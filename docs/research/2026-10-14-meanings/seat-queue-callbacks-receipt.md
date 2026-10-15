@@ -373,3 +373,29 @@ The audit command is `lean-slot.sh lake env lean /private/tmp/queue-actual-compi
 It checks 326 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
 The output is `/private/tmp/queue-actual-compiler-audit.log`.
 The coordinator must add the library-root import for `Effect4.Laws.Program.CodeClosure.AuthoredBinders`.
+
+## Actual feeder chain
+
+The job and rest endpoints remain open.
+Commit `b09683d8a` proves the feeder's actual allocation, hint, commit and tail chain.
+The hint uses the source's Boolean deferred type.
+The entry getter retains its saved interruptibility value.
+The worker constructor consumes the actual compiled take body.
+The mixed saved family reuses the existing family and embedding producers.
+
+Concept: store-typing R4 and translation-simulation R10.
+Consumer: `QueueWorkers.Assertions.jobs_step`, followed by `rest_step`.
+Reach: local source and callback closure at actual captured inputs.
+This slice establishes no complete run invariant.
+
+Verification:
+
+- `lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersOfferWrapper Test.Dogfood.Proofs.QueueWorkersJobSourceFamilies Test.Dogfood.Proofs.QueueWorkersWorkerBinding` passes 1429 jobs.
+- `/private/tmp/queue-offer-wrapper-build8.log` records the build.
+- `lean-slot.sh lake env lean /private/tmp/queue-offer-chain-audit.lean` passes.
+- The audit checks 260 declarations with `propext` and `Quot.sound` only.
+- The audited declarations depend on no planned goal.
+- `/private/tmp/queue-offer-chain-audit.log` records the audit.
+
+The remaining producer must join actual source control, job custody and the physical queue table.
+The two endpoint statements remain unchanged by this slice.
