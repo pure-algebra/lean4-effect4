@@ -1,5 +1,6 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberSourceSlots
 import Effect4.Laws.Program.CodeClosure.Qualified.Stable
+import Effect4.Laws.Machine.AnswerFlowNativeExit
 
 /-!
 Concept: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -231,5 +232,31 @@ theorem finalizer_frame (context : CountContext) (view : HostTimeoutFlow.View)
   obtain ⟨input, code, saved⟩ := next
   exact ⟨HostTimeoutNumberSourceSlots.finalizer_frame context view machine fiber yielding exit current held.toFrameAt,
     code, CodeClosure.Qualified.prefix_path_owned (At context) (AnswerSlots.Prefix (bindings context)) (Writes context) saved⟩
+
+/-- Actual terminal native dispatch retains the selected writer graph through its real callbacks.
+Consumer: the pending whole-fiber native producer of both Timeout numeric endpoint histories. -/
+theorem finalizer_native (context : CountContext) (view : HostTimeoutFlow.View)
+    (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV)
+    (current : fiber.frame.current = Prim.ofExit exit) (held : FrameAt context fiber.frame) :
+    let next := evaluatePrim.finalizerOr (HostTimeoutFlow.interpreter view) machine fiber yielding exit
+    FrameAt context next.fiber.frame := by
+  let edge := CodeClosure.Qualified.prefixEdge (At context) (AnswerSlots.Prefix (bindings context)) (Writes context)
+  let spec := CodeClosure.Qualified.prefixSpec HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+    (At context) (AnswerSlots.Prefix (bindings context)) (Writes context)
+  have source := HostTimeoutNumberSourceSlots.finalizer_frame context view machine fiber yielding exit current held.toFrameAt
+  have saved := CodeClosure.Qualified.prefix_path (At context) (AnswerSlots.Prefix (bindings context))
+    (Writes context) fiber.frame.stack held.savedWrites
+  have callbacks := CodeClosure.Qualified.prefix_family HostTimeoutSource.program HostTimeoutNumberSourceSlots.fragment
+    (At context) (AnswerSlots.Prefix (bindings context)) (Writes context) (contract context)
+    (fun p held view => HostTimeoutNumberSourceSlots.completed context p view held)
+    Test.Dogfood.Scenario.Timeout.fetch.table view
+  have good : AnswerFlow.ExitAt (spec.model view) () () exit := by cases exit <;> trivial
+  obtain ⟨output, next⟩ := AnswerFlow.External.Native.finalizer_frame (spec.model view)
+    (HostTimeoutFlow.interpreter view) edge callbacks (by intros; trivial)
+    () () () machine fiber yielding exit current held.currentWrites saved good
+    (by intros; trivial) (by intros; rfl)
+  obtain ⟨input, code, path⟩ := next
+  exact ⟨source, code, CodeClosure.Qualified.prefix_path_owned (At context)
+    (AnswerSlots.Prefix (bindings context)) (Writes context) path⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberSourceWrites

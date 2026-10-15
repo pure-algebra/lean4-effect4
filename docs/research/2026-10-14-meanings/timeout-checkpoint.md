@@ -1401,3 +1401,35 @@ The preceding authority verification command checks this slice too.
 The build passes with 1255 jobs.
 The audit checks 288 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 This proof-only slice reaches no outside implementation gate.
+
+## Joined terminal handoff
+
+The shared whole-return dispatcher now accepts the caller's actual result assertion.
+The previous local value and failure interfaces remain wrappers.
+The native frame dispatcher carries the same assertion through actual running and finished outcomes.
+The existing frame-row proof exposes the exact emitted events, returned frame, and unchanged row fields.
+No second return, native, or saved-frame traversal enters this slice.
+
+The numeric result retains one current class, its saved path, and conditional unmasked permission together.
+It also retains the actual cleared deferred-interruption flag.
+The whole pending fiber consumes those facts alongside actual source bindings and recorded causes.
+The joined terminal consumer installs that same returned fiber and retains the machine, queue, and detached-task assertions together.
+
+Placement: scope-lifetime-finalization R11 and reactive-scheduling R9; both original numeric histories consume the joined pending native producer.
+Reach: an actual continued terminal handoff, live running actor, unique stored identities, and actual source configuration.
+The caller supplies the remaining queue's finish exclusion and scheduled-loop heap permission.
+Finished retirement, the full active command producer, fixed-budget history, and both original endpoint proofs remain open.
+Neither public endpoint changes.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-protected-return-check.sh
+```
+
+The script builds `HostTimeoutNumberTerminalFiber`, `HostTimeoutNumberInjection`, `HostTimeoutNumberRootLoop`, and `NativeFrameRows`.
+It then runs `lake env lean scratch/TimeoutProtectedReturnAudit.lean`.
+The build passes with 1294 jobs.
+The audit checks 220 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The first audit catches classical heap case selection; an explicit constructive equality instance removes that dependency.
+This proof-only slice reaches no outside implementation gate.
