@@ -1211,3 +1211,82 @@ The build passes with 1252 jobs.
 The audit checks 133 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 The terminal leaf imports the new return leaf.
 This proof-only slice reaches no outside implementation gate.
+
+## History invariant review
+
+This section records the remaining proof design.
+It does not report a checked history invariant.
+Both original Timeout endpoint claims stay unchanged.
+The actual terminal cleanup barrier is checked above.
+
+The history carries one numeric world beside the existing source and guard worlds.
+The numeric world names the actual three-cell heap and the actual fiber roles.
+Each role has one current source certificate and one saved numeric path.
+The pending attempt's path ends at its exact before-and-entered attempt class.
+Its source bindings name that same attempt context.
+
+| Part | Required fact | Existing producer or remaining edge |
+| --- | --- | --- |
+| Actual heap | The world phase reads the three actual numeric reference cells | Checked phase writers and observation readers |
+| Actor ownership | Every resident fiber has one compatible role | Existing configuration assertion; actual role transitions remain open |
+| Active writer | One pending attempt owns numeric count and cleanup writes | Checked `OnlyAttempt` consumers; actual fork and retirement producer remains open |
+| Source binding | Current code and saved callbacks belong to the same actual attempt context | Existing source slots and selected writer contract; joint numeric class correlation remains open |
+| Numeric path | Every saved edge retains common classes across actual interpreter views | Checked uniform family and return producer |
+| Protected crossing | Only the authored count finalizer crosses the early-to-late grade boundary | Proposed refinement of the existing uniform edge contract |
+| Restoring authority | A restoring mask retains its source callback's same-context returned class or an authored finalizer below it | Proposed refinement of the same saved-path certificate |
+| Recorded interruption | Every actual pending interruption has no typed failure reason | Checked contextual interruption and cause-return consumers |
+| Deferred interruption | A masked pending actor has no deferred interruption | Checked whole-fiber field and local producers |
+| Pre-count execution | Queued pre-count loops retain their counter and remaining-budget bound | Indexed command lift is checked; actual counter producer remains open |
+| Queue ownership | Consuming a loop retains actual owner freshness and exact queued demands | Existing guard and checked queue transports |
+| Cancellation | Root cancellation names the actual active attempt until its cleanup barrier holds | Checked target consumers; actual race target producer remains open |
+| Detached replies | Each actual drained reply retains its current token and role obligation | Checked snapshot transports; active task attachment remains open |
+| Failure origin | Every typed retry reason comes from the actual selected declared failure | Checked `TypedFrom` closure; actual host, timer, and race origin producer remains open |
+
+The proposed crossing condition strengthens the existing saved-edge assertion.
+An ordinary bind or constant callback must retain the input grade region at its output.
+The authored attempt finalizer may cross from an early input to a late output.
+Its actual source certificate identifies the same count context.
+The existing path producer then supplies finalizer membership at that crossing.
+No new program or saved-stack traversal is proposed.
+
+The old pre-entry yield constructor crosses this boundary through a generic constant callback.
+The checked paused constructor retains the original grade and freezes the actual current heap.
+That constructor can replace this old yield instance.
+This is an internal certificate change, not an endpoint amendment.
+
+Restoring-mask permission needs the same context correlation.
+A generic published phase can refer to another attempt's earlier form.
+Its heap fact alone does not establish that this attempt completed cleanup.
+The strengthened source-phase certificate must retain the actual callback's returned class.
+The actual attempt and cleanup returned classes then exclude the unclean entered heap when a restoring mask removes protection.
+An asynchronous cancellation mask can instead retain the authored count finalizer below it.
+
+The indexed queue assertion records the counter of each actual queued pre-count actor.
+Its counter plus remaining commands is at most the scenario budget, 2000.
+Its automatic yield threshold is at least the default threshold, 2048.
+An installed count finalizer also retains the actual override or existing yield latch authority.
+A forced yield before finalizer installation remains possible and clears its override.
+The actual yield reply resets the operation counter when evaluation starts again.
+An exhausted command cut drops its pending queue.
+A stranded running actor gains no new loop demand from that fact alone.
+These are proposed history premises, not checked global bounds.
+
+```mermaid
+flowchart TD
+  entry[Actual allocation entry] --> source[Same-context source and numeric certificate]
+  source --> native[Actual joined native result]
+  native --> command[Indexed command preservation]
+  queue[Actual owner and cancellation demands] --> command
+  command --> history[Existing decision and replay producer]
+  history --> cleanup[Original cleanup observation]
+  history --> origin[Actual declared failure origin]
+  origin --> retries[Original retry observation]
+```
+
+The command producer consumes the strengthened certificate at actual native and administrative steps.
+The fixed-budget scheduler connector must reuse the existing decision proofs through their actual command-loop contract.
+The bare allocation attachment supplies the real entry heap and source point.
+It supplies no active numeric invariant by itself.
+The cleanup reader then closes the original cleanup claim.
+The retry reader additionally consumes actual declared failure provenance.
+Neither result claims progress or host agreement beyond the existing reply-admission boundary.
