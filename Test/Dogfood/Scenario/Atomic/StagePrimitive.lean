@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.NativePrimitiveDefault
 import Test.Dogfood.Scenario.Atomic.StageReturn
 import Effect4.Laws.Machine.StatePreservation
 
@@ -117,47 +118,25 @@ theorem native_primitive_eq (root : NativeEff) (table : RowTable) (owner : Nat)
       evaluatePrim (interpAt root machine.completedExits table) machine fiber yielding := by
   obtain ⟨input, code, saved⟩ := held
   have ordinary := ordinary_shape root table owner machine.completedExits world input fiber.frame.current code
-  unfold evaluateNative
-  split
-  · rename_i point current
+  apply evaluateNative_primitive root table machine fiber yielding
+  · intro point current body found
     exact (ordinary.2.1 (.act point) current).elim
-  · rename_i value current
+  · intro value current body previous scope flag chosen
     have good : ValueAt world input value := by rw [current] at code; cases code; assumption
-    have excluded (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool) :
-        (fiber.frame.getCont .contA false).answer ≠ .frame (.onExit body (.scopedExit previous scope) flag) := by
-      intro chosen
-      obtain ⟨incoming, middle, good, edge, suffix⟩ := Contextual.Hooked.getCont_value_selected
-        (model root table owner machine.completedExits) (interpAt root machine.completedExits table).toPrimInterp
-        (Edge root table owner) StageFinalizer.Allowed (family root table owner machine.completedExits)
-        (hook_mask root table owner) world input (.finalized owner) fiber.frame value _ good saved chosen
-      exact edge_no_scoped root table owner world incoming middle _ edge body previous scope flag rfl
-    unfold exitScoped
-    dsimp only
-    split
-    · rename_i body previous scope flag chosen
-      exact (excluded body previous scope flag chosen).elim
-    · simp only [evaluatePrim, current]
-      rfl
-  · rename_i cause current
+    obtain ⟨incoming, middle, good, edge, suffix⟩ := Contextual.Hooked.getCont_value_selected
+      (model root table owner machine.completedExits) (interpAt root machine.completedExits table).toPrimInterp
+      (Edge root table owner) StageFinalizer.Allowed (family root table owner machine.completedExits)
+      (hook_mask root table owner) world input (.finalized owner) fiber.frame value _ good saved chosen
+    exact edge_no_scoped root table owner world incoming middle _ edge body previous scope flag rfl
+  · intro cause current body previous scope flag chosen
     have good : CauseAt world input cause := by rw [current] at code; cases code; assumption
-    have excluded (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool) :
-        (fiber.frame.getCont .contE true (some cause)).answer ≠ .frame (.onExit body (.scopedExit previous scope) flag) := by
-      intro chosen
-      obtain ⟨incoming, middle, delivered, carried, good, edge, suffix⟩ := Contextual.Hooked.getCont_cause_selected
-        (admitted := recorded_allowed world fiber.frame recorded)
-        (model root table owner machine.completedExits) (interpAt root machine.completedExits table).toPrimInterp
-        (Edge root table owner) StageFinalizer.Allowed (family root table owner machine.completedExits)
-        (hook_mask root table owner) world input (.finalized owner) fiber.frame cause _ good
-        (recorded_absorbs root table owner machine.completedExits world fiber.frame recorded) saved chosen
-      exact edge_no_scoped root table owner world incoming middle _ edge body previous scope flag rfl
-    unfold exitScoped
-    dsimp only
-    split
-    · rename_i body previous scope flag chosen
-      exact (excluded body previous scope flag chosen).elim
-    · simp only [evaluatePrim, current]
-      rfl
-  · rfl
+    obtain ⟨incoming, middle, delivered, carried, good, edge, suffix⟩ := Contextual.Hooked.getCont_cause_selected
+      (admitted := recorded_allowed world fiber.frame recorded)
+      (model root table owner machine.completedExits) (interpAt root machine.completedExits table).toPrimInterp
+      (Edge root table owner) StageFinalizer.Allowed (family root table owner machine.completedExits)
+      (hook_mask root table owner) world input (.finalized owner) fiber.frame cause _ good
+      (recorded_absorbs root table owner machine.completedExits world fiber.frame recorded) saved chosen
+    exact edge_no_scoped root table owner world incoming middle _ edge body previous scope flag rfl
 
 /-- The actual native request actor returns one world for heap, live frame and published-exit permission. -/
 theorem native_result (root : NativeEff) (table : RowTable) (owner : Nat) (member : owner ∈ requests)
