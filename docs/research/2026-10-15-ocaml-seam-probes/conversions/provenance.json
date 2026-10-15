@@ -1,0 +1,25 @@
+{
+  "head": "57d352bbb0f14578de9e5302b41244e65ae19984",
+  "inputs": {
+    "ocaml/eff/eff_types.ml": "dd1484435929566535c762e7df5002371b30c501f2a23db62eba1db08e3dbda4",
+    "ocaml/eff/eff_frame.ml": "7895fe2e86f1e7495a713cc1f5dd0464e2d12c2754fbe091e209b61abb862c88",
+    "ocaml/eff/eff_wire.ml": "197b4aaf3eb51f0a74ca14b54232ed17f5092d0e8d46b2adeb6252603d77f307",
+    "ocaml/clock/e4_clock.ml": "99b137f2d61dbc6e438c3d830503fba75ef7851a949c750446512fd74f7a2cbb",
+    "ocaml/clock/e4_clock.mli": "f864eb753cada897d9e8f3b61a26f64623855621fa108efabe64dc1ad6b3418c",
+    "src/Effect4/Program/TyCore.lean": "f8382447448939673444b22d05b4007bde99cd2f30fe3263b8e8e94e3b3d7268",
+    "src/Effect4/Schema/Modeled.lean": "8d1db1c20d377c933f866258de3b25977bdae11d263e78d49f1248b4aebb1c6c",
+    "src/Effect4/Schema/Modeled/Derive.lean": "3109ae54e45af959c21ac83661dc0cd2c71dfa74d9b4e84b7d219d634d9292f6",
+    "src/Effect4/Store/Carrier/Image.lean": "2ad5a7811d90412772b9608ff5dbb104359eabc41ef34697af214b7e9b02675a",
+    "src/Effect4/Store/Carrier/Image/Record.lean": "08343666e85ee849151b25c87e179e84b9fdc54bc23e99c4a2427a7c40575305",
+    "src/Effect4/Laws/Schema/Modeled.lean": "7615f3950201c269abb0759a95787915bf94d4ff316d2120d208ce387456b49d",
+    "src/OCaml5/Lcnf/TypeRows.lean": "c16365f25d24cab4f78d1b6add2d9437aa51d9c001477d57938c1c938569453b",
+    "src/OCaml5/Ml/Syntax.lean": "c5cec9b8fb42757c62a14d29eb288ae8dbfd9fe782dbc32e21337ac72a87fdf6"
+  },
+  "instrumented_eff_types_sha256": "ae0cb60c200da077f1394d8139ebfef484abfd30593408f053aaa284a40e6af4",
+  "installed_sources": {
+    "/Users/pooks/.opam/effect4/doc/ppx_sexp_conv/README.org": "a80cc62b71ae177ce0cc31dcde52784296da7172454d503fc9e130b222d29e6f",
+    "/Users/pooks/.opam/effect4/lib/eio/resource.mli": "94631bcc0211260be05e5f315f55959a22a643862be13da1aa9b2896a905a8ba",
+    "/Users/pooks/.opam/effect4/lib/zarith/z.mli": "34faa8a06207739afb12749226b22c1434b8388e11cb4e7ff900bff311ae01d0",
+    "/Users/pooks/.opam/effect4/lib/base_quickcheck/test_intf.ml": "c68f3b31cd2d1e55bba94b4c62b310e785c21c98058bd11eb9f526ab79c5d45b"
+  }
+}

@@ -1,0 +1,19 @@
+# bun --no-install run jsoo/two_layers.ts http://127.0.0.1:8474 (bun 1.4.2, effect 4.0.0-rc.112); native layer ./fpath_main 8474 (OCaml 5.1.1, Eio 1.2); in-process layer fpath_host.cjs (js_of_ocaml of rows_core.ml + generated fpath_host.ml + fpath_js.ml), 2026-10-15
+[http http://127.0.0.1:8474] built 39 methods: Fpath.dir_sep, Fpath.is_seg, Fpath.is_rel_seg, Fpath.v, Fpath.add_seg, Fpath.append, ...
+[js_of_ocaml in-process] built 39 methods: Fpath.dir_sep, Fpath.is_seg, Fpath.is_rel_seg, Fpath.v, Fpath.add_seg, Fpath.append, ...
+ 0  native/http "a/c"
+    js/inproc   "a/c"
+ 1  native/http ["","usr","local","lib"]
+    js/inproc   ["","usr","local","lib"]
+ 2  native/http ["archive.tar",".gz"]
+    js/inproc   ["archive.tar",".gz"]
+ 3  native/http "www/x"
+    js/inproc   "www/x"
+ 4  native/http "relativize: refused by the generator"
+    js/inproc   "relativize: refused by the generator"
+ 5  native/http {"_tag":"RowFailure","row":"Fpath.of_string","error":{"_tag":"Msg","value":"\"\": invalid path"}}
+    js/inproc   {"_tag":"RowFailure","row":"Fpath.of_string","error":{"_tag":"Msg","value":"\"\": invalid path"}}
+ 6  native/http {"_tag":"RowFailure","row":"Fpath.v","error":{"_tag":"Raised","value":"Invalid_argument(\"\\\"\\\": invalid path\")"}}
+    js/inproc   {"_tag":"RowFailure","row":"Fpath.v","error":{"_tag":"Raised","value":"Invalid_argument(\"\\\"\\\": invalid path\")"}}
+THE TWO LAYERS ANSWER ALIKE
+# fpath_host.cjs size: 188492 bytes (not kept: rebuild with the commands in the README)

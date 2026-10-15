@@ -1,0 +1,16 @@
+# ./fpath_laws (Fpath on OCaml 5.1.1), 2026-10-15
+"a/b"            retraction true, exactness true
+"/usr/lib/"      retraction true, exactness true
+"a//b"           retraction true, exactness false (to_string gives "a/b")
+"./x"            retraction true, exactness true
+"a/./b"          retraction true, exactness true
+"../.."          retraction true, exactness true
+"a/b/"           retraction true, exactness true
+"/"              retraction true, exactness true
+"//net/share"    retraction true, exactness true
+"C:\\x"          retraction true, exactness true
+"x.tar.gz"       retraction true, exactness true
+" spaced name"   retraction true, exactness true
+"\206\177/\206\178" retraction true, exactness true
+""               refused by of_string: "": invalid path
+"a\000b"         refused by of_string: "a\x00b": invalid path

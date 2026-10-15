@@ -241,25 +241,3 @@ and ref_key = int
 
 
 
-let lcnf_utf8_bytes s =
-  List.init (String.length s) (fun i -> Char.code (String.get s i))
-
-let lcnf_utf8_length s =
-  String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
-
-let lcnf_nat_mul a b =
-  if a = 0 then 0 else if b > max_int / a then max_int else a * b
-
-let rec lcnf_nat_pow a b =
-  if b = 0 then 1 else (let h = lcnf_nat_pow a (b - 1) in
-    if a = 0 then 0 else if h > max_int / a then max_int else h * a)
-
-let lcnf_nat_shift_left a b =
-  let s = lcnf_nat_pow 2 b in
-  if a = 0 then 0 else if s > max_int / a then max_int else a * s
-
-let lcnf_list_contains inst l a =
-  List.exists (fun e -> inst a e) l
-
-
-

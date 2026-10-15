@@ -36,11 +36,16 @@ so that the OCaml types agree with the representation the mono-phase LCNF code a
   `(α, ε) result`, `Array` is `list` (the route's Array-as-list shim), and so on. No declaration
   is emitted for it — *by construction*.
 * **Parameters by binder kind.** A type's OCaml parameters are its type parameters, in source
-  order. An instance parameter and a value parameter are dropped, as the compiler erases both
-  from the type's representation (`typeParameterIndices`) — *by construction*.
+  order. A family over a finite index (`R : I → Type u`, with `I` an inductive whose
+  constructors take no argument) is one OCaml parameter per constructor of `I`, and an instance
+  reads each by reducing `R c`: exact, with no cast (F3). An instance parameter and a value
+  parameter are dropped, as the compiler erases both from the type's representation
+  (`typeParameterSlots`) — *by construction*; *tested* by the rule's controls
+  (`Conform.Effect4.CompilerControls`).
 * **Unknown shapes are visible.** A field type this module cannot spell (a dependent arrow,
-  a non-type argument, a `Sort`) becomes the abstract type `lcnf_unknown`, declared once, and
-  is listed in the result — never silently dropped — *by construction*.
+  a non-type argument, a `Sort`, a family at a variable such as `R fam`) becomes the abstract
+  type `lcnf_unknown`, declared once, and is listed in the result — never silently dropped —
+  *by construction*.
 -/
 
 namespace OCaml5.Lcnf
@@ -117,27 +122,85 @@ def isTypeParameter (domain : Lean.Expr) : Bool :=
   let ty := unwrapParam domain
   ty.isSort || ty.isConstOf `Effect4.ServiceUniverse
 
-/-- The positions of a type's OCaml type parameters among its first `count` parameters, by
-binder kind: a type parameter (`isTypeParameter`) is kept, and an instance parameter and a value
-parameter are dropped. The compiler erases both from the type's representation, so a value of the
-type carries neither. The one refusal is a telescope shorter than `count`. -/
-def typeParameterIndices (owner : Name) (count : Nat) (type : Lean.Expr) : Except String (Array Nat) :=
+/-- The constructors of a *finite index*, in declaration order: an inductive type with no
+parameter and no index whose every constructor takes no argument (`EffFam`, `TermFam`,
+`CauseTermFam`). `none` for any other constant. -/
+def finiteIndexIn (env : Environment) (n : Name) : Option (List Name) := do
+  let .inductInfo info ← env.find? n | none
+  guard (info.numParams == 0 && info.numIndices == 0)
+  guard (info.ctors.all fun c => match env.find? c with
+    | some (.ctorInfo ci) => ci.numFields == 0
+    | _ => false)
+  return info.ctors
+
+/-- One kept parameter of a type, with the OCaml type parameters it becomes. -/
+inductive ParamSlot where
+  /-- A type parameter (`isTypeParameter`): one OCaml type parameter. -/
+  | type (pos : Nat)
+  /-- A family over a finite index, `R : I → Type u` (F3): one OCaml type parameter per
+  constructor of `I`, in declaration order. `levels` are the universe levels of the constant `I`
+  as the type's telescope writes them. -/
+  | family (pos : Nat) (levels : List Level) (ctors : List Name)
+deriving Inhabited, BEq
+
+/-- The parameter's position in the type's telescope. -/
+def ParamSlot.pos : ParamSlot → Nat
+  | .type p => p
+  | .family p _ _ => p
+
+/-- How many OCaml type parameters a slot spells. -/
+def ParamSlot.width : ParamSlot → Nat
+  | .type _ => 1
+  | .family _ _ cs => cs.length
+
+/-- The index of a family parameter's domain `I → Type u`, with the universe levels of `I` and its
+constructors, when `index` reads `I` as a finite index (`finiteIndexIn`). -/
+def familyIndex? (index : Name → Option (List Name)) (domain : Lean.Expr) :
+    Option (List Level × List Name) :=
+  match unwrapParam domain with
+  | .forallE _ (.const i us) (.sort (.succ _)) _ => (index i).map (us, ·)
+  | _ => none
+
+/-- The OCaml parameter slots of a type among its first `count` parameters, by binder kind. A type
+parameter (`isTypeParameter`) is a slot of one OCaml parameter. A family over a finite index
+(`familyIndex?`) is a slot of one OCaml parameter per constructor of the index, which an instance
+reads by reducing its family at that constructor (F3): exact, and no cast. An instance parameter
+and a value parameter are dropped: the compiler erases both from the type's representation, so a
+value of the type carries neither. `index` reads the finite indexes (`finiteIndexIn`). The one
+refusal is a telescope shorter than `count`. -/
+def typeParameterSlots (index : Name → Option (List Name)) (owner : Name) (count : Nat)
+    (type : Lean.Expr) : Except String (Array ParamSlot) :=
   go count 0 type #[]
 where
-  go : Nat → Nat → Lean.Expr → Array Nat → Except String (Array Nat)
+  go : Nat → Nat → Lean.Expr → Array ParamSlot → Except String (Array ParamSlot)
     | 0, _, _, out => .ok out
     | k + 1, i, .forallE _ domain body _, out =>
-      go k (i + 1) body (if isTypeParameter domain then out.push i else out)
+      let slot? : Option ParamSlot :=
+        if isTypeParameter domain then some (.type i)
+        else (familyIndex? index domain).map fun (us, cs) => .family i us cs
+      go k (i + 1) body (match slot? with | some s => out.push s | none => out)
     | _, _, _, _ => .error s!"{owner}: incomplete parameter telescope"
+
+/-- The number of OCaml type parameters of a type's first `count` parameters: what an annotation
+that says nothing about them spells as anonymous types. A refused telescope has none. -/
+def typeParameterWidth (env : Environment) (owner : Name) (count : Nat) (type : Lean.Expr) : Nat :=
+  ((typeParameterSlots (finiteIndexIn env) owner count type).toOption.getD #[]).foldl
+    (fun n slot => n + slot.width) 0
+
+/-- The OCaml type variables of a type's parameters, by each parameter's free variable: one for a
+type parameter, and one for each constructor of a family's index (F3). -/
+structure ParamVars where
+  vars : Std.HashMap FVarId String := {}
+  families : Std.HashMap FVarId (List (Name × String)) := {}
 
 /-- A field type, with the inductive's parameters as free variables, as an OCaml type. Returns
 the type constants it mentions and `none` when the shape could not be spelled. -/
-partial def kernelTy (ex : Externs) (tn : TypeNames) (params : Std.HashMap FVarId String)
+partial def kernelTy (ex : Externs) (tn : TypeNames) (params : ParamVars)
     (e : Lean.Expr) : MetaM (Option Ml.Ty × Array Name) := do
   let e ← whnf e  -- unfold a `def`/`abbrev` head; an inductive head stays
   match e with
   | .fvar id =>
-    match params[id]? with
+    match params.vars[id]? with
     | some v => return (some (.var v), #[])
     | none => return (none, #[])
   | .forallE _ d b _ =>
@@ -155,7 +218,12 @@ partial def kernelTy (ex : Externs) (tn : TypeNames) (params : Std.HashMap FVarI
     let fn := e.getAppFn
     let args := e.getAppArgs
     match fn with
-    | .const n _ =>
+    -- `R c`, a family parameter at a constructor of its index: that constructor's variable (F3)
+    | .fvar id =>
+      match params.families[id]?, args with
+      | some vars, #[.const c _] => return ((vars.lookup c).map Ml.Ty.var, #[])
+      | _, _ => return (none, #[])
+    | .const n us =>
       -- A service universe is read as its carrier type: `Carrier U k` (and the projection it
       -- unfolds to) is the universe's own parameter (`'u service = { value : 'u }`), and a
       -- closed universe `⟨fun _ => T⟩` (`Env.ValU`) is `T`, so `Context ValU` is `val_ context`.
@@ -174,14 +242,22 @@ partial def kernelTy (ex : Externs) (tn : TypeNames) (params : Std.HashMap FVarI
         let mut refs : Array Name := #[]
         let mut ok := true
         let info ← getConstInfo n
-        let .ok indices := typeParameterIndices n args.size info.type | return (none, #[])
-        for i in indices do
-          let a := args[i]!
-          let (t, r) ← kernelTy ex tn params a
-          refs := refs ++ r
-          match t with
-          | some t => tys := tys.push t
-          | none => ok := false
+        let .ok slots := typeParameterSlots (finiteIndexIn (← getEnv)) n args.size info.type
+          | return (none, #[])
+        for slot in slots do
+          -- a type parameter is its argument; a family is its argument at each constructor of
+          -- the index, reduced by `kernelTy`'s `whnf` (F3)
+          let parts : List Lean.Expr := match slot with
+            | .type i => [args[i]!]
+            | .family i levels ctors =>
+              let levels := levels.map (·.instantiateParams info.levelParams us)
+              ctors.map fun c => mkApp args[i]! (mkConst c levels)
+          for a in parts do
+            let (t, r) ← kernelTy ex tn params a
+            refs := refs ++ r
+            match t with
+            | some t => tys := tys.push t
+            | none => ok := false
         unless ok do return (none, refs)
         -- an extern type row: the carrier chain applied to the Lean arguments. `n` is still
         -- pushed as a reference so `generate` sees the row was hit.
@@ -212,23 +288,29 @@ def externField (chain : List String) (owner : Name) (field : String) (t : Ml.Ty
 def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInfo) := do
   let env ← getEnv
   let some (.inductInfo info) := env.find? n | return none
-  let indices ← match typeParameterIndices n info.numParams info.type with
-    | .ok indices => pure indices
+  let slots ← match typeParameterSlots (finiteIndexIn env) n info.numParams info.type with
+    | .ok slots => pure slots
     | .error message => throwError message
-  -- the parameter names, from the type's own telescope; made unique
-  let pnames ← forallBoundedTelescope info.type info.numParams fun xs _ => do
+  -- each slot's parameter names, from the type's own telescope; made unique. A family's names are
+  -- its own name and each constructor of its index (`'r_eff` for `R .eff`).
+  let slotNames ← forallBoundedTelescope info.type info.numParams fun xs _ => do
     let mut seen : Std.HashSet String := {}
-    let mut out : Array String := #[]
-    for i in indices do
-      let x := xs[i]!
-      let base := tyVar (← x.fvarId!.getUserName)
-      let mut v := base
-      let mut i := 1
-      while seen.contains v do
-        v := s!"{base}{i}"
-        i := i + 1
-      seen := seen.insert v
-      out := out.push v
+    let mut out : Array (List String) := #[]
+    for slot in slots do
+      let base := tyVar (← xs[slot.pos]!.fvarId!.getUserName)
+      let bases := match slot with
+        | .type _ => [base]
+        | .family _ _ ctors => ctors.map fun c => base ++ "_" ++ snake (shortName c)
+      let mut names : List String := []
+      for b in bases do
+        let mut v := b
+        let mut i := 1
+        while seen.contains v do
+          v := s!"{b}{i}"
+          i := i + 1
+        seen := seen.insert v
+        names := names ++ [v]
+      out := out.push names
     return out
   let trivialIdx? ← trivialFieldIdx? n
   let mut ctors : Array Ml.Ctor := #[]
@@ -239,9 +321,12 @@ def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInf
   let mut usedFields : Array Name := #[]
   for ctorName in info.ctors do
     let (ctor, fs, alias, r, u, uf) ← withConstructor ctorName fun _ xs => do
-      let mut pmap : Std.HashMap FVarId String := {}
-      for i in indices, v in pnames do
-        pmap := pmap.insert xs[i]!.fvarId! v
+      let mut pmap : ParamVars := {}
+      for slot in slots, names in slotNames do
+        let id := xs[slot.pos]!.fvarId!
+        match slot with
+        | .type _ => pmap := { pmap with vars := pmap.vars.insert id (names.headD "_") }
+        | .family _ _ ctors => pmap := { pmap with families := pmap.families.insert id (ctors.zip names) }
       let mut args : Array Ml.Ty := #[]
       let mut fs : Array Ml.Field := #[]
       let mut alias : Option Ml.Ty := none
@@ -282,7 +367,7 @@ def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInf
     refs := refs ++ r
     unknown := unknown ++ u
     usedFields := usedFields ++ uf
-  let params := pnames.toList
+  let params := slotNames.toList.flatten
   let tname := OCaml5.Lcnf.typeNameIn tn n
   -- A structure whose every field is erased (`ServiceUniverse`: one `Type`-valued field) has
   -- no relevant data: OCaml refuses an empty record, so it is the abbreviation `unit`, and

@@ -1,0 +1,6 @@
+positive: checker diagnostics = []
+wrong_type: checker diagnostics = []
+unbound: checker diagnostics = [unbound-value@probe: `missing_value`]
+raw_scope: checker diagnostics = []
+unknown_field: checker diagnostics = []
+hole_fill: checker diagnostics = []

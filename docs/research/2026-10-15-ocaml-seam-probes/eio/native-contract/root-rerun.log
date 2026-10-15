@@ -1,0 +1,16 @@
+ocamlfind: [WARNING] Package `mtime.clock.os': Deprecated, use the mtime.clock library.
+PASS custom source to unchanged standard Eio sink
+PASS custom source actually performs partial reads
+PASS unchanged standard Eio source to custom sink
+PASS custom sink actually performs partial writes
+PASS same generic client copies between two custom providers
+PASS same generic client copies between two standard providers
+PASS standard Buf_read consumes custom one-byte source
+PASS same buffered client consumes standard Eio provider
+PASS read_exact reports EOF while retaining the prefix already read
+PASS partial read updates only its written slice
+PASS standard vectored write retries partial provider writes
+PASS custom typed method coexists with unchanged standard Flow consumer
+PASS Net stream provider exposes the standard source sink and shutdown facets
+PASS standard Net.close dispatches to the mock resource lifecycle
+ALL NATIVE FLOW INTERFACE PROBES PASSED

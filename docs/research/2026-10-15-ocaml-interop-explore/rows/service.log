@@ -1,0 +1,9 @@
+# bun --no-install run rows_service.ts http://127.0.0.1:8473 (bun 1.4.2, effect 4.0.0-rc.112), against ./rows_http serve 8473, 2026-10-15
+built 4 methods from the host's table: TodoRepo.insert, TodoRepo.all, TodoRepo.setDone, TodoRepo.delete
+TodoRepo.insert('milk')              {"id":1,"title":"milk","done":false}
+TodoRepo.insert('tea')               {"id":2,"title":"tea","done":false}
+TodoRepo.setDone([1, true])          {"id":1,"title":"milk","done":true}
+TodoRepo.delete(2)                   true
+TodoRepo.all(null)                   [{"id":1,"title":"milk","done":true}]
+setDone([-1, true]) refused locally  "SchemaError(Expected a value greater than or equal to 0"
+ALL ROW SERVICE CALLS ANSWERED

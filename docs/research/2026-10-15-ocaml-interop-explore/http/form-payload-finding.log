@@ -1,0 +1,11 @@
+# the first run: the request headers Effect's client sends for a field-list payload (debug build of todo_http)
+  header content-length: 10
+  header accept-encoding: gzip, deflate, br, zstd
+  header host: 127.0.0.1:8472
+  header accept: */*
+  header user-agent: Bun/1.4.2
+  header connection: keep-alive
+  header traceparent: 00-a7a40d15519101601451ecc4515fd3aa-977fb7dc1320ce9e-01
+  header b3: a7a40d15519101601451ecc4515fd3aa-977fb7dc1320ce9e-1
+  header content-type: application/x-www-form-urlencoded
+  body "title=milk"

@@ -80,6 +80,8 @@ inductive TySpelling where
   | con (name : String) (args : List Nat)
   /-- A tuple: `tuple [0, 1]` on `[α, β]` is `α * β`. -/
   | tuple (args : List Nat)
+  /-- One OCaml type that reads no argument: `fixed (list int)` is `int list`. -/
+  | fixed (ty : Ml.Ty)
   deriving Inhabited
 
 namespace TySpelling
@@ -88,6 +90,7 @@ namespace TySpelling
 def positions : TySpelling → List Nat
   | .con _ args => args
   | .tuple args => args
+  | .fixed _ => []
 
 /-- The spelling applied to converted arguments. A position past the arguments reads `_`; the
 table's check refuses a row that holds one. -/
@@ -96,11 +99,13 @@ def apply (s : TySpelling) (args : List Ml.Ty) : Ml.Ty :=
   match s with
   | .con name ps => .con name (ps.map at_)
   | .tuple ps => .tuple (ps.map at_)
+  | .fixed ty => ty
 
 /-- The spelling's head, as a report writes it: the type constructor, or `*` for a tuple. -/
 def head : TySpelling → String
   | .con name _ => name
   | .tuple _ => "*"
+  | .fixed _ => "fixed"
 
 end TySpelling
 
@@ -109,7 +114,7 @@ structure TypeRow where
   /-- The Lean type constant. -/
   lean : Name
   /-- The number of Lean arguments the row spells: the type's OCaml parameters
-  (`OCaml5.Lcnf.typeParameterIndices`). -/
+  (`OCaml5.Lcnf.typeParameterSlots`). -/
   arity : Nat
   spelling : TySpelling
   fidelity : Fidelity
@@ -151,6 +156,8 @@ def typeRows : List TypeRow := [
   typeRow ``List 1 (.con "list" [0]) .exact "" "",
   typeRow ``Array 1 (.con "list" [0]) .approximate ""
     "the shim: denotationally a sequence, operationally a different cost model (see `Array.push`, `Array.uget`).",
+  typeRow ``ByteArray 0 (.fixed (.list .int)) .approximate ""
+    "a byte list, as `Array UInt8` under the shim.",
   typeRow ``Option 1 (.con "option" [0]) .exact "" "",
   typeRow ``Prod 2 (.tuple [0, 1]) .exact "" "",
   typeRow ``Except 2 (.con "result" [1, 0]) .exact ""
@@ -185,7 +192,7 @@ def reservedTypeNames : List String :=
   (typeRows.filterMap fun r =>
     match r.spelling with
     | .con name _ => if name.contains '.' then none else some name
-    | .tuple _ => none).eraseDups
+    | .tuple _ | .fixed _ => none).eraseDups
 
 /-! ## 4. The table's own check -/
 
@@ -212,12 +219,13 @@ def typeRowProblems (rows : List TypeRow) : List String := Id.run do
     | .tuple ps =>
       if ps.length < 2 then
         out := out ++ [s!"type row {r.lean}: a tuple of fewer than two parts"]
+    | .fixed _ => pure ()
     for p in Fidelity.problems r.fidelity r.domain do
       out := out ++ [s!"type row {r.lean}: {p}"]
   return out
 
 #guard (typeRowProblems typeRows).isEmpty
-#guard typeRows.length == 19
+#guard typeRows.length == 20
 #guard reservedTypeNames == ["int", "bool", "string", "unit", "float", "list", "option", "result"]
 
 /-! ### Controls: each altered copy is refused, for its own reason -/

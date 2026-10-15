@@ -1,0 +1,7 @@
+ocamlfind: [WARNING] Package `mtime.clock.os': Deprecated, use the mtime.clock library.
+PASS same job client on Picos FIFO
+PASS same job client on Picos thread scheduler
+PASS same job client on Picos multidomain scheduler
+PASS domain-local-await receives copied completion on plain domain
+PASS same domain-local-await client receives completion inside Eio
+ALL INTEROPERABILITY PROBES PASSED

@@ -1253,6 +1253,8 @@ let sh_dispatcher_insert priority task dispatcher = D.enqueue dispatcher ~priori
   List.init (String.length s) (fun i -> Char.code (String.get s i))
   let lcnf_utf8_length s =
   String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
+  let lcnf_utf8_of_code_points cs =
+  let b = Buffer.create 16 in List.iter (fun c -> Buffer.add_utf_8_uchar b (Uchar.of_int c)) cs; Buffer.contents b
   let lcnf_nat_mul a b =
   if a = 0 then 0 else if b > max_int / a then max_int else a * b
   let rec lcnf_nat_pow a b =

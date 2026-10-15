@@ -1,0 +1,40 @@
+# ./effect_rpc 8475 8476: each message the server read and wrote, 2026-10-15
+effect_rpc: NDJSON socket on 127.0.0.1:8475, HTTP on 127.0.0.1:8476
+[socket tcp:127.0.0.1:49428]  request id 0 insert "milk"
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":0,"exit":{"_tag":"Success","value":{"id":1,"title":"milk","done":false}}}
+[socket tcp:127.0.0.1:49428]  request id 1 insert "tea"
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":1,"exit":{"_tag":"Success","value":{"id":2,"title":"tea","done":false}}}
+[socket tcp:127.0.0.1:49428]  request id 2 setDone [1,true]
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":2,"exit":{"_tag":"Success","value":{"id":1,"title":"milk","done":true}}}
+[socket tcp:127.0.0.1:49428]  request id 3 echoAfter [300,"slow"]
+[socket tcp:127.0.0.1:49428]  request id 4 echoAfter [20,"fast"]
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":4,"exit":{"_tag":"Success","value":"fast"}}
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":3,"exit":{"_tag":"Success","value":"slow"}}
+[socket tcp:127.0.0.1:49428]  request id 5 insert "boom"
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":5,"exit":{"_tag":"Failure","cause":[{"_tag":"Fail","error":{"_tag":"SqlError","message":"disk full"}}]}}
+[socket tcp:127.0.0.1:49428]  request id 6 echoAfter [2000,"never"]
+[socket tcp:127.0.0.1:49428]  interrupt: id 6 cancelled
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":6,"exit":{"_tag":"Failure","cause":[{"_tag":"Interrupt","fiberId":null}]}}
+[socket tcp:127.0.0.1:49428]  request id 7 delete 2
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":7,"exit":{"_tag":"Success","value":true}}
+[socket tcp:127.0.0.1:49428]  request id 8 all null
+[socket tcp:127.0.0.1:49428]  reply {"_tag":"Exit","requestId":8,"exit":{"_tag":"Success","value":[{"id":1,"title":"milk","done":true}]}}
+[http]  request id 9 insert "milk"
+[http]  reply [{"_tag":"Exit","requestId":9,"exit":{"_tag":"Success","value":{"id":1,"title":"milk","done":false}}}]
+[http]  request id 10 insert "tea"
+[http]  reply [{"_tag":"Exit","requestId":10,"exit":{"_tag":"Success","value":{"id":2,"title":"tea","done":false}}}]
+[http]  request id 11 setDone [1,true]
+[http]  reply [{"_tag":"Exit","requestId":11,"exit":{"_tag":"Success","value":{"id":1,"title":"milk","done":true}}}]
+[http]  request id 12 echoAfter [300,"slow"]
+[http]  request id 13 echoAfter [20,"fast"]
+[http]  reply [{"_tag":"Exit","requestId":13,"exit":{"_tag":"Success","value":"fast"}}]
+[http]  reply [{"_tag":"Exit","requestId":12,"exit":{"_tag":"Success","value":"slow"}}]
+[http]  request id 14 insert "boom"
+[http]  reply [{"_tag":"Exit","requestId":14,"exit":{"_tag":"Failure","cause":[{"_tag":"Fail","error":{"_tag":"SqlError","message":"disk full"}}]}}]
+[http]  request id 15 echoAfter [2000,"never"]
+[http]  request id 16 delete 2
+[http]  reply [{"_tag":"Exit","requestId":16,"exit":{"_tag":"Success","value":true}}]
+[http]  request id 17 all null
+[http]  reply [{"_tag":"Exit","requestId":17,"exit":{"_tag":"Success","value":[{"id":1,"title":"milk","done":true}]}}]
+[socket tcp:127.0.0.1:49428]  closed
+[http]  reply [{"_tag":"Exit","requestId":15,"exit":{"_tag":"Success","value":"never"}}]

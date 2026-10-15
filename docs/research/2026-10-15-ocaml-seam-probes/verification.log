@@ -1,0 +1,24 @@
+PASS retained probe outcomes, selected source hashes, and document links
+{
+  "conversion_runtime_checks": 88,
+  "generated_ty_constructor_samples": 29,
+  "ordinary_record_quickcheck_samples": 256,
+  "jane_street_runtime_checks": 24,
+  "jane_street_compile_rejection": 1,
+  "eio_checks_including_compile_rejection": 22,
+  "scheduler_interoperability_checks": 5,
+  "native_eio_interface_execution_checks": 14,
+  "native_eio_interface_type_refusals": 2,
+  "lean_model_checks": 12,
+  "lowering_commands_with_expected_outcomes": 13,
+  "resolved_document_links": 30
+}
+MEASURE changed_source_pins_since_individual_probes=8
+CHANGED conversions ocaml/eff/eff_types.ml
+CHANGED conversions src/OCaml5/Lcnf/TypeRows.lean
+CHANGED lowering ocaml/eff/eff_types.ml
+CHANGED lowering ocaml/gen/api_gen.ml
+CHANGED lowering ocaml/engine/api_engine.ml
+CHANGED lowering src/OCaml5/Lcnf/Builtins.lean
+CHANGED lowering src/OCaml5/Lcnf/Translate.lean
+CHANGED lowering src/OCaml5/Lcnf/TypeRows.lean

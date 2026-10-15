@@ -262,7 +262,8 @@ def targetLibrary : List LibFn := [
   infixOp "lsr", infixOp "&&", infixOp "||", infixOp "^", infixOp "@",
   { name := "max_int", arity := 0, isInfix := false, target := .bound },
   prim "max" 2, prim "min" 2, prim "not" 1, prim "fst" 1, prim "snd" 1, prim "failwith" 1,
-  prim "lcnf_utf8_bytes" 1, prim "lcnf_utf8_length" 1,
+  prim "lcnf_utf8_bytes" 1, prim "lcnf_utf8_length" 1, unruled "lcnf_utf8_of_code_points" 1,
+  unruled "string_of_int" 1,
   prim "List.rev" 1, prim "List.rev_append" 2, prim "List.length" 1, prim "List.nth" 2,
   scan "List.exists" true, scan "List.for_all" false, unruled "List.map" 2,
   unruled "List.filter" 2, unruled "List.fold_left" 3, unruled "List.find_opt" 2,
@@ -282,8 +283,9 @@ def libraryArity? (lib : List LibFn) (name : String) : Option Nat :=
 def isOperator (lib : List LibFn) (symbol : String) : Bool :=
   lib.any fun f => f.isInfix && f.name == symbol
 
-/-- The two primitives the prelude carries as verbatim OCaml. Strings admitted by this profile
-are valid UTF-8; `ByteArray` and `Array UInt8` both use a byte list. -/
+/-- The three primitives the prelude carries as verbatim OCaml. Strings admitted by this profile
+are valid UTF-8; `ByteArray` and `Array UInt8` both use a byte list, and a `Char` is its code
+point. -/
 -- Declarations, not `rawD`: a top-level `rawD` is text `Ml.Check` cannot see into, so a module
 -- holding one has to be checked with its value scope open and `unbound-value` stops deciding
 -- anything there (tooling plan 4.3). The binder and its parameter are structure the checker
@@ -292,7 +294,9 @@ def rawPrimitives : List Ml.Bind := [
   { name := "lcnf_utf8_bytes", params := [("s", none)],
     body := .raw "List.init (String.length s) (fun i -> Char.code (String.get s i))" },
   { name := "lcnf_utf8_length", params := [("s", none)],
-    body := .raw "String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s" }]
+    body := .raw "String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s" },
+  { name := "lcnf_utf8_of_code_points", params := [("cs", none)],
+    body := .raw "let b = Buffer.create 16 in List.iter (fun c -> Buffer.add_utf_8_uchar b (Uchar.of_int c)) cs; Buffer.contents b" }]
 
 private def va : Ml.Expr := .var "a"
 private def vb : Ml.Expr := .var "b"
@@ -477,6 +481,22 @@ def builtins : List Builtin := [
   row `ByteArray.data (.extern "lean_byte_array_data" (some .identity)) (same) .exact "" []
     "Byte arrays use the same list-of-byte representation as their data array.",
   -- List
+  -- The session's closure (LC-6, LC-7): strings from code points, bytes, and the platform.
+  row `String.ofList (.extern "lean_string_mk" none) (.library "lcnf_utf8_of_code_points") .exact "" []
+    "A `Char` is its code point, and every one is a Unicode scalar value, so the UTF-8 encoding is the string Lean's `String.ofList` builds.",
+  row `String.toByteArray (.extern "lean_string_to_utf8" (some .strToUTF8)) (.library "lcnf_utf8_bytes") .domain "valid UTF-8" []
+    "as `String.toUTF8`, whose bytes it is.",
+  row `ByteArray.emptyWithCapacity (.extern "lean_mk_empty_byte_array" (some .arrayMkEmpty)) (arrayEmpty) .exact "" []
+    "the capacity is a hint; the byte list is empty.",
+  row `ByteArray.push (.extern "lean_byte_array_push" (some .arrayPush)) (arrayPush) .exact "" []
+    ""
+    (cost := "O(n) per push, as `Array.push` under the shim."),
+  row `Char.ofNatAux (.extern "lean_uint32_of_nat" (some .identity)) (same) .exact "" []
+    "the proof that the natural is a scalar value is erased; the code point is the natural.",
+  row `USize.repr (.extern "lean_string_of_usize" none) (.library "string_of_int") .domain "the value < 2^62" []
+    "`string_of_int` writes the decimal digits with no leading zero, as `Nat.repr` does.",
+  row `System.Platform.getNumBits (.extern "lean_system_platform_nbits" none) (.inline ["u"] (.int 64)) .exact "" []
+    "the engine requires a 63-bit integer host (`E4_engine.Make`), which is a 64-bit platform.",
   row `List.appendTR .body (op "@") .exact "" []
     "`appendTR` is `append` (the tail-recursive spelling the mono phase leaves behind).",
   row `List.append .body (op "@") .exact "" []
@@ -556,6 +576,9 @@ def builtins : List Builtin := [
     "Lean's `Array.uget a i h` is total (`h` proves `i` in range) and the row is `List.nth`, which **raises** `Failure \"nth\"` out of range and `Invalid_argument` on a negative index."
     (cost := "O(i) under the shim where Lean's is O(1)."),
   -- Option, Prod, panic
+  row `Array.getInternal (.extern "lean_array_fget" (some .arrayGet)) (.library "List.nth") .exact "" []
+    "the proof that the index is in range is erased; `List.nth` answers in range."
+    (cost := "O(i) under the shim where Lean's is O(1)."),
   row `Option.isSome .body (.library "Option.is_some") .exact "" []
     "",
   row `Option.isNone .body (.library "Option.is_none") .exact "" []
@@ -813,11 +836,13 @@ def problems : List String := problemsOf builtins support targetLibrary
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
 #guard etaBinders.all fun b => !protectedNames.contains b && !(targetLibrary.map (·.name)).contains b
 #guard maxArity == 3
-#guard builtins.length == 99
+#guard builtins.length == 107
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
--- row but two (`USize.add`, `panicCore`), and the target evaluator scans with two functions.
-#guard sourcePrims.length == 41
-#guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) == [`USize.add, `panicCore]
+-- row but five (three the session's closure needs, `USize.add`, `panicCore`), and the target
+-- evaluator scans with two functions.
+#guard sourcePrims.length == 46
+#guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) ==
+  [`String.ofList, `USize.repr, `System.Platform.getNumBits, `USize.add, `panicCore]
 #guard targetScans.toList.length == 2 && targetScans["List.exists"]? == some true
 #guard targetArities["Option.value~default"]? == some 2 && (targetArities["List.map"]?).isNone
 

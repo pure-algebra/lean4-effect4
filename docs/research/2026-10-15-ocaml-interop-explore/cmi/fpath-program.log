@@ -1,0 +1,12 @@
+# bun --no-install run cmi/fpath_program.ts http://127.0.0.1:8474 (bun 1.4.2, effect 4.0.0-rc.112), against ./fpath_main 8474, 2026-10-15
+built 39 methods from the host's table: Fpath.dir_sep, Fpath.is_seg, Fpath.is_rel_seg, Fpath.v, Fpath.add_seg, Fpath.append, Fpath.split_volume, Fpath.segs, Fpath.is_dir_path, Fpath.is_file_path, Fpath.to_dir_path, Fpath.filename, Fpath.split_base, Fpath.base, Fpath.basename, Fpath.parent, Fpath.rem_empty_seg, Fpath.normalize, Fpath.is_prefix, Fpath.find_prefix, Fpath.rem_prefix, Fpath.is_rel, Fpath.is_abs, Fpath.is_root, Fpath.is_current_dir, Fpath.is_parent_dir, Fpath.is_dotfile, Fpath.equal, Fpath.compare, Fpath.to_string, Fpath.of_string, Fpath.get_ext, Fpath.has_ext, Fpath.mem_ext, Fpath.exists_ext, Fpath.add_ext, Fpath.rem_ext, Fpath.set_ext, Fpath.split_ext
+Fpath.normalize('a/./b/../c')                "a/c"
+Fpath.segs('/usr/local/lib')                 ["","usr","local","lib"]
+Fpath.split_ext('archive.tar.gz')  ?multi default ["archive.tar",".gz"]
+Fpath.add_seg(['/srv', 'www'])               "/srv/www"
+Fpath.rem_prefix(['/srv', '/srv/www/x'])     "www/x"
+Fpath.is_prefix(['/a', '/b/c'])              false
+Fpath.compare(['a', 'b'])                    -1
+Fpath.of_string('')  (Error `Msg)            {"_tag":"RowFailure","row":"Fpath.of_string","error":{"_tag":"Msg","value":"\"\": invalid path"}}
+Fpath.v('')  (raises Invalid_argument)       {"_tag":"RowFailure","row":"Fpath.v","error":{"_tag":"Raised","value":"Invalid_argument(\"\\\"\\\": invalid path\")"}}
+ALL FPATH CALLS ANSWERED
