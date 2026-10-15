@@ -4,6 +4,7 @@ import Test.Dogfood.Proofs.QueueWorkersTakeSites
 import Test.Dogfood.Proofs.QueueWorkersWithdrawalSites
 import Test.Dogfood.Proofs.QueueWorkersRetrySites
 import Test.Dogfood.Proofs.QueueWorkersOfferSites
+import Test.Dogfood.Proofs.QueueWorkersOfferTail
 import Test.Dogfood.Proofs.QueueWorkersReadonlySource
 
 /-!
@@ -46,6 +47,9 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
       CodeAt total table owner world kind (.success value)
   | failure {world kind cause} : CodeAt total table owner world kind (.failure cause)
   | ordinary {world code} (held : QueueWorkersReadonly.Code total code) :
+      CodeAt total table owner world .ordinary code
+  | postOffer {world bindings code}
+      (held : QueueWorkersOfferTail.Code total bindings (QueueWorkersOfferSites.path.dropLast ++ [1]) code) :
       CodeAt total table owner world .ordinary code
   | notification {world kind bindings code}
       (spec : QueueWorkersNotificationFlow.Spec (Programs.queueProgram total))
@@ -215,6 +219,7 @@ theorem assignment_input (total : Nat) (table : RowTable)
   | ordinary owned =>
     change (3 ≠ 0 ∧ 3 ≠ 3) at owned
     exact (owned.2 rfl).elim
+  | postOffer owned => exact (QueueWorkersOfferTail.no_assignment total _ term env owned).elim
   | notification _spec _flat _phase owned => exact owned.elim
   | assignment held leading found => exact ⟨rfl, _, rfl, held, leading, found⟩
 
@@ -273,6 +278,7 @@ theorem take_input (total : Nat) (table : RowTable)
       (∃ hint, point.env[worker + 10]? = some (.promise hint)) := by
   cases good with
   | ordinary owned => exact owned.elim
+  | postOffer => obtain ⟨_, impossible⟩ := takeKind; cases impossible
   | notification _spec _flat _phase owned => exact owned.elim
   | take member request selected leading path hinted => exact ⟨_, member, _, _, rfl, rfl, rfl, request, selected, leading, path, hinted⟩
   | withdraw => obtain ⟨_, impossible⟩ := takeKind; cases impossible
