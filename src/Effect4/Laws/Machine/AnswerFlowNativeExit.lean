@@ -27,11 +27,20 @@ def ResultAt (world : World) (output : Kind) (result : Iter EffName EffThunk Val
   | .finished exit => ExitAt model world output exit
   | _ => FamilyResult model Edge world output result.fiber.frame.current result.fiber.frame.stack
 
-/-- The actual native frame dispatcher retains the exit permission of a completed frame. -/
-theorem step_frame_result (world : World) (output : Kind) (machine : NativeMachine)
-    (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
-    (typed : FamilyStep model Edge world output (fiber.frame.step interp.toPrimInterp).1) :
-    ResultAt model Edge world output (evaluatePrim.stepFrame interp machine fiber yielding) := by
+/-- One actual native result reads the same predicate on its running or finished frame step.
+Concept: scope-lifetime-finalization R11. Consumer: Timeout's whole numeric runtime authority. -/
+def ResultOf (Post : FrameStep EffName EffThunk Val Err Defect FiberId Ann → Prop)
+    (result : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) : Prop :=
+  match result.outcome with
+  | .finished exit => Post (.finished exit)
+  | _ => Post (.running result.fiber.frame)
+
+/-- The existing native frame proof transports an arbitrary actual step predicate.
+The semantic result reader remains its family-permission instance. -/
+theorem step_frame_post (Post : FrameStep EffName EffThunk Val Err Defect FiberId Ann → Prop)
+    (machine : NativeMachine) (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (yielding : Bool) (typed : Post (fiber.frame.step interp.toPrimInterp).1) :
+    ResultOf Post (evaluatePrim.stepFrame interp machine fiber yielding) := by
   unfold evaluatePrim.stepFrame
   cases actual : fiber.frame.step interp.toPrimInterp with
   | mk step events =>
@@ -39,6 +48,13 @@ theorem step_frame_result (world : World) (output : Kind) (machine : NativeMachi
     cases step with
     | running frame => exact typed
     | finished exit => exact typed
+
+/-- The actual native frame dispatcher retains the exit permission of a completed frame. -/
+theorem step_frame_result (world : World) (output : Kind) (machine : NativeMachine)
+    (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (typed : FamilyStep model Edge world output (fiber.frame.step interp.toPrimInterp).1) :
+    ResultAt model Edge world output (evaluatePrim.stepFrame interp machine fiber yielding) := by
+  exact step_frame_post interp (FamilyStep model Edge world output) machine fiber yielding typed
 
 /-- The actual fused continuation pop retains the current primitive. -/
 theorem getCont_current (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
