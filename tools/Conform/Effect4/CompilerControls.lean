@@ -236,8 +236,14 @@ private def labelled (f : String) (args : List (Ml.ArgLabel × Ml.Expr)) : Ml.Ex
 #guard refused (run { binds := {} } 200 (Ml.Expr.call "Option.value" [someOf 3, .int 7]))
   "unbound name `Option.value`"
 
--- The binder policy recognizes types and the explicitly admitted Row order instance.
-#guard (Lcnf.typeParameterIndices `Indexed 1
+-- The parameter rule by binder kind: a type parameter is kept, and an instance parameter and
+-- a value parameter are dropped. A telescope shorter than its count is the one refusal.
+#guard (Lcnf.typeParameterIndices `Indexed 3
+  (.forallE `α (.sort (.succ .zero))
+    (.forallE `inst (.app (.const ``Inhabited [.succ .zero]) (.bvar 0))
+      (.forallE `n (.const ``Nat []) (.sort .zero) .default) .instImplicit) .default)).toOption
+  == some #[0]
+#guard (Lcnf.typeParameterIndices `Indexed 2
   (.forallE `n (.const ``Nat []) (.sort .zero) .default)).toOption.isNone
 
 private def host (name : Name) (args : List Ml.Expr) : Ml.Expr :=

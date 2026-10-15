@@ -12,8 +12,7 @@ OCaml manual references are to the 5.1.1 manual:
 
 * §11.1 *Lexical conventions*, "Identifiers" and "Keywords" — the character class and the
   55 reserved words;
-* §11.1, "Integer literals", "Floating-point literals", "Character literals", "String literals" —
-  the escape sequences `escString` and `escChar` produce;
+* §11.1, "String literals" — the escape sequences `escString` produces;
 * §11.4 *Names* — the capitalisation rule: a `value-name` and a `field-name` begin with a
   lowercase letter or `_`, a `constr-name`, `tag-name` and `module-name` with an uppercase
   letter, and a `typeconstr-name` follows the `value-name` class.
@@ -26,10 +25,11 @@ namespace OCaml5.Ml
 
 /-! ## Literals
 
-`escString` is the body of a `" … "` literal and `escChar` the body of a `' … '` literal, both in
-the escapes of §11.1. Anything outside printable ASCII becomes a `\DDD` decimal escape, which is
-the one escape form every OCaml backend agrees on byte for byte: `\uXXXX` is not OCaml, and a raw
-byte above 126 in a source file makes the literal depend on the file's encoding. -/
+`escString` is the body of a `" … "` literal, in the escapes of §11.1. Anything outside
+printable ASCII becomes a `\DDD` decimal escape, which is the one escape form every OCaml backend
+agrees on byte for byte: `\uXXXX` is not OCaml, and a raw byte above 126 in a source file makes
+the literal depend on the file's encoding. The route writes no character literal: a Lean `Char`
+is its code point, an `int` (the type row of `Char`, `OCaml5.Lcnf.typeRows`). -/
 
 /-- Three decimal digits, zero-padded: the `\DDD` escape's payload. -/
 private def pad3 (n : Nat) : String :=
@@ -51,16 +51,6 @@ private def escStringByte (b : UInt8) : String :=
 are first encoded as UTF-8, then each byte gets a three-digit escape. -/
 def escString (s : String) : String :=
   s.toUTF8.data.foldl (init := "") fun acc b => acc ++ escStringByte b
-
-/-- The body of an OCaml character literal (§11.1, "Character literals"). A `'` must be escaped
-here and a `"` need not be, which is why this is not `escString`. -/
-def escChar (c : Char) : String :=
-  if c == '\'' then "\\'"
-  else if c == '\\' then "\\\\"
-  else if c == '\t' then "\\t"
-  else if c == '\n' then "\\n"
-  else if c.toNat < 32 || c.toNat > 126 then "\\" ++ pad3 c.toNat
-  else String.singleton c
 
 /-! ## Reserved words -/
 
@@ -240,8 +230,6 @@ def tyVarName (s : String) : String :=
 
 #guard escString "perform\tNumber" == "perform\\tNumber"
 #guard escString "a\"b\\c" == "a\\\"b\\\\c"
-#guard escChar '\'' == "\\'"
-#guard escChar 'a' == "a"
 
 #guard reservedWords.length == 56
 #guard reservedNames.length == 57

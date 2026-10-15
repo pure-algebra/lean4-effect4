@@ -2,6 +2,7 @@ import Lean
 import OCaml5.Ml.Syntax
 import OCaml5.Ml.Render
 import OCaml5.Lcnf.Externs
+import OCaml5.Lcnf.TypeRows
 
 /-!
 # OCaml5.Lcnf.Builtins
@@ -11,7 +12,8 @@ their own bodies. One row is data: the constant, its OCaml form and its contract
 the prelude, the reserved names and the fidelity inventory are computed from the rows.
 
 **Depends on.** `OCaml5.Ml.Syntax` (a form is OCaml syntax), `OCaml5.Ml.Render` (a form's
-spelling in a report), `OCaml5.Lcnf.Externs` (`stripRedArg`).
+spelling in a report), `OCaml5.Lcnf.Externs` (`stripRedArg`), `OCaml5.Lcnf.TypeRows` (the
+contract's class, `Fidelity`, which the type rows share).
 
 **Properties.**
 * **One owner.** A constant has a row in `builtins` or the route translates it. `builtin?`,
@@ -27,48 +29,23 @@ spelling in a report), `OCaml5.Lcnf.Externs` (`stripRedArg`).
   is exact for an atom. `Form.strict` holds when a body evaluates each parameter exactly once;
   `Translate.applyBuiltin` binds every other argument that is not an atom before the form.
 * **Every row has a contract.** `fidelity`, `domain`, `controls` and `note` have no default.
-  The class is a reading of the row against the Lean definition. No theorem proves a row.
+  The class is a reading of the row against the Lean definition. No theorem proves a row. An
+  exact row states no domain, and a row exact under a domain states its domain: *checked*.
 * **The raw natural rows retain their numeric limits.** Addition and successor use 63-bit `+`.
   Raw multiplication, powers and left shifts saturate at `max_int`; subtraction stops at zero.
   `Profile.grow` and `Profile.scale` instead compute exactly and refuse outside their declared domain.
   Decisions row 108 remains open for the raw rows.
 
-**What it does not own.** The native constructors (`OCaml5.Lcnf.Native`), the exact clock's
-constructors and type (`OCaml5.Lcnf.Clock`), and the extern table of a run
-(`OCaml5.Lcnf.Externs`).
+**What it does not own.** The type rows (`OCaml5.Lcnf.TypeRows`), the native constructors
+(`OCaml5.Lcnf.Native`), the exact clock's constructors (`OCaml5.Lcnf.Clock`), and the extern
+table of a run (`OCaml5.Lcnf.Externs`).
 -/
 
 namespace OCaml5.Lcnf
 
 open Lean
 
-/-! ## 1. The contract of a row -/
-
-/-- How faithfully an OCaml form reproduces the Lean constant it stands for. The class is a
-claim about the row, read against the Lean definition. -/
-inductive Fidelity
-  /-- The OCaml form denotes the same function on the whole Lean domain. -/
-  | exact
-  /-- The OCaml form denotes the same function on a stated sub-domain, and something else
-  outside it. The domain is the row's `domain` field. -/
-  | domain
-  /-- The OCaml form denotes a different function that agrees on the values this tree
-  produces, or differs in a way the row states. -/
-  | approximate
-  /-- The OCaml form denotes a different function and the difference can be reached. -/
-  | unsound
-  deriving DecidableEq, Repr, Inhabited
-
-namespace Fidelity
-protected def toString : Fidelity → String
-  | .exact => "exact"
-  | .domain => "exact-under-domain"
-  | .approximate => "approximate"
-  | .unsound => "unsound"
-instance : ToString Fidelity := ⟨Fidelity.toString⟩
-end Fidelity
-
-/-! ## 2. Forms -/
+/-! ## 1. Forms -/
 
 /-- The OCaml realization of a row. Each form denotes one closed function of the target. -/
 inductive Form where
@@ -110,7 +87,7 @@ structure Support where
 def Support.bind (s : Support) : Ml.Bind :=
   { name := s.name, params := s.params.map fun p => (p, none), body := s.body }
 
-/-! ## 3. What a body uses
+/-! ## 2. What a body uses
 
 Two fragments of `Ml.Expr`. An inline body is built from variables, literals, constructors,
 applications, labelled applications, infix operators, conditionals and list literals. A support
@@ -226,7 +203,7 @@ def substLabelled (σ : List (String × Ml.Expr)) :
 
 end
 
-/-! ## 4. The target's library and the prelude -/
+/-! ## 3. The target's library and the prelude -/
 
 /-- The functions and values of the target's own library that a form or a support body may
 name, each with the number of arguments it takes. They are trusted leaves: the route does not
@@ -303,7 +280,7 @@ def prelude : List Ml.Decl :=
     ++ support.map (fun s => Ml.Decl.letD s.recursive [s.bind])
     ++ [.blank]
 
-/-! ## 5. The table -/
+/-! ## 4. The table -/
 
 namespace Form
 
@@ -601,7 +578,7 @@ def builtins : List Builtin := [
     "Both read exactly the spelling `toDecimal` writes: a non-empty digit string with no leading zero, or `0`. Lean's side is `ofDecimal_exact` and `ofDecimal_toDecimal`; the OCaml side is read against `e4_clock.ml`. No theorem joins the two."
 ]
 
-/-! ## 6. What the table computes -/
+/-! ## 5. What the table computes -/
 
 /-- The support function of a name. -/
 def supportOf? (name : String) : Option Support := support.find? (·.name == name)
@@ -680,7 +657,7 @@ def builtinIndex : Std.HashMap Name Builtin :=
 /-- The row of a Lean constant, if it has one. A `_redArg` twin has its wrapper's row. -/
 def builtin? (n : Name) : Option Builtin := builtinIndex[stripRedArg n]?
 
-/-! ## 7. The table's own check -/
+/-! ## 6. The table's own check -/
 
 /-- The names of a list that occur more than once, each reported once. -/
 private def repeated [BEq α] (xs : List α) : List α :=
@@ -699,6 +676,10 @@ def problemsOf (rows : List Builtin) (sup : List Support) (lib : List (String ×
       out := out ++ [s!"row {r.lean}: the key is not normalized"]
   for n in repeated (rows.map (·.lean)) do
     out := out ++ [s!"row {n}: the key has two rows"]
+  -- the contracts
+  for r in rows do
+    for p in Fidelity.problems r.fidelity r.domain do
+      out := out ++ [s!"row {r.lean}: {p}"]
   -- the forms
   for r in rows do
     match r.form with
@@ -779,6 +760,9 @@ private def refuses (ps : List String) (reason : String) : Bool :=
   "support `lcnf_nat_mul`: `max_int` is not declared before it"
 #guard refuses (problemsOf builtins support (libraries.filter (·.1 != "max")))
   "row Nat.sub: `max` is not declared"
+-- a contract whose domain disagrees with its class
+#guard refuses (problemsOf [row `Nat.add (Form.op "+") .exact "a + b < 2^62" [] ""] support libraries)
+  "row Nat.add: an exact row states a domain"
 -- two rows for one key, and a key that `stripRedArg` would change
 #guard refuses (problemsOf (builtins ++ builtins.take 1) support libraries)
   "row Nat.decEq: the key has two rows"

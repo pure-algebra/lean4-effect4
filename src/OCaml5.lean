@@ -26,3 +26,4 @@ import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
+import OCaml5.Lcnf.TypeRows

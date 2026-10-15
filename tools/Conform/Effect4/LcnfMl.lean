@@ -63,7 +63,6 @@ partial def ofPat : OCaml5.Ml.Pat → Except String Target.Pat
   | .constrained p _ => ofPat p
   | .alias .. => .error "Ml.Pat.alias"
   | .orPat .. => .error "Ml.Pat.orPat"
-  | .char _ => .error "Ml.Pat.char"
   | .float _ => .error "Ml.Pat.float"
   | .exnPat _ => .error "Ml.Pat.exnPat"
   | .polyPat .. => .error "Ml.Pat.polyPat"
@@ -128,7 +127,6 @@ partial def ofExpr : OCaml5.Ml.Expr → Except String Target.Expr
   | .matchWith .. => .error "Ml.Expr.matchWith"
   | .tryWithEff .. => .error "Ml.Expr.tryWithEff"
   | .raw _ => .error "Ml.Expr.raw"
-  | .char _ => .error "Ml.Expr.char"
   | .float _ => .error "Ml.Expr.float"
   | .intOf _ => .error "Ml.Expr.intOf"
   | .lam .. => .error "Ml.Expr.lam"

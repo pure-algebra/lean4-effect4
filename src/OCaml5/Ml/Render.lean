@@ -124,7 +124,6 @@ private def patLevel : Pat → Nat
   | .var _ => 4
   | .int _ => 4
   | .str _ => 4
-  | .char _ => 4
   | .float _ => 4
   | .ctor _ [] => 4
   | .ctor _ _ => 3
@@ -151,7 +150,6 @@ def renderPatAt (need : Nat) (p : Pat) : String :=
     | .var n => n
     | .int n => toString n
     | .str s => "\"" ++ escString s ++ "\""
-    | .char c => "'" ++ escChar c ++ "'"
     | .float r => r
     | .ctor n [] => n
     | .ctor n [a] => n ++ " " ++ renderPatAt 4 a
@@ -223,7 +221,6 @@ private def exprLevel : Expr → Nat
   | .str _ => 17
   | .bool _ => 17
   | .unit => 17
-  | .char _ => 17
   | .float r => if r.startsWith "-" then 17 else 17
   | .intOf n => if n < 0 then 17 else 17
   | .ctor _ [] => 17
@@ -297,7 +294,6 @@ def renderExprAt (ind : Nat) (need : Nat) (e : Expr) : String :=
     | .str s => "\"" ++ escString s ++ "\""
     | .bool b => if b then "true" else "false"
     | .unit => "()"
-    | .char c => "'" ++ escChar c ++ "'"
     | .float r => if r.startsWith "-" then "(" ++ r ++ ")" else r
     | .intOf n => if n < 0 then "(" ++ toString n ++ ")" else toString n
     | .ctor n [] => n
@@ -778,7 +774,6 @@ it is the text this file is supposed to produce. -/
 #guard renderExpr 0 (.app (.var "f") [.matchE (.var "x") [.mk .wild none (.int 1)]])
   == "f (match x with\n  | _ -> 1)"
 #guard renderExpr 0 (.intOf (-3)) == "(-3)"
-#guard renderExpr 0 (.char 'a') == "'a'"
 #guard renderExpr 0 (.float "0x1.8p1") == "0x1.8p1"
 #guard renderExpr 0 (.assertE (.bool false)) == "assert false"
 #guard renderExpr 0 (.lam [Param.named "x", Param.optionalD "y" (.int 0), Param.unit] (.var "x"))

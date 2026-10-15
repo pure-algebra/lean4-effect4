@@ -208,7 +208,6 @@ private def bindNamesOfPat : Pat → List String
   | .var n => [n]
   | .int _ => []
   | .str _ => []
-  | .char _ => []
   | .float _ => []
   | .ctor _ args => bindNamesOfPats args
   | .record fs => bindNamesOfPatFields fs
@@ -327,7 +326,6 @@ def checkExpr (env : Env) (site : String) (tp : TailPosition) : Expr → List Di
   | .str _ => []
   | .bool _ => []
   | .unit => []
-  | .char _ => []
   | .float _ => []
   | .intOf _ => []
   | .raw _ => []
@@ -489,7 +487,6 @@ def checkPat (env : Env) (site : String) : Pat → List Diag
   | .var _ => []
   | .int _ => []
   | .str _ => []
-  | .char _ => []
   | .float _ => []
   | .ctor n args => checkCtorUse env site n args.length ++ checkPats env site args
   | .record fs =>

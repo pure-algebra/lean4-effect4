@@ -59,7 +59,7 @@ def allConstructs : List String :=
    "ty.asVar",
   -- patterns
    "pat.wild", "pat.var", "pat.int", "pat.str", "pat.ctor", "pat.record", "pat.tuple",
-   "pat.cons", "pat.alias", "pat.orPat", "pat.char", "pat.float", "pat.listPat",
+   "pat.cons", "pat.alias", "pat.orPat", "pat.float", "pat.listPat",
    "pat.recordOpen", "pat.constrained", "pat.exnPat", "pat.polyPat", "pat.lazyPat",
   -- expressions
    "expr.var", "expr.int", "expr.str", "expr.bool", "expr.unit", "expr.ctor", "expr.app",
@@ -67,7 +67,7 @@ def allConstructs : List String :=
    "expr.matchE", "expr.tryWith", "expr.record", "expr.recordWith", "expr.field",
    "expr.setField", "expr.tuple", "expr.listLit", "expr.mkRef", "expr.deref", "expr.assign",
    "expr.raiseE", "expr.perform", "expr.continueK", "expr.discontinueK", "expr.matchWith",
-   "expr.tryWithEff", "expr.annot", "expr.hole", "expr.raw", "expr.char", "expr.float",
+   "expr.tryWithEff", "expr.annot", "expr.hole", "expr.raw", "expr.float",
    "expr.intOf", "expr.lam", "expr.functionE", "expr.letPat", "expr.openIn", "expr.assertE",
    "expr.lazyE", "expr.arrayLit", "expr.arrayGet", "expr.arraySet", "expr.whileE", "expr.forE",
    "expr.polyCtor", "expr.ifThenOnly", "expr.handler", "expr.matchWithK",
@@ -82,7 +82,7 @@ private def patTag : Pat → String
   | .wild => "pat.wild" | .var _ => "pat.var" | .int _ => "pat.int" | .str _ => "pat.str"
   | .ctor _ _ => "pat.ctor" | .record _ => "pat.record" | .tuple _ => "pat.tuple"
   | .cons _ _ => "pat.cons" | .alias _ _ => "pat.alias" | .orPat _ _ => "pat.orPat"
-  | .char _ => "pat.char" | .float _ => "pat.float" | .listPat _ => "pat.listPat"
+  | .float _ => "pat.float" | .listPat _ => "pat.listPat"
   | .recordOpen _ => "pat.recordOpen" | .constrained _ _ => "pat.constrained"
   | .exnPat _ => "pat.exnPat" | .polyPat _ _ => "pat.polyPat" | .lazyPat _ => "pat.lazyPat"
 
@@ -99,7 +99,7 @@ private def exprTag : Expr → String
   | .continueK _ _ => "expr.continueK" | .discontinueK _ _ => "expr.discontinueK"
   | .matchWith _ _ _ _ _ _ _ => "expr.matchWith" | .tryWithEff _ _ _ _ => "expr.tryWithEff"
   | .annot _ _ => "expr.annot" | .hole _ _ => "expr.hole" | .raw _ => "expr.raw"
-  | .char _ => "expr.char" | .float _ => "expr.float" | .intOf _ => "expr.intOf"
+  | .float _ => "expr.float" | .intOf _ => "expr.intOf"
   | .lam _ _ => "expr.lam" | .functionE _ => "expr.functionE" | .letPat _ _ _ => "expr.letPat"
   | .openIn _ _ => "expr.openIn" | .assertE _ => "expr.assertE" | .lazyE _ => "expr.lazyE"
   | .arrayLit _ => "expr.arrayLit" | .arrayGet _ _ => "expr.arrayGet"

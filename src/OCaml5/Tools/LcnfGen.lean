@@ -267,7 +267,8 @@ def main (argv : List String) : IO Unit := do
       IO.println s!"extern rows: {fnRows.length} fn, {tyRows.length} type, \
         {fieldRows.length} field, {elemRows.length} elem"
       IO.println s!"fn rows used ({closure.usedExterns.size}):"
-      for n in closure.usedExterns do IO.println s!"  {n} -> {(ex.fn? n).get!.head}"
+      for k in closure.usedExterns do
+        IO.println s!"  {k} -> {(ex.fns[k]?.map (·.head)).getD "?"}"
       IO.println s!"type rows used ({gen.usedTys.size}): {gen.usedTys}"
       IO.println s!"field rows used ({gen.usedFields.size}): {gen.usedFields}"
       IO.println s!"elem rows used ({gen.usedElems.size}): {gen.usedElems}"

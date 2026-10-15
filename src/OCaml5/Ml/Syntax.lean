@@ -102,7 +102,6 @@ def int : Ty := .con "int" []
 def bool : Ty := .con "bool" []
 def unit : Ty := .con "unit" []
 def string : Ty := .con "string" []
-def char : Ty := .con "char" []
 def float : Ty := .con "float" []
 def exn : Ty := .con "exn" []
 def named (n : String) : Ty := .con n []
@@ -244,8 +243,6 @@ inductive Pat where
   | alias (p : Pat) (name : String)
   /-- `(p1 | p2)` (§11.6, "pattern | pattern"). Both sides must bind the same variables. -/
   | orPat (a b : Pat)
-  /-- A character literal pattern. -/
-  | char (c : Char)
   /-- A float literal pattern, as the exact source text: see `Expr.float`. -/
   | float (repr : String)
   /-- `[p1; p2; …]` (§11.6, "[ pattern ; … ]"). -/
@@ -380,8 +377,6 @@ inductive Expr : Type where
   /-- Verbatim text, for anything this surface does not spell. `Check` cannot see inside it and
   says so rather than passing it silently. -/
   | raw (text : String)
-  /-- A character literal (§11.1). -/
-  | char (c : Char)
   /-- A float literal, as **exact source text** (§11.1, "float-literal").
 
   The O3 backend caveat: OCaml's three backends do not agree on the decimal spelling of a

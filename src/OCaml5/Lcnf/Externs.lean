@@ -19,6 +19,7 @@ error, so **the table is complete iff the generated file compiles** (§1.3).
 | row | meaning |
 | --- | --- |
 | `fn <lean> <arity> <head> [tok…]` | translate `<lean>` as an application of `<head>`; never emit its definition and never enqueue its callees. `<arity>` is the number of *relevant* (non-erased) arguments; the call is eta-expanded when under-applied and over-applied when over-applied, exactly as `Translate.applyBuiltin` does for a builtin. |
+| `fn <lean>@<host> <arity> <head> [tok…]` | the same, for the specializations of the definition `<lean>` that the compiler made inside the definition `<host>` (`f._at_.h….spec_N`, named by the compiler): the row names the two definitions, never the compiler's numbering, so a renumbered or re-chained specialization still meets its row. |
 | `fn? <lean> …` | the same, but the row may go unused (a row kept live for a root set that does not reach it). Every `fn` row that no declaration hits is a **fatal** stale ledger. |
 | `type <lean> <con>…` | spell the type constant `<lean>` as the postfix chain `<con>…` applied to its own converted arguments: `type Effect4.Machine.Dispatcher task D.t` is `(…) task D.t`. Its declaration is not emitted. |
 | `field <lean-struct>.<field> <con>…` | the field's type must be spelled `τ list`; it becomes the chain applied to `τ` — and to `v` alone when `τ` is a pair `(k * v)`, which is how `List (LayerId × MemoEntry)` becomes `memo_entry L.t`. |
@@ -60,6 +61,10 @@ which is the common case.
 * **`_redArg` blindness.** A row written for `f` also matches `f._redArg`, because
   `reduceArity`'s twin is the constant the mono code actually calls and the two are one
   definition — *by construction* (`fn?`, `stripRedArg`).
+* **Rows by definition and host.** A `fn` row is keyed by a definition, and for a
+  specialization by the definition and its host (`FnKey`). A compiler-made name is read into that
+  key (`FnKey.ofCall`), and one hash lookup answers it: no row names a `spec_N` or an `_at_`
+  chain — *by construction*.
 * **No implicit arity.** A row states its arity; the emitted call is saturated for any number
   of arguments the call site passes — *by construction* (`ExternFn.apply`).
 * **The signatures are bytes, not syntax.** `carrierSignatures` is the verbatim text of the
@@ -97,6 +102,58 @@ def stripSpec : Name → Name
 def normalizeFnName (n : Name) : Name :=
   stripRedArg (stripSpec (stripRedArg n))
 
+/-- A specialization's definition and its host. The compiler names the specialization of `f`
+that it made inside `h` as `f._at_.h.spec_N`, where `h` may itself be such a name and the
+`spec_N` numbers pile up at the end. The definition is `f`, and the host is `h`'s own definition:
+the components up to the next `_at_` or the first `spec_N`. `none` for a name with no `_at_`. -/
+def specializationOf? (n : Name) : Option (Name × Name) :=
+  let cs := (stripRedArg n).components
+  let isSpec (c : Name) : Bool := match c with
+    | .str .anonymous s => s.startsWith "spec_" && (s.drop 5).all Char.isDigit
+    | _ => false
+  let isAt (c : Name) : Bool := c == `_at_
+  match cs.findIdx? isAt with
+  | none => none
+  | some i =>
+    let definition := cs.take i
+    let host := ((cs.drop (i + 1)).takeWhile fun c => !isAt c && !isSpec c)
+    if definition.isEmpty || host.isEmpty then none
+    else some (definition.foldl (· ++ ·) .anonymous, host.foldl (· ++ ·) .anonymous)
+
+/-- The key of a `fn` row: a definition, and for a specialization its host. -/
+structure FnKey where
+  definition : Name
+  host : Option Name := none
+deriving BEq, Hashable, Inhabited
+
+instance : ToString FnKey where
+  toString k := match k.host with
+    | none => toString k.definition
+    | some h => s!"{k.definition}@{h}"
+
+/-- The key a call of the constant `n` meets: its definition and host when `n` is a
+specialization, and its definition with the `_redArg` and `spec_N` suffixes stripped otherwise. -/
+def FnKey.ofCall (n : Name) : FnKey :=
+  match specializationOf? n with
+  | some (definition, host) => { definition, host := some host }
+  | none => { definition := normalizeFnName n }
+
+/-- The key a row of the file names: `<definition>@<host>`, or a definition. -/
+def FnKey.ofRow (text : String) : FnKey :=
+  match text.splitOn "@" with
+  | [definition, host] => { definition := definition.toName, host := some host.toName }
+  | _ => { definition := normalizeFnName text.toName }
+
+#guard specializationOf? `List.find?._at_.Effect4.Machine.ScopeStore.entryAt.spec_0 ==
+  some (`List.find?, `Effect4.Machine.ScopeStore.entryAt)
+#guard specializationOf?
+    `Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep.spec_3.spec_19._redArg ==
+  some (`Effect4.Machine.spawn, `Effect4.Machine.launchEntrant)
+#guard (specializationOf? `Effect4.Machine.spawn).isNone
+#guard FnKey.ofCall `Effect4.Machine.spawn._redArg == { definition := `Effect4.Machine.spawn }
+#guard FnKey.ofRow "Effect4.Machine.spawn@Effect4.Machine.evaluatePrim.withFiber" ==
+  FnKey.ofCall `Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber.spec_0._redArg
+
 /-- How a carg parameter is identified: by 0-based position or by binder name. -/
 inductive CargParam where
   | pos (i : Nat)
@@ -125,8 +182,8 @@ deriving Inhabited
 
 /-- The whole table. -/
 structure Externs where
-  /-- Lean constant → its OCaml form. -/
-  fns : Std.HashMap Name ExternFn := {}
+  /-- A definition, or a definition and its host → its OCaml form. -/
+  fns : Std.HashMap FnKey ExternFn := {}
   /-- Lean type constant → the postfix chain that spells it. -/
   tys : Std.HashMap Name (List String) := {}
   /-- `<struct>.<field>` → the postfix chain that spells the field's carrier. -/
@@ -148,26 +205,16 @@ structure Externs where
 
 instance : Inhabited Externs := ⟨{}⟩
 
-/-- The declared key in `ex.fns` that matches `n`, checking arity on normalized fallback. -/
-def Externs.fnRowKey? (ex : Externs) (n : Name) (arity : Option Nat := none) : Option Name :=
-  if ex.fns.contains n then some n
-  else if ex.fns.contains (stripRedArg n) then some (stripRedArg n)
-  else
-    let norm := normalizeFnName n
-    ex.fns.toList.findSome? fun (k, row) =>
-      if normalizeFnName k == norm && (match arity with | some a => row.arity == a | none => true) then
-        some k
-      else
-        none
+/-- The row a call of the constant `n` meets, with its key (`FnKey.ofCall`). -/
+def Externs.fnRow? (ex : Externs) (n : Name) : Option (FnKey × ExternFn) :=
+  let key := FnKey.ofCall n
+  ex.fns[key]?.map (key, ·)
 
-/-- The row for a constant, `_redArg`-blind and specialization-insensitive when arity matches. -/
-def Externs.fn? (ex : Externs) (n : Name) (arity : Option Nat := none) : Option ExternFn :=
-  match ex.fnRowKey? n arity with
-  | some k => ex.fns[k]?
-  | none => none
+/-- The row for a constant. -/
+def Externs.fn? (ex : Externs) (n : Name) : Option ExternFn := (ex.fnRow? n).map (·.2)
 
-/-- Whether a constant has a row, checking arity on normalized fallback. -/
-def Externs.hasFn (ex : Externs) (n : Name) (arity : Option Nat := none) : Bool := (ex.fn? n arity).isSome
+/-- Whether a constant has a row. -/
+def Externs.hasFn (ex : Externs) (n : Name) : Bool := (ex.fnRow? n).isSome
 
 /-- One operation of a carrier, by the carrier's key. -/
 def Externs.op? (ex : Externs) (carrier op : String) : Option ExternFn :=
@@ -400,9 +447,10 @@ def Externs.parse (text : String) : Except String Externs := do
         throw s!"externs:{lineNo}: row `{name}` has {slots} argument slots for declared arity {k}"
       let fnRow : ExternFn :=
         { arity := k, head := head, spec := spec, optional := kind == "fn?" }
-      let n := name.toName
+      let key := FnKey.ofRow name
+      if ex.fns.contains key then throw s!"externs:{lineNo}: a second row for `{key}`"
       ex := { ex with
-        fns := ex.fns.insert n fnRow,
+        fns := ex.fns.insert key fnRow,
         order := ex.order.push row }
     | _ => throw s!"externs:{lineNo}: cannot read row `{row}`"
   return ex
