@@ -205,3 +205,37 @@ Commands use `/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh`.
 
 The last audit includes `DaemonIteration`, completing the earlier interruption slice's module list.
 No host behaviour or bounded execution claim follows from these proof checks.
+
+## Actual fork and contextual command slice
+
+`Atomic.Store.shop_stages` remains open with its original statement.
+The actual root, daemon and active command history join remains the next consumer.
+
+The base is `ec4fb9adb`; the proof heads are `17908e822` and `faa652b25`.
+`JointCommands` keeps strict application assertions in one contextual premise and postcondition.
+It instantiates the existing `GhostCommands.step` with a trivial auxiliary frame assertion.
+It assumes actual application transitions and establishes no application history by itself.
+
+`RootGraph.fork_parent`, `fork_child` and `fork_rows` join the actual allocated handle, child source role and older rows.
+`RootGraph.native_exit` proves the actual root terminal dispatcher result.
+`DaemonGraph.terminal_frame`, `timer_edge` and `action_frame` retain actual terminal, cancellation and administrative frames.
+`StageGraph.native_rows` retains exact nonacting rows and their published exits through a request native step.
+`StageWorld.final_exit_future` retains certified published outcomes when another fiber advances the world.
+These helpers serve store-typing R4 through `Atomic.Store.shop_stages`.
+They prove neither progress nor a host observation claim.
+
+The daemon annotation drops its unused arbitrary suspension constructor.
+Actual source suspensions still enter through the existing source-point and loop constructors.
+The endpoint and the machine remain unchanged.
+
+Changed paths are the shared `AnswerFlowJointCommands.lean` leaf and eleven Atomic leaves in `faa652b25`.
+All commands run through `/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh`.
+
+- `lake build Test.Dogfood.Scenario.Atomic.RootSpawn Test.Dogfood.Scenario.Atomic.DaemonReturn Test.Dogfood.Scenario.Atomic.StageRows Effect4.Laws.Machine.AnswerFlowJointCommands` succeeds, 1292 jobs.
+- `lake env lean scratch/audit-active-native.lean` audits twelve modules.
+- The audit reports 420 declarations within `[propext, Quot.sound]`, zero planned goals and zero modulo goals.
+- `git diff --check` succeeds.
+
+The next proof joins remaining native park and store results with active machine, queue and detached-task assertions.
+The checked allocation attachment then carries those actual assertions through control histories.
+No bounded or host-only evidence replaces that open producer.
