@@ -48,6 +48,10 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
         (.sync (.op (.refModify ⟨0⟩ (QueueWorkersTakeSites.term worker) point.env)))
   | frontier {world kind point} (zero : point.fuel = 0) :
       CodeAt total table owner world kind (Effect4.Program.frontier point)
+  | suspended {world kind thunk}
+      (next : ∀ view, CodeAt total table owner world kind
+        ((interpAt (Programs.queueProgram total) view table).suspendBody thunk)) :
+      CodeAt total table owner world kind (.suspend thunk)
   | bound {world input output body name}
       (first : CodeAt total table owner world input body)
       (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,

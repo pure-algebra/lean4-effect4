@@ -66,4 +66,25 @@ def firstSpec (total worker : Nat) (member : worker ∈ [1, 2]) :
 def secondSpec (total worker : Nat) (member : worker ∈ [1, 2]) :
     QueueWorkersNotificationFlow.Spec (Programs.queueProgram total) :=
   QueueWorkersNotificationFlow.specification total (secondPath worker) (second_member total worker member)
+
+/-- The actual completed-attempt branch reads the captured tuple and returns its bound option payload. -/
+theorem option_source (total worker : Nat) (member : worker ∈ [1, 2]) :
+    Node.at_ (.eff (Programs.queueProgram total)) (optionPath worker) =
+      some (.eff (.select (.tupleAt (.var (worker + 11)) 0) .option
+        (body (optionPath worker ++ [0]))
+        (.succeed (.app "some" (.cons (.var (worker + 14)) .nil))))) := by
+  rcases List.mem_cons.mp member with rfl | member
+  · kernel_rfl
+  rcases List.mem_cons.mp member with rfl | member
+  · kernel_rfl
+  exact (List.not_mem_nil member).elim
+
+/-- The option branch has the original tuple and both ignored notification answers in scope. -/
+theorem option_level (total worker : Nat) (member : worker ∈ [1, 2]) :
+    SourceScope.levelAt (.eff (Programs.queueProgram total)) 0 (optionPath worker) = some (worker + 14) := by
+  rcases List.mem_cons.mp member with rfl | member
+  · kernel_rfl
+  rcases List.mem_cons.mp member with rfl | member
+  · kernel_rfl
+  exact (List.not_mem_nil member).elim
 end Test.Dogfood.Proofs.QueueWorkersTakeTailSites
