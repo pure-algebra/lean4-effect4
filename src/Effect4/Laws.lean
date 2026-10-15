@@ -379,3 +379,6 @@ separate build targets. `import Effect4` never reaches this root.
 -- M3: carried driver guards and immutable initialized bindings.
 import Effect4.Laws.Program.PlaceFunding.FlowGuarded
 import Effect4.Laws.Program.AnswerSlots.Callbacks
+import Effect4.Laws.Program.AnswerSlots.Actions
+import Effect4.Laws.Program.AnswerSlots.Interp
+import Effect4.Laws.Machine.LiftCoupledFact
