@@ -956,3 +956,101 @@ the traversals' rewriting as algebras.
   former takes a key form, so the target syntax's fold loses five arms.
 - **P-CR6-2.** `fold_of` reads a sibling over a list of pairs and a case analysis on a child
   list's elements. Then `exprUses`, `stmtUses`, `readValue` and `reifyJson?` read as folds.
+
+## CR-4: the typed surface from Lean data
+
+CR-4 lands in parts, each a commit. This section grows with each part.
+
+### Part A: typed Schema code, and the codec gate over it
+
+**The one thing to know.** The codec gate now reads Schemas that Lean prints, not Schemas
+written by hand. Each generated Schema equals rc.112's own revival of Lean's document. One hand
+Schema stays, `Schema.Number`, because the bridge does not lower `number` (R-T6, CR-10).
+
+Base `d738e0727`; the part's commit is the head.
+
+**What landed.**
+
+- **The printer.** `Effect4.Codegen.SchemaCode` (`src/Effect4/Codegen/SchemaCode.lean`) writes a
+  representation as the Schema expression an Effect user writes. It is a second algebra of the
+  generated fold (`codeAlgebra`, on the carrier `Except String Expr`), as the review's P4 (a)
+  and decisions row 392 (2) ask. `ofTy` prints a type's Schema, the bridge's image of its normal
+  form, which the codec reads.
+- **The spelling.** Each node is spelled as rc.112's `toCodeDocument` spells it, with its source
+  lines cited. Each check is spelled as its constructor's `toCode` spells it, from one table
+  (`checkCode`). The declarations come from one table too (`declarations`).
+- **Three departures from rc.112, each with its cause.** A node with annotations is refused,
+  since the bridge writes none. An object's keys take the module's one key form
+  (`Record.keyForm`, decisions row 196). The `Json` declaration prints `Schema.Defect()`,
+  which encodes an `Error` defect that `Schema.Json` refuses (probe `cr4/probe/repr2.ts`).
+- **The refusals.** The printer refuses a node by its name. It refuses a reference, a
+  suspension, an enum, a unique symbol and a bigint literal. It refuses a key that is no string,
+  and a declaration or a check outside its table. On the bridge's image these are the handles,
+  `Ref`, `Fiber`, `Deferred`, a template parameter and the unlowered forms.
+- **The face.** `Api.schemaCode` (`src/Effect4/Api/Codegen.lean`) answers a type's code.
+- **The gate.** `check-schema-codec` writes one fresh module into the checker's work folder,
+  which git ignores (`harness/truth/schema-codec/.work/`). The module holds Lean's results. It
+  holds each case's generated Schema and that Schema's document. Then tsgo 7 checks it with
+  `check.ts`, so each hand value is typed against its generated Schema. `check.ts` takes every
+  Schema from the module.
+- **Two oracles.** rc.112 revives each case's Lean document with its own revivers. The revived
+  Schema's representation equals the generated Schema's. rc.112's code of that revival
+  (`toCodeDocument`), evaluated, is equal too, but at one case.
+- **A defect of rc.112 found.** That case is `recordKeys`. rc.112's code quotes the key
+  `"__proto__"`. An object literal reads a quoted `__proto__` as the prototype, so the code drops
+  the field. The gate names the case.
+- **A red control.** The hand Schema the gate held for `pair` until now, a tuple of any number and
+  a string, is not rc.112's revival of Lean's document. The gate shows that it differs.
+- **A latent TS1117 repaired.** `Codegen.Schema.json` wrote an object with a repeated key as an
+  object literal, which tsgo 7 refuses. It writes one through `Object.fromEntries` now, which
+  keeps the last value, as the literal did at run time. The three schema fixtures do not move.
+
+**The hand Schemas.** `check.ts` held 134 references to Schema constructors before, in 50 calls.
+It holds one now, `Schema.Number` in the function `generated`, for the 18 cases whose type is
+`number`. The bridge writes `number` as an unlowered declaration (decisions rows 121, 158, 160,
+161), so the printer refuses it. R-T6 lowers it, in CR-10. One more hand Schema is the red
+control's.
+
+**Changed files.**
+
+- The core: `src/Effect4/Codegen/SchemaCode.lean` (new), `src/Effect4/Codegen/Schema.lean` and
+  `src/Effect4/Api/Codegen.lean`.
+- The battery: `Test/Codegen/SchemaCode.lean` (new). `Test/All.lean` imports it in one line, at
+  the end of its codegen block, after `Test.Codegen.SchemaGenerationCoverage`.
+- The gate: `harness/truth/schema-codec/{Emit.lean,check.ts}`, the `Makefile`'s `schema-codec`
+  recipe and `.gitignore`.
+- The documents: `docs/GENERATED.md` and `docs/core/traversal-census.md`.
+
+**Commands and results.**
+
+| Command | Result |
+| --- | --- |
+| `lake build Effect4.Codegen.SchemaCode`, `Effect4.Codegen.Schema`, `Effect4.Api.Codegen`, `Test.Codegen.SchemaCode` | each passes |
+| `lake build` of the 50 direct importers of the two changed core modules | passes, 1373 jobs |
+| the probe `cr4/lean/CodeProbe.lean` | the code of the codec corpus's types; the 12 `number` cases refuse at `effect4/unlowered/number` |
+| `make check-schema-codec` | passes: 49 fresh Lean/rc.112 comparisons and 49 host round trips, as at the base; 7 negative controls; 37 generated Schemas, all 37 equal to rc.112's revival of their documents, 36 to its code of them; 18 cases on `Schema.Number` |
+| `make check-schema-ts` | passes: the three fixtures' bytes unchanged |
+| `make check-truth` | passes |
+| `make check-corpus` | passes: 400 programs match the committed results |
+| `make check-ts-reader` | passes: 783 tests |
+| `make check-target` | passes: 104 resolved, none mismatching; 742 pairs, 708 agree, 10 cut, 24 incomplete, CR-3's line |
+
+**Axiom output.** `#axiom_audit Effect4.Codegen.SchemaCode`: 34 declarations within
+`[propext, Quot.sound]`. `#axiom_audit Effect4.Codegen.Schema`: 191 of 195 within; the other four
+are the rendering declarations that `Test/Audit/AxiomGate.lean` admits by name (`jsonSource`,
+`representationSource`, `documentSource`, `multiDocumentSource`).
+
+**Lines.** 559 added and 139 removed, in 11 files.
+
+**Evidence.** *Tested*: the code's agreement with rc.112's revival, for the 37 types of the codec
+corpus, and tsgo 7's typing of the generated Schemas. *Not proved*: that the code builds the
+Schema of its input for every representation. No law states it (row 391), and Lean holds no
+model of rc.112's Schema constructors.
+
+**Open obligations.** The 18 `number` cases wait on R-T6 (CR-10).
+
+**Proposed decisions row (proposal only).**
+
+- **P-CR4-1.** Row 11 closes by row 392 (2), P4 (a). Typed Schema text comes from a second
+  algebra of the fold, and rc.112's `toCodeDocument` is a finite oracle. Row 11's option (b) would
+  make rc.112 the producer, and rc.112's code drops a `__proto__` field.

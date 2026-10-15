@@ -30,9 +30,12 @@ open Effect4
   simp +arith
 
 /-- Preserve data keys that have special JavaScript object-literal semantics
-without erasing the original field list from the target syntax. -/
+without erasing the original field list from the target syntax: a `__proto__` key, which a
+literal reads as the prototype, and a repeated key, which tsgo 7 refuses in a literal (TS1117).
+`Object.fromEntries` defines each as an own property and keeps a repeated key's last value, as a
+literal would at run time. -/
 private def dataObject (fields : List (String × Expr)) : Expr :=
-  if fields.any fun field => field.1 == "__proto__" then
+  if fields.any (fun field => field.1 == "__proto__") || !decide (fields.map (·.1)).Nodup then
     .objectFromEntries fields
   else .objectQuoted fields
 

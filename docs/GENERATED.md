@@ -203,13 +203,17 @@ and type outcomes, both exits and both compared schedules in full. A fresh run m
 program, dimension and outcome with its reason in `harness/truth/corpus-known-differences.md`,
 which may list nothing that no longer occurs.
 
-**Schema codec comparisons.** `make check-schema-codec` produces a temporary TypeScript
-data module from the public `Ty.encode` results for
-`Test/Codegen/SchemaGenerationContract.lean`'s representative cases
-(`harness/truth/schema-codec/Emit.lean`); `check.ts` compares them with pinned rc.112
-`Schema.toCodecJson`, decodes and re-encodes them on the host, and checks the rejected
-legacy Result/Cause shapes. No codec golden is committed. Finite host evidence, separate
-from the universal checked-boundary laws in `Laws/Schema/Codec`.
+**Schema codec comparisons.** `make check-schema-codec` writes a fresh TypeScript module into
+the checker's work folder, which git ignores (`harness/truth/schema-codec/.work/values.ts`, by
+`harness/truth/schema-codec/Emit.lean`). It holds the public `Ty.encode` results for the
+representative cases of `Test/Codegen/SchemaGenerationContract.lean`. It holds each case's typed
+Schema as the code printer writes it (`Codegen.SchemaCode.ofTy`), and that Schema's persisted
+document. tsgo 7 checks the module with `check.ts`. Then `check.ts` compares the results with
+pinned rc.112 `Schema.toCodecJson` under the generated Schemas. It decodes and re-encodes them on
+the host, and checks the rejected legacy Result/Cause shapes. It compares each generated Schema with rc.112's
+revival of its document and with rc.112's own code of that revival (`toCodeDocument`). No codec
+golden is committed. Finite host evidence, separate from the universal checked-boundary laws in
+`Laws/Schema/Codec`.
 
 **Conform outputs.** Source descriptions and conformance reports are build artifacts under
 `.lake/conform/`; `scripts/check-conform.py` produces them freshly. The compiler profile's

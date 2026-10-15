@@ -121,9 +121,10 @@ costs 17 hand edits today and one algebra field each after.
 ### 3.4 `Representation` — 5 hand, 3 fold
 
 Hand: `withChecks?` (`Authoring`), `Bridge.checkId`, `Bridge.ofSchema`, `Representation.tag`,
-`Check.tag`. Fold: the printer (`Codegen/Schema.printAlgebra`); `fieldAdmissible`
-(`Check.lean`) and `effectfulFieldProperties` (`EffectfulField.lean`) were deleted on
-2026-10-01 under row 39. The two `tag` projections
+`Check.tag`. Fold: the printer of the persisted document (`Codegen/Schema.printAlgebra`), and
+the printer of typed Schema code (`Codegen/SchemaCode.codeAlgebra`, 2026-10-15). The folds
+`fieldAdmissible` (`Check.lean`) and `effectfulFieldProperties` (`EffectfulField.lean`) were
+deleted on 2026-10-01 under row 39. The two `tag` projections
 are what the generator's `ctorIdx`-style view gives for free; `ofSchema` is the K2 read (row 6)
 and stays a hand definition until exactness is stated — then it is the *inverse* of the fold
 `schema`, which is its specification.

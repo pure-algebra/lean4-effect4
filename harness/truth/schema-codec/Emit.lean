@@ -1,6 +1,9 @@
 import Test.Codegen.SchemaGenerationContract
+import Effect4.Codegen.SchemaCode
 
-/-! Emit fresh public codec results for the bounded rc.112 comparison. -/
+/-! Emit fresh public codec results for the bounded rc.112 comparison, and each case's typed
+Schema as the code printer writes it (`Codegen.SchemaCode.ofTy`, CR-4): the checker reads these
+Schemas, and writes none by hand but `Schema.Number`, for the type the bridge leaves unlowered. -/
 open Effect4 Effect4.Program
 
 namespace SchemaCodecHost
@@ -94,6 +97,24 @@ def encodingRefusals : List (String × Ty × Store.Val) := [
   ("numberPositiveInfinity", .number, .float 0x7FF0000000000000),
   ("numberNegativeInfinity", .number, .float 0xFFF0000000000000)]
 
+/-- An object of named expressions, its names plain: every case name is an identifier. -/
+def namedObject (entries : List (String × TypeScript.Expr)) : TypeScript.Expr :=
+  .objectWith .plain (entries.map fun (name, value) => .property name value)
+
+/-- Whether the code printer writes a type's Schema. -/
+def lowered (t : Ty) : Bool := (Codegen.SchemaCode.ofTy t).toOption.isSome
+
+/-- The typed Schema of each case whose type has one (`Codegen.SchemaCode.ofTy`). -/
+def schemaObject (cases : List (String × Ty)) : TypeScript.Expr :=
+  namedObject (cases.filterMap fun (name, t) => (Codegen.SchemaCode.ofTy t).toOption.map (name, ·))
+
+/-- The cases whose type has no typed Schema, each with the printer's refusal, once per name. -/
+def unlowered (cases : List (String × Ty)) : List (String × Json) :=
+  (cases.filterMap fun (name, t) => match Codegen.SchemaCode.ofTy t with
+    | .ok _ => none
+    | .error why => some (name, Json.str why)).foldl
+    (fun acc entry => if acc.any (·.1 == entry.1) then acc else acc ++ [entry]) []
+
 end SchemaCodecHost
 
 def main (args : List String) : IO Unit := do
@@ -114,9 +135,34 @@ def main (args : List String) : IO Unit := do
       ("reencoded", (decoded.bind prepared.encode).getD .null)])
   let encodingRefusals := SchemaCodecHost.encodingRefusals.map fun (name, t, v) =>
     (name, Json.bool (Ty.encode t v).isNone)
+  let encodingTypes := (existing ++ SchemaCodecHost.cases).map fun (name, t, _) => (name, t)
+  let refusalTypes := SchemaCodecHost.refusals.map fun (name, t, _) => (name, t)
+  let encodingRefusalTypes := SchemaCodecHost.encodingRefusals.map fun (name, t, _) => (name, t)
+  let documents ← (encodingTypes.filter (SchemaCodecHost.lowered ·.2)).mapM fun (name, t) =>
+    match Codegen.Schema.documentExpr (Schema.document t.schema) with
+    | .ok document => pure (name, document)
+    | .error why => throw (IO.userError s!"the document of {name} refuses at {why.path}")
+  let render := TypeScript.Render.expr TypeScript.house0 0
+  match (System.FilePath.mk output).parent with
+  | some folder => IO.FS.createDirAll folder
+  | none => pure ()
   IO.FS.writeFile output
-    ("// Fresh Lean codec output. Do not edit.\nexport default " ++
-      Codegen.Schema.jsonSource (.obj entries) ++ ";\nexport const refusals = " ++
-      Codegen.Schema.jsonSource (.obj refusals) ++ ";\nexport const numericDecodings = " ++
-      Codegen.Schema.jsonSource (.obj numericDecodings) ++ ";\nexport const encodingRefusals = " ++
-      Codegen.Schema.jsonSource (.obj encodingRefusals) ++ ";\n")
+    ("// Fresh Lean codec output and typed Schemas. Do not edit.\n" ++
+      "import { Schema } from \"effect\"\n" ++
+      "export const encodings: Readonly<Record<string, any>> = " ++
+      Codegen.Schema.jsonSource (.obj entries) ++
+      ";\nexport const refusals: Readonly<Record<string, any>> = " ++
+      Codegen.Schema.jsonSource (.obj refusals) ++
+      ";\nexport const numericDecodings: Readonly<Record<string, any>> = " ++
+      Codegen.Schema.jsonSource (.obj numericDecodings) ++
+      ";\nexport const encodingRefusals: Readonly<Record<string, boolean>> = " ++
+      Codegen.Schema.jsonSource (.obj encodingRefusals) ++
+      ";\nexport const schemas = " ++ render (SchemaCodecHost.schemaObject encodingTypes) ++
+      ";\nexport const refusalSchemas = " ++ render (SchemaCodecHost.schemaObject refusalTypes) ++
+      ";\nexport const encodingRefusalSchemas = " ++
+      render (SchemaCodecHost.schemaObject encodingRefusalTypes) ++
+      ";\nexport const documents: Readonly<Record<string, Schema.Json>> = " ++
+      render (SchemaCodecHost.namedObject documents) ++
+      ";\nexport const unlowered: Readonly<Record<string, string>> = " ++
+      Codegen.Schema.jsonSource (.obj (SchemaCodecHost.unlowered
+        (encodingTypes ++ refusalTypes ++ encodingRefusalTypes))) ++ ";\n")

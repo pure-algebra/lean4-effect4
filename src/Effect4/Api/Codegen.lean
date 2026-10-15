@@ -6,6 +6,7 @@ import Effect4.Codegen.Read
 import Effect4.Codegen.Admit
 import Effect4.Codegen.CallbackRequirements
 import Effect4.Codegen.Schema
+import Effect4.Codegen.SchemaCode
 
 /-!
 # Effect4.Api.Codegen — the program interface's codegen face
@@ -24,7 +25,8 @@ The half of the application face that crosses to TypeScript, in the namespace `E
   are the module's production receipt, its raw reconstruction and its checked reading.
 * `Typed.print`, `Typed.emit`, `TypedLayer.print` and `Built.print` print the certified values.
 * The Schema half: persisted `SchemaRepresentation` JSON syntax (`schemaDocument`,
-  `schemaRepresentation`) and the JSON payload beside it (`jsonExpr`).
+  `schemaRepresentation`), the JSON payload beside it (`jsonExpr`), and a type's typed Schema
+  code (`schemaCode`), the expression an Effect user writes.
   `Codegen.Schema.moduleSyntax` assembles raw module syntax; `Effect4.Codegen.Schema.documentSource`
   renders one raw document and is admitted by exact name in the axiom gate. A document's
   references table is written once per key, and a repeated key whose bodies differ is refused
@@ -221,5 +223,11 @@ def schemaRepresentation (representation : Effect4.Representation) : TypeScript.
 /-- A JSON payload as a TypeScript literal. -/
 def jsonExpr (value : Effect4.Json) : TypeScript.Expr :=
   Effect4.Codegen.Schema.json value
+
+/-- A type's typed Schema code, `Schema.Struct({ … })` and its kin, as an Effect user writes it
+(`Codegen.SchemaCode.ofTy`, CR-4); or why the code printer refuses the type, by the node's name.
+-/
+def schemaCode (t : Ty) : Except String TypeScript.Expr :=
+  Effect4.Codegen.SchemaCode.ofTy t
 
 end Effect4.Api

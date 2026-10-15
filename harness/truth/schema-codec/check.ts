@@ -1,21 +1,29 @@
 import assert from "node:assert/strict"
-import { pathToFileURL } from "node:url"
-import { Cause, Exit, Option, Result, Schema } from "effect"
+import { isDeepStrictEqual } from "node:util"
+import { Cause, Exit, Option, Result, Schema, SchemaRepresentation } from "effect"
 import effectPackage from "effect/package.json"
+// Written fresh by Emit.lean before tsgo checks this file: Lean's codec results, and each case's
+// typed Schema as the code printer writes it (`Codegen.SchemaCode.ofTy`). The checker writes no
+// Schema by hand but `Schema.Number`, at the cases whose type the bridge leaves unlowered.
+import {
+  documents, encodingRefusals, encodingRefusalSchemas, encodings as encoded, numericDecodings, refusals,
+  refusalSchemas, schemas, unlowered
+} from "./.work/values.ts"
 
 assert.equal(effectPackage.version, "4.0.0-rc.112")
-const input = process.argv[2]
-if (!input) throw new Error("expected a fresh Lean output module")
-const { default: encoded, refusals, numericDecodings, encodingRefusals } = await import(pathToFileURL(input).href)
-if (typeof encoded !== "object" || encoded === null || Array.isArray(encoded)) {
-  throw new Error("Lean codec output is not an object")
-}
 
-if (typeof refusals !== "object" || refusals === null || Array.isArray(refusals)) {
-  throw new Error("Lean refusal output is not an object")
+/** A case's generated Schema: the printer's, or `Schema.Number` where Lean says the printer
+ * refuses the case's type because the bridge does not lower `number` (`Bridge.schemaAlg`). */
+function generated(table: Readonly<Record<string, unknown>>, name: string): unknown {
+  if (Object.hasOwn(table, name)) return table[name]
+  assert.equal(unlowered[name], "the declaration effect4/unlowered/number has no Schema code",
+    `${name}: no generated Schema, and the type is not the unlowered number`)
+  return Schema.Number
 }
-for (const [name, value] of Object.entries({ numericDecodings, encodingRefusals })) {
-  assert.ok(typeof value === "object" && value !== null && !Array.isArray(value), `${name}: missing Lean observations`)
+let hostNumbers = 0
+for (const [name, why] of Object.entries(unlowered)) {
+  assert.equal(why, "the declaration effect4/unlowered/number has no Schema code", `${name}: ${why}`)
+  hostNumbers++
 }
 
 const cause = Cause.fromReasons([
@@ -27,6 +35,7 @@ const cause = Cause.fromReasons([
 let checked = 0
 const names: string[] = []
 function check<S extends Schema.ConstraintCodec<unknown, unknown>>(name: string, schema: S, value: S["Type"]) {
+  assert.equal(schema, generated(schemas, name), `${name}: not the case's generated Schema`)
   const codec = Schema.toCodecJson(schema)
   const host = Schema.encodeSync(codec)(value)
   assert.deepEqual(encoded[name], host, `${name}: Lean/rc.112 encoding differs`)
@@ -36,51 +45,43 @@ function check<S extends Schema.ConstraintCodec<unknown, unknown>>(name: string,
   checked++
 }
 
-check("unit", Schema.Void, undefined)
-check("bool", Schema.Boolean, true)
-check("nat", Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)), 42)
-check("string", Schema.String, "λ🙂")
-check("literal", Schema.Literal("User"), "User")
-check("pair", Schema.Tuple([Schema.Number, Schema.String]), [3, "x"])
-check("list", Schema.Array(Schema.Boolean), [true, false])
-check("none", Schema.Option(Schema.Number), Option.none())
-check("some", Schema.Option(Schema.Number), Option.some(7))
-check("resultFailure", Schema.Result(Schema.Boolean, Schema.String), Result.fail("bad"))
-check("resultSuccess", Schema.Result(Schema.Boolean, Schema.String), Result.succeed(true))
-check("exitSuccess", Schema.Exit(Schema.Boolean, Schema.String, Schema.Defect()), Exit.succeed(true))
-check("exitFailure", Schema.Exit(Schema.Boolean, Schema.String, Schema.Defect()), Exit.failCause(cause))
-check("cause", Schema.Cause(Schema.String, Schema.Defect()), cause)
-check("emptyCause", Schema.Cause(Schema.Never, Schema.Defect()), Cause.empty)
-check("union", Schema.Union([Schema.String, Schema.Number]), 4)
-check("nested", Schema.Array(Schema.Option(Schema.Result(Schema.Boolean, Schema.String))),
-  [Option.some(Result.succeed(true)), Option.none()])
-const nat = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
-const person = Schema.Struct({ name: Schema.String, nickname: Schema.optionalKey(Schema.Option(Schema.String)) })
-const slot = Schema.Struct({ slot: Schema.optionalKey(Schema.Void) })
-const triple = Schema.Tuple([nat, Schema.String, Schema.Boolean])
+check("unit", schemas.unit, undefined)
+check("bool", schemas.bool, true)
+check("nat", schemas.nat, 42)
+check("string", schemas.string, "λ🙂")
+check("literal", schemas.literal, "User")
+check("pair", schemas.pair, [3, "x"])
+check("list", schemas.list, [true, false])
+check("none", schemas.none, Option.none())
+check("some", schemas.some, Option.some(7))
+check("resultFailure", schemas.resultFailure, Result.fail("bad"))
+check("resultSuccess", schemas.resultSuccess, Result.succeed(true))
+check("exitSuccess", schemas.exitSuccess, Exit.succeed(true))
+check("exitFailure", schemas.exitFailure, Exit.failCause(cause))
+check("cause", schemas.cause, cause)
+check("emptyCause", schemas.emptyCause, Cause.empty)
+check("union", schemas.union, 4)
+check("nested", schemas.nested, [Option.some(Result.succeed(true)), Option.none()])
 const ada = { name: "Ada" }
 const adaNone = { name: "Ada", nickname: Option.none<string>() }
 const adaSome = { name: "Ada", nickname: Option.some("A") }
-check("recordAbsent", person, ada)
-check("recordNone", person, adaNone)
-check("recordSome", person, adaSome)
-check("recordVoidAbsent", slot, {})
-check("recordVoidPresent", slot, { slot: undefined })
-check("recordKeys", Schema.Struct({ "": Schema.String, ["__proto__"]: nat, "a-b": Schema.Boolean }),
-  { "": "empty", ["__proto__"]: 7, "a-b": true })
-check("mapEmpty", Schema.Record(Schema.String, Schema.Never), {})
-check("mapKeys", Schema.Record(Schema.String, nat),
-  { "2": 2, "10": 10, ["__proto__"]: 7, "a-b": 3, "λ🙂": 4 })
-check("mapRecords", Schema.Record(Schema.String, person), { ["__proto__"]: ada, "a-b": adaNone })
-check("tuple0", Schema.Tuple([]), [])
-check("tuple1", Schema.Tuple([nat]), [7])
-check("tuple2", Schema.Tuple([nat, Schema.String]), [7, "x"])
-check("tuple3", triple, [7, "x", true])
-check("nestedRecordMapTuple", Schema.Struct({ rows: Schema.Record(Schema.String,
-  Schema.Tuple([person, Schema.Option(nat), Schema.Boolean])) }),
+check("recordAbsent", schemas.recordAbsent, ada)
+check("recordNone", schemas.recordNone, adaNone)
+check("recordSome", schemas.recordSome, adaSome)
+check("recordVoidAbsent", schemas.recordVoidAbsent, {})
+check("recordVoidPresent", schemas.recordVoidPresent, { slot: undefined })
+check("recordKeys", schemas.recordKeys, { "": "empty", ["__proto__"]: 7, "a-b": true })
+check("mapEmpty", schemas.mapEmpty, {})
+check("mapKeys", schemas.mapKeys, { "2": 2, "10": 10, ["__proto__"]: 7, "a-b": 3, "λ🙂": 4 })
+check("mapRecords", schemas.mapRecords, { ["__proto__"]: ada, "a-b": adaNone })
+check("tuple0", schemas.tuple0, [])
+check("tuple1", schemas.tuple1, [7])
+check("tuple2", schemas.tuple2, [7, "x"])
+check("tuple3", schemas.tuple3, [7, "x", true])
+check("nestedRecordMapTuple", schemas.nestedRecordMapTuple,
   { rows: { ["__proto__"]: [adaSome, Option.some(9), true], "a-b": [ada, Option.none(), false] } })
-check("nestedTupleRecordMap", Schema.Tuple([slot, Schema.Record(Schema.String, Schema.Option(Schema.String)),
-  Schema.Tuple([])]), [{ slot: undefined }, { "a-b": Option.none(), ["__proto__"]: Option.some("ok") }, []])
+check("nestedTupleRecordMap", schemas.nestedTupleRecordMap,
+  [{ slot: undefined }, { "a-b": Option.none(), ["__proto__"]: Option.some("ok") }, []])
 
 interface NumericDecoding {
   input: number
@@ -97,7 +98,8 @@ function validateNumeric(name: string, fixtures: Record<string, NumericDecoding>
   assert.equal(fixture.reencoded, host, `${name}: Lean decoder reencoding differs`)
 }
 const numericNames: string[] = []
-function checkNumeric(name: string, schema: typeof Schema.Int | typeof Schema.Number, value: number) {
+function checkNumeric(name: string, value: number) {
+  const schema = generated(schemas, name) as typeof Schema.Number
   check(name, schema, value)
   const codec = Schema.toCodecJson(schema)
   const host = Schema.encodeSync(codec)(value)
@@ -105,23 +107,23 @@ function checkNumeric(name: string, schema: typeof Schema.Int | typeof Schema.Nu
   assert.equal(Schema.decodeUnknownSync(codec)(encoded[name]), value, `${name}: host decoder changed the numeric datum`)
   numericNames.push(name)
 }
-checkNumeric("intZero", Schema.Int, 0)
-checkNumeric("intPositive", Schema.Int, 404)
-checkNumeric("intNegative", Schema.Int, -15)
-checkNumeric("intPositiveBound", Schema.Int, Number.MAX_SAFE_INTEGER)
-checkNumeric("intNegativeBound", Schema.Int, -Number.MAX_SAFE_INTEGER)
-checkNumeric("numberZero", Schema.Number, 0)
-checkNumeric("numberPositive", Schema.Number, 3)
-checkNumeric("numberNegative", Schema.Number, -3)
-checkNumeric("numberPositiveFraction", Schema.Number, 0.5)
-checkNumeric("numberNegativeFraction", Schema.Number, -0.5)
-checkNumeric("numberNegativeZero", Schema.Number, -0)
-checkNumeric("numberPositiveBound", Schema.Number, Number.MAX_SAFE_INTEGER)
-checkNumeric("numberNegativeBound", Schema.Number, -Number.MAX_SAFE_INTEGER)
-checkNumeric("numberAboveBound", Schema.Number, 2 ** 53)
-checkNumeric("numberBelowBound", Schema.Number, -(2 ** 53))
-checkNumeric("numberLargePositive", Schema.Number, 2 ** 60)
-checkNumeric("numberLargeNegative", Schema.Number, -(2 ** 60))
+checkNumeric("intZero", 0)
+checkNumeric("intPositive", 404)
+checkNumeric("intNegative", -15)
+checkNumeric("intPositiveBound", Number.MAX_SAFE_INTEGER)
+checkNumeric("intNegativeBound", -Number.MAX_SAFE_INTEGER)
+checkNumeric("numberZero", 0)
+checkNumeric("numberPositive", 3)
+checkNumeric("numberNegative", -3)
+checkNumeric("numberPositiveFraction", 0.5)
+checkNumeric("numberNegativeFraction", -0.5)
+checkNumeric("numberNegativeZero", -0)
+checkNumeric("numberPositiveBound", Number.MAX_SAFE_INTEGER)
+checkNumeric("numberNegativeBound", -Number.MAX_SAFE_INTEGER)
+checkNumeric("numberAboveBound", 2 ** 53)
+checkNumeric("numberBelowBound", -(2 ** 53))
+checkNumeric("numberLargePositive", 2 ** 60)
+checkNumeric("numberLargeNegative", -(2 ** 60))
 assert.deepEqual(Object.keys(numericDecodings).sort(), numericNames.sort(), "uncompared or missing Lean numeric decoder fixture")
 
 // Mutants reach the same checker as the host observations, after the positive cases pass.
@@ -150,7 +152,7 @@ assert.equal(Object.hasOwn(encoded.recordNone, "nickname"), true)
 assert.equal(Object.hasOwn(encoded.recordVoidAbsent, "slot"), false)
 assert.equal(Object.hasOwn(encoded.recordVoidPresent, "slot"), true)
 assert.equal(encoded.recordVoidPresent.slot, null)
-const slotCodec = Schema.toCodecJson(slot)
+const slotCodec = Schema.toCodecJson(schemas.recordVoidAbsent)
 assert.equal(Object.hasOwn(Schema.decodeUnknownSync(slotCodec)(encoded.recordVoidAbsent), "slot"), false)
 const presentSlot = Schema.decodeUnknownSync(slotCodec)(encoded.recordVoidPresent)
 assert.equal(Object.hasOwn(presentSlot, "slot"), true)
@@ -163,50 +165,38 @@ for (const value of [encoded.recordKeys, encoded.mapKeys, encoded.mapRecords, en
 const refusalNames: string[] = []
 let matchingRefusals = 0
 let boundaryDifferences = 3 // excess-property defaults and the two duplicate-key inputs
-function checkRefusal<S extends Schema.ConstraintCodec<unknown, unknown>>(name: string, schema: S) {
+/** A refusal case's generated Schema, as a codec's source. */
+const refusalSchema = (name: string) => generated(refusalSchemas, name) as Schema.ConstraintCodec<unknown, unknown>
+function checkRefusal(name: string) {
   const fixture = refusals[name]
   assert.equal(fixture.refused, true, `${name}: Lean must refuse`)
   // Strict excess-property handling matches this Lean record boundary.
-  assert.throws(() => Schema.decodeUnknownSync(Schema.toCodecJson(schema),
+  assert.throws(() => Schema.decodeUnknownSync(Schema.toCodecJson(refusalSchema(name)),
     { onExcessProperty: "error" })(fixture.input), `${name}: rc.112 must refuse`)
   refusalNames.push(name)
   matchingRefusals++
 }
-checkRefusal("recordMissing", person)
-checkRefusal("recordExtra", person)
-checkRefusal("recordWrong", person)
-checkRefusal("mapWrong", Schema.Record(Schema.String, nat))
-checkRefusal("tuple0Long", Schema.Tuple([]))
-checkRefusal("tuple1Short", Schema.Tuple([nat]))
-checkRefusal("tuple1Long", Schema.Tuple([nat]))
-checkRefusal("tuple3Short", triple)
-checkRefusal("tuple3Long", triple)
-checkRefusal("tuple3Wrong", triple)
-checkRefusal("intAboveBound", Schema.Int)
-checkRefusal("intBelowBound", Schema.Int)
-checkRefusal("intPositiveFraction", Schema.Int)
-checkRefusal("intNegativeFraction", Schema.Int)
-checkRefusal("intNaN", Schema.Int)
-checkRefusal("intPositiveInfinity", Schema.Int)
-checkRefusal("intNegativeInfinity", Schema.Int)
-checkRefusal("intWrongType", Schema.Int)
-checkRefusal("numberWrongType", Schema.Number)
+for (const name of [
+  "recordMissing", "recordExtra", "recordWrong", "mapWrong", "tuple0Long", "tuple1Short", "tuple1Long",
+  "tuple3Short", "tuple3Long", "tuple3Wrong", "intAboveBound", "intBelowBound", "intPositiveFraction",
+  "intNegativeFraction", "intNaN", "intPositiveInfinity", "intNegativeInfinity", "intWrongType", "numberWrongType"
+]) checkRefusal(name)
 
 const encodingRefusalNames: string[] = []
 let matchingEncoderRefusals = 0
-for (const [name, schema, value] of [
-  ["intAboveBound", Schema.Int, 2 ** 53],
-  ["intBelowBound", Schema.Int, -(2 ** 53)],
-  ["intPositiveFraction", Schema.Int, 0.5],
-  ["intNegativeFraction", Schema.Int, -0.5],
-  ["intNaN", Schema.Int, NaN],
-  ["intPositiveInfinity", Schema.Int, Infinity],
-  ["intNegativeInfinity", Schema.Int, -Infinity],
-  ["intWrongType", Schema.Int, "1"],
-  ["numberWrongType", Schema.Number, "1"]
+for (const [name, value] of [
+  ["intAboveBound", 2 ** 53],
+  ["intBelowBound", -(2 ** 53)],
+  ["intPositiveFraction", 0.5],
+  ["intNegativeFraction", -0.5],
+  ["intNaN", NaN],
+  ["intPositiveInfinity", Infinity],
+  ["intNegativeInfinity", -Infinity],
+  ["intWrongType", "1"],
+  ["numberWrongType", "1"]
 ] as const) {
   assert.equal(encodingRefusals[name], true, `${name}: Lean encoder must refuse`)
-  const codec = Schema.toCodecJson(schema)
+  const codec = Schema.toCodecJson(generated(encodingRefusalSchemas, name) as Schema.ConstraintCodec<unknown, unknown>)
   const encodeUnknown = Schema.encodeUnknownSync(codec)
   assert.throws(() => encodeUnknown(value), `${name}: rc.112 encoder must refuse`)
   encodingRefusalNames.push(name)
@@ -217,7 +207,7 @@ for (const [name, schema, value] of [
 assert.equal(refusals.intNegativeZero.refused, true)
 assert.equal(encodingRefusals.intNegativeZero, true)
 assert.equal(refusals.intNegativeZero.input, -0)
-const intCodec = Schema.toCodecJson(Schema.Int)
+const intCodec = Schema.toCodecJson(refusalSchema("intNegativeZero") as typeof Schema.Number)
 assert.equal(Schema.decodeUnknownSync(intCodec)(refusals.intNegativeZero.input), -0)
 assert.equal(Schema.encodeSync(intCodec)(-0), -0)
 refusalNames.push("intNegativeZero")
@@ -225,7 +215,7 @@ encodingRefusalNames.push("intNegativeZero")
 boundaryDifferences++
 
 // NaN and infinities stay outside the Lean number codec. The host writes named strings.
-const numberCodec = Schema.toCodecJson(Schema.Number)
+const numberCodec = Schema.toCodecJson(refusalSchema("numberNaN") as typeof Schema.Number)
 for (const [name, value, text] of [
   ["numberNaN", NaN, "NaN"],
   ["numberPositiveInfinity", Infinity, "Infinity"],
@@ -260,25 +250,54 @@ assert.equal(JSON.parse(JSON.stringify(encoded.numberNegativeZero)), 0)
 boundaryDifferences++
 
 // Default host decoding discards extra fields; the Lean codec refuses them.
-assert.deepEqual(Schema.decodeUnknownSync(Schema.toCodecJson(person))(refusals.recordExtra.input), ada)
+assert.deepEqual(Schema.decodeUnknownSync(Schema.toCodecJson(refusalSchema("recordExtra")))(refusals.recordExtra.input), ada)
 // JSON text parsing collapses duplicate keys before Schema sees an object.
 // These observations document the boundary difference, not matching raw inputs.
-for (const [name, schema, text, expected] of [
-  ["recordDuplicate", person, '{"name":"Ada","name":"Grace"}', { name: "Grace" }],
-  ["mapDuplicate", Schema.Record(Schema.String, nat), '{"x":1,"x":2}', { x: 2 }]
+for (const [name, text, expected] of [
+  ["recordDuplicate", '{"name":"Ada","name":"Grace"}', { name: "Grace" }],
+  ["mapDuplicate", '{"x":1,"x":2}', { x: 2 }]
 ] as const) {
   assert.equal(refusals[name].refused, true, `${name}: Lean entry-list input must refuse`)
   assert.deepEqual(refusals[name].input, JSON.parse(text), `${name}: host object conversion keeps the last key`)
-  assert.deepEqual(Schema.decodeUnknownSync(Schema.toCodecJson(schema))(JSON.parse(text)), expected)
+  assert.deepEqual(Schema.decodeUnknownSync(Schema.toCodecJson(refusalSchema(name)))(JSON.parse(text)), expected)
   refusalNames.push(name)
 }
 assert.deepEqual(Object.keys(refusals).sort(), refusalNames.sort(), "uncompared or missing Lean refusal")
 
 // Negative controls catch the two incorrect shapes in the original specification.
-assert.throws(() => Schema.decodeUnknownSync(Schema.toCodecJson(
-  Schema.Result(Schema.Boolean, Schema.String)))({ _tag: "Success", value: true }))
+assert.throws(() => Schema.decodeUnknownSync(Schema.toCodecJson(schemas.resultSuccess))({ _tag: "Success", value: true }))
 negativeControls++
-assert.throws(() => Schema.decodeUnknownSync(Schema.toCodecJson(
-  Schema.Cause(Schema.String, Schema.Defect())))({ reasons: [] }))
+assert.throws(() => Schema.decodeUnknownSync(Schema.toCodecJson(schemas.cause))({ reasons: [] }))
 negativeControls++
-console.log(`PASS schema-codec: ${checked} fresh Lean/rc.112 comparisons, ${checked} host round trips, ${numericNames.length} host encodings observed by Lean decoders, ${matchingRefusals} matching decoder refusals, ${matchingEncoderRefusals} matching encoder refusals, ${negativeControls} negative controls, ${boundaryDifferences} explicit boundary differences`)
+
+// The generated Schemas are rc.112's reading of Lean's documents (the review's P4, option (a)).
+// For each case whose type the printer writes, rc.112 revives Lean's persisted document
+// (`Codegen.Schema.documentExpr`) with its own revivers, and the generated Schema has the revived
+// Schema's representation. rc.112's code generator (`toCodeDocument`) then writes the revived
+// Schema's code, and that code, evaluated, has the representation too: but at a `__proto__` key,
+// which rc.112 quotes, so that its object literal sets the prototype and drops the field.
+const revivers = [Schema.OptionReviver, Schema.ResultReviver, Schema.ExitReviver, Schema.CauseReviver,
+  Schema.JsonReviver, Schema.isIntReviver, Schema.isGreaterThanOrEqualToReviver]
+const representationOf = (schema: Schema.Top) =>
+  SchemaRepresentation.toJson(SchemaRepresentation.toRepresentation(schema.ast))
+const revive = (name: string) =>
+  SchemaRepresentation.fromRepresentation(SchemaRepresentation.fromJson(documents[name]!), { revivers })
+let revived = 0
+const codeDifferences: string[] = []
+for (const [name, schema] of Object.entries(schemas) as Array<[string, Schema.Top]>) {
+  const host = revive(name)
+  assert.deepEqual(representationOf(schema), representationOf(host), `${name}: not rc.112's revival of Lean's document`)
+  revived++
+  const code = SchemaRepresentation.toCodeDocument(
+    SchemaRepresentation.toMultiDocument(SchemaRepresentation.toRepresentation(host.ast))).codes[0]!.runtime
+  const rebuilt = new Function("Schema", `return (${code})`)(Schema) as Schema.Top
+  if (!isDeepStrictEqual(representationOf(rebuilt), representationOf(schema))) codeDifferences.push(name)
+}
+assert.deepEqual(Object.keys(documents).sort(), Object.keys(schemas).sort(), "a generated Schema without its document")
+assert.deepEqual(codeDifferences, ["recordKeys"], "rc.112's code differs only at the quoted __proto__ key")
+// A red control: the hand Schema this gate held for `pair` until CR-4 is not rc.112's revival of
+// Lean's document, whose first position is a natural, not any number.
+assert.throws(() => assert.deepEqual(representationOf(Schema.Tuple([Schema.Number, Schema.String])),
+  representationOf(revive("pair"))))
+negativeControls++
+console.log(`PASS schema-codec: ${checked} fresh Lean/rc.112 comparisons, ${checked} host round trips, ${numericNames.length} host encodings observed by Lean decoders, ${matchingRefusals} matching decoder refusals, ${matchingEncoderRefusals} matching encoder refusals, ${negativeControls} negative controls, ${boundaryDifferences} explicit boundary differences; ${Object.keys(schemas).length} generated Schemas, ${revived} equal to rc.112's revival of their documents, ${revived - codeDifferences.length} to its code of them (${codeDifferences.length} difference, its quoted __proto__ key), ${hostNumbers} cases on Schema.Number, which the bridge does not lower`)

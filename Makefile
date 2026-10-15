@@ -657,14 +657,14 @@ gen-row-citations: ## promote a fresh rows/atoms report to generated/row-citatio
 	$(BUN) tools/target/rows.ts --repo . --promote
 
 # The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
-# rc.112's `Schema.toCodecJson` on the host; nothing committed.
+# rc.112's `Schema.toCodecJson` on the host, under each case's typed Schema as the code printer
+# writes it (`Codegen.SchemaCode`); tsgo checks the generated Schemas and the checker together.
+# The fresh module goes to the checker's work folder, which git ignores; nothing committed.
 $(CHK)/schema-codec: $(LEAN_INPUTS) $(wildcard harness/truth/schema-codec/*) | harness/truth/node_modules
 	$(call build_imports,harness/truth/schema-codec/Emit.lean)
-	@tmp="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-schema-codec.XXXXXX")"; \
-	  $(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean "$$tmp/values.ts" && \
-	  $(NODE) harness/truth/node_modules/@typescript/native-preview/bin/tsgo --project harness/truth/schema-codec/tsconfig.json && \
-	  $(BUN) harness/truth/schema-codec/check.ts "$$tmp/values.ts"; \
-	  status=$$?; rm -rf "$$tmp"; exit $$status
+	$(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean harness/truth/schema-codec/.work/values.ts
+	$(NODE) harness/truth/node_modules/@typescript/native-preview/bin/tsgo --project harness/truth/schema-codec/tsconfig.json
+	$(BUN) harness/truth/schema-codec/check.ts
 	@mkdir -p $(CHK) && touch $@
 
 # The OCaml lane (the effect4 opam switch; local only until the runner has one): the eff
