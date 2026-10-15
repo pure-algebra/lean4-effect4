@@ -41,6 +41,7 @@
    Sections: w1 w2 w3 w4 sweep accept (default: all). *)
 
 open Effect4_engine
+open Eff_types
 
 module Ty = Eff_types
 
@@ -222,16 +223,16 @@ let ms (x : float) : string = Printf.sprintf "%.3f" (x *. 1000.)
 type eng = {
   e_name : string;
   (* one `Api.run`: load + evaluate + flush, the generated entry point *)
-  e_api : Ty.eff -> fuel:int -> unit -> unit;
+  e_api : Ty.native_op Ty.eff -> fuel:int -> unit -> unit;
   (* one `drive` over a PRELOADED machine: evaluate + flush only -- route 1's cell *)
-  e_drive : Ty.eff -> fuel:int -> unit -> unit;
+  e_drive : Ty.native_op Ty.eff -> fuel:int -> unit -> unit;
   (* trace rows, fibers, outcome of the finished machine *)
-  e_stats : Ty.eff -> fuel:int -> int * int * string;
+  e_stats : Ty.native_op Ty.eff -> fuel:int -> int * int * string;
   (* live words the finished machine holds *)
-  e_held : Ty.eff -> fuel:int -> int;
+  e_held : Ty.native_op Ty.eff -> fuel:int -> int;
   (* the same, over a whole list of programs at once (W3) *)
-  e_batch : Ty.eff list -> fuel:int -> unit -> int;
-  e_batch_held : Ty.eff list -> fuel:int -> int;
+  e_batch : Ty.native_op Ty.eff list -> fuel:int -> unit -> int;
+  e_batch_held : Ty.native_op Ty.eff list -> fuel:int -> int;
 }
 
 module Mk (En : E4_engine.ENGINE) = struct
@@ -276,47 +277,47 @@ let engines = [ M_gen.eng; M_ref.eng; M_fast.eng ]
 (* ==================================================================== the programs *)
 
 let fork_opts : Ty.fork_options =
-  { Ty.fork_options_startImmediately = false;
-    fork_options_daemon = false;
-    fork_options_maskMode = Ty.Mask_mode_inherit }
+  { Ty.start_immediately = false;
+    daemon = false;
+    mask_mode = Ty.MaskMode_inherit }
 
 (* `chain 0 = succeed unit`, `chain (n+1) = bind (perform refMake (lit (nat n))) (chain n)`
    -- Test/Program/RuntimeRContract.lean's `chain` (A1 §6.1 W2, the quadratic detector).
    Leaves `2n + 3` trace rows and n refs at `fuel = 8n + 400`. *)
-let rec chain (n : int) : Ty.eff =
+let rec chain (n : int) : Ty.native_op Ty.eff =
   if n <= 0 then Ty.Eff_succeed (Ty.Term_lit Ty.Lit_unit)
   else
     Ty.Eff_bind
-      (Ty.Eff_perform (Ty.Native_op_refMake, Ty.Term_lit (Ty.Lit_nat (n - 1))), chain (n - 1))
+      (Ty.Eff_perform (Ty.NativeOp_refMake, Ty.Term_lit (Ty.Lit_nat (n - 1))), chain (n - 1))
 
 (* M nested `yieldNow`, then `succeed 0`: the body every forked fiber runs (W4's M axis). *)
-let rec yields (m : int) : Ty.eff =
+let rec yields (m : int) : Ty.native_op Ty.eff =
   if m <= 0 then Ty.Eff_succeed (Ty.Term_lit (Ty.Lit_nat 0))
   else Ty.Eff_bind (Ty.Eff_yieldNow 0, yields (m - 1))
 
 (* M nested `sync`, then `succeed 0`. *)
-let rec syncs (m : int) : Ty.eff =
+let rec syncs (m : int) : Ty.native_op Ty.eff =
   if m <= 0 then Ty.Eff_succeed (Ty.Term_lit (Ty.Lit_nat 0))
   else Ty.Eff_bind (Ty.Eff_sync (Ty.Term_lit (Ty.Lit_nat 0)), syncs (m - 1))
 
 (* `forkN N M`: N children, each running [body M] (A1 §6.1 W4 with the M axis of probe
    §6.2's W4 -- "N fibers x M yields"). *)
-let rec forkn_with (body : int -> Ty.eff) (n : int) (m : int) : Ty.eff =
+let rec forkn_with (body : int -> Ty.native_op Ty.eff) (n : int) (m : int) : Ty.native_op Ty.eff =
   if n <= 0 then Ty.Eff_succeed (Ty.Term_lit Ty.Lit_unit)
   else
     Ty.Eff_bind
-      (Ty.Eff_withFiber (Ty.Action_term_fork (body m, fork_opts)), forkn_with body (n - 1) m)
+      (Ty.Eff_withFiber (Ty.ActionTerm_fork (body m, fork_opts)), forkn_with body (n - 1) m)
 
 (* `forkN N` children with a trivial body, then the ROOT does [tail].  The M axis of
    probe §6.2 ("steps/s as a function of N at fixed T, and of T at fixed N") needs a T that
    actually moves; a forked child's body does not move it under `[evaluate 0; flush]`
    (measured, §W4's first table), so the T work is put where `evaluate` reaches it. *)
-let rec forkn_then (n : int) (tail : Ty.eff) : Ty.eff =
+let rec forkn_then (n : int) (tail : Ty.native_op Ty.eff) : Ty.native_op Ty.eff =
   if n <= 0 then tail
   else
     Ty.Eff_bind
       ( Ty.Eff_withFiber
-          (Ty.Action_term_fork (Ty.Eff_succeed (Ty.Term_lit (Ty.Lit_nat 0)), fork_opts)),
+          (Ty.ActionTerm_fork (Ty.Eff_succeed (Ty.Term_lit (Ty.Lit_nat 0)), fork_opts)),
         forkn_then (n - 1) tail )
 
 (* `git:14e6835:src/OCaml5/Bridge.lean:48-51`'s `pTwo` -- the program route 1's domain sweep ran --
@@ -324,17 +325,17 @@ let rec forkn_then (n : int) (tail : Ty.eff) : Ty.eff =
    `{startImmediately := false, daemon := false, maskMode := .inherit}`, i.e. {!fork_opts}.
    The BYTE GOLDEN of the same name is a different program: measured below, 41 trace rows
    against this one's 43, and 4 host decisions under the event-loop rule against 3. *)
-let p_two_bridge : Ty.eff =
+let p_two_bridge : Ty.native_op Ty.eff =
   let child n =
     Ty.Eff_bind (Ty.Eff_yieldNow 0, Ty.Eff_succeed (Ty.Term_lit (Ty.Lit_nat n)))
   in
   Ty.Eff_bind
-    ( Ty.Eff_withFiber (Ty.Action_term_fork (child 1, fork_opts)),
+    ( Ty.Eff_withFiber (Ty.ActionTerm_fork (child 1, fork_opts)),
       Ty.Eff_bind
-        ( Ty.Eff_withFiber (Ty.Action_term_fork (child 2, fork_opts)),
+        ( Ty.Eff_withFiber (Ty.ActionTerm_fork (child 2, fork_opts)),
           Ty.Eff_bind
-            ( Ty.Eff_awaitFiber (Ty.Term_var 1, Ty.Observer_mode_awaitValue),
-              Ty.Eff_awaitFiber (Ty.Term_var 1, Ty.Observer_mode_awaitValue) ) ) )
+            ( Ty.Eff_awaitFiber (Ty.Term_var 1, Ty.ObserverMode_awaitValue),
+              Ty.Eff_awaitFiber (Ty.Term_var 1, Ty.ObserverMode_awaitValue) ) ) )
 
 (* ==================================================================== the corpora *)
 
@@ -517,7 +518,7 @@ let w4_body_probe () =
      ---: | --- |\n";
   List.iter
     (fun (nm, f) ->
-       let r (mk : int -> Ty.eff) m =
+       let r (mk : int -> Ty.native_op Ty.eff) m =
          let fuel = (8 * m) + 4000 in
          try
            let rows, _, o = M_fast.eng.e_stats (mk m) ~fuel in

@@ -126,9 +126,13 @@ $(GEN)/variances: $(VARIANCE_SOURCES) $(wildcard $(VARIANCE_OUT)) $(if $(filter-
 
 DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
   $(wildcard $(VARIANCES)) $(WIRE_TAGS) tools/Tools/WireTags.lean $(PRODUCER_COMMON) lakefile.toml
-# Bootstrap freshness cannot depend on compiled consumers of stale generated files.
-# Source files and directories also notice additions and deletions before Lake runs.
-DERIVED_INPUTS := $(shell find src tools -type d -o -name '*.lean') lake-manifest.json lean-toolchain
+# Bootstrap freshness cannot depend on compiled consumers of stale generated files, so the inputs
+# are source files: every one in the import closure of the generators and of each manifest group's
+# imports, read from the headers (`scripts/lean-imports.py --closure`). An edit outside it, to the
+# LCNF route or a battery, cannot change a derived output and reruns no group (LC-4). A file added
+# to the closure changes the file that imports it.
+DERIVED_INPUTS := $(shell $(PY) scripts/lean-imports.py --closure --manifest tools/Effect4Gen/manifest.json \
+  Effect4Gen.Exe Effect4Gen.CatalogueExe Tools.GeneratedStamp) lake-manifest.json lean-toolchain
 DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Json.lean src/Effect4/Store/Domain/Derived/Schema.lean \
   src/Effect4/Store/Domain/Derived/Program.lean src/Effect4/Store/Domain/PinDerived.lean src/Effect4/Api/Derived.lean \
   src/Effect4/Store/Domain/Derived/Value.lean src/Effect4/Api/RefusalsDerived.lean src/Effect4/Api/RunnerDerived.lean \
@@ -137,7 +141,8 @@ DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Js
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
   src/Effect4/Program/Authoring/Atoms.lean src/Effect4/Laws/Program/Authoring/Atoms.lean \
   src/Effect4/Codegen/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
-  src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts tools/Tools/Code/TsFold.lean
+  src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts tools/Tools/Code/TsFold.lean \
+  src/OCaml5/Ml/Fold.lean
 
 # A missing output must run its producer instead of becoming a missing prerequisite.
 .PHONY: derived-output-missing
@@ -145,22 +150,23 @@ $(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_INPUTS) $(wildcard
 	$(PY) scripts/generate.py --only derived
 	@mkdir -p $(GEN) && touch $@
 
-# The four LCNF outputs (each header carries its own regenerating command). The group is
+# The two LCNF outputs (each header carries its own regenerating command). The group is
 # NOT a link of the hermetic chain: it regenerates in place only (generate.py refuses
-# `--output-dir` for it) and its slowest producer is the engine cut, measured at 14m38s, so
-# `check-gen` -- which runs inside `make check`, on every core change -- must not reach it.
-# What the chain needs is the order, and `ocaml/engine/api_engine.ml` in EFF_SOURCES below:
-# together they make the second pass unnecessary. `make gen-lcnf` is run by name, by `gen`
-# and by the check-ocaml CI job.
-LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean) \
+# `--output-dir` for it), so `check-gen` does not reach it. What the chain needs is the order,
+# and `ocaml/engine/api_engine.ml` in EFF_SOURCES below: together they make the second pass
+# unnecessary. `make gen-lcnf` is run by name, by `gen`, by the check-ocaml CI job, and by
+# `$(CHK)/ocaml`, which depends on it, so the OCaml gate builds the current machine (LC-3).
+# Its sources are the generator's: the driver, the route (`OCaml5.Lcnf`, `OCaml5.Ml`) and the
+# Conform modules it reads (the mono index, the source evaluator's primitives).
+LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean src/OCaml5/Ml/*.lean) \
+  $(wildcard tools/Conform/Lcnf/*.lean tools/Conform/Core/*.lean tools/Conform/Source/*.lean) \
   ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml $(PRODUCER_COMMON)
 $(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only lcnf
 	@mkdir -p $(GEN) && touch $@
 
 EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) $(WIRE_TAGS) \
-  scripts/generate-engine-structure.py scripts/lib/program_structure.py \
-  ocaml/engine/layout-allowance.json ocaml/engine/api_engine.ml $(PRODUCER_COMMON)
+  $(PRODUCER_COMMON)
 $(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@
@@ -305,7 +311,10 @@ deploy-site: site ## publish .lake/gen/site to Cloudflare Pages (effect4-docs) w
 $(GEN)/fixtures-inventory: FORCE
 	@mkdir -p $(GEN); printf '%s\n' $(sort $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS)) > $@.new; \
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
-$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(LEAN_SOURCES) scripts/generate.py
+# The writers' inputs are the sources of their import closure (`scripts/lean-imports.py --closure`):
+# an edit outside it, to the LCNF route or the conformance tools, rewrites no fixture (LC-4).
+FIXTURE_INPUTS := $(shell $(PY) scripts/lean-imports.py --closure $(ENGINE_FIXTURE_WRITERS))
+$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(FIXTURE_INPUTS) scripts/generate.py
 	$(PY) scripts/generate.py --only fixtures
 	@mkdir -p $(GEN) && touch $@
 
@@ -325,10 +334,8 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 
 # Every committed path a generator writes. The drift check diffs exactly these.
 GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.lean \
-  ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens ocaml/engine/e4_program_layout.ml \
-  ocaml/engine/e4_program_layout.json \
-  ocaml/gen/api_gen.ml ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/engine/api_engine.ml \
-  ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-fibers_gen.tsv ocaml/gen/closure-machine_gen.tsv ocaml/gen/closure-api_engine.tsv \
+  ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens \
+  ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \
   harness/truth/prelude-atoms.gen.ts \
@@ -653,9 +660,11 @@ $(CHK)/schema-codec: $(LEAN_INPUTS) $(wildcard harness/truth/schema-codec/*) | h
 
 # The OCaml lane (the effect4 opam switch; local only until the runner has one): the eff
 # library's goldens and wire tests, the LCNF route's smoke, the engine's own tests and the
-# three-engine differential (which reads the printed corpus), and the engine seam check.
+# three-engine differential (which reads the printed corpus), and the engine seam check. It
+# depends on the LCNF group, so a change of the machine re-cuts the generated engine before
+# the lane builds it (finding N10 of docs/research/2026-10-14-lowering-collation/README.md).
 OCAML_SOURCES := $(shell find ocaml -type f -not -path '*/_build/*')
-$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES) $(GEN)/fixtures
+$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES) $(GEN)/fixtures $(GEN)/lcnf
 	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock
 	cd ocaml && $(OCAML) dune test engine
 	$(OCAML) bash ocaml/engine/tools/gen-check.sh

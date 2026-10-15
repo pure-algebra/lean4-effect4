@@ -1,7 +1,6 @@
 (* E4_shape — see e4_shape.mli for what this is, the two findings behind it, and its
    behaviours.  Lane P2, 2026-09-08. *)
 
-open Effect4_engine
 
 (* ============================================================ 1. paths *)
 

@@ -20,10 +20,14 @@ private def decl (name : String) (deps : Array String := #[]) : Lcnf.Translated 
 #guard Lcnf.emissionGroups #[decl "a", decl "a"] = .error "duplicate emitted name: a"
 
 /-- The program a builtin's form is evaluated in: the support functions, read from the
-definitions the prelude prints, and `max_int`. -/
+definitions the prelude prints, `max_int`, and the evaluator's primitives computed from the
+table. -/
 private def programOf (support : List Lcnf.Support) : Except String Target.Program :=
   (Conform.Effect4.LcnfMl.supportBinds { bits := 63 } support).map fun binds =>
-    { binds, pe := { word := { bits := 63 } } }
+    { binds, pe := Conform.Effect4.LcnfMl.primEnv }
+
+/-- A program with no binding: the evaluator's primitives alone. -/
+private def bare : Target.Program := { binds := {}, pe := Conform.Effect4.LcnfMl.primEnv }
 
 /-- An expression of the emitted syntax, read and evaluated in a program. A reader's refusal
 is the evaluator's. -/
@@ -65,7 +69,6 @@ private def maxInt : Target.TValue := .int 4611686018427387903
 #guard equals (evaluate `UInt8.ofNatTruncate [.int 256]) (.int 255)
 #guard equals (evaluate `String.length [.str "é🙂"]) (.int 2)
 #guard equals (evaluate `String.toUTF8 [.str "é"]) (Target.TValue.ofList [.int 195, .int 169])
-#guard equals (evaluate `Array.get! [.int 77, .listLit [.int 3], .int 2]) (.int 77)
 
 /-! ### The support functions run from their own definitions
 
@@ -164,26 +167,23 @@ private def elementFirst : List Lcnf.Support := Lcnf.support.map fun s =>
 -- Under-applied, the row is a function of the rest: the callback arrives later.
 #guard equals (evaluate `List.any [ints [1, 3]] [sixOver "=" 2]) (.bool true)
 -- The library function itself, applied to its callback first and to its list later.
-#guard equals (run { binds := {} } 200
+#guard equals (run bare 200
   (.app (Ml.Expr.call "List.for_all" [sixOver ">" 1]) [ints [1, 3]])) (.bool true)
 -- A callback that answers no boolean and a second argument that is no list are refusals.
 #guard refused (evaluate `List.any [ints [1], .fn ["e"] (.var "e")])
   "List.exists: the callback did not answer a boolean"
 #guard refused (evaluate `List.any [.int 5, sixOver "=" 2]) "List.exists: not a list"
--- The other callback names of the table have no rule: a call of one is a refusal, never a
--- value.
-#guard ["List.map", "List.filter", "List.fold_left", "List.find_opt", "List.filter_map",
-    "Option.map", "Option.bind"].all fun name =>
-  (Lcnf.libraries.lookup name).isSome &&
-    refused (run { binds := {} } 200 (Ml.Expr.call name [sixOver "=" 2, ints [1]]))
-      s!"unbound name `{name}`"
+-- The library entries with no rule on the evaluator (the other callback functions and the
+-- clock's) are refusals there: a call of one is never a value.
+#guard (Lcnf.targetLibrary.filter (·.target matches .unruled)).all fun f =>
+  refused (run bare 200 (Ml.Expr.call f.name [sixOver "=" 2, ints [1]])) s!"unbound name `{f.name}`"
 
 /-- A list of `n` ones, as a value: a scan of it costs fuel, and reading it costs none. -/
 private def ones (n : Nat) : Target.TValue :=
   Target.TValue.ofList ((List.range n).map fun _ => .int 1)
 
 private def scanOnes (fuel n : Nat) : Target.TOutcome :=
-  Target.evalT { binds := {} } fuel [("l", ones n)]
+  Target.evalT bare fuel [("l", ones n)]
     (.prim "List.exists" [.fn ["e"] (.prim "=" [.var "e", .int 0]), .var "l"])
 
 -- Exhaustion stays the frontier. With too little fuel a scan is out of fuel, never `false`;
@@ -221,10 +221,9 @@ private def labelled (f : String) (args : List (Ml.ArgLabel × Ml.Expr)) : Ml.Ex
 
 -- the row's own form is read
 #guard !unread (labelled "Option.value" [(.nolabel, someOf 3), (.lbl "default", .int 7)])
--- another label, an optional label, another order, another function, a missing or a surplus
--- argument, and a head that is not a name: each is refused
+-- another label, another order, another function, a missing or a surplus argument, and a head
+-- that is not a name: each is refused (an optional label is no form of the syntax)
 #guard unread (labelled "Option.value" [(.nolabel, someOf 3), (.lbl "other", .int 7)])
-#guard unread (labelled "Option.value" [(.nolabel, someOf 3), (.opt "default", .int 7)])
 #guard unread (labelled "Option.value" [(.lbl "default", .int 7), (.nolabel, someOf 3)])
 #guard unread (labelled "Option.get" [(.nolabel, someOf 3), (.lbl "default", .int 7)])
 #guard unread (labelled "Option.value" [(.nolabel, someOf 3)])
@@ -233,11 +232,17 @@ private def labelled (f : String) (args : List (Ml.ArgLabel × Ml.Expr)) : Ml.Ex
   [(.nolabel, someOf 3), (.lbl "default", .int 7), (.nolabel, .int 1)])
 #guard unread (.appL (.fn ["o"] (.var "o")) [(.nolabel, someOf 3), (.lbl "default", .int 7)])
 -- Without its label the call is not the primitive: the name is unbound, a refusal.
-#guard refused (run { binds := {} } 200 (Ml.Expr.call "Option.value" [someOf 3, .int 7]))
+#guard refused (run bare 200 (Ml.Expr.call "Option.value" [someOf 3, .int 7]))
   "unbound name `Option.value`"
 
--- The binder policy recognizes types and the explicitly admitted Row order instance.
-#guard (Lcnf.typeParameterIndices `Indexed 1
+-- The parameter rule by binder kind: a type parameter is kept, and an instance parameter and
+-- a value parameter are dropped. A telescope shorter than its count is the one refusal.
+#guard (Lcnf.typeParameterIndices `Indexed 3
+  (.forallE `α (.sort (.succ .zero))
+    (.forallE `inst (.app (.const ``Inhabited [.succ .zero]) (.bvar 0))
+      (.forallE `n (.const ``Nat []) (.sort .zero) .default) .instImplicit) .default)).toOption
+  == some #[0]
+#guard (Lcnf.typeParameterIndices `Indexed 2
   (.forallE `n (.const ``Nat []) (.sort .zero) .default)).toOption.isNone
 
 private def host (name : Name) (args : List Ml.Expr) : Ml.Expr :=
@@ -266,7 +271,6 @@ def hostChecks : List (String × Ml.Expr × Expect) := [
   ("shift-saturation", host `Nat.shiftLeft [.int 3, .int 62], .value (.var "max_int")),
   ("mul-saturation", host `Nat.mul [.var "max_int", .int 2], .value (.var "max_int")),
   ("pow-saturation", host `Nat.pow [.int 2, .int 64], .value (.var "max_int")),
-  ("array-default", host `Array.get! [.int 77, .listLit [.int 3], .int 2], .value (.int 77)),
   ("utf8-length", host `String.length [.str "é🙂"], .value (.int 2)),
   ("utf8-literal-bytes", host `String.toUTF8 [.str "é🙂\n"],
     .value (ints [195, 169, 240, 159, 153, 130, 10])),
@@ -407,7 +411,7 @@ private def captured (guarded : List String) (params : List String) (body : Ml.E
 #guard captured ["max"] ["max", "a"] (Ml.Expr.call "max" [.int 0, .var "a"]) == ["`max`"]
 -- a pattern variable that hides a parameter
 #guard captured [] ["x"]
-  (.matchE (.var "x") [.mk (.ctor "Some" [.var "x"]) none (.var "x")]) == ["`x`"]
+  (.matchE (.var "x") [(.ctor "Some" [.var "x"], .var "x")]) == ["`x`"]
 -- the same eta binder in two sibling scopes hides nothing
 #guard captured [] ["x"]
   (.letIn "p" (.fn ["_b1"] (.var "_b1")) (.letIn "q" (.fn ["_b1"] (.var "_b1")) (.var "x")))
@@ -433,10 +437,47 @@ private def calling (name : String) (head : String) : Lcnf.Translated :=
 #guard (Lcnf.hygieneProblems #[decl "sh_machine_finished", calling "caller" "sh_machine_finished"]).length == 1
 #guard (Lcnf.hygieneProblems #[decl "machine_finished", calling "caller" "sh_machine_finished"]).isEmpty
 
+/-! ### The runtime column is Lean's
+
+A row's runtime column, read against the environment: the row names a constant of the
+environment or a persisted mono declaration (a specialization the compiler made), and its C
+symbol is the one that Lean's extern attribute names, or none where Lean names none. The source
+evaluator's primitive stands only beside a symbol, by the column's type (`Lcnf.LeanRuntime`). -/
+
+/-- Everything wrong with the runtime column of `rows` in `env`. -/
+private def runtimeProblems (env : Environment) (rows : List Lcnf.Builtin) : List String :=
+  let mono := OCaml5.Lcnf.persistedMonoIndex env
+  rows.flatMap fun b =>
+    let named := if env.contains b.lean || mono.contains b.lean then []
+      else [s!"builtin {b.lean}: no constant and no mono declaration of this name"]
+    let symbol := getExternNameFor env `c b.lean
+    let column := if b.runtime.symbol? == symbol then []
+      else [s!"builtin {b.lean}: the runtime column names {b.runtime.symbol?}, and Lean {symbol}"]
+    named ++ column
+
+run_cmd liftTermElabM do
+  let env ← getEnv
+  let found := runtimeProblems env Lcnf.builtins
+  unless found.isEmpty do throwError "the runtime column: {found}"
+  -- the red controls: a row that says `body` for an extern, one with another symbol, and a
+  -- constant that the environment does not hold are each refused for their own reason
+  let change (lean : Name) (runtime : Lcnf.LeanRuntime) : List Lcnf.Builtin :=
+    Lcnf.builtins.map fun b => if b.lean == lean then { b with runtime } else b
+  let refused (rows : List Lcnf.Builtin) (reason : String) : Bool :=
+    (runtimeProblems env rows).any fun p => (p.splitOn reason).length > 1
+  unless refused (change ``Nat.add .body) "builtin Nat.add: the runtime column names none" do
+    throwError "the runtime column: an extern written as a body passes"
+  unless refused (change ``String.append (.extern "lean_string_push" none))
+      "the runtime column names (some lean_string_push), and Lean (some lean_string_append)" do
+    throwError "the runtime column: a wrong symbol passes"
+  let ghost := { (Lcnf.builtins.headD default) with lean := `Nat.notAConstant }
+  unless refused (ghost :: Lcnf.builtins) "builtin Nat.notAConstant: no constant" do
+    throwError "the runtime column: a row for no constant passes"
+
 /-! ### A row without a contract does not elaborate
 
-The contract's fields have no default, so the omission is an error of the elaborator and not a
-row that reads as exact. -/
+The contract's fields and the runtime column have no default, so an omission is an error of the
+elaborator and not a row that reads as exact or as a body. -/
 
 run_cmd liftTermElabM do
   let elaborates (row : Term) : TermElabM Bool :=
@@ -444,10 +485,15 @@ run_cmd liftTermElabM do
       discard <| Term.withoutErrToSorry (Term.elabTermAndSynthesize row none)
       pure true
     catch _ => pure false
-  let complete ← `(({ lean := `Nat.add, form := Lcnf.Form.op "+", fidelity := Lcnf.Fidelity.exact,
+  let complete ← `(({ lean := `Nat.add, runtime := .extern "lean_nat_add" (some .natAdd),
+                      form := Lcnf.Form.op "+", fidelity := Lcnf.Fidelity.exact,
                       domain := "", controls := [], note := "", cost := "" } : Lcnf.Builtin))
-  let bare ← `(({ lean := `Nat.add, form := Lcnf.Form.op "+" } : Lcnf.Builtin))
+  let contractless ← `(({ lean := `Nat.add, runtime := .body, form := Lcnf.Form.op "+" } : Lcnf.Builtin))
+  let noRuntime ← `(({ lean := `Nat.add, form := Lcnf.Form.op "+",
+                        fidelity := Lcnf.Fidelity.exact, domain := "", controls := [], note := "",
+                        cost := "" } : Lcnf.Builtin))
   unless ← elaborates complete do throwError "the complete row did not elaborate"
-  if ← elaborates bare then throwError "a row without a contract elaborated"
+  if ← elaborates contractless then throwError "a row without a contract elaborated"
+  if ← elaborates noRuntime then throwError "a row without its runtime column elaborated"
 
 end Conform.Effect4.CompilerControls

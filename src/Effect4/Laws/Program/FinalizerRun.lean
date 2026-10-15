@@ -1,3 +1,11 @@
+import Effect4.Laws.Program.FinalizerScopes
+import Effect4.Laws.Program.FinalizerNativeFrames
+import Effect4.Laws.Program.FinalizerNativeActions
+import Effect4.Laws.Program.FinalizerGeneratorRun
+import Effect4.Laws.Program.FinalizerEvaluation
+import Effect4.Laws.Program.FinalizerLayerBody
+import Effect4.Laws.Program.FinalizerControl
+import Effect4.Laws.Program.FinalizerPlacement
 import Effect4.Laws.Program.FinalizerCommands
 import Effect4.Laws.Program.Guard.Core
 import Effect4.Laws.Program.Placement
@@ -111,6 +119,20 @@ theorem census_pushes_once (p : NativeEff) (table : RowTable) (cf : Nat)
   rw [selectors]
   exact Nat.le_trans (SourceScope.Opportunities.exit_registrations_le_recorded q m)
     (Nat.le_trans (Nat.le_add_right _ _) kept.2.2)
+
+/-- A once-placed direct source outside finalizer children needs no separate loop premise.
+Placement: scope-lifetime-finalization R11, a restriction of `once-placed-finalizer`.
+Consumer: the direct-source case of `once_placed_pushes_once`.
+The source restrictions remain explicit; this establishes no finalizer progress. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem once_placed_direct_pushes_once (p : NativeEff) (table : RowTable) (cf : Nat)
+    (m : NativeMachine) (q : List Nat) (fragment : SourceScope.Fragment p)
+    (clear : SourceScope.Opportunities.ClearFinalizers p q)
+    (sequential : SourceScope.SequentialSource p) (raceFree : SourceScope.RaceFreeSource p)
+    (placed : OncePlaced (.eff p) q = true) (reached : Guard.Reachable p table cf m) :
+    m.trace.countP (registeredAt q) ≤ 1 :=
+  census_pushes_once p table cf m q
+    ⟨fragment, clear, FinalizerPlacement.clear_loops p q placed, sequential, raceFree⟩ reached
 
 /-- **Control-source uniqueness outside the source census** (planned goal). The part of
 `once_placed_pushes_once` that the source-use budget does not reach: a once-placed source in a

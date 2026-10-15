@@ -4,62 +4,24 @@
 ;
 ;   test_host  lane Q4 — E4_mailbox, E4_inbox, E4_ring, E4_quiescence, E4_reply,
 ;              E4_trigger, E4_admit; also prints the B-Q4a contention measurement.
-;   test_math  lane M — E4_nat, E4_sha256, E4_hex, E4_be; also prints the SHA-256
-;              throughput on a 64 MiB buffer.
+; The byte layer's lane M (test_math) is in bytes/test/, beside its library.
 
 (test
  (name test_host)
  (modules test_host)
  (libraries effect4_engine threads.posix))
 
-(test
- (name test_math)
- (modules test_math)
- (libraries effect4_engine))
-
-; lane Q1 — in-machine queues: the dispatcher, the due queue, the wake protocol.
+; lane Q1 — the dispatcher.
 ;   test_buckets  E4_buckets over BOTH carriers, the 100 000-op differential against
 ;                 dispatcher_ref (the literal transcription of Fibers.lean:115-155), and the
 ;                 B-Q1a/B-Q1b bench at p in {1,4,16,256}.
-;   test_due      E4_due: ORD-FAM, P-U1..P-U4 and the family-order mutation test.
-;   test_wake     E4_wake: W1..W6 and the DL3 budget.
-;   test_whatwg   the seven WHATWG fixtures F1..F5c over E4_wake (+ E4_due for F5c).
+; The due queue, the wake protocol and the timer store are the machine's own
+; (src/Effect4/Machine/Wake.lean, src/Effect4/Machine/Timer.lean), made from LCNF into
+; api_engine.ml; their hand models and tests were deleted on 2026-10-15 (LC-3).
 
 (test
  (name test_buckets)
  (modules test_buckets dispatcher_ref)
- (libraries effect4_engine unix))
-
-(test
- (name test_due)
- (modules test_due)
- (libraries effect4_engine))
-
-(test
- (name test_wake)
- (modules test_wake)
- (libraries effect4_engine))
-
-(test
- (name test_whatwg)
- (modules test_whatwg)
- (libraries effect4_engine))
-
-; lane Q2 — the timer store: the logical clock and the deadline-ordered table.
-;   test_timers   E4_time + E4_timers: P-T1..P-T7 under the §4.1 names, the mutation test
-;                 (advance_to must refuse a target below `now`, refusal R1), and the eight
-;                 workshop/Timer/Timer.lean #guard witnesses replayed against the carrier.
-;   bench_timers  the B-Q2a..B-Q2d cells with the acceptance verdict per cell. An
-;                 executable, not a test: a bench is a measurement, not a gate.
-
-(test
- (name test_timers)
- (modules test_timers)
- (libraries effect4_engine))
-
-(executable
- (name bench_timers)
- (modules bench_timers)
  (libraries effect4_engine unix))
 
 ; lane C — the persistent state carriers, each against its list twin (the Lean carrier,
@@ -67,9 +29,6 @@
 ;   prop_table    E4_table T1-T8 + R6a/R6b, and the TABLE module type of
 ;                 2026-09-08-engine-a1-state.md §1.5 ascribed to BOTH carriers.
 ;   prop_trace    E4_trace TR1-TR8, and the TRACE module type ascribed to both.
-;   prop_store    E4_store ST1-ST11, against Lean's list operations and arena laws.
-;   prop_fibers   E4_fibers FB2-FB9 against Fibers.lean's own definitions (FB1 is owed to
-;                 lane X: it needs the substituted engine).
 ;   prop_memo     E4_memo MM1-MM7, and the LAYERS module type ascribed to both; MM2 is the
 ;                 observation-equality law against the duplicating list twin.
 ;   bench_carriers  the §6.2 C1-C6 cells plus the memo and the small-size crossover.  An
@@ -83,16 +42,6 @@
 (test
  (name prop_trace)
  (modules prop_trace)
- (libraries effect4_engine))
-
-(test
- (name prop_store)
- (modules prop_store)
- (libraries effect4_engine))
-
-(test
- (name prop_fibers)
- (modules prop_fibers)
  (libraries effect4_engine))
 
 (test
@@ -120,17 +69,13 @@
  (modules test_sched)
  (libraries effect4_engine unix threads.posix))
 
-; lane D — the drive loop: the two instances of the generated engine, the program
-; conversion and the ordinal pin, the differential between them, and the first numbers.
-;   test_engine  G0 (p42 / pFork / pAwait) on Fast AND Ref; the 37 byte goldens of
-;                ocaml/eff/goldens run at fuel 1000 on both, with outcome, exits, the
-;                fiber-table projection, the trace rows and the store row compared row by
-;                row (differential D1 in miniature); the M17 ordinal pin against
-;                ocaml/eff/eff_manifest.txt with a transposition mutation test;
-;                `replay_steps` at |tape|+1; a count of the two `failwith` rows of the
-;                generated prelude; and the W1/W2 bench cells (a measurement, printed, not
-;                a gate).  It reads ocaml/eff/goldens and ocaml/eff/eff_manifest.txt by an
-;                ancestor walk from the cwd — $E4_EFF_GOLDENS and $E4_EFF_MANIFEST override.
+; lane D — the drive loop: the two instances of the generated engine, the differential
+; between them, and the first numbers. The program type is one (ocaml/eff/eff_types.ml, the
+; LCNF route's), so no conversion or ordinal pin stands between the wire and the engine.
+;   test_engine  G0 (p42 / pFork / pAwait) on Fast AND Ref; the numeric profile at load;
+;                the clock and creation-origin readers of the generated machine; a count of the
+;                two `failwith` rows of the generated prelude; and the W1/W2 bench cells (a
+;                measurement, printed, not a gate). The goldens' differential is test_diff's.
 
 (test
  (name test_engine)
@@ -148,7 +93,7 @@
 ;               the carrier half).  Every position of every replay is compared on both
 ;               pairs; the tapes are drawn from the machine as it runs, so they are
 ;               admissible by construction.  It also discharges lane C's OWED FB1, records
-;               why DF-2/DF-3 are not run, and reports the engines against
+;               why DF-3 is not run, and reports the engines against
 ;               harness/truth/corpus.json.  Paths are found by an ancestor walk from the
 ;               cwd — $E4_EFF_GOLDENS, $E4_HEX_GOLDENS, $E4_TRUTH_CORPUS and
 ;               $E4_LEAN_CORPUS (the directory) override.

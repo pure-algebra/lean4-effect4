@@ -21,7 +21,7 @@
                      This is `E4_trace`'s shape (a reversed accumulator).
      B  path-copying `Im.add d _ m` -- a persistent balanced tree, one insertion per
                      decision.  A retained version keeps its own spine, which the final
-                     machine has replaced.  This is `E4_table` / `E4_store`'s shape.
+                     machine has replaced.  This is `E4_table`'s shape.
      C  the engine   `E4_engine.Fast` over a real program and an admissible tape: both
                      shapes at once, and the only number that answers the actual question.
    B-Q5a uses shape B: it asks what the QUERY LAYER costs against a raw replay of the SAME
@@ -279,17 +279,17 @@ let retention (type m d) label (tape : d array) (replay : m -> d -> m) (initial 
 
 (* the G0 fork program, in `Eff_types`, as lane D writes it (test_engine.ml:103-114) *)
 let fork_opts : E.fork_options =
-  { E.fork_options_startImmediately = false;
-    fork_options_daemon = false;
-    fork_options_maskMode = E.Mask_mode_inherit }
+  { E.start_immediately = false;
+    daemon = false;
+    mask_mode = E.MaskMode_inherit }
 
-let p_fork : E.eff =
+let p_fork : E.native_op E.eff =
   E.Eff_bind
     ( E.Eff_withFiber
-        (E.Action_term_fork
+        (E.ActionTerm_fork
            ( E.Eff_bind (E.Eff_yieldNow 0, E.Eff_succeed (E.Term_lit (E.Lit_nat 7))),
              fork_opts )),
-      E.Eff_awaitFiber (E.Term_var 0, E.Observer_mode_awaitValue) )
+      E.Eff_awaitFiber (E.Term_var 0, E.ObserverMode_awaitValue) )
 
 let dec_of (d : E4_diff.decision) : F.decision =
   match d with

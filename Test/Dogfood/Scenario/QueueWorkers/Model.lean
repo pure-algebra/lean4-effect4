@@ -4,7 +4,8 @@ import Test.Dogfood.Scenario.QueueWorkers.Program
 # The queue crew's observation and clause propositions
 
 Decisions rows 254 and 275. The scenario and its proof modules share these definitions.
-The declarations retain their original names and bodies.
+The fed reading counts resolved values at the actual feeder offer continuation.
+The Original namespace retains the reply-application reading and its delayed-read control.
 -/
 
 set_option autoImplicit false
@@ -118,6 +119,8 @@ def QueueCell.view : QueueCell → Option QueueView
   | .holds view => some view
   | .malformed => none
 
+namespace Original
+
 /-- The jobs that the host fed: the success value of each applied reply on `Jobs.take`, in the
 order of the reply applications. The value is the stored reply's, read at the accepted reply
 receipt of the same key. -/
@@ -139,6 +142,22 @@ def fedOf (s : Run) : List Val :=
       | none => none
     | _ => none
 
+end Original
+
+/-- The feeder's offer entry, before its mask captures the caller's flag. -/
+def offerEntryPath : List Nat :=
+  [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1]
+
+/-- One actual offer entry retains the resolved job in its source continuation. -/
+def fedAt : RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx → Option Val
+  | .frame _ (.pushed (.onSuccess _ (.cont point))) =>
+    if point.path == offerEntryPath then point.env[10]? else none
+  | _ => none
+
+/-- Fed jobs are resolved values reaching the feeder's Queue.offer continuation.
+An accepted reply application that never reaches that continuation feeds no job. -/
+def fedOf (s : Run) : List Val := s.machine.trace.filterMap fedAt
+
 /-- The scenario's one observation. -/
 structure Observation where
   /-- The assignment of jobs to workers: each `[job, worker]` the `assigned` cell holds, in the
@@ -146,7 +165,7 @@ structure Observation where
   assignment : List Val
   /-- The queue's cell, up to its handles. -/
   queue : QueueCell
-  /-- The jobs that the host fed, in the order of the reply applications. -/
+  /-- The resolved jobs entering the feeder's Queue.offer continuation, in trace order. -/
   fed : List Val
   /-- The accepted reply receipts, in order, on both host rows. -/
   receipts : List Seen
@@ -179,6 +198,9 @@ def observe (s : Run) : Observation :=
     finished := cell s 4
     rootExit := s.exit
     workLeft := s.work }
+
+/-- The original reading counts successful terminal reply applications on Jobs.take. -/
+def Original.observe (s : Run) : Observation := {QueueWorkers.observe s with fed := Original.fedOf s}
 
 /-! ### The readings of the clauses -/
 
@@ -248,7 +270,31 @@ def Observation.releasedOnce (o : Observation) : Bool := decide o.cleanups.Nodup
 /-- A `[job, worker]` entry of the `assigned` cell. -/
 def gave (job worker : Nat) : Val := .list [.nat job, .nat worker]
 
-/-- The proposition of `held_within_fed`. -/
+/-- The executable check of the accepted terminal external-reply profile. -/
+def terminalReplyRow : Api.Runner.Command × Api.HostSession.Phase → Bool
+  | (.submit reply, .preflight) => match reply.completion with
+    | .ofExit _ => true
+    | .ofRefGet _ => false
+  | _ => true
+
+/-- The accepted reply profile, read directly from the recorded journal and verdicts. -/
+def Original.terminalRepliesCheck (s : Run) : Bool := (Scenario.rows s).all terminalReplyRow
+
+/-- Accepted external reply receipts contain terminal exits.
+The profile permits every control and every refused row. -/
+def Original.TerminalReplies (s : Run) : Prop :=
+  ∀ reply : Api.HostSession.Reply,
+    (Api.Runner.Command.submit reply, Api.HostSession.Phase.preflight) ∈ Scenario.rows s →
+      ∃ exit, reply.completion = .ofExit exit
+
+/-- The original claim reads accepted reply applications, including delayed completions. -/
+def Original.HeldWithinFed : Prop :=
+  ∀ (total fuel : Nat) (b : Api.Built) (moves : List Move),
+    Effect4.Api.Author.build (crew total) = .ok b →
+    funded (Scenario.play (openedAt fuel b) moves) = true →
+    (Original.observe (Scenario.play (openedAt fuel b) moves)).heldWithin = true
+
+/-- The proposition of `held_within_fed`, on values actually entering offers. -/
 def HeldWithinFed : Prop :=
   ∀ (total fuel : Nat) (b : Api.Built) (moves : List Move),
     Effect4.Api.Author.build (crew total) = .ok b →

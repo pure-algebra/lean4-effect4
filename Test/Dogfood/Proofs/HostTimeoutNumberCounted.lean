@@ -21,8 +21,7 @@ open HostTimeoutNumberCallbacks HostTimeoutNumberFlow HostTimeoutNumberFinalizer
 def nextImage (image : Image) (n : Fin 4)
     (cleanupComplete : image.cleanups.length = image.count) (formComplete : image.exits.length = image.count)
     (cursor : image.count ≤ n.val) : Image :=
-  ⟨image.count + 1, image.cleanups, image.completed, image.exits,
-    count_numbers image.numbers n cleanupComplete formComplete cursor⟩
+  image.enter n cleanupComplete formComplete cursor
 
 /-- The source's count callback resolves the exact HTTP body after committing the counter. -/
 theorem count_callback (view : View) (captured : Point) (fuel delay : Nat) (n : Fin 4) (error : Val) :
@@ -52,6 +51,100 @@ theorem count_saved (view : View) (state : Stores) (image : Image)
     exact CodeAt.attemptBody image {captured with completed := view} fuel delay n error count good.1
   · intro next future cause good
     exact False.elim good
+
+/-- The source count binder has its post-count class before its synchronous write runs. -/
+theorem count_bind_push (view : View) (state : Stores) (image : Image) (n : Fin 4)
+    (cleanupComplete : image.cleanups.length = image.count)
+    (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+    (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image state)
+    (fiber : HostTimeoutFrames.NativeFrame) (output : HostTimeoutNumberFlow.Kind)
+    (current : fiber.current = resolve HostTimeoutSource.program
+      ((attemptPoint captured (fuel + 1) delay n error).child 0))
+    (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp state
+      (.at (nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor))) output fiber.stack) :
+    ∃ next events, fiber.step (interpreter view).toPrimInterp = (.running next, events) ∧
+      AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp state output next := by
+  let entered := nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor)
+  have count : entered.count = n.val + 1 := by
+    change image.count + 1 = n.val + 1
+    rw [cursor]
+  have code : resolve HostTimeoutSource.program
+      ((attemptPoint captured (fuel + 1) delay n error).child 0) =
+      .onSuccess (.sync (.op (.refUpdate ⟨0⟩ countTerm
+        (attemptPoint captured (fuel + 1) delay n error).env)))
+        (.cont ((attemptPoint captured (fuel + 1) delay n error).child 0)) := by kernel_rfl
+  exact AnswerFlow.push_success (model view) (interpreter view).toPrimInterp state
+    (.unit entered) (.at entered) output fiber _ _ (current.trans code)
+    (CodeAt.count image n cleanupComplete formComplete cursor captured fuel delay error heap)
+    (count_saved view state entered captured fuel delay n error count) stack
+
+/-- Installing the attempt's finalizer requires no fabricated post-count heap before the count runs. -/
+theorem count_exit_push (view : View) (state : Stores) (image : Image) (n : Fin 4)
+    (cleanupComplete : image.cleanups.length = image.count)
+    (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+    (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image state)
+    (fiber : HostTimeoutFrames.NativeFrame) (output : HostTimeoutNumberFlow.Kind)
+    (current : fiber.current = resolve HostTimeoutSource.program
+      (attemptPoint captured (fuel + 1) delay n error))
+    (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp state
+      (.cleanupExit (nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor))
+        (by change image.count + 1 = image.cleanups.length + 1; rw [cleanupComplete])) output fiber.stack) :
+    ∃ next events, fiber.step (interpreter view).toPrimInterp = (.running next, events) ∧
+      AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp state output next := by
+  let point := attemptPoint captured (fuel + 1) delay n error
+  let entered := nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor)
+  have own : entered.count = entered.cleanups.length + 1 := by
+    change image.count + 1 = image.cleanups.length + 1
+    rw [cleanupComplete]
+  have count : entered.count = n.val + 1 := by
+    change image.count + 1 = n.val + 1
+    rw [cursor]
+  let body := resolve HostTimeoutSource.program (point.child 0)
+  have code : resolve HostTimeoutSource.program point = .onExit body (.fin point) false := by
+    kernel_rfl
+  refine ⟨{fiber with current := body, stack := .onExit body (.fin point) false :: fiber.stack},
+    [.pushed (.onExit body (.fin point) false)], ?_, .at entered,
+    CodeAt.countBind image n cleanupComplete formComplete cursor captured fuel delay error heap,
+    .cons (attempt_saved view state entered own captured fuel delay n error count body) stack⟩
+  simp only [FrameFiber.step, show fiber.current = .onExit body (.fin point) false from current.trans code]
+
+/-- The actual synchronous count establishes the post-count class saved by the two pushes. -/
+theorem count_native_write (view : View) (machine : Effect4.Program.NativeMachine)
+    (fiber : NativeFiber) (yielding : Bool) (image : Image) (n : Fin 4)
+    (cleanupComplete : image.cleanups.length = image.count)
+    (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+    (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image machine.state)
+    (output : HostTimeoutNumberFlow.Kind)
+    (current : fiber.frame.current = .sync (.op (.refUpdate ⟨0⟩ countTerm
+      (attemptPoint captured (fuel + 1) delay n error).env)))
+    (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp machine.state
+      (.unit (nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor))) output fiber.frame.stack) :
+    let entered := nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor)
+    let next := {machine.state with refs := entered.heap}
+    evaluateNative HostTimeoutSource.program machine fiber yielding Test.Dogfood.Scenario.Timeout.fetch.table =
+      ⟨{machine with state := next}, {fiber with frame := {fiber.frame with current := .success .unit}},
+        yielding, .answered, [.drainDue], []⟩ ∧
+      AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp next output
+        {fiber.frame with current := .success .unit} := by
+  dsimp only
+  let entered := nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor)
+  let operation := SyncOp.refUpdate ⟨0⟩ countTerm
+    (attemptPoint captured (fuel + 1) delay n error).env
+  have overwrite : {machine.state with refs := image.heap} = machine.state := by
+    rw [show image.heap = machine.state.refs from heap.symm]
+  have step := count_sync machine.state image.count delay n error image.cleanups image.completed
+  change syncOpStep operation {machine.state with refs := image.heap} =
+    some ({machine.state with refs := entered.heap}, .unit) at step
+  rw [overwrite] at step
+  have future : Future machine.state {machine.state with refs := entered.heap} := by
+    constructor
+    · change machine.state.refs.length ≤ 3
+      rw [heap]
+      exact Nat.le_refl _
+    · exact Nat.le_refl _
+  exact ControlSteps.native_sync_answer HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+    machine fiber yielding operation _ .unit id (model view) (interpreter view).toPrimInterp
+    (.unit entered) output current step future ⟨rfl, rfl⟩ stack
 
 /-- The three-command prefix returns the exact saved binder and attempt finalizer in source order. -/
 theorem counted_frame (view : View) (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber)

@@ -8,21 +8,18 @@ import Effect4
 /-!
 # Conform.Effect4.LcnfMl — rung 3: the emitted OCaml, read into the target semantics
 
-**What it is.** A reader from `OCaml5.Ml.Syntax` into `Conform.Lcnf.Target`, and the
-differential that uses it: translate the `Effect4.Program.Ty` closure with the *real*
-translator (`OCaml5.Lcnf.translateClosure`, unchanged), read the `Ml.Decl`s it produces into
-`Target.Expr`, and run that against the compiled Lean functions on the same 20,387 vectors
-rung 2 uses. Nothing is re-implemented: the input is exactly the syntax tree
-`OCaml5.Ml.Render` renders into `ocaml/gen/*.ml`.
+**What it is.** A reader from `OCaml5.Ml.Syntax` into `Conform.Lcnf.Target`, the assembly of an
+emitted module into a target program, and the marshalling of `Ty` into the target's values. The
+compiler checkpoint (`Conform.Effect4.Normalization`, `make check-compiler`) runs its target lane
+through them: the input is exactly the syntax tree `OCaml5.Ml.Render` renders. The vector lane
+that ran this reader on 20,387 vectors went on 2026-10-15: no gate ran it
+(`git:fef45fb5a:tools/Conform/Effect4/LcnfMl.lean`, decisions row 391).
 
-    lake env lean -M4096 --run tools/Conform/Effect4/LcnfMl.lean --out <dir>
-
-**The reader refuses by name.** Every `Ml.Expr` and `Ml.Pat` constructor outside the emitted
-subset is an `Except` error naming the constructor, so "the evaluator handles what the
-translator emits" is a checked claim rather than a hope. The refusals this run reports are
-listed in the output. One labelled application is read, by its exact shape:
-`Option.value o ~default:d`, the form of the row `Option.getD`. Every other labelled
-application is refused.
+**The reader refuses by name.** The syntax holds only the forms the route builds
+(`OCaml5.Ml.Syntax`), and the reader reads every one of them but verbatim text, which is an
+`Except` error naming it. One labelled application is read, by its exact shape:
+`Option.value o ~default:d`, the form of the row `Option.getD`. Every other labelled application
+is refused. The refusals a run reports are listed in its output.
 
 The production backend emits its UTF-8 helper and byte-array identity. This reader uses
 those same emitted declarations, with named primitive assumptions in the target evaluator.
@@ -35,7 +32,11 @@ open Effect4.Program
 
 namespace Conform.Effect4.LcnfMl
 
-/-! ## 1. The reader -/
+/-! ## 1. The reader
+
+The reader is two algebras of the OCaml syntax's fold (`OCaml5.Ml.Fold`): every pattern reads,
+and an expression reads unless it is verbatim text or a labelled application other than the one
+the builtin table writes. -/
 
 /-- Constructor names an OCaml target spells as a literal rather than as a constructor. -/
 def litCtor? : String → Option Target.Pat
@@ -44,121 +45,83 @@ def litCtor? : String → Option Target.Pat
   | "()" => some .unit
   | _ => none
 
-partial def ofPat : OCaml5.Ml.Pat → Except String Target.Pat
-  | .wild => .ok .wild
-  | .var n => .ok (.var n)
-  | .int n => .ok (.int n)
-  | .str s => .ok (.str s)
-  | .ctor n args => do
+/-- A pattern, read. -/
+def ofPatAlg : OCaml5.Ml.PatAlgebra (fun _ => Target.Pat) where
+  pat_wild := .wild
+  pat_var n := .var n
+  pat_ctor n args :=
     match litCtor? n, args with
-    | some p, [] => .ok p
-    | _, _ => return .ctor n (← args.mapM ofPat)
-  | .record fs => do return .record (← fs.mapM fun (k, p) => do return (k, ← ofPat p)) false
-  | .recordOpen fs => do return .record (← fs.mapM fun (k, p) => do return (k, ← ofPat p)) true
-  | .tuple ps => do return .tuple (← ps.mapM ofPat)
-  | .cons h t => do return .ctor "::" [← ofPat h, ← ofPat t]
-  | .listPat items => do
-    let ps ← items.mapM ofPat
-    return ps.foldr (fun h t => .ctor "::" [h, t]) (.ctor "[]" [])
-  | .constrained p _ => ofPat p
-  | .alias .. => .error "Ml.Pat.alias"
-  | .orPat .. => .error "Ml.Pat.orPat"
-  | .char _ => .error "Ml.Pat.char"
-  | .float _ => .error "Ml.Pat.float"
-  | .exnPat _ => .error "Ml.Pat.exnPat"
-  | .polyPat .. => .error "Ml.Pat.polyPat"
-  | .lazyPat _ => .error "Ml.Pat.lazyPat"
+    | some p, [] => p
+    | _, _ => .ctor n args
+  pat_record fs := .record fs false
+  pat_recordOpen fs := .record fs true
+  pat_tuple ps := .tuple ps
+  pat_cons h t := .ctor "::" [h, t]
+
+def ofPat (p : OCaml5.Ml.Pat) : Target.Pat := OCaml5.Ml.cata_pat ofPatAlg p
+
+/-- The target evaluator's primitives: the route's library entries that it answers, with their
+arities and scans (`OCaml5.Lcnf.targetArities`, `OCaml5.Lcnf.targetScans`), at a word. -/
+def primEnv (word : Target.Word := { bits := 63 }) : Target.PrimEnv :=
+  { word, arity := OCaml5.Lcnf.targetArities, scans := OCaml5.Lcnf.targetScans }
 
 /-- Operators and function names the target evaluates as primitives; `::` is a constructor,
 not a primitive, and is handled before this. -/
-def isPrimName (n : String) : Bool := (Target.primArity n).isSome
+def isPrimName (n : String) : Bool := OCaml5.Lcnf.targetArities.contains n
 
-partial def ofExpr : OCaml5.Ml.Expr → Except String Target.Expr
-  | .var n => .ok (.var n)
-  | .int n => .ok (.int n)
-  | .str s => .ok (.str s)
-  | .bool b => .ok (.bool b)
-  | .unit => .ok .unit
-  | .ctor n args => do
+private def all (xs : List (Except String Target.Expr)) : Except String (List Target.Expr) :=
+  xs.mapM id
+
+/-- An expression, read. An application of a primitive's name is the primitive; the one labelled
+call it reads is `Option.value o ~default:d`, the form of the row `Option.getD`, by its exact
+shape, and the target primitive takes both as values, as the call evaluates both. -/
+def ofExprAlg : OCaml5.Ml.ExprAlgebra (fun _ => Except String Target.Expr) where
+  expr_var n := .ok (.var n)
+  expr_int n := .ok (.int n)
+  expr_str s := .ok (.str s)
+  expr_bool b := .ok (.bool b)
+  expr_unit := .ok .unit
+  expr_ctor n args := do
     match n, args with
     | "true", [] => return .bool true
     | "false", [] => return .bool false
     | "()", [] => return .unit
-    | _, _ => return .ctor n (← args.mapM ofExpr)
-  | .binop "::" l r => do return .ctor "::" [← ofExpr l, ← ofExpr r]
-  | .binop op l r => do
-    if isPrimName op then return .prim op [← ofExpr l, ← ofExpr r]
-    else .error s!"Ml.Expr.binop `{op}`"
-  | .app f args => do
-    let as ← args.mapM ofExpr
-    match f with
+    | _, _ => return .ctor n (← all args)
+  expr_app f args := do
+    let as ← all args
+    match ← f with
     | .var n => if isPrimName n then return .prim n as else return .app (.var n) as
-    | _ => return .app (← ofExpr f) as
-  | .fn params body => do return .fn params (← ofExpr body)
-  | .letIn n v b => do return .letIn n (← ofExpr v) (← ofExpr b)
-  | .letRecIn binds b => do
-    let bs ← binds.mapM fun (n, ps, body) => do return (n, ps, ← ofExpr body)
-    return .letRec bs (← ofExpr b)
-  | .ifThen c t e => do return .ifThen (← ofExpr c) (← ofExpr t) (← ofExpr e)
-  | .matchE scrut arms => do
-    let as ← arms.mapM fun
-      | .mk p none body => do return (← ofPat p, ← ofExpr body)
-      | .mk _ (some _) _ => .error "Ml.Arm with a guard"
-    return .matchE (← ofExpr scrut) as
-  | .record fs => do return .record (← fs.mapM fun (k, e) => do return (k, ← ofExpr e))
-  | .field e n => do return .field (← ofExpr e) n
-  | .tuple parts => do return .tuple (← parts.mapM ofExpr)
-  | .listLit items => do
-    let es ← items.mapM ofExpr
+    | f' => return .app f' as
+  expr_appL f args := do
+    match ← f, args with
+    | .var "Option.value", [(.nolabel, o), (.lbl "default", d)] =>
+      return .prim "Option.value~default" [← o, ← d]
+    | _, _ => .error "Ml.Expr.appL (a labelled application other than `Option.value o ~default:d`)"
+  expr_binop op l r := do
+    if op == "::" then return .ctor "::" [← l, ← r]
+    else if isPrimName op then return .prim op [← l, ← r]
+    else .error s!"Ml.Expr.binop `{op}`"
+  expr_fn params body := do return .fn params (← body)
+  expr_letIn n v b := do return .letIn n (← v) (← b)
+  expr_letRec f ps v b := do return .letRec [(f, ps, ← v)] (← b)
+  expr_ifThen c t e := do return .ifThen (← c) (← t) (← e)
+  expr_matchE scrut arms := do
+    return .matchE (← scrut) (← arms.mapM fun (p, body) => do return (ofPat p, ← body))
+  expr_record fs := do return .record (← fs.mapM fun (k, e) => do return (k, ← e))
+  expr_field e n := do return .field (← e) n
+  expr_tuple parts := do return .tuple (← all parts)
+  expr_listLit items := do
+    let es ← all items
     return es.foldr (fun h t => .ctor "::" [h, t]) (.ctor "[]" [])
-  | .annot e _ => ofExpr e
-  | .assertE _ => .ok (.fail "assert false")
-  | .hole note _ => .ok (.fail s!"HOLE: {note}")
-  | .seq .. => .error "Ml.Expr.seq"
-  | .tryWith .. => .error "Ml.Expr.tryWith"
-  | .recordWith .. => .error "Ml.Expr.recordWith"
-  | .setField .. => .error "Ml.Expr.setField"
-  | .mkRef _ => .error "Ml.Expr.mkRef"
-  | .deref _ => .error "Ml.Expr.deref"
-  | .assign .. => .error "Ml.Expr.assign"
-  | .raiseE _ => .error "Ml.Expr.raiseE"
-  | .perform _ => .error "Ml.Expr.perform"
-  | .continueK .. => .error "Ml.Expr.continueK"
-  | .discontinueK .. => .error "Ml.Expr.discontinueK"
-  | .matchWith .. => .error "Ml.Expr.matchWith"
-  | .tryWithEff .. => .error "Ml.Expr.tryWithEff"
-  | .raw _ => .error "Ml.Expr.raw"
-  | .char _ => .error "Ml.Expr.char"
-  | .float _ => .error "Ml.Expr.float"
-  | .intOf _ => .error "Ml.Expr.intOf"
-  | .lam .. => .error "Ml.Expr.lam"
-  | .functionE _ => .error "Ml.Expr.functionE"
-  | .letPat .. => .error "Ml.Expr.letPat"
-  | .openIn .. => .error "Ml.Expr.openIn"
-  | .lazyE _ => .error "Ml.Expr.lazyE"
-  | .arrayLit _ => .error "Ml.Expr.arrayLit"
-  | .arrayGet .. => .error "Ml.Expr.arrayGet"
-  | .arraySet .. => .error "Ml.Expr.arraySet"
-  | .whileE .. => .error "Ml.Expr.whileE"
-  | .forE .. => .error "Ml.Expr.forE"
-  | .polyCtor .. => .error "Ml.Expr.polyCtor"
-  -- The one labelled call the builtin table writes: the row `Option.getD`. It is read by its
-  -- exact shape: the function's name, one positional option, then the label `default`. The
-  -- target primitive takes both as values, as the call evaluates both.
-  | .appL (.var "Option.value") [(.nolabel, o), (.lbl "default", d)] => do
-    return .prim "Option.value~default" [← ofExpr o, ← ofExpr d]
-  | .appL .. =>
-    .error "Ml.Expr.appL (a labelled application other than `Option.value o ~default:d`)"
-  | .ifThenOnly .. => .error "Ml.Expr.ifThenOnly"
-  | .handler .. => .error "Ml.Expr.handler"
-  | .matchWithK .. => .error "Ml.Expr.matchWithK"
-  | .shallowContinue .. => .error "Ml.Expr.shallowContinue"
-  | .shallowDiscontinue .. => .error "Ml.Expr.shallowDiscontinue"
-  | .reperform .. => .error "Ml.Expr.reperform"
+  expr_annot e _ := e
+  expr_hole note _ := .ok (.fail s!"HOLE: {note}")
+  expr_raw _ := .error "Ml.Expr.raw"
+  expr_assertE _ := .ok (.fail "assert false")
+
+def ofExpr (e : OCaml5.Ml.Expr) : Except String Target.Expr := OCaml5.Ml.cata_expr ofExprAlg e
 
 /-- One `Ml.Bind` as a top-level target binding. -/
 def ofBind (b : OCaml5.Ml.Bind) : Except String (String × List String × Target.Expr) := do
-  unless b.lparams.isEmpty do throw "Ml.Bind.lparams"
   return (b.name, b.params.map (·.1), ← ofExpr b.body)
 
 /-! ## 1b. The program an emitted module is
@@ -196,7 +159,7 @@ def assemble (decls : Array OCaml5.Lcnf.Translated) (word : Target.Word := { bit
     let (name, ps, body) ← (ofBind d.bind).mapError fun why => s!"{d.leanName}: {why}"
     if binds.contains name then throw s!"{d.leanName}: `{name}` is already bound"
     binds := binds.insert name (ps, body)
-  return { binds, pe := { word } }
+  return { binds, pe := primEnv word }
 
 /-! ## 2. Marshalling `Ty` into the OCaml value domain
 
@@ -249,187 +212,7 @@ def itemTs : List Ty → List Target.TValue
   | t :: rest => tyT t :: itemTs rest
 end
 
-def tyListT (ts : List Ty) : Target.TValue := Target.TValue.ofList (ts.map tyT)
 def natListT (ns : List Nat) : Target.TValue :=
   Target.TValue.ofList (ns.map fun n => Target.TValue.int (Int.ofNat n))
-
-/-! ## 3. The vectors (the same enumeration rung 2 uses) -/
-
-def leaves : List Ty :=
-  [.never, .unit, .nat, .int, .string, .bool, .handle "Ref.Ref<number>", .handle Ty.scopeTarget]
-
-def layer (below right : List Ty) : List Ty :=
-  (below.map Ty.option) ++ (below.map Ty.list) ++ (below.map Ty.causeOf) ++
-  (below.flatMap fun a => right.flatMap fun b =>
-    [.prod a b, .except a b, .exitOf a b, .fiberOf a b, .union a b])
-
-def small : List Ty := [.never, .nat, .handle "Ref.Ref<number>"]
-def d1full : List Ty := leaves ++ layer leaves leaves
-def c1 : List Ty := small ++ layer small small
-def c2 : List Ty := c1 ++ layer c1 small
-def packageTys : List Ty :=
-  (Packages.sqliteBun ++ Packages.keyValueStoreMemory).flatMap fun r =>
-    [r.request, r.answer, r.error]
-def vectors : List Ty := (d1full ++ c2 ++ packageTys).eraseDups
-
-def gname (n : Name) : String := OCaml5.Lcnf.globalName n
-
-def buildCases : Array Target.TCase := Id.run do
-  let mut out : Array Target.TCase := #[]
-  for t in vectors do
-    let tv := tyT t
-    let lbl := t.render
-    out := out.push { label := lbl, bind := gname ``Ty.render, args := #[tv], expected := .value (.str t.render) }
-    out := out.push { label := lbl, bind := gname ``Ty.key, args := #[tv], expected := .value (natListT t.key) }
-    out := out.push { label := lbl, bind := gname ``Ty.members, args := #[tv], expected := .value (tyListT t.members) }
-    out := out.push { label := lbl, bind := gname ``Ty.isNever, args := #[tv], expected := .value (.bool t.isNever) }
-    out := out.push { label := lbl, bind := gname ``Ty.ofMembers, args := #[tyListT t.members],
-                      expected := .value (tyT (Ty.ofMembers t.members)) }
-    out := out.push { label := lbl ++ " ⊔ self", bind := gname ``Ty.join, args := #[tv, tv],
-                      expected := .value (tyT (Ty.join t t)) }
-    out := out.push { label := lbl ++ " ⊔ never", bind := gname ``Ty.join, args := #[tv, tyT .never],
-                      expected := .value (tyT (Ty.join t .never)) }
-    out := out.push { label := lbl ++ " ▷ []", bind := gname ``Ty.insertMember,
-                      args := #[tv, Target.TValue.ofList []],
-                      expected := .value (tyListT (Ty.insertMember t [])) }
-  for a in c1 do
-    for b in c1 do
-      let lbl := a.render ++ " | " ++ b.render
-      out := out.push { label := lbl, bind := gname ``Ty.join, args := #[tyT a, tyT b],
-                        expected := .value (tyT (Ty.join a b)) }
-      out := out.push { label := lbl, bind := gname ``Effect4.Field.ltKey,
-                        args := #[natListT a.key, natListT b.key],
-                        expected := .value (.bool (Effect4.Field.ltKey a.key b.key)) }
-      out := out.push { label := lbl, bind := gname ``Ty.insertMember,
-                        args := #[tyT a, tyListT [b]],
-                        expected := .value (tyListT (Ty.insertMember a [b])) }
-  return out
-
-/-! ## 4. The driver -/
-
-structure Args where
-  out : Option String := none
-  fuel : Nat := 200000
-  /-- The target word width; 63 is OCaml's `int`. -/
-  bits : Nat := 63
-  /-- Render the same declarations as a self-contained `.ml` with a driver appended, so the
-  target evaluator can be checked against `ocaml` executing the real bytes. -/
-  emitMl : Option String := none
-  /-- Write the expected answers (computed by Lean) beside it. -/
-  emitExpected : Option String := none
-
-def parseArgs : List String → Args → Args
-  | "--out" :: p :: rest, a => parseArgs rest { a with out := some p }
-  | "--fuel" :: n :: rest, a => parseArgs rest { a with fuel := n.toNat! }
-  | "--bits" :: n :: rest, a => parseArgs rest { a with bits := n.toNat! }
-  | "--emit-ml" :: p :: rest, a => parseArgs rest { a with emitMl := some p }
-  | "--emit-expected" :: p :: rest, a => parseArgs rest { a with emitExpected := some p }
-  | _ :: rest, a => parseArgs rest a
-  | [], a => a
-
-/-! ### Rendering the same declarations as real OCaml
-
-The `.ml` this writes holds the same `Ml.Decl` list the differential reads, so `ocaml`'s
-answer and the target evaluator's answer are answers about the *same* syntax tree. Primitive implementations are supplied by the production backend. -/
-
-/-- The six observations the three sides compare, per vector: `render`, `key`, `isNever`,
-`render (join t t)`, `render (ofMembers (members t))`, `length (members t)`. All six print
-without a hand-written `ty` printer, so the OCaml driver needs nothing beyond the closure. -/
-def expectedLine (t : Ty) : String :=
-  String.intercalate "\t"
-    [ t.render, " ".intercalate (t.key.map toString), toString t.isNever
-    , (Ty.join t t).render, (Ty.ofMembers t.members).render, toString t.members.length ]
-
-def driverSource : String :=
-  -- a vector as OCaml source is its target value's own rendering through the translator's
-  -- constructor names; the hand printer `tyOcaml` that stood beside `tyT` is deleted (seat W2,
-  -- decisions row 173: it printed the same OCaml up to a space before each parenthesis)
-  let vecs := ";\n  ".intercalate (vectors.map fun t => "(" ++ (tyT t).render ++ ")")
-  "\n(* --- driver appended by Conform.Effect4.LcnfMl --- *)\n" ++
-  "let vectors = [\n  " ++ vecs ++ "\n]\n" ++
-  "let show_ints l = String.concat \" \" (List.map string_of_int l)\n" ++
-  "let () = List.iter (fun t ->\n" ++
-  "  Printf.printf \"%s\\t%s\\t%s\\t%s\\t%s\\t%d\\n\"\n" ++
-  "    (" ++ gname ``Ty.render ++ " t)\n" ++
-  "    (show_ints (" ++ gname ``Ty.key ++ " t))\n" ++
-  "    (string_of_bool (" ++ gname ``Ty.isNever ++ " t))\n" ++
-  "    (" ++ gname ``Ty.render ++ " (" ++ gname ``Ty.join ++ " t t))\n" ++
-  "    (" ++ gname ``Ty.render ++ " (" ++ gname ``Ty.ofMembers ++ " (" ++ gname ``Ty.members ++ " t)))\n" ++
-  "    (List.length (" ++ gname ``Ty.members ++ " t))) vectors\n"
-
-def roots : Array Name :=
-  #[``Ty.key, ``Ty.members, ``Ty.join, ``Ty.render, ``Effect4.Field.ltKey, ``Ty.insertMember,
-    ``Ty.ofMembers, ``Ty.isNever, ``GenTy.merge]
-
-def main (argv : List String) : IO UInt32 := do
-  initSearchPath (← findSysroot)
-  let args := parseArgs argv {}
-  let env ← importModules #[{ module := `Effect4 }] {} 0
-  let ctx : Core.Context := { fileName := "<conform-lcnf-ml>", fileMap := default }
-  let act : CoreM UInt32 := do
-    let rs := roots
-    let closure ← OCaml5.Lcnf.translateClosure rs 4000 {} {}
-    -- the program starts from the support bindings, as the emitted module starts from its prelude
-    let mut binds : Std.HashMap String (List String × Target.Expr) ←
-      match supportBinds { bits := args.bits } with
-      | .ok support => pure support
-      | .error why => throwError why
-    let mut refusals : Array String := #[]
-    for t in closure.decls do
-      match ofBind t.bind with
-      | .ok (n, ps, e) => binds := binds.insert n (ps, e)
-      | .error m => refusals := refusals.push s!"{t.ocamlName}: {m}"
-    let prog : Target.Program := { binds := binds, pe := { word := { bits := args.bits } } }
-    -- the same declarations as real OCaml, for the third side of the comparison
-    if let some path := args.emitMl then
-      let gen ← (OCaml5.Lcnf.generate (closure.realTypes) closure.mentioned {} {}).run' {} {}
-      let emitted ← match OCaml5.Lcnf.emit closure.decls with
-        | .ok items => pure items
-        | .error message => throwError message
-      let items : List OCaml5.Ml.Decl :=
-        [ .floatingAttrD "warning \"-26-27-32-33-35-37-39-69\"", .blank, gen.item, .blank ]
-          ++ emitted
-      let m : OCaml5.Ml.Module :=
-        { name := "ty_gen"
-          header := some "Rendered by Conform.Effect4.LcnfMl from the SAME Ml.Decl list the target evaluator reads. Scratch: not a committed artefact."
-          items := items }
-      IO.FS.writeFile path (OCaml5.Ml.render m ++ driverSource)
-      IO.println s!"wrote {path}"
-    if let some path := args.emitExpected then
-      IO.FS.writeFile path ("\n".intercalate (vectors.map expectedLine) ++ "\n")
-      IO.println s!"wrote {path}"
-    let cases := buildCases
-    let rows := Target.differentialT prog args.fuel "lcnf.target.agrees" cases
-    let refusalRows : Array Row := refusals.map fun m =>
-      Row.unresolved "lcnf.target.reads" { kind := "declaration", path := [m] }
-        "the reader has no rule for this Ml constructor"
-    let all := refusalRows ++ rows
-    let report : Report :=
-      { tool := "conform-lcnf-target"
-        pins := [ { name := "lean", value := Lean.versionString }
-                , { name := "word-bits", value := toString args.bits }
-                , { name := "primitive-profile", value := "ocaml-63-utf8" } ]
-        expected := refusals.size + cases.size
-        required := (refusals.map fun m => ⟨"lcnf.target.reads", ⟨"declaration", [m]⟩⟩) ++
-          (cases.mapIdx fun i c => ⟨"lcnf.target.agrees", ⟨"case", [toString i, c.bind, c.label]⟩⟩)
-        rows := all }
-    let (p, f, c, u) := report.counts
-    IO.println s!"translated declarations: {closure.decls.size}, read: {binds.size}, \
-      reader refusals: {refusals.size}"
-    for m in refusals do IO.println s!"  refused: {m}"
-    IO.println s!"cases: {cases.size}"
-    IO.println s!"pass {p}  refused {f}  counterexample {c}  unresolved {u}"
-    for r in all.filter (fun r => r.outcome != .pass) |>.extract 0 10 do
-      IO.println s!"  {r.outcome} {r.subject.render}: {r.message}"
-    match args.out with
-    | none => pure ()
-    | some dir =>
-      IO.FS.createDirAll dir
-      let leaf := "target"
-      IO.FS.writeFile (dir ++ "/" ++ leaf ++ ".json") (report.sorted.toJson.pretty ++ "\n")
-      IO.println s!"wrote {dir}/{leaf}.json"
-    return report.exitCode
-  let (code, _) ← (act.toIO ctx { env := env })
-  return code
 
 end Conform.Effect4.LcnfMl

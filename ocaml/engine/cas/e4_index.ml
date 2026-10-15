@@ -1,7 +1,6 @@
 (* E4_index — see e4_index.mli for what this is, the slot layout, the laws L-IDX-0/1/2 and the
    deviations.  Lane P2, 2026-09-08. *)
 
-open Effect4_engine
 
 type seg = int
 type off = int

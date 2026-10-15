@@ -3,7 +3,7 @@
    What it is: build lane X of the engine team (docs/research/2026-09-08-engine-brief.md
    §2.1 "a differential is the evidence"; the corpus table of
    2026-09-08-engine-a1-state.md §6.3).  Every source is reduced to ONE shape --
-   {!program}, an `Eff_types.eff` with a name and the corpus it came from -- so the three
+   {!program}, an `Eff_wire.program` with a name and the corpus it came from -- so the three
    engines can be driven through `E4_engine.ENGINE.compile` with no per-corpus code.
 
    The three sources, and what each is worth:
@@ -49,7 +49,7 @@ open Eff_types
 type program = {
   name : string;  (** the golden's basename, or `g<NNN>` for a generated program *)
   corpus : string;  (** "goldens" | "truth" | "lean" *)
-  eff : eff;
+  eff : native_op eff;
   bytes : string option;  (** the canonical wire bytes, when the program came from them *)
   typed : bool option;  (** Lean's `Api.wellTyped` verdict, when the source records it *)
 }

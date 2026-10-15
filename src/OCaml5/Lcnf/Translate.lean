@@ -1,10 +1,11 @@
 import Lean
-import Conform.Lcnf.Index
+import OCaml5.Lcnf.Index
 import OCaml5.Ml.Syntax
 import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Native
+import OCaml5.Lcnf.Clock
 import OCaml5.Lcnf.ClockFlow
 import OCaml5.Lcnf.Builtins
 import OCaml5.Ml.Check
@@ -18,8 +19,9 @@ closure that decides *which* definitions to translate and the strongly-connected
 ordering that decides how to emit them.
 
 **Depends on.** `OCaml5.Lcnf.Dump` (`monoDecl?`), `OCaml5.Lcnf.Naming`,
-`OCaml5.Lcnf.Types` (`builtinTy?`), `OCaml5.Lcnf.Builtins` (the builtin table, its prelude and
-its reserved names), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
+`OCaml5.Lcnf.Types` (the type declarations; the type rows' `builtinTy?`), `OCaml5.Lcnf.Builtins`
+(the builtin table, its prelude and its reserved names), `OCaml5.Lcnf.Clock` (the clock's
+constructors), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
 `Lean.Compiler.LCNF.Basic` (`Code.collectUsed`).
 
 **Properties.**
@@ -148,8 +150,8 @@ structure St where
   mentioned : Array Name := #[]
   /-- Constructs without a rule, as `<decl>: <what>`. -/
   todos : Array String := #[]
-  /-- `fn` extern rows this declaration used, by the row's own Lean name. -/
-  usedExterns : Array Name := #[]
+  /-- `fn` extern rows this declaration used, by the row's key. -/
+  usedExterns : Array FnKey := #[]
   /-- OCaml names an extern row hands to a hand body as a leading argument. They are ordinary
   generated declarations, so they must be **emitted before** this one: `emit` adds the edge. -/
   externDeps : Array String := #[]
@@ -522,7 +524,7 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
           else useAsList s!"{ci.name}.{fn}" c e
       rel := rel ++ [e]
       named := named ++ [(fieldName fn.toString, e)]
-  -- seat Q (2026-10-01): `Array.mk l` is `l` under the Array-as-list shim (`Types.lean:61`);
+  -- seat Q (2026-10-01): `Array.mk l` is `l` under the Array-as-list shim (the type row of `Array`);
   -- `List.zipIdxTR` builds one from `l.toArray`, and the record it rendered refused in ocamlopt.
   if ci.name == ``Array.mk then
     if let [l] := rel then return l
@@ -545,7 +547,7 @@ def listFact? (v : LetValue .pure) : TM (Option (Option Ml.Expr)) := do
   match v with
   | .const n _ args =>
     -- `[]`, and the empty accumulator the tail-recursion transform writes as an `Array`
-    -- (`List.takeTR.go l l n #[]`; `Types.builtinTy?` reads `Array` as `list`)
+    -- (`List.takeTR.go l l n #[]`; the type row of `Array` reads it as `list`)
     if n == ``List.nil || n == ``Array.mkEmpty || n == ``Array.emptyWithCapacity
        || n == ``Array.empty then return some none
     else if n == ``List.cons then
@@ -695,10 +697,8 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     -- arguments — the type parameters among them — are dropped, as they are for a builtin.
     -- A row takes a carrier argument RAW: the hand body is written against the signature.
     let exx ← readExterns
-    let relCount : Nat := args.foldl (fun (c : Nat) a => match a with | .fvar _ => c + 1 | _ => c) 0
-    match exx.fn? n (some relCount) with
-    | some f =>
-      let key := (exx.fnRowKey? n (some relCount)).getD n
+    match exx.fnRow? n with
+    | some (key, f) =>
       let deps := f.literals
       noteExternHead f
       modify fun s =>
@@ -866,13 +866,13 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
         if Native.owns cs.typeName then .var d
         else .annot (.var d) (tyOfInd exx tn env cs.typeName)
       unless Native.owns cs.typeName do noteReal cs.typeName
-      let mut arms : List Ml.Arm := []
+      let mut arms : List (Ml.Pat × Ml.Expr) := []
       for alt in cs.alts do
         match alt with
-        | .default k => arms := arms ++ [.mk .wild none (← code declName k)]
+        | .default k => arms := arms ++ [(.wild, ← code declName k)]
         | .alt ctor ps k =>
           let pat ← altPat ctor ps k.collectUsed
-          arms := arms ++ [.mk pat none (← code declName k)]
+          arms := arms ++ [(pat, ← code declName k)]
       return .matchE scrut arms
 
 /-- A local function or join point, then the rest. -/
@@ -886,7 +886,7 @@ partial def localFun (declName : Name) (decl : FunDecl .pure) (k : Code .pure) :
   let recursive := decl.value.collectUsed.contains decl.fvarId
   let body ← code declName decl.value
   let rest ← code declName k
-  if recursive then return .letRecIn [(f, ps, body)] rest
+  if recursive then return .letRec f ps body rest
   return .letIn f (.fn ps body) rest
 
 end
@@ -1011,9 +1011,12 @@ structure Closure where
   wrapperRefs : Array Name := #[]
   realTypes : Array Name := #[]
   mentioned : Array Name := #[]
+  /-- Constructs the translation has no rule for (`St.todos`). -/
   todos : Array String := #[]
+  /-- The clock boundary's refusals (`ClockFlow.refusals`), read off the walk's declarations. -/
+  clockRefusals : Array String := #[]
   /-- `fn` extern rows a translated declaration actually hit (G10's ledger). -/
-  usedExterns : Array Name := #[]
+  usedExterns : Array FnKey := #[]
   /-- `ops` rows a rewrite used, as `<carrier>#<op>`. -/
   usedOps : Array String := #[]
   /-- `carg` rows a declaration used. -/
@@ -1023,15 +1026,32 @@ structure Closure where
   /-- Every place a carrier was turned back into the Lean list. -/
   toLists : Array String := #[]
 
+/-- Every refusal of the closure: the translation's, then the clock boundary's. -/
+def Closure.problems (c : Closure) : Array String := c.todos ++ c.clockRefusals
+
 private def pushNew (a : Array Name) (n : Name) : Array Name :=
   if a.contains n then a else a.push n
+
+/-- One translated declaration and what its translation recorded, added to the closure. The
+walk and `retranslate` both build a closure this way, so the two agree on every field. -/
+private def Closure.absorb (c : Closure) (t : Translated) (st : St) : Closure :=
+  { c with
+    decls := c.decls.push t,
+    realTypes := st.realTypes.foldl pushNew c.realTypes,
+    mentioned := st.mentioned.foldl pushNew c.mentioned,
+    usedExterns := st.usedExterns.foldl (fun a k => if a.contains k then a else a.push k) c.usedExterns,
+    usedOps := st.usedOps.foldl (fun a o => if a.contains o then a else a.push o) c.usedOps,
+    usedCargs := st.usedCargs.foldl pushNew c.usedCargs,
+    wantedCargs := st.wantedCargs.foldl (fun a w => if a.contains w then a else a.push w) c.wantedCargs,
+    toLists := c.toLists ++ st.toLists,
+    todos := c.todos ++ st.todos }
 
 /-- Collect the translated closure and its original mono dependency graph. Intermediate
 carrier-inference rounds stay private; only the final checked closure is returned publicly. -/
 private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
     (ex : Externs := {}) : CoreM (Closure × Array ClockFlow.Flow) := do
   let env ← getEnv
-  let mono := Conform.Lcnf.persistedMonoIndex env
+  let mono := persistedMonoIndex env
   let mut c : Closure := {}
   let mut clockFlows : Array ClockFlow.Flow := #[]
   let mut done : NameSet := {}
@@ -1041,8 +1061,7 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
     let n := queue[i]!
     i := i + 1
     if done.contains n then continue
-    let arity := (mono.findIn? env n).map (fun d => d.params.size)
-    if ex.hasFn n arity then continue
+    if ex.hasFn n then continue
     if (builtin? n).isSome then continue
     if env.find? n matches some (.ctorInfo _) then continue
     if c.decls.size ≥ cap then
@@ -1072,16 +1091,7 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
         if let some wrapper := mono.findIn? env userName then
           clockFlows := clockFlows.push (ClockFlow.ofDecl wrapper)
     let (t, st) := translateDecl env d userName (globalName userName) tn ex
-    c := { c with
-      decls := c.decls.push t,
-      realTypes := st.realTypes.foldl pushNew c.realTypes,
-      mentioned := st.mentioned.foldl pushNew c.mentioned,
-      usedExterns := st.usedExterns.foldl pushNew c.usedExterns,
-      usedOps := st.usedOps.foldl (fun a o => if a.contains o then a else a.push o) c.usedOps,
-      usedCargs := st.usedCargs.foldl pushNew c.usedCargs,
-      wantedCargs := st.wantedCargs.foldl (fun a w => if a.contains w then a else a.push w) c.wantedCargs,
-      toLists := c.toLists ++ st.toLists,
-      todos := c.todos ++ st.todos }
+    c := c.absorb t st
     for callee in st.calls do
       unless done.contains callee do
         -- a direct reference to a wrapper that has a twin: note it, translate the twin
@@ -1096,8 +1106,7 @@ declarations. Validate the final closure at the clock boundary before returning 
 def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
     (ex : Externs := {}) : CoreM Closure := do
   let (closure, clockFlows) ← collectClosure roots cap tn ex
-  let todos := ClockFlow.refusals (← getEnv) roots clockFlows
-  return { closure with todos := closure.todos ++ todos }
+  return { closure with clockRefusals := ClockFlow.refusals (← getEnv) roots clockFlows }
 
 /-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
 operation can only be passed on as itself, so a generated callee that is handed one takes it as
@@ -1128,8 +1137,27 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
     throwError "carrier parameters still unsettled after 64 rounds: {closure.wantedCargs}"
   -- Carrier rows affect translation, so validate the graph of the settled result.
   -- Checking intermediate results repeats the same analysis without returning an artifact.
-  let todos := ClockFlow.refusals (← getEnv) roots clockFlows
-  return ({ closure with todos := closure.todos ++ todos }, ex, inferred)
+  return ({ closure with clockRefusals := ClockFlow.refusals (← getEnv) roots clockFlows }, ex,
+    inferred)
+
+/-- The closure translated again under other type names (`tn`), with its settled carrier table.
+The walk, the carrier inference and the clock boundary read no type name, so their results stay:
+each declaration is translated again, in the walk's order, and nothing is walked again. The
+generator's renaming pass took a whole walk with its inference and its clock analysis (LC-4). -/
+def retranslate (c : Closure) (tn : TypeNames) (ex : Externs) : CoreM Closure := do
+  let env ← getEnv
+  let mono := persistedMonoIndex env
+  let mut out : Closure :=
+    { frontier := c.frontier, missing := c.missing, wrapperRefs := c.wrapperRefs,
+      clockRefusals := c.clockRefusals }
+  for t in c.decls do
+    let some d := mono.findIn? env t.leanName
+      | throwError "retranslate: no mono declaration for {t.leanName}"
+    let (t', st) := translateDecl env d t.userName t.ocamlName tn ex
+    out := out.absorb t' st
+  unless out.wantedCargs.isEmpty do
+    throwError "retranslate: carrier parameters the settled table does not state: {out.wantedCargs}"
+  return out
 
 /-! ## Emission: strongly connected components, dependencies first -/
 

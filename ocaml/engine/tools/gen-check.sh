@@ -68,11 +68,14 @@ iso=$(mktemp -d)
 cp "$GEN" "$iso/"
 # The clock and natural-number externs are explicit target dependencies. Admit only their
 # signatures: copying a compiled engine or numeric implementation would hide the seam.
+# The program types are the recipe's own first artifact, which the engine opens.
 cp "$REPO/ocaml/clock/e4_clock.mli" "$iso/"
-cp "$REPO/ocaml/engine/e4_nat.mli" "$iso/"
+cp "$REPO/ocaml/engine/bytes/e4_nat.mli" "$iso/"
+cp "$REPO/ocaml/eff/eff_types.ml" "$iso/"
 if (cd "$iso" && ocamlfind ocamlopt -opaque -c e4_clock.mli e4_nat.mli &&
+    ocamlfind ocamlopt -c eff_types.ml &&
     ocamlfind ocamlopt -c -w +a-4-9-40-41-42-44-45-70 api_engine.ml) >/tmp/geng-c3b.log 2>&1; then
-  note ok "C3b api_engine.ml type-checks against E4_clock/E4_nat interfaces: the functor needs no instance, so the"
+  note ok "C3b api_engine.ml type-checks against E4_clock/E4_nat interfaces and Eff_types: the functor needs no instance, so the"
   note ""  "     extern table is closed (every unconverted carrier site would be a type error)"
 else
   note FAIL "C3b api_engine.ml does not type-check against E4_clock/E4_nat interfaces — the extern table has a hole:"

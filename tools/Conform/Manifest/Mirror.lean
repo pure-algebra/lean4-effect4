@@ -6,8 +6,8 @@ import Conform.Manifest.Readers
 /-!
 # Conform.Manifest.Mirror — `family.mirror.agrees`
 
-**What it is.** The check that closes the *other* half of coverage. `Conform.Lcnf.Cases` asks
-whether every consumer **in Lean** has an arm for every constructor; a family's alphabet is also
+**What it is.** The check that closes the *other* half of coverage. Lean's own match compiler
+decides whether every consumer **in Lean** has an arm for every constructor; a family's alphabet is also
 restated in OCaml, in TypeScript, in a text manifest and in frozen fixtures, and LCNF cannot see
 any of those. This module reads each of those artefacts back to a constructor list with
 `Conform.Manifest.Readers`, maps its spellings to Lean constructor names, and compares — **names

@@ -1,5 +1,7 @@
 (* E4_engine -- see e4_engine.mli. *)
 
+open Eff_types
+
 type frontier = { parked : (int * int) list; armed : int list; due : int }
 
 type answer =
@@ -10,65 +12,12 @@ type answer =
   | Delay of frontier
 
 module type INSTANCE = sig
-  include E4_program.PROGRAM_TYPES
-
   val name : string
   val carriers : string
 
   type nu
   type s
   type fiber_id = int
-  type ref_key = int
-  type 'a reason_annotations = (string * 'a) list
-
-  type ('e, 'd, 'i, 'a) reason =
-    | Reason_fail of 'e * 'a reason_annotations
-    | Reason_die of 'd * 'a reason_annotations
-    | Reason_interrupt of 'i option * 'a reason_annotations
-
-  type ('e, 'd, 'i, 'a) cause = ('e, 'd, 'i, 'a) reason list
-
-  type ('b, 'e, 'd, 'i, 'a) exit_ =
-    | Exit_success of 'b
-    | Exit_failure of ('e, 'd, 'i, 'a) cause
-
-  type ('b, 'e, 'd, 'i, 'a) completion =
-    | Completion_ofExit of ('b, 'e, 'd, 'i, 'a) exit_
-    | Completion_ofRefGet of ref_key
-
-  type val_ =
-    | Val_unit
-    | Val_bool of bool
-    | Val_nat of int
-    | Val_str of string
-    | Val_bytes of int list
-    | Val_list of val_ list
-    | Val_pair of val_ * val_
-    | Val_none
-    | Val_some of val_
-    | Val_ctor of int * val_ list
-    | Val_ref of int * int list
-    | Val_handle of int * int
-    | Val_negInt of int
-    | Val_float of int
-
-  (* a handle-free record value (Effect4.Machine.Payload, decisions row 120) *)
-  type payload = val_
-
-  type err =
-    | Err_boom
-    | Err_tag of int
-    | Err_tagged of string * string
-    | Err_text of string
-    | Err_payload of payload
-
-  type defect =
-    | Defect_notImplemented
-    | Defect_asyncFiber
-    | Defect_badName
-    | Defect_missingService
-    | Defect_user of int
-    | Defect_error of err
 
   type stuck =
     | Stuck_unknownFiber of fiber_id
@@ -253,10 +202,10 @@ module type ENGINE = sig
   val install_middleware : decision
   val advance : int -> decision
   val advance_exact : E4_clock.t -> decision
-  val compile : Eff_types.eff -> program
+  val compile : Eff_wire.program -> program
   val of_bytes : string -> program option
   val load_program : program -> fuel:int -> t
-  val load : Eff_types.eff -> fuel:int -> t
+  val load : Eff_wire.program -> fuel:int -> t
   val load_bytes : string -> fuel:int -> t option
   val step : t -> decision -> t
   val replay : t -> decision list -> t
@@ -264,7 +213,7 @@ module type ENGINE = sig
   val replay_steps : t -> decision list -> t Seq.t
   val replay_positions : t -> decision list -> t Seq.t
   val drive : t -> t
-  val run : Eff_types.eff -> fuel:int -> t
+  val run : Eff_wire.program -> fuel:int -> t
   val run_program : program -> fuel:int -> t
   val api_run : program -> fuel:int -> string
   val answer : t -> answer
@@ -287,8 +236,6 @@ module Make (I : INSTANCE) = struct
   let () =
     if Sys.int_size <> 63 then
       raise (E4_clock.Profile_refusal "engine: a 63-bit integer host is required")
-
-  module P = E4_program.Make (I)
 
   let name = I.name
   let carriers = I.carriers
@@ -315,14 +262,14 @@ module Make (I : INSTANCE) = struct
   let answer_async_success fiber token n : decision =
     let n = E4_clock.to_profile_nat (E4_clock.of_nat n) in
     I.RunDecision_answerAsync
-      (fiber, token, I.Completion_ofExit (I.Exit_success (I.Val_nat n)))
+      (fiber, token, Eff_types.Completion_ofExit (Eff_types.Exit_success (Eff_types.Val_nat n)))
 
   let answer_async_float fiber token value : decision =
     let bits = Int64.bits_of_float value in
     if Int64.compare bits 0L < 0 || Int64.compare bits (Int64.of_int max_int) > 0 then
       raise (E4_clock.Profile_refusal "reply: float bits do not fit the value carrier");
     I.RunDecision_answerAsync
-      (fiber, token, I.Completion_ofExit (I.Exit_success (I.Val_float (Int64.to_int bits))))
+      (fiber, token, Eff_types.Completion_ofExit (Eff_types.Exit_success (Eff_types.Val_float (Int64.to_int bits))))
 
   let interrupt_from who target : decision =
     I.RunDecision_interruptFrom (who, [], target)
@@ -333,14 +280,20 @@ module Make (I : INSTANCE) = struct
 
   (* -- loading -------------------------------------------------------------------- *)
 
-  let compile (p : Eff_types.eff) : program = P.load p
-  let of_bytes (b : string) : program option = P.of_bytes b
+  (* EN8: a natural literal of the program passes the selected profile before it runs. The
+     program type is the instance's own (`Eff_types`, the LCNF route's), so nothing converts. *)
+  let compile (p : Eff_wire.program) : program =
+    Eff_ctors.lits_eff
+      (function Lit_nat n -> ignore (E4_clock.to_profile_nat (E4_clock.of_nat n)) | _ -> ()) p;
+    p
+
+  let of_bytes (b : string) : program option = Option.map compile (Eff_wire.decode_program_exact b)
 
   let load_program (p : program) ~(fuel : int) : t =
     { program = p; interp = I.interp_of p; fuel_ = fuel;
       m = I.load p ~fuel; settled = true; outside_profile = None }
 
-  let load (p : Eff_types.eff) ~(fuel : int) : t = load_program (compile p) ~fuel
+  let load (p : Eff_wire.program) ~(fuel : int) : t = load_program (compile p) ~fuel
 
   let load_bytes (b : string) ~(fuel : int) : t option =
     match of_bytes b with None -> None | Some p -> Some (load_program p ~fuel)
@@ -413,73 +366,73 @@ module Make (I : INSTANCE) = struct
 
   let drive (t : t) : t = replay t [ I.api_evaluate; flush ]
   let run_program (p : program) ~(fuel : int) : t = drive (load_program p ~fuel)
-  let run (p : Eff_types.eff) ~(fuel : int) : t = run_program (compile p) ~fuel
+  let run (p : Eff_wire.program) ~(fuel : int) : t = run_program (compile p) ~fuel
 
   (* -- the renderers -------------------------------------------------------------- *)
 
-  let rec show_val (v : I.val_) : string =
+  let rec show_val (v : Eff_types.val_) : string =
     match v with
-    | I.Val_unit -> "unit"
-    | I.Val_bool b -> string_of_bool b
-    | I.Val_nat n -> string_of_int n
-    | I.Val_str s -> Printf.sprintf "%S" s
-    | I.Val_bytes bs ->
+    | Eff_types.Val_unit -> "unit"
+    | Eff_types.Val_bool b -> string_of_bool b
+    | Eff_types.Val_nat n -> string_of_int n
+    | Eff_types.Val_str s -> Printf.sprintf "%S" s
+    | Eff_types.Val_bytes bs ->
       "bytes[" ^ String.concat "," (List.map string_of_int bs) ^ "]"
-    | I.Val_list xs -> "list[" ^ String.concat "," (List.map show_val xs) ^ "]"
-    | I.Val_pair (a, b) -> "pair(" ^ show_val a ^ "," ^ show_val b ^ ")"
-    | I.Val_none -> "none"
-    | I.Val_some x -> "some " ^ show_val x
-    | I.Val_ctor (i, args) ->
+    | Eff_types.Val_list xs -> "list[" ^ String.concat "," (List.map show_val xs) ^ "]"
+    | Eff_types.Val_pair (a, b) -> "pair(" ^ show_val a ^ "," ^ show_val b ^ ")"
+    | Eff_types.Val_none -> "none"
+    | Eff_types.Val_some x -> "some " ^ show_val x
+    | Eff_types.Val_ctor (i, args) ->
       Printf.sprintf "ctor %d [%s]" i (String.concat ", " (List.map show_val args))
-    | I.Val_ref (k, path) ->
+    | Eff_types.Val_ref (k, path) ->
       Printf.sprintf "ref %d/[%s]" k (String.concat "," (List.map string_of_int path))
-    | I.Val_handle (k, n) -> Printf.sprintf "handle %d/%d" k n
+    | Eff_types.Val_handle (k, n) -> Printf.sprintf "handle %d/%d" k n
     (* the signed frame holds -(n+1); the binary64 frame its bits (below 2^62: the carrier) *)
-    | I.Val_negInt n -> "-" ^ string_of_int (n + 1)
-    | I.Val_float bits -> Printf.sprintf "float %016x" bits
+    | Eff_types.Val_negInt n -> "-" ^ string_of_int (n + 1)
+    | Eff_types.Val_float bits -> Printf.sprintf "float %016x" bits
 
-  let show_err (e : I.err) : string =
+  let show_err (e : Eff_types.err) : string =
     match e with
-    | I.Err_boom -> "boom"
-    | I.Err_tag t -> Printf.sprintf "tag %d" t
-    | I.Err_tagged (tag, msg) -> Printf.sprintf "tagged %s: %s" tag msg
-    | I.Err_text msg -> Printf.sprintf "text %s" msg
-    | I.Err_payload p -> "payload " ^ show_val p
+    | Eff_types.Err_boom -> "boom"
+    | Eff_types.Err_tag t -> Printf.sprintf "tag %d" t
+    | Eff_types.Err_tagged (tag, msg) -> Printf.sprintf "tagged %s: %s" tag msg
+    | Eff_types.Err_text msg -> Printf.sprintf "text %s" msg
+    | Eff_types.Err_payload p -> "payload " ^ show_val p
 
-  let show_defect (d : I.defect) : string =
+  let show_defect (d : Eff_types.defect) : string =
     match d with
-    | I.Defect_notImplemented -> "notImplemented"
-    | I.Defect_asyncFiber -> "asyncFiber"
-    | I.Defect_badName -> "badName"
-    | I.Defect_missingService -> "missingService"
-    | I.Defect_user n -> Printf.sprintf "user %d" n
-    | I.Defect_error e -> "error(" ^ show_err e ^ ")"
+    | Eff_types.Defect_notImplemented -> "notImplemented"
+    | Eff_types.Defect_asyncFiber -> "asyncFiber"
+    | Eff_types.Defect_badName -> "badName"
+    | Eff_types.Defect_missingService -> "missingService"
+    | Eff_types.Defect_user n -> Printf.sprintf "user %d" n
+    | Eff_types.Defect_error e -> "error(" ^ show_err e ^ ")"
 
-  let show_anns (a : unit I.reason_annotations) : string =
+  let show_anns (a : unit Eff_types.reason_annotations) : string =
     if a = [] then "" else "{" ^ String.concat "," (List.map fst a) ^ "}"
 
-  let show_reason (r : (I.err, I.defect, I.fiber_id, unit) I.reason) : string =
+  let show_reason (r : (Eff_types.err, Eff_types.defect, I.fiber_id, unit) Eff_types.reason) : string =
     match r with
-    | I.Reason_fail (e, a) -> "fail(" ^ show_err e ^ ")" ^ show_anns a
-    | I.Reason_die (d, a) -> "die(" ^ show_defect d ^ ")" ^ show_anns a
-    | I.Reason_interrupt (None, a) -> "interrupt(none)" ^ show_anns a
-    | I.Reason_interrupt (Some i, a) ->
+    | Eff_types.Reason_fail (e, a) -> "fail(" ^ show_err e ^ ")" ^ show_anns a
+    | Eff_types.Reason_die (d, a) -> "die(" ^ show_defect d ^ ")" ^ show_anns a
+    | Eff_types.Reason_interrupt (None, a) -> "interrupt(none)" ^ show_anns a
+    | Eff_types.Reason_interrupt (Some i, a) ->
       Printf.sprintf "interrupt(%d)%s" i (show_anns a)
 
-  let show_cause (c : (I.err, I.defect, I.fiber_id, unit) I.cause) : string =
+  let show_cause (c : (Eff_types.err, Eff_types.defect, I.fiber_id, unit) Eff_types.cause) : string =
     "[" ^ String.concat "; " (List.map show_reason c) ^ "]"
 
-  let show_exit (x : (I.val_, I.err, I.defect, I.fiber_id, unit) I.exit_) : string =
+  let show_exit (x : (Eff_types.val_, Eff_types.err, Eff_types.defect, I.fiber_id, unit) Eff_types.exit_) : string =
     match x with
-    | I.Exit_success v -> "success " ^ show_val v
-    | I.Exit_failure c -> "failure " ^ show_cause c
+    | Eff_types.Exit_success v -> "success " ^ show_val v
+    | Eff_types.Exit_failure c -> "failure " ^ show_cause c
 
   let show_exit_opt = function None -> "-" | Some x -> show_exit x
 
-  let show_observer_mode (m : I.observer_mode) : string =
+  let show_observer_mode (m : observer_mode) : string =
     match m with
-    | I.ObserverMode_awaitValue -> "awaitValue"
-    | I.ObserverMode_joinEffect -> "joinEffect"
+    | ObserverMode_awaitValue -> "awaitValue"
+    | ObserverMode_joinEffect -> "joinEffect"
 
   let show_observer (o : I.observer) : string =
     match o with
@@ -510,8 +463,8 @@ module Make (I : INSTANCE) = struct
     Printf.sprintf "ctx(%s;%d;%b)"
       (String.concat ","
          (List.map
-            (fun (sv : I.val_ I.service) ->
-               Printf.sprintf "%d:%d=%s" sv.I.key.I.name sv.I.key.I.service
+            (fun (sv : Eff_types.val_ I.service) ->
+               Printf.sprintf "%d:%d=%s" sv.I.key.name sv.I.key.service
                  (show_val sv.I.value))
             c.I.services))
       c.I.max_ops_before_yield c.I.prevent_yield
@@ -519,7 +472,7 @@ module Make (I : INSTANCE) = struct
   (* `nu` (EffName) and `s` (EffThunk) are the two payloads this projection does not
      descend into -- see the header's note on the differential's reach. *)
   let rec show_prim
-      (p : (I.nu, I.s, I.val_, I.err, I.defect, I.fiber_id, unit) I.prim) : string =
+      (p : (I.nu, I.s, Eff_types.val_, Eff_types.err, Eff_types.defect, I.fiber_id, unit) I.prim) : string =
     match p with
     | I.Prim_success v -> "success " ^ show_val v
     | I.Prim_failure c -> "failure " ^ show_cause c
@@ -544,7 +497,7 @@ module Make (I : INSTANCE) = struct
     | I.Prim_asyncFinalizer _ -> "asyncFinalizer(<name>)"
 
   let show_frame_event
-      (e : (I.nu, I.s, I.val_, I.err, I.defect, I.fiber_id, unit) I.frame_event) : string =
+      (e : (I.nu, I.s, Eff_types.val_, Eff_types.err, Eff_types.defect, I.fiber_id, unit) I.frame_event) : string =
     match e with
     | I.FrameEvent_popped p -> "popped(" ^ show_prim p ^ ")"
     | I.FrameEvent_ranContAll p -> "ranContAll(" ^ show_prim p ^ ")"
@@ -558,12 +511,12 @@ module Make (I : INSTANCE) = struct
       (t :
         ( I.nu,
           I.s,
-          I.val_,
-          I.err,
-          I.defect,
+          Eff_types.val_,
+          Eff_types.err,
+          Eff_types.defect,
           I.fiber_id,
           unit,
-          (I.nu, I.s, I.val_, I.err, I.defect, I.fiber_id, unit) I.prim )
+          (I.nu, I.s, Eff_types.val_, Eff_types.err, Eff_types.defect, I.fiber_id, unit) I.prim )
         I.task) : string =
     match t with
     | I.Task_start f -> Printf.sprintf "start(%d)" f

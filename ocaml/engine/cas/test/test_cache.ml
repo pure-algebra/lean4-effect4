@@ -55,7 +55,6 @@
    Everything that touches the disk runs in a fresh directory under $E4_CACHE_TMP (default:
    the system temp dir) and is removed at the end.  Exit code 0 iff every check passed. *)
 
-open Effect4_engine
 open Effect4_engine_cas
 
 let failures = ref 0
@@ -471,7 +470,7 @@ let eb = Eff_succeed (t_n 2)
    j + 1, so two children of one witness differ and a wrong ValPath cannot pass by two children
    happening to be equal.  Each is embedded in a program here, with the ProgPath at which the
    index must find it. *)
-let embedded : (E4_subterm.Tree.node * Eff_types.eff * int list) list =
+let embedded : (E4_subterm.Tree.node * Eff_wire.program * int list) list =
   List.map
     (fun (w : E4_subterm.Tree.node) ->
       match w with
@@ -479,9 +478,9 @@ let embedded : (E4_subterm.Tree.node * Eff_types.eff * int list) list =
       | N_stmts ss -> (w, Eff_gen ss, [ 0 ])
       | N_stmt st -> (w, Eff_gen (Stmts_cons (st, Stmts_nil)), [ 0; 0 ])
       | N_action a -> (w, Eff_withFiber a, [ 0 ])
-      | N_effs es -> (w, Eff_withFiber (Action_term_raceAll es), [ 0; 0 ])
+      | N_effs es -> (w, Eff_withFiber (ActionTerm_raceAll es), [ 0; 0 ])
       | N_layer l -> (w, Eff_provideLayer (l, false, ea), [ 0 ])
-      | N_layers ls -> (w, Eff_provideLayer (Layer_term_mergeAll ls, false, ea), [ 0; 0 ]))
+      | N_layers ls -> (w, Eff_provideLayer (LayerTerm_mergeAll ls, false, ea), [ 0; 0 ]))
     E4_subterm.Tree.witnesses
 
 let eff_goldens_dir () =

@@ -1,11 +1,12 @@
 import Effect4.Laws.Program.ReleaseCustody.RuntimeShape
+import Effect4.Laws.Program.CodeClosure.Correlated
 import Effect4.Laws.Program.NativeEvaluation
 import Effect4.Laws.Machine.MaskRuns
 
 /-!
 Concept: scope-lifetime-finalization, R11.
 Question: native evaluator sequencing serves Execution.history and Workers.Assertions.releases_step.
-Reach: actual native evaluator outputs under existing source ownership and saved-frame sequencing.
+Reach: actual native evaluator outputs under the exact registration template and saved-frame sequencing.
 Limit: evaluator sequencing alone establishes neither command funding nor admitted-history closure.
 Unlock: the actual scheduler retains stable parked and overwrite-command stacks.
 -/
@@ -25,28 +26,28 @@ theorem returned_clean (it : Iteration) (held : NoAdd it.fiber.frame.stack)
     (finished : ∀ exit, it.outcome = .finished exit → it.fiber.frame.stack = []) : Returned it :=
   ⟨⟨.clean _ _ held, fun _ => .clean _ held⟩, fun _ => held, finished⟩
 
-/-- The native frame rule consumes the source predicate's existing registration-body field.
+/-- The native frame rule consumes the exact registration-body template.
 Consumer: the primitive evaluator delegation below. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem frame_step (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+theorem frame_step_template (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (fiber : Effect4.Program.ReleaseCustody.Pop.Frame)
-    (held : Kept fiber.current fiber.stack) (source : SourceScope.FrameAt root fiber) :
+    (held : Kept fiber.current fiber.stack) (source : CodeClosure.RegistrationBody fiber.current) :
     match (fiber.step (interpAt root completed table).toPrimInterp).1 with
     | .running next => Kept next.current next.stack
     | .finished _ => True := by
   apply FrameSequencing.step root completed table fiber held
   intro body acquired fin same
-  exact SourceScope.registration_body root body acquired fin (same ▸ source.1)
+  exact (same ▸ source) acquired fin rfl
 
 /-- The actual primitive delegate retains both its running and finished boundary shapes.
 Consumer: the native evaluator's ordinary cases. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem step_frame (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+theorem step_frame_template (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (fiber : Fiber) (yielding : Bool)
     (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
-    (source : SourceScope.FrameAt root fiber.frame) :
+    (source : CodeClosure.RegistrationBody fiber.frame.current) :
     Returned (evaluatePrim.stepFrame (interpAt root completed table) m fiber yielding) := by
-  have sequence := frame_step root completed table fiber.frame held source
+  have sequence := frame_step_template root completed table fiber.frame held source
   unfold evaluatePrim.stepFrame
   cases found : fiber.frame.step (interpAt root completed table).toPrimInterp with
   | mk step events =>
@@ -125,10 +126,10 @@ theorem exit_pop_noAdd (fiber : Effect4.Program.ReleaseCustody.Pop.Frame)
 /-- Program finalizers run on a clean residual stack after the actual continuation pop.
 Consumer: success and failure evaluation in the native interpreter. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem finalizer_returned (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+theorem finalizer_returned_template (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (fiber : Fiber) (yielding : Bool) (exit : ExitV)
     (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
-    (source : SourceScope.FrameAt root fiber.frame) :
+    (source : CodeClosure.RegistrationBody fiber.frame.current) :
     Returned (evaluatePrim.finalizerOr (interpAt root completed table) m fiber yielding exit) := by
   have popClean := exit_pop_noAdd fiber.frame held exit
   cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
@@ -141,8 +142,8 @@ theorem finalizer_returned (root : NativeEff) (completed : List (FiberId × Exit
         · exact clean
         · intro exit wrong
           cases wrong
-      · exact step_frame root completed table m fiber yielding active held source
-    · exact step_frame root completed table m fiber yielding active held source
+      · exact step_frame_template root completed table m fiber yielding active held source
+    · exact step_frame_template root completed table m fiber yielding active held source
 
 /-- The stateful scoped callback also starts cleanup only after the registration is passed.
 Consumer: native scoped-success and scoped-failure evaluation. -/
@@ -178,12 +179,12 @@ theorem countdown_noAdd (interp : Interp) (m : NativeMachine) (fiber : Fiber)
 /-- A native primitive evaluation retains sequencing at every park and returned command.
 Consumer: the stateful native evaluator and actual Workers command loop. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem primitive_returned (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+theorem primitive_returned_template (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (fiber : Fiber) (yielding : Bool)
     (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
-    (source : SourceScope.FrameAt root fiber.frame) :
+    (source : CodeClosure.RegistrationBody fiber.frame.current) :
     Returned (evaluatePrim (interpAt root completed table) m fiber yielding) := by
-  have ordinary := step_frame root completed table m fiber yielding active held source
+  have ordinary := step_frame_template root completed table m fiber yielding active held source
   have absent {code : NCode} (same : fiber.frame.current = code)
       (notAdd : ∀ fin, ¬ AddPhase fin code) (notYield : ¬ YieldPhase code) : NoAdd fiber.frame.stack :=
     opaque_noAdd (same ▸ held) notAdd notYield
@@ -192,12 +193,12 @@ theorem primitive_returned (root : NativeEff) (completed : List (FiberId × Exit
     have park : (interpAt root completed table).parkOf (.success value) = none := rfl
     simp only [evaluatePrim, current, park]
     change Returned (evaluatePrim.finalizerOr (interpAt root completed table) m fiber yielding (.success value))
-    exact finalizer_returned root completed table m fiber yielding _ active held source
+    exact finalizer_returned_template root completed table m fiber yielding _ active held source
   case failure cause =>
     have park : (interpAt root completed table).parkOf (.failure cause) = none := rfl
     simp only [evaluatePrim, current, park]
     change Returned (evaluatePrim.finalizerOr (interpAt root completed table) m fiber yielding (.failure cause))
-    exact finalizer_returned root completed table m fiber yielding _ active held source
+    exact finalizer_returned_template root completed table m fiber yielding _ active held source
   case yieldNowWith priority =>
     simp only [evaluatePrim, current]
     have stable := yield_stable (current ▸ held)
@@ -272,10 +273,10 @@ theorem primitive_returned (root : NativeEff) (completed : List (FiberId × Exit
 /-- Native scoped entry and both stateful exit routes retain the same returned shape.
 Consumer: the actual command loop's evaluator premise. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem native_returned (root : NativeEff) (table : RowTable) (m : NativeMachine)
+theorem native_returned_template (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (fiber : Fiber) (yielding : Bool)
     (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
-    (source : SourceScope.FrameAt root fiber.frame) :
+    (source : CodeClosure.RegistrationBody fiber.frame.current) :
     Returned (evaluateNative root m fiber yielding table) := by
   unfold evaluateNative
   split
@@ -285,12 +286,12 @@ theorem native_returned (root : NativeEff) (table : RowTable) (m : NativeMachine
     split
     · apply returned_clean _ clean
       intro exit wrong; cases wrong
-    · exact primitive_returned root m.completedExits table m fiber yielding active held source
+    · exact primitive_returned_template root m.completedExits table m fiber yielding active held source
   · exact scoped_exit_returned root m fiber yielding _ held
-      (primitive_returned root m.completedExits [] m fiber yielding active held source)
+      (primitive_returned_template root m.completedExits [] m fiber yielding active held source)
   · exact scoped_exit_returned root m fiber yielding _ held
-      (primitive_returned root m.completedExits [] m fiber yielding active held source)
-  · exact primitive_returned root m.completedExits table m fiber yielding active held source
+      (primitive_returned_template root m.completedExits [] m fiber yielding active held source)
+  · exact primitive_returned_template root m.completedExits table m fiber yielding active held source
 
 /-- Loop-top interruption retains the pending registration phase before the next operation.
 Consumer: native iteration sequencing. -/
@@ -312,31 +313,98 @@ theorem loop_top_source (root : NativeEff) (fiber : Fiber) (source : SourceScope
   · exact ⟨trivial, source.2⟩
   · exact source
 
+/-- Loop-top interruption retains the local registration template.
+Consumer: the unrestricted native iteration sequencing rule. -/
+theorem loop_top_template (fiber : Fiber) (source : CodeClosure.RegistrationBody fiber.frame.current) :
+    CodeClosure.RegistrationBody (runloopTop fiber).frame.current := by
+  unfold runloopTop
+  split
+  · exact True.intro
+  · exact source
+
 /-- Forced yield and the loop-top interruption cut preserve every actual evaluator boundary.
 Consumer: the original Workers release history, through the actual scheduler iteration. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem iteration_returned (root : NativeEff) (table : RowTable) (m : NativeMachine)
+theorem iteration_returned_template (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (fiber : Fiber) (yielding : Bool)
     (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
-    (source : SourceScope.FrameAt root fiber.frame) :
+    (source : CodeClosure.RegistrationBody fiber.frame.current) :
     Returned (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding) := by
   have top := loop_top fiber held
-  have owned := loop_top_source root fiber source
+  have owned := loop_top_template fiber source
   have unparked : (countOp (runloopTop fiber)).parked = .notParked := by
     unfold countOp runloopTop
     split <;> exact active
   unfold iteration
   dsimp only
   cases injected : injectYield m (countOp (runloopTop fiber)) yielding with
-  | none => exact native_returned root table m _ yielding unparked top owned
+  | none => exact native_returned_template root table m _ yielding unparked top owned
   | some it =>
     unfold injectYield at injected
     split at injected
     · cases injected
-      apply native_returned root table
+      apply native_returned_template root table
       · exact unparked
       · exact forced_wrapper top 0
-      · exact ⟨⟨trivial, owned.1⟩, owned.2⟩
+      · exact True.intro
     · cases injected
+
+/-- Existing source ownership supplies the exact local registration template.
+Consumer: compatibility instances of the unrestricted sequencing producer. -/
+theorem source_template (root : NativeEff) (fiber : Effect4.Program.ReleaseCustody.Pop.Frame)
+    (source : SourceScope.FrameAt root fiber) : CodeClosure.RegistrationBody fiber.current := by
+  cases current : fiber.current
+  case onSuccess body callback =>
+    intro acquired fin same
+    cases same
+    exact SourceScope.registration_body root body acquired fin (current ▸ source.1)
+  all_goals exact True.intro
+
+/-- Source-owned frames use the unrestricted local sequencing rule. -/
+theorem frame_step (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+    (fiber : Effect4.Program.ReleaseCustody.Pop.Frame)
+    (held : Kept fiber.current fiber.stack) (source : SourceScope.FrameAt root fiber) :
+    match (fiber.step (interpAt root completed table).toPrimInterp).1 with
+    | .running next => Kept next.current next.stack
+    | .finished _ => True :=
+  frame_step_template root completed table fiber held (source_template root fiber source)
+
+/-- Existing source callers use the same local template producer. -/
+theorem step_frame (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+    (m : NativeMachine) (fiber : Fiber) (yielding : Bool)
+    (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
+    (source : SourceScope.FrameAt root fiber.frame) : Returned (evaluatePrim.stepFrame (interpAt root completed table) m fiber yielding) :=
+  step_frame_template root completed table m fiber yielding active held
+    (source_template root fiber.frame source)
+
+/-- Existing source callers use the same local template producer. -/
+theorem finalizer_returned (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+    (m : NativeMachine) (fiber : Fiber) (yielding : Bool) (exit : ExitV)
+    (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
+    (source : SourceScope.FrameAt root fiber.frame) : Returned (evaluatePrim.finalizerOr (interpAt root completed table) m fiber yielding exit) :=
+  finalizer_returned_template root completed table m fiber yielding exit active held
+    (source_template root fiber.frame source)
+
+/-- Existing source callers use the same local template producer. -/
+theorem primitive_returned (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+    (m : NativeMachine) (fiber : Fiber) (yielding : Bool)
+    (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
+    (source : SourceScope.FrameAt root fiber.frame) : Returned (evaluatePrim (interpAt root completed table) m fiber yielding) :=
+  primitive_returned_template root completed table m fiber yielding active held
+    (source_template root fiber.frame source)
+
+/-- Existing source callers use the same local template producer. -/
+theorem native_returned (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (fiber : Fiber) (yielding : Bool)
+    (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
+    (source : SourceScope.FrameAt root fiber.frame) : Returned (evaluateNative root m fiber yielding table) :=
+  native_returned_template root table m fiber yielding active held (source_template root fiber.frame source)
+
+/-- Existing source callers use the same local template producer. -/
+theorem iteration_returned (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (fiber : Fiber) (yielding : Bool)
+    (active : fiber.parked = .notParked) (held : Kept fiber.frame.current fiber.frame.stack)
+    (source : SourceScope.FrameAt root fiber.frame) : Returned (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding) :=
+  iteration_returned_template root table m fiber yielding active held (source_template root fiber.frame source)
 
 end Effect4.Program.ReleaseCustody.NativeSequencing

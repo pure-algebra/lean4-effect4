@@ -285,6 +285,13 @@ def ocamlTypeBlock (text : String) (key : String) : Except String (Array String)
   let ls := lines text
   for h : i in [0:ls.size] do
     let l := tr ls[i]
+    -- A short variant is rendered on its header line: `and row_kind = RowKind_sync | …`.
+    for head in ["type " ++ key ++ " = ", "and " ++ key ++ " = "] do
+      if l.startsWith head && !(tr (dropS l head.length)).startsWith "{" then
+        let alts := ((dropS l head.length).splitOn "|").map tr |>.filter (!·.isEmpty)
+        let names := alts.map leadingIdent
+        if names.any (·.isEmpty) then throw s!"line {i + 1}: `{l}` has an alternative with no constructor name"
+        return names.toArray
     if l == "type " ++ key ++ " =" || l == "and " ++ key ++ " =" then
       let mut out : Array String := #[]
       let mut j := i + 1

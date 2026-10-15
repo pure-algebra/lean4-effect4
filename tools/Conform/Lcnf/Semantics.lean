@@ -1,5 +1,6 @@
 import Lean
 import Conform.Lcnf.Validity
+import OCaml5.Lcnf.Prim
 
 /-!
 # Conform.Lcnf.Semantics — rung 2: a meaning for the mono `Code .pure` fragment, inside Lean
@@ -12,7 +13,7 @@ for are the ones with no body at all — the genuine `@[extern]`s. That table, `
 therefore not a convenience: it is the *specification* of what any backend for this fragment
 must implement, and it is small (nine rows carry `Effect4.Program.Ty`'s whole closure).
 
-**Depends on.** `Lean`, `Conform.Lcnf.Validity` (for `stripRedArg`). Nothing from this
+**Depends on.** `Lean`, `Conform.Lcnf.Validity`, `OCaml5.Lcnf.Prim` (the alphabet and `stripRedArg`). Nothing from this
 repository; roots, primitives and marshalling arrive as arguments.
 
 **Properties.**
@@ -44,6 +45,7 @@ repository; roots, primitives and marshalling arrive as arguments.
 namespace Conform.Lcnf
 
 open Lean Compiler LCNF
+open OCaml5.Lcnf (Prim PrimTable stripRedArg)
 
 /-! ## 1. The value domain -/
 
@@ -151,56 +153,14 @@ end Outcome
 
 /-! ## 2. The primitive table
 
-The constants with no mono body. Every row is a claim about what the Lean constant means,
-and this inductive **is** the claim: it is data, it can be printed, and it can be lined up
-against a target's builtin table row by row (which is what the fidelity classes of
-`Conform.Effect4.Lcnf` do for OCaml). -/
+The constants with no mono body. Every row is a claim about what the Lean constant means, and
+the route's alphabet (`OCaml5.Lcnf.Prim`) **is** the claim: it is data, it can be printed, and it
+can be lined up against a target's builtin table row by row (which is what the fidelity classes
+of `OCaml5.Lcnf.TypeRows` and `OCaml5.Lcnf.Builtins` do for OCaml). This section gives each
+primitive its meaning on the evaluator's values. -/
 
-inductive Prim where
-  | natAdd | natSub | natMul | natDiv | natMod | natPow
-  | natShiftLeft | natShiftRight | natLand | natLor | natXor
-  /-- `Nat.decEq`, `Nat.beq`: `Decidable (n = m)` is `Bool` at mono. -/
-  | natDecEq
-  | natDecLt | natDecLe
-  | natSucc | natPred
-  | boolNot | boolAnd | boolOr | boolDecEq
-  | strAppend | strDecEq | strLength
-  /-- `String.toUTF8 : String → ByteArray`, as the array of its UTF-8 bytes. -/
-  | strToUTF8
-  /-- A coercion that is the identity on this value domain: `ByteArray.data`,
-  `UInt8.toNat`, `USize.toNat`, `UInt8.toUInt64`, … -/
-  | identity
-  /-- `UIntN.ofNat`: reduce mod `2 ^ bits`. -/
-  | uintOfNat (bits : Nat)
-  /-- `UIntN.sub`: subtraction mod `2 ^ bits`. It wraps below zero, where `Nat.sub` stops:
-  `0 - 1` is `2 ^ bits - 1`. -/
-  | uintSub (bits : Nat)
-  | arrayToList | listToArray | arrayMkEmpty | arrayPush | arraySize
-  /-- `Array.uget`/`get!`/`fget`: Lean's `get!` answers a default on an out-of-range index;
-  this row is *stuck* there instead, because "the default of the element type" is not
-  something the value domain can produce. A stuck row is a refusal a report can carry; a
-  wrong answer is not. -/
-  | arrayGet
-  | listLength
-  deriving DecidableEq, Repr, Inhabited
-
+-- The meaning of each primitive of the route's alphabet (`OCaml5.Lcnf.Prim`).
 namespace Prim
-
-/-- How many **relevant** (non-erased) arguments the row takes. -/
-def arity : Prim → Nat
-  | .natAdd | .natSub | .natMul | .natDiv | .natMod | .natPow => 2
-  | .natShiftLeft | .natShiftRight | .natLand | .natLor | .natXor => 2
-  | .natDecEq | .natDecLt | .natDecLe => 2
-  | .natSucc | .natPred => 1
-  | .boolNot => 1
-  | .boolAnd | .boolOr | .boolDecEq => 2
-  | .strAppend | .strDecEq => 2
-  | .strLength | .strToUTF8 => 1
-  | .identity => 1
-  | .uintOfNat _ => 1
-  | .uintSub _ => 2
-  | .arrayToList | .listToArray | .arrayMkEmpty | .arraySize | .listLength => 1
-  | .arrayPush | .arrayGet => 2
 
 private def natBin (f : Nat → Nat → Nat) (a b : Value) : Option Value := do
   return .nat (f (← a.toNat?) (← b.toNat?))
@@ -264,22 +224,7 @@ def apply : Prim → Array Value → Option Value
   | .listLength, #[a] => do return .nat (← a.toList?).length
   | _, _ => none
 
-protected def toString : Prim → String
-  | .uintOfNat bits => s!"uintOfNat {bits}"
-  | .uintSub bits => s!"uintSub {bits}"
-  | p => (repr p).pretty.replace "Conform.Lcnf.Prim." ""
-
-instance : ToString Prim := ⟨Prim.toString⟩
-
 end Prim
-
-/-- A primitive table: pure data. Lookup strips a `_redArg` suffix, as the compiler's own
-`reduceArity` twins require and as `OCaml5.Lcnf.builtin?` does. -/
-abbrev PrimTable := List (Name × Prim)
-
-def PrimTable.lookup? (t : PrimTable) (n : Name) : Option Prim :=
-  let n := stripRedArg n
-  (List.find? (fun p => p.1 == n) t).map (·.2)
 
 /-! ## 3. The interpreter -/
 
@@ -467,7 +412,7 @@ def applyPrim : Prim → Name → Array Value → Outcome := fun p n vs =>
   if rel.size != p.arity then
     .stuck s!"primitive {n} ({p}) takes {p.arity} relevant arguments, got {rel.size}"
   else
-    match p.apply rel with
+    match Prim.apply p rel with
     | some v => .value v
     | none => .stuck s!"primitive {n} ({p}) refused its arguments: {", ".intercalate (rel.toList.map Value.render)}"
 

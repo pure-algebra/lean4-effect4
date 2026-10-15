@@ -17,7 +17,7 @@
     "inductive family of the program world (tools/Tools/ProgramStructure.lean) must be listed.",
     "",
     "A wire tag is not a compiled constructor position. The runtime layout checks",
-    "(tools/Conform/Source/Description.lean, scripts/lib/program_structure.py) keep reading the",
+    "(tools/Conform/Source/Description.lean) keep reading the",
     "declaration itself.",
     "",
     "To add a constructor: give it the next tag above every active and retired tag of its family.",

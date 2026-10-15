@@ -1,0 +1,35 @@
+   0.12 s rc=0 clock/test_clock :: PASS multiplication: exact product and profile refusal
+   0.15 s rc=0 eff/test/test_eff :: test_eff: 739 checks, 0 failures
+   0.11 s rc=0 eff/test/prop_wire :: prop_wire: 6345 checks, 0 failures (seed 42)
+   0.34 s rc=0 eff/test/test_frame :: PASS  W short header length=8
+   0.10 s rc=0 eff/test/test_val_frames :: test_val_frames: 26 checks, 0 failures
+   0.13 s rc=0 eff/test/test_lean_wire :: test_lean_wire: 125 checks, 0 failures
+   0.11 s rc=0 eff/test/test_metadata :: metadata: 212 checks passed
+   1.01 s rc=0 engine/bytes/test/test_math :: == ALL PASS: 0 failure(s) ==
+   0.31 s rc=0 engine/cas/test/test_bytes :: == ALL PASS: 0 failure(s) ==
+   0.29 s rc=0 engine/cas/test/test_wal :: == ALL PASS: 0 failure(s) ==
+   0.29 s rc=0 engine/cas/test/test_control :: == ALL PASS: 0 failure(s) ==
+   0.44 s rc=0 engine/cas/test/test_pack :: == ALL PASS: 0 failure(s) ==
+   0.41 s rc=0 engine/cas/test/test_cas :: == ALL PASS: 0 failure(s) ==
+   0.49 s rc=0 engine/cas/test/test_crash :: == ALL PASS: 0 failure(s) ==
+   0.67 s rc=0 engine/cas/test/test_index :: == ALL PASS: 0 failure(s) ==
+   3.65 s rc=0 engine/cas/test/test_checkpoint ::    107 checks
+   1.16 s rc=0 engine/cas/test/test_cache :: == ALL PASS: 0 failure(s) ==
+   0.77 s rc=0 engine/test/test_host :: == ALL PASS: 0 failure(s) ==
+   1.93 s rc=0 engine/test/test_buckets :: == ALL PASS: 0 failure(s) ==
+   0.44 s rc=0 engine/test/prop_table :: == ALL PASS: 0 failure(s) ==
+   0.76 s rc=0 engine/test/prop_trace :: == ALL PASS: 0 failure(s) ==
+   0.43 s rc=0 engine/test/prop_memo :: == ALL PASS: 0 failure(s) ==
+   1.09 s rc=0 engine/test/test_sched :: == ALL PASS: 0 failure(s) ==
+   1.84 s rc=0 engine/test/test_engine :: == ALL PASS: 0 failure(s) in 206 checks ==
+   4.27 s rc=0 engine/test/test_diff :: == ALL PASS: 0 failure(s) == (32 checks)
+   0.44 s rc=0 engine/test/test_log :: == ALL PASS: 0 failure(s) in 32 checks ==
+   1.03 s rc=0 engine/test/test_query :: == ALL PASS: 0 failure(s) in 21 checks ==
+   0.33 s rc=0 engine/test/test_replay_steps :: == ALL PASS: 0 failure(s) in 41 checks ==
+   0.31 s rc=0 engine/test/prop_point :: == ALL PASS: 0 failure(s) ==
+  15.45 s rc=0 engine/test/prop_fibers_view :: == ALL PASS: 0 failure(s) ==
+   0.58 s rc=0 engine/test/mask/test_mask :: test_mask: 83 checks, 0 failures
+   0.56 s rc=0 engine/test/pool/test_pool :: test_pool: 110 checks, 0 failures
+   0.44 s rc=0 engine/test/queue/test_queue :: test_queue: 92 checks, 0 failures
+   0.46 s rc=0 engine/test/scenarios/test_scenarios :: 271 checks, 0 failures
+   0.39 s rc=0 engine/test/semaphore/test_semaphore :: test_semaphore: 31 checks, 0 failures

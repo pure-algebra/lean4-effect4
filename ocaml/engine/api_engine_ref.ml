@@ -23,6 +23,9 @@
    Lean's filterMap WALK, not a maintained view, so Ref vs Fast is exactly the question lane
    G3's view has to answer. *)
 
+open Eff_types
+
+
 include Api_engine.Make (E4_table_list) (E4_trace_list) (E4_memo_list) (E4_buckets_list) (E4_ppath_list) (E4_env_list) (E4_fibers_view_list)
 
 let name = "Ref"

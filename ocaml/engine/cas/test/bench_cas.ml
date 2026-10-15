@@ -21,7 +21,6 @@
    A2 §6.2 measures a 72x read penalty on /mnt/c against ext4, so pass BOTH a Linux-side
    directory and one under /mnt/c to see it.  Each directory is removed at the end. *)
 
-open Effect4_engine
 open Effect4_engine_cas
 
 let n_nodes = try int_of_string (Sys.getenv "E4_BENCH_N") with _ -> 20_000

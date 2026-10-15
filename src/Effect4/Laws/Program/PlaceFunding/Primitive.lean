@@ -13,6 +13,18 @@ namespace Effect4.Program.PlaceFunding
 open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Program.Guard Effect4.Machine.ForkLedger.Invariant
 
+/-- Unchanged stored rows and race programs retain their actual weights.
+Consumer: primitive replies and the unrestricted finalizer source ledger. -/
+theorem local_debit {L : Ledger} (m : NativeMachine)
+    (fiber : NFiber) (it : Moves.NIteration) (rows : it.machine.fibers = m.fibers)
+    (races : it.machine.races = m.races) (commands : (it.nested.map L.command).sum = 0)
+    (bounded : L.spent it.machine + L.state it.machine.state + L.fiber it.fiber + L.issued m ≤
+      L.spent m + L.state m.state + L.fiber fiber + L.issued it.machine) :
+    L.IterDebit m fiber it := by
+  unfold PlaceLedger.IterDebit PlaceLedger.outside
+  simp only [FiberSum.outside, rows, races, commands, List.map_nil, List.sum_nil, Nat.add_zero]
+  omega
+
 /-- The local state, trace and acting row lift through an unchanged stored-row table.
 Consumers: primitive replies and both source and Atomic frame delegation. -/
 theorem NoQueue.local_debit {L : Ledger} (quiet : NoQueue L) (m : NativeMachine)
@@ -60,16 +72,17 @@ structure PrimitiveInputs (L : Ledger) (Free : NCode → Prop) (interp : Moves.N
 
 /-- The shared interpretation reads the existing primitive witness once.
 Source instances discharge every actual reply and writer permission. -/
-theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
-    (quiet : NoQueue L) (control : Control L Free) (events : Events L)
+theorem primitive_debit_of_drain {L : Ledger} {Free : NCode → Prop}
+    (drain : L.command .drainDue = 0) (control : Control L Free) (events : Events L)
     (interp : Moves.NInterp) (m : NativeMachine) (fiber : NFiber) (yielding : Bool)
     (inputs : PrimitiveInputs L Free interp m fiber yielding) :
     L.IterDebit m fiber (evaluatePrim interp m fiber yielding) := by
   have answer (next : NativeMachine) (code : NCode) (outcome : Outcome EffName EffThunk Val Err Defect FiberId Ann)
-      (commands : List Native.NCmd) (rows : next.fibers = m.fibers) (trace : next.trace = m.trace)
+      (commands : List Native.NCmd) (rows : next.fibers = m.fibers) (races : next.races = m.races)
+      (queued : (commands.map L.command).sum = 0) (trace : next.trace = m.trace)
       (bounded : L.state next.state + L.fiber {fiber with frame.current := code} ≤ L.state m.state + L.fiber fiber) :
       L.IterDebit m fiber ⟨next, {fiber with frame.current := code}, yielding, outcome, commands, []⟩ := by
-    apply quiet.local_debit m fiber _ rows
+    apply local_debit m fiber _ rows races queued
     simp only [PlaceLedger.spent, PlaceLedger.issued, trace]
     dsimp only at bounded ⊢
     omega
@@ -87,23 +100,23 @@ theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
   | countdownPark targets next returned parked edits park counted => exact inputs.countdown targets next returned parked edits park counted
   | racePark race park => exact inputs.race race park
   | sync thunk state value selected park produced =>
-    exact answer {m with state} (.success value) .answered [.drainDue] rfl rfl (inputs.sync thunk state value selected produced)
+    exact answer {m with state} (.success value) .answered [.drainDue] rfl rfl (by simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, drain, Nat.add_zero]) rfl (inputs.sync thunk state value selected produced)
   | fallback thunk selected park missing =>
-    exact answer m (.success (interp.syncValue thunk)) .answered [] rfl rfl
+    exact answer m (.success (interp.syncValue thunk)) .answered [] rfl rfl rfl rfl
       (Nat.add_le_add_left (control.replace fiber _ (inputs.success _)) _)
   | rejectedPark cause park =>
-    exact answer m (.failure cause) .continue_ [] rfl rfl
+    exact answer m (.failure cause) .continue_ [] rfl rfl rfl rfl
       (Nat.add_le_add_left (control.replace fiber _ (inputs.failure _)) _)
   | joinExited target mode other exit park found exited =>
-    exact answer m (interp.exitValue exit mode) .continue_ [] rfl rfl
+    exact answer m (interp.exitValue exit mode) .continue_ [] rfl rfl rfl rfl
       (Nat.add_le_add_left (control.replace fiber _ (inputs.exitValue exit mode)) _)
   | asyncImmediate register signal cancel state code selected produced =>
-    exact answer {m with state, nextToken := m.nextToken + 1} code .continue_ [.drainDue] rfl rfl
+    exact answer {m with state, nextToken := m.nextToken + 1} code .continue_ [.drainDue] rfl rfl (by simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, drain, Nat.add_zero]) rfl
       (Nat.add_le_add (inputs.registerState register signal cancel state _ selected produced)
         (control.replace fiber code (inputs.registerReply register signal cancel state code selected produced)))
   | joinMissing target mode park missing => exact Nat.le_refl _
   | yieldNow priority selected =>
-    apply quiet.local_debit m fiber _ rfl
+    apply local_debit m fiber _ rfl rfl rfl
     have dropped := control.replace fiber (.success interp.voidValue) (inputs.success _)
     have returned := parked {fiber with frame.current := .success interp.voidValue}
       ⟨m.nextToken, none, [], [], .void, false⟩
@@ -115,7 +128,7 @@ theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
     dsimp only [RunFiber.park] at returned dropped
     omega
   | asyncParked register signal cancel state selected produced =>
-    apply quiet.local_debit m fiber _ rfl
+    apply local_debit m fiber _ rfl rfl rfl
     have stored := inputs.registerState register signal cancel state none selected produced
     have charged := events.administrative (.parkedOn fiber.id m.nextToken) rfl
     dsimp only
@@ -135,7 +148,7 @@ theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
       dsimp only [RunFiber.park] at returned
       omega
   | joinWaiting target mode other park found live =>
-    apply quiet.local_debit m fiber _ rfl
+    apply local_debit m fiber _ rfl rfl rfl
     have pushed := inputs.joinCancel
     have returned := parked {fiber with frame.stack := .asyncFinalizer (interp.cancelName interp.parkCancelName fiber.id m.nextToken) :: fiber.frame.stack}
       ⟨m.nextToken, none, [], [], .void, false⟩ fiber.dispatcher
@@ -145,5 +158,13 @@ theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
     simp only [List.isEmpty_cons, Bool.false_eq_true, if_false, List.map_append, List.sum_append, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, Nat.add_zero]
     dsimp only [RunFiber.park] at returned pushed
     omega
+
+/-- A ledger with no queued weight is an instance of the actual drain-command contract. -/
+theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
+    (quiet : NoQueue L) (control : Control L Free) (events : Events L)
+    (interp : Moves.NInterp) (m : NativeMachine) (fiber : NFiber) (yielding : Bool)
+    (inputs : PrimitiveInputs L Free interp m fiber yielding) :
+    L.IterDebit m fiber (evaluatePrim interp m fiber yielding) :=
+  primitive_debit_of_drain (quiet.commands .drainDue) control events interp m fiber yielding inputs
 
 end Effect4.Program.PlaceFunding

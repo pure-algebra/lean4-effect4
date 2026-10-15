@@ -33,14 +33,14 @@ let strings =
 
 let rand_string () = pick strings
 
-let rand_mask () = pick [ Mask_mode_interruptible; Mask_mode_uninterruptible; Mask_mode_inherit ]
-let rand_mode () = pick [ Observer_mode_awaitValue; Observer_mode_joinEffect ]
+let rand_mask () = pick [ MaskMode_interruptible; MaskMode_uninterruptible; MaskMode_inherit ]
+let rand_mode () = pick [ ObserverMode_awaitValue; ObserverMode_joinEffect ]
 
 let rand_options () =
-  { fork_options_startImmediately = rb (); fork_options_daemon = rb (); fork_options_maskMode = rand_mask () }
+  { start_immediately = rb (); daemon = rb (); mask_mode = rand_mask () }
 
 let rand_service_key () =
-  { service_key_name = { service_name_value = rand_nat () }; service_key_service = { service_type_code_value = rand_nat () } }
+  { name = (rand_nat ()); service = (rand_nat ()) }
 
 (* A canonical row of keys: strictly ascending by name, then service (`Effect4.Row`, `ServiceKey.Lt`). *)
 let rand_keys () = List.sort_uniq compare (List.init (ri 4) (fun _ -> rand_service_key ()))
@@ -63,7 +63,7 @@ let rec rand_term d =
         (List.init (ri 4) (fun _ -> rand_string (), (rb (), pick [Ty_nat; Ty_int; Ty_number; Ty_string])),
          List.init (ri 4) (fun _ -> rand_string ()), rand_terms (d - 1))
     | 4 -> Term_field
-        (pick [Field_read_mode_required; Field_read_mode_optional], rand_term (d - 1), rand_string ())
+        (pick [FieldReadMode_required; FieldReadMode_optional], rand_term (d - 1), rand_string ())
     | 5 -> Term_recordSet (rand_term (d - 1), rand_string (), rand_term (d - 1))
     | 6 -> Term_tupleAt (rand_term (d - 1), rand_nat ())
     | _ -> Term_fold
@@ -81,27 +81,27 @@ and rand_terms d = if d <= 0 || ri 3 = 0 then Terms_nil else Terms_cons (rand_te
 let rand_term_op () =
   let f = rand_term 2 in
   match ri 8 with
-  | 0 -> Native_op_refUpdateWith f
-  | 1 -> Native_op_refGetAndUpdateWith f
-  | 2 -> Native_op_refUpdateAndGetWith f
-  | 3 -> Native_op_refUpdateSomeWith f
-  | 4 -> Native_op_refGetAndUpdateSomeWith f
-  | 5 -> Native_op_refUpdateSomeAndGetWith f
-  | 6 -> Native_op_refModifyWith f
-  | _ -> Native_op_refModifySomeWith f
+  | 0 -> NativeOp_refUpdateWith f
+  | 1 -> NativeOp_refGetAndUpdateWith f
+  | 2 -> NativeOp_refUpdateAndGetWith f
+  | 3 -> NativeOp_refUpdateSomeWith f
+  | 4 -> NativeOp_refGetAndUpdateSomeWith f
+  | 5 -> NativeOp_refUpdateSomeAndGetWith f
+  | 6 -> NativeOp_refModifyWith f
+  | _ -> NativeOp_refModifySomeWith f
 
 let rand_op () =
   match ri 4 with
-  | 0 -> Native_op_external (rand_nat ())
+  | 0 -> NativeOp_external (rand_nat ())
   | 1 -> rand_term_op ()
   | _ -> pick Eff_native.all_ops
 
 let rec rand_cause d =
   match if d <= 0 then ri 3 else ri 4 with
-  | 0 -> Cause_term_fail (rand_term d)
-  | 1 -> Cause_term_die (rand_term d)
-  | 2 -> Cause_term_interrupt (if rb () then None else Some (rand_term d))
-  | _ -> Cause_term_both (rand_cause (d - 1), rand_cause (d - 1))
+  | 0 -> CauseTerm_fail (rand_term d)
+  | 1 -> CauseTerm_die (rand_term d)
+  | 2 -> CauseTerm_interrupt (if rb () then None else Some (rand_term d))
+  | _ -> CauseTerm_both (rand_cause (d - 1), rand_cause (d - 1))
 
 let rand_decision () =
   pick [Decision_bool; Decision_option; Decision_tag (rand_string ());
@@ -149,17 +149,17 @@ let rec rand_eff d =
     | _ -> Eff_catchIf (t (), e (), e ())
 
 and rand_layer d =
-  if d <= 0 then Layer_term_succeed (rand_service_key (), rand_lit ())
+  if d <= 0 then LayerTerm_succeed (rand_service_key (), rand_lit ())
   else
     match ri 8 with
-    | 0 -> Layer_term_succeed (rand_service_key (), rand_lit ())
-    | 1 -> Layer_term_effect (rand_service_key (), rand_eff (d - 1))
-    | 2 -> Layer_term_effectDiscard (rand_eff (d - 1))
-    | 3 -> Layer_term_provide (rand_layer (d - 1), rand_layer (d - 1))
-    | 4 -> Layer_term_provideMerge (rand_layer (d - 1), rand_layer (d - 1))
-    | 5 -> Layer_term_merge (rand_layer (d - 1), rand_layer (d - 1))
-    | 6 -> Layer_term_fresh (rand_layer (d - 1))
-    | _ -> Layer_term_orDie (rand_layer (d - 1))
+    | 0 -> LayerTerm_succeed (rand_service_key (), rand_lit ())
+    | 1 -> LayerTerm_effect (rand_service_key (), rand_eff (d - 1))
+    | 2 -> LayerTerm_effectDiscard (rand_eff (d - 1))
+    | 3 -> LayerTerm_provide (rand_layer (d - 1), rand_layer (d - 1))
+    | 4 -> LayerTerm_provideMerge (rand_layer (d - 1), rand_layer (d - 1))
+    | 5 -> LayerTerm_merge (rand_layer (d - 1), rand_layer (d - 1))
+    | 6 -> LayerTerm_fresh (rand_layer (d - 1))
+    | _ -> LayerTerm_orDie (rand_layer (d - 1))
 
 and rand_stmt d =
   match ri 6 with
@@ -176,23 +176,23 @@ and rand_effs d = if d <= 0 || ri 3 = 0 then Effs_nil else Effs_cons (rand_eff (
 and rand_action d =
   let t () = rand_term (min d 2) in
   match ri 17 with
-  | 0 -> Action_term_fork (rand_eff d, rand_options ())
-  | 1 -> Action_term_forkIn (rand_eff d, rand_options (), t ())
-  | 2 -> Action_term_forkScoped (rand_eff d, rand_options ())
-  | 3 -> Action_term_runIn (t (), t ())
-  | 4 -> Action_term_interrupt (t ())
-  | 5 -> Action_term_interruptScoped (t ())
-  | 6 -> Action_term_interruptAll (t (), if rb () then None else Some (t ()))
-  | 7 -> Action_term_awaitAll (t ())
-  | 8 -> Action_term_awaitAllFailFast (t ())
-  | 9 -> Action_term_snapshotChildren
-  | 10 -> Action_term_awaitNewChildren (t ())
-  | 11 -> Action_term_raceAll (rand_effs d)
-  | 12 -> Action_term_context (rand_keys ())
-  | 13 -> Action_term_getId
-  | 14 -> Action_term_getInterruptible
-  | 15 -> Action_term_closeScope (t (), t ())
-  | _ -> Action_term_raceAllFirst (rand_effs d)
+  | 0 -> ActionTerm_fork (rand_eff d, rand_options ())
+  | 1 -> ActionTerm_forkIn (rand_eff d, rand_options (), t ())
+  | 2 -> ActionTerm_forkScoped (rand_eff d, rand_options ())
+  | 3 -> ActionTerm_runIn (t (), t ())
+  | 4 -> ActionTerm_interrupt (t ())
+  | 5 -> ActionTerm_interruptScoped (t ())
+  | 6 -> ActionTerm_interruptAll (t (), if rb () then None else Some (t ()))
+  | 7 -> ActionTerm_awaitAll (t ())
+  | 8 -> ActionTerm_awaitAllFailFast (t ())
+  | 9 -> ActionTerm_snapshotChildren
+  | 10 -> ActionTerm_awaitNewChildren (t ())
+  | 11 -> ActionTerm_raceAll (rand_effs d)
+  | 12 -> ActionTerm_context (rand_keys ())
+  | 13 -> ActionTerm_getId
+  | 14 -> ActionTerm_getInterruptible
+  | 15 -> ActionTerm_closeScope (t (), t ())
+  | _ -> ActionTerm_raceAllFirst (rand_effs d)
 
 let rec rand_ty d =
   match if d <= 0 then ri 7 else ri 15 with
@@ -213,29 +213,29 @@ let rec rand_ty d =
   | _ -> Ty_union (rand_ty (d - 1), rand_ty (d - 1))
 
 let rand_key () =
-  { service_key_name = { service_name_value = rand_nat () }; service_key_service = { service_type_code_value = rand_nat () } }
+  { name = (rand_nat ()); service = (rand_nat ()) }
 
 let rand_list f = List.init (ri 4) (fun _ -> f ())
 
 (* Requirement rows are canonical sets in the Lean source image. Invalid ordering and
    duplicates are tested separately by test_metadata; round-trip samples stay in-domain. *)
 let rand_requirements () =
-  let key k = k.service_key_name.service_name_value, k.service_key_service.service_type_code_value in
+  let key (k : service_key) = k.name, k.service in
   List.sort_uniq (fun a b -> compare (key a) (key b)) (rand_list rand_key)
 
 let rand_row_arg () =
-  if rb () then Row_arg_name (rand_string ()) else Row_arg_str (rand_string ())
+  if rb () then RowArg_name (rand_string ()) else RowArg_str (rand_string ())
 
 let rand_row () =
-  { row_name = rand_string (); row_spelling = rand_string ();
-    row_shape = pick [ Row_shape_call; Row_shape_value; Row_shape_tupleCall; Row_shape_method ]; row_trailing = rand_list rand_row_arg;
-    row_kind = pick [ Row_kind_sync; Row_kind_async; Row_kind_program ];
-    row_request = rand_ty 2; row_answer = rand_ty 2; row_error = rand_ty 2;
-    row_requires = rand_requirements (); row_cite = rand_string ();
-    row_typeArgs = rand_list rand_string;
-    row_registration = pick [ Registration_deferred; Registration_external ] }
+  { name = rand_string (); spelling = rand_string ();
+    shape = pick [ RowShape_call; RowShape_value; RowShape_tupleCall; RowShape_method ]; trailing = rand_list rand_row_arg;
+    kind = pick [ RowKind_sync; RowKind_async; RowKind_program ];
+    request = rand_ty 2; answer = rand_ty 2; error = rand_ty 2;
+    requires = rand_requirements (); cite = rand_string ();
+    type_args = rand_list rand_string;
+    registration = pick [ Registration_deferred; Registration_external ] }
 
-let rand_eff_ty () = { eff_ty_answer = rand_ty 3; eff_ty_error = rand_ty 3; eff_ty_requires = rand_requirements () }
+let rand_eff_ty () = { answer = rand_ty 3; error = rand_ty 3; requires = rand_requirements () }
 
 let checks = ref 0
 let failures = ref 0
@@ -270,15 +270,15 @@ let record_controls =
   [ raw;
     Term_record (["x", (true, Ty_nat)], [], Terms_cons (Term_lit (Lit_nat 1), Terms_nil));
     Term_record (["x", (true, Ty_nat)], [], Terms_nil);
-    Term_field (Field_read_mode_required, raw, "__proto__");
-    Term_field (Field_read_mode_optional, raw, "a-b");
+    Term_field (FieldReadMode_required, raw, "__proto__");
+    Term_field (FieldReadMode_optional, raw, "a-b");
     Term_recordSet (raw, "a-b", Term_var 3) ]
 
 let tuple_controls =
   [ Term_tupleAt (Term_var 0, 0);
     Term_tupleAt (Term_var 1, 9007199254740993);
     Term_tupleAt (Term_tupleAt (Term_var 2, 65537), max_int);
-    Term_field (Field_read_mode_optional, Term_tupleAt (Term_var 3, 1), "a-b") ]
+    Term_field (FieldReadMode_optional, Term_tupleAt (Term_var 3, 1), "a-b") ]
 
 (* The list fold (decisions row 228): with no stated type and with one, and a fold inside a
    fold's body. *)

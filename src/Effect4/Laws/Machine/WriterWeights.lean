@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.FrameWeights
+import Effect4.Laws.Machine.PopCurrent
 import Effect4.Laws.Machine.FinalizerRun
 import Effect4.Laws.Machine.FiberSumMessages
 
@@ -92,6 +93,24 @@ theorem native_start_bound (model : FrameWeights.Model ν σ β ε δ ι α) (ch
       change _ + ((popFor fiber.frame (.failure cause)).events.countP (FinalizerCredits.started choose) + _) = _
       rw [silent, Nat.zero_add]
       rfl
+
+/-- A continuation pop retains active code and spends only the selected saved reservations.
+Consumers: source, finalizer and release-writer frame delegation. -/
+theorem getCont_frame_le (model : FrameWeights.Model ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool)
+    (cause : Option (Cause ε δ ι α)) :
+    FrameWeights.frame model (fiber.getCont demand skip cause).fiber ≤ FrameWeights.frame model fiber := by
+  have bounded := FrameWeights.getCont_le model fiber demand skip cause
+  have same := PopTrace.getCont_current fiber demand skip cause
+  simp only [FrameWeights.frame, same]
+  omega
+
+/-- A completed frame retains only the reservation remaining after its actual pop. -/
+theorem frameExit_le (model : FrameWeights.Model ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    FrameWeights.frame model (frameExitState fiber) ≤ FrameWeights.frame model fiber := by
+  unfold frameExitState
+  split <;> exact getCont_frame_le model fiber _ _ none
 
 /-- The existing stored rows carry their actual frame scalar. -/
 def fibers (model : FrameWeights.Model ν σ β ε δ ι α) (machine : RunMachine ν σ β ε δ ι α χ St) : Nat :=

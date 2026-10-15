@@ -38,6 +38,7 @@
         make corpus && cd ocaml && dune build @engine/test/runtest --force *)
 
 open Effect4_engine
+open Eff_types
 
 let failures = ref 0
 let checks = ref 0
@@ -56,7 +57,7 @@ let note s = Printf.printf "  NOTE %s\n" s
    they are the ONLY lines that name a carrier, exactly as `api_engine_inst.ml` says --
    here every carrier is Lean's own list, so each projection is a `List` operation.  The
    ascription `E4_engine.Make (Api_gen_inst)` is itself a check: `ocamlopt` compares the
-   hand transcriptions of `E4_program.PROGRAM_TYPES` and `E4_engine.INSTANCE` against the
+   hand transcription of `E4_engine.INSTANCE` against the
    generated file of the OTHER route, so a constructor that drifted between
    `ocaml/gen/api_gen.ml` and `ocaml/engine/api_engine.ml` is a compile error here. *)
 module Api_gen_inst = struct
@@ -496,13 +497,13 @@ let () =
   let tl = run_corpus "lean" lean tapes_for_lean in
   verdict "lean" tl;
 
-  (* -------------------------------------------------------------- 4. FB1 and DF-2 *)
+  (* -------------------------------------------------------------- 4. FB1 and DF-3 *)
   print_endline "";
   print_endline "== 4. the owed rows ==";
-  (* Lane C's OWED FB1: `E4_fibers.to_list` = api_gen's `m.fibers` over the corpus.  The
-     fiber-table projection is p6 (ids, in machine order) and p9 (the rows) of every
-     comparison above, so FB1 is discharged by the goldens tally -- but say it in its own
-     words, over the 37 goldens at the `Api.run` tape. *)
+  (* Lane C's OWED FB1: the Fast instance's fiber table (`E4_fibers_view.bindings`) = api_gen's
+     `m.fibers` over the corpus.  The fiber-table projection is p6 (ids, in machine order) and
+     p9 (the rows) of every comparison above, so FB1 is discharged by the goldens tally -- but
+     say it in its own words, over the 37 goldens at the `Api.run` tape. *)
   let fb1 = ref 0 and fb1_bad = ref 0 in
   List.iter
     (fun (p : Corpora.program) ->
@@ -521,19 +522,10 @@ let () =
     goldens;
   check
     (Printf.sprintf
-       "FB1 (lane C, owed): E4_fibers.to_list = api_gen's m.fibers, ids AND rows, on %d/%d \
+       "FB1 (lane C, owed): the Fast fiber table = api_gen's m.fibers, ids AND rows, on %d/%d \
         goldens"
        (!fb1 - !fb1_bad) (List.length goldens))
     (!fb1_bad = 0 && !fb1 = List.length goldens);
-  note
-    "DF-2 (A3 §4.2, the family order byte-identical with only Deferred owing) is NOT \
-     RUN: `E4_due` is not wired into the engine. ocaml/engine/externs.txt has no row for \
-     `Effect4.Machine.DeferredStore.due` and none for E4_due's drain, so the due list in \
-     `api_engine.ml` is still the generated one and the substitution DF-2 is about does \
-     not exist yet. What stands in its place today is lane Q1's own \
-     due-family-order-mutation test, and the fact that every machine in all three corpora \
-     above owes only Deferred resumes (there is no Timer/Queue/Semaphore family in the \
-     Lean machine yet), so ORD-FAM is vacuous here by construction.";
   note
     "DF-3 (query agreement, `E4_query.at s i` = `api_replay` of the first i) waits on lane \
      Q3 and is out of this lane's scope. The half of it that exists -- `replay_steps` at \

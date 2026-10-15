@@ -7,6 +7,11 @@ functions were exercised by a `gen_check` executable against a hand copy of the 
 dispatcher (1419 compared steps), both removed on 2026-09-13 with the avatar itself
 archived. Lean 4.33.1, OCaml 5.1.1, dune 3.24.2.
 
+This note is the spike's record, and its sections stay as they were written. On 2026-10-15 the
+lowering cleanup's LC-3 retired the spike's outputs `machine_gen.ml` and `fibers_gen.ml`. The
+machine's functions are now coverage roots of `api_gen.ml`, and `gen/roots.json` is the one
+recipe. `ocaml/README.md` holds the current map and the commands.
+
 ## Commands
 
 The exact regeneration command is in each generated file's header. Run it through

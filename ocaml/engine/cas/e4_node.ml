@@ -1,7 +1,6 @@
 (* E4_node — the node envelope and the flat payload walk.  The property list is in
    e4_node.mli.  Every step below carries the Lean line it transcribes. *)
 
-open Effect4_engine
 
 type t = { version : int; kind : E4_kind.t; spec : string; payload : string }
 

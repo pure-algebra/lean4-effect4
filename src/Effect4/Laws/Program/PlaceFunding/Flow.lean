@@ -22,7 +22,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.SourceScope
 open Effect4.Machine.AnswerFlow (Flows)
 open Effect4.Machine.ForkLedger.Invariant Effect4.Program.Guard
 
-universe w
+universe w v
 
 /-- What source ownership gives at a command: the machine's configuration and the command's code. -/
 def SourceReady (root : NativeEff) (m : NativeMachine) (command : SourceCommand) : Prop :=
@@ -37,6 +37,26 @@ structure NativeFlow {World : Type w} (root : NativeEff) (table : RowTable)
     AnswerFlow.Commands (interpOf root table) (SourceReady root) G worldOf
   outside : AnswerFlow.OutsideEdits (interpOf root table) G worldOf
 
+/-- Source ownership supplies the shared command premises of the answer-flow producer. -/
+theorem NativeFlow.local_facts {World : Type w} {root : NativeEff} {table : RowTable}
+    {G : World → FiberId → FrameFiber EffName EffThunk Val Err Defect FiberId Ann → Prop}
+    {worldOf : Stores → FiberId → World} (facts : NativeFlow root table G worldOf) :
+    letI := evaluatorFor root table
+    AnswerFlow.Local (interpOf root table)
+      (fun (_ : Unit) m => ConfigurationAt root m)
+      (fun _ _ cmds => CommandsAt root cmds) (fun _ _ tasks => TasksAt root tasks)
+      (fun _ _ _ => True) (SourceReady root) G worldOf := by
+  letI := evaluatorFor root table
+  refine ⟨?_, facts.commands, facts.outside, ?_⟩
+  · intro ts w m command rest running guarded
+    exact ⟨guarded.1, (guarded.2 running).1 command (.head _)⟩
+  · intro w m id token value owned running _
+    have prepared := prepare_reply_at root table m id token value
+    have scopes : ScopesAt root (prepareAsyncAnswer (interpOf root table) m id token value).1.scopes := by
+      rw [prepared.1]
+      exact owned.scopes
+    exact ⟨⟨owned.fibers, owned.races, scopes⟩, prepared.2.1, prepared.2.2⟩
+
 /-- **The native producer**: source ownership and the flow, carried through every decision, replies
 included. The base is the reply decision lift; its queue and snapshot facts are kept. -/
 theorem NativeFlow.decision_lift {World : Type w} {root : NativeEff} {table : RowTable}
@@ -49,16 +69,38 @@ theorem NativeFlow.decision_lift {World : Type w} {root : NativeEff} {table : Ro
       (fun _ _ cmds => CommandsAt root cmds) (fun _ _ tasks => TasksAt root tasks)
       (fun _ _ _ => True) := by
   letI := evaluatorFor root table
-  apply AnswerFlow.Local.decision_lift (reply_decision_lift root fragment table)
-  refine ⟨?_, facts.commands, facts.outside, ?_⟩
-  · intro ts w m command rest running guarded
-    exact ⟨guarded.1, (guarded.2 running).1 command (.head _)⟩
-  · intro w m id token value owned running _
-    have prepared := prepare_reply_at root table m id token value
-    have scopes : ScopesAt root (prepareAsyncAnswer (interpOf root table) m id token value).1.scopes := by
-      rw [prepared.1]
-      exact owned.scopes
-    exact ⟨⟨owned.fibers, owned.races, scopes⟩, prepared.2.1, prepared.2.2⟩
+  exact facts.local_facts.decision_lift (reply_decision_lift root fragment table)
+
+/-- The existing answer-flow producer retains the driver's actual queue and snapshot premises.
+Consumer: the four application flow instances named in the module placement.
+Reach: every native admitted history and supplied decision invariant; no source-only guard is substituted. -/
+theorem NativeFlow.history_of_lift {W : Type w} {World : Type v}
+    (b : Api.Built) (order : Effect4.Laws.Effects.WorldOrder W)
+    (J : W → NativeMachine → Prop)
+    (I : W → NativeMachine → List SourceCommand → Prop)
+    (O : W → NativeMachine → List SourceTask → Prop)
+    (A : W → NativeMachine → NativeDecision → Prop)
+    (Ready : NativeMachine → SourceCommand → Prop)
+    (G : World → FiberId → FrameFiber EffName EffThunk Val Err Defect FiberId Ann → Prop)
+    (worldOf : Stores → FiberId → World)
+    (base : letI := evaluatorFor b.program b.table
+      Lift.DecisionLift order (interpOf b.program b.table) J I O A)
+    (facts : letI := evaluatorFor b.program b.table
+      AnswerFlow.Local (interpOf b.program b.table) J I O A Ready G worldOf)
+    (admission : ∀ w m d, J w m →
+      Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m d → A w m d)
+    (compileFuel : Nat)
+    (load : ∃ w, J w (Api.load b.program compileFuel) ∧
+      Flows G worldOf (Api.load b.program compileFuel))
+    (m : NativeMachine) (history : Run.HistoryOf b compileFuel m) :
+    ∃ w, J w m ∧ Flows G worldOf m := by
+  apply Run.history_keeps b compileFuel (fun m => ∃ w, J w m ∧ Flows G worldOf m) load
+    (fun before row held accepted => ?_) m history
+  letI := evaluatorFor b.program b.table
+  obtain ⟨world, invariant, flowing⟩ := held
+  obtain ⟨next, _, moved⟩ := Lift.stepDecisionState_lift (facts.decision_lift base)
+    row.1 world before row.2 ⟨invariant, flowing⟩ (admission world before row.2 invariant accepted)
+  exact ⟨next, moved⟩
 
 /-- **The flow holds along every admitted history** of a direct-fragment program, from a load that
 holds it. Placement: the proposed claim `answer-flow-history`, role preservation; a step of the crews'
@@ -70,15 +112,14 @@ theorem NativeFlow.history {World : Type w} (b : Api.Built)
     (fragment : Fragment b.program) (compileFuel : Nat)
     (load : Flows G worldOf (Api.load b.program compileFuel))
     (m : NativeMachine) (history : Run.HistoryOf b compileFuel m) :
-    ConfigurationAt b.program m ∧ Flows G worldOf m :=
-  Run.history_keeps b compileFuel (fun m => ConfigurationAt b.program m ∧ Flows G worldOf m)
-    ⟨load_at b.program fragment compileFuel, load⟩
-    (fun before row held _ => by
-      letI := evaluatorFor b.program b.table
-      obtain ⟨_, _, moved⟩ := Lift.stepDecisionState_lift (facts.decision_lift fragment)
-        row.1 () before row.2 held trivial
-      exact moved)
-    m history
+    ConfigurationAt b.program m ∧ Flows G worldOf m := by
+  obtain ⟨_, owned, flowing⟩ := NativeFlow.history_of_lift b Lift.unitOrder
+    (fun _ m => ConfigurationAt b.program m)
+    (fun _ _ commands => CommandsAt b.program commands) (fun _ _ tasks => TasksAt b.program tasks)
+    (fun _ _ _ => True) (SourceReady b.program) G worldOf
+    (reply_decision_lift b.program fragment b.table) facts.local_facts (fun _ _ _ _ _ => trivial)
+    compileFuel ⟨(), load_at b.program fragment compileFuel, load⟩ m history
+  exact ⟨owned, flowing⟩
 
 /-! ## Place funding over a carried invariant -/
 
@@ -128,27 +169,30 @@ theorem LocalOn.command {L : Ledger} {Free : NCode → Prop} {root : NativeEff} 
   rw [zero_allowance, Nat.add_zero] at after
   exact after
 
-/-- Every decision keeps the carried invariant and the funded ledger, replies included, from a
-decision lift that carries the invariant. -/
-theorem LocalOn.decision_lift {L : Ledger} {Free : NCode → Prop} {root : NativeEff}
-    {table : RowTable} {Q : NativeMachine → Prop} (facts : LocalOn L Free root table Q) (cap : Nat)
+/-- The writer ledger uses the carried driver's queue, including its overwrite demands.
+Consumer: the two crews' release-log funding proofs.
+Reach: native commands and accepted decisions under the supplied invariant; no application instance is assumed proved. -/
+theorem LocalOn.guarded_decision_lift {W : Type w}
+    {L : Ledger} {Free : NCode → Prop} {root : NativeEff} {table : RowTable}
+    {Q : NativeMachine → Prop} (facts : LocalOn L Free root table Q) (cap : Nat)
+    (order : Effect4.Laws.Effects.WorldOrder W)
+    (I : W → NativeMachine → List SourceCommand → Prop)
+    (O : W → NativeMachine → List SourceTask → Prop)
+    (A : W → NativeMachine → NativeDecision → Prop)
+    (source : ∀ w m commands, I w m commands → CommandsAt root commands)
     (carried : letI := evaluatorFor root table
-      Lift.DecisionLift Lift.unitOrder (interpOf root table)
-        (fun _ m => ConfigurationAt root m ∧ Q m)
-        (fun _ _ cmds => CommandsAt root cmds) (fun _ _ tasks => TasksAt root tasks)
-        (fun _ _ _ => True)) :
+      Lift.DecisionLift order (interpOf root table)
+        (fun _ m => ConfigurationAt root m ∧ Q m) I O A) :
     letI := evaluatorFor root table
-    Lift.DecisionLift Lift.unitOrder (interpOf root table)
-      (fun _ m => (ConfigurationAt root m ∧ Q m) ∧ Holds L cap m)
-      (fun _ _ cmds => CommandsAt root cmds) (fun _ _ tasks => TasksAt root tasks)
-      (fun _ _ _ => True) := by
+    Lift.DecisionLift order (interpOf root table)
+      (fun _ m => (ConfigurationAt root m ∧ Q m) ∧ Holds L cap m) I O A := by
   letI := evaluatorFor root table
   apply carried.withMachineFact _ ?_
     (edits facts.control facts.quiet facts.events cap (interpOf root table) facts.clock facts.prepare) ?_
-  · intro tasks world m command rest running source held
-    have queue := (source.2 running).1
-    exact ⟨ForkLedger.Invariant.Native.driveStep_ok root table m command rest held.1,
-      facts.command cap m command rest source.1.1 source.1.2 held.1 (queue command (.head _)) held.2⟩
+  · intro tasks world m command rest running held funded
+    have queue := source world m (command :: rest) (held.2 running).1
+    exact ⟨ForkLedger.Invariant.Native.driveStep_ok root table m command rest funded.1,
+      facts.command cap m command rest held.1.1 held.1.2 funded.1 (queue command (.head _)) funded.2⟩
   · intro world m fiber token answer invariant held running admitted
     have prepared := prepare_reply_at root table m fiber token answer
     have scopes : ScopesAt root
@@ -164,6 +208,23 @@ theorem LocalOn.decision_lift {L : Ledger} {Free : NCode → Prop} {root : Nativ
     exact ⟨ForkLedger.Invariant.Native.driveStep_ok root table _ _ [.drainDue] held.1,
       facts.command cap _ _ [.drainDue] configured (facts.carry m fiber token answer invariant.2) held.1
         prepared.2 funded⟩
+
+/-- Every decision keeps the carried invariant and the funded ledger, replies included, from a
+decision lift that carries the invariant. -/
+theorem LocalOn.decision_lift {L : Ledger} {Free : NCode → Prop} {root : NativeEff}
+    {table : RowTable} {Q : NativeMachine → Prop} (facts : LocalOn L Free root table Q) (cap : Nat)
+    (carried : letI := evaluatorFor root table
+      Lift.DecisionLift Lift.unitOrder (interpOf root table)
+        (fun _ m => ConfigurationAt root m ∧ Q m)
+        (fun _ _ cmds => CommandsAt root cmds) (fun _ _ tasks => TasksAt root tasks)
+        (fun _ _ _ => True)) :
+    letI := evaluatorFor root table
+    Lift.DecisionLift Lift.unitOrder (interpOf root table)
+      (fun _ m => (ConfigurationAt root m ∧ Q m) ∧ Holds L cap m)
+      (fun _ _ cmds => CommandsAt root cmds) (fun _ _ tasks => TasksAt root tasks)
+      (fun _ _ _ => True) := by
+  letI := evaluatorFor root table
+  exact facts.guarded_decision_lift cap Lift.unitOrder _ _ _ (fun _ _ _ queued => queued) carried
 
 /-- **A place ledger over a carried invariant is funded along every admitted history** of a program
 of the direct lexical fragment, from a funded load where the invariant holds. It is

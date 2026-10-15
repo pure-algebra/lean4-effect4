@@ -1,3 +1,4 @@
+import Effect4.Laws.Machine.ContextualMessages
 import Effect4.Laws.Machine.LiftMachineFact
 import Effect4.Laws.Machine.AnswerFlowFamily
 import Effect4.Laws.Machine.Ledger
@@ -273,6 +274,7 @@ structure Commands [FiberEvaluator ν σ β ε δ ι α χ St (Prim ν σ β ε 
   /-- The children's interrupt becomes the current code of an exiting fiber. -/
   exitChildren : ∀ m id exit (f : RunFiber ν σ β ε δ ι α χ), Ready m (.finish id exit) →
     Flows G worldOf m → m.fiber? id = some f →
+    (m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty) = true →
       G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false, current := .onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit)}
   /-- Publishing an exit clears the deferred flag. -/
   publish : ∀ (state : St) (f : RunFiber ν σ β ε δ ι α χ),
@@ -325,19 +327,23 @@ theorem Flows.fiberEdits
       G (worldOf state f.id) f.id f.frame → G (worldOf state f.id) f.id (interruptWithCause cause f).1.frame)
     (edits : List (FiberEdit ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St) (held : Flows G worldOf m) :
     Flows G worldOf (applyFiberEdits edits m).1 := by
-  unfold applyFiberEdits
-  suffices ∀ (word : List (FiberEdit ε δ ι α)) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)),
-      Flows G worldOf acc.1 →
-      Flows G worldOf (word.foldl (fun held edit =>
-        let changed := applyFiberEdit edit held.1
-        (changed.1, held.2 ++ changed.2)) acc).1 from this edits (m, []) held
-  intro word
-  induction word with
-  | nil => intro acc kept; exact kept
-  | cons edit rest ih =>
-    intro acc kept
-    rw [List.foldl_cons]
-    exact ih _ (Flows.fiberEdit interruption edit acc.1 kept)
+  have facts : ContextualMessages.Local Lift.unitOrder
+      (fun (_ : Unit) (_ : Unit) m => Flows G worldOf m)
+      (fun (_ : Unit) (_ : Unit) (_ : RunMachine ν σ β ε δ ι α χ St)
+        (_ : List (Cmd ν σ β ε δ ι α)) => True) := by
+    refine { observe := ?_, drop := ?_, interrupt := ?_ }
+    · intro context world m commands target observer flow queued
+      refine ⟨(), Lift.unitOrder.refl (), ?_, True.intro⟩
+      exact Flows.fiberEdit interruption (.observe target observer) m flow
+    · intro context world m commands token flow queued
+      refine ⟨(), Lift.unitOrder.refl (), ?_, True.intro⟩
+      exact Flows.fiberEdit interruption (.dropToken token) m flow
+    · intro context world m commands target cause fiber found flow queued
+      refine ⟨(), Lift.unitOrder.refl (), ?_, True.intro⟩
+      have changed := Flows.fiberEdit interruption (.interrupt target cause) m flow
+      simpa only [applyFiberEdit, found] using changed
+  obtain ⟨world, advanced, retained, queued⟩ := facts.apply () () edits m held True.intro
+  exact retained
 
 /-- Settlement keeps the flow of an iteration's result: it installs the returned fiber, applies the
 edit word and records the outcome in metadata. -/
@@ -476,14 +482,16 @@ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 with no observer, the fiber cleared. -/
 theorem Flows.exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) (held : Flows G worldOf m)
-    (children : G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false, current := .onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit)})
+    (children : (m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty) = true →
+      G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false, current := .onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit)})
     (publish : G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false})
     (cleared : G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false, stack := []}) :
     Flows G worldOf (Machine.exitFiber interp m f exit).1 := by
   unfold Machine.exitFiber
   split
-  · unfold Machine.exitFiber.exitInterruptChildren
-    exact (held.update _ children).fields rfl rfl
+  · rename_i runs
+    unfold Machine.exitFiber.exitInterruptChildren
+    exact (held.update _ (children runs)).fields rfl rfl
   · unfold Machine.exitFiber.exitStore
     dsimp only
     have published : Flows G worldOf ((m.update (f.publish exit)).emit [RunEvent.exited f.id exit]) :=
@@ -715,7 +723,7 @@ theorem Commands.step (facts : Commands interp Ready G worldOf) (m : RunMachine 
     · exact held
     · rename_i f found
       have kept := Flows.exitFiber interp m {f with running := false} exit held
-        (facts.exitChildren m id exit f ready held found)
+        (fun runs => facts.exitChildren m id exit f ready held found runs)
         (facts.publish m.state f (held.found found))
         (facts.cleared m.state {f with frame := {f.frame with deferredInterrupt := false}}
           (facts.publish m.state f (held.found found)))

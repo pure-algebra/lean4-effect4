@@ -98,7 +98,7 @@ theorem primitive_at (root : NativeEff) (fragment : Fragment root) (completed) (
       ⟨owned.fibers, owned.races, syncOwned thunk state value current operation⟩
       (fiber_current_at root fiber _ held trivial)
       (by intro command member; rw [List.mem_singleton.mp member]; trivial)).2
-  | _ => aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt, TerminalReply]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
+  | _ => aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt, TerminalReply]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered]) (add norm simp [CommandsAt, CommandAt, CodeClosure.Configuration.CommandsAt, CodeClosure.Configuration.CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
 
 /-- Scoped entry installs its actual zero-binder source child and a fresh empty scope. -/
 theorem enter_scoped_at (root : NativeEff) (fragment : Fragment root) (p : Point)

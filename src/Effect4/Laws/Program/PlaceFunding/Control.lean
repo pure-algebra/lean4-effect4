@@ -40,6 +40,19 @@ structure NoQueue (L : Ledger) : Prop where
   tasks : ∀ task, L.task task = 0
 
 
+/-- Command admission can make the queue reading zero while races retain their programs. -/
+structure NoPending (L : Ledger) : Prop where
+  commands : ∀ command, L.command command = 0
+  tasks : ∀ task, L.task task = 0
+
+/-- The original zero-place instance supplies the smaller queue premise. -/
+theorem NoQueue.pending {L : Ledger} (quiet : NoQueue L) : NoPending L := ⟨quiet.commands, quiet.tasks⟩
+
+/-- A race's administrative fields do not change its program reservation. -/
+structure RaceWeights (L : Ledger) : Prop where
+  metadata : ∀ old next, next.programs = old.programs → L.race next = L.race old
+
+
 /-- Permissions mention only the two commands that import unrelated current code.
 Applications derive these permissions from the existing source command/history facts. -/
 structure Inputs (Free : NCode → Prop) (m : NativeMachine) (command : Native.NCmd) : Prop where

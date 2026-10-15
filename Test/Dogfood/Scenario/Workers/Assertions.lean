@@ -1,3 +1,4 @@
+import Test.Dogfood.Proofs.CrewLogHistory
 import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario.SourceOpportunity
@@ -162,13 +163,23 @@ note writes the acquired value bound in its environment, not a literal (the cont
 `ReleaseWrites.readsSlot`).
 It proves no host behavior; consumer: `step` and then `history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal logs_step :
+theorem logs_step :
   ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
     Api.Author.build (crew total) = .ok b → Holds b cf m →
     Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
-    LogDebits (Run.stepBy b m x)
+    LogDebits (Run.stepBy b m x) := by
+  intro total cf b machine decision built held accepted
+  have history := history_step b cf machine decision held.history accepted
+  have observed := (Proofs.CrewLogHistory.workers total b built cf _ history).observe
+    (log (Run.stepBy b machine decision)) (CrewLogs.list_observation _)
+  refine ⟨?_, observed.2⟩
+  intro value member
+  obtain ⟨identity, inside, same⟩ := observed.1 value member
+  rcases List.mem_cons.mp inside with first | rest
+  · exact .inl (same.trans (congrArg Val.nat first))
+  · exact .inr (same.trans (congrArg Val.nat (List.mem_singleton.mp rest)))
 
-/-- Step assembly of `releases_once`, modulo its three preservation obligations. -/
+/-- Step assembly of `releases_once` from its three proved preservation facts. -/
 theorem step (total cf : Nat) (b : Api.Built) (hb : Api.Author.build (crew total) = .ok b)
     (m : NativeMachine) (x : Nat × NativeDecision) (hm : Holds b cf m)
     (hx : Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2) :

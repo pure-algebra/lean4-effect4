@@ -6,7 +6,6 @@
    writer and the reader over it.  The walker is the only place that decides what damage is,
    so `replay`, `end_index` and `open_`'s recovery cannot drift apart. *)
 
-open Effect4_engine
 
 (* ---------------------------------------------------------------- the grammar *)
 

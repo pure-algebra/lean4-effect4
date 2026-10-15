@@ -17,7 +17,7 @@
      query-cost-exact  `cost ~from ~upto` is the number of times the source's `replay` is
                        ACTUALLY called -- counted, at k in {1, 8, 1024, infinity}.
      DF-3              QUERY AGREEMENT.  For the 37 byte goldens of ocaml/eff/goldens
-                       (`Eff_wire` + `E4_program`, the loader copied from lane D's
+                       (`Eff_wire`, the loader copied from lane D's
                        test_engine.ml) driven at fuel 1000: for every
                        i <= |tape|, `E4_query.at s i` equals what replaying the first i
                        decisions produces, on all thirteen `E4_diff` projections.  Two
@@ -110,7 +110,7 @@ let status_of (t : F.t) : E4_query.status =
 (* The log is the FINAL machine's trace, stamped with the decision whose step appended each
    row.  `trace_length` is O(1) (e4_trace.mli TR4), so the stamps cost one int per decision
    and the rows are rendered ONCE, at the end -- never once per position. *)
-let build ?(replay = hold) (p : E.eff) ~(fuel : int) (dtape : E4_diff.decision list) ~(k : int)
+let build ?(replay = hold) (p : E.native_op E.eff) ~(fuel : int) (dtape : E4_diff.decision list) ~(k : int)
   : (F.t, F.decision) E4_query.source =
   let arr = Array.of_list (List.map dec_of dtape) in
   let n = Array.length arr in
@@ -262,7 +262,7 @@ let gate () =
 
 let show_divs ds = String.concat "; " (List.map E4_diff.show_divergence ds)
 
-let laws (p : E.eff) (name : string) (dtape : E4_diff.decision list) =
+let laws (p : E.native_op E.eff) (name : string) (dtape : E4_diff.decision list) =
   print_endline "";
   Printf.printf "== the query laws on %s (|tape| = %d) ==\n" name (List.length dtape);
   let k = 8 in

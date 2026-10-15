@@ -11,9 +11,9 @@ what that append costs.
 
 ## Why this is an inventory and not a second gate
 
-The compiled-LCNF case-site policy (`tools/Conform/Lcnf/Cases.lean`, `make check-cases`) is the
-gate: it sees the default arms the compiler created, which were never in the source, and it
-carries a signed pin. This command reads the *source*'s matchers instead, and it is deliberately
+The compiled-LCNF case-site audit (`git:eaa45b6b9:tools/Conform/Lcnf/Cases.lean`) saw the default arms
+the compiler created, which were never in the source. Decisions row 375 cleared its policy, and it
+went on 2026-10-15. This command reads the *source*'s matchers instead, and it is deliberately
 a printed report: nothing is written into the tree (a `Test` module must not, decisions row 49)
 and nothing fails (the census stays an instrument, decisions row 34). Its use is
 `lake env lean Test/Audit/TraversalCensus.lean` before a constructor is added, to read the bill.

@@ -1,8 +1,10 @@
+import Test.Dogfood.Proofs.CrewLogHistory
 import Test.Dogfood.Scenario.QueueWorkers.Ledger
 import Test.Dogfood.Scenario.QueueWorkers.CleanupSource
 import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.Frame
 import Effect4.Laws.Program.ReleaseTrace
+import Test.Dogfood.Proofs.CrewLogHistory
 
 /-!
 # Queue assertions at every command boundary
@@ -12,7 +14,7 @@ Question: these helpers serve the four original queue scenario clauses, consumed
 Reach: the actual built crew, all job counts, command budgets, raw rows and admitted host replies.
 The assertions retain job custody, withdrawn jobs and actual release-source identities.
 The rest reading requires a journal of host rows and the original rest premise.
-Three named preservation obligations retain the unfinished machine-to-model and control-source work.
+Two named preservation obligations retain the unfinished queue custody and resting-state work.
 The four assemblies are proved modulo those obligations.
 They establish neither progress, fairness nor any outside-host behavior.
 Decisions rows 254 and 275 bound the scenario fragment.
@@ -130,8 +132,15 @@ theorem hostAct_scriptRows : ∀ (s : Run) (moves : List Move), moves.all Move.h
 def HostRows (s : Run) : Prop := ∀ c ∈ s.journal, HostRow c
 
 /-- A conserving ledger matches the actual observation, including unfinished command custody. -/
-def Jobs (s : Run) : Prop :=
+def RawJobs (s : Run) : Prop :=
   ∃ a : Ledger, a.Shows (observe s) ∧ a.Conserved
+
+/-- The retained original ledger claim reads accepted terminal reply applications. -/
+def OriginalRawJobs (s : Run) : Prop :=
+  ∃ a : Ledger, a.Shows (QueueWorkers.Original.observe s) ∧ a.Conserved
+
+/-- The conserving ledger reads resolved jobs entering actual offer continuations. -/
+def Jobs (s : Run) : Prop := RawJobs s
 
 /-- At rest a host journal empties custody and bounds loss, with the queue's actual wait counts. -/
 def Rest (s : Run) : Prop :=
@@ -193,8 +202,8 @@ theorem opened (total fuel : Nat) (b : Api.Built)
     · intro i _
       exact Nat.le_refl 0
 
-/-- Machine-to-model preservation for `held_within_fed` at an actual funded command boundary.
-It needs the queue-cell writer census, admitted take replies and once-entered continuations.
+/-- Machine-to-model preservation for `held_within_fed` on actual offer-entry values.
+It needs the queue-cell writer census, exact take replies and once-entered continuations.
 Consumer: `jobs_boundary`, then the first clause. It establishes no rest or progress claim. -/
 @[semantics "translation-simulation" (requirement := R10)]
 proof_goal jobs_step :
@@ -211,18 +220,20 @@ proof_goal rest_step :
     Api.Author.build (crew total) = .ok b → Basis b s → Jobs s → Rest s → Run.rowReads s c = true →
     Rest (s.step c)
 
-/-- The remaining cleanup writer obligation on the original actual history.
+/-- The concrete cleanup writer bound on the original actual history.
 Each observed identity spends a release start at its own source acquisition.
 Consumer: `cleanup_step`, then the unchanged `releases_once`; no progress or release order follows. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal logs_history (total compileFuel : Nat) (b : Api.Built) (machine : NativeMachine)
+theorem logs_history (total compileFuel : Nat) (b : Api.Built) (machine : NativeMachine)
     (built : Api.Author.build (crew total) = .ok b) (history : Run.HistoryOf b compileFuel machine) :
     (∀ value ∈ log machine, ∃ i ∈ [1, 2, 3], value = .nat i) ∧
       ∀ i ∈ [1, 2, 3], (log machine).count (.nat i) ≤
-        machine.trace.countP (ReleaseTrace.releaseAt (acquirePath i))
+        machine.trace.countP (ReleaseTrace.releaseAt (acquirePath i)) := by
+  exact (Proofs.CrewLogHistory.queue total b built compileFuel machine history).observe
+    (log machine) (CrewLogs.list_observation _)
 
-/-- Cleanup preservation now uses proved source uniqueness and actual release custody.
-Only the concrete log-writer history remains open.
+
+/-- Cleanup preservation uses source uniqueness, actual release custody and the initialized writer history.
 Consumer: `cleanup_boundary`, then the unchanged cleanup clause; no progress or order follows. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem cleanup_step :
@@ -333,6 +344,23 @@ theorem host_journal (fuel : Nat) (b : Api.Built) (moves : List Move)
   rw [Scenario.play_scriptRows, Run.journal_play]
   change ∀ c ∈ Scenario.scriptRows (openedAt fuel b) moves, HostRow c
   exact hostAct_scriptRows (openedAt fuel b) moves hh
+
+/-- Every host-row journal satisfies the accepted terminal-reply profile. -/
+theorem host_terminal (s : Run) (host : HostRows s) : QueueWorkers.Original.TerminalReplies s := by
+  intro reply member
+  change (.submit reply, Api.HostSession.Phase.preflight) ∈ s.journal.zip s.phases at member
+  exact host (.submit reply) (List.of_mem_zip member).1
+
+/-- A checked journal supplies the same explicit terminal-reply premise as the public claim. -/
+theorem terminal_of_check (s : Run) (checked : QueueWorkers.Original.terminalRepliesCheck s = true) : QueueWorkers.Original.TerminalReplies s := by
+  intro reply member
+  have selected := List.all_eq_true.mp checked (.submit reply, .preflight) member
+  cases completion : reply.completion with
+  | ofExit exit => exact ⟨exit, rfl⟩
+  | ofRefGet cell =>
+    change (match reply.completion with | .ofExit _ => true | .ofRefGet _ => false) = true at selected
+    rw [completion] at selected
+    cases selected
 
 /-- The concrete source-path debit bounds imply no repeated actual cleanup entry. -/
 theorem cleanup_read (m : NativeMachine) (hc : Cleanup m) : (log m).Nodup := by

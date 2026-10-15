@@ -158,6 +158,23 @@ theorem OtherEdits.controls {g h : NFiber} (word : OtherEdits g h)
     exact ⟨next.1.trans ih.1, next.2.1.trans ih.2.1, next.2.2.1.trans ih.2.2.1,
       fun running => next.2.2.2 (ih.2.2.2 running)⟩
 
+/-- Environment interference preserves every saved continuation, including interrupted fibers. -/
+theorem OtherEdit.stack {g h : NFiber} (edit : OtherEdit g h) : h.frame.stack = g.frame.stack := by
+  cases edit with
+  | observe => rfl
+  | filterObservers => rfl
+  | interruptCause cause =>
+    unfold interruptWithCause
+    dsimp only
+    repeat' split
+    all_goals rfl
+
+/-- The actual environment edit word preserves the saved continuation stack. -/
+theorem OtherEdits.stack {g h : NFiber} (word : OtherEdits g h) : h.frame.stack = g.frame.stack := by
+  induction word with
+  | refl => rfl
+  | tail prior edit ih => exact edit.stack.trans ih
+
 /-- The initial fields of an allocated fiber, retained as proof data.
 This witness reuses the machine's code and context; it adds no stored program syntax. -/
 structure Birth where

@@ -43,7 +43,7 @@ theorem Links.of_lookup {m n : NativeMachine} (changes : Moves.InterferesWithLoo
     · intro id f found running park
       obtain ⟨g, seen, word⟩ := changes.lookup id f found
       have fields := word.controls (Or.inl running)
-      exact ⟨g, seen, fields.2.2.2 running, fields.2.1.trans park, fields.1⟩
+      exact ⟨g, seen, fields.2.2.2 running, fields.2.1.trans park, fields.1, fun empty => word.stack.trans empty⟩
     · intro id f found exited
       obtain ⟨g, seen, word⟩ := changes.lookup id f found
       exact ⟨g, seen, word.exit ▸ exited⟩
@@ -74,7 +74,7 @@ theorem Links.same {m n : NativeMachine} (fibers : n.fibers = m.fibers)
   constructor
   · constructor
     · intro id f hf hr hp
-      exact ⟨f, (lookup id).trans hf, hr, hp, rfl⟩
+      exact ⟨f, (lookup id).trans hf, hr, hp, rfl, fun h => h⟩
     · intro id f hf hx
       exact ⟨f, (lookup id).trans hf, hx⟩
   · exact races
@@ -94,9 +94,9 @@ theorem Links.trans {m n o : NativeMachine} (a : Links m n) (b : Links n o) : Li
   constructor
   · constructor
     · intro id f hf hr hp
-      obtain ⟨g, hg, hgr, hgp, hgc⟩ := a.controls.active id f hf hr hp
-      obtain ⟨h, hh, hhr, hhp, hhc⟩ := b.controls.active id g hg hgr hgp
-      exact ⟨h, hh, hhr, hhp, hhc.trans hgc⟩
+      obtain ⟨g, hg, hgr, hgp, hgc, hgs⟩ := a.controls.active id f hf hr hp
+      obtain ⟨h, hh, hhr, hhp, hhc, hhs⟩ := b.controls.active id g hg hgr hgp
+      exact ⟨h, hh, hhr, hhp, hhc.trans hgc, fun empty => hhs (hgs empty)⟩
     · intro id f hf hx
       obtain ⟨g, hg, hgx⟩ := a.controls.exited id f hf hx
       exact b.controls.exited id g hg hgx
@@ -120,19 +120,43 @@ theorem Links.arm {m n : NativeMachine} (h : Links m n) (owner : FiberId) : Link
 theorem Links.store {m n : NativeMachine} (h : Links m n) (stores : Stores) : Links m {n with state := stores} :=
   h.trans (.sameTables rfl rfl)
 
-theorem controls_of_full {m n : NativeMachine} (h : ControlsPreserved m n) :
+theorem controls_of_full {m n : NativeMachine} (h : ControlsPreserved m n)
+    (stacks : ∀ id f, m.fiber? id = some f → ∀ g, n.fiber? id = some g → f.frame.stack = [] → g.frame.stack = []) :
     CommandControlsPreserved m n := by
   constructor
   · intro id f hf hr hp
     obtain ⟨g, hg, hc, hpark, _, hrun⟩ := h id f hf (Or.inl hp)
-    exact ⟨g, hg, hrun hr, hpark.trans hp, hc⟩
+    exact ⟨g, hg, hrun hr, hpark.trans hp, hc, stacks id f hf g hg⟩
   · intro id f hf hx
     obtain ⟨g, hg, _, _, he, _⟩ := h id f hf (Or.inr hx)
     exact ⟨g, hg, by rw [he]; exact hx⟩
 
+/-- A metadata replacement carries the exact empty-stack observation at every actual first lookup. -/
+theorem emptyStacks_update {m : NativeMachine} {f : NFiber} (found : m.fiber? f.id = some f)
+    (next : NFiber) (key : next.id = f.id) (stack : f.frame.stack = [] → next.frame.stack = []) :
+    ∀ id old, m.fiber? id = some old → ∀ row, (m.update next).fiber? id = some row →
+      old.frame.stack = [] → row.frame.stack = [] := by
+  intro id old before row after empty
+  by_cases same : old.id = next.id
+  · have previous : m.fiber? f.id = some old := by
+      simpa only [← key, ← same, fiber_id_of_lookup before] using before
+    have equal := Option.some.inj (previous.symm.trans found)
+    subst old
+    rw [fiber_lookup_update, before] at after
+    simp only [Option.map_some, key, ↓reduceIte] at after
+    have equal := Option.some.inj after
+    subst row
+    exact stack empty
+  · rw [fiber_lookup_update, before] at after
+    simp only [Option.map_some, same, ↓reduceIte] at after
+    have equal := Option.some.inj after
+    subst row
+    exact empty
+
 theorem Links.modifyFields (m : NativeMachine) (target : FiberId) (k : NFiber → NFiber)
     (view : ∀ f, RequestView f (k f)) (run : ∀ f, (k f).running = f.running)
-    (exit : ∀ f, (k f).exit = f.exit) (mark : ∀ f, Interrupted f → Interrupted (k f)) :
+    (exit : ∀ f, (k f).exit = f.exit) (mark : ∀ f, Interrupted f → Interrupted (k f))
+    (stack : ∀ f, f.frame.stack = [] → (k f).frame.stack = []) :
     Links m (m.modify target k) := by
   constructor
   · unfold RunMachine.modify
@@ -140,9 +164,10 @@ theorem Links.modifyFields (m : NativeMachine) (target : FiberId) (k : NFiber �
     | none => exact (Links.refl m).controls
     | some f =>
       apply controls_of_full
-      exact controlsPreserved_update_fields
-        (by simpa only [fiber_id_of_lookup hf] using hf) (k f) (view f) (exit f)
-        (fun hr => (run f).trans hr)
+      · exact controlsPreserved_update_fields
+          (by simpa only [fiber_id_of_lookup hf] using hf) (k f) (view f) (exit f)
+          (fun hr => (run f).trans hr)
+      · exact emptyStacks_update (by simpa only [fiber_id_of_lookup hf] using hf) (k f) (view f).1.symm (stack f)
   · intro id race hr
     exact ⟨race, by simpa only [RunMachine.race?, Effect4.Program.Guard.FrameOwned.modify_races] using hr, rfl⟩
   · intro id token request hr
@@ -151,7 +176,7 @@ theorem Links.modifyFields (m : NativeMachine) (target : FiberId) (k : NFiber �
 
 theorem Links.observer (m : NativeMachine) (target : FiberId) (observer : Observer) :
     Links m (m.modify target fun f => {f with observers := f.observers ++ [observer]}) :=
-  .modifyFields m target _ (fun _ => ⟨rfl,rfl,rfl⟩) (fun _ => rfl) (fun _ => rfl) (fun _ h => h)
+  .modifyFields m target _ (fun _ => ⟨rfl,rfl,rfl⟩) (fun _ => rfl) (fun _ => rfl) (fun _ h => h) (fun _ h => h)
 
 theorem Links.interruptRecord (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} {f : NFiber} (hf : m.fiber? f.id = some f)
@@ -174,7 +199,12 @@ theorem Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMa
     (f : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
     Links m (spawn (interpAt p completed table) m f code options site).1 := by
   change Links m (Effect4.Machine.spawn (interpOf p table) m f code options site).1
-  refine ⟨controls_of_full (controlsPreserved_spawnAppend m (spawnedChild p table m f code options site)),
+  refine ⟨controls_of_full (controlsPreserved_spawnAppend m (spawnedChild p table m f code options site)) (by
+      intro id old found next seen empty
+      have previous := fiber_lookup_spawnAppend_old m (spawnedChild p table m f code options site) found
+      have same := Option.some.inj (previous.symm.trans seen)
+      subst next
+      exact empty),
     (fun _ race hr => ⟨race, hr, rfl⟩), ?_, ?_⟩
   · intro id token request hr
     exact Or.inl ((requestOf_spawn p table m f code options id token site).trans hr)
@@ -251,7 +281,7 @@ theorem Links.filterObservers (m : NativeMachine) (keep : Observer → Bool) :
   constructor
   · constructor
     · intro id f hf hr hp
-      exact ⟨filteredFiber keep f, by rw [filtered_lookup, hf]; rfl, hr, hp, rfl⟩
+      exact ⟨filteredFiber keep f, by rw [filtered_lookup, hf]; rfl, hr, hp, rfl, fun h => h⟩
     · intro id f hf hx
       exact ⟨filteredFiber keep f, by rw [filtered_lookup, hf]; rfl, hx⟩
   · exact fun _ race hr => ⟨race, hr, rfl⟩

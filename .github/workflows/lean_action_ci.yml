@@ -92,13 +92,13 @@ jobs:
         with:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
       - run: make doctor OCAML="opam exec --"
-      # The engine's four faces are cut from the tree's own LCNF. Re-cutting them here and refusing
+      # The two LCNF artefacts are cut from the tree's own LCNF. Re-cutting them here and refusing
       # a difference is what makes "the engine runs the same algebra" a gate; the OCaml lane then
-      # compiles the faces this step just wrote.
-      - name: The four LCNF faces re-cut from the tree and held against the committed ones
+      # compiles the artefacts this step just wrote.
+      - name: The LCNF artefacts re-cut from the tree and held against the committed ones
         run: |
           make gen-lcnf
-          git diff --exit-code --stat -- ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml
+          git diff --exit-code --stat -- ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv
       - name: The OCaml lane and the compiler conformance profile
         run: make check-ocaml check-compiler OCAML="opam exec --"
 

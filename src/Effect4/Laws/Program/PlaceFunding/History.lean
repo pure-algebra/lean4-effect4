@@ -41,7 +41,7 @@ theorem interrupt_balance (control : Control L Free) (events : Events L)
   exact transfer_path path ok
 
 /-- Every outer edit preserves the shared funding predicate under its actual store obligations. -/
-theorem edits (control : Control L Free) (quiet : NoQueue L) (events : Events L)
+theorem edits_at (control : Control L Free) (events : Events L)
     (cap : Nat) (interp : Native.NInterp)
     (clock : ∀ m : NativeMachine, ∀ millis,
       L.state (interp.clockStep millis m.state).2 ≤ L.state m.state)
@@ -52,8 +52,8 @@ theorem edits (control : Control L Free) (quiet : NoQueue L) (events : Events L)
     intro m owner fiber held found
     have changed := (metadata_transfer control m fiber
       {fiber with dispatcher := fiber.dispatcher.drain.2} owner found rfl rfl rfl (Nat.le_refl _)).2 held.1
-    have disarmed := quiet.fields (m.update {fiber with dispatcher := fiber.dispatcher.drain.2})
-      ((m.update {fiber with dispatcher := fiber.dispatcher.drain.2}).disarm owner) rfl rfl rfl
+    have disarmed := fields_balance (L := L) (m.update {fiber with dispatcher := fiber.dispatcher.drain.2})
+      ((m.update {fiber with dispatcher := fiber.dispatcher.drain.2}).disarm owner) rfl rfl rfl rfl
     exact ⟨disarm_ok changed.1 owner, (changed.2.trans L disarmed).funded L held.2⟩
   ran := by
     intro m owner task held
@@ -70,15 +70,25 @@ theorem edits (control : Control L Free) (quiet : NoQueue L) (events : Events L)
     exact ⟨changed.1, changed.2.funded L held.2⟩
   middleware := by
     intro m held
-    exact ⟨held.1, (quiet.fields m {m with middlewareInstalled := true} rfl rfl rfl).funded L held.2⟩
+    exact ⟨held.1, (fields_balance m {m with middlewareInstalled := true} rfl rfl rfl rfl).funded L held.2⟩
   clock := by
     intro m millis held _
     exact ⟨state_ok held.1 _, (PlaceLedger.state_balance L m _ [] [] (clock m millis)).funded L held.2⟩
   owed := by
     intro m owed held
-    exact ⟨drainOwed_ok m [owed] held.1, (drain_balance control quiet events m [owed] held.1).funded L held.2⟩
+    exact ⟨drainOwed_ok m [owed] held.1, (drain_balance_at control events m [owed] held.1).funded L held.2⟩
   prepare := by
     intro m id token answer held
     exact ⟨state_ok held.1 _, (PlaceLedger.state_balance L m _ [] [] (prepare m id token answer)).funded L held.2⟩
+
+/-- The original zero-place instance uses the same outer edit producer. -/
+theorem edits (control : Control L Free) (_quiet : NoQueue L) (events : Events L)
+    (cap : Nat) (interp : Native.NInterp)
+    (clock : ∀ m : NativeMachine, ∀ millis,
+      L.state (interp.clockStep millis m.state).2 ≤ L.state m.state)
+    (prepare : ∀ (m : NativeMachine) id token answer,
+      L.state (prepareAsyncAnswer interp m id token answer).1 ≤ L.state m.state) :
+    Lift.MachineEdits interp (Holds L cap) :=
+  edits_at control events cap interp clock prepare
 
 end Effect4.Program.PlaceFunding

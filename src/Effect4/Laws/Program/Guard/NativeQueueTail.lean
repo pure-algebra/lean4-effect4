@@ -55,7 +55,7 @@ theorem guardQueue_evaluated_rest (p : NativeEff) (table : RowTable)
 
 theorem controlsAway_refl (m : NativeMachine) (target : FiberId) : ControlsAway m m target := by
   intro fiber f lookup _ _
-  exact ⟨f, lookup, rfl, rfl, rfl, fun h => h⟩
+  exact ⟨f, lookup, rfl, rfl, rfl, (fun h => h), (fun h => h)⟩
 
 /-- Stage two uses the after-evaluation state, active owner and old tail, but
 reserves the tail's keys from the original machine through the fresh park. -/

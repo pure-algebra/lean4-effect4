@@ -48,8 +48,8 @@ run_cmd liftTermElabM do
     | _ => throwError "let-return control: {root} is not `let x := v; return x`"
   -- The route's form: the right side alone.
   let translated ← OCaml5.Lcnf.translateClosure #[root]
-  unless translated.todos.isEmpty && translated.missing.isEmpty && translated.frontier.isEmpty do
-    throwError "let-return control: {root} refused: {translated.todos}"
+  unless translated.problems.isEmpty && translated.missing.isEmpty && translated.frontier.isEmpty do
+    throwError "let-return control: {root} refused: {translated.problems}"
   let short ← match Conform.Effect4.LcnfMl.assemble translated.decls with
     | .ok program => pure program
     | .error why => throwError "let-return control: {why}"

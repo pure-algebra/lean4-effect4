@@ -58,12 +58,12 @@ def ControlsAway (m n : NativeMachine) (target : FiberId) : Prop :=
   ∀ fiber f, m.fiber? fiber = some f → fiber ≠ target →
     ((f.running = true ∧ f.parked = .notParked) ∨ f.exit.isSome = true) → ∃ g, n.fiber? fiber = some g ∧
     g.frame.current = f.frame.current ∧ g.parked = f.parked ∧ g.exit = f.exit ∧
-    (f.running = true → g.running = true)
+    (f.running = true → g.running = true) ∧ (f.frame.stack = [] → g.frame.stack = [])
 
 theorem controlsAway_update (m : NativeMachine) (f : NFiber) :
     ControlsAway m (m.update f) f.id := by
   intro fiber old lookup other _
-  refine ⟨old, ?_, rfl, rfl, rfl, fun h => h⟩
+  refine ⟨old, ?_, rfl, rfl, rfl, (fun h => h), (fun h => h)⟩
   simp only [fiber_lookup_update, lookup, Option.map_some, fiber_id_of_lookup lookup,
     other, ↓reduceIte]
 
@@ -71,7 +71,7 @@ theorem activeAt_transport_away {m n : NativeMachine} {target fiber : FiberId}
     (controls : ControlsAway m n target) (other : fiber ≠ target) (active : ActiveAt m fiber) :
     ActiveAt n fiber := by
   obtain ⟨f, lookup, running, park⟩ := active
-  obtain ⟨g, after, _, park', _, running'⟩ := controls fiber f lookup other (Or.inl ⟨running, park⟩)
+  obtain ⟨g, after, _, park', _, running', _⟩ := controls fiber f lookup other (Or.inl ⟨running, park⟩)
   exact ⟨g, after, running' running, park'.trans park⟩
 
 theorem commandAuthority_transport_away (p : NativeEff) (table : RowTable)
@@ -88,8 +88,9 @@ theorem commandAuthority_transport_away (p : NativeEff) (table : RowTable)
     intro same
     apply fresh
     exact same ▸ List.mem_filterMap.mpr ⟨command, member, owner⟩
-  cases command <;> try exact True.intro
-  all_goals try exact activeAt_transport_away controls (owner_other rfl) authority
+  have transport : ∀ id, commandOwner m command = some id → ActiveAt m id → ActiveAt n id :=
+    fun _ owner active => activeAt_transport_away controls (owner_other owner) active
+  cases command
   case launch raceId =>
     obtain ⟨race, hr, active⟩ := authority
     obtain ⟨next, hn, host⟩ := races raceId race hr
@@ -106,7 +107,7 @@ theorem commandAuthority_transport_away (p : NativeEff) (table : RowTable)
     obtain ⟨race, f, hr, hf, running, park, code⟩ := authority
     have other : race.host ≠ target := owner_other (by simp only [commandOwner, hr, Option.map_some])
     obtain ⟨next, hn, host⟩ := races raceId race hr
-    obtain ⟨g, hg, current, park', _, running'⟩ := controls race.host f hf other (Or.inl ⟨running, park⟩)
+    obtain ⟨g, hg, current, park', _, running', _⟩ := controls race.host f hf other (Or.inl ⟨running, park⟩)
     exact ⟨next, g, hn, host ▸ hg, running' running, park'.trans park, current ▸ code⟩
   case exitDone fiber =>
     obtain ⟨f, hf, exited⟩ := authority
@@ -118,6 +119,7 @@ theorem commandAuthority_transport_away (p : NativeEff) (table : RowTable)
       exact Bool.noConfusion (stopped.symm.trans (eq ▸ running))
     obtain ⟨g, hg, _, _, exit', _⟩ := controls fiber f hf other (Or.inr exited)
     exact ⟨g, hg, exit' ▸ exited⟩
+  all_goals aesop (add norm unfold [CommandAuthority, commandOwner]) (add safe apply [transport])
 
 theorem guardQueue_transport_away (p : NativeEff) (table : RowTable)
     {m n : NativeMachine} {target : FiberId} {commands : List NCmd}

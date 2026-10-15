@@ -36,6 +36,9 @@
        generated `settled` -- the discriminator the answer alphabet needs (owner default
        A1-Q7).                                                      by construction *)
 
+open Eff_types
+
+
 include Api_engine.Make (E4_table) (E4_trace) (E4_memo) (E4_buckets) (E4_ppath) (E4_env) (E4_fibers_view)
 
 let name = "Fast"
@@ -130,6 +133,5 @@ let f_context (f : fiber) : ctx = f.context
 let f_dispatcher (f : fiber) : (int * int) list =
   List.map (fun (p, ts) -> (p, List.length ts)) (E4_buckets.to_list f.dispatcher)
 
-(* The program conversion is NOT here: `E4_engine.Make` applies `E4_program.Make` to this
-   module itself (the INSTANCE signature includes `E4_program.PROGRAM_TYPES`), so the
-   conversion is written once and this file names it nowhere. *)
+(* No program conversion: the generated engine opens `Eff_types`, the one program type of the
+   wire and every instance, so this file names no program type of its own. *)

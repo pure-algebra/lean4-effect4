@@ -1,6 +1,5 @@
 (* E4_subterm — see e4_subterm.mli for what this is and the behaviours it holds itself to. *)
 
-open Effect4_engine
 
 (* ============================================================ 1. families, the child table,
    the value side
@@ -35,13 +34,13 @@ let prog_of_val (f : family) (c : int) (j : int) : int option =
 
 module Tree = struct
   type node = Eff_subterm.node =
-    | N_eff of Eff_types.eff
-    | N_stmts of Eff_types.stmts
-    | N_stmt of Eff_types.stmt
-    | N_action of Eff_types.action_term
-    | N_effs of Eff_types.effs
-    | N_layer of Eff_types.layer_term
-    | N_layers of Eff_types.layer_terms
+    | N_eff of Eff_wire.program
+    | N_stmts of Eff_types.native_op Eff_types.stmts
+    | N_stmt of Eff_types.native_op Eff_types.stmt
+    | N_action of Eff_types.native_op Eff_types.action_term
+    | N_effs of Eff_types.native_op Eff_types.effs
+    | N_layer of Eff_types.native_op Eff_types.layer_term
+    | N_layers of Eff_types.native_op Eff_types.layer_terms
 
   let family_of = Eff_subterm.family_of
   let ctor_index = Eff_subterm.ctor_index
