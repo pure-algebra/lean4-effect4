@@ -170,27 +170,27 @@ open Effect4.Program
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
   {spell : String → List RowArg → Option Op}
 
-/-- The target fold's list component is the list map of its expression component.
-Its consumer is the template erasure relation of the proposed typed-print erasure claim. -/
-theorem targetFold_exprs_map {E S O : Type} (alg : TargetFold.Algebra E S O)
-    (xs : List Expr) : TargetFold.exprs alg xs = xs.map (TargetFold.expr alg) := by
+/-- The call map's list component, read at one depth, is the list map of the call map: the
+generated fold's list equations, one child at a time. A step of the array and call equations. -/
+theorem atDepth_calls (call : Nat → Expr → Expr) (xs : List Expr) (n : Nat) :
+    atDepth n (cata_pos_list_expr (callAlgebra call) xs) = xs.map fun x => mapCalls call x n := by
   induction xs with
   | nil => rfl
-  | cons x xs ih => simp only [TargetFold.exprs, List.map_cons, ih]
+  | cons x xs ih => exact congrArg (List.cons _) ih
 
 /-- Arrays reconstruct after their children fold. A template erasure relation step. -/
 theorem mapCalls_arr (call : Nat → Expr → Expr) (xs : List Expr) (n : Nat) :
     mapCalls call (.arr xs) n = .arr (xs.map fun x => mapCalls call x n) := by
-  simp only [mapCalls, TargetFold.expr, callAlgebra, atDepth, targetFold_exprs_map, List.map_map]
-  rfl
+  show Expr.arr (atDepth n (cata_pos_list_expr (callAlgebra call) xs)) = _
+  rw [atDepth_calls]
 
 /-- Call reconstruction exposes only the transformed children and the call field.
 Its consumer is the pure-leaf and template relation for typed-print erasure. -/
 theorem mapCalls_call (call : Nat → Expr → Expr) (head : Expr) (xs : List Expr) (n : Nat) :
     mapCalls call (.call head xs) n = call n (.call (mapCalls call head n)
       (xs.map fun x => mapCalls call x n)) := by
-  simp only [mapCalls, TargetFold.expr, callAlgebra, atDepth, targetFold_exprs_map, List.map_map]
-  rfl
+  show call n (.call (mapCalls call head n) (atDepth n (cata_pos_list_expr (callAlgebra call) xs))) = _
+  rw [atDepth_calls]
 
 /-- Names reconstruct directly. A pure-leaf and template relation step. -/
 theorem mapCalls_ident (call : Nat → Expr → Expr) (name : String) (n : Nat) :
@@ -209,9 +209,9 @@ theorem mapCalls_lambda (call : Nat → Expr → Expr) (ps : List Parameter) (bo
 
 /-- Object property reconstruction retains names while folding values.
 Its consumers are class and record term erasure. -/
-theorem targetFold_properties (call : Nat → Expr → Expr) (names : List String)
+theorem callAlgebra_properties (call : Nat → Expr → Expr) (names : List String)
     (values : List Expr) (n : Nat) :
-    atDepth n (TargetFold.entries (callAlgebra call) (Record.properties names values)) =
+    atDepth n (cata_pos_list_objectentry (callAlgebra call) (Record.properties names values)) =
       Record.properties names (values.map fun x => mapCalls call x n) := by
   induction names generalizing values with
   | nil => rfl
@@ -220,7 +220,7 @@ theorem targetFold_properties (call : Nat → Expr → Expr) (names : List Strin
     | nil => rfl
     | cons value values =>
       change .property name (mapCalls call value n) ::
-          atDepth n (TargetFold.entries (callAlgebra call) (Record.properties names values)) =
+          atDepth n (cata_pos_list_objectentry (callAlgebra call) (Record.properties names values)) =
         .property name (mapCalls call value n) ::
           Record.properties names (values.map fun x => mapCalls call x n)
       rw [ih]
@@ -232,8 +232,8 @@ theorem mapCalls_objectProperties (call : Nat → Expr → Expr) (form : KeyForm
     mapCalls call (.objectWith form (Record.properties names values)) n =
       .objectWith form (Record.properties names (values.map fun x => mapCalls call x n)) := by
   change Expr.objectWith form (atDepth n
-    (TargetFold.entries (callAlgebra call) (Record.properties names values))) = _
-  rw [targetFold_properties]
+    (cata_pos_list_objectentry (callAlgebra call) (Record.properties names values))) = _
+  rw [callAlgebra_properties]
 
 /-- A class construction folds its supplied values without changing the declaration data.
 Its consumer is the record arm of pure-term erasure. -/

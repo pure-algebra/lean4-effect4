@@ -1,5 +1,5 @@
 import Tools.Code.Doc
-import Tools.Code.TsFold
+import Effect4.Codegen.TsFold
 import TypeScript.Render
 
 /-!
@@ -7,8 +7,8 @@ import TypeScript.Render
 
 The readable form of the printer's TypeScript (`Effect4.Codegen`, the pinned `TypeScript.Syntax`).
 TypeScript's syntax (`Expr`, `Stmt`, `ObjectEntry`) is a free object whose fold is generated
-(`Tools/Code/TsFold.lean`; slice F of `docs/research/2026-10-09-view-algebra-audit.md`). Two
-printers are algebras of it:
+into the core (`src/Effect4/Codegen/TsFold.lean`; slice F of
+`docs/research/2026-10-09-view-algebra-audit.md`). Two printers are algebras of it:
 
 - **the house** (`renderAlg`): the pinned renderer's text at each depth. The pinned renderer is
   its fold (`render_eq_expr`, `render_eq_stmt`), by uniqueness (`hom_eq_cata_expr`);
