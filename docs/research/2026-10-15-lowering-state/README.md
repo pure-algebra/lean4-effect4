@@ -335,3 +335,17 @@ The three features, which LC-7's session needs as well:
 F4 is mechanical. F3 is a design choice: erase the family to one type at the cost of casts in the
 generated code, or specialize each algebra at its family. The clock refusal needs its cause read
 first.
+
+### 6.8 F4, landed
+
+Eight rows join `OCaml5.Lcnf.builtins` (107 rows), each with the C symbol the environment's
+`@[extern]` names: `String.ofList`, `String.toByteArray`, `ByteArray.emptyWithCapacity`,
+`ByteArray.push`, `Char.ofNatAux`, `USize.repr`, `System.Platform.getNumBits` and
+`Array.getInternal`. Five carry a source-evaluator primitive; three have none. A third verbatim
+primitive, `lcnf_utf8_of_code_points`, encodes code points as UTF-8. `ByteArray` spells as
+`int list` through a new type spelling, `TySpelling.fixed`. An artifact that translates nothing
+now carries no prelude, so `eff_types.ml` declares types alone.
+
+The host run's probe (§6.7) now reports no missing row. Its four clock refusals and `EffAlgebra`
+remain. `check-compiler`, which checks each row's runtime column against the environment,
+`check-native` and `check-ocaml` pass. The engines gain the one prelude line.

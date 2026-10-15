@@ -1179,8 +1179,10 @@ def emissionGroups (ds : Array Translated) : Except String (List (List Nat)) := 
       t.externDeps.filterMap fun n => byName[n]?
   return Lean.SCC.scc (List.range ds.size) (fun i => adj[i]!.toList)
 
-/-- One binding group per component, preserving input/successor order and origin comments. -/
+/-- One binding group per component, preserving input/successor order and origin comments,
+after the prelude. A run that translated nothing declares types alone, and carries no prelude. -/
 def emit (ds : Array Translated) : Except String (List Ml.Decl) := do
+  if ds.isEmpty then return []
   let groups ← emissionGroups ds
   return prelude ++ groups.flatMap fun comp =>
     let binds := comp.map fun v => ds[v]!.bind
