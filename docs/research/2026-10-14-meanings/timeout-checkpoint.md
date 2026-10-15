@@ -1583,3 +1583,37 @@ It then runs `lake env lean scratch/TimeoutPendingPhaseAudit.lean`.
 The build passes with 1299 jobs.
 The audit checks 308 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 This proof-only slice reaches no outside implementation gate.
+
+## Actual pending source action leaves
+
+The pending frame now carries restricted source action leaves beside its existing writer and numeric facts.
+The generated source fold excludes exceptional constructors within the actual attempt subtree.
+The existing compiler closure establishes the restricted entry annotation.
+Actual callback leaves instantiate `Arms.Rules` and `PredicateFamily.Rules`.
+The existing head, saved-family, and frame-step producers retain that annotation.
+No new compiler, code, or saved-frame traversal enters this slice.
+
+The earlier source annotation admits a fabricated direct race cancellation.
+A kernel-checked control retains that fact.
+The restricted annotation rejects that cancellation and its masked form.
+The numeric action reader now derives actual action absence from the same pending frame.
+Count entry, cleanup, forced yield, ordinary evaluation, and finalizer dispatch retain the stronger frame.
+The duplicate writer finalizer producer becomes its existing theorem's wrapper.
+
+Placement: scope-lifetime-finalization R11 and translation-simulation R10.
+Consumer: the actual pending native case join for both original Timeout endpoint goals.
+Reach: the actual source subtree, retained callback points, resident pending frame, and existing numeric head.
+The actual native case join, command producer, source race births, fixed-budget history, and declared failure origin remain open.
+Neither public endpoint changes.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-source-actions-migration-check.sh
+```
+
+The script builds `HostTimeoutNumberRetirement`, `HostTimeoutNumberCleanupNative`, and `HostTimeoutNumberInjection`.
+It then runs `lake env lean scratch/TimeoutSourceActionsAudit.lean`.
+The build passes with 1300 jobs.
+The audit checks 522 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+This proof-only slice reaches no outside implementation gate.

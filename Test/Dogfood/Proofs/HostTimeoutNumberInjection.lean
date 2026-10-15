@@ -23,7 +23,8 @@ theorem source (context : CountContext) (frame : HostTimeoutFrames.NativeFrame)
     (held : HostTimeoutNumberSourceWrites.FrameAt context frame) :
     HostTimeoutNumberSourceWrites.FrameAt context
       {frame with current := .onSuccessConst (.yieldNowWith 0) frame.current} := by
-  exact ⟨⟨⟨trivial, held.current⟩, held.saved⟩, ⟨trivial, held.currentWrites⟩, held.savedWrites⟩
+  exact ⟨⟨⟨trivial, held.current⟩, held.saved⟩, ⟨trivial, held.currentWrites⟩, held.savedWrites,
+    ⟨⟨trivial, held.actions.current⟩, held.actions.saved⟩⟩
 
 /-- The actual paused class freezes the current heap while retaining the original incoming failure class. -/
 theorem fiber (phase : HostTimeoutNumberPhase.Phase) (context : CountContext) (machine : NativeMachine)
