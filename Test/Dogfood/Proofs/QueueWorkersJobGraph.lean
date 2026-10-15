@@ -1,4 +1,5 @@
 import Test.Dogfood.Proofs.QueueWorkersJobBinding
+import Test.Dogfood.Proofs.QueueWorkersTakeSites
 import Test.Dogfood.Proofs.QueueWorkersReadonlySource
 
 /-!
@@ -26,6 +27,19 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
       (found : Node.at_ (.eff (Programs.queueProgram total)) point.path =
         some (.eff (.perform (.refUpdateWith term) (.var 3)))) :
       CodeAt total table owner world .ordinary (.sync (.op (.refUpdate ⟨3⟩ term point.env)))
+  | workerMake {world} : CodeAt total table owner world (.workerKey owner) (.sync (.op .deferredMake))
+  | hintMake {world token} (selected : Owns world owner token)
+      (waiting : world.requests.custody.requests token = .waiting) :
+      CodeAt total table owner world (.hintKey owner token) (.sync (.op .deferredMake))
+  | take {world point token worker}
+      (member : worker ∈ [1, 2])
+      (request : QueueWorkersJobBinding.RequestCapture (Programs.queueProgram total) world owner (worker + 8) point)
+      (selected : Owns world owner token)
+      (leading : AnswerSlots.Prefix InitialSlots.bindings point.env)
+      (path : point.path = QueueWorkersTakeSites.path worker)
+      (hinted : ∃ hint, point.env[worker + 10]? = some (.promise hint)) :
+      CodeAt total table owner world (.captured owner token (.takeReply token))
+        (.sync (.op (.refModify ⟨0⟩ (QueueWorkersTakeSites.term worker) point.env)))
   | frontier {world kind point} (zero : point.fuel = 0) :
       CodeAt total table owner world kind (Effect4.Program.frontier point)
   | bound {world input output body name}
@@ -139,5 +153,19 @@ theorem worker_bound (total : Nat) (table : RowTable)
   intro nextWorld future view answer good
   obtain ⟨job, rfl, classified⟩ := job_value nextWorld owner answer good
   exact worker_callback total table nextWorld owner point before rest term job view source found leading classified
+
+/-- An actual worker take head retains its own waiting request and exact source capture. -/
+theorem take_input (total : Nat) (table : RowTable)
+    (world : QueueWorkersCustodyFlow.World) (owner : FiberId) (kind : Kind) (term : Term) (env : List Val)
+    (good : CodeAt total table owner world kind (.sync (.op (.refModify ⟨0⟩ term env)))) :
+    ∃ worker ∈ [1, 2], ∃ point token, kind = .captured owner token (.takeReply token) ∧
+      term = QueueWorkersTakeSites.term worker ∧ point.env = env ∧
+      QueueWorkersJobBinding.RequestCapture (Programs.queueProgram total) world owner (worker + 8) point ∧
+      Owns world owner token ∧ AnswerSlots.Prefix InitialSlots.bindings point.env ∧
+      point.path = QueueWorkersTakeSites.path worker ∧
+      (∃ hint, point.env[worker + 10]? = some (.promise hint)) := by
+  cases good with
+  | ordinary owned => exact owned.elim
+  | take member request selected leading path hinted => exact ⟨_, member, _, _, rfl, rfl, rfl, request, selected, leading, path, hinted⟩
 
 end Test.Dogfood.Proofs.QueueWorkersJobGraph

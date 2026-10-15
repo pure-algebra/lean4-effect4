@@ -51,6 +51,7 @@ def OwnerReady (world : World) (owner : FiberId) : Prop :=
 inductive Kind
   | ordinary
   | newKey (owner : FiberId)
+  | hintKey (owner : FiberId) (token : Nat)
   | workerKey (owner : FiberId)
   | offerKey (owner : FiberId) (job : Nat)
   | ownerReady (owner : FiberId)
@@ -63,6 +64,8 @@ def ValueAt (world : World) : Kind → Val → Prop
   | .ordinary, _ => True
   | .newKey owner, value => ∃ token, Owns world owner token ∧
       QueueWorkersRequestKeys.KeyAt world.requests token value
+  | .hintKey owner token, .handle 3 _ => Owns world owner token ∧
+      world.requests.custody.requests token = .waiting
   | .workerKey owner, value => ∃ token, Owns world owner token ∧
       QueueWorkersRequestKeys.KeyAt world.requests token value ∧
       world.requests.custody.requests token = .waiting
