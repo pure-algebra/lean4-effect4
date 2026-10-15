@@ -1,0 +1,108 @@
+Nat.decEq	known=true	extern=true	c=(some lean_nat_dec_eq)	mono=(some extern)	source=(some natDecEq)
+Nat.beq	known=true	extern=true	c=(some lean_nat_dec_eq)	mono=(some extern)	source=none
+instDecidableEqNat	known=true	extern=false	c=none	mono=(some code)	source=none
+Nat.decLt	known=true	extern=true	c=(some lean_nat_dec_lt)	mono=(some extern)	source=(some natDecLt)
+Nat.blt	known=true	extern=false	c=none	mono=(some code)	source=none
+Nat.decLe	known=true	extern=true	c=(some lean_nat_dec_le)	mono=(some extern)	source=none
+Nat.ble	known=true	extern=true	c=(some lean_nat_dec_le)	mono=(some extern)	source=none
+Nat.add	known=true	extern=true	c=(some lean_nat_add)	mono=(some extern)	source=(some natAdd)
+Nat.mul	known=true	extern=true	c=(some lean_nat_mul)	mono=(some extern)	source=none
+Nat.div	known=true	extern=true	c=(some lean_nat_div)	mono=(some extern)	source=none
+Nat.mod	known=true	extern=true	c=(some lean_nat_mod)	mono=(some extern)	source=none
+Nat.sub	known=true	extern=true	c=(some lean_nat_sub)	mono=(some extern)	source=(some natSub)
+Nat.succ	known=true	extern=false	c=none	mono=none	source=none
+Nat.pred	known=true	extern=true	c=(some lean_nat_pred)	mono=(some extern)	source=none
+Nat.pow	known=true	extern=true	c=(some lean_nat_pow)	mono=(some extern)	source=none
+Nat.shiftLeft	known=true	extern=true	c=(some lean_nat_shiftl)	mono=(some extern)	source=none
+Nat.shiftRight	known=true	extern=true	c=(some lean_nat_shiftr)	mono=(some extern)	source=none
+Nat.land	known=true	extern=true	c=(some lean_nat_land)	mono=(some extern)	source=none
+Nat.lor	known=true	extern=true	c=(some lean_nat_lor)	mono=(some extern)	source=none
+Nat.xor	known=true	extern=true	c=(some lean_nat_lxor)	mono=(some extern)	source=none
+UInt8.decEq	known=true	extern=true	c=(some lean_uint8_dec_eq)	mono=(some extern)	source=none
+instDecidableEqUInt8	known=true	extern=false	c=none	mono=(some code)	source=none
+UInt8.beq	known=false	extern=false	c=none	mono=none	source=none
+UInt8.ofNat	known=true	extern=true	c=(some lean_uint8_of_nat)	mono=(some extern)	source=none
+UInt8.ofNatLT	known=true	extern=true	c=(some lean_uint8_of_nat)	mono=(some extern)	source=none
+UInt8.ofNatTruncate	known=true	extern=false	c=none	mono=(some code)	source=none
+UInt8.ofNatClamp	known=true	extern=false	c=none	mono=(some code)	source=none
+UInt8.toNat	known=true	extern=true	c=(some lean_uint8_to_nat)	mono=(some extern)	source=(some identity)
+UInt8.toUInt64	known=true	extern=true	c=(some lean_uint8_to_uint64)	mono=(some extern)	source=none
+UInt8.toUInt32	known=true	extern=true	c=(some lean_uint8_to_uint32)	mono=(some extern)	source=none
+UInt64.decEq	known=true	extern=true	c=(some lean_uint64_dec_eq)	mono=(some extern)	source=none
+instDecidableEqUInt64	known=true	extern=false	c=none	mono=(some code)	source=none
+UInt64.beq	known=false	extern=false	c=none	mono=none	source=none
+UInt64.toNat	known=true	extern=true	c=(some lean_uint64_to_nat)	mono=(some extern)	source=none
+Bool.decEq	known=true	extern=false	c=none	mono=(some code)	source=none
+instDecidableEqBool	known=true	extern=false	c=none	mono=(some code)	source=none
+Bool.not	known=true	extern=false	c=none	mono=(some code)	source=none
+not	known=false	extern=false	c=none	mono=none	source=none
+Bool.and	known=true	extern=false	c=none	mono=none	source=none
+and	known=false	extern=false	c=none	mono=none	source=none
+Bool.or	known=true	extern=false	c=none	mono=none	source=none
+or	known=false	extern=false	c=none	mono=none	source=none
+String.decEq	known=true	extern=true	c=(some lean_string_dec_eq)	mono=(some extern)	source=(some strDecEq)
+instDecidableEqString	known=true	extern=false	c=none	mono=(some code)	source=none
+String.append	known=true	extern=true	c=(some lean_string_append)	mono=(some extern)	source=(some strAppend)
+String.length	known=true	extern=true	c=(some lean_string_length)	mono=(some extern)	source=none
+String.toUTF8	known=true	extern=true	c=(some lean_string_to_utf8)	mono=(some extern)	source=(some strToUTF8)
+ByteArray.data	known=true	extern=true	c=(some lean_byte_array_data)	mono=(some extern)	source=(some identity)
+List.appendTR	known=true	extern=false	c=none	mono=(some code)	source=none
+List.append	known=true	extern=false	c=none	mono=(some code)	source=none
+List.reverse	known=true	extern=false	c=none	mono=(some code)	source=none
+List.reverseAux	known=true	extern=false	c=none	mono=(some code)	source=none
+List.length	known=true	extern=false	c=none	mono=(some code)	source=none
+List.lengthTR	known=true	extern=false	c=none	mono=(some code)	source=none
+List.instDecidableEqNil	known=true	extern=false	c=none	mono=(some code)	source=none
+List.isEmpty	known=true	extern=false	c=none	mono=(some code)	source=none
+List.elem	known=true	extern=false	c=none	mono=(some code)	source=none
+List.contains	known=true	extern=false	c=none	mono=(some code)	source=none
+List.map	known=true	extern=false	c=none	mono=(some code)	source=none
+List.mapTR	known=true	extern=false	c=none	mono=(some code)	source=none
+List.filter	known=true	extern=false	c=none	mono=(some code)	source=none
+List.filterTR	known=true	extern=false	c=none	mono=(some code)	source=none
+List.foldl	known=true	extern=false	c=none	mono=(some code)	source=none
+List.all	known=true	extern=false	c=none	mono=(some code)	source=none
+List.any	known=true	extern=false	c=none	mono=(some code)	source=none
+List.find?	known=true	extern=false	c=none	mono=(some code)	source=none
+List.flatten	known=true	extern=false	c=none	mono=none	source=none
+List.flattenTR	known=true	extern=false	c=none	mono=(some code)	source=none
+List.filterMap	known=true	extern=false	c=none	mono=none	source=none
+List.filterMapTR	known=true	extern=false	c=none	mono=(some code)	source=none
+Array.mkEmpty	known=true	extern=true	c=(some lean_mk_empty_array_with_capacity)	mono=(some extern)	source=(some arrayMkEmpty)
+Array.emptyWithCapacity	known=true	extern=true	c=(some lean_mk_empty_array_with_capacity)	mono=(some extern)	source=(some arrayMkEmpty)
+Array.toList	known=true	extern=true	c=(some lean_array_to_list)	mono=(some extern)	source=(some arrayToList)
+List.toArray	known=true	extern=false	c=none	mono=(some code)	source=none
+Array.push	known=true	extern=true	c=(some lean_array_push)	mono=(some extern)	source=(some arrayPush)
+Array.size	known=true	extern=true	c=(some lean_array_get_size)	mono=(some extern)	source=(some arraySize)
+Array.appendList	known=true	extern=false	c=none	mono=(some code)	source=none
+List.foldl._at_.Array.appendList.spec_0	known=false	extern=false	c=none	mono=(some code)	source=none
+USize.ofNat	known=true	extern=true	c=(some lean_usize_of_nat)	mono=(some extern)	source=(some (uintOfNat 64))
+USize.toNat	known=true	extern=true	c=(some lean_usize_to_nat)	mono=(some extern)	source=none
+USize.ofNatLT	known=true	extern=true	c=(some lean_usize_of_nat)	mono=(some extern)	source=none
+USize.decEq	known=true	extern=true	c=(some lean_usize_dec_eq)	mono=(some extern)	source=(some natDecEq)
+USize.beq	known=false	extern=false	c=none	mono=none	source=none
+USize.sub	known=true	extern=true	c=(some lean_usize_sub)	mono=(some extern)	source=(some (uintSub 64))
+USize.add	known=true	extern=true	c=(some lean_usize_add)	mono=(some extern)	source=none
+Array.uget	known=true	extern=true	c=(some lean_array_uget)	mono=(some extern)	source=(some arrayGet)
+Array.get!	known=false	extern=false	c=none	mono=none	source=none
+Array.fget	known=false	extern=false	c=none	mono=none	source=none
+Option.isSome	known=true	extern=false	c=none	mono=(some code)	source=none
+Option.isNone	known=true	extern=false	c=none	mono=(some code)	source=none
+Option.getD	known=true	extern=false	c=none	mono=none	source=none
+Option.map	known=true	extern=false	c=none	mono=(some code)	source=none
+Option.bind	known=true	extern=false	c=none	mono=(some code)	source=none
+Prod.fst	known=true	extern=false	c=none	mono=none	source=none
+Prod.snd	known=true	extern=false	c=none	mono=none	source=none
+panic	known=true	extern=false	c=none	mono=(some code)	source=none
+panicCore	known=true	extern=true	c=(some lean_panic_fn_borrowed)	mono=(some extern)	source=none
+Effect4.ClockMillis.ofNat	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.ClockMillis.toNat	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.Program.Profile.grow	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.Program.Profile.scale	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.ClockMillis.add	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.ClockMillis.decLe	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.ClockMillis.decLt	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.ClockMillis.beq	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.instDecidableEqClockMillis	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.ClockMillis.toDecimal	known=true	extern=false	c=none	mono=(some code)	source=none
+Effect4.ClockMillis.ofDecimal	known=true	extern=false	c=none	mono=(some code)	source=none
