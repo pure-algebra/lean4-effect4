@@ -760,13 +760,13 @@ private def conflicting : List ReferenceEntry :=
   [⟨"A", Schema.string⟩, ⟨"B", Schema.boolean⟩, ⟨"A", Schema.number⟩]
 
 -- a repeat with an equal body is dropped, the first entry kept in place
-#guard match Codegen.Schema.dedupeReferences
+#guard match dedupeReferences
     [⟨"A", Schema.string⟩, ⟨"B", Schema.boolean⟩, ⟨"A", Schema.string⟩] with
   | .ok out => out == [⟨"A", Schema.string⟩, ⟨"B", Schema.boolean⟩]
   | .error _ => false
 -- a repeat whose body differs is refused at its key, by every document entry point
-#guard match Codegen.Schema.dedupeReferences conflicting with
-  | .error e => e == ⟨["references", "A"], "a repeated reference key with a different body"⟩
+#guard match dedupeReferences conflicting with
+  | .error e => e == ⟨["references", "A"], .conflictingReference "A"⟩
   | .ok _ => false
 #guard match Codegen.Schema.documentSource (Schema.document Schema.string conflicting) with
   | .error e => e.path == ["references", "A"]
@@ -776,7 +776,7 @@ private def conflicting : List ReferenceEntry :=
   | .ok _ => false
 -- the meta-schema's table repeats keys, every repeat with an equal body: written once each
 open Effect4.Store in
-#guard match Codegen.Schema.dedupeReferences (shape Document).document.references with
+#guard match dedupeReferences (shape Document).document.references with
   | .ok out => out.length < (shape Document).document.references.length &&
       (out.map (·.key)).eraseDups.length == out.length
   | .error _ => false

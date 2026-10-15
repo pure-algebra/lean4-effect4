@@ -1,6 +1,7 @@
 import Effect4.Schema.Authoring
 import Effect4.Schema.OfShape
 import Effect4.Schema.Fold
+import Effect4.Schema.DocumentJson
 import TypeScript
 
 /-!
@@ -150,275 +151,94 @@ theorem json_injective : Function.Injective json := by
   have recovered := congrArg reifyJson? equal
   simpa [reifyJson?_json] using recovered
 
-private def annotationFields : Annotations → List (String × Expr)
-  | none => []
-  | some entries =>
-      [("annotations", dataObject (entries.map fun entry =>
-        (entry.key, json entry.payload)))]
+/-! ## A persisted document's layout
 
-private def representationAnnotation (annotation : RepresentationAnnotation) : Expr :=
-  .objectQuoted
-    [("id", .str annotation.id), ("payload", json annotation.payload)]
+The spelling of rc.112's persisted JSON is the data plane's (`Representation.toJson`,
+`Effect4/Schema/DocumentJson.lean`); the emitter only lays that JSON out. A document's skeleton
+(its nodes, checks, tuple elements, property signatures, and the objects between them) breaks
+across lines by node kind; its data (a check's or declaration's `payload`, an annotation bag) is
+printed as data (`json`). The bytes of `harness/schema-generation/*.generated.ts` pin the layout. -/
 
-private def nonFiniteNumberName (value : Float64) : String :=
-  let bits := value.bits.toNat
-  let negative := bits / (2 ^ 63) == 1
-  let fraction := bits % (2 ^ 52)
-  if fraction == 0 then
-    if negative then "-Infinity" else "Infinity"
-  else "NaN"
+/-- Which skeleton objects break across lines: every node but a reference and a bare keyword (its
+`_tag` and an empty `checks`), every check, every tuple element and property signature, and a
+check annotation that carries schemas. Any other object breaks only when a member does. -/
+private def breaks (fields : List (String × Json)) : Bool :=
+  match List.lookup "_tag" fields with
+  | some (.str tag) =>
+    match RepresentationTag.ofTagName tag, fields with
+    | some .reference, _ => false
+    | some _, [("_tag", _), ("checks", .arr [])] => false
+    | _, _ => true
+  | _ => fields.any fun field => field.1 == "isOptional" || field.1 == "schemas"
 
-private def encodedEnumNumber (value : Float64) : Expr :=
-  if value.isFinite then .float64Bits value.bits
-  else .str (nonFiniteNumberName value)
+/-- `dataObject`'s form for a skeleton object, its quoted form broken across lines when asked. -/
+private def skeletonObject (fields : List (String × Expr)) (multiline : Bool) : Expr :=
+  if multiline then
+    match dataObject fields with
+    | .objectQuoted fields => .objectQuotedML fields
+    | other => other
+  else dataObject fields
 
-private def literalValue : LiteralValue → Expr
-  | .string value =>
-      .objectQuoted [("type", .str "string"), ("value", .str value)]
-  | .number value =>
-      .objectQuoted [("type", .str "number"), ("value", .float64Bits value.bits)]
-  | .bigint value =>
-      .objectQuoted [("type", .str "bigint"), ("value", .str (toString value))]
-  | .boolean value =>
-      .objectQuoted [("type", .str "boolean"), ("value", .bool value)]
+/-- A data position of the skeleton: printed as data, never laid out as a node. -/
+private def isData (key : String) : Bool := key == "payload" || key == "annotations"
 
-private def enumValue : EnumValue → Expr
-  | .string value =>
-      .objectQuoted [("type", .str "string"), ("value", .str value)]
-  | .number value =>
-      .objectQuoted [("type", .str "number"), ("value", encodedEnumNumber value)]
+mutual
+/-- A persisted document's JSON, laid out: the skeleton by node kind, the data as data. -/
+private def layout : Json → Expr
+  | .obj fields => skeletonObject (layoutFields fields) (breaks fields)
+  | .arr items => .arr (layoutList items)
+  | value => json value
+termination_by value => sizeOf value
+decreasing_by all_goals decreasing_tactic
 
-private def propertyKey : PropertyKey → Expr
-  | .string value =>
-      .objectQuoted [("type", .str "string"), ("value", .str value)]
-  | .number value =>
-      .objectQuoted [("type", .str "number"), ("value", encodedEnumNumber value)]
-  | .globalSymbol value =>
-      .objectQuoted
-        [("type", .str "symbol"), ("value", .str ("Symbol(" ++ value.key ++ ")"))]
+private def layoutList : List Json → List Expr
+  | [] => []
+  | first :: rest => layout first :: layoutList rest
+termination_by values => sizeOf values
+decreasing_by all_goals decreasing_tactic
 
-private def keyword (tag : String) (annotations : Annotations)
-    (checks : List Expr) (extra : List (String × Expr) := []) : Expr :=
-  let fields := [("_tag", .str tag)] ++ annotationFields annotations ++
-    [("checks", .arr checks)] ++ extra
-  if annotations.isNone && checks.isEmpty && extra.isEmpty then
-    .objectQuoted fields
-  else .objectQuotedML fields
+private def layoutFields : List (String × Json) → List (String × Expr)
+  | [] => []
+  | first :: rest =>
+    (first.1, if isData first.1 then json first.2 else layout first.2) :: layoutFields rest
+termination_by entries => sizeOf entries
+decreasing_by
+  all_goals first
+    | decreasing_tactic
+    | exact Nat.lt_trans (jsonEntryValue_sizeOf_lt _) (by simp +arith)
+end
 
-/-- A check's representation annotation, its referenced schemas already printed. -/
-private def checkRepresentationAnnotation : CheckRepresentationAnnotationOf Expr → Expr
-  | ⟨id, payload, none⟩ =>
-      .objectQuoted [("id", .str id), ("payload", json payload)]
-  | ⟨id, payload, some schemas⟩ =>
-      .objectQuotedML
-        [ ("id", .str id)
-        , ("payload", json payload)
-        , ("schemas", .arr schemas) ]
+/-- Raw rc.112 JSON syntax for one representation: the writer's JSON, laid out. -/
+def representation (value : Representation) : Expr := layout value.toJson
 
-/-- One tuple element, its type already printed. -/
-private def elementExpr (element : ElementOf Expr) : Expr :=
-  .objectQuotedML
-    ([ ("isOptional", .bool element.isOptional)
-     , ("type", element.type) ] ++
-     annotationFields element.annotations)
-
-/-- One property signature, its type already printed. -/
-private def propertyExpr (property : PropertySignatureOf Expr) : Expr :=
-  .objectQuotedML
-    ([ ("name", propertyKey property.name)
-     , ("type", property.type)
-     , ("isOptional", .bool property.isOptional)
-     , ("isMutable", .bool property.isMutable) ] ++
-     annotationFields property.annotations)
-
-/-- One index signature, both positions already printed. -/
-private def indexExpr (index : IndexSignatureOf Expr) : Expr :=
-  .objectQuoted [("parameter", index.parameter), ("type", index.type)]
-
-/-- Raw rc.112 JSON syntax, as an algebra of the generated fold
-(`src/Effect4/Schema/Fold.lean`) on the constant carrier `Expr`: a field receives its children
-already printed and says only how this node is spelled. Field order follows the pinned codec
-declarations. Before 2026-09-17 this was a well-founded recursion of nine helpers over `sizeOf`
-with five size lemmas; the fold's recursion is structural and generated. -/
-private def printAlgebra : RepresentationAlgebra (fun _ => Expr) where
-  representation_declaration rep annotations typeParameters checks :=
-    .objectQuotedML
-      ([ ("_tag", .str "Declaration")
-       , ("representation", representationAnnotation rep) ] ++
-       annotationFields annotations ++
-       [ ("typeParameters", .arr typeParameters)
-       , ("checks", .arr checks) ])
-  representation_reference key :=
-    .objectQuoted [("_tag", .str "Reference"), ("$ref", .str key.value)]
-  representation_suspend annotations checks thunk :=
-    .objectQuotedML
-      ([("_tag", .str "Suspend")] ++ annotationFields annotations ++
-       [("checks", .arr checks), ("thunk", thunk)])
-  representation_null annotations checks := keyword "Null" annotations checks
-  representation_undefined annotations checks := keyword "Undefined" annotations checks
-  representation_void annotations checks := keyword "Void" annotations checks
-  representation_never annotations checks := keyword "Never" annotations checks
-  representation_unknown annotations checks := keyword "Unknown" annotations checks
-  representation_any annotations checks := keyword "Any" annotations checks
-  representation_string annotations checks := keyword "String" annotations checks
-  representation_number annotations checks := keyword "Number" annotations checks
-  representation_boolean annotations checks := keyword "Boolean" annotations checks
-  representation_bigint annotations checks := keyword "BigInt" annotations checks
-  representation_symbol annotations checks := keyword "Symbol" annotations checks
-  representation_literal annotations checks value :=
-    keyword "Literal" annotations checks [("literal", literalValue value)]
-  representation_uniqueSymbol annotations checks value :=
-    keyword "UniqueSymbol" annotations checks
-      [("symbol", .str ("Symbol(" ++ value.key ++ ")"))]
-  representation_objectKeyword annotations checks := keyword "ObjectKeyword" annotations checks
-  representation_enum annotations checks entries :=
-    keyword "Enum" annotations checks
-      [("enums", .arr (entries.map fun entry =>
-        .arr [.str entry.name, enumValue entry.value]))]
-  representation_templateLiteral annotations checks parts :=
-    keyword "TemplateLiteral" annotations checks [("parts", .arr parts)]
-  representation_arrays annotations checks elements rest :=
-    keyword "Arrays" annotations checks
-      [ ("elements", .arr (elements.map elementExpr))
-      , ("rest", .arr rest) ]
-  representation_objects annotations checks properties indexes :=
-    keyword "Objects" annotations checks
-      [ ("propertySignatures", .arr (properties.map propertyExpr))
-      , ("indexSignatures", .arr (indexes.map indexExpr)) ]
-  representation_union annotations checks types mode :=
-    keyword "Union" annotations checks
-      [ ("types", .arr types)
-      , ("mode", .str mode.modeName) ]
-  check_filter rep annotations aborted :=
-    .objectQuotedML
-      ([ ("_tag", .str "Filter")
-       , ("representation", checkRepresentationAnnotation rep) ] ++
-       annotationFields annotations ++ [("aborted", .bool aborted)])
-  check_filterGroup rep annotations checks :=
-    .objectQuotedML
-      ([ ("_tag", .str "FilterGroup") ] ++
-       (match rep with
-        | none => []
-        | some value => [("representation", checkRepresentationAnnotation value)]) ++
-       annotationFields annotations ++ [("checks", .arr checks)])
-
-/-- Raw rc.112 JSON syntax for one representation. -/
-def representation (value : Representation) : Expr := cata_representation printAlgebra value
-
-/-- Raw rc.112 JSON syntax for one check. -/
-def check (value : Check) : Expr := cata_check printAlgebra value
+/-- Raw rc.112 JSON syntax for one check: the writer's JSON, laid out. -/
+def check (value : Check) : Expr := layout value.toJson
 
 /-! ## Documents, data, and generation entry points -/
 
 /-! ### The references table, written once per key (decisions row 8 (C))
 
 A document's references table is written as a JSON object, so a repeated key would be a repeated
-property: TS1117 under tsgo 7, and the last body winning at run time. The store keeps its version-0
-bytes (`ShapeDoc.document` repeats keys whose bodies are equal, and the store's addresses are a
-frozen contract), so the emitter writes each key once. The first entry of a key is kept, a later one
-with an equal body is dropped, and a later one whose body differs is refused at
-`["references", key]`. On a table whose keys are distinct this is the identity
-(`dedupeReferences_distinct`), so such a document's bytes do not move (`documentExpr_distinct`);
-whatever it answers has distinct keys (`dedupeReferences_nodup`). -/
-
-/-- A refusal of the emitter, located in the emitted JSON. -/
-structure ReferenceRefusal where
-  path : List String
-  reason : String
-deriving DecidableEq, Repr
-
-/-- The table after `acc`: the first entry of each key kept, a later one with an equal body dropped,
-a later one whose body differs refused at its key. -/
-def dedupeFrom (acc : List ReferenceEntry) :
-    List ReferenceEntry → Except ReferenceRefusal (List ReferenceEntry)
-  | [] => .ok acc
-  | e :: es =>
-    match acc.find? (fun f => f.key == e.key) with
-    | none => dedupeFrom (acc ++ [e]) es
-    | some f =>
-      if f.representation = e.representation then dedupeFrom acc es
-      else .error ⟨["references", e.key], "a repeated reference key with a different body"⟩
-
-/-- A references table written once per key. -/
-def dedupeReferences (es : List ReferenceEntry) : Except ReferenceRefusal (List ReferenceEntry) :=
-  dedupeFrom [] es
-
-/-- The keys of a table are distinct. -/
-def KeysDistinct (es : List ReferenceEntry) : Prop := (es.map (·.key)).Nodup
-
-private theorem find?_none_of_not_mem {acc : List ReferenceEntry} {k : String}
-    (h : k ∉ acc.map (·.key)) : acc.find? (fun f => f.key == k) = none := by
-  rw [List.find?_eq_none]
-  intro f hf hk
-  apply h
-  rw [List.mem_map]
-  exact ⟨f, hf, (beq_iff_eq.mp hk)⟩
-
-theorem dedupeFrom_distinct (acc es : List ReferenceEntry)
-    (h : ((acc ++ es).map (·.key)).Nodup) : dedupeFrom acc es = .ok (acc ++ es) := by
-  induction es generalizing acc with
-  | nil => simp only [dedupeFrom, List.append_nil]
-  | cons e es ih =>
-    have hnot : e.key ∉ acc.map (·.key) := by
-      intro hm
-      rw [List.map_append, List.map_cons] at h
-      exact (List.nodup_append.mp h).2.2 e.key hm e.key List.mem_cons_self rfl
-    simp only [dedupeFrom, find?_none_of_not_mem hnot]
-    have h' : ((acc ++ [e]) ++ es).map (·.key) = (acc ++ e :: es).map (·.key) := by
-      rw [List.append_assoc, List.singleton_append]
-    rw [ih (acc ++ [e]) (h' ▸ h), List.append_assoc, List.singleton_append]
-
-/-- **The identity on a table without repeats.** -/
-theorem dedupeReferences_distinct (es : List ReferenceEntry) (h : KeysDistinct es) :
-    dedupeReferences es = .ok es := by
-  unfold dedupeReferences
-  unfold KeysDistinct at h
-  rw [dedupeFrom_distinct [] es (by simpa only [List.nil_append] using h), List.nil_append]
-
-theorem dedupeFrom_nodup (acc es : List ReferenceEntry) (hacc : KeysDistinct acc)
-    (out : List ReferenceEntry) (h : dedupeFrom acc es = .ok out) : KeysDistinct out := by
-  induction es generalizing acc with
-  | nil =>
-    simp only [dedupeFrom, Except.ok.injEq] at h
-    exact h ▸ hacc
-  | cons e es ih =>
-    simp only [dedupeFrom] at h
-    split at h
-    · rename_i hnone
-      apply ih (acc ++ [e]) _ h
-      unfold KeysDistinct
-      rw [List.map_append, List.map_singleton]
-      refine List.nodup_append.mpr ⟨hacc, List.pairwise_singleton _ _, ?_⟩
-      intro a ha b hb hab
-      rw [List.mem_singleton] at hb
-      subst hb
-      rw [List.find?_eq_none] at hnone
-      rw [List.mem_map] at ha
-      obtain ⟨f, hf, hk⟩ := ha
-      exact hnone f hf (beq_iff_eq.mpr (hk.trans hab))
-    · split at h
-      · exact ih acc hacc h
-      · exact nomatch h
-
-/-- **Distinct keys out**: whatever the dedupe answers has no repeated key. -/
-theorem dedupeReferences_nodup (es out : List ReferenceEntry) (h : dedupeReferences es = .ok out) :
-    KeysDistinct out :=
-  dedupeFrom_nodup [] es List.nodup_nil out h
+property: TS1117 under tsgo 7, and the last body winning at run time. The emitter applies the
+table policy every reader and writer shares (`dedupeReferences`, `Effect4/Schema/Document.lean`):
+the first entry of a key is kept, a later one with an equal body is dropped, and a later one whose
+body differs is refused at `["references", key]` (`DocumentRefusal`). On a table whose keys are
+distinct this is the identity, so such a document's bytes do not move (`documentExpr_distinct`). -/
 
 /-- The references table as a JSON object, each key once. -/
-private def references (entries : List ReferenceEntry) : Except ReferenceRefusal Expr := do
+private def references (entries : List ReferenceEntry) : Except DocumentRefusal Expr := do
   let refs ← dedupeReferences entries
   pure (dataObject (refs.map fun entry => (entry.key, representation entry.representation)))
 
 /-- Raw rc.112 JSON syntax for one document, its references written once per key. -/
-def documentExpr (document : Document) : Except ReferenceRefusal Expr := do
+def documentExpr (document : Document) : Except DocumentRefusal Expr := do
   let refs ← references document.references
   pure (.objectQuotedML
     [ ("representation", representation document.representation)
     , ("references", refs) ])
 
 /-- Raw rc.112 JSON syntax for one multi-document, its references written once per key. -/
-def multiDocumentExpr (document : MultiDocument) : Except ReferenceRefusal Expr := do
+def multiDocumentExpr (document : MultiDocument) : Except DocumentRefusal Expr := do
   let refs ← references document.references
   pure (.objectQuotedML
     [ ("representations", .arr (document.representations.map representation))
@@ -443,16 +263,16 @@ def representationSource (value : Representation) (style : Style := house0) : St
   Render.expr style 0 (representation value)
 
 /-- Render one raw persisted Schema document without constructing a module. -/
-def documentSource (value : Document) (style : Style := house0) : Except ReferenceRefusal String :=
+def documentSource (value : Document) (style : Style := house0) : Except DocumentRefusal String :=
   (documentExpr value).map (Render.expr style 0)
 
 /-- Render one raw persisted multi-document without constructing a module. -/
 def multiDocumentSource (value : MultiDocument) (style : Style := house0) :
-    Except ReferenceRefusal String :=
+    Except DocumentRefusal String :=
   (multiDocumentExpr value).map (Render.expr style 0)
 
 /-- One exported raw persisted Schema JSON value. -/
-def rawDocumentDecl (name : String) (document : Document) : Except ReferenceRefusal Decl := do
+def rawDocumentDecl (name : String) (document : Document) : Except DocumentRefusal Decl := do
   let value ← documentExpr document
   pure (.const
     { doc := ["Raw Effect Schema document."]
@@ -484,7 +304,7 @@ fields; it writes the references table once per key and refuses a repeated key w
 (decisions row 8 (C)). Emitted object expressions have the target runtime's key behavior. The
 caller chooses when to render and execute the module. -/
 def moduleSyntax (schemaName : String) (document : Document)
-    (data : List (String × Json) := []) : Except ReferenceRefusal Module := do
+    (data : List (String × Json) := []) : Except DocumentRefusal Module := do
   let raw ← rawDocumentDecl schemaName document
   pure { header := ["Generated by Effect4 Schema.", "", "Do not edit."]
          imports :=

@@ -12,18 +12,25 @@ about the prepared representation: `ofSchema (prepare d) = some t → normS (pre
 No law relates the original document to its preparation; none has a consumer yet (Codex's review,
 F3, `docs/research/2026-10-15-ocaml-interop-explore/codex-review.md`).
 
-Three passes, each a fold or a table:
+The references table is a system of equations, one per key, and `Ty` has no recursive type, so the
+preparation solves an acyclic system by substitution in dependency order:
 
-1. **Placement.** The keys the root reaches through the table (`reachable`), checked: a repeated
-   key, a key with no entry, and a key that reaches itself are refused, located at the table.
-   A recursive document is refused, not unfolded to a depth: a depth bound is no meaning for it.
-   The keys are placed so that each comes after the keys its entry references (`place`).
-2. **Substitution.** Each reference replaced by its entry, already resolved
-   (`substAlg`, the identity algebra with its reference arm replaced).
-3. **Union shape.** A bare union of one member is that member, and a bare `anyOf` of three or
-   more nests to the right, in order (`shapeAlg`). A `oneOf` of three or more is kept: nesting
-   changes which inputs it admits. A union with checks, or with an annotation the bridge does not
-   erase, is kept.
+1. **The table.** One entry per key, by the policy every reader and writer of a table shares
+   (`dedupeReferences`, decisions row 8 (C)): a repeat with an equal body is the same equation, a
+   repeat whose body differs is refused at its key.
+2. **The order.** A depth-first walk from the root through the reference graph's edges
+   (`Representation.refs`) places each reached key after the keys its entry references
+   (`visit`). A key with no entry is refused at the node that references it. A key met again
+   while its own entry is being walked lies on a cycle, and is refused at its entry: rc.112 admits
+   such a document (`E4-SCHEMA-CE-025`), but `Ty` cannot represent it. An entry the root does not
+   reach is not read.
+3. **Substitution.** Each reference replaced by its entry, already resolved (`substAlg`, the
+   identity algebra with its reference arm replaced, as `Schema.Template.fillAlg` replaces its
+   child references).
+4. **Union shape.** A bare union takes the shape `Ty.ofMembers` gives a member list under
+   `schema`: no member is `never`, one member is that member, and an `anyOf` of three or more nests
+   to the right, in order (`shapeAlg`). A `oneOf` of two or more is kept: nesting changes which
+   inputs it admits. A union with checks, or with an annotation the bridge does not erase, is kept.
 
 What it does not establish: that a prepared representation decodes what rc.112's document
 decodes. Each pass is checked on finite controls (`Test/Schema/DocumentJson.lean`).
@@ -33,68 +40,30 @@ decodes. Each pass is checked on finite controls (`Test/Schema/DocumentJson.lean
 
 namespace Effect4.Schema.Prepare
 
-open Effect4 Effect4.Schema.DocumentJson
+open Effect4 Effect4.DocumentRefusal
 
-/-! ## The keys a representation references -/
+/-! ## The order -/
 
-/-- The referenced keys, in the order met: an algebra of the representation fold. -/
-def refsAlg : RepresentationAlgebra (fun _ => List String) where
-  representation_declaration _ _ tps cs := tps.flatten ++ cs.flatten
-  representation_reference k := [k.value]
-  representation_suspend _ cs th := cs.flatten ++ th
-  representation_null _ cs := cs.flatten
-  representation_undefined _ cs := cs.flatten
-  representation_void _ cs := cs.flatten
-  representation_never _ cs := cs.flatten
-  representation_unknown _ cs := cs.flatten
-  representation_any _ cs := cs.flatten
-  representation_string _ cs := cs.flatten
-  representation_number _ cs := cs.flatten
-  representation_boolean _ cs := cs.flatten
-  representation_bigint _ cs := cs.flatten
-  representation_symbol _ cs := cs.flatten
-  representation_literal _ cs _ := cs.flatten
-  representation_uniqueSymbol _ cs _ := cs.flatten
-  representation_objectKeyword _ cs := cs.flatten
-  representation_enum _ cs _ := cs.flatten
-  representation_templateLiteral _ cs ps := cs.flatten ++ ps.flatten
-  representation_arrays _ cs els rest :=
-    cs.flatten ++ (els.map (·.type)).flatten ++ rest.flatten
-  representation_objects _ cs ps is :=
-    cs.flatten ++ (ps.map (·.type)).flatten ++ (is.map fun i => i.parameter ++ i.type).flatten
-  representation_union _ cs ts _ := cs.flatten ++ ts.flatten
-  check_filter rep _ _ := (rep.schemas.getD []).flatten
-  check_filterGroup rep _ cs := ((rep.bind (·.schemas)).getD []).flatten ++ cs.flatten
+/-- Visit `k` from the node at `site`: the keys placed so far (`done`), then those `k`'s entry
+reaches, then `k`. `stack` holds the keys whose entries are being walked. Each level pushes a key
+of the table that is not on the stack, so on a table with distinct keys `deps.length + 1` levels of
+`fuel` never run out; the empty-fuel case answers as the cycle it would be. -/
+def visit (deps : List (String × List String)) : Nat → List String → List String → List String →
+    String → Read (List String)
+  | 0, _, _, _, k => .error ⟨["references", k], .recursiveReference k⟩
+  | fuel + 1, stack, done, site, k =>
+    if done.contains k then pure done
+    else if stack.contains k then .error ⟨["references", k], .recursiveReference k⟩
+    else match List.lookup k deps with
+      | none => .error ⟨site, .missingReference k⟩
+      | some ks => do
+        let done ← ks.foldlM (fun done k' => visit deps fuel (k :: stack) done ["references", k] k')
+          done
+        pure (done ++ [k])
 
-/-- The keys a representation references, in the order met. -/
-def refsOf (r : Representation) : List String := cata_representation refsAlg r
-
-/-! ## Placement -/
-
-/-- The first key that repeats in a table's key list. -/
-def firstDuplicate : List String → Option String
-  | [] => none
-  | k :: ks => if ks.contains k then some k else firstDuplicate ks
-
-/-- The keys reached from `start` through `deps`, each once, in the order met. Each round adds
-the keys the reached ones reference; `deps.length + 1` rounds reach every key that can be. -/
-def reachable (deps : List (String × List String)) (start : List String) : List String :=
-  (List.range (deps.length + 1)).foldl
-    (fun seen _ =>
-      seen ++ ((seen.flatMap fun k => (List.lookup k deps).getD []).filter
-        (fun k => !seen.contains k)).eraseDups)
-    start.eraseDups
-
-/-- The pending keys placed so that each follows every key its entry references. When no pending
-key can be placed, the first pending one reaches itself, and it is refused at its entry. -/
-def place (deps : List (String × List String)) : Nat → List String → List String →
-    Read (List String)
-  | _, placed, [] => pure placed
-  | 0, _, k :: _ => under "references" (under k (refuse (.recursiveReference k)))
-  | fuel + 1, placed, k :: ks =>
-    match (k :: ks).find? (fun p => ((List.lookup p deps).getD []).all placed.contains) with
-    | some p => place deps fuel (placed ++ [p]) ((k :: ks).filter (· != p))
-    | none => under "references" (under k (refuse (.recursiveReference k)))
+/-- The keys the root reaches, each after the keys its entry references. -/
+def order (deps : List (String × List String)) (root : Representation) : Read (List String) :=
+  root.refs.foldlM (fun done k => visit deps (deps.length + 1) [] done ["representation"] k) []
 
 /-! ## Substitution and union shape -/
 
@@ -107,17 +76,19 @@ def substAlg (table : List (String × Representation)) :
 def subst (table : List (String × Representation)) (r : Representation) : Representation :=
   cata_representation (substAlg table) r
 
-/-- A first member and the rest, as binary `anyOf` unions nested to the right, in order. -/
+/-- A first member and the rest, as binary `anyOf` unions nested to the right, in order: the shape
+`schema (Ty.ofMembers (a :: rest))` writes. -/
 def nest : Representation → List Representation → Representation
   | a, [] => a
   | a, b :: rest => .union none [] [a, nest b rest] .anyOf
 
-/-- A union in `Ty`'s binary shape: a bare union of one member is that member; a bare `anyOf` of
-three or more nests to the right. Anything else is kept as it is. -/
+/-- A union in `Ty`'s binary shape: a bare union of no member is `never`, of one member that
+member; a bare `anyOf` of three or more nests to the right. Anything else is kept as it is. -/
 def shapeUnion (ann : Annotations) (checks : List Check) (types : List Representation)
     (mode : UnionMode) : Representation :=
   if Bridge.normAnn ann = none ∧ checks = [] then
     match types, mode with
+    | [], _ => .never none []
     | [t], _ => t
     | a :: b :: c :: rest, .anyOf => nest a (b :: c :: rest)
     | _, _ => .union ann checks types mode
@@ -130,28 +101,15 @@ def shapeUnions (r : Representation) : Representation := cata_representation sha
 
 /-! ## The preparation -/
 
-/-- Where a missing key is referenced: the root, or the first entry that references it. -/
-def siteOf (root : Representation) (deps : List (String × List String)) (k : String) :
-    List String :=
-  if (refsOf root).contains k then ["representation"]
-  else match deps.find? (fun d => d.2.contains k) with
-    | some (k', _) => ["references", k']
-    | none => []
-
 /-- **A document prepared for the exact bridge**: its references resolved, its unions in `Ty`'s
-binary shape; or the located refusal of a repeated key, a missing key, or a recursive one. -/
+binary shape; or the located refusal of a conflicting key, a missing key, or a key on a cycle. -/
 def prepare (d : Document) : Read Representation := do
-  if let some k := firstDuplicate (d.references.map (·.key)) then
-    under "references" (under k (refuse (.duplicateKey k)))
-  let deps := d.references.map fun e => (e.key, refsOf e.representation)
-  let needed := reachable deps (refsOf d.representation)
-  if let some k := needed.find? (fun k => (List.lookup k deps).isNone) then
-    throw ⟨siteOf d.representation deps k, .missingReference k⟩
-  let order ← place deps (needed.length + 1) [] needed
-  let table := order.foldl (fun acc k =>
-    acc ++ [(k, subst acc ((List.lookup k (d.references.map fun e => (e.key, e.representation))).getD
-      (.reference ⟨k⟩)))]) []
-  pure (shapeUnions (subst table d.representation))
+  let entries ← dedupeReferences d.references
+  let table := entries.map fun e => (e.key, e.representation)
+  let keys ← order (table.map fun (k, r) => (k, r.refs)) d.representation
+  let resolved := keys.foldl (fun acc k =>
+    acc ++ [(k, subst acc ((List.lookup k table).getD (.reference ⟨k⟩)))]) []
+  pure (shapeUnions (subst resolved d.representation))
 
 /-- **A persisted document's JSON as a program type**: read exactly (`Document.ofJson`), prepared,
 then read by the exact bridge. `none` is the bridge's refusal: a node `Ty` cannot represent. -/

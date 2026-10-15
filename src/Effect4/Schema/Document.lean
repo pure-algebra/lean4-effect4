@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Schema.Annotations
+public import Effect4.Schema.Fold
 
 /-!
 # Schema.Document.lean
@@ -13,8 +14,12 @@ semantic object it is assigned below — the reference graph, guardedness,
 productivity, the memoized checker — is still unopened, and its public surface
 is frozen only after the owning contract and counterexample packet.
 
-No reference edge is interpreted here. `ReferenceEntry.key` is an opaque
-string, `$ref` is not resolved against it, and no theorem below is worded as a
+No reference is resolved here. Three pieces of the persisted boundary live
+here, because every reader and writer of a document shares them: the located
+refusal (`DocumentRefusal`), the edges of the reference graph out of one node
+(`Representation.refs`, the first step of `SC-DOC-01`), and the references
+table's policy of decisions row 8 (C) (`dedupeReferences`). `$ref` is not
+resolved against a table here, and no theorem below is worded as a
 termination, reachability, or dead-entry result.
 
 The annotations below are navigation and scope, not declarations. Obligation
@@ -397,5 +402,160 @@ private theorem representationSites_lawful :
         rw [collectReferenceRepresentations_modify, map_append_exact]
 
 end MultiDocument
+
+/-! ## The persisted boundary: one located refusal, the graph's edges, the table's policy
+
+Every reader and writer of a persisted document refuses with one located refusal: the path from
+the document's root and the reason. The reader of rc.112's JSON (`Effect4/Schema/DocumentJson.lean`),
+the preparation for the exact bridge (`Effect4/Schema/Prepare.lean`) and the TypeScript emitter
+(`Effect4/Codegen/Schema.lean`) share it. -/
+
+/-- Why a value is refused at the persisted-document boundary. -/
+inductive DocumentReason where
+  | notObject
+  | notArray
+  | notString
+  | notBool
+  | notNumber
+  /-- A required field is absent. -/
+  | missing (field : String)
+  /-- A `_tag` the pin's persisted codec does not declare. -/
+  | unknownTag (tag : String)
+  /-- A union mode other than `anyOf` and `oneOf`. -/
+  | unknownMode (mode : String)
+  /-- A literal, enum or property key whose `type` the pin does not declare. -/
+  | unknownKind (kind : String)
+  /-- A symbol spelled other than `Symbol(key)`. -/
+  | notSymbol (text : String)
+  /-- A bigint literal whose text is not an integer. -/
+  | notInteger (text : String)
+  /-- The nesting is deeper than the reader's bound. -/
+  | tooDeep
+  /-- The fields read, but the input is not the writer's JSON for them modulo `normJ`: an extra
+  key, a repeated fixed field, or a second spelling of one value. -/
+  | notTheImage
+  /-- A references table names a key twice with different bodies (decisions row 8 (C)). -/
+  | conflictingReference (key : String)
+  /-- A `$ref` names no entry of the table. -/
+  | missingReference (key : String)
+  /-- A reference on a cycle of the table. rc.112 admits such a document (`E4-SCHEMA-CE-025`);
+  the refusal is the exact bridge's, whose `Ty` has no recursive type. -/
+  | recursiveReference (key : String)
+  deriving DecidableEq, Repr
+
+/-- A refusal at the persisted-document boundary: the path from the root, then the reason. -/
+structure DocumentRefusal where
+  path : List String
+  reason : DocumentReason
+  deriving DecidableEq, Repr
+
+namespace DocumentRefusal
+
+/-- A read at the persisted boundary: a value or a located refusal. -/
+abbrev Read := Except DocumentRefusal
+
+/-- Refuse here, at the empty path; `under` prefixes the steps that led here. -/
+def refuse {α : Type} (reason : DocumentReason) : Read α := .error ⟨[], reason⟩
+
+/-- A read one step down: its refusal's path starts with `step`. -/
+def under {α : Type} (step : String) (x : Read α) : Read α :=
+  x.mapError fun e => { e with path := step :: e.path }
+
+end DocumentRefusal
+
+/-- The keys a representation references, in the order met: the edges of the reference graph out
+of one node (`SC-DOC-01`). The generated fold visits every position a reference can occupy,
+including the schemas of a check's annotation (`E4-SCHEMA-CE-033`). -/
+def Representation.refs (r : Representation) : List String :=
+  foldMap_representation [] (· ++ ·) r (f_representation := fun
+    | .reference key => [key.value]
+    | _ => [])
+
+/-! ### The references table, one entry per key (decisions row 8 (C))
+
+A table is a function from keys to representations when its repeated keys agree. The first entry
+of a key is kept, a later one with an equal body is dropped, and a later one whose body differs is
+refused at `["references", key]`. On a table whose keys are distinct this is the identity
+(`dedupeReferences_distinct`); whatever it answers has distinct keys (`dedupeReferences_nodup`).
+The store's own documents repeat keys with equal bodies (`ShapeDoc.document`, whose bytes are a
+frozen contract), so every reader and writer of a table applies this one policy. -/
+
+/-- The table after `acc`: the first entry of each key kept, a later one with an equal body dropped,
+a later one whose body differs refused at its key. -/
+def dedupeFrom (acc : List ReferenceEntry) :
+    List ReferenceEntry → DocumentRefusal.Read (List ReferenceEntry)
+  | [] => .ok acc
+  | e :: es =>
+    match acc.find? (fun f => f.key == e.key) with
+    | none => dedupeFrom (acc ++ [e]) es
+    | some f =>
+      if f.representation = e.representation then dedupeFrom acc es
+      else .error ⟨["references", e.key], .conflictingReference e.key⟩
+
+/-- A references table with one entry per key. -/
+def dedupeReferences (es : List ReferenceEntry) : DocumentRefusal.Read (List ReferenceEntry) :=
+  dedupeFrom [] es
+
+/-- The keys of a table are distinct. -/
+def KeysDistinct (es : List ReferenceEntry) : Prop := (es.map (·.key)).Nodup
+
+private theorem find?_none_of_not_mem {acc : List ReferenceEntry} {k : String}
+    (h : k ∉ acc.map (·.key)) : acc.find? (fun f => f.key == k) = none := by
+  rw [List.find?_eq_none]
+  intro f hf hk
+  apply h
+  rw [List.mem_map]
+  exact ⟨f, hf, (beq_iff_eq.mp hk)⟩
+
+theorem dedupeFrom_distinct (acc es : List ReferenceEntry)
+    (h : ((acc ++ es).map (·.key)).Nodup) : dedupeFrom acc es = .ok (acc ++ es) := by
+  induction es generalizing acc with
+  | nil => simp only [dedupeFrom, List.append_nil]
+  | cons e es ih =>
+    have hnot : e.key ∉ acc.map (·.key) := by
+      intro hm
+      rw [List.map_append, List.map_cons] at h
+      exact (List.nodup_append.mp h).2.2 e.key hm e.key List.mem_cons_self rfl
+    simp only [dedupeFrom, find?_none_of_not_mem hnot]
+    have h' : ((acc ++ [e]) ++ es).map (·.key) = (acc ++ e :: es).map (·.key) := by
+      rw [List.append_assoc, List.singleton_append]
+    rw [ih (acc ++ [e]) (h' ▸ h), List.append_assoc, List.singleton_append]
+
+/-- **The identity on a table without repeats.** -/
+theorem dedupeReferences_distinct (es : List ReferenceEntry) (h : KeysDistinct es) :
+    dedupeReferences es = .ok es := by
+  unfold dedupeReferences
+  unfold KeysDistinct at h
+  rw [dedupeFrom_distinct [] es (by simpa only [List.nil_append] using h), List.nil_append]
+
+theorem dedupeFrom_nodup (acc es : List ReferenceEntry) (hacc : KeysDistinct acc)
+    (out : List ReferenceEntry) (h : dedupeFrom acc es = .ok out) : KeysDistinct out := by
+  induction es generalizing acc with
+  | nil =>
+    simp only [dedupeFrom, Except.ok.injEq] at h
+    exact h ▸ hacc
+  | cons e es ih =>
+    simp only [dedupeFrom] at h
+    split at h
+    · rename_i hnone
+      apply ih (acc ++ [e]) _ h
+      unfold KeysDistinct
+      rw [List.map_append, List.map_singleton]
+      refine List.nodup_append.mpr ⟨hacc, List.pairwise_singleton _ _, ?_⟩
+      intro a ha b hb hab
+      rw [List.mem_singleton] at hb
+      subst hb
+      rw [List.find?_eq_none] at hnone
+      rw [List.mem_map] at ha
+      obtain ⟨f, hf, hk⟩ := ha
+      exact hnone f hf (beq_iff_eq.mpr (hk.trans hab))
+    · split at h
+      · exact ih acc hacc h
+      · exact nomatch h
+
+/-- **Distinct keys out**: whatever the dedupe answers has no repeated key. -/
+theorem dedupeReferences_nodup (es out : List ReferenceEntry) (h : dedupeReferences es = .ok out) :
+    KeysDistinct out :=
+  dedupeFrom_nodup [] es List.nodup_nil out h
 
 end Effect4

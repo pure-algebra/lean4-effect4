@@ -35,7 +35,9 @@ every document entry point (`documentExpr`, `multiDocumentExpr`,
 `documentSource`, `multiDocumentSource`, `rawDocumentDecl`, `moduleSyntax`)
 writes a document's references table once per key, dropping a later entry with
 an equal body, and refuses a repeated key whose bodies differ with a
-`ReferenceRefusal` at `["references", key]`. The store keeps its version-0
+`DocumentRefusal` (`conflictingReference`) at `["references", key]`. *Amended
+2026-10-15 (decisions row 398 (3)):* the policy and the refusal moved to
+`src/Effect4/Schema/Document.lean`, shared by every reader and writer of a table. The store keeps its version-0
 bytes. On a table without repeats the emitted expression is the table in order
 (`documentExpr_distinct`), so the three harness fixtures re-emit byte-identical. A `__proto__` data key lowers through `Object.fromEntries` so it
 remains an own data property rather than activating object-literal prototype

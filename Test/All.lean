@@ -457,6 +457,7 @@ import Test.Dogfood.Scenario.Atomic.StageActivation
 import Test.Dogfood.Scenario.Atomic.StageNativeQueue
 import Test.Dogfood.Scenario.Atomic.StageTerminal
 import Test.Program.SelectRulesRed
+import Test.Schema.DocumentJson
 
 /-!
 # Effect4 test battery

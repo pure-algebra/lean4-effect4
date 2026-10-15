@@ -1,4 +1,6 @@
 /.lake
+# the passed checks every worktree shares (scripts/lib/gate_cache.py: beside the git common directory)
+/.git-checks
 .DS_Store
 __pycache__/
 # wrangler's local state from `make deploy-site`

@@ -216,7 +216,7 @@ end Built
 written once per key; a repeated key whose bodies differ is refused at `["references", key]`
 (decisions row 8 (C)). -/
 def schemaDocument (document : Effect4.Document) :
-    Except Effect4.Codegen.Schema.ReferenceRefusal TypeScript.Expr :=
+    Except Effect4.DocumentRefusal TypeScript.Expr :=
   Effect4.Codegen.Schema.documentExpr document
 
 /-- A persisted representation as raw `SchemaRepresentation` JSON syntax. -/

@@ -2,10 +2,9 @@
 // own SchemaRepresentation JSON, plus the serialization descriptors. Nothing is transcribed by
 // hand. The battery Test/Schema/DocumentJson.lean reads the output.
 //
-// Producer of Test/fixtures/schema-documents/effect-rpc-rc112.json, under effect 4.0.0-rc.112
-// (this folder's install). From this folder:
-//   bun --no-install run export-rpc.ts > ../../Test/fixtures/schema-documents/effect-rpc-rc112.json
-// First written as the interop exploration's probe
+// Producer of Test/fixtures/schema-documents/effect-rpc-rc112.json, under effect 4.0.0-rc.112.
+// `make check-ts` (scripts/check-schema-typescript-generation.sh) reruns it against the pinned
+// install and refuses a changed byte. First written as the interop exploration's probe
 // (docs/research/2026-10-15-ocaml-interop-explore/alphabet/export.ts).
 
 import { Schema, SchemaRepresentation } from "effect"

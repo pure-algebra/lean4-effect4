@@ -132,7 +132,10 @@ The erased keys are revision 5's eight documentation keys
 (`docs/research/2026-10-01-type-language-probe/S-inputs/revision-5/annotation-review.md`: rc.112
 reads them for diagnostics, references and documentation, never for acceptance or decoded values)
 and `arbitrary`, a fast-check generator hint with no decoding meaning, which rc.112's own
-`Schema.Int` writes on its `isInt` filter (probe S, E9d). `normAnn` erases those entries and keeps
+`Schema.Int` writes on its `isInt` filter (probe S, E9d). Decisions row 396 (2) adds `~identifier`,
+rc.112's fallback reference name (`IDENTIFIER_FALLBACK_KEY`, `internal/schema/annotations.ts:19`):
+`toRepresentation` writes it on a referenced node whose key falls back to the type side's
+identifier (`toRepresentation.ts:113-137`). It names a reference and decides nothing. `normAnn` erases those entries and keeps
 every other entry, and a bag left empty is `none`; the reader admits a bag only when nothing is left
 (`normAnn ann = none`), at every bag it reads: each node, each check, each tuple element, the defect
 slot. Every other key, `parseOptions` among them, is refused. `normS` applies `normAnn` to every bag
@@ -140,10 +143,10 @@ of the tree, checks and properties included, and changes nothing else. -/
 
 /-- The annotation keys that change nothing rc.112 accepts or decodes, erased by `N_S` (row 179:
 revision 5's eight documentation keys, seat S's allowlist, and `arbitrary`, the ninth, a generator
-hint rc.112's own `Schema.Int` writes). -/
+hint rc.112's own `Schema.Int` writes; row 396 (2): `~identifier`, the fallback reference name). -/
 def erasedKeys : List String :=
   ["identifier", "title", "description", "documentation", "examples", "default", "message",
-   "expected", "arbitrary"]
+   "expected", "arbitrary", "~identifier"]
 
 /-- An annotation bag modulo the erased keys: those entries erased, the rest kept in order, an
 empty remainder `none` (so an absent bag and a bag of erased keys only are one). -/

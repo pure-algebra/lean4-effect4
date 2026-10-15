@@ -796,10 +796,14 @@ _run-semantics:
 	$(LAKE) exe semantics-controls
 
 SCHEMA_SOURCES := $(shell find src/Effect4/Schema -name '*.lean') src/Effect4/Codegen/Schema.lean
-$(eval $(call cached_check,schema-ts,ts,$(SCHEMA_SOURCES) $(wildcard $(SCHEMA_TS_DIR)/*) scripts/check-schema-typescript-generation.sh $(TS_PINS) $(TS_INSTALL) harness/schema-host/package.json harness/schema-host/package-lock.json $(SCHEMA_INSTALL),$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean)))
+# rc.112's own documents and the battery that reads them (slice A1); `include_str` files are not
+# in a Lean closure, so the fixtures are named.
+SCHEMA_DOCUMENTS := Test/Schema/DocumentJson.lean Test/fixtures/schema-documents/effect-rpc-rc112.json \
+  Test/fixtures/schema-representation/observed/06-vectors.observed.json
+$(eval $(call cached_check,schema-ts,ts,$(SCHEMA_SOURCES) $(wildcard $(SCHEMA_TS_DIR)/*) $(SCHEMA_DOCUMENTS) scripts/check-schema-typescript-generation.sh $(TS_PINS) $(TS_INSTALL) harness/schema-host/package.json harness/schema-host/package-lock.json $(SCHEMA_INSTALL),$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) Test/Schema/DocumentJson.lean))
 $(CHK)/schema-ts.key:  | ts/eff/node_modules
 _run-schema-ts:
-	$(call build_imports,$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean))
+	$(call build_imports,$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) Test/Schema/DocumentJson.lean)
 	bash scripts/check-schema-typescript-generation.sh
 
 # The rest of the Schema slice, on its inputs (ledger decision 3): the rc.112 tag pins

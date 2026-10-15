@@ -1,7 +1,7 @@
 # Slice A1, in progress: rc.112's schema documents read into `Ty`
 
-Status: work in progress on branch `wip/a1-document-json`, off `refactor/phase1-phase3`. Nothing
-here is built yet. The owner paused development on 2026-10-15 before the first build.
+Status: landed on 2026-10-15 after a reuse pass, which replaced most of this draft; the receipt is
+`receipt.md` in this folder. This note is the draft's handoff, kept as history.
 
 ## The one thing to know first
 

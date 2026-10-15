@@ -420,6 +420,7 @@ import Effect4.Laws.Program.CodeClosure.ConfigurationNativeMetadata
 import Effect4.Laws.Program.FinalizerSourceHistory
 import Effect4.Laws.Program.CodeClosure.AuthoredBinders
 import Effect4.Laws.Program.ParkedOrigin
+import Effect4.Laws.Schema.DocumentJson
 
 /-!
 # Effect4 proof graph

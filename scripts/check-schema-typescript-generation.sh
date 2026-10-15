@@ -113,9 +113,29 @@ if [[ "$multi_output" != "schema-generation-multi: 2 roots, 1 shared reference" 
 fi
 printf '%s\n' "$multi_output"
 
+# rc.112 writes its own RPC documents; Lean reads every one (slice A1, the persisted boundary).
+documents_fixture="$project_root/Test/fixtures/schema-documents/effect-rpc-rc112.json"
+cp "$harness_dir/export-rpc.ts" "$temporary_dir/export-rpc.ts"
+if ! NODE_NO_WARNINGS=1 "$node_bin" --experimental-strip-types \
+  "$temporary_dir/export-rpc.ts" > "$temporary_dir/effect-rpc-rc112.json"; then
+  echo "schema TypeScript harness: rc.112 did not write its RPC documents" >&2
+  exit 1
+fi
+if ! cmp -- "$documents_fixture" "$temporary_dir/effect-rpc-rc112.json"; then
+  echo "schema TypeScript harness: rc.112's RPC documents differ from the fixture" >&2
+  exit 1
+fi
+if ! lake env lean -M4096 "$project_root/Test/Schema/DocumentJson.lean" \
+  > "$temporary_dir/document-json.log" 2>&1; then
+  cat "$temporary_dir/document-json.log" >&2
+  echo "schema TypeScript harness: Lean's reading of rc.112's documents failed" >&2
+  exit 1
+fi
+
 echo "schema TypeScript harness: fixture bytes match Lean generation"
 echo "schema TypeScript harness: 22-constructor corpus bytes match Lean generation"
 echo "schema TypeScript harness: two-root multi-document bytes match Lean generation"
 echo "schema TypeScript harness: direct compiler $typescript_version passed"
 echo "schema TypeScript harness: effect $effect_version revived the document and the two-root multi-document"
 echo "schema TypeScript harness: language service $tsgo_version passed"
+echo "schema TypeScript harness: effect $effect_version rewrote its RPC documents byte for byte; Lean read every one"

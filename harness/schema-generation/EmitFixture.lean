@@ -13,7 +13,7 @@ private def person : Representation :=
 
 private def personDocument : Document := Schema.document person
 
-private def fixture : Except Codegen.Schema.ReferenceRefusal String :=
+private def fixture : Except DocumentRefusal String :=
   (Codegen.Schema.moduleSyntax "PersonSchema" personDocument
     [ ("ada", .obj [("name", .str "Ada"), ("active", .bool true)])
     , ("prototypeData", .obj [("__proto__", .str "data")]) ]).map
@@ -23,6 +23,6 @@ private def fixture : Except Codegen.Schema.ReferenceRefusal String :=
   IO.println ("// " ++ Tools.GeneratedStamp.note "harness/schema-generation/EmitFixture.lean")
   match fixture with
   | .ok text => IO.print text
-  | .error e => throw (IO.userError s!"the emitter refused at {e.path}: {e.reason}")
+  | .error e => throw (IO.userError s!"the emitter refused at {e.path}: {reprStr e.reason}")
 
 end Effect4Harness.SchemaGeneration

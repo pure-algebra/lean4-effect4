@@ -652,6 +652,12 @@ def registry : Registry where
     { id := "of-schema-schema", concept := "exact-codecs", role := .compatibility
       title := "Retraction of Schema generation on reserved-free types"
       pointer := .witness `Effect4.Schema.Bridge.ofSchema_schema },
+    { id := "document-json-exact", concept := "exact-codecs", role := .compatibility
+      title := "rc.112's persisted Schema JSON read into a representation is that JSON modulo normJ (Representation.ofJson_exact): the reader dispatches on the frozen tag table and admits its answer through the re-encode guard (Reencode.guard_exact); nothing of rc.112's field admission, which admits fewer documents, or of the preparation for the bridge (decisions row 396 (2); slice A1)"
+      pointer := .witness `Effect4.Representation.ofJson_exact },
+    { id := "document-json-complete", concept := "exact-codecs", role := .compatibility
+      title := "A JSON value whose normal form is a writer image is admitted at some nesting bound, with that normal form (DocumentJson.ofJson_complete), modulo the planned goal ofJson_image; nothing at the public reader's fixed bound (decisions row 396 (2); slice A1)"
+      pointer := .witness `Effect4.Schema.DocumentJson.ofJson_complete },
     { id := "collection-term-print-read", concept := "exact-codecs", role := .compatibility
       title := "Every scoped term reconstructs after structural printing, including records, payload class constructions under classes that cover them (decisions row 120), and every static tuple index"
       pointer := .witness `Effect4.Program.readTerm_printTerm },

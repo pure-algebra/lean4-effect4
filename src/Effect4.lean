@@ -258,6 +258,7 @@ import Effect4.Library.Ref.CacheModel
 -- module emission and checked reading (the codegen refactor's CR-0, decisions row 392).
 import Effect4.Api.Codegen
 import Effect4.Library.Stream.ArrayModel
+import Effect4.Schema.Prepare
 
 /-!
 # Effect4
