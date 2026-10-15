@@ -90,11 +90,13 @@ inductive Kind
   | finalized (id : Nat)
   | note (id : Nat)
   | cleanup (id : Nat)
+  | paused (id : Nat) (incoming : Kind) (stage : Stage) (cleaned : Bool)
 
 /-- A returned decision is usable only between that decision and its deposit.
 Consumer: the actual decision continuation's saved-answer contract. -/
 def ValueAt (world : World) : Kind → Val → Prop
   | .ordinary, _ => True
+  | .paused id _ stage cleaned, _ => world.stages id = stage ∧ world.cleaned id = cleaned
   | .rootAnswer binder, value =>
     world.nextId = RootSlots.rank (binder + 1) ∧ RootSlots.Answer binder value
   | .waiting id, _ => world.stages id = .waiting
@@ -111,6 +113,8 @@ def ValueAt (world : World) : Kind → Val → Prop
 
 /-- A typed body failure stands behind a deposit; finalization also retains its cleanup witness. -/
 def CauseAt (world : World) : Kind → CauseV → Prop
+  | .paused id incoming stage cleaned, cause =>
+    world.stages id = stage ∧ world.cleaned id = cleaned ∧ CauseAt world incoming cause
   | .ordinary, _ => True
   | .body id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail → world.stages id = .deposited
   | .finalized id, cause | .cleanup id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail →

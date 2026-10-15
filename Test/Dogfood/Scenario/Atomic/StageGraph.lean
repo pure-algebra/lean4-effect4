@@ -20,6 +20,7 @@ open StageWorld
 def Owns (owner : Nat) : StageWorld.Kind → Prop
   | .waiting id | .seen id | .decision id | .deposit id | .body id | .finalized id | .note id | .cleanup id => owner = id
   | .ordinary | .rootAnswer _ => False
+  | .paused id incoming _ _ => owner = id ∧ Owns owner incoming
 
 /-- A failed body installs its merge wrapper; a successful body restores after cleanup directly. -/
 def FinalizerKind (owner : Nat) : ExitV → StageWorld.Kind
@@ -42,6 +43,11 @@ inductive CodeAt (root : NativeEff) (table : RowTable) (owner : Nat) : StageWorl
           (env ++ [Test.Dogfood.P4RateLimiter.windowVal used admitted rejected]))))
   | yielding {world priority} (waiting : world.stages owner = .waiting) :
       CodeAt root table owner world (.waiting owner) (.yieldNowWith priority)
+  | pause {world kind priority} (owns : Owns owner kind) :
+      CodeAt root table owner world (.paused owner kind (world.stages owner) (world.cleaned owner)) (.yieldNowWith priority)
+  | pausing {world kind priority next} (owns : Owns owner kind)
+      (held : CodeAt root table owner world kind next) :
+      CodeAt root table owner world kind (.onSuccessConst (.yieldNowWith priority) next)
   | frontier {world kind point} (zero : point.fuel = 0) :
       CodeAt root table owner world kind (Effect4.Program.frontier point)
   | suspended {world kind thunk}
@@ -72,22 +78,30 @@ theorem value_other (owner : Nat) (kind : StageWorld.Kind) (owns : Owns owner ki
     (before after : StageWorld.World) (stage : before.stages owner = after.stages owner)
     (cleaned : before.cleaned owner = after.cleaned owner) (value : Val) (good : ValueAt before kind value) :
     ValueAt after kind value := by
-  cases kind
-  all_goals dsimp only [Owns] at owns
-  all_goals cases owns
-  all_goals cases value
-  all_goals simp only [ValueAt, stage, cleaned] at good ⊢
-  all_goals exact good
+  cases kind with
+  | paused id incoming savedStage savedCleaned =>
+    obtain ⟨rfl, localKind⟩ := owns
+    exact ⟨stage.symm.trans good.1, cleaned.symm.trans good.2⟩
+  | _ =>
+    all_goals dsimp only [Owns] at owns
+    all_goals cases owns
+    all_goals cases value
+    all_goals simp only [ValueAt, stage, cleaned] at good ⊢
+    all_goals exact good
 
 /-- Unaffected request causes retain both deposit and positive cleanup evidence. -/
 theorem cause_other (owner : Nat) (kind : StageWorld.Kind) (owns : Owns owner kind)
     (before after : StageWorld.World) (stage : before.stages owner = after.stages owner)
     (cleaned : before.cleaned owner = after.cleaned owner) (cause : CauseV) (good : CauseAt before kind cause) :
     CauseAt after kind cause := by
-  cases kind
-  all_goals dsimp only [Owns] at owns
-  all_goals cases owns
-  all_goals simpa only [CauseAt, stage, cleaned] using good
+  induction kind with
+  | paused id incoming savedStage savedCleaned ih =>
+    obtain ⟨rfl, localKind⟩ := owns
+    exact ⟨stage.symm.trans good.1, cleaned.symm.trans good.2.1, ih localKind good.2.2⟩
+  | _ =>
+    all_goals dsimp only [Owns] at owns
+    all_goals cases owns
+    all_goals simpa only [CauseAt, stage, cleaned] using good
 
 /-- Actual nonacting request code reads only its owner's unchanged stage and cleanup facts. -/
 theorem code_other (root : NativeEff) (table : RowTable) (owner : Nat)
@@ -117,6 +131,13 @@ theorem code_other (root : NativeEff) (table : RowTable) (owner : Nat)
   | yielding waiting =>
     intro after future stage cleaned owns
     exact .yielding (stage ▸ waiting)
+  | pause localKind =>
+    intro after future stage cleaned owns
+    rw [stage, cleaned]
+    exact .pause localKind
+  | pausing localKind held ih =>
+    intro after future stage cleaned owns
+    exact .pausing localKind (ih after future stage cleaned owns)
   | frontier zero =>
     intro after future stage cleaned owns
     exact .frontier zero
@@ -211,6 +232,26 @@ theorem bound_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : 
   · intro view
     exact saved_success (model root table owner view) (interpAt root view table).toPrimInterp world input output body name
       (fun nextWorld future answer good => callback nextWorld future view answer good) skip
+  · intro name cursor equal
+    cases equal
+  · intro name cursor equal
+    cases equal
+
+/-- A scheduler pause ignores its returned value while retaining this owner's actual phase.
+The saved failure arm retains the original incoming cause class. -/
+theorem pause_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : StageWorld.World)
+    (kind : StageWorld.Kind) (priority : Nat) (next : NCode) (owns : Owns owner kind)
+    (held : CodeAt root table owner world kind next) :
+    Edge root table owner world (.paused owner kind (world.stages owner) (world.cleaned owner)) kind
+      (.onSuccessConst (.yieldNowWith priority) next) := by
+  apply EmbeddedEdgeOver.saved
+  refine ⟨?_, ?_, ?_⟩
+  · intro view
+    apply saved_constant (model root table owner view) (interpAt root view table).toPrimInterp
+    · intro after future answer good
+      exact code_other root table owner world kind next held after future good.1.symm good.2.symm owns
+    · intro after future cause good
+      exact good.2.2
   · intro name cursor equal
     cases equal
   · intro name cursor equal

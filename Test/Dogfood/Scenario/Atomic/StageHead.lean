@@ -64,6 +64,9 @@ theorem head_or_sync (root : NativeEff) (table : RowTable) (owner : Nat)
   | reading => exact .inr ⟨_, rfl⟩
   | note => exact .inr ⟨_, rfl⟩
   | yielding waiting => exact .inl (.yieldNowWith _ (.yielding waiting))
+  | pause owns => exact .inl (.yieldNowWith _ (.pause owns))
+  | pausing owns held =>
+    exact .inl (.onSuccessConst _ _ _ (.pause owns) (pause_edge root table owner world _ _ _ owns held))
   | frontier zero =>
     apply Or.inl
     apply HeadAt.suspend
