@@ -73,7 +73,7 @@ theorem yield_value_or_entry (spec : Spec) (world : World) (kind : Kind spec.sta
     exact .inl ⟨phase, refs, deferred, missing, contents, entered⟩
   | success good | failure phase | allocating small stage | gateAllocating stage available
     | frontier zero phase | reading phase refs deferred missing contents entered
-    | bound first callback | yieldThen phase next missing => cases current
+    | yieldThen phase next missing => cases current
 
 /-- Actual pending yield dispatch preserves its real older saved suffix at the ignored reply class. -/
 theorem yield_frame_or_entry (spec : Spec) (fragment : SourceScope.Fragment spec.root)

@@ -85,7 +85,7 @@ theorem sync_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world : Wo
   | gateAllocating stage available =>
     cases same
     exact .inl (gate_actual spec world _ stage available state value ran).2
-  | @reading _ refs deferred cell phase refsEq deferredEq pending contents entered =>
+  | @reading refs deferred cell phase refsEq deferredEq pending contents entered =>
     cases same
     change syncOpStep (.refGet cell) world.state = some (state, value) at ran
     cases peek : refPeek world.state.refs cell with
@@ -102,7 +102,7 @@ theorem sync_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world : Wo
     exact .inl ⟨ready_future spec world _ (sync_future spec view world thunk state value ran) ready,
       spec.sync_value _ thunk value held⟩
   | frontier zero phase | yielding phase refs deferred pending contents entered
-    | bound first callback | yieldThen phase held pending => cases same
+    | yieldThen phase held pending => cases same
 
 /-- An absent native operation retains its real fallback value at the ignored or stable class. -/
 theorem fallback_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world : World)
@@ -124,7 +124,7 @@ theorem fallback_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world 
     cases same
     exact .inl ⟨ready, spec.sync_value _ thunk _ held⟩
   | frontier zero phase | yielding phase refs deferred pending contents entered
-    | bound first callback | yieldThen phase held pending => cases same
+    | yieldThen phase held pending => cases same
 
 /-- A real pending sync step preserves the exact initial prefix or exposes the application entry. -/
 theorem pending_sync_heap_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world : World)
@@ -138,7 +138,7 @@ theorem pending_sync_heap_or_entry (spec : Spec) (view : List (FiberId × ExitV)
   cases owned with
   | success good | failure phase => cases same
   | initial stage active => exact (initial_not_sync spec world _ _ stage active thunk same.symm).elim
-  | @allocating _ index point small stage =>
+  | @allocating index point small stage =>
     cases same
     obtain ⟨key, written⟩ := Initialization.actual spec.initialization _ world.state state value ran
     subst state
@@ -168,7 +168,7 @@ theorem pending_sync_heap_or_entry (spec : Spec) (view : List (FiberId × ExitV)
       have need : spec.gateNeed = 1 := by simp only [Spec.gateNeed, available, ↓reduceIte]
       rw [need]
       exact Nat.le_refl 1
-  | @reading _ refs deferred cell phase refsEq deferredEq missing contents entered =>
+  | @reading refs deferred cell phase refsEq deferredEq missing contents entered =>
     cases same
     change syncOpStep (.refGet cell) world.state = some (state, value) at ran
     cases peek : refPeek world.state.refs cell with
@@ -182,6 +182,6 @@ theorem pending_sync_heap_or_entry (spec : Spec) (view : List (FiberId × ExitV)
   | entered fragment entry => exact .inr ⟨_, rfl, rfl, entry⟩
   | stable ready held => exact (pending_not_ready spec world pending ready).elim
   | frontier zero phase | yielding phase refs deferred missing contents entered
-    | bound first callback | yieldThen phase held missing => cases same
+    | yieldThen phase held missing => cases same
 
 end Effect4.Program.AnswerSlots.AllocationAdapter

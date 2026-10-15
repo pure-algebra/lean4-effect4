@@ -34,7 +34,7 @@ theorem mask_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root) (wor
     (kind : Kind spec.stable.Kind) (flag : Bool) : Edge spec fragment world kind kind (.setInterruptible flag) :=
   .saved (.saved ⟨(fun view => AnswerFlow.saved_mask (model spec view)
     (interpAt spec.root view spec.table).toPrimInterp world kind flag),
-    (by intro name cursor equal; cases equal), (by intro name cursor equal; cases equal)⟩ (by intro body previous scope flag same; cases same))
+    (by intro name cursor equal; cases equal), (by intro name cursor equal; cases equal)⟩ (Or.inr (Or.inl ⟨rfl, flag, rfl⟩)))
 
 /-- The actual entry hook changes only the independent world flag and preserves the entire saved suffix. -/
 theorem activate_frame (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -100,7 +100,12 @@ theorem scoped_edge_ready (spec : Spec) (fragment : SourceScope.Fragment spec.ro
   cases held with
   | saved held =>
     cases held with
-    | saved held scopeReady => exact scopeReady body previous scope flag same.symm
+    | saved held scopeReady =>
+      rcases scopeReady with ready | shape
+      · exact ready
+      · rcases shape with ⟨kinds, flag, mask⟩ | ⟨refs, deferred, priority, next, input, wrapper⟩
+        · cases mask.symm.trans same.symm
+        · cases wrapper.symm.trans same.symm
     | allocation => cases same
     | gate => cases same
   | mapped ready held => exact ready

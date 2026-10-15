@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.AnswerSlots.AllocationCounter
+import Effect4.Laws.Program.AnswerSlots.AllocationEntrySuffix
 
 /-!
 Concept: store-typing R4 and reactive-scheduling R9.
@@ -18,6 +19,13 @@ def EntryAt (spec : Spec) (fragment : SourceScope.Fragment spec.root) (machine :
     Entry spec ⟨fiber.id, machine.state, false⟩ point ∧
     Effect4.Contracts.Path (Edge spec fragment ⟨fiber.id, machine.state, false⟩)
       (.stable spec.stable.rootKind) output fiber.frame.stack
+
+/-- The real older suffix at source entry transfers as identity masks into the application model. -/
+theorem EntryAt.mask_suffix (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (entry : EntryAt spec fragment machine fiber) :
+    MaskSuffix fiber.frame.stack := by
+  obtain ⟨point, output, current, stage, saved⟩ := entry
+  exact (pending_root_path spec fragment ⟨fiber.id, machine.state, false⟩ rfl fiber.frame.stack output saved).2
 
 /-- The actual iteration reaches entry either directly or through its real scheduler injection. -/
 inductive EntryRun (spec : Spec) (fragment : SourceScope.Fragment spec.root)

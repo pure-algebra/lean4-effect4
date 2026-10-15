@@ -14,25 +14,6 @@ set_option autoImplicit false
 namespace Effect4.Program.AnswerSlots.AllocationAdapter
 open Effect4 Effect4.Machine Effect4.Program Effect4.Contracts
 
-/-- An actual bind frame retains its supplied callback at every completed-fiber view. -/
-theorem bound_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root)
-    (world : World) (input output : Kind spec.stable.Kind) (body : NCode) (name : EffName)
-    (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
-      ValueAt spec nextWorld input answer → CodeAt spec nextWorld output
-        ((interpAt spec.root view spec.table).contA name answer)) :
-    Edge spec fragment world input output (.onSuccess body name) := by
-  apply AnswerFlow.EmbeddedEdgeOver.saved
-  refine Semantic.saved ?_ (by intro body previous scope flag same; cases same)
-  refine ⟨?_, ?_, ?_⟩
-  · intro view
-    exact AnswerFlow.saved_success (model spec view) (interpAt spec.root view spec.table).toPrimInterp
-      world input output body name (fun nextWorld future answer good => callback nextWorld future view answer good)
-      (fun _ _ _ good => good)
-  · intro name cursor equal
-    cases equal
-  · intro name cursor equal
-    cases equal
-
 /-- A pending synthetic yield returns to the same exact heap and actual suspended code. -/
 theorem yield_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     (world : World) (kind : Kind spec.stable.Kind) (priority : Nat) (next : NCode)
@@ -40,7 +21,7 @@ theorem yield_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     Edge spec fragment world (.yielded world.state.refs.length world.state.deferreds.cells.length) kind
       (.onSuccessConst (.yieldNowWith priority) next) := by
   apply AnswerFlow.EmbeddedEdgeOver.saved
-  refine Semantic.saved ?_ (by intro body previous scope flag same; cases same)
+  refine Semantic.saved ?_ (Or.inr (Or.inr ⟨_, _, priority, next, rfl, rfl⟩))
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_constant (model spec view) (interpAt spec.root view spec.table).toPrimInterp
@@ -149,13 +130,12 @@ theorem head_or_entry (spec : Spec) (fragment : SourceScope.Fragment spec.root)
   | frontier zero phase => exact .inl (.suspend _ (frontier_code spec view world kind _ zero phase))
   | yielding phase refs deferred pending contents entered =>
     exact .inl (.yieldNowWith _ (.yielding phase refs deferred pending contents entered))
-  | bound first callback => exact .inl (.onSuccess _ _ _ first (bound_edge spec fragment world _ _ _ _ callback))
   | yieldThen phase held pending =>
     apply Or.inl
     by_cases ready : Ready spec world
     · refine .onSuccessConst (Kind.stable spec.stable.rootKind) _ _ (.stable ready (spec.yield_code _)) ?_
       apply AnswerFlow.EmbeddedEdgeOver.saved
-      refine Semantic.saved ?_ (by intro body previous scope flag same; cases same)
+      refine Semantic.saved ?_ (Or.inl ready)
       refine ⟨?_, ?_, ?_⟩
       · intro nextView
         apply AnswerFlow.saved_constant

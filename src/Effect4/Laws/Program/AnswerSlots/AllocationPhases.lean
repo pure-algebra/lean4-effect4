@@ -31,7 +31,6 @@ theorem code_phase (spec : Spec) (world : World) (kind : Kind spec.stable.Kind) 
   | stable ready => exact .inr ready
   | frontier _ phase => exact phase
   | yielding phase | reading phase => exact phase
-  | bound _ _ ih => exact ih
   | yieldThen phase => exact phase
 
 /-- A pending source entry cannot already belong to the stable phase. -/
@@ -121,10 +120,6 @@ theorem code_rebase (spec : Spec) (first : World) (kind : Kind spec.stable.Kind)
     exact .reading (phase_future spec _ _ future phase) nextRefs (deferreds.symm.trans oldDeferred)
       (pending_not_ready spec last pending)
       (contents.trans (congrArg (Initialization.values spec.initialization) nextRefs)) pending
-  | bound first callback ih =>
-    refine .bound (ih last future refs deferreds pending contents) ?_
-    intro nextWorld nextFuture view answer good
-    exact callback nextWorld ((model spec []).future_trans _ _ _ future nextFuture) view answer good
   | yieldThen phase first oldPending ih =>
     exact .yieldThen (phase_future spec _ _ future phase) (ih last future refs deferreds pending contents)
       (fun _ => ⟨pending, contents⟩)
@@ -152,12 +147,8 @@ theorem code_future_ready (spec : Spec) (first : World) (kind : Kind spec.stable
   | stable current code => exact .stable (ready_future spec _ _ future current) code
   | frontier zero phase => exact .frontier zero (phase_future spec _ _ future phase)
   | yielding phase refs deferreds pending | reading phase refs deferreds pending => exact False.elim (pending ready)
-  | bound first callback ih =>
-    refine .bound (ih last future ready) ?_
-    intro nextWorld nextFuture view answer good
-    exact callback nextWorld ((model spec []).future_trans _ _ _ future nextFuture) view answer good
   | yieldThen phase first pending ih =>
-    exact .yieldThen (phase_future spec _ _ future phase) (ih last future ready)
+    exact .yieldThen (phase_future spec _ _ future phase) (ih last future)
       (fun missing => False.elim (missing (ready_future spec _ _ future ready)))
 
 end Effect4.Program.AnswerSlots.AllocationAdapter

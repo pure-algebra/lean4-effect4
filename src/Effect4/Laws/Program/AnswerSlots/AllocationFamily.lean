@@ -19,7 +19,7 @@ theorem semantic_future (spec : Spec) (before after : World) (future : Future be
   | saved saved scopeReady =>
     exact .saved (AnswerFlow.ViewSavedAt.future (fun view => model spec view)
       (fun view => (interpAt spec.root view spec.table).toPrimInterp) (fun _ => future) saved)
-      (fun body previous scope flag same => ready_future spec before after future (scopeReady body previous scope flag same))
+      (scopeReady.elim (fun ready => Or.inl (ready_future spec before after future ready)) Or.inr)
   | allocation captured index point body small stage reached =>
     exact .allocation captured index point body small stage ((model spec []).future_trans _ _ _ reached future)
   | gate captured point body stage gate present reached =>

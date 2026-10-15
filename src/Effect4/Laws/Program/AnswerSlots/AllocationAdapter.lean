@@ -136,11 +136,6 @@ inductive CodeAt (spec : Spec) : World → Kind spec.stable.Kind → NCode → P
       (contents : world.state.refs = Initialization.values spec.initialization refs)
       (entered : world.entered = false) :
       CodeAt spec world (.yielded refs deferred) (.sync (.store (.op (.refGet cell))))
-  | bound {world input output body name} (first : CodeAt spec world input body)
-      (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
-        ValueAt spec nextWorld input answer → CodeAt spec nextWorld output
-          ((interpAt spec.root view spec.table).contA name answer)) :
-      CodeAt spec world output (.onSuccess body name)
   | yieldThen {world kind priority next} (phase : Phase spec world) (owned : CodeAt spec world kind next)
       (pending : ¬ Ready spec world → world.entered = false ∧
         world.state.refs = Initialization.values spec.initialization world.state.refs.length) :
@@ -187,10 +182,16 @@ def UniformSaved (spec : Spec) :=
   AnswerFlow.ViewSavedAt (fun view => model spec view)
     (fun view => (interpAt spec.root view spec.table).toPrimInterp)
 
+/-- Before entry, administrative saved frames are masks or actual synthetic yield wrappers. -/
+def AdminSaved {K : Type} (input output : Kind K) (frame : NCode) : Prop :=
+  (input = output ∧ ∃ flag, frame = .setInterruptible flag) ∨
+    ∃ refs deferred priority next, input = .yielded refs deferred ∧
+      frame = .onSuccessConst (.yieldNowWith priority) next
+
 /-- Prefix saved edges retain their actual allocation point until entry is exposed. -/
 inductive Semantic (spec : Spec) : World → Kind spec.stable.Kind → Kind spec.stable.Kind → NCode → Prop
   | saved {world input output frame} (held : UniformSaved spec world input output frame)
-      (scopeReady : ∀ body previous scope flag, frame = .onExit body (.scopedExit previous scope) flag → Ready spec world) :
+      (shape : Ready spec world ∨ AdminSaved input output frame) :
       Semantic spec world input output frame
   | allocation {world} (captured : World) (index : Nat) (point : Point) (body : NCode)
       (small : index < spec.initialization.width) (stage : RootStage spec captured index point)

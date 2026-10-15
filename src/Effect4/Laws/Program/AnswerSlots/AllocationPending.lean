@@ -28,7 +28,7 @@ theorem pending_ordinary_or_entry (spec : Spec) (view : List (FiberId × ExitV))
   | success good | failure phase | allocating small stage | gateAllocating stage available
     | frontier zero phase | yielding phase refs deferred missing contents entered
     | reading phase refs deferred missing contents entered
-    | bound first callback | yieldThen phase next missing =>
+    | yieldThen phase next missing =>
     exact .inl ⟨rfl, (by intro thunk equal; cases equal), (by intro name signal cancel equal; cases equal)⟩
 
 end Effect4.Program.AnswerSlots.AllocationAdapter
