@@ -54,7 +54,7 @@ theorem native_wait_head (built : Api.Built) (accepted : Api.Author.build (shop 
   cases role with
   | root identity owned =>
     obtain ⟨input, code, saved⟩ := owned
-    obtain ⟨next, future, freshNext, nextCounter, nextHeap, actor, rows, same, effects⟩ :=
+    obtain ⟨next, future, freshNext, nextCounter, nextHeap, actor, rows, same, effects, recipients⟩ :=
       RootGraph.action_result built accepted machine.completedExits world fresh machine fiber yielding input thunk action
         (current ▸ code) current heap counter saved found (fun _ => True) (fun _ _ _ => Or.inr True.intro)
     exact ParkedShape.unparked_with (effects.retainedPark.trans active)

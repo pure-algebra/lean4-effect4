@@ -51,16 +51,27 @@ theorem quiet (forks : Bool) (actor : SourceScope.SourceFiber) (result : Moves.N
     rw [edits] at member
     cases member
 
+/-- A source fork does not mint an after-interruption command. -/
+def NoAfter (result : Moves.NIteration) : Prop :=
+  ∀ host yielding kind, .afterInterrupt host yielding kind ∉ result.nested
+
 /-- Actual fork administration emits only child evaluation and tracking. -/
-theorem fork (interp : Moves.NInterp) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
+theorem fork_with_no_after (interp : Moves.NInterp) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
     (yielding : Bool) (program : NCode) (options : Supervision.ForkOptions) (site : List Nat) :
-    ActionAt true fiber (evaluatePrim.withFiber interp machine fiber yielding (.fork program options site)) := by
+    ActionAt true fiber (evaluatePrim.withFiber interp machine fiber yielding (.fork program options site)) ∧
+      NoAfter (evaluatePrim.withFiber interp machine fiber yielding (.fork program options site)) := by
   cases options with
   | mk immediate daemon mask =>
     cases immediate <;> cases daemon
     all_goals simp only [evaluatePrim.withFiber, spawn, start]
     all_goals constructor
-    all_goals aesop (add safe constructors [Nested, Edit]) (add norm simp [List.mem_append, List.mem_cons])
+    all_goals aesop (add safe constructors [ActionAt, Nested, Edit]) (add norm simp [NoAfter, List.mem_append, List.mem_cons])
+
+/-- The original source-fork profile projects the same checked action producer. -/
+theorem fork (interp : Moves.NInterp) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
+    (yielding : Bool) (program : NCode) (options : Supervision.ForkOptions) (site : List Nat) :
+    ActionAt true fiber (evaluatePrim.withFiber interp machine fiber yielding (.fork program options site)) :=
+  (fork_with_no_after interp machine fiber yielding program options site).1
 
 /-- Actual interrupt-all administration retains each target and the matching actor await. -/
 theorem interrupt_all (forks : Bool) (interp : Moves.NInterp) (machine : NativeMachine)

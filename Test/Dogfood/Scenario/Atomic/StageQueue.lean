@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.StageSettlement
+import Effect4.Laws.Machine.AnswerFlowGhostCommands
 
 /-!
 Concept: store-typing R4 and reactive-scheduling R11.
@@ -18,7 +19,7 @@ def CompletedAt (world : StageWorld.World) (id : FiberId) (exit : ExitV) : Prop 
 /-- Live command permission names the actual row read by that command. -/
 def LiveAt (root : NativeEff) (table : RowTable) (world : StageWorld.World)
     (machine : NativeMachine) (id : FiberId) : Prop :=
-  ∀ fiber, machine.fiber? id = some fiber → StageRoles.FrameAt root table world fiber.id fiber.frame
+  ∀ fiber ∈ machine.fibers, fiber.id = id → StageRoles.FrameAt root table world fiber.id fiber.frame
 
 /-- Requests receive only scheduler void replies; root and daemon may receive awaited exits. -/
 inductive ReplyAt (id : FiberId) : NCode → Prop
@@ -61,6 +62,30 @@ def QueueAt (root : NativeEff) (table : RowTable) (world : StageWorld.World)
 /-- The detached scheduler snapshot retains the same source reply profile. -/
 def SnapshotAt (_world : StageWorld.World) (_machine : NativeMachine) (tasks : List Guard.NTask) : Prop :=
   ∀ task ∈ tasks, TaskAt task
+
+/-- Existing command classifiers select only the actual loop and delivery owners. -/
+def LiveOwners (machine : NativeMachine) (commands : List Guard.NCmd) : List FiberId :=
+  commands.filterMap (fun command => if AnswerFlow.ghostAdvancing command then Guard.commandOwner machine command else none)
+
+/-- The real queued native owners retain strong row permissions independently of dormant rows. -/
+theorem QueueAt.live_owners (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (machine : NativeMachine) (commands : List Guard.NCmd) (held : QueueAt root table world machine commands)
+    (fiber : SourceScope.SourceFiber) (member : fiber ∈ machine.fibers) (pending : fiber.id ∈ LiveOwners machine commands) :
+    StageRoles.FrameAt root table world fiber.id fiber.frame := by
+  obtain ⟨command, present, found⟩ := List.mem_filterMap.mp pending
+  by_cases advancing : AnswerFlow.ghostAdvancing command = true
+  · simp only [if_pos advancing] at found
+    have typed := held command present
+    cases typed with
+    | loop id yielding live =>
+      change some id = some fiber.id at found
+      exact live fiber member (Option.some.inj found).symm
+    | deliver id yielding live =>
+      change some id = some fiber.id at found
+      exact live fiber member (Option.some.inj found).symm
+    | evaluate | finish | resume | interrupt | afterInterrupt | track | observe | exitDone | drain => cases advancing
+  · simp only [if_neg advancing] at found
+    cases found
 
 /-- Earlier completed exits retain their finalized observation at the chosen next native world. -/
 theorem CompletedAt.future (before after : StageWorld.World) (future : Future before after)
