@@ -220,7 +220,7 @@ Base `2985e6ed0`, head `be5cfb832`.
 
 ### Evidence
 
-- Tested: four verdicts moved, each from incomplete to cut. Their two sides now print one text:
+- Tested: four verdicts moved, each from `incomplete` to `cut`. Their two sides now print one text:
   `literalPair/0-1`, `literalPair/1-0`, `bound/2-3` and `bound/3-2`.
   `Ty.sub` relates the two types one way, and the printer, which normalizes first, spells both as
   one union of tuples. Each pair holds one of the two types that the review's probe found
