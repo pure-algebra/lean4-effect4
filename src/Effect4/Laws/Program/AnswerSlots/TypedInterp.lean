@@ -97,4 +97,84 @@ theorem interp_fin_at (spec : Spec) (fragment : SourceScope.Fragment spec.root)
   case scopeClose scope => cases found; exact ⟨rfl, trivial, trivial, trivial⟩
   case restoreCtx previous => cases found; exact ⟨rfl, trivial, trivial, trivial⟩
   all_goals cases found
+/-- A certified foreign capture contains the leading binding annotation used by stored syntax. -/
+theorem fin_leading (spec : Spec) (fin : FinName) (owned : FinAt spec fin) :
+    AnswerSlots.FinAt spec.bindings fin := by
+  cases fin
+  case foreign capture => exact owned.2.1
+  all_goals trivial
+
+/-- Every recursive iterator step retains its actual protected body and next name. -/
+def IterAt (spec : Spec) : IterStep EffName EffThunk Val Err Defect FiberId Ann NCode → Prop
+  | .resume body next => CodeAt spec .root body ∧ OrdinaryName spec next
+  | _ => True
+
+/-- Sequential close retains every remaining captured finalizer in its recursive iterator name. -/
+theorem closeSeq_at (spec : Spec) (remaining : List FinName) (exit : ExitV)
+    (captured : List (Reason Err Defect FiberId Ann)) (value : Val)
+    (owned : ∀ fin ∈ remaining, FinAt spec fin) :
+    IterAt spec (embedStep (closeSeqStep remaining exit captured value)) := by
+  cases remaining with
+  | nil =>
+    change IterAt spec (embedStep (closeDone (captured ++ reasonsOfVal value)))
+    unfold closeDone
+    split <;> trivial
+  | cons fin rest =>
+    refine ⟨⟨rfl, finProgram_at spec fin exit (owned fin (.head _))⟩, ?_⟩
+    refine ⟨?_, ?_, ?_⟩
+    · intro next member
+      have held := owned next (.tail _ member)
+      cases next
+      case foreign => exact held.1
+      all_goals exact held
+    · intro next member
+      exact fin_leading spec next (owned next (.tail _ member))
+    · intro next member
+      exact owned next (.tail _ member)
+
+/-- Stored iterator interpretation retains its protected remaining finalizer names. -/
+theorem store_iter_at (spec : Spec) (name : Name) (value : Val)
+    (owned : StoreNameAt spec name) : IterAt spec (embedStep ((stores.iterNext name value).2)) := by
+  cases name
+  case closeSeq remaining exit captured => exact closeSeq_at spec remaining exit captured value owned
+  case closeParDone =>
+    change IterAt spec (embedStep (closeDone (reasonsOfVal value)))
+    unfold closeDone
+    split <;> trivial
+  all_goals trivial
+
+/-- Current completed exits leave each actual iterator's protected stored programs unchanged. -/
+theorem interp_iter_at (spec : Spec) (completed : List (FiberId × ExitV))
+    (name : EffName) (value : Val) (owned : OrdinaryName spec name) :
+    IterAt spec (((interpAt spec.root completed spec.table).iterNext name value).2) := by
+  cases name
+  case gen => exact owned.1.elim
+  case store name => exact store_iter_at spec name value owned.2.2
+  all_goals trivial
+
+/-- Current completed exits leave each actual loop entry's protected source unchanged. -/
+theorem interp_loopEnter_at (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (completed : List (FiberId × ExitV)) (name : EffName) (cursor : Val)
+    (owned : OrdinaryName spec name) :
+    LoopAt spec ((interpAt spec.root completed spec.table).loopEnter name cursor) := by
+  cases name
+  case loop point => exact loopNext_at spec fragment _ cursor owned.2.2
+  all_goals trivial
+
+/-- Current completed exits leave each resumed loop's protected source unchanged. -/
+theorem interp_loopResume_at (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (completed : List (FiberId × ExitV)) (name : EffName) (cursor answer : Val)
+    (owned : OrdinaryName spec name) :
+    LoopAt spec ((interpAt spec.root completed spec.table).loopResume name cursor answer) := by
+  cases name
+  case loop point => exact loopResume_at spec fragment _ cursor answer owned.2.2
+  all_goals trivial
+
+/-- The installed restore wrapper retains its actual protected finalizer program. -/
+theorem finalizerCode_at (spec : Spec) (completed : List (FiberId × ExitV))
+    (exit : ExitV) (body : NCode) (owned : CodeAt spec .root body) :
+    CodeAt spec .root (finalizerCode (interpAt spec.root completed spec.table) exit body) := by
+  cases exit with
+  | success value => exact ⟨.root, owned, trivial, trivial, trivial⟩
+  | failure cause => exact ⟨.root, ⟨rfl, owned, trivial, trivial, trivial⟩, trivial, trivial, trivial⟩
 end Effect4.Program.AnswerSlots.Typed

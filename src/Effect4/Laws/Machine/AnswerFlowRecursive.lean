@@ -41,8 +41,6 @@ def RecursiveIterResult (world : World) : IterStep ν σ β ε δ ι α (Prim ν
 
 /-- Hook producers retain actual recursive names across permitted future worlds. -/
 structure RecursiveHooks : Prop where
-  value : ∀ world answer, model.value world broad answer
-  cause : ∀ world reason, model.cause world broad reason
   loop_future : ∀ world nextWorld, model.future world nextWorld → ∀ name,
     Loop world name → Loop nextWorld name
   iter_future : ∀ world nextWorld, model.future world nextWorld → ∀ name,
@@ -73,8 +71,8 @@ theorem recursive_family (hooks : RecursiveHooks model interp broad Loop Iter) :
   · intro world input output frame edge nextWorld future cause good absent
     cases edge with
     | saved held => exact semantic.skipCause world input output frame held nextWorld future cause good absent
-    | loop => exact hooks.cause nextWorld cause
-    | iterator => exact hooks.cause nextWorld cause
+    | loop => exact good
+    | iterator => exact good
   · intro world input output frame edge nextWorld future value provided next pushed good supplied absent arm
     cases edge with
     | saved held =>
