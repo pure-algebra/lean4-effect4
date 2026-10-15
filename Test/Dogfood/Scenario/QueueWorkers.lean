@@ -165,8 +165,8 @@ Consumer: the scenario's claim `queueWorkers`. Its controls are finite runs, and
 receipt records a bounded search. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem held_within_fed : HeldWithinFed := by
-  intro total fuel b moves hb hf
-  obtain ⟨a, shows, conserved⟩ := Assertions.jobs_script total fuel b moves hb hf
+  intro total fuel b moves hb terminal hf
+  obtain ⟨a, shows, conserved⟩ := (Assertions.jobs_script total fuel b moves hb hf) terminal
   exact Accounting.heldWithin_of_ledger shows conserved
 
 /-- **Each fed job is held, but for one job of a feeder that is gone.** Under every script of

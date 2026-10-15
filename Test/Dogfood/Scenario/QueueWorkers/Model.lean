@@ -248,10 +248,28 @@ def Observation.releasedOnce (o : Observation) : Bool := decide o.cleanups.Nodup
 /-- A `[job, worker]` entry of the `assigned` cell. -/
 def gave (job worker : Nat) : Val := .list [.nat job, .nat worker]
 
+/-- The executable check of the accepted terminal external-reply profile. -/
+def terminalReplyRow : Api.Runner.Command × Api.HostSession.Phase → Bool
+  | (.submit reply, .preflight) => match reply.completion with
+    | .ofExit _ => true
+    | .ofRefGet _ => false
+  | _ => true
+
+/-- The accepted reply profile, read directly from the recorded journal and verdicts. -/
+def terminalRepliesCheck (s : Run) : Bool := (Scenario.rows s).all terminalReplyRow
+
+/-- Accepted external reply receipts contain terminal exits.
+The profile permits every control and every refused row. -/
+def TerminalReplies (s : Run) : Prop :=
+  ∀ reply : Api.HostSession.Reply,
+    (Api.Runner.Command.submit reply, Api.HostSession.Phase.preflight) ∈ Scenario.rows s →
+      ∃ exit, reply.completion = .ofExit exit
+
 /-- The proposition of `held_within_fed`. -/
 def HeldWithinFed : Prop :=
   ∀ (total fuel : Nat) (b : Api.Built) (moves : List Move),
     Effect4.Api.Author.build (crew total) = .ok b →
+    TerminalReplies (Scenario.play (openedAt fuel b) moves) →
     funded (Scenario.play (openedAt fuel b) moves) = true →
     (observe (Scenario.play (openedAt fuel b) moves)).heldWithin = true
 

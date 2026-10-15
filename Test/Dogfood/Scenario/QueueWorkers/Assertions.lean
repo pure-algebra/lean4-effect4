@@ -130,8 +130,12 @@ theorem hostAct_scriptRows : ∀ (s : Run) (moves : List Move), moves.all Move.h
 def HostRows (s : Run) : Prop := ∀ c ∈ s.journal, HostRow c
 
 /-- A conserving ledger matches the actual observation, including unfinished command custody. -/
-def Jobs (s : Run) : Prop :=
+def RawJobs (s : Run) : Prop :=
   ∃ a : Ledger, a.Shows (observe s) ∧ a.Conserved
+
+/-- The conserving ledger applies to accepted terminal external replies.
+Delayed reference reads require a different fed observation. -/
+def Jobs (s : Run) : Prop := TerminalReplies s → RawJobs s
 
 /-- At rest a host journal empties custody and bounds loss, with the queue's actual wait counts. -/
 def Rest (s : Run) : Prop :=
@@ -178,7 +182,8 @@ theorem opened (total fuel : Nat) (b : Api.Built)
     ?_, ?_, ?_⟩
   · rw [Programs.queue_built_program total b hb]
     exact Programs.queue_acquisition_sites total
-  · exact ⟨Ledger.empty, ledger_opened fuel b⟩
+  · intro _
+    exact ⟨Ledger.empty, ledger_opened fuel b⟩
   · intro _ _
     obtain ⟨shows, conserved⟩ := ledger_opened fuel b
     refine ⟨Ledger.empty, shows, conserved, rfl, Nat.zero_le _, ?_⟩
@@ -193,8 +198,8 @@ theorem opened (total fuel : Nat) (b : Api.Built)
     · intro i _
       exact Nat.le_refl 0
 
-/-- Machine-to-model preservation for `held_within_fed` at an actual funded command boundary.
-It needs the queue-cell writer census, admitted take replies and once-entered continuations.
+/-- Machine-to-model preservation for `held_within_fed` under its accepted terminal-reply profile.
+It needs the queue-cell writer census, terminal take replies and once-entered continuations.
 Consumer: `jobs_boundary`, then the first clause. It establishes no rest or progress claim. -/
 @[semantics "translation-simulation" (requirement := R10)]
 proof_goal jobs_step :
@@ -250,7 +255,13 @@ theorem jobs_refused (s : Run) (c : Command)
     (why : Api.HostSession.Refusal) (hlen : s.journal.length = s.phases.length)
     (h : (Api.Runner.result s.runner c).phase = .refused why) (hs : Jobs s) :
     Jobs (s.step c) := by
-  obtain ⟨a, shows, conserved⟩ := hs
+  intro terminal
+  have before : TerminalReplies s := by
+    intro reply member
+    apply terminal reply
+    rw [rows_step s c hlen]
+    exact List.mem_append_left _ member
+  obtain ⟨a, shows, conserved⟩ := hs before
   exact ⟨a, shows_refused s c why hlen h shows, conserved⟩
 
 /-- A refused row keeps the cleanup assertion outright. -/
@@ -333,6 +344,23 @@ theorem host_journal (fuel : Nat) (b : Api.Built) (moves : List Move)
   rw [Scenario.play_scriptRows, Run.journal_play]
   change ∀ c ∈ Scenario.scriptRows (openedAt fuel b) moves, HostRow c
   exact hostAct_scriptRows (openedAt fuel b) moves hh
+
+/-- Every host-row journal satisfies the accepted terminal-reply profile. -/
+theorem host_terminal (s : Run) (host : HostRows s) : TerminalReplies s := by
+  intro reply member
+  change (.submit reply, Api.HostSession.Phase.preflight) ∈ s.journal.zip s.phases at member
+  exact host (.submit reply) (List.of_mem_zip member).1
+
+/-- A checked journal supplies the same explicit terminal-reply premise as the public claim. -/
+theorem terminal_of_check (s : Run) (checked : terminalRepliesCheck s = true) : TerminalReplies s := by
+  intro reply member
+  have selected := List.all_eq_true.mp checked (.submit reply, .preflight) member
+  cases completion : reply.completion with
+  | ofExit exit => exact ⟨exit, rfl⟩
+  | ofRefGet cell =>
+    change (match reply.completion with | .ofExit _ => true | .ofRefGet _ => false) = true at selected
+    rw [completion] at selected
+    cases selected
 
 /-- The concrete source-path debit bounds imply no repeated actual cleanup entry. -/
 theorem cleanup_read (m : NativeMachine) (hc : Cleanup m) : (log m).Nodup := by
