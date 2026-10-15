@@ -24,22 +24,29 @@ inductive Head : NCode → Prop
   | storedPark (kind : ParkKind) : Head (.suspend (.store (.park kind)))
 
 /-- Only a parked fiber owes a park-head observation. -/
-def Held (fiber : Fiber) : Prop := fiber.parked ≠ .notParked → Head fiber.frame.current
+def HeldWith (head : NCode → Prop) (fiber : Fiber) : Prop := fiber.parked ≠ .notParked → head fiber.frame.current
+
+/-- The original parked-head observation is the broad head instance. -/
+def Held (fiber : Fiber) : Prop := HeldWith Head fiber
+
+/-- Every supplied parked-head observation holds for an unparked actor. -/
+theorem unparked_with {head : NCode → Prop} {fiber : Fiber} (active : fiber.parked = .notParked) :
+    HeldWith head fiber := fun parked => False.elim (parked active)
 
 def Configuration (machine : NativeMachine) : Prop := ∀ fiber ∈ machine.fibers, Held fiber
 
 theorem unparked {fiber : Fiber} (active : fiber.parked = .notParked) : Held fiber :=
   fun parked => False.elim (parked active)
 
-theorem fields {first last : Fiber} (held : Held first)
-    (parked : last.parked = first.parked) (current : last.frame.current = first.frame.current) : Held last := by
+theorem fields_with {head : NCode → Prop} {first last : Fiber} (held : HeldWith head first)
+    (parked : last.parked = first.parked) (current : last.frame.current = first.frame.current) : HeldWith head last := by
   intro pending
   rw [current]
   exact held (fun empty => pending (parked.trans empty))
 
 /-- Interrupt recording retains the parked head or removes the park before replacing it. -/
-theorem interruption (cause : CauseV) (fiber : Fiber) (held : Held fiber) :
-    Held (interruptWithCause cause fiber).1 := by
+theorem interruption_with (head : NCode → Prop) (cause : CauseV) (fiber : Fiber) (held : HeldWith head fiber) :
+    HeldWith head (interruptWithCause cause fiber).1 := by
   unfold interruptWithCause
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
@@ -48,54 +55,93 @@ theorem interruption (cause : CauseV) (fiber : Fiber) (held : Held fiber) :
   · split
     · split
       · exact held
-      · exact unparked rfl
+      · exact unparked_with rfl
     · exact held
 
 /-- Existing other-fiber edits retain the parked-head observation. -/
-theorem edit {first last : Fiber} (word : Moves.OtherEdit first last) (held : Held first) : Held last := by
+theorem edit_with {head : NCode → Prop} {first last : Fiber} (word : Moves.OtherEdit first last) (held : HeldWith head first) : HeldWith head last := by
   cases word with
   | observe => exact held
   | filterObservers => exact held
-  | interruptCause cause => exact interruption cause _ held
+  | interruptCause cause => exact interruption_with head cause _ held
 
-theorem edits {first last : Fiber} (word : Moves.OtherEdits first last) (held : Held first) : Held last := by
+theorem edits_with {head : NCode → Prop} {first last : Fiber} (word : Moves.OtherEdits first last) (held : HeldWith head first) : HeldWith head last := by
   induction word with
   | refl => exact held
-  | tail prior next ih => exact edit next ih
+  | tail prior next ih => exact edit_with next ih
 
 /-- The existing interference witness retains old parked heads; every birth starts unparked. -/
-theorem interferes {first last : NativeMachine} (word : Moves.Interferes first last)
-    (held : Configuration first) : Configuration last := by
+theorem interferes_with {head : NCode → Prop} {first last : NativeMachine} (word : Moves.Interferes first last)
+    (held : ∀ fiber ∈ first.fibers, HeldWith head fiber) : ∀ fiber ∈ last.fibers, HeldWith head fiber := by
   intro fiber member
   rcases word.fibers fiber member with ⟨old, inside, changed⟩ | ⟨_, program, flag, budget, context, changed⟩
-  · exact edits changed (held old inside)
-  · exact edits changed (unparked rfl)
+  · exact edits_with changed (held old inside)
+  · exact edits_with changed (unparked_with rfl)
+
+/-- The broad observation retains its field-transport interface. -/
+theorem fields {first last : Fiber} (held : Held first)
+    (parked : last.parked = first.parked) (current : last.frame.current = first.frame.current) : Held last :=
+  fields_with held parked current
+
+/-- The broad observation retains its actual interruption interface. -/
+theorem interruption (cause : CauseV) (fiber : Fiber) (held : Held fiber) :
+    Held (interruptWithCause cause fiber).1 := interruption_with Head cause fiber held
+
+/-- The broad observation retains its actual edit interface. -/
+theorem edit {first last : Fiber} (word : Moves.OtherEdit first last) (held : Held first) : Held last :=
+  edit_with word held
+
+/-- The broad observation retains its actual edit-word interface. -/
+theorem edits {first last : Fiber} (word : Moves.OtherEdits first last) (held : Held first) : Held last :=
+  edits_with word held
+
+/-- The broad observation retains its actual interference interface. -/
+theorem interferes {first last : NativeMachine} (word : Moves.Interferes first last)
+    (held : Configuration first) : Configuration last := interferes_with word held
 
 /-- Pure frame evaluation changes no parked status. -/
-theorem step_frame (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
-    (active : fiber.parked = .notParked) : Held (evaluatePrim.stepFrame interp machine fiber yielding).fiber := by
+theorem step_frame_with (head : NCode → Prop) (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
+    (active : fiber.parked = .notParked) : HeldWith head (evaluatePrim.stepFrame interp machine fiber yielding).fiber := by
   unfold evaluatePrim.stepFrame evaluatePrim.finishFrame
   dsimp only
-  split <;> exact unparked active
+  split <;> exact unparked_with active
 
 /-- Finalizer interception either runs a pure frame step or retains the original unparked status. -/
-theorem finalizer (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
+theorem finalizer_with (head : NCode → Prop) (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
     (exit : ExitV) (active : fiber.parked = .notParked) :
-    Held (evaluatePrim.finalizerOr interp machine fiber yielding exit).fiber := by
+    HeldWith head (evaluatePrim.finalizerOr interp machine fiber yielding exit).fiber := by
   unfold evaluatePrim.finalizerOr
   repeat' split
-  all_goals aesop (add safe apply [step_frame], unsafe apply [unparked])
+  all_goals aesop (add safe apply [step_frame_with], unsafe apply [unparked_with])
 
 /-- A countdown either answers without a park or retains the original await head. -/
-theorem countdown (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber)
+theorem countdown_with (head : NCode → Prop) (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
-    (active : fiber.parked = .notParked) (head : Head fiber.frame.current) :
-    Held (countdownParkEdits interp machine fiber targets resume failFast).2.1 := by
+    (active : fiber.parked = .notParked) (currentHead : head fiber.frame.current) :
+    HeldWith head (countdownParkEdits interp machine fiber targets resume failFast).2.1 := by
   unfold countdownParkEdits
   dsimp only
   split
-  · exact unparked active
-  · exact fun _ => head
+  · exact unparked_with active
+  · exact fun _ => currentHead
+
+/-- The broad frame-step observation specializes the supplied-head producer. -/
+theorem step_frame (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
+    (active : fiber.parked = .notParked) : Held (evaluatePrim.stepFrame interp machine fiber yielding).fiber :=
+  step_frame_with Head interp machine fiber yielding active
+
+/-- The broad finalizer observation specializes the supplied-head producer. -/
+theorem finalizer (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
+    (exit : ExitV) (active : fiber.parked = .notParked) :
+    Held (evaluatePrim.finalizerOr interp machine fiber yielding exit).fiber :=
+  finalizer_with Head interp machine fiber yielding exit active
+
+/-- The broad countdown observation specializes the supplied-head producer. -/
+theorem countdown (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Fiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
+    (active : fiber.parked = .notParked) (head : Head fiber.frame.current) :
+    Held (countdownParkEdits interp machine fiber targets resume failFast).2.1 :=
+  countdown_with Head interp machine fiber targets resume failFast active head
 
 /-- Action entry can park only an await action; all other actions retain the unparked status. -/
 theorem action (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowTable)
@@ -159,46 +205,70 @@ theorem action (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowT
   case getInterruptible => exact unparked active
 
 /-- The native park decoder exposes an explicit park in the existing code. -/
-theorem park_head (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowTable)
-    (program : NCode) (park : (interpAt root view table).parkOf program ≠ none) : Head program := by
+theorem park_head_with (head : NCode → Prop)
+    (parkCase : ∀ kind, head (.suspend (.park kind)))
+    (storedCase : ∀ kind, head (.suspend (.store (.park kind)))) (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowTable)
+    (program : NCode) (park : (interpAt root view table).parkOf program ≠ none) : head program := by
   cases program
   case suspend thunk =>
     cases thunk
-    case park kind => exact .park kind
-    case store stored =>
-      cases stored
-      case park kind => exact .storedPark kind
+    case park kind => exact parkCase kind
+    case store thunk =>
+      cases thunk
+      case park kind => exact storedCase kind
       all_goals exact (park rfl).elim
     all_goals exact (park rfl).elim
   all_goals exact (park rfl).elim
 
 /-- The shared primitive classification supplies each actual parked head. -/
+theorem primitive_with (head : NCode → Prop)
+    (yielded : head (.success .unit))
+    (asynchronous : ∀ register signal cancel, head (.async register signal cancel))
+    (parkCase : ∀ kind, head (.suspend (.park kind)))
+    (storedCase : ∀ kind, head (.suspend (.store (.park kind)))) (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowTable)
+    (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
+    (active : fiber.parked = .notParked)
+    (actions : ∀ thunk chosen, fiber.frame.current = .withFiber thunk →
+      (interpAt root view table).parkOf fiber.frame.current = none →
+      (interpAt root view table).withFiberOf thunk = some chosen →
+      HeldWith head (evaluatePrim.withFiber (interpAt root view table) machine fiber yielding chosen).fiber) :
+    HeldWith head (evaluatePrim (interpAt root view table) machine fiber yielding).fiber := by
+  have producer := Moves.evaluatePrim_producer (interpAt root view table) machine fiber yielding
+  generalize actual : evaluatePrim (interpAt root view table) machine fiber yielding = result at producer ⊢
+  cases producer with
+  | step => exact step_frame_with head _ _ _ _ active
+  | finalizer exit current => exact finalizer_with head _ _ _ _ exit active
+  | action thunk chosen current unparked found =>
+    exact actions thunk chosen current unparked found
+  | sync | fallback | asyncImmediate | rejectedPark | joinMissing | joinExited => exact unparked_with active
+  | yieldNow => exact fun _ => yielded
+  | asyncParked register signal cancel state current registered =>
+    dsimp only
+    split <;> exact fun _ => current ▸ asynchronous register signal cancel
+  | racePark race park =>
+    unfold registerRace
+    split <;> exact unparked_with active
+  | countdownPark targets next returned parked edits park counted =>
+    have result := countdown_with head (interpAt root view table) machine fiber targets .exitsValue false active
+      (park_head_with head parkCase storedCase root view table fiber.frame.current (by rw [park]; intro wrong; cases wrong))
+    rw [counted] at result
+    exact result
+  | joinWaiting target mode other park found live =>
+    exact fun _ => park_head_with head parkCase storedCase root view table fiber.frame.current (by rw [park]; intro wrong; cases wrong)
+
+/-- The native decoder's broad head instance retains the old interface. -/
+theorem park_head (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowTable)
+    (program : NCode) (park : (interpAt root view table).parkOf program ≠ none) : Head program :=
+  park_head_with Head Head.park Head.storedPark root view table program park
+
+/-- The broad native observation specializes the single supplied-head primitive producer. -/
 theorem primitive (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowTable)
     (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
     (active : fiber.parked = .notParked) :
     Held (evaluatePrim (interpAt root view table) machine fiber yielding).fiber := by
-  have producer := Moves.evaluatePrim_producer (interpAt root view table) machine fiber yielding
-  generalize actual : evaluatePrim (interpAt root view table) machine fiber yielding = result at producer ⊢
-  cases producer with
-  | step => exact step_frame _ _ _ _ active
-  | finalizer exit current => exact finalizer _ _ _ _ exit active
-  | action thunk chosen current unparked found =>
-    exact action root view table machine fiber yielding chosen active (current ▸ Head.action thunk)
-  | sync | fallback | asyncImmediate | rejectedPark | joinMissing | joinExited => exact unparked active
-  | yieldNow => exact fun _ => .yielded
-  | asyncParked register signal cancel state current registered =>
-    dsimp only
-    split <;> exact fun _ => current ▸ Head.async register signal cancel
-  | racePark race park =>
-    unfold registerRace
-    split <;> exact unparked active
-  | countdownPark targets next returned parked edits park counted =>
-    have result := countdown (interpAt root view table) machine fiber targets .exitsValue false active
-      (park_head root view table fiber.frame.current (by rw [park]; intro wrong; cases wrong))
-    rw [counted] at result
-    exact result
-  | joinWaiting target mode other park found live =>
-    exact fun _ => park_head root view table fiber.frame.current (by rw [park]; intro wrong; cases wrong)
+  apply primitive_with Head Head.yielded Head.async Head.park Head.storedPark root view table machine fiber yielding active
+  intro thunk chosen current unparked found
+  exact action root view table machine fiber yielding chosen active (current ▸ Head.action thunk)
 
 /-- Scoped exit changes the frame and context while retaining the old unparked status. -/
 theorem scoped_exit (root : NativeEff) (machine : NativeMachine) (fiber : Fiber) (yielding : Bool)
