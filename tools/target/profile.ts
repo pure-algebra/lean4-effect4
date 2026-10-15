@@ -47,7 +47,8 @@ export function requirements(raw: unknown, scope: Key | undefined): string {
 }
 
 /** A row's target signature as Lean rendered it (`generated/row-types.tsv`, written by
- * `tools/Tools/RowTypes.lean` with `Ty.renderRaw` and the row's own `RowShape`). There is no
+ * `tools/Tools/RowTypes.lean` at the shipped spelling, `ofTy` rendered, and the row's own
+ * `RowShape`). There is no
  * second printer here: handle spellings stay as the row declares them and the query's
  * declarations bind them. `typeArgs` is the explicit instantiation a generic subject is queried
  * at (`<"p0">` for a `poly` atom, whose request and answer Lean rendered at the same probes),

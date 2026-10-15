@@ -121,7 +121,7 @@ export interface Report {
  * the algebra (decisions row 46) and is compared here, never refused as contamination. */
 export interface Pair {
   id: string
-  /** The two rendered types, as `Ty.renderRaw` printed them. */
+  /** The two types, at the spelling a printed module ships (`tools/Tools/TypeSpelling.lean`). */
   left: string
   right: string
 }
@@ -145,7 +145,7 @@ export interface PairReport {
 const axes: Axis[] = ["A", "E", "R", "request", "receiver"]
 export const bindingName = (axis: Axis, direction: string) => `__${axis}_${direction}`
 export const pairBindingName = (direction: "leftToRight" | "rightToLeft") => `__pair_${direction}`
-/** Every module of the effect namespace a rendered type can name (`Ty.renderRaw`), plus the
+/** Every module of the effect namespace a shipped type spelling can name, plus the
  * handle spellings it prints verbatim. */
 export const pairImports = ['import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from "effect"']
 

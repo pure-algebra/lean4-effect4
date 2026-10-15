@@ -12,7 +12,7 @@
  *
  * So: one query per row (`Parameters<typeof Ref.set>` and the three `Effect` columns of its
  * `ReturnType`) and one per atom (`Parameters<typeof Atoms.isSome>` and its `ReturnType`, which
- * is a value, not an `Effect`), with the expectation `Ty.renderRaw` prints for the row's request,
+ * is a value, not an `Effect`), with the expectation at the shipped spelling of the row's request,
  * answer and error, under the row's own shape (`generated/row-types.tsv`). A template atom is
  * queried at the explicit instantiation Lean rendered its columns at (`typeof Atoms.ite<"p0">`
  * against `[boolean, "p0", "p0"]`): the checker cannot judge a generic signature, an
