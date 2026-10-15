@@ -118,6 +118,107 @@ theorem protects_post (messageContext : MessageContext) (world : HostTimeoutNumb
   · cases passive
 
 
+/-- The actual count keeps arbitrary certified saved frames and the same joined queue and snapshot. -/
+theorem count_joint_over (messageContext : MessageContext) (world : HostTimeoutNumberConfiguration.World)
+    (machine : Effect4.Program.NativeMachine) (context : CountContext)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool) (pending : List Guard.NCmd) (tasks : List NTask)
+    (census : OnlyAttempt world fiber.id context) (found : machine.fiber? fiber.id = some fiber)
+    (assigned : (fiber.id, Role.pending context) ∈ world.roles) (held : Configuration world machine)
+    (queued : Commands world machine pending) (detached : Snapshot world machine tasks)
+    (targets : Targets world fiber.id pending) (live : fiber.exit = none)
+    (heap : HostTimeoutNumberPhaseFlow.At context.before machine.state)
+    (current : fiber.frame.current = context.write)
+    (installedFin : CountInstalled context fiber.frame) (ready : CountReady context fiber yielding)
+    (numeric : HostTimeoutNumberUniform.FrameAt {machine.state with refs := context.entered.heap}
+      (.attempt context.before context.entered (by
+        change context.before.count + 1 = context.before.cleanups.length + 1
+        rw [context.cleanups])) {fiber.frame with current := .success .unit}) :
+    letI := evaluatorFor HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+    let state := {machine.state with refs := context.entered.heap}
+    let next := postMachine machine context fiber
+    iteration (interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table) machine fiber yielding =
+      ⟨{machine with state}, postFiber fiber, yielding, .answered, [.drainDue], []⟩ ∧
+    Configuration {world with phase := context.entered} next ∧
+    Commands {world with phase := context.entered} next pending ∧
+    Snapshot {world with phase := context.entered} next tasks ∧
+    Protects messageContext {world with phase := context.entered} next pending := by
+  have old := held.lookup world machine fiber.id (.pending context) assigned fiber found
+  have charged : FiberAt machine (.pending context) (countOp fiber) :=
+    ⟨old.frame, old.exit, old.retired, old.recorded, old.immediate,
+      old.pendingRunning, old.pendingCustody, old.pendingDeferred⟩
+  have active := counted_fiber_over machine context (countOp fiber) charged live heap installedFin numeric
+  have config := configuration_store world machine context fiber (postFiber fiber)
+    {machine.state with refs := context.entered.heap} context.entered census found assigned rfl
+    ready.2.2 rfl rfl held active (.inr (.inl rfl))
+  have saved : fiber.frame.stack ≠ [] := by
+    intro empty
+    obtain ⟨point, body, source, member⟩ := installedFin
+    rw [empty] at member
+    cases member
+  have answer := HostTimeoutNumberEntry.count_sync machine.state context.before.count context.delay context.n
+    context.previous context.before.cleanups context.before.completed
+  change syncOpStep (.refUpdate ⟨0⟩ HostTimeoutNumberEntry.countTerm context.point.env)
+    {machine.state with refs := context.before.heap} =
+      some ({machine.state with refs := context.entered.heap}, .unit) at answer
+  have previous : {machine.state with refs := context.before.heap} = machine.state := by rw [← heap]
+  rw [previous] at answer
+  have evaluated := ControlSteps.native_sync_op HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+    machine (countOp fiber) yielding _ _ .unit current answer
+  have committed :
+      letI := evaluatorFor HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+      iteration (interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table) machine fiber yielding =
+        ⟨{machine with state := {machine.state with refs := context.entered.heap}}, postFiber fiber,
+          yielding, .answered, [.drainDue], []⟩ := by
+    rw [count_iteration context machine fiber yielding installedFin ready]
+    exact evaluated
+  exact ⟨committed, config,
+    commands_post world machine context fiber pending census found live ready.2.2 saved targets queued,
+    snapshot_replies world machine _ tasks
+      (reply_store world machine context fiber (postFiber fiber) _ census found rfl ready.2.2) detached,
+    protects_post messageContext world machine context fiber pending census⟩
+
+/-- The actual source count head derives its heap, finalizer, and answer permission from one configuration.
+Consumer: the pending native branch advances the joined machine, queue, and snapshot. -/
+theorem count_joint_frame (messageContext : MessageContext) (world : HostTimeoutNumberConfiguration.World)
+    (machine : Effect4.Program.NativeMachine) (context : CountContext)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool) (pending : List Guard.NCmd) (tasks : List NTask)
+    (census : OnlyAttempt world fiber.id context) (found : machine.fiber? fiber.id = some fiber)
+    (assigned : (fiber.id, Role.pending context) ∈ world.roles) (held : Configuration world machine)
+    (queued : Commands world machine pending) (detached : Snapshot world machine tasks)
+    (targets : Targets world fiber.id pending) (live : fiber.exit = none)
+    (term : Term) (env : List Val)
+    (current : fiber.frame.current = .sync (.op (.refUpdate ⟨0⟩ term env)))
+    (source : SourceScope.FrameAt HostTimeoutSource.program fiber.frame)
+    (admitted : CommandAt world machine (.loop fiber.id yielding)) :
+    letI := evaluatorFor HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+    let state := {machine.state with refs := context.entered.heap}
+    let next := postMachine machine context fiber
+    iteration (interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table) machine fiber yielding =
+      ⟨{machine with state}, postFiber fiber, yielding, .answered, [.drainDue], []⟩ ∧
+    Configuration {world with phase := context.entered} next ∧
+    Commands {world with phase := context.entered} next pending ∧
+    Snapshot {world with phase := context.entered} next tasks ∧
+    Protects messageContext {world with phase := context.entered} next pending := by
+  have provided := held.lookup world machine fiber.id (.pending context) assigned fiber found
+  obtain ⟨input, authored, heap, early, path, good⟩ :=
+    count_permission world context machine fiber term env assigned held provided current
+  have installedFin := installed_of_path context machine.state fiber.frame input early path provided.frame.1 source
+  have ready := admitted context assigned heap fiber found installedFin
+  have future : HostTimeoutNumberFlow.Future machine.state {machine.state with refs := context.entered.heap} := by
+    constructor
+    · change machine.state.refs.length ≤ context.entered.heap.length
+      rw [heap]
+      exact Nat.le_refl _
+    · exact Nat.le_refl _
+  have numeric : HostTimeoutNumberUniform.FrameAt {machine.state with refs := context.entered.heap}
+      (.attempt context.before context.entered (by
+        change context.before.count + 1 = context.before.cleanups.length + 1
+        rw [context.cleanups])) {fiber.frame with current := .success .unit} := by
+    refine ⟨input, .success input .unit good, ?_⟩
+    exact path.map (fun first last frame edge => HostTimeoutNumberUniform.Edge.future _ _ first last frame future edge)
+  exact count_joint_over messageContext world machine context fiber yielding pending tasks census found assigned
+    held queued detached targets live heap authored installedFin ready numeric
+
 /-- The actual native count returns one joined machine, old queue, detached snapshot, and protected-owner assertion. -/
 theorem count_joint (messageContext : MessageContext) (world : HostTimeoutNumberConfiguration.World)
     (machine : Effect4.Program.NativeMachine) (context : CountContext)
@@ -139,12 +240,13 @@ theorem count_joint (messageContext : MessageContext) (world : HostTimeoutNumber
     Commands {world with phase := context.entered} next pending ∧
     Snapshot {world with phase := context.entered} next tasks ∧
     Protects messageContext {world with phase := context.entered} next pending := by
-  have saved : fiber.frame.stack ≠ [] := by rw [stack]; exact List.cons_ne_nil _ _
-  exact ⟨(count_iteration_commit context [] machine fiber yielding heap current stack ready).1,
-    count_machine world machine context fiber yielding census found assigned held live heap current stack ready,
-    commands_post world machine context fiber pending census found live ready.2.2 saved targets queued,
-    snapshot_replies world machine _ tasks
-      (reply_store world machine context fiber (postFiber fiber) _ census found rfl ready.2.2) detached,
-    protects_post messageContext world machine context fiber pending census⟩
+  have installedFin : CountInstalled context fiber.frame := by
+    apply CountInstalled.exact
+    change _ ∈ fiber.frame.stack
+    rw [stack]
+    exact List.mem_cons_of_mem _ (List.mem_cons_self ..)
+  exact count_joint_over messageContext world machine context fiber yielding pending tasks census found assigned
+    held queued detached targets live heap current installedFin ready
+    (counted_frame_uniform context _ fiber.frame rfl stack)
 
 end Test.Dogfood.Proofs.HostTimeoutNumberCountQueue

@@ -68,7 +68,7 @@ def NameAt (context : CountContext) : EffName → Prop
 /-- Source actions retain their actual point; no embedded native action is admitted. -/
 def ThunkAt (context : CountContext) : EffThunk → Prop
   | .pure point | .body point | .act point => At context point
-  | .op _ | .park _ | .getCtx | .captureMask => True
+  | .op _ | .getCtx | .captureMask => True
   | _ => False
 
 /-- The existing generated code fold carries these exact leaves through current and saved code. -/
@@ -94,19 +94,33 @@ theorem asynchronous (context : CountContext) (row : NativeOp) (request : Term) 
 
 /-- The existing compiler fold consumes the restricted source leaves directly. -/
 theorem compilation (context : CountContext) :
-    CodeClosure.CompileContract HostTimeoutSource.program (At context) (NameAt context) (ThunkAt context) := by
+    CodeClosure.IndexedCompileContract HostTimeoutSource.program Unit (fun _ => At context)
+      (fun _ => CodeAt context) := by
+  have nextPoint : ∀ point : Point, At context point → ∀ index, At context (point.child index) :=
+    fun _ held index => (transport context).child held index
   refine {
-    child := ?_, body := ?_, pure := ?_, act := ?_, operation := ?_, asynchronous := ?_,
-    cont := ?_, caught := ?_, caughtError := ?_, onValue := ?_, onCause := ?_, fin := ?_,
-    forkScoped := ?_, acquire := ?_, service := ?_, provideService := ?_, provideContext := ?_,
-    getContext := ?_, captureMask := ?_, park := ?_ }
-  case refine_1 => intro p e i found held selected; exact (transport context).child held i
-  case refine_2 => intro p e found held; exact held
-  case refine_3 => intro p term found held; exact held
-  case refine_4 => intro p e found held; exact held
-  case refine_5 => intros; trivial
-  case refine_6 => intros; exact asynchronous context _ _ _
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [NameAt, ThunkAt, exceptional, exceptionalSource]) (add safe forward [ordinary_source])
+    failure := ?_, success := ?_, body := ?_, pure := ?_, act := ?_, operation := ?_,
+    asynchronous := ?_, bind := ?_, caught := ?_, caughtError := ?_, matched := ?_,
+    finalized := ?_, exited := ?_, restored := ?_, definitions := ?_, yielding := ?_,
+    awaited := ?_, parked := ?_, forkScoped := ?_, acquire := ?_, service := ?_,
+    provideService := ?_, context := ?_ }
+  case refine_1 => intros; trivial
+  case refine_2 => intros; trivial
+  case refine_3 => intro point code kind found held; exact held
+  case refine_4 => intro point term kind found held; exact held
+  case refine_5 => intro point code kind found held; exact held
+  case refine_6 => intros; trivial
+  case refine_7 => intros; exact asynchronous context _ _ _
+  case refine_8 | refine_9 | refine_10 | refine_11 | refine_12 =>
+    all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt]) (add safe apply [nextPoint])
+  case refine_13 =>
+    intro point first kind found held
+    refine ⟨(), (transport context).child held 0, ?_⟩
+    intro body good
+    cases selected : body.asExit? with
+    | none => exact good
+    | some exit => trivial
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt, ThunkAt, exceptional, exceptionalSource, Prim.ofExit]) (add safe forward [ordinary_source])
 
 /-- Resolving an actual retained point uses the shared compiler closure. -/
 theorem resolve_at (context : CountContext) (point : Point) (held : At context point) :
@@ -114,7 +128,7 @@ theorem resolve_at (context : CountContext) (point : Point) (held : At context p
   unfold resolve
   split
   · rename_i code found
-    exact CodeClosure.compile_closure (compilation context) code point found held
+    exact CodeClosure.indexed_compile_closure (compilation context) code point () found held
   · trivial
 
 /-- A callback's actual bound child remains in the same source subtree. -/
@@ -153,7 +167,7 @@ theorem suspend_leaf (context : CountContext) (thunk : EffThunk) (owned : ThunkA
   cases thunk
   case body point =>
     exact CodeClosure.suspend_body_at _ fragment (At context) (CodeAt context)
-      { compiled := fun code point found held => CodeClosure.compile_closure (compilation context) code point found held
+      { compiled := fun code point found held => CodeClosure.indexed_compile_closure (compilation context) code point () found held
         frontier := fun _ held => held
         child := fun point held => resolve_at context _ ((transport context).child held 0)
         selected := fun point first bound held => resolve_selected context point _ bound held
@@ -401,6 +415,17 @@ theorem frame_step (context : CountContext) (view : HostTimeoutFlow.View)
   rw [actual] at moved
   obtain ⟨input, code, saved⟩ := moved
   exact ⟨code, CodeClosure.PredicateFamily.path_owned (CodeAt context) saved⟩
+
+/-- A pending source head cannot contain an unminted native park. -/
+theorem park_absent (context : CountContext) (view : HostTimeoutFlow.View)
+    (code : NCode) (owned : CodeAt context code) :
+    (HostTimeoutFlow.interpreter view).parkOf code = none := by
+  change (match code with
+    | .suspend (.park kind) => some (Except.ok kind)
+    | .suspend (.store (.park kind)) => some (Except.ok kind)
+    | _ => none) = none
+  split
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, ThunkAt])
 
 end Test.Dogfood.Proofs.HostTimeoutNumberSourceActions
 
