@@ -12,11 +12,7 @@ namespace Test.Dogfood.Scenario.Atomic.RootBindings
 open Effect4 Effect4.Machine Effect4.Program
 
 /-- Root cells precede the daemon and five requests; the last request follows the sleep. -/
-def expected (slot : Nat) : Option Val :=
-  if slot < 3 then some (Val.cell ⟨slot⟩)
-  else if slot < 9 then some (Val.fiber ⟨slot - 2⟩)
-  else if slot = 15 then some (Val.fiber ⟨7⟩)
-  else none
+abbrev expected := RootSlots.expected
 
 /-- Every already-created handle occupies its actual source binder slot. -/
 def Holds (env : List Val) : Prop :=
@@ -43,7 +39,7 @@ theorem append (env : List Val) (value : Val) (held : Holds env) (answer : Answe
 theorem initial : Holds [Val.cell ⟨0⟩, Val.cell ⟨1⟩, Val.cell ⟨2⟩] := by
   intro slot value known small
   have bound : slot < 3 := small
-  have eq : Val.cell ⟨slot⟩ = value := Option.some.inj (by simpa only [expected, if_pos bound] using known)
+  have eq : Val.cell ⟨slot⟩ = value := Option.some.inj (by simpa only [expected, RootSlots.expected, if_pos bound] using known)
   subst value
   have cases : slot = 0 ∨ slot = 1 ∨ slot = 2 := by omega
   rcases cases with rfl | rfl | rfl <;> rfl
@@ -70,7 +66,7 @@ theorem fork_answer (env : List Val) (slot : Nat) (small : slot < 7)
   · rw [if_pos first] at known
     have low : ¬ 3 + slot < 3 := by omega
     have high : 3 + slot < 9 := by omega
-    simp only [expected, if_neg low, if_pos high] at known
+    simp only [expected, RootSlots.expected, if_neg low, if_pos high] at known
     have arithmetic : 3 + slot - 2 = slot + 1 := by omega
     simpa only [arithmetic] using Option.some.inj known
   · have last : slot = 6 := by omega
@@ -107,5 +103,37 @@ theorem fork_transition (root : NativeEff) (table : RowTable) (view)
   dsimp only
   rw [id]
   exact ⟨rfl, count, slots, callback, child⟩
+
+/-- The actual fork source binder determines both sides of the allocation counter. -/
+theorem fork_rank (slot : Nat) (small : slot < 7) :
+    RootSlots.rank (StageSource.forkBinder slot) = slot + 1 ∧
+      RootSlots.rank (StageSource.forkBinder slot + 1) = slot + 2 := by
+  have cases : slot = 0 ∨ slot = 1 ∨ slot = 2 ∨ slot = 3 ∨ slot = 4 ∨ slot = 5 ∨ slot = 6 := by omega
+  rcases cases with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals exact ⟨rfl, rfl⟩
+
+/-- One actual fork advances the same external world used by its returned root answer. -/
+theorem fork_stage_transition (root : NativeEff) (table : RowTable)
+    (machine : NativeMachine) (parent : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (world : StageWorld.World) (point : Point) (slot : Nat) (options : Supervision.ForkOptions)
+    (small : slot < 7) (length : point.env.length = StageSource.forkBinder slot)
+    (nextId : machine.nextId = slot + 1) :
+    let actionPoint := point.child 0
+    let spawned := Machine.spawn (interpOf root table) machine parent
+      (resolve root ((actionPoint.child 0).child 0)) options (actionPoint.child 0).path
+    ∃ after : StageWorld.World, StageWorld.Future world after ∧
+      spawned.1.nextId = after.nextId ∧
+      StageWorld.ValueAt after (.rootAnswer point.env.length) (Val.fiber spawned.2.2) := by
+  obtain ⟨id, count, child⟩ := StageSource.spawn_role root table machine parent slot (point.child 0) options nextId
+  dsimp only
+  refine ⟨{world with nextId := slot + 2}, ⟨fun _ => .refl _, fun _ held => held⟩, count, ?_⟩
+  change slot + 2 = RootSlots.rank (point.env.length + 1) ∧ RootSlots.Answer point.env.length (Val.fiber _)
+  rw [length]
+  refine ⟨(fork_rank slot small).2.symm, ?_⟩
+  rw [id]
+  have answered := fork_answer point.env slot small length
+  change RootSlots.Answer point.env.length (Val.fiber ⟨slot + 1⟩) at answered
+  rw [length] at answered
+  exact answered
 
 end Test.Dogfood.Scenario.Atomic.RootBindings

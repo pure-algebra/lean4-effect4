@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.Writes
+import Test.Dogfood.Scenario.Atomic.RootSlots
 import Effect4.Laws.Machine.AnswerFlow
 
 /-!
@@ -38,6 +39,7 @@ theorem Advances.rejected {stage : Stage} (held : Advances .rejected stage) : st
 structure World where
   stages : Nat → Stage
   cleaned : Nat → Bool
+  nextId : Nat := 1
 
 /-- A future world retains every earlier stage transition and positive cleanup witness. -/
 def Future (before after : World) : Prop :=
@@ -79,6 +81,7 @@ theorem markCleaned_future (world : World) (id : Nat) (positive : Bool) :
 /-- The decision and deposit answers differ from the request's final Boolean answer. -/
 inductive Kind
   | ordinary
+  | rootAnswer (binder : Nat)
   | decision (id : Nat)
   | deposit (id : Nat)
   | body (id : Nat)
@@ -90,6 +93,8 @@ inductive Kind
 Consumer: the actual decision continuation's saved-answer contract. -/
 def ValueAt (world : World) : Kind → Val → Prop
   | .ordinary, _ => True
+  | .rootAnswer binder, value =>
+    world.nextId = RootSlots.rank (binder + 1) ∧ RootSlots.Answer binder value
   | .decision id, .bool admitted =>
     world.stages id = if admitted then .admitted else .rejected
   | .deposit id, .nat _ => world.stages id = .deposited
