@@ -43,6 +43,41 @@ theorem acquisition_return (spec : Spec) (view : List (FiberId × ExitV)) (table
         (cont_ordinary spec.root spec.acquisitions (sites spec) _ answer named)⟩
   · exact Agreement.at_child atBody 1
 
+/-- The acquisition body returns through the constrained literal continuation. -/
+theorem acquisition_code (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (identity : Nat) (point : Point) (member : identity ∈ spec.identities)
+    (source : SourcePoint spec point) (path : point.path = spec.acquirePath identity ++ [0]) :
+    CodeAt spec (.connection identity) (resolve spec.root point) := by
+  obtain ⟨note, body⟩ := spec.acquisitionBody identity member
+  have found : Node.at_ (.eff spec.root) point.path =
+      some (.eff (.bind note (.succeed (.lit (.nat identity))))) := by rw [path]; exact body
+  rw [Agreement.resolve_of_at found]
+  cases fuel : point.fuel with
+  | zero =>
+    rw [Agreement.compileEff_at_zero _ fuel]
+    exact .inl ⟨fuel, source⟩
+  | succ amount =>
+    rw [Agreement.compileEff_bind _ _ fuel]
+    refine ⟨.root, compile_at spec fragment note (point.child 0) (Agreement.at_child found 0)
+      ?_ source.2.1 (.inl (ordinary_zero spec point)), ?_⟩
+    · exact SourceScope.child_at spec.root point 0
+        (SourceScope.next_of_at spec.root point _ 0 0 found source.1 rfl)
+    · exact ⟨member, ⟨SourceScope.next_of_at spec.root point _ 1 1 found source.1 rfl,
+        note, .succeed (.lit (.nat identity)), found⟩, source, path⟩
+
+/-- The real acquire-in callback installs the constrained acquired callback around its source body. -/
+theorem acquireIn_callback (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (point : Point) (ctx : Ctx) (scope : Nat)
+    (named : OrdinaryName spec (.acquireIn point ctx)) :
+    CodeAt spec .root (contAOf spec.root (.acquireIn point ctx) (.scopeHandle scope)) := by
+  obtain ⟨lexical, slots, source, identity, member, path⟩ := named
+  refine ⟨.connection identity, ?_, member, ⟨lexical.2.1, lexical.2.2⟩, source, path⟩
+  apply acquisition_code spec fragment identity _ member
+  · exact ⟨SourceScope.child_at spec.root point 0 lexical.1, slots,
+      .inl (ordinary_zero spec point)⟩
+  · change point.path ++ [0] = spec.acquirePath identity ++ [0]
+    rw [path]
+
 /-- The source's lexical level fixes the actual position of its acquisition answer. -/
 theorem acquired_length (spec : Spec) (identity : Nat) (point : Point)
     (member : identity ∈ spec.identities) (source : SourceScope.At spec.root point)
