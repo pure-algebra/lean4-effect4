@@ -53,6 +53,44 @@ theorem assignment_source (total worker : Nat) (member : worker ∈ [1, 2]) :
   · exact ⟨_, _, rfl⟩
   exact (List.not_mem_nil member).elim
 
+/-- Both source continuations begin with the same actual assignment form. -/
+theorem after_take_shape (total worker : Nat) (member : worker ∈ [1, 2]) :
+    ∃ term rest, afterTake total worker = .bind (.perform (.refUpdateWith term) (.var 3)) rest := by
+  rcases List.mem_cons.mp member with rfl | member
+  · exact ⟨_, _, rfl⟩
+  rcases List.mem_cons.mp member with rfl | member
+  · exact ⟨_, _, rfl⟩
+  exact (List.not_mem_nil member).elim
+
+/-- An actual-body compiler override reuses the checked take and assignment chains.
+Its unchecked child induction cannot supply the worker's job permission. -/
+theorem constructor (total worker : Nat) (member : worker ∈ [1, 2]) (table : RowTable)
+    (world : QueueWorkersCustodyFlow.World) (owner : FiberId) (point : Point) (firstCode : NCode)
+    (owned : SourceScope.At (Programs.queueProgram total) point)
+    (atPath : point.path = path worker)
+    (leading : AnswerSlots.Prefix InitialSlots.bindings point.env)
+    (actual : firstCode = compileEff
+      (.bind (.withFiber .getInterruptible) (.uninterruptible (QueueWorkersTakeWrapper.allocation worker)))
+      (point.child 0)) :
+    QueueWorkersJobGraph.CodeAt total table owner world .ordinary (.onSuccess firstCode (.cont point)) := by
+  have found := source total worker member
+  rw [← atPath] at found
+  apply QueueWorkersJobGraph.CodeAt.bound (input := .job owner) rfl
+  · rw [actual, ← Agreement.resolve_of_at (Agreement.at_child (p := point) found 0)]
+    apply QueueWorkersTakeWrapper.body total worker member table world owner (point.child 0)
+    · exact SourceScope.child_at _ _ 0 (SourceScope.next_of_at _ _ _ 0 0 found owned rfl)
+    · change point.path ++ [0] = QueueWorkersTakeWrapper.path worker
+      rw [atPath, take_path worker member]
+    · exact leading
+  · intro nextWorld future view answer good
+    cases answer
+    case nat job =>
+      obtain ⟨term, rest, shape⟩ := after_take_shape total worker member
+      rw [shape] at found
+      exact QueueWorkersJobGraph.worker_callback total table nextWorld owner point _ rest term job view
+        owned found leading good
+    all_goals exact good.elim
+
 /-- The actual worker binder accepts only the job classified by its own take continuation. -/
 theorem body (total worker : Nat) (member : worker ∈ [1, 2]) (table : RowTable)
     (world : QueueWorkersCustodyFlow.World) (owner : FiberId) (point : Point)
@@ -70,24 +108,5 @@ theorem body (total worker : Nat) (member : worker ∈ [1, 2]) (table : RowTable
     exact .frontier fuel
   | succ amount =>
     rw [Agreement.compileEff_bind _ _ fuel]
-    apply QueueWorkersJobGraph.CodeAt.bound (input := .job owner) rfl
-    · rw [← Agreement.resolve_of_at (Agreement.at_child (p := point) found 0)]
-      apply QueueWorkersTakeWrapper.body total worker member table world owner (point.child 0)
-      · exact SourceScope.child_at _ _ 0 (SourceScope.next_of_at _ _ _ 0 0 found owned rfl)
-      · change point.path ++ [0] = QueueWorkersTakeWrapper.path worker
-        rw [atPath, take_path worker member]
-      · exact leading
-    · intro nextWorld future view answer good
-      cases answer
-      case nat job =>
-        obtain ⟨actual, captured⟩ := QueueWorkersJobBinding.callback (Programs.queueProgram total)
-          nextWorld owner point _ _ job view table found owned good
-        rw [actual]
-        obtain ⟨term, rest, assignment⟩ := assignment_source total worker member
-        apply QueueWorkersJobGraph.assignment_body total table nextWorld owner _ term rest captured
-          (leading.append [.nat job])
-        change Node.at_ (.eff (Programs.queueProgram total)) (point.path ++ [1]) = _
-        rw [atPath]
-        exact assignment
-      all_goals exact good.elim
+    exact constructor total worker member table world owner point _ owned atPath leading rfl
 end Test.Dogfood.Proofs.QueueWorkersWorkerBinding
