@@ -40,6 +40,15 @@ theorem data : run.map (fun s => ((observe s).fed, (observe s).held, funded s)) 
 theorem outside_profile : run.map terminalRepliesCheck = some false := by
   kernel_rfl
 
+/-- A resumed delayed reference completion still contains unexecuted code in the trace. -/
+def delayedResume : RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx → Bool
+  | .resumedWith _ _ (.sync (.store (.op (.refGet cell)))) => decide (cell = ⟨4⟩)
+  | _ => false
+
+/-- The actual trace records the delayed read program before its synchronous value is known. -/
+theorem resumed_delayed : run.map (fun s => s.machine.trace.any delayedResume) = some true := by
+  kernel_rfl
+
 /-- The admitted funded session refutes the original conserving-ledger assertion. -/
 theorem refutes : ∃ s : Run, run = some s ∧ funded s = true ∧ ¬ Assertions.RawJobs s := by
   have measured := data

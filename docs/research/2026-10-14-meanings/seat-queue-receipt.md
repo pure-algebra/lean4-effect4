@@ -50,3 +50,34 @@ The coordinator owns the joint guarded machine, queue and task driver.
 This seat owns the reusable initializer and stable answer model.
 `logs_history`, `jobs_step` and `rest_step` remain planned goals.
 No behaviour comparison establishes those unfinished proofs.
+
+## Native answer extension
+
+`d57a8c5d5` adds actual synchronous allocation answers and whole continuation return wrappers.
+Ready workers use a broad yield class that allows other workers to grow deferred stores.
+Transient initialization yields retain exact lengths and require the initialization phase.
+The explicit readiness decision avoids `Classical.choice`.
+
+The narrow command is `lake build Effect4.Laws.Program.AnswerSlots.InitializedSync Effect4.Laws.Machine.AnswerFlowResume Test.Dogfood.Proofs.QueueWorkersLogValues Test.Dogfood.Scenario.QueueWorkers.RefReplyControl`.
+It passes 1327 jobs before the readiness decision repair.
+The repaired dependency build checks the changed initialized modules again.
+`lake env lean InitialAudit.lean` audits 204 declarations without goals or dependencies on goals.
+
+The concrete log-value extension reads actual source updates and their protected environment.
+`QueueWorkersLogValues.operation_value` proves the actual cleanup update appends its acquired identity.
+Its premise is the typed source-operation certificate, which the history producer must establish.
+`lake build Test.Dogfood.Proofs.QueueWorkersLogValues` passes 1303 jobs.
+`lake env lean QueueAudit.lean` audits 254 declarations without goals or dependencies on goals.
+Both audits admit only `propext` and `Quot.sound`.
+
+The Overwatch suggestion to read values from `resumedWith` does not apply as stated.
+That event records an unexecuted program, including delayed reference reads.
+`RefReplyControl.resumed_delayed` retains this fact by kernel reduction on the admitted control.
+The current terminal-reply correction remains explicit.
+A general-admission fed observation still needs an actual continuation-value witness.
+No machine or trace definition changes.
+
+The unrestricted native history producer remains open.
+The bare root-cell producer for Atomic and Timeout also remains open.
+The current initialized model requires a crew gate and protected acquisition specification.
+It does not establish a standalone root-cell history for those other programs.
