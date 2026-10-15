@@ -1,5 +1,6 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberContext
-import Effect4.Laws.Program.CodeClosure.Callbacks
+import Effect4.Laws.Program.CodeClosure.Stable
+import Effect4.Laws.Machine.AnswerFlowNativeExit
 import Effect4.Laws.Program.AnswerSlots.Points
 
 /-!
@@ -219,5 +220,75 @@ theorem counted_frame (context : CountContext) (frame : Test.Dogfood.Proofs.Host
     FrameAt context {frame with current := .success .unit} := by
   have before := count_frame context {frame with current := context.write} (.binder _ rfl stack)
   exact ⟨trivial, before.saved⟩
+
+/-- The pending source assertion uses the existing stable interface with its actual callback contract. -/
+abbrev sourceSpec (context : CountContext) :=
+  CodeClosure.Slots.prefixSpec HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+    (At context) (AnswerSlots.Prefix (bindings context))
+
+/-- Each saved edge reads the same captured source fields on the actual saved code. -/
+abbrev Edge (context : CountContext) :=
+  CodeClosure.Slots.prefixEdge (At context) (AnswerSlots.Prefix (bindings context))
+
+/-- The existing stable saved-family and native-head proof supplies the pending source producer. -/
+def sourceLaws (context : CountContext) : AnswerSlots.StableLaws (sourceSpec context) :=
+  CodeClosure.Slots.prefixLaws _ fragment _ _ (contract context)
+    (fun p held view => completed context p view held) _
+
+/-- The actual pending frame reads as the shared source family's current code and saved path. -/
+theorem FrameAt.result (context : CountContext) (view : HostTimeoutFlow.View)
+    (frame : Test.Dogfood.Proofs.HostTimeoutFrames.NativeFrame) (held : FrameAt context frame) :
+    AnswerFlow.FamilyResult ((sourceSpec context).model view) (Edge context) () () frame.current frame.stack :=
+  ⟨(), held.current, CodeClosure.Slots.prefix_path _ _ frame.stack held.saved⟩
+
+/-- The shared family result returns the same pending source assertion without changing its code or stack. -/
+theorem FrameAt.of_result (context : CountContext) (view : HostTimeoutFlow.View)
+    (frame : Test.Dogfood.Proofs.HostTimeoutFrames.NativeFrame)
+    (held : AnswerFlow.FamilyResult ((sourceSpec context).model view) (Edge context) () () frame.current frame.stack) :
+    FrameAt context frame := by
+  obtain ⟨input, code, saved⟩ := held
+  exact ⟨code, CodeClosure.Slots.prefix_path_owned _ _ saved⟩
+
+/-- Actual native finalizer dispatch retains the pending source annotation through its real selected frame. -/
+theorem finalizer_frame (context : CountContext) (view : HostTimeoutFlow.View)
+    (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV)
+    (current : fiber.frame.current = Prim.ofExit exit) (held : FrameAt context fiber.frame) :
+    let next := evaluatePrim.finalizerOr (HostTimeoutFlow.interpreter view) machine fiber yielding exit
+    FrameAt context next.fiber.frame := by
+  obtain ⟨input, code, path⟩ := held.result context view fiber.frame
+  have good : AnswerFlow.ExitAt ((sourceSpec context).model view) () input exit := by cases exit <;> trivial
+  obtain ⟨output, next⟩ := AnswerFlow.External.Native.finalizer_frame ((sourceSpec context).model view)
+    (HostTimeoutFlow.interpreter view) (Edge context) ((sourceLaws context).family view)
+    (fun world kind => by trivial) () input () machine fiber yielding exit current code path good
+    (by intros; trivial) (by intros; rfl)
+  exact FrameAt.of_result context view _ (by cases output; exact next)
+
+/-- An ordinary actual frame step consumes the shared source head and retains the selected saved suffix. -/
+theorem step_frame (context : CountContext) (view : HostTimeoutFlow.View)
+    (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool)
+    (held : FrameAt context fiber.frame)
+    (noSuccess : ∀ value, fiber.frame.current ≠ .success value)
+    (noFailure : ∀ cause, fiber.frame.current ≠ .failure cause)
+    (noSync : ∀ thunk, fiber.frame.current ≠ .sync thunk) :
+    let next := evaluatePrim.stepFrame (HostTimeoutFlow.interpreter view) machine fiber yielding
+    FrameAt context next.fiber.frame := by
+  obtain ⟨input, code, path⟩ := held.result context view fiber.frame
+  have next := AnswerFlow.frame_step ((sourceSpec context).model view)
+    (HostTimeoutFlow.interpreter view).toPrimInterp (Edge context) () input () fiber.frame
+    ((sourceLaws context).head view input _ code) path
+    (by
+      intro value provided actual good
+      rcases actual with ⟨current, supplied⟩ | ⟨thunk, current, valueEq, supplied⟩
+      · exact (noSuccess value current).elim
+      · exact (noSync thunk current).elim)
+    (by intro cause current good; exact (noFailure cause current).elim)
+  have running : AnswerFlow.External.RunningStep ((sourceSpec context).model view) (Edge context) () ()
+      (fiber.frame.step (HostTimeoutFlow.interpreter view).toPrimInterp).1 := by
+    cases actual : (fiber.frame.step (HostTimeoutFlow.interpreter view).toPrimInterp).1 with
+    | running frame => simpa only [actual, AnswerFlow.FamilyStep, AnswerFlow.External.RunningStep] using next
+    | finished exit => trivial
+  obtain ⟨output, result⟩ := AnswerFlow.External.Native.finish_exit ((sourceSpec context).model view)
+    (HostTimeoutFlow.interpreter view) (Edge context) () input () machine fiber yielding code running
+  exact FrameAt.of_result context view _ (by cases output; exact result)
 
 end Test.Dogfood.Proofs.HostTimeoutNumberSourceSlots

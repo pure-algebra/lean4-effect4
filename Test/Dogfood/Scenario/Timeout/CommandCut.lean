@@ -37,6 +37,16 @@ def publicEvaluation : Effect4.Program.NativeMachine :=
   (stepDecisionState (interpOf Test.Dogfood.Proofs.HostTimeoutSource.program fetch.table) 2000 interrupted
     (.evaluate ⟨1⟩)).1
 
+/-- Interrupting the waiting root runs actual race cancellation before the form finalizer can publish. -/
+def rootInterrupted : Effect4.Program.NativeMachine :=
+  letI := evaluatorFor Test.Dogfood.Proofs.HostTimeoutSource.program fetch.table
+  (stepDecisionState (interpOf Test.Dogfood.Proofs.HostTimeoutSource.program fetch.table) 2000 cut.1
+    (.interruptFrom none .empty ⟨0⟩)).1
+
+#guard rootInterrupted.state.refs == [.nat 0, .list [], .list []]
+#guard (rootInterrupted.fiber? ⟨1⟩).map (fun fiber => fiber.running) == some true
+#guard (rootInterrupted.fiber? ⟨1⟩).map (fun fiber => fiber.exit) == some none
+
 #guard cut.1.state.refs == [.nat 0, .list [], .list []]
 #guard reusedQueue.state.refs[0]? == some (.nat 0)
 #guard reusedQueue.state.refs[1]? == some (.list [.list [.nat 0, .bool true]])

@@ -686,3 +686,39 @@ The audit covers context, source annotation, configuration, interruption, transp
 The actual initialized history and both endpoint goals remain open.
 The proposed stranded-child case remains an unverified concern about the internal invariant, not an endpoint counterexample.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Shared source family and actual native consumers
+
+The coordinator must retain the distinction between source annotations and numeric writer permissions.
+The base is `dbb0920fa`.
+The two original endpoint goals remain open.
+
+The existing iterator, loop, finalizer, saved-family, and current-head proofs now consume supplied point and environment assertions.
+`CodeClosure.Interp` and `CodeClosure.Stable` own those proofs.
+`AnswerSlots.Interp` and `AnswerSlots.PrefixStable` retain their old interfaces through the shared producers.
+No second compiler, evaluator, command, or saved-pop induction occurs.
+The direct source fragment remains an explicit premise.
+
+`SourceSlots.FrameAt.result` and `FrameAt.of_result` connect the pending source assertion to the existing ordered saved path.
+`SourceSlots.finalizer_frame` consumes actual native finalizer dispatch.
+`SourceSlots.step_frame` consumes the existing current-head producer and actual finished-frame connector.
+Both results retain the actual returned current code and saved suffix.
+Their consumers serve the pending role in both Timeout numeric goals under R11, R10, and R4.
+
+The additional `CommandCut.rootInterrupted` evaluation retains the initial heap while the attempt remains running without an exit.
+This is a finite control for an internal cut, not a counterexample to either endpoint.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCountQueue Test.Dogfood.Scenario.Timeout.CommandCut Effect4.Laws.Program.AnswerSlots.Actions` | Passed, 1255 jobs |
+| `lake env lean scratch/TimeoutStableFactorAudit.lean` | The output below |
+
+```text
+#axiom_audit: 129 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers both shared leaves, both compatibility consumers, Timeout source consumers, and the cut control.
+The slice changes proof assertions only and reaches no outside implementation gate.
+The initialized numeric history, actual race assignments, and cleanup and form transitions remain open.
+The source assertion alone admits arbitrary updates with matching captured environments.
+A numeric producer must retain exact writer provenance before deriving numeric facts from those updates.

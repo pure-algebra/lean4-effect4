@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.AnswerSlots.Interp
 import Effect4.Laws.Program.AnswerSlots.Stable
+import Effect4.Laws.Program.CodeClosure.Stable
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -23,6 +24,15 @@ def prefixSpec (root : NativeEff) (table : RowTable) (bindings : List Val) : Sta
   success _ _ _ := trivial
   failure _ _ := trivial
 
+/-- The compatibility Prefix model reads the same shared source graph. -/
+theorem prefixModel_slots_eq (root : NativeEff) (table : RowTable) (bindings : List Val) (view) :
+    (prefixSpec root table bindings).model view =
+      (CodeClosure.Slots.prefixSpec root table (fun p => Prefix bindings p.env) (Prefix bindings)).model view := by
+  unfold prefixSpec CodeClosure.Slots.prefixSpec StableSpec.model
+  congr 1
+  funext world kind program
+  exact codeAt_fold bindings program
+
 /-- Every exit representation contains no delayed source environment. -/
 theorem prefix_ofExit (bindings : List Val) (exit : ExitV) : CodeAt bindings (Prim.ofExit exit) := by
   cases exit <;> trivial
@@ -34,8 +44,14 @@ theorem prefix_armA (root : NativeEff) (fragment : SourceScope.Fragment root)
     (owned : CodeAt bindings frame)
     (actual : frame.armA (interpAt root view table).toPrimInterp value provided = some (next, pushed)) :
     CodeAt bindings next ∧ ∀ code ∈ pushed, CodeAt bindings code := by
-  fun_cases Prim.armA (interpAt root view table).toPrimInterp frame value provided
-  all_goals aesop (add norm simp [CodeAt, Prim.armA, LoopAt, IterAt]) (add safe apply [prefix_ofExit, (interp_contA_at root bindings fragment)]) (add safe forward [(interp_loopResume_at root bindings fragment), interp_iter_at])
+  rw [codeAt_fold] at owned
+  have produced := CodeClosure.Slots.prefix_armA root fragment (fun p => Prefix bindings p.env) (Prefix bindings)
+    (prefix_contract root bindings) (fun _ held _ => held) view table frame value provided next pushed owned actual
+  constructor
+  · rw [codeAt_fold]; exact produced.1
+  · intro code member
+    rw [codeAt_fold]
+    exact produced.2 code member
 
 /-- Actual cause callbacks retain the current code and every pushed binding certificate. -/
 theorem prefix_armE (root : NativeEff) (fragment : SourceScope.Fragment root)
@@ -44,19 +60,31 @@ theorem prefix_armE (root : NativeEff) (fragment : SourceScope.Fragment root)
     (owned : CodeAt bindings frame)
     (actual : frame.armE (interpAt root view table).toPrimInterp cause provided = some (next, pushed)) :
     CodeAt bindings next ∧ ∀ code ∈ pushed, CodeAt bindings code := by
-  fun_cases Prim.armE (interpAt root view table).toPrimInterp frame cause provided
-  all_goals aesop (add norm simp [CodeAt, Prim.armE]) (add safe apply [prefix_ofExit, (interp_contE_at root bindings fragment), interp_cancel_at])
+  rw [codeAt_fold] at owned
+  have produced := CodeClosure.Slots.prefix_armE root fragment (fun p => Prefix bindings p.env) (Prefix bindings)
+    (prefix_contract root bindings) (fun _ held _ => held) view table frame cause provided next pushed owned actual
+  constructor
+  · rw [codeAt_fold]; exact produced.1
+  · intro code member
+    rw [codeAt_fold]
+    exact produced.2 code member
 
 /-- Native finalizer restoration adds no delayed source environment. -/
 theorem prefix_finalizerCode (root : NativeEff) (bindings : List Val) (view) (table : RowTable)
     (exit : ExitV) (body : NCode) (owned : CodeAt bindings body) :
     CodeAt bindings (finalizerCode (interpAt root view table) exit body) := by
-  cases exit with
-  | success value => exact ⟨owned, trivial⟩
-  | failure cause => exact ⟨⟨owned, trivial⟩, trivial⟩
+  rw [codeAt_fold] at owned ⊢
+  exact CodeClosure.Slots.prefix_finalizerCode root (fun p => Prefix bindings p.env) (Prefix bindings)
+    view table exit body owned
 
 /-- The same binding certificate annotates saved code at every completed-fiber view. -/
 def prefixEdge (bindings : List Val) (_ : Unit) (_ _ : Unit) : NCode → Prop := CodeAt bindings
+
+/-- The compatibility saved edges read the same generated code annotation. -/
+theorem prefixEdge_slots_eq (bindings : List Val) :
+    prefixEdge bindings = CodeClosure.Slots.prefixEdge (fun p => Prefix bindings p.env) (Prefix bindings) := by
+  funext world input output
+  exact funext (codeAt_fold bindings)
 
 /-- An actual saved suffix composes the same immutable binding certificate. -/
 theorem prefix_path (bindings : List Val) (frames : List NCode)
@@ -72,65 +100,19 @@ theorem prefix_family (root : NativeEff) (fragment : SourceScope.Fragment root)
     (bindings : List Val) (table : RowTable) (view) :
     AnswerFlow.SavedFamily ((prefixSpec root table bindings).model view)
       (interpAt root view table).toPrimInterp (prefixEdge bindings) := by
-  constructor
-  · intros; trivial
-  · intros; trivial
-  · intro world input output frame held nextWorld future value provided next pushed good supplied absent actual
-    obtain ⟨code, stack⟩ := prefix_armA root fragment bindings view table frame value provided next pushed held actual
-    cases output
-    exact ⟨(), code, prefix_path bindings pushed stack⟩
-  · intro world input output frame held nextWorld future cause provided next pushed good supplied absent actual
-    obtain ⟨code, stack⟩ := prefix_armE root fragment bindings view table frame cause provided next pushed held actual
-    cases output
-    exact ⟨(), code, prefix_path bindings pushed stack⟩
-  · intro world input output frame held nextWorld future exit next good installed
-    cases frame
-    case onExit body name flag =>
-      change Option.map (finalizerCode (interpAt root view table) exit)
-        ((interpAt root view table).finalizerProgram name exit) = some next at installed
-      obtain ⟨program, found, equal⟩ := Option.map_eq_some_iff.mp installed
-      rw [← equal]
-      exact prefix_finalizerCode root bindings view table exit program
-        (interp_fin_at root bindings fragment view table name exit program held.2 found)
-    all_goals cases installed
-  · intros; trivial
+  rw [prefixModel_slots_eq, prefixEdge_slots_eq]
+  exact CodeClosure.Slots.prefix_family root fragment (fun p => Prefix bindings p.env) (Prefix bindings)
+    (prefix_contract root bindings) (fun _ held _ => held) table view
 
 /-- Every permitted current head consumes the same stable binding class. -/
 theorem prefix_head (root : NativeEff) (fragment : SourceScope.Fragment root)
     (bindings : List Val) (table : RowTable) (view) (code : NCode) (owned : CodeAt bindings code) :
     AnswerFlow.HeadAt ((prefixSpec root table bindings).model view)
       (interpAt root view table).toPrimInterp (prefixEdge bindings) () () code := by
-  cases code
-  case success value => exact .success value trivial
-  case failure cause => exact .failure cause trivial
-  case sync thunk => exact .sync thunk trivial
-  case suspend thunk => exact .suspend thunk (interp_suspend_at root bindings fragment view table thunk owned)
-  case withFiber thunk => exact .withFiber thunk (interp_suspend_at root bindings fragment view table thunk owned)
-  case yieldableError error => exact .yieldableError error trivial
-  case iterator name cursor =>
-    refine .iterator name cursor owned ?_
-    intro next pushed actual
-    obtain ⟨code, slots⟩ := prefix_armA root fragment bindings view table _ cursor none next pushed owned actual
-    exact ⟨(), code, prefix_path bindings pushed slots⟩
-  case whileLoop name cursor =>
-    have slots := interp_loopEnter_at root bindings fragment view table name cursor owned
-    refine .whileLoop name cursor ?_ ?_
-    · intro next body actual
-      rw [actual] at slots
-      exact ⟨(), slots, .cons owned (.nil ())⟩
-    · intro body actual
-      rw [actual] at slots
-      exact ⟨(), slots, .nil ()⟩
-  case onSuccess body name => exact .onSuccess () body name owned.1 owned
-  case onSuccessConst body next => exact .onSuccessConst () body next owned.1 owned
-  case onFailure body name => exact .onFailure () body name owned.1 owned
-  case onSuccessAndFailure body success failure => exact .onSuccessAndFailure () body success failure owned.1 owned
-  case exitFrame body => exact .exitFrame () body owned owned
-  case onExit body name flag => exact .onExit () body name flag owned.1 owned
-  case yieldNowWith priority => exact .yieldNowWith priority owned
-  case async register signal cancel => exact .async register signal cancel owned
-  case setInterruptible flag => exact .setInterruptible flag trivial
-  case asyncFinalizer name => exact .asyncFinalizer name trivial
+  rw [prefixModel_slots_eq, prefixEdge_slots_eq]
+  rw [codeAt_fold] at owned
+  exact CodeClosure.Slots.prefix_head root fragment (fun p => Prefix bindings p.env) (Prefix bindings)
+    (prefix_contract root bindings) (fun _ held _ => held) table view code owned
 
 /-- The common allocation adapter accepts the existing prefix graph at every actual view. -/
 def prefixLaws (root : NativeEff) (fragment : SourceScope.Fragment root)
