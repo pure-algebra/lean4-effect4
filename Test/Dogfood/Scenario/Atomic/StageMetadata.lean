@@ -92,7 +92,7 @@ theorem RowsAt.primitive (root : NativeEff) (fragment : SourceScope.Fragment roo
     exact owned
   have programs := SourceScope.interp_action_at root fragment view table thunk action thunkAt found
   exact SourceScope.with_fiber_rows root view table (fun _ => True) (RowAt after) machine fiber yielding action oldRows
-    (SourceScope.ActionProgramsAt.mono root action programs (fun _ _ _ => True.intro))
+    (SourceScope.ActionProgramsAt.mono root (P := fun _ => SourceScope.CodeAt root) (Q := fun _ _ => True) action programs (fun _ _ _ => True.intro))
     (fun id program flag budget context _ => RowAt.birth after id program flag budget context)
 
 /-- Installing the evaluated row preserves every other stored row's metadata. -/

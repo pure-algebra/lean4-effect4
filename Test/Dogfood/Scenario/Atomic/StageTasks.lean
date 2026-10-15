@@ -67,7 +67,7 @@ theorem native_tasks (built : Api.Built) (accepted : Api.Author.build (shop .non
   have programs := SourceScope.interp_action_at built.program fragment machine.completedExits built.table thunk action owned found
   exact SourceScope.with_fiber_rows_dispatcher built.program machine.completedExits built.table (fun _ => True)
     (fun row => DispatcherPredicate.All TaskAt row.dispatcher) TaskAt machine fiber yielding action held
-    (SourceScope.ActionProgramsAt.mono built.program action programs (fun _ _ _ => True.intro))
+    (SourceScope.ActionProgramsAt.mono built.program (P := fun _ => SourceScope.CodeAt built.program) (Q := fun _ _ => True) action programs (fun _ _ _ => True.intro))
     (fun id program flag budget context _ => task_birth id program flag budget context) actor TaskAt.start
 
 end Test.Dogfood.Scenario.Atomic.StageConfiguration
