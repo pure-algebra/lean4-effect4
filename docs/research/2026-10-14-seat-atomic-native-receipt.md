@@ -383,3 +383,20 @@ Verification:
 
 Remaining: native emitted/follow-up commands, detached snapshots, fixed commands and the control-history attachment.
 The original endpoint statement stays unchanged.
+
+## Actual native emitted commands and disposition
+
+`StageNativeQueue.native_nested_queue` types the actual emitted command word at the chosen native world.
+Its interruption waits use the actual root suffix or daemon frame.
+The existing quiet primitive profile excludes request interruption waits.
+`StageDisposition.NativeCut.settle_outcome_queue` types the actual scheduler follow-up.
+It retains the same waiting readers through parked, deferred and stuck outcomes.
+These declarations serve the preceding native P/Q/R consumer.
+
+Verification:
+- `lean-slot.sh lake build Test.Dogfood.Scenario.Atomic.StageNativeQueue` succeeds: 1362 jobs.
+- `lean-slot.sh lake env lean scratch/audit-stage-nativequeue.lean` audits four declarations within `[propext, Quot.sound]`.
+- The audit reports zero planned goals and zero declarations modulo planned goals.
+
+The complete pending-suffix transport, detached-snapshot join and command-history instance remain open.
+`Atomic.Store.shop_stages` remains unchanged and open.
