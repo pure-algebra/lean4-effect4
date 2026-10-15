@@ -73,6 +73,10 @@ surface, not hand-written types.
 
 ### F4: V5, the to-do in OCaml
 
+**Moved** (decisions row 391 (5)): this slice runs as LC-6 of the lowering cleanup
+(`docs/research/2026-10-14-lowering-cleanup/prompt.md`), with the repository made from LCNF. Skip
+it here.
+
 The slice note's V5 row, with a native repository:
 - `ocaml/engine/e4_host.ml` and its `.mli`: evaluate; at a parked call, ask a reactor, apply the
   answer, flush; write the record;
