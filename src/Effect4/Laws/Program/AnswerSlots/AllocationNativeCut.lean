@@ -22,6 +22,8 @@ structure PendingNativeCut (spec : Spec) (fragment : SourceScope.Fragment spec.r
   effects : Moves.QuietEffects result
   dispatcher : result.machine.fibers = machine.fibers ∧
     (Replies fiber.dispatcher → Replies result.fiber.dispatcher)
+  recorded : result.fiber.frame.interruptedCause = fiber.frame.interruptedCause
+  deferred : DeferredQuiet machine.state.deferreds → DeferredQuiet result.machine.state.deferreds
 
 /-- Actual pending native evaluation returns one joint pending cut or its exact application entry. -/
 theorem pending_native_cut_or_entry (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -40,14 +42,15 @@ theorem pending_native_cut_or_entry (spec : Spec) (fragment : SourceScope.Fragme
   rcases pending_native_waits_or_entry spec fragment machine fiber yielding input output owned saved unparked with waits | entry
   swap
   · exact .inr entry
-  rcases pending_ordinary_or_entry spec machine.completedExits ⟨fiber.id, machine.state, false⟩ input fiber.frame.current owned rfl with ordinary | entry
+  rcases pending_metadata_or_entry spec machine.completedExits ⟨fiber.id, machine.state, false⟩ input fiber.frame.current owned rfl with ordinary | entry
   swap
   · exact .inr entry
   rcases pending_native_primitive_or_entry spec fragment machine fiber yielding input output owned saved with same | entry
   swap
   · exact .inr entry
   have footprint := Moves.evaluateNative_footprint spec.root spec.table machine fiber yielding
-  refine .inl ⟨flow.1, flow.2.1, ?_, ?_, footprint, ?_, ?_⟩
+  refine .inl ⟨flow.1, flow.2.1, ?_, ?_, footprint, ?_, ?_,
+    Guard.Interruption.evaluateNative_interruptedCause spec.root spec.table machine fiber yielding, ?_⟩
   · exact ⟨fun row member => ⟨flow.2.2.1 row member, flow.1⟩, ⟨flow.2.2.2, flow.1⟩⟩
   · rw [footprint.id]
     exact waits
@@ -62,6 +65,17 @@ theorem pending_native_cut_or_entry (spec : Spec) (fragment : SourceScope.Fragme
     · intro replies
       exact (Moves.evaluatePrim_dispatcher (interpAt spec.root machine.completedExits spec.table) machine fiber yielding
         ReplyTask (fun owner token => reply_success owner token _) replies ordinary.1 ordinary.2.1).2
+
+  · intro quiet
+    rw [same]
+    apply StatePreservation.primitive_at (interpAt spec.root machine.completedExits spec.table)
+      (fun state => DeferredQuiet state.deferreds) machine fiber yielding quiet
+    · intro thunk state value current ran
+      exact ordinary.2.2.2 thunk state value current ran quiet
+    · intro name signal cancel current
+      exact (ordinary.2.2.1 name signal cancel current).elim
+    · intro thunk action current found
+      exact (ordinary.2.1 thunk current).elim
 
 /-- The common iteration walk retains the joint pending cut through charging and yield injection. -/
 theorem pending_iteration_cut_or_entry (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -79,12 +93,14 @@ theorem pending_iteration_cut_or_entry (spec : Spec) (fragment : SourceScope.Fra
       (fun state id => ⟨id, state, false⟩) result ∧
     PendingWaits spec fragment ⟨result.fiber.id, result.machine.state, false⟩ result.fiber ∧
     Moves.QuietEffects result ∧ result.machine.fibers = machine.fibers ∧
-      (Replies fiber.dispatcher → Replies result.fiber.dispatcher)
+      (Replies fiber.dispatcher → Replies result.fiber.dispatcher) ∧
+    (DeferredQuiet machine.state.deferreds → DeferredQuiet result.machine.state.deferreds)
   have admitted : (countOp (runloopTop fiber)).parked = .notParked := by
     unfold countOp runloopTop
     split <;> exact unparked
   have localNative : ∀ actual actor y first last,
-      (actual.nextId = machine.nextId ∧ actor.parked = .notParked ∧ actual.fibers = machine.fibers ∧ actor.dispatcher = fiber.dispatcher) →
+      (actual.nextId = machine.nextId ∧ actor.parked = .notParked ∧ actual.fibers = machine.fibers ∧ actor.dispatcher = fiber.dispatcher ∧
+        actual.state.deferreds = machine.state.deferreds) →
       CodeAt spec ⟨actor.id, actual.state, false⟩ first actor.frame.current →
       Effect4.Contracts.Path (Edge spec fragment ⟨actor.id, actual.state, false⟩) first last actor.frame.stack →
       FramesAt spec fragment false actual → HeapPrefix spec actual.state →
@@ -95,19 +111,23 @@ theorem pending_iteration_cut_or_entry (spec : Spec) (fragment : SourceScope.Fra
     rcases pending_native_cut_or_entry spec fragment actual actor y first last current suffix frames contents permission.2.1 with cut | entry
     · exact .inl ⟨cut.heap, cut.counter.trans permission.1, cut.flows, cut.waits, cut.effects,
         cut.dispatcher.1.trans permission.2.2.1,
-        fun replies => cut.dispatcher.2 (permission.2.2.2.symm ▸ replies)⟩
+        fun replies => cut.dispatcher.2 (permission.2.2.2.1.symm ▸ replies),
+        fun quiet => cut.deferred (permission.2.2.2.2.symm ▸ quiet)⟩
     · exact .inr entry
   rcases pending_iteration_of_native spec fragment Post
-    (fun actual actor _ => actual.nextId = machine.nextId ∧ actor.parked = .notParked ∧ actual.fibers = machine.fibers ∧ actor.dispatcher = fiber.dispatcher)
+    (fun actual actor _ => actual.nextId = machine.nextId ∧ actor.parked = .notParked ∧ actual.fibers = machine.fibers ∧ actor.dispatcher = fiber.dispatcher ∧
+        actual.state.deferreds = machine.state.deferreds)
     localNative machine fiber yielding input output owned saved held heap
     (by
       have dispatcher : (countOp (runloopTop fiber)).dispatcher = fiber.dispatcher := by
         unfold countOp runloopTop
         split <;> rfl
-      exact ⟨⟨rfl, admitted, rfl, dispatcher⟩, ⟨rfl, admitted, rfl, dispatcher⟩⟩) with result | entry
-  · exact .inl ⟨result.1, result.2.1, result.2.2.1, result.2.2.2.1,
+      exact ⟨⟨rfl, admitted, rfl, dispatcher, rfl⟩, ⟨rfl, admitted, rfl, dispatcher, rfl⟩⟩) with result | entry
+  · obtain ⟨heap, counter, flows, waits, effects, rows, replies, quiet⟩ := result
+    exact .inl ⟨heap, counter, flows, waits,
       Moves.iteration_footprint spec.root spec.table (interpOf spec.root spec.table) machine fiber yielding,
-      result.2.2.2.2.1, result.2.2.2.2.2⟩
+      effects, ⟨rows, replies⟩,
+      Guard.Interruption.iteration_interruptedCause spec.root spec.table machine fiber yielding, quiet⟩
   · exact .inr entry
 
 /-- Before entry every updated stored row is the actual returned root fiber. -/
@@ -136,7 +156,7 @@ theorem PendingNativeCut.configuration (spec : Spec) (fragment : SourceScope.Fra
     (before : PendingConfiguration spec fragment machine) (member : fiber ∈ machine.fibers)
     (cut : PendingNativeCut spec fragment machine fiber result) :
     PendingConfiguration spec fragment (result.machine.update result.fiber) := by
-  refine ⟨cut.heap, ?_, ?_, ?_, ?_, cut.counter.trans before.counter, ?_⟩
+  refine ⟨cut.heap, ?_, ?_, ?_, ?_, cut.counter.trans before.counter, ?_, ?_, cut.deferred before.deferred⟩
   · intro row present
     exact (cut.flows.1 row present).1
   · intro row present
@@ -151,4 +171,8 @@ theorem PendingNativeCut.configuration (spec : Spec) (fragment : SourceScope.Fra
   · intro row present
     rw [PendingNativeCut.rows spec fragment machine fiber result cut row present]
     exact cut.dispatcher.2 (before.replies fiber member)
+  · intro row present cause recorded
+    rw [PendingNativeCut.rows spec fragment machine fiber result cut row present, cut.recorded] at recorded
+    exact before.recorded fiber member cause recorded
+
 end Effect4.Program.AnswerSlots.AllocationAdapter

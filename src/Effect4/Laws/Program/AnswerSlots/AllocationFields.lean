@@ -41,9 +41,10 @@ theorem PendingConfiguration.transfer (spec : Spec) (fragment : SourceScope.Frag
     (refs : after.state.refs = before.state.refs)
     (deferred : after.state.deferreds.cells.length = before.state.deferreds.cells.length)
     (counter : after.nextId = before.nextId)
-    (rows : ∀ row ∈ after.fibers, ∃ old ∈ before.fibers, SamePendingRow old row) :
+    (rows : ∀ row ∈ after.fibers, ∃ old ∈ before.fibers, SamePendingRow old row)
+    (quiet : DeferredQuiet after.state.deferreds) :
     PendingConfiguration spec fragment after := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, counter.trans held.counter, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, counter.trans held.counter, ?_, ?_, quiet⟩
   · refine ⟨?_, ?_⟩
     · rw [refs]; exact held.heap.1
     · rw [refs, deferred]; exact held.heap.2
@@ -74,13 +75,18 @@ theorem PendingConfiguration.transfer (spec : Spec) (fragment : SourceScope.Frag
     obtain ⟨old, present, id, frame, park, children, observers, dispatcher⟩ := rows row member
     rw [dispatcher]
     exact held.replies old present
+  · intro row member
+    obtain ⟨old, present, id, frame, park, children, observers, dispatcher⟩ := rows row member
+    rw [frame]
+    exact held.recorded old present
 /-- Administrative store hooks preserve the entire pending configuration at equal allocation fields. -/
 theorem PendingConfiguration.store_fields (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     (machine : NativeMachine) (state : Stores) (held : PendingConfiguration spec fragment machine)
     (refs : state.refs = machine.state.refs)
-    (deferred : state.deferreds.cells.length = machine.state.deferreds.cells.length) :
+    (deferred : state.deferreds.cells.length = machine.state.deferreds.cells.length)
+    (quiet : DeferredQuiet state.deferreds) :
     PendingConfiguration spec fragment {machine with state} := by
-  apply PendingConfiguration.transfer spec fragment machine {machine with state} held refs deferred rfl
+  apply PendingConfiguration.transfer spec fragment machine {machine with state} held refs deferred rfl ?_ quiet
   intro row member
   exact ⟨row, member, rfl, rfl, rfl, rfl, rfl, rfl⟩
 

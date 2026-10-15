@@ -55,6 +55,7 @@ theorem PendingConfiguration.fixed (spec : Spec) (fragment : SourceScope.Fragmen
     · rename_i fiber found
       have interrupted := PendingConfiguration.interruption spec fragment machine before fiber
         (RunMachine.mem_of_fiber? found) (interruptCause (interpOf spec.root spec.table) who extra fiber.id)
+        (clean_interrupt spec.root spec.table who extra fiber.id)
       exact PendingConfiguration.fields spec fragment _ _ interrupted rfl rfl rfl
   case finish id exit =>
     simp only [driveStep]
@@ -66,11 +67,18 @@ theorem PendingConfiguration.fixed (spec : Spec) (fragment : SourceScope.Fragmen
     have fields := (pending_store_hooks spec.root spec.table machine.state.refs machine.state.deferreds.cells.length).due
       machine.state ⟨rfl, rfl⟩
     have changed := PendingConfiguration.store_fields spec fragment machine _ before fields.1 fields.2
+      ⟨rfl, before.deferred.2⟩
     exact PendingConfiguration.drainOwed spec fragment _ _ changed (due_replies spec.root spec.table machine.state)
   case wake list phase =>
     have fields := (pending_store_hooks spec.root spec.table machine.state.refs machine.state.deferreds.cells.length).wake
       list phase machine.state ⟨rfl, rfl⟩
-    exact PendingConfiguration.store_fields spec fragment machine _ before fields.1 fields.2
+    apply PendingConfiguration.store_fields spec fragment machine _ before fields.1 fields.2
+    change DeferredQuiet (machine.state.wakeList list phase).deferreds
+    unfold Stores.wakeList
+    split
+    · rw [before.deferred.wake]
+      exact before.deferred
+    · exact before.deferred
 
 /-- The existing administrative command family supplies the pending frame walk under the exact profile. -/
 theorem FixedAllowed.administrative (spec : Spec) (fragment : SourceScope.Fragment spec.root)

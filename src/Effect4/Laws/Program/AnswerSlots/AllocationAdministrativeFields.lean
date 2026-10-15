@@ -24,6 +24,7 @@ theorem PendingConfiguration.postTask (spec : Spec) (fragment : SourceScope.Frag
       (before.frames fiber member) (before.waits fiber member)
       (before.childless fiber member) (before.unobserved fiber member)
       (DispatcherPredicate.enqueue ReplyTask fiber.dispatcher priority task (before.replies fiber member) ready)
+      (before.recorded fiber member)
     exact PendingConfiguration.fields spec fragment _ _ updated rfl rfl rfl
 
 /-- Delivering owed tasks preserves the whole pending configuration. -/
@@ -54,6 +55,7 @@ theorem PendingConfiguration.drain (spec : Spec) (fragment : SourceScope.Fragmen
     (before.frames fiber member) (before.waits fiber member)
     (before.childless fiber member) (before.unobserved fiber member)
     (DispatcherPredicate.drain ReplyTask fiber.dispatcher (before.replies fiber member)).2
+    (before.recorded fiber member)
   exact PendingConfiguration.fields spec fragment _ _ updated rfl rfl rfl
 /-- Starting the actual pending owner changes only administrative execution fields. -/
 theorem PendingConfiguration.start (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -61,7 +63,7 @@ theorem PendingConfiguration.start (spec : Spec) (fragment : SourceScope.Fragmen
     (fiber : SourceScope.SourceFiber) (member : fiber ∈ machine.fibers) :
     PendingConfiguration spec fragment (machine.update {fiber with running := true, currentOpCount := 0}) :=
   PendingConfiguration.update spec fragment machine before _ (before.frames fiber member)
-    (before.waits fiber member) (before.childless fiber member) (before.unobserved fiber member) (before.replies fiber member)
+    (before.waits fiber member) (before.childless fiber member) (before.unobserved fiber member) (before.replies fiber member) (before.recorded fiber member)
 
 /-- A real matching pending resume reads the parked demand before replacing the current code. -/
 theorem PendingConfiguration.resume (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -77,7 +79,7 @@ theorem PendingConfiguration.resume (spec : Spec) (fragment : SourceScope.Fragme
   obtain ⟨output, input, current, saved⟩ := PendingWaits.resume spec fragment _ fiber code
     (before.waits fiber member) (by rw [parked]; intro impossible; cases impossible) terminal ordinary
   exact PendingConfiguration.update spec fragment machine before _ ⟨input, output, current, saved⟩
-    (fun impossible => (impossible rfl).elim) (before.childless fiber member) (before.unobserved fiber member) (before.replies fiber member)
+    (fun impossible => (impossible rfl).elim) (before.childless fiber member) (before.unobserved fiber member) (before.replies fiber member) (before.recorded fiber member)
 
 /-- A pending childless, unobserved owner publishes and clears without a source callback. -/
 theorem PendingConfiguration.finish (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -96,12 +98,13 @@ theorem PendingConfiguration.finish (spec : Spec) (fragment : SourceScope.Fragme
     · exact children
     · exact observers
     · exact before.replies fiber member
+    · exact before.recorded fiber member
   have emitted := PendingConfiguration.fields spec fragment _
     ((machine.update ({fiber with running := false}.publish exit)).emit [.exited fiber.id exit]) published rfl rfl rfl
   have cleared : PendingConfiguration spec fragment
       (((machine.update ({fiber with running := false}.publish exit)).emit [.exited fiber.id exit]).update
         (({fiber with running := false}.publish exit).cleared (interpOf spec.root spec.table))) := by
-    refine PendingConfiguration.update spec fragment ((machine.update ({fiber with running := false}.publish exit)).emit [.exited fiber.id exit]) emitted (({fiber with running := false}.publish exit).cleared (interpOf spec.root spec.table)) ?_ ?_ rfl rfl (before.replies fiber member)
+    refine PendingConfiguration.update spec fragment ((machine.update ({fiber with running := false}.publish exit)).emit [.exited fiber.id exit]) emitted (({fiber with running := false}.publish exit).cleared (interpOf spec.root spec.table)) ?_ ?_ rfl rfl (before.replies fiber member) (before.recorded fiber member)
     · exact FrameAt.cleared spec fragment _ _ (FrameAt.fields spec fragment _ _ _ (before.frames fiber member) rfl rfl)
     · exact fun impossible => (impossible rfl).elim
   simpa only [RunFiber.publish, RunFiber.cleared, observers, children] using cleared

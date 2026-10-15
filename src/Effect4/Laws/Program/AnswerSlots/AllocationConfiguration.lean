@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.AnswerSlots.AllocationDeferredQuiet
 import Effect4.Laws.Program.AnswerSlots.AllocationTasks
 import Effect4.Laws.Program.AnswerSlots.AllocationPendingParks
 import Effect4.Laws.Program.AnswerSlots.AllocationContextualAttachment
@@ -22,6 +23,8 @@ structure PendingConfiguration (spec : Spec) (fragment : SourceScope.Fragment sp
   unobserved : ∀ fiber ∈ machine.fibers, fiber.observers = []
   counter : machine.nextId = 1
   replies : ReplyRows machine
+  recorded : ∀ fiber ∈ machine.fibers, CleanRecorded fiber.frame
+  deferred : DeferredQuiet machine.state.deferreds
 
 /-- The real loaded program starts in the common pending configuration. -/
 theorem initial_pending (spec : Spec) (fragment : SourceScope.Fragment spec.root) (fuel : Nat) :
@@ -50,6 +53,25 @@ theorem initial_pending (spec : Spec) (fragment : SourceScope.Fragment spec.root
     have same := List.mem_singleton.mp member
     subst fiber
     exact (List.not_mem_nil present).elim
+  · intro fiber member cause present
+    have same := List.mem_singleton.mp member
+    subst fiber
+    cases present
+  · exact ⟨rfl, fun _ member => (List.not_mem_nil member).elim⟩
+
+/-- Actual application entry reads the clean recorded cause and empty owed-answer queue from the same pending machine. -/
+theorem PendingConfiguration.entry_admitted (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (machine : NativeMachine) (held : PendingConfiguration spec fragment machine)
+    (fiber : SourceScope.SourceFiber) (member : fiber ∈ machine.fibers) (yielding : Bool)
+    (result : Moves.NIteration) (run : EntryRun spec fragment machine fiber yielding result) :
+    EntryRun.Admitted spec fragment
+      (fun actual actor _ => CleanRecorded actor.frame ∧ actual.state.deferreds.due = []) run := by
+  have recorded : CleanRecorded (countOp (runloopTop fiber)).frame := by
+    intro cause present
+    change (runloopTop fiber).frame.interruptedCause = some cause at present
+    rw [Guard.Interruption.runloopTop_interruptedCause] at present
+    exact held.recorded fiber member cause present
+  exact ⟨⟨recorded, held.deferred.1⟩, ⟨recorded, held.deferred.1⟩⟩
 
 /-- The pending machine's existing frames all belong to its actual root. -/
 theorem PendingConfiguration.root_rows (spec : Spec) (fragment : SourceScope.Fragment spec.root)
