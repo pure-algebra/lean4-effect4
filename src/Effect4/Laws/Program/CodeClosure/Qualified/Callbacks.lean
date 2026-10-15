@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.CodeClosure.Qualified.Stored
 import Effect4.Laws.Program.CodeClosure.Compile
+import Effect4.Laws.Program.CodeClosure.Suspension
 import Effect4.Laws.Program.NativeScope
 
 /-!
@@ -177,14 +178,22 @@ theorem loopResume_at (root : NativeEff) (fragment : SourceScope.Fragment root)
 theorem suspend_at (root : NativeEff) (fragment : SourceScope.Fragment root)
     (point : Point → Prop) (env : List Val → Prop) (writes : SyncOp → Prop) (contract : Contract root point env writes) (thunk : EffThunk) (held : ThunkAt point env writes thunk) :
     CodeAt point env writes (suspendBodyAt root thunk) := by
-  revert held
-  fun_cases suspendBodyAt root thunk
-  case case2 p n fuel body found =>
-    intro held
-    exact resolve_child_at root fragment point env writes contract p 0 held
-  all_goals intro held
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, ThunkAt, NameAt, StoreThunkAt, FinAt,
-    badShape_at, SourceScope.directHead, progOf_at]) (add safe apply [(compile_at root fragment point env writes contract), (select_arg_at root fragment point env writes contract)]) (add safe forward [SourceScope.Fragment.at])
+  cases thunk
+  case body p =>
+    exact CodeClosure.suspend_body_at root fragment point (CodeAt point env writes)
+      { compiled := fun e p found held => compile_at root fragment point env writes contract e p found held
+        frontier := fun _ held => held
+        child := fun p held => resolve_child_at root fragment point env writes contract p 0 held
+        selected := fun p first bound held => select_arg_at root fragment point env writes contract p first bound held
+        loop := fun _ _ held => held
+        badShape := trivial } p held
+  case memoLookup => exact held.elim
+  case store stored =>
+    cases stored
+    case body program => exact progOf_at point env writes program held
+    case foreign capture exit => exact ⟨trivial, held⟩
+    all_goals trivial
+  all_goals trivial
 /-- Actual asynchronous cancellation introduces no captured source point. -/
 theorem cancel_at (point : Point → Prop) (env : List Val → Prop) (writes : SyncOp → Prop) (name : EffName) :
     CodeAt point env writes (cancelProgramOf name) := by
