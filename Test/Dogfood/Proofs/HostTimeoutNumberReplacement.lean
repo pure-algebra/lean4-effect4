@@ -69,4 +69,61 @@ theorem resume_value (view : HostTimeoutFlow.View) (state : Stores) (input outpu
   · exact supplied
   · exact pure
 
+/-- Every admitted actual recorded cause preserves the numeric failure assertion when combined. -/
+theorem absorbs (view : HostTimeoutFlow.View) (state : Stores) (recorded : Option CauseV)
+    (clean : HostTimeoutNumberPhaseFinalizer.Allowed state recorded) :
+    AnswerFlow.Contextual.AbsorbsInterrupt (model view) state recorded := by
+  intro interrupted present kind cause good
+  exact cause_combine state kind cause interrupted good (clean interrupted present)
+
+/-- Actual failure replacement reads the same recorded cause at every passed saved frame. -/
+theorem cause_frame (view : HostTimeoutFlow.View) (state : Stores) (input output : Kind)
+    (frame : HostTimeoutFrames.NativeFrame) (cause : CauseV) (next : NCode)
+    (good : CauseAt state input cause)
+    (saved : Effect4.Contracts.Path (Edge state) input output frame.stack)
+    (recorded : HostTimeoutNumberPhaseFinalizer.Allowed state frame.interruptedCause)
+    (actual : (frame.getCont .contE true (some cause)).answer = .replacement next) :
+    HostTimeoutNumberUniform.FrameAt state output
+      {(frame.getCont .contE true (some cause)).fiber with current := next} := by
+  let contextual := AnswerFlow.SavedFamily.contextual (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
+    Edge HostTimeoutNumberPhaseFinalizer.Allowed (family view)
+  have transport : ∀ incoming middle head scratch before after,
+      Edge state incoming middle head → Effect4.Machine.PopTrace.Passes .contE true head scratch before after →
+      scratch.interruptedCause = frame.interruptedCause →
+      (∃ reason, CauseAt state incoming reason) → ∃ reason, CauseAt state middle reason := by
+    intro incoming middle head scratch before after callback passed same permitted
+    obtain ⟨reason, good⟩ := permitted
+    rcases passed with ⟨absent, unchanged⟩ | ⟨answer, selected, skipped, changed⟩
+    · exact ⟨reason, contextual.skipCause state incoming middle head callback state
+        ((model view).future_refl state) reason good (PopTrace.answer_missing head .contE _ absent)⟩
+    · have admitted : HostTimeoutNumberPhaseFinalizer.Allowed state (head.ensure scratch).1.interruptedCause := by
+        rw [AnswerFlow.Contextual.ensure_recorded head scratch, same]
+        exact recorded
+      obtain ⟨delivered, actual, permitted⟩ := AnswerFlow.Contextual.Hooked.saved_discard_cause
+        (admitted := admitted) (model view) (HostTimeoutFlow.interpreter view).toPrimInterp Edge
+        HostTimeoutNumberPhaseFinalizer.Allowed contextual state incoming middle head scratch reason callback good
+        (by simpa only [Bool.true_and] using skipped)
+        (absorbs view state _ admitted)
+      exact ⟨delivered, permitted⟩
+  obtain ⟨incoming, middle, head, rest, scratch, callback, path, permitted, empty, same, replaced, suffix⟩ :=
+    AnswerFlow.External.getCont_replacement_hooked_recorded Edge hook_mask
+      (fun kind => ∃ reason, CauseAt state kind reason) state .contE true frame transport
+      input output (some cause) ⟨cause, good⟩ saved next actual
+  obtain ⟨reason, good⟩ := permitted
+  obtain ⟨interrupted, mask, present, failure⟩ := AnswerFlow.External.ensure_replacement_recorded head scratch next replaced
+  have clean := recorded interrupted (same.symm.trans present)
+  have permitted := HostTimeoutNumberMaskClass.cause_recorded state incoming reason interrupted
+    (callback.restores mask) good clean
+  have delivered := contextual.skipCause state incoming middle head callback state
+    ((model view).future_refl state) interrupted permitted (by rw [mask]; rfl)
+  refine ⟨middle, ?_, ?_⟩
+  · change CodeAt state middle next
+    rw [failure]
+    exact CodeAt.failure middle interrupted delivered
+  · change Effect4.Contracts.Path (Edge state) middle output
+      (frame.getCont .contE true (some cause)).fiber.stack
+    rw [mask, Prim.ensure_setInterruptible_stack, empty, List.nil_append] at suffix
+    rw [suffix]
+    exact path
+
 end Test.Dogfood.Proofs.HostTimeoutNumberReplacement

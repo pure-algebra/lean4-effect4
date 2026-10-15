@@ -1160,3 +1160,29 @@ The preceding remaining-budget verification command checks this change too.
 The build passes with 1274 jobs.
 The audit checks 196 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 This proof-only slice reaches no outside implementation gate.
+
+
+## Actual recorded cause at replacement
+
+The shared replacement proof now exposes the actual recorded-cause equation at each passed frame.
+Its existing pop-family proof already retains that equation.
+The previous transport interface remains a wrapper that ignores the equation.
+The numeric failure-return consumer uses the equation when a skipped handler reads the pending interruption.
+A real restoring mask then replaces failure with the actual clean recorded cause while retaining its heap and selected-exit facts.
+The proof adds no saved-frame or program traversal.
+
+Placement: scope-lifetime-finalization R11 and store-typing R4; the numeric terminal native producer consumes these facts.
+Reach: the actual uniformly certified saved path and actual recorded cause without typed failure reasons.
+The actual native settlement and initialized history remain open.
+Both original Timeout numeric goals remain open.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-return-check.sh
+```
+
+The build passes with 1218 jobs.
+The audit checks 120 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The shared return and empty-stack interfaces come from Atomic's checked commit `e71339659`, integrated here as `bca9a8e7f`.
+This proof-only slice reaches no outside implementation gate.

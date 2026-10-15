@@ -34,4 +34,24 @@ theorem value_recorded (state : Stores) (kind : Kind) (value : Val) (cause : Cau
     obtain ⟨selected, heap, returned⟩ := good
     exact ⟨selected, heap, typedFrom_clean selected cause clean⟩
 
+/-- A real restoring mask retains its heap and selected-exit facts when its actual clean cause replaces failure. -/
+theorem cause_recorded (state : Stores) (kind : Kind) (cause recorded : CauseV)
+    (restorable : Restorable kind) (good : CauseAt state kind cause)
+    (clean : HostTimeoutNumberFlow.NoTypedFailure recorded) : CauseAt state kind recorded := by
+  cases kind with
+  | fresh phase => exact ⟨good.1, clean⟩
+  | attempt before entered own =>
+    rcases good with cleaned | ⟨heap, quiet⟩
+    · exact Or.inl cleaned
+    · exact Or.inr ⟨heap, clean⟩
+  | read phase => exact False.elim good
+  | unit phase => exact False.elim good
+  | countUnit phase => exact ⟨good.1, clean⟩
+  | paused phase incoming => exact False.elim restorable
+  | before phase => exact good
+  | cleanupExit phase own => exact good
+  | published phase =>
+    obtain ⟨selected, heap, origin⟩ := good
+    exact ⟨selected, heap, typedFrom_clean selected recorded clean⟩
+
 end Test.Dogfood.Proofs.HostTimeoutNumberMaskClass
