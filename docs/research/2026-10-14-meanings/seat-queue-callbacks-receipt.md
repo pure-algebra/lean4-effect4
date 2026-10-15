@@ -257,3 +257,21 @@ The active history still needs the complete worker and feeder bindings, table cu
 The rest proof retains its original bound.
 Funded histories exclude command-budget cuts; the automatic-yield segment bound remains a separate obligation.
 No actual counterexample to that bound is established here.
+
+## Actual request allocation through worker result
+
+The queue history producer and both endpoint goals remain open.
+The preceding commit is `a19a13819`.
+`QueueWorkersRequestFlow.allocate_body` connects the actual request allocator to the complete retry and result binder.
+The callback consumes the allocator's actual classified key.
+`QueueWorkersRetryReturn.option_body` covers both actual option classes.
+The empty option executes its authored failure and grants no successful job.
+The successful option returns the same held occurrence.
+
+The narrow command is `lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersRequestFlow`.
+It passes with 1418 jobs.
+The outputs are `/private/tmp/queue-request-flow-build2.log` and `/private/tmp/queue-request-flow-build3.log`.
+The audit command is `lean-slot.sh lake env lean /private/tmp/queue-request-audit.lean`.
+It checks 26 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
+The output is `/private/tmp/queue-request-audit.log`.
+The worker mask, outer worker, feeder and whole-history consumers remain open.
