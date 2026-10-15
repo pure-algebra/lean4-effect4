@@ -1,0 +1,31 @@
+diff --git a/src/Effect4/Laws/Program/NativeActionRows.lean b/src/Effect4/Laws/Program/NativeActionRows.lean
+index f027bdd93..0f765bda4 100644
+--- a/src/Effect4/Laws/Program/NativeActionRows.lean
++++ b/src/Effect4/Laws/Program/NativeActionRows.lean
+@@ -38,7 +38,7 @@ theorem spawn_frame_rows_at (interp : RunInterp EffName EffThunk Val Err Defect
+     (seed : ∀ id, floor ≤ id.value → ∀ frame, P frame.current → frame.stack = [] → G id frame) :
+     ∀ row ∈ (spawn interp m parent program options site).1.fibers, G row.id row.frame :=
+   spawn_rows_at interp P (fun row => G row.id row.frame) m parent program options site floor lower held owned
+-    (fun id fresh program flag budget context good => seed id fresh _ good rfl)
++    (fun id fresh _program _flag _budget _context good => seed id fresh _ good rfl)
+ 
+ theorem spawn_frame_rows (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (P : NCode → Prop)
+     (G : FiberId → FrameFiber EffName EffThunk Val Err Defect FiberId Ann → Prop)
+@@ -93,7 +93,7 @@ theorem fork_finalizer_frame_rows_at (interp : RunInterp EffName EffThunk Val Er
+     (seed : ∀ id, floor ≤ id.value → ∀ frame, P frame.current → frame.stack = [] → G id frame) :
+     ∀ row ∈ (forkFinalizers interp m parent programs).1.fibers, G row.id row.frame :=
+   fork_finalizer_rows_at interp P (fun row => G row.id row.frame) m parent programs floor lower held owned
+-    (fun id fresh program flag budget context good => seed id fresh _ good rfl)
++    (fun id fresh _program _flag _budget _context good => seed id fresh _ good rfl)
+ 
+ theorem fork_finalizer_frame_rows (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (P : NCode → Prop)
+     (G : FiberId → FrameFiber EffName EffThunk Val Err Defect FiberId Ann → Prop)
+@@ -201,7 +201,7 @@ theorem with_fiber_frame_rows_at {races parallel : Prop} (root : NativeEff) (vie
+     ∀ row ∈ (evaluatePrim.withFiber (interpAt root view table) m parent yielding action).machine.fibers,
+       G row.id row.frame :=
+   with_fiber_rows_at root view table P (fun row => G row.id row.frame) m parent yielding action floor lower held source
+-    (fun id fresh program flag budget context good => seed id fresh _ good rfl)
++    (fun id fresh _program _flag _budget _context good => seed id fresh _ good rfl)
+ 
+ /-- Existing unrestricted birth seeds remain an instance of the fresh-id producer. -/
+ theorem with_fiber_frame_rows (root : NativeEff) (view) (table : RowTable)

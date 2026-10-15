@@ -1,0 +1,24 @@
+diff --git a/src/Effect4/Laws/Machine/AnswerFlowContextualFamily.lean b/src/Effect4/Laws/Machine/AnswerFlowContextualFamily.lean
+index 0e79d4d0f..a4446c896 100644
+--- a/src/Effect4/Laws/Machine/AnswerFlowContextualFamily.lean
++++ b/src/Effect4/Laws/Machine/AnswerFlowContextualFamily.lean
+@@ -68,4 +68,19 @@ theorem SavedFamily.contextual
+ 
+ }
+ 
++
++/-- A family with unrestricted recorded causes recovers the original public contract. -/
++theorem ContextualSavedFamily.unconditional
++    (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
++    (interp : PrimInterp ν σ β ε δ ι α)
++    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
++    (family : ContextualSavedFamily model interp Edge (fun _ _ => True)) : SavedFamily model interp Edge where
++  skip := family.skip
++  skipCause := family.skipCause
++  answer := family.answer
++  cause := family.cause
++  program := family.program
++  discard world input output frame held nextWorld future fiber cause delivered good selected interrupted actual :=
++    family.discard world input output frame held nextWorld future fiber cause delivered good selected trivial interrupted actual
++
+ end Effect4.Machine.AnswerFlow

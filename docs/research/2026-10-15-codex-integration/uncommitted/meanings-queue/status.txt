@@ -1,0 +1,186 @@
+ M Test/Dogfood/Proofs/HostTimeoutNumberCounted.lean
+ M Test/Dogfood/Proofs/HostTimeoutNumberFlow.lean
+ M docs/research/2026-10-14-meanings/seat-queue-receipt.md
+ M src/Effect4/Laws/Auto/RuleSets.lean
+ M src/Effect4/Laws/Machine/AnswerFlowClassifiedEmbedding.lean
+ M src/Effect4/Laws/Machine/AnswerFlowEmbedding.lean
+ M src/Effect4/Laws/Machine/AnswerFlowFamilyPop.lean
+ M src/Effect4/Laws/Machine/AnswerFlowRun.lean
+ M src/Effect4/Laws/Machine/EditObserverWords.lean
+ M src/Effect4/Laws/Machine/PrimWeights.lean
+ M src/Effect4/Laws/Machine/StatePreservation.lean
+ M src/Effect4/Laws/Program/AnswerSlots/AllocationAdapter.lean
+ M src/Effect4/Laws/Program/AnswerSlots/Callbacks.lean
+ M src/Effect4/Laws/Program/AnswerSlots/Compile.lean
+ M src/Effect4/Laws/Program/AnswerSlots/Initialized.lean
+ M src/Effect4/Laws/Program/AnswerSlots/InitializedNativeExit.lean
+ M src/Effect4/Laws/Program/AnswerSlots/InitializedNativeParks.lean
+ M src/Effect4/Laws/Program/AnswerSlots/InitializedNativeShapes.lean
+ M src/Effect4/Laws/Program/AnswerSlots/InitializedPhases.lean
+ M src/Effect4/Laws/Program/AnswerSlots/InitializedScopes.lean
+ M src/Effect4/Laws/Program/AnswerSlots/InitializedSync.lean
+ M src/Effect4/Laws/Program/AnswerSlots/InitializedTransport.lean
+ M src/Effect4/Laws/Program/AnswerSlots/Interp.lean
+ M src/Effect4/Laws/Program/AnswerSlots/Stored.lean
+ M src/Effect4/Laws/Program/AnswerSlots/Syntax.lean
+ M src/Effect4/Laws/Program/AnswerSlots/TypedActions.lean
+ M src/Effect4/Laws/Program/AnswerSlots/TypedStored.lean
+ M src/Effect4/Laws/Program/FinalizerRun.lean
+ M src/Effect4/Laws/Program/PlaceFunding/Flow.lean
+ M src/Effect4/Laws/Program/PlaceFunding/Native.lean
+ M src/Effect4/Laws/Program/SourceOpportunityCommands.lean
+?? AdminAudit.lean
+?? AdminProductionAudit.lean
+?? AllocationAudit.lean
+?? CensusAudit.lean
+?? CensusProbe.lean
+?? Check.lean
+?? ControlsAudit.lean
+?? CountsIterationAudit.lean
+?? FramesAudit.lean
+?? GrowthAudit.lean
+?? InitialAudit.lean
+?? InitializedScopeAudit.lean
+?? NativeAudit.lean
+?? NativeRowsAudit.lean
+?? NormalProfile.lean
+?? ParkScopeAudit.lean
+?? ProducerAudit.lean
+?? QueueAudit.lean
+?? QueueCreditAudit.lean
+?? QueueCustodyAudit.lean
+?? QueueDynamicAudit.lean
+?? QueueEarlyRestProbe.lean
+?? QueueEmissionAudit.lean
+?? QueueFlowAudit.lean
+?? QueueIndexedCompileAudit.lean
+?? QueueInterfaceAudit.lean
+?? QueueObservationAudit.lean
+?? QueueOwnedAudit.lean
+?? QueuePotentialAudit.lean
+?? QueueProbe.lean
+?? QueueRefProbe.lean
+?? QueueSourceAudit.lean
+?? QueueSourceReplyProbe.lean
+?? QueueTypedHooksAudit.lean
+?? RecursiveAudit.lean
+?? RefAudit.lean
+?? ScopedAudit.lean
+?? ScopedExecutionAudit.lean
+?? ScopedTagAudit.lean
+?? ShapeAudit.lean
+?? SlotsAudit.lean
+?? StableAudit.lean
+?? SyncAudit.lean
+?? Test/Dogfood/Proofs/CrewLogHistory.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberConfiguration.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberConfigurationInterrupt.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberConfigurationTransport.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberContext.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberCountMachine.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberCountQueue.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberInterrupt.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberLoop.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberMessages.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberObserverMap.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberPassive.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberPhase.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberPhaseFlow.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberQueueInterrupt.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberRegion.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberResult.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberRootControl.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberRootLoop.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberRootModel.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberRootResult.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberRootSuffix.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberRootTransitions.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberSourceSlots.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberStable.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberTimer.lean
+?? Test/Dogfood/Proofs/HostTimeoutNumberWait.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustody.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodyAssignment.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodyAssignmentSource.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodyCredits.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodyFlow.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodyNotificationSource.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodyRetry.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodyRetrySource.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodySegments.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodySelections.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodySource.lean
+?? Test/Dogfood/Proofs/QueueWorkersCustodyTransfers.lean
+?? Test/Dogfood/Proofs/QueueWorkersJobPotential.lean
+?? Test/Dogfood/Proofs/QueueWorkersJobWeights.lean
+?? Test/Dogfood/Proofs/QueueWorkersLogContract.lean
+?? Test/Dogfood/Proofs/QueueWorkersRequestKeys.lean
+?? Test/Dogfood/Proofs/QueueWorkersWriter.lean
+?? Test/Dogfood/Proofs/WorkersFlow.lean
+?? Test/Dogfood/Proofs/WorkersLogContract.lean
+?? Test/Dogfood/Proofs/WorkersLogValues.lean
+?? Test/Dogfood/Proofs/WorkersWriterSource.lean
+?? TypedAudit.lean
+?? UniformAudit.lean
+?? ViewAudit.lean
+?? src/Effect4/Laws/Machine/AnswerFlowContextualFamily.lean
+?? src/Effect4/Laws/Machine/AnswerFlowGhostCommands.lean
+?? src/Effect4/Laws/Machine/AnswerFlowNativeExit.lean
+?? src/Effect4/Laws/Machine/AnswerFlowProtected.lean
+?? src/Effect4/Laws/Machine/AwaitCode.lean
+?? src/Effect4/Laws/Machine/ContextualMessages.lean
+?? src/Effect4/Laws/Machine/LiftCoupledFact.lean
+?? src/Effect4/Laws/Machine/StoredWeights.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationCounter.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationFamily.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationFrame.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationHead.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationIteration.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationNative.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationNativeExit.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationPending.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationPhases.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationProvenance.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationRows.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationScoped.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationSync.lean
+?? src/Effect4/Laws/Program/AnswerSlots/AllocationWaits.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializationExact.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializedActionFacts.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializedChildren.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializedCommands.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializedDecision.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializedDriver.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializedHistory.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializedQueueAdmin.lean
+?? src/Effect4/Laws/Program/AnswerSlots/InitializedWaits.lean
+?? src/Effect4/Laws/Program/CodeClosure/Callbacks.lean
+?? src/Effect4/Laws/Program/CodeClosure/Predicate.lean
+?? src/Effect4/Laws/Program/CodeClosure/Qualified/
+?? src/Effect4/Laws/Program/CodeClosure/Slots.lean
+?? src/Effect4/Laws/Program/CodeClosure/Stored.lean
+?? src/Effect4/Laws/Program/CrewLogs.lean
+?? src/Effect4/Laws/Program/CrewLogs/
+?? src/Effect4/Laws/Program/FinalizerControl.lean
+?? src/Effect4/Laws/Program/FinalizerGenerator.lean
+?? src/Effect4/Laws/Program/FinalizerGeneratorPC.lean
+?? src/Effect4/Laws/Program/FinalizerGeneratorRun.lean
+?? src/Effect4/Laws/Program/FinalizerLayerBody.lean
+?? src/Effect4/Laws/Program/FinalizerPlacement.lean
+?? src/Effect4/Laws/Program/FinalizerPlaces.lean
+?? src/Effect4/Laws/Program/FinalizerRace.lean
+?? src/Effect4/Laws/Program/FinalizerSource.lean
+?? src/Effect4/Laws/Program/Guard/CommandControlEdits.lean
+?? src/Effect4/Laws/Program/Guard/Lift.lean
+?? src/Effect4/Laws/Program/Guard/SourceLift.lean
+?? src/Effect4/Laws/Program/NativeActionFlow.lean
+?? src/Effect4/Laws/Program/NativeActionRows.lean
+?? src/Effect4/Laws/Program/NativeRefInvariant.lean
+?? src/Effect4/Laws/Program/NativeScopeFields.lean
+?? src/Effect4/Laws/Program/ParkedShape.lean
+?? src/Effect4/Laws/Program/ParkedShapeRun.lean
+?? src/Effect4/Laws/Program/PlaceFunding/FlowGuarded.lean
+?? src/Effect4/Laws/Program/PlaceFunding/FrameControl.lean
+?? src/Effect4/Laws/Program/PrimitiveCounter.lean
+?? src/Effect4/Laws/Program/ReleaseWriter/
+!! .lake/

@@ -1,0 +1,64 @@
+diff --git a/Test/Dogfood/Scenario/Atomic/StageQueue.lean b/Test/Dogfood/Scenario/Atomic/StageQueue.lean
+index 0ff0513ea..5410a0f95 100644
+--- a/Test/Dogfood/Scenario/Atomic/StageQueue.lean
++++ b/Test/Dogfood/Scenario/Atomic/StageQueue.lean
+@@ -94,6 +94,15 @@ def SnapshotAt (_world : StageWorld.World) (machine : NativeMachine) (tasks : Li
+ def LiveOwners (machine : NativeMachine) (commands : List Guard.NCmd) : List FiberId :=
+   commands.filterMap (fun command => if AnswerFlow.ghostAdvancing command then Guard.commandOwner machine command else none)
+ 
++/-- Selected live owners are actual command owners of the same queue. -/
++theorem live_owners_subset (machine : NativeMachine) (commands : List Guard.NCmd)
++    (id : FiberId) (member : id ∈ LiveOwners machine commands) :
++    id ∈ commands.filterMap (Guard.commandOwner machine) := by
++  obtain ⟨command, inside, found⟩ := List.mem_filterMap.mp member
++  split at found
++  · exact List.mem_filterMap.mpr ⟨command, inside, found⟩
++  · cases found
++
+ /-- Native owners and actual daemon interruption waits retain a strong frame certificate. -/
+ def FrameOwners (machine : NativeMachine) (commands : List Guard.NCmd) : List FiberId :=
+   commands.filterMap (fun command =>
+@@ -151,12 +160,12 @@ Consumer: Atomic's contextual fixed-command and native settlement producers. -/
+ theorem QueueAt.transport (root : NativeEff) (table : RowTable) (before after : StageWorld.World)
+     (future : Future before after) (first last : NativeMachine) (commands : List Guard.NCmd)
+     (held : QueueAt root table before first commands)
+-    (live : ∀ id, id ∈ commands.filterMap (Guard.commandOwner first) →
++    (live : ∀ id, id ∈ LiveOwners first commands →
+       LiveAt root table before first id → LiveAt root table after last id)
+     (finish : ∀ id, id ∈ commands.filterMap (Guard.commandOwner first) → FinishAt first id → FinishAt last id)
+     (reply : ∀ id token code, .resume id token code ∈ commands →
+       ReplyPermission first id token code → ReplyPermission last id token code)
+-    (receiving : ∀ id kind, id ∈ commands.filterMap (Guard.commandOwner first) →
++    (receiving : ∀ id kind, (∃ yielding, .afterInterrupt id yielding kind ∈ commands) →
+       AfterPermission root table before first id kind → AfterPermission root table after last id kind) :
+     QueueAt root table after last commands := by
+   intro command member
+@@ -168,7 +177,7 @@ theorem QueueAt.transport (root : NativeEff) (table : RowTable) (before after :
+   | resume id token code typed => exact .resume id token code (reply id token code member typed)
+   | interrupt target who extra => exact .interrupt target who extra
+   | afterInterrupt id yielding kind small noRace typed =>
+-    exact .afterInterrupt id yielding kind small noRace (receiving id kind (List.mem_filterMap.mpr ⟨_, member, rfl⟩) typed)
++    exact .afterInterrupt id yielding kind small noRace (receiving id kind ⟨yielding, member⟩ typed)
+   | track parent child rootParent => exact .track parent child rootParent
+   | observe id exit observer allowed => exact .observe id exit observer allowed
+   | exitDone id => exact .exitDone id
+diff --git a/Test/Dogfood/Scenario/Atomic/StageQueueUpdate.lean b/Test/Dogfood/Scenario/Atomic/StageQueueUpdate.lean
+index f2e75f85d..354d43af4 100644
+--- a/Test/Dogfood/Scenario/Atomic/StageQueueUpdate.lean
++++ b/Test/Dogfood/Scenario/Atomic/StageQueueUpdate.lean
+@@ -41,12 +41,13 @@ theorem QueueAt.update_other (root : NativeEff) (table : RowTable) (world : Stag
+     QueueAt root table world (machine.update actor) commands := by
+   apply held.transport root table world world (order.refl world) machine (machine.update actor) commands
+   · intro id member live
+-    exact owner_update machine actor id (away id member) _ live
++    exact owner_update machine actor id (away id (live_owners_subset machine commands id member)) _ live
+   · intro id member empty
+     exact owner_update machine actor id (away id member) _ empty
+   · exact reply
+   · intro id kind member receiving
+-    exact owner_update machine actor id (away id member) _ receiving
++    obtain ⟨yielding, present⟩ := member
++    exact owner_update machine actor id (away id (List.mem_filterMap.mpr ⟨_, present, rfl⟩)) _ receiving
+ 
+ /-- Updating one actual row transports a reader using its actual replacement certificate. -/
+ theorem owner_update_with (machine : NativeMachine) (first last : SourceScope.SourceFiber)

@@ -1,0 +1,490 @@
+diff --git a/docs/research/2026-10-14-meanings/configuration-route.md b/docs/research/2026-10-14-meanings/configuration-route.md
+index 19e4199fa..259522150 100644
+--- a/docs/research/2026-10-14-meanings/configuration-route.md
++++ b/docs/research/2026-10-14-meanings/configuration-route.md
+@@ -16,3 +16,37 @@ Use the full finalizer annotation to supply those premises.
+ This change adds no stored representation or machine behavior.
+ Local configuration closure establishes neither history funding nor release custody.
+ The finalizer endpoint still needs their composition.
++
++## Release custody at executable positions
++
++Concept: scope-lifetime-finalization R11.
++Question: release custody closes `FinalizerRun.once_placed_outside_census`.
++The full source balance already holds on every raw history.
++Its remaining premise bounds release-start production by earlier registrations.
++
++The old custody reading counts stored current code after parallel close has transferred its work.
++The parent stays running until an overwrite command executes.
++A command cut can discard that command, leaving the stored code unable to run.
++
++Use the existing fiber table and command list as the custody positions.
++Count current code in idle fibers and fibers owned by queued loop or delivery commands.
++Count saved frames, scope entries, dispatcher tasks, and unlaunched programs as before.
++Command ownership protects each untouched suffix.
++Dropping a command suffix can only reduce its current-code reservation.
++
++The generic split and installation laws belong beside `Machine.FiberSum`.
++Their consumer is the existing release-custody evaluator and command balance.
++The native case split stays in its existing producer.
++Only parallel close needs a new local transfer equation.
++The common decision lift carries the joined assertion.
++This route establishes no progress and adds no decision-admission premise.
++
++```mermaid
++flowchart LR
++  F[Existing fiber sum] --> A[Executable current-code reading]
++  A --> D[Existing native debit with parallel transfer]
++  D --> H[Common history lift]
++  H --> C[Release starts bounded by registration]
++  S[Full source funding] --> U[Once-placed registration bound]
++  C --> U
++```
+diff --git a/src/Effect4/Laws.lean b/src/Effect4/Laws.lean
+index 8184ef5b4..1f62c47bd 100644
+--- a/src/Effect4/Laws.lean
++++ b/src/Effect4/Laws.lean
+@@ -419,6 +419,11 @@ import Effect4.Laws.Program.NativePrimitiveDefault
+ import Effect4.Laws.Program.CodeClosure.ConfigurationNativeMetadata
+ import Effect4.Laws.Program.FinalizerSourceHistory
+ 
++-- M3: executable release custody through the shared native evaluator census.
++import Effect4.Laws.Program.ReleaseCustody.ExecutableNative
++import Effect4.Laws.Program.CodeClosure.AuthoredBinders
++import Effect4.Laws.Program.ParkedOrigin
++
+ /-!
+ # Effect4 proof graph
+ 
+diff --git a/src/Effect4/Laws/Machine/WriterActions.lean b/src/Effect4/Laws/Machine/WriterActions.lean
+index 6e64739da..9534ad20a 100644
+--- a/src/Effect4/Laws/Machine/WriterActions.lean
++++ b/src/Effect4/Laws/Machine/WriterActions.lean
+@@ -1,3 +1,4 @@
++import Effect4.Laws.Machine.FiberSumForks
+ import Effect4.Laws.Machine.WriterWeights
+ 
+ /-!
+@@ -48,14 +49,15 @@ theorem fork_finalizers_zero (model : FrameWeights.Model ν σ β ε δ ι α)
+     (fiber : RunFiber ν σ β ε δ ι α χ) (owner : FiberId) (programs : List (Prim ν σ β ε δ ι α))
+     (zero : (programs.map model.current).sum = 0) :
+     outside model owner (forkFinalizers interp machine fiber programs).1 = outside model owner machine := by
+-  induction programs generalizing machine with
+-  | nil => rfl
+-  | cons first rest ih =>
+-    simp only [List.map_cons, List.sum_cons] at zero
+-    have firstZero : model.current first = 0 := by omega
+-    have restZero : (rest.map model.current).sum = 0 := by omega
+-    exact (ih (spawn interp machine fiber first ⟨true, true, .inherit⟩ []).1 restZero).trans
+-      (spawn_zero model interp machine fiber owner first ⟨true, true, .inherit⟩ [] firstZero)
++  have bounds := FiberSum.forks_bounds
++    (fun f : RunFiber ν σ β ε δ ι α χ => FrameWeights.frame model f.frame)
++    model.current interp machine fiber owner programs (by
++      intro id code flag budget context
++      simp only [RunFiber.make, FrameFiber.start, FrameWeights.frame,
++        List.map_nil, List.sum_nil, Nat.add_zero, Nat.le_refl])
++  change outside model owner machine ≤ _ ∧ _ ≤ outside model owner machine + _ at bounds
++  rw [zero, Nat.add_zero] at bounds
++  exact Nat.le_antisymm bounds.2 bounds.1
+ 
+ /-- A parallel close with zero source weight in its children retains the actual parent reservation. -/
+ theorem parallel_bound (model : FrameWeights.Model ν σ β ε δ ι α)
+diff --git a/src/Effect4/Laws/Program/ReleaseCustody/NativeActionDebit.lean b/src/Effect4/Laws/Program/ReleaseCustody/NativeActionDebit.lean
+index 853ce4859..859efd31b 100644
+--- a/src/Effect4/Laws/Program/ReleaseCustody/NativeActionDebit.lean
++++ b/src/Effect4/Laws/Program/ReleaseCustody/NativeActionDebit.lean
+@@ -395,7 +395,8 @@ Consumer: actual action debit and the source/stored producer bound. -/
+ def demand (q : List Nat) : NAction → Nat
+   | .fork program _ _ | .forkIn program _ _ _ | .forkScoped program _ _
+   | .setInterruptible program _ => currentCredits q program
+-  | .raceAll programs _ | .raceAllFirst programs _ => (programs.map (currentCredits q)).sum
++  | .raceAll programs _ | .raceAllFirst programs _ | .closePar programs =>
++      (programs.map (currentCredits q)).sum
+   | _ => 0
+ 
+ /-- Removing observer metadata leaves every off-owner reservation unchanged.
+@@ -412,16 +413,22 @@ theorem drop_outside (q : List Nat) (m : NativeMachine) (owner : FiberId) (token
+ 
+ /-- Every actual non-parallel fiber action spends at most its existing active reservation.
+ Consumer: the native evaluator aggregate, then unchanged Workers release history. -/
+-theorem action (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
++theorem action_with (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
+     (fiber : Control.Fiber) (yielding : Bool) (selected : NAction)
+-    (held : NoAdd fiber.frame.stack) (source : SourceScope.ActionAt root selected)
+-    (sequential : SourceScope.SequentialSource root)
++    (held : NoAdd fiber.frame.stack)
+     (fibers : (m.fibers.map RunFiber.id).Nodup)
+     (scopes : (m.state.scopes.entries.map ScopeEntry.key).Nodup) (fresh : m.state.ScopeKeysFresh)
+-    (carried : demand q selected ≤ currentCredits q fiber.frame.current) :
+-    IterDebit q m fiber (evaluatePrim.withFiber (interpAt root m.completedExits table) m fiber yielding selected) := by
++    (carried : demand q selected ≤ currentCredits q fiber.frame.current)
++    (claim : RuntimeShape.Iteration → Prop)
++    (ordinary : ∀ it, IterDebit q m fiber it → claim it)
++    (parallel : ∀ programs, selected = .closePar programs →
++      (programs.map (currentCredits q)).sum ≤ currentCredits q fiber.frame.current →
++      claim (evaluatePrim.withFiber (interpAt root m.completedExits table) m fiber yielding (.closePar programs))) :
++    claim (evaluatePrim.withFiber (interpAt root m.completedExits table) m fiber yielding selected) := by
+   have full (active : NCode) := noAdd_full q active fiber.frame.stack held
+   cases selected
++  case closePar programs => exact parallel programs rfl carried
++  all_goals apply ordinary _
+   case fork program options site => exact fork q _ m fiber yielding program options site held carried
+   case forkIn program options scope site => exact forkIn q _ m fiber yielding program options scope site held carried
+   case forkScoped program options site => exact forkScoped q _ m fiber yielding program options site held carried
+@@ -429,7 +436,6 @@ theorem action (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeM
+   case raceAll programs site => exact race q root table m fiber yielding programs site .firstSuccess held carried
+   case raceAllFirst programs site => exact race q root table m fiber yielding programs site .firstExit held carried
+   case closeScope scope exit => exact closeScope q root table m fiber yielding scope exit held scopes
+-  case closePar programs => exact False.elim (SourceScope.SequentialSource.not_parallel sequential source.2)
+   case interruptAs target who => exact interruptAs q root table m fiber yielding target who fibers
+   case awaitAll targets => exact countdown_plan q root table m fiber yielding targets .exitsValue false held (Or.inl rfl)
+   case awaitAllFailFast targets => exact countdown_plan q root table m fiber yielding targets .exitsValue true held (Or.inl rfl)
+@@ -461,7 +467,7 @@ theorem action (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeM
+     all_goals apply replace_current q m fiber yielding _ .continue_ held
+     all_goals exact Nat.zero_le _
+   case interruptAll targets interruptor =>
+-    clear source carried
++    clear carried parallel
+     have commands : (((targets.map fun t => Cmd.interruptTarget (κ := NCode) t
+         (some (interruptor.getD fiber.id)) ((interpAt root m.completedExits table).stackAnnotations fiber.id)) ++
+         [Cmd.afterInterrupt fiber.id yielding (.awaitAll targets)]).map (commandCredits q)).sum = 0 := by
+@@ -490,12 +496,36 @@ theorem action (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeM
+       Nat.zero_add]
+   all_goals omega
+ 
++/-- Sequential sources instantiate the common action proof with an impossible parallel case.
++Consumer: the existing release history API. -/
++theorem action (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
++    (fiber : Control.Fiber) (yielding : Bool) (selected : NAction)
++    (held : NoAdd fiber.frame.stack) (source : SourceScope.ActionAt root selected)
++    (sequential : SourceScope.SequentialSource root)
++    (fibers : (m.fibers.map RunFiber.id).Nodup)
++    (scopes : (m.state.scopes.entries.map ScopeEntry.key).Nodup) (fresh : m.state.ScopeKeysFresh)
++    (carried : demand q selected ≤ currentCredits q fiber.frame.current) :
++    IterDebit q m fiber (evaluatePrim.withFiber (interpAt root m.completedExits table) m fiber yielding selected) := by
++  apply action_with q root table m fiber yielding selected held fibers scopes fresh carried
++    (IterDebit q m fiber) (fun _ debit => debit)
++  intro programs same _
++  have parallel : SourceScope.ActionAt root (.closePar programs) := same ▸ source
++  exact False.elim (SourceScope.SequentialSource.not_parallel sequential parallel.2)
++
+ /-- Stored actions retain precisely the programs that their active name reserves.
+ Consumer: actual withFiberOf producer bound. -/
+ theorem store_demand (q : List Nat) (name : ActionName) :
+     demand q (embedAction (actionOf name)) ≤ Names.actionCredits q name := by
+   cases name
+   case raceAll race => cases race <;> exact Nat.le_refl _
++  case closePar order exit =>
++    simp only [actionOf, embedAction, demand, Names.actionCredits, List.map_map, Function.comp_def, fin_program_credits]
++    induction order with
++    | nil => exact Nat.le_refl 0
++    | cons fin rest ih =>
++      simp only [List.map_cons, List.sum_cons, orderCredits, List.countP_cons, credit]
++      simp only [credit, orderCredits] at ih
++      omega
+   all_goals
+     simp only [actionOf, embedAction, demand, Names.actionCredits, prog_of_credits]
+     aesop (add safe apply [Nat.zero_le])
+diff --git a/src/Effect4/Laws/Program/ReleaseCustody/NativeIterationDebit.lean b/src/Effect4/Laws/Program/ReleaseCustody/NativeIterationDebit.lean
+index f28e33810..336a78034 100644
+--- a/src/Effect4/Laws/Program/ReleaseCustody/NativeIterationDebit.lean
++++ b/src/Effect4/Laws/Program/ReleaseCustody/NativeIterationDebit.lean
+@@ -1,4 +1,5 @@
+ import Effect4.Laws.Program.ReleaseCustody.NativeScopeDebit
++import Effect4.Laws.Program.IterationCases
+ 
+ /-!
+ Concept: scope-lifetime-finalization R11.
+@@ -45,42 +46,30 @@ theorem iteration (q : List Nat) (root : NativeEff) (table : RowTable) (m : Nati
+   have key : (countOp (runloopTop fiber)).id = fiber.id := by
+     unfold runloopTop
+     split <;> rfl
+-  unfold Effect4.Machine.iteration
+-  dsimp only
+-  cases injected : injectYield m (countOp (runloopTop fiber)) yielding with
+-  | none =>
+-    change IterDebit q m fiber (evaluateNative root m (countOp (runloopTop fiber)) yielding table)
+-    have debit := NativeScopeDebit.native q root table m (countOp (runloopTop fiber)) yielding
++  apply iteration_of_native root table m fiber yielding (IterDebit q m fiber)
++  · have debit := NativeScopeDebit.native q root table m (countOp (runloopTop fiber)) yielding
+       kept fragment source sequential fibers scopes fresh races
+     exact entry q m m fiber _ _ key rfl rfl rfl bound debit
+-  | some it =>
+-    unfold injectYield at injected
+-    split at injected
+-    · cases injected
+-      change IterDebit q m fiber (evaluateNative root _ _ true table)
+-      have wrapped := forced_wrapper kept 0
+-      have wrappedSource : SourceScope.FrameAt root
+-          { (countOp (runloopTop fiber)).frame with
+-            current := .onSuccessConst (.yieldNowWith 0) (countOp (runloopTop fiber)).frame.current } :=
+-        ⟨⟨trivial, source.1⟩, source.2⟩
+-      let next : Control.Fiber := {(countOp (runloopTop fiber)) with
+-          yieldOverride := none
+-          frame := {(countOp (runloopTop fiber)).frame with
+-            current := .onSuccessConst (.yieldNowWith 0) (countOp (runloopTop fiber)).frame.current}}
+-      let after := m.emit [.yieldInjected (countOp (runloopTop fiber)).id
+-        (countOp (runloopTop fiber)).currentOpCount]
+-      have debit := NativeScopeDebit.native q root table
+-        after
+-        next
+-        true wrapped fragment wrappedSource sequential fibers scopes fresh races
+-      apply entry q m after fiber next _ key rfl _ _ _ debit
+-      · simp only [after, RunMachine.emit_trace, List.countP_append, List.countP_cons, List.countP_nil,
+-          ReleaseTrace.releaseAt, Bool.false_eq_true, if_false, Nat.add_zero]
+-      · simp only [after, RunMachine.emit_trace, List.countP_append, List.countP_cons, List.countP_nil,
+-          ReleaseTrace.registeredAt, Bool.false_eq_true, if_false, Nat.add_zero]
+-      · dsimp only [next]
+-        rw [Evaluation.yield_wrapper_credits]
+-        exact bound
+-    · cases injected
++  · have wrapped := forced_wrapper kept 0
++    have wrappedSource : SourceScope.FrameAt root
++        { (countOp (runloopTop fiber)).frame with
++          current := .onSuccessConst (.yieldNowWith 0) (countOp (runloopTop fiber)).frame.current } :=
++      ⟨⟨trivial, source.1⟩, source.2⟩
++    let next : Control.Fiber := {(countOp (runloopTop fiber)) with
++        yieldOverride := none
++        frame := {(countOp (runloopTop fiber)).frame with
++          current := .onSuccessConst (.yieldNowWith 0) (countOp (runloopTop fiber)).frame.current}}
++    let after := m.emit [.yieldInjected (countOp (runloopTop fiber)).id
++      (countOp (runloopTop fiber)).currentOpCount]
++    have debit := NativeScopeDebit.native q root table after next true
++      wrapped fragment wrappedSource sequential fibers scopes fresh races
++    apply entry q m after fiber next _ key rfl _ _ _ debit
++    · simp only [after, RunMachine.emit_trace, List.countP_append, List.countP_cons, List.countP_nil,
++        ReleaseTrace.releaseAt, Bool.false_eq_true, if_false, Nat.add_zero]
++    · simp only [after, RunMachine.emit_trace, List.countP_append, List.countP_cons, List.countP_nil,
++        ReleaseTrace.registeredAt, Bool.false_eq_true, if_false, Nat.add_zero]
++    · dsimp only [next]
++      rw [Evaluation.yield_wrapper_credits]
++      exact bound
+ 
+ end Effect4.Program.ReleaseCustody.NativeIterationDebit
+diff --git a/src/Effect4/Laws/Program/ReleaseCustody/NativeParkDebit.lean b/src/Effect4/Laws/Program/ReleaseCustody/NativeParkDebit.lean
+index 12636feb9..4ea0a022d 100644
+--- a/src/Effect4/Laws/Program/ReleaseCustody/NativeParkDebit.lean
++++ b/src/Effect4/Laws/Program/ReleaseCustody/NativeParkDebit.lean
+@@ -1,4 +1,4 @@
+-import Effect4.Laws.Program.ReleaseCustody.NativePrimitiveDebit
++import Effect4.Laws.Program.ReleaseCustody.NativeRaceDebit
+ import Effect4.Laws.Program.ReleaseCustody.ReplySequencing
+ 
+ /-!
+@@ -75,11 +75,11 @@ theorem join (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMac
+ 
+ /-- Every native suspended park preserves its release reservation.
+ Consumer: the complete primitive evaluator census. -/
+-theorem suspend (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
++theorem suspend_at (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
+     (fiber : Control.Fiber) (yielding : Bool) (thunk : EffThunk)
+     (current : fiber.frame.current = .suspend thunk)
+     (held : Kept fiber.frame.current fiber.frame.stack)
+-    (unique : (m.fibers.map RunFiber.id).Nodup) (races : m.races = []) :
++    (unique : (m.fibers.map RunFiber.id).Nodup) (races : (m.races.map Race.id).Nodup) :
+     IterDebit q m fiber (evaluatePrim (interpAt root m.completedExits table) m fiber yielding) := by
+   have clean := suspended_clean thunk fiber.frame.stack (current ▸ held)
+   cases park : (interpAt root m.completedExits table).parkOf (.suspend thunk) with
+@@ -94,55 +94,83 @@ theorem suspend (q : List Nat) (root : NativeEff) (table : RowTable) (m : Native
+     | ok kind =>
+       cases kind with
+       | race rid =>
+-        simpa only [evaluatePrim, current, park] using race_missing q m fiber yielding rid races
++        simpa only [evaluatePrim, current, park] using NativeRaceDebit.register q m fiber yielding rid races
+       | awaitAll targets =>
+         simpa only [evaluatePrim, current, park, IterDebit] using
+           NativeActionDebit.countdown_plan q root table m fiber yielding targets .exitsValue false clean (Or.inl rfl)
+       | join target mode => exact join q root table m fiber yielding thunk target mode current park held unique
+ 
++/-- The old empty-race instance uses the unrestricted park producer. -/
++theorem suspend (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
++    (fiber : Control.Fiber) (yielding : Bool) (thunk : EffThunk)
++    (current : fiber.frame.current = .suspend thunk)
++    (held : Kept fiber.frame.current fiber.frame.stack)
++    (unique : (m.fibers.map RunFiber.id).Nodup) (races : m.races = []) :
++    IterDebit q m fiber (evaluatePrim (interpAt root m.completedExits table) m fiber yielding) :=
++  suspend_at q root table m fiber yielding thunk current held unique
++    (by rw [races]; exact List.nodup_nil)
++
+ /-- Every actual primitive evaluator case accounts for its foreign-release custody.
+ Consumer: native scoped evaluator assembly and the original admitted Workers history. -/
+ @[semantics "scope-lifetime-finalization" (requirement := R11)]
+-theorem primitive (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
++theorem primitive_with (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
+     (fiber : Control.Fiber) (yielding : Bool)
+     (held : Kept fiber.frame.current fiber.frame.stack)
+-    (fragment : SourceScope.Fragment root) (owned : SourceScope.FrameAt root fiber.frame)
+-    (sequential : SourceScope.SequentialSource root)
+     (fibers : (m.fibers.map RunFiber.id).Nodup)
+     (scopes : (m.state.scopes.entries.map ScopeEntry.key).Nodup) (fresh : m.state.ScopeKeysFresh)
+-    (races : m.races = []) :
+-    IterDebit q m fiber (evaluatePrim (interpAt root m.completedExits table) m fiber yielding) := by
+-  have ordinary := NativeAccounting.step_frame q root m.completedExits table m fiber yielding
++    (races : (m.races.map Race.id).Nodup)
++    (claim : RuntimeShape.Iteration → Prop)
++    (lift : ∀ it, IterDebit q m fiber it → claim it)
++    (actionDebit : ∀ thunk selected, fiber.frame.current = .withFiber thunk →
++      (interpAt root m.completedExits table).withFiberOf thunk = some selected →
++      claim (evaluatePrim.withFiber (interpAt root m.completedExits table) m fiber yielding selected)) :
++    claim (evaluatePrim (interpAt root m.completedExits table) m fiber yielding) := by
++  have ordinary := lift _ (NativeAccounting.step_frame q root m.completedExits table m fiber yielding)
+   cases current : fiber.frame.current
+   case yieldNowWith priority =>
+-    exact NativePrimitiveDebit.yielding q root table m fiber yielding priority current held
++    exact lift _ (NativePrimitiveDebit.yielding q root table m fiber yielding priority current held)
+   case async register signal cancel =>
+-    exact NativePrimitiveDebit.asynchronous q root table m fiber yielding register signal cancel current held
++    exact lift _ (NativePrimitiveDebit.asynchronous q root table m fiber yielding register signal cancel current held)
+   case success value =>
+     have park : (interpAt root m.completedExits table).parkOf (.success value) = none := rfl
+     simpa only [evaluatePrim, current, park] using
+-      NativePrimitiveDebit.finalizer q root m.completedExits table m fiber yielding (.success value) held
++      lift _ (NativePrimitiveDebit.finalizer q root m.completedExits table m fiber yielding (.success value) held)
+   case failure cause =>
+     have park : (interpAt root m.completedExits table).parkOf (.failure cause) = none := rfl
+     simpa only [evaluatePrim, current, park] using
+-      NativePrimitiveDebit.finalizer q root m.completedExits table m fiber yielding (.failure cause) held
++      lift _ (NativePrimitiveDebit.finalizer q root m.completedExits table m fiber yielding (.failure cause) held)
+   case withFiber thunk =>
+     have park : (interpAt root m.completedExits table).parkOf (.withFiber thunk) = none := rfl
+     cases selected : (interpAt root m.completedExits table).withFiberOf thunk with
+     | none => simpa only [evaluatePrim, current, park, selected] using ordinary
+     | some action =>
+       simpa only [evaluatePrim, current, park, selected] using
+-        NativeActionDebit.native_action q root table m fiber yielding thunk action current held fragment
+-          owned sequential fibers scopes fresh selected
++        actionDebit thunk action current selected
+   case sync thunk =>
+     cases response : (interpAt root m.completedExits table).syncState thunk m.state with
+-    | none => exact NativePrimitiveDebit.sync_none q root table m fiber yielding thunk current response
++    | none => exact lift _ (NativePrimitiveDebit.sync_none q root table m fiber yielding thunk current response)
+     | some result =>
+       obtain ⟨state, value⟩ := result
+-      exact NativePrimitiveDebit.sync_some q root table m fiber yielding thunk state value current held scopes fresh response
+-  case suspend thunk => exact suspend q root table m fiber yielding thunk current held fibers races
++      exact lift _ (NativePrimitiveDebit.sync_some q root table m fiber yielding thunk state value current held scopes fresh response)
++  case suspend thunk => exact lift _ (suspend_at q root table m fiber yielding thunk current held fibers races)
+   all_goals
+     simp only [evaluatePrim, current]
+     exact ordinary
+ 
++/-- The existing direct sequential instance uses the shared primitive census. -/
++@[semantics "scope-lifetime-finalization" (requirement := R11)]
++theorem primitive (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
++    (fiber : Control.Fiber) (yielding : Bool)
++    (held : Kept fiber.frame.current fiber.frame.stack)
++    (fragment : SourceScope.Fragment root) (owned : SourceScope.FrameAt root fiber.frame)
++    (sequential : SourceScope.SequentialSource root)
++    (fibers : (m.fibers.map RunFiber.id).Nodup)
++    (scopes : (m.state.scopes.entries.map ScopeEntry.key).Nodup) (fresh : m.state.ScopeKeysFresh)
++    (races : m.races = []) :
++    IterDebit q m fiber (evaluatePrim (interpAt root m.completedExits table) m fiber yielding) :=
++  primitive_with q root table m fiber yielding held fibers scopes fresh
++    (by rw [races]; exact List.nodup_nil) (IterDebit q m fiber) (fun _ debit => debit)
++    (fun thunk selected current found => NativeActionDebit.native_action q root table m fiber yielding
++      thunk selected current held fragment owned sequential fibers scopes fresh found)
++
+ end Effect4.Program.ReleaseCustody.NativeParkDebit
+diff --git a/src/Effect4/Laws/Program/ReleaseCustody/NativeScopeDebit.lean b/src/Effect4/Laws/Program/ReleaseCustody/NativeScopeDebit.lean
+index 0d7595784..ef05201d9 100644
+--- a/src/Effect4/Laws/Program/ReleaseCustody/NativeScopeDebit.lean
++++ b/src/Effect4/Laws/Program/ReleaseCustody/NativeScopeDebit.lean
+@@ -99,12 +99,14 @@ theorem exit_pop_bound (q : List Nat) (fiber : Pop.Frame) (exit : ExitV)
+ 
+ /-- Scoped exit transfers the closed store's cleanup credits after the actual continuation pop.
+ Consumer: the complete native evaluator aggregate at both success and failure. -/
+-theorem exiting (q : List Nat) (root : NativeEff) (m : NativeMachine)
++theorem exiting_with (q : List Nat) (root : NativeEff) (m : NativeMachine)
+     (fiber : Control.Fiber) (yielding : Bool) (exit : ExitV)
+     (held : Kept fiber.frame.current fiber.frame.stack)
+     (unique : (m.state.scopes.entries.map ScopeEntry.key).Nodup)
+-    (fallback : IterDebit q m fiber (evaluatePrim (interpAt root m.completedExits) m fiber yielding)) :
+-    IterDebit q m fiber (exitScoped root m fiber yielding exit) := by
++    (claim : RuntimeShape.Iteration → Prop)
++    (lift : ∀ it, IterDebit q m fiber it → claim it)
++    (fallback : claim (evaluatePrim (interpAt root m.completedExits) m fiber yielding)) :
++    claim (exitScoped root m fiber yielding exit) := by
+   let pop := fiber.frame.getCont
+     (match exit with | .success _ => .contA | .failure _ => .contE)
+     (match exit with | .success _ => false | .failure _ => true)
+@@ -132,6 +134,7 @@ theorem exiting (q : List Nat) (root : NativeEff) (m : NativeMachine)
+     · cases exit
+       all_goals
+         dsimp only at tail bounded counts noPush
++        apply lift _
+         unfold IterDebit
+         simp only [RunMachine.emit_trace, List.countP_append, List.map_nil, List.sum_nil,
+           Nat.add_zero, fiberCredits, noAdd_full q _ _ tail, Evaluation.exit_credits,
+@@ -146,6 +149,7 @@ theorem exiting (q : List Nat) (root : NativeEff) (m : NativeMachine)
+       cases program <;> cases exit
+       all_goals
+         dsimp only at tail bounded counts noPush
++        apply lift _
+         unfold IterDebit
+         simp only [RunMachine.emit_trace]
+         unfold outsideCredits
+@@ -159,9 +163,39 @@ theorem exiting (q : List Nat) (root : NativeEff) (m : NativeMachine)
+         omega
+   · exact fallback
+ 
++/-- The complete-row scoped exit is an instance of its shared branch producer. -/
++theorem exiting (q : List Nat) (root : NativeEff) (m : NativeMachine)
++    (fiber : Control.Fiber) (yielding : Bool) (exit : ExitV)
++    (held : Kept fiber.frame.current fiber.frame.stack)
++    (unique : (m.state.scopes.entries.map ScopeEntry.key).Nodup)
++    (fallback : IterDebit q m fiber (evaluatePrim (interpAt root m.completedExits) m fiber yielding)) :
++    IterDebit q m fiber (exitScoped root m fiber yielding exit) :=
++  exiting_with q root m fiber yielding exit held unique (IterDebit q m fiber)
++    (fun _ debit => debit) fallback
++
+ /-- All native evaluator branches retain the actual scope and continuation debit.
+ Consumer: iteration accounting, then `Execution.history` at the original Workers statement. -/
+ @[semantics "scope-lifetime-finalization" (requirement := R11)]
++theorem native_with (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
++    (fiber : Control.Fiber) (yielding : Bool)
++    (held : Kept fiber.frame.current fiber.frame.stack)
++    (scopes : (m.state.scopes.entries.map ScopeEntry.key).Nodup)
++    (claim : RuntimeShape.Iteration → Prop)
++    (lift : ∀ it, IterDebit q m fiber it → claim it)
++    (primitive : ∀ rows, claim (evaluatePrim (interpAt root m.completedExits rows) m fiber yielding)) :
++    claim (evaluateNative root m fiber yielding table) := by
++  unfold evaluateNative
++  split
++  · rename_i point current
++    split
++    · exact lift _ (enter q root point m fiber yielding current held)
++    · exact primitive table
++  · exact exiting_with q root m fiber yielding _ held scopes claim lift (primitive [])
++  · exact exiting_with q root m fiber yielding _ held scopes claim lift (primitive [])
++  · exact primitive table
++
++/-- The old source-restricted evaluator is the complete-row instance of the shared producer. -/
++@[semantics "scope-lifetime-finalization" (requirement := R11)]
+ theorem native (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
+     (fiber : Control.Fiber) (yielding : Bool)
+     (held : Kept fiber.frame.current fiber.frame.stack)
+@@ -170,19 +204,10 @@ theorem native (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeM
+     (fibers : (m.fibers.map RunFiber.id).Nodup)
+     (scopes : (m.state.scopes.entries.map ScopeEntry.key).Nodup) (fresh : m.state.ScopeKeysFresh)
+     (races : m.races = []) :
+-    IterDebit q m fiber (evaluateNative root m fiber yielding table) := by
+-  have ordinary := NativeParkDebit.primitive q root table m fiber yielding held fragment owned
+-    sequential fibers scopes fresh races
+-  have exitFallback := NativeParkDebit.primitive q root [] m fiber yielding held fragment owned
+-    sequential fibers scopes fresh races
+-  unfold evaluateNative
+-  split
+-  · rename_i point current
+-    split
+-    · exact enter q root point m fiber yielding current held
+-    · exact ordinary
+-  · exact exiting q root m fiber yielding _ held scopes exitFallback
+-  · exact exiting q root m fiber yielding _ held scopes exitFallback
+-  · exact ordinary
++    IterDebit q m fiber (evaluateNative root m fiber yielding table) :=
++  native_with q root table m fiber yielding held scopes (IterDebit q m fiber)
++    (fun _ debit => debit)
++    (fun rows => NativeParkDebit.primitive q root rows m fiber yielding held fragment owned
++      sequential fibers scopes fresh races)
+ 
+ end Effect4.Program.ReleaseCustody.NativeScopeDebit
