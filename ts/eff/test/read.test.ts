@@ -804,6 +804,6 @@ describe("a module file: the rows' services and a definition block", () => {
     if (r.success._tag !== "defs") throw new Error("no definition block")
     expect(r.success.decls[0]?.answer).toEqual({ _tag: "refOf", value: { _tag: "option", inner: { _tag: "nat" } } })
     expect(r.success.decls[1]?.request).toEqual({ _tag: "refOf", value: { _tag: "option", inner: { _tag: "nat" } } })
-    expect(refusal("Deferred.make<Ref.Ref<number>, never>()")).toEqual({ _tag: "shape", what: "Deferred.make type argument annotation" })
+    expect(refusal("Deferred.make<Ref.Ref<number>, never>()")).toEqual({ _tag: "annotation", site: "Deferred.make type argument" })
   })
 })

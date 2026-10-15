@@ -609,3 +609,119 @@ lines and adds 18.
   - (b) the key names `defs` and `invoke` as not constructed.
 
   Recommend (a): the foreign readers then meet a block.
+
+## CR-8: one refusal alphabet, and refusals that name their site
+
+### Base and head
+
+Base `827252a85`; the slice's commit is the head.
+
+### What landed, step by step
+
+1. **The TypeScript reader's refusal type is generated from `ReadRefusal`** (DI-88's first step).
+   - `TsGen` reads the inductive `Effect4.Program.ReadRefusal` off the environment it loads, and
+     writes one TypeScript arm per constructor into `ts/eff/templates.gen.ts`
+     (`readRefusalArms`, `tools/Drivers/TsGen.lean`). A field of a type with no carrier refuses
+     the generation.
+   - `ts/eff/read.ts` defines its `Refusal` as that type and its own three: `node`, `program`
+     and `parse`. The hand type had seven of Lean's eight cases: it lacked `annotation`.
+   - Three sites of the TypeScript reader now answer Lean's refusal, `annotation`. They are a
+     loop's cursor type with no reading (`"local const"`), a fold's stated accumulator
+     (`"fold accumulator"`), and a row's type argument with no reading
+     (`"<spelling> type argument"`). Their five unit tests follow.
+   - The compiler-backed foreign engine mirrors the fragment reader's refusal at a type argument
+     (`ts/eff/ingest/ck.ts`). It now answers `annotation` too, so the two foreign engines still
+     agree, and their test follows.
+2. **`PrintRefusal.internalAction` gives up the block's refusals to seven named cases.** They
+   are appended after the alphabet's others, so every older case keeps its wire tag:
+   - `invocation (definition : Nat)`: an invocation with programs of a definition the signature
+     lacks or that takes no program (`printInvoke`);
+   - `emptyBlock`, and `bodies (position : Nat)` where declarations and bodies part
+     (`printModuleWith`, `printDefsWith`);
+   - `serviceName (name : String)`: a name two definitions, or two services' names, share;
+   - `strayMethod (definition service : String)`: a method of a service the block lacks;
+   - `service (name : String)` and `serviceMethod (service method : String)`: a service, or one
+     of its methods, that does not print (`serviceFaultOf`, `methodType`, `methodClosure`).
+
+   `serviceFault` and `serviceFaultOf` answer a refusal, not a string. `internalAction` keeps the
+   template table's refusals and the typed print's sites. `RefusalsDerived` is regenerated, and
+   the generator's guards sample the seven cases (`tools/Effect4Gen/guards/refusals.lean`).
+3. **`SurfaceRefusal.unbound` names the reference and its scope.** It carries the unbound name
+   and the names its scope binds, nearest first, less the builtins (`SourceBindings.scopeNames`).
+   The lexical check's two other refusals get their own cases, `imports` and `lexical`
+   (`lexicalRefusal`, `src/Effect4/Codegen/Admit.lean`).
+
+### Changed files
+
+- Core: `src/Effect4/Codegen/Refusal.lean`, `PrintLeaf.lean`, `Print.lean`, `SourceBindings.lean`,
+  `Admit.lean` (all under `src/Effect4/Codegen/`); `src/Effect4/Laws/Codegen/Services.lean`.
+- Regenerated: `src/Effect4/Api/RefusalsDerived.lean` (`python3 scripts/generate.py --only
+  derived`) and `ts/eff/templates.gen.ts` (`--only ts`).
+- Tools: `tools/Drivers/TsGen.lean`, `tools/Effect4Gen/guards/refusals.lean`,
+  `tools/Tools/Code/Module.lean` (the boundary's refusals in words).
+- The truth driver: `harness/truth/Truth.lean` (the new refusals in words).
+- TypeScript: `ts/eff/read.ts`, `ts/eff/ingest/ck.ts`, `ts/eff/README.md`, and four test files
+  under `ts/eff/test/` and `ts/eff/ingest/test/`.
+- Batteries: `Test/Codegen/DefinitionsPrint.lean` (six new controls, one updated),
+  `Test/Api/ApiContract.lean` and `Test/Codegen/PayloadClasses.lean` (the unbound name pinned).
+- The contract: `Test/contracts/faces.contract.md`, a new amendment.
+
+### Commands and results
+
+Every `lake` and `make` command ran through the shared slot. The logs are in the seat's
+scratchpad (`cr8/`, `gates/cr8/`, `gates/cr8b/`).
+
+| Command | Result |
+| --- | --- |
+| `lake build` of the five edited core modules | passes: 128 jobs, 34 s |
+| `python3 scripts/generate.py --only derived` | passes: `RefusalsDerived.lean` alone moves, by the seven cases and their samples |
+| the narrow build (`cr8/build2.sh`): the edited modules, their direct importers, the codegen laws that unfold the printers, the tools and the batteries that read the refusals | first run: one battery failed, `Test/Codegen/PayloadClasses.lean`, at two guards that matched the old `.unbound`. After their repair it passes: 1,372 jobs |
+| the refusal probe (`cr8/RefusalProbe.lean`) | each named case answers at a small program; the values that the batteries now pin |
+| `python3 scripts/generate.py --only ts` | passes: `templates.gen.ts` alone moves, by the generated `ReadRefusal` |
+| `make check-ts-reader`, first run | one test failed: the two foreign engines disagreed at an unreadable type argument. `ck.ts` mirrored the old detail; it now mirrors the new one |
+| `make check-ts-reader`, after the repair | passes: 501 files, 416 matched, none mismatched, none refused with an oracle; 783 tests; tsgo's typecheck |
+| `make check-gen` | regenerates every group: the two files above are the only difference from the base commit, so the check fails until they are committed |
+| `make check-host-protocol` | passes: the keyed differential's 57 runs, the scenarios, the to-do's service and the to-do on SQLite |
+| `lake env lean --run harness/truth/Truth.lean` into the scratchpad | the truth manifest is byte-identical to the committed one |
+
+### Axiom output
+
+`#axiom_audit` over the five core modules, `RefusalsDerived`, `Effect4.Laws.Codegen.Services`
+and the three edited batteries (`cr8/AuditCR8.lean`): 2,556 declarations within
+`[propext, Quot.sound]`, none modulo a planned goal.
+
+### Landed theorems and their placement
+
+- `nodup_of_repeatOf` and `strayMethod_of_strayOf` (`src/Effect4/Laws/Codegen/Services.lean`):
+  concept `exact-codecs`, steps of the claim `module-defs-round-trip` (R8). Their consumer is
+  `serviceFault_none`, whose statement is unchanged. They replace the two `decide`-based steps
+  of its old proof, since the fault now names what repeats and what strays.
+- `readServiceMethods_ok` takes the service's name as an implicit argument. Its conclusion is
+  unchanged.
+
+### Lines removed and added
+
+Without the two regenerated files, 106 lines removed and 362 added in 21 files. The regenerated
+files add 114 lines and remove 5.
+
+### Evidence
+
+- Proved: the laws above, under `[propext, Quot.sound]`.
+- Tested: the reader's 783 tests and its corpus run; the keyed lane; the batteries' new controls.
+- Reproduced: the truth manifest, byte for byte; the two regenerated files by their producers.
+
+### Open obligations
+
+- The TypeScript reader answers Lean's refusal at three sites. Elsewhere it may name a refusal
+  otherwise: an annotated function in a term row's place is one (`E4-CHECK-CE-017`). The
+  generated reader of DI-88 closes the rest.
+- The two foreign engines still answer `shape` at a loop's unreadable cursor type. Both reject it
+  themselves, before the fragment reader, so they agree with each other and not with Lean's
+  `annotation "local const"`.
+- `internalAction` still names the template table's refusals and the typed print's sites by a
+  string. Those are the table's data (`RowOut.refuse`) and the typed print's internal sites.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR8-1.** DI-88's register entry records that its first step landed: the refusal alphabet,
+  generated from `ReadRefusal`.

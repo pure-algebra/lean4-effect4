@@ -49,7 +49,7 @@ def allowedOrigins : List Bindings.Origin :=
 
 /-- A refusal of the reading boundary, in words. -/
 def surfaceText : SurfaceRefusal → String
-  | .unbound => "a name has no binding or no permitted import"
+  | .unbound name _ => "the name " ++ name ++ " has no binding in its scope"
   | .read why => "it does not read back: " ++ reprStr why
   | .illTyped => "what it reads back to is ill-typed"
   | .unrepresentable _ => "a type has no TypeScript annotation"
@@ -61,6 +61,8 @@ def surfaceText : SurfaceRefusal → String
   | .formation _ => "what it reads back to is not formed"
   | .classDeclarations => "its classes are not the printer's"
   | .outsideProfile n => "the literal " ++ toString n ++ " is above the target's safe integers"
+  | .imports => "an import is not admitted"
+  | .lexical => "a form the binding analysis does not read"
 
 /-- A module laid out at the width `w`: the house's header block and imports, then each
 declaration laid out, one blank line between. -/

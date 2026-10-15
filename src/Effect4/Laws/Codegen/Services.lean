@@ -200,9 +200,10 @@ theorem mapM_passedName : ∀ (qs : List ParamDecl),
 
 /-- The closures of a printed layer read back as its methods' information: the arity is the
 closure's parameters less the programs that it passes on (slice HO-5). -/
-theorem readServiceMethods_ok {sig : Signature Op} {defs : List DefDecl} {init : DefDecl} :
+theorem readServiceMethods_ok {sig : Signature Op} {service : String} {defs : List DefDecl}
+    {init : DefDecl} :
     ∀ {methods : List (String × Nat × Nat)} {closures : List (String × TypeScript.Expr)},
-      methods.mapM (methodClosure sig init defs) = .ok closures →
+      methods.mapM (methodClosure sig service init defs) = .ok closures →
         closures.mapM readServiceMethod =
           some (methods.map fun x => (x.1, ((defs[x.2.1]?).map (·.name)).getD "", x.2.2))
   | [], closures, h => by
@@ -302,6 +303,58 @@ theorem printService_ok {sig : Signature Op} {defs : List DefDecl} {sv : Service
 
 /-! ## What a block whose services print satisfies -/
 
+/-- A list in which no name repeats a later one has no duplicate: what `repeatOf` checks when it
+finds no repeat. A step of `serviceFault_none`, its consumer. -/
+theorem nodup_of_repeatOf : ∀ {names : List String}, repeatOf names = none → names.Nodup
+  | [], _ => List.nodup_nil
+  | n :: rest, h => by
+    simp only [repeatOf] at h
+    cases hc : rest.contains n with
+    | true =>
+      rw [hc, if_pos rfl] at h
+      cases h
+    | false =>
+      rw [hc, if_neg Bool.false_ne_true] at h
+      exact List.nodup_cons.mpr
+        ⟨fun hm => Bool.false_ne_true (hc.symm.trans (List.contains_iff_mem.mpr hm)),
+          nodup_of_repeatOf h⟩
+
+/-- No definition is a method of a service the block does not declare when `strayOf` finds none.
+A step of `serviceFault_none`, its consumer. -/
+theorem strayMethod_of_strayOf {names : List String} :
+    ∀ {defs : List DefDecl}, strayOf names defs = none → ∀ d ∈ defs, strayMethod names d = false
+  | [], _, _, hd => nomatch hd
+  | d :: ds, h, e, he => by
+    simp only [strayOf] at h
+    cases hr : d.role with
+    | plain =>
+      rw [hr] at h
+      dsimp only at h
+      rcases List.mem_cons.mp he with heq | he
+      · rw [heq]
+        simp only [strayMethod, hr]
+      · exact strayMethod_of_strayOf h e he
+    | serviceInit s =>
+      rw [hr] at h
+      dsimp only at h
+      rcases List.mem_cons.mp he with heq | he
+      · rw [heq]
+        simp only [strayMethod, hr]
+      · exact strayMethod_of_strayOf h e he
+    | serviceMethod s m k =>
+      rw [hr] at h
+      dsimp only at h
+      cases hc : names.contains s with
+      | false =>
+        rw [hc, if_neg Bool.false_ne_true] at h
+        cases h
+      | true =>
+        rw [hc, if_pos rfl] at h
+        rcases List.mem_cons.mp he with heq | he
+        · rw [heq]
+          simp only [strayMethod, hr, hc, Bool.not_true]
+        · exact strayMethod_of_strayOf h e he
+
 /-- What `serviceFault` checks, when it finds no fault: distinct definition names in a block with
 a service, no method of a service that the block does not declare, and no fault of one service. -/
 theorem serviceFault_none {defs : List DefDecl} (h : serviceFault defs = none) :
@@ -317,15 +370,9 @@ theorem serviceFault_none {defs : List DefDecl} (h : serviceFault defs = none) :
     · split at h
       · cases h
       · rename_i hstray
-        refine ⟨?_, ?_, h⟩
-        · intro hne
-          cases hn : decide ((defs.map (·.name)).Nodup) with
-          | true => exact of_decide_eq_true hn
-          | false => exact absurd (by rw [hne, hn]; rfl) hnames
-        · intro d hd
-          cases hs : strayMethod ((servicesOf defs).map (·.name)) d with
-          | false => rfl
-          | true => exact absurd (List.any_eq_true.mpr ⟨d, hd, hs⟩) hstray
+        refine ⟨fun hne => ?_, strayMethod_of_strayOf hstray, h⟩
+        rw [hne, if_neg Bool.false_ne_true] at hnames
+        exact nodup_of_repeatOf hnames
 
 /-- A service that prints has a name and a layer name that carry no layer path. -/
 theorem serviceFaultOf_names {defs : List DefDecl} {sv : Service}

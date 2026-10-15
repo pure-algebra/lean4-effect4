@@ -32,8 +32,9 @@ open Effect4.Program
 rather than being re-listed. `DecidableEq` only: the carrier's `TypeRef` has decidable
 equality but no `Repr`, and `declaredType` carries two of them. -/
 inductive SurfaceRefusal where
-  /-- The lexical check refused: an import, or a reference with no binding in its scope. -/
-  | unbound
+  /-- The lexical check refused a reference that no binding of its scope resolves: the name, and
+  the names its scope binds, nearest first, less the builtins (`SourceBindings.scopeNames`). -/
+  | unbound (name : String) (scope : List String)
   | read (why : ReadRefusal)
   /-- The reconstructed program does not type against the signature. -/
   | illTyped
@@ -51,6 +52,13 @@ inductive SurfaceRefusal where
   /-- A natural literal above the TypeScript face's bound: JavaScript reads the module's text as
   another number than the program holds (DI-56; `E4-PRINT-CE-002`, decisions row 357). -/
   | outsideProfile (value : Nat)
+  /-- The lexical check refused an import: a local name imported twice or no identifier, or an
+  origin the reading does not allow (`Bindings.lawfulImports`). -/
+  | imports
+  /-- The lexical check refused a form the binding analysis does not read: an import of another
+  shape, a raw or opaque declaration, or a name declared twice in one scope
+  (`SourceBindings.moduleUses`). -/
+  | lexical
   deriving DecidableEq
 
 /-- Every earlier declaration of a block is a plain exported layer constant: the shape
@@ -124,6 +132,20 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
   envelope : envelopeCheck name typing.ty classes (nativeSignature table).keyNames module.decls =
     none
 
+/-- Why the lexical check refused a module (`SourceBindings.check`): an import it does not admit,
+a form the binding analysis does not read, or the first reference that no binding of its scope
+resolves, with the names that scope binds. A module the check refuses has one of the three, so
+the last arm answers only a module that the check admits, which `admitModule` never asks about. -/
+def lexicalRefusal (allowed : List Bindings.Origin) (module : TypeScript.Module) : SurfaceRefusal :=
+  if !Bindings.lawfulImports allowed module.imports then .imports
+  else
+    let analysis := SourceBindings.moduleUses module
+    if !analysis.valid then .lexical
+    else
+      match analysis.uses.find? fun u => !SourceBindings.useResolved u with
+      | some u => .unbound u.name (SourceBindings.scopeNames u)
+      | none => .lexical
+
 /-- Checked reading: lexical bindings, raw reconstruction, the shared typing certificate,
 and the declaration envelope compared with what the printer emits for the checked type. -/
 def admitModule (name : String) (module : TypeScript.Module) (table : RowTable := [])
@@ -131,7 +153,7 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
     (ambient : List TypeScript.Import := []) :
     Except SurfaceRefusal (ModuleReading table name allowed ambient) :=
   match SourceBindings.validate allowed (withAmbient ambient module) with
-  | none => .error .unbound
+  | none => .error (lexicalRefusal allowed (withAmbient ambient module))
   | some bound =>
     match hread : Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
         NativeOp.param [] module.decls with

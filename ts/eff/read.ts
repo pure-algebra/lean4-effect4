@@ -25,26 +25,21 @@ import { readTupleIndex } from "./tuple-index.ts"
 import { targetType, legacyType, recordKeyForm, quoteType, payloadClass, targetIdentifier, requirementText, nativeScopeKey, keySpelling, keyOfSpelling, rowKeyNames, unionParts, normalize, sameKey, type KeyNames } from "./target-types.ts"
 import { heads, rows, serviceTypes, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
 import { names as nameTables } from "./names.gen.ts"
-import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
+import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type ReadRefusal, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
 export type { Eff } from "./eff.gen.ts"
 
 /* ============================================================ § 0  the function */
 
 /**
- * Why a reading declined. The first seven are `Effect4.Program.ReadRefusal` verbatim; the
- * last three belong to the layer under it: a tree oxc built that the printer never emits
- * (`node`), a file that is not one program (`program`), text oxc could not parse (`parse`).
- * A refusal is data, never a guess.
+ * Why a reading declined. `ReadRefusal` is `Effect4.Program.ReadRefusal`, generated from the
+ * inductive (`templates.gen.ts`), so the two readers answer in one alphabet. The last three
+ * belong to the layer under it: a tree oxc built that the printer never emits (`node`), a file
+ * that is not one program (`program`), text oxc could not parse (`parse`). A refusal is data,
+ * never a guess.
  */
 export type Refusal =
-  | { readonly _tag: "unknownHead"; readonly name: string }
-  | { readonly _tag: "unknownIdent"; readonly name: string }
-  | { readonly _tag: "arity"; readonly head: string }
-  | { readonly _tag: "binder"; readonly expected: string }
-  | { readonly _tag: "shape"; readonly what: string }
-  | { readonly _tag: "negative"; readonly value: number }
-  | { readonly _tag: "unsupportedStmt" }
+  | ReadRefusal
   | { readonly _tag: "node"; readonly type: string; readonly where: string }
   | { readonly _tag: "program"; readonly what: string }
   | { readonly _tag: "parse"; readonly messages: ReadonlyArray<string> }
@@ -124,6 +119,7 @@ export const showRefusal = (r: Refusal): string => {
     case "shape": return `shape ${r.what}`
     case "negative": return `negative ${r.value}`
     case "unsupportedStmt": return "unsupportedStmt"
+    case "annotation": return `annotation ${r.site}`
     case "node": return `node ${r.type} (${r.where})`
     case "program": return `program ${r.what}`
     case "parse": return `parse ${r.messages.join("; ")}`
@@ -704,11 +700,12 @@ const stmtOf = (n: Node): Read<TsStmt> => {
         if (failed(v)) return again(v)
         if (!id.typeAnnotation) return ok({ _tag: "letInit", name: id.name, value: v.success })
         // A stated type on a `let` is a loop's cursor type (`iterate`'s annotated image). It is
-        // read by the checked type reader, and a type with no such reading is refused here,
-        // where Lean answers `annotation "local const"`.
+        // read by the checked type reader, and a type with no such reading is refused here as
+        // Lean refuses it, `annotation "local const"`.
         const stated = annotation && nodeAt(annotation, "typeAnnotation")
         const type = stated ? readTypeChecked(stated) : undefined
-        return type === undefined ? unsupported(n, "declarator") : ok({ _tag: "letInit", name: id.name, value: v.success, type })
+        return type === undefined ? refuse({ _tag: "annotation", site: "local const" })
+          : ok({ _tag: "letInit", name: id.name, value: v.success, type })
       }
       return unsupported(n, "declaration kind")
     }
@@ -1201,10 +1198,10 @@ export const readTerm = (n: number, x: Expr): Read<Term> => {
     case "call": {
       const fn = x.fn
       // A fold's stated accumulator type is printed and not read yet: the checked type reader
-      // (`readTypeChecked`) does not serve this place (Lean's
-      // `ReadRefusal.annotation "fold accumulator"`, `Codegen/Read.lean`).
+      // (`readTypeChecked`) does not serve this place, and the refusal is Lean's
+      // (`ReadRefusal.annotation "fold accumulator"`, `Codegen/Read.lean`).
       if (fn._tag === "generic" && fn.fn._tag === "ident" && fn.fn.name === "fold")
-        return refuse({ _tag: "shape", what: "fold accumulator annotation" })
+        return refuse({ _tag: "annotation", site: "fold accumulator" })
       if (fn._tag !== "ident") return refuse({ _tag: "shape", what: "term" })
       return Result.map(readTerms(n, x.args), (args): Term => ({ _tag: "app", atom: fn.name, args }))
     }
@@ -2013,7 +2010,7 @@ const readCall = (n: number, x: Expr): Read<Eff> => {
       const tys: Ty[] = []
       for (const text of split.types) {
         const ty = readTypeText(text)
-        if (ty === undefined) return refuse({ _tag: "shape", what: `${calledSpelling(x)} type argument annotation` })
+        if (ty === undefined) return refuse({ _tag: "annotation", site: `${calledSpelling(x)} type argument` })
         tys.push(ty)
       }
       return ok({ _tag: "perform", op: withTypeArgs(eff.op, tys), request: eff.request })

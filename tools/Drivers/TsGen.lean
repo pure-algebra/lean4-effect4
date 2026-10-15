@@ -49,7 +49,9 @@ Writes nine library files and one test fixture, all `GENERATED`, none ever edite
   constructor's argument sorts and field names, and the reserved names that head a program
   clause: what `ts/eff/read.ts`'s one matcher runs over, as Lean's `readT` does. The reserved
   heads are cross-checked against the identifiers the table's skeletons write (data, not a
-  source scan) and `PrintLeaf.lean`'s literals.
+  source scan) and `PrintLeaf.lean`'s literals. Beside the table, the reader's refusal alphabet
+  `ReadRefusal`, read off the inductive `Effect4.Program.ReadRefusal` (DI-88's first step): the
+  two readers answer in one alphabet.
 * `test/type-projection.gen.json` — finite type metadata, normalization and annotation fixtures, evaluated by the core functions.
 * `packages.gen.ts` — the canonical package tables (`Effect4.Program.Packages.all`, the host
   rows slice): per package its rc.112 key string, service type code, handle target and its
@@ -1162,7 +1164,33 @@ def templateTypes : String :=
   "export const programHeads: ReadonlyArray<string> = templates.programHeads\n" ++
   "export const genHead: string = templates.genHead\n"
 
-def emitTemplates (fs : List Family) : Except String String := do
+/-- **The reader's refusal alphabet, read off `Effect4.Program.ReadRefusal`** (DI-88's first step):
+one TypeScript arm per constructor, in declaration order, its `_tag` the constructor's short name
+and its fields under their Lean names. `String` is `string`, and `Nat` and `Int` are `number`; a
+field of any other type has no carrier here, and the generator refuses it. -/
+def readRefusalArms : MetaM (List String) := do
+  let some (.inductInfo refusal) := (← getEnv).find? ``Effect4.Program.ReadRefusal
+    | throwError "TsGen: Effect4.Program.ReadRefusal is not an inductive"
+  refusal.ctors.mapM fun ctorName => do
+    let ctor ← getConstInfoCtor ctorName
+    forallTelescope ctor.type fun xs _ => do
+      let fields ← (xs.toList.drop ctor.numParams).mapM fun x => do
+        let field ← x.fvarId!.getUserName
+        let carrier ← match (← whnfR (← inferType x)).constName? with
+          | some ``String => pure "string"
+          | some ``Nat | some ``Int => pure "number"
+          | _ => throwError "TsGen: the field {field} of {ctorName} has no TypeScript carrier"
+        pure s!"; readonly {field}: {carrier}"
+      pure s!"  | \{ readonly _tag: {lit (shortName ctorName)}{String.join fields} }"
+
+/-- The reader's refusal type, from its arms (`readRefusalArms`). -/
+def readRefusalType (arms : List String) : String :=
+  "/** Why the reader declined a tree: `Effect4.Program.ReadRefusal`, constructor for constructor,\n" ++
+  " * read off the inductive (`tools/Drivers/TsGen.lean`). `String` is `string`; `Nat` and `Int` are\n" ++
+  " * `number`. `ts/eff/read.ts` adds the refusals of the layer under it. */\n" ++
+  "export type ReadRefusal =\n" ++ "\n".intercalate arms ++ "\n"
+
+def emitTemplates (fs : List Family) (refusalArms : List String) : Except String String := do
   let rows ← table.mapM rowJs'
   let perFamily (f : Effect4.Program.EffFam × Name → Except String (List (String × String))) :
       Except String String := do
@@ -1183,7 +1211,7 @@ def emitTemplates (fs : List Family) : Except String String := do
       else .ok (family.ctors.map fun c => (c.short, arr (c.args.map fun (name, _) => lit name)))
   pure (emitTable "templates" (obj [("rows", arr rows), ("argSorts", sorts), ("argNames", names),
     ("programHeads", arr (Effect4.Program.programHeads.map lit)), ("genHead", lit genHead)]) ++
-    templateTypes)
+    templateTypes ++ readRefusalType refusalArms)
 
 mutual
   /-- The identifiers a skeleton writes: with the leaf printers' own, the printer's whole
@@ -1270,9 +1298,11 @@ def main (args : List String) : IO Unit := do
   let out : System.FilePath := outDir
   -- the closed world
   initSearchPath (← findSysroot)
-  let env ← importModules #[{ module := `Effect4.Program.Native }] {} 0
+  let env ← importModules #[{ module := `Effect4.Program.Native },
+    { module := `Effect4.Codegen.Refusal }] {} 0
   let ctx : Core.Context := { fileName := "<tsgen>", fileMap := default }
   let (bs, _) ← ((readBlocks.run' {}).toIO ctx { env := env })
+  let (refusalArms, _) ← ((readRefusalArms.run' {}).toIO ctx { env := env })
   let fs := bs.flatten
   for f in fs do
     for c in f.ctors do
@@ -1322,7 +1352,7 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (out / "names.gen.ts") (stampHeader ++ emitNames)
   IO.FS.writeFile (out / "forms.gen.ts") (stampHeader ++ emitForms)
   IO.FS.writeFile (out / "packages.gen.ts") (stampHeader ++ emitPackages)
-  match emitTemplates fs with
+  match emitTemplates fs refusalArms with
   | .ok text => IO.FS.writeFile (out / "templates.gen.ts") (stampHeader ++ text)
   | .error why => throw (IO.userError s!"TsGen: templates: {why}")
   let projectionCases ← match emitTypeProjectionCases fs with

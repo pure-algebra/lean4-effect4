@@ -464,16 +464,16 @@ def printPerform {Op : Type} (sig : Signature Op) (n : Nat) (op : Op) (request :
 /-- **An invocation with programs** (decisions row 340, slice HO-3b): the definition's name
 applied to its request and to each program as a function of the binder due at `n`,
 `twice(5, (a0) => …)`; each program is printed at `n + 1` by the caller (`Templates.tableLayer`).
-A definition the signature lacks, or one that takes no program, is refused by name: such a
-definition is invoked by its row call. -/
+A definition the signature lacks, or one that takes no program, is refused by its position
+(`PrintRefusal.invocation`): such a definition is invoked by its row call. -/
 def printInvoke {Op : Type} (sig : Signature Op) (n k : Nat) (request : Term)
     (programs : List TypeScript.Expr) : Except PrintRefusal TypeScript.Expr :=
   match sig.defOf k with
   | some d =>
-    if d.params.isEmpty then .error (.internalAction "invoke")
+    if d.params.isEmpty then .error (.invocation k)
     else .ok (.call (.ident d.name)
       (printTerm n request :: programs.map (Effect4.Codegen.Binders.write n [0])))
-  | none => .error (.internalAction "invoke")
+  | none => .error (.invocation k)
 
 /-- The fork options object rc.112's fork family takes:
 `{ startImmediately: b, uninterruptible: true | false | "inherit" }`. `daemon` is not a

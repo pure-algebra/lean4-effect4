@@ -357,13 +357,13 @@ test("both engines read Deferred.make's type arguments alike, and refuse a bare 
     }
   }
   // A type with no reading (a handle, `unknown`, a name that is no type of the fragment) is
-  // refused by both, alike.
+  // refused by both, alike, as the fragment reader refuses it: an annotation.
   for (const call of ["Deferred.make<Ref.Ref<number>, never>()", "Deferred.make<unknown, never>()", "Deferred.make<Foo, never>()"]) {
     const source = deferredModule(call)
     const left = ck(source, "deferred.ts"), right = oxc(source, "deferred.ts")
     expect(compareVerdicts(left, right).status).toBe("agree")
     for (const verdicts of [left, right]) {
-      expect(verdicts.map(v => v.kind === "refusal" ? [v.code, v.detail] : v.kind)).toEqual([["E-NODE", "fragment node: shape"]])
+      expect(verdicts.map(v => v.kind === "refusal" ? [v.code, v.detail] : v.kind)).toEqual([["E-NODE", "fragment node: annotation"]])
     }
   }
 })

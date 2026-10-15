@@ -41,9 +41,12 @@ deriving DecidableEq, Repr
 
 /-- Why the printer declined a program. `internalAction` names what the template table refuses
 (`RowOut.refuse`): the `ActionTerm` constructor whose rc.112 counterpart has no public export
-with the same frame shape, and a child fork into a scope. `layerRef` is the declaration block's
-(the host rows slice): a layer reference whose target path names no layer, so no `const` can be
-hoisted for it. `payloadClass` is the module's: an error payload class it cannot declare. -/
+with the same frame shape, a child fork into a scope, and a definition block in an expression's
+place. It also names a defect of the table (`table:`) and a site the typed print cannot annotate
+(`typed:`). `layerRef` is the declaration block's (the host rows slice): a layer reference whose
+target path names no layer, so no `const` can be hoisted for it. `payloadClass` is the module's:
+an error payload class it cannot declare. The cases after `callbackRequirement` name the
+definition, the service or the method that a block's print refuses (the codegen refactor's CR-8). -/
 inductive PrintRefusal
   | internalAction (name : String)
   | layerRef (target : List Nat)
@@ -65,9 +68,34 @@ inductive PrintRefusal
   parameter's requirement row as `never`, so tsgo refuses the call. Kept until the target can
   bind a requirement variable on the header. -/
   | callbackRequirement (path : List Nat)
+  /-- An invocation with programs of a definition that the signature lacks, or that takes no
+  program, by the definition's position in its block (`printInvoke`): the row call invokes a
+  definition that takes no program. -/
+  | invocation (definition : Nat)
+  /-- A definition block that holds no definition: it would print as its main program alone, and
+  read back as it (`printModuleWith`). -/
+  | emptyBlock
+  /-- A definition block whose declarations and bodies differ in number, from the definition at
+  this position on (`printDefsWith`). The checker refuses such a block too. -/
+  | bodies (position : Nat)
+  /-- A name that two definitions of a block with a service share, or that two of the names its
+  services declare share, a key and a layer among them (`serviceFault`). -/
+  | serviceName (name : String)
+  /-- A definition that is a method of a service the block does not declare, by the definition and
+  the service it names (`serviceFault`). -/
+  | strayMethod (definition service : String)
+  /-- A service that does not print, by its name: its initial program is missing, takes a request
+  or a program; it has no method, two with one name, or one whose name is no plain key; or its
+  name or its layer's is a definition's or carries a layer path (`serviceFaultOf`). -/
+  | service (name : String)
+  /-- A method of a service that does not print, by the service and the method: its definition is
+  missing, or its request is not the service's state and the method's arguments
+  (`serviceFaultOf`). -/
+  | serviceMethod (service method : String)
 deriving DecidableEq, Repr
 
-/-- Why the reader declined a tree. -/
+/-- Why the reader declined a tree. The TypeScript reader's alphabet is generated from this one
+(`ReadRefusal` in `ts/eff/templates.gen.ts`, `tools/Drivers/TsGen.lean`; DI-88's first step). -/
 inductive ReadRefusal
   /-- A call whose head is a reserved name with no `Eff` reading in that position
   (`Cause.fail` outside a cause, `Effect.whileLoop` outside its suspend). -/

@@ -1737,6 +1737,13 @@ def refusalText : PrintRefusal → String
   | .payloadClass tag why => s!"payload class {tag}: {classRefusalText why}"
   | .binderTerm spelling => s!"binder term of {spelling}"
   | .callbackRequirement path => s!"callback requirement at {path}"
+  | .invocation definition => s!"invocation of definition {definition}"
+  | .emptyBlock => "an empty definition block"
+  | .bodies position => s!"declarations and bodies part at definition {position}"
+  | .serviceName name => s!"service name {name} declared twice"
+  | .strayMethod definition service => s!"method {definition} of undeclared service {service}"
+  | .service name => s!"service {name}"
+  | .serviceMethod service method => s!"method {service}.{method}"
 
 /-- One fiber of the machine's own record, under the machine's ids: its exit is recorded and
 never compared. -/

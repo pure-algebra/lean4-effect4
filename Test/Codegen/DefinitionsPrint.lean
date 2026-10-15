@@ -169,7 +169,7 @@ def admitted (p : NativeEff) : Option Bool :=
     match Api.admitModule "main" e.module [] Effect4.Codegen.effectOrigins
         [.named ["Effect", "Layer", "Context"] "effect"] with
     | .ok reading => if reading.program == p then some true else none
-    | .error .unbound => some false
+    | .error (.unbound _ _) => some false
     | .error _ => none
 
 /-- `ownLayerOnly` with the module's layer `[2, 0]` provided in the body by reference too. -/
@@ -366,8 +366,66 @@ def counterService (methodParam initParam : Bool) : NativeEff :=
   decide (Api.readModule m [] = .ok (counterService true false))
 -- control (HO3-SVC-01): an initial program that takes a program is refused by name, since the
 -- layer runs it with no caller to pass one; the service without one prints
-#guard printRefusalAt (counterService false true) [] = some (.internalAction "Counter")
+#guard printRefusalAt (counterService false true) [] = some (.service "Counter")
 #guard (Api.printModule "main" (counterService false false)).isSome
+
+/-! ### Each refusal of a block names its site (the codegen refactor's CR-8)
+
+The printer refuses a block whose services do not print by the name, the definition, the service
+or the method at fault, and a block that does not print by its position. -/
+
+/-- A service, and a method of a service the block does not declare. -/
+def strayService : NativeEff :=
+  .defs [
+    { name := "makeCounter", request := .unit, answer := .nat, role := .serviceInit "Counter" },
+    { name := "readCounter", request := .nat, answer := .nat,
+      role := .serviceMethod "Counter" "read" 0 },
+    { name := "readClock", request := .nat, answer := .nat, role := .serviceMethod "Clock" "now" 0 }]
+    (.cons (.succeed (.lit (.nat 7))) (.cons (.succeed (.var 0)) (.cons (.succeed (.var 0)) .nil)))
+    (.succeed (.lit (.nat 1))) .nil
+
+/-- Two services, the second named as the first one's layer. -/
+def twiceService : NativeEff :=
+  .defs [
+    { name := "makeA", request := .unit, answer := .nat, role := .serviceInit "A" },
+    { name := "readA", request := .nat, answer := .nat, role := .serviceMethod "A" "read" 0 },
+    { name := "makeALayer", request := .unit, answer := .nat, role := .serviceInit "ALayer" },
+    { name := "readALayer", request := .nat, answer := .nat,
+      role := .serviceMethod "ALayer" "read" 0 }]
+    (.cons (.succeed (.lit (.nat 7))) (.cons (.succeed (.var 0))
+      (.cons (.succeed (.lit (.nat 8))) (.cons (.succeed (.var 0)) .nil))))
+    (.succeed (.lit (.nat 1))) .nil
+
+/-- A method of one argument whose request is the state alone. -/
+def methodFault : NativeEff :=
+  .defs [
+    { name := "makeCounter", request := .unit, answer := .nat, role := .serviceInit "Counter" },
+    { name := "readCounter", request := .nat, answer := .nat,
+      role := .serviceMethod "Counter" "read" 1 }]
+    (.cons (.succeed (.lit (.nat 7))) (.cons (.succeed (.var 0)) .nil))
+    (.succeed (.lit (.nat 1))) .nil
+
+/-- A block of two declarations and one body. -/
+def shortBodies : NativeEff :=
+  .defs [{ name := "one", request := .nat, answer := .nat },
+      { name := "two", request := .nat, answer := .nat }]
+    (.cons (.succeed (.var 0)) .nil) (.succeed (.lit (.nat 1))) .nil
+
+-- control: a method of a service the block does not declare, by the definition and the service
+#guard printRefusalAt strayService [] = some (.strayMethod "readClock" "Clock")
+-- control: a service named as another one's layer, by the name the two share
+#guard printRefusalAt twiceService [] = some (.serviceName "ALayer")
+-- control: a method whose request is not the state and its argument, by the service and the method
+#guard printRefusalAt methodFault [] = some (.serviceMethod "Counter" "read")
+-- control: an empty block
+#guard printRefusalAt (.defs [] .nil (.succeed (.lit (.nat 1))) .nil) [] = some .emptyBlock
+-- control: declarations and bodies part at the second definition; the checker refuses the block
+-- first, so the module printer is asked directly
+#guard Program.printModule (nativeSignature []) "main" (.pure .nat) shortBodies matches
+  .error (.bodies 1)
+-- control: an invocation of a definition the signature lacks, by its position
+#guard Api.print (.invoke 0 (.lit (.nat 1)) (.cons (.succeed (.var 0)) .nil)) matches
+  .error (.invocation 0)
 
 /-- A payload named `OnlyParam`, which only a parameter's request names. -/
 def onlyParamTy : Ty := .record [("_tag", false, .lit "OnlyParam"), ("id", false, .nat)]
