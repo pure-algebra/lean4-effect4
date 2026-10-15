@@ -1,5 +1,5 @@
 import Tools.GeneratedStamp
-import Effect4.Api
+import Effect4.Api.Codegen
 import TypeScript.Render
 import Lean.Data.Json
 

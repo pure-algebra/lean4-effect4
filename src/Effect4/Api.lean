@@ -12,18 +12,13 @@ import Effect4.Program.Authoring.Folds
 import Effect4.Api.Derived
 import Effect4.Program.Packages
 import Effect4.Store.Domain.ProgramWire
-import Effect4.Codegen.Print
-import Effect4.Codegen.Checked
-import Effect4.Codegen.SourceBindings
-import Effect4.Codegen.Read
-import Effect4.Codegen.Admit
-import Effect4.Codegen.CallbackRequirements
-import Effect4.Codegen.Schema
-import Effect4.Codegen.Target
 import Effect4.Store.Domain.Cascade
 import Effect4.Schema.Bridge
 import Effect4.Schema.OfShape
 import Effect4.Schema.Codec
+-- The codegen's refusal alphabets: the refusals an agent is shown are content (decisions row
+-- 17), and the generated `Api/RefusalsDerived.lean` reads them through this face.
+import Effect4.Codegen.Refusal
 
 /-!
 # Effect4.Api — the application face
@@ -40,15 +35,17 @@ One module, the whole pipeline, small interface:
 * `typeOf` / `wellTyped` type a program against the native signature; `explain` / `blame`
   locate and name a refusal (DI-86).
 * Certificate first (DI-85): `check` answers the typing certificate or the located, named
-  refusal, `Typed` carries a program with its certificate into `Typed.run`, `Typed.runSync` and
-  `Typed.emit` under a `Budget` with defaults, and `author` takes a named source
+  refusal, `Typed` carries a program with its certificate into `Typed.run` and `Typed.runSync`
+  under a `Budget` with defaults, and `author` takes a named source
   (`Program.Authoring.Src`) to a `Typed` in one call. `Typed.replay` replays a session's journal
   through the checked session, so it stands beside the session's face
   (`src/Effect4/Run/Live.lean`, decisions row 373 (8)).
-* `print` / `printDecl` answer TypeScript **syntax** (`TypeScript.Expr`, `ConstDecl`),
-  never text. Rendering to bytes is one call to the pinned package — `TypeScript.Render.expr
-  house0 0 e` — kept outside this module on purpose: Lean's `String` folds reach
-  `Classical.choice`, and this module stays at the library's axiom ceiling.
+* The codegen face is its own module, `Effect4.Api.Codegen` (`src/Effect4/Api/Codegen.lean`),
+  in this namespace: `print` and `read`, the round trip and its certificate, `printDecl`, the
+  module's emission and its checked reading, the printed `Typed`, `TypedLayer` and `Built`, and the
+  Schema syntax. It answers syntax, never text. This module imports none of the codegen, only its
+  refusal alphabets (`src/Effect4/Codegen/Refusal.lean`), so an edit of the printer, the reader
+  or the module writer rebuilds none of this face's importers.
 * `bytesOf` / `ofBytes` are the canonical bytes of a program and the exact decoder: what
   the store addresses and what an OCaml or TypeScript host is sent and sends back.
 * `compile` is the defunctionalising compile to the frame alphabet; `interpOf` gives the
@@ -63,18 +60,9 @@ One module, the whole pipeline, small interface:
   binds a reply to the call it answers before the reply becomes a decision (DI-23, DI-58).
   A raw tape answers a parked call by the decision `answerAsync` alone; no run entry takes a
   list of answers, and a host call always parks (DI-23).
-* The Schema half: persisted `SchemaRepresentation` JSON syntax
-  (`schemaDocument`, `schemaRepresentation`) and the JSON payload beside it
-  (`jsonExpr`). `Codegen.Schema.moduleSyntax` assembles raw module syntax;
-  `Effect4.Codegen.Schema.documentSource` renders one raw document and is admitted
-  by exact name in the axiom gate. A document's references table is written once per key, and a
-  repeated key whose bodies differ is refused (decisions row 8 (C)).
-* The codegen crossing: `Target` and `Artefact` represent emitted syntax, and `render`
-  is the one crossing from an artefact to bytes — admitted by exact name in the gate as
-  `Effect4.Codegen.Artefact.render`, and the reason the rest of this face never returns text.
 
-Applications import `Effect4.Api` for programs and data schemas. Batteries test modules
-at their own boundaries; `Test/Api/ApiContract.lean` exercises the application seam.
+Applications import the root `Effect4`, which imports this face and its codegen face. Batteries
+test modules at their own boundaries; `Test/Api/ApiContract.lean` exercises the application seam.
 -/
 
 namespace Effect4.Api
@@ -165,42 +153,6 @@ theorem blame_none_iff (program : Program) (table : RowTable) :
     blame program table = none ↔ wellTyped program table = true := by
   simp [blame, ← explain_none_iff]
 
-/-- The program as one TypeScript expression, at the empty environment. -/
-def print (program : Program) (table : RowTable := []) : Except PrintRefusal TypeScript.Expr :=
-  Program.print (nativeSignature table) 0 program
-
-/-- A program back from one TypeScript expression, at the empty environment: read through the
-table the printer prints from (`src/Effect4/Codegen/Read.lean`, `readT`), a `ReadRefusal` on a
-tree no row matches. A row is accepted only when the printer would choose it for what was
-read, so what is read prints back to the tree read (`read_exact`). A payload class construction
-`new Tag({ … })` reads under the module's `classes` (decisions row 120); a bare expression has
-none. -/
-def read (expression : TypeScript.Expr) (table : RowTable := [])
-    (classes : Effect4.Codegen.Classes.Classes := []) : Except ReadRefusal Program :=
-  Program.readEff classes (nativeSignature table) (nativeSpell table) 0 expression
-
-/-- `read`, with where a refusal happened: the path of constructors and argument indices down to
-the node that refused, and, when a reserved head matched no row, what the nearest row's skeleton
-has where the tree parts from it (`Effect4.Program.ReadFailure`; `.render` for a person). -/
-def readAt (expression : TypeScript.Expr) (table : RowTable := [])
-    (classes : Effect4.Codegen.Classes.Classes := []) : Except Program.ReadFailure Program :=
-  Program.readEffAt classes (nativeSignature table) (nativeSpell table) 0 expression
-
-/-- Whether `read` of the program's printing is the program itself: the round trip, decided by
-running it. What the printer loses is listed in `Codegen/Read.lean`'s module note (a variable
-out of scope, a dropped `unit` request, a stated type outside the readable types, the internal
-fiber actions).
-A program the printer refuses is not readable either: a child fork into a scope has no rc.112
-spelling, so it is refused (`internalAction "forkScoped:child"`, `Codegen/Templates.lean`), never
-printed as the daemon it is not. -/
-def readable (program : Program) (table : RowTable := []) : Bool :=
-  Program.readable (nativeSignature table) (nativeSpell table) 0 program
-
-/-- `read` after `print`: the program itself exactly when it is `readable`
-(`Effect4.Program.roundTrip_eq`), and otherwise the program the printer kept. -/
-def roundTrip (program : Program) (table : RowTable := []) : Except ReadRefusal Program :=
-  Program.roundTrip (nativeSignature table) (nativeSpell table) 0 program
-
 /-! ## Bytes: how a program crosses a boundary -/
 
 /-- The canonical bytes of a program: what the store addresses and what a host is sent
@@ -210,84 +162,6 @@ def bytesOf (program : Program) : Store.Bytes := Wire.encodeProgram program
 /-- A program from its canonical bytes, exactly: `none` unless the bytes are one
 well-formed program and nothing else. Type it with `wellTyped` before running it. -/
 def ofBytes (bytes : Store.Bytes) : Option Program := Wire.decodeProgram bytes
-
-/-- The program as an exported constant with its `Effect.Effect<A, E>` type. Raw
-formation, stored-annotation support, typing and printing must all succeed; otherwise the result is `none`. -/
-def printDecl (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.ConstDecl :=
-  match Program.Formation.checkInput program table, Program.annotationRefusal program with
-  | none, none =>
-    match checkTyping program table, print program table with
-    | some typing, Except.ok body => (Program.printDecl name typing.ty body).toOption
-    | _, _ => none
-  | _, _ => none
-
-
-/-- The module together with its core typing and exact production receipt. Consumers
-that need the proof connection retain this result; `printModule` projects its syntax.
-This does not validate source imports or establish target typing/execution. -/
-def emitModule (name : String) (program : Program) (table : RowTable := []) :
-    Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission program table name) :=
-  -- a callback that needs a service is refused at its invocation until the header can carry its
-  -- row (`Codegen/CallbackRequirements.lean`, Codex's HO3-REQ-01)
-  match Effect4.Codegen.invokeRequirementFault (nativeSignature table) program with
-  | some path => .error (.print (.callbackRequirement path))
-  | none => Effect4.Codegen.emitModule name program table
-
-/-- The program as a declaration block: one `const L_<path> = …` per referenced layer target
-(the host rows slice, `Program.printModule`), then the exported main constant; `none` when it
-is ill-typed or the printer refuses it. `Api.emitModule` answers the refusal's reason; an
-export name with an `exportNameFault` is one. The block is what a host must run for a program
-with a layer reference: rc.112 keys its memo map on the layer object (`Layer.ts:411`), and the
-one `const` is the one object. -/
-def printModule (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.Module :=
-  ((emitModule name program table).toOption).map (·.module)
-
-/-- Raw reconstruction from a declaration block. This recovers programs in the
-printer's readable image, but ignores imports, outer annotations and export names.
-Use `checkTyping` on the recovered program for core typing; that check alone does
-not validate the original source envelope. -/
-def readModule (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
-  Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param []
-    module.decls
-
-/-- Raw reconstruction from a module file (`ModuleEmission.file`): the payload classes, then the
-row namespaces' services (`rowServiceDecls`, decisions row 378 (19)), read back exactly against
-the table, then the declaration block, read as `readModule` reads it. A module that declares no
-service of its table reads by `readModule`; a file of a table with no service row reads by
-either. -/
-def readFile (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
-  Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param table
-    module.decls
-
-/-- Check imports and lexical bindings on the original module, retaining its exact
-syntax in the certificate's index. The caller supplies permitted import origins.
-This is a prerequisite of typed source admission: it does not check annotation
-agreement, resolve package exports or validate the origin expected by a core head. -/
-def checkSourceBindings (module : TypeScript.Module)
-    (allowed : List Effect4.Codegen.Bindings.Origin) :
-    Option (Effect4.Codegen.SourceBindings.Checked allowed module) :=
-  Effect4.Codegen.SourceBindings.validate allowed module
-
-/-- Checked reading of a declaration block, the boundary `readModule` is the raw half of.
-It checks four things and keeps all four: the original module's imports and lexical bindings
-against the permitted origins (with a host's `ambient` prelude prepended), the raw
-reconstruction of the program, the one whole-program type checker, and the declaration
-envelope — a safe export name, the last declaration exported under that name and annotated
-exactly as `printDecl` annotates the checked type, and every earlier declaration a plain
-exported layer constant.
-
-What it does **not** check. It does not widen a declared type: the comparison is equality
-with the printer's own annotation, because the core has no subsumption at a program's top
-type. It admits no binder, return or local annotation; the raw reader still refuses those.
-It gives the `effect` package no meaning: a resolved `Effect` is a lexical fact, not
-evidence that the host's namespace is the pinned one. It is neither target type checking
-nor execution. -/
-def admitModule (name : String) (module : TypeScript.Module) (table : RowTable := [])
-    (allowed : List Effect4.Codegen.Bindings.Origin := Effect4.Codegen.effectOrigins)
-    (ambient : List TypeScript.Import := []) :
-    Except Effect4.Codegen.SurfaceRefusal
-      (Effect4.Codegen.ModuleReading table name allowed ambient) :=
-  Effect4.Codegen.admitModule name module table allowed ambient
 
 /-! ## Compiling and running -/
 
@@ -449,7 +323,7 @@ this program", which is a property of the *print image*, not of execution: a pro
 typed and run and still not be one the printer keeps whole (a loop whose stated cursor type is
 outside the readable types, `Codegen.Classes.ReadableTy`: a cursor at a cell's type prints, and
 no reading answers its spelling). Admission certifies execution and `readable` certifies
-reconstruction, so it is a separate optional certificate, `imageCertificate`. (The example this paragraph once gave,
+reconstruction, so it is a separate optional certificate, `imageCertificate` (`src/Effect4/Api/Codegen.lean`). (The example this paragraph once gave,
 `Wire.Corpus.pAwait`, became readable when `callback` retired into `perform`.)
 
 None of this is a completion claim: an admitted program may park at a live frontier, and a
@@ -462,15 +336,6 @@ export Effect4.Program (TableRefusal checkTable rowKey SigApp SigRefusal RowReas
 namespace Table
 export Effect4.Program.Table (lawful)
 end Table
-
-/-- The print-image certificate, separate from admission on purpose: the proof that this
-program survives `print` and `read` unchanged. A program without it still runs.
-
-`PLift` only because `Option` is a `Type` and the certificate is a `Prop`; the proposition
-carried is exactly `readable program table = true`, reached as `.down`. -/
-def imageCertificate (program : Program) (table : RowTable := []) :
-    Option (PLift (readable program table = true)) :=
-  if h : readable program table = true then some ⟨h⟩ else none
 
 /-- The checked ordinary run: `run`, with the certificate consumed. The certificate is at the
 table's own signature, `⟨table, []⟩`; a run at declared services is the Σ_app slice's step 3. -/
@@ -521,14 +386,6 @@ def run (t : Typed table) (budget : Budget := {}) : Inspection :=
 /-- `Effect.runSyncExit` on the certified program: the exit alone. -/
 def runSync (t : Typed table) (budget : Budget := {}) : ExitV :=
   (Api.runSync t.program budget.fuel table budget.compileFuel).2
-
-/-- The printed syntax of the certified program. -/
-def print (t : Typed table) : Except PrintRefusal TypeScript.Expr := Api.print t.program table
-
-/-- The certified module emission under a declaration name. -/
-def emit (t : Typed table) (name : String) :
-    Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission t.program table name) :=
-  Api.emitModule name t.program table
 
 /-- The canonical bytes: the program's identity for a store and a host. -/
 def bytes (t : Typed table) : Store.Bytes := bytesOf t.program
@@ -607,33 +464,7 @@ exists. -/
 def closed (l : TypedLayer sig) : Bool :=
   l.ty.requires == Effect4.Machine.Env.Requirement.empty
 
-/-- The printed layer (`Codegen.Templates.printLayerT`, the printer's own fold). -/
-def print (l : TypedLayer sig) : Except PrintRefusal TypeScript.Expr :=
-  Effect4.Codegen.Templates.printLayerT sig l.layer
-
 end TypedLayer
-
-/-! ## Schema, as syntax -/
-
-/-- A persisted Schema document as raw `SchemaRepresentation` JSON syntax, its references table
-written once per key; a repeated key whose bodies differ is refused at `["references", key]`
-(decisions row 8 (C)). -/
-def schemaDocument (document : Effect4.Document) :
-    Except Effect4.Codegen.Schema.ReferenceRefusal TypeScript.Expr :=
-  Effect4.Codegen.Schema.documentExpr document
-
-/-- A persisted representation as raw `SchemaRepresentation` JSON syntax. -/
-def schemaRepresentation (representation : Effect4.Representation) : TypeScript.Expr :=
-  Effect4.Codegen.Schema.representation representation
-
-/-- A JSON payload as a TypeScript literal. -/
-def jsonExpr (value : Effect4.Json) : TypeScript.Expr :=
-  Effect4.Codegen.Schema.json value
-
-/-! ## Codegen: the targets, artefacts, and rendering to bytes -/
-
-export Effect4.Codegen (Target Artefact)
-export Effect4.Codegen.Artefact (render)
 
 /-! ## Multi-Tier Cascading CAS Store -/
 

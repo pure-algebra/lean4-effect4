@@ -16,7 +16,8 @@ input, the node's address. A child's address is its parent's and its index among
 arguments (`Node.child`). Every row prints as in `printAlg`, except a call: at an address where
 the annotation answers type arguments, the call carries them on its head (`withHeadTypes`).
 
-**The annotation.** `typeArgsAt` reads the call's checked bindings where inference needs a join.
+**The annotation.** `typeArgsAt` reads the call's checked bindings where inference needs a join,
+off the address table that `annotate` builds once per program (`focusAtTable`).
 `PrintedJoin` detects that printing condition independently of admission.
 The bindings follow the row's template variables, `.var 0` first.
 
@@ -143,7 +144,7 @@ def row (row : Row) (request : Ty) (use : Option TermUse := none) : Bool :=
           needed seed binder.result.normalize result).getD false
 
 /-- Whether a focused call needs explicit type arguments. Addresses outside a checked call
-answer false. The consumer is `typeArgsAt`; this is a printer decision, never admission. -/
+answer false. The consumer is `NoJoin`; this is a printer decision, never admission. -/
 def at_ (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) : Bool :=
   ((focusAt s env0 p path).bind fun focus =>
     match focus.program with
@@ -160,23 +161,67 @@ def NoJoin (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : Prop :=
   (∀ path, PrintedJoin.at_ s env0 p path = false) ∧
     Effect4.Codegen.PrintEliminators.NoSiteTypes s env0 p
 
-/-- The row's checked bindings, in template-variable order, only at a call that needs them. -/
-def typeArgsAt (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
+/-- **The type arguments a join needs at a focused call**: where the request's match needs a join
+annotation (`PrintedJoin.row`), the row's bindings at the request's type (`rowBindings`, the
+bindings of the call's instance, `callAt`), in the order of the row's variables. -/
+def Focus.joinArgs (s : Signature Op) (focus : Focus Op) : Option (List Ty) :=
+  match focus.program with
+  | .perform op request =>
+    (termTy s focus.env request).bind fun requestTy =>
+      if PrintedJoin.row (s.rowOf op) requestTy (s.termUse focus.env op) then
+        (rowBindings (s.rowOf op) requestTy (s.termUse focus.env op)).bind Ty.Subst.ordered
+      else none
+  | _ => none
+
+/-- **The focus at an address, read off the address table** (`annotate`): the node there, the
+environment its entry holds and the checker's answer there. No address is focused afresh. It
+answers what `focusAt` answers (`focusAtTable_annotate`, `Laws/Codegen/PrintTyped.lean`). -/
+def focusAtTable (entries : List Table.Entry) (p : Eff Op) (path : List Nat) :
+    Option (Focus Op) :=
+  (entries.find? fun entry => decide (entry.path = path)).bind fun entry =>
+    match (Node.eff p).at_ path, entry.env, entry.result with
+    | some (.eff q), some (.env env), some (.ok t) => some ⟨q, env, t⟩
+    | _, _, _ => none
+
+/-- **The type arguments at each address**, read off the address table: the row's checked
+bindings, in the order of the row's variables, only at a call that needs them. The table is
+built once per program, so no call focuses the program again. -/
+def typeArgsAt (s : Signature Op) (entries : List Table.Entry) (p : Eff Op) (path : List Nat) :
     Option (List Ty) :=
-  if PrintedJoin.at_ s env0 p path then
-    (callAt s env0 p path).bind fun call => call.bindings.ordered
-  else none
+  (focusAtTable entries p path).bind (Focus.joinArgs s)
 
 /-- The typed print adds the approved site types when a checked site needs them.
-The shared annotation table supplies every site context and child result.
+The shared annotation table supplies every site context and child result, and the type
+arguments of every call (`typeArgsAt`): the program is checked once.
 Without site annotations, the row-only printer keeps its existing raw behavior. -/
 def printTyped (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
     Except PrintRefusal TypeScript.Expr :=
   let entries := annotate s env0 p
   if Effect4.Codegen.PrintEliminators.needsSitesAt s entries p then
-    Effect4.Codegen.Templates.printTypedSitesAt s (typeArgsAt s env0 p)
+    Effect4.Codegen.Templates.printTypedSitesAt s (typeArgsAt s entries p)
       (Effect4.Codegen.PrintEliminators.contextAtTable entries p) env0.length p
   else
-    Effect4.Codegen.Templates.printTypedAt s (typeArgsAt s env0 p) env0.length p
+    Effect4.Codegen.Templates.printTypedAt s (typeArgsAt s entries p) env0.length p
+
+/-! ## The module that ships: its pieces printed typed, and read back after the erasure -/
+
+/-- **The pieces of the module that ships**: a module's main program and its bodies, each at its
+signature and its checked environment, by the typed print, which writes a call's type arguments
+where a join needs them (decisions row 373 (11)); where the typed print refuses a piece, by the
+table's fold, as every module printed before the typed print shipped. The typed print refuses a
+term slot that it cannot annotate (`typed:term slot depth`), which the fold prints. The module
+that ships prints its pieces so (`printModuleWith shippedPieces`). -/
+def shippedPieces : PiecePrint Op := fun s env e =>
+  match printTyped s env e with
+  | .ok x => .ok x
+  | .error _ => print s env.length e
+
+/-- **The typed module reader**: each program piece read after the named erasure of its inserted
+type arguments (`Codegen.readTyped`). It reads the module that ships (`ModuleEmission.readModule`,
+`Laws/Api/ModuleReadable.lean`). -/
+abbrev readModuleTyped (sig : Signature Op) (spell : String → List RowArg → Option Op)
+    (call : Nat → Op) (param : Nat → Op) (rows : List Row) (decls : List TypeScript.Decl) :
+    Except ReadRefusal (Eff Op) :=
+  readModuleWith Effect4.Codegen.readTyped sig spell call param rows decls
 
 end Effect4.Program

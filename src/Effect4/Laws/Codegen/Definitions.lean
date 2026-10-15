@@ -465,7 +465,7 @@ theorem LawfulInvokes.withDefs {sig : Signature Op} {spell : String → List Row
 spelling, under the signature's `LawfulCalls` and a block whose names are `DefsNamed`, the
 block's spelling map is lawful at the block's signature. So `read_print` and `read_exact` hold
 at a block's signature. A step of the claim `module-defs-round-trip`; its consumer is the module
-round trip on the readable domain (`readModule_printModule_readable`). -/
+round trip on the readable domain of a block (`readModuleWith_printModuleWith_defs_readable`). -/
 theorem LawfulSpelling.withDefs {sig : Signature Op} {spell : String → List RowArg → Option Op}
     {call : Nat → Op} (hl : LawfulSpelling sig spell) (calls : LawfulCalls sig spell call)
     {defs : List DefDecl} (named : DefsNamed spell defs) :
@@ -801,7 +801,7 @@ theorem binderNamed_name (i : Nat) : binderNamed (Var.name i) = true := by
     rfl
   unfold binderNamed
   rw [bytes]
-  simp only [decodeBytes_repr, decide_true]
+  simp only [Data.NatDecimal.decodeBytes_repr, decide_true]
 
 /-- What a safe export name is not: no binder, no reserved head, and a binding of the target.
 A step of `defsNamed_of_fault`. -/

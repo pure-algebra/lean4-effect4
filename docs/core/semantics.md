@@ -284,7 +284,7 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   world. A later world keeps the membership of a list of handles.
   The handles of a term's answer are handles of its environment.
   It establishes no correspondence in a target: that is each target's relation.
-  (`handle_identity_laws` (`src/Effect4/Laws/Program/Typed/ListFold.lean`)).
+  (`handle_identity_laws` (`src/Effect4/Laws/Program/Typed/HandleIdentity.lean`)).
 - **The mask's saved state (`saved-mask-image-membership`)**: A mask saves its caller's
   interruptibility at an opaque host type, `Ty.maskRestore`, with a reserved target (decisions
   row 244).
@@ -884,7 +884,12 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   The native signature and the printer's name check give both (`nativeCalls`,
   `defsNamed_of_fault`).
   So the program interface's module round trip holds for a program with a block
-  (`Api.printModule_roundTrip`, `src/Effect4/Laws/Api/ModuleReadable.lean`).
+  (`Api.printModule_roundTrip`, `src/Effect4/Laws/Api/ModuleReadable.lean`), the claim's pointer.
+  The module that ships prints its program pieces by the typed print, and the module reader
+  reads them after the named erasure.
+  The module laws are stated of any lawful pair of a piece printer and a piece reader
+  (`readModuleWith_printModuleWith_defs`, `PiecesLawful`).
+  `readModule_printModule_defs` is the plain pair's instance.
   The printer refuses an empty block, and a reference out of its scope by its target
   (`Eff.inScope`).
   The application face refuses an invocation whose programs need a service, at its path

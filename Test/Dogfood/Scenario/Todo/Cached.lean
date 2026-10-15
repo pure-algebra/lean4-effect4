@@ -3,6 +3,7 @@ import Test.Dogfood.ApplicationDefs
 import Effect4.Program.Authoring.ApplicationService
 import Effect4.Laws.Library.Ref.Cache
 import Effect4.Laws.Program.FragmentBlock
+import Effect4.Emit
 
 /-!
 # The to-do with the banked Ref cache imposed on its service

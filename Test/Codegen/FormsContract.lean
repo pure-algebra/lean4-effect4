@@ -1,4 +1,4 @@
-import Effect4.Codegen.Styles
+import Drivers.StyleSyntax
 import Effect4.Laws.Codegen.Forms
 
 /-! Finite receipts for relative form bindings, required slots, and the owner's

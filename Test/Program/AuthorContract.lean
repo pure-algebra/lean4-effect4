@@ -4,6 +4,7 @@ import Effect4.Codegen.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Forms
 import Effect4.Program.Authoring.Loops
 import Test.Program.LayerSharingContract
+import Effect4.Api.Codegen
 
 /-!
 # Author contract — a module declares what it needs, and one call builds it

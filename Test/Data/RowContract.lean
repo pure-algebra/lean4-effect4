@@ -29,14 +29,6 @@ individual law classes are the native consumer API.
 
 section StandardOrderBoundary
 
-example {α : Type u} [LE α] [LT α] [Std.IsLinearOrder α]
-    [Std.LawfulOrderLT α] (a : α) : ¬ a < a :=
-  Std.lt_irrefl
-
-example {α : Type u} [LE α] [LT α] [Std.IsLinearOrder α]
-    [Std.LawfulOrderLT α] {a b c : α} : a < b → b < c → a < c :=
-  Std.lt_trans
-
 example {α : Type u} [LE α] [LT α] [DecidableEq α]
     [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
     (a b : α) : a < b ∨ a = b ∨ b < a := by

@@ -8,8 +8,8 @@ import Test.Program.InvokeControls
 The module printer prints each definition of a block as a constant before the layers and the
 main declaration, and an invocation as the definition's name applied to its request
 (`Program.printModule`). The reader reads them back (`Program.readModule`). The round trip is
-`Api.printModule_roundTrip` on a program in `blockReadable`, and the claim is
-`module-defs-round-trip` (`readModule_printModule_defs`).
+`Api.printModule_roundTrip` on a program in `blockReadable`, the pointer of the claim
+`module-defs-round-trip`.
 
 The lines below are finite evaluations of the printed text and of the readable domain at fixed
 programs, the controls of each refusal, and one reader of the name bridge at a real block. The

@@ -35,7 +35,9 @@ one premise for its clients: nothing is acquired or registered before the body b
 
 Consumers. The checked module production and reading (`ModuleEmission`, `admitModule`) read
 the first claim through `read_print` and `read_exact`. The Queue's waiting wrapper and the
-Semaphore's protected permit read the second.
+Semaphore's protected permit read the second's typing field, `maskForm_typed`. The form, its
+typing and the restore site's typing are theorems of `src/Effect4/Laws/Program/Typed/Mask.lean`,
+so a consumer that types the form imports no codegen module.
 -/
 
 set_option autoImplicit false
@@ -249,54 +251,6 @@ theorem mask_rows_table_premises : MaskRowsPremises where
   readExact := fun _ _ _ hl _ _ _ h => read_exact hl h
 
 /-! ## 5. The printed form's profile (`mask-printed-form-profile`) -/
-
-open Effect4.Machine in
-/-- The mask as a derived form: the getter bound to the body under `uninterruptible`. The
-body is one level up, under the saved state's binder. -/
-abbrev maskForm {Op : Type} (body : Eff Op) : Eff Op :=
-  .bind (.withFiber .getInterruptible) (.uninterruptible body)
-
-section FormTyping
-
-open Conform.Effect4.Typing
-open Effect4.Machine.Env (Requirement)
-
-/-- **The derived form types as its body**, under the saved state's binder: the getter answers
-the saved state's type with no error and no requirement, and a mask changes no column. -/
-@[semantics "translation-simulation"]
-theorem maskForm_typed (sig : Signature NativeOp) (env : TyEnv) (body : Eff NativeOp)
-    (t : EffTy) (hb : effTy sig (env ++ [Ty.maskRestore]) body = some t) :
-    effTy sig env (maskForm body) =
-      some ⟨t.answer, Ty.never.join t.error, Requirement.empty.union t.requires⟩ :=
-  effTy_complete sig _ env _
-    (.bind (.withFiber .getInterruptible) (.uninterruptible (effTy_sound sig body _ t hb)))
-
-/-- **A restore site types as its body**, when its saved term has the saved state's type. -/
-@[semantics "translation-simulation"]
-theorem restore_typed (sig : Signature NativeOp) (env : TyEnv) (saved : Term)
-    (body : Eff NativeOp) (t : EffTy) (hs : termTy sig env saved = some Ty.maskRestore)
-    (hb : effTy sig env body = some t) : effTy sig env (.restore saved body) = some t :=
-  effTy_complete sig _ env _ (.restore hs (Ty.sub_refl _) (effTy_sound sig body env t hb))
-
-/-- A restore site of any other saved term has no type: the Boolean use that row 239's
-selection would admit is refused. -/
-@[semantics "translation-simulation"]
-theorem restore_untyped (sig : Signature NativeOp) (env : TyEnv) (saved : Term)
-    (body : Eff NativeOp) (s : Ty) (hs : termTy sig env saved = some s)
-    (hne : Ty.sub s.normalize Ty.maskRestore = false) :
-    effTy sig env (.restore saved body) = none := by
-  cases h : effTy sig env (.restore saved body) with
-  | none => rfl
-  | some t =>
-    have typed := effTy_sound sig _ env t h
-    cases typed with
-    | restore hsaved hsub _ =>
-      have heq : s = _ := Option.some.inj (hs.symm.trans hsaved)
-      subst heq
-      rw [hsub] at hne
-      contradiction
-
-end FormTyping
 
 section Profile
 

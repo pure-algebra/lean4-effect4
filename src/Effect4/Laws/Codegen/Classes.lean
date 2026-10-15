@@ -7,7 +7,7 @@ import Effect4.Laws.Codegen.Record
 Concept: Translation & Simulation Metatheory (`translation-simulation`), at R8: these are the
 steps of the term round trip's class branch (`readTerm_printTerm`, `readTerm_exact`,
 `Laws/Codegen/ReadLeaf.lean`) and of the module round trip's class section
-(`readModule_printModule`, `Laws/Codegen/Module.lean`), whose consumers are `read_print`,
+(`readModuleWith_printModuleWith`, `Laws/Codegen/Module.lean`), whose consumers are `read_print`,
 `read_exact` and the emitted module's reading. Reach: every expression, every class table; the
 construction image needs no typing premise (decisions row 165: the reader is untyped).
 
@@ -128,8 +128,9 @@ theorem readClassDecl_checked {entry : String × Fields} {c : ClassDecl}
   · exact nomatch h
 
 /-- **A module's checked class declarations read back to its classes**, in order (decisions row
-120): the module round trip's class section (`readModule_printModule`, R8). The premise is the
-module printer's own decision (`ClassTable.moduleClasses` runs `checkedDecl` on every class). -/
+120): the module round trip's class section (`readModuleWith_printModuleWith`, R8). The premise
+is the module printer's own decision (`ClassTable.moduleClasses` runs `checkedDecl` on every
+class). -/
 theorem readClassDecls_checked : ∀ {table : Classes} {decls : List ClassDecl},
     table.mapM ClassTable.checkedDecl = .ok decls → readClassDecls decls = some table
   | [], decls, h => by

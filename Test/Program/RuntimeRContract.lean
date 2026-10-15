@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.RuntimeR
 import Test.Program.RuntimeRReference
+import Effect4.Api.Codegen
 
 /-!
 # R3/R4 finite term/frame comparisons

@@ -2,7 +2,8 @@ import Effect4.Library.Words
 import Effect4.Laws.Step.Table
 import Effect4.Laws.Data.ListRel
 import Effect4.Laws.Program.Authoring.Folds
-import Effect4.Laws.Program.Typed.ListFold
+import Effect4.Laws.Program.Typed.HandleIdentity
+import Effect4.Laws.Data.NatDecimal
 
 /-!
 # Reading a step term: the values of the authoring builders and of the words (row 255)
@@ -423,12 +424,12 @@ theorem written_ne_mint {x : String} (written : Name.reserved x = false) (env : 
   exact Bool.noConfusion written
 
 /-- **The names that one stem mints at two depths are two names**: a minted name ends in its
-depth's decimal digits (`repr_inj`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`). It relates no
+depth's decimal digits (`Data.NatDecimal.repr_inj`, `src/Effect4/Laws/Data/NatDecimal.lean`). It relates no
 two stems. A step of the resolution premise: a second `bindWith` leaves the level of the name
 that a first one minted. -/
 theorem mint_depth_inj {env outer : Env} {stem : String}
     (same : env.mint stem = outer.mint stem) : env.names.length = outer.names.length :=
-  repr_inj (String.append_right_inj _ |>.mp same)
+  Data.NatDecimal.repr_inj (String.append_right_inj _ |>.mp same)
 
 /-- **The name that `bindWith` mints is a caller's term under a step's folds**, at every scope
 where it is bound: `outer` is the scope of the `bindWith`, and `env` the scope of the step. -/

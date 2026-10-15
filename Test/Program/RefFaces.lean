@@ -1,5 +1,6 @@
 import Test.Program.RefPrograms
 import TypeScript.Render
+import Effect4.Api.Codegen
 
 /-! Finite checked emissions of the Ref callers. Placement: controls of read_print and
 read_exact, R8, and ref-steps-agree, R10. Compiler and host checks consume these exact emissions.

@@ -1,5 +1,6 @@
 import Test.Dogfood.Stage
 import Effect4.Run
+import Effect4.Emit
 
 /-!
 # p2: a request handler over layered services

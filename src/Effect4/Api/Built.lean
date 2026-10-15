@@ -25,4 +25,13 @@ structure Built where
   /-- The spelling each row was declared under, with its position in `table`. -/
   rowNames : List (String × Nat) := []
 
+namespace Built
+
+/-- The built program as a typed one: the admission certificate extends the typing
+certificate, so every reading `Typed` has is this one's, through this projection and not by
+a second definition. -/
+def typed (b : Built) : Typed b.table := ⟨b.program, b.admitted.toTypedProgram⟩
+
+end Built
+
 end Effect4.Api

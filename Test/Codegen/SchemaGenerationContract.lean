@@ -1,6 +1,7 @@
 import Effect4.Codegen.Schema
+import Effect4.Codegen.Target
 import Effect4.Schema.Bridge
-import Effect4.Api
+import Effect4.Api.Codegen
 import Effect4.Laws.Schema.Codec
 import Effect4.Store.Domain.Derived.Schema
 

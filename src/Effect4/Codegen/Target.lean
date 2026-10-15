@@ -3,16 +3,20 @@ import TypeScript
 import Effect4.Data.Json
 
 /-!
-# Codegen.Target — the targets, the artefact, and the one crossing to bytes
+# Codegen.Target — the targets, and the JSON target's text
 
 Design: `docs/research/2026-09-04-codegen-api-design.md` §3.1.
 
 A **target** is a closed alphabet: TypeScript and JSON today, OCaml when the `lean4-ocaml`
 package is pinned (§8 of the design). A target owns a syntax, and an emitter answers that
 syntax and never text: `TypeScript.Module` is the pinned package's, `Json` is the estate's.
-An **artefact** is one emitted value of one target, and `Artefact.render` is the one place
-syntax becomes bytes. It is admitted by exact name in the axiom gate, exactly as
-the raw Schema generator was; nothing inside the seam calls it.
+
+Rendering crosses from a target's syntax to bytes, outside every emitter. A TypeScript module is
+rendered by the pinned package (`TypeScript.Render.module`), and a file writer lays it out as
+every lane writes it (`moduleText`, `tools/Tools/Code/Module.lean`). A JSON document is rendered
+here (`renderJson`). Each renderer that traverses a `String` is admitted by exact name in the
+axiom gate. The codegen refactor's CR-9 removed the `Artefact` wrapper over the two, which one
+battery line called (decisions row 392).
 
 ## JSON text
 
@@ -52,7 +56,7 @@ def name : Target → String
   | .ts => "ts"
   | .json => "json"
 
-/-- The file extension of a target's artefact. -/
+/-- The file extension of a target's file. -/
 def extension : Target → String
   | .ts => "ts"
   | .json => "json"
@@ -73,32 +77,6 @@ abbrev Syntax : Target → Type
   | .json => Json
 
 end Target
-
-/-! ## Artefacts -/
-
-/-- One emitted value of one target. -/
-inductive Artefact where
-  | ts (module : TypeScript.Module)
-  | json (value : Json)
-
-namespace Artefact
-
-/-- An artefact of a target from that target's syntax. -/
-def of : (target : Target) → target.Syntax → Artefact
-  | .ts, module => .ts module
-  | .json, value => .json value
-
-/-- The target an artefact is of. -/
-def target : Artefact → Target
-  | .ts _ => .ts
-  | .json _ => .json
-
-/-- `of` answers in the target it was given. -/
-theorem target_of (target : Target) (content : target.Syntax) :
-    (Artefact.of target content).target = target := by
-  cases target <;> rfl
-
-end Artefact
 
 /-! ## JSON text -/
 
@@ -219,11 +197,6 @@ end JsonText
 
 /-- A JSON document as text, with a trailing newline. The crossing for the `json` target. -/
 def renderJson (value : Json) : String := JsonText.render 0 value ++ "\n"
-
-/-- The one crossing from syntax to bytes. Admitted by exact name in the axiom gate. -/
-def Artefact.render : Artefact → String
-  | .ts module => TypeScript.Render.module TypeScript.house0 module
-  | .json value => renderJson value
 
 /-! ## Anti-vacuity: the number spellings, decided in the kernel -/
 

@@ -10,7 +10,7 @@ import Effect4.Laws.Step.Tuples
 import Effect4.Laws.Step.Requirements
 import Effect4.Laws.Schema.Identity
 import Effect4.Laws.Auto.Semantics
-import Effect4.Laws.Program.Typed.ListFold
+import Effect4.Laws.Program.Typed.FoldEval
 import Aesop
 
 /-!

@@ -21,7 +21,7 @@ Machine: the fiber machine over the frames; its stores (the memo world included)
         |
 Program: Eff (the program IR), typing, printer, native alphabet, compile to frames
         |
-Api: the application face (type, print, compile, run; Schema syntax)
+Api: the application face (type, compile, run); Api.Codegen, its codegen face (print, read, emit; Schema syntax)
 Program (the authoring surface) -> Modules: the words of a step term and the shared waiting wrapper, then the composed modules (the cell, the steps and the first operations of the Queue, of Semaphore and of Pool)
 
 Effect4: Api and the functional utilities, including Config / ConfigValue / Provision
@@ -42,7 +42,9 @@ OCaml5.Lcnf consumes the generic Source/Lcnf utilities, never Conform.Effect4
 ```
 
 Arrows point from what is imported to what imports it. `Api` imports the
-Program and Schema faces; callers and selected batteries import `Api`. From `Program`,
+Program and Schema faces and the codegen's refusal alphabets (`src/Effect4/Codegen/Refusal.lean`),
+and no other codegen module. `Api.Codegen` imports `Api` and the codegen, and the root `Effect4`
+imports both; callers and selected batteries import `Api` or `Api.Codegen`. From `Program`,
 `Machine` imports only the type data a record term stores, `Program.TyCore` and `Program.TyEq`
 ([record contract](research/2026-10-03-data-language/record-contract.md)). It never imports
 `Eff`, typing or the checker. The persisted Schema data plane stays below Machine. The type-directed
@@ -57,7 +59,7 @@ that boundary. It does not import the renderer; stored `Ty` and `Row` data remai
 unchanged. The target carrier retains source annotations and binding distinctions
 for validation above the canonical expression reader.
 
-Lean's module system (decisions row 200) covers 116 core modules outside `Laws`: those that reach
+Lean's module system (decisions row 200) covers the core modules outside `Laws` that reach
 no package or only `hash`. Such a module opens with `module`, imports with `public import`, and declares in
 `@[expose] public section`. A proof edit inside one leaves its importers fresh. Seven
 specialization sites and their importers stay non-module (decisions row 202, ruled (a)). `Laws`,
@@ -89,7 +91,7 @@ the second authoring plane, were deleted on 2026-09-18 under the ontology note �
 | `src/Effect4/Laws/Machine/Integers.lean` | the integer model and the rows' laws (decisions row 319): `toInt?` and `ofInt`, an exact embedding of `Int` into `Val`; `intAdd_spec`, `intSub_spec`, `intLt_spec` and `intEq_spec`; closure on `int`, no handle in an answer, and conservativity on two naturals. `NativeAtom.sound`, `atomFits`, `atom_progress` and the two handle laws read it |
 | `src/Effect4/Laws/Machine/IntegerProfile.lean` | the profile's judgment of the one growing addition (decisions row 321): `Within`, `growIn` and `intAddIn`, the checked addition with the bound as an argument; with both arguments inside the profile it answers exactly when the reference answers inside it (`intAddIn_eq_some_iff`, the pointer of the claim `profile-plus-exact`) |
 | `src/Effect4/Program` | `Eff`, `typeOf`, the native operation alphabet, `compile` and `interpOf`; `Ty.lean` owns raw type data, constructive ordering, normalization and checked canonical representatives, with semantic membership laws in the separate Laws graph; `Provision` — the requirement algebra (`Row.diff`), the layer signature `LayerTy` and its laws, the build specification and its totality theorem, and the docs deployment as compile-route runs (`docs/research/2026-09-04-provision-algebra.md` (untracked working note)); the layer term `LayerTerm` is a member of the `Eff` family since the join of 2026-09-07 (`Eff.lean`), typed in `Typing.lean` and compiled by path (`Compile.lean`'s `compileLayer`: a layer is a subterm, its identity its path, its build `EffName` continuations at Points); `Config` — rc.112's `ConfigProvider` as a fallback monoid under a path-transformation action, the `Config` reader with its tri-state resolution, dotenv substitution with fuel, and the configuration requirement row (`docs/research/2026-09-04-production-standards-spike.md` (untracked working note)) |
-| `src/Effect4/Api` | the one application-facing module |
+| `src/Effect4/Api` | the application face (`Api.lean`), and its codegen face (`Api/Codegen.lean`): printing, reading, module emission and checked reading, and the Schema syntax, in the namespace `Effect4.Api`. The split keeps the codegen out of the interface's import closure (the codegen refactor's CR-0, decisions row 392) |
 | `src/Effect4/Author.lean`, `src/Effect4/Run.lean`, `src/Effect4/Emit.lean`, `src/Effect4/Library.lean`, `src/Effect4/Laws/Author.lean`, `src/Effect4/Laws/Author/Explain.lean` | the five entry modules of decisions row 332, and `#explain` and `#obligations`, imported on their own (row 332, amended 2026-10-09). A user's file imports these and the composed modules' own files. Each re-exports and declares nothing. Each source file's exposure is declared data in `tools/Tools/ArchitectureRoles.lean` (`exposures`), and `#exposure_report` (`tools/Tools/Exposure.lean`) reads the acceptance programs' imports against it |
 | `src/Effect4/Run/Basic.lean` | the run API: a run opened from a built program, its rows, its journal, and the reactor's loop |
 | `src/Effect4/Run/Tape.lean` | what a tool reads off a run, in the namespace `Effect4.Run`: executable definitions of the core over the run API (`src/Effect4/Run/Basic.lean`). It holds the machine's view (`MachineView`, `machineView`), and the decision of a journal row (`decisionOf`, `Position`). It holds the raw replay of a decision tape (`replayFrom`, `machineOf`, `enoughFor`). It holds the tape of a journal (`tapeFrom`, `tapeOf`), a funded run (`funded`) and a machine at rest (`atRest`). A tool that inspects a recorded run imports the `Effect4` root alone. The file is no `module` file: it imports `Effect4.Run.Basic` (decisions row 202) |
@@ -142,8 +144,8 @@ the second authoring plane, were deleted on 2026-09-18 under the ontology note �
 | `src/Effect4/Laws/Step/Ascribe.lean` | the two builder rules of an ascription, beside the rules of a construction and of a field's read: it has its declared type under each literal flag where its term's type is below it (`types_ascribe`), it has no type otherwise (`ascribe_untyped`), and it reads what its term reads (`reads_ascribe`). It names no module |
 | `src/Effect4/Laws/Program/Typed/Mask.lean` | the mask's three claims at the typed state: the saved image's membership (`saved_mask_image_membership`), the body of a restore site (`scoped_body_substitution_boundary`), and the flag at the boundaries of regions (`saved_mask_restoration`). The file states no run-level bracket |
 | `src/Effect4/Laws/Codegen/Mask.lean` | the mask's two rows keep the template table's premises (`mask_rows_table_premises`), and the profile of the mask's printed form (`mask_printed_form_profile`) |
-| `src/Effect4/Codegen/PrintTyped.lean` | the typed print, slice P2a (decisions row 325): the table-driven print with each node's address (`printTypedAt`); at a call where the annotation answers type arguments, the call carries them on its head. `typeArgsAt` answers a call's bindings where a binding is a join, and `printTyped` reads it |
-| `src/Effect4/Laws/Codegen/PrintTyped.lean` | the connector: at the empty annotation the typed print is the print (`printTypedAt_none`); while the guards stand the annotation answers nothing (`typeArgsAt_none`); so the typed print is the print, byte for byte (`printTyped_eq_print`, the pointer of the claim `typed-print-connector`). The battery is `Test/Codegen/PrintTyped.lean` |
+| `src/Effect4/Codegen/PrintTyped.lean` | the typed print, slice P2a (decisions row 325): the table-driven print with each node's address (`printTypedAt`); at a call where the annotation answers type arguments, the call carries them on its head. `typeArgsAt` answers a call's bindings where a binding is a join, read off the address table that `annotate` builds once per program (`focusAtTable`), and `printTyped` reads it. The module that ships prints its pieces so, or by the fold where the typed print refuses (`shippedPieces`), and `readModuleTyped` reads them after the named erasure |
+| `src/Effect4/Laws/Codegen/PrintTyped.lean` | the connector: at the empty annotation the typed print is the print (`printTypedAt_none`); the table's focus is the focus (`focusAtTable_annotate`), so where no call needs a join and no site needs a type (`NoJoin`) the annotation answers nothing, and the typed print is the print, byte for byte (`printTyped_eq_print`, the pointer of the claim `typed-print-connector`). The battery is `Test/Codegen/PrintTyped.lean` |
 | `src/Effect4/Laws/Machine/MaskDiscipline.lean` | the saved mask's chain on a fiber's stack (`MaskChain`): at one fixed base bit, the restoring frames alternate from the negation of the flag. One placed theorem holds the statements (`saved_mask_pop_discipline`). The frame machine's pop from an empty scratch stack, `getCont`, the finished frame's path `Machine.frameExitState` and the entry of each region keep the chain. Two fibers with one base and one stack have one flag. The file states no law of a run. It imports no module of `src/Effect4/Laws/Program` |
 | `src/Effect4/Laws/Machine/MaskRuns.lean` | the saved mask's chain at every live fiber of a run (`MaskRuns`), over a table of start flags that is proof data. A step of the frame machine keeps the chain, and a pop that answers nothing ends at an empty stack and at the base. Each command keeps the invariant under the condition on `Cmd.exitDone` (`ClearReady`), and the command loop discharges it through `Machine.Lift`. One placed theorem holds the statements at the frame evaluator (`saved_mask_chain_runs`). The file states no bracket of a region |
 | `src/Effect4/Laws/Program/MaskRuns.lean` | the same invariant at the compiled program's interpreter, under the native evaluator (`compiled_mask_chain_runs`, the pointer of the registry claim `saved-mask-chain-runs`), and at the entries of `src/Effect4/Api.lean` and `src/Effect4/Program/Admit.lean` that return a machine |
@@ -152,7 +154,7 @@ the second authoring plane, were deleted on 2026-09-18 under the ontology note �
 | `src/Effect4/Laws/Program/MaskBracket.lean` | the bracket at the cuts of a compiled command loop (`LoopCut`): a fiber that a pending command steps has not exited (`stepped_live`, the pointer of the registry claim `stepped-fiber-live`), each command gives a cut again, and a region ends at its entry's stack and at its entry flag (`compiled_region_bracket`, the pointer of `saved-mask-region-bracket`) |
 | `src/Effect4/Laws/Program/ReferenceExpansion.lean` | the reference expansion leaves no reference: a program whose layer references are well formed (`Eff.layerRefsWF`) expands to a program with no reference site, at the bound of `Eff.expandRefs` (`expanded_refs_nil_of_wf`). It holds one law of the generated folds at the seven sorts, with its two instances: one round (`Eff.refSites_expandRound`), and a layer's sites under a longer path (`LayerTerm.refSites_append`). It holds the budget of the rounds (`RefsWithin`). The rank of a path and the facts of the path fold that it uses are in `PathOrder.lean` and `PathFold.lean`. The file states nothing about a run: the compile redirects a reference, and it does not expand |
 | `src/Effect4/Schema` | the persisted Schema data plane; `Codec` is the type-directed JSON boundary above Program, with exact value admission and a conservative shared-layout test for subtype agreement |
-| `src/Effect4/Codegen`, `src/Effect4/Ingest` | the pinned Effect v4 profile, `print`, the Schema and annotated-field generators, target/artefact definitions, and the Ingest taxonomy |
+| `src/Effect4/Codegen`, `src/Effect4/Ingest` | the pinned Effect v4 profile, `print`, the Schema and annotated-field generators, the target definitions and the JSON text, and the Ingest taxonomy |
 | `src/Effect4/Store` | the content-addressed store as one trait (`docs/research/2026-09-04-cas-trait-plan.md` (untracked working note)): `Val` the value tree and its one exact byte codec, `Canonical α` (shape, `toVal`, `ofVal`, three laws), including `RowCanonical` built from the existing subtype/equivalence images (sorted list bytes, proof-free and exact), with `encode`, `decode`, `digest`, the JSON printer and the spec `Document` all derived, `Kind` and the typed `Ref α`, the node `version ∷ kind ∷ spec ∷ payload` with the meta-schema as the zero-spec genesis, the heterogeneous store with admission and roots, words with closure, the layered read, the outbox and `verify`, and traits as `annotation` nodes that never enter identity; instances are generated by `tools/Effect4Gen` into `Store/Derived/*`, `Store/Domain/Derived/Program.lean`, `Store/Domain/PinDerived.lean` |
 | `git:f7d22703:src/Effect4/Arch` | JSON-number facts and structural acceptance of Schema documents; the views are archived on `archive/char-stdlib` |
 | `src/OCaml5` | the Lean half of the OCaml estate: the OCaml syntax the route prints, its generated fold, and the printer and checker as algebras of it (`Ml`), the `Eff` closed world and emitters (`Eff`), the LCNF → OCaml backend with its value and type tables (`Lcnf`), the `--run` drivers (`Tools`) |
@@ -199,9 +201,17 @@ import or alter the runtime/LCNF root. The six owed encoders (DI-41) remain with
 `Program/CheckedTyping.lean` owns the computed `TypedProgram` evidence for the
 existing whole-program checker. Execution admission extends it; code generation
 reuses it without runner registration limits. `Codegen/Checked.lean` owns module
-production receipts indexed by program, row table and export name. The application
-module exposes those receipts through `emitModule`, while `printModule` projects
-syntax. Checker/declarative connections and production/reconstruction theorems live
+production receipts indexed by program, row table and export name. A receipt's
+declarations print their program pieces by the typed print (decisions row 392, P1). Where
+the typed print refuses a piece, the fold prints it (`printEntryWith shippedPieces`).
+`uncheckedFile` prints a program that has no receipt by the same writer. The application
+module exposes those receipts through `emitModule`, while `printModule` projects syntax.
+`Tools.Code.programModule` is the one writer of every lane's module text. The module printer
+is one function over a printer of the program pieces (`printModuleWith`), and so is the
+module reader (`readModuleWith`). The module laws are stated of any lawful pair
+(`readModuleWith_printModuleWith_defs`, `Laws/Codegen/Module.lean`; `PiecesLawful`,
+`Laws/Api/ModuleReadable.lean`).
+Checker/declarative connections and production/reconstruction theorems live
 in `Laws/Program/CheckedTyping.lean` and `Laws/Codegen/Checked.lean`. These are proof
 views of the same program and printer, not a second language or source validator.
 
@@ -249,11 +259,13 @@ beside it, the avatar (the same machine as OCaml 5 effect handlers) with the dae
 ## The seam
 
 `Effect4.Api` exposes the operations of
-the program pipeline. Callers cross this seam; batteries also test modules
-at their own boundaries. Program printers answer syntax (`TypeScript.Expr`, `ConstDecl`). The explicit
-`render` operation crosses to bytes through `Codegen.Artefact.render`; it and
-text-producing functions such as `Codegen.Schema.documentSource` are admitted by
-exact name in the axiom gate.
+the program pipeline, and `Effect4.Api.Codegen` its codegen operations in the same namespace.
+Callers cross this seam; batteries also test modules
+at their own boundaries. Program printers answer syntax (`TypeScript.Expr`, `ConstDecl`), never
+text. A file writer renders a module to bytes outside the seam (`moduleText`,
+`tools/Tools/Code/Module.lean`). A text-producing function of the core, such as
+`Codegen.Schema.documentSource` or `Codegen.renderJson`, is admitted by exact name in the axiom
+gate.
 
 Inside the seam the library keeps its faces distinct and relates them by
 theorem: structural syntax (`Eff`) for construction and printing; the frame
@@ -330,8 +342,9 @@ that refuse everything from passing (`ts/eff/ingest/check-corpus.ts`, DI-37, Wav
 ## The codegen route and the `Api` export
 
 The experimental Surface emitter route was retired and the `Api` codegen export was **cut**
-(DI-27, ruled 2026-09-09, executed 2026-09-10). The `Api` module exports `Target`, `Artefact`,
-and the single crossing `render`.
+(DI-27, ruled 2026-09-09, executed 2026-09-10). The `Api.Codegen` module exports no renderer.
+The codegen refactor's CR-9 removed `Artefact` and its `render`, which one battery line called
+(decisions row 392).
 
 ## What is not here
 

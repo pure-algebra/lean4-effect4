@@ -18,6 +18,8 @@ No theorem here widens a declared type, admits a binder annotation, interprets t
 package, or claims target typing or execution.
 -/
 
+open Effect4.Laws.Auto (bind_eq_ok)
+
 namespace Effect4.Codegen
 
 open Effect4.Program
@@ -300,12 +302,13 @@ theorem admitModule_typed {module : TypeScript.Module}
     typeOfProgram (nativeSignature table) r.program = some r.typing.ty :=
   r.typing.typed
 
-/-- The raw reader is the projection of the checked boundary. -/
+/-- The module reader is the projection of the checked boundary: the reconstruction after the
+named erasure of a typed print's inserted type arguments (`Program.readModuleTyped`). -/
 theorem admitModule_read {module : TypeScript.Module}
     {r : ModuleReading table name allowed ambient}
     (h : admitModule name module table allowed ambient = .ok r) :
-    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param []
-      module.decls = .ok r.program := by
+    Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
+      NativeOp.param [] module.decls = .ok r.program := by
   rw [← admitModule_module h]
   exact r.read
 
@@ -347,7 +350,7 @@ theorem ModuleReading.typing_eq (r : ModuleReading table name allowed ambient)
 /-- Completeness of source admission against its declared checks, including stored-annotation support. -/
 theorem admitModule_complete {module : TypeScript.Module} {program : NativeEff}
     (bound : SourceBindings.Checked allowed (withAmbient ambient module))
-    (read : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call
+    (read : Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
       NativeOp.param [] module.decls = .ok program)
     (formed : Formation.InputFormed program table)
     (inProfile : natLiteralsInProfile program = true)
@@ -377,10 +380,10 @@ theorem ModuleReading.unique (left right : ModuleReading table name allowed ambi
 /-- The round trip in certificate form: what the checked producer emitted, when it reads
 back to its program, is admitted by the checked reader to the same program and the same typing
 certificate. The host supplies the bindings its prelude provides; everything else is read off
-the printer's own equations. (`readModule_printModule` gives the reading from the pieces'.) -/
+the printer's own equations. (`ModuleEmission.readModule` gives the reading from the pieces'.) -/
 theorem ModuleEmission.admit {program : NativeEff} {table : RowTable} {name : String}
     (e : ModuleEmission program table name)
-    (read : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call
+    (read : Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
       NativeOp.param [] e.module.decls = .ok program)
     {allowed : List Bindings.Origin} {ambient : List TypeScript.Import}
     (bound : SourceBindings.Checked allowed (withAmbient ambient e.module)) :

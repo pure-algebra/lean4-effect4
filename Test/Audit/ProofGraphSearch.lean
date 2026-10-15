@@ -71,8 +71,6 @@ run_cmd liftTermElabM do
   checkRestored
   if let .error why := recovered then throwError "search after timeout failed: {why}"
 
-#print axioms Test.ProofGraphSearch.closed
-
 -- Returned proofs must survive speculative declaration rollback.
 run_cmd liftTermElabM do
   let originalAsync := Elab.async.get (← getOptions)
@@ -188,8 +186,5 @@ run_cmd liftTermElabM do
   let existingProof ← requirePortable (← search (mkConst ``True) existing 20000)
   unless existingProof.getUsedConstants.contains `Test.ProofGraphSearchPortability.closed do
     throwError "search unfolded an existing theorem"
-
-#print axioms Test.ProofGraphSearchPortability.closed
-#print axioms Test.ProofGraphSearchPortability.polymorphic
 
 end Test.ProofGraphSearch

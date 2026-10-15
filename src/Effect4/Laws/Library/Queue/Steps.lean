@@ -2,7 +2,7 @@ import Effect4.Laws.Library.Queue.Relation
 import Effect4.Laws.Library.Queue.Data
 import Effect4.Laws.Library.Queue.OfferData
 import Effect4.Laws.Library.Queue.Reading
-import Effect4.Laws.Program.Typed.ListFold
+import Effect4.Laws.Program.Typed.FoldEval
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 

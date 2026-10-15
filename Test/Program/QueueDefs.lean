@@ -1,5 +1,6 @@
 import Test.Program.QueueScenarios
 import Effect4.Library.Queue.Defs
+import Effect4.Api.Codegen
 
 /-!
 # The Queue's operations as definitions (decisions row 328, slice PROC-4)

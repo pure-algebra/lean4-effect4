@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-!
 # `E4-PRINT-CE-002`: a natural literal outside the profile prints as another number (repaired)

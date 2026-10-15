@@ -16,8 +16,10 @@ The hand selection reads annotated generated exports. The corpus lane reads sepa
 unannotated modules so its actual columns come from initializer inference; the hand
 selection alone is not that independent inference check.
 Expected adapter types come from `generated/row-types.tsv`, which `tools/Tools/RowTypes.lean`
-writes with `Ty.renderRaw` and each row's own `RowShape`: the tool has no type printer of its
-own, and `make check-target` refuses a stale table rather than reading it.
+writes at the spelling a printed module ships (`ofTy`, rendered: `tools/Tools/TypeSpelling.lean`)
+and each row's own `RowShape`. The tool has no type printer of its own, and `make check-target`
+refuses a stale table rather than reading it. The assignability pairs
+(`tools/Tools/TyVectors.lean`) are spelled the same way.
 The full `scopeKey` maps to `Scope.Scope`; a matching service code alone is insufficient.
 Other requirements use the printer's full-key string literal identity, independently of their value carrier.
 

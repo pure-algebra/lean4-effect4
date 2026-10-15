@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.RuntimeR
 import Test.Program.RuntimeRReference
 import Test.Program.RuntimeRContract
+import Effect4.Api.Codegen
 
 /-!
 # Simulation contract — the P3 judgment and the P4 corollary, pinned

@@ -56,6 +56,15 @@ theorem decodeBytes_repr (n : Nat) : decodeBytes (Nat.repr n).toByteArray.data.t
     Nat.toDigits]
   exact decodeBytes_toDigitsCore (n + 1) n (Nat.lt_succ_self n)
 
+/-- `Nat.repr` is injective, read from the bytes: `decodeBytes` reads the number back
+(`decodeBytes_repr`). The string layer's injectivity lemmas reach `Classical.choice` on this
+toolchain (they go through `String.toList`). Binder names (`Var.name_inj`,
+`src/Effect4/Laws/Codegen/ReadLeaf.lean`) and minted names (`mint_depth_inj`,
+`src/Effect4/Laws/Step/Reading.lean`) read it. -/
+theorem repr_inj {a b : Nat} (h : Nat.repr a = Nat.repr b) : a = b := by
+  have := congrArg (fun s => decodeBytes s.toByteArray.data.toList) h
+  simpa only [decodeBytes_repr] using this
+
 theorem read_repr (n : Nat) : read (Nat.repr n) = some n := by
   simp only [read, decodeBytes_repr, ↓reduceIte]
 

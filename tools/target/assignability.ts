@@ -4,9 +4,10 @@
  *
  *     bun tools/target/assignability.ts --repo . --vectors <ty-vectors.tsv> [--promote]
  *
- * `tools/Tools/TyVectors.lean` writes the questions — each pair as its two `Ty` values, the
- * strings `Ty.renderRaw` prints for them, `Ty.sub` in both directions, and the same two
- * verdicts under one swapped arm (the red control). This asks the compiler about the rendered
+ * `tools/Tools/TyVectors.lean` writes the questions — each pair as its two `Ty` values, each at
+ * the spelling a printed module ships (`ofTy`, rendered: `tools/Tools/TypeSpelling.lean`),
+ * `Ty.sub` in both directions, and the same two verdicts under one swapped arm (the red
+ * control). This asks the compiler about the rendered
  * pair, both readings of both directions, and classifies every row:
  *
  *   agree       the order and the target say the same thing in both directions
@@ -49,7 +50,7 @@ export function readVectors(text: string): Vector[] {
 /** The deliberate differences, each with the reason it is not a defect and not incompleteness.
  * A pair is a cut only when the reason applies to it; nothing is classified by its id. */
 const cuts: Array<{ name: string; reason: string; holds: (v: Vector) => boolean }> = [
-  { name: "cut/spelling", reason: "`Ty.renderRaw` is not injective (`nat` and `int` both print `number`; `refOf nat` prints the handle target `Ref.Ref<number>` a `.handle` prints verbatim), so the target cannot see a difference the order can",
+  { name: "cut/spelling", reason: "the shipped spelling is not injective (`nat` and `int` both print `number`; `refOf nat` prints the handle target `Ref.Ref<number>` that a `.handle` prints verbatim), so the target cannot see a difference the order can",
     holds: v => v.renderLeft === v.renderRight && v.left !== v.right },
 ]
 

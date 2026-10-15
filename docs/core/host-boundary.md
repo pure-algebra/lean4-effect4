@@ -99,8 +99,8 @@ Operation-carried type arguments and a row's declared type arguments keep their 
 The join erasure removes only inserted arguments before the existing reader.
 It does not remove the arguments that reconstruct operation data.
 
-`KeyedTool.bindingsType` in `harness/truth/session/Keyed.lean` currently generates declarations only for closed host columns.
-Its column printer refuses template variables, so that generator supplies no generic declaration-order guarantee.
+`hostBindings` in `src/Effect4/Codegen/RowServices.lean` currently generates declarations only for closed host columns.
+Its method printer (`rowMethodField`) refuses template variables, so that generator supplies no generic declaration-order guarantee.
 A host supplies a template declaration explicitly and must follow the order above.
 The UNGUARD receipt records the finite compiler checks of supplied declarations and actual printed calls.
 Those checks establish no universal host implementation theorem.

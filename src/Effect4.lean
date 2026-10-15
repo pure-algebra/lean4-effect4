@@ -75,7 +75,7 @@ import Effect4.Machine.Alphabets
 import Effect4.Machine.Term
 import Effect4.Machine.Stores
 import Effect4.Machine.Context
--- The codegen target and artefact definitions with the one crossing to bytes.
+-- The codegen targets, and the JSON target's text.
 import Effect4.Codegen.Target
 import Effect4.Codegen.Template
 -- The AST relation (docs/research/2026-09-04-ast-relation-plan.md), lane A1:
@@ -203,10 +203,10 @@ import Effect4.Run.Tape
 import Effect4.Author
 import Effect4.Emit
 import Effect4.Library
--- Foreign-source ingestion tables and constructed target spellings.
+-- Foreign-source ingestion tables and the forms table. The foreign corpus's spellings are the
+-- ingest tool's (`tools/Drivers/StyleSyntax.lean`).
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms
-import Effect4.Codegen.Styles
 -- The words of a step term that the composed modules share, in the namespace `Effect4.Modules`.
 import Effect4.Library.Words
 -- The composed modules, programs over the authoring surface (decisions row 255): the Queue's
@@ -254,6 +254,9 @@ import Effect4.Codegen.RowServices
 -- The banked Ref cache: a cache of a list beside storage, and its model (decisions row 378).
 import Effect4.Library.Ref.Cache
 import Effect4.Library.Ref.CacheModel
+-- The program interface's codegen face, in the namespace `Effect4.Api`: printing, reading,
+-- module emission and checked reading (the codegen refactor's CR-0, decisions row 392).
+import Effect4.Api.Codegen
 
 /-!
 # Effect4

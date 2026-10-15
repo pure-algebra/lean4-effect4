@@ -7,7 +7,9 @@ import Effect4.Codegen.SourceBindings
 
 `Program.readModule` is the raw reconstruction: it reads the leading class declarations as
 the payload classes (decisions row 120), takes the last `const` as the main program and ignores
-its name, its export flag, its annotation and the module's imports.
+its name, its export flag, its annotation and the module's imports. The boundary reads with
+`Program.readModuleTyped`, the same reconstruction after the named erasure of a typed print's
+inserted type arguments, so it admits the module that ships (`ModuleEmission`).
 This module is the checked boundary beside it, in the way `emitModule` sits beside
 `printModule`: `admitModule` runs the lexical binding check on the original module, the
 raw reconstruction, raw formation, the one whole-program checker, and the declaration
@@ -117,7 +119,7 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
     .ok (classes, classDecls)
   annotations : annotationRefusal program = none
   bound : SourceBindings.Checked allowed (withAmbient ambient module)
-  read : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call
+  read : Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
     NativeOp.param [] module.decls = .ok program
   envelope : envelopeCheck name typing.ty classes (nativeSignature table).keyNames module.decls =
     none
@@ -131,7 +133,7 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
   match SourceBindings.validate allowed (withAmbient ambient module) with
   | none => .error .unbound
   | some bound =>
-    match hread : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call
+    match hread : Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
         NativeOp.param [] module.decls with
     | .error why => .error (.read why)
     | .ok program =>

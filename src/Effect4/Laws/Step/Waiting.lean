@@ -5,7 +5,7 @@ import Effect4.Laws.Program.Authoring.Records
 import Effect4.Laws.Program.Authoring.Tuples
 import Effect4.Laws.Step.Checking
 import Effect4.Laws.Program.Typing.Sound
-import Effect4.Laws.Codegen.Mask
+import Effect4.Laws.Program.Typed.Mask
 import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Program.Bounds
 import Effect4.Laws.Program.Eliminators
@@ -467,8 +467,8 @@ statements below are the means. They name no module.
 Placement. Concept `store-typing`, requirement R4: helpers of a module's typing statements, the
 Queue's first (`src/Effect4/Laws/Library/Queue/Ops.lean`), and Semaphore's operations second
 (`src/Effect4/Laws/Library/Semaphore/Ops.lean`). Reach: the checker's judgment `effTy` at every typed scope; the rows at the native
-signature of any row table. The mask's rule is `MaskFormProfile.typed`
-(`src/Effect4/Laws/Codegen/Mask.lean`). They establish no run, no behaviour and nothing of a
+signature of any row table. The mask's rule is `maskForm_typed`
+(`src/Effect4/Laws/Program/Typed/Mask.lean`). They establish no run, no behaviour and nothing of a
 target. -/
 
 section Typing
@@ -965,7 +965,7 @@ theorem answers_restore {saved : TermSrc} {body : Src NativeOp} {s : TypedScope}
 
 /-- **`uninterruptibleMaskWith`**: the body's `restore` answers as its argument, at every scope
 that the surface's binders reach from the mask's. The program answers as its body
-(`MaskFormProfile.typed`, `src/Effect4/Laws/Codegen/Mask.lean`). -/
+(`maskForm_typed`, `src/Effect4/Laws/Program/Typed/Mask.lean`). -/
 theorem answers_maskWith {body : (Src NativeOp → Src NativeOp) → Src NativeOp}
     {s : TypedScope} {X : Ty}
     (hbody : ∀ restore : Src NativeOp → Src NativeOp,
@@ -987,7 +987,7 @@ theorem answers_maskWith {body : (Src NativeOp → Src NativeOp) → Src NativeO
           Except.ok (Eff.uninterruptible y)) >>= fun x1 => Except.ok (Eff.bind x0 x1)) = _
     rw [treeA']
     rfl
-  · exact (Effect4.Program.mask_printed_form_profile.typed sig s.types a _ typedA).trans
+  · exact (Effect4.Program.maskForm_typed sig s.types a _ typedA).trans
       (congrArg some (pure_columns X))
 
 /-- **`withFiber (Action.fork …)`**: a fork answers its child's handle. -/
@@ -1166,7 +1166,7 @@ theorem has_restore {saved : TermSrc} {body : Src NativeOp} {s : TypedScope} {t 
 /-- **`uninterruptibleMaskWith`, at any effect type**: the body's `restore` keeps the effect
 type of its argument, at every scope that the surface's binders reach from the mask's. The mask
 has its body's answer, and the getter's two empty columns join the body's
-(`MaskFormProfile.typed`, `src/Effect4/Laws/Codegen/Mask.lean`). -/
+(`maskForm_typed`, `src/Effect4/Laws/Program/Typed/Mask.lean`). -/
 theorem has_maskWith {body : (Src NativeOp → Src NativeOp) → Src NativeOp} {s : TypedScope}
     {b : EffTy}
     (hbody : ∀ restore : Src NativeOp → Src NativeOp,
@@ -1183,7 +1183,7 @@ theorem has_maskWith {body : (Src NativeOp → Src NativeOp) → Src NativeOp} {
   have treeA' : body (Authoring.restore (minted (s.env.mint "restore")))
       (s.env.push [s.env.mint "restore"]) (path ++ [1] ++ [0]) = .ok a := treeA
   refine ⟨Effect4.Program.maskForm a, ?_,
-    Effect4.Program.mask_printed_form_profile.typed sig s.types a _ typedA⟩
+    Effect4.Program.maskForm_typed sig s.types a _ typedA⟩
   show (Except.ok (Eff.withFiber ActionTerm.getInterruptible) >>= fun x0 =>
     (body (Authoring.restore (minted (s.env.mint "restore")))
       (s.env.push [s.env.mint "restore"]) (path ++ [1] ++ [0]) >>= fun y =>

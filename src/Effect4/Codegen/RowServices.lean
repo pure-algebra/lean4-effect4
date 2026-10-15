@@ -128,6 +128,28 @@ def rowMethodField (sig : Signature Op) (m : String) (row : Row) :
   | some result => .ok { name := m, readonly := true, type := .function params result }
   | none => .error (.typeSpelling row.spelling)
 
+/-- **The host bindings of a table**: the namespaces of its rows that are no service row, each
+an object whose methods are its rows, in table order, and the TypeScript type of the object that
+holds the namespaces. Each method's field is a service method's (`rowMethodField`). A printed
+module leaves each such namespace free (`ModuleEmission.file` imports none), and the host binds
+it. Refused, by a row's spelling, at a row that is no plain host call: a call with no trailing
+argument and no type argument, spelled `Ns.method`, that the host answers asynchronously. -/
+def hostBindings (sig : Signature Op) (table : List Row) :
+    Except String (List String × TypeScript.TypeRef) := do
+  let methods ← (table.filter fun row => row.serviceCall?.isNone).mapM fun raw => do
+    let row := raw.normalizeTypes
+    unless row.shape == .call && row.trailing.isEmpty && row.typeArgs.isEmpty &&
+        row.registration == .external && row.kind == .async do
+      throw ("the row " ++ row.spelling ++ " is no plain host call")
+    let some (ns, m) := serviceParts row.spelling
+      | throw ("the row " ++ row.spelling ++ " is not spelled Namespace.method")
+    let field ← (rowMethodField sig m row).mapError fun _ =>
+      "a column of the row " ++ row.spelling ++ " has no TypeScript type"
+    pure (ns, field)
+  let spaces := (methods.map (·.1)).eraseDups
+  pure (spaces, .object (spaces.map fun ns =>
+    { name := ns, readonly := true, type := .object ((methods.filter (·.1 == ns)).map (·.2)) }))
+
 /-- A method's accessor on its key, as an expression: `(a0: T) => NsKey.use((a1) => a1.m(a0))` at
 the request's type `T`, and `() => NsKey.use((a0) => a0.m())` on a `unit` request (`none`). It is
 the ruled call of a service's method, `Key.use((r) => r.method(x))` (decisions row 378 (19);

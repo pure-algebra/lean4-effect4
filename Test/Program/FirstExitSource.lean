@@ -1,6 +1,7 @@
 import Effect4.Api.Author
 import Effect4.Store.Domain.ProgramWire
 import Effect4.Laws.Program.Authoring.Lifts
+import Effect4.Api.Codegen
 
 /-!
 # First-exit source readers

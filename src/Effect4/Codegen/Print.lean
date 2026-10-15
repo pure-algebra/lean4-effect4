@@ -142,12 +142,6 @@ theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
 
 /-! ## A definition block (decisions row 328, slice PROC-3) -/
 
-/-- A program's definition block, when its root holds one: the declarations, the bodies and the
-main program. -/
-def Eff.block? : Eff Op → Option (List DefDecl × Effs Op × Eff Op × LayerTerms Op)
-  | .defs decls bodies main layers => some (decls, bodies, main, layers)
-  | _ => none
-
 /-- A program type as target syntax, a context type's row under the key names given (none by
 default), refused by its rendering when it has none. -/
 def typeRefOf (ty : Ty) (names : KeyNames := []) : Except PrintRefusal TypeScript.TypeRef :=
@@ -200,6 +194,24 @@ def paramType (sig : Signature Op) (q : ParamDecl) : Except PrintRefusal TypeScr
     | some result => .ok (.function [(Var.name 0, request)] result)
     | none => .error (.typeSpelling q.name)
 
+/-! ### The printer of a module's program pieces
+
+A module prints programs in two places: its main program, and each definition's body. A **piece
+printer** prints one of them at its signature and its checked environment. The plain module
+prints a piece by the table's fold at the environment's length (`plainPieces`). The module that
+ships prints it by the typed print, which writes a call's type arguments where a join needs them
+(`shippedPieces`, `Codegen/PrintTyped.lean`; decisions row 373 (11)), or by the fold where the
+typed print refuses. Everything else a module prints is the same in both: its classes, its
+services, its layers and its declarations' order. So one module printer serves both
+(`printModuleWith`), and `printModule` is the plain one. -/
+
+/-- A printer of a module's program pieces, at the piece's signature and environment. -/
+abbrev PiecePrint (Op : Type) :=
+  Signature Op → TyEnv → Eff Op → Except PrintRefusal TypeScript.Expr
+
+/-- **The plain pieces**: the table's fold at the environment's length. -/
+def plainPieces : PiecePrint Op := fun sig env e => print sig env.length e
+
 /-- **A definition as a module constant**: `const name = (a0: Request, p: (a0: B) =>
 Effect.Effect<…>, …): Effect.Effect<A, E, R> => Effect.suspend(() => body)`. The first parameter
 is the request, the body's one variable, so the body prints at environment length `1`. Each
@@ -213,35 +225,49 @@ The body's own hoisted layers (`locals`) print at the top of the suspension (`su
 declaration order (`Path.declBefore`), at the body's signature, so a layer may run the body's
 parameters. A reference to one prints as its constant's name, and each run of the body makes its
 own objects, as the machine keys a body's build by its path and the running call (decisions row
-341, step 3). A reference to a module layer prints as the module constant's name (step 2). -/
-def printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op)
+341, step 3). A reference to a module layer prints as the module constant's name (step 2).
+
+The body is a piece (`pp`): at the signature its parameters extend and the environment of its
+declared request, as the module check checks it (`Checker.checkBodies`). -/
+def printDefWith (pp : PiecePrint Op) (sig : Signature Op) (d : DefDecl) (body : Eff Op)
     (locals : List (List Nat × LayerTerm Op)) : Except PrintRefusal TypeScript.ConstDecl :=
   typeRefOf d.request sig.keyNames >>= fun request =>
   d.params.mapM (paramType sig) >>= fun fns =>
   declarationType d.effTy sig.typeEnv >>= fun result =>
   (Path.sortBy Path.declBefore (locals.map (·.1))).mapM
     (printLocal (sig.withParams d.params) locals) >>= fun ls =>
-  print (sig.withParams d.params) 1 body >>= fun value =>
+  pp (sig.withParams d.params) [d.request.normalize] body >>= fun value =>
   .ok { doc := [], name := d.name,
         value := .lambda ({ name := Var.name 0, type := some request } ::
           (d.params.zip fns).map fun p => { name := p.1.name, type := some p.2 })
           (suspension ls value) result }
+
+/-- A definition as a plain module constant: its body by the table's fold. -/
+abbrev printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op)
+    (locals : List (List Nat × LayerTerm Op)) : Except PrintRefusal TypeScript.ConstDecl :=
+  printDefWith plainPieces sig d body locals
 
 /-- The definitions of a block, in order, each against its body, from position `k`. Each takes
 into its suspension the hoisted layers of `rest` whose paths stand in its body
 (`Path.bodyIndex`), and passes the others on: the answer is the constants and the layers no body
 took. A block whose declarations and bodies differ in number is refused, as the checker refuses
 it. -/
-def printDefs (sig : Signature Op) : Nat → List DefDecl → Effs Op →
+def printDefsWith (pp : PiecePrint Op) (sig : Signature Op) : Nat → List DefDecl → Effs Op →
     List (List Nat × LayerTerm Op) →
     Except PrintRefusal (List TypeScript.ConstDecl × List (List Nat × LayerTerm Op))
   | _, [], .nil, rest => .ok ([], rest)
   | k, d :: ds, .cons body bodies, rest =>
-    printDef sig d body (rest.filter fun e => decide (Path.bodyIndex e.1 = some k)) >>= fun c =>
-    printDefs sig (k + 1) ds bodies
+    printDefWith pp sig d body (rest.filter fun e => decide (Path.bodyIndex e.1 = some k)) >>= fun c =>
+    printDefsWith pp sig (k + 1) ds bodies
       (rest.filter fun e => !decide (Path.bodyIndex e.1 = some k)) >>= fun out =>
     .ok (c :: out.1, out.2)
   | _, _, _, _ => .error (.internalAction "defs")
+
+/-- The plain definitions of a block: each body by the table's fold. -/
+abbrev printDefs (sig : Signature Op) (k : Nat) (defs : List DefDecl) (bodies : Effs Op)
+    (rest : List (List Nat × LayerTerm Op)) :
+    Except PrintRefusal (List TypeScript.ConstDecl × List (List Nat × LayerTerm Op)) :=
+  printDefsWith plainPieces sig k defs bodies rest
 
 /-! ## A block's services (decisions rows 338 and 339, slice CO-6b)
 
@@ -470,8 +496,11 @@ which may name them. The main declaration is the block's main program.
 A block's references must stand in their scopes (`Eff.inScope`, decisions row 341): a body names
 its own layers, declared in its suspension, and the module's; the main program names its own and
 the module's. Otherwise a printed name would be declared where its site cannot see it, so the
-first reference out of its scope is refused by its target. -/
-def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
+first reference out of its scope is refused by its target.
+
+The main program is a piece (`pp`), at the empty environment and the block's signature. -/
+def printModuleWith (pp : PiecePrint Op) (sig : Signature Op) (name : String) (ty : EffTy)
+    (e : Eff Op) :
     Except PrintRefusal (List TypeScript.ConstDecl) :=
   match e.hoistAll with
   | .error target => .error (.layerRef target)
@@ -485,7 +514,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
           let x ← printLayer sig l
           .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
         | none => .error (.layerRef t)
-      let m ← print sig 0 main
+      let m ← pp sig [] main
       let declaration ← printDecl name ty m sig.typeEnv
       .ok (ds ++ [declaration])
     -- an empty block would print as its main program alone, and read back as it
@@ -496,7 +525,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
       | none => do
         let defs := d :: ds
         let sig' := sig.withDefs defs
-        let out ← printDefs sig' 0 defs bodies decls
+        let out ← printDefsWith pp sig' 0 defs bodies decls
         let svc ← printServices sig' defs
         let ms ← printModuleLayers sig' layers
         let ordered := Path.sortBy Path.declBefore (out.2.map (·.1))
@@ -506,9 +535,14 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
             let x ← printLayer sig' l
             .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
           | none => .error (.layerRef t)
-        let m ← print sig' 0 body
+        let m ← pp sig' [] body
         let declaration ← printDecl name ty m sig.typeEnv
         .ok (out.1 ++ svc ++ ms ++ ds ++ [declaration])
+
+/-- The plain module: each program piece by the table's fold. -/
+abbrev printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
+    Except PrintRefusal (List TypeScript.ConstDecl) :=
+  printModuleWith plainPieces sig name ty e
 
 variable [ScopedOp Op]
 
@@ -588,8 +622,8 @@ declare one of its payload classes (`ClassTable.moduleClasses`, decisions row 12
 the export name here is what lets the reading boundary compare names at all: a block exporting
 `a0` would be read back as a binder. The classes themselves are declared by the module
 (`Codegen.ModuleEmission`), before these declarations. -/
-def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
-    Except PrintRefusal (List TypeScript.ConstDecl) :=
+def printEntryWith (pp : PiecePrint Op) (table : List Row) (sig : Signature Op) (name : String)
+    (ty : EffTy) (e : Eff Op) : Except PrintRefusal (List TypeScript.ConstDecl) :=
   if !exportNameSafe name then .error (.unsafeName name)
   else
     match table.find? (fun row => !rowNamesSafe row) with
@@ -612,22 +646,27 @@ def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : Eff
       | none =>
       match annotationRefusal e with
       | some why => .error why
-      | none => printModule sig name ty e
+      | none => printModuleWith pp sig name ty e
+
+/-- A plain entry: the module's program pieces by the table's fold. -/
+abbrev printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
+    Except PrintRefusal (List TypeScript.ConstDecl) :=
+  printEntryWith plainPieces table sig name ty e
 
 /-- Shared checks of a successful entry, serving `printed-modules` through module emission.
 Stored-annotation support is a target profile fact, not a target execution theorem (R2/R3). -/
-theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
-    {e : Eff Op} {decls : List TypeScript.ConstDecl}
-    (h : printEntry table sig name ty e = .ok decls) :
+theorem printEntry_checks {pp : PiecePrint Op} {table : List Row} {sig : Signature Op}
+    {name : String} {ty : EffTy} {e : Eff Op} {decls : List TypeScript.ConstDecl}
+    (h : printEntryWith pp table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
       defsNameFault table name e.defsOf = none ∧ blockParamsFault table name e.defsOf = none ∧
       serviceNamesFault table name e.defsOf = none ∧
       (∃ classes, Effect4.Codegen.ClassTable.moduleClasses sig name ty e = .ok classes) ∧
-      annotationRefusal e = none ∧ printModule sig name ty e = .ok decls := by
+      annotationRefusal e = none ∧ printModuleWith pp sig name ty e = .ok decls := by
   cases hs : exportNameSafe name with
-  | false => simp only [printEntry, hs, Bool.not_false, ↓reduceIte] at h; cases h
+  | false => simp only [printEntryWith, hs, Bool.not_false, ↓reduceIte] at h; cases h
   | true =>
-    simp only [printEntry, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
+    simp only [printEntryWith, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
     cases hr : table.find? (fun row => !rowNamesSafe row) with
     | some row => simp only [hr] at h; cases h
     | none =>
@@ -659,20 +698,21 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
           exact ⟨rfl, rfl, rfl, rfl, rfl, ⟨(classes, classDecls), rfl⟩, rfl,
             by simpa only [ha] using h⟩
 
-/-- Every successful entry retains safe names and the actual module-printer equation. -/
-theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
-    {e : Eff Op} {decls : List TypeScript.ConstDecl}
-    (h : printEntry table sig name ty e = .ok decls) :
+/-- Every successful entry retains safe names and the actual module-printer equation, at any
+piece printer. -/
+theorem printEntry_ok {pp : PiecePrint Op} {table : List Row} {sig : Signature Op} {name : String}
+    {ty : EffTy} {e : Eff Op} {decls : List TypeScript.ConstDecl}
+    (h : printEntryWith pp table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
-      printModule sig name ty e = .ok decls := by
+      printModuleWith pp sig name ty e = .ok decls := by
   obtain ⟨safe, rows, _, _, _, _, _, printed⟩ := printEntry_checks h
   exact ⟨safe, rows, printed⟩
 
 /-- A checked entry contains only representable stored annotations (`printed-modules`, R2/R3).
 The exact hypothesis is successful `printEntry`; host execution remains outside this fact. -/
-theorem printEntry_annotations {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
-    {e : Eff Op} {decls : List TypeScript.ConstDecl}
-    (h : printEntry table sig name ty e = .ok decls) : annotationRefusal e = none :=
+theorem printEntry_annotations {pp : PiecePrint Op} {table : List Row} {sig : Signature Op}
+    {name : String} {ty : EffTy} {e : Eff Op} {decls : List TypeScript.ConstDecl}
+    (h : printEntryWith pp table sig name ty e = .ok decls) : annotationRefusal e = none :=
   (printEntry_checks h).2.2.2.2.2.2.1
 
 end Effect4.Program

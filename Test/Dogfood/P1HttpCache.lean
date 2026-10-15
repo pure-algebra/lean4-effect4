@@ -2,6 +2,7 @@ import Test.Dogfood.Stage
 import Effect4.Run
 import Effect4.Author
 import Effect4.Laws.Author
+import Effect4.Emit
 
 /-!
 # p1: an HTTP call with a timeout, a retry schedule, a typed error and a cache

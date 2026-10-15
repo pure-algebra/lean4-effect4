@@ -3,6 +3,7 @@ import Effect4.Codegen.ListFold
 import Effect4.Laws.Codegen.Read
 import Effect4.Laws.Codegen.PrintReadable
 import TypeScript.Render
+import Effect4.Api.Codegen
 
 /-!
 # The faces of Semaphore's operations and steps: what prints and reads back (rows 255 and 276)

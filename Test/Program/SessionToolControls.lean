@@ -1,4 +1,5 @@
 import Tools.Session
+import Effect4.Api.Codegen
 
 /-!
 # The session tool: the controls

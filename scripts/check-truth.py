@@ -96,15 +96,9 @@ def p2b_controls(work, host_path):
     manifest = json.loads(manifest_path.read_text())
     directory = work/'__p2b__'
     directory.mkdir()
-    # The existing import owner supplies the same header as other printed consumers.
-    header = subprocess.run([
-        os.environ.get('EFFECT4_NODE', 'node'), '--input-type=module', '-e',
-        'import { moduleImports } from "./harness/truth/module-imports.ts"; '
-        'console.log(moduleImports("../prelude.ts").join("\\n"))'
-    ], cwd=root, text=True, capture_output=True, check=True, timeout=30).stdout.rstrip('\n')
+    # Lean writes the module that holds the declarations, its imports from Lean data.
     module = directory/'printed.ts'
-    module.write_text(header + '\n\n' + '\n\n'.join(
-        fixture['declaration'] for fixture in manifest['fixtures'] + manifest['negativeObservations']) + '\n')
+    module.write_text(manifest['module'])
     request, response = work/'p2b-request.json', work/'p2b-receipt.json'
     request.write_text(json.dumps({
         'kind': 'p2b-target', 'repo': host_path(root), 'work': host_path(work),

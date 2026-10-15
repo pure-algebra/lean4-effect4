@@ -96,11 +96,6 @@ separate `Option` result before this operation is called. -/
 def rebuild (b : Built) (candidate : Program) : Except BuildRefusal Built :=
   Author.Internal.finishBuild candidate b.table b.rowNames
 
-/-- The built program as a typed one: the admission certificate extends the typing
-certificate, so every reading `Typed` has is this one's, through this projection and not by
-a second definition. -/
-def typed (b : Built) : Typed b.table := ⟨b.program, b.admitted.toTypedProgram⟩
-
 /-- The certified type of the built program. -/
 def ty (b : Built) : EffTy := b.typed.ty
 
@@ -117,9 +112,6 @@ def positionOf (b : Built) (spelling : String) : Option Nat :=
 /-- `Effect.runSyncExit` on a built program. (The ordinary run of a built program is a value a
 caller holds, `Run.runPure` in `src/Effect4/Run.lean`; it is not a projection of `Built`.) -/
 def runSync (b : Built) (budget : Budget := {}) : ExitV := b.typed.runSync budget
-
-/-- The printed syntax of the built program, against its own table. -/
-def print (b : Built) : Except PrintRefusal TypeScript.Expr := b.typed.print
 
 /-- The canonical bytes of the built program. -/
 def bytes (b : Built) : Store.Bytes := b.typed.bytes

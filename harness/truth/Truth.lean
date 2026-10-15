@@ -2,7 +2,7 @@ import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Codegen.TermRows
 import Test.Program.MaskContract
 import Test.Program.BoundsControls
-import Effect4.Codegen.PrintTyped
+import Tools.Code.Module
 import Test.Program.QueueMask
 import Test.Program.SemaphoreScenarios
 import Test.Program.PoolPublic
@@ -12,7 +12,7 @@ import Test.Program.QueueDefs
 import Test.Codegen.ServicesPrint
 import Tools.GeneratedStamp
 import Tools.ProfileJson
-import Effect4.Api
+import Effect4.Api.Codegen
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Program.Denote
 import Test.Program.Gen
@@ -50,12 +50,17 @@ Manifest (`format: effect4-truth-manifest-v1`), one entry per program:
   `null` when ill-typed), `straight` (whether the program is in the fragment `run_eq_meaning`
   covers, `Effect4.Program.Denote.Straight`: on such a program rc.112's exit is compared,
   through the theorem, with the algebra's answer);
-* `expr`: the program as one TypeScript expression (`Api.print` rendered by
-  `TypeScript.Render.expr house0 0`), or `null` with `exprRefusal` naming the refusal;
-* `decl`: the exported constant `Api.printDecl "main"` rendered by
-  `TypeScript.Render.constDecl house0`, or `null` (ill-typed, or refused);
-* `declInferred`: the same block with no type annotation on any declaration, the module the
-  type oracle reads so that the host's compiler infers the program's type on its own;
+* `module`: the program's module text, as every lane writes it (`moduleOf`, over
+  `Tools.Code.programModule`; decisions row 392, P1 (a)): the checked emission's file, its pieces
+  printed typed, or, for a program the emission refuses, the program printed plain as `main`
+  (`uncheckedFile`); with its imports from Lean data, the prelude's host namespaces
+  (`hostImports`), and Effect's layout (`Tools.Code.moduleText`). `run-truth.ts` writes it as it
+  is. `null` with `moduleRefusal` naming the printer's refusal;
+* `moduleSource`: `decl` for the checked emission's file, `expr` for the unchecked one;
+* `expr`: the initializer of the module's `main`, as the house prints it flat;
+* `moduleInferred`: the checked module with no type annotation on any declaration, under the same
+  imports: the module the type oracle reads, so that the host's compiler infers the program's
+  type on its own;
 * `run`: `Api.run p fuel`, or for a program with host answers its run under a host that answers
   from a list (`Test.Api.HostList`: the session, each answer a decision, DI-23) — `outcome`
   (`finished`, `frontier`, `stuck …`), `exit` (the root's
@@ -89,9 +94,9 @@ Behaviours held:
   fuel, a frontier when it runs out, never a hang (by construction);
 * complete over the corpus — every program of `corpus` has one entry, names are unique
   (tested: the `#guard`s at the end);
-* honest about refusals — a print refusal or an ill-typed program is recorded as such.
-  Ordinary fixtures retain the raw producer. Joined fixtures retain `Program.printTyped`
-  verbatim through the explicitly restricted fixture adapter;
+* honest about refusals — a print refusal or an ill-typed program is recorded as such, and
+  every program's module is the one writer's: a joined fixture's is its checked module, whose
+  pieces the typed print writes;
 * one numbering — each compared field writes a fiber under its number in the recorder's
   first-seen order (`numbering`), so the two faces are compared up to one renaming of the
   fibers, and the machine's allocation order is compared in no field (tested: the receipts on
@@ -285,10 +290,6 @@ def joinedModify (initial : Nat) : Api.Program :=
 
 def pJoinedModifyNumber : Api.Program := joinedModify 1
 def pJoinedModifyString : Api.Program := joinedModify 0
-
-/-- Only these fixtures use the typed expression adapter below. -/
-def joinedFixtures : List String :=
-  ["pJoinedFirstNumber", "pJoinedFirstString", "pJoinedModifyNumber", "pJoinedModifyString"]
 
 def strs (xs : List String) : Term := .app "strings" (xs.foldr (fun s t => .cons (.lit (.str s)) t) .nil)
 def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
@@ -1131,14 +1132,25 @@ def pQueueService : Api.Program :=
   Test.Codegen.ServicesPrint.queueProgram.getD
     (.fail (.lit (.str "pQueueService: the module does not build")))
 
-/-- The same client through the service's key, in TypeScript: the layer builds the queue once,
-and the client reaches it only through the methods. The runner appends it to the printed
-module, so tsgo checks it against the printed key, and runs it on rc.112 beside `main`. -/
-def queueServiceClient : String :=
-  "export const client = Effect.provide(\n" ++
-  "  Effect.flatMap(NumberQueue, (q) =>\n" ++
-  "    Effect.flatMap(q.offer(1), (a) => Effect.map(q.take(), (x) => tuple(a, x)))),\n" ++
-  "  NumberQueueLayer)\n"
+/-- `fn(args)` of a dotted head, as the printer spells a head (`Effect.flatMap`). -/
+def callOf (head : String) (args : List TypeScript.Expr) : TypeScript.Expr := .call (.ident head) args
+
+/-- `(x) => body`. -/
+def arrowOf (x : String) (body : TypeScript.Expr) : TypeScript.Expr := .lambda [{ name := x }] body
+
+/-- The same client through the service's key, in TypeScript syntax: the layer builds the queue
+once, and the client reaches it only through the methods. The module holds it after `main`
+(`moduleOf`), so its imports cover it, tsgo checks it against the printed key, and the runner
+runs it on rc.112 beside `main`:
+`Effect.provide(Effect.flatMap(NumberQueue, (q) => Effect.flatMap(q.offer(1), (a) =>
+Effect.map(q.take(), (x) => tuple(a, x)))), NumberQueueLayer)`. -/
+def queueServiceClient : TypeScript.Expr :=
+  callOf "Effect.provide"
+    [ callOf "Effect.flatMap" [.ident "NumberQueue", arrowOf "q" (callOf "Effect.flatMap"
+        [ .method (.ident "q") "offer" [.int 1]
+        , arrowOf "a" (callOf "Effect.map"
+            [.method (.ident "q") "take" [], arrowOf "x" (callOf "tuple" [.ident "a", .ident "x"])]) ])]
+    , .ident "NumberQueueLayer" ]
 
 /-- **The Semaphore as a service** (decisions rows 338 and 339, slice CO-6b): two permits; the
 main program takes two, tries to take one, and releases one, each through a definition. The
@@ -1147,16 +1159,23 @@ def pSemaphoreService : Api.Program :=
   Test.Codegen.ServicesPrint.semaphoreProgram.getD
     (.fail (.lit (.str "pSemaphoreService: the module does not build")))
 
-/-- The same client through the `Permits` key, in TypeScript. -/
-def semaphoreServiceClient : String :=
-  "export const client = Effect.provide(\n" ++
-  "  Effect.flatMap(Permits, (s) =>\n" ++
-  "    Effect.flatMap(s.take(2), (a) =>\n" ++
-  "      Effect.flatMap(s.takeIfAvailable(1), (b) => Effect.map(s.release(1), (c) => tuple(a, b, c))))),\n" ++
-  "  PermitsLayer)\n"
+/-- The same client through the `Permits` key, in TypeScript syntax:
+`Effect.provide(Effect.flatMap(Permits, (s) => Effect.flatMap(s.take(2), (a) =>
+Effect.flatMap(s.takeIfAvailable(1), (b) => Effect.map(s.release(1), (c) => tuple(a, b, c))))),
+PermitsLayer)`. -/
+def semaphoreServiceClient : TypeScript.Expr :=
+  callOf "Effect.provide"
+    [ callOf "Effect.flatMap" [.ident "Permits", arrowOf "s" (callOf "Effect.flatMap"
+        [ .method (.ident "s") "take" [.int 2]
+        , arrowOf "a" (callOf "Effect.flatMap"
+            [ .method (.ident "s") "takeIfAvailable" [.int 1]
+            , arrowOf "b" (callOf "Effect.map"
+                [ .method (.ident "s") "release" [.int 1]
+                , arrowOf "c" (callOf "tuple" [.ident "a", .ident "b", .ident "c"]) ]) ]) ])]
+    , .ident "PermitsLayer" ]
 
 /-- The programs whose module exports a service, each with its client through the key. -/
-def serviceClients : List (String × String) :=
+def serviceClients : List (String × TypeScript.Expr) :=
   [("pQueueService", queueServiceClient), ("pSemaphoreService", semaphoreServiceClient)]
 
 def corpus : List (String × Api.Program) :=
@@ -1782,76 +1801,84 @@ def unannotated : TypeScript.Decl → TypeScript.Decl
   | .const c => .const { c with type := none }
   | d => d
 
-/-- A fixture-only typed expression and declaration. Ordinary emission supplies admission,
-not a certificate for the replacement initializer. Classes and hoisted layers refuse here. -/
-def joinedOutput (p : Api.Program) (table : RowTable) :
-    Except String (TypeScript.Expr × TypeScript.Module) := do
-  let emission ← (Api.emitModule "main" p table).mapError fun
-    | .illTyped => "typed fixture: ordinary admission refuses typing"
-    | .formation why => s!"typed fixture: ordinary admission refuses raw formation {repr why}"
-    | .print why => "typed fixture: ordinary emission refuses " ++ refusalText why
-    | .outsideProfile value => s!"typed fixture: the literal {value} is above the target's safe integers"
-  unless emission.classDecls.isEmpty do
-    throw "typed fixture: payload classes need the ordinary module producer"
-  match emission.declarations with
-  | [raw] =>
-    unless raw.name == "main" && raw.exported do
-      throw "typed fixture: expected one exported main declaration"
-  | _ => throw "typed fixture: hoisted layers need the ordinary module producer"
-  let sig := nativeSignature table
-  let expression ← (Program.printTyped sig [] p).mapError refusalText
-  let declaration ← (Program.printDecl "main" emission.typing.ty expression sig.typeEnv).mapError refusalText
-  pure (expression, { header := [], imports := [], decls := [.const declaration] })
+/-- The path a truth module imports its prelude from: the folder above `generated/`. -/
+def preludePath : String := "../prelude.ts"
 
-/-- Widening fixtures retain the actual typed initializer in both module views.
-All other fixtures use the existing expression and ordinary module producers. -/
-def fixtureOutput (name : String) (p : Api.Program) (table : RowTable) :
-    Except String (TypeScript.Expr × Option TypeScript.Module) :=
-  if joinedFixtures.contains name then
-    (joinedOutput p table).map fun (expression, module) => (expression, some module)
-  else
-    (Api.print p table).mapError refusalText |>.map fun expression =>
-      (expression, Api.printModule "main" p table)
+/-- **The truth lane's host is its prelude.** A module file leaves free each namespace of the
+table's rows that is no service (`ModuleEmission.file`: a row that is no service row is the
+host's), and the prelude binds those this lane's fixtures name: `Host`, `L`, `Sql` and `Kv` of
+`harness/truth/prelude.ts`. So a module imports from the prelude each such namespace that it names,
+in one import after the file's own, read off the table (`serviceParts`): no list of names. -/
+def hostImports (table : RowTable) (m : TypeScript.Module) : TypeScript.Module :=
+  let spaces := ((table.filter fun row => row.serviceCall?.isNone).filterMap fun row =>
+    (serviceParts row.spelling).map (·.1)).eraseDups
+  let free := (Effect4.Codegen.freeNames m).filter fun p => spaces.contains p.1
+  if free.isEmpty then m
+  else { m with imports := m.imports ++
+    [.named (free.map fun p => { imported := p.1, localName := p.1, typeOnly := p.2 }) preludePath false] }
 
-def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect FiberId Ann))
-    (name : String) (p : Api.Program) : J :=
+/-- **One program's module, as the lane writes it**: the one writer of every lane
+(`Tools.Code.programModule`): the checked emission's file, its pieces printed typed, or the
+unchecked file of a program the emission refuses, with the host's imports (`hostImports`) and
+the lane's header. The flag says whether the module is the checked emission's. -/
+def moduleOf (header : List String) (name : String) (p : Api.Program) :
+    Except PrintRefusal (TypeScript.Module × Bool) :=
+  let (table, _) := hostInputs name
+  (Tools.Code.programModule preludePath p table).map fun (m, checked) =>
+    -- a service's client is a declaration of the module, so the file's imports cover it
+    let m := match serviceClients.lookup name with
+      | some client => Effect4.Codegen.fileOf preludePath
+          { m with decls := m.decls ++ [.const { doc := [], name := "client", value := client }] }
+      | none => m
+    ({ hostImports table m with header }, checked)
+
+/-- The initializer of a module's `main`, as the house prints it flat. -/
+def mainInitializer (m : TypeScript.Module) : Option String :=
+  m.decls.findSome? fun
+    | .const c => if c.name == "main" then some (TypeScript.Render.expr house0 0 c.value) else none
+    | _ => none
+
+/-- The header of the lane's module, and of the corpus lane's (`--corpus`). -/
+def truthHeader : List String :=
+  ["GENERATED by harness/truth/Truth.lean from the truth corpus; do not edit.", "Regenerate: make gen-truth"]
+def corpusHeader : List String :=
+  ["GENERATED by harness/truth/Truth.lean --corpus from the generated corpus; do not edit.",
+   "Regenerate: make check-corpus"]
+
+def entry (header : List String) (fuel : Nat)
+    (tapes : String → List (Completion Val Err Defect FiberId Ann)) (name : String) (p : Api.Program) :
+    J :=
   let (table, builtIn) := hostInputs name
   let runtimeTable := fixtureRuntimeTable name p table
   let answers := builtIn ++ tapes name
   let ty := Api.typeOf p table
-  let output := fixtureOutput name p table
-  let printed := output.map (·.1)
-  -- The ordinary block retains its emission certificate. Joined fixtures use the explicit
-  -- fixture adapter, with the same actual typed initializer in both declaration views. A
-  -- program with a definition block has no expression print (a block stands at a module's
-  -- root): its module is the ordinary producer's alone.
-  let module := match output with
-    | .ok (_, m) => m
-    | .error _ => if joinedFixtures.contains name then none else Api.printModule "main" p table
-  let decl := module.map fun m => String.join (m.decls.map (TypeScript.Render.decl house0))
-  -- the same block with every annotation removed: what the host's compiler infers for the
-  -- printed program on its own, which the type oracle compares with Lean's rendered type
-  -- (an annotated `main` would only hand Lean's type back to itself)
-  let declInferred := module.map fun m =>
-    String.join (m.decls.map fun d => TypeScript.Render.decl house0 (unannotated d))
+  let written := moduleOf header name p
+  let text (m : TypeScript.Module) := Lean.Json.str (Tools.Code.moduleText Tools.Code.Ts.width m)
   Lean.Json.mkObj <|
     [ ("name", Lean.Json.str name)
     , ("scenario", if name == "pInterruptEscape" then Lean.Json.str "U-01" else Lean.Json.null)
     , ("wellTyped", Lean.Json.bool ty.isSome)
     , ("straight", Lean.Json.bool (Effect4.Program.Denote.Straight p))
     , ("type", match ty with | some t => typeJson (nativeSignature table) t | none => Lean.Json.null)
-    , ("expr", match printed with
-        | .ok e => Lean.Json.str (TypeScript.Render.expr house0 0 e)
+    , ("moduleSource", match written with
+        | .ok (_, true) => Lean.Json.str "decl"
+        | .ok (_, false) => Lean.Json.str "expr"
         | .error _ => Lean.Json.null)
-    , ("exprRefusal", match printed with
+    , ("moduleRefusal", match written with
         | .ok _ => Lean.Json.null
-        | .error why => Lean.Json.str why)
-    , ("decl", match decl with
-        | some text => Lean.Json.str text
-        | none => Lean.Json.null)
-    , ("declInferred", match declInferred with
-        | some text => Lean.Json.str text
-        | none => Lean.Json.null)
+        | .error why => Lean.Json.str (refusalText why))
+    , ("expr", match written with
+        | .ok (m, _) => (mainInitializer m).map Lean.Json.str |>.getD Lean.Json.null
+        | .error _ => Lean.Json.null)
+    , ("module", match written with
+        | .ok (m, _) => text m
+        | .error _ => Lean.Json.null)
+    -- the checked module with every annotation removed, under the same imports: what the host's
+    -- compiler infers for the printed program on its own, which the type oracle compares with
+    -- Lean's rendered type (an annotated `main` would only hand Lean's type back to itself)
+    , ("moduleInferred", match written with
+        | .ok (m, true) => text { m with decls := m.decls.map unannotated }
+        | _ => Lean.Json.null)
     , ("run", (runtimeTable.map fun rows => runJson p fuel rows answers name).getD Lean.Json.null)
     , ("runSync", (runtimeTable.map fun rows => runSyncJson p fuel rows).getD Lean.Json.null) ] ++
     (if name == "pJoinedFirstNumber" || name == "pJoinedFirstString" then
@@ -1860,10 +1887,9 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
         | some rows => Lean.Json.arr (rows.map Tools.ProfileJson.rowJson).toArray
         | none => Lean.Json.null)]
      else []) ++
-    -- a service's client through its key (slice CO-6b S3): only the programs that have one
-    (match serviceClients.lookup name with
-     | some client => [("client", Lean.Json.str client)]
-     | none => [])
+    -- a service's client through its key (slice CO-6b S3), a declaration of the module: only the
+    -- programs that have one
+    (if (serviceClients.lookup name).isSome then [("client", Lean.Json.bool true)] else [])
 
 /-- The whole manifest; `tapes` gives each program the answers rc.112 recorded for its package
 rows (the empty list for a program without a tape, which then parks at its first row). -/
@@ -1875,7 +1901,7 @@ def manifest (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fi
     , ("fuel", toJson fuel)
     , ("scopeKey", Tools.ProfileJson.flatKeyJson nativeScopeKey)
     , ("hostRows", Lean.Json.arr (acquireHandleTable.map Tools.ProfileJson.rowJson).toArray)
-    , ("programs", Lean.Json.arr (corpus.map fun (name, p) => entry fuel tapes name p).toArray) ]
+    , ("programs", Lean.Json.arr (corpus.map fun (name, p) => entry truthHeader fuel tapes name p).toArray) ]
 
 /-- The generated corpus: `count` programs of the seeded generator at `depth`, named as the
 printed corpus names them. -/
@@ -1893,7 +1919,8 @@ def corpusManifest (fuel count depth : Nat) : J :=
     , ("scopeKey", Tools.ProfileJson.flatKeyJson nativeScopeKey)
     , ("hostRows", Lean.Json.arr #[])
     , ("programs", Lean.Json.arr
-        ((corpusPrograms count depth).map fun (name, p) => entry fuel (fun _ => []) name p).toArray)]
+        ((corpusPrograms count depth).map fun (name, p) =>
+          entry corpusHeader fuel (fun _ => []) name p).toArray)]
 
 /-! ## The tapes: rc.112's recorded answers, read by a host that answers from a list
 

@@ -1,6 +1,6 @@
 import Effect4.Laws.Program.Typing.Closed
 import Effect4.Laws.Codegen.Checked
-import Effect4.Api
+import Effect4.Api.Codegen
 import Test.Program.Gen
 
 /-!

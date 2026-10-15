@@ -1,6 +1,6 @@
 import Test.Api.ExternalContract
 import Test.Api.PackagesContract
-import Effect4.Api
+import Effect4.Api.Codegen
 import TypeScript.Render
 
 /-!
@@ -274,11 +274,6 @@ def pIdIsZero : Program :=
 #guard (runSync pIdIsZero 100).2 = Exit.success (Val.bool true)
 #guard (print pIdIsZero).map (expr house0 0)
   = .ok "Effect.flatMap(Effect.fiberId, (a0) => Effect.succeed(eq(a0, 0)))"
-
-/-! ## Codegen, through the face: an artefact and its bytes -/
-
--- the one crossing to bytes, kept inside the guard
-#guard render (Effect4.Codegen.Artefact.json (.arr [])) = "[]\n"
 
 /-! ## Type spellings and Result patterns, through the application import
 

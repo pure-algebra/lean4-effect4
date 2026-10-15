@@ -25,6 +25,8 @@ theorem ties the knot by induction on the size of the tree.
 
 set_option autoImplicit false
 
+open Effect4.Laws.Auto (bind_eq_ok map_eq_ok)
+
 namespace Effect4.Program
 
 open TypeScript (Expr Stmt)

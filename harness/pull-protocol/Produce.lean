@@ -1,5 +1,6 @@
 import Test.Program.Pull
 import Lean.Data.Json
+import Effect4.Api.Codegen
 
 /-! Emit checked Pull callers and compare their finite machine observations with fixed numeric answers.
 The packet observes the existing Chunk/End value protocol, not native Pull.Done behavior. -/

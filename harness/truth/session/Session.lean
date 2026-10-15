@@ -3,6 +3,7 @@ import Effect4.Program.Profile
 import Tools.ProfileJson
 import TypeScript.Render
 import Lean.Data.Json
+import Effect4.Api.Codegen
 
 /-! Thin strict JSON boundary for the selected serial-root scalar session.
 The table check is equality with Tools.ProfileJson's complete view. This tool is outside

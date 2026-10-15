@@ -139,8 +139,8 @@ theorem Eff.restoreAll_hoistAll {root main : Eff Op} {history : History Op}
 
 /-- **No hoisted declaration is a module layer** (decisions row 341, step 2): the hoist captures
 the targets of `Eff.refTargets`, which leaves the module's layers out. The module reader splits
-a block's layer declarations by that fact (`readModule`). A step of
-`readModule_printModule_defs`. -/
+a block's layer declarations by that fact (`readModuleWith`). A step of
+`readModuleWith_printModuleWith_defs`. -/
 theorem Eff.hoistAll_outside {root main : Eff Op} {history : History Op}
     (h : root.hoistAll = .ok (main, history)) :
     ∀ entry ∈ history, root.inModule entry.1 = false := by

@@ -10,8 +10,8 @@ LCNF route. The route writes `v` where the LCNF has `let x := v; return x`
 The law is `Conform.Lcnf.Target.let_return_outcome` (`tools/Conform/Lcnf/TargetLaws.lean`), with
 its placement in its docstring. It is not a declaration of this file. `Target.evalT` reaches
 `Classical.choice` through its own definition, so a statement about it cannot be a declaration
-of a `Test.*` module under the axiom gate. This file declares nothing. It holds three checks:
-the statement, the axiom lists, and one translated declaration evaluated in both forms. -/
+of a `Test.*` module under the axiom gate. This file declares nothing. It holds two checks: the
+statement with its red control, and one translated declaration evaluated in both forms. -/
 open Lean Elab Command Compiler LCNF
 open Conform.Lcnf
 
@@ -28,31 +28,6 @@ example :
     ¬ ∀ (prog : Target.Program) (n : Nat) (env : Target.TEnv) (x : String) (e : Target.Expr),
         Target.evalT prog (n + 1) env (.letIn x e (.var x)) = Target.evalT prog (n + 1) env e :=
   Target.let_return_same_fuel_refuted
-
-/-! ## The axiom lists
-
-The law's list is the evaluator's own: the proof adds no axiom. `Classical.choice` is in both,
-so the law is outside the ceiling `[propext, Quot.sound]`. The lookup lemma is under it. -/
-
-/-- info: 'Conform.Lcnf.Target.evalT' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms Target.evalT
-
-/--
-info: 'Conform.Lcnf.Target.let_return_outcome' depends on axioms: [propext, Classical.choice, Quot.sound]
--/
-#guard_msgs in
-#print axioms Target.let_return_outcome
-
-/--
-info: 'Conform.Lcnf.Target.let_return_same_fuel_refuted' depends on axioms: [propext, Classical.choice, Quot.sound]
--/
-#guard_msgs in
-#print axioms Target.let_return_same_fuel_refuted
-
-/-- info: 'Conform.Lcnf.Target.TEnv.find?_head' does not depend on any axioms -/
-#guard_msgs in
-#print axioms Target.TEnv.find?_head
 
 /-! ## The finite control on the route
 

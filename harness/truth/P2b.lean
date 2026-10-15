@@ -1,5 +1,6 @@
 import Effect4.Api
 import Effect4.Codegen.PrintTyped
+import Effect4.Codegen.Checked
 import TypeScript.Render
 import Lean.Data.Json
 
@@ -11,6 +12,8 @@ The exporter calls the actual checker and Program.printTyped.
 It renders those variable types as TypeScript parameters and leaves the result inferred.
 The compiler consumer checks source-derived columns, retaining any mismatches.
 These are finite type-only fixtures, not ModuleEmission certificates or host executions.
+The module that holds them is written here, its imports from Lean data (`fileOf`), and the
+lane writes it as it is.
 -/
 
 set_option autoImplicit false
@@ -166,8 +169,9 @@ def columns (ty : EffTy) : Except String Lean.Json := do
     ("E", toJson (Render.type house0 error)),
     ("R", toJson (Render.type house0 (requirementType nativeScopeKey [] ty.requires)))]
 
-/-- Emit one inferred function from the actual typed expression and exact source parameters. -/
-def emit (fixture : Fixture) : Except String Lean.Json := do
+/-- Emit one inferred function from the actual typed expression and exact source parameters,
+with its declaration. -/
+def emit (fixture : Fixture) : Except String (Lean.Json × ConstDecl) := do
   let checked ← (Checker.check nativeSignature fixture.env [] fixture.program).mapError
     fun refusal => "checker refuses " ++ fixture.name ++ " at " ++ reprStr refusal.path
   unless checked.answer.normalize = fixture.expected.answer.normalize ∧
@@ -180,20 +184,20 @@ def emit (fixture : Fixture) : Except String Lean.Json := do
   let request : TypeRef := .tuple (← fixture.env.mapM fun ty => do
     let some target := Types.ofTy ty | throw "request projection refuses"
     return target) false
-  return Lean.Json.mkObj [("name", toJson fixture.name), ("family", toJson fixture.family),
+  return (Lean.Json.mkObj [("name", toJson fixture.name), ("family", toJson fixture.family),
     ("companion", toJson fixture.companion), ("joined", toJson fixture.joined),
     ("initializer", toJson (Render.expr house0 0 initializer)),
     ("body", toJson (Render.expr house0 0 printed)),
     ("declaration", toJson (Render.constDecl house0 decl)),
-    ("columns", ← columns checked), ("request", toJson (Render.type house0 request))]
+    ("columns", ← columns checked), ("request", toJson (Render.type house0 request))], decl)
 
-/-- Emit actual syntax and the exact expected negative diagnostic role. -/
-def emitNegative (fixture : Fixture × Nat × String) : Except String Lean.Json := do
+/-- Emit actual syntax and the exact expected negative diagnostic role, with its declaration. -/
+def emitNegative (fixture : Fixture × Nat × String) : Except String (Lean.Json × ConstDecl) := do
   let (source, diagnostic, difference) := fixture
-  let emitted ← emit source
+  let (emitted, decl) ← emit source
   match emitted with
-  | .obj fields => return .mkObj (fields.toList ++
-      [("expectedDiagnostic", toJson diagnostic), ("difference", toJson difference)])
+  | .obj fields => return (.mkObj (fields.toList ++
+      [("expectedDiagnostic", toJson diagnostic), ("difference", toJson difference)]), decl)
   | _ => throw "negative observation has no emitted fields"
 
 /-- A retained refusal compares the ordinary and typed printer at the same source. -/
@@ -212,10 +216,18 @@ def emitRefusal (fixture : String × TyEnv × NativeEff × String) : Except Stri
 
 /-- One compact collection, with no execution or raw emission certificate. -/
 def manifest : Except String Lean.Json := do
+  let emitted ← fixtures.mapM emit
+  let negatives ← negativeObservations.mapM emitNegative
+  let decls := (emitted ++ negatives).map (·.2)
+  -- the module that holds every declaration, its imports from Lean data
+  let file := fileOf "../prelude.ts" { header := [], imports := [], decls := decls.map .const }
+  let module := String.join (file.imports.map (Render.import_ house0)) ++ "\n" ++
+    String.intercalate "\n\n" (decls.map (Render.constDecl house0)) ++ "\n"
   return Lean.Json.mkObj [("format", toJson "effect4-p2b-target-v1"),
     ("evidence", toJson "finite type-only; actual Program.printTyped; no ModuleEmission certificate"),
-    ("fixtures", Lean.Json.arr (← fixtures.mapM emit).toArray),
-    ("negativeObservations", Lean.Json.arr (← negativeObservations.mapM emitNegative).toArray),
+    ("fixtures", Lean.Json.arr (emitted.map (·.1)).toArray),
+    ("negativeObservations", Lean.Json.arr (negatives.map (·.1)).toArray),
+    ("module", toJson module),
     ("refusals", Lean.Json.arr (← refusals.mapM emitRefusal).toArray)]
 
 end P2bTarget

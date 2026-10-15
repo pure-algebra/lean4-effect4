@@ -10,7 +10,7 @@ A block's roles declare its services (`DefRole`). The module printer prints each
 the definitions, as its key and its layer (`printServices`): the layer runs the service's initial
 program once, and each method closes over the state it built. The reader gives the roles back
 from the layers (`roleOf`), and the round trip is `Api.printModule_roundTrip` on a program in
-`blockReadable` (the claim `module-defs-round-trip`, `readModule_printModule_defs`).
+`blockReadable` (the pointer of the claim `module-defs-round-trip`).
 
 The lines below are finite evaluations of the printed text, of the round trip and of the readable
 domain at fixed programs, a control of the readable domain, and the controls of each refusal. The printed text is target syntax

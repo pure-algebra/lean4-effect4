@@ -25,10 +25,6 @@ run_cmd liftTermElabM do
   let reference : ProofRef := ⟨`Test.ProofGraph.searched, [], proposition⟩
   if let .error why ← reference.validate then throwError why
 
-/-- info: 'Test.ProofGraph.searched' does not depend on any axioms -/
-#guard_msgs in
-#print axioms Test.ProofGraph.searched
-
 /-- info: Effect4.Laws.Auto.RuleSets: 0 of 0 theorems closed from their statements; 0 source lines they now take -/
 #guard_msgs in
 #auto_census Effect4.Laws.Auto.RuleSets using aesop

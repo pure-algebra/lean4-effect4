@@ -6,7 +6,7 @@ import Effect4.Laws.Codegen.Module
 # Certified production through the existing module algebra
 
 The producer certificate is unique for its program/table/name. Erasing it gives
-the previous printer interface on raw formed input.
+the interface of the module that ships on raw formed input (`printEntryWith shippedPieces`).
 Successful checking alone promises neither printing nor source validity. Adequacy
 uses the established readable, lawful-spelling and representable-annotation domain;
 reconstruction then follows from the existing hoist/restore and expression proofs.
@@ -23,8 +23,8 @@ theorem emitFormedModule_ok (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
     (inProfile : natLiteralsInProfile program = true)
     {declarations : List TypeScript.ConstDecl}
-    (printed : Program.printEntry table (nativeSignature table) name typing.ty program =
-      .ok declarations)
+    (printed : Program.printEntryWith Program.shippedPieces table (nativeSignature table) name
+      typing.ty program = .ok declarations)
     {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
     (classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
       .ok (classes, classDecls)) :
@@ -57,8 +57,8 @@ theorem emitTypedModule_ok (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
     (inProfile : natLiteralsInProfile program = true)
     {declarations : List TypeScript.ConstDecl}
-    (printed : Program.printEntry table (nativeSignature table) name typing.ty program =
-      .ok declarations)
+    (printed : Program.printEntryWith Program.shippedPieces table (nativeSignature table) name
+      typing.ty program = .ok declarations)
     {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
     (classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
       .ok (classes, classDecls)) :
@@ -89,17 +89,18 @@ theorem ModuleEmission.unique (left right : ModuleEmission program table name) :
     left = right :=
   Except.ok.inj (left.recheck.symm.trans right.recheck)
 
-/-- On raw formed input inside the face's profile, erasure is the existing type-and-print
-interface. Malformed raw input is refused before normalization (rows 192 and 193), and a natural
-literal outside the profile before printing (`E4-PRINT-CE-002`). -/
+/-- On raw formed input inside the face's profile, erasure is the type-and-print interface, its
+pieces printed as the module that ships prints them (`shippedPieces`). Malformed raw input is
+refused before normalization (rows 192 and 193), and a natural literal outside the profile
+before printing (`E4-PRINT-CE-002`). -/
 theorem emitModule_erasure (name : String) (program : NativeEff) (table : RowTable)
     (formed : Formation.InputFormed program table)
     (inProfile : natLiteralsInProfile program = true) :
     (emitModule name program table).toOption.map (·.module) =
       match typeOfProgram (nativeSignature table) program with
       | some ty =>
-        match Program.printEntry table (nativeSignature table) name ty program,
-            ClassTable.moduleClasses (nativeSignature table) name ty program with
+        match Program.printEntryWith Program.shippedPieces table (nativeSignature table) name ty
+            program, ClassTable.moduleClasses (nativeSignature table) name ty program with
         | .ok decls, .ok (_, classDecls) =>
           some { header := [], imports := []
                  decls := classDecls.map .classDecl ++ decls.map .const }

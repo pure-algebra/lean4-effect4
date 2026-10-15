@@ -6,6 +6,7 @@ import Effect4.Codegen.EraseTypes
 import Effect4.Laws.Codegen.ReadPrint
 import Effect4.Laws.Codegen.PrintReadable
 import Effect4.Laws.Program.Typing.Annotate
+import Effect4.Laws.Program.Typing.Table
 import Effect4.Laws.Program.Address
 import Effect4.Program.Binders
 
@@ -20,6 +21,8 @@ Target typing and execution remain separate evidence.
 -/
 
 set_option autoImplicit false
+
+open Effect4.Laws.Auto (bind_eq_ok)
 
 namespace Effect4.Codegen.Templates
 
@@ -77,6 +80,51 @@ namespace Effect4.Program
 
 variable {Op : Type}
 
+/-- **The address table answers the focus**: the focus read off `annotate`'s entries at an
+address is `focusAt`'s there. The entry at an address holds `Node.envAt`'s environment and the
+checker's answer there (`annotate_eq_table`), whose success is `effTy`
+(`check_toOption_eq_effTy`), and an address with no entry holds no node (`mem_addresses_iff`).
+Placement: concept `exact-codecs`, a step of the claim `typed-print-connector` (R8). The typed
+print reads a call's type arguments off the table (`typeArgsAt`), and its consumer
+`printTyped_eq_print` keeps its statement through it. It says nothing of the cost. -/
+@[semantics "exact-codecs" (requirement := R8)]
+theorem focusAtTable_annotate (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
+    focusAtTable (annotate s env0 p) p path = focusAt s env0 p path := by
+  rw [annotate_eq_table]
+  unfold focusAtTable table focusAt
+  simp only [List.find?_map, Function.comp_def]
+  cases hfind : (Node.addresses (.eff p)).find? (fun a => decide (a = path)) with
+  | none =>
+    have absent : (Node.eff p).at_ path = none := by
+      cases hat : (Node.eff p).at_ path with
+      | none => rfl
+      | some m =>
+        have mem := (mem_addresses_iff (.eff p) path).mpr (by rw [hat]; rfl)
+        have := List.find?_eq_none.mp hfind path mem
+        simp only [decide_true, not_true_eq_false] at this
+    simp only [Option.map_none, Option.bind_none, absent]
+  | some a =>
+    have found := List.find?_some hfind
+    have same : a = path := of_decide_eq_true found
+    subst same
+    simp only [Option.map_some, Option.bind_some]
+    cases hat : (Node.eff p).at_ a with
+    | none => rfl
+    | some m =>
+      cases m with
+      | eff q =>
+        cases henv : (Node.eff p).envAt s (.env env0) a with
+        | none => rfl
+        | some ctx =>
+          cases ctx with
+          | env tys =>
+            have hty := Conform.Effect4.Typing.check_toOption_eq_effTy s tys a q
+            dsimp only
+            rw [← hty]
+            cases Checker.check s tys a q <;> rfl
+          | _ => rfl
+      | _ => rfl
+
 /-- Without a row join annotation, the typed print is the ordinary print.
 This remains the pointer of `typed-print-connector`, exact-codecs, R8.
 The `NoJoin` premise states absence at every checked address.
@@ -86,11 +134,25 @@ theorem printTyped_eq_print (s : Signature Op) (env0 : TyEnv) (p : Eff Op)
     (noJoin : NoJoin s env0 p) :
     printTyped s env0 p = print s env0.length p := by
   obtain ⟨noRows, noSites⟩ := noJoin
-  have annotation : typeArgsAt s env0 p = fun _ => none := by
+  have annotation : typeArgsAt s (annotate s env0 p) p = fun _ => none := by
     funext path
+    have absent := noRows path
     unfold typeArgsAt
-    rw [noRows path]
-    rfl
+    rw [focusAtTable_annotate]
+    unfold PrintedJoin.at_ at absent
+    cases hf : focusAt s env0 p path with
+    | none => rfl
+    | some focus =>
+      rw [hf] at absent
+      obtain ⟨program, env, ty⟩ := focus
+      cases program with
+      | perform op request =>
+        cases ht : termTy s env request with
+        | none => simp only [Option.bind_some, Focus.joinArgs, ht, Option.bind_none]
+        | some requestTy =>
+          simp only [Option.bind_some, ht, Option.map_some, Option.getD_some] at absent
+          simp only [Option.bind_some, Focus.joinArgs, ht, absent, Bool.false_eq_true, ↓reduceIte]
+      | _ => rfl
   have sites : Effect4.Codegen.PrintEliminators.needsSitesAt s (annotate s env0 p) p = false := by
     apply List.any_eq_false.mpr
     intro path _

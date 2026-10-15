@@ -1,5 +1,6 @@
 import Effect4.Api.TestClock
 import Effect4.Program.Authoring.Sugar
+import Effect4.Api.Codegen
 
 /-!
 # Test clock contract — the tape is the clock; the warps are folds

@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-!
 # `E4-PRINT-CE-001`: the printer spells a pair of a union as a union of pairs (seeded)

@@ -1,5 +1,6 @@
 import Effect4.Laws.Codegen.ReadPrint
 import Effect4.Laws.Codegen.PrintReadable
+import Effect4.Laws.Codegen.PrintTyped
 import Effect4.Laws.Codegen.Module
 import Effect4.Laws.Codegen.Definitions
 import Effect4.Laws.Api.Codegen
@@ -7,12 +8,17 @@ import Effect4.Laws.Api.Codegen
 /-!
 # Laws.Codegen.ModuleReadable — the module round trip on the readable domain
 
-`readModule_printModule` (`Laws/Codegen/Module.lean`) is the hoisting inverse composed with
-"each piece reads back from its own printing", stated of any reader. Law 11 (`read_print`,
-`Laws/Codegen/ReadPrint.lean`) says the table reader has that property on `Readable`. This
-module composes the two: a program whose hoisted pieces are readable and whose reference names
-decode reads back from the declaration block the module printer prints of it, through the
-checked producer (`ModuleEmission`) and the application face (`Api.printModule`).
+`readModuleWith_printModuleWith` (`Laws/Codegen/Module.lean`) is the hoisting inverse composed
+with "each piece reads back from its own printing", stated of any pair of a piece printer and a
+piece reader. A pair is lawful when every piece readable at its environment reads back by it
+(`PiecesLawful`). The pieces that ship and the typed reader are one (`shippedPieces_lawful`):
+the typed print reads back by `readTyped_printTyped` (`Laws/Codegen/PrintTyped.lean`), and the
+fold's print, where the typed print refuses, by law 11 at the empty annotation. This module
+composes the two: a program whose hoisted pieces are readable and whose reference names decode
+reads back from the declaration block the module printer prints of it, at any lawful pair. The
+checked producer (`ModuleEmission`) prints its pieces as the module that ships prints them, so
+its module reads back by the typed reader, and so does the application face's
+(`Api.printModule`, `Api.readModule`).
 
 The domain here is per piece (`moduleReadable`): the main program at depth `0` and every
 captured layer at depth `0`, each by the fold `readableAlg`, and each captured path by the name
@@ -22,6 +28,8 @@ a fold and this a definition.
 -/
 
 set_option autoImplicit false
+
+open Effect4.Laws.Auto (bind_eq_ok)
 
 namespace Effect4.Program
 
@@ -62,11 +70,37 @@ theorem moduleReadable_pieces {sig : Signature Op} {root : Eff Op}
     simpa only [cataFam, Option.isSome_iff_exists] using this
   · cases hr
 
-/-- **The module inverse on the readable domain.** The declaration block the module printer
-prints of a program whose pieces are readable under the module's classes, after class
-declarations that read back to those classes and the services of the rows that the module
+/-- **A lawful pair of a piece printer and a piece reader**: at a lawful spelling, every piece
+readable at its environment's length reads back by the pair (`ReadsBackBy`). The module round
+trips of the readable domain are stated of any lawful pair. -/
+def PiecesLawful (pp : PiecePrint Op) (rd : PieceRead Op) (classes : Classes) : Prop :=
+  ∀ {sig : Signature Op} {spell : String → List RowArg → Option Op} {env : TyEnv} {e : Eff Op},
+    LawfulSpelling sig spell → Readable classes sig env.length e = true →
+      ReadsBackBy pp rd classes sig spell env e
+
+/-- **The pieces that ship and the typed reader are a lawful pair**: the typed reader reads every
+successful typed print back after the named erasure (`readTyped_printTyped`, the claim
+`typed-print-read`), and the fold's print as the typed print at the empty annotation
+(`readTyped_printTypedAt`, `printTypedAt_none`), where the typed print refuses. The module that
+ships prints its pieces so, and the reading boundary reads them so (`ModuleEmission.readDecls`). -/
+theorem shippedPieces_lawful : PiecesLawful (Op := Op) shippedPieces Codegen.readTyped classes := by
+  intro sig spell env e hl hr x printed
+  cases typed : printTyped sig env e with
+  | ok y =>
+    simp only [shippedPieces, typed, Except.ok.injEq] at printed
+    subst printed
+    exact Codegen.readTyped_printTyped hl hr typed
+  | error _ =>
+    simp only [shippedPieces, typed] at printed
+    exact Codegen.readTyped_printTypedAt (ann := fun _ => none) hl hr
+      ((Effect4.Codegen.Templates.printTypedAt_none sig env.length e).trans printed)
+
+/-- **The module inverse on the readable domain**, at any lawful pair. The declaration block the
+module printer prints of a program whose pieces are readable under the module's classes, after
+class declarations that read back to those classes and the services of the rows that the module
 declares (`rowServiceDecls`), reads back to the program. -/
-theorem readModule_printModule_readable {sig : Signature Op}
+theorem readModuleWith_printModuleWith_readable {pp : PiecePrint Op} {rd : PieceRead Op}
+    (pieces : PiecesLawful pp rd classes) {sig : Signature Op}
     {spell : String → List RowArg → Option Op} {call param : Nat → Op}
     (hl : LawfulSpelling sig spell)
     {root : Eff Op}
@@ -75,13 +109,13 @@ theorem readModule_printModule_readable {sig : Signature Op}
     {rows : List Row} {serviceDecls : List TypeScript.ConstDecl}
     (servicesPrinted : rowServiceDecls sig rows = .ok serviceDecls)
     {name : String} {ty : EffTy}
-    {decls : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call param rows
+    {decls : List TypeScript.ConstDecl} (printed : printModuleWith pp sig name ty root = .ok decls) :
+    readModuleWith rd sig spell call param rows
       (classDecls.map TypeScript.Decl.classDecl ++ serviceDecls.map TypeScript.Decl.const ++
         decls.map TypeScript.Decl.const) = .ok root := by
   obtain ⟨main, history, hoisted, plain, hmain, hlayers, hnames⟩ := moduleReadable_pieces hr
-  exact readModule_printModule hoisted plain classesRead servicesPrinted
-    (ReadsBack.of_Readable hl hmain) (fun entry hm x hp => readLayer_print hl (hlayers entry hm) hp)
+  exact readModuleWith_printModuleWith hoisted plain classesRead servicesPrinted
+    (pieces (env := []) hl hmain) (fun entry hm x hp => readLayer_print hl (hlayers entry hm) hp)
     hnames printed
 
 /-! ## A program whose pieces are readable prints as a declaration block -/
@@ -127,24 +161,38 @@ theorem captured_mapM_ok {sig : Signature Op} {history : List (List Nat × Layer
     rfl
 
 /-- **A program whose pieces are readable prints as a declaration block**, at every export
-name and every representable declaration type. -/
-theorem printModule_readable {sig : Signature Op} {root : Eff Op}
+name and every representable declaration type, by any piece printer that prints whatever the
+table's fold prints (`prints`): the plain pieces, and the pieces that ship
+(`shippedPieces_prints`). -/
+theorem printModuleWith_readable {pp : PiecePrint Op}
+    (prints : ∀ (sig : Signature Op) env e x, print sig env.length e = .ok x →
+      ∃ y, pp sig env e = .ok y)
+    {sig : Signature Op} {root : Eff Op}
     (hr : moduleReadable classes sig root = true) (name : String) (ty : EffTy)
     (types : declarationTypeRepresentable ty = true) :
-    ∃ decls, printModule sig name ty root = .ok decls := by
+    ∃ decls, printModuleWith pp sig name ty root = .ok decls := by
   obtain ⟨main, history, hoisted, plain, hmain, hlayers, _⟩ := moduleReadable_pieces hr
-  obtain ⟨body, hbody⟩ := print_of_readable hmain
+  obtain ⟨x, hx⟩ := print_of_readable hmain
+  obtain ⟨body, hbody⟩ := prints sig [] main x hx
   obtain ⟨ds, hds⟩ := captured_mapM_ok hlayers (Path.sortBy Path.declBefore (history.map (·.1)))
     (fun t ht => (Path.sortBy_perm Path.declBefore _).mem_iff.mp ht)
   obtain ⟨decl, hdecl⟩ := printDecl_readable name ty body types sig.typeEnv
   refine ⟨ds ++ [decl], ?_⟩
-  unfold printModule
+  unfold printModuleWith
   rw [hoisted]
   simp only [plain]
   change ((Path.sortBy Path.declBefore (history.map (·.1))).mapM (capturedDecl sig history) >>=
-    fun ds => print sig 0 main >>= fun body =>
+    fun ds => pp sig [] main >>= fun body =>
     printDecl name ty body sig.typeEnv >>= fun decl => .ok (ds ++ [decl])) = _
   simp only [hds, ok_bind, hbody, hdecl]
+
+/-- The pieces that ship print whatever the table's fold prints: the typed print where it
+succeeds, and the fold's print where it refuses. A step of `emitModule_complete`. -/
+theorem shippedPieces_prints (sig : Signature Op) (env : TyEnv) (e : Eff Op) (x : TypeScript.Expr)
+    (printed : print sig env.length e = .ok x) : ∃ y, shippedPieces sig env e = .ok y := by
+  cases typed : printTyped sig env e with
+  | ok y => exact ⟨y, by simp only [shippedPieces, typed]⟩
+  | error _ => exact ⟨x, by simp only [shippedPieces, typed, printed]⟩
 
 /-! ## A program with a definition block (decisions row 328, slice PROC-3) -/
 
@@ -214,16 +262,17 @@ theorem blockReadable_pieces {sig : Signature Op} {root : Eff Op}
     · cases hr
   · cases hr
 
-/-- **The module inverse on the readable domain of a definition block.** The declaration block
-the module printer prints of a program with a block whose pieces are readable reads back to the
-program, at a lawful spelling whose invocations and parameter runs are lawful (`LawfulCalls`,
-`LawfulParams`, apart from each other) and whose block and parameter names are readable
-(`DefsNamed`, `ParamsNamed`). The reader's laws hold at the block's signature
+/-- **The module inverse on the readable domain of a definition block**, at any lawful pair. The
+declaration block the module printer prints of a program with a block whose pieces are readable
+reads back to the program, at a lawful spelling whose invocations and parameter runs are lawful
+(`LawfulCalls`, `LawfulParams`, apart from each other) and whose block and parameter names are
+readable (`DefsNamed`, `ParamsNamed`). The reader's laws hold at the block's signature
 (`LawfulSpelling.withDefs`) and at each body's (`LawfulSpelling.withParams`, slice HO-3), where a
 body and its own layers are read (decisions row 341, step 3), and the module law with a block
-composes them (`readModule_printModule_defs`). A step of the claim `module-defs-round-trip`; its
-consumer is `ModuleEmission.readModule`. -/
-theorem readModule_printModule_defs_readable {sig : Signature Op}
+composes them (`readModuleWith_printModuleWith_defs`). A step of the claim
+`module-defs-round-trip`; its consumer is `ModuleEmission.readModule`, at the typed pair. -/
+theorem readModuleWith_printModuleWith_defs_readable {pp : PiecePrint Op} {rd : PieceRead Op}
+    (pieces : PiecesLawful pp rd classes) {sig : Signature Op}
     {spell : String → List RowArg → Option Op} {call param : Nat → Op}
     (hl : LawfulSpelling sig spell) (calls : LawfulCalls sig spell call)
     (params : LawfulParams sig spell param)
@@ -236,8 +285,8 @@ theorem readModule_printModule_defs_readable {sig : Signature Op}
     {rows : List Row} {serviceDecls : List TypeScript.ConstDecl}
     (servicesPrinted : rowServiceDecls sig rows = .ok serviceDecls)
     {name : String} {ty : EffTy}
-    {decls : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call param rows
+    {decls : List TypeScript.ConstDecl} (printed : printModuleWith pp sig name ty root = .ok decls) :
+    readModuleWith rd sig spell call param rows
       (classDecls.map TypeScript.Decl.classDecl ++ serviceDecls.map TypeScript.Decl.const ++
         decls.map TypeScript.Decl.const) = .ok root := by
   obtain ⟨main, history, defs, bodies, body, layers, hoisted, block, heads, hbodies, hmain, hmods,
@@ -247,10 +296,10 @@ theorem readModule_printModule_defs_readable {sig : Signature Op}
   rw [same] at named paramsNamed
   have hl' := hl.withDefs calls named
   have params' := params.withDefs calls apart defs
-  refine readModule_printModule_defs hoisted block classesRead servicesPrinted heads
-    (fun p mem => ReadsBack.of_Readable
+  refine readModuleWith_printModuleWith_defs hoisted block classesRead servicesPrinted heads
+    (fun p mem => pieces (env := [p.1.request.normalize])
       (hl'.withParams params' apart (paramsNamed p.1 (List.of_mem_zip mem).1)) (hbodies p mem))
-    (ReadsBack.of_Readable hl' hmain)
+    (pieces (env := []) hl' hmain)
     (fun l hm x hp => readLayer_print hl' (hmods l hm) hp) hmodNames
     (fun entry hm d hd x hp => ?_) (fun entry hm hd x hp => ?_) hnames printed
   · -- a body's own layer, read at the signature its parameters extend
@@ -273,27 +322,29 @@ open Effect4.Program
 services of the rows that the module declares (`rowServiceDecls`), when the program's pieces are
 readable under the native table: a program with no definition block (`moduleReadable`), or one
 with a block (`blockReadable`), whose names and parameter names the printer's own checks made
-readable (`defsNamed_of_fault`, `blockParamsNamed`). The envelope (`ModuleEmission.readModule`)
-and the file (`ModuleEmission.readFile`) are its two instances. -/
+readable (`defsNamed_of_fault`, `blockParamsNamed`). The emission prints its pieces typed, so the
+typed reader reads them (`shippedPieces_lawful`). The envelope (`ModuleEmission.readModule`) and
+the file (`ModuleEmission.readFile`) are its two instances. -/
 theorem ModuleEmission.readDecls {program : NativeEff} {table : RowTable} {name : String}
     (emission : ModuleEmission program table name) (lawful : LawfulTable table = true)
     (readable : moduleReadable emission.classes (nativeSignature table) program = true ∨
       blockReadable emission.classes (nativeSignature table) program = true)
     {rows : List Program.Row} {serviceDecls : List TypeScript.ConstDecl}
     (servicesPrinted : rowServiceDecls (nativeSignature table) rows = .ok serviceDecls) :
-    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param
-      rows (emission.classDecls.map TypeScript.Decl.classDecl ++
+    Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
+      NativeOp.param rows (emission.classDecls.map TypeScript.Decl.classDecl ++
         serviceDecls.map TypeScript.Decl.const ++ emission.declarations.map TypeScript.Decl.const) =
       .ok program := by
   obtain ⟨_, _, names, paramNames, _, _, _, printed⟩ :=
     Program.printEntry_checks emission.generated
   have classesRead := Classes.readClassDecls_checked (moduleClasses_checked emission.classified)
   rcases readable with plain | block
-  · exact readModule_printModule_readable (nativeLawful table lawful) plain classesRead
-      servicesPrinted printed
-  · exact readModule_printModule_defs_readable (nativeLawful table lawful) (nativeCalls table)
-      (nativeParams table) (nativeApart table) block (defsNamed_of_fault names)
-      (blockParamsNamed paramNames) classesRead servicesPrinted printed
+  · exact readModuleWith_printModuleWith_readable shippedPieces_lawful (nativeLawful table lawful)
+      plain classesRead servicesPrinted printed
+  · exact readModuleWith_printModuleWith_defs_readable shippedPieces_lawful
+      (nativeLawful table lawful) (nativeCalls table) (nativeParams table) (nativeApart table)
+      block (defsNamed_of_fault names) (blockParamsNamed paramNames) classesRead servicesPrinted
+      printed
 
 /-- **The envelope reads back**: the declaration block that a host wraps
 (`ModuleEmission.module`) declares no service, and reads back at no row's services. -/
@@ -301,8 +352,8 @@ theorem ModuleEmission.readModule {program : NativeEff} {table : RowTable} {name
     (emission : ModuleEmission program table name) (lawful : LawfulTable table = true)
     (readable : moduleReadable emission.classes (nativeSignature table) program = true ∨
       blockReadable emission.classes (nativeSignature table) program = true) :
-    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param []
-      emission.module.decls = .ok program := by
+    Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
+      NativeOp.param [] emission.module.decls = .ok program := by
   have h := emission.readDecls lawful readable (rowServiceDecls_nil (nativeSignature table))
   simp only [List.map_nil, List.append_nil] at h
   exact h
@@ -319,8 +370,8 @@ theorem ModuleEmission.readFile {program : NativeEff} {table : RowTable} {name :
       blockReadable emission.classes (nativeSignature table) program = true)
     {prelude : String} {except : List String} {file : TypeScript.Module}
     (filed : emission.file prelude except = .ok file) :
-    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param
-      table file.decls = .ok program := by
+    Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
+      NativeOp.param table file.decls = .ok program := by
   unfold ModuleEmission.file at filed
   obtain ⟨serviceDecls, servicesPrinted, hfile⟩ := bind_eq_ok.mp filed
   cases hfile
@@ -335,7 +386,9 @@ theorem lawful_rowNamesSafe {table : RowTable} (lawful : LawfulTable table = tru
     not_false_eq_true]
 
 /-- **Every checked program whose pieces are readable emits**, at a safe export name and a
-representable declaration type and stored annotations. -/
+representable declaration type and stored annotations. The emission prints its pieces as the
+module that ships prints them (`shippedPieces`), which prints whatever the table's fold prints
+(`shippedPieces_prints`). -/
 theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : String}
     (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
@@ -348,12 +401,14 @@ theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : Str
     (annotations : annotationRefusal program = none)
     (inProfile : natLiteralsInProfile program = true) :
     ∃ emission, emitModule name program table = .ok emission := by
-  obtain ⟨decls, printed⟩ := printModule_readable readable name typing.ty types
+  obtain ⟨decls, printed⟩ :=
+    printModuleWith_readable shippedPieces_prints readable name typing.ty types
   obtain ⟨_, _, hoisted, plain, _, _, _⟩ := moduleReadable_pieces readable
   have noDefs : program.defsOf = [] :=
     (Eff.hoistAll_defsOf hoisted).symm.trans (Eff.defsOf_of_block?_none plain)
-  have generated : printEntry table (nativeSignature table) name typing.ty program = .ok decls := by
-    simp only [printEntry, safe, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
+  have generated : printEntryWith shippedPieces table (nativeSignature table) name typing.ty
+      program = .ok decls := by
+    simp only [printEntryWith, safe, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
       lawful_rowNamesSafe lawful, noDefs, defsNameFault, blockParamsFault, classNameFault,
       List.findSome?_nil, serviceNamesFault_nil, classified,
       annotations, printed]
@@ -367,7 +422,9 @@ namespace Effect4.Api
 open Effect4.Program
 
 /-- Through the application face: a program whose pieces are readable under a lawful table has
-a module whose reading is the program, with or without a definition block. -/
+a module whose reading is the program, with or without a definition block. The module is the
+one that ships, its pieces printed typed, and the face's reader reads it after the named
+erasure (`ModuleEmission.readModule`). -/
 theorem printModule_roundTrip {name : String} {program : Program} {table : RowTable}
     (lawful : LawfulTable table = true)
     (readable : ∀ e : Effect4.Codegen.ModuleEmission program table name,

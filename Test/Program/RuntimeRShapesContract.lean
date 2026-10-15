@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.RuntimeR
 import Test.Program.CompileContract
 import Test.Program.DenoteRContract
+import Effect4.Api.Codegen
 
 /-!
 R3 direct synthesized shapes and R4 source/control boundaries. Comparisons

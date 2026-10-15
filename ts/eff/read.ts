@@ -51,21 +51,45 @@ export type Refusal =
 
 export type Read<A> = Result.Result<A, Refusal>
 
+/** How a reading treats the type arguments that the typed print writes on a row call at a join,
+ * where neither the operation nor its row carries any (decisions row 373 (11)). `refuse` reads as
+ * Lean's raw reader does (`readEff`): the arguments are an argument list the row does not print
+ * (`E4-CHECK-CE-013`). `erase` reads as Lean's typed reader does (`readTyped`,
+ * `Codegen/EraseTypes.lean`, `eraseRowJoin`): the call reads as the bare call. A module that ships
+ * is the typed print's, so `make check-ts-reader` reads with `erase`. The types that the typed
+ * print writes at an eliminator's site (Lean `EraseTermTypes`) are not read by either. */
+export type Joins = "refuse" | "erase"
+let joins: Joins = "refuse"
+
 /** One program file's text into an Eff node, or the refusal that names what was not readable.
  * `table` is the supplied row table (`Api.read (table := …)`): its rows are the external
  * operations, by position; the printed corpus reads under the empty table. The file is the
  * declaration block a host wraps (Lean `Api.readModule`): it declares no row's service. */
-export const readTypeScript = (source: string, filename = "program.ts", table: ReadonlyArray<Row> = []): Read<Eff> =>
-  readSource(source, filename, table, [])
+export const readTypeScript = (source: string, filename = "program.ts", table: ReadonlyArray<Row> = [],
+  mode: Joins = "refuse"): Read<Eff> =>
+  readSource(source, filename, table, [], mode)
 
 /** A module file's text into an Eff node (Lean `Api.readFile`): its payload classes, then the
  * services of its table's rows, exactly as `rowServiceDecls` prints them (decisions row 378
  * (19)), then the declaration block. */
-export const readTypeScriptFile = (source: string, filename = "program.ts", table: ReadonlyArray<Row> = []): Read<Eff> =>
-  readSource(source, filename, table, table)
+export const readTypeScriptFile = (source: string, filename = "program.ts", table: ReadonlyArray<Row> = [],
+  mode: Joins = "refuse"): Read<Eff> =>
+  readSource(source, filename, table, table, mode)
 
-/** A source's text read under its table, its module declaring the services of `rows`. */
-const readSource = (source: string, filename: string, table: ReadonlyArray<Row>, rows: ReadonlyArray<Row>): Read<Eff> =>
+/** A source's text read under its table, its module declaring the services of `rows`, its joins
+ * read in `mode` for the duration of the call. */
+const readSource = (source: string, filename: string, table: ReadonlyArray<Row>, rows: ReadonlyArray<Row>,
+  mode: Joins): Read<Eff> => {
+  const saved = joins
+  joins = mode
+  try {
+    return readSourceAt(source, filename, table, rows)
+  } finally {
+    joins = saved
+  }
+}
+
+const readSourceAt = (source: string, filename: string, table: ReadonlyArray<Row>, rows: ReadonlyArray<Row>): Read<Eff> =>
   withTable(table, () => {
     const parsed = parseSync(filename, source, { sourceType: "module", lang: "ts" })
     if (parsed.errors.length > 0) return refuse({ _tag: "parse", messages: parsed.errors.map((e) => e.message) })
@@ -1980,7 +2004,12 @@ const readCall = (n: number, x: Expr): Read<Eff> => {
     if (!failed(bare)) {
       const eff = bare.success
       if (eff._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
-      if (typeArgsOf(eff.op).length !== split.types.length) return arity(calledSpelling(x))
+      if (typeArgsOf(eff.op).length !== split.types.length) {
+        // A join's type arguments (Lean `eraseRowJoin`): the bare call read, so its row declares
+        // none, and its operation carries none either. The typed reading reads the bare call.
+        if (joins === "erase" && typeArgsOf(eff.op).length === 0) return bare
+        return arity(calledSpelling(x))
+      }
       const tys: Ty[] = []
       for (const text of split.types) {
         const ty = readTypeText(text)

@@ -3,6 +3,7 @@ import Effect4.Run
 import Effect4.Emit
 import Effect4.Library.Pull.Ops
 import Effect4.Laws.Codegen.ReadPrint
+import Effect4.Api.Codegen
 
 /-! Public branches retain their distinct answer, error and requirement columns.
 These finite controls consume the ruled boolean printer and its existing reconstruction law.

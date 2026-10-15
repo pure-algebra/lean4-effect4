@@ -3,6 +3,7 @@ import Effect4.Program.CheckedTyping
 import Effect4.Program.Native
 import Effect4.Program.Profile
 import Effect4.Codegen.Print
+import Effect4.Codegen.PrintTyped
 import Effect4.Codegen.RowServices
 import Effect4.Codegen.SourceBindings
 
@@ -14,6 +15,11 @@ check and the exact relation between this program, table, requested name and the
 existing declaration printer. The module syntax is a projection of those retained
 declarations, so a caller cannot replace an annotation independently of its receipt.
 
+The declarations are the module that ships: its program pieces printed by the typed print, which
+writes a call's type arguments where a join needs them, or by the table's fold where the typed
+print refuses (`shippedPieces`; decisions row 373 (11)).
+The reading boundary reads them after the named erasure of those arguments (`readModuleTyped`).
+
 This certifies production, not source admission. The printer retains all three type parameters.
 The envelope `module` supplies no imports: an embedding host prepends its own. The file
 `ModuleEmission.file` writes the imports from Lean data (decisions row 373 (11)). Original
@@ -24,6 +30,10 @@ Target type checking and execution are not consequences of this certificate.
 namespace Effect4.Codegen
 
 open Effect4.Program
+
+-- `Program.table` (the address table) is in scope through the typed print; the emission's
+-- indices are named here so that `table` is the row table.
+variable {program : NativeEff} {table : RowTable} {name : String}
 
 /-- Failure to type the input, or the existing printer's precise refusal. -/
 inductive EmissionRefusal where
@@ -94,8 +104,8 @@ structure ModuleEmission (program : NativeEff) (table : RowTable) (name : String
   classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
     .ok (classes, classDecls)
   declarations : List TypeScript.ConstDecl
-  generated : Program.printEntry table (nativeSignature table) name typing.ty program =
-    .ok declarations
+  generated : Program.printEntryWith Program.shippedPieces table (nativeSignature table) name
+    typing.ty program = .ok declarations
 
 /-- The module envelope, constructed from retained declarations: the payload classes first,
 then the declaration block. Empty imports are an explicit limit of this producer, not evidence
@@ -178,6 +188,17 @@ def ModuleEmission.file (emission : ModuleEmission program table name) (prelude 
     decls := emission.classDecls.map .classDecl ++ rows.map .const ++
       emission.declarations.map .const } except)
 
+/-- **A module of a program that is not checked**: the program printed plain, one exported
+`const name = …` with no declared type, and its imports from Lean data (`fileOf`), the prelude at
+`prelude`; a name in `except` is no import. A lane that shows what a host makes of an ill-typed
+program prints it so, with the writer every lane uses (decisions row 392, P1 (a)). A checked
+program's module is its emission's `file`. -/
+def uncheckedFile (prelude : String) (name : String) (program : NativeEff) (table : RowTable := [])
+    (except : List String := []) : Except PrintRefusal TypeScript.Module := do
+  let x ← Program.print (nativeSignature table) 0 program
+  pure (fileOf prelude { header := [], imports := [], decls := [.const { doc := [], name, value := x }] }
+    except)
+
 /-- Print from retained typing and raw formation evidence. Both public producers
 obtain this evidence before calling the declaration printer. -/
 def emitFormedModule (name : String) {program : NativeEff} {table : RowTable}
@@ -188,7 +209,8 @@ def emitFormedModule (name : String) {program : NativeEff} {table : RowTable}
   | false => .error (.outsideProfile
       (((natLiterals program).find? fun n => decide (rc112.natBound < n)).getD 0))
   | true =>
-    match printed : Program.printEntry table (nativeSignature table) name typing.ty program with
+    match printed : Program.printEntryWith Program.shippedPieces table (nativeSignature table) name
+        typing.ty program with
     | .error why => .error (.print why)
     | .ok declarations =>
       match classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program with

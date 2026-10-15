@@ -145,7 +145,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   its slices P1, P2a, P2b and P3 (rows 324 and 325, the
   [receipt](research/2026-10-08-codex-unguard-receipt.md)). A call at a join carries its type
   arguments, and so does an approved eliminator site. The reader reconstructs the typed print
-  after its named erasure. The application's print is not yet the typed print.
+  after its named erasure. The application's module is the typed print, and every lane's module
+  comes from one Lean writer (decisions row 392, P1).
 - **The type interface** (the [type interface note](research/2026-10-11-type-interface/README.md)).
   `Ty` is the hub, and the JSON codec is its one exact image. A model of tsgo's assignability
   (`src/Effect4/Laws/Codegen/TargetOrder.lean`) agrees with tsgo on every recorded pair of

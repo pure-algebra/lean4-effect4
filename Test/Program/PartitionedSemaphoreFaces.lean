@@ -1,6 +1,7 @@
 import Test.Program.PartitionedSemaphorePrograms
 import Effect4.Emit
 import TypeScript.Render
+import Effect4.Api.Codegen
 
 /-!
 Finite checked emissions of the scalar callers.

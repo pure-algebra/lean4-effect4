@@ -74,19 +74,22 @@ It prints `readonly [number, number]; closed: true`.
 `die asyncFiber` from `runSync` means that the run did not finish. It slept, called a host, or
 spent its budget of 1000 commands.
 
-To emit TypeScript, check the program with `Api.author src`, then call `t.emit name` and
-`Api.render (.ts e.module)`. The module has no imports. Its header and the prelude it calls are
-`harness/truth/module-imports.ts` and `harness/truth/prelude.ts`.
+To emit TypeScript, check the program with `Api.author src`, then call `t.emit name`. The
+emission's file `e.file "./prelude.ts"` holds the module's imports, written from Lean data
+(`ModuleEmission.file`, `src/Effect4/Codegen/Checked.lean`). The prelude it imports is
+`harness/truth/prelude.ts`. Lay the file out with `Tools.Code.moduleText`
+(`tools/Tools/Code/Module.lean`), as every lane writes it.
 
 ## The application face
 
-Import `Effect4.Api` (`src/Effect4/Api.lean`). It is the program interface:
-`typeOf`, `print`, `printDecl`, `compile`, `replay`, `run`, `runSync`,
-and the Schema syntax (`schemaDocument`, `schemaRepresentation`, `jsonExpr`).
-Its program printers answer TypeScript **syntax**; the explicit `render` operation
-crosses from a codegen artefact to bytes, and
-`Test/Api/ApiContract.lean` is the receipt that crosses it the way a
-caller does.
+Import `Effect4.Api` (`src/Effect4/Api.lean`). It is the program interface: `typeOf`, `compile`,
+`replay`, `run` and `runSync`. Its codegen face is `Effect4.Api.Codegen`
+(`src/Effect4/Api/Codegen.lean`), in the same namespace: `print`, `printDecl`, the module's
+emission, and the Schema syntax (`schemaDocument`, `schemaRepresentation`, `jsonExpr`). The root
+`Effect4` imports both.
+The program printers answer TypeScript **syntax**, never text. A caller renders the syntax with
+the pinned package's renderer (`TypeScript.Render`). `Test/Api/ApiContract.lean` is the receipt
+that renders it the way a caller does.
 
 A printed module type-checks under `HostConfig.pinned` (`src/Effect4/Codegen/Diagnostics.lean`):
 `strict`, `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`, with its module options.
