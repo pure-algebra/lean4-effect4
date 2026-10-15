@@ -1,0 +1,314 @@
+[
+  {
+    "phase": "cold",
+    "target": "check",
+    "seconds": 1.428,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-native",
+    "seconds": 22.133,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-compiler",
+    "seconds": 8.644,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-ocaml",
+    "seconds": 117.604,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-schema-codec",
+    "seconds": 3.38,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-schema-ts",
+    "seconds": 1.247,
+    "exit": 2
+  },
+  {
+    "phase": "cold",
+    "target": "check-truth",
+    "seconds": 19.414,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-target",
+    "seconds": 13.649,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-ts-reader",
+    "seconds": 6.112,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-host-protocol",
+    "seconds": 91.033,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-corpus",
+    "seconds": 64.629,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-tsdiag",
+    "seconds": 3.024,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-ingest-smoke",
+    "seconds": 1.289,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check",
+    "seconds": 1.048,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-native",
+    "seconds": 0.234,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-compiler",
+    "seconds": 0.239,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-ocaml",
+    "seconds": 1.099,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-schema-codec",
+    "seconds": 0.501,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-schema-ts",
+    "seconds": 1.161,
+    "exit": 2
+  },
+  {
+    "phase": "warm",
+    "target": "check-truth",
+    "seconds": 0.529,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-target",
+    "seconds": 0.515,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-ts-reader",
+    "seconds": 0.966,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-host-protocol",
+    "seconds": 0.508,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-corpus",
+    "seconds": 0.508,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-tsdiag",
+    "seconds": 0.954,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-ingest-smoke",
+    "seconds": 0.94,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check",
+    "seconds": 0.826,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-native",
+    "seconds": 11.31,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-compiler",
+    "seconds": 8.275,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-ocaml",
+    "seconds": 98.651,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-schema-codec",
+    "seconds": 3.113,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-schema-ts",
+    "seconds": 1.441,
+    "exit": 2
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-truth",
+    "seconds": 20.281,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-target",
+    "seconds": 15.602,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-ts-reader",
+    "seconds": 1.123,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-host-protocol",
+    "seconds": 101.738,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-corpus",
+    "seconds": 66.592,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-tsdiag",
+    "seconds": 1.069,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-ingest-smoke",
+    "seconds": 1.083,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check",
+    "seconds": 1.013,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-native",
+    "seconds": 24.051,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-compiler",
+    "seconds": 9.567,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-ocaml",
+    "seconds": 100.304,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-schema-codec",
+    "seconds": 3.005,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-schema-ts",
+    "seconds": 1.199,
+    "exit": 2
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-truth",
+    "seconds": 19.558,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-target",
+    "seconds": 13.632,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-ts-reader",
+    "seconds": 6.175,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-host-protocol",
+    "seconds": 99.473,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-corpus",
+    "seconds": 69.586,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-tsdiag",
+    "seconds": 3.467,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-ingest-smoke",
+    "seconds": 1.72,
+    "exit": 0
+  }
+]

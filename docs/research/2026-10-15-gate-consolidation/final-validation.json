@@ -1,0 +1,32 @@
+[
+  {
+    "name": "full-final",
+    "command": [
+      "make",
+      "--no-print-directory",
+      "check-full"
+    ],
+    "seconds": 362.744,
+    "exit": 0
+  },
+  {
+    "name": "warm-final",
+    "command": [
+      "make",
+      "--no-print-directory",
+      "check-full"
+    ],
+    "seconds": 17.15,
+    "exit": 0
+  },
+  {
+    "name": "docs-final",
+    "command": [
+      "make",
+      "--no-print-directory",
+      "check-docs"
+    ],
+    "seconds": 1.727,
+    "exit": 0
+  }
+]

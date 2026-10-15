@@ -1,0 +1,4 @@
+python3 scripts/wire-roots.py
+PASS roots: every module is reached by its root
+set -o pipefail; lake build Effect4 Effect4Laws 2>&1 | tee .lake/gen/build.log
+Build completed successfully (1355 jobs).

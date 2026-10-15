@@ -1,0 +1,18 @@
+python3 scripts/wire-roots.py
+PASS roots: every module is reached by its root
+set -o pipefail; lake build Effect4 Effect4Laws 2>&1 | tee .lake/gen/build.log
+Build completed successfully (1355 jobs).
+PASS tsgo: shared result 84277ccce1fb
+PASS schema-codec: shared result 05571388d97a
+PASS schema-ts: shared result 5c695742581e
+PASS truth: shared result b24ed2796913
+PASS target: shared result d581cc8fcf5c
+PASS ts-reader: shared result df68763e01b2
+PASS corpus: shared result 4b39a364ab2f
+PASS tsdiag: shared result 8b32ee08c54f
+PASS host-protocol: shared result e21ad4661e39
+PASS ingest-smoke: shared result 7c9477e5e135
+PASS service-identity: shared result cceb523e08ec
+PASS native: shared result c2cf62ad7629
+PASS compiler: shared result dede494fc1bf
+PASS ocaml: shared result 13d1bb820140

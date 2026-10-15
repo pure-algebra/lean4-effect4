@@ -1,0 +1,408 @@
+[
+  {
+    "phase": "cold",
+    "target": "check",
+    "command_target": "check",
+    "seconds": 3.224,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-native",
+    "command_target": "check-native",
+    "seconds": 17.948,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-compiler",
+    "command_target": "check-compiler",
+    "seconds": 11.049,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-ocaml",
+    "command_target": ".lake/check/ocaml",
+    "seconds": 128.855,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-schema-codec",
+    "command_target": "check-schema-codec",
+    "seconds": 5.856,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-schema-ts",
+    "command_target": "check-schema-ts",
+    "seconds": 8.383,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-truth",
+    "command_target": "check-truth",
+    "seconds": 24.121,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-target",
+    "command_target": "check-target",
+    "seconds": 17.157,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-ts-reader",
+    "command_target": "check-ts-reader",
+    "seconds": 8.753,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-host-protocol",
+    "command_target": "check-host-protocol",
+    "seconds": 98.252,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-corpus",
+    "command_target": "check-corpus",
+    "seconds": 68.207,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-tsdiag",
+    "command_target": "check-tsdiag",
+    "seconds": 5.864,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-ingest-smoke",
+    "command_target": "check-ingest-smoke",
+    "seconds": 4.358,
+    "exit": 0
+  },
+  {
+    "phase": "cold",
+    "target": "check-service-identity",
+    "command_target": "check-service-identity",
+    "seconds": 4.971,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check",
+    "command_target": "check",
+    "seconds": 1.633,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-native",
+    "command_target": "check-native",
+    "seconds": 1.093,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-compiler",
+    "command_target": "check-compiler",
+    "seconds": 1.443,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-ocaml",
+    "command_target": ".lake/check/ocaml",
+    "seconds": 5.831,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-schema-codec",
+    "command_target": "check-schema-codec",
+    "seconds": 1.137,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-schema-ts",
+    "command_target": "check-schema-ts",
+    "seconds": 1.111,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-truth",
+    "command_target": "check-truth",
+    "seconds": 1.218,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-target",
+    "command_target": "check-target",
+    "seconds": 1.177,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-ts-reader",
+    "command_target": "check-ts-reader",
+    "seconds": 2.106,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-host-protocol",
+    "command_target": "check-host-protocol",
+    "seconds": 1.239,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-corpus",
+    "command_target": "check-corpus",
+    "seconds": 1.224,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-tsdiag",
+    "command_target": "check-tsdiag",
+    "seconds": 2.044,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-ingest-smoke",
+    "command_target": "check-ingest-smoke",
+    "seconds": 2.043,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-service-identity",
+    "command_target": "check-service-identity",
+    "seconds": 1.146,
+    "exit": 0
+  },
+  {
+    "phase": "warm",
+    "target": "check-full",
+    "command_target": "check-full",
+    "seconds": 18.245,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check",
+    "command_target": "check",
+    "seconds": 1.373,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-native",
+    "command_target": "check-native",
+    "seconds": 1.052,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-compiler",
+    "command_target": "check-compiler",
+    "seconds": 10.617,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-ocaml",
+    "command_target": ".lake/check/ocaml",
+    "seconds": 105.957,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-schema-codec",
+    "command_target": "check-schema-codec",
+    "seconds": 6.166,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-schema-ts",
+    "command_target": "check-schema-ts",
+    "seconds": 1.15,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-truth",
+    "command_target": "check-truth",
+    "seconds": 23.205,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-target",
+    "command_target": "check-target",
+    "seconds": 1.198,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-ts-reader",
+    "command_target": "check-ts-reader",
+    "seconds": 2.126,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-host-protocol",
+    "command_target": "check-host-protocol",
+    "seconds": 100.223,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-corpus",
+    "command_target": "check-corpus",
+    "seconds": 68.119,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-tsdiag",
+    "command_target": "check-tsdiag",
+    "seconds": 2.105,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-ingest-smoke",
+    "command_target": "check-ingest-smoke",
+    "seconds": 2.064,
+    "exit": 0
+  },
+  {
+    "phase": "core-edit",
+    "target": "check-service-identity",
+    "command_target": "check-service-identity",
+    "seconds": 4.935,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check",
+    "command_target": "check",
+    "seconds": 1.408,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-native",
+    "command_target": "check-native",
+    "seconds": 1.084,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-compiler",
+    "command_target": "check-compiler",
+    "seconds": 1.451,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-ocaml",
+    "command_target": ".lake/check/ocaml",
+    "seconds": 5.793,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-schema-codec",
+    "command_target": "check-schema-codec",
+    "seconds": 1.176,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-schema-ts",
+    "command_target": "check-schema-ts",
+    "seconds": 1.121,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-truth",
+    "command_target": "check-truth",
+    "seconds": 1.234,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-target",
+    "command_target": "check-target",
+    "seconds": 1.155,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-ts-reader",
+    "command_target": "check-ts-reader",
+    "seconds": 2.082,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-host-protocol",
+    "command_target": "check-host-protocol",
+    "seconds": 1.236,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-corpus",
+    "command_target": "check-corpus",
+    "seconds": 1.219,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-tsdiag",
+    "command_target": "check-tsdiag",
+    "seconds": 2.06,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-ingest-smoke",
+    "command_target": "check-ingest-smoke",
+    "seconds": 2.078,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-service-identity",
+    "command_target": "check-service-identity",
+    "seconds": 1.148,
+    "exit": 0
+  },
+  {
+    "phase": "noop-checkout",
+    "target": "check-full",
+    "command_target": "check-full",
+    "seconds": 18.138,
+    "exit": 0
+  }
+]

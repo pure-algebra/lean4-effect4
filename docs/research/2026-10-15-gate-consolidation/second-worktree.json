@@ -1,0 +1,14 @@
+{
+  "command": [
+    "make",
+    "--no-print-directory",
+    "check-native",
+    "check-compiler",
+    "check-schema-codec"
+  ],
+  "seconds": 6.271,
+  "exit": 0,
+  "compiled_project_artifacts": false,
+  "shared_passes": 3,
+  "new_passes": 0
+}

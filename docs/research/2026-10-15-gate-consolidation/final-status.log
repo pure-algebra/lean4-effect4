@@ -1,0 +1,13 @@
+effect4   HEAD @ d7f99c991 2026-10-15
+dirty     114: AGENTS.md, Makefile, README.md, Test/All.lean, Test/Counterexamples/Archive/REGISTER.md, Test/Counterexamples/REGISTER.md, +108 more
+build     battery built 2026-10-15 16:47; 60 source timestamp(s) newer; content may match
+cache     3.4 GB in Lake's artifact cache, 0.0 GB of it used by no build directory (lake cache clean frees it and rebuilds nothing)
+checks    fresh: native compiler ts-reader truth target schema-codec ocaml ingest-smoke host-protocol service-identity schema-ts corpus tsgo tsdiag; never: roots truth-release ingest census schema-pins tools semantics docs language
+generated stale: semantics (make check-gen); no committed generated file differs
+claims    226 proved · 1 modulo · 3 absent · 1 refuted · 1 assumed  (generated/semantics.md)
+goals     1 open planned goal(s) (proof_goal)
+plan      requirements 14 open; 6 next goal(s): shop_stages cleanup_keeps retries_declared jobs_step rest_step once_placed_outside_census  (generated/semantics.md)
+decisions 49 open · 235 ruled · 55 landed · 4 closed · 54 other  (docs/core/decisions.md)
+issues    6 open · 88 ruled · 1 basis · 5 landed · 1 other  (docs/DESIGN-ISSUES.md)
+counterex 137 seeded · 49 repaired · 3 pinned · 4 retired  (Test/Counterexamples/REGISTER.md)
+docs      every path, link, citation and make target resolves
