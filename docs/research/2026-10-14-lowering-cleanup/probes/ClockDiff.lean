@@ -1,5 +1,5 @@
 import Lean
-import Conform.Lcnf.Validity
+import OCaml5.Lcnf.Index
 import OCaml5.Lcnf.Externs
 import OCaml5.Lcnf.Translate
 
@@ -805,7 +805,7 @@ def compare (label : String) (env : Environment) (roots : Array Name) (flows : A
   return ok
 
 def flowsOf (env : Environment) (closure : Closure) : Array ClockFlow.Flow := Id.run do
-  let mono := Conform.Lcnf.persistedMonoIndex env
+  let mono := OCaml5.Lcnf.persistedMonoIndex env
   let mut flows := #[]
   for t in closure.decls do
     if let some d := mono.findIn? env t.leanName then flows := flows.push (ClockFlow.ofDecl d)

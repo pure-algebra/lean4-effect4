@@ -1,0 +1,98 @@
+ocaml/eff/eff_types.ml: old refusals 0
+ocaml/eff/eff_types.ml: new refusals 0
+ocaml/eff/eff_types.ml: library refusals 0
+ocaml/eff/eff_types.ml: AGREE; old 0.6 ms, new 0.4 ms, library 0.0 ms; 0 resolved flows, 0 summaries, 0 narrowed and 0 unknown returns, refusals #[]
+ocaml/gen/api_gen.ml: old refusals 0
+ocaml/gen/api_gen.ml: new refusals 0
+ocaml/gen/api_gen.ml: library refusals 0
+ocaml/gen/api_gen.ml: AGREE; old 4623.9 ms, new 4438.3 ms, library 3737.9 ms; 911 resolved flows, 68 summaries, 0 narrowed and 42 unknown returns, refusals #[]
+ocaml/engine/api_engine.ml: old refusals 0
+ocaml/engine/api_engine.ml: new refusals 0
+ocaml/engine/api_engine.ml: library refusals 0
+ocaml/engine/api_engine.ml: AGREE; old 2827.3 ms, new 2565.3 ms, library 1797.0 ms; 836 resolved flows, 66 summaries, 0 narrowed and 40 unknown returns, refusals #[]
+#[Test.ClockLiteralFixtures.direct]: old refusals 0
+#[Test.ClockLiteralFixtures.direct]: new refusals 0
+#[Test.ClockLiteralFixtures.direct]: library refusals 0
+#[Test.ClockLiteralFixtures.direct]: AGREE; old 0.2 ms, new 0.2 ms, library 0.1 ms; 1 resolved flows, 0 summaries, 0 narrowed and 0 unknown returns, refusals #[]
+#[Test.ClockLiteralFixtures.numeral]: old refusals 0
+#[Test.ClockLiteralFixtures.numeral]: new refusals 0
+#[Test.ClockLiteralFixtures.numeral]: library refusals 0
+#[Test.ClockLiteralFixtures.numeral]: AGREE; old 0.3 ms, new 0.2 ms, library 0.1 ms; 1 resolved flows, 0 summaries, 0 narrowed and 0 unknown returns, refusals #[]
+#[Test.ClockLiteralFixtures.positive]: old refusals 0
+#[Test.ClockLiteralFixtures.positive]: new refusals 0
+#[Test.ClockLiteralFixtures.positive]: library refusals 0
+#[Test.ClockLiteralFixtures.positive]: AGREE; old 0.2 ms, new 0.2 ms, library 0.0 ms; 1 resolved flows, 0 summaries, 0 narrowed and 0 unknown returns, refusals #[]
+#[Test.ClockLiteralFixtures.narrowed]: old refusals 1
+#[Test.ClockLiteralFixtures.narrowed]: new refusals 1
+#[Test.ClockLiteralFixtures.narrowed]: library refusals 1
+#[Test.ClockLiteralFixtures.narrowed]: AGREE; old 0.5 ms, new 0.3 ms, library 0.1 ms; 1 resolved flows, 1 summaries, 0 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.narrowed: Effect4.ClockMillis.ofNat argument 0 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughWrapper]: old refusals 2
+#[Test.ClockLiteralFixtures.throughWrapper]: new refusals 2
+#[Test.ClockLiteralFixtures.throughWrapper]: library refusals 2
+#[Test.ClockLiteralFixtures.throughWrapper]: AGREE; old 0.5 ms, new 0.4 ms, library 0.2 ms; 2 resolved flows, 1 summaries, 1 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughWrapper: returned value reaches clock ingress after Nat saturation",
+  "Test.ClockLiteralFixtures.throughWrapper: Test.ClockLiteralFixtures.wrapper argument 0 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughNestedWrapper]: old refusals 2
+#[Test.ClockLiteralFixtures.throughNestedWrapper]: new refusals 2
+#[Test.ClockLiteralFixtures.throughNestedWrapper]: library refusals 2
+#[Test.ClockLiteralFixtures.throughNestedWrapper]: AGREE; old 0.6 ms, new 0.5 ms, library 0.3 ms; 3 resolved flows, 2 summaries, 1 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughNestedWrapper: returned value reaches clock ingress after Nat saturation",
+  "Test.ClockLiteralFixtures.throughNestedWrapper: Test.ClockLiteralFixtures.nestedWrapper argument 0 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughFactory]: old refusals 1
+#[Test.ClockLiteralFixtures.throughFactory]: new refusals 1
+#[Test.ClockLiteralFixtures.throughFactory]: library refusals 1
+#[Test.ClockLiteralFixtures.throughFactory]: AGREE; old 0.4 ms, new 0.4 ms, library 0.2 ms; 2 resolved flows, 0 summaries, 1 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughFactory: Effect4.ClockMillis.ofNat argument 0 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughNestedFactory]: old refusals 1
+#[Test.ClockLiteralFixtures.throughNestedFactory]: new refusals 1
+#[Test.ClockLiteralFixtures.throughNestedFactory]: library refusals 1
+#[Test.ClockLiteralFixtures.throughNestedFactory]: AGREE; old 0.5 ms, new 0.5 ms, library 0.3 ms; 3 resolved flows, 0 summaries, 2 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughNestedFactory: Effect4.ClockMillis.ofNat argument 0 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughClockCallback]: old refusals 2
+#[Test.ClockLiteralFixtures.throughClockCallback]: new refusals 2
+#[Test.ClockLiteralFixtures.throughClockCallback]: library refusals 2
+#[Test.ClockLiteralFixtures.throughClockCallback]: AGREE; old 0.5 ms, new 0.4 ms, library 0.2 ms; 2 resolved flows, 1 summaries, 1 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughClockCallback: returned value reaches clock ingress after Nat saturation",
+  "Test.ClockLiteralFixtures.throughClockCallback: Test.ClockLiteralFixtures.applyClock argument 1 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughGenericClockCallback]: old refusals 2
+#[Test.ClockLiteralFixtures.throughGenericClockCallback]: new refusals 2
+#[Test.ClockLiteralFixtures.throughGenericClockCallback]: library refusals 2
+#[Test.ClockLiteralFixtures.throughGenericClockCallback]: AGREE; old 0.5 ms, new 0.4 ms, library 0.3 ms; 2 resolved flows, 1 summaries, 1 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughGenericClockCallback: returned value reaches clock ingress after Nat saturation",
+  "Test.ClockLiteralFixtures.throughGenericClockCallback: Test.ClockLiteralFixtures.applyGeneric._redArg argument 1 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughValue]: old refusals 2
+#[Test.ClockLiteralFixtures.throughValue]: new refusals 2
+#[Test.ClockLiteralFixtures.throughValue]: library refusals 2
+#[Test.ClockLiteralFixtures.throughValue]: AGREE; old 0.5 ms, new 0.4 ms, library 0.2 ms; 2 resolved flows, 1 summaries, 1 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughValue: returned value reaches clock ingress after Nat saturation",
+  "Test.ClockLiteralFixtures.throughValue: Test.ClockLiteralFixtures.clockFromValue argument 0 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughKnownNatCallback]: old refusals 1
+#[Test.ClockLiteralFixtures.throughKnownNatCallback]: new refusals 1
+#[Test.ClockLiteralFixtures.throughKnownNatCallback]: library refusals 1
+#[Test.ClockLiteralFixtures.throughKnownNatCallback]: AGREE; old 0.7 ms, new 0.8 ms, library 0.4 ms; 3 resolved flows, 0 summaries, 2 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughKnownNatCallback: Effect4.ClockMillis.ofNat argument 0 reaches clock ingress after Nat saturation"]
+#[Test.ClockLiteralFixtures.throughUnknown]: old refusals 1
+#[Test.ClockLiteralFixtures.throughUnknown]: new refusals 1
+#[Test.ClockLiteralFixtures.throughUnknown]: library refusals 1
+#[Test.ClockLiteralFixtures.throughUnknown]: AGREE; old 0.4 ms, new 0.3 ms, library 0.1 ms; 1 resolved flows, 1 summaries, 0 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughUnknown: Effect4.ClockMillis.ofNat argument 0 reaches clock ingress from unknown higher-order Nat production"]
+#[Test.ClockLiteralFixtures.unrelatedNat]: old refusals 0
+#[Test.ClockLiteralFixtures.unrelatedNat]: new refusals 0
+#[Test.ClockLiteralFixtures.unrelatedNat]: library refusals 0
+#[Test.ClockLiteralFixtures.unrelatedNat]: AGREE; old 0.0 ms, new 0.0 ms, library 0.0 ms; 0 resolved flows, 0 summaries, 0 narrowed and 0 unknown returns, refusals #[]
+#[Test.ClockLiteralFixtures.closedCallback]: old refusals 0
+#[Test.ClockLiteralFixtures.closedCallback]: new refusals 0
+#[Test.ClockLiteralFixtures.closedCallback]: library refusals 0
+#[Test.ClockLiteralFixtures.closedCallback]: AGREE; old 0.5 ms, new 0.5 ms, library 0.3 ms; 3 resolved flows, 0 summaries, 0 narrowed and 0 unknown returns, refusals #[]
+#[Test.ClockLiteralFixtures.closedRecordCallback]: old refusals 0
+#[Test.ClockLiteralFixtures.closedRecordCallback]: new refusals 0
+#[Test.ClockLiteralFixtures.closedRecordCallback]: library refusals 0
+#[Test.ClockLiteralFixtures.closedRecordCallback]: AGREE; old 0.7 ms, new 0.7 ms, library 0.4 ms; 3 resolved flows, 1 summaries, 0 narrowed and 0 unknown returns, refusals #[]
+#[Test.ClockLiteralFixtures.unknownRecordCallback]: old refusals 1
+#[Test.ClockLiteralFixtures.unknownRecordCallback]: new refusals 1
+#[Test.ClockLiteralFixtures.unknownRecordCallback]: library refusals 1
+#[Test.ClockLiteralFixtures.unknownRecordCallback]: AGREE; old 0.5 ms, new 0.5 ms, library 0.3 ms; 2 resolved flows, 1 summaries, 0 narrowed and 1 unknown returns, refusals #["Test.ClockLiteralFixtures.unknownRecordCallback: Effect4.ClockMillis.ofNat argument 0 reaches clock ingress from unknown higher-order Nat production"]
+#[Test.ClockLiteralFixtures.unknownContainer]: old refusals 1
+#[Test.ClockLiteralFixtures.unknownContainer]: new refusals 1
+#[Test.ClockLiteralFixtures.unknownContainer]: library refusals 1
+#[Test.ClockLiteralFixtures.unknownContainer]: AGREE; old 0.3 ms, new 0.3 ms, library 0.1 ms; 1 resolved flows, 1 summaries, 0 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.unknownContainer: Effect4.ClockMillis.ofNat argument 0 reaches clock ingress from unknown higher-order Nat production"]
+#[Test.ClockLiteralFixtures.closedCallback, Test.ClockLiteralFixtures.applyNat]: old refusals 0
+#[Test.ClockLiteralFixtures.closedCallback, Test.ClockLiteralFixtures.applyNat]: new refusals 0
+#[Test.ClockLiteralFixtures.closedCallback, Test.ClockLiteralFixtures.applyNat]: library refusals 0
+#[Test.ClockLiteralFixtures.closedCallback, Test.ClockLiteralFixtures.applyNat]: AGREE; old 0.5 ms, new 0.5 ms, library 0.3 ms; 3 resolved flows, 0 summaries, 0 narrowed and 0 unknown returns, refusals #[]
+#[Test.ClockLiteralFixtures.closedCallback, Test.ClockLiteralFixtures.applyNat, Test.ClockLiteralFixtures.throughUnknown]: old refusals 1
+#[Test.ClockLiteralFixtures.closedCallback, Test.ClockLiteralFixtures.applyNat, Test.ClockLiteralFixtures.throughUnknown]: new refusals 1
+#[Test.ClockLiteralFixtures.closedCallback, Test.ClockLiteralFixtures.applyNat, Test.ClockLiteralFixtures.throughUnknown]: library refusals 1
+#[Test.ClockLiteralFixtures.closedCallback, Test.ClockLiteralFixtures.applyNat, Test.ClockLiteralFixtures.throughUnknown]: AGREE; old 0.6 ms, new 0.6 ms, library 0.4 ms; 4 resolved flows, 1 summaries, 0 narrowed and 0 unknown returns, refusals #["Test.ClockLiteralFixtures.throughUnknown: Effect4.ClockMillis.ofNat argument 0 reaches clock ingress from unknown higher-order Nat production"]
+clock differential: every input set AGREES

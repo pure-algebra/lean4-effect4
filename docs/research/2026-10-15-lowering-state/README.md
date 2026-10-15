@@ -197,6 +197,7 @@ route and `Conform` sit outside `Effect4` and `Effect4.Laws`.
 | K1, one OCaml program type | §6.4's commit | hand OCaml +614 and −1,869 lines, generated files +1,527 and −1,983; the route gates pass |
 | K2, the route owns its walk | §6.5's commit | the mono index, the census, the primitive alphabet and the constructor telescope move into `OCaml5.Lcnf`; the second `stripRedArg` goes; the route imports nothing of Conform |
 | LC-5, the test census | §6.6's commit | the two unrun vector lanes and their drivers go; two duplicate sections of `test_engine` go; every remaining test names its own fault (§6.6) |
+| LC-4 D, the clock graph | its commit | constructor origins enter once a field holds a fact; no byte moved; ClockDiff agrees on 24 root sets; the analysis 16% and 30% faster |
 | K7 | ruled out | the scenario writer needs the authored programs, which import the author's laws by decisions row 332; the fixture rerun costs 20.0 s and moves no byte |
 
 ### 6.1 What F does, measured
