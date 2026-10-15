@@ -39,7 +39,13 @@
         "Effect4.Program.Registration",
         "Effect4.Program.RowArg",
         "Effect4.Program.Row",
-        "Effect4.Program.EffTy"
+        "Effect4.Program.EffTy",
+        "Effect4.Store.Val",
+        "Effect4.Machine.Err",
+        "Effect4.Machine.Defect",
+        "Effect4.Reason",
+        "Effect4.Exit",
+        "Effect4.Machine.Completion"
       ],
       "roots": []
     },

@@ -194,48 +194,48 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
     Buffer.contents b
 
   (* The frames of src/Effect4/Store/Carrier/Val.lean, `Val.encode`. *)
-  let rec emit_val (b : Buffer.t) (v : A.val_) : unit =
+  let rec emit_val (b : Buffer.t) (v : Eff_types.val_) : unit =
     match v with
-    | A.Val_unit -> Eff_frame.emit_unit b ()
-    | A.Val_bool x -> Eff_frame.emit_bool b x
-    | A.Val_nat n -> Eff_frame.emit_nat b n
-    | A.Val_str s -> Eff_frame.emit_string b s
-    | A.Val_bytes codes -> Eff_frame.emit_frame b Eff_frame.tag_bytes (string_of_codes codes)
-    | A.Val_list xs -> Eff_frame.emit_list b emit_val xs
-    | A.Val_pair (x, y) -> Eff_frame.emit_pair b emit_val emit_val (x, y)
-    | A.Val_none -> Eff_frame.emit_option b emit_val None
-    | A.Val_some x -> Eff_frame.emit_option b emit_val (Some x)
-    | A.Val_ctor (index, args) -> Eff_frame.emit_ctor b index (fun p -> List.iter (emit_val p) args)
-    | A.Val_ref (kind, digest) -> Eff_frame.emit_ref b (kind, string_of_codes digest)
-    | A.Val_handle (kind, key) -> Eff_frame.emit_handle b (kind, key)
-    | A.Val_negInt n -> Eff_frame.emit_frame b Eff_frame.tag_int (Eff_frame.nat_digits n)
-    | A.Val_float bits -> Eff_frame.emit_frame b Eff_frame.tag_float (be64 bits)
+    | Eff_types.Val_unit -> Eff_frame.emit_unit b ()
+    | Eff_types.Val_bool x -> Eff_frame.emit_bool b x
+    | Eff_types.Val_nat n -> Eff_frame.emit_nat b n
+    | Eff_types.Val_str s -> Eff_frame.emit_string b s
+    | Eff_types.Val_bytes codes -> Eff_frame.emit_frame b Eff_frame.tag_bytes (string_of_codes codes)
+    | Eff_types.Val_list xs -> Eff_frame.emit_list b emit_val xs
+    | Eff_types.Val_pair (x, y) -> Eff_frame.emit_pair b emit_val emit_val (x, y)
+    | Eff_types.Val_none -> Eff_frame.emit_option b emit_val None
+    | Eff_types.Val_some x -> Eff_frame.emit_option b emit_val (Some x)
+    | Eff_types.Val_ctor (index, args) -> Eff_frame.emit_ctor b index (fun p -> List.iter (emit_val p) args)
+    | Eff_types.Val_ref (kind, digest) -> Eff_frame.emit_ref b (kind, string_of_codes digest)
+    | Eff_types.Val_handle (kind, key) -> Eff_frame.emit_handle b (kind, key)
+    | Eff_types.Val_negInt n -> Eff_frame.emit_frame b Eff_frame.tag_int (Eff_frame.nat_digits n)
+    | Eff_types.Val_float bits -> Eff_frame.emit_frame b Eff_frame.tag_float (be64 bits)
 
-  let hex_of_val (v : A.val_) : string = E4_hex.of_bytes (Eff_frame.to_string emit_val v)
+  let hex_of_val (v : Eff_types.val_) : string = E4_hex.of_bytes (Eff_frame.to_string emit_val v)
 
   (* The reader of the same frames.  The tape's values are scalars, lists, options, pairs and
      constructor applications; a frame outside those is refused, never guessed. *)
-  let rec decode_val : A.val_ Eff_frame.decoder =
+  let rec decode_val : Eff_types.val_ Eff_frame.decoder =
    fun s pos limit ->
     match Eff_frame.read_frame s pos limit with
     | None -> None
     | Some (tag, p, e, next) ->
-      if tag = Eff_frame.tag_unit then if p = e then Some (A.Val_unit, next) else None
+      if tag = Eff_frame.tag_unit then if p = e then Some (Eff_types.Val_unit, next) else None
       else if tag = Eff_frame.tag_bool then
-        Option.map (fun (x, n) -> (A.Val_bool x, n)) (Eff_frame.decode_bool s pos limit)
+        Option.map (fun (x, n) -> (Eff_types.Val_bool x, n)) (Eff_frame.decode_bool s pos limit)
       else if tag = Eff_frame.tag_nat then
-        Option.map (fun (x, n) -> (A.Val_nat x, n)) (Eff_frame.decode_nat s pos limit)
+        Option.map (fun (x, n) -> (Eff_types.Val_nat x, n)) (Eff_frame.decode_nat s pos limit)
       else if tag = Eff_frame.tag_string then
-        Option.map (fun (x, n) -> (A.Val_str x, n)) (Eff_frame.decode_string s pos limit)
+        Option.map (fun (x, n) -> (Eff_types.Val_str x, n)) (Eff_frame.decode_string s pos limit)
       else if tag = Eff_frame.tag_list then
-        Option.map (fun (xs, n) -> (A.Val_list xs, n)) (Eff_frame.decode_list decode_val s pos limit)
+        Option.map (fun (xs, n) -> (Eff_types.Val_list xs, n)) (Eff_frame.decode_list decode_val s pos limit)
       else if tag = Eff_frame.tag_pair then
         Option.map
-          (fun ((x, y), n) -> (A.Val_pair (x, y), n))
+          (fun ((x, y), n) -> (Eff_types.Val_pair (x, y), n))
           (Eff_frame.decode_pair decode_val decode_val s pos limit)
       else if tag = Eff_frame.tag_none || tag = Eff_frame.tag_some then
         Option.map
-          (fun (o, n) -> ((match o with None -> A.Val_none | Some x -> A.Val_some x), n))
+          (fun (o, n) -> ((match o with None -> Eff_types.Val_none | Some x -> Eff_types.Val_some x), n))
           (Eff_frame.decode_option decode_val s pos limit)
       else if tag = Eff_frame.tag_ctor then
         match Eff_frame.read_ctor s pos limit with
@@ -245,10 +245,10 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
             if p = e' then Some (List.rev acc)
             else match decode_val s p e' with None -> None | Some (x, p'') -> args p'' (x :: acc)
           in
-          Option.map (fun xs -> (A.Val_ctor (index, xs), next')) (args p' [])
+          Option.map (fun xs -> (Eff_types.Val_ctor (index, xs), next')) (args p' [])
       else None
 
-  let val_of_hex (hex : string) : A.val_ =
+  let val_of_hex (hex : string) : val_ =
     match Eff_frame.exact decode_val (bytes_of_hex "a value" hex) with
     | Some v -> v
     | None -> failwith "fixture: a value's bytes are not exactly one value"
@@ -269,13 +269,13 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
     | [ "answer"; f; token; "ok"; hex ] ->
       A.RunDecision_answerAsync
         (int_of_string f, int_of_string token,
-         A.Completion_ofExit (A.Exit_success (val_of_hex hex)))
+         Eff_types.Completion_ofExit (Eff_types.Exit_success (val_of_hex hex)))
     | [ "answer"; f; token; "failed"; tag; message ] ->
       A.RunDecision_answerAsync
         (int_of_string f, int_of_string token,
-         A.Completion_ofExit
-           (A.Exit_failure
-              [ A.Reason_fail (A.Err_tagged (text_of_word tag, text_of_word message), []) ]))
+         Eff_types.Completion_ofExit
+           (Eff_types.Exit_failure
+              [ Eff_types.Reason_fail (Eff_types.Err_tagged (text_of_word tag, text_of_word message), []) ]))
     | [ "interrupt"; who; target ] ->
       A.RunDecision_interruptFrom
         ((if who = "-" then None else Some (int_of_string who)), [], int_of_string target)

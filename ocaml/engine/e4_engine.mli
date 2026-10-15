@@ -122,57 +122,6 @@ module type INSTANCE = sig
       a compile error here. *)
 
   type fiber_id = int  (* :775 *)
-  type ref_key = int  (* :782 *)
-  type 'a reason_annotations = (string * 'a) list  (* :776 *)
-
-  type ('e, 'd, 'i, 'a) reason =  (* :654 *)
-    | Reason_fail of 'e * 'a reason_annotations
-    | Reason_die of 'd * 'a reason_annotations
-    | Reason_interrupt of 'i option * 'a reason_annotations
-
-  type ('e, 'd, 'i, 'a) cause = ('e, 'd, 'i, 'a) reason list  (* :777 *)
-
-  type ('b, 'e, 'd, 'i, 'a) exit_ =  (* :573 *)
-    | Exit_success of 'b
-    | Exit_failure of ('e, 'd, 'i, 'a) cause
-
-  type ('b, 'e, 'd, 'i, 'a) completion =  (* :574 *)
-    | Completion_ofExit of ('b, 'e, 'd, 'i, 'a) exit_
-    | Completion_ofRefGet of ref_key
-
-  type val_ =  (* :208-220 *)
-    | Val_unit
-    | Val_bool of bool
-    | Val_nat of int
-    | Val_str of string
-    | Val_bytes of int list
-    | Val_list of val_ list
-    | Val_pair of val_ * val_
-    | Val_none
-    | Val_some of val_
-    | Val_ctor of int * val_ list
-    | Val_ref of int * int list
-    | Val_handle of int * int
-    | Val_negInt of int
-    | Val_float of int
-
-  (* a handle-free record value (Effect4.Machine.Payload, decisions row 120) *)
-  type payload = val_
-
-  type err =
-    | Err_boom
-    | Err_tag of int
-    | Err_tagged of string * string
-    | Err_text of string
-    | Err_payload of payload
-
-  type defect =  (* :236-241 *)
-    | Defect_notImplemented
-    | Defect_asyncFiber
-    | Defect_badName
-    | Defect_missingService
-    | Defect_user of int
-    | Defect_error of err
 
   type stuck =  (* :651 *)
     | Stuck_unknownFiber of fiber_id

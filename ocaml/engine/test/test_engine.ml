@@ -428,7 +428,7 @@ let clock_profile_check () =
       (fun m -> List.map (fun (w : E4_clock.t I.waiter) -> w.payload)
         (I.stores_of m).timers.wake.waiters)
       (fun m -> match List.assoc_opt 0 (I.completed_exits m) with
-        | Some (I.Exit_success (I.Val_nat 42)) -> true | _ -> false)
+        | Some (Eff_types.Exit_success (Eff_types.Val_nat 42)) -> true | _ -> false)
   in
   let () =
     let module I = Api_engine_ref in
@@ -441,7 +441,7 @@ let clock_profile_check () =
       (fun m -> List.map (fun (w : E4_clock.t I.waiter) -> w.payload)
         (I.stores_of m).timers.wake.waiters)
       (fun m -> match List.assoc_opt 0 (I.completed_exits m) with
-        | Some (I.Exit_success (I.Val_nat 42)) -> true | _ -> false)
+        | Some (Eff_types.Exit_success (Eff_types.Val_nat 42)) -> true | _ -> false)
   in
   let check_instance (module En : E4_engine.ENGINE) =
     let module Projection = E4_diff.Of (En) in
