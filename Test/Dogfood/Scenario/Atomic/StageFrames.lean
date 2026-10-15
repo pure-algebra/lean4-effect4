@@ -20,6 +20,15 @@ theorem edge_owned (root : NativeEff) (table : RowTable) (owner : Nat) (world : 
   | saved held => exact ⟨held.inputOwned, held.outputOwned⟩
   | mapped ready held => cases held <;> exact ⟨rfl, rfl⟩
 
+/-- Actual request saved edges never introduce the stateful scoped-exit callback. -/
+theorem edge_no_scoped (root : NativeEff) (table : RowTable) (owner : Nat) (world : StageWorld.World)
+    (input output : StageWorld.Kind) (frame : NCode) (held : Edge root table owner world input output frame)
+    (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool) :
+    frame ≠ .onExit body (.scopedExit previous scope) flag := by
+  cases held with
+  | saved held => exact held.noScoped body previous scope flag
+  | mapped ready held => cases held <;> (intro equal; cases equal)
+
 /-- An ordered saved suffix cannot hide a different request's intermediate answer class. -/
 theorem path_input_owned (root : NativeEff) (table : RowTable) (owner : Nat) (world : StageWorld.World)
     (input output : StageWorld.Kind) (frames : List NCode)
@@ -35,7 +44,7 @@ theorem edge_future (root : NativeEff) (table : RowTable) (owner : Nat)
     (input output : StageWorld.Kind) (frame : NCode) (held : Edge root table owner before input output frame) :
     Edge root table owner after input output frame := by
   cases held with
-  | saved held => exact .saved ⟨ViewSavedAt.future (model root table owner) (fun view => (interpAt root view table).toPrimInterp) (fun _ => future) held.held, held.inputOwned, held.outputOwned⟩
+  | saved held => exact .saved ⟨ViewSavedAt.future (model root table owner) (fun view => (interpAt root view table).toPrimInterp) (fun _ => future) held.held, held.inputOwned, held.outputOwned, held.noScoped⟩
   | mapped ready held => exact .mapped trivial (StageFinalizer.edge_future before after future owner _ _ _ held)
 
 /-- A request frame retains its actual current code and actual ordered older suffix. -/

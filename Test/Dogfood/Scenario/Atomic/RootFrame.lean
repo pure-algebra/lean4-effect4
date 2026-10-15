@@ -26,8 +26,17 @@ theorem edge_future (root : NativeEff) (table : RowTable) (before after : StageW
   cases held with
   | saved held => exact .saved ⟨ViewSavedAt.future (model root table)
       (fun view => (interpAt root view table).toPrimInterp) (fun _ => future) held.held,
-      held.inputOwned, held.outputOwned⟩
+      held.inputOwned, held.outputOwned, held.noScoped⟩
   | mapped ready held => exact .mapped trivial (DaemonGraph.edge_future root table before after future _ _ _ held)
+
+/-- Actual root saved edges exclude stateful scoped-exit callbacks. -/
+theorem edge_no_scoped (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (input output : StageWorld.Kind) (frame : NCode) (held : Edge root table world input output frame)
+    (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool) :
+    frame ≠ .onExit body (.scopedExit previous scope) flag := by
+  cases held with
+  | saved held => exact held.noScoped body previous scope flag
+  | mapped ready held => exact DaemonGraph.edge_no_scoped root table world _ _ frame held body previous scope flag
 
 /-- The actual saved path retains its root answer classes. -/
 theorem path_owned (root : NativeEff) (table : RowTable) (world : StageWorld.World)

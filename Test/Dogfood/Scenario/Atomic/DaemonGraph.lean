@@ -70,8 +70,10 @@ def LoopAt (root : NativeEff) (_world : StageWorld.World) : EffName → Prop
   | .loop point => LoopPoint root point
   | _ => False
 
-def Semantic (root : NativeEff) (table : RowTable) :=
-  ViewSavedAt (model root table) (fun view => (interpAt root view table).toPrimInterp)
+structure Semantic (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (input output : Unit) (frame : NCode) : Prop where
+  held : ViewSavedAt (model root table) (fun view => (interpAt root view table).toPrimInterp) world input output frame
+  noScoped : ∀ body previous scope flag, frame ≠ .onExit body (.scopedExit previous scope) flag
 
 def Edge (root : NativeEff) (table : RowTable) :=
   RecursiveFamilyEdge (Semantic root table) () (LoopAt root) (fun _ _ => False)
@@ -134,6 +136,7 @@ theorem family (root : NativeEff) (table : RowTable) (view : List (FiberId × Ex
     SavedFamily (model root table view) (interpAt root view table).toPrimInterp (Edge root table) :=
   recursive_family_of (model root table view) (interpAt root view table).toPrimInterp
     (Semantic root table) () (LoopAt root) (fun _ _ => False)
-    (ViewSavedAt.family (model root table) (fun current => (interpAt root current table).toPrimInterp) view)
+    (ViewSavedAt.refined_family (model root table) (fun current => (interpAt root current table).toPrimInterp)
+      (Semantic root table) (fun _ _ _ _ held => held.held) view)
     (hooks root table view)
 end Test.Dogfood.Scenario.Atomic.DaemonGraph

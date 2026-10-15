@@ -20,9 +20,19 @@ theorem edge_future (root : NativeEff) (table : RowTable) (before after : StageW
     (future : Future before after) (input output : Unit) (frame : NCode)
     (held : Edge root table before input output frame) : Edge root table after input output frame := by
   cases held with
-  | saved owned => exact .saved (ViewSavedAt.future (model root table)
-      (fun view => (interpAt root view table).toPrimInterp) (fun _ => future) owned)
+  | saved owned => exact .saved ⟨ViewSavedAt.future (model root table)
+      (fun view => (interpAt root view table).toPrimInterp) (fun _ => future) owned.held, owned.noScoped⟩
   | loop cursor owned => exact .loop cursor owned
+  | iterator cursor impossible => cases impossible
+
+/-- Actual daemon saved edges exclude stateful scoped-exit callbacks. -/
+theorem edge_no_scoped (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (input output : Unit) (frame : NCode) (held : Edge root table world input output frame)
+    (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool) :
+    frame ≠ .onExit body (.scopedExit previous scope) flag := by
+  cases held with
+  | saved held => exact held.noScoped body previous scope flag
+  | loop cursor held => intro equal; cases equal
   | iterator cursor impossible => cases impossible
 
 /-- The unchanged daemon frame remains valid at the same future request world. -/

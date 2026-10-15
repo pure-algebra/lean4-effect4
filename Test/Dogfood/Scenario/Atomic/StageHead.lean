@@ -22,7 +22,7 @@ theorem guarded_exit_edge (root : NativeEff) (table : RowTable) (owner : Nat)
         (resolve root (({point with completed := view} : Point).childWith 1 (reifyExitVal exit)))) :
     Edge root table owner world (.body owner) (.finalized owner) (.onExit body (.fin point) false) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨⟨?_, ?_, ?_⟩, rfl, rfl⟩
+  refine ⟨⟨?_, ?_, ?_⟩, rfl, rfl, (by intro body previous scope flag equal; cases equal)⟩
   · intro view
     refine SavedAt.mk world (StageWorld.Kind.body owner) (StageWorld.Kind.finalized owner) _ ?_ ?_ ?_ ?_ ?_ ?_
     · intro nextWorld future value good absent

@@ -228,6 +228,7 @@ structure Semantic (root : NativeEff) (table : RowTable) (world : StageWorld.Wor
     world input output frame
   inputOwned : Owns input
   outputOwned : Owns output
+  noScoped : ∀ body previous scope flag, frame ≠ .onExit body (.scopedExit previous scope) flag
 
 /-- Root ignored code reuses the daemon's stable heap-preserving answer family. -/
 theorem ignored_embedding (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV)) :
@@ -265,7 +266,7 @@ theorem bound_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Wor
         ((interpAt root view table).contA name answer)) :
     Edge root table world input output (.onSuccess body name) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨⟨?_, ?_, ?_⟩, inputOwned, outputOwned⟩
+  refine ⟨⟨?_, ?_, ?_⟩, inputOwned, outputOwned, (by intro body previous scope flag equal; cases equal)⟩
   · intro view
     exact saved_success (model root table view) (interpAt root view table).toPrimInterp world input output body name
       (fun after future answer good => callback after future view answer good)
@@ -282,7 +283,7 @@ theorem cont_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Worl
     (remaining : point.env.length < 18) (body : NCode) :
     Edge root table world (.rootAnswer point.env.length) .ordinary (.onSuccess body (.cont point)) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨⟨?_, ?_, ?_⟩, True.intro, True.intro⟩
+  refine ⟨⟨?_, ?_, ?_⟩, True.intro, True.intro, (by intro body previous scope flag equal; cases equal)⟩
   · intro view
     apply saved_success (model root table view) (interpAt root view table).toPrimInterp
     · intro after future answer good
@@ -300,7 +301,7 @@ theorem mask_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Worl
     Edge root table world kind kind (.setInterruptible flag) := by
   apply EmbeddedEdgeOver.saved
   refine ⟨⟨fun view => saved_mask (model root table view) (interpAt root view table).toPrimInterp world kind flag,
-    ?_, ?_⟩, owns, owns⟩
+    ?_, ?_⟩, owns, owns, (by intro body previous scope flag equal; cases equal)⟩
   · intro name cursor equal
     cases equal
   · intro name cursor equal
@@ -312,7 +313,7 @@ theorem pause_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Wor
     (held : CodeAt root table world kind next) :
     Edge root table world (.rootPause world.nextId) kind (.onSuccessConst (.yieldNowWith priority) next) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨⟨?_, ?_, ?_⟩, True.intro, owns⟩
+  refine ⟨⟨?_, ?_, ?_⟩, True.intro, owns, (by intro body previous scope flag equal; cases equal)⟩
   · intro view
     apply saved_constant (model root table view) (interpAt root view table).toPrimInterp
     · intro after future value good

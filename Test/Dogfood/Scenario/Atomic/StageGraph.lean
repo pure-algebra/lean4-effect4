@@ -50,9 +50,9 @@ inductive CodeAt (root : NativeEff) (table : RowTable) (owner : Nat) : StageWorl
       CodeAt root table owner world kind (.onSuccessConst (.yieldNowWith priority) next)
   | frontier {world kind point} (zero : point.fuel = 0) :
       CodeAt root table owner world kind (Effect4.Program.frontier point)
-  | suspended {world kind thunk}
-      (next : ∀ view, CodeAt root table owner world kind ((interpAt root view table).suspendBody thunk)) :
-      CodeAt root table owner world kind (.suspend thunk)
+  | suspended {world kind point}
+      (next : ∀ view, CodeAt root table owner world kind ((interpAt root view table).suspendBody (.body point))) :
+      CodeAt root table owner world kind (.suspend (.body point))
   | guardedExit {world body point} (first : CodeAt root table owner world (.body owner) body)
       (callback : ∀ nextWorld, Future world nextWorld → ∀ view exit,
         StageFinalizer.BodyExit nextWorld owner exit →
@@ -184,6 +184,7 @@ structure Semantic (root : NativeEff) (table : RowTable) (owner : Nat)
     world input output frame
   inputOwned : Owns owner input
   outputOwned : Owns owner output
+  noScoped : ∀ body previous scope flag, frame ≠ .onExit body (.scopedExit previous scope) flag
 
 /-- The request graph reuses the checked finalizer restore and merge family. -/
 def Edge (root : NativeEff) (table : RowTable) (owner : Nat) :=
@@ -217,7 +218,7 @@ theorem mask_edge (root : NativeEff) (table : RowTable) (owner : Nat)
     Edge root table owner world kind kind (.setInterruptible flag) := by
   apply EmbeddedEdgeOver.saved
   refine ⟨⟨fun view => saved_mask (model root table owner view) (interpAt root view table).toPrimInterp world kind flag,
-    ?_, ?_⟩, owns, owns⟩
+    ?_, ?_⟩, owns, owns, (by intro body previous scope flag equal; cases equal)⟩
   · intro name cursor equal
     cases equal
   · intro name cursor equal
@@ -233,7 +234,7 @@ theorem bound_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : 
       CauseAt nextWorld input cause → CauseAt nextWorld output cause) :
     Edge root table owner world input output (.onSuccess body name) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨⟨?_, ?_, ?_⟩, inputOwned, outputOwned⟩
+  refine ⟨⟨?_, ?_, ?_⟩, inputOwned, outputOwned, (by intro body previous scope flag equal; cases equal)⟩
   · intro view
     exact saved_success (model root table owner view) (interpAt root view table).toPrimInterp world input output body name
       (fun nextWorld future answer good => callback nextWorld future view answer good) skip
@@ -250,7 +251,7 @@ theorem pause_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : 
     Edge root table owner world (.paused owner kind (world.stages owner) (world.cleaned owner)) kind
       (.onSuccessConst (.yieldNowWith priority) next) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨⟨?_, ?_, ?_⟩, ⟨rfl, owns⟩, owns⟩
+  refine ⟨⟨?_, ?_, ?_⟩, ⟨rfl, owns⟩, owns, (by intro body previous scope flag equal; cases equal)⟩
   · intro view
     apply saved_constant (model root table owner view) (interpAt root view table).toPrimInterp
     · intro after future answer good

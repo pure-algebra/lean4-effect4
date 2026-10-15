@@ -17,7 +17,7 @@ theorem bound_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Wor
     (callback : ∀ view value, CodeAt root table ((interpAt root view table).contA name value)) :
     Edge root table world () () (.onSuccess first name) := by
   apply RecursiveFamilyEdge.saved
-  constructor
+  refine ⟨⟨?_, ?_, ?_⟩, (by intro body previous scope flag equal; cases equal)⟩
   · intro view
     apply saved_success (model root table view) (interpAt root view table).toPrimInterp
     · intro after future answer good
@@ -34,7 +34,7 @@ theorem constant_edge (root : NativeEff) (table : RowTable) (world : StageWorld.
     (first next : NCode) (held : CodeAt root table next) :
     Edge root table world () () (.onSuccessConst first next) := by
   apply RecursiveFamilyEdge.saved
-  constructor
+  refine ⟨⟨?_, ?_, ?_⟩, (by intro body previous scope flag equal; cases equal)⟩
   · intro view
     apply saved_constant (model root table view) (interpAt root view table).toPrimInterp
     · intro after future answer good
