@@ -705,3 +705,46 @@ Result: the narrow build passes, 599 jobs.
 Audit: 666 declarations within `[propext, Quot.sound]`, zero modulo goals and zero planned goals.
 Evidence: [the audit](evidence/ConfigurationAudit.lean) and [its output](evidence/configuration.log).
 No outside implementation run is reached by this proof-only consolidation.
+
+
+### Full source ownership and funding through raw histories
+
+The six remaining M3 goals stay open. Full source history funding is now proved; release custody remains separate.
+Base: `61667b19c`. The commit containing this section records the slice head.
+
+`FinalizerSource.configuration_reachable` retains full source annotations through every raw decision history.
+`FinalizerSource.source_funded_reachable` carries the full source ledger through the same histories.
+The guard supplies distinct race rows and actual queued reply permissions.
+The existing command debit supplies source spending and release-start production.
+The existing place ledger supplies the outside edits.
+No lexical, sequential-scope, race-free, or admitted-reply premise restricts these histories.
+
+`DecisionLift.asCoupled` reuses an independent lift beside another invariant.
+`Guard.source_coupled` now uses it.
+The scope-link transport also moves to the common configuration proof.
+Native evaluation uses the shared primitive command-word theorem and existing pending, scope, frame, and scheduler facts.
+
+Placement: scope-lifetime-finalization R11.
+Consumer: `FinalizerRun.once_placed_outside_census`.
+The source ledger counts release-start production explicitly.
+A separate release-custody proof must bound that production before the once-only registration conclusion follows.
+These results establish no progress or host agreement.
+
+Changed files:
+`src/Effect4/Laws/Machine/LiftCoupledFact.lean`,
+`src/Effect4/Laws/Program/Guard/SourceLift.lean`,
+`src/Effect4/Laws/Program/CodeClosure/ConfigurationEdits.lean`,
+`src/Effect4/Laws/Program/NativeEvaluation.lean`,
+`src/Effect4/Laws/Program/FinalizerConfigurationNative.lean`,
+`src/Effect4/Laws/Program/FinalizerConfiguration.lean`,
+`src/Effect4/Laws/Program/FinalizerSourceHistory.lean`, and the Laws root.
+This receipt and its audit evidence accompany the proofs.
+
+Commands through `scratch/lean-slot.sh`:
+`lake build Effect4.Laws.Program.FinalizerConfiguration Effect4.Laws.Program.Guard.SourceLift`;
+`lake build Effect4.Laws.Program.FinalizerSourceHistory Effect4.Laws.Program.Guard.SourceLift`;
+`lake env lean docs/research/2026-10-14-meanings/evidence/FinalizerSourceHistoryAudit.lean`.
+Results: both builds pass, 718 and 720 jobs respectively.
+Audit: 259 declarations within `[propext, Quot.sound]`, zero modulo goals and zero planned goals.
+Evidence: [the audit](evidence/FinalizerSourceHistoryAudit.lean) and [its output](evidence/finalizer-source-history.log).
+No outside implementation run is reached by these proof-only changes.

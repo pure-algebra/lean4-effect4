@@ -124,6 +124,33 @@ structure CoupledDecision : Prop extends CoupledFold p interp J I O P Q R where
         (driveStep interp {m with state := (prepareAsyncAnswer interp m id token answer).1}
           (.resume id token (prepareAsyncAnswer interp m id token answer).2) [.drainDue]).2
 
+/-- An independent decision lift supplies the relative fields without another driver proof.
+Consumers: lexical source ownership and full finalizer source ownership beside the common guard. -/
+theorem DecisionLift.asCoupled
+    {B : V → RunMachine ν σ β ε δ ι α χ St κ φ η → RunDecision ν σ β ε δ ι α → Prop}
+    (source : DecisionLift p interp P Q R B)
+    (admission : ∀ w v m id token answer, J w m → P v m →
+      A w m (.answerAsync id token answer) → B v m (.answerAsync id token answer)) :
+    CoupledDecision (p := p) (interp := interp) (J := J) (I := I) (O := O)
+      (A := A) (P := P) (Q := Q) (R := R) where
+  step := fun tasks _ extra m command rest running _ owned =>
+    source.step tasks extra m command rest running owned
+  nil := source.nil
+  drain := fun _ extra m owner fiber _ owned found => source.drain extra m owner fiber owned found
+  ran := fun _ extra m owner task _ owned => source.ran extra m owner task owned
+  task := fun _ extra m owner task tasks _ owned running _ pending =>
+    source.task extra m owner task tasks owned running pending
+  skip := source.skip
+  clockNone := fun _ extra m millis state _ owned running clock => source.clockNone extra m millis state owned running clock
+  clockSome := fun _ extra m millis owed state _ owned running clock => source.clockSome extra m millis owed state owned running clock
+  evaluate := fun _ extra m id _ owned running => source.evaluate extra m id owned running
+  yield := fun _ extra m id verdict _ owned => source.yield extra m id verdict owned
+  interrupt := fun _ extra m who reason target fiber _ owned found => source.interrupt extra m who reason target fiber owned found
+  middleware := fun _ extra m _ owned => source.middleware extra m owned
+  answer := fun world extra m id token answer guarded owned running admitted =>
+    source.answer extra m id token answer owned running
+      (admission world extra m id token answer guarded owned admitted)
+
 /-- The existing decision producer carries the added machine and queue assertions jointly. -/
 theorem DecisionLift.withCoupledFact (base : DecisionLift o interp J I O A)
     (facts : CoupledDecision (p := p) (interp := interp) (J := J) (I := I) (O := O)

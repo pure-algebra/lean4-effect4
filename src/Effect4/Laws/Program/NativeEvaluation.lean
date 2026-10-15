@@ -332,26 +332,13 @@ theorem scope_link_at (root : NativeEff) (completed) (table : RowTable) (mode : 
   · cases found
     exact scope_register_at root state.scopes scope state.nextName _ owned trivial
 
-/-- A queued scope link retains the configuration before its addressed message. -/
+/-- A queued scope link instantiates the shared configuration transport. -/
 theorem link_edits_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (owned : ConfigurationAt root m) :
-    ConfigurationAt root (linkScopeEdits (interpAt root completed table) m mode scope target who extra).1 := by
-  unfold linkScopeEdits
-  split
-  · exact configuration_halt root m _ owned
-  · split
-    · exact configuration_halt root m _ owned
-    · exact configuration_emit root m _ owned
-  · split
-    · exact configuration_halt root m _ owned
-    · split
-      · exact owned
-      · split
-        · exact configuration_halt root m _ owned
-        · rename_i state key found
-          exact configuration_emit root _ _ (configuration_store root m state owned
-            (scope_link_at root completed table mode scope target m.state state key owned.scopes found))
+    ConfigurationAt root (linkScopeEdits (interpAt root completed table) m mode scope target who extra).1 :=
+  CodeClosure.Configuration.link_edits_at (configurationModel root) root completed table
+    (scope_link_at root completed table) m mode scope target who extra owned
 
 /-- The eager scope adapter applies the same source-preserving message word. -/
 theorem link_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
@@ -359,7 +346,8 @@ theorem link_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMac
     (extra : ReasonAnnotations Ann) (owned : ConfigurationAt root m) :
     ConfigurationAt root (linkScope (interpAt root completed table) m mode scope target who extra).1 ∧
       CommandsAt root (linkScope (interpAt root completed table) m mode scope target who extra).2 :=
-  fiber_edits_at root _ _ (link_edits_at root completed table m mode scope target who extra owned)
+  CodeClosure.Configuration.link_at (configurationModel root) root completed table
+    (fun _ => True.intro) (scope_link_at root completed table) m mode scope target who extra owned
 
 /-- Parallel closing launches exactly the finalizer programs owned by its source captures. -/
 theorem fork_finalizers_at (root : NativeEff) (completed) (table : RowTable)

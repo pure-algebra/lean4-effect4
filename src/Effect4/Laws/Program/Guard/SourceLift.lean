@@ -24,33 +24,8 @@ theorem source_coupled (root : NativeEff) (fragment : SourceScope.Fragment root)
       (Q := fun _ _ commands => SourceScope.CommandsAt root commands)
       (R := fun _ _ tasks => SourceScope.TasksAt root tasks) := by
   letI := evaluatorFor root table
-  have source := SourceScope.reply_decision_lift root fragment table
-  refine {
-    step := ?_, nil := source.nil, drain := ?_, ran := ?_, task := ?_, skip := source.skip,
-    clockNone := ?_, clockSome := ?_, evaluate := ?_, yield := ?_, interrupt := ?_,
-    middleware := ?_, answer := ?_ }
-  · intro tasks world extra m command rest running guarded owned
-    exact source.step tasks extra m command rest running owned
-  · intro world extra m owner fiber guarded owned found
-    exact source.drain extra m owner fiber owned found
-  · intro world extra m owner task guarded owned
-    exact source.ran extra m owner task owned
-  · intro world extra m owner task tasks guarded owned running reserved pending
-    exact source.task extra m owner task tasks owned running pending
-  · intro world extra m millis state guarded owned running clock
-    exact source.clockNone extra m millis state owned running clock
-  · intro world extra m millis owed state guarded owned running clock
-    exact source.clockSome extra m millis owed state owned running clock
-  · intro world extra m id guarded owned running
-    exact source.evaluate extra m id owned running
-  · intro world extra m id verdict guarded owned
-    exact source.yield extra m id verdict owned
-  · intro world extra m who reason target fiber guarded owned found
-    exact source.interrupt extra m who reason target fiber owned found
-  · intro world extra m guarded owned
-    exact source.middleware extra m owned
-  · intro world extra m id token answer guarded owned running admitted
-    exact source.answer extra m id token answer owned running trivial
+  exact (SourceScope.reply_decision_lift root fragment table).asCoupled
+    (by intros; trivial)
 
 /-- The command driver retains source ownership and its guard in one decision invariant. -/
 theorem source_decision_lift (root : NativeEff) (fragment : SourceScope.Fragment root) (table : RowTable) :

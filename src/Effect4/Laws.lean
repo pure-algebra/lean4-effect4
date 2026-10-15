@@ -417,6 +417,7 @@ import Effect4.Laws.Program.NativePrimitiveDefault
 
 -- M3: one configuration transport with source annotations as instances.
 import Effect4.Laws.Program.CodeClosure.ConfigurationNativeMetadata
+import Effect4.Laws.Program.FinalizerSourceHistory
 
 /-!
 # Effect4 proof graph

@@ -51,4 +51,40 @@ theorem fiber_edits_at (model : Model) (failure : ∀ cause, model.code (.failur
     subst command
     trivial
 
+/-- A queued scope link retains the configuration before its addressed message. -/
+theorem link_edits_at (model : Model) (root : NativeEff) (completed) (table : RowTable)
+    (link : ∀ mode scope fiber (state next : Stores) key, model.scopes state.scopes →
+      (interpAt root completed table).scopeLinkFiber mode scope fiber state = some (next, key) →
+      model.scopes next.scopes) (m : NativeMachine)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (who : Option FiberId)
+    (extra : ReasonAnnotations Ann) (owned : ConfigurationAt model m) :
+    ConfigurationAt model (linkScopeEdits (interpAt root completed table) m mode scope target who extra).1 := by
+  unfold linkScopeEdits
+  split
+  · exact configuration_halt model m _ owned
+  · split
+    · exact configuration_halt model m _ owned
+    · exact configuration_emit model m _ owned
+  · split
+    · exact configuration_halt model m _ owned
+    · split
+      · exact owned
+      · split
+        · exact configuration_halt model m _ owned
+        · rename_i state key found
+          exact configuration_emit model _ _ (configuration_store model m state owned
+            (link mode scope target m.state state key owned.scopes found))
+
+/-- Actual linking applies the same source-preserving addressed word. -/
+theorem link_at (model : Model) (root : NativeEff) (completed) (table : RowTable)
+    (failure : ∀ cause, model.code (.failure cause))
+    (link : ∀ mode scope fiber (state next : Stores) key, model.scopes state.scopes →
+      (interpAt root completed table).scopeLinkFiber mode scope fiber state = some (next, key) →
+      model.scopes next.scopes) (m : NativeMachine)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (who : Option FiberId)
+    (extra : ReasonAnnotations Ann) (owned : ConfigurationAt model m) :
+    ConfigurationAt model (linkScope (interpAt root completed table) m mode scope target who extra).1 ∧
+      CommandsAt model (linkScope (interpAt root completed table) m mode scope target who extra).2 :=
+  fiber_edits_at model failure _ _ (link_edits_at model root completed table link m mode scope target who extra owned)
+
 end Effect4.Program.CodeClosure.Configuration
