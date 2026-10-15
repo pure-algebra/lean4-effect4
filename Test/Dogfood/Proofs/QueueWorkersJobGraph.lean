@@ -2,6 +2,7 @@ import Test.Dogfood.Proofs.QueueWorkersNotificationFamily
 import Test.Dogfood.Proofs.QueueWorkersJobBinding
 import Test.Dogfood.Proofs.QueueWorkersTakeSites
 import Test.Dogfood.Proofs.QueueWorkersWithdrawalSites
+import Test.Dogfood.Proofs.QueueWorkersRetrySites
 import Test.Dogfood.Proofs.QueueWorkersReadonlySource
 
 /-!
@@ -15,6 +16,26 @@ namespace Test.Dogfood.Proofs.QueueWorkersJobGraph
 open Effect4 Effect4.Machine Effect4.Program
 open Test.Dogfood.Scenario Test.Dogfood.Scenario.QueueWorkers
 open QueueWorkersCustodyFlow
+
+/-- A saved retry hook retains its actual source, immutable request key and fixed root slots. -/
+structure RetryAt (total : Nat) (world : QueueWorkersCustodyFlow.World) (token worker : Nat) (point : Point) : Prop where
+  source : SourceScope.At (Programs.queueProgram total) point
+  path : point.path = QueueWorkersRetrySites.path worker
+  leading : AnswerSlots.Prefix InitialSlots.bindings point.env
+  key : ∃ key, world.requests.keys token = some key ∧ point.env[worker + 8]? = some (.promise key)
+
+/-- A retry name survives future worlds without assuming its request remains waiting. -/
+theorem RetryAt.future {total : Nat} {before after : QueueWorkersCustodyFlow.World} {token worker : Nat} {point : Point}
+    (held : RetryAt total before token worker point) (future : Future before after) :
+    RetryAt total after token worker point := by
+  obtain ⟨key, published, captured⟩ := held.key
+  exact ⟨held.source, held.path, held.leading, key, future.1.2 token key published, captured⟩
+
+/-- Refreshing the actual completed-exit view retains the retry's source and literal request key. -/
+theorem RetryAt.view {total : Nat} {world : QueueWorkersCustodyFlow.World} {token worker : Nat} {point : Point}
+    (held : RetryAt total world token worker point) (view : List (FiberId × ExitV)) :
+    RetryAt total world token worker {point with completed := view} :=
+  ⟨held.source, held.path, held.leading, held.key⟩
 
 /-- The saved success binder consumes its classified input at the actual future world. -/
 inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorkersCustodyFlow.World → Kind → NCode → Prop
@@ -58,6 +79,11 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
       (phase : ValueAt world (.restoreSnapshot owner token option exit) .unit) :
       CodeAt total table owner world (.restoreSnapshot owner token option exit)
         (.sync (.op (.refModify ⟨0⟩ (QueueWorkersWithdrawalSites.term worker) point.env)))
+  | retry {world token worker point cursor}
+      (member : worker ∈ [1, 2])
+      (held : RetryAt total world token worker point)
+      (typed : ValueAt world (.captured owner token (.takeOption token)) cursor) :
+      CodeAt total table owner world (.captured owner token (.takeOption token)) (.whileLoop (.loop point) cursor)
   | awaiting {world token key}
       (selected : Owns world owner token)
       (waiting : world.requests.custody.requests token = .waiting) :
