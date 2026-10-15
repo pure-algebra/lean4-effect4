@@ -69,13 +69,6 @@ theorem resume_value (view : HostTimeoutFlow.View) (state : Stores) (input outpu
   · exact supplied
   · exact pure
 
-/-- Every admitted actual recorded cause preserves the numeric failure assertion when combined. -/
-theorem absorbs (view : HostTimeoutFlow.View) (state : Stores) (recorded : Option CauseV)
-    (clean : HostTimeoutNumberPhaseFinalizer.Allowed state recorded) :
-    AnswerFlow.Contextual.AbsorbsInterrupt (model view) state recorded := by
-  intro interrupted present kind cause good
-  exact cause_combine state kind cause interrupted good (clean interrupted present)
-
 /-- Actual failure replacement reads the same recorded cause at every passed saved frame. -/
 theorem cause_frame (view : HostTimeoutFlow.View) (state : Stores) (input output : Kind)
     (frame : HostTimeoutFrames.NativeFrame) (cause : CauseV) (next : NCode)
@@ -103,7 +96,7 @@ theorem cause_frame (view : HostTimeoutFlow.View) (state : Stores) (input output
         (admitted := admitted) (model view) (HostTimeoutFlow.interpreter view).toPrimInterp Edge
         HostTimeoutNumberPhaseFinalizer.Allowed contextual state incoming middle head scratch reason callback good
         (by simpa only [Bool.true_and] using skipped)
-        (absorbs view state _ admitted)
+        (HostTimeoutNumberPhaseFinalizer.absorbs view state (head.ensure scratch).1 admitted)
       exact ⟨delivered, permitted⟩
   obtain ⟨incoming, middle, head, rest, scratch, callback, path, permitted, empty, same, replaced, suffix⟩ :=
     AnswerFlow.External.getCont_replacement_hooked_recorded Edge hook_mask
@@ -125,5 +118,36 @@ theorem cause_frame (view : HostTimeoutFlow.View) (state : Stores) (input output
     rw [mask, Prim.ensure_setInterruptible_stack, empty, List.nil_append] at suffix
     rw [suffix]
     exact path
+
+/-- A whole actual cause return retains the numeric path through actual discards and mask replacement. -/
+theorem resume_cause (view : HostTimeoutFlow.View) (state : Stores) (input output : Kind)
+    (frame : HostTimeoutFrames.NativeFrame) (cause : CauseV) (provided : Option ExitV)
+    (good : CauseAt state input cause)
+    (saved : Effect4.Contracts.Path (Edge state) input output frame.stack)
+    (recorded : HostTimeoutNumberPhaseFinalizer.Allowed state frame.interruptedCause)
+    (clear : frame.deferredInterrupt = false)
+    (supplied : ∀ incoming delivered, (frame.getCont .contE true (some cause)).carriedCause = some delivered →
+      CauseAt state incoming delivered →
+      ∀ exit ∈ provided.map (frame.getCont .contE true (some cause)).deliveredExit,
+        AnswerFlow.ExitAt (model view) state incoming exit)
+    (pure : ∀ selected, (frame.getCont .contE true (some cause)).answer = .frame selected →
+      ∀ delivered, (frame.getCont .contE true (some cause)).carriedCause = some delivered →
+      AnswerFlow.programOf (model view) state selected
+        ((provided.map (frame.getCont .contE true (some cause)).deliveredExit).getD (.failure delivered)) = none) :
+    AnswerFlow.External.RunningStep (model view) Edge state output
+      (frame.resumeCause (HostTimeoutFlow.interpreter view).toPrimInterp cause provided).1 := by
+  apply AnswerFlow.External.resume_cause_local (model view) Edge (HostTimeoutFlow.interpreter view).toPrimInterp
+    HostTimeoutNumberPhaseFinalizer.Allowed
+    (AnswerFlow.SavedFamily.contextual (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
+      Edge HostTimeoutNumberPhaseFinalizer.Allowed (family view)) hook_mask
+    state input output frame cause provided good saved
+    (HostTimeoutNumberPhaseFinalizer.absorbs view state frame recorded) recorded
+  · intro reason actual
+    rw [FrameFiber.getCont_answer_cause frame .contE true (some cause)] at actual
+    exact False.elim (FrameFiber.getCont_never_defers frame .contE true reason clear actual)
+  · intro next actual
+    exact cause_frame view state input output frame cause next good saved recorded actual
+  · exact supplied
+  · exact pure
 
 end Test.Dogfood.Proofs.HostTimeoutNumberReplacement

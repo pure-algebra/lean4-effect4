@@ -1186,3 +1186,28 @@ The build passes with 1218 jobs.
 The audit checks 120 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 The shared return and empty-stack interfaces come from Atomic's checked commit `e71339659`, integrated here as `bca9a8e7f`.
 This proof-only slice reaches no outside implementation gate.
+
+
+## Actual terminal cleanup barrier
+
+The numeric return producer now joins running callbacks with the actual exit permission when the saved stack empties.
+The actual native terminal dispatcher uses that producer or the existing selected finalizer producer.
+Its finished result retains the original attempt's cleanup assertion.
+The terminal consumer derives cleanup readiness from the actual finished native outcome before changing the attempt's role.
+The failure-return connector reuses the existing recorded-cause combination proof.
+
+Placement: scope-lifetime-finalization R11 and translation-simulation R10; the active command settlement of both Timeout goals consumes this barrier.
+Reach: the actual pending fiber, terminal primitive, uniform saved path, cleared deferred interruption, and actual finished outcome.
+The joined whole-fiber settlement, source role producer, fixed-budget history, and both original goals remain open.
+This result establishes no progress or host agreement.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-return-check.sh
+```
+
+The build passes with 1252 jobs.
+The audit checks 133 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The terminal leaf imports the new return leaf.
+This proof-only slice reaches no outside implementation gate.

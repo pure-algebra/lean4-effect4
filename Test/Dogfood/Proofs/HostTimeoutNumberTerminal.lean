@@ -1,4 +1,4 @@
-import Test.Dogfood.Proofs.HostTimeoutNumberPhaseFinalizer
+import Test.Dogfood.Proofs.HostTimeoutNumberReturn
 import Effect4.Laws.Program.Guard.Interruption
 import Test.Dogfood.Proofs.HostTimeoutNumberConfiguration
 
@@ -87,5 +87,21 @@ theorem finished_cleanup (context : CountContext) (view : HostTimeoutFlow.View) 
         change context.before.count + 1 = context.before.cleanups.length + 1
         rw [context.cleanups])) exit) :
     CleanupReady state := attempt_cleanup_ready context state view exit good
+
+/-- An actual finished attempt establishes the cleanup barrier before its numeric role can retire. -/
+theorem finished_actual (context : CountContext) (view : HostTimeoutFlow.View) (machine : NativeMachine)
+    (fiber : SourceScope.SourceFiber) (yielding : Bool) (selected exit : ExitV)
+    (held : FiberAt machine (.pending context) fiber)
+    (current : fiber.frame.current = Prim.ofExit selected) (clear : fiber.frame.deferredInterrupt = false)
+    (finished : (evaluatePrim.finalizerOr (HostTimeoutFlow.interpreter view) machine fiber yielding selected).outcome =
+      .finished exit) : CleanupReady machine.state := by
+  obtain ⟨input, code, saved⟩ := held.frame.2
+  have owned : HostTimeoutNumberPhaseFlow.CodeAt machine.state input (Prim.ofExit selected) := current ▸ code
+  have good := HostTimeoutNumberPhaseFinalizer.exit_class machine.state input selected owned
+  have permission := HostTimeoutNumberReturn.native_exit view input _ machine fiber yielding selected current good
+    saved held.recorded clear
+  unfold AnswerFlow.External.Native.ResultAt at permission
+  rw [finished] at permission
+  exact attempt_cleanup_ready context machine.state view exit permission
 
 end Test.Dogfood.Proofs.HostTimeoutNumberTerminal
