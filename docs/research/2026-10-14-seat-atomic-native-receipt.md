@@ -239,3 +239,55 @@ All commands run through `/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh`.
 The next proof joins remaining native park and store results with active machine, queue and detached-task assertions.
 The checked allocation attachment then carries those actual assertions through control histories.
 No bounded or host-only evidence replaces that open producer.
+
+## Actual root and active machine assertions
+
+The coordinator must retain the open history obligation.
+`Atomic.Store.shop_stages` remains a planned goal with its original statement.
+
+The prior native head is `9ebfe742d`.
+The shared producer head is `0efa224a1`; the Atomic head is `020ec4e73`.
+Skip `bc7b8ec80`: it copies the coordinator's checked parked-shape dependencies without changes.
+
+`StatePreservation.primitive_at` generalizes the existing primitive proof over actual current-operation permissions.
+Its former unconditional hook theorem remains a wrapper.
+`NativeFrameRows.primitive_row_facts` retains whole stored rows through the existing primitive producer.
+`NativeActionRows` supplies whole-row instances through its existing action proof.
+The former frame assertions remain wrappers.
+`PrimitiveCounter.evaluatePrim_nextId_of_actions` isolates allocation to the actual action branch.
+The former nonaction counter theorem remains a wrapper.
+
+The complete actual root native and charged-iteration producers retain one chosen world.
+They join the heap, allocation counter, returned root and nonacting source roles.
+The actual action producer also retains its exact store equality.
+The daemon and request producers supply their actual stored-row and counter assertions.
+
+`StageConfiguration.Configuration` joins heap, freshness, counter, live or dormant rows and publication metadata.
+Recorded-cause metadata applies only to actual request identities.
+No request exists before entry, and actual child births start without a recorded cause.
+`Configuration.published` reads actual request exits.
+`Configuration.stages` supplies the unchanged original stage observation from the complete machine assertion.
+
+The checked edit producers cover actual observer admission, token cleanup and admitted interruption.
+The checked disposition producer covers continuation, delivery, parking, completion, commands and stopped cuts.
+A completed running row remains dormant until its actual finish command publishes the certified exit.
+Live queued commands retain stronger actual source-role permission separately.
+`StageStoreFields` proves actual root, daemon and request evaluation retains the deferred store.
+It consumes `primitive_at` and the existing reference-kernel store equation.
+
+These declarations serve store-typing R4 and reactive-scheduling R11 through `Atomic.Store.shop_stages`.
+They establish no progress, lowered execution claim or host agreement.
+The actual joint command and outside-decision producer remains open.
+The next consumer joins `NativeCut`, command classes and the checked allocation attachment.
+
+Changed paths are four shared modules in `0efa224a1` and twelve Atomic modules in `020ec4e73`.
+All Lean commands use the serialized slot script.
+
+- `lake build Test.Dogfood.Scenario.Atomic.StageStoreFields` succeeds, 1306 jobs.
+- `lake env lean scratch/audit-atomic-root-rows.lean` succeeds.
+- The audit reports 398 and 10 declarations within `[propext, Quot.sound]`.
+- Both audit groups report zero planned goals and zero declarations modulo planned goals.
+
+The pending initializer does not yet certify an empty deferred due list at entry.
+Timeout owns that shared strengthening through the existing allocation producer.
+The Atomic native join remains under construction and does not assume that missing fact.
