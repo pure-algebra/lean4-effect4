@@ -24,7 +24,7 @@ control of the host protocol.
   to a worker's call. A reply application does not drain a posted helper, so a flush follows
   each one (section 2). `runsOf` lists each script once, as a named run.
 * **Observation.** `Observation`, eleven fields: the assignment, the queue's cell up to its
-  handles, the fed jobs, the reply receipts, the reply applications, the retired calls, the
+  handles, the resolved jobs entering feeder offers, the reply receipts, the reply applications, the retired calls, the
   opened and the released connections, the count of finished jobs, the root's exit and the work
   left.
 * **Claim.** `queueWorkers` assembles seven clauses. Three are proved laws: `receipt_inert`,
@@ -141,8 +141,10 @@ Two premises stand in each statement, and a third in two of them.
 * **Rest**, for the two statements about a state between two acts of a host: `atRest`, on a
   script of host acts (`Move.hostAct`). -/
 
-/-- **No job is held more often than the host fed it.** Under every script of a funded run, each
-job stands among the held jobs at most as often as among the fed ones. The held jobs are the
+/-- **No job is held more often than it enters the feeder's offer continuation.**
+Fed counts resolved values reaching Queue.offer, including delayed reference-read completions.
+An accepted reply application that never reaches this continuation feeds no job.
+Under every script of a funded run, each job occurs among held jobs at most as often as among fed jobs. The held jobs are the
 buffered ones, the jobs of the pending offers, the assigned ones, and the job that the root's
 poll took. So the queue and the workers duplicate no job and invent none: a take delivers its
 job to one worker, once.
@@ -165,11 +167,11 @@ Consumer: the scenario's claim `queueWorkers`. Its controls are finite runs, and
 receipt records a bounded search. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem held_within_fed : HeldWithinFed := by
-  intro total fuel b moves hb terminal hf
-  obtain ⟨a, shows, conserved⟩ := (Assertions.jobs_script total fuel b moves hb hf) terminal
+  intro total fuel b moves hb hf
+  obtain ⟨a, shows, conserved⟩ := Assertions.jobs_script total fuel b moves hb hf
   exact Accounting.heldWithin_of_ledger shows conserved
 
-/-- **Each fed job is held, but for one job of a feeder that is gone.** Under every script of
+/-- **Each job entering an offer is held, but for one job of a feeder that is gone.** Under every script of
 host acts, where the run is funded and at rest, the fed jobs are no more than the held ones. They
 may be one more where the feeder's connection is released. With `held_within_fed` that is the
 exact account. A take that commits keeps its job when its worker is cancelled. A request that is

@@ -21,8 +21,8 @@ def moves : List Move := parked ++ [.receive feederCall (.ofRefGet ⟨4⟩), .ap
 def run : Option Run := (Test.Dogfood.P3WorkerQueue.built? (crew 2)).map fun b => Scenario.play (opened b) moves
 
 /-- A conserving job ledger with no fed entries can show no held jobs. -/
-theorem jobs_empty_fed (s : Run) (jobs : Assertions.RawJobs s) (empty : (observe s).fed = []) :
-    (observe s).held = [] := by
+theorem jobs_empty_fed (s : Run) (jobs : Assertions.OriginalRawJobs s) (empty : (Original.observe s).fed = []) :
+    (Original.observe s).held = [] := by
   obtain ⟨ledger, shows, conserved⟩ := jobs
   have no_fed : ledger.fed = [] := List.map_eq_nil_iff.mp (shows.fed.symm.trans empty)
   have lengths := conserved.length_eq
@@ -33,11 +33,11 @@ theorem jobs_empty_fed (s : Run) (jobs : Assertions.RawJobs s) (empty : (observe
   rfl
 
 /-- The actual admitted and funded run holds job zero while its original fed observation is empty. -/
-theorem data : run.map (fun s => ((observe s).fed, (observe s).held, funded s)) =
+theorem data : run.map (fun s => ((Original.observe s).fed, (Original.observe s).held, funded s)) =
     some ([], [.nat 0], true) := by
   kernel_rfl
 /-- The actual delayed-reference session lies outside the terminal-reply profile. -/
-theorem outside_profile : run.map terminalRepliesCheck = some false := by
+theorem outside_profile : run.map Original.terminalRepliesCheck = some false := by
   kernel_rfl
 
 /-- A resumed delayed reference completion still contains unexecuted code in the trace. -/
@@ -49,8 +49,17 @@ def delayedResume : RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx →
 theorem resumed_delayed : run.map (fun s => s.machine.trace.any delayedResume) = some true := by
   kernel_rfl
 
+/-- The corrected reading includes the delayed value when it reaches the actual offer continuation. -/
+theorem corrected_data : run.map (fun s => ((observe s).fed, (observe s).held, funded s)) =
+    some ([.nat 0], [.nat 0], true) := by
+  kernel_rfl
+
+/-- The original delayed-completion control passes the corrected conservation observation. -/
+theorem corrected_reading : run.map (fun s => (observe s).heldWithin) = some true := by
+  kernel_rfl
+
 /-- The admitted funded session refutes the original conserving-ledger assertion. -/
-theorem refutes : ∃ s : Run, run = some s ∧ funded s = true ∧ ¬ Assertions.RawJobs s := by
+theorem refutes : ∃ s : Run, run = some s ∧ funded s = true ∧ ¬ Assertions.OriginalRawJobs s := by
   have measured := data
   cases selected : run with
   | none => rw [selected] at measured; cases measured
