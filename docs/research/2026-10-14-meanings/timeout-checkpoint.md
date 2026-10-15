@@ -361,3 +361,35 @@ The actual initialized producer must still supply the selected singleton and its
 The audit checks `NumberPhaseFlow`, `NumberRootModel`, `NumberRootResult`, and `Timeout.OriginControl` in their full module namespaces.
 The actual control advancement, contextual source catch suffix, initialized history, and both original endpoints remain open.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Contextual source suffix
+
+This slice changes neither original Timeout endpoint.
+Its concepts are scope-lifetime-finalization R11 and translation-simulation R10.
+Its consumer is the actual root return component of the coupled numeric producer.
+Its reach is the actual source encoder and catch, with the same popped frame's recorded interruption.
+It establishes no initialized history or command closure.
+
+`NumberRootSuffix.local_family` joins those source callbacks to the existing contextual saved-frame proof.
+`catch_skipped` uses the actual ensured frame's recorded interruption premise.
+`control_path` retains the actual source form, encoder, catch, and ordered suffix.
+`cause_selected` consumes that path through the shared contextual pop producer.
+`retry_declared` identifies the exact selected singleton recorded by the source form.
+The returned retry assertion retains the actual predicate result and selected typed-failure provenance.
+
+The unchanged shared dependencies are Atomic's `7d19775dd` and the coordinator's `d74d61c58`.
+The latter supplies contextual embedding composition and the legacy unconditional instance.
+These shared files are dependencies, not Timeout edits.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRootSuffix` | Passed, 1215 jobs |
+| `lake env lean scratch/TimeoutSuffixAudit.lean` | The output below |
+
+```text
+#axiom_audit: 81 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks `NumberRootModel` and `NumberRootSuffix` in their full module namespaces.
+The actual loop continuation, coupled native and command producer, initialized history, and both original endpoints remain open.
+No execution behaviour changes, so this slice reaches no outside implementation gate.

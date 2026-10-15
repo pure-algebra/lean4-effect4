@@ -17,21 +17,35 @@ open HostTimeoutFlow HostTimeoutNumberPhase HostTimeoutNumberRootControl
 inductive Kind
   | read (phase : Phase)
   | numeric (kind : HostTimeoutNumberPhaseFlow.Kind)
+  | retry (phase : Phase) (n : Fin 4) (delay : Nat) (previous : Val)
+
+/-- A retry result retains its exact selected success or the actual tested failure provenance. -/
+def RetryValue (state : Stores) (phase : Phase) (n : Fin 4) (delay : Nat) (previous value : Val) : Prop :=
+  ∃ selected, HostTimeoutNumberPhaseFlow.At (phase.form phase.count selected) state ∧
+    ((∃ body, selected = .success body ∧ value = .list [.some body, .none]) ∨
+      ∃ cause error, HostTimeoutNumberPhaseFlow.TypedFrom selected cause ∧
+        caughtErrorValue? (HostTimeoutSlots.ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous)
+          HostTimeoutSource.retryTest cause = some error ∧ value = .list [.none, .some error])
 
 /-- The readonly input retains the current exact heap without restricting its delivered value. -/
 def ValueAt (state : Stores) : Kind → Val → Prop
   | .read phase, _ => HostTimeoutNumberPhaseFlow.At phase state
   | .numeric kind, value => HostTimeoutNumberPhaseFlow.ValueAt state kind value
+  | .retry phase n delay previous, value => RetryValue state phase n delay previous value
 
 /-- The readonly input retains the current exact heap without changing the actual delivered cause. -/
 def CauseAt (state : Stores) : Kind → CauseV → Prop
   | .read phase, _ => HostTimeoutNumberPhaseFlow.At phase state
   | .numeric kind, cause => HostTimeoutNumberPhaseFlow.CauseAt state kind cause
+  | .retry phase _ _ _, cause => HostTimeoutNumberPhaseFlow.CauseAt state (.published phase) cause
 
 /-- The readonly code refinement survives callback selection instead of being forgotten at the pop. -/
 def CodeAt (state : Stores) : Kind → NCode → Prop
   | .read phase, code => ReadCode code ∧ HostTimeoutNumberPhaseFlow.At phase state
   | .numeric kind, code => HostTimeoutNumberPhaseFlow.CodeAt state kind code
+  | .retry phase n delay previous, code =>
+      (∃ value, code = .success value ∧ RetryValue state phase n delay previous value) ∨
+      ∃ cause, code = .failure cause ∧ HostTimeoutNumberPhaseFlow.CauseAt state (.published phase) cause
 
 /-- This model changes proof assertions on existing code and leaves the interpreter unchanged. -/
 def model (view : View) : AnswerFlow.Model (ν := EffName) (σ := EffThunk) (β := Val)
@@ -48,11 +62,13 @@ def model (view : View) : AnswerFlow.Model (ν := EffName) (σ := EffThunk) (β 
     cases kind with
     | read phase => exact ⟨.success value, good⟩
     | numeric kind => exact HostTimeoutNumberPhaseFlow.CodeAt.success kind value good
+    | retry phase n delay previous => exact Or.inl ⟨value, rfl, good⟩
   failure := by
     intro state kind cause good
     cases kind with
     | read phase => exact ⟨.failure cause, good⟩
     | numeric kind => exact HostTimeoutNumberPhaseFlow.CodeAt.failure kind cause good
+    | retry phase n delay previous => exact Or.inr ⟨cause, rfl, good⟩
 
 /-- Every existing numeric saved family embeds unchanged into the refined root model. -/
 theorem numeric_embedding (view : View) :
@@ -149,6 +165,7 @@ theorem form_saved (view : View) (state : Stores) (phase : Phase) (captured : Po
 
 /-- A local edge retains its actual readonly frame or source form-finalizer identity. -/
 inductive LocalEdge (_state : Stores) : Kind → Kind → NCode → Prop
+  | mask (kind : Kind) (flag : Bool) : LocalEdge _state kind kind (.setInterruptible flag)
   | read (phase : Phase) (frame : NCode) (held : ReadSaved frame) :
       LocalEdge _state (.read phase) (.read phase) frame
   | form (phase : Phase) (captured : Point) (fuel delay : Nat) (n : Fin 4) (previous : Val) (body : NCode) :
@@ -160,6 +177,7 @@ theorem LocalEdge.contract (state : Stores) (input output : Kind) (frame : NCode
     (edge : LocalEdge state input output frame) (view : View) :
     AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state input output frame := by
   cases edge with
+  | mask kind flag => exact AnswerFlow.saved_mask (model view) (interpreter view).toPrimInterp state _ flag
   | read phase frame held => exact read_saved frame held view state phase
   | form phase captured fuel delay n previous body => exact form_saved view state phase captured fuel delay n previous body
 
@@ -169,6 +187,7 @@ theorem LocalEdge.value_empty (state : Stores) (input output : Kind) (frame : NC
     (next : NCode) (pushed : List NCode)
     (arm : frame.armA (interpreter view).toPrimInterp value provided = some (next, pushed)) : pushed = [] := by
   cases edge with
+  | mask kind flag => cases arm
   | read phase frame held =>
       cases held <;> simp only [Prim.armA] at arm
       all_goals cases arm <;> rfl
@@ -183,6 +202,7 @@ theorem LocalEdge.cause_empty (state : Stores) (input output : Kind) (frame : NC
     (next : NCode) (pushed : List NCode)
     (arm : frame.armE (interpreter view).toPrimInterp cause provided = some (next, pushed)) : pushed = [] := by
   cases edge with
+  | mask kind flag => cases arm
   | read phase frame held =>
       cases held <;> simp only [Prim.armE] at arm
       all_goals cases arm <;> rfl
@@ -241,14 +261,11 @@ theorem absorbs_recorded (view : View) (state : Stores) (fiber : HostTimeoutFram
   cases kind with
   | read phase => exact good
   | numeric kind => exact HostTimeoutNumberPhaseFlow.cause_combine state kind cause interrupted good (recorded interrupted present)
+  | retry phase n delay previous => exact HostTimeoutNumberPhaseFlow.cause_combine state (.published phase) cause interrupted good (recorded interrupted present)
 
 /-- A restoring hook has an identity edge at both readonly and numeric classes. -/
 theorem mask_edge (view : View) (state : Stores) (kind : Kind) : Edge view state kind kind (.setInterruptible true) := by
-  cases kind with
-  | read phase => exact .saved (.read phase _ (.mask true))
-  | numeric kind =>
-      exact .mapped True.intro
-        (AnswerFlow.saved_mask (HostTimeoutNumberPhaseFlow.model view) (interpreter view).toPrimInterp state kind true)
+  exact .saved (.mask kind true)
 
 /-- The actual saved readonly prefix becomes a path in the tagged family. -/
 theorem read_path (view : View) (state : Stores) (phase : Phase) (front : List NCode)
