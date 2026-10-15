@@ -1,4 +1,4 @@
-import Test.Dogfood.Proofs.HostTimeoutNumberConfiguration
+import Test.Dogfood.Proofs.HostTimeoutNumberContext
 import Effect4.Laws.Program.CodeClosure.Callbacks
 import Effect4.Laws.Program.AnswerSlots.Points
 
@@ -153,5 +153,71 @@ theorem finalizer_joint (context : CountContext) (p : Point) (B : List Val)
     (resolve HostTimeoutSource.program ({p with completed := view}.childWith 1 (reifyExitVal exit)))) = some code at installed
   rw [← Option.some.inj installed]
   exact finalizer_annotation context p held view exit
+
+/-- A pending attempt retains its source annotation in both current code and every actual saved frame. -/
+structure FrameAt (context : CountContext) (frame : Test.Dogfood.Proofs.HostTimeoutFrames.NativeFrame) : Prop where
+  current : CodeClosure.Slots.CodeAt (At context) (AnswerSlots.Prefix (bindings context)) frame.current
+  saved : ∀ code ∈ frame.stack, CodeClosure.Slots.CodeAt (At context) (AnswerSlots.Prefix (bindings context)) code
+
+/-- Actual field transport keeps the source annotation without inspecting a saved-stack proof. -/
+theorem FrameAt.fields (context : CountContext)
+    (before after : Test.Dogfood.Proofs.HostTimeoutFrames.NativeFrame)
+    (held : FrameAt context before) (current : after.current = before.current) (stack : after.stack = before.stack) :
+    FrameAt context after := by
+  constructor
+  · rw [current]; exact held.current
+  · rw [stack]; exact held.saved
+
+/-- The count body retains its original captured point under the shared callback compiler. -/
+theorem bound_code (context : CountContext) :
+    CodeClosure.Slots.CodeAt (At context) (AnswerSlots.Prefix (bindings context)) context.bound :=
+  CodeClosure.Slots.resolve_child_at _ fragment _ _ (contract context) context.point 0 (entry context)
+
+/-- The actual synchronous counter operation retains its captured update environment. -/
+theorem write_code (context : CountContext) :
+    CodeClosure.Slots.CodeAt (At context) (AnswerSlots.Prefix (bindings context)) context.write :=
+  (entry context).leading
+
+/-- The saved count binder and finalizer retain the same actual attempt capture. -/
+theorem count_saved (context : CountContext) :
+    CodeClosure.Slots.CodeAt (At context) (AnswerSlots.Prefix (bindings context))
+      (.onSuccess context.write (.cont (context.point.child 0))) ∧
+    CodeClosure.Slots.CodeAt (At context) (AnswerSlots.Prefix (bindings context))
+      (.onExit context.bound (.fin context.point) false) :=
+  ⟨⟨write_code context, (transport context).child (entry context) 0⟩, ⟨bound_code context, entry context⟩⟩
+
+/-- Every actual pre-count control position establishes the source half of the pending role. -/
+theorem count_frame (context : CountContext) (frame : Test.Dogfood.Proofs.HostTimeoutFrames.NativeFrame)
+    (held : CountFrameAt context frame) : FrameAt context frame := by
+  cases held with
+  | entry current stack =>
+    refine ⟨?_, ?_⟩
+    · rw [current]; exact entry_code context
+    · rw [stack]; intro code member; cases member
+  | finalizer current stack =>
+    refine ⟨?_, ?_⟩
+    · rw [current]; exact bound_code context
+    · rw [stack]
+      intro code member
+      rw [List.mem_singleton] at member
+      rw [member]
+      exact (count_saved context).2
+  | binder current stack =>
+    refine ⟨?_, ?_⟩
+    · rw [current]; exact write_code context
+    · rw [stack]
+      intro code member
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      rcases member with equal | equal
+      · rw [equal]; exact (count_saved context).1
+      · rw [equal]; exact (count_saved context).2
+
+/-- The real count answer retains the same captured-source saved stack. -/
+theorem counted_frame (context : CountContext) (frame : Test.Dogfood.Proofs.HostTimeoutFrames.NativeFrame)
+    (stack : frame.stack = [.onSuccess context.write (.cont (context.point.child 0)),
+      .onExit context.bound (.fin context.point) false]) :
+    FrameAt context {frame with current := .success .unit} := by
+  have before := count_frame context {frame with current := context.write} (.binder _ rfl stack)
+  exact ⟨trivial, before.saved⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberSourceSlots

@@ -654,3 +654,35 @@ The slice changes proofs and assertions, so it reaches no outside implementation
 
 Next, the pending attempt must carry this checked source assertion in the coupled machine fact.
 Actual race membership, all native numeric branches, initialized history, and both original endpoint proofs remain open.
+
+## Pending source assertion in the coupled machine fact
+
+The coordinator must retain the stronger pending frame assertion in later numeric producers.
+The base is `11b8d8c8a`.
+The source annotation is now a field of the actual pending role, not a separate proposed invariant.
+
+The context and source-capture declarations move to `Test/Dogfood/Proofs/HostTimeoutNumberContext.lean` without name or statement changes.
+The extraction removes the import cycle between the numeric configuration and its source annotation.
+`SourceSlots.FrameAt` retains the source assertion for current code and every actual saved frame.
+`count_frame` establishes it at all three actual pre-count positions.
+`counted_frame` keeps the same captured-source suffix at the actual counter answer.
+`Configuration.FrameAt` pairs this assertion with its numeric contracts at every interpreter view.
+`CountMachine.counted_fiber` returns the stronger actual pending role.
+The existing full count-machine and count-queue producers consume that result.
+Addressed interruption and observer transport also keep the stronger pending role.
+No second command, native evaluator, or pop induction occurs.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCountQueue Test.Dogfood.Scenario.Timeout.SourceCut` | Passed, 1244 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRootLoop Test.Dogfood.Scenario.Timeout.FinishCut` | Passed, 1235 jobs |
+| `lake env lean scratch/TimeoutPendingSourceAudit.lean` | The output below |
+
+```text
+#axiom_audit: 348 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers context, source annotation, configuration, interruption, transport, queue, observer, passive, count-machine, count-queue, and source controls.
+The actual initialized history and both endpoint goals remain open.
+The proposed stranded-child case remains an unverified concern about the internal invariant, not an endpoint counterexample.
+No execution behaviour changes, so this slice reaches no outside implementation gate.
