@@ -382,3 +382,5 @@ import Effect4.Laws.Program.AnswerSlots.Callbacks
 import Effect4.Laws.Program.AnswerSlots.Actions
 import Effect4.Laws.Program.AnswerSlots.Interp
 import Effect4.Laws.Machine.LiftCoupledFact
+
+import Effect4.Laws.Program.NativeScopeFields

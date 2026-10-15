@@ -29,6 +29,21 @@ structure Hooks (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → P
   due : ∀ state, P state → P (interp.dueResumes state).2
   wake : ∀ list phase state, P state → P (interp.wakeList list phase state)
 
+/-- Commands use only administrative store hooks. Source operations retain their own local premises.
+Consumer: the crews' captured scope invariant through the coupled driver. -/
+structure CommandHooks (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) : Prop where
+  link : ∀ mode scope id state next key, P state →
+    interp.scopeLinkFiber mode scope id state = some (next, key) → P next
+  drop : ∀ scope key state next, P state → interp.dropFinalizer scope key state = some next → P next
+  due : ∀ state, P state → P (interp.dueResumes state).2
+  wake : ∀ list phase state, P state → P (interp.wakeList list phase state)
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- Unconditional store preservation supplies every administrative hook. -/
+theorem Hooks.commands {interp : RunInterp ν σ β ε δ ι α χ St κ} {P : St → Prop}
+    (hooks : Hooks interp P) : CommandHooks interp P :=
+  ⟨hooks.link, hooks.drop, hooks.due, hooks.wake⟩
+
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 /-- Keyed fiber edits leave the store untouched. Consumer: observer and scope-link steps. -/
 theorem modify_state (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId)
@@ -52,7 +67,7 @@ theorem interruptEach_state (interp : RunInterp ν σ β ε δ ι α χ St κ) (
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 /-- Scope linking uses exactly the interpreter's link hook. Consumer: native actions and commands. -/
-theorem link_plan (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : Hooks interp P)
+theorem link_plan_with (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : CommandHooks interp P)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (mode : Supervision.ScopeMode)
     (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α)
     (held : P m.state) : P (linkScopeEdits interp m mode scope target who extra).1.state := by
@@ -72,8 +87,16 @@ theorem link_plan (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St →
         · rename_i state key step
           exact hooks.link mode scope target m.state state key held step
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
+/-- The full store contract supplies the administrative link contract. -/
+theorem link_plan (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : Hooks interp P)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α)
+    (held : P m.state) : P (linkScopeEdits interp m mode scope target who extra).1.state :=
+  link_plan_with interp P hooks.commands m mode scope target who extra held
+
 /-- The eager scope-link view interprets a fiber-only word after its store hook. -/
-theorem link (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : Hooks interp P)
+theorem link_with (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : CommandHooks interp P)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (mode : Supervision.ScopeMode)
     (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α)
     (held : P m.state) : P (linkScope interp m mode scope target who extra).1.state := by
@@ -82,7 +105,14 @@ theorem link (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop
     (linkScopeEdits interp m mode scope target who extra).2
     (linkScopeEdits interp m mode scope target who extra).1
   rw [congrArg RunMachine.state shape.1]
-  exact link_plan interp P hooks m mode scope target who extra held
+  exact link_plan_with interp P hooks m mode scope target who extra held
+
+/-- The full store contract supplies the eager administrative link contract. -/
+theorem link (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : Hooks interp P)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α)
+    (held : P m.state) : P (linkScope interp m mode scope target who extra).1.state :=
+  link_with interp P hooks.commands m mode scope target who extra held
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Forking the parallel cleanup list leaves the store untouched. Consumer: native close actions. -/
@@ -161,10 +191,12 @@ theorem finalizerOr (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν
     · exact stepFrame interp P _ _ _ held
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-include hooks in
 /-- All fiber actions preserve the store predicate through their declared hooks.
 Consumer: primitive evaluation, including source actions after native elaboration. -/
-theorem withFiber (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+theorem withFiber_on (admin : CommandHooks interp P)
+    (close : ∀ scope exit mask id state next code, P state →
+      interp.closeScope scope exit mask id state = some (next, code) → P next)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
     (yielding : Bool) (action : WithFiberAction ν σ β ε δ ι α χ) (held : P m.state) :
     P (evaluatePrim.withFiber interp m f yielding action).machine.state := by
   cases action with
@@ -172,10 +204,10 @@ theorem withFiber (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν �
     simp only [evaluatePrim.withFiber]
     split
     · exact held
-    · next state step => exact hooks.close scope exit f.frame.interruptible f.id m.state state none held step
+    · next state step => exact close scope exit f.frame.interruptible f.id m.state state none held step
     · next state code step =>
-      exact hooks.close scope exit f.frame.interruptible f.id m.state state (some code) held step
-  | runIn target scope => exact link_plan interp P hooks m _ scope target _ _ held
+      exact close scope exit f.frame.interruptible f.id m.state state (some code) held step
+  | runIn target scope => exact link_plan_with interp P admin m _ scope target _ _ held
   | awaitAll targets => exact (countdown_plan_state interp m f targets .exitsValue false) ▸ held
   | awaitAllFailFast targets => exact (countdown_plan_state interp m f targets .exitsValue true) ▸ held
   | awaitNewChildren snapshot => exact (countdown_plan_state interp m f _ .void false) ▸ held
@@ -200,6 +232,14 @@ theorem withFiber (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν �
     split <;> exact held
   | setInterruptible body flag => cases flag <;> exact held
   | _ => exact held
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+include hooks in
+/-- The full hook contract supplies action preservation without another action classification. -/
+theorem withFiber (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+    (yielding : Bool) (action : WithFiberAction ν σ β ε δ ι α χ) (held : P m.state) :
+    P (evaluatePrim.withFiber interp m f yielding action).machine.state :=
+  withFiber_on interp P hooks.commands hooks.close m f yielding action held
 
 include hooks in
 /-- The primitive evaluator accesses the store only through the named hooks.
@@ -238,10 +278,9 @@ end Primitive
 section Commands
 variable (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : Hooks interp P)
 
-include hooks in
 /-- An observer changes the store only when it drops a scope registration.
 Consumer: observation and race-enrollment commands. -/
-theorem observer (id : FiberId) (exit : Exit β ε δ ι α)
+theorem observer_with (admin : CommandHooks interp P) (id : FiberId) (exit : Exit β ε δ ι α)
     (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ))
     (obs : Observer) (held : P acc.1.state) : P (fireObserver interp id exit acc obs).1.state := by
   cases obs with
@@ -252,7 +291,7 @@ theorem observer (id : FiberId) (exit : Exit β ε δ ι α)
     split
     · exact held
     · rename_i state step
-      exact hooks.drop scope key acc.1.state state held step
+      exact admin.drop scope key acc.1.state state held step
   | countdown waiter token =>
     simp only [fireObserver]
     repeat' split
@@ -264,6 +303,13 @@ theorem observer (id : FiberId) (exit : Exit β ε δ ι α)
     · exact held
     · split <;> exact held
   | callback => exact held
+
+include hooks in
+/-- The full store contract supplies the observer's administrative hook. -/
+theorem observer (id : FiberId) (exit : Exit β ε δ ι α)
+    (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ))
+    (obs : Observer) (held : P acc.1.state) : P (fireObserver interp id exit acc obs).1.state :=
+  observer_with interp P hooks.commands id exit acc obs held
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Publishing an exit changes fiber records and the trace alone. Consumer: finish commands. -/
@@ -308,13 +354,15 @@ theorem iteration (evaluate : ∀ m f yielding, P m.state →
     · cases selected
   · exact evaluate _ _ _ held
 
-include hooks in
-/-- Every actual command preserves the predicate when its evaluator and store hooks do.
-Consumer: the existing Machine.Lift command induction and native scope allocation. -/
-theorem command (evaluate : ∀ m f yielding, P m.state →
-      P (evaluator.evaluate interp m f yielding).machine.state)
+/-- A command reads the evaluator fact at its actual lookup and command kind.
+Consumer: the crews' scope captures, whose sync premise comes from the typed source operation. -/
+theorem command_on (admin : CommandHooks interp P)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (command : Cmd ν σ β ε δ ι α κ)
-    (rest : List (Cmd ν σ β ε δ ι α κ)) (held : P m.state) :
+    (rest : List (Cmd ν σ β ε δ ι α κ)) (held : P m.state)
+    (iterate : ∀ id yielding f, command = .loop id yielding → m.fiber? id = some f →
+      P (Machine.iteration interp m f yielding).machine.state)
+    (deliver : ∀ id yielding f, command = .deliver id yielding → m.fiber? id = some f →
+      P (evaluator.evaluate interp m f yielding).machine.state) :
     P (driveStep interp m command rest).1.state := by
   cases command with
   | loop id yielding =>
@@ -322,15 +370,15 @@ theorem command (evaluate : ∀ m f yielding, P m.state →
     split
     · exact held
     · rw [settle_state]
-      exact iteration interp P evaluate _ _ _ held
+      exact iterate _ _ _ rfl (by assumption)
   | deliver id yielding =>
     simp only [driveStep]
     split
     · exact held
     · rw [settle_state]
-      exact evaluate _ _ _ held
-  | link mode scope target who extra => exact link interp P hooks _ mode scope target who extra held
-  | observe id exit obs => exact observer interp P hooks id exit (m, []) obs held
+      exact deliver _ _ _ rfl (by assumption)
+  | link mode scope target who extra => exact link_with interp P admin _ mode scope target who extra held
+  | observe id exit obs => exact observer_with interp P admin id exit (m, []) obs held
   | finish id exit =>
     simp only [driveStep]
     split
@@ -340,13 +388,13 @@ theorem command (evaluate : ∀ m f yielding, P m.state →
     change P (drainOwed {m with state := (interp.dueResumes m.state).2}
       (interp.dueResumes m.state).1).1.state
     rw [drain_state]
-    exact hooks.due m.state held
-  | wake list phase => exact hooks.wake list phase m.state held
+    exact admin.due m.state held
+  | wake list phase => exact admin.wake list phase m.state held
   | enrollRace rid child =>
     simp only [driveStep]
     split
     · split
-      · exact observer interp P hooks _ _ _ _ held
+      · exact observer_with interp P admin _ _ _ _ held
       · simpa only [modify_state, RunMachine.updateRace] using held
     · exact held
   | registrationDone =>
@@ -369,6 +417,18 @@ theorem command (evaluate : ∀ m f yielding, P m.state →
     simp only [driveStep, launchEntrant, spawn]
     repeat' split
     all_goals exact held
+
+include hooks in
+/-- Unconditional evaluation supplies the contextual command contract.
+Consumer: existing store-invariant histories. -/
+theorem command (evaluate : ∀ m f yielding, P m.state →
+      P (evaluator.evaluate interp m f yielding).machine.state)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (command : Cmd ν σ β ε δ ι α κ)
+    (rest : List (Cmd ν σ β ε δ ι α κ)) (held : P m.state) :
+    P (driveStep interp m command rest).1.state :=
+  command_on interp P hooks.commands m command rest held
+    (fun _ yielding f _ _ => iteration interp P evaluate m f yielding held)
+    (fun _ yielding f _ _ => evaluate m f yielding held)
 
 include hooks in
 /-- Existing command induction transports the store predicate through every fuel prefix.
