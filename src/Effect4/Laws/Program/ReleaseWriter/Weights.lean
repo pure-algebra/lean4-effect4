@@ -129,9 +129,7 @@ theorem release_push (target : Target) (point : Point) (previous : Ctx) (exit : 
 
 /-- The release log is the selected reference, read independently of the assertion module. -/
 def log (target : Target) (state : Stores) : List Val :=
-  match (state.refs[target.cell]? : Option Val) with
-  | some (.list values) => values
-  | _ => []
+  ((state.refs[target.cell]?).bind Val.asList?).getD []
 
 /-- The writer ledger counts each committed target and each pending write. -/
 def ledger (target : Target) : PlaceFunding.Ledger where

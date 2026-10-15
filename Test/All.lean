@@ -412,10 +412,7 @@ passing gate. The batteries of the Flow route live on branch
 #effect4_axiom_gate
 
 -- M3: the crews actual allocation and acquired-value obligations.
-import Test.Dogfood.Proofs.WorkersCapturedSlots
-import Test.Dogfood.Proofs.WorkersExclusivity
 
-import Test.Dogfood.Proofs.WorkersWriterCensus
 
 import Test.Dogfood.Proofs.WorkersWriterSource
 import Test.Dogfood.Proofs.QueueWorkersWriter
@@ -424,3 +421,8 @@ import Test.Dogfood.Scenario.QueueWorkers.RefReplyControl
 import Test.Dogfood.Proofs.HostTimeoutNumberPhaseFlow
 import Test.Dogfood.Proofs.HostTimeoutNumberConfiguration
 import Test.Dogfood.Scenario.Timeout.CommandCut
+
+-- M3: shared crew observations and concrete source contracts.
+import Test.Dogfood.Proofs.WorkersLogContract
+import Test.Dogfood.Proofs.QueueWorkersLogContract
+import Test.Program.CodeClosureBank

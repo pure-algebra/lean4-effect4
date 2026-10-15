@@ -394,3 +394,7 @@ import Effect4.Laws.Machine.AnswerFlowGhostCommands
 import Effect4.Laws.Program.AnswerSlots.InitializedTransport
 import Effect4.Laws.Machine.AnswerFlowProtected
 import Effect4.Laws.Program.ReleaseWriter.Actions
+
+-- M3: actual initialized native exits and the shared crew log history.
+import Effect4.Laws.Program.AnswerSlots.InitializedNativeExit
+import Effect4.Laws.Program.CrewLogs.Initialized
