@@ -1506,3 +1506,41 @@ The build passes with 1296 jobs.
 The audit checks 50 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 It covers the role update, queue transport, installation consumer, and joined terminal producer.
 This proof-only slice reaches no outside implementation gate.
+
+## Fixed-budget scheduler connection
+
+The shared scheduler now consumes an actual fixed-budget loop contract.
+That contract returns the machine assertion and the actual remaining detached snapshot.
+It does not retain the discarded command queue after a loop cut.
+The existing fire, flush, and clock recursions move to this contract.
+The old fold interfaces remain wrappers through `FoldLift.toLoop`.
+
+`guarded_loop_fuel` consumes the existing indexed command fold.
+Its local command assertion spends one remaining index per actual command.
+Early stops lower that assertion to zero through the caller's explicit premise.
+The actual native permissions and initial command assertion remain caller obligations.
+No second command or scheduler recursion enters this slice.
+
+The decision contract accepts the actual answer continuation at the same fixed budget.
+The previous first-resume interface supplies that continuation through `DecisionLift.toLoop`.
+The existing decision split moves to the loop contract.
+The previous `stepDecisionState_lift` statement remains a wrapper.
+The existing replay fold can consume the resulting per-decision machine assertion.
+
+Placement: reactive-scheduling R9 and scope-lifetime-finalization R11.
+Consumer: Timeout's actual fixed-budget numeric history through raw command cuts.
+Reach: the supplied world order, interpreter, indexed command assertion, actual scheduler edits, and admitted answers.
+This connection leaves numeric native steps, queue initialization, and endpoint proofs to their application consumers.
+Both original Timeout endpoint proofs remain open.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-lift-loop-check.sh
+```
+
+The script builds `Effect4.Laws.Machine.Lift` and `Effect4.Laws.Machine.LiftCoupledFact`.
+It then runs `lake env lean scratch/LiftLoopAudit.lean`.
+The build passes with 209 jobs.
+The audit checks 196 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+This proof-only slice reaches no outside implementation gate.
