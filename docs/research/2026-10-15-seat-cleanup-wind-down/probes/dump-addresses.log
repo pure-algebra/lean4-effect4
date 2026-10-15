@@ -1,0 +1,45 @@
+-- Effect4.Program.Node.addresses._redArg
+def Effect4.Program.Node.addresses._redArg n : List (List Nat) :=
+  cases n : List (List Nat)
+  | Effect4.Program.Node.eff e.1 =>
+    let _f.2 := List.appendTR._redArg;
+    let _x.3 := List.nil ◾;
+    let _x.4 := Effect4.Program.Node.addresses._redArg._lam_0 ◾;
+    let _x.5 := Effect4.Program.foldMapAt_eff._redArg _x.3 _f.2 _x.3 e.1 _x.4 _x.4 _x.4 _x.4 _x.4 _x.4 _x.4;
+    return _x.5
+  | Effect4.Program.Node.stmts s.6 =>
+    let _f.7 := List.appendTR._redArg;
+    let _x.8 := List.nil ◾;
+    let _x.9 := Effect4.Program.Node.addresses._redArg._lam_0 ◾;
+    let _x.10 := Effect4.Program.foldMapAt_stmts._redArg _x.8 _f.7 _x.8 s.6 _x.9 _x.9 _x.9 _x.9 _x.9 _x.9 _x.9;
+    return _x.10
+  | Effect4.Program.Node.stmt s.11 =>
+    let _f.12 := List.appendTR._redArg;
+    let _x.13 := List.nil ◾;
+    let _x.14 := Effect4.Program.Node.addresses._redArg._lam_0 ◾;
+    let _x.15 := Effect4.Program.foldMapAt_stmt._redArg _x.13 _f.12 _x.13 s.11 _x.14 _x.14 _x.14 _x.14 _x.14 _x.14 _x.14;
+    return _x.15
+  | Effect4.Program.Node.action a.16 =>
+    let _f.17 := List.appendTR._redArg;
+    let _x.18 := List.nil ◾;
+    let _x.19 := Effect4.Program.Node.addresses._redArg._lam_0 ◾;
+    let _x.20 := Effect4.Program.foldMapAt_action._redArg _x.18 _f.17 _x.18 a.16 _x.19 _x.19 _x.19 _x.19 _x.19 _x.19 _x.19;
+    return _x.20
+  | Effect4.Program.Node.effs es.21 =>
+    let _f.22 := List.appendTR._redArg;
+    let _x.23 := List.nil ◾;
+    let _x.24 := Effect4.Program.Node.addresses._redArg._lam_0 ◾;
+    let _x.25 := Effect4.Program.foldMapAt_effs._redArg _x.23 _f.22 _x.23 es.21 _x.24 _x.24 _x.24 _x.24 _x.24 _x.24 _x.24;
+    return _x.25
+  | Effect4.Program.Node.layer l.26 =>
+    let _f.27 := List.appendTR._redArg;
+    let _x.28 := List.nil ◾;
+    let _x.29 := Effect4.Program.Node.addresses._redArg._lam_0 ◾;
+    let _x.30 := Effect4.Program.foldMapAt_layer._redArg _x.28 _f.27 _x.28 l.26 _x.29 _x.29 _x.29 _x.29 _x.29 _x.29 _x.29;
+    return _x.30
+  | Effect4.Program.Node.layers ls.31 =>
+    let _f.32 := List.appendTR._redArg;
+    let _x.33 := List.nil ◾;
+    let _x.34 := Effect4.Program.Node.addresses._redArg._lam_0 ◾;
+    let _x.35 := Effect4.Program.foldMapAt_layers._redArg _x.33 _f.32 _x.33 ls.31 _x.34 _x.34 _x.34 _x.34 _x.34 _x.34 _x.34;
+    return _x.35

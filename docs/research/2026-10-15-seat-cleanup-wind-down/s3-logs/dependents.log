@@ -1,0 +1,35 @@
++ lake build OCaml5 Conform Test.Audit.ClockLowering Test.Audit.LetReturn Drivers.Corpus Drivers.ForeignCorpus Drivers.ProgramStructureCheck Drivers.Styles Drivers.TsGen
+✔ [351/372] Built Conform.Lcnf.Validity (1.6s)
+✔ [355/372] Built Conform.Effect4.LayoutWorld (1.6s)
+✔ [356/656] Built Conform.Lcnf.Semantics (1.5s)
+✔ [359/656] Built Conform.Effect4.LcnfMl (2.1s)
+✔ [643/656] Built Conform.Effect4.LcnfSemantics (1.5s)
+✔ [646/656] Built Test.Audit.LetReturn (1.9s)
+✔ [647/656] Built Conform.Effect4.CompilerControls (3.3s)
+✔ [650/656] Built Conform.Effect4.Normalization (1.8s)
+✔ [652/656] Built Conform.Effect4.TargetLeanNative (1.3s)
+✔ [653/784] Built Conform.Effect4.NativeMain (1.3s)
+✔ [782/790] Built Test.Audit.ClockLowering (11s)
+✔ [784/790] Built Drivers.Styles (1.4s)
+✔ [787/790] Built Drivers.ProgramStructureCheck (1.2s)
+✔ [788/790] Built Drivers.ForeignCorpus (1.4s)
+✔ [789/790] Built Drivers.Corpus (1.4s)
+✔ [790/790] Built Drivers.TsGen (5.2s)
+Build completed successfully (790 jobs).
+real 21.67
+user 25.58
+sys 13.86
+exit=0
++ lake env lean -DwarningAsError=true -M6144 Test/fixtures/ty-rule/CensusMirrorsOCaml5.lean
+Test/fixtures/ty-rule/CensusMirrorsOCaml5.lean:1:0: error: object file '/Users/pooks/Dev/lean4-effect4-cleanup/.lake/build/lib/lean/Effect4/Laws/Auto/Traversals.olean' of module Effect4.Laws.Auto.Traversals does not exist
+real 1.15
+user 0.18
+sys 0.91
+exit=1
++ lake env lean -DwarningAsError=true -M6144 Test/fixtures/ty-rule/CensusMirrorsConformLcnfMl.lean
+Test/fixtures/ty-rule/CensusMirrorsConformLcnfMl.lean:1:0: error: object file '/Users/pooks/Dev/lean4-effect4-cleanup/.lake/build/lib/lean/Effect4/Laws/Auto/Traversals.olean' of module Effect4.Laws.Auto.Traversals does not exist
+real 1.03
+user 0.17
+sys 0.82
+exit=1
+exit=0

@@ -1,0 +1,7 @@
+File "todo_host.ml", line 13003, characters 54-58:
+13003 |       program_fold_map_at_eff _x_3 _f_2 _x_3 e_1 _x_4 _x_4 _x_4 _x_4 _x_4 _x_4 _x_4)
+                                                              ^^^^
+Error: This expression has type 'a Eff_types.eff -> int list -> int list list
+       but an expression was expected of type
+         'a Eff_types.stmt -> int list -> int list list
+       Type 'a Eff_types.eff is not compatible with type 'a Eff_types.stmt

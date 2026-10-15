@@ -34,7 +34,7 @@ evaluator's primitives, `Prim`).
   the eta binders are in `reservedNames`: *checked* (`problemsOf`, the `#guard`s at the foot).
 * **A form states what it needs.** Every free name of a row is a function of `targetLibrary`
   or of `support`, and every operator is an operator of `targetLibrary`. A body outside its
-  fragment is refused, and `Expr.raw` is outside both fragments: *checked* (`problemsOf`).
+  fragment is refused: *checked* (`problemsOf`).
 * **Arguments are values.** `Builtin.apply` substitutes its arguments into an inline body, which
   is exact for an atom. `Form.strict` holds when a body evaluates each parameter exactly once;
   `Translate.applyBuiltin` binds every other argument that is not an atom before the form.
@@ -118,7 +118,7 @@ def Support.bind (s : Support) : Ml.Bind :=
 
 Two fragments of `Ml.Expr`. An inline body is built from variables, literals, constructors,
 applications, labelled applications, infix operators, conditionals and list literals. A support
-body may also bind, by `let` and by `fun`. Everything else is outside both, `Expr.raw` first. -/
+body may also bind, by `let` and by `fun`. Everything else is outside both. -/
 
 /-- The operators whose right operand is evaluated only when the left one does not decide. -/
 def lazyOperators : List String := ["&&", "||"]
@@ -192,7 +192,7 @@ def usesAlg (binding : Bool) : Ml.ExprAlgebra (fun _ => List String → Option U
       let c ← b (ps ++ bound)
       return { c.deferred with binders := ps ++ c.binders }
     else none
-  -- outside both fragments, `Expr.raw` first
+  -- outside both fragments
   expr_letRec _ _ _ _ := fun _ => none
   expr_matchE _ _ := fun _ => none
   expr_record _ := fun _ => none
@@ -200,8 +200,13 @@ def usesAlg (binding : Bool) : Ml.ExprAlgebra (fun _ => List String → Option U
   expr_tuple _ := fun _ => none
   expr_annot _ _ := fun _ => none
   expr_hole _ _ := fun _ => none
-  expr_raw _ := fun _ => none
   expr_assertE _ := fun _ => none
+  expr_fnMatch _ := fun _ => none
+  expr_seq _ _ := fun _ => none
+  expr_letPat _ _ _ := fun _ => none
+  expr_ifUnit _ _ := fun _ => none
+  expr_commented _ _ := fun _ => none
+  expr_pack _ _ := fun _ => none
 
 /-- What a body uses under the names `bound`, or `none` when it leaves its fragment. -/
 def usesExpr (binding : Bool) (bound : List String) (e : Ml.Expr) : Option Uses :=
@@ -253,8 +258,8 @@ private def unruled (name : String) (arity : Nat) : LibFn :=
 
 /-- The target's library: every function, value and operator that a form or a support body may
 name, with the number of arguments it takes and the target evaluator's rule for it.
-`lcnf_utf8_bytes` and `lcnf_utf8_length` are the two the prelude carries as verbatim OCaml
-(`rawPrimitives`). The labelled call `Option.value o ~default:d` is the evaluator's primitive
+`lcnf_utf8_bytes` and `lcnf_utf8_length` are two of the prelude's primitives
+(`preludePrimitives`), which the target evaluator answers by name. The labelled call `Option.value o ~default:d` is the evaluator's primitive
 `Option.value~default` (`Conform.Effect4.LcnfMl.ofExpr`). -/
 def targetLibrary : List LibFn := [
   infixOp "=", infixOp "<", infixOp "<=", infixOp ">", infixOp ">=", infixOp "+", infixOp "-",
@@ -283,20 +288,28 @@ def libraryArity? (lib : List LibFn) (name : String) : Option Nat :=
 def isOperator (lib : List LibFn) (symbol : String) : Bool :=
   lib.any fun f => f.isInfix && f.name == symbol
 
-/-- The three primitives the prelude carries as verbatim OCaml. Strings admitted by this profile
-are valid UTF-8; `ByteArray` and `Array UInt8` both use a byte list, and a `Char` is its code
-point. -/
--- Declarations, not `rawD`: a top-level `rawD` is text `Ml.Check` cannot see into, so a module
--- holding one has to be checked with its value scope open and `unbound-value` stops deciding
--- anything there (tooling plan 4.3). The binder and its parameter are structure the checker
--- reads; only the body stays verbatim, which is all these two need.
-def rawPrimitives : List Ml.Bind := [
+/-- The three primitives of the prelude, over the target's string library. Strings admitted by this
+profile are valid UTF-8; `ByteArray` and `Array UInt8` both use a byte list, and a `Char` is its
+code point. They are structured like every other binding, so `Ml.Check` reads them; the target
+evaluator answers the two it has a rule for by name and reads no body of them. -/
+def preludePrimitives : List Ml.Bind := [
+  -- `List.init (String.length s) (fun i -> Char.code (String.get s i))`
   { name := "lcnf_utf8_bytes", params := [("s", none)],
-    body := .raw "List.init (String.length s) (fun i -> Char.code (String.get s i))" },
+    body := Ml.Expr.call "List.init" [Ml.Expr.call "String.length" [.var "s"],
+      .fn ["i"] (Ml.Expr.call "Char.code" [Ml.Expr.call "String.get" [.var "s", .var "i"]])] },
+  -- `String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s`: the
+  -- bytes that start a scalar
   { name := "lcnf_utf8_length", params := [("s", none)],
-    body := .raw "String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s" },
+    body := Ml.Expr.call "String.fold_left" [.fn ["n", "c"]
+        (.ifThen (.binop "=" (.binop "land" (Ml.Expr.call "Char.code" [.var "c"]) (.int 192)) (.int 128))
+          (.var "n") (.binop "+" (.var "n") (.int 1))),
+      .int 0, .var "s"] },
+  -- `let b = Buffer.create 16 in List.iter (fun c -> …) cs; Buffer.contents b`
   { name := "lcnf_utf8_of_code_points", params := [("cs", none)],
-    body := .raw "let b = Buffer.create 16 in List.iter (fun c -> Buffer.add_utf_8_uchar b (Uchar.of_int c)) cs; Buffer.contents b" }]
+    body := .letIn "b" (Ml.Expr.call "Buffer.create" [.int 16])
+      (.seq (Ml.Expr.call "List.iter" [.fn ["c"] (Ml.Expr.call "Buffer.add_utf_8_uchar"
+          [.var "b", Ml.Expr.call "Uchar.of_int" [.var "c"]]), .var "cs"])
+        (Ml.Expr.call "Buffer.contents" [.var "b"])) }]
 
 private def va : Ml.Expr := .var "a"
 private def vb : Ml.Expr := .var "b"
@@ -332,11 +345,11 @@ def support : List Support := [
     body := Ml.Expr.call "List.exists"
       [.fn ["e"] (.app (.var "inst") [va, .var "e"]), .var "l"] }]
 
-/-- The prelude of an emitted module: the two verbatim primitives, then the support functions.
+/-- The prelude of an emitted module: the three primitives, then the support functions.
 The production backend emits it, and it is part of the manifest, never patched into a
 generated file. -/
 def prelude : List Ml.Decl :=
-  rawPrimitives.map (fun b => Ml.Decl.letD false [b])
+  preludePrimitives.map (fun b => Ml.Decl.letD false [b])
     ++ support.map (fun s => Ml.Decl.letD s.recursive [s.bind])
     ++ [.blank]
 
@@ -697,7 +710,7 @@ def Builtin.apply (b : Builtin) (args : List Ml.Expr) : Ml.Expr :=
 /-- The names a call site must reach: the names the prelude defines, and every unqualified
 name a row leaves free at a call site. A binder that took one would capture a reference. -/
 def protectedNames : List String :=
-  (rawPrimitives.map (·.name) ++ support.map (·.name)
+  (preludePrimitives.map (·.name) ++ support.map (·.name)
     ++ builtins.flatMap (·.form.freeNames)).eraseDups
 
 /-- The names no source binder of a declaration may take: the eta binders and the protected
@@ -802,7 +815,7 @@ def problemsOf (rows : List Builtin) (sup : List Support) (lib : List LibFn) :
     | _ => none
   for n in repeated spellings do
     out := out ++ [s!"library: the evaluator's primitive `{n}` answers two entries"]
-  for b in rawPrimitives do
+  for b in preludePrimitives do
     unless libraryArity? lib b.name == some b.params.length do
       out := out ++ [s!"primitive `{b.name}`: not declared with its arity"]
   for n in repeated supNames do
@@ -882,13 +895,14 @@ private def unaryOp : LibFn := { name := "~~", arity := 1, isInfix := true, targ
   (problemsOf (row (`Nat.add ++ `_redArg) .body (Form.op "+") .exact "" [] "" :: builtins) support
     targetLibrary)
   "the key is not normalized"
--- an inline body that binds, and a support body of verbatim text
+-- an inline body that binds, and a support body outside its fragment (a `match`)
 #guard refuses
   (problemsOf [row `Nat.mul .body (.inline ["a"] (.letIn "t" va (.var "t"))) .exact "" [] ""] support
     targetLibrary)
   "row Nat.mul: the inline body leaves its fragment"
 #guard refuses
-  (problemsOf builtins [{ name := "lcnf_x", params := ["a"], body := .raw "a" }] targetLibrary)
+  (problemsOf builtins [{ name := "lcnf_x", params := ["a"], body := .matchE va [(.wild, va)] }]
+    targetLibrary)
   "support `lcnf_x`: the body leaves its fragment"
 -- a support body whose own binder hides a parameter
 #guard refuses
@@ -917,11 +931,12 @@ private def spelled (name : Name) (args : List Ml.Expr) : String :=
 #guard spelled `Array.mkEmpty [.var "n"] == "[]"
 #guard spelled `Array.push [.var "xs", .var "x"] == "xs @ [x]"
 #guard spelled `Option.getD [.var "o", .var "d"] == "Option.value o ~default:d"
--- under-applied: eta binders; over-applied: the rest is applied to the result
+-- under-applied: eta binders; over-applied: the rest is applied to the result, which the
+-- renderer prints with its parentheses (`OCaml5.Ml.renderExprAlg`, an application's head)
 #guard spelled `Nat.decEq [] == "fun _b1 _b2 -> _b1 = _b2"
 #guard spelled `Nat.add [.var "x"] == "fun _b1 -> x + _b1"
 #guard spelled `Effect4.ClockMillis.beq [] == "fun _b1 _b2 -> E4_clock.equal _b1 _b2"
-#guard spelled `Prod.fst [.var "p", .var "x"] == "fst p x"
+#guard spelled `Prod.fst [.var "p", .var "x"] == "(fst p) x"
 -- a twin has its wrapper's row
 #guard (builtin? (`List.map ++ `_redArg)).isSome
 -- which forms may take an expression in a parameter's place

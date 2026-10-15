@@ -25,6 +25,10 @@ properties of the *syntax*, and leaves typing to `ocamlc`. What it decides:
 | `duplicate-binding` | one `let … and …` group that binds a name twice |
 | `bad-name` | a name outside the identifier profile of `OCaml5.Ml.Identifier` |
 | `shadowed-value` | a binder whose name is already in scope, only when the environment asks (`Env.noShadow`) |
+| `unbound-module` | an `open` of a unit whose interface the checker is not handed, or a packed module that names no module in scope |
+| `unbound-module-type` | a functor parameter or a packed module whose module type is no declared one |
+| `duplicate-module-type` | one module that declares a module type name twice |
+| `private-abstract` | `private` on an abstract type, which has no body to make private |
 
 ## Two deliberate silences
 
@@ -32,8 +36,13 @@ properties of the *syntax*, and leaves typing to `ocamlc`. What it decides:
 module has no way to see it. Every check on a name therefore applies only to unqualified ones.
 That is a real limit: a typo inside a qualified name reaches `ocamlc`.
 
-**`Expr.raw` and `Decl.rawD` are opaque.** Verbatim text is not parsed, so nothing inside it is
-scoped. A module that holds a `rawD` is checked with its value scope open (`checkModule`).
+**`Decl.rawD` is opaque.** Verbatim text is not parsed, so nothing inside it is scoped. The
+structure that holds a `rawD`, the module or a functor's body, is checked with its value scope
+open, and no other structure is (`checkModule`). No expression is verbatim text.
+
+An `open` is not opaque: the checker is handed the interface of each unit a module opens
+(`Interface`), and the open brings that unit's constructors, labels and values into scope and
+nothing else, so the value-name check reads on past it.
 -/
 
 namespace OCaml5.Ml
@@ -67,6 +76,10 @@ structure Env where
   fields : List String := []
   /-- Type names declared in the module. -/
   types : List String := []
+  /-- Module names in scope: the module's own modules and, inside a functor, its parameters. -/
+  modules : List String := []
+  /-- Module type names declared in the module. -/
+  moduleTypes : List String := []
   /-- Set by a verbatim item. Inside such a scope another unit's unqualified names may be
   visible and this module cannot see them, so `unbound-value` reporting is switched off rather
   than made to lie. -/
@@ -132,7 +145,23 @@ def shadows (e : Env) (site : String) (ns : List String) : List Diag :=
 def ctorArity (e : Env) (n : String) : Option Nat :=
   (e.ctors.lookup n).orElse fun _ => preludeCtors.lookup n
 
+/-- A module name this module can see: declared, a functor's parameter, or qualified. -/
+def knowsModule (e : Env) (n : String) : Bool :=
+  e.openScope || isQualifiedName n || e.modules.contains n
+
+/-- A module type name this module can see: declared, or qualified. -/
+def knowsModuleType (e : Env) (n : String) : Bool :=
+  e.openScope || isQualifiedName n || e.moduleTypes.contains n
+
 end Env
+
+/-- What an opened compilation unit makes available, as far as this checker reads it: its type
+declarations (their constructors and labels) and its value names. -/
+structure Interface where
+  name : String
+  types : List TypeDecl := []
+  values : List String := []
+deriving Repr, Inhabited
 
 /-! ## Collecting declarations -/
 
@@ -145,6 +174,7 @@ def patVarsAlg : PatAlgebra (fun _ => List String) where
   pat_recordOpen fs := (fs.map (·.2)).flatten
   pat_tuple ps := ps.flatten
   pat_cons hd tl := hd ++ tl
+  pat_int _ := []
 
 /-- The names a pattern binds, in the order they occur. -/
 def patVars (p : Pat) : List String := cata_pat patVarsAlg p
@@ -156,6 +186,7 @@ def tyVarsAlg : TyAlgebra (fun _ => List String) where
   ty_arrow a b := a ++ b
   ty_tuple ps := ps.flatten
   ty_anon := []
+  ty_labelled _ a b := a ++ b
 
 private def fieldsOfBody : TyBody → List String
   | .record fs => fs.map (·.name)
@@ -164,6 +195,13 @@ private def fieldsOfBody : TyBody → List String
 private def ctorsOfBody : TyBody → List (String × Nat)
   | .variant cs => cs.map fun c => (c.name, c.args.length)
   | _ => []
+
+/-- The scope an `open` of a unit adds: its constructors, its labels and its values. Its type
+names stay out, so a type of the module may shadow one it opens, as in OCaml. -/
+def Env.withInterface (e : Env) (u : Interface) : Env :=
+  { e with ctors := u.types.flatMap (ctorsOfBody ·.body) ++ e.ctors,
+           fields := u.types.flatMap (fieldsOfBody ·.body) ++ e.fields,
+           values := u.values ++ e.values }
 
 /-! ## The checker -/
 
@@ -191,17 +229,35 @@ def checkCtorUse (env : Env) (site : String) (n : String) (given : Nat) : List D
                 detail := "`" ++ n ++ "` takes " ++ toString want ++ ", given "
                             ++ toString given }]
 
-/-- Constructor existence and arity in a pattern, plus duplicate record labels. -/
-def checkPatAlg (site : String) : PatAlgebra (fun _ => Env → List Diag) where
-  pat_wild := fun _ => []
-  pat_var _ := fun _ => []
-  pat_ctor n args := fun env => checkCtorUse env site n args.length ++ (args.map (· env)).flatten
-  pat_record fs := fun env =>
-    dup "duplicate-field" site (fs.map (·.1)) ++ (fs.map (·.2 env)).flatten
-  pat_recordOpen fs := fun env =>
-    dup "duplicate-field" site (fs.map (·.1)) ++ (fs.map (·.2 env)).flatten
-  pat_tuple ps := fun env => (ps.map (· env)).flatten
-  pat_cons hd tl := fun env => hd env ++ tl env
+/-- A constructor applied to one `_`, which matches its arguments at every arity (§11.6): the
+constructor is declared and takes at least one. A qualified name is not checked. -/
+def checkCtorAny (env : Env) (site : String) (n : String) : List Diag :=
+  if Env.isQualifiedName n then []
+  else
+    match env.ctorArity n with
+    | none => [{ code := "unbound-ctor", site := site, detail := "`" ++ n ++ "`" }]
+    | some 0 => [{ code := "ctor-arity", site := site, detail := "`" ++ n ++ "` takes 0, given 1" }]
+    | some _ => []
+
+/-- Constructor existence and arity in a pattern, plus duplicate record labels; with each
+pattern, whether it is `_`, so that a constructor applied to one `_` is read at every arity. -/
+def checkPatAlg (site : String) : PatAlgebra (fun _ => Bool × (Env → List Diag)) where
+  pat_wild := (true, fun _ => [])
+  pat_var _ := (false, fun _ => [])
+  pat_ctor n args := (false, fun env =>
+    (match args with
+     | [(true, _)] => checkCtorAny env site n
+     | _ => checkCtorUse env site n args.length) ++ (args.map (·.2 env)).flatten)
+  pat_record fs := (false, fun env =>
+    dup "duplicate-field" site (fs.map (·.1)) ++ (fs.map (·.2.2 env)).flatten)
+  pat_recordOpen fs := (false, fun env =>
+    dup "duplicate-field" site (fs.map (·.1)) ++ (fs.map (·.2.2 env)).flatten)
+  pat_tuple ps := (false, fun env => (ps.map (·.2 env)).flatten)
+  pat_cons hd tl := (false, fun env => hd.2 env ++ tl.2 env)
+  pat_int _ := (false, fun _ => [])
+
+/-- A pattern's failures at a scope. -/
+def checkPat (env : Env) (site : String) (p : Pat) : List Diag := (cata_pat (checkPatAlg site) p).2 env
 
 /-- Every failure in one expression at scope `env`, as the fold's algebra at one site. -/
 def checkExprAlg (site : String) : ExprAlgebra (fun _ => Env → List Diag) where
@@ -225,15 +281,31 @@ def checkExprAlg (site : String) : ExprAlgebra (fun _ => Env → List Diag) wher
   expr_matchE s arms := fun env =>
     s env ++ (arms.map fun (p, b) =>
       let vars := patVars p
-      env.shadows site vars ++ cata_pat (checkPatAlg site) p env ++ b (env.withValues vars)).flatten
+      env.shadows site vars ++ checkPat env site p ++ b (env.withValues vars)).flatten
   expr_record fs := fun env => dup "duplicate-field" site (fs.map (·.1)) ++ (fs.map (·.2 env)).flatten
   expr_field e _ := e
   expr_tuple ps := fun env => (ps.map (· env)).flatten
   expr_listLit items := fun env => (items.map (· env)).flatten
   expr_annot e _ := e
   expr_hole _ fill := fill
-  expr_raw _ := fun _ => []
   expr_assertE e := e
+  -- `function`'s arms scope as `match`'s
+  expr_fnMatch arms := fun env =>
+    (arms.map fun (p, b) =>
+      let vars := patVars p
+      env.shadows site vars ++ checkPat env site p ++ b (env.withValues vars)).flatten
+  expr_seq a b := fun env => a env ++ b env
+  -- a pattern `let` binds its variables over the body, not over its value
+  expr_letPat p v b := fun env =>
+    let vars := patVars p
+    env.shadows site vars ++ checkPat env site p ++ v env ++ b (env.withValues vars)
+  expr_ifUnit c t := fun env => c env ++ t env
+  expr_commented e _ := e
+  expr_pack m s := fun env =>
+    (if env.knowsModule m then []
+     else [{ code := "unbound-module", site := site, detail := "`" ++ m ++ "`" }])
+    ++ (if env.knowsModuleType s then []
+        else [{ code := "unbound-module-type", site := site, detail := "`" ++ s ++ "`" }])
 
 /-- Every failure in one expression, at scope `env`. -/
 def checkExpr (env : Env) (site : String) (e : Expr) : List Diag :=
@@ -272,9 +344,21 @@ private def checkTypeDecl (d : TypeDecl) : List Diag :=
         | .variant cs => cs.flatMap fun c => badName site "constructor" isUpperIdent c.name
         | .record fs => fs.flatMap fun f => badName site "field" isLowerIdent f.name
         | _ => [])
-    ++ unbound.map fun n =>
+    ++ unbound.map (fun n =>
         { code := "unbound-tyvar", site := site,
-          detail := "`'" ++ n ++ "` is mentioned by a member and bound by no parameter" }
+          detail := "`'" ++ n ++ "` is mentioned by a member and bound by no parameter" })
+    ++ (if d.isPrivate && d.body matches .abstract then
+          [{ code := "private-abstract", site := site, detail := "an abstract type has no body" }]
+        else [])
+
+/-- The items of a module type: no `val` and no type named twice, each name in its profile, each
+type declaration by the rule of `checkTypeDecl`. A `val`'s type variables are its own. -/
+private def checkSigItems (site : String) (items : List SigItem) : List Diag :=
+  let values := items.filterMap fun | .value n _ => some n | .type _ => none
+  let types := items.filterMap fun | .type d => some d | .value _ _ => none
+  dup "duplicate-binding" site values ++ dup "duplicate-type" site (types.map (·.name))
+    ++ values.flatMap (badName site "value name" isLowerIdent)
+    ++ types.flatMap checkTypeDecl
 
 -- The rule both ways, at the shapes `ocamlopt` was run on: an unused parameter compiles, an
 -- unbound one does not.
@@ -292,8 +376,9 @@ A functor body is checked under its own declarations: the pair is the fold's two
 once. -/
 abbrev Checked : DeclFam → Type := fun _ => (Env → Env) × (Env → List Diag)
 
-/-- The declarations and the failures of one structure item. -/
-def checkDeclAlg : DeclAlgebra Checked where
+/-- The declarations and the failures of one structure item, under the interfaces of the units
+the module may open. -/
+def checkDeclAlg (units : List Interface) : DeclAlgebra Checked where
   decl_types group :=
     (fun e => group.foldl (init := e) fun acc d =>
         { acc with types := d.name :: acc.types, ctors := ctorsOfBody d.body ++ acc.ctors,
@@ -307,27 +392,102 @@ def checkDeclAlg : DeclAlgebra Checked where
            else badName b.name "value name" isLowerIdent b.name)
             ++ checkExpr (env.withValues (b.params.map (·.1))) b.name b.body)
   decl_comment _ := (id, fun _ => [])
-  decl_rawD _ := (id, fun _ => [])
-  decl_moduleD n _ body :=
-    (fun e => { e with types := n :: e.types },
+  -- what verbatim text binds is invisible, so it opens the scope of the structure that holds it
+  decl_rawD _ := (Env.opened, fun _ => [])
+  -- a functor's parameters are modules of its body, each at a module type in scope
+  decl_moduleD n params body :=
+    (fun e => { e with types := n :: e.types, modules := n :: e.modules },
      fun env =>
-       let inner := body.foldl (fun e d => d.1 e) env
-       badName n "module name" isUpperIdent n ++ (body.map (·.2 inner)).flatten)
+       let inner := body.foldl (fun e d => d.1 e) { env with modules := params.map (·.1) ++ env.modules }
+       badName n "module name" isUpperIdent n
+         ++ params.flatMap (fun (p, s) =>
+              if env.knowsModuleType s then []
+              else [{ code := "unbound-module-type", site := n ++ "." ++ p, detail := "`" ++ s ++ "`" }])
+         ++ (body.map (·.2 inner)).flatten)
   decl_floatingAttrD _ := (id, fun _ => [])
   decl_blank := (id, fun _ => [])
+  decl_openD path :=
+    (fun e => match units.find? (·.name == path) with
+      | some u => e.withInterface u
+      | none => e,
+     fun _ => if units.any (·.name == path) then []
+       else [{ code := "unbound-module", site := "open", detail := "`" ++ path ++ "`" }])
+  decl_moduleTypeD n items :=
+    (fun e => { e with moduleTypes := n :: e.moduleTypes },
+     fun _ => badName n "module type name" isUpperIdent n ++ checkSigItems n items)
 
-/-- Everything a module declares at its top level. -/
-def Env.ofModule (m : Module) : Env := m.items.foldl (fun e d => (cata_decl checkDeclAlg d).1 e) {}
+/-- Everything a module declares at its top level, under the interfaces of the units it opens. -/
+def Env.ofModule (m : Module) (units : List Interface := []) : Env :=
+  m.items.foldl (fun e d => (cata_decl (checkDeclAlg units) d).1 e) {}
 
 /-- Every well-formedness failure in a module, in declaration order. Empty means the module
-passes every check this file can decide; it does **not** mean `ocamlc` accepts it. A top-level
-`rawD` is verbatim text this module does not parse, and what it binds is exactly as invisible,
-so a module with one is checked with its value scope open. `opened` are the type declarations of a
-module the checked one opens: their types, constructors and labels are in scope. -/
-def checkModule (m : Module) (opened : List TypeDecl := []) : List Diag :=
-  let env0 := (cata_decl checkDeclAlg (.types opened)).1 (Env.ofModule m)
-  let env := if m.items.any (fun d => d matches .rawD _) then env0.opened else env0
+passes every check this file can decide; it does **not** mean `ocamlc` accepts it. A `rawD` is
+verbatim text this module does not parse, and what it binds is exactly as invisible, so the
+structure that holds one (the module, or a functor's body) is checked with its value scope open:
+the item's declaration opens it (`checkDeclAlg`). `units` are the interfaces of the units the
+module opens: an `open` of one brings its constructors, labels and values into scope, and an
+`open` of any other unit is `unbound-module`. -/
+def checkModule (m : Module) (units : List Interface := []) : List Diag :=
+  let alg := checkDeclAlg units
+  let env := Env.ofModule m units
   dup "duplicate-type" "module" env.types.reverse
-    ++ (m.items.map fun d => (cata_decl checkDeclAlg d).2 env).flatten
+    ++ dup "duplicate-module-type" "module" env.moduleTypes.reverse
+    ++ (m.items.map fun d => (cata_decl alg d).2 env).flatten
+
+/-! ## Controls: the scope of `open`, the module language and the `eff/` emitter's binders -/
+
+private def typesUnit : Interface :=
+  { name := "Types", types := [{ name := "t", body := .variant [{ name := "A" }, { name := "B", args := [Ty.int] }] }] }
+
+private def one (items : List Decl) (units : List Interface := []) : List String :=
+  (checkModule { name := "m", items := items } units).map (·.code)
+
+-- An `open` of a handed unit brings its constructors in and leaves the value scope closed, so a
+-- missing value is still found past it. A raw `open` hides the same missing value: the check
+-- stopped there (Codex's lowering note).
+#guard one [.openD "Types", .letD false [{ name := "x", body := .ctor "B" [.var "missing"] }]]
+  [typesUnit] == ["unbound-value"]
+#guard one [.rawD "open Types", .letD false [{ name := "x", body := .var "missing" }]] == []
+-- an `open` of a unit the checker is not handed is refused, and its constructors stay unknown
+#guard one [.openD "Other", .letD false [{ name := "x", body := .ctor "B" [.int 1] }]]
+  [typesUnit] == ["unbound-module", "unbound-ctor"]
+
+private def tableSig : Decl := .moduleTypeD "TABLE"
+  [.type { name := "t", params := ["a"], body := .abstract }, .value "empty" (.con "t" [.var "a"])]
+
+-- A functor's parameter at a declared module type passes; at an undeclared one it is refused.
+#guard one [tableSig, .moduleD "Make" [("M", "TABLE")] []] == []
+#guard one [.moduleD "Make" [("M", "TABLE")] []] == ["unbound-module-type"]
+-- Verbatim text opens the scope of the structure that holds it and of no other: a functor body
+-- with one is checked open, and the module around it still finds a missing value (the engine's
+-- hand prelude, inside `Make`).
+#guard one [tableSig, .moduleD "Make" [("M", "TABLE")]
+    [.rawD "let hidden = 1", .letD false [{ name := "x", body := .var "hidden" }]],
+  .letD false [{ name := "y", body := .var "missing" }]] == ["unbound-value"]
+-- A module type that names a value twice, and one declared twice, are refused.
+#guard one [.moduleTypeD "S" [.value "f" Ty.int, .value "f" Ty.int]] == ["duplicate-binding"]
+#guard one [.moduleTypeD "S" [], .moduleTypeD "S" []] == ["duplicate-module-type"]
+-- A packed module: a functor's parameter at a declared module type passes; a module or a module
+-- type in no scope is refused.
+#guard one [tableSig, .moduleD "Make" [("M", "TABLE")]
+    [.letD false [{ name := "packed", body := .pack "M" "TABLE" }]]] == []
+#guard one [tableSig, .letD false [{ name := "packed", body := .pack "N" "SIG" }]]
+  == ["unbound-module", "unbound-module-type"]
+-- `private` on a body passes; on an abstract type it is refused.
+#guard one [.types [{ name := "n", body := .alias Ty.int, isPrivate := true }]] == []
+#guard one [.types [{ name := "n", body := .abstract, isPrivate := true }]] == ["private-abstract"]
+-- A pattern `let` binds over its body and not over its value; a `function` arm binds over its
+-- body.
+private def overBody : Expr := .letPat (.tuple [.var "a", .var "b"]) (.var "p") (.seq (.var "a") (.var "b"))
+private def overValue : Expr := .letPat (.tuple [.var "a", .var "b"]) (.var "a") (.var "b")
+private def someArm : Expr := .fnMatch [(.ctor "Some" [.var "x"], .var "x"), (.wild, .int 0)]
+#guard one [.letD false [{ name := "f", params := [("p", none)], body := overBody }]] == []
+#guard one [.letD false [{ name := "f", params := [("p", none)], body := overValue }]] == ["unbound-value"]
+#guard one [.letD false [{ name := "f", body := someArm }]] == []
+-- `C _` matches a constructor of every arity from one (the constructor tables' arms); on a
+-- constant constructor it is refused, as OCaml refuses it.
+#guard one [.types [{ name := "t", body := .variant [{ name := "A" }, { name := "B", args := [Ty.int, Ty.int] }] }],
+    .letD false [{ name := "f", body := .fnMatch [(.ctor "B" [.wild], .int 1), (.ctor "A" [.wild], .int 0)] }]]
+  == ["ctor-arity"]
 
 end OCaml5.Ml

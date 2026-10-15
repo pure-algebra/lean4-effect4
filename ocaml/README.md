@@ -42,8 +42,8 @@ The Lean half, `src/OCaml5/`:
 
 | module | what it is |
 | --- | --- |
-| `Ml/*` | the OCaml syntax the LCNF backend prints, cut to the forms it builds (`Syntax`), its generated fold (`Fold`, the derived group `MlFold`), and the canonical printer (`Render`) and the well-formedness checker (`Check`), each an algebra of the fold |
-| `Eff/*` | the `Eff` program IR as OCaml: the closed world read off the environment (`World`), the emitters of the `eff/` library (`Emit`), the goldens and corpus (`Goldens`) |
+| `Ml/*` | the one OCaml syntax of the estate, cut to the forms its producers build: the LCNF backend, the `eff/` emitter, and the module language (`open`, module types, packed modules, private types) for the interop plan's P1 and P2 (`Syntax`); its generated fold (`Fold`, the derived group `MlFold`), and the canonical printer (`Render`) and the well-formedness checker (`Check`, which reads an `open` as the opened unit's scope), each an algebra of the fold |
+| `Eff/*` | the `Eff` program IR as OCaml: the closed world read off the environment (`World`), the `eff/` library as modules of that syntax (`Emit`), the goldens and corpus (`Goldens`) |
 | `Lcnf/*` | the LCNF → OCaml backend: dump, naming, the type rows as data (`TypeRows`), types, the translation rules, and the one primitive table (`Builtins`: one row for each Lean constant with its OCaml form, Lean's runtime column and its contract; the target's library with each evaluator's rule; the prelude's support functions; the reserved names) |
 | `Tools/*` | the `--run` drivers, each a thin `main` over a library module: `LcnfDump`/`LcnfGen` (the route and the engine), `EffGen` (over `Eff`), `EffWire` (the wire goldens), `CasGoldens` (the CAS goldens) |
 

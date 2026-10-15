@@ -21,6 +21,7 @@ structure TyAlgebra (R : TyFam → Type u) where
   ty_arrow : R .ty → R .ty → R .ty
   ty_tuple : List (R .ty) → R .ty
   ty_anon : R .ty
+  ty_labelled : (String) → R .ty → R .ty → R .ty
 
 mutual
 def cata_ty {R : TyFam → Type u} (alg : TyAlgebra R)
@@ -31,6 +32,7 @@ def cata_ty {R : TyFam → Type u} (alg : TyAlgebra R)
   | .arrow a0 a1 => alg.ty_arrow (cata_ty alg a0) (cata_ty alg a1)
   | .tuple a0 => alg.ty_tuple (cata_pos_list_ty alg a0)
   | .anon => alg.ty_anon
+  | .labelled a0 a1 a2 => alg.ty_labelled a0 (cata_ty alg a1) (cata_ty alg a2)
 termination_by structural node
 def cata_pos_list_ty {R : TyFam → Type u} (alg : TyAlgebra R)
     (xs : List OCaml5.Ml.Ty) : List (R .ty) :=
@@ -74,6 +76,11 @@ theorem cata_pos_list_ty_eq {R : TyFam → Type u}
     cata_ty alg (.anon) =
       alg.ty_anon := rfl
 
+@[simp] theorem cata_ty_labelled {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : String) (a1 : OCaml5.Ml.Ty) (a2 : OCaml5.Ml.Ty) :
+    cata_ty alg (.labelled a0 a1 a2) =
+      alg.ty_labelled a0 (cata_ty alg a1) (cata_ty alg a2) := rfl
+
 structure TyHom {R : TyFam → Type u} (alg : TyAlgebra R) where
   f_ty : OCaml5.Ml.Ty → R .ty
   h_ty_var : ∀ a0, f_ty (.var a0) =
@@ -86,6 +93,8 @@ structure TyHom {R : TyFam → Type u} (alg : TyAlgebra R) where
     alg.ty_tuple (a0.map f_ty)
   h_ty_anon : f_ty (.anon) =
     alg.ty_anon
+  h_ty_labelled : ∀ a0 a1 a2, f_ty (.labelled a0 a1 a2) =
+    alg.ty_labelled a0 (f_ty a1) (f_ty a2)
 
 mutual
 theorem hom_eq_cata_ty {R : TyFam → Type u}
@@ -102,6 +111,8 @@ theorem hom_eq_cata_ty {R : TyFam → Type u}
     simp only [cata_ty, hom.h_ty_tuple a0, hom_pos_list_ty hom a0]
   | .anon =>
     simp only [cata_ty, hom.h_ty_anon]
+  | .labelled a0 a1 a2 =>
+    simp only [cata_ty, hom.h_ty_labelled a0 a1 a2, hom_eq_cata_ty hom a1, hom_eq_cata_ty hom a2]
 termination_by structural node
 theorem hom_pos_list_ty {R : TyFam → Type u}
     {alg : TyAlgebra R} (hom : TyHom alg) (xs : List OCaml5.Ml.Ty) :
@@ -121,6 +132,7 @@ def TyAlgebra.id : TyAlgebra (TySelfCarrier) where
   ty_arrow a0 a1 := OCaml5.Ml.Ty.arrow a0 a1
   ty_tuple a0 := OCaml5.Ml.Ty.tuple a0
   ty_anon := OCaml5.Ml.Ty.anon
+  ty_labelled a0 a1 a2 := OCaml5.Ml.Ty.labelled a0 a1 a2
 
 mutual
 @[simp] theorem cata_id_ty (node : OCaml5.Ml.Ty) :
@@ -140,6 +152,9 @@ mutual
     rfl
   | .anon =>
     simp only [cata_ty]
+    rfl
+  | .labelled a0 a1 a2 =>
+    simp only [cata_ty, cata_id_ty a1, cata_id_ty a2]
     rfl
 termination_by structural node
 theorem cata_id_pos_list_ty (xs : List OCaml5.Ml.Ty) :
@@ -164,6 +179,8 @@ def foldMap_ty {M : Type u} (unit : M) (op : M → M → M) (node : OCaml5.Ml.Ty
     op (f_ty (.tuple a0)) ((foldMap_pos_list_ty unit op a0 f_ty))
   | .anon =>
     f_ty (.anon)
+  | .labelled a0 a1 a2 =>
+    op (f_ty (.labelled a0 a1 a2)) (op (foldMap_ty unit op a1 f_ty) ((foldMap_ty unit op a2 f_ty)))
 termination_by structural node
 def foldMap_pos_list_ty {M : Type u} (unit : M) (op : M → M → M) (xs : List OCaml5.Ml.Ty)
     (f_ty : OCaml5.Ml.Ty → M := fun _ => unit) : M :=
@@ -186,6 +203,7 @@ structure PatAlgebra (R : PatFam → Type u) where
   pat_recordOpen : List (String × R .pat) → R .pat
   pat_tuple : List (R .pat) → R .pat
   pat_cons : R .pat → R .pat → R .pat
+  pat_int : (Nat) → R .pat
 
 /-- The map of a product's components. -/
 def prodMapSnd {α : Type u} {β : Type v} {γ : Type w} (f : β → γ) (x : α × β) : α × γ := (x.1, f x.2)
@@ -207,6 +225,7 @@ def cata_pat {R : PatFam → Type u} (alg : PatAlgebra R)
   | .recordOpen a0 => alg.pat_recordOpen (cata_pos_list_prod_string_pat alg a0)
   | .tuple a0 => alg.pat_tuple (cata_pos_list_pat alg a0)
   | .cons a0 a1 => alg.pat_cons (cata_pat alg a0) (cata_pat alg a1)
+  | .int a0 => alg.pat_int a0
 termination_by structural node
 def cata_pos_list_pat {R : PatFam → Type u} (alg : PatAlgebra R)
     (xs : List OCaml5.Ml.Pat) : List (R .pat) :=
@@ -286,6 +305,11 @@ theorem cata_pos_list_prod_string_pat_eq {R : PatFam → Type u}
     cata_pat alg (.cons a0 a1) =
       alg.pat_cons (cata_pat alg a0) (cata_pat alg a1) := rfl
 
+@[simp] theorem cata_pat_int {R : PatFam → Type u}
+    (alg : PatAlgebra R) (a0 : Nat) :
+    cata_pat alg (.int a0) =
+      alg.pat_int a0 := rfl
+
 structure PatHom {R : PatFam → Type u} (alg : PatAlgebra R) where
   f_pat : OCaml5.Ml.Pat → R .pat
   h_pat_wild : f_pat (.wild) =
@@ -302,6 +326,8 @@ structure PatHom {R : PatFam → Type u} (alg : PatAlgebra R) where
     alg.pat_tuple (a0.map f_pat)
   h_pat_cons : ∀ a0 a1, f_pat (.cons a0 a1) =
     alg.pat_cons (f_pat a0) (f_pat a1)
+  h_pat_int : ∀ a0, f_pat (.int a0) =
+    alg.pat_int a0
 
 mutual
 theorem hom_eq_cata_pat {R : PatFam → Type u}
@@ -322,6 +348,8 @@ theorem hom_eq_cata_pat {R : PatFam → Type u}
     simp only [cata_pat, hom.h_pat_tuple a0, hom_pos_list_pat hom a0]
   | .cons a0 a1 =>
     simp only [cata_pat, hom.h_pat_cons a0 a1, hom_eq_cata_pat hom a0, hom_eq_cata_pat hom a1]
+  | .int a0 =>
+    simp only [cata_pat, hom.h_pat_int a0]
 termination_by structural node
 theorem hom_pos_list_pat {R : PatFam → Type u}
     {alg : PatAlgebra R} (hom : PatHom alg) (xs : List OCaml5.Ml.Pat) :
@@ -356,6 +384,7 @@ def PatAlgebra.id : PatAlgebra (PatSelfCarrier) where
   pat_recordOpen a0 := OCaml5.Ml.Pat.recordOpen a0
   pat_tuple a0 := OCaml5.Ml.Pat.tuple a0
   pat_cons a0 a1 := OCaml5.Ml.Pat.cons a0 a1
+  pat_int a0 := OCaml5.Ml.Pat.int a0
 
 mutual
 @[simp] theorem cata_id_pat (node : OCaml5.Ml.Pat) :
@@ -381,6 +410,9 @@ mutual
     rfl
   | .cons a0 a1 =>
     simp only [cata_pat, cata_id_pat a0, cata_id_pat a1]
+    rfl
+  | .int a0 =>
+    simp only [cata_pat]
     rfl
 termination_by structural node
 theorem cata_id_pos_list_pat (xs : List OCaml5.Ml.Pat) :
@@ -420,6 +452,8 @@ def foldMap_pat {M : Type u} (unit : M) (op : M → M → M) (node : OCaml5.Ml.P
     op (f_pat (.tuple a0)) ((foldMap_pos_list_pat unit op a0 f_pat))
   | .cons a0 a1 =>
     op (f_pat (.cons a0 a1)) (op (foldMap_pat unit op a0 f_pat) ((foldMap_pat unit op a1 f_pat)))
+  | .int a0 =>
+    f_pat (.int a0)
 termination_by structural node
 def foldMap_pos_list_pat {M : Type u} (unit : M) (op : M → M → M) (xs : List OCaml5.Ml.Pat)
     (f_pat : OCaml5.Ml.Pat → M := fun _ => unit) : M :=
@@ -466,8 +500,13 @@ structure ExprAlgebra (R : ExprFam → Type u) where
   expr_listLit : List (R .expr) → R .expr
   expr_annot : R .expr → (OCaml5.Ml.Ty) → R .expr
   expr_hole : (String) → R .expr → R .expr
-  expr_raw : (String) → R .expr
   expr_assertE : R .expr → R .expr
+  expr_fnMatch : List (OCaml5.Ml.Pat × R .expr) → R .expr
+  expr_seq : R .expr → R .expr → R .expr
+  expr_letPat : (OCaml5.Ml.Pat) → R .expr → R .expr → R .expr
+  expr_ifUnit : R .expr → R .expr → R .expr
+  expr_commented : R .expr → (String) → R .expr
+  expr_pack : (String) → (String) → R .expr
 
 mutual
 def cata_expr {R : ExprFam → Type u} (alg : ExprAlgebra R)
@@ -493,8 +532,13 @@ def cata_expr {R : ExprFam → Type u} (alg : ExprAlgebra R)
   | .listLit a0 => alg.expr_listLit (cata_pos_list_expr alg a0)
   | .annot a0 a1 => alg.expr_annot (cata_expr alg a0) a1
   | .hole a0 a1 => alg.expr_hole a0 (cata_expr alg a1)
-  | .raw a0 => alg.expr_raw a0
   | .assertE a0 => alg.expr_assertE (cata_expr alg a0)
+  | .fnMatch a0 => alg.expr_fnMatch (cata_pos_list_prod_pat_expr alg a0)
+  | .seq a0 a1 => alg.expr_seq (cata_expr alg a0) (cata_expr alg a1)
+  | .letPat a0 a1 a2 => alg.expr_letPat a0 (cata_expr alg a1) (cata_expr alg a2)
+  | .ifUnit a0 a1 => alg.expr_ifUnit (cata_expr alg a0) (cata_expr alg a1)
+  | .commented a0 a1 => alg.expr_commented (cata_expr alg a0) a1
+  | .pack a0 a1 => alg.expr_pack a0 a1
 termination_by structural node
 def cata_pos_list_expr {R : ExprFam → Type u} (alg : ExprAlgebra R)
     (xs : List OCaml5.Ml.Expr) : List (R .expr) :=
@@ -690,15 +734,41 @@ theorem cata_pos_list_prod_string_expr_eq {R : ExprFam → Type u}
     cata_expr alg (.hole a0 a1) =
       alg.expr_hole a0 (cata_expr alg a1) := rfl
 
-@[simp] theorem cata_expr_raw {R : ExprFam → Type u}
-    (alg : ExprAlgebra R) (a0 : String) :
-    cata_expr alg (.raw a0) =
-      alg.expr_raw a0 := rfl
-
 @[simp] theorem cata_expr_assertE {R : ExprFam → Type u}
     (alg : ExprAlgebra R) (a0 : OCaml5.Ml.Expr) :
     cata_expr alg (.assertE a0) =
       alg.expr_assertE (cata_expr alg a0) := rfl
+
+@[simp] theorem cata_expr_fnMatch {R : ExprFam → Type u}
+    (alg : ExprAlgebra R) (a0 : List (OCaml5.Ml.Pat × OCaml5.Ml.Expr)) :
+    cata_expr alg (.fnMatch a0) =
+      alg.expr_fnMatch (a0.map (prodMapSnd (cata_expr alg))) := by
+  simp only [cata_expr, cata_pos_list_prod_pat_expr_eq]
+
+@[simp] theorem cata_expr_seq {R : ExprFam → Type u}
+    (alg : ExprAlgebra R) (a0 : OCaml5.Ml.Expr) (a1 : OCaml5.Ml.Expr) :
+    cata_expr alg (.seq a0 a1) =
+      alg.expr_seq (cata_expr alg a0) (cata_expr alg a1) := rfl
+
+@[simp] theorem cata_expr_letPat {R : ExprFam → Type u}
+    (alg : ExprAlgebra R) (a0 : OCaml5.Ml.Pat) (a1 : OCaml5.Ml.Expr) (a2 : OCaml5.Ml.Expr) :
+    cata_expr alg (.letPat a0 a1 a2) =
+      alg.expr_letPat a0 (cata_expr alg a1) (cata_expr alg a2) := rfl
+
+@[simp] theorem cata_expr_ifUnit {R : ExprFam → Type u}
+    (alg : ExprAlgebra R) (a0 : OCaml5.Ml.Expr) (a1 : OCaml5.Ml.Expr) :
+    cata_expr alg (.ifUnit a0 a1) =
+      alg.expr_ifUnit (cata_expr alg a0) (cata_expr alg a1) := rfl
+
+@[simp] theorem cata_expr_commented {R : ExprFam → Type u}
+    (alg : ExprAlgebra R) (a0 : OCaml5.Ml.Expr) (a1 : String) :
+    cata_expr alg (.commented a0 a1) =
+      alg.expr_commented (cata_expr alg a0) a1 := rfl
+
+@[simp] theorem cata_expr_pack {R : ExprFam → Type u}
+    (alg : ExprAlgebra R) (a0 : String) (a1 : String) :
+    cata_expr alg (.pack a0 a1) =
+      alg.expr_pack a0 a1 := rfl
 
 structure ExprHom {R : ExprFam → Type u} (alg : ExprAlgebra R) where
   f_expr : OCaml5.Ml.Expr → R .expr
@@ -742,10 +812,20 @@ structure ExprHom {R : ExprFam → Type u} (alg : ExprAlgebra R) where
     alg.expr_annot (f_expr a0) a1
   h_expr_hole : ∀ a0 a1, f_expr (.hole a0 a1) =
     alg.expr_hole a0 (f_expr a1)
-  h_expr_raw : ∀ a0, f_expr (.raw a0) =
-    alg.expr_raw a0
   h_expr_assertE : ∀ a0, f_expr (.assertE a0) =
     alg.expr_assertE (f_expr a0)
+  h_expr_fnMatch : ∀ a0, f_expr (.fnMatch a0) =
+    alg.expr_fnMatch (a0.map (prodMapSnd f_expr))
+  h_expr_seq : ∀ a0 a1, f_expr (.seq a0 a1) =
+    alg.expr_seq (f_expr a0) (f_expr a1)
+  h_expr_letPat : ∀ a0 a1 a2, f_expr (.letPat a0 a1 a2) =
+    alg.expr_letPat a0 (f_expr a1) (f_expr a2)
+  h_expr_ifUnit : ∀ a0 a1, f_expr (.ifUnit a0 a1) =
+    alg.expr_ifUnit (f_expr a0) (f_expr a1)
+  h_expr_commented : ∀ a0 a1, f_expr (.commented a0 a1) =
+    alg.expr_commented (f_expr a0) a1
+  h_expr_pack : ∀ a0 a1, f_expr (.pack a0 a1) =
+    alg.expr_pack a0 a1
 
 mutual
 theorem hom_eq_cata_expr {R : ExprFam → Type u}
@@ -792,10 +872,20 @@ theorem hom_eq_cata_expr {R : ExprFam → Type u}
     simp only [cata_expr, hom.h_expr_annot a0 a1, hom_eq_cata_expr hom a0]
   | .hole a0 a1 =>
     simp only [cata_expr, hom.h_expr_hole a0 a1, hom_eq_cata_expr hom a1]
-  | .raw a0 =>
-    simp only [cata_expr, hom.h_expr_raw a0]
   | .assertE a0 =>
     simp only [cata_expr, hom.h_expr_assertE a0, hom_eq_cata_expr hom a0]
+  | .fnMatch a0 =>
+    simp only [cata_expr, hom.h_expr_fnMatch a0, hom_pos_list_prod_pat_expr hom a0]
+  | .seq a0 a1 =>
+    simp only [cata_expr, hom.h_expr_seq a0 a1, hom_eq_cata_expr hom a0, hom_eq_cata_expr hom a1]
+  | .letPat a0 a1 a2 =>
+    simp only [cata_expr, hom.h_expr_letPat a0 a1 a2, hom_eq_cata_expr hom a1, hom_eq_cata_expr hom a2]
+  | .ifUnit a0 a1 =>
+    simp only [cata_expr, hom.h_expr_ifUnit a0 a1, hom_eq_cata_expr hom a0, hom_eq_cata_expr hom a1]
+  | .commented a0 a1 =>
+    simp only [cata_expr, hom.h_expr_commented a0 a1, hom_eq_cata_expr hom a0]
+  | .pack a0 a1 =>
+    simp only [cata_expr, hom.h_expr_pack a0 a1]
 termination_by structural node
 theorem hom_pos_list_expr {R : ExprFam → Type u}
     {alg : ExprAlgebra R} (hom : ExprHom alg) (xs : List OCaml5.Ml.Expr) :
@@ -869,8 +959,13 @@ def ExprAlgebra.id : ExprAlgebra (ExprSelfCarrier) where
   expr_listLit a0 := OCaml5.Ml.Expr.listLit a0
   expr_annot a0 a1 := OCaml5.Ml.Expr.annot a0 a1
   expr_hole a0 a1 := OCaml5.Ml.Expr.hole a0 a1
-  expr_raw a0 := OCaml5.Ml.Expr.raw a0
   expr_assertE a0 := OCaml5.Ml.Expr.assertE a0
+  expr_fnMatch a0 := OCaml5.Ml.Expr.fnMatch a0
+  expr_seq a0 a1 := OCaml5.Ml.Expr.seq a0 a1
+  expr_letPat a0 a1 a2 := OCaml5.Ml.Expr.letPat a0 a1 a2
+  expr_ifUnit a0 a1 := OCaml5.Ml.Expr.ifUnit a0 a1
+  expr_commented a0 a1 := OCaml5.Ml.Expr.commented a0 a1
+  expr_pack a0 a1 := OCaml5.Ml.Expr.pack a0 a1
 
 mutual
 @[simp] theorem cata_id_expr (node : OCaml5.Ml.Expr) :
@@ -936,11 +1031,26 @@ mutual
   | .hole a0 a1 =>
     simp only [cata_expr, cata_id_expr a1]
     rfl
-  | .raw a0 =>
-    simp only [cata_expr]
-    rfl
   | .assertE a0 =>
     simp only [cata_expr, cata_id_expr a0]
+    rfl
+  | .fnMatch a0 =>
+    simp only [cata_expr, cata_id_pos_list_prod_pat_expr a0]
+    rfl
+  | .seq a0 a1 =>
+    simp only [cata_expr, cata_id_expr a0, cata_id_expr a1]
+    rfl
+  | .letPat a0 a1 a2 =>
+    simp only [cata_expr, cata_id_expr a1, cata_id_expr a2]
+    rfl
+  | .ifUnit a0 a1 =>
+    simp only [cata_expr, cata_id_expr a0, cata_id_expr a1]
+    rfl
+  | .commented a0 a1 =>
+    simp only [cata_expr, cata_id_expr a0]
+    rfl
+  | .pack a0 a1 =>
+    simp only [cata_expr]
     rfl
 termination_by structural node
 theorem cata_id_pos_list_expr (xs : List OCaml5.Ml.Expr) :
@@ -1028,10 +1138,20 @@ def foldMap_expr {M : Type u} (unit : M) (op : M → M → M) (node : OCaml5.Ml.
     op (f_expr (.annot a0 a1)) ((foldMap_expr unit op a0 f_expr))
   | .hole a0 a1 =>
     op (f_expr (.hole a0 a1)) ((foldMap_expr unit op a1 f_expr))
-  | .raw a0 =>
-    f_expr (.raw a0)
   | .assertE a0 =>
     op (f_expr (.assertE a0)) ((foldMap_expr unit op a0 f_expr))
+  | .fnMatch a0 =>
+    op (f_expr (.fnMatch a0)) ((foldMap_pos_list_prod_pat_expr unit op a0 f_expr))
+  | .seq a0 a1 =>
+    op (f_expr (.seq a0 a1)) (op (foldMap_expr unit op a0 f_expr) ((foldMap_expr unit op a1 f_expr)))
+  | .letPat a0 a1 a2 =>
+    op (f_expr (.letPat a0 a1 a2)) (op (foldMap_expr unit op a1 f_expr) ((foldMap_expr unit op a2 f_expr)))
+  | .ifUnit a0 a1 =>
+    op (f_expr (.ifUnit a0 a1)) (op (foldMap_expr unit op a0 f_expr) ((foldMap_expr unit op a1 f_expr)))
+  | .commented a0 a1 =>
+    op (f_expr (.commented a0 a1)) ((foldMap_expr unit op a0 f_expr))
+  | .pack a0 a1 =>
+    f_expr (.pack a0 a1)
 termination_by structural node
 def foldMap_pos_list_expr {M : Type u} (unit : M) (op : M → M → M) (xs : List OCaml5.Ml.Expr)
     (f_expr : OCaml5.Ml.Expr → M := fun _ => unit) : M :=
@@ -1087,6 +1207,8 @@ structure DeclAlgebra (R : DeclFam → Type u) where
   decl_moduleD : (String) → (List (Prod String String)) → List (R .decl) → R .decl
   decl_floatingAttrD : (String) → R .decl
   decl_blank : R .decl
+  decl_openD : (String) → R .decl
+  decl_moduleTypeD : (String) → (List OCaml5.Ml.SigItem) → R .decl
 
 mutual
 def cata_decl {R : DeclFam → Type u} (alg : DeclAlgebra R)
@@ -1099,6 +1221,8 @@ def cata_decl {R : DeclFam → Type u} (alg : DeclAlgebra R)
   | .moduleD a0 a1 a2 => alg.decl_moduleD a0 a1 (cata_pos_list_decl alg a2)
   | .floatingAttrD a0 => alg.decl_floatingAttrD a0
   | .blank => alg.decl_blank
+  | .openD a0 => alg.decl_openD a0
+  | .moduleTypeD a0 a1 => alg.decl_moduleTypeD a0 a1
 termination_by structural node
 def cata_pos_list_decl {R : DeclFam → Type u} (alg : DeclAlgebra R)
     (xs : List OCaml5.Ml.Decl) : List (R .decl) :=
@@ -1151,6 +1275,16 @@ theorem cata_pos_list_decl_eq {R : DeclFam → Type u}
     cata_decl alg (.blank) =
       alg.decl_blank := rfl
 
+@[simp] theorem cata_decl_openD {R : DeclFam → Type u}
+    (alg : DeclAlgebra R) (a0 : String) :
+    cata_decl alg (.openD a0) =
+      alg.decl_openD a0 := rfl
+
+@[simp] theorem cata_decl_moduleTypeD {R : DeclFam → Type u}
+    (alg : DeclAlgebra R) (a0 : String) (a1 : List OCaml5.Ml.SigItem) :
+    cata_decl alg (.moduleTypeD a0 a1) =
+      alg.decl_moduleTypeD a0 a1 := rfl
+
 structure DeclHom {R : DeclFam → Type u} (alg : DeclAlgebra R) where
   f_decl : OCaml5.Ml.Decl → R .decl
   h_decl_types : ∀ a0, f_decl (.types a0) =
@@ -1167,6 +1301,10 @@ structure DeclHom {R : DeclFam → Type u} (alg : DeclAlgebra R) where
     alg.decl_floatingAttrD a0
   h_decl_blank : f_decl (.blank) =
     alg.decl_blank
+  h_decl_openD : ∀ a0, f_decl (.openD a0) =
+    alg.decl_openD a0
+  h_decl_moduleTypeD : ∀ a0 a1, f_decl (.moduleTypeD a0 a1) =
+    alg.decl_moduleTypeD a0 a1
 
 mutual
 theorem hom_eq_cata_decl {R : DeclFam → Type u}
@@ -1187,6 +1325,10 @@ theorem hom_eq_cata_decl {R : DeclFam → Type u}
     simp only [cata_decl, hom.h_decl_floatingAttrD a0]
   | .blank =>
     simp only [cata_decl, hom.h_decl_blank]
+  | .openD a0 =>
+    simp only [cata_decl, hom.h_decl_openD a0]
+  | .moduleTypeD a0 a1 =>
+    simp only [cata_decl, hom.h_decl_moduleTypeD a0 a1]
 termination_by structural node
 theorem hom_pos_list_decl {R : DeclFam → Type u}
     {alg : DeclAlgebra R} (hom : DeclHom alg) (xs : List OCaml5.Ml.Decl) :
@@ -1208,6 +1350,8 @@ def DeclAlgebra.id : DeclAlgebra (DeclSelfCarrier) where
   decl_moduleD a0 a1 a2 := OCaml5.Ml.Decl.moduleD a0 a1 a2
   decl_floatingAttrD a0 := OCaml5.Ml.Decl.floatingAttrD a0
   decl_blank := OCaml5.Ml.Decl.blank
+  decl_openD a0 := OCaml5.Ml.Decl.openD a0
+  decl_moduleTypeD a0 a1 := OCaml5.Ml.Decl.moduleTypeD a0 a1
 
 mutual
 @[simp] theorem cata_id_decl (node : OCaml5.Ml.Decl) :
@@ -1232,6 +1376,12 @@ mutual
     simp only [cata_decl]
     rfl
   | .blank =>
+    simp only [cata_decl]
+    rfl
+  | .openD a0 =>
+    simp only [cata_decl]
+    rfl
+  | .moduleTypeD a0 a1 =>
     simp only [cata_decl]
     rfl
 termination_by structural node
@@ -1261,6 +1411,10 @@ def foldMap_decl {M : Type u} (unit : M) (op : M → M → M) (node : OCaml5.Ml.
     f_decl (.floatingAttrD a0)
   | .blank =>
     f_decl (.blank)
+  | .openD a0 =>
+    f_decl (.openD a0)
+  | .moduleTypeD a0 a1 =>
+    f_decl (.moduleTypeD a0 a1)
 termination_by structural node
 def foldMap_pos_list_decl {M : Type u} (unit : M) (op : M → M → M) (xs : List OCaml5.Ml.Decl)
     (f_decl : OCaml5.Ml.Decl → M := fun _ => unit) : M :=

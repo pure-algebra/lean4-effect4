@@ -15,9 +15,11 @@ through them: the input is exactly the syntax tree `OCaml5.Ml.Render` renders. T
 that ran this reader on 20,387 vectors went on 2026-10-15: no gate ran it
 (`git:fef45fb5a:tools/Conform/Effect4/LcnfMl.lean`, decisions row 391).
 
-**The reader refuses by name.** The syntax holds only the forms the route builds
-(`OCaml5.Ml.Syntax`), and the reader reads every one of them but verbatim text, which is an
-`Except` error naming it. One labelled application is read, by its exact shape:
+**The reader refuses by name.** The reader reads every form the route builds. The syntax also
+holds the `eff/` emitter's forms and the module language (`OCaml5.Ml.Syntax`): a trailing comment
+reads as its expression, an integer pattern as the target's, and `function`, a sequence, a
+pattern `let`, an `if` without `else` and a packed module are refused by name, each an `Except`
+error naming it. One labelled application is read, by its exact shape:
 `Option.value o ~default:d`, the form of the row `Option.getD`. Every other labelled application
 is refused. The refusals a run reports are listed in its output.
 
@@ -35,8 +37,8 @@ namespace Conform.Effect4.LcnfMl
 /-! ## 1. The reader
 
 The reader is two algebras of the OCaml syntax's fold (`OCaml5.Ml.Fold`): every pattern reads,
-and an expression reads unless it is verbatim text or a labelled application other than the one
-the builtin table writes. -/
+and an expression reads unless it is a form the route never emits or a labelled application other
+than the one the builtin table writes. -/
 
 /-- Constructor names an OCaml target spells as a literal rather than as a constructor. -/
 def litCtor? : String → Option Target.Pat
@@ -57,6 +59,7 @@ def ofPatAlg : OCaml5.Ml.PatAlgebra (fun _ => Target.Pat) where
   pat_recordOpen fs := .record fs true
   pat_tuple ps := .tuple ps
   pat_cons h t := .ctor "::" [h, t]
+  pat_int n := .int n
 
 def ofPat (p : OCaml5.Ml.Pat) : Target.Pat := OCaml5.Ml.cata_pat ofPatAlg p
 
@@ -115,8 +118,14 @@ def ofExprAlg : OCaml5.Ml.ExprAlgebra (fun _ => Except String Target.Expr) where
     return es.foldr (fun h t => .ctor "::" [h, t]) (.ctor "[]" [])
   expr_annot e _ := e
   expr_hole note _ := .ok (.fail s!"HOLE: {note}")
-  expr_raw _ := .error "Ml.Expr.raw"
   expr_assertE _ := .ok (.fail "assert false")
+  -- a trailing comment is whitespace; the forms the route never emits are refused by name
+  expr_commented e _ := e
+  expr_fnMatch _ := .error "Ml.Expr.fnMatch"
+  expr_seq _ _ := .error "Ml.Expr.seq"
+  expr_letPat _ _ _ := .error "Ml.Expr.letPat"
+  expr_ifUnit _ _ := .error "Ml.Expr.ifUnit"
+  expr_pack _ _ := .error "Ml.Expr.pack"
 
 def ofExpr (e : OCaml5.Ml.Expr) : Except String Target.Expr := OCaml5.Ml.cata_expr ofExprAlg e
 
@@ -128,9 +137,9 @@ def ofBind (b : OCaml5.Ml.Bind) : Except String (String × List String × Target
 
 An emitted module is its prelude and then its declarations. The target program is assembled the
 same way, from the same data: each support function is read from the definition the prelude
-prints (`OCaml5.Lcnf.support`), so the evaluator runs the body that OCaml compiles. The two
-verbatim primitives and the target's own library are not read: they are the evaluator's
-primitives (`Target.applyPrim`), named assumptions. -/
+prints (`OCaml5.Lcnf.support`), so the evaluator runs the body that OCaml compiles. The
+prelude's primitives (`OCaml5.Lcnf.preludePrimitives`) and the target's own library are not read:
+they are the evaluator's primitives (`Target.applyPrim`), named assumptions. -/
 
 /-- The bindings every emitted module starts from: `max_int` for the profile's word, and the
 support functions. A support function called from another binding starts from its parameters

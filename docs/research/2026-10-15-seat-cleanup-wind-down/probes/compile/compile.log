@@ -1,0 +1,5 @@
+File "todo_host.ml", line 11104, characters 27-33:
+11104 |   ({ to_bit_vec = _x_2 } : uint32) in
+                                   ^^^^^^
+Error: Unbound type constructor uint32
+Hint: Did you mean int32?
