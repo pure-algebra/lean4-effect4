@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.AnswerSlots.AllocationScoped
+import Effect4.Laws.Program.AnswerSlots.AllocationCounter
 
 /-!
 Concept: store-typing R4 and reactive-scheduling R9.
@@ -55,7 +55,7 @@ theorem pending_iteration_or_entry (spec : Spec) (fragment : SourceScope.Fragmen
     (saved : Effect4.Contracts.Path (Edge spec fragment ⟨fiber.id, machine.state, false⟩) input output fiber.frame.stack)
     (held : FramesAt spec fragment false machine) (heap : HeapPrefix spec machine.state) :
     let result := iteration (evaluator := evaluatorFor spec.root spec.table) (interpOf spec.root spec.table) machine fiber yielding
-    (HeapPrefix spec result.machine.state ∧
+    (HeapPrefix spec result.machine.state ∧ result.machine.nextId = machine.nextId ∧
       AnswerFlow.IterFlows (fun world _ => FrameAt spec fragment world) (fun state id => ⟨id, state, false⟩) result) ∨
       EntryRun spec fragment machine fiber yielding result := by
   have topId : (countOp (runloopTop fiber)).id = fiber.id := by
@@ -75,7 +75,7 @@ theorem pending_iteration_or_entry (spec : Spec) (fragment : SourceScope.Fragmen
       have typed : CodeAt spec ⟨fiber.id, machine.state, false⟩ topKind
           (.onSuccessConst (.yieldNowWith 0) (countOp (runloopTop fiber)).frame.current) :=
         .yieldThen (code_phase spec _ topKind _ code) code (fun _ => ⟨rfl, heap.1⟩)
-      rcases pending_native_iterflows_or_entry spec fragment
+      rcases pending_native_counted_iterflows_or_entry spec fragment
         (machine.emit [.yieldInjected (countOp (runloopTop fiber)).id (countOp (runloopTop fiber)).currentOpCount])
         {(countOp (runloopTop fiber)) with yieldOverride := none, frame := {(countOp (runloopTop fiber)).frame with current := .onSuccessConst (.yieldNowWith 0) (countOp (runloopTop fiber)).frame.current}}
         true topKind output (by rw [topId]; exact typed) (by rw [topId]; exact stack) held heap with flow | entry
@@ -85,7 +85,7 @@ theorem pending_iteration_or_entry (spec : Spec) (fragment : SourceScope.Fragmen
         exact .inr (.injected ⟨point, output, current, stage, by rw [topId]; exact stack⟩ rfl)
     · cases injected
   · cases actual
-    rcases pending_native_iterflows_or_entry spec fragment machine (countOp (runloopTop fiber)) yielding
+    rcases pending_native_counted_iterflows_or_entry spec fragment machine (countOp (runloopTop fiber)) yielding
       topKind output (by rw [topId]; exact code) (by rw [topId]; exact stack) held heap with flow | entry
     · exact .inl flow
     · obtain ⟨point, kind, current, stage⟩ := entry
