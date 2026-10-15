@@ -1121,3 +1121,135 @@ and `check-host-protocol`, and `make gen-derived` regenerates the fold, which lo
 
 **The pin.** `lakefile.toml` names the package by its commit (`rev`), and `lake-manifest.json`
 carries the same commit. Both are the coordinator's, so the bump lands with the release.
+
+### Part B: the module's surface, decoding at entry, and the entries' JSON Schemas
+
+**The one thing to know.** An emitted module now ships with a second module, its surface, which
+a consumer imports. It holds each data service's Schemas and a layer that decodes each entry's
+input. The to-do's consumer runs through that layer, and every lane's verdict stands.
+
+Base `b03037a23`; the part's commit is the head.
+
+**Why a second module (row 390).** The review's step 3 wraps each exported entry. The program
+module's layer is program syntax, which the reading boundary reads back exactly
+(`readServiceMethod`, `Laws/Codegen/Services.lean`), and the TypeScript reader reads it too. A
+decode inside it would change the printer, both readers, their laws and every lane's bytes. The
+surface is no program syntax: it is a function of the checked program's types. So it stands
+beside the program module, which keeps every byte, and the reading boundary is unchanged. The
+review's file list names `Checked.lean`, not the printer, so the plan meant a file of the
+emission too.
+
+**What landed.**
+
+- **The surface.** `ModuleEmission.surface` (`src/Effect4/Codegen/Surface.lean`) writes two
+  declarations for each data service of the program's block. The first, `SSchemas`, holds each
+  method's input, answer and error Schemas, by part A's code printer. The layer `SLive`
+  provides the service from the program's own layer:
+  `Layer.provide(Layer.effect(S, Effect.map(S, (a0) => …)), SLayer)`. Each of its methods
+  decodes its arguments with `Schema.decodeUnknownEffect(SSchemas.m.input)`, then calls the
+  program's method. A failed decode dies (`Effect.orDie`). The imports come from Lean data
+  (`surfaceImports`).
+- **A data service.** Every argument, answer and error of its methods has typed Schema code. A
+  generic service, and a method that takes a handle, have none. The to-do's two services are data
+  services.
+- **The to-do.** `apps/todo/EmitTodo.lean` writes `.work/todo.surface.gen.ts` beside the module.
+  The consumer (`apps/todo/consumer.ts`) provides `TodoAppLive`, and its types `Todo`,
+  `SqlError` and `EmptyTitle` are the generated Schemas' types, not hand types.
+- **The JSON Schemas.** `apps/todo/json-schemas.ts` writes `.work/todo.schemas.json` from the
+  surface. The compiler of rc.112 writes each document (`Schema.toJsonSchemaDocument`). rc.112 imports each input's
+  document back, and the imported Schema agrees with the surface's on 16 inputs.
+- **The red control of `E4-PRINT-CE-003`.** `harness/truth/service/run-todo.ts` calls
+  `complete(-1)`. Through the program's own layer the repository receives `[-1, true]`. Through
+  the surface's layer the decode dies, and the repository is not called.
+- **The gate.** `scripts/check-host-protocol.py` runs the JSON Schema writer after the emitter.
+  tsgo 7 checks the surface with the consumer, the front, the repository and the runner.
+
+**Changed files.**
+
+- The core: `src/Effect4/Codegen/Surface.lean` (new) and `src/Effect4/Api/Codegen.lean`, which
+  imports it.
+- The battery: `Test/Codegen/SurfaceContract.lean` (new). `Test/All.lean` imports it in one line,
+  at the end of its codegen block, after `Test.Codegen.SchemaCode`.
+- The to-do: `apps/todo/EmitTodo.lean`, `apps/todo/consumer.ts`, `apps/todo/json-schemas.ts`
+  (new); the runner `harness/truth/service/run-todo.ts`; the gate's script
+  `scripts/check-host-protocol.py`. No `Makefile` line moves: the gate's sources already hold
+  `apps/todo/*.ts` and the core.
+- The documents: `docs/ARCHITECTURE.md` (the codegen row) and `docs/core/api-surface.md` (D-E,
+  ruled by rows 392 and 395).
+
+**Commands and results.**
+
+| Command | Result |
+| --- | --- |
+| the probes `cr4/lean/SurfaceProbe.lean` and `SurfaceProbe2.lean` | the to-do's surface has two data services, `ListCache` and `TodoApp`; the counter's and the number queue's surfaces print |
+| `lake build` of the surface, its battery, the root `Effect4` and the 45 direct importers of `Effect4.Api.Codegen` | passes, 1319 jobs |
+| `#axiom_audit Effect4.Codegen.Surface Effect4.Api.Codegen` | 61 declarations within `[propext, Quot.sound]` |
+| `make check-host-protocol` | passes. tsgo 7 checks the surface with the consumer, the front, the repository and the runner. The to-do's 14 scripts on rc.112 each equal Lean's observation through the decoding layer, as at the base; the third red control holds; the to-do on SQLite passes Lean's five checks on 11 requests, as at the base; the JSON Schemas agree on 16 inputs |
+| `make check-schema-codec` | passes: part A's line |
+| `make check-schema-ts` | passes |
+| `make check-ts-reader` | passes: 783 tests |
+| `make check-target` | passes: 104 resolved, none mismatching |
+
+**The stop rule, checked.** Decoding at entry changes no run's observation on rc.112 for a member
+input. Each of the 14 scripts' outcomes, calls and refusals equals Lean's, and Lean replays each
+recording to its journal.
+
+**Axiom output.** 61 declarations within `[propext, Quot.sound]`, none modulo planned goals.
+
+**Lines.** 376 added and 27 removed, in 11 files.
+
+**Evidence.** *Tested*: tsgo 7's typing of the surface, the 14 runs through its layer, the red
+control, and the JSON Schemas' agreement on 16 inputs. *Not proved*: that the decoding layer
+answers as the program's layer on every member input. No law states it, since Lean holds no model
+of rc.112's decoder.
+
+**Open obligations.**
+
+- **The brand of a `Ref` argument.** No data service of the tree takes a `Ref` at an entry, so the
+  surface has no instance of it. A method that takes one has no Schemas, and its service has no
+  surface (a red control of `Test/Codegen/SurfaceContract.lean`). The brand waits for a service
+  that needs it.
+- **A service whose method answers `number`** has no surface until R-T6 lowers `number` (CR-10).
+- **The register.** `E4-PRINT-CE-003` gets its witness as the runner's third red control. The
+  coordinator rules its status in `Test/Counterexamples/REGISTER.md` (P-CR4-2).
+
+**Proposed decisions row (proposal only).**
+
+- **P-CR4-2.** `E4-PRINT-CE-003` moves from RESERVED to REPAIRED at the surface. Its witness is the
+  third red control of `harness/truth/service/run-todo.ts`. The program's own layer passes `-1` to
+  the repository, and the surface's layer dies at the decode. The program module's own exports
+  stay as the counterexample states them: they are the implementation, which the surface wraps.
+
+### Step 4, the prelude package: planned, and waiting on the `Makefile`
+
+**The one thing to know.** The prelude package (`ts/prelude/`, row 392's P10) needs three
+`Makefile` lines, and row 395 keeps this seat's `Makefile` edits to its two. So the step waits for
+the coordinator's word on those three lines, or for the lowering seat's gate census (S4).
+
+**The plan.** The package is the runtime half of `harness/truth/prelude.ts`, generated where it
+transcribes Lean, and no harness code (P10):
+
+| Part | Where it goes |
+| --- | --- |
+| the atoms, generated from the atom table | `ts/prelude/atoms.gen.ts`, the `Out` of the `PreludeAtoms` group of `tools/Effect4Gen/manifest.json`, from `harness/truth/prelude-atoms.gen.ts` |
+| the record, tuple and control helpers | `ts/prelude/records.ts`, `tuples.ts`, `control.ts`, from `harness/truth/` |
+| the mask's restore type (`MaskRestore`) | `ts/prelude/prelude.ts`, the package's one entry, which re-exports the other four files |
+| the package's identity | `ts/prelude/package.json`: a private package, its entry `prelude.ts` |
+| the harness half: the self-test table, the fixture rows `Host` and `L`, the SQLite and key-value tables, the pair projection and the tape | stays in `harness/truth/prelude.ts`, which re-exports the package |
+
+**What moves with it.**
+
+- The `Makefile`: `DERIVED_OUT` and `GENERATED_PATHS` name `ts/prelude/atoms.gen.ts` in place of
+  `harness/truth/prelude-atoms.gen.ts`, and `PRELUDE_SOURCES` names the package's five files.
+  These are the three lines.
+- `scripts/lib/truth_host.py`: `copy_prelude` copies the package's files beside the harness's.
+- `tools/Drivers/Emit.lean`: `preludeFiles` copies the package, not four files of `harness/truth`.
+- `harness/tsdiag/run-tsdiag.mjs`: the lane copies the files of the package that the compiler
+  reads, beside the files of `harness/truth`. Today it refuses a prelude file outside
+  `harness/truth`.
+- `Tools.Code.preludePath` and the to-do's prelude path name the package. The to-do's module then
+  imports no harness file, and no SQLite.
+
+**The gates.** `make gen-derived` writes the atoms at the new path. Then `check-truth`,
+`check-corpus`, `check-tsdiag`, `check-host-protocol` and `check-target` run, and no printed byte
+other than an import path moves.

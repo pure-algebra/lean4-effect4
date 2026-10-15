@@ -20,7 +20,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises"
 import { resolve } from "node:path"
 import { setImmediate } from "node:timers/promises"
 import { AssertionError, deepStrictEqual, throws } from "node:assert"
-import { Effect, type Exit, type Fiber } from "effect"
+import { Cause, Effect, Exit, Layer, Option, type Fiber } from "effect"
 import { KeyedRecorder, type KeyedFixture } from "../session/keyed-recorder.ts"
 import { ScriptedHost, bindScenario, declareScenario, provideScenario } from "../session/keyed-bindings.ts"
 import { measure, type HostEnd, type ScenarioFixture, type ScenarioManifest } from "../session/keyed-observation.ts"
@@ -28,6 +28,7 @@ import type { KeyedRecording } from "../session/keyed-protocol.ts"
 import type { Json } from "../session/protocol.ts"
 import { Rc112ClockBoundary } from "../session/clock.ts"
 import * as Service from "../../../apps/todo/.work/todo.gen.ts"
+import * as Surface from "../../../apps/todo/.work/todo.surface.gen.ts"
 import { cachedListAfterAdd, programs } from "../../../apps/todo/consumer.ts"
 
 const [scenariosPath, outPath] = process.argv.slice(2)
@@ -129,8 +130,32 @@ const milk = fixtures.find(fixture => fixture.name === "todo/milk")!
 let refused = false
 try { await perform(milk, programs.list) } catch (error) { refused = error instanceof Error && error.message.startsWith("call association differs") }
 if (!refused) throw Error("todo/milk run on `list` must be refused by the recorder")
+// Red control of the decode at entry (`E4-PRINT-CE-003`; CR-4, decisions row 373 (11)): `complete`
+// takes a natural, and a TypeScript caller may pass -1. The program's own layer passes it to the
+// repository, outside the model's type; the surface's layer dies at the decode, before any call.
+const setDone: Array<readonly [number, boolean]> = []
+const recording: typeof Service.TodoRepo.Service = {
+  insert: () => Effect.die("the control inserts nothing"),
+  all: () => Effect.succeed([]),
+  setDone: (request) => { setDone.push(request); return Effect.succeed(Option.none()) },
+  delete: () => Effect.succeed(false)
+}
+const completeNegative = (layer: typeof Service.TodoAppLayer) =>
+  Effect.runPromiseExit(Effect.gen(function* () {
+    const todo = yield* Service.TodoApp
+    return yield* todo.complete(-1)
+  }).pipe(Effect.provide(layer), Effect.provide(Layer.succeed(Service.TodoRepo, recording))))
+const raw = await completeNegative(Service.TodoAppLayer)
+deepStrictEqual(setDone, [[-1, true]], "the program's own layer passes -1 to the repository")
+if (!Exit.isFailure(raw) || !raw.cause.reasons.some(Cause.isFailReason))
+  throw Error("the program's own layer answers -1 by the repository's absence, a failure")
+const decoded = await completeNegative(Surface.TodoAppLive)
+deepStrictEqual(setDone, [[-1, true]], "the surface's layer calls no repository method at -1")
+if (!Exit.isFailure(decoded) || !decoded.cause.reasons.some(Cause.isDieReason))
+  throw Error("the surface's layer dies at the decode of -1")
 await writeFile(resolve(outPath, "service-cases.json"), JSON.stringify(cases) + "\n")
 await writeFile(resolve(outPath, "service-host.json"), JSON.stringify(hosts, null, 2) + "\n")
 console.log(`PASS the to-do's service on rc.112: ${fixtures.length} scripts performed on its consumer's programs, ` +
   `each with the host's outcome, calls and predicted refusals equal to Lean's observation; ` +
-  `${manifest.waiting.filter(run => run.scenario === "todo").length} scripts with no host run; 2 red controls`)
+  `${manifest.waiting.filter(run => run.scenario === "todo").length} scripts with no host run; 3 red controls, ` +
+  `the third the decode at entry: -1 reaches the repository through the program's layer and dies at the surface's`)

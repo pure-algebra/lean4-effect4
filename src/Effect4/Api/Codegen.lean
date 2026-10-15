@@ -7,6 +7,7 @@ import Effect4.Codegen.Admit
 import Effect4.Codegen.CallbackRequirements
 import Effect4.Codegen.Schema
 import Effect4.Codegen.SchemaCode
+import Effect4.Codegen.Surface
 
 /-!
 # Effect4.Api.Codegen — the program interface's codegen face
@@ -22,7 +23,9 @@ The half of the application face that crosses to TypeScript, in the namespace `E
 * `read`, `readAt`, `readable` and `roundTrip` are the reader and the print image's round trip;
   `imageCertificate` carries `readable` as a certificate.
 * `emitModule`, `printModule`, `readModule`, `readFile`, `checkSourceBindings` and `admitModule`
-  are the module's production receipt, its raw reconstruction and its checked reading.
+  are the module's production receipt, its raw reconstruction and its checked reading. An
+  emission's surface (`ModuleEmission.surface`, `Codegen/Surface.lean`) is the second module a
+  consumer imports: each data service's Schemas, and its layer that decodes each entry's input.
 * `Typed.print`, `Typed.emit`, `TypedLayer.print` and `Built.print` print the certified values.
 * The Schema half: persisted `SchemaRepresentation` JSON syntax (`schemaDocument`,
   `schemaRepresentation`), the JSON payload beside it (`jsonExpr`), and a type's typed Schema

@@ -11,9 +11,11 @@ under each header that the runner writes for it.
 
 The to-do's scripts run a second time on its emitted Effect service (decisions row 378 (20),
 slice E4, `harness/truth/service/`). Lean writes the service's file into the to-do application's
-folder (`apps/todo/`); tsgo 7 checks it with its consumer and red controls. The consumer's
-programs perform each to-do script with the lane's recorder; Lean replays each recording and
-decides each run's checks beside the script's own run.
+folder (`apps/todo/`), with its surface (CR-4): the Schemas of the service's methods, and the
+service's layer that decodes each entry's input. rc.112 writes each entry's JSON Schemas from
+them (`apps/todo/json-schemas.ts`). tsgo 7 checks the files with the consumer and red controls.
+The consumer's programs perform each to-do script with the lane's recorder, through the decoding
+layer; Lean replays each recording and decides each run's checks beside the script's own run.
 
 The to-do application then runs on SQLite (decisions row 378 (16), slice V4, `apps/todo/`): its
 front serves one script of requests from an empty database, over the shipped repository, two red
@@ -238,8 +240,12 @@ def main():
         if digest != CASES_SHA256:
             raise SystemExit('FAIL host-protocol: the recordings of the four fixture families moved: '
                              f'cases.json has the digest {digest}, and the pin is {CASES_SHA256}')
-        # The to-do's service file, where its consumer imports it from (slice E4).
+        # The to-do's service file and its surface, where its consumer imports them from (slice E4;
+        # CR-4: the surface's Schemas and its layer that decodes each entry's input).
         lean('apps/todo/EmitTodo.lean', SERVICE_FILE, '../../../harness/truth/prelude.ts')
+        # The entries' JSON Schemas, by rc.112's own compiler; each input's document checked on
+        # members and on values outside its type (CR-4).
+        run(bun, '--no-install', str(APP / 'json-schemas.ts'), str(SERVICE_FILE))
         # Include the actual generated expressions, alongside every owned adapter source, and the
         # service's consumer and runner with the file they import.
         config = {'extends': str(ROOT / 'harness/truth/tsconfig.json'),
