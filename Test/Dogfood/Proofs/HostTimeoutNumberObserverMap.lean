@@ -144,6 +144,19 @@ theorem await (machine : Effect4.Program.NativeMachine)
     obtain ⟨old, original, same⟩ := (target machine observers attempt).2 fiber found
     exact complete old original (same ▸ published)
 
+/-- Observer-only edits retain actual drained-stack permission for a pending finish. -/
+theorem terminal (machine : Effect4.Program.NativeMachine)
+    (observers : Effect4.Program.SourceScope.SourceFiber → List Observer) (id : FiberId)
+    (held : TerminalStack machine id) : TerminalStack (mapped machine observers) id := by
+  intro fiber found
+  rw [lookup] at found
+  cases original : machine.fiber? id with
+  | none => simp only [original, Option.map_none] at found; cases found
+  | some old =>
+      simp only [original, Option.map_some] at found
+      cases found
+      exact held old original
+
 /-- Every pending numeric command shares the existing single assertion transport. -/
 theorem commands (world : HostTimeoutNumberConfiguration.World) (machine : Effect4.Program.NativeMachine)
     (observers : Effect4.Program.SourceScope.SourceFiber → List Observer) (pending : List Guard.NCmd)
@@ -152,7 +165,8 @@ theorem commands (world : HostTimeoutNumberConfiguration.World) (machine : Effec
   exact command_transport world machine _ pending command member (held command member)
     (reply world machine observers)
     (fun id yielding queued good => loop world machine observers id yielding good)
-    (fun role selected good => exit_machine machine _ role selected rfl (view machine observers) good)
+    (fun id selected good => ⟨terminal machine observers id good.1,
+      fun role assigned => exit_machine machine _ role selected rfl (view machine observers) (good.2 role assigned)⟩)
     (fun image own targets good => await machine observers targets image own good)
     (fun targets good => cleanup_await machine observers targets good)
 

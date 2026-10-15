@@ -70,6 +70,15 @@ theorem await_update (machine : Effect4.Program.NativeMachine)
     obtain ⟨old, previous, same⟩ := (update_lookup_exit machine before after found key exit attempt).2 fiber actual
     exact complete old previous (same ▸ published)
 
+/-- An actual writer retaining any saved frame cannot have a pending finish command. -/
+theorem finish_excludes_saved (world : HostTimeoutNumberConfiguration.World)
+    (machine : Effect4.Program.NativeMachine) (commands : List Guard.NCmd)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (selected : ExitV)
+    (found : machine.fiber? fiber.id = some fiber) (saved : fiber.frame.stack ≠ [])
+    (held : Commands world machine commands) : .finish fiber.id selected ∉ commands := by
+  intro member
+  exact saved ((held (.finish fiber.id selected) member).1 fiber found)
+
 /-- An actual admitted interrupt leaves an existing queued pending-prefix loop permission valid. -/
 theorem loop_interrupt (context : MessageContext) (world : HostTimeoutNumberConfiguration.World)
     (machine : Effect4.Program.NativeMachine) (commands : List Guard.NCmd)
@@ -106,6 +115,26 @@ theorem loop_interrupt (context : MessageContext) (world : HostTimeoutNumberConf
     exact held count assigned heap after old installed
 
 
+/-- Actual addressed replacement retains a queued finish's drained-stack authority. -/
+theorem terminal_update (machine : Effect4.Program.NativeMachine)
+    (before after : Effect4.Program.SourceScope.SourceFiber) (id : FiberId)
+    (found : machine.fiber? before.id = some before) (key : after.id = before.id)
+    (stack : after.frame.stack = before.frame.stack) (held : TerminalStack machine id) :
+    TerminalStack (machine.update after) id := by
+  intro fiber actual
+  by_cases same : id = before.id
+  · subst id
+    have self : (machine.update after).fiber? before.id = some after := by
+      rw [← key]
+      apply RunMachine.fiber?_update_self
+      exact ⟨before, RunMachine.mem_of_fiber? found, key.symm⟩
+    rw [self] at actual
+    cases actual
+    exact stack.trans (held before found)
+  · have other : id ≠ after.id := by intro equal; exact same (equal.trans key)
+    rw [RunMachine.fiber?_update_other after machine id other] at actual
+    exact held fiber actual
+
 /-- Numeric queue transport shares one assertion case split across actual metadata producers. -/
 theorem command_transport (world : HostTimeoutNumberConfiguration.World)
     (before after : Effect4.Program.NativeMachine) (commands : List Guard.NCmd) (command : Guard.NCmd)
@@ -113,7 +142,8 @@ theorem command_transport (world : HostTimeoutNumberConfiguration.World)
     (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt world after id token code)
     (loops : ∀ id yielding, .loop id yielding ∈ commands →
       CommandAt world before (.loop id yielding) → CommandAt world after (.loop id yielding))
-    (exits : ∀ role selected, ExitAt before role selected → ExitAt after role selected)
+    (finishes : ∀ id selected, CommandAt world before (.finish id selected) →
+      CommandAt world after (.finish id selected))
     (oldAwait : ∀ image own targets, HostTimeoutNumberWait.AwaitAt image own before targets →
       HostTimeoutNumberWait.AwaitAt image own after targets)
     (cleanupAwait : ∀ targets, CleanupAwait before targets → CleanupAwait after targets) :
@@ -121,9 +151,7 @@ theorem command_transport (world : HostTimeoutNumberConfiguration.World)
   cases command with
   | resume id token code => exact replies id token code held
   | loop id yielding => exact loops id yielding queued held
-  | finish id selected =>
-      intro role assigned
-      exact exits role selected (held role assigned)
+  | finish id selected => exact finishes id selected held
   | afterInterrupt host yielding kind =>
       cases kind with
       | join target mode => trivial
@@ -171,8 +199,10 @@ theorem command_interrupt (context : MessageContext) (world : HostTimeoutNumberC
     (fun id token code good => interrupt_reply world machine fiber cause id token code found unique good)
     (fun id yielding member good => loop_interrupt context world machine commands fiber cause id yielding
       found coverage allowed member good)
-    (fun role selected good => exit_machine machine _ role selected rfl
-      (interrupt_view machine fiber cause found unique) good)
+    (fun id selected good => ⟨terminal_update machine fiber _ id found key
+      (HostTimeoutNumberConfigurationInterrupt.interrupt_fields fiber cause).2.2.1 good.1,
+      fun role assigned => exit_machine machine _ role selected rfl
+        (interrupt_view machine fiber cause found unique) (good.2 role assigned)⟩)
     (fun image own targets good => await_update machine fiber _ targets image own found key exit good)
     (fun targets good => cleanup_await_update machine fiber _ targets found key exit good)
 

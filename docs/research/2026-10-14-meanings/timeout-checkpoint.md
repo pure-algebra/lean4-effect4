@@ -495,3 +495,35 @@ The native caller must still supply its actual word permission and starting asse
 The audit checks `NumberQueueInterrupt`, `NumberObserverMap`, and `NumberMessages` in their full module namespaces.
 Actual native role advancement, initialized history, and both original endpoints remain open.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Actual finish authority
+
+This slice changes neither original Timeout endpoint.
+Its concepts are reactive-scheduling R9 and scope-lifetime-finalization R11.
+Its consumer is the numeric writer's pending-queue transport.
+
+`NumberConfiguration.TerminalStack` requires the actual addressed fiber's saved stack to be empty.
+The numeric finish command now carries that authority beside its existing exit assertion.
+This assertion does not identify current code, which the actual finish path retains.
+`NumberQueueInterrupt.finish_excludes_saved` excludes a pending finish while the actual writer retains a saved frame.
+The existing actual message producer retains this stronger finish authority.
+
+`Timeout.FinishCut` reads the actual launched attempt from the retained pre-count cut.
+Its kernel-checked `actual` theorem uses no fallback record.
+`saved` checks the retained source finalizer, and `rejected` rejects finish authority for that unfinished prefix.
+This control refutes neither original fixed-budget endpoint.
+The shared actual iteration mask law supplies drained stacks for generated finishes.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberMessages Test.Dogfood.Proofs.HostTimeoutNumberRootTransitions Test.Dogfood.Proofs.HostTimeoutNumberRootLoop` | Passed, 1238 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberMessages Test.Dogfood.Scenario.Timeout.FinishCut` | Passed, 1233 jobs |
+| `lake env lean scratch/TimeoutTerminalAudit.lean` | The output below |
+
+```text
+#axiom_audit: 236 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks `NumberConfiguration`, `NumberQueueInterrupt`, `NumberObserverMap`, `NumberMessages`, and `Timeout.FinishCut` in their full module namespaces.
+Actual native role advancement, initialized history, and both original endpoints remain open.
+No execution behaviour changes, so this slice reaches no outside implementation gate.

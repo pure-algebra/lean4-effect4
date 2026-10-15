@@ -379,6 +379,10 @@ def TaskAt (world : World) (machine : Effect4.Program.NativeMachine) : NTask →
 def Snapshot (world : World) (machine : Effect4.Program.NativeMachine) (tasks : List NTask) : Prop :=
   ∀ task ∈ tasks, TaskAt world machine task
 
+/-- A pending finish retains the drained saved stack of every actual addressed row. -/
+def TerminalStack (machine : Effect4.Program.NativeMachine) (id : FiberId) : Prop :=
+  ∀ fiber, machine.fiber? id = some fiber → fiber.frame.stack = []
+
 /-- Value-bearing commands and cancellation countdowns retain their concrete numeric obligations. -/
 def CommandAt (world : World) (machine : Effect4.Program.NativeMachine) : Guard.NCmd → Prop
   | .resume id token code => ReplyAt world machine id token code
@@ -386,7 +390,8 @@ def CommandAt (world : World) (machine : Effect4.Program.NativeMachine) : Guard.
       HostTimeoutNumberPhaseFlow.At context.before machine.state →
       ∀ fiber, machine.fiber? id = some fiber → CountInstalled context fiber.frame →
         CountReady context fiber yielding
-  | .finish id exit => ∀ role, (id, role) ∈ world.roles → ExitAt machine role exit
+  | .finish id exit => TerminalStack machine id ∧
+      ∀ role, (id, role) ∈ world.roles → ExitAt machine role exit
   | .afterInterrupt host _ (.awaitAll targets) =>
       (∀ image own suffix, (host, Role.root image own suffix) ∈ world.roles → AwaitAt image own machine targets) ∧
       (∀ suffix, (host, Role.rootRead suffix) ∈ world.roles → CleanupAwait machine targets)
