@@ -51,10 +51,10 @@ theorem source_step (context : CountContext) (view : HostTimeoutFlow.View) (mach
     (AnswerSlots.Prefix (HostTimeoutNumberSourceSlots.bindings context)) (HostTimeoutNumberSourceWrites.Writes context) saved⟩
 
 /-- Actual running authority makes immediate interruption vacuous while the ordinary step retains authored finalizer custody. -/
-theorem fiber (context : CountContext) (view : HostTimeoutFlow.View) (machine : NativeMachine)
+theorem fiber_running (context : CountContext) (view : HostTimeoutFlow.View) (machine : NativeMachine)
     (row : SourceScope.SourceFiber) (yielding : Bool)
     (held : FiberAt machine (.pending context) row) (running : row.running = true)
-    (live : row.exit = none) (heap : At context.entered machine.state)
+    (live : row.exit = none)
     (noSuccess : ∀ value, row.frame.current ≠ .success value)
     (noFailure : ∀ cause, row.frame.current ≠ .failure cause)
     (noSync : ∀ thunk, row.frame.current ≠ .sync thunk)
@@ -87,15 +87,64 @@ theorem fiber (context : CountContext) (view : HostTimeoutFlow.View) (machine : 
     rw [running] at idle
     cases idle
   · intro next same before installed
-    cases same
-    exact False.elim (HostTimeoutNumberCountMachine.counted_heap_ne context (heap.symm.trans before))
+    exact running
   · intro next same entered interruptible
     cases same
-    exact shape.2.subset (held.pendingCustody context rfl heap (shape.1.symm.trans interruptible))
+    exact shape.2.subset (held.pendingCustody context rfl entered (shape.1.symm.trans interruptible))
 
   · intro next same masked
     rw [deferred]
     exact held.pendingDeferred next same (shape.1.symm.trans masked)
+
+/-- The earlier entered-heap interface remains an instance of actual running authority. -/
+theorem fiber (context : CountContext) (view : HostTimeoutFlow.View) (machine : NativeMachine)
+    (row : SourceScope.SourceFiber) (yielding : Bool)
+    (held : FiberAt machine (.pending context) row) (running : row.running = true)
+    (live : row.exit = none) (_heap : At context.entered machine.state)
+    (noSuccess : ∀ value, row.frame.current ≠ .success value)
+    (noFailure : ∀ cause, row.frame.current ≠ .failure cause)
+    (noSync : ∀ thunk, row.frame.current ≠ .sync thunk)
+    (ordinary : ∀ thunk, row.frame.current = .withFiber thunk →
+      (HostTimeoutFlow.interpreter view).withFiberOf thunk = none) :
+    let next := evaluatePrim.stepFrame (HostTimeoutFlow.interpreter view) machine row yielding
+    FiberAt next.machine (.pending context) next.fiber :=
+  fiber_running context view machine row yielding held running live noSuccess noFailure noSync ordinary
+
+/-- Actual native evaluation may charge a charged fiber before installing its returned row.
+The resident lookup and charged frame assertion stay separate until the shared update producer. -/
+theorem joint_local (world : HostTimeoutNumberConfiguration.World) (context : CountContext)
+    (view : HostTimeoutFlow.View) (machine : NativeMachine)
+    (resident charged : SourceScope.SourceFiber) (yielding : Bool)
+    (pending : List Guard.NCmd) (tasks : List NTask)
+    (found : machine.fiber? resident.id = some resident) (ids : (machine.fibers.map (·.id)).Nodup)
+    (assigned : (resident.id, Role.pending context) ∈ world.roles)
+    (held : Configuration world machine) (queued : Commands world machine pending)
+    (detached : Snapshot world machine tasks) (provided : FiberAt machine (.pending context) charged)
+    (key : charged.id = resident.id) (dispatcher : charged.dispatcher = resident.dispatcher)
+    (exitSame : charged.exit = resident.exit) (running : charged.running = true)
+    (live : charged.exit = none) (unparked : charged.parked = .notParked)
+    (finishes : ∀ exit, .finish resident.id exit ∉ pending)
+    (loopEntered : ∀ latch, .loop resident.id latch ∈ pending → At context.entered machine.state)
+    (noSuccess : ∀ value, charged.frame.current ≠ .success value)
+    (noFailure : ∀ cause, charged.frame.current ≠ .failure cause)
+    (noSync : ∀ thunk, charged.frame.current ≠ .sync thunk)
+    (ordinary : ∀ thunk, charged.frame.current = .withFiber thunk →
+      (HostTimeoutFlow.interpreter view).withFiberOf thunk = none) :
+    let next := evaluatePrim.stepFrame (HostTimeoutFlow.interpreter view) machine charged yielding
+    Configuration world (next.machine.update next.fiber) ∧
+      Commands world (next.machine.update next.fiber) pending ∧
+      Snapshot world (next.machine.update next.fiber) tasks ∧
+      next.nested = [] ∧ next.edits = [] ∧ next.outcome = .continue_ := by
+  obtain ⟨frame, events, actual, _typed⟩ := HostTimeoutNumberPhaseHead.ordinary_running_over
+    HostTimeoutNumberUniform.Edge HostTimeoutNumberUniform.head_edges view machine.state _ charged.frame provided.frame.2
+    noSuccess noFailure noSync ordinary
+  have retained := fiber_running context view machine charged yielding provided running live
+    noSuccess noFailure noSync ordinary
+  simp only [evaluatePrim.stepFrame, actual, evaluatePrim.finishFrame] at retained ⊢
+  obtain ⟨config, queue, snapshot⟩ := HostTimeoutNumberPendingInstall.readonly_update world context machine
+    (machine.emit (events.map (RunEvent.frame charged.id))) resident {charged with frame := frame} pending tasks
+    found ids assigned held queued detached finishes loopEntered rfl rfl rfl key dispatcher exitSame unparked retained
+  exact ⟨config, queue, snapshot, True.intro, True.intro, True.intro⟩
 
 /-- The actual ordinary running native step retains the same joined numeric world. -/
 theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountContext)
@@ -117,18 +166,9 @@ theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountCon
       Commands world (next.machine.update next.fiber) pending ∧
       Snapshot world (next.machine.update next.fiber) tasks ∧
       next.nested = [] ∧ next.edits = [] ∧ next.outcome = .continue_ := by
-  have classified := held.lookup world machine row.id (.pending context) assigned row found
-  obtain ⟨frame, events, actual, _typed⟩ := HostTimeoutNumberPhaseHead.ordinary_running_over
-    HostTimeoutNumberUniform.Edge HostTimeoutNumberUniform.head_edges view machine.state _ row.frame classified.frame.2
-    noSuccess noFailure noSync ordinary
-  have provided := fiber context view machine row yielding classified running live heap
-    noSuccess noFailure noSync ordinary
-  simp only [evaluatePrim.stepFrame, actual, evaluatePrim.finishFrame] at provided ⊢
-  obtain ⟨config, queue, snapshot⟩ := HostTimeoutNumberPendingInstall.readonly_update world context machine
-    (machine.emit (events.map (RunEvent.frame row.id))) row {row with frame := frame} pending tasks
-    found ids assigned held queued detached
+  exact joint_local world context view machine row row yielding pending tasks found ids assigned held queued detached
+    (held.lookup world machine row.id (.pending context) assigned row found) rfl rfl rfl running live unparked
     (fun selected member => saved ((queued (.finish row.id selected) member).1 row found))
-    (fun _ _ => heap) rfl rfl rfl rfl rfl rfl unparked provided
-  exact ⟨config, queue, snapshot, True.intro, True.intro, True.intro⟩
+    (fun _ _ => heap) noSuccess noFailure noSync ordinary
 
 end Test.Dogfood.Proofs.HostTimeoutNumberOrdinary

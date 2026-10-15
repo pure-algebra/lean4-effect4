@@ -1142,3 +1142,21 @@ Verification command:
 The build passes with 1274 jobs.
 The audit checks 196 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 It includes the existing coupled lift and the resident-fiber ordinary producer.
+
+
+## Resident and charged native fibers
+
+The ordinary native producer now separates the resident row from the locally charged input fiber.
+It retains the actual local running permission through the existing frame-step producer.
+The existing machine-update producer joins that returned fiber with the resident lookup, queue, and detached replies.
+The former entered-heap interface remains a wrapper.
+
+Placement: reactive-scheduling R9 and scope-lifetime-finalization R11; actual numeric iteration consumes this producer.
+The result assumes the local frame assertion, resident identity, and actual pending-owner demands.
+It does not claim that an uninstalled charged fiber already appears in the machine.
+The active command producer and both original endpoint proofs remain open.
+
+The preceding remaining-budget verification command checks this change too.
+The build passes with 1274 jobs.
+The audit checks 196 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+This proof-only slice reaches no outside implementation gate.
