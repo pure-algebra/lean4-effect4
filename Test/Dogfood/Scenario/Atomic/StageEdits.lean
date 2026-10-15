@@ -11,14 +11,33 @@ open Effect4 Effect4.Machine Effect4.Program
 open StageWorld
 
 /-- Actual interruption leaves the scheduler and publication fields of its target unchanged. -/
+theorem interruption_fields_with_stack (fiber : SourceScope.SourceFiber) (cause : CauseV) :
+    let next := (interruptWithCause cause fiber).1
+    next.id = fiber.id ∧ next.exit = fiber.exit ∧ next.running = fiber.running ∧
+      next.children = fiber.children ∧ next.observers = fiber.observers ∧ next.frame.stack = fiber.frame.stack ∧ next.dispatcher = fiber.dispatcher := by
+  unfold interruptWithCause
+  dsimp only
+  repeat' split
+  all_goals exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+
+/-- The original metadata interface projects the same actual interruption witness. -/
 theorem interruption_fields (fiber : SourceScope.SourceFiber) (cause : CauseV) :
     let next := (interruptWithCause cause fiber).1
     next.id = fiber.id ∧ next.exit = fiber.exit ∧ next.running = fiber.running ∧
       next.children = fiber.children ∧ next.observers = fiber.observers := by
-  unfold interruptWithCause
-  dsimp only
-  repeat' split
-  all_goals exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+  have fields := interruption_fields_with_stack fiber cause
+  exact ⟨fields.1, fields.2.1, fields.2.2.1, fields.2.2.2.1, fields.2.2.2.2.1⟩
+
+/-- Actual interruption records a cause without changing its saved continuation. -/
+theorem interruption_stack (fiber : SourceScope.SourceFiber) (cause : CauseV) :
+    (interruptWithCause cause fiber).1.frame.stack = fiber.frame.stack :=
+  (interruption_fields_with_stack fiber cause).2.2.2.2.2.1
+
+/-- Actual interruption retains already queued dispatcher tasks. -/
+theorem interruption_dispatcher (fiber : SourceScope.SourceFiber) (cause : CauseV) :
+    (interruptWithCause cause fiber).1.dispatcher = fiber.dispatcher :=
+  (interruption_fields_with_stack fiber cause).2.2.2.2.2.2
 
 /-- Admitted interruption preserves the actual target's metadata and its published request exit. -/
 theorem RowAt.interruption (world : StageWorld.World) (fiber : SourceScope.SourceFiber) (cause : CauseV)
@@ -39,6 +58,17 @@ theorem RowAt.interruption (world : StageWorld.World) (fiber : SourceScope.Sourc
   · rw [observers]
     exact held.observers
 
+/-- Admitted interruption retains an actual live source-role certificate. -/
+theorem live_interruption (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (fiber : SourceScope.SourceFiber) (cause : CauseV)
+    (active : StageRoles.FrameAt root table world fiber.id fiber.frame)
+    (recorded : ∀ owner ∈ requests, fiber.id = ⟨owner + 1⟩ → StageGraph.Recorded fiber.frame)
+    (untyped : ∀ reason ∈ cause.reasons, reason.tag ≠ .fail) (marked : MarkedCause cause) :
+    StageRoles.FrameAt root table world (interruptWithCause cause fiber).1.id (interruptWithCause cause fiber).1.frame := by
+  have identity := (interruption_fields fiber cause).1
+  rw [identity]
+  exact StageRoles.interruption_frame_with root table world fiber cause active recorded untyped marked
+
 /-- Admitted interruption preserves live roles and actual dormant scheduler rows together. -/
 theorem RoleAt.interruption (root : NativeEff) (table : RowTable) (world : StageWorld.World)
     (fiber : SourceScope.SourceFiber) (cause : CauseV) (held : RoleAt root table world fiber)
@@ -47,15 +77,7 @@ theorem RoleAt.interruption (root : NativeEff) (table : RowTable) (world : Stage
     RoleAt root table world (interruptWithCause cause fiber).1 := by
   obtain ⟨identity, exit, running, children, observers⟩ := interruption_fields fiber cause
   rcases held with active | inactive
-  · apply Or.inl
-    rw [identity]
-    cases active with
-    | root same owned => exact .root same (RootGraph.interruption_frame root table world fiber cause owned)
-    | daemon same owned => exact .daemon same (DaemonGraph.interruption_frame root table world fiber cause owned)
-    | request owner member same owned =>
-      exact .request owner member same
-        (StageGraph.interruption_frame root table owner world fiber cause owned
-          (recorded owner member same) untyped marked)
+  · exact Or.inl (live_interruption root table world fiber cause active recorded untyped marked)
   · apply Or.inr
     change _ ∨ _
     rw [exit, running]

@@ -11,6 +11,63 @@ set_option autoImplicit false
 namespace Test.Dogfood.Scenario.Atomic.StageConfiguration
 open Effect4 Effect4.Machine Effect4.Program
 
+/-- An actor write-back transports replies through its actual matching-park origin. -/
+theorem ReplyPermission.update_origin (machine : NativeMachine) (actor : SourceScope.SourceFiber)
+    (origin : ∀ token, actor.parked = .withGuard token →
+      ∃ old ∈ machine.fibers, old.id = actor.id ∧ old.parked = .withGuard token)
+    (id : FiberId) (token : Nat) (code : NCode) (held : ReplyPermission machine id token code) :
+    ReplyPermission (machine.update actor) id token code := by
+  intro row member identity parked
+  obtain ⟨old, inside, same⟩ := List.mem_map.mp member
+  rw [← same] at identity parked
+  by_cases changed : old.id = actor.id
+  · rw [if_pos changed] at identity parked
+    obtain ⟨prior, present, sameId, samePark⟩ := origin token parked
+    exact held prior present (sameId.trans identity) samePark
+  · rw [if_neg changed] at identity parked
+    exact held old inside identity parked
+
+/-- Retained actual parked rows retain matching-token reply admission. -/
+theorem ReplyPermission.row_origin (first last : NativeMachine)
+    (origin : ∀ row ∈ last.fibers, ∃ old ∈ first.fibers,
+      row.id = old.id ∧ row.parked = old.parked)
+    (id : FiberId) (token : Nat) (code : NCode) (held : ReplyPermission first id token code) :
+    ReplyPermission last id token code := by
+  intro row member identity parked
+  obtain ⟨old, inside, sameId, samePark⟩ := origin row member
+  exact held old inside (sameId.symm.trans identity) (samePark.symm.trans parked)
+
+/-- An actual interruption retains every matching-token reply admission. -/
+theorem ReplyPermission.interruption (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
+    (member : fiber ∈ machine.fibers) (cause : CauseV) (id : FiberId) (token : Nat) (code : NCode)
+    (held : ReplyPermission machine id token code) :
+    ReplyPermission (machine.update (interruptWithCause cause fiber).1) id token code :=
+  held.update_origin machine _ (fun key parked => ⟨fiber, member,
+    (interruption_fields fiber cause).1.symm,
+    (ParkedShape.interruption_park_origin cause fiber key parked).1⟩) id token code
+
+/-- Preserving the actual actor's park preserves every matching reply admission. -/
+theorem ReplyPermission.update_park (machine : NativeMachine) (first last : SourceScope.SourceFiber)
+    (member : first ∈ machine.fibers) (identity : last.id = first.id) (park : last.parked = first.parked)
+    (id : FiberId) (token : Nat) (code : NCode) (held : ReplyPermission machine id token code) :
+    ReplyPermission (machine.update last) id token code :=
+  held.update_origin machine last
+    (fun _ actual => ⟨first, member, identity.symm, park.symm.trans actual⟩) id token code
+
+/-- Task admission follows its supplied actual reply transport. -/
+theorem TaskPermission.transport (first last : NativeMachine) (task : Guard.NTask)
+    (reply : ∀ id token code, ReplyPermission first id token code → ReplyPermission last id token code)
+    (held : TaskPermission first task) : TaskPermission last task := by
+  cases held with
+  | start id => exact .start id
+  | resume id token code typed => exact .resume id token code (reply id token code typed)
+
+/-- The detached snapshot uses the same actual reply transport at every saved task. -/
+theorem SnapshotAt.transport (world : StageWorld.World) (first last : NativeMachine) (tasks : List Guard.NTask)
+    (reply : ∀ id token code, ReplyPermission first id token code → ReplyPermission last id token code)
+    (held : SnapshotAt world first tasks) : SnapshotAt world last tasks :=
+  fun task member => (held task member).transport first last task reply
+
 /-- Every old reserved reply keeps its actual matching admission after actor installation. -/
 theorem ReplyPermission.native_install {before : NativeMachine} {result : Guard.ReturnFields.NIter}
     (fresh : Guard.ReturnFields.FreshPark before result)

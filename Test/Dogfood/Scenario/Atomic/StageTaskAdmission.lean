@@ -14,6 +14,31 @@ open Effect4 Effect4.Machine Effect4.Program
 def AdmittedTasks (machine : NativeMachine) : Prop :=
   ∀ fiber ∈ machine.fibers, DispatcherPredicate.All (TaskPermission machine) fiber.dispatcher
 
+/-- Actor installation retains admitted dispatchers through the same actual reply transport. -/
+theorem AdmittedTasks.update (machine : NativeMachine) (actor : SourceScope.SourceFiber)
+    (held : AdmittedTasks machine) (owned : DispatcherPredicate.All (TaskPermission machine) actor.dispatcher)
+    (reply : ∀ id token code, ReplyPermission machine id token code →
+      ReplyPermission (machine.update actor) id token code) : AdmittedTasks (machine.update actor) := by
+  intro row member bucket inside task present
+  obtain ⟨old, oldIn, same⟩ := List.mem_map.mp member
+  have typed : DispatcherPredicate.All (TaskPermission machine) row.dispatcher := by
+    rw [← same]
+    change DispatcherPredicate.All (TaskPermission machine) (if old.id = actor.id then actor else old).dispatcher
+    split
+    · exact owned
+    · exact held old oldIn
+  exact (typed bucket inside task present).transport machine (machine.update actor) task reply
+
+/-- An actual addressed interruption retains stored tasks and their matching-token admission. -/
+theorem AdmittedTasks.interruption (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
+    (member : fiber ∈ machine.fibers) (cause : CauseV) (held : AdmittedTasks machine) :
+    AdmittedTasks (machine.update (interruptWithCause cause fiber).1) := by
+  apply held.update machine (interruptWithCause cause fiber).1
+  · rw [interruption_dispatcher fiber cause]
+    exact held fiber member
+  · intro id token code reply
+    exact reply.interruption machine fiber member cause id token code
+
 /-- The common pending dispatcher profile seeds matching-root admission at actual entry. -/
 theorem AdmittedTasks.of_pending (machine : NativeMachine)
     (roots : ∀ fiber ∈ machine.fibers, fiber.id = ⟨0⟩)

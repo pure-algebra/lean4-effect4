@@ -291,3 +291,95 @@ All Lean commands use the serialized slot script.
 The pending initializer does not yet certify an empty deferred due list at entry.
 Timeout owns that shared strengthening through the existing allocation producer.
 The Atomic native join remains under construction and does not assume that missing fact.
+
+## Actual native joins and waiting replies
+
+The endpoint remains open after these commits.
+The command and outside-decision producers remain its consumers.
+The original `Atomic.Store.shop_stages` statement stays unchanged.
+
+The actor join chooses one world for the heap, stored rows, returned actor and completion permission.
+`StageNativeJoin.native_cut` supplies that join in `2ddb1fe7f`.
+The task producer retains the returned dispatcher and stored dispatchers together in `475c982b6`.
+`156c8a265` reconciles that producer with the coordinator's child bounds and actual source roles.
+The coordinator already owns the dependency bytes in `d921f04ef`; integration skips that commit.
+
+`5f917f7dd` generalizes the existing parked-head producer over its supplied predicate.
+Its old interfaces remain instances of that producer.
+`812b1dc4c` supplies the Atomic predicate and its actual matching-token resume consumer.
+The predicate excludes action heads at actual parks.
+The existing root action producer retains its real emitted edits and unchanged parked field.
+Root replies retain their captured answer class and saved suffix.
+Request void replies retain their exact current code and saved suffix.
+The guard excludes inactive rows when the actual parked row supplies reply permission.
+
+These declarations serve store-typing R4 and reactive-scheduling R11 through the same endpoint.
+They establish neither progress nor host agreement.
+
+- `lake build Effect4.Laws.Program.NativeActionRows Test.Dogfood.Scenario.Atomic.StageTasks Test.Dogfood.Scenario.Atomic.NativeEffects` succeeds, 1335 jobs.
+- `lake env lean scratch/audit-row-reconcile.lean` reports 109 declarations within `[propext, Quot.sound]`.
+- `lake build Test.Dogfood.Scenario.Atomic.StageWaits` succeeds, 1336 jobs.
+- `lake env lean scratch/audit-stage-waits.lean` reports 288 declarations within `[propext, Quot.sound]` after constructive repairs.
+- Both audits report zero planned goals and zero declarations modulo planned goals.
+
+The audit initially rejects existential choice and classical contradiction in two new reply proofs.
+The repaired proofs inspect the actual timer witness and eliminate the impossible request identity explicitly.
+The rejected proofs do not enter the commits.
+
+Timeout supplies the pending clean-record and deferred-store strengthening in `18dde0dc6`.
+The coordinator integrates that packet as `8899de418`.
+This receipt records that handoff; this worktree has not independently rebuilt that dependency packet.
+
+The remaining command certificates retain actual finish-stack emptiness and the receiving endpoint of interruption waits.
+The existing `Moves.FinishOrigin.stack` supplies finish-stack emptiness without another evaluator walk.
+The charged loop join and terminal command assembly remain under check beyond the commits above.
+
+## Actual reply admission and initialization entry
+
+The original `Atomic.Store.shop_stages` remains open.
+Its observation and `ControlHistory` hypotheses remain unchanged.
+
+- `d7656e627` generalizes the existing primitive command and edit producer through `Moves.WordProfile`.
+- `05115009e` joins native owners, charged iteration, actual receiving suffixes, and terminal cleanup.
+- `b1923f42c` proves actual old-token continuation recovery through interruption, interference, and actor installation.
+- `a421b0dad` excludes wake tasks and commands that the pending initializer never produces.
+- `28349b132` retains reply admission only at actual matching tokens and admits ignored reference-read results at their receiving classes.
+- `7200d3563` seeds the complete active configuration from actual initialization entry and classifies actual native messages.
+
+The 1344-job native and terminal build passes.
+The corresponding audit accepts 202 declarations without goals or proofs modulo goals.
+The later 1357-job task admission build passes.
+Its audit accepts 607 declarations at `[propext, Quot.sound]`, without goals or proofs modulo goals.
+The source-entry and native-word audit accepts six declarations with the same result.
+The pending command producer also compiles after the wake restriction.
+
+The source-entry proof retains the actual root point and mask suffix.
+It constructs no empty-stack assumption.
+The task proof uses the existing dispatcher producer with a supplied assertion.
+It adds no evaluator or scheduler induction.
+
+The remaining endpoint work joins actual settlement, command permissions, detached tasks, and outside controls.
+`ControlHistory` excludes external answer decisions.
+The interpreter's clock producer supplies a successful unit reply directly.
+The earlier timer-origin concern therefore adds no premise to this endpoint.
+
+## Actual native settlement and waiting-command join
+
+The original `Atomic.Store.shop_stages` goal remains open.
+This slice retains the actual native result's completion stack and root receiving suffix.
+The same chosen world retains the configuration through addressed messages.
+The existing message fold also retains every waiting command's actual reader.
+Matching-token reply admission and stored tasks survive actual interruption.
+
+Placement: store-typing R4 and reactive-scheduling R11.
+Consumer: the actual native P/Q/R producer for `Atomic.Store.shop_stages`.
+Reach: the existing Atomic source roles, admitted native messages and actual actor installation.
+This slice establishes no progress or host-answer admission.
+
+Verification:
+- `lean-slot.sh lake build Test.Dogfood.Scenario.Atomic.StageMessages Test.Dogfood.Scenario.Atomic.StageQueueUpdate Test.Dogfood.Scenario.Atomic.StageTaskAdmission Test.Dogfood.Scenario.Atomic.StageActivation` succeeds: 1363 jobs.
+- `lean-slot.sh lake env lean scratch/audit-stage-messages.lean` audits 195 declarations within `[propext, Quot.sound]`.
+- The audit reports zero planned goals and zero declarations modulo planned goals.
+
+Remaining: native emitted/follow-up commands, detached snapshots, fixed commands and the control-history attachment.
+The original endpoint statement stays unchanged.

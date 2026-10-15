@@ -20,9 +20,9 @@ inductive FrameAt (root : NativeEff) (table : RowTable) (world : StageWorld.Worl
       (held : StageGraph.FrameAt root table owner world frame) : FrameAt root table world id frame
 
 /-- An actual admitted interruption preserves all three source roles at the same stage world. -/
-theorem interruption_frame (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+theorem interruption_frame_with (root : NativeEff) (table : RowTable) (world : StageWorld.World)
     (fiber : SourceScope.SourceFiber) (cause : CauseV)
-    (held : FrameAt root table world fiber.id fiber.frame) (recorded : StageGraph.Recorded fiber.frame)
+    (held : FrameAt root table world fiber.id fiber.frame) (recorded : ∀ owner ∈ requests, fiber.id = ⟨owner + 1⟩ → StageGraph.Recorded fiber.frame)
     (untyped : ∀ reason ∈ cause.reasons, reason.tag ≠ .fail) (marked : MarkedCause cause) :
     FrameAt root table world fiber.id (interruptWithCause cause fiber).1.frame := by
   cases held with
@@ -30,7 +30,16 @@ theorem interruption_frame (root : NativeEff) (table : RowTable) (world : StageW
   | daemon identity owned => exact .daemon identity (DaemonGraph.interruption_frame root table world fiber cause owned)
   | request owner member identity owned =>
     exact .request owner member identity
-      (StageGraph.interruption_frame root table owner world fiber cause owned recorded untyped marked)
+      (StageGraph.interruption_frame root table owner world fiber cause owned (recorded owner member identity) untyped marked)
+
+
+/-- Unconditional recorded-cause admission is the original role transport instance. -/
+theorem interruption_frame (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (fiber : SourceScope.SourceFiber) (cause : CauseV)
+    (held : FrameAt root table world fiber.id fiber.frame) (recorded : StageGraph.Recorded fiber.frame)
+    (untyped : ∀ reason ∈ cause.reasons, reason.tag ≠ .fail) (marked : MarkedCause cause) :
+    FrameAt root table world fiber.id (interruptWithCause cause fiber).1.frame :=
+  interruption_frame_with root table world fiber cause held (fun _ _ _ => recorded) untyped marked
 
 /-- A request write retypes every actual nonacting fiber at the same chosen next world. -/
 theorem request_other (root : NativeEff) (table : RowTable) (before after : StageWorld.World)

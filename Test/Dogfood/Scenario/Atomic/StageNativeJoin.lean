@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.StageStoreFields
 import Effect4.Laws.Program.NativeExecutor
+import Effect4.Laws.Program.MovesConnect
 import Effect4.Laws.Program.SourceOpportunityPrimitive
 
 /-!
@@ -19,6 +20,8 @@ structure NativeCut (root : NativeEff) (table : RowTable) (world : StageWorld.Wo
   actor : RowAt world result.fiber
   role : OutcomeRole root table world result
   completed : ∀ exit, result.outcome = .finished exit → CompletedAt world result.fiber.id exit
+  rootAfter : result.fiber.id = ⟨0⟩ → RootGraph.AfterResult root table world result
+  finishedStack : ∀ exit, result.outcome = .finished exit → result.fiber.frame.stack = []
 
 /-- The three checked actor producers join the actual native state at one shared next world. -/
 theorem native_cut_owned (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
@@ -39,10 +42,12 @@ theorem native_cut_owned (built : Api.Built) (accepted : Api.Author.build (shop 
   have fields := Moves.evaluateNative_footprint built.program built.table machine fiber yielding
   have sourceNext := (SourceScope.native_at built.program fragment built.table machine fiber yielding source actorSource).machine
   have races := SourceScope.Opportunities.races_nil built.program _ raceFree sourceNext
+  have finishedStack := fun exit finished =>
+    (Moves.evaluateNative_parking built.program built.table machine fiber yielding).finished.stack (exit := exit) finished
   cases role with
   | root identity owned =>
-    obtain ⟨next, future, fresh, counter, heap, actor, rows⟩ :=
-      RootGraph.native_result built accepted world held.fresh machine fiber yielding owned held.heap held.counter
+    obtain ⟨next, future, fresh, counter, heap, actor, recipients, rows⟩ :=
+      RootGraph.native_result_with_after built accepted world held.fresh machine fiber yielding owned held.heap held.counter
         (fun row => Inactive row ∧ row.id ∉ owners) (by
           intro row present different
           by_cases pending : row.id ∈ owners
@@ -55,7 +60,7 @@ theorem native_cut_owned (built : Api.Built) (accepted : Api.Author.build (shop 
       exact RowsAt.primitive built.program fragment built.table machine.completedExits world next future
         machine fiber yielding actorSource.frame held.metadata
     refine ⟨next, future, ⟨?_, RowAt.native built.program built.table world next future machine fiber yielding
-      actorMetadata, ?_, ?_⟩, ?_⟩
+      actorMetadata, ?_, ?_, (fun _ => recipients), finishedStack⟩, ?_⟩
     · refine ⟨heap, fresh, counter, ?_, metadata, races, ?_⟩
       · intro row present different
         have other : row.id ≠ ⟨0⟩ := by rw [fields.id, identity] at different; exact different
@@ -80,7 +85,7 @@ theorem native_cut_owned (built : Api.Built) (accepted : Api.Author.build (shop 
       exact RowsAt.primitive built.program fragment built.table machine.completedExits world world (order.refl world)
         machine fiber yielding actorSource.frame held.metadata
     refine ⟨world, order.refl world, ⟨?_, RowAt.native built.program built.table world world (order.refl world)
-      machine fiber yielding actorMetadata, ?_, ?_⟩, ?_⟩
+      machine fiber yielding actorMetadata, ?_, ?_, ?_, finishedStack⟩, ?_⟩
     · refine ⟨actor.1, held.fresh, (DaemonGraph.native_counter built.program built.table world machine fiber yielding owned).trans held.counter,
         ?_, metadata, races, ?_⟩
       · intro row present different
@@ -92,6 +97,9 @@ theorem native_cut_owned (built : Api.Built) (accepted : Api.Author.build (shop 
     · intro exit finished
       rw [fields.id, identity]
       exact CompletedAt.daemon world exit
+    · intro impossible
+      have zero : (1 : Nat) = 0 := congrArg FiberId.value ((fields.id.trans identity).symm.trans impossible)
+      cases zero
     · intro row present pending different
       exact DaemonGraph.native_rows built.program built.table world machine fiber yielding owned
         (fun old => old.id ∈ owners → StageRoles.FrameAt built.program built.table world old.id old.frame)
@@ -115,7 +123,7 @@ theorem native_cut_owned (built : Api.Built) (accepted : Api.Author.build (shop 
       (StageGraph.native_rows built.program built.table owner world machine fiber yielding owned recorded
         (fun _ => True) (fun _ _ => True.intro) (fun _ _ _ _ => True.intro)).1
     refine ⟨next, future, ⟨?_, RowAt.native built.program built.table world next future machine fiber yielding
-      actorMetadata, ?_, ?_⟩, ?_⟩
+      actorMetadata, ?_, ?_, ?_, finishedStack⟩, ?_⟩
     · refine ⟨heap, fresh_request world next owner held.fresh change allocated, counter, ?_, metadata, races, ?_⟩
       · intro row present different
         rw [oldRows] at present
@@ -130,6 +138,9 @@ theorem native_cut_owned (built : Api.Built) (accepted : Api.Author.build (shop 
       rw [fields.id, identity]
       apply CompletedAt.request built.program built.table machine.completedExits next owner exit
       simpa only [External.Native.ResultAt, finished] using actor
+    · intro impossible
+      have zero : owner + 1 = 0 := congrArg FiberId.value ((fields.id.trans identity).symm.trans impossible)
+      exact False.elim (Nat.noConfusion zero)
     · intro row present pending different
       rw [oldRows] at present
       apply StageRoles.request_other built.program built.table world next owner future change row.id row.frame

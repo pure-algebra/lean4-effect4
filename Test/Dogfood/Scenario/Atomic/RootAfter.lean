@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.RootFrame
+import Effect4.Laws.Program.PrimitiveEffects
 
 /-!
 Concept: reactive-scheduling R11 and store-typing R4.
@@ -21,10 +22,45 @@ inductive AfterAt (root : NativeEff) (table : RowTable) (world : StageWorld.Worl
       (saved : Effect4.Contracts.Path (Edge root table world) (.rootAnswer binder) .ordinary frame.stack) :
       AfterAt root table world kind frame
 
+/-- Retaining the actual saved suffix retains its receiving endpoint. -/
+theorem AfterAt.stack (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (kind : ParkKind) (first last : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (same : last.stack = first.stack) (held : AfterAt root table world kind first) :
+    AfterAt root table world kind last := by
+  cases held with
+  | ordinary noRace saved => exact .ordinary noRace (same.symm ▸ saved)
+  | binder binder target kind counter ignored saved =>
+    exact .binder binder target kind counter ignored (same.symm ▸ saved)
+
+/-- Actual request writes retain receiving suffixes at the unchanged root counter. -/
+theorem AfterAt.counter (root : NativeEff) (table : RowTable) (before after : StageWorld.World)
+    (future : Future before after) (counter : before.nextId = after.nextId)
+    (kind : ParkKind) (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (held : AfterAt root table before kind frame) : AfterAt root table after kind frame := by
+  cases held with
+  | ordinary noRace saved => exact .ordinary noRace (saved.map (edge_future root table before after future))
+  | binder binder target kind captured ignored saved =>
+    exact .binder binder target kind (counter.symm.trans captured) ignored
+      (saved.map (edge_future root table before after future))
+
 /-- Every emitted after-interruption command carries its actual receiving endpoint. -/
 def AfterResult (root : NativeEff) (table : RowTable) (world : StageWorld.World) (result : Moves.NIteration) : Prop :=
   ∀ host yielding kind, .afterInterrupt host yielding kind ∈ result.nested →
     AfterAt root table world kind result.fiber.frame
+
+/-- A quiet actual primitive owes no after-interruption receiver. -/
+theorem AfterResult.of_quiet (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (result : Moves.NIteration) (quiet : Moves.QuietEffects result) : AfterResult root table world result := by
+  intro host yielding kind member
+  have impossible := quiet.2 (.afterInterrupt host yielding kind) member
+  cases impossible
+
+/-- An empty nested command list owes no after-interruption receiver. -/
+theorem AfterResult.of_empty (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (result : Moves.NIteration) (empty : result.nested = []) : AfterResult root table world result := by
+  intro host yielding kind member
+  rw [empty] at member
+  cases member
 
 /-- Ignored interruption waits use the existing daemon await heads and actual observed exit. -/
 theorem ignored_await (root : NativeEff) (table : RowTable) (machine : NativeMachine) (kind : ParkKind)

@@ -24,7 +24,7 @@ theorem result_of_frame (root : NativeEff) (table : RowTable) (view : List (Fibe
   | _ => exact held
 
 /-- Every actual root primitive joins its actor, allocation counter, heap and stored child roles. -/
-theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
+theorem primitive_result_with_after (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
     (view : List (FiberId × ExitV)) (world : StageWorld.World) (fresh : Fresh world)
     (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool)
     (held : FrameAt built.program built.table world fiber.frame) (heap : HeapAt world machine.state)
@@ -35,6 +35,7 @@ theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop 
     ∃ next, Future world next ∧ Fresh next ∧ result.machine.nextId = next.nextId ∧
       HeapAt next result.machine.state ∧
       External.Native.ResultAt (model built.program built.table view) (Edge built.program built.table) next .ordinary result ∧
+      AfterResult built.program built.table next result ∧
       ∀ row ∈ result.machine.fibers, row.id ≠ ⟨0⟩ →
         StageRoles.FrameAt built.program built.table next row.id row.frame ∨ Other row := by
   obtain ⟨input, code, saved⟩ := held
@@ -45,7 +46,7 @@ theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop 
   cases produced with
   | step noPark noAction noSync noSuccess noFailure noYield noAsync =>
     refine ⟨world, order.refl world, fresh, (Moves.stepFrame_nextId _ _ _ _).trans counter,
-      StatePreservation.stepFrame _ (HeapAt world) machine fiber yielding heap, ?_, ?_⟩
+      StatePreservation.stepFrame _ (HeapAt world) machine fiber yielding heap, ?_, AfterResult.of_quiet _ _ _ _ (Moves.stepFrame_effects _ _ _ _), ?_⟩
     · exact result_of_frame built.program built.table view world _
         (step_frame built accepted world view machine fiber yielding ⟨input, code, saved⟩ noSuccess noFailure noSync)
     · rw [NativeFrameRows.step_rows]
@@ -61,7 +62,7 @@ theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop 
         assumption
     refine ⟨world, order.refl world, fresh, (Moves.finalizerOr_nextId _ _ _ _ _).trans counter,
       StatePreservation.finalizerOr _ (HeapAt world) machine fiber yielding exit heap,
-      native_exit built.program built.table view world input machine fiber yielding exit current good saved, ?_⟩
+      native_exit built.program built.table view world input machine fiber yielding exit current good saved, AfterResult.of_quiet _ _ _ _ (Moves.finalizerOr_effects _ _ _ _ _), ?_⟩
     rw [NativeFrameRows.finalizer_rows]
     exact rows
   | action thunk action current noPark found =>
@@ -69,20 +70,20 @@ theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop 
       action_result built accepted view world fresh machine fiber yielding input thunk action (current ▸ code)
         current heap counter saved found Other rows
     exact ⟨next, future, freshNext, nextCounter, heapNext,
-      result_of_frame built.program built.table view next _ actor, others⟩
+      result_of_frame built.program built.table view next _ actor, state.2.2, others⟩
   | sync thunk state value current noPark found =>
     change (interpOf built.program built.table).syncState thunk machine.state = some (state, value) at found
     obtain ⟨nextHeap, good⟩ := sync_heap built accepted world input thunk machine.state (current ▸ code) heap state value found
-    exact ⟨world, order.refl world, fresh, counter, nextHeap, ⟨input, .success good, saved⟩, rows⟩
+    exact ⟨world, order.refl world, fresh, counter, nextHeap, ⟨input, .success good, saved⟩, AfterResult.of_quiet _ _ _ _ ⟨rfl, fun command member => List.mem_singleton.mp member⟩, rows⟩
   | fallback thunk current noPark missing =>
     have typed := head built accepted world input fiber.frame.current code owns view
     rw [current] at typed
     cases typed with
     | sync chosen good =>
-      exact ⟨world, order.refl world, fresh, counter, heap, ⟨input, .success good, saved⟩, rows⟩
+      exact ⟨world, order.refl world, fresh, counter, heap, ⟨input, .success good, saved⟩, AfterResult.of_empty _ _ _ _ rfl, rows⟩
   | yieldNow priority current =>
     exact ⟨world, order.refl world, fresh, counter, heap, ⟨input,
-      .success (yield_value built accepted world input priority (current ▸ code)), saved⟩, rows⟩
+      .success (yield_value built accepted world input priority (current ▸ code)), saved⟩, AfterResult.of_empty _ _ _ _ rfl, rows⟩
   | asyncImmediate name signal cancel state next current registered =>
     obtain ⟨millis, rfl, rfl, rfl, owned, ignored⟩ := async_shape built accepted world input name signal cancel (current ▸ code)
     cases registered
@@ -91,7 +92,7 @@ theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop 
     change ({machine.state with timers := machine.state.timers.sleep fiber.id machine.nextToken millis}, none) = (state, none) at registered
     cases registered
     exact ⟨world, order.refl world, fresh, counter, ⟨heap.witness⟩, ⟨input, code,
-      .cons (timer_edge built.program built.table world input owns fiber.id machine.nextToken) saved⟩, rows⟩
+      .cons (timer_edge built.program built.table world input owns fiber.id machine.nextToken) saved⟩, AfterResult.of_empty _ _ _ _ rfl, rows⟩
   | rejectedPark cause park =>
     obtain ⟨shape, owned, ignored⟩ := park_shape built accepted world view input _ code _ park
     rcases shape with ⟨target, mode, wrong⟩ | ⟨targets, wrong⟩
@@ -116,12 +117,12 @@ theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop 
     have nextRows : ∀ row ∈ next.fibers, row.id ≠ ⟨0⟩ →
         StageRoles.FrameAt built.program built.table world row.id row.frame ∨ Other row := by rw [fields.1]; exact rows
     cases parked <;> exact ⟨world, order.refl world, fresh, fields.2.trans counter, nextHeap,
-      ⟨input, frame.1, frame.2⟩, nextRows⟩
+      ⟨input, frame.1, frame.2⟩, AfterResult.of_empty _ _ _ _ rfl, nextRows⟩
   | joinMissing target mode park missing =>
-    exact ⟨world, order.refl world, fresh, counter, heap, ⟨input, code, saved⟩, rows⟩
+    exact ⟨world, order.refl world, fresh, counter, heap, ⟨input, code, saved⟩, AfterResult.of_empty _ _ _ _ rfl, rows⟩
   | joinExited target mode other exit park found exited =>
     obtain ⟨shape, owned, ignored⟩ := park_shape built accepted world view input _ code _ park
-    refine ⟨world, order.refl world, fresh, counter, heap, ⟨input, ?_, saved⟩, rows⟩
+    refine ⟨world, order.refl world, fresh, counter, heap, ⟨input, ?_, saved⟩, AfterResult.of_empty _ _ _ _ rfl, rows⟩
     cases mode with
     | awaitValue => exact .success (ignored _)
     | joinEffect => cases exit with
@@ -129,7 +130,26 @@ theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop 
       | failure cause => exact .failure
   | joinWaiting target mode other park found live =>
     exact ⟨world, order.refl world, fresh, counter, heap, ⟨input, code,
-      .cons (park_edge built.program built.table world input owns fiber.id machine.nextToken) saved⟩, rows⟩
+      .cons (park_edge built.program built.table world input owns fiber.id machine.nextToken) saved⟩, AfterResult.of_empty _ _ _ _ rfl, rows⟩
+
+
+/-- The original result interface projects the same selected world and actor. -/
+theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
+    (view : List (FiberId × ExitV)) (world : StageWorld.World) (fresh : Fresh world)
+    (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool)
+    (held : FrameAt built.program built.table world fiber.frame) (heap : HeapAt world machine.state)
+    (counter : machine.nextId = world.nextId) (Other : SourceScope.SourceFiber → Prop)
+    (rows : ∀ row ∈ machine.fibers, row.id ≠ ⟨0⟩ →
+      StageRoles.FrameAt built.program built.table world row.id row.frame ∨ Other row) :
+    let result := evaluatePrim (interpAt built.program view built.table) machine fiber yielding
+    ∃ next, Future world next ∧ Fresh next ∧ result.machine.nextId = next.nextId ∧
+      HeapAt next result.machine.state ∧
+      External.Native.ResultAt (model built.program built.table view) (Edge built.program built.table) next .ordinary result ∧
+      ∀ row ∈ result.machine.fibers, row.id ≠ ⟨0⟩ →
+        StageRoles.FrameAt built.program built.table next row.id row.frame ∨ Other row := by
+  obtain ⟨next, future, freshNext, nextCounter, heapNext, actor, recipients, others⟩ :=
+    primitive_result_with_after built accepted view world fresh machine fiber yielding held heap counter Other rows
+  exact ⟨next, future, freshNext, nextCounter, heapNext, actor, others⟩
 
 /-- Actual root native dispatch excludes source scopes and selected scoped-exit frames. -/
 theorem native_primitive_eq (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
@@ -162,6 +182,23 @@ theorem native_primitive_eq (built : Api.Built) (accepted : Api.Author.build (sh
     exact edge_no_scoped built.program built.table world incoming middle _ edge body previous scope flag rfl
 
 /-- The actual root native result retains one world for its heap, parent and all child roles. -/
+theorem native_result_with_after (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
+    (world : StageWorld.World) (fresh : Fresh world) (machine : NativeMachine)
+    (fiber : SourceScope.SourceFiber) (yielding : Bool)
+    (held : FrameAt built.program built.table world fiber.frame) (heap : HeapAt world machine.state)
+    (counter : machine.nextId = world.nextId) (Other : SourceScope.SourceFiber → Prop)
+    (rows : ∀ row ∈ machine.fibers, row.id ≠ ⟨0⟩ →
+      StageRoles.FrameAt built.program built.table world row.id row.frame ∨ Other row) :
+    let result := evaluateNative built.program machine fiber yielding built.table
+    ∃ next, Future world next ∧ Fresh next ∧ result.machine.nextId = next.nextId ∧
+      HeapAt next result.machine.state ∧
+      External.Native.ResultAt (model built.program built.table machine.completedExits) (Edge built.program built.table) next .ordinary result ∧
+      AfterResult built.program built.table next result ∧
+      ∀ row ∈ result.machine.fibers, row.id ≠ ⟨0⟩ →
+        StageRoles.FrameAt built.program built.table next row.id row.frame ∨ Other row := by
+  rw [native_primitive_eq built accepted world machine fiber yielding held]
+  exact primitive_result_with_after built accepted machine.completedExits world fresh machine fiber yielding held heap counter Other rows
+
 theorem native_result (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
     (world : StageWorld.World) (fresh : Fresh world) (machine : NativeMachine)
     (fiber : SourceScope.SourceFiber) (yielding : Bool)
