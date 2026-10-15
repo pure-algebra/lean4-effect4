@@ -53,3 +53,32 @@ The eight goals and application claims must report proved through `#plan_status`
 The semantics projection is regenerated after placements change.
 Only reached behavior gates run.
 Commits name exact paths, and the final receipt records commands, outputs, limits, and remaining copies.
+
+## Shared release writer
+
+The graph review selects one writer model for both crews.
+`ReleaseWriter.Target` selects existing source, operation, reference, and value fields.
+`ReleaseWriter.Source` supplies source ownership and the direct release body.
+Its consumers are the two crew log goals, under scope-lifetime-finalization R11.
+The writer counts the actual release-start push and its pending direct write.
+The acquired value and initialized reference remain separate answer-flow obligations.
+`StoredWeights` extracts Atomic's existing delayed-program observations.
+Atomic's writer proofs continue to compile through that shared observation.
+The replaced Workers weight copy has no caller and is deleted.
+
+```mermaid
+flowchart LR
+  WS[Workers source] --> S[Shared source contract]
+  QS[QueueWorkers source] --> S
+  S --> F[Callbacks and frames]
+  F --> N[Native frame and action debit]
+  V[Actual answer flow] --> W[Actual store write debit]
+  N --> H[Existing funded history]
+  W --> H
+  H --> G[Two crew log goals]
+```
+
+The shared frame and action slice compiles.
+Its audit checks 1,025 declarations within the permitted axioms, with no planned goals.
+The eight application endpoints remain open at this slice.
+The earlier writer audit remains historical evidence for the deleted prototype.

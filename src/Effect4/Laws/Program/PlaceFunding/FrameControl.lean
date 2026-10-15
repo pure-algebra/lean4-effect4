@@ -6,7 +6,7 @@ Concept: scope-lifetime-finalization R11.
 Question: frame administration serves the crew release-log ledgers.
 Reach: every ledger whose fiber observation is the supplied frame weight.
 The current-code permission requires zero weight; the saved stack remains counted.
-Consumer: WorkersWriterWeights.control and the corresponding queue writer control.
+Consumer: ReleaseWriter.control, shared by both crews.
 This connector establishes no evaluator debit, initial funding, or history claim.
 -/
 set_option autoImplicit false

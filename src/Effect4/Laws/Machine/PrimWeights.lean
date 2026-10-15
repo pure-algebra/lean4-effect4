@@ -15,6 +15,8 @@ universe u v
 structure Model (ν σ : Type u) where
   name : ν → Nat
   thunk : σ → Nat
+  /-- A success binder may receive its callback reservation when its push emits an event. -/
+  successName : ν → Nat := name
   successPush : ν → Nat := fun _ => 0
   exitPush : ν → Bool → Nat := fun _ _ => 0
 
@@ -28,7 +30,7 @@ abbrev currentAlgebra {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (mod
   prim_withFiber suspended := model.thunk suspended
   prim_yieldableError _ := 0
   prim_iterator callback _ := model.name callback
-  prim_onSuccess body callback := body + model.name callback + model.successPush callback
+  prim_onSuccess body callback := body + model.successName callback + model.successPush callback
   prim_onSuccessConst body next := body + next
   prim_onFailure body callback := body + model.name callback
   prim_onSuccessAndFailure body success failure := body + model.name success + model.name failure
@@ -52,7 +54,7 @@ abbrev pairedAlgebra {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
   prim_yieldableError _ := (0, 0)
   prim_iterator callback _ := (model.name callback, model.name callback)
   prim_onSuccess body callback :=
-    (body.1 + model.name callback + model.successPush callback, savedSuccess callback)
+    (body.1 + model.successName callback + model.successPush callback, savedSuccess callback)
   prim_onSuccessConst body next := (body.1 + next.1, next.1)
   prim_onFailure body callback := (body.1 + model.name callback, model.name callback)
   prim_onSuccessAndFailure body success failure :=

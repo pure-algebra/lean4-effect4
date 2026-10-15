@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario.Atomic.Writer
 import Effect4.Laws.Program.SourceOpportunities
 import Effect4.Laws.Machine.FrameWeights
 import Effect4.Laws.Machine.PrimWeights
+import Effect4.Laws.Machine.StoredWeights
 import Effect4.Laws.Program.FinalizerRun
 
 /-!
@@ -28,25 +29,14 @@ def operation (id : Nat) : SyncOp → Nat
   | .refUpdate _ term env => if term == Store.noteAt id env.length then 1 else 0
   | _ => 0
 
-/-- Existing synthetic program wrappers retain the active note operations they contain.
-Consumer: stored callback and action interpretation in the writer history. -/
-def program (id : Nat) : ProgName → Nat
-  | .syncOp op => operation id op
-  | .intoDeferred body _ | .intoBody body _ | .forkThen body _ _ | .forkOnly body _
-  | .forkInScope body _ _ | .forkScopedOf body _ | .awaitAllNew body => program id body
-  | .onExitOf body _ _ => program id body
-  | .seqOf first second => program id first + program id second
-  | _ => 0
+/-- Existing stored programs use the shared delayed-operation projection. -/
+abbrev program (id : Nat) := Machine.StoredWeights.program (operation id)
 
-/-- Stored callback names retain their future existing program slots. -/
-def storeName (id : Nat) : Name → Nat
-  | .seq next | .snapshotThen next => program id next
-  | _ => 0
+/-- Existing stored callbacks use the shared future-program projection. -/
+abbrev storeName (id : Nat) := Machine.StoredWeights.name (operation id)
 
-/-- Stored fork and mask actions retain their existing body programs. -/
-def storeAction (id : Nat) : ActionName → Nat
-  | .fork body _ | .forkIn body _ _ | .forkScoped body _ | .setInterruptible body _ => program id body
-  | _ => 0
+/-- Existing stored actions use the shared body-program projection. -/
+abbrev storeAction (id : Nat) := Machine.StoredWeights.action (operation id)
 
 /-- A future native callback retains only its active finalizer child.
 Dormant finalizer names supply their reservation at the actual start event. -/
@@ -94,7 +84,7 @@ def saved (id : Nat) : NCode → Nat
 theorem program_exact (id : Nat) (body : ProgName) :
     current id (embed (progOf body)) = program id body := by
   fun_induction progOf body
-  all_goals aesop (add norm simp [program, current, cata_prim, thunk, name, storeName, storeAction,
+  all_goals aesop (add norm simp [program, current, cata_prim, thunk, name, storeName, storeAction, StoredWeights.program, StoredWeights.name, StoredWeights.action,
     embed, finProgram]) (add safe cases [FinalizerStrategy])
 
 /-- Stored value callbacks spend only the reservation retained by their name. -/
@@ -105,7 +95,7 @@ theorem store_value_bound (id : Nat) (callback : Name) (value : Val) :
     program_exact id body
   fun_cases Machine.contAOf callback value
   all_goals aesop (add norm simp [folded, current, cata_prim, thunk, name, storeName,
-    storeAction, operation, embed, Prim.ofExit])
+    storeAction, StoredWeights.name, StoredWeights.action, operation, embed, Prim.ofExit])
 
 /-- Stored cause callbacks introduce no active note operation. -/
 theorem store_cause_zero (id : Nat) (callback : Name) (cause : CauseV) :
