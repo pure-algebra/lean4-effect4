@@ -30,7 +30,7 @@ theorem yield_value (spec : Spec) (world : World) (kind : Kind) (program : NCode
   case stable ready held =>
     rw [current] at held
     exact ⟨.inr ready, held ▸ True.intro⟩
-  case yielding phase refs deferred pending => exact ⟨phase, rfl, refs, deferred, pending⟩
+  case yielding phase refs deferred pending => exact ⟨phase, refs, deferred, pending⟩
   all_goals cases current
 
 /-- Yield's actual unit reply retains the parked frame's saved suffix. -/

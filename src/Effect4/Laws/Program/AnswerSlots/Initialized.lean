@@ -27,7 +27,7 @@ structure World where
   owner : FiberId
   state : Stores
 
-/-- Transient allocation and forced-yield classes coexist with the existing stable answer classes. -/
+/-- Transient allocation and ignored yield answers coexist with protected stable answer classes. -/
 inductive Kind
   | stable (kind : Typed.Kind)
   | allocated (index : Nat)
@@ -59,7 +59,7 @@ def ValueAt (spec : Spec) (world : World) : Kind → Val → Prop
   | .allocated index, value => Phase spec world ∧ value = .cell ⟨index⟩ ∧
       world.state.refs.length = index + 1 ∧ world.state.deferreds.cells.length = 0
   | .gate, value => value = .promise ⟨0⟩ ∧ Ready spec world
-  | .yielded refs deferred, value => Phase spec world ∧ value = .unit ∧
+  | .yielded refs deferred, _ => Phase spec world ∧
       world.state.refs.length = refs ∧ world.state.deferreds.cells.length = deferred ∧ ¬ Ready spec world
 
 /-- The existing native code carries transient initialization or protected stable source evidence. -/
@@ -81,6 +81,10 @@ inductive CodeAt (spec : Spec) : World → Kind → NCode → Prop
       (refsEq : world.state.refs.length = refs) (deferredEq : world.state.deferreds.cells.length = deferred)
       (pending : ¬ Ready spec world) :
       CodeAt spec world (.yielded refs deferred) (.yieldNowWith priority)
+  | reading {world refs deferred cell} (phase : Phase spec world)
+      (refsEq : world.state.refs.length = refs) (deferredEq : world.state.deferreds.cells.length = deferred)
+      (pending : ¬ Ready spec world) :
+      CodeAt spec world (.yielded refs deferred) (.sync (.store (.op (.refGet cell))))
   | bound {world input output body name} (first : CodeAt spec world input body)
       (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
         ValueAt spec nextWorld input answer → CodeAt spec nextWorld output

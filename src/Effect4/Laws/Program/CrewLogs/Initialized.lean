@@ -67,6 +67,9 @@ theorem current_change {crew : Spec} {spec : Initialized.Spec} (contract : SyncC
       some (after, value) at actual
     cases actual
     exact .inl rfl
+  | reading phase refs deferred pending =>
+    cases same
+    exact .inl (by rw [syncOpStep_refGet_refs actual])
   | stable ready held =>
     cases same
     exact thunk_change contract completed thunk held.2 world.state after value actual

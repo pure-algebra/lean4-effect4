@@ -45,7 +45,7 @@ theorem sync_fields (spec : Spec) (world : World) (kind : Kind) (thunk : EffThun
   cases owned with
   | success good | failure phase => cases same
   | initial stage => exact (initial_not_sync spec world _ _ stage thunk same.symm).elim
-  | allocating small stage | gateAllocating stage => cases same; trivial
+  | allocating small stage | gateAllocating stage | reading phase refs deferred pending => cases same; trivial
   | stable ready held =>
     cases same
     exact Typed.thunk_fields spec.toSpec thunk held.2

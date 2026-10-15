@@ -55,7 +55,7 @@ theorem stable_shape (spec : Spec) (world : World) (kind : Kind) (program : NCod
     · exact (notBind body name same).elim
     · exact (notFrontier _ same).elim
     · exact (notFailure cause same).elim
-  | allocating small stage | gateAllocating stage => exact (notSync _ rfl).elim
+  | allocating small stage | gateAllocating stage | reading phase refs deferred pending => exact (notSync _ rfl).elim
   | stable ready held => exact ⟨_, rfl, ready, held⟩
   | frontier zero phase => exact (notFrontier _ rfl).elim
   | yielding phase refs deferred pending => exact (notYield _ rfl).elim

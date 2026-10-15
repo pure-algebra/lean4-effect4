@@ -97,13 +97,24 @@ theorem sync_value (spec : Spec) (completed : List (FiberId × ExitV)) (world : 
       some (state, value) at ran
     cases ran
     exact gate_value spec world _ stage
+  | @reading _ refs deferred cell phase refsEq deferredEq pending =>
+    cases same
+    change syncOpStep (.refGet cell) world.state = some (state, value) at ran
+    cases peek : refPeek world.state.refs cell with
+    | none =>
+      simp only [syncOpStep, refStep, peek, Option.map_none] at ran
+      cases ran
+    | some answer =>
+      simp only [syncOpStep, refStep, peek, Option.map_some] at ran
+      cases ran
+      exact ⟨phase, refsEq, deferredEq, pending⟩
   | stable ready held =>
     cases same
     obtain ⟨rfl, allowed⟩ := held
     exact ⟨.inr (ready_future spec world _ (sync_future spec completed world thunk state value ran) ready), trivial⟩
   | frontier zero phase | yielding phase refs deferred pending | bound first callback | yieldThen phase held => cases same
 
-/-- A native sync fallback is possible only at the protected stable broad answer class. -/
+/-- A native fallback retains its stable answer class or its ignored transient reply class. -/
 theorem sync_fallback (spec : Spec) (completed : List (FiberId × ExitV)) (world : World)
     (kind : Kind) (thunk : EffThunk) (owned : CodeAt spec world kind (.sync thunk))
     (missing : (interpAt spec.root completed spec.table).syncState thunk world.state = none) :
@@ -114,6 +125,9 @@ theorem sync_fallback (spec : Spec) (completed : List (FiberId × ExitV)) (world
   | initial stage => exact (initial_not_sync spec world _ _ stage thunk same.symm).elim
   | allocating small stage => cases same; cases missing
   | gateAllocating stage => cases same; cases missing
+  | reading phase refs deferred pending =>
+    cases same
+    exact ⟨phase, refs, deferred, pending⟩
   | stable ready held =>
     cases same
     obtain ⟨rfl, allowed⟩ := held

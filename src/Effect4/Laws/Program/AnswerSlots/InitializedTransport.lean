@@ -21,7 +21,7 @@ theorem yield_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : 
   · intro view
     apply AnswerFlow.saved_constant
     · intro nextWorld future value good
-      exact code_rebase spec world kind next owned nextWorld future good.2.2.1.symm good.2.2.2.1.symm
+      exact code_rebase spec world kind next owned nextWorld future good.2.1.symm good.2.2.1.symm
     · intro nextWorld future cause good
       exact good
   · intro loop cursor same
@@ -40,7 +40,7 @@ theorem head (spec : Spec) (fragment : SourceScope.Fragment spec.root)
   | success good => exact .success _ good
   | failure phase => exact .failure _ phase
   | initial stage => exact initial_head spec fragment completed world _ _ stage
-  | allocating small stage => exact (noSync _ rfl).elim
+  | allocating small stage | reading phase refs deferred pending => exact (noSync _ rfl).elim
   | gateAllocating stage => exact (noSync _ rfl).elim
   | stable ready held =>
     exact AnswerFlow.FamilyEmbedding.head_over (interpAt spec.root completed spec.table).toPrimInterp

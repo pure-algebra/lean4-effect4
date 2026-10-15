@@ -26,7 +26,7 @@ theorem code_phase (spec : Spec) (world : World) (kind : Kind) (program : NCode)
   | failure phase => exact phase
   | initial stage | allocating small stage | gateAllocating stage => exact .inl stage.2.1
   | stable ready => exact .inr ready
-  | frontier zero phase | yielding phase => exact phase
+  | frontier zero phase | yielding phase | reading phase => exact phase
   | bound first callback ih => exact ih
   | yieldThen phase => exact phase
 
@@ -41,10 +41,10 @@ theorem value_rebase (spec : Spec) (first last : World) (future : Future first l
     exact ⟨phase_future spec first last future good.1, good.2.1,
       refs.symm.trans good.2.2.1, deferred.symm.trans good.2.2.2⟩
   | yielded index deferreds =>
-    refine ⟨phase_future spec first last future good.1, good.2.1,
-      refs.symm.trans good.2.2.1, deferred.symm.trans good.2.2.2.1, ?_⟩
+    refine ⟨phase_future spec first last future good.1,
+      refs.symm.trans good.2.1, deferred.symm.trans good.2.2.1, ?_⟩
     intro ready
-    apply good.2.2.2.2
+    apply good.2.2.2
     exact ⟨by rw [refs]; exact ready.1, by rw [deferred]; exact ready.2⟩
   | gate => exact ⟨good.1, ready_future spec first last future good.2⟩
 
@@ -74,6 +74,10 @@ theorem code_rebase (spec : Spec) (first : World) (kind : Kind) (program : NCode
     exact .yielding (phase_future spec _ _ future phase)
       (refs.symm.trans beforeRefs) (deferred.symm.trans beforeDeferred)
       (fun ready => pending ⟨by rw [refs]; exact ready.1, by rw [deferred]; exact ready.2⟩)
+  | reading phase beforeRefs beforeDeferred pending =>
+    exact .reading (phase_future spec _ _ future phase)
+      (refs.symm.trans beforeRefs) (deferred.symm.trans beforeDeferred)
+      (fun ready => pending ⟨by rw [refs]; exact ready.1, by rw [deferred]; exact ready.2⟩)
   | bound first callback ih =>
     refine .bound (ih last future refs deferred) ?_
     intro nextWorld nextFuture view answer good
@@ -92,7 +96,7 @@ theorem value_future_ready (spec : Spec) (first last : World) (future : Future f
     rw [good.2.2.2] at positive
     exact (Nat.not_succ_le_zero _ positive).elim
   | gate => exact ⟨good.1, ready_future spec first last future good.2⟩
-  | yielded refs deferred => exact (good.2.2.2.2 ready).elim
+  | yielded refs deferred => exact (good.2.2.2 ready).elim
 
 /-- Once ready, the protected current graph tolerates growth of references and deferred waiters. -/
 theorem code_future_ready (spec : Spec) (first : World) (kind : Kind) (program : NCode)
@@ -107,7 +111,7 @@ theorem code_future_ready (spec : Spec) (first : World) (kind : Kind) (program :
     exact (Nat.not_succ_le_zero _ positive).elim
   | stable held code => exact .stable (ready_future spec _ _ future held) code
   | frontier zero phase => exact .frontier zero (phase_future spec _ _ future phase)
-  | yielding phase refs deferred pending => exact (pending ready).elim
+  | yielding phase refs deferred pending | reading phase refs deferred pending => exact (pending ready).elim
   | bound first callback ih =>
     refine .bound (ih last future ready) ?_
     intro nextWorld nextFuture view answer good
