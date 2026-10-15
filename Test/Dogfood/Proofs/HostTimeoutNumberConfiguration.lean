@@ -120,7 +120,7 @@ theorem count_frame_uniform (context : CountContext) (state : Stores)
       exact HostTimeoutNumberPhaseFlow.CodeAt.countBind context.before context.n context.cleanups context.forms
         context.cursor context.captured context.fuel context.delay context.previous heap
     · rw [stack]
-      exact .cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _
+      exact .cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by trivial)
         (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _)
   | binder current stack =>
     refine ⟨.unit context.entered, ?_, ?_⟩
@@ -131,7 +131,7 @@ theorem count_frame_uniform (context : CountContext) (state : Stores)
       exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _
         (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
           context.fuel context.delay context.n context.previous))
-        (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _
+        (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by trivial)
         (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
 
 /-- The previous count-prefix reader consumes the common uniform source constructor. -/
@@ -159,7 +159,7 @@ theorem counted_frame_uniform (context : CountContext) (state : Stores) (frame :
   exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _
     (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
       context.fuel context.delay context.n context.previous))
-    (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _
+    (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by trivial)
       (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
 
 /-- The admitted count-write iteration commits its new phase and produces the actual attempt continuation contract. -/

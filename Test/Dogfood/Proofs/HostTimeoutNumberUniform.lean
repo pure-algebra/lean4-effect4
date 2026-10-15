@@ -13,9 +13,21 @@ namespace Test.Dogfood.Proofs.HostTimeoutNumberUniform
 open Effect4 Effect4.Machine Effect4.Program
 open HostTimeoutNumberPhaseFlow
 
-/-- One saved certificate keeps its answer classes when the actual completed-exit view changes. -/
-abbrev Edge := AnswerFlow.ViewSavedAt (fun view => model view)
-  (fun view => (HostTimeoutFlow.interpreter view).toPrimInterp)
+/-- One saved certificate keeps its classes and actual restoring-mask authority together. -/
+structure Edge (state : Stores) (input output : Kind) (frame : NCode)
+    extends AnswerFlow.ViewSavedAt (fun view => model view)
+      (fun view => (HostTimeoutFlow.interpreter view).toPrimInterp) state input output frame where
+  restores : frame = .setInterruptible true → HostTimeoutNumberMaskClass.Restorable input
+  generated : ∀ fiber : HostTimeoutFrames.NativeFrame,
+    (frame.ensure fiber).1.stack = .setInterruptible true :: fiber.stack →
+    HostTimeoutNumberMaskClass.Restorable output
+
+/-- A hook that keeps its stack cannot also push a restoring mask. -/
+theorem no_push (before after : List NCode) (same : after = before)
+    (pushed : after = .setInterruptible true :: before) : False := by
+  have lengths := congrArg List.length (same.symm.trans pushed)
+  simp only [List.length_cons] at lengths
+  omega
 
 /-- A numeric frame retains one input class and one uniformly certified saved path. -/
 def FrameAt (state : Stores) (output : Kind) (frame : HostTimeoutFrames.NativeFrame) : Prop :=
@@ -26,7 +38,7 @@ theorem family (view : HostTimeoutFlow.View) :
     AnswerFlow.SavedFamily (model view) (HostTimeoutFlow.interpreter view).toPrimInterp Edge :=
   AnswerFlow.ViewSavedAt.refined_family (fun view => model view)
     (fun view => (HostTimeoutFlow.interpreter view).toPrimInterp) Edge
-    (fun _ _ _ _ held => held) view
+    (fun _ _ _ _ held => held.toViewSavedAt) view
 
 /-- A uniformly certified saved path gives its ordinary semantic path at the actual view. -/
 theorem path (view : HostTimeoutFlow.View) (state : Stores) (input output : Kind) (stack : List NCode)
@@ -46,17 +58,29 @@ theorem FrameAt.each (state : Stores) (output : Kind) (frame : HostTimeoutFrames
 theorem head_edges : HostTimeoutNumberPhaseHead.HeadEdges Edge := by
   constructor
   · intro state input output body name each
-    exact ⟨each, (by intro name cursor impossible; cases impossible),
-      (by intro name cursor impossible; cases impossible)⟩
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_⟩
+    · intro name cursor impossible; cases impossible
+    · intro name cursor impossible; cases impossible
+    · intro impossible; cases impossible
+    · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
   · intro state input output body name each
-    exact ⟨each, (by intro name cursor impossible; cases impossible),
-      (by intro name cursor impossible; cases impossible)⟩
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_⟩
+    · intro name cursor impossible; cases impossible
+    · intro name cursor impossible; cases impossible
+    · intro impossible; cases impossible
+    · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
   · intro state input output body next each
-    exact ⟨each, (by intro name cursor impossible; cases impossible),
-      (by intro name cursor impossible; cases impossible)⟩
-  · intro state input output body name flag each
-    exact ⟨each, (by intro name cursor impossible; cases impossible),
-      (by intro name cursor impossible; cases impossible)⟩
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_⟩
+    · intro name cursor impossible; cases impossible
+    · intro name cursor impossible; cases impossible
+    · intro impossible; cases impossible
+    · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
+  · intro state input output body name flag restorable each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_⟩
+    · intro name cursor impossible; cases impossible
+    · intro name cursor impossible; cases impossible
+    · intro impossible; cases impossible
+    · intro fiber pushed; exact restorable
 
 /-- The single numeric head proof also supplies uniform saved edges. -/
 theorem head (view : HostTimeoutFlow.View) (state : Stores) (kind : Kind) (program : NCode)
@@ -82,12 +106,21 @@ theorem ordinary_native (view : HostTimeoutFlow.View) (machine : NativeMachine)
   exact good
 
 /-- A saved interruptibility flag is uniform and retains exactly the same numeric answer class. -/
-theorem mask (state : Stores) (kind : Kind) (flag : Bool) :
+theorem mask (state : Stores) (kind : Kind) (flag : Bool)
+    (restorable : HostTimeoutNumberMaskClass.Restorable kind) :
     Edge state kind kind (.setInterruptible flag) := by
-  constructor
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_⟩
   · intro view
     exact AnswerFlow.saved_mask (model view) (HostTimeoutFlow.interpreter view).toPrimInterp state kind flag
   · intro name cursor impossible; cases impossible
   · intro name cursor impossible; cases impossible
+  · intro actual; exact restorable
+  · intro fiber pushed
+    exact False.elim (no_push _ _ (Prim.ensure_setInterruptible_stack flag fiber) pushed)
+
+/-- Only the actual source edge authorizes its generated mask's answer class. -/
+theorem hook_mask : AnswerFlow.Contextual.HookMask Edge := by
+  intro state input output code held fiber pushed
+  exact mask state output true (held.generated fiber pushed)
 
 end Test.Dogfood.Proofs.HostTimeoutNumberUniform

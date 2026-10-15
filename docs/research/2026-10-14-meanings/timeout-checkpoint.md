@@ -892,3 +892,41 @@ The numeric application still must construct the source-sensitive saved-edge ann
 The audit covers the shared contextual pop and replacement modules.
 Existing consumers reach both leaves, so no root import changes are needed.
 This proof-only slice reaches no outside implementation gate.
+
+## Numeric mask authority and actual whole-value return
+
+The coordinator must retain both mask fields of the uniform numeric edge.
+The base is `fdbfd03a6`.
+Both original endpoints remain open.
+
+The pending uniform edge now retains its actual restoring-mask class and its actual generated-mask class together.
+`Restorable` excludes the existing read and unit classes.
+It changes no numeric value or cause predicate.
+The value reader derives a clean interruption permission from the actual value evidence in every other existing class.
+
+The numeric head's finalizer constructor supplies this permission at its actual result class.
+Count entry, count reply, addressed interruption, and the full count-command producer consume the stricter saved path.
+`Replacement.value_frame` uses the shared exact replacement site and the actual recorded clean cause.
+It returns the actual numeric frame at the saved suffix without an arbitrary all-class cause premise.
+
+`AnswerFlowResume.resume_value_local` now owns the existing whole-value return proof.
+It accepts the exact deferred and replacement results at their actual suffixes.
+The earlier broad interface remains a wrapper.
+`Replacement.resume_value` consumes that producer for actual clear-deferred numeric frames and actual pure callbacks.
+These helpers serve both endpoints under R11, R10, and R4.
+They establish no source race assignment, initialized history, or whole-fiber mask permission by themselves.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberReplacement Test.Dogfood.Proofs.HostTimeoutNumberCountQueue Effect4.Laws.Machine.AnswerFlowNativeExit` | Passed, 1262 jobs |
+| `lake env lean scratch/TimeoutUniformAudit.lean` | The output below |
+
+```text
+#axiom_audit: 344 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers fourteen shared, numeric native, configuration, count, and interruption modules.
+`MaskClass` is reached by the pending configuration.
+The new `Replacement` leaf needs root reach when its native endpoint consumer is integrated.
+This proof-only slice reaches no outside implementation gate.
+Actual whole-fiber masking still needs the retained source provenance and the actual protected finalizer flag.

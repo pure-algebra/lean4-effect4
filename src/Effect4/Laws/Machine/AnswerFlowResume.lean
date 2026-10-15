@@ -324,8 +324,42 @@ def RunningStep (world : World) (output : Kind) : FrameStep ν σ β ε δ ι α
 
 variable (interp : PrimInterp ν σ β ε δ ι α) (family : SavedFamily model interp Edge)
 
+/-- A whole value return uses actual deferred and replacement results at their retained suffix.
+Consumer: numeric families whose protected intermediate classes reject arbitrary causes. -/
+theorem resume_value_local
+    (Allowed : World → Option (Cause ε δ ι α) → Prop)
+    (contextual : ContextualSavedFamily model interp Edge Allowed)
+    (hook : Contextual.HookMask Edge) (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Exit β ε δ ι α))
+    (good : model.value world input value) (stack : Path (Edge world) input output fiber.stack)
+    (deferred : ∀ cause, (fiber.getCont .contA false).answer = .deferred cause →
+      FamilyResult model Edge world output (.failure cause) (fiber.getCont .contA false).fiber.stack)
+    (replacement : ∀ next, (fiber.getCont .contA false).answer = .replacement next →
+      FamilyResult model Edge world output next (fiber.getCont .contA false).fiber.stack)
+    (supplied : ∀ incoming, model.value world incoming value → ∀ exit ∈ provided, ExitAt model world incoming exit)
+    (pure : ∀ selected, (fiber.getCont .contA false).answer = .frame selected →
+      programOf model world selected (provided.getD (.success value)) = none) :
+    RunningStep model Edge world output (fiber.resumeValue interp value provided).1 := by
+  cases selected : (fiber.getCont .contA false).answer with
+  | empty => rw [FrameFiber.resumeValue_empty interp fiber value provided selected]; trivial
+  | deferred cause =>
+    rw [FrameFiber.resumeValue_deferred interp fiber value provided cause selected]
+    exact deferred cause selected
+  | replacement next =>
+    rw [FrameFiber.resumeValue_replacement interp fiber value provided next selected]
+    exact replacement next selected
+  | frame frame =>
+    cases actual : frame.armA interp value provided with
+    | none => simp only [FrameFiber.resumeValue, selected, actual, RunningStep]
+    | some result =>
+      obtain ⟨next, pushed⟩ := result
+      obtain ⟨events, equation, typed⟩ := Contextual.Hooked.resumeValue_selected model interp Edge Allowed contextual hook world input output
+        fiber value frame next pushed provided good stack selected supplied (pure frame selected) actual
+      rw [equation]
+      exact typed
+
 include family mask in
-/-- A whole value return consumes the existing selected-arm theorem and the retained saved suffix. -/
+/-- The earlier whole-value interface specializes the same actual-return producer. -/
 theorem resume_value (world : World) (input output : Kind)
     (fiber : FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Exit β ε δ ι α))
     (good : model.value world input value) (stack : Path (Edge world) input output fiber.stack)
@@ -337,25 +371,17 @@ theorem resume_value (world : World) (input output : Kind)
       programOf model world selected (provided.getD (.success value)) = none) :
     RunningStep model Edge world output (fiber.resumeValue interp value provided).1 := by
   have suffix := getCont_suffix model Edge mask world input output fiber .contA false none stack
-  cases selected : (fiber.getCont .contA false).answer with
-  | empty => rw [FrameFiber.resumeValue_empty interp fiber value provided selected]; trivial
-  | deferred cause =>
-    rw [FrameFiber.resumeValue_deferred interp fiber value provided cause selected]
+  apply resume_value_local model Edge interp (fun _ _ => True)
+    (family.contextual model interp Edge (fun _ _ => True)) (Contextual.unconditional_hook_mask Edge mask)
+    world input output fiber value provided good stack
+  · intro cause selected
     obtain ⟨incoming, path⟩ := suffix
     exact ⟨incoming, model.failure world incoming cause (causes incoming cause), path⟩
-  | replacement next =>
-    rw [FrameFiber.resumeValue_replacement interp fiber value provided next selected]
+  · intro next selected
     obtain ⟨incoming, path⟩ := suffix
     exact ⟨incoming, replacement next selected incoming, path⟩
-  | frame frame =>
-    cases actual : frame.armA interp value provided with
-    | none => simp only [FrameFiber.resumeValue, selected, actual, RunningStep]
-    | some result =>
-      obtain ⟨next, pushed⟩ := result
-      obtain ⟨events, equation, typed⟩ := resumeValue_selected model interp Edge family mask world input output
-        fiber value frame next pushed provided good stack selected supplied (pure frame selected) actual
-      rw [equation]
-      exact typed
+  · exact supplied
+  · exact pure
 
 include family mask in
 /-- A whole cause return consumes the actual delivered cause and shared selected-arm theorem. -/
