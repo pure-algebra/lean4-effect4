@@ -177,3 +177,31 @@ No outside-host agreement or progress claim follows.
 
 Remaining consumers: the active root, daemon, and request native producer; its joint command invariant; actual entry activation; and the original observation readout.
 The separate Finalizer endpoint remains the coordinator's work.
+
+## Actual terminal return slice
+
+`Atomic.Store.shop_stages` remains open and keeps its original statement.
+The next consumer joins native actor results with the active command and history invariant.
+
+- Shared native connectors: `653e189c9`.
+- Root, daemon and request interruption roles: `058b5bece`.
+- Shared completed-return permissions: `e71339659`.
+- Actual request terminal dispatch: `3fdf6563d`.
+- Dependency synchronization only: `4699c565f`; the coordinator already owns these exact dependencies.
+
+`External.Native.step_frame_running` keeps the exact outer answer class for ordinary native heads.
+`External.Native.finalizer_dispatch` joins actual installation and contextual ordinary return under one result predicate.
+`Contextual.resume_value_finished` and `Contextual.resume_cause_finished` retain the actual completed exit permission.
+`StageGraph.native_exit` consumes these proofs for the actual request finalizer dispatcher.
+All serve store-typing R4 and scope-lifetime-finalization R11 through `Atomic.Store.shop_stages`.
+They establish local native transitions, not an active history invariant or progress.
+
+Commands use `/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh`.
+
+- `lake build Test.Dogfood.Scenario.Atomic.StageRoles`: build succeeds, 1279 jobs.
+- `lake build Test.Dogfood.Scenario.Atomic.StageReturn`: build succeeds, 1199 jobs.
+- `lake env lean scratch/audit-atomic-active.lean`: 398 declarations within `[propext, Quot.sound]`; zero goals and zero modulo goals.
+- `lake env lean scratch/audit-atomic-return.lean`: 402 declarations within `[propext, Quot.sound]`; zero goals and zero modulo goals.
+
+The last audit includes `DaemonIteration`, completing the earlier interruption slice's module list.
+No host behaviour or bounded execution claim follows from these proof checks.
