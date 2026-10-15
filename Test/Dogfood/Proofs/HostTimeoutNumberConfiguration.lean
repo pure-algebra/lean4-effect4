@@ -357,6 +357,8 @@ structure FiberAt (machine : Effect4.Program.NativeMachine) (role : Role)
   exit : ∀ exit, fiber.exit = some exit → ExitAt machine role exit
   retired : role = .retired → fiber.exit.isSome = true
   recorded : ∀ cause, fiber.frame.interruptedCause = some cause → NoTypedFailure cause
+  immediate : ∀ cause, NoTypedFailure cause → fiber.exit = none → fiber.running = false →
+    fiber.frame.interruptible = true → FrameAt machine role {fiber.frame with current := .failure cause}
   pendingRunning : ∀ context, role = .pending context →
     HostTimeoutNumberPhaseFlow.At context.before machine.state → CountInstalled context fiber.frame →
       fiber.running = true

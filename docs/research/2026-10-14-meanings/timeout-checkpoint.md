@@ -393,3 +393,37 @@ These shared files are dependencies, not Timeout edits.
 The audit checks `NumberRootModel` and `NumberRootSuffix` in their full module namespaces.
 The actual loop continuation, coupled native and command producer, initialized history, and both original endpoints remain open.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Actual loop and interruption permissions
+
+This slice changes neither original Timeout endpoint.
+Its concepts are translation-simulation R10, reactive-scheduling R9, and scope-lifetime-finalization R11.
+Its consumers are the root loop outcome and actual addressed-message component of the coupled command producer.
+
+`NumberRootLoop.failure_continue` consumes the actual returned retry and exact selected singleton publication.
+It also consumes the real cleanup barrier and source loop callback premises.
+It returns the exact loop continuation and next `CountContext` permissions together.
+The completed predecessor log contains only declared retries at that boundary.
+The proof uses the existing loop callback laws and adds no syntax traversal.
+
+`NumberConfiguration.FiberAt.immediate` records the live idle fiber's clean-cause replacement permission.
+Read and unit classes still reject cause delivery.
+Their actual masked execution must discharge the new conditional permission.
+`NumberConfigurationInterrupt.interrupt_fiber` proves the actual addressed interruption retains the whole numeric fiber assertion.
+It uses the actual running flag, mask, ordered saved suffix, and recorded cause.
+The incoming and previously recorded causes contain no typed failure.
+This local producer does not assume unrestricted interruption closure of each answer class.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRootLoop` | Passed, 1225 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberConfigurationInterrupt` | Passed, 1220 jobs |
+| `lake env lean scratch/TimeoutLoopInterruptAudit.lean` | The output below |
+
+```text
+#axiom_audit: 204 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks `NumberRootLoop`, `NumberConfiguration`, and `NumberConfigurationInterrupt` in their full module namespaces.
+Whole-machine and queue transport, native role advancement, initialized history, and both original endpoints remain open.
+No execution behaviour changes, so this slice reaches no outside implementation gate.
