@@ -1,3 +1,4 @@
+import Effect4.Laws.Machine.ContextualMessages
 import Effect4.Laws.Machine.LiftMachineFact
 import Effect4.Laws.Machine.AnswerFlowFamily
 import Effect4.Laws.Machine.Ledger
@@ -325,19 +326,23 @@ theorem Flows.fiberEdits
       G (worldOf state f.id) f.id f.frame → G (worldOf state f.id) f.id (interruptWithCause cause f).1.frame)
     (edits : List (FiberEdit ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St) (held : Flows G worldOf m) :
     Flows G worldOf (applyFiberEdits edits m).1 := by
-  unfold applyFiberEdits
-  suffices ∀ (word : List (FiberEdit ε δ ι α)) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)),
-      Flows G worldOf acc.1 →
-      Flows G worldOf (word.foldl (fun held edit =>
-        let changed := applyFiberEdit edit held.1
-        (changed.1, held.2 ++ changed.2)) acc).1 from this edits (m, []) held
-  intro word
-  induction word with
-  | nil => intro acc kept; exact kept
-  | cons edit rest ih =>
-    intro acc kept
-    rw [List.foldl_cons]
-    exact ih _ (Flows.fiberEdit interruption edit acc.1 kept)
+  have facts : ContextualMessages.Local Lift.unitOrder
+      (fun (_ : Unit) (_ : Unit) m => Flows G worldOf m)
+      (fun (_ : Unit) (_ : Unit) (_ : RunMachine ν σ β ε δ ι α χ St)
+        (_ : List (Cmd ν σ β ε δ ι α)) => True) := by
+    refine { observe := ?_, drop := ?_, interrupt := ?_ }
+    · intro context world m commands target observer flow queued
+      refine ⟨(), Lift.unitOrder.refl (), ?_, True.intro⟩
+      exact Flows.fiberEdit interruption (.observe target observer) m flow
+    · intro context world m commands token flow queued
+      refine ⟨(), Lift.unitOrder.refl (), ?_, True.intro⟩
+      exact Flows.fiberEdit interruption (.dropToken token) m flow
+    · intro context world m commands target cause fiber found flow queued
+      refine ⟨(), Lift.unitOrder.refl (), ?_, True.intro⟩
+      have changed := Flows.fiberEdit interruption (.interrupt target cause) m flow
+      simpa only [applyFiberEdit, found] using changed
+  obtain ⟨world, advanced, retained, queued⟩ := facts.apply () () edits m held True.intro
+  exact retained
 
 /-- Settlement keeps the flow of an iteration's result: it installs the returned fiber, applies the
 edit word and records the outcome in metadata. -/
