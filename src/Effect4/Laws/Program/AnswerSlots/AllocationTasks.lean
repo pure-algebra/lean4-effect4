@@ -13,7 +13,8 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- Before application entry a stored resume carries an ordinary terminal completion. -/
 def ReplyTask : SourceScope.SourceTask → Prop
   | .resume _ _ code => SourceScope.TerminalReply code ∧ NoRaceReply code
-  | _ => True
+  | .start _ => True
+  | .wake _ _ => False
 
 abbrev Replies (dispatcher : SourceScope.SourceDispatcher) : Prop := DispatcherPredicate.All ReplyTask dispatcher
 

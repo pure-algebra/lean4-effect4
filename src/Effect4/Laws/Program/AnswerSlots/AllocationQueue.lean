@@ -12,7 +12,7 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- No application-only operation occurs before the actual source entry. -/
 def PendingCommand : SourceScope.SourceCommand → Prop
   | .evaluate _ | .loop _ _ | .deliver _ _ | .interruptTarget _ _ _
-    | .finish _ _ | .drainDue | .wake _ _ => True
+    | .finish _ _ | .drainDue => True
   | .resume id token code => ReplyTask (.resume id token code)
   | _ => False
 
@@ -146,7 +146,6 @@ theorem PendingCommand.fixed (command : SourceScope.SourceCommand) (allowed : Pe
   case interruptTarget => trivial
   case finish => trivial
   case drainDue => trivial
-  case wake => trivial
 /-- Detached pending tasks retain their exact ordinary reply admission. -/
 abbrev PendingSnapshot (tasks : List SourceScope.SourceTask) : Prop := DispatcherPredicate.Tasks ReplyTask tasks
 
@@ -155,6 +154,6 @@ theorem pending_task_queue (task : SourceScope.SourceTask) (ready : ReplyTask ta
   cases task with
   | start child => exact PendingQueue.cons _ _ trivial (PendingQueue.cons _ _ trivial pending_queue_nil)
   | resume owner token code => exact PendingQueue.cons _ _ ready (PendingQueue.cons _ _ trivial pending_queue_nil)
-  | wake list phase => exact PendingQueue.cons _ _ trivial (PendingQueue.cons _ _ trivial pending_queue_nil)
+  | wake list phase => exact False.elim ready
 
 end Effect4.Program.AnswerSlots.AllocationAdapter
