@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.AnswerSlots.InitializedNativeRows
 import Effect4.Laws.Program.Guard.ReturnCommands
 import Effect4.Laws.Program.MaskRuns
+import Effect4.Laws.Program.NativeAdminOrigin
 
 /-!
 Concept: store-typing R4 and reactive-scheduling R11.

@@ -1,0 +1,105 @@
+import Effect4.Laws.Program.PrimitiveProducer
+import Effect4.Laws.Program.Guard.ReturnCommands
+
+/-!
+Concept: reactive-scheduling R11.
+Question: retained administrative command demands originate at an actual native action.
+Reach: the existing primitive producer, actual nested command membership and host ownership.
+Limit: source classes and saved suffixes remain the initialized action producer's responsibility.
+Consumer: initialized crew administrative queue permission.
+-/
+set_option autoImplicit false
+namespace Effect4.Program.NativeAdminOrigin
+open Effect4 Effect4.Machine Effect4.Program
+
+/-- Administrative continuation commands retain their addressed host for every park kind. -/
+def Local (host : FiberId) : Guard.NCmd → Prop
+  | .afterInterrupt owner _ _ | .closeParAwait owner _ _ | .raceCancel _ owner _ _ _ => owner = host
+  | _ => False
+
+/-- A simple command has no administrative continuation host. -/
+theorem simple_not_local (command : Guard.NCmd) (host : FiberId)
+    (simple : Guard.ReturnCommands.Simple command) (owned : Local host command) : False := by
+  cases command <;> simp only [Guard.ReturnCommands.Simple, Local] at simple owned
+
+/-- Pure frame dispatch emits no nested command. -/
+theorem step_nested (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Moves.NFiber) (yielding : Bool) :
+    (evaluatePrim.stepFrame interp machine fiber yielding).nested = [] := by
+  unfold evaluatePrim.stepFrame evaluatePrim.finishFrame
+  repeat' split
+  all_goals rfl
+
+/-- Finalizer dispatch emits no nested command. -/
+theorem finalizer_nested (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Moves.NFiber)
+    (yielding : Bool) (exit : ExitV) :
+    (evaluatePrim.finalizerOr interp machine fiber yielding exit).nested = [] := by
+  unfold evaluatePrim.finalizerOr
+  dsimp only
+  split
+  · split
+    · rfl
+    · exact step_nested interp machine fiber yielding
+  · exact step_nested interp machine fiber yielding
+
+/-- Actual local administrative commands arise only from the existing action producer arm. -/
+theorem primitive_action (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Moves.NFiber)
+    (yielding : Bool) (next : Moves.NIteration) (produced : Moves.PrimitiveProducer interp machine fiber yielding next)
+    (command : Guard.NCmd) (member : command ∈ next.nested) (host : FiberId)
+    (owned : Local host command) :
+    ∃ thunk action, fiber.frame.current = .withFiber thunk ∧ interp.withFiberOf thunk = some action ∧
+      next = evaluatePrim.withFiber interp machine fiber yielding action := by
+  cases produced with
+  | action thunk action current unparked found => exact ⟨thunk, action, current, found, rfl⟩
+  | step => rw [step_nested] at member; exact (List.not_mem_nil member).elim
+  | finalizer => rw [finalizer_nested] at member; exact (List.not_mem_nil member).elim
+  | sync | asyncImmediate =>
+    have same := List.mem_singleton.mp member
+    subst command
+    exact owned.elim
+  | racePark race park =>
+    unfold registerRace at member
+    split at member
+    · exact (List.not_mem_nil member).elim
+    · rcases List.mem_cons.mp member with same | rest
+      · subst command; exact owned.elim
+      · have same := List.mem_singleton.mp rest
+        subst command
+        exact owned.elim
+  | fallback | yieldNow | asyncParked | rejectedPark | countdownPark | joinMissing | joinExited | joinWaiting =>
+    exact (List.not_mem_nil member).elim
+
+/-- A local administrative continuation has a unique addressed host. -/
+theorem local_unique (command : Guard.NCmd) (first last : FiberId)
+    (one : Local first command) (two : Local last command) : first = last := by
+  fun_cases Local first command <;>
+    simp only [Local] at one two
+  all_goals exact one.symm.trans two
+
+/-- The existing guard's narrower administrative command class supplies the host certificate. -/
+theorem of_guard (command : Guard.NCmd) (host : FiberId)
+    (held : Guard.ReturnCommands.Local host command) : Local host command := by
+  fun_cases Guard.ReturnCommands.Local host command <;>
+    simp only [Guard.ReturnCommands.Local, Local] at held ⊢
+  all_goals exact held
+
+/-- The shared nested-command certificate identifies the actual continuation's sole host. -/
+theorem nested_host (root : NativeEff) (table : RowTable) (next : Moves.NIteration)
+    (nested : Guard.ReturnCommands.Nested root table next) (command : Guard.NCmd)
+    (member : command ∈ next.nested) (host : FiberId) (owned : Local host command) : host = next.fiber.id := by
+  cases nested with
+  | simple commands => exact (simple_not_local command host (commands command member) owned).elim
+  | owned outcome front last commands simple isLocal =>
+    rw [commands] at member
+    rcases List.mem_append.mp member with previous | final
+    · exact (simple_not_local command host (simple command previous) owned).elim
+    · have same := List.mem_singleton.mp final
+      subst command
+      exact local_unique last host next.fiber.id owned (of_guard last next.fiber.id isLocal)
+  | registration outcome rid race lookup hostEq park commands =>
+    rw [commands] at member
+    rcases List.mem_cons.mp member with same | rest
+    · subst command; exact owned.elim
+    · have same := List.mem_singleton.mp rest
+      subst command
+      exact owned.elim
+end Effect4.Program.NativeAdminOrigin
