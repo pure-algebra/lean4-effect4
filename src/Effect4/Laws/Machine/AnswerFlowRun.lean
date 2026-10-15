@@ -274,6 +274,7 @@ structure Commands [FiberEvaluator ν σ β ε δ ι α χ St (Prim ν σ β ε 
   /-- The children's interrupt becomes the current code of an exiting fiber. -/
   exitChildren : ∀ m id exit (f : RunFiber ν σ β ε δ ι α χ), Ready m (.finish id exit) →
     Flows G worldOf m → m.fiber? id = some f →
+    (m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty) = true →
       G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false, current := .onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit)}
   /-- Publishing an exit clears the deferred flag. -/
   publish : ∀ (state : St) (f : RunFiber ν σ β ε δ ι α χ),
@@ -481,14 +482,16 @@ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 with no observer, the fiber cleared. -/
 theorem Flows.exitFiber (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε δ ι α) (held : Flows G worldOf m)
-    (children : G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false, current := .onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit)})
+    (children : (m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty) = true →
+      G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false, current := .onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit)})
     (publish : G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false})
     (cleared : G (worldOf m.state f.id) f.id {f.frame with deferredInterrupt := false, stack := []}) :
     Flows G worldOf (Machine.exitFiber interp m f exit).1 := by
   unfold Machine.exitFiber
   split
-  · unfold Machine.exitFiber.exitInterruptChildren
-    exact (held.update _ children).fields rfl rfl
+  · rename_i runs
+    unfold Machine.exitFiber.exitInterruptChildren
+    exact (held.update _ (children runs)).fields rfl rfl
   · unfold Machine.exitFiber.exitStore
     dsimp only
     have published : Flows G worldOf ((m.update (f.publish exit)).emit [RunEvent.exited f.id exit]) :=
@@ -720,7 +723,7 @@ theorem Commands.step (facts : Commands interp Ready G worldOf) (m : RunMachine 
     · exact held
     · rename_i f found
       have kept := Flows.exitFiber interp m {f with running := false} exit held
-        (facts.exitChildren m id exit f ready held found)
+        (fun runs => facts.exitChildren m id exit f ready held found runs)
         (facts.publish m.state f (held.found found))
         (facts.cleared m.state {f with frame := {f.frame with deferredInterrupt := false}}
           (facts.publish m.state f (held.found found)))

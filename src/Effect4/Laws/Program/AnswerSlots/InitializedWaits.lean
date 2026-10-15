@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.AnswerSlots.InitializedNativeParks
 import Effect4.Laws.Program.AnswerSlots.InitializedOtherRows
+import Effect4.Laws.Program.ParkedShape
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -53,6 +54,45 @@ theorem Demand.reply (spec : Spec) (raceFree : SourceScope.RaceFreeSource spec.r
     | stable ready => exact .stable ready (completion_code spec (.ofRefGet cell))
     | yielded phase pending => exact .reading phase rfl rfl pending
   | raceCleanup race exit => exact (terminal_no_race spec raceFree race exit source).elim
+
+/-- A parked current head determines its reply demand from the existing answer class. -/
+theorem Demand.of_head (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (world : World) (kind : Kind) (program : NCode) (owned : CodeAt spec world kind program)
+    (shape : ParkedShape.Head program) : Demand spec world kind := by
+  cases shape with
+  | yielded =>
+    have good := success_value spec fragment [] world kind .unit owned
+    cases kind with
+    | stable kind =>
+      cases kind with
+      | root => exact .stable good.1
+      | connection identity => cases good.2
+    | allocated index => cases good.2.1
+    | gate => cases good.1
+    | yielded refs deferred =>
+      rw [← good.2.1, ← good.2.2.1]
+      exact .yielded good.1 good.2.2.2
+  | async register signal cancel =>
+    obtain ⟨rfl, ready⟩ := async_shape spec world kind register signal cancel owned
+    exact .stable ready
+  | action thunk =>
+    obtain ⟨rfl, ready, _⟩ := action_shape spec world kind thunk owned
+    exact .stable ready
+  | park parkKind =>
+    obtain ⟨rfl, ready⟩ := park_shape spec [] world kind _ owned (by intro wrong; cases wrong)
+    exact .stable ready
+  | storedPark parkKind =>
+    obtain ⟨rfl, ready⟩ := park_shape spec [] world kind _ owned (by intro wrong; cases wrong)
+    exact .stable ready
+
+/-- Current-code ownership and the existing path supply the reply suffix at each parked cut. -/
+theorem Waits.of_frame (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (state : Stores) (fiber : SourceScope.SourceFiber) (input output : Kind)
+    (owned : CodeAt spec ⟨fiber.id, state⟩ input fiber.frame.current)
+    (saved : Effect4.Contracts.Path (Edge spec [] ⟨fiber.id, state⟩) input output fiber.frame.stack)
+    (shape : ParkedShape.Held fiber) : Waits spec state fiber := by
+  intro parked
+  exact ⟨input, output, Demand.of_head spec fragment _ input _ owned (shape parked), saved⟩
 
 /-- The matching resume installs its existing payload at the recorded parked answer class. -/
 theorem Waits.resume (spec : Spec) (raceFree : SourceScope.RaceFreeSource spec.root)

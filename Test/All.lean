@@ -400,16 +400,8 @@ import Test.Dogfood.Scenario.Todo.Cached
 -- The statement census and its controls (consolidation round 2).
 import Test.Audit.StatementCensusControls
 
-/-!
-# Effect4 test battery
 
-The default Lake build imports every admitted contract and attack through this
-root. A test file not reachable here is not a
-passing gate. The batteries of the Flow route live on branch
-`archive/flow-route` (`docs/research/2026-09-04-prod-cleanup-inventory.md`).
--/
 
-#effect4_axiom_gate
 
 -- M3: the crews actual allocation and acquired-value obligations.
 
@@ -428,3 +420,14 @@ import Test.Dogfood.Proofs.QueueWorkersLogContract
 import Test.Program.CodeClosureBank
 
 import Test.Machine.AnswerFlowContextual
+
+/-!
+# Effect4 test battery
+
+The default Lake build imports every admitted contract and attack through this
+root. A test file not reachable here is not a
+passing gate. The batteries of the Flow route live on branch
+`archive/flow-route` (`docs/research/2026-09-04-prod-cleanup-inventory.md`).
+-/
+
+#effect4_axiom_gate

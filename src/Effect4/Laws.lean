@@ -368,13 +368,7 @@ import Effect4.Laws.Program.Agreement.HostedBlocks
 import Effect4.Laws.Api.SessionMeaningBlocks
 import Effect4.Laws.Program.ValidatedBlocks
 
-/-!
-# Effect4 proof graph
 
-The machine and program judgments, simulation, composition and execution laws.
-These modules continue their definition modules' namespaces; the module paths
-separate build targets. `import Effect4` never reaches this root.
--/
 
 -- M3: carried driver guards and immutable initialized bindings.
 import Effect4.Laws.Program.PlaceFunding.FlowGuarded
@@ -403,3 +397,13 @@ import Effect4.Laws.Program.NativeActionRows
 import Effect4.Laws.Program.AnswerSlots.InitializedActionFacts
 import Effect4.Laws.Program.AnswerSlots.InitializedNativeShapes
 import Effect4.Laws.Program.CrewLogs.Observation
+import Effect4.Laws.Program.ParkedShapeRun
+import Effect4.Laws.Program.AnswerSlots.InitializedWaits
+
+/-!
+# Effect4 proof graph
+
+The machine and program judgments, simulation, composition and execution laws.
+These modules continue their definition modules' namespaces; the module paths
+separate build targets. `import Effect4` never reaches this root.
+-/
