@@ -114,17 +114,84 @@ theorem childBind (root : NativeEff) (point : Point → Prop) (env : List Val �
   | none => exact contract.child held index
   | some value => exact contract.childWith held index value
 
-/-- Calling any stable value callback preserves all delayed source annotations. -/
-theorem contA_at (root : NativeEff) (fragment : SourceScope.Fragment root)
-    (point : Point → Prop) (env : List Val → Prop) (writes : SyncOp → Prop) (contract : Contract root point env writes) (name : EffName) (value : Val) (held : NameAt point env writes name) :
-    CodeAt point env writes (contAOf root name value) := by
+/-- Native value callbacks build existing code with source-qualified leaves.
+Native builders cannot introduce an authored source continuation. -/
+structure ValueBuilders (point : Point → Prop) (env : List Val → Prop) (writes : SyncOp → Prop)
+    (P : NCode → Prop) : Prop where
+  success : ∀ value, P (.success value)
+  failure : ∀ cause, P (.failure cause)
+  sync : ∀ thunk, ThunkAt point env writes thunk → P (.sync thunk)
+  suspend : ∀ thunk, ThunkAt point env writes thunk → P (.suspend thunk)
+  withFiber : ∀ thunk, ThunkAt point env writes thunk → P (.withFiber thunk)
+  onSuccess : ∀ body name, P body → NameAt point env writes name →
+    (∀ source, name ≠ .cont source) → P (.onSuccess body name)
+  onSuccessConst : ∀ body next, P body → P next → P (.onSuccessConst body next)
+  onFailure : ∀ body name, P body → NameAt point env writes name → P (.onFailure body name)
+  onSuccessAndFailure : ∀ body value cause, P body → NameAt point env writes value →
+    NameAt point env writes cause → P (.onSuccessAndFailure body value cause)
+  onExit : ∀ body name flag, P body → NameAt point env writes name → P (.onExit body name flag)
+  exitFrame : ∀ body, P body → P (.exitFrame body)
+  setInterruptible : ∀ flag, P (.setInterruptible flag)
+  iterator : ∀ name cursor, NameAt point env writes name → P (.iterator name cursor)
+  whileLoop : ∀ name cursor, NameAt point env writes name → P (.whileLoop name cursor)
+  async : ∀ name flag cancel, NameAt point env writes name →
+    (∀ callback ∈ cancel, NameAt point env writes callback) → P (.async name flag cancel)
+  asyncFinalizer : ∀ name, NameAt point env writes name → P (.asyncFinalizer name)
+
+/-- Actual source and stored leaves feed the existing native value-callback producer. -/
+structure ValueLeaves (root : NativeEff) (point : Point → Prop) (env : List Val → Prop)
+    (writes : SyncOp → Prop) (P : NCode → Prop) : Prop where
+  argument : ∀ p index value, point p → P (resolve root (p.childWith index value))
+  child : ∀ p index, point p → P (resolve root (p.child index))
+  region : ∀ region, RegionAt point env writes region → P (regionCode root region)
+  stored : ∀ name value, StoreNameAt point env writes name → P (embed (Effect4.Machine.contAOf name value))
+  finalizer : ∀ fin exit, FinAt point env writes fin → P (embed (finProgram fin exit))
+
+/-- The single value-callback case analysis consumes supplied source leaves and native builders. -/
+theorem contA_with (root : NativeEff)
+    (point : Point → Prop) (env : List Val → Prop) (writes : SyncOp → Prop)
+    (contract : Contract root point env writes) (P : NCode → Prop)
+    (builders : ValueBuilders point env writes P) (leaves : ValueLeaves root point env writes P)
+    (name : EffName) (value : Val) (held : NameAt point env writes name) : P (contAOf root name value) := by
   revert held
   fun_cases contAOf root name value
   all_goals intro held
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [(resolve_arg_at root fragment point env writes contract), (resolve_child_at root fragment point env writes contract),
-    (region_at root fragment point env writes contract), store_contA_at, finProgram_at, (capture_at root point env writes contract), CodeAt, ThunkAt,
-    NameAt, StoreNameAt, OpAt, RegionAt, Prim.ofExit, badShape_at]) (add norm unfold [updateThenK, addCurrentMemoMapK, combineWithK, mergeContextsK,
-      serviceLookupK, bindServiceK]) (add safe apply [contract.childWith, (region_at root fragment point env writes contract)])
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [leaves.argument, leaves.child, leaves.region, leaves.stored, leaves.finalizer,
+      (capture_at root point env writes contract), ThunkAt, NameAt, StoreNameAt, OpAt, RegionAt, Prim.ofExit, badShape]) (add norm unfold [updateThenK, addCurrentMemoMapK, combineWithK, mergeContextsK, serviceLookupK, bindServiceK]) (add safe apply [contract.childWith, leaves.region, builders.success, builders.failure, builders.sync,
+      builders.suspend, builders.withFiber, builders.onSuccess, builders.onSuccessConst, builders.onFailure,
+      builders.onSuccessAndFailure, builders.onExit, builders.exitFrame, builders.setInterruptible,
+      builders.iterator, builders.whileLoop, builders.async, builders.asyncFinalizer])
+
+/-- The existing leaf fold instantiates the parameterized native builders. -/
+theorem value_builders (point : Point → Prop) (env : List Val → Prop) (writes : SyncOp → Prop) :
+    ValueBuilders point env writes (CodeAt point env writes) where
+  success _ := trivial
+  failure _ := trivial
+  sync _ held := held
+  suspend _ held := held
+  withFiber _ held := held
+  onSuccess _ _ held named _ := ⟨held, named⟩
+  onSuccessConst _ _ first next := ⟨first, next⟩
+  onFailure _ _ held named := ⟨held, named⟩
+  onSuccessAndFailure _ _ _ held value cause := ⟨held, value, cause⟩
+  onExit _ _ _ held named := ⟨held, named⟩
+  exitFrame _ held := held
+  setInterruptible _ := trivial
+  iterator _ _ held := held
+  whileLoop _ _ held := held
+  async _ _ _ held cancel := ⟨held, cancel⟩
+  asyncFinalizer _ held := held
+
+/-- Calling any stable value callback retains the original statement through the shared producer. -/
+theorem contA_at (root : NativeEff) (fragment : SourceScope.Fragment root)
+    (point : Point → Prop) (env : List Val → Prop) (writes : SyncOp → Prop) (contract : Contract root point env writes) (name : EffName) (value : Val) (held : NameAt point env writes name) :
+    CodeAt point env writes (contAOf root name value) :=
+  contA_with root point env writes contract (CodeAt point env writes) (value_builders point env writes)
+    { argument := fun p index value owned => resolve_arg_at root fragment point env writes contract p index value owned
+      child := fun p index owned => resolve_child_at root fragment point env writes contract p index owned
+      region := fun region owned => region_at root fragment point env writes contract region owned
+      stored := fun name value owned => store_contA_at point env writes name value owned
+      finalizer := fun fin exit owned => finProgram_at point env writes fin exit owned } name value held
 
 /-- Calling any stable cause callback preserves all delayed source annotations. -/
 theorem contE_at (root : NativeEff) (fragment : SourceScope.Fragment root)
