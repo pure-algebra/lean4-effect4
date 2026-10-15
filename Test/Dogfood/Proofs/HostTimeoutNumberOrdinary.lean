@@ -126,7 +126,9 @@ theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountCon
   simp only [evaluatePrim.stepFrame, actual, evaluatePrim.finishFrame] at provided ⊢
   obtain ⟨config, queue, snapshot⟩ := HostTimeoutNumberPendingInstall.readonly_update world context machine
     (machine.emit (events.map (RunEvent.frame row.id))) row {row with frame := frame} pending tasks
-    found ids assigned held queued detached saved heap rfl rfl rfl rfl rfl rfl unparked provided
+    found ids assigned held queued detached
+    (fun selected member => saved ((queued (.finish row.id selected) member).1 row found))
+    (fun _ _ => heap) rfl rfl rfl rfl rfl rfl unparked provided
   exact ⟨config, queue, snapshot, True.intro, True.intro, True.intro⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberOrdinary

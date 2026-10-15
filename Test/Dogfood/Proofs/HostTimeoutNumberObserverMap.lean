@@ -167,7 +167,7 @@ theorem commands (world : HostTimeoutNumberConfiguration.World) (machine : Effec
   exact command_transport world machine _ pending command member (held command member)
     (reply world machine observers)
     (fun id yielding queued good => loop world machine observers id yielding good)
-    (fun id selected good => ⟨terminal machine observers id good.1,
+    (fun id selected member good => ⟨terminal machine observers id good.1,
       fun role assigned => exit_machine machine _ role selected rfl (view machine observers) (good.2 role assigned)⟩)
     (by
       intro host yielding kind member good

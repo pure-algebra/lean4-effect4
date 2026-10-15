@@ -90,7 +90,7 @@ theorem commands_post (world : HostTimeoutNumberConfiguration.World) (machine : 
   exact command_transport world machine _ pending command member (held command member)
     (reply_store world machine context fiber (postFiber fiber) _ census found rfl unparked)
     (fun id yielding queued good => loop_post world machine context fiber id yielding census)
-    (fun id exit good => finish_post world machine context fiber id exit census found saved good)
+    (fun id exit member good => finish_post world machine context fiber id exit census found saved good)
     (by
       intro host yielding kind queued good
       cases kind with

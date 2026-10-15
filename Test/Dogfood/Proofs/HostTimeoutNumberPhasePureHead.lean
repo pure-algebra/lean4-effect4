@@ -1,5 +1,6 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberPhaseHead
 import Test.Dogfood.Proofs.HostTimeoutNumberMaskClass
+import Test.Dogfood.Proofs.HostTimeoutNumberPause
 
 /-!
 Concept: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -131,6 +132,11 @@ theorem head_over (Edge : Stores → Kind → Kind → NCode → Prop) (edges : 
     · rw [← count_bound_code captured fuel delay n previous]
       exact CodeAt.countBind phase n cleanups forms cursor captured fuel delay previous heap
     · exact edges.finalizer _ _ _ _ _ _ (by dsimp only [Kind.grade]; decide) rfl (by trivial) (by dsimp only [Kind.grade]; decide) (fun view => attempt_saved view state (phase.counted n cleanups forms cursor) _ captured fuel delay n previous _)
+  case pausing phase priority body heap owned =>
+    exact AnswerFlow.HeadAt.onSuccessConst (model := model view) (.paused phase kind) _ _
+      (CodeAt.yieldNow (.paused phase kind) priority heap)
+      (edges.constant _ _ _ _ _ (Nat.le_refl _) (fun completed =>
+        HostTimeoutNumberPause.saved completed state phase kind priority body heap owned))
   case bind input first name head ordered callback skip =>
     exact AnswerFlow.HeadAt.onSuccess (model := model view) input first name head
       (edges.success state input _ first name ordered (fun completed =>

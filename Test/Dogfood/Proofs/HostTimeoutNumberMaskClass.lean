@@ -14,7 +14,7 @@ open HostTimeoutNumberPhaseFlow
 
 /-- Read and unit classes execute inside their actual protected numeric region. -/
 def Restorable : Kind → Prop
-  | .read _ | .unit _ => False
+  | .read _ | .unit _ | .paused _ _ => False
   | _ => True
 
 /-- A real restoring-mask class turns its successful value evidence into the actual clean interruption permission. -/
@@ -27,6 +27,7 @@ theorem value_recorded (state : Stores) (kind : Kind) (value : Val) (cause : Cau
   | read phase => exact False.elim restorable
   | unit phase => exact False.elim restorable
   | countUnit phase => exact ⟨good.1, clean⟩
+  | paused phase incoming => exact False.elim restorable
   | before phase => exact good
   | cleanupExit phase own => exact good
   | published phase =>

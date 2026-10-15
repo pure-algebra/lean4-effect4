@@ -116,7 +116,7 @@ theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountCon
       · cases equal
         exact False.elim (before_ne context selected oldHeap)
       · cases passive
-    · intro id exit previous
+    · intro id exit finishMember previous
       by_cases same : id = row.id
       · subst id
         exact False.elim (nonempty (previous.1 row found))

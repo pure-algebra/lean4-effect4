@@ -1093,3 +1093,28 @@ The script builds the ordinary, cleanup, attempt, terminal, and mask-permission 
 The build passes with 1273 jobs.
 The audit checks 960 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 The audit also reads the new loop-top theorem by name.
+
+
+## Actual yield injection
+
+The numeric answer assertion now records the unchanged heap while an automatic yield suspends the original program.
+The resumed constant callback restores the original assertion from that same heap.
+The shared callback family handles the saved frame.
+The actual injection producer retains the joined machine, pending commands, and drained tasks.
+It uses actual command membership and owner freshness when transporting queued finish and loop demands.
+The existing ordinary and finalizer wrappers retain their interfaces.
+
+Placement: reactive-scheduling R9 and scope-lifetime-finalization R11; the active native producer of both original Timeout goals consumes these facts.
+The result assumes the actual resident lookup, role assignment, and owner freshness.
+The full active command producer and both original endpoint proofs remain open.
+This proof-only slice reaches no outside implementation gate.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-injection-check.sh
+```
+
+The build passes with 1281 jobs.
+The audit checks 1135 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The new pause and injection leaves need test reach when the active native consumer lands.

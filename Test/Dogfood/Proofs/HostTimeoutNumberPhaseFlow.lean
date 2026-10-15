@@ -31,6 +31,7 @@ inductive Kind
   | before (phase : Phase)
   | published (phase : Phase)
   | cleanupExit (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
+  | paused (phase : Phase) (incoming : Kind)
 
 /-- Saved numeric phases move from ordinary work through protected cleanup to its returned exit.
 Consumer: the authored-finalizer membership contradiction for read and unit runtime permissions. -/
@@ -42,10 +43,12 @@ def Kind.grade : Kind → Nat
   | .unit _ => 3
   | .cleanupExit _ _ | .published _ => 4
   | .attempt _ _ _ => 5
+  | .paused _ incoming => incoming.grade
 
 /-- A restored success names the selected exit that the actual form log has just published. -/
 def ValueAt (state : Stores) : Kind → Val → Prop
   | .fresh phase, _ => At phase state
+  | .paused phase _, _ => At phase state
   | .attempt _ entered own, _ => ∃ selected, At (entered.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state
   | .read phase, value => At phase state ∧ value = .nat phase.count
   | .unit phase, value => At phase state ∧ value = .unit
@@ -83,6 +86,7 @@ theorem typedFrom_combine (selected : ExitV) (cause interrupted : CauseV)
 
 /-- An interruption may replace the delivered cause after the selected exit is already published. -/
 def CauseAt (state : Stores) : Kind → CauseV → Prop
+  | .paused _ incoming, cause => CauseAt state incoming cause
   | .fresh phase, cause => At phase state ∧ HostTimeoutNumberFlow.NoTypedFailure cause
   | .countUnit phase, cause => At phase state ∧ HostTimeoutNumberFlow.NoTypedFailure cause
   | .attempt before entered own, cause =>
@@ -98,7 +102,7 @@ def CauseAt (state : Stores) : Kind → CauseV → Prop
 theorem cause_combine (state : Stores) (kind : Kind) (cause interrupted : CauseV)
     (good : CauseAt state kind cause) (clean : HostTimeoutNumberFlow.NoTypedFailure interrupted) :
     CauseAt state kind (Cause.combine cause interrupted) := by
-  cases kind with
+  induction kind with
   | fresh phase => exact ⟨good.1, HostTimeoutNumberFlow.no_typed_combine cause interrupted good.2 clean⟩
   | attempt before entered own =>
       rcases good with cleaned | ⟨heap, quiet⟩
@@ -107,6 +111,7 @@ theorem cause_combine (state : Stores) (kind : Kind) (cause interrupted : CauseV
   | read phase => exact False.elim good
   | unit phase => exact False.elim good
   | countUnit phase => exact ⟨good.1, HostTimeoutNumberFlow.no_typed_combine cause interrupted good.2 clean⟩
+  | paused phase incoming ih => exact ih good
   | before phase => exact good
   | cleanupExit phase own => exact good
   | published phase =>
@@ -116,7 +121,7 @@ theorem cause_combine (state : Stores) (kind : Kind) (cause interrupted : CauseV
 /-- Skipping a handler removes typed failures without losing their selected-exit provenance. -/
 theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
     (good : CauseAt state kind cause) : CauseAt state kind cause.stripFail := by
-  cases kind with
+  induction kind with
   | fresh phase => exact ⟨good.1, HostTimeoutNumberFlow.no_typed_strip cause⟩
   | attempt before entered own =>
       rcases good with cleaned | ⟨heap, quiet⟩
@@ -125,6 +130,7 @@ theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
   | read phase => exact False.elim good
   | unit phase => exact False.elim good
   | countUnit phase => exact ⟨good.1, HostTimeoutNumberFlow.no_typed_strip cause⟩
+  | paused phase incoming ih => exact ih good
   | before phase => exact good
   | cleanupExit phase own => exact good
   | published phase =>
@@ -192,6 +198,9 @@ inductive CodeAt : Stores → Kind → NCode → Prop
       (skip : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ cause,
         CauseAt next input cause → CauseAt next output cause) :
       CodeAt state output (.onSuccess first name)
+  | pausing {state : Stores} (phase : Phase) (kind : Kind) (priority : Nat) (body : NCode)
+      (heap : At phase state) (owned : CodeAt state kind body) :
+      CodeAt state kind (.onSuccessConst (.yieldNowWith priority) body)
   | yieldNow {state : Stores} (kind : Kind) (priority : Nat) (good : ValueAt state kind .unit) :
       CodeAt state kind (.yieldNowWith priority)
   | constant {state : Stores} (input output : Kind) (first body : NCode) (head : CodeAt state input first) (ordered : input.grade ≤ output.grade)

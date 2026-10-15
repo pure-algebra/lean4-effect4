@@ -44,8 +44,9 @@ theorem readonly_update (world : HostTimeoutNumberConfiguration.World) (context 
     (found : machine.fiber? fiber.id = some fiber) (ids : (machine.fibers.map (·.id)).Nodup)
     (assigned : (fiber.id, Role.pending context) ∈ world.roles)
     (held : Configuration world machine) (queued : Commands world machine pending)
-    (detached : Snapshot world machine tasks) (saved : fiber.frame.stack ≠ [])
-    (heap : At context.entered machine.state)
+    (detached : Snapshot world machine tasks)
+    (finishes : ∀ exit, .finish fiber.id exit ∉ pending)
+    (loopEntered : ∀ yielding, .loop fiber.id yielding ∈ pending → At context.entered machine.state)
     (state : afterMachine.state = machine.state) (fibers : afterMachine.fibers = machine.fibers)
     (completed : afterMachine.completedExits = machine.completedExits)
     (key : afterFiber.id = fiber.id) (dispatcher : afterFiber.dispatcher = fiber.dispatcher)
@@ -86,7 +87,7 @@ theorem readonly_update (world : HostTimeoutNumberConfiguration.World) (context 
       rw [state] at oldHeap
       rw [lookup] at actual
       exact previous nextContext roleAt oldHeap after actual installedFin
-    · intro id selected previous
+    · intro id selected finishMember previous
       exact ⟨fun after actual => previous.1 after ((lookup id).symm ▸ actual),
         fun role roleAt => exit_machine machine afterMachine role selected state completed (previous.2 role roleAt)⟩
     · intro host yielding kind member previous
@@ -121,15 +122,15 @@ theorem readonly_update (world : HostTimeoutNumberConfiguration.World) (context 
       · subst id
         have equal := held.unique fiber.id (.pending nextContext) (.pending context) roleAt assigned
         cases equal
-        have entered : At context.entered afterMachine.state := state ▸ heap
+        have entered : At context.entered afterMachine.state := state ▸ loopEntered yielding member
         exact False.elim (HostTimeoutNumberCountMachine.counted_heap_ne context (entered.symm.trans oldHeap))
       · have other : id ≠ afterFiber.id := by intro equal; exact same (equal.trans key)
         rw [RunMachine.fiber?_update_other afterFiber afterMachine id other] at actual
         exact previous nextContext roleAt oldHeap after actual installedFin
-    · intro id selected previous
+    · intro id selected finishMember previous
       by_cases same : id = fiber.id
       · subst id
-        exact False.elim (saved (previous.1 fiber located))
+        exact False.elim (finishes selected finishMember)
       · constructor
         · intro after actual
           have other : id ≠ afterFiber.id := by intro equal; exact same (equal.trans key)
@@ -190,7 +191,9 @@ theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountCon
   have provided := HostTimeoutNumberPendingFinalizer.installed context view machine fiber yielding exit body name flag program
     classified live heap current chosen hook
   obtain ⟨config, queue, snapshot⟩ := readonly_update world context machine next.machine fiber next.fiber pending tasks
-    found ids assigned held queued detached saved heap state fibers completed key dispatcher exitSame
+    found ids assigned held queued detached
+    (fun selected member => saved ((queued (.finish fiber.id selected) member).1 fiber found))
+    (fun _ _ => heap) state fibers completed key dispatcher exitSame
     (parked.trans unparked) provided
   exact ⟨config, queue, snapshot, nested, edits, outcome⟩
 

@@ -142,7 +142,7 @@ theorem command_transport (world : HostTimeoutNumberConfiguration.World)
     (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt world after id token code)
     (loops : ∀ id yielding, .loop id yielding ∈ commands →
       CommandAt world before (.loop id yielding) → CommandAt world after (.loop id yielding))
-    (finishes : ∀ id selected, CommandAt world before (.finish id selected) →
+    (finishes : ∀ id selected, .finish id selected ∈ commands → CommandAt world before (.finish id selected) →
       CommandAt world after (.finish id selected))
     (afterReturns : ∀ host yielding kind, .afterInterrupt host yielding kind ∈ commands →
       CommandAt world before (.afterInterrupt host yielding kind) → CommandAt world after (.afterInterrupt host yielding kind))
@@ -153,7 +153,7 @@ theorem command_transport (world : HostTimeoutNumberConfiguration.World)
   cases command with
   | resume id token code => exact replies id token code held
   | loop id yielding => exact loops id yielding queued held
-  | finish id selected => exact finishes id selected held
+  | finish id selected => exact finishes id selected queued held
   | afterInterrupt host yielding kind => exact afterReturns host yielding kind queued held
   | raceCancel race host yielding remaining visited => exact raceReturns race host yielding remaining visited queued held
   | trackChild parent child => exact held
@@ -186,7 +186,7 @@ theorem command_interrupt (context : MessageContext) (world : HostTimeoutNumberC
     (fun id token code good => interrupt_reply world machine fiber cause id token code found unique good)
     (fun id yielding member good => loop_interrupt context world machine commands fiber cause id yielding
       found coverage allowed member good)
-    (fun id selected good => ⟨terminal_update machine fiber _ id found key
+    (fun id selected member good => ⟨terminal_update machine fiber _ id found key
       (HostTimeoutNumberConfigurationInterrupt.interrupt_fields fiber cause).2.2.1 good.1,
       fun role assigned => exit_machine machine _ role selected rfl
         (interrupt_view machine fiber cause found unique) (good.2 role assigned)⟩)
