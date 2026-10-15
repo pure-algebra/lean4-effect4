@@ -26,6 +26,14 @@ theorem Advances.trans {first middle last : Stage}
   | waiting => exact .waiting _
   | deposit => cases two; exact .deposit
 
+theorem Advances.deposited {stage : Stage} (held : Advances .deposited stage) : stage = .deposited := by
+  cases held
+  rfl
+
+theorem Advances.rejected {stage : Stage} (held : Advances .rejected stage) : stage = .rejected := by
+  cases held
+  rfl
+
 /-- Cleanup evidence survives code erasure independently of the request's stage. -/
 structure World where
   stages : Nat → Stage
@@ -76,6 +84,7 @@ inductive Kind
   | body (id : Nat)
   | finalized (id : Nat)
   | note (id : Nat)
+  | cleanup (id : Nat)
 
 /-- A returned decision is usable only between that decision and its deposit.
 Consumer: the actual decision continuation's saved-answer contract. -/
@@ -86,14 +95,14 @@ def ValueAt (world : World) : Kind → Val → Prop
   | .deposit id, .nat _ => world.stages id = .deposited
   | .body id, .bool admitted | .finalized id, .bool admitted =>
     world.stages id = if admitted then .deposited else .rejected
-  | .note id, value => value = .unit ∧ (world.stages id = .deposited → world.cleaned id = true)
+  | .note id, value | .cleanup id, value => value = .unit ∧ (world.stages id = .deposited → world.cleaned id = true)
   | _, _ => False
 
 /-- A typed body failure stands behind a deposit; finalization also retains its cleanup witness. -/
 def CauseAt (world : World) : Kind → CauseV → Prop
   | .ordinary, _ => True
   | .body id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail → world.stages id = .deposited
-  | .finalized id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail →
+  | .finalized id, cause | .cleanup id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail →
       world.stages id = .deposited ∧ world.cleaned id = true
   | .note id, cause => (∀ reason ∈ cause.reasons, reason.tag ≠ .fail) ∧
       (world.stages id = .deposited → world.cleaned id = true)
