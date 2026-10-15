@@ -1655,3 +1655,33 @@ The correction proves the contradictory numeric branches explicitly before elimi
 The corrected build passes with 1300 jobs.
 The audit checks 567 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 This proof-only slice reaches no outside implementation gate.
+
+## Shared callback pushed-frame metadata
+
+The existing value-arm producer now retains its actual pushed-frame shapes beside its code predicate.
+Only iterator and loop continuation frames occur in that suffix.
+The existing value-arm theorem projects the same producer.
+The constant-predicate instance exposes the shape without adding source permissions.
+No second value-arm traversal enters the tree.
+
+Placement: scope-lifetime-finalization R11 and reactive-scheduling R9.
+Consumer: the existing generic code family and its actual saved callback transfer.
+Reach: every actual value arm at the native carrier and its exact returned suffix.
+This metadata supplies no pre-count runtime mask or numeric history.
+The proposed pre-count mask refinement is rejected before any invariant changes.
+The source finalizer push retains the body's mask; its false flag governs cleanup installation.
+The checked count producer therefore retains its honest execution permission.
+
+Verification commands:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-arms-check.sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean scratch/TimeoutArmsAudit.lean
+```
+
+The narrow build checks the generic family and the queue notification family.
+It passes with 1192 jobs.
+The audit checks 139 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The initial declaration-kind linter error and audit module-name error are corrected before these results.
+Both original Timeout endpoint goals remain open.
+This proof-only slice reaches no outside implementation gate.
