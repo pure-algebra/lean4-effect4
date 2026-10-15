@@ -1,4 +1,5 @@
-import Test.Dogfood.Scenario.Atomic.RootFork
+import Test.Dogfood.Scenario.Atomic.StageRequest
+import Effect4.Laws.Auto.KernelRfl
 
 /-!
 Concept: store-typing R4.

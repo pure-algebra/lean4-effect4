@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.DaemonIteration
+import Test.Dogfood.Scenario.Atomic.RootFork
 
 /-!
 Concept: store-typing R4.

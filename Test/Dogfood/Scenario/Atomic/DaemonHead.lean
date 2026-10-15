@@ -159,6 +159,10 @@ theorem head (root : NativeEff) (table : RowTable) (world : StageWorld.World)
   | sleep => exact .async _ _ _ CodeAt.sleep
   | refill length => exact .sync _ True.intro
   | cancelClock waiter token => exact .sync _ True.intro
+  | join target mode => exact .suspend _ (.failure _)
+  | awaitAll targets => exact .suspend _ (.failure _)
+  | interruptAll targets who => exact .withFiber _ (.failure _)
+  | dropObservers token => exact .withFiber _ (.failure _)
   | constant first next => exact .onSuccessConst () _ _ first (constant_edge root table world _ _ next)
   | pause priority => exact .yieldNowWith priority (.pause priority)
   | bound first callback => exact .onSuccess () _ _ first (bound_edge root table world _ _ callback)

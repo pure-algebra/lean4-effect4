@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.DaemonEntry
+import Test.Dogfood.Scenario.Atomic.StageInterrupt
 
 /-!
 Concept: store-typing R4.
@@ -17,6 +18,19 @@ inductive FrameAt (root : NativeEff) (table : RowTable) (world : StageWorld.Worl
   | daemon (identity : id = ⟨1⟩) (held : DaemonGraph.FrameAt root table world frame) : FrameAt root table world id frame
   | request (owner : Nat) (member : owner ∈ requests) (identity : id = ⟨owner + 1⟩)
       (held : StageGraph.FrameAt root table owner world frame) : FrameAt root table world id frame
+
+/-- An actual admitted interruption preserves all three source roles at the same stage world. -/
+theorem interruption_frame (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (fiber : SourceScope.SourceFiber) (cause : CauseV)
+    (held : FrameAt root table world fiber.id fiber.frame) (recorded : StageGraph.Recorded fiber.frame)
+    (untyped : ∀ reason ∈ cause.reasons, reason.tag ≠ .fail) (marked : MarkedCause cause) :
+    FrameAt root table world fiber.id (interruptWithCause cause fiber).1.frame := by
+  cases held with
+  | root identity owned => exact .root identity (RootGraph.interruption_frame root table world fiber cause owned)
+  | daemon identity owned => exact .daemon identity (DaemonGraph.interruption_frame root table world fiber cause owned)
+  | request owner member identity owned =>
+    exact .request owner member identity
+      (StageGraph.interruption_frame root table owner world fiber cause owned recorded untyped marked)
 
 /-- A request write retypes every actual nonacting fiber at the same chosen next world. -/
 theorem request_other (root : NativeEff) (table : RowTable) (before after : StageWorld.World)

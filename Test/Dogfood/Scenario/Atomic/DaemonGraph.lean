@@ -38,6 +38,12 @@ inductive CodeAt (root : NativeEff) (table : RowTable) : NCode → Prop
   | sleep : CodeAt root table (.async (.store (.registerSleep 1000)) true (some (.store .cancelSleep)))
   | refill {env} (length : env.length = 5) : CodeAt root table (.sync (.op (.refUpdate ⟨0⟩ (Store.refillAt 5) env)))
   | cancelClock (waiter : FiberId) (token : Nat) : CodeAt root table (.sync (.store (.op (.sleepCancel waiter token))))
+  | join (target : FiberId) (mode : Supervision.ObserverMode) :
+      CodeAt root table (.suspend (.park (.join target mode)))
+  | awaitAll (targets : List FiberId) : CodeAt root table (.suspend (.park (.awaitAll targets)))
+  | interruptAll (targets : List FiberId) (who : Option FiberId) :
+      CodeAt root table (.withFiber (.store (.act (.interruptAll targets who))))
+  | dropObservers (token : Nat) : CodeAt root table (.withFiber (.store (.act (.dropObservers token))))
   | constant {first next} (held : CodeAt root table first) (continuation : CodeAt root table next) :
       CodeAt root table (.onSuccessConst first next)
   | pause (priority : Nat) : CodeAt root table (.yieldNowWith priority)

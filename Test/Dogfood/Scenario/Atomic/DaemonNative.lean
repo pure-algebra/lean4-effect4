@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.DaemonHead
+import Test.Dogfood.Scenario.Atomic.StageHeap
 import Effect4.Laws.Machine.StoresLaws
 
 /-!
@@ -44,6 +45,10 @@ theorem sync_shape (root : NativeEff) (table : RowTable) (code : NCode)
     cases equal
     exact .refill _ length
   | cancelClock waiter token => cases equal; exact .cancel waiter token
+  | join target mode => cases equal
+  | awaitAll targets => cases equal
+  | interruptAll targets who => cases equal
+  | dropObservers token => cases equal
   | frontier zero => cases equal
   | success value => cases equal
   | failure cause => cases equal

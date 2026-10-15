@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.StageNative
+import Effect4.Laws.Machine.AnswerFlowNativeIteration
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -61,6 +62,23 @@ theorem frame_other (root : NativeEff) (table : RowTable) (owner acting : Nat)
     (held : FrameAt root table owner before frame) : FrameAt root table owner after frame := by
   obtain ⟨stage, cleaned⟩ := change.2 owner different
   exact frame_rebase root table owner before after future stage cleaned frame held
+
+/-- An ordinary request head retains its finalized output class through the shared native connector. -/
+theorem step_frame (root : NativeEff) (table : RowTable) (owner : Nat)
+    (world : StageWorld.World) (view : List (FiberId × ExitV)) (machine : NativeMachine)
+    (fiber : SourceScope.SourceFiber) (yielding : Bool) (held : FrameAt root table owner world fiber.frame)
+    (noSuccess : ∀ value, fiber.frame.current ≠ .success value)
+    (noFailure : ∀ cause, fiber.frame.current ≠ .failure cause)
+    (noSync : ∀ thunk, fiber.frame.current ≠ .sync thunk) :
+    FrameAt root table owner world
+      (evaluatePrim.stepFrame (interpAt root view table) machine fiber yielding).fiber.frame := by
+  obtain ⟨input, code, saved⟩ := held
+  have owns := path_input_owned root table owner world input (.finalized owner) fiber.frame.stack saved rfl
+  rcases head_or_sync root table owner view world input fiber.frame.current code owns with head | ⟨operation, current⟩
+  · exact External.Native.step_frame_running (model root table owner view) (interpAt root view table)
+      (Edge root table owner) world input (.finalized owner) machine fiber yielding saved head
+      noSuccess noFailure noSync
+  · exact (noSync (.op operation) current).elim
 
 /-- An actual request sync answer retains the whole saved suffix at its chosen heap world. -/
 theorem sync_frame (root : NativeEff) (table : RowTable) (owner : Nat) (member : owner ∈ requests)

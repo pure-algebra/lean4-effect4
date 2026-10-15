@@ -40,6 +40,21 @@ theorem loop_top (root : NativeEff) (table : RowTable) (world : StageWorld.World
   · exact ⟨.failure _, held.2⟩
   · exact held
 
+/-- Actual addressed daemon interruption retains its ignored-answer saved path. -/
+theorem interruption_frame (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (fiber : SourceScope.SourceFiber) (cause : CauseV) (held : FrameAt root table world fiber.frame) :
+    FrameAt root table world (interruptWithCause cause fiber).1.frame := by
+  unfold interruptWithCause
+  split
+  · exact held
+  · dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+      FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
+    split
+    · split
+      · exact held
+      · exact ⟨.failure _, held.2⟩
+    · exact held
+
 /-- Scheduler injection retains the actual daemon primitive under its saved constant callback. -/
 theorem injected_code (root : NativeEff) (table : RowTable) (code : NCode) (held : CodeAt root table code) :
     CodeAt root table (.onSuccessConst (.yieldNowWith 0) code) := .constant (.pause 0) held

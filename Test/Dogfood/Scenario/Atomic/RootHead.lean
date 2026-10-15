@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.RootGraph
+import Test.Dogfood.Scenario.Atomic.DaemonHead
 import Effect4.Laws.Machine.AnswerFlowHead
 
 /-!
@@ -11,6 +12,15 @@ set_option autoImplicit false
 namespace Test.Dogfood.Scenario.Atomic.RootGraph
 open Effect4 Effect4.Machine Effect4.Program Effect4.Machine.AnswerFlow
 open StageWorld
+
+/-- Ignored native root code uses the existing stable daemon head through one answer-class embedding. -/
+theorem ignored_head (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (view : List (FiberId × ExitV)) (code : NCode) (held : DaemonGraph.CodeAt root table code) :
+    HeadAt (model root table view) (interpAt root view table).toPrimInterp (Edge root table)
+      world .ordinary code :=
+  (ignored_embedding root table view).head_over (interpAt root view table).toPrimInterp
+    (Semantic root table) (DaemonGraph.Edge root table) world trivial () code
+    (DaemonGraph.head root table world code held view)
 
 /-- The actual fork body retains the root binder that must receive its new child handle. -/
 theorem fork_body (root : NativeEff) (table : RowTable) (world : StageWorld.World) (point : Point)
@@ -136,4 +146,35 @@ theorem entry_head (built : Api.Built) (accepted : Api.Author.build (shop .none)
     | succ fuel =>
       simp only [compileEff, amount, evalTerm, captured]
       exact .sync _ True.intro
+/-- Every actual root current annotation exposes its existing source or ignored native head. -/
+theorem head (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
+    (world : StageWorld.World) (kind : StageWorld.Kind) (code : NCode)
+    (held : CodeAt built.program built.table world kind code) (owns : Owns kind)
+    (view : List (FiberId × ExitV)) :
+    HeadAt (model built.program built.table view) (interpAt built.program view built.table).toPrimInterp
+      (Edge built.program built.table) world kind code := by
+  cases held with
+  | ignored held => exact ignored_head built.program built.table world view _ held
+  | success good => exact .success _ good
+  | failure => exact .failure _ True.intro
+  | entry owned => exact entry_head built accepted world _ owned view
+  | frontier zero =>
+    apply HeadAt.suspend
+    change CodeAt built.program built.table world kind (suspendBodyAt built.program (.body _))
+    simp only [suspendBodyAt, zero]
+    exact .frontier rfl
+  | action owned => exact .withFiber _ .failure
+  | await counter ignored => exact .suspend _ .failure
+  | sleep counter ignored => exact .async _ _ _ (.sleep counter ignored)
+  | read => exact .sync _ True.intro
+  | join target mode captured => exact .suspend _ .failure
+  | awaitAll targets captured => exact .suspend _ .failure
+  | pause => exact .yieldNowWith _ .pause
+  | pausing localKind next =>
+    exact .onSuccessConst _ _ _ (CodeAt.pause)
+      (pause_edge built.program built.table world _ localKind _ _ next)
+  | bound localKind first callback =>
+    exact .onSuccess _ _ _ first
+      (bound_edge built.program built.table world _ _ _ _ localKind owns callback)
+
 end Test.Dogfood.Scenario.Atomic.RootGraph

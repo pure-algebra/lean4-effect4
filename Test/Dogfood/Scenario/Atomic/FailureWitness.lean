@@ -45,6 +45,33 @@ theorem native_interrupt_marked
   exact MarkedCause.annotate _ extra false
     (MarkedCause.annotate _ (interp.stackAnnotations target) false (MarkedCause.interrupt _))
 
+/-- The real interruption reason contains no typed failure. -/
+theorem interrupt_untyped (who : Option FiberId) :
+    ∀ reason ∈ (Cause.interrupt who : CauseV).reasons, reason.tag ≠ .fail := by
+  intro reason member
+  rw [List.mem_singleton.mp member]
+  intro impossible
+  cases impossible
+
+/-- Actual cause annotation retains the absence of typed failures. -/
+theorem annotate_untyped (cause : CauseV) (extra : ReasonAnnotations Ann) (overwrite : Bool)
+    (untyped : ∀ reason ∈ cause.reasons, reason.tag ≠ .fail) :
+    ∀ reason ∈ (cause.annotate extra overwrite).reasons, reason.tag ≠ .fail := by
+  intro reason member
+  rw [Cause.annotate_reasons] at member
+  obtain ⟨prior, present, same⟩ := List.mem_map.mp member
+  rw [← same, Reason.annotate_tag]
+  exact untyped prior present
+
+/-- Both real native annotation stages retain the absence of typed failures. -/
+theorem native_interrupt_untyped
+    (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann) (target : FiberId) :
+    ∀ reason ∈ (interruptCause interp who extra target).reasons, reason.tag ≠ .fail := by
+  unfold interruptCause Supervision.interruptCause
+  exact annotate_untyped _ extra false
+    (annotate_untyped _ (interp.stackAnnotations target) false (interrupt_untyped _))
+
 /-- Removing typed failures retains the actual non-fail reason. -/
 theorem MarkedCause.stripFail (cause : CauseV) (marked : MarkedCause cause) : MarkedCause cause.stripFail := by
   obtain ⟨reason, member, different⟩ := marked

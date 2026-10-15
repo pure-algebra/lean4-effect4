@@ -1,4 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.RootSource
+import Test.Dogfood.Scenario.Atomic.DaemonGraph
+import Effect4.Laws.Machine.AnswerFlowEmbedding
 import Test.Dogfood.Scenario.Atomic.StageFresh
 import Test.Dogfood.Scenario.Atomic.RootBindings
 import Effect4.Laws.Machine.AnswerFlowViewsRefined
@@ -27,6 +29,8 @@ def PointAt (root : NativeEff) (world : StageWorld.World) (point : Point) : Prop
 
 /-- Current root code distinguishes actual source entries, fork actions and ignored native answers. -/
 inductive CodeAt (root : NativeEff) (table : RowTable) : StageWorld.World → StageWorld.Kind → NCode → Prop
+  | ignored {world code} (held : DaemonGraph.CodeAt root table code) :
+      CodeAt root table world .ordinary code
   | success {world kind value} (good : ValueAt world kind value) : CodeAt root table world kind (.success value)
   | failure {world kind cause} : CodeAt root table world kind (.failure cause)
   | entry {world point} (held : PointAt root world point) : CodeAt root table world .ordinary (resolve root point)
@@ -41,6 +45,11 @@ inductive CodeAt (root : NativeEff) (table : RowTable) : StageWorld.World → St
       CodeAt root table world (.rootAnswer binder)
         (.async (.store (.registerSleep millis)) true (some (.store .cancelSleep)))
   | read {world} : CodeAt root table world .ordinary (.sync (.op (.refGet ⟨0⟩)))
+  | join {world counter} (target : FiberId) (mode : Supervision.ObserverMode)
+      (captured : world.nextId = counter) :
+      CodeAt root table world (.rootPause counter) (.suspend (.park (.join target mode)))
+  | awaitAll {world counter} (targets : List FiberId) (captured : world.nextId = counter) :
+      CodeAt root table world (.rootPause counter) (.suspend (.park (.awaitAll targets)))
   | pause {world priority} : CodeAt root table world (.rootPause world.nextId) (.yieldNowWith priority)
   | pausing {world kind priority next} (localKind : Owns kind) (held : CodeAt root table world kind next) :
       CodeAt root table world kind (.onSuccessConst (.yieldNowWith priority) next)
@@ -81,6 +90,9 @@ theorem code_counter (root : NativeEff) (table : RowTable) (before : StageWorld.
     ∀ after, Future before after → before.nextId = after.nextId → Owns kind →
       CodeAt root table after kind code := by
   induction held with
+  | ignored code =>
+    intro after future counter owns
+    exact .ignored code
   | success good =>
     intro after future counter owns
     exact .success (value_counter _ after counter _ owns _ good)
@@ -105,6 +117,12 @@ theorem code_counter (root : NativeEff) (table : RowTable) (before : StageWorld.
   | read =>
     intro after future counter owns
     exact .read
+  | join target mode captured =>
+    intro after future counter owns
+    exact .join target mode (counter.symm.trans captured)
+  | awaitAll targets captured =>
+    intro after future counter owns
+    exact .awaitAll targets (counter.symm.trans captured)
   | pause =>
     intro after future counter owns
     rw [counter]
@@ -204,18 +222,58 @@ def model (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV))
   failure := fun _ _ _ _ => .failure
 
 /-- Actual root saved frames retain their root-only endpoints and all completed-view callbacks. -/
-structure Edge (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+structure Semantic (root : NativeEff) (table : RowTable) (world : StageWorld.World)
     (input output : StageWorld.Kind) (frame : NCode) : Prop where
   held : ViewSavedAt (model root table) (fun view => (interpAt root view table).toPrimInterp)
     world input output frame
   inputOwned : Owns input
   outputOwned : Owns output
 
-/-- The existing uniform saved-family theorem handles the root's actual callback stack. -/
+/-- Root ignored code reuses the daemon's stable heap-preserving answer family. -/
+theorem ignored_embedding (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV)) :
+    FamilyEmbedding (DaemonGraph.model root table view) (model root table view) id
+      (fun (_ : Unit) => StageWorld.Kind.ordinary) (fun _ => True) where
+  ready_future := fun _ _ _ held => held
+  future := fun _ _ held _ => held
+  value_read := fun _ _ _ _ _ => True.intro
+  value_write := fun _ _ _ _ _ => True.intro
+  cause_read := fun _ _ _ _ _ => True.intro
+  cause_write := fun _ _ _ _ _ => True.intro
+  code := fun _ _ _ _ held => .ignored held
+  finalizer := fun _ _ _ _ => rfl
+
+/-- The root's exact source callbacks coexist with its existing ignored native family. -/
+def Edge (root : NativeEff) (table : RowTable) :=
+  EmbeddedEdgeOver id (fun (_ : Unit) => StageWorld.Kind.ordinary) (fun (_ : StageWorld.World) => True)
+    (Semantic root table) (DaemonGraph.Edge root table)
+
+/-- The existing uniform saved-family theorem handles both actual root callback kinds. -/
 theorem family (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV)) :
     SavedFamily (model root table view) (interpAt root view table).toPrimInterp (Edge root table) :=
-  ViewSavedAt.refined_family (model root table) (fun view => (interpAt root view table).toPrimInterp)
-    (Edge root table) (fun _ _ _ _ held => held.held) view
+  (ignored_embedding root table view).family_over (interpAt root view table).toPrimInterp
+    (Semantic root table) (DaemonGraph.Edge root table)
+    (ViewSavedAt.refined_family (model root table) (fun view => (interpAt root view table).toPrimInterp)
+      (Semantic root table) (fun _ _ _ _ held => held.held) view)
+    (DaemonGraph.family root table view)
+
+/-- Generic root success wrappers reuse the same uniform callback contract. -/
+theorem bound_edge (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (input output : StageWorld.Kind) (body : NCode) (name : EffName)
+    (inputOwned : Owns input) (outputOwned : Owns output)
+    (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
+      ValueAt nextWorld input answer → CodeAt root table nextWorld output
+        ((interpAt root view table).contA name answer)) :
+    Edge root table world input output (.onSuccess body name) := by
+  apply EmbeddedEdgeOver.saved
+  refine ⟨⟨?_, ?_, ?_⟩, inputOwned, outputOwned⟩
+  · intro view
+    exact saved_success (model root table view) (interpAt root view table).toPrimInterp world input output body name
+      (fun after future answer good => callback after future view answer good)
+      (fun _ _ _ _ => True.intro)
+  · intro name cursor equal
+    cases equal
+  · intro name cursor equal
+    cases equal
 
 /-- A real root bind consumes its declared answer at the same future counter. -/
 theorem cont_edge (root : NativeEff) (table : RowTable) (world : StageWorld.World)
@@ -223,6 +281,7 @@ theorem cont_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Worl
     (found : Node.at_ (.eff root) point.path = some (.eff (.bind first rest)))
     (remaining : point.env.length < 18) (body : NCode) :
     Edge root table world (.rootAnswer point.env.length) .ordinary (.onSuccess body (.cont point)) := by
+  apply EmbeddedEdgeOver.saved
   refine ⟨⟨?_, ?_, ?_⟩, True.intro, True.intro⟩
   · intro view
     apply saved_success (model root table view) (interpAt root view table).toPrimInterp
@@ -239,6 +298,7 @@ theorem cont_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Worl
 theorem mask_edge (root : NativeEff) (table : RowTable) (world : StageWorld.World)
     (kind : StageWorld.Kind) (owns : Owns kind) (flag : Bool) :
     Edge root table world kind kind (.setInterruptible flag) := by
+  apply EmbeddedEdgeOver.saved
   refine ⟨⟨fun view => saved_mask (model root table view) (interpAt root view table).toPrimInterp world kind flag,
     ?_, ?_⟩, owns, owns⟩
   · intro name cursor equal
@@ -251,6 +311,7 @@ theorem pause_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Wor
     (kind : StageWorld.Kind) (owns : Owns kind) (priority : Nat) (next : NCode)
     (held : CodeAt root table world kind next) :
     Edge root table world (.rootPause world.nextId) kind (.onSuccessConst (.yieldNowWith priority) next) := by
+  apply EmbeddedEdgeOver.saved
   refine ⟨⟨?_, ?_, ?_⟩, True.intro, owns⟩
   · intro view
     apply saved_constant (model root table view) (interpAt root view table).toPrimInterp
