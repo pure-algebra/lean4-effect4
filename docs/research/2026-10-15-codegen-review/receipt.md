@@ -1253,3 +1253,159 @@ transcribes Lean, and no harness code (P10):
 **The gates.** `make gen-derived` writes the atoms at the new path. Then `check-truth`,
 `check-corpus`, `check-tsdiag`, `check-host-protocol` and `check-target` run, and no printed byte
 other than an import path moves.
+
+### Step 4, after row 397: the package's resolution is a boundary
+
+Row 397 (2) approves the three `Makefile` lines. Before the first build, the seat merged
+`158093669` at `cf98794f7`, as the coordinator asked. Then a probe found what the plan above
+missed, so nothing of step 4 lands yet.
+
+**The one thing to know.** A file under `ts/prelude/` cannot import `effect`. No `node_modules`
+stands above it, and bun resolves a bare import from the importing file's own folder, not from its
+importer's. The probe `cr4/resolve/` reproduces it: a file outside a link's folder, imported from a
+folder that holds the link, fails with "Cannot find package 'effect'". Each of the four runtime
+files imports `effect`, but `tuples.ts`.
+
+**What it rules out.** The plan's in-place uses all reach the package: the to-do's module, the
+batteries of `harness/truth/*.test.ts`, and the keyed lane's files. Copying the package does not
+help the lanes either. The truth, corpus and diagnostics lanes copy the prelude flat into a work
+folder, so that each copy resolves `effect` through that folder's own install. The release lane
+selects effect 4.0.1 there. A relative import from the harness's prelude into `ts/prelude/` does
+not hold in a flat copy.
+
+**The options (P-CR4-3).**
+
+- **(A) A link and a mirrored copy.** A `Makefile` rule links `ts/prelude/node_modules` to the one
+  install, as `apps/todo/node_modules` is linked: two lines beyond row 397's three. The copying
+  lanes copy the package at the repository's relative layout inside their work folders
+  (`scripts/lib/truth_host.py`, `scripts/check-corpus.py`, `harness/tsdiag/run-tsdiag.mjs`).
+- **(B) The package inside the one install's folder,** `ts/eff/prelude/`, which resolves `effect`
+  with no link. The copying lanes change as in (A). The reader's package then holds the prelude
+  too.
+- **(C) The package by name,** `@effect4/prelude`, a local dependency of the two installs
+  (`ts/eff`, `ts/release`), with `effect` as its peer dependency. A module imports it by name, and
+  no lane copies the runtime half. It is an install change, and it needs a probe of how bun links a
+  local package's peer dependency.
+
+**The recommendation.** (C) is the end state. Section 6.5 of the review makes the prelude a
+dependency of the emitted package, and a package is imported by its name. (A) serves now if the
+install change waits, and its two lines join row 397's three.
+
+**What does not wait.** The rest of CR-4 has landed. CR-5 goes on.
+
+## Wind-down handoff
+
+**The one thing to know.** The owner paused the seat at a clean point. Nothing is in flight in
+the tree: step 4 of CR-4 is approved and surveyed, and none of it is written. Its edit list is
+below, ready for the next seat.
+
+### Base and head
+
+- The coordinator's last merge of this branch: `8bf64aa6b` (CR-4 part B), into
+  `refactor/phase1-phase3` at `45e249ad2`.
+- The head: this section's commit, after `e32a05453`.
+
+### What landed since that merge
+
+- `3f16c1839`: the receipt's note that step 4 stops at the package's resolution (P-CR4-3).
+- Three merges of the coordinator's head, each before a planned build, as asked: `cf98794f7`
+  (`158093669`), `5d6b1f2d7` (`5c02634ff`) and `e32a05453` (`0768df456`). They bring decisions
+  rows 396 and 397 and three fixed citations.
+- No source file moved since the merge. No build or gate ran on these commits.
+
+### In flight
+
+None: `git status` is clean, so no patch is saved under `wind-down/`. Step 4's state is
+"approved, surveyed, not started". Row 397 (2) to (4) approves its `Makefile` lines. The survey
+found these edits:
+
+1. **Moves** (`git mv`): `harness/truth/prelude-atoms.gen.ts`, `records.ts`, `tuples.ts` and
+   `control.ts` to `ts/prelude/`, with their names.
+2. **New files:** `ts/prelude/prelude.ts`, the package's one entry, which re-exports the four
+   files and holds `MaskRestore`; `ts/prelude/package.json`, a private module package.
+3. **The harness's prelude** (`harness/truth/prelude.ts`) re-exports `../../ts/prelude/prelude.ts`,
+   imports `fold` and the atoms from the package, and drops `MaskRestore`.
+4. **The harness files that import a moved file:** `if-case.test.ts`, `literals.typecheck.ts`,
+   `maps.test.ts`, `maps.typecheck.ts`, `records.test.ts`, `records.typecheck.ts`,
+   `select-controls.ts`, `tuples.test.ts` and `tuples.typecheck.ts`, all under `harness/truth/`.
+5. **The generator:** the `Out` of the `PreludeAtoms` group of `tools/Effect4Gen/manifest.json`,
+   and the command in `tools/Effect4Gen/PreludeAtoms.lean`'s note; then
+   `python3 scripts/generate.py --only derived`.
+6. **The `Makefile`, by row 397 (2) to (4).** The lines `DERIVED_OUT`, `PRELUDE_SOURCES` and
+   `GENERATED_PATHS` name the package. The path `harness/truth/tuples.ts` moves in the
+   `$(CHK)/truth` prerequisites and in `TRUTH_RELEASE_LANE`. A rule
+   `ts/prelude/node_modules: | ts/eff/node_modules` makes the link. Listing the link in
+   `PRELUDE_SOURCES` makes every gate that reads the prelude create it.
+7. **The copying lanes, at the repository's layout.** In `scripts/lib/truth_host.py`,
+   `copy_prelude` copies the harness's prelude to `harness/truth/` of the work folder. It copies
+   the package to `ts/prelude/` there, and returns the copy's `harness/truth`.
+   `scripts/check-truth.py` and `scripts/check-corpus.py` write their modules under that folder.
+   The diagnostics lane (`harness/tsdiag/run-tsdiag.mjs`) accepts the package's files and copies
+   each at its repository path. It writes its project under `harness/truth/` of the work folder,
+   with `node_modules` linked at the folder's root. The release lane's work copy follows relative
+   imports already (`scripts/check-truth-release.py`, `closure`).
+8. **The other readers of the moved files.** These are `tools/target/rows.ts`, which names the
+   atoms' source, and `tools/Drivers/Emit.lean`, which copies the package and its entry. The header
+   of `ts/eff/ingest/fidelity/roundtrip.ts` names the harness's prelude. The packet scripts read
+   the files too: `harness/ts_packet.py`, `harness/test_ts_packet.py`,
+   `harness/codegen-bindings/run.py`, `harness/ref-catalogue/run.py` and
+   `harness/authoring-branches/{check-helper.py,run.py}`.
+9. **The to-do:** `scripts/check-host-protocol.py` passes `../../../ts/prelude/prelude.ts` to
+   `apps/todo/EmitTodo.lean`, so the to-do's module imports no harness file.
+10. **The notes and documents:** `src/Effect4/Machine/Term.lean`'s docstring, which names the
+    atoms' path; `docs/GENERATED.md` (the derived group's outputs); `docs/ARCHITECTURE.md` (a
+    row for `ts/prelude`).
+11. **The gates:** `check-truth`, `check-corpus`, `check-tsdiag`, `check-host-protocol` and
+    `check-target`. No printed byte should move but an import path.
+
+### Open items
+
+**Slices not started.**
+
+- CR-5, names and decorations. The seat's reading, for the next seat, follows. The reader's laws
+  keep their statements if the named reader tries the positional reader first. It renames only
+  where that reader refuses. A program parameter is bound by its name, so a renaming skips the
+  parameters of a definition's header and of a service's closure.
+- CR-10, the ruled type repairs. They are R-T4 (`Int` and `Num`) and repair A at tsgo's bound
+  of 25 (row 346). They are R-T6 (`Shape` as a fold of `Ty`, and the bridge's lowering of
+  `number`) and R-T7.
+- CR-11, its design note, then the coordinator's ruling.
+- CR-12, idiomatic printing, after CR-5.
+- CR-4's step 4 (above).
+
+**Open within landed slices.**
+
+- CR-7: option (B) inside the fusion slice, and option (A) as a checker slice that starts as a plan
+  (row 395 (1)). The patch stays tracked (`cr7-part2/part2.patch`).
+- CR-4: the 18 `number` cases of the codec gate wait on R-T6, and so does a service that
+  answers a `number`. A `Ref` argument's brand waits on a data service that takes one (row 397
+  (1)).
+- CR-6: step 3 waits on `fold_of` (P-CR6-2, approved, not written).
+- CR-1, CR-8 and CR-9: the open obligations their sections list.
+- The ergonomics probe's hand rows (`docs/research/2026-10-13-agent-ergonomics-probe/tsgo/approws.ts`)
+  stay: they are a dated probe's evidence, and the surface replaces them for a consumer.
+
+**Open proposals.**
+
+- P-CR1-2, ruled (a) by row 395 (2), and not written: the diagnostics lane checks the module that
+  ships, with a register of known differences.
+- P-CR9-1 and P-CR9-2, not ruled.
+- P6 of the review, which row 392 (2) asks this receipt to propose. It is one codegen command as
+  a `lean_exe`, with the verbs `emit`, `check`, `run` and `session`. Each verb is thin over a
+  library function: `Api.emitModule`, `ModuleEmission.file` and `surface`, `admitModule` and
+  `Live.feedAll`. Its `lakefile.toml` entry is the coordinator's. The seat recommends it with
+  LC-4's compiled generator, as P-CR2-1 (b).
+
+**The owner's items.**
+
+- The lean4-typescript v0.8.0 release (P-CR6-1; the brief is above).
+- The install change of P-CR4-3 (C), the prelude by name, with its probe of a linked peer
+  dependency.
+
+### Gates
+
+- Ran, for the last code commits: `make check-host-protocol`, `check-schema-codec`,
+  `check-schema-ts`, `check-ts-reader` and `check-target` (`8bf64aa6b`); `make check-target`,
+  `check-truth` and `check-gen` (`b03037a23`).
+- Not run: `check-corpus`, `check-tsdiag`, `check-native`, `check-compiler`, `check-ocaml` and
+  `check-ingest-smoke`. The coordinator runs them at the merge.
