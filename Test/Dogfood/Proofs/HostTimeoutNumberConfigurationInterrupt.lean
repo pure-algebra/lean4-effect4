@@ -29,7 +29,7 @@ theorem frame_fields (machine : Effect4.Program.NativeMachine) (role : Role)
       exact ⟨above, stack.trans equation, input, by rw [current]; exact code, saved⟩
   | retired => trivial
   | pending context =>
-      refine ⟨HostTimeoutNumberSourceSlots.FrameAt.fields context before after held.1 current stack, ?_⟩
+      refine ⟨HostTimeoutNumberSourceWrites.FrameAt.fields context before after held.1 current stack, ?_⟩
       intro view
       obtain ⟨input, code, saved⟩ := held.2 view
       exact ⟨input, by rw [current]; exact code, by rw [stack]; exact saved⟩

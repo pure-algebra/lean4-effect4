@@ -1,4 +1,4 @@
-import Test.Dogfood.Proofs.HostTimeoutNumberSourceSlots
+import Test.Dogfood.Proofs.HostTimeoutNumberSourceWrites
 import Test.Dogfood.Proofs.HostTimeoutNumberRootControl
 import Test.Dogfood.Proofs.HostTimeoutNumberStable
 import Test.Dogfood.Proofs.HostTimeoutNumberWait
@@ -277,7 +277,7 @@ theorem allowed_target_distinct (context : MessageContext) (world : World)
 def FrameAt (machine : Effect4.Program.NativeMachine) (role : Role)
     (frame : HostTimeoutFrames.NativeFrame) : Prop :=
   match role with
-  | .pending context => HostTimeoutNumberSourceSlots.FrameAt context frame ∧ ∀ view, AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model view)
+  | .pending context => HostTimeoutNumberSourceWrites.FrameAt context frame ∧ ∀ view, AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model view)
       (interpreter view).toPrimInterp machine.state
       (.attempt context.before context.entered (by
         change context.before.count + 1 = context.before.cleanups.length + 1

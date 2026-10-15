@@ -108,7 +108,7 @@ theorem counted_fiber (machine : Effect4.Program.NativeMachine)
     exact List.mem_cons_of_mem _ (List.mem_cons_self ..)
   have running := held.pendingRunning context rfl heap installedFin
   constructor
-  · refine ⟨HostTimeoutNumberSourceSlots.counted_frame context fiber.frame stack, ?_⟩
+  · refine ⟨HostTimeoutNumberSourceWrites.counted_frame context fiber.frame stack, ?_⟩
     intro view
     exact (count_iteration_commit context view machine fiber yielding heap current stack ready).2
   · intro selected published

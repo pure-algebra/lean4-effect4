@@ -722,3 +722,41 @@ The slice changes proof assertions only and reaches no outside implementation ga
 The initialized numeric history, actual race assignments, and cleanup and form transitions remain open.
 The source assertion alone admits arbitrary updates with matching captured environments.
 A numeric producer must retain exact writer provenance before deriving numeric facts from those updates.
+
+## Exact operation provenance in the pending source graph
+
+The coordinator must retain the exact selected operation, including its operation tag.
+The base is `36ea3ecfd`.
+Both original numeric goals remain open.
+
+`CodeClosure.Qualified` now owns the existing slot, stored callback, interpreter, and stable-family proofs.
+Its writer predicate reads every synchronous operation field.
+The old `CodeClosure.Slots` interface specializes that predicate to its earlier captured-environment assertion.
+The compiler contract accepts a supplied actual-operation permission.
+All source compiler and callback walks retain one owner.
+The old automatic environment-only compiler constructor becomes an instance of that contract.
+
+`HostTimeoutNumberSourceWrites.Writes` retains the actual source point, source row, request evaluation, and selected synchronous operation.
+Its callback contract and actual entry consume the generalized compiler and saved-family infrastructure.
+`selected_update_shape` uses the existing eight-leaf reference census.
+It proves that the pending attempt writes only cell zero with the count term or cell one with the cleanup term.
+The paired controls show that the old environment-only annotation accepts a fabricated cell-nine update while exact provenance rejects it.
+
+The pending configuration now retains this stronger current and saved-writer graph.
+Actual count entry, count reply, addressed interruption, and the full count-queue producer consume it.
+These helpers serve both original endpoints under R11, R10, and R4.
+They supply no numeric cleanup or form transition, initialized history, progress, or outside implementation agreement.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCountQueue Effect4.Laws.Program.AnswerSlots.Actions Effect4.Laws.Program.AnswerSlots.PrefixStable` | Passed, 1261 jobs |
+| `lake env lean scratch/TimeoutWriterFactorAudit.lean` | The output below |
+
+```text
+#axiom_audit: 637 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers all ten shared implementation and compatibility modules, exact writer controls, and the coupled pending consumers.
+No root import changes are needed because existing consumers reach every new leaf.
+This proof-only slice reaches no outside implementation gate.
+The next actual native branch is the single external request after the count, followed by numeric cleanup and form dispatch.
