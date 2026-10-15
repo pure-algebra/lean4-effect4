@@ -34,12 +34,14 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts/lib"))
 from conform_report import InvalidReport, fresh_run, manifest, sha256, validate
+from lean_imports import imports_of, source_closure, workspace_source
 
 SELF = "scripts/check-conform.py"
 
 # Each output of a profile has one role. A report names the tool that must have written it.
 PROFILES = {
     "compiler": {
+        "driver": "tools/Conform/Effect4/Normalization.lean",
         "command": [sys.executable, SELF, "--step", "compiler", "{out}"],
         "reports": {"normalization.json": "conform.normalization",
                     "validity.json": "conform-lcnf-validity",
@@ -49,6 +51,7 @@ PROFILES = {
                       "mutation.txt", "processes.json"],
     },
     "native": {
+        "driver": "tools/Conform/Effect4/NativeMain.lean",
         "command": ["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Effect4/NativeMain.lean", "{out}"],
         "reports": {"layout-lean-native.json": "conform.layout[lean-native]"},
         "artifacts": ["native-layout.json"],
@@ -284,12 +287,27 @@ def step_compiler(out, execute=execute):
 STEPS = {"compiler": step_compiler}
 
 
+def profile_inputs(names):
+    """The profile drivers' source closure, runner implementation and build pins."""
+    return sorted(set(source_closure(ROOT, [PROFILES[name]['driver'] for name in names])) | {
+        SELF, 'scripts/lib/conform_report.py', 'scripts/lib/lean_imports.py',
+        'lean-toolchain', 'lakefile.toml', 'lake-manifest.json',
+    })
+
+
+def profile_modules(names):
+    """Only the modules a selected driver's header imports need building before `lean --run`."""
+    return sorted({module for name in names for module in imports_of(ROOT / PROFILES[name]['driver'])
+                   if workspace_source(ROOT, module) is not None})
+
+
 # ---------------------------------------------------------------- the runner
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("profiles", nargs="*", metavar="PROFILE")
     parser.add_argument("--step", choices=sorted(STEPS), help=argparse.SUPPRESS)
+    parser.add_argument("--inputs", action="store_true", help="print profile inputs without building or running")
     args = parser.parse_args()
     if args.step:
         (out,) = args.profiles
@@ -304,14 +322,18 @@ def main():
         parser.error(f"unknown profiles: {sorted(unknown)}; choose from {list(PROFILES)}")
     if len(args.profiles) != len(set(args.profiles)):
         parser.error("each profile may be requested only once")
-    build = subprocess.run(["lake", "build", "Conform", "Effect4", "Effect4.Laws.Program.Typing.Check"], cwd=ROOT)
+    if args.inputs:
+        print(' '.join(profile_inputs(args.profiles)))
+        return 0
+    build = subprocess.run(["lake", "build", *profile_modules(args.profiles)], cwd=ROOT)
     if build.returncode:
         return build.returncode
     worst = 0
     for name in args.profiles:
         profile = PROFILES[name]
         code = fresh_run(profile["command"], ROOT / f".lake/conform/{name}.json", profile["reports"],
-                         profile["artifacts"], cwd=ROOT, input_snapshot=lambda: manifest(ROOT))
+                         profile["artifacts"], cwd=ROOT,
+                         input_snapshot=lambda: manifest(ROOT, profile_inputs([name])))
         label = {0: "PASS", 1: "REFUSED", 2: "UNRESOLVED"}[code]
         print(f"conform {name}: {label}, exit {code}; .lake/conform/{name}.json")
         worst = max(worst, code)

@@ -22,12 +22,11 @@ the core as native code, not interpreted (`native_flags`, `scripts/generate.py`)
 producers that run the machine take them (`native_flags` in the `Makefile`). The modules must be
 built first, as `build_imports` builds them.
 """
-import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lib.lean_imports import imports_of, workspace_source  # noqa: E402
+from lib.lean_imports import imports_of, source_closure, workspace_source  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 UNREADABLE = 'lean-imports-closure-unreadable'
@@ -44,29 +43,7 @@ def is_workspace(module: str) -> bool:
 
 def closure(roots: list[str], manifest: str | None) -> list[str]:
     """The workspace source files the roots reach, relative to the repository, sorted."""
-    pending: list[str] = []
-    files: set[Path] = set()
-    for root in roots:
-        if root.endswith('.lean'):
-            files.add((ROOT / root).resolve())
-            pending.extend(imports_of(ROOT / root))
-        else:
-            pending.append(root)
-    if manifest is not None:
-        for group in json.loads((ROOT / manifest).read_text(encoding='utf-8'))['groups']:
-            pending.extend(m for m in group['Imports'].split(',') if m)
-    seen: set[str] = set()
-    while pending:
-        module = pending.pop()
-        if module in seen:
-            continue
-        seen.add(module)
-        source = source_of(module)
-        if source is None:
-            continue
-        files.add(source.resolve())
-        pending.extend(imports_of(source))
-    return sorted(path.relative_to(ROOT.resolve()).as_posix() for path in files)
+    return source_closure(ROOT, roots, manifest)
 
 
 def main(argv: list[str]) -> int:

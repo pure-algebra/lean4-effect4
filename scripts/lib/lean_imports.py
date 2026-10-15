@@ -10,6 +10,7 @@ plain identifier reads as that identifier, so `«Effect4».Program.Ty` is `Effec
 reads them here (the build profile's graph missed `public import` lines and the imports below a
 block comment until 2026-10-09, Codex's review HC-R8).
 """
+import json
 import re
 from pathlib import Path
 
@@ -110,3 +111,39 @@ def workspace_source(root: Path, module: str) -> Path | None:
         if (root / base / relative).is_file():
             return root / base / relative
     return None
+
+
+def source_closure(root: Path, roots: list[str], manifest: str | None = None) -> list[str]:
+    """Sorted workspace sources reached by module names or Lean files, including file roots.
+
+    Package and toolchain modules are represented by the caller's build pins. A missing file
+    root is an error; it must never turn a failed dependency scan into an empty cache key.
+    """
+    root = root.resolve()
+    pending: list[str] = []
+    files: set[Path] = set()
+    for entry in roots:
+        if entry.endswith('.lean'):
+            source = (root / entry).resolve()
+            pending.extend(imports_of(source))
+            files.add(source)
+        else:
+            source = workspace_source(root, entry)
+            if source is None:
+                raise FileNotFoundError(f'workspace root module not found: {entry}')
+            pending.append(entry)
+    if manifest is not None:
+        for group in json.loads((root / manifest).read_text(encoding='utf-8'))['groups']:
+            pending.extend(m for m in group['Imports'].split(',') if m)
+    seen: set[str] = set()
+    while pending:
+        module = pending.pop()
+        if module in seen:
+            continue
+        seen.add(module)
+        source = workspace_source(root, module)
+        if source is None:
+            continue
+        files.add(source.resolve())
+        pending.extend(imports_of(source))
+    return sorted(path.relative_to(root).as_posix() for path in files)

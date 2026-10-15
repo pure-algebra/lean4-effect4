@@ -1,14 +1,29 @@
 #!/usr/bin/env python3
 """Finite controls for the shared Lean import reader (`scripts/lib/lean_imports.py`)."""
 import unittest
+import tempfile
 from pathlib import Path
 
-from lib.lean_imports import header_imports, imports_of
+from lib.lean_imports import header_imports, imports_of, source_closure
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class HeaderImports(unittest.TestCase):
+    def test_closure_follows_public_imports_and_cycles(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'src').mkdir()
+            (root / 'src/A.lean').write_text('module\npublic import B\nimport Lean\n')
+            (root / 'src/B.lean').write_text('import A\n')
+            self.assertEqual(source_closure(root, ['A']), ['src/A.lean', 'src/B.lean'])
+
+    def test_missing_root_refuses_instead_of_empty_closure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for entry in ['Missing', 'Missing.lean']:
+                with self.subTest(entry=entry), self.assertRaises(FileNotFoundError):
+                    source_closure(Path(directory), [entry])
+
     def test_plain(self):
         self.assertEqual(header_imports('import A\nimport B.C\n\ndef x := 1\n'), ['A', 'B.C'])
 

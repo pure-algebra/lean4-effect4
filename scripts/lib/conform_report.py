@@ -138,7 +138,7 @@ def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def manifest(root):
+def manifest(root, sources=None):
     """Bind current source, configuration, compiled Lean artifacts and package pins.
 
     A successful Lake build must precede this snapshot. Source and compiled identities
@@ -146,12 +146,21 @@ def manifest(root):
     """
     root = Path(root)
     files = set()
-    for directory in ("src", "tools", "Test", "scripts", "ocaml", "ts", "harness"):
-        for folder, directories, names in os.walk(root / directory):
-            directories[:] = [d for d in directories if d not in {"node_modules", "_build", ".lake", ".git", "__pycache__"}]
-            files.update(Path(folder) / n for n in names if Path(n).suffix in
-                         {".lean", ".json", ".jsonl", ".py", ".ts", ".ml", ".sh", ".toml", ".lock"})
-    files.update((root / ".lake/build/lib/lean").rglob("*.olean"))
+    if sources is None:
+        for directory in ("src", "tools", "Test", "scripts", "ocaml", "ts", "harness"):
+            for folder, directories, names in os.walk(root / directory):
+                directories[:] = [d for d in directories if d not in {"node_modules", "_build", ".lake", ".git", "__pycache__"}]
+                files.update(Path(folder) / n for n in names if Path(n).suffix in
+                             {".lean", ".json", ".jsonl", ".py", ".ts", ".ml", ".sh", ".toml", ".lock"})
+        files.update((root / ".lake/build/lib/lean").rglob("*.olean"))
+    else:
+        files.update(root / name for name in sources)
+        for name in sources:
+            if name.endswith('.lean'):
+                module = name.removeprefix('src/').removeprefix('tools/')
+                compiled = root / '.lake/build/lib/lean' / Path(module).with_suffix('.olean')
+                if compiled.is_file():
+                    files.add(compiled)
     for package in (root / ".lake/packages").glob("*"):
         files.update((package / ".lake/build/lib/lean").rglob("*.olean"))
     for name in ("lean-toolchain", "lakefile.toml", "lake-manifest.json"):
