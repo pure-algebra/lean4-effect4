@@ -3,6 +3,7 @@ module
 public import Effect4.Store.Domain.Shape
 public import Effect4.Schema.OfShape
 public import Effect4.Store.Carrier.Image
+public import Effect4.Data.Reencode
 meta import Effect4.Data.Json
 meta import Effect4.Schema.OfShape
 meta import Effect4.Store.Carrier.Digest
@@ -283,38 +284,35 @@ theorem accepts_named_of_mem (defs : List (String × Shape)) (n : String) (s : S
   unfold acceptsIn
   exact List.any_eq_true.mpr ⟨s, (mem_lookupAll n s defs).mpr h, hv⟩
 
-/-! The re-encode guard: exactness by construction from any left inverse. The Wire's `readString`
-bought its string frame's exactness this way (`Wire.lean:254-262`), and `Surface/Annotate.lean`'s
-`markKey` its key's. A carrier whose structural exactness proof is disproportionate (the `Eff`
-family, fifty constructors) reads through `guarded toVal raw`: `raw` is the structural reader,
-the guard compares the re-encoding, `guarded_toVal` needs only `raw (toVal a) = some a`, and
-`guarded_exact` is free. The price is one re-encoding per decode. -/
+/-! The re-encode guard (`Effect4/Data/Reencode.lean`): exactness by construction from any left
+inverse. The Wire's `readString` bought its string frame's exactness this way
+(`Wire.lean:254-262`), and `Surface/Annotate.lean`'s `markKey` its key's. A carrier whose
+structural exactness proof is disproportionate (the `Eff` family, fifty constructors) reads
+through `guarded toVal raw`: `raw` is the structural reader, the guard compares the re-encoding,
+`guarded_toVal` needs only `raw (toVal a) = some a`, and `guarded_exact` is free. The price is one
+re-encoding per decode. -/
 
-/-- A reader made exact by re-encoding what it read. -/
+/-- A reader made exact by re-encoding what it read: the re-encode guard on the value tree, with
+no normaliser and an anonymous refusal. -/
 def guarded {α : Type} (toVal : α → Val) (raw : Val → Option α) (v : Val) : Option α :=
-  match raw v with
-  | some a => if toVal a = v then some a else none
-  | none => none
+  (Reencode.guard id toVal (fun w => (raw w).elim (.error ()) .ok) () v).toOption
 
 theorem guarded_toVal {α : Type} (toVal : α → Val) (raw : Val → Option α) (a : α)
     (hraw : raw (toVal a) = some a) : guarded toVal raw (toVal a) = some a := by
-  unfold guarded
-  rw [hraw]
-  show (if toVal a = toVal a then some a else none) = some a
-  rw [if_pos rfl]
+  have h := Reencode.guard_image (norm := id) (write := toVal)
+    (read := fun w => (raw w).elim (.error ()) .ok) (miss := ()) (a := a) (a' := a)
+    (by simp only [id_eq, hraw, Option.elim]) rfl
+  simp only [guarded, h, Except.toOption]
 
 theorem guarded_exact {α : Type} {toVal : α → Val} {raw : Val → Option α} {v : Val} {a : α}
     (h : guarded toVal raw v = some a) : v = toVal a := by
   unfold guarded at h
-  split at h
-  · next b hb =>
-    split at h
-    · next heq =>
-      injection h with h
-      subst h
-      exact heq.symm
-    · exact nomatch h
-  · exact nomatch h
+  cases hg : Reencode.guard id toVal (fun w => (raw w).elim (.error ()) .ok) () v with
+  | error e => simp only [hg, Except.toOption, reduceCtorEq] at h
+  | ok b =>
+    simp only [hg, Except.toOption, Option.some.injEq] at h
+    subst h
+    exact Reencode.guard_exact hg
 
 /-! ## The primitives -/
 
