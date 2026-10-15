@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Print the workspace modules that the given Lean files import, on one line; or, with
-`--closure`, the workspace source files of their whole import closure.
+`--closure`, the workspace source files of their whole import closure; or, with `--dynlibs`, the
+`--load-dynlib` flags of the native libraries that Lake loads for those modules.
 
 A recipe that runs `lake env lean --run FILE` builds exactly these first (`build_imports` in the
 `Makefile`): `lake env` builds nothing. The header is read by the one shared reader,
@@ -15,26 +16,26 @@ with `--manifest`, the imports of every group of that derived manifest are roots
 files and on no other Lean source: an edit outside the closure cannot change what the producer
 reads (the derived and fixtures groups, LC-4). A file that cannot be read prints a prerequisite
 that no rule makes, so the Makefile stops instead of reading an empty closure.
+
+`--dynlibs FILE...` prints, on one line, the flags with which `lake env lean` runs the files with
+the core as native code, not interpreted (`native_flags`, `scripts/generate.py`). The Makefile's
+producers that run the machine take them (`native_flags` in the `Makefile`). The modules must be
+built first, as `build_imports` builds them.
 """
 import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lib.lean_imports import imports_of  # noqa: E402
+from lib.lean_imports import imports_of, workspace_source  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE_DIRS = [ROOT / 'src', ROOT / 'tools', ROOT]
 UNREADABLE = 'lean-imports-closure-unreadable'
 
 
 def source_of(module: str) -> Path | None:
     """The workspace file of `module`, or None for a module of the toolchain or a package."""
-    relative = Path(*module.split('.')).with_suffix('.lean')
-    for base in SOURCE_DIRS:
-        if (base / relative).is_file():
-            return base / relative
-    return None
+    return workspace_source(ROOT, module)
 
 
 def is_workspace(module: str) -> bool:
@@ -80,8 +81,13 @@ def main(argv: list[str]) -> int:
             print(UNREADABLE)
             return 1
         return 0
+    if argv[:1] == ['--dynlibs']:
+        from generate import native_flags
+        print(' '.join(native_flags(argv[1:])))
+        return 0
     if not argv:
-        print('usage: lean-imports.py FILE... | --closure [--manifest PATH] ROOT...', file=sys.stderr)
+        print('usage: lean-imports.py FILE... | --closure [--manifest PATH] ROOT... | --dynlibs FILE...',
+              file=sys.stderr)
         return 2
     seen: list[str] = []
     for name in argv:

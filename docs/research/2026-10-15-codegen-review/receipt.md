@@ -609,3 +609,448 @@ lines and adds 18.
   - (b) the key names `defs` and `invoke` as not constructed.
 
   Recommend (a): the foreign readers then meet a block.
+
+## CR-8: one refusal alphabet, and refusals that name their site
+
+### Base and head
+
+Base `827252a85`; the slice's commit is the head.
+
+### What landed, step by step
+
+1. **The TypeScript reader's refusal type is generated from `ReadRefusal`** (DI-88's first step).
+   - `TsGen` reads the inductive `Effect4.Program.ReadRefusal` off the environment it loads, and
+     writes one TypeScript arm per constructor into `ts/eff/templates.gen.ts`
+     (`readRefusalArms`, `tools/Drivers/TsGen.lean`). A field of a type with no carrier refuses
+     the generation.
+   - `ts/eff/read.ts` defines its `Refusal` as that type and its own three: `node`, `program`
+     and `parse`. The hand type had seven of Lean's eight cases: it lacked `annotation`.
+   - Three sites of the TypeScript reader now answer Lean's refusal, `annotation`. They are a
+     loop's cursor type with no reading (`"local const"`), a fold's stated accumulator
+     (`"fold accumulator"`), and a row's type argument with no reading
+     (`"<spelling> type argument"`). Their five unit tests follow.
+   - The compiler-backed foreign engine mirrors the fragment reader's refusal at a type argument
+     (`ts/eff/ingest/ck.ts`). It now answers `annotation` too, so the two foreign engines still
+     agree, and their test follows.
+2. **`PrintRefusal.internalAction` gives up the block's refusals to seven named cases.** They
+   are appended after the alphabet's others, so every older case keeps its wire tag:
+   - `invocation (definition : Nat)`: an invocation with programs of a definition the signature
+     lacks or that takes no program (`printInvoke`);
+   - `emptyBlock`, and `bodies (position : Nat)` where declarations and bodies part
+     (`printModuleWith`, `printDefsWith`);
+   - `serviceName (name : String)`: a name two definitions, or two services' names, share;
+   - `strayMethod (definition service : String)`: a method of a service the block lacks;
+   - `service (name : String)` and `serviceMethod (service method : String)`: a service, or one
+     of its methods, that does not print (`serviceFaultOf`, `methodType`, `methodClosure`).
+
+   `serviceFault` and `serviceFaultOf` answer a refusal, not a string. `internalAction` keeps the
+   template table's refusals and the typed print's sites. `RefusalsDerived` is regenerated, and
+   the generator's guards sample the seven cases (`tools/Effect4Gen/guards/refusals.lean`).
+3. **`SurfaceRefusal.unbound` names the reference and its scope.** It carries the unbound name
+   and the names its scope binds, nearest first, less the builtins (`SourceBindings.scopeNames`).
+   The lexical check's two other refusals get their own cases, `imports` and `lexical`
+   (`lexicalRefusal`, `src/Effect4/Codegen/Admit.lean`).
+
+### Changed files
+
+- Core: `src/Effect4/Codegen/Refusal.lean`, `PrintLeaf.lean`, `Print.lean`, `SourceBindings.lean`,
+  `Admit.lean` (all under `src/Effect4/Codegen/`); `src/Effect4/Laws/Codegen/Services.lean`.
+- Regenerated: `src/Effect4/Api/RefusalsDerived.lean` (`python3 scripts/generate.py --only
+  derived`) and `ts/eff/templates.gen.ts` (`--only ts`).
+- Tools: `tools/Drivers/TsGen.lean`, `tools/Effect4Gen/guards/refusals.lean`,
+  `tools/Tools/Code/Module.lean` (the boundary's refusals in words).
+- The truth driver: `harness/truth/Truth.lean` (the new refusals in words).
+- TypeScript: `ts/eff/read.ts`, `ts/eff/ingest/ck.ts`, `ts/eff/README.md`, and four test files
+  under `ts/eff/test/` and `ts/eff/ingest/test/`.
+- Batteries: `Test/Codegen/DefinitionsPrint.lean` (six new controls, one updated),
+  `Test/Api/ApiContract.lean` and `Test/Codegen/PayloadClasses.lean` (the unbound name pinned).
+- The contract: `Test/contracts/faces.contract.md`, a new amendment.
+
+### Commands and results
+
+Every `lake` and `make` command ran through the shared slot. The logs are in the seat's
+scratchpad (`cr8/`, `gates/cr8/`, `gates/cr8b/`).
+
+| Command | Result |
+| --- | --- |
+| `lake build` of the five edited core modules | passes: 128 jobs, 34 s |
+| `python3 scripts/generate.py --only derived` | passes: `RefusalsDerived.lean` alone moves, by the seven cases and their samples |
+| the narrow build (`cr8/build2.sh`): the edited modules, their direct importers, the codegen laws that unfold the printers, the tools and the batteries that read the refusals | first run: one battery failed, `Test/Codegen/PayloadClasses.lean`, at two guards that matched the old `.unbound`. After their repair it passes: 1,372 jobs |
+| the refusal probe (`cr8/RefusalProbe.lean`) | each named case answers at a small program; the values that the batteries now pin |
+| `python3 scripts/generate.py --only ts` | passes: `templates.gen.ts` alone moves, by the generated `ReadRefusal` |
+| `make check-ts-reader`, first run | one test failed: the two foreign engines disagreed at an unreadable type argument. `ck.ts` mirrored the old detail; it now mirrors the new one |
+| `make check-ts-reader`, after the repair | passes: 501 files, 416 matched, none mismatched, none refused with an oracle; 783 tests; tsgo's typecheck |
+| `make check-gen`, before the commit | regenerates every group: the two files above are the only difference from the base commit, so the check fails until they are committed |
+| `make check-gen`, after the commit `ae2765fd4` | passes: every Lean-only generated file is what its generator emits |
+| `make check-host-protocol` | passes: the keyed differential's 57 runs, the scenarios, the to-do's service and the to-do on SQLite |
+| `lake env lean --run harness/truth/Truth.lean` into the scratchpad | the truth manifest is byte-identical to the committed one |
+
+### Axiom output
+
+`#axiom_audit` over the five core modules, `RefusalsDerived`, `Effect4.Laws.Codegen.Services`
+and the three edited batteries (`cr8/AuditCR8.lean`): 2,556 declarations within
+`[propext, Quot.sound]`, none modulo a planned goal.
+
+### Landed theorems and their placement
+
+- `nodup_of_repeatOf` and `strayMethod_of_strayOf` (`src/Effect4/Laws/Codegen/Services.lean`):
+  concept `exact-codecs`, steps of the claim `module-defs-round-trip` (R8). Their consumer is
+  `serviceFault_none`, whose statement is unchanged. They replace the two `decide`-based steps
+  of its old proof, since the fault now names what repeats and what strays.
+- `readServiceMethods_ok` takes the service's name as an implicit argument. Its conclusion is
+  unchanged.
+
+### Lines removed and added
+
+Without the two regenerated files, 106 lines removed and 362 added in 21 files. The regenerated
+files add 114 lines and remove 5.
+
+### Evidence
+
+- Proved: the laws above, under `[propext, Quot.sound]`.
+- Tested: the reader's 783 tests and its corpus run; the keyed lane; the batteries' new controls.
+- Reproduced: the truth manifest, byte for byte; the two regenerated files by their producers.
+
+### Open obligations
+
+- The TypeScript reader answers Lean's refusal at three sites. Elsewhere it may name a refusal
+  otherwise: an annotated function in a term row's place is one (`E4-CHECK-CE-017`). The
+  generated reader of DI-88 closes the rest.
+- The two foreign engines still answer `shape` at a loop's unreadable cursor type. Both reject it
+  themselves, before the fragment reader, so they agree with each other and not with Lean's
+  `annotation "local const"`.
+- `internalAction` still names the template table's refusals and the typed print's sites by a
+  string. Those are the table's data (`RowOut.refuse`) and the typed print's internal sites.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR8-1.** DI-88's register entry records that its first step landed: the refusal alphabet,
+  generated from `ReadRefusal`.
+
+## CR-7, resumed: the coordinator's option (a)
+
+The coordinator ruled option (a) of `cr7-note.md` §4, in the note's §5 order. This section grows
+with each part.
+
+### Part 1: the repair of the TypeScript site printer
+
+Base `ae2765fd4`; the part's commit is the head.
+
+**The cause was not the one §3 of the note gave.** The note's probe paired an `iterate`'s
+children with its argument positions. Paired correctly, every node's checked environment has
+the length of its print depth. The refusing slot is a `catchIf`'s test under the row
+`Effect.catch`, at `[1, 1, 1, 0, 0, 1]`. That row fixes the test to `true` and prints no hole for
+it, so the template's depth for it is the node's own. The checker types it under the handler's
+binder, one deeper. The note's §7 records the correction.
+
+**The repair.** The site printer fits a slot's checked environment to the template's depth
+(`PrintEliminators.atDepth`, `src/Effect4/Codegen/PrintEliminators.lean`). It cuts where the
+checker's is longer, and pads with `unknown` where it is shorter. So no slot is refused for its
+depth. The three leaf laws of the erasure read each term at its print depth through one
+step, `atDepth_length`.
+
+| Command | Result |
+| --- | --- |
+| the probe `cr7/EagerDepths.lean` | every node's checked length equals its print depth; one slot differs, the classifier above; the typed print now prints `timeout/eager` |
+| `lake build` of the two edited modules and their direct importers | passes; the law module in 86 s |
+| `lake env lean --run harness/truth/Truth.lean` into the scratchpad | the truth manifest is byte-identical, so no truth program used the fallback |
+| `make check-host-protocol` | passes, with `timeout/eager` now printed typed |
+| `make check-ts-reader` | passes: 501 files, 416 matched, none mismatched; 783 tests |
+| `make check-corpus` | passes: 400 programs match the committed results |
+| `#axiom_audit` of the two edited modules (`cr7/AuditCR7a.lean`) | 2,259 declarations within `[propext, Quot.sound]` |
+
+The fallback in `shippedPieces` stays in this part. Part 2 removes it with the row-only printer.
+
+### Part 2: the deletion stops at a decision boundary
+
+**The one thing to know.** The site printer has no checked context in the main piece of a
+program that shares a layer by reference. Deleting the row-only printer loses those modules: the
+truth lane's `pDiamond` and two batteries' programs. The options and the recommendation are in
+`cr7-note.md` §8.3. Nothing of part 2 lands. Part 1 stays as it landed.
+
+Base `1807268cb`. This part commits the note's §8, this section and the patch, all under
+`docs/research`. The patch applies to the base (`git apply --check`).
+
+**What the patch holds**, by the note's §8.1:
+
+- the row-only printer, its erasure and the fallback of `shippedPieces` deleted;
+- the connector at the site printer, proved: a successful typed print under `NoJoin` is the print
+  (`printTyped_eq_print`, by `plain_upTo`);
+- `emitModule_complete` with the premise `typedMain`, and the counterexample battery of
+  `E4-PRINT-CE-004` and `E4-PRINT-CE-005` (`cr7-part2/TypedPrintRefuses.lean`);
+- a second repair: a spine reads no context, so an invocation's spine prints;
+- the battery's port, the register rows, the claim's title and the two authority documents.
+
+| Command | Result |
+| --- | --- |
+| `lake build Effect4.Laws.Codegen.PrintTyped`, the patch applied | passes, 73 s |
+| `lake build` of its importers and the 32 batteries that emit a module, the patch applied | 30 pass. `Test.Codegen.ReadContract` fails at `nestedSharing`, and `Test.Api.ApiContract` at `sharedLayers` |
+| the truth harness's `lake env lean --run`, the patch applied | stops at its two checks of `pDiamond`, before it writes a manifest |
+| the probe `cr7/InvokeProbe.lean`, before the spine repair | an invocation's main piece refuses: no context at the spine's end, `[0, 1]` |
+| the probe `cr7/LayerProbe.lean` | `nestedSharing`'s main piece has no environment at `[1]` and below; `typed:missing context` |
+| `git apply --check cr7-part2/part2.patch` at `1807268cb` | applies |
+| `python3 scripts/check-language.py --strict` on the note | passes |
+
+**Axiom output.** None: no `#axiom_audit` ran over the patch, because it does not land.
+
+**Lines.** The patch adds 2,026 lines and removes 2,074 (`cr7-part2/part2.stat`).
+
+**Open obligations.** CR-7's deletion, its connector and its fusion wait on the ruling of §8.3.
+
+**Evidence.** *Tested*: the builds and the three failing checks above, the patch applied.
+*Assumed*: option (B)'s 800 to 1,000 lines, an estimate from the deleted row-only erasure.
+
+**Proposed decisions row (proposal only).**
+
+- **P-CR7-1.** A ruling among §8.3's three options. In (A) the checker types a layer reference
+  by its target's type. In (B) the typed print prints a node with no checked context by the
+  fold, and the fused erasure's plain instance covers it. In (C) the row-only printer stays. The
+  seat recommends (C) now and (B) inside the fusion slice.
+
+## The merge of the coordinator's branch
+
+At the CR-7 boundary, as the coordinator asked, `refactor/phase1-phase3` (`69cbf348c`) is merged
+into this branch at `5e19eff24`. The merge had no conflict. CR-2 and CR-6 start on its
+`Makefile`, `scripts/generate.py` and `tools/Effect4Gen/manifest.json`.
+
+## CR-2: the Lean producers that run the machine run native
+
+**The one thing to know.** The truth manifest and the corpus manifest are written with the core
+as native code, byte for byte as before. `check-truth` took 17 s and `check-corpus` 63 s.
+
+Base `5e19eff24`; the slice's commit is the head.
+
+### What landed
+
+- **One helper.** `native_flags` (`scripts/generate.py`, beside `native_libraries`) gives the
+  `--load-dynlib` flags of the native libraries that Lake loads for a Lean file's workspace
+  imports. `scripts/lean-imports.py --dynlibs FILE...` prints them, and the `Makefile`'s
+  `native_flags` reads them. `native_libraries` now queries Lake with nothing on stdout.
+- **The producers that run the machine take them.** A file that runs the machine imports a module
+  of `TestProgram` or `TestDogfood`, whose setups load the native core. They are the truth
+  manifest (`gen-truth` and `scripts/check-truth.py`), the corpus manifest
+  (`scripts/check-corpus.py`) and the printed corpus (`make corpus`).
+- **The other producers stay interpreted.** The host protocol's, the schema fixtures', the
+  codec's, the row types', the type vectors' and P2b's producers import no such module. Their
+  imports load no native library, so the flags are empty there, and the recipes keep their text.
+- **Each generation marker depends on the groups it reads.** `wire`, `cas`, `ts`,
+  `host-protocol` and `schema-ts` wait on `derived`. `truth` waits on `derived`, `ts` and
+  `host-protocol`, whose protocol its prelude imports. `census` waits on none. `docs/GENERATED.md`
+  states the rule.
+
+### Changed files
+
+`Makefile`; `scripts/generate.py`, `scripts/lean-imports.py`, `scripts/lib/lean_imports.py`;
+`scripts/check-truth.py`, `scripts/check-corpus.py`; `docs/GENERATED.md`.
+
+### Commands and results
+
+| Command | Result |
+| --- | --- |
+| `Truth.lean`, the truth manifest, interpreted and then native (`cr2/compare.sh`) | 68 s and 9 s; byte-identical, and equal to the committed `harness/truth/corpus.json` |
+| `Truth.lean --corpus 400 4`, interpreted and then native | 60 s and 7 s; byte-identical |
+| `tools/Drivers/Corpus.lean 400 4`, interpreted and then native | 3 s and 2 s; byte-identical, 408 programs kept |
+| `make -n gen` | the host protocol's recipe runs before the truth lane's, and the truth recipe carries the flags |
+| `make check-truth` | passes in 17 s: 81 programs agree, 12 signed divergences; the review measured 67 s |
+| `make check-corpus` | passes in 63 s: 400 programs match the committed results; the review measured 112 s |
+| `make check-host-protocol` | passes; 678 s, most of it the merged tree's first build |
+| `make check-schema-codec` | passes in 6 s |
+| `make check-target` | passes in 11 s: 104 resolved, none mismatching |
+| `make check-ts-reader` | passes in 6 s: 783 tests |
+| `python3 scripts/check-language.py --show docs/GENERATED.md` | no finding on the edited lines |
+
+### Axiom output
+
+None: no Lean source changed.
+
+### Evidence
+
+*Tested*: the gates and the byte comparisons above. *Measured*: the times, each run once through
+the slot, on a machine with other seats.
+
+### Open obligations
+
+None. The lowering's LC-4 plans a compiled generator for the same reason, and this helper is the
+one that it would share.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR2-1.** The review's P2, option (a), landed: the Lean producers that run the machine load
+  the native core through one helper, `native_flags`. Option (b), `lean_exe` targets, waits on
+  LC-4's compiled generator.
+
+## CR-6: one fold of the target syntax, in the core
+
+**The one thing to know.** The fold of the target syntax is generated into the core, and the
+named erasure's call map is an algebra of it. `fold_of` refuses the four other traversals that
+step 3 names, as written, so they stay hand traversals. The census's distance on the target
+syntax is 11, not the 7 that the review projected.
+
+Base `d3b702102`; head `fe523babb`, then `d4b034b5c` for the semantics report.
+
+### What landed
+
+- **The fold moves.** The manifest's group `TsFold` writes `src/Effect4/Codegen/TsFold.lean`, not
+  `tools/Tools/Code/TsFold.lean`. The regenerated file differs from the old one only in its
+  header's path. The code plane (`Tools.Code.TypeScript`) imports it from the core.
+- **The hand fold goes.** `Effect4.Codegen.TargetFold` (205 lines) is deleted. The call map
+  (`mapCalls`) is the generated `cata_expr` at one algebra (`callAlgebra`, over `CallCarrier`),
+  in `src/Effect4/Codegen/EraseTermTypes.lean`.
+- **The call map's equations.** The eleven `mapCalls_*` lemmas stay, proved from the generated
+  fold. Each is a `rfl`, or one step through `atDepth_calls`, the list component read at one
+  depth. `targetFold_exprs_map` goes, and `targetFold_properties` is `callAlgebra_properties`.
+  The lemmas stay because 22 proofs name them, and inlining them would change those proofs'
+  normal forms and remove nothing.
+- **What does not land: step 3.** `fold_of` (`Effect4.Program.FoldOf`) refuses each traversal, at
+  the file `cr6`'s probe wrote and removed:
+  - `SourceBindings.exprUses`: its block has siblings over `List (String × Expr)` and
+    `List (Nat × List Stmt)`, which no member of the family is;
+  - `Metadata.readValue`: a case analysis on a child list's elements is no recursive call on an
+    immediate child;
+  - `Schema.reifyJson?`: its sibling `reifyJsonFields?` recurses on a field list's values, which
+    is the same refusal.
+- **Step 4, a proposal.** lean4-typescript v0.8.0 drops `scopedGen` and `scopedGenMasked`, and
+  one object former takes a key form (P-CR6-1 below).
+
+### Changed files
+
+`tools/Effect4Gen/manifest.json`, `Makefile` (`DERIVED_OUT`); `src/Effect4/Codegen/TsFold.lean`
+(moved from `tools/Tools/Code/TsFold.lean`), `src/Effect4/Codegen/EraseTermTypes.lean`,
+`src/Effect4/Codegen/TargetFold.lean` (deleted), `src/Effect4/Laws/Codegen/PrintTyped.lean`;
+`tools/Tools/Code/TypeScript.lean`; `docs/ARCHITECTURE.md`, `tools/view/README.md`.
+
+### Commands and results
+
+| Command | Result |
+| --- | --- |
+| `python3 scripts/generate.py --only derived` | passes; one new output, and no other derived file moved |
+| `lake build` of the fold, the term eraser, the erasure, the law module and the code plane | passes; the law module in 95 s |
+| `lake build` of `Test.Codegen.PrintTyped`, `Tools.Code.Module` and `Drivers.Emit` | passes |
+| `#axiom_audit` of `Effect4.Codegen.TsFold`, `Effect4.Codegen.EraseTermTypes` and `Effect4.Laws.Codegen.PrintTyped` (`cr6/AuditCore.lean`) | 2,593 declarations within `[propext, Quot.sound]` |
+| `#traversal_census TypeScript.Expr` under `Effect4` | 97 rows: 9 structural, 2 well-founded, 1 fold, 3 generated, 4 one-level |
+| `make check-gen` | failed first, on `generated/semantics.md` alone: the merged branch's report was stale. After its re-cut (`d4b034b5c`) it passes |
+| `make check-truth` | passes in 30 s |
+| `make check-ts-reader` | passes: 783 tests |
+| `make check-corpus` | passes in 63 s: 400 programs match |
+
+### Axiom output
+
+The three modules above are within `[propext, Quot.sound]`. The code plane `Tools.Code.TypeScript`
+was audited too: 181 of its declarations reach `Classical.choice`, through the equation lemmas
+of the package's `TypeScript.Render`. The axiom gate audits no `Tools` module, and this slice
+changed only that module's import.
+
+### Evidence
+
+*Proved*: the call map's equations and the erasure law, unchanged in statement. *Tested*: the
+gates above; no printed byte moved. *Measured*: the census.
+
+### Open obligations
+
+Step 3 waits on `fold_of`'s list-of-pairs siblings and its case analysis on a child list, or on
+the traversals' rewriting as algebras.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR6-1.** lean4-typescript v0.8.0: `scopedGen` and `scopedGenMasked` go, and one object
+  former takes a key form, so the target syntax's fold loses five arms.
+- **P-CR6-2.** `fold_of` reads a sibling over a list of pairs and a case analysis on a child
+  list's elements. Then `exprUses`, `stmtUses`, `readValue` and `reifyJson?` read as folds.
+
+## CR-4: the typed surface from Lean data
+
+CR-4 lands in parts, each a commit. This section grows with each part.
+
+### Part A: typed Schema code, and the codec gate over it
+
+**The one thing to know.** The codec gate now reads Schemas that Lean prints, not Schemas
+written by hand. Each generated Schema equals rc.112's own revival of Lean's document. One hand
+Schema stays, `Schema.Number`, because the bridge does not lower `number` (R-T6, CR-10).
+
+Base `d738e0727`; the part's commit is the head.
+
+**What landed.**
+
+- **The printer.** `Effect4.Codegen.SchemaCode` (`src/Effect4/Codegen/SchemaCode.lean`) writes a
+  representation as the Schema expression an Effect user writes. It is a second algebra of the
+  generated fold (`codeAlgebra`, on the carrier `Except String Expr`), as the review's P4 (a)
+  and decisions row 392 (2) ask. `ofTy` prints a type's Schema, the bridge's image of its normal
+  form, which the codec reads.
+- **The spelling.** Each node is spelled as rc.112's `toCodeDocument` spells it, with its source
+  lines cited. Each check is spelled as its constructor's `toCode` spells it, from one table
+  (`checkCode`). The declarations come from one table too (`declarations`).
+- **Three departures from rc.112, each with its cause.** A node with annotations is refused,
+  since the bridge writes none. An object's keys take the module's one key form
+  (`Record.keyForm`, decisions row 196). The `Json` declaration prints `Schema.Defect()`,
+  which encodes an `Error` defect that `Schema.Json` refuses (probe `cr4/probe/repr2.ts`).
+- **The refusals.** The printer refuses a node by its name. It refuses a reference, a
+  suspension, an enum, a unique symbol and a bigint literal. It refuses a key that is no string,
+  and a declaration or a check outside its table. On the bridge's image these are the handles,
+  `Ref`, `Fiber`, `Deferred`, a template parameter and the unlowered forms.
+- **The face.** `Api.schemaCode` (`src/Effect4/Api/Codegen.lean`) answers a type's code.
+- **The gate.** `check-schema-codec` writes one fresh module into the checker's work folder,
+  which git ignores (`harness/truth/schema-codec/.work/`). The module holds Lean's results. It
+  holds each case's generated Schema and that Schema's document. Then tsgo 7 checks it with
+  `check.ts`, so each hand value is typed against its generated Schema. `check.ts` takes every
+  Schema from the module.
+- **Two oracles.** rc.112 revives each case's Lean document with its own revivers. The revived
+  Schema's representation equals the generated Schema's. rc.112's code of that revival
+  (`toCodeDocument`), evaluated, is equal too, but at one case.
+- **A defect of rc.112 found.** That case is `recordKeys`. rc.112's code quotes the key
+  `"__proto__"`. An object literal reads a quoted `__proto__` as the prototype, so the code drops
+  the field. The gate names the case.
+- **A red control.** The hand Schema the gate held for `pair` until now, a tuple of any number and
+  a string, is not rc.112's revival of Lean's document. The gate shows that it differs.
+- **A latent TS1117 repaired.** `Codegen.Schema.json` wrote an object with a repeated key as an
+  object literal, which tsgo 7 refuses. It writes one through `Object.fromEntries` now, which
+  keeps the last value, as the literal did at run time. The three schema fixtures do not move.
+
+**The hand Schemas.** `check.ts` held 134 references to Schema constructors before, in 50 calls.
+It holds one now, `Schema.Number` in the function `generated`, for the 18 cases whose type is
+`number`. The bridge writes `number` as an unlowered declaration (decisions rows 121, 158, 160,
+161), so the printer refuses it. R-T6 lowers it, in CR-10. One more hand Schema is the red
+control's.
+
+**Changed files.**
+
+- The core: `src/Effect4/Codegen/SchemaCode.lean` (new), `src/Effect4/Codegen/Schema.lean` and
+  `src/Effect4/Api/Codegen.lean`.
+- The battery: `Test/Codegen/SchemaCode.lean` (new). `Test/All.lean` imports it in one line, at
+  the end of its codegen block, after `Test.Codegen.SchemaGenerationCoverage`.
+- The gate: `harness/truth/schema-codec/{Emit.lean,check.ts}`, the `Makefile`'s `schema-codec`
+  recipe and `.gitignore`.
+- The documents: `docs/GENERATED.md` and `docs/core/traversal-census.md`.
+
+**Commands and results.**
+
+| Command | Result |
+| --- | --- |
+| `lake build Effect4.Codegen.SchemaCode`, `Effect4.Codegen.Schema`, `Effect4.Api.Codegen`, `Test.Codegen.SchemaCode` | each passes |
+| `lake build` of the 50 direct importers of the two changed core modules | passes, 1373 jobs |
+| the probe `cr4/lean/CodeProbe.lean` | the code of the codec corpus's types; the 12 `number` cases refuse at `effect4/unlowered/number` |
+| `make check-schema-codec` | passes: 49 fresh Lean/rc.112 comparisons and 49 host round trips, as at the base; 7 negative controls; 37 generated Schemas, all 37 equal to rc.112's revival of their documents, 36 to its code of them; 18 cases on `Schema.Number` |
+| `make check-schema-ts` | passes: the three fixtures' bytes unchanged |
+| `make check-truth` | passes |
+| `make check-corpus` | passes: 400 programs match the committed results |
+| `make check-ts-reader` | passes: 783 tests |
+| `make check-target` | passes: 104 resolved, none mismatching; 742 pairs, 708 agree, 10 cut, 24 incomplete, CR-3's line |
+
+**Axiom output.** `#axiom_audit Effect4.Codegen.SchemaCode`: 34 declarations within
+`[propext, Quot.sound]`. `#axiom_audit Effect4.Codegen.Schema`: 191 of 195 within; the other four
+are the rendering declarations that `Test/Audit/AxiomGate.lean` admits by name (`jsonSource`,
+`representationSource`, `documentSource`, `multiDocumentSource`).
+
+**Lines.** 559 added and 139 removed, in 11 files.
+
+**Evidence.** *Tested*: the code's agreement with rc.112's revival, for the 37 types of the codec
+corpus, and tsgo 7's typing of the generated Schemas. *Not proved*: that the code builds the
+Schema of its input for every representation. No law states it (row 391), and Lean holds no
+model of rc.112's Schema constructors.
+
+**Open obligations.** The 18 `number` cases wait on R-T6 (CR-10).
+
+**Proposed decisions row (proposal only).**
+
+- **P-CR4-1.** Row 11 closes by row 392 (2), P4 (a). Typed Schema text comes from a second
+  algebra of the fold, and rc.112's `toCodeDocument` is a finite oracle. Row 11's option (b) would
+  make rc.112 the producer, and rc.112's code drops a `__proto__` field.

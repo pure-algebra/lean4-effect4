@@ -147,7 +147,7 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/LiveChecks.lean` | the live view's checks at every frame of the view's builds |
 | `tools/Tools/View/Specimen.lean` | the graph specimen |
 | `tools/Tools/Code/Doc.lean` | a document and its layout at a width: groups lie flat when they fit |
-| `tools/Tools/Code/TsFold.lean` | the fold of TypeScript's syntax: its algebra and uniqueness (generated, group `TsFold`) |
+| `src/Effect4/Codegen/TsFold.lean` | the fold of TypeScript's syntax: its algebra and uniqueness (generated into the core, group `TsFold`) |
 | `tools/Tools/Code/TypeScript.lean` | printed TypeScript as two algebras of its syntax: the house and the readable layout |
 | `tools/Tools/Code/Module.lean` | a generated module: its exact imports, its header, its checks; the code plane |
 | `tools/Drivers/Emit.lean` | the driver: the generated folder |

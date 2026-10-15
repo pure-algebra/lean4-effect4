@@ -208,11 +208,11 @@ def ambient : List TypeScript.Import := [.named ["Effect", "Data"] "effect"]
     | .ok reading => reading.program == failDirect && reading.classes == [("NotFound", notFoundFields)]
     | .error _ => false
   | .error _ => false
--- red control: the class declaration removed
+-- red control: the class declaration removed, so its name is unbound
 #guard match Api.emitModule "main" failDirect with
   | .ok e => match Api.admitModule "main" { e.module with decls := e.module.decls.drop 1 } [] origins
       ambient with
-    | .error .unbound => true
+    | .error (.unbound name _) => name == "NotFound"
     | _ => false
   | .error _ => false
 -- red control: a class the program does not name, declared before the block
@@ -226,7 +226,7 @@ def ambient : List TypeScript.Import := [.named ["Effect", "Data"] "effect"]
 -- `Data` is a permitted import origin; without it the heritage is unbound
 #guard match Api.emitModule "main" failDirect with
   | .ok e => match Api.admitModule "main" e.module [] origins [.named ["Effect"] "effect"] with
-    | .error .unbound => true
+    | .error (.unbound name _) => name == "Data"
     | _ => false
   | .error _ => false
 

@@ -300,6 +300,14 @@ def moduleUses (module : TypeScript.Module) : Analysis :=
 
 def useResolved (use : Use) : Bool := (resolve use.env use.name use.space).isSome
 
+/-- The names a use's scope binds, nearest first, less the builtins: the module's declarations,
+its imports and the binders around the use. What a refusal of an unbound name shows. -/
+def scopeNames (use : Use) : List String :=
+  use.env.filterMap fun b =>
+    match b.origin with
+    | .builtin => none
+    | _ => some b.name
+
 def Analysis.resolved (analysis : Analysis) : Bool :=
   analysis.valid && analysis.uses.all useResolved
 

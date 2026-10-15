@@ -199,10 +199,11 @@ def stringEffect : TypeScript.TypeRef :=
     | _ => false
   | .error _ => false
 
--- 6. The same block with no ambient prelude: `succ` and `Effect` are unbound.
+-- 6. The same block with no ambient prelude: `succ` and `Effect` are unbound. The refusal names
+-- the first, and the names its scope binds: the module's own declaration.
 #guard match emitModule "main" pBind with
   | .ok e => match admitModule "main" e.module [] hostOrigins [] with
-    | .error .unbound => true
+    | .error (.unbound name scope) => name == "Effect" && scope == ["main"]
     | _ => false
   | .error _ => false
 

@@ -170,27 +170,27 @@ open Effect4.Program
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
   {spell : String → List RowArg → Option Op}
 
-/-- The target fold's list component is the list map of its expression component.
-Its consumer is the template erasure relation of the proposed typed-print erasure claim. -/
-theorem targetFold_exprs_map {E S O : Type} (alg : TargetFold.Algebra E S O)
-    (xs : List Expr) : TargetFold.exprs alg xs = xs.map (TargetFold.expr alg) := by
+/-- The call map's list component, read at one depth, is the list map of the call map: the
+generated fold's list equations, one child at a time. A step of the array and call equations. -/
+theorem atDepth_calls (call : Nat → Expr → Expr) (xs : List Expr) (n : Nat) :
+    atDepth n (cata_pos_list_expr (callAlgebra call) xs) = xs.map fun x => mapCalls call x n := by
   induction xs with
   | nil => rfl
-  | cons x xs ih => simp only [TargetFold.exprs, List.map_cons, ih]
+  | cons x xs ih => exact congrArg (List.cons _) ih
 
 /-- Arrays reconstruct after their children fold. A template erasure relation step. -/
 theorem mapCalls_arr (call : Nat → Expr → Expr) (xs : List Expr) (n : Nat) :
     mapCalls call (.arr xs) n = .arr (xs.map fun x => mapCalls call x n) := by
-  simp only [mapCalls, TargetFold.expr, callAlgebra, atDepth, targetFold_exprs_map, List.map_map]
-  rfl
+  show Expr.arr (atDepth n (cata_pos_list_expr (callAlgebra call) xs)) = _
+  rw [atDepth_calls]
 
 /-- Call reconstruction exposes only the transformed children and the call field.
 Its consumer is the pure-leaf and template relation for typed-print erasure. -/
 theorem mapCalls_call (call : Nat → Expr → Expr) (head : Expr) (xs : List Expr) (n : Nat) :
     mapCalls call (.call head xs) n = call n (.call (mapCalls call head n)
       (xs.map fun x => mapCalls call x n)) := by
-  simp only [mapCalls, TargetFold.expr, callAlgebra, atDepth, targetFold_exprs_map, List.map_map]
-  rfl
+  show call n (.call (mapCalls call head n) (atDepth n (cata_pos_list_expr (callAlgebra call) xs))) = _
+  rw [atDepth_calls]
 
 /-- Names reconstruct directly. A pure-leaf and template relation step. -/
 theorem mapCalls_ident (call : Nat → Expr → Expr) (name : String) (n : Nat) :
@@ -209,9 +209,9 @@ theorem mapCalls_lambda (call : Nat → Expr → Expr) (ps : List Parameter) (bo
 
 /-- Object property reconstruction retains names while folding values.
 Its consumers are class and record term erasure. -/
-theorem targetFold_properties (call : Nat → Expr → Expr) (names : List String)
+theorem callAlgebra_properties (call : Nat → Expr → Expr) (names : List String)
     (values : List Expr) (n : Nat) :
-    atDepth n (TargetFold.entries (callAlgebra call) (Record.properties names values)) =
+    atDepth n (cata_pos_list_objectentry (callAlgebra call) (Record.properties names values)) =
       Record.properties names (values.map fun x => mapCalls call x n) := by
   induction names generalizing values with
   | nil => rfl
@@ -220,7 +220,7 @@ theorem targetFold_properties (call : Nat → Expr → Expr) (names : List Strin
     | nil => rfl
     | cons value values =>
       change .property name (mapCalls call value n) ::
-          atDepth n (TargetFold.entries (callAlgebra call) (Record.properties names values)) =
+          atDepth n (cata_pos_list_objectentry (callAlgebra call) (Record.properties names values)) =
         .property name (mapCalls call value n) ::
           Record.properties names (values.map fun x => mapCalls call x n)
       rw [ih]
@@ -232,8 +232,8 @@ theorem mapCalls_objectProperties (call : Nat → Expr → Expr) (form : KeyForm
     mapCalls call (.objectWith form (Record.properties names values)) n =
       .objectWith form (Record.properties names (values.map fun x => mapCalls call x n)) := by
   change Expr.objectWith form (atDepth n
-    (TargetFold.entries (callAlgebra call) (Record.properties names values))) = _
-  rw [targetFold_properties]
+    (cata_pos_list_objectentry (callAlgebra call) (Record.properties names values))) = _
+  rw [callAlgebra_properties]
 
 /-- A class construction folds its supplied values without changing the declaration data.
 Its consumer is the record arm of pure-term erasure. -/
@@ -4585,9 +4585,16 @@ open Effect4.Program TypeScript
 
 variable {Op : Type}
 
+/-- A slot's environment fitted to the template's depth has the depth's length. Placement:
+exact-codecs R8, a step of the claim `typed-print-erasure`; its consumers are the three leaf laws
+below, which read each typed term at the depth it is printed at. -/
+theorem atDepth_length (env : TyEnv) (depth : Nat) : (atDepth env depth).length = depth := by
+  simp only [atDepth, List.length_take, List.length_append, List.length_replicate]
+  omega
+
 -- Placement: exact-codecs R8, step of typed-print erasure.
 -- Consumer: contextual template capture agreement for a successful typed term slot.
--- The existing success guard supplies the exact template depth; no new typing premise.
+-- The slot's environment is fitted to the template depth (`atDepth`); no new typing premise.
 theorem printArg_term_erases (sig : Signature Op) (ctx : Context Op)
     (index depth : Nat) (t : Term) {value : Expr}
     (printed : printArg sig ctx index depth (.term t) = .ok (some (.expr value))) :
@@ -4598,13 +4605,11 @@ theorem printArg_term_erases (sig : Signature Op) (ctx : Context Op)
     cases printed
   | some env =>
     simp only [printArg, henv, need, bind, Except.bind] at printed
-    split at printed
-    · rename_i depthMatches
-      obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
-      simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
-      subst value
-      simpa only [depthMatches] using EraseTermTypes.eraseTerm_printTerm sig t env false hx
-    · cases printed
+    obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
+    simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
+    subst value
+    simpa only [atDepth_length] using
+      EraseTermTypes.eraseTerm_printTerm sig t (atDepth env depth) false hx
 
 -- Same capture law at the optional term sort; absence remains the old template behavior.
 theorem printArg_optTerm_erases (sig : Signature Op) (ctx : Context Op)
@@ -4617,27 +4622,23 @@ theorem printArg_optTerm_erases (sig : Signature Op) (ctx : Context Op)
     cases printed
   | some env =>
     simp only [printArg, henv, need, bind, Except.bind] at printed
-    split at printed
-    · rename_i depthMatches
-      obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
-      simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
-      subst value
-      simpa only [depthMatches] using EraseTermTypes.eraseTerm_printTerm sig t env false hx
-    · cases printed
+    obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
+    simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
+    subst value
+    simpa only [atDepth_length] using
+      EraseTermTypes.eraseTerm_printTerm sig t (atDepth env depth) false hx
 
--- Cause captures use the checked cause fold at the same explicitly guarded depth.
+-- Cause captures use the checked cause fold at the node's environment fitted to the depth.
 theorem printArg_cause_erases (sig : Signature Op) (ctx : Context Op)
     (index depth : Nat) (c : CauseTerm) {value : Expr}
     (printed : printArg sig ctx index depth (.cause c) = .ok (some (.expr value))) :
     EraseTermTypes.eraseCause depth value = printCause depth c := by
   simp only [printArg] at printed
-  split at printed
-  · rename_i depthMatches
-    obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
-    simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
-    subst value
-    simpa only [depthMatches] using EraseTermTypes.eraseCause_typedCause sig ctx.env c hx
-  · cases printed
+  obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
+  simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
+  subst value
+  simpa only [atDepth_length] using
+    EraseTermTypes.eraseCause_typedCause sig (atDepth ctx.env depth) c hx
 
 end Effect4.Codegen.PrintEliminators
 
@@ -4662,11 +4663,9 @@ theorem site_term_capture_shape (sig : Signature Op) (ctx : PrintEliminators.Con
     cases printed
   | some env =>
     simp only [PrintEliminators.printArg, envAt, PrintEliminators.need, bind, Except.bind] at printed
-    split at printed
-    · obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
-      cases assembled
-      exact ⟨value, rfl⟩
-    · cases printed
+    obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
+    cases assembled
+    exact ⟨value, rfl⟩
 
 theorem site_optTerm_capture_shape (sig : Signature Op) (ctx : PrintEliminators.Context Op)
     (index depth : Nat) (source : Term) {capture : Arg}
@@ -4678,22 +4677,18 @@ theorem site_optTerm_capture_shape (sig : Signature Op) (ctx : PrintEliminators.
     cases printed
   | some env =>
     simp only [PrintEliminators.printArg, envAt, PrintEliminators.need, bind, Except.bind] at printed
-    split at printed
-    · obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
-      cases assembled
-      exact ⟨value, rfl⟩
-    · cases printed
+    obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
+    cases assembled
+    exact ⟨value, rfl⟩
 
 theorem site_cause_capture_shape (sig : Signature Op) (ctx : PrintEliminators.Context Op)
     (index depth : Nat) (source : CauseTerm) {capture : Arg}
     (printed : PrintEliminators.printArg sig ctx index depth (.cause source) = .ok (some capture)) :
     ∃ value, capture = .expr value := by
   simp only [PrintEliminators.printArg] at printed
-  split at printed
-  · obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
-    cases assembled
-    exact ⟨value, rfl⟩
-  · cases printed
+  obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
+  cases assembled
+  exact ⟨value, rfl⟩
 
 theorem siteScalar_printArg (sig : Signature Op) (ctx : PrintEliminators.Context Op)
     (row : Templates.Row) (sorts : List ArgSort) (n : Nat) (σ : Subst)

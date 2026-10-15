@@ -41,6 +41,7 @@ import Test.Codegen.RecordTag
 import Test.Codegen.Tuple
 import Test.Codegen.SchemaGenerationContract
 import Test.Codegen.SchemaGenerationCoverage
+import Test.Codegen.SchemaCode
 import Test.Machine.Semantics.CauseExitContract
 import Test.Counterexamples.Machine.Semantics.CauseExit
 import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise

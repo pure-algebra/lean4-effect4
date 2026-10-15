@@ -250,8 +250,8 @@ abbrev printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op)
 /-- The definitions of a block, in order, each against its body, from position `k`. Each takes
 into its suspension the hoisted layers of `rest` whose paths stand in its body
 (`Path.bodyIndex`), and passes the others on: the answer is the constants and the layers no body
-took. A block whose declarations and bodies differ in number is refused, as the checker refuses
-it. -/
+took. A block whose declarations and bodies differ in number is refused at the position where
+they part (`PrintRefusal.bodies`), as the checker refuses it. -/
 def printDefsWith (pp : PiecePrint Op) (sig : Signature Op) : Nat → List DefDecl → Effs Op →
     List (List Nat × LayerTerm Op) →
     Except PrintRefusal (List TypeScript.ConstDecl × List (List Nat × LayerTerm Op))
@@ -261,7 +261,7 @@ def printDefsWith (pp : PiecePrint Op) (sig : Signature Op) : Nat → List DefDe
     printDefsWith pp sig (k + 1) ds bodies
       (rest.filter fun e => !decide (Path.bodyIndex e.1 = some k)) >>= fun out =>
     .ok (c :: out.1, out.2)
-  | _, _, _, _ => .error (.internalAction "defs")
+  | k, _, _, _ => .error (.bodies k)
 
 /-- The plain definitions of a block: each body by the table's fold. -/
 abbrev printDefs (sig : Signature Op) (k : Nat) (defs : List DefDecl) (bodies : Effs Op)
@@ -356,25 +356,27 @@ def serviceNames (services : List Service) : List String :=
 request other than `unit`, or takes a program, which the layer has none to pass; it has no
 method, two with one name, or one whose name is no plain key (`plainMethodName`); its name or its
 layer's name is a definition's or carries a layer path; or a method's request is not the state and
-its arguments. A method that takes programs prints, and its closure passes them on (slice HO-5). -/
-def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option String :=
+its arguments. A method that takes programs prints, and its closure passes them on (slice HO-5).
+The refusal names the service (`PrintRefusal.service`), or the service and the method at fault
+(`PrintRefusal.serviceMethod`). -/
+def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option PrintRefusal :=
   match defs[sv.init]? with
-  | none => some sv.name
+  | none => some (.service sv.name)
   | some init =>
     -- the layer runs the initial program with no caller, so none passes it a program
-    if init.request ≠ .unit || !init.params.isEmpty then some sv.name
+    if init.request ≠ .unit || !init.params.isEmpty then some (.service sv.name)
     else if !(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty ||
-        sv.methods.any (fun x => !plainMethodName x.1) then some sv.name
+        sv.methods.any (fun x => !plainMethodName x.1) then some (.service sv.name)
     else if defs.any (·.name == sv.name) || defs.any (·.name == sv.name ++ "Layer") ||
         (LayerTerm.readRefName sv.name).isSome ||
         (LayerTerm.readRefName (sv.name ++ "Layer")).isSome then
-      some sv.name
+      some (.service sv.name)
     else sv.methods.findSome? fun (m, j, n) =>
       match defs[j]? with
       | some d =>
         if (methodArgs init.answer d n).isSome then none
-        else some (sv.name ++ "." ++ m)
-      | none => some (sv.name ++ "." ++ m)
+        else some (.serviceMethod sv.name m)
+      | none => some (.serviceMethod sv.name m)
 
 /-- Whether a definition is a method of a service that the block does not declare. -/
 def strayMethod (names : List String) (d : DefDecl) : Bool :=
@@ -382,22 +384,43 @@ def strayMethod (names : List String) (d : DefDecl) : Bool :=
   | .serviceMethod s _ _ => !names.contains s
   | _ => false
 
+/-- The first name of a list that a later one repeats, if one does. -/
+def repeatOf : List String → Option String
+  | [] => none
+  | n :: rest => if rest.contains n then some n else repeatOf rest
+
+/-- The refusal of the first definition that is a method of a service the block does not
+declare (`strayMethod`), by the definition and the service it names. -/
+def strayOf (names : List String) : List DefDecl → Option PrintRefusal
+  | [] => none
+  | d :: ds =>
+    match d.role with
+    | .serviceMethod s _ _ => if names.contains s then strayOf names ds else some (.strayMethod d.name s)
+    | _ => strayOf names ds
+
 /-- Why a block's services do not print, if they do not: definitions with one name in a block
 with a service, two of the names the services declare that are one (a key and another service's
 layer among them, Codex's CO6B-NAMES), a method of no service, or a fault of one service
-(`serviceFaultOf`). -/
-def serviceFault (defs : List DefDecl) : Option String :=
-  if !(servicesOf defs).isEmpty && !decide ((defs.map (·.name)).Nodup) then some "service:names"
-  else if !decide ((serviceNames (servicesOf defs)).Nodup) then some "service:twice"
-  else if defs.any (strayMethod ((servicesOf defs).map (·.name))) then some "service:method"
-  else (servicesOf defs).findSome? (serviceFaultOf defs)
+(`serviceFaultOf`). Each refusal names the name, the definition, the service or the method at
+fault. -/
+def serviceFault (defs : List DefDecl) : Option PrintRefusal :=
+  match (if (servicesOf defs).isEmpty then none else repeatOf (defs.map (·.name))) with
+  | some n => some (.serviceName n)
+  | none =>
+  match repeatOf (serviceNames (servicesOf defs)) with
+  | some n => some (.serviceName n)
+  | none =>
+  match strayOf ((servicesOf defs).map (·.name)) defs with
+  | some why => some why
+  | none => (servicesOf defs).findSome? (serviceFaultOf defs)
 
 /-- A method's type in the service's shape: `(a1: T1, …, p: (a0: B) => Effect.Effect<…>, …) =>
 Effect.Effect<A, E, R>`. The definition's program parameters follow the arguments, each named by
-its declaration and typed by `paramType` (slice HO-5). -/
-def methodType (sig : Signature Op) (state : Ty) (d : DefDecl) (arity : Nat) :
-    Except PrintRefusal TypeScript.TypeRef := do
-  let some tys := methodArgs state d arity | .error (.internalAction "service")
+its declaration and typed by `paramType` (slice HO-5). Refused by the service and the method,
+`service.method`, where its request is not the state and its arguments. -/
+def methodType (sig : Signature Op) (service method : String) (state : Ty) (d : DefDecl)
+    (arity : Nat) : Except PrintRefusal TypeScript.TypeRef := do
+  let some tys := methodArgs state d arity | .error (.serviceMethod service method)
   let params ← (argNames arity).zip tys |>.mapM fun (a, t) => do
     let r ← typeRefOf t sig.keyNames
     .ok (a, r)
@@ -405,15 +428,17 @@ def methodType (sig : Signature Op) (state : Ty) (d : DefDecl) (arity : Nat) :
   let result ← declarationType d.effTy sig.typeEnv
   match result with
   | some r => .ok (.function (params ++ (d.params.map (·.name)).zip fns) r)
-  | none => .error (.internalAction "service")
+  | none => .error (.serviceMethod service method)
 
 /-- A method's closure in its service's layer: `(a1: T1, …, p: …, …) => d(pair(a0, …), p, …)`.
 The closure takes the definition's programs after its arguments and passes them on unchanged
-(slice HO-5): a method that takes none is `(a1: T1, …) => d(pair(a0, …))`. -/
-def methodClosure (sig : Signature Op) (init : DefDecl) (defs : List DefDecl)
+(slice HO-5): a method that takes none is `(a1: T1, …) => d(pair(a0, …))`. Refused by the
+service and the method where its definition is missing or its request is not the state and its
+arguments. -/
+def methodClosure (sig : Signature Op) (service : String) (init : DefDecl) (defs : List DefDecl)
     (x : String × Nat × Nat) : Except PrintRefusal (String × TypeScript.Expr) := do
-  let some d := defs[x.2.1]? | .error (.internalAction "service")
-  let some tys := methodArgs init.answer d x.2.2 | .error (.internalAction "service")
+  let some d := defs[x.2.1]? | .error (.serviceMethod service x.1)
+  let some tys := methodArgs init.answer d x.2.2 | .error (.serviceMethod service x.1)
   let params ← ((argNames x.2.2).zip tys).mapM fun p => do
     let r ← typeRefOf p.2 sig.keyNames
     .ok ({ name := p.1, type := some r } : TypeScript.Parameter)
@@ -423,11 +448,12 @@ def methodClosure (sig : Signature Op) (init : DefDecl) (defs : List DefDecl)
       TypeScript.Parameter))
     (.call (.ident d.name) (methodRequest (argNames x.2.2) :: d.params.map fun q => .ident q.name)))
 
-/-- A method's field in its service's shape. -/
-def methodField (sig : Signature Op) (init : DefDecl) (defs : List DefDecl)
+/-- A method's field in its service's shape, refused by the service and the method where its
+definition is missing. -/
+def methodField (sig : Signature Op) (service : String) (init : DefDecl) (defs : List DefDecl)
     (x : String × Nat × Nat) : Except PrintRefusal TypeScript.TypeRef.Field := do
-  let some d := defs[x.2.1]? | .error (.internalAction "service")
-  let t ← methodType sig init.answer d x.2.2
+  let some d := defs[x.2.1]? | .error (.serviceMethod service x.1)
+  let t ← methodType sig service x.1 init.answer d x.2.2
   .ok { name := x.1, readonly := true, type := t }
 
 /-- **A service's key**: `const name = Context.Service<"identity", { fields }>("identity")`, the
@@ -443,12 +469,13 @@ def serviceKeyDecl (name identity : String) (fields : List TypeScript.TypeRef.Fi
     value := .call (.generic (.ident "Context.Service") [.literal identity, .object fields])
       [.str identity] }
 
-/-- **A service's key and layer.** -/
+/-- **A service's key and layer**, refused by the service's name where its initial program is
+missing. -/
 def printService (sig : Signature Op) (defs : List DefDecl) (sv : Service) :
     Except PrintRefusal (List TypeScript.ConstDecl) := do
-  let some init := defs[sv.init]? | .error (.internalAction "service")
-  let fields ← sv.methods.mapM (methodField sig init defs)
-  let closures ← sv.methods.mapM (methodClosure sig init defs)
+  let some init := defs[sv.init]? | .error (.service sv.name)
+  let fields ← sv.methods.mapM (methodField sig sv.name init defs)
+  let closures ← sv.methods.mapM (methodClosure sig sv.name init defs)
   .ok [serviceKeyDecl sv.name sv.name fields,
        { doc := [], name := sv.name ++ "Layer",
          value := .call (.ident "Layer.effect") [.ident sv.name,
@@ -456,11 +483,12 @@ def printService (sig : Signature Op) (defs : List DefDecl) (sv : Service) :
              .arrowBlock [{ name := Var.name 0 }] [.ret (.object closures)]]] }]
 
 /-- **A block's services**, each its key and its layer, in the order of their initial
-programs; refused by name where `serviceFault` names a fault. -/
+programs; refused where `serviceFault` names a fault, by the name, the definition, the service or
+the method at fault. -/
 def printServices (sig : Signature Op) (defs : List DefDecl) :
     Except PrintRefusal (List TypeScript.ConstDecl) :=
   match serviceFault defs with
-  | some why => .error (.internalAction why)
+  | some why => .error why
   | none => do
     let groups ← (servicesOf defs).mapM (printService sig defs)
     .ok groups.flatten
@@ -518,7 +546,7 @@ def printModuleWith (pp : PiecePrint Op) (sig : Signature Op) (name : String) (t
       let declaration ← printDecl name ty m sig.typeEnv
       .ok (ds ++ [declaration])
     -- an empty block would print as its main program alone, and read back as it
-    | some ([], _, _, _) => .error (.internalAction "defs")
+    | some ([], _, _, _) => .error .emptyBlock
     | some (d :: ds, bodies, body, layers) =>
       match (e.refSites []).find? fun x => !e.inScope x.1 x.2 with
       | some x => .error (.layerRef x.2)

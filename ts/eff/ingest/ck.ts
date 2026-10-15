@@ -676,8 +676,9 @@ class CompilerReader {
       }
       // Each type argument is read by the checked type reader: an answer is kept only when the
       // type printer prints it back as the spelling read. One with no reading declines the call,
-      // under the detail the fragment reader gives the other engine (`shape`).
-      const tys = own === 0 ? [] : types.map(text => readTypeText(text) ?? bad("shape"))
+      // under the detail the fragment reader gives the other engine (`annotation`, Lean's
+      // `ReadRefusal.annotation "<spelling> type argument"`).
+      const tys = own === 0 ? [] : types.map(text => readTypeText(text) ?? bad("annotation"))
       const typed = own === 0 ? r.op : withTypeArgs(r.op, tys) as RowOp
       const op = isTermRow(typed) ? withTerm(typed, this.rowFunction(arg(count + r.row.trailing.length), env)) : typed
       return { _tag: "perform", op, request }

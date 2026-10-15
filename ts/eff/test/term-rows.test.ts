@@ -70,7 +70,7 @@ describe("an operation's binder term, read from its function", () => {
   test("a term out of scope, and a stated accumulator type inside the term, are refused", () => {
     expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, (a1) => a2))")).toEqual({ _tag: "unknownIdent", name: "a2" })
     expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.modify(a0, (a1) => fold<number>(nil(), a1, (a2, a3) => a2)))")).toEqual(
-      { _tag: "shape", what: "fold accumulator annotation" })
+      { _tag: "annotation", site: "fold accumulator" })
   })
 })
 
@@ -109,10 +109,10 @@ describe("an operation's type arguments, read from the call's head", () => {
     expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.get<number>(a0))")).toEqual({ _tag: "arity", head: "Ref.get" })
   })
   test("a spelling with no reading is refused by name", () => {
-    // Lean names it `annotation "Deferred.make type argument"`: a handle, `unknown` and a class's
-    // name have no reading (`Classes.ReadableTy`).
+    // As Lean names it, `annotation "Deferred.make type argument"`: a handle, `unknown` and a
+    // class's name have no reading (`Classes.ReadableTy`).
     for (const type of ["Ref.Ref<number>", "Deferred.Deferred<void, never>", "unknown", "Short"]) {
-      expect(read(`Deferred.make<${type}, never>()`)).toEqual({ _tag: "shape", what: "Deferred.make type argument annotation" })
+      expect(read(`Deferred.make<${type}, never>()`)).toEqual({ _tag: "annotation", site: "Deferred.make type argument" })
     }
   })
   test("the checked type reader keeps only what the type printer prints back", () => {
@@ -150,9 +150,9 @@ describe("a loop's stated cursor type, read by the checked type reader", () => {
     expect(read(loopText(""))).toEqual(loopAt(null))
   })
   test("a stated type with no reading is refused where the declaration stands", () => {
-    // Lean answers `annotation "local const"`; here the declaration never reaches the fragment.
+    // As Lean answers it, `annotation "local const"`.
     for (const type of ["Ref.Ref<number>", "unknown", "Short", "[number, number]"]) {
-      expect(read(loopText(`: ${type}`))).toEqual({ _tag: "node", type: "VariableDeclaration", where: "declarator" })
+      expect(read(loopText(`: ${type}`))).toEqual({ _tag: "annotation", site: "local const" })
     }
   })
   test("a yielded constant states no type", () => {

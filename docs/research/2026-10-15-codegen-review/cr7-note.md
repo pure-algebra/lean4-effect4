@@ -101,3 +101,103 @@ flowchart LR
   estimate from the module's parts.
 - It proves nothing new and changes no statement. The three claims keep their names and their
   pointers.
+
+## 7. Correction, after the coordinator's ruling of option (a)
+
+§3 placed the refusal at the `iterate`'s body. That was wrong, and the probe that placed it was
+wrong. It paired a node's children with its argument positions: an `iterate`'s child `0` is its
+body, its argument `5`. Paired by the argument that each child is, every node's checked
+environment has the length of its print depth (`cr7/EagerDepths.lean`, the seat's probe).
+
+The refusing slot is a `catchIf`'s test, at the address `[1, 1, 1, 0, 0, 1]`, inside the loop's
+body:
+
+- the row that prints it is `Effect.catch`. Its classifier fixes the test to the literal `true`,
+  and its skeleton has no hole for the test (`Templates.table`);
+- the skeleton's level at a hole it does not have is `0` (`Template.levelAt`), so the template
+  depth of the test is the node's own;
+- the checker types the test under the handler's binder (`slotEnv`), one binder deeper;
+- the site printer refused where the two lengths differ (`typed:term slot depth`).
+
+Option (a) repairs it as ruled, in the general form. The site printer fits a slot's checked
+environment to the template's depth (`PrintEliminators.atDepth`). It cuts the environment where
+the checker's is longer, and pads it with `unknown` where it is shorter. At every slot that a
+lane's program prints, the two agree, so nothing changes there. At a classifier the template prints
+nothing. So the typed print refuses no slot for its depth, and the erasure reads each term at its
+print depth (`atDepth_length`).
+
+§2's measure of the deletion changes too. A reach probe starts from three theorems: the site
+erasure, the typed reader's exactness and the focus law (`cr7/Reach.lean`). It finds 68 of the
+module's authored declarations unreached, about 2,050 lines. The site erasure reuses most of the module, so the
+row-only erasure's own part is about 2,050 lines, not 3,100.
+
+## 8. Part 2 stops: the main piece of a program with layer references has no checked context
+
+Part 2 carried out §5's second and third steps in the worktree. It does not land: a truth-lane
+program and two batteries lose their module. The work is kept as a patch that applies to the
+part-1 head `1807268cb` (`cr7-part2/part2.patch`, with `cr7-part2/TypedPrintRefuses.lean`).
+
+### 8.1 What the patch holds
+
+- **The deletion.** The row-only printer (`printTypedAt`, `typedAlg`, the print of
+  `printPerformAt`), its erasure and the fallback of `shippedPieces` go. `printTyped` is the site
+  printer alone.
+- **The connector at the site printer.** `printTyped_eq_print` reads a successful typed print. At
+  a program with `NoJoin`, a successful typed print is its print (`plain_upTo`, by induction on
+  the node's size). The proof is about 1,390 lines: the term leaves, the node decoration, the row
+  call, the arguments and the node steps.
+- **Why the statement changes.** The typed print can refuse where the print succeeds, at a site
+  that the detector reads as no join. An `awaitFiber` whose receiver has no fiber type is one;
+  an address with no checked context is another (`E4-PRINT-CE-005` in the patch).
+- **The emission's theorem.** `emitModule_complete` takes the typed print's success at the main
+  piece (`typedMain`). A site whose type has no printed form refuses it (`E4-PRINT-CE-004`).
+- **A second repair of the site printer.** A spine reads no context
+  (`PrintEliminators.missing`). The end of an invocation's spine has no checked environment past
+  its last slot (`Node.childEnv`), and the site printer refused every invocation. The site
+  erasure's focus admits a spine with no item (`NilSpine`).
+- **The battery and the documents.** `Test/Codegen/PrintTyped.lean` reads the site printer at a
+  hand annotation over the program's own address table. The register rows, the claim's title,
+  `docs/ARCHITECTURE.md` and `docs/core/semantics.md` follow.
+- **Lines.** The patch adds 2,026 lines and removes 2,074: the connector's proof takes back what
+  the deletion removes. The cut that §2 measured comes only with the fusion.
+
+### 8.2 What fails
+
+The patch builds the law module in 73 s, and its importers. Of the 32 batteries that emit a
+module, 30 pass. Two fail, and so does the truth lane's harness, for one cause:
+
+| Where | Program | Check |
+| --- | --- | --- |
+| `harness/truth/Truth.lean` | `pDiamond` | its module prints two declarations, and reads back |
+| `Test/Codegen/ReadContract.lean` | `nestedSharing` | its module reads back |
+| `Test/Api/ApiContract.lean` | `sharedLayers` | its emitted module is admitted |
+
+- Each program shares a layer by reference (`LayerTerm.ref`). The module's main piece keeps the
+  references (`Eff.hoistAll`).
+- The checker refuses a layer reference (`Checker.checkLayer`, `layerReference`). A program is
+  typed only after its references are expanded (`typeOfProgram`, `expandRefs`).
+- So in the main piece's address table, a step that reads a referenced layer's type has no
+  environment. A bind's continuation after it has none either (`Node.childEnv`).
+- The site printer needs a context at each such node and refuses (`typed:missing context`). The
+  row-only printer needed none, and printed the piece. CR-1's fallback did too.
+
+### 8.3 Options
+
+| Option | What changes | Cost |
+| --- | --- | --- |
+| (A) the checker types a layer reference by the type of its target, from a table that the expanded program supplies | `Checker.checkLayer`'s reference arm, the signature, and their laws: Program typing, outside CR-7's brief | a checker slice; then the patch lands as it stands |
+| (B) the typed print prints a node with no checked context as the table's fold prints it | `PrintEliminators.missing` for every sort; the erasure law then owes that the named erasure fixes the print on the readable fragment | the row-only erasure gave that at the empty annotation; it returns as the plain instance of the fusion, about 800 to 1,000 lines |
+| (C) keep the row-only printer and the fallback | nothing: CR-7 ends at part 1 | none |
+
+Recommend (C) now, and (B) inside the fusion slice. The fused erasure law over one leaf printer
+has two instances, the typed sites and the plain fold. The plain instance is the law that the
+deletion needs. (A) is the end state for the typed print's coverage. With it, a join inside a
+program that shares a layer is printed with its type arguments. Today that program's piece prints
+by the row-only printer, with none.
+
+### 8.4 What this section does not establish
+
+- The patch's proofs built under the trust rules, but no `#axiom_audit` ran over them.
+- No lane ran on the patch. The truth lane's harness stopped at its own checks of `pDiamond`,
+  before it wrote a manifest. The other lanes' results are unknown.
+- The 800 to 1,000 lines of option (B) are an estimate from the deleted row-only erasure.

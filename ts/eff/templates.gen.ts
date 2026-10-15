@@ -72,3 +72,15 @@ export const argNamesOf = (fam: Fam, ctor: string): ReadonlyArray<string> | unde
   (templates.argNames as Record<string, Record<string, ReadonlyArray<string>>>)[fam]?.[ctor]
 export const programHeads: ReadonlyArray<string> = templates.programHeads
 export const genHead: string = templates.genHead
+/** Why the reader declined a tree: `Effect4.Program.ReadRefusal`, constructor for constructor,
+ * read off the inductive (`tools/Drivers/TsGen.lean`). `String` is `string`; `Nat` and `Int` are
+ * `number`. `ts/eff/read.ts` adds the refusals of the layer under it. */
+export type ReadRefusal =
+  | { readonly _tag: "unknownHead"; readonly name: string }
+  | { readonly _tag: "unknownIdent"; readonly name: string }
+  | { readonly _tag: "arity"; readonly head: string }
+  | { readonly _tag: "binder"; readonly expected: string }
+  | { readonly _tag: "shape"; readonly what: string }
+  | { readonly _tag: "negative"; readonly value: number }
+  | { readonly _tag: "unsupportedStmt" }
+  | { readonly _tag: "annotation"; readonly site: string }

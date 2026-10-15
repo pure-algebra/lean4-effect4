@@ -43,7 +43,7 @@ describe("the list fold's source syntax", () => {
   })
   test("a stated accumulator type is printed and not read", () => {
     const parsed = readTypeScript("Effect.succeed(fold<number>(cons(1, nil()), 0, (a0, a1) => add(a0, a1)))")
-    expect(Result.isFailure(parsed) && parsed.failure).toEqual({ _tag: "shape", what: "fold accumulator annotation" })
+    expect(Result.isFailure(parsed) && parsed.failure).toEqual({ _tag: "annotation", site: "fold accumulator" })
     expect(Result.isFailure(readTypeScript(
       "Effect.succeed(fold<ReadonlyArray<readonly [number, number]>>(nil(), nil(), (a0, a1) => a0))"))).toBe(true)
   })

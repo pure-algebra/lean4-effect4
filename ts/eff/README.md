@@ -28,8 +28,8 @@ node's JSON.
 | `readEff(0, ·)` | fragment → Eff, `src/Effect4/Codegen/Read.lean` clause for clause, one reader per head | `read.ts` § 3 |
 | `decodeEff` | the node checked against the schema | `eff.gen.ts` |
 
-A refusal is data (`Refusal`): Lean's seven `ReadRefusal` cases plus three for the layer
-below them (`node`, `program`, `parse`).
+A refusal is data (`Refusal`): Lean's `ReadRefusal`, generated from the inductive into
+`templates.gen.ts`, plus three for the layer below it (`node`, `program`, `parse`).
 
 The reader includes the printed service and provision operations and all eight Layer
 forms. Layer effect bodies start with an empty variable environment. Service keys retain

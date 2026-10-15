@@ -95,3 +95,18 @@ def header_imports(text: str) -> list[str]:
 def imports_of(path: Path) -> list[str]:
     """The modules the Lean source at `path` imports."""
     return header_imports(Path(path).read_text(encoding='utf-8', errors='replace'))
+
+
+# Where a workspace module's source stands: the library roots `src` and `tools`, then the
+# repository itself (`Test`, `harness`).
+SOURCE_DIRS = ('src', 'tools', '.')
+
+
+def workspace_source(root: Path, module: str) -> Path | None:
+    """The workspace file of `module` under `root`, or None for a module of the toolchain or a
+    package."""
+    relative = Path(*module.split('.')).with_suffix('.lean')
+    for base in SOURCE_DIRS:
+        if (root / base / relative).is_file():
+            return root / base / relative
+    return None

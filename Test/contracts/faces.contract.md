@@ -848,3 +848,28 @@ What this changes in the packet above, and nothing else:
   lane's 93 modules, with no verdict moved. Their declarations equal the flat print's up to
   whitespace. *Tested*: the corpus lane's 400 programs, the diagnostics lane's 408, the reader's
   501 files, the keyed lane's scenarios, and `ts/eff/test/read.test.ts`.
+
+## Amendment, 2026-10-15: one refusal alphabet for the two readers, and refusals that name their site (decisions row 392, P9)
+
+The codegen refactor's CR-8 lands DI-88's first step. Face 3 answers in face 2's alphabet.
+
+- **The alphabet.** The TypeScript reader's refusal type is `ReadRefusal`, which `TsGen` reads off
+  the inductive `Effect4.Program.ReadRefusal` into `ts/eff/templates.gen.ts`. The reader adds
+  three refusals for the layer under it: `node`, `program` and `parse` (`ts/eff/read.ts`).
+- **Three sites answer Lean's refusal.** A loop's stated cursor type with no reading is
+  `annotation "local const"`. A fold's stated accumulator is `annotation "fold accumulator"`. A
+  row's type argument with no reading is `annotation "<spelling> type argument"`. At a term row's
+  annotated function the TypeScript reader still refuses by another name (`E4-CHECK-CE-017`).
+- **The printer names the site of a block's refusal.** `PrintRefusal` gains seven cases, after
+  its others: `invocation`, `emptyBlock`, `bodies`, `serviceName`, `strayMethod`, `service` and
+  `serviceMethod`. Each carries the definition, the name, the service or the method at fault.
+  `internalAction` keeps the template table's refusals and the typed print's sites.
+- **The reading boundary names the unbound reference.** `SurfaceRefusal.unbound` carries the
+  name and the names its scope binds, nearest first, less the builtins. `imports` and `lexical`
+  name the lexical check's two other refusals (`lexicalRefusal`, `src/Effect4/Codegen/Admit.lean`).
+- **The laws keep their statements.** `serviceFault_none` and `printServices_ok` keep theirs.
+  `readServiceMethods_ok` takes the service's name, which the closures now carry into their
+  refusals.
+- **Evidence.** *Proved*: the laws above, under `[propext, Quot.sound]`. *Tested*: the reader's
+  unit tests and `make check-ts-reader`. *Reproduced*: `ts/eff/templates.gen.ts` and
+  `src/Effect4/Api/RefusalsDerived.lean` by `make check-gen`.

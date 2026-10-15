@@ -1,0 +1,11 @@
+ Test/All.lean                             |    1 +
+ Test/Codegen/PrintTyped.lean              |  100 +-
+ Test/Counterexamples/REGISTER.md          |    2 +
+ docs/ARCHITECTURE.md                      |    6 +-
+ docs/core/semantics.md                    |    4 +-
+ src/Effect4/Codegen/PrintEliminators.lean |   67 +-
+ src/Effect4/Codegen/PrintTyped.lean       |   96 +-
+ src/Effect4/Laws/Api/ModuleReadable.lean  |   59 +-
+ src/Effect4/Laws/Codegen/PrintTyped.lean  | 3763 ++++++++++++++---------------
+ tools/ProofGraph/Registry.lean            |    2 +-
+ 10 files changed, 2026 insertions(+), 2074 deletions(-)
