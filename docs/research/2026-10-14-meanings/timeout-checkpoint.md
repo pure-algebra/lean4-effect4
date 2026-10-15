@@ -1118,3 +1118,27 @@ Verification command:
 The build passes with 1281 jobs.
 The audit checks 1135 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 The new pause and injection leaves need test reach when the active native consumer lands.
+
+
+## Remaining command budget
+
+The existing command-loop induction now accepts an assertion indexed by the remaining command budget.
+Each actual command consumes one index.
+An early stop uses the supplied assertion at index zero.
+The previous command-loop theorem remains its constant-index instance, with the same statement.
+The existing coupled lift and numeric injection consumer still compile.
+
+Placement: reactive-scheduling R9; the fixed-budget command producer for both Timeout goals consumes this interface.
+The native counter bound, fixed-budget scheduler attachment, and initialized numeric history remain open.
+This interface proves no application assertion by itself.
+This proof-only slice reaches no outside implementation gate.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-fuel-check.sh
+```
+
+The build passes with 1274 jobs.
+The audit checks 196 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+It includes the existing coupled lift and the resident-fiber ordinary producer.

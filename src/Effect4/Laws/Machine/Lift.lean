@@ -51,15 +51,28 @@ def StepKeeps (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St 
   ∀ w m c rest, m.stuck = none → I w m (c :: rest) →
     ∃ w', o.le w w' ∧ I w' (driveStep interp m c rest).1 (driveStep interp m c rest).2
 
-/-- **Lift 1, the command loop.** One fact per command gives the fact for `driveState` at every
-fuel, machine and pending list, at some later world. -/
-theorem driveState_lift (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St κ)
-    (I : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) → Prop)
-    (step : StepKeeps o interp I) :
+/-- Concept: reactive-scheduling R9. Consumer: Timeout's fixed-budget numeric history.
+The index records commands still available, so one actual command consumes one index.
+This premise supplies neither native authority nor an initialized history. -/
+def FuelStepKeeps (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (I : Nat → W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) → Prop) :
+    Prop :=
+  ∀ fuel w m c rest, m.stuck = none → I (fuel + 1) w m (c :: rest) →
+    ∃ w', o.le w w' ∧ I fuel w' (driveStep interp m c rest).1 (driveStep interp m c rest).2
+
+/-- The existing command fold retains a remaining-budget assertion.
+Early stops lower its index to zero; actual commands consume exactly one index.
+Concept: reactive-scheduling R9. Consumer: Timeout's fixed-budget numeric command product.
+Reach: the actual command loop, any world order, and the supplied downward-closed assertion.
+Limit: local command preservation and initialization remain explicit premises. -/
+theorem driveState_lift_fuel (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (I : Nat → W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) → Prop)
+    (lower : ∀ fuel w m cmds, I fuel w m cmds → I 0 w m cmds)
+    (step : FuelStepKeeps o interp I) :
     ∀ (fuel : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-      (cmds : List (Cmd ν σ β ε δ ι α κ)), I w m cmds →
+      (cmds : List (Cmd ν σ β ε δ ι α κ)), I fuel w m cmds →
       ∃ w', o.le w w' ∧
-        I w' (driveState interp fuel m cmds).1 (driveState interp fuel m cmds).2 := by
+        I 0 w' (driveState interp fuel m cmds).1 (driveState interp fuel m cmds).2 := by
   intro fuel
   induction fuel with
   | zero =>
@@ -68,16 +81,28 @@ theorem driveState_lift (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι
   | succ fuel ih =>
     intro w m cmds h
     cases cmds with
-    | nil => exact ⟨w, o.refl w, by rw [driveState_nil]; exact h⟩
+    | nil => exact ⟨w, o.refl w, by rw [driveState_nil]; exact lower _ _ _ _ h⟩
     | cons c rest =>
       rw [driveState_succ_cons]
       by_cases hs : m.stuck.isSome = true
       · rw [if_pos hs]
-        exact ⟨w, o.refl w, h⟩
+        exact ⟨w, o.refl w, lower _ _ _ _ h⟩
       · rw [if_neg hs]
-        obtain ⟨w₁, le₁, h₁⟩ := step w m c rest (stuck_none_of_not hs) h
+        obtain ⟨w₁, le₁, h₁⟩ := step fuel w m c rest (stuck_none_of_not hs) h
         obtain ⟨w₂, le₂, h₂⟩ := ih w₁ _ _ h₁
         exact ⟨w₂, o.trans le₁ le₂, h₂⟩
+
+/-- **Lift 1, the command loop.** The original interface is the constant-budget instance
+of the indexed command fold. -/
+theorem driveState_lift (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (I : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) → Prop)
+    (step : StepKeeps o interp I) :
+    ∀ (fuel : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+      (cmds : List (Cmd ν σ β ε δ ι α κ)), I w m cmds →
+      ∃ w', o.le w w' ∧
+        I w' (driveState interp fuel m cmds).1 (driveState interp fuel m cmds).2 :=
+  driveState_lift_fuel o interp (fun _ => I) (fun _ _ _ _ held => held)
+    (fun _ => step)
 
 /-- The premise exactly as the brief states it (no stuck guard); it implies `StepKeeps`. -/
 theorem driveState_lift_of (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St κ)
