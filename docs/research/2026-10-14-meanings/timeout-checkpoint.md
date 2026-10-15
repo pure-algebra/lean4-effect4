@@ -318,3 +318,46 @@ The audit checks `NumberRootControl`, `NumberConfiguration`, and `NumberRootTran
 The readonly pop must retain its control assertion until the actual source form callback starts.
 The coupled native and command producer, initialized history, and both original endpoints remain open.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Selected typed-failure provenance
+
+This internal invariant refinement changes neither original Timeout endpoint.
+The source catch reader still establishes the exact selected singleton's declared retry.
+Its concepts are scope-lifetime-finalization R11 and translation-simulation R10.
+Its consumer is the declared-prefix component of the coupled numeric producer.
+
+`NumberPhaseFlow.TypedFrom` requires every delivered typed reason to occur in the selected failure.
+It replaces the exact-cause alternative in the published phase's cause assertion.
+The actual restoring-mask union can combine a selected failure with a recorded interruption.
+`cause_combine`, `cause_strip`, and `cause_sanitize` retain the provenance relation.
+Combination and sanitization retain the actual recorded interruption premise.
+`Timeout.OriginControl.unrelated_rejected` rejects an unrelated typed failure in that union.
+This kernel-checked control refutes neither original endpoint.
+
+`NumberRootModel` refines readonly current code with the existing concrete control assertion.
+Its tagged local edges distinguish readonly callbacks from the actual source form finalizer.
+The coordinator's unchanged `AnswerFlowEmbedding` at `1f997ca04` supplies the numeric composition.
+That shared leaf is a dependency, not a Timeout edit.
+The actual selected-pop readers consume the existing shared family proof and retain the ordered suffix.
+The cause reader consumes the same popped frame's recorded interruption premise.
+
+`NumberRootResult.singleton_error` identifies the selected singleton's exact represented error.
+`caught_declared` applies the actual source predicate to that payload.
+`selected_unique` reads the exact completed-form heap.
+`published_caught_declared` joins that heap to the delivered cause provenance and proves the selected singleton's declared retry.
+The actual initialized producer must still supply the selected singleton and its publication.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRootModel` | Passed, 1193 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRootResult` | Passed, 1212 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRootTransitions Test.Dogfood.Scenario.Timeout.OriginControl` | Passed, 1220 jobs |
+| `lake env lean scratch/TimeoutOriginAudit.lean` | The output below |
+
+```text
+#axiom_audit: 219 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks `NumberPhaseFlow`, `NumberRootModel`, `NumberRootResult`, and `Timeout.OriginControl` in their full module namespaces.
+The actual control advancement, contextual source catch suffix, initialized history, and both original endpoints remain open.
+No execution behaviour changes, so this slice reaches no outside implementation gate.

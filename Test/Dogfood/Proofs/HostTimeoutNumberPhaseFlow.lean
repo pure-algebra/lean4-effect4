@@ -41,6 +41,33 @@ def ValueAt (state : Stores) : Kind → Val → Prop
   | .cleanupExit phase own, _ => ∃ selected, At (phase.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state
   | .published phase, value => ∃ selected, At (phase.form phase.count selected) state ∧ selected = .success value
 
+/-- Every delivered typed failure originates in the selected exit already stored by the form. -/
+def TypedFrom (selected : ExitV) (cause : CauseV) : Prop :=
+  ∀ reason ∈ cause.reasons, reason.tag = .fail →
+    match selected with
+    | .success _ => False
+    | .failure original => reason ∈ original.reasons
+
+/-- Restoring the selected failure retains each of its actual typed reasons. -/
+theorem typedFrom_selected (cause : CauseV) : TypedFrom (.failure cause) cause := by
+  intro reason member tag
+  exact member
+
+/-- An interruption-only cause introduces no typed reason into any selected exit. -/
+theorem typedFrom_clean (selected : ExitV) (cause : CauseV)
+    (clean : HostTimeoutNumberFlow.NoTypedFailure cause) : TypedFrom selected cause := by
+  intro reason member tag
+  exact False.elim (clean reason member tag)
+
+/-- The actual restoring-mask union adds no typed reason from a clean recorded interruption. -/
+theorem typedFrom_combine (selected : ExitV) (cause interrupted : CauseV)
+    (origin : TypedFrom selected cause) (clean : HostTimeoutNumberFlow.NoTypedFailure interrupted) :
+    TypedFrom selected (Cause.combine cause interrupted) := by
+  intro reason member tag
+  rcases (Cause.mem_combine reason cause interrupted).mp member with before | after
+  · exact origin reason before tag
+  · exact False.elim (clean reason after tag)
+
 /-- An interruption may replace the delivered cause after the selected exit is already published. -/
 def CauseAt (state : Stores) : Kind → CauseV → Prop
   | .fresh phase, cause => At phase state ∧ HostTimeoutNumberFlow.NoTypedFailure cause
@@ -50,8 +77,56 @@ def CauseAt (state : Stores) : Kind → CauseV → Prop
   | .before phase, _ => At phase state
   | .cleanupExit phase own, _ => ∃ selected, At (phase.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state
   | .published phase, cause => ∃ selected, At (phase.form phase.count selected) state ∧
-      (selected = .failure cause ∨ HostTimeoutNumberFlow.NoTypedFailure cause)
+      TypedFrom selected cause
   | _, _ => False
+
+/-- Every phase cause class absorbs the actual clean recorded interruption at a restoring mask. -/
+theorem cause_combine (state : Stores) (kind : Kind) (cause interrupted : CauseV)
+    (good : CauseAt state kind cause) (clean : HostTimeoutNumberFlow.NoTypedFailure interrupted) :
+    CauseAt state kind (Cause.combine cause interrupted) := by
+  cases kind with
+  | fresh phase => exact ⟨good.1, HostTimeoutNumberFlow.no_typed_combine cause interrupted good.2 clean⟩
+  | attempt before entered own =>
+      rcases good with cleaned | ⟨heap, quiet⟩
+      · exact Or.inl cleaned
+      · exact Or.inr ⟨heap, HostTimeoutNumberFlow.no_typed_combine cause interrupted quiet clean⟩
+  | read phase => exact False.elim good
+  | unit phase => exact False.elim good
+  | before phase => exact good
+  | cleanupExit phase own => exact good
+  | published phase =>
+      obtain ⟨selected, heap, origin⟩ := good
+      exact ⟨selected, heap, typedFrom_combine selected cause interrupted origin clean⟩
+
+/-- Skipping a handler removes typed failures without losing their selected-exit provenance. -/
+theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
+    (good : CauseAt state kind cause) : CauseAt state kind cause.stripFail := by
+  cases kind with
+  | fresh phase => exact ⟨good.1, HostTimeoutNumberFlow.no_typed_strip cause⟩
+  | attempt before entered own =>
+      rcases good with cleaned | ⟨heap, quiet⟩
+      · exact Or.inl cleaned
+      · exact Or.inr ⟨heap, HostTimeoutNumberFlow.no_typed_strip cause⟩
+  | read phase => exact False.elim good
+  | unit phase => exact False.elim good
+  | before phase => exact good
+  | cleanupExit phase own => exact good
+  | published phase =>
+      obtain ⟨selected, heap, origin⟩ := good
+      exact ⟨selected, heap, typedFrom_clean selected cause.stripFail (HostTimeoutNumberFlow.no_typed_strip cause)⟩
+
+/-- Actual handler sanitization retains phase facts under the recorded interruption premise. -/
+theorem cause_sanitize (state : Stores) (kind : Kind) (cause interrupted : CauseV)
+    (good : CauseAt state kind cause) (clean : HostTimeoutNumberFlow.NoTypedFailure interrupted) :
+    CauseAt state kind (Cause.sanitize cause interrupted) :=
+  cause_combine state kind cause.stripFail interrupted (cause_strip state kind cause good) clean
+
+/-- An unrelated typed reason in a combined cause is refused by the selected-exit provenance relation. -/
+theorem typedFrom_unrelated (selected cause extra : CauseV) (reason : Reason Err Defect FiberId Ann)
+    (member : reason ∈ extra.reasons) (typed : reason.tag = .fail)
+    (unrelated : reason ∉ selected.reasons) : ¬ TypedFrom (.failure selected) (Cause.combine cause extra) := by
+  intro origin
+  exact unrelated (origin reason ((Cause.mem_combine reason cause extra).mpr (Or.inr member)) typed)
 
 /-- The code assertion classifies the existing form source and its saved native restore wrappers. -/
 inductive CodeAt : Stores → Kind → NCode → Prop
@@ -196,7 +271,7 @@ theorem restore_saved (view : View) (state : Stores) (phase : Phase) (selected :
   · intro next future value good
     cases selected with
     | success saved => exact CodeAt.success _ saved ⟨.success saved, good.1, rfl⟩
-    | failure saved => exact CodeAt.failure _ saved ⟨.failure saved, good.1, Or.inl rfl⟩
+    | failure saved => exact CodeAt.failure _ saved ⟨.failure saved, good.1, typedFrom_selected saved⟩
   · intro next future cause good
     exact False.elim good
 
