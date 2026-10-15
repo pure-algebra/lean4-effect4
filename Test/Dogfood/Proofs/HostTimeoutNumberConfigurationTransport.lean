@@ -96,6 +96,7 @@ theorem configuration_fields (world : HostTimeoutNumberConfiguration.World) (bef
     exact snapshot_fields world before after bucket.tasks fibers state view
       (held.dispatchers fiber (fibers ▸ member) bucket stored)
 
+  · exact held.pendingPhase
 
 /-- Replacing the actual unique addressed row with the same id and exit retains the completed-exit view. -/
 theorem update_view (machine : Effect4.Program.NativeMachine)
@@ -218,7 +219,8 @@ theorem configuration_update_roles (world next : HostTimeoutNumberConfiguration.
       (fiber.id, role) ∈ world.roles → FiberAt machine role fiber →
       ∃ selected, (fiber.id, selected) ∈ next.roles ∧ FiberAt machine selected fiber)
     (replies : ∀ id token code, ReplyAt world machine id token code →
-      ReplyAt next (machine.update after) id token code) : Configuration next (machine.update after) := by
+      ReplyAt next (machine.update after) id token code)
+    (phases : ∀ id context, (id, Role.pending context) ∈ next.roles → PendingPhase context next.phase) : Configuration next (machine.update after) := by
   constructor
   · rw [phase]; exact held.heap
   · intro fiber member
@@ -249,6 +251,8 @@ theorem configuration_update_roles (world next : HostTimeoutNumberConfiguration.
     · exact snapshot_replies_into world next machine (machine.update after) bucket.tasks replies
         (held.dispatchers old present bucket stored)
 
+  · exact phases
+
 /-- The original same-role update is an instance of the joined role producer. -/
 theorem configuration_update (world : HostTimeoutNumberConfiguration.World) (machine : Effect4.Program.NativeMachine)
     (before after : Effect4.Program.SourceScope.SourceFiber) (found : machine.fiber? before.id = some before)
@@ -264,6 +268,7 @@ theorem configuration_update (world : HostTimeoutNumberConfiguration.World) (mac
   · intro fiber member different role assigned good
     exact ⟨role, assigned, good⟩
   · exact replies
+  · exact held.pendingPhase
 
 /-- Actual addressed interruption retains the whole numeric machine assertion and every stored reply obligation. -/
 theorem interrupt_configuration (world : HostTimeoutNumberConfiguration.World)

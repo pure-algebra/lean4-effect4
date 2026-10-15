@@ -1544,3 +1544,42 @@ It then runs `lake env lean scratch/LiftLoopAudit.lean`.
 The build passes with 209 jobs.
 The audit checks 196 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 This proof-only slice reaches no outside implementation gate.
+
+## Coherent pending phase and actual cleanup permission
+
+The existing configuration now ties each pending context to its predecessor, counted, or single cleanup phase.
+The existing row, observer, count, cleanup, and retirement producers retain that same relation.
+The count and cleanup writers explicitly supply their resulting phase.
+The role-relabeling producer requires that relation for every new pending assignment.
+No parallel configuration carrier enters this slice.
+
+The actual cleanup input's uniform saved path retains its owner count.
+That count excludes the predecessor phase.
+The cleanup gap excludes an already-cleaned phase.
+The remaining counted phase supplies the real entered heap.
+The existing mask-custody theorem then supplies the actual masked flag and cleared deferred-interruption flag.
+
+The existing cleanup writer now accepts the same actual incoming value class and a separate charged actor.
+Its previous interfaces remain wrappers.
+The real native cleanup consumer derives its runtime permissions from the coherent configuration.
+It uses equal stored heaps without identifying ghost exit lists.
+The existing evaluator equation and writer producer return the same joined machine, queue, and detached snapshot.
+No new source, evaluator, saved-frame, or command traversal enters this slice.
+
+Placement: scope-lifetime-finalization R11 and reactive-scheduling R9.
+Consumer: the actual cleanup-head branch of the coupled numeric command producer for both original Timeout endpoints.
+Reach: the actual resident owner, charged actor, selected source leaf, numeric saved input, and unique-writer census.
+The full native case join, source race births, active command producer, fixed-budget history, and declared failure origin remain open.
+Neither public endpoint changes.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-pending-phase-check.sh
+```
+
+The script builds `HostTimeoutNumberRetirement`, `HostTimeoutNumberCleanupNative`, and `HostTimeoutNumberInjection`.
+It then runs `lake env lean scratch/TimeoutPendingPhaseAudit.lean`.
+The build passes with 1299 jobs.
+The audit checks 308 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+This proof-only slice reaches no outside implementation gate.
