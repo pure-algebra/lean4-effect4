@@ -582,9 +582,9 @@ module type PENV = sig
   val of_list : 'a list -> 'a t
 end"
 
-/-- The functor's parameters, in order. -/
-def carrierParams : List (String × Ml.ModTy) :=
-  [("M", .path "TABLE"), ("T", .path "TRACE"), ("L", .path "LAYERS"), ("D", .path "DISPATCHER"),
-   ("P", .path "PPATH"), ("E", .path "PENV"), ("F", .path "FIBERS")]
+/-- The functor's parameters, in order, each with its module type. -/
+def carrierParams : List (String × String) :=
+  [("M", "TABLE"), ("T", "TRACE"), ("L", "LAYERS"), ("D", "DISPATCHER"), ("P", "PPATH"),
+   ("E", "PENV"), ("F", "FIBERS")]
 
 end OCaml5.Lcnf

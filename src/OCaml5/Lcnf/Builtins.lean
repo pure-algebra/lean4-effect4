@@ -142,93 +142,79 @@ instance : Append Uses where
 /-- A part of a body that is not always evaluated: an arm, a lazy operand, a function body. -/
 def Uses.deferred (u : Uses) : Uses := { u with always := [] }
 
-mutual
+/-- The uses of a list of parts, in order: `none` when one part leaves its fragment. -/
+private def usesAll : List (Option Uses) → Option Uses
+  | [] => some {}
+  | u :: rest => do
+    let a ← u
+    let b ← usesAll rest
+    return a ++ b
 
-/-- What a body uses under the names `bound`, or `none` when it leaves its fragment. `binding`
-admits `let` and `fun`: a support body may bind and an inline body may not. -/
-def usesExpr (binding : Bool) (bound : List String) : Ml.Expr → Option Uses
-  | .var n => some (if bound.contains n then {} else { free := [n], always := [n] })
-  | .int _ => some {}
-  | .str _ => some {}
-  | .bool _ => some {}
-  | .unit => some {}
-  | .ctor _ args => usesExprs binding bound args
-  | .app f args => do
-    let a ← usesExpr binding bound f
-    let b ← usesExprs binding bound args
+/-- What a body uses under the names it is handed, or `none` when it leaves its fragment, as an
+algebra of the expression fold (`OCaml5.Ml.Fold`). `binding` admits `let` and `fun`: a support
+body may bind and an inline body may not. -/
+def usesAlg (binding : Bool) : Ml.ExprAlgebra (fun _ => List String → Option Uses) where
+  expr_var n := fun bound => some (if bound.contains n then {} else { free := [n], always := [n] })
+  expr_int _ := fun _ => some {}
+  expr_str _ := fun _ => some {}
+  expr_bool _ := fun _ => some {}
+  expr_unit := fun _ => some {}
+  expr_ctor _ args := fun bound => usesAll (args.map (· bound))
+  expr_app f args := fun bound => do
+    let a ← f bound
+    let b ← usesAll (args.map (· bound))
     return a ++ b
-  | .appL f args => do
-    let a ← usesExpr binding bound f
-    let b ← usesLabelled binding bound args
+  expr_appL f args := fun bound => do
+    let a ← f bound
+    let b ← usesAll (args.map (·.2 bound))
     return a ++ b
-  | .binop op l r => do
-    let a ← usesExpr binding bound l
-    let b ← usesExpr binding bound r
+  expr_binop op l r := fun bound => do
+    let a ← l bound
+    let b ← r bound
     let b := if lazyOperators.contains op then b.deferred else b
     return { free := a.free ++ b.free, always := a.always ++ b.always,
              ops := op :: (a.ops ++ b.ops), binders := a.binders ++ b.binders }
-  | .ifThen c t e => do
-    let a ← usesExpr binding bound c
-    let b ← usesExpr binding bound t
-    let d ← usesExpr binding bound e
+  expr_ifThen c t e := fun bound => do
+    let a ← c bound
+    let b ← t bound
+    let d ← e bound
     return a ++ b.deferred ++ d.deferred
-  | .listLit items => usesExprs binding bound items
-  | .letIn n v b =>
+  expr_listLit items := fun bound => usesAll (items.map (· bound))
+  expr_letIn n v b := fun bound =>
     if binding then do
-      let a ← usesExpr binding bound v
-      let c ← usesExpr binding (n :: bound) b
+      let a ← v bound
+      let c ← b (n :: bound)
       return { free := a.free ++ c.free, always := a.always ++ c.always,
                ops := a.ops ++ c.ops, binders := n :: (a.binders ++ c.binders) }
     else none
-  | .fn ps b =>
+  expr_fn ps b := fun bound =>
     if binding then do
-      let c ← usesExpr binding (ps ++ bound) b
+      let c ← b (ps ++ bound)
       return { c.deferred with binders := ps ++ c.binders }
     else none
-  | _ => none
+  -- outside both fragments, `Expr.raw` first
+  expr_letRec _ _ _ _ := fun _ => none
+  expr_matchE _ _ := fun _ => none
+  expr_record _ := fun _ => none
+  expr_field _ _ := fun _ => none
+  expr_tuple _ := fun _ => none
+  expr_annot _ _ := fun _ => none
+  expr_hole _ _ := fun _ => none
+  expr_raw _ := fun _ => none
+  expr_assertE _ := fun _ => none
 
-def usesExprs (binding : Bool) (bound : List String) : List Ml.Expr → Option Uses
-  | [] => some {}
-  | e :: rest => do
-    let a ← usesExpr binding bound e
-    let b ← usesExprs binding bound rest
-    return a ++ b
+/-- What a body uses under the names `bound`, or `none` when it leaves its fragment. -/
+def usesExpr (binding : Bool) (bound : List String) (e : Ml.Expr) : Option Uses :=
+  Ml.cata_expr (usesAlg binding) e bound
 
-def usesLabelled (binding : Bool) (bound : List String) :
-    List (Ml.ArgLabel × Ml.Expr) → Option Uses
-  | [] => some {}
-  | (_, e) :: rest => do
-    let a ← usesExpr binding bound e
-    let b ← usesLabelled binding bound rest
-    return a ++ b
+/-- Put values in the place of an inline body's parameters: the fold's identity algebra with
+the variables replaced. The body binds nothing, so no name of a value can be captured;
+`problemsOf` refuses a table whose inline body leaves the fragment. -/
+def substAlg (σ : List (String × Ml.Expr)) : Ml.ExprAlgebra Ml.ExprSelfCarrier :=
+  { Ml.ExprAlgebra.id with expr_var := fun n => (σ.lookup n).getD (.var n) }
 
-end
-
-mutual
-
-/-- Put values in the place of an inline body's parameters. The body binds nothing, so no name
-of a value can be captured. A constructor outside the inline fragment is returned as it is;
-`problemsOf` refuses a table that holds one. -/
-def substExpr (σ : List (String × Ml.Expr)) : Ml.Expr → Ml.Expr
-  | .var n => (σ.lookup n).getD (.var n)
-  | .ctor c args => .ctor c (substExprs σ args)
-  | .app f args => .app (substExpr σ f) (substExprs σ args)
-  | .appL f args => .appL (substExpr σ f) (substLabelled σ args)
-  | .binop op l r => .binop op (substExpr σ l) (substExpr σ r)
-  | .ifThen c t e => .ifThen (substExpr σ c) (substExpr σ t) (substExpr σ e)
-  | .listLit items => .listLit (substExprs σ items)
-  | e => e
-
-def substExprs (σ : List (String × Ml.Expr)) : List Ml.Expr → List Ml.Expr
-  | [] => []
-  | e :: rest => substExpr σ e :: substExprs σ rest
-
-def substLabelled (σ : List (String × Ml.Expr)) :
-    List (Ml.ArgLabel × Ml.Expr) → List (Ml.ArgLabel × Ml.Expr)
-  | [] => []
-  | (l, e) :: rest => (l, substExpr σ e) :: substLabelled σ rest
-
-end
+/-- An inline body with its parameters replaced. -/
+def substExpr (σ : List (String × Ml.Expr)) (e : Ml.Expr) : Ml.Expr := Ml.cata_expr (substAlg σ) e
 
 /-! ## 3. The target's library and the prelude -/
 

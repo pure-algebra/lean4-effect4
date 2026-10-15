@@ -221,10 +221,9 @@ private def labelled (f : String) (args : List (Ml.ArgLabel × Ml.Expr)) : Ml.Ex
 
 -- the row's own form is read
 #guard !unread (labelled "Option.value" [(.nolabel, someOf 3), (.lbl "default", .int 7)])
--- another label, an optional label, another order, another function, a missing or a surplus
--- argument, and a head that is not a name: each is refused
+-- another label, another order, another function, a missing or a surplus argument, and a head
+-- that is not a name: each is refused (an optional label is no form of the syntax)
 #guard unread (labelled "Option.value" [(.nolabel, someOf 3), (.lbl "other", .int 7)])
-#guard unread (labelled "Option.value" [(.nolabel, someOf 3), (.opt "default", .int 7)])
 #guard unread (labelled "Option.value" [(.lbl "default", .int 7), (.nolabel, someOf 3)])
 #guard unread (labelled "Option.get" [(.nolabel, someOf 3), (.lbl "default", .int 7)])
 #guard unread (labelled "Option.value" [(.nolabel, someOf 3)])
@@ -412,7 +411,7 @@ private def captured (guarded : List String) (params : List String) (body : Ml.E
 #guard captured ["max"] ["max", "a"] (Ml.Expr.call "max" [.int 0, .var "a"]) == ["`max`"]
 -- a pattern variable that hides a parameter
 #guard captured [] ["x"]
-  (.matchE (.var "x") [.mk (.ctor "Some" [.var "x"]) none (.var "x")]) == ["`x`"]
+  (.matchE (.var "x") [(.ctor "Some" [.var "x"], .var "x")]) == ["`x`"]
 -- the same eta binder in two sibling scopes hides nothing
 #guard captured [] ["x"]
   (.letIn "p" (.fn ["_b1"] (.var "_b1")) (.letIn "q" (.fn ["_b1"] (.var "_b1")) (.var "x")))

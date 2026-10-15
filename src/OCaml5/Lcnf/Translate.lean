@@ -866,13 +866,13 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
         if Native.owns cs.typeName then .var d
         else .annot (.var d) (tyOfInd exx tn env cs.typeName)
       unless Native.owns cs.typeName do noteReal cs.typeName
-      let mut arms : List Ml.Arm := []
+      let mut arms : List (Ml.Pat × Ml.Expr) := []
       for alt in cs.alts do
         match alt with
-        | .default k => arms := arms ++ [.mk .wild none (← code declName k)]
+        | .default k => arms := arms ++ [(.wild, ← code declName k)]
         | .alt ctor ps k =>
           let pat ← altPat ctor ps k.collectUsed
-          arms := arms ++ [.mk pat none (← code declName k)]
+          arms := arms ++ [(pat, ← code declName k)]
       return .matchE scrut arms
 
 /-- A local function or join point, then the rest. -/
@@ -886,7 +886,7 @@ partial def localFun (declName : Name) (decl : FunDecl .pure) (k : Code .pure) :
   let recursive := decl.value.collectUsed.contains decl.fvarId
   let body ← code declName decl.value
   let rest ← code declName k
-  if recursive then return .letRecIn [(f, ps, body)] rest
+  if recursive then return .letRec f ps body rest
   return .letIn f (.fn ps body) rest
 
 end

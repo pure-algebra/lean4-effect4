@@ -18,15 +18,14 @@ construction rather than by convention.
   (§11.4: a `value-name`/`field-name`/`typeconstr-name` starts lowercase or `_`, a
   `constr-name` uppercase) — *by construction*: `snake` only ever emits `[a-z0-9_']` and
   `_uNNN` escapes, `ctorName` prefixes the type's own capitalised short name.
-* A keyword can never come out: `snake` appends `_` to a reserved word, as
-  `Ml.Identifier.mangleField` does (`exit` → `exit_`, `val` → `val_`) — *by construction*.
+* A keyword can never come out: `snake` appends `_` to a reserved word (`exit` → `exit_`,
+  `val` → `val_`) — *by construction*.
 * A type name never shadows one a type row spells: `typeName` and `fullTypeName` append `_` to a
   name of `reservedTypeNames` (a Lean `Result` is `result_`, and `result` stays `Except`'s) —
   *by construction*.
 * Readability over injectivity: `snake` is *not* injective (`aB` and `a_b` both go to
   `a_b`). This route names *whole declarations and fields of one file*, where a collision
-  is a build error the generator reports, not a silent hole; the field mangling a
-  simulation relation needs is `Ml.Identifier.mangleField`, not this. Within one function
+  is a build error the generator reports, not a silent hole. Within one function
   body `Translate` makes binder names unique by a numeric suffix, keyed on the LCNF
   `FVarId`, so shadowing in the source can never become capture in the target — *tested*
   (`Dispatcher.insert`, whose `Bucket.mk priority tasks` alternative shadows the parameter

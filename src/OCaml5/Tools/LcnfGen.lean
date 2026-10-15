@@ -192,7 +192,7 @@ def main (argv : List String) : IO Unit := do
       else
         [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank,
          .rawD carrierSignatures, .blank,
-         .moduleD "Make" carrierParams none body]
+         .moduleD "Make" carrierParams body]
     let modName := (System.FilePath.mk args.out).fileStem.getD "lcnf_gen"
     let m : Ml.Module := { name := modName, header := some header, items := items }
     -- The closure as DATA (tooling plan 4.1). What stood here was a line per translated
