@@ -295,3 +295,74 @@ These are proofs over actual transitions, not finite runtime comparisons.
 The landing changes no machine, program syntax, type syntax or value representation.
 The eight `proof_goal` declarations remain in place, as the source search confirms.
 M1 and M2 remain after M3.
+
+
+## Revised M3: both crew log goals are proved
+
+Merge the shared initialized driver with both application instances.
+The log proofs use actual command producers, queued demands, captures and reference writes together.
+They require no supplied preservation premise.
+
+Base: `69e18b618`.
+Implementation head: `03c5d9544`.
+
+`Initialized.decision_lift` in `src/Effect4/Laws/Program/AnswerSlots/InitializedHistory.lean` composes the existing driver with its initialized value assertion.
+`CrewLogs.initialized_history` in `src/Effect4/Laws/Program/CrewLogs/InitializedHistory.lean` serves both log goals under R4 and R11.
+`CrewLogHistory` in `Test/Dogfood/Proofs/CrewLogHistory.lean` supplies the two actual source instances.
+The shared `awaitCode_closed` in `src/Effect4/Laws/Machine/AwaitCode.lean` replaces two separate wait-result case walks.
+The observer producer retains its actual running flag alongside its existing frame and counter facts.
+
+Proof role: preservation and observation of initialized crew log entries.
+Evidence status: kernel-checked and audited.
+Scope: every admitted history of each original crew, at every compilation and command budget.
+The result establishes no progress, release order, fairness or outside-host agreement.
+
+The narrow build command is:
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build \
+  Test.Dogfood.Scenario.Workers Test.Dogfood.Scenario.QueueWorkers
+```
+
+Result: 1428 jobs, passed.
+The output is [crew-history-build.log](evidence/crew-history-build.log).
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean \
+  docs/research/2026-10-14-meanings/evidence/CrewHistoryAudit.lean
+```
+
+The command file retains the exact module audit and application status queries.
+The output is [crew-history-audit.log](evidence/crew-history-audit.log).
+
+```text
+#axiom_audit: 476 declarations within [propext, Quot.sound], 3 of them modulo planned goals; 2 planned goals
+Test.Dogfood.Scenario.Workers.Assertions.logs_step: proved; nearest []; 0 lemmas, 0 definitions
+Test.Dogfood.Scenario.QueueWorkers.Assertions.logs_history: proved; nearest []; 0 lemmas, 0 definitions
+Test.Dogfood.Scenario.Workers.workers: proved; nearest []; 0 lemmas, 0 definitions
+Test.Dogfood.Scenario.QueueWorkers.releases_once: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+```
+
+The audited queue assertions module still contains `jobs_step` and `rest_step`.
+Neither log proof depends on them.
+The other M3 goals remain open: both Timeout goals, both queue accounting goals, `Atomic.Store.shop_stages`, and `FinalizerRun.once_placed_outside_census`.
+M1 and M2 remain pending after M3.
+The change reaches no executable behavior gate.
+
+Changed files:
+
+- `Test/Dogfood/Proofs/CrewLogHistory.lean`.
+- `Test/Dogfood/Scenario/Workers/Assertions.lean`.
+- `Test/Dogfood/Scenario/QueueWorkers/Assertions.lean`.
+- `src/Effect4/Laws.lean`.
+- `src/Effect4/Laws/Machine/EditObserverWords.lean`.
+- `src/Effect4/Laws/Machine/AwaitCode.lean`.
+- `src/Effect4/Laws/Program/Guard/CommandControlEdits.lean`.
+- `src/Effect4/Laws/Program/AnswerSlots/InitializedCommands.lean`.
+- `src/Effect4/Laws/Program/AnswerSlots/InitializedQueueAdmin.lean`.
+- `src/Effect4/Laws/Program/AnswerSlots/InitializedHistory.lean`.
+- `src/Effect4/Laws/Program/AnswerSlots/TypedStored.lean`.
+- `src/Effect4/Laws/Program/AnswerSlots/TypedActions.lean`.
+- `src/Effect4/Laws/Program/CrewLogs/InitializedHistory.lean`.
+- `src/Effect4/Laws/Program/SourceOpportunityCommands.lean`.
