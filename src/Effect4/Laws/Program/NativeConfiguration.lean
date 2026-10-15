@@ -1,3 +1,4 @@
+import Effect4.Laws.Machine.DispatcherPredicate
 import Effect4.Laws.Program.NativeFrameScope
 import Effect4.Laws.Program.NativeActionScope
 import Effect4.Laws.Program.NativeScopeStore
@@ -151,16 +152,8 @@ theorem commands_append (root : NativeEff) (left right : List SourceCommand)
 theorem dispatcher_insert_at (root : NativeEff) (priority : Nat) (task : SourceTask)
     (buckets : List SourceBucket) (owned : ∀ bucket ∈ buckets, TasksAt root bucket.tasks)
     (new : TaskAt root task) : ∀ bucket ∈ Dispatcher.insert priority task buckets,
-      TasksAt root bucket.tasks := by
-  induction buckets with
-  | nil => aesop (add norm simp [Dispatcher.insert, TasksAt, List.mem_cons])
-  | cons bucket rest ih =>
-    have first := owned bucket (.head _)
-    have tail : ∀ bucket ∈ rest, TasksAt root bucket.tasks := fun b hb => owned b (.tail _ hb)
-    have kept := ih tail
-    unfold Dispatcher.insert
-    repeat' split
-    all_goals aesop (add norm simp [TasksAt, List.mem_cons, List.mem_append])
+      TasksAt root bucket.tasks :=
+  DispatcherPredicate.insert (TaskAt root) priority task buckets owned new
 
 /-- Enqueue retains an actual dispatcher's saved resume programs. -/
 theorem dispatcher_enqueue_at (root : NativeEff) (dispatcher : SourceDispatcher) (priority : Nat)

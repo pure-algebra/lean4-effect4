@@ -15,9 +15,9 @@ theorem PendingConfiguration.update (spec : Spec) (fragment : SourceScope.Fragme
     (fiber : SourceScope.SourceFiber)
     (frame : FrameAt spec fragment ⟨fiber.id, machine.state, false⟩ fiber.frame)
     (waits : PendingWaits spec fragment ⟨fiber.id, machine.state, false⟩ fiber)
-    (children : fiber.children = []) (observers : fiber.observers = []) :
+    (children : fiber.children = []) (observers : fiber.observers = []) (replies : Replies fiber.dispatcher) :
     PendingConfiguration spec fragment (machine.update fiber) := by
-  refine ⟨before.heap, ?_, ?_, ?_, ?_, before.counter⟩
+  refine ⟨before.heap, ?_, ?_, ?_, ?_, before.counter, ?_⟩
   · intro row member
     obtain ⟨old, present, same⟩ := List.mem_map.mp member
     rw [← same]
@@ -48,6 +48,13 @@ theorem PendingConfiguration.update (spec : Spec) (fragment : SourceScope.Fragme
     split
     · exact observers
     · exact before.unobserved old present
+  · intro row member
+    obtain ⟨old, present, same⟩ := List.mem_map.mp member
+    rw [← same]
+    change Replies (if old.id = fiber.id then fiber else old).dispatcher
+    split
+    · exact replies
+    · exact before.replies old present
 
 /-- An actual interrupt keeps the saved parked suffix or removes the park. -/
 theorem PendingWaits.interruption (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -87,4 +94,11 @@ theorem PendingConfiguration.interruption (spec : Spec) (fragment : SourceScope.
       repeat' split
       all_goals rfl
     exact same.trans (before.unobserved fiber member)
+  · have same : (interruptWithCause cause fiber).1.dispatcher = fiber.dispatcher := by
+      unfold interruptWithCause
+      dsimp only
+      repeat' split
+      all_goals rfl
+    rw [same]
+    exact before.replies fiber member
 end Effect4.Program.AnswerSlots.AllocationAdapter

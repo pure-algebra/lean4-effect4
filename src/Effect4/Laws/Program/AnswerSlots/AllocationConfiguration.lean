@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.AnswerSlots.AllocationTasks
 import Effect4.Laws.Program.AnswerSlots.AllocationPendingParks
 import Effect4.Laws.Program.AnswerSlots.AllocationContextualAttachment
 
@@ -20,6 +21,7 @@ structure PendingConfiguration (spec : Spec) (fragment : SourceScope.Fragment sp
   childless : ∀ fiber ∈ machine.fibers, fiber.children = []
   unobserved : ∀ fiber ∈ machine.fibers, fiber.observers = []
   counter : machine.nextId = 1
+  replies : ReplyRows machine
 
 /-- The real loaded program starts in the common pending configuration. -/
 theorem initial_pending (spec : Spec) (fragment : SourceScope.Fragment spec.root) (fuel : Nat) :
@@ -44,6 +46,10 @@ theorem initial_pending (spec : Spec) (fragment : SourceScope.Fragment spec.root
     subst fiber
     rfl
   · rfl
+  · intro fiber member bucket present
+    have same := List.mem_singleton.mp member
+    subst fiber
+    exact (List.not_mem_nil present).elim
 
 /-- The pending machine's existing frames all belong to its actual root. -/
 theorem PendingConfiguration.root_rows (spec : Spec) (fragment : SourceScope.Fragment spec.root)

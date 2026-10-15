@@ -14,7 +14,7 @@ theorem PendingConfiguration.fields (spec : Spec) (fragment : SourceScope.Fragme
     (before after : NativeMachine) (held : PendingConfiguration spec fragment before)
     (state : after.state = before.state) (fibers : after.fibers = before.fibers)
     (counter : after.nextId = before.nextId) : PendingConfiguration spec fragment after := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, counter.trans held.counter⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, counter.trans held.counter, ?_⟩
   · rw [state]; exact held.heap
   · intro row member
     rw [fibers] at member
@@ -29,6 +29,9 @@ theorem PendingConfiguration.fields (spec : Spec) (fragment : SourceScope.Fragme
   · intro row member
     rw [fibers] at member
     exact held.unobserved row member
+  · intro row member
+    rw [fibers] at member
+    exact held.replies row member
 
 /-- Settlement changes only the returned owner's administrative fiber fields. -/
 theorem PendingNativeCut.replace (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -38,7 +41,8 @@ theorem PendingNativeCut.replace (spec : Spec) (fragment : SourceScope.Fragment 
     (after : SourceScope.SourceFiber) (id : after.id = result.fiber.id)
     (frame : after.frame = result.fiber.frame) (children : after.children = result.fiber.children)
     (observers : after.observers = result.fiber.observers)
-    (waits : PendingWaits spec fragment ⟨after.id, result.machine.state, false⟩ after) :
+    (waits : PendingWaits spec fragment ⟨after.id, result.machine.state, false⟩ after)
+    (replies : Replies after.dispatcher) :
     PendingConfiguration spec fragment (result.machine.update after) := by
   have rows : ∀ row ∈ (result.machine.update after).fibers, row = after := by
     intro row present
@@ -55,7 +59,7 @@ theorem PendingNativeCut.replace (spec : Spec) (fragment : SourceScope.Fragment 
         rw [if_neg (fun equal => different (equal.trans id.symm))]
       have sameOld := PendingNativeCut.rows spec fragment machine fiber result cut old updated
       exact (different (sameOld ▸ id.symm)).elim
-  refine ⟨cut.heap, ?_, ?_, ?_, ?_, cut.counter.trans before.counter⟩
+  refine ⟨cut.heap, ?_, ?_, ?_, ?_, cut.counter.trans before.counter, ?_⟩
   · intro row present
     rw [rows row present]
     change FrameAt spec fragment ⟨after.id, result.machine.state, false⟩ after.frame
@@ -70,6 +74,9 @@ theorem PendingNativeCut.replace (spec : Spec) (fragment : SourceScope.Fragment 
   · intro row present
     rw [rows row present, observers, cut.footprint.observers]
     exact before.unobserved fiber member
+  · intro row present
+    rw [rows row present]
+    exact replies
 
 /-- The actual pending native cut remains pending after all outcome dispositions. -/
 theorem PendingNativeCut.settlement (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -81,11 +88,11 @@ theorem PendingNativeCut.settlement (spec : Spec) (fragment : SourceScope.Fragme
   have original := cut.configuration spec fragment machine fiber result before member
   have stopped : PendingConfiguration spec fragment
       (result.machine.update {result.fiber with running := false}) :=
-    cut.replace spec fragment machine fiber result before member _ rfl rfl rfl rfl cut.waits
+    cut.replace spec fragment machine fiber result before member _ rfl rfl rfl rfl cut.waits (cut.dispatcher.2 (before.replies fiber member))
   have unparked : PendingConfiguration spec fragment
       (result.machine.update {result.fiber with parked := .notParked, pending := []}) :=
     cut.replace spec fragment machine fiber result before member _ rfl rfl rfl rfl
-      (fun parked => (parked rfl).elim)
+      (fun parked => (parked rfl).elim) (cut.dispatcher.2 (before.replies fiber member))
   cases outcome : result.outcome with
   | continue_ => simpa only [settleOutcome, outcome] using original
   | answered => simpa only [settleOutcome, outcome] using original
