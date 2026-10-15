@@ -760,3 +760,39 @@ The audit covers all ten shared implementation and compatibility modules, exact 
 No root import changes are needed because existing consumers reach every new leaf.
 This proof-only slice reaches no outside implementation gate.
 The next actual native branch is the single external request after the count, followed by numeric cleanup and form dispatch.
+
+## Actual native branches and uniform saved classes
+
+The coordinator must retain the actual cleanup barrier before assigning a finished attempt its passive role.
+The base is `f6961a752`.
+Both original numeric goals remain open.
+
+`MaskRuns.step_finished_current` exposes the existing terminal-head restriction.
+`step_finished_stack` now consumes it instead of repeating that shape proof.
+The ordinary numeric native producer excludes those heads and returns an actual running frame.
+The external request producer retains the actual park, emitted event, and pending numeric fiber assertion.
+The installed finalizer adapter consumes the shared contextual pop producer with the actual recorded interruption cause.
+
+The terminal consumer reuses the existing timer role for a drained actor that performs no numeric writes.
+It derives cleanup readiness from the actual attempt exit before any role reassignment.
+No new terminal role or current-code representation is introduced.
+
+`HostTimeoutNumberUniform.FrameAt` retains one input class and one saved path across interpreter views.
+Its family uses `ViewSavedAt.refined_family`.
+Its old-view reader uses `Contracts.Path.map`.
+The actual numeric head and pending configuration still need migration to this stronger assertion.
+These helpers serve both original endpoints under R11 and R10.
+They establish no initialized numeric history, race provenance, or failure-origin producer.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberTerminal Test.Dogfood.Proofs.HostTimeoutNumberUniform Test.Dogfood.Proofs.HostTimeoutNumberAttemptNative` | Passed, 1246 jobs |
+| `lake env lean scratch/TimeoutNativeAudit.lean` | The output below |
+
+```text
+#axiom_audit: 411 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers the shared mask module and six numeric native and uniform-view modules.
+The new leaves need root reach when their endpoint consumer is integrated.
+This proof-only slice reaches no outside implementation gate.

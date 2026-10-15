@@ -443,6 +443,27 @@ section FinishedFrame
 variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
+/-- A finished frame step starts at an actual success, failure, or synchronous return.
+Concept: scope-lifetime-finalization R11.
+Consumers: `step_finished_stack` and Timeout's actual numeric native terminal producer.
+No source, cause permission, or initialized history follows from this shape alone. -/
+@[semantics "scope-lifetime-finalization"]
+theorem step_finished_current (interp : PrimInterp ν σ β ε δ ι α) (f : FrameFiber ν σ β ε δ ι α)
+    (exit : Exit β ε δ ι α) (finished : (f.step interp).fst = FrameStep.finished exit) :
+    (∃ value, f.current = .success value) ∨ (∃ cause, f.current = .failure cause) ∨
+      (∃ thunk, f.current = .sync thunk) := by
+  cases current : f.current with
+  | success value => exact .inl ⟨value, rfl⟩
+  | failure cause => exact .inr (.inl ⟨cause, rfl⟩)
+  | sync thunk => exact .inr (.inr ⟨thunk, rfl⟩)
+  | iterator generator cursor =>
+    simp only [FrameFiber.step, current] at finished
+    split at finished <;> cases finished
+  | whileLoop loop cursor =>
+    simp only [FrameFiber.step, current] at finished
+    split at finished <;> cases finished
+  | _ => simp only [FrameFiber.step, current, reduceCtorEq] at finished
+
 /-- **A finished frame has an empty stack.** Where `FrameFiber.step` finishes, the state that
 `frameExitState` retains has no frame. The step finishes at a success, a failure or a `sync`
 whose pop answers nothing, and `frameExitState` is that pop's fiber.
@@ -454,29 +475,20 @@ It asks for no chain. -/
 theorem step_finished_stack (interp : PrimInterp ν σ β ε δ ι α) (f : FrameFiber ν σ β ε δ ι α)
     (exit : Exit β ε δ ι α) (finished : (f.step interp).fst = FrameStep.finished exit) :
     (frameExitState f).stack = [] := by
-  cases current : f.current with
-  | success value =>
-    simp only [FrameFiber.step, current] at finished
+  rcases step_finished_current interp f exit finished with
+    ⟨value, current⟩ | ⟨cause, current⟩ | ⟨thunk, current⟩
+  · simp only [FrameFiber.step, current] at finished
     simp only [frameExitState, current]
     exact getCont_unanswered_stack f Arm.contA false none
       (resumeValue_finished interp f _ _ exit finished)
-  | failure cause =>
-    simp only [FrameFiber.step, current] at finished
+  · simp only [FrameFiber.step, current] at finished
     simp only [frameExitState, current]
     exact getCont_unanswered_stack f Arm.contE true none
       (resumeCause_finished interp f _ _ exit finished)
-  | sync thunk =>
-    simp only [FrameFiber.step, current] at finished
+  · simp only [FrameFiber.step, current] at finished
     simp only [frameExitState, current]
     exact getCont_unanswered_stack f Arm.contA false none
       (resumeValue_finished interp f _ _ exit finished)
-  | iterator generator cursor =>
-    simp only [FrameFiber.step, current] at finished
-    split at finished <;> cases finished
-  | whileLoop loop cursor =>
-    simp only [FrameFiber.step, current] at finished
-    split at finished <;> cases finished
-  | _ => simp only [FrameFiber.step, current, reduceCtorEq] at finished
 
 /-- **A finished frame is at the base.** With the chain over the fiber, the state that
 `frameExitState` retains has the base as its flag: the chain is kept
