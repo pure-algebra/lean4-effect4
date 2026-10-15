@@ -130,4 +130,22 @@ theorem fold_and (name₁ name₂ : EffName → Prop) (thunk₁ thunk₂ : EffTh
     all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [codeAlg])
   exact Iff.of_eq (hom_eq_cata_prim hom code).symm
 
+/-- Pointwise leaf implications lift through the generated runtime-code fold.
+Consumer: unrestricted finalizer annotations reuse the stored callback closure. -/
+theorem code_mono {name₁ name₂ : EffName → Prop} {thunk₁ thunk₂ : EffThunk → Prop}
+    (names : ∀ n, name₁ n → name₂ n) (thunks : ∀ t, thunk₁ t → thunk₂ t)
+    (code : NCode) (held : Code name₁ thunk₁ code) : Code name₂ thunk₂ code := by
+  induction code with
+  | success | failure | yieldableError | setInterruptible | yieldNowWith => trivial
+  | sync t | suspend t | withFiber t => exact thunks t held
+  | iterator n value | whileLoop n value | asyncFinalizer n => exact names n held
+  | onSuccess body n ih | onFailure body n ih | onExit body n flag ih =>
+    exact ⟨ih held.1, names n held.2⟩
+  | onSuccessConst body next ihBody ihNext => exact ⟨ihBody held.1, ihNext held.2⟩
+  | onSuccessAndFailure body success failure ih =>
+    exact ⟨ih held.1, names success held.2.1, names failure held.2.2⟩
+  | exitFrame body ih => exact ih held
+  | async register flag cancel =>
+    exact ⟨names register held.1, fun n member => names n (held.2 n member)⟩
+
 end Effect4.Program.CodeClosure

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.FinalizerGeneratorRun
+import Effect4.Laws.Program.FinalizerSuspensions
 import Effect4.Laws.Program.FinalizerLayerBody
 import Effect4.Laws.Program.FinalizerControl
 import Effect4.Laws.Program.FinalizerPlacement

@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.FinalizerGeneratorPC
-import Effect4.Laws.Program.FinalizerLayerBody
+import Effect4.Laws.Program.FinalizerSyntax
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -14,8 +14,9 @@ open Effect4 Effect4.Machine Effect4.Program
 open SourceScope.Opportunities
 
 /-- The actual statement walker returns only its own valid generator continuation. -/
-def ResultAt (point : Point) : IterStep EffName EffThunk Val Err Defect FiberId Ann → Prop
-  | .resume _ (.gen next pc _) => next.path = point.path ∧ Counter pc
+def ResultAt (q : List Nat) (point : Point) : IterStep EffName EffThunk Val Err Defect FiberId Ann → Prop
+  | .resume code (.gen next pc _) => next.path = point.path ∧ next.params = point.params ∧
+      Counter pc ∧ FinalizerSource.CodeAt q code
   | .resume _ _ => False
   | _ => True
 
@@ -46,29 +47,31 @@ theorem yield_found (root : NativeEff) (point : Point) (pc : List Nat)
 Consumer: the two yield cases of the full statement-walker producer. -/
 theorem yield_budget (root : NativeEff) (q : List Nat) (point : Point) (effect : NativeEff)
     (bind : Bool) (fuel : Nat) (pc : List Nat) (values folded : List Val)
-    (rest : Stmts NativeOp) (held : Counter pc)
+    (rest : Stmts NativeOp) (held : Counter pc) (parameters : FinalizerSource.PointAt q point)
     (found : blockAt root point pc = some (.cons (if bind then .bindYield effect else .yieldDiscard effect) rest))
     (recursive : ∀ next values folded, Counter next →
-      ResultAt point (runStmts root point fuel next values folded).2 ∧
+      ResultAt q point (runStmts root point fuel next values folded).2 ∧
         resultWeight root q (runStmts root point fuel next values folded).2 ≤
           remaining q (point.path ++ [0]) next) :
-    ResultAt point (runStmts.yieldOf root point effect bind fuel pc values folded).2 ∧
+    ResultAt q point (runStmts.yieldOf root point effect bind fuel pc values folded).2 ∧
       resultWeight root q (runStmts.yieldOf root point effect bind fuel pc values folded).2 ≤
         remaining q (point.path ++ [0]) pc := by
   have location := yield_found root point pc effect rest bind found
   have compiled := FinalizerSource.compile_le root q effect
     {point with path := point.path ++ [0] ++ pc ++ [0, 0], env := values, fuel := fuel + 1} location
+  have annotated := FinalizerSource.compile_at root q effect
+    {point with path := point.path ++ [0] ++ pc ++ [0, 0], env := values, fuel := fuel + 1} location parameters
   unfold runStmts.yieldOf
   dsimp only
   generalize actual : compileEff effect
-    {point with path := point.path ++ [0] ++ pc ++ [0, 0], env := values, fuel := fuel + 1} = code at compiled ⊢
+    {point with path := point.path ++ [0] ++ pc ++ [0, 0], env := values, fuel := fuel + 1} = code at compiled annotated ⊢
   cases code
   case success value =>
     obtain ⟨typed, bounded⟩ := recursive (pc ++ [1]) _ _ (Counter.append_next pc held)
     exact ⟨typed, Nat.le_trans bounded (remaining_descend q (point.path ++ [0]) pc [1])⟩
   case failure => exact ⟨True.intro, Nat.zero_le _⟩
   all_goals dsimp only [ResultAt, resultWeight]
-  all_goals refine ⟨⟨rfl, Counter.append_next pc held⟩, ?_⟩
+  all_goals refine ⟨⟨rfl, rfl, Counter.append_next pc held, annotated⟩, ?_⟩
   all_goals
     exact Nat.le_trans
       (Nat.add_le_add_right compiled (remaining q (point.path ++ [0]) (pc ++ [1])))
@@ -90,14 +93,14 @@ theorem block_found (root : NativeEff) (point : Point) (pc : List Nat)
 Consumer: the unrestricted generator iterator callback debit. -/
 theorem run_budget (root : NativeEff) (q : List Nat) (point : Point) (fuel : Nat)
     (pc : List Nat) (values folded : List Val) (held : Counter pc)
-    (placed : OncePlaced (.eff root) q = true) :
-    ResultAt point (runStmts root point fuel pc values folded).2 ∧
+    (parameters : FinalizerSource.PointAt q point) (placed : OncePlaced (.eff root) q = true) :
+    ResultAt q point (runStmts root point fuel pc values folded).2 ∧
       resultWeight root q (runStmts root point fuel pc values folded).2 ≤
         remaining q (point.path ++ [0]) pc := by
   induction fuel generalizing pc values folded with
   | zero =>
     unfold runStmts
-    refine ⟨⟨rfl, held⟩, ?_⟩
+    refine ⟨⟨rfl, rfl, held, parameters⟩, ?_⟩
     change 0 + remaining q (point.path ++ [0]) pc ≤ remaining q (point.path ++ [0]) pc
     exact Nat.le_of_eq (Nat.zero_add _)
   | succ fuel ih =>
@@ -118,9 +121,9 @@ theorem run_budget (root : NativeEff) (q : List Nat) (point : Point) (fuel : Nat
         dsimp only
         cases statement with
         | bindYield effect =>
-          exact yield_budget root q point effect true fuel pc values folded rest held block ih
+          exact yield_budget root q point effect true fuel pc values folded rest held parameters block ih
         | yieldDiscard effect =>
-          exact yield_budget root q point effect false fuel pc values folded rest held block ih
+          exact yield_budget root q point effect false fuel pc values folded rest held parameters block ih
         | ret term =>
           dsimp only
           split

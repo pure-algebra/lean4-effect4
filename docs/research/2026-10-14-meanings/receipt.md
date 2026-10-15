@@ -366,3 +366,30 @@ Changed files:
 - `src/Effect4/Laws/Program/AnswerSlots/TypedActions.lean`.
 - `src/Effect4/Laws/Program/CrewLogs/InitializedHistory.lean`.
 - `src/Effect4/Laws/Program/SourceOpportunityCommands.lean`.
+
+## Full source callback closure
+
+The finalizer endpoint remains open. This slice removes the direct-fragment restriction from its source callback facts.
+
+Base: `2099f556d`. The branch also integrates Atomic observation commit `7766f84b4`.
+
+Placement: scope-lifetime-finalization, R11, serving `FinalizerRun.once_placed_outside_census`.
+The shared generated code fold retains parameter frames, generator counters, and excluded layer construction regions.
+`FinalizerGenerator.run_budget` carries annotations and weights through its existing statement walk.
+The stored callbacks reuse `CodeClosure` through `code_mono`.
+The canonical weight model from `cbff02d3d` remains the only finalizer source weight model.
+
+Changed modules: `CodeClosure.Predicate`, `FinalizerSyntax`, `FinalizerLayers`, `FinalizerCallbacks`, `FinalizerSuspensions`, and `FinalizerGeneratorRun`.
+`FinalizerRun` imports the closure.
+
+Commands, run from `/Users/pooks/Dev/lean4-effect4-codex` through `scratch/lean-slot.sh`:
+
+- `lake build Effect4.Laws.Program.FinalizerGeneratorRun Effect4.Laws.Program.FinalizerCallbacks`: passes, 584 jobs.
+- `lake build Effect4.Laws.Program.FinalizerSuspensions`: passes, 584 jobs.
+- `lake env lean /private/tmp/FinalizerClosureAudit.lean`: passes.
+
+Audit: 344 declarations within `[propext, Quot.sound]`, zero modulo planned goals, zero planned goals.
+Evidence: `evidence/finalizer-closure-audit.log` and `evidence/FinalizerClosureAudit.lean`.
+
+Open: join recursive callbacks, native transitions, release custody, and command history to the endpoint.
+These are local kernel-checked facts. They establish no progress or host behavior.
