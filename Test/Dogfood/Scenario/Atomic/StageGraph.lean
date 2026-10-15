@@ -15,37 +15,118 @@ namespace Test.Dogfood.Scenario.Atomic.StageGraph
 open Effect4 Effect4.Machine Effect4.Program Effect4.Machine.AnswerFlow
 open StageWorld
 
+/-- Request answer classes name the same owner as the current source role. -/
+def Owns (owner : Nat) : StageWorld.Kind → Prop
+  | .waiting id | .seen id | .decision id | .deposit id | .body id | .finalized id | .note id | .cleanup id => owner = id
+  | .ordinary | .rootAnswer _ => False
+
 /-- Current code retains the precise request stage required by its next actual operation. -/
-inductive CodeAt (root : NativeEff) (table : RowTable) : StageWorld.World → StageWorld.Kind → NCode → Prop
-  | success {world kind value} (good : ValueAt world kind value) : CodeAt root table world kind (.success value)
-  | failure {world kind cause} (good : CauseAt world kind cause) : CodeAt root table world kind (.failure cause)
-  | decision {world id env} (waiting : world.stages id = .waiting) :
-      CodeAt root table world (.decision id) (.sync (.op (.refModify ⟨0⟩ (Store.decisionAt env.length) env)))
-  | deposit {world id env} (admitted : world.stages id = .admitted) :
-      CodeAt root table world (.deposit id) (.sync (.op (.refModify ⟨1⟩ (Store.depositAt id env.length) env)))
-  | reading {world id} : CodeAt root table world (.seen id) (.sync (.op (.refGet ⟨0⟩)))
-  | note {world id env used admitted rejected}
-      (positive : world.stages id = .deposited → 1 ≤ admitted + rejected) :
-      CodeAt root table world (.note id)
-        (.sync (.op (.refUpdate ⟨2⟩ (Store.noteAt id (env.length + 1))
+inductive CodeAt (root : NativeEff) (table : RowTable) (owner : Nat) : StageWorld.World → StageWorld.Kind → NCode → Prop
+  | success {world kind value} (good : ValueAt world kind value) : CodeAt root table owner world kind (.success value)
+  | failure {world kind cause} (good : CauseAt world kind cause) : CodeAt root table owner world kind (.failure cause)
+  | decision {world env} (waiting : world.stages owner = .waiting) :
+      CodeAt root table owner world (.decision owner) (.sync (.op (.refModify ⟨0⟩ (Store.decisionAt env.length) env)))
+  | deposit {world env} (admitted : world.stages owner = .admitted) :
+      CodeAt root table owner world (.deposit owner) (.sync (.op (.refModify ⟨1⟩ (Store.depositAt owner env.length) env)))
+  | reading {world} : CodeAt root table owner world (.seen owner) (.sync (.op (.refGet ⟨0⟩)))
+  | note {world env used admitted rejected}
+      (positive : world.stages owner = .deposited → 1 ≤ admitted + rejected) :
+      CodeAt root table owner world (.note owner)
+        (.sync (.op (.refUpdate ⟨2⟩ (Store.noteAt owner (env.length + 1))
           (env ++ [Test.Dogfood.P4RateLimiter.windowVal used admitted rejected]))))
-  | yielding {world id priority} (waiting : world.stages id = .waiting) :
-      CodeAt root table world (.waiting id) (.yieldNowWith priority)
+  | yielding {world priority} (waiting : world.stages owner = .waiting) :
+      CodeAt root table owner world (.waiting owner) (.yieldNowWith priority)
   | frontier {world kind point} (zero : point.fuel = 0) :
-      CodeAt root table world kind (Effect4.Program.frontier point)
+      CodeAt root table owner world kind (Effect4.Program.frontier point)
   | suspended {world kind thunk}
-      (next : ∀ view, CodeAt root table world kind ((interpAt root view table).suspendBody thunk)) :
-      CodeAt root table world kind (.suspend thunk)
-  | bound {world input output body name} (first : CodeAt root table world input body)
+      (next : ∀ view, CodeAt root table owner world kind ((interpAt root view table).suspendBody thunk)) :
+      CodeAt root table owner world kind (.suspend thunk)
+  | restoring {world body exit} (captured : StageFinalizer.BodyExit world owner exit)
+      (first : CodeAt root table owner world (.cleanup owner) body) :
+      CodeAt root table owner world (.finalized owner) (.onSuccess body (.restore exit))
+  | merging {world body exit} (captured : StageFinalizer.BodyExit world owner exit)
+      (first : CodeAt root table owner world (.note owner) body) :
+      CodeAt root table owner world (.cleanup owner) (.onFailure body (.merge exit))
+  | bound {world input output body name} (localInput : Owns owner input) (first : CodeAt root table owner world input body)
       (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
-        ValueAt nextWorld input answer → CodeAt root table nextWorld output
+        ValueAt nextWorld input answer → CodeAt root table owner nextWorld output
           ((interpAt root view table).contA name answer))
       (skip : ∀ nextWorld, Future world nextWorld → ∀ cause,
         CauseAt nextWorld input cause → CauseAt nextWorld output cause) :
-      CodeAt root table world output (.onSuccess body name)
+      CodeAt root table owner world output (.onSuccess body name)
+
+/-- A different request's write leaves this owner's delivered value class unchanged. -/
+theorem value_other (owner : Nat) (kind : StageWorld.Kind) (owns : Owns owner kind)
+    (before after : StageWorld.World) (stage : before.stages owner = after.stages owner)
+    (cleaned : before.cleaned owner = after.cleaned owner) (value : Val) (good : ValueAt before kind value) :
+    ValueAt after kind value := by
+  cases kind
+  all_goals dsimp only [Owns] at owns
+  all_goals cases owns
+  all_goals cases value
+  all_goals simp only [ValueAt, stage, cleaned] at good ⊢
+  all_goals exact good
+
+/-- Unaffected request causes retain both deposit and positive cleanup evidence. -/
+theorem cause_other (owner : Nat) (kind : StageWorld.Kind) (owns : Owns owner kind)
+    (before after : StageWorld.World) (stage : before.stages owner = after.stages owner)
+    (cleaned : before.cleaned owner = after.cleaned owner) (cause : CauseV) (good : CauseAt before kind cause) :
+    CauseAt after kind cause := by
+  cases kind
+  all_goals dsimp only [Owns] at owns
+  all_goals cases owns
+  all_goals simpa only [CauseAt, stage, cleaned] using good
+
+/-- Actual nonacting request code reads only its owner's unchanged stage and cleanup facts. -/
+theorem code_other (root : NativeEff) (table : RowTable) (owner : Nat)
+    (before : StageWorld.World) (kind : StageWorld.Kind) (code : NCode)
+    (owned : CodeAt root table owner before kind code) :
+    ∀ after, Future before after → before.stages owner = after.stages owner →
+      before.cleaned owner = after.cleaned owner → Owns owner kind → CodeAt root table owner after kind code := by
+  induction owned with
+  | success good =>
+    intro after future stage cleaned owns
+    exact .success (value_other owner _ owns _ after stage cleaned _ good)
+  | failure good =>
+    intro after future stage cleaned owns
+    exact .failure (cause_other owner _ owns _ after stage cleaned _ good)
+  | decision waiting =>
+    intro after future stage cleaned owns
+    exact .decision (stage ▸ waiting)
+  | deposit admitted =>
+    intro after future stage cleaned owns
+    exact .deposit (stage ▸ admitted)
+  | reading =>
+    intro after future stage cleaned owns
+    exact .reading
+  | note positive =>
+    intro after future stage cleaned owns
+    exact .note (fun deposited => positive (stage.symm ▸ deposited))
+  | yielding waiting =>
+    intro after future stage cleaned owns
+    exact .yielding (stage ▸ waiting)
+  | frontier zero =>
+    intro after future stage cleaned owns
+    exact .frontier zero
+  | suspended next ih =>
+    intro after future stage cleaned owns
+    exact .suspended (fun view => ih view after future stage cleaned owns)
+  | restoring captured first ih =>
+    intro after future stage cleaned owns
+    exact .restoring (StageFinalizer.body_exit_future _ after future owner _ captured)
+      (ih after future stage cleaned rfl)
+  | merging captured first ih =>
+    intro after future stage cleaned owns
+    exact .merging (StageFinalizer.body_exit_future _ after future owner _ captured)
+      (ih after future stage cleaned rfl)
+  | bound localInput first callback skip ihFirst ihCallback =>
+    intro after future stage cleaned owns
+    exact .bound localInput (ihFirst after future stage cleaned localInput)
+      (fun later next view answer good => callback later (order.trans future next) view answer good)
+      (fun later next cause good => skip later (order.trans future next) cause good)
 
 /-- The answer-flow model reads the same stage world used by actual primitive writes. -/
-def model (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV)) :
+def model (root : NativeEff) (table : RowTable) (owner : Nat) (view : List (FiberId × ExitV)) :
     Model (ν := EffName) (σ := EffThunk) (β := Val) (ε := Err) (δ := Defect)
       (ι := FiberId) (α := Ann) StageWorld.World StageWorld.Kind where
   future := Future
@@ -53,23 +134,23 @@ def model (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV))
   future_trans _ _ _ one two := order.trans one two
   value := ValueAt
   cause := CauseAt
-  code := CodeAt root table
+  code := CodeAt root table owner
   finalizer := fun _ name exit => ((interpAt root view table).finalizerProgram name exit).map
     (finalizerCode (interpAt root view table) exit)
   success := fun _ _ _ held => .success held
   failure := fun _ _ _ held => .failure held
 
 /-- Ordinary bind callbacks retain their semantic contract at every actual completed-fiber view. -/
-def Semantic (root : NativeEff) (table : RowTable) :=
-  ViewSavedAt (model root table) (fun view => (interpAt root view table).toPrimInterp)
+def Semantic (root : NativeEff) (table : RowTable) (owner : Nat) :=
+  ViewSavedAt (model root table owner) (fun view => (interpAt root view table).toPrimInterp)
 
 /-- The request graph reuses the checked finalizer restore and merge family. -/
-def Edge (root : NativeEff) (table : RowTable) :=
-  EmbeddedEdgeOver id id (fun (_ : StageWorld.World) => True) (Semantic root table) StageFinalizer.Edge
+def Edge (root : NativeEff) (table : RowTable) (owner : Nat) :=
+  EmbeddedEdgeOver id id (fun (_ : StageWorld.World) => True) (Semantic root table owner) StageFinalizer.Edge
 
 /-- The same model embeds its existing finalizer family without changing its world or classes. -/
-theorem embedding (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV)) :
-    FamilyEmbedding (model root table view) (model root table view) id id (fun _ => True) where
+theorem embedding (root : NativeEff) (table : RowTable) (owner : Nat) (view : List (FiberId × ExitV)) :
+    FamilyEmbedding (model root table owner view) (model root table owner view) id id (fun _ => True) where
   ready_future := fun _ _ _ held => held
   future := fun _ _ held _ => held
   value_read := fun _ _ _ _ held => held
@@ -80,17 +161,17 @@ theorem embedding (root : NativeEff) (table : RowTable) (view : List (FiberId ×
   finalizer := fun _ _ _ _ => rfl
 
 /-- Native bind edges consume the actual answer class and preserve the separate failure class. -/
-theorem bound_edge (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+theorem bound_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : StageWorld.World)
     (input output : StageWorld.Kind) (body : NCode) (name : EffName)
     (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
-      ValueAt nextWorld input answer → CodeAt root table nextWorld output ((interpAt root view table).contA name answer))
+      ValueAt nextWorld input answer → CodeAt root table owner nextWorld output ((interpAt root view table).contA name answer))
     (skip : ∀ nextWorld, Future world nextWorld → ∀ cause,
       CauseAt nextWorld input cause → CauseAt nextWorld output cause) :
-    Edge root table world input output (.onSuccess body name) := by
+    Edge root table owner world input output (.onSuccess body name) := by
   apply EmbeddedEdgeOver.saved
   refine ⟨?_, ?_, ?_⟩
   · intro view
-    exact saved_success (model root table view) (interpAt root view table).toPrimInterp world input output body name
+    exact saved_success (model root table owner view) (interpAt root view table).toPrimInterp world input output body name
       (fun nextWorld future answer good => callback nextWorld future view answer good) skip
   · intro name cursor equal
     cases equal
@@ -98,15 +179,15 @@ theorem bound_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Wor
     cases equal
 
 /-- The whole saved request suffix shares one actual recorded-cause admission. -/
-theorem family (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV)) :
-    ContextualSavedFamily (model root table view) (interpAt root view table).toPrimInterp
-      (Edge root table) StageFinalizer.Allowed := by
-  exact (embedding root table view).contextual_family_over (interpAt root view table).toPrimInterp (Semantic root table) StageFinalizer.Edge
+theorem family (root : NativeEff) (table : RowTable) (owner : Nat) (view : List (FiberId × ExitV)) :
+    ContextualSavedFamily (model root table owner view) (interpAt root view table).toPrimInterp
+      (Edge root table owner) StageFinalizer.Allowed := by
+  exact (embedding root table owner view).contextual_family_over (interpAt root view table).toPrimInterp (Semantic root table owner) StageFinalizer.Edge
     StageFinalizer.Allowed StageFinalizer.Allowed (fun _ _ _ held => held)
-    (SavedFamily.contextual (model root table view) (interpAt root view table).toPrimInterp
-      (Semantic root table) StageFinalizer.Allowed
-      (ViewSavedAt.family (model root table) (fun view => (interpAt root view table).toPrimInterp) view))
-    (StageFinalizer.family (model root table view) rfl rfl rfl root table view)
+    (SavedFamily.contextual (model root table owner view) (interpAt root view table).toPrimInterp
+      (Semantic root table owner) StageFinalizer.Allowed
+      (ViewSavedAt.family (model root table owner) (fun view => (interpAt root view table).toPrimInterp) view))
+    (StageFinalizer.family (model root table owner view) rfl rfl rfl root table view)
 
 /-- Exact source resolution supplies the decision code with its actual waiting premise. -/
 theorem decision_source (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
@@ -114,7 +195,7 @@ theorem decision_source (built : Api.Built) (accepted : Api.Author.build (shop .
     (path : point.path = StageSource.decisionPath id) (amount : point.fuel = fuel + 1)
     (sourceOwned : SourceScope.At built.program point) (captured : point.env[0]? = some (.cell ⟨0⟩))
     (world : StageWorld.World) (waiting : world.stages id = .waiting) :
-    CodeAt built.program built.table world (.decision id) (resolve built.program point) := by
+    CodeAt built.program built.table id world (.decision id) (resolve built.program point) := by
   rw [StageSource.resolve_decision built accepted id member point fuel path amount sourceOwned captured]
   exact .decision waiting
 
@@ -124,14 +205,14 @@ theorem deposit_source (built : Api.Built) (accepted : Api.Author.build (shop .n
     (path : point.path = StageSource.depositPath id) (amount : point.fuel = fuel + 1)
     (sourceOwned : SourceScope.At built.program point) (captured : point.env[1]? = some (.cell ⟨1⟩))
     (world : StageWorld.World) (admitted : world.stages id = .admitted) :
-    CodeAt built.program built.table world (.deposit id) (resolve built.program point) := by
+    CodeAt built.program built.table id world (.deposit id) (resolve built.program point) := by
   rw [StageSource.resolve_deposit built accepted id member point fuel path amount sourceOwned captured]
   exact .deposit admitted
 
 /-- An actual stage-sensitive synchronous head chooses its new world and returned class together.
 The window, account and cleanup premises come from the coupled numeric heap invariant. -/
-theorem sync_answer (root : NativeEff) (table : RowTable) (world : StageWorld.World)
-    (kind : StageWorld.Kind) (operation : SyncOp) (owned : CodeAt root table world kind (.sync (.op operation)))
+theorem sync_answer (root : NativeEff) (table : RowTable) (owner : Nat) (world : StageWorld.World)
+    (kind : StageWorld.Kind) (operation : SyncOp) (owned : CodeAt root table owner world kind (.sync (.op operation)))
     (state : Stores) (used admitted rejected : Nat) (ids : List Nat) (log : List Val)
     (window : refPeek state.refs ⟨0⟩ = some (Test.Dogfood.P4RateLimiter.windowVal used admitted rejected))
     (account : refPeek state.refs ⟨1⟩ = some (Store.Writes.account ids))
