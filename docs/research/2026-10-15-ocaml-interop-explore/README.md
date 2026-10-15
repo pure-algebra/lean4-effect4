@@ -168,7 +168,87 @@ half of that law (`session_keys_once`, `src/Effect4/Laws/Run/Journal.lean`).
 5. Generate layers 2 to 4 once, generic over the rows. The OCaml edge then comes from the same
    description as Effect's client.
 
-## 7. What this does not establish
+## 7. The message alphabet, from what exists
+
+### 7.1 The principle
+
+The tree already holds every representation the layers need. The alphabet is a function of the
+rows over `Ty`. The existing bridge prints it, and the existing codec admits wire messages
+against it. No new representation enters.
+
+### 7.2 What ran
+
+| Probe | Files | Evidence | Result |
+| --- | --- | --- | --- |
+| Effect's RPC schemas exported as data | `alphabet/export.ts`, `alphabet/vendored/effect-rpc-rc112.json` | tested | the envelope, each RPC's payload, success, error and exit, and five serializations, written by rc.112's own `SchemaRepresentation` |
+| Those schemas read into `Ty` | `alphabet/Alphabet.lean` | tested, `alphabet/alphabet.log` | payloads read as they are; exits and errors read after three widenings; the envelope stays refused |
+| The alphabet derived from the rows | the same | tested | 6 of 9 recorded server messages admitted; the 3 refused are named in §7.3 |
+| The derived alphabet through the bridge | the same | tested | `ofSchema (schema t) = some t` for both directions' alphabets |
+
+`Alphabet.lean` reads rc.112's representation JSON into `Representation` with a small reader
+(`repOf`). It then applies the existing `Bridge.ofSchema` (`src/Effect4/Schema/Bridge.lean`), and
+decodes with the existing `Schema.decode` (`src/Effect4/Schema/Codec.lean`).
+
+### 7.3 The seams it found
+
+| Seam | Observed | What it needs |
+| --- | --- | --- |
+| References in a document | `ofSchema` refuses `$ref` | resolve before reading, in the reader |
+| Unions of one or of three or more | `Rpc.exitSchema` wraps an error in a one-member union; the envelope has nine members | read a one-member union as its member, many as nested pairs |
+| The `~identifier` annotation | a tagged error carries it, and `erasedKeys` lacks it | add it to the erased keys, with `ofSchema_exact` kept |
+| A request id is a JS `number` | `Ty.number` is unlowered in the bridge, so the envelope is refused | lower `number`, or restrict ids to integers and strings with a named refusal |
+| The failure form | `eff_failure SqlError message` is a pair; the face (`Codegen/Classes.lean`, row 120 (b)) and Effect's wire use the tagged record | one failure form: the tagged record |
+| An option on the wire | the codec admitted a bare record at `option` | check against rc.112's `Option` JSON codec, which `check-schema-codec` owns |
+| The hand-written client | `Int` for a natural, `Null` for unit, `NullOr` for an option, declared field order | print the RPC group from the rows; compare types modulo `Ty.normalize` |
+
+The two answers of `echoAfter` are refused correctly: `echoAfter` is no row of the table.
+
+### 7.4 Each layer: its owner, its Effect surface and its OCaml surface
+
+| Layer | The Lean owner | The Effect surface | The OCaml surface | What is missing |
+| --- | --- | --- | --- | --- |
+| 5. Signature | `Row`, `eff_rows`, `rowServices` | `RpcGroup` of `Rpc.make`, printed from the rows | the host: generated glue or the lowered machine | the `RpcGroup` printer |
+| 4. Correlation | `session_keys_once`; `Run.Reactor`; `Effects.Comodel` | inside Effect's `RpcClient` and `RpcServer` | one module, generic in the alphabet | the client half's law; correlation as a host over send and receive |
+| 3. Messages | `Ty`: the alphabet as `fromClient rows` and `fromServer rows` | Effect's `RpcMessage`, read from the vendored document | the lowered codec at the alphabet's type | the id type and the failure form |
+| 2. Framing | `Schema.encode` and `Schema.decode` at a `Ty` | `RpcSerialization` layers: json, ndjson, jsonRpc, msgPack | NDJSON and JSON framing, once | the serialization table as Lean data |
+| 1. Channel | none: native and assumed (row 393 (4)) | platform layers: `Socket`, `FetchHttpClient`, workers, stdio | Eio flows | the platform table as Lean data |
+
+### 7.5 The platform model, as data
+
+Effect's own protocols say what each channel carries. The HTTP client sends only `Request`
+(`vendor/effect-4.0.0-rc.112/src/unstable/rpc/RpcClient.ts:923`) and declares no acks (`:1002`).
+The socket and worker clients declare acks (`:1187`, `:1410`). Each serialization declares its
+content type and whether it frames its messages. The platform model is that table:
+
+- a channel: its name, the messages it carries, whether it needs framed messages, and the Effect
+  layer that provides it;
+- a serialization: its name, its content type and whether it includes framing.
+
+A deployment is a channel with a serialization. It is valid when a channel that needs framing
+gets a framed serialization. The transport law observes only the messages the channel carries.
+Over HTTP the law covers answers, and interruption stays unobserved.
+
+### 7.6 The vendoring route
+
+1. Export an Effect schema, or a standard's JSON Schema read by `fromJsonSchemaDocument`, as
+   rc.112's representation JSON.
+2. Vendor the file with its source, version and SHA-256.
+3. Read it with `Representation.ofJson`, then `Bridge.ofSchema`, into `Ty`.
+4. Generate from `Ty`: the Effect schema (`Bridge.schema`), the codec, and the OCaml lowering.
+
+### 7.7 The slices
+
+| Slice | What lands | Consumer |
+| --- | --- | --- |
+| A1 | `Representation.ofJson`; the three widenings in `ofSchema`, with `ofSchema_exact` kept | the vendored rc.112 document reads into `Ty` |
+| A2 | `fromClient` and `fromServer` as functions of the rows; agreement with the vendored exits | the wire admission of every message |
+| A3 | one failure form: the tagged record | the alphabet admits the codec value of Effect's failure |
+| A4 | the `RpcGroup` printer from the rows | Effect's `RpcClient` against the OCaml server, with no hand-written schema |
+| A5 | the platform and serialization tables as data, and the layer printer | a deployment's Effect layers |
+| A6 | correlation in `effects`: a host over send and receive that simulates the request/response wire | the transport law for sockets |
+| A7 | the OCaml layers 2 to 4, generated once from the alphabet | replaces `rpc/effect_rpc.ml` |
+
+## 8. What this does not establish
 
 - Each result is a finite probe at the named versions, except the two theorems of
   `rpc/Transport.lean`.
