@@ -1617,3 +1617,41 @@ It then runs `lake env lean scratch/TimeoutSourceActionsAudit.lean`.
 The build passes with 1300 jobs.
 The audit checks 522 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 This proof-only slice reaches no outside implementation gate.
+
+## Actual count head and retained saved frames
+
+The source action annotation now rejects native park thunks.
+The existing indexed compiler contract retains the actual source node at its park leaf.
+That source node excludes a park within the attempt subtree.
+The prior compiler contract permits every park independently of its source node.
+The refinement uses the existing compiler induction.
+
+The count producer now retains arbitrary certified saved frames.
+The same numeric saved path supplies its incoming count and committed answer class.
+The same writer annotation supplies the actual authored count environment.
+The same configuration supplies the predecessor heap.
+The existing path crossing theorem locates the authored finalizer.
+The source frame certificate identifies that actual finalizer's attempt point.
+The actual count consumer joins these facts with its existing command permission.
+The earlier exact-stack count interfaces remain wrappers.
+No new compiler, saved-frame, command, or history traversal enters this slice.
+
+Placement: scope-lifetime-finalization R11 and reactive-scheduling R9.
+Consumer: the actual count branch of the pending native producer for both original Timeout endpoints.
+Reach: the actual source count head, retained saved path, unique attempt, and admitted count command.
+The full native case join, root race births, active command producer, and both endpoint histories remain open.
+Neither public endpoint changes.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-source-actions-migration-check.sh
+```
+
+The script builds the existing retirement, cleanup-native, and injection consumers.
+It then audits the count machine, count queue, source action, writer, ordinary, cleanup, and injection modules.
+The initial build passes, but its audit finds an unwanted classical dependency in the count permission proof.
+The correction proves the contradictory numeric branches explicitly before eliminating them.
+The corrected build passes with 1300 jobs.
+The audit checks 567 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+This proof-only slice reaches no outside implementation gate.
