@@ -21,7 +21,7 @@ def FinalExitAt (world : World) (id : Nat) : Option ExitV → Prop
 /-- The planted typed failure's finalized class contains both deposit and cleanup evidence. -/
 theorem downstream_finished (world : World) (id : Nat) (good : FinalExitAt world id (some downstream)) :
     world.stages id = .deposited ∧ world.cleaned id = true :=
-  good (.fail (Err.tagged "Downstream" "unavailable") .empty) (List.mem_singleton_self _) rfl
+  good downstream_needs
 
 /-- Reading a finalized request exit reports only its certified deposited or rejected stage. -/
 theorem outcome_stages (world : World) (id : Nat) (exit : Option ExitV) (good : FinalExitAt world id exit) :

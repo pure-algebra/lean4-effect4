@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.Writes
+import Test.Dogfood.Scenario.Atomic.FailureWitness
 import Test.Dogfood.Scenario.Atomic.RootSlots
 import Effect4.Laws.Machine.AnswerFlow
 
@@ -113,16 +114,14 @@ def ValueAt (world : World) : Kind → Val → Prop
   | .note id, value | .cleanup id, value => value = .unit ∧ (world.stages id = .deposited → world.cleaned id = true)
   | _, _ => False
 
-/-- A typed body failure stands behind a deposit; finalization also retains its cleanup witness. -/
+/-- A typed body failure retains its deposit; a failure-only final exit also retains its cleanup witness. -/
 def CauseAt (world : World) : Kind → CauseV → Prop
-  | .paused id incoming stage cleaned, cause =>
-    world.stages id = stage ∧ world.cleaned id = cleaned ∧ CauseAt world incoming cause
+  | .paused _ incoming _ _, cause => CauseAt world incoming cause
   | .ordinary, _ => True
   | .body id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail → world.stages id = .deposited
-  | .finalized id, cause | .cleanup id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail →
+  | .finalized id, cause | .cleanup id, cause => NeedsCleanup cause →
       world.stages id = .deposited ∧ world.cleaned id = true
-  | .seen id, cause | .note id, cause => (∀ reason ∈ cause.reasons, reason.tag ≠ .fail) ∧
-      (world.stages id = .deposited → world.cleaned id = true)
+  | .seen _, cause | .note _, cause => MarkedCause cause
   | _, cause => ∀ reason ∈ cause.reasons, reason.tag ≠ .fail
 
 /-- Finalizer restoration retains the body's Boolean stage certificate.
@@ -137,32 +136,47 @@ Consumer: the finalizer's restore and merge saved contracts. -/
 theorem restored_cause (world : World) (id : Nat) (cause : CauseV)
     (body : CauseAt world (.body id) cause) (note : ValueAt world (.note id) .unit) :
     CauseAt world (.finalized id) cause := by
-  intro reason member typed
-  have deposited := body reason member typed
+  intro needed
+  obtain ⟨reason, member⟩ := needed.1
+  have deposited := body reason member (needed.2 reason member)
   exact ⟨deposited, note.2 deposited⟩
 
-/-- A finalizer failure supplies no new typed reason and retains cleanup evidence.
+/-- A finalizer failure retains a non-fail reason and excludes a failure-only downstream observation.
 Consumer: the actual failure-merge name following an installed request finalizer. -/
 theorem merged_cause (world : World) (id : Nat) (body finalizer : CauseV)
-    (original : CauseAt world (.body id) body)
+    (_original : CauseAt world (.body id) body)
     (finished : CauseAt world (.note id) finalizer) :
-    CauseAt world (.finalized id) (Cause.combine body finalizer) := by
-  intro reason member typed
-  rcases Cause.combine_no_new_reason reason body finalizer member with prior | cleanup
-  · have deposited := original reason prior typed
-    exact ⟨deposited, finished.2 deposited⟩
-  · exact False.elim (finished.1 reason cleanup typed)
+    CauseAt world (.finalized id) (Cause.combine body finalizer) :=
+  fun needed => False.elim ((MarkedCause.combine_right body finalizer finished).not_needs needed)
 
-/-- A later outside interrupt cannot erase a finalized request's deposit or cleanup evidence.
+/-- An added cause without typed failures cannot create a failure-only exit without its prior cleanup evidence.
 Consumer: contextual interruption of a completed request role. -/
 theorem interrupted_cause (world : World) (id : Nat) (body interruption : CauseV)
     (original : CauseAt world (.finalized id) body)
     (outside : ∀ reason ∈ interruption.reasons, reason.tag ≠ .fail) :
-    CauseAt world (.finalized id) (Cause.combine body interruption) := by
-  intro reason member typed
-  rcases Cause.combine_no_new_reason reason body interruption member with prior | added
-  · exact original reason prior typed
-  · exact False.elim (outside reason added typed)
+    CauseAt world (.finalized id) (Cause.combine body interruption) :=
+  fun needed => original (NeedsCleanup.before_untyped body interruption outside needed)
+
+/-- An actual interruption without typed failures fits every request failure class.
+Consumer: outside interruption, deferred loop entry and native cancellation transport. -/
+theorem untyped_marked_cause (world : World) (kind : Kind) (cause : CauseV)
+    (untyped : ∀ reason ∈ cause.reasons, reason.tag ≠ .fail) (marked : MarkedCause cause) :
+    CauseAt world kind cause := by
+  induction kind with
+  | ordinary => trivial
+  | rootAnswer binder => exact untyped
+  | rootPause counter => exact untyped
+  | waiting id => exact untyped
+  | decision id => exact untyped
+  | deposit id => exact untyped
+  | body id =>
+    intro reason member typed
+    exact False.elim (untyped reason member typed)
+  | finalized id => exact fun needed => False.elim (marked.not_needs needed)
+  | cleanup id => exact fun needed => False.elim (marked.not_needs needed)
+  | seen id => exact marked
+  | note id => exact marked
+  | paused id incoming stage cleaned ih => exact ih
 
 /-- The actual decision chooses its next stage and its answer in the same primitive step. -/
 theorem decision (world : World) (id : Nat) (waiting : world.stages id = .waiting)

@@ -143,8 +143,8 @@ theorem note_tail_code (root : NativeEff) (table : RowTable) (id : Nat) (world :
     · intro nextWorld future cause value
       rcases shape with rfl | rfl
       · exact value
-      · intro reason member typed
-        exact False.elim (value.1 reason member typed)
+      · intro needed
+        exact False.elim (value.not_needs needed)
 
 
 /-- The actual finalizer source carries its window read into one note and the real pure suffix. -/
@@ -191,7 +191,7 @@ theorem cleanup_code (built : Api.Built) (accepted : Api.Author.build (shop .non
     · intro nextWorld future cause value
       rcases shape with rfl | rfl
       · exact value
-      · intro reason member typed
-        exact False.elim (value.1 reason member typed)
+      · intro needed
+        exact False.elim (value.not_needs needed)
 
 end Test.Dogfood.Scenario.Atomic.StageCleanup

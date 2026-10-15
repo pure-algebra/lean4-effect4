@@ -89,7 +89,7 @@ theorem value_other (owner : Nat) (kind : StageWorld.Kind) (owns : Owns owner ki
     all_goals simp only [ValueAt, stage, cleaned] at good ⊢
     all_goals exact good
 
-/-- Unaffected request causes retain both deposit and positive cleanup evidence. -/
+/-- Unaffected request causes retain their failure-only cleanup implication. -/
 theorem cause_other (owner : Nat) (kind : StageWorld.Kind) (owns : Owns owner kind)
     (before after : StageWorld.World) (stage : before.stages owner = after.stages owner)
     (cleaned : before.cleaned owner = after.cleaned owner) (cause : CauseV) (good : CauseAt before kind cause) :
@@ -97,7 +97,7 @@ theorem cause_other (owner : Nat) (kind : StageWorld.Kind) (owns : Owns owner ki
   induction kind with
   | paused id incoming savedStage savedCleaned ih =>
     obtain ⟨rfl, localKind⟩ := owns
-    exact ⟨stage.symm.trans good.1, cleaned.symm.trans good.2.1, ih localKind good.2.2⟩
+    exact ih localKind good
   | _ =>
     all_goals dsimp only [Owns] at owns
     all_goals cases owns
@@ -256,7 +256,7 @@ theorem pause_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : 
     · intro after future answer good
       exact code_other root table owner world kind next held after future good.1.symm good.2.symm owns
     · intro after future cause good
-      exact good.2.2
+      exact good
   · intro name cursor equal
     cases equal
   · intro name cursor equal

@@ -90,7 +90,7 @@ theorem restore_code (world : StageWorld.World) (id : Nat) (exit : ExitV) (good 
     exact restored_cause world id cause good ⟨rfl, finished.2⟩
 
 include causeEq in
-/-- The actual failure merge adds no new typed failure from finalizer execution. -/
+/-- The actual failure merge excludes a failure-only finalizer observation. -/
 theorem merge_code (world : StageWorld.World) (id : Nat) (exit : ExitV) (good : BodyExit world id exit)
     (cause : CauseV) (finished : CauseAt world (.note id) cause) :
     model.code world (.cleanup id) (Prim.ofExit (Exit.restoreAfterFinalizer exit (.failure cause))) := by
@@ -98,8 +98,7 @@ theorem merge_code (world : StageWorld.World) (id : Nat) (exit : ExitV) (good : 
   | success answer =>
     apply model.failure
     rw [causeEq]
-    intro reason member typed
-    exact False.elim (finished.1 reason member typed)
+    exact fun needed => False.elim (finished.not_needs needed)
   | failure original =>
     apply model.failure
     rw [causeEq]
@@ -150,13 +149,11 @@ theorem family (id : Nat) (root : NativeEff) (table : RowTable) (view) :
       | none =>
         simp only [Prim.ensure, FrameFiber.skippedCause, pending] at actual
         cases actual
-        intro reason member typed
-        exact False.elim (finished.1 reason member typed)
+        exact fun needed => False.elim (finished.not_needs needed)
       | some recorded =>
-        have clean := admitted recorded pending
         simp only [Prim.ensure, FrameFiber.skippedCause, pending] at actual
         cases actual
-        intro reason member typed
-        exact False.elim (Cause.sanitize_clean cause recorded clean reason member typed)
+        exact fun needed => False.elim
+          ((MarkedCause.combine_left cause.stripFail recorded (MarkedCause.stripFail cause finished)).not_needs needed)
 
 end Test.Dogfood.Scenario.Atomic.StageFinalizer
