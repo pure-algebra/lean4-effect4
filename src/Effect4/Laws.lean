@@ -399,4 +399,4 @@ import Effect4.Laws.Program.ReleaseWriter.Actions
 import Effect4.Laws.Program.AnswerSlots.InitializedNativeExit
 import Effect4.Laws.Program.CrewLogs.Initialized
 import Effect4.Laws.Program.AnswerSlots.PrefixStable
-import Effect4.Laws.Program.NativeActionFlow
+import Effect4.Laws.Program.NativeActionRows
