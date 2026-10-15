@@ -146,4 +146,88 @@ theorem spawn_role (root : NativeEff) (table : RowTable) (m : NativeMachine)
     omega
   · refine ⟨_, List.mem_append.mpr (.inr (List.mem_cons_self)), ?_, rfl⟩
     exact congrArg FiberId.mk nextId
+
+/-- The decision executes after the request's initial scheduler yield. -/
+def decisionPath (id : Nat) : List Nat := SourcePaths.requestPath id ++ [0, 0, 1]
+
+/-- The admitted branch executes the deposit before returning or failing. -/
+def depositPath (id : Nat) : List Nat := SourcePaths.requestPath id ++ [0, 1, 0, 0]
+
+/-- One source-site reader retains the operation, lexical level and captured reference slot. -/
+def opSite (root : NativeEff) (path : List Nat) (operation : Nat → NativeOp) (slot : Nat) : Bool :=
+  match SourceScope.levelAt (.eff root) 0 path, Node.at_ (.eff root) path with
+  | some level, some (.eff (.perform op request)) => op == operation level && request == .var slot
+  | _, _ => false
+
+/-- The actual six decision sites use the captured window and the lexical decision term. -/
+theorem decision_sites :
+    (Store.shopProgram.map fun root => requests.all fun id =>
+      opSite root (decisionPath id) (fun level => .refModifyWith (Store.decisionAt level)) 0) = some true := by
+  kernel_rfl
+
+/-- The actual six deposit sites retain their request identity and the captured account. -/
+theorem deposit_sites :
+    (Store.shopProgram.map fun root => requests.all fun id =>
+      opSite root (depositPath id) (fun level => .refModifyWith (Store.depositAt id level)) 1) = some true := by
+  kernel_rfl
+
+/-- A successful source-site reading recovers the original operation without a second traversal. -/
+theorem op_at (root : NativeEff) (path : List Nat) (operation : Nat → NativeOp) (slot : Nat)
+    (held : opSite root path operation slot = true) :
+    ∃ level, SourceScope.levelAt (.eff root) 0 path = some level ∧
+      Node.at_ (.eff root) path = some (.eff (.perform (operation level) (.var slot))) := by
+  unfold opSite at held
+  split at held
+  · rename_i level op request lexical found
+    obtain ⟨sameOp, sameRequest⟩ := Bool.and_eq_true_iff.mp held
+    have one := beq_iff_eq.mp sameOp
+    have two := beq_iff_eq.mp sameRequest
+    subst op
+    subst request
+    exact ⟨level, lexical, found⟩
+  · cases held
+
+/-- Successful shop admission retains both literal request write-site certificates. -/
+theorem request_write_sites (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
+    (id : Nat) (member : id ∈ requests) :
+    opSite built.program (decisionPath id) (fun level => .refModifyWith (Store.decisionAt level)) 0 = true ∧
+    opSite built.program (depositPath id) (fun level => .refModifyWith (Store.depositAt id level)) 1 = true := by
+  have source : Store.shopProgram = some built.program := by
+    unfold Store.shopProgram
+    rw [(Api.Author.build_retains accepted).1]
+    rfl
+  have decisions := decision_sites
+  have deposits := deposit_sites
+  rw [source] at decisions deposits
+  exact ⟨List.all_eq_true.mp (Option.some.inj decisions) id member,
+    List.all_eq_true.mp (Option.some.inj deposits) id member⟩
+
+/-- Actual resolution retains every source-point field while selecting the decision primitive. -/
+theorem resolve_decision (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
+    (id : Nat) (member : id ∈ requests) (point : Point) (fuel : Nat)
+    (path : point.path = decisionPath id) (amount : point.fuel = fuel + 1)
+    (sourceOwned : SourceScope.At built.program point) (captured : point.env[0]? = some (.cell ⟨0⟩)) :
+    resolve built.program point = .sync (.op (.refModify ⟨0⟩ (Store.decisionAt point.env.length) point.env)) := by
+  obtain ⟨level, lexical, found⟩ := op_at _ _ _ _ (request_write_sites built accepted id member).1
+  rw [← path] at lexical found
+  have same : level = point.env.length := Option.some.inj (lexical.symm.trans sourceOwned)
+  subst level
+  rw [SourceScope.resolve_at _ _ _ found]
+  simp only [compileEff, amount, evalTerm, captured]
+  rfl
+
+/-- Actual resolution retains the deposited identity and the real source-point metadata. -/
+theorem resolve_deposit (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
+    (id : Nat) (member : id ∈ requests) (point : Point) (fuel : Nat)
+    (path : point.path = depositPath id) (amount : point.fuel = fuel + 1)
+    (sourceOwned : SourceScope.At built.program point) (captured : point.env[1]? = some (.cell ⟨1⟩)) :
+    resolve built.program point = .sync (.op (.refModify ⟨1⟩ (Store.depositAt id point.env.length) point.env)) := by
+  obtain ⟨level, lexical, found⟩ := op_at _ _ _ _ (request_write_sites built accepted id member).2
+  rw [← path] at lexical found
+  have same : level = point.env.length := Option.some.inj (lexical.symm.trans sourceOwned)
+  subst level
+  rw [SourceScope.resolve_at _ _ _ found]
+  simp only [compileEff, amount, evalTerm, captured]
+  rfl
+
 end Test.Dogfood.Scenario.Atomic.StageSource

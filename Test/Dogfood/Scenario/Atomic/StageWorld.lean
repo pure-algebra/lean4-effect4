@@ -82,6 +82,8 @@ theorem markCleaned_future (world : World) (id : Nat) (positive : Bool) :
 inductive Kind
   | ordinary
   | rootAnswer (binder : Nat)
+  | waiting (id : Nat)
+  | seen (id : Nat)
   | decision (id : Nat)
   | deposit (id : Nat)
   | body (id : Nat)
@@ -95,6 +97,10 @@ def ValueAt (world : World) : Kind → Val → Prop
   | .ordinary, _ => True
   | .rootAnswer binder, value =>
     world.nextId = RootSlots.rank (binder + 1) ∧ RootSlots.Answer binder value
+  | .waiting id, _ => world.stages id = .waiting
+  | .seen id, value => ∃ used admitted rejected,
+    value = Test.Dogfood.P4RateLimiter.windowVal used admitted rejected ∧
+      (world.stages id = .deposited → 1 ≤ admitted + rejected)
   | .decision id, .bool admitted =>
     world.stages id = if admitted then .admitted else .rejected
   | .deposit id, .nat _ => world.stages id = .deposited
@@ -109,7 +115,7 @@ def CauseAt (world : World) : Kind → CauseV → Prop
   | .body id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail → world.stages id = .deposited
   | .finalized id, cause | .cleanup id, cause => ∀ reason ∈ cause.reasons, reason.tag = .fail →
       world.stages id = .deposited ∧ world.cleaned id = true
-  | .note id, cause => (∀ reason ∈ cause.reasons, reason.tag ≠ .fail) ∧
+  | .seen id, cause | .note id, cause => (∀ reason ∈ cause.reasons, reason.tag ≠ .fail) ∧
       (world.stages id = .deposited → world.cleaned id = true)
   | _, cause => ∀ reason ∈ cause.reasons, reason.tag ≠ .fail
 
