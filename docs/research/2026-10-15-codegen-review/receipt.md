@@ -189,3 +189,62 @@ binder law `Var.name_inj` and of `mint_depth_inj`.
   `tools/Effect4Gen/manifest.json` imports `Effect4.Api.Codegen` in place of `Effect4.Api`.
   `Effect4.Api` then drops `Effect4.Codegen.Refusal`, and the alphabet rebuilds what the codegen
   face rebuilds, not 454 modules.
+
+## CR-3: `check-target` asks tsgo about the shipped spelling
+
+### Base and head
+
+Base `2985e6ed0`, head `be5cfb832`.
+
+### Changed files
+
+- `tools/Tools/TypeSpelling.lean` (new): `Tools.TypeSpelling.spelled`, the type printer
+  `Codegen.Types.ofTy` rendered flat at the house style, as the module writer renders a type.
+- `tools/Tools/TyVectors.lean`: each pair at that spelling; a pair whose type has no printed
+  form is refused by its id.
+- `tools/Tools/RowTypes.lean`: every selectable row's signature at that spelling, through
+  `Except`; a type with no printed form refuses the table by name.
+- `tools/target/assignability.ts`: the cut's reason names the shipped spelling. The comments of
+  `oracle.ts`, `profile.ts` and `rows.ts`, and `tools/target/README.md`, follow.
+- `generated/row-types.tsv` and `generated/assignability.tsv`, promoted.
+
+### Commands and results
+
+| Command | Result | Time |
+| --- | --- | ---: |
+| `lake build Tools.TypeSpelling Tools.TyVectors Tools.RowTypes` | passes | 5 s |
+| `lake env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv` | only the header line moves: every row's spelling is the same under the shipped printer | — |
+| `lake env lean -M4096 --run tools/Tools/TyVectors.lean`, diffed with the base's vectors | 14 of 742 pairs change their spelled columns, each at one of the probe's two types | — |
+| `make gen-assignability` | 742 pairs: 708 agree, 10 cut, 24 incomplete, no defect; the red control is caught by 10 pairs | — |
+| `make check-target` | passes: 104 rows conform; 742 pairs as above; rows 67 queried, 42 agree, 3 mismatch, 22 refused, as at the base | 15 s |
+
+### Evidence
+
+- Tested: four verdicts moved, each from incomplete to cut. Their two sides now print one text:
+  `literalPair/0-1`, `literalPair/1-0`, `bound/2-3` and `bound/3-2`.
+  `Ty.sub` relates the two types one way, and the printer, which normalizes first, spells both as
+  one union of tuples. Each pair holds one of the two types that the review's probe found
+  (`probes/type-spellings.log`). No verdict outside them moved.
+- The order column stays `Ty.sub`, the raw order. The checker compares with `Ty.subN`, `sub`
+  after `normalize`, under which these pairs relate both ways. This seat changes no column
+  of the order.
+
+### Axiom output
+
+No declaration of `Effect4.*` or `Test.*` changed: the edits are in the tool root `Tools`.
+
+### Lines removed and added
+
+100 lines removed and 158 added, the new module's 31 among them, in 10 files.
+
+### Open obligations
+
+- The gate's marker does not depend on `tools/Tools/TypeSpelling.lean`: `$(CHK)/target` names
+  `tools/Tools/RowTypes.lean` and `tools/Tools/TyVectors.lean` but not their imports, and
+  `LEAN_INPUTS` reads `src` and `Test` only.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR3-1.** `$(CHK)/target` in the `Makefile` adds `tools/Tools/TypeSpelling.lean` to its
+  prerequisites, so an edit of the shipped spelling re-runs the gate. The `Makefile` is the
+  coordinator's while the lowering branch is open.
