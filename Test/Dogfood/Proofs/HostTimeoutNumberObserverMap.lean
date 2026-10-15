@@ -167,8 +167,18 @@ theorem commands (world : HostTimeoutNumberConfiguration.World) (machine : Effec
     (fun id yielding queued good => loop world machine observers id yielding good)
     (fun id selected good => ⟨terminal machine observers id good.1,
       fun role assigned => exit_machine machine _ role selected rfl (view machine observers) (good.2 role assigned)⟩)
-    (fun image own targets good => await machine observers targets image own good)
-    (fun targets good => cleanup_await machine observers targets good)
+    (by
+      intro host yielding kind member good
+      cases kind with
+      | join target mode => trivial
+      | race race => trivial
+      | awaitAll targets =>
+          exact ⟨fun image own suffix assigned => await machine observers targets image own (good.1 image own suffix assigned),
+            fun suffix assigned => cleanup_await machine observers targets (good.2 suffix assigned)⟩)
+    (by
+      intro race host yielding remaining visited member good
+      exact ⟨fun image own suffix assigned => await machine observers (remaining ++ visited) image own (good.1 image own suffix assigned),
+        fun suffix assigned => cleanup_await machine observers (remaining ++ visited) (good.2 suffix assigned)⟩)
 
 /-- Protected queued prefixes retain their actual lookup and installed finalizer. -/
 theorem protects (context : MessageContext) (world : HostTimeoutNumberConfiguration.World)

@@ -144,31 +144,18 @@ theorem command_transport (world : HostTimeoutNumberConfiguration.World)
       CommandAt world before (.loop id yielding) → CommandAt world after (.loop id yielding))
     (finishes : ∀ id selected, CommandAt world before (.finish id selected) →
       CommandAt world after (.finish id selected))
-    (oldAwait : ∀ image own targets, HostTimeoutNumberWait.AwaitAt image own before targets →
-      HostTimeoutNumberWait.AwaitAt image own after targets)
-    (cleanupAwait : ∀ targets, CleanupAwait before targets → CleanupAwait after targets) :
+    (afterReturns : ∀ host yielding kind, .afterInterrupt host yielding kind ∈ commands →
+      CommandAt world before (.afterInterrupt host yielding kind) → CommandAt world after (.afterInterrupt host yielding kind))
+    (raceReturns : ∀ race host yielding remaining visited, .raceCancel race host yielding remaining visited ∈ commands →
+      CommandAt world before (.raceCancel race host yielding remaining visited) →
+      CommandAt world after (.raceCancel race host yielding remaining visited)) :
     CommandAt world after command := by
   cases command with
   | resume id token code => exact replies id token code held
   | loop id yielding => exact loops id yielding queued held
   | finish id selected => exact finishes id selected held
-  | afterInterrupt host yielding kind =>
-      cases kind with
-      | join target mode => trivial
-      | race race => trivial
-      | awaitAll targets =>
-          constructor
-          · intro image own suffix assigned
-            exact oldAwait image own targets (held.1 image own suffix assigned)
-          · intro suffix assigned
-            exact cleanupAwait targets (held.2 suffix assigned)
-  | raceCancel race host yielding remaining visited =>
-      constructor
-      · intro image own suffix assigned
-        exact oldAwait image own (remaining ++ visited)
-          (held.1 image own suffix assigned)
-      · intro suffix assigned
-        exact cleanupAwait (remaining ++ visited) (held.2 suffix assigned)
+  | afterInterrupt host yielding kind => exact afterReturns host yielding kind queued held
+  | raceCancel race host yielding remaining visited => exact raceReturns race host yielding remaining visited queued held
   | trackChild parent child => exact held
   | closeParAwait host yielding fibers => exact held
   | link mode scope target who extra => exact held
@@ -203,8 +190,20 @@ theorem command_interrupt (context : MessageContext) (world : HostTimeoutNumberC
       (HostTimeoutNumberConfigurationInterrupt.interrupt_fields fiber cause).2.2.1 good.1,
       fun role assigned => exit_machine machine _ role selected rfl
         (interrupt_view machine fiber cause found unique) (good.2 role assigned)⟩)
-    (fun image own targets good => await_update machine fiber _ targets image own found key exit good)
-    (fun targets good => cleanup_await_update machine fiber _ targets found key exit good)
+    (by
+      intro host yielding kind member good
+      cases kind with
+      | join target mode => trivial
+      | race race => trivial
+      | awaitAll targets =>
+          exact ⟨fun image own suffix assigned => await_update machine fiber _ targets image own found key exit
+            (good.1 image own suffix assigned),
+            fun suffix assigned => cleanup_await_update machine fiber _ targets found key exit (good.2 suffix assigned)⟩)
+    (by
+      intro race host yielding remaining visited member good
+      exact ⟨fun image own suffix assigned => await_update machine fiber _ (remaining ++ visited) image own found key exit
+        (good.1 image own suffix assigned),
+        fun suffix assigned => cleanup_await_update machine fiber _ (remaining ++ visited) found key exit (good.2 suffix assigned)⟩)
 
 /-- The actual addressed message retains the complete old queue and its generated evaluate suffix. -/
 theorem commands_interrupt (context : MessageContext) (world : HostTimeoutNumberConfiguration.World)

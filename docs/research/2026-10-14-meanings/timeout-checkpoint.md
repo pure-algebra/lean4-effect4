@@ -527,3 +527,46 @@ The shared actual iteration mask law supplies drained stacks for generated finis
 The audit checks `NumberConfiguration`, `NumberQueueInterrupt`, `NumberObserverMap`, `NumberMessages`, and `Timeout.FinishCut` in their full module namespaces.
 Actual native role advancement, initialized history, and both original endpoints remain open.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Joined actual count writer
+
+This slice changes neither original Timeout endpoint.
+Its concepts are scope-lifetime-finalization R11 and reactive-scheduling R9.
+Its consumer is the count branch of the coupled native and command producer.
+
+Numeric frame assertions now retain their saved contracts uniformly over every completed-exit view.
+An actual publication can select its new view without assuming arbitrary saved contracts transport between views.
+`CountReady` also retains the actual unparked count-loop permission.
+The existing addressed-message producer retains both stronger assertions.
+
+`NumberPassive` transports structural root control, timer siblings, and retired fibers across sibling reference writes.
+`OnlyAttempt` identifies the one heap-dependent attempt role.
+The same pending `CountContext` serves its pre-count, counted, and cleaned positions.
+`NumberCountMachine.count_machine` advances the entire numeric configuration and stored dispatcher tasks through the actual count answer.
+
+`NumberCountQueue.Targets` names the active attempt in actual pending root cancellation commands.
+The race producer must establish this certificate; no arbitrary cancellation barrier survives a count increment.
+`count_joint` consumes that certificate, the actual count current and saved stack, the live row, and its execution permission.
+It returns the actual iteration equation, numeric configuration, old queue, detached snapshot, and protected-owner condition together.
+The active row remains unparked, so stale active replies carry no fabricated value assertion.
+The actual saved count stack excludes stale active finish commands.
+All passive replies retain their actual saved suffixes through the new store.
+
+The command-assertion adapter now consumes actual administrative command permissions.
+It no longer asks a caller to transport arbitrary cleanup barriers across reference writes.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberMessages Test.Dogfood.Proofs.HostTimeoutNumberRootTransitions Test.Dogfood.Proofs.HostTimeoutNumberRootLoop Test.Dogfood.Scenario.Timeout.FinishCut` | Passed, 1240 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberPassive Test.Dogfood.Proofs.HostTimeoutNumberRootTransitions Test.Dogfood.Proofs.HostTimeoutNumberRootLoop Test.Dogfood.Scenario.Timeout.FinishCut` | Passed, 1241 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCountMachine` | Passed, 1234 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCountQueue` | Passed, 1235 jobs |
+| `lake env lean scratch/TimeoutCountJointAudit.lean` | The output below |
+
+```text
+#axiom_audit: 285 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks the numeric configuration, interruption, transport, queue, observer, passive, count-machine, and count-queue modules in their full namespaces.
+Actual race provenance, cleanup and form writer integration, initialized history, and both original endpoints remain open.
+No execution behaviour changes, so this slice reaches no outside implementation gate.

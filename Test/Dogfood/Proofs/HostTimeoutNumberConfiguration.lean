@@ -68,7 +68,8 @@ Outside decisions can strand that frame after the old command queue is dropped. 
 def CountReady (context : CountContext) (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool) : Prop :=
   fiber.frame.deferredInterrupt = false ∧
     (CountInstalled context fiber.frame →
-      yielding = true ∨ fiber.preventYield = true ∨ yieldVerdict (countOp fiber) = false)
+      yielding = true ∨ fiber.preventYield = true ∨ yieldVerdict (countOp fiber) = false) ∧
+    fiber.parked = .notParked
 
 /-- An installed pre-count prefix is running whenever the current configuration admits it. -/
 structure PendingCountAt (context : CountContext) (machine : Effect4.Program.NativeMachine)
@@ -128,7 +129,7 @@ theorem count_iteration (context : CountContext) (machine : Effect4.Program.Nati
   have top : runloopTop fiber = fiber := by
     simp only [runloopTop, ready.1, Bool.false_eq_true, ↓reduceIte]
   have quiet : injectYield machine (countOp fiber) yielding = none := by
-    rcases ready.2 installed with latched | prevented | verdict
+    rcases ready.2.1 installed with latched | prevented | verdict
     · simp only [injectYield, latched, Bool.not_true, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
     · simp only [injectYield, countOp, prevented, Bool.not_true, Bool.and_false, Bool.false_and,
         Bool.false_eq_true, ↓reduceIte]
@@ -319,23 +320,23 @@ theorem allowed_target_distinct (context : MessageContext) (world : World)
   rw [equal]
   exact coverage id count yielding fiber role heap found installed queued
 
-/-- The current numeric frame is checked at the actual store and completed-exit view. -/
+/-- The numeric frame retains its saved contracts uniformly over every completed-exit view. -/
 def FrameAt (machine : Effect4.Program.NativeMachine) (role : Role)
     (frame : HostTimeoutFrames.NativeFrame) : Prop :=
   match role with
-  | .pending context => AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model machine.completedExits)
-      (interpreter machine.completedExits).toPrimInterp machine.state
+  | .pending context => ∀ view, AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model view)
+      (interpreter view).toPrimInterp machine.state
       (.attempt context.before context.entered (by
         change context.before.count + 1 = context.before.cleanups.length + 1
         rw [context.cleanups])) frame
   | .rootRead suffix => Nonempty (HostTimeoutNumberRootControl.RootControl frame suffix)
-  | .phase output => AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model machine.completedExits)
-      (interpreter machine.completedExits).toPrimInterp machine.state output frame
-  | .numeric output => AnswerFlow.FrameAt (model machine.completedExits)
-      (interpreter machine.completedExits).toPrimInterp machine.state output frame
-  | .root image own suffix => RootRegionAt machine.completedExits machine.state image own frame suffix
-  | .timer => AnswerFlow.FrameAt (timerModel machine.completedExits)
-      (interpreter machine.completedExits).toPrimInterp machine.state () frame
+  | .phase output => ∀ view, AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model view)
+      (interpreter view).toPrimInterp machine.state output frame
+  | .numeric output => ∀ view, AnswerFlow.FrameAt (model view)
+      (interpreter view).toPrimInterp machine.state output frame
+  | .root image own suffix => ∀ view, RootRegionAt view machine.state image own frame suffix
+  | .timer => ∀ view, AnswerFlow.FrameAt (timerModel view)
+      (interpreter view).toPrimInterp machine.state () frame
   | .retired => True
 
 /-- Published attempt exits retain their completed cleanup class until the form retires the role. -/

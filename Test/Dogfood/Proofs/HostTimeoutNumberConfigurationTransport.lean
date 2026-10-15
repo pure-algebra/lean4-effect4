@@ -16,10 +16,10 @@ open HostTimeoutFlow HostTimeoutNumberConfiguration HostTimeoutState
 /-- Numeric frame assertions depend on the actual store and completed-exit view. -/
 theorem frame_machine (before after : Effect4.Program.NativeMachine) (role : Role)
     (frame : HostTimeoutFrames.NativeFrame) (state : after.state = before.state)
-    (view : after.completedExits = before.completedExits) (held : FrameAt before role frame) :
+    (_view : after.completedExits = before.completedExits) (held : FrameAt before role frame) :
     FrameAt after role frame := by
   unfold HostTimeoutNumberConfiguration.FrameAt
-  rw [state, view]
+  rw [state]
   exact held
 
 /-- Numeric published exits use the same actual store and completed-exit view. -/

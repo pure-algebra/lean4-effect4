@@ -24,20 +24,25 @@ theorem frame_fields (machine : Effect4.Program.NativeMachine) (role : Role)
         current := by rw [current]; exact control.current
         stack := stack.trans control.stack}⟩
   | root image own suffix =>
-      obtain ⟨above, equation, input, code, saved⟩ := held
+      intro view
+      obtain ⟨above, equation, input, code, saved⟩ := held view
       exact ⟨above, stack.trans equation, input, by rw [current]; exact code, saved⟩
   | retired => trivial
   | pending context =>
-      obtain ⟨input, code, saved⟩ := held
+      intro view
+      obtain ⟨input, code, saved⟩ := held view
       exact ⟨input, by rw [current]; exact code, by rw [stack]; exact saved⟩
   | phase output =>
-      obtain ⟨input, code, saved⟩ := held
+      intro view
+      obtain ⟨input, code, saved⟩ := held view
       exact ⟨input, by rw [current]; exact code, by rw [stack]; exact saved⟩
   | numeric output =>
-      obtain ⟨input, code, saved⟩ := held
+      intro view
+      obtain ⟨input, code, saved⟩ := held view
       exact ⟨input, by rw [current]; exact code, by rw [stack]; exact saved⟩
   | timer =>
-      obtain ⟨input, code, saved⟩ := held
+      intro view
+      obtain ⟨input, code, saved⟩ := held view
       exact ⟨input, by rw [current]; exact code, by rw [stack]; exact saved⟩
 
 /-- The actual recording operation combines only the existing clean cause and the incoming clean cause. -/
