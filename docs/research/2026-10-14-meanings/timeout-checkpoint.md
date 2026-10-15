@@ -462,3 +462,36 @@ It requires no fabricated unconditional handler-discard premise.
 The audit checks `NumberConfigurationTransport`, `NumberQueueInterrupt`, and `NumberRootSuffix` in their full module namespaces.
 Observer and token edits, native role advancement, initialized history, and both original endpoints remain open.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Actual addressed message words
+
+This slice changes neither original Timeout endpoint.
+Its concepts are reactive-scheduling R9 and scope-lifetime-finalization R11.
+Its consumer is the native settlement component of the coupled numeric command producer.
+
+`NumberObserverMap` retains numeric assertions through one map of existing observer fields.
+`observe_mapped` identifies actual registration at the uniquely addressed fiber.
+`drop_mapped` identifies actual token removal without a uniqueness premise.
+The map retains actual lookup identities, completed exits, execution fields, masks, and dispatcher snapshots.
+
+`NumberQueueInterrupt.command_transport` supplies one assertion case split for interruption and observer maps.
+Neither consumer adds a command execution induction.
+`NumberMessages.admitted` closes all three actual addressed-message cases.
+Its machine assertion contains numeric configuration, detached tasks, and unique fiber identifiers.
+Its queue assertion contains numeric commands and protected prefix owners.
+`apply_word` consumes the existing shared contextual word fold.
+Every resulting assertion uses the same returned proof world.
+The native caller must still supply its actual word permission and starting assertions.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberMessages` | Passed, 1231 jobs |
+| `lake env lean scratch/TimeoutMessagesAudit.lean` | The output below |
+
+```text
+#axiom_audit: 36 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks `NumberQueueInterrupt`, `NumberObserverMap`, and `NumberMessages` in their full module namespaces.
+Actual native role advancement, initialized history, and both original endpoints remain open.
+No execution behaviour changes, so this slice reaches no outside implementation gate.

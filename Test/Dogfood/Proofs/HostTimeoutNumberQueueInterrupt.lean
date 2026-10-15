@@ -106,23 +106,24 @@ theorem loop_interrupt (context : MessageContext) (world : HostTimeoutNumberConf
     exact held count assigned heap after old installed
 
 
-/-- The actual admitted interrupt transports each existing queued numeric command. -/
-theorem command_interrupt (context : MessageContext) (world : HostTimeoutNumberConfiguration.World)
-    (machine : Effect4.Program.NativeMachine) (commands : List Guard.NCmd)
-    (fiber : Effect4.Program.SourceScope.SourceFiber) (cause : CauseV) (command : Guard.NCmd)
-    (found : machine.fiber? fiber.id = some fiber) (unique : (machine.fibers.map (·.id)).Nodup)
-    (coverage : Protects context world machine commands)
-    (allowed : MessageAllowed context (.interrupt fiber.id cause))
-    (queued : command ∈ commands) (held : CommandAt world machine command) :
-    CommandAt world (machine.update (interruptWithCause cause fiber).1) command := by
-  have key := StackLedger.interruptWithCause_key cause fiber
-  have exit := (HostTimeoutNumberConfigurationInterrupt.interrupt_fields fiber cause).1
+/-- Numeric queue transport shares one assertion case split across actual metadata producers. -/
+theorem command_transport (world : HostTimeoutNumberConfiguration.World)
+    (before after : Effect4.Program.NativeMachine) (commands : List Guard.NCmd) (command : Guard.NCmd)
+    (queued : command ∈ commands) (held : CommandAt world before command)
+    (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt world after id token code)
+    (loops : ∀ id yielding, .loop id yielding ∈ commands →
+      CommandAt world before (.loop id yielding) → CommandAt world after (.loop id yielding))
+    (exits : ∀ role selected, ExitAt before role selected → ExitAt after role selected)
+    (oldAwait : ∀ image own targets, HostTimeoutNumberWait.AwaitAt image own before targets →
+      HostTimeoutNumberWait.AwaitAt image own after targets)
+    (cleanupAwait : ∀ targets, CleanupAwait before targets → CleanupAwait after targets) :
+    CommandAt world after command := by
   cases command with
-  | resume id token code => exact interrupt_reply world machine fiber cause id token code found unique held
-  | loop id yielding => exact loop_interrupt context world machine commands fiber cause id yielding found coverage allowed queued held
+  | resume id token code => exact replies id token code held
+  | loop id yielding => exact loops id yielding queued held
   | finish id selected =>
       intro role assigned
-      exact exit_machine machine _ role selected rfl (interrupt_view machine fiber cause found unique) (held role assigned)
+      exact exits role selected (held role assigned)
   | afterInterrupt host yielding kind =>
       cases kind with
       | join target mode => trivial
@@ -130,16 +131,16 @@ theorem command_interrupt (context : MessageContext) (world : HostTimeoutNumberC
       | awaitAll targets =>
           constructor
           · intro image own suffix assigned
-            exact await_update machine fiber _ targets image own found key exit (held.1 image own suffix assigned)
+            exact oldAwait image own targets (held.1 image own suffix assigned)
           · intro suffix assigned
-            exact cleanup_await_update machine fiber _ targets found key exit (held.2 suffix assigned)
+            exact cleanupAwait targets (held.2 suffix assigned)
   | raceCancel race host yielding remaining visited =>
       constructor
       · intro image own suffix assigned
-        exact await_update machine fiber _ (remaining ++ visited) image own found key exit
+        exact oldAwait image own (remaining ++ visited)
           (held.1 image own suffix assigned)
       · intro suffix assigned
-        exact cleanup_await_update machine fiber _ (remaining ++ visited) found key exit (held.2 suffix assigned)
+        exact cleanupAwait (remaining ++ visited) (held.2 suffix assigned)
   | trackChild parent child => exact held
   | closeParAwait host yielding fibers => exact held
   | link mode scope target who extra => exact held
@@ -153,6 +154,27 @@ theorem command_interrupt (context : MessageContext) (world : HostTimeoutNumberC
   | observe id selected observer => trivial
   | exitDone id => trivial
   | drainDue => trivial
+
+
+/-- The actual admitted interrupt transports each existing queued numeric command. -/
+theorem command_interrupt (context : MessageContext) (world : HostTimeoutNumberConfiguration.World)
+    (machine : Effect4.Program.NativeMachine) (commands : List Guard.NCmd)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (cause : CauseV) (command : Guard.NCmd)
+    (found : machine.fiber? fiber.id = some fiber) (unique : (machine.fibers.map (·.id)).Nodup)
+    (coverage : Protects context world machine commands)
+    (allowed : MessageAllowed context (.interrupt fiber.id cause))
+    (queued : command ∈ commands) (held : CommandAt world machine command) :
+    CommandAt world (machine.update (interruptWithCause cause fiber).1) command := by
+  have key := StackLedger.interruptWithCause_key cause fiber
+  have exit := (HostTimeoutNumberConfigurationInterrupt.interrupt_fields fiber cause).1
+  exact command_transport world machine _ commands command queued held
+    (fun id token code good => interrupt_reply world machine fiber cause id token code found unique good)
+    (fun id yielding member good => loop_interrupt context world machine commands fiber cause id yielding
+      found coverage allowed member good)
+    (fun role selected good => exit_machine machine _ role selected rfl
+      (interrupt_view machine fiber cause found unique) good)
+    (fun image own targets good => await_update machine fiber _ targets image own found key exit good)
+    (fun targets good => cleanup_await_update machine fiber _ targets found key exit good)
 
 /-- The actual addressed message retains the complete old queue and its generated evaluate suffix. -/
 theorem commands_interrupt (context : MessageContext) (world : HostTimeoutNumberConfiguration.World)
