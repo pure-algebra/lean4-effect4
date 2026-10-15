@@ -26,6 +26,7 @@ theorem value_recorded (state : Stores) (kind : Kind) (value : Val) (cause : Cau
   | attempt before entered own => exact Or.inl good
   | read phase => exact False.elim restorable
   | unit phase => exact False.elim restorable
+  | countUnit phase => exact ⟨good.1, clean⟩
   | before phase => exact good
   | cleanupExit phase own => exact good
   | published phase =>

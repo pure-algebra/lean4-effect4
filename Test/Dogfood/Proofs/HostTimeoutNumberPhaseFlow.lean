@@ -27,9 +27,21 @@ inductive Kind
   | attempt (before entered : Phase) (own : entered.count = entered.cleanups.length + 1)
   | read (phase : Phase)
   | unit (phase : Phase)
+  | countUnit (phase : Phase)
   | before (phase : Phase)
   | published (phase : Phase)
   | cleanupExit (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
+
+/-- Saved numeric phases move from ordinary work through protected cleanup to its returned exit.
+Consumer: the authored-finalizer membership contradiction for read and unit runtime permissions. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+def Kind.grade : Kind → Nat
+  | .fresh _ => 0
+  | .countUnit _ | .before _ => 1
+  | .read _ => 2
+  | .unit _ => 3
+  | .cleanupExit _ _ | .published _ => 4
+  | .attempt _ _ _ => 5
 
 /-- A restored success names the selected exit that the actual form log has just published. -/
 def ValueAt (state : Stores) : Kind → Val → Prop
@@ -37,6 +49,7 @@ def ValueAt (state : Stores) : Kind → Val → Prop
   | .attempt _ entered own, _ => ∃ selected, At (entered.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state
   | .read phase, value => At phase state ∧ value = .nat phase.count
   | .unit phase, value => At phase state ∧ value = .unit
+  | .countUnit phase, value => At phase state ∧ value = .unit
   | .before phase, _ => At phase state
   | .cleanupExit phase own, _ => ∃ selected, At (phase.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state
   | .published phase, value => ∃ selected, At (phase.form phase.count selected) state ∧ selected = .success value
@@ -71,6 +84,7 @@ theorem typedFrom_combine (selected : ExitV) (cause interrupted : CauseV)
 /-- An interruption may replace the delivered cause after the selected exit is already published. -/
 def CauseAt (state : Stores) : Kind → CauseV → Prop
   | .fresh phase, cause => At phase state ∧ HostTimeoutNumberFlow.NoTypedFailure cause
+  | .countUnit phase, cause => At phase state ∧ HostTimeoutNumberFlow.NoTypedFailure cause
   | .attempt before entered own, cause =>
       (∃ selected, At (entered.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state) ∨
         (At before state ∧ HostTimeoutNumberFlow.NoTypedFailure cause)
@@ -92,6 +106,7 @@ theorem cause_combine (state : Stores) (kind : Kind) (cause interrupted : CauseV
       · exact Or.inr ⟨heap, HostTimeoutNumberFlow.no_typed_combine cause interrupted quiet clean⟩
   | read phase => exact False.elim good
   | unit phase => exact False.elim good
+  | countUnit phase => exact ⟨good.1, HostTimeoutNumberFlow.no_typed_combine cause interrupted good.2 clean⟩
   | before phase => exact good
   | cleanupExit phase own => exact good
   | published phase =>
@@ -109,6 +124,7 @@ theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
       · exact Or.inr ⟨heap, HostTimeoutNumberFlow.no_typed_strip cause⟩
   | read phase => exact False.elim good
   | unit phase => exact False.elim good
+  | countUnit phase => exact ⟨good.1, HostTimeoutNumberFlow.no_typed_strip cause⟩
   | before phase => exact good
   | cleanupExit phase own => exact good
   | published phase =>
@@ -170,7 +186,7 @@ inductive CodeAt : Stores → Kind → NCode → Prop
   | maskedCancelRace {state : Stores} (phase : Phase) (race : Nat) (heap : At phase state) :
       CodeAt state (.before phase) (.withFiber (.store (.act (.setInterruptible (.cancelRace race) false))))
   | bind {state : Stores} (input output : Kind) (first : NCode) (name : EffName)
-      (head : CodeAt state input first)
+      (head : CodeAt state input first) (ordered : input.grade ≤ output.grade)
       (callback : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ value,
         ValueAt next input value → ∀ view, CodeAt next output ((interpreter view).contA name value))
       (skip : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ cause,
@@ -178,7 +194,7 @@ inductive CodeAt : Stores → Kind → NCode → Prop
       CodeAt state output (.onSuccess first name)
   | yieldNow {state : Stores} (kind : Kind) (priority : Nat) (good : ValueAt state kind .unit) :
       CodeAt state kind (.yieldNowWith priority)
-  | constant {state : Stores} (input output : Kind) (first body : NCode) (head : CodeAt state input first)
+  | constant {state : Stores} (input output : Kind) (first body : NCode) (head : CodeAt state input first) (ordered : input.grade ≤ output.grade)
       (callback : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ value,
         ValueAt next input value → CodeAt next output body)
       (skip : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ cause,
@@ -202,7 +218,7 @@ inductive CodeAt : Stores → Kind → NCode → Prop
   | count {state : Stores} (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
       (forms : phase.count ≤ phase.exits.length) (cursor : phase.count ≤ n.val)
       (captured : Point) (fuel delay : Nat) (previous : Val) (heap : At phase state) :
-      CodeAt state (.unit (phase.counted n cleanups forms cursor))
+      CodeAt state (.countUnit (phase.counted n cleanups forms cursor))
         (.sync (.op (.refUpdate ⟨0⟩ HostTimeoutNumberEntry.countTerm
           (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous).env)))
   | countBind {state : Stores} (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
@@ -444,7 +460,7 @@ theorem fresh_entry_yield (state : Stores) (phase : Phase) (n : Fin 4)
       (by change phase.count + 1 = phase.cleanups.length + 1; rw [cleanups]))
       (.onSuccessConst (.yieldNowWith priority)
         (resolve HostTimeoutSource.program (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous))) := by
-  apply CodeAt.constant (.fresh phase) _ _ _ (CodeAt.yieldNow (.fresh phase) priority heap)
+  apply CodeAt.constant (.fresh phase) _ _ _ (CodeAt.yieldNow (.fresh phase) priority heap) (by dsimp only [Kind.grade]; decide)
   · intro next future value good
     exact CodeAt.attemptEntry phase n cleanups forms cursor captured fuel delay previous good
   · intro next future cause good
@@ -468,7 +484,7 @@ theorem race_cancel_code (view : View) (state : Stores) (phase : Phase) (race to
     CodeAt state (.before phase)
       ((interpreter view).cancelThenFail (.withWaiter (.store (.cancelRace race)) owner token) cause) := by
   rw [HostTimeoutNumberFlow.race_cancel_program]
-  apply CodeAt.bind (.before phase) (.before phase) _ (.reFail cause) (CodeAt.cancelRace phase race heap)
+  apply CodeAt.bind (.before phase) (.before phase) _ (.reFail cause) (CodeAt.cancelRace phase race heap) (by dsimp only [Kind.grade]; decide)
   · intro next future value good nextView
     exact CodeAt.failure _ cause good
   · intro next future delivered good
@@ -517,7 +533,7 @@ theorem race_cancel_saved (view : View) (state : Stores) (phase : Phase)
 theorem count_saved (view : View) (state : Stores) (phase : Phase) (captured : Point)
     (fuel delay : Nat) (n : Fin 4) (previous : Val) :
     let point := HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous
-    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state (.unit phase) (.before phase)
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state (.countUnit phase) (.before phase)
       (.onSuccess (.sync (.op (.refUpdate ⟨0⟩ HostTimeoutNumberEntry.countTerm point.env))) (.cont (point.child 0))) := by
   dsimp only
   apply AnswerFlow.saved_success
@@ -531,7 +547,7 @@ theorem count_saved (view : View) (state : Stores) (phase : Phase) (captured : P
     rw [code]
     exact CodeAt.attemptBody phase {captured with completed := view} fuel delay n previous heap
   · intro next future cause good
-    exact False.elim good
+    exact good.1
 
 /-- The count binder installs its post-count callback before the actual write. -/
 theorem count_bind_push (view : View) (state : Stores) (phase : Phase) (n : Fin 4)
@@ -550,7 +566,7 @@ theorem count_bind_push (view : View) (state : Stores) (phase : Phase) (n : Fin 
         (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous).env)))
         (.cont ((HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous).child 0)) := by kernel_rfl
   exact AnswerFlow.push_success (model view) (interpreter view).toPrimInterp state
-    (.unit (phase.counted n cleanups forms cursor)) (.before (phase.counted n cleanups forms cursor))
+    (.countUnit (phase.counted n cleanups forms cursor)) (.before (phase.counted n cleanups forms cursor))
     output fiber _ _ (current.trans code)
     (CodeAt.count phase n cleanups forms cursor captured fuel delay previous heap)
     (count_saved view state (phase.counted n cleanups forms cursor) captured fuel delay n previous) stack
@@ -675,7 +691,7 @@ theorem native_count (view : View) (machine : Effect4.Program.NativeMachine)
     (current : fiber.frame.current = .sync (.op (.refUpdate ⟨0⟩ HostTimeoutNumberEntry.countTerm
       (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous).env)))
     (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp machine.state
-      (.unit (phase.counted n cleanups forms cursor)) output fiber.frame.stack) :
+      (.countUnit (phase.counted n cleanups forms cursor)) output fiber.frame.stack) :
     let next := {machine.state with refs := (phase.counted n cleanups forms cursor).heap}
     evaluateNative HostTimeoutSource.program machine fiber yielding Test.Dogfood.Scenario.Timeout.fetch.table =
       ⟨{machine with state := next}, {fiber with frame := {fiber.frame with current := .success .unit}},
@@ -683,7 +699,7 @@ theorem native_count (view : View) (machine : Effect4.Program.NativeMachine)
       AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp next output
         {fiber.frame with current := .success .unit} := by
   apply native_answer view machine fiber yielding phase (phase.counted n cleanups forms cursor)
-    _ .unit (.unit (phase.counted n cleanups forms cursor)) output heap current _ ⟨rfl, rfl⟩ stack
+    _ .unit (.countUnit (phase.counted n cleanups forms cursor)) output heap current _ ⟨rfl, rfl⟩ stack
   kernel_rfl
 
 /-- The actual cleanup writer's term remains existing source data. -/

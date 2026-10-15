@@ -1035,3 +1035,32 @@ The build passes with 1271 jobs.
 The audit checks 638 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 The shared leaf needs the Laws root import.
 The ordinary native leaf needs test reach when its active execution consumer lands.
+
+## Protected numeric input permission
+
+The post-count unit answer now has its own numeric class.
+Its cause assertion accepts only an actual cause without typed failure reasons.
+The protected cleanup and form unit classes still reject causes.
+Saved numeric edges retain increasing answer grades and the authored finalizer's early input boundary.
+The existing source callback constructors supply these conditions.
+The actual saved path and finalizer custody now prove that a later numeric input remains masked.
+The proof consumes the shared path member rule and adds no stack or program traversal.
+
+Placement: scope-lifetime-finalization R11; the loop-top and interruption producers of both Timeout numeric goals consume this permission.
+The result assumes the entered heap, actual pending-fiber custody, and the same uniformly ordered saved path.
+The source producer, command history, and both original Timeout numeric goals remain open.
+The deferred-interruption bit still needs its actual runtime authority at loop entry.
+This internal assertion refinement changes neither endpoint claim.
+
+Verification commands:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.HostTimeoutNumberMaskPermission Test.Dogfood.Proofs.HostTimeoutNumberOrdinary Test.Dogfood.Proofs.HostTimeoutNumberCleanupJoint Test.Dogfood.Proofs.HostTimeoutNumberReplacement
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean scratch/TimeoutCustodyAudit.lean
+```
+
+The build passes with 1271 jobs.
+The audit checks 951 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The shared path helper comes from checked commit `8544d49c9`, integrated here as `0346a15df`.
+The new mask-permission leaf needs test reach when its active loop consumer lands.
+This proof-only slice reaches no outside implementation gate.

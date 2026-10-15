@@ -121,18 +121,18 @@ theorem count_frame_uniform (context : CountContext) (state : Stores)
       exact HostTimeoutNumberPhaseFlow.CodeAt.countBind context.before context.n context.cleanups context.forms
         context.cursor context.captured context.fuel context.delay context.previous heap
     · rw [stack]
-      exact .cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ rfl (by trivial)
+      exact .cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
         (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _)
   | binder current stack =>
-    refine ⟨.unit context.entered, ?_, ?_⟩
+    refine ⟨.countUnit context.entered, ?_, ?_⟩
     · rw [current]
       exact HostTimeoutNumberPhaseFlow.CodeAt.count context.before context.n context.cleanups context.forms
         context.cursor context.captured context.fuel context.delay context.previous heap
     · rw [stack]
-      exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _
+      exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
         (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
           context.fuel context.delay context.n context.previous))
-        (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ rfl (by trivial)
+        (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
         (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
 
 /-- The previous count-prefix reader consumes the common uniform source constructor. -/
@@ -154,13 +154,13 @@ theorem counted_frame_uniform (context : CountContext) (state : Stores) (frame :
       (.attempt context.before context.entered (by
         change context.before.count + 1 = context.before.cleanups.length + 1
         rw [context.cleanups])) {frame with current := .success .unit} := by
-  refine ⟨.unit context.entered, HostTimeoutNumberPhaseFlow.CodeAt.success _ _ ⟨heap, rfl⟩, ?_⟩
+  refine ⟨.countUnit context.entered, HostTimeoutNumberPhaseFlow.CodeAt.success _ _ ⟨heap, rfl⟩, ?_⟩
   change Effect4.Contracts.Path _ _ _ frame.stack
   rw [stack]
-  exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _
+  exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
     (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
       context.fuel context.delay context.n context.previous))
-    (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ rfl (by trivial)
+    (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
       (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
 
 /-- The admitted count-write iteration commits its new phase and produces the actual attempt continuation contract. -/
@@ -195,7 +195,7 @@ theorem count_iteration_commit (context : CountContext) (view : View)
     context.cleanups context.forms context.cursor context.captured context.fuel context.delay context.previous heap
     (.attempt context.before context.entered own) current
   change AnswerFlow.StackAt (HostTimeoutNumberPhaseFlow.model view) (interpreter view).toPrimInterp machine.state
-    (.unit context.entered) (.attempt context.before context.entered own) fiber.frame.stack
+    (.countUnit context.entered) (.attempt context.before context.entered own) fiber.frame.stack
   rw [stack]
   exact .cons (HostTimeoutNumberPhaseFlow.count_saved view machine.state context.entered context.captured
     context.fuel context.delay context.n context.previous)

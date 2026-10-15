@@ -39,7 +39,7 @@ theorem ReadCode.classified (code : NCode) (held : ReadCode code)
   | cancel race => exact CodeAt.cancelRace phase race heap
   | maskedCancel race => exact CodeAt.maskedCancelRace phase race heap
   | restore body selected held ih =>
-      apply CodeAt.bind (.before phase) (.before phase) body _ (ih state phase heap)
+      apply CodeAt.bind (.before phase) (.before phase) body _ (ih state phase heap) (by dsimp only [Kind.grade]; decide)
       · intro next future value good view
         cases selected with
         | success saved => exact CodeAt.success _ saved good
@@ -47,7 +47,7 @@ theorem ReadCode.classified (code : NCode) (held : ReadCode code)
       · intro next future cause good
         exact good
   | rethrow body cause held ih =>
-      apply CodeAt.bind (.before phase) (.before phase) body _ (ih state phase heap)
+      apply CodeAt.bind (.before phase) (.before phase) body _ (ih state phase heap) (by dsimp only [Kind.grade]; decide)
       · intro next future value good view
         exact CodeAt.failure _ cause good
       · intro next future delivered good
@@ -55,7 +55,7 @@ theorem ReadCode.classified (code : NCode) (held : ReadCode code)
 
   | yielding priority => exact CodeAt.yieldNow _ priority heap
   | constant first body head next ihFirst ihBody =>
-      apply CodeAt.constant (.before phase) (.before phase) first body (ihFirst state phase heap)
+      apply CodeAt.constant (.before phase) (.before phase) first body (ihFirst state phase heap) (by dsimp only [Kind.grade]; decide)
       · intro after future value good
         exact ihBody after phase good
       · intro after future cause good

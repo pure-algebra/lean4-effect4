@@ -21,6 +21,8 @@ structure Edge (state : Stores) (input output : Kind) (frame : NCode)
   generated : ∀ fiber : HostTimeoutFrames.NativeFrame,
     (frame.ensure fiber).1.stack = .setInterruptible true :: fiber.stack →
     HostTimeoutNumberMaskClass.Restorable output
+  ordered : input.grade ≤ output.grade
+  finalizerInput : ∀ body name flag, frame = .onExit body name flag → input.grade ≤ 1
   finalizerFlag : ∀ body name flag, frame = .onExit body name flag → flag = false
 
 /-- The same authored saved edge retains its numeric classes after an admitted reference write. -/
@@ -28,7 +30,7 @@ theorem Edge.future (before after : Stores) (input output : Kind) (frame : NCode
     (future : HostTimeoutNumberFlow.Future before after) (held : Edge before input output frame) :
     Edge after input output frame :=
   ⟨AnswerFlow.ViewSavedAt.future (fun view => model view)
-    (fun view => (HostTimeoutFlow.interpreter view).toPrimInterp) (fun _ => future) held.toViewSavedAt, held.restores, held.generated, held.finalizerFlag⟩
+    (fun view => (HostTimeoutFlow.interpreter view).toPrimInterp) (fun _ => future) held.toViewSavedAt, held.restores, held.generated, held.ordered, held.finalizerInput, held.finalizerFlag⟩
 
 /-- A hook that keeps its stack cannot also push a restoring mask. -/
 theorem no_push (before after : List NCode) (same : after = before)
@@ -65,33 +67,38 @@ theorem FrameAt.each (state : Stores) (output : Kind) (frame : HostTimeoutFrames
 /-- All numeric head constructors introduce the same nonrecursive saved shapes once. -/
 theorem head_edges : HostTimeoutNumberPhaseHead.HeadEdges Edge := by
   constructor
-  · intro state input output body name each
-    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ?_⟩
+  · intro state input output body name ordered each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_⟩
     · intro name cursor impossible; cases impossible
     · intro name cursor impossible; cases impossible
     · intro impossible; cases impossible
     · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
     · intro body name flag impossible; cases impossible
-  · intro state input output body name each
-    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ?_⟩
+    · intro body name flag impossible; cases impossible
+  · intro state input output body name ordered each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_⟩
     · intro name cursor impossible; cases impossible
     · intro name cursor impossible; cases impossible
     · intro impossible; cases impossible
     · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
     · intro body name flag impossible; cases impossible
-  · intro state input output body next each
-    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ?_⟩
+    · intro body name flag impossible; cases impossible
+  · intro state input output body next ordered each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_⟩
     · intro name cursor impossible; cases impossible
     · intro name cursor impossible; cases impossible
     · intro impossible; cases impossible
     · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
     · intro body name flag impossible; cases impossible
-  · intro state input output body name flag flagFalse restorable each
-    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ?_⟩
+    · intro body name flag impossible; cases impossible
+  · intro state input output body name flag low flagFalse restorable ordered each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_⟩
     · intro name cursor impossible; cases impossible
     · intro name cursor impossible; cases impossible
     · intro impossible; cases impossible
     · intro fiber pushed; exact restorable
+    · intro selectedBody selectedName selectedFlag actual
+      exact low
     · intro selectedBody selectedName selectedFlag actual
       cases actual
       exact flagFalse
@@ -123,7 +130,7 @@ theorem ordinary_native (view : HostTimeoutFlow.View) (machine : NativeMachine)
 theorem mask (state : Stores) (kind : Kind) (flag : Bool)
     (restorable : HostTimeoutNumberMaskClass.Restorable kind) :
     Edge state kind kind (.setInterruptible flag) := by
-  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_⟩
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, Nat.le_refl _, ?_, ?_⟩
   · intro view
     exact AnswerFlow.saved_mask (model view) (HostTimeoutFlow.interpreter view).toPrimInterp state kind flag
   · intro name cursor impossible; cases impossible
@@ -131,6 +138,7 @@ theorem mask (state : Stores) (kind : Kind) (flag : Bool)
   · intro actual; exact restorable
   · intro fiber pushed
     exact False.elim (no_push _ _ (Prim.ensure_setInterruptible_stack flag fiber) pushed)
+  · intro body name flag impossible; cases impossible
   · intro body name flag impossible; cases impossible
 
 /-- Only the actual source edge authorizes its generated mask's answer class. -/
