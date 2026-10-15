@@ -1,0 +1,40 @@
+probe: statements 18042 theorems in 994 modules, 37 duplicate groups
+probe: dup	2	Effect4.Laws.Auto.bool_or_eq_true@Effect4.Laws.Auto.Inversion#0	Effect4.Constructive.Bool.or_eq_true_iff@Effect4.Data.Constructive#1
+probe: dup	2	Effect4.Laws.Auto.bind_eq_ok@Effect4.Laws.Auto.Inversion#82	Effect4.Program.bind_eq_ok@Effect4.Laws.Codegen.ReadLeaf#61
+probe: dup	2	Effect4.Laws.Auto.bool_and_eq_true@Effect4.Laws.Auto.Inversion#0	Effect4.Constructive.Bool.and_eq_true_iff@Effect4.Data.Constructive#1
+probe: dup	2	Effect4.Laws.Auto.map_eq_ok@Effect4.Laws.Auto.Inversion#4	Effect4.Program.map_eq_ok@Effect4.Laws.Codegen.ReadLeaf#6
+probe: dup	2	Effect4.Laws.Auto.bool_not_eq_true@Effect4.Laws.Auto.Inversion#0	Effect4.Constructive.Bool.not_eq_true_iff@Effect4.Data.Constructive#0
+probe: dup	2	Effect4.Machine.drainOwed_grows@Effect4.Laws.Machine.Approximation#2	Effect4.Machine.drainOwed_grows_aux@Effect4.Laws.Machine.Approximation#1
+probe: dup	2	Effect4.Constructive.List.flatMap_congr@Effect4.Data.Constructive#2	Tools.View.Program.flatMap_congr_mem@Tools.View.Program#1
+probe: dup	2	Effect4.Machine.Arena.list_lawful@Effect4.Laws.Machine.Arena#1	Effect4.Machine.Arena.instLawfulArenaList@Effect4.Laws.Machine.Arena#1
+probe: dup	2	Effect4.Program.Ty.sizeOf_field_lt@Effect4.Program.Ty#2	Effect4.Program.Ty.sizeOf_field_lt_record@Effect4.Laws.Program.TyView#1
+probe: dup	2	Effect4.Store.cata_id_val@Effect4.Store.Carrier.Fold#0	Effect4.Store.Names.cata_id@Effect4.Laws.Store.Names#3
+probe: dup	2	Effect4.ListRel.mem_right@Effect4.Laws.Data.ListRel#0	Effect4.Program.Sched.listRel_mem_left@Effect4.Laws.Program.Table.Agreement#1
+probe: dup	2	Effect4.Store.putNode_closed@Effect4.Store.Domain.Store#2	Effect4.Store.putNode_fresh_closed@Effect4.Store.Domain.Store#0
+probe: dup	2	Effect4.Program.emptyTable_refuses_every_answer@Effect4.Laws.Program.Admit#0	Effect4.Run.admit_nil_answer@Effect4.Laws.Run.Frame#1
+probe: dup	2	Effect4.Program.Agreement.contAOf_acquired@Effect4.Laws.Program.Agreement#2	Effect4.Program.ReleaseCustody.Sequencing.acquired_registration@Effect4.Laws.Program.ReleaseCustody.Sequencing#0
+probe: dup	2	Effect4.Program.Agreement.resolve_of_at@Effect4.Laws.Program.Agreement#42	Effect4.Program.SourceScope.resolve_at@Effect4.Laws.Program.SourceScope#4
+probe: dup	2	Effect4.Program.Sched.suspendBodyAt_zero'@Effect4.Laws.Program.Intro.Weight#4	Effect4.Program.Agreement.suspendBodyAt_zero@Effect4.Laws.Program.Agreement.Machine#3
+probe: dup	2	Effect4.Program.Agreement.ContextFreeHooks.resolve@Effect4.Laws.Program.Agreement.Machine#2	Effect4.Program.Agreement.plainCode_resolve@Effect4.Laws.Program.Agreement.Machine#8
+probe: dup	2	Effect4.Program.Agreement.plainContext_resolve@Effect4.Laws.Program.Agreement.Machine#6	Effect4.Program.Agreement.PlainHooks.resolve@Effect4.Laws.Program.Agreement.Machine#5
+probe: dup	2	Effect4.Program.Agreement.ContextFreeHooks.suspend@Effect4.Laws.Program.Agreement.Machine#2	Effect4.Program.Agreement.plainCode_suspendBodyAt@Effect4.Laws.Program.Agreement.Machine#1
+probe: dup	2	Effect4.Program.Agreement.plainContext_suspendBodyAt@Effect4.Laws.Program.Agreement.Machine#1	Effect4.Program.Agreement.PlainHooks.suspend@Effect4.Laws.Program.Agreement.Machine#1
+probe: dup	2	Conform.Effect4.Typing.effTy_scoped@Effect4.Laws.Program.Typing.Sound#1	Effect4.Program.effTy_scoped@Effect4.Laws.Program.ScopedTyping#4
+probe: dup	5	Effect4.Program.Path.instReflBEqNat@Effect4.Laws.Program.PathOrder#2	Test.Dogfood.Scenario.Atomic.WriterOwnership.instReflBEqNat_test@Test.Dogfood.Scenario.Atomic.WriterOwnership#0	Test.Dogfood.Scenario.Atomic.WriterSource.instReflBEqNat_test@Test.Dogfood.Scenario.Atomic.WriterSource#0	Test.Dogfood.Scenario.Atomic.WriterSync.instReflBEqNat_test@Test.Dogfood.Scenario.Atomic.WriterSync#1	Test.Dogfood.Scenario.Atomic.WriterFinalizers.instReflBEqNat_test@Test.Dogfood.Scenario.Atomic.WriterFinalizers#0
+probe: dup	2	Effect4.Program.Guard.timer_clockStep_keys@Effect4.Laws.Program.Guard.Core#3	Effect4.Program.Guard.OuterDriver.timer_clockStep_keys@Effect4.Laws.Program.Guard.OuterDriver#1
+probe: dup	2	Effect4.Program.Guard.raceIds_update@Effect4.Laws.Program.Guard.Core#1	Effect4.Program.ReleaseCustody.CommandDebit.update_race_ids@Effect4.Laws.Program.ReleaseCustody.CommandRaceDebit#2
+probe: dup	2	Effect4.Program.Guard.nextToken_modify@Effect4.Laws.Program.Guard.Observer#2	Effect4.Run.modify_nextToken@Effect4.Laws.Run.Journal#1
+probe: dup	2	Effect4.Program.Guard.FinishQueue.guardQueue_drainDue_single@Effect4.Laws.Program.Guard.FinishQueue#1	Effect4.Program.Guard.AnswerDecision.guardQueue_drainDue@Effect4.Laws.Program.Guard.AnswerDecision#7
+probe: dup	2	Effect4.Program.Typed.firstErrorValue?_of_caught@Effect4.Laws.Program.Typed.Denotation#1	Effect4.Program.caughtErrorValue?_first@Effect4.Laws.Program.Handles.Hooks#1
+probe: dup	2	Effect4.Data.NatDecimal.utf8_digitChar@Effect4.Laws.Data.NatDecimal#2	Effect4.Program.utf8_digitChar@Effect4.Laws.Codegen.ReadLeaf#1
+probe: dup	2	Effect4.Modules.atom_ite@Effect4.Laws.Step.Reading#1	Test.Dogfood.Scenario.Atomic.Store.atom_ite@Test.Dogfood.Scenario.Atomic.Store#0
+probe: dup	2	Effect4.Program.Typed.countdownAt_world@Effect4.Laws.Program.Typed.Commands.Bookkeeping#2	Effect4.Program.Typed.countdownAt_tok@Effect4.Laws.Program.Typed.Commands.Clauses.Park#2
+probe: dup	2	Effect4.Program.Typed.configTyped_cons_drainDue@Effect4.Laws.Program.Typed.Commands.Evaluate#2	Effect4.Program.Typed.configTyped_drainDue@Effect4.Laws.Program.Typed.Edits#2
+probe: dup	2	Effect4.Run.rows_step@Effect4.Laws.Run.Journal#6	Test.Dogfood.Scenario.QueueWorkers.Accounting.rows_step@Test.Dogfood.Scenario.QueueWorkers.Ledger#2
+probe: dup	2	Effect4.Program.PlaceFunding.commandAllowance_zero@Effect4.Laws.Program.PlaceFunding.Commands#1	Effect4.Program.PlaceFunding.zero_allowance@Effect4.Laws.Program.PlaceFunding.Run#2
+probe: dup	2	Effect4.Program.ReleaseCustody.AdministrativeKept.same_fibers@Effect4.Laws.Program.ReleaseCustody.AdministrativeKept#4	Effect4.Program.ReleaseCustody.OuterFrames.fields@Effect4.Laws.Program.ReleaseCustody.OuterFrames#0
+probe: dup	2	Effect4.Program.ReleaseCustody.AdministrativeKept.drain_owed@Effect4.Laws.Program.ReleaseCustody.AdministrativeKept#1	Effect4.Program.ReleaseCustody.OuterFrames.drain_owed@Effect4.Laws.Program.ReleaseCustody.OuterFrames#2
+probe: dup	2	Test.Program.TypedProgBindRed.typedProg_not_bind_closed@Test.Program.TypedProgBindRed#0	Test.Program.TypedProgBindRed.guard_bind_not_closed@Test.Program.TypedProgBindRed#0
+probe: dup	2	Test.Dogfood.Proofs.HostTimeoutStateSteps.observed_fiber@Test.Dogfood.Proofs.HostTimeoutStateSteps#1	Test.Dogfood.Proofs.HostTimeoutParkSteps.observer_fiber@Test.Dogfood.Proofs.HostTimeoutParkSteps#1
+#statement_census reducible: 1179 theorems in 34 modules; 0 duplicate groups
+statements exit 0 in 34 s

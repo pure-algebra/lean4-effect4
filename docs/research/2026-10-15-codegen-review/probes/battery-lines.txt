@@ -1,0 +1,187 @@
+  print-axioms Test/Audit/LetReturn.lean:39: #print axioms Target.evalT
+  print-axioms Test/Audit/LetReturn.lean:45: #print axioms Target.let_return_outcome
+  print-axioms Test/Audit/LetReturn.lean:51: #print axioms Target.let_return_same_fuel_refuted
+  print-axioms Test/Audit/LetReturn.lean:55: #print axioms Target.TEnv.find?_head
+  print-axioms Test/Audit/ProofGraph.lean:30: #print axioms Test.ProofGraph.searched
+  print-axioms Test/Audit/ProofGraphSearch.lean:74: #print axioms Test.ProofGraphSearch.closed
+  print-axioms Test/Audit/ProofGraphSearch.lean:192: #print axioms Test.ProofGraphSearchPortability.closed
+  print-axioms Test/Audit/ProofGraphSearch.lean:193: #print axioms Test.ProofGraphSearchPortability.polymorphic
+  print-axioms Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean:60: #print axioms preflight_failure_noShapeDefect
+files 477
+by shape {'bare-proof': 165, 'print-axioms': 9, 'simpa-proof': 1, 'check-name': 1}
+  Test/Api	{'bare-proof': 10}
+  Test/Audit	{'bare-proof': 11, 'print-axioms': 8}
+  Test/Counterexamples	{'print-axioms': 1}
+  Test/Data	{'bare-proof': 2}
+  Test/Dogfood	{'bare-proof': 21, 'simpa-proof': 1}
+  Test/Machine	{'bare-proof': 25}
+  Test/Program	{'bare-proof': 7}
+  Test/Schema	{'check-name': 1, 'bare-proof': 89}
+codegen batteries
+every bare or simpa proof by name
+  Test/Api/TraceOrigin.lean:319: bare-proof by h: theorem update_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) (f : RunFiber ν σ β ε δ ι α χ κ φ) : Ok (m.update f) := h
+  Test/Api/TraceOrigin.lean:327: bare-proof by h: theorem updateRace_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) (race : Race ν σ β ε δ ι α κ) : Ok (m.updateRace race) := h
+  Test/Api/TraceOrigin.lean:330: bare-proof by h: theorem halt_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) (why : Stuck) : Ok (m.halt why) := h
+  Test/Api/TraceOrigin.lean:333: bare-proof by h: theorem arm_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) (id : FiberId) : Ok (m.arm id) := h
+  Test/Api/TraceOrigin.lean:336: bare-proof by h: theorem disarm_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) (id : FiberId) : Ok (m.disarm id) := h
+  Test/Api/TraceOrigin.lean:339: bare-proof by h: theorem state_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) (state : St) : Ok { m with state } := h
+  Test/Api/TraceOrigin.lean:342: bare-proof by h: theorem middleware_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) : Ok { m with middlewareInstalled := true } := h
+  Test/Api/TraceOrigin.lean:349: bare-proof by h: theorem mapFibers_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) (edit : RunFiber ν σ β ε δ ι α χ κ φ → RunFiber ν σ β ε δ ι α χ κ φ) : Ok { 
+  Test/Api/TraceOrigin.lean:353: bare-proof by h: theorem appendRoot_ok {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) (fiber : RunFiber ν σ β ε δ ι α χ κ φ) : Ok { m with fibers := m.fibers ++ 
+  Test/Api/TraceOrigin.lean:690: bare-proof by h: theorem enterScoped_ok (p : NativeEff) (point : Point) (m : NativeMachine) (f : NFiber) (yielding : Bool) (h : Ok m) : Ok (Effect4.Program.enterScoped
+  Test/Audit/LandingPlanControls.lean:49: bare-proof by localGoal: theorem pendingHelper : True := localGoal
+  Test/Audit/LandingPlanControls.lean:51: bare-proof by pendingHelper: theorem pendingTop : True := pendingHelper
+  Test/Audit/LetReturn.lean:27: bare-proof by Target.let_return_same_fuel_refuted: example : ¬ ∀ (prog : Target.Program) (n : Nat) (env : Target.TEnv) (x : String) (e : Target.Expr), Target.evalT prog (n + 1) env (.letIn x e (.var x)
+  Test/Audit/SemanticsCensus.lean:7: bare-proof by True.intro: @[semantics "fixture-one"] theorem firstWitness : True := True.intro
+  Test/Audit/SemanticsCensus.lean:9: bare-proof by True.intro: theorem untaggedWitness : True := True.intro
+  Test/Audit/SemanticsCensus.lean:12: bare-proof by True.intro: theorem eq_cata : True := True.intro
+  Test/Audit/SemanticsCensus.lean:70: bare-proof by True.intro: @[semantics "fixture-two" (requirement := R2)] theorem placedWitness : True := True.intro
+  Test/Audit/TypedStateDecl.lean:61: bare-proof by h.c0: example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent) (h : ChildOk P w e x.pair.2) : P.value w e x.pair.2.payload := h.c0
+  Test/Audit/TypedStateDecl.lean:73: bare-proof by h: example {W : Type} (P : Preds W) (w : W) (e : Expect) (v : Effect4.Store.Val) (h : BoxOk P w e (.mk v)) : P.value w e v := h
+  Test/Audit/TypedStateDecl.lean:87: bare-proof by h.c0.c0: example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent) (h : ParentOk P w e x) : P.Heap w x.store := h.c0.c0
+  Test/Audit/TypedStateDecl.lean:148: bare-proof by h.c0: example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Sample) (h : SampleOk P w e x) : P.Whole w e x := h.c0
+  Test/Data/RowContract.lean:32: bare-proof by Std.lt_irrefl: example {α : Type u} [LE α] [LT α] [Std.IsLinearOrder α] [Std.LawfulOrderLT α] (a : α) : ¬ a < a := Std.lt_irrefl
+  Test/Data/RowContract.lean:36: bare-proof by Std.lt_trans: example {α : Type u} [LE α] [LT α] [Std.IsLinearOrder α] [Std.LawfulOrderLT α] {a b c : α} : a < b → b < c → a < c := Std.lt_trans
+  Test/Dogfood/Proofs/HostTimeoutFrames.lean:108: bare-proof by owned: theorem pass_on {B : List Val} {demand : Effect4.Arm} {input output : Kind} {pop : NativePop} (frame : NCode) (replacement : Option NCode) (owned : Po
+  Test/Dogfood/Proofs/HostTimeoutLocalSteps.lean:124: bare-proof by owned.children: theorem filter_observers_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber} (owned : FiberAt B classes fiber) (keep : Observer → Bool) : F
+  Test/Dogfood/Proofs/HostTimeoutLocalSteps.lean:137: bare-proof by owned.scopes: theorem filter_observers_configuration {B : List Val} {classes : Classes} {machine : Effect4.Program.NativeMachine} (owned : ConfigurationAt B classes
+  Test/Dogfood/Proofs/HostTimeoutParkSteps.lean:18: bare-proof by owned.children: theorem set_frame_live {B : List Val} {classes : Classes} {fiber : NativeFiber} (owned : FiberAt B classes fiber) (frame : NativeFrame) (good : FrameK
+  Test/Dogfood/Proofs/HostTimeoutParkSteps.lean:32: bare-proof by owned.children: theorem park_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber} {kind : Kind} (owned : FiberAt B classes fiber) (pending : NPending) (toke
+  Test/Dogfood/Proofs/HostTimeoutParkSteps.lean:137: bare-proof by owned.children: theorem observer_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber} (owned : FiberAt B classes fiber) (observer : Observer) (allowed : Obs
+  Test/Dogfood/Proofs/HostTimeoutRaceSteps.lean:18: bare-proof by owned.cleanup: theorem race_extend {B : List Val} {before after : Classes} {race : NRace} (later : ClassLe before after) (owned : RaceAt B before race) : RaceAt B af
+  Test/Dogfood/Proofs/HostTimeoutRaceSteps.lean:27: bare-proof by owned.scopes: theorem configuration_update_race {B : List Val} {classes : Classes} {machine : Effect4.Program.NativeMachine} (owned : ConfigurationAt B classes mach
+  Test/Dogfood/Proofs/HostTimeoutRaceSteps.lean:169: bare-proof by owned.scopes: theorem configuration_mint {B : List Val} {classes : Classes} {machine : Effect4.Program.NativeMachine} (owned : ConfigurationAt B classes machine) (k
+  Test/Dogfood/Proofs/HostTimeoutRaceSteps.lean:186: bare-proof by owned.scopes: theorem configuration_append_race {B : List Val} {classes : Classes} {machine : Effect4.Program.NativeMachine} (owned : ConfigurationAt B classes mach
+  Test/Dogfood/Proofs/HostTimeoutScheduler.lean:27: bare-proof by good.children: theorem drained_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber} (good : FiberAt B classes fiber) : FiberAt B classes {fiber with dispat
+  Test/Dogfood/Proofs/HostTimeoutScheduler.lean:82: bare-proof by good.scopes: theorem clock_configuration {B : List Val} {classes : Classes} (machine : Effect4.Program.NativeMachine) (millis : ClockMillis) (good : ConfigurationA
+  Test/Dogfood/Proofs/HostTimeoutStateSteps.lean:53: bare-proof by owned.children: theorem fiber_extend {B : List Val} {before after : Classes} {fiber : NativeFiber} (later : ClassLe before after) (owned : FiberAt B before fiber) : F
+  Test/Dogfood/Proofs/HostTimeoutStateSteps.lean:65: bare-proof by owned.scopes: theorem configuration_update {B : List Val} {classes : Classes} {machine : Effect4.Program.NativeMachine} (owned : ConfigurationAt B classes machine) 
+  Test/Dogfood/Proofs/HostTimeoutStateSteps.lean:78: bare-proof by owned.scopes: theorem configuration_emit {B : List Val} {classes : Classes} {machine : Effect4.Program.NativeMachine} (owned : ConfigurationAt B classes machine) (e
+  Test/Dogfood/Proofs/HostTimeoutStateSteps.lean:121: bare-proof by owned.children: theorem resumed_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber} {token : Nat} {code : NCode} (owned : FiberAt B classes fiber) (held : 
+  Test/Dogfood/Proofs/HostTimeoutStateSteps.lean:247: bare-proof by owned.children: theorem observed_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber} (owned : FiberAt B classes fiber) (observer : Observer) (allowed : Obs
+  Test/Dogfood/Proofs/HostTimeoutStateSteps.lean:372: bare-proof by owned.children: theorem published_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber} (owned : FiberAt B classes fiber) (exit : ExitV) (good : ExitAt B .bo
+  Test/Dogfood/Proofs/HostTimeoutStateSteps.lean:470: bare-proof by owned.children: theorem reframe_live {B : List Val} {classes : Classes} {fiber : NativeFiber} {kind : Kind} {code : NCode} (owned : FiberAt B classes fiber) (current 
+  Test/Dogfood/Scenario/Atomic/WriterNative.lean:77: simpa-proof by debit: theorem debit_ledger (id : Nat) (m : NativeMachine) (fiber : SourceFiber) (next : SourceIteration) (debit : WriterMachine.Debit id m fiber next) : (Wr
+  Test/Dogfood/Scenario/Gate.lean:198: bare-proof by pending: theorem decomposed : True := pending
+  Test/Dogfood/Scenario/Gate.lean:214: bare-proof by True.intro: theorem independent : True := True.intro
+  Test/Machine/Runtime/BehaviourContract.lean:37: bare-proof by List.prefix_rfl: theorem frontiers_related : ReplayResult.le (.frontier .tape withCell) (.frontier .tape bare) := List.prefix_rfl
+  Test/Machine/Runtime/ScopeMachineContract.lean:124: bare-proof by ScopeMachine.Phase.waiting: example : φ → ScopeMachine.Phase φ := ScopeMachine.Phase.waiting
+  Test/Machine/Runtime/ScopeMachineContract.lean:125: bare-proof by ScopeMachine.Phase.ready: example : ScopeMachine.Phase φ := ScopeMachine.Phase.ready
+  Test/Machine/Runtime/ScopeMachineContract.lean:126: bare-proof by ScopeMachine.Phase.complete: example : ScopeMachine.Phase φ := ScopeMachine.Phase.complete
+  Test/Machine/Runtime/ScopeMachineContract.lean:127: bare-proof by ScopeMachine.State.mk: example : Scope κ φ β ε δ ι α → Exit β ε δ ι α → List φ → List (φ × Exit Unit ε δ ι α) → ScopeMachine.Phase φ → ScopeMachine.State κ φ β ε δ ι α := Sc
+  Test/Machine/Runtime/ScopeMachineContract.lean:130: bare-proof by ScopeMachine.start: example : Scope κ φ β ε δ ι α → Exit β ε δ ι α → ScopeMachine.State κ φ β ε δ ι α := ScopeMachine.start
+  Test/Machine/Runtime/ScopeMachineContract.lean:132: bare-proof by ScopeMachine.advance: example : ScopeMachine.State κ φ β ε δ ι α → ScopeMachine.State κ φ β ε δ ι α := ScopeMachine.advance
+  Test/Machine/Runtime/ScopeMachineContract.lean:134: bare-proof by ScopeMachine.request?: example : ScopeMachine.State κ φ β ε δ ι α → Option (Nat × φ × Exit β ε δ ι α) := ScopeMachine.request?
+  Test/Machine/Runtime/ScopeMachineContract.lean:136: bare-proof by ScopeMachine.respond: example : ScopeMachine.State κ φ β ε δ ι α → Nat → Exit Unit ε δ ι α → Option (ScopeMachine.State κ φ β ε δ ι α) := ScopeMachine.respond
+  Test/Machine/Runtime/ScopeMachineContract.lean:138: bare-proof by ScopeMachine.result?: example : ScopeMachine.State κ φ β ε δ ι α → Option (Exit Unit ε δ ι α) := ScopeMachine.result?
+  Test/Machine/Runtime/ScopeMachineContract.lean:140: bare-proof by ScopeMachine.journal: example : ScopeMachine.State κ φ β ε δ ι α → List (Reason ε δ ι α) := ScopeMachine.journal
+  Test/Machine/Runtime/ScopeMachineContract.lean:142: bare-proof by ScopeMachine.restore?: example [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] : ScopeMachine.State κ φ β ε δ ι α → Option (Exit β ε δ ι α) := ScopeMachine.r
+  Test/Machine/Runtime/ScopeMachineContract.lean:145: bare-proof by ScopeMachine.bound: example : Scope κ φ β ε δ ι α → Nat := ScopeMachine.bound
+  Test/Machine/Runtime/ScopeMachineContract.lean:146: bare-proof by ScopeMachine.runState: example : (φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α)) → Nat → ScopeMachine.State κ φ β ε δ ι α → σ → ScopeMachine.State κ φ β ε δ ι α × σ :
+  Test/Machine/Runtime/ScopeMachineContract.lean:150: bare-proof by ScopeMachine.request_uses_original: example : ∀ (machine : ScopeMachine.State κ φ β ε δ ι α) (ordinal : Nat) (operation : φ) (offered : Exit β ε δ ι α), ScopeMachine.request? machine = s
+  Test/Machine/Runtime/ScopeMachineContract.lean:155: bare-proof by ScopeMachine.respond_rejects_wrong_id: example : ∀ (machine : ScopeMachine.State κ φ β ε δ ι α) (ordinal : Nat) (reply : Exit Unit ε δ ι α), ordinal ≠ machine.captured.length → ScopeMachine
+  Test/Machine/Runtime/ScopeMachineContract.lean:159: bare-proof by ScopeMachine.respond_rejects_wrong_phase: example : ∀ (machine : ScopeMachine.State κ φ β ε δ ι α) (ordinal : Nat) (reply : Exit Unit ε δ ι α), (∀ operation, machine.phase ≠ ScopeMachine.Phase
+  Test/Machine/Runtime/ScopeMachineContract.lean:164: bare-proof by ScopeMachine.runState_zero: example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α)) (machine : ScopeMachine.State κ φ β ε δ ι α) (world : σ), ScopeMachine.ru
+  Test/Machine/Runtime/ScopeMachineContract.lean:168: bare-proof by ScopeMachine.runState_add: example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α)) (first later : Nat) (machine : ScopeMachine.State κ φ β ε δ ι α) (world :
+  Test/Machine/Runtime/ScopeMachineContract.lean:174: bare-proof by ScopeMachine.runState_scope: example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α)) (budget : Nat) (machine : ScopeMachine.State κ φ β ε δ ι α) (world : σ), 
+  Test/Machine/Runtime/ScopeMachineContract.lean:179: bare-proof by ScopeMachine.runState_prefix: example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α)) (budget : Nat) (scope : Scope κ φ β ε δ ι α) (original : Exit β ε δ ι α) 
+  Test/Machine/Runtime/ScopeMachineContract.lean:190: bare-proof by ScopeMachine.runState_complete: example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α)) (scope : Scope κ φ β ε δ ι α) (original : Exit β ε δ ι α) (world : σ), Sc
+  Test/Machine/Runtime/ScopeMachineContract.lean:198: bare-proof by ScopeMachine.runState_result: example : ∀ (callback : φ → Exit β ε δ ι α → Exit Unit ε δ ι α) (scope : Scope κ φ β ε δ ι α) (original : Exit β ε δ ι α) (world : σ), ScopeMachine.re
+  Test/Machine/Runtime/ScopeMachineContract.lean:205: bare-proof by ScopeMachine.runState_restore: example [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α)) (scope : 
+  Test/Machine/Runtime/ScopeRestorationContract.lean:21: bare-proof by ScopeRestoration.resumeClosedScope: example : PrimInterp ν τ β ε δ ι α → ScopeMachine.State κ φ β ε δ ι α → FrameFiber ν τ β ε δ ι α → Option (FrameStep ν τ β ε δ ι α × List (FrameEvent 
+  Test/Program/Eliminators.lean:230: bare-proof by Member.fiber_eliminator.extendAll_laws: theorem fiberTy_contract : (∀ {t : Ty} {a : Ty × Ty}, Member.fiber t = some a → fiberTy t = some a) ∧ (∀ {t : Ty}, Member.fiber t = none → fiberTy t =
+  Test/Program/FormationClosed.lean:138: bare-proof by Bool.noConfusion: example : ¬ Formation.HeadFormed false (.var 3) := Bool.noConfusion
+  Test/Program/FormationContract.lean:147: bare-proof by admitted.formed: example (admitted : AdmittedProgram pureProgram ⟨validTable, []⟩) : Formation.InputFormed pureProgram validTable := admitted.formed
+  Test/Program/FormationContract.lean:149: bare-proof by emission.formed: example (emission : Effect4.Codegen.ModuleEmission pureProgram validTable "main") : Formation.InputFormed pureProgram validTable := emission.formed
+  Test/Program/MeaningEqContract.lean:38: bare-proof by rewrite_agrees.run_agrees_at_bound.2.2.1: example : (Api.run original (StraightEq.fuelFor original)).exit = (Api.run rewritten (StraightEq.fuelFor rewritten)).exit := rewrite_agrees.run_agrees
+  Test/Program/ReferenceExpansion.lean:290: bare-proof by checked.expanded_refSites: example (checked : TypedProgram sig chain) : chain.expandRefs.refSites [] = [] := checked.expanded_refSites
+  Test/Program/TypingCheckContract.lean:17: bare-proof by result.property: theorem returned_judgment (sig : Signature Op) (env : TyEnv) (program : Eff Op) (result : { t : EffTy // HasTy sig env program t }) : HasTy sig env pr
+  Test/Schema/PayloadContract.lean:100: bare-proof by Float64: example : Type := Float64
+  Test/Schema/PayloadContract.lean:104: bare-proof by Float64.toBits: example : Float64 → UInt64 := Float64.toBits
+  Test/Schema/PayloadContract.lean:105: bare-proof by Float64.ofBits: example : UInt64 → Float64 := Float64.ofBits
+  Test/Schema/PayloadContract.lean:116: bare-proof by Float64.isFinite: example : Float64 → Bool := Float64.isFinite
+  Test/Schema/PayloadContract.lean:118: bare-proof by Float64.nan: example : Float64 := Float64.nan
+  Test/Schema/PayloadContract.lean:119: bare-proof by Float64.posInfinity: example : Float64 := Float64.posInfinity
+  Test/Schema/PayloadContract.lean:120: bare-proof by Float64.negInfinity: example : Float64 := Float64.negInfinity
+  Test/Schema/PayloadContract.lean:121: bare-proof by Float64.zero: example : Float64 := Float64.zero
+  Test/Schema/PayloadContract.lean:122: bare-proof by Float64.negZero: example : Float64 := Float64.negZero
+  Test/Schema/PayloadContract.lean:176: bare-proof by Json: example : Type := Json
+  Test/Schema/PayloadContract.lean:180: bare-proof by Json.null: example : Json := Json.null
+  Test/Schema/PayloadContract.lean:181: bare-proof by Json.bool: example : Bool → Json := Json.bool
+  Test/Schema/PayloadContract.lean:182: bare-proof by Json.number: example : Float64 → Json := Json.number
+  Test/Schema/PayloadContract.lean:183: bare-proof by Json.str: example : String → Json := Json.str
+  Test/Schema/PayloadContract.lean:184: bare-proof by Json.arr: example : List Json → Json := Json.arr
+  Test/Schema/PayloadContract.lean:185: bare-proof by Json.obj: example : List (String × Json) → Json := Json.obj
+  Test/Schema/PayloadContract.lean:190: bare-proof by Json.NumbersFinite: example : Json → Prop := Json.NumbersFinite
+  Test/Schema/PayloadContract.lean:191: bare-proof by Json.numbersFinite: example : Json → Bool := Json.numbersFinite
+  Test/Schema/PayloadContract.lean:246: bare-proof by ReferenceKey: example : Type := ReferenceKey
+  Test/Schema/PayloadContract.lean:248: bare-proof by ReferenceKey.value: example : ReferenceKey → String := ReferenceKey.value
+  Test/Schema/PayloadContract.lean:250: bare-proof by GlobalSymbolKey: example : Type := GlobalSymbolKey
+  Test/Schema/PayloadContract.lean:252: bare-proof by GlobalSymbolKey.key: example : GlobalSymbolKey → String := GlobalSymbolKey.key
+  Test/Schema/PayloadContract.lean:254: bare-proof by AnnotationEntry: example : Type := AnnotationEntry
+  Test/Schema/PayloadContract.lean:256: bare-proof by AnnotationEntry.key: example : AnnotationEntry → String := AnnotationEntry.key
+  Test/Schema/PayloadContract.lean:257: bare-proof by AnnotationEntry.payload: example : AnnotationEntry → Json := AnnotationEntry.payload
+  Test/Schema/PayloadContract.lean:265: bare-proof by LiteralValue: example : Type := LiteralValue
+  Test/Schema/PayloadContract.lean:267: bare-proof by LiteralValue.string: example : String → LiteralValue := LiteralValue.string
+  Test/Schema/PayloadContract.lean:268: bare-proof by LiteralValue.number: example : Float64 → LiteralValue := LiteralValue.number
+  Test/Schema/PayloadContract.lean:269: bare-proof by LiteralValue.bigint: example : Int → LiteralValue := LiteralValue.bigint
+  Test/Schema/PayloadContract.lean:270: bare-proof by LiteralValue.boolean: example : Bool → LiteralValue := LiteralValue.boolean
+  Test/Schema/PayloadContract.lean:272: bare-proof by EnumValue: example : Type := EnumValue
+  Test/Schema/PayloadContract.lean:274: bare-proof by EnumValue.string: example : String → EnumValue := EnumValue.string
+  Test/Schema/PayloadContract.lean:275: bare-proof by EnumValue.number: example : Float64 → EnumValue := EnumValue.number
+  Test/Schema/PayloadContract.lean:277: bare-proof by EnumEntry: example : Type := EnumEntry
+  Test/Schema/PayloadContract.lean:279: bare-proof by EnumEntry.name: example : EnumEntry → String := EnumEntry.name
+  Test/Schema/PayloadContract.lean:280: bare-proof by EnumEntry.value: example : EnumEntry → EnumValue := EnumEntry.value
+  Test/Schema/PayloadContract.lean:282: bare-proof by PropertyKey: example : Type := PropertyKey
+  Test/Schema/PayloadContract.lean:284: bare-proof by PropertyKey.string: example : String → PropertyKey := PropertyKey.string
+  Test/Schema/PayloadContract.lean:285: bare-proof by PropertyKey.number: example : Float64 → PropertyKey := PropertyKey.number
+  Test/Schema/PayloadContract.lean:286: bare-proof by PropertyKey.globalSymbol: example : GlobalSymbolKey → PropertyKey := PropertyKey.globalSymbol
+  Test/Schema/PayloadContract.lean:292: bare-proof by LiteralValue.kind: example : LiteralValue → LiteralKind := LiteralValue.kind
+  Test/Schema/PayloadContract.lean:293: bare-proof by EnumValue.kind: example : EnumValue → EnumValueKind := EnumValue.kind
+  Test/Schema/PayloadContract.lean:294: bare-proof by PropertyKey.kind: example : PropertyKey → PropertyKeyKind := PropertyKey.kind
+  Test/Schema/PayloadContract.lean:336: bare-proof by EnumValue.toLiteralValue: example : EnumValue → LiteralValue := EnumValue.toLiteralValue
+  Test/Schema/PayloadContract.lean:370: bare-proof by RepresentationAnnotation: example : Type := RepresentationAnnotation
+  Test/Schema/PayloadContract.lean:372: bare-proof by RepresentationAnnotation.id: example : RepresentationAnnotation → String := RepresentationAnnotation.id
+  Test/Schema/PayloadContract.lean:373: bare-proof by RepresentationAnnotation.payload: example : RepresentationAnnotation → Json := RepresentationAnnotation.payload
+  Test/Schema/PayloadContract.lean:375: bare-proof by CheckRepresentationAnnotationOf: example : Type → Type := CheckRepresentationAnnotationOf
+  Test/Schema/PayloadContract.lean:383: bare-proof by ElementOf: example : Type → Type := ElementOf
+  Test/Schema/PayloadContract.lean:388: bare-proof by PropertySignatureOf: example : Type → Type := PropertySignatureOf
+  Test/Schema/PayloadContract.lean:395: bare-proof by IndexSignatureOf: example : Type → Type := IndexSignatureOf
+  Test/Schema/PayloadContract.lean:419: bare-proof by Representation: example : Type := Representation
+  Test/Schema/PayloadContract.lean:420: bare-proof by Check: example : Type := Check
+  Test/Schema/PayloadContract.lean:428: bare-proof by Representation.declaration: example : RepresentationAnnotation → Annotations → List Representation → List Check → Representation := Representation.declaration
+  Test/Schema/PayloadContract.lean:432: bare-proof by Representation.reference: example : ReferenceKey → Representation := Representation.reference
+  Test/Schema/PayloadContract.lean:433: bare-proof by Representation.suspend: example : Annotations → List Check → Representation → Representation := Representation.suspend
+  Test/Schema/PayloadContract.lean:435: bare-proof by Representation.null: example : Annotations → List Check → Representation := Representation.null
+  Test/Schema/PayloadContract.lean:436: bare-proof by Representation.undefined: example : Annotations → List Check → Representation := Representation.undefined
+  Test/Schema/PayloadContract.lean:437: bare-proof by Representation.void: example : Annotations → List Check → Representation := Representation.void
+  Test/Schema/PayloadContract.lean:438: bare-proof by Representation.never: example : Annotations → List Check → Representation := Representation.never
+  Test/Schema/PayloadContract.lean:439: bare-proof by Representation.unknown: example : Annotations → List Check → Representation := Representation.unknown
+  Test/Schema/PayloadContract.lean:440: bare-proof by Representation.any: example : Annotations → List Check → Representation := Representation.any
+  Test/Schema/PayloadContract.lean:441: bare-proof by Representation.string: example : Annotations → List Check → Representation := Representation.string
+  Test/Schema/PayloadContract.lean:442: bare-proof by Representation.number: example : Annotations → List Check → Representation := Representation.number
+  Test/Schema/PayloadContract.lean:443: bare-proof by Representation.boolean: example : Annotations → List Check → Representation := Representation.boolean
+  Test/Schema/PayloadContract.lean:444: bare-proof by Representation.bigint: example : Annotations → List Check → Representation := Representation.bigint
+  Test/Schema/PayloadContract.lean:445: bare-proof by Representation.symbol: example : Annotations → List Check → Representation := Representation.symbol
+  Test/Schema/PayloadContract.lean:446: bare-proof by Representation.literal: example : Annotations → List Check → LiteralValue → Representation := Representation.literal
+  Test/Schema/PayloadContract.lean:448: bare-proof by Representation.uniqueSymbol: example : Annotations → List Check → GlobalSymbolKey → Representation := Representation.uniqueSymbol
+  Test/Schema/PayloadContract.lean:450: bare-proof by Representation.objectKeyword: example : Annotations → List Check → Representation := Representation.objectKeyword
+  Test/Schema/PayloadContract.lean:451: bare-proof by Representation.enum: example : Annotations → List Check → List EnumEntry → Representation := Representation.enum
+  Test/Schema/PayloadContract.lean:453: bare-proof by Representation.templateLiteral: example : Annotations → List Check → List Representation → Representation := Representation.templateLiteral
+  Test/Schema/PayloadContract.lean:455: bare-proof by Representation.arrays: example : Annotations → List Check → List (ElementOf Representation) → List Representation → Representation := Representation.arrays
+  Test/Schema/PayloadContract.lean:459: bare-proof by Representation.objects: example : Annotations → List Check → List (PropertySignatureOf Representation) → List (IndexSignatureOf Representation) → Representation := Representa
+  Test/Schema/PayloadContract.lean:463: bare-proof by Representation.union: example : Annotations → List Check → List Representation → UnionMode → Representation := Representation.union
+  Test/Schema/PayloadContract.lean:470: bare-proof by Check.filter: example : CheckRepresentationAnnotationOf Representation → Annotations → Bool → Check := Check.filter
+  Test/Schema/PayloadContract.lean:476: bare-proof by Check.filterGroup: example : Option (CheckRepresentationAnnotationOf Representation) → Annotations → List Check → Check := Check.filterGroup
+  Test/Schema/PayloadContract.lean:509: bare-proof by Representation.tag: example : Representation → RepresentationTag := Representation.tag
+  Test/Schema/PayloadContract.lean:510: bare-proof by Check.tag: example : Check → CheckTag := Check.tag
+  Test/Schema/PayloadContract.lean:662: bare-proof by ReferenceEntry: example : Type := ReferenceEntry
+  Test/Schema/PayloadContract.lean:664: bare-proof by ReferenceEntry.key: example : ReferenceEntry → String := ReferenceEntry.key
+  Test/Schema/PayloadContract.lean:665: bare-proof by ReferenceEntry.representation: example : ReferenceEntry → Representation := ReferenceEntry.representation
+  Test/Schema/PayloadContract.lean:667: bare-proof by Document: example : Type := Document
+  Test/Schema/PayloadContract.lean:669: bare-proof by Document.representation: example : Document → Representation := Document.representation
+  Test/Schema/PayloadContract.lean:670: bare-proof by Document.references: example : Document → List ReferenceEntry := Document.references
+  Test/Schema/PayloadContract.lean:672: bare-proof by MultiDocument: example : Type := MultiDocument
+  Test/Schema/PayloadContract.lean:674: bare-proof by MultiDocument.representations: example : MultiDocument → List Representation := MultiDocument.representations
+  Test/Schema/PayloadContract.lean:675: bare-proof by MultiDocument.references: example : MultiDocument → List ReferenceEntry := MultiDocument.references
+  Test/Schema/PayloadContract.lean:678: bare-proof by Document.toMulti: example : Document → MultiDocument := Document.toMulti

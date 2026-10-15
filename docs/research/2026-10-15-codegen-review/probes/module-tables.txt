@@ -1,0 +1,277 @@
+modules 1008
+law graph (Effect4.Laws.*): 619 modules, 13901 theorems, 1 goals, 2685 definitions, 8454 load-bearing, 2703 unconsumed
+core (Effect4.* less Laws): 256 modules, 2872 theorems, 0 goals, 7103 definitions, 821 load-bearing, 1394 unconsumed
+Test.*: 91 modules, 847 theorems, 7 goals, 1091 definitions, 42 load-bearing, 105 unconsumed
+Tools.* and ProofGraph.*: 42 modules, 422 theorems, 0 goals, 1268 definitions, 21 load-bearing, 164 unconsumed
+
+law-graph modules with theorems: 580; of them no root reaches any theorem: 172 (1998 theorems)
+  unreached	Effect4.Laws.Machine.Witnesses	69 theorems	69 unconsumed
+  unreached	Effect4.Laws.Codegen.Definitions	65 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.Typed.Frames	63 theorems	63 unconsumed
+  unreached	Effect4.Laws.Library.Queue.Typing	59 theorems	23 unconsumed
+  unreached	Effect4.Laws.Api.Supervision	57 theorems	25 unconsumed
+  unreached	Effect4.Laws.Program.Guard.MemoIds	50 theorems	9 unconsumed
+  unreached	Effect4.Laws.Library.Semaphore.Ops	46 theorems	13 unconsumed
+  unreached	Effect4.Laws.Program.Authoring.Atoms	45 theorems	45 unconsumed
+  unreached	Effect4.Laws.Machine.Refinement	41 theorems	33 unconsumed
+  unreached	Effect4.Laws.Library.Queue.Ops	41 theorems	19 unconsumed
+  unreached	Effect4.Laws.Store.Folds.Val	37 theorems	25 unconsumed
+  unreached	Effect4.Laws.Library.Semaphore.Typing	36 theorems	8 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.Evaluation	36 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.Guard.Single	34 theorems	3 unconsumed
+  unreached	Effect4.Laws.Library.Pool.Reading	34 theorems	27 unconsumed
+  unreached	Effect4.Laws.Program.Authoring.Rows	30 theorems	23 unconsumed
+  unreached	Effect4.Laws.Machine.StatePreservation	26 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.Sequencing	25 theorems	8 unconsumed
+  unreached	Effect4.Laws.Machine.Arena	24 theorems	7 unconsumed
+  unreached	Effect4.Laws.Library.Queue.Reading	24 theorems	15 unconsumed
+  unreached	Effect4.Laws.Program.NativeHeapExecution	24 theorems	7 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeActionDebit	23 theorems	5 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.FrameDebit	22 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.NativeReferences	22 theorems	2 unconsumed
+  unreached	Effect4.Laws.Library.Semaphore.Reading	21 theorems	10 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.PopSequencing	21 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CommandDebit	21 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReasonsR	20 theorems	4 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.Lift	20 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Handles.Term	19 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.Handles.Hooks	19 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Authoring.Forms	19 theorems	19 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.Control	19 theorems	0 unconsumed
+  unreached	Effect4.Laws.Api.MaskRuns	18 theorems	7 unconsumed
+  unreached	Effect4.Laws.Codegen.SourceBindings	18 theorems	9 unconsumed
+  unreached	Effect4.Laws.Program.LayerSharing	18 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.Handles.Alphabet	17 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody	17 theorems	8 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CommandStacks	17 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.AdministrativeQueue	17 theorems	2 unconsumed
+  unreached	Effect4.Laws.Codegen.Bindings	15 theorems	6 unconsumed
+  unreached	Effect4.Laws.Program.StackRegion	15 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeSequencing	15 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.Authoring.Sugar	14 theorems	5 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeStacks	14 theorems	11 unconsumed
+  unreached	Effect4.Laws.Machine.StoresValue	13 theorems	12 unconsumed
+  unreached	Effect4.Laws.Api.ModuleReadable	13 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.Folds.Term	13 theorems	13 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.Producers	13 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.HostBoundary	12 theorems	9 unconsumed
+  unreached	Effect4.Laws.Program.CheckedTyping	12 theorems	3 unconsumed
+  unreached	Effect4.Laws.Step.Scope	12 theorems	3 unconsumed
+  unreached	Effect4.Laws.Author.Explain	12 theorems	12 unconsumed
+  unreached	Effect4.Laws.Program.StackLocal	11 theorems	0 unconsumed
+  unreached	Effect4.Laws.Api.RunnerBytes	11 theorems	6 unconsumed
+  unreached	Effect4.Laws.Program.Handles.Evaluation	11 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.StackRegionCommands	11 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.ScopeTransfer	11 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CommandStackSteps	11 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CommandSequencing	11 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.AdministrativeKept	11 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.HistoryLift	11 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Folds.Region	10 theorems	5 unconsumed
+  unreached	Effect4.Laws.Machine.ScopeRestoration	10 theorems	8 unconsumed
+  unreached	Effect4.Laws.Library.Stream.Ops	10 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CommandStoreDebit	10 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativePrimitiveDebit	10 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.RefWords	10 theorems	4 unconsumed
+  unreached	Effect4.Laws.Program.Sched	9 theorems	7 unconsumed
+  unreached	Effect4.Laws.Machine.ForkLedger	9 theorems	5 unconsumed
+  unreached	Effect4.Laws.Machine.AnswerFlowFrames	9 theorems	6 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CommandRaceDebit	9 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.ScopeRows	9 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.OuterFrames	9 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.Handles.Compile	8 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.Folds.Denote	8 theorems	6 unconsumed
+  unreached	Effect4.Laws.Program.DenoteCtl	8 theorems	5 unconsumed
+  unreached	Effect4.Laws.Program.ScopedTyping	8 theorems	7 unconsumed
+  unreached	Effect4.Laws.Library.Pull.Scope	8 theorems	2 unconsumed
+  unreached	Effect4.Laws.Machine.RaceFirst	8 theorems	4 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CommandClosure	8 theorems	0 unconsumed
+  unreached	Effect4.Laws.Api.Codegen	7 theorems	7 unconsumed
+  unreached	Effect4.Laws.Program.StackRegionRun	7 theorems	2 unconsumed
+  unreached	Effect4.Laws.Library.SynchronizedRef.Ops	7 theorems	3 unconsumed
+  unreached	Effect4.Laws.Library.Queue.Conservation	7 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.LedgerFinalizer	7 theorems	7 unconsumed
+  unreached	Effect4.Laws.Program.FiberSumConnect	7 theorems	7 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeAccounting	7 theorems	1 unconsumed
+  unreached	Effect4.Laws.Machine.LiveStack	6 theorems	5 unconsumed
+  unreached	Effect4.Laws.Machine.Folds.Val	6 theorems	4 unconsumed
+  unreached	Effect4.Laws.Program.ScopeMarkers	6 theorems	5 unconsumed
+  unreached	Effect4.Laws.Effects.Sum	6 theorems	5 unconsumed
+  unreached	Effect4.Laws.Program.TyNormal	6 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Typed.AnswerSchema	6 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.Typing.FoldAgreement	6 theorems	6 unconsumed
+  unreached	Effect4.Laws.Library.Channel.Scope	6 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.RuntimeShape	6 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeParkDebit	6 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeMachineShape	6 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.ObserverDebit	6 theorems	2 unconsumed
+  unreached	Effect4.Laws.Machine.Behaviour	5 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.Order	5 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.TypedRun	5 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.Authoring.Loops	5 theorems	3 unconsumed
+  unreached	Effect4.Laws.Machine.AnswerFlowHooks	5 theorems	3 unconsumed
+  unreached	Effect4.Laws.Machine.AnswerFlowCausePop	5 theorems	4 unconsumed
+  unreached	Effect4.Laws.Machine.AnswerFlowActions	5 theorems	5 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CausePop	5 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeScopeDebit	5 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.NativeHeapReplies	5 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ApplicationService	5 theorems	4 unconsumed
+  unreached	Effect4.Laws.Program.IterLimit	4 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.StoreComodel	4 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.RowProtocol	4 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.Authoring.Records	4 theorems	2 unconsumed
+  unreached	Effect4.Laws.Machine.Handshake	4 theorems	0 unconsumed
+  unreached	Effect4.Laws.Machine.AnswerFlowPop	4 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.Folds.Projections	4 theorems	4 unconsumed
+  unreached	Effect4.Laws.Program.Folds.Provision	4 theorems	4 unconsumed
+  unreached	Effect4.Laws.Program.Folds.Representation	4 theorems	4 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.Outside	4 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.Pop	4 theorems	0 unconsumed
+  unreached	Effect4.Laws.Machine.StackLocal	3 theorems	0 unconsumed
+  unreached	Effect4.Laws.Api.Guard	3 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.HoistingTotal	3 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Invocation	3 theorems	3 unconsumed
+  unreached	Effect4.Laws.Program.Typing.Check	3 theorems	3 unconsumed
+  unreached	Effect4.Laws.Library.Queue.Relation	3 theorems	3 unconsumed
+  unreached	Effect4.Laws.Machine.Folds.Stores	3 theorems	2 unconsumed
+  unreached	Effect4.Laws.Data.ListRelConnectors	3 theorems	3 unconsumed
+  unreached	Effect4.Laws.Step.Store	3 theorems	0 unconsumed
+  unreached	Effect4.Laws.Library.Stream.Model	3 theorems	1 unconsumed
+  unreached	Effect4.Laws.Library.Stream.Steps	3 theorems	3 unconsumed
+  unreached	Effect4.Laws.Machine.ControlSteps	3 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.ControlSteps	3 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.StoreExecution	3 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.LoopCommand	3 theorems	0 unconsumed
+  unreached	Effect4.Laws.Machine.RefFootprint	3 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.NativeHeapHistory	3 theorems	0 unconsumed
+  unreached	Effect4.Laws.Machine.Edit	2 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Folds.DenoteRows	2 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.Provision	2 theorems	2 unconsumed
+  unreached	Effect4.Laws.Api.Formation	2 theorems	2 unconsumed
+  unreached	Effect4.Laws.Store.CanonicalSpec	2 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Authoring.Tuples	2 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Typed.ForkSource	2 theorems	2 unconsumed
+  unreached	Effect4.Laws.Library.Stream.Typing	2 theorems	2 unconsumed
+  unreached	Effect4.Laws.Library.Queue.Execution	2 theorems	2 unconsumed
+  unreached	Effect4.Laws.Program.SourceOrigin	2 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.NativeHeap	2 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.IterationDebit	2 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.ReplySequencing	2 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeIterationDebit	2 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.Execution	2 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.HeapSites	2 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.WriterScope	2 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.ValidatedBlocks	2 theorems	2 unconsumed
+  unreached	Effect4.Laws.Machine.ContextValue	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Folds.Straight	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Folds.Looped	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Folds.DenoteRowsB	1 theorems	0 unconsumed
+  unreached	Effect4.Laws.Api.Fuel	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.ValueModel	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.AtomRules	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Auto.Traversals	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.Authoring.Ascribe	1 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.Guard.Handshake	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Machine.LiftPrefix	1 theorems	0 unconsumed
+  unreached	Effect4.Laws.Codegen.TargetOrder	1 theorems	1 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.FrameSequencing	1 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.NativeDebit	1 theorems	0 unconsumed
+  unreached	Effect4.Laws.Program.ReleaseCustody.CommandFunding	1 theorems	0 unconsumed
+
+by area (depth 3): modules, theorems, load-bearing, unconsumed
+  Effect4.Laws.Program	396	8605	5744	1454
+  Effect4.Laws.Machine	76	1993	738	580
+  Effect4.Laws.Codegen	22	1059	776	145
+  Effect4.Laws.Library	48	909	423	256
+  Effect4.Laws.Step	18	419	291	37
+  Effect4.Laws.Api	18	267	70	94
+  Effect4.Laws.Run	8	246	185	27
+  Effect4.Laws.Schema	4	139	121	16
+  Effect4.Laws.Store	4	92	29	39
+  Effect4.Laws.Slice	1	59	22	11
+  Effect4.Laws.Auto	15	46	33	12
+  Effect4.Laws.Data	3	29	18	7
+  Effect4.Laws.Effects	2	22	2	12
+  Effect4.Laws.Author	2	12	0	12
+  Effect4.Laws.Contracts	1	4	2	1
+  Effect4.Laws	1	0	0	0
+
+largest law-graph modules by theorems
+  Effect4.Laws.Machine.Handles	393 theorems	11 load-bearing	47 unconsumed
+  Effect4.Laws.Codegen.PrintTyped	344 theorems	296 load-bearing	31 unconsumed
+  Effect4.Laws.Program.Guard.Core	323 theorems	277 load-bearing	34 unconsumed
+  Effect4.Laws.Program.Typed.Commands.Bookkeeping	247 theorems	239 load-bearing	7 unconsumed
+  Effect4.Laws.Program.Typed.Membership	231 theorems	192 load-bearing	25 unconsumed
+  Effect4.Laws.Program.Agreement	200 theorems	162 load-bearing	34 unconsumed
+  Effect4.Laws.Program.Agreement.Machine	187 theorems	171 load-bearing	15 unconsumed
+  Effect4.Laws.Machine.Clauses	175 theorems	11 load-bearing	146 unconsumed
+  Effect4.Laws.Program.TyView	143 theorems	118 load-bearing	10 unconsumed
+  Effect4.Laws.Codegen.ReadLeaf	138 theorems	106 load-bearing	14 unconsumed
+  Effect4.Laws.Program.Signature	130 theorems	113 load-bearing	13 unconsumed
+  Effect4.Laws.Machine.Approximation	128 theorems	16 load-bearing	35 unconsumed
+  Effect4.Laws.Step.Waiting	128 theorems	93 load-bearing	1 unconsumed
+  Effect4.Laws.Program.Typed.Adequacy	125 theorems	48 load-bearing	70 unconsumed
+  Effect4.Laws.Program.TypeAlgebra	123 theorems	86 load-bearing	21 unconsumed
+  Effect4.Laws.Codegen.ReadPrint	121 theorems	107 load-bearing	12 unconsumed
+  Effect4.Laws.Program.Typed.Assembly	113 theorems	92 load-bearing	17 unconsumed
+  Effect4.Laws.Machine.MaskRuns	111 theorems	81 load-bearing	16 unconsumed
+  Effect4.Laws.Program.Typed.Denotation	111 theorems	107 load-bearing	4 unconsumed
+  Effect4.Laws.Schema.Codec	102 theorems	91 load-bearing	9 unconsumed
+  Effect4.Laws.Program.Typed.Commands.Evaluate	102 theorems	101 load-bearing	0 unconsumed
+  Effect4.Laws.Program.UnionRule	100 theorems	53 load-bearing	18 unconsumed
+  Effect4.Laws.Program.Simulation.Fibers	100 theorems	91 load-bearing	9 unconsumed
+  Effect4.Laws.Machine.StoresLaws	96 theorems	61 load-bearing	21 unconsumed
+  Effect4.Laws.Program.Typed	95 theorems	13 load-bearing	17 unconsumed
+
+codegen modules
+  Effect4.Codegen.Template	19 theorems	58 definitions	17 load-bearing	2 unconsumed
+  Effect4.Codegen.Names	0 theorems	2 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.Types	7 theorems	15 definitions	0 load-bearing	6 unconsumed
+  Effect4.Codegen.Metadata	0 theorems	13 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.Record	4 theorems	15 definitions	4 load-bearing	0 unconsumed
+  Effect4.Codegen.Classes	1 theorems	40 definitions	1 load-bearing	0 unconsumed
+  Effect4.Codegen.Tuple	1 theorems	3 definitions	1 load-bearing	0 unconsumed
+  Effect4.Codegen.ListFold	3 theorems	10 definitions	3 load-bearing	0 unconsumed
+  Effect4.Codegen.PrintLeaf	10 theorems	57 definitions	3 load-bearing	7 unconsumed
+  Effect4.Codegen.Templates	2 theorems	44 definitions	0 load-bearing	1 unconsumed
+  Effect4.Codegen.Bindings	2 theorems	29 definitions	0 load-bearing	1 unconsumed
+  Effect4.Codegen.SourceBindings	1 theorems	48 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.ClassTable	0 theorems	10 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.Print	11 theorems	52 definitions	6 load-bearing	1 unconsumed
+  Effect4.Codegen.RowServices	0 theorems	25 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.Checked	4 theorems	26 definitions	1 load-bearing	0 unconsumed
+  Effect4.Codegen.Read	38 theorems	120 definitions	34 load-bearing	3 unconsumed
+  Effect4.Codegen.Admit	6 theorems	15 definitions	2 load-bearing	3 unconsumed
+  Effect4.Codegen.CallbackRequirements	0 theorems	3 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.Schema	7 theorems	23 definitions	0 load-bearing	3 unconsumed
+  Effect4.Codegen.Target	4 theorems	25 definitions	0 load-bearing	4 unconsumed
+  Effect4.Laws.Codegen.Metadata	17 theorems	0 definitions	16 load-bearing	1 unconsumed
+  Effect4.Laws.Codegen.Record	18 theorems	0 definitions	16 load-bearing	2 unconsumed
+  Effect4.Laws.Codegen.Tuple	5 theorems	0 definitions	2 load-bearing	3 unconsumed
+  Effect4.Laws.Codegen.Classes	35 theorems	0 definitions	33 load-bearing	0 unconsumed
+  Effect4.Laws.Codegen.ListFold	20 theorems	0 definitions	16 load-bearing	4 unconsumed
+  Effect4.Laws.Codegen.ReadLeaf	138 theorems	4 definitions	106 load-bearing	14 unconsumed
+  Effect4.Laws.Codegen.Services	18 theorems	1 definitions	18 load-bearing	0 unconsumed
+  Effect4.Laws.Codegen.RowServices	11 theorems	0 definitions	5 load-bearing	1 unconsumed
+  Effect4.Laws.Codegen.Module	26 theorems	2 definitions	22 load-bearing	1 unconsumed
+  Effect4.Laws.Codegen.Checked	8 theorems	0 definitions	1 load-bearing	4 unconsumed
+  Effect4.Laws.Codegen.Bindings	15 theorems	0 definitions	0 load-bearing	6 unconsumed
+  Effect4.Laws.Codegen.SourceBindings	18 theorems	1 definitions	0 load-bearing	9 unconsumed
+  Effect4.Laws.Codegen.Admit	19 theorems	0 definitions	11 load-bearing	4 unconsumed
+  Effect4.Laws.Api.Codegen	7 theorems	0 definitions	0 load-bearing	7 unconsumed
+  Effect4.Codegen.Forms	2 theorems	59 definitions	0 load-bearing	2 unconsumed
+  Effect4.Laws.Codegen.Forms	25 theorems	0 definitions	22 load-bearing	3 unconsumed
+  Effect4.Laws.Codegen.Template	30 theorems	2 definitions	20 load-bearing	10 unconsumed
+  Effect4.Laws.Codegen.Read	50 theorems	8 definitions	46 load-bearing	4 unconsumed
+  Effect4.Laws.Codegen.ReadPrint	121 theorems	26 definitions	107 load-bearing	12 unconsumed
+  Effect4.Laws.Codegen.PrintReadable	40 theorems	25 definitions	28 load-bearing	11 unconsumed
+  Effect4.Codegen.PrintEliminators	0 theorems	39 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.TargetFold	0 theorems	53 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.EraseTermTypes	0 theorems	8 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.EraseTypes	1 theorems	11 definitions	1 load-bearing	0 unconsumed
+  Effect4.Codegen.PrintTyped	0 theorems	14 definitions	0 load-bearing	0 unconsumed
+  Effect4.Laws.Codegen.PrintTyped	344 theorems	53 definitions	296 load-bearing	31 unconsumed
+  Effect4.Laws.Codegen.Definitions	65 theorems	0 definitions	0 load-bearing	0 unconsumed
+  Effect4.Codegen.Authoring.Forms	0 theorems	19 definitions	0 load-bearing	0 unconsumed
+  Effect4.Laws.Codegen.Mask	35 theorems	3 definitions	11 load-bearing	24 unconsumed
+  Effect4.Laws.Codegen.TargetOrder	1 theorems	16 definitions	0 load-bearing	1 unconsumed
