@@ -953,3 +953,25 @@ Verification commands:
 
 The build passes with 1264 jobs.
 The audit checks 445 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+
+## Joined protected callback installation
+
+The actual callback installation now retains the numeric machine assertion, pending commands, and detached reply tasks at the same world.
+The proof uses the existing command assertion transport and addressed row update.
+It requires neither a new role nor the active-attempt census for this operation.
+The actual selected callback supplies the live exit, unchanged store, masked frame, empty nested commands, and empty message word.
+The scheduled source step still supplies actual lookup, unique ids, an unparked fiber, and the entered heap.
+
+Placement: scope-lifetime-finalization R11 and reactive-scheduling R9; the coupled Timeout history producer consumes this branch.
+The source and scheduled execution premises remain conditional.
+The initialized history producer and both original numeric goals remain open.
+
+Verification commands:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.HostTimeoutNumberPendingInstall
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean scratch/TimeoutPendingInstallAudit.lean
+```
+
+The build passes with 1265 jobs.
+The audit checks nine declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
