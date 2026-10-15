@@ -127,3 +127,71 @@ These obligations remain before `jobs_step` can be replaced.
 A spent feeder credit alone does not prove that its queued offer has completed.
 The live-member and idle-member observations still need their source and host-profile connection.
 These are safety observations, not progress claims.
+
+## Concrete binding continuation
+
+The endpoint obligations remain open.
+These commits connect actual source captures and native results; they do not supply the complete active history invariant.
+
+| Commit | Checked consumer |
+| --- | --- |
+| `2f224e613` | Ordinary post-assignment and connection regions exclude queue and assignment writes. |
+| `17a9e7701` | The actual worker job binder captures its classified answer and funds its exact assignment write. |
+| `e366ffca6` | The worker's uniform saved binder and the native take share the returned custody world. |
+| `cd13057b8` | Both workers retain their actual request keys and separately allocated wake keys through their take heads. |
+| `c8377b965` | Both notification prefixes retain the actual take tuple before the option branch. |
+
+`QueueWorkersJobGraph.assignment_input` reads the actual assignment head.
+`QueueWorkersJobGraph.assignment_step` spends its protected occurrence and retains conservation.
+`QueueWorkersTakeBinding.take_step` reads the actual take head and returns its classified tuple in the same world.
+`QueueWorkersAllocationBinding.hint_callback` retains the immutable request key when it appends the actual hint key.
+The hint input requires a waiting request; a broader pending class would also admit a request that already holds a job.
+
+`QueueWorkersJobFamilies.take_notifications` consumes both actual `postAll` source regions.
+Its remaining premise is the local producer for the actual option branch.
+`AnswerFlow.indexed_family` joins existing member families by mapping their returned paths into one stack relation.
+It performs no callback, compiler or machine traversal.
+
+The native model names requests by their deferred indices.
+The custody proof uses separate logical tokens.
+This keeps `Table.handle` injective without extending a finite native-key map.
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersReadonlySource
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean QueueReadonlyAudit.lean
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersJobGraph
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean QueueJobGraphAudit.lean
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersJobFamily
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean QueueJobCutsAudit.lean
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersTakeBinding Test.Dogfood.Proofs.QueueWorkersAllocationBinding Test.Dogfood.Proofs.QueueWorkersJobFamily
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean QueueNativeCutsAudit.lean
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersJobFamilies Test.Dogfood.Proofs.QueueWorkersTakeBinding
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean QueueNotificationJoinAudit.lean
+```
+
+The corresponding narrow builds report 1332, 1387, 1388, 1391 and 1400 successful jobs.
+The audits report 32, 47, 10, 209 and 138 declarations within `[propext, Quot.sound]`.
+Every listed audit reports zero declarations modulo planned goals and zero planned goals.
+The logs are `/private/tmp/queue-readonly-source2-build.log`, `/private/tmp/queue-readonly-audit.log`,
+`/private/tmp/queue-job-graph6-build.log`, `/private/tmp/queue-job-graph-audit.log`,
+`/private/tmp/queue-job-family2-build.log`, `/private/tmp/queue-job-cuts-audit.log`,
+`/private/tmp/queue-allocation-take2-build.log`, `/private/tmp/queue-native-cuts-audit.log`,
+`/private/tmp/queue-take-notifications2-build.log` and `/private/tmp/queue-notification-join-audit.log`.
+
+The active history still needs the waiting cleanup, retry completion, feeder offer entry, offer withdrawal and root terminal custody producers.
+Full reply admission also needs the count-cell invariant and delayed-reference reply permission in the same active invariant.
+The resting-state endpoint additionally needs actual offer acceptance and its live-member observations.
+
+The successful option branch also checks at every fuel.
+`QueueWorkersTakeOptionBranch.body` reads the captured tuple after both notification answers.
+Its remaining premise supplies only the actual waiting body, for the same still-waiting token.
+It does not assume conservation or the endpoint observation.
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersTakeOptionBranch
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean QueueOptionAudit.lean
+```
+
+Result: 1402 successful build jobs.
+The audit reports 179 declarations within `[propext, Quot.sound]`, zero modulo planned goals and zero planned goals.
+Logs: `/private/tmp/queue-take-option-branch2-build.log` and `/private/tmp/queue-option-audit.log`.
