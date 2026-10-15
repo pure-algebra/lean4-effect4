@@ -1054,3 +1054,70 @@ model of rc.112's Schema constructors.
 - **P-CR4-1.** Row 11 closes by row 392 (2), P4 (a). Typed Schema text comes from a second
   algebra of the fold, and rc.112's `toCodeDocument` is a finite oracle. Row 11's option (b) would
   make rc.112 the producer, and rc.112's code drops a `__proto__` field.
+
+## The merge of the coordinator's branch, and decisions row 395 applied
+
+The coordinator merged this branch at `368a564b3` into `refactor/phase1-phase3`, with the lowering
+seat's S1, and ruled this receipt's proposals in decisions row 395. As asked, `68765c384` is merged
+into this branch at `3b7b7fd5b`, before the next build. The merge had no conflict.
+
+### The three approved proposals, applied
+
+| Row 395 | The edit |
+| --- | --- |
+| (3) P-CR1-1 | `TRUTH_SOURCES` in the `Makefile` drops `harness/truth/module-imports.ts`, and the file is deleted. Two comments that name it say that it is deleted (`harness/truth/run-truth.ts`, `harness/tsdiag/run-tsdiag.mjs`) |
+| (4) P-CR3-1 | `$(CHK)/target` takes `tools/Tools/TypeSpelling.lean` as a prerequisite |
+| (5) P-CR0-1 | The Refusals group of `tools/Effect4Gen/manifest.json` imports `Effect4.Api.Codegen` in place of `Effect4.Api`. `Effect4.Api` drops `Effect4.Codegen.Refusal`, and its note says where the alphabets come from. `python3 scripts/generate.py --only derived` changes two lines of `src/Effect4/Api/RefusalsDerived.lean`: the import, and the import list of its regeneration command |
+
+These are the two `Makefile` lines that row 395 names, and no other `Makefile` line moves.
+
+**The rebuild, measured.** An edit of `Effect4.Codegen.Refusal` rebuilds 92 modules
+(`probes/fanout.py`, at this commit), against the 454 of CR-0.
+
+**Commands and results.**
+
+| Command | Result | Time |
+| --- | --- | ---: |
+| `python3 scripts/generate.py --only derived` | passes; `RefusalsDerived.lean` moves by its two lines, and no other output moves | 584 s |
+| `lake build` of the 43 direct importers of `Effect4.Api` and of `Effect4.Api.RefusalsDerived`, and the root `Effect4` | passes, 1166 jobs | 277 s |
+| `#axiom_audit Effect4.Api Effect4.Api.RefusalsDerived` | 1375 declarations within `[propext, Quot.sound]` | — |
+| `make check-target` | passes: 104 resolved, none mismatching; CR-3's assignability line | 11 s |
+| `make check-truth` | passes: 81 programs agree, 12 signed divergences | 291 s |
+| `make check-gen` | regenerates every stale Lean-only group; the only change is the committed `RefusalsDerived.lean` of this commit | 959 s |
+
+The times include the wait for the slot and the rebuild that the edit of `Effect4.Api` starts.
+
+**What reads the alphabets.** Of the 35 Lean files that name `PrintRefusal`, `ReadRefusal` or
+`ClassRefusal`, every one but two reaches `Effect4.Codegen.Refusal` without `Effect4.Api`'s edge.
+The two are a docstring (`tools/Tools/TypeSpelling.lean`) and the guards that the generator
+appends to `RefusalsDerived.lean`, which imports the codegen face.
+
+### P-CR6-1: the brief for lean4-typescript v0.8.0 (the owner's release)
+
+Row 395 (8) makes the release the owner's push. The release changes the target syntax
+(`TypeScript.Syntax`) in two ways.
+
+1. **No scoped generator statements.** `Stmt.scopedGen` and `Stmt.scopedGenMasked` go. No producer
+   of this tree writes either. The tree meets them only where it reads every statement. These are
+   the generated fold (`src/Effect4/Codegen/TsFold.lean`) and the term eraser
+   (`src/Effect4/Codegen/EraseTermTypes.lean`). They are the binding analysis
+   (`src/Effect4/Codegen/SourceBindings.lean`) and the layout (`tools/Tools/Code/TypeScript.lean`).
+   They are the style driver (`tools/Drivers/StyleSyntax.lean`) and three guards of
+   `Test/Codegen/SourceBindingsContract.lean`.
+2. **One object former.** `objectWith (keys : KeyForm) (entries : List ObjectEntry)` with a layout
+   flag stands for the five formers `object`, `objectML`, `objectQuoted`, `objectQuotedML` and
+   `objectFromEntries`. The key forms are `plain`, `quoted` and `computed`, and a fourth,
+   `entries`, which writes `Object.fromEntries([[k, v], …])`. The JSON data printer needs it for a
+   `__proto__` key and for a repeated key (`Codegen.Schema.dataObject`).
+
+**The migration in this tree.** `git grep` counts the uses outside the generated fold: `object`
+80, `objectML` 8, `objectQuoted` 38, `objectQuotedML` 18 and `objectFromEntries` 10. `objectWith`
+has 22 already. Each use moves to `objectWith` at its key form and its layout.
+
+**What the release must keep.** No rendered byte moves, so every lane's committed bytes stand.
+They are the truth manifest and its modules, the corpus index, the three schema fixtures and the
+to-do's fixture. The checks are `make check-truth`, `check-corpus`, `check-schema-ts`, `check-ts-reader`
+and `check-host-protocol`, and `make gen-derived` regenerates the fold, which loses five arms.
+
+**The pin.** `lakefile.toml` names the package by its commit (`rev`), and `lake-manifest.json`
+carries the same commit. Both are the coordinator's, so the bump lands with the release.

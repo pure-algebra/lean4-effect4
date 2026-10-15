@@ -17,7 +17,8 @@
 // declared type, its imports from Lean data, laid out. So the compiler answers for the program on
 // its own; whether it accepts Lean's declared type is the corpus lane's question, on the module
 // that ships. This lane writes no byte of a module and keeps no list of names. Until 2026-10-15
-// it wrote each program itself, under the imports of every name (harness/truth/module-imports.ts).
+// it wrote each program itself, under the imports of every name (harness/truth/module-imports.ts,
+// deleted by decisions row 395 (3)).
 // A module's header is what stands before its first `export`: its comment and its imports. The prelude stands beside the modules with every file that it
 // reaches. The compiler names those files: the lane opens the tree's prelude as the one root
 // of a project and copies each file of harness/truth that the compiler read. So a new file

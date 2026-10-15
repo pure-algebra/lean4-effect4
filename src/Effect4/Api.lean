@@ -16,9 +16,6 @@ import Effect4.Store.Domain.Cascade
 import Effect4.Schema.Bridge
 import Effect4.Schema.OfShape
 import Effect4.Schema.Codec
--- The codegen's refusal alphabets: the refusals an agent is shown are content (decisions row
--- 17), and the generated `Api/RefusalsDerived.lean` reads them through this face.
-import Effect4.Codegen.Refusal
 
 /-!
 # Effect4.Api — the application face
@@ -43,9 +40,11 @@ One module, the whole pipeline, small interface:
 * The codegen face is its own module, `Effect4.Api.Codegen` (`src/Effect4/Api/Codegen.lean`),
   in this namespace: `print` and `read`, the round trip and its certificate, `printDecl`, the
   module's emission and its checked reading, the printed `Typed`, `TypedLayer` and `Built`, and the
-  Schema syntax. It answers syntax, never text. This module imports none of the codegen, only its
-  refusal alphabets (`src/Effect4/Codegen/Refusal.lean`), so an edit of the printer, the reader
-  or the module writer rebuilds none of this face's importers.
+  Schema syntax. It answers syntax, never text. This module imports none of the codegen, so an
+  edit of the printer, the reader, the module writer or their refusal alphabets
+  (`src/Effect4/Codegen/Refusal.lean`) rebuilds none of this face's importers. The generated
+  `Api/RefusalsDerived.lean` reads those alphabets through the codegen face (decisions row 395
+  (5)).
 * `bytesOf` / `ofBytes` are the canonical bytes of a program and the exact decoder: what
   the store addresses and what an OCaml or TypeScript host is sent and sends back.
 * `compile` is the defunctionalising compile to the frame alphabet; `interpOf` gives the
