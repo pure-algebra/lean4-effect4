@@ -975,3 +975,24 @@ Verification commands:
 
 The build passes with 1265 jobs.
 The audit checks nine declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+
+## Joined actual cleanup write
+
+The actual cleanup evaluator result now retains the numeric machine assertion, pending queue, and detached reply tasks at its committed phase.
+The proof reuses the existing cleanup evaluator equation and the existing addressed writer transport.
+It closes the cleanup barrier directly from the committed heap.
+The actual source writer, masked frame, saved restore path, and active-attempt census remain explicit premises.
+
+Placement: scope-lifetime-finalization R11 and translation-simulation R10; the numeric history producer consumes this cleanup branch.
+The authored saved edges now retain their classes across the numeric store update.
+The initialized history and both original Timeout numeric goals remain open.
+
+Verification commands:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.HostTimeoutNumberCleanupJoint
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean scratch/TimeoutCleanupJointAudit.lean
+```
+
+The build passes with 1266 jobs.
+The audit checks 31 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.

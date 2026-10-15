@@ -23,6 +23,13 @@ structure Edge (state : Stores) (input output : Kind) (frame : NCode)
     HostTimeoutNumberMaskClass.Restorable output
   finalizerFlag : ∀ body name flag, frame = .onExit body name flag → flag = false
 
+/-- The same authored saved edge retains its numeric classes after an admitted reference write. -/
+theorem Edge.future (before after : Stores) (input output : Kind) (frame : NCode)
+    (future : HostTimeoutNumberFlow.Future before after) (held : Edge before input output frame) :
+    Edge after input output frame :=
+  ⟨AnswerFlow.ViewSavedAt.future (fun view => model view)
+    (fun view => (HostTimeoutFlow.interpreter view).toPrimInterp) (fun _ => future) held.toViewSavedAt, held.restores, held.generated, held.finalizerFlag⟩
+
 /-- A hook that keeps its stack cannot also push a restoring mask. -/
 theorem no_push (before after : List NCode) (same : after = before)
     (pushed : after = .setInterruptible true :: before) : False := by
