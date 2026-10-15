@@ -428,6 +428,59 @@ structure FoldLift (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α �
         I w' (drainOwed { m with state := st } [owed]).1
           ((drainOwed { m with state := st } [owed]).2 ++ [Cmd.drainDue]))
 
+/-- The scheduler consumes one actual fixed-budget loop contract.
+Concept: reactive-scheduling R9. Consumer: Timeout's fuel-indexed numeric history.
+The loop returns the machine and actual detached snapshot; its discarded queue is outside this contract. -/
+structure LoopFoldLift (budget : Nat) (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (J : W → RunMachine ν σ β ε δ ι α χ St κ φ η → Prop)
+    (I : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) → Prop)
+    (O : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Machine.Task ν σ β ε δ ι α κ) → Prop) :
+    Prop where
+  loop : ∀ ts w m cmds, J w m → (m.stuck = none → I w m cmds ∧ O w m ts) →
+    ∃ next, o.le w next ∧ J next (driveState interp budget m cmds).1 ∧
+      ((driveState interp budget m cmds).1.stuck = none → O next (driveState interp budget m cmds).1 ts)
+  nil : ∀ w m, O w m []
+  drain : ∀ w (m : RunMachine ν σ β ε δ ι α χ St κ φ η) owner f, J w m →
+    m.fiber? owner = some f →
+    J w ((m.update { f with dispatcher := (f.dispatcher.drain).2 }).disarm owner) ∧
+      O w ((m.update { f with dispatcher := (f.dispatcher.drain).2 }).disarm owner)
+        (f.dispatcher.drain).1
+  ran : ∀ w m owner (t : Machine.Task ν σ β ε δ ι α κ), J w m →
+    J w (m.emit [RunEvent.ranTask owner t])
+  task : ∀ w m owner (t : Machine.Task ν σ β ε δ ι α κ) ts, J w m → m.stuck = none →
+    O w m (t :: ts) →
+    I w (m.emit [RunEvent.ranTask owner t]) (taskCmds t) ∧
+      O w (m.emit [RunEvent.ranTask owner t]) ts
+  skip : ∀ w m (t : Machine.Task ν σ β ε δ ι α κ) ts, O w m (t :: ts) → O w m ts
+  /-- A store edit may need a later world when the world's invariant follows the store. -/
+  clockNone : ∀ w (m : RunMachine ν σ β ε δ ι α χ St κ φ η) millis st, J w m →
+    m.stuck = none → interp.clockStep millis m.state = (none, st) →
+    ∃ w', o.le w w' ∧ J w' { m with state := st }
+  clockSome : ∀ w (m : RunMachine ν σ β ε δ ι α χ St κ φ η) millis owed st, J w m →
+    m.stuck = none → interp.clockStep millis m.state = (some owed, st) →
+    ∃ w', o.le w w' ∧ J w' (drainOwed { m with state := st } [owed]).1 ∧
+      ((drainOwed { m with state := st } [owed]).1.stuck = none →
+        I w' (drainOwed { m with state := st } [owed]).1
+          ((drainOwed { m with state := st } [owed]).2 ++ [Cmd.drainDue]))
+
+/-- A decision consumes the same fixed-budget scheduler and its actual full answer continuation.
+Concept: reactive-scheduling R9. Consumer: Timeout's raw-budget history through indexed commands. -/
+structure LoopDecisionLift (budget : Nat) (o : WorldOrder W) (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (J : W → RunMachine ν σ β ε δ ι α χ St κ φ η → Prop)
+    (I : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) → Prop)
+    (O : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Machine.Task ν σ β ε δ ι α κ) → Prop)
+    (A : W → RunMachine ν σ β ε δ ι α χ St κ φ η → RunDecision ν σ β ε δ ι α → Prop) : Prop where
+  fold : LoopFoldLift budget o interp J I O
+  evaluate : ∀ w m id, J w m → m.stuck = none → I w m [Cmd.evaluate id, Cmd.drainDue]
+  yield : ∀ w (m : RunMachine ν σ β ε δ ι α χ St κ φ η) id (v : Bool), J w m →
+    J w (m.modify id fun f => {f with yieldOverride := some v})
+  interrupt : ∀ w m who extra target t, J w m → m.fiber? target = some t →
+    J w (interruptEdit interp m who extra target t)
+  middleware : ∀ w (m : RunMachine ν σ β ε δ ι α χ St κ φ η), J w m →
+    J w {m with middlewareInstalled := true}
+  answer : ∀ w m id token answer, J w m → m.stuck = none → A w m (.answerAsync id token answer) →
+    ∃ next, o.le w next ∧ J next (stepDecisionState interp budget m (.answerAsync id token answer)).1
+
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core
   [FiberEvaluator ν σ β ε δ ι α χ St κ φ η] in
 theorem not_isSome_of_none {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (hs : m.stuck = none) :
@@ -560,16 +613,49 @@ theorem FoldLift.loop_lift (h : FoldLift o interp J I O) (ts : List (Machine.Tas
       (driveState interp fuel m cmds).2 :=
   driveState_lift o interp (Guarded J I O ts) (h.step ts) fuel w m cmds ⟨hj, hi⟩
 
+/-- Actual indexed command preservation supplies the scheduler's fixed-budget loop contract.
+Concept: reactive-scheduling R9. Consumer: Timeout's coupled numeric loop and answer continuation.
+The returned command queue is discarded; the actual detached snapshot remains available. -/
+theorem guarded_loop_fuel
+    (indexed : Nat → W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd ν σ β ε δ ι α κ) → Prop)
+    (lower : ∀ fuel w m cmds, indexed fuel w m cmds → indexed 0 w m cmds)
+    (step : ∀ ts, FuelStepKeeps o interp (fun fuel => Guarded J (indexed fuel) O ts))
+    (tasks : List (Machine.Task ν σ β ε δ ι α κ)) (fuel : Nat) (world : W)
+    (machine : RunMachine ν σ β ε δ ι α χ St κ φ η) (commands : List (Cmd ν σ β ε δ ι α κ))
+    (held : J world machine) (queued : machine.stuck = none → indexed fuel world machine commands ∧ O world machine tasks) :
+    ∃ next, o.le world next ∧ J next (driveState interp fuel machine commands).1 ∧
+      ((driveState interp fuel machine commands).1.stuck = none → O next (driveState interp fuel machine commands).1 tasks) := by
+  obtain ⟨next, later, kept, pending⟩ := driveState_lift_fuel o interp
+    (fun remaining => Guarded J (indexed remaining) O tasks)
+    (fun remaining world machine commands previous =>
+      ⟨previous.1, fun running => ⟨lower remaining world machine commands (previous.2 running).1, (previous.2 running).2⟩⟩)
+    (step tasks) fuel world machine commands ⟨held, queued⟩
+  exact ⟨next, later, kept, fun running => (pending running).2⟩
+
+/-- The existing per-command interface supplies the same scheduler loop contract. -/
+theorem FoldLift.toLoop (h : FoldLift o interp J I O) (budget : Nat) : LoopFoldLift budget o interp J I O where
+  loop := by
+    intro ts w m cmds hj hi
+    obtain ⟨next, later, kept, pending⟩ := h.loop_lift ts budget w m cmds hj hi
+    exact ⟨next, later, kept, fun running => (pending running).2⟩
+  nil := h.nil
+  drain := h.drain
+  ran := h.ran
+  task := h.task
+  skip := h.skip
+  clockNone := h.clockNone
+  clockSome := h.clockSome
+
 /-- A loop entered with no snapshot keeps `J`. -/
-theorem FoldLift.loop_entry (h : FoldLift o interp J I O) (fuel : Nat) (w : W)
+theorem LoopFoldLift.loop_entry {fuel : Nat} (h : LoopFoldLift fuel o interp J I O) (w : W)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (cmds : List (Cmd ν σ β ε δ ι α κ)) (hj : J w m)
     (hi : m.stuck = none → I w m cmds) :
     ∃ w', o.le w w' ∧ J w' (driveState interp fuel m cmds).1 := by
-  obtain ⟨w', le, hj', _⟩ := loop_lift h [] fuel w m cmds hj (fun hs => ⟨hi hs, h.nil w m⟩)
+  obtain ⟨w', le, hj', _⟩ := h.loop [] w m cmds hj (fun hs => ⟨hi hs, h.nil w m⟩)
   exact ⟨w', le, hj'⟩
 
 /-- A dispatcher snapshot run task by task (`fireStep`), the snapshot fact carried. -/
-theorem FoldLift.fireFold_lift (h : FoldLift o interp J I O) (fuel : Nat) (owner : FiberId) :
+theorem LoopFoldLift.fireFold_lift {fuel : Nat} (h : LoopFoldLift fuel o interp J I O) (owner : FiberId) :
     ∀ (tasks : List (Machine.Task ν σ β ε δ ι α κ)) (w : W)
       (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × Bool),
       J w acc.1 → (acc.1.stuck = none → O w acc.1 tasks) →
@@ -584,21 +670,21 @@ theorem FoldLift.fireFold_lift (h : FoldLift o interp J I O) (fuel : Nat) (owner
         unfold fireStep
         rw [if_pos hb]
       rw [hstep]
-      obtain ⟨w₁, le₁, hj₁, hi₁⟩ := loop_lift h ts fuel w (acc.1.emit [RunEvent.ranTask owner t])
+      obtain ⟨w₁, le₁, hj₁, hi₁⟩ := h.loop ts w (acc.1.emit [RunEvent.ranTask owner t])
         (taskCmds t) (h.ran w acc.1 owner t hj) (fun hs => h.task w acc.1 owner t ts hj hs (ho hs))
-      obtain ⟨w₂, le₂, hj₂⟩ := fireFold_lift h fuel owner ts w₁
+      obtain ⟨w₂, le₂, hj₂⟩ := fireFold_lift h owner ts w₁
         ((driveState interp fuel (acc.1.emit [RunEvent.ranTask owner t]) (taskCmds t)).1,
           settled (driveState interp fuel (acc.1.emit [RunEvent.ranTask owner t]) (taskCmds t)))
-        hj₁ (fun hs => (hi₁ hs).2)
+        hj₁ (fun hs => hi₁ hs)
       exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
     · have hstep : fireStep interp fuel owner acc t = acc := by
         unfold fireStep
         rw [if_neg hb]
       rw [hstep]
-      exact fireFold_lift h fuel owner ts w acc hj (fun hs => h.skip w acc.1 t ts (ho hs))
+      exact fireFold_lift h owner ts w acc hj (fun hs => h.skip w acc.1 t ts (ho hs))
 
 /-- One `fire`: the dispatcher drained and disarmed, then its snapshot run. -/
-theorem FoldLift.fireState_lift (h : FoldLift o interp J I O) (fuel : Nat) (w : W)
+theorem LoopFoldLift.fireState_lift {fuel : Nat} (h : LoopFoldLift fuel o interp J I O) (w : W)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId) (hj : J w m) :
     ∃ w', o.le w w' ∧ J w' (fireState interp fuel m owner).1 := by
   unfold fireState
@@ -606,10 +692,10 @@ theorem FoldLift.fireState_lift (h : FoldLift o interp J I O) (fuel : Nat) (w : 
   · exact ⟨w, o.refl w, hj⟩
   · rename_i f hf
     obtain ⟨hj₀, ho₀⟩ := h.drain w m owner f hj hf
-    exact fireFold_lift h fuel owner _ w _ hj₀ (fun _ => ho₀)
+    exact fireFold_lift h owner _ w _ hj₀ (fun _ => ho₀)
 
 /-- A flush: rounds of `fire` over the armed dispatchers. -/
-theorem FoldLift.flushAllState_lift (h : FoldLift o interp J I O) (fuel : Nat) :
+theorem LoopFoldLift.flushAllState_lift {fuel : Nat} (h : LoopFoldLift fuel o interp J I O) :
     ∀ (rounds : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η), J w m →
       ∃ w', o.le w w' ∧ J w' (flushAllState interp fuel rounds m).1
   | 0, w, _, hj => ⟨w, o.refl w, hj⟩
@@ -620,9 +706,9 @@ theorem FoldLift.flushAllState_lift (h : FoldLift o interp J I O) (fuel : Nat) :
     · rename_i owner _ _
       split
       · exact ⟨w, o.refl w, hj⟩
-      · obtain ⟨w₁, le₁, hj₁⟩ := fireState_lift h fuel w m owner hj
+      · obtain ⟨w₁, le₁, hj₁⟩ := fireState_lift h w m owner hj
         split
-        · obtain ⟨w₂, le₂, hj₂⟩ := flushAllState_lift h fuel rounds w₁ _ hj₁
+        · obtain ⟨w₂, le₂, hj₂⟩ := flushAllState_lift h rounds w₁ _ hj₁
           exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
         · exact ⟨w₁, le₁, hj₁⟩
 
@@ -630,7 +716,7 @@ theorem FoldLift.flushAllState_lift (h : FoldLift o interp J I O) (fuel : Nat) :
 the sync entry). Its first consumer is the mask's invariant at that entry
 (`flushRootState_maskRuns`, `Laws/Machine/MaskRuns.lean`), a step of the claim
 `saved-mask-chain-runs`. It carries an invariant, and it states no progress of the flush. -/
-theorem FoldLift.flushRootState_lift (h : FoldLift o interp J I O) (fuel : Nat) (root : FiberId) :
+theorem LoopFoldLift.flushRootState_lift {fuel : Nat} (h : LoopFoldLift fuel o interp J I O) (root : FiberId) :
     ∀ (rounds : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η), J w m →
       ∃ w', o.le w w' ∧ J w' (flushRootState interp fuel root rounds m).1
   | 0, w, m, hj => by
@@ -644,14 +730,14 @@ theorem FoldLift.flushRootState_lift (h : FoldLift o interp J I O) (fuel : Nat) 
     · exact ⟨w, o.refl w, hj⟩
     · split
       · exact ⟨w, o.refl w, hj⟩
-      · obtain ⟨w₁, le₁, hj₁⟩ := fireState_lift h fuel w m root hj
+      · obtain ⟨w₁, le₁, hj₁⟩ := fireState_lift h w m root hj
         split
-        · obtain ⟨w₂, le₂, hj₂⟩ := flushRootState_lift h fuel root rounds w₁ _ hj₁
+        · obtain ⟨w₂, le₂, hj₂⟩ := flushRootState_lift h root rounds w₁ _ hj₁
           exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
         · exact ⟨w₁, le₁, hj₁⟩
 
 /-- An `advance`: rounds of `clockStep`, the owed resume through the loop, then a flush. -/
-theorem FoldLift.advanceState_lift (h : FoldLift o interp J I O) (fuel : Nat)
+theorem LoopFoldLift.advanceState_lift {fuel : Nat} (h : LoopFoldLift fuel o interp J I O)
     (millis : ClockMillis) :
     ∀ (rounds : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η), J w m →
       ∃ w', o.le w w' ∧ J w' (advanceState interp fuel millis rounds m).1
@@ -666,14 +752,50 @@ theorem FoldLift.advanceState_lift (h : FoldLift o interp J I O) (fuel : Nat)
         exact h.clockNone w m millis st hj (stuck_none_of_not hs) hc
       · rename_i owed st hc
         obtain ⟨w₁, le₁, hj₁, hi₁⟩ := h.clockSome w m millis owed st hj (stuck_none_of_not hs) hc
-        obtain ⟨w₂, le₂, hj₂⟩ := loop_entry h fuel w₁ _ _ hj₁ hi₁
+        obtain ⟨w₂, le₂, hj₂⟩ := loop_entry h w₁ _ _ hj₁ hi₁
         split
-        · obtain ⟨w₃, le₃, hj₃⟩ := flushAllState_lift h fuel fuel w₂ _ hj₂
+        · obtain ⟨w₃, le₃, hj₃⟩ := flushAllState_lift h fuel w₂ _ hj₂
           split
-          · obtain ⟨w₄, le₄, hj₄⟩ := advanceState_lift h fuel millis rounds w₃ _ hj₃
+          · obtain ⟨w₄, le₄, hj₄⟩ := advanceState_lift h millis rounds w₃ _ hj₃
             exact ⟨w₄, o.trans (o.trans (o.trans le₁ le₂) le₃) le₄, hj₄⟩
           · exact ⟨w₃, o.trans (o.trans le₁ le₂) le₃, hj₃⟩
         · exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
+
+/-! The old fold interfaces remain constant-loop instances of the shared scheduler proof. -/
+
+theorem FoldLift.loop_entry (h : FoldLift o interp J I O) (fuel : Nat) (w : W)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (cmds : List (Cmd ν σ β ε δ ι α κ)) (hj : J w m)
+    (hi : m.stuck = none → I w m cmds) :
+    ∃ w', o.le w w' ∧ J w' (driveState interp fuel m cmds).1 :=
+  LoopFoldLift.loop_entry (h.toLoop fuel) w m cmds hj hi
+
+theorem FoldLift.fireFold_lift (h : FoldLift o interp J I O) (fuel : Nat) (owner : FiberId) :
+    ∀ (tasks : List (Machine.Task ν σ β ε δ ι α κ)) (w : W)
+      (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × Bool),
+      J w acc.1 → (acc.1.stuck = none → O w acc.1 tasks) →
+      ∃ w', o.le w w' ∧ J w' (tasks.foldl (fireStep interp fuel owner) acc).1 :=
+  LoopFoldLift.fireFold_lift (h.toLoop fuel) owner
+
+theorem FoldLift.fireState_lift (h : FoldLift o interp J I O) (fuel : Nat) (w : W)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId) (hj : J w m) :
+    ∃ w', o.le w w' ∧ J w' (fireState interp fuel m owner).1 :=
+  LoopFoldLift.fireState_lift (h.toLoop fuel) w m owner hj
+
+theorem FoldLift.flushAllState_lift (h : FoldLift o interp J I O) (fuel : Nat) :
+    ∀ (rounds : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η), J w m →
+      ∃ w', o.le w w' ∧ J w' (flushAllState interp fuel rounds m).1 :=
+  LoopFoldLift.flushAllState_lift (h.toLoop fuel)
+
+theorem FoldLift.flushRootState_lift (h : FoldLift o interp J I O) (fuel : Nat) (root : FiberId) :
+    ∀ (rounds : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η), J w m →
+      ∃ w', o.le w w' ∧ J w' (flushRootState interp fuel root rounds m).1 :=
+  LoopFoldLift.flushRootState_lift (h.toLoop fuel) root
+
+theorem FoldLift.advanceState_lift (h : FoldLift o interp J I O) (fuel : Nat)
+    (millis : ClockMillis) :
+    ∀ (rounds : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η), J w m →
+      ∃ w', o.le w w' ∧ J w' (advanceState interp fuel millis rounds m).1 :=
+  LoopFoldLift.advanceState_lift (h.toLoop fuel) millis
 
 /-! The decision-lift forms below keep their names and statements; each is its fold-lift form
 through `FoldLift.ofDecisionLift`. -/
@@ -713,35 +835,51 @@ theorem advanceState_lift (h : DecisionLift o interp J I O A) (fuel : Nat) (mill
       ∃ w', o.le w w' ∧ J w' (advanceState interp fuel millis rounds m).1 :=
   (FoldLift.ofDecisionLift h).advanceState_lift fuel millis
 
-/-- **Lift 2, one decision.** From the command premise and one premise per edit outside the
-loop, every decision keeps `J`, at some later world, when its admission `A` holds. -/
-theorem stepDecisionState_lift (h : DecisionLift o interp J I O A) (fuel : Nat) (w : W)
+/-- The original first-resume answer interface supplies the same actual full decision continuation. -/
+theorem DecisionLift.toLoop (h : DecisionLift o interp J I O A) (budget : Nat) :
+    LoopDecisionLift budget o interp J I O A where
+  fold := (FoldLift.ofDecisionLift h).toLoop budget
+  evaluate := h.evaluate
+  yield := h.yield
+  interrupt := h.interrupt
+  middleware := h.middleware
+  answer := by
+    intro w m id token answer hj hs ha
+    cases budget with
+    | zero => exact ⟨w, o.refl w, hj⟩
+    | succ remaining =>
+      show ∃ next, o.le w next ∧ J next (driveState interp (remaining + 1)
+        {m with state := (prepareAsyncAnswer interp m id token answer).1}
+        [Cmd.resume id token (prepareAsyncAnswer interp m id token answer).2, Cmd.drainDue]).1
+      rw [driveState_succ_cons, if_neg (not_isSome_of_none hs)]
+      obtain ⟨first, later, kept⟩ := h.answer w m id token answer hj hs ha
+      obtain ⟨next, further, hjNext, rest⟩ := (FoldLift.ofDecisionLift h).loop_lift [] remaining first _ _ kept.1 kept.2
+      exact ⟨next, o.trans later further, hjNext⟩
+
+/-- The existing decision split consumes one actual loop contract at the fixed command budget. -/
+theorem LoopDecisionLift.stepDecisionState_lift {fuel : Nat} (h : LoopDecisionLift fuel o interp J I O A) (w : W)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (d : RunDecision ν σ β ε δ ι α)
     (hj : J w m) (ha : A w m d) :
     ∃ w', o.le w w' ∧ J w' (stepDecisionState interp fuel m d).1 := by
   cases d with
-  | fire owner => exact fireState_lift h fuel w m owner hj
-  | flush => exact flushAllState_lift h fuel fuel w m hj
-  | evaluate id => exact loop_entry h fuel w m _ hj (h.evaluate w m id hj)
+  | fire owner => exact h.fold.fireState_lift w m owner hj
+  | flush => exact h.fold.flushAllState_lift fuel w m hj
+  | evaluate id => exact h.fold.loop_entry w m _ hj (h.evaluate w m id hj)
   | yieldVerdict id v => exact ⟨w, o.refl w, h.yield w m id v hj⟩
   | answerAsync id token answer =>
-    cases fuel with
-    | zero => exact ⟨w, o.refl w, hj⟩
-    | succ fuel =>
-      show ∃ w', o.le w w' ∧ J w' (driveState interp (fuel + 1)
-        { m with state := (prepareAsyncAnswer interp m id token answer).1 }
-        [Cmd.resume id token (prepareAsyncAnswer interp m id token answer).2, Cmd.drainDue]).1
-      by_cases hs : m.stuck = none
-      · rw [driveState_succ_cons, if_neg (not_isSome_of_none hs)]
-        obtain ⟨w₁, le₁, hg₁⟩ := h.answer w m id token answer hj hs ha
-        obtain ⟨w₂, le₂, hj₂, _⟩ := loop_lift h [] fuel w₁ _ _ hg₁.1 hg₁.2
-        exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
-      · have hkeep : prepareAsyncAnswer interp m id token answer =
-            (m.state, interp.answerCode answer) := by
+    by_cases hs : m.stuck = none
+    · exact h.answer w m id token answer hj hs ha
+    · cases fuel with
+      | zero => exact ⟨w, o.refl w, hj⟩
+      | succ remaining =>
+        have unchanged : prepareAsyncAnswer interp m id token answer = (m.state, interp.answerCode answer) := by
           unfold prepareAsyncAnswer
           rw [if_pos (isSome_of_ne_none hs)]
-        rw [hkeep, driveState_stuck interp (fuel + 1) { m with state := m.state } _
-          (isSome_of_ne_none (m := { m with state := m.state }) hs)]
+        show ∃ next, o.le w next ∧ J next (driveState interp (remaining + 1)
+          {m with state := (prepareAsyncAnswer interp m id token answer).1}
+          [Cmd.resume id token (prepareAsyncAnswer interp m id token answer).2, Cmd.drainDue]).1
+        rw [unchanged, driveState_stuck interp (remaining + 1) {m with state := m.state} _
+          (isSome_of_ne_none (m := {m with state := m.state}) hs)]
         exact ⟨w, o.refl w, hj⟩
   | interruptFrom who extra target =>
     rw [interruptFrom_eq]
@@ -750,10 +888,18 @@ theorem stepDecisionState_lift (h : DecisionLift o interp J I O A) (fuel : Nat) 
     · rename_i t ht
       have hj₁ := h.interrupt w m who extra target t hj ht
       split
-      · exact loop_entry h fuel w _ _ hj₁ (h.evaluate w _ target hj₁)
+      · exact h.fold.loop_entry w _ _ hj₁ (h.evaluate w _ target hj₁)
       · exact ⟨w, o.refl w, hj₁⟩
   | installMiddleware => exact ⟨w, o.refl w, h.middleware w m hj⟩
-  | advance millis => exact advanceState_lift h fuel millis fuel w m hj
+  | advance millis => exact h.fold.advanceState_lift millis fuel w m hj
+
+/-- **Lift 2, one decision.** From the command premise and one premise per edit outside the
+loop, every decision keeps `J`, at some later world, when its admission `A` holds. -/
+theorem stepDecisionState_lift (h : DecisionLift o interp J I O A) (fuel : Nat) (w : W)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (d : RunDecision ν σ β ε δ ι α)
+    (hj : J w m) (ha : A w m d) :
+    ∃ w', o.le w w' ∧ J w' (stepDecisionState interp fuel m d).1 :=
+  LoopDecisionLift.stepDecisionState_lift (h.toLoop fuel) w m d hj ha
 
 end Decision
 
