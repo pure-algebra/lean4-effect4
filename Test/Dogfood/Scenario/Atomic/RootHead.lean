@@ -167,6 +167,7 @@ theorem head (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok
   | await counter ignored => exact .suspend _ .failure
   | sleep counter ignored => exact .async _ _ _ (.sleep counter ignored)
   | read => exact .sync _ True.intro
+  | interrupting counter ignored => exact .withFiber _ .failure
   | join target mode captured => exact .suspend _ .failure
   | awaitAll targets captured => exact .suspend _ .failure
   | pause => exact .yieldNowWith _ .pause

@@ -53,8 +53,47 @@ theorem sync_shape (root : NativeEff) (table : RowTable) (code : NCode)
   | success value => cases equal
   | failure cause => cases equal
   | loop owned cursor => cases equal
-  | suspended next => cases equal
   | sleep => cases equal
+  | constant first next => cases equal
+  | pause priority => cases equal
+  | bound first callback => cases equal
+
+/-- The daemon's actual native actions only interrupt or remove observer tokens. -/
+theorem action_shape (root : NativeEff) (table : RowTable) (thunk : EffThunk)
+    (held : CodeAt root table (.withFiber thunk)) :
+    (∃ targets who, thunk = .store (.act (.interruptAll targets who))) ∨
+      (∃ token, thunk = .store (.act (.dropObservers token))) := by
+  generalize equal : Prim.withFiber thunk = code at held
+  cases held with
+  | @entry point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at equal
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at equal; cases equal
+    | succ fuel => simp only [DaemonSource.program, compileEff, amount] at equal; cases equal
+  | @body point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at equal
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at equal; cases equal
+    | succ fuel => simp only [DaemonSource.body, compileEff, amount] at equal; cases equal
+  | @update point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at equal
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at equal; cases equal
+    | succ fuel =>
+      have captured : point.env[0]? = some (.cell ⟨0⟩) := owned.2.2.read 0 (by decide)
+      simp only [compileEff, amount, NativeOp.kind, evalTerm, captured, NativeOp.syncOpOf] at equal
+      cases equal
+  | interruptAll targets who => cases equal; exact .inl ⟨targets, who, rfl⟩
+  | dropObservers token => cases equal; exact .inr ⟨token, rfl⟩
+  | success value => cases equal
+  | failure cause => cases equal
+  | loop owned cursor => cases equal
+  | frontier zero => cases equal
+  | sleep => cases equal
+  | refill length => cases equal
+  | cancelClock waiter token => cases equal
+  | join target mode => cases equal
+  | awaitAll targets => cases equal
   | constant first next => cases equal
   | pause priority => cases equal
   | bound first callback => cases equal

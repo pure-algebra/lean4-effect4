@@ -44,6 +44,9 @@ inductive CodeAt (root : NativeEff) (table : RowTable) : StageWorld.World → St
       (ignored : RootSlots.expected binder = none) :
       CodeAt root table world (.rootAnswer binder)
         (.async (.store (.registerSleep millis)) true (some (.store .cancelSleep)))
+  | interrupting {world binder target who} (counter : world.nextId = RootSlots.rank (binder + 1))
+      (ignored : RootSlots.expected binder = none) :
+      CodeAt root table world (.rootAnswer binder) (.withFiber (.store (.act (.interruptAs target who))))
   | read {world} : CodeAt root table world .ordinary (.sync (.op (.refGet ⟨0⟩)))
   | join {world counter} (target : FiberId) (mode : Supervision.ObserverMode)
       (captured : world.nextId = counter) :
@@ -114,6 +117,9 @@ theorem code_counter (root : NativeEff) (table : RowTable) (before : StageWorld.
   | sleep old ignored =>
     intro after future counter owns
     exact .sleep (counter.symm.trans old) ignored
+  | interrupting old ignored =>
+    intro after future counter owns
+    exact .interrupting (counter.symm.trans old) ignored
   | read =>
     intro after future counter owns
     exact .read

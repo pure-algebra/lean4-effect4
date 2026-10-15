@@ -18,6 +18,25 @@ def FinalExitAt (world : World) (id : Nat) : Option ExitV → Prop
   | some (.success value) => ValueAt world (.finalized id) value
   | some (.failure cause) => CauseAt world (.finalized id) cause
 
+/-- Published request exits retain their certified observations when another fiber advances the world. -/
+theorem final_exit_future (before after : World) (future : Future before after)
+    (id : Nat) (exit : Option ExitV) (held : FinalExitAt before id exit) : FinalExitAt after id exit := by
+  cases exit with
+  | none => exact True.intro
+  | some exit =>
+    cases exit with
+    | success value =>
+      have body : ValueAt before (.body id) value := by
+        cases value <;> exact held
+      have next := StageFinalizer.body_value_future before after future id value body
+      cases value <;> exact next
+    | failure cause =>
+      intro needed
+      obtain ⟨deposited, cleaned⟩ := held needed
+      have advanced := future.1 id
+      rw [deposited] at advanced
+      exact ⟨advanced.deposited, future.2 id cleaned⟩
+
 /-- The planted typed failure's finalized class contains both deposit and cleanup evidence. -/
 theorem downstream_finished (world : World) (id : Nat) (good : FinalExitAt world id (some downstream)) :
     world.stages id = .deposited ∧ world.cleaned id = true :=

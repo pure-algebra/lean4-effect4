@@ -33,8 +33,6 @@ inductive CodeAt (root : NativeEff) (table : RowTable) : NCode → Prop
   | update {point} (held : UpdatePoint root point) : CodeAt root table (resolve root point)
   | loop {point} (held : LoopPoint root point) (cursor : Val) : CodeAt root table (.whileLoop (.loop point) cursor)
   | frontier {point} (zero : point.fuel = 0) : CodeAt root table (Effect4.Program.frontier point)
-  | suspended {thunk} (next : ∀ view, CodeAt root table ((interpAt root view table).suspendBody thunk)) :
-      CodeAt root table (.suspend thunk)
   | sleep : CodeAt root table (.async (.store (.registerSleep 1000)) true (some (.store .cancelSleep)))
   | refill {env} (length : env.length = 5) : CodeAt root table (.sync (.op (.refUpdate ⟨0⟩ (Store.refillAt 5) env)))
   | cancelClock (waiter : FiberId) (token : Nat) : CodeAt root table (.sync (.store (.op (.sleepCancel waiter token))))

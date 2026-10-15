@@ -155,7 +155,6 @@ theorem head (root : NativeEff) (table : RowTable) (world : StageWorld.World)
     change CodeAt root table (suspendBodyAt root (.body { point with completed := view }))
     simp only [suspendBodyAt, zero]
     exact .frontier rfl
-  | suspended next => exact .suspend _ (next view)
   | sleep => exact .async _ _ _ CodeAt.sleep
   | refill length => exact .sync _ True.intro
   | cancelClock waiter token => exact .sync _ True.intro
