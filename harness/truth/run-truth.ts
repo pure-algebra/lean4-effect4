@@ -193,7 +193,8 @@ const selfTest = (): string[] => {
 /** The module text, as Lean wrote it (`module`), and which writer wrote it (`moduleSource`):
  * the checked emission's declarations, or the unchecked module of an ill-typed program. Until
  * 2026-10-15 this runner put its own header of every name of `effect` and of the prelude above a
- * declaration block that Lean printed flat (`module-imports.ts`); the module that ships was
+ * declaration block that Lean printed flat (`module-imports.ts`, deleted by decisions row 395
+ * (3)); the module that ships was
  * another text. */
 const moduleFor = (entry: Entry): { text: string; source: "decl" | "expr" } | null =>
   entry.module === null || entry.moduleSource === null ? null : { text: entry.module, source: entry.moduleSource }

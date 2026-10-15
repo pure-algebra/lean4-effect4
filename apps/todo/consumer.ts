@@ -1,27 +1,31 @@
 /** The consumer of the to-do application's emitted service (decisions row 378 (20), slices E4
  * and V4). An Effect program takes the service by its key, calls one method, and provides the
- * service's layer. The layer reads the repository's service from its context, so a program here
- * requires the repository's key until a repository is provided. tsgo 7 type-checks this file
- * against the emitted module, which `EmitTodo.lean` writes into the application's work folder.
- * The front (`server.ts`) serves its programs over SQLite, and the keyed lane's runner performs
- * the to-do's scripts on them (`harness/truth/service/run-todo.ts`). */
+ * service's layer. It provides the surface's layer (`TodoAppLive`), which decodes each method's
+ * arguments at entry by their Schemas and dies on a failed decode (CR-4; decisions row 373 (11)).
+ * The layer reads the repository's service from its context, so a program here requires the
+ * repository's key until a repository is provided. tsgo 7 type-checks this file against the
+ * emitted module and its surface, which `EmitTodo.lean` writes into the application's work
+ * folder. The front (`server.ts`) serves its programs over SQLite, and the keyed lane's runner
+ * performs the to-do's scripts on them (`harness/truth/service/run-todo.ts`). */
 import { Effect, Layer } from "effect"
-import { NotFound, TodoApp, TodoAppLayer, TodoRepo } from "./.work/todo.gen.ts"
+import { NotFound, TodoApp, TodoRepo } from "./.work/todo.gen.ts"
+import { TodoAppLive, TodoAppSchemas } from "./.work/todo.surface.gen.ts"
 
-/** A to-do, as the service's methods answer it. */
-export type Todo = { readonly done: boolean; readonly id: number; readonly title: string }
-/** The repository's failure, and the empty title's. */
-export type SqlError = readonly ["SqlError", string]
-export type EmptyTitle = readonly ["EmptyTitle", "a title is required"]
+/** A to-do, as the service's methods answer it: the type of the generated answer Schema. */
+export type Todo = typeof TodoAppSchemas.add.answer.Type
+/** The repository's failure, and the empty title's: the types of the generated error Schemas. */
+export type SqlError = typeof TodoAppSchemas.list.error.Type
+export type EmptyTitle = Exclude<typeof TodoAppSchemas.add.error.Type, SqlError>
 /** The repository's key, which the service's layer requires. */
 export type Repo = typeof TodoRepo.Identifier
 
-/** A program over the to-do service, its layer provided: it requires the repository alone. */
+/** A program over the to-do service, its decoding layer provided: it requires the repository
+ * alone. */
 export const withTodo = <A, E>(use: (todo: typeof TodoApp.Service) => Effect.Effect<A, E>): Effect.Effect<A, E, Repo> =>
   Effect.gen(function* () {
     const todo = yield* TodoApp
     return yield* use(todo)
-  }).pipe(Effect.provide(TodoAppLayer))
+  }).pipe(Effect.provide(TodoAppLive))
 
 /** The to-do's scripts (`runsOf`, `Test/Dogfood/Scenario/Todo/Claims.lean`), each as the program
  * of the method its script runs. */
@@ -44,7 +48,7 @@ export const repository = (impl: typeof TodoRepo.Service): Layer.Layer<Repo> => 
 export const closed = (impl: typeof TodoRepo.Service): Effect.Effect<Todo, SqlError | EmptyTitle> =>
   programs.addMilk.pipe(Effect.provide(repository(impl)))
 
-/** Two `list`s, an `add`, and a third `list` in one `TodoAppLayer` scope (decisions row 378 (8)):
+/** Two `list`s, an `add`, and a third `list` in one `TodoAppLive` scope (decisions row 378 (8)):
  * the second `list` answers from the `Ref` cache without calling `TodoRepo.all`, and `add`
  * invalidates the cache (`cached_list_after_add`) so the third `list` reads the repository again. */
 export const cachedListAfterAdd = (

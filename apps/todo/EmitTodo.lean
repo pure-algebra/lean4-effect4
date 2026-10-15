@@ -1,6 +1,7 @@
 import Test.Dogfood.Scenario.Todo.Cached
 import Effect4.Program.Authoring.ApplicationService
 import Effect4.Codegen.RowServices
+import Effect4.Codegen.Surface
 import Tools.Code.Module
 import Tools.ProfileJson
 
@@ -16,7 +17,12 @@ laid out at Effect's width. The file holds the payload classes, the repository's
 and its layer (`TodoApp`, `TodoAppLayer`), and the main. Its imports come from Lean data
 (row 373 (11)).
 
-Beside it stands `OUT/todo.table.json`: the application's name, its row table on the wire
+Beside it stands `OUT/todo.surface.gen.ts`, the module's typed surface (`ModuleEmission.surface`,
+`src/Effect4/Codegen/Surface.lean`; CR-4, decisions row 373 (11)): the Schemas of each data
+service's methods, and the service's layer with each method's arguments decoded at entry. The
+consumer imports the service through it.
+
+Beside them stands `OUT/todo.table.json`: the application's name, its row table on the wire
 (`Tools.ProfileJson.tableJson`) and the namespaces that the file declares as services. The front
 (`apps/todo/server.ts`) records each host call by its row's position in that table. It writes the
 table into each session's header, and the checker (`apps/todo/Check.lean`) compares it whole.
@@ -43,13 +49,21 @@ def main (args : List String) : IO UInt32 := do
   let file ← match emission.file prelude with
     | .ok file => pure file
     | .error why => IO.eprintln s!"the file refuses: {reprStr why}"; return 1
+  let surface ← match emission.surface prelude "./todo.gen.ts" with
+    | .ok surface => pure surface
+    | .error why => IO.eprintln s!"the surface refuses: {reprStr why}"; return 1
   let header := ["todo: the to-do application with the banked Ref cache as one Effect service,",
     "written by the Effect4 code generator (decisions row 378 (8) and (20)). Do not edit."]
+  let surfaceHeader := ["todo surface: the Schemas of the to-do's services and their decoding layers,",
+    "written by the Effect4 code generator from the program's checked types (CR-4; decisions",
+    "row 373 (11)). Do not edit."]
   let table := Lean.Json.mkObj [("application", .str application.name),
     ("table", Tools.ProfileJson.tableJson application.table),
     ("services", Lean.toJson ((rowServices application.table).map (·.ns)))]
   IO.FS.createDirAll out
   IO.FS.writeFile (out / "todo.gen.ts") (Tools.Code.moduleText Tools.Code.Ts.width { file with header })
+  IO.FS.writeFile (out / "todo.surface.gen.ts")
+    (Tools.Code.moduleText Tools.Code.Ts.width { surface with header := surfaceHeader })
   IO.FS.writeFile (out / "todo.table.json") (table.compress ++ "\n")
-  IO.println s!"EmitTodo: wrote the to-do's service module and its table to {out}"
+  IO.println s!"EmitTodo: wrote the to-do's service module, its surface and its table to {out}"
   return 0

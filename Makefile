@@ -208,7 +208,7 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
 # The prelude and the files it re-exports: a gate that reads printed modules depends on all five.
 PRELUDE_SOURCES := harness/truth/prelude.ts harness/truth/control.ts harness/truth/records.ts harness/truth/tuples.ts harness/truth/prelude-atoms.gen.ts
-TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean Test/Codegen/ServicesPrint.lean $(PRELUDE_SOURCES) harness/truth/module-imports.ts harness/truth/run-truth.ts \
+TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean Test/Codegen/ServicesPrint.lean $(PRELUDE_SOURCES) harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
 $(GEN)/truth: $(GEN)/derived $(GEN)/ts $(GEN)/host-protocol $(TRUTH_SOURCES) $(LEAN_INPUTS)
 	$(call build_imports,harness/truth/Truth.lean)
@@ -633,7 +633,7 @@ gen-architecture: gen-semantics | build ## the architecture map, measured from t
 # the tool type-checks itself under the same compiler it drives — nothing did before, and
 # `renderTy`, the hand copy of the printer it replaced, had fallen four constructors behind.
 $(CHK)/target: $(LEAN_INPUTS) $(TRUTH_GENERATED) $(PRELUDE_SOURCES) Test/fixtures/target/selection.json \
-  $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean generated/row-types.tsv \
+  $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean tools/Tools/TypeSpelling.lean generated/row-types.tsv \
   tools/Tools/TyVectors.lean generated/assignability.tsv \
   ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json ts/eff/node_modules lean-toolchain
 	$(call build_imports,tools/Tools/RowTypes.lean tools/Tools/TyVectors.lean)
