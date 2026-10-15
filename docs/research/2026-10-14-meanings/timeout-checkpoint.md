@@ -1378,3 +1378,26 @@ The build passes with 1255 jobs.
 The audit checks 281 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 The audit covers `AnswerFlowFamilyPop`, `HostTimeoutNumberConfiguration`, and `HostTimeoutNumberPopAuthority`.
 This proof-only slice reaches no outside implementation gate.
+
+## Actual failure-return authority
+
+The existing selected-failure proof now consumes the same class-indexed pop family.
+Its scratch assertion retains the actual carried cause and recorded interruption together.
+The actual discard clause still requires the recorded cause to contain no typed failure.
+The previous flag interface remains a wrapper.
+The shared passed-frame cause step supplies the same output class to the existing pop producer.
+
+The concrete instance retains the actual delivered cause, selected class, and saved path together.
+The actual failure callback carries the early permission into its new current class.
+The same numeric hook argument serves both value and failure returns.
+No second pop induction enters this slice.
+
+Placement: scope-lifetime-finalization R11 and store-typing R4; the joined numeric native producer consumes these callback results.
+Reach: the actual failure return, recorded interruption without typed failure, entered heap, and owner-anchored saved path.
+The whole-return join, active command producer, fixed-budget history, and both original endpoint proofs remain open.
+Neither public endpoint changes.
+
+The preceding authority verification command checks this slice too.
+The build passes with 1255 jobs.
+The audit checks 288 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+This proof-only slice reaches no outside implementation gate.

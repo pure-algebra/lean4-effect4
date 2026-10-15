@@ -153,4 +153,92 @@ theorem resume_value_selected_early (view : HostTimeoutFlow.View)
     frame value provided selected next pushed found evaluated, code,
     Effect4.Contracts.Path.append callbackPath suffix, fun unmasked => Nat.le_trans order (early unmasked)⟩
 
+/-- The selected failure callback retains its actual carried cause, class, and mask authority together. -/
+theorem selected_cause_early (view : HostTimeoutFlow.View)
+    (context : HostTimeoutNumberConfiguration.CountContext) (state : Stores)
+    (input output : Kind) (frame : HostTimeoutFrames.NativeFrame) (cause : CauseV) (selected : NCode)
+    (heap : At context.entered state)
+    (owner : output.ownerCount = context.entered.count) (valid : output.Valid)
+    (good : CauseAt state input cause)
+    (recorded : HostTimeoutNumberPhaseFinalizer.Allowed state frame.interruptedCause)
+    (authority : frame.interruptible = true → input.grade ≤ 1)
+    (path : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge state) input output frame.stack)
+    (found : (frame.getCont .contE true (some cause)).answer = .frame selected) :
+    ∃ incoming middle delivered,
+      (frame.getCont .contE true (some cause)).carriedCause = some delivered ∧
+      CauseAt state incoming delivered ∧ HostTimeoutNumberUniform.Edge state incoming middle selected ∧
+      Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge state) middle output
+        (frame.getCont .contE true (some cause)).fiber.stack ∧
+      ((frame.getCont .contE true (some cause)).fiber.interruptible = true → middle.grade ≤ 1) := by
+  exact AnswerFlow.Contextual.Hooked.getCont_cause_selected_with_authority (admitted := recorded)
+    (model view) (HostTimeoutFlow.interpreter view).toPrimInterp HostTimeoutNumberUniform.Edge
+    HostTimeoutNumberPhaseFinalizer.Allowed
+    (AnswerFlow.SavedFamily.contextual (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
+      HostTimeoutNumberUniform.Edge HostTimeoutNumberPhaseFinalizer.Allowed
+      (HostTimeoutNumberUniform.family view))
+    HostTimeoutNumberUniform.hook_mask
+    (fun kind scratch => scratch.interruptible = true → kind.grade ≤ 1)
+    (fun kind scratch => scratch.interruptible = true → kind.grade ≤ 1)
+    state input output frame cause selected
+    (by
+      intro incoming middle head rest scratch before after edge tail empty good nextGood early passed drained unmasked
+      rw [FrameFiber.passPushed_fiber_cause] at unmasked
+      exact drain_permitted context state incoming middle output head rest scratch .contE true heap edge tail owner valid
+        empty (Or.inr good) (Or.inr nextGood) early unmasked)
+    (by
+      intro incoming middle rest scratch edge tail empty good early unmasked
+      exact ensure_permitted context state incoming middle output selected rest scratch heap edge tail owner valid
+        (Or.inr good) early unmasked)
+    good (HostTimeoutNumberPhaseFinalizer.absorbs view state frame recorded) authority path found
+
+/-- The actual failure callback retains its new current class and runtime mask permission. -/
+theorem resume_cause_selected_early (view : HostTimeoutFlow.View)
+    (context : HostTimeoutNumberConfiguration.CountContext) (state : Stores)
+    (input output : Kind) (frame : HostTimeoutFrames.NativeFrame) (cause : CauseV)
+    (selected next : NCode) (pushed : List NCode) (provided : Option ExitV)
+    (heap : At context.entered state)
+    (owner : output.ownerCount = context.entered.count) (valid : output.Valid)
+    (good : CauseAt state input cause)
+    (recorded : HostTimeoutNumberPhaseFinalizer.Allowed state frame.interruptedCause)
+    (authority : frame.interruptible = true → input.grade ≤ 1)
+    (path : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge state) input output frame.stack)
+    (found : (frame.getCont .contE true (some cause)).answer = .frame selected)
+    (supplied : ∀ incoming delivered,
+      (frame.getCont .contE true (some cause)).carriedCause = some delivered →
+      CauseAt state incoming delivered →
+      ∀ exit ∈ provided.map (frame.getCont .contE true (some cause)).deliveredExit,
+        AnswerFlow.ExitAt (model view) state incoming exit)
+    (pure : ∀ delivered,
+      (frame.getCont .contE true (some cause)).carriedCause = some delivered →
+      AnswerFlow.programOf (model view) state selected
+        ((provided.map (frame.getCont .contE true (some cause)).deliveredExit).getD (.failure delivered)) = none)
+    (evaluated : selected.armE (HostTimeoutFlow.interpreter view).toPrimInterp
+      ((frame.getCont .contE true (some cause)).carriedCause.getD cause)
+      (provided.map (frame.getCont .contE true (some cause)).deliveredExit) = some (next, pushed)) :
+    ∃ events current,
+      frame.resumeCause (HostTimeoutFlow.interpreter view).toPrimInterp cause provided =
+        (.running {(frame.getCont .contE true (some cause)).fiber with
+          current := next
+          stack := pushed ++ (frame.getCont .contE true (some cause)).fiber.stack}, events) ∧
+      CodeAt state current next ∧
+      Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge state) current output
+        (pushed ++ (frame.getCont .contE true (some cause)).fiber.stack) ∧
+      ((frame.getCont .contE true (some cause)).fiber.interruptible = true → current.grade ≤ 1) := by
+  obtain ⟨incoming, middle, delivered, carried, incomingGood, callback, suffix, early⟩ :=
+    selected_cause_early view context state input output frame cause selected heap owner valid good recorded authority path found
+  have equation := FrameFiber.resumeCause_frame (HostTimeoutFlow.interpreter view).toPrimInterp
+    frame cause provided selected next pushed found evaluated
+  simp only [carried, Option.getD_some] at evaluated
+  have family := AnswerFlow.SavedFamily.contextual (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
+    HostTimeoutNumberUniform.Edge HostTimeoutNumberPhaseFinalizer.Allowed (HostTimeoutNumberUniform.family view)
+  obtain ⟨current, code, callbackPath⟩ := family.cause state incoming middle selected callback state
+    ((model view).future_refl state) delivered _ next pushed incomingGood
+    (supplied incoming delivered carried incomingGood) (pure delivered carried) evaluated
+  have order : current.grade ≤ middle.grade := Effect4.Contracts.Path.endpoints
+    (fun first last : Kind => first.grade ≤ last.grade) (fun _ => Nat.le_refl _)
+    (fun _ _ _ first second => Nat.le_trans first second)
+    (fun _ _ _ edge => edge.ordered) callbackPath
+  exact ⟨_, current, equation, code, Effect4.Contracts.Path.append callbackPath suffix,
+    fun unmasked => Nat.le_trans order (early unmasked)⟩
+
 end Test.Dogfood.Proofs.HostTimeoutNumberPopAuthority
