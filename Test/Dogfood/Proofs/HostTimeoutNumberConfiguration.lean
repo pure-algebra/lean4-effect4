@@ -1,4 +1,4 @@
-import Test.Dogfood.Proofs.HostTimeoutNumberPhaseFlow
+import Test.Dogfood.Proofs.HostTimeoutNumberRootControl
 import Test.Dogfood.Proofs.HostTimeoutNumberStable
 import Test.Dogfood.Proofs.HostTimeoutNumberWait
 import Test.Dogfood.Proofs.HostTimeoutState
@@ -276,6 +276,8 @@ theorem cleanup_await_complete (machine : Effect4.Program.NativeMachine) (target
 /-- A role names existing numeric frames, the root's exact saved region, or the timer sibling. -/
 inductive Role
   | pending (context : CountContext)
+  | rootRead (suffix : List NCode)
+  | phase (output : HostTimeoutNumberPhaseFlow.Kind)
   | numeric (output : HostTimeoutNumberFlow.Kind)
   | root (image : Image) (own : image.count = image.cleanups.length + 1) (suffix : List NCode)
   | timer
@@ -326,6 +328,9 @@ def FrameAt (machine : Effect4.Program.NativeMachine) (role : Role)
       (.attempt context.before context.entered (by
         change context.before.count + 1 = context.before.cleanups.length + 1
         rw [context.cleanups])) frame
+  | .rootRead suffix => Nonempty (HostTimeoutNumberRootControl.RootControl frame suffix)
+  | .phase output => AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model machine.completedExits)
+      (interpreter machine.completedExits).toPrimInterp machine.state output frame
   | .numeric output => AnswerFlow.FrameAt (model machine.completedExits)
       (interpreter machine.completedExits).toPrimInterp machine.state output frame
   | .root image own suffix => RootRegionAt machine.completedExits machine.state image own frame suffix
@@ -340,6 +345,8 @@ def ExitAt (machine : Effect4.Program.NativeMachine) (role : Role) (exit : ExitV
       machine.state (.attempt context.before context.entered (by
         change context.before.count + 1 = context.before.cleanups.length + 1
         rw [context.cleanups])) exit
+  | .phase output => AnswerFlow.ExitAt (HostTimeoutNumberPhaseFlow.model machine.completedExits)
+      machine.state output exit
   | .numeric output => AnswerFlow.ExitAt (model machine.completedExits) machine.state output exit
   | _ => True
 
@@ -379,10 +386,12 @@ def CommandAt (world : World) (machine : Effect4.Program.NativeMachine) : Guard.
         CountReady context fiber yielding
   | .finish id exit => ∀ role, (id, role) ∈ world.roles → ExitAt machine role exit
   | .afterInterrupt host _ (.awaitAll targets) =>
-      ∀ image own suffix, (host, Role.root image own suffix) ∈ world.roles → AwaitAt image own machine targets
+      (∀ image own suffix, (host, Role.root image own suffix) ∈ world.roles → AwaitAt image own machine targets) ∧
+      (∀ suffix, (host, Role.rootRead suffix) ∈ world.roles → CleanupAwait machine targets)
   | .raceCancel _ host _ remaining visited =>
-      ∀ image own suffix, (host, Role.root image own suffix) ∈ world.roles →
-        AwaitAt image own machine (remaining ++ visited)
+      (∀ image own suffix, (host, Role.root image own suffix) ∈ world.roles →
+        AwaitAt image own machine (remaining ++ visited)) ∧
+      (∀ suffix, (host, Role.rootRead suffix) ∈ world.roles → CleanupAwait machine (remaining ++ visited))
   | .trackChild _ _ | .closeParAwait _ _ _ | .link _ _ _ _ _ | .wake _ _ => False
   | _ => True
 

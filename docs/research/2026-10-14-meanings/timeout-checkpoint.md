@@ -283,3 +283,38 @@ The fixed-budget goals remain unchanged and open.
 The source initializer, root race relation, declared failure correlation, and coupled command producer remain open.
 The shared bare initialization producer belongs to the Queue seat.
 The shared code closure supplies source contracts without another syntax traversal.
+
+## Root control across numeric writers
+
+The numeric producer remains open.
+`NumberRootControl` names the root's actual readonly cancellation control and ordered saved prefix.
+Its concepts are scope-lifetime-finalization R11 and translation-simulation R10.
+Its consumer is the numeric command producer for both Timeout goals.
+The source form finalizer remains below that prefix and above the untouched source suffix.
+The contracts quantify the completed-exit view.
+They cover restoring masks and injected yield wrappers.
+
+`ReadCode.iteration_refs` consumes the existing actual iteration reference producer.
+`RootControl.region` reconstructs the form region at the newly established numeric heap.
+Neither theorem walks the program syntax or defines race semantics.
+
+`NumberRootTransitions.count_root_regions` consumes the permitted actual count iteration.
+`cleanup_root_regions` consumes the actual cleanup write.
+Both read the actual root lookup at fiber zero.
+Both return that lookup, the new heap, the child contract, and the root region at one successor phase.
+The configuration includes the readonly root role and the frozen numeric computation role.
+Its cancellation command assertions now carry the general cleanup barrier.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRootTransitions` | Passed, 1219 jobs |
+| `lake env lean scratch/TimeoutRootControlAudit.lean` | The output below |
+
+```text
+#axiom_audit: 258 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks `NumberRootControl`, `NumberConfiguration`, and `NumberRootTransitions` in their full module namespaces.
+The readonly pop must retain its control assertion until the actual source form callback starts.
+The coupled native and command producer, initialized history, and both original endpoints remain open.
+No execution behaviour changes, so this slice reaches no outside implementation gate.
