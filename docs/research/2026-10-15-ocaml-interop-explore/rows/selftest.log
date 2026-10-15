@@ -1,0 +1,26 @@
+# ./rows_http selftest 8473 (OCaml 5.1.1, Eio 1.2), 2026-10-15
+TodoRepo.insert   "milk"                 local {"_tag":"Success","value":{"id":1,"title":"milk","done":false}}
+                                         http  {"_tag":"Success","value":{"id":1,"title":"milk","done":false}}
+PASS the host behind HTTP answers TodoRepo.insert as the host does
+TodoRepo.insert   "tea"                  local {"_tag":"Success","value":{"id":2,"title":"tea","done":false}}
+                                         http  {"_tag":"Success","value":{"id":2,"title":"tea","done":false}}
+PASS the host behind HTTP answers TodoRepo.insert as the host does
+TodoRepo.setDone  [1,true]               local {"_tag":"Success","value":{"id":1,"title":"milk","done":true}}
+                                         http  {"_tag":"Success","value":{"id":1,"title":"milk","done":true}}
+PASS the host behind HTTP answers TodoRepo.setDone as the host does
+TodoRepo.setDone  [9,true]               local {"_tag":"Success","value":null}
+                                         http  {"_tag":"Success","value":null}
+PASS the host behind HTTP answers TodoRepo.setDone as the host does
+TodoRepo.delete   2                      local {"_tag":"Success","value":true}
+                                         http  {"_tag":"Success","value":true}
+PASS the host behind HTTP answers TodoRepo.delete as the host does
+TodoRepo.all      null                   local {"_tag":"Success","value":[{"id":1,"title":"milk","done":true}]}
+                                         http  {"_tag":"Success","value":[{"id":1,"title":"milk","done":true}]}
+PASS the host behind HTTP answers TodoRepo.all as the host does
+insert 42           -> HTTP/1.1 422 X {"_tag":"RequestRefused","at":"$: not of its type"}
+PASS a request outside the row's type is refused, with its path
+setDone [-1, true]  -> HTTP/1.1 422 X {"_tag":"RequestRefused","at":"$[0]: a negative natural"}
+PASS a negative natural inside a pair is refused at its position
+lying delete 2      -> HTTP/1.1 502 X {"_tag":"NoAdmittedAnswer","row":"TodoRepo.delete"}
+PASS the guard refuses a host answer outside the row's answer type (red control)
+ALL ROW TRANSPORT PROBES PASSED

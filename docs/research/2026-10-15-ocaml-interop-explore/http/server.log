@@ -1,0 +1,11 @@
+# ./todo_http 8471: one line per request served
+todo_http: listening on 127.0.0.1:8471
+POST   /todos -> 200 {"id":1,"title":"milk","done":false}
+POST   /todos -> 200 {"id":2,"title":"tea","done":false}
+POST   /todos -> 400 {"_tag":"EmptyTitle","message":"a title is required"}
+POST   /todos/1/complete -> 200 {"id":1,"title":"milk","done":true}
+POST   /todos/9/complete -> 404 {"_tag":"NotFound","id":9}
+DELETE /todos/2 -> 204 
+DELETE /todos/2 -> 404 {"_tag":"NotFound","id":2}
+GET    /todos -> 200 [{"id":1,"title":"milk","done":true}]
+POST   /todos/9/complete -> 404 {"_tag":"NotFound","id":9}

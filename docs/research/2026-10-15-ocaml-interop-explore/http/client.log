@@ -1,0 +1,11 @@
+# bun --no-install run client.ts http://127.0.0.1:8471 (bun 1.4.2, effect 4.0.0-rc.112), against ./todo_http 8471 (OCaml 5.1.1, Eio 1.2), 2026-10-15
+add milk                           {"id":1,"title":"milk","done":false}
+add tea                            {"id":2,"title":"tea","done":false}
+add '' (EmptyTitle, 400)           {"_tag":"EmptyTitle","message":"a title is required"}
+complete 1                         {"id":1,"title":"milk","done":true}
+complete 9 (NotFound, 404)         {"_tag":"NotFound","id":9}
+remove 2 (NoContent, 204)          undefined
+remove 2 again (NotFound, 404)     {"_tag":"NotFound","id":2}
+list                               [{"id":1,"title":"milk","done":true}]
+the failure is a typed NotFound    true
+ALL HTTPAPI CLIENT CALLS ANSWERED
