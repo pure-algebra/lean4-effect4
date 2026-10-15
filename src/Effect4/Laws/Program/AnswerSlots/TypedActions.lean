@@ -80,7 +80,7 @@ theorem store_action_at (spec : Spec) (name : ActionName)
     rw [← same]
     exact finProgram_at spec fin exit (owned fin present)
   case raceAll race =>
-    cases race <;> aesop (add norm simp [actionOf, embedAction, ActionAt, SourceScope.ActionProgramsAt,
+    cases race <;> aesop (add norm simp [actionOf, embedAction, ActionAt, SourceScope.ActionProgramsAt, SourceScope.ActionProgramsWith,
       raceEntrants, List.mem_cons, CodeAt, ValueAt, embed, ThunkAt, StoreThunkAt, ProgAt,
       NameAt, OrdinaryName, ProtectedName, StoreNameAt, StoreActionAt,
       SourceScope.StoreActionAt, SourceScope.ProgAt, SourceScope.StoreThunkAt,
@@ -117,5 +117,5 @@ theorem interp_action_at (spec : Spec) (fragment : SourceScope.Fragment spec.roo
   case restoreRegion region flag =>
     cases found
     exact region_at spec fragment region owned.2.2
-  all_goals aesop (add norm simp [interpAt, interpOf, ActionAt, SourceScope.ActionProgramsAt])
+  all_goals aesop (add norm simp [interpAt, interpOf, ActionAt, SourceScope.ActionProgramsAt, SourceScope.ActionProgramsWith])
 end Effect4.Program.AnswerSlots.Typed

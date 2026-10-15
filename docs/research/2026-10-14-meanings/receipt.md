@@ -504,3 +504,22 @@ The Family target passed. The separate finalizer caller failed while adapting it
 Command: `scratch/lean-slot.sh lake env lean -DwarningAsError=true /private/tmp/MeaningsArmsAudit.lean`.
 Result: 178 declarations within `[propext, Quot.sound]`, zero modulo planned goals, zero planned goals.
 The audit source and output accompany this section. Evidence is kernel-checked; no host claim is made.
+
+### Common native action programs
+
+The six remaining M3 goals stay open. This slice supplies their shared action producer.
+Base: `a832f0f2e`. The commit containing this section records the slice head.
+
+`SourceScope.ActionProgramsWith` separates actual program slots from race and parallel-close permissions.
+`ChildClosure` transports a supplied source-point predicate through the actual zero-binder child.
+`ActionClosure` supplies the native interpreter's leaves. `interp_action_closed` owns their common case analysis.
+The older lexical predicate and both answer-slot consumers use this producer.
+Placement: store-typing R4 and scope-lifetime-finalization R11, serving the queue and finalizer planned goals.
+These local facts establish no complete command history or progress.
+
+Files: `NativeActionScope.lean`, `AnswerSlots/Actions.lean`, and `AnswerSlots/TypedActions.lean` under `src/Effect4/Laws/Program/`.
+Command: `scratch/lean-slot.sh bash -c 'lake build Effect4.Laws.Program.AnswerSlots.TypedActions ProofGraph.AxiomAudit && lake env lean /private/tmp/MeaningsActionsAudit.lean'`.
+Result: the narrow build passed, 428 jobs. The audit passed, 745 declarations within `[propext, Quot.sound]`.
+The audit reports zero declarations modulo goals and zero planned goals.
+Evidence: [the audit](evidence/ActionsAudit.lean) and [its output](evidence/actions-audit.log).
+No outside implementation runs are reached by this proof-only consolidation.

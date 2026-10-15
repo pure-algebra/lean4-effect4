@@ -46,7 +46,7 @@ theorem source_program_at (root : NativeEff) (fragment : SourceScope.Fragment ro
 theorem action_programs_at (root : NativeEff) (bindings : List Val) (action : NAction)
     (held : SourceScope.ActionProgramsAt root (fun _ => CodeAt bindings) action) :
     ActionAt bindings action := by
-  cases action <;> aesop (add norm simp [ActionAt, SourceScope.ActionProgramsAt])
+  cases action <;> aesop (add norm simp [ActionAt, SourceScope.ActionProgramsAt, SourceScope.ActionProgramsWith])
 
 /-- A source action retains initialized leading bindings in every launched program. -/
 theorem source_action_at (root : NativeEff) (fragment : SourceScope.Fragment root)
