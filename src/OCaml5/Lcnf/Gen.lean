@@ -1,5 +1,6 @@
 import Lean
-import Conform.Lcnf.Validity
+import OCaml5.Lcnf.Index
+import OCaml5.Lcnf.Census
 import OCaml5.Ml.Syntax
 import OCaml5.Ml.Render
 import OCaml5.Ml.Check
@@ -18,7 +19,7 @@ its closure manifest. The recipe (`ocaml/gen/roots.json`) lists the artifacts, a
 `OCaml5.Tools.LcnfGen` runs one artifact, or every artifact of the recipe in one process.
 
 **Depends on.** `OCaml5.Lcnf.Translate`, `OCaml5.Lcnf.Types`, `OCaml5.Lcnf.Externs`, `OCaml5.Ml`,
-`Conform.Lcnf.Validity` (the mono index and the construct census of the manifest).
+`OCaml5.Lcnf.Index` and `OCaml5.Lcnf.Census` (the mono index and the construct census of the manifest).
 
 **Properties.**
 * **The header is the command.** An artifact's header carries the command that makes it alone
@@ -142,22 +143,22 @@ def manifestPathFor (out : String) (recipeOuts : List String) : String :=
 
 /-- One row of the closure manifest: the Lean constant, the OCaml name it became, whether the
 emitted binding is recursive, the twenty-six mono-LCNF construct counts of its body
-(`Conform.Lcnf.constructs`, in that order) and `DeclHash`'s hash of the whole `Decl`, the
+(`constructs`, in that order) and `DeclHash`'s hash of the whole `Decl`, the
 identity of the *code*, stable across runs of one build.
 
 The mono declaration is read the way `translateClosure` reads it, out of `monoExt`'s module
-entries (`Conform.Lcnf.persistedMonoIndex`), never through `getMonoDecl?`: the module system's
-export filter makes the two disagree (`Conform/Lcnf/Validity.lean`, the section on reading
+entries (`persistedMonoIndex`), never through `getMonoDecl?`: the module system's
+export filter makes the two disagree (`tools/Conform/Lcnf/Validity.lean`, the section on reading
 `monoExt`'s local state). A declaration the closure translated and the index cannot find is
 fatal, not a blank row. -/
-private def manifestRow (env : Environment) (mono : Conform.Lcnf.MonoIndex)
+private def manifestRow (env : Environment) (mono : MonoIndex)
     (t : Translated) : MetaM String := do
   let some d := mono.findIn? env t.leanName
     | throwError s!"closure manifest: no mono declaration for {t.leanName}"
-  let census := Conform.Lcnf.Census.ofDecl {} d
+  let census := Census.ofDecl {} d
   return "\t".intercalate
     ([toString t.leanName, t.ocamlName, toString t.recursive]
-      ++ Conform.Lcnf.constructs.map (fun k => toString (census.get k))
+      ++ constructs.map (fun k => toString (census.get k))
       ++ [toString (hash d)])
 
 /-- Milliseconds between two readings of `IO.monoNanosNow`. -/
@@ -250,10 +251,10 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   -- and WRITTEN with the artifact, below every fatal check: a manifest beside an artifact the
   -- run never wrote would be the drift it exists to catch.
   let env ← getEnv
-  let monoIndex := Conform.Lcnf.persistedMonoIndex env
+  let monoIndex := persistedMonoIndex env
   let manifestPath := manifestPathFor args.out recipeOuts
   let manifestHeader := "\t".intercalate
-    (["lean", "ocaml", "recursive"] ++ Conform.Lcnf.constructs ++ ["declHash"])
+    (["lean", "ocaml", "recursive"] ++ constructs ++ ["declHash"])
   let manifestRows ← closure.decls.mapM (manifestRow env monoIndex)
   let manifestText := String.intercalate "\n" (manifestHeader :: manifestRows.toList) ++ "\n"
   IO.println s!"closure: {closure.decls.size} of --cap {args.cap} \

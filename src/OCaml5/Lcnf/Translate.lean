@@ -1,5 +1,5 @@
 import Lean
-import Conform.Lcnf.Index
+import OCaml5.Lcnf.Index
 import OCaml5.Ml.Syntax
 import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
@@ -1051,7 +1051,7 @@ carrier-inference rounds stay private; only the final checked closure is returne
 private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
     (ex : Externs := {}) : CoreM (Closure × Array ClockFlow.Flow) := do
   let env ← getEnv
-  let mono := Conform.Lcnf.persistedMonoIndex env
+  let mono := persistedMonoIndex env
   let mut c : Closure := {}
   let mut clockFlows : Array ClockFlow.Flow := #[]
   let mut done : NameSet := {}
@@ -1146,7 +1146,7 @@ each declaration is translated again, in the walk's order, and nothing is walked
 generator's renaming pass took a whole walk with its inference and its clock analysis (LC-4). -/
 def retranslate (c : Closure) (tn : TypeNames) (ex : Externs) : CoreM Closure := do
   let env ← getEnv
-  let mono := Conform.Lcnf.persistedMonoIndex env
+  let mono := persistedMonoIndex env
   let mut out : Closure :=
     { frontier := c.frontier, missing := c.missing, wrapperRefs := c.wrapperRefs,
       clockRefusals := c.clockRefusals }

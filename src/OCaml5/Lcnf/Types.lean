@@ -1,5 +1,5 @@
 import Lean
-import Conform.Source.Description
+import OCaml5.Lcnf.Index
 import OCaml5.Ml.Syntax
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Externs
@@ -94,7 +94,7 @@ def trivialFieldIdx? (n : Name) : MetaM (Option Nat) := do
     if info.isUnsafe || info.isRec then return none
     let [ctorName] := info.ctors | return none
     let ci ← getConstInfoCtor ctorName
-    Conform.Source.withConstructor ctorName fun _ xs => do
+    withConstructor ctorName fun _ xs => do
       let mut result := none
       for i in [:ci.numFields] do
         let x := xs[info.numParams + i]!
@@ -238,7 +238,7 @@ def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInf
   let mut unknown : Array String := #[]
   let mut usedFields : Array Name := #[]
   for ctorName in info.ctors do
-    let (ctor, fs, alias, r, u, uf) ← Conform.Source.withConstructor ctorName fun _ xs => do
+    let (ctor, fs, alias, r, u, uf) ← withConstructor ctorName fun _ xs => do
       let mut pmap : Std.HashMap FVarId String := {}
       for i in indices, v in pnames do
         pmap := pmap.insert xs[i]!.fvarId! v

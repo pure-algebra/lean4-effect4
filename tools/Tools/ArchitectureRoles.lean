@@ -326,7 +326,7 @@ def roots : List String := [
   "Conform.Core.Evidence", "Conform.Core.Obligation", "Conform.Core.Policy",
   "Conform.Core.Report", "Conform.Layout.Build", "Conform.Layout.Check", "Conform.Layout.Laws",
   "Conform.Layout.Layout", "Conform.Layout.Native", "Conform.Layout.Reflect", "Conform.Layout.Types",
-  "Conform.Lcnf.Index", "Conform.Lcnf.Semantics",
+  "Conform.Lcnf.Semantics",
   "Conform.Lcnf.SemanticsTarget", "Conform.Lcnf.Validity", "Conform.Manifest.Mirror",
   "Conform.Manifest.Readers", "Conform.Source.Description",
   "Conform.Effect4.LayoutWorld",

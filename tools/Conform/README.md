@@ -82,7 +82,7 @@ the whole input without a second decoder. `Test.Program.TypingCheckContract` exe
 | `Core.Report`, `Core.Evidence`, `Core.Obligation`, `Core.Policy` | Exact report coverage, separate evidence methods, open obligations, strict configuration |
 | `Source.Description` | Generic bounded constructor reflection; used by ProgramStructure, layouts and OCaml parameter handling |
 | `Layout` | One layout plan for construction, projection and matching; exact applied-type keys and target usages; standard `Function.Injective` laws |
-| `Lcnf.Index`, `Lcnf.Validity` | One persisted mono index per walk, structural checks, explicit opt-in on-demand compilation with phase diagnostics |
+| `Lcnf.Validity` | Structural checks over the route's persisted mono index (`OCaml5.Lcnf.Index`), explicit opt-in on-demand compilation with phase diagnostics |
 | `Manifest` | The mirror census: each mirror file read back to a constructor list and compared with the environment's |
 | `Lcnf.Semantics`, `Lcnf.SemanticsTarget` | Bounded source and target interpreters with separate fuel bounds |
 | `Lcnf.TargetLaws` | Laws of the target evaluator: `let x = e in x` and `e` have one outcome at related fuels. Its axiom list holds `Classical.choice`, from the evaluator's own definition |
@@ -94,8 +94,11 @@ The case-site audit (`Lcnf.Cases`), the rule extraction (`Lcnf.Rules`), `Core.Pr
 gate, script or test imported or ran them (`docs/research/2026-10-15-lowering-state/README.md`, K4).
 They are at `git:eaa45b6b9:tools/Conform/`.
 
-The generic modules do not import Effect4 or OCaml5. The OCaml emitter consumes the generic
-source and persisted-index utilities, uses `Lean.SCC.scc`, rejects duplicate emitted names,
+The generic modules do not import Effect4. They import the route's own walk from `OCaml5.Lcnf`:
+the persisted mono index and the constructor telescope (`OCaml5.Lcnf.Index`), the construct census
+(`OCaml5.Lcnf.Census`), the primitive alphabet (`OCaml5.Lcnf.Prim`) and `stripRedArg`. The route
+imports nothing of Conform (2026-10-15), so the generator builds without the evaluators.
+The OCaml emitter uses `Lean.SCC.scc`, rejects duplicate emitted names,
 and shares a single native-constructor table between expressions and patterns. It does not
 silently replace persisted compiler input with on-demand compilation.
 

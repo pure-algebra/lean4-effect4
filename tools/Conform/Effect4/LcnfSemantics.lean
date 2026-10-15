@@ -142,7 +142,7 @@ whose constant is an extern of Lean's runtime names its primitive in its runtime
 the interpreter reads out of the compiler's own output. The OCaml form of the same constant is
 the target's, in the same row. -/
 
-def tyPrims : PrimTable := OCaml5.Lcnf.sourcePrims
+def tyPrims : OCaml5.Lcnf.PrimTable := OCaml5.Lcnf.sourcePrims
 
 /-! ## 4. The mutants — the negative controls
 
@@ -192,7 +192,7 @@ def Mutant.label : Mutant → String
   | .ctorKeepsParams => "a construction keeps its type parameters as fields"
 
 /-- The **assumption** mutants: one row of the primitive table says something else. -/
-def mutatePrims (m : Mutant) (t : PrimTable) : PrimTable :=
+def mutatePrims (m : Mutant) (t : OCaml5.Lcnf.PrimTable) : OCaml5.Lcnf.PrimTable :=
   t.map fun (n, p) =>
     match m with
     | .ltIsLe => if n == ``Nat.decLt then (n, .natDecLe) else (n, p)
@@ -242,7 +242,7 @@ where
     match m, v with
     | .natLitShift, .lit (.nat n) => .lit (.nat (n + 1))
     | .appendSwapped, .const n us args =>
-      if Conform.Lcnf.stripRedArg n == ``String.append then .const n us args.reverse
+      if OCaml5.Lcnf.stripRedArg n == ``String.append then .const n us args.reverse
       else v
     | _, _ => v
 

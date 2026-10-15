@@ -1,4 +1,5 @@
 import Lean
+import OCaml5.Lcnf.Index
 
 /-!
 Ground source descriptions shared by program generators and inspection tools. The caller
@@ -68,11 +69,9 @@ structure Family where
   constructors : List Ctor
   deriving BEq, Inhabited
 
-/-- One constructor telescope, shared by source and layout readers. -/
-def withConstructor {α : Type} (name : Name)
-    (read : ConstructorVal → Array Expr → MetaM α) : MetaM α := do
-  let ci ← getConstInfoCtor name
-  forallBoundedTelescope ci.type (ci.numParams + ci.numFields) fun xs _ => read ci xs
+-- One constructor telescope, shared by source and layout readers: the route's
+-- (`OCaml5.Lcnf.withConstructor`), which its type generator reads too.
+export OCaml5.Lcnf (withConstructor)
 
 def readFamily (cfg : Config) (spec : Spec) : MetaM Family := do
   let env ← getEnv

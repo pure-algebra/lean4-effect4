@@ -446,7 +446,7 @@ evaluator's primitive stands only beside a symbol, by the column's type (`Lcnf.L
 
 /-- Everything wrong with the runtime column of `rows` in `env`. -/
 private def runtimeProblems (env : Environment) (rows : List Lcnf.Builtin) : List String :=
-  let mono := persistedMonoIndex env
+  let mono := OCaml5.Lcnf.persistedMonoIndex env
   rows.flatMap fun b =>
     let named := if env.contains b.lean || mono.contains b.lean then []
       else [s!"builtin {b.lean}: no constant and no mono declaration of this name"]

@@ -3,7 +3,7 @@ import OCaml5.Ml.Syntax
 import OCaml5.Ml.Render
 import OCaml5.Lcnf.Externs
 import OCaml5.Lcnf.TypeRows
-import Conform.Lcnf.Semantics
+import OCaml5.Lcnf.Prim
 
 /-!
 # OCaml5.Lcnf.Builtins
@@ -74,7 +74,7 @@ inductive LeanRuntime where
   | body
   /-- An `@[extern]` of Lean's runtime: the C function that implements it, and the source
   evaluator's primitive for it (`Conform.Lcnf.Prim`), or `none` where that evaluator has none. -/
-  | extern (symbol : String) (source : Option Conform.Lcnf.Prim)
+  | extern (symbol : String) (source : Option Prim)
   deriving Inhabited
 
 /-- The C symbol of a realization, when it is one of Lean's runtime. -/
@@ -690,7 +690,7 @@ def builtin? (n : Name) : Option Builtin := builtinIndex[stripRedArg n]?
 
 /-- The source evaluator's primitive table (`Conform.Lcnf.Semantics`): each row's Lean constant
 with the primitive of its runtime column. -/
-def sourcePrims : Conform.Lcnf.PrimTable :=
+def sourcePrims : PrimTable :=
   builtins.filterMap fun b =>
     match b.runtime with
     | .extern _ (some p) => some (b.lean, p)
