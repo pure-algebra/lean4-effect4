@@ -178,6 +178,29 @@ theorem untyped_marked_cause (world : World) (kind : Kind) (cause : CauseV)
   | note id => exact marked
   | paused id incoming stage cleaned ih => exact ih
 
+/-- Adding an actual untyped interrupt preserves every existing request cause class. -/
+theorem cause_combine_untyped (world : World) (kind : Kind) (cause interruption : CauseV)
+    (good : CauseAt world kind cause)
+    (untyped : ∀ reason ∈ interruption.reasons, reason.tag ≠ .fail) :
+    CauseAt world kind (Cause.combine cause interruption) := by
+  induction kind with
+  | ordinary => trivial
+  | body id =>
+    intro reason member typed
+    rcases Cause.combine_no_new_reason reason cause interruption member with old | added
+    · exact good reason old typed
+    · exact (untyped reason added typed).elim
+  | finalized id => exact interrupted_cause world id cause interruption good untyped
+  | cleanup id => exact interrupted_cause world id cause interruption good untyped
+  | seen id => exact MarkedCause.combine_left cause interruption good
+  | note id => exact MarkedCause.combine_left cause interruption good
+  | paused id incoming stage cleaned ih => exact ih good
+  | _ =>
+    intro reason member
+    rcases Cause.combine_no_new_reason reason cause interruption member with old | added
+    · exact good reason old
+    · exact untyped reason added
+
 /-- The actual decision chooses its next stage and its answer in the same primitive step. -/
 theorem decision (world : World) (id : Nat) (waiting : world.stages id = .waiting)
     (state : Stores) (env : List Val) (used admitted rejected : Nat)
