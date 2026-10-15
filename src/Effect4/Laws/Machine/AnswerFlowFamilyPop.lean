@@ -1,4 +1,4 @@
-import Effect4.Laws.Machine.AnswerFlowFamily
+import Effect4.Laws.Machine.AnswerFlowContextualFamily
 import Effect4.Machine.Fibers
 
 /-!
@@ -9,7 +9,7 @@ Consumers: AnswerFlowPop's unchanged semantic headers and NativeFrameScope's lex
 Pending causes, supplied exits, source history, and progress remain explicit obligations.
 -/
 set_option autoImplicit false
-namespace Effect4.Machine.AnswerFlow.External
+namespace Effect4.Machine.AnswerFlow.Contextual
 open Effect4 Effect4.Contracts
 universe u v w
 variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} {World Kind : Type w}
@@ -31,7 +31,8 @@ theorem ensure_path
 variable (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
 variable (interp : PrimInterp ν σ β ε δ ι α)
 variable (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
-variable (family : SavedFamily model interp Edge)
+variable (Allowed : World → Option (Cause ε δ ι α) → Prop)
+variable (family : ContextualSavedFamily model interp Edge Allowed)
 variable (mask : ∀ world kind, Edge world kind kind (.setInterruptible true))
 
 /-- The model's cause classes absorb a recorded interrupt. Latest's failure walk adds it to the
@@ -113,7 +114,7 @@ theorem getCont_value_selected (world : World) (input output : Kind)
     cases found
   · rename_i normal
     rw [if_neg normal] at found
-    exact popFrom_value_selected model interp Edge family mask world input output fiber.stack _ value selected rfl good stack found
+    exact popFrom_value_selected model interp Edge Allowed family mask world input output fiber.stack _ value selected rfl good stack found
 
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
@@ -188,7 +189,8 @@ theorem saved_discard_cause (world : World) (input middle : Kind)
     (saved : Edge world input middle code)
     (good : model.cause world input cause)
     (interrupted : (code.ensure fiber).1.interrupted = true)
-    (absorbs : AbsorbsInterrupt model world (code.ensure fiber).1.interruptedCause) :
+    (absorbs : AbsorbsInterrupt model world (code.ensure fiber).1.interruptedCause)
+    (admitted : Allowed world (code.ensure fiber).1.interruptedCause := by trivial) :
     ∃ delivered, FrameFiber.skippedCause .contE code (code.ensure fiber).1 (some cause) = some delivered ∧
       model.cause world middle delivered := by
   cases arm : code.hasArm .contE with
@@ -211,7 +213,7 @@ theorem saved_discard_cause (world : World) (input middle : Kind)
       | some other => exact ⟨Cause.sanitize cause other, by simp only [FrameFiber.skippedCause, arm, pending]; rfl⟩
     rcases produced with ⟨delivered, equation⟩
     exact ⟨delivered, equation, family.discard world input middle code saved world
-      (model.future_refl world) fiber cause delivered good arm interrupted equation⟩
+      (model.future_refl world) fiber cause delivered good arm admitted interrupted equation⟩
 
 include interp family mask in
 /-- The selected failure callback retains the cause actually carried past earlier discarded handlers. -/
@@ -222,7 +224,8 @@ theorem popFrom_cause_selected (world : World) (input output : Kind)
     (good : model.cause world input cause)
     (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
     (stack : Path (Edge world) input output frames)
-    (found : (FrameFiber.popFrom .contE true frames fiber (some cause)).answer = .frame selected) :
+    (found : (FrameFiber.popFrom .contE true frames fiber (some cause)).answer = .frame selected)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
     ∃ incoming middle delivered,
       (FrameFiber.popFrom .contE true frames fiber (some cause)).carriedCause = some delivered ∧
       model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
@@ -253,12 +256,14 @@ theorem popFrom_cause_selected (world : World) (input output : Kind)
     · intro input middle output head tail current before after tailPop callback path scratch passed drained next cause incoming good found
       have recorded : AbsorbsInterrupt model world (head.ensure current).1.interruptedCause := by
         rw [ensure_recorded head current, scratch.2]; exact absorbs
+      have admissible : Allowed world (head.ensure current).1.interruptedCause := by
+        rw [ensure_recorded head current, scratch.2]; exact admitted
       have advanced : ∃ delivered, after = some delivered ∧ model.cause world middle delivered := by
         rcases passed with ⟨chosen, unchanged⟩ | ⟨answer, _, skipped, changed⟩
         · have missing := PopTrace.answer_missing head .contE _ chosen
           exact ⟨cause, unchanged.trans incoming,
             family.skipCause world input middle head callback world (model.future_refl world) cause good missing⟩
-        · rcases saved_discard_cause model interp Edge family world input middle head current cause callback good
+        · rcases saved_discard_cause (admitted := admissible) model interp Edge Allowed family world input middle head current cause callback good
             (by simpa only [Bool.true_and] using skipped) recorded with ⟨delivered, equation, nextGood⟩
           exact ⟨delivered, changed.trans (by rw [incoming]; exact equation), nextGood⟩
       rcases advanced with ⟨delivered, changed, nextGood⟩
@@ -270,10 +275,12 @@ theorem popFrom_cause_selected (world : World) (input output : Kind)
     · intro input middle output head tail current before after tailPop callback path scratch passed answered cause incoming good found
       have recorded : AbsorbsInterrupt model world (head.ensure current).1.interruptedCause := by
         rw [ensure_recorded head current, scratch.2]; exact absorbs
+      have admissible : Allowed world (head.ensure current).1.interruptedCause := by
+        rw [ensure_recorded head current, scratch.2]; exact admitted
       have produced : ∃ delivered, after = some delivered := by
         rcases passed with ⟨_, unchanged⟩ | ⟨answer, _, skipped, changed⟩
         · exact ⟨cause, unchanged.trans incoming⟩
-        · rcases saved_discard_cause model interp Edge family world input middle head current cause callback good
+        · rcases saved_discard_cause (admitted := admissible) model interp Edge Allowed family world input middle head current cause callback good
             (by simpa only [Bool.true_and] using skipped) recorded with ⟨delivered, equation, _⟩
           exact ⟨delivered, changed.trans (by rw [incoming]; exact equation)⟩
       rcases produced with ⟨delivered, changed⟩
@@ -289,13 +296,14 @@ theorem getCont_cause_selected (world : World) (input output : Kind)
     (good : model.cause world input cause)
     (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
     (stack : Path (Edge world) input output fiber.stack)
-    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected) :
+    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
     ∃ incoming middle delivered,
       (fiber.getCont .contE true (some cause)).carriedCause = some delivered ∧
       model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
       Path (Edge world) middle output (fiber.getCont .contE true (some cause)).fiber.stack := by
   simp only [FrameFiber.getCont, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte] at found ⊢
-  exact popFrom_cause_selected model interp Edge family mask world input output fiber.stack _ cause selected rfl good
+  exact popFrom_cause_selected (admitted := admitted) model interp Edge Allowed family mask world input output fiber.stack _ cause selected rfl good
     absorbs stack found
 
 
@@ -318,7 +326,7 @@ theorem resumeValue_selected (world : World) (input output : Kind)
         stack := pushed ++ (fiber.getCont .contA false).fiber.stack}, events) ∧
       FamilyResult model Edge world output next (pushed ++ (fiber.getCont .contA false).fiber.stack) := by
   obtain ⟨incoming, middle, incomingGood, callback, suffix⟩ :=
-    getCont_value_selected model interp Edge family mask world input output fiber value selected good stack found
+    getCont_value_selected model interp Edge Allowed family mask world input output fiber value selected good stack found
   obtain ⟨head, code, path⟩ := family.answer world incoming middle selected callback world
     (model.future_refl world) value provided next pushed incomingGood (supplied incoming incomingGood) pure evaluated
   exact ⟨_, FrameFiber.resumeValue_frame interp fiber value provided selected next pushed found evaluated,
@@ -347,7 +355,8 @@ theorem resumeCause_provided_selected (world : World) (input output : Kind)
           (.failure delivered)) = none)
     (evaluated : selected.armE interp
       ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
-      (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) = some (next, pushed)) :
+      (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) = some (next, pushed))
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
     ∃ events, fiber.resumeCause interp cause provided =
       (.running {(fiber.getCont .contE true (some cause)).fiber with
         current := next
@@ -355,7 +364,7 @@ theorem resumeCause_provided_selected (world : World) (input output : Kind)
       FamilyResult model Edge world output next
         (pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack) := by
   obtain ⟨incoming, middle, delivered, carried, incomingGood, callback, suffix⟩ :=
-    getCont_cause_selected model interp Edge family mask world input output fiber cause selected good absorbs
+    getCont_cause_selected (admitted := admitted) model interp Edge Allowed family mask world input output fiber cause selected good absorbs
       stack found
   have equation := FrameFiber.resumeCause_frame interp fiber cause provided selected next pushed found evaluated
   simp only [carried, Option.getD_some] at evaluated
@@ -376,13 +385,14 @@ theorem resumeCause_selected (world : World) (input output : Kind)
     (pure : programOf model world selected
       ((fiber.getCont .contE true (some cause)).deliveredExit (.failure cause)) = none)
     (evaluated : selected.armE interp
-      ((fiber.getCont .contE true (some cause)).carriedCause.getD cause) none = some (next, pushed)) :
+      ((fiber.getCont .contE true (some cause)).carriedCause.getD cause) none = some (next, pushed))
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
     ∃ events, fiber.resumeCause interp cause none =
       (.running {(fiber.getCont .contE true (some cause)).fiber with
         current := next
         stack := pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack}, events) ∧
       FamilyResult model Edge world output next (pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack) := by
-  exact resumeCause_provided_selected model interp Edge family mask world input output fiber cause none
+  exact resumeCause_provided_selected (admitted := admitted) model interp Edge Allowed family mask world input output fiber cause none
     selected next pushed good absorbs stack found
     (by intro incoming delivered carried good exit member; cases member)
     (by intro delivered carried
@@ -399,7 +409,7 @@ theorem getCont_value_finalizer (world : World) (input output : Kind)
     (installed : programOf model world selected (.success value) = some next) :
     FamilyResult model Edge world output next (fiber.getCont .contA false).fiber.stack := by
   obtain ⟨incoming, middle, incomingGood, callback, suffix⟩ :=
-    getCont_value_selected model interp Edge family mask world input output fiber value selected good stack found
+    getCont_value_selected model interp Edge Allowed family mask world input output fiber value selected good stack found
   exact ⟨middle, family.program world incoming middle selected callback world
     (model.future_refl world) (.success value) next incomingGood installed, suffix⟩
 
@@ -411,10 +421,11 @@ theorem getCont_cause_finalizer (world : World) (input output : Kind)
     (stack : Path (Edge world) input output fiber.stack)
     (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
     (installed : programOf model world selected
-      ((fiber.getCont .contE true (some cause)).deliveredExit (.failure cause)) = some next) :
+      ((fiber.getCont .contE true (some cause)).deliveredExit (.failure cause)) = some next)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
     FamilyResult model Edge world output next (fiber.getCont .contE true (some cause)).fiber.stack := by
   obtain ⟨incoming, middle, delivered, carried, incomingGood, callback, suffix⟩ :=
-    getCont_cause_selected model interp Edge family mask world input output fiber cause selected good absorbs
+    getCont_cause_selected (admitted := admitted) model interp Edge Allowed family mask world input output fiber cause selected good absorbs
       stack found
   simp only [FramePop.deliveredExit, carried, Option.getD_some] at installed
   exact ⟨middle, family.program world incoming middle selected callback world
@@ -455,13 +466,14 @@ theorem finalizer_step {χ : Type u} {St : Type (max u v)}
         ((fiber.frame.getCont
           (match exit with | .success _ => .contA | .failure _ => .contE)
           (match exit with | .success _ => false | .failure _ => true)
-          (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) program)) :
+          (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) program))
+    (admitted : Allowed world fiber.frame.interruptedCause := by trivial) :
     let result := evaluatePrim.finalizerOr runInterp machine fiber yielding exit
     result.machine.state = machine.state ∧
       FamilyResult model Edge world output result.fiber.frame.current result.fiber.frame.stack := by
   cases exit with
   | success value =>
-    have typed := getCont_value_finalizer model interp Edge family mask world input output fiber.frame value
+    have typed := getCont_value_finalizer model interp Edge Allowed family mask world input output fiber.frame value
       (.onExit body name flag) (finalizerCode runInterp (.success value) program) good stack chosen installed
     unfold evaluatePrim.finalizerOr
     dsimp only
@@ -470,7 +482,7 @@ theorem finalizer_step {χ : Type u} {St : Type (max u v)}
     rw [hook]
     exact ⟨rfl, typed⟩
   | failure cause =>
-    have typed := getCont_cause_finalizer model interp Edge family mask world input output fiber.frame cause
+    have typed := getCont_cause_finalizer (admitted := admitted) model interp Edge Allowed family mask world input output fiber.frame cause
       (.onExit body name flag)
       (finalizerCode runInterp ((fiber.frame.getCont .contE true (some cause)).deliveredExit (.failure cause)) program)
       good (absorbs cause rfl) stack chosen installed
@@ -480,5 +492,56 @@ theorem finalizer_step {χ : Type u} {St : Type (max u v)}
     dsimp only
     rw [hook]
     exact ⟨rfl, typed⟩
+
+end Effect4.Machine.AnswerFlow.Contextual
+
+namespace Effect4.Machine.AnswerFlow.External
+open Effect4 Effect4.Contracts
+universe u v w
+variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} {World Kind : Type w}
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+variable (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
+variable (interp : PrimInterp ν σ β ε δ ι α)
+variable (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+variable (family : SavedFamily model interp Edge)
+variable (mask : ∀ world kind, Edge world kind kind (.setInterruptible true))
+
+abbrev AbsorbsInterrupt := Contextual.AbsorbsInterrupt model
+abbrev absorbsInterrupt_none := Contextual.absorbsInterrupt_none model
+abbrev ensure_path := @Contextual.ensure_path
+abbrev drain_cause := @Contextual.drain_cause
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev popFrom_value_selected := Contextual.popFrom_value_selected model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev getCont_value_selected := Contextual.getCont_value_selected model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev saved_discard_cause := Contextual.saved_discard_cause model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True))
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev popFrom_cause_selected := Contextual.popFrom_cause_selected model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev getCont_cause_selected := Contextual.getCont_cause_selected model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev resumeValue_selected := Contextual.resumeValue_selected model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev resumeCause_provided_selected := Contextual.resumeCause_provided_selected model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev resumeCause_selected := Contextual.resumeCause_selected model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev getCont_value_finalizer := Contextual.getCont_value_finalizer model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev getCont_cause_finalizer := Contextual.getCont_cause_finalizer model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
+
+/-- The legacy unconditional family uses the common contextual transport. -/
+abbrev finalizer_step {χ : Type u} {St : Type (max u v)} := Contextual.finalizer_step (χ := χ) (St := St) model interp Edge (fun _ _ => True) (family.contextual model interp Edge (fun _ _ => True)) mask
 
 end Effect4.Machine.AnswerFlow.External
