@@ -44,19 +44,82 @@ theorem fields_with {head : NCode → Prop} {first last : Fiber} (held : HeldWit
   rw [current]
   exact held (fun empty => pending (parked.trans empty))
 
+/-- An actual retained token keeps the original current code and saved suffix.
+Consumer: Atomic and Timeout matching-token reply admission. -/
+theorem interruption_park_origin (cause : CauseV) (fiber : Fiber)
+    (token : Nat) (parked : (interruptWithCause cause fiber).1.parked = .withGuard token) :
+    fiber.parked = .withGuard token ∧
+    (interruptWithCause cause fiber).1.frame.current = fiber.frame.current ∧
+    (interruptWithCause cause fiber).1.frame.stack = fiber.frame.stack := by
+  unfold interruptWithCause at parked ⊢
+  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+    FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore] at parked ⊢
+  split
+  · rename_i exited
+    simp only [exited, ↓reduceIte] at parked
+    exact ⟨parked, rfl, rfl⟩
+  · rename_i exited
+    simp only [exited] at parked
+    split
+    · rename_i enabled
+      simp only [enabled, ↓reduceIte] at parked
+      split
+      · rename_i running
+        simp only [running, ↓reduceIte] at parked
+        exact ⟨parked, rfl, rfl⟩
+      · rename_i running
+        simp only [running] at parked
+        cases parked
+    · rename_i enabled
+      simp only [enabled] at parked
+      exact ⟨parked, rfl, rfl⟩
+
 /-- Interrupt recording retains the parked head or removes the park before replacing it. -/
 theorem interruption_with (head : NCode → Prop) (cause : CauseV) (fiber : Fiber) (held : HeldWith head fiber) :
     HeldWith head (interruptWithCause cause fiber).1 := by
-  unfold interruptWithCause
-  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
-    FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
-  split
-  · exact held
-  · split
-    · split
-      · exact held
-      · exact unparked_with rfl
-    · exact held
+  intro pending
+  cases parked : (interruptWithCause cause fiber).1.parked with
+  | notParked => exact False.elim (pending parked)
+  | withGuard token =>
+    have origin := interruption_park_origin cause fiber token parked
+    rw [origin.2.1]
+    exact held (by rw [origin.1]; intro wrong; cases wrong)
+
+/-- Other-fiber edits cannot mint a parked token or replace its saved continuation.
+Consumer: matching-token admission at old reserved keys. -/
+theorem edit_park_origin {first last : Fiber} (word : Moves.OtherEdit first last)
+    (token : Nat) (parked : last.parked = .withGuard token) :
+    first.parked = .withGuard token ∧ last.frame.current = first.frame.current ∧
+    last.frame.stack = first.frame.stack := by
+  cases word with
+  | observe => exact ⟨parked, rfl, rfl⟩
+  | filterObservers => exact ⟨parked, rfl, rfl⟩
+  | interruptCause cause => exact interruption_park_origin cause _ token parked
+
+/-- The existing edit word transports an actual token back to its original continuation. -/
+theorem edits_park_origin {first last : Fiber} (word : Moves.OtherEdits first last)
+    (token : Nat) (parked : last.parked = .withGuard token) :
+    first.parked = .withGuard token ∧ last.frame.current = first.frame.current ∧
+    last.frame.stack = first.frame.stack := by
+  induction word with
+  | refl => exact ⟨parked, rfl, rfl⟩
+  | tail prior next ih =>
+    have final := edit_park_origin next token parked
+    have initial := ih final.1
+    exact ⟨initial.1, final.2.1.trans initial.2.1, final.2.2.trans initial.2.2⟩
+
+/-- A parked row in an actual interference result comes from an old parked row.
+Consumer: old queued, detached and stored replies retain their matching continuation. -/
+theorem interferes_park_origin {first last : NativeMachine}
+    (word : Moves.Interferes first last) (fiber : Fiber) (member : fiber ∈ last.fibers)
+    (token : Nat) (parked : fiber.parked = .withGuard token) :
+    ∃ old ∈ first.fibers, fiber.id = old.id ∧ old.parked = .withGuard token ∧
+      fiber.frame.current = old.frame.current ∧ fiber.frame.stack = old.frame.stack := by
+  rcases word.fibers fiber member with ⟨old, inside, changed⟩ | ⟨_, program, flag, budget, context, changed⟩
+  · have origin := edits_park_origin changed token parked
+    exact ⟨old, inside, changed.id, origin⟩
+  · have origin := edits_park_origin changed token parked
+    cases origin.1
 
 /-- Existing other-fiber edits retain the parked-head observation. -/
 theorem edit_with {head : NCode → Prop} {first last : Fiber} (word : Moves.OtherEdit first last) (held : HeldWith head first) : HeldWith head last := by
