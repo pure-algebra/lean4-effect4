@@ -66,4 +66,56 @@ theorem some_body (total worker : Nat) (member : worker ∈ [1, 2]) (table : Row
     · rw [← depth]
       exact List.getElem?_concat_length
     · exact ⟨token, selected, holding⟩
+/-- The authored impossible empty result fails instead of inventing a successful job. -/
+theorem none_body (total worker : Nat) (member : worker ∈ [1, 2]) (table : RowTable)
+    (world : QueueWorkersCustodyFlow.World) (owner : FiberId) (point : Point)
+    (atPath : point.path = path worker)
+    (captured : point.env[worker + 9]? = some .none) :
+    QueueWorkersJobGraph.CodeAt total table owner world (.job owner)
+      (resolve (Programs.queueProgram total) point) := by
+  have found := source total worker member
+  rw [← atPath] at found
+  rw [Agreement.resolve_of_at found]
+  cases fuel : point.fuel with
+  | zero =>
+    rw [Agreement.compileEff_at_zero _ fuel]
+    exact .frontier fuel
+  | succ amount =>
+    rw [Agreement.compileEff_select _ _ _ _ fuel]
+    apply QueueWorkersJobGraph.CodeAt.suspended
+    intro view
+    change QueueWorkersJobGraph.CodeAt total table owner world (.job owner)
+      (suspendBodyAt (Programs.queueProgram total) (.body {point with completed := view}))
+    have decision : (evalTerm point.env (.var (worker + 9))).bind Decision.option.decide = some (true, none) := by
+      change (point.env[worker + 9]?).bind Decision.option.decide = _
+      rw [captured]
+      rfl
+    rw [Agreement.suspendBodyAt_select_of_decide (q := {point with completed := view}) fuel found decision]
+    change QueueWorkersJobGraph.CodeAt total table owner world (.job owner)
+      (resolve (Programs.queueProgram total) ({point with completed := view}.child 0))
+    rw [Agreement.resolve_of_at (Agreement.at_child (p := {point with completed := view}) found 0)]
+    cases childFuel : ({point with completed := view}.child 0).fuel with
+    | zero =>
+      rw [Agreement.compileEff_at_zero _ childFuel]
+      exact .frontier childFuel
+    | succ remaining =>
+      rw [Agreement.compileEff_failCause _ childFuel]
+      exact .failure
+
+/-- The actual result selection consumes the option class returned by its own saved loop. -/
+theorem option_body (total worker : Nat) (member : worker ∈ [1, 2]) (table : RowTable)
+    (world : QueueWorkersCustodyFlow.World) (owner : FiberId) (token : Nat) (point : Point) (cursor : Val)
+    (owned : SourceScope.At (Programs.queueProgram total) point)
+    (atPath : point.path = path worker)
+    (captured : point.env[worker + 9]? = some cursor)
+    (typed : ValueAt world (.captured owner token (.takeOption token)) cursor) :
+    QueueWorkersJobGraph.CodeAt total table owner world (.job owner)
+      (resolve (Programs.queueProgram total) point) := by
+  have phase := typed.2
+  change QueueWorkersCustody.OptionAt world.requests.custody token cursor at phase
+  unfold QueueWorkersCustody.OptionAt at phase
+  split at phase
+  next => exact none_body total worker member table world owner point atPath captured
+  next job => exact some_body total worker member table world owner token job point owned atPath captured typed.1 phase
+  next => exact phase.elim
 end Test.Dogfood.Proofs.QueueWorkersRetryReturn
