@@ -93,8 +93,9 @@ private def squaring : List Lcnf.Support := Lcnf.support.map fun s =>
 -- refusals with their reason, never a silent default.
 #guard refused (evaluateIn (Lcnf.support.filter (·.name != "lcnf_nat_mul")) `Nat.mul [.int 3, .int 5])
   "unbound name `lcnf_nat_mul`"
-#guard refused (evaluateIn [{ name := "lcnf_x", params := ["a"], body := .raw "a" }] `Nat.add [.int 1, .int 2])
-  "support `lcnf_x`: Ml.Expr.raw"
+#guard refused (evaluateIn [{ name := "lcnf_x", params := ["a"], body := .seq (.var "a") (.var "a") }]
+    `Nat.add [.int 1, .int 2])
+  "support `lcnf_x`: Ml.Expr.seq"
 #guard refused (evaluateIn [{ name := "max", params := ["a"], body := .var "a" }] `Nat.add [.int 1, .int 2])
   "support `max`: the evaluator has a primitive of this name"
 

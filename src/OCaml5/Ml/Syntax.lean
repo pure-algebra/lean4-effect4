@@ -3,12 +3,17 @@ import OCaml5.Ml.Identifier
 /-!
 # OCaml5.Ml.Syntax
 
-The part of the OCaml 5 surface that the LCNF route prints, as first-order data. This module owns
-**syntax only**: no rendering, no checking. Every constructor is one the route builds
-(`OCaml5.Lcnf.Translate`, `OCaml5.Lcnf.Types`, the builtin table's forms, the driver
-`OCaml5.Tools.LcnfGen`); a form no producer builds is not here. The cut of 2026-10-15 (LC-3 of
+The part of the OCaml 5 surface that the estate prints, as first-order data. This module owns
+**syntax only**: no rendering, no checking. Every constructor is one a producer builds: the LCNF
+route (`OCaml5.Lcnf.Translate`, `OCaml5.Lcnf.Types`, the builtin table's forms, `OCaml5.Lcnf.Gen`)
+and the `eff/` library's emitter (`OCaml5.Eff.Emit`), whose forms `fnMatch`, `seq`, `letPat`,
+`ifUnit`, `commented` and `Pat.int` are. Three module-language forms land ahead of their
+producers, the interop plan's P1 and P2 (`docs/research/2026-10-15-interop-plan/README.md`,
+decisions row 393): `pack`, `SigItem` with `Decl.moduleTypeD`, and `TypeDecl.isPrivate`. A form
+no producer builds is not here otherwise. The cut of 2026-10-15 (LC-3 of
 `docs/research/2026-10-14-lowering-cleanup/prompt.md`) measured each removal by a build: the
-avatar's surface of 55 expression constructors became the 22 below.
+avatar's surface of 55 expression constructors became 22. The `eff/` emitter added 6, and verbatim
+expression text went once the prelude's three primitives were structured.
 
 Precedent: `TypeScript.Syntax` in the estate's TypeScript target package — syntax in one module,
 rendering in another. The traversals of the four sorts (`Ty`, `Pat`, `Expr`, `Decl`) are algebras
@@ -55,6 +60,9 @@ inductive Ty where
   | tuple (parts : List Ty)
   /-- `_` — the anonymous type (§11.2, "_"): an annotation that says nothing. -/
   | anon
+  /-- `label:t -> u` (§11.2, "typexpr -> typexpr" with a label): the engine's carrier signatures
+  take the fiber table's projection as `exit_of:`. -/
+  | labelled (label : String) (dom cod : Ty)
 deriving Repr, Inhabited, BEq
 
 namespace Ty
@@ -87,6 +95,8 @@ inductive Pat where
   | tuple (parts : List Pat)
   /-- `hd :: tl`, which `Pat.ctor` cannot spell because `::` is infix. -/
   | cons (hd tl : Pat)
+  /-- A non-negative integer literal (§11.6, "constant"): the wire decoders' tag arms. -/
+  | int (n : Nat)
 deriving Repr, Inhabited
 
 namespace Pat
@@ -148,12 +158,24 @@ inductive Expr where
   stands in its place. Rendered as a comment followed by `fill`, so a hole is visible in the
   output. -/
   | hole (note : String) (fill : Expr)
-  /-- Verbatim text, for the two primitives the prelude carries as OCaml
-  (`OCaml5.Lcnf.rawPrimitives`). `Check` cannot see inside it. -/
-  | raw (text : String)
   /-- `assert e` (§11.7, "assert expr"). `assert false` is the idiom for an unreachable arm and
   is the one expression OCaml types at any type. -/
   | assertE (e : Expr)
+  /-- `function | p -> e …` (§11.7, "function pattern-matching"): a match on the one argument
+  of a function, as the `eff/` library's constructor tables write it. -/
+  | fnMatch (arms : List (Pat × Expr))
+  /-- `e1; e2` (§11.7, "expr ; expr"): `e1` evaluated for its effect, then `e2`. -/
+  | seq (first rest : Expr)
+  /-- `let p = v in body` with a pattern (§11.7, "let … in"): `letIn` is the variable case. -/
+  | letPat (pat : Pat) (value body : Expr)
+  /-- `if c then e` with no `else` (§11.7): `e` has type `unit`. -/
+  | ifUnit (cond thenE : Expr)
+  /-- `e (* note *)`: an expression with a trailing comment. The comment is whitespace to
+  OCaml, so the form is exactly as tight as `e`. -/
+  | commented (e : Expr) (note : String)
+  /-- `(module M : S)` (§11.7, "first-class modules"): the module `M` packed at the module type
+  `S`, both paths. -/
+  | pack (module_ : String) (signature : String)
 deriving Repr, Inhabited
 
 namespace Expr
@@ -196,6 +218,17 @@ structure TypeDecl where
   name : String
   params : List String := []
   body : TyBody
+  /-- `= private …` (§11.6, "private types"): outside its module the type's values can be read
+  and matched but not built. An abstract type has no body to make private. -/
+  isPrivate : Bool := false
+deriving Repr, Inhabited
+
+/-- One item of a module type (§11.10, "module types"). -/
+inductive SigItem where
+  /-- `val name : ty`. -/
+  | value (name : String) (ty : Ty)
+  /-- `type …`: one type declaration, abstract or with its body. -/
+  | type (decl : TypeDecl)
 deriving Repr, Inhabited
 
 /-- One `let` binding, possibly a function (§11.6, "value definition"). -/
@@ -216,7 +249,8 @@ inductive Decl where
   | letD (isRec : Bool) (binds : List Bind)
   /-- `(* text *)`. -/
   | comment (text : String)
-  /-- Verbatim text: the carrier signatures and the hand prelude of the engine's seam. -/
+  /-- Verbatim text: the hand prelude of the engine's seam (`--prelude`), the one item no
+  structured form covers, since it is hand OCaml until the carriers are Lean data. -/
   | rawD (text : String)
   /-- `module F (X : S) … = struct … end` — the functor definition (§11.11), each parameter
   with the path of its module type. -/
@@ -226,6 +260,11 @@ inductive Decl where
   /-- One blank line. Layout, not syntax; here so that a generated unit's paragraphing is data
   like everything else. -/
   | blank
+  /-- `open M` (§11.11, "open"): the unit `M`'s names in scope. The checker reads it as a scope
+  when it is handed `M`'s interface (`OCaml5.Ml.checkModule`). -/
+  | openD (path : String)
+  /-- `module type S = sig … end` (§11.10). -/
+  | moduleTypeD (name : String) (items : List SigItem)
 deriving Repr, Inhabited
 
 /-! ## The root -/

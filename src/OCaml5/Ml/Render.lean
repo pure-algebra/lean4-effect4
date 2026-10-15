@@ -73,6 +73,7 @@ def renderTyAlg : TyAlgebra (fun _ => Nat → String) where
   ty_arrow a b := fun need => paren (0 < need) (a 1 ++ " -> " ++ b 0)
   ty_tuple ps := fun need => paren (1 < need) (String.intercalate " * " (ps.map (· 2)))
   ty_anon := fun _ => "_"
+  ty_labelled l a b := fun need => paren (0 < need) (l ++ ":" ++ a 1 ++ " -> " ++ b 0)
 
 /-- One type at a required minimum level. -/
 def renderTyAt (need : Nat) (t : Ty) : String := cata_ty renderTyAlg t need
@@ -98,6 +99,7 @@ def renderPatAlg : PatAlgebra (fun _ => Nat → String) where
     "{ " ++ String.intercalate "; " (fs.map fun (n, p) => n ++ " = " ++ p 1) ++ "; _ }"
   pat_tuple ps := fun need => paren (2 < need) (String.intercalate ", " (ps.map (· 3)))
   pat_cons hd tl := fun need => paren (2 < need) (hd 3 ++ " :: " ++ tl 2)
+  pat_int n := fun _ => toString n
 
 /-- One pattern, at the outermost level. -/
 def renderPat (p : Pat) : String := cata_pat renderPatAlg p 0
@@ -152,13 +154,15 @@ def renderExprAlg : ExprAlgebra Rendered where
     | [] => n
     | [a] => paren (14 < need) (n ++ " " ++ a ind 15)
     | _ => paren (14 < need) (n ++ " (" ++ String.intercalate ", " (args.map (· ind 5)) ++ ")")
+  -- The head at 15: an application there is parenthesised, so `(f x) y` keeps its tree, which
+  -- OCaml parses apart from `f x y`.
   expr_app f args := fun ind need =>
-    paren (14 < need) (f ind 14 ++ " " ++ String.intercalate " " (args.map (· ind 15)))
+    paren (14 < need) (f ind 15 ++ " " ++ String.intercalate " " (args.map (· ind 15)))
   expr_appL f args := fun ind need =>
     let arg : ArgLabel × (Nat → Nat → String) → String
       | (.nolabel, e) => e ind 15
       | (.lbl n, e) => "~" ++ n ++ ":" ++ e ind 15
-    paren (14 < need) (f ind 14 ++ " " ++ String.intercalate " " (args.map arg))
+    paren (14 < need) (f ind 15 ++ " " ++ String.intercalate " " (args.map arg))
   expr_binop op l r := fun ind need =>
     let (lvl, right) := opInfo op
     paren (lvl < need)
@@ -189,9 +193,23 @@ def renderExprAlg : ExprAlgebra Rendered where
   expr_listLit items := fun ind _ => "[" ++ String.intercalate "; " (items.map (· ind 5)) ++ "]"
   expr_annot e ty := fun ind _ => "(" ++ e ind 0 ++ " : " ++ renderTy ty ++ ")"
   expr_hole note fill := fun ind need => "(* HOLE: " ++ note ++ " *) " ++ fill ind need
-  -- verbatim text: the caller owns its parenthesisation, as with `Decl.rawD`
-  expr_raw t := fun _ _ => t
   expr_assertE e := fun ind need => paren (14 < need) ("assert " ++ e ind 15)
+  -- `function`, like `match`, takes every arm that follows: level 0.
+  expr_fnMatch arms := fun ind need =>
+    paren (0 < need)
+      ("function"
+        ++ String.join (arms.map fun (p, b) =>
+          "\n" ++ indentOf (ind + 1) ++ "| " ++ renderPat p ++ " -> " ++ b (ind + 2) 1))
+  -- `;` binds below `if` and above `let`, `match` and `fun`, and to the right: level 1, the left
+  -- operand at 2 (an `if` there is whole, a `let` or a `match` would take the rest).
+  expr_seq a b := fun ind need => paren (1 < need) (a ind 2 ++ "; " ++ b ind 1)
+  expr_letPat p v b := fun ind need =>
+    paren (0 < need) ("let " ++ renderPat p ++ " = " ++ v ind 0 ++ " in\n" ++ indentOf ind ++ b ind 0)
+  -- its branch at 3, as `ifThen`'s: a nested `if` there is parenthesised, so no `else` can
+  -- attach to it
+  expr_ifUnit c t := fun ind need => paren (2 < need) ("if " ++ c ind 2 ++ " then " ++ t (ind + 1) 3)
+  expr_commented e note := fun ind need => e ind need ++ " (* " ++ note ++ " *)"
+  expr_pack m s := fun _ _ => "(module " ++ m ++ " : " ++ s ++ ")"
 
 /-- One expression, at indentation `ind` and a required minimum level `need`. -/
 def renderExprAt (ind : Nat) (need : Nat) (e : Expr) : String := cata_expr renderExprAlg e ind need
@@ -233,12 +251,18 @@ private def renderTyBody (b : TyBody) : String :=
   | .abstract => ""
 
 private def renderTypeDecl (d : TypeDecl) : String :=
+  let priv := if d.isPrivate then " private" else ""
   renderParams d.params ++ d.name
     ++ (match d.body with
         | .abstract => ""
         -- a variant body starts on its own line, so no space before it
-        | .variant cs => " =" ++ renderTyBody (.variant cs)
-        | b => " = " ++ renderTyBody b)
+        | .variant cs => " =" ++ priv ++ renderTyBody (.variant cs)
+        | b => " =" ++ priv ++ " " ++ renderTyBody b)
+
+/-- One item of a module type: `val name : ty`, or `type …`. -/
+private def renderSigItem : SigItem → String
+  | .value name ty => "val " ++ name ++ " : " ++ renderTy ty
+  | .type d => "type " ++ renderTypeDecl d
 
 private def renderBind (b : Bind) : String :=
   b.name
@@ -268,6 +292,11 @@ def renderDeclAlg : DeclAlgebra (fun _ => Nat → String) where
       ++ indentOf ind ++ "end"
   decl_floatingAttrD t := fun _ => "[@@@" ++ t ++ "]"
   decl_blank := fun _ => ""
+  decl_openD path := fun _ => "open " ++ path
+  decl_moduleTypeD n items := fun ind =>
+    "module type " ++ n ++ " = sig\n"
+      ++ String.join (items.map fun i => indentOf (ind + 1) ++ renderSigItem i ++ "\n")
+      ++ indentOf ind ++ "end"
 
 /-- One declaration, as a top-level structure item. -/
 def renderDecl (d : Decl) : String := cata_decl renderDeclAlg d 0
@@ -298,6 +327,9 @@ this file is supposed to produce. -/
 #guard renderTy (.tuple [.arrow Ty.int Ty.int, Ty.bool]) == "(int -> int) * bool"
 #guard renderTy (.list (.tuple [Ty.int, Ty.bool])) == "(int * bool) list"
 #guard renderTy .anon == "_"
+-- a labelled arrow, its domain an arrow
+#guard renderTy (.labelled "exit_of" (.arrow (.var "a") (Ty.option (.var "x"))) (.var "a"))
+  == "exit_of:('a -> 'x option) -> 'a"
 
 -- Expressions: the operator table, and the parentheses it does *not* emit.
 #guard renderExpr 0 (.binop "+" (.binop "*" (.int 1) (.int 2)) (.int 3)) == "1 * 2 + 3"
@@ -308,6 +340,8 @@ this file is supposed to produce. -/
 #guard renderExpr 0 (.binop "&&" (.binop "=" (.var "a") (.var "b")) (.var "c"))
   == "a = b && c"
 #guard renderExpr 0 (Expr.call "f" [.var "a", Expr.call "g" [.var "b"]]) == "f a (g b)"
+-- an application in head position keeps its tree
+#guard renderExpr 0 (.app (Expr.call "f" [.var "x"]) [.var "y"]) == "(f x) y"
 #guard renderExpr 0 (.field (.field (.var "f") "frame") "control") == "f.frame.control"
 #guard renderExpr 0 (.tuple [.int 1, .tuple [.int 2, .int 3]]) == "1, (2, 3)"
 #guard renderExpr 0 (.listLit [.tuple [.int 1, .int 2]]) == "[(1, 2)]"
@@ -335,5 +369,36 @@ this file is supposed to produce. -/
 -- A module is its header and its items.
 #guard render { name := "m", header := some "Generated.", items := [.comment "x"] }
   == "(* Generated. *)\n\n(* x *)\n\n"
+
+-- The `eff/` emitter's forms: an integer pattern, `function`, a sequence, a pattern `let`, an
+-- `if` without `else` and a trailing comment.
+#guard renderPat (.tuple [.ctor "Eff" [], .int 4]) == "Eff, 4"
+#guard renderExpr 0 (.fnMatch [(.ctor "A" [], .int 0), (.wild, .int 1)])
+  == "function\n  | A -> 0\n  | _ -> 1"
+#guard renderExpr 0 (.seq (Expr.call "f" [.var "x"]) (Expr.call "g" [.var "x"])) == "f x; g x"
+-- a `match` left of `;` is parenthesised, or its last arm would take the right operand
+#guard renderExpr 0 (.seq (.matchE (.var "x") [(.wild, .unit)]) .unit)
+  == "(match x with\n  | _ -> ()); ()"
+-- a sequence in a branch is parenthesised; a sequence in an arm is not
+#guard renderExpr 0 (.ifThen (.var "c") (.seq .unit .unit) .unit) == "if c then ((); ()) else ()"
+#guard renderExpr 0 (.matchE (.var "x") [(.wild, .seq .unit .unit)]) == "match x with\n  | _ -> (); ()"
+#guard renderExpr 0 (.letPat (.tuple [.var "a", .var "b"]) (.var "p") (.var "a"))
+  == "let a, b = p in\na"
+#guard renderExpr 0 (.ifUnit (.var "c") (Expr.call "f" [.unit])) == "if c then f ()"
+-- an `if` without `else` in the branch of one with `else` is parenthesised: no dangling `else`
+#guard renderExpr 0 (.ifThen (.var "a") (.ifUnit (.var "b") .unit) .unit)
+  == "if a then (if b then ()) else ()"
+#guard renderExpr 0 (.commented (.int 1) "one") == "1 (* one *)"
+
+-- The module language: a packed module, `open`, a module type, private bodies.
+#guard renderExpr 0 (Expr.call "run" [.pack "E4_table" "TABLE"]) == "run (module E4_table : TABLE)"
+#guard renderDecl (.openD "Eff_types") == "open Eff_types"
+#guard renderDecl (.moduleTypeD "TABLE"
+    [.type { name := "t", params := ["a"], body := .abstract }, .value "empty" (.con "t" [.var "a"])])
+  == "module type TABLE = sig\n  type 'a t\n  val empty : 'a t\nend"
+#guard renderDecl (.types [{ name := "nat", body := .alias Ty.int, isPrivate := true }])
+  == "type nat = private int"
+#guard renderDecl (.types [{ name := "t", body := .variant [{ name := "A" }], isPrivate := true }])
+  == "type t = private A"
 
 end OCaml5.Ml

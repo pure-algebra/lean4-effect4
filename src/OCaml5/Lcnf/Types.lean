@@ -478,4 +478,21 @@ partial def generate (full : Array Name) (mentioned : Array Name) (tn : TypeName
 def Generated.item (g : Generated) : Ml.Decl :=
   .types g.decls.toList
 
+/-- A set of types declared in full, as one artifact's own run declares them: no extern table,
+and the renaming loop of the generator (`OCaml5.Lcnf.Gen.run`), whose decided names come back
+with the declarations. A placeholder, a collision or an unspelled field is fatal: a module that
+opens these types would otherwise miss one. `Gen.run` reads an opened artifact's types so, and
+the `eff/` emitter reads the interface of `Eff_types` so. -/
+def generateInFull (types : Array Name) : MetaM (Generated × TypeNames) := do
+  let mut tn : TypeNames := {}
+  let mut g ← generate types #[] tn {}
+  for _ in [:4] do
+    if g.collisions.isEmpty then break
+    for (_, _, n) in g.collisions do tn := tn.insert n (fullTypeName n)
+    g ← generate types #[] tn {}
+  unless g.placeholders.isEmpty && g.collisions.isEmpty && g.unknown.isEmpty do
+    throwError s!"the types are not all declared in full (fatal): placeholders {g.placeholders}, \
+      collisions {g.collisions}, unknown {g.unknown}"
+  return (g, tn)
+
 end OCaml5.Lcnf

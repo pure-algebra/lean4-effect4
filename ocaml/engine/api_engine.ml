@@ -11,22 +11,23 @@ open Eff_types
 
 (* An int-keyed persistent table.  `set` REPLACES and never inserts (Lean's List.set and
    List.map-by-key are no-ops on an absent key); `add` inserts.  `bindings` is ascending. *)
+
 module type TABLE = sig
   type 'a t
-  val empty     : 'a t
-  val find_opt  : int -> 'a t -> 'a option
-  val set       : int -> 'a -> 'a t -> 'a t
-  val add       : int -> 'a -> 'a t -> 'a t
-  val remove    : int -> 'a t -> 'a t
-  val mem       : int -> 'a t -> bool
-  val cardinal  : 'a t -> int
-  val map       : ('a -> 'a) -> 'a t -> 'a t
+  val empty : 'a t
+  val find_opt : int -> 'a t -> 'a option
+  val set : int -> 'a -> 'a t -> 'a t
+  val add : int -> 'a -> 'a t -> 'a t
+  val remove : int -> 'a t -> 'a t
+  val mem : int -> 'a t -> bool
+  val cardinal : 'a t -> int
+  val map : ('a -> 'a) -> 'a t -> 'a t
   val filter_map : (int -> 'a -> 'b option) -> 'a t -> 'b list
-  val for_all   : (int -> 'a -> bool) -> 'a t -> bool
-  val fold      : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-  val bindings  : 'a t -> (int * 'a) list
-  val of_list   : (int * 'a) list -> 'a t
-  val to_list   : 'a t -> 'a list
+  val for_all : (int -> 'a -> bool) -> 'a t -> bool
+  val fold : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  val bindings : 'a t -> (int * 'a) list
+  val of_list : (int * 'a) list -> 'a t
+  val to_list : 'a t -> 'a list
 end
 
 (* The fiber table: an int-keyed persistent table that also MAINTAINS the completed view --
@@ -39,46 +40,50 @@ end
    is ocaml/engine/e4_fibers_view.mli's own signature, so `module F = E4_fibers_view` needs no
    adapter.  Nothing removes a fiber -- the ordering argument that licenses the substitution
    is that no fiber is ever removed (gen-check.sh C1). *)
+
 module type FIBERS = sig
   type ('a, 'x) t
-  val empty     : ('a, 'x) t
-  val find_opt  : int -> ('a, 'x) t -> 'a option
-  val set       : exit_of:('a -> 'x option) -> int -> 'a -> ('a, 'x) t -> ('a, 'x) t
-  val add       : exit_of:('a -> 'x option) -> int -> 'a -> ('a, 'x) t -> ('a, 'x) t
-  val map       : exit_of:('a -> 'x option) -> ('a -> 'a) -> ('a, 'x) t -> ('a, 'x) t
-  val for_all   : (int -> 'a -> bool) -> ('a, 'x) t -> bool
+  val empty : ('a, 'x) t
+  val find_opt : int -> ('a, 'x) t -> 'a option
+  val set : exit_of:('a -> 'x option) -> int -> 'a -> ('a, 'x) t -> ('a, 'x) t
+  val add : exit_of:('a -> 'x option) -> int -> 'a -> ('a, 'x) t -> ('a, 'x) t
+  val map : exit_of:('a -> 'x option) -> ('a -> 'a) -> ('a, 'x) t -> ('a, 'x) t
+  val for_all : (int -> 'a -> bool) -> ('a, 'x) t -> bool
   val completed : ('a, 'x) t -> (int * 'x) list
-  val cardinal  : ('a, 'x) t -> int
-  val bindings  : ('a, 'x) t -> (int * 'a) list
-  val to_list   : ('a, 'x) t -> 'a list
-  val of_list   : exit_of:('a -> 'x option) -> (int * 'a) list -> ('a, 'x) t
+  val cardinal : ('a, 'x) t -> int
+  val bindings : ('a, 'x) t -> (int * 'a) list
+  val to_list : ('a, 'x) t -> 'a list
+  val of_list : exit_of:('a -> 'x option) -> (int * 'a) list -> ('a, 'x) t
 end
 
 (* An append-and-read-once event log.  `emit []` is O(1) and physically equal. *)
+
 module type TRACE = sig
   type 'e t
-  val empty   : 'e t
-  val emit    : 'e list -> 'e t -> 'e t
+  val empty : 'e t
+  val emit : 'e list -> 'e t -> 'e t
   val to_list : 'e t -> 'e list
-  val length  : 'e t -> int
+  val length : 'e t -> int
 end
 
 (* A table keyed by a layer's identity, its path and the call that runs it
    (`LayerId = List Nat × CallId`, decisions row 341, step 3).  `insert` KEEPS an existing
    binding: Lean appends and `find?` answers the first (`MemoWorld.insertEntry`). *)
+
 module type LAYERS = sig
   type 'a t
-  val empty     : 'a t
-  val find_opt  : int list * int list list -> 'a t -> 'a option
-  val insert    : int list * int list list -> 'a -> 'a t -> 'a t
-  val update    : int list * int list list -> ('a -> 'a) -> 'a t -> 'a t
-  val delete    : int list * int list list -> 'a t -> 'a t
-  val bindings  : 'a t -> ((int list * int list list) * 'a) list
+  val empty : 'a t
+  val find_opt : int list * int list list -> 'a t -> 'a option
+  val insert : int list * int list list -> 'a -> 'a t -> 'a t
+  val update : int list * int list list -> ('a -> 'a) -> 'a t -> 'a t
+  val delete : int list * int list list -> 'a t -> 'a t
+  val bindings : 'a t -> ((int list * int list list) * 'a) list
 end
 
 (* The per-fiber dispatcher: priority -> FIFO, persistent.  This is
    ocaml/engine/queue/e4_buckets.mli verbatim (engine-a3 SS1.1.1), so `module D = E4_buckets`
    needs no adapter. *)
+
 module type DISPATCHER = sig
   type 'a t
   val empty : 'a t
@@ -98,6 +103,7 @@ end
    (docs/research/2026-09-08-engine-prof-chain.md SS5.1).  This is
    ocaml/engine/e4_ppath.mli's own signature.  `'n` is the generated `node` type, which is
    declared inside this functor, so `Node.child` is passed in rather than closed over. *)
+
 module type PPATH = sig
   type 'n t
   val make : 'n -> 'n t
@@ -113,6 +119,7 @@ end
 (* A point's environment: a snoc-shared spine with a cached length.  `get` is Lean's
    `env[i]?` (indexed from the front) and `take` is Lean's `List.take` (clamped).  This is
    ocaml/engine/e4_env.mli's own signature. *)
+
 module type PENV = sig
   type 'a t
   val empty : 'a t
@@ -1254,7 +1261,8 @@ let sh_dispatcher_insert priority task dispatcher = D.enqueue dispatcher ~priori
   let lcnf_utf8_length s =
   String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
   let lcnf_utf8_of_code_points cs =
-  let b = Buffer.create 16 in List.iter (fun c -> Buffer.add_utf_8_uchar b (Uchar.of_int c)) cs; Buffer.contents b
+  let b = Buffer.create 16 in
+  List.iter (fun c -> Buffer.add_utf_8_uchar b (Uchar.of_int c)) cs; Buffer.contents b
   let lcnf_nat_mul a b =
   if a = 0 then 0 else if b > max_int / a then max_int else a * b
   let rec lcnf_nat_pow a b =

@@ -194,14 +194,8 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   let mut provided : NameSet := {}
   let mut openedDecls : Array Ml.TypeDecl := #[]
   if args.opens.isSome then
-    let mut og ← generate args.openTypes #[] tn {}
-    for _ in [:4] do
-      if og.collisions.isEmpty then break
-      for (_, _, n) in og.collisions do tn := tn.insert n (fullTypeName n)
-      og ← generate args.openTypes #[] tn {}
-    unless og.placeholders.isEmpty && og.collisions.isEmpty && og.unknown.isEmpty do
-      throwError s!"the opened module's types are not all declared in full (fatal): \
-        placeholders {og.placeholders}, collisions {og.collisions}, unknown {og.unknown}"
+    let (og, otn) ← generateInFull args.openTypes
+    tn := otn
     provided := (og.full ++ og.aliases).foldl (·.insert ·) {}
     openedDecls := og.decls
   let (closure0, ex, inferred) ← translateClosureInferring args.roots args.cap tn handEx
@@ -234,14 +228,13 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   -- makes 30 fatal; `ocaml/gen` builds with `-warn-error -a` and its list is left alone, so
   -- `ocaml/gen/api_gen.ml` regenerates byte for byte.
   let opened : List Ml.Decl :=
-    match args.opens with | none => [] | some m => [.rawD s!"open {m}", .blank]
+    match args.opens with | none => [] | some m => [.openD m, .blank]
   let items : List Ml.Decl :=
     if args.externs.isNone then
       [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank] ++ opened ++ body
     else
       [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank] ++ opened ++
-      [.rawD carrierSignatures, .blank,
-       .moduleD "Make" carrierParams body]
+      carrierSignatures ++ [.blank, .moduleD "Make" carrierParams body]
   let modName := (System.FilePath.mk args.out).fileStem.getD "lcnf_gen"
   let m : Ml.Module := { name := modName, header := some header, items := items }
   let t4 ← IO.monoNanosNow
@@ -285,8 +278,13 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
     throwError s!"todos remaining in closure (fatal): {closure.problems}"
   unless gen.collisions.isEmpty do
     throwError s!"unresolved type-name collisions (fatal): {gen.collisions}"
-  -- The module's own well-formedness, FATAL (tooling plan 4.3), for every artifact.
-  let diags := Ml.checkModule m openedDecls.toList
+  -- The module's own well-formedness, FATAL (tooling plan 4.3), for every artifact. The opened
+  -- unit's interface is its types, as its own artifact declares them: the `open` reads as a
+  -- scope, and the value names past it are checked.
+  let units : List Ml.Interface := match args.opens with
+    | none => []
+    | some m => [{ name := m, types := openedDecls.toList }]
+  let diags := Ml.checkModule m units
   unless diags.isEmpty do
     throwError s!"Ml.checkModule (fatal): {diags.length} diagnostic(s)\n  " ++
       "\n  ".intercalate (diags.map Ml.Diag.toLine)

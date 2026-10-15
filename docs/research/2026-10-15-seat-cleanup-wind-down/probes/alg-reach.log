@@ -1,0 +1,32 @@
+closure 1330
+Effect4.Program.expandAlgebra._redArg: real [] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.expandAlgebra._redArg (orig : Effect4.Program.Node lcAny) : Effect4.Program.EffAlgebra lcAny lcAny
+Effect4.Program.cata_eff._redArg: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.cata_eff._redArg (alg : Effect4.Program.EffAlgebra lcAny lcAny) (node : Effect4.Program.Eff lcAny) : lcAny
+Effect4.Program.EffAlgebra.onRef._redArg: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.EffAlgebra.onRef._redArg (f : (List Nat) -> (Effect4.Program.LayerTerm lcAny)) : Effect4.Program.EffAlgebra lcAny lcAny
+Effect4.Program.cata_stmts._redArg: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.cata_stmts._redArg (alg : Effect4.Program.EffAlgebra lcAny lcAny) (node : Effect4.Program.Stmts lcAny) : lcAny
+Effect4.Program.cata_action._redArg: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.cata_action._redArg (alg : Effect4.Program.EffAlgebra lcAny lcAny) (node : Effect4.Program.ActionTerm lcAny) : lcAny
+Effect4.Program.cata_layer._redArg: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.cata_layer._redArg (alg : Effect4.Program.EffAlgebra lcAny lcAny) (node : Effect4.Program.LayerTerm lcAny) : lcAny
+Effect4.Program.cata_effs._redArg: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.cata_effs._redArg (alg : Effect4.Program.EffAlgebra lcAny lcAny) (node : Effect4.Program.Effs lcAny) : lcAny
+Effect4.Program.cata_layers._redArg: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.cata_layers._redArg (alg : Effect4.Program.EffAlgebra lcAny lcAny) (node : Effect4.Program.LayerTerms lcAny) : lcAny
+Effect4.Program.EffAlgebra.id: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.EffAlgebra.id (Op : lcErased) : Effect4.Program.EffAlgebra lcAny lcAny
+Effect4.Program.cata_stmt._redArg: real [Effect4.Program.EffAlgebra] mentioned [Effect4.Program.EffAlgebra]
+    Effect4.Program.cata_stmt._redArg (alg : Effect4.Program.EffAlgebra lcAny lcAny) (node : Effect4.Program.Stmt lcAny) : lcAny
+_private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra: real [Effect4.Program.TermAlgebra] mentioned [Effect4.Program.TermAlgebra]
+    _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (constAtom : String -> Bool) : Effect4.Program.TermAlgebra lcAny
+Effect4.Program.cata_term._redArg: real [Effect4.Program.TermAlgebra] mentioned [Effect4.Program.TermAlgebra]
+    Effect4.Program.cata_term._redArg (alg : Effect4.Program.TermAlgebra lcAny) (node : Effect4.Program.Term) : lcAny
+_private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra: real [Effect4.Program.CauseTermAlgebra] mentioned [Effect4.Program.CauseTermAlgebra]
+    _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra (inferCause : Effect4.Program.CauseTerm -> (Option Effect4.Program.Ty)) (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option Effect4.Program.TermTypingRefusal)) : Effect4.Program.CauseTermAlgebra lcAny
+Effect4.Program.cata_cause._redArg: real [Effect4.Program.CauseTermAlgebra] mentioned [Effect4.Program.CauseTermAlgebra]
+    Effect4.Program.cata_cause._redArg (alg : Effect4.Program.CauseTermAlgebra lcAny) (node : Effect4.Program.CauseTerm) : lcAny
+Effect4.Program.cata_terms._redArg: real [Effect4.Program.TermAlgebra] mentioned [Effect4.Program.TermAlgebra]
+    Effect4.Program.cata_terms._redArg (alg : Effect4.Program.TermAlgebra lcAny) (node : Effect4.Program.Terms) : lcAny
+exit=0

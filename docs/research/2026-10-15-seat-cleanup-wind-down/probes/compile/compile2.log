@@ -1,0 +1,5 @@
+File "todo_host.ml", line 11257, characters 45-52:
+11257 |       let _x_6 = ({ to_byte_array = _x_5 } : string_) in
+                                                     ^^^^^^^
+Error: Unbound type constructor string_
+Hint: Did you mean string?

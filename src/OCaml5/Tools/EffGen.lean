@@ -41,8 +41,10 @@ What is derived and what is written by hand, precisely:
 
 This is a tool (`IO`, `Lean.Meta`); it is not part of any audited library.
 
-A thin driver over `OCaml5.Eff`: it reads the closed world, runs the cross-checks, and writes the
-files. The library — the carrier alphabet, the emitters, the goldens — is `src/OCaml5/Eff/`.
+A thin driver over `OCaml5.Eff`: it reads the closed world, runs the cross-checks, checks every
+OCaml module (`OCaml5.Ml.checkModule`, with the interface of `Eff_types` that an `open` reads),
+and only then renders (`OCaml5.Ml.render`) and writes the files. The library — the carrier
+alphabet, the emitters, the goldens — is `src/OCaml5/Eff/`.
 -/
 
 open Lean Meta
@@ -77,8 +79,9 @@ def main (args : List String) : IO Unit := do
   let ctx : Core.Context := { fileName := "<effgen>", fileMap := default }
   let (bs, _) ← ((readBlocks.run' {}).toIO ctx { env := env })
   let (sorts, _) ← ((readNodeSorts.run' {}).toIO ctx { env := env })
-  let subtermText ← match emitSubterm sorts bs with
-    | .ok text => pure text
+  let (effTypes, _) ← (((typesInterface bs).run' {}).toIO ctx { env := env })
+  let subterm ← match subtermModule sorts bs with
+    | .ok m => pure m
     | .error message => throw (IO.userError message)
   let families := bs.flatten
   -- wire tags, by full constructor name, from the one assignment (`World.readBlocks` read
@@ -139,25 +142,20 @@ def main (args : List String) : IO Unit := do
   -- write
   IO.FS.createDirAll out
   IO.FS.createDirAll (out / "goldens")
-  let wireFamilies := bs.flatten.map fun f =>
-    let fields := if f.isStruct then f.ctors.head!.args.map (·.1) else f.ctors.map (·.short)
-    "(" ++ ostr f.spec.leanName.getString! ++ ", [" ++ "; ".intercalate (fields.map ostr) ++ "])"
-  let wireTags := (bs.flatten.filter (!·.isStruct)).map fun f =>
-    "(" ++ ostr f.spec.leanName.getString! ++ ", [" ++ "; ".intercalate
-      (f.ctors.map fun c => "(" ++ ostr c.short ++ ", " ++ toString c.tag ++ ")") ++ "])"
-  IO.FS.writeFile (out / "eff_layout.ml") ("(* " ++ stamp ++ " *)\n" ++
-    "(* GENERATED source-structure view; no runtime or execution-permission claim. *)\n" ++
-    "let wire_families = [\n  " ++ ";\n  ".intercalate wireFamilies ++ "\n]\n\n" ++
-    "(* The wire tag of every constructor of every inductive family, from\n" ++
-    "   tools/Effect4Gen/wire-tags.json. A tag is not a declaration position. *)\n" ++
-    "let wire_tags = [\n  " ++ ";\n  ".intercalate wireTags ++ "\n]\n")
+  -- every OCaml file is checked before any is written: the module checker, with the interface of
+  -- `Eff_types` that an `open` of it reads (`typesInterface`)
+  let files : List (String × OCaml5.Ml.Module) :=
+    [("eff_layout.ml", layoutModule bs), ("eff_ctors.ml", ctorsModule bs),
+     ("eff_wire.ml", wireModule bs), ("eff_subterm.ml", subterm), ("eff_json.ml", jsonModule bs),
+     ("eff_native.ml", nativeModule nul typed fn st)]
+  for (file, m) in files do
+    let diags := OCaml5.Ml.checkModule m [effTypes]
+    unless diags.isEmpty do
+      throw (IO.userError s!"EffGen: {file}: Ml.checkModule (fatal): {diags.map OCaml5.Ml.Diag.toLine}")
+  for (file, m) in files do
+    IO.FS.writeFile (out / file) (OCaml5.Ml.render { m with header := some stamp })
   IO.FS.writeFile (out / "goldens" / "metadata.tsv") ("\n".intercalate metadataLines ++ "\n")
   IO.FS.writeFile (out / "goldens" / "coverage-metadata.txt") ("\n".intercalate metadataRows ++ "\n")
-  IO.FS.writeFile (out / "eff_ctors.ml") ("(* " ++ stamp ++ " *)\n" ++ emitCtors bs)
-  IO.FS.writeFile (out / "eff_wire.ml") ("(* " ++ stamp ++ " *)\n" ++ emitWire bs)
-  IO.FS.writeFile (out / "eff_subterm.ml") ("(* " ++ stamp ++ " *)\n" ++ subtermText)
-  IO.FS.writeFile (out / "eff_json.ml") ("(* " ++ stamp ++ " *)\n" ++ emitJson bs)
-  IO.FS.writeFile (out / "eff_native.ml") ("(* " ++ stamp ++ " *)\n" ++ emitNative nul typed fn st)
   IO.FS.writeFile (out / "eff_manifest.txt") (manifest bs)
   let mut corpusLines : Array String := #[]
   let mut coverage : NameMap Nat := {}
