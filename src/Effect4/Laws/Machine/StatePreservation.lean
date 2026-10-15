@@ -241,16 +241,22 @@ theorem withFiber (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν �
     P (evaluatePrim.withFiber interp m f yielding action).machine.state :=
   withFiber_on interp P hooks.commands hooks.close m f yielding action held
 
-include hooks in
-/-- The primitive evaluator accesses the store only through the named hooks.
-Consumer: native allocation preservation and its command lift. -/
-theorem primitive (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
-    (yielding : Bool) (held : P m.state) : P (evaluatePrim interp m f yielding).machine.state := by
+/-- The actual current primitive supplies its own store permissions.
+Consumer: source-qualified Atomic and pending-initializer store facts. -/
+theorem primitive_at (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+    (yielding : Bool) (held : P m.state)
+    (sync_preserves : ∀ name state value, f.frame.current = .sync name →
+      interp.syncState name m.state = some (state, value) → P state)
+    (async_preserves : ∀ name signal cancel, f.frame.current = .async name signal cancel →
+      P (interp.registerAsync name f.id m.nextToken m.state).1)
+    (action_preserves : ∀ thunk action, f.frame.current = .withFiber thunk →
+      interp.withFiberOf thunk = some action → P (evaluatePrim.withFiber interp m f yielding action).machine.state) :
+    P (evaluatePrim interp m f yielding).machine.state := by
   simp only [evaluatePrim]
   split
   · exact held
   · rename_i name signal cancel current
-    have changed := hooks.async name f.id m.nextToken m.state held
+    have changed := async_preserves name signal cancel current
     split
     · exact changed
     · exact changed
@@ -264,15 +270,29 @@ theorem primitive (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν �
       · split <;> exact held
     · split
       · split
-        · exact withFiber interp P hooks _ _ _ _ held
+        · apply action_preserves
+          all_goals assumption
         · exact stepFrame interp P _ _ _ held
       · split
         · rename_i state value step
-          exact hooks.sync _ m.state state value held step
+          exact sync_preserves _ state value (by assumption) step
         · exact held
       · exact finalizerOr interp P _ _ _ _ held
       · exact finalizerOr interp P _ _ _ _ held
       · exact stepFrame interp P _ _ _ held
+
+include hooks in
+/-- The primitive evaluator accesses the store only through the named hooks.
+Consumer: native allocation preservation and its command lift. -/
+theorem primitive (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+    (yielding : Bool) (held : P m.state) : P (evaluatePrim interp m f yielding).machine.state := by
+  apply primitive_at interp P m f yielding held
+  · intro name state value current produced
+    exact hooks.sync name m.state state value held produced
+  · intro name signal cancel current
+    exact hooks.async name f.id m.nextToken m.state held
+  · intro thunk action current found
+    exact withFiber interp P hooks m f yielding action held
 end Primitive
 
 section Commands

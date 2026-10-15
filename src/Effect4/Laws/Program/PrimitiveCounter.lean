@@ -46,26 +46,42 @@ theorem finalizerOr_nextId (interp : NInterp) (machine : NativeMachine) (fiber :
       · exact stepFrame_nextId interp machine fiber yielding
     · exact stepFrame_nextId interp machine fiber yielding
 
-/-- Actual nonaction, unparked primitive evaluation cannot consume a fresh fiber identity. -/
-theorem evaluatePrim_nextId (interp : NInterp) (machine : NativeMachine) (fiber : NFiber) (yielding : Bool)
-    (unparked : interp.parkOf fiber.frame.current = none)
-    (ordinary : ∀ thunk, fiber.frame.current ≠ .withFiber thunk) :
+/-- The actual primitive producer isolates fiber allocation to its action branch. -/
+theorem evaluatePrim_nextId_of_actions (interp : NInterp) (machine : NativeMachine) (fiber : NFiber)
+    (yielding : Bool)
+    (actions : ∀ thunk action, fiber.frame.current = .withFiber thunk →
+      interp.parkOf fiber.frame.current = none → interp.withFiberOf thunk = some action →
+      (evaluatePrim.withFiber interp machine fiber yielding action).machine.nextId = machine.nextId) :
     (evaluatePrim interp machine fiber yielding).machine.nextId = machine.nextId := by
   have producer := evaluatePrim_producer interp machine fiber yielding
   generalize actual : evaluatePrim interp machine fiber yielding = result at producer ⊢
   cases producer with
   | step => exact stepFrame_nextId interp machine fiber yielding
   | finalizer exit => exact finalizerOr_nextId interp machine fiber yielding exit
-  | action thunk action current => exact (ordinary thunk current).elim
+  | action thunk action current noPark found => exact actions thunk action current noPark found
   | sync => rfl
   | fallback => rfl
   | yieldNow => rfl
   | asyncImmediate => rfl
   | asyncParked => rfl
-  | rejectedPark cause parked => have impossible := unparked.symm.trans parked; cases impossible
-  | racePark race parked => have impossible := unparked.symm.trans parked; cases impossible
-  | countdownPark targets next returned blocked edits parked => have impossible := unparked.symm.trans parked; cases impossible
-  | joinMissing target mode parked => have impossible := unparked.symm.trans parked; cases impossible
-  | joinExited target mode other exit parked => have impossible := unparked.symm.trans parked; cases impossible
-  | joinWaiting target mode other parked => have impossible := unparked.symm.trans parked; cases impossible
+  | rejectedPark => rfl
+  | racePark => unfold registerRace; split <;> rfl
+  | countdownPark targets next returned blocked edits parked counted =>
+    have same : (countdownParkEdits interp machine fiber targets .exitsValue false).1.nextId = machine.nextId := by
+      unfold countdownParkEdits
+      dsimp only
+      split <;> rfl
+    rw [counted] at same
+    exact same
+  | joinMissing => rfl
+  | joinExited => rfl
+  | joinWaiting => rfl
+
+/-- Actual nonaction, unparked primitive evaluation cannot consume a fresh fiber identity. -/
+theorem evaluatePrim_nextId (interp : NInterp) (machine : NativeMachine) (fiber : NFiber) (yielding : Bool)
+    (_unparked : interp.parkOf fiber.frame.current = none)
+    (ordinary : ∀ thunk, fiber.frame.current ≠ .withFiber thunk) :
+    (evaluatePrim interp machine fiber yielding).machine.nextId = machine.nextId := by
+  exact evaluatePrim_nextId_of_actions interp machine fiber yielding
+    (fun thunk _ current _ _ => (ordinary thunk current).elim)
 end Effect4.Program.Moves
