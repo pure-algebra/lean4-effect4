@@ -4,12 +4,12 @@ Status: receipt (history, not authority). Branch `claude/codegen`, worktree
 `/Users/pooks/Dev/lean4-effect4-codegen`, base `edae4e2b5`. The seat appends one section per
 slice as the slice lands.
 
-**The one thing to know before merging:** CR-0 cuts the codegen out of the program interface's
-import closure, but one new module stays wide. The refusal alphabets of the printer and the
-reader moved to `Effect4.Codegen.Refusal`, which `Effect4.Api` imports, because the generated
-`src/Effect4/Api/RefusalsDerived.lean` reads them through `Effect4.Api`. Its imports come from
-`tools/Effect4Gen/manifest.json`, which this seat may not edit. That module's edit rebuilds 454
-modules; every other core codegen module rebuilds 16 to 91.
+**The one thing to know before merging:** the TypeScript module that ships is not the typed
+print everywhere. CR-1 found a well-typed program that the typed print refuses: the keyed lane's
+`timeout/eager` client (`typed:term slot depth`, at an `iterate`). So the shipped module prints
+each piece by the typed print, and by the fold where the typed print refuses (`shippedPieces`).
+No verdict moves in any lane. The refusal is a defect of the eliminator-site printer, proposed
+below as P-CR1-3.
 
 ## Baseline at the base `edae4e2b5`
 
@@ -39,6 +39,15 @@ The times include the wait for the slot, so they bound a gate's own time from ab
 ### Base and head
 
 Base `edae4e2b5`, head `3fcd80e94`.
+
+### The one module that stays wide
+
+CR-0 cuts the codegen out of the program interface's import closure, but one new module stays
+wide. The refusal alphabets of the printer and the reader moved to `Effect4.Codegen.Refusal`,
+which `Effect4.Api` imports, because the generated `src/Effect4/Api/RefusalsDerived.lean` reads
+them through `Effect4.Api`. Its imports come from `tools/Effect4Gen/manifest.json`, which this
+seat may not edit. That module's edit rebuilds 454 modules; every other core codegen module
+rebuilds 16 to 91.
 
 ### What moved, and why each move serves the cut
 
@@ -248,3 +257,157 @@ No declaration of `Effect4.*` or `Test.*` changed: the edits are in the tool roo
 - **P-CR3-1.** `$(CHK)/target` in the `Makefile` adds `tools/Tools/TypeSpelling.lean` to its
   prerequisites, so an edit of the shipped spelling re-runs the gate. The `Makefile` is the
   coordinator's while the lowering branch is open.
+
+## CR-1: one emission route
+
+### Base and head
+
+Base `9a699340a`, head `bdf074d15`.
+
+### What landed, step by step
+
+| Step of the plan | The form landed |
+| --- | --- |
+| 1. `printEntry` prints through `printTyped` | one module printer over a printer of the program pieces (`printModuleWith`, `printEntryWith`, `PiecePrint`, `src/Effect4/Codegen/Print.lean`); the checked emission prints its pieces by `shippedPieces` (`src/Effect4/Codegen/PrintTyped.lean`): the typed print, and the fold where the typed print refuses; `printModule` and `printEntry` are the plain instances; `Api.printDecl` prints its body as the module does |
+| 2. `typeArgsAt` reads the `annotate` table | `typeArgsAt s entries p` reads the focus off the table (`focusAtTable`, `Focus.joinArgs`); the old focus-based `typeArgsAt` is gone |
+| 3. unchecked programs get the same writer | `uncheckedFile` (`src/Effect4/Codegen/Checked.lean`), and the one writer of every lane, `Tools.Code.programModule` (`tools/Tools/Code/Module.lean`) |
+| 4. the truth modules' text in Lean | `harness/truth/Truth.lean` writes `module`, `moduleInferred`, `moduleSource`, `moduleRefusal` and `expr` (the main initializer, flat); `run-truth.ts` writes `module` as it is; the service clients are Lean syntax inside the module, so its imports cover them; the truth lane's host binds its row namespaces from its prelude (`hostImports`) |
+| 5. the corpus's module texts in Lean | `tools/Drivers/Corpus.lean` writes `.lake/corpus/modules/<name>.ts` and the lane's two controls; `harness/tsdiag/run-tsdiag.mjs` reads them as they are |
+| 6. `bindingsType` into the core | `hostBindings` (`src/Effect4/Codegen/RowServices.lean`), a structured type whose methods are the service methods' fields (`rowMethodField`); the keyed lane's scenario module is Lean's (`scenarioModule`), under the host's header of bindings |
+| 7. `ts/eff/read.ts` reads a join's type arguments | a reading mode, `Joins`: `erase` reads the bare call where neither the operation nor its row carries type arguments, as `eraseRowJoin` does; `ts/eff/check.ts` reads with `erase` |
+| 8. the erasure lifted to modules | one module reader over a reader of the pieces (`readModuleWith`, `PieceRead`, `src/Effect4/Codegen/Read.lean`); `readModuleTyped` reads each piece by `readTyped`; `admitModule`, `Api.readModule` and `Api.readFile` read so |
+
+P2b's module (`harness/truth/P2b.lean`) comes from Lean too, with its imports from Lean data
+(`fileOf`); `scripts/check-truth.py` writes it as it is.
+
+### Two departures from the plan, each with its cause (row 390)
+
+- **The fold where the typed print refuses.** The typed print refuses the keyed lane's
+  `timeout/eager` client: the `iterate` at the address `[1, 1, 1, 0]` of its hoisted main
+  program, with `internalAction "typed:term slot depth"` (`PrintEliminators.printArg`). There a
+  term slot's checked environment is not the template's binder depth. Under the plain typed print
+  the scenario's script had no host run: 86 scripts in 294 runs, against 87 in 297 at the base.
+  Under `shippedPieces` the script runs as at the base. The probes are the seat's
+  `cr1/probe/Eager*.lean`. The fallback serves the same users: every module that printed still
+  prints, typed where the typed print succeeds.
+- **The diagnostics lane checks the unchecked module.** Under the module that ships, with its
+  declared type, `g309` moves from `typed-clean` to `typed-errors`, and the lane fails. The
+  corpus lane registers the same TS2375 for `g309` in `harness/truth/corpus-known-differences.md`:
+  tsgo infers `Fiber<unknown, unknown>` from a never value. So the diagnostics lane checks each
+  program as `export const main = …` with no declared type, by the one writer. Whether it checks
+  the module that ships is P-CR1-2.
+
+### Deletes
+
+- `joinedOutput`, `fixtureOutput` and `joinedFixtures` of `harness/truth/Truth.lean`;
+- `importHeader` and the module assembly of `harness/truth/run-truth.ts`;
+- `columnType` and `bindingsType` of `harness/truth/session/Keyed.lean`, and the keyed header's
+  lists of `effect` and prelude names (`run-keyed.ts`);
+- the diagnostics lane's module writer and the corpus's `expanded/` twins;
+- P2b's header from `module-imports.ts` (`scripts/check-truth.py`).
+
+`harness/truth/module-imports.ts` stays: no code reads it, and `TRUTH_SOURCES` in the `Makefile`
+names it, so deleting it stops `make gen-truth` (P-CR1-1).
+
+### Changed files
+
+39 source files and 95 generated ones.
+
+- The core: `src/Effect4/Codegen/{Print,Read,PrintTyped,Checked,Admit,RowServices}.lean` and
+  `src/Effect4/Api/Codegen.lean`.
+- The laws: `src/Effect4/Laws/Codegen/{Module,PrintTyped,Checked,Admit}.lean` and
+  `src/Effect4/Laws/Api/{Codegen,ModuleReadable}.lean`; docstrings only in
+  `src/Effect4/Laws/Codegen/{Classes,Definitions,RowServices,Services}.lean` and
+  `src/Effect4/Laws/Program/Hoisting.lean`.
+- The tools and lanes: `tools/Tools/Code/Module.lean`, `tools/Drivers/Corpus.lean`,
+  `tools/target/{checker,corpus,oracle}.ts`, `harness/truth/{Truth,P2b}.lean`,
+  `harness/truth/run-truth.ts`, `harness/truth/session/{Keyed.lean,run-keyed.ts}`,
+  `harness/tsdiag/run-tsdiag.mjs`, `scripts/check-truth.py`, `ts/eff/{read,check}.ts` and
+  `ts/eff/test/read.test.ts`.
+- The documents: `docs/ARCHITECTURE.md`, `docs/GENERATED.md`, `docs/STATE.md`,
+  `docs/core/semantics.md`, `docs/core/host-boundary.md`, and an amendment of
+  `Test/contracts/faces.contract.md`.
+- Regenerated: `harness/truth/corpus.json`, the 93 modules of `harness/truth/generated/`, and
+  `generated/semantics.md`.
+- No root import and no gate of `Test/Audit/AxiomGate.lean` changed.
+
+### Commands and results
+
+Every command ran through `/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh`; a time includes
+the wait for the slot. From this slice on, `make` runs with `BUN="bun --no-install"`. CR-0's and
+CR-3's gates ran with the `Makefile`'s plain `bun`.
+
+| Command | Result | Time |
+| --- | --- | ---: |
+| `lake build Effect4`, twice as the core changed, and a third time with the law modules | passes, 296 jobs | 108 s, 18 s, 147 s |
+| `lake build` of the six touched law modules | passes, 388 jobs | 121 s |
+| `lake build Effect4.Laws` | passes, 1102 jobs | 9 s to 52 s |
+| `lake build` of the 57 batteries and tools that import a touched module | passes, 1327 jobs | 177 s |
+| `lake env lean` on `Truth.lean`, `P2b.lean`, `session/Keyed.lean` | each elaborates | — |
+| the truth manifest, diffed with the committed one before any host run | no field but the module fields moved; every module's declarations equal the base's flat block up to whitespace; `expr` moved for 15 programs, the 14 block programs that had none and `pDiamond`, whose main is hoisted | — |
+| `make corpus`, diffed | `generated/corpus-index.tsv` unchanged | 85 s |
+| `make gen-truth` | `result.json`, `result.md` and the tapes unchanged; 81 programs agree, 12 signed divergences | 186 s |
+| `make check-truth` | passes, with the widening controls and P2b | 71 s |
+| `make check-corpus` | passes: the base's line, 400 programs match the committed results | 114 s |
+| `make check-tsdiag` | passes: the base's table, 136 typed-clean | 1 s |
+| `make check-ts-reader` | passes: 416 matched, as at the base; 73 accepted without an oracle (71 at the base: the two `pJoinedModify` modules read under `erase`); 783 tests | 3 s |
+| `make check-target` | passes: CR-3's line | 9 s |
+| `make check-ingest-smoke` | passes: the base's line | 1 s |
+| `make check-host-protocol` | passes: the base's lines, 87 scripts in 297 runs | 94 s |
+| `make gen-semantics` | `generated/semantics.md` moves: the claim's docstring, and `printTyped_eq_print` rests on `focusAtTable_annotate` too; every status unchanged | 286 s |
+| `make check-docs` | the base's one stale reference, no other | 0 s |
+| `make check-language` | passes | 7 s |
+| `bun --no-install test test/read.test.ts` in `ts/eff` | 132 pass | 1 s |
+
+### Axiom output
+
+`#axiom_audit` over the 18 touched modules of `Effect4`: 4251 declarations within
+`[propext, Quot.sound]`, none modulo planned goals.
+
+### Landed theorems and their placement
+
+- `focusAtTable_annotate` (`src/Effect4/Laws/Codegen/PrintTyped.lean`): concept `exact-codecs`, a
+  step of the claim `typed-print-connector` (R8). Its consumer is `printTyped_eq_print`, which keeps
+  its statement. Reach: every program and every address. It says nothing of the cost.
+- `readModuleWith_printModuleWith` and `readModuleWith_printModuleWith_defs`
+  (`src/Effect4/Laws/Codegen/Module.lean`): steps of `module-defs-round-trip` (R8). Consumers:
+  the plain instances, `readModule_printModule_defs` the claim's pointer, and the laws below.
+- `PiecesLawful`, `shippedPieces_lawful`, `readModuleWith_printModuleWith_readable`,
+  `readModuleWith_printModuleWith_defs_readable` (`src/Effect4/Laws/Api/ModuleReadable.lean`):
+  steps of `module-defs-round-trip`, through `readTyped_printTyped` (`typed-print-read`).
+  Consumer: `ModuleEmission.readDecls`.
+- `printModuleWith_readable` and `shippedPieces_prints`: steps of `emitModule_complete`, which
+  keeps its statement.
+- No requirement, claim or planned goal is added. What changes in the contract's statements is
+  in its amendment of 2026-10-15.
+
+### Lines removed and added
+
+529 lines removed and 1101 added in the 39 source files. The 95 regenerated files add 25295 lines
+and remove 2730. A module laid out at Effect's width is longer, and the manifest holds two views
+of it.
+
+### Evidence
+
+- Proved: the laws above, under `[propext, Quot.sound]` (`#axiom_audit`).
+- Tested: the nine behaviour gates, against the base's result lines; no program's verdict moved.
+- Reproduced: the truth lane's committed files, the corpus index and the semantics report.
+
+### Open obligations
+
+- The eliminator-site printer refuses `timeout/eager` at a term slot (P-CR1-3).
+- `Ty.maskRestoreTarget` is no `preludeNames` member. A module whose annotation names
+  `MaskRestore` imports nothing for it. No program of a lane prints it today.
+- The keyed lane's plain fixtures keep their `build` template: the program is an expression under
+  the host's bindings, and `CASES_SHA256` pins their recordings.
+- The TypeScript reader reads no type that the typed print writes at an eliminator's site.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR1-1.** `TRUTH_SOURCES` in the `Makefile` drops `harness/truth/module-imports.ts`, and the
+  file is deleted. No code reads it.
+- **P-CR1-2.** The owner rules what the diagnostics lane checks. (a) The module that ships, with
+  a register of known differences, as the corpus lane keeps one. (b) The unchecked module, as
+  now. Recommend (a): the lane would then check what an agent ships.
+- **P-CR1-3.** Register the slot-depth refusal as a counterexample of the typed print, and repair
+  `PrintEliminators.printArg`. The fallback in `shippedPieces` then goes.
