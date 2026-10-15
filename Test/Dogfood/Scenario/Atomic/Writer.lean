@@ -1,4 +1,4 @@
-import Test.Dogfood.Scenario.Atomic.Store
+import Test.Dogfood.Scenario.Atomic.StoreFacts
 import Effect4.Laws.Program.ControlSteps
 import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Effect4.Laws.Auto.KernelRfl
