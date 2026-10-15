@@ -884,7 +884,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   The native signature and the printer's name check give both (`nativeCalls`,
   `defsNamed_of_fault`).
   So the program interface's module round trip holds for a program with a block
-  (`Api.printModule_roundTrip`, `src/Effect4/Laws/Api/ModuleReadable.lean`).
+  (`Api.printModule_roundTrip`, `src/Effect4/Laws/Api/ModuleReadable.lean`), the claim's pointer.
   The module that ships prints its program pieces by the typed print, and the module reader
   reads them after the named erasure.
   The module laws are stated of any lawful pair of a piece printer and a piece reader

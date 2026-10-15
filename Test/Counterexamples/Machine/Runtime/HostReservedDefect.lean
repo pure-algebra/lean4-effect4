@@ -55,8 +55,4 @@ example (reply : Reply) (decision : NativeDecision) (c : Machine.CauseV)
     Typed.NoShapeDefect admitted.ty (.failure c) :=
   preflight_failure_noShapeDefect bound0 reply decision c failed accepted admitted.ty
 
-/-- info: 'Effect4.Api.HostSession.preflight_failure_noShapeDefect' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms preflight_failure_noShapeDefect
-
 end Test.Counterexamples.Machine.Runtime.HostReservedDefect

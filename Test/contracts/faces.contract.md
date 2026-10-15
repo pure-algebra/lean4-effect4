@@ -507,7 +507,9 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
 - **The foreign contract (§3).** The five names are no foreign spelling. Both recognizers read a
   row's function under any parameter name. Each of the four lambda shapes spells one term at each
   row (`LambdaShape.term`, `src/Effect4/Codegen/Forms.lean`). The foreign corpus restyles a
-  printed function that is such a term (`Styles.lambdaOf`, `src/Effect4/Codegen/Styles.lean`).
+  printed function that is such a term (`Styles.lambdaOf`, `tools/Drivers/StyleSyntax.lean`,
+  namespace `Effect4.Codegen.Styles`; moved by the codegen refactor's CR-9 from
+  `git:edae4e2b:src/Effect4/Codegen/Styles.lean`).
   A term row declares no type argument. Both recognizers refuse a call that carries one, with
   the code `E-NODE` (`ts/eff/ingest/test/foreign.test.ts`).
 - **The truth claim (§4).** The prelude exports no function name. A printed term calls the atoms
@@ -822,9 +824,9 @@ What this changes in the packet above, and nothing else:
   typed reader, after the named erasure (`readModuleTyped`). `admitModule`, `Api.readModule` and
   `Api.readFile` read so. `readModule` is the raw instance.
 - **The statements that keep their text.** `readModule_printModule`, `readModule_printModule_defs`
-  (the claim `module-defs-round-trip`), `printTyped_eq_print` (the claim `typed-print-connector`),
-  `emitModule_complete` and `Api.printModule_roundTrip`. The last one's module is now the one
-  that ships.
+  (a step of the claim `module-defs-round-trip`), `printTyped_eq_print` (the claim
+  `typed-print-connector`), `emitModule_complete` and `Api.printModule_roundTrip`. The last one's
+  module is now the one that ships, and CR-9 made it the pointer of `module-defs-round-trip`.
 - **The statements that change.** Two laws are stated of any lawful pair of a piece printer and a
   piece reader (`PiecesLawful`): `readModuleWith_printModuleWith_readable` and
   `readModuleWith_printModuleWith_defs_readable`. They were `readModule_printModule_readable` and

@@ -42,8 +42,8 @@ One module, the whole pipeline, small interface:
   (`src/Effect4/Run/Live.lean`, decisions row 373 (8)).
 * The codegen face is its own module, `Effect4.Api.Codegen` (`src/Effect4/Api/Codegen.lean`),
   in this namespace: `print` and `read`, the round trip and its certificate, `printDecl`, the
-  module's emission and its checked reading, the printed `Typed`, `TypedLayer` and `Built`, the
-  Schema syntax, and the one crossing to bytes. This module imports none of the codegen, only its
+  module's emission and its checked reading, the printed `Typed`, `TypedLayer` and `Built`, and the
+  Schema syntax. It answers syntax, never text. This module imports none of the codegen, only its
   refusal alphabets (`src/Effect4/Codegen/Refusal.lean`), so an edit of the printer, the reader
   or the module writer rebuilds none of this face's importers.
 * `bytesOf` / `ofBytes` are the canonical bytes of a program and the exact decoder: what

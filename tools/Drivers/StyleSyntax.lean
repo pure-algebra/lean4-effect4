@@ -1,12 +1,18 @@
 import Effect4.Codegen.Forms
 
 /-!
-# Codegen.Styles
+# The foreign styles' syntax
 
 Foreign target syntax constructed from the printer's syntax and the forms table.
-This is printer output, never a second program IR. Rendering lives in Tools.Corpus;
-no raw source string is stored as a target expression. Each document is paired with
-its original Eff oracle by that driver. The recognizer's gate checks the inverse.
+This is printer output, never a second program IR. Rendering lives in the driver beside this
+module (`Drivers.Styles`); no raw source string is stored as a target expression. The foreign
+corpus pairs each document with its original Eff oracle (`Drivers.ForeignCorpus`). The
+recognizer's gate checks the inverse.
+
+The module is the ingest tool's, not the library's: the codegen refactor's CR-9 moved it from
+`src/Effect4/Codegen/Styles.lean` beside its reader (decisions row 392). Its declarations keep
+their namespace, `Effect4.Codegen.Styles`, as the driver beside it kept `Tools.Styles` when it
+moved.
 -/
 
 namespace Effect4.Codegen.Styles

@@ -6,7 +6,6 @@ import Effect4.Codegen.Read
 import Effect4.Codegen.Admit
 import Effect4.Codegen.CallbackRequirements
 import Effect4.Codegen.Schema
-import Effect4.Codegen.Target
 
 /-!
 # Effect4.Api.Codegen — the program interface's codegen face
@@ -15,8 +14,10 @@ The half of the application face that crosses to TypeScript, in the namespace `E
 
 * `print` / `printDecl` answer TypeScript **syntax** (`TypeScript.Expr`, `ConstDecl`), never
   text. Rendering to bytes is one call to the pinned package — `TypeScript.Render.expr house0 0
-  e` — kept outside this module on purpose: Lean's `String` folds reach `Classical.choice`, and
-  this module stays at the library's axiom ceiling.
+  e`, or `TypeScript.Render.module` of a module — and a file writer lays a module out as every
+  lane writes it (`moduleText`, `tools/Tools/Code/Module.lean`). Both stay outside this module on
+  purpose: Lean's `String` folds reach `Classical.choice`, and this module stays at the library's
+  axiom ceiling. No operation of this face returns text.
 * `read`, `readAt`, `readable` and `roundTrip` are the reader and the print image's round trip;
   `imageCertificate` carries `readable` as a certificate.
 * `emitModule`, `printModule`, `readModule`, `readFile`, `checkSourceBindings` and `admitModule`
@@ -28,9 +29,6 @@ The half of the application face that crosses to TypeScript, in the namespace `E
   renders one raw document and is admitted by exact name in the axiom gate. A document's
   references table is written once per key, and a repeated key whose bodies differ is refused
   (decisions row 8 (C)).
-* The codegen crossing: `Target` and `Artefact` represent emitted syntax, and `render` is the one
-  crossing from an artefact to bytes — admitted by exact name in the gate as
-  `Effect4.Codegen.Artefact.render`, and the reason the rest of this face never returns text.
 
 The face is its own module so that the program interface below it (`Effect4.Api`, its authoring
 and session faces, and the law graph that reads them) imports no codegen module: an edit of the
@@ -223,10 +221,5 @@ def schemaRepresentation (representation : Effect4.Representation) : TypeScript.
 /-- A JSON payload as a TypeScript literal. -/
 def jsonExpr (value : Effect4.Json) : TypeScript.Expr :=
   Effect4.Codegen.Schema.json value
-
-/-! ## Codegen: the targets, artefacts, and rendering to bytes -/
-
-export Effect4.Codegen (Target Artefact)
-export Effect4.Codegen.Artefact (render)
 
 end Effect4.Api

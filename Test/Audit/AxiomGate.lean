@@ -195,16 +195,14 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Codegen.Schema.representationSource
   , ``Effect4.Codegen.Schema.documentSource
   , ``Effect4.Codegen.Schema.multiDocumentSource
-  -- The codegen crossing to bytes (`docs/research/2026-09-04-codegen-api-design.md` §3.1):
-  -- JSON text folds over `String`s for escaping, and the artefact renderer is one call to
-  -- the pinned package's renderer or to it. `JsonText.number` is deliberately not here: it
+  -- The JSON target's crossing to bytes (`docs/research/2026-09-04-codegen-api-design.md` §3.1):
+  -- JSON text folds over `String`s for escaping. `JsonText.number` is deliberately not here: it
   -- writes digits without traversing a `String` and stays at the ceiling.
   , ``Effect4.Codegen.JsonText.escape
   , ``Effect4.Codegen.JsonText.render
   , ``Effect4.Codegen.JsonText.renderList
   , ``Effect4.Codegen.JsonText.renderEntries
   , ``Effect4.Codegen.renderJson
-  , ``Effect4.Codegen.Artefact.render
   -- The configuration algebra's `String`-side instantiations
   -- (`docs/research/2026-09-04-production-standards-spike.md` §10, finding 1): the rc.112
   -- scalar codecs (`String.toNat?`), the `_`-splitting env embedding (`String.splitOn`),

@@ -1,10 +1,11 @@
-import Effect4.Codegen.Styles
+import Drivers.StyleSyntax
 import Effect4.Store.Domain.ProgramWire
 import OCaml5.Eff.Goldens
 import TypeScript.Render
 
-/-! Rendering and corpus construction for Codegen.Styles. This IO tool is outside the
-semantic audit. The library's target data has no raw-source constructor. -/
+/-! Rendering and corpus construction for the foreign styles' syntax (`Drivers.StyleSyntax`).
+This IO tool is outside the semantic audit. The library's target data has no raw-source
+constructor. -/
 
 namespace Tools.Styles
 

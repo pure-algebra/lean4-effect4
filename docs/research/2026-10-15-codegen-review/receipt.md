@@ -460,3 +460,152 @@ None: no declaration changed.
   with the binders that the template adds. Then CR-7 runs as the note orders it. The row-only
   printer and its erasure go, and the connector moves to the site printer with its statement.
   Then the site erasure's casework fuses.
+
+## CR-9: superseded code, and the claim's pointer
+
+### Base and head
+
+Base `b857068f3`; the slice's commit is the head.
+
+### What landed, step by step
+
+1. **`Artefact` went, by deletion.** `Codegen.Target` loses `Artefact`, `Artefact.of`,
+   `Artefact.target`, `target_of` and `Artefact.render`. The program interface's codegen face
+   loses its export of `Target`, `Artefact` and `render`.
+   - The live users were the face's export, one battery line (`Test/Api/ApiContract.lean`) and
+     the axiom gate's exemption. The build's reference files (`.ilean`) show it, less the stale
+     files of modules deleted earlier (`Effect4.Codegen.App`, `Rule`, `Package`, `Emit`).
+   - The other option was to make `moduleText` the body of `render`. It would move the tool's
+     layout printer into the core, under the axiom gate (`tools/Tools/Code/`, about 1,200 lines
+     with its laws). The seat took the deletion.
+   - The target alphabet `Target` stays: it is the tree anchor of the dictionary's word
+     **target**. The JSON text stays: `Effect4.Laws.Author.Explain` and a Schema battery read it.
+2. **The foreign styles' target syntax moved to the ingest tool.** `src/Effect4/Codegen/Styles.lean` is
+   now `tools/Drivers/StyleSyntax.lean`, beside its reader `Drivers.Styles`.
+   - Its declarations keep their namespace, `Effect4.Codegen.Styles`. The driver beside it kept
+     `Tools.Styles` when it moved, so the tree's precedent is the same.
+   - Its readers are the driver and one battery (`Test/Codegen/FormsContract.lean`). The battery
+     imports the tool module now, as other batteries import tool modules.
+   - The move changes the header docstring alone (`git diff -M`, reading).
+   - Its declarations leave the axiom gate's audit, since `Drivers.*` is no `Effect4.*` module.
+     They stay within the ceiling (the axiom output below).
+3. **The three lemma copies** went in CR-0 (`3fcd80e94`).
+4. **The nine `#print axioms` lines and the two restatements went.** The lines were in
+   `Test/Audit/LetReturn.lean`, `Test/Audit/ProofGraph.lean`, `Test/Audit/ProofGraphSearch.lean`
+   and `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean`. The restatements were the
+   two examples of `Std.lt_irrefl` and `Std.lt_trans` in `Test/Data/RowContract.lean`.
+5. **The claim `module-defs-round-trip` points at `Api.printModule_roundTrip`** (CG-14, the
+   review's P11 (a)). Its title already named that theorem. Its status stays proved.
+
+The documents follow the code:
+- `README.md` named `Api.render (.ts e.module)` as the way to emit TypeScript. It now names the
+  emission's file and `moduleText`.
+- `README.md` also named `print` and `printDecl` as `Effect4.Api`'s. CR-0 moved them to
+  `Effect4.Api.Codegen`, so the README now names both modules.
+- The dictionary's row **artifact** had `Artefact` as its tree anchor. It now means a produced
+  file, anchored at `docs/GENERATED.md`.
+- `docs/ARCHITECTURE.md` and the module docstrings no longer name a render crossing in the face.
+- The contract cites the moved module at its new path, and at the old one by revision
+  (`Test/contracts/faces.contract.md`). Its row 6 cites a moved module the same way.
+
+### Changed files
+
+- Core: `src/Effect4/Codegen/Target.lean`, `src/Effect4/Api/Codegen.lean`,
+  `src/Effect4/Api.lean` (docstring), `src/Effect4.lean` (the comment at Target's import, and the
+  import of `Styles` removed at its anchor), `src/Effect4/Laws/Codegen/Module.lean` (docstrings).
+- Moved: `src/Effect4/Codegen/Styles.lean` to `tools/Drivers/StyleSyntax.lean`.
+- Tools: `tools/Drivers/Styles.lean` (its import), `tools/ProofGraph/Registry.lean` (the
+  pointer).
+- Codegen batteries: `Test/Api/ApiContract.lean`, `Test/Codegen/FormsContract.lean`, and
+  `Test/Codegen/SchemaGenerationContract.lean`, which now imports the JSON text it reads.
+- Docstrings of batteries: `Test/Codegen/ServicesPrint.lean`, `Test/Codegen/DefinitionsPrint.lean`.
+- The gate: `Test/Audit/AxiomGate.lean`, its exemption removed at its anchor.
+- The battery lines: `Test/Audit/LetReturn.lean`, `Test/Audit/ProofGraph.lean`,
+  `Test/Audit/ProofGraphSearch.lean`, `Test/Data/RowContract.lean` and
+  `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean`.
+- Documents: `README.md`, `docs/ARCHITECTURE.md`, `docs/core/controlled-english.md`,
+  `docs/core/semantics.md`, `Test/contracts/faces.contract.md`.
+- Regenerated: `generated/semantics.md`.
+
+### Commands and results
+
+Every `lake` and `make` command ran through the shared slot. The logs are in the seat's
+scratchpad (`cr9/`, `gates/cr9/`).
+
+| Command | Result |
+| --- | --- |
+| the narrow build: the edited modules, the direct importers of `Codegen.Target` and `Api.Codegen`, and the edited batteries (`cr9/build1.sh`) | passes: 1,355 jobs, 271 compiled, 381 s |
+| `make gen-semantics` | passes: 1,670 jobs, 524 s. The report moves the claim's row and its entry alone: the pointer, its docstring, module and statement. The status stays proved |
+| `make check-ingest-smoke` | passes: 408 exact JSON and wire comparisons on each parser; the corpus index is byte-identical |
+| `make check-docs` | fails on the base's one stale reference: decisions row 494 names `tools/view/make_videos.py`, untracked in the main tree |
+| `make check-language` | passes |
+| `python3 scripts/check-language.py --show` on the five edited documents, against their head copies | no finding added; two removed (`README.md` and `docs/ARCHITECTURE.md`) |
+| `lake env lean --run tools/Drivers/Corpus.lean --foreign <dir> 400 4`, the nightly lane's step | writes the foreign corpus through the moved module: 22,419 files, 21 isolated styles, 11,520 products |
+| `bun --no-install ts/eff/ingest/check-coverage.ts <dir>` | fails: `missing eff coverage: defs, invoke` |
+| `bun --no-install ts/eff/ingest/cli.ts gate --printed .lake/corpus --foreign <dir>` | the printed half passes; the foreign half fails its file-count pin, 22,398 |
+| the pointer probe, `lake env lean` on `cr9/PointerProbe.lean` (the review's probe's imports) | the roots are 328. The load-bearing theorems go from 10,204 to 10,320: 117 gained, 1 lost |
+
+The two nightly failures are the lane's own, not the move's (reading). The pin of 22,398 dates
+from 2026-10-06. `3bada1241` (2026-10-11) added a provider probe under each of the 21 styles, so
+the corpus holds 22,419. No generated program holds a definition block, so the foreign corpus
+covers neither `defs` nor `invoke`, which slices HO-1 and HO-2 added on 2026-10-10. The main
+tree's marker of `check-ingest` is from 2026-10-07. `check-ingest` is the nightly lane, not a
+gate a landing owes.
+
+The pointer probe, by module:
+
+| Module | Theorems | Load-bearing before | Load-bearing now |
+| --- | ---: | ---: | ---: |
+| `Effect4.Laws.Codegen.Definitions` | 65 | 0 | 65 |
+| `Effect4.Laws.Api.ModuleReadable` | 15 | 0 | 8 |
+
+The other gains are 17 in `Effect4.Laws.Codegen.ReadLeaf`, 10 in `Effect4.Program.Native` and 17
+across eleven more modules, two of them Lean's own (`Init.Data.List.Find`, `Init.Data.Nat.Basic`). The theorem lost is the old pointer, `readModule_printModule_defs`: the
+face theorem reaches the module law at the typed pair, not its plain instance. It keeps its
+placement at R8 (`@[semantics "exact-codecs" (requirement := R8)]`), so it stays a node of R8.
+The review counted 78 theorems in the two modules: 65 and 13. `ModuleReadable` holds 15 theorems
+since CR-1, and 8 of them carry load.
+
+### Axiom output
+
+`#axiom_audit` (`cr9/AuditCR9.lean`):
+- `Effect4.Codegen.Target`: 13 of 93 declarations reach `Classical.choice`. Each is a JSON text
+  renderer or its auxiliary: `JsonText.escape`, `render`, `renderList`, `renderEntries` and
+  `renderJson`. The gate exempts each by exact name. `Artefact.render` left that list.
+- The fourteen other modules this slice edits: 982 declarations within `[propext, Quot.sound]`,
+  2 of them modulo planned goals. The one planned goal is the fixture `leaf` of
+  `Test/Audit/ProofGraph.lean`, which the battery declares to test the goal commands.
+- `Drivers.StyleSyntax`: 389 declarations within `[propext, Quot.sound]`.
+
+### Lines removed and added
+
+Without the regenerated report, 152 lines removed and 81 added in 24 files. The report removes 71
+lines and adds 18.
+
+### Evidence
+
+- Reproduced: the semantics report and the printed corpus's index.
+- Tested: the narrow build, `check-ingest-smoke`, and the foreign corpus written through the moved
+  module.
+- Proved: no new statement. The claim's pointer is a theorem the tree held.
+- Reading: the move changes one docstring; the two nightly failures predate the slice.
+
+### Open obligations
+
+- `Effect4.Codegen.EraseTermTypes` imports `Effect4.Codegen.Target` and uses none of its
+  declarations (the reference files).
+- The nightly ingest lane fails its two pins above.
+- The `Makefile`'s marker of `check-ingest` lists `tools/Drivers/Styles.lean` and
+  `tools/Drivers/ForeignCorpus.lean` among its inputs, and not the moved module. It did not list
+  `src/Effect4/Codegen/Styles.lean` either.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR9-1.** The `Makefile`'s rule `$(CHK)/ingest` lists `tools/Drivers/StyleSyntax.lean` among
+  its inputs.
+- **P-CR9-2.** The nightly ingest lane's pins move. The foreign file count becomes 22,419
+  (`3bada1241`'s probe). The coverage key needs one of two repairs:
+  - (a) the foreign corpus gains one program with a definition block;
+  - (b) the key names `defs` and `invoke` as not constructed.
+
+  Recommend (a): the foreign readers then meet a block.

@@ -2165,7 +2165,7 @@ Invertible embeddings for JSON and Schema representations. 20 claims: 20 proved.
 | `typed-print-connector` | compatibility | proved | `Effect4.Program.printTyped_eq_print` |
 | `typed-print-erasure` | compatibility | proved | `Effect4.Codegen.eraseJoinArgs_printTyped` |
 | `typed-print-read` | compatibility | proved | `Effect4.Codegen.readTyped_printTyped` |
-| `module-defs-round-trip` | compatibility | proved | `Effect4.Program.readModule_printModule_defs` |
+| `module-defs-round-trip` | compatibility | proved | `Effect4.Api.printModule_roundTrip` |
 | `modeled-codec` | compatibility | proved | `Effect4.Schema.Modeled.codec_roundtrip` |
 | `record-field-laws` | compatibility | proved | `Effect4.Schema.FieldRef.frame_laws` |
 | `program-digest-exact` | compatibility | proved | `Effect4.Store.address_eq_or_collision` |
@@ -2422,79 +2422,26 @@ Module: `Effect4.Laws.Codegen.PrintTyped`
 
 A module with a definition block reads back: the module printer prints each definition as a constant before the layers, an arrow from its request and its parameters, each a function named by its declaration (slice HO-3a), with its declared result type around a suspension of its body, an invocation as the definition's name applied to its request, and an invocation with programs as that name applied to the request and to each program as an arrow of the binder due at the call (slice HO-3b, read back under the block's invocation laws, LawfulInvokes); the block's module layers print after the services as constants named by their paths (printModuleLayers), and a reference to one prints as that name; when each declaration has columns readable under the module's payload classes (a column that names a class reads as the class's record), a canonical requirement row and a name with no layer path, each body and each of its own layers at the signature and spelling map its parameters extend (LawfulSpelling.withParams; a body's own hoisted layers print as constants at the top of its suspension, row 341, step 3b), the main program, each layer and each module layer read back at the block's signature through the block's spelling map, and each module layer's name decodes to its path, the module reads back to the program, its module layers rebuilt in order (readModule_printModule_defs), after its classes and the services of the rows it declares, which the file reader reads back exactly against the table (readRowServices_rowServiceDecls, readRowServices_exact; the file, ModuleEmission.readFile); the block's spelling map is lawful under the signature's invocation laws and readable names (LawfulSpelling.withDefs), which the native signature and the printer's name check give (nativeCalls, defsNamed_of_fault), so the program interface's module round trip holds for a program with a block (Api.printModule_roundTrip); the printer refuses an empty block and a reference out of its scope (Eff.inScope), and a header's requirement row reads back by the requirement reader (readKeys); the block's services, declared by its definitions' roles, print after the definitions as an Effect service's key and layer each (printServices) and give the roles back from the layers (roleOf), when serviceFault finds no fault (printServices_ok, restoreRoles); a method whose definition takes programs takes them after its arguments and passes them on, and the arity read back is the closure's parameters less those programs (slice HO-5, readServiceMethods_ok); it does not say that tsgo accepts the module or how rc.112 runs it (decisions rows 328, 338, 339 and 341, G6; slices PROC-3 and CO-6b)
 
-G6: the plain module with a definition block reads back by the raw reader (`readModuleWith_printModuleWith_defs` at the table's fold and `readEff`, where `ReadsBack` is the pieces' premise; decisions rows 328 and 341). Placement: concept `exact-codecs`, claim `module-defs-round-trip`, requirement R8. The module that ships is another pair's instance (`shippedPieces_lawful`, `ModuleEmission.readModule`). It is a structural equation: it does not say that tsgo accepts the module or how rc.112 runs it.
+Through the application face: a program whose pieces are readable under a lawful table has a module whose reading is the program, with or without a definition block. The module is the one that ships, its pieces printed typed, and the face's reader reads it after the named erasure (`ModuleEmission.readModule`).
 
-Module: `Effect4.Laws.Codegen.Module`
+Module: `Effect4.Laws.Api.ModuleReadable`
 
 ```lean
-∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes} {sig : Effect4.Program.Signature Op}
-  {spell : String → List Effect4.Program.RowArg → Option Op} {call param : Nat → Op}
-  {root main body : Effect4.Program.Eff Op} {defs : List Effect4.Program.DefDecl}
-  {bodies : Effect4.Program.Effs Op} {layers : Effect4.Program.LayerTerms Op}
-  {history : List (Prod (List Nat) (Effect4.Program.LayerTerm Op))},
-  Eq root.hoistAll (Except.ok { fst := main, snd := history }) →
-    Eq main.block?
-        (Option.some
-          { fst := defs, snd := { fst := bodies, snd := { fst := body, snd := layers } } }) →
-      ∀ {classDecls : List TypeScript.ClassDecl},
-        Eq (Effect4.Codegen.Classes.readClassDecls classDecls) (Option.some classes) →
-          ∀ {rows : List Effect4.Program.Row} {serviceDecls : List TypeScript.ConstDecl},
-            Eq (Effect4.Program.rowServiceDecls sig rows) (Except.ok serviceDecls) →
-              (∀ (d : Effect4.Program.DefDecl),
-                  List.instMembership.mem defs d →
-                    Eq (Effect4.Program.DefDecl.readable (sig.typeEnv classes) d) Bool.true) →
-                (∀ (p : Prod Effect4.Program.DefDecl (Effect4.Program.Eff Op)),
-                    List.instMembership.mem (defs.zip bodies.toList) p →
-                      Effect4.Program.ReadsBack classes
-                        ((sig.withDefs defs).withParams p.fst.params)
-                        (Effect4.Program.paramsSpell param p.fst.params
-                          (Effect4.Program.defsSpell call defs spell))
-                        1 p.snd) →
-                  Effect4.Program.ReadsBack classes (sig.withDefs defs)
-                      (Effect4.Program.defsSpell call defs spell) 0 body →
-                    (∀ (l : Effect4.Program.LayerTerm Op),
-                        List.instMembership.mem layers.toList l →
-                          Effect4.Program.LayerTerm.ReadsBack classes (sig.withDefs defs)
-                            (Effect4.Program.defsSpell call defs spell) l) →
-                      (∀ (k : Nat),
-                          instLTNat.lt k layers.toList.length →
-                            Eq
-                              (Effect4.Program.LayerTerm.readRefName
-                                (Effect4.Program.LayerTerm.refName
-                                  (Effect4.Program.Path.layerPath k)))
-                              (Option.some (Effect4.Program.Path.layerPath k))) →
-                        (∀ (entry : Prod (List Nat) (Effect4.Program.LayerTerm Op)),
-                            List.instMembership.mem history entry →
-                              ∀ (d : Effect4.Program.DefDecl),
-                                Eq (Effect4.Program.bodyDeclOf defs entry.fst) (Option.some d) →
-                                  Effect4.Program.LayerTerm.ReadsBack classes
-                                    ((sig.withDefs defs).withParams d.params)
-                                    (Effect4.Program.paramsSpell param d.params
-                                      (Effect4.Program.defsSpell call defs spell))
-                                    entry.snd) →
-                          (∀ (entry : Prod (List Nat) (Effect4.Program.LayerTerm Op)),
-                              List.instMembership.mem history entry →
-                                Eq (Effect4.Program.bodyDeclOf defs entry.fst) Option.none →
-                                  Effect4.Program.LayerTerm.ReadsBack classes (sig.withDefs defs)
-                                    (Effect4.Program.defsSpell call defs spell) entry.snd) →
-                            (∀ (entry : Prod (List Nat) (Effect4.Program.LayerTerm Op)),
-                                List.instMembership.mem history entry →
-                                  Eq
-                                    (Effect4.Program.LayerTerm.readRefName
-                                      (Effect4.Program.LayerTerm.refName entry.fst))
-                                    (Option.some entry.fst)) →
-                              ∀ {name : String} {ty : Effect4.Program.EffTy}
-                                {decls : List TypeScript.ConstDecl},
-                                Eq (Effect4.Program.printModule sig name ty root)
-                                    (Except.ok decls) →
-                                  Eq
-                                    (Effect4.Program.readModule sig spell call param rows
-                                      (instHAppendOfAppend.hAppend
-                                        (instHAppendOfAppend.hAppend
-                                          (List.map TypeScript.Decl.classDecl classDecls)
-                                          (List.map TypeScript.Decl.const serviceDecls))
-                                        (List.map TypeScript.Decl.const decls)))
-                                    (Except.ok root)
+∀ {name : String} {program : Effect4.Api.Program} {table : Effect4.Program.RowTable},
+  Eq (Effect4.Program.LawfulTable table) Bool.true →
+    (∀ (e : Effect4.Codegen.ModuleEmission program table name),
+        Or
+          (Eq
+            (Effect4.Program.moduleReadable e.classes (Effect4.Program.nativeSignature table)
+              program)
+            Bool.true)
+          (Eq
+            (Effect4.Program.blockReadable e.classes (Effect4.Program.nativeSignature table)
+              program)
+            Bool.true)) →
+      ∀ {module : TypeScript.Module},
+        Eq (Effect4.Api.printModule name program table) (Option.some module) →
+          Eq (Effect4.Api.readModule module table) (Except.ok program)
 ```
 
 ### modeled-codec

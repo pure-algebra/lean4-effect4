@@ -275,11 +275,6 @@ def pIdIsZero : Program :=
 #guard (print pIdIsZero).map (expr house0 0)
   = .ok "Effect.flatMap(Effect.fiberId, (a0) => Effect.succeed(eq(a0, 0)))"
 
-/-! ## Codegen, through the face: an artefact and its bytes -/
-
--- the one crossing to bytes, kept inside the guard
-#guard render (Effect4.Codegen.Artefact.json (.arr [])) = "[]\n"
-
 /-! ## Type spellings and Result patterns, through the application import
 
 Known target spellings from the DX specification; runtime handles still require

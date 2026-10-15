@@ -1073,10 +1073,10 @@ Restated for step 3: each body reads back itself (it was its suspension), and th
 premise is split by the scope that prints them (`localsReadable`, `layersReadable`).
 
 Placement: concept `exact-codecs`, a step of the claim `module-defs-round-trip`, requirement R8.
-Consumers: the plain pair's instance (`readModule_printModule_defs`, the claim's pointer) and the
-module round trip of the readable domain at any lawful pair
-(`readModuleWith_printModuleWith_defs_readable`), which `ModuleEmission.readModule` takes at the
-typed pair. It is a structural equation: it does not say that tsgo accepts the module or how
+Consumers: the plain pair's instance (`readModule_printModule_defs`) and the module round trip
+of the readable domain at any lawful pair (`readModuleWith_printModuleWith_defs_readable`), which
+`ModuleEmission.readModule` takes at the typed pair, under the claim's pointer
+(`Api.printModule_roundTrip`). It is a structural equation: it does not say that tsgo accepts the module or how
 rc.112 runs it. -/
 theorem readModuleWith_printModuleWith_defs {pp : PiecePrint Op} {rd : PieceRead Op}
     {sig : Signature Op}
@@ -1242,9 +1242,10 @@ theorem readModuleWith_printModuleWith_defs {pp : PiecePrint Op} {rd : PieceRead
 
 /-- **G6: the plain module with a definition block reads back** by the raw reader
 (`readModuleWith_printModuleWith_defs` at the table's fold and `readEff`, where `ReadsBack` is the
-pieces' premise; decisions rows 328 and 341). Placement: concept `exact-codecs`, claim
-`module-defs-round-trip`, requirement R8. The module that ships is another pair's instance
-(`shippedPieces_lawful`, `ModuleEmission.readModule`). It is a structural equation: it does not
+pieces' premise; decisions rows 328 and 341). Placement: concept `exact-codecs`, a step of the
+claim `module-defs-round-trip`, requirement R8. The module that ships is another pair's instance
+(`shippedPieces_lawful`, `ModuleEmission.readModule`), and the claim's pointer reads it through
+the application face (`Api.printModule_roundTrip`). It is a structural equation: it does not
 say that tsgo accepts the module or how rc.112 runs it. -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem readModule_printModule_defs {sig : Signature Op}
