@@ -68,14 +68,14 @@ theorem finalizer_rows (interp : Moves.NInterp) (machine : NativeMachine) (fiber
   rfl
 
 /-- The existing producer isolates the only primitive family that can create stored rows. -/
-theorem primitive_rows (interp : Moves.NInterp) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
+theorem primitive_row_facts (interp : Moves.NInterp) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
     (yielding : Bool) (next : Moves.NIteration) (produced : Moves.PrimitiveProducer interp machine fiber yielding next)
-    (G : FiberId → FrameFiber EffName EffThunk Val Err Defect FiberId Ann → Prop)
-    (held : ∀ row ∈ machine.fibers, G row.id row.frame)
+    (G : SourceScope.SourceFiber → Prop)
+    (held : ∀ row ∈ machine.fibers, G row)
     (action : ∀ thunk operation, fiber.frame.current = .withFiber thunk →
       interp.parkOf fiber.frame.current = none → interp.withFiberOf thunk = some operation →
-      ∀ row ∈ (evaluatePrim.withFiber interp machine fiber yielding operation).machine.fibers, G row.id row.frame) :
-    ∀ row ∈ next.machine.fibers, G row.id row.frame := by
+      ∀ row ∈ (evaluatePrim.withFiber interp machine fiber yielding operation).machine.fibers, G row) :
+    ∀ row ∈ next.machine.fibers, G row := by
   cases produced with
   | step => rw [step_rows]; exact held
   | finalizer => rw [finalizer_rows]; exact held
@@ -85,7 +85,19 @@ theorem primitive_rows (interp : Moves.NInterp) (machine : NativeMachine) (fiber
     unfold registerRace
     split <;> exact held
   | countdownPark targets next returned parked edits park counted =>
-    have rows := SourceScope.countdown_frame_rows interp G machine fiber targets .exitsValue false held
+    have rows := SourceScope.countdown_rows interp G machine fiber targets .exitsValue false held
     rw [counted] at rows
     exact rows
+/-- The existing frame assertion is an instance of actual whole-row primitive preservation. -/
+theorem primitive_rows (interp : Moves.NInterp) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
+    (yielding : Bool) (next : Moves.NIteration) (produced : Moves.PrimitiveProducer interp machine fiber yielding next)
+    (G : FiberId → FrameFiber EffName EffThunk Val Err Defect FiberId Ann → Prop)
+    (held : ∀ row ∈ machine.fibers, G row.id row.frame)
+    (action : ∀ thunk operation, fiber.frame.current = .withFiber thunk →
+      interp.parkOf fiber.frame.current = none → interp.withFiberOf thunk = some operation →
+      ∀ row ∈ (evaluatePrim.withFiber interp machine fiber yielding operation).machine.fibers, G row.id row.frame) :
+    ∀ row ∈ next.machine.fibers, G row.id row.frame := by
+  exact primitive_row_facts interp machine fiber yielding next produced
+    (fun row => G row.id row.frame) held action
+
 end Effect4.Program.NativeFrameRows
