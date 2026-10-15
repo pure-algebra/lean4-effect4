@@ -396,6 +396,85 @@ def RunningStep (world : World) (output : Kind) : FrameStep ν σ β ε δ ι α
 
 variable (interp : PrimInterp ν σ β ε δ ι α) (family : SavedFamily model interp Edge)
 
+/-- The existing value-return split exposes one result predicate at its actual branch.
+Concept: scope-lifetime-finalization R11. Consumer: Timeout's whole numeric return authority.
+The callback certificates remain application premises. -/
+theorem resume_value_dispatch (Post : FrameStep ν σ β ε δ ι α → Prop)
+    (fiber : FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Exit β ε δ ι α))
+    (empty : (fiber.getCont .contA false).answer = .empty → Post (.finished (provided.getD (.success value))))
+    (deferred : ∀ cause, (fiber.getCont .contA false).answer = .deferred cause →
+      Post (.running {(fiber.getCont .contA false).fiber with current := .failure cause}))
+    (replacement : ∀ next, (fiber.getCont .contA false).answer = .replacement next →
+      Post (.running {(fiber.getCont .contA false).fiber with current := next}))
+    (missing : ∀ selected, (fiber.getCont .contA false).answer = .frame selected →
+      selected.armA interp value provided = none → Post (.finished (provided.getD (.success value))))
+    (callback : ∀ selected next pushed, (fiber.getCont .contA false).answer = .frame selected →
+      selected.armA interp value provided = some (next, pushed) →
+      Post (.running {(fiber.getCont .contA false).fiber with
+        current := next
+        stack := pushed ++ (fiber.getCont .contA false).fiber.stack})) :
+    Post (fiber.resumeValue interp value provided).1 := by
+  cases selected : (fiber.getCont .contA false).answer with
+  | empty =>
+    rw [FrameFiber.resumeValue_empty interp fiber value provided selected]
+    exact empty selected
+  | deferred cause =>
+    rw [FrameFiber.resumeValue_deferred interp fiber value provided cause selected]
+    exact deferred cause selected
+  | replacement next =>
+    rw [FrameFiber.resumeValue_replacement interp fiber value provided next selected]
+    exact replacement next selected
+  | frame frame =>
+    cases actual : frame.armA interp value provided with
+    | none =>
+      simpa only [FrameFiber.resumeValue, selected, actual] using missing frame selected actual
+    | some result =>
+      obtain ⟨next, pushed⟩ := result
+      rw [FrameFiber.resumeValue_frame interp fiber value provided frame next pushed selected actual]
+      exact callback frame next pushed selected actual
+
+/-- The existing failure-return split exposes one result predicate at its actual delivered branch.
+Concept: scope-lifetime-finalization R11. Consumer: Timeout's whole numeric return authority.
+The actual delivered cause and callback certificates remain application premises. -/
+theorem resume_cause_dispatch (Post : FrameStep ν σ β ε δ ι α → Prop)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α))
+    (empty : (fiber.getCont .contE true (some cause)).answer = .empty →
+      Post (.finished ((fiber.getCont .contE true (some cause)).deliveredExit (provided.getD (.failure cause)))))
+    (deferred : ∀ reason, (fiber.getCont .contE true (some cause)).answer = .deferred reason →
+      Post (.running {(fiber.getCont .contE true (some cause)).fiber with current := .failure reason}))
+    (replacement : ∀ next, (fiber.getCont .contE true (some cause)).answer = .replacement next →
+      Post (.running {(fiber.getCont .contE true (some cause)).fiber with current := next}))
+    (missing : ∀ selected, (fiber.getCont .contE true (some cause)).answer = .frame selected →
+      selected.armE interp ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+        (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) = none →
+      Post (.finished ((fiber.getCont .contE true (some cause)).deliveredExit (provided.getD (.failure cause)))))
+    (callback : ∀ selected next pushed, (fiber.getCont .contE true (some cause)).answer = .frame selected →
+      selected.armE interp ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+        (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) = some (next, pushed) →
+      Post (.running {(fiber.getCont .contE true (some cause)).fiber with
+        current := next
+        stack := pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack})) :
+    Post (fiber.resumeCause interp cause provided).1 := by
+  cases selected : (fiber.getCont .contE true (some cause)).answer with
+  | empty =>
+    rw [FrameFiber.resumeCause_empty interp fiber cause provided selected]
+    exact empty selected
+  | deferred reason =>
+    rw [FrameFiber.resumeCause_deferred interp fiber cause reason provided selected]
+    exact deferred reason selected
+  | replacement next =>
+    rw [FrameFiber.resumeCause_replacement interp fiber cause provided next selected]
+    exact replacement next selected
+  | frame frame =>
+    cases actual : frame.armE interp ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+        (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) with
+    | none =>
+      simpa only [FrameFiber.resumeCause, selected, actual] using missing frame selected actual
+    | some result =>
+      obtain ⟨next, pushed⟩ := result
+      rw [FrameFiber.resumeCause_frame interp fiber cause provided frame next pushed selected actual]
+      exact callback frame next pushed selected actual
+
 /-- A whole value return uses actual deferred and replacement results at their retained suffix.
 Consumer: numeric families whose protected intermediate classes reject arbitrary causes. -/
 theorem resume_value_local
@@ -412,23 +491,15 @@ theorem resume_value_local
     (pure : ∀ selected, (fiber.getCont .contA false).answer = .frame selected →
       programOf model world selected (provided.getD (.success value)) = none) :
     RunningStep model Edge world output (fiber.resumeValue interp value provided).1 := by
-  cases selected : (fiber.getCont .contA false).answer with
-  | empty => rw [FrameFiber.resumeValue_empty interp fiber value provided selected]; trivial
-  | deferred cause =>
-    rw [FrameFiber.resumeValue_deferred interp fiber value provided cause selected]
-    exact deferred cause selected
-  | replacement next =>
-    rw [FrameFiber.resumeValue_replacement interp fiber value provided next selected]
-    exact replacement next selected
-  | frame frame =>
-    cases actual : frame.armA interp value provided with
-    | none => simp only [FrameFiber.resumeValue, selected, actual, RunningStep]
-    | some result =>
-      obtain ⟨next, pushed⟩ := result
-      obtain ⟨events, equation, typed⟩ := Contextual.Hooked.resumeValue_selected model interp Edge Allowed contextual hook world input output
-        fiber value frame next pushed provided good stack selected supplied (pure frame selected) actual
-      rw [equation]
-      exact typed
+  apply resume_value_dispatch interp (RunningStep model Edge world output) fiber value provided
+  · intro actual; trivial
+  · exact deferred
+  · exact replacement
+  · intro selected found missing; trivial
+  · intro selected next pushed found evaluated
+    obtain ⟨events, equation, typed⟩ := Contextual.Hooked.resumeValue_selected model interp Edge Allowed contextual hook world input output
+      fiber value selected next pushed provided good stack found supplied (pure selected found) evaluated
+    exact typed
 
 include family mask in
 /-- The earlier whole-value interface specializes the same actual-return producer. -/
@@ -476,25 +547,16 @@ theorem resume_cause_local
       programOf model world selected
         ((provided.map (fiber.getCont .contE true (some cause)).deliveredExit).getD (.failure delivered)) = none) :
     RunningStep model Edge world output (fiber.resumeCause interp cause provided).1 := by
-  cases selected : (fiber.getCont .contE true (some cause)).answer with
-  | empty => rw [FrameFiber.resumeCause_empty interp fiber cause provided selected]; trivial
-  | deferred reason =>
-    rw [FrameFiber.resumeCause_deferred interp fiber cause reason provided selected]
-    exact deferred reason selected
-  | replacement next =>
-    rw [FrameFiber.resumeCause_replacement interp fiber cause provided next selected]
-    exact replacement next selected
-  | frame frame =>
-    cases actual : frame.armE interp ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
-        (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) with
-    | none => simp only [FrameFiber.resumeCause, selected, actual, RunningStep]
-    | some result =>
-      obtain ⟨next, pushed⟩ := result
-      obtain ⟨events, equation, typed⟩ := Contextual.Hooked.resumeCause_provided_selected
-        (admitted := admitted) model interp Edge Allowed contextual hook world input output
-        fiber cause provided frame next pushed good absorbs stack selected supplied (pure frame selected) actual
-      rw [equation]
-      exact typed
+  apply resume_cause_dispatch interp (RunningStep model Edge world output) fiber cause provided
+  · intro actual; trivial
+  · exact deferred
+  · exact replacement
+  · intro selected found missing; trivial
+  · intro selected next pushed found evaluated
+    obtain ⟨events, equation, typed⟩ := Contextual.Hooked.resumeCause_provided_selected
+      (admitted := admitted) model interp Edge Allowed contextual hook world input output
+      fiber cause provided selected next pushed good absorbs stack found supplied (pure selected found) evaluated
+    exact typed
 
 include family mask in
 /-- A whole cause return consumes the actual delivered cause and shared selected-arm theorem. -/
