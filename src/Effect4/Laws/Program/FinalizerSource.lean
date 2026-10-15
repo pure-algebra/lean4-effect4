@@ -27,6 +27,7 @@ def name (q : List Nat) : EffName → Nat
 /-- Foreign release suspensions remain in custody until the release-start push. -/
 def thunk (root : NativeEff) (q : List Nat) : EffThunk → Nat
   | .store (.foreign _ _) => 0
+  | .body point => if point.fuel = 0 then 0 else SourceScope.Opportunities.below q point.path
   | suspended => SourceScope.Opportunities.thunk root q suspended
 
 /-- A pushed acquisition template transfers its selected release descendant into custody. -/
@@ -96,6 +97,12 @@ theorem name_le (q : List Nat) (callback : EffName) : name q callback ≤ Source
 theorem thunk_le (root : NativeEff) (q : List Nat) (suspended : EffThunk) :
     thunk root q suspended ≤ SourceScope.Opportunities.thunk root q suspended := by
   cases suspended
+  case body point =>
+    change (if point.fuel = 0 then 0 else SourceScope.Opportunities.below q point.path) ≤
+      SourceScope.Opportunities.below q point.path
+    split
+    · exact Nat.zero_le _
+    · exact Nat.le_refl _
   case store suspended =>
     cases suspended
     case foreign => exact Nat.zero_le _
