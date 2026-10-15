@@ -37,6 +37,10 @@ inductive Kind
 def Ready (spec : Spec) (world : World) : Prop :=
   spec.initialization.width ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length
 
+instance (spec : Spec) (world : World) : Decidable (Ready spec world) := by
+  unfold Ready
+  infer_instance
+
 def Phase (spec : Spec) (world : World) : Prop := world.owner = ⟨0⟩ ∨ Ready spec world
 
 def Future (first last : World) : Prop :=
@@ -56,7 +60,7 @@ def ValueAt (spec : Spec) (world : World) : Kind → Val → Prop
       world.state.refs.length = index + 1 ∧ world.state.deferreds.cells.length = 0
   | .gate, value => value = .promise ⟨0⟩ ∧ Ready spec world
   | .yielded refs deferred, value => Phase spec world ∧ value = .unit ∧
-      world.state.refs.length = refs ∧ world.state.deferreds.cells.length = deferred
+      world.state.refs.length = refs ∧ world.state.deferreds.cells.length = deferred ∧ ¬ Ready spec world
 
 /-- The existing native code carries transient initialization or protected stable source evidence. -/
 inductive CodeAt (spec : Spec) : World → Kind → NCode → Prop
@@ -74,7 +78,8 @@ inductive CodeAt (spec : Spec) : World → Kind → NCode → Prop
   | frontier {world kind point} (zero : point.fuel = 0) (phase : Phase spec world) :
       CodeAt spec world kind (Effect4.Program.frontier point)
   | yielding {world priority refs deferred} (phase : Phase spec world)
-      (refsEq : world.state.refs.length = refs) (deferredEq : world.state.deferreds.cells.length = deferred) :
+      (refsEq : world.state.refs.length = refs) (deferredEq : world.state.deferreds.cells.length = deferred)
+      (pending : ¬ Ready spec world) :
       CodeAt spec world (.yielded refs deferred) (.yieldNowWith priority)
   | bound {world input output body name} (first : CodeAt spec world input body)
       (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,

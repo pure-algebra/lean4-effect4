@@ -37,9 +37,15 @@ theorem value_rebase (spec : Spec) (first last : World) (future : Future first l
     (kind : Kind) (value : Val) (good : ValueAt spec first kind value) : ValueAt spec last kind value := by
   cases kind with
   | stable kind => exact ⟨phase_future spec first last future good.1, good.2⟩
-  | allocated index | yielded index deferreds =>
+  | allocated index =>
     exact ⟨phase_future spec first last future good.1, good.2.1,
       refs.symm.trans good.2.2.1, deferred.symm.trans good.2.2.2⟩
+  | yielded index deferreds =>
+    refine ⟨phase_future spec first last future good.1, good.2.1,
+      refs.symm.trans good.2.2.1, deferred.symm.trans good.2.2.2.1, ?_⟩
+    intro ready
+    apply good.2.2.2.2
+    exact ⟨by rw [refs]; exact ready.1, by rw [deferred]; exact ready.2⟩
   | gate => exact ⟨good.1, ready_future spec first last future good.2⟩
 
 /-- The actual initializer stage depends only on its owner and current allocation counts. -/
@@ -64,9 +70,10 @@ theorem code_rebase (spec : Spec) (first : World) (kind : Kind) (program : NCode
   | gateAllocating stage => exact .gateAllocating (stage_rebase spec _ _ future refs deferred _ _ stage)
   | stable ready held => exact .stable (ready_future spec _ _ future ready) held
   | frontier zero phase => exact .frontier zero (phase_future spec _ _ future phase)
-  | yielding phase beforeRefs beforeDeferred =>
+  | yielding phase beforeRefs beforeDeferred pending =>
     exact .yielding (phase_future spec _ _ future phase)
       (refs.symm.trans beforeRefs) (deferred.symm.trans beforeDeferred)
+      (fun ready => pending ⟨by rw [refs]; exact ready.1, by rw [deferred]; exact ready.2⟩)
   | bound first callback ih =>
     refine .bound (ih last future refs deferred) ?_
     intro nextWorld nextFuture view answer good
@@ -74,4 +81,38 @@ theorem code_rebase (spec : Spec) (first : World) (kind : Kind) (program : NCode
       ⟨future.1.trans nextFuture.1, Nat.le_trans future.2.1 nextFuture.2.1,
         Nat.le_trans future.2.2 nextFuture.2.2⟩ view answer good
   | yieldThen phase held ih => exact .yieldThen (phase_future spec _ _ future phase) (ih last future refs deferred)
+/-- Once ready, successful answer classes retain their meaning under arbitrary store growth. -/
+theorem value_future_ready (spec : Spec) (first last : World) (future : Future first last)
+    (ready : Ready spec first) (kind : Kind) (value : Val) (good : ValueAt spec first kind value) :
+    ValueAt spec last kind value := by
+  cases kind with
+  | stable kind => exact ⟨phase_future spec first last future good.1, good.2⟩
+  | allocated index =>
+    have positive := ready.2
+    rw [good.2.2.2] at positive
+    exact (Nat.not_succ_le_zero _ positive).elim
+  | gate => exact ⟨good.1, ready_future spec first last future good.2⟩
+  | yielded refs deferred => exact (good.2.2.2.2 ready).elim
+
+/-- Once ready, the protected current graph tolerates growth of references and deferred waiters. -/
+theorem code_future_ready (spec : Spec) (first : World) (kind : Kind) (program : NCode)
+    (owned : CodeAt spec first kind program) (last : World) (future : Future first last)
+    (ready : Ready spec first) : CodeAt spec last kind program := by
+  induction owned generalizing last with
+  | success good => exact .success (value_future_ready spec _ _ future ready _ _ good)
+  | failure phase => exact .failure (phase_future spec _ _ future phase)
+  | initial stage | allocating small stage | gateAllocating stage =>
+    have positive := ready.2
+    rw [stage.2.2.2.2.2.1] at positive
+    exact (Nat.not_succ_le_zero _ positive).elim
+  | stable held code => exact .stable (ready_future spec _ _ future held) code
+  | frontier zero phase => exact .frontier zero (phase_future spec _ _ future phase)
+  | yielding phase refs deferred pending => exact (pending ready).elim
+  | bound first callback ih =>
+    refine .bound (ih last future ready) ?_
+    intro nextWorld nextFuture view answer good
+    exact callback nextWorld
+      ⟨future.1.trans nextFuture.1, Nat.le_trans future.2.1 nextFuture.2.1,
+        Nat.le_trans future.2.2 nextFuture.2.2⟩ view answer good
+  | yieldThen phase held ih => exact .yieldThen (phase_future spec _ _ future phase) (ih last future ready)
 end Effect4.Program.AnswerSlots.Initialized

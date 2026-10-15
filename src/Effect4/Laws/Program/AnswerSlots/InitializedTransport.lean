@@ -19,7 +19,7 @@ theorem yield_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : 
   apply AnswerFlow.EmbeddedEdge.saved
   apply AnswerFlow.saved_constant
   · intro nextWorld future value good
-    exact code_rebase spec world kind next owned nextWorld future good.2.2.1.symm good.2.2.2.symm
+    exact code_rebase spec world kind next owned nextWorld future good.2.2.1.symm good.2.2.2.1.symm
   · intro nextWorld future cause good
     exact good
 
@@ -39,12 +39,20 @@ theorem head (spec : Spec) (fragment : SourceScope.Fragment spec.root)
   | stable ready held =>
     exact (embedding spec completed).head _ _ world ready _ program (Typed.head spec.toSpec fragment completed _ program held)
   | frontier zero phase => exact .suspend _ (frontier_code spec completed world kind _ zero phase)
-  | yielding phase refsEq deferredEq => exact .yieldNowWith _ (.yielding phase refsEq deferredEq)
+  | yielding phase refsEq deferredEq pending => exact .yieldNowWith _ (.yielding phase refsEq deferredEq pending)
   | bound first callback =>
     exact .onSuccess _ _ _ first (bound_edge spec completed world _ _ _ _ callback)
   | yieldThen phase held =>
-    exact .onSuccessConst (Kind.yielded world.state.refs.length world.state.deferreds.cells.length) _ _
-      (.yielding phase rfl rfl) (yield_edge spec completed world kind _ _ held)
+    by_cases ready : Ready spec world
+    · refine .onSuccessConst (Kind.stable Typed.Kind.root) _ _ (.stable ready rfl) ?_
+      apply AnswerFlow.EmbeddedEdge.saved
+      apply AnswerFlow.saved_constant
+      · intro nextWorld future value good
+        exact code_future_ready spec world kind _ held nextWorld future ready
+      · intro nextWorld future cause good
+        exact good
+    · exact .onSuccessConst (Kind.yielded world.state.refs.length world.state.deferreds.cells.length) _ _
+        (.yielding phase rfl rfl ready) (yield_edge spec completed world kind _ _ held)
 
 /-- The actual closed source starts in the first initializer stage with no allocated cells. -/
 theorem initial_code (spec : Spec) (state : Stores) (fuel : Nat) (tape : List Bool)
