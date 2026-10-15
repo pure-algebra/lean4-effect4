@@ -368,3 +368,20 @@ artifact takes host answers as root data on the tape, and checks them at its ing
 choice is the clock boundary's: treat a reactor's answer as the same host ingress, or resolve the
 known reactor through `runWith` and `drive` at the call site. Its owner is the clock boundary's
 design (DI-56), so the choice is recorded here, not made.
+
+### 6.10 F3 and the clock boundary, landed (seat CLEANUP's S1 and S2)
+
+Both slices are on the branch inside the merge `68765c384`. The commits record their checks.
+
+- **S1, F3** (`5b1180aae`): `OCaml5.Lcnf.typeParameterSlots` gives a parameter `R : I → Type`,
+  over a finite index `I`, one OCaml type parameter per constructor of `I`. The host-run probe
+  had 68 unspelled fields of `EffAlgebra`, 10 of `TermAlgebra` and 4 of `CauseTermAlgebra`; it
+  now has none. No committed byte moved.
+- **S2, the clock boundary** (`ea5371129`): the host-run probe lowers `serveBuilt` and
+  `serveBuiltForgetful` with no clock refusal.
+
+**§6.9's diagnosis of the clock refusals was wrong.** The four refusals came from a builtin
+callback's arity: `List.appendTR._redArg` has no kernel constant, and the analysis read it as
+arity 0. The reactor call did not cause them. S2 fixes the arity. It also adds row 394's rule (a
+root reactor's answer is host ingress), with red controls, and `E4_engine.check_answer` (EN9),
+which checks each reactor answer's numeric profile.
