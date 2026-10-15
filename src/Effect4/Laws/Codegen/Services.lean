@@ -6,7 +6,7 @@ import Effect4.Laws.Codegen.ReadLeaf
 A block's roles declare its services (`DefRole`), and the printer prints each as its key and its
 layer after the definitions (`printServices`, `src/Effect4/Codegen/Print.lean`). The reader gives
 the roles back from the layers (`roleOf`, `src/Effect4/Codegen/Read.lean`). This module proves the
-three facts that the round trip of a block uses (`readModule_printModule_defs`,
+three facts that the round trip of a block uses (`readModuleWith_printModuleWith_defs`,
 `Laws/Codegen/Module.lean`):
 
 - the printed service constants are plain, are service constants, and carry no layer path
@@ -419,7 +419,7 @@ theorem printServices_ok {sig : Signature Op} {defs : List DefDecl}
 /-! ## The roles come back -/
 
 /-- The information of a block's services gives each definition its role, at a block whose
-services print. A step of `readModule_printModule_defs`. -/
+services print. A step of `readModuleWith_printModuleWith_defs`. -/
 theorem roleOf_servicesOf {defs : List DefDecl} (hf : serviceFault defs = none) {d : DefDecl}
     (hd : d ∈ defs) : roleOf ((servicesOf defs).map (serviceInfo defs)) d.name = d.role := by
   obtain ⟨hnodup, hstray, -⟩ := serviceFault_none hf
@@ -542,7 +542,7 @@ theorem roleOf_servicesOf {defs : List DefDecl} (hf : serviceFault defs = none) 
 
 /-- **The definitions come back with their roles**: definitions read back with plain roles, then
 given the roles of the block's services, are the block's definitions. A step of
-`readModule_printModule_defs`. -/
+`readModuleWith_printModuleWith_defs`. -/
 theorem restoreRoles {defs : List DefDecl} (hf : serviceFault defs = none)
     {heads : List (DefDecl × TypeScript.Expr)}
     (hdefs : heads.map (·.1) = defs.map fun d => { d with role := .plain }) :

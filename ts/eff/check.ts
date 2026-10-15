@@ -6,8 +6,9 @@
 //
 // The oracle files are written by `tools/Tools/Corpus.lean`: the program Lean's own
 // reader gets back after the printer (`Api.roundTrip`). A match is this reader agreeing with
-// Lean's reader on that program. Exit status 1 on any mismatch or any refusal of a program
-// that has an oracle.
+// Lean's reader on that program. Every file is read with the typed reading (`erase`), as Lean's
+// module reader reads a module that ships (`Api.readModule`). Exit status 1 on any mismatch or
+// any refusal of a program that has an oracle.
 
 import * as fs from "node:fs"
 import * as path from "node:path"
@@ -48,7 +49,8 @@ for (const dir of dirs) {
     const beside = path.join(dir, `${base}.json`)
     const inOracle = oracleDir ? path.join(oracleDir, `${base}.json`) : undefined
     const oracle = fs.existsSync(beside) ? beside : inOracle && fs.existsSync(inOracle) ? inOracle : undefined
-    const result = readTypeScript(fs.readFileSync(file, "utf8"), name)
+    // the typed reading: a module that ships is the typed print's (decisions row 373 (11))
+    const result = readTypeScript(fs.readFileSync(file, "utf8"), name, [], "erase")
     if (Result.isFailure(result)) {
       const shown = showFailure(result.failure)
       refusalKinds.set(result.failure._tag, (refusalKinds.get(result.failure._tag) ?? 0) + 1)

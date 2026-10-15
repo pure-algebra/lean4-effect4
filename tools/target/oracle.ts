@@ -36,7 +36,8 @@ export interface Query {
 }
 /** The truth lane's fixed widening fixtures; no compiler-neutral parser or type printer. */
 export interface TruthWideningEntry {
-  name: string; wellTyped: boolean; expr: string | null; decl: string | null; declInferred: string | null
+  name: string; wellTyped: boolean; expr: string | null; module: string | null
+  moduleSource: "decl" | "expr" | null; moduleInferred: string | null
   type: { answer: string; error: string; requiresEmpty: boolean; requires: unknown[] } | null
 }
 export interface TruthWideningRequest {

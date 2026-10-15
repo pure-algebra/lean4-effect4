@@ -1244,34 +1244,42 @@ def readLocal (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
     | none => .error (.shape "definition")
   | _ => .error (.shape "definition")
 
-/-- A definition's body from its printed suspension, read at environment length `1`, with the
-body's own layers (decisions row 341, step 3): the inverse of `suspension`. The plain form
-`Effect.suspend(() => body)` holds none; the block form
+/-- A reader of a module's program pieces, at the module's classes, a signature, a spelling map
+and an environment's length: the inverse of a piece printer (`PiecePrint`). The raw reader is
+`readEff`. The typed reader erases a typed print's inserted type arguments first (`readTyped`,
+`Codegen/EraseTypes.lean`). One module reader serves both (`readModuleWith`). -/
+abbrev PieceRead (Op : Type) :=
+  Effect4.Codegen.Classes.Classes → Signature Op → (String → List RowArg → Option Op) → Nat →
+    Expr → Except ReadRefusal (Eff Op)
+
+/-- A definition's body from its printed suspension, read at environment length `1` by the piece
+reader `rd`, with the body's own layers (decisions row 341, step 3): the inverse of
+`suspension`. The plain form `Effect.suspend(() => body)` holds none; the block form
 `Effect.suspend(() => { let L_<path> = …; return body })` holds one per constant before the
 `return`, each at the path its name carries. -/
-def readDefBody (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List RowArg → Option Op) (x : Expr) :
+def readDefBodyWith (rd : PieceRead Op) (classes : Effect4.Codegen.Classes.Classes)
+    (sig : Signature Op) (spell : String → List RowArg → Option Op) (x : Expr) :
     Except ReadRefusal (Eff Op × List (List Nat × LayerTerm Op)) :=
   match x with
   | .call (.ident "Effect.suspend") [.arrow none y] =>
-    readEff classes sig spell 1 y >>= fun body => .ok (body, [])
+    rd classes sig spell 1 y >>= fun body => .ok (body, [])
   | .call (.ident "Effect.suspend") [.arrowBlock [] stmts none] =>
     match stmts.getLast? with
     | some (.ret y) =>
       stmts.dropLast.mapM (readLocal classes sig spell) >>= fun locals =>
-      readEff classes sig spell 1 y >>= fun body => .ok (body, locals)
+      rd classes sig spell 1 y >>= fun body => .ok (body, locals)
     | _ => .error (.shape "definition")
   | _ => .error (.shape "definition")
 
 /-- The bodies of a block, in order, each at the signature and the spelling map its parameters
 extend (slice HO-3), and the bodies' own layers, body after body (decisions row 341, step 3). -/
-def readDefBodies (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List RowArg → Option Op) (param : Nat → Op) :
+def readDefBodiesWith (rd : PieceRead Op) (classes : Effect4.Codegen.Classes.Classes)
+    (sig : Signature Op) (spell : String → List RowArg → Option Op) (param : Nat → Op) :
     List (DefDecl × Expr) → Except ReadRefusal (Effs Op × List (List Nat × LayerTerm Op))
   | [] => .ok (.nil, [])
   | (d, x) :: rest =>
-    readDefBody classes (sig.withParams d.params) (paramsSpell param d.params spell) x >>= fun b =>
-    readDefBodies classes sig spell param rest >>= fun bs =>
+    readDefBodyWith rd classes (sig.withParams d.params) (paramsSpell param d.params spell) x >>= fun b =>
+    readDefBodiesWith rd classes sig spell param rest >>= fun bs =>
     .ok (.cons b.1 bs.1, b.2 ++ bs.2)
 
 /-- A layer declaration back to its path and its layer: `const L_<path> = <layer>`. -/
@@ -1322,9 +1330,12 @@ native signature), and `param i` the run of a body's parameter `i` (`NativeOp.pa
 its body's spelling map reads (`paramsSpell`, slice HO-3). The layers whose paths stand in the
 module (`2 :: …`, decisions row 341, step 2) are the block's module layers, the `k`-th at
 `Path.layerPath k` (`moduleLayersOf`); the others, and each body's own layers from its suspension
-(step 3), are put back at their paths. -/
-def readModule (sig : Signature Op) (spell : String → List RowArg → Option Op)
-    (call : Nat → Op) (param : Nat → Op) (rows : List Row) (decls : List TypeScript.Decl) :
+(step 3), are put back at their paths.
+
+The main program and the bodies are read by the piece reader `rd`, the layers by `readLayer`. -/
+def readModuleWith (rd : PieceRead Op) (sig : Signature Op)
+    (spell : String → List RowArg → Option Op) (call : Nat → Op) (param : Nat → Op)
+    (rows : List Row) (decls : List TypeScript.Decl) :
     Except ReadRefusal (Eff Op) :=
   match blockClasses decls with
   | none => .error (.shape "class")
@@ -1336,7 +1347,7 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
     | some (.const main), earlier =>
       match defsPrefix earlier with
       | ([], layerDecls) => do
-        let e ← readEff classes sig spell 0 main.value
+        let e ← rd classes sig spell 0 main.value
         let ds ← layerDecls.mapM (readLayerDecl classes sig spell)
         match e.restoreAll ds with
         | some e' => .ok e'
@@ -1348,8 +1359,8 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
         let defs := heads.map fun h => { h.1 with role := roleOf services h.1.name }
         let sig' := sig.withDefs defs
         let spell' := defsSpell call defs spell
-        let bodies ← readDefBodies classes sig' spell' param heads
-        let e ← readEff classes sig' spell' 0 main.value
+        let bodies ← readDefBodiesWith rd classes sig' spell' param heads
+        let e ← rd classes sig' spell' 0 main.value
         let ds ← layerDecls.mapM (readLayerDecl classes sig' spell')
         let some layers := moduleLayersOf ds | .error (.shape "module")
         match (Eff.defs defs bodies.1 e layers).restoreAll
@@ -1357,6 +1368,13 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
         | some e' => .ok e'
         | none => .error (.shape "module")
     | _, _ => .error (.shape "module")
+
+/-- The raw module reader: each program piece by `readEff`, which refuses an inserted type
+argument. The typed reader is `readModuleTyped` (`Codegen/PrintTyped.lean`). -/
+abbrev readModule (sig : Signature Op) (spell : String → List RowArg → Option Op)
+    (call : Nat → Op) (param : Nat → Op) (rows : List Row) (decls : List TypeScript.Decl) :
+    Except ReadRefusal (Eff Op) :=
+  readModuleWith readEff sig spell call param rows decls
 
 /-- The reader after the printer: the executed shadow of `read_print`, under the classes the
 program's constructions name (`classesOf`, what its module declares; an operation's binder term
@@ -1391,6 +1409,15 @@ classes: the premise the module law composes, stated of any reader. -/
 def ReadsBack (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
     (spell : String → List RowArg → Option Op) (n : Nat) (e : Eff Op) : Prop :=
   ∀ x, print sig n e = .ok x → readEff classes sig spell n x = .ok e
+
+/-- **A piece reads back by a pair of a piece printer and a piece reader**: whatever `pp` prints of
+it at its signature and environment, `rd` reads back to it at the environment's length. The
+plain pair is `ReadsBack`'s; the module laws are stated of any pair
+(`readModuleWith_printModuleWith`, `Laws/Codegen/Module.lean`). -/
+def ReadsBackBy (pp : PiecePrint Op) (rd : PieceRead Op) (classes : Effect4.Codegen.Classes.Classes)
+    (sig : Signature Op) (spell : String → List RowArg → Option Op) (env : TyEnv) (e : Eff Op) :
+    Prop :=
+  ∀ x, pp sig env e = .ok x → rd classes sig spell env.length x = .ok e
 
 /-- The same of a layer. -/
 def LayerTerm.ReadsBack (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)

@@ -144,8 +144,8 @@ the second authoring plane, were deleted on 2026-09-18 under the ontology note Â
 | `src/Effect4/Laws/Step/Ascribe.lean` | the two builder rules of an ascription, beside the rules of a construction and of a field's read: it has its declared type under each literal flag where its term's type is below it (`types_ascribe`), it has no type otherwise (`ascribe_untyped`), and it reads what its term reads (`reads_ascribe`). It names no module |
 | `src/Effect4/Laws/Program/Typed/Mask.lean` | the mask's three claims at the typed state: the saved image's membership (`saved_mask_image_membership`), the body of a restore site (`scoped_body_substitution_boundary`), and the flag at the boundaries of regions (`saved_mask_restoration`). The file states no run-level bracket |
 | `src/Effect4/Laws/Codegen/Mask.lean` | the mask's two rows keep the template table's premises (`mask_rows_table_premises`), and the profile of the mask's printed form (`mask_printed_form_profile`) |
-| `src/Effect4/Codegen/PrintTyped.lean` | the typed print, slice P2a (decisions row 325): the table-driven print with each node's address (`printTypedAt`); at a call where the annotation answers type arguments, the call carries them on its head. `typeArgsAt` answers a call's bindings where a binding is a join, and `printTyped` reads it |
-| `src/Effect4/Laws/Codegen/PrintTyped.lean` | the connector: at the empty annotation the typed print is the print (`printTypedAt_none`); while the guards stand the annotation answers nothing (`typeArgsAt_none`); so the typed print is the print, byte for byte (`printTyped_eq_print`, the pointer of the claim `typed-print-connector`). The battery is `Test/Codegen/PrintTyped.lean` |
+| `src/Effect4/Codegen/PrintTyped.lean` | the typed print, slice P2a (decisions row 325): the table-driven print with each node's address (`printTypedAt`); at a call where the annotation answers type arguments, the call carries them on its head. `typeArgsAt` answers a call's bindings where a binding is a join, read off the address table that `annotate` builds once per program (`focusAtTable`), and `printTyped` reads it. The module that ships prints its pieces so, or by the fold where the typed print refuses (`shippedPieces`), and `readModuleTyped` reads them after the named erasure |
+| `src/Effect4/Laws/Codegen/PrintTyped.lean` | the connector: at the empty annotation the typed print is the print (`printTypedAt_none`); the table's focus is the focus (`focusAtTable_annotate`), so where no call needs a join and no site needs a type (`NoJoin`) the annotation answers nothing, and the typed print is the print, byte for byte (`printTyped_eq_print`, the pointer of the claim `typed-print-connector`). The battery is `Test/Codegen/PrintTyped.lean` |
 | `src/Effect4/Laws/Machine/MaskDiscipline.lean` | the saved mask's chain on a fiber's stack (`MaskChain`): at one fixed base bit, the restoring frames alternate from the negation of the flag. One placed theorem holds the statements (`saved_mask_pop_discipline`). The frame machine's pop from an empty scratch stack, `getCont`, the finished frame's path `Machine.frameExitState` and the entry of each region keep the chain. Two fibers with one base and one stack have one flag. The file states no law of a run. It imports no module of `src/Effect4/Laws/Program` |
 | `src/Effect4/Laws/Machine/MaskRuns.lean` | the saved mask's chain at every live fiber of a run (`MaskRuns`), over a table of start flags that is proof data. A step of the frame machine keeps the chain, and a pop that answers nothing ends at an empty stack and at the base. Each command keeps the invariant under the condition on `Cmd.exitDone` (`ClearReady`), and the command loop discharges it through `Machine.Lift`. One placed theorem holds the statements at the frame evaluator (`saved_mask_chain_runs`). The file states no bracket of a region |
 | `src/Effect4/Laws/Program/MaskRuns.lean` | the same invariant at the compiled program's interpreter, under the native evaluator (`compiled_mask_chain_runs`, the pointer of the registry claim `saved-mask-chain-runs`), and at the entries of `src/Effect4/Api.lean` and `src/Effect4/Program/Admit.lean` that return a machine |
@@ -201,9 +201,17 @@ import or alter the runtime/LCNF root. The six owed encoders (DI-41) remain with
 `Program/CheckedTyping.lean` owns the computed `TypedProgram` evidence for the
 existing whole-program checker. Execution admission extends it; code generation
 reuses it without runner registration limits. `Codegen/Checked.lean` owns module
-production receipts indexed by program, row table and export name. The application
-module exposes those receipts through `emitModule`, while `printModule` projects
-syntax. Checker/declarative connections and production/reconstruction theorems live
+production receipts indexed by program, row table and export name. A receipt's
+declarations print their program pieces by the typed print (decisions row 392, P1). Where
+the typed print refuses a piece, the fold prints it (`printEntryWith shippedPieces`).
+`uncheckedFile` prints a program that has no receipt by the same writer. The application
+module exposes those receipts through `emitModule`, while `printModule` projects syntax.
+`Tools.Code.programModule` is the one writer of every lane's module text. The module printer
+is one function over a printer of the program pieces (`printModuleWith`), and so is the
+module reader (`readModuleWith`). The module laws are stated of any lawful pair
+(`readModuleWith_printModuleWith_defs`, `Laws/Codegen/Module.lean`; `PiecesLawful`,
+`Laws/Api/ModuleReadable.lean`).
+Checker/declarative connections and production/reconstruction theorems live
 in `Laws/Program/CheckedTyping.lean` and `Laws/Codegen/Checked.lean`. These are proof
 views of the same program and printer, not a second language or source validator.
 

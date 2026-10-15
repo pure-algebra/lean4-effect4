@@ -92,12 +92,15 @@ def imageCertificate (program : Program) (table : RowTable := []) :
 
 /-! ## Modules: production, reconstruction, checked reading -/
 
-/-- The program as an exported constant with its `Effect.Effect<A, E>` type. Raw
-formation, stored-annotation support, typing and printing must all succeed; otherwise the result is `none`. -/
+/-- The program as an exported constant with its `Effect.Effect<A, E>` type, its body printed as
+a module that ships prints it (`Program.shippedPieces`: the typed print, a call's type arguments
+where a join needs them, or the fold where the typed print refuses). Raw formation,
+stored-annotation support, typing and printing must all succeed; otherwise the result is
+`none`. -/
 def printDecl (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.ConstDecl :=
   match Program.Formation.checkInput program table, Program.annotationRefusal program with
   | none, none =>
-    match checkTyping program table, print program table with
+    match checkTyping program table, Program.shippedPieces (nativeSignature table) [] program with
     | some typing, Except.ok body => (Program.printDecl name typing.ty body).toOption
     | _, _ => none
   | _, _ => none
@@ -123,22 +126,23 @@ one `const` is the one object. -/
 def printModule (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.Module :=
   ((emitModule name program table).toOption).map (·.module)
 
-/-- Raw reconstruction from a declaration block. This recovers programs in the
-printer's readable image, but ignores imports, outer annotations and export names.
-Use `checkTyping` on the recovered program for core typing; that check alone does
-not validate the original source envelope. -/
+/-- Reconstruction from a declaration block, each program piece read after the named erasure of
+the type arguments that the typed print inserts (`Program.readModuleTyped`), so it reads the
+block that `printModule` answers. This recovers programs in the printer's readable image, but
+ignores imports, outer annotations and export names. Use `checkTyping` on the recovered program
+for core typing; that check alone does not validate the original source envelope. -/
 def readModule (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
-  Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param []
+  Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param []
     module.decls
 
-/-- Raw reconstruction from a module file (`ModuleEmission.file`): the payload classes, then the
+/-- Reconstruction from a module file (`ModuleEmission.file`): the payload classes, then the
 row namespaces' services (`rowServiceDecls`, decisions row 378 (19)), read back exactly against
 the table, then the declaration block, read as `readModule` reads it. A module that declares no
 service of its table reads by `readModule`; a file of a table with no service row reads by
 either. -/
 def readFile (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
-  Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param table
-    module.decls
+  Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param
+    table module.decls
 
 /-- Check imports and lexical bindings on the original module, retaining its exact
 syntax in the certificate's index. The caller supplies permitted import origins.

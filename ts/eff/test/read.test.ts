@@ -122,6 +122,20 @@ describe("rows: the shape the grammar could not decide", () => {
   test("Ref.make<number>(0) carries type arguments its row does not declare", () => {
     expect(refusal("Ref.make<number>(0)")).toEqual({ _tag: "arity", head: "Ref.make" })
   })
+  test("a join's type arguments: refused by the raw reading, read as the bare call by the typed one", () => {
+    // The typed print writes a row call's bindings on its head where inference needs a join
+    // (decisions row 373 (11)). Neither `Ref.make` nor its row carries a type argument, so the
+    // typed reading (Lean `readTyped`, `eraseRowJoin`) reads the bare call.
+    const typed = (source: string) => readTypeScript(source, "program.ts", [], "erase")
+    const join = typed("Ref.make<number>(0)")
+    expect(Result.isSuccess(join) ? toJson(join.success) : join.failure).toBe(json("Ref.make(0)"))
+    // an operation that carries its own types keeps them, and another count is refused
+    const another = typed("Deferred.make<number>()")
+    expect(Result.isFailure(another) ? another.failure : toJson(another.success)).toEqual({ _tag: "arity", head: "Deferred.make" })
+    // a reserved head is no row call in either reading
+    const reserved = typed("Effect.succeed<number>(1)")
+    expect(Result.isFailure(reserved) ? reserved.failure : toJson(reserved.success)).toEqual({ _tag: "unknownHead", name: "Effect.succeed" })
+  })
   test("a reserved head with type arguments is not a row call", () => {
     expect(refusal("Effect.succeed<number>(1)")).toEqual({ _tag: "unknownHead", name: "Effect.succeed" })
   })
@@ -586,6 +600,14 @@ describe("supplied tables and method rows", () => {
   test("the type arguments must be exactly the row's", () => {
     expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.lookup(3))", methodTable)).toEqual({ _tag: "arity", head: "lookup" })
     expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.read<number>(3))", methodTable)).toEqual({ _tag: "arity", head: "read" })
+  })
+  test("a method call's join: the typed reading reads the bare method call", () => {
+    const typed = (source: string) => readTypeScript(source, "program.ts", methodTable, "erase")
+    const join = typed("Effect.flatMap(Effect.succeed(9), (a0) => a0.read<number>(3))")
+    expect(Result.isSuccess(join) ? toJson(join.success) : join.failure).toBe(toJson(after9(external(1, pair(v(0), natLit(3))))))
+    // a row that declares its type arguments still needs them under the typed reading
+    const bare = typed("Effect.flatMap(Effect.succeed(9), (a0) => a0.lookup(3))")
+    expect(Result.isFailure(bare) ? bare.failure : toJson(bare.success)).toEqual({ _tag: "arity", head: "lookup" })
   })
   test("a method spelled as a call, and a call row spelled with a receiver, are refused", () => {
     expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => read(a0, 3))", methodTable)).toEqual({ _tag: "arity", head: "read" })

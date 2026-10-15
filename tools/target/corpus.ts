@@ -8,8 +8,8 @@
  *
  *     bun tools/target/corpus.ts --repo . --manifest <corpus.json> --inferred <dir> --out <report.json>
  *
- * The module read is the program's *unannotated* block (`inferred/<name>.ts`, written by
- * `run-truth.ts --emit` from the manifest's `declInferred`): `typeof Program.main` is then
+ * The module read is the program's *unannotated* module (`inferred/<name>.ts`, written by
+ * `run-truth.ts --emit` from the manifest's `moduleInferred`): `typeof Program.main` is then
  * what the host's compiler infers for the printed initializer on its own. Reading the shipped
  * annotated block would hand Lean's rendered type back to the comparison (the annotation *is*
  * that type), which the audit of 2026-09-13 showed reports agreement on a widened annotation.
@@ -48,7 +48,7 @@ const imports = [
 ]
 const queries: Query[] = []
 for (const entry of manifest.programs as Array<Record<string, any>>) {
-  if (!entry.wellTyped || entry.decl === null) continue
+  if (!entry.wellTyped || entry.moduleSource !== "decl") continue
   const source = resolve(inferred, `${entry.name}.ts`)
   const q: Query = {
     id: `program/${entry.name}`, source,
@@ -56,7 +56,7 @@ for (const entry of manifest.programs as Array<Record<string, any>>) {
     subject: "typeof Program.main", kind: "program", expected: {}, bindings: Object.fromEntries(handles), inputIssues: [],
     provenance: { metadata: "corpus manifest", program: entry.name, type: entry.type, module: "inferred (unannotated)" }
   }
-  if (entry.declInferred === null) q.inputIssues!.push({ code: "no-inferred-module", message: "the manifest has no unannotated block for a well-typed program" })
+  if (entry.moduleInferred === null) q.inputIssues!.push({ code: "no-inferred-module", message: "the manifest has no unannotated module for a well-typed program" })
   try {
     q.expected.A = entry.type.answer
     q.expected.E = entry.type.error

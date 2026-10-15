@@ -15,7 +15,7 @@ assumed. These are theorems about the module AST returned by the existing API.
 `admitModule_emitModule` is the round trip in certificate form: what the checked producer
 emitted is admitted by the checked reader, at the same program and the same recorded type,
 once the host supplies the bindings its prelude provides. `printModule_roundTrip` is its
-projection through the raw reader, and keeps its own statement. Source annotations beyond
+projection through the module reader, and keeps its own statement. Source annotations beyond
 the declaration's, nominal service requirements, the meaning of the `effect` package, and
 target typing or execution remain separate obligations.
 -/
@@ -69,9 +69,9 @@ theorem explain_eq_if_refsWF (program : Program) (table : RowTable) :
     rw [hwf]
     rfl
 
-/-- On raw formed input, evidence retention keeps the existing module output, when no
-invocation's programs need a service the printed header cannot carry (Codex's HO3-REQ-01,
-`Codegen/CallbackRequirements.lean`). -/
+/-- On raw formed input, evidence retention keeps the module output, its pieces printed as the
+module that ships prints them (`shippedPieces`), when no invocation's programs need a service the
+printed header cannot carry (Codex's HO3-REQ-01, `Codegen/CallbackRequirements.lean`). -/
 theorem printModule_erasure (name : String) (program : Program) (table : RowTable)
     (formed : Formation.InputFormed program table)
     (callbacks : Effect4.Codegen.invokeRequirementFault (nativeSignature table) program = none)
@@ -79,7 +79,8 @@ theorem printModule_erasure (name : String) (program : Program) (table : RowTabl
     printModule name program table =
       match typeOf program table with
       | some ty =>
-        match Effect4.Program.printEntry table (nativeSignature table) name ty program,
+        match Effect4.Program.printEntryWith Effect4.Program.shippedPieces table
+            (nativeSignature table) name ty program,
             Effect4.Codegen.ClassTable.moduleClasses (nativeSignature table) name ty program with
         | .ok decls, .ok (_, classDecls) =>
           some { header := [], imports := []
@@ -89,22 +90,23 @@ theorem printModule_erasure (name : String) (program : Program) (table : RowTabl
   simp only [printModule, emitModule, callbacks]
   exact Effect4.Codegen.emitModule_erasure name program table formed inProfile
 
-/-- On formed input with supported stored annotations, evidence retention retains the declaration result. -/
+/-- On formed input with supported stored annotations, evidence retention retains the declaration
+result, its body printed as a module that ships prints it (`Program.shippedPieces`). -/
 theorem printDecl_erasure (name : String) (program : Program) (table : RowTable)
     (formed : Formation.InputFormed program table)
     (annotations : annotationRefusal program = none) :
     printDecl name program table =
-      match typeOf program table, print program table with
+      match typeOf program table, Effect4.Program.shippedPieces (nativeSignature table) [] program with
       | some ty, .ok body => (Effect4.Program.printDecl name ty body).toOption
       | _, _ => none := by
   have hformed := (Formation.checkInput_eq_none_iff program table).mpr formed
   cases checked : checkTypedProgram (nativeSignature table) program with
   | none =>
     have typed := checkTypedProgram_refusal_iff.mp checked
-    cases body : print program table <;>
+    cases body : Effect4.Program.shippedPieces (nativeSignature table) [] program <;>
       simp only [printDecl, hformed, annotations, checkTyping, checked, typeOf, typed, body]
   | some typing =>
-    cases body : print program table <;>
+    cases body : Effect4.Program.shippedPieces (nativeSignature table) [] program <;>
       simp only [printDecl, hformed, annotations, checkTyping, checked, typeOf, typing.typed, body]
 
 /-- O3 through the application face: an admitted module's program carries the type the

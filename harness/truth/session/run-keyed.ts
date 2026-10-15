@@ -15,7 +15,8 @@ import { pathToFileURL } from "node:url"
 import { setImmediate } from "node:timers/promises"
 import { deepStrictEqual } from "node:assert"
 import { Effect, Ref, type Exit, type Fiber } from "effect"
-import * as Prelude from "../prelude.ts"
+// the lane's prelude, loaded before any module that imports it, as it was when the header read it
+import "../prelude.ts"
 import { KeyedRecorder, exitJson, type KeyedFixture } from "./keyed-recorder.ts"
 import { ArmedDispatchers, KeyedBindings, ScriptedHost, bindScenario, declareScenario, provideScenario } from "./keyed-bindings.ts"
 import { measure, type HostEnd, type ReaderName, type Readers, type ScenarioFixture, type ScenarioManifest, type ScenarioResult } from "./keyed-observation.ts"
@@ -105,26 +106,24 @@ if (scenariosPath) {
   const alone = (fixture: ScenarioFixture): Array<Variant & { readonly reader: ReaderName }> =>
     (["cells", "fibers", "sleeps"] as const).filter(reader => fixture.readers[reader] !== undefined)
       .map(reader => ({ label: `only-${reader}`, reader, readers: { [reader]: fixture.readers[reader] }, exact: false }))
-  /** The printed module, verbatim, under a header. The plain header is the truth lane's
-   * (`../run-truth.ts`, `importHeader`): the names of the pinned `effect` that a printed module
-   * may mention, then the prelude. It takes every value that the prelude exports, and the
-   * prelude's type aliases that a printed annotation names. Then it binds the rows of the
-   * scenario's table as the objects that the module names. A run with the cells reader or the
-   * fibers reader has one more header: it binds `Ref` or `Effect` to the reader's object, which
-   * inherits from the pinned one. The module's text under the header is the same bytes. */
-  const preludeTypes = ["MaskRestore"]
+  /** The printed module, as Lean wrote it, under a header of the host's bindings. Lean's module
+   * imports every name it uses (`ModuleEmission.file`) but the names the host binds
+   * (`scenarioModule`, `Keyed.lean`): the table's host namespaces, and the pinned `Effect` and
+   * `Ref`. The header imports those two from `effect`, and binds the rows of the scenario's table
+   * as the objects that the module names. A run with the cells reader or the fibers reader binds
+   * `Ref` or `Effect` to the reader's object instead, which inherits from the pinned one. The
+   * module's text under the header is the same bytes. Its prelude is `./prelude.ts`, beside it
+   * (`preludeShim`). */
   const header = (fixture: ScenarioFixture, variant: Variant, modulePath: string): string => {
     const from = (file: string): string => JSON.stringify("./" + relative(dirname(modulePath), resolve(import.meta.dir, file)))
     const name = JSON.stringify(fixture.name)
     const cells = variant.readers.cells !== undefined
     const fibers = variant.readers.fibers !== undefined
-    const pinned = ["Cause", "Context", "Data", "Deferred", fibers ? "Effect as PinnedEffect" : "Effect", "Exit", "Fiber", "Layer", "Option", cells ? "Ref as PinnedRef" : "Ref", "Scope", "pipe"]
-    const prelude = [...Object.keys(Prelude).filter(value => !fixture.namespaces.includes(value)), ...preludeTypes.map(type => `type ${type}`)]
+    const pinned = [fibers ? "Effect as PinnedEffect" : "Effect", cells ? "Ref as PinnedRef" : "Ref"]
     const bound = [...(fibers ? ["scenarioEffect"] : []), ...(cells ? ["scenarioRef"] : []), "scenarioRows"]
     return [
       "// Generated from the admitted Lean fixture; do not edit.",
       `import { ${pinned.join(", ")} } from "effect"`,
-      `import { ${prelude.join(", ")} } from ${from("../prelude.ts")}`,
       `import { ${bound.join(", ")} } from ${from("keyed-bindings.ts")}`,
       ...(fibers ? [`const Effect = scenarioEffect(${name})`, "namespace Effect { export type Effect<A, E = never, R = never> = PinnedEffect.Effect<A, E, R> }"] : []),
       ...(cells ? [`const Ref = scenarioRef(${name}${variant.fault ? `, ${JSON.stringify(variant.fault)}` : ""})`, "namespace Ref { export type Ref<A> = PinnedRef.Ref<A> }"] : []),
@@ -132,6 +131,10 @@ if (scenariosPath) {
       ""
     ].join("\n")
   }
+  /** The prelude of the scenarios' modules, beside them: a re-export of the lane's prelude. The
+   * modules import it as `./prelude.ts` (`scenarioModule`, `Keyed.lean`). */
+  const preludeShim = resolve(output, "prelude.ts")
+  await writeFile(preludeShim, `// The lane's prelude, beside the scenarios' modules; do not edit.\nexport * from ${JSON.stringify("./" + relative(output, resolve(import.meta.dir, "../prelude.ts")))}\n`)
   const modules = new Map<string, Effect.Effect<unknown, unknown>>()
   /** One module a header. Two runs with one header share the module: the plain module serves a
    * run whose readers change no header. Every module of a fixture stands in one folder, so its

@@ -69,6 +69,18 @@ def moduleText (w : Nat) (m : Module) : String :=
     "\n */\n" ++ String.join (m.imports.map (Render.import_ Ts.house)) ++ "\n" ++
     String.intercalate "\n" (m.decls.map (Ts.decl w))
 
+/-- **A program's module, as every lane writes it** (decisions row 392, P1 (a)): the checked
+emission's file, its pieces printed typed (`ModuleEmission.file`); or, where the emission refuses,
+the program printed plain as `main` with no declared type (`uncheckedFile`), which a lane that
+shows what a host makes of an ill-typed program runs or checks. The prelude is at `prelude`, and a
+name in `except` is no import. The flag says whether the module is the checked emission's. A
+refusal is the plain printer's, where both refuse. -/
+def programModule (prelude : String) (program : NativeEff) (table : RowTable := [])
+    (except : List String := []) : Except PrintRefusal (Module × Bool) :=
+  match Api.emitModule "main" program table with
+  | .ok emission => (emission.file prelude except).map fun m => (m, true)
+  | .error _ => (uncheckedFile prelude "main" program table except).map fun m => (m, false)
+
 /-- A program's code as the view shows it: its imports and declarations laid out at the width
 `w`, one line a row, without the header; or why it has none. The program's holes are named in a
 comment where their import would stand. -/

@@ -11,7 +11,7 @@ into the declarations that follow the classes: the retraction (`readRowServices_
 and exactness (`readRowServices_exact`).
 
 Placement: concept `exact-codecs`, steps of the claim `module-defs-round-trip` (R8) through the
-module laws (`readModule_printModule`, `readModule_printModule_defs`,
+module laws (`readModuleWith_printModuleWith`, `readModuleWith_printModuleWith_defs`,
 `Laws/Codegen/Module.lean`), their consumers. Reach: every signature and every row table. They do
 not establish that tsgo accepts the declarations or that rc.112 provides the services: the
 receipts' finite checks are that evidence.
@@ -141,7 +141,8 @@ theorem rowServiceDecls_nil (sig : Signature Op) : rowServiceDecls sig [] = .ok 
 /-- **The row services read back**: the declarations of a table's services, followed by any
 declarations, read back to those that follow. The retraction of the exact embedding of the
 table's services into a module's declarations. Concept `exact-codecs`, a step of
-`module-defs-round-trip` (R8) through `readModule_printModule` and `readModule_printModule_defs`. -/
+`module-defs-round-trip` (R8) through `readModuleWith_printModuleWith` and
+`readModuleWith_printModuleWith_defs`. -/
 theorem readRowServices_rowServiceDecls {sig : Signature Op} {table : List Row}
     {svc : List TypeScript.ConstDecl} (printed : rowServiceDecls sig table = .ok svc)
     (rest : List TypeScript.Decl) : readRowServices sig table (svc.map .const ++ rest) = some rest := by

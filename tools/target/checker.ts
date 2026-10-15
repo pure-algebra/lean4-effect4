@@ -434,16 +434,16 @@ function truthWidenings(repo: string, request: TruthWideningRequest): TruthWiden
     const entries = request.manifest.programs.filter(entry => entry.name === spec.name)
     const entry = entries[0]
     if (entries.length !== 1 || !entry?.wellTyped || !entry.type || entry.expr === null ||
-      entry.decl === null || entry.declInferred === null) throw new Error(`truth widening: ${spec.name} is missing, refused, or duplicated`)
+      entry.module === null || entry.moduleSource !== "decl" || entry.moduleInferred === null) throw new Error(`truth widening: ${spec.name} is missing, refused, unchecked, or duplicated`)
     if (!entry.type.requiresEmpty || entry.type.requires.length !== 0) throw new Error(`truth widening: ${spec.name} has a nonempty requirement row`)
     const source = readFileSync(join(work, "generated", `${spec.name}.ts`), "utf8")
-    if (!source.endsWith(entry.decl)) throw new Error(`truth widening: ${spec.name} executed bytes differ from its declaration`)
+    if (source !== entry.module) throw new Error(`truth widening: ${spec.name} executed bytes differ from its module`)
     const positive = join(directory, `${spec.name}.positive.ts`)
     const inferred = join(directory, `${spec.name}.inferred.ts`)
     const query = join(directory, `${spec.name}.query.ts`)
     sources.set(positive, source)
-    // Preserve the exact executed import header; replace only the manifest's declaration view.
-    sources.set(inferred, source.slice(0, source.length - entry.decl.length) + entry.declInferred)
+    // The manifest's unannotated view of the same module: Lean writes it under the same imports.
+    sources.set(inferred, entry.moduleInferred)
     sources.set(query, querySource({
       id: spec.name, source: inferred,
       imports: ['import type { Option, Ref } from "effect"', `import type * as Program from ${JSON.stringify(inferred)}`],
@@ -486,8 +486,12 @@ function truthWidenings(repo: string, request: TruthWideningRequest): TruthWiden
         const sf = project.program.getSourceFile(file)
         if (!sf) throw new Error(`truth widening: missing parsed module ${file}`)
         const main = names(sf).variables.get("main")
+        // A laid-out module differs from the flat print only in whitespace at its breaks
+        // (`undo_layout`, `tools/Tools/Code/TypeScript.lean`), so the initializer is compared
+        // with the flat print with whitespace removed from both.
+        const unspaced = (text: string): string => text.replace(/\s+/g, "")
         if (!main || !isVariableDeclaration(main.parent) || !main.parent.initializer ||
-          main.parent.initializer.getText(sf) !== entry.expr) throw new Error(`truth widening: ${spec.name} lost its actual printed initializer`)
+          unspaced(main.parent.initializer.getText(sf)) !== unspaced(entry.expr ?? "")) throw new Error(`truth widening: ${spec.name} lost its actual printed initializer`)
       }
       const sf = project.program.getSourceFile(paths.query)
       if (!sf) throw new Error(`truth widening: missing inferred query ${spec.name}`)
