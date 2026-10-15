@@ -878,3 +878,81 @@ one that it would share.
 - **P-CR2-1.** The review's P2, option (a), landed: the Lean producers that run the machine load
   the native core through one helper, `native_flags`. Option (b), `lean_exe` targets, waits on
   LC-4's compiled generator.
+
+## CR-6: one fold of the target syntax, in the core
+
+**The one thing to know.** The fold of the target syntax is generated into the core, and the
+named erasure's call map is an algebra of it. `fold_of` refuses the four other traversals that
+step 3 names, as written, so they stay hand traversals. The census's distance on the target
+syntax is 11, not the 7 that the review projected.
+
+Base `d3b702102`; head `fe523babb`, then `d4b034b5c` for the semantics report.
+
+### What landed
+
+- **The fold moves.** The manifest's group `TsFold` writes `src/Effect4/Codegen/TsFold.lean`, not
+  `tools/Tools/Code/TsFold.lean`. The regenerated file differs from the old one only in its
+  header's path. The code plane (`Tools.Code.TypeScript`) imports it from the core.
+- **The hand fold goes.** `Effect4.Codegen.TargetFold` (205 lines) is deleted. The call map
+  (`mapCalls`) is the generated `cata_expr` at one algebra (`callAlgebra`, over `CallCarrier`),
+  in `src/Effect4/Codegen/EraseTermTypes.lean`.
+- **The call map's equations.** The eleven `mapCalls_*` lemmas stay, proved from the generated
+  fold. Each is a `rfl`, or one step through `atDepth_calls`, the list component read at one
+  depth. `targetFold_exprs_map` goes, and `targetFold_properties` is `callAlgebra_properties`.
+  The lemmas stay because 22 proofs name them, and inlining them would change those proofs'
+  normal forms and remove nothing.
+- **What does not land: step 3.** `fold_of` (`Effect4.Program.FoldOf`) refuses each traversal, at
+  the file `cr6`'s probe wrote and removed:
+  - `SourceBindings.exprUses`: its block has siblings over `List (String × Expr)` and
+    `List (Nat × List Stmt)`, which no member of the family is;
+  - `Metadata.readValue`: a case analysis on a child list's elements is no recursive call on an
+    immediate child;
+  - `Schema.reifyJson?`: its sibling `reifyJsonFields?` recurses on a field list's values, which
+    is the same refusal.
+- **Step 4, a proposal.** lean4-typescript v0.8.0 drops `scopedGen` and `scopedGenMasked`, and
+  one object former takes a key form (P-CR6-1 below).
+
+### Changed files
+
+`tools/Effect4Gen/manifest.json`, `Makefile` (`DERIVED_OUT`); `src/Effect4/Codegen/TsFold.lean`
+(moved from `tools/Tools/Code/TsFold.lean`), `src/Effect4/Codegen/EraseTermTypes.lean`,
+`src/Effect4/Codegen/TargetFold.lean` (deleted), `src/Effect4/Laws/Codegen/PrintTyped.lean`;
+`tools/Tools/Code/TypeScript.lean`; `docs/ARCHITECTURE.md`, `tools/view/README.md`.
+
+### Commands and results
+
+| Command | Result |
+| --- | --- |
+| `python3 scripts/generate.py --only derived` | passes; one new output, and no other derived file moved |
+| `lake build` of the fold, the term eraser, the erasure, the law module and the code plane | passes; the law module in 95 s |
+| `lake build` of `Test.Codegen.PrintTyped`, `Tools.Code.Module` and `Drivers.Emit` | passes |
+| `#axiom_audit` of `Effect4.Codegen.TsFold`, `Effect4.Codegen.EraseTermTypes` and `Effect4.Laws.Codegen.PrintTyped` (`cr6/AuditCore.lean`) | 2,593 declarations within `[propext, Quot.sound]` |
+| `#traversal_census TypeScript.Expr` under `Effect4` | 97 rows: 9 structural, 2 well-founded, 1 fold, 3 generated, 4 one-level |
+| `make check-gen` | failed first, on `generated/semantics.md` alone: the merged branch's report was stale. After its re-cut (`d4b034b5c`) it passes |
+| `make check-truth` | passes in 30 s |
+| `make check-ts-reader` | passes: 783 tests |
+| `make check-corpus` | passes in 63 s: 400 programs match |
+
+### Axiom output
+
+The three modules above are within `[propext, Quot.sound]`. The code plane `Tools.Code.TypeScript`
+was audited too: 181 of its declarations reach `Classical.choice`, through the equation lemmas
+of the package's `TypeScript.Render`. The axiom gate audits no `Tools` module, and this slice
+changed only that module's import.
+
+### Evidence
+
+*Proved*: the call map's equations and the erasure law, unchanged in statement. *Tested*: the
+gates above; no printed byte moved. *Measured*: the census.
+
+### Open obligations
+
+Step 3 waits on `fold_of`'s list-of-pairs siblings and its case analysis on a child list, or on
+the traversals' rewriting as algebras.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR6-1.** lean4-typescript v0.8.0: `scopedGen` and `scopedGenMasked` go, and one object
+  former takes a key form, so the target syntax's fold loses five arms.
+- **P-CR6-2.** `fold_of` reads a sibling over a list of pairs and a case analysis on a child
+  list's elements. Then `exprUses`, `stmtUses`, `readValue` and `reifyJson?` read as folds.
