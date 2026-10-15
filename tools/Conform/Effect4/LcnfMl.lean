@@ -68,9 +68,14 @@ partial def ofPat : OCaml5.Ml.Pat → Except String Target.Pat
   | .polyPat .. => .error "Ml.Pat.polyPat"
   | .lazyPat _ => .error "Ml.Pat.lazyPat"
 
+/-- The target evaluator's primitives: the route's library entries that it answers, with their
+arities and scans (`OCaml5.Lcnf.targetArities`, `OCaml5.Lcnf.targetScans`), at a word. -/
+def primEnv (word : Target.Word := { bits := 63 }) : Target.PrimEnv :=
+  { word, arity := OCaml5.Lcnf.targetArities, scans := OCaml5.Lcnf.targetScans }
+
 /-- Operators and function names the target evaluates as primitives; `::` is a constructor,
 not a primitive, and is handled before this. -/
-def isPrimName (n : String) : Bool := (Target.primArity n).isSome
+def isPrimName (n : String) : Bool := OCaml5.Lcnf.targetArities.contains n
 
 partial def ofExpr : OCaml5.Ml.Expr → Except String Target.Expr
   | .var n => .ok (.var n)
@@ -194,7 +199,7 @@ def assemble (decls : Array OCaml5.Lcnf.Translated) (word : Target.Word := { bit
     let (name, ps, body) ← (ofBind d.bind).mapError fun why => s!"{d.leanName}: {why}"
     if binds.contains name then throw s!"{d.leanName}: `{name}` is already bound"
     binds := binds.insert name (ps, body)
-  return { binds, pe := { word } }
+  return { binds, pe := primEnv word }
 
 /-! ## 2. Marshalling `Ty` into the OCaml value domain
 
@@ -377,7 +382,7 @@ def main (argv : List String) : IO UInt32 := do
       match ofBind t.bind with
       | .ok (n, ps, e) => binds := binds.insert n (ps, e)
       | .error m => refusals := refusals.push s!"{t.ocamlName}: {m}"
-    let prog : Target.Program := { binds := binds, pe := { word := { bits := args.bits } } }
+    let prog : Target.Program := { binds := binds, pe := primEnv { bits := args.bits } }
     -- the same declarations as real OCaml, for the third side of the comparison
     if let some path := args.emitMl then
       let gen ← (OCaml5.Lcnf.generate (closure.realTypes) closure.mentioned {} {}).run' {} {}

@@ -3,28 +3,38 @@ import OCaml5.Ml.Syntax
 import OCaml5.Ml.Render
 import OCaml5.Lcnf.Externs
 import OCaml5.Lcnf.TypeRows
+import Conform.Lcnf.Semantics
 
 /-!
 # OCaml5.Lcnf.Builtins
 
-**What it is.** The table of the Lean constants that the LCNF route does not translate from
-their own bodies. One row is data: the constant, its OCaml form and its contract. The lookup,
-the prelude, the reserved names and the fidelity inventory are computed from the rows.
+**What it is.** The one primitive table of the LCNF route: one row for each Lean constant that
+the route does not translate from its own body. A row is data: the constant, how Lean itself
+realizes it (its body, or a C function of Lean's runtime and the source evaluator's primitive),
+its OCaml form and its contract. Beside the rows stands the target's library, one entry for each
+function and operator a form names, with the target evaluator's rule for it. The lookup, the
+prelude, the reserved names, the fidelity inventory and both evaluators' primitive tables
+(`sourcePrims`, `targetArities`, `targetScans`) are computed from the rows.
 
 **Depends on.** `OCaml5.Ml.Syntax` (a form is OCaml syntax), `OCaml5.Ml.Render` (a form's
 spelling in a report), `OCaml5.Lcnf.Externs` (`stripRedArg`), `OCaml5.Lcnf.TypeRows` (the
-contract's class, `Fidelity`, which the type rows share).
+contract's class, `Fidelity`, which the type rows share), `Conform.Lcnf.Semantics` (the source
+evaluator's primitives, `Prim`).
 
 **Properties.**
 * **One owner.** A constant has a row in `builtins` or the route translates it. `builtin?`,
-  `prelude`, `reservedNames` and `Form.spelling` are computed from `builtins`, `support` and
-  `libraries`. No second list names a row: *by construction*.
+  `prelude`, `reservedNames`, `Form.spelling` and the evaluators' tables are computed from
+  `builtins`, `support` and `targetLibrary`. No second list names a row: *by construction*.
+* **The runtime column is Lean's.** A row's `runtime` names the C symbol of Lean's runtime
+  exactly when Lean's extern attribute names one. A row holds the source evaluator's primitive
+  only beside such a symbol, since that evaluator reads every other constant's body: *checked*
+  against the environment (`Conform.Effect4.CompilerControls`).
 * **A form binds nothing at a call site.** An inline body is binder-free. A support function is
   a closed definition of the prelude. An application adds a binder only by eta-expansion, and
   the eta binders are in `reservedNames`: *checked* (`problemsOf`, the `#guard`s at the foot).
-* **A form states what it needs.** Every free name of a row is an entry of `libraries` or a
-  function of `support`, and every operator is in `operators`. A body outside its fragment is
-  refused, and `Expr.raw` is outside both fragments: *checked* (`problemsOf`).
+* **A form states what it needs.** Every free name of a row is a function of `targetLibrary`
+  or of `support`, and every operator is an operator of `targetLibrary`. A body outside its
+  fragment is refused, and `Expr.raw` is outside both fragments: *checked* (`problemsOf`).
 * **Arguments are values.** `Builtin.apply` substitutes its arguments into an inline body, which
   is exact for an atom. `Form.strict` holds when a body evaluates each parameter exactly once;
   `Translate.applyBuiltin` binds every other argument that is not an atom before the form.
@@ -53,14 +63,31 @@ inductive Form where
   | inline (params : List String) (body : Ml.Expr)
   /-- A function that `support` defines in the prelude. -/
   | support (name : String)
-  /-- A function of the target's own library, named in `libraries`: a trusted leaf. -/
+  /-- A function of the target's own library, named in `targetLibrary`: a trusted leaf. -/
   | library (name : String)
   deriving Inhabited
 
-/-- One row of the table. No field of the contract has a default. -/
+/-- How Lean itself realizes a row's constant. -/
+inductive LeanRuntime where
+  /-- The constant has a Lean body: Lean's compiler compiles it, and the source evaluator reads
+  it. The route short-circuits it with the row's form. -/
+  | body
+  /-- An `@[extern]` of Lean's runtime: the C function that implements it, and the source
+  evaluator's primitive for it (`Conform.Lcnf.Prim`), or `none` where that evaluator has none. -/
+  | extern (symbol : String) (source : Option Conform.Lcnf.Prim)
+  deriving Inhabited
+
+/-- The C symbol of a realization, when it is one of Lean's runtime. -/
+def LeanRuntime.symbol? : LeanRuntime → Option String
+  | .body => none
+  | .extern symbol _ => some symbol
+
+/-- One row of the table. No field of the contract or of a column has a default. -/
 structure Builtin where
   /-- The Lean constant, as `stripRedArg` leaves it. -/
   lean : Name
+  /-- How Lean realizes the constant: the source evaluator's column and the C column. -/
+  runtime : LeanRuntime
   form : Form
   fidelity : Fidelity
   /-- The domain on which the row is exact (`""` when the class is `exact`). -/
@@ -205,26 +232,69 @@ end
 
 /-! ## 3. The target's library and the prelude -/
 
-/-- The functions and values of the target's own library that a form or a support body may
-name, each with the number of arguments it takes. They are trusted leaves: the route does not
-define them. `lcnf_utf8_bytes` and `lcnf_utf8_length` are the two the prelude carries as
-verbatim OCaml (`rawPrimitives`). -/
-def libraries : List (String × Nat) := [
-  ("max_int", 0), ("max", 2), ("min", 2), ("not", 1), ("fst", 1), ("snd", 1), ("failwith", 1),
-  ("lcnf_utf8_bytes", 1), ("lcnf_utf8_length", 1),
-  ("List.rev", 1), ("List.rev_append", 2), ("List.length", 1), ("List.nth", 2),
-  ("List.exists", 2), ("List.for_all", 2), ("List.map", 2), ("List.filter", 2),
-  ("List.fold_left", 3), ("List.find_opt", 2), ("List.concat", 1), ("List.filter_map", 2),
-  ("Option.is_some", 1), ("Option.is_none", 1), ("Option.value", 2), ("Option.map", 2),
-  ("Option.bind", 2),
-  ("E4_clock.of_nat", 1), ("E4_clock.to_profile_nat", 1), ("E4_clock.add", 2), ("E4_clock.mul", 2),
-  ("E4_clock.le", 2), ("E4_clock.lt", 2), ("E4_clock.equal", 2), ("E4_clock.to_decimal", 1),
-  ("E4_clock.of_decimal", 1)]
+/-- How the target evaluator (`Conform.Lcnf.Target`, `tools/Conform/Lcnf/SemanticsTarget.lean`)
+answers a function or an operator of the target's library. -/
+inductive TargetRule where
+  /-- `Target.applyPrim` answers it from its argument values, under this spelling. -/
+  | prim (spelling : String)
+  /-- `Target.scanT` applies the callback along the list, and stops at the answer `stop`. -/
+  | scan (stop : Bool)
+  /-- The evaluator's program binds it from the target's word (`supportBinds`). -/
+  | bound
+  /-- No rule: a call of it is a refusal on the evaluator, and only compiled OCaml runs it. -/
+  | unruled
+  deriving Inhabited
 
-/-- The infix operators a form or a support body may use. -/
-def operators : List String :=
-  ["=", "<", "<=", ">", ">=", "+", "-", "*", "/", "mod", "land", "lor", "lxor", "lsr", "&&",
-   "||", "^", "@"]
+/-- One function, value or infix operator of the target's own library. It is a trusted leaf: the
+route does not define it. -/
+structure LibFn where
+  name : String
+  /-- The number of arguments it takes; an infix operator takes two. -/
+  arity : Nat
+  /-- An infix operator rather than a function or a value. -/
+  isInfix : Bool
+  target : TargetRule
+  deriving Inhabited
+
+private def infixOp (symbol : String) : LibFn :=
+  { name := symbol, arity := 2, isInfix := true, target := .prim symbol }
+private def prim (name : String) (arity : Nat) : LibFn :=
+  { name, arity, isInfix := false, target := .prim name }
+private def scan (name : String) (stop : Bool) : LibFn :=
+  { name, arity := 2, isInfix := false, target := .scan stop }
+private def unruled (name : String) (arity : Nat) : LibFn :=
+  { name, arity, isInfix := false, target := .unruled }
+
+/-- The target's library: every function, value and operator that a form or a support body may
+name, with the number of arguments it takes and the target evaluator's rule for it.
+`lcnf_utf8_bytes` and `lcnf_utf8_length` are the two the prelude carries as verbatim OCaml
+(`rawPrimitives`). The labelled call `Option.value o ~default:d` is the evaluator's primitive
+`Option.value~default` (`Conform.Effect4.LcnfMl.ofExpr`). -/
+def targetLibrary : List LibFn := [
+  infixOp "=", infixOp "<", infixOp "<=", infixOp ">", infixOp ">=", infixOp "+", infixOp "-",
+  infixOp "*", infixOp "/", infixOp "mod", infixOp "land", infixOp "lor", infixOp "lxor",
+  infixOp "lsr", infixOp "&&", infixOp "||", infixOp "^", infixOp "@",
+  { name := "max_int", arity := 0, isInfix := false, target := .bound },
+  prim "max" 2, prim "min" 2, prim "not" 1, prim "fst" 1, prim "snd" 1, prim "failwith" 1,
+  prim "lcnf_utf8_bytes" 1, prim "lcnf_utf8_length" 1,
+  prim "List.rev" 1, prim "List.rev_append" 2, prim "List.length" 1, prim "List.nth" 2,
+  scan "List.exists" true, scan "List.for_all" false, unruled "List.map" 2,
+  unruled "List.filter" 2, unruled "List.fold_left" 3, unruled "List.find_opt" 2,
+  prim "List.concat" 1, unruled "List.filter_map" 2,
+  prim "Option.is_some" 1, prim "Option.is_none" 1,
+  { name := "Option.value", arity := 2, isInfix := false, target := .prim "Option.value~default" },
+  unruled "Option.map" 2, unruled "Option.bind" 2,
+  unruled "E4_clock.of_nat" 1, unruled "E4_clock.to_profile_nat" 1, unruled "E4_clock.add" 2,
+  unruled "E4_clock.mul" 2, unruled "E4_clock.le" 2, unruled "E4_clock.lt" 2,
+  unruled "E4_clock.equal" 2, unruled "E4_clock.to_decimal" 1, unruled "E4_clock.of_decimal" 1]
+
+/-- The arity of a function or value of the library. -/
+def libraryArity? (lib : List LibFn) (name : String) : Option Nat :=
+  (lib.find? fun f => !f.isInfix && f.name == name).map (·.arity)
+
+/-- Whether a symbol is an infix operator of the library. -/
+def isOperator (lib : List LibFn) (symbol : String) : Bool :=
+  lib.any fun f => f.isInfix && f.name == symbol
 
 /-- The two primitives the prelude carries as verbatim OCaml. Strings admitted by this profile
 are valid UTF-8; `ByteArray` and `Array UInt8` both use a byte list. -/
@@ -298,7 +368,6 @@ private def natDiv : Form :=
 private def natMod : Form :=
   .inline ["a", "b"] (.ifThen (.binop "=" vb (.int 0)) va (.binop "mod" va vb))
 private def natSub : Form := .inline ["a", "b"] (Ml.Expr.call "max" [.int 0, .binop "-" va vb])
-private def natSucc : Form := .inline ["a"] (.binop "+" va (.int 1))
 private def natPred : Form := .inline ["a"] (Ml.Expr.call "max" [.int 0, .binop "-" va (.int 1)])
 -- OCaml's shifts are undefined at 63 and above, so the form answers `0` there.
 private def natShiftRight : Form :=
@@ -318,17 +387,13 @@ private def listAny : Form :=
 -- The capacity is a hint, and the list has none.
 private def arrayEmpty : Form := .inline ["n"] Ml.Expr.nil
 private def arrayPush : Form := .inline ["a", "x"] (.binop "@" va (.listLit [.var "x"]))
-private def arrayGetBang : Form :=
-  .inline ["d", "a", "i"]
-    (.ifThen (.binop "<" (.var "i") (Ml.Expr.call "List.length" [va]))
-      (Ml.Expr.call "List.nth" [va, .var "i"]) (.var "d"))
 private def optionGetD : Form :=
   .inline ["o", "d"]
     (.appL (.var "Option.value") [(.nolabel, .var "o"), (.lbl "default", .var "d")])
 
-private def row (lean : Name) (form : Form) (fidelity : Fidelity) (domain : String)
-    (controls : List String) (note : String) (cost : String := "") : Builtin :=
-  { lean, form, fidelity, domain, controls, note, cost }
+private def row (lean : Name) (runtime : LeanRuntime) (form : Form) (fidelity : Fidelity)
+    (domain : String) (controls : List String) (note : String) (cost : String := "") : Builtin :=
+  { lean, runtime, form, fidelity, domain, controls, note, cost }
 
 open Form in
 /-- The Lean constants with a native OCaml spelling, one row per constant. Names are unchecked
@@ -337,244 +402,224 @@ matched after `stripRedArg`, so one row stands for a constant and its `_redArg` 
 def builtins : List Builtin := [
   -- Nat comparisons and arithmetic: `Nat` is `int`. A comparison is exact wherever both operands
   -- are representable.
-  row `Nat.decEq (op "=") .domain "0 ≤ a, b < 2^62" []
+  row `Nat.decEq (.extern "lean_nat_dec_eq" (some .natDecEq)) (op "=") .domain "0 ≤ a, b < 2^62" []
     "Lean `Nat` is unbounded; OCaml `int` is 63-bit. `=` on `int` is structural equality of the machine word, which agrees with `Nat` equality on the representable range.",
-  row `Nat.beq (op "=") .domain "0 ≤ a, b < 2^62" []
+  row `Nat.beq (.extern "lean_nat_dec_eq" (some .natDecEq)) (op "=") .domain "0 ≤ a, b < 2^62" []
     "as `Nat.decEq`.",
-  row `instDecidableEqNat (op "=") .domain "0 ≤ a, b < 2^62" []
+  row `instDecidableEqNat .body (op "=") .domain "0 ≤ a, b < 2^62" []
     "as `Nat.decEq`; `Decidable` is `Bool` at mono.",
-  row `Nat.decLt (op "<") .domain "0 ≤ a, b < 2^62" []
+  row `Nat.decLt (.extern "lean_nat_dec_lt" (some .natDecLt)) (op "<") .domain "0 ≤ a, b < 2^62" []
     "OCaml's `<` on `int` is signed; a saturated or wrapped operand can compare wrongly, which is why literals and `pow` saturate rather than wrap.",
-  row `Nat.blt (op "<") .domain "0 ≤ a, b < 2^62" []
+  row `Nat.blt .body (op "<") .domain "0 ≤ a, b < 2^62" []
     "as `Nat.decLt`.",
-  row `Nat.decLe (op "<=") .domain "0 ≤ a, b < 2^62" []
+  row `Nat.decLe (.extern "lean_nat_dec_le" (some .natDecLe)) (op "<=") .domain "0 ≤ a, b < 2^62" []
     "as `Nat.decLt`.",
-  row `Nat.ble (op "<=") .domain "0 ≤ a, b < 2^62" []
+  row `Nat.ble (.extern "lean_nat_dec_le" (some .natDecLe)) (op "<=") .domain "0 ≤ a, b < 2^62" []
     "as `Nat.decLt`.",
-  row `Nat.add (op "+") .domain "a + b < 2^62" []
+  row `Nat.add (.extern "lean_nat_add" (some .natAdd)) (op "+") .domain "a + b < 2^62" []
     "OCaml `+` wraps at 2^62 without a trap; Lean's `Nat.add` does not.",
-  row `Nat.mul (.support "lcnf_nat_mul") .domain "a * b < 2^62" ["mul-saturation"]
+  row `Nat.mul (.extern "lean_nat_mul" (some .natMul)) (.support "lcnf_nat_mul") .domain "a * b < 2^62" ["mul-saturation"]
     "saturating: a product above `max_int` reads as `max_int`, where OCaml's raw `*` would wrap. The check is `b > max_int / a`, so no intermediate overflows.",
-  row `Nat.div (natDiv) .domain "0 ≤ a, b < 2^62" ["div-zero"]
+  row `Nat.div (.extern "lean_nat_div" (some .natDiv)) (natDiv) .domain "0 ≤ a, b < 2^62" ["div-zero"]
     "Includes Lean's total value at zero; unbounded input representation remains outside this target profile.",
-  row `Nat.mod (natMod) .domain "0 ≤ a, b < 2^62" ["mod-zero"]
+  row `Nat.mod (.extern "lean_nat_mod" (some .natMod)) (natMod) .domain "0 ≤ a, b < 2^62" ["mod-zero"]
     "Includes Lean's remainder value at zero.",
-  row `Nat.sub (natSub) .domain "0 ≤ a, b < 2^62" []
+  row `Nat.sub (.extern "lean_nat_sub" (some .natSub)) (natSub) .domain "0 ≤ a, b < 2^62" []
     "truncated subtraction, spelled out; exact on the representable range.",
-  row `Nat.succ (natSucc) .domain "a + 1 < 2^62" []
-    "as `Nat.add`.",
-  row `Nat.pred (natPred) .domain "a < 2^62" []
+  row `Nat.pred (.extern "lean_nat_pred" (some .natPred)) (natPred) .domain "a < 2^62" []
     "truncated predecessor.",
-  row `Nat.pow (.support "lcnf_nat_pow") .approximate "a ^ b < max_int" ["pow-saturation"]
+  row `Nat.pow (.extern "lean_nat_pow" (some .natPow)) (.support "lcnf_nat_pow") .approximate "a ^ b < max_int" ["pow-saturation"]
     "saturating: `2 ^ 64` reads as `max_int` rather than wrapping to 0. The host profile of `ocaml/gen/NOTES.md` §5. Note the helper's own multiplications are checked against `max_int / a`, so the saturation is monotone.",
-  row `Nat.shiftLeft (.support "lcnf_nat_shift_left") .approximate "a * 2^b ≤ max_int" ["shift-saturation"]
+  row `Nat.shiftLeft (.extern "lean_nat_shiftl" (some .natShiftLeft)) (.support "lcnf_nat_shift_left") .approximate "a * 2^b ≤ max_int" ["shift-saturation"]
     "Checks both the power and final multiplication; larger results saturate at max_int.",
-  row `Nat.shiftRight (natShiftRight) .domain "a < 2^62" []
+  row `Nat.shiftRight (.extern "lean_nat_shiftr" (some .natShiftRight)) (natShiftRight) .domain "a < 2^62" []
     "OCaml's `lsr` is undefined at shift ≥ 63, so the row guards it; `lsr` on a non-negative `int` is Lean's `shiftRight` below 2^62.",
-  row `Nat.land (op "land") .domain "a, b < 2^62" []
+  row `Nat.land (.extern "lean_nat_land" (some .natLand)) (op "land") .domain "a, b < 2^62" []
     "bitwise and on the 63-bit word.",
-  row `Nat.lor (op "lor") .domain "a, b < 2^62" []
+  row `Nat.lor (.extern "lean_nat_lor" (some .natLor)) (op "lor") .domain "a, b < 2^62" []
     "bitwise or on the 63-bit word.",
-  row `Nat.xor (op "lxor") .domain "a, b < 2^62" []
+  row `Nat.xor (.extern "lean_nat_lxor" (some .natXor)) (op "lxor") .domain "a, b < 2^62" []
     "bitwise xor on the 63-bit word.",
   -- UInt8: `int` with an explicit truncation on the way in.
-  row `UInt8.decEq (op "=") .exact "" []
+  row `UInt8.decEq (.extern "lean_uint8_dec_eq" (some .natDecEq)) (op "=") .exact "" []
     "`UInt8` is `int`; both sides are already reduced mod 256 by `ofNat`.",
-  row `instDecidableEqUInt8 (op "=") .exact "" []
+  row `instDecidableEqUInt8 .body (op "=") .exact "" []
     "as `UInt8.decEq`.",
-  row `UInt8.beq (op "=") .exact "" []
-    "as `UInt8.decEq`.",
-  row `UInt8.ofNat (u8Mask) .exact "" []
+  row `UInt8.ofNat (.extern "lean_uint8_of_nat" (some (.uintOfNat 8))) (u8Mask) .exact "" []
     "`UInt8.ofNat` is `n % 256`, and `land 255` is `% 256` on a non-negative `int`.",
-  row `UInt8.ofNatLT (u8Mask) .exact "" []
+  row `UInt8.ofNatLT (.extern "lean_uint8_of_nat" (some (.uintOfNat 8))) (u8Mask) .exact "" []
     "the argument is already < 256; the mask is a no-op.",
-  row `UInt8.ofNatTruncate (u8Clamp) .domain "a is a representable non-negative int" ["u8-clamp"]
+  row `UInt8.ofNatTruncate .body (u8Clamp) .domain "a is a representable non-negative int" ["u8-clamp"]
     "Clamps at 255, matching Lean; the 256 counterexample is a permanent control.",
-  row `UInt8.ofNatClamp (u8Clamp) .domain "a is a representable non-negative int" []
+  row `UInt8.ofNatClamp .body (u8Clamp) .domain "a is a representable non-negative int" []
     "The current spelling of the same clamping operation.",
-  row `UInt8.toNat (same) .exact "" []
+  row `UInt8.toNat (.extern "lean_uint8_to_nat" (some .identity)) (same) .exact "" []
     "identity on the representation.",
-  row `UInt8.toUInt64 (same) .exact "" []
+  row `UInt8.toUInt64 (.extern "lean_uint8_to_uint64" (some .identity)) (same) .exact "" []
     "identity on the representation; `UInt64` is `int` too.",
-  row `UInt8.toUInt32 (same) .exact "" []
+  row `UInt8.toUInt32 (.extern "lean_uint8_to_uint32" (some .identity)) (same) .exact "" []
     "identity on the representation.",
   -- UInt64: `int` too, the float frame's bits (`Store.Val.float`). Not exact above 2^62.
-  row `UInt64.decEq (op "=") .domain "both bit patterns < 2^62" []
+  row `UInt64.decEq (.extern "lean_uint64_dec_eq" (some .natDecEq)) (op "=") .domain "both bit patterns < 2^62" []
     "`UInt64` is `int` here, the float frame's bits. A pattern at 2^62 or above has no carrier, and nothing detects it. The type row is `unsound` for the same reason. Open, not supported, until an exact 64-bit carrier exists.",
-  row `instDecidableEqUInt64 (op "=") .domain "both bit patterns < 2^62" []
+  row `instDecidableEqUInt64 .body (op "=") .domain "both bit patterns < 2^62" []
     "as `UInt64.decEq`.",
-  row `UInt64.beq (op "=") .domain "both bit patterns < 2^62" []
-    "as `UInt64.decEq`.",
-  row `UInt64.toNat (same) .domain "the bit pattern < 2^62" []
+  row `UInt64.toNat (.extern "lean_uint64_to_nat" (some .identity)) (same) .domain "the bit pattern < 2^62" []
     "identity on the representation; as `UInt64.decEq` outside the domain.",
   -- Bool
-  row `Bool.decEq (op "=") .exact "" []
+  row `Bool.decEq .body (op "=") .exact "" []
     "OCaml `bool` is Lean `Bool`.",
-  row `instDecidableEqBool (op "=") .exact "" []
+  row `instDecidableEqBool .body (op "=") .exact "" []
     "as `Bool.decEq`.",
-  row `Bool.not (.library "not") .exact "" []
+  row `Bool.not .body (.library "not") .exact "" []
     "",
-  row `not (.library "not") .exact "" []
-    "",
-  row `Bool.and (op "&&") .approximate "" []
+  row `Bool.and .body (op "&&") .approximate "" []
     "OCaml's `&&` is short-circuiting and Lean's `Bool.and` is a strict function of two already-evaluated arguments. At mono LCNF both arguments are already `let`-bound values, so the difference is unobservable *here* — but the row is not exact as a function-level claim, and an emitter that inlined the arguments would change evaluation order.",
-  row `and (op "&&") .approximate "" []
-    "as `Bool.and`.",
-  row `Bool.or (op "||") .approximate "" []
-    "as `Bool.and`.",
-  row `or (op "||") .approximate "" []
+  row `Bool.or .body (op "||") .approximate "" []
     "as `Bool.and`.",
   -- String: UTF-8 bytes on both sides.
-  row `String.decEq (op "=") .exact "" []
+  row `String.decEq (.extern "lean_string_dec_eq" (some .strDecEq)) (op "=") .exact "" []
     "OCaml's structural `=` on `string` is byte equality; two Lean strings are equal iff their UTF-8 encodings are equal, and the route's strings *are* their UTF-8 bytes.",
-  row `instDecidableEqString (op "=") .exact "" []
+  row `instDecidableEqString .body (op "=") .exact "" []
     "as `String.decEq`.",
-  row `String.append (op "^") .exact "" []
+  row `String.append (.extern "lean_string_append" (some .strAppend)) (op "^") .exact "" []
     "concatenation of UTF-8 byte sequences is the encoding of the concatenation.",
-  row `String.length (.library "lcnf_utf8_length") .domain "valid UTF-8; scalar count fits int" ["utf8-length"]
+  row `String.length (.extern "lean_string_length" (some .strLength)) (.library "lcnf_utf8_length") .domain "valid UTF-8; scalar count fits int" ["utf8-length"]
     "Counts leading UTF-8 bytes, hence Unicode scalar values for represented Lean strings.",
-  row `String.toUTF8 (.library "lcnf_utf8_bytes") .domain "valid UTF-8" ["utf8-literal-bytes"]
+  row `String.toUTF8 (.extern "lean_string_to_utf8" (some .strToUTF8)) (.library "lcnf_utf8_bytes") .domain "valid UTF-8" ["utf8-literal-bytes"]
     "Emitted helper returns the actual encoded bytes, including non-ASCII keys.",
-  row `ByteArray.data (same) .exact "" []
+  row `ByteArray.data (.extern "lean_byte_array_data" (some .identity)) (same) .exact "" []
     "Byte arrays use the same list-of-byte representation as their data array.",
   -- List
-  row `List.appendTR (op "@") .exact "" []
+  row `List.appendTR .body (op "@") .exact "" []
     "`appendTR` is `append` (the tail-recursive spelling the mono phase leaves behind).",
-  row `List.append (op "@") .exact "" []
+  row `List.append .body (op "@") .exact "" []
     "",
-  row `List.reverse (.library "List.rev") .exact "" []
+  row `List.reverse .body (.library "List.rev") .exact "" []
     "",
-  row `List.reverseAux (.library "List.rev_append") .exact "" []
+  row `List.reverseAux .body (.library "List.rev_append") .exact "" []
     "`List.reverseAux as bs = List.rev_append as bs`.",
-  row `List.length (.library "List.length") .domain "length < 2^62" []
+  row `List.length .body (.library "List.length") .domain "length < 2^62" []
     "the result is a `Nat` spelled as `int`.",
-  row `List.lengthTR (.library "List.length") .domain "length < 2^62" []
+  row `List.lengthTR .body (.library "List.length") .domain "length < 2^62" []
     "as `List.length`.",
-  row `List.instDecidableEqNil (listIsEmpty) .exact "" []
+  row `List.instDecidableEqNil .body (listIsEmpty) .exact "" []
     "the structural comparison of a list against the empty list is `isEmpty`.",
-  row `List.isEmpty (listIsEmpty) .exact "" []
+  row `List.isEmpty .body (listIsEmpty) .exact "" []
     "",
-  row `List.elem (listElem) .exact "" ["elem-order"]
+  row `List.elem .body (listElem) .exact "" ["elem-order"]
     "`[BEq α]` is a one-field structure at mono, so the instance is a relevant argument. Lean's `List.elem a (b :: l)` tests `a == b`, i.e. `inst a b`; `List.exists (inst a) l` tests the same, in the same order.",
-  row `List.contains (.support "lcnf_list_contains") .exact "" ["contains-order", "callback-exception"]
+  row `List.contains .body (.support "lcnf_list_contains") .exact "" ["contains-order", "callback-exception"]
     "`contains as a` is `elem a as`, so the target is the first BEq argument, as in the `elem` row; an asymmetric instance sees the same order on both sides (the `contains-order` control).",
-  row `List.map (.library "List.map") .exact "" []
+  row `List.map .body (.library "List.map") .exact "" []
     "",
-  row `List.mapTR (.library "List.map") .exact "" []
+  row `List.mapTR .body (.library "List.map") .exact "" []
     "",
-  row `List.filter (.library "List.filter") .exact "" []
+  row `List.filter .body (.library "List.filter") .exact "" []
     "",
-  row `List.filterTR (.library "List.filter") .exact "" []
+  row `List.filterTR .body (.library "List.filter") .exact "" []
     "",
-  row `List.foldl (.library "List.fold_left") .exact "" []
+  row `List.foldl .body (.library "List.fold_left") .exact "" []
     "same argument order (`f`, `init`, `l`) and same associativity.",
-  row `List.all (listAll) .exact "" ["all-scan"]
+  row `List.all .body (listAll) .exact "" ["all-scan"]
     "Lean takes the list first, OCaml the predicate first; the row swaps.",
-  row `List.any (listAny) .exact "" ["any-scan"]
+  row `List.any .body (listAny) .exact "" ["any-scan"]
     "as `List.all`.",
-  row `List.find? (.library "List.find_opt") .exact "" []
+  row `List.find? .body (.library "List.find_opt") .exact "" []
     "",
-  row `List.flatten (.library "List.concat") .exact "" []
+  row `List.flatten .body (.library "List.concat") .exact "" []
     "OCaml's `List.concat` is `flatten`.",
-  row `List.flattenTR (.library "List.concat") .exact "" []
+  row `List.flattenTR .body (.library "List.concat") .exact "" []
     "",
-  row `List.filterMap (.library "List.filter_map") .exact "" []
+  row `List.filterMap .body (.library "List.filter_map") .exact "" []
     "",
-  row `List.filterMapTR (.library "List.filter_map") .exact "" []
+  row `List.filterMapTR .body (.library "List.filter_map") .exact "" []
     "",
   -- Array as list: the shim. `USize` is the shim's index type.
-  row `Array.mkEmpty (arrayEmpty) .exact "" []
+  row `Array.mkEmpty (.extern "lean_mk_empty_array_with_capacity" (some .arrayMkEmpty)) (arrayEmpty) .exact "" []
     "`Array` is `list`; the capacity hint is dropped.",
-  row `Array.emptyWithCapacity (arrayEmpty) .exact "" []
+  row `Array.emptyWithCapacity (.extern "lean_mk_empty_array_with_capacity" (some .arrayMkEmpty)) (arrayEmpty) .exact "" []
     "",
-  row `Array.toList (same) .exact "" []
+  row `Array.toList (.extern "lean_array_to_list" (some .arrayToList)) (same) .exact "" []
     "identity under the shim.",
-  row `List.toArray (same) .exact "" []
+  row `List.toArray .body (same) .exact "" []
     "identity under the shim.",
-  row `Array.push (arrayPush) .exact "" []
+  row `Array.push (.extern "lean_array_push" (some .arrayPush)) (arrayPush) .exact "" []
     "`a @ [x]` is the sequence with `x` appended."
     (cost := "O(n) per push where Lean's `Array.push` is amortised O(1); a `push` in a loop is quadratic."),
-  row `Array.size (.library "List.length") .exact "" []
+  row `Array.size (.extern "lean_array_get_size" (some .arraySize)) (.library "List.length") .exact "" []
     "the length of the list that stands for the array."
     (cost := "O(n) where Lean's is O(1)."),
-  row `Array.appendList (op "@") .exact "" []
+  row `Array.appendList .body (op "@") .exact "" []
     "",
-  row `List.foldl._at_.Array.appendList.spec_0 (op "@") .exact "" []
+  row `List.foldl._at_.Array.appendList.spec_0 .body (op "@") .exact "" []
     "the specialisation of the fold that `Array.appendList` compiles to.",
-  row `USize.ofNat (same) .domain "a < 2^62" []
+  row `USize.ofNat (.extern "lean_usize_of_nat" (some (.uintOfNat 64))) (same) .domain "a < 2^62" []
     "`USize` is the shim's index type and is `int`.",
-  row `USize.toNat (same) .exact "" []
+  row `USize.toNat (.extern "lean_usize_to_nat" (some .identity)) (same) .exact "" []
     "",
-  row `USize.ofNatLT (same) .exact "" []
+  row `USize.ofNatLT (.extern "lean_usize_of_nat" (some (.uintOfNat 64))) (same) .exact "" []
     "",
-  row `USize.decEq (op "=") .domain "a, b < 2^62" []
+  row `USize.decEq (.extern "lean_usize_dec_eq" (some .natDecEq)) (op "=") .domain "a, b < 2^62" []
     "",
-  row `USize.beq (op "=") .domain "a, b < 2^62" []
-    "",
-  row `USize.sub (natSub) .unsound "a ≥ b" []
+  row `USize.sub (.extern "lean_usize_sub" (some (.uintSub 64))) (natSub) .unsound "a ≥ b" []
     "`USize.sub` in Lean **wraps** (it is `Fin (2^64)` subtraction: `0 - 1 = 2^64 - 1`); the row **truncates** to 0. Every use in this closure is a bounded index decrement where `a ≥ b`, so the difference is not reached, but the row is not the Lean function.",
-  row `USize.add (op "+") .unsound "a + b < 2^62" []
+  row `USize.add (.extern "lean_usize_add" none) (op "+") .unsound "a + b < 2^62" []
     "`USize.add` wraps at 2^64 in Lean; OCaml's `+` wraps at 2^62. Two different wrapping points.",
-  row `Array.uget (.library "List.nth") .unsound "i < length" []
+  row `Array.uget (.extern "lean_array_uget" (some .arrayGet)) (.library "List.nth") .unsound "i < length" []
     "Lean's `Array.uget a i h` is total (`h` proves `i` in range) and the row is `List.nth`, which **raises** `Failure \"nth\"` out of range and `Invalid_argument` on a negative index."
     (cost := "O(i) under the shim where Lean's is O(1)."),
-  row `Array.get! (arrayGetBang) .domain "represented non-negative index; returned-value observation" ["array-default"]
-    "Out-of-range lookup returns the supplied default. Lean panic diagnostics are not reproduced."
-    (cost := "linear in the index."),
-  row `Array.fget (.library "List.nth") .domain "i < length" []
-    "The source carries a bounded index; list lookup agrees on that domain."
-    (cost := "linear in the index."),
   -- Option, Prod, panic
-  row `Option.isSome (.library "Option.is_some") .exact "" []
+  row `Option.isSome .body (.library "Option.is_some") .exact "" []
     "",
-  row `Option.isNone (.library "Option.is_none") .exact "" []
+  row `Option.isNone .body (.library "Option.is_none") .exact "" []
     "",
-  row `Option.getD (optionGetD) .exact "" ["option-default", "option-default-eager"]
+  row `Option.getD .body (optionGetD) .exact "" ["option-default", "option-default-eager"]
     "",
-  row `Option.map (.library "Option.map") .exact "" []
+  row `Option.map .body (.library "Option.map") .exact "" []
     "",
-  row `Option.bind (.library "Option.bind") .exact "" []
+  row `Option.bind .body (.library "Option.bind") .exact "" []
     "",
-  row `Prod.fst (.library "fst") .exact "" []
+  row `Prod.fst .body (.library "fst") .exact "" []
     "",
-  row `Prod.snd (.library "snd") .exact "" []
+  row `Prod.snd .body (.library "snd") .exact "" []
     "",
-  row `panic (.library "failwith") .approximate "" []
+  row `panic .body (.library "failwith") .approximate "" []
     "Lean's `panic` logs and **returns `default`**: the caller continues with a junk value. OCaml's `failwith` raises `Failure`. The OCaml behaviour is arguably the better one, but it is not the Lean one, and a Lean theorem about a program that panics says nothing about an OCaml run that aborts.",
-  row `panicCore (.library "failwith") .approximate "" []
+  row `panicCore (.extern "lean_panic_fn_borrowed" none) (.library "failwith") .approximate "" []
     "as `panic`.",
   -- The exact clock: `Effect4.ClockMillis` is `E4_clock.t`, a Zarith integer.
-  row `Effect4.ClockMillis.ofNat (.library "E4_clock.of_nat") .domain "n < 2^62, the natural as the `int` that carries it" []
+  row `Effect4.ClockMillis.ofNat .body (.library "E4_clock.of_nat") .domain "n < 2^62, the natural as the `int` that carries it" []
     "`E4_clock.of_nat` is `Z.of_int` on a non-negative `int`, and raises `Profile_refusal` on a negative one. A literal reaches the clock by `clockNatIngress?` as exact decimal text, and a natural that the literal rule narrowed is refused at generation. Read against `ocaml/clock/e4_clock.ml`; its own tests are `ocaml/clock/test_clock.ml`.",
-  row `Effect4.ClockMillis.toNat (.library "E4_clock.to_profile_nat") .domain "millis ≤ 2^53 - 1 and the value fits `int`" []
+  row `Effect4.ClockMillis.toNat .body (.library "E4_clock.to_profile_nat") .domain "millis ≤ 2^53 - 1 and the value fits `int`" []
     "`E4_clock.to_profile_nat` raises `Profile_refusal` outside the domain: a refusal outside the program's result, never a wrapped value (DI-56).",
   -- The one addition that can leave the profile (decisions row 321): `succ`, `add`, `plus` and
   -- `minus` grow through it, and its form refuses outside the bound.
-  row `Effect4.Program.Profile.grow
+  row `Effect4.Program.Profile.grow .body
     (.inline ["a", "b"] (.call "E4_clock.to_profile_nat"
       [.call "E4_clock.add" [.call "E4_clock.of_nat" [.var "a"], .call "E4_clock.of_nat" [.var "b"]]]))
     .domain "a + b ≤ 2^53 - 1, and each of a and b fits `int`" []
     "Exact addition on `E4_clock.t`, then `E4_clock.to_profile_nat`, which raises `Profile_refusal` outside the domain: a refusal outside the program's result, never a wrapped value (DI-56, decisions row 108). The engine answers it as `Outside_profile` with the input machine retained (`ocaml/engine/e4_engine.mli`)."
     "two conversions and one Zarith addition for one machine addition",
-  row `Effect4.Program.Profile.scale
+  row `Effect4.Program.Profile.scale .body
     (.inline ["a", "b"] (.call "E4_clock.to_profile_nat"
       [.call "E4_clock.mul" [.call "E4_clock.of_nat" [.var "a"], .call "E4_clock.of_nat" [.var "b"]]]))
     .domain "a * b ≤ 2^53 - 1, and nonnegative a and b fit `int`" []
     "Exact Zarith multiplication followed by checked natural observation. Outside the domain, Profile_refusal remains outside the program result (DI-56)."
     "two conversions and one Zarith multiplication",
-  row `Effect4.ClockMillis.add (.library "E4_clock.add") .exact "" []
+  row `Effect4.ClockMillis.add .body (.library "E4_clock.add") .exact "" []
     "`E4_clock.add` is `Z.add`, exact on naturals of any size; Lean's `add` is `ofNat (a.toNat + b.toNat)` (`ClockMillis.toNat_add`).",
-  row `Effect4.ClockMillis.decLe (.library "E4_clock.le") .exact "" []
+  row `Effect4.ClockMillis.decLe .body (.library "E4_clock.le") .exact "" []
     "`E4_clock.le` is `Z.leq`; Lean compares the two `toNat`.",
-  row `Effect4.ClockMillis.decLt (.library "E4_clock.lt") .exact "" []
+  row `Effect4.ClockMillis.decLt .body (.library "E4_clock.lt") .exact "" []
     "`E4_clock.lt` is `Z.lt`; as `decLe`.",
-  row `Effect4.ClockMillis.beq (.library "E4_clock.equal") .exact "" []
+  row `Effect4.ClockMillis.beq .body (.library "E4_clock.equal") .exact "" []
     "`E4_clock.equal` is `Z.equal`. One `Z.t` stands for one natural, and `ofNat` and `toNat` are inverse (`ofNat_toNat`, `toNat_ofNat`), so equality of the carriers is equality of the clocks.",
-  row `Effect4.instDecidableEqClockMillis (.library "E4_clock.equal") .exact "" []
+  row `Effect4.instDecidableEqClockMillis .body (.library "E4_clock.equal") .exact "" []
     "as `ClockMillis.beq`; `Decidable` is `Bool` at mono.",
-  row `Effect4.ClockMillis.toDecimal (.library "E4_clock.to_decimal") .exact "" []
+  row `Effect4.ClockMillis.toDecimal .body (.library "E4_clock.to_decimal") .exact "" []
     "`E4_clock.to_decimal` is `Z.to_string`: the decimal digits with no leading zero, as `Nat.repr` writes them.",
-  row `Effect4.ClockMillis.ofDecimal (.library "E4_clock.of_decimal") .exact "" []
+  row `Effect4.ClockMillis.ofDecimal .body (.library "E4_clock.of_decimal") .exact "" []
     "Both read exactly the spelling `toDecimal` writes: a non-empty digit string with no leading zero, or `0`. Lean's side is `ofDecimal_exact` and `ofDecimal_toDecimal`; the OCaml side is read against `e4_clock.ml`. No theorem joins the two."
 ]
 
@@ -587,7 +632,7 @@ def supportOf? (name : String) : Option Support := support.find? (·.name == nam
 def Form.arity : Form → Nat
   | .inline ps _ => ps.length
   | .support n => ((supportOf? n).map (·.params.length)).getD 0
-  | .library n => (libraries.lookup n).getD 0
+  | .library n => (libraryArity? targetLibrary n).getD 0
 
 def Builtin.arity (b : Builtin) : Nat := b.form.arity
 
@@ -657,17 +702,42 @@ def builtinIndex : Std.HashMap Name Builtin :=
 /-- The row of a Lean constant, if it has one. A `_redArg` twin has its wrapper's row. -/
 def builtin? (n : Name) : Option Builtin := builtinIndex[stripRedArg n]?
 
+/-- The source evaluator's primitive table (`Conform.Lcnf.Semantics`): each row's Lean constant
+with the primitive of its runtime column. -/
+def sourcePrims : Conform.Lcnf.PrimTable :=
+  builtins.filterMap fun b =>
+    match b.runtime with
+    | .extern _ (some p) => some (b.lean, p)
+    | _ => none
+
+/-- The target evaluator's arity of each primitive spelling (`Conform.Lcnf.Target.PrimEnv`):
+every entry of the library that it answers, by `applyPrim` or by a scan. -/
+def targetArities : Std.HashMap String Nat :=
+  targetLibrary.foldl (init := {}) fun m f =>
+    match f.target with
+    | .prim spelling => m.insert spelling f.arity
+    | .scan _ => m.insert f.name f.arity
+    | _ => m
+
+/-- The library functions that the target evaluator scans a list with, each with the callback's
+answer that ends the scan. -/
+def targetScans : Std.HashMap String Bool :=
+  targetLibrary.foldl (init := {}) fun m f =>
+    match f.target with
+    | .scan stop => m.insert f.name stop
+    | _ => m
+
 /-! ## 6. The table's own check -/
 
 /-- The names of a list that occur more than once, each reported once. -/
 private def repeated [BEq α] (xs : List α) : List α :=
   (xs.filter fun x => (xs.filter (· == x)).length > 1).eraseDups
 
-/-- Everything wrong with a table, a support list and a library list. It is empty for the
-three of this module, and it refuses each altered copy below. -/
-def problemsOf (rows : List Builtin) (sup : List Support) (lib : List (String × Nat)) :
+/-- Everything wrong with a table, a support list and a library. It is empty for the three of
+this module, and it refuses each altered copy below. -/
+def problemsOf (rows : List Builtin) (sup : List Support) (lib : List LibFn) :
     List String := Id.run do
-  let libNames := lib.map (·.1)
+  let libNames := (lib.filter (!·.isInfix)).map (·.name)
   let supNames := sup.map (·.name)
   let mut out : List String := []
   -- the keys
@@ -693,27 +763,44 @@ def problemsOf (rows : List Builtin) (sup : List Support) (lib : List (String ×
           unless libNames.contains f || supNames.contains f do
             out := out ++ [s!"row {r.lean}: `{f}` is not declared"]
         for o in u.ops.eraseDups do
-          unless operators.contains o do
+          unless isOperator lib o do
             out := out ++ [s!"row {r.lean}: the operator `{o}` is not declared"]
     | .support n =>
       unless supNames.contains n do
         out := out ++ [s!"row {r.lean}: the support function `{n}` is not defined"]
     | .library n =>
-      match lib.lookup n with
+      match libraryArity? lib n with
       | none => out := out ++ [s!"row {r.lean}: the library function `{n}` is not declared"]
       | some 0 => out := out ++ [s!"row {r.lean}: `{n}` is not a function"]
       | some _ => pure ()
   -- the library and the prelude
-  for n in repeated libNames do
+  for n in repeated (lib.map (·.name)) do
     out := out ++ [s!"library `{n}`: declared twice"]
+  for f in lib do
+    if f.isInfix && f.arity != 2 then
+      out := out ++ [s!"library `{f.name}`: an operator takes two arguments"]
+    match f.target with
+    | .scan _ =>
+      unless f.arity == 2 do
+        out := out ++ [s!"library `{f.name}`: a scan takes a callback and a list"]
+    | .bound =>
+      unless f.arity == 0 do
+        out := out ++ [s!"library `{f.name}`: a bound name is a value"]
+    | _ => pure ()
+  let spellings := lib.filterMap fun f => match f.target with
+    | .prim spelling => some spelling
+    | .scan _ => some f.name
+    | _ => none
+  for n in repeated spellings do
+    out := out ++ [s!"library: the evaluator's primitive `{n}` answers two entries"]
   for b in rawPrimitives do
-    unless lib.lookup b.name == some b.params.length do
+    unless libraryArity? lib b.name == some b.params.length do
       out := out ++ [s!"primitive `{b.name}`: not declared with its arity"]
   for n in repeated supNames do
     out := out ++ [s!"support `{n}`: defined twice"]
   let mut earlier : List String := []
   for s in sup do
-    if libNames.contains s.name || operators.contains s.name then
+    if libNames.contains s.name || isOperator lib s.name then
       out := out ++ [s!"support `{s.name}`: the name is the library's"]
     match usesExpr true s.params s.body with
     | none => out := out ++ [s!"support `{s.name}`: the body leaves its fragment"]
@@ -725,7 +812,7 @@ def problemsOf (rows : List Builtin) (sup : List Support) (lib : List (String ×
         unless libNames.contains f || earlier.contains f || self.contains f do
           out := out ++ [s!"support `{s.name}`: `{f}` is not declared before it"]
       for o in u.ops.eraseDups do
-        unless operators.contains o do
+        unless isOperator lib o do
           out := out ++ [s!"support `{s.name}`: the operator `{o}` is not declared"]
       if s.recursive && !u.free.contains s.name then
         out := out ++ [s!"support `{s.name}`: marked recursive, and it does not call itself"]
@@ -733,14 +820,20 @@ def problemsOf (rows : List Builtin) (sup : List Support) (lib : List (String ×
   return out
 
 /-- The problems of this module's table. -/
-def problems : List String := problemsOf builtins support libraries
+def problems : List String := problemsOf builtins support targetLibrary
 
 #guard problems.isEmpty
 
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
-#guard etaBinders.all fun b => !protectedNames.contains b && !(libraries.map (·.1)).contains b
+#guard etaBinders.all fun b => !protectedNames.contains b && !(targetLibrary.map (·.name)).contains b
 #guard maxArity == 3
-#guard builtins.length == 108
+#guard builtins.length == 99
+-- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
+-- row but two (`USize.add`, `panicCore`), and the target evaluator scans with two functions.
+#guard sourcePrims.length == 41
+#guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) == [`USize.add, `panicCore]
+#guard targetScans.toList.length == 2 && targetScans["List.exists"]? == some true
+#guard targetArities["Option.value~default"]? == some 2 && (targetArities["List.map"]?).isNone
 
 /-! ### Controls: each altered copy is refused, for its own reason -/
 
@@ -748,39 +841,47 @@ private def refuses (ps : List String) (reason : String) : Bool :=
   ps.any fun p => (p.splitOn reason).length > 1
 
 -- a support definition left out: its row has no function, and its dependent no declaration
-#guard refuses (problemsOf builtins (support.filter (·.name != "lcnf_nat_pow")) libraries)
+#guard refuses (problemsOf builtins (support.filter (·.name != "lcnf_nat_pow")) targetLibrary)
   "the support function `lcnf_nat_pow` is not defined"
-#guard refuses (problemsOf builtins (support.filter (·.name != "lcnf_nat_pow")) libraries)
+#guard refuses (problemsOf builtins (support.filter (·.name != "lcnf_nat_pow")) targetLibrary)
   "support `lcnf_nat_shift_left`: `lcnf_nat_pow` is not declared before it"
 -- the definitions out of order
-#guard refuses (problemsOf builtins support.reverse libraries)
+#guard refuses (problemsOf builtins support.reverse targetLibrary)
   "support `lcnf_nat_shift_left`: `lcnf_nat_pow` is not declared before it"
 -- a library dependency left out
-#guard refuses (problemsOf builtins support (libraries.filter (·.1 != "max_int")))
+#guard refuses (problemsOf builtins support (targetLibrary.filter (·.name != "max_int")))
   "support `lcnf_nat_mul`: `max_int` is not declared before it"
-#guard refuses (problemsOf builtins support (libraries.filter (·.1 != "max")))
+#guard refuses (problemsOf builtins support (targetLibrary.filter (·.name != "max")))
   "row Nat.sub: `max` is not declared"
 -- a contract whose domain disagrees with its class
-#guard refuses (problemsOf [row `Nat.add (Form.op "+") .exact "a + b < 2^62" [] ""] support libraries)
+#guard refuses (problemsOf [row `Nat.add .body (Form.op "+") .exact "a + b < 2^62" [] ""] support targetLibrary)
   "row Nat.add: an exact row states a domain"
+-- a library whose evaluator spelling answers two entries, and an operator of one argument
+private def secondRev : LibFn :=
+  { name := "List.rev2", arity := 1, isInfix := false, target := .prim "List.rev" }
+private def unaryOp : LibFn := { name := "~~", arity := 1, isInfix := true, target := .unruled }
+#guard refuses (problemsOf builtins support (targetLibrary ++ [secondRev]))
+  "the evaluator's primitive `List.rev` answers two entries"
+#guard refuses (problemsOf builtins support (targetLibrary ++ [unaryOp]))
+  "library `~~`: an operator takes two arguments"
 -- two rows for one key, and a key that `stripRedArg` would change
-#guard refuses (problemsOf (builtins ++ builtins.take 1) support libraries)
+#guard refuses (problemsOf (builtins ++ builtins.take 1) support targetLibrary)
   "row Nat.decEq: the key has two rows"
 #guard refuses
-  (problemsOf (row (`Nat.add ++ `_redArg) (Form.op "+") .exact "" [] "" :: builtins) support
-    libraries)
+  (problemsOf (row (`Nat.add ++ `_redArg) .body (Form.op "+") .exact "" [] "" :: builtins) support
+    targetLibrary)
   "the key is not normalized"
 -- an inline body that binds, and a support body of verbatim text
 #guard refuses
-  (problemsOf [row `Nat.mul (.inline ["a"] (.letIn "t" va (.var "t"))) .exact "" [] ""] support
-    libraries)
+  (problemsOf [row `Nat.mul .body (.inline ["a"] (.letIn "t" va (.var "t"))) .exact "" [] ""] support
+    targetLibrary)
   "row Nat.mul: the inline body leaves its fragment"
 #guard refuses
-  (problemsOf builtins [{ name := "lcnf_x", params := ["a"], body := .raw "a" }] libraries)
+  (problemsOf builtins [{ name := "lcnf_x", params := ["a"], body := .raw "a" }] targetLibrary)
   "support `lcnf_x`: the body leaves its fragment"
 -- a support body whose own binder hides a parameter
 #guard refuses
-  (problemsOf [] [{ name := "lcnf_x", params := ["a"], body := .letIn "a" va va }] libraries)
+  (problemsOf [] [{ name := "lcnf_x", params := ["a"], body := .letIn "a" va va }] targetLibrary)
   "support `lcnf_x`: a name is bound twice"
 
 /-! ### Controls: the forms the route had
@@ -816,7 +917,7 @@ private def spelled (name : Name) (args : List Ml.Expr) : String :=
 #guard (builtin? `Nat.sub).any (·.form.strict)
 #guard (builtin? `List.all).any (·.form.strict)
 #guard (builtin? `Nat.div).any (!·.form.strict)       -- `b` twice
-#guard (builtin? `Array.get!).any (!·.form.strict)    -- `a` and `i` twice, `d` in one arm
+#guard (builtin? `Option.getD).any (·.form.strict)    -- each argument once, always
 #guard (builtin? `Bool.and).any (!·.form.strict)      -- the right operand is lazy
 #guard (builtin? `Array.mkEmpty).any (!·.form.strict) -- the capacity is dropped
 

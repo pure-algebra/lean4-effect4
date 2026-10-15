@@ -192,10 +192,20 @@ Every operation the emitted fragment applies that is not a call to another emitt
 The spelling is the target's (`"="`, `"List.rev"`, `"@"`); the meaning is here, and it is the
 target's meaning, not Lean's: `"/"` raises on zero, `"String.length"` counts bytes, `"+"`
 wraps at the word. That divergence from `Conform.Lcnf.Prim` is exactly the fidelity gap the
-audit measures — same names, two tables, and the difference is the finding. -/
+audit measures — same names, two tables, and the difference is the finding.
+
+Which spellings are primitives, and at which arity, is data of the configuration (`PrimEnv`):
+the route's primitive table computes it (`Conform.Effect4.LcnfMl.primEnv`, from
+`OCaml5.Lcnf.targetLibrary`), so this generic module names no spelling a table does not. -/
 
 structure PrimEnv where
   word : Word := {}
+  /-- The arity of each spelling the evaluator answers as a primitive. A name outside it is no
+  primitive: a call of it is an unbound name. -/
+  arity : Std.HashMap String Nat := {}
+  /-- The library functions that scan a list with a callback, each with the callback's answer
+  that ends the scan (`scanT`). -/
+  scans : Std.HashMap String Bool := {}
   deriving Inhabited
 
 private def asInt : TValue → Option Int | .int n => some n | _ => none
@@ -386,26 +396,15 @@ def applyPrim (pe : PrimEnv) (op : String) (args : Array TValue) : TOutcome :=
     | _ => .stuck "Option.value: not an option and a default"
   | _ => .stuck s!"no rule for the primitive `{op}`"
 
-/-- The arity of a primitive, so an under-applied one becomes a partial application rather
-than a refusal. -/
-def primArity : String → Option Nat
-  | "not" | "String.length" | "List.rev" | "List.length" | "List.concat"
-  | "fst" | "snd" | "Option.is_some" | "Option.is_none" | "failwith"
-  | "utf8_bytes" | "lcnf_utf8_bytes" | "lcnf_utf8_length" | "id" => some 1
-  | "+" | "-" | "*" | "/" | "mod" | "land" | "lor" | "lxor" | "lsr" | "lsl"
-  | "=" | "<>" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "^" | "max" | "min"
-  | "@" | "List.rev_append" | "List.nth" | "Option.value~default"
-  | "List.exists" | "List.for_all" => some 2
-  | _ => none
+/-- The arity of a primitive in a program's table, so an under-applied one becomes a partial
+application rather than a refusal. -/
+def PrimEnv.arity? (pe : PrimEnv) (op : String) : Option Nat := pe.arity[op]?
 
-/-- The library functions that take a function and scan a list with it. `applyPrim` cannot
-apply a function value, so the evaluator answers these itself (`primT`, `scanT`). The Boolean
-is the callback's answer that ends the scan: `List.exists` stops at the first `true`, and
-`List.for_all` at the first `false`. -/
-def scanStop? : String → Option Bool
-  | "List.exists" => some true
-  | "List.for_all" => some false
-  | _ => none
+/-- Whether a primitive scans a list with a callback, and the callback's answer that ends the
+scan. `applyPrim` cannot apply a function value, so the evaluator answers these itself
+(`primT`, `scanT`): `List.exists` stops at the first `true`, and `List.for_all` at the first
+`false`. -/
+def PrimEnv.scanStop? (pe : PrimEnv) (op : String) : Option Bool := pe.scans[op]?
 
 /-! ## 5. The evaluator -/
 
@@ -464,7 +463,7 @@ def evalT (prog : Program) : Nat → TEnv → Expr → TOutcome
         | some (ps, body) =>
           if ps.isEmpty then evalT prog fuel [] body else .value (.papp n #[])
         | none =>
-          match primArity n with
+          match prog.pe.arity? n with
           | some _ => .value (.papp n #[])
           | none => .stuck s!"unbound name `{n}`"
     | .fn ps body => .value (.closureV ps body env none)
@@ -508,7 +507,7 @@ def evalT (prog : Program) : Nat → TEnv → Expr → TOutcome
     | .prim op args =>
       match evalArgs prog fuel env args with
       | .value (.tupleV vs) =>
-        match primArity op with
+        match prog.pe.arity? op with
         | some k =>
           if vs.size == k then primT prog fuel op vs
           else if vs.size < k then .value (.papp op vs)
@@ -589,7 +588,7 @@ def applyNamed (prog : Program) : Nat → String → Array TValue → TOutcome
         | .value g => applyT prog fuel g (vs.extract ps.length vs.size)
         | o => o
     | none =>
-      match primArity n with
+      match prog.pe.arity? n with
       | some k =>
         if vs.size == k then primT prog fuel n vs
         else if vs.size < k then .value (.papp n vs)
@@ -604,11 +603,11 @@ unit of fuel here. Every other primitive is `applyPrim`, at any fuel: its answer
 depend on the fuel that is left. -/
 def primT (prog : Program) : Nat → String → Array TValue → TOutcome
   | 0, op, vs =>
-    match scanStop? op with
+    match prog.pe.scanStop? op with
     | some _ => .outOfFuel
     | none => applyPrim prog.pe op vs
   | fuel + 1, op, vs =>
-    match scanStop? op with
+    match prog.pe.scanStop? op with
     | some stop =>
       match vs with
       | #[p, l] => scanT prog fuel op stop p l
