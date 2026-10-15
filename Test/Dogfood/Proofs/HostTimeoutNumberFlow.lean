@@ -65,6 +65,13 @@ def Image.afterForm (image : Image) (own : image.count = image.cleanups.length +
     (attemptExit selected : ExitV) : Image :=
   (image.cleanup own attemptExit).form (image.cleanup_complete own attemptExit) (image.form_gap own) selected
 
+/-- The count's post-state is fixed before its saved binders are installed. -/
+def Image.enter (image : Image) (n : Fin 4)
+    (cleanupComplete : image.cleanups.length = image.count)
+    (formComplete : image.exits.length = image.count) (cursor : image.count ≤ n.val) : Image :=
+  ⟨image.count + 1, image.cleanups, image.completed, image.exits,
+    count_numbers image.numbers n cleanupComplete formComplete cursor⟩
+
 /-- The operation's returned class names the state it must establish. -/
 inductive Kind
   | read (image : Image)
@@ -124,6 +131,27 @@ inductive CodeAt (state : Stores) : Kind → NCode → Prop
       CodeAt state kind (.failure cause)
   | get (image : Image) (heap : ImageAt image state) :
       CodeAt state (.read image) (.sync (.op (.refGet ⟨0⟩)))
+  | count (image : Image) (n : Fin 4)
+      (cleanupComplete : image.cleanups.length = image.count)
+      (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+      (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image state) :
+      CodeAt state (.unit (image.enter n cleanupComplete formComplete (Nat.le_of_eq cursor)))
+        (.sync (.op (.refUpdate ⟨0⟩ HostTimeoutNumberEntry.countTerm
+          (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n error).env)))
+  | countBind (image : Image) (n : Fin 4)
+      (cleanupComplete : image.cleanups.length = image.count)
+      (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+      (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image state) :
+      CodeAt state (.at (image.enter n cleanupComplete formComplete (Nat.le_of_eq cursor)))
+        (resolve HostTimeoutSource.program
+          ((HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n error).child 0))
+  | countEntry (image : Image) (n : Fin 4)
+      (cleanupComplete : image.cleanups.length = image.count)
+      (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+      (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image state) :
+      CodeAt state (.cleanupExit (image.enter n cleanupComplete formComplete (Nat.le_of_eq cursor))
+        (by change image.count + 1 = image.cleanups.length + 1; rw [cleanupComplete]))
+        (resolve HostTimeoutSource.program (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n error))
   | cleanup (image : Image) (own : image.count = image.cleanups.length + 1)
       (captured : Point) (fuel delay : Nat) (n : Fin 4) (error : Val) (exit : ExitV)
       (count : image.count = n.val + 1) (heap : ImageAt image state) :

@@ -106,3 +106,37 @@ The output is:
 ```text
 #axiom_audit: 89 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
 ```
+
+## Per-command count entry
+
+`CodeAt.count`, `CodeAt.countBind`, and `CodeAt.countEntry` name the post-count class before the count executes.
+The current heap remains the actual pre-count heap.
+`Image.enter` owns that post-count image.
+`NumberCounted.nextImage` uses it.
+
+`count_exit_push`, `count_bind_push`, and `count_native_write` verify the actual three commands separately.
+Their saved callback obligations require the post-count heap only when the callback receives its result.
+The producer no longer needs to assume a fabricated post-count heap before either push.
+
+`HostTimeoutNumberInterrupt.running_frame` verifies the deferred-interruption branch.
+It changes neither the numeric current code nor the saved stack.
+`idle_frame` verifies immediate interruption from the actual accumulated cause class.
+The command assertion must still supply that cause class and the permission to execute a count prefix.
+
+The new interruption module is `Test/Dogfood/Proofs/HostTimeoutNumberInterrupt.lean`.
+Its placement is scope-lifetime-finalization R11, with reactive-scheduling R9.
+Its consumers remain both Timeout goals.
+It establishes no history or execution permission by itself.
+
+| Command | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCounted Test.Dogfood.Proofs.HostTimeoutNumberWait` | Passed, 1204 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCounted` | Passed, 1202 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberInterrupt` | Passed, 1203 jobs |
+| `lake env lean scratch/TimeoutCountAudit.lean` | The output below |
+
+The last command audits `NumberFlow`, `NumberCounted`, `NumberInterrupt`, `NumberPhase`, and `NumberWait` in their full module namespaces.
+
+```text
+#axiom_audit: 301 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
