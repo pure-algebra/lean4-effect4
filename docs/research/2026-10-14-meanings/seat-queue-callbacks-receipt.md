@@ -324,3 +324,25 @@ The audit command is `lean-slot.sh lake env lean /private/tmp/queue-count-histor
 It checks 55 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
 The output is `/private/tmp/queue-count-history-audit.log`.
 The remaining delayed-reply consumer still needs the actual admitted reply and its saved input class.
+
+## Actual feeder commit and publication
+
+Both queue endpoint goals remain open.
+The base is `db598aa50`.
+`QueueWorkersOfferNative.source_step` connects the actual captured offer term to its renewed queue table and spent request class.
+The same returned world retains conservation and counted custody.
+`allocation_step` publishes the real deferred key for the existing holding request.
+`getter_path` retains the actual saved flag and unpublished request suffix.
+The unpublished input requires an absent key; a later callback cannot publish that request again.
+`entry_input` connects this input to the already selected offer-entry observation.
+The active command and history consumers remain unfinished.
+
+`QueueWorkersWorkerBinding.body` now consumes `QueueWorkersJobGraph.assignment_body` directly.
+The duplicate assignment proof is removed.
+The narrow command is `lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersOfferNative Test.Dogfood.Proofs.QueueWorkersWorkerBinding`.
+It passes with 1423 jobs.
+The output is `/private/tmp/queue-offer-allocation-build.log`.
+The audit command is `lean-slot.sh lake env lean /private/tmp/queue-offer-allocation-audit.lean`.
+It checks 285 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
+The output is `/private/tmp/queue-offer-allocation-audit.log`.
+The new test consumer is `Test.Dogfood.Proofs.QueueWorkersOfferNative`.
