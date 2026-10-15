@@ -13,6 +13,7 @@ import Tools.ProfileJson
 import Tools.RunChecks
 import TypeScript.Render
 import Lean.Data.Json
+import Effect4.Api.Codegen
 
 /-! Strict v3 decision-tape tool. The runtime session is the semantic owner; this is
 only fixture construction, JSON transport, and rendering of the same admitted Eff program.

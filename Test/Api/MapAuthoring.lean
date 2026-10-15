@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-! Finite application examples for string maps.
 These checks exercise named composition, presence, immutable updates and entry conversion.

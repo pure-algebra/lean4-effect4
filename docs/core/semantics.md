@@ -284,7 +284,7 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   world. A later world keeps the membership of a list of handles.
   The handles of a term's answer are handles of its environment.
   It establishes no correspondence in a target: that is each target's relation.
-  (`handle_identity_laws` (`src/Effect4/Laws/Program/Typed/ListFold.lean`)).
+  (`handle_identity_laws` (`src/Effect4/Laws/Program/Typed/HandleIdentity.lean`)).
 - **The mask's saved state (`saved-mask-image-membership`)**: A mask saves its caller's
   interruptibility at an opaque host type, `Ty.maskRestore`, with a reserved target (decisions
   row 244).

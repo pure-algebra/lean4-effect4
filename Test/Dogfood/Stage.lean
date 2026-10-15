@@ -1,4 +1,5 @@
 import Effect4.Author
+import Effect4.Emit
 
 /-!
 # Test.Dogfood.Stage — how far an rc.112 program gets

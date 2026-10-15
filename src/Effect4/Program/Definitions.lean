@@ -150,6 +150,12 @@ def Eff.defsOf : Eff Op → List DefDecl
   | .defs decls _ _ _ => decls
   | _ => []
 
+/-- A program's definition block, when its root holds one: the declarations, the bodies and the
+main program. -/
+def Eff.block? : Eff Op → Option (List DefDecl × Effs Op × Eff Op × LayerTerms Op)
+  | .defs decls bodies main layers => some (decls, bodies, main, layers)
+  | _ => none
+
 /-- The definition whose body holds `path` in `root`, by name (`Eff.scopeOf`); `none` outside
 every body. -/
 def Eff.defAt (root : Eff Op) (path : List Nat) : Option String :=

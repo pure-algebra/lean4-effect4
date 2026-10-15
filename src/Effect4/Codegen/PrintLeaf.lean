@@ -1,4 +1,5 @@
 import Effect4.Program.Typing
+import Effect4.Codegen.Refusal
 import Effect4.Codegen.Names
 import Effect4.Codegen.Types
 import Effect4.Codegen.Record
@@ -10,13 +11,14 @@ import Effect4.Program.AtomInventory
 import TypeScript
 
 /-!
-# Codegen.PrintLeaf — what the printer's table is made over: refusals, reserved heads, leaves, rows
+# Codegen.PrintLeaf — what the printer's table is made over: reserved heads, leaves, rows
 
 The part of the printer that is not a clause of the table (`Codegen/Templates.lean`) and that the
-table is built from: the refusal alphabet, the reserved heads, binder names, and the printers of
-the leaf sorts (terms, causes, literals, fork options, service keys) and of a signature row
-(`printRow`, whose inverse is the signature's `spell`). `Codegen/Print.lean` is the printer
-proper: the generated fold over the table.
+table is built from: the reserved heads, binder names, and the printers of the leaf sorts (terms,
+causes, literals, fork options, service keys) and of a signature row (`printRow`, whose inverse is
+the signature's `spell`). `Codegen/Print.lean` is the printer proper: the generated fold over the
+table. The printer's refusal alphabet, `PrintRefusal` with `ClassRefusal`, is
+`Codegen/Refusal.lean`'s: the program interface carries it.
 
 The `Nat` every printing function carries is the environment's length (decision D1: a
 positional environment), so the next binder minted is `Var.name n = a{n}`. Nothing else decides
@@ -38,54 +40,6 @@ end Effect4.Codegen
 namespace Effect4.Program
 
 open Effect4.Machine.Env (Requirement)
-
-/-- Why a module cannot declare an error payload's class (decisions row 120, ruling (b): one
-`Data.TaggedError` class per tagged payload type, named by its tag). Each is a refusal of the
-module, named with the tag (`PrintRefusal.payloadClass`). -/
-inductive ClassRefusal
-  /-- The tag is not a TypeScript identifier, so no class can be named by it. -/
-  | notIdentifier
-  /-- The tag collides with a name the module already binds: an import (`Data`, `Effect`, …),
-  an atom or row of its prelude, a reserved head, a builtin, or one of its own declarations. -/
-  | collides
-  /-- Two payload types under one tag with different fields: one class cannot declare both. -/
-  | fieldsDiffer
-  /-- A construction of the payload type outside the class form (`Classes.classTag?`): `_tag`
-  is not its first field, its first name and the tag's literal, or a name repeats `_tag`. -/
-  | construction
-  /-- The class's printed declaration does not read back to its fields
-  (`ClassTable.checkedDecl`): a field type TypeScript spells like another (`number`), or a field
-  naming another class. -/
-  | unreadable
-deriving DecidableEq, Repr
-
-/-- Why the printer declined a program. `internalAction` names what the template table refuses
-(`RowOut.refuse`): the `ActionTerm` constructor whose rc.112 counterpart has no public export
-with the same frame shape, and a child fork into a scope. `layerRef` is the declaration block's
-(the host rows slice): a layer reference whose target path names no layer, so no `const` can be
-hoisted for it. `payloadClass` is the module's: an error payload class it cannot declare. -/
-inductive PrintRefusal
-  | internalAction (name : String)
-  | layerRef (target : List Nat)
-  /-- A row table carries an unsafe spelling (colliding with binders or reserved heads). -/
-  | unsafeName (spelling : String)
-  /-- A legacy target type has no structural reading in the supported profile. Named by a row's
-  spelling, it is also the refusal of an operation's type arguments (`printCall`): one of them
-  has no printed form, or the row's call cannot carry them on its head (`withHeadTypes`). -/
-  | typeSpelling (text : String)
-  /-- An error payload class the module cannot declare, named by its tag (decisions row 120). -/
-  | payloadClass (tag : String) (why : ClassRefusal)
-  /-- An operation that carries a binder term on a row whose printed form is no call, named by the
-  row's spelling: a value row has no argument list to carry the term's function
-  (`withFunction`). No native row is such a row: the eight term rows are call rows, and each
-  prints its term (the state plan's T5). -/
-  | binderTerm (spelling : String)
-  /-- An invocation whose programs need a service that the printed parameter's type cannot carry,
-  at the invocation's path (decisions row 340; Codex's HO3-REQ-01): the header closes a
-  parameter's requirement row as `never`, so tsgo refuses the call. Kept until the target can
-  bind a requirement variable on the header. -/
-  | callbackRequirement (path : List Nat)
-deriving DecidableEq, Repr
 
 /-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/
 def firstByte (s : String) : Option UInt8 := s.toByteArray.data.toList.head?

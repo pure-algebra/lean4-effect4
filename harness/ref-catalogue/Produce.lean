@@ -1,5 +1,6 @@
 import Test.Program.RefFaces
 import Lean.Data.Json
+import Effect4.Api.Codegen
 
 /-! The finite packet's producer uses checked emission and machine observations.
 It refuses a missing program, emission, observation, or supported observation shape. -/

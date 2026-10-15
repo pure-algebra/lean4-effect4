@@ -19,6 +19,8 @@ the record-wrapper brief.
 
 set_option autoImplicit false
 
+open Effect4.Laws.Auto (bind_eq_ok map_eq_ok)
+
 namespace Effect4.Program
 open TypeScript (Expr)
 variable {Op : Type}
@@ -31,41 +33,13 @@ variable {Op : Type}
 @[simp] theorem map_ok {ε α β : Type} (f : α → β) (a : α) :
     (Except.ok a : Except ε α).map f = .ok (f a) := rfl
 
-/-- The inversion of a bind that succeeds: `Laws.Auto.bind_eq_ok` (`Laws/Auto/Inversion.lean`),
-whose statement it is. -/
-theorem bind_eq_ok {ε α β : Type} {m : Except ε α} {f : α → Except ε β} {b : β} :
-    (m >>= f) = .ok b ↔ ∃ a, m = .ok a ∧ f a = .ok b :=
-  Effect4.Laws.Auto.bind_eq_ok
-
-/-- The inversion of a map that succeeds: `Laws.Auto.map_eq_ok`, whose statement it is. -/
-theorem map_eq_ok {ε α β : Type} {m : Except ε α} {f : α → β} {b : β} :
-    m.map f = .ok b ↔ ∃ a, m = .ok a ∧ f a = b :=
-  Effect4.Laws.Auto.map_eq_ok
-
 /-! ## Binders are injective
 
 `Var.name i = "a" ++ Nat.repr i`, and `Nat.repr` is `String.ofList` of the decimal digits.
 The string layer's injectivity lemmas reach `Classical.choice` on this toolchain (they go
 through `String.toList`), so injectivity is taken from the bytes instead: the UTF-8 bytes of
-a decimal string are its digits, and `decodeBytes` reads the number back. -/
-
-theorem decodeBytes_append (bs : List UInt8) (b : UInt8) :
-    decodeBytes (bs ++ [b]) = decodeBytes bs * 10 + digitOfByte b :=
-  Data.NatDecimal.decodeBytes_append bs b
-
-theorem utf8_digitChar : ∀ m, m < 10 →
-    String.utf8EncodeChar (Nat.digitChar m) = [UInt8.ofNat (48 + m)] :=
-  Data.NatDecimal.utf8_digitChar
-
-theorem digitOfByte_digit : ∀ m, m < 10 → digitOfByte (UInt8.ofNat (48 + m)) = m :=
-  Data.NatDecimal.digitOfByte_digit
-
-theorem decodeBytes_toDigitsCore (fuel : Nat) : ∀ n, n < fuel →
-    decodeBytes ((Nat.toDigitsCore 10 fuel n []).flatMap String.utf8EncodeChar) = n :=
-  Data.NatDecimal.decodeBytes_toDigitsCore fuel
-
-theorem decodeBytes_repr (n : Nat) : decodeBytes (Nat.repr n).toByteArray.data.toList = n :=
-  Data.NatDecimal.decodeBytes_repr n
+a decimal string are its digits, and `decodeBytes` reads the number back (`Data.NatDecimal.repr_inj`,
+`src/Effect4/Laws/Data/NatDecimal.lean`). -/
 
 theorem readKey_exact {Op : Type} {sig : Signature Op} {x : Expr} {key : ServiceKey}
     (h : readKey sig x = .ok key) : printKey sig key = .ok x := by
@@ -112,7 +86,7 @@ private theorem repr_no_separator (n : Nat) :
     have hm : n % 10 < 10 := Nat.mod_lt _ (by decide)
     have hd : ∀ b ∈ String.utf8EncodeChar (Nat.digitChar (n % 10)),
         (b != (95 : UInt8)) = true := by
-      rw [utf8_digitChar _ hm]
+      rw [Data.NatDecimal.utf8_digitChar _ hm]
       have : ∀ m, m < 10 → ((UInt8.ofNat (48 + m)) != (95 : UInt8)) = true := by decide
       simp only [List.mem_singleton]
       intro b hb
@@ -158,7 +132,7 @@ theorem keyFromText_print (name service : Nat) :
       95 :: (Nat.repr service).toByteArray.data.toList).dropWhile (· != 95)).drop 1)⟩ = _
   rw [(split_separator _ _ (repr_no_separator name)).1,
     (split_separator _ _ (repr_no_separator name)).2]
-  simp only [List.drop_succ_cons, List.drop_zero, decodeBytes_repr]
+  simp only [List.drop_succ_cons, List.drop_zero, Data.NatDecimal.decodeBytes_repr]
 
 /-- Full key text is injective because its decoder is a left inverse. Helper for
 `keyIdentifier_injective`, the generated requirement identity claim (R5/R8). -/
@@ -333,12 +307,8 @@ theorem printKey_readable (sig : Signature Op) (key : ServiceKey)
       obtain ⟨target, htarget⟩ := hr
       exact ⟨_, by simp only [printKey, if_neg hs, ht, htarget, ok_bind]; rfl⟩
 
-theorem repr_inj {a b : Nat} (h : Nat.repr a = Nat.repr b) : a = b := by
-  have := congrArg (fun s => decodeBytes s.toByteArray.data.toList) h
-  simpa [decodeBytes_repr] using this
-
 theorem Var.name_inj {i j : Nat} (h : Var.name i = Var.name j) : i = j :=
-  repr_inj (String.append_right_inj _ |>.mp h)
+  Data.NatDecimal.repr_inj (String.append_right_inj _ |>.mp h)
 
 theorem Var.name_head (i : Nat) : (Var.name i).toByteArray.data.toList.head? = some 97 := by
   have ha : "a".toByteArray.data.toList = [97] := by decide

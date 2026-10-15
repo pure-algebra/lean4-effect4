@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 import Effect4.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Codegen.Authoring.Forms

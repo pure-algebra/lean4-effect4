@@ -3,6 +3,7 @@ import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
+import Effect4.Emit
 
 /-!
 # The scenarios' printed modules: each prints and reads back (decisions row 254)

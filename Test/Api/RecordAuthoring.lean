@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-! Application-facing record examples using the ordinary API import.
 These finite checks cover named composition, optional presence and immutable overwrite.

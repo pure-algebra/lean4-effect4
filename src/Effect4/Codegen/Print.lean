@@ -142,12 +142,6 @@ theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
 
 /-! ## A definition block (decisions row 328, slice PROC-3) -/
 
-/-- A program's definition block, when its root holds one: the declarations, the bodies and the
-main program. -/
-def Eff.block? : Eff Op → Option (List DefDecl × Effs Op × Eff Op × LayerTerms Op)
-  | .defs decls bodies main layers => some (decls, bodies, main, layers)
-  | _ => none
-
 /-- A program type as target syntax, a context type's row under the key names given (none by
 default), refused by its rendering when it has none. -/
 def typeRefOf (ty : Ty) (names : KeyNames := []) : Except PrintRefusal TypeScript.TypeRef :=

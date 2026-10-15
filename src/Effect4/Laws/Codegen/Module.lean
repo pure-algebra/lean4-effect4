@@ -20,6 +20,8 @@ original program's, and successful printing on that domain. Target typing, sourc
 validation and host execution remain separate obligations.
 -/
 
+open Effect4.Laws.Auto (bind_eq_ok)
+
 namespace Effect4.Program
 
 variable {Op : Type}

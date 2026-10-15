@@ -23,6 +23,8 @@ a fold and this a definition.
 
 set_option autoImplicit false
 
+open Effect4.Laws.Auto (bind_eq_ok)
+
 namespace Effect4.Program
 
 open Effect4.Codegen

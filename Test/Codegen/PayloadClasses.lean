@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-!
 # The error payload face: one `Data.TaggedError` class per tagged payload type

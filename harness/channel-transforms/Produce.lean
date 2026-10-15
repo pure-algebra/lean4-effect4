@@ -1,6 +1,7 @@
 import Test.Program.Channel
 import Lean.Data.Json
 import Effect4.Api.RefusalsDerived
+import Effect4.Api.Codegen
 set_option autoImplicit false
 set_option maxRecDepth 16384
 namespace ChannelPacket
@@ -56,7 +57,7 @@ def main (args : List String) : IO Unit := do
     let some emitted := (Api.emitModule "main" built.program built.table).toOption
       | throw (IO.userError s!"Produce: {c.name} does not emit")
     -- Ref requests are outside the existing header reader's domain. Retain that exact refusal.
-    let unreadable := authored.defs.filter (fun d => !d.decl.readable emitted.classes)
+    let unreadable := authored.defs.filter (fun d => !d.decl.readable { classes := emitted.classes })
     unless !unreadable.isEmpty do
       throw (IO.userError s!"Produce: {c.name} no longer exercises the unreadable-header boundary")
     unless Api.readModule emitted.module built.table == .error (.shape "definition") do

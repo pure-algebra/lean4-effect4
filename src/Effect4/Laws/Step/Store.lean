@@ -1,5 +1,5 @@
 import Effect4.Laws.Step.Reading
-import Effect4.Laws.Program.Typed.ListFold
+import Effect4.Laws.Program.Typed.FoldEval
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -14,7 +14,8 @@ This file joins each to the store. It names no module.
   reads the cell once, answers the reply and writes the next value (`refStep_modify`).
 - **`step_keeps_cell`**: a step term that the checker types at the pair of a reply type and the
   cell's type keeps the cell a member of its type, and its reply is a member of the reply type
-  (`ListFoldRules.step`, `src/Effect4/Laws/Program/Typed/ListFold.lean`).
+  (`refModify_typed_step`, the `step` field of the claim `fold-typed-atomic-update`,
+  `src/Effect4/Laws/Program/Typed/FoldEval.lean`).
 - **`cell_read`**: a `Ref.get` of the cell answers its value and leaves the stores
   (`refStep_get`).
 
@@ -60,7 +61,8 @@ theorem step_updates {step : TermSrc} {env : Env} {path : List Nat} {current : S
 
 /-- **The typed half of the connector.** A step term that the checker types at the pair of a
 reply type and the cell's type keeps the cell a member of its type, and its reply is a member
-of the reply type. It is `ListFoldRules.step`, read at the value that the step answers.
+of the reply type. It is `refModify_typed_step`, the fold claim's `step` field
+(`src/Effect4/Laws/Program/Typed/FoldEval.lean`), read at the value that the step answers.
 Consumer: a wrapper's law, with a step's typing statement
 (`src/Effect4/Laws/Library/Queue/Typing.lean`,
 `src/Effect4/Laws/Library/Semaphore/Typing.lean`). -/
@@ -73,8 +75,7 @@ theorem step_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeA
     (value : evalTerm (captured ++ [cell]) f = some (Val.tuple [reply, next])) :
     Fits w reply B ∧ Fits w next C := by
   obtain ⟨b, a, answered, -, fitsReply, fitsNext⟩ :=
-    (fold_typed_atomic_update sig).step atoms w tys captured typedEnv f C B typed stores q cell
-      held member
+    refModify_typed_step atoms typedEnv typed held member
   rw [value] at answered
   have same : Val.tuple [reply, next] = Val.tuple [b, a] := Option.some.inj answered
   have parts : [reply, next] = [b, a] := Store.Val.list.inj same

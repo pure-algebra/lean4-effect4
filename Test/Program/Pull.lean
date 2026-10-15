@@ -4,6 +4,7 @@ import Effect4.Emit
 import Effect4.Library.Pull.Ops
 import Effect4.Library.Stream.ArrayDefs
 import Effect4.Laws.Library.Pull.Protocol
+import Effect4.Api.Codegen
 
 /-! Public readers and finite controls for Pull's chunk protocol.
 The declared answer column supplies both Chunk and End to the checker.

@@ -254,6 +254,9 @@ import Effect4.Codegen.RowServices
 -- The banked Ref cache: a cache of a list beside storage, and its model (decisions row 378).
 import Effect4.Library.Ref.Cache
 import Effect4.Library.Ref.CacheModel
+-- The program interface's codegen face, in the namespace `Effect4.Api`: printing, reading,
+-- module emission and checked reading (the codegen refactor's CR-0, decisions row 392).
+import Effect4.Api.Codegen
 
 /-!
 # Effect4

@@ -5,6 +5,7 @@ import TypeScript.Render
 import Drivers.Styles
 import Drivers.ForeignCorpus
 import Effect4.Codegen.Diagnostics
+import Effect4.Api.Codegen
 
 /-!
 # Tools.Corpus — the printed corpus, with the programs beside it

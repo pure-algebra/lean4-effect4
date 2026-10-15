@@ -2,7 +2,7 @@ import Tools.Code.TypeScript
 import Effect4.Codegen.Admit
 import Effect4.Program.Fragment
 import Effect4.Store.Carrier.Digest
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-!
 # A generated module: its file, its imports, and what was checked of it

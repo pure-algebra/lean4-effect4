@@ -1,5 +1,6 @@
 import Test.Program.PartitionedSemaphoreFaces
 import Lean.Data.Json
+import Effect4.Api.Codegen
 
 /-! Emit exact checked bookkeeping callers and their finite machine observations.
 The packet does not call latest's PartitionedSemaphore wrapper. -/

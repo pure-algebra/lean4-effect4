@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario.Atomic.Store
 import Effect4.Laws.Program.ControlSteps
 import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Effect4.Laws.Auto.KernelRfl
+import Effect4.Laws.Program.Size
 
 /-!
 Concept: scope-lifetime-finalization, R11.

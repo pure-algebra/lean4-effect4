@@ -21,6 +21,8 @@ requirement R8. They say nothing of tsgo or of rc.112.
 
 set_option autoImplicit false
 
+open Effect4.Laws.Auto (bind_eq_ok)
+
 namespace Effect4.Program
 
 variable {Op : Type}

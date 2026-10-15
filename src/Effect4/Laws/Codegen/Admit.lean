@@ -18,6 +18,8 @@ No theorem here widens a declared type, admits a binder annotation, interprets t
 package, or claims target typing or execution.
 -/
 
+open Effect4.Laws.Auto (bind_eq_ok)
+
 namespace Effect4.Codegen
 
 open Effect4.Program

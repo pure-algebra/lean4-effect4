@@ -21,6 +21,8 @@ Target typing and execution remain separate evidence.
 
 set_option autoImplicit false
 
+open Effect4.Laws.Auto (bind_eq_ok)
+
 namespace Effect4.Codegen.Templates
 
 open Effect4.Program

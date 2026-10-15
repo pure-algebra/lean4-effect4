@@ -1,6 +1,7 @@
 import Test.Program.BranchAuthoring
 import Lean.Data.Json
 import Effect4.Api.RefusalsDerived
+import Effect4.Api.Codegen
 set_option autoImplicit false
 set_option maxRecDepth 16384
 open Effect4 Effect4.Program Test.Program.BranchAuthoring in

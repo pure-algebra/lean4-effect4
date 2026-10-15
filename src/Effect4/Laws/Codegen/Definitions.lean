@@ -801,7 +801,7 @@ theorem binderNamed_name (i : Nat) : binderNamed (Var.name i) = true := by
     rfl
   unfold binderNamed
   rw [bytes]
-  simp only [decodeBytes_repr, decide_true]
+  simp only [Data.NatDecimal.decodeBytes_repr, decide_true]
 
 /-- What a safe export name is not: no binder, no reserved head, and a binding of the target.
 A step of `defsNamed_of_fault`. -/

@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 import Effect4.Api.Author
 import Effect4.Program.Authoring.Module
 

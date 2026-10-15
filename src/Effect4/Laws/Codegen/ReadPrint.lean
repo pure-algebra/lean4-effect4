@@ -23,6 +23,8 @@ a spelled type, fork options whose daemon flag the row spells, no type annotatio
 
 set_option autoImplicit false
 
+open Effect4.Laws.Auto (bind_eq_ok)
+
 namespace Effect4.Codegen.Template
 
 open TypeScript (Expr Stmt TypeRef Parameter)

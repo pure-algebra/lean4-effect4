@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-! Finite controls for checked record declaration production and source admission.
 These controls serve `printed-modules` under Exact Codecs and Embeddings, for decisions row 195.

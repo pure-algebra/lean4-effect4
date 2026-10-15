@@ -36,6 +36,9 @@ definition's header reads its columns under the module's classes and the signatu
 (`readDefHead`). A list fold's stated accumulator type is printed and not read. `LawfulSpelling` is what the row reader needs
 of a signature.
 
+The reader's refusal alphabet, `ReadRefusal`, is `Codegen/Refusal.lean`'s: the program interface
+carries it.
+
 Binders are recovered by comparison, never by decoding: `Var.read n s` is the position `i < n`
 with `Var.name i = s`. Nothing here folds over a string (`String.toList` and its kin reach
 `Classical.choice` on this toolchain).
@@ -49,32 +52,6 @@ reads 44 more images, and is exact on all 400.
 namespace Effect4.Program
 
 open TypeScript (Expr Stmt)
-
-/-! ## Refusals -/
-
-/-- Why the reader declined a tree. -/
-inductive ReadRefusal
-  /-- A call whose head is a reserved name with no `Eff` reading in that position
-  (`Cause.fail` outside a cause, `Effect.whileLoop` outside its suspend). -/
-  | unknownHead (name : String)
-  /-- An identifier that is no binder, no reserved name, and no value row. -/
-  | unknownIdent (name : String)
-  /-- A row called with an argument list its row table does not print. -/
-  | arity (head : String)
-  /-- A lambda, `const` or `step` parameter that is not the binder due at that position. -/
-  | binder (expected : String)
-  /-- Any other form the printer never emits; `what` names the position. -/
-  | shape (what : String)
-  /-- A negative integer literal. -/
-  | negative (value : Int)
-  /-- A statement form the printer never emits. -/
-  | unsupportedStmt
-  /-- A binder, return or local annotation the raw printer never emits; `site` names the
-  position. This is not `arity` (an argument list the row table does not print) and not
-  `unsupportedStmt` (a statement form with no reading): a consumer routing on the alphabet
-  must be able to tell "annotated, not admitted here" from "wrong shape". -/
-  | annotation (site : String)
-deriving DecidableEq, Repr
 
 /-! ## Annotations the raw reader does not admit
 

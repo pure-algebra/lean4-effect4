@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-! Finite application controls for exact tuple composition through the public authoring API. -/
 namespace Effect4.Test.TupleAuthoring

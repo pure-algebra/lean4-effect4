@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 
 /-! Closed counted-layer instance: one actual reference site versus two nested
 reference sites, with the same table and ordinary run tape. The two programs and their

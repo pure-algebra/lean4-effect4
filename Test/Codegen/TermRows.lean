@@ -8,6 +8,7 @@ import Effect4.Codegen.ListFold
 import Effect4.Laws.Codegen.Read
 import Effect4.Laws.Codegen.PrintReadable
 import TypeScript.Render
+import Effect4.Api.Codegen
 
 /-!
 # Term rows: an operation's binder term as a printed function (the state plan's T5)

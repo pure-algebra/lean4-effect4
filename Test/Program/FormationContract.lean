@@ -3,6 +3,7 @@ import Effect4.Laws.Program.Template
 import Effect4.Laws.Program.Bounds
 import Effect4.Laws.Codegen.Checked
 import Effect4.Laws.Codegen.Admit
+import Effect4.Api.Codegen
 
 /-!
 # Raw and instantiated formation (rows 192 and 193)

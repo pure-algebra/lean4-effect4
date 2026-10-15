@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 import Effect4.Laws.Program.RuntimeR
 import Effect4.Laws.Program.Handles
 import Effect4.Laws.Program.Typing.Sound

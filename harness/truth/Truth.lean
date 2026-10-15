@@ -12,7 +12,7 @@ import Test.Program.QueueDefs
 import Test.Codegen.ServicesPrint
 import Tools.GeneratedStamp
 import Tools.ProfileJson
-import Effect4.Api
+import Effect4.Api.Codegen
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Program.Denote
 import Test.Program.Gen

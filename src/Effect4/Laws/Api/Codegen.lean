@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Api.Codegen
 import Effect4.Laws.Codegen.Checked
 import Effect4.Laws.Codegen.SourceBindings
 import Effect4.Laws.Codegen.Admit
