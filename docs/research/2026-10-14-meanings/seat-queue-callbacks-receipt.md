@@ -300,3 +300,27 @@ The audit command is `lean-slot.sh lake env lean /private/tmp/queue-worker-bindi
 It checks 331 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
 The output is `/private/tmp/queue-worker-binding-audit.log`.
 The feeder, root terminal publication and actual coupled command history remain open.
+
+## Independent actual counter history
+
+Both queue endpoint goals remain open.
+The preceding commit is `b546e9440`.
+`QueueWorkersCountCell.history` proves that reference four is absent or Nat-valued in every admitted history of the actual crew.
+It assumes neither `Jobs` nor `Rest`.
+`source_keeps` uses the existing source census and actual reference footprint.
+`current_keeps` covers the real initializer allocation and the stable native writer.
+The history consumer reuses `Initialized.decision_lift` and `RefInvariant.history`.
+It adds no command or scheduler traversal.
+
+The common driver rebuild exposes two predicate-inference failures after the action contract consolidation.
+The coordinator authorizes explicit source predicates at the existing `ActionProgramsAt.mono` calls in `InitializedNative` and `InitializedAdmin`.
+Both repaired calls retain their original statements and implementations.
+No other identical call remains in those direct dependencies.
+
+The narrow command is `lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersCountHistory`.
+It passes with 1395 jobs.
+The output is `/private/tmp/queue-count-history-build3.log`.
+The audit command is `lean-slot.sh lake env lean /private/tmp/queue-count-history-audit.lean`.
+It checks 55 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
+The output is `/private/tmp/queue-count-history-audit.log`.
+The remaining delayed-reply consumer still needs the actual admitted reply and its saved input class.

@@ -42,7 +42,7 @@ theorem action_root_path (spec : Spec) (fragment : SourceScope.Fragment spec.roo
     ⟨rfl, Nat.le_of_eq counts.1.symm, Nat.le_of_eq counts.2.symm⟩
   have afterReady := ready_future spec _ _ future ready
   have actual := Typed.interp_action_at spec.toSpec fragment view thunk action permission found
-  have programs := SourceScope.ActionProgramsAt.mono spec.root action actual
+  have programs := SourceScope.ActionProgramsAt.mono spec.root (P := fun _ => Typed.CodeAt spec.toSpec .root) action actual
     (fun _ _ code => CodeAt.stable afterReady code)
   have result := SourceScope.with_fiber_path (model spec view) (Edge spec view)
     spec.root view spec.table ⟨fiber.id, next.machine.state⟩ (.stable .root) output machine fiber yielding action
