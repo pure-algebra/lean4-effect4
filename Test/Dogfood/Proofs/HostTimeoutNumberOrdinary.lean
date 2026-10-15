@@ -48,7 +48,20 @@ theorem source_step (context : CountContext) (view : HostTimeoutFlow.View) (mach
     noSuccess noFailure noSync
   simp only [evaluatePrim.stepFrame, actual, evaluatePrim.finishFrame] at broad
   exact ⟨broad, code, CodeClosure.Qualified.prefix_path_owned (HostTimeoutNumberSourceSlots.At context)
-    (AnswerSlots.Prefix (HostTimeoutNumberSourceSlots.bindings context)) (HostTimeoutNumberSourceWrites.Writes context) saved⟩
+    (AnswerSlots.Prefix (HostTimeoutNumberSourceSlots.bindings context)) (HostTimeoutNumberSourceWrites.Writes context) saved,
+    HostTimeoutNumberSourceActions.frame_step context view fiber.frame frame events held.actions
+      actual noSuccess noFailure noSync⟩
+
+/-- The joint source and numeric certificate excludes unminted cancellation actions. -/
+theorem action_absent (context : CountContext) (view : HostTimeoutFlow.View) (machine : NativeMachine)
+    (fiber : SourceScope.SourceFiber) (held : FiberAt machine (.pending context) fiber) :
+    ∀ thunk, fiber.frame.current = .withFiber thunk →
+      (HostTimeoutFlow.interpreter view).withFiberOf thunk = none := by
+  intro thunk current
+  obtain ⟨input, numeric, saved⟩ := held.frame.2
+  have source := held.frame.1.actions.current
+  rw [current] at numeric source
+  exact (HostTimeoutNumberSourceActions.no_native_action context machine.state input thunk numeric source).elim
 
 /-- Actual running authority makes immediate interruption vacuous while the ordinary step retains authored finalizer custody. -/
 theorem fiber_running (context : CountContext) (view : HostTimeoutFlow.View) (machine : NativeMachine)

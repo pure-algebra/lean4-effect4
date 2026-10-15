@@ -50,7 +50,8 @@ theorem fiber_value (context : CountContext) (machine : NativeMachine) (row : So
     · exact Nat.le_refl _
   constructor
   · constructor
-    · exact ⟨⟨trivial, held.frame.1.saved⟩, trivial, held.frame.1.savedWrites⟩
+    · exact ⟨⟨trivial, held.frame.1.saved⟩, trivial, held.frame.1.savedWrites,
+        ⟨trivial, held.frame.1.actions.saved⟩⟩
     · refine ⟨input, CodeAt.success _ .unit good, ?_⟩
       exact Effect4.Contracts.Path.map (fun input output code edge =>
         HostTimeoutNumberUniform.Edge.future _ _ input output code future edge) saved

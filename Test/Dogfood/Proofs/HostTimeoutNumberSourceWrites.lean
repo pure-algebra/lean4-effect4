@@ -1,4 +1,5 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberSourceSlots
+import Test.Dogfood.Proofs.HostTimeoutNumberSourceActions
 import Effect4.Laws.Program.CodeClosure.Qualified.Stable
 import Effect4.Laws.Machine.AnswerFlowNativeExit
 
@@ -151,12 +152,13 @@ structure FrameAt (context : CountContext) (frame : HostTimeoutFrames.NativeFram
     (Writes context) frame.current
   savedWrites : ∀ code ∈ frame.stack, CodeClosure.Qualified.CodeAt (At context)
     (AnswerSlots.Prefix (bindings context)) (Writes context) code
+  actions : HostTimeoutNumberSourceActions.FrameAt context frame
 
 /-- Frame metadata transport keeps the same current writer and each actual saved writer. -/
 theorem FrameAt.fields (context : CountContext) (before after : HostTimeoutFrames.NativeFrame)
     (held : FrameAt context before) (current : after.current = before.current)
     (stack : after.stack = before.stack) : FrameAt context after := by
-  refine ⟨held.toFrameAt.fields context before after current stack, ?_, ?_⟩
+  refine ⟨held.toFrameAt.fields context before after current stack, ?_, ?_, held.actions.fields context before after current stack⟩
   · rw [current]; exact held.currentWrites
   · rw [stack]; exact held.savedWrites
 
@@ -180,25 +182,46 @@ theorem count_frame (context : CountContext) (frame : HostTimeoutFrames.NativeFr
     ⟨(entry_parts context).2, (transport context).child (entry context) 0⟩
   have finalizer : CodeClosure.Qualified.CodeAt (At context) (AnswerSlots.Prefix (bindings context)) (Writes context)
       (.onExit context.bound (.fin context.point) false) := ⟨(entry_parts context).1, entry context⟩
+  have safeBinder : HostTimeoutNumberSourceActions.CodeAt context
+      (.onSuccess context.write (.cont (context.point.child 0))) :=
+    ⟨(HostTimeoutNumberSourceActions.entry_parts context).2, (transport context).child (entry context) 0⟩
+  have safeFinalizer : HostTimeoutNumberSourceActions.CodeAt context
+      (.onExit context.bound (.fin context.point) false) :=
+    ⟨(HostTimeoutNumberSourceActions.entry_parts context).1, entry context⟩
   cases held with
   | entry current stack =>
-    refine ⟨broad, ?_, ?_⟩
+    refine ⟨broad, ?_, ?_, ?_⟩
     · rw [current]; exact entry_code context
     · rw [stack]; intro code member; cases member
+    · constructor
+      · rw [current]; exact HostTimeoutNumberSourceActions.entry_code context
+      · rw [stack]; intro code member; cases member
   | finalizer current stack =>
-    refine ⟨broad, ?_, ?_⟩
+    refine ⟨broad, ?_, ?_, ?_⟩
     · rw [current]; exact (entry_parts context).1
     · rw [stack]; intro code member
       rw [List.mem_singleton] at member
       rw [member]; exact finalizer
+    · constructor
+      · rw [current]; exact (HostTimeoutNumberSourceActions.entry_parts context).1
+      · rw [stack]; intro code member
+        rw [List.mem_singleton] at member
+        rw [member]; exact safeFinalizer
   | binder current stack =>
-    refine ⟨broad, ?_, ?_⟩
+    refine ⟨broad, ?_, ?_, ?_⟩
     · rw [current]; exact (entry_parts context).2
     · rw [stack]; intro code member
       simp only [List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with same | same
       · rw [same]; exact binder
       · rw [same]; exact finalizer
+    · constructor
+      · rw [current]; exact (HostTimeoutNumberSourceActions.entry_parts context).2
+      · rw [stack]; intro code member
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+        rcases member with same | same
+        · rw [same]; exact safeBinder
+        · rw [same]; exact safeFinalizer
 
 /-- The committed count reply retains its exact captured-source writer suffix. -/
 theorem counted_frame (context : CountContext) (frame : HostTimeoutFrames.NativeFrame)
@@ -206,7 +229,8 @@ theorem counted_frame (context : CountContext) (frame : HostTimeoutFrames.Native
       .onExit context.bound (.fin context.point) false]) :
     FrameAt context {frame with current := .success .unit} := by
   have before := count_frame context {frame with current := context.write} (.binder _ rfl stack)
-  exact ⟨HostTimeoutNumberSourceSlots.counted_frame context frame stack, trivial, before.savedWrites⟩
+  exact ⟨HostTimeoutNumberSourceSlots.counted_frame context frame stack, trivial, before.savedWrites,
+    ⟨trivial, before.actions.saved⟩⟩
 
 /-- The exact selected-writer annotation specializes the existing shared stable family. -/
 abbrev sourceSpec (context : CountContext) :=
@@ -231,7 +255,7 @@ theorem finalizer_frame (context : CountContext) (view : HostTimeoutFlow.View)
     (by intros; trivial) (by intros; rfl)
   obtain ⟨input, code, saved⟩ := next
   exact ⟨HostTimeoutNumberSourceSlots.finalizer_frame context view machine fiber yielding exit current held.toFrameAt,
-    code, CodeClosure.Qualified.prefix_path_owned (At context) (AnswerSlots.Prefix (bindings context)) (Writes context) saved⟩
+    code, CodeClosure.Qualified.prefix_path_owned (At context) (AnswerSlots.Prefix (bindings context)) (Writes context) saved, HostTimeoutNumberSourceActions.finalizer_frame context view machine fiber yielding exit current held.actions⟩
 
 /-- Actual terminal native dispatch retains the selected writer graph through its real callbacks.
 Consumer: the pending whole-fiber native producer of both Timeout numeric endpoint histories. -/
@@ -239,24 +263,7 @@ theorem finalizer_native (context : CountContext) (view : HostTimeoutFlow.View)
     (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV)
     (current : fiber.frame.current = Prim.ofExit exit) (held : FrameAt context fiber.frame) :
     let next := evaluatePrim.finalizerOr (HostTimeoutFlow.interpreter view) machine fiber yielding exit
-    FrameAt context next.fiber.frame := by
-  let edge := CodeClosure.Qualified.prefixEdge (At context) (AnswerSlots.Prefix (bindings context)) (Writes context)
-  let spec := CodeClosure.Qualified.prefixSpec HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
-    (At context) (AnswerSlots.Prefix (bindings context)) (Writes context)
-  have source := HostTimeoutNumberSourceSlots.finalizer_frame context view machine fiber yielding exit current held.toFrameAt
-  have saved := CodeClosure.Qualified.prefix_path (At context) (AnswerSlots.Prefix (bindings context))
-    (Writes context) fiber.frame.stack held.savedWrites
-  have callbacks := CodeClosure.Qualified.prefix_family HostTimeoutSource.program HostTimeoutNumberSourceSlots.fragment
-    (At context) (AnswerSlots.Prefix (bindings context)) (Writes context) (contract context)
-    (fun p held view => HostTimeoutNumberSourceSlots.completed context p view held)
-    Test.Dogfood.Scenario.Timeout.fetch.table view
-  have good : AnswerFlow.ExitAt (spec.model view) () () exit := by cases exit <;> trivial
-  obtain ⟨output, next⟩ := AnswerFlow.External.Native.finalizer_frame (spec.model view)
-    (HostTimeoutFlow.interpreter view) edge callbacks (by intros; trivial)
-    () () () machine fiber yielding exit current held.currentWrites saved good
-    (by intros; trivial) (by intros; rfl)
-  obtain ⟨input, code, path⟩ := next
-  exact ⟨source, code, CodeClosure.Qualified.prefix_path_owned (At context)
-    (AnswerSlots.Prefix (bindings context)) (Writes context) path⟩
+    FrameAt context next.fiber.frame :=
+  finalizer_frame context view machine fiber yielding exit current held
 
 end Test.Dogfood.Proofs.HostTimeoutNumberSourceWrites
