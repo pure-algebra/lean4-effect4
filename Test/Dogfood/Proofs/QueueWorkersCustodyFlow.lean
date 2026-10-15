@@ -55,6 +55,8 @@ inductive Kind
   | hintKey (owner : FiberId) (token : Nat)
   | workerKey (owner : FiberId)
   | offerKey (owner : FiberId) (job : Nat)
+  | unpublished (owner : FiberId) (token job : Nat)
+  | offerHint (owner : FiberId) (token job : Nat)
   | ownerReady (owner : FiberId)
   | captured (owner : FiberId) (token : Nat) (input : QueueWorkersCustody.Kind)
   | snapshot (owner : FiberId) (token : Nat) (option : Val)
@@ -70,6 +72,7 @@ def RequestInput (token : Nat) : QueueWorkersCustody.Kind → Prop
 def LocalKind (owner : FiberId) : Kind → Prop
   | .ordinary | .maskFlag => True
   | .newKey actual | .hintKey actual _ | .workerKey actual | .offerKey actual _ |
+      .unpublished actual _ _ | .offerHint actual _ _ |
       .ownerReady actual | .snapshot actual _ _ | .restoreSnapshot actual _ _ _ | .job actual => actual = owner
   | .captured actual token input => actual = owner ∧ RequestInput token input
 
@@ -86,6 +89,11 @@ def ValueAt (world : World) : Kind → Val → Prop
       world.requests.custody.requests token = .waiting
   | .offerKey owner job, value => ∃ token, Owns world owner token ∧
       QueueWorkersRequestKeys.KeyAt world.requests token value ∧
+      world.requests.custody.requests token = .holding job
+  | .unpublished owner token job, value => Owns world owner token ∧
+      world.requests.custody.requests token = .holding job ∧ world.requests.keys token = none ∧
+      ∃ flag, value = Val.savedMask flag
+  | .offerHint owner token job, .handle 3 _ => Owns world owner token ∧
       world.requests.custody.requests token = .holding job
   | .ownerReady owner, _ => OwnerReady world owner
   | .captured owner token input, value => Owns world owner token ∧

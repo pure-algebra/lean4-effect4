@@ -3,6 +3,7 @@ import Test.Dogfood.Proofs.QueueWorkersJobBinding
 import Test.Dogfood.Proofs.QueueWorkersTakeSites
 import Test.Dogfood.Proofs.QueueWorkersWithdrawalSites
 import Test.Dogfood.Proofs.QueueWorkersRetrySites
+import Test.Dogfood.Proofs.QueueWorkersOfferSites
 import Test.Dogfood.Proofs.QueueWorkersReadonlySource
 
 /-!
@@ -12,6 +13,8 @@ Current assignment code retains the job class read by its actual successful bind
 Ordinary tails reuse the qualified source family; this annotation adds no source traversal.
 -/
 set_option autoImplicit false
+set_option maxRecDepth 100000
+set_option maxHeartbeats 8000000
 namespace Test.Dogfood.Proofs.QueueWorkersJobGraph
 open Effect4 Effect4.Machine Effect4.Program
 open Test.Dogfood.Scenario Test.Dogfood.Scenario.QueueWorkers
@@ -60,6 +63,21 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
   | maskGetter {world point}
       (actual : actionAt (Programs.queueProgram total) point = some .getInterruptible) :
       CodeAt total table owner world .maskFlag (.withFiber (.act point))
+  | heldGetter {world point token job}
+      (actual : actionAt (Programs.queueProgram total) point = some .getInterruptible)
+      (selected : Owns world owner token)
+      (holding : world.requests.custody.requests token = .holding job)
+      (unpublished : world.requests.keys token = none) :
+      CodeAt total table owner world (.unpublished owner token job) (.withFiber (.act point))
+  | offerMake {world token job}
+      (selected : Owns world owner token)
+      (holding : world.requests.custody.requests token = .holding job)
+      (unpublished : world.requests.keys token = none) :
+      CodeAt total table owner world (.offerKey owner job) (.sync (.op .deferredMake))
+  | offerHintMake {world token job}
+      (selected : Owns world owner token)
+      (holding : world.requests.custody.requests token = .holding job) :
+      CodeAt total table owner world (.offerHint owner token job) (.sync (.op .deferredMake))
   | hintMake {world token} (selected : Owns world owner token)
       (waiting : world.requests.custody.requests token = .waiting) :
       CodeAt total table owner world (.hintKey owner token) (.sync (.op .deferredMake))
@@ -72,6 +90,17 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
       (hinted : ∃ hint, point.env[worker + 10]? = some (.promise hint)) :
       CodeAt total table owner world (.captured owner token (.takeReply token))
         (.sync (.op (.refModify ⟨0⟩ (QueueWorkersTakeSites.term worker) point.env)))
+  | offer {world point token job}
+      (source : SourceScope.At (Programs.queueProgram total) point)
+      (selected : Owns world owner token)
+      (holding : world.requests.custody.requests token = .holding job)
+      (leading : AnswerSlots.Prefix InitialSlots.bindings point.env)
+      (path : point.path = QueueWorkersOfferSites.path)
+      (key : ∃ key, world.requests.keys token = some key ∧ point.env[12]? = some (.promise key))
+      (hinted : ∃ hint, point.env[13]? = some (.promise hint))
+      (payload : point.env[10]? = some (.nat job)) :
+      CodeAt total table owner world (.captured owner token (.spent token))
+        (.sync (.op (.refModify ⟨0⟩ QueueWorkersOfferSites.term point.env)))
   | withdraw {world point token option exit worker}
       (member : worker ∈ [1, 2])
       (source : SourceScope.At (Programs.queueProgram total) point)
@@ -247,5 +276,6 @@ theorem take_input (total : Nat) (table : RowTable)
   | notification _spec _flat _phase owned => exact owned.elim
   | take member request selected leading path hinted => exact ⟨_, member, _, _, rfl, rfl, rfl, request, selected, leading, path, hinted⟩
   | withdraw => obtain ⟨_, impossible⟩ := takeKind; cases impossible
+  | offer => obtain ⟨_, impossible⟩ := takeKind; cases impossible
 
 end Test.Dogfood.Proofs.QueueWorkersJobGraph
