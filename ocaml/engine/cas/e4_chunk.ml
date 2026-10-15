@@ -1,6 +1,5 @@
 (* E4_chunk — see e4_chunk.mli for what this is, its byte grammar and its behaviours. *)
 
-open Effect4_engine
 (* E4_be, E4_sha256 — never a second framing writer and never a second hash (brief §2.2). *)
 
 (* ---------------------------------------------------------------- the parameters *)

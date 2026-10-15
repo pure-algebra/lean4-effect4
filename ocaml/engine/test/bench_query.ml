@@ -21,7 +21,7 @@
                      This is `E4_trace`'s shape (a reversed accumulator).
      B  path-copying `Im.add d _ m` -- a persistent balanced tree, one insertion per
                      decision.  A retained version keeps its own spine, which the final
-                     machine has replaced.  This is `E4_table` / `E4_store`'s shape.
+                     machine has replaced.  This is `E4_table`'s shape.
      C  the engine   `E4_engine.Fast` over a real program and an admissible tape: both
                      shapes at once, and the only number that answers the actual question.
    B-Q5a uses shape B: it asks what the QUERY LAYER costs against a raw replay of the SAME

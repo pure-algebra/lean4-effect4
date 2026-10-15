@@ -1,6 +1,5 @@
 (* E4_addr — Addr / Ref / Cid / Handle.  The property list is in e4_addr.mli. *)
 
-open Effect4_engine
 
 module Addr = struct
   type t = string                      (* exactly 32 raw bytes; AD1 *)

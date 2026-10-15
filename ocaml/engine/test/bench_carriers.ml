@@ -1,11 +1,12 @@
-(* bench_carriers.ml — per-carrier isolation for lane C's carriers (docs/research/
+(* bench_carriers.ml — per-carrier isolation for the engine's carriers: E4_table (the ref heap
+   and the cells), E4_fibers_view (the fiber table), E4_trace and E4_memo (docs/research/
    2026-09-08-engine-a1-state.md §6.2, cases C1-C6, plus the memo and the small-size
    crossover of §7 R6).
 
    What it measures, and how, so the numbers can be reproduced or refuted:
      * `list_ms` is the LEAN carrier as the LCNF backend emits it — `List.set`, `List.get?`,
        `find? + map`, `xs ++ [v]` — written out in this file.
-       `map_ms` is lane C's carrier.  The ratio is list/map: > 1 means the carrier wins.
+       `map_ms` is the engine's carrier.  The ratio is list/map: > 1 means the carrier wins.
      * ops = 10 000 per cell, except C6, whose unit is a READ of the whole table and which
        therefore runs ops/100 = 100 reads (that is A1's "100 reads per 10 000 steps").
      * C1 poke, C2 peek, C3 fiber and C6 read hold the carrier at a FIXED size n; C4 emit
@@ -89,8 +90,13 @@ let build_list n = List.init n (fun i -> i)
 let build_table n = List.fold_left (fun t i -> E4_table.add i i t) E4_table.empty (List.init n (fun i -> i))
 let build_fibers_list n = List.init n (fun i -> { id = i; w = 0 })
 
+(* The engine's fiber table (`F` = E4_fibers_view): no fiber of this bench has an exit. *)
+let no_exit (_ : fiber) : unit option = None
+
 let build_fibers_table n =
-  List.fold_left (fun t i -> E4_fibers.append i { id = i; w = 0 } t) E4_fibers.empty (List.init n (fun i -> i))
+  List.fold_left
+    (fun t i -> E4_fibers_view.add ~exit_of:no_exit i { id = i; w = 0 } t)
+    E4_fibers_view.empty (List.init n (fun i -> i))
 
 let c1 n =
   let xs = build_list n and t = build_table n in
@@ -101,7 +107,7 @@ let c1 n =
       done)
     (fun () ->
       for _ = 1 to ops do
-        ignore (E4_store.poke (rand n) 7 t)
+        ignore (E4_table.set (rand n) 7 t)
       done)
 
 let c2 n =
@@ -113,7 +119,7 @@ let c2 n =
       done)
     (fun () ->
       for _ = 1 to ops do
-        ignore (E4_store.peek (rand n) t)
+        ignore (E4_table.find_opt (rand n) t)
       done)
 
 let c3 n =
@@ -126,9 +132,9 @@ let c3 n =
     (fun () ->
       for _ = 1 to ops do
         let id = rand n in
-        match E4_fibers.find id t with
+        match E4_fibers_view.find_opt id t with
         | None -> ()
-        | Some f -> ignore (E4_fibers.update_at id { f with w = f.w + 1 } t)
+        | Some f -> ignore (E4_fibers_view.set ~exit_of:no_exit id { f with w = f.w + 1 } t)
       done)
 
 (* C4 and C5 ACCUMULATE: the growth is the measurement. *)
@@ -161,8 +167,7 @@ let c5 n =
     (fun () ->
       let acc = ref base_t in
       for i = 1 to ops do
-        let _, t' = E4_store.grow i !acc in
-        acc := t'
+        acc := E4_table.add (E4_table.cardinal !acc) i !acc
       done;
       ignore (E4_table.cardinal !acc))
 
@@ -325,7 +330,7 @@ let print_rows () =
   Printf.printf
     "\n-- per-carrier isolation, %d ops per cell (C6: %d whole-table reads), best of %d.\n"
     ops (ops / 100) reps;
-  Printf.printf "   list_ms is the Lean carrier as the LCNF backend emits it; map_ms is lane C's.\n\n";
+  Printf.printf "   list_ms is the Lean carrier as the LCNF backend emits it; map_ms is the engine's.\n\n";
   Printf.printf "  %-28s" "case";
   List.iter (fun n -> Printf.printf "  %22s" (Printf.sprintf "n=%d" n)) sizes;
   Printf.printf "\n";

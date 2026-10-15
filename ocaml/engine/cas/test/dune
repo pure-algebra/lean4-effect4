@@ -9,7 +9,7 @@
 (test
  (name test_bytes)
  (modules test_bytes)
- (libraries effect4_engine_cas effect4_engine effect4_eff))
+ (libraries effect4_engine_cas effect4_bytes effect4_eff))
 
 ;   test_wal    lane P5 — E4_wal: the laws LG1-LG9 of ../e4_wal.mli, the crash families of
 ;               A2 §4.3 X6 (a torn last row, a flipped checksum, a missing middle segment, an
@@ -23,12 +23,12 @@
 (test
  (name test_wal)
  (modules test_wal)
- (libraries effect4_engine_cas effect4_engine unix))
+ (libraries effect4_engine_cas effect4_bytes unix))
 
 (executable
  (name bench_wal)
  (modules bench_wal)
- (libraries effect4_engine_cas effect4_engine unix))
+ (libraries effect4_engine_cas effect4_bytes unix))
 
 ;   test_control  lane P3 — E4_control: the byte grammar and the behaviours CF1-CF9 of
 ;                 ../e4_control.mli, every constructor of `open_error`, the three crash
@@ -41,7 +41,7 @@
 (test
  (name test_control)
  (modules test_control)
- (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+ (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
 
 ;   test_pack   lane P1 — E4_pack: the byte grammar of A2 §1.2 read back out of the file, the
 ;               behaviours PK1-PK8 of ../e4_pack.mli, the crash families of A2 §4.3 X1 and X2
@@ -60,12 +60,12 @@
 (test
  (name test_pack)
  (modules test_pack)
- (libraries effect4_engine_cas effect4_engine unix))
+ (libraries effect4_engine_cas effect4_bytes unix))
 
 (executable
  (name bench_pack)
  (modules bench_pack)
- (libraries effect4_engine_cas effect4_engine unix))
+ (libraries effect4_engine_cas effect4_bytes unix))
 
 ;   test_cas    lane P4 — E4_cas: the laws L-CAS-1..8 of A2 §2.1 as named properties, golden
 ;               G2 replayed through `put` with each case's store built as ../goldens/cases.txt
@@ -90,17 +90,17 @@
 (test
  (name test_cas)
  (modules test_cas)
- (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+ (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
 
 (test
  (name test_crash)
  (modules test_crash)
- (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+ (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
 
 (executable
  (name bench_cas)
  (modules bench_cas)
- (libraries effect4_engine_cas effect4_engine unix))
+ (libraries effect4_engine_cas effect4_bytes unix))
 
 ;   test_index  lane P2 — E4_index and E4_shape: the slot layout of ../e4_index.mli D1, the
 ;               behaviours IX1-IX9, a HAND-FORCED 62-bit prefix collision resolved by
@@ -124,12 +124,12 @@
 (test
  (name test_index)
  (modules test_index)
- (libraries effect4_engine_cas effect4_engine unix))
+ (libraries effect4_engine_cas effect4_bytes unix))
 
 (executable
  (name bench_index)
  (modules bench_index)
- (libraries effect4_engine_cas effect4_engine unix))
+ (libraries effect4_engine_cas effect4_bytes unix))
 
 ;   test_checkpoint  lane P6 — E4_chunk and E4_checkpoint: the chunker's determinism, size
 ;                    bounds and ONE-BYTE INSERTION LAW (CH6) with the mutation check that
@@ -159,7 +159,7 @@
 (executable
  (name bench_checkpoint)
  (modules bench_checkpoint)
- (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+ (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
 ;   test_cache  lane P7 — E4_cache, E4_subterm and E4_deps: the weight and slot bounds of
 ;               ../e4_cache.mli under a 20 000-step random sequence with the invariant
 ;               re-checked after every operation, CLOCK's choice of victim, the hit/miss/
@@ -182,12 +182,12 @@
 (test
  (name test_cache)
  (modules test_cache)
- (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+ (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
 
 (executable
  (name bench_cache)
  (modules bench_cache)
- (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+ (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
 
 ;   bench_bycid lane W item 4 — `E4_cas.by_cid` and `E4_cas.pin_all` at 1e3 / 1e4 / 5e4 nodes:
 ;               the cold call (one payload hash per node), 1 000 warm calls, and pin_all as a
@@ -196,4 +196,4 @@
 (executable
  (name bench_bycid)
  (modules bench_bycid)
- (libraries effect4_engine_cas effect4_engine effect4_eff unix))
+ (libraries effect4_engine_cas effect4_bytes effect4_eff unix))

@@ -1,0 +1,8 @@
+; The byte layer's tests.
+;   test_math  lane M — E4_nat, E4_sha256, E4_hex, E4_be; also prints the SHA-256
+;              throughput on a 64 MiB buffer.
+
+(test
+ (name test_math)
+ (modules test_math)
+ (libraries effect4_bytes effect4_eff))

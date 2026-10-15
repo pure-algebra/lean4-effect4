@@ -151,8 +151,6 @@ if want engine; then
       ./$B/engine/test/e4_engine_bench.exe
   run "C1–C6 carriers and the small-size crossover (lane C, \`bench_carriers\`)" \
       ./$B/engine/test/bench_carriers.exe
-  run "B-Q2a–d timers (lane Q2, \`bench_timers\`)" \
-      ./$B/engine/test/bench_timers.exe
   run "B-Q3a–c, B-Q5a–c log/index/query (lane Q3, \`bench_query\`)" \
       ./$B/engine/test/bench_query.exe
   run "the trace over E4_log.Vec (lane W, \`bench_trace\`)" \

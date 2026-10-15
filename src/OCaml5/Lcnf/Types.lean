@@ -1,9 +1,9 @@
 import Lean
-import OCaml5.Lcnf.Clock
 import Conform.Source.Description
 import OCaml5.Ml.Syntax
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Externs
+import OCaml5.Lcnf.TypeRows
 
 /-!
 # OCaml5.Lcnf.Types
@@ -16,7 +16,8 @@ so that the OCaml types agree with the representation the mono-phase LCNF code a
 (`FiberId` is `int`, `Cause ε δ ι α` is `(…) reason list`).
 
 **Depends on.** `Lean.Meta` (`forallTelescope`, `inferType`, `isProp`, `isTypeFormerType`),
-`Lean.Compiler.LCNF.hasTrivialStructure?`, `OCaml5.Ml.Syntax`, `OCaml5.Lcnf.Naming`.
+`Lean.Compiler.LCNF.hasTrivialStructure?`, `OCaml5.Ml.Syntax`, `OCaml5.Lcnf.Naming`,
+`OCaml5.Lcnf.TypeRows` (the type rows: `builtinTy?`, `isBuiltinType`).
 
 **Properties.**
 * **Representation agreement.** A field is emitted iff the compiler keeps it: relevance is
@@ -30,10 +31,13 @@ so that the OCaml types agree with the representation the mono-phase LCNF code a
   sees exactly which types this run did not port — *tested* (`gen_check`).
 * **One group.** Every declaration goes into one `type … and …` group, so the order of
   discovery is never an OCaml scoping error — *by construction*.
-* **Builtins.** `Nat`/`Int`/`UInt*` → `int` (a fidelity caveat: OCaml `int` is 63-bit, Lean
-  `Nat` is unbounded), `Bool`, `String`, `Char`, `Float`, `Unit`, `List`, `Option`,
-  `Prod` → `*`, `Except ε α` → `(α, ε) result`, `Array` → `list` (the LCNF route's
-  Array-as-list shim; `Translate` maps the array operations accordingly).
+* **Builtins.** A type constant with a row of the type table is spelled by its row
+  (`OCaml5.Lcnf.typeRows`): `Nat`, `Int`, `Char` and the `UInt*` are `int`, `Except ε α` is
+  `(α, ε) result`, `Array` is `list` (the route's Array-as-list shim), and so on. No declaration
+  is emitted for it — *by construction*.
+* **Parameters by binder kind.** A type's OCaml parameters are its type parameters, in source
+  order. An instance parameter and a value parameter are dropped, as the compiler erases both
+  from the type's representation (`typeParameterIndices`) — *by construction*.
 * **Unknown shapes are visible.** A field type this module cannot spell (a dependent arrow,
   a non-type argument, a `Sort`) becomes the abstract type `lcnf_unknown`, declared once, and
   is listed in the result — never silently dropped — *by construction*.
@@ -42,34 +46,6 @@ so that the OCaml types agree with the representation the mono-phase LCNF code a
 namespace OCaml5.Lcnf
 
 open Lean Meta
-
-/-! ## Builtin types, shared with `Translate` -/
-
-/-- A Lean type constant with a native OCaml counterpart, applied to already-converted
-arguments. -/
-def builtinTy? (n : Name) (args : List Ml.Ty) : Option Ml.Ty :=
-  (Clock.type? n args).orElse fun _ =>
-  match n, args with
-  | ``Nat, [] | ``Int, [] => some Ml.Ty.int
-  | ``UInt8, [] | ``UInt16, [] | ``UInt32, [] | ``UInt64, [] | ``USize, [] => some Ml.Ty.int
-  | ``Bool, [] => some Ml.Ty.bool
-  | ``String, [] => some Ml.Ty.string
-  | ``Unit, [] | ``PUnit, [] => some Ml.Ty.unit
-  | ``Char, [] => some Ml.Ty.char
-  | ``Float, [] => some Ml.Ty.float
-  | ``List, [a] => some (Ml.Ty.list a)
-  | ``Array, [a] => some (Ml.Ty.list a)
-  | ``Option, [a] => some (Ml.Ty.option a)
-  | ``Prod, [a, b] => some (.tuple [a, b])
-  | ``Except, [e, a] => some (.con "result" [a, e])
-  | _, _ => none
-
-/-- The type constants `builtinTy?` knows. -/
-def builtinTypeNames : List Name :=
-  [``Nat, ``Int, ``UInt8, ``UInt16, ``UInt32, ``UInt64, ``USize, ``Bool, ``String, ``Unit,
-   ``PUnit, ``Char, ``Float, ``List, ``Array, ``Option, ``Prod, ``Except]
-
-def isBuiltinType (n : Name) : Bool := Clock.owns n || builtinTypeNames.contains n
 
 /-- The name of the abstract type standing for a type this module could not spell. -/
 def unknownTypeName : String := "lcnf_unknown"
@@ -141,21 +117,17 @@ def isTypeParameter (domain : Lean.Expr) : Bool :=
   let ty := unwrapParam domain
   ty.isSort || ty.isConstOf `Effect4.ServiceUniverse
 
-/-- OCaml type parameters are type binders. Erased dictionary parameters (typeclass
-instances marked `.instImplicit`), proposition-valued parameters (`Prop`), and value parameters
-(which are erased at runtime) are dropped. Service universes retain the existing
-carrier interpretation. -/
+/-- The positions of a type's OCaml type parameters among its first `count` parameters, by
+binder kind: a type parameter (`isTypeParameter`) is kept, and an instance parameter and a value
+parameter are dropped. The compiler erases both from the type's representation, so a value of the
+type carries neither. The one refusal is a telescope shorter than `count`. -/
 def typeParameterIndices (owner : Name) (count : Nat) (type : Lean.Expr) : Except String (Array Nat) :=
   go count 0 type #[]
 where
   go : Nat → Nat → Lean.Expr → Array Nat → Except String (Array Nat)
     | 0, _, _, out => .ok out
-    | k + 1, i, .forallE name domain body bi, out =>
-      if isTypeParameter domain then
-        go k (i + 1) body (out.push i)
-      else if owner == `Effect4.Row && bi == .instImplicit then
-        go k (i + 1) body out
-      else .error s!"{owner}: unsupported parameter {name} at {i}"
+    | k + 1, i, .forallE _ domain body _, out =>
+      go k (i + 1) body (if isTypeParameter domain then out.push i else out)
     | _, _, _, _ => .error s!"{owner}: incomplete parameter telescope"
 
 /-- A field type, with the inductive's parameters as free variables, as an OCaml type. Returns

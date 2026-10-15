@@ -8,11 +8,11 @@
 -- and the mutation pass of the language model and its battery (`Ml/Reflect`, `Ml/Passes`,
 -- `MlTest`) were removed after `ddb51b6c`; the avatar they served is on `archive/ocaml5-avatar`.
 -- `Ml/`: the part of the OCaml language model the LCNF backend prints through: typed syntax,
--- the canonical printer, the profile and its checker.
+-- its generated fold, the canonical printer and the checker, each an algebra of the fold.
 import OCaml5.Ml.Identifier
 import OCaml5.Ml.Syntax
+import OCaml5.Ml.Fold
 import OCaml5.Ml.Render
-import OCaml5.Ml.Profile
 import OCaml5.Ml.Check
 -- The `Eff` program IR as an OCaml library (`ocaml/eff`): the closed world, the emitters,
 -- the goldens. `Tools/EffGen.lean` is the driver.
@@ -26,3 +26,4 @@ import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
+import OCaml5.Lcnf.TypeRows

@@ -137,7 +137,8 @@ DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Js
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
   src/Effect4/Program/Authoring/Atoms.lean src/Effect4/Laws/Program/Authoring/Atoms.lean \
   src/Effect4/Codegen/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
-  src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts tools/Tools/Code/TsFold.lean
+  src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts tools/Tools/Code/TsFold.lean \
+  src/OCaml5/Ml/Fold.lean
 
 # A missing output must run its producer instead of becoming a missing prerequisite.
 .PHONY: derived-output-missing
@@ -145,14 +146,16 @@ $(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_INPUTS) $(wildcard
 	$(PY) scripts/generate.py --only derived
 	@mkdir -p $(GEN) && touch $@
 
-# The four LCNF outputs (each header carries its own regenerating command). The group is
+# The two LCNF outputs (each header carries its own regenerating command). The group is
 # NOT a link of the hermetic chain: it regenerates in place only (generate.py refuses
-# `--output-dir` for it) and its slowest producer is the engine cut, measured at 14m38s, so
-# `check-gen` -- which runs inside `make check`, on every core change -- must not reach it.
-# What the chain needs is the order, and `ocaml/engine/api_engine.ml` in EFF_SOURCES below:
-# together they make the second pass unnecessary. `make gen-lcnf` is run by name, by `gen`
-# and by the check-ocaml CI job.
-LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean) \
+# `--output-dir` for it), so `check-gen` does not reach it. What the chain needs is the order,
+# and `ocaml/engine/api_engine.ml` in EFF_SOURCES below: together they make the second pass
+# unnecessary. `make gen-lcnf` is run by name, by `gen`, by the check-ocaml CI job, and by
+# `$(CHK)/ocaml`, which depends on it, so the OCaml gate builds the current machine (LC-3).
+# Its sources are the generator's: the driver, the route (`OCaml5.Lcnf`, `OCaml5.Ml`) and the
+# Conform modules it reads (the mono index, the source evaluator's primitives).
+LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean src/OCaml5/Ml/*.lean) \
+  $(wildcard tools/Conform/Lcnf/*.lean tools/Conform/Core/*.lean tools/Conform/Source/*.lean) \
   ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml $(PRODUCER_COMMON)
 $(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only lcnf
@@ -327,8 +330,7 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.lean \
   ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens ocaml/engine/e4_program_layout.ml \
   ocaml/engine/e4_program_layout.json \
-  ocaml/gen/api_gen.ml ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/engine/api_engine.ml \
-  ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-fibers_gen.tsv ocaml/gen/closure-machine_gen.tsv ocaml/gen/closure-api_engine.tsv \
+  ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \
   harness/truth/prelude-atoms.gen.ts \
@@ -653,9 +655,11 @@ $(CHK)/schema-codec: $(LEAN_INPUTS) $(wildcard harness/truth/schema-codec/*) | h
 
 # The OCaml lane (the effect4 opam switch; local only until the runner has one): the eff
 # library's goldens and wire tests, the LCNF route's smoke, the engine's own tests and the
-# three-engine differential (which reads the printed corpus), and the engine seam check.
+# three-engine differential (which reads the printed corpus), and the engine seam check. It
+# depends on the LCNF group, so a change of the machine re-cuts the generated engine before
+# the lane builds it (finding N10 of docs/research/2026-10-14-lowering-collation/README.md).
 OCAML_SOURCES := $(shell find ocaml -type f -not -path '*/_build/*')
-$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES) $(GEN)/fixtures
+$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES) $(GEN)/fixtures $(GEN)/lcnf
 	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock
 	cd ocaml && $(OCAML) dune test engine
 	$(OCAML) bash ocaml/engine/tools/gen-check.sh

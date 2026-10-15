@@ -31,7 +31,6 @@
 
    Exit code 0 iff every check passed. *)
 
-open Effect4_engine
 open Effect4_engine_cas
 
 let failures = ref 0

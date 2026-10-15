@@ -166,7 +166,8 @@ LCNF_ROOTS = 'ocaml/gen/roots.json'
 
 def lcnf_command(entry):
     """One artefact's argv, in the fixed order `roots.json` documents. It is the text that
-    lands in the artefact's header, so the order is part of the format."""
+    lands in the artefact's header, so the order is part of the format. The coverage roots
+    follow the roots: the generator translates both alike."""
     argv = ['lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean', '--out', entry['out']]
     for module in entry.get('import', []):
         argv += ['--import', module]
@@ -176,7 +177,7 @@ def lcnf_command(entry):
     for flag in ('externs', 'prelude'):
         if entry.get(flag):
             argv += ['--' + flag, entry[flag]]
-    return argv + entry['roots']
+    return argv + entry['roots'] + entry.get('coverage', [])
 
 
 def lean_module(canonical):
@@ -296,7 +297,7 @@ def generate(families, output):
             run(['lake', 'build', 'Effect4'])
             run(['lake', 'build', 'OCaml5.Tools.LcnfGen'])
             roots = json.loads((ROOT / LCNF_ROOTS).read_text())
-            if roots.get('format') != 'effect4-lcnf-roots-v1':
+            if roots.get('format') != 'effect4-lcnf-roots-v2':
                 raise ValueError('unsupported LCNF roots format')
             for entry in roots['artefacts']:
                 run(['lake', 'env', *lcnf_command(entry)])

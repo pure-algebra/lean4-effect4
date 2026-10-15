@@ -19,7 +19,6 @@
          `read_be64` with the standard library's big-endian reader.
    Exit code 0 iff every check passed. *)
 
-open Effect4_engine
 
 let failures = ref 0
 
@@ -252,15 +251,21 @@ let read_file path =
   close_in ic;
   s
 
+(* `$E4_GOLDENS`, or `eff/goldens` (or `ocaml/eff/goldens`) in the nearest ancestor of the
+   working directory that holds one: dune runs the test from its build directory. *)
 let goldens_dir () =
-  let candidates =
-    [ (try Sys.getenv "E4_GOLDENS" with Not_found -> "");
-      (* from _build/default/test, both standalone and in the ocaml workspace *)
-      Filename.concat ".." (Filename.concat ".." (Filename.concat ".." (Filename.concat ".." (Filename.concat "eff" "goldens"))));
-      Filename.concat ".." (Filename.concat "eff" "goldens");
-      Filename.concat "ocaml" (Filename.concat "eff" "goldens") ]
+  let is_dir d = d <> "" && Sys.file_exists d && Sys.is_directory d in
+  let rec walk dir =
+    let here = List.find_opt is_dir
+        [ Filename.concat dir (Filename.concat "eff" "goldens");
+          Filename.concat dir (Filename.concat "ocaml" (Filename.concat "eff" "goldens")) ] in
+    match here with
+    | Some _ -> here
+    | None -> let up = Filename.dirname dir in if up = dir then None else walk up
   in
-  List.find_opt (fun d -> d <> "" && Sys.file_exists d && Sys.is_directory d) candidates
+  match Sys.getenv_opt "E4_GOLDENS" with
+  | Some d when is_dir d -> Some d
+  | _ -> walk (Sys.getcwd ())
 
 let check_golden name bytes =
   match E4_be.exact_frame bytes with

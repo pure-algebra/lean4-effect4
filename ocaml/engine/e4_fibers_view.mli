@@ -15,8 +15,8 @@
 
    `('a, 'x) t` is a table of fibers `'a` whose exit is `'x`.  The fiber record is declared
    INSIDE the generated functor, so this module cannot project `f.exit`: every write takes the
-   projection as a labelled argument `~exit_of` (the same device as lane C's `E4_fibers`
-   `~id_of`/`~exit_of`, deviation D2 there).  The view holds the EXIT, not the fiber, so
+   projection as a labelled argument `~exit_of` (the device of lane C's retired fiber
+   carrier, deviation D2 there).  The view holds the EXIT, not the fiber, so
    `completed` IS the answer `completedExits` returns — one shared list, allocated only when a
    fiber's exit changes, never per step.
 

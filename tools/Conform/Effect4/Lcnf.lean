@@ -6,10 +6,10 @@ import OCaml5.Lcnf.Translate
 
 **What it is.** The `--run` driver that points `Conform.Lcnf.Validity` at this repository's
 mono closure, and the *fidelity inventory*: how faithfully each OCaml form reproduces the Lean
-meaning. The value rows are read off `OCaml5.Lcnf.builtins`, where a row and its contract are
-one datum. The type rows of `OCaml5.Lcnf.Types.builtinTy?` are listed here. The generic half
-knows none of this: the roots and the primitive predicate live here, on the Effect4 side of
-the extensibility rule (`docs/research/type-tooling/brief-common.md`).
+meaning. The value rows are read off `OCaml5.Lcnf.builtins` and the type rows off
+`OCaml5.Lcnf.typeRows`, where a row and its contract are one datum. The generic half knows none
+of this: the roots and the primitive predicate live here, on the Effect4 side of the
+extensibility rule (`docs/research/type-tooling/brief-common.md`).
 
     lake env lean -M4096 --run tools/Conform/Effect4/Lcnf.lean \
       --import Effect4.Api --out <dir> --cap 2000 Effect4.Api.run Effect4.Api.replay
@@ -62,26 +62,12 @@ def fidelityTable : List ValueRow :=
     { lean := b.lean, ocaml := b.form.spelling, fidelity := b.fidelity, domain := b.domain,
       note := b.note, controls := b.controls, cost := b.cost }
 
-/-- The `builtinTy?` table, classified the same way (`src/OCaml5/Lcnf/Types.lean:48-62`). -/
+/-- The type rows: one entry per row of `OCaml5.Lcnf.typeRows`, computed, as for the value
+rows. -/
 def typeFidelityTable : List FidRow :=
-  [ ⟨``Nat, "int", .domain, "n < 2^62", "OCaml `int` is 63-bit, Lean `Nat` unbounded."⟩
-  , ⟨``Int, "int", .domain, "-2^62 ≤ n < 2^62", "and `Int` and `Nat` share one OCaml type, so an emitter cannot tell them apart in an annotation."⟩
-  , ⟨``UInt8, "int", .exact, "", "the range 0..255 is inside `int`."⟩
-  , ⟨``UInt16, "int", .exact, "", ""⟩
-  , ⟨``UInt32, "int", .exact, "", ""⟩
-  , ⟨``UInt64, "int", .unsound, "n < 2^62", "**the hole.** `UInt64` values reach 2^64 - 1; OCaml's `int` holds 2^62 - 1. The wire's big-endian 64-bit fields and `Effect4.Store.Val.wf`'s `… < 2 ^ 64` live in this type. Nothing in the route detects the overflow: it wraps."⟩
-  , ⟨``USize, "int", .unsound, "n < 2^62", "as `UInt64` — and `USize` is the shim's index type, so it is also the type every `Array` index is spelled in."⟩
-  , ⟨``Bool, "bool", .exact, "", ""⟩
-  , ⟨``String, "string", .approximate, "the string is ASCII", "Lean's `String` is a sequence of Unicode scalar values; OCaml's is a byte sequence. Equality and concatenation agree; `length`, indexing and any `Char` operation do not."⟩
-  , ⟨``Unit, "unit", .exact, "", ""⟩
-  , ⟨``PUnit, "unit", .exact, "", ""⟩
-  , ⟨``Char, "char", .unsound, "the character is ASCII", "Lean's `Char` is a Unicode scalar value (21 bits); OCaml's `char` is one byte. There is no rule for `Char` operations in `builtin?` at all, so a `Char` in code is a hole — but a `Char` in a *type* is silently `char`."⟩
-  , ⟨``Float, "float", .exact, "", "both are IEEE 754 binary64. No `Float` operation has a `builtin?` row, so any arithmetic is a hole."⟩
-  , ⟨``List, "list", .exact, "", ""⟩
-  , ⟨``Array, "list", .approximate, "", "the shim: denotationally a sequence, operationally a different cost model (see `Array.push`, `Array.uget`)."⟩
-  , ⟨``Option, "option", .exact, "", ""⟩
-  , ⟨``Prod, "*", .exact, "", ""⟩
-  , ⟨``Except, "result", .exact, "", "`Except ε α` is `(α, ε) result`, arguments swapped."⟩ ]
+  OCaml5.Lcnf.typeRows.map fun r =>
+    { lean := r.lean, ocaml := r.spelling.head, fidelity := r.fidelity, domain := r.domain,
+      note := r.note }
 
 /-! ## 2. The primitive predicate
 

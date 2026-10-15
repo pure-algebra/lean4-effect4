@@ -393,6 +393,21 @@
       ]
     },
     {
+      "Note": "The fold of the OCaml syntax that the LCNF route prints (`OCaml5.Ml.Ty`, `Pat`, `Expr` and `Decl`, each nested through lists and pairs): its algebra, its fold, its homomorphism with uniqueness, the identity algebra and the monoid fold. The printer, the checker, the builtin table's uses and substitution, and the conformance reader are algebras of it (LC-3 of docs/research/2026-10-14-lowering-cleanup/prompt.md), as the TypeScript printer is of TsFold.",
+      "Name": "MlFold",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "OCaml5.Ml.Syntax",
+      "Out": "src\\OCaml5\\Ml\\Fold.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "OCaml5.Ml.Ty",
+        "OCaml5.Ml.Pat",
+        "OCaml5.Ml.Expr",
+        "OCaml5.Ml.Decl"
+      ]
+    },
+    {
       "Note": "Node.child and Node.setChild from the constructor declarations: one arm per node-typed argument, the child scheme every consumer resolves against.",
       "Name": "NodeLenses",
       "Flags": ["--module", "--meta-imports", "Effect4.Program.Node"],

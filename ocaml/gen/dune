@@ -1,16 +1,13 @@
 ; The LCNF route's output and its smoke check. Build standalone from this directory:
 ;   dune build --root . && dune test --root .
-; `machine_gen.ml` (the nine target functions), `fibers_gen.ml` (every top-level function
-; of Fibers.lean, type-checked only) and `api_gen.ml` (Effect4.Api.run / Effect4.Api.replay
-; and their whole closure, run by api_check) are GENERATED; each header carries the
-; regenerating command, and `make gen-lcnf` runs all of them. The former `gen_check`, which
-; compared the generated dispatcher against a hand copy of the archived avatar, was removed
-; on 2026-09-13 with that copy.
+; `api_gen.ml` (Effect4.Api.run / Effect4.Api.replay and their whole closure, run by
+; api_check, with the machine's own functions as coverage roots) is GENERATED; its header
+; carries the regenerating command, and `make gen-lcnf` runs it (ocaml/gen/roots.json).
 
 (library
  (name effect4_gen)
  (public_name effect4_gen)
- (modules machine_gen fibers_gen api_gen)
+ (modules api_gen)
  (libraries effect4_clock)
  (flags
   (:standard -warn-error -a)))

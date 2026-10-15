@@ -93,8 +93,11 @@ fn Effect4.Machine.RunMachine.finished 1 sh_machine_finished
 fn Effect4.Machine.RunMachine.completedExits 1 sh_machine_completed_exits
 # P2b frontier observations read the fiber view through its existing ordered projection.
 ops F.t to_list F.to_list
-fn Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber.spec_0 6 sh_spawn
-fn Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12.spec_19 6 sh_spawn
+# The compiler specializes `spawn` inside two hosts and drops one argument; each row names the
+# definition and its host (`<lean>@<host>`, src/OCaml5/Lcnf/Externs.lean), never the compiler's
+# `_at_` chain or its `spec_N` numbers.
+fn Effect4.Machine.spawn@Effect4.Machine.evaluatePrim.withFiber 6 sh_spawn
+fn Effect4.Machine.spawn@Effect4.Machine.launchEntrant 6 sh_spawn
 fn Effect4.Machine.spawn 7 sh_spawn_generic run_fiber_make
 fn Effect4.Machine.RunMachine.dropToken 2 sh_machine_drop_token
 
@@ -107,7 +110,7 @@ fn Effect4.Machine.DeferredStore.cellAt 2 sh_deferred_cell_at
 fn Effect4.Machine.DeferredStore.setCell 3 sh_deferred_set_cell
 
 # ---- E5: the scope entries and the dispatcher ---------------------------------------------
-fn List.find?._at_.Effect4.Machine.ScopeStore.entryAt.spec_0 2 sh_scope_entry_at
+fn List.find?@Effect4.Machine.ScopeStore.entryAt 2 sh_scope_entry_at
 fn Effect4.Machine.ScopeStore.setEntry 2 sh_scope_set_entry
 fn Effect4.Machine.ScopeStore.make 3 sh_scope_store_make scope_make
 fn Effect4.Machine.ScopeStore.forkChild 5 sh_scope_fork_child scope_fork

@@ -12,7 +12,6 @@
      7. verify: its own scan, no index, no trusted digest
      8. opening, recovery, closing *)
 
-open Effect4_engine
 
 let host_limit_why = "a frame length at or above 2^62 (amendment M9)"
 

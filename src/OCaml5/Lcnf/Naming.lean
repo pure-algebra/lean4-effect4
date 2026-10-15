@@ -1,5 +1,6 @@
 import Lean
 import OCaml5.Ml.Identifier
+import OCaml5.Lcnf.TypeRows
 
 /-!
 # OCaml5.Lcnf.Naming
@@ -9,19 +10,22 @@ names, constructor names, global value names and local binder names. One place, 
 `Types` (which emits the declarations) and `Translate` (which emits the uses) agree by
 construction rather than by convention.
 
-**Depends on.** `OCaml5.Ml.Identifier` (`reservedNames`, `tyVarName`) and `Lean.Name`.
+**Depends on.** `OCaml5.Ml.Identifier` (`reservedNames`, `tyVarName`),
+`OCaml5.Lcnf.TypeRows` (`reservedTypeNames`) and `Lean.Name`.
 
 **Properties.**
 * Every function is total and produces an OCaml identifier of the right lexical class
   (§11.4: a `value-name`/`field-name`/`typeconstr-name` starts lowercase or `_`, a
   `constr-name` uppercase) — *by construction*: `snake` only ever emits `[a-z0-9_']` and
   `_uNNN` escapes, `ctorName` prefixes the type's own capitalised short name.
-* A keyword can never come out: `snake` appends `_` to a reserved word, as
-  `Ml.Identifier.mangleField` does (`exit` → `exit_`, `val` → `val_`) — *by construction*.
+* A keyword can never come out: `snake` appends `_` to a reserved word (`exit` → `exit_`,
+  `val` → `val_`) — *by construction*.
+* A type name never shadows one a type row spells: `typeName` and `fullTypeName` append `_` to a
+  name of `reservedTypeNames` (a Lean `Result` is `result_`, and `result` stays `Except`'s) —
+  *by construction*.
 * Readability over injectivity: `snake` is *not* injective (`aB` and `a_b` both go to
   `a_b`). This route names *whole declarations and fields of one file*, where a collision
-  is a build error the generator reports, not a silent hole; the field mangling a
-  simulation relation needs is `Ml.Identifier.mangleField`, not this. Within one function
+  is a build error the generator reports, not a silent hole. Within one function
   body `Translate` makes binder names unique by a numeric suffix, keyed on the LCNF
   `FVarId`, so shadowing in the source can never become capture in the target — *tested*
   (`Dispatcher.insert`, whose `Bucket.mk priority tasks` alternative shadows the parameter
@@ -34,6 +38,7 @@ construction rather than by convention.
 | Lean | rule | OCaml |
 | --- | --- | --- |
 | type `Effect4.Machine.RunFiber` | last component, camel → snake | `run_fiber` |
+| type `Effect4.Api.Result` | as above; a type row's name gets a `_` suffix | `result_` |
 | field `currentOpCount`, `exit` | camel → snake, keyword/shadowed → `_` suffix | `current_op_count`, `exit_` |
 | constructor `Task.resume` | `<TypeShort>_<ctor>` | `Task_resume` |
 | placeholder type `Prim` | `Placeholder_<type>` | `Placeholder_prim` |
@@ -84,8 +89,12 @@ def shortName (n : Name) : String :=
   | s :: _ => s
   | [] => ""
 
+/-- A type name, kept off the names the type rows spell (`reservedTypeNames`). -/
+def reserveType (s : String) : String :=
+  if reservedTypeNames.contains s then s ++ "_" else s
+
 /-- The OCaml type name of a Lean type constant. -/
-def typeName (n : Name) : String := snake (shortName n)
+def typeName (n : Name) : String := reserveType (snake (shortName n))
 
 /-- Type constants whose short name is claimed by another constant of the same run, and the
 OCaml name they take instead (the full path, snake case). `typeName` is the last component,
@@ -96,7 +105,7 @@ which of the two a name means. -/
 abbrev TypeNames := Std.HashMap Name String
 
 /-- The full-path OCaml name a colliding type constant falls back to. -/
-def fullTypeName (n : Name) : String := snake ("_".intercalate (components n))
+def fullTypeName (n : Name) : String := reserveType (snake ("_".intercalate (components n)))
 
 /-- The OCaml type name of a Lean type constant under a decided rename map. -/
 def typeNameIn (tn : TypeNames) (n : Name) : String := tn.getD n (typeName n)
@@ -176,6 +185,8 @@ def tyVar (n : Name) : String := Ml.tyVarName (shortName n)
 #guard snake "spec_0" == "spec_0"
 #guard typeName `Effect4.Machine.RunFiber == "run_fiber"
 #guard typeName `Effect4.Supervision.ObserverMode == "observer_mode"
+#guard typeName `Effect4.Api.Result == "result_" && typeName `Effect4.Program.Option == "option_"
+#guard fullTypeName `Result == "result_"
 #guard ctorName `Effect4.Machine.Task "resume" == "Task_resume"
 #guard ctorName `Effect4.Machine.Parked "notParked" == "Parked_notParked"
 #guard globalName `Effect4.Machine.Dispatcher.insert._redArg == "dispatcher_insert"

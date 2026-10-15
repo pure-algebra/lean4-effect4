@@ -5,6 +5,7 @@ import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Native
+import OCaml5.Lcnf.Clock
 import OCaml5.Lcnf.ClockFlow
 import OCaml5.Lcnf.Builtins
 import OCaml5.Ml.Check
@@ -18,8 +19,9 @@ closure that decides *which* definitions to translate and the strongly-connected
 ordering that decides how to emit them.
 
 **Depends on.** `OCaml5.Lcnf.Dump` (`monoDecl?`), `OCaml5.Lcnf.Naming`,
-`OCaml5.Lcnf.Types` (`builtinTy?`), `OCaml5.Lcnf.Builtins` (the builtin table, its prelude and
-its reserved names), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
+`OCaml5.Lcnf.Types` (the type declarations; the type rows' `builtinTy?`), `OCaml5.Lcnf.Builtins`
+(the builtin table, its prelude and its reserved names), `OCaml5.Lcnf.Clock` (the clock's
+constructors), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
 `Lean.Compiler.LCNF.Basic` (`Code.collectUsed`).
 
 **Properties.**
@@ -148,8 +150,8 @@ structure St where
   mentioned : Array Name := #[]
   /-- Constructs without a rule, as `<decl>: <what>`. -/
   todos : Array String := #[]
-  /-- `fn` extern rows this declaration used, by the row's own Lean name. -/
-  usedExterns : Array Name := #[]
+  /-- `fn` extern rows this declaration used, by the row's key. -/
+  usedExterns : Array FnKey := #[]
   /-- OCaml names an extern row hands to a hand body as a leading argument. They are ordinary
   generated declarations, so they must be **emitted before** this one: `emit` adds the edge. -/
   externDeps : Array String := #[]
@@ -522,7 +524,7 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
           else useAsList s!"{ci.name}.{fn}" c e
       rel := rel ++ [e]
       named := named ++ [(fieldName fn.toString, e)]
-  -- seat Q (2026-10-01): `Array.mk l` is `l` under the Array-as-list shim (`Types.lean:61`);
+  -- seat Q (2026-10-01): `Array.mk l` is `l` under the Array-as-list shim (the type row of `Array`);
   -- `List.zipIdxTR` builds one from `l.toArray`, and the record it rendered refused in ocamlopt.
   if ci.name == ``Array.mk then
     if let [l] := rel then return l
@@ -545,7 +547,7 @@ def listFact? (v : LetValue .pure) : TM (Option (Option Ml.Expr)) := do
   match v with
   | .const n _ args =>
     -- `[]`, and the empty accumulator the tail-recursion transform writes as an `Array`
-    -- (`List.takeTR.go l l n #[]`; `Types.builtinTy?` reads `Array` as `list`)
+    -- (`List.takeTR.go l l n #[]`; the type row of `Array` reads it as `list`)
     if n == ``List.nil || n == ``Array.mkEmpty || n == ``Array.emptyWithCapacity
        || n == ``Array.empty then return some none
     else if n == ``List.cons then
@@ -695,10 +697,8 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     -- arguments — the type parameters among them — are dropped, as they are for a builtin.
     -- A row takes a carrier argument RAW: the hand body is written against the signature.
     let exx ← readExterns
-    let relCount : Nat := args.foldl (fun (c : Nat) a => match a with | .fvar _ => c + 1 | _ => c) 0
-    match exx.fn? n (some relCount) with
-    | some f =>
-      let key := (exx.fnRowKey? n (some relCount)).getD n
+    match exx.fnRow? n with
+    | some (key, f) =>
       let deps := f.literals
       noteExternHead f
       modify fun s =>
@@ -866,13 +866,13 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
         if Native.owns cs.typeName then .var d
         else .annot (.var d) (tyOfInd exx tn env cs.typeName)
       unless Native.owns cs.typeName do noteReal cs.typeName
-      let mut arms : List Ml.Arm := []
+      let mut arms : List (Ml.Pat × Ml.Expr) := []
       for alt in cs.alts do
         match alt with
-        | .default k => arms := arms ++ [.mk .wild none (← code declName k)]
+        | .default k => arms := arms ++ [(.wild, ← code declName k)]
         | .alt ctor ps k =>
           let pat ← altPat ctor ps k.collectUsed
-          arms := arms ++ [.mk pat none (← code declName k)]
+          arms := arms ++ [(pat, ← code declName k)]
       return .matchE scrut arms
 
 /-- A local function or join point, then the rest. -/
@@ -886,7 +886,7 @@ partial def localFun (declName : Name) (decl : FunDecl .pure) (k : Code .pure) :
   let recursive := decl.value.collectUsed.contains decl.fvarId
   let body ← code declName decl.value
   let rest ← code declName k
-  if recursive then return .letRecIn [(f, ps, body)] rest
+  if recursive then return .letRec f ps body rest
   return .letIn f (.fn ps body) rest
 
 end
@@ -1013,7 +1013,7 @@ structure Closure where
   mentioned : Array Name := #[]
   todos : Array String := #[]
   /-- `fn` extern rows a translated declaration actually hit (G10's ledger). -/
-  usedExterns : Array Name := #[]
+  usedExterns : Array FnKey := #[]
   /-- `ops` rows a rewrite used, as `<carrier>#<op>`. -/
   usedOps : Array String := #[]
   /-- `carg` rows a declaration used. -/
@@ -1041,8 +1041,7 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
     let n := queue[i]!
     i := i + 1
     if done.contains n then continue
-    let arity := (mono.findIn? env n).map (fun d => d.params.size)
-    if ex.hasFn n arity then continue
+    if ex.hasFn n then continue
     if (builtin? n).isSome then continue
     if env.find? n matches some (.ctorInfo _) then continue
     if c.decls.size ≥ cap then
@@ -1076,7 +1075,7 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
       decls := c.decls.push t,
       realTypes := st.realTypes.foldl pushNew c.realTypes,
       mentioned := st.mentioned.foldl pushNew c.mentioned,
-      usedExterns := st.usedExterns.foldl pushNew c.usedExterns,
+      usedExterns := st.usedExterns.foldl (fun a k => if a.contains k then a else a.push k) c.usedExterns,
       usedOps := st.usedOps.foldl (fun a o => if a.contains o then a else a.push o) c.usedOps,
       usedCargs := st.usedCargs.foldl pushNew c.usedCargs,
       wantedCargs := st.wantedCargs.foldl (fun a w => if a.contains w then a else a.push w) c.wantedCargs,

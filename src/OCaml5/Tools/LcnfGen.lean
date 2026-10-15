@@ -12,19 +12,18 @@ import OCaml5.Lcnf.Translate
 /-!
 # LcnfGen — Lean definitions to an OCaml module, through the mono-phase LCNF
 
-A thin driver over `OCaml5.Lcnf.Translate` and `OCaml5.Lcnf.Types`: import
-`Effect4.Machine.Fibers`, translate the named constants and everything they call (up to
-`--cap`), generate the types they destruct or construct (plus `--types`), render one `.ml`
-file, and print a report of what was and was not covered.
+A thin driver over `OCaml5.Lcnf.Translate` and `OCaml5.Lcnf.Types`: import the named modules,
+translate the named constants and everything they call (up to `--cap`), generate the types they
+destruct or construct (plus `--types`), render one `.ml` file, and print a report of what was and
+was not covered. The recipe of the committed artefacts is `ocaml/gen/roots.json`.
 
     lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean \
-      --out ocaml/gen/machine_gen.ml --cap 60 \
-      Effect4.Machine.Dispatcher.insert Effect4.Machine.Dispatcher.enqueue …
+      --out ocaml/gen/api_gen.ml --import Effect4.Api --cap 2000 \
+      Effect4.Api.run Effect4.Api.replay …
 
-Options: `--out <path>` (default `ocaml/gen/machine_gen.ml`), `--cap <n>` (default
-60), `--types A,B,…` (types to emit in full even when no translated code destructs them),
-`--import M` (the module whose environment the roots are looked up in; default
-`Effect4.Machine.Fibers`, repeatable — every existing regeneration command is unchanged).
+Options: `--out <path>` (required), `--import M` (a module whose environment the roots are looked
+up in; required, repeatable), `--cap <n>` (default 60), `--types A,B,…` (types to emit in full
+even when no translated code destructs them).
 
 ## The seam (`--externs`, `--prelude`)
 
@@ -55,11 +54,12 @@ This is a tool (`IO`, `MetaM`); it is not part of any audited library.
 open Lean OCaml5 OCaml5.Lcnf
 
 structure GenArgs where
-  out : String := "ocaml/gen/machine_gen.ml"
+  /-- The artefact's path; a run without one is refused. -/
+  out : String := ""
   types : Array Name := #[]
   cap : Nat := 60
   roots : Array Name := #[]
-  /-- Modules to import before looking the roots up. Empty means the default. -/
+  /-- Modules to import before looking the roots up; a run without one is refused. -/
   imports : Array Name := #[]
   /-- The `Extract Constant` table (`--externs <file>`). None means the flat, unseamed output. -/
   externs : Option String := none
@@ -67,11 +67,6 @@ structure GenArgs where
   It is where a row whose Lean body applies a builtin to a carrier field lives, because only
   there can it see both the carrier parameters and the generated record types. -/
   prelude : Option String := none
-
-/-- The import list actually used: `--import`s, or `Effect4.Machine.Fibers` when none was given,
-so every command written before `--import` existed generates exactly what it did before. -/
-def GenArgs.importModuleNames (a : GenArgs) : Array Name :=
-  if a.imports.isEmpty then #[`Effect4.Machine.Fibers] else a.imports
 
 partial def parseArgs : List String → GenArgs → GenArgs
   | "--out" :: p :: rest, a => parseArgs rest { a with out := p }
@@ -118,8 +113,8 @@ def recipeOuts : IO (List String) := do
     | .ok (.arr rows) => return rows.toList.filterMap fun r => (r.getObjValAs? String "out").toOption
     | _ => return []
 
-/-- Where a run writes its closure manifest: in `ocaml/gen/` for one of the recipe's four
-artefacts (row 70, all four in one folder, named after the artefact's stem), and beside `--out`
+/-- Where a run writes its closure manifest: in `ocaml/gen/` for one of the recipe's artefacts
+(row 70, all of them in one folder, named after the artefact's stem), and beside `--out`
 for any other run, so a probe that redirects its output never writes into the tree (decisions
 row 174 (i); probe Q's patch wrote every manifest beside `--out`, which would have moved
 `api_engine.ml`'s from `ocaml/gen/` to `ocaml/engine/`). -/
@@ -131,6 +126,8 @@ def manifestPathFor (out : String) (recipe : List String) : String :=
 def main (argv : List String) : IO Unit := do
   initSearchPath (← findSysroot)
   let args := parseArgs argv {}
+  if args.out.isEmpty || args.imports.isEmpty then
+    throw (IO.userError "LcnfGen: `--out <path>` and at least one `--import <module>` are required")
   let recipe ← recipeOuts
   let ex : Externs ← match args.externs with
     | none => pure {}
@@ -141,7 +138,7 @@ def main (argv : List String) : IO Unit := do
   let preludeText : Option String ← match args.prelude with
     | none => pure none
     | some path => pure (some (← IO.FS.readFile path))
-  let mods := args.importModuleNames
+  let mods := args.imports
   let env ← importModules (mods.map fun m => { module := m }) {} 0
   -- One `MetaM` run spells every type of the closure, through every carrier-inference round,
   -- and Lean's heartbeat budget counts the whole run. The default (200000 thousand) stopped the
@@ -195,13 +192,13 @@ def main (argv : List String) : IO Unit := do
       else
         [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank,
          .rawD carrierSignatures, .blank,
-         .moduleD "Make" carrierParams none body]
-    let modName := (System.FilePath.mk args.out).fileStem.getD "machine_gen"
+         .moduleD "Make" carrierParams body]
+    let modName := (System.FilePath.mk args.out).fileStem.getD "lcnf_gen"
     let m : Ml.Module := { name := modName, header := some header, items := items }
     -- The closure as DATA (tooling plan 4.1). What stood here was a line per translated
     -- declaration on a terminal nobody reads; the manifest is beside the artefact and inside
     -- GENERATED_PATHS, so a declaration entering or leaving the engine's closure, or a body
-    -- whose shape changed, is a diff at review time. One file per artefact, all four in
+    -- whose shape changed, is a diff at review time. One file per artefact, all of them in
     -- `ocaml/gen/`, named after the artefact's own stem; a run whose `--out` is not one of the
     -- recipe's writes its manifest beside its output (`manifestPathFor`). It is BUILT here and
     -- WRITTEN with the artefact, below every fatal check: a manifest beside an artefact the run
@@ -229,7 +226,7 @@ def main (argv : List String) : IO Unit := do
     -- A non-empty frontier means the artefact calls a declaration the cap stopped at: the
     -- emitted file names a function it does not define, and only `ocamlc` would say so. The
     -- headroom is printed above, so raising the artefact's `cap` in `ocaml/gen/roots.json` is
-    -- the repair. All four close today, so this costs nothing until something stops closing.
+    -- the repair. Every artefact closes today, so this costs nothing until one stops closing.
     unless closure.frontier.isEmpty do
       throwError s!"closure did not close at --cap {args.cap} (fatal): {closure.frontier}"
     unless closure.missing.isEmpty do
@@ -238,8 +235,8 @@ def main (argv : List String) : IO Unit := do
       throwError s!"todos remaining in closure (fatal): {closure.todos}"
     unless gen.collisions.isEmpty do
       throwError s!"unresolved type-name collisions (fatal): {gen.collisions}"
-    -- The module's own well-formedness, FATAL (tooling plan 4.3), for all four artefacts and
-    -- not only the three without a prelude. It was an informational count nobody read, and the
+    -- The module's own well-formedness, FATAL (tooling plan 4.3), for every artefact and
+    -- not only the ones without a prelude. It was an informational count nobody read, and the
     -- count was 27/59/24/244 — every one of them a defect of the checker, not of the generated
     -- file: it reported unused type parameters, which OCaml accepts, missed the unbound ones it
     -- rejects, did not know `Ok`/`Error`, and called the names a top-level `rawD` binds unbound.
@@ -267,7 +264,8 @@ def main (argv : List String) : IO Unit := do
       IO.println s!"extern rows: {fnRows.length} fn, {tyRows.length} type, \
         {fieldRows.length} field, {elemRows.length} elem"
       IO.println s!"fn rows used ({closure.usedExterns.size}):"
-      for n in closure.usedExterns do IO.println s!"  {n} -> {(ex.fn? n).get!.head}"
+      for k in closure.usedExterns do
+        IO.println s!"  {k} -> {(ex.fns[k]?.map (·.head)).getD "?"}"
       IO.println s!"type rows used ({gen.usedTys.size}): {gen.usedTys}"
       IO.println s!"field rows used ({gen.usedFields.size}): {gen.usedFields}"
       IO.println s!"elem rows used ({gen.usedElems.size}): {gen.usedElems}"

@@ -44,13 +44,16 @@ alone is written again from Lean, and a committed fixture that Lean does not wri
 Its marker depends on every Lean source, and it does not wait for `build`. When a program
 changes, the binding battery refuses the old fixture, and the default build is red until
 `make gen-fixtures` writes the fixture again.
-The group lcnf is another deliberate exception: it sits in the order between
-derived and eff, because eff cuts the engine's layout mirror from the api_engine.ml lcnf
-writes, but its marker is not a link of the chain, so `check-gen` — which runs inside `make
-check`, on every core change — does not reach a group whose engine cut is minutes. lcnf used
-to run last, after readme, which made `make gen` a non-fixpoint: a changed row needed a second
-pass before the mirror agreed with the face (tooling plan 4.2). `make gen-<group>` regenerates
-one group; `make clean-gen` forgets the markers. The recipes hold the Lean lane one at a time.
+The group lcnf is another deliberate exception.
+It sits in the order between derived and eff, because eff cuts the engine's layout mirror from
+the api_engine.ml that lcnf writes.
+Its marker is not a link of the hermetic chain, so `check-gen` does not reach it.
+The OCaml lane does: `make check-ocaml` depends on the lcnf marker.
+So a change of the machine re-cuts the generated engine before the lane builds it.
+The group lcnf used to run last, after readme, which made `make gen` a non-fixpoint.
+A changed row then needed a second pass before the mirror agreed with the face (tooling plan 4.2).
+`make gen-<group>` regenerates one group, and `make clean-gen` forgets the markers.
+The recipes hold the Lean lane one at a time.
 
 ## Generator bootstrap
 
@@ -115,7 +118,7 @@ set still requires the typing-world instantiation; frame premises are not that p
 | cas | `src/OCaml5/Tools/CasGoldens.lean` | the store word, genesis and machine stores | `ocaml/engine/cas/goldens/` (121 files) | `make check-gen`; `make check-ocaml` (`engine-tests`) | reproduced; tested |
 | ts | `tools/Drivers/TsGen.lean` (`scripts/generate.py --only ts`) | the closed world `OCaml5.Eff.World` reads, `Effect4.Codegen.Templates` (the table of printed clauses) and `Effect4.Codegen.PrintLeaf`, `Ty.normalize`, `Codegen.Types.ofTy`, the name tables `serviceKeyMembers` and `Codegen.Names.reservedExtra`, the variance data, three pinned vendor sources for package tables | `ts/eff/{eff,json,wire,profile,taxonomy,names,forms,packages,templates}.gen.ts`, `ts/eff/test/type-projection.gen.json` | `make check-gen`; `make check-ts-reader` | reproduced; tested |
 | readme | `bun ts/eff/ingest/render-readme.ts` (a host producer; writes in place) | `profile.gen.ts`, `forms.gen.ts`, `taxonomy.gen.ts` | `ts/eff/ingest/README.md` | `make check-gen`; the renderer's own `--check` inside `make check-ingest-smoke` | reproduced |
-| lcnf | `src/OCaml5/Tools/LcnfGen.lean`; each output's header carries its exact command | `Effect4.Machine.Fibers`, `Effect4.Api`, `ocaml/engine/externs.txt`, `ocaml/engine/tools/api_engine_prelude.ml` | `ocaml/gen/{fibers_gen,machine_gen,api_gen}.ml`, `ocaml/engine/api_engine.ml` | `make check-gen` holds these four against a hand edit only — the lcnf group is not in `HERMETIC_GROUPS`, so `check-gen` diffs them without re-cutting them and a *stale* output is invisible to it. What re-cuts them is the `check-ocaml` CI job, which runs `make gen-lcnf` and refuses a difference from the committed files, and the nightly `check-gen-full`. `make check-ocaml` (`api_check`, the engine seam in `gen-check.sh`) compiles and runs what is committed | reproduced; tested |
+| lcnf | `src/OCaml5/Tools/LcnfGen.lean`; the recipe is `ocaml/gen/roots.json`, and each output's header carries its exact command | `Effect4.Api`, the recipe, `ocaml/engine/externs.txt`, `ocaml/engine/tools/api_engine_prelude.ml`, the route's sources (`OCaml5.Lcnf`, `OCaml5.Ml`, the Conform modules it reads) | `ocaml/gen/api_gen.ml` (the roots `Api.run` and `Api.replay`, with the machine's functions as coverage roots), `ocaml/engine/api_engine.ml`, and their closure manifests `ocaml/gen/closure-{api_gen,api_engine}.tsv` | `make check-ocaml` depends on this group, so the OCaml lane re-cuts both outputs from the current machine before it builds them (`api_check`, the engine seam in `gen-check.sh`). `make check-gen` holds them against a hand edit; the lcnf group is not in `HERMETIC_GROUPS`. The `check-ocaml` CI job runs `make gen-lcnf` and refuses a difference from the committed files | reproduced; tested |
 | truth | `harness/truth/Truth.lean` writes the corpus from the committed tapes; `harness/truth/run-truth.ts` runs rc.112, prints the modules, re-records the tapes, writes the result | the Eff corpus, `prelude.ts`, the tapes, the pinned `effect` and `@effect/sql-sqlite-bun` | `harness/truth/corpus.json`, `generated/*.ts`, `result.{json,md}`, `tapes/*.jsonl` | `make check-truth` (a fresh run must equal the committed artefacts; the printed modules type-check first, DI-49) | reproduced (corpus, tapes); tested (the host run) |
 | host-protocol | `tools/Tools/HostProtocol.lean` (the `gen-host-protocol` recipe) | `Effect4.Api.HostProtocol` | `harness/truth/session/protocol.gen.ts`, `tape.schema.json` | `make check-host-protocol` | reproduced; tested |
 | schema-ts | `harness/schema-generation/Emit{Fixture,CoverageFixture,MultiFixture}.lean`, stdout redirected | `Effect4.Codegen.Schema`, the fixture declarations | the three `.generated.ts` beside them | `make check-schema-ts` | reproduced; tested |
@@ -147,6 +150,10 @@ bytes), has no carrier since the labels went; every committed group is *reproduc
 The derived group includes `PrimFold` from `tools/Effect4Gen/Fold.lean`.
 It generates `src/Effect4/Machine/Fold.lean` from `Effect4.Prim` in `src/Effect4/Machine/Frames.lean`.
 Native code weights consume its algebra, fold, and uniqueness law.
+
+The derived group includes `MlFold` from `tools/Effect4Gen/Fold.lean`.
+It generates `src/OCaml5/Ml/Fold.lean` from the OCaml syntax of `src/OCaml5/Ml/Syntax.lean`.
+The LCNF route's printer, checker, builtin uses and conformance reader are algebras of it.
 
 The derived group includes `Fragments`, `FragmentLooped`, `FragmentRows`, and `FragmentLoopedRows` from `tools/Effect4Gen/Fragments.lean`.
 They generate the existing fragment predicates from one classification table and the program family metadata.
