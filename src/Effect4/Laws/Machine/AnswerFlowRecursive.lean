@@ -50,6 +50,27 @@ structure RecursiveHooks : Prop where
   iter_next : ∀ world name answer, Iter world name →
     RecursiveIterResult model broad Iter world ((interp.iterNext name answer).2)
 
+/-- Recursive hooks consume the actual answer class of their saved input edge.
+Consumer: QueueWorkers.jobs_step, whose retry loop returns its own request's option. -/
+structure TypedRecursiveHooks : Prop where
+  loop_future : ∀ world nextWorld, model.future world nextWorld → ∀ name,
+    Loop world name → Loop nextWorld name
+  iter_future : ∀ world nextWorld, model.future world nextWorld → ∀ name,
+    Iter world name → Iter nextWorld name
+  loop_resume : ∀ world name cursor answer, Loop world name → model.value world broad answer →
+    RecursiveLoopResult model broad world (interp.loopResume name cursor answer)
+  iter_next : ∀ world name answer, Iter world name → model.value world broad answer →
+    RecursiveIterResult model broad Iter world ((interp.iterNext name answer).2)
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- Existing broad hooks supply typed hooks without changing their callers. -/
+theorem RecursiveHooks.typed (hooks : RecursiveHooks model interp broad Loop Iter) :
+    TypedRecursiveHooks model interp broad Loop Iter where
+  loop_future := hooks.loop_future
+  iter_future := hooks.iter_future
+  loop_resume world name cursor answer held _ := hooks.loop_resume world name cursor answer held
+  iter_next world name answer held _ := hooks.iter_next world name answer held
+
 /-- Recursive saved edges retain their future callback contract and actual hook names. -/
 theorem RecursiveHooks.edge_future (hooks : RecursiveHooks model interp broad Loop Iter)
     (world nextWorld : World) (future : model.future world nextWorld)

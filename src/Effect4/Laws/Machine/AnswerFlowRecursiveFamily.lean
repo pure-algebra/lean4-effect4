@@ -38,8 +38,8 @@ theorem recursive_family_result (world : World) (output : Kind) (next : Prim ν 
   exact ⟨input, code, path.map (fun _ _ _ edge => .saved edge)⟩
 
 /-- The existing recursive hook algebra composes with a supplied semantic saved family. -/
-theorem recursive_family_of (semantic : SavedFamily model interp Semantic)
-    (hooks : RecursiveHooks model interp broad Loop Iter) :
+theorem recursive_family_of_typed (semantic : SavedFamily model interp Semantic)
+    (hooks : TypedRecursiveHooks model interp broad Loop Iter) :
     SavedFamily model interp (RecursiveFamilyEdge Semantic broad Loop Iter) := by
   constructor
   · intro world input output frame edge nextWorld future value good absent
@@ -59,7 +59,7 @@ theorem recursive_family_of (semantic : SavedFamily model interp Semantic)
         (semantic.answer world input output frame held nextWorld future value provided next pushed good supplied absent arm)
     | loop cursor held =>
       have later := hooks.loop_future world nextWorld future _ held
-      have code := hooks.loop_resume nextWorld _ cursor value later
+      have code := hooks.loop_resume nextWorld _ cursor value later good
       change (match interp.loopResume _ cursor value with
         | .continue next body => some (body, [Prim.whileLoop _ next])
         | .finish body => some (body, [])) = some (next, pushed) at arm
@@ -74,7 +74,7 @@ theorem recursive_family_of (semantic : SavedFamily model interp Semantic)
         exact ⟨broad, code, .nil broad⟩
     | iterator cursor held =>
       have later := hooks.iter_future world nextWorld future _ held
-      have code := hooks.iter_next nextWorld _ value later
+      have code := hooks.iter_next nextWorld _ value later good
       change (match (interp.iterNext _ value).2 with
         | .done result => some (Prim.success result, [])
         | .halt reason => some (Prim.failure reason, [])
@@ -109,4 +109,10 @@ theorem recursive_family_of (semantic : SavedFamily model interp Semantic)
     | saved held => exact semantic.discard world input output frame held nextWorld future fiber cause delivered good selected interrupted skipped
     | loop => cases selected
     | iterator => cases selected
+/-- The original broad hook API is the unrestricted-input instance of the typed adapter. -/
+theorem recursive_family_of (semantic : SavedFamily model interp Semantic)
+    (hooks : RecursiveHooks model interp broad Loop Iter) :
+    SavedFamily model interp (RecursiveFamilyEdge Semantic broad Loop Iter) :=
+  recursive_family_of_typed model interp Semantic broad Loop Iter semantic hooks.typed
+
 end Effect4.Machine.AnswerFlow
