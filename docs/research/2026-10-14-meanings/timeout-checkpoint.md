@@ -179,3 +179,70 @@ The audit checks `NumberFlow`, `NumberResult`, `NumberRegion`, `NumberTimer`, `N
 ```text
 #axiom_audit: 402 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
 ```
+
+## Proof graph review
+
+FLOW section 5 and GOALS-2 section 4 identify the missing numeric producer.
+WORKERS section 5 shows why source-only command admission does not supply it.
+The current route uses the shared guarded source lift and the coupled ghost-state producer.
+
+```mermaid
+flowchart TD
+  Guard[Guarded source decision lift] --> Coupled[Numeric machine, command, and snapshot producer]
+  Load[Initialized numeric source roles] --> Coupled
+  Local[Phase callback and native transition contracts] --> Coupled
+  Coupled --> Rows[Actual control and application rows]
+  Rows --> Heap[Reached exact numeric phase]
+  Heap --> Cleanup[Original cleanup observation]
+  Rows --> Declared[Declared predecessor prefix and bounded cursor]
+  Declared --> Retry[Original retry observation]
+  Heap --> Retry
+```
+
+The shared guard supplies the first node.
+The shared coupled lift supplies composition, but it does not supply the numeric producer.
+`HostTimeoutHistory` supplies the actual row decomposition pattern.
+The existing phase readers supply both final observation steps.
+The initialized source-control family and numeric command producer remain open.
+
+The general phase drops the stronger local comparison between completed forms and cleanups.
+Its count transition requires cleanup length equal to the count, enough completed predecessors, and a bounded source cursor.
+It does not require the cursor to equal the committed count.
+`Phase.enter` remains the stronger local instance of `Phase.counted`.
+`Phase.counted_declared` consumes the declared predecessor prefix without requiring equal log lengths.
+
+`NumberPhaseFlow` consolidates count, cleanup, and form callbacks around that phase.
+Both actual finalizer families use `AnswerFlow.saved_protected_finalizer`.
+The three native writes use one `native_answer` theorem.
+The count prefix retains its actual pre-count heap until the write commits.
+These facts remain local until the numeric producer establishes their source permissions.
+
+## The command-cut control
+
+`Timeout.CommandCut` retains four finite kernel checks.
+A raw cut after 27 commands holds a running attempt with an installed finalizer and count zero.
+An outside interruption records its deferred cause.
+Reusing the old internal queue then records cleanup zero at count zero.
+Public evaluation instead refuses that running attempt and leaves both logs empty.
+
+Queue reuse is not a scenario move.
+This control refutes neither original fixed-budget goal.
+It shows why the numeric command assertion must reject a deferred pre-count loop command.
+A source-only command assertion does not express that restriction.
+
+The shared ghost-command producer belongs to the Atomic seat.
+The Timeout instance supplies the same new ghost state for frames, pending commands, and drained tasks.
+Its interruption premise must also read the installed-prefix running condition.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberPhaseFlow Test.Dogfood.Scenario.Timeout.CommandCut` | Passed, 1191 jobs |
+| `lake env lean scratch/TimeoutPhaseFlowAudit.lean` | The output below |
+
+```text
+#axiom_audit: 187 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks `NumberPhase`, `NumberPhaseFlow`, and `Timeout.CommandCut` in their full module namespaces.
+Both original Timeout goals remain unchanged and open.
+The coordinator must import the retained proof leaves and control through the scenario before merging.

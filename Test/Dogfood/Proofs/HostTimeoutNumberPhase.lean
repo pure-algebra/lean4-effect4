@@ -42,12 +42,18 @@ def ofNumbers (count : Nat) (cleanups completed : List Val) (exits : List ExitV)
   ⟨count, cleanups, completed, exits, numbers.cleanupsAt, numbers.formsAt,
     numbers.cleanupLower, numbers.cleanupUpper, numbers.formUpper, numbers.bound⟩
 
-/-- Entering an attempt requires both predecessor logs to have finished. -/
+/-- A counted attempt enters after the prior cleanup, while the source cursor bounds the committed count. -/
+def Phase.counted (phase : Phase) (n : Fin 4)
+    (cleanupComplete : phase.cleanups.length = phase.count)
+    (formsReady : phase.count ≤ phase.exits.length) (cursor : phase.count ≤ n.val) : Phase :=
+  ⟨phase.count + 1, phase.cleanups, phase.completed, phase.exits,
+    phase.cleanupsAt, phase.formsAt, by omega, by omega, by omega, by have h := n.isLt; omega⟩
+
+/-- The stronger local entry is an instance of the general phase count transition. -/
 def Phase.enter (phase : Phase) (n : Fin 4)
     (cleanupComplete : phase.cleanups.length = phase.count)
     (formComplete : phase.exits.length = phase.count) (cursor : phase.count = n.val) : Phase :=
-  ⟨phase.count + 1, phase.cleanups, phase.completed, phase.exits,
-    phase.cleanupsAt, phase.formsAt, by omega, by omega, by omega, by have h := n.isLt; omega⟩
+  phase.counted n cleanupComplete (Nat.le_of_eq formComplete.symm) (Nat.le_of_eq cursor)
 
 /-- Cleanup publishes the active attempt's number and retains its committed count. -/
 def Phase.cleanup (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
@@ -115,6 +121,18 @@ theorem Phase.form_declared (phase : Phase) (seen : Nat) (exit : ExitV)
     (declared : Declared phase.count phase.exits) :
     Declared (phase.form seen exit).count (phase.form seen exit).exits :=
   completed_declared phase.count phase.exits exit declared phase.formUpper
+
+/-- A new count consumes only the declared predecessor prefix, even when earlier uncounted forms exist. -/
+theorem Phase.counted_declared (phase : Phase) (n : Fin 4)
+    (cleanupComplete : phase.cleanups.length = phase.count)
+    (formsReady : phase.count ≤ phase.exits.length) (cursor : phase.count ≤ n.val)
+    (declared : phase.exits.all exitRetries = true) :
+    Declared (phase.counted n cleanupComplete formsReady cursor).count
+      (phase.counted n cleanupComplete formsReady cursor).exits := by
+  change (phase.exits.take (phase.count + 1 - 1)).all exitRetries = true
+  rw [List.all_eq_true] at declared ⊢
+  intro exit member
+  exact declared exit (List.mem_of_mem_take member)
 
 /-- The next attempt consumes the actual complete declared predecessor log. -/
 theorem Phase.enter_declared (phase : Phase) (n : Fin 4)
