@@ -930,3 +930,26 @@ The audit covers fourteen shared, numeric native, configuration, count, and inte
 The new `Replacement` leaf needs root reach when its native endpoint consumer is integrated.
 This proof-only slice reaches no outside implementation gate.
 Actual whole-fiber masking still needs the retained source provenance and the actual protected finalizer flag.
+
+## Protected finalizer installation
+
+The actual selected callback now carries its returned interruption flag through the existing saved-frame proof.
+The old selected-callback interfaces remain wrappers.
+Timeout retains the authored finalizer flag in its uniform saved-frame relation.
+The installed callback therefore supplies the actual masked state and every field of the pending-fiber assertion.
+The exact source writer graph uses the existing qualified saved family.
+
+Placement: scope-lifetime-finalization R11 and translation-simulation R10; both Timeout numeric goals consume this installation branch.
+The result assumes the actual callback selection, entered heap, clean recorded cause, and live pending fiber.
+Machine installation, queue transport, and initialized history remain open consumers.
+Both original Timeout goals remain open.
+
+Verification commands:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.HostTimeoutNumberPendingFinalizer Test.Dogfood.Proofs.HostTimeoutNumberCountQueue Test.Dogfood.Proofs.HostTimeoutNumberReplacement
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean scratch/TimeoutProtectedAudit.lean
+```
+
+The build passes with 1264 jobs.
+The audit checks 445 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.

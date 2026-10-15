@@ -70,33 +70,37 @@ theorem absorbsInterrupt_none (world : World) : AbsorbsInterrupt model world non
 include interp family mask in
 /-- The actual value pop carries its incoming value into the selected saved callback.
 It retains the suffix after that callback's actual mask hook. -/
-theorem popFrom_value_selected (world : World) (input output : Kind)
+theorem popFrom_value_selected_with_flag (Post : Bool → Prop) (world : World) (input output : Kind)
     (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
     (value : β) (selected : Prim ν σ β ε δ ι α)
+    (post : ∀ incoming middle (scratch : FrameFiber ν σ β ε δ ι α),
+      Edge world incoming middle selected → Post (selected.ensure scratch).1.interruptible)
     (empty : fiber.stack = [])
     (good : model.value world input value)
     (stack : Path (Edge world) input output frames)
     (found : (FrameFiber.popFrom .contA false frames fiber).answer = .frame selected) :
     ∃ incoming middle, model.value world incoming value ∧
       Edge world incoming middle selected ∧
-      Path (Edge world) middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack := by
+      Path (Edge world) middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack ∧
+      Post (FrameFiber.popFrom .contA false frames fiber).fiber.interruptible := by
   have popFamily : PopTrace.Family .contA false (Edge world)
       (fun fiber => fiber.stack = [])
       (fun input output _ pop => model.value world input value → pop.answer = .frame selected →
         ∃ incoming middle, model.value world incoming value ∧ Edge world incoming middle selected ∧
-          Path (Edge world) middle output pop.fiber.stack) := by
+          Path (Edge world) middle output pop.fiber.stack ∧ Post pop.fiber.interruptible) := by
     constructor
     · intro kind fiber cause scratch good found
       cases found
     · intro input middle output head tail fiber cause answer callback path empty chosen kept good found
       have shape := Prim.answerOf_frame_eq head selected .contA _
         (chosen.trans (congrArg some found))
-      rw [shape.1]
+      rw [shape.1] at post ⊢
       have scratch : Path (Edge world) middle middle fiber.stack := by
         rw [empty]; exact .nil middle
       exact ⟨input, middle, good, callback,
         Path.append (ensure_path model Edge world middle middle head fiber
-          (fun pushed => mask world input middle head callback fiber pushed) scratch) path⟩
+          (fun pushed => mask world input middle head callback fiber pushed) scratch) path,
+        post input middle fiber callback⟩
     · intro input middle head fiber after callback empty
       rw [FrameFiber.passPushed_fiber_cause]; exact PopTrace.drain_empty .contA false head fiber empty
     · intro input middle output head tail fiber before after tailPop callback path empty passed drained next good found
@@ -117,8 +121,45 @@ theorem popFrom_value_selected (world : World) (input output : Kind)
   exact popFamily.popFrom input output frames fiber none (stack) empty good found
 
 include interp family mask in
+/-- The previous selected-frame reader projects the common actual-state producer. -/
+theorem popFrom_value_selected (world : World) (input output : Kind)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (value : β) (selected : Prim ν σ β ε δ ι α)
+    (empty : fiber.stack = [])
+    (good : model.value world input value)
+    (stack : Path (Edge world) input output frames)
+    (found : (FrameFiber.popFrom .contA false frames fiber).answer = .frame selected) :
+    ∃ incoming middle, model.value world incoming value ∧
+      Edge world incoming middle selected ∧
+      Path (Edge world) middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack := by
+  obtain ⟨incoming, middle, good, edge, path, flag⟩ := popFrom_value_selected_with_flag model interp Edge Allowed family mask (fun _ => True) world input output frames fiber value selected (fun _ _ _ _ => trivial) empty good stack found
+  exact ⟨incoming, middle, good, edge, path⟩
+
+include interp family mask in
 /-- Actual getCont retains the selected callback and its ordered suffix.
 Deferred and replacement answers cannot inhabit this selected-frame branch. -/
+theorem getCont_value_selected_with_flag (Post : Bool → Prop) (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (value : β) (selected : Prim ν σ β ε δ ι α)
+    (post : ∀ incoming middle (scratch : FrameFiber ν σ β ε δ ι α),
+      Edge world incoming middle selected → Post (selected.ensure scratch).1.interruptible)
+    (good : model.value world input value)
+    (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contA false).answer = .frame selected) :
+    ∃ incoming middle, model.value world incoming value ∧
+      Edge world incoming middle selected ∧
+      Path (Edge world) middle output (fiber.getCont .contA false).fiber.stack ∧
+      Post (fiber.getCont .contA false).fiber.interruptible := by
+  unfold FrameFiber.getCont at found ⊢
+  split
+  · rename_i deferred
+    rw [if_pos deferred] at found
+    cases found
+  · rename_i normal
+    rw [if_neg normal] at found
+    exact popFrom_value_selected_with_flag model interp Edge Allowed family mask Post world input output fiber.stack _ value selected post rfl good stack found
+
+include interp family mask in
+/-- The previous selected-frame reader projects the common actual-state producer. -/
 theorem getCont_value_selected (world : World) (input output : Kind)
     (fiber : FrameFiber ν σ β ε δ ι α) (value : β) (selected : Prim ν σ β ε δ ι α)
     (good : model.value world input value)
@@ -127,14 +168,8 @@ theorem getCont_value_selected (world : World) (input output : Kind)
     ∃ incoming middle, model.value world incoming value ∧
       Edge world incoming middle selected ∧
       Path (Edge world) middle output (fiber.getCont .contA false).fiber.stack := by
-  unfold FrameFiber.getCont at found ⊢
-  split
-  · rename_i deferred
-    rw [if_pos deferred] at found
-    cases found
-  · rename_i normal
-    rw [if_neg normal] at found
-    exact popFrom_value_selected model interp Edge Allowed family mask world input output fiber.stack _ value selected rfl good stack found
+  obtain ⟨incoming, middle, good, edge, path, flag⟩ := getCont_value_selected_with_flag model interp Edge Allowed family mask (fun _ => True) world input output fiber value selected (fun _ _ _ _ => trivial) good stack found
+  exact ⟨incoming, middle, good, edge, path⟩
 
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
@@ -237,9 +272,11 @@ theorem saved_discard_cause (world : World) (input middle : Kind)
 
 include interp family mask in
 /-- The selected failure callback retains the cause actually carried past earlier discarded handlers. -/
-theorem popFrom_cause_selected (world : World) (input output : Kind)
+theorem popFrom_cause_selected_with_flag (Post : Bool → Prop) (world : World) (input output : Kind)
     (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
     (cause : Cause ε δ ι α) (selected : Prim ν σ β ε δ ι α)
+    (post : ∀ incoming middle (scratch : FrameFiber ν σ β ε δ ι α),
+      Edge world incoming middle selected → Post (selected.ensure scratch).1.interruptible)
     (empty : fiber.stack = [])
     (good : model.cause world input cause)
     (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
@@ -250,25 +287,27 @@ theorem popFrom_cause_selected (world : World) (input output : Kind)
       (FrameFiber.popFrom .contE true frames fiber (some cause)).carriedCause = some delivered ∧
       model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
       Path (Edge world) middle output
-        (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.stack := by
+        (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.stack ∧
+      Post (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.interruptible := by
   have popFamily : PopTrace.Family .contE true (Edge world)
       (fun scratch => scratch.stack = [] ∧ scratch.interruptedCause = fiber.interruptedCause)
       (fun input output carried pop => ∀ cause, carried = some cause → model.cause world input cause →
         pop.answer = .frame selected → ∃ incoming middle delivered,
           pop.carriedCause = some delivered ∧ model.cause world incoming delivered ∧
-          Edge world incoming middle selected ∧ Path (Edge world) middle output pop.fiber.stack) := by
+          Edge world incoming middle selected ∧ Path (Edge world) middle output pop.fiber.stack ∧ Post pop.fiber.interruptible) := by
     constructor
     · intro kind current before scratch cause incoming good found
       cases found
     · intro input middle output head tail current before answer callback path scratch chosen kept cause incoming good found
       have shape := Prim.answerOf_frame_eq head selected .contE _
         (chosen.trans (congrArg some found))
-      rw [shape.1]
+      rw [shape.1] at post ⊢
       have suffix : Path (Edge world) middle middle current.stack := by
         rw [scratch.1]; exact .nil middle
       exact ⟨input, middle, cause, incoming, good, callback,
         Path.append (ensure_path model Edge world middle middle head current
-          (fun pushed => mask world input middle head callback current pushed) suffix) path⟩
+          (fun pushed => mask world input middle head callback current pushed) suffix) path,
+        post input middle current callback⟩
     · intro input middle head current after callback scratch
       rw [FrameFiber.passPushed_fiber_cause]
       exact ⟨PopTrace.drain_empty .contE true head current scratch.1,
@@ -310,7 +349,47 @@ theorem popFrom_cause_selected (world : World) (input output : Kind)
   exact popFamily.popFrom input output frames fiber (some cause) stack ⟨empty, rfl⟩ cause rfl good found
 
 include interp family mask in
+/-- The previous selected-frame reader projects the common actual-state producer. -/
+theorem popFrom_cause_selected (world : World) (input output : Kind)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Cause ε δ ι α) (selected : Prim ν σ β ε δ ι α)
+    (empty : fiber.stack = [])
+    (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (stack : Path (Edge world) input output frames)
+    (found : (FrameFiber.popFrom .contE true frames fiber (some cause)).answer = .frame selected)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    ∃ incoming middle delivered,
+      (FrameFiber.popFrom .contE true frames fiber (some cause)).carriedCause = some delivered ∧
+      model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
+      Path (Edge world) middle output
+        (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.stack := by
+  obtain ⟨incoming, middle, delivered, carried, good, edge, path, flag⟩ := popFrom_cause_selected_with_flag (admitted := admitted) model interp Edge Allowed family mask (fun _ => True) world input output frames fiber cause selected (fun _ _ _ _ => trivial) empty good absorbs stack found
+  exact ⟨incoming, middle, delivered, carried, good, edge, path⟩
+
+include interp family mask in
 /-- Actual getCont selects a failure callback at the class of its delivered cause. -/
+theorem getCont_cause_selected_with_flag (Post : Bool → Prop) (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α)
+    (selected : Prim ν σ β ε δ ι α)
+    (post : ∀ incoming middle (scratch : FrameFiber ν σ β ε δ ι α),
+      Edge world incoming middle selected → Post (selected.ensure scratch).1.interruptible)
+    (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    ∃ incoming middle delivered,
+      (fiber.getCont .contE true (some cause)).carriedCause = some delivered ∧
+      model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
+      Path (Edge world) middle output (fiber.getCont .contE true (some cause)).fiber.stack ∧
+      Post (fiber.getCont .contE true (some cause)).fiber.interruptible := by
+  simp only [FrameFiber.getCont, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte] at found ⊢
+  exact popFrom_cause_selected_with_flag (admitted := admitted) model interp Edge Allowed family mask Post world input output fiber.stack {fiber with stack := [], deferredInterrupt := false} cause selected post rfl good
+    absorbs stack found
+
+include interp family mask in
+/-- The previous selected-frame reader projects the common actual-state producer. -/
 theorem getCont_cause_selected (world : World) (input output : Kind)
     (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α)
     (selected : Prim ν σ β ε δ ι α)
@@ -323,9 +402,8 @@ theorem getCont_cause_selected (world : World) (input output : Kind)
       (fiber.getCont .contE true (some cause)).carriedCause = some delivered ∧
       model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
       Path (Edge world) middle output (fiber.getCont .contE true (some cause)).fiber.stack := by
-  simp only [FrameFiber.getCont, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte] at found ⊢
-  exact popFrom_cause_selected (admitted := admitted) model interp Edge Allowed family mask world input output fiber.stack _ cause selected rfl good
-    absorbs stack found
+  obtain ⟨incoming, middle, delivered, carried, good, edge, path, flag⟩ := getCont_cause_selected_with_flag (admitted := admitted) model interp Edge Allowed family mask (fun _ => True) world input output fiber cause selected (fun _ _ _ _ => trivial) good absorbs stack found
+  exact ⟨incoming, middle, delivered, carried, good, edge, path⟩
 
 
 include interp family mask in

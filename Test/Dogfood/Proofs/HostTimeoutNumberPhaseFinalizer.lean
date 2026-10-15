@@ -30,11 +30,11 @@ theorem absorbs (view : HostTimeoutFlow.View) (state : Stores) (fiber : HostTime
   exact cause_combine state kind cause interrupted good (recorded interrupted present)
 
 /-- Actual native finalizer installation consumes the common contextual saved-pop producer. -/
-theorem installed_over (view : HostTimeoutFlow.View)
+theorem installed_hooked (view : HostTimeoutFlow.View)
     (Edge : Stores → Kind → Kind → NCode → Prop)
     (family : AnswerFlow.ContextualSavedFamily (model view)
       (HostTimeoutFlow.interpreter view).toPrimInterp Edge Allowed)
-    (mask : ∀ world kind, Edge world kind kind (.setInterruptible true)) (machine : NativeMachine)
+    (mask : AnswerFlow.Contextual.HookMask Edge) (machine : NativeMachine)
     (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV) (input output : Kind)
     (body : NCode) (name : EffName) (flag : Bool) (program : NCode)
     (owned : CodeAt machine.state input (Prim.ofExit exit))
@@ -64,7 +64,7 @@ theorem installed_over (view : HostTimeoutFlow.View)
           (match exit with | .success _ => false | .failure _ => true)
           (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) program) := by
     cases exit <;> exact congrArg (Option.map _) hook
-  have next := AnswerFlow.Contextual.finalizer_step (admitted := recorded) (model view)
+  have next := AnswerFlow.Contextual.Hooked.finalizer_step (admitted := recorded) (model view)
     (HostTimeoutFlow.interpreter view).toPrimInterp Edge Allowed family mask
     (HostTimeoutFlow.interpreter view) machine.state input output machine fiber yielding exit body name flag program
     (exit_class machine.state input exit owned) (fun _ _ => absorbs view machine.state fiber.frame recorded)
@@ -74,6 +74,14 @@ theorem installed_over (view : HostTimeoutFlow.View)
   dsimp only
   rw [next.1]
   exact next.2
+
+/-- The previous external-edge reader specializes source-sensitive actual mask generation. -/
+abbrev installed_over (view : HostTimeoutFlow.View)
+    (Edge : Stores → Kind → Kind → NCode → Prop)
+    (family : AnswerFlow.ContextualSavedFamily (model view)
+      (HostTimeoutFlow.interpreter view).toPrimInterp Edge Allowed)
+    (mask : ∀ world kind, Edge world kind kind (.setInterruptible true)) :=
+  installed_hooked view Edge family (AnswerFlow.Contextual.unconditional_hook_mask Edge mask)
 
 /-- The previous semantic-path finalizer reader specializes the common external-edge producer. -/
 theorem installed (view : HostTimeoutFlow.View) (machine : NativeMachine)

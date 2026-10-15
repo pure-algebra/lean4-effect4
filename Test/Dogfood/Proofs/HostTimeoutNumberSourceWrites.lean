@@ -207,4 +207,29 @@ theorem counted_frame (context : CountContext) (frame : HostTimeoutFrames.Native
   have before := count_frame context {frame with current := context.write} (.binder _ rfl stack)
   exact ⟨HostTimeoutNumberSourceSlots.counted_frame context frame stack, trivial, before.savedWrites⟩
 
+/-- The exact selected-writer annotation specializes the existing shared stable family. -/
+abbrev sourceSpec (context : CountContext) :=
+  CodeClosure.Qualified.prefixSpec HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+    (At context) (AnswerSlots.Prefix (bindings context)) (Writes context)
+
+/-- Actual native finalizer dispatch retains the exact writer graph through the shared callback family. -/
+theorem finalizer_frame (context : CountContext) (view : HostTimeoutFlow.View)
+    (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV)
+    (current : fiber.frame.current = Prim.ofExit exit) (held : FrameAt context fiber.frame) :
+    let next := evaluatePrim.finalizerOr (HostTimeoutFlow.interpreter view) machine fiber yielding exit
+    FrameAt context next.fiber.frame := by
+  let edge := CodeClosure.Qualified.prefixEdge (At context) (AnswerSlots.Prefix (bindings context)) (Writes context)
+  have path := CodeClosure.Qualified.prefix_path (At context) (AnswerSlots.Prefix (bindings context))
+    (Writes context) fiber.frame.stack held.savedWrites
+  have good : AnswerFlow.ExitAt ((sourceSpec context).model view) () () exit := by cases exit <;> trivial
+  obtain ⟨output, next⟩ := AnswerFlow.External.Native.finalizer_frame ((sourceSpec context).model view)
+    (HostTimeoutFlow.interpreter view) edge (CodeClosure.Qualified.prefix_family HostTimeoutSource.program fragment (At context)
+      (AnswerSlots.Prefix (bindings context)) (Writes context) (contract context)
+      (fun p held view => completed context p view held) Test.Dogfood.Scenario.Timeout.fetch.table view)
+    (fun world kind => by trivial) () () () machine fiber yielding exit current held.currentWrites path good
+    (by intros; trivial) (by intros; rfl)
+  obtain ⟨input, code, saved⟩ := next
+  exact ⟨HostTimeoutNumberSourceSlots.finalizer_frame context view machine fiber yielding exit current held.toFrameAt,
+    code, CodeClosure.Qualified.prefix_path_owned (At context) (AnswerSlots.Prefix (bindings context)) (Writes context) saved⟩
+
 end Test.Dogfood.Proofs.HostTimeoutNumberSourceWrites
