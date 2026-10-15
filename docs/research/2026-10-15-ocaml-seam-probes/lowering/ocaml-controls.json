@@ -1,0 +1,164 @@
+[
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-o",
+      "scalar_boundary",
+      "scalar_boundary.ml"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "/private/tmp/effect4-lowering-e0hl0fl7/scalar_boundary"
+    ],
+    "exit": 0,
+    "output": "scalar-boundary: finite controls pass\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-w",
+      "-a",
+      "-o",
+      "flat_aliases",
+      "eff_types.ml",
+      "flat_aliases.ml"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "/private/tmp/effect4-lowering-e0hl0fl7/flat_aliases"
+    ],
+    "exit": 0,
+    "output": "flat-aliases: compiler accepts negative naturals and mixed name domains\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "reject_forged_nat.ml"
+    ],
+    "exit": 2,
+    "output": "File \"reject_forged_nat.ml\", line 1, characters 37-39:\n1 | let forged : Scalar_boundary.Nat.t = -1\n                                         ^^\nError: This expression has type int but an expression was expected of type\n         Scalar_boundary.Nat.t\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "reject_mixed_profile.ml"
+    ],
+    "exit": 2,
+    "output": "File \"reject_mixed_profile.ml\", line 1, characters 66-67:\n1 | let wrong (x : Scalar_boundary.Small.t) : Scalar_boundary.Nat.t = x\n                                                                      ^\nError: This expression has type Scalar_boundary.Small.t\n       but an expression was expected of type Scalar_boundary.Nat.t\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "reject_bits_as_nat.ml"
+    ],
+    "exit": 2,
+    "output": "File \"reject_bits_as_nat.ml\", line 1, characters 67-68:\n1 | let wrong (x : Scalar_boundary.Bits64.t) : Scalar_boundary.Nat.t = x\n                                                                       ^\nError: This expression has type Scalar_boundary.Bits64.t\n       but an expression was expected of type Scalar_boundary.Nat.t\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "positive.ml"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "wrong_type.ml"
+    ],
+    "exit": 2,
+    "output": "File \"wrong_type.ml\", line 2, characters 2-6:\n2 |   true + 1\n      ^^^^\nError: This expression has type bool but an expression was expected of type\n         int\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "unbound.ml"
+    ],
+    "exit": 2,
+    "output": "File \"unbound.ml\", line 2, characters 2-15:\n2 |   missing_value\n      ^^^^^^^^^^^^^\nError: Unbound value missing_value\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "raw_scope.ml"
+    ],
+    "exit": 2,
+    "output": "File \"raw_scope.ml\", line 4, characters 2-15:\n4 |   missing_value\n      ^^^^^^^^^^^^^\nError: Unbound value missing_value\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "unknown_field.ml"
+    ],
+    "exit": 2,
+    "output": "File \"unknown_field.ml\", line 2, characters 4-17:\n2 |   { missing_label = 1 }\n        ^^^^^^^^^^^^^\nError: Unbound record field missing_label\n"
+  },
+  {
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "ocamlopt",
+      "-c",
+      "hole_fill.ml"
+    ],
+    "exit": 0,
+    "output": ""
+  }
+]

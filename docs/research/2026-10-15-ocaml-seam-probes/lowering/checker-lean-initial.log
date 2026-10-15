@@ -1,0 +1,15 @@
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:6:39: error: unexpected token 'prefix'; expected '_' or identifier
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:6:47: error: unexpected identifier; expected prec
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:7:33: error: unexpected token '++'; expected ':'
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:9:25: error(lean.unknownIdentifier): Unknown identifier `one`
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:10:26: error(lean.unknownIdentifier): Unknown identifier `one`
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:11:24: error(lean.unknownIdentifier): Unknown identifier `one`
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:12:25: error(lean.unknownIdentifier): Unknown identifier `one`
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:13:29: error(lean.unknownIdentifier): Unknown identifier `one`
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:14:25: error(lean.unknownIdentifier): Unknown identifier `one`
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:16:0: error: cannot evaluate code because 'positive' uses 'sorry' and/or contains errors
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:17:0: error: cannot evaluate code because 'wrongType' uses 'sorry' and/or contains errors
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:18:0: error: cannot evaluate code because 'unbound' uses 'sorry' and/or contains errors
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:19:0: error: cannot evaluate code because 'rawScope' uses 'sorry' and/or contains errors
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:20:0: error: cannot evaluate code because 'unknownField' uses 'sorry' and/or contains errors
+docs/research/2026-10-15-ocaml-seam-probes/lowering/CheckerProbe.lean:21:0: error: cannot evaluate code because 'holeFill' uses 'sorry' and/or contains errors

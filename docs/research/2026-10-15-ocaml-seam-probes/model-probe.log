@@ -1,0 +1,13 @@
+PASS generic_pair_roundtrips
+PASS runtime_product_roundtrips
+PASS generic_pair_is_not_program_product
+PASS runtime_tuple_is_program_product
+PASS generic_int_roundtrips
+PASS generic_int_is_not_program_int
+PASS negative_frame_is_program_int
+PASS modeled_required_data_record_admitted
+PASS modeled_optional_record_refused
+PASS modeled_resource_refused
+PASS modeled_raw_union_refused
+PASS tagged_sum_is_not_untagged_union
+MEASURE finite_model_checks=12

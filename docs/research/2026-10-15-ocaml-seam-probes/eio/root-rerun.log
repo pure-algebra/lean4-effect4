@@ -1,0 +1,35 @@
+ocamlfind: [WARNING] Package `mtime.clock.os': Deprecated, use the mtime.clock library.
+PASS suspended continuation has not run finalizer
+PASS explicit discontinue runs finalizer once
+PASS second continuation use is refused
+PASS promise first result
+PASS promise duplicate resolution is refused
+PASS switch releases in reverse registration order
+PASS switch cancellation is observed
+PASS state before cancellation remains
+PASS protected cleanup yields then finishes once
+PASS receipt follows chosen host completion order
+PASS receipt does not apply either reply
+PASS application order can differ from receipt order
+PASS cancelled untransferred acquisition is compensated once
+PASS fork through a foreign-domain switch is refused
+PASS ready fiber waits through finite non-yielding CPU segment
+PASS escaped resource keeps its OCaml type but refuses use after close
+PASS pool returns typed results
+PASS finite pool jobs execute once
+ALL FINITE PROBES PASSED
+PASS existential provider returns typed lookup answer
+PASS optional lookup refuses an unsupported interface
+PASS public constructor can claim a tag without its implementation
+File "unsupported_resource.ml", line 2, characters 39-67:
+2 | let () = ignore (Resource_probe.lookup (Eio.Flow.string_source "x") 1)
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This expression has type
+         Eio.Flow.source_ty Eio__.Std.r = Eio.Flow.source_ty Eio.Resource.t
+       but an expression was expected of type
+         ([> Resource_probe.lookup_ty ] as 'a) Eio.Resource.t =
+           'a Eio.Resource.t
+       Type Eio.Flow.source_ty = [ `Flow | `R ] is not compatible with type
+         [> Resource_probe.lookup_ty ] = [> `Lookup ]
+       The first variant type does not allow tag(s) `Lookup
+PASS compiler refuses a resource without the Lookup interface

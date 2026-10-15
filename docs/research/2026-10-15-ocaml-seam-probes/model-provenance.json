@@ -1,0 +1,81 @@
+{
+  "captured_utc": "2026-10-15T15:47:18.551607+00:00",
+  "scope": "Finite readers using existing compiled imports; no fresh build or theorem audit",
+  "head_before": {
+    "argv": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "exit": 0,
+    "stdout": "ee5f9e338932bb23123af7d9a5b7aa2615084f59\n",
+    "stderr": ""
+  },
+  "head_after": {
+    "argv": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "exit": 0,
+    "stdout": "ee5f9e338932bb23123af7d9a5b7aa2615084f59\n",
+    "stderr": ""
+  },
+  "lean_version": {
+    "argv": [
+      "lake",
+      "env",
+      "lean",
+      "--version"
+    ],
+    "exit": 0,
+    "stdout": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)\n",
+    "stderr": ""
+  },
+  "run": {
+    "argv": [
+      "lake",
+      "env",
+      "lean",
+      "-M4096",
+      "--run",
+      "docs/research/2026-10-15-ocaml-seam-probes/ModelProbe.lean"
+    ],
+    "exit": 0,
+    "stdout": "PASS generic_pair_roundtrips\nPASS runtime_product_roundtrips\nPASS generic_pair_is_not_program_product\nPASS runtime_tuple_is_program_product\nPASS generic_int_roundtrips\nPASS generic_int_is_not_program_int\nPASS negative_frame_is_program_int\nPASS modeled_required_data_record_admitted\nPASS modeled_optional_record_refused\nPASS modeled_resource_refused\nPASS modeled_raw_union_refused\nPASS tagged_sum_is_not_untagged_union\nMEASURE finite_model_checks=12\n",
+    "stderr": ""
+  },
+  "input_sha256_before": {
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+    "src/Effect4/Schema/Modeled.lean": "8d1db1c20d377c933f866258de3b25977bdae11d263e78d49f1248b4aebb1c6c",
+    "src/Effect4/Program/Typed.lean": "f4be872ccf815212164f8b57dee473ac440aa329ae1a5d0a73fc96f66d545856",
+    "src/Effect4/Store/Domain/Canonical.lean": "599a9631fc8bde3792613f055037a1b03709cf95c8c1d3048d3abd2e7f0802e7",
+    "src/Effect4/Store/Carrier/Image.lean": "2ad5a7811d90412772b9608ff5dbb104359eabc41ef34697af214b7e9b02675a",
+    "src/Effect4/Store/Carrier/Image/Containers.lean": "667920bc87b566ae94c396baab6ef9581810c130921ad527e8f079d68bd4c947",
+    "src/Effect4/Program/TyCore.lean": "f8382447448939673444b22d05b4007bde99cd2f30fe3263b8e8e94e3b3d7268",
+    "docs/research/2026-10-15-ocaml-seam-probes/ModelProbe.lean": "6809cc025b841b6c3766c3bcd28bfc3e85abf4e5650390345a467fa2ef7ada60",
+    ".lake/build/lib/lean/Effect4/Schema/Modeled.olean": "1c5d879b20615cd1e6232ff2327db405c3f6cbb46e132abced983e1ad6378531",
+    ".lake/build/lib/lean/Effect4/Schema/Modeled.trace": "fd714ba84a02ca3efe4229d69ed81c4c9a46a14bf35b512cb4f708d14f912dec",
+    ".lake/build/lib/lean/Effect4/Program/Typed.olean": "46a50298c8246be5bc0ed2582ac8aae6acf88888f47d0055df8337a2b9bb0224",
+    ".lake/build/lib/lean/Effect4/Program/Typed.trace": "5fcd4df6708bb68d2fd3c3fb6d3f2363444e46b08ef5ee99db9df0455b49c973",
+    ".lake/build/lib/lean/Effect4/Store/Domain/Canonical.olean": "59a961694fb7a58034cd1dfbd0b3de7961a56e9aadf275d28c390ed0e00176fa",
+    ".lake/build/lib/lean/Effect4/Store/Domain/Canonical.trace": "3c7dd755e1a1c443902180fe4db18cdc0f0b7aa616af22faf83f7f650ef3719f"
+  },
+  "input_sha256_after": {
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+    "src/Effect4/Schema/Modeled.lean": "8d1db1c20d377c933f866258de3b25977bdae11d263e78d49f1248b4aebb1c6c",
+    "src/Effect4/Program/Typed.lean": "f4be872ccf815212164f8b57dee473ac440aa329ae1a5d0a73fc96f66d545856",
+    "src/Effect4/Store/Domain/Canonical.lean": "599a9631fc8bde3792613f055037a1b03709cf95c8c1d3048d3abd2e7f0802e7",
+    "src/Effect4/Store/Carrier/Image.lean": "2ad5a7811d90412772b9608ff5dbb104359eabc41ef34697af214b7e9b02675a",
+    "src/Effect4/Store/Carrier/Image/Containers.lean": "667920bc87b566ae94c396baab6ef9581810c130921ad527e8f079d68bd4c947",
+    "src/Effect4/Program/TyCore.lean": "f8382447448939673444b22d05b4007bde99cd2f30fe3263b8e8e94e3b3d7268",
+    "docs/research/2026-10-15-ocaml-seam-probes/ModelProbe.lean": "6809cc025b841b6c3766c3bcd28bfc3e85abf4e5650390345a467fa2ef7ada60",
+    ".lake/build/lib/lean/Effect4/Schema/Modeled.olean": "1c5d879b20615cd1e6232ff2327db405c3f6cbb46e132abced983e1ad6378531",
+    ".lake/build/lib/lean/Effect4/Schema/Modeled.trace": "fd714ba84a02ca3efe4229d69ed81c4c9a46a14bf35b512cb4f708d14f912dec",
+    ".lake/build/lib/lean/Effect4/Program/Typed.olean": "46a50298c8246be5bc0ed2582ac8aae6acf88888f47d0055df8337a2b9bb0224",
+    ".lake/build/lib/lean/Effect4/Program/Typed.trace": "5fcd4df6708bb68d2fd3c3fb6d3f2363444e46b08ef5ee99db9df0455b49c973",
+    ".lake/build/lib/lean/Effect4/Store/Domain/Canonical.olean": "59a961694fb7a58034cd1dfbd0b3de7961a56e9aadf275d28c390ed0e00176fa",
+    ".lake/build/lib/lean/Effect4/Store/Domain/Canonical.trace": "3c7dd755e1a1c443902180fe4db18cdc0f0b7aa616af22faf83f7f650ef3719f"
+  },
+  "inputs_unchanged_during_run": true
+}
