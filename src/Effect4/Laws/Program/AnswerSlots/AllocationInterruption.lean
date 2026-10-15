@@ -15,9 +15,10 @@ theorem PendingConfiguration.update (spec : Spec) (fragment : SourceScope.Fragme
     (fiber : SourceScope.SourceFiber)
     (frame : FrameAt spec fragment ⟨fiber.id, machine.state, false⟩ fiber.frame)
     (waits : PendingWaits spec fragment ⟨fiber.id, machine.state, false⟩ fiber)
-    (children : fiber.children = []) (observers : fiber.observers = []) (replies : Replies fiber.dispatcher) :
+    (children : fiber.children = []) (observers : fiber.observers = []) (replies : Replies fiber.dispatcher)
+    (recorded : CleanRecorded fiber.frame) :
     PendingConfiguration spec fragment (machine.update fiber) := by
-  refine ⟨before.heap, ?_, ?_, ?_, ?_, before.counter, ?_⟩
+  refine ⟨before.heap, ?_, ?_, ?_, ?_, before.counter, ?_, ?_, before.deferred⟩
   · intro row member
     obtain ⟨old, present, same⟩ := List.mem_map.mp member
     rw [← same]
@@ -56,6 +57,14 @@ theorem PendingConfiguration.update (spec : Spec) (fragment : SourceScope.Fragme
     · exact replies
     · exact before.replies old present
 
+  · intro row member
+    obtain ⟨old, present, same⟩ := List.mem_map.mp member
+    rw [← same]
+    change CleanRecorded (if old.id = fiber.id then fiber else old).frame
+    split
+    · exact recorded
+    · exact before.recorded old present
+
 /-- An actual interrupt keeps the saved parked suffix or removes the park. -/
 theorem PendingWaits.interruption (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     (world : World) (fiber : SourceScope.SourceFiber) (cause : CauseV)
@@ -70,7 +79,8 @@ theorem PendingWaits.interruption (spec : Spec) (fragment : SourceScope.Fragment
 /-- The actual interrupt edit retains the whole pending machine configuration. -/
 theorem PendingConfiguration.interruption (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     (machine : NativeMachine) (before : PendingConfiguration spec fragment machine)
-    (fiber : SourceScope.SourceFiber) (member : fiber ∈ machine.fibers) (cause : CauseV) :
+    (fiber : SourceScope.SourceFiber) (member : fiber ∈ machine.fibers) (cause : CauseV)
+    (incoming : CleanCause cause) :
     PendingConfiguration spec fragment (machine.update (interruptWithCause cause fiber).1) := by
   have id : (interruptWithCause cause fiber).1.id = fiber.id := by
     unfold interruptWithCause
@@ -101,4 +111,6 @@ theorem PendingConfiguration.interruption (spec : Spec) (fragment : SourceScope.
       all_goals rfl
     rw [same]
     exact before.replies fiber member
+  · exact CleanRecorded.interruption fiber cause incoming (before.recorded fiber member)
+
 end Effect4.Program.AnswerSlots.AllocationAdapter

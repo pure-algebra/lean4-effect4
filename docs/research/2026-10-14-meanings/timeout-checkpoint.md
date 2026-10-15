@@ -1433,3 +1433,40 @@ The build passes with 1294 jobs.
 The audit checks 220 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 The first audit catches classical heap case selection; an explicit constructive equality instance removes that dependency.
 This proof-only slice reaches no outside implementation gate.
+
+## Honest initializer metadata
+
+The common pending configuration now retains clean recorded causes and quiet deferred stores.
+A quiet deferred store owes no answer and captures no wake batch.
+The actual wake operation returns that same store without manufacturing an owed answer.
+The existing pending source classifier supplies actual synchronous store permission.
+Its previous ordinary-head interface remains a wrapper.
+The native producer consumes the shared actual-current state hook and existing recorded-cause equality.
+The existing iteration, settlement, administrative, and outside-decision producers retain both added fields.
+No second source, evaluator, command, or history traversal enters this slice.
+
+The interruption theorem now requires an incoming cause without typed failure.
+Its actual command and outside-decision callers discharge that premise for the real interruption cause.
+The previous arbitrary-cause premise cannot justify the stronger recorded-cause conclusion.
+The actual entry adapter supplies both metadata facts from the same charged or yield-injected actor.
+
+Placement: reactive-scheduling R9, store-typing R4, and scope-lifetime-finalization R11.
+Consumers: Timeout's clean-record entry permission and Atomic's empty owed-answer queue at actual entry.
+Reach: the common pending allocation configuration and actual source-entry branches.
+Active application history, fixed-budget numeric attachment, and both original Timeout endpoint proofs remain open.
+Neither public Timeout endpoint changes.
+
+Base: `834690bba`, with the preceding checked Timeout packets and Atomic's actual-current hook packet.
+The shared row dependency uses the coordinator's merged fresh-identity wrappers.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-pending-metadata-check.sh
+```
+
+The script builds `AllocationCommandStep`, `AllocationDeferredQuiet`, and `ProofGraph.AxiomAudit`.
+It then runs `lake env lean scratch/TimeoutPendingMetadataAudit.lean`.
+The build passes with 676 jobs.
+The audit checks 132 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+This proof-only slice reaches no outside implementation gate.

@@ -22,6 +22,8 @@ theorem PendingConfiguration.prepare (spec : Spec) (fragment : SourceScope.Fragm
   · exact SourceScope.prepare_reply_refs spec.root spec.table machine id token answer
   · exact congrArg (fun store : DeferredStore => store.cells.length)
       (Guard.AnswerDecision.prepareAsyncAnswer_shape spec.root spec.table machine id token answer).2.1
+  · rw [(Guard.AnswerDecision.prepareAsyncAnswer_shape spec.root spec.table machine id token answer).2.1]
+    exact before.deferred
 
 /-- The real clock hook writes timers without changing the initialized references or deferred count. -/
 theorem PendingConfiguration.clock (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -30,6 +32,7 @@ theorem PendingConfiguration.clock (spec : Spec) (fragment : SourceScope.Fragmen
   apply PendingConfiguration.store_fields spec fragment machine _ before
   · rfl
   · rfl
+  · exact before.deferred
 
 /-- Recording the next yield decision retains the actual pending row observation. -/
 theorem PendingConfiguration.yield (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -41,7 +44,7 @@ theorem PendingConfiguration.yield (spec : Spec) (fragment : SourceScope.Fragmen
   · rename_i fiber found
     have member := RunMachine.mem_of_fiber? found
     exact PendingConfiguration.update spec fragment machine before _ (before.frames fiber member)
-      (before.waits fiber member) (before.childless fiber member) (before.unobserved fiber member) (before.replies fiber member)
+      (before.waits fiber member) (before.childless fiber member) (before.unobserved fiber member) (before.replies fiber member) (before.recorded fiber member)
 
 /-- The actual outside interruption uses the same checked pending row update. -/
 theorem PendingConfiguration.interruptEdit (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -51,6 +54,7 @@ theorem PendingConfiguration.interruptEdit (spec : Spec) (fragment : SourceScope
     PendingConfiguration spec fragment (Lift.interruptEdit (interpOf spec.root spec.table) machine who extra target fiber) := by
   have changed := PendingConfiguration.interruption spec fragment machine before fiber
     (RunMachine.mem_of_fiber? found) (interruptCause (interpOf spec.root spec.table) who extra fiber.id)
+        (clean_interrupt spec.root spec.table who extra fiber.id)
   apply PendingConfiguration.fields spec fragment _ _ changed
   all_goals unfold Lift.interruptEdit
   all_goals dsimp only

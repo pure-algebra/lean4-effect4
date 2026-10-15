@@ -14,7 +14,7 @@ theorem PendingConfiguration.fields (spec : Spec) (fragment : SourceScope.Fragme
     (before after : NativeMachine) (held : PendingConfiguration spec fragment before)
     (state : after.state = before.state) (fibers : after.fibers = before.fibers)
     (counter : after.nextId = before.nextId) : PendingConfiguration spec fragment after := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, counter.trans held.counter, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, counter.trans held.counter, ?_, ?_, ?_⟩
   · rw [state]; exact held.heap
   · intro row member
     rw [fibers] at member
@@ -32,6 +32,13 @@ theorem PendingConfiguration.fields (spec : Spec) (fragment : SourceScope.Fragme
   · intro row member
     rw [fibers] at member
     exact held.replies row member
+
+  · intro row member
+    rw [fibers] at member
+    exact held.recorded row member
+
+  · rw [state]
+    exact held.deferred
 
 /-- Settlement changes only the returned owner's administrative fiber fields. -/
 theorem PendingNativeCut.replace (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -59,7 +66,7 @@ theorem PendingNativeCut.replace (spec : Spec) (fragment : SourceScope.Fragment 
         rw [if_neg (fun equal => different (equal.trans id.symm))]
       have sameOld := PendingNativeCut.rows spec fragment machine fiber result cut old updated
       exact (different (sameOld ▸ id.symm)).elim
-  refine ⟨cut.heap, ?_, ?_, ?_, ?_, cut.counter.trans before.counter, ?_⟩
+  refine ⟨cut.heap, ?_, ?_, ?_, ?_, cut.counter.trans before.counter, ?_, ?_, cut.deferred before.deferred⟩
   · intro row present
     rw [rows row present]
     change FrameAt spec fragment ⟨after.id, result.machine.state, false⟩ after.frame
@@ -77,6 +84,10 @@ theorem PendingNativeCut.replace (spec : Spec) (fragment : SourceScope.Fragment 
   · intro row present
     rw [rows row present]
     exact replies
+
+  · intro row present cause recorded
+    rw [rows row present, frame, cut.recorded] at recorded
+    exact before.recorded fiber member cause recorded
 
 /-- The actual pending native cut remains pending after all outcome dispositions. -/
 theorem PendingNativeCut.settlement (spec : Spec) (fragment : SourceScope.Fragment spec.root)
