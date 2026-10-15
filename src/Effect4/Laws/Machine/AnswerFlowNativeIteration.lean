@@ -18,6 +18,42 @@ variable (model : Model (ν := EffName) (σ := EffThunk) (β := Val) (ε := Err)
 variable (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
 variable (Edge : World → Kind → Kind → NCode → Prop)
 
+/-- Every nonterminal current constructor returns an actual running frame. -/
+theorem step_not_finished (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (noSuccess : ∀ value, fiber.current ≠ .success value)
+    (noFailure : ∀ cause, fiber.current ≠ .failure cause)
+    (noSync : ∀ thunk, fiber.current ≠ .sync thunk) (exit : ExitV) :
+    (fiber.step interp.toPrimInterp).1 ≠ .finished exit := by
+  fun_cases FrameFiber.step interp.toPrimInterp fiber
+  all_goals aesop
+
+/-- An ordinary native head retains its exact outer answer class. -/
+theorem step_frame_running (world : World) (input output : Kind)
+    (machine : NativeMachine) (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (saved : Effect4.Contracts.Path (Edge world) input output fiber.frame.stack)
+    (head : HeadAt model interp.toPrimInterp Edge world input fiber.frame.current)
+    (noSuccess : ∀ value, fiber.frame.current ≠ .success value)
+    (noFailure : ∀ cause, fiber.frame.current ≠ .failure cause)
+    (noSync : ∀ thunk, fiber.frame.current ≠ .sync thunk) :
+    let next := evaluatePrim.stepFrame interp machine fiber yielding
+    FamilyResult model Edge world output next.fiber.frame.current next.fiber.frame.stack := by
+  have next : FamilyStep model Edge world output (fiber.frame.step interp.toPrimInterp).1 := by
+    apply frame_step model interp.toPrimInterp Edge world input output fiber.frame head saved
+    · intro value provided actual good
+      rcases actual with ⟨current, supplied⟩ | ⟨thunk, current, valueEq, supplied⟩
+      · exact (noSuccess value current).elim
+      · exact (noSync thunk current).elim
+    · intro cause current good
+      exact (noFailure cause current).elim
+  unfold evaluatePrim.stepFrame
+  cases actual : fiber.frame.step interp.toPrimInterp with
+  | mk step events =>
+    rw [actual] at next
+    cases step with
+    | running frame => exact next
+    | finished exit =>
+      exact (step_not_finished interp fiber.frame noSuccess noFailure noSync exit (congrArg Prod.fst actual)).elim
+
 /-- The actual ordinary native step consumes a supplied head and its actual saved answer path. -/
 theorem step_frame (world : World) (input output : Kind)
     (machine : NativeMachine) (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)

@@ -121,6 +121,62 @@ theorem pure_exit_step (world : World) (input output : Kind)
       simpa only [Option.map_some, FramePop.deliveredExit, carried, Option.getD_some] using pure selected chosen
 
 
+/-- The actual finalizer dispatcher reuses contextual local return and installation producers. -/
+theorem finalizer_dispatch (machine : NativeMachine)
+    (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (yielding : Bool) (exit : ExitV) (Post : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores → Prop)
+    (ordinary :
+      (∀ body name flag program,
+        (fiber.frame.getCont
+          (match exit with | .success _ => .contA | .failure _ => .contE)
+          (match exit with | .success _ => false | .failure _ => true)
+          (match exit with | .success _ => none | .failure cause => some cause)).answer =
+            .frame (.onExit body name flag) →
+        interp.finalizerProgram name
+          ((fiber.frame.getCont
+            (match exit with | .success _ => .contA | .failure _ => .contE)
+            (match exit with | .success _ => false | .failure _ => true)
+            (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) ≠ some program) →
+      Post (evaluatePrim.stepFrame interp machine fiber yielding))
+    (installation : ∀ body name flag program,
+      (fiber.frame.getCont
+        (match exit with | .success _ => .contA | .failure _ => .contE)
+        (match exit with | .success _ => false | .failure _ => true)
+        (match exit with | .success _ => none | .failure cause => some cause)).answer =
+          .frame (.onExit body name flag) →
+      interp.finalizerProgram name
+        ((fiber.frame.getCont
+          (match exit with | .success _ => .contA | .failure _ => .contE)
+          (match exit with | .success _ => false | .failure _ => true)
+          (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) = some program →
+      Post (evaluatePrim.finalizerOr interp machine fiber yielding exit)) :
+    Post (evaluatePrim.finalizerOr interp machine fiber yielding exit) := by
+  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
+  all_goals
+    split
+    · rename_i body name flag chosen
+      split
+      · rename_i program installed
+        have result := installation body name flag program chosen installed
+        unfold evaluatePrim.finalizerOr at result
+        dsimp only at result
+        rw [chosen] at result
+        dsimp only at result
+        rw [installed] at result
+        exact result
+      · rename_i missing
+        apply ordinary
+        intro other otherName otherFlag program selected
+        have equal := chosen.symm.trans selected
+        cases equal
+        rw [missing]
+        intro impossible
+        cases impossible
+    · rename_i absent
+      apply ordinary
+      intro body name flag program selected
+      exact (absent body name flag selected).elim
+
 include family mask in
 /-- The actual finalizer dispatcher either installs its certified wrapper or uses the checked pure return. -/
 theorem finalizer_frame (world : World) (input output : Kind)
@@ -183,33 +239,22 @@ theorem finalizer_frame (world : World) (input output : Kind)
           change model.finalizer world name _ = _
           rw [finalizer, installed]; rfl)
 
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
+  cases exit
   all_goals
-    split
-    · rename_i body name flag chosen
-      split
-      · rename_i program installed
-        exact ⟨output, by
-          have result := installation body name flag program chosen installed
-          unfold evaluatePrim.finalizerOr at result
-          dsimp only at result
-          rw [chosen] at result
-          dsimp only at result
-          rw [installed] at result
-          exact result⟩
-      · rename_i missing
-        apply pure_exit_step model interp Edge family mask world input output machine fiber yielding _ current owned saved good causes
-        intro selected answer
-        have same := chosen.symm.trans answer
-        cases same
-        change model.finalizer world name _ = none
-        rw [finalizer, missing]
-        rfl
-    · rename_i absent
+    apply finalizer_dispatch interp machine fiber yielding _
+      (fun next => ∃ result, FamilyResult model Edge world result next.fiber.frame.current next.fiber.frame.stack)
+    · intro absent
       apply pure_exit_step model interp Edge family mask world input output machine fiber yielding _ current owned saved good causes
-      intro selected answer
+      intro selected chosen
       cases selected
-      case onExit body name flag => exact (absent body name flag answer).elim
+      case onExit body name flag =>
+        change model.finalizer world name _ = none
+        rw [finalizer]
+        cases actual : interp.finalizerProgram name _ with
+        | none => rfl
+        | some program => exact (absent body name flag program chosen actual).elim
       all_goals rfl
+    · intro body name flag program chosen installed
+      exact ⟨output, installation body name flag program chosen installed⟩
 
 end Effect4.Machine.AnswerFlow.External.Native
