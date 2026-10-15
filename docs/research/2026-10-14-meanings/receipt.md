@@ -230,3 +230,68 @@ The retained command file is `evidence/CrewConsolidationAudit.lean`.
 The axiom output is retained in `evidence/crew-consolidation-audit.log`.
 The landing changes proof definitions and proofs; it changes no executable machine or source-program behavior.
 M1 and M2 remain pending after M3.
+
+
+## Revised M3: actual initialized commands
+
+The eight endpoint goals remain open at this checkpoint.
+The initialized machine fact now advances through every actual command when the driver supplies its queued demands.
+
+Base: `82f809d6b`.
+Implementation head: `187844ddd`.
+The changed paths are the exact output of `git diff --name-only 82f809d6b 187844ddd`.
+The Timeout receipt continues in `timeout-checkpoint.md`.
+
+`AnswerSlots.Initialized.Configuration` joins stored frames, captured scope fields and tracked-child readiness.
+It lives in `src/Effect4/Laws/Program/AnswerSlots/InitializedDriver.lean`.
+Its command theorem serves the two crew log goals under store-typing R4 and scope-lifetime-finalization R11.
+`initial_configuration` proves its load case for every compilation budget.
+`configuration_edits` covers the actual outside decisions and prepared replies.
+The queue must still retain administrative heads, terminal stacks and track readiness.
+
+`ParkedShape.Configuration` records the actual code held by a parked fiber.
+Its command and decision proofs live in `src/Effect4/Laws/Program/ParkedShapeRun.lean`.
+`Waits.of_frame` derives each parked reply class from that code and its saved path.
+It consumes the existing source-owned reply queue, including delayed reference reads.
+It adds no separate reply queue.
+
+`AnswerFlow.Commands.exitChildren` now requires its actual execution branch.
+The former helper demanded child-cleanup flow even before initialization and when no child cleanup runs.
+The changed helper leaves the machine and endpoint statements unchanged.
+`ChildrenReady.command` proves that tracked children imply completed initialization.
+`InitializedCommands.command_facts` supplies the common answer-flow command producer.
+
+`AnswerFlowNativeExit` replaces the copied initialized terminal-return proof.
+The allocation adapter uses the same connector and retains exact source entry separately from allocation counts.
+`NativeAdminOrigin` identifies actual administrative continuations through the existing primitive producer.
+The continuation retains its originating action instruction.
+The existing guard therefore transports its instruction; the frame proof reads its answer class at consumption.
+
+Timeout now carries actual addressed messages and count writes through its numeric machine, queue and detached tasks.
+Its pending finishes retain the actual drained-stack premise.
+The actual race provenance and complete history remain open.
+Atomic's allocation, source-entry, saved-frame and terminal-return connections remain prerequisites of its open history.
+No local producer establishes an application endpoint by itself.
+
+The focused commands are:
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4.Laws.Program.PlaceFunding.Flow
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean /private/tmp/ParkedReplyAudit.lean
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4.Laws.Program.AnswerSlots.InitializedDriver
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean /private/tmp/InitializedDriverAudit.lean
+```
+
+The builds report 573 and 707 jobs, both successful.
+Their retained outputs are `evidence/parked-reply-build.log` and `evidence/initialized-driver-build.log`.
+The retained audit command files and outputs share those names.
+
+```text
+#axiom_audit: 327 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+#axiom_audit: 144 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+These are proofs over actual transitions, not finite runtime comparisons.
+The landing changes no machine, program syntax, type syntax or value representation.
+The eight `proof_goal` declarations remain in place, as the source search confirms.
+M1 and M2 remain after M3.
