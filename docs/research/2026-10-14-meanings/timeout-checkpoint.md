@@ -570,3 +570,30 @@ It no longer asks a caller to transport arbitrary cleanup barriers across refere
 The audit checks the numeric configuration, interruption, transport, queue, observer, passive, count-machine, and count-queue modules in their full namespaces.
 Actual race provenance, cleanup and form writer integration, initialized history, and both original endpoints remain open.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Actual source capture bridge
+
+The coordinator must retain actual source capture; the numeric saved contract alone forgets it.
+This slice serves the same R11 and R10 claims as the numeric configuration.
+The base is `6338b529d`; the commit owns only the configuration and this receipt.
+
+`AttemptSource` retains the actual attempt path, four captured bindings, following unit, and remaining source fuel.
+It permits the actual tape, completed exits, root, parameters, and call metadata.
+`AttemptSource.of_prefix` consumes the existing lexical assertion and the four captured bindings.
+`AttemptSource.reconstruct` rebuilds the numeric source point using the actual point's metadata.
+`AttemptSource.saved` supplies the numeric finalizer contract through the existing protected-finalizer producer.
+`count_frame_flow` consumes this bridge at both installed pre-count positions.
+These facts supply no actual race or initialized history.
+Both original endpoint goals remain open.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberConfiguration Test.Dogfood.Proofs.HostTimeoutNumberCountQueue` | Passed, 1235 jobs |
+| `lake env lean scratch/TimeoutCountJointAudit.lean` | The output below |
+
+```text
+#axiom_audit: 299 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers the same eight modules as the preceding joint count slice.
+No execution behaviour changes, so this slice reaches no outside implementation gate.
