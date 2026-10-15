@@ -1,5 +1,5 @@
 import Test.Dogfood.Scenario.QueueWorkers.WriterSource
-import Effect4.Laws.Program.AnswerSlots.TypedAcquisition
+import Effect4.Laws.Program.AnswerSlots.InitializedCallbacks
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -61,4 +61,13 @@ def spec (total : Nat) (rows : RowTable) : AnswerSlots.Typed.Spec where
     · exact ⟨3, by decide, third⟩
   acquisitionLevel := Connections.acquisition_level total
   acquisitionBody := acquisition_body total
+/-- The concrete queue uses the shared five-reference initializer and protected stable model. -/
+def initializedSpec (total : Nat) (rows : RowTable) : AnswerSlots.Initialized.Spec where
+  toSpec := spec total rows
+  initialization := InitialSlots.certificate total
+  bindings_eq := rfl
+  gateValue := .nat
+  gateError := .nat
+  gate_head := InitialSlots.gate_source total
+  gate_next := by kernel_rfl
 end Test.Dogfood.Proofs.QueueWorkersFlow

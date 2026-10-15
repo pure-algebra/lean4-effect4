@@ -50,6 +50,17 @@ structure RecursiveHooks : Prop where
   iter_next : ∀ world name answer, Iter world name →
     RecursiveIterResult model broad Iter world ((interp.iterNext name answer).2)
 
+/-- Recursive saved edges retain their future callback contract and actual hook names. -/
+theorem RecursiveHooks.edge_future (hooks : RecursiveHooks model interp broad Loop Iter)
+    (world nextWorld : World) (future : model.future world nextWorld)
+    (input output : Kind) (frame : Prim ν σ β ε δ ι α)
+    (held : RecursiveEdge model interp broad Loop Iter world input output frame) :
+    RecursiveEdge model interp broad Loop Iter nextWorld input output frame := by
+  cases held with
+  | saved owned => exact .saved (saved_mono model interp future owned)
+  | loop cursor owned => exact .loop cursor (hooks.loop_future world nextWorld future _ owned)
+  | iterator cursor owned => exact .iterator cursor (hooks.iter_future world nextWorld future _ owned)
+
 /-- The semantic saved path embeds directly in the common recursive saved path. -/
 theorem recursive_result (world : World) (output : Kind) (next : Prim ν σ β ε δ ι α)
     (pushed : List (Prim ν σ β ε δ ι α))
