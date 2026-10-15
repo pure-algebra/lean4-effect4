@@ -37,14 +37,34 @@ structure FamilyEmbedding : Prop where
   finalizer : ∀ world name exit, Ready world →
     newModel.finalizer world name exit = oldModel.finalizer (worldOf world) name exit
 
-/-- Initializer semantic frames coexist with the mapped existing stable saved edges. -/
-inductive EmbeddedEdge (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) :
+/-- A local saved family coexists with ready edges of an existing stable family. -/
+inductive EmbeddedEdgeOver (Semantic : NewWorld → NewKind → NewKind → Prim ν σ β ε δ ι α → Prop)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) :
     NewWorld → NewKind → NewKind → Prim ν σ β ε δ ι α → Prop
-  | saved {world input output frame} (held : SavedAt newModel interp world input output frame) :
-      EmbeddedEdge Edge world input output frame
+  | saved {world input output frame} (held : Semantic world input output frame) :
+      EmbeddedEdgeOver Semantic Edge world input output frame
   | mapped {world input output frame} (ready : Ready world)
       (held : Edge (worldOf world) input output frame) :
-      EmbeddedEdge Edge world (kindOf input) (kindOf output) frame
+      EmbeddedEdgeOver Semantic Edge world (kindOf input) (kindOf output) frame
+
+/-- The original embedding is the instance with the single-interpreter semantic saved family. -/
+abbrev EmbeddedEdge (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) :=
+  EmbeddedEdgeOver worldOf kindOf Ready (SavedAt newModel interp) Edge
+
+namespace EmbeddedEdge
+/-- The original constructor remains available at the semantic-family instance. -/
+abbrev saved {Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop}
+    {world : NewWorld} {input output : NewKind} {frame : Prim ν σ β ε δ ι α}
+    (held : SavedAt newModel interp world input output frame) :
+    EmbeddedEdge newModel interp worldOf kindOf Ready Edge world input output frame := EmbeddedEdgeOver.saved held
+
+/-- The original stable-edge constructor remains available at the semantic-family instance. -/
+abbrev mapped {Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop}
+    {world : NewWorld} {input output : Kind} {frame : Prim ν σ β ε δ ι α}
+    (ready : Ready world) (held : Edge (worldOf world) input output frame) :
+    EmbeddedEdge newModel interp worldOf kindOf Ready Edge world (kindOf input) (kindOf output) frame :=
+  EmbeddedEdgeOver.mapped ready held
+end EmbeddedEdge
 
 variable {oldModel newModel worldOf kindOf Ready}
 
@@ -66,21 +86,24 @@ theorem FamilyEmbedding.exit_read (embedding : FamilyEmbedding oldModel newModel
   | success value => exact embedding.value_read world kind value ready good
   | failure cause => exact embedding.cause_read world kind cause ready good
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Existing stable callback results map their actual code and ordered saved path together. -/
-theorem FamilyEmbedding.result (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+theorem FamilyEmbedding.result_over (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Semantic : NewWorld → NewKind → NewKind → Prim ν σ β ε δ ι α → Prop)
     (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) (world : NewWorld) (ready : Ready world)
     (output : Kind) (next : Prim ν σ β ε δ ι α) (pushed : List (Prim ν σ β ε δ ι α))
     (held : FamilyResult oldModel Edge (worldOf world) output next pushed) :
-    FamilyResult newModel (EmbeddedEdge newModel interp worldOf kindOf Ready Edge) world (kindOf output) next pushed := by
+    FamilyResult newModel (EmbeddedEdgeOver worldOf kindOf Ready Semantic Edge) world (kindOf output) next pushed := by
   obtain ⟨input, code, path⟩ := held
   exact ⟨kindOf input, embedding.code world input next ready code,
     path.map_objects kindOf (fun _ _ _ saved => .mapped ready saved)⟩
 
 /-- Ready stable edges and new initializer semantic edges share one saved-family proof. -/
-theorem FamilyEmbedding.family (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
-    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) (family : SavedFamily oldModel interp Edge) :
-    SavedFamily newModel interp (EmbeddedEdge newModel interp worldOf kindOf Ready Edge) := by
-  have semantic := saved_family newModel interp
+theorem FamilyEmbedding.family_over (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Semantic : NewWorld → NewKind → NewKind → Prim ν σ β ε δ ι α → Prop)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (semantic : SavedFamily newModel interp Semantic) (family : SavedFamily oldModel interp Edge) :
+    SavedFamily newModel interp (EmbeddedEdgeOver worldOf kindOf Ready Semantic Edge) := by
   constructor
   · intro world input output frame edge nextWorld future value good absent
     cases edge with
@@ -105,7 +128,7 @@ theorem FamilyEmbedding.family (embedding : FamilyEmbedding oldModel newModel wo
       exact ⟨middle, code, path.map (fun _ _ _ saved => .saved saved)⟩
     | mapped ready held =>
       have later := embedding.ready_future world nextWorld future ready
-      apply embedding.result interp Edge nextWorld later _ next pushed
+      apply embedding.result_over Semantic Edge nextWorld later _ next pushed
       apply family.answer _ _ _ frame held _ (embedding.future world nextWorld future ready)
         value provided next pushed (embedding.value_read nextWorld _ value later good)
       · intro exit member
@@ -120,7 +143,7 @@ theorem FamilyEmbedding.family (embedding : FamilyEmbedding oldModel newModel wo
       exact ⟨middle, code, path.map (fun _ _ _ saved => .saved saved)⟩
     | mapped ready held =>
       have later := embedding.ready_future world nextWorld future ready
-      apply embedding.result interp Edge nextWorld later _ next pushed
+      apply embedding.result_over Semantic Edge nextWorld later _ next pushed
       apply family.cause _ _ _ frame held _ (embedding.future world nextWorld future ready)
         cause provided next pushed (embedding.cause_read nextWorld _ cause later good)
       · intro exit member
@@ -146,27 +169,33 @@ theorem FamilyEmbedding.family (embedding : FamilyEmbedding oldModel newModel wo
       exact embedding.cause_write nextWorld _ delivered later
         (family.discard _ _ _ frame held _ (embedding.future world nextWorld future ready) fiber cause delivered
           (embedding.cause_read nextWorld _ cause later good) selected interrupted skipped)
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Embedded saved edges retain the stable and initializer future contracts together. -/
-theorem FamilyEmbedding.edge_future (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+theorem FamilyEmbedding.edge_future_over (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Semantic : NewWorld → NewKind → NewKind → Prim ν σ β ε δ ι α → Prop)
     (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (semanticTransport : ∀ world nextWorld, newModel.future world nextWorld → ∀ input output frame,
+      Semantic world input output frame → Semantic nextWorld input output frame)
     (transport : ∀ world nextWorld, oldModel.future world nextWorld → ∀ input output frame,
       Edge world input output frame → Edge nextWorld input output frame)
     (world nextWorld : NewWorld) (future : newModel.future world nextWorld)
     (input output : NewKind) (frame : Prim ν σ β ε δ ι α)
-    (held : EmbeddedEdge newModel interp worldOf kindOf Ready Edge world input output frame) :
-    EmbeddedEdge newModel interp worldOf kindOf Ready Edge nextWorld input output frame := by
+    (held : EmbeddedEdgeOver worldOf kindOf Ready Semantic Edge world input output frame) :
+    EmbeddedEdgeOver worldOf kindOf Ready Semantic Edge nextWorld input output frame := by
   cases held with
-  | saved owned => exact .saved (saved_mono newModel interp future owned)
+  | saved owned => exact .saved (semanticTransport world nextWorld future input output frame owned)
   | mapped ready owned =>
     exact .mapped (embedding.ready_future world nextWorld future ready)
       (transport _ _ (embedding.future world nextWorld future ready) _ _ _ owned)
 
 /-- The existing stable native head maps into the ready initialized model without rechecking callbacks. -/
-theorem FamilyEmbedding.head (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+theorem FamilyEmbedding.head_over (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Semantic : NewWorld → NewKind → NewKind → Prim ν σ β ε δ ι α → Prop)
     (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
     (world : NewWorld) (ready : Ready world) (input : Kind) (program : Prim ν σ β ε δ ι α)
     (held : HeadAt oldModel interp Edge (worldOf world) input program) :
-    HeadAt newModel interp (EmbeddedEdge newModel interp worldOf kindOf Ready Edge)
+    HeadAt newModel interp (EmbeddedEdgeOver worldOf kindOf Ready Semantic Edge)
       world (kindOf input) program := by
   cases held with
   | success value good => exact .success value (embedding.value_write world input value ready good)
@@ -178,7 +207,7 @@ theorem FamilyEmbedding.head (embedding : FamilyEmbedding oldModel newModel worl
   | iterator name cursor code answer =>
     refine .iterator name cursor (embedding.code world input _ ready code) ?_
     intro next pushed actual
-    exact embedding.result interp Edge world ready input next pushed (answer next pushed actual)
+    exact embedding.result_over Semantic Edge world ready input next pushed (answer next pushed actual)
   | onSuccess middle body name code saved =>
     exact .onSuccess (kindOf middle) body name (embedding.code world middle body ready code) (.mapped ready saved)
   | onSuccessConst middle body next code saved =>
@@ -198,7 +227,43 @@ theorem FamilyEmbedding.head (embedding : FamilyEmbedding oldModel newModel worl
   | whileLoop name cursor proceed finish =>
     refine .whileLoop name cursor ?_ ?_
     · intro next body actual
-      exact embedding.result interp Edge world ready input body _ (proceed next body actual)
+      exact embedding.result_over Semantic Edge world ready input body _ (proceed next body actual)
     · intro body actual
-      exact embedding.result interp Edge world ready input body _ (finish body actual)
+      exact embedding.result_over Semantic Edge world ready input body _ (finish body actual)
+/-- The original result embedding is the semantic-family instance. -/
+theorem FamilyEmbedding.result (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) (world : NewWorld) (ready : Ready world)
+    (output : Kind) (next : Prim ν σ β ε δ ι α) (pushed : List (Prim ν σ β ε δ ι α))
+    (held : FamilyResult oldModel Edge (worldOf world) output next pushed) :
+    FamilyResult newModel (EmbeddedEdge newModel interp worldOf kindOf Ready Edge) world (kindOf output) next pushed :=
+  embedding.result_over (SavedAt newModel interp) Edge world ready output next pushed held
+
+/-- The original saved-family embedding is the semantic-family instance. -/
+theorem FamilyEmbedding.family (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) (family : SavedFamily oldModel interp Edge) :
+    SavedFamily newModel interp (EmbeddedEdge newModel interp worldOf kindOf Ready Edge) :=
+  embedding.family_over interp (SavedAt newModel interp) Edge (saved_family newModel interp) family
+
+/-- The original future transport is the semantic-family instance. -/
+theorem FamilyEmbedding.edge_future (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (transport : ∀ world nextWorld, oldModel.future world nextWorld → ∀ input output frame,
+      Edge world input output frame → Edge nextWorld input output frame)
+    (world nextWorld : NewWorld) (future : newModel.future world nextWorld)
+    (input output : NewKind) (frame : Prim ν σ β ε δ ι α)
+    (held : EmbeddedEdge newModel interp worldOf kindOf Ready Edge world input output frame) :
+    EmbeddedEdge newModel interp worldOf kindOf Ready Edge nextWorld input output frame :=
+  embedding.edge_future_over (SavedAt newModel interp) Edge
+    (fun _ _ later _ _ _ saved => saved_mono newModel interp later saved) transport
+    world nextWorld future input output frame held
+
+/-- The original head embedding is the semantic-family instance. -/
+theorem FamilyEmbedding.head (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (world : NewWorld) (ready : Ready world) (input : Kind) (program : Prim ν σ β ε δ ι α)
+    (held : HeadAt oldModel interp Edge (worldOf world) input program) :
+    HeadAt newModel interp (EmbeddedEdge newModel interp worldOf kindOf Ready Edge)
+      world (kindOf input) program :=
+  embedding.head_over interp (SavedAt newModel interp) Edge world ready input program held
+
 end Effect4.Machine.AnswerFlow
