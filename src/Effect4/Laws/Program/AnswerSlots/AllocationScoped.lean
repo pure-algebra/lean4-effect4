@@ -71,9 +71,10 @@ theorem pending_native_iterflows_or_entry (spec : Spec) (fragment : SourceScope.
     (input output : Kind spec.stable.Kind)
     (owned : CodeAt spec ⟨fiber.id, machine.state, false⟩ input fiber.frame.current)
     (saved : Effect4.Contracts.Path (Edge spec fragment ⟨fiber.id, machine.state, false⟩) input output fiber.frame.stack)
-    (held : FramesAt spec fragment false machine) :
+    (held : FramesAt spec fragment false machine) (heap : HeapPrefix spec machine.state) :
+    (HeapPrefix spec (evaluateNative spec.root machine fiber yielding spec.table).machine.state ∧
     AnswerFlow.IterFlows (fun world _ => FrameAt spec fragment world) (fun state id => ⟨id, state, false⟩)
-      (evaluateNative spec.root machine fiber yielding spec.table) ∨
+      (evaluateNative spec.root machine fiber yielding spec.table)) ∨
     ∃ point, input = .stable spec.stable.rootKind ∧ fiber.frame.current = resolve spec.root point ∧
       Entry spec ⟨fiber.id, machine.state, false⟩ point := by
   rcases pending_ordinary_or_entry spec machine.completedExits ⟨fiber.id, machine.state, false⟩ input fiber.frame.current owned rfl with ordinary | entry
@@ -86,13 +87,13 @@ theorem pending_native_iterflows_or_entry (spec : Spec) (fragment : SourceScope.
   · rename_i value current
     rcases pending_exit_eq_or_entry spec fragment machine fiber yielding input output (.success value) current owned saved with same | entry
     · rw [same]
-      exact pending_primitive_iterflows_or_entry spec fragment machine.completedExits machine fiber yielding input output owned saved held
+      exact pending_primitive_iterflows_or_entry spec fragment machine.completedExits machine fiber yielding input output owned saved held heap
     · exact .inr entry
   · rename_i cause current
     rcases pending_exit_eq_or_entry spec fragment machine fiber yielding input output (.failure cause) current owned saved with same | entry
     · rw [same]
-      exact pending_primitive_iterflows_or_entry spec fragment machine.completedExits machine fiber yielding input output owned saved held
+      exact pending_primitive_iterflows_or_entry spec fragment machine.completedExits machine fiber yielding input output owned saved held heap
     · exact .inr entry
-  · exact pending_primitive_iterflows_or_entry spec fragment machine.completedExits machine fiber yielding input output owned saved held
+  · exact pending_primitive_iterflows_or_entry spec fragment machine.completedExits machine fiber yielding input output owned saved held heap
 
 end Effect4.Program.AnswerSlots.AllocationAdapter

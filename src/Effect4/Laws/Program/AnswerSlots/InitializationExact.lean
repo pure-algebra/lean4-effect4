@@ -93,4 +93,9 @@ theorem actual_boundary {root : NativeEff} (spec : AnswerSlots.Initialization ro
   obtain ⟨path, env, contents, source⟩ := exact_boundary spec _ after.refs advanced
   exact ⟨_, path, env, contents, source, callback_frame point view table body answer fiber noDeferred⟩
 
+/-- A partial initializer heap is the corresponding prefix of the complete declared initial heap. -/
+theorem values_take {root : NativeEff} (spec : AnswerSlots.Initialization root) (index : Nat)
+    (small : index ≤ spec.width) : values spec index = (values spec spec.width).take index := by
+  simp only [values, ← List.map_take, List.take_range, Nat.min_eq_left small]
+
 end Effect4.Program.AnswerSlots.Initialization

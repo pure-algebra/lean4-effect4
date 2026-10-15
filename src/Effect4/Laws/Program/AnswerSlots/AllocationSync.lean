@@ -126,4 +126,62 @@ theorem fallback_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world 
   | frontier zero phase | yielding phase refs deferred pending contents entered
     | bound first callback | yieldThen phase held pending => cases same
 
+/-- A real pending sync step preserves the exact initial prefix or exposes the application entry. -/
+theorem pending_sync_heap_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world : World)
+    (kind : Kind spec.stable.Kind) (thunk : EffThunk) (state : Stores) (value : Val)
+    (owned : CodeAt spec world kind (.sync thunk)) (pending : world.entered = false)
+    (heap : HeapPrefix spec world.state)
+    (ran : (interpAt spec.root view spec.table).syncState thunk world.state = some (state, value)) :
+    HeapPrefix spec state ∨
+      ∃ point, kind = .stable spec.stable.rootKind ∧ .sync thunk = resolve spec.root point ∧ Entry spec world point := by
+  generalize same : Prim.sync thunk = program at owned
+  cases owned with
+  | success good | failure phase => cases same
+  | initial stage active => exact (initial_not_sync spec world _ _ stage active thunk same.symm).elim
+  | @allocating _ index point small stage =>
+    cases same
+    obtain ⟨key, written⟩ := Initialization.actual spec.initialization _ world.state state value ran
+    subst state
+    have refs : (world.state.refs ++ [spec.initialization.initial index]).length = index + 1 := by
+      rw [List.length_append, List.length_singleton, stage.stage.source.2.2.2.1]
+    apply Or.inl
+    refine ⟨?_, ?_, ?_⟩
+    · rw [refs, stage.stage.contents, Initialization.values_next]
+    · rw [refs]
+      exact small
+    · change world.state.deferreds.cells.length ≤ spec.gateNeed
+      rw [stage.deferreds]
+      exact Nat.zero_le _
+  | gateAllocating stage available =>
+    cases same
+    change syncOpStep .deferredMake world.state = some (state, value) at ran
+    rw [syncOpStep_deferredMake] at ran
+    cases ran
+    apply Or.inl
+    refine ⟨?_, ?_, ?_⟩
+    · change world.state.refs = Initialization.values spec.initialization world.state.refs.length
+      rw [stage.stage.source.2.2.2.1]
+      exact stage.stage.contents
+    · exact Nat.le_of_eq stage.stage.source.2.2.2.1
+    · change (world.state.deferreds.cells ++ [_]).length ≤ spec.gateNeed
+      rw [List.length_append, List.length_singleton, stage.deferreds]
+      have need : spec.gateNeed = 1 := by simp only [Spec.gateNeed, available, ↓reduceIte]
+      rw [need]
+      exact Nat.le_refl 1
+  | @reading _ refs deferred cell phase refsEq deferredEq missing contents entered =>
+    cases same
+    change syncOpStep (.refGet cell) world.state = some (state, value) at ran
+    cases peek : refPeek world.state.refs cell with
+    | none =>
+      simp only [syncOpStep, refStep, peek, Option.map_none] at ran
+      cases ran
+    | some answer =>
+      simp only [syncOpStep, refStep, peek, Option.map_some] at ran
+      cases ran
+      exact .inl heap
+  | entered fragment entry => exact .inr ⟨_, rfl, rfl, entry⟩
+  | stable ready held => exact (pending_not_ready spec world pending ready).elim
+  | frontier zero phase | yielding phase refs deferred missing contents entered
+    | bound first callback | yieldThen phase held missing => cases same
+
 end Effect4.Program.AnswerSlots.AllocationAdapter

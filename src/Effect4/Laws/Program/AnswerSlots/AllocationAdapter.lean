@@ -71,6 +71,11 @@ structure Future (first last : World) : Prop where
   deferreds : first.state.deferreds.cells.length ≤ last.state.deferreds.cells.length
   entered : first.entered = true → last.entered = true
 
+/-- Exact pending heap contents remain independent of the code retained after an interruption. -/
+def HeapPrefix (spec : Spec) (state : Stores) : Prop :=
+  state.refs = Initialization.values spec.initialization state.refs.length ∧
+    state.refs.length ≤ spec.initialization.width ∧ state.deferreds.cells.length ≤ spec.gateNeed
+
 /-- A live allocation stage retains the actual root point and exact initial heap. -/
 structure RootStage (spec : Spec) (world : World) (index : Nat) (point : Point) : Prop where
   owner : world.owner = ⟨0⟩

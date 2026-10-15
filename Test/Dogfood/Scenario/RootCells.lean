@@ -1,7 +1,7 @@
 import Effect4.Laws.Program.AnswerSlots.InitializationExact
 import Effect4.Laws.Program.AnswerSlots.PrefixStable
 import Effect4.Laws.Program.AnswerSlots.AllocationProvenance
-import Test.Dogfood.Scenario.Atomic.Model
+import Test.Dogfood.Scenario.Atomic.Writes
 import Test.Dogfood.Proofs.HostTimeoutSource
 import Effect4.Laws.Author
 import Effect4.Laws.Auto.KernelRfl
@@ -123,6 +123,11 @@ def atomicBuilt (built : Api.Built) (accepted : Api.Author.build (Atomic.shop .n
     exact ⟨tail, moved.symm.trans found⟩
   closed := atomic.closed
   next := atomic.next
+
+/-- The Atomic prefix initializes the actual window, empty deposit account and empty cleanup log. -/
+theorem atomic_values : AnswerSlots.Initialization.values atomic 3 =
+    [Test.Dogfood.P4RateLimiter.windowVal 0 0 0, Atomic.Store.Writes.account [], .list []] := by
+  kernel_rfl
 
 /-- The fetch's actual reference heap is the numeric phase's three declared initial cells. -/
 theorem timeout_values : AnswerSlots.Initialization.values timeout 3 = [.nat 0, .list [], .list []] := by

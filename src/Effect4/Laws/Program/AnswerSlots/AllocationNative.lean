@@ -47,9 +47,9 @@ theorem pending_primitive_frame_or_entry (spec : Spec) (fragment : SourceScope.F
     (yielding : Bool) (input output : Kind spec.stable.Kind)
     (owned : CodeAt spec ⟨fiber.id, machine.state, false⟩ input fiber.frame.current)
     (saved : Effect4.Contracts.Path (Edge spec fragment ⟨fiber.id, machine.state, false⟩) input output fiber.frame.stack)
-    :
+    (heap : HeapPrefix spec machine.state) :
     (let next := evaluatePrim (interpAt spec.root view spec.table) machine fiber yielding
-    FrameAt spec fragment ⟨fiber.id, next.machine.state, false⟩ next.fiber.frame) ∨
+    HeapPrefix spec next.machine.state ∧ FrameAt spec fragment ⟨fiber.id, next.machine.state, false⟩ next.fiber.frame) ∨
     ∃ point, input = .stable spec.stable.rootKind ∧ fiber.frame.current = resolve spec.root point ∧
       Entry spec ⟨fiber.id, machine.state, false⟩ point := by
   rcases pending_ordinary_or_entry spec view ⟨fiber.id, machine.state, false⟩ input fiber.frame.current owned rfl with ordinary | entry
@@ -65,7 +65,7 @@ theorem pending_primitive_frame_or_entry (spec : Spec) (fragment : SourceScope.F
     rw [state]
     rcases pending_step_frame_or_entry spec fragment view _ input output machine fiber yielding owned saved noSuccess noFailure noSync with result | entry
     · obtain ⟨output, input, code, path⟩ := result
-      exact .inl ⟨input, output, code, path⟩
+      exact .inl ⟨heap, input, output, code, path⟩
     · exact .inr entry
   | finalizer exit current =>
     have state := StatePreservation.finalizerOr (interpAt spec.root view spec.table)
@@ -73,22 +73,26 @@ theorem pending_primitive_frame_or_entry (spec : Spec) (fragment : SourceScope.F
     rw [state]
     rcases finalizer_frame_or_entry spec fragment view _ input output machine fiber yielding exit current owned saved with result | entry
     · obtain ⟨output, input, code, path⟩ := result
-      exact .inl ⟨input, output, code, path⟩
+      exact .inl ⟨heap, input, output, code, path⟩
     · exact .inr entry
   | sync thunk state value current unparked found =>
+    rcases pending_sync_heap_or_entry spec view _ input thunk state value (current ▸ owned) rfl heap found with heapAfter | entry
+    swap
+    · obtain ⟨point, kind, code, stage⟩ := entry
+      exact .inr ⟨point, kind, current.trans code, stage⟩
     rcases sync_frame_or_entry spec fragment view _ input output fiber.frame thunk state value current owned saved found with result | entry
     · obtain ⟨input, code, path⟩ := result
-      exact .inl ⟨input, output, code, path⟩
+      exact .inl ⟨heapAfter, input, output, code, path⟩
     · exact .inr entry
   | fallback thunk current unparked missing =>
     rcases fallback_or_entry spec view _ input thunk (current ▸ owned) missing with good | entry
-    · exact .inl ⟨input, output, .success good, saved⟩
+    · exact .inl ⟨heap, input, output, .success good, saved⟩
     · obtain ⟨point, kind, code, stage⟩ := entry
       exact .inr ⟨point, kind, current.trans code, stage⟩
   | yieldNow priority current =>
     rcases yield_frame_or_entry spec fragment _ input output fiber.frame priority owned rfl current saved with result | entry
     · obtain ⟨input, code, path⟩ := result
-      exact .inl ⟨input, output, code, path⟩
+      exact .inl ⟨heap, input, output, code, path⟩
     · exact .inr entry
   | action thunk action current unparked found => exact (ordinary.2.1 thunk current).elim
   | asyncImmediate name signal cancel state code current registered => exact (ordinary.2.2 name signal cancel current).elim
@@ -106,18 +110,21 @@ theorem pending_primitive_iterflows_or_entry (spec : Spec) (fragment : SourceSco
     (yielding : Bool) (input output : Kind spec.stable.Kind)
     (owned : CodeAt spec ⟨fiber.id, machine.state, false⟩ input fiber.frame.current)
     (saved : Effect4.Contracts.Path (Edge spec fragment ⟨fiber.id, machine.state, false⟩) input output fiber.frame.stack)
-    (held : FramesAt spec fragment false machine) :
+    (held : FramesAt spec fragment false machine) (heap : HeapPrefix spec machine.state) :
+    (HeapPrefix spec (evaluatePrim (interpAt spec.root view spec.table) machine fiber yielding).machine.state ∧
     AnswerFlow.IterFlows (fun world _ => FrameAt spec fragment world) (fun state id => ⟨id, state, false⟩)
-      (evaluatePrim (interpAt spec.root view spec.table) machine fiber yielding) ∨
+      (evaluatePrim (interpAt spec.root view spec.table) machine fiber yielding)) ∨
     ∃ point, input = .stable spec.stable.rootKind ∧ fiber.frame.current = resolve spec.root point ∧
       Entry spec ⟨fiber.id, machine.state, false⟩ point := by
   rcases pending_ordinary_or_entry spec view ⟨fiber.id, machine.state, false⟩ input fiber.frame.current owned rfl with ordinary | entry
   swap
   · exact .inr entry
-  rcases pending_primitive_frame_or_entry spec fragment view machine fiber yielding input output owned saved with code | entry
+  rcases pending_primitive_frame_or_entry spec fragment view machine fiber yielding input output owned saved heap with result | entry
   swap
   · exact .inr entry
+  obtain ⟨heapAfter, code⟩ := result
   apply Or.inl
+  refine ⟨heapAfter, ?_⟩
   let next := evaluatePrim (interpAt spec.root view spec.table) machine fiber yielding
   have key := (Moves.evaluatePrim_footprint (interpAt spec.root view spec.table) machine fiber yielding).id
   have parent : FrameAt spec fragment ⟨next.fiber.id, next.machine.state, false⟩ next.fiber.frame := by
