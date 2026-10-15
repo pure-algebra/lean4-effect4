@@ -15,7 +15,7 @@ open Effect4.Machine.ForkLedger.Invariant Effect4.Program.Guard
 
 variable {L : Ledger} {Free : NCode → Prop}
 
-theorem exit_balance (control : Control L Free) (_quiet : NoQueue L) (events : Events L)
+theorem exit_balance_at (control : Control L Free) (events : Events L)
     (interp : Native.NInterp) (admin : Administration L Free interp)
     (m : NativeMachine) (old fiber : NFiber) (exit : ExitV) (ok : Ok m)
     (found : m.fiber? old.id = some old) (key : fiber.id = old.id) (weight : L.fiber fiber ≤ L.fiber old) :
@@ -52,14 +52,63 @@ theorem exit_balance (control : Control L Free) (_quiet : NoQueue L) (events : E
         (control.clear_changed (fiber.publish exit) ((fiber.publish exit).cleared interp) rfl rfl rfl (Nat.le_refl _)))
     · exact before
 
-/-- One native command fold reads the supplied place ledger and actual imported-code permission. -/
-theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
+/-- The previous zero-place exit uses the same transfer. -/
+theorem exit_balance (control : Control L Free) (_quiet : NoQueue L) (events : Events L)
+    (interp : Native.NInterp) (admin : Administration L Free interp)
+    (m : NativeMachine) (old fiber : NFiber) (exit : ExitV) (ok : Ok m)
+    (found : m.fiber? old.id = some old) (key : fiber.id = old.id) (weight : L.fiber fiber ≤ L.fiber old) :
+    L.Balanced m [] [] (exitFiber interp m fiber exit).1 [] [] :=
+  exit_balance_at control events interp admin m old fiber exit ok found key weight
+
+/-- An admitted zero-weight entrant uses the original launch producer. -/
+theorem NoQueue.launch_balance (root : NativeEff) (table : RowTable)
     (control : Control L Free) (quiet : NoQueue L) (events : Events L)
+    (m : NativeMachine) (raceId : Nat) (rest : List Native.NCmd) (ok : Ok m)
+    (free : ∀ race code more, m.race? raceId = some race → race.programs = code :: more → Free code) :
+    letI := evaluatorFor root table
+    L.Balanced m [] [] (driveStep (interpOf root table) m (.launch raceId) rest).1 [] [] := by
+  letI := evaluatorFor root table
+  simp only [driveStep]
+  split
+  · exact Nat.le_refl _
+  · rename_i race found
+    split
+    · exact Nat.le_refl _
+    · rename_i code more programs
+      split
+      · exact Nat.le_refl _
+      · split
+        · exact Nat.le_refl _
+        · rename_i host hostFound
+          have born := spawn_balance_at control events (interpOf root table) m host code
+            ⟨true, true, .interruptible⟩ (race.nextSite.getD []) (free race code more found programs)
+          have replaced := (race_transfer quiet
+            (launchEntrant (interpOf root table) raceId m host code (race.nextSite.getD [])).1
+            {race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1])}).2
+            (launchEntrant_ok (interpOf root table) ok raceId host code (race.nextSite.getD []))
+          exact (born.trans L replaced.2).trans L
+            (events.emit _ [.raceLaunched raceId _]
+              (by intro event member; have same := List.mem_singleton.mp member; subst event; rfl))
+
+theorem command_funded_at {cap : Nat} (root : NativeEff) (table : RowTable)
+    (control : Control L Free) (quiet : NoPending L) (events : Events L)
     (stores : StoreHooks L (interpOf root table)) (admin : Administration L Free (interpOf root table))
     (P : NativeMachine → Prop) (charge : NativeMachine → FiberId → Bool → Nat)
     (evaluation : Evaluation L P root table charge)
     (m : NativeMachine) (cmd : Native.NCmd) (rest : List Native.NCmd)
-    (ok : Ok m) (permission : P m) (inputs : Inputs Free m cmd) (funded : L.Funded cap m [] []) :
+    (ok : Ok m) (permission : P m)
+    (reply : ∀ owner token code, cmd = .resume owner token code → Free code)
+    (R : NativeMachine → Prop)
+    (raceStable : ∀ before after : NativeMachine,
+      after.races.map Race.id = before.races.map Race.id → R before → R after)
+    (raceStep : ∀ (machine : NativeMachine) (key : Nat) (old next : Race EffName EffThunk Val Err Defect FiberId Ann),
+      machine.race? key = some old → next.id = old.id → next.programs = old.programs → R machine →
+      Transfer (L := L) machine (machine.updateRace next) (.updateRace next))
+    (raceHeld : R m)
+    (launch : ∀ raceId, cmd = .launch raceId →
+      letI := evaluatorFor root table
+      L.Balanced m [] [] (driveStep (interpOf root table) m (.launch raceId) rest).1 [] [])
+    (funded : L.Funded cap m [] []) :
     letI := evaluatorFor root table
     L.Funded (cap + commandAllowance charge m cmd) (driveStep (interpOf root table) m cmd rest).1 [] [] := by
   letI := evaluatorFor root table
@@ -85,7 +134,7 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
       have installed := PlaceLedger.charged_funded L
         (evaluation.iteration m fiber y ok permission
           (by simpa only [RunMachine.id_of_fiber? found] using found)) funded
-      have settled := (settle_balance control quiet id rest _ (Native.iteration_ok root table m fiber y ok)).funded L installed
+      have settled := (settle_balance_at control quiet id rest _ (Native.iteration_ok root table m fiber y ok)).funded L installed
       simpa only [RunMachine.id_of_fiber? found] using settled
   | deliver id y =>
     simp only [commandAllowance, Nat.add_zero, driveStep]
@@ -94,7 +143,7 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
     · rename_i fiber found
       have installed := (evaluation.native m fiber y ok permission
         (by simpa only [RunMachine.id_of_fiber? found] using found)).funded L funded
-      exact (settle_balance control quiet id rest _ (Native.evaluateNative_ok root table m fiber y ok)).funded L installed
+      exact (settle_balance_at control quiet id rest _ (Native.evaluateNative_ok root table m fiber y ok)).funded L installed
   | resume id token answer =>
     simp only [commandAllowance, Nat.add_zero, driveStep]
     split
@@ -113,38 +162,23 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
               {fiber with
                 parked := .notParked
                 pending := fiber.pending.filter fun p => p.token ≠ token
-                frame.current := answer} rfl (inputs.reply id token answer rfl) rfl (Nat.le_refl _))).2 ok).2.funded L funded
+                frame.current := answer} rfl (reply id token answer rfl) rfl (Nat.le_refl _))).2 ok).2.funded L funded
         · exact funded
       · exact funded
   | launch raceId =>
-    simp only [commandAllowance, Nat.add_zero, driveStep]
-    split
-    · exact funded
-    · rename_i race raceFound
-      split
-      · exact funded
-      · rename_i program more programs
-        split
-        · exact funded
-        · split
-          · exact funded
-          · rename_i host found
-            apply (events.emit _ [.raceLaunched raceId _]
-              (by intro event member; have same := List.mem_singleton.mp member; subst event; rfl)).funded L
-            apply ((race_transfer quiet (launchEntrant (interpOf root table) raceId m host program (race.nextSite.getD [])).1
-              {race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1])}).2
-              (launchEntrant_ok (interpOf root table) ok raceId host program (race.nextSite.getD []))).2.funded L
-            exact (spawn_balance control quiet events (interpOf root table) m host program
-              ⟨true, true, .interruptible⟩ _ (inputs.entrant raceId race program more rfl raceFound programs)).funded L funded
+    simpa only [commandAllowance, Nat.add_zero] using (launch raceId rfl).funded L funded
   | enrollRace raceId child =>
     simp only [commandAllowance, Nat.add_zero, driveStep]
     split
     · rename_i race fiber raceFound childFound
       let changed := m.updateRace {race with state.live := race.state.live ++ [child]}
-      have before := (quiet.fields m changed rfl rfl rfl).funded L funded
+      have changedBalance := (raceStep m raceId race
+        {race with state.live := race.state.live ++ [child]} raceFound rfl rfl raceHeld).2 ok
+      have changedHeld := raceStable m changed (RunMachine.race_ids_update m _) raceHeld
+      have before := changedBalance.2.funded L funded
       split
-      · exact (observer_balance control quiet events (interpOf root table) stores child _ (changed, [])
-          (.raceCallback raceId) (updateRace_ok ok _)).funded L before
+      · exact (observer_balance_on control events (interpOf root table) stores R raceStable raceStep
+          child _ (changed, []) (.raceCallback raceId) changedHeld (updateRace_ok ok _)).funded L before
       · exact (modify_transfer control changed child
           (fun fiber => {fiber with observers := fiber.observers ++ [.raceCallback raceId]})
           (fun _ => rfl) (fun fiber => control.metadata fiber _ rfl rfl rfl (Nat.le_refl _))
@@ -156,15 +190,15 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
     · exact funded
     · rename_i race raceFound
       split
-      · exact (quiet.fields m (m.updateRace {race with registering := false}) rfl rfl rfl).funded L funded
+      · exact ((raceStep m raceId race {race with registering := false} raceFound rfl rfl raceHeld).2 ok).2.funded L funded
       · rename_i fiber found
-        have before := quiet.fields m (m.updateRace {race with registering := false}) rfl rfl rfl
+        have before := ((raceStep m raceId race {race with registering := false} raceFound rfl rfl raceHeld).2 ok).2
         have stored : m.fiber? fiber.id = some fiber := by
           simpa only [RunMachine.updateRace, RunMachine.fiber?, RunMachine.id_of_fiber? found] using found
         split
-        · exact (settle_bookkeeping control quiet m fiber _ rest (updateRace_ok ok _) stored rfl rfl
+        · exact (settle_bookkeeping_at control quiet m fiber _ rest (updateRace_ok ok _) stored rfl rfl
             (control.replace_changed fiber _ rfl (admin.race raceId race.state.cleanupNeeded _) rfl (Nat.le_refl _)) before).funded L funded
-        · apply (settle_bookkeeping control quiet m fiber _ rest (emit_ok (updateRace_ok ok _) _) stored rfl rfl ?_
+        · apply (settle_bookkeeping_at control quiet m fiber _ rest (emit_ok (updateRace_ok ok _) _) stored rfl rfl ?_
             (before.trans L (events.emit _ [.parkedOn fiber.id race.token]
               (by intro event member; have same := List.mem_singleton.mp member; subst event; rfl)))).funded L funded
           exact Nat.le_trans
@@ -185,7 +219,7 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
     split
     · exact funded
     · rename_i fiber found
-      exact (settle_bookkeeping control quiet m fiber _ rest ok
+      exact (settle_bookkeeping_at control quiet m fiber _ rest ok
         (by simpa only [RunMachine.id_of_fiber? found] using found) rfl rfl
         (control.replace_changed fiber _ rfl (admin.await m kind) rfl (Nat.le_refl _)) (Nat.le_refl _)).funded L funded
   | raceCancel raceId host y remaining visited =>
@@ -207,7 +241,8 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
           (first.2.funded L funded)
   | observe id exit observer =>
     simp only [commandAllowance, Nat.add_zero]
-    exact (observer_balance control quiet events (interpOf root table) stores id exit (m, []) observer ok).funded L funded
+    exact (observer_balance_on control events (interpOf root table) stores R raceStable raceStep
+      id exit (m, []) observer raceHeld ok).funded L funded
   | exitDone id =>
     simp only [commandAllowance, Nat.add_zero, driveStep]
     split
@@ -220,29 +255,47 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
     split
     · exact funded
     · rename_i fiber found
-      apply (settle_bookkeeping control quiet m fiber _ rest ok
+      apply (settle_bookkeeping_at control quiet m fiber _ rest ok
         (by simpa only [RunMachine.id_of_fiber? found] using found) rfl rfl ?_ (Nat.le_refl _)).funded L funded
       exact Nat.le_trans (control.replace_changed
         {fiber with frame.stack := .iterator (interpOf root table).closeDoneName (interpOf root table).voidValue :: fiber.frame.stack}
         _ rfl (admin.park fibers) rfl (Nat.le_refl _)) (admin.iterator fiber)
   | link mode scope target who extra =>
     simp only [commandAllowance, Nat.add_zero]
-    exact (link_balance control quiet events (interpOf root table) stores mode scope target who extra m ok).funded L funded
+    exact (link_balance_at control events (interpOf root table) stores mode scope target who extra m ok).funded L funded
   | finish id exit =>
     simp only [commandAllowance, Nat.add_zero, driveStep]
     split
     · exact funded
     · rename_i fiber found
-      exact (exit_balance control quiet events (interpOf root table) admin m fiber {fiber with running := false} exit ok
+      exact (exit_balance_at control events (interpOf root table) admin m fiber {fiber with running := false} exit ok
         (by simpa only [RunMachine.id_of_fiber? found] using found) rfl
         (control.metadata fiber _ rfl rfl rfl (Nat.le_refl _))).funded L funded
   | drainDue =>
     simp only [commandAllowance, Nat.add_zero]
     have state := PlaceLedger.state_balance L m ((interpOf root table).dueResumes m.state).2 [] [] (stores.due m.state)
-    exact (state.trans L (drain_balance control quiet events _ _ (state_ok ok _))).funded L funded
+    exact (state.trans L (drain_balance_at control events _ _ (state_ok ok _))).funded L funded
   | wake list phase =>
     simp only [commandAllowance, Nat.add_zero, driveStep]
     exact (PlaceLedger.state_balance L m _ [] [] (stores.wake list phase m.state)).funded L funded
+
+
+/-- The earlier zero-race command API is the same producer at the trivial race permission. -/
+theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
+    (control : Control L Free) (quiet : NoQueue L) (events : Events L)
+    (stores : StoreHooks L (interpOf root table)) (admin : Administration L Free (interpOf root table))
+    (P : NativeMachine → Prop) (charge : NativeMachine → FiberId → Bool → Nat)
+    (evaluation : Evaluation L P root table charge)
+    (m : NativeMachine) (cmd : Native.NCmd) (rest : List Native.NCmd)
+    (ok : Ok m) (permission : P m) (inputs : Inputs Free m cmd) (funded : L.Funded cap m [] []) :
+    letI := evaluatorFor root table
+    L.Funded (cap + commandAllowance charge m cmd) (driveStep (interpOf root table) m cmd rest).1 [] [] := by
+  apply command_funded_at root table control quiet.pending events stores admin P charge evaluation
+    m cmd rest ok permission inputs.reply (fun _ => True) (fun _ _ _ _ => trivial)
+    (fun machine _ _ next _ _ _ _ => race_transfer quiet machine next) trivial _ funded
+  intro raceId selected
+  exact NoQueue.launch_balance root table control quiet events m raceId rest ok
+    (fun race code more found programs => inputs.entrant raceId race code more selected found programs)
 
 
 

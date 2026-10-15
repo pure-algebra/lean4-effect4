@@ -400,6 +400,52 @@ import Test.Dogfood.Scenario.Todo.Cached
 -- The statement census and its controls (consolidation round 2).
 import Test.Audit.StatementCensusControls
 
+
+
+
+-- M3: the crews actual allocation and acquired-value obligations.
+
+
+import Test.Dogfood.Proofs.WorkersWriterSource
+import Test.Dogfood.Proofs.QueueWorkersWriter
+import Test.Dogfood.Proofs.QueueWorkersFlow
+import Test.Dogfood.Scenario.QueueWorkers.RefReplyControl
+import Test.Dogfood.Proofs.HostTimeoutNumberPhaseFlow
+import Test.Dogfood.Proofs.HostTimeoutNumberConfiguration
+import Test.Dogfood.Scenario.Timeout.CommandCut
+
+-- M3: shared crew observations and concrete source contracts.
+import Test.Dogfood.Proofs.WorkersLogContract
+import Test.Dogfood.Proofs.QueueWorkersLogContract
+import Test.Program.CodeClosureBank
+
+import Test.Machine.AnswerFlowContextual
+
+-- M3: checked shared producers and their concrete application readers.
+import Test.Dogfood.Proofs.HostTimeoutNumberOrdinary
+import Test.Dogfood.Proofs.HostTimeoutNumberCleanupJoint
+import Test.Dogfood.Proofs.HostTimeoutNumberAttemptNative
+import Test.Dogfood.Proofs.HostTimeoutNumberTerminal
+import Test.Dogfood.Scenario.Atomic.FailureControls
+import Test.Dogfood.Scenario.Atomic.StageRoles
+import Test.Dogfood.Scenario.Atomic.StageObservation
+import Test.Dogfood.Proofs.QueueWorkersJobBinding
+import Test.Dogfood.Proofs.QueueWorkersNotificationFamily
+
+-- M3: full native source accounting and actual application transitions.
+import Test.Dogfood.Proofs.HostTimeoutNumberInjection
+import Test.Dogfood.Proofs.HostTimeoutNumberInterrupt
+import Test.Dogfood.Proofs.HostTimeoutNumberRootLoop
+import Test.Dogfood.Proofs.HostTimeoutNumberTerminalFiber
+import Test.Dogfood.Proofs.QueueWorkersCountSource
+import Test.Dogfood.Proofs.QueueWorkersRetryFamily
+import Test.Dogfood.Proofs.QueueWorkersTakeWithdrawal
+import Test.Dogfood.Proofs.QueueWorkersWorkerBinding
+import Test.Dogfood.Scenario.Atomic.StageNativeJoin
+import Test.Dogfood.Scenario.Timeout.FinishCut
+import Test.Dogfood.Scenario.Timeout.OriginControl
+import Test.Dogfood.Scenario.Timeout.SourceCut
+
 /-!
 # Effect4 test battery
 

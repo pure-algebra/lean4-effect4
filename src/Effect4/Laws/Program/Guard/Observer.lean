@@ -67,7 +67,7 @@ theorem commandControls_update_inactive {m : NativeMachine} {f : NFiber}
       subst old
       rw [inactive] at running
       cases running
-    · refine ⟨old, ?_, running, parked, rfl⟩
+    · refine ⟨old, ?_, running, parked, rfl, fun h => h⟩
       simp only [fiber_lookup_update, hold, Option.map_some, id, he, ↓reduceIte]
   · intro fiber old hold hexit
     by_cases he : old.id = f.id

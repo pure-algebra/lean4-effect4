@@ -2,6 +2,7 @@ import Effect4.Laws.Program.SourceOpportunityExecution
 import Effect4.Laws.Program.PlaceFunding.Commands
 import Effect4.Laws.Program.Size
 import Effect4.Laws.Machine.EditObserverWords
+import Effect4.Laws.Machine.AwaitCode
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -18,10 +19,11 @@ Consumer: after-interruption and parallel-await commands. -/
 theorem await_code_zero (root : NativeEff) (q : List Nat) (table : RowTable)
     (m : NativeMachine) (kind : ParkKind) :
     current root q (awaitCode (interpOf root table) m kind) = 0 := by
-  fun_cases awaitCode (interpOf root table) m kind
-  case case1 target mode exit found => exact exit_answer_zero root q table m exit mode
-  case case2 target mode missing => cases mode <;> rfl
-  all_goals rfl
+  apply awaitCode_closed (interpOf root table) (fun code => current root q code = 0)
+  · intro exit mode
+    exact exit_answer_zero root q table m exit mode
+  · intro kind
+    rfl
 
 /-- Discarding a wait's answer adds no source opportunity.
 Consumer: after-interruption command. -/

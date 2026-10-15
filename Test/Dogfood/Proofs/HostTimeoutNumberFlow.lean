@@ -65,6 +65,13 @@ def Image.afterForm (image : Image) (own : image.count = image.cleanups.length +
     (attemptExit selected : ExitV) : Image :=
   (image.cleanup own attemptExit).form (image.cleanup_complete own attemptExit) (image.form_gap own) selected
 
+/-- The count's post-state is fixed before its saved binders are installed. -/
+def Image.enter (image : Image) (n : Fin 4)
+    (cleanupComplete : image.cleanups.length = image.count)
+    (formComplete : image.exits.length = image.count) (cursor : image.count ≤ n.val) : Image :=
+  ⟨image.count + 1, image.cleanups, image.completed, image.exits,
+    count_numbers image.numbers n cleanupComplete formComplete cursor⟩
+
 /-- The operation's returned class names the state it must establish. -/
 inductive Kind
   | read (image : Image)
@@ -75,6 +82,7 @@ inductive Kind
   | formExit (image : Image) (cleanupComplete : image.cleanups.length = image.count)
       (own : image.exits.length + 1 = image.count)
   | formAfterCleanup (image : Image) (own : image.count = image.cleanups.length + 1)
+  | retryResult (image : Image) (own : image.count = image.cleanups.length + 1)
   | raceWaiting (image : Image) (own : image.count = image.cleanups.length + 1)
 
 /-- A count or cleanup answer is valid only at the exact post-operation heap. -/
@@ -90,6 +98,14 @@ def ValueAt (state : Stores) : Kind → Val → Prop
     ∃ saved, ImageAt (image.form cleanupComplete own saved) state ∧ saved = .success value
   | .formAfterCleanup image own, value =>
     ∃ attemptExit saved, ImageAt (image.afterForm own attemptExit saved) state ∧ saved = .success value
+  | .retryResult image own, value =>
+    ∃ attemptExit saved, ImageAt (image.afterForm own attemptExit saved) state ∧
+      match saved with
+      | .success body => value = .list [.some body, .none]
+      | .failure cause => ∃ (n : Fin 4) (delay : Nat) (previous error : Val),
+          value = .list [.none, .some error] ∧
+          caughtErrorValue? (ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous)
+            HostTimeoutSource.retryTest cause = some error
 
 /-- Interruption cleanup retains no typed failure for the declared retry handler to select. -/
 def NoTypedFailure (cause : CauseV) : Prop :=
@@ -110,6 +126,9 @@ def CauseAt (state : Stores) : Kind → CauseV → Prop
   | .formAfterCleanup image own, cause =>
     ∃ attemptExit saved, ImageAt (image.afterForm own attemptExit saved) state ∧
       (saved = .failure cause ∨ NoTypedFailure cause)
+  | .retryResult image own, cause =>
+    ∃ attemptExit saved, ImageAt (image.afterForm own attemptExit saved) state ∧
+      (saved = .failure cause ∨ NoTypedFailure cause)
   | _, _ => False
 
 /-- The future relation retains monotone allocated storage, rather than assuming arbitrary store changes. -/
@@ -124,6 +143,27 @@ inductive CodeAt (state : Stores) : Kind → NCode → Prop
       CodeAt state kind (.failure cause)
   | get (image : Image) (heap : ImageAt image state) :
       CodeAt state (.read image) (.sync (.op (.refGet ⟨0⟩)))
+  | count (image : Image) (n : Fin 4)
+      (cleanupComplete : image.cleanups.length = image.count)
+      (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+      (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image state) :
+      CodeAt state (.unit (image.enter n cleanupComplete formComplete (Nat.le_of_eq cursor)))
+        (.sync (.op (.refUpdate ⟨0⟩ HostTimeoutNumberEntry.countTerm
+          (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n error).env)))
+  | countBind (image : Image) (n : Fin 4)
+      (cleanupComplete : image.cleanups.length = image.count)
+      (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+      (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image state) :
+      CodeAt state (.at (image.enter n cleanupComplete formComplete (Nat.le_of_eq cursor)))
+        (resolve HostTimeoutSource.program
+          ((HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n error).child 0))
+  | countEntry (image : Image) (n : Fin 4)
+      (cleanupComplete : image.cleanups.length = image.count)
+      (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+      (captured : Point) (fuel delay : Nat) (error : Val) (heap : ImageAt image state) :
+      CodeAt state (.cleanupExit (image.enter n cleanupComplete formComplete (Nat.le_of_eq cursor))
+        (by change image.count + 1 = image.cleanups.length + 1; rw [cleanupComplete]))
+        (resolve HostTimeoutSource.program (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n error))
   | cleanup (image : Image) (own : image.count = image.cleanups.length + 1)
       (captured : Point) (fuel delay : Nat) (n : Fin 4) (error : Val) (exit : ExitV)
       (count : image.count = n.val + 1) (heap : ImageAt image state) :
@@ -590,6 +630,9 @@ theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
   | formAfterCleanup image own =>
     obtain ⟨attemptExit, saved, heap, _⟩ := good
     exact ⟨attemptExit, saved, heap, Or.inr (no_typed_strip cause)⟩
+  | retryResult image own =>
+    obtain ⟨attemptExit, saved, heap, _⟩ := good
+    exact ⟨attemptExit, saved, heap, Or.inr (no_typed_strip cause)⟩
 
 /-- Actual handler sanitization retains committed numeric phases under the explicit recorded interruption cut. -/
 theorem cause_sanitize (state : Stores) (kind : Kind) (cause interrupted : CauseV)
@@ -609,6 +652,9 @@ theorem cause_sanitize (state : Stores) (kind : Kind) (cause interrupted : Cause
     obtain ⟨saved, heap, _⟩ := good
     exact ⟨saved, heap, Or.inr (Cause.sanitize_clean cause interrupted recorded)⟩
   | formAfterCleanup image own =>
+    obtain ⟨attemptExit, saved, heap, _⟩ := good
+    exact ⟨attemptExit, saved, heap, Or.inr (Cause.sanitize_clean cause interrupted recorded)⟩
+  | retryResult image own =>
     obtain ⟨attemptExit, saved, heap, _⟩ := good
     exact ⟨attemptExit, saved, heap, Or.inr (Cause.sanitize_clean cause interrupted recorded)⟩
 

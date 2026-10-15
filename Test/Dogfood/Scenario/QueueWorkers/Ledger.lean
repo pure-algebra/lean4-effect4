@@ -32,12 +32,11 @@ def viewOf (q : Queue.Model.State) : QueueView :=
   ⟨q.capacity.getD 0, q.messages.map Val.nat,
     q.offers.map (fun o => (o.batch, o.rest.map Val.nat)), q.takers.length⟩
 
-/-- **What the invariant knows of a crew run**, as data. A job is the number that the host fed
-(`Jobs.take` answers `.nat`, and the session admits no other answer). -/
+/-- **What the invariant knows of a crew run**, as data. A job is a natural number that reaches the feeder offer continuation. -/
 structure Ledger where
   /-- The queue's model run, once the root made the cell. -/
   queue : Option Queue.Model.Run
-  /-- The jobs that the host fed, in the order of the reply applications. -/
+  /-- The resolved jobs entering feeder offers, in the order of those source entries. -/
   fed : List Nat
   /-- The assignment: each noted job with its worker, in order. -/
   assigned : List (Nat × Nat)
@@ -358,8 +357,8 @@ def appliedValue (rs : List (Command × Phase)) (seen : Key → Option Test.Dogf
   | _ => none
 
 /-- `fedOf`, with its two readers named. -/
-theorem fedOf_eq (s : Run) :
-    fedOf s = (Test.Dogfood.Scenario.rows s).filterMap
+theorem originalFedOf_eq (s : Run) :
+    Original.fedOf s = (Test.Dogfood.Scenario.rows s).filterMap
       (appliedValue (Test.Dogfood.Scenario.rows s) (Test.Dogfood.Scenario.seenAt s)) := rfl
 
 /-- Playing one row appends it, with its verdict, to the run's rows. -/
@@ -434,11 +433,11 @@ theorem appliedValue_refused (rs : List (Command × Phase))
   | control _ => rfl
 
 /-- **A refused row feeds nothing.** General in its proof: it reads only the journal's lookups. -/
-theorem fedOf_refused (s : Run) (c : Command) (why : Api.HostSession.Refusal)
+theorem originalFedOf_refused (s : Run) (c : Command) (why : Api.HostSession.Refusal)
     (hlen : s.journal.length = s.phases.length)
     (h : (Api.Runner.result s.runner c).phase = .refused why) :
-    fedOf (s.step c) = fedOf s := by
-  rw [fedOf_eq, fedOf_eq, seenAt_refused s c why hlen h, rows_step s c hlen, h,
+    Original.fedOf (s.step c) = Original.fedOf s := by
+  rw [originalFedOf_eq, originalFedOf_eq, seenAt_refused s c why hlen h, rows_step s c hlen, h,
     List.filterMap_append]
   have same : appliedValue (Test.Dogfood.Scenario.rows s ++ [(c, .refused why)])
       (Test.Dogfood.Scenario.seenAt s) =
@@ -448,6 +447,14 @@ theorem fedOf_refused (s : Run) (c : Command) (why : Api.HostSession.Refusal)
       (appliedValue (Test.Dogfood.Scenario.rows s) (Test.Dogfood.Scenario.seenAt s)) = [] := by
     cases c <;> rfl
   rw [same, none, List.append_nil]
+
+/-- A refused row reaches no new offer continuation. -/
+theorem fedOf_refused (s : Run) (c : Command) (why : Api.HostSession.Refusal)
+    (_hlen : s.journal.length = s.phases.length)
+    (refused : (Api.Runner.result s.runner c).phase = .refused why) :
+    fedOf (s.step c) = fedOf s := by
+  unfold fedOf
+  rw [machine_refused s c why refused]
 
 /-- **A refused row keeps what the observation shows of a ledger.** One row of the invariant's
 step, proved outright: the session, so the machine, stays, and the fed jobs stay. -/

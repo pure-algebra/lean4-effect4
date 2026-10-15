@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.NativeInterpScope
 import Effect4.Laws.Machine.AnswerFlowHead
+import Effect4.Laws.Machine.PopCurrent
 
 /-!
 # Source scope through the actual frame machine
@@ -331,32 +332,20 @@ theorem frame_step_at (root : NativeEff) (fragment : Fragment root) (completed) 
 
 /-- Frame hooks retain the current primitive while pushing administrative masks. -/
 theorem ensure_current (frame : NCode) (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) :
-    (frame.ensure fiber).1.current = fiber.current := by
-  fun_cases Prim.ensure frame fiber
-  all_goals rfl
+    (frame.ensure fiber).1.current = fiber.current :=
+  PopTrace.ensure_current frame fiber
 
 /-- The single pushed hook retains the current primitive. -/
 theorem pushed_current (demand : Effect4.Arm) (skip : Bool)
     (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (cause : Option CauseV) :
-    (FrameFiber.passPushed demand skip fiber cause).fiber.current = fiber.current := by
-  unfold FrameFiber.passPushed
-  cases h : fiber.stack with
-  | nil => rfl
-  | cons frame rest => exact ensure_current frame _
+    (FrameFiber.passPushed demand skip fiber cause).fiber.current = fiber.current :=
+  PopTrace.pushed_current demand skip fiber cause
 
 /-- The fused pop retains the current primitive throughout hook and tail processing. -/
 theorem pop_current (demand : Effect4.Arm) (skip : Bool) (frames : List NCode)
     (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (cause : Option CauseV) :
-    (FrameFiber.popFrom demand skip frames fiber cause).fiber.current = fiber.current := by
-  induction frames generalizing fiber cause with
-  | nil => rfl
-  | cons frame rest ih =>
-    unfold FrameFiber.popFrom
-    dsimp only
-    repeat' split
-    all_goals simp only [FrameFiber.passOn, FrameFiber.joinPushed]
-    all_goals repeat' split
-    all_goals simp only [ih, pushed_current, ensure_current]
+    (FrameFiber.popFrom demand skip frames fiber cause).fiber.current = fiber.current :=
+  PopTrace.pop_current demand skip frames fiber cause
 
 /-- The actual pop retains both the current primitive and saved source scopes. -/
 theorem getCont_frame_at (root : NativeEff)

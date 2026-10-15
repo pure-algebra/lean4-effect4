@@ -368,6 +368,57 @@ import Effect4.Laws.Program.Agreement.HostedBlocks
 import Effect4.Laws.Api.SessionMeaningBlocks
 import Effect4.Laws.Program.ValidatedBlocks
 
+
+
+-- M3: carried driver guards and immutable initialized bindings.
+import Effect4.Laws.Program.PlaceFunding.FlowGuarded
+import Effect4.Laws.Program.AnswerSlots.Callbacks
+import Effect4.Laws.Program.AnswerSlots.Actions
+import Effect4.Laws.Program.AnswerSlots.Interp
+import Effect4.Laws.Machine.LiftCoupledFact
+
+import Effect4.Laws.Program.NativeScopeFields
+
+import Effect4.Laws.Program.Guard.Lift
+
+import Effect4.Laws.Program.PlaceFunding.FrameControl
+
+import Effect4.Laws.Program.Guard.SourceLift
+import Effect4.Laws.Machine.AnswerFlowGhostCommands
+import Effect4.Laws.Program.AnswerSlots.InitializedTransport
+import Effect4.Laws.Machine.AnswerFlowProtected
+import Effect4.Laws.Program.ReleaseWriter.Actions
+
+-- M3: actual initialized native exits and the shared crew log history.
+import Effect4.Laws.Program.AnswerSlots.InitializedNativeExit
+import Effect4.Laws.Program.CrewLogs.Initialized
+import Effect4.Laws.Program.AnswerSlots.PrefixStable
+import Effect4.Laws.Program.NativeActionRows
+import Effect4.Laws.Program.AnswerSlots.InitializedActionFacts
+import Effect4.Laws.Program.AnswerSlots.InitializedNativeShapes
+import Effect4.Laws.Program.CrewLogs.Observation
+import Effect4.Laws.Program.ParkedShapeRun
+import Effect4.Laws.Program.AnswerSlots.InitializedWaits
+import Effect4.Laws.Program.AnswerSlots.AllocationIteration
+import Effect4.Laws.Program.CrewLogs.InitializedHistory
+
+-- M3: checked shared producers and their concrete application readers.
+import Effect4.Laws.Machine.FinalizerCustody
+import Effect4.Laws.Contracts.FramePathOrder
+import Effect4.Laws.Program.AnswerSlots.AllocationCommandStep
+
+-- M3: full native source accounting and actual application transitions.
+import Effect4.Laws.Machine.AnswerFlowClassifiedEmbedding
+import Effect4.Laws.Machine.AnswerFlowEmpty
+import Effect4.Laws.Machine.AnswerFlowIndexedFamily
+import Effect4.Laws.Machine.AnswerFlowJointCommands
+import Effect4.Laws.Program.FinalizerTemplateCommands
+import Effect4.Laws.Program.NativePrimitiveDefault
+
+-- M3: one configuration transport with source annotations as instances.
+import Effect4.Laws.Program.CodeClosure.ConfigurationNativeMetadata
+import Effect4.Laws.Program.FinalizerSourceHistory
+
 /-!
 # Effect4 proof graph
 

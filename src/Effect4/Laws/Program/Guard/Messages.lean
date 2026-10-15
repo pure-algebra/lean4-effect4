@@ -244,7 +244,7 @@ theorem commandControls_fiberEdits (edits : List (FiberEdit Err Defect FiberId A
   · intro fiber f found running park
     obtain ⟨g, lookup, word⟩ := changed.lookup fiber f found
     have fields := word.controls (Or.inl running)
-    exact ⟨g, lookup, fields.2.2.2 running, fields.2.1.trans park, fields.1⟩
+    exact ⟨g, lookup, fields.2.2.2 running, fields.2.1.trans park, fields.1, fun empty => word.stack.trans empty⟩
   · intro fiber f found exited
     obtain ⟨g, lookup, word⟩ := changed.lookup fiber f found
     exact ⟨g, lookup, word.exit ▸ exited⟩

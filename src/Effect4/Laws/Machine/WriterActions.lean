@@ -31,6 +31,43 @@ theorem rows_bound (model : FrameWeights.Model ν σ β ε δ ι α)
   rw [rows]
   omega
 
+/-- A spawned program with zero current weight adds no outside reservation.
+Consumer: the parallel-finalizer source bound. -/
+theorem spawn_zero (model : FrameWeights.Model ν σ β ε δ ι α)
+    (interp : RunInterp ν σ β ε δ ι α χ St) (machine : RunMachine ν σ β ε δ ι α χ St)
+    (fiber : RunFiber ν σ β ε δ ι α χ) (owner : FiberId) (program : Prim ν σ β ε δ ι α)
+    (options : Supervision.ForkOptions) (site : List Nat) (zero : model.current program = 0) :
+    outside model owner (spawn interp machine fiber program options site).1 = outside model owner machine := by
+  simp only [outside, spawn, RunMachine.emit, List.map_append, List.sum_append,
+    List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, ControlWeights.omitted,
+    RunFiber.make, FrameWeights.frame, FrameFiber.start, zero, Nat.add_zero, ite_self]
+
+/-- Parallel finalizer allocations retain the existing outside reservations when every source weight is zero. -/
+theorem fork_finalizers_zero (model : FrameWeights.Model ν σ β ε δ ι α)
+    (interp : RunInterp ν σ β ε δ ι α χ St) (machine : RunMachine ν σ β ε δ ι α χ St)
+    (fiber : RunFiber ν σ β ε δ ι α χ) (owner : FiberId) (programs : List (Prim ν σ β ε δ ι α))
+    (zero : (programs.map model.current).sum = 0) :
+    outside model owner (forkFinalizers interp machine fiber programs).1 = outside model owner machine := by
+  induction programs generalizing machine with
+  | nil => rfl
+  | cons first rest ih =>
+    simp only [List.map_cons, List.sum_cons] at zero
+    have firstZero : model.current first = 0 := by omega
+    have restZero : (rest.map model.current).sum = 0 := by omega
+    exact (ih (spawn interp machine fiber first ⟨true, true, .inherit⟩ []).1 restZero).trans
+      (spawn_zero model interp machine fiber owner first ⟨true, true, .inherit⟩ [] firstZero)
+
+/-- A parallel close with zero source weight in its children retains the actual parent reservation. -/
+theorem parallel_bound (model : FrameWeights.Model ν σ β ε δ ι α)
+    (interp : RunInterp ν σ β ε δ ι α χ St) (machine : RunMachine ν σ β ε δ ι α χ St)
+    (fiber : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (programs : List (Prim ν σ β ε δ ι α))
+    (zero : (programs.map model.current).sum = 0) :
+    LocalBound model machine fiber (evaluatePrim.withFiber interp machine fiber yielding (.closePar programs)) := by
+  change outside model fiber.id (forkFinalizers interp machine fiber programs).1 +
+    FrameWeights.frame model fiber.frame ≤ outside model fiber.id machine + FrameWeights.frame model fiber.frame
+  rw [fork_finalizers_zero model interp machine fiber fiber.id programs zero]
+  exact Nat.le_refl _
+
 /-- A zero-weight active code keeps the saved reservations and drops the active one.
 Consumer: the answering action arms. -/
 theorem answer_le (model : FrameWeights.Model ν σ β ε δ ι α) (frame : FrameFiber ν σ β ε δ ι α)

@@ -1,4 +1,4 @@
-import Test.Dogfood.Scenario.Atomic.Store
+import Test.Dogfood.Scenario.Atomic.StoreFacts
 import Effect4.Laws.Auto.KernelRfl
 
 /-!

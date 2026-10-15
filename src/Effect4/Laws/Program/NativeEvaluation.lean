@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.NativeConfiguration
+import Effect4.Laws.Program.CodeClosure.ConfigurationEdits
 import Effect4.Laws.Program.Interference
 import Effect4.Laws.Machine.Clauses
 
@@ -272,11 +273,8 @@ theorem begin_race_at (root : NativeEff) (completed) (table : RowTable)
 /-- A fresh cause updates metadata or installs a failure, retaining all source captures. -/
 theorem interrupt_cause_at (root : NativeEff) (cause : CauseV)
     (fiber : SourceFiber) (held : FiberAt root fiber) :
-    FiberAt root (interruptWithCause cause fiber).1 := by
-  unfold interruptWithCause
-  dsimp only
-  repeat' split
-  all_goals aesop (add safe constructors [FiberAt]) (add norm simp [FrameAt, CodeAt]) (add safe cases [FiberAt])
+    FiberAt root (interruptWithCause cause fiber).1 :=
+  CodeClosure.Configuration.interrupt_cause_at (configurationModel root) (fun _ => True.intro) cause fiber held
 
 /-- Recording an interrupt retains all source programs and saved continuations. -/
 theorem interrupt_record_at (root : NativeEff) (completed) (table : RowTable)
@@ -286,34 +284,15 @@ theorem interrupt_record_at (root : NativeEff) (completed) (table : RowTable)
 
 /-- Source ownership is an instance of the shared structural edit word. -/
 theorem fiber_other_edits_at (root : NativeEff) {before after : SourceFiber}
-    (edits : Moves.OtherEdits before after) (held : FiberAt root before) : FiberAt root after := by
-  induction edits with
-  | refl => exact held
-  | tail _ edit ih =>
-    cases edit with
-    | observe => exact ⟨ih.frame, ih.pending, ih.dispatcher⟩
-    | filterObservers => exact ⟨ih.frame, ih.pending, ih.dispatcher⟩
-    | interruptCause cause => exact interrupt_cause_at root cause _ ih
+    (edits : Moves.OtherEdits before after) (held : FiberAt root before) : FiberAt root after :=
+  CodeClosure.Configuration.fiber_other_edits_at (configurationModel root) (fun _ => True.intro) edits held
 
 /-- The native message word retains source ownership and creates only evaluation commands.
 Consumer: settlement and the eager countdown and scope-link adapters. -/
 theorem fiber_edits_at (root : NativeEff) (edits : List (FiberEdit Err Defect FiberId Ann))
     (m : NativeMachine) (held : ConfigurationAt root m) :
-    ConfigurationAt root (applyFiberEdits edits m).1 ∧ CommandsAt root (applyFiberEdits edits m).2 := by
-  have shape := RunMachine.applyFiberEdits_shape edits m
-  have counter := congrArg (fun machine : NativeMachine => machine.nextId) shape.1
-  obtain ⟨born, rows⟩ := (Moves.InterferesWithLookup.fiberEdits edits m).backward.births
-  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
-  · intro fiber member
-    rcases rows fiber member with ⟨before, present, edits⟩ | ⟨lower, upper, _⟩
-    · exact fiber_other_edits_at root edits (held.fibers before present)
-    · exact False.elim ((Nat.not_lt_of_ge lower) (counter ▸ upper))
-  · simpa only [congrArg (fun machine : NativeMachine => machine.races) shape.1] using held.races
-  · simpa only [congrArg (fun machine : NativeMachine => machine.state) shape.1] using held.scopes
-  · intro command member
-    obtain ⟨target, same⟩ := shape.2 command member
-    subst command
-    trivial
+    ConfigurationAt root (applyFiberEdits edits m).1 ∧ CommandsAt root (applyFiberEdits edits m).2 :=
+  CodeClosure.Configuration.fiber_edits_at (configurationModel root) (fun _ => True.intro) edits m held
 
 /-- Native countdown parks retain the pending continuation and actual cleanup frame. -/
 theorem countdown_edits_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
@@ -353,26 +332,13 @@ theorem scope_link_at (root : NativeEff) (completed) (table : RowTable) (mode : 
   · cases found
     exact scope_register_at root state.scopes scope state.nextName _ owned trivial
 
-/-- A queued scope link retains the configuration before its addressed message. -/
+/-- A queued scope link instantiates the shared configuration transport. -/
 theorem link_edits_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (owned : ConfigurationAt root m) :
-    ConfigurationAt root (linkScopeEdits (interpAt root completed table) m mode scope target who extra).1 := by
-  unfold linkScopeEdits
-  split
-  · exact configuration_halt root m _ owned
-  · split
-    · exact configuration_halt root m _ owned
-    · exact configuration_emit root m _ owned
-  · split
-    · exact configuration_halt root m _ owned
-    · split
-      · exact owned
-      · split
-        · exact configuration_halt root m _ owned
-        · rename_i state key found
-          exact configuration_emit root _ _ (configuration_store root m state owned
-            (scope_link_at root completed table mode scope target m.state state key owned.scopes found))
+    ConfigurationAt root (linkScopeEdits (interpAt root completed table) m mode scope target who extra).1 :=
+  CodeClosure.Configuration.link_edits_at (configurationModel root) root completed table
+    (scope_link_at root completed table) m mode scope target who extra owned
 
 /-- The eager scope adapter applies the same source-preserving message word. -/
 theorem link_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
@@ -380,7 +346,8 @@ theorem link_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMac
     (extra : ReasonAnnotations Ann) (owned : ConfigurationAt root m) :
     ConfigurationAt root (linkScope (interpAt root completed table) m mode scope target who extra).1 ∧
       CommandsAt root (linkScope (interpAt root completed table) m mode scope target who extra).2 :=
-  fiber_edits_at root _ _ (link_edits_at root completed table m mode scope target who extra owned)
+  CodeClosure.Configuration.link_at (configurationModel root) root completed table
+    (fun _ => True.intro) (scope_link_at root completed table) m mode scope target who extra owned
 
 /-- Parallel closing launches exactly the finalizer programs owned by its source captures. -/
 theorem fork_finalizers_at (root : NativeEff) (completed) (table : RowTable)

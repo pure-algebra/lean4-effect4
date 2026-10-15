@@ -151,7 +151,8 @@ theorem controlsAway_fiberEdits (m : NativeMachine)
     ControlsAway m (applyFiberEdits edits m).1 target := by
   intro fiber f found _ eligible
   obtain ⟨g, lookup, word⟩ := (Moves.InterferesWithLookup.fiberEdits edits m).lookup fiber f found
-  exact ⟨g, lookup, word.controls (eligible.elim (fun h => Or.inl h.1) Or.inr)⟩
+  have fields := word.controls (eligible.elim (fun h => Or.inl h.1) Or.inr)
+  exact ⟨g, lookup, fields.1, fields.2.1, fields.2.2.1, fields.2.2.2, fun empty => word.stack.trans empty⟩
 
 theorem controlsAway_settle {m : NativeMachine} (id : FiberId) (rest : List NCmd)
     (it : NIter) (target : FiberId) (hid : it.fiber.id = target)

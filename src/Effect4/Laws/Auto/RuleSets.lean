@@ -21,7 +21,7 @@ it fails the gate's staleness check.
 -/
 
 declare_aesop_rule_sets [Effect4.TypedState, Effect4.Atoms, Effect4.Checker, Effect4.Stores,
-  Effect4.StoreKernel, Effect4.Fibers, Effect4.StepInv, Effect4.Coind]
+  Effect4.StoreKernel, Effect4.Fibers, Effect4.StepInv, Effect4.Coind, Effect4.CodeClosure]
 
 /-! `Effect4.Stores` carries the store equations and laws only; `Effect4.StoreKernel` carries the
 store definitions and the arena view, unfolded inside the store kernel modules

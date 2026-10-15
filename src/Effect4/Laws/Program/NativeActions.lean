@@ -142,6 +142,6 @@ theorem with_fiber_at (root : NativeEff) (completed) (table : RowTable)
       FiberAt root other := configuration_fiber root m target other owned found
   all_goals simp only [evaluatePrim.withFiber]
   all_goals repeat' split
-  all_goals aesop (add safe constructors [EvaluationAt, FiberAt]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, List.mem_append, CodeAt, ThunkAt, StoreThunkAt, StoreActionAt, ProgAt, NameAt, FrameAt, Option.getD_none, Option.getD_some]) (add safe apply [configuration_emit, configuration_update, configuration_map_fibers, fiber_current_at, mask_frame_at]) (add safe forward [looked, (interrupt_record_at root completed table)]) (add safe cases [FiberAt])
+  all_goals aesop (add safe constructors [EvaluationAt, FiberAt]) (add norm simp [CommandsAt, CommandAt, CodeClosure.Configuration.CommandsAt, CodeClosure.Configuration.CommandAt, List.mem_cons, List.mem_append, CodeAt, ThunkAt, StoreThunkAt, StoreActionAt, ProgAt, NameAt, FrameAt, Option.getD_none, Option.getD_some]) (add safe apply [configuration_emit, configuration_update, configuration_map_fibers, fiber_current_at, mask_frame_at]) (add safe forward [looked, (interrupt_record_at root completed table)]) (add safe cases [FiberAt])
 
 end Effect4.Program.SourceScope
