@@ -40,32 +40,14 @@ theorem reply_decision_lift (root : NativeEff) (fragment : Fragment root) (table
     Lift.DecisionLift Lift.unitOrder (interpOf root table)
       (fun _ m => ConfigurationAt root m) (fun _ _ cmds => CommandsAt root cmds)
       (fun _ _ tasks => TasksAt root tasks) (fun _ _ _ => True) := by
-  letI := evaluatorFor root table
-  have source := decision_lift_at root fragment table
-  refine {
-    step := source.step, nil := source.nil, evaluate := source.evaluate,
-    drain := source.drain, ran := source.ran, task := source.task, skip := source.skip,
-    yield := source.yield, interrupt := source.interrupt, middleware := source.middleware,
-    clockNone := source.clockNone, clockSome := source.clockSome, answer := ?_ }
-  intro w m id token answer owned _ _
+  apply CodeClosure.Configuration.decision_lift (configurationModel root) root table
+    (command_facts root fragment table) (fun _ => True) (clock_at root table)
+  intro m id token answer owned _
   have prepared := prepare_reply_at root table m id token answer
   have scopes : ScopesAt root (prepareAsyncAnswer (interpOf root table) m id token answer).1.scopes := by
     rw [prepared.1]
     exact owned.scopes
-  have stateOwned : ConfigurationAt root
-      {m with state := (prepareAsyncAnswer (interpOf root table) m id token answer).1} :=
-    ⟨owned.fibers, owned.races, scopes⟩
-  have commands : CommandsAt root
-      [.resume id token (prepareAsyncAnswer (interpOf root table) m id token answer).2, .drainDue] := by
-    intro command member
-    rcases List.mem_cons.mp member with rfl | tail
-    · exact prepared.2
-    · rw [List.mem_singleton] at tail
-      cases tail
-      trivial
-  have moved := command_at root fragment table _ _ [.drainDue] stateOwned
-    commands
-  exact ⟨(), trivial, moved.1, fun _ => ⟨moved.2, by intro task member; cases member⟩⟩
+  exact ⟨⟨owned.fibers, owned.races, scopes⟩, prepared.2⟩
 
 /-- Every actual decision retains source ownership, including host reply preparation. -/
 theorem decision_at (root : NativeEff) (fragment : Fragment root) (table : RowTable)

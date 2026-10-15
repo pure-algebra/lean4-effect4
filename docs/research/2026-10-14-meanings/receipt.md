@@ -668,3 +668,40 @@ Command: `lake env lean docs/research/2026-10-14-meanings/evidence/FullNativeCom
 Result: 1975 declarations within `[propext, Quot.sound]`, zero modulo goals and zero planned goals.
 Evidence: [the audit](evidence/FullNativeCommandsAudit.lean) and [its output](evidence/full-native-commands.log).
 No outside implementation run is reached by this proof-only consolidation.
+
+
+### One configuration transport for full source annotations
+
+The six remaining M3 goals stay open. This consolidation removes duplicate command and decision walks.
+Base: `c281a2402`. The commit containing this section records the slice head.
+
+`CodeClosure.Configuration.Model` supplies the code predicate, captured scopes, and race permission.
+The existing source configuration is its instance.
+The shared command theorem retains the actual evaluation, observer, and reply premises.
+The shared decision theorem handles both control decisions and admitted replies.
+The older source APIs now apply these theorems.
+Native pending metadata reuses `Sched.evaluateNative_pendingOk`.
+Stored rows and dispatcher tasks reuse their existing joint producer.
+Actual race creation supplies the new race programs.
+
+Placement: store-typing R4 and scope-lifetime-finalization R11.
+Consumer: the full source history required by `FinalizerRun.once_placed_outside_census`.
+These local facts establish neither whole-history funding nor release custody.
+
+Changed files under `src/Effect4/Laws/Program/`:
+`CodeClosure/ReplyForms.lean`, `CodeClosure/Configuration.lean`,
+`CodeClosure/ConfigurationEdits.lean`, `CodeClosure/ConfigurationCommands.lean`,
+`CodeClosure/ConfigurationAdministration.lean`, `CodeClosure/ConfigurationHistory.lean`,
+`CodeClosure/ConfigurationNativeMetadata.lean`, `NativeConfiguration.lean`,
+`NativeEvaluation.lean`, `NativeActions.lean`, `NativeExecutor.lean`,
+`NativeCommands.lean`, `NativeHistory.lean`, and `NativeReplies.lean`.
+The Laws root reaches the new metadata producer.
+The route and audit evidence accompany this receipt.
+
+Commands through `scratch/lean-slot.sh`:
+`lake build Effect4.Laws.Program.NativeReplies Effect4.Laws.Program.CodeClosure.ConfigurationNativeMetadata`;
+`lake env lean docs/research/2026-10-14-meanings/evidence/ConfigurationAudit.lean`.
+Result: the narrow build passes, 599 jobs.
+Audit: 666 declarations within `[propext, Quot.sound]`, zero modulo goals and zero planned goals.
+Evidence: [the audit](evidence/ConfigurationAudit.lean) and [its output](evidence/configuration.log).
+No outside implementation run is reached by this proof-only consolidation.

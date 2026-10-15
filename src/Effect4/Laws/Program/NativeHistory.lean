@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.NativeCommands
+import Effect4.Laws.Program.CodeClosure.ConfigurationHistory
 import Effect4.Laws.Run.Frame
 
 /-!
@@ -13,14 +14,8 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Run
 /-- Draining returns the owned task snapshot and an empty dispatcher. -/
 theorem dispatcher_drain_at (root : NativeEff) (dispatcher : SourceDispatcher)
     (held : DispatcherAt root dispatcher) :
-    TasksAt root dispatcher.drain.1 ∧ DispatcherAt root dispatcher.drain.2 := by
-  refine ⟨?_, ?_⟩
-  · intro task member
-    obtain ⟨tasks, present, member⟩ := List.mem_flatten.mp member
-    obtain ⟨bucket, stored, eq⟩ := List.mem_map.mp present
-    rw [← eq] at member
-    exact held bucket stored task member
-  · intro bucket member; cases member
+    TasksAt root dispatcher.drain.1 ∧ DispatcherAt root dispatcher.drain.2 :=
+  CodeClosure.Configuration.dispatcher_drain_at (configurationModel root) dispatcher held
 
 /-- The clock emits only a native completion and retains scope captures. -/
 theorem clock_at (root : NativeEff) (table : RowTable) (millis : ClockMillis) (state : Stores)
@@ -36,64 +31,18 @@ theorem clock_at (root : NativeEff) (table : RowTable) (millis : ClockMillis) (s
 
 /-- A queued task's actual command list retains its resume code. -/
 theorem task_commands_at (root : NativeEff) (task : SourceTask) (held : TaskAt root task) :
-    CommandsAt root (taskCmds task) := by
-  cases task
-  all_goals intro c member
-  all_goals rcases List.mem_cons.mp member with same | later
-  all_goals (aesop (add norm simp [CommandAt, List.mem_cons, TaskAt]))
+    CommandsAt root (taskCmds task) :=
+  CodeClosure.Configuration.task_commands_at (configurationModel root) task held
 
 /-- Source ownership follows the actual native decision lift, including drained snapshots. -/
 theorem decision_lift_at (root : NativeEff) (fragment : Fragment root) (table : RowTable) :
     letI := evaluatorFor root table
     Lift.DecisionLift Lift.unitOrder (interpOf root table)
       (fun _ m => ConfigurationAt root m) (fun _ _ cmds => CommandsAt root cmds)
-      (fun _ _ tasks => TasksAt root tasks) (fun _ _ d => IsControl d) := by
-  letI := evaluatorFor root table
-  refine {
-    step := ?_, nil := ?_, evaluate := ?_, drain := ?_, ran := ?_, task := ?_, skip := ?_,
-    yield := ?_, interrupt := ?_, middleware := ?_, clockNone := ?_, clockSome := ?_, answer := ?_ }
-  · intro ts w m c rest notStuck held
-    have moved := command_at root fragment table m c rest held.1 ((held.2 notStuck).1)
-    exact ⟨(), trivial, moved.1, fun _ => ⟨moved.2, (held.2 notStuck).2⟩⟩
-  · intro w m task member; cases member
-  · intro w m id owned notStuck c member
-    rcases List.mem_cons.mp member with same | later
-    · rw [same]; trivial
-    · rw [List.mem_singleton.mp later]; trivial
-  · intro w m owner fiber owned found
-    have held := configuration_fiber root m owner fiber owned found
-    have snapshot := dispatcher_drain_at root fiber.dispatcher held.dispatcher
-    have updated : ConfigurationAt root (m.update {fiber with dispatcher := fiber.dispatcher.drain.2}) :=
-      configuration_update root m _ owned ⟨held.frame, held.pending, snapshot.2⟩
-    exact ⟨⟨updated.fibers, updated.races, updated.scopes⟩, snapshot.1⟩
-  · intro w m owner task owned; exact configuration_emit root m _ owned
-  · intro w m owner task rest owned notStuck held
-    exact ⟨task_commands_at root task (held task (.head _)), fun t member => held t (.tail _ member)⟩
-  · intro w m task rest held t member; exact held t (.tail _ member)
-  · intro w m id verdict owned
-    exact configuration_modify root m id _ owned (fun fiber held => ⟨held.frame, held.pending, held.dispatcher⟩)
-  · intro w m who extra target fiber owned found
-    have held := configuration_fiber root m target fiber owned found
-    have changed := interrupt_record_at root [] table who extra fiber held
-    unfold Lift.interruptEdit
-    dsimp only
-    split
-    · exact configuration_update root _ _ (configuration_emit root _ _ (configuration_emit root m _ owned)) changed
-    · exact configuration_update root _ _ (configuration_emit root m _ owned) changed
-  · intro w m owned; exact ⟨owned.fibers, owned.races, owned.scopes⟩
-  · intro w m millis state owned notStuck found
-    have retained := clock_at root table millis m.state owned.scopes
-    rw [found] at retained
-    exact ⟨(), trivial, owned.fibers, owned.races, retained.1⟩
-  · intro w m millis owed state owned notStuck found
-    have retained := clock_at root table millis m.state owned.scopes
-    rw [found] at retained
-    have moved := drain_at root {m with state} [owed] ⟨owned.fibers, owned.races, retained.1⟩
-      (by intro item member; rw [List.mem_singleton.mp member]; exact retained.2 owed rfl)
-    exact ⟨(), trivial, moved.1, fun _ => commands_append root _ _ moved.2
-      (by intro c member; rw [List.mem_singleton.mp member]; trivial)⟩
-  · intro w m id token answer owned notStuck refused
-    exact False.elim refused
+      (fun _ _ tasks => TasksAt root tasks) (fun _ _ d => IsControl d) :=
+  CodeClosure.Configuration.decision_lift (configurationModel root) root table
+    (command_facts root fragment table) IsControl (clock_at root table)
+    (by intro m id token answer owned refused; exact False.elim refused)
 
 /-- The actual load starts with its source root and no saved callback or task. -/
 theorem load_at (root : NativeEff) (fragment : Fragment root) (compileFuel : Nat) :

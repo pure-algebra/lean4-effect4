@@ -415,6 +415,9 @@ import Effect4.Laws.Machine.AnswerFlowJointCommands
 import Effect4.Laws.Program.FinalizerTemplateCommands
 import Effect4.Laws.Program.NativePrimitiveDefault
 
+-- M3: one configuration transport with source annotations as instances.
+import Effect4.Laws.Program.CodeClosure.ConfigurationNativeMetadata
+
 /-!
 # Effect4 proof graph
 
