@@ -58,6 +58,24 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
       (phase : ValueAt world (.restoreSnapshot owner token option exit) .unit) :
       CodeAt total table owner world (.restoreSnapshot owner token option exit)
         (.sync (.op (.refModify ⟨0⟩ (QueueWorkersWithdrawalSites.term worker) point.env)))
+  | awaiting {world token key}
+      (selected : Owns world owner token)
+      (waiting : world.requests.custody.requests token = .waiting) :
+      CodeAt total table owner world (.snapshot owner token .none)
+        (.async (.registerAwait key) true (some (.cancelAwait key)))
+  | masking {world kind point body flag}
+      (action : actionAt (Programs.queueProgram total) point = some (.setInterruptible body flag))
+      (first : CodeAt total table owner world kind body) :
+      CodeAt total table owner world kind (.withFiber (.act point))
+  | protectedWait {world token option body point}
+      (first : CodeAt total table owner world (.snapshot owner token option) body)
+      (installed : ∀ nextWorld, Future world nextWorld → ∀ view exit,
+        (match exit with
+          | .success value => ValueAt nextWorld (.snapshot owner token option) value
+          | .failure _ => True) →
+        CodeAt total table owner nextWorld (.restoreSnapshot owner token option exit)
+          (resolve (Programs.queueProgram total) ({point with completed := view}.childWith 1 (reifyExitVal exit)))) :
+      CodeAt total table owner world (.snapshot owner token option) (.onExit body (.fin point) false)
   | restoring {world token option exit body}
       (first : CodeAt total table owner world (.restoreSnapshot owner token option exit) body) :
       CodeAt total table owner world (.snapshot owner token option) (.onSuccess body (.restore exit))
@@ -71,6 +89,7 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
         ((interpAt (Programs.queueProgram total) view table).suspendBody thunk)) :
       CodeAt total table owner world kind (.suspend thunk)
   | bound {world input output body name}
+      (localInput : LocalKind owner input)
       (first : CodeAt total table owner world input body)
       (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
         ValueAt nextWorld input answer → CodeAt total table owner nextWorld output
@@ -92,7 +111,7 @@ theorem assignment_body (total : Nat) (table : RowTable) (world : QueueWorkersCu
     exact .frontier fuel
   | succ amount =>
     rw [Agreement.compileEff_bind _ _ fuel]
-    apply CodeAt.bound (input := .ordinary)
+    apply CodeAt.bound (input := .ordinary) True.intro
     · cases childFuel : (point.child 0).fuel with
       | zero =>
         rw [Agreement.compileEff_at_zero _ childFuel]
@@ -178,7 +197,7 @@ theorem worker_bound (total : Nat) (table : RowTable)
     (leading : AnswerSlots.Prefix InitialSlots.bindings point.env)
     (first : CodeAt total table owner world (.job owner) body) :
     CodeAt total table owner world .ordinary (.onSuccess body (.cont point)) := by
-  apply CodeAt.bound first
+  apply CodeAt.bound (input := .job owner) rfl first
   intro nextWorld future view answer good
   obtain ⟨job, rfl, classified⟩ := job_value nextWorld owner answer good
   exact worker_callback total table nextWorld owner point before rest term job view source found leading classified

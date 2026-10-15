@@ -195,3 +195,32 @@ It does not assume conservation or the endpoint observation.
 Result: 1402 successful build jobs.
 The audit reports 179 declarations within `[propext, Quot.sound]`, zero modulo planned goals and zero planned goals.
 Logs: `/private/tmp/queue-take-option-branch2-build.log` and `/private/tmp/queue-option-audit.log`.
+
+## Actual worker take continuation
+
+The queue history producer remains open.
+Neither `Assertions.jobs_step` nor `Assertions.rest_step` changes in this slice.
+The base is `2a630ab46`.
+The preceding cleanup commit is `5b8920a95`.
+
+`QueueWorkersTakeFlow.attempt` consumes the actual take term and its captured request and hint.
+It proves both notification continuations, the option selection, the authored wait, its protected cleanup, and its retry result.
+The proof reads the actual classified callback answer.
+It assumes no waiting-body or option-branch conclusion.
+The saved finalizer keeps the actual captured exit.
+The binder requires an input class belonging to its worker.
+`take_notifications_future` retains the actual future-world witness.
+The earlier notification API is its wrapper.
+
+The narrow command is `lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersTakeFlow`.
+It passes with 1413 jobs.
+The output is `/private/tmp/queue-take-flow-build2.log`.
+The audit command is `lean-slot.sh lake env lean /private/tmp/queue-take-flow-audit.lean`.
+It checks 262 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
+The output is `/private/tmp/queue-take-flow-audit.log`.
+These checks establish the local take producer, not the actual history invariant.
+
+The remaining consumers are the worker retry hook, the outer worker, the feeder, and root publication.
+The active command producer must carry the queue table together with custody, actual frames, and queued permissions.
+The rest proof also needs accepted-offer custody and actual waiting failure origin.
+No machine, program syntax, or external reply profile changes.

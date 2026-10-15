@@ -1,5 +1,6 @@
 import Test.Dogfood.Proofs.QueueWorkersJobGraph
 import Effect4.Laws.Machine.AnswerFlowViews
+import Effect4.Laws.Machine.AnswerFlowProtected
 
 /-!
 Concept: store-typing R4 and translation-simulation R10.
@@ -129,6 +130,34 @@ theorem finalizer_code (total : Nat) (table : RowTable) (owner : FiberId)
   cases exit with
   | success value => exact .restoring first
   | failure cause => exact .restoring (.merging first)
+
+/-- The actual protected wait finalizer retains the captured body exit at installation. -/
+theorem protected_saved (total : Nat) (table : RowTable) (owner : FiberId)
+    (world : QueueWorkersCustodyFlow.World) (token : Nat) (option : Val) (body : NCode) (point : Point)
+    (installed : ∀ nextWorld, Future world nextWorld → ∀ view exit,
+      (match exit with
+        | .success value => ValueAt nextWorld (.snapshot owner token option) value
+        | .failure _ => True) →
+      CodeAt total table owner nextWorld (.restoreSnapshot owner token option exit)
+        (resolve (Test.Dogfood.Scenario.Programs.queueProgram total)
+          ({point with completed := view}.childWith 1 (reifyExitVal exit)))) :
+    Semantic total table owner world (.snapshot owner token option) (.snapshot owner token option)
+      (.onExit body (.fin point) false) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro view
+    apply saved_protected_finalizer (model total table owner view)
+      (interpAt (Test.Dogfood.Scenario.Programs.queueProgram total) view table).toPrimInterp
+      world (.snapshot owner token option) (.snapshot owner token option) body (.fin point)
+    intro nextWorld future exit good
+    cases exit with
+    | success value =>
+      exact ⟨_, rfl, finalizer_code total table owner nextWorld token option (.success value) _ view
+        (installed nextWorld future view (.success value) good)⟩
+    | failure cause =>
+      exact ⟨_, rfl, finalizer_code total table owner nextWorld token option (.failure cause) _ view
+        (installed nextWorld future view (.failure cause) True.intro)⟩
+  · intros; intro impossible; cases impossible
+  · intros; intro impossible; cases impossible
 
 /-- The existing saved-family proof owns all actual callback and unwinding cases. -/
 theorem semantic_family (total : Nat) (table : RowTable) (owner : FiberId) (view : List (FiberId × ExitV)) :

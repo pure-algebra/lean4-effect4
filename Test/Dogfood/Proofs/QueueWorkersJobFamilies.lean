@@ -91,13 +91,13 @@ theorem notification_bind (total : Nat) (table : RowTable) (owner : FiberId) (to
     exact .frontier fuel
   | succ available =>
     rw [Agreement.compileEff_bind _ _ fuel]
-    apply QueueWorkersJobGraph.CodeAt.bound (input := .snapshot owner token option)
+    apply QueueWorkersJobGraph.CodeAt.bound (input := .snapshot owner token option) rfl
     · exact .notification spec (fun _ _ => Iff.rfl) phase (QueueWorkersNotificationFlow.compile_at spec point.env first
         (point.child 0) (Agreement.at_child found 0) ⟨inside, List.take_length⟩)
     · exact callback
 
 /-- Both actual notification prefixes retain the captured tuple before the actual option branch. -/
-theorem take_notifications (total worker : Nat) (member : worker ∈ [1, 2])
+theorem take_notifications_future (total worker : Nat) (member : worker ∈ [1, 2])
     (table : RowTable) (owner : FiberId) (token : Nat) (option : Val)
     (world : QueueWorkersCustodyFlow.World) (point : Point)
     (source : SourceScope.At (Programs.queueProgram total) point)
@@ -105,6 +105,7 @@ theorem take_notifications (total worker : Nat) (member : worker ∈ [1, 2])
     (phase : QueueWorkersCustodyFlow.Owns world owner token ∧ QueueWorkersCustody.OptionAt world.requests.custody token option)
     (output : QueueWorkersCustodyFlow.Kind)
     (branch : ∀ nextWorld nextPoint,
+      QueueWorkersCustodyFlow.Future world nextWorld →
       SourceScope.At (Programs.queueProgram total) nextPoint →
       AnswerSlots.Prefix point.env nextPoint.env → nextPoint.path = QueueWorkersTakeTailSites.optionPath worker →
       QueueWorkersCustodyFlow.Owns nextWorld owner token ∧ QueueWorkersCustody.OptionAt nextWorld.requests.custody token option →
@@ -129,11 +130,29 @@ theorem take_notifications (total worker : Nat) (member : worker ∈ [1, 2])
       simp only [path, List.append_assoc, List.cons_append, List.nil_append]
       exact List.prefix_refl _
     · intro lastWorld later lastView lastAnswer lastGood
-      apply branch lastWorld _ ?_ ?_ ?_ lastGood
+      apply branch lastWorld _ (QueueWorkersCustodyFlow.order.trans future later) ?_ ?_ ?_ lastGood
       · exact SourceScope.childWith_at (Programs.queueProgram total)
           {{point with completed := view}.childWith 1 answer with completed := lastView} 1 lastAnswer
           (SourceScope.next_of_at _ _ _ 1 1 (Agreement.at_childWith found 1 answer) nextSource rfl)
       · exact ((show AnswerSlots.Prefix point.env point.env from List.take_length).append [answer]).append [lastAnswer]
       · change (point.path ++ [1]) ++ [1] = QueueWorkersTakeTailSites.tailPath worker ++ [1, 1]
         simp only [path, List.append_assoc, List.cons_append, List.nil_append]
+
+/-- The earlier notification API ignores the additionally retained actual future-world witness. -/
+theorem take_notifications (total worker : Nat) (member : worker ∈ [1, 2])
+    (table : RowTable) (owner : FiberId) (token : Nat) (option : Val)
+    (world : QueueWorkersCustodyFlow.World) (point : Point)
+    (source : SourceScope.At (Programs.queueProgram total) point)
+    (path : point.path = QueueWorkersTakeTailSites.tailPath worker)
+    (phase : QueueWorkersCustodyFlow.Owns world owner token ∧ QueueWorkersCustody.OptionAt world.requests.custody token option)
+    (output : QueueWorkersCustodyFlow.Kind)
+    (branch : ∀ nextWorld nextPoint,
+      SourceScope.At (Programs.queueProgram total) nextPoint →
+      AnswerSlots.Prefix point.env nextPoint.env → nextPoint.path = QueueWorkersTakeTailSites.optionPath worker →
+      QueueWorkersCustodyFlow.Owns nextWorld owner token ∧ QueueWorkersCustody.OptionAt nextWorld.requests.custody token option →
+      QueueWorkersJobGraph.CodeAt total table owner nextWorld output (resolve (Programs.queueProgram total) nextPoint)) :
+    QueueWorkersJobGraph.CodeAt total table owner world output (resolve (Programs.queueProgram total) point) := by
+  apply take_notifications_future total worker member table owner token option world point source path phase output
+  intro nextWorld nextPoint _future nextSource nextLeading nextPath nextPhase
+  exact branch nextWorld nextPoint nextSource nextLeading nextPath nextPhase
 end Test.Dogfood.Proofs.QueueWorkersJobFamilies
