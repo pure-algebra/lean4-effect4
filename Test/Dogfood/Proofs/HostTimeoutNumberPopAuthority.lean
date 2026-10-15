@@ -14,6 +14,18 @@ namespace Test.Dogfood.Proofs.HostTimeoutNumberPopAuthority
 open Effect4 Effect4.Machine Effect4.Program
 open HostTimeoutNumberPhaseFlow
 
+/-- One actual running frame keeps its semantic input and unmasked early permission together. -/
+def FramePermission (context : HostTimeoutNumberConfiguration.CountContext) (state : Stores) (output : Kind) (frame : HostTimeoutFrames.NativeFrame) : Prop :=
+  ∃ input, CodeAt state input frame.current ∧
+    Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge state) input output frame.stack ∧
+    (At context.entered state → frame.interruptible = true → input.grade ≤ 1) ∧ frame.deferredInterrupt = false
+
+/-- Finished returns retain their actual outer exit; running returns retain one protected current input. -/
+def StepPermission (context : HostTimeoutNumberConfiguration.CountContext) (view : HostTimeoutFlow.View) (state : Stores) (output : Kind) :
+    FrameStep EffName EffThunk Val Err Defect FiberId Ann → Prop
+  | .running frame => FramePermission context state output frame
+  | .finished exit => AnswerFlow.ExitAt (model view) state output exit
+
 /-- A hook raises a masked fiber's flag only at the actual restoring-mask instruction. -/
 theorem ensure_raises (head : NCode) (scratch : HostTimeoutFrames.NativeFrame)
     (before : scratch.interruptible = false)
@@ -240,5 +252,43 @@ theorem resume_cause_selected_early (view : HostTimeoutFlow.View)
     (fun _ _ _ edge => edge.ordered) callbackPath
   exact ⟨_, current, equation, code, Effect4.Contracts.Path.append callbackPath suffix,
     fun unmasked => Nat.le_trans order (early unmasked)⟩
+
+/-- An actual failure permission at the unclean entered heap belongs to an early numeric class. -/
+theorem cause_early (context : HostTimeoutNumberConfiguration.CountContext) (state : Stores)
+    (kind : Kind) (cause : CauseV) (heap : At context.entered state)
+    (owner : kind.ownerCount = context.entered.count) (valid : kind.Valid)
+    (good : CauseAt state kind cause) : kind.grade ≤ 1 := by
+  induction kind with
+  | fresh phase => dsimp only [Kind.grade]; decide
+  | countUnit phase => dsimp only [Kind.grade]; decide
+  | before phase => dsimp only [Kind.grade]; decide
+  | read phase => exact False.elim good
+  | unit phase => exact False.elim good
+  | paused phase incoming ih => exact ih owner valid good
+  | published phase => exact False.elim valid
+  | attempt prior entered own =>
+    exact False.elim (HostTimeoutNumberMaskPermission.restoring_late_ne_entered context state _ owner valid
+      (by trivial) (by dsimp only [Kind.grade]; decide) (Or.inr ⟨cause, good⟩) heap)
+  | cleanupExit phase own =>
+    exact False.elim (HostTimeoutNumberMaskPermission.restoring_late_ne_entered context state _ owner valid
+      (by trivial) (by dsimp only [Kind.grade]; decide) (Or.inr ⟨cause, good⟩) heap)
+
+/-- The existing semantic head producer supplies early authority for an actual replacement failure. -/
+theorem failure_frame_early (view : HostTimeoutFlow.View)
+    (context : HostTimeoutNumberConfiguration.CountContext) (state : Stores)
+    (output : Kind) (frame : HostTimeoutFrames.NativeFrame) (cause : CauseV)
+    (heap : At context.entered state)
+    (owner : output.ownerCount = context.entered.count) (valid : output.Valid)
+    (held : HostTimeoutNumberUniform.FrameAt state output {frame with current := .failure cause}) :
+    ∃ input, CodeAt state input (.failure cause) ∧
+      Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge state) input output frame.stack ∧ input.grade ≤ 1 := by
+  obtain ⟨input, code, path⟩ := held
+  have anchors := HostTimeoutNumberUniform.anchors state input output frame.stack path
+  have head := HostTimeoutNumberUniform.head view state input (.failure cause) code
+    (by intro thunk impossible; cases impossible) (by intro thunk impossible; cases impossible)
+  cases head with
+  | failure actual permitted =>
+    exact ⟨input, code, path, cause_early context state input cause heap
+      (anchors.1.trans owner) (anchors.2 valid) permitted⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberPopAuthority
