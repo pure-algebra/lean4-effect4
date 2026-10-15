@@ -32,6 +32,9 @@ theorem progOf_at (spec : Spec) (name : ProgName)
     CodeAt spec .root (embed (progOf name)) := by
   revert lexical leading owned
   fun_induction progOf name
+  case case14 first second ih =>
+    intro lexical leading owned
+    exact ⟨.root, ih lexical.1 leading.1 owned.1, lexical.2, leading.2, owned.2⟩
   all_goals intro lexical leading owned
   all_goals aesop (add norm simp [ValueAt, SourceScope.StrategyAt, ProgAt, CodeAt, embed, ThunkAt, StoreThunkAt,
     StoreActionAt, NameAt, OrdinaryName, ProtectedName, StoreNameAt,

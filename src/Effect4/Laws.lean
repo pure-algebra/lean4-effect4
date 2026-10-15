@@ -399,6 +399,8 @@ import Effect4.Laws.Program.AnswerSlots.InitializedNativeShapes
 import Effect4.Laws.Program.CrewLogs.Observation
 import Effect4.Laws.Program.ParkedShapeRun
 import Effect4.Laws.Program.AnswerSlots.InitializedWaits
+import Effect4.Laws.Program.AnswerSlots.AllocationIteration
+import Effect4.Laws.Program.CrewLogs.InitializedHistory
 
 /-!
 # Effect4 proof graph

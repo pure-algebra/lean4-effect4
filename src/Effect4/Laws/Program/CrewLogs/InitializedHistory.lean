@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.CrewLogs.Initialized
-import Effect4.Laws.Program.AnswerSlots.InitializedDriver
+import Effect4.Laws.Program.AnswerSlots.InitializedHistory
 
 /-!
 Concept: scope-lifetime-finalization R11 and store-typing R4.
@@ -62,4 +62,23 @@ theorem initialized_history_of_lift {W : Type w} (crew : Spec) (spec : Initializ
       subst fiber
       exact ParkedShape.unparked rfl
     · simpa only [root] using Initialized.initial_configuration spec fuel
+/-- One initialized history theorem supplies both crew log obligations. -/
+theorem initialized_history (crew : Spec) (spec : Initialized.Spec) (b : Api.Built)
+    (root : spec.root = b.program) (table : spec.table = b.table)
+    (contract : SyncContract crew spec)
+    (sources : ∀ identity ∈ crew.identities, ReleaseWriter.Source (crew.target identity) b.program)
+    (fragment : SourceScope.Fragment b.program) (sequential : SourceScope.SequentialSource b.program)
+    (raceFree : SourceScope.RaceFreeSource b.program) : History crew b := by
+  have carried := Initialized.decision_lift spec (root.symm ▸ fragment) (root.symm ▸ raceFree)
+  let I (_ : (Unit × Unit) × Unit) (machine : NativeMachine) (commands : List SourceScope.SourceCommand) :=
+    Initialized.DriverQueue spec ((), ()) machine commands ∧ Initialized.QueueAt spec machine commands
+  let O (_ : (Unit × Unit) × Unit) (machine : NativeMachine) (tasks : List SourceScope.SourceTask) :=
+    Initialized.DriverTasks spec ((), ()) machine tasks ∧ True
+  apply initialized_history_of_lift crew spec b root table contract sources fragment sequential raceFree
+    (Lift.pairOrder (Lift.pairOrder Lift.unitOrder Lift.unitOrder) Lift.unitOrder) I O
+    (fun _ _ _ held => root ▸ held.1.2) ?_ (((), ()), ())
+  have evaluator : evaluatorFor spec.root spec.table = evaluatorFor b.program b.table := by rw [root, table]
+  rw [evaluator] at carried
+  simpa only [Initialized.DriverState, root, table] using carried
+
 end Effect4.Program.CrewLogs

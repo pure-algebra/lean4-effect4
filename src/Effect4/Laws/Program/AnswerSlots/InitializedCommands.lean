@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.AnswerSlots.InitializedAdmin
 import Effect4.Laws.Program.AnswerSlots.InitializedWaits
 import Effect4.Laws.Program.SourceOpportunityPrimitive
+import Effect4.Laws.Machine.AwaitCode
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -26,9 +27,11 @@ structure CommandPremises (spec : Spec) (machine : NativeMachine) (command : Gua
 /-- Native waiting returns an administrative broad answer at each actual join mode. -/
 theorem typed_await (spec : Spec) (machine : NativeMachine) (kind : ParkKind) :
     Typed.CodeAt spec.toSpec .root (awaitCode (interpOf spec.root spec.table) machine kind) := by
-  fun_cases awaitCode (interpOf spec.root spec.table) machine kind
-  case case1 target mode exit found => cases mode <;> cases exit <;> trivial
-  all_goals exact ⟨rfl, trivial, trivial, trivial⟩
+  apply awaitCode_closed (interpOf spec.root spec.table)
+  · intro exit mode
+    cases mode <;> cases exit <;> trivial
+  · intro kind
+    exact ⟨rfl, trivial, trivial, trivial⟩
 
 /-- The root suffix admits the actual interruption wait and its answer-discarding callback. -/
 theorem RootPath.afterInterrupt (spec : Spec) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)

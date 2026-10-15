@@ -86,7 +86,8 @@ theorem store_action_at (spec : Spec) (name : ActionName)
       SourceScope.StoreActionAt, SourceScope.ProgAt, SourceScope.StoreThunkAt,
       SourceScope.OpAt, SourceScope.NameAt, SourceScope.ThunkAt,
       AnswerSlots.StoreActionAt, AnswerSlots.ProgAt, AnswerSlots.StoreThunkAt,
-      AnswerSlots.OpAt, AnswerSlots.NameAt, AnswerSlots.ThunkAt]) (add safe apply [progOf_at])
+      AnswerSlots.OpAt, AnswerSlots.NameAt, AnswerSlots.ThunkAt,
+      CodeClosure.Slots.ProgAt]) (add safe apply [progOf_at])
   all_goals trivial
 
 /-- Actual interpreted source and stored actions retain their protected launched programs. -/

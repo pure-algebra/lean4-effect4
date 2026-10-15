@@ -1,3 +1,4 @@
+import Test.Dogfood.Proofs.CrewLogHistory
 import Test.Dogfood.Scenario.QueueWorkers.Ledger
 import Test.Dogfood.Scenario.QueueWorkers.CleanupSource
 import Test.Dogfood.Scenario.Programs
@@ -216,18 +217,20 @@ proof_goal rest_step :
     Api.Author.build (crew total) = .ok b → Basis b s → Jobs s → Rest s → Run.rowReads s c = true →
     Rest (s.step c)
 
-/-- The remaining cleanup writer obligation on the original actual history.
+/-- The concrete cleanup writer bound on the original actual history.
 Each observed identity spends a release start at its own source acquisition.
 Consumer: `cleanup_step`, then the unchanged `releases_once`; no progress or release order follows. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal logs_history (total compileFuel : Nat) (b : Api.Built) (machine : NativeMachine)
+theorem logs_history (total compileFuel : Nat) (b : Api.Built) (machine : NativeMachine)
     (built : Api.Author.build (crew total) = .ok b) (history : Run.HistoryOf b compileFuel machine) :
     (∀ value ∈ log machine, ∃ i ∈ [1, 2, 3], value = .nat i) ∧
       ∀ i ∈ [1, 2, 3], (log machine).count (.nat i) ≤
-        machine.trace.countP (ReleaseTrace.releaseAt (acquirePath i))
+        machine.trace.countP (ReleaseTrace.releaseAt (acquirePath i)) := by
+  exact (Proofs.CrewLogHistory.queue total b built compileFuel machine history).observe
+    (log machine) (CrewLogs.list_observation _)
 
-/-- Cleanup preservation now uses proved source uniqueness and actual release custody.
-Only the concrete log-writer history remains open.
+
+/-- Cleanup preservation uses source uniqueness, actual release custody and the initialized writer history.
 Consumer: `cleanup_boundary`, then the unchanged cleanup clause; no progress or order follows. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem cleanup_step :
