@@ -101,3 +101,32 @@ flowchart LR
   estimate from the module's parts.
 - It proves nothing new and changes no statement. The three claims keep their names and their
   pointers.
+
+## 7. Correction, after the coordinator's ruling of option (a)
+
+§3 placed the refusal at the `iterate`'s body. That was wrong, and the probe that placed it was
+wrong. It paired a node's children with its argument positions: an `iterate`'s child `0` is its
+body, its argument `5`. Paired by the argument that each child is, every node's checked
+environment has the length of its print depth (`cr7/EagerDepths.lean`, the seat's probe).
+
+The refusing slot is a `catchIf`'s test, at the address `[1, 1, 1, 0, 0, 1]`, inside the loop's
+body:
+
+- the row that prints it is `Effect.catch`. Its classifier fixes the test to the literal `true`,
+  and its skeleton has no hole for the test (`Templates.table`);
+- the skeleton's level at a hole it does not have is `0` (`Template.levelAt`), so the template
+  depth of the test is the node's own;
+- the checker types the test under the handler's binder (`slotEnv`), one binder deeper;
+- the site printer refused where the two lengths differ (`typed:term slot depth`).
+
+Option (a) repairs it as ruled, in the general form. The site printer fits a slot's checked
+environment to the template's depth (`PrintEliminators.atDepth`). It cuts the environment where
+the checker's is longer, and pads it with `unknown` where it is shorter. At every slot that a
+lane's program prints, the two agree, so nothing changes there. At a classifier the template prints
+nothing. So the typed print refuses no slot for its depth, and the erasure reads each term at its
+print depth (`atDepth_length`).
+
+§2's measure of the deletion changes too. A reach probe starts from three theorems: the site
+erasure, the typed reader's exactness and the focus law (`cr7/Reach.lean`). It finds 68 of the
+module's authored declarations unreached, about 2,050 lines. The site erasure reuses most of the module, so the
+row-only erasure's own part is about 2,050 lines, not 3,100.

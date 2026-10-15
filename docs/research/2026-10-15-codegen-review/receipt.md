@@ -680,7 +680,8 @@ scratchpad (`cr8/`, `gates/cr8/`, `gates/cr8b/`).
 | `python3 scripts/generate.py --only ts` | passes: `templates.gen.ts` alone moves, by the generated `ReadRefusal` |
 | `make check-ts-reader`, first run | one test failed: the two foreign engines disagreed at an unreadable type argument. `ck.ts` mirrored the old detail; it now mirrors the new one |
 | `make check-ts-reader`, after the repair | passes: 501 files, 416 matched, none mismatched, none refused with an oracle; 783 tests; tsgo's typecheck |
-| `make check-gen` | regenerates every group: the two files above are the only difference from the base commit, so the check fails until they are committed |
+| `make check-gen`, before the commit | regenerates every group: the two files above are the only difference from the base commit, so the check fails until they are committed |
+| `make check-gen`, after the commit `ae2765fd4` | passes: every Lean-only generated file is what its generator emits |
 | `make check-host-protocol` | passes: the keyed differential's 57 runs, the scenarios, the to-do's service and the to-do on SQLite |
 | `lake env lean --run harness/truth/Truth.lean` into the scratchpad | the truth manifest is byte-identical to the committed one |
 
@@ -725,3 +726,37 @@ files add 114 lines and remove 5.
 
 - **P-CR8-1.** DI-88's register entry records that its first step landed: the refusal alphabet,
   generated from `ReadRefusal`.
+
+## CR-7, resumed: the coordinator's option (a)
+
+The coordinator ruled option (a) of `cr7-note.md` §4, in the note's §5 order. This section grows
+with each part.
+
+### Part 1: the repair of the TypeScript site printer
+
+Base `ae2765fd4`; the part's commit is the head.
+
+**The cause was not the one §3 of the note gave.** The note's probe paired an `iterate`'s
+children with its argument positions. Paired correctly, every node's checked environment has
+the length of its print depth. The refusing slot is a `catchIf`'s test under the row
+`Effect.catch`, at `[1, 1, 1, 0, 0, 1]`. That row fixes the test to `true` and prints no hole for
+it, so the template's depth for it is the node's own. The checker types it under the handler's
+binder, one deeper. The note's §7 records the correction.
+
+**The repair.** The site printer fits a slot's checked environment to the template's depth
+(`PrintEliminators.atDepth`, `src/Effect4/Codegen/PrintEliminators.lean`). It cuts where the
+checker's is longer, and pads with `unknown` where it is shorter. So no slot is refused for its
+depth. The three leaf laws of the erasure read each term at its print depth through one
+step, `atDepth_length`.
+
+| Command | Result |
+| --- | --- |
+| the probe `cr7/EagerDepths.lean` | every node's checked length equals its print depth; one slot differs, the classifier above; the typed print now prints `timeout/eager` |
+| `lake build` of the two edited modules and their direct importers | passes; the law module in 86 s |
+| `lake env lean --run harness/truth/Truth.lean` into the scratchpad | the truth manifest is byte-identical, so no truth program used the fallback |
+| `make check-host-protocol` | passes, with `timeout/eager` now printed typed |
+| `make check-ts-reader` | passes: 501 files, 416 matched, none mismatched; 783 tests |
+| `make check-corpus` | passes: 400 programs match the committed results |
+| `#axiom_audit` of the two edited modules (`cr7/AuditCR7a.lean`) | 2,259 declarations within `[propext, Quot.sound]` |
+
+The fallback in `shippedPieces` stays in this part. Part 2 removes it with the row-only printer.

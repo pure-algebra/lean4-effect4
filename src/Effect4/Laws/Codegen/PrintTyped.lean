@@ -4585,9 +4585,16 @@ open Effect4.Program TypeScript
 
 variable {Op : Type}
 
+/-- A slot's environment fitted to the template's depth has the depth's length. Placement:
+exact-codecs R8, a step of the claim `typed-print-erasure`; its consumers are the three leaf laws
+below, which read each typed term at the depth it is printed at. -/
+theorem atDepth_length (env : TyEnv) (depth : Nat) : (atDepth env depth).length = depth := by
+  simp only [atDepth, List.length_take, List.length_append, List.length_replicate]
+  omega
+
 -- Placement: exact-codecs R8, step of typed-print erasure.
 -- Consumer: contextual template capture agreement for a successful typed term slot.
--- The existing success guard supplies the exact template depth; no new typing premise.
+-- The slot's environment is fitted to the template depth (`atDepth`); no new typing premise.
 theorem printArg_term_erases (sig : Signature Op) (ctx : Context Op)
     (index depth : Nat) (t : Term) {value : Expr}
     (printed : printArg sig ctx index depth (.term t) = .ok (some (.expr value))) :
@@ -4598,13 +4605,11 @@ theorem printArg_term_erases (sig : Signature Op) (ctx : Context Op)
     cases printed
   | some env =>
     simp only [printArg, henv, need, bind, Except.bind] at printed
-    split at printed
-    · rename_i depthMatches
-      obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
-      simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
-      subst value
-      simpa only [depthMatches] using EraseTermTypes.eraseTerm_printTerm sig t env false hx
-    · cases printed
+    obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
+    simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
+    subst value
+    simpa only [atDepth_length] using
+      EraseTermTypes.eraseTerm_printTerm sig t (atDepth env depth) false hx
 
 -- Same capture law at the optional term sort; absence remains the old template behavior.
 theorem printArg_optTerm_erases (sig : Signature Op) (ctx : Context Op)
@@ -4617,27 +4622,23 @@ theorem printArg_optTerm_erases (sig : Signature Op) (ctx : Context Op)
     cases printed
   | some env =>
     simp only [printArg, henv, need, bind, Except.bind] at printed
-    split at printed
-    · rename_i depthMatches
-      obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
-      simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
-      subst value
-      simpa only [depthMatches] using EraseTermTypes.eraseTerm_printTerm sig t env false hx
-    · cases printed
+    obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
+    simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
+    subst value
+    simpa only [atDepth_length] using
+      EraseTermTypes.eraseTerm_printTerm sig t (atDepth env depth) false hx
 
--- Cause captures use the checked cause fold at the same explicitly guarded depth.
+-- Cause captures use the checked cause fold at the node's environment fitted to the depth.
 theorem printArg_cause_erases (sig : Signature Op) (ctx : Context Op)
     (index depth : Nat) (c : CauseTerm) {value : Expr}
     (printed : printArg sig ctx index depth (.cause c) = .ok (some (.expr value))) :
     EraseTermTypes.eraseCause depth value = printCause depth c := by
   simp only [printArg] at printed
-  split at printed
-  · rename_i depthMatches
-    obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
-    simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
-    subst value
-    simpa only [depthMatches] using EraseTermTypes.eraseCause_typedCause sig ctx.env c hx
-  · cases printed
+  obtain ⟨x, hx, assembled⟩ := Effect4.Laws.Auto.bind_eq_ok.mp printed
+  simp only [EraseTermTypes.pure_eq_ok, Option.some.injEq, Template.Arg.expr.injEq] at assembled
+  subst value
+  simpa only [atDepth_length] using
+    EraseTermTypes.eraseCause_typedCause sig (atDepth ctx.env depth) c hx
 
 end Effect4.Codegen.PrintEliminators
 
@@ -4662,11 +4663,9 @@ theorem site_term_capture_shape (sig : Signature Op) (ctx : PrintEliminators.Con
     cases printed
   | some env =>
     simp only [PrintEliminators.printArg, envAt, PrintEliminators.need, bind, Except.bind] at printed
-    split at printed
-    · obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
-      cases assembled
-      exact ⟨value, rfl⟩
-    · cases printed
+    obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
+    cases assembled
+    exact ⟨value, rfl⟩
 
 theorem site_optTerm_capture_shape (sig : Signature Op) (ctx : PrintEliminators.Context Op)
     (index depth : Nat) (source : Term) {capture : Arg}
@@ -4678,22 +4677,18 @@ theorem site_optTerm_capture_shape (sig : Signature Op) (ctx : PrintEliminators.
     cases printed
   | some env =>
     simp only [PrintEliminators.printArg, envAt, PrintEliminators.need, bind, Except.bind] at printed
-    split at printed
-    · obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
-      cases assembled
-      exact ⟨value, rfl⟩
-    · cases printed
+    obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
+    cases assembled
+    exact ⟨value, rfl⟩
 
 theorem site_cause_capture_shape (sig : Signature Op) (ctx : PrintEliminators.Context Op)
     (index depth : Nat) (source : CauseTerm) {capture : Arg}
     (printed : PrintEliminators.printArg sig ctx index depth (.cause source) = .ok (some capture)) :
     ∃ value, capture = .expr value := by
   simp only [PrintEliminators.printArg] at printed
-  split at printed
-  · obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
-    cases assembled
-    exact ⟨value, rfl⟩
-  · cases printed
+  obtain ⟨value, _, assembled⟩ := bind_eq_ok.mp printed
+  cases assembled
+  exact ⟨value, rfl⟩
 
 theorem siteScalar_printArg (sig : Signature Op) (ctx : PrintEliminators.Context Op)
     (row : Templates.Row) (sorts : List ArgSort) (n : Nat) (σ : Subst)

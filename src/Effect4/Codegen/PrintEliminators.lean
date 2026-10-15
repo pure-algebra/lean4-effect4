@@ -202,20 +202,28 @@ def slotEnv (sig : Signature Op) (ctx : Context Op) (index : Nat) : Option TyEnv
   | .eff (.iterate _ _ _ _ _ _), 4 => ctx.node.extSlotEnv sig ctx.env .iterateResult
   | _, _ => some ctx.env
 
-/-- A leaf argument's typed print. The template still owns its structural binder depth. -/
+/-- **A slot's checked environment at the template's depth**: the environment the checker types
+the slot in, cut or padded with `unknown` to the binders that the template puts the slot under.
+The two agree at every slot that a lane's program prints (`cr7/EagerDepths.lean`, the codegen
+seat's probe). They part at a row's classifier, which the template does not print: `catchIf`'s
+literal `true` under `Effect.catch` is typed under the handler's binder and printed nowhere. So
+the typed print refuses no slot for its depth, and the erasure reads each term at the depth it is
+printed at (the codegen refactor's CR-7, option (a) of its note, as the coordinator ruled). -/
+def atDepth (env : TyEnv) (depth : Nat) : TyEnv :=
+  (env ++ List.replicate (depth - env.length) Ty.unknown).take depth
+
+/-- A leaf argument's typed print, at its slot's checked environment fitted to the template's
+depth (`atDepth`). The template still owns its structural binder depth. -/
 def printArg (sig : Signature Op) (ctx : Context Op) (index depth : Nat) :
     ArgF Op Templates.Carrier → Except PrintRefusal (Option Template.Arg)
   | .term t => do
     let env ← need "term slot" (slotEnv sig ctx index)
-    if env.length = depth then return some (.expr (← term sig env false t))
-    else throw (.internalAction "typed:term slot depth")
+    return some (.expr (← term sig (atDepth env depth) false t))
   | .optTerm (some t) => do
     let env ← need "optional term slot" (slotEnv sig ctx index)
-    if env.length = depth then return some (.expr (← term sig env false t))
-    else throw (.internalAction "typed:optional term slot depth")
+    return some (.expr (← term sig (atDepth env depth) false t))
   | .cause c => do
-    if ctx.env.length = depth then return some (.expr (← cata_cause (causeAlg sig) c ctx.env))
-    else throw (.internalAction "typed:cause slot depth")
+    return some (.expr (← cata_cause (causeAlg sig) c (atDepth ctx.env depth)))
   | other => Templates.printArg sig depth other
 
 /-- Instantiate the existing template with typed term leaves. -/
