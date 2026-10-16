@@ -145,7 +145,10 @@ let names_of (v : val_) : (string * int) list =
   | _ -> failwith "fixture: the row names are not a list"
 
 let built_of (r : request) : Todo_gen.built =
-  { Todo_gen.table = List.map (exactly "a row" Eff_wire.decode_row_exact) r.rows;
+  { Todo_gen.app =
+      { Todo_gen.rows = List.map (exactly "a row" Eff_wire.decode_row_exact) r.rows;
+        services = [];
+        types = [] };
     program = exactly "the program" Eff_wire.decode_program_exact r.program;
     admitted = exactly "the type" Eff_wire.decode_eff_ty_exact r.typed;
     row_names = names_of (exactly "the row names" Eff_val.decode_exact r.names) }
@@ -242,7 +245,7 @@ let () =
   List.iteri
     (fun i r ->
       let built = built_of r in
-      let table = built.Todo_gen.table and program = built.Todo_gen.program in
+      let table = built.Todo_gen.app.Todo_gen.rows and program = built.Todo_gen.program in
       let module F = Effect4_engine.E4_engine.Fast in
       let module R = Effect4_engine.E4_engine.Ref in
       let f0 = F.run ~table program ~fuel:100000 and g0 = R.run ~table program ~fuel:100000 in
@@ -272,7 +275,7 @@ let () =
   List.iteri
     (fun i r ->
       let built = built_of r in
-      let table = built.Todo_gen.table and program = built.Todo_gen.program in
+      let table = built.Todo_gen.app.Todo_gen.rows and program = built.Todo_gen.program in
       let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
       let result calls exit st =
         hex_of

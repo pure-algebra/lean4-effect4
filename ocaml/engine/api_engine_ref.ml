@@ -63,8 +63,10 @@ let run_api (table : row list) (p : program) ~(fuel : int) : outcome * machine =
   let r = api_run p fuel table fuel in
   (r.outcome, r.machine)
 
+(* The machine's admission at the application of this row table: the wire carries no named
+   type, so the application declares none (decisions row 407 (5)). *)
 let admit (table : row list) (m : machine) (d : api_decision) : bool =
-  Option.is_none (program_admit table m d)
+  Option.is_none (program_admit { rows = table; services = []; types = [] } m d)
 
 (* -- the free rows -------------------------------------------------------------------- *)
 
