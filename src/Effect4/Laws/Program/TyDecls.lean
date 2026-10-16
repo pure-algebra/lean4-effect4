@@ -1401,18 +1401,288 @@ theorem inhabited_iff_memberIn {decls : TyDecls} {t : Ty} :
 
 /-! ### Normalization: its part -/
 
+/-- The fold reads a list of members joined by `Ty.ofMembers` as their disjunction. -/
+theorem cata_declAlg_ofMembers (decls : TyDecls) (o : String → Adm) (v : Val)
+    (allocated : List String) : ∀ xs : List Ty,
+    (cata_ty (declAlg decls o) (Ty.ofMembers xs)).2 v allocated =
+      xs.any fun t => (cata_ty (declAlg decls o) t).2 v allocated
+  | [] => rfl
+  | [x] => by simp only [Ty.ofMembers, List.any_cons, List.any_nil, Bool.or_false]
+  | x :: y :: ys => by
+    change ((cata_ty (declAlg decls o) x).2 v allocated ||
+      (cata_ty (declAlg decls o) (Ty.ofMembers (y :: ys))).2 v allocated) = _
+    rw [cata_declAlg_ofMembers decls o v allocated (y :: ys)]
+    rfl
+
+/-- A union row's normal form keeps a member above each one it drops (`cata_admits_sub` at
+`declAlg_admitsSub`), so the fold admits the same values. -/
+theorem cata_declAlg_normalizeRow (decls : TyDecls) (o : String → Adm) (v : Val)
+    (allocated : List String) (xs : List Ty) :
+    (Ty.normalizeRow xs).elems.any (fun t => (cata_ty (declAlg decls o) t).2 v allocated) =
+      xs.any fun t => (cata_ty (declAlg decls o) t).2 v allocated := by
+  rw [← any_row_normalize xs (fun t => (cata_ty (declAlg decls o) t).2 v allocated)]
+  apply Bool.eq_iff_iff.mpr
+  simp only [Ty.normalizeRow, List.any_eq_true]
+  constructor
+  · rintro ⟨t, ht, hv⟩
+    exact ⟨t, Effect4.Row.antichain_subset Ty.sub ht, hv⟩
+  · rintro ⟨t, ht, hv⟩
+    obtain ⟨u, hu, htu⟩ := Effect4.Row.antichain_coverage Ty.sub Ty.sub_refl
+      Ty.sub_trans (Effect4.Row.normalize xs).elems t ht
+    exact ⟨u, hu, cata_admits_sub (declAlg_admitsSub decls o) htu v allocated hv⟩
+
+/-- The fold at a product: a pair whose sides the two factors admit. -/
+theorem cata_declAlg_prod (decls : TyDecls) (o : String → Adm) (a b : Ty) (v : Val)
+    (allocated : List String) :
+    (cata_ty (declAlg decls o) (.prod a b)).2 v allocated =
+      match v with
+      | .list [x, y] =>
+        (cata_ty (declAlg decls o) a).2 x allocated && (cata_ty (declAlg decls o) b).2 y allocated
+      | _ => false := rfl
+
+/-- The fold reads a type by its factors. -/
+theorem cata_declAlg_factors (decls : TyDecls) (o : String → Adm) (v : Val)
+    (allocated : List String) (t : Ty) :
+    t.factors.any (fun u => (cata_ty (declAlg decls o) u).2 v allocated) =
+      (cata_ty (declAlg decls o) t).2 v allocated := by
+  cases t with
+  | never => rfl
+  | _ => exact (cata_declAlg_members decls o _ v allocated).symm
+
+/-- The fold reads a product by the products of its factors. -/
+theorem cata_declAlg_productMembers (decls : TyDecls) (o : String → Adm) (v : Val)
+    (allocated : List String) (a b : Ty) :
+    (Ty.productMembers a b).any (fun t => (cata_ty (declAlg decls o) t).2 v allocated) =
+      (cata_ty (declAlg decls o) (.prod a b)).2 v allocated := by
+  simp only [Ty.productMembers, List.any_flatMap, List.any_map, Function.comp_def,
+    cata_declAlg_prod]
+  split
+  · rename_i x y
+    apply Bool.eq_iff_iff.mpr
+    simp only [List.any_eq_true, Bool.and_eq_true]
+    constructor
+    · rintro ⟨ta, hta, tb, htb, hx, hy⟩
+      exact ⟨(Bool.eq_iff_iff.mp (cata_declAlg_factors decls o x allocated a)).mp
+          (List.any_eq_true.mpr ⟨ta, hta, hx⟩),
+        (Bool.eq_iff_iff.mp (cata_declAlg_factors decls o y allocated b)).mp
+          (List.any_eq_true.mpr ⟨tb, htb, hy⟩)⟩
+    · rintro ⟨hx, hy⟩
+      obtain ⟨ta, hta, hx⟩ := List.any_eq_true.mp
+        ((Bool.eq_iff_iff.mp (cata_declAlg_factors decls o x allocated a)).mpr hx)
+      obtain ⟨tb, htb, hy⟩ := List.any_eq_true.mp
+        ((Bool.eq_iff_iff.mp (cata_declAlg_factors decls o y allocated b)).mpr hy)
+      exact ⟨ta, hta, tb, htb, hx, hy⟩
+  · apply Bool.eq_false_iff.mpr
+    intro h
+    obtain ⟨_, _, hx⟩ := List.any_eq_true.mp h
+    obtain ⟨_, _, hy⟩ := List.any_eq_true.mp hx
+    exact Bool.false_ne_true hy
+
+/-- Normalization of a product keeps the fold's admission, given it at both factors. -/
+theorem cata_declAlg_normalize_prod (decls : TyDecls) (o : String → Adm) (a b : Ty) (v : Val)
+    (allocated : List String)
+    (iha : ∀ v allocated, (cata_ty (declAlg decls o) a.normalize).2 v allocated =
+      (cata_ty (declAlg decls o) a).2 v allocated)
+    (ihb : ∀ v allocated, (cata_ty (declAlg decls o) b.normalize).2 v allocated =
+      (cata_ty (declAlg decls o) b).2 v allocated) :
+    (cata_ty (declAlg decls o) (Ty.prod a b).normalize).2 v allocated =
+      (cata_ty (declAlg decls o) (.prod a b)).2 v allocated := by
+  show (cata_ty (declAlg decls o) (Ty.ofMembers (Ty.normalizeRow
+    (Ty.productMembers a.normalize b.normalize)).elems)).2 v allocated = _
+  rw [cata_declAlg_ofMembers, cata_declAlg_normalizeRow, cata_declAlg_productMembers,
+    cata_declAlg_prod, cata_declAlg_prod]
+  split
+  · rw [iha, ihb]
+  · rfl
+
+/-- The fold at a tuple: a list read item by item. -/
+theorem cata_declAlg_tuple (decls : TyDecls) (o : String → Adm) (ts : List Ty) (v : Val)
+    (allocated : List String) :
+    (cata_ty (declAlg decls o) (.tuple ts)).2 v allocated =
+      match v with
+      | .list xs => itemsHasTy (ts.map fun u x => (cata_ty (declAlg decls o) u).2 x allocated) xs
+      | _ => false := by
+  show (Val.hasTy.alg.ty_tuple (cata_pos_list_ty (declAlg decls o) ts)).2 v allocated = _
+  dsimp only [Val.hasTy.alg]
+  cases v
+  case list xs =>
+    rw [itemCheckers_foldr, cata_pos_list_ty_eq, List.map_map]
+    rfl
+  all_goals rfl
+
+/-- A pair tuple and a product have the fold's same admission. -/
+theorem cata_declAlg_tuple_pair (decls : TyDecls) (o : String → Adm) (a b : Ty) (v : Val)
+    (allocated : List String) :
+    (cata_ty (declAlg decls o) (.tuple [a, b])).2 v allocated =
+      (cata_ty (declAlg decls o) (.prod a b)).2 v allocated := by
+  rw [cata_declAlg_tuple, cata_declAlg_prod]
+  cases v
+  case list xs =>
+    match xs with
+    | [] => rfl
+    | [_] => simp only [List.map_cons, List.map_nil, itemsHasTy, Bool.and_false]
+    | [_, _] => simp only [List.map_cons, List.map_nil, itemsHasTy, Bool.and_true]
+    | _ :: _ :: _ :: _ => simp only [List.map_cons, List.map_nil, itemsHasTy, Bool.and_false]
+  all_goals rfl
+
+/-- The fold at a record: the canonical fields read by name. -/
+theorem cata_declAlg_record (decls : TyDecls) (o : String → Adm) (fs : List (String × Bool × Ty))
+    (v : Val) (allocated : List String) :
+    (cata_ty (declAlg decls o) (.record fs)).2 v allocated =
+      match recordParts? v with
+      | some (ns, xs) => namedHasTy ((Ty.canon fs).map fun c =>
+          (c.1, c.2.1, fun x => (cata_ty (declAlg decls o) c.2.2).2 x allocated)) ns xs
+      | none => false := by
+  show (Val.hasTy.alg.ty_record (cata_pos_list_prod_string_prod_bool_ty (declAlg decls o) fs)).2 v
+    allocated = _
+  dsimp only [Val.hasTy.alg]
+  cases recordParts? v with
+  | some parts =>
+    obtain ⟨ns, xs⟩ := parts
+    dsimp only
+    rw [fieldCheckers_foldr, cata_pos_list_prod_string_prod_bool_ty_eq, List.map_map]
+    have hmap : ((fun q => (q.1, admChecker allocated q.2)) ∘
+        prodMapSnd (prodMapSnd (cata_ty (declAlg decls o)))) =
+        fun c : String × Bool × Ty =>
+          (c.1, c.2.1, fun x => (cata_ty (declAlg decls o) c.2.2).2 x allocated) := rfl
+    rw [hmap]
+    have hcanon := Field.canonBy_map (key := Field.bytesKey)
+      (fun c : Bool × Ty => (c.1, fun x => (cata_ty (declAlg decls o) c.2).2 x allocated)) fs
+    rw [Ty.canon, hcanon, ← Ty.canon]
+  | none => rfl
+
+/-- The fold at a reference: the oracle at a declared name, the handle arm at any other. -/
+theorem cata_declAlg_handle (decls : TyDecls) (o : String → Adm) (name : String) (v : Val)
+    (allocated : List String) :
+    (cata_ty (declAlg decls o) (.handle name)).2 v allocated =
+      match decls.body? name with
+      | some _ => o name v allocated
+      | none => Val.hasTy v (.handle name) allocated := by
+  show ((declAlg decls o).ty_handle name).2 v allocated = _
+  unfold declAlg
+  dsimp only
+  cases decls.body? name with
+  | some _ => rfl
+  | none => exact (Val.hasTy.eq_cata v (.handle name) allocated).symm
+
+/-- The fold at a reference with arguments reads its name alone. -/
+theorem cata_declAlg_app (decls : TyDecls) (o : String → Adm) (name : String) (args : List Ty)
+    (v : Val) (allocated : List String) :
+    (cata_ty (declAlg decls o) (.app name args)).2 v allocated =
+      match decls.body? name with
+      | some _ => o name v allocated
+      | none => Val.hasTy v (.handle name) allocated := by
+  show ((declAlg decls o).ty_app name _).2 v allocated = _
+  unfold declAlg
+  dsimp only
+  cases decls.body? name with
+  | some _ => rfl
+  | none => exact (Val.hasTy.eq_cata v (.app name args) allocated).symm
+
 /-- **The fold under any oracle is invariant under normalization.** Placement: concept
 `store-typing`, R3, the step of the claim `recursive-types-normalize`. Route: `hasTy_normalize`'s
 induction, arm by arm, over the fold. `declAlg`'s arms are `Val.hasTy.alg`'s except at a
-reference, which reads its name alone at both spellings (`Ty.normalize_app_nil`). A union's
-normal form keeps a member above each one it drops (`declAlg_admitsSub`, `cata_admits_sub`), and
-the congruence arms are `AdmitsNormalize`'s (`Val.hasTy_admitsNormalize`, which no theorem
-consumes yet). At the empty table it is `hasTy_normalize` (`declAlg_nil`), which then becomes its
-instance. Consumer: `memberIn_normalize`. -/
+reference, which reads its name alone at both spellings (`cata_declAlg_handle`,
+`cata_declAlg_app`). A union's normal form keeps a member above each one it drops
+(`cata_declAlg_normalizeRow`), and the congruence arms are `AdmitsNormalize`'s
+(`Val.hasTy_admitsNormalize`). At the empty table it is `hasTy_normalize` (`declAlg_nil`).
+Consumer: `memberIn_normalize`. -/
 @[semantics "store-typing" (requirement := R3)]
-proof_goal cata_declAlg_normalize (decls : TyDecls) (o : String → Adm) (t : Ty) (v : Val)
+theorem cata_declAlg_normalize (decls : TyDecls) (o : String → Adm) (t : Ty) (v : Val)
     (allocated : List String) :
-    (cata_ty (declAlg decls o) t.normalize).2 v allocated = (cata_ty (declAlg decls o) t).2 v allocated
+    (cata_ty (declAlg decls o) t.normalize).2 v allocated =
+      (cata_ty (declAlg decls o) t).2 v allocated := by
+  induction t generalizing v allocated with
+  | never | unknown | unit | nat | int | string | bool | handle | lit | var | null | undefined
+  | number | bytes | contextOf => rfl
+  | fiberOf _ _ _ _ | refOf _ _ | deferredOf _ _ _ _ => rfl
+  | option t ih =>
+    show (Val.hasTy.alg.ty_option (cata_ty (declAlg decls o) t.normalize)).2 v allocated =
+      (Val.hasTy.alg.ty_option (cata_ty (declAlg decls o) t)).2 v allocated
+    rw [Val.hasTy_admitsNormalize.option _ _ (funext fun x => funext fun a => ih x a)]
+  | list t ih =>
+    show (Val.hasTy.alg.ty_list (cata_ty (declAlg decls o) t.normalize)).2 v allocated =
+      (Val.hasTy.alg.ty_list (cata_ty (declAlg decls o) t)).2 v allocated
+    rw [Val.hasTy_admitsNormalize.list _ _ (funext fun x => funext fun a => ih x a)]
+  | except e a ihe iha =>
+    show (Val.hasTy.alg.ty_except (cata_ty (declAlg decls o) e.normalize)
+      (cata_ty (declAlg decls o) a.normalize)).2 v allocated =
+      (Val.hasTy.alg.ty_except (cata_ty (declAlg decls o) e) (cata_ty (declAlg decls o) a)).2 v
+        allocated
+    rw [Val.hasTy_admitsNormalize.except _ _ _ _ (funext fun x => funext fun al => ihe x al)
+      (funext fun x => funext fun al => iha x al)]
+  | exitOf a e iha ihe =>
+    show (Val.hasTy.alg.ty_exitOf (cata_ty (declAlg decls o) a.normalize)
+      (cata_ty (declAlg decls o) e.normalize)).2 v allocated =
+      (Val.hasTy.alg.ty_exitOf (cata_ty (declAlg decls o) a) (cata_ty (declAlg decls o) e)).2 v
+        allocated
+    rw [Val.hasTy_admitsNormalize.exitOf _ _ _ _ (funext fun x => funext fun al => iha x al)
+      (funext fun x => funext fun al => ihe x al)]
+  | causeOf e ih =>
+    show (Val.hasTy.alg.ty_causeOf (cata_ty (declAlg decls o) e.normalize)).2 v allocated =
+      (Val.hasTy.alg.ty_causeOf (cata_ty (declAlg decls o) e)).2 v allocated
+    rw [Val.hasTy_admitsNormalize.causeOf _ _ (funext fun x => funext fun a => ih x a)]
+  | map k t ihk iht =>
+    have hk : (cata_ty (declAlg decls o) k.normalize).2 = (cata_ty (declAlg decls o) k).2 :=
+      funext fun x => funext fun a => ihk x a
+    have ht : (cata_ty (declAlg decls o) t.normalize).2 = (cata_ty (declAlg decls o) t).2 :=
+      funext fun x => funext fun a => iht x a
+    show (Val.hasTy.alg.ty_map (cata_ty (declAlg decls o) k.normalize)
+      (cata_ty (declAlg decls o) t.normalize)).2 v allocated =
+      (Val.hasTy.alg.ty_map (cata_ty (declAlg decls o) k) (cata_ty (declAlg decls o) t)).2 v
+        allocated
+    dsimp only [Val.hasTy.alg]
+    rw [hk, ht]
+  | union a b iha ihb =>
+    show (cata_ty (declAlg decls o) (Ty.ofMembers (Ty.normalizeRow
+      (a.normalize.members ++ b.normalize.members)).elems)).2 v allocated = _
+    rw [cata_declAlg_ofMembers, cata_declAlg_normalizeRow, List.any_append,
+      ← cata_declAlg_members, ← cata_declAlg_members, iha, ihb]
+    rfl
+  | prod a b iha ihb => exact cata_declAlg_normalize_prod decls o a b v allocated iha ihb
+  | tuple ts ih =>
+    cases Nat.decEq ts.length 2 with
+    | isTrue h2 =>
+      match ts, h2, ih with
+      | [a, b], _, ih =>
+        rw [cata_declAlg_tuple_pair]
+        exact cata_declAlg_normalize_prod decls o a b v allocated (ih a List.mem_cons_self)
+          (ih b (List.mem_cons_of_mem _ List.mem_cons_self))
+    | isFalse h2 =>
+      rw [Ty.normalize_tuple_of_ne ts h2, Ty.normalizeItems_eq_map, cata_declAlg_tuple,
+        cata_declAlg_tuple]
+      split
+      · rw [List.map_map]
+        congr 1
+        apply List.map_congr_left
+        intro u hu
+        funext x
+        exact ih u hu x allocated
+      · rfl
+  | record fs ih =>
+    rw [Ty.normalize_record, cata_declAlg_record, cata_declAlg_record]
+    split
+    · rename_i ns xs _
+      rw [Ty.canon, Field.canonBy_of_ascending _
+        (Field.ascending_map Ty.normPayload (Field.canonBy_ascending fs)), List.map_map,
+        ← Ty.canon]
+      congr 1
+      apply List.map_congr_left
+      intro q hq
+      have hfun : (fun x => (cata_ty (declAlg decls o) (Ty.normPayload q.2).2).2 x allocated) =
+          fun x => (cata_ty (declAlg decls o) q.2.2).2 x allocated :=
+        funext fun x => ih q (Ty.mem_canon hq) x allocated
+      simp only [Function.comp_apply]
+      rw [← hfun]
+      rfl
+    · rfl
+  | app name args _ =>
+    cases args with
+    | nil =>
+      show (cata_ty (declAlg decls o) (.handle name)).2 v allocated = _
+      rw [cata_declAlg_handle, cata_declAlg_app]
+    | cons t ts =>
+      rw [Ty.normalize_app_of_ne name _ (List.cons_ne_nil _ _), cata_declAlg_app, cata_declAlg_app]
 
 /-- **Membership under the table is invariant under normalization** (claim
 `recursive-types-normalize`). It is what the checker's order needs: `Ty.subN` compares normal
