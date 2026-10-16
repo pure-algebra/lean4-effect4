@@ -62,9 +62,9 @@ def readable : List Ty :=
 Each list is a red control of the retraction: `readTyChecked_of_readable` has `ReadableTy` as
 its premise, and the premise is false at every type below. -/
 
-/-- **Collisions.** `int` and `number` print as `number`, which reads as `nat`. A union whose
-members collapse in the target prints as one member. -/
-def collisions : List Ty := [.int, .number, .option .int, .union .nat .int]
+/-- **Collisions.** A union whose members collapse in the target prints as one member: `nat`'s
+spelling `number` is a member of `Num`, the alias of `number`. -/
+def collisions : List Ty := [.union .nat .number]
 
 #guard collisions.all fun ty => !ReadableTy {} ty
 -- each prints, and its spelling reads to another type
@@ -72,16 +72,25 @@ def collisions : List Ty := [.int, .number, .option .int, .union .nat .int]
   match (Types.ofTy ty).bind readTyChecked with
   | some other => other != ty
   | none => false
-#guard (Types.ofTy .int).bind readTyChecked = some .nat
-#guard (Types.ofTy .number).bind readTyChecked = some .nat
-#guard (Types.ofTy (.union .nat .int)).bind readTyChecked = some .nat
 
-/-- **Spellings with no reading** under no class. `unknown`, the five handle heads, the scope
-handle and a supplied handle, and a tagged payload record, which prints as the name of its class
-(under the classes that declare it, the name reads: the last section). -/
+-- The number tower prints injectively (R-T4, decisions row 380 (6)): `int` prints as the
+-- prelude's alias `Int`, `number` as `Num`, and each reads back.
+#guard [Ty.nat, .int, .number, .option .int, .list .number].all (ReadableTy {})
+#guard Types.ofTy .int = some (.name ["Int"] []) && Types.ofTy .number = some (.name ["Num"] [])
+-- control: a payload class never takes an alias's name, so the record prints as its object type
+#guard Types.payloadClass? [("_tag", false, .lit "Int"), ("needed", false, .nat)] = none &&
+  Types.payloadClass? [("_tag", false, .lit "Short"), ("needed", false, .nat)] = some "Short"
+
+-- The effect types read back (the types audit, §6.3): `unknown`, `Exit`, `Cause`, `Fiber` and
+-- `Deferred` read wherever the checked reader reads, and the re-print check keeps each exact.
+#guard [Ty.unknown, .deferredOf .unit .never, .exitOf .nat .never, .causeOf .never,
+    .fiberOf .nat .never, .list (.exitOf .string .unknown)].all (ReadableTy {})
+
+/-- **Spellings with no reading** under no class. `Ref` outside a header (decisions row 378 (8)),
+the scope handle and a supplied handle, and a tagged payload record, which prints as the name of
+its class (under the classes that declare it, the name reads: the last section). -/
 def unread : List Ty :=
-  [ .unknown, .refOf .nat, .deferredOf .unit .never, .exitOf .nat .never, .causeOf .never
-  , .fiberOf .nat .never, Ty.scope, .handle "SqlClient.SqlClient", tagged, .option tagged
+  [ .refOf .nat, Ty.scope, .handle "SqlClient.SqlClient", tagged, .option tagged
   , .record [("hint", false, .refOf .nat)] ]
 
 #guard unread.all fun ty => !ReadableTy {} ty
@@ -89,9 +98,7 @@ def unread : List Ty :=
 #guard unread.all fun ty => (Types.ofTy ty).isSome && ((Types.ofTy ty).bind readTy).isNone
 #guard Types.ofTy tagged = some (.name ["Short"] [])
 #guard readTy {} (.name ["Short"] []) = none
-#guard readTy {} (.name ["unknown"] []) = none
 #guard readTy {} (.name ["Ref", "Ref"] [.name ["number"] []]) = none
-#guard readTy {} (.name ["Deferred", "Deferred"] [.name ["void"] [], .name ["never"] []]) = none
 
 /-- **Not the reader's choice for its spelling.** `readonly [A, B]` reads as a product, never as
 a tuple of two items. A union in another order of members prints as its normal form. -/
@@ -124,7 +131,7 @@ tuple is read by neither. -/
 #guard readTyChecked {} (.union [.name ["number"] []]) = none
 #guard readTyChecked {} (.tuple [.name ["number"] []] false) = none
 #guard readTyChecked {} (.function [] (.name ["void"] [])) = none
-#guard readTysChecked [] [.name ["void"] [], .name ["unknown"] []] = none
+#guard readTysChecked [] [.name ["void"] [], .name ["unknown"] []] = some [.unit, .unknown]
 
 /-! ## The class reader shares the `never` arm
 
@@ -215,7 +222,7 @@ of a list. Under `{}` (`refs = false`, an operation's type arguments or a loop's
   (ReadableTy { refs := true })
 #guard readTyChecked { refs := true } (.name ["Ref", "Ref"] [.name ["number"] []]) =
   some (.refOf .nat)
--- control: `Deferred.Deferred<A, E>` still reads as nothing even when `refs = true`
-#guard !ReadableTy { refs := true } (.deferredOf .unit .never)
+-- reader: `Deferred.Deferred<A, E>` reads under both environments (the types audit, §6.3)
+#guard ReadableTy { refs := true } (.deferredOf .unit .never)
 
 end Test.Codegen.TypeReader

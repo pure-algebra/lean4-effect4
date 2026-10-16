@@ -14,7 +14,7 @@ open Effect4.Program Effect4.Codegen TypeScript
 #guard (Types.ofTy (.record [("nickname", true, .union .string .undefined)])).map
     (Render.type house0) = some "{ readonly nickname?: string | undefined }"
 #guard (Types.ofTy (.record [("a-b", false, .null), ("__proto__", false, .number)])).map
-    (Render.type house0) = some "{ readonly __proto__: number; readonly \"a-b\": null }"
+    (Render.type house0) = some "{ readonly __proto__: Num; readonly \"a-b\": null }"
 #guard (Types.ofTy (.tuple [.nat, .record [("x", true, .bytes)]])).map
     (Render.type house0) = some "readonly [number, { readonly x?: Uint8Array }]"
 #guard (Types.ofTy (.tuple [])).map (Render.type house0) = some "readonly []"

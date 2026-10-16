@@ -156,15 +156,19 @@ def emitted (p : NativeEff) : Option PrintRefusal :=
 #guard emitted (.fail (.record notFoundFields ["id", "_tag"]
     (.cons (.lit (.nat 1)) (.cons (.lit (.str "NotFound")) .nil)))) =
   some (.payloadClass "NotFound" .construction)
--- a field TypeScript spells like another: a binary64 `number` reads back as a natural
-def rateFields : List (String × Bool × Ty) := [("_tag", false, .lit "Rate"), ("value", false, .number)]
+-- a field whose spelling reads back as another type: `Record<number, …>` reads its key as `Num`,
+-- not as the natural the map is keyed by
+def rateFields : List (String × Bool × Ty) :=
+  [("_tag", false, .lit "Rate"), ("value", false, .map .nat .nat)]
 #guard Classes.classTag? rateFields ["_tag"] (.cons (.lit (.str "Rate")) .nil) = some "Rate"
-#guard (ClassTable.moduleClasses nativeSignature "main" ⟨.never, .record rateFields, Requirement.empty⟩
-    (.succeed (.lit .unit))).isOk = false
 #guard match ClassTable.moduleClasses nativeSignature "main"
     ⟨.never, .record rateFields, Requirement.empty⟩ (.succeed (.lit .unit)) with
   | .error why => why == .payloadClass "Rate" .unreadable
   | .ok _ => false
+-- green control: a binary64 field declares its class, since `Num` reads back (R-T4)
+#guard (ClassTable.moduleClasses nativeSignature "main"
+    ⟨.never, .record [("_tag", false, .lit "Rate"), ("value", false, .number)], Requirement.empty⟩
+    (.succeed (.lit .unit))).isOk
 -- green control: the same type under a natural field declares its class
 #guard (ClassTable.moduleClasses nativeSignature "main"
     ⟨.never, .record [("_tag", false, .lit "Rate"), ("value", false, .nat)], Requirement.empty⟩

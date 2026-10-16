@@ -143,6 +143,11 @@ namespace Effect4.Codegen.Types
 
 open TypeScript
 
+/-- The prelude's aliases of `number` (decisions rows 309 (5), 380 (6); R-T4): `int` prints as `Int`
+and `number` as `Num`, so the number tower prints injectively and each reads back. A payload class
+never takes one of these names (`payloadClass?`). -/
+def typeAliasNames : List String := ["Int", "Num"]
+
 /-- The class a record type prints as (decisions row 120, ruling (b)): its tag, when its fields
 are a tagged payload record type (`Program.payloadRecordTy`: a required `_tag` literal, every
 field payload-admissible, no other spelling) and the tag is a target identifier. Classness is a
@@ -150,7 +155,9 @@ property of the type: the model's record types are structural, so a tagged recor
 the same type as the failure it may become. -/
 def payloadClass? (fields : List (String × Bool × Program.Ty)) : Option String := do
   let tag ← Program.Record.tagOf (.record fields)
-  if Program.payloadRecordTy fields && targetIdentifier tag then some tag else none
+  if Program.payloadRecordTy fields && targetIdentifier tag && !typeAliasNames.contains tag then
+    some tag
+  else none
 
 private abbrev Bytes := List UInt8
 
@@ -404,7 +411,8 @@ private def ofNormalized (names : Program.KeyNames) : Program.Ty → Option Type
   | .never => some (.name ["never"] [])
   | .unknown => some (.name ["unknown"] [])
   | .unit => some (.name ["void"] [])
-  | .nat | .int => some (.name ["number"] [])
+  | .nat => some (.name ["number"] [])
+  | .int => some (.name ["Int"] [])
   | .string => some (.name ["string"] [])
   | .bool => some (.name ["boolean"] [])
   | .handle target => parseLegacy target
@@ -454,7 +462,7 @@ private def ofNormalized (names : Program.KeyNames) : Program.Ty → Option Type
   | .tuple items => (ofItems names items).map (fun values => .tuple values true)
   | .null => some (.name ["null"] [])
   | .undefined => some (.name ["undefined"] [])
-  | .number => some (.name ["number"] [])
+  | .number => some (.name ["Num"] [])
   | .bytes => some (.name ["Uint8Array"] [])
   -- Nominal applications need their own resolved declaration table.
   | .app _ _ => none
@@ -592,7 +600,7 @@ theorem ofTy_unit : ofTy .unit = some (.name ["void"] []) := rfl
 
 theorem ofTy_nat : ofTy .nat = some (.name ["number"] []) := rfl
 
-theorem ofTy_int : ofTy .int = some (.name ["number"] []) := rfl
+theorem ofTy_int : ofTy .int = some (.name ["Int"] []) := rfl
 
 /-- **A context type prints as rc.112's answer of `Effect.context<R>()`**: `Context.Context<R>`,
 its row in the one spelling of a requirement row (`requirementType`) under the key names given,

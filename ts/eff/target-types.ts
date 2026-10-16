@@ -185,10 +185,12 @@ const classSpelling = (fields: RecordFields): boolean => {
 /** `payloadRecordTy`: a tagged payload record type. */
 export const payloadRecord = (fields: RecordFields): boolean =>
   tagOf(fields) !== undefined && fields.every(([, [, value]]) => payloadFieldTy(value)) && !classSpelling(fields)
+/** `Types.typeAliasNames`: the prelude's aliases of `number`, which no payload class takes. */
+export const typeAliasNames: ReadonlyArray<string> = ["Int", "Num"]
 /** `Types.payloadClass?`: the class a record type prints as, its tag when an identifier. */
 export const payloadClass = (fields: RecordFields): string | undefined => {
   const tag = tagOf(fields)
-  return tag !== undefined && payloadRecord(fields) && targetIdentifier(tag) ? tag : undefined
+  return tag !== undefined && payloadRecord(fields) && targetIdentifier(tag) && !typeAliasNames.includes(tag) ? tag : undefined
 }
 export const quoteType = (text: string): string =>
   `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")}"`
@@ -310,7 +312,10 @@ export const targetType = (raw: Ty, legacy: (text: string) => string | undefined
     switch (type._tag) {
       case "never": case "unknown": case "string": case "null": case "undefined": return type._tag
       case "unit": return "void"
-      case "nat": case "int": case "number": return "number"
+      // `int` and `number` print as the prelude's aliases `Int` and `Num` (R-T4, decisions row 380 (6))
+      case "nat": return "number"
+      case "int": return "Int"
+      case "number": return "Num"
       case "bool": return "boolean"
       case "bytes": return "Uint8Array"
       case "lit": return quoteType(type.value)

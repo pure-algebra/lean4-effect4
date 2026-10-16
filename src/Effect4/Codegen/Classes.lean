@@ -112,7 +112,8 @@ theorem readClass_size (e : Expr) (tag : String) (names : List String) (values :
 /-! ## The field-type reader -/
 
 /-- A named type at its arguments' readings, under the module's payload classes, at one choice
-per spelling: `number` reads as `nat`, and `Readonly<Record<string, V>>` as a map. A class name
+per spelling: `number` reads as `nat`, the prelude's aliases `Int` and `Num` as `int` and `number`
+(R-T4, decisions row 380 (6)), and `Readonly<Record<string, V>>` as a map. A class name
 reads as the payload record that its declaration declares (`classes`, tag ↦ fields; decisions row
 120), so the error column `readonly ["SqlError", string] | NotFound` reads as a union that holds
 the record of `NotFound`. Under no class a class name reads as nothing: the class reader reads a
@@ -120,10 +121,14 @@ class's fields under none, so a class's field naming another class has no readin
 as the empty type (the state plan's T5, part B): the error column of `Deferred.make<A, never>()`
 is spelled so. `Ref.Ref<A>` reads as `.refOf A` when `refs` is true (a definition's header,
 `Signature.typeEnv`; decisions row 378 (8)) and as nothing at an expression's type arguments or a
-loop's cursor (`refs = false`). The other handle names (`Deferred.Deferred<A, E>`, …) and
-`unknown` read as nothing. -/
+loop's cursor (`refs = false`). `unknown`, `Exit.Exit`, `Cause.Cause`, `Fiber.Fiber` and
+`Deferred.Deferred` read everywhere (the types audit, §6.3): each prints so, and the checked
+reader's re-print keeps the reading exact. A supplied handle's name reads as nothing. -/
 def readNamed (classes : Classes) (refs : Bool := false) : List String → List Ty → Option Ty
   | ["number"], [] => some .nat
+  | ["Int"], [] => some .int
+  | ["Num"], [] => some .number
+  | ["unknown"], [] => some .unknown
   | ["string"], [] => some .string
   | ["boolean"], [] => some .bool
   | ["void"], [] => some .unit
@@ -135,6 +140,10 @@ def readNamed (classes : Classes) (refs : Bool := false) : List String → List 
   | ["ReadonlyArray"], [x] => some (.list x)
   | ["Result", "Result"], [v, e] => some (.except e v)
   | ["Ref", "Ref"], [x] => if refs then some (.refOf x) else none
+  | ["Exit", "Exit"], [v, e] => some (.exitOf v e)
+  | ["Cause", "Cause"], [e] => some (.causeOf e)
+  | ["Fiber", "Fiber"], [v, e] => some (.fiberOf v e)
+  | ["Deferred", "Deferred"], [v, e] => some (.deferredOf v e)
   | ["Record"], [.string, v] => some (.map .string v)
   | ["Readonly"], [.map k v] => some (.map k v)
   | [tag], [] => (classes.lookup tag).map .record
@@ -223,11 +232,11 @@ A type is outside it for one of four reasons, and each stays visible here.
 * **No printed form** (`Types.ofTy` answers `none`): a row template's parameter, a nominal
   application at arguments, a map whose key is no string, and a handle whose legacy name does
   not parse.
-* **A collision**: `int` and `number` print as `number`, which reads as `nat`; a union whose
-  members collapse in the target prints as one member.
-* **A spelling with no reading**: `unknown`; `Ref.Ref<A>`, `Deferred.Deferred<A, E>`,
-  `Exit.Exit<A, E>`, `Cause.Cause<E>` and `Fiber.Fiber<A, E>`; the scope handle and every other
-  handle; a tagged payload record whose class `env.classes` does not declare with its fields.
+* **A collision**: a union whose members collapse in the target prints as one member. (`int`
+  and `number` print as the aliases `Int` and `Num`, so the number tower reads back.)
+* **A spelling with no reading**: `Ref.Ref<A>` outside a header (`refs = false`); the scope
+  handle and every other handle; a tagged payload record whose class `env.classes` does not
+  declare with its fields.
 * **Not the reader's choice for its spelling**: `readonly [A, B]` reads as a product, never as
   a tuple of two items, and a type outside normal form prints as its normal form (a union in
   another order of members, for one).

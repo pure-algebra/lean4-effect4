@@ -126,12 +126,13 @@ the module's free names, by the binding analysis (`SourceBindings.moduleUses`), 
 other free name stays free: a row that is no service row is the host's. Every declaration is
 exported already (`ConstDecl.exported`), the service key, its layer and the main among them. -/
 
-/-- The names a printed module may import from its prelude: the atoms, the term helpers, and the
-printer's heads that are no namespace member, except `pipe` and `undefined`. A head is a namespace
+/-- The names a printed module may import from its prelude: the atoms, the term helpers, the
+number tower's aliases (`Types.typeAliasNames`), and the printer's heads that are no namespace
+member, except `pipe` and `undefined`. A head is a namespace
 member when its spelling holds a dot. The test reads bytes (`46` is `.`), since the string
 API's character traversals reach `Classical.choice` on this toolchain. -/
 def preludeNames : List String :=
-  NativeAtom.names ++ termHelperNames ++
+  NativeAtom.names ++ termHelperNames ++ Types.typeAliasNames ++
     reserved.filter fun h => !h.toUTF8.data.toList.contains 46 && h != "pipe" && h != "undefined"
 
 /-- Whether a name comes from `effect`: one of its namespaces (`effectNamespaces`), or its root

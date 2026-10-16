@@ -767,30 +767,34 @@ def readableInstances : List (Ty × Ty × String) :=
 that is not the reader's choice for its spelling, and a spelling with no reading
 (`Classes.ReadableTy`). -/
 def unreadableInstances : List (Ty × Ty × String) :=
-  [ (.int, .never, "Deferred.make<number, never>()")
-  , (.number, .never, "Deferred.make<number, never>()")
-  , (.tuple [.nat, .bool], .never, "Deferred.make<readonly [number, boolean], never>()")
+  [ (.tuple [.nat, .bool], .never, "Deferred.make<readonly [number, boolean], never>()")
   , (.union .string .nat, .never, "Deferred.make<number | string, never>()")
-  , (.unknown, .never, "Deferred.make<unknown, never>()")
   , (.refOf .nat, .never, "Deferred.make<Ref.Ref<number>, never>()")
-  , (.deferredOf .unit .never, .never, "Deferred.make<Deferred.Deferred<void, never>, never>()")
   , (.record shortFields, .never, "Deferred.make<Short, never>()") ]
+
+-- The number tower's aliases and the effect types print and read back exactly (decisions row
+-- 399 (2), (3)): before, `int` and `number` printed as `number` and read back as `nat`.
+#guard ([(Ty.int, "Deferred.make<Int, never>()"), (.number, "Deferred.make<Num, never>()"),
+    (.unknown, "Deferred.make<unknown, never>()"),
+    (.deferredOf .unit .never, "Deferred.make<Deferred.Deferred<void, never>, never>()")] :
+    List (Ty × String)).all fun (v, text) =>
+  decide ((print nativeSignature 0 (make v .never)).map (expr house0 0) = .ok text) &&
+    readable nativeSignature nativeSpell 0 (make v .never)
 
 -- Each prints, and is outside the readable domain: the round trip does not give it back.
 #guard unreadableInstances.all fun (v, e, text) =>
   decide ((print nativeSignature 0 (make v e)).map (expr house0 0) = .ok text) &&
     !readable nativeSignature nativeSpell 0 (make v e) &&
     !typeArgsReadable (nativeSignature.rowOf (.deferredMakeOf v e)) [v, e]
--- A collision reads back at the reader's choice for the spelling: `int` at `nat`, a tuple of
--- two items at a product, a union at its normal order.
-#guard roundTrip nativeSignature nativeSpell 0 (make .int .never) = .ok (make .nat .never)
+-- A collision reads back at the reader's choice for the spelling: a tuple of two items at a
+-- product, a union at its normal order.
 #guard roundTrip nativeSignature nativeSpell 0 (make (.tuple [.nat, .bool]) .never) =
   .ok (make (.prod .nat .bool) .never)
 #guard roundTrip nativeSignature nativeSpell 0 (make (.union .string .nat) .never) =
   .ok (make (.union .nat .string) .never)
--- A spelling with no reading is refused as an annotation, named by the row's spelling: a
--- handle, `unknown`, and a class's name.
-#guard [Ty.refOf .nat, .deferredOf .unit .never, .unknown, .record shortFields].all fun ty =>
+-- A spelling with no reading is refused as an annotation, named by the row's spelling: `Ref`
+-- outside a header, and a class's name.
+#guard [Ty.refOf .nat, .record shortFields].all fun ty =>
   decide (roundTrip nativeSignature nativeSpell 0 (make ty .never) =
     .error (.annotation "Deferred.make type argument"))
 
@@ -1108,15 +1112,16 @@ def loopAt (cursorTy : Option Ty) : Eff NativeOp :=
 #guard roundTrip nativeSignature nativeSpell 0 (loopAt none) = .ok (loopAt none)
 -- Other readable cursor types read back too.
 #guard [Ty.option .bool, .prod .nat (.option .string), .union .nat .string,
-    .list (.option .unit), .record [("a", false, .nat)]].all fun ty =>
+    .list (.option .unit), .record [("a", false, .nat)], .option .int, .unknown,
+    .option (.deferredOf .unit .never)].all fun ty =>
   readable nativeSignature nativeSpell 0 (loopAt (some ty))
 -- Red controls. A collision reads back at the reader's choice for the spelling, another
 -- program: the loop is outside the readable domain.
-#guard roundTrip nativeSignature nativeSpell 0 (loopAt (some (.option .int))) =
-  .ok (loopAt (some (.option .nat)))
-#guard readable nativeSignature nativeSpell 0 (loopAt (some (.option .int))) = false
+#guard roundTrip nativeSignature nativeSpell 0 (loopAt (some (.union .string .nat))) =
+  .ok (loopAt (some (.union .nat .string)))
+#guard readable nativeSignature nativeSpell 0 (loopAt (some (.union .string .nat))) = false
 -- A spelling with no reading is refused by name, as every annotated loop was before part B.
-#guard [Ty.refOf .nat, .unknown, .option (.deferredOf .unit .never), .record shortFields].all
+#guard [Ty.refOf .nat, .record shortFields].all
   fun ty => decide (roundTrip nativeSignature nativeSpell 0 (loopAt (some ty)) =
     .error (.annotation "local const"))
 -- A second reader of this step: `Timeout.fetch` (`Test/Dogfood/Scenario/Timeout.lean`), p1's

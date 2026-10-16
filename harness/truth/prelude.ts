@@ -61,6 +61,12 @@ import * as Atoms from "./prelude-atoms.gen.ts"
  * type here, as the checker refuses it (`TypeReason.maskRestoreExpected`). */
 export type MaskRestore = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
 
+/** The number tower's printed names (R-T4, decisions rows 309 (5) and 380 (6); `Types.typeAliasNames`):
+ * a program's `int` prints as `Int` and its `number` as `Num`, each an alias of `number`, so the
+ * printed type reads back to the program's type. A natural prints as `number`. */
+export type Int = number
+export type Num = number
+
 /** The table the runner's self-test walks. `atom` is the name in `nativeAtom`, or the list
  * fold's head, that the case exercises: `run-truth.ts` checks the atom names against the profile's own
  * atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an atom appended in
@@ -91,6 +97,8 @@ export const selfTestCases: ReadonlyArray<{
     apply: () => JSON.stringify(Atoms.strings("7", "\"x\"")), expected: "[\"7\",\"\\\"x\\\"\"]" },
   { atom: "eq", name: "string equality hit", apply: () => Atoms.eq("A", "A"), expected: true },
   { atom: "eq", name: "string equality miss", apply: () => Atoms.eq("A", "B"), expected: false },
+  { atom: "eq", name: "Boolean equality hit", apply: () => Atoms.eq(true, true), expected: true },
+  { atom: "eq", name: "Boolean equality miss", apply: () => Atoms.eq(true, false), expected: false },
   { atom: "or", name: "or false true", apply: () => Atoms.or(false, true), expected: true },
   { atom: "and", name: "and true false", apply: () => Atoms.and(true, false), expected: false },
   { atom: "causeIsFail", name: "mixed cause contains Fail", apply: () => Atoms.causeIsFail(Cause.combine(Cause.fail(7), Cause.interrupt(1))), expected: true },

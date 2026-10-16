@@ -3,7 +3,7 @@ import { packages } from "../../ts/eff/packages.gen.ts"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { createHash } from "node:crypto"
-import { query, subjectReceivers, type Query, type Issue, type Report } from "./oracle.ts"
+import { pairImports, query, subjectReceivers, type Query, type Issue, type Report } from "./oracle.ts"
 
 type Obj = Record<string, unknown>
 function object(x: unknown, label: string): Obj {
@@ -87,7 +87,7 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
   let scope: Key | undefined
   try { scope = key(corpus.scopeKey) } catch (e) { inputIssues.push({ code: "scope-key-metadata", message: String(e) }) }
   const imports = [
-    'import type { Option, Result, Exit, Cause, Fiber, Scope, Context, Ref, Deferred } from "effect"',
+    ...pairImports,
     `import type * as Adapter from ${JSON.stringify(resolve(repo, "harness/truth/prelude.ts"))}`,
   ]
   const queries: Query[] = programs.map(name => {

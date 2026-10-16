@@ -52,12 +52,16 @@ mutual
 an `except` answer is the data reading `Result.Result<A, E>`; a `handle` is an opaque host type
 whose spelling is carried verbatim. A record prints its fields in the order given (`render`
 normalizes first), each `readonly` and an optional one with `?`; a map prints
-`Readonly<Record<K, V>>` (decisions row 125). -/
+`Readonly<Record<K, V>>` (decisions row 125). The number tower prints as the codegen printer
+does (`Codegen.Types.ofTy`, decisions row 399 (2)): `nat` as `number`, `int` and `number` as the
+prelude's aliases `Int` and `Num`. -/
 def renderRaw : Ty → String
   | .never => "never"
   | .unknown => "unknown"
   | .unit => "void"
-  | .nat | .int | .number => "number"
+  | .nat => "number"
+  | .int => "Int"
+  | .number => "Num"
   | .string => "string"
   | .bool => "boolean"
   | .handle target => target

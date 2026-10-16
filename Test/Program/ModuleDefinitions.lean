@@ -48,6 +48,12 @@ def readResult (m : Module NativeOp) : Option (Except ReadRefusal Api.Program) :
     (Api.printModule "main" built.program built.table).map fun printed =>
       Api.readModule printed built.table
 
+/-- The module prints, and its printed module reads back to the program it was built to. -/
+def roundTrips (m : Module NativeOp) : Bool :=
+  match (Api.Author.build m).toOption with
+  | some built => readResult m == some (.ok built.program)
+  | none => false
+
 /-- The two Queue instances retain their separate message types and names. -/
 def twoTypes : Src NativeOp := eff do
   let q ← Queue.bounded .nat 2
@@ -63,12 +69,12 @@ def twoTypesModule : Module NativeOp := numbers.install (strings.module twoTypes
 
 #guard runModule twoTypesModule = some (.success (.list [.nat 3, .str "three", .none]))
 #guard prints twoTypesModule
--- The handle request is outside the existing type reader's domain, on both authoring surfaces.
+-- The handle request reads only at a definition's header (decisions row 378 (8)), on both
+-- authoring surfaces; there it reads, since `Deferred` does (row 399 (3)), so the modules read back.
 #guard (Queue.defs .nat).all fun d => !d.decl.readable {}
 #guard numbers.defs.all fun d => !d.decl.readable {}
-#guard readResult { defs := Queue.defs .nat, main := succeed unit } =
-  some (.error (.shape "definition"))
-#guard readResult twoTypesModule = some (.error (.shape "definition"))
+#guard roundTrips { defs := Queue.defs .nat, main := succeed unit }
+#guard roundTrips twoTypesModule
 -- Changing installation order changes indices, but these invocations still resolve by name.
 #guard runModule (strings.install (numbers.module twoTypes)) = runModule twoTypesModule
 -- The wrong message type still refuses through ordinary program admission.
@@ -91,7 +97,7 @@ def immediate : Src NativeOp := eff do
   some (.success (.list [.nat 1, .nat 2, .bool true, .bool false]))
 #guard prints (permits.module immediate)
 #guard permits.defs.all fun d => !d.decl.readable {}
-#guard readResult (permits.module immediate) = some (.error (.shape "definition"))
+#guard roundTrips (permits.module immediate)
 
 /-- A stored invocation waits in a child and resumes after a release. -/
 def waiting : Src NativeOp := eff do

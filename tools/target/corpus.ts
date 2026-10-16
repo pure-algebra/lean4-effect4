@@ -23,7 +23,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { key, requirements } from "./profile.ts"
-import { query, type Query } from "./oracle.ts"
+import { pairImports, query, type Query } from "./oracle.ts"
 
 const args = process.argv.slice(2)
 let repo = resolve(import.meta.dir, "../.."), manifestPath = "", inferred = "", output = ""
@@ -43,7 +43,7 @@ const selection = JSON.parse(readFileSync(resolve(repo, "Test/fixtures/target/se
 const handles = new Map<string, string>(Object.entries(selection.handles as Record<string, string>))
 const scope = key(manifest.scopeKey)
 const imports = [
-  'import type { Option, Result, Exit, Cause, Fiber, Scope, Context, Ref, Deferred } from "effect"',
+  ...pairImports,
   `import type * as Adapter from ${JSON.stringify(resolve(repo, "harness/truth/prelude.ts"))}`
 ]
 const queries: Query[] = []

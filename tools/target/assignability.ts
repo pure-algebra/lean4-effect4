@@ -24,6 +24,7 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { assignability, type Pair, type PairObservation } from "./oracle.ts"
+import { typeAliasNames } from "../../ts/eff/target-types.ts"
 
 interface Vector { id: string; left: string; right: string; renderLeft: string; renderRight: string
   subLR: boolean; subRL: boolean; mutantLR: boolean; mutantRL: boolean }
@@ -47,11 +48,16 @@ export function readVectors(text: string): Vector[] {
   return vectors
 }
 
+/** A spelling as the target reads it: the prelude's aliases of `number` (`Int`, `Num`) are
+ * `number` itself to the compiler. */
+const unalias = (spelling: string): string =>
+  typeAliasNames.reduce((s, name) => s.replace(new RegExp(`\\b${name}\\b`, "g"), "number"), spelling)
+
 /** The deliberate differences, each with the reason it is not a defect and not incompleteness.
  * A pair is a cut only when the reason applies to it; nothing is classified by its id. */
 const cuts: Array<{ name: string; reason: string; holds: (v: Vector) => boolean }> = [
-  { name: "cut/spelling", reason: "the shipped spelling is not injective (`nat` and `int` both print `number`; `refOf nat` prints the handle target `Ref.Ref<number>` that a `.handle` prints verbatim), so the target cannot see a difference the order can",
-    holds: v => v.renderLeft === v.renderRight && v.left !== v.right },
+  { name: "cut/spelling", reason: "the target's reading of the shipped spelling is not injective (`int` and `number` print as the prelude's aliases `Int` and `Num` of `number`, which the compiler reads as `number`, a natural's spelling; `refOf nat` prints the handle target `Ref.Ref<number>` that a `.handle` prints verbatim), so the target cannot see a difference the order can",
+    holds: v => unalias(v.renderLeft) === unalias(v.renderRight) && v.left !== v.right },
 ]
 
 export type Verdict = "agree" | "cut" | "incomplete" | "defect"

@@ -12,6 +12,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { join } from "node:path"
+import { typeAliasNames } from "../../ts/eff/target-types.ts"
 
 export type Axis = "A" | "E" | "R" | "request" | "receiver"
 export interface Issue { code: string; message: string; axis?: Axis }
@@ -146,9 +147,12 @@ export interface PairReport {
 const axes: Axis[] = ["A", "E", "R", "request", "receiver"]
 export const bindingName = (axis: Axis, direction: string) => `__${axis}_${direction}`
 export const pairBindingName = (direction: "leftToRight" | "rightToLeft") => `__pair_${direction}`
-/** Every module of the effect namespace a shipped type spelling can name, plus the
- * handle spellings it prints verbatim. */
-export const pairImports = ['import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from "effect"']
+/** Every name a shipped type spelling can use, for every query of the lane: the modules of the
+ * effect namespace, which the handle spellings print verbatim too, and the prelude's aliases of
+ * `number` (`Int`, `Num`; `Types.typeAliasNames`), declared as `harness/truth/prelude.ts`
+ * declares them. */
+export const pairImports = ['import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from "effect"',
+  ...typeAliasNames.map(name => `type ${name} = number`)]
 
 /** The handle bindings as declarations the compiler resolves. A binding `A.B` → `T` is a
  * namespace `A` with a type member `B`; a binding `A` → `T` is a type alias. The rendered text

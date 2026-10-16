@@ -83,12 +83,11 @@ private def sampleModule : Module :=
     .name ["never"] []])
 #guard Effect4.Codegen.Types.parseLegacy "'\\uD83D\\uDE42'" == some (.literal "🙂")
 
--- Projected and parsed unions are canonical in the target: members that collapse to one
--- spelling collapse to one member, so a declared `number` compares equal to the projection
--- of `nat | int` (breaker finding B19).
-#guard Effect4.Codegen.Types.ofTy (.union .nat .int) == some (.name ["number"] [])
+-- Projected and parsed unions are canonical in the target: `nat | int` normalizes to `int`
+-- before it prints, so it compares equal to a declared `Int` (breaker finding B19).
+#guard Effect4.Codegen.Types.ofTy (.union .nat .int) == some (.name ["Int"] [])
 #guard (Effect4.Codegen.Types.ofTy (.union (.union .nat .int) .string)).map (Render.type house0)
-  = some "number | string"
+  = some "Int | string"
 #guard Effect4.Codegen.Types.parseLegacy "A | A" == some (.name ["A"] [])
 #guard Effect4.Codegen.Types.parseLegacy "A | (B | A)" == some (.union [.name ["A"] [], .name ["B"] []])
 #guard ["", "A<>", "number<string>", "void.X", "default", "true", "A.1",

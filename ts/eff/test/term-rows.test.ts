@@ -109,11 +109,18 @@ describe("an operation's type arguments, read from the call's head", () => {
     expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.get<number>(a0))")).toEqual({ _tag: "arity", head: "Ref.get" })
   })
   test("a spelling with no reading is refused by name", () => {
-    // As Lean names it, `annotation "Deferred.make type argument"`: a handle, `unknown` and a
+    // As Lean names it, `annotation "Deferred.make type argument"`: `Ref` outside a header and a
     // class's name have no reading (`Classes.ReadableTy`).
-    for (const type of ["Ref.Ref<number>", "Deferred.Deferred<void, never>", "unknown", "Short"]) {
+    for (const type of ["Ref.Ref<number>", "Short"]) {
       expect(read(`Deferred.make<${type}, never>()`)).toEqual({ _tag: "annotation", site: "Deferred.make type argument" })
     }
+  })
+  test("the effect types and the number tower's aliases read back (decisions row 399 (2), (3))", () => {
+    expect(readTypeText("unknown")).toEqual({ _tag: "unknown" })
+    expect(readTypeText("Int")).toEqual({ _tag: "int" })
+    expect(readTypeText("Num")).toEqual({ _tag: "number" })
+    expect(readTypeText("Exit.Exit<number, never>")).toEqual({ _tag: "exitOf", value: natTy, error: neverTy })
+    expect(readTypeText("Deferred.Deferred<void, never>")).toEqual({ _tag: "deferredOf", value: { _tag: "unit" }, error: neverTy })
   })
   test("the checked type reader keeps only what the type printer prints back", () => {
     expect(readTypeText("void")).toEqual({ _tag: "unit" })
@@ -121,10 +128,10 @@ describe("an operation's type arguments, read from the call's head", () => {
     expect(readTypeText("Option.Option<number>")).toEqual({ _tag: "option", inner: natTy })
     // layout is no part of a type: the text is parsed, and its printed form compared
     expect(readTypeText("Option.Option< number >")).toEqual({ _tag: "option", inner: natTy })
-    // `number` reads as `nat`: the printer spells `int` and `number` alike, so neither reads back
+    // `number` reads as `nat`: `int` and `number` print as the aliases `Int` and `Num`
     expect(readTypeText("number")).toEqual(natTy)
-    // no reading: a handle, `unknown`, a mutable tuple, a union of one printed member twice
-    for (const text of ["Ref.Ref<number>", "unknown", "[number, number]", "number | number", "number; type U = string"]) {
+    // no reading: a handle, a mutable tuple, a union of one printed member twice
+    for (const text of ["Ref.Ref<number>", "[number, number]", "number | number", "number; type U = string"]) {
       expect(readTypeText(text)).toBeUndefined()
     }
   })
@@ -151,7 +158,7 @@ describe("a loop's stated cursor type, read by the checked type reader", () => {
   })
   test("a stated type with no reading is refused where the declaration stands", () => {
     // As Lean answers it, `annotation "local const"`.
-    for (const type of ["Ref.Ref<number>", "unknown", "Short", "[number, number]"]) {
+    for (const type of ["Ref.Ref<number>", "Short", "[number, number]"]) {
       expect(read(loopText(`: ${type}`))).toEqual({ _tag: "annotation", site: "local const" })
     }
   })
@@ -186,7 +193,7 @@ describe("the Queue program r4, read from its printed module", () => {
   test("red controls: a bare Deferred.make, and a cursor type with no reading", () => {
     const bare = readTypeScript(text.replace("Deferred.make<boolean, never>()", "Deferred.make()"))
     expect(Result.isFailure(bare) ? bare.failure : undefined).toEqual({ _tag: "arity", head: "Deferred.make" })
-    expect(Result.isFailure(readTypeScript(text.replace("let a4: Option.Option<number> = none()", "let a4: unknown = none()")))).toBe(true)
+    expect(Result.isFailure(readTypeScript(text.replace("let a4: Option.Option<number> = none()", "let a4: Ref.Ref<number> = none()")))).toBe(true)
     // another readable type is another program
     const other = readTypeScript(text.replace("let a4: Option.Option<number> = none()", "let a4: Option.Option<boolean> = none()"))
     expect(Result.isSuccess(other)).toBe(true)

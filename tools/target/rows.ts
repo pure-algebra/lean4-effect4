@@ -28,7 +28,7 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { rowSignatures, type RowSignature } from "./profile.ts"
-import { query, type Observation, type Query } from "./oracle.ts"
+import { pairImports, query, type Observation, type Query } from "./oracle.ts"
 
 /** The two rows whose answer column disagrees with rc.112 on purpose (plan Q9). The content is
  * stated here, not a skip: the lane reports the exception and what the target actually says. */
@@ -41,7 +41,7 @@ const signed: Record<string, string> = {
 
 // `Effect` itself is imported by every query source; naming it again here is a duplicate
 // identifier, which refuses the query.
-const imports = ['import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from "effect"']
+const imports = pairImports
 
 export function queries(repo: string, signatures: Map<string, RowSignature>): Query[] {
   const out: Query[] = []

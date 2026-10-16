@@ -342,12 +342,13 @@ section Rows
   = some (Val.tuple [Val.str "a", Val.str "b"])
 
 -- E4-TYPED-CE-002, retired 2026-10-02 (decisions row 121, the nesting images): `.int`'s image is
--- `nat`'s and the signed frame, so `Val.nat` inhabits `.int` by that inclusion, not because both
--- render as `number`; the signed frame is no `nat`
+-- `nat`'s and the signed frame, so `Val.nat` inhabits `.int` by that inclusion; since decisions
+-- row 399 (2) the two no longer render alike, so the inclusion is not the printer's; the signed
+-- frame is no `nat`
 #guard Val.hasTy (Val.nat 1) .int = true
 #guard Val.hasTy (.negInt 0) .int = true
 #guard Val.hasTy (.negInt 0) .nat = false
-#guard Ty.render .nat = Ty.render .int
+#guard Ty.render .nat = "number" && Ty.render .int = "Int"
 #guard Val.hasTy (Val.nat 1) .nat = true
 
 end Rows

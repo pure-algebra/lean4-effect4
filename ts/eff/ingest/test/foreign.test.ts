@@ -201,6 +201,7 @@ test("both engines read a loop's stated cursor type alike", () => {
     ["number", { _tag: "nat" }],
     ["Option.Option<number>", { _tag: "option", inner: { _tag: "nat" } }],
     ["number | string", { _tag: "union", left: { _tag: "nat" }, right: { _tag: "string" } }],
+    ["unknown", { _tag: "unknown" }],
   ]
   for (const [type, cursorTy] of readable) {
     const source = annotatedLoopModule(type)
@@ -212,8 +213,8 @@ test("both engines read a loop's stated cursor type alike", () => {
       expect(v.eff.rest.cursorTy).toEqual(cursorTy as never)
     }
   }
-  // a type with no reading: a name, a handle, `unknown`
-  for (const type of ["Foo", "Ref.Ref<number>", "unknown"]) {
+  // a type with no reading: a name, a handle, `bigint`
+  for (const type of ["Foo", "Ref.Ref<number>", "bigint"]) {
     const source = annotatedLoopModule(type)
     const left = ck(source, "loop.ts"), right = oxc(source, "loop.ts")
     expect(compareVerdicts(left, right).status).toBe("agree")
@@ -330,6 +331,7 @@ test("both engines read Deferred.make's type arguments alike, and refuse a bare 
     ["Deferred.make<boolean, never>()", { _tag: "bool" }, neverTy],
     ["Deferred.make<number, number>()", natTy, natTy],
     ["Deferred.make<Option.Option<number>, never>()", { _tag: "option", inner: natTy }, neverTy],
+    ["Deferred.make<unknown, never>()", { _tag: "unknown" }, neverTy],
     // layout is no part of a type
     ["Deferred.make< void ,never >()", { _tag: "unit" }, neverTy],
   ]
@@ -356,9 +358,9 @@ test("both engines read Deferred.make's type arguments alike, and refuse a bare 
       expect(verdicts.map(v => v.kind === "refusal" ? [v.code, v.detail] : v.kind)).toEqual([["E-NODE", "fragment node: Deferred.make"]])
     }
   }
-  // A type with no reading (a handle, `unknown`, a name that is no type of the fragment) is
+  // A type with no reading (a handle, `bigint`, a name that is no type of the fragment) is
   // refused by both, alike, as the fragment reader refuses it: an annotation.
-  for (const call of ["Deferred.make<Ref.Ref<number>, never>()", "Deferred.make<unknown, never>()", "Deferred.make<Foo, never>()"]) {
+  for (const call of ["Deferred.make<Ref.Ref<number>, never>()", "Deferred.make<bigint, never>()", "Deferred.make<Foo, never>()"]) {
     const source = deferredModule(call)
     const left = ck(source, "deferred.ts"), right = oxc(source, "deferred.ts")
     expect(compareVerdicts(left, right).status).toBe("agree")

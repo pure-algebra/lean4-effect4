@@ -818,10 +818,16 @@ const constDeclOf = (s: Node): Declaration | undefined => {
 const readNamedType = (name: string, args: ReadonlyArray<Ty>, classes: ClassTable, refs = false): Ty | undefined => {
   const [a, b] = args
   if (name === "Uint8Array" && args.length === 0) return { _tag: "bytes" }
+  if (name === "Int" && args.length === 0) return { _tag: "int" }
+  if (name === "Num" && args.length === 0) return { _tag: "number" }
   if (name === "Option.Option" && args.length === 1) return { _tag: "option", inner: a! }
   if (name === "ReadonlyArray" && args.length === 1) return { _tag: "list", inner: a! }
   if (name === "Result.Result" && args.length === 2) return { _tag: "except", error: b!, value: a! }
   if (name === "Ref.Ref" && args.length === 1 && refs) return { _tag: "refOf", value: a! }
+  if (name === "Exit.Exit" && args.length === 2) return { _tag: "exitOf", value: a!, error: b! }
+  if (name === "Cause.Cause" && args.length === 1) return { _tag: "causeOf", error: a! }
+  if (name === "Fiber.Fiber" && args.length === 2) return { _tag: "fiberOf", value: a!, error: b! }
+  if (name === "Deferred.Deferred" && args.length === 2) return { _tag: "deferredOf", value: a!, error: b! }
   if (name === "Record" && args.length === 2 && a!._tag === "string") return { _tag: "map", key: a!, value: b! }
   if (name === "Readonly" && args.length === 1 && a!._tag === "map") return a
   const fields = args.length === 0 ? classes.find(([tag]) => tag === name)?.[1] : undefined
@@ -862,8 +868,9 @@ const readTypeNode = (t: Node, classes: ClassTable, names: KeyNames = [], refs =
     case "TSBooleanKeyword": return { _tag: "bool" }
     case "TSVoidKeyword": return { _tag: "unit" }
     // `never` reads as the empty type (`readNamed`, the state plan's T5, part B): the error
-    // column of `Deferred.make<A, never>()` is spelled so. `unknown` has no reading.
+    // column of `Deferred.make<A, never>()` is spelled so. `unknown` reads as the top.
     case "TSNeverKeyword": return { _tag: "never" }
+    case "TSUnknownKeyword": return { _tag: "unknown" }
     case "TSNullKeyword": return { _tag: "null" }
     case "TSUndefinedKeyword": return { _tag: "undefined" }
     case "TSLiteralType": {
