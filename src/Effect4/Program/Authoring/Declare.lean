@@ -35,9 +35,13 @@ tag and the message (decisions row 120). The word `message` is no reserved keywo
 syntax (name := effFailureDecl) "eff_failure " ident " where " sepBy1(effField, ", ") : command
 syntax (name := effMessageDecl) "eff_failure " ident &" message" : command
 
-/-- One row of a block: its name, its request type and its answer type. -/
+/-- One row of a block: its name, its request type and its answer type. A row with named
+parameters, `r(a : A, b : B)`, takes one record request whose fields are its parameters, and its
+call takes them by name in the written order (the types audit, §6.6). `fails E` before the colon
+gives the row its own error column in place of the block's. -/
 declare_syntax_cat effRow
-syntax ident "(" term ")" " : " term : effRow
+syntax ident "(" term ")" (&" fails " term:max)? " : " term : effRow
+syntax ident "(" sepBy1(effField, ", ") ")" (&" fails " term:max)? " : " term : effRow
 
 /-- `eff_rows Name error E cite "…" where r₁(request₁) : answer₁, …`: one host row for each
 entry, spelled `Name.rᵢ`, with the block's error column and citation. It declares each row
@@ -133,24 +137,45 @@ macro_rules
     return mkNullNode #[d1.raw, d2.raw, d3.raw, d4.raw]
   | `(eff_rows $name:ident $[key $keyTerm]? error $err:term cite $cite:str where $rows,*) => do
     let n := name.getId
+    -- each row: its name, its request, its parameters when named, its error and its answer
     let parsed ← rows.getElems.mapM fun r => match r with
-      | `(effRow| $x:ident ($req:term) : $ans:term) => pure (x, req, ans)
+      | `(effRow| $x:ident ($req:term) $[fails $e]? : $ans:term) =>
+        pure (x, req, (none : Option (Array (Ident × TSyntax `term))), e, ans)
+      | `(effRow| $x:ident ($params,*) $[fails $e]? : $ans:term) => do
+        let ps ← parseEffFields params.getElems
+        let entries ← ps.mapM fun (p, t) =>
+          `(($(Syntax.mkStrLit (identToString p)), false, ($t : Effect4.Program.Ty)))
+        let req ← `((Effect4.Program.Ty.record [$entries,*]).normalize)
+        pure (x, req, some ps, e, ans)
       | _ => Macro.throwUnsupported
     let mut out : Array Syntax := #[]
     let mut rowIds : Array (TSyntax `term) := #[]
-    for (x, req, ans) in parsed do
+    for (x, req, params, rowErr, ans) in parsed do
       let rowId := mkIdent (n ++ `row ++ x.getId)
       let callId := mkIdent (n ++ x.getId)
       let spelling := Syntax.mkStrLit (identToString name ++ "." ++ identToString x)
       rowIds := rowIds.push ⟨rowId.raw⟩
-      let host ← `(Effect4.Program.Authoring.Row.host $spelling $req $ans $err $cite)
+      let e := rowErr.getD err
+      let host ← `(Effect4.Program.Authoring.Row.host $spelling $req $ans $e $cite)
       let rowDef ← match keyTerm with
         | some k => `(Effect4.Program.Authoring.RowDef.mk { ($host).row with requires := [$k] })
         | none => pure host
       out := out.push (← `(def $rowId : Effect4.Program.Authoring.RowDef := $rowDef)).raw
-      out := out.push (← `(def $callId (request : Effect4.Program.Authoring.TermSrc) :
-          Effect4.Program.Authoring.Src Effect4.Program.NativeOp :=
-        Effect4.Program.Authoring.Row.call $rowId request)).raw
+      match params with
+      | none =>
+        out := out.push (← `(def $callId (request : Effect4.Program.Authoring.TermSrc) :
+            Effect4.Program.Authoring.Src Effect4.Program.NativeOp :=
+          Effect4.Program.Authoring.Row.call $rowId request)).raw
+      | some ps =>
+        let args : TSyntaxArray `term := ps.map fun (p, _) => ⟨p.raw⟩
+        let entries ← ps.mapM fun (p, t) =>
+          `(($(Syntax.mkStrLit (identToString p)), false, ($t : Effect4.Program.Ty)))
+        let present ← ps.mapM fun (p, _) => `(($(Syntax.mkStrLit (identToString p)), $p))
+        let callTy ← termArrows ps.size
+          (← `(Effect4.Program.Authoring.Src Effect4.Program.NativeOp))
+        out := out.push (← `(def $callId : $callTy := fun $args* =>
+          Effect4.Program.Authoring.Row.call $rowId
+            (Effect4.Program.Authoring.record [$entries,*] [$present,*]))).raw
     out := out.push (← `(def $(mkIdent (n ++ `rows)) : List Effect4.Program.Authoring.RowDef :=
       [$rowIds,*])).raw
     return mkNullNode out

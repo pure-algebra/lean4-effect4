@@ -123,4 +123,34 @@ def handDelete : RowDef := Row.host "TodoRepo.delete" .nat .bool SqlError.ty "th
 #guard elaborateModule { rows := TodoRepo.rows, main := TodoRepo.insert (str "milk") } =
   .ok (.perform (.external 0) (.lit (.str "milk")))
 
+/-! ## 6. Rows with named parameters and their own errors (the types audit, §6.6)
+
+A row written `r(a : A, b : B)` takes one record request whose fields are its parameters, and its
+call takes them by name; `fails E` gives the row its own error column. -/
+
+eff_rows Notes error SqlError.ty cite "named parameters" where
+  setDone(id : .nat, done : .bool) fails NotFound.ty : .option Todo.ty,
+  count(.unit) : .nat
+
+-- Finite evaluation: the row is the hand row at the record of its parameters, in canonical order,
+-- with its own error column; the other row keeps the block's.
+#guard Notes.row.setDone == Row.host "Notes.setDone"
+  (.record [("done", false, .bool), ("id", false, .nat)]) (.option Todo.ty) NotFound.ty
+  "named parameters"
+#guard Notes.row.count == Row.host "Notes.count" .unit .nat SqlError.ty "named parameters"
+-- Finite evaluation: the call builds the request record from its named arguments.
+/-- The call of `setDone`, written by hand: `Row.call` at the record of its named arguments. -/
+def handSetDoneCall : Src NativeOp :=
+  Row.call Notes.row.setDone
+    (record [("id", false, .nat), ("done", false, .bool)] [("id", nat 3), ("done", bool true)])
+
+#guard elaborateModule { rows := Notes.rows, main := Notes.setDone (nat 3) (bool true) } =
+  elaborateModule { rows := Notes.rows, main := handSetDoneCall }
+-- Reader: the call is well typed against its row, and a call with an argument of another type is
+-- not (control).
+#guard (elaborateModule { rows := Notes.rows, main := Notes.setDone (nat 3) (bool true) }).toOption.map
+  (Api.wellTyped · (RowDef.table Notes.rows)) = some true
+#guard (elaborateModule { rows := Notes.rows, main := Notes.setDone (bool true) (nat 3) }).toOption.map
+  (Api.wellTyped · (RowDef.table Notes.rows)) = some false
+
 end Test.Program.AuthoringDeclare
