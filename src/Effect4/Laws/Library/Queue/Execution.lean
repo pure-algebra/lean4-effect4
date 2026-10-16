@@ -26,7 +26,8 @@ open Queue.Model
 
 /-- The compiled take attempt commits the model's cell and job transition, retaining all pending commands. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem take_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+theorem take_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
     (injective : tb.Injective) {idSrc hintSrc : TermSrc} {env : Env} {path : List Nat}
@@ -73,7 +74,7 @@ theorem take_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     rw [site] at current
     exact current
   obtain ⟨term', reply, entered, woken, tree', encoded, notified, answer, _, _⟩ :=
-    Queue.take_attempt sig atoms A message tb msg s id hint profile requested injective
+    Queue.take_attempt sig atoms types A message tb msg s id hint profile requested injective
       depth tyDepth typedEnv readsId readsHint typesId typesHint held member
   have same : term' = term := Except.ok.inj (tree'.symm.trans tree)
   subst term'
@@ -89,7 +90,8 @@ theorem take_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
 
 /-- The compiled offer attempt commits the model's cell and job transition, retaining all pending commands. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem offer_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+theorem offer_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
     (fresh : ∀ o ∈ s.offers, o.id ≠ id) {idSrc hintSrc messageSrc : TermSrc} {env : Env}
@@ -136,7 +138,7 @@ theorem offer_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy
     rw [site] at current
     exact current
   obtain ⟨term', woken, tree', notified, answer, _, _⟩ :=
-    Queue.offer_attempt sig atoms A message tb msg s id a hint profile requested fresh
+    Queue.offer_attempt sig atoms types A message tb msg s id a hint profile requested fresh
       depth tyDepth typedEnv readsId readsHint readsMessage typesId typesHint typesMessage held member
   have same : term' = term := Except.ok.inj (tree'.symm.trans tree)
   subst term'

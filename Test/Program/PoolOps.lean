@@ -152,7 +152,8 @@ cell's value and its membership. No premise on a minted name stays. Each example
 is its law's. -/
 
 /-- The lease's attempt at its own binders, in `use`. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Pool.Model.State)
     (id : Nat) (hint : DeferredKey) (injective : tb.Injective) (caller : Env) (path : List Nat)
     (tys : List Ty) (w : Typed.World) (captured : List Val)
@@ -164,12 +165,13 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (hintTyped : tys[(looped caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.lease_attempt_minted sig atoms canonical tb res s id hint injective (path := path) depth
+  Pool.lease_attempt_minted sig atoms types canonical tb res s id hint injective (path := path) depth
     tyDepth typedEnv (takeRow_identity caller).1 (takeRow_identity caller).2 idHeld idTyped
     (takeRow_hint caller).1 (takeRow_hint caller).2 hintHeld hintTyped held member
 
 /-- The lease's withdrawal at its own binders. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Pool.Model.State)
     (id : Nat) (injective : tb.Injective) (caller : Env) (path : List Nat) (tys : List Ty)
     (w : Typed.World) (captured : List Val)
@@ -180,13 +182,14 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (idTyped : tys[(masked caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.withdraw_attempt_minted sig atoms canonical tb res s id injective (path := path) depth
+  Pool.withdraw_attempt_minted sig atoms types canonical tb res s id injective (path := path) depth
     tyDepth typedEnv (takeWithdrawRow_identity caller).1 (takeWithdrawRow_identity caller).2
     idHeld idTyped held member
 
 /-- The return at the hook's own binder: the leased item's record stands at the level of the
 mask's saved state plus one. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Pool.Model.State)
     (it : Pool.Model.Item) (caller : Env) (path : List Nat) (tys : List Ty) (w : Typed.World)
     (captured : List Val) (depth : captured.length = (returnRow caller).names.length)
@@ -195,12 +198,13 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (itemTyped : tys[(masked caller).names.length]? = some (Pool.itemTy A))
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.return_attempt_minted sig atoms canonical tb res s it (path := path) depth tyDepth
+  Pool.return_attempt_minted sig atoms types canonical tb res s it (path := path) depth tyDepth
     typedEnv (returnRow_item caller).1 (returnRow_item caller).2 itemHeld itemTyped held member
 
 /-- The closer's attempt at the wrapper's own binders: the closer's wrapper stands at
 `closeBase`, so its row is the wrapper's row at that scope as its caller's. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Pool.Model.State)
     (id : Nat) (hint : DeferredKey) (injective : tb.Injective) (closer : Env) (path : List Nat)
     (tys : List Ty) (w : Typed.World) (captured : List Val)
@@ -214,20 +218,21 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (hintTyped : tys[(looped (closeBase closer)).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.drain_attempt_minted sig atoms canonical tb res s id hint injective (path := path) depth
+  Pool.drain_attempt_minted sig atoms types canonical tb res s id hint injective (path := path) depth
     tyDepth typedEnv (takeRow_identity (closeBase closer)).1
     (takeRow_identity (closeBase closer)).2 idHeld idTyped (takeRow_hint (closeBase closer)).1
     (takeRow_hint (closeBase closer)).2 hintHeld hintTyped held member
 
 /-- The selection of a return's helper, at the helper's row: the count is the literal 1. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Pool.Model.State)
     (row : Env) (path : List Nat) (tys : List Ty) (w : Typed.World) (captured : List Val)
     (depth : captured.length = row.names.length) (tyDepth : tys.length = row.names.length)
     (typedEnv : EnvTyped w tys captured) (stores : Stores) (q : RefKey)
     (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.select_attempt sig atoms canonical tb res s 1 (path := path) (countSrc := nat 1) depth
+  Pool.select_attempt sig atoms types canonical tb res s 1 (path := path) (countSrc := nat 1) depth
     tyDepth typedEnv (reads_nat 1 _ path _) (types_nat 1) held member
 
 end OwnBinders

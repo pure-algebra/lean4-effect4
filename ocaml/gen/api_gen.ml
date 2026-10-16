@@ -11255,13 +11255,13 @@ let program_internal_handle_targets : string list =
 
 
 
-(* LCNF mono: List.elem._at_.Effect4.Program.NativeAtom.covers.spec_0 (a : String) (x.1 : List String) : Bool *)
+(* LCNF mono: List.elem._at_.Effect4.Program.Ty.headMembers.spec_0 (a : String) (x.1 : List String) : Bool *)
 
-let rec list_elem_at_program_native_atom_covers_spec_0 (a : string) (x_1 : string list) : bool =
+let rec list_elem_at_program_ty_head_members_spec_0 (a : string) (x_1 : string list) : bool =
   match x_1 with
     | [] -> false
     | head_3 :: tail_4 -> (let _x_5 = a = head_3 in
-      if _x_5 then _x_5 else list_elem_at_program_native_atom_covers_spec_0 a tail_4)
+      if _x_5 then _x_5 else list_elem_at_program_ty_head_members_spec_0 a tail_4)
 
 
 
@@ -11269,7 +11269,7 @@ let rec list_elem_at_program_native_atom_covers_spec_0 (a : string) (x_1 : strin
 
 let program_external_handle_target (target : string) : bool =
   let _x_1 = program_internal_handle_targets in
-  let _x_2 = list_elem_at_program_native_atom_covers_spec_0 target _x_1 in
+  let _x_2 = list_elem_at_program_ty_head_members_spec_0 target _x_1 in
   if _x_2 then false else true
 
 

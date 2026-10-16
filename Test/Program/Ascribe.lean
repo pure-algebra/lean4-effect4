@@ -2,6 +2,7 @@ import Effect4.Api
 import Effect4.Program.Authoring.Ascribe
 import Effect4.Laws.Program.Authoring.Ascribe
 import Effect4.Laws.Step.Ascribe
+import Effect4.Laws.Program.TyHead
 import Test.Dogfood.Stage
 
 /-!
@@ -167,7 +168,8 @@ example (atoms : sig.atomOf = nativeAtomTy) :
 /-- The refusal at a string literal declared at `nat`: no type, under either flag. -/
 example (const : Bool) (U : Ty) :
     ¬ Types sig (ascribe .nat (str "a")) env path types const U :=
-  ascribe_untyped (types_lit (.str "a") true) (by decide +kernel) const U
+  ascribe_untyped (types_lit (.str "a") true)
+    (by rw [Record.fieldAdmitsIn_of_unfold?_none rfl]; decide +kernel) const U
 
 /-- The reading law at a number. -/
 example (vals : List Val) : Reads (ascribe .nat (nat 3)) env path vals (.nat 3) :=

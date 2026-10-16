@@ -78,7 +78,7 @@ example (w : Typed.World) : ∃ value,
 -- The world theorem covers an actual record constructor through the term checker.
 example (w : Typed.World) : ∃ value,
     evalTerm [] (.record [] [] .nil) = some value ∧ Fits w value (.record []) :=
-  evalTerm_progress (sig := nativeSignature) rfl (.nil : FitsAll w [] []) _ _ rfl
+  evalTerm_progress (sig := nativeSignature) rfl rfl (.nil : FitsAll w [] []) _ _ rfl
 
 -- Both read modes and overwrite pass through the same value operations.
 #guard evalTerm [] (.field .optional (.record [("a", true, .nat)] [] .nil) "a") =

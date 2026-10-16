@@ -143,12 +143,12 @@ def Signature.emptyDom (sig : Signature Op) : Signature Op :=
 
 theorem Signature.emptyDom_extends (sig : Signature Op) : SigExtends sig.emptyDom sig :=
   ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl,
-    fun _ _ h => (by cases h), rfl⟩
+    fun _ _ h => (by cases h), rfl, rfl⟩
 
 theorem Signature.emptyDom_extends_withDefs (sig : Signature Op) (decls : List DefDecl) :
     SigExtends sig.emptyDom (sig.withDefs decls) :=
   ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl,
-    fun _ _ h => (by cases h), rfl⟩
+    fun _ _ h => (by cases h), rfl, rfl⟩
 
 /-! ## G1: conservative -/
 
@@ -479,7 +479,7 @@ invocations (`SigExtends.callOf`), so it extends the block's signature too. A st
 theorem SigExtends.withDefs {s s' : Signature Op} (h : SigExtends s s') (decls : List DefDecl) :
     SigExtends (s.withDefs decls) (s'.withDefs decls) := by
   refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf,
-    fun k d hk => ?_, h.paramOf⟩
+    fun k d hk => ?_, h.paramOf, h.types⟩
   rotate_left
   · -- the block's declaration first, then the signature's, which the extension keeps
     show decls[k]?.or (s'.defOf k) = some d
@@ -517,7 +517,7 @@ theorem SigExtends.withParams {s s' : Signature Op} (h : SigExtends s s') :
   | [] => h
   | q :: qs => by
     refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf,
-      h.defOf, h.paramOf⟩
+      h.defOf, h.paramOf, h.types⟩
     have hp : s'.paramOf op = s.paramOf op := by rw [h.paramOf]
     cases hc : s.paramOf op with
     | none =>
@@ -546,7 +546,7 @@ theorem Signature.extends_withParams (sig : Signature Op)
     ∀ ps : List ParamDecl, SigExtends sig (sig.withParams ps)
   | [] => SigExtends.refl sig
   | q :: qs => by
-    refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl, fun _ _ hk => hk, rfl⟩
+    refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl, fun _ _ hk => hk, rfl, rfl⟩
     cases hc : sig.paramOf op with
     | none =>
       simp only [Signature.withParams, hc]

@@ -383,6 +383,7 @@ statement's own scope, and the second at every scope. -/
 that the checker types in a cell: the step's tree at the statement's own scope, and what its
 answer and its stored value are members of. -/
 theorem withdrawOffer_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (A : Ty) (message : MessageTy A) {w : Typed.World} {captured : List Val}
     (typedEnv : Typed.EnvTyped w [idTy] captured) {stores : Stores} {q : RefKey}
     {cell reply next : Val} (held : refPeek stores.refs q = some cell)
@@ -391,7 +392,7 @@ theorem withdrawOffer_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf 
       (evalTerm (captured ++ [cell]) f = some (Val.tuple [reply, next]) →
         Typed.Fits w reply wakeReplyTy ∧ Typed.Fits w next (Queue.cellTy A)) := by
   obtain ⟨f, tree, typed⟩ := typeAt_tree (withdrawOffer_typed sig atoms A message)
-  exact ⟨f, tree, fun value => step_keeps_cell sig atoms typedEnv typed held member value⟩
+  exact ⟨f, tree, fun value => step_keeps_cell sig atoms types typedEnv typed held member value⟩
 
 /-- **A step's tree is one tree, at every scope.** The tree that a step's reading evaluates is
 the tree that the step's theorem types (`Types.tree`). So a withdrawal of a take that reads a
@@ -399,6 +400,7 @@ reply and a next value keeps the cell a member of its type, at every scope and f
 caller's terms. The cell's value is the scope's last name. The wrapper's law has this shape,
 and it takes its tree from `step_updates`. -/
 theorem withdrawTake_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (A : Ty) (message : MessageTy A) {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
     {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : (tys ++ [Queue.cellTy A]).length = env.names.length)
@@ -411,7 +413,7 @@ theorem withdrawTake_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf =
       (Val.tuple [reply, next])) :
     Typed.Fits w reply wakeReplyTy ∧ Typed.Fits w next (Queue.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms typedEnv
+  exact step_keeps_cell sig atoms types typedEnv
     ((withdrawTake_types sig atoms A message depth typesId typesCell false).tree tree) held
     member value
 

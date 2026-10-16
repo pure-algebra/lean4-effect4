@@ -671,10 +671,11 @@ theorem empty_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomT
     | some _ => none
     | none => (argsTy sig types true (.cons (.app "nil" .nil) (.cons (.lit (.nat capacity))
         (.cons (.app "nil" .nil) (.cons (.app "nil" .nil) .nil))))).bind
-          (Record.check (Queue.cellFields A) ["msgs", "cap", "takers", "offers"])) = _
+          (Record.checkIn sig.types (Queue.cellFields A) ["msgs", "cap", "takers", "offers"])) = _
   rw [message.cell, values]
-  show Record.check (Queue.cellFields A) ["msgs", "cap", "takers", "offers"]
+  show Record.checkIn sig.types (Queue.cellFields A) ["msgs", "cap", "takers", "offers"]
     [Ty.list .never, Ty.nat, Ty.list .never, Ty.list .never] = _
+  refine Record.checkIn_of_check ?_
   unfold Record.check
   show (if _ then some (Ty.normalize (.record (Queue.cellFields A))) else none) = _
   have named : (["msgs", "cap", "takers", "offers"] : List String).Nodup := by decide

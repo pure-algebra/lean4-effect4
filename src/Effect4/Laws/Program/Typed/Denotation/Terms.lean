@@ -782,7 +782,7 @@ whose atoms are the native table's; the const-generic flag is the signature's ow
 fixed. The environment is the theorem's own binder, since a list fold's body runs at the
 environment extended by its accumulator and its element (decisions row 228). -/
 theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf = nativeAtomTy)
-    (hfit : FitsAll w vals env) :
+    (htypes : sig.types = []) (hfit : FitsAll w vals env) :
     ∀ (t : Term) (ty : Ty), termTy sig env t = some ty →
       ∃ v, evalTerm vals t = some v ∧ Fits w v ty
   | .var i, ty, hty => hfit.getElem? hty
@@ -795,7 +795,7 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
     have hty' : (argsTy sig env (sig.constAtom atom) args).bind (sig.atomOf atom) = some ty := hty
     obtain ⟨tl, hts, hatomTy⟩ := Option.bind_eq_some_iff.mp hty'
     rw [hatom] at hatomTy
-    obtain ⟨vs, hvs, hfitvs⟩ := evalTerms_progress hatom hfit (sig.constAtom atom) args tl hts
+    obtain ⟨vs, hvs, hfitvs⟩ := evalTerms_progress hatom htypes hfit (sig.constAtom atom) args tl hts
     unfold nativeAtomTy at hatomTy
     obtain ⟨named, hname, hnamedTy⟩ := Option.bind_eq_some_iff.mp hatomTy
     obtain ⟨v, hv⟩ :=
@@ -807,16 +807,17 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
     rw [hname]
     exact hv
   | .record fields names values, ty, hty => by
-    obtain ⟨types, ht, hc⟩ := termTy_record_inv hty
-    obtain ⟨vs, hvs, hfitvs⟩ := evalTerms_progress hatom hfit true values types ht
+    obtain ⟨types, ht, hc⟩ := termTy_record_inv hty htypes
+    obtain ⟨vs, hvs, hfitvs⟩ := evalTerms_progress hatom htypes hfit true values types ht
     obtain ⟨out, hout, hfitout⟩ := record_build_fits hc hfitvs
     refine ⟨out, ?_, hfitout⟩
     show (evalTerms vals values).bind (Machine.Record.build names) = some out
     rw [hvs, Option.bind_some, hout]
   | .field mode target name, ty, hty => by
-    have ht : (termTy sig env target).bind (fun ty => Record.fieldType (mode = .optional) ty name) = some ty := hty
+    have ht : (termTy sig env target).bind (fun ty => Record.fieldTypeIn sig.types (mode = .optional) ty name) = some ty := hty
+    rw [htypes] at ht
     obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
-    obtain ⟨value, he, hfitvalue⟩ := evalTerm_progress hatom hfit target targetType ht
+    obtain ⟨value, he, hfitvalue⟩ := evalTerm_progress hatom htypes hfit target targetType ht
     obtain ⟨out, hout, hfitout⟩ := record_fieldType_fits hc hfitvalue
     refine ⟨out, ?_, hfitout⟩
     show (evalTerm vals target).bind (fun value => Machine.Record.read (mode = .optional) value name) = some out
@@ -824,15 +825,16 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
   | .recordSet target name replacement, ty, hty => by
     have ht : ((termTy sig env target).bind fun targetType =>
       (argTy sig env true replacement).bind fun replacementType =>
-      Record.setType targetType name replacementType) = some ty := hty
+      Record.setTypeIn sig.types targetType name replacementType) = some ty := hty
+    rw [htypes] at ht
     obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
     obtain ⟨replacementType, hr, hc⟩ := Option.bind_eq_some_iff.mp hc
-    obtain ⟨value, he, hfitvalue⟩ := evalTerm_progress hatom hfit target targetType ht
+    obtain ⟨value, he, hfitvalue⟩ := evalTerm_progress hatom htypes hfit target targetType ht
     have hnext : ∃ next, evalTerm vals replacement = some next ∧ Fits w next replacementType := by
       rcases argTy_cases _ _ _ replacement replacementType hr with ⟨l, rfl, rfl⟩ | hr
       · obtain ⟨next, hn⟩ := Option.isSome_iff_exists.mp (Lit.toVal_isSome l)
         exact ⟨next, hn, fits_lit w true l next hn⟩
-      · exact evalTerm_progress hatom hfit replacement replacementType hr
+      · exact evalTerm_progress hatom htypes hfit replacement replacementType hr
     obtain ⟨next, hn, hnext⟩ := hnext
     obtain ⟨out, hout, hfitout⟩ := record_setType_fits hc hfitvalue hnext
     refine ⟨out, ?_, hfitout⟩
@@ -842,7 +844,7 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
   | .tupleAt target index, ty, hty => by
     have ht : (termTy sig env target).bind (fun targetType => Tuple.typeAt targetType index) = some ty := hty
     obtain ⟨targetType, ht, hp⟩ := Option.bind_eq_some_iff.mp ht
-    obtain ⟨value, he, hm⟩ := evalTerm_progress hatom hfit target targetType ht
+    obtain ⟨value, he, hm⟩ := evalTerm_progress hatom htypes hfit target targetType ht
     obtain ⟨out, hout, hfitout⟩ := tuple_typeAt_fits hp hm
     refine ⟨out, ?_, hfitout⟩
     show (evalTerm vals target).bind (fun value => Val.tupleAt? value index) = some out
@@ -853,20 +855,20 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
   -- fold's type and an element, so it answers a member of the body's type, which is below it
   | .fold accTy list init body, ty, hty => by
     obtain ⟨listType, item, initType, bodyType, hlist, hitem, hinit, _, hsubInit, hbody, hsubBody⟩ :=
-      termTy_fold_inv hty
-    obtain ⟨value, hlv, hfitList⟩ := evalTerm_progress hatom hfit list listType hlist
+      termTy_fold_inv hty htypes
+    obtain ⟨value, hlv, hfitList⟩ := evalTerm_progress hatom htypes hfit list listType hlist
     replace hfitList := fits_subN w (listOf_upper hitem) value hfitList
-    obtain ⟨start, hstart, hfitStart⟩ := evalTerm_progress hatom hfit init initType hinit
+    obtain ⟨start, hstart, hfitStart⟩ := evalTerm_progress hatom htypes hfit init initType hinit
     refine fold_fits hlv hfitList hstart (fits_subN w hsubInit start hfitStart) ?_
     intro acc x hacc hx
     obtain ⟨next, hnext, hfitNext⟩ :=
-      evalTerm_progress hatom (hfit.append_pair hacc hx) body bodyType hbody
+      evalTerm_progress hatom htypes (hfit.append_pair hacc hx) body bodyType hbody
     exact ⟨next, hnext, fits_subN w hsubBody next hfitNext⟩
 termination_by t => sizeOf t
 
 /-- The argument list's form. -/
 theorem evalTerms_progress {vals : List Val} {env : List Ty}
-    (hatom : sig.atomOf = nativeAtomTy) (hfit : FitsAll w vals env) :
+    (hatom : sig.atomOf = nativeAtomTy) (htypes : sig.types = []) (hfit : FitsAll w vals env) :
     ∀ (const : Bool) (ts : Terms) (tl : List Ty),
       argsTy sig env const ts = some tl → ∃ vs, evalTerms vals ts = some vs ∧ FitsAll w vs tl
   | _, .nil, tl, hty => by
@@ -878,12 +880,12 @@ theorem evalTerms_progress {vals : List Val} {env : List Ty}
     obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
     obtain ⟨rest, hrest, hcons⟩ := Option.bind_eq_some_iff.mp hty'
     cases hcons
-    obtain ⟨vrest, hvrest, hfitrest⟩ := evalTerms_progress hatom hfit const tail rest hrest
+    obtain ⟨vrest, hvrest, hfitrest⟩ := evalTerms_progress hatom htypes hfit const tail rest hrest
     have hhead : ∃ v1, evalTerm vals head = some v1 ∧ Fits w v1 t1 := by
       rcases argTy_cases _ _ _ head t1 ht1 with ⟨value, rfl, rfl⟩ | ht1'
       · obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (Lit.toVal_isSome value)
         exact ⟨v, hv, fits_lit w const value v hv⟩
-      · exact evalTerm_progress hatom hfit head t1 ht1'
+      · exact evalTerm_progress hatom htypes hfit head t1 ht1'
     obtain ⟨v1, hv1, hfit1⟩ := hhead
     refine ⟨v1 :: vrest, ?_, .cons hfit1 hfitrest⟩
     show ((evalTerm vals head).bind fun v =>
@@ -901,7 +903,7 @@ theorem evalTerm_progress_env {src : ProgramSource} {path : List Nat} {w : World
     {vals : List Val} (henv : EnvTyped w env vals) {t : Term} {ty : Ty}
     (hty : termTy (src.scopeSig path) env t = some ty) :
     ∃ v, evalTerm vals t = some v ∧ Fits w v ty :=
-  evalTerm_progress rfl (fitsAll_of_pointwise henv.1 henv.2) t ty
+  evalTerm_progress rfl rfl (fitsAll_of_pointwise henv.1 henv.2) t ty
     (((src.scopeSig_extends path).termTy env t).symm.trans hty)
 
 /-- **A typed binder term maps its parameter into its type**, at every later world (the claim
@@ -915,12 +917,12 @@ the environment stays typed at every later world (`envTyped_mono`), the current 
 nothing of a term the checker refuses. -/
 @[semantics "store-typing" (requirement := R4)]
 theorem termMaps_of_typed {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
-    {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env)
+    (htypes : sig.types = []) {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env)
     {f : Term} {A R : Ty} (hty : termTy sig (tys ++ [A]) f = some R) :
     TermMaps w f env A R := by
   intro w' ord a ha
   have henv' := envTyped_append (envTyped_mono ord henv) ha
-  exact evalTerm_progress hatom (fitsAll_of_pointwise henv'.1 henv'.2) f R hty
+  exact evalTerm_progress hatom htypes (fitsAll_of_pointwise henv'.1 henv'.2) f R hty
 
 /-- An admitted error value is represented: its error image reads back (`valOfErr_errOf_supported`
 at the world's allocation table), so it is not the payload-discarding `boom`. -/

@@ -109,8 +109,9 @@ def declaration (fields : Record.Fields) : Option RecordTypingReason :=
   | none => (Formation.check (Formation.sites false [] (.record fields))).map
       RecordTypingReason.declarationFormation
 
-/-- Explain the column and field checks after all supplied terms have types. -/
-def construction (fields : Record.Fields) (names : List String) (types : List Ty) :
+/-- Explain the column and field checks after all supplied terms have types. A field written at
+a declared name takes its argument by the fold (`Record.fieldAdmitsIn`), as the typer does. -/
+def construction (decls : TyDecls) (fields : Record.Fields) (names : List String) (types : List Ty) :
     Option RecordTypingReason :=
   match Machine.Record.zipNames names types with
   | none => some (.columnLengths names.length types.length)
@@ -123,13 +124,14 @@ def construction (fields : Record.Fields) (names : List String) (types : List Ty
       | none => fields.findSome? fun field =>
         match Field.firstOf field.1 arguments with
         | none => if field.2.1 then none else some (.missingRequired field.1)
-        | some actual => if Ty.sub actual.normalize field.2.2.normalize then none
+        | some actual => if Record.fieldAdmitsIn decls actual field.2.2 then none
           else some (.fieldNotSubtype field.1 actual field.2.2)
 
-/-- Explain the first unsupported read alternative. A non-record keeps the generic fallback. -/
-def readField (mode : FieldReadMode) (target : Ty) (name : String) :
+/-- Explain the first unsupported read alternative, among the union members under the table. A
+non-record keeps the generic fallback. -/
+def readField (decls : TyDecls) (mode : FieldReadMode) (target : Ty) (name : String) :
     Option RecordTypingReason :=
-  (Ty.members target.normalize).foldr (fun branch rest =>
+  (Ty.membersIn decls target).foldr (fun branch rest =>
     match branch with
     | .record fields =>
       match Field.firstOf name fields with
@@ -158,8 +160,8 @@ set_option backward.privateInPublic true in
 environment. Only failed children are descended into, in the typing rule's order and literal
 mode, each at the environment the rule types it in: a fold's body under its two binders. -/
 private def algebra (infer : TyEnv → Bool → Term → Option Ty)
-    (inferArgs : TyEnv → Bool → Terms → Option (List Ty)) (constAtom : String → Bool) :
-    TermAlgebra Carrier where
+    (inferArgs : TyEnv → Bool → Terms → Option (List Ty)) (constAtom : String → Bool)
+    (decls : TyDecls) : TermAlgebra Carrier where
   term_var level := (.var level, fun _ _ _ => none)
   term_lit value := (.lit value, fun _ _ _ => none)
   term_app atom args := (.app atom args.1, fun env _ path =>
@@ -170,11 +172,11 @@ private def algebra (infer : TyEnv → Bool → Term → Option Ty)
     | none =>
       match inferArgs env true values.1 with
       | none => values.2 env true path 0
-      | some types => (construction fields names types).map (fun why => .record ⟨path, why⟩))
+      | some types => (construction decls fields names types).map (fun why => .record ⟨path, why⟩))
   term_field mode target name := (.field mode target.1 name, fun env _ path =>
     match infer env false target.1 with
     | none => target.2 env false (path ++ [0])
-    | some type => (readField mode type name).map (fun why => .record ⟨path, why⟩))
+    | some type => (readField decls mode type name).map (fun why => .record ⟨path, why⟩))
   term_recordSet target name value := (.recordSet target.1 name value.1, fun env _ path =>
     match infer env false target.1 with
     | none => target.2 env false (path ++ [0])
@@ -191,7 +193,7 @@ private def algebra (infer : TyEnv → Bool → Term → Option Ty)
     match infer env false list.1 with
     | none => list.2 env false (path ++ [0])
     | some listType =>
-      match Checker.listOf? listType with
+      match Checker.listOfIn decls listType with
       | none => some (.fold ⟨path, .notList listType⟩)
       | some item =>
         match infer env false init.1 with
@@ -216,7 +218,7 @@ set_option backward.privateInPublic.warn false in
 /-- Diagnose a failed term. This function never supplies a successful type. -/
 def diagnose {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
     Option TermTypingRefusal :=
-  (cata_term (algebra (argTy sig) (argsTy sig) sig.constAtom) term).2 env false []
+  (cata_term (algebra (argTy sig) (argsTy sig) sig.constAtom sig.types) term).2 env false []
 
 /-- Compatibility projection for callers that request record-specific diagnostics. -/
 def locate {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :

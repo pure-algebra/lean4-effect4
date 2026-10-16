@@ -141,7 +141,8 @@ It establishes nothing about a module that uses the fold and no agreement with a
 consumer is the Queue's service pass (decisions row 228), on the M5 and M6 path through
 `syncRow_typed`. -/
 @[semantics "store-typing" (requirement := R4)]
-theorem fold_typed_atomic_update (sig : Signature NativeOp) : ListFoldRules sig where
+theorem fold_typed_atomic_update (sig : Signature NativeOp) (htypes : sig.types = []) :
+    ListFoldRules sig where
   scope := fun _ _ _ _ _ => rfl
   authored := fun acc item accTy _ _ _ hl hi hb => Authoring.fold_scoped acc item accTy hl hi hb
   eval := evalTerm_fold
@@ -149,15 +150,15 @@ theorem fold_typed_atomic_update (sig : Signature NativeOp) : ListFoldRules sig 
     foldlM_refuses (fun acc item => evalTerm (env ++ [acc, item]) body) xs ys x start acc hpre hx
   weakenEval := evalTerm_weaken
   weakenTy := termTy_weaken sig
-  typing := fun _ _ _ _ _ _ h => termTy_fold_inv h
+  typing := fun _ _ _ _ _ _ h => termTy_fold_inv h htypes
   semantic := fun _ _ _ _ _ _ _ _ _ _ hlist hvalue hinit hstart hbody =>
     fold_fits hlist hvalue hinit hstart hbody
   typed := fun hatom _ _ _ hfit accTy list init body B hty =>
-    evalTerm_progress hatom hfit (.fold accTy list init body) B hty
+    evalTerm_progress hatom htypes hfit (.fold accTy list init body) B hty
   preserved := fun hatom hconst w vals env hfit accTy list init body B v hty hev =>
-    evalTerm_fitsAll sig hatom hconst w (.fold accTy list init body) vals env B v hfit hty hev
+    evalTerm_fitsAll sig hatom hconst htypes w (.fold accTy list init body) vals env B v hfit hty hev
   step := fun hatom _ _ _ henv _ _ _ hty _ _ _ hcell ha =>
-    refModify_typed_step hatom henv hty hcell ha
+    refModify_typed_step hatom htypes henv hty hcell ha
   readPrint := fun _ _ term hs hc hu => readTerm_printTerm term hs hc hu
   readExact := fun _ _ x _ h => readTerm_exact x h
 

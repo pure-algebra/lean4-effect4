@@ -1938,7 +1938,7 @@ at. When the request bound no element type its instance is `never`, the cell's t
 member, and both hold vacuously: such a node is dead. A step of `denote-typed`; its consumer is
 `syncRow_typed` at the eight term rows. It says nothing of a term the checker refuses. -/
 theorem bindTerm_termMaps {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
-    {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env) {f : Term}
+    (htypes : sig.types = []) {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env) {f : Term}
     (s : FnShape) {σ σ' : Ty.Subst}
     (hbind : bindTerm σ (some ⟨s.param, s.result, fun A => termTy sig (tys ++ [A]) f⟩) = .ok σ')
     {ty : Ty} (hequiv : Equiv ty (Ty.instantiate σ (.var 0))) :
@@ -1949,7 +1949,7 @@ theorem bindTerm_termMaps {sig : Signature NativeOp} (hatom : sig.atomOf = nativ
   have hparam : (Ty.instantiate σ s.param.normalize).normalize =
       (Ty.instantiate σ (.var 0)).normalize := rfl
   have hmaps : TermMaps w f env (Ty.instantiate σ (.var 0)).normalize r :=
-    termMaps_of_typed hatom henv (hparam ▸ hr)
+    termMaps_of_typed hatom htypes henv (hparam ▸ hr)
   cases hσ : σ.lookup 0 with
   | none =>
     -- the request bound no element type: the cell's type is below `never`, which has no member
@@ -2110,7 +2110,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     cases op with
     | refUpdateWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
-      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl henv .update hbind hequiv
+      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl rfl henv .update hbind hequiv
       refine ⟨SyncOp.refUpdate k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refUpdate k f env) (cert := ()) ⟨t', hlookup, hmaps⟩ ?_
       intro w' ord ans post
@@ -2119,7 +2119,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refGetAndUpdateWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, hcell⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl henv .update hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl rfl henv .update hbind hequiv
       refine ⟨SyncOp.refGetAndUpdate k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refGetAndUpdate k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2131,7 +2131,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refUpdateAndGetWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, hcell⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl henv .update hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl rfl henv .update hbind hequiv
       refine ⟨SyncOp.refUpdateAndGet k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refUpdateAndGet k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2143,7 +2143,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refUpdateSomeWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, -⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl henv .updateSome hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl rfl henv .updateSome hbind hequiv
       refine ⟨SyncOp.refUpdateSome k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refUpdateSome k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2153,7 +2153,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refGetAndUpdateSomeWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, hcell⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl henv .updateSome hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl rfl henv .updateSome hbind hequiv
       refine ⟨SyncOp.refGetAndUpdateSome k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refGetAndUpdateSome k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2165,7 +2165,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refUpdateSomeAndGetWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, hcell⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl henv .updateSome hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl rfl henv .updateSome hbind hequiv
       refine ⟨SyncOp.refUpdateSomeAndGet k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refUpdateSomeAndGet k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2176,7 +2176,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
       exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 0 (hcell w' ans hfit')))
     | refModifyWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
-      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl henv .modify hbind hequiv
+      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl rfl henv .modify hbind hequiv
       refine ⟨SyncOp.refModify k f env, rfl, ?_⟩
       -- the certificate is the answer type `B` the term bound: it may differ from the cell's
       refine TypedProg.store (op := SyncOp.refModify k f env)
@@ -2186,7 +2186,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refModifySomeWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, -⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl henv .modifySome hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl rfl henv .modifySome hbind hequiv
       refine ⟨SyncOp.refModifySome k f env, rfl, ?_⟩
       -- the certificate is the answer type `B` the term bound: it may differ from the cell's
       refine TypedProg.store (op := SyncOp.refModifySome k f env)

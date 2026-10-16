@@ -190,7 +190,7 @@ theorem TypedAt.bound {tys : TyEnv} {env : List Val} {w : Typed.World} (h : Type
 theorem TypedAt.eval {tys : TyEnv} {env : List Val} {w : Typed.World} (h : TypedAt tys env w)
     {r : Term} {ty : Ty} (hty : termTy nativeSignature tys r = some ty) :
     ∃ x, evalTerm env r = some x ∧ Typed.Fits w x ty :=
-  Typed.evalTerm_progress (sig := nativeSignature) rfl
+  Typed.evalTerm_progress (sig := nativeSignature) rfl rfl
     (Typed.fitsAll_of_pointwise h.fits.1 h.fits.2) r ty hty
 
 /-- **Soundness of one run of a pair of programs**, the first with the parameter and the second

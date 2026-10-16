@@ -141,7 +141,7 @@ theorem progress (op : NativeOp) (r : Term) (tys : TyEnv) (env : List Val) (w : 
       syncOpStep o w.state = some (w'.state, a) ∧ Denote.StoreOk w w' ∧
       Typed.Fits w' a t.answer := by
   obtain ⟨requestTy, _, hr, hrow⟩ := inv_perform nativeSignature tys op r t hty
-  obtain ⟨x, hx, hxfit⟩ := Typed.evalTerm_progress (sig := nativeSignature) rfl
+  obtain ⟨x, hx, hxfit⟩ := Typed.evalTerm_progress (sig := nativeSignature) rfl rfl
     (Typed.fitsAll_of_pointwise henv.1 henv.2) r requestTy hr
   have hrowOf : nativeSignature.rowOf op = (NativeOp.row op).normalizeTypes := by
     show (nativeRowOf [] op).normalizeTypes = _

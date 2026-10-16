@@ -498,7 +498,8 @@ atomic update: the store step answers whether the request took, and it writes th
 state through the table that holds the hint at the request. The reply and the stored value are
 members of their types. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem take_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Table)
+theorem take_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (tb : Table)
     (s : State) (id n : Nat) (hint : DeferredKey) (injective : tb.Injective)
     {countSrc idSrc hintSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty}
     {w : Typed.World} {captured : List Val}
@@ -533,7 +534,7 @@ theorem take_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtom
   have typed := (takeStep_types sig atoms (push_minted_length tyDepth "current" _) typesCount
     typesId typesHint (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **The withdrawal of a take is the model's `withdraw`.** The store step answers nothing, and
@@ -541,6 +542,7 @@ it writes the model's next state: the request's entry leaves, and no other field
 table does not change. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (tb : Table) (s : State) (id : Nat) (injective : tb.Injective) {idSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
@@ -565,7 +567,7 @@ theorem take_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeA
   have typed := (withdrawStep_types sig atoms (push_minted_length tyDepth "current" _) typesId
     (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **The step of `release` is the model's `release`.** The store step answers the free count
@@ -575,6 +577,7 @@ premise names the count: the step releases at most what is taken, as the model's
 row's scope alone. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem release_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (tb : Table) (s : State) (n : Nat) {countSrc : TermSrc} {env : Env} {path : List Nat}
     {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
@@ -598,13 +601,14 @@ theorem release_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeA
   have typed := (releaseStep_types sig atoms typesCount
     (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **The step of `takeIfAvailable` is the model's `takeIfAvailable`.** The store step answers
 whether the request took, and it writes the model's next state. It enrols nobody. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem takeIfAvailable_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (tb : Table) (s : State) (n : Nat) {countSrc : TermSrc} {env : Env} {path : List Nat}
     {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
@@ -630,7 +634,7 @@ theorem takeIfAvailable_attempt (sig : Signature NativeOp) (atoms : sig.atomOf =
   have typed := (takeIfAvailableStep_types sig atoms typesCount
     (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **One visit of the walk is the model's `visit`.** The cursor is a caller's term of the step,
@@ -640,6 +644,7 @@ record through the table, or nothing, and it writes the model's next state. A vi
 nothing: `taken` stays (`visit_reserves_nothing`). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem visit_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (tb : Table) (s : State) (cursor : Nat) {cursorSrc : TermSrc} {env : Env} {path : List Nat}
     {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
@@ -665,7 +670,7 @@ theorem visit_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAto
   have typed := (visitStep_types sig atoms (push_minted_length tyDepth "current" _) typesCursor
     (capturedTy_current tyDepth path _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- The initial value reads the cell of the model's initial state, at every table. -/
@@ -730,6 +735,7 @@ names that `bindWith` mints. The scope binds each, and no later binder shadows e
 stays a caller's term, with its reading and its type at the row's scope. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (tb : Table) (s : State) (id n : Nat) (hint : DeferredKey) (injective : tb.Injective)
     {countSrc : TermSrc} {env outerId outerHint : Env} {path : List Nat} {tys : List Ty}
     {w : Typed.World} {captured : List Val} {beforeId afterId beforeHint afterHint : Names}
@@ -758,7 +764,7 @@ theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nat
           Val.bool (Model.take s id n).2) ∧
       Fits w (Val.bool (Model.take s id n).2) .bool ∧
       Fits w (cellVal (tb.renew id hint) (Model.take s id n).1) Semaphore.cellTy :=
-  take_attempt sig atoms tb s id n hint injective depth tyDepth typedEnv readsCount
+  take_attempt sig atoms types tb s id n hint injective depth tyDepth typedEnv readsCount
     (captured_answer_in_row idScope idUnshadowed idHeld)
     (captured_answer_in_row hintScope hintUnshadowed hintHeld).atScope typesCount
     (capturedTy_answer_in_row idScope idUnshadowed idTyped)
@@ -768,6 +774,7 @@ theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nat
 `bindWith` mints. The scope binds it, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (tb : Table) (s : State) (id : Nat) (injective : tb.Injective) {env outerId : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
     {beforeId afterId : Names}
@@ -787,7 +794,7 @@ theorem take_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf = 
           Val.unit) ∧
       Fits w Val.unit .unit ∧
       Fits w (cellVal tb (Model.withdraw s id)) Semaphore.cellTy :=
-  take_withdrawal sig atoms tb s id injective depth tyDepth typedEnv
+  take_withdrawal sig atoms types tb s id injective depth tyDepth typedEnv
     (captured_answer_in_row idScope idUnshadowed idHeld)
     (capturedTy_answer_in_row idScope idUnshadowed idTyped) held member
 
@@ -796,6 +803,7 @@ loop mints, and it holds an option of a stamp: the visit reads it through `getOr
 scope binds the name, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem visit_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (tb : Table) (s : State) (cursor : Nat) {env outer : Env} {path : List Nat}
     {tys : List Ty} {w : Typed.World} {captured : List Val} {before later : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
@@ -815,7 +823,7 @@ theorem visit_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = na
           visitReplyVal tb (Model.visit s cursor).2) ∧
       Fits w (visitReplyVal tb (Model.visit s cursor).2) visitReplyTy ∧
       Fits w (cellVal tb (Model.visit s cursor).1) Semaphore.cellTy :=
-  visit_attempt sig atoms tb s cursor depth tyDepth typedEnv
+  visit_attempt sig atoms types tb s cursor depth tyDepth typedEnv
     (captured_cursorOr (captured_cursor_in_row cursorScope cursorUnshadowed cursorHeld))
     (capturedTy_cursorOr atoms
       (capturedTy_cursor_in_row cursorScope cursorUnshadowed cursorTyped)) held member

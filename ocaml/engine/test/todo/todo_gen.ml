@@ -250,6 +250,7 @@ and 'op signature = {
   param_of : 'op -> int option;
   def_of : int -> def_decl option;
   key_names : (service_key * string) list;
+  types : (string * ty) list;
 }
 and 'op node =
   | Node_eff of 'op eff
@@ -11411,7 +11412,8 @@ let program_native_signature (table : row list) : native_op signature =
   let _x_12 = program_native_op_type_args in
   let _x_13 = program_native_op_with_type_args in
   let _x_14 = program_row_key_names table in
-  ({ row_of = _f_1; atom_of = _x_7; scope_key = _x_8; service_ty = _x_9; dom = _f_2; const_atom = _x_10; term_of = _f_3; with_term = _x_11; type_args_of = _x_12; with_type_args = _x_13; call_of = _f_4; param_of = _f_5; def_of = _f_6; key_names = _x_14 } : _ signature)
+  let _x_15 = [] in
+  ({ row_of = _f_1; atom_of = _x_7; scope_key = _x_8; service_ty = _x_9; dom = _f_2; const_atom = _x_10; term_of = _f_3; with_term = _x_11; type_args_of = _x_12; with_type_args = _x_13; call_of = _f_4; param_of = _f_5; def_of = _f_6; key_names = _x_14; types = _x_15 } : _ signature)
 
 
 
@@ -11486,10 +11488,11 @@ let program_sig_app_signature (app : sig_app) : native_op signature =
   match (app : sig_app) with
     | { rows = rows; _ } -> (let _x_1 = program_native_signature rows in
       match (_x_1 : _ signature) with
-        | { row_of = row_of; atom_of = atom_of; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; _ } -> (let _x_2 = 0 in
-          let _x_3 = ({ name = _x_2; service = _x_2 } : service_key) in
-          let _x_4 = program_sig_app_service_ty app in
-          ({ row_of = row_of; atom_of = atom_of; scope_key = _x_3; service_ty = _x_4; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names } : _ signature)))
+        | { row_of = row_of; atom_of = atom_of; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; _ } -> (let _x_2 = [] in
+          let _x_3 = 0 in
+          let _x_4 = ({ name = _x_3; service = _x_3 } : service_key) in
+          let _x_5 = program_sig_app_service_ty app in
+          ({ row_of = row_of; atom_of = atom_of; scope_key = _x_4; service_ty = _x_5; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = _x_2 } : _ signature)))
 
 
 
@@ -13120,10 +13123,10 @@ let program_signature_with_defs__red_arg__lam_2 (decls : def_decl list) (def_of 
 
 let program_signature_with_defs (sig_ : _ signature) (decls : def_decl list) : _ signature =
   match (sig_ : _ signature) with
-    | { row_of = row_of; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names } -> (let _f_1 = program_signature_with_defs__red_arg__lam_0 call_of row_of decls in
+    | { row_of = row_of; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } -> (let _f_1 = program_signature_with_defs__red_arg__lam_0 call_of row_of decls in
       let _f_2 = program_signature_with_defs__red_arg__lam_1 call_of dom decls in
       let _f_3 = program_signature_with_defs__red_arg__lam_2 decls def_of in
-      ({ row_of = _f_1; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = _f_2; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = _f_3; key_names = key_names } : _ signature))
+      ({ row_of = _f_1; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = _f_2; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = _f_3; key_names = key_names; types = types } : _ signature))
 
 
 
@@ -13183,9 +13186,9 @@ let program_signature_with_params (sig_ : _ signature) (x_1 : param_decl list) :
   match x_1 with
     | [] -> sig_
     | _ :: _ -> (match (sig_ : _ signature) with
-        | { row_of = row_of; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names } -> (let _f_4 = program_signature_with_params__red_arg__lam_0 param_of row_of x_1 in
+        | { row_of = row_of; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } -> (let _f_4 = program_signature_with_params__red_arg__lam_0 param_of row_of x_1 in
           let _f_5 = program_signature_with_params__red_arg__lam_1 param_of dom x_1 in
-          ({ row_of = _f_4; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = _f_5; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names } : _ signature)))
+          ({ row_of = _f_4; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = _f_5; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } : _ signature)))
 
 
 
@@ -13849,69 +13852,121 @@ let rec program_formation_check (x_1 : site list) : formation_refusal option =
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Program.Record.check.spec_0 (a.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) (a.2 : List String) : List String *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Program.Record.checkIn.spec_0 (a.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) (a.2 : List String) : List String *)
 
-let rec list_map_tr_loop_at_program_record_check_spec_0 (a_1 : (string * (bool * ty)) list) (a_2 : string list) : string list =
+let rec list_map_tr_loop_at_program_record_check_in_spec_0 (a_1 : (string * (bool * ty)) list) (a_2 : string list) : string list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, _ -> (let _x_6 = fst_1 :: a_2 in
-          list_map_tr_loop_at_program_record_check_spec_0 tail_5 _x_6))
+          list_map_tr_loop_at_program_record_check_in_spec_0 tail_5 _x_6))
 
 
 
-(* LCNF mono: List.all._at_.Effect4.Program.Record.argumentsFit.spec_0 (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (x.1 : List (Prod String Effect4.Program.Ty)) : Bool *)
+(* LCNF mono: List.all._at_.Effect4.Program.Record.argumentsFitIn.spec_0 (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (x.1 : List (Prod String Effect4.Program.Ty)) : Bool *)
 
-let rec list_all_at_program_record_arguments_fit_spec_0 (fields : (string * (bool * ty)) list) (x_1 : (string * ty) list) : bool =
+let rec list_all_at_program_record_arguments_fit_in_spec_0 (fields : (string * (bool * ty)) list) (x_1 : (string * ty) list) : bool =
   match x_1 with
     | [] -> true
     | head_3 :: tail_4 -> (match head_3 with
         | fst_1, _ -> (let _x_5 = field_first_of fst_1 fields in
           match _x_5 with
             | None -> false
-            | Some _ -> list_all_at_program_record_arguments_fit_spec_0 fields tail_4))
+            | Some _ -> list_all_at_program_record_arguments_fit_in_spec_0 fields tail_4))
 
 
 
-(* LCNF mono: List.all._at_.Effect4.Program.Record.argumentsFit.spec_1 (arguments : List (Prod String Effect4.Program.Ty)) (x.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) : Bool *)
+(* LCNF mono: Effect4.Program.Ty.refName? (x.1 : Effect4.Program.Ty) : Option String *)
 
-let rec list_all_at_program_record_arguments_fit_spec_1 (arguments : (string * ty) list) (x_1 : (string * (bool * ty)) list) : bool =
+let program_ty_ref_name_opt (x_1 : ty) : string option =
+  match (x_1 : ty) with
+    | Ty_handle target_2 -> Some target_2
+    | Ty_app (name_4, _) -> Some name_4
+    | _ -> None
+
+
+
+(* LCNF mono: List.lookup._at_.Effect4.Program.TyDecls.body?.spec_0._redArg (x.1 : String) (x.2 : List (Prod String lcAny)) : Option lcAny *)
+
+let rec list_lookup_at_program_ty_decls_body_opt_spec_0 (x_1 : string) (x_2 : (string * _) list) : _ option =
+  match x_2 with
+    | [] -> None
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_6, snd_7 -> (let _x_8 = x_1 = fst_6 in
+          if _x_8 then Some snd_7 else list_lookup_at_program_ty_decls_body_opt_spec_0 x_1 tail_5))
+
+
+
+(* LCNF mono: Effect4.Program.TyDecls.unfold? (decls : List (Prod String Effect4.Program.Ty)) (t : Effect4.Program.Ty) : Option (Prod String Effect4.Program.Ty) *)
+
+let program_ty_decls_unfold_opt (decls : (string * ty) list) (t : ty) : (string * ty) option =
+  let _x_1 = program_ty_ref_name_opt t in
+  match _x_1 with
+    | None -> None
+    | Some val__3 -> (let _x_4 = list_lookup_at_program_ty_decls_body_opt_spec_0 val__3 decls in
+      match _x_4 with
+        | None -> None
+        | Some val__6 -> (let _x_7 = val__3, val__6 in
+          Some _x_7))
+
+
+
+(* LCNF mono: Effect4.Program.Record.fieldAdmitsIn (decls : List (Prod String Effect4.Program.Ty)) (actual : Effect4.Program.Ty) (declared : Effect4.Program.Ty) : Bool *)
+
+let program_record_field_admits_in (decls : (string * ty) list) (actual : ty) (declared : ty) : bool =
+  match decls with
+    | [] -> (let _x_1 = program_ty_normalize actual in
+      let _x_2 = program_ty_normalize declared in
+      program_ty_sub _x_1 _x_2)
+    | _ -> (let _x_4 = program_ty_normalize actual in
+      let _x_5 = program_ty_normalize declared in
+      let _x_6 = program_ty_sub _x_4 _x_5 in
+      if _x_6 then _x_6 else (let _x_7 = program_ty_decls_unfold_opt decls _x_5 in
+        match _x_7 with
+          | None -> _x_6
+          | Some val__8 -> (match val__8 with
+              | _, snd_10 -> (let _x_11 = program_ty_normalize snd_10 in
+                program_ty_sub _x_4 _x_11))))
+
+
+
+(* LCNF mono: List.all._at_.Effect4.Program.Record.argumentsFitIn.spec_1 (arguments : List (Prod String Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (x.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) : Bool *)
+
+let rec list_all_at_program_record_arguments_fit_in_spec_1 (arguments : (string * ty) list) (decls : (string * ty) list) (x_1 : (string * (bool * ty)) list) : bool =
   match x_1 with
     | [] -> true
-    | head_3 :: tail_4 -> (let _jp_5 = fun _y_6 -> if _y_6 then list_all_at_program_record_arguments_fit_spec_1 arguments tail_4 else _y_6 in
+    | head_3 :: tail_4 -> (let _jp_5 = fun _y_6 -> if _y_6 then list_all_at_program_record_arguments_fit_in_spec_1 arguments decls tail_4 else _y_6 in
       match head_3 with
         | fst_1, snd_1 -> (let _x_8 = field_first_of fst_1 arguments in
           match _x_8 with
             | None -> (match snd_1 with
                 | fst_2, _ -> _jp_5 fst_2)
             | Some val__9 -> (match snd_1 with
-                | _, snd_2 -> (let _x_10 = program_ty_normalize val__9 in
-                  let _x_11 = program_ty_normalize snd_2 in
-                  let _x_12 = program_ty_sub _x_10 _x_11 in
-                  _jp_5 _x_12))))
+                | _, snd_2 -> (let _x_10 = program_record_field_admits_in decls val__9 snd_2 in
+                  _jp_5 _x_10))))
 
 
 
-(* LCNF mono: Effect4.Program.Record.argumentsFit (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (arguments : List (Prod String Effect4.Program.Ty)) : Bool *)
+(* LCNF mono: Effect4.Program.Record.argumentsFitIn (decls : List (Prod String Effect4.Program.Ty)) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (arguments : List (Prod String Effect4.Program.Ty)) : Bool *)
 
-let program_record_arguments_fit (fields : (string * (bool * ty)) list) (arguments : (string * ty) list) : bool =
-  let _x_1 = list_all_at_program_record_arguments_fit_spec_0 fields arguments in
-  if _x_1 then list_all_at_program_record_arguments_fit_spec_1 arguments fields else _x_1
+let program_record_arguments_fit_in (decls : (string * ty) list) (fields : (string * (bool * ty)) list) (arguments : (string * ty) list) : bool =
+  let _x_1 = list_all_at_program_record_arguments_fit_in_spec_0 fields arguments in
+  if _x_1 then list_all_at_program_record_arguments_fit_in_spec_1 arguments decls fields else _x_1
 
 
 
-(* LCNF mono: Effect4.Program.Record.check (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (presentNames : List String) (argumentTypes : List Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+(* LCNF mono: Effect4.Program.Record.checkIn (decls : List (Prod String Effect4.Program.Ty)) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (presentNames : List String) (argumentTypes : List Effect4.Program.Ty) : Option Effect4.Program.Ty *)
 
-let program_record_check (fields : (string * (bool * ty)) list) (present_names : string list) (argument_types : ty list) : ty option =
+let program_record_check_in (decls : (string * ty) list) (fields : (string * (bool * ty)) list) (present_names : string list) (argument_types : ty list) : ty option =
   let _x_1 = record_zip_names present_names argument_types in
   match _x_1 with
     | None -> None
     | Some val__3 -> (let _x_4 = fun _b1 _b2 -> _b1 = _b2 in
       let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_program_record_check_spec_0 fields _x_5 in
+      let _x_6 = list_map_tr_loop_at_program_record_check_in_spec_0 fields _x_5 in
       let _x_7 = list_nodup_decidable _x_4 _x_6 in
       if _x_7 then (let _x_9 = list_nodup_decidable _x_4 present_names in
-        if _x_9 then (let _x_11 = program_record_arguments_fit fields val__3 in
+        if _x_9 then (let _x_11 = program_record_arguments_fit_in decls fields val__3 in
           if _x_11 then (let _x_13 = Ty_record fields in
             let _x_14 = program_ty_normalize _x_13 in
             Some _x_14) else None) else None) else None)
@@ -13932,9 +13987,9 @@ let program_record_field_of (optional : bool) (name : string) (x_1 : ty) : ty op
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Program.UnionRule.lift._at_.Effect4.Program.Record.fieldType.spec_0.spec_0 (rule : Effect4.Program.Ty -> (Option Effect4.Program.Ty)) (x.1 : List Effect4.Program.Ty) (x.2 : List Effect4.Program.Ty) : Option (List Effect4.Program.Ty) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Program.UnionRule.liftIn._at_.Effect4.Program.Record.fieldTypeIn.spec_0.spec_1 (rule : Effect4.Program.Ty -> (Option Effect4.Program.Ty)) (x.1 : List Effect4.Program.Ty) (x.2 : List Effect4.Program.Ty) : Option (List Effect4.Program.Ty) *)
 
-let rec list_map_m_loop_at_program_union_rule_lift_at_program_record_field_type_spec_0_spec_0 (rule : ty -> ty option) (x_1 : ty list) (x_2 : ty list) : ty list option =
+let rec list_map_m_loop_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_1 (rule : ty -> ty option) (x_1 : ty list) (x_2 : ty list) : ty list option =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
@@ -13942,47 +13997,112 @@ let rec list_map_m_loop_at_program_union_rule_lift_at_program_record_field_type_
       match _x_7 with
         | None -> None
         | Some val__9 -> (let _x_10 = val__9 :: x_2 in
-          list_map_m_loop_at_program_union_rule_lift_at_program_record_field_type_spec_0_spec_0 rule tail_6 _x_10))
+          list_map_m_loop_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_1 rule tail_6 _x_10))
 
 
 
-(* LCNF mono: List.foldl._at_.Effect4.Program.UnionRule.joinAll._at_.Effect4.Program.Record.joinResults.spec_0.spec_0 (x.1 : Effect4.Program.Ty) (x.2 : List Effect4.Program.Ty) : Effect4.Program.Ty *)
+(* LCNF mono: List.foldl._at_.Effect4.Program.UnionRule.joinAll._at_.Effect4.Program.UnionRule.liftIn._at_.Effect4.Program.Record.fieldTypeIn.spec_0.spec_2.spec_3 (x.1 : Effect4.Program.Ty) (x.2 : List Effect4.Program.Ty) : Effect4.Program.Ty *)
 
-let rec list_foldl_at_program_union_rule_join_all_at_program_record_join_results_spec_0_spec_0 (x_1 : ty) (x_2 : ty list) : ty =
+let rec list_foldl_at_program_union_rule_join_all_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_2_spec_3 (x_1 : ty) (x_2 : ty list) : ty =
   match x_2 with
     | [] -> x_1
     | head_3 :: tail_4 -> (let _x_5 = program_ty_join x_1 head_3 in
-      list_foldl_at_program_union_rule_join_all_at_program_record_join_results_spec_0_spec_0 _x_5 tail_4)
+      list_foldl_at_program_union_rule_join_all_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_2_spec_3 _x_5 tail_4)
 
 
 
-(* LCNF mono: Effect4.Program.UnionRule.joinAll._at_.Effect4.Program.Record.joinResults.spec_0 (answers : List Effect4.Program.Ty) : Effect4.Program.Ty *)
+(* LCNF mono: Effect4.Program.UnionRule.joinAll._at_.Effect4.Program.UnionRule.liftIn._at_.Effect4.Program.Record.fieldTypeIn.spec_0.spec_2 (answers : List Effect4.Program.Ty) : Effect4.Program.Ty *)
 
-let program_union_rule_join_all_at_program_record_join_results_spec_0 (answers : ty list) : ty =
+let program_union_rule_join_all_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_2 (answers : ty list) : ty =
   let _x_1 = Ty_never in
-  list_foldl_at_program_union_rule_join_all_at_program_record_join_results_spec_0_spec_0 _x_1 answers
+  list_foldl_at_program_union_rule_join_all_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_2_spec_3 _x_1 answers
 
 
 
-(* LCNF mono: Effect4.Program.UnionRule.lift._at_.Effect4.Program.Record.fieldType.spec_0 (rule : Effect4.Program.Ty -> (Option Effect4.Program.Ty)) (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+(* LCNF mono: Effect4.Program.UnionRule.lift._at_.Effect4.Program.UnionRule.liftIn._at_.Effect4.Program.Record.fieldTypeIn.spec_0.spec_0 (rule : Effect4.Program.Ty -> (Option Effect4.Program.Ty)) (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
 
-let program_union_rule_lift_at_program_record_field_type_spec_0 (rule : ty -> ty option) (target : ty) : ty option =
+let program_union_rule_lift_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_0 (rule : ty -> ty option) (target : ty) : ty option =
   let _x_1 = program_ty_normalize target in
   let _x_2 = program_ty_members _x_1 in
   let _x_3 = [] in
-  let _x_4 = list_map_m_loop_at_program_union_rule_lift_at_program_record_field_type_spec_0_spec_0 rule _x_2 _x_3 in
+  let _x_4 = list_map_m_loop_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_1 rule _x_2 _x_3 in
   match _x_4 with
     | None -> None
-    | Some val__6 -> (let _x_7 = program_union_rule_join_all_at_program_record_join_results_spec_0 val__6 in
+    | Some val__6 -> (let _x_7 = program_union_rule_join_all_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_2 val__6 in
       Some _x_7)
 
 
 
-(* LCNF mono: Effect4.Program.Record.fieldType (optional : Bool) (target : Effect4.Program.Ty) (name : String) : Option Effect4.Program.Ty *)
+(* LCNF mono: List.elem._at_.Effect4.Program.Ty.headMembers.spec_0 (a : String) (x.1 : List String) : Bool *)
 
-let program_record_field_type (optional : bool) (target : ty) (name : string) : ty option =
+let rec list_elem_at_program_ty_head_members_spec_0 (a : string) (x_1 : string list) : bool =
+  match x_1 with
+    | [] -> false
+    | head_3 :: tail_4 -> (let _x_5 = a = head_3 in
+      if _x_5 then _x_5 else list_elem_at_program_ty_head_members_spec_0 a tail_4)
+
+
+
+(* LCNF mono: Effect4.Program.Ty.headMembers (decls : List (Prod String Effect4.Program.Ty)) (seen : List String) (t : Effect4.Program.Ty) : List Effect4.Program.Ty
+   _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Program.Ty.headMembers.spec_1 (decls : List (Prod String Effect4.Program.Ty)) (seen : List String) (a.1 : List Effect4.Program.Ty) (a.2 : Array Effect4.Program.Ty) : List Effect4.Program.Ty *)
+
+let rec program_ty_head_members (decls : (string * ty) list) (seen : string list) (t : ty) : ty list =
+  let _x_1 = program_ty_members t in
+  let _x_2 = 0 in
+  let _x_3 = [] in
+  list_flat_map_tr_go_at_program_ty_head_members_spec_1 decls seen _x_1 _x_3
+
+and list_flat_map_tr_go_at_program_ty_head_members_spec_1 (decls : (string * ty) list) (seen : string list) (a_1 : ty list) (a_2 : ty list) : ty list =
+  match a_1 with
+    | [] -> a_2
+    | head_4 :: tail_5 -> (let _jp_6 = fun _y_7 -> let _x_8 = a_2 @ _y_7 in
+      list_flat_map_tr_go_at_program_ty_head_members_spec_1 decls seen tail_5 _x_8 in
+      let _x_10 = program_ty_decls_unfold_opt decls head_4 in
+      match _x_10 with
+        | None -> (let _x_11 = [] in
+          let _x_12 = head_4 :: _x_11 in
+          _jp_6 _x_12)
+        | Some val__13 -> (match val__13 with
+            | fst_14, snd_15 -> (let _x_16 = list_elem_at_program_ty_head_members_spec_0 fst_14 seen in
+              if _x_16 then (let _x_19 = [] in
+                _jp_6 _x_19) else (let _x_17 = fst_14 :: seen in
+                let _x_18 = program_ty_head_members decls _x_17 snd_15 in
+                _jp_6 _x_18))))
+
+
+
+(* LCNF mono: Effect4.Program.Ty.membersIn (decls : List (Prod String Effect4.Program.Ty)) (t : Effect4.Program.Ty) : List Effect4.Program.Ty *)
+
+let program_ty_members_in (decls : (string * ty) list) (t : ty) : ty list =
+  match decls with
+    | [] -> (let _x_1 = program_ty_normalize t in
+      program_ty_members _x_1)
+    | _ -> (let _x_3 = [] in
+      let _x_4 = program_ty_normalize t in
+      program_ty_head_members decls _x_3 _x_4)
+
+
+
+(* LCNF mono: Effect4.Program.UnionRule.liftIn._at_.Effect4.Program.Record.fieldTypeIn.spec_0 (decls : List (Prod String Effect4.Program.Ty)) (rule : Effect4.Program.Ty -> (Option Effect4.Program.Ty)) (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+
+let program_union_rule_lift_in_at_program_record_field_type_in_spec_0 (decls : (string * ty) list) (rule : ty -> ty option) (target : ty) : ty option =
+  match decls with
+    | [] -> program_union_rule_lift_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_0 rule target
+    | _ -> (let _x_2 = program_ty_members_in decls target in
+      let _x_3 = [] in
+      let _x_4 = list_map_m_loop_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_1 rule _x_2 _x_3 in
+      match _x_4 with
+        | None -> None
+        | Some val__6 -> (let _x_7 = program_union_rule_join_all_at_program_union_rule_lift_in_at_program_record_field_type_in_spec_0_spec_2 val__6 in
+          Some _x_7))
+
+
+
+(* LCNF mono: Effect4.Program.Record.fieldTypeIn (decls : List (Prod String Effect4.Program.Ty)) (optional : Bool) (target : Effect4.Program.Ty) (name : String) : Option Effect4.Program.Ty *)
+
+let program_record_field_type_in (decls : (string * ty) list) (optional : bool) (target : ty) (name : string) : ty option =
   let _x_1 = program_record_field_of optional name in
-  program_union_rule_lift_at_program_record_field_type_spec_0 _x_1 target
+  program_union_rule_lift_in_at_program_record_field_type_in_spec_0 decls _x_1 target
 
 
 
@@ -14015,11 +14135,11 @@ let program_record_set_of (name : string) (value_type : ty) (x_1 : ty) : ty opti
 
 
 
-(* LCNF mono: Effect4.Program.Record.setType (target : Effect4.Program.Ty) (name : String) (valueType : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+(* LCNF mono: Effect4.Program.Record.setTypeIn (decls : List (Prod String Effect4.Program.Ty)) (target : Effect4.Program.Ty) (name : String) (valueType : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
 
-let program_record_set_type (target : ty) (name : string) (value_type : ty) : ty option =
+let program_record_set_type_in (decls : (string * ty) list) (target : ty) (name : string) (value_type : ty) : ty option =
   let _x_1 = program_record_set_of name value_type in
-  program_union_rule_lift_at_program_record_field_type_spec_0 _x_1 target
+  program_union_rule_lift_in_at_program_record_field_type_in_spec_0 decls _x_1 target
 
 
 
@@ -14118,11 +14238,38 @@ let program_union_rule_extend_all_at_program_checker_list_of_opt_spec_0 (rule : 
 
 
 
-(* LCNF mono: Effect4.Program.Checker.listOf? (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+(* LCNF mono: Effect4.Program.UnionRule.liftIn._at_.Effect4.Program.UnionRule.extendAllIn._at_.Effect4.Program.Checker.listOfIn.spec_0.spec_0 (decls : List (Prod String Effect4.Program.Ty)) (rule : Effect4.Program.Ty -> (Option Effect4.Program.Ty)) (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
 
-let program_checker_list_of_opt (target : ty) : ty option =
+let program_union_rule_lift_in_at_program_union_rule_extend_all_in_at_program_checker_list_of_in_spec_0_spec_0 (decls : (string * ty) list) (rule : ty -> ty option) (target : ty) : ty option =
+  match decls with
+    | [] -> program_union_rule_lift_at_program_union_rule_extend_all_at_program_checker_list_of_opt_spec_0_spec_0 rule target
+    | _ -> (let _x_2 = program_ty_members_in decls target in
+      let _x_3 = [] in
+      let _x_4 = list_map_m_loop_at_program_union_rule_lift_at_program_union_rule_extend_all_at_program_checker_list_of_opt_spec_0_spec_0_spec_1 rule _x_2 _x_3 in
+      match _x_4 with
+        | None -> None
+        | Some val__6 -> (let _x_7 = program_union_rule_join_all_at_program_union_rule_lift_at_program_union_rule_extend_all_at_program_checker_list_of_opt_spec_0_spec_0_spec_2 val__6 in
+          Some _x_7))
+
+
+
+(* LCNF mono: Effect4.Program.UnionRule.extendAllIn._at_.Effect4.Program.Checker.listOfIn.spec_0 (decls : List (Prod String Effect4.Program.Ty)) (rule : Effect4.Program.Ty -> (Option Effect4.Program.Ty)) (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+
+let program_union_rule_extend_all_in_at_program_checker_list_of_in_spec_0 (decls : (string * ty) list) (rule : ty -> ty option) (target : ty) : ty option =
+  match decls with
+    | [] -> program_union_rule_extend_all_at_program_checker_list_of_opt_spec_0 rule target
+    | _ -> (let _x_2 = rule target in
+      match _x_2 with
+        | None -> program_union_rule_lift_in_at_program_union_rule_extend_all_in_at_program_checker_list_of_in_spec_0_spec_0 decls rule target
+        | Some _ -> _x_2)
+
+
+
+(* LCNF mono: Effect4.Program.Checker.listOfIn (decls : List (Prod String Effect4.Program.Ty)) (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+
+let program_checker_list_of_in (decls : (string * ty) list) (target : ty) : ty option =
   let _x_1 = program_member_list in
-  program_union_rule_extend_all_at_program_checker_list_of_opt_spec_0 _x_1 target
+  program_union_rule_extend_all_in_at_program_checker_list_of_in_spec_0 decls _x_1 target
 
 
 
@@ -14150,15 +14297,17 @@ let rec program_arg_ty (sig_ : _ signature) (env : ty list) (const : bool) (x_1 
           let _x_23 = program_args_ty sig_ env _x_22 values_16 in
           match _x_23 with
             | None -> None
-            | Some val__25 -> program_record_check fields_14 present_names_15 val__25)
+            | Some val__25 -> (match (sig_ : _ signature) with
+                | { types = types; _ } -> program_record_check_in types fields_14 present_names_15 val__25))
         | Some _ -> None)
     | Term_field (mode_29, target_30, name_31) -> (let _x_32 = false in
       let _x_33 = program_arg_ty sig_ env _x_32 target_30 in
       match _x_33 with
         | None -> _x_33
-        | Some val__34 -> (let _x_35 = FieldReadMode_optional in
-          let _x_36 = program_inst_decidable_eq_field_read_mode mode_29 _x_35 in
-          program_record_field_type _x_36 val__34 name_31))
+        | Some val__34 -> (match (sig_ : _ signature) with
+            | { types = types_1; _ } -> (let _x_35 = FieldReadMode_optional in
+              let _x_36 = program_inst_decidable_eq_field_read_mode mode_29 _x_35 in
+              program_record_field_type_in types_1 _x_36 val__34 name_31)))
     | Term_recordSet (target_38, name_39, value_40) -> (let _x_41 = false in
       let _x_42 = program_arg_ty sig_ env _x_41 target_38 in
       match _x_42 with
@@ -14167,7 +14316,8 @@ let rec program_arg_ty (sig_ : _ signature) (env : ty list) (const : bool) (x_1 
           let _x_45 = program_arg_ty sig_ env _x_44 value_40 in
           match _x_45 with
             | None -> _x_45
-            | Some val__46 -> program_record_set_type val__43 name_39 val__46))
+            | Some val__46 -> (match (sig_ : _ signature) with
+                | { types = types_2; _ } -> program_record_set_type_in types_2 val__43 name_39 val__46)))
     | Term_tupleAt (target_48, index_49) -> (let _x_50 = false in
       let _x_51 = program_arg_ty sig_ env _x_50 target_48 in
       match _x_51 with
@@ -14177,28 +14327,29 @@ let rec program_arg_ty (sig_ : _ signature) (env : ty list) (const : bool) (x_1 
       let _x_59 = program_arg_ty sig_ env _x_58 list_55 in
       match _x_59 with
         | None -> _x_59
-        | Some val__60 -> (let _x_61 = program_checker_list_of_opt val__60 in
-          match _x_61 with
-            | None -> _x_61
-            | Some val__62 -> (let _x_63 = program_arg_ty sig_ env _x_58 init_56 in
-              match _x_63 with
-                | None -> _x_63
-                | Some val__64 -> (let _jp_65 = fun _y_66 -> let _x_67 = program_ty_normalize val__64 in
-                  let _x_68 = program_ty_normalize _y_66 in
-                  let _x_69 = program_ty_sub _x_67 _x_68 in
-                  if _x_69 then (let _x_71 = [] in
-                    let _x_72 = val__62 :: _x_71 in
-                    let _x_73 = _y_66 :: _x_72 in
-                    let _x_74 = env @ _x_73 in
-                    let _x_75 = program_arg_ty sig_ _x_74 _x_58 body_57 in
-                    match _x_75 with
-                      | None -> _x_75
-                      | Some val__76 -> (let _x_77 = program_ty_normalize val__76 in
-                        let _x_78 = program_ty_sub _x_77 _x_68 in
-                        if _x_78 then Some _y_66 else None)) else None in
-                  match acc_ty_54 with
-                    | None -> _jp_65 val__64
-                    | Some val__81 -> _jp_65 val__81))))
+        | Some val__60 -> (match (sig_ : _ signature) with
+            | { types = types_3; _ } -> (let _x_61 = program_checker_list_of_in types_3 val__60 in
+              match _x_61 with
+                | None -> _x_61
+                | Some val__62 -> (let _x_63 = program_arg_ty sig_ env _x_58 init_56 in
+                  match _x_63 with
+                    | None -> _x_63
+                    | Some val__64 -> (let _jp_65 = fun _y_66 -> let _x_67 = program_ty_normalize val__64 in
+                      let _x_68 = program_ty_normalize _y_66 in
+                      let _x_69 = program_ty_sub _x_67 _x_68 in
+                      if _x_69 then (let _x_71 = [] in
+                        let _x_72 = val__62 :: _x_71 in
+                        let _x_73 = _y_66 :: _x_72 in
+                        let _x_74 = env @ _x_73 in
+                        let _x_75 = program_arg_ty sig_ _x_74 _x_58 body_57 in
+                        match _x_75 with
+                          | None -> _x_75
+                          | Some val__76 -> (let _x_77 = program_ty_normalize val__76 in
+                            let _x_78 = program_ty_sub _x_77 _x_68 in
+                            if _x_78 then Some _y_66 else None)) else None in
+                      match acc_ty_54 with
+                        | None -> _jp_65 val__64
+                        | Some val__81 -> _jp_65 val__81)))))
 
 and program_args_ty (sig_ : _ signature) (env : ty list) (const : bool) (x_1 : terms) : ty list option =
   match (x_1 : terms) with
@@ -14297,29 +14448,27 @@ let rec list_find_opt_at_program_term_refusal_construction_spec_0 (fields : (str
 
 
 
-(* LCNF mono: List.findSome?._at_.Effect4.Program.TermRefusal.construction.spec_1 (val.1 : List (Prod String Effect4.Program.Ty)) (x.2 : List (Prod String (Prod Bool Effect4.Program.Ty))) : Option Effect4.Program.RecordTypingReason *)
+(* LCNF mono: List.findSome?._at_.Effect4.Program.TermRefusal.construction.spec_1 (val.1 : List (Prod String Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (x.2 : List (Prod String (Prod Bool Effect4.Program.Ty))) : Option Effect4.Program.RecordTypingReason *)
 
-let rec list_find_some_opt_at_program_term_refusal_construction_spec_1 (val__1 : (string * ty) list) (x_2 : (string * (bool * ty)) list) : record_typing_reason option =
+let rec list_find_some_opt_at_program_term_refusal_construction_spec_1 (val__1 : (string * ty) list) (decls : (string * ty) list) (x_2 : (string * (bool * ty)) list) : record_typing_reason option =
   match x_2 with
     | [] -> None
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, snd_1 -> (let _x_6 = field_first_of fst_1 val__1 in
           match _x_6 with
             | None -> (match snd_1 with
-                | fst_2, _ -> if fst_2 then list_find_some_opt_at_program_term_refusal_construction_spec_1 val__1 tail_5 else (let _x_7 = RecordTypingReason_missingRequired fst_1 in
+                | fst_2, _ -> if fst_2 then list_find_some_opt_at_program_term_refusal_construction_spec_1 val__1 decls tail_5 else (let _x_7 = RecordTypingReason_missingRequired fst_1 in
                     Some _x_7))
             | Some val__10 -> (match snd_1 with
-                | _, snd_2 -> (let _x_11 = program_ty_normalize val__10 in
-                  let _x_12 = program_ty_normalize snd_2 in
-                  let _x_13 = program_ty_sub _x_11 _x_12 in
-                  if _x_13 then list_find_some_opt_at_program_term_refusal_construction_spec_1 val__1 tail_5 else (let _x_14 = RecordTypingReason_fieldNotSubtype (fst_1, val__10, snd_2) in
-                    Some _x_14)))))
+                | _, snd_2 -> (let _x_11 = program_record_field_admits_in decls val__10 snd_2 in
+                  if _x_11 then list_find_some_opt_at_program_term_refusal_construction_spec_1 val__1 decls tail_5 else (let _x_12 = RecordTypingReason_fieldNotSubtype (fst_1, val__10, snd_2) in
+                    Some _x_12)))))
 
 
 
-(* LCNF mono: Effect4.Program.TermRefusal.construction (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (names : List String) (types : List Effect4.Program.Ty) : Option Effect4.Program.RecordTypingReason *)
+(* LCNF mono: Effect4.Program.TermRefusal.construction (decls : List (Prod String Effect4.Program.Ty)) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (names : List String) (types : List Effect4.Program.Ty) : Option Effect4.Program.RecordTypingReason *)
 
-let program_term_refusal_construction (fields : (string * (bool * ty)) list) (names : string list) (types : ty list) : record_typing_reason option =
+let program_term_refusal_construction (decls : (string * ty) list) (fields : (string * (bool * ty)) list) (names : string list) (types : ty list) : record_typing_reason option =
   let _x_1 = record_zip_names names types in
   match _x_1 with
     | None -> (let _x_2 = List.length names in
@@ -14330,7 +14479,7 @@ let program_term_refusal_construction (fields : (string * (bool * ty)) list) (na
       match _x_7 with
         | None -> (let _x_8 = list_find_opt_at_program_term_refusal_construction_spec_0 fields val__6 in
           match _x_8 with
-            | None -> list_find_some_opt_at_program_term_refusal_construction_spec_1 val__6 fields
+            | None -> list_find_some_opt_at_program_term_refusal_construction_spec_1 val__6 decls fields
             | Some val__10 -> (match val__10 with
                 | fst_1, _ -> (let _x_11 = RecordTypingReason_unknownSupplied fst_1 in
                   Some _x_11)))
@@ -14339,9 +14488,9 @@ let program_term_refusal_construction (fields : (string * (bool * ty)) list) (na
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_5 (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (names : List String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_5 (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (names : List String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_5 (fields : (string * (bool * ty)) list) (infer_args : ty list -> bool -> terms -> ty list option) fst_1 snd_1 (names : string list) (env : ty list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_5 (fields : (string * (bool * ty)) list) (infer_args : ty list -> bool -> terms -> ty list option) fst_1 snd_1 (decls : (string * ty) list) (names : string list) (env : ty list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = program_term_refusal_declaration fields in
   match _x_2 with
     | None -> (let _x_3 = true in
@@ -14349,7 +14498,7 @@ let program_term_refusal_algebra__lam_5 (fields : (string * (bool * ty)) list) (
       match _x_4 with
         | None -> (let _x_5 = 0 in
           snd_1 env _x_3 path _x_5)
-        | Some val__7 -> (let _x_8 = program_term_refusal_construction fields names val__7 in
+        | Some val__7 -> (let _x_8 = program_term_refusal_construction decls fields names val__7 in
           match _x_8 with
             | None -> None
             | Some val__10 -> (let _x_11 = ({ path = path; reason = val__10 } : record_term_refusal) in
@@ -14361,11 +14510,11 @@ let program_term_refusal_algebra__lam_5 (fields : (string * (bool * ty)) list) (
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_6 (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (names : List String) (values : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_6 (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (decls : List (Prod String Effect4.Program.Ty)) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (names : List String) (values : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_6 (infer_args : ty list -> bool -> terms -> ty list option) (fields : (string * (bool * ty)) list) (names : string list) (values : terms * (ty list -> bool -> int list -> int -> term_typing_refusal option)) : term * (ty list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_6 (infer_args : ty list -> bool -> terms -> ty list option) (decls : (string * ty) list) (fields : (string * (bool * ty)) list) (names : string list) (values : terms * (ty list -> bool -> int list -> int -> term_typing_refusal option)) : term * (ty list -> bool -> int list -> term_typing_refusal option) =
   match values with
-    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_5 fields infer_args fst_1 snd_1 names in
+    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_5 fields infer_args fst_1 snd_1 decls names in
       let _x_2 = Term_record (fields, names, fst_1) in
       _x_2, _f_1)
 
@@ -14408,19 +14557,18 @@ let list_foldr_tr_at_program_term_refusal_read_field_spec_0 (name : string) (mod
 
 
 
-(* LCNF mono: Effect4.Program.TermRefusal.readField (mode : Effect4.Program.FieldReadMode) (target : Effect4.Program.Ty) (name : String) : Option Effect4.Program.RecordTypingReason *)
+(* LCNF mono: Effect4.Program.TermRefusal.readField (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (target : Effect4.Program.Ty) (name : String) : Option Effect4.Program.RecordTypingReason *)
 
-let program_term_refusal_read_field (mode : field_read_mode) (target : ty) (name : string) : record_typing_reason option =
+let program_term_refusal_read_field (decls : (string * ty) list) (mode : field_read_mode) (target : ty) (name : string) : record_typing_reason option =
   let _x_1 = None in
-  let _x_2 = program_ty_normalize target in
-  let _x_3 = program_ty_members _x_2 in
-  list_foldr_tr_at_program_term_refusal_read_field_spec_0 name mode _x_1 _x_3
+  let _x_2 = program_ty_members_in decls target in
+  list_foldr_tr_at_program_term_refusal_read_field_spec_0 name mode _x_1 _x_2
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_7 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (mode : Effect4.Program.FieldReadMode) (name : String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_7 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (name : String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_7 (infer : ty list -> bool -> term -> ty option) fst_1 snd_1 (mode : field_read_mode) (name : string) (env : ty list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_7 (infer : ty list -> bool -> term -> ty option) fst_1 snd_1 (decls : (string * ty) list) (mode : field_read_mode) (name : string) (env : ty list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -14429,7 +14577,7 @@ let program_term_refusal_algebra__lam_7 (infer : ty list -> bool -> term -> ty o
       let _x_6 = _x_4 :: _x_5 in
       let _x_7 = path @ _x_6 in
       snd_1 env _x_2 _x_7)
-    | Some val__9 -> (let _x_10 = program_term_refusal_read_field mode val__9 name in
+    | Some val__9 -> (let _x_10 = program_term_refusal_read_field decls mode val__9 name in
       match _x_10 with
         | None -> None
         | Some val__12 -> (let _x_13 = ({ path = path; reason = val__12 } : record_term_refusal) in
@@ -14438,11 +14586,11 @@ let program_term_refusal_algebra__lam_7 (infer : ty list -> bool -> term -> ty o
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_8 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (name : String) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_8 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (name : String) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_8 (infer : ty list -> bool -> term -> ty option) (mode : field_read_mode) (target : term * (ty list -> bool -> int list -> term_typing_refusal option)) (name : string) : term * (ty list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_8 (infer : ty list -> bool -> term -> ty option) (decls : (string * ty) list) (mode : field_read_mode) (target : term * (ty list -> bool -> int list -> term_typing_refusal option)) (name : string) : term * (ty list -> bool -> int list -> term_typing_refusal option) =
   match target with
-    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_7 infer fst_1 snd_1 mode name in
+    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_7 infer fst_1 snd_1 decls mode name in
       let _x_2 = Term_field (mode, fst_1, name) in
       _x_2, _f_1)
 
@@ -14560,9 +14708,9 @@ let program_term_refusal_algebra__lam_12 (infer : ty list -> bool -> term -> ty 
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_13 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (accTy : Option Effect4.Program.Ty) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_13 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (accTy : Option Effect4.Program.Ty) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_13 (infer : ty list -> bool -> term -> ty option) fst_1 snd_1 fst_2 snd_2 fst_3 snd_3 (acc_ty : ty option) (env : ty list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_13 (infer : ty list -> bool -> term -> ty option) fst_1 snd_1 (decls : (string * ty) list) fst_2 snd_2 fst_3 snd_3 (acc_ty : ty option) (env : ty list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -14571,7 +14719,7 @@ let program_term_refusal_algebra__lam_13 (infer : ty list -> bool -> term -> ty 
       let _x_6 = _x_4 :: _x_5 in
       let _x_7 = path @ _x_6 in
       snd_1 env _x_2 _x_7)
-    | Some val__9 -> (let _x_10 = program_checker_list_of_opt val__9 in
+    | Some val__9 -> (let _x_10 = program_checker_list_of_in decls val__9 in
       match _x_10 with
         | None -> (let _x_11 = FoldTypingReason_notList val__9 in
           let _x_12 = ({ path = path; reason = _x_11 } : fold_term_refusal) in
@@ -14612,13 +14760,13 @@ let program_term_refusal_algebra__lam_13 (infer : ty list -> bool -> term -> ty 
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_14 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (accTy : Option Effect4.Program.Ty) (list : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (init : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (body : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_14 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (accTy : Option Effect4.Program.Ty) (list : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (init : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (body : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_14 (infer : ty list -> bool -> term -> ty option) (acc_ty : ty option) (list : term * (ty list -> bool -> int list -> term_typing_refusal option)) (init : term * (ty list -> bool -> int list -> term_typing_refusal option)) (body : term * (ty list -> bool -> int list -> term_typing_refusal option)) : term * (ty list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_14 (infer : ty list -> bool -> term -> ty option) (decls : (string * ty) list) (acc_ty : ty option) (list : term * (ty list -> bool -> int list -> term_typing_refusal option)) (init : term * (ty list -> bool -> int list -> term_typing_refusal option)) (body : term * (ty list -> bool -> int list -> term_typing_refusal option)) : term * (ty list -> bool -> int list -> term_typing_refusal option) =
   match list with
     | fst_1, snd_1 -> (match init with
         | fst_2, snd_2 -> (match body with
-            | fst_3, snd_3 -> (let _f_1 = program_term_refusal_algebra__lam_13 infer fst_1 snd_1 fst_2 snd_2 fst_3 snd_3 acc_ty in
+            | fst_3, snd_3 -> (let _f_1 = program_term_refusal_algebra__lam_13 infer fst_1 snd_1 decls fst_2 snd_2 fst_3 snd_3 acc_ty in
               let _x_2 = Term_fold (acc_ty, fst_1, fst_2, fst_3) in
               _x_2, _f_1)))
 
@@ -14657,18 +14805,18 @@ let program_term_refusal_algebra__lam_17 (infer : ty list -> bool -> term -> ty 
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (constAtom : String -> Bool) : Effect4.Program.TermAlgebra lcAny *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (constAtom : String -> Bool) (decls : List (Prod String Effect4.Program.Ty)) : Effect4.Program.TermAlgebra lcAny *)
 
-let program_term_refusal_algebra (infer : ty list -> bool -> term -> ty option) (infer_args : ty list -> bool -> terms -> ty list option) (const_atom : string -> bool) : (_, _) term_algebra =
+let program_term_refusal_algebra (infer : ty list -> bool -> term -> ty option) (infer_args : ty list -> bool -> terms -> ty list option) (const_atom : string -> bool) (decls : (string * ty) list) : (_, _) term_algebra =
   let _f_1 = program_term_refusal_algebra__lam_0 in
   let _f_2 = program_term_refusal_algebra__lam_1 _f_1 in
   let _f_3 = program_term_refusal_algebra__lam_3 _f_1 in
   let _f_4 = program_term_refusal_algebra__lam_4 const_atom in
-  let _f_5 = program_term_refusal_algebra__lam_6 infer_args in
-  let _f_6 = program_term_refusal_algebra__lam_8 infer in
+  let _f_5 = program_term_refusal_algebra__lam_6 infer_args decls in
+  let _f_6 = program_term_refusal_algebra__lam_8 infer decls in
   let _f_7 = program_term_refusal_algebra__lam_10 infer in
   let _f_8 = program_term_refusal_algebra__lam_12 infer in
-  let _f_9 = program_term_refusal_algebra__lam_14 infer in
+  let _f_9 = program_term_refusal_algebra__lam_14 infer decls in
   let _f_10 = program_term_refusal_algebra__lam_15 in
   let _f_11 = program_term_refusal_algebra__lam_17 infer in
   let _x_12 = Terms_nil in
@@ -14723,9 +14871,9 @@ and program_cata_terms (alg : (_, _) term_algebra) (node : terms) =
 
 let program_term_refusal_diagnose (sig_ : _ signature) (env : ty list) (term : term) =
   match (sig_ : _ signature) with
-    | { const_atom = const_atom; _ } -> (let _x_1 = fun _eta _eta_1 _eta_2 -> program_arg_ty sig_ _eta _eta_1 _eta_2 in
+    | { const_atom = const_atom; types = types; _ } -> (let _x_1 = fun _eta _eta_1 _eta_2 -> program_arg_ty sig_ _eta _eta_1 _eta_2 in
       let _x_2 = fun _eta_3 _eta_4 _eta_5 -> program_args_ty sig_ _eta_3 _eta_4 _eta_5 in
-      let _x_3 = program_term_refusal_algebra _x_1 _x_2 const_atom in
+      let _x_3 = program_term_refusal_algebra _x_1 _x_2 const_atom types in
       let _x_4 = program_cata_term _x_3 term in
       match _x_4 with
         | _, snd_1 -> (let _x_5 = false in
@@ -15411,6 +15559,14 @@ let program_param_decl_admits (d : param_decl) (t : eff_ty) : bool =
           if _x_3 then (let _x_4 = program_ty_normalize error in
             let _x_5 = program_ty_normalize error_1 in
             program_ty_sub _x_4 _x_5) else _x_3))
+
+
+
+(* LCNF mono: Effect4.Program.Checker.listOf? (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+
+let program_checker_list_of_opt (target : ty) : ty option =
+  let _x_1 = program_member_list in
+  program_union_rule_extend_all_at_program_checker_list_of_opt_spec_0 _x_1 target
 
 
 
@@ -16474,13 +16630,13 @@ let rec program_checker_check (sig_ : _ signature) (env : ty list) (p : int list
       match _x_390 with
         | Error a_391 -> Error a_391
         | Ok a_393 -> (let _jp_394 = fun _y_395 _y_396 _y_397 _y_398 -> if _y_395 then (let _x_402 = program_ty_normalize a_393 in
-            let _x_403 = program_ty_normalize _y_396 in
+            let _x_403 = program_ty_normalize _y_397 in
             let _x_404 = program_ty_sub _x_402 _x_403 in
-            if _x_404 then (let _x_408 = TypeReason_stepNotCursor (_y_397, _y_396) in
+            if _x_404 then (let _x_408 = TypeReason_stepNotCursor (_y_398, _y_397) in
               let _x_409 = ({ path = p; reason = _x_408 } : type_refusal) in
-              Error _x_409) else (let _x_405 = TypeReason_initialNotCursor (a_393, _y_396) in
+              Error _x_409) else (let _x_405 = TypeReason_initialNotCursor (a_393, _y_397) in
               let _x_406 = ({ path = p; reason = _x_405 } : type_refusal) in
-              Error _x_406)) else (let _x_399 = TypeReason_predicateNotBool _y_398 in
+              Error _x_406)) else (let _x_399 = TypeReason_predicateNotBool _y_396 in
             let _x_400 = ({ path = p; reason = _x_399 } : type_refusal) in
             Error _x_400) in
           let _jp_411 = fun _y_412 -> let _x_413 = [] in
@@ -16514,7 +16670,7 @@ let rec program_checker_check (sig_ : _ signature) (env : ty list) (p : int list
                                 if _x_442 then (let _x_443 = program_ty_normalize a_432 in
                                   let _x_444 = program_ty_sub _x_443 _x_441 in
                                   if _x_444 then (let _x_445 = ({ answer = a_436; error = error_22; requires = requires_20 } : eff_ty) in
-                                    Ok _x_445) else _jp_394 _x_439 _y_412 a_432 a_419) else _jp_394 _x_439 _y_412 a_432 a_419) else _jp_394 _x_439 _y_412 a_432 a_419))))) in
+                                    Ok _x_445) else _jp_394 _x_439 a_419 _y_412 a_432) else _jp_394 _x_439 a_419 _y_412 a_432) else _jp_394 _x_439 a_419 _y_412 a_432))))) in
           match cursor_ty_384 with
             | None -> _jp_411 a_393
             | Some val__447 -> _jp_411 val__447))
@@ -18082,21 +18238,11 @@ let program_internal_handle_targets : string list =
 
 
 
-(* LCNF mono: List.elem._at_.Effect4.Program.NativeAtom.covers.spec_0 (a : String) (x.1 : List String) : Bool *)
-
-let rec list_elem_at_program_native_atom_covers_spec_0 (a : string) (x_1 : string list) : bool =
-  match x_1 with
-    | [] -> false
-    | head_3 :: tail_4 -> (let _x_5 = a = head_3 in
-      if _x_5 then _x_5 else list_elem_at_program_native_atom_covers_spec_0 a tail_4)
-
-
-
 (* LCNF mono: Effect4.Program.externalHandleTarget (target : String) : Bool *)
 
 let program_external_handle_target (target : string) : bool =
   let _x_1 = program_internal_handle_targets in
-  let _x_2 = list_elem_at_program_native_atom_covers_spec_0 target _x_1 in
+  let _x_2 = list_elem_at_program_ty_head_members_spec_0 target _x_1 in
   if _x_2 then false else true
 
 

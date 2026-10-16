@@ -209,7 +209,8 @@ each with its capture. The step term under the row's own binder is one atomic up
 step answers the model's reply with the model's signals as two lists, and it writes the model's
 next state. The reply and the stored value are members of their types. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem take_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+theorem take_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
     (injective : tb.Injective) {idSrc hintSrc : TermSrc} {env : Env} {path : List Nat}
@@ -252,14 +253,15 @@ theorem take_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtom
   have typed := (takeStep_types sig atoms A message (push_minted_length tyDepth "current" _)
     typesId typesHint (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, reply, entered, woken, tree, encoded, notified, stepped, fitsReply, fitsNext⟩
 
 /-- **The withdrawal of a take is the model's `withdrawTake`.** The same statement as an
 attempt's: the store step answers the takers that the model wakes, and it writes the model's
 next state. The table does not change. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem take_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+theorem take_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {idSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -288,7 +290,7 @@ theorem take_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeA
   have typed := (withdrawTake_types sig atoms A message (push_minted_length tyDepth "current" _)
     typesId (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, woken, tree, notified, stepped, fitsReply, fitsNext⟩
 
 /-- **The attempt of `offer` is the model's `offer`**, by a fresh request. No fold of the offer
@@ -296,7 +298,8 @@ step holds a caller's term, so the identity, the hint and the message are read a
 scope alone. The store step answers the model's reply and the takers that the model wakes, and
 it writes the model's next state. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem offer_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+theorem offer_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
     (fresh : ∀ o ∈ s.offers, o.id ≠ id) {idSrc hintSrc messageSrc : TermSrc} {env : Env}
@@ -341,14 +344,15 @@ theorem offer_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAto
   have typed := (offerStep_types sig atoms A message typesId typesHint typesMessage
     (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, woken, tree, notified, stepped, fitsReply, fitsNext⟩
 
 /-- **The withdrawal of an offer is the model's `withdrawOffer`.** The store step answers the
 takers that the model wakes, and it writes the model's next state: an offer that a step already
 accepted is not pending, so its message stays accepted (decisions row 222). -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem offer_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+theorem offer_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {idSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -378,14 +382,15 @@ theorem offer_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = native
     (push_minted_length tyDepth "current" _) typesId
     (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, woken, tree, notified, stepped, fitsReply, fitsNext⟩
 
 /-- **The step of `poll` is the model's `poll`.** It takes no request. The store step answers
 the model's reply and the offers that entered, and it writes the model's next state. The model
 wakes no taker. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem poll_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+theorem poll_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State)
     (profile : FirstProfile s) {env : Env} {path : List Nat} {tys : List Ty} {w : Typed.World}
     {captured : List Val} (depth : captured.length = env.names.length)
@@ -409,7 +414,7 @@ theorem poll_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtom
   have typed := (pollStep_types sig atoms A message (push_minted_length tyDepth "current" _)
     (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, entered, tree, notified, stepped, fitsReply, fitsNext⟩
 
 /-- **The read law of `size`.** The operation's `Ref.get` answers the cell's value and leaves
@@ -464,6 +469,7 @@ those levels. The row's own binder is no later binder that shadows either name
 names that `bindWith` mints. The scope binds each, and no later binder shadows either. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (A : Ty) (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
     (injective : tb.Injective) {env outerId outerHint : Env} {path : List Nat}
@@ -499,7 +505,7 @@ theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nat
         (takeReplyTy A) ∧
       Fits w (cellVal (tb.afterTake id hint (Model.take s ⟨id, 1, 1⟩).2.1) msg
         (Model.take s ⟨id, 1, 1⟩).1) (Queue.cellTy A) :=
-  take_attempt sig atoms A message tb msg s id hint profile requested injective depth tyDepth
+  take_attempt sig atoms types A message tb msg s id hint profile requested injective depth tyDepth
     typedEnv (captured_answer_in_row idScope idUnshadowed idHeld)
     (captured_answer_in_row hintScope hintUnshadowed hintHeld)
     (capturedTy_answer_in_row idScope idUnshadowed idTyped)
@@ -509,6 +515,7 @@ theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nat
 `bindWith` mints. The scope binds it, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (A : Ty) (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {env outerId : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -531,7 +538,7 @@ theorem take_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf = 
           Val.list (woken.map (takerVal tb))) ∧
       Fits w (Val.list (woken.map (takerVal tb))) wakeReplyTy ∧
       Fits w (cellVal tb msg (Model.withdrawTake s id).1) (Queue.cellTy A) :=
-  take_withdrawal sig atoms A message tb msg s id profile injective depth tyDepth typedEnv
+  take_withdrawal sig atoms types A message tb msg s id profile injective depth tyDepth typedEnv
     (captured_answer_in_row idScope idUnshadowed idHeld)
     (capturedTy_answer_in_row idScope idUnshadowed idTyped) held member
 
@@ -540,6 +547,7 @@ names that `bindWith` mints. The scope binds each, and no later binder shadows e
 message stays a caller's term, with its reading and its type at the row's scope. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem offer_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (A : Ty) (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
     (fresh : ∀ o ∈ s.offers, o.id ≠ id) {messageSrc : TermSrc} {env outerId outerHint : Env}
@@ -578,7 +586,7 @@ theorem offer_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = na
         offerReplyTy ∧
       Fits w (cellVal (tb.afterOffer id hint (Model.offer s id a).2.1) msg
         (Model.offer s id a).1) (Queue.cellTy A) :=
-  offer_attempt sig atoms A message tb msg s id a hint profile requested fresh depth tyDepth
+  offer_attempt sig atoms types A message tb msg s id a hint profile requested fresh depth tyDepth
     typedEnv (captured_answer_in_row idScope idUnshadowed idHeld).atScope
     (captured_answer_in_row hintScope hintUnshadowed hintHeld).atScope readsMessage
     (capturedTy_answer_in_row idScope idUnshadowed idTyped).atScope
@@ -589,6 +597,7 @@ theorem offer_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = na
 `bindWith` mints. The scope binds it, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem offer_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     (A : Ty) (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {env outerId : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -611,7 +620,7 @@ theorem offer_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf =
           Val.list (woken.map (takerVal tb))) ∧
       Fits w (Val.list (woken.map (takerVal tb))) wakeReplyTy ∧
       Fits w (cellVal tb msg (Model.withdrawOffer s id).1) (Queue.cellTy A) :=
-  offer_withdrawal sig atoms A message tb msg s id profile injective depth tyDepth typedEnv
+  offer_withdrawal sig atoms types A message tb msg s id profile injective depth tyDepth typedEnv
     (captured_answer_in_row idScope idUnshadowed idHeld)
     (capturedTy_answer_in_row idScope idUnshadowed idTyped) held member
 

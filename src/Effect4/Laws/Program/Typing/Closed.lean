@@ -299,6 +299,60 @@ theorem closed_check {fields : Fields} {names : List String} {types : List Ty} {
     exact Ty.closed_normalize _ hf
   · exact nomatch h
 
+/-- The union members under a table of closed bodies, of a closed type, are closed. -/
+@[semantics "subtyping-algebra" (requirement := R3)]
+theorem closed_membersIn {decls : TyDecls} (hdecls : ∀ d ∈ decls, d.2.closed = true) {t : Ty}
+    (ht : t.closed = true) : ∀ x ∈ Ty.membersIn decls t, x.closed = true := by
+  intro x hx
+  cases decls with
+  | nil => exact Ty.closed_members _ (Ty.closed_normalize t ht) x hx
+  | cons d ds =>
+    exact Ty.headMembers_all (P := fun t => t.closed = true) Ty.closed_members hdecls [] t.normalize
+      (Ty.closed_normalize t ht) x hx
+
+/-- **A lifted rule under a table of closed bodies keeps closed types closed**: the form of
+`UnionRule.lift_closed` at the union members under the table. -/
+@[semantics "subtyping-algebra" (requirement := R3)]
+theorem liftIn_closed {decls : TyDecls} (hdecls : ∀ d ∈ decls, d.2.closed = true)
+    {rule : Ty → Option Ty}
+    (member : ∀ {m a : Ty}, m.closed = true → rule m = some a → a.closed = true)
+    {t a : Ty} (typed : UnionRule.liftIn decls rule t = some a) (closed : t.closed = true) :
+    a.closed = true := by
+  rw [UnionRule.liftIn_eq] at typed
+  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp typed
+  refine UnionRule.joinAll_all (Q := fun a : Ty => a.closed = true) rfl UnionRule.closed_join
+    fun c hc => ?_
+  obtain ⟨m, hm, hrule⟩ := UnionRule.mapM_source hanswers c hc
+  exact member (closed_membersIn hdecls closed m hm) hrule
+
+/-- The field read under a table of closed bodies keeps closed types closed. -/
+@[semantics "subtyping-algebra" (requirement := R3)]
+theorem closed_fieldTypeIn {decls : TyDecls} (hdecls : ∀ d ∈ decls, d.2.closed = true)
+    {optional : Bool} {target ty : Ty} {name : String} (ht : target.closed = true)
+    (h : fieldTypeIn decls optional target name = some ty) : ty.closed = true :=
+  liftIn_closed hdecls (fun hm hr => closed_fieldOf hm hr) h ht
+
+/-- The field write under a table of closed bodies keeps closed types closed, at a closed
+replacement. -/
+@[semantics "subtyping-algebra" (requirement := R3)]
+theorem closed_setTypeIn {decls : TyDecls} (hdecls : ∀ d ∈ decls, d.2.closed = true)
+    {target valueType ty : Ty} {name : String} (ht : target.closed = true)
+    (hv : valueType.closed = true) (h : setTypeIn decls target name valueType = some ty) :
+    ty.closed = true :=
+  liftIn_closed hdecls (fun hm hr => closed_setOf hv hm hr) h ht
+
+/-- A record term's type under a table is the normal form of its declaration. -/
+@[semantics "subtyping-algebra" (requirement := R3)]
+theorem closed_checkIn {decls : TyDecls} {fields : Fields} {names : List String}
+    {types : List Ty} {ty : Ty} (hf : (Ty.record fields).closed = true)
+    (h : checkIn decls fields names types = some ty) : ty.closed = true := by
+  simp only [checkIn, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨_, _, h⟩ := h
+  split at h
+  · cases h
+    exact Ty.closed_normalize _ hf
+  · exact nomatch h
+
 /-- The two arms of a record tag decision keep members of the target's normal form. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_tagArms {tag : String} {t : Ty} {arms : Ty × Ty} (ht : t.closed = true)
@@ -1114,6 +1168,9 @@ structure ClosedSig {Op : Type} (sig : Signature Op) : Prop where
     (∀ t ∈ tys, t.closed = true) → ty.closed = true
   /-- Every service carrier is closed. -/
   service : ∀ (key : ServiceKey) (ty : Ty), sig.serviceTy key = some ty → ty.closed = true
+  /-- Every declared body is closed: a declaration names no type variable (`declChecks`,
+  `Program/SigApp.lean`), so a field read through a declared name answers a closed type. -/
+  types : ∀ d ∈ sig.types, d.2.closed = true
 
 /-- An environment of closed types. -/
 def ClosedEnv (env : TyEnv) : Prop := ∀ t ∈ env, t.closed = true
@@ -1176,16 +1233,16 @@ theorem argTy_closed (hsig : ClosedSig sig) {env : TyEnv} (henv : ClosedEnv env)
     · rename_i hformed
       simp only [bind, Option.bind_eq_some_iff] at h
       obtain ⟨_, _, hrecord⟩ := h
-      exact Record.closed_check
+      exact Record.closed_checkIn
         (Formation.closed_of_formed ((Formation.check_eq_none_iff _).mp hformed)) hrecord
   | _, .field mode target name, _, hs, h => by
     simp only [argTy, bind, Option.bind_eq_some_iff] at h
     obtain ⟨type, htarget, hfield⟩ := h
-    exact Record.closed_fieldType (argTy_closed hsig henv false target hs.2 htarget) hfield
+    exact Record.closed_fieldTypeIn hsig.types (argTy_closed hsig henv false target hs.2 htarget) hfield
   | _, .recordSet target name value, _, hs, h => by
     simp only [argTy, bind, Option.bind_eq_some_iff] at h
     obtain ⟨targetType, htarget, valueType, hvalue, hset⟩ := h
-    exact Record.closed_setType (argTy_closed hsig henv false target hs.2.1 htarget)
+    exact Record.closed_setTypeIn hsig.types (argTy_closed hsig henv false target hs.2.1 htarget)
       (argTy_closed hsig henv true value hs.2.2 hvalue) hset
   | _, .tupleAt target index, _, hs, h => by
     simp only [argTy, bind, Option.bind_eq_some_iff] at h
@@ -1591,7 +1648,7 @@ theorem typeOfProgram_closed {Op : Type} [ScopedOp Op] (sig : Signature Op)
     -- a block's main program is checked at the block's signature, whose atoms and carriers are
     -- the signature's (decisions row 328)
     | @defs decls _ _ _ _ _ hmain _ =>
-      exact hasTy_closed (sig := sig.withDefs decls) ⟨closed.atom, closed.service⟩ hmain
+      exact hasTy_closed (sig := sig.withDefs decls) ⟨closed.atom, closed.service, closed.types⟩ hmain
         ClosedEnv.nil hann.2.2.1
     | plain hd => exact hasTy_closed closed hd ClosedEnv.nil hann
   · exact nomatch h
@@ -1626,7 +1683,8 @@ theorem closed_nativeServiceTy {key : ServiceKey} {ty : Ty}
 So `check_closed` asks nothing of a native program but its formed annotations. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closedSig_native (table : RowTable) : ClosedSig (nativeSignature table) :=
-  ⟨fun _ _ _ h htys => closed_nativeAtomTy htys h, fun _ _ h => closed_nativeServiceTy h⟩
+  ⟨fun _ _ _ h htys => closed_nativeAtomTy htys h, fun _ _ h => closed_nativeServiceTy h,
+    fun _ h => absurd h List.not_mem_nil⟩
 
 /-! ## 7. An application's signature: a declared carrier is a formation site
 
@@ -1695,7 +1753,8 @@ carriers are formed.** The atoms are the native ones. A step of `AdmittedProgram
 theorem closedSig_app (app : SigApp) (h : Formation.Formed (Formation.serviceSites app.services)) :
     ClosedSig app.signature :=
   ⟨fun _ _ _ hatom htys => closed_nativeAtomTy htys hatom,
-    fun _ _ hty => closed_serviceTy (Formation.services_closed h) hty⟩
+    fun _ _ hty => closed_serviceTy (Formation.services_closed h) hty,
+    fun _ h => absurd h List.not_mem_nil⟩
 
 /-- `typeOfProgram_closed` at an application's signature: formation of the input is its one
 premise. -/

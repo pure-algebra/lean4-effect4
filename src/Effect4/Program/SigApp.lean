@@ -68,9 +68,19 @@ def serviceTy (app : SigApp) (key : ServiceKey) : Option Ty :=
       | some ty => some ty
       | none => builtinCodeTy key.service
 
-/-- The checker's signature over an application's tables. -/
+/-- The checker's signature over an application's tables: its rows and its service carriers. It
+declares no named type, so the term typer reads every declared name as a handle, and program
+admission and the typed state (M5 to M7) read the checker as before. -/
 def signature (app : SigApp) : Signature NativeOp :=
   { nativeSignature app.rows with serviceTy := app.serviceTy }
+
+/-- **The checker's signature under the application's named types**: `signature` with the
+declaration table, which the term typer reads (`Signature.types`; the wiring plan,
+`docs/research/2026-10-16-usability-scope/wiring-plan.md`). At an application with no named type
+it is `signature`. The typed state's guarantee is claimed at `signature` only (the plan's
+decision 5). -/
+def signatureIn (app : SigApp) : Signature NativeOp :=
+  { app.signature with types := app.types }
 
 end SigApp
 

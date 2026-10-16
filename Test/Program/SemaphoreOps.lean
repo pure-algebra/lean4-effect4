@@ -289,7 +289,8 @@ theorem countTypes {row : Env} {x : String} {level : Nat} {tys : List Ty} {T : T
 
 /-- The take's attempt at its own binders, in `take` and in `withPermits`. The count is a
 variable that the caller reads through `var`: it keeps its level under the row's own binder. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Table)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (tb : Table)
     (s : Semaphore.Model.State) (id n : Nat) (hint : DeferredKey) (injective : tb.Injective)
     (caller : Env) (path : List Nat) (tys : List Ty) (w : Typed.World) (captured : List Val)
     (x : String) (level : Nat) (written : Name.reserved x = false)
@@ -303,14 +304,15 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Tab
     (countHeld : captured[level]? = some (Val.nat n)) (countTyped : tys[level]? = some .nat)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.take_attempt_minted sig atoms tb s id n hint injective (path := path)
+  Semaphore.take_attempt_minted sig atoms types tb s id n hint injective (path := path)
     (countSrc := var x) depth tyDepth typedEnv (takeRow_identity caller).1
     (takeRow_identity caller).2 idHeld idTyped (takeRow_hint caller).1 (takeRow_hint caller).2
     hintHeld hintTyped (countReads path _ written bound countHeld)
     (countTypes sig path _ written bound countTyped) held member
 
 /-- The take's withdrawal at its own binders. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Table)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (tb : Table)
     (s : Semaphore.Model.State) (id : Nat) (injective : tb.Injective) (caller : Env)
     (path : List Nat) (tys : List Ty) (w : Typed.World) (captured : List Val)
     (depth : captured.length = (takeWithdrawRow caller).names.length)
@@ -320,12 +322,13 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Tab
     (idTyped : tys[(masked caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.take_withdrawal_minted sig atoms tb s id injective (path := path) depth tyDepth
+  Semaphore.take_withdrawal_minted sig atoms types tb s id injective (path := path) depth tyDepth
     typedEnv (takeWithdrawRow_identity caller).1 (takeWithdrawRow_identity caller).2 idHeld
     idTyped held member
 
 /-- A visit of the walk at the walk's own binder: the cursor holds an option of a stamp. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Table)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (tb : Table)
     (s : Semaphore.Model.State) (cursor : Nat) (caller : Env) (path : List Nat) (tys : List Ty)
     (w : Typed.World) (captured : List Val)
     (depth : captured.length = (walkRow caller).names.length)
@@ -335,12 +338,13 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Tab
     (cursorTyped : tys[(released caller).names.length]? = some (.option .nat))
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.visit_attempt_minted sig atoms tb s cursor (path := path) depth tyDepth typedEnv
+  Semaphore.visit_attempt_minted sig atoms types tb s cursor (path := path) depth tyDepth typedEnv
     (walkRow_cursor caller).1 (walkRow_cursor caller).2 cursorHeld cursorTyped held member
 
 /-- The release's step at a row's scope, with the count a caller's variable: the caller's own
 scope in `release`, and `hookRow` in a protected form. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Table)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (tb : Table)
     (s : Semaphore.Model.State) (n : Nat) (row : Env) (path : List Nat) (tys : List Ty)
     (w : Typed.World) (captured : List Val) (x : String) (level : Nat)
     (written : Name.reserved x = false) (bound : row.names.resolve x = some level)
@@ -349,13 +353,14 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Tab
     (countTyped : tys[level]? = some .nat) (stores : Stores) (q : RefKey)
     (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.release_attempt sig atoms tb s n (path := path) (countSrc := var x) depth tyDepth
+  Semaphore.release_attempt sig atoms types tb s n (path := path) (countSrc := var x) depth tyDepth
     typedEnv (countReads path _ written bound countHeld)
     (countTypes sig path _ written bound countTyped) held member
 
 /-- The step that never waits at a row's scope, with the count a caller's variable: the
 caller's own scope in `takeIfAvailable`, and `masked` in `withPermitsIfAvailable`. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Table)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (tb : Table)
     (s : Semaphore.Model.State) (n : Nat) (row : Env) (path : List Nat) (tys : List Ty)
     (w : Typed.World) (captured : List Val) (x : String) (level : Nat)
     (written : Name.reserved x = false) (bound : row.names.resolve x = some level)
@@ -364,7 +369,7 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (tb : Tab
     (countTyped : tys[level]? = some .nat) (stores : Stores) (q : RefKey)
     (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.takeIfAvailable_attempt sig atoms tb s n (path := path) (countSrc := var x) depth
+  Semaphore.takeIfAvailable_attempt sig atoms types tb s n (path := path) (countSrc := var x) depth
     tyDepth typedEnv (countReads path _ written bound countHeld)
     (countTypes sig path _ written bound countTyped) held member
 

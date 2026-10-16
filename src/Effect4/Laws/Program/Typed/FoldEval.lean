@@ -106,14 +106,14 @@ second, a member of `A`, in the cell. The term may hold a fold: the whole fold i
 one evaluation. The term's map is `termMaps_of_typed`, and the step is the census clause
 `refStep_modify`. It reads the fixed world `w` and no later one. -/
 theorem refModify_typed_step {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
-    {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env) {f : Term}
+    (htypes : sig.types = []) {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env) {f : Term}
     {A B : Ty} (hty : termTy sig (tys ++ [A]) f = some (.prod B A)) {s : Stores}
     {cell : RefKey} {a : Val} (hcell : refPeek s.refs cell = some a) (ha : Fits w a A) :
     ∃ b a', evalTerm (env ++ [a]) f = some (Val.tuple [b, a']) ∧
       syncOpStep (.refModify cell f env) s =
         some ({ s with refs := refPoke s.refs cell a' }, b) ∧
       Fits w b B ∧ Fits w a' A := by
-  obtain ⟨r, hr, hfit⟩ := termMaps_of_typed hatom henv hty w (leHost_refl w) a ha
+  obtain ⟨r, hr, hfit⟩ := termMaps_of_typed hatom htypes henv hty w (leHost_refl w) a ha
   obtain ⟨b, a', rfl, hb, ha'⟩ := (fits_prod_iff w r B A).mp hfit
   refine ⟨b, a', hr, ?_, hb, ha'⟩
   show (refStep (.refModify cell f env) s.refs).map

@@ -72,7 +72,8 @@ and reads one theorem per guarantee. The decisions follow from that.
    - Why: brands and identities need a name (row 158). The fold sits in a written type, so a refusal names the record's path.
    - An agent never writes the fold: the Lean surface (U2's record form, `ascribe`) writes it.
    - The printed TypeScript compares aliases structurally, so tsgo accepts every program this nominal checker accepts.
-2. **One table, in the typing signature.** `Signature.types : TyDecls := []`, filled from `SigApp.types` by `SigApp.signature`.
+2. **One table, in the typing signature.** `Signature.types : TyDecls := []`, filled from `SigApp.types` by `SigApp.signatureIn`.
+   `SigApp.signature` stays table-free. So program admission and the typed state (M5 to M7) read the checker as before (W3a).
 3. **Beside, by `rfl`.** Each reader under the table is `match decls with | [] => original | _ => …`.
    So the empty table is the original by definition, and no existing proof changes.
 4. **The allocation rule** (row 401 (3)). A natural at a column whose head is a declared name is no allocation request.
@@ -127,9 +128,29 @@ Each serves R3's open part on recursive types and R6's host lane (`docs/core/sys
 2. The table in the signature, and the beside-by-`rfl` rule for its readers (decisions 2 and 3).
 3. The typed-state guarantee at the empty table until `FitsIn` (decision 5).
 
+## After: W2 and W3a landed
+
+W2 landed the readers beside their originals (`Program/TyHead.lean`, `Program/AdmitIn.lean`) and
+their laws. W3a switched the term typer to them. What W3a settled, beyond the decisions above:
+
+- **The term typer reads the signature's table** at the record, field, update and list-fold arms
+  (`argTy`, `Typing/Rules.lean`), and the term refusal reads the same readers.
+- **Introduction lemmas need no premise**: where an original reader answers, its reader under any
+  table answers the same (`Record.fieldTypeIn_of_fieldType`, `Record.checkIn_of_check`,
+  `Checker.listOfIn_of_listOf`). A member rule refuses a reference, so nothing unfolds there.
+- **The laws that invert the typer against `Fits` take `sig.types = []`** (decision 5).
+  They are `evalTerm_fitsAll`, `evalTerm_progress`, `termMaps_of_typed`, `refModify_typed_step`,
+  `step_keeps_cell`, the Library's attempt laws, `termTy_record_inv` and `termTy_fold_inv`.
+  Every concrete signature discharges the premise by `rfl`, a scope by its extension.
+- **An extension keeps the table** (`SigExtends.types`), and so do the congruences of the typer.
+- **A closed signature has closed bodies** (`ClosedSig.types`), and the readers keep closed types
+  closed (`Record.closed_fieldTypeIn`, `closed_membersIn`).
+- **An ascription at a declared name is the fold** (`ascribe_untyped`'s premise is now the fold's
+  refusal, `Record.fieldAdmitsIn`; at an empty table it is the order's).
+
 ## What this does not establish
 
-- No code is written yet. The reaches and file counts come from the scouts' searches.
+- The reaches and file counts before W2 come from the scouts' searches.
 - The Eff-level readers beyond tag dispatch (`Decision.arms`, the option and exit eliminators, `Tuple.typeAt`) are not planned in W3.
 - Recursive `deriving Modeled` is not planned here. A recursive table is written by hand until it lands.
 - No gate has run.

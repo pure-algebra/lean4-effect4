@@ -330,7 +330,8 @@ typed environment, the request's two handles at their levels, the cell's value a
 membership. No premise on a name stays. Each example's conclusion is its law's. -/
 
 /-- `take`'s attempt at its own binders. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State) (id : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
     (injective : tb.Injective) (caller : Env) (path : List Nat) (tys : List Ty)
@@ -343,12 +344,13 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (hintTyped : tys[(looped caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb msg s))
     (member : Fits w (cellVal tb msg s) (Queue.cellTy A)) :=
-  Queue.take_attempt_minted sig atoms A message tb msg s id hint profile requested injective
+  Queue.take_attempt_minted sig atoms types A message tb msg s id hint profile requested injective
     (path := path) depth tyDepth typedEnv (takeRow_identity caller).1 (takeRow_identity caller).2
     idHeld idTyped (takeRow_hint caller).1 (takeRow_hint caller).2 hintHeld hintTyped held member
 
 /-- `take`'s withdrawal at its own binders. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) (caller : Env) (path : List Nat)
     (tys : List Ty) (w : Typed.World) (captured : List Val)
@@ -359,13 +361,14 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (idTyped : tys[(masked caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb msg s))
     (member : Fits w (cellVal tb msg s) (Queue.cellTy A)) :=
-  Queue.take_withdrawal_minted sig atoms A message tb msg s id profile injective (path := path)
+  Queue.take_withdrawal_minted sig atoms types A message tb msg s id profile injective (path := path)
     depth tyDepth typedEnv (takeWithdrawRow_identity caller).1
     (takeWithdrawRow_identity caller).2 idHeld idTyped held member
 
 /-- `offer`'s attempt at its own binders. The message is a variable that the caller reads
 through `var`: it keeps its level under the row's own binder (`var_push_minted`). -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State) (id a : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
     (fresh : ∀ o ∈ s.offers, o.id ≠ id) (caller : Env) (path : List Nat) (tys : List Ty)
@@ -387,7 +390,7 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
       (offerRow caller).names).trans bound
   have inside : level < captured.length := (List.getElem?_eq_some_iff.mp messageHeld).1
   have insideTy : level < tys.length := (List.getElem?_eq_some_iff.mp messageTyped).1
-  Queue.offer_attempt_minted sig atoms A message tb msg s id a hint profile requested fresh
+  Queue.offer_attempt_minted sig atoms types A message tb msg s id a hint profile requested fresh
     (path := path) (messageSrc := var x) depth tyDepth typedEnv (offerRow_identity caller).1
     (offerRow_identity caller).2 idHeld idTyped (offerRow_hint caller).1 (offerRow_hint caller).2
     hintHeld hintTyped
@@ -397,7 +400,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     held member
 
 /-- `offer`'s withdrawal at its own binders. -/
-example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) (caller : Env) (path : List Nat)
     (tys : List Ty) (w : Typed.World) (captured : List Val)
@@ -408,7 +412,7 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (idTyped : tys[(masked caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb msg s))
     (member : Fits w (cellVal tb msg s) (Queue.cellTy A)) :=
-  Queue.offer_withdrawal_minted sig atoms A message tb msg s id profile injective (path := path)
+  Queue.offer_withdrawal_minted sig atoms types A message tb msg s id profile injective (path := path)
     depth tyDepth typedEnv (offerWithdrawRow_identity caller).1
     (offerWithdrawRow_identity caller).2 idHeld idTyped held member
 

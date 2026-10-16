@@ -81,6 +81,36 @@ theorem ascribe_check (S T : Ty) :
   · rw [if_neg below]
     exact if_neg fun accepted => below accepted.2.2
 
+/-- **The record's check at one declared field under a table is the fold**: the supplied type
+is below the declared type, or, at a declared name, below the name's body
+(`Record.fieldAdmitsIn`). At the empty table it is `ascribe_check`. -/
+theorem ascribe_checkIn (decls : TyDecls) (S T : Ty) :
+    Record.checkIn decls (ascribeFields T) ["v"] [S] =
+      if Record.fieldAdmitsIn decls S T = true then
+        some (Ty.normalize (.record (ascribeFields T))) else none := by
+  have fit : Record.argumentsFitIn decls (ascribeFields T) [("v", S)] =
+      Record.fieldAdmitsIn decls S T := by
+    show ((Field.firstOf "v" (ascribeFields T)).isSome && true &&
+      ((match Field.firstOf "v" [("v", S)] with
+        | none => false
+        | some actual => Record.fieldAdmitsIn decls actual T) && true)) =
+      Record.fieldAdmitsIn decls S T
+    have declared : Field.firstOf "v" (ascribeFields T) = some (false, T) := rfl
+    have supplied : Field.firstOf "v" [("v", S)] = some S := rfl
+    rw [declared, supplied]
+    show (true && true && (Record.fieldAdmitsIn decls S T && true)) = Record.fieldAdmitsIn decls S T
+    rw [Bool.and_true, Bool.and_true, Bool.true_and]
+  have distinct : (["v"] : List String).Nodup := by decide
+  show (if ((ascribeFields T).map Prod.fst).Nodup ∧ (["v"] : List String).Nodup ∧
+      Record.argumentsFitIn decls (ascribeFields T) [("v", S)] = true then
+    some (Ty.normalize (.record (ascribeFields T))) else none) = _
+  rw [fit]
+  by_cases below : Record.fieldAdmitsIn decls S T = true
+  · rw [if_pos below]
+    exact if_pos ⟨distinct, distinct, below⟩
+  · rw [if_neg below]
+    exact if_neg fun accepted => below accepted.2.2
+
 /-! ## The typing rule -/
 
 /-- **An ascription has its declared type.** At a scope, let `e` have the type `S` inside a
@@ -107,15 +137,17 @@ theorem types_ascribe {e : TermSrc} {S T : Ty} (canonical : T.normalize = T)
       (show TypesAll sig [e] env path types true [S] from .cons he .nil) checked).to normal
   exact types_field built (Record.fieldType_normal normal rfl)
 
-/-- **An ascription is no cast.** Where the type of `e` is not below the declared type, the
-checker has no type for `ascribe T e`, under either literal flag. With `types_ascribe`, the
+/-- **An ascription is no cast, but the fold.** Where the type of `e` is not below the declared
+type, and, at a declared name of the signature's table, not below the name's body
+(`Record.fieldAdmitsIn`), the checker has no type for `ascribe T e`, under either literal flag.
+At a signature with no declared name the premise is the order alone. With `types_ascribe`, the
 record's check decides the form.
 
 Reach: the checker's `argTy` at every scope and every signature, for a term `e` that has a type
 inside a const-generic position. It says nothing of a term that has no type there. -/
 @[semantics "store-typing" (requirement := R4)]
 theorem ascribe_untyped {e : TermSrc} {S T : Ty} (he : Types sig e env path types true S)
-    (above : Ty.subN S T = false) (const : Bool) (U : Ty) :
+    (above : Record.fieldAdmitsIn sig.types S T = false) (const : Bool) (U : Ty) :
     ¬ Types sig (ascribe T e) env path types const U := by
   obtain ⟨t, tree, typed⟩ := he
   rintro ⟨whole, elaborated, answered⟩
@@ -135,15 +167,16 @@ theorem ascribe_untyped {e : TermSrc} {S T : Ty} (he : Types sig e env path type
     show (match Formation.check (Formation.sites false [] (.record (ascribeFields T))) with
       | some _ => none
       | none => (argsTy sig types true (termsOfList [t])).bind
-          (Record.check (ascribeFields T) ["v"])) = none
+          (Record.checkIn sig.types (ascribeFields T) ["v"])) = none
     split
     · rfl
-    · rw [values, Option.bind_some, ascribe_check, above]
+    · rw [values, Option.bind_some, ascribe_checkIn, above]
       rfl
   have none : argTy sig types const
       (.field .required (.record (ascribeFields T) ["v"] (termsOfList [t])) "v") = none := by
     show (argTy sig types false (.record (ascribeFields T) ["v"] (termsOfList [t]))).bind
-      (fun type => Record.fieldType (decide (FieldReadMode.required = .optional)) type "v") = none
+      (fun type => Record.fieldTypeIn sig.types (decide (FieldReadMode.required = .optional)) type "v") =
+        none
     rw [refused]
     rfl
   rw [none] at answered

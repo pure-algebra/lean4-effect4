@@ -1650,27 +1650,40 @@ theorem evalTerms_cons (env : List Val) (head : Term) (tail : Terms) :
       (evalTerm env head).bind fun v =>
         (evalTerms env tail).bind fun rest => some (v :: rest) := rfl
 
-/-- Record typing supplies checked argument types after the formation guard. -/
-theorem termTy_record_inv {Op : Type} {sig : Signature Op} {env : TyEnv}
+/-- Record typing supplies checked argument types after the formation guard, by the record check
+under the signature's declaration table (the fold of a written field, `Record.checkIn`). -/
+theorem termTy_record_invIn {Op : Type} {sig : Signature Op} {env : TyEnv}
     {fields : List (String × Bool × Ty)} {names : List String} {values : Terms} {ty : Ty}
     (h : termTy sig env (.record fields names values) = some ty) :
-    ∃ types, argsTy sig env true values = some types ∧ Record.check fields names types = some ty := by
+    ∃ types, argsTy sig env true values = some types ∧
+      Record.checkIn sig.types fields names types = some ty := by
   unfold termTy argTy at h
   split at h
   · cases h
   · exact Option.bind_eq_some_iff.mp h
+
+/-- Record typing supplies checked argument types after the formation guard, at a signature that
+declares no type: the record check itself. A concrete signature discharges the premise by `rfl`. -/
+theorem termTy_record_inv {Op : Type} {sig : Signature Op} {env : TyEnv}
+    {fields : List (String × Bool × Ty)} {names : List String} {values : Terms} {ty : Ty}
+    (h : termTy sig env (.record fields names values) = some ty)
+    (htypes : sig.types = [] := by rfl) :
+    ∃ types, argsTy sig env true values = some types ∧ Record.check fields names types = some ty := by
+  obtain ⟨types, ht, hc⟩ := termTy_record_invIn h
+  rw [htypes] at hc
+  exact ⟨types, ht, hc⟩
 
 /-- Fold typing supplies its parts (decisions row 228): the list's type has the list head; the
 fold's type is the stated accumulator type, or the initial value's where none is stated; the
 initial value's type and the body's are below it in the checker's order; and the body is typed
 under the accumulator at the fold's level and the element one above it. Step of
 `fold-typed-atomic-update` (R4); its consumers are the fold cases of both value judgments. -/
-theorem termTy_fold_inv {Op : Type} {sig : Signature Op} {env : TyEnv} {accTy : Option Ty}
+theorem termTy_fold_invIn {Op : Type} {sig : Signature Op} {env : TyEnv} {accTy : Option Ty}
     {list init body : Term} {ty : Ty}
     (h : termTy sig env (.fold accTy list init body) = some ty) :
     ∃ listType item initType bodyType,
       termTy sig env list = some listType ∧
-      Checker.listOf? listType = some item ∧
+      Checker.listOfIn sig.types listType = some item ∧
       termTy sig env init = some initType ∧
       ty = accTy.getD initType ∧
       Ty.subN initType ty = true ∧
@@ -1690,6 +1703,24 @@ theorem termTy_fold_inv {Op : Type} {sig : Signature Op} {env : TyEnv} {accTy : 
       exact ⟨listType, item, initType, bodyType, hlist, hitem, hinit, rfl, hsubInit, hbody, hsubBody⟩
     · exact nomatch h4
   · exact nomatch h3
+
+/-- Fold typing supplies its parts, at a signature that declares no type: the list rule itself.
+A concrete signature discharges the premise by `rfl`. -/
+theorem termTy_fold_inv {Op : Type} {sig : Signature Op} {env : TyEnv} {accTy : Option Ty}
+    {list init body : Term} {ty : Ty}
+    (h : termTy sig env (.fold accTy list init body) = some ty)
+    (htypes : sig.types = [] := by rfl) :
+    ∃ listType item initType bodyType,
+      termTy sig env list = some listType ∧
+      Checker.listOf? listType = some item ∧
+      termTy sig env init = some initType ∧
+      ty = accTy.getD initType ∧
+      Ty.subN initType ty = true ∧
+      termTy sig (env ++ [ty, item]) body = some bodyType ∧
+      Ty.subN bodyType ty = true := by
+  obtain ⟨listType, item, initType, bodyType, hlist, hitem, rest⟩ := termTy_fold_invIn h
+  rw [htypes] at hitem
+  exact ⟨listType, item, initType, bodyType, hlist, hitem, rest⟩
 
 /-- Boolean membership is closed under the checker's order, the comparison of normal forms. A
 fold's accumulator is typed through it. -/

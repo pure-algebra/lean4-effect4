@@ -368,9 +368,9 @@ theorem argTy_field_intro (const : Bool) {mode : FieldReadMode} {target : Term} 
     (hfield : Record.fieldType (decide (mode = .optional)) record name = some answer) :
     argTy sig env const (.field mode target name) = some answer := by
   show (argTy sig env false target).bind
-    (fun type => Record.fieldType (decide (mode = .optional)) type name) = some answer
+    (fun type => Record.fieldTypeIn sig.types (decide (mode = .optional)) type name) = some answer
   rw [htarget]
-  exact hfield
+  exact Record.fieldTypeIn_of_fieldType hfield
 
 /-- **An overwrite**: the target outside a const-generic position, the value inside one, then
 the record rule. -/
@@ -381,9 +381,9 @@ theorem argTy_recordSet_intro (const : Bool) {target value : Term} {name : Strin
     argTy sig env const (.recordSet target name value) = some answer := by
   show (argTy sig env false target).bind (fun targetType =>
     (argTy sig env true value).bind fun valueType =>
-      Record.setType targetType name valueType) = some answer
+      Record.setTypeIn sig.types targetType name valueType) = some answer
   rw [htarget, Option.bind_some, hvalue]
-  exact hset
+  exact Record.setTypeIn_of_setType hset
 
 /-- **A positional read**: the target outside a const-generic position, then the tuple rule.
 Its consumer is the wrapper's law, which reads a step's reply by position. -/
@@ -406,9 +406,10 @@ theorem argTy_record_intro (const : Bool) {fields : List (String × Bool × Ty)}
     argTy sig env const (.record fields names values) = some answer := by
   show (match Formation.check (Formation.sites false [] (.record fields)) with
     | some _ => none
-    | none => (argsTy sig env true values).bind (Record.check fields names)) = some answer
+    | none => (argsTy sig env true values).bind (Record.checkIn sig.types fields names)) =
+      some answer
   rw [formed, hvalues]
-  exact hcheck
+  exact Record.checkIn_of_check hcheck
 
 /-- **A fold** (the introduction form of `termTy_fold_inv`). The list has a list type. The
 accumulator's type is the stated one, or the initial value's. The initial value's type is below
@@ -423,8 +424,10 @@ theorem argTy_fold_intro (const : Bool) {accTy : Option Ty} {list init body : Te
     argTy sig env const (.fold accTy list init body) = some (accTy.getD initial) := by
   have start' : Ty.sub initial.normalize (accTy.getD initial).normalize = true := start
   have step' : Ty.sub bodyType.normalize (accTy.getD initial).normalize = true := step
+  have hitem : Checker.listOfIn sig.types (.list item) = some item :=
+    Checker.listOfIn_of_listOf rfl
   show (argTy sig env false list).bind (fun listType =>
-    (Checker.listOf? listType).bind fun item =>
+    (Checker.listOfIn sig.types listType).bind fun item =>
       (argTy sig env false init).bind fun initType =>
         if Ty.sub initType.normalize (accTy.getD initType).normalize = true then
           (argTy sig (env ++ [accTy.getD initType, item]) false body).bind fun bodyType =>
@@ -432,7 +435,7 @@ theorem argTy_fold_intro (const : Bool) {accTy : Option Ty} {list init body : Te
               some (accTy.getD initType)
             else none
         else none) = some (accTy.getD initial)
-  rw [hlist]
+  rw [hlist, Option.bind_some, hitem, Option.bind_some]
   show (argTy sig env false init).bind (fun initType =>
     if Ty.sub initType.normalize (accTy.getD initType).normalize = true then
       (argTy sig (env ++ [accTy.getD initType, item]) false body).bind fun bodyType =>

@@ -756,7 +756,8 @@ own name has that capture (`captured_current`). The store step answers whether t
 and the leased item's record, if any. It writes the model's next state through the table that
 holds the hint at the request. The reply and the stored value are members of their types. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem lease_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) {A : Ty}
+theorem lease_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) (id : Nat)
     (hint : DeferredKey) (injective : tb.Injective) {idSrc hintSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -787,14 +788,15 @@ theorem lease_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAto
   have typed := (leaseStep_types sig atoms canonical (push_minted_length tyDepth "current" _)
     typesId typesHint (capturedTy_current tyDepth path _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **The withdrawal of a request is the model's `withdraw`.** The store step answers nothing,
 and it writes the model's next state: the request's entry leaves, and no other field changes.
 The table does not change. A borrower's withdrawal and the closer's are this one statement. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem withdraw_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) {A : Ty}
+theorem withdraw_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) (id : Nat)
     (injective : tb.Injective) {idSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty}
     {w : Typed.World} {captured : List Val}
@@ -820,7 +822,7 @@ theorem withdraw_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = native
   have typed := (withdrawStep_types sig atoms canonical (push_minted_length tyDepth "current" _)
     typesId (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **The step of a return is the model's `giveBack`.** The item's stamp and the lease's stamp
@@ -829,7 +831,8 @@ items. The store step answers whether the lease returned and whether a wake is o
 writes the model's next state. No premise names the lease: a return of a lease that holds
 nothing changes nothing, as the model's does. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem return_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) {A : Ty}
+theorem return_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (item lease : Nat) {itemSrc leaseSrc : TermSrc} {env : Env} {path : List Nat}
     {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -860,7 +863,7 @@ theorem return_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
   have typed := (returnStep_types sig atoms canonical (push_minted_length tyDepth "current" _)
     typesItem typesLease (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **The selection of a wake is the model's `select`.** The count is a caller's term of the
@@ -868,7 +871,8 @@ step, read at the row's scope alone: the step folds nothing. The store step answ
 selected waiters' records through the table, in order, and it writes the model's next state. A
 selection reserves nothing: only the waiters change (`select_takes_first`). -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem select_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) {A : Ty}
+theorem select_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) (count : Nat)
     {countSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty} {w : Typed.World}
     {captured : List Val}
@@ -895,14 +899,15 @@ theorem select_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
   have typed := (selectStep_types sig atoms canonical typesCount
     (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **The close's first step is the model's `close`.** The store step answers whether it began
 the close and the count of the waiters, and it writes the model's next state: the pool refuses
 new leases from now on (`close_refuses`). -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem close_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) {A : Ty}
+theorem close_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
@@ -921,7 +926,7 @@ theorem close_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAto
   have typed := (closeStep_types sig atoms canonical
     (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-- **The attempt of the closer is the model's `drain`.** The closer's identity is a caller's
@@ -929,7 +934,8 @@ term of the step, with its capture: it stands in the removal's fold. The hint is
 The store step answers whether no lease is outstanding (`drain_waits`). It writes the model's
 next state through the table that holds the hint at the closer. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem drain_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) {A : Ty}
+theorem drain_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = []) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) (id : Nat)
     (hint : DeferredKey) (injective : tb.Injective) {idSrc hintSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -961,7 +967,7 @@ theorem drain_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAto
   have typed := (drainStep_types sig atoms canonical (push_minted_length tyDepth "current" _)
     typesId typesHint (types_minted_last tyDepth path "current" _) false).tree tree
   obtain ⟨fitsReply, fitsNext⟩ :=
-    step_keeps_cell sig atoms typedEnv typed held member (reads.eval tree)
+    step_keeps_cell sig atoms types typedEnv typed held member (reads.eval tree)
   exact ⟨f, tree, stepped, fitsReply, fitsNext⟩
 
 /-! ## The construction -/
@@ -1045,6 +1051,7 @@ above are already at the operation's own binders. -/
 names that `bindWith` mints. The scope binds each, and no later binder shadows either. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem lease_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {A : Ty} (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (id : Nat) (hint : DeferredKey) (injective : tb.Injective) {env outerId outerHint : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -1070,7 +1077,7 @@ theorem lease_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = na
           leaseReplyVal res (Model.lease s id).2) ∧
       Fits w (leaseReplyVal res (Model.lease s id).2) (leaseReplyTy A) ∧
       Fits w (cellVal (tb.renew id hint) res (Model.lease s id).1) (Pool.cellTy A) :=
-  lease_attempt sig atoms canonical tb res s id hint injective depth tyDepth typedEnv
+  lease_attempt sig atoms types canonical tb res s id hint injective depth tyDepth typedEnv
     (captured_answer_in_row idScope idUnshadowed idHeld)
     (captured_answer_in_row hintScope hintUnshadowed hintHeld).atScope
     (capturedTy_answer_in_row idScope idUnshadowed idTyped)
@@ -1080,6 +1087,7 @@ theorem lease_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = na
 `bindWith` mints. The scope binds it, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem withdraw_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {A : Ty} (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (id : Nat) (injective : tb.Injective) {env outerId : Env} {path : List Nat} {tys : List Ty}
     {w : Typed.World} {captured : List Val} {beforeId afterId : Names}
@@ -1099,7 +1107,7 @@ theorem withdraw_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf =
             refs := refPoke stores.refs q (cellVal tb res (Model.withdraw s id)) }, Val.unit) ∧
       Fits w Val.unit .unit ∧
       Fits w (cellVal tb res (Model.withdraw s id)) (Pool.cellTy A) :=
-  withdraw_attempt sig atoms canonical tb res s id injective depth tyDepth typedEnv
+  withdraw_attempt sig atoms types canonical tb res s id injective depth tyDepth typedEnv
     (captured_answer_in_row idScope idUnshadowed idHeld)
     (capturedTy_answer_in_row idScope idUnshadowed idTyped) held member
 
@@ -1109,6 +1117,7 @@ stamp as two fields of it, each under the step's folds. The scope binds the name
 binder shadows it. The return is the model's `giveBack` at the record's two stamps. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem return_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {A : Ty} (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (it : Model.Item) {env outerItem : Env} {path : List Nat} {tys : List Ty} {w : Typed.World}
     {captured : List Val} {before after : Names}
@@ -1131,7 +1140,7 @@ theorem return_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = n
           returnReplyVal (Model.giveBack s it.stamp it.lease).2) ∧
       Fits w (returnReplyVal (Model.giveBack s it.stamp it.lease).2) returnReplyTy ∧
       Fits w (cellVal tb res (Model.giveBack s it.stamp it.lease).1) (Pool.cellTy A) :=
-  return_attempt sig atoms canonical tb res s it.stamp it.lease depth tyDepth typedEnv
+  return_attempt sig atoms types canonical tb res s it.stamp it.lease depth tyDepth typedEnv
     (captured_field (captured_answer_in_row itemScope itemUnshadowed itemHeld)
       (item_stamp _ _ _ _))
     (captured_field (captured_answer_in_row itemScope itemUnshadowed itemHeld)
@@ -1146,6 +1155,7 @@ hint are names that `bindWith` mints. The scope binds each, and no later binder 
 either. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem drain_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {A : Ty} (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (id : Nat) (hint : DeferredKey) (injective : tb.Injective) {env outerId outerHint : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
@@ -1171,7 +1181,7 @@ theorem drain_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = na
           Val.bool (Model.drain s id).2) ∧
       Fits w (Val.bool (Model.drain s id).2) .bool ∧
       Fits w (cellVal (tb.renew id hint) res (Model.drain s id).1) (Pool.cellTy A) :=
-  drain_attempt sig atoms canonical tb res s id hint injective depth tyDepth typedEnv
+  drain_attempt sig atoms types canonical tb res s id hint injective depth tyDepth typedEnv
     (captured_answer_in_row idScope idUnshadowed idHeld)
     (captured_answer_in_row hintScope hintUnshadowed hintHeld).atScope
     (capturedTy_answer_in_row idScope idUnshadowed idTyped)

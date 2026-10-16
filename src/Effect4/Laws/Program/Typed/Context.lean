@@ -778,7 +778,8 @@ theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point
     (root.scopeSig_extends p.path).constAtom.trans rfl
   have atoms : (root.scopeSig p.path).atomOf = nativeAtomTy :=
     (root.scopeSig_extends p.path).atomOf.trans rfl
-  have members := evalTerm_fits (sig := root.scopeSig p.path) atoms constants values termCheck evaluated
+  have members := evalTerm_fits (sig := root.scopeSig p.path) atoms constants
+    ((root.scopeSig_extends p.path).types.trans rfl) values termCheck evaluated
   have given : Fits w (Val.context supplied) (.contextOf keys) := by
     rw [← normalized]
     exact (fits_normalize _ _ _).mpr members
@@ -852,7 +853,8 @@ theorem checked_provideService_arm (root : ProgramSource) (w : World) (p : Point
     (root.scopeSig_extends p.path).constAtom.trans rfl
   have atoms : (root.scopeSig p.path).atomOf = nativeAtomTy :=
     (root.scopeSig_extends p.path).atomOf.trans rfl
-  have valueFit := evalTerm_fits (sig := root.scopeSig p.path) atoms constants values termCheck evaluated
+  have valueFit := evalTerm_fits (sig := root.scopeSig p.path) atoms constants
+    ((root.scopeSig_extends p.path).types.trans rfl) values termCheck evaluated
   have carrierFit : Fits w provided carrier := fits_subN w orderedValue provided valueFit
   let supplied : Ctx := Ctx.withServices ((Env.Context.empty : Env.Ctx).addV key provided)
   have given : Fits w (Val.context supplied) (.contextOf (Env.Requirement.single key)) := by

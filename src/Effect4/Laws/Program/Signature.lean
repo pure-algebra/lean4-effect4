@@ -45,45 +45,48 @@ variable {Op Op' : Type} {s₁ : Signature Op} {s₂ : Signature Op'}
 
 mutual
 theorem argTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂.constAtom)
+    (ht : s₁.types = s₂.types)
     (env : TyEnv) : ∀ (c : Bool) (t : Term), argTy s₁ env c t = argTy s₂ env c t
   | _, .var _ => rfl
   | _, .lit _ => rfl
   | _, .app atom args => by
-    simp only [argTy, argsTy_congr ha hc env, ha, hc]
+    simp only [argTy, argsTy_congr ha hc ht env, ha, hc]
   | _, .record fields names values => by
-    simp only [argTy, argsTy_congr ha hc env true values]
+    simp only [argTy, argsTy_congr ha hc ht env true values, ht]
   | _, .field mode target name => by
-    simp only [argTy, argTy_congr ha hc env false target]
+    simp only [argTy, argTy_congr ha hc ht env false target, ht]
   | _, .recordSet target name value => by
-    simp only [argTy, argTy_congr ha hc env false target, argTy_congr ha hc env true value]
+    simp only [argTy, argTy_congr ha hc ht env false target, argTy_congr ha hc ht env true value, ht]
   | _, .tupleAt target index => by
-    simp only [argTy, argTy_congr ha hc env false target]
+    simp only [argTy, argTy_congr ha hc ht env false target]
   -- the body is typed under the fold's two binders, in both signatures alike
   | _, .fold accTy list init body => by
     have hbody : ∀ acc item : Ty,
         argTy s₁ (env ++ [acc, item]) false body = argTy s₂ (env ++ [acc, item]) false body :=
-      fun acc item => argTy_congr ha hc (env ++ [acc, item]) false body
-    simp only [argTy, argTy_congr ha hc env false list, argTy_congr ha hc env false init, hbody]
+      fun acc item => argTy_congr ha hc ht (env ++ [acc, item]) false body
+    simp only [argTy, argTy_congr ha hc ht env false list, argTy_congr ha hc ht env false init, hbody,
+      ht]
 
 theorem argsTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂.constAtom)
+    (ht : s₁.types = s₂.types)
     (env : TyEnv) : ∀ (c : Bool) (ts : Terms), argsTy s₁ env c ts = argsTy s₂ env c ts
   | _, .nil => rfl
   | c, .cons head tail => by
-    simp only [argsTy, argTy_congr ha hc env c head, argsTy_congr ha hc env c tail]
+    simp only [argsTy, argTy_congr ha hc ht env c head, argsTy_congr ha hc ht env c tail]
 end
 
 theorem termTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂.constAtom)
-    (env : TyEnv) (t : Term) : termTy s₁ env t = termTy s₂ env t :=
-  argTy_congr ha hc env false t
+    (ht : s₁.types = s₂.types) (env : TyEnv) (t : Term) : termTy s₁ env t = termTy s₂ env t :=
+  argTy_congr ha hc ht env false t
 
 theorem causeTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂.constAtom)
-    (env : TyEnv) : ∀ c : CauseTerm, causeTy s₁ env c = causeTy s₂ env c
-  | .fail error => by simp only [causeTy, termTy_congr ha hc env error]
-  | .die defect => by simp only [causeTy, termTy_congr ha hc env defect]
+    (ht : s₁.types = s₂.types) (env : TyEnv) : ∀ c : CauseTerm, causeTy s₁ env c = causeTy s₂ env c
+  | .fail error => by simp only [causeTy, termTy_congr ha hc ht env error]
+  | .die defect => by simp only [causeTy, termTy_congr ha hc ht env defect]
   | .interrupt none => rfl
-  | .interrupt (some who) => by simp only [causeTy, termTy_congr ha hc env who]
+  | .interrupt (some who) => by simp only [causeTy, termTy_congr ha hc ht env who]
   | .both left right => by
-    simp only [causeTy, causeTy_congr ha hc env left, causeTy_congr ha hc env right]
+    simp only [causeTy, causeTy_congr ha hc ht env left, causeTy_congr ha hc ht env right]
 
 end Congr
 
@@ -110,13 +113,16 @@ structure SigExtends {Op : Type} (s s' : Signature Op) : Prop where
   /-- The same runs of parameters (decisions row 340): which operation runs which parameter is
   the operation's own data, so a body's parameters extend both signatures alike. -/
   paramOf : s'.paramOf = s.paramOf
+  /-- The same declaration table: an extension adds rows, services and definitions, and the term
+  typer reads the table (`Signature.types`). -/
+  types : s'.types = s.types
 
 namespace SigExtends
 
 variable {Op : Type} {s s' s'' : Signature Op}
 
 theorem refl (s : Signature Op) : SigExtends s s :=
-  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl, rfl, fun _ _ h => h, rfl⟩
+  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl, rfl, fun _ _ h => h, rfl, rfl⟩
 
 theorem trans (h₁ : SigExtends s s') (h₂ : SigExtends s' s'') : SigExtends s s'' :=
   ⟨h₂.atomOf.trans h₁.atomOf, h₂.constAtom.trans h₁.constAtom, h₂.scopeKey.trans h₁.scopeKey,
@@ -124,15 +130,15 @@ theorem trans (h₁ : SigExtends s s') (h₂ : SigExtends s' s'') : SigExtends s
       ⟨(h₂.row op (h₁.row op hd).1).1, (h₂.row op (h₁.row op hd).1).2.trans (h₁.row op hd).2⟩,
     fun key ty hk => h₂.service key ty (h₁.service key ty hk), h₂.termOf.trans h₁.termOf,
     h₂.callOf.trans h₁.callOf, fun k d hk => h₂.defOf k d (h₁.defOf k d hk),
-    h₂.paramOf.trans h₁.paramOf⟩
+    h₂.paramOf.trans h₁.paramOf, h₂.types.trans h₁.types⟩
 
 theorem termTy (h : SigExtends s s') (env : TyEnv) (t : Term) :
     Effect4.Program.termTy s' env t = Effect4.Program.termTy s env t :=
-  termTy_congr h.atomOf h.constAtom env t
+  termTy_congr h.atomOf h.constAtom h.types env t
 
 theorem causeTy (h : SigExtends s s') (env : TyEnv) (c : CauseTerm) :
     Effect4.Program.causeTy s' env c = Effect4.Program.causeTy s env c :=
-  causeTy_congr h.atomOf h.constAtom env c
+  causeTy_congr h.atomOf h.constAtom h.types env c
 
 theorem bodyRequires (h : SigExtends s s') (t : EffTy) :
     Effect4.Program.bodyRequires s' t = Effect4.Program.bodyRequires s t := by
@@ -287,7 +293,7 @@ end Extend
 admitted by the longer one at the same row. -/
 theorem rows_append (t t' : RowTable) :
     SigExtends (nativeSignature t) (nativeSignature (t ++ t')) := by
-  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl⟩
+  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl, rfl⟩
   intro op hd
   cases op with
   | external i =>
@@ -328,7 +334,7 @@ theorem serviceTy_code (app : SigApp) {key key' : ServiceKey} (hcode : key.servi
 theorem rows_append (app : SigApp) (t' : RowTable) :
     SigExtends app.signature (SigApp.mk (app.rows ++ t') app.services app.types).signature := by
   have h := Effect4.Program.rows_append app.rows t'
-  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl⟩
+  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl, rfl⟩
 
 /-- A declaration appended at a code that neither the application nor the built-in table
 types. -/
@@ -340,7 +346,7 @@ types keeps its carrier. -/
 theorem services_append (app : SigApp) (s' : List (ServiceKey × Ty))
     (fresh : ∀ entry ∈ s', FreshCode app entry) :
     SigExtends app.signature (SigApp.mk app.rows (app.services ++ s') app.types).signature := by
-  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl, rfl, fun _ _ hk => hk, rfl⟩
+  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl, rfl, fun _ _ hk => hk, rfl, rfl⟩
   intro key ty hk
   change app.serviceTy key = some ty at hk
   change SigApp.serviceTy ⟨app.rows, app.services ++ s', app.types⟩ key = some ty
@@ -830,18 +836,18 @@ the reads the checker's algebra makes of the signature. -/
 def SigProgram {Op : Type} (s : Signature Op) (e : Eff Op) : Prop :=
   cata_eff (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) e
 
-/-- Collection diagnostics read only atom typing and literal flags.
+/-- Collection diagnostics read only atom typing, literal flags and the declaration table.
 This serves checker/refusal agreement through the extension helpers below. -/
 theorem termDiagnostic_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
     TermRefusal.diagnose s' = TermRefusal.diagnose s := by
   funext env term
   have harg : argTy s' = argTy s :=
     funext fun env => funext fun flag => funext fun value =>
-      argTy_congr h.atomOf h.constAtom env flag value
+      argTy_congr h.atomOf h.constAtom h.types env flag value
   have hargs : argsTy s' = argsTy s :=
     funext fun env => funext fun flag => funext fun terms =>
-      argsTy_congr h.atomOf h.constAtom env flag terms
-  simp only [TermRefusal.diagnose, harg, hargs, h.constAtom]
+      argsTy_congr h.atomOf h.constAtom h.types env flag terms
+  simp only [TermRefusal.diagnose, harg, hargs, h.constAtom, h.types]
 
 /-- The record-only compatibility projection follows the same diagnostic agreement. -/
 theorem termRefusal_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :

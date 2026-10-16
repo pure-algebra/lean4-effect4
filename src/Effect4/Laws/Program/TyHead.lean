@@ -44,51 +44,6 @@ open Effect4 Effect4.Machine
 
 /-! ## The head members -/
 
-/-- **The head members, as a proposition**: a head member is a union member that is no declared
-reference, or a head member of the body of a declared name not yet unfolded. -/
-theorem Ty.mem_headMembers_iff {decls : TyDecls} {seen : List String} {t x : Ty} :
-    x ∈ Ty.headMembers decls seen t ↔ ∃ m ∈ t.members,
-      (decls.unfold? m = none ∧ x = m) ∨
-      (∃ name body, decls.unfold? m = some (name, body) ∧ seen.contains name = false ∧
-        x ∈ Ty.headMembers decls (name :: seen) body) := by
-  rw [Ty.headMembers.eq_1, List.mem_flatMap]
-  refine exists_congr fun m => and_congr_right fun _ => ?_
-  split
-  · rename_i name body hu
-    constructor
-    · intro h
-      split at h
-      · exact absurd h List.not_mem_nil
-      · rename_i hs
-        exact Or.inr ⟨name, body, hu, Bool.eq_false_iff.mpr hs, h⟩
-    · rintro (⟨hn, _⟩ | ⟨name', body', hu', hs, h⟩)
-      · rw [hu] at hn
-        cases hn
-      · rw [hu] at hu'
-        cases hu'
-        rw [dif_neg (by rw [hs]; exact Bool.false_ne_true)]
-        exact h
-  · rename_i hu
-    constructor
-    · intro h
-      exact Or.inl ⟨hu, List.mem_singleton.mp h⟩
-    · rintro (⟨_, rfl⟩ | ⟨name, body, hu', _, _⟩)
-      · exact List.mem_singleton_self _
-      · rw [hu] at hu'
-        cases hu'
-
-/-- **Every head member is a union member and no declared reference.** -/
-theorem Ty.headMembers_head {decls : TyDecls} :
-    ∀ (seen : List String) (t : Ty) {x : Ty}, x ∈ Ty.headMembers decls seen t →
-      decls.unfold? x = none ∧ x.isMember = true := by
-  intro seen t
-  induction seen, t using Ty.headMembers.induct decls with
-  | case1 seen t ih =>
-    intro x hx
-    obtain ⟨m, hm, ⟨hu, rfl⟩ | ⟨name, body, hu, hs, hb⟩⟩ := Ty.mem_headMembers_iff.mp hx
-    · exact ⟨hu, Ty.members_isMember hm⟩
-    · exact ih m name body hu (by rw [hs]; exact Bool.false_ne_true) hb
-
 /-- **At the empty table the head members are the union members.** -/
 theorem Ty.headMembers_nil (seen : List String) (t : Ty) : Ty.headMembers [] seen t = t.members := by
   rw [Ty.headMembers.eq_1]
@@ -197,13 +152,6 @@ theorem wiring_readers_conservative :
 
 /-! ## A lifted rule under a table -/
 
-/-- The lifted rule under a table reads the union members under the table, at every table. -/
-theorem UnionRule.liftIn_eq {α : Type} [UnionRule.Answer α] (decls : TyDecls)
-    (rule : Ty → Option α) (t : Ty) :
-    UnionRule.liftIn decls rule t =
-      ((Ty.membersIn decls t).mapM rule).map UnionRule.joinAll := by
-  cases decls <;> rfl
-
 /-- **A lifted rule under a table carries a property of its members** (the claim
 `wiring-lift-transfer`): `UnionRule.lift_transfer` with membership under the table for the
 relation. A property that each member's answer gives every member of that member, and that each
@@ -252,6 +200,17 @@ theorem Record.fieldAdmitsIn_sound {decls : TyDecls} {allocated : List String} {
         have hb := (memberIn_normalize (d :: ds) allocated v body).mp (memberIn_sub hf hn)
         exact (memberIn_normalize (d :: ds) allocated v declared).mp (.unfold hu hb)
       · cases hf
+
+/-- At a declared type that is no declared reference, the fold is the order alone, at every
+table. -/
+theorem Record.fieldAdmitsIn_of_unfold?_none {decls : TyDecls} {actual declared : Ty}
+    (h : decls.unfold? declared.normalize = none) :
+    Record.fieldAdmitsIn decls actual declared = Ty.sub actual.normalize declared.normalize := by
+  cases decls with
+  | nil => rfl
+  | cons d ds =>
+    show (Ty.sub actual.normalize declared.normalize || _) = _
+    simp only [h, Bool.or_false]
 
 /-- A member of one of a list's types is a member of the union the list spells. -/
 theorem memberIn_ofMembers {decls : TyDecls} {allocated : List String} {v : Val} :

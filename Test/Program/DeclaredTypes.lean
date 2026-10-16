@@ -1,5 +1,8 @@
 import Effect4.Program.TyHead
 import Effect4.Program.AdmitIn
+import Effect4.Program.SigApp
+import Effect4.Program.Typing.TermRefusal
+import Effect4.Program.Authoring
 
 /-!
 # Battery: declared types read by shape, folded at a written field, and admitted at a reply
@@ -78,6 +81,29 @@ def badNode : Val :=
 #guard (Record.checkIn treeDecls [("v", false, .handle "Tree")] ["v"]
   [.record [("_tag", false, .lit "node"), ("children", false, .list (.handle "Tree")),
     ("label", false, .string)]]).isSome
+
+/-! ## The term typer under the application's table (`SigApp.signatureIn`) -/
+
+/-- An application that declares `Todo` and `Tree`. -/
+def app : SigApp := { types := todoDecls ++ treeDecls }
+
+/-- A record whose one field is written at `Todo`, holding the term `value`. -/
+def asTodo (value : Term) : Term :=
+  .record [("v", false, .handle "Todo")] ["v"] (Authoring.termsOfList [value])
+
+-- finite evaluation: the typer reads a field through a declared name.
+#guard termTy app.signatureIn [.handle "Todo"] (.field .required (.var 0) "title") == some .string
+-- control: the table-free signature refuses the same read.
+#guard termTy app.signature [.handle "Todo"] (.field .required (.var 0) "title") == none
+-- finite evaluation: a field written at `Todo` folds a value of its body, and reading it back
+-- gives the name.
+#guard termTy app.signatureIn [todoBody] (.field .required (asTodo (.var 0)) "v") ==
+  some (.handle "Todo")
+-- control: the table-free signature refuses the fold: the name is nominal there.
+#guard termTy app.signature [todoBody] (.field .required (asTodo (.var 0)) "v") == none
+-- finite evaluation: the refusal of a field that `Todo` lacks is located at the record.
+#guard (TermRefusal.diagnose app.signatureIn [.handle "Todo"]
+  (.field .required (.var 0) "owner")).isSome
 
 /-! ## Reply admission at a declared column -/
 

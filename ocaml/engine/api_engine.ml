@@ -9808,17 +9808,17 @@ and program_ty_normalize_items (x_1 : ty list) : ty list =
   let _x_12 = _x_2 :: _x_11 in
   _x_1 :: _x_12
 
-  (* LCNF mono: List.elem._at_.Effect4.Program.NativeAtom.covers.spec_0 (a : String) (x.1 : List String) : Bool *)
-  let rec list_elem_at_program_native_atom_covers_spec_0 (a : string) (x_1 : string list) : bool =
+  (* LCNF mono: List.elem._at_.Effect4.Program.Ty.headMembers.spec_0 (a : String) (x.1 : List String) : Bool *)
+  let rec list_elem_at_program_ty_head_members_spec_0 (a : string) (x_1 : string list) : bool =
   match x_1 with
     | [] -> false
     | head_3 :: tail_4 -> (let _x_5 = a = head_3 in
-      if _x_5 then _x_5 else list_elem_at_program_native_atom_covers_spec_0 a tail_4)
+      if _x_5 then _x_5 else list_elem_at_program_ty_head_members_spec_0 a tail_4)
 
   (* LCNF mono: Effect4.Program.externalHandleTarget (target : String) : Bool *)
   let program_external_handle_target (target : string) : bool =
   let _x_1 = program_internal_handle_targets in
-  let _x_2 = list_elem_at_program_native_atom_covers_spec_0 target _x_1 in
+  let _x_2 = list_elem_at_program_ty_head_members_spec_0 target _x_1 in
   if _x_2 then false else true
 
   (* LCNF mono: Option.instBEq.beq._at_.Std.Http.Header.TransferEncoding.Validate.spec_0 (x.1 : Option String) (x.2 : Option String) : Bool *)

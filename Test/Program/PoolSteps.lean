@@ -464,6 +464,7 @@ the scope's last name. -/
 /-- **A lease keeps the cell a member of its type**, at every scope and for every caller's
 terms: its reply is a Boolean and an option of an item, and its stored value is a cell. -/
 theorem leaseStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {A : Ty} (canonical : A.normalize = A) {idSrc hintSrc cellSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : (tys ++ [Pool.cellTy A]).length = env.names.length)
@@ -477,13 +478,14 @@ theorem leaseStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = na
       (Val.tuple [reply, next])) :
     Typed.Fits w reply (leaseReplyTy A) ∧ Typed.Fits w next (Pool.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms typedEnv
+  exact step_keeps_cell sig atoms types typedEnv
     ((leaseStep_types sig atoms canonical depth typesId typesHint typesCell false).tree tree)
     held member value
 
 /-- **A selection keeps the cell a member of its type**, at every scope: its reply is a list of
 waiters. -/
 theorem selectStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {A : Ty} (canonical : A.normalize = A) {countSrc cellSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
     (typesCount : TypesEach sig countSrc env path (tys ++ [Pool.cellTy A]) .nat)
@@ -495,12 +497,13 @@ theorem selectStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = n
       (Val.tuple [reply, next])) :
     Typed.Fits w reply selectReplyTy ∧ Typed.Fits w next (Pool.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms typedEnv
+  exact step_keeps_cell sig atoms types typedEnv
     ((selectStep_types sig atoms canonical typesCount typesCell false).tree tree) held member
     value
 
 /-- **A return keeps the cell a member of its type**, at every scope. -/
 theorem returnStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {A : Ty} (canonical : A.normalize = A) {itemSrc leaseSrc cellSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : (tys ++ [Pool.cellTy A]).length = env.names.length)
@@ -514,13 +517,14 @@ theorem returnStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = n
       (Val.tuple [reply, next])) :
     Typed.Fits w reply returnReplyTy ∧ Typed.Fits w next (Pool.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms typedEnv
+  exact step_keeps_cell sig atoms types typedEnv
     ((returnStep_types sig atoms canonical depth typesItem typesLease typesCell false).tree tree)
     held member value
 
 /-- **The closer's step keeps the cell a member of its type**, at every scope: its reply is a
 Boolean. -/
 theorem drainStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {A : Ty} (canonical : A.normalize = A) {idSrc hintSrc cellSrc : TermSrc} {env : Env}
     {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : (tys ++ [Pool.cellTy A]).length = env.names.length)
@@ -534,7 +538,7 @@ theorem drainStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = na
       (Val.tuple [reply, next])) :
     Typed.Fits w reply .bool ∧ Typed.Fits w next (Pool.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms typedEnv
+  exact step_keeps_cell sig atoms types typedEnv
     ((drainStep_types sig atoms canonical depth typesId typesHint typesCell false).tree tree)
     held member value
 

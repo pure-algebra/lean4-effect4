@@ -291,6 +291,7 @@ cell's value is the scope's last name. -/
 /-- **A visit keeps the cell a member of its type**, at every scope and for every caller's
 terms: its reply is an option of a waiter, and its stored value is a cell. -/
 theorem visitStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {cursorSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty}
     {w : Typed.World} {captured : List Val}
     (depth : (tys ++ [Semaphore.cellTy]).length = env.names.length)
@@ -303,11 +304,12 @@ theorem visitStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = na
       (Val.tuple [reply, next])) :
     Typed.Fits w reply visitReplyTy ∧ Typed.Fits w next Semaphore.cellTy := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms typedEnv
+  exact step_keeps_cell sig atoms types typedEnv
     ((visitStep_types sig atoms depth typesCursor typesCell false).tree tree) held member value
 
 /-- **A release keeps the cell a member of its type**, at every scope. -/
 theorem releaseStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (types : sig.types = [])
     {countSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty}
     {w : Typed.World} {captured : List Val}
     (typesCount : TypesEach sig countSrc env path (tys ++ [Semaphore.cellTy]) .nat)
@@ -319,7 +321,7 @@ theorem releaseStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = 
       (Val.tuple [reply, next])) :
     Typed.Fits w reply releaseReplyTy ∧ Typed.Fits w next Semaphore.cellTy := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms typedEnv
+  exact step_keeps_cell sig atoms types typedEnv
     ((releaseStep_types sig atoms typesCount typesCell false).tree tree) held member value
 
 end Test.Program.SemaphoreSteps

@@ -3,6 +3,7 @@ module
 public import Effect4.Program.Refs
 public import Effect4.Program.Formation
 public import Effect4.Program.Record
+public import Effect4.Program.TyHead
 public import Effect4.Program.Tuple
 public import Effect4.Program.Bounds
 public import Effect4.Machine.Context
@@ -126,6 +127,12 @@ structure Signature (Op : Type) where
   that its rows name (`rowKeyNames`, `Program/Native.lean`). None by default: every key prints
   by its runtime text. Typing reads none of it. -/
   keyNames : List (ServiceKey × String) := []
+  /-- The declaration table of the application's named types (decisions rows 400 to 402): the
+  term typer reads a declared name by its body where it reads a type by shape, and a record field
+  written at a declared name folds a member of the body into it (`Program/TyHead.lean`; the wiring
+  plan, `docs/research/2026-10-16-usability-scope/wiring-plan.md`). The order `Ty.sub` reads no
+  table. Empty by default: no name is declared, and every reader is its original. -/
+  types : TyDecls := []
 
 variable {Op : Type}
 
@@ -169,6 +176,21 @@ Otherwise every retained normal member must be a list, and their element types j
 At `never` it answers `never`. -/
 def Checker.listOf? : Ty → Option Ty := UnionRule.extendAll Member.list
 
+/-- The list rule under a declaration table: the raw list first, then every union member under
+the table. At the empty table it is `Checker.listOf?`. -/
+def Checker.listOfIn (decls : TyDecls) : Ty → Option Ty := UnionRule.extendAllIn decls Member.list
+
+/-- The list rule refuses a declared reference. -/
+theorem Member.list_ref {decls : TyDecls} :
+    ∀ m x, decls.unfold? m = some x → Member.list m = none := by
+  intro m x h
+  obtain ⟨n, rfl | ⟨args, rfl⟩⟩ := TyDecls.ref_of_unfold? h <;> rfl
+
+/-- **Where the list rule answers, the list rule under a table answers the same.** -/
+theorem Checker.listOfIn_of_listOf {decls : TyDecls} {t a : Ty} (h : Checker.listOf? t = some a) :
+    Checker.listOfIn decls t = some a :=
+  UnionRule.extendAllIn_of_extendAll Member.list_ref h
+
 namespace Member
 
 /-- The member rule of the exit rule: the value type and the error type of one exit type, by the
@@ -208,20 +230,20 @@ mutual
       | some _ => none
       | none => do
         let types ← argsTy sig env true values
-        Record.check fields names types
+        Record.checkIn sig.types fields names types
     | .field mode target name => do
       let type ← argTy sig env false target
-      Record.fieldType (mode = .optional) type name
+      Record.fieldTypeIn sig.types (mode = .optional) type name
     | .recordSet target name value => do
       let targetType ← argTy sig env false target
       let valueType ← argTy sig env true value
-      Record.setType targetType name valueType
+      Record.setTypeIn sig.types targetType name valueType
     | .tupleAt target index => do
       let targetType ← argTy sig env false target
       Tuple.typeAt targetType index
     | .fold accTy list init body => do
       let listType ← argTy sig env false list
-      let item ← Checker.listOf? listType
+      let item ← Checker.listOfIn sig.types listType
       let initType ← argTy sig env false init
       let acc := accTy.getD initType
       if Ty.sub initType.normalize acc.normalize then do
