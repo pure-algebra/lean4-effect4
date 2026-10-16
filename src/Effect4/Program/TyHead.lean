@@ -126,7 +126,7 @@ end Record
 
 /-! ## Where the original answers, the reader under a table answers the same
 
-A member rule of the checker refuses a declared reference, a `handle` or an `app`. So where the
+A member rule of the checker refuses a declared reference `app n args`. So where the
 table-free reader answers, no union member of its target is a declared reference, the table
 unfolds nothing, and the reader under any table answers the same. The checker's introduction
 lemmas, stated at the originals, then hold at every table. -/
@@ -198,12 +198,11 @@ theorem UnionRule.liftIn_eq {α : Type} [UnionRule.Answer α] (decls : TyDecls)
       ((Ty.membersIn decls t).mapM rule).map UnionRule.joinAll := by
   cases decls <;> rfl
 
-/-- A type that unfolds under a table is a reference: a handle or an applied name. -/
+/-- A type that unfolds under a table is a reference `app n args`. -/
 theorem TyDecls.ref_of_unfold? {decls : TyDecls} {m : Ty} {x : String × Ty}
-    (h : decls.unfold? m = some x) : ∃ n, m = .handle n ∨ ∃ args, m = .app n args := by
+    (h : decls.unfold? m = some x) : ∃ n args, m = .app n args := by
   cases m
-  case handle n => exact ⟨n, Or.inl rfl⟩
-  case app n args => exact ⟨n, Or.inr ⟨args, rfl⟩⟩
+  case app n args => exact ⟨n, args, rfl⟩
   all_goals cases h
 
 /-- With no declared reference among a type's union members, the head members are the union
@@ -293,13 +292,13 @@ theorem UnionRule.extendAllIn_of_extendAll {α : Type} [UnionRule.Answer α] {de
 theorem Record.fieldOf_ref {decls : TyDecls} {o : Bool} {name : String} :
     ∀ m x, decls.unfold? m = some x → Record.fieldOf o name m = none := by
   intro m x h
-  obtain ⟨n, rfl | ⟨args, rfl⟩⟩ := TyDecls.ref_of_unfold? h <;> rfl
+  obtain ⟨n, args, rfl⟩ := TyDecls.ref_of_unfold? h; rfl
 
 /-- The update rule refuses a declared reference. -/
 theorem Record.setOf_ref {decls : TyDecls} {name : String} {value : Ty} :
     ∀ m x, decls.unfold? m = some x → Record.setOf name value m = none := by
   intro m x h
-  obtain ⟨n, rfl | ⟨args, rfl⟩⟩ := TyDecls.ref_of_unfold? h <;> rfl
+  obtain ⟨n, args, rfl⟩ := TyDecls.ref_of_unfold? h; rfl
 
 /-- **Where the field read answers, the field read under a table answers the same.** -/
 theorem Record.fieldTypeIn_of_fieldType {decls : TyDecls} {o : Bool} {t : Ty} {name : String}

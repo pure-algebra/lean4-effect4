@@ -5,13 +5,13 @@ import Effect4.Program.TyDecls
 # Program.AdmitIn — reply admission under a declaration table
 
 Reply admission (`Program/Admit.lean`) reads a row's columns with `Val.hasTy`, which reads no
-table. So at a column that names a declared type it refuses every honest answer, and at a column
-`handle n` it reads a natural as an allocation request even where `n` is declared. This module
+table. So at a column that names a declared type it refuses every honest answer. This module
 writes each reader beside its original, under a table (decisions rows 400 to 402; the plan
 `docs/research/2026-10-16-usability-scope/wiring-plan.md`, increment W2b):
 
-* **The allocation classifier** (`allocatesIn`): a column allocates an external handle at a reply
-  only where its head is a handle that the table does not declare (decisions row 401 (3)).
+* **The allocation test is the machine's** (`allocates`): a declared name is `app n []`, and the
+  signature refuses a host handle `handle n` at a declared name (decisions row 406 (1)). So a
+  handle column allocates as the machine reads it, with no table.
 * **Membership under the table** (`Val.hasTyIn`) wherever the original reads `Val.hasTy`: the
   success value (`externalValueIn`), the error column (`errAdmitsIn`), a delayed cell read
   (`admitAnswerIn`), the call's checked instance (`admitInstanceIn`), and the row protocol's check
@@ -32,14 +32,6 @@ plan's increment W4. This module is not a Lean module (decisions row 200): it im
 namespace Effect4.Program
 open Effect4 Effect4.Machine
 
-/-- **The allocation classifier under a table** (decisions row 401 (3)): a column allocates an
-external handle at a reply where its head is a handle whose name the table does not declare. At
-the empty table it is `allocates`. -/
-def allocatesIn (decls : TyDecls) (t : Ty) : Bool :=
-  match decls with
-  | [] => allocates t
-  | _ => allocates t && (t.refName?.bind decls.body?).isNone
-
 /-- A reply's data: the value itself, where it is a member of the column under the table and
 holds no handle. -/
 def dataValueIn (decls : TyDecls) (ty : Ty) (allocated : List String) (value : Val) :
@@ -48,10 +40,10 @@ def dataValueIn (decls : TyDecls) (ty : Ty) (allocated : List String) (value : V
     some (allocated, value)
   else none
 
-/-- **A reply's success value under a table**: at a handle column whose name the table does not
-declare, a natural at the next index is an allocation request, as `externalValue` reads it.
-Every other value, and every value at a declared name, is data, read by membership under the
-table. At the empty table it is `externalValue`. -/
+/-- **A reply's success value under a table**: at a handle column, a natural at the next index is
+an allocation request, as `externalValue` reads it. Every other value is data, read by membership
+under the table; a declared name's column is `app n []`, so its value is data. At the empty table
+it is `externalValue`. -/
 def externalValueIn (decls : TyDecls) (ty : Ty) (allocated : List String) (value : Val) :
     Option (List String × Val) :=
   match decls with
@@ -59,8 +51,7 @@ def externalValueIn (decls : TyDecls) (ty : Ty) (allocated : List String) (value
   | _ =>
     match ty, value with
     | .handle target, .nat index =>
-      if (decls.body? target).isSome then dataValueIn decls ty allocated value
-      else if externalHandleTarget target && index == allocated.length then
+      if externalHandleTarget target && index == allocated.length then
         some (allocated ++ [target], Value.external index)
       else none
     | _, _ => dataValueIn decls ty allocated value

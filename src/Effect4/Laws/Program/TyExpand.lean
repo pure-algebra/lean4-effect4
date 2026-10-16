@@ -141,10 +141,7 @@ theorem obligations_expand (exps : TyDecls) {m : Ty}
     Val.obligations v (Ty.expand exps m) allocated =
       (Val.obligations v m allocated).map (List.map fun p => (p.1, Ty.expand exps p.2)) := by
   cases m with
-  | handle n =>
-    show Val.obligations v ((exps.body? n).getD (.handle n)) allocated = _
-    rw [hm n rfl]
-    exact leaf_map _ _
+  | handle n => exact leaf_map _ _
   | app n args =>
     show Val.obligations v ((exps.body? n).getD (.app n args)) allocated = _
     rw [hm n rfl]
@@ -272,10 +269,6 @@ theorem Ty.isMember_expand (exps : TyDecls) {m : Ty} (hm : m.isMember = true)
   cases m with
   | never => cases hm
   | union a b => cases hm
-  | handle n =>
-    show ((exps.body? n).getD (.handle n)).isMember = true
-    rw [hfree n rfl]
-    rfl
   | app n args =>
     show ((exps.body? n).getD (.app n args)).isMember = true
     rw [hfree n rfl]
@@ -296,18 +289,6 @@ theorem Ty.expand_of_unfold {decls exps : TyDecls} {m : Ty} {name : String} {bod
     Ty.expand exps m = x := by
   unfold TyDecls.unfold? at hu
   cases m with
-  | handle n =>
-    simp only [Ty.refName?, Option.bind_some] at hu
-    cases hb : decls.body? n with
-    | none =>
-      rw [hb] at hu
-      cases hu
-    | some b =>
-      rw [hb, Option.map_some] at hu
-      cases hu
-      show (exps.body? _).getD _ = x
-      rw [hx]
-      rfl
   | app n args =>
     simp only [Ty.refName?, Option.bind_some] at hu
     cases hb : decls.body? n with

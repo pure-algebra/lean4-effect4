@@ -305,7 +305,7 @@ and compiled code runs the combinators with no fold over `Ty` (`docs/research/20
 
 A named type also has a name in the declaration table (decisions row 402). `decls` holds the
 declarations the type brings: each named type it reaches, its own entry last, whose body names
-each field's type by its reference. `ref` is the type a program writes: `handle n` for a type
+each field's type by its reference. `ref` is the type a program writes: `app n []` for a type
 named `n`, the code itself for an unnamed one. `ref_expands` says the reference expands to the
 code under every solution of `decls`. Its last premise is `checked`'s statement, which an
 unnamed type's default proof reads (`Model.expand_of_checked`). So membership at the name under

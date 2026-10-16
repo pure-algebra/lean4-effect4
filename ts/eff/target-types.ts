@@ -137,7 +137,8 @@ export const normalize = (type: Ty): Ty => {
       const items = type.items.map(normalize)
       return items.length === 2 ? product(items[0]!, items[1]!) : { _tag: "tuple", items }
     }
-    case "app": return type.args.length === 0 ? { _tag: "handle", target: type.name } : { ...type, args: type.args.map(normalize) }
+    // a reference keeps its name, so a reference with no argument is no handle (decisions row 406 (1))
+    case "app": return { ...type, args: type.args.map(normalize) }
     case "never": case "unit": case "nat": case "int": case "string": case "bool":
     case "unknown": case "null": case "undefined": case "number": case "bytes":
     case "handle": case "lit": case "var": case "contextOf": return type
@@ -354,7 +355,15 @@ export const targetType = (raw: Ty, legacy: (text: string) => string | undefined
       // row's one spelling at the native scope key (`Codegen.Types.ofTy_contextOf`, decisions
       // row 349)
       case "contextOf": return `Context.Context<${requirementText(type.keys, names)}>`
-      case "var": case "app": return undefined
+      // a reference with no argument is a declared name and prints as its bare name
+      // (`Codegen.Types.legacyName?`, decisions row 406 (1)); a nominal application at arguments
+      // needs its own resolved declaration, so it stays unprinted
+      case "app": {
+        if (type.args.length > 0) return undefined
+        const head = legacyType(type.name)
+        return head !== undefined && /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(head) ? head : undefined
+      }
+      case "var": return undefined
       default: return unrecognized(type)
     }
   }

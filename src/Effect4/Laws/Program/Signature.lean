@@ -1091,6 +1091,8 @@ structure LawfulSig (app : SigApp) : Prop where
   served : ∀ r ∈ app.rows, ∀ k ∈ r.requires, (app.serviceTy k).isSome = true
   /-- Every named type's declaration meets its local conditions (decisions row 401 (2)). -/
   decls : ∀ d ∈ app.types, ∀ c ∈ declChecks app.types d, c.1 = true
+  /-- Every row spells each name with one meaning under the table (decisions row 406 (1)). -/
+  rowNames : ∀ r ∈ app.rows, ∀ c ∈ nameChecks app.types r.spelledNames, c.1 = true
   /-- No name has two bodies (decisions row 402 (5)). -/
   declsConsistent : app.types.Pairwise fun d e => d.1 = e.1 → d.2 = e.2
   /-- The table is guarded: the ranking ranks every name (decisions row 401 (2)). -/
@@ -1100,29 +1102,31 @@ structure LawfulSig (app : SigApp) : Prop where
 theorem sigRefusal?_eq_none_iff (app : SigApp) : sigRefusal? app = none ↔ LawfulSig app := by
   unfold sigRefusal?
   rw [Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff,
-    Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff,
+    Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff,
     Option.map_eq_none_iff, Option.map_eq_none_iff, Option.map_eq_none_iff,
     Option.map_eq_none_iff, Option.map_eq_none_iff, Option.map_eq_none_iff,
-    Option.map_eq_none_iff, Option.map_eq_none_iff,
+    Option.map_eq_none_iff, Option.map_eq_none_iff, Option.map_eq_none_iff,
     firstIndexed_eq_none_iff, firstDup_eq_none_iff, firstIndexed_eq_none_iff,
     firstDup_eq_none_iff, firstIndexed_eq_none_iff, firstIndexed_eq_none_iff,
-    firstConflict_eq_none_iff, ← Option.isNone_iff_eq_none]
+    firstIndexed_eq_none_iff, firstConflict_eq_none_iff, ← Option.isNone_iff_eq_none]
   constructor
-  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hconsistent, hguarded⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hnames, hconsistent, hguarded⟩
     refine ⟨fun r hr => (firstFailing_eq_none_iff _).mp (hrows r hr), List.pairwise_map.mp hkeys,
       fun e he => (firstFailing_eq_none_iff _).mp (hsvc e he), List.pairwise_map.mp hcodes, ?_,
-      fun d hd => (firstFailing_eq_none_iff _).mp (hdecls d hd), hconsistent, hguarded⟩
+      fun d hd => (firstFailing_eq_none_iff _).mp (hdecls d hd),
+      fun r hr => (firstFailing_eq_none_iff _).mp (hnames r hr), hconsistent, hguarded⟩
     intro r hr k hk
     have hk' := List.find?_eq_none.mp (hserved r hr) k hk
     cases hks : (app.serviceTy k).isSome
     · rw [hks] at hk'
       exact absurd rfl hk'
     · rfl
-  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hconsistent, hguarded⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hnames, hconsistent, hguarded⟩
     refine ⟨fun r hr => (firstFailing_eq_none_iff _).mpr (hrows r hr), List.pairwise_map.mpr hkeys,
       fun e he => (firstFailing_eq_none_iff _).mpr (hsvc e he), List.pairwise_map.mpr hcodes,
       fun r hr => List.find?_eq_none.mpr fun k hk hbad => ?_,
-      fun d hd => (firstFailing_eq_none_iff _).mpr (hdecls d hd), hconsistent, hguarded⟩
+      fun d hd => (firstFailing_eq_none_iff _).mpr (hdecls d hd),
+      fun r hr => (firstFailing_eq_none_iff _).mpr (hnames r hr), hconsistent, hguarded⟩
     rw [hserved r hr k hk] at hbad
     cases hbad
 
@@ -1164,7 +1168,7 @@ theorem LawfulSig.registered {app : SigApp} (h : LawfulSig app) :
 /-- The empty signature is lawful: what every source with no rows and no declarations carries. -/
 theorem SigApp.lawful_empty : LawfulSig (SigApp.mk [] [] []) :=
   ⟨fun _ h => (nomatch h), List.Pairwise.nil, fun _ h => (nomatch h), List.Pairwise.nil,
-    fun _ h => (nomatch h), fun _ h => (nomatch h), List.Pairwise.nil, rfl⟩
+    fun _ h => (nomatch h), fun _ h => (nomatch h), fun _ h => (nomatch h), List.Pairwise.nil, rfl⟩
 
 /-- **C6 (proved)**: an appended signature is lawful exactly when each part's local clauses
 hold, each part's pairwise clauses hold, the cross terms hold, and the whole serves every
@@ -1185,14 +1189,15 @@ theorem lawful_append (app : SigApp) (rows' : RowTable) (services' : List (Servi
         ((SigApp.mk (app.rows ++ rows') (app.services ++ services') app.types).serviceTy k).isSome =
           true) ∧
       ((∀ d ∈ app.types, ∀ c ∈ declChecks app.types d, c.1 = true) ∧
+        (∀ r ∈ app.rows ++ rows', ∀ c ∈ nameChecks app.types r.spelledNames, c.1 = true) ∧
         (app.types.Pairwise fun d e => d.1 = e.1 → d.2 = e.2) ∧ app.types.guarded = true) := by
   constructor
-  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hconsistent, hguarded⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hnames, hconsistent, hguarded⟩
     exact ⟨List.forall_mem_append.mp hrows, List.pairwise_append.mp hkeys,
       List.forall_mem_append.mp hsvc, List.pairwise_append.mp hcodes, hserved,
-      hdecls, hconsistent, hguarded⟩
-  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hconsistent, hguarded⟩
+      hdecls, hnames, hconsistent, hguarded⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hnames, hconsistent, hguarded⟩
     exact ⟨List.forall_mem_append.mpr hrows, List.pairwise_append.mpr hkeys,
       List.forall_mem_append.mpr hsvc, List.pairwise_append.mpr hcodes, hserved,
-      hdecls, hconsistent, hguarded⟩
+      hdecls, hnames, hconsistent, hguarded⟩
 end Effect4.Program

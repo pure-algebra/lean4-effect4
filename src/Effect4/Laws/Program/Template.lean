@@ -56,14 +56,6 @@ theorem closed_normTuple : ∀ (xs : List Ty), (∀ t ∈ xs, closed t = true) �
     simp only [normTuple, closed, closedItems_eq_all, List.all_eq_true]
     exact h
 
-/-- A reference at closed arguments normalizes to a closed type. -/
-theorem closed_normApp (n : String) :
-    ∀ (xs : List Ty), (∀ t ∈ xs, closed t = true) → closed (normApp n xs) = true
-  | [], _ => rfl
-  | _ :: _, h => by
-    simp only [normApp, closed, closedItems_eq_all, List.all_eq_true]
-    exact h
-
 theorem closed_normalize (t : Ty) (h : closed t = true) : closed (normalize t) = true := by
   induction t with
   | prod a b iha ihb =>
@@ -88,9 +80,10 @@ theorem closed_normalize (t : Ty) (h : closed t = true) : closed (normalize t) =
   | app n ts ih =>
     simp only [closed, closedItems_eq_all, List.all_eq_true] at h
     rw [normalize, normalizeItems_eq_map]
-    exact closed_normApp n _ fun t ht => by
-      obtain ⟨u, hu, rfl⟩ := List.mem_map.mp ht
-      exact ih u hu (h u hu)
+    simp only [closed, closedItems_eq_all, List.all_eq_true]
+    intro t ht
+    obtain ⟨u, hu, rfl⟩ := List.mem_map.mp ht
+    exact ih u hu (h u hu)
   | _ => aesop (add norm simp [closed, normalize])
 
 theorem instantiate_closed (σ : Subst) (t : Ty) (h : closed t = true) : instantiate σ t = t := by
@@ -776,8 +769,8 @@ theorem paramOccurrences_firsts {t : Ty} (ht : Normal t) :
     rename_i ts _ _
     rw [paramOccurrences_tuple, varsOf, varsOfItems_eq_flatMap, List.map_flatMap]
     exact flatMap_congr fun x hx => ih x hx
-  | app _ _ ih =>
-    rename_i n ts _ _
+  | app _ ih =>
+    rename_i n ts _
     rw [paramOccurrences_app, varsOf, varsOfItems_eq_flatMap, List.map_flatMap]
     refine flatMap_congr fun x hx => ?_
     rw [List.map_map]
@@ -915,8 +908,8 @@ theorem instance_members (τ : Subst) {t : Ty} (ht : Normal t) (hv : ∀ i, t �
     · simp only [sameHead, List.length_map, decide_eq_true_eq]
     · simp only [args, List.map_map]
       rfl
-  | app _ _ =>
-    rename_i n ts _ _ _
+  | app _ =>
+    rename_i n ts _ _
     exact absurd rfl (happ n ts)
   | _ =>
     simp only [instantiate, normalize, members]

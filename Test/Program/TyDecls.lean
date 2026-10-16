@@ -89,11 +89,13 @@ def fits (decls : TyDecls) (v : Val) (t : Ty) (allocated : List String := []) : 
 #guard fits mutualDecls exprV (.app "Expr" []) && !fits mutualDecls exprV (.app "Stmt" [])
 -- every finite cut of a stream ends, so none fits
 #guard !fits streamDecls streamV (.app "Stream" [])
--- the reference's normal form reads the same declaration (`Ty.normalize_app_nil`)
-#guard fits treeDecls tree3 (.handle "Tree") && !fits treeDecls treeBad (.handle "Tree")
-#guard Ty.normalize tree = .handle "Tree"
+-- a reference keeps its spelling in its normal form, so the table reads the same declaration
+-- there (decisions row 406 (1))
+#guard Ty.normalize tree = tree
+-- control: a host handle at a declared spelling is no reference, so the table does not read it
+#guard !fits treeDecls tree3 (.handle "Tree")
 -- a declared name is read by its body, not as a handle: an external handle at its spelling does
--- not fit, while an undeclared reference keeps the handle arm
+-- not fit, while a host handle keeps the handle arm
 #guard !fits treeDecls (.handle 7 0) tree ["Tree"]
 #guard fits treeDecls (.handle 7 0) (.handle "Conn") ["Conn"]
 -- a union of declared names is read by its members
@@ -126,18 +128,14 @@ def fits (decls : TyDecls) (v : Val) (t : Ty) (allocated : List String := []) : 
 #guard streamDecls.inhabited (.option (.app "Stream" []))
 -- a repeated name is read at its declaration, its first entry, in both judgments: `A` is `never`
 -- here, so it is empty and refuses `unit`; reading every entry made inhabitance answer `true`
-#guard !TyDecls.inhabited [("A", .never), ("A", .unit)] (.handle "A") &&
-  !fits [("A", .never), ("A", .unit)] .unit (.handle "A") []
+#guard !TyDecls.inhabited [("A", .never), ("A", .unit)] (.app "A" []) &&
+  !fits [("A", .never), ("A", .unit)] .unit (.app "A" []) []
 
 /-! ## Readers of the laws at the tables -/
 
-/-- The iso-recursive unfolding at the tree, at the reference and at its normal form. -/
+/-- The iso-recursive unfolding at the tree's reference. -/
 example (v : Val) (allocated : List String) :
     MemberIn treeDecls allocated v tree ↔ MemberIn treeDecls allocated v treeBody :=
-  memberIn_unfold_iff rfl
-
-example (v : Val) (allocated : List String) :
-    MemberIn treeDecls allocated v (.handle "Tree") ↔ MemberIn treeDecls allocated v treeBody :=
   memberIn_unfold_iff rfl
 
 /-- The order, unchanged, at a declared reference: a tree is a member of a union holding it. -/

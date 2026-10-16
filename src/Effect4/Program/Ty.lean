@@ -1022,15 +1022,11 @@ def normTuple : List Ty → Ty
   | [a, b] => ofMembers (normalizeRow (productMembers a b)).elems
   | items => .tuple items
 
-/-- A reference at normal arguments: with none it is the handle at its name. -/
-def normApp (name : String) : List Ty → Ty
-  | [] => .handle name
-  | args => .app name args
-
 mutual
 /-- Deep normalization uses the existing canonical finite-row algebra. A record normalizes each
 field type, then takes the canonical field order; a tuple of two items is a product (normalized as
-one); a reference with no argument is a handle. -/
+one); a reference keeps its name and normalizes its arguments, so a reference with no argument is no
+handle (decisions row 406 (1)). -/
 def normalize : Ty → Ty
   | .option t => .option (normalize t)
   | .list t => .list (normalize t)
@@ -1056,7 +1052,7 @@ def normalize : Ty → Ty
   | .record fs => .record (canon (normalizeFields fs))
   | .map k v => .map (normalize k) (normalize v)
   | .tuple items => normTuple (normalizeItems items)
-  | .app name args => normApp name (normalizeItems args)
+  | .app name args => .app name (normalizeItems args)
   | .null => .null
   | .undefined => .undefined
   | .number => .number
@@ -1120,21 +1116,13 @@ theorem normalize_tuple_pair (a b : Ty) : normalize (.tuple [a, b]) = normalize 
   rw [normalize, normalize, normalizeItems_eq_map]
   rfl
 
-/-- A reference with arguments normalizes them in place. -/
-theorem normalize_app_of_ne (n : String) (ts : List Ty) (h : ts ≠ []) :
+/-- A reference normalizes its arguments in place. -/
+theorem normalize_app (n : String) (ts : List Ty) :
     normalize (.app n ts) = .app n (normalizeItems ts) := by
-  rw [normalize, normalizeItems_eq_map]
-  match ts, h with
-  | _ :: _, _ => rfl
-
-/-- A reference with no argument is the handle at its name. -/
-theorem normalize_app_nil (n : String) : normalize (.app n []) = .handle n := by
   rw [normalize]
-  rfl
 
 /-- Proof-only construction invariant. Its row case has canonical atomic members; a record's
-fields are canonical (strictly ascending by name) and each normal; a tuple's arity is not two; a
-reference has an argument. -/
+fields are canonical (strictly ascending by name) and each normal; a tuple's arity is not two. -/
 inductive Normal : Ty → Prop
   | never : Normal .never
   | unknown : Normal .unknown
@@ -1164,7 +1152,7 @@ inductive Normal : Ty → Prop
       (∀ p ∈ fs, Normal p.2.2) → Field.Ascending bytesKey fs → Normal (.record fs)
   | map {k v} : Normal k → Normal v → Normal (.map k v)
   | tuple {ts : List Ty} : (∀ t ∈ ts, Normal t) → ts.length ≠ 2 → Normal (.tuple ts)
-  | app {n : String} {ts : List Ty} : (∀ t ∈ ts, Normal t) → ts ≠ [] → Normal (.app n ts)
+  | app {n : String} {ts : List Ty} : (∀ t ∈ ts, Normal t) → Normal (.app n ts)
   | null : Normal .null
   | undefined : Normal .undefined
   | number : Normal .number
@@ -1212,11 +1200,6 @@ theorem normal_normTuple : ∀ (xs : List Ty), (∀ t ∈ xs, Normal t) → Norm
   | [], h => .tuple h (by simp only [List.length_nil]; omega)
   | [_], h => .tuple h (by simp only [List.length_cons, List.length_nil]; omega)
   | _ :: _ :: _ :: _, h => .tuple h (by simp only [List.length_cons]; omega)
-
-/-- A reference at normal arguments is a normal form. -/
-theorem normal_normApp (n : String) : ∀ (xs : List Ty), (∀ t ∈ xs, Normal t) → Normal (normApp n xs)
-  | [], _ => .handle n
-  | _ :: _, h => .app h (List.cons_ne_nil _ _)
 
 theorem normal_normalize (t : Ty) : Normal (normalize t) := by
   induction t with
@@ -1270,7 +1253,7 @@ theorem normal_normalize (t : Ty) : Normal (normalize t) := by
       exact ih u hu
   | app n ts ih =>
     rw [normalize, normalizeItems_eq_map]
-    exact normal_normApp n _ fun t ht => by
+    exact .app fun t ht => by
       obtain ⟨u, hu, rfl⟩ := List.mem_map.mp ht
       exact ih u hu
   | null => exact .null
@@ -1348,8 +1331,8 @@ theorem Normal.fixed {t : Ty} (h : Normal t) : normalize t = t := by
   case tuple ts _ hlen ih =>
     rw [normalize_tuple_of_ne ts hlen, normalizeItems_eq_map]
     exact congrArg Ty.tuple ((List.map_congr_left ih).trans (List.map_id ts))
-  case app n ts _ hne ih =>
-    rw [normalize_app_of_ne n ts hne, normalizeItems_eq_map]
+  case app n ts _ ih =>
+    rw [normalize_app n ts, normalizeItems_eq_map]
     exact congrArg (Ty.app n) ((List.map_congr_left ih).trans (List.map_id ts))
   case null => rfl
   case undefined => rfl

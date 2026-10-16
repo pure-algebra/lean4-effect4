@@ -712,8 +712,8 @@ theorem instance_shape (τ : Subst) {t : Ty} (ht : Normal t) (hv : ∀ i, t ≠ 
     · simp only [sameHead, List.length_map, decide_eq_true_eq]
     · simp only [args, List.map_map]
       rfl
-  | app _ _ =>
-    rename_i n ts _ _ _
+  | app _ =>
+    rename_i n ts _ _
     exact absurd rfl (happ n ts)
   | unknown | unit | nat | int | string | bool | handle _ | lit _
   | null | undefined | number | bytes | contextOf _ =>

@@ -417,18 +417,24 @@ def shapeDoc : ShapeDoc :=
   ⟨.sum "DeclReason"
      [("internalSpelling", 0, []),
       ("typeVariable", 1, []),
-      ("applied", 2, [])],
+      ("applied", 2, []),
+      ("handleAtName", 3, []),
+      ("undeclaredName", 4, [])],
    []⟩
 
 def toVal : _root_.Effect4.Program.DeclReason → Val
   | .internalSpelling => .ctor 0 []
   | .typeVariable => .ctor 1 []
   | .applied => .ctor 2 []
+  | .handleAtName => .ctor 3 []
+  | .undeclaredName => .ctor 4 []
 
 def ofVal : Val → Option (_root_.Effect4.Program.DeclReason)
   | .ctor 0 [] => some .internalSpelling
   | .ctor 1 [] => some .typeVariable
   | .ctor 2 [] => some .applied
+  | .ctor 3 [] => some .handleAtName
+  | .ctor 4 [] => some .undeclaredName
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.DeclReason) : ofVal (toVal a) = some a := by
@@ -436,11 +442,19 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.DeclReason) : ofVal (toVal a) = 
   | «internalSpelling» => simp only [toVal, ofVal]
   | «typeVariable» => simp only [toVal, ofVal]
   | «applied» => simp only [toVal, ofVal]
+  | «handleAtName» => simp only [toVal, ofVal]
+  | «undeclaredName» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.DeclReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
   · injection h with h
     subst h
     rfl
@@ -460,6 +474,10 @@ theorem fits (a : _root_.Effect4.Program.DeclReason) : shapeDoc.accepts (toVal a
     exact accepts_sum _ _ _ 1 "typeVariable" [] [] rfl (acceptsFields_nil _)
   | «applied» =>
     exact accepts_sum _ _ _ 2 "applied" [] [] rfl (acceptsFields_nil _)
+  | «handleAtName» =>
+    exact accepts_sum _ _ _ 3 "handleAtName" [] [] rfl (acceptsFields_nil _)
+  | «undeclaredName» =>
+    exact accepts_sum _ _ _ 4 "undeclaredName" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Program.DeclReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -484,8 +502,10 @@ def shapeDoc : ShapeDoc :=
         ("key", (shape _root_.Effect4.ServiceKey).root)]),
       ("decl", 5, [("index", (shape _root_.Nat).root),
         ("reason", (shape _root_.Effect4.Program.DeclReason).root)]),
-      ("conflictingDecl", 6, [("name", (shape _root_.String).root)]),
-      ("unguardedDecl", 7, [("name", (shape _root_.String).root)])],
+      ("rowName", 6, [("index", (shape _root_.Nat).root),
+        ("reason", (shape _root_.Effect4.Program.DeclReason).root)]),
+      ("conflictingDecl", 7, [("name", (shape _root_.String).root)]),
+      ("unguardedDecl", 8, [("name", (shape _root_.String).root)])],
    (shape _root_.Nat).defs ++ (shape _root_.Effect4.Program.RowReason).defs ++
      (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))).defs ++
      (shape _root_.Effect4.Program.ServiceReason).defs ++
@@ -499,8 +519,9 @@ def toVal : _root_.Effect4.Program.SigRefusal → Val
   | .duplicateCode a0 => .ctor 3 [Canonical.toVal a0]
   | .unservedKey a0 a1 => .ctor 4 [Canonical.toVal a0, Canonical.toVal a1]
   | .decl a0 a1 => .ctor 5 [Canonical.toVal a0, Canonical.toVal a1]
-  | .conflictingDecl a0 => .ctor 6 [Canonical.toVal a0]
-  | .unguardedDecl a0 => .ctor 7 [Canonical.toVal a0]
+  | .rowName a0 a1 => .ctor 6 [Canonical.toVal a0, Canonical.toVal a1]
+  | .conflictingDecl a0 => .ctor 7 [Canonical.toVal a0]
+  | .unguardedDecl a0 => .ctor 8 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.SigRefusal)
   | .ctor 0 [v0, v1] =>
@@ -525,8 +546,13 @@ def ofVal : Val → Option (_root_.Effect4.Program.SigRefusal)
         Canonical.ofVal (α := _root_.Effect4.Program.DeclReason) v1 with
     | some a0, some a1 => some (.decl a0 a1)
     | _, _ => none
-  | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .conflictingDecl
-  | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unguardedDecl
+  | .ctor 6 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Nat) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.DeclReason) v1 with
+    | some a0, some a1 => some (.rowName a0 a1)
+    | _, _ => none
+  | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .conflictingDecl
+  | .ctor 8 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unguardedDecl
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.SigRefusal) : ofVal (toVal a) = some a := by
@@ -537,6 +563,7 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.SigRefusal) : ofVal (toVal a) = 
   | «duplicateCode» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «unservedKey» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
   | «decl» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «rowName» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
   | «conflictingDecl» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «unguardedDecl» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
@@ -566,6 +593,13 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.SigRefusal} (h : ofVal
     subst hj
     simp only [toVal]
     rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
   · split at h
     · rename_i b0 b1 h0 h1
       injection h with h
@@ -652,11 +686,15 @@ theorem fits (a : _root_.Effect4.Program.SigRefusal) : shapeDoc.accepts (toVal a
     exact accepts_sum _ _ _ 5 "decl" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_DeclReason a1) (acceptsFields_nil _)))
+  | «rowName» a0 a1 =>
+    exact accepts_sum _ _ _ 6 "rowName" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_DeclReason a1) (acceptsFields_nil _)))
   | «conflictingDecl» a0 =>
-    exact accepts_sum _ _ _ 6 "conflictingDecl" _ _ rfl
+    exact accepts_sum _ _ _ 7 "conflictingDecl" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
   | «unguardedDecl» a0 =>
-    exact accepts_sum _ _ _ 7 "unguardedDecl" _ _ rfl
+    exact accepts_sum _ _ _ 8 "unguardedDecl" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.SigRefusal) :=

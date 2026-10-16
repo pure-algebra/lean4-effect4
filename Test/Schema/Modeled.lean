@@ -288,9 +288,9 @@ namespace Test.Schema.Modeled.Named
 open Test.Schema.Modeled.Sums
 
 -- Finite evaluation: the reference, the body by reference, and the declarations in order.
-#guard Modeled.ref (α := Drawing) == .handle "Drawing"
+#guard Modeled.ref (α := Drawing) == .app "Drawing" []
 #guard Drawing.modeledBody ==
-  .record [("owner", false, .handle "Account"), ("shapes", false, .list (.handle "Shape"))]
+  .record [("owner", false, .app "Account" []), ("shapes", false, .list (.app "Shape" []))]
 #guard (Modeled.decls (α := Drawing)).map Prod.fst == ["Account", "Shape", "Drawing"]
 -- Finite evaluation: an unnamed type's reference is its code, and it declares nothing.
 #guard Modeled.ref (α := List Nat) == .list .nat && (Modeled.decls (α := List Nat)).isEmpty
@@ -315,7 +315,7 @@ example (d : Drawing) (alloc : List String) :
 -- Finite evaluation: the checker under the table agrees at a written value.
 #guard Val.hasTyIn (Modeled.decls (α := Drawing)) []
   ((Modeled.image Drawing).toVal ⟨[.dot, .circle 2], ⟨"ada", -1⟩⟩) (Modeled.ref (α := Drawing)) []
--- Control: without the table the reference is the handle arm, and a record frame fits no handle.
+-- Control: without the table the reference is opaque by name, and a record frame fits none.
 #guard !Val.hasTy ((Modeled.image Drawing).toVal ⟨[], ⟨"ada", 0⟩⟩) (Modeled.ref (α := Drawing)) []
 
 -- Finite evaluation: the signature admits the derived table, its repeated entries one
@@ -331,11 +331,11 @@ example (v : Effect4.Store.Val) (alloc : List String) :
 
 -- Control: a recursive table is not expandable, so no expansion speaks for it.
 #guard !TyDecls.expandable
-  [("L", .union (.lit "nil") (.record [("head", false, .nat), ("tail", false, .handle "L")]))]
+  [("L", .union (.lit "nil") (.record [("head", false, .nat), ("tail", false, .app "L" [])]))]
 -- Control: an alias cycle passes the expansion check and has no member, so the law asks for
 -- guardedness as well.
-#guard TyDecls.expandable [("A", .handle "B"), ("B", .handle "A")] &&
-  !TyDecls.guarded [("A", .handle "B"), ("B", .handle "A")]
+#guard TyDecls.expandable [("A", .app "B" []), ("B", .app "A" [])] &&
+  !TyDecls.guarded [("A", .app "B" []), ("B", .app "A" [])]
 
 end Test.Schema.Modeled.Named
 

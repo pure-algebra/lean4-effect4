@@ -184,7 +184,7 @@ def Checker.listOfIn (decls : TyDecls) : Ty → Option Ty := UnionRule.extendAll
 theorem Member.list_ref {decls : TyDecls} :
     ∀ m x, decls.unfold? m = some x → Member.list m = none := by
   intro m x h
-  obtain ⟨n, rfl | ⟨args, rfl⟩⟩ := TyDecls.ref_of_unfold? h <;> rfl
+  obtain ⟨n, args, rfl⟩ := TyDecls.ref_of_unfold? h; rfl
 
 /-- **Where the list rule answers, the list rule under a table answers the same.** -/
 theorem Checker.listOfIn_of_listOf {decls : TyDecls} {t a : Ty} (h : Checker.listOf? t = some a) :

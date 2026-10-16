@@ -30,7 +30,7 @@ The type is named in the declaration table by its declaration's last component (
 402). The body (`modeledBody`) is the code with each field's type written as its reference
 (`Modeled.ref`), so a body names a field's named type and never copies its code. The declarations
 (`modeledDecls`) are each field's, then the type's own entry. The proof that the reference
-`handle n` expands to the code (`modeled_ref_expands`) composes each field instance's own, so a
+`app n []` expands to the code (`modeled_ref_expands`) composes each field instance's own, so a
 field instance may be opaque. If a generated declaration fails, the environment is restored: the
 command keeps all or none.
 -/
@@ -334,12 +334,12 @@ def deriveModeledSum (ref : Syntax) (tName : Name) : CommandElabM Unit := do
   elabCommand (← `(def $declsId : Effect4.Program.TyDecls := $decls))
   elabCommand (← `(theorem $refExpandsId ($exps : Effect4.Program.TyDecls)
       ($hId : Effect4.Program.TyDecls.Expands $exps $declsId) :
-      Effect4.Program.Ty.expand $exps (.handle $(quote declName)) = $tyId := by
+      Effect4.Program.Ty.expand $exps (.app $(quote declName) []) = $tyId := by
     unfold $declsId:ident at $hId:ident
     exact $refExpands))
   elabCommand (← `(instance : Effect4.Schema.Modeled $s :=
     ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId, $stagedId, $stagedEqId, $declsId,
-      .handle $(quote declName), fun $exps $hId _ => $refExpandsId $exps $hId⟩))
+      .app $(quote declName) [], fun $exps $hId _ => $refExpandsId $exps $hId⟩))
   if (← get).messages.hasErrors then
     setEnv envBefore
 
@@ -472,12 +472,12 @@ def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × Strin
   elabCommand (← `(def $declsId : Effect4.Program.TyDecls := $decls))
   elabCommand (← `(theorem $refExpandsId ($exps : Effect4.Program.TyDecls)
       ($hId : Effect4.Program.TyDecls.Expands $exps $declsId) :
-      Effect4.Program.Ty.expand $exps (.handle $(quote declName)) = $tyId := by
+      Effect4.Program.Ty.expand $exps (.app $(quote declName) []) = $tyId := by
     unfold $declsId:ident at $hId:ident
     exact $refExpands))
   elabCommand (← `(instance : Effect4.Schema.Modeled $s :=
     ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId, $stagedId, $stagedEqId, $declsId,
-      .handle $(quote declName), fun $exps $hId _ => $refExpandsId $exps $hId⟩))
+      .app $(quote declName) [], fun $exps $hId _ => $refExpandsId $exps $hId⟩))
   -- A declaration that failed leaves nothing behind: the command keeps all or none.
   if (← get).messages.hasErrors then
     setEnv envBefore

@@ -395,6 +395,13 @@ def parseLegacy (text : String) : Option TypeRef := do
   let (value, rest) ← readType (2 * bytes.length + 4) bytes
   if (skipSpace rest).isEmpty then some value else none
 
+/-- The segments of a reference's name, read as the legacy spelling reads a bare name: `Todo` is
+`["Todo"]`, `Queue.Dequeue` is `["Queue", "Dequeue"]`. Any other spelling has none. -/
+def legacyName? (name : String) : Option (List String) :=
+  match parseLegacy name with
+  | some (.name segments []) => some segments
+  | _ => none
+
 mutual
 /-- Project a normalized `Ty` to its target `TypeRef`, under `names` for `.contextOf`.
 
@@ -464,8 +471,11 @@ private def ofNormalized (names : Program.KeyNames) : Program.Ty → Option Type
   | .undefined => some (.name ["undefined"] [])
   | .number => some (.name ["Num"] [])
   | .bytes => some (.name ["Uint8Array"] [])
-  -- Nominal applications need their own resolved declaration table.
-  | .app _ _ => none
+  -- a reference with no argument is a declared name, which the signature's admission checks
+  -- (decisions row 406 (1)): it prints as its name. A nominal application at arguments needs its
+  -- own resolved declaration, so it stays unprinted.
+  | .app name [] => (legacyName? name).map (.name · [])
+  | .app _ (_ :: _) => none
   -- `Context.Context<R>`, the answer of `Effect.context<R>()`: its row is the requirement row's
   -- one spelling (`requirementType`) under the names given, at the native scope key, since this
   -- projection reads no signature (decisions rows 349, 378 (22))
@@ -528,7 +538,7 @@ context type's row, and a context type always prints. A step of `ofTy_isSome`. -
 private theorem ofNormalized_isSome (names names' : Program.KeyNames) :
     (ty : Program.Ty) → (ofNormalized names ty).isSome = (ofNormalized names' ty).isSome
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ | .var _
-  | .null | .undefined | .number | .bytes | .app _ _ | .contextOf _ => rfl
+  | .null | .undefined | .number | .bytes | .contextOf _ => rfl
   | .option inner | .list inner | .causeOf inner | .refOf inner => by
     simp only [ofNormalized]
     exact isSome_bind_pure (ofNormalized_isSome names names' inner)
@@ -551,6 +561,7 @@ private theorem ofNormalized_isSome (names names' : Program.KeyNames) :
   | .tuple items => by
     simp only [ofNormalized, Option.isSome_map]
     exact ofItems_isSome names names' items
+  | .app _ [] | .app _ (_ :: _) => rfl
 
 /-- The items' printed forms exist alike under any key names. A step of `ofTy_isSome`. -/
 private theorem ofItems_isSome (names names' : Program.KeyNames) :

@@ -216,11 +216,11 @@ local checks, no name has two bodies, and the table is guarded. -/
 /-- A to-do's status and the to-do that names it. -/
 def todoTypes : TyDecls :=
   [("Status", .union (.lit "open") (.lit "done")),
-   ("Todo", .record [("status", false, .handle "Status"), ("title", false, .string)])]
+   ("Todo", .record [("status", false, .app "Status" []), ("title", false, .string)])]
 
 -- tested: a table with no recursion, a recursive one, and one entry written twice are admitted
 #guard admitSig { types := todoTypes } = .ok ()
-#guard admitSig { types := [("L", .union (.lit "nil") (.record [("tail", false, .handle "L")]))] } =
+#guard admitSig { types := [("L", .union (.lit "nil") (.record [("tail", false, .app "L" [])]))] } =
   .ok ()
 #guard admitSig { types := todoTypes ++ todoTypes } = .ok ()
 -- tested: each clause refuses, located
@@ -228,10 +228,29 @@ def todoTypes : TyDecls :=
 #guard admitSig { types := [("Box", .list (.var 0))] } = .error (.decl 0 .typeVariable)
 #guard admitSig { types := [("A", .nat), ("B", .app "A" [.nat])] } = .error (.decl 1 .applied)
 #guard admitSig { types := [("A", .nat), ("A", .string)] } = .error (.conflictingDecl "A")
-#guard admitSig { types := [("A", .handle "B"), ("B", .handle "A")] } = .error (.unguardedDecl "A")
+#guard admitSig { types := [("A", .app "B" []), ("B", .app "A" [])] } = .error (.unguardedDecl "A")
 -- control: a row's own refusal comes first, before the table's
-#guard admitSig { rows := [cellRow], types := [("A", .handle "A")] } =
+#guard admitSig { rows := [cellRow], types := [("A", .app "A" [])] } =
   .error (.row 0 (.internalHandle "answer"))
+
+/-! Decisions row 406 (1): a declared name is the reference `app n []`, and a host handle
+`handle n` is never a declared name. So a row answers a declared alias of a natural as data. -/
+
+/-- A row that answers a declared name, and one that answers a host handle at the same spelling. -/
+def idRow : Row := { rowA with answer := .app "Id" [] }
+def idHandleRow : Row := { rowA with answer := .handle "Id" }
+
+-- tested: a row answers `type Id = number` by reference, admitted
+#guard admitSig { rows := [idRow], types := [("Id", .nat)] } = .ok ()
+-- tested: a host handle at the declared spelling refuses, in a row and in a body, located
+#guard admitSig { rows := [idHandleRow], types := [("Id", .nat)] } = .error (.rowName 0 .handleAtName)
+#guard admitSig { types := [("Id", .nat), ("Box", .list (.handle "Id"))] } =
+  .error (.decl 1 .handleAtName)
+-- tested: a reference to a name the table does not declare refuses, in a row and in a body
+#guard admitSig { rows := [idRow] } = .error (.rowName 0 .undeclaredName)
+#guard admitSig { types := [("Box", .list (.app "Idd" []))] } = .error (.decl 0 .undeclaredName)
+-- control: with no table, a host handle at the same spelling is admitted
+#guard admitSig { rows := [idHandleRow] } = .ok ()
 
 /-- **Red control (proved).** A name with two bodies is not lawful, whatever else holds. -/
 theorem two_bodies_not_lawful : ¬ LawfulSig { types := [("A", .nat), ("A", .string)] } := by

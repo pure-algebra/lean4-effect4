@@ -20,7 +20,8 @@ table, the application's service declarations and its named types (`SigApp`). Th
   declaration meets its local checks (`serviceChecks`, row 114), the declared codes are distinct
   (row 113), and every key a row requires has a carrier. Then the application's named types
   (`types`, decisions rows 401 and 402): each declaration meets its local checks (`declChecks`),
-  no name has two bodies, and the table is guarded. Program admission runs it (`admitProgram`,
+  each row spells every name with one meaning under the table (`nameChecks`, decisions row 406
+  (1)), no name has two bodies, and the table is guarded. Program admission runs it (`admitProgram`,
   `Program/Admission.lean`).
 
 The theorems live in `Laws/Program/Signature.lean`: the refusal is complete against `LawfulSig`
@@ -221,6 +222,46 @@ def appliedAlg : TyAlgebra (fun _ => List String) where
 /-- The names a type applies to arguments (`appliedAlg`). -/
 def Ty.appliedNames (t : Ty) : List String := cata_ty appliedAlg t
 
+/-- The names a type spells, anywhere in it: each host handle `handle n` as `(true, n)`, and each
+reference with no argument `app n []` as `(false, n)` (decisions row 406 (1)). -/
+def spelledAlg : TyAlgebra (fun _ => List (Bool × String)) where
+  ty_never := []
+  ty_unit := []
+  ty_nat := []
+  ty_int := []
+  ty_string := []
+  ty_bool := []
+  ty_handle n := [(true, n)]
+  ty_option m := m
+  ty_list m := m
+  ty_prod a b := a ++ b
+  ty_except a b := a ++ b
+  ty_exitOf a b := a ++ b
+  ty_causeOf m := m
+  ty_fiberOf a b := a ++ b
+  ty_union a b := a ++ b
+  ty_lit _ := []
+  ty_refOf m := m
+  ty_deferredOf a b := a ++ b
+  ty_var _ := []
+  ty_unknown := []
+  ty_record fs := (fs.map fun f => f.2.2).flatten
+  ty_map a b := a ++ b
+  ty_tuple ms := ms.flatten
+  ty_app n args := (if args.isEmpty then [(false, n)] else []) ++ args.flatten
+  ty_null := []
+  ty_undefined := []
+  ty_number := []
+  ty_bytes := []
+  ty_contextOf _ := []
+
+/-- The names a type spells (`spelledAlg`). -/
+def Ty.spelledNames (t : Ty) : List (Bool × String) := cata_ty spelledAlg t
+
+/-- The names a row's three columns spell. -/
+def Row.spelledNames (r : Row) : List (Bool × String) :=
+  r.request.spelledNames ++ r.answer.spelledNames ++ r.error.spelledNames
+
 /-- A declaration's local conditions (decisions row 401 (2)), with their reasons. -/
 inductive DeclReason
   /-- The name is an internal handle's spelling (`internalHandleTargets`): one spelling, one
@@ -230,13 +271,25 @@ inductive DeclReason
   | typeVariable
   /-- The body applies a declared name to arguments: a declared name takes none. -/
   | applied
+  /-- A host handle `handle n` at a name the table declares: one spelling, one meaning (decisions
+  row 406 (1)). -/
+  | handleAtName
+  /-- A reference with no argument `app n []` at a name the table does not declare. -/
+  | undeclaredName
 deriving DecidableEq, Repr
+
+/-- The checks on the names a type or a row spells, against the table (decisions row 406 (1)):
+no host handle at a declared name, and no reference with no argument at an undeclared one. -/
+def nameChecks (decls : TyDecls) (names : List (Bool × String)) : List (Bool × DeclReason) :=
+  [(names.all fun s => !s.1 || (decls.body? s.2).isNone, .handleAtName),
+   (names.all fun s => s.1 || (decls.body? s.2).isSome, .undeclaredName)]
 
 /-- A declaration's local checks, in order, against the table it sits in. -/
 def declChecks (decls : TyDecls) (d : String × Ty) : List (Bool × DeclReason) :=
   [(!internalHandleTargets.contains d.1, .internalSpelling),
    (d.2.varsOf.isEmpty, .typeVariable),
-   ((d.2.appliedNames.filter fun n => (decls.body? n).isSome).isEmpty, .applied)]
+   ((d.2.appliedNames.filter fun n => (decls.body? n).isSome).isEmpty, .applied)] ++
+  nameChecks decls d.2.spelledNames
 
 /-- The first name a table declares with two different bodies (decisions row 402 (5)): a
 repeated entry is one declaration, two bodies at one name are two meanings. -/
@@ -264,7 +317,8 @@ def firstDup {α : Type} [DecidableEq α] : List α → Option α
 
 /-- Why a signature is not lawful, located: a row by its position, a declaration by its
 position, a repeated row key or service code, a required key with no carrier; a named type's
-declaration by its position, a name with two bodies, a name the ranking leaves unranked. -/
+declaration by its position, a row that spells a name with two meanings or none, a name with two
+bodies, a name the ranking leaves unranked. -/
 inductive SigRefusal
   | row (index : Nat) (reason : RowReason)
   | duplicateRow (key : String × List RowArg)
@@ -272,12 +326,13 @@ inductive SigRefusal
   | duplicateCode (code : ServiceTypeCode)
   | unservedKey (row : Nat) (key : ServiceKey)
   | decl (index : Nat) (reason : DeclReason)
+  | rowName (index : Nat) (reason : DeclReason)
   | conflictingDecl (name : String)
   | unguardedDecl (name : String)
 deriving DecidableEq, Repr
 
 /-- The first refusal, in the order rows, row keys, declarations, codes, required keys, then the
-named types: each declaration, the names, the ranking. -/
+named types: each declaration, each row's spelled names, the names, the ranking. -/
 def sigRefusal? (app : SigApp) : Option SigRefusal :=
   ((firstIndexed (fun r => firstFailing (rowChecks r)) 0 app.rows).map
       fun found => .row found.1 found.2).or <|
@@ -289,6 +344,8 @@ def sigRefusal? (app : SigApp) : Option SigRefusal :=
       fun found => .unservedKey found.1 found.2).or <|
   ((firstIndexed (fun d => firstFailing (declChecks app.types d)) 0 app.types).map
       fun found => .decl found.1 found.2).or <|
+  ((firstIndexed (fun r => firstFailing (nameChecks app.types r.spelledNames)) 0 app.rows).map
+      fun found => .rowName found.1 found.2).or <|
   ((firstConflict app.types).map .conflictingDecl).or <|
   app.types.unguardedAt?.map .unguardedDecl
 

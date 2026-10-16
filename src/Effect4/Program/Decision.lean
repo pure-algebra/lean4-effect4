@@ -91,7 +91,7 @@ def optionTyIn (decls : TyDecls) : Ty → Option Ty := UnionRule.liftIn decls Me
 theorem Member.option_ref {decls : TyDecls} :
     ∀ m x, decls.unfold? m = some x → Member.option m = none := by
   intro m x h
-  obtain ⟨n, rfl | ⟨args, rfl⟩⟩ := TyDecls.ref_of_unfold? h <;> rfl
+  obtain ⟨n, args, rfl⟩ := TyDecls.ref_of_unfold? h; rfl
 
 /-- **Where the option rule answers, the option rule under a table answers the same.** -/
 theorem optionTyIn_of_optionTy {decls : TyDecls} {t a : Ty} (h : optionTy t = some a) :
@@ -165,7 +165,7 @@ def armsIn (decls : TyDecls) (d : Decision) (t : Ty) : Option (List Ty × List T
 /-- The tag of a record member is no declared reference's. -/
 theorem _root_.Effect4.Program.Record.tagOf_ref {decls : TyDecls} {m : Ty} {x : String × Ty}
     (h : decls.unfold? m = some x) : Record.tagOf m = none := by
-  obtain ⟨n, rfl | ⟨args, rfl⟩⟩ := TyDecls.ref_of_unfold? h <;> rfl
+  obtain ⟨n, args, rfl⟩ := TyDecls.ref_of_unfold? h; rfl
 
 /-- **Where the tag dispatch answers, the tag dispatch under a table answers the same**: every
 union member carries a tag, so none is a declared reference. -/

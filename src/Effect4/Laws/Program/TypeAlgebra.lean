@@ -396,7 +396,7 @@ theorem hasTy_normalize_app (n : String) (ts : List Ty) (v : Val) (allocated : L
     Val.hasTy v (Ty.normalize (.app n ts)) allocated = Val.hasTy v (.app n ts) allocated := by
   cases ts with
   | nil => rfl
-  | cons t ts => rw [Ty.normalize_app_of_ne n _ (List.cons_ne_nil _ _)]; rfl
+  | cons t ts => rw [Ty.normalize_app n _]; rfl
 
 /-- Normalization preserves value typing at every type. Proved by structural induction,
 dispatching each case to its named congruence or normalisation fact with no catch-all. -/
@@ -709,7 +709,7 @@ theorem normal_args {t : Ty} (hn : Ty.Normal t) (hm : Ty.isMember t = true) :
     simp only [Ty.args, List.map_map, List.mem_map] at hx
     obtain ⟨t, ht, rfl⟩ := hx
     exact hts t ht
-  | app hts _ =>
+  | app hts =>
     intro x hx
     simp only [Ty.args, List.map_map, List.mem_map] at hx
     obtain ⟨p, hp, rfl⟩ := hx
@@ -1084,7 +1084,7 @@ theorem sub_normalize_app (_htrans : ∀ a b c, Ty.sub a b = true → Ty.sub b c
   match ts, us, hlen with
   | [], [], _ => exact Ty.sub_refl _
   | t :: ts', u :: us', hlen =>
-    rw [Ty.normalize_app_of_ne n _ (List.cons_ne_nil _ _), Ty.normalize_app_of_ne n _ (List.cons_ne_nil _ _),
+    rw [Ty.normalize_app n _, Ty.normalize_app n _,
       Ty.sub_args_app _ _ _ _ (by simp only [Ty.sameHead, Ty.normalizeItems_eq_map, List.length_map,
         hlen, decide_true, Bool.and_self])]
     rw [argsBelow_app_iff, Ty.normalizeItems_eq_map, Ty.normalizeItems_eq_map, List.zipIdx_map,

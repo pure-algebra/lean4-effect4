@@ -10,9 +10,9 @@ The readers are `Program/AdmitIn.lean`'s; the plan is
 
 - **Conservativity** (`wiring_admission_conservative`): at the empty table each reader is its
   original, by definition, so every law of `Laws/Program/Admit.lean` holds there unchanged.
-- **No allocation at a declared name** (`externalValueIn_internalFree`): an accepted conversion
-  keeps the value and the allocation table, or mints exactly the next external handle at a
-  handle column whose name the table does not declare.
+- **Data or one allocation** (`externalValueIn_internalFree`): an accepted conversion keeps the
+  value and the allocation table, or mints exactly the next external handle at a handle column.
+  A handle column names no declared type: the signature refuses it (decisions row 406 (1)).
 - **An admitted success is a member** (`external_answer_typedIn`): the converted value is a member
   of the parked row's answer column under the table, in the resulting allocation table.
 - **An admitted failure fits** (`external_error_typedIn`): each typed failure's value is a member
@@ -29,7 +29,7 @@ Placement of the claims (`AGENTS.md`, five points), shared by every theorem belo
    (`external_answer_typedIn`, preservation) and `wiring-no-allocation-at-name`
    (`externalValueIn_internalFree`, safety).
 3. Reach: one decision at one parked call; `MemberIn` at the prepared allocation table. Decisions
-   rows 191, 400 and 401 (3) bound it.
+   rows 191, 400 and 406 (1) bound it.
 4. Does not establish: `AnswerOk` or `Fits`; anything of the machine's preparation, which still
    reads the row's column with no table (`prepareExternalAnswer`); any session law. No caller
    reads these readers yet.
@@ -45,12 +45,11 @@ open Effect4 Effect4.Machine
 /-! ## At the empty table each reader is its original -/
 
 /-- **Conservativity** (the claim `wiring-admission-conservative`): at the empty table the
-allocation classifier, the conversion, the error check, the answer check, the decision check,
+conversion, the error check, the answer check, the decision check,
 the recorded reply, the instance check and the row protocol's check are their originals, by
 definition. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 theorem wiring_admission_conservative :
-    (∀ t : Ty, allocatesIn [] t = allocates t) ∧
     (∀ (ty : Ty) (allocated : List String) (v : Val),
       externalValueIn [] ty allocated v = externalValue ty allocated v) ∧
     (∀ ty : Ty, errAdmitsIn [] ty = errAdmits ty) ∧
@@ -70,34 +69,14 @@ theorem wiring_admission_conservative :
     (∀ (table : RowTable) (i : Nat) (answer : Completion Val Err Defect FiberId Ann)
         (allocated : List String),
       externalAdmitsIn [] table i answer allocated = externalAdmits table i answer allocated) :=
-  ⟨fun _ => rfl, fun _ _ _ => rfl, fun _ => rfl, fun _ _ _ _ _ => rfl, fun _ _ _ => rfl,
+  ⟨fun _ _ _ => rfl, fun _ => rfl, fun _ _ _ _ _ => rfl, fun _ _ _ => rfl,
     fun _ _ _ => rfl, fun _ _ _ _ _ => rfl, fun _ _ _ _ => rfl, fun _ _ _ _ => rfl⟩
 
-/-! ## The allocation classifier and the conversion -/
+/-! ## The conversion -/
 
-/-- A handle column that allocates under a table names no declared type. -/
-theorem allocatesIn_handle {decls : TyDecls} {n : String}
-    (h : allocatesIn decls (.handle n) = true) : decls.body? n = none := by
-  cases decls with
-  | nil => rfl
-  | cons d ds =>
-    simp only [allocatesIn, allocates, Ty.refName?, Option.bind_some, Bool.true_and,
-      Option.isNone_iff_eq_none] at h
-    exact h
-
-/-- A name the table does not declare unfolds to nothing. -/
-theorem TyDecls.unfold?_handle_none {decls : TyDecls} {n : String} (h : decls.body? n = none) :
-    decls.unfold? (.handle n) = none := by
-  simp only [TyDecls.unfold?, Ty.refName?, Option.bind_some, h, Option.map_none]
-
-/-- A body that `body?` does not find is `none`. -/
-theorem TyDecls.body?_none_of_not_isSome {decls : TyDecls} {n : String}
-    (h : ¬ (decls.body? n).isSome = true) : decls.body? n = none := by
-  cases hb : decls.body? n with
-  | none => rfl
-  | some _ =>
-    rw [hb] at h
-    exact absurd rfl h
+/-- A host handle is no reference, so no table unfolds it (decisions row 406 (1)). -/
+theorem TyDecls.unfold?_handle (decls : TyDecls) (n : String) : decls.unfold? (.handle n) = none :=
+  rfl
 
 /-- A data conversion keeps the value and the allocation table, and the value is a member that
 holds no handle. -/
@@ -113,16 +92,16 @@ theorem dataValueIn_some {decls : TyDecls} {ty : Ty} {allocated allocated' : Lis
     exact ⟨rfl, rfl, List.isEmpty_iff.mp hf, hasTyIn_iff.mp hm⟩
   · cases h
 
-/-- **No allocation at a declared name** (the claim `wiring-no-allocation-at-name`, decisions row
-401 (3)): an accepted conversion keeps a handle-free value and the allocation table, or mints
-exactly the external handle at the next index of a handle column whose name the table does not
-declare. -/
+/-- **Data or one allocation** (the claim `wiring-no-allocation-at-name`, decisions row 406 (1)):
+an accepted conversion keeps a handle-free value and the allocation table, or mints exactly the
+external handle at the next index of a handle column. A declared name's column is `app n []`, so
+its value is data; the signature refuses a handle at a declared name. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 theorem externalValueIn_internalFree {decls : TyDecls} {ty : Ty}
     {allocated allocated' : List String} {value result : Val}
     (h : externalValueIn decls ty allocated value = some (allocated', result)) :
     (allocated' = allocated ∧ result = value ∧ result.handles = []) ∨
-      ∃ target, ty = .handle target ∧ decls.body? target = none ∧
+      ∃ target, ty = .handle target ∧
         externalHandleTarget target = true ∧ value = .nat allocated.length ∧
         allocated' = allocated ++ [target] ∧ result = Value.external allocated.length := by
   cases decls with
@@ -130,28 +109,24 @@ theorem externalValueIn_internalFree {decls : TyDecls} {ty : Ty}
     rcases externalValue_internalFree ty allocated allocated' value result h with
       hd | ⟨target, h1, h2, h3, h4, h5⟩
     · exact Or.inl hd
-    · exact Or.inr ⟨target, h1, rfl, h2, h3, h4, h5⟩
+    · exact Or.inr ⟨target, h1, h2, h3, h4, h5⟩
   | cons d ds =>
     simp only [externalValueIn] at h
     split at h
     · rename_i target index
       split at h
-      · obtain ⟨h1, h2, h3, _⟩ := dataValueIn_some h
-        exact Or.inl ⟨h1, h2, h3⟩
-      · rename_i hdecl
-        split at h
-        · rename_i ha
-          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-          obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp ha
-          have hi : index = allocated.length := beq_iff_eq.mp hi
-          subst hi
-          exact Or.inr ⟨target, rfl, TyDecls.body?_none_of_not_isSome hdecl, ht, rfl, rfl, rfl⟩
-        · cases h
+      · rename_i ha
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+        obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp ha
+        have hi : index = allocated.length := beq_iff_eq.mp hi
+        subst hi
+        exact Or.inr ⟨target, rfl, ht, rfl, rfl, rfl⟩
+      · cases h
     · obtain ⟨h1, h2, h3, _⟩ := dataValueIn_some h
       exact Or.inl ⟨h1, h2, h3⟩
 
 /-- **A conversion under a table returns a member** of the column under the table, in the
-resulting allocation table. A minted handle is a member of its undeclared handle column, as
+resulting allocation table. A minted handle is a member of its handle column, as
 `externalValue_typed` shows for the original. -/
 theorem externalValueIn_typed {decls : TyDecls} {ty : Ty} {allocated allocated' : List String}
     {value result : Val} (h : externalValueIn decls ty allocated value = some (allocated', result)) :
@@ -163,20 +138,16 @@ theorem externalValueIn_typed {decls : TyDecls} {ty : Ty} {allocated allocated' 
     split at h
     · rename_i target index
       split at h
-      · exact (dataValueIn_some h).2.2.2
-      · rename_i hdecl
-        split at h
-        · rename_i ha
-          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-          have hv : externalValue (.handle target) allocated (.nat index) =
-              some (allocated ++ [target], Value.external index) := by
-            show (if externalHandleTarget target && index == allocated.length then
-              some (allocated ++ [target], Value.external index) else none) = _
-            rw [if_pos ha]
-          exact memberIn_of_hasTy
-            (TyDecls.unfold?_handle_none (TyDecls.body?_none_of_not_isSome hdecl)) rfl
-            (externalValue_typed _ _ _ _ _ hv)
-        · cases h
+      · rename_i ha
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+        have hv : externalValue (.handle target) allocated (.nat index) =
+            some (allocated ++ [target], Value.external index) := by
+          show (if externalHandleTarget target && index == allocated.length then
+            some (allocated ++ [target], Value.external index) else none) = _
+          rw [if_pos ha]
+        exact memberIn_of_hasTy (TyDecls.unfold?_handle _ target) rfl
+          (externalValue_typed _ _ _ _ _ hv)
+      · cases h
     · exact (dataValueIn_some h).2.2.2
 
 /-! ## The decision check -/

@@ -6,8 +6,9 @@ import Effect4.Program.TyExpand
 # Program.TyDecls — the application's type declarations, and recursive types
 
 A **declaration table** is a list of named type bodies, monomorphic (decisions rows 124, 158
-and 400). A body refers to a declaration, itself included, by a nominal reference: `app n args`
-or its normal form `handle n` (`Ty.normalize_app_nil`). No `Ty` constructor is added. The table
+and 400). A body refers to a declaration, itself included, by a nominal reference `app n args`,
+which normalization keeps; a host handle `handle n` is no reference (decisions row 406 (1)). No
+`Ty` constructor is added. The table
 is a system of type equations `Xᵢ = Tᵢ(X₁ … Xₖ)`, read iso-recursively: a declared name unfolds
 to its body only where membership asks it, and the order compares names, never bodies.
 
@@ -149,8 +150,8 @@ def causeObligations (error : Ty) : List (Reason Err Defect FiberId Ann) → Opt
 /-- **One step of membership** (`Val.hasTy`'s arms, read one level): the value's shape against
 the type's head, and the questions it leaves, each child value with the type it must fit.
 `none` where the shape refuses, `some []` at a leaf that fits. A union has no head: the checker
-reads it by its members. A reference is the handle arm here; the checker unfolds a declared one
-before it asks this step. -/
+reads it by its members. A reference `app n args` is a leaf here, read as a handle at its name;
+the checker unfolds a declared one before it asks this step. -/
 def Val.obligations (v : Val) (ty : Ty) (allocated : List String) : Option (List (Val × Ty)) :=
   match ty with
   | .option inner =>
@@ -478,8 +479,6 @@ namespace TyDecls
 shown to have a member. -/
 def inhabitedWith (decls : TyDecls) (known : List String) : TyAlgebra (fun _ => Bool) :=
   { inhabitedAlg with
-    ty_handle := fun name =>
-      if (decls.body? name).isSome then known.contains name else inhabitedAlg.ty_handle name
     ty_app := fun name args =>
       if (decls.body? name).isSome then known.contains name else inhabitedAlg.ty_app name args }
 

@@ -32,14 +32,14 @@ def todoDecls : TyDecls := [("Todo", todoBody)]
 /-- A recursive tree: `Tree = {_tag: "leaf"} | {_tag: "node", children: Tree[], label: string}`. -/
 def treeDecls : TyDecls :=
   [("Tree", .union (.record [("_tag", false, .lit "leaf")])
-    (.record [("_tag", false, .lit "node"), ("children", false, .list (.handle "Tree")),
+    (.record [("_tag", false, .lit "node"), ("children", false, .list (.app "Tree" [])),
       ("label", false, .string)]))]
 
 /-- A declared name for a natural: `Id = number`. -/
 def idDecls : TyDecls := [("Id", .nat)]
 
 /-- An unguarded table: `A = A | number`. -/
-def loopDecls : TyDecls := [("A", .union (.handle "A") .nat)]
+def loopDecls : TyDecls := [("A", .union (.app "A" []) .nat)]
 
 /-- A to-do value. -/
 def todo : Val := (Record.build ["done", "id", "title"] [.bool false, .nat 1, .str "milk"]).getD .unit
@@ -56,33 +56,33 @@ def badNode : Val :=
 /-! ## The checker's readers -/
 
 -- finite evaluation: a field read through a declared name answers the field's declared type.
-#guard Record.fieldTypeIn todoDecls false (.handle "Todo") "title" == some .string
--- control: the table-free read refuses it, since a declared name reads as a handle there.
-#guard Record.fieldType false (.handle "Todo") "title" == none
+#guard Record.fieldTypeIn todoDecls false (.app "Todo" []) "title" == some .string
+-- control: the table-free read refuses it, since a declared name is opaque there.
+#guard Record.fieldType false (.app "Todo" []) "title" == none
 -- finite evaluation: a field that one member lacks is refused at the union, as the lifted rule
 -- refuses it: the leaf has no children.
-#guard Record.fieldTypeIn treeDecls false (.handle "Tree") "children" == none
+#guard Record.fieldTypeIn treeDecls false (.app "Tree" []) "children" == none
 -- finite evaluation: the tag dispatch on a recursive type, and the node arm's children, which
 -- keep the declared name inside.
-#guard ((Record.tagArmsIn treeDecls "node" (.handle "Tree")).bind fun arms =>
-  Record.fieldTypeIn treeDecls false arms.1 "children") == some (.list (.handle "Tree"))
+#guard ((Record.tagArmsIn treeDecls "node" (.app "Tree" [])).bind fun arms =>
+  Record.fieldTypeIn treeDecls false arms.1 "children") == some (.list (.app "Tree" []))
 -- control: the table-free dispatch refuses the declared name.
-#guard Record.tagArms "node" (.handle "Tree") == none
+#guard Record.tagArms "node" (.app "Tree" []) == none
 -- finite evaluation: an unguarded name adds no member when its unfolding returns to it.
-#guard Ty.membersIn loopDecls (.handle "A") == [.nat]
+#guard Ty.membersIn loopDecls (.app "A" []) == [.nat]
 
 /-! ## The fold of a written field -/
 
 -- finite evaluation: a field written at `Todo` takes a member of the body.
-#guard (Record.checkIn todoDecls [("v", false, .handle "Todo")] ["v"] [todoBody]).isSome
+#guard (Record.checkIn todoDecls [("v", false, .app "Todo" [])] ["v"] [todoBody]).isSome
 -- control: the order alone refuses it: the name is nominal.
-#guard (Record.check [("v", false, .handle "Todo")] ["v"] [todoBody]).isNone
+#guard (Record.check [("v", false, .app "Todo" [])] ["v"] [todoBody]).isNone
 -- control: a record that lacks a field is not folded.
-#guard (Record.checkIn todoDecls [("v", false, .handle "Todo")] ["v"]
+#guard (Record.checkIn todoDecls [("v", false, .app "Todo" [])] ["v"]
   [.record [("id", false, .nat)]]).isNone
 -- finite evaluation: a node folds into `Tree` when its children are already trees.
-#guard (Record.checkIn treeDecls [("v", false, .handle "Tree")] ["v"]
-  [.record [("_tag", false, .lit "node"), ("children", false, .list (.handle "Tree")),
+#guard (Record.checkIn treeDecls [("v", false, .app "Tree" [])] ["v"]
+  [.record [("_tag", false, .lit "node"), ("children", false, .list (.app "Tree" [])),
     ("label", false, .string)]]).isSome
 
 /-! ## The term typer under the application's table (`SigApp.signatureIn`) -/
@@ -92,60 +92,61 @@ def app : SigApp := { types := todoDecls ++ treeDecls }
 
 /-- A record whose one field is written at `Todo`, holding the term `value`. -/
 def asTodo (value : Term) : Term :=
-  .record [("v", false, .handle "Todo")] ["v"] (Authoring.termsOfList [value])
+  .record [("v", false, .app "Todo" [])] ["v"] (Authoring.termsOfList [value])
 
 -- finite evaluation: the typer reads a field through a declared name.
-#guard termTy app.signatureIn [.handle "Todo"] (.field .required (.var 0) "title") == some .string
+#guard termTy app.signatureIn [.app "Todo" []] (.field .required (.var 0) "title") == some .string
 -- control: the table-free signature refuses the same read.
-#guard termTy app.signature [.handle "Todo"] (.field .required (.var 0) "title") == none
+#guard termTy app.signature [.app "Todo" []] (.field .required (.var 0) "title") == none
 -- finite evaluation: a field written at `Todo` folds a value of its body, and reading it back
 -- gives the name.
 #guard termTy app.signatureIn [todoBody] (.field .required (asTodo (.var 0)) "v") ==
-  some (.handle "Todo")
+  some (.app "Todo" [])
 -- control: the table-free signature refuses the fold: the name is nominal there.
 #guard termTy app.signature [todoBody] (.field .required (asTodo (.var 0)) "v") == none
 -- finite evaluation: the refusal of a field that `Todo` lacks is located at the record.
-#guard (TermRefusal.diagnose app.signatureIn [.handle "Todo"]
+#guard (TermRefusal.diagnose app.signatureIn [.app "Todo" []]
   (.field .required (.var 0) "owner")).isSome
 
 /-! ## The select rule's arms under the table (`Decision.armsIn`) -/
 
 -- finite evaluation: a record-tag decision on a recursive type binds the node arm, whose
 -- children keep the declared name.
-#guard ((Decision.armsIn treeDecls (.recordTag "node") (.handle "Tree")).bind fun arms =>
+#guard ((Decision.armsIn treeDecls (.recordTag "node") (.app "Tree" [])).bind fun arms =>
   arms.1.head?.bind fun node => Record.fieldTypeIn treeDecls false node "children") ==
-  some (.list (.handle "Tree"))
+  some (.list (.app "Tree" []))
 -- control: the table-free decision refuses the declared name.
-#guard Decision.arms (.recordTag "node") (.handle "Tree") == none
+#guard Decision.arms (.recordTag "node") (.app "Tree" []) == none
 -- finite evaluation: an option decision reads a declared name for an option.
-#guard Decision.armsIn [("Maybe", .option .nat)] .option (.handle "Maybe") == some ([], [.nat])
+#guard Decision.armsIn [("Maybe", .option .nat)] .option (.app "Maybe" []) == some ([], [.nat])
 -- control: the table-free decision refuses it.
-#guard Decision.arms .option (.handle "Maybe") == none
+#guard Decision.arms .option (.app "Maybe" []) == none
 
 /-! ## Reply admission at a declared column -/
 
 -- finite evaluation: a record answer at a declared column is data, kept as it is.
-#guard externalValueIn todoDecls (.handle "Todo") [] todo == some ([], todo)
+#guard externalValueIn todoDecls (.app "Todo" []) [] todo == some ([], todo)
 -- control: the table-free conversion refuses it.
-#guard externalValue (.handle "Todo") [] todo == none
+#guard externalValue (.app "Todo" []) [] todo == none
 -- finite evaluation: a tree answer is admitted, and a node with a bad child is refused.
-#guard externalValueIn treeDecls (.handle "Tree") [] node == some ([], node)
-#guard externalValueIn treeDecls (.handle "Tree") [] badNode == none
+#guard externalValueIn treeDecls (.app "Tree" []) [] node == some ([], node)
+#guard externalValueIn treeDecls (.app "Tree" []) [] badNode == none
 -- finite evaluation: a natural at a declared name for `nat` is data, not an allocation request.
-#guard externalValueIn idDecls (.handle "Id") [] (.nat 0) == some ([], .nat 0)
--- control: the table-free conversion mints a host handle named `Id` for it (decisions row 401 (3)).
-#guard externalValue (.handle "Id") [] (.nat 0) == some (["Id"], Value.external 0)
--- finite evaluation: at a handle the table does not declare, a natural is still an allocation.
+#guard externalValueIn idDecls (.app "Id" []) [] (.nat 0) == some ([], .nat 0)
+-- finite evaluation: the machine's own conversion mints no handle at a declared column, with no
+-- table: a declared name is `app n []`, never `handle n` (decisions row 406 (1)).
+#guard externalValue (.app "Id" []) [] (.nat 0) == none
+-- finite evaluation: at a host handle, a natural is still an allocation, under any table.
 #guard externalValueIn idDecls (.handle "Conn") [] (.nat 0) == some (["Conn"], Value.external 0)
--- finite evaluation: the classifier allocates only at the undeclared name.
-#guard (allocatesIn idDecls (.handle "Id"), allocatesIn idDecls (.handle "Conn")) == (false, true)
+-- finite evaluation: the machine's allocation test reads the spelling alone.
+#guard (allocates (.app "Id" []), allocates (.handle "Conn")) == (false, true)
 
 /-! ## A module built under its named types (`Api.Author.buildIn`) -/
 
 open Effect4.Program.Authoring
 
 eff_rows Repo error .never cite "the declared-types battery" where
-  get(.nat) : .handle "Todo"
+  get(.nat) : .app "Todo" []
 
 /-- A program that reads a declared record's field from a host row's answer. -/
 def readTitle : Src NativeOp :=
@@ -158,7 +159,7 @@ def titleModule : Module NativeOp := { rows := Repo.rows, types := todoDecls, ma
 #guard (match Api.Author.buildIn titleModule with
   | .ok b => b.ty.answer == .string
   | .error _ => false)
--- control: the table-free build refuses it, since the field read meets a handle there.
+-- control: the table-free build refuses it, since the field read meets an opaque name there.
 #guard (match Api.Author.build titleModule with
   | .ok _ => false
   | .error _ => true)

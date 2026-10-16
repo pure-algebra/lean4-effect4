@@ -2170,7 +2170,7 @@ theorem fits_normalize (w : World) : ∀ (t : Ty) (v : Val), Fits w v t.normaliz
     cases ts with
     | nil => exact Iff.rfl
     | cons t ts =>
-      rw [Ty.normalize_app_of_ne n _ (List.cons_ne_nil _ _)]
+      rw [Ty.normalize_app n _]
       exact Iff.rfl
 
 /-- **Membership is closed under the checker's order.** -/

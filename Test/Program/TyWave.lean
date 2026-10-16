@@ -43,10 +43,11 @@ open Effect4.Program
 #guard Ty.findRepeatedField [] (.record [("a", false, .nat), ("b", false, .string)]) = none
 #guard Ty.mapKeyOk .string && !Ty.mapKeyOk .nat && !Ty.mapKeyOk (.lit "a") &&
   !Ty.mapKeyOk (.union (.lit "a") (.lit "b"))
--- a pair tuple is a product; other arities stay tuples; `app t []` is `handle t` (rows 158, 159)
+-- a pair tuple is a product; other arities stay tuples (row 159); a reference with no argument
+-- stays a reference, not a host handle (row 406 (1))
 #guard Ty.normalize (.tuple [.nat, .string]) = .prod .nat .string
 #guard Ty.normalize (.tuple [.union .string .nat, .nat, .bool]) = .tuple [.union .nat .string, .nat, .bool]
-#guard Ty.normalize (.app "Stream.Stream" []) = .handle "Stream.Stream"
+#guard Ty.normalize (.app "Stream.Stream" []) = .app "Stream.Stream" []
 #guard Ty.sub (.tuple [.lit "a", .nat, .bool]) (.tuple [.string, .nat, .bool])
 #guard !Ty.sub (.tuple [.nat, .nat, .nat]) (.tuple [.nat, .nat])
 -- a reference reads each argument at its declaration's variance: `Fiber<out A, out E>` is
@@ -100,7 +101,7 @@ open Effect4.Schema in
 open Effect4.Schema in
 #guard Bridge.ofSchema (Ty.schema (.tuple [.nat, .string])) == some (.prod .nat .string)
 open Effect4.Schema in
-#guard Bridge.ofSchema (Ty.schema (.app "effect4/unlowered/record" [])) ==
+#guard Bridge.ofSchema (Ty.schema (.handle "effect4/unlowered/record")) ==
   some (.handle "effect4/unlowered/record")
 open Effect4.Schema in
 #guard Bridge.ofSchema (Ty.schema (.var 0)) == none

@@ -6,7 +6,8 @@ public import Effect4.Program.Ty
 # Program.TyExpand — the declaration table, and a type's expansion under a table of expansions
 
 The **declaration table** (`TyDecls`) is a list of named type bodies (decisions rows 124, 158, 400
-and 401). A body refers to a declared name by a nominal reference, `handle n` or `app n args`.
+and 401). A body refers to a declared name by a nominal reference, `app n args`; a host handle
+`handle n` is never a declared name (decisions row 406 (1)).
 The table's checker, its fixed point and its laws are `Program/TyDecls.lean` and
 `Laws/Program/TyDecls.lean`. This module holds what a Lean module may import: the table, its
 lookup, and expansion.
@@ -29,8 +30,8 @@ guarded table, membership at a type is then membership at its expansion (`member
 namespace Effect4.Program
 
 /-- **The declaration table** (decisions rows 124, 158 and 400): each entry a name and its body.
-A body refers to a declaration by `app n args` or `handle n`. A name's first entry is its
-declaration; formation refuses a repeated name. -/
+A body refers to a declaration by `app n args`. A name's first entry is its declaration;
+formation refuses a repeated name. -/
 abbrev TyDecls := List (String × Ty)
 
 namespace TyDecls
@@ -56,10 +57,9 @@ theorem mem_of_body? {decls : TyDecls} {name : String} {body : Ty}
 
 end TyDecls
 
-/-- The name of a nominal reference: `handle n`, or `app n args` at any arguments. A declared
-name is read at both spellings, since `app n []` normalizes to `handle n`. -/
+/-- The name of a nominal reference `app n args`, at any arguments. A host handle `handle n` is
+no reference: the signature refuses a handle at a declared name (decisions row 406 (1)). -/
 def Ty.refName? : Ty → Option String
-  | .handle name => some name
   | .app name _ => some name
   | _ => none
 
@@ -140,7 +140,7 @@ mutual
 by shape, replaced by the name's entry in `exps`. A leaf stays as it is: the checker reads it as
 it is and unfolds no name inside it. -/
 def Ty.expand (exps : TyDecls) : Ty → Ty
-  | .handle n => (exps.body? n).getD (.handle n)
+  | .handle n => .handle n
   | .app n args => (exps.body? n).getD (.app n args)
   | .option t => .option (Ty.expand exps t)
   | .list t => .list (Ty.expand exps t)
@@ -217,8 +217,8 @@ theorem TyDecls.Expands.right {exps a b : TyDecls} (h : TyDecls.Expands exps (a 
 /-- **A declared name expands to its body's expansion** under a solution that holds its entry. -/
 theorem TyDecls.Expands.named {exps : TyDecls} {name : String} {body : Ty}
     (h : TyDecls.Expands exps [(name, body)]) :
-    Ty.expand exps (.handle name) = Ty.expand exps body := by
-  show (exps.body? name).getD (.handle name) = _
+    Ty.expand exps (.app name []) = Ty.expand exps body := by
+  show (exps.body? name).getD (.app name []) = _
   rw [h (name, body) List.mem_cons_self]
   rfl
 

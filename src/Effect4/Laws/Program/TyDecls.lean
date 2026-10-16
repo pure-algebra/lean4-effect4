@@ -397,10 +397,6 @@ reference to a declared name the node admits what `o` admits at the name; every 
 `Val.hasTy`'s own arm (`Val.hasTy.alg`). -/
 def declAlg (decls : TyDecls) (o : String → Adm) : TyAlgebra AdmCarrier :=
   { Val.hasTy.alg with
-    ty_handle := fun name =>
-      match decls.body? name with
-      | some _ => (.handle name, o name)
-      | none => Val.hasTy.alg.ty_handle name
     ty_app := fun name args =>
       match decls.body? name with
       | some _ => (.app name (args.map Prod.fst), o name)
@@ -456,13 +452,7 @@ theorem cata_declAlg_step (decls : TyDecls) (o : String → Adm) {m : Ty} (hm : 
   cases m
   case never => cases hm
   case union => cases hm
-  case handle name =>
-    show ((declAlg decls o).ty_handle name).2 v allocated = _
-    unfold declAlg TyDecls.unfold?
-    simp only [Ty.refName?, Option.bind_some]
-    cases decls.body? name with
-    | some b => rfl
-    | none => exact (obligationsAll_leaf (t := .handle name) _ rfl).symm
+  case handle name => exact (obligationsAll_leaf (t := .handle name) _ rfl).symm
   case app name args =>
     show ((declAlg decls o).ty_app name _).2 v allocated = _
     unfold declAlg TyDecls.unfold?
@@ -875,16 +865,7 @@ theorem inhabitedWith_of_step {decls : TyDecls} {known : List String} {v : Val} 
   cases t
   case never => cases hps
   case union => cases hps
-  case handle name =>
-    unfold unfold? at hu
-    simp only [Ty.refName?, Option.bind_some] at hu
-    refine hleaf ?_ rfl hps
-    show (if (decls.body? name).isSome then _ else _) = _
-    cases hb : decls.body? name with
-    | some b =>
-      rw [hb] at hu
-      cases hu
-    | none => rfl
+  case handle name => exact hleaf rfl rfl hps
   case app name args =>
     unfold unfold? at hu
     simp only [Ty.refName?, Option.bind_some] at hu
@@ -977,11 +958,6 @@ theorem inhabited_of_memberIn {decls : TyDecls} {allocated : List String} {v : V
         cases he
         rfl
     cases t
-    case handle n =>
-      cases href
-      show (if (decls.body? name).isSome then _ else _) = true
-      rw [hb, Option.isSome_some, if_pos rfl]
-      exact hname
     case app n args =>
       cases href
       show (if (decls.body? name).isSome then _ else _) = true
@@ -1278,30 +1254,8 @@ theorem exists_memberIn_fresh {decls : TyDecls} {known : List String}
   | causeOf _ _ =>
     exact ⟨Val.exitErr ⟨[]⟩, allocated, fun _ _ h => h, .step rfl rfl fun _ hp => nomatch hp⟩
   | handle target =>
-    cases hb : decls.body? target with
-    | some body =>
-      have hc : known.contains target = true := by
-        have h' : (if (decls.body? target).isSome then known.contains target
-            else inhabitedAlg.ty_handle target) = true := h
-        rw [hb, Option.isSome_some, if_pos rfl] at h'
-        exact h'
-      have hu : decls.unfold? (.handle target) = some (target, body) := by
-        show (decls.body? target).map (target, ·) = _
-        rw [hb]
-        rfl
-      exact exists_memberIn_ref hk hu hc allocated
-    | none =>
-      have hr : retiredHandleTargets.contains target = false := by
-        have h' : (if (decls.body? target).isSome then known.contains target
-            else inhabitedAlg.ty_handle target) = true := h
-        rw [hb, Option.isSome_none] at h'
-        exact Typed.not_retired_of_inhabited h'
-      have hu : decls.unfold? (.handle target) = none := by
-        show (decls.body? target).map (target, ·) = _
-        rw [hb]
-        rfl
-      obtain ⟨v, al', e, hv⟩ := exists_hasTy_handle_fresh hr allocated
-      exact ⟨v, al', e, memberIn_of_hasTy hu rfl hv⟩
+    obtain ⟨v, al', e, hv⟩ := exists_hasTy_handle_fresh (Typed.not_retired_of_inhabited h) allocated
+    exact ⟨v, al', e, memberIn_of_hasTy rfl rfl hv⟩
   | app name args _ =>
     cases hb : decls.body? name with
     | some body =>
@@ -1566,21 +1520,8 @@ theorem cata_declAlg_record (decls : TyDecls) (o : String → Adm) (fs : List (S
     rw [Ty.canon, hcanon, ← Ty.canon]
   | none => rfl
 
-/-- The fold at a reference: the oracle at a declared name, the handle arm at any other. -/
-theorem cata_declAlg_handle (decls : TyDecls) (o : String → Adm) (name : String) (v : Val)
-    (allocated : List String) :
-    (cata_ty (declAlg decls o) (.handle name)).2 v allocated =
-      match decls.body? name with
-      | some _ => o name v allocated
-      | none => Val.hasTy v (.handle name) allocated := by
-  show ((declAlg decls o).ty_handle name).2 v allocated = _
-  unfold declAlg
-  dsimp only
-  cases decls.body? name with
-  | some _ => rfl
-  | none => exact (Val.hasTy.eq_cata v (.handle name) allocated).symm
-
-/-- The fold at a reference with arguments reads its name alone. -/
+/-- The fold at a reference reads its name alone: the oracle at a declared name, the handle arm at
+any other. -/
 theorem cata_declAlg_app (decls : TyDecls) (o : String → Adm) (name : String) (args : List Ty)
     (v : Val) (allocated : List String) :
     (cata_ty (declAlg decls o) (.app name args)).2 v allocated =
@@ -1597,8 +1538,7 @@ theorem cata_declAlg_app (decls : TyDecls) (o : String → Adm) (name : String) 
 /-- **The fold under any oracle is invariant under normalization.** Placement: concept
 `store-typing`, R3, the step of the claim `recursive-types-normalize`. Route: `hasTy_normalize`'s
 induction, arm by arm, over the fold. `declAlg`'s arms are `Val.hasTy.alg`'s except at a
-reference, which reads its name alone at both spellings (`cata_declAlg_handle`,
-`cata_declAlg_app`). A union's normal form keeps a member above each one it drops
+reference, which reads its name alone (`cata_declAlg_app`). A union's normal form keeps a member above each one it drops
 (`cata_declAlg_normalizeRow`), and the congruence arms are `AdmitsNormalize`'s
 (`Val.hasTy_admitsNormalize`). At the empty table it is `hasTy_normalize` (`declAlg_nil`).
 Consumer: `memberIn_normalize`. -/
@@ -1691,17 +1631,11 @@ theorem cata_declAlg_normalize (decls : TyDecls) (o : String → Adm) (t : Ty) (
       rw [← hfun]
       rfl
     · rfl
-  | app name args _ =>
-    cases args with
-    | nil =>
-      show (cata_ty (declAlg decls o) (.handle name)).2 v allocated = _
-      rw [cata_declAlg_handle, cata_declAlg_app]
-    | cons t ts =>
-      rw [Ty.normalize_app_of_ne name _ (List.cons_ne_nil _ _), cata_declAlg_app, cata_declAlg_app]
+  | app name args _ => rw [Ty.normalize_app name _, cata_declAlg_app, cata_declAlg_app]
 
 /-- **Membership under the table is invariant under normalization** (claim
 `recursive-types-normalize`). It is what the checker's order needs: `Ty.subN` compares normal
-forms, and `app n []` normalizes to `handle n`, which the table reads at the same declaration.
+forms, and a reference keeps its name in its normal form (decisions row 406 (1)).
 Proved modulo its part `cata_declAlg_normalize`. Consumer: `Ty.subN` under a table, and the
 world's `fits_normalize` once the table enters the world. It establishes nothing of `Fits`. -/
 @[semantics "store-typing" (requirement := R3)]
