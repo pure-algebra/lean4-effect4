@@ -133,7 +133,7 @@
    "key": [22, 0],
    "annotation": "readonly []"},
   {"raw": {"name": "", "args": [], "_tag": "app"},
-   "normal": {"target": "", "_tag": "handle"},
+   "normal": {"name": "", "args": [], "_tag": "app"},
    "metadata": "[10, [23], [[3, \"\"], [4, []]]]",
    "key": [23, 0, 0],
    "annotation": null},
