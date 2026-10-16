@@ -145,8 +145,8 @@ def typeRows : List TypeRow := [
   typeRow ``USize 0 int .unsound "n < 2^62"
     "as `UInt64` — and `USize` is the shim's index type, so it is also the type every `Array` index is spelled in.",
   typeRow ``Bool 0 (.con "bool" []) .exact "" "",
-  typeRow ``String 0 (.con "string" []) .approximate "the string is ASCII"
-    "Lean's `String` is a sequence of Unicode scalar values; OCaml's is a byte sequence. Equality and concatenation agree; `length`, indexing and any `Char` operation do not.",
+  typeRow ``String 0 (.con "string" []) .domain "valid UTF-8"
+    "Lean's `String` is the UTF-8 encoding of a sequence of Unicode scalar values, and the OCaml string holds those bytes. Each operation is its own row of `OCaml5.Lcnf.builtins`: equality and concatenation are exact, `length` counts scalar values (`lcnf_utf8_length`), and an operation with no row is refused. A string enters valid: the wire refuses any other (`Eff_frame.decode_string`), and the to-do lane runs a title outside ASCII.",
   typeRow ``Unit 0 (.con "unit" []) .exact "" "",
   typeRow ``PUnit 0 (.con "unit" []) .exact "" "",
   typeRow ``Fin 0 int .domain "n < 2^62"
