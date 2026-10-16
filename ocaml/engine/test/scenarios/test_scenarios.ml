@@ -12,10 +12,10 @@
    canonical bytes, the budgets, and the machine tape: each decision that moved Lean's session
    machine, with the view after it.
 
-   The adapter lives here and changes no production interface.  `E4_engine.INSTANCE` takes no
-   row table: api_engine_inst.ml and api_engine_ref.ml fix it to the empty list.  This test
-   calls the generated `api_replay` itself, with the program, the command fuel, the tape, the
-   row table and the compile fuel.
+   The adapter lives here and changes no production interface.  `E4_engine.INSTANCE` takes the
+   row table, but it steps one decision at a time; this test reads a view after every prefix
+   of a tape, so it calls the generated `api_replay` itself, with the program, the command
+   fuel, the tape, the row table and the compile fuel.
 
    Properties:
    S1  The row table is read from its wire bytes (`Eff_wire.decode_row_exact`). The row type

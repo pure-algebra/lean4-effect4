@@ -6,7 +6,7 @@
    file is Lean's (Test/Dogfood/Scenario/Todo/HostLane.lean, written by write.lean): for each
    request of one script, the built program, its rows, its type, its row names and the
    repository state before it, as canonical bytes, then Lean's two results.
-   Depends on: Todo_gen, Eff_wire, Eff_val, E4_hex.
+   Depends on: Todo_gen, Eff_wire, Eff_val, E4_hex, E4_engine.
 
    Properties:
    T1  Each input crosses as its canonical bytes and is read exactly: Eff_wire's program, row
@@ -17,9 +17,13 @@
    T3  The same, over the repository that forgets a write.                tested
    T4  Red control: the two hosts' results differ on some request, so T2 and T3 compare values
        that tell the hosts apart.                                          tested
+   T5  The engine (E4_engine.Fast and Ref) runs each request's program at its row table, and its
+       two instances agree after the parked call is answered.             tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
-   records of apps/todo/Check.lean, which this lane does not write.
+   records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
+   the table changes (the scenarios lane's S4 does), and its reply is a natural the engine
+   applies with no reply admission: a natural answers `TodoRepo.insert` and the run finishes.
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/todo *)
 
@@ -132,6 +136,19 @@ let () =
       check (name ^ ": the forgetful host's result is Lean's")
         (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_forgetful_val built state)
          = r.forgetful))
+    requests;
+  (* T5: the engine runs each request's program at its row table, on both instances, and they
+     agree after a reply. *)
+  List.iteri
+    (fun i r ->
+      let built = built_of r in
+      let table = built.Todo_gen.table and program = built.Todo_gen.program in
+      let module F = Effect4_engine.E4_engine.Fast in
+      let module R = Effect4_engine.E4_engine.Ref in
+      let f = F.step (F.run ~table program ~fuel:100000) (F.answer_async_success 0 0 7) in
+      let g = R.step (R.run ~table program ~fuel:100000) (R.answer_async_success 0 0 7) in
+      check (Printf.sprintf "%d %s: the engine's two instances agree at the row table after a reply" i r.entry)
+        (F.outcome f = R.outcome g && F.fiber_rows f = R.fiber_rows g))
     requests;
   check "red control: the two hosts' results differ on some request"
     (List.exists (fun r -> r.result <> r.forgetful) requests);

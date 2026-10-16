@@ -345,7 +345,7 @@ let origin_prelude_check () =
     check "Fast creation origin: the root has no fork record"
       (match machine.forks with [] -> true | _ -> false);
     let options = { Eff_types.start_immediately = true; daemon = true; mask_mode = Eff_types.MaskMode_inherit } in
-    let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
+    let spawned, (_, child_id) = I.sh_spawn (I.interp_of [] program) machine parent
       parent.frame.current options [3; 1] in
     let _child = List.assoc child_id (I.fibers spawned) in
     check "Fast creation origin: spawn retains parent, daemon and exact site"
@@ -362,7 +362,7 @@ let origin_prelude_check () =
     check "Ref creation origin: the root has no fork record"
       (match machine.forks with [] -> true | _ -> false);
     let options = { Eff_types.start_immediately = true; daemon = true; mask_mode = Eff_types.MaskMode_inherit } in
-    let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
+    let spawned, (_, child_id) = I.sh_spawn (I.interp_of [] program) machine parent
       parent.frame.current options [3; 1] in
     let _child = List.assoc child_id (I.fibers spawned) in
     check "Ref creation origin: spawn retains parent, daemon and exact site"
@@ -422,7 +422,7 @@ let clock_profile_check () =
   let () =
     let module I = Api_engine_inst in
     let p = sleep_then_42 in
-    let step m d = I.step p (I.interp_of p) ~fuel:100 m d in
+    let step m d = I.step [] p (I.interp_of [] p) ~fuel:100 m d in
     check_generated I.name (fun () -> I.load p ~fuel:100)
       (fun millis m -> step m (I.RunDecision_advance millis))
       (fun m -> step m (I.RunDecision_evaluate 0))
@@ -435,7 +435,7 @@ let clock_profile_check () =
   let () =
     let module I = Api_engine_ref in
     let p = sleep_then_42 in
-    let step m d = I.step p (I.interp_of p) ~fuel:100 m d in
+    let step m d = I.step [] p (I.interp_of [] p) ~fuel:100 m d in
     check_generated I.name (fun () -> I.load p ~fuel:100)
       (fun millis m -> step m (I.RunDecision_advance millis))
       (fun m -> step m (I.RunDecision_evaluate 0))
@@ -637,9 +637,11 @@ let bench () =
            (float_of_int steps /. (ms /. 1000.0))
            words (words * 8)
        in
-       w2 "Fast" En_fast.compile En_fast.api_run En_fast.load_program En_fast.run_program
+       w2 "Fast" En_fast.compile (fun p ~fuel -> En_fast.api_run p ~fuel)
+         (fun p ~fuel -> En_fast.load_program p ~fuel) (fun p ~fuel -> En_fast.run_program p ~fuel)
          En_fast.trace_length En_fast.refs;
-       w2 "Ref" En_ref.compile En_ref.api_run En_ref.load_program En_ref.run_program
+       w2 "Ref" En_ref.compile (fun p ~fuel -> En_ref.api_run p ~fuel)
+         (fun p ~fuel -> En_ref.load_program p ~fuel) (fun p ~fuel -> En_ref.run_program p ~fuel)
          En_ref.trace_length En_ref.refs)
     [ 50; 100; 300; 500; 1000 ]
 

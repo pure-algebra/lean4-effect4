@@ -38,7 +38,6 @@
         make corpus && cd ocaml && dune build @engine/test/runtest --force *)
 
 open Effect4_engine
-open Eff_types
 
 let failures = ref 0
 let checks = ref 0
@@ -52,109 +51,8 @@ let note s = Printf.printf "  NOTE %s\n" s
 
 (* ==================================================================== the third engine *)
 
-(* `Api_gen` is not an `E4_engine.INSTANCE` as it stands: the drive loop needs the fully
-   applied type abbreviations and the 38 free-row projections.  They are one line each and
-   they are the ONLY lines that name a carrier, exactly as `api_engine_inst.ml` says --
-   here every carrier is Lean's own list, so each projection is a `List` operation.  The
-   ascription `E4_engine.Make (Api_gen_inst)` is itself a check: `ocamlopt` compares the
-   hand transcription of `E4_engine.INSTANCE` against the
-   generated file of the OTHER route, so a constructor that drifted between
-   `ocaml/gen/api_gen.ml` and `ocaml/engine/api_engine.ml` is a compile error here. *)
-module Api_gen_inst = struct
-  include Effect4_gen.Api_gen
-
-  let name = "Gen"
-  let carriers = "ocaml/gen/api_gen.ml as generated: List everywhere, no externs"
-
-  type nu = eff_name
-  type s = eff_thunk
-  type prim_ = (nu, s, val_, err, defect, fiber_id, unit) prim
-  type ffiber = (nu, s, val_, err, defect, fiber_id, unit) frame_fiber
-  type fevent = (nu, s, val_, err, defect, fiber_id, unit) frame_event
-
-  type machine =
-    (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_, ffiber, fevent) run_machine
-
-  type fiber = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, ffiber) run_fiber
-  type event = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, fevent) run_event
-  type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
-
-  type interp =
-    (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_) run_interp
-
-  type program = native_op eff
-
-  let interp_of (p : program) : interp = program_interp_of p []
-  let load (p : program) ~(fuel : int) : machine =
-    api_load p fuel
-
-  (* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation
-     (api_gen.ml); the bool is `Effect4.Machine.settled`. *)
-  let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
-    : machine * bool =
-    step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
-
-  let run_api (p : program) ~(fuel : int) : outcome * machine =
-    let r = api_run p fuel [] fuel in
-    (r.outcome, r.machine)
-
-  let fibers (m : machine) : (fiber_id * fiber) list =
-    List.map (fun (f : fiber) -> (f.id, f)) m.fibers
-
-  let fiber_count (m : machine) : int = List.length m.fibers
-  let trace (m : machine) : event list = m.trace
-  let trace_length (m : machine) : int = List.length m.trace
-  let stuck_of (m : machine) : stuck option = m.stuck
-  let armed_of (m : machine) : fiber_id list = m.armed
-  let next_id (m : machine) : int = m.next_id
-  let next_token (m : machine) : int = m.next_token
-  let race_count (m : machine) : int = List.length m.races
-  let middleware (m : machine) : bool = m.middleware_installed
-  let finished (m : machine) : bool = run_machine_finished m
-
-  let completed_exits (m : machine)
-    : (fiber_id * (val_, err, defect, fiber_id, unit) exit_) list =
-    run_machine_completed_exits m
-
-  let stores_of (m : machine) : stores = m.state
-  let refs (m : machine) : val_ list = (stores_of m).refs
-  let next_name (m : machine) : int = (stores_of m).next_name
-  let due_count (m : machine) : int = List.length (stores_of m).deferreds.due
-  let cell_count (m : machine) : int = List.length (stores_of m).deferreds.cells
-  let scope_count (m : machine) : int = List.length (stores_of m).scopes
-  let memo_map_count (m : machine) : int = List.length (stores_of m).memo
-
-  (* Lean's list is in insertion order and the carriers answer `bindings` sorted by path;
-     entry order is unobservable (E4_memo MM6), so the projection sorts here too, as
-     api_engine_inst.ml does with `E4_memo.bindings`.  The Lean corpus is what found this:
-     g227 inserts two entries under one map out of path order. *)
-  let memo_paths (m : machine) : (int * (int list * int list list) list) list =
-    List.map
-      (fun (mm : memo_map) -> (mm.id, List.map fst (E4_memo_list.bindings mm.entries)))
-      (stores_of m).memo
-
-  let f_id (f : fiber) : fiber_id = f.id
-  let f_exit (f : fiber) : (val_, err, defect, fiber_id, unit) exit_ option = f.exit_
-  let f_parked (f : fiber) : parked = f.parked
-  let f_running (f : fiber) : bool = f.running
-  let f_finalizing (f : fiber) : bool = Option.is_some f.finalizing
-
-  let f_pending_tokens (f : fiber) : int list =
-    List.map (fun (p : (_, _, _, _, _, _) pending) -> p.token) f.pending
-
-  let f_observers (f : fiber) : observer list = f.observers
-  let f_children (f : fiber) : fiber_id list = f.children
-  let f_op_count (f : fiber) : int = f.current_op_count
-  let f_max_ops (f : fiber) : int = f.max_ops_before_yield
-  let f_prevent_yield (f : fiber) : bool = f.prevent_yield
-  let f_yield_override (f : fiber) : bool option = f.yield_override
-  let f_context (f : fiber) : ctx = f.context
-
-  let f_dispatcher (f : fiber) : (int * int) list =
-    List.map
-      (fun (b : (_, _, _, _, _, _, _, _) bucket) -> (b.priority, List.length b.tasks))
-      f.dispatcher
-end
+(* The third engine is `Api_gen_inst` (api_gen_inst.ml, beside this file): the generated machine
+   as an `E4_engine.INSTANCE`. *)
 
 module Gen_engine = E4_engine.Make (Api_gen_inst)
 

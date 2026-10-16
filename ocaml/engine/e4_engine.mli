@@ -268,10 +268,12 @@ module type INSTANCE = sig
   val api_evaluate : api_decision
   (** `Effect4.Api.evaluate`, the first row of `Api.run`'s tape. *)
 
-  val interp_of : program -> interp
+  (** The row table: the program's host rows, as `Api.Built` carries them; `[]` for a program
+      with none. *)
+  val interp_of : row list -> program -> interp
   val load : program -> fuel:int -> machine
-  val step : program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
-  val run_api : program -> fuel:int -> outcome * machine
+  val step : row list -> program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
+  val run_api : row list -> program -> fuel:int -> outcome * machine
 
   (** The free rows. *)
 
@@ -352,9 +354,12 @@ module type ENGINE = sig
       @raise E4_clock.Profile_refusal for a negative or out-of-profile natural literal. *)
 
   val of_bytes : string -> program option
-  val load_program : program -> fuel:int -> t
-  val load : Eff_wire.program -> fuel:int -> t
-  val load_bytes : string -> fuel:int -> t option
+
+  (* [?table] is the program's row table (`Api.Built.table`); [[]] when omitted, for a program
+     with no host row. Every step reads it. *)
+  val load_program : ?table:row list -> program -> fuel:int -> t
+  val load : ?table:row list -> Eff_wire.program -> fuel:int -> t
+  val load_bytes : ?table:row list -> string -> fuel:int -> t option
 
   (** {2 Driving} *)
 
@@ -388,10 +393,10 @@ module type ENGINE = sig
   val drive : t -> t
   (** `Api.run`'s tape, `[evaluate root; flush]` (Api.lean:171-172). *)
 
-  val run : Eff_wire.program -> fuel:int -> t
-  val run_program : program -> fuel:int -> t
+  val run : ?table:row list -> Eff_wire.program -> fuel:int -> t
+  val run_program : ?table:row list -> program -> fuel:int -> t
 
-  val api_run : program -> fuel:int -> string
+  val api_run : ?table:row list -> program -> fuel:int -> string
   (** The GENERATED `Effect4.Api.run`, unwrapped, answering only its outcome: the W1 bench
       cell, and the oracle {!run} is checked against. *)
 

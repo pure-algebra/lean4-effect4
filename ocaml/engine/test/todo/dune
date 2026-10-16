@@ -9,5 +9,5 @@
  (name test_todo)
  (modules todo_gen test_todo)
  (deps todo-host.txt)
- (libraries effect4_eff effect4_clock effect4_bytes)
+ (libraries effect4_eff effect4_clock effect4_bytes effect4_engine)
 )

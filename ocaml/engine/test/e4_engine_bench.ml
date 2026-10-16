@@ -24,9 +24,9 @@
            -- the seam's generated file (so the G2 point carriers ARE in it) over list twins
            of the four substituted carriers.
      Fast  the same generated file over the substituted carriers.
-   `Api_gen_inst` below is transcribed from `test/test_diff.ml:47-160` (lane X's third
-   engine) because that module lives in another lane's `(modules ...)` stanza; the
-   ascription `E4_engine.Make` is itself the check that the transcription is right.
+   `Api_gen_inst` (api_gen_inst.ml, in the test-support library beside this file) is the third
+   engine, the same one lane X's differential uses; the ascription `E4_engine.Make` is itself the
+   check that the transcription is right.
 
    METHOD.  Wall clock (`Unix.gettimeofday`), best of 5 with the median beside it,
    `Gc.compact ()` between reps, `Sys.opaque_identity` on every result, iterations
@@ -41,100 +41,13 @@
    Sections: w1 w2 w3 w4 sweep accept (default: all). *)
 
 open Effect4_engine
-open Eff_types
 
 module Ty = Eff_types
 
 (* ==================================================================== the third engine *)
 
-(* Transcribed from test/test_diff.ml:47-160.  Every line is a projection of the generated
-   record; each names a carrier, and here every carrier is Lean's own list. *)
-module Api_gen_inst = struct
-  include Effect4_gen.Api_gen
-
-  let name = "Gen"
-  let carriers = "ocaml/gen/api_gen.ml as generated: List everywhere, no externs"
-
-  type nu = eff_name
-  type s = eff_thunk
-  type prim_ = (nu, s, val_, err, defect, fiber_id, unit) prim
-  type ffiber = (nu, s, val_, err, defect, fiber_id, unit) frame_fiber
-  type fevent = (nu, s, val_, err, defect, fiber_id, unit) frame_event
-
-  type machine =
-    (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_, ffiber, fevent) run_machine
-
-  type fiber = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, ffiber) run_fiber
-  type event = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, fevent) run_event
-  type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
-
-  type interp = (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_) run_interp
-  type program = native_op eff
-
-  let interp_of (p : program) : interp = program_interp_of p []
-
-  let load (p : program) ~(fuel : int) : machine =
-    api_load p fuel
-
-  let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
-    : machine * bool =
-    step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
-
-  let run_api (p : program) ~(fuel : int) : outcome * machine =
-    let r = api_run p fuel [] fuel in
-    (r.outcome, r.machine)
-
-  let fibers (m : machine) : (fiber_id * fiber) list =
-    List.map (fun (f : fiber) -> (f.id, f)) m.fibers
-
-  let fiber_count (m : machine) : int = List.length m.fibers
-  let trace (m : machine) : event list = m.trace
-  let trace_length (m : machine) : int = List.length m.trace
-  let stuck_of (m : machine) : stuck option = m.stuck
-  let armed_of (m : machine) : fiber_id list = m.armed
-  let next_id (m : machine) : int = m.next_id
-  let next_token (m : machine) : int = m.next_token
-  let race_count (m : machine) : int = List.length m.races
-  let middleware (m : machine) : bool = m.middleware_installed
-  let finished (m : machine) : bool = run_machine_finished m
-
-  let completed_exits (m : machine)
-    : (fiber_id * (val_, err, defect, fiber_id, unit) exit_) list =
-    run_machine_completed_exits m
-
-  let stores_of (m : machine) : stores = m.state
-  let refs (m : machine) : val_ list = (stores_of m).refs
-  let next_name (m : machine) : int = (stores_of m).next_name
-  let due_count (m : machine) : int = List.length (stores_of m).deferreds.due
-  let cell_count (m : machine) : int = List.length (stores_of m).deferreds.cells
-  let scope_count (m : machine) : int = List.length (stores_of m).scopes
-  let memo_map_count (m : machine) : int = List.length (stores_of m).memo
-
-  let memo_paths (m : machine) : (int * (int list * int list list) list) list =
-    List.map (fun (mm : memo_map) -> (mm.id, List.map fst mm.entries)) (stores_of m).memo
-
-  let f_id (f : fiber) : fiber_id = f.id
-  let f_exit (f : fiber) : (val_, err, defect, fiber_id, unit) exit_ option = f.exit_
-  let f_parked (f : fiber) : parked = f.parked
-  let f_running (f : fiber) : bool = f.running
-  let f_finalizing (f : fiber) : bool = Option.is_some f.finalizing
-
-  let f_pending_tokens (f : fiber) : int list =
-    List.map (fun (p : (_, _, _, _, _, _) pending) -> p.token) f.pending
-
-  let f_observers (f : fiber) : observer list = f.observers
-  let f_children (f : fiber) : fiber_id list = f.children
-  let f_op_count (f : fiber) : int = f.current_op_count
-  let f_max_ops (f : fiber) : int = f.max_ops_before_yield
-  let f_prevent_yield (f : fiber) : bool = f.prevent_yield
-  let f_yield_override (f : fiber) : bool option = f.yield_override
-  let f_context (f : fiber) : ctx = f.context
-
-  let f_dispatcher (f : fiber) : (int * int) list =
-    List.map
-      (fun (b : (_, _, _, _, _, _, _, _) bucket) -> (b.priority, List.length b.tasks))
-      f.dispatcher
-end
+(* The third engine is `Api_gen_inst` (api_gen_inst.ml, beside this file), the one the
+   differential uses. *)
 
 module Gen_engine = E4_engine.Make (Api_gen_inst)
 

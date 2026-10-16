@@ -178,10 +178,12 @@ module type INSTANCE = sig
   type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
 
   val api_evaluate : api_decision
-  val interp_of : program -> interp
+  (* The row table: the program's host rows, as `Api.Built` carries them; `[]` for a program
+     with none. *)
+  val interp_of : row list -> program -> interp
   val load : program -> fuel:int -> machine
-  val step : program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
-  val run_api : program -> fuel:int -> outcome * machine
+  val step : row list -> program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
+  val run_api : row list -> program -> fuel:int -> outcome * machine
   val fibers : machine -> (fiber_id * fiber) list
   val fiber_count : machine -> int
   val trace : machine -> event list
@@ -238,18 +240,20 @@ module type ENGINE = sig
   val advance_exact : E4_clock.t -> decision
   val compile : Eff_wire.program -> program
   val of_bytes : string -> program option
-  val load_program : program -> fuel:int -> t
-  val load : Eff_wire.program -> fuel:int -> t
-  val load_bytes : string -> fuel:int -> t option
+  (* `?table`: the program's row table (`Api.Built.table`); `[]` when omitted, for a program
+     with no host row. *)
+  val load_program : ?table:row list -> program -> fuel:int -> t
+  val load : ?table:row list -> Eff_wire.program -> fuel:int -> t
+  val load_bytes : ?table:row list -> string -> fuel:int -> t option
   val step : t -> decision -> t
   val replay : t -> decision list -> t
   val replay_to : t -> decision list -> t * decision list
   val replay_steps : t -> decision list -> t Seq.t
   val replay_positions : t -> decision list -> t Seq.t
   val drive : t -> t
-  val run : Eff_wire.program -> fuel:int -> t
-  val run_program : program -> fuel:int -> t
-  val api_run : program -> fuel:int -> string
+  val run : ?table:row list -> Eff_wire.program -> fuel:int -> t
+  val run_program : ?table:row list -> program -> fuel:int -> t
+  val api_run : ?table:row list -> program -> fuel:int -> string
   val answer : t -> answer
   val outcome : t -> string
   val exits : t -> (int * string) list
@@ -279,6 +283,7 @@ module Make (I : INSTANCE) = struct
 
   type t = {
     program : I.program;
+    table : row list;  (** the program's row table, which every step reads *)
     interp : I.interp;
     fuel_ : int;
     m : I.machine;
@@ -323,14 +328,14 @@ module Make (I : INSTANCE) = struct
 
   let of_bytes (b : string) : program option = Option.map compile (Eff_wire.decode_program_exact b)
 
-  let load_program (p : program) ~(fuel : int) : t =
-    { program = p; interp = I.interp_of p; fuel_ = fuel;
+  let load_program ?(table = []) (p : program) ~(fuel : int) : t =
+    { program = p; table; interp = I.interp_of table p; fuel_ = fuel;
       m = I.load p ~fuel; settled = true; outside_profile = None }
 
-  let load (p : Eff_wire.program) ~(fuel : int) : t = load_program (compile p) ~fuel
+  let load ?table (p : Eff_wire.program) ~(fuel : int) : t = load_program ?table (compile p) ~fuel
 
-  let load_bytes (b : string) ~(fuel : int) : t option =
-    match of_bytes b with None -> None | Some p -> Some (load_program p ~fuel)
+  let load_bytes ?table (b : string) ~(fuel : int) : t option =
+    match of_bytes b with None -> None | Some p -> Some (load_program ?table p ~fuel)
 
   (* -- driving -------------------------------------------------------------------- *)
 
@@ -338,7 +343,7 @@ module Make (I : INSTANCE) = struct
     match t.outside_profile with
     | Some _ -> t
     | None ->
-      match I.step t.program t.interp ~fuel:t.fuel_ t.m d with
+      match I.step t.table t.program t.interp ~fuel:t.fuel_ t.m d with
       | m, settled -> { t with m; settled }
       | exception E4_clock.Profile_refusal why ->
         (* Generated transitions are pure. Keep the input machine when a numeric
@@ -399,8 +404,8 @@ module Make (I : INSTANCE) = struct
     go t tape
 
   let drive (t : t) : t = replay t [ I.api_evaluate; flush ]
-  let run_program (p : program) ~(fuel : int) : t = drive (load_program p ~fuel)
-  let run (p : Eff_wire.program) ~(fuel : int) : t = run_program (compile p) ~fuel
+  let run_program ?table (p : program) ~(fuel : int) : t = drive (load_program ?table p ~fuel)
+  let run ?table (p : Eff_wire.program) ~(fuel : int) : t = run_program ?table (compile p) ~fuel
 
   (* -- the renderers -------------------------------------------------------------- *)
 
@@ -694,8 +699,8 @@ module Make (I : INSTANCE) = struct
       (I.race_count t.m) (I.middleware t.m)
       (ids (I.armed_of t.m))
 
-  let api_run (p : program) ~(fuel : int) : string =
-    let o, _ = I.run_api p ~fuel in
+  let api_run ?(table = []) (p : program) ~(fuel : int) : string =
+    let o, _ = I.run_api table p ~fuel in
     show_outcome o
 end
 

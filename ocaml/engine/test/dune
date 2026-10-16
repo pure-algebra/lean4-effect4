@@ -100,10 +100,19 @@
 ;               `effect4_gen` is named here and NOWHERE in the library: the third engine
 ;               is a test-only functor application.
 
+; The generated machine as an `E4_engine.INSTANCE`: one module for the differential and the
+; bench (api_gen_inst.ml's header), unwrapped so both name `Api_gen_inst`.
+
+(library
+ (name e4_gen_instance)
+ (wrapped false)
+ (modules api_gen_inst)
+ (libraries effect4_engine effect4_eff effect4_gen))
+
 (test
  (name test_diff)
  (modules test_diff)
- (libraries effect4_engine effect4_eff effect4_gen))
+ (libraries effect4_engine effect4_eff effect4_gen e4_gen_instance))
 
 ; lane Q3 — query: the persistent log, its incremental indexes, and the query API.
 ;   test_log     E4_log L1-L5, the public-log codec (E4_logindex.parse_run_event_row) over
@@ -182,7 +191,7 @@
 (executable
  (name e4_engine_bench)
  (modules e4_engine_bench)
- (libraries effect4_engine effect4_eff effect4_gen unix))
+ (libraries effect4_engine effect4_eff effect4_gen unix e4_gen_instance))
 
 ; lane G3 — the fiber table's maintained completed view (docs/research/
 ; 2026-09-08-engine-lane-g3-delivery.md).
