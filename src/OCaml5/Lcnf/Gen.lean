@@ -223,17 +223,18 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
       ++ emitted
   -- Without a table the file is what it always was; with one, the type group mentions the
   -- carrier parameters, so the whole body moves inside the functor (A1 §1.5).
-  -- The seamed file adds warning 30 (a record label claimed by two of the ~80 generated
-  -- record types) because the engine library compiles with `-w +a` and dune's dev profile
-  -- makes 30 fatal; `ocaml/gen` builds with `-warn-error -a` and its list is left alone, so
-  -- `ocaml/gen/api_gen.ml` regenerates byte for byte.
+  -- The two warnings the generated code is allowed, measured on every artifact of the recipe:
+  -- 27, a parameter a body does not read (LCNF keeps erased and unused parameters, so the
+  -- arity is Lean's), and 30, a record label claimed by two of the generated record types of
+  -- one group (each use is annotated with its type). Every other warning is on, and the
+  -- estate builds with warnings as errors, so a new kind fails the build where it appears.
   let opened : List Ml.Decl :=
     match args.opens with | none => [] | some m => [.openD m, .blank]
   let items : List Ml.Decl :=
     if args.externs.isNone then
-      [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank] ++ opened ++ body
+      [.floatingAttrD "warning \"-27-30\"", .blank] ++ opened ++ body
     else
-      [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank] ++ opened ++
+      [.floatingAttrD "warning \"-27-30\"", .blank] ++ opened ++
       carrierSignatures ++ [.blank, .moduleD "Make" carrierParams body]
   let modName := (System.FilePath.mk args.out).fileStem.getD "lcnf_gen"
   let m : Ml.Module := { name := modName, header := some header, items := items }
