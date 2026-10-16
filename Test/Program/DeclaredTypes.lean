@@ -3,6 +3,7 @@ import Effect4.Program.AdmitIn
 import Effect4.Program.SigApp
 import Effect4.Program.Typing.TermRefusal
 import Effect4.Program.Authoring
+import Effect4.Program.Decision
 
 /-!
 # Battery: declared types read by shape, folded at a written field, and admitted at a reply
@@ -104,6 +105,20 @@ def asTodo (value : Term) : Term :=
 -- finite evaluation: the refusal of a field that `Todo` lacks is located at the record.
 #guard (TermRefusal.diagnose app.signatureIn [.handle "Todo"]
   (.field .required (.var 0) "owner")).isSome
+
+/-! ## The select rule's arms under the table (`Decision.armsIn`) -/
+
+-- finite evaluation: a record-tag decision on a recursive type binds the node arm, whose
+-- children keep the declared name.
+#guard ((Decision.armsIn treeDecls (.recordTag "node") (.handle "Tree")).bind fun arms =>
+  arms.1.head?.bind fun node => Record.fieldTypeIn treeDecls false node "children") ==
+  some (.list (.handle "Tree"))
+-- control: the table-free decision refuses the declared name.
+#guard Decision.arms (.recordTag "node") (.handle "Tree") == none
+-- finite evaluation: an option decision reads a declared name for an option.
+#guard Decision.armsIn [("Maybe", .option .nat)] .option (.handle "Maybe") == some ([], [.nat])
+-- control: the table-free decision refuses it.
+#guard Decision.arms .option (.handle "Maybe") == none
 
 /-! ## Reply admission at a declared column -/
 

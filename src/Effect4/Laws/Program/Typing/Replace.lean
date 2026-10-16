@@ -315,14 +315,16 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
       Option.map_eq_some_iff.mpr ⟨_, Option.bind_eq_some_iff.mpr ⟨_, ht, hd⟩, rfl⟩,
       fun h hc' hs => by
       cases hc' with | eff hx =>
-        cases hs; exact .eff (.select ((h.termTy _ _).trans ht) hd hx (hasTy_ext h h1) hj)⟩
+        cases hs; exact .eff (.select ((h.termTy _ _).trans ht) (by rw [h.types]; exact hd) hx
+          (hasTy_ext h h1) hj)⟩
   -- eff (.select _ _ _ a3), 1
   · cases hn with | eff hp => cases hp with | select ht hd h0 h1 hj =>
     exact ⟨_, .eff h1,
       Option.map_eq_some_iff.mpr ⟨_, Option.bind_eq_some_iff.mpr ⟨_, ht, hd⟩, rfl⟩,
       fun h hc' hs => by
       cases hc' with | eff hx =>
-        cases hs; exact .eff (.select ((h.termTy _ _).trans ht) hd (hasTy_ext h h0) hx hj)⟩
+        cases hs; exact .eff (.select ((h.termTy _ _).trans ht) (by rw [h.types]; exact hd)
+          (hasTy_ext h h0) hx hj)⟩
   -- eff (.iterate _ _ _ _ _ a5), 0
   · cases hn with | eff hp => cases hp with | iterate hi ht hsub hb hst hr hs0 hs1 =>
     exact ⟨_, .eff hb, Option.map_eq_some_iff.mpr ⟨_, hi, rfl⟩, fun h hc' hs => by

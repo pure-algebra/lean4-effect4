@@ -202,7 +202,8 @@ theorem defs_check_agreeOn (sig : Signature Op) (decls : List DefDecl) :
     eff_provideService := fun _ _ => by simp only [Checker.check.alg, hservice, hterm]
     eff_provideContext := by simp only [Checker.check.alg, hterm]
     eff_catchIf := by simp only [Checker.check.alg, hterm]
-    eff_select := by simp only [Checker.check.alg, hterm]
+    eff_select := by
+      simp only [Checker.check.alg, hterm, show (sig.withDefs decls).types = sig.types from rfl]
     eff_iterate := by simp only [Checker.check.alg, hterm]
     eff_restore := by simp only [Checker.check.alg, hterm]
     eff_defs := rfl

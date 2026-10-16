@@ -148,6 +148,41 @@ their laws. W3a switched the term typer to them. What W3a settled, beyond the de
 - **An ascription at a declared name is the fold** (`ascribe_untyped`'s premise is now the fold's
   refusal, `Record.fieldAdmitsIn`; at an empty table it is the order's).
 
+W3b switched the select rule. Its option and record-tag decisions read the scrutinee's union
+members under the table (`Decision.armsIn`, `Program/Decision.lean`):
+
+- The checker's select, the focus and the annotation read `armsIn` at the signature's table.
+- `HasTy`'s select constructor and the two inversions state `armsIn`.
+- Where the original arms answer, `armsIn` answers the same (`Decision.armsIn_of_arms`).
+- The arms under a table bind `binds` values (`Decision.armsIn_length`), and they are closed
+  (`Decision.closed_armsIn`).
+- The denotation's select case reads `decide_fitsIn`, with the table's emptiness from the scope's
+  extension (decision 5).
+- So a program can dispatch on a declared sum type by its tags, a recursive one included.
+
+## W4, designed: the build and the session carry the table
+
+W3a leaves the table reachable only through `SigApp.signatureIn`. W4 makes the authoring API reach
+it. Program admission and the typed state stay at `SigApp.signature`, so W4 builds beside them.
+
+- **Authoring.** `Module.types` and `Application.types`, default empty. A derived type's
+  declarations (`Modeled.decls`) are what an author puts there.
+- **Program admission beside.** `admitProgramIn` and its certificate `AdmittedProgramIn`, the original's
+  checks at `SigApp.signatureIn`. At an application with no named type its typing certificate is
+  the original's, since `signatureIn` is `signature` there.
+- **The build.** `Api.Author.build` keeps its path when `Module.types` is empty. A module with
+  named types builds through `admitProgramIn`, into a built program that holds its `SigApp`.
+- **The session.** The reply check reads `acceptReplyIn` and `acceptAtInstanceIn` at the
+  session's table. The machine still prepares a reply at the row's column with no table.
+- **Preparation at a declared name.** A natural at a column whose head is a declared name would
+  be minted as a host handle. W4 refuses, by name at the signature's admission, a declared column
+  whose union members under the table admit a natural (`nat`, `int`, `number`, `unknown`).
+  A derived type never does: its code is a record, a union of tagged records or of literals.
+- **The engine.** The OCaml engine takes the table through the session's lowered entry, after the
+  Lean session reads it.
+
+Gates: `check-ocaml` (the to-do lane, regenerated) and `check-ts` (the host protocol).
+
 ## What this does not establish
 
 - The reaches and file counts before W2 come from the scouts' searches.

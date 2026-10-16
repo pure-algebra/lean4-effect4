@@ -190,9 +190,9 @@ def childEnv (s : Signature Op) (ctx : NodeEnv) : Node Op → Nat → Option Nod
     (effTy s ctx.tyEnv a1).map fun b => .env (ctx.tyEnv ++ [b.error])
   -- each arm reads what the decision binds from the type of its term
   | eff (.select t d _ _), 0 =>
-    ((termTy s ctx.tyEnv t).bind d.arms).map fun arms => .env (ctx.tyEnv ++ arms.1)
+    ((termTy s ctx.tyEnv t).bind (d.armsIn s.types)).map fun arms => .env (ctx.tyEnv ++ arms.1)
   | eff (.select t d _ _), 1 =>
-    ((termTy s ctx.tyEnv t).bind d.arms).map fun arms => .env (ctx.tyEnv ++ arms.2)
+    ((termTy s ctx.tyEnv t).bind (d.armsIn s.types)).map fun arms => .env (ctx.tyEnv ++ arms.2)
   -- the body reads the cursor: its annotation, or the type of the initial term
   | eff (.iterate cursorTy initial _ _ _ _), 0 =>
     (termTy s ctx.tyEnv initial).map fun c0 => .env (ctx.tyEnv ++ [cursorTy.getD c0])

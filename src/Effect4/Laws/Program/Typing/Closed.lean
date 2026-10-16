@@ -365,6 +365,19 @@ theorem closed_tagArms {tag : String} {t : Ty} {arms : Ty × Ty} (ht : t.closed 
       Ty.closed_ofMembers _ fun x hx => hm x (List.mem_filter.mp hx).1⟩
   · exact nomatch h
 
+/-- The two arms of a record tag decision under a table of closed bodies are closed. -/
+@[semantics "subtyping-algebra" (requirement := R3)]
+theorem closed_tagArmsIn {decls : TyDecls} (hdecls : ∀ d ∈ decls, d.2.closed = true)
+    {tag : String} {t : Ty} {arms : Ty × Ty} (ht : t.closed = true)
+    (h : tagArmsIn decls tag t = some arms) : arms.1.closed = true ∧ arms.2.closed = true := by
+  have hm := closed_membersIn hdecls ht
+  simp only [tagArmsIn] at h
+  split at h
+  · cases h
+    exact ⟨Ty.closed_ofMembers _ fun x hx => hm x (List.mem_filter.mp hx).1,
+      Ty.closed_ofMembers _ fun x hx => hm x (List.mem_filter.mp hx).1⟩
+  · exact nomatch h
+
 end Record
 
 /-- A positional projection of a closed type is closed. -/
@@ -444,6 +457,32 @@ theorem Decision.closed_arms {d : Decision} {t : Ty} {e0 e1 : List Ty} (ht : t.c
     have hc := Record.closed_tagArms ht hparts
     exact ⟨fun x hx => by rw [List.mem_singleton.mp hx]; exact hc.1,
       fun x hx => by rw [List.mem_singleton.mp hx]; exact hc.2⟩
+
+/-- What a decision's arms bind under a table of closed bodies is closed, at a closed
+scrutinee. -/
+@[semantics "subtyping-algebra" (requirement := R3)]
+theorem Decision.closed_armsIn {decls : TyDecls} (hdecls : ∀ d ∈ decls, d.2.closed = true)
+    {d : Decision} {t : Ty} {e0 e1 : List Ty} (ht : t.closed = true)
+    (h : d.armsIn decls t = some (e0, e1)) :
+    (∀ x ∈ e0, x.closed = true) ∧ ∀ x ∈ e1, x.closed = true := by
+  cases decls with
+  | nil => exact Decision.closed_arms ht h
+  | cons e es =>
+    cases d with
+    | bool => exact Decision.closed_arms (d := .bool) ht h
+    | tag name => exact Decision.closed_arms (d := .tag name) ht h
+    | option =>
+      obtain ⟨a, hopt, heq⟩ := Option.map_eq_some_iff.mp h
+      cases heq
+      have ha := Record.liftIn_closed hdecls
+        (fun closed answered => Member.option_closed closed answered) hopt ht
+      exact ⟨fun _ hx => (nomatch hx), fun x hx => by rw [List.mem_singleton.mp hx]; exact ha⟩
+    | recordTag name =>
+      obtain ⟨parts, hparts, heq⟩ := Option.map_eq_some_iff.mp h
+      cases heq
+      have hc := Record.closed_tagArmsIn hdecls ht hparts
+      exact ⟨fun x hx => by rw [List.mem_singleton.mp hx]; exact hc.1,
+        fun x hx => by rw [List.mem_singleton.mp hx]; exact hc.2⟩
 
 /-- A fiber handle's two columns are closed when the handle's type is. The fiber rule is the
 extended rule of its member rule (`UnionRule.extendAll`, `src/Effect4/Program/UnionRule.lean`), so
@@ -1459,7 +1498,7 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
     have h := hasTy_closed hsig hh (henv.push b.2) hs.2.2
     ⟨closed_joinAnswer hj b.1 h.1, closed_catchIfError _ _ b.2 h.2⟩
   | _, _, _, .select ht hd h0 h1 hj, henv, hs =>
-    have arms := Decision.closed_arms (termTy_closed hsig henv hs.1.1 ht) hd
+    have arms := Decision.closed_armsIn hsig.types (termTy_closed hsig henv hs.1.1 ht) hd
     have t0 := hasTy_closed hsig h0 (henv.append arms.1) hs.2.1
     have t1 := hasTy_closed hsig h1 (henv.append arms.2) hs.2.2
     ⟨closed_joinAnswer hj t0.1 t1.1, UnionRule.closed_join t0.2 t1.2⟩

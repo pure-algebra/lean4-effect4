@@ -173,7 +173,7 @@ theorem hasTy_ext (h : SigExtends s s') :
   | _, _, _, .catchIf hb ht hsub hh hj =>
     .catchIf (hasTy_ext h hb) ((h.termTy _ _).trans ht) hsub (hasTy_ext h hh) hj
   | _, _, _, .select ht hd h0 h1 hj =>
-    .select ((h.termTy _ _).trans ht) hd (hasTy_ext h h0) (hasTy_ext h h1) hj
+    .select ((h.termTy _ _).trans ht) (by rw [h.types]; exact hd) (hasTy_ext h h0) (hasTy_ext h h1) hj
   | _, _, _, .matchCause hb hv hc hj =>
     .matchCause (hasTy_ext h hb) (hasTy_ext h hv) (hasTy_ext h hc) hj
   | _, _, _, .onExit hb hf => .onExit (hasTy_ext h hb) (hasTy_ext h hf)
@@ -910,7 +910,7 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
       simp only [Checker.check.alg, h.service key ty hty, hty, hterm]
     eff_provideContext := by simp only [Checker.check.alg, hterm]
     eff_catchIf := by simp only [Checker.check.alg, hterm]
-    eff_select := by simp only [Checker.check.alg, hterm]
+    eff_select := by simp only [Checker.check.alg, hterm, h.types]
     eff_iterate := by simp only [Checker.check.alg, hterm]
     eff_restore := by simp only [Checker.check.alg, hterm]
     eff_defs := rfl

@@ -316,6 +316,15 @@ theorem suspend_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fue
     (ambientStackTyped_child (q := { p with completed }.child 0) hat rfl rfl
       (ambientStackTyped_mono o'' savedParams))
 
+/-- `decide_fits` at the arms under a table that declares no type, as a signature's with no
+named type gives them (the wiring plan's decision 5). -/
+theorem decide_fitsIn {w : World} {decls : TyDecls} (htypes : decls = []) {d : Decision} {t : Ty}
+    {e0 e1 : List Ty} {v : Val} (harms : d.armsIn decls t = some (e0, e1)) (hv : Fits w v t) :
+    ∃ first bound, d.decide v = some (first, bound) ∧
+      BoundFits w bound (if first then e0 else e1) := by
+  subst htypes
+  exact decide_fits harms hv
+
 /-- **`select`**: the counted step, the scrutinee decides (`decide_fits`), and the chosen arm runs
 at its point with the value it binds, widened to the join of the arms. -/
 theorem select_arm {available : Env.Requirement} {s : Term} {d : Decision} {a0 a1 : NativeEff} (hfuel : p.fuel = f + 1)
@@ -339,7 +348,8 @@ theorem select_arm {available : Env.Requirement} {s : Term} {d : Decision} {a0 a
     ambient_constructR_typed root (Row.subset_refl _) (fun w'' o' completed hc => ?_))
   have o'' := leHost_trans _ _ _ o o'
   have htie'' := serviceTy_leHost o'' htie
-  obtain ⟨first, bound, hdec, hbound⟩ := decide_fits harms (fits_mono o'' hfit)
+  obtain ⟨first, bound, hdec, hbound⟩ :=
+    decide_fitsIn ((root.scopeSig_extends p.path).types.trans rfl) harms (fits_mono o'' hfit)
   show AmbientProg root w'' available
     ((⟨t0.answer.join t1.answer, t0.error.join t1.error, Row.union t0.requires t1.requires⟩ : EffTy),
       available, available) (match (evalTerm p.env s).bind d.decide with

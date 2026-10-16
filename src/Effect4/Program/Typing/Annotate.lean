@@ -135,7 +135,7 @@ mutual
       let unreachedArms := unreached (p ++ [0]) (.eff a0) ++ unreached (p ++ [1]) (.eff a1)
       match Checker.term? s env p scrutinee with
       | .ok t =>
-        match d.arms t with
+        match d.armsIn s.types t with
         | some arms =>
           let c0 := check s (env ++ arms.1) (p ++ [0]) a0
           let c1 := check s (env ++ arms.2) (p ++ [1]) a1

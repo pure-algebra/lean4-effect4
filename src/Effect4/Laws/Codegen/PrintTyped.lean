@@ -5139,7 +5139,7 @@ theorem body_append_one_map_length {A : Type} (source : Option A) (env : TyEnv)
 -- The select map's actual arm lengths are proved by the existing decision law.
 theorem select_left_map_length (s : Signature Op) (env : TyEnv) (term : Term)
     (decision : Decision) {rho : NodeEnv}
-    (found : ((termTy s env term).bind decision.arms).map
+    (found : ((termTy s env term).bind (decision.armsIn s.types)).map
       (fun arms => NodeEnv.env (env ++ arms.1)) = some rho) :
     rho.tyEnv.length = env.length + decision.binds.1 := by
   obtain ⟨arms, harm, assembled⟩ := Option.map_eq_some_iff.mp found
@@ -5147,11 +5147,11 @@ theorem select_left_map_length (s : Signature Op) (env : TyEnv) (term : Term)
   cases assembled
   simp only [NodeEnv.tyEnv, List.length_append]
   exact congrArg (env.length + ·) (congrArg Prod.fst
-    (Decision.arms_length decision ty arms.1 arms.2 harms))
+    (Decision.armsIn_length s.types decision ty arms.1 arms.2 harms))
 
 theorem select_right_map_length (s : Signature Op) (env : TyEnv) (term : Term)
     (decision : Decision) {rho : NodeEnv}
-    (found : ((termTy s env term).bind decision.arms).map
+    (found : ((termTy s env term).bind (decision.armsIn s.types)).map
       (fun arms => NodeEnv.env (env ++ arms.2)) = some rho) :
     rho.tyEnv.length = env.length + decision.binds.2 := by
   obtain ⟨arms, harm, assembled⟩ := Option.map_eq_some_iff.mp found
@@ -5159,7 +5159,7 @@ theorem select_right_map_length (s : Signature Op) (env : TyEnv) (term : Term)
   cases assembled
   simp only [NodeEnv.tyEnv, List.length_append]
   exact congrArg (env.length + ·) (congrArg Prod.snd
-    (Decision.arms_length decision ty arms.1 arms.2 harms))
+    (Decision.armsIn_length s.types decision ty arms.1 arms.2 harms))
 
 theorem childScope_select_left (n : Nat) (term : Term) (decision : Decision)
     (left right : Eff Op) :

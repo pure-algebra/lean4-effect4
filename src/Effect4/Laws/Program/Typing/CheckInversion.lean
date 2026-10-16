@@ -156,7 +156,7 @@ theorem inv_interruptible (sig : Signature Op) (env : TyEnv) (p : List Nat) (bod
 theorem inv_select (sig : Signature Op) (env : TyEnv) (p : List Nat) (s : Term) (d : Decision)
     (a0 a1 : Eff Op) :
     ∀ t, check sig env p (.select s d a0 a1) = .ok t →
-      ∃ ty arms t0 t1, termTy sig env s = some ty ∧ d.arms ty = some arms ∧
+      ∃ ty arms t0 t1, termTy sig env s = some ty ∧ d.armsIn sig.types ty = some arms ∧
         check sig (env ++ arms.1) (p ++ [0]) a0 = .ok t0 ∧
         check sig (env ++ arms.2) (p ++ [1]) a1 = .ok t1 ∧
         t = ⟨Ty.join t0.answer t1.answer, t0.error.join t1.error,

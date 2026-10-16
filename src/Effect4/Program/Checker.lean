@@ -198,7 +198,7 @@ mutual
       else throw ⟨p, .predicateNotBool predicate⟩
     | .select s d a0 a1 => do
       let t ← term? sig env p s
-      let arms ← expect ⟨p, selectRefusal d t⟩ (d.arms t)
+      let arms ← expect ⟨p, selectRefusal d t⟩ (d.armsIn sig.types t)
       let t0 ← check sig (env ++ arms.1) (p ++ [0]) a0
       let t1 ← check sig (env ++ arms.2) (p ++ [1]) a1
       pure ⟨Ty.join t0.answer t1.answer, t0.error.join t1.error, t0.requires.union t1.requires⟩

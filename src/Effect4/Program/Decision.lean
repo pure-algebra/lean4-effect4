@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Program.Record
+public import Effect4.Program.TyHead
 public import Effect4.Store.Carrier.Val
 
 /-!
@@ -82,6 +83,21 @@ Every retained normal member must be an option. Their element types join.
 At `never` it answers `never`. It keeps the existing normalized answer at a raw option type. -/
 def optionTy : Ty → Option Ty := UnionRule.lift Member.option
 
+/-- The element type of an option input under a declaration table: every union member under the
+table must be an option. At the empty table it is `optionTy`. -/
+def optionTyIn (decls : TyDecls) : Ty → Option Ty := UnionRule.liftIn decls Member.option
+
+/-- The option rule refuses a declared reference. -/
+theorem Member.option_ref {decls : TyDecls} :
+    ∀ m x, decls.unfold? m = some x → Member.option m = none := by
+  intro m x h
+  obtain ⟨n, rfl | ⟨args, rfl⟩⟩ := TyDecls.ref_of_unfold? h <;> rfl
+
+/-- **Where the option rule answers, the option rule under a table answers the same.** -/
+theorem optionTyIn_of_optionTy {decls : TyDecls} {t a : Ty} (h : optionTy t = some a) :
+    optionTyIn decls t = some a :=
+  UnionRule.liftIn_of_lift Member.option_ref h
+
 namespace Decision
 
 /-- What child 0 and child 1 bind, from the scrutinee's type; `none` refuses the scrutinee.
@@ -132,6 +148,83 @@ theorem arms_length (d : Decision) (t : Ty) (e0 e1 : List Ty) (h : d.arms t = so
     obtain ⟨parts, _, heq⟩ := Option.map_eq_some_iff.mp h
     cases heq
     rfl
+
+/-- **What each child binds under a declaration table**: the option and the record-tag decisions
+read the scrutinee's union members under the table, so a declared name is read by its body
+(the wiring plan, `docs/research/2026-10-16-usability-scope/wiring-plan.md`). At the empty table
+it is `arms`. -/
+def armsIn (decls : TyDecls) (d : Decision) (t : Ty) : Option (List Ty × List Ty) :=
+  match decls with
+  | [] => d.arms t
+  | _ =>
+    match d with
+    | .option => (optionTyIn decls t).map fun a => ([], [a])
+    | .recordTag name => (Record.tagArmsIn decls name t).map fun arms => ([arms.1], [arms.2])
+    | d => d.arms t
+
+/-- The tag of a record member is no declared reference's. -/
+theorem _root_.Effect4.Program.Record.tagOf_ref {decls : TyDecls} {m : Ty} {x : String × Ty}
+    (h : decls.unfold? m = some x) : Record.tagOf m = none := by
+  obtain ⟨n, rfl | ⟨args, rfl⟩⟩ := TyDecls.ref_of_unfold? h <;> rfl
+
+/-- **Where the tag dispatch answers, the tag dispatch under a table answers the same**: every
+union member carries a tag, so none is a declared reference. -/
+theorem _root_.Effect4.Program.Record.tagArmsIn_of_tagArms {decls : TyDecls} {tag : String}
+    {t : Ty} {arms : Ty × Ty} (h : Record.tagArms tag t = some arms) :
+    Record.tagArmsIn decls tag t = some arms := by
+  simp only [Record.tagArms] at h
+  split at h
+  · rename_i hall
+    have hnone : ∀ m ∈ t.normalize.members, decls.unfold? m = none := by
+      intro m hm
+      cases hu : decls.unfold? m with
+      | none => rfl
+      | some x =>
+        have htag := List.all_eq_true.mp hall m hm
+        rw [Record.tagOf_ref hu] at htag
+        cases htag
+    have hmembers : Ty.membersIn decls t = t.normalize.members := Ty.membersIn_of_noRefs hnone
+    simp only [Record.tagArmsIn, hmembers, hall, ↓reduceIte]
+    exact h
+  · cases h
+
+/-- **Where the decision's arms answer, they answer the same under a table.** -/
+theorem armsIn_of_arms {decls : TyDecls} {d : Decision} {t : Ty} {r : List Ty × List Ty}
+    (h : d.arms t = some r) : d.armsIn decls t = some r := by
+  cases decls with
+  | nil => exact h
+  | cons e es =>
+    cases d with
+    | bool => exact h
+    | tag name => exact h
+    | option =>
+      obtain ⟨a, ha, rfl⟩ := Option.map_eq_some_iff.mp h
+      show (optionTyIn (e :: es) t).map (fun a => ([], [a])) = _
+      rw [optionTyIn_of_optionTy ha]
+      rfl
+    | recordTag name =>
+      obtain ⟨arms, ha, rfl⟩ := Option.map_eq_some_iff.mp h
+      show (Record.tagArmsIn (e :: es) name t).map (fun arms => ([arms.1], [arms.2])) = _
+      rw [Record.tagArmsIn_of_tagArms ha]
+      rfl
+
+/-- The arms under a table bind exactly `binds` values. -/
+theorem armsIn_length (decls : TyDecls) (d : Decision) (t : Ty) (e0 e1 : List Ty)
+    (h : d.armsIn decls t = some (e0, e1)) : (e0.length, e1.length) = d.binds := by
+  cases decls with
+  | nil => exact arms_length d t e0 e1 h
+  | cons e es =>
+    cases d with
+    | bool => exact arms_length .bool t e0 e1 h
+    | tag name => exact arms_length (.tag name) t e0 e1 h
+    | option =>
+      obtain ⟨a, _, heq⟩ := Option.map_eq_some_iff.mp h
+      cases heq
+      rfl
+    | recordTag name =>
+      obtain ⟨parts, _, heq⟩ := Option.map_eq_some_iff.mp h
+      cases heq
+      rfl
 
 end Decision
 end Effect4.Program

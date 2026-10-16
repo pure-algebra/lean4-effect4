@@ -98,7 +98,7 @@ theorem inv_exit (sig : Signature Op) (env : TyEnv) (body : Eff Op) :
 
 theorem inv_select (sig : Signature Op) (env : TyEnv) (s : Term) (d : Decision) (a0 a1 : Eff Op) :
     ∀ t, effTy sig env (.select s d a0 a1) = some t →
-      ∃ ty e0 e1 t0 t1 answer, termTy sig env s = some ty ∧ d.arms ty = some (e0, e1) ∧
+      ∃ ty e0 e1 t0 t1 answer, termTy sig env s = some ty ∧ d.armsIn sig.types ty = some (e0, e1) ∧
         effTy sig (env ++ e0) a0 = some t0 ∧ effTy sig (env ++ e1) a1 = some t1 ∧
         EffTy.joinAnswer t0.answer t1.answer = some answer ∧
         t = ⟨answer, t0.error.join t1.error, t0.requires.union t1.requires⟩ := by

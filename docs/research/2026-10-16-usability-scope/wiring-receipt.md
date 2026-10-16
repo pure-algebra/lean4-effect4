@@ -44,6 +44,11 @@
 | `#axiom_audit` over the six W2 modules | `418 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals` |
 | `#axiom_audit` over the 27 W3a modules | `4668 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals` |
 | `python3 scripts/check-language.py --strict` on the review, the plan and this receipt | `PASS` |
+| WSL, at `ddabf89d2`: `make gen-lcnf` | `FAIL`: the generator passed its 4096 MB cap at `todo_gen.ml`, all six artefacts in one process |
+| `lake env lean -M8192 --run src/OCaml5/Tools/LcnfGen.lean --recipe ocaml/gen/roots.json`, peak sampled | completes; peak working set 6296 MB; the six artefacts byte-identical to the committed ones |
+| the same, one artefact per process (`--one 0` to `--one 5`) at `-M4096` | completes; peak 3042 MB; byte-identical |
+| WSL, at `6a5f7787b` (the generator fix): `make gen-lcnf` | `PASS generate`; `git status` shows no change to `ocaml/` or `generated/` |
+| WSL, at `6a5f7787b`: `make check-ocaml` | `gen-check: PASS`, `PASS ocaml: recorded 3bf1a7de1aa5`, exit 0 |
 
 ## Axiom output
 

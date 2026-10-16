@@ -873,7 +873,8 @@ theorem answers_ifElse {test : TermSrc} {thenB elseB : Src NativeOp} {s : TypedS
       rw [List.append_nil]
       exact effTy_sound sig b _ _ typedB
     exact (effTy_complete sig _ _ _
-      (.select (d := .bool) (e0 := []) (e1 := []) typedC Decision.arms_bool left right rfl)).trans
+      (.select (d := .bool) (e0 := []) (e1 := []) typedC (Decision.armsIn_of_arms Decision.arms_bool)
+        left right rfl)).trans
         (congrArg some (pure_columns _))
 
 /-- **`selectOptionWith`, with a kept payload.** The second arm reads the payload through a kept
@@ -903,7 +904,8 @@ theorem answers_selectOptionWith_kept {scrutinee : TermSrc} {arm0 : Src NativeOp
       rw [List.append_nil]
       exact effTy_sound sig a _ _ typedA
     exact (effTy_complete sig _ _ _
-      (.select (d := .option) typedC arms left (effTy_sound sig b _ _ typedB) rfl)).trans
+      (.select (d := .option) typedC (Decision.armsIn_of_arms arms) left
+        (effTy_sound sig b _ _ typedB) rfl)).trans
         (congrArg some (pure_columns _))
 
 /-- **`selectOptionWith`**: the second arm reads the payload at its type, and the two arms'
@@ -1214,7 +1216,8 @@ theorem has_ifElse {test : TermSrc} {thenB elseB : Src NativeOp} {s : TypedScope
       rw [List.append_nil]
       exact effTy_sound sig b _ _ typedB
     exact effTy_complete sig _ _ _
-      (.select (d := .bool) (e0 := []) (e1 := []) typedC Decision.arms_bool left right rfl)
+      (.select (d := .bool) (e0 := []) (e1 := []) typedC (Decision.armsIn_of_arms Decision.arms_bool)
+        left right rfl)
 
 /-! ## Rows -/
 

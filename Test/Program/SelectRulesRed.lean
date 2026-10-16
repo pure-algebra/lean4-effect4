@@ -22,7 +22,7 @@ inductive WrongSelect (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   | select {env : TyEnv} {s : Term} {d : Decision} {a0 a1 : Eff Op} {t : Ty}
       {e0 e1 : List Ty} {t0 t1 : EffTy} {answer : Ty} :
       termTy sig env s = some t →
-      d.arms t = some (e0, e1) →
+      d.armsIn sig.types t = some (e0, e1) →
       effTy sig (env ++ e0) a0 = some t0 →
       effTy sig (env ++ e1) a1 = some t1 →
       EffTy.joinAnswer t0.answer t1.answer = some answer →

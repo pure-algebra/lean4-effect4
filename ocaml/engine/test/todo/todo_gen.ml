@@ -16249,6 +16249,104 @@ let program_decision_arms (x_1 : decision) (x_2 : ty) : (ty list * ty list) opti
 
 
 
+(* LCNF mono: Effect4.Program.UnionRule.liftIn._at_.Effect4.Program.optionTyIn.spec_0 (decls : List (Prod String Effect4.Program.Ty)) (rule : Effect4.Program.Ty -> (Option Effect4.Program.Ty)) (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+
+let program_union_rule_lift_in_at_program_option_ty_in_spec_0 (decls : (string * ty) list) (rule : ty -> ty option) (target : ty) : ty option =
+  match decls with
+    | [] -> program_union_rule_lift_at_program_option_ty_spec_0 rule target
+    | _ -> (let _x_2 = program_ty_members_in decls target in
+      let _x_3 = [] in
+      let _x_4 = list_map_m_loop_at_program_union_rule_lift_at_program_option_ty_spec_0_spec_0 rule _x_2 _x_3 in
+      match _x_4 with
+        | None -> None
+        | Some val__6 -> (let _x_7 = program_union_rule_join_all_at_program_union_rule_lift_at_program_option_ty_spec_0_spec_1 val__6 in
+          Some _x_7))
+
+
+
+(* LCNF mono: Effect4.Program.optionTyIn (decls : List (Prod String Effect4.Program.Ty)) (target : Effect4.Program.Ty) : Option Effect4.Program.Ty *)
+
+let program_option_ty_in (decls : (string * ty) list) (target : ty) : ty option =
+  let _x_1 = program_member_option in
+  program_union_rule_lift_in_at_program_option_ty_in_spec_0 decls _x_1 target
+
+
+
+(* LCNF mono: List.all._at_.Effect4.Program.Record.tagArmsIn.spec_0 (x.1 : List Effect4.Program.Ty) : Bool *)
+
+let rec list_all_at_program_record_tag_arms_in_spec_0 (x_1 : ty list) : bool =
+  match x_1 with
+    | [] -> true
+    | head_3 :: tail_4 -> (let _x_5 = program_record_tag_of head_3 in
+      match _x_5 with
+        | None -> false
+        | Some _ -> list_all_at_program_record_tag_arms_in_spec_0 tail_4)
+
+
+
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Program.Record.tagArmsIn.spec_1 (tag : String) (a.1 : List Effect4.Program.Ty) (a.2 : List Effect4.Program.Ty) : List Effect4.Program.Ty *)
+
+let rec list_filter_tr_loop_at_program_record_tag_arms_in_spec_1 (tag : string) (a_1 : ty list) (a_2 : ty list) : ty list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = program_record_is_tag tag head_4 in
+      if _x_6 then (let _x_8 = head_4 :: a_2 in
+        list_filter_tr_loop_at_program_record_tag_arms_in_spec_1 tag tail_5 _x_8) else list_filter_tr_loop_at_program_record_tag_arms_in_spec_1 tag tail_5 a_2)
+
+
+
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Program.Record.tagArmsIn.spec_2 (tag : String) (_x.1 : Bool) (a.2 : List Effect4.Program.Ty) (a.3 : List Effect4.Program.Ty) : List Effect4.Program.Ty *)
+
+let rec list_filter_tr_loop_at_program_record_tag_arms_in_spec_2 (tag : string) (_x_1 : bool) (a_2 : ty list) (a_3 : ty list) : ty list =
+  match a_2 with
+    | [] -> List.rev a_3
+    | head_5 :: tail_6 -> (let _x_7 = program_record_is_tag tag head_5 in
+      if _x_7 then list_filter_tr_loop_at_program_record_tag_arms_in_spec_2 tag _x_1 tail_6 a_3 else if _x_1 then (let _x_9 = head_5 :: a_3 in
+          list_filter_tr_loop_at_program_record_tag_arms_in_spec_2 tag _x_1 tail_6 _x_9) else list_filter_tr_loop_at_program_record_tag_arms_in_spec_2 tag _x_1 tail_6 a_3)
+
+
+
+(* LCNF mono: Effect4.Program.Record.tagArmsIn (decls : List (Prod String Effect4.Program.Ty)) (tag : String) (target : Effect4.Program.Ty) : Option (Prod Effect4.Program.Ty Effect4.Program.Ty) *)
+
+let program_record_tag_arms_in (decls : (string * ty) list) (tag : string) (target : ty) : (ty * ty) option =
+  let members = program_ty_members_in decls target in
+  let _x_1 = list_all_at_program_record_tag_arms_in_spec_0 members in
+  if _x_1 then (let _x_3 = [] in
+    let _x_4 = list_filter_tr_loop_at_program_record_tag_arms_in_spec_1 tag members _x_3 in
+    let _x_5 = program_ty_of_members _x_4 in
+    let _x_6 = list_filter_tr_loop_at_program_record_tag_arms_in_spec_2 tag _x_1 members _x_3 in
+    let _x_7 = program_ty_of_members _x_6 in
+    let _x_8 = _x_5, _x_7 in
+    Some _x_8) else None
+
+
+
+(* LCNF mono: Effect4.Program.Decision.armsIn (decls : List (Prod String Effect4.Program.Ty)) (d : Effect4.Program.Decision) (t : Effect4.Program.Ty) : Option (Prod (List Effect4.Program.Ty) (List Effect4.Program.Ty)) *)
+
+let program_decision_arms_in (decls : (string * ty) list) (d : decision) (t : ty) : (ty list * ty list) option =
+  match decls with
+    | [] -> program_decision_arms d t
+    | _ -> (match (d : decision) with
+        | Decision_option -> (let _x_2 = program_option_ty_in decls t in
+          match _x_2 with
+            | None -> None
+            | Some val__4 -> (let _x_5 = [] in
+              let _x_6 = val__4 :: _x_5 in
+              let _x_7 = _x_5, _x_6 in
+              Some _x_7))
+        | Decision_recordTag tag_9 -> (let _x_10 = program_record_tag_arms_in decls tag_9 t in
+          match _x_10 with
+            | None -> None
+            | Some val__12 -> (match val__12 with
+                | fst_1, snd_1 -> (let _x_13 = [] in
+                  let _x_14 = fst_1 :: _x_13 in
+                  let _x_15 = snd_1 :: _x_13 in
+                  let _x_16 = _x_14, _x_15 in
+                  Some _x_16)))
+        | _ -> program_decision_arms d t)
+
+
+
 (* LCNF mono: Effect4.Program.Effs.toList._redArg (x.1 : Effect4.Program.Effs lcAny) : List (Effect4.Program.Eff lcAny) *)
 
 let rec program_effs_to_list (x_1 : _ effs) : _ eff list =
@@ -16597,46 +16695,47 @@ let rec program_checker_check (sig_ : _ signature) (env : ty list) (p : int list
     | Eff_select (scrutinee_349, decision_350, arm0_351, arm1_352) -> (let _x_353 = program_checker_term_opt sig_ env p scrutinee_349 in
       match _x_353 with
         | Error a_354 -> Error a_354
-        | Ok a_356 -> (let _x_357 = program_select_refusal decision_350 a_356 in
-          let _x_358 = ({ path = p; reason = _x_357 } : type_refusal) in
-          let _x_359 = program_decision_arms decision_350 a_356 in
-          let _x_360 = program_checker_expect _x_358 _x_359 in
-          match _x_360 with
-            | Error a_361 -> Error a_361
-            | Ok a_363 -> (match a_363 with
-                | fst_3, snd_3 -> (let _x_364 = env @ fst_3 in
-                  let _x_365 = 0 in
-                  let _x_366 = [] in
-                  let _x_367 = _x_365 :: _x_366 in
-                  let _x_368 = p @ _x_367 in
-                  let _x_369 = program_checker_check sig_ _x_364 _x_368 arm0_351 in
-                  match _x_369 with
-                    | Error _ -> _x_369
-                    | Ok a_371 -> (let _x_372 = env @ snd_3 in
-                      let _x_373 = 1 in
-                      let _x_374 = _x_373 :: _x_366 in
-                      let _x_375 = p @ _x_374 in
-                      let _x_376 = program_checker_check sig_ _x_372 _x_375 arm1_352 in
-                      match _x_376 with
-                        | Error _ -> _x_376
-                        | Ok a_378 -> (match (a_371 : eff_ty) with
-                            | { answer = answer_15; error = error_20; requires = requires_18 } -> (match (a_378 : eff_ty) with
-                                | { answer = answer_16; error = error_21; requires = requires_19 } -> (let _x_379 = program_ty_join answer_15 answer_16 in
-                                  let _x_380 = program_ty_join error_20 error_21 in
-                                  let _x_381 = row_union_at_env_requirement_union_spec_0 requires_18 requires_19 in
-                                  let _x_382 = ({ answer = _x_379; error = _x_380; requires = _x_381 } : eff_ty) in
-                                  Ok _x_382))))))))
+        | Ok a_356 -> (match (sig_ : _ signature) with
+            | { types = types; _ } -> (let _x_357 = program_select_refusal decision_350 a_356 in
+              let _x_358 = ({ path = p; reason = _x_357 } : type_refusal) in
+              let _x_359 = program_decision_arms_in types decision_350 a_356 in
+              let _x_360 = program_checker_expect _x_358 _x_359 in
+              match _x_360 with
+                | Error a_361 -> Error a_361
+                | Ok a_363 -> (match a_363 with
+                    | fst_3, snd_3 -> (let _x_364 = env @ fst_3 in
+                      let _x_365 = 0 in
+                      let _x_366 = [] in
+                      let _x_367 = _x_365 :: _x_366 in
+                      let _x_368 = p @ _x_367 in
+                      let _x_369 = program_checker_check sig_ _x_364 _x_368 arm0_351 in
+                      match _x_369 with
+                        | Error _ -> _x_369
+                        | Ok a_371 -> (let _x_372 = env @ snd_3 in
+                          let _x_373 = 1 in
+                          let _x_374 = _x_373 :: _x_366 in
+                          let _x_375 = p @ _x_374 in
+                          let _x_376 = program_checker_check sig_ _x_372 _x_375 arm1_352 in
+                          match _x_376 with
+                            | Error _ -> _x_376
+                            | Ok a_378 -> (match (a_371 : eff_ty) with
+                                | { answer = answer_15; error = error_20; requires = requires_18 } -> (match (a_378 : eff_ty) with
+                                    | { answer = answer_16; error = error_21; requires = requires_19 } -> (let _x_379 = program_ty_join answer_15 answer_16 in
+                                      let _x_380 = program_ty_join error_20 error_21 in
+                                      let _x_381 = row_union_at_env_requirement_union_spec_0 requires_18 requires_19 in
+                                      let _x_382 = ({ answer = _x_379; error = _x_380; requires = _x_381 } : eff_ty) in
+                                      Ok _x_382)))))))))
     | Eff_iterate (cursor_ty_384, initial_385, test_386, step_387, result_388, body_389) -> (let _x_390 = program_checker_term_opt sig_ env p initial_385 in
       match _x_390 with
         | Error a_391 -> Error a_391
-        | Ok a_393 -> (let _jp_394 = fun _y_395 _y_396 _y_397 _y_398 -> if _y_395 then (let _x_402 = program_ty_normalize a_393 in
-            let _x_403 = program_ty_normalize _y_397 in
+        | Ok a_393 -> (let _jp_394 = fun _y_395 _y_396 _y_397 _y_398 -> if _y_396 then (let _x_402 = program_ty_normalize a_393 in
+            let _x_403 = program_ty_normalize _y_395 in
             let _x_404 = program_ty_sub _x_402 _x_403 in
-            if _x_404 then (let _x_408 = TypeReason_stepNotCursor (_y_398, _y_397) in
+            if _x_404 then (let _x_408 = TypeReason_stepNotCursor (_y_397, _y_395) in
               let _x_409 = ({ path = p; reason = _x_408 } : type_refusal) in
-              Error _x_409) else (let _x_405 = TypeReason_initialNotCursor (a_393, _y_397) in
+              Error _x_409) else (let _x_405 = TypeReason_initialNotCursor (a_393, _y_395) in
               let _x_406 = ({ path = p; reason = _x_405 } : type_refusal) in
-              Error _x_406)) else (let _x_399 = TypeReason_predicateNotBool _y_396 in
+              Error _x_406)) else (let _x_399 = TypeReason_predicateNotBool _y_398 in
             let _x_400 = ({ path = p; reason = _x_399 } : type_refusal) in
             Error _x_400) in
           let _jp_411 = fun _y_412 -> let _x_413 = [] in
@@ -16670,7 +16769,7 @@ let rec program_checker_check (sig_ : _ signature) (env : ty list) (p : int list
                                 if _x_442 then (let _x_443 = program_ty_normalize a_432 in
                                   let _x_444 = program_ty_sub _x_443 _x_441 in
                                   if _x_444 then (let _x_445 = ({ answer = a_436; error = error_22; requires = requires_20 } : eff_ty) in
-                                    Ok _x_445) else _jp_394 _x_439 a_419 _y_412 a_432) else _jp_394 _x_439 a_419 _y_412 a_432) else _jp_394 _x_439 a_419 _y_412 a_432))))) in
+                                    Ok _x_445) else _jp_394 _y_412 _x_439 a_432 a_419) else _jp_394 _y_412 _x_439 a_432 a_419) else _jp_394 _y_412 _x_439 a_432 a_419))))) in
           match cursor_ty_384 with
             | None -> _jp_411 a_393
             | Some val__447 -> _jp_411 val__447))
@@ -17502,25 +17601,27 @@ let program_node_child_env (s : _ signature) (ctx : node_env) (x_1 : _ node) (x_
             let _x_246 = program_term_ty s _x_245 scrutinee_226 in
             match _x_246 with
               | None -> None
-              | Some val__248 -> (let _x_249 = program_decision_arms decision_227 val__248 in
-                match _x_249 with
-                  | None -> None
-                  | Some val__251 -> (match val__251 with
-                      | fst_1, _ -> (let _x_252 = _x_245 @ fst_1 in
-                        let _x_253 = NodeEnv_env _x_252 in
-                        Some _x_253)))) else (let _x_232 = 1 in
+              | Some val__248 -> (match (s : _ signature) with
+                  | { types = types_1; _ } -> (let _x_249 = program_decision_arms_in types_1 decision_227 val__248 in
+                    match _x_249 with
+                      | None -> None
+                      | Some val__251 -> (match val__251 with
+                          | fst_1, _ -> (let _x_252 = _x_245 @ fst_1 in
+                            let _x_253 = NodeEnv_env _x_252 in
+                            Some _x_253))))) else (let _x_232 = 1 in
             let _x_233 = x_2 = _x_232 in
             if _x_233 then (let _x_235 = program_node_env_ty_env ctx in
               let _x_236 = program_term_ty s _x_235 scrutinee_226 in
               match _x_236 with
                 | None -> None
-                | Some val__238 -> (let _x_239 = program_decision_arms decision_227 val__238 in
-                  match _x_239 with
-                    | None -> None
-                    | Some val__241 -> (match val__241 with
-                        | _, snd_1 -> (let _x_242 = _x_235 @ snd_1 in
-                          let _x_243 = NodeEnv_env _x_242 in
-                          Some _x_243)))) else None))
+                | Some val__238 -> (match (s : _ signature) with
+                    | { types = types; _ } -> (let _x_239 = program_decision_arms_in types decision_227 val__238 in
+                      match _x_239 with
+                        | None -> None
+                        | Some val__241 -> (match val__241 with
+                            | _, snd_1 -> (let _x_242 = _x_235 @ snd_1 in
+                              let _x_243 = NodeEnv_env _x_242 in
+                              Some _x_243))))) else None))
         | Eff_iterate (cursor_ty_255, initial_256, _, _, _, _) -> (let _x_261 = 0 in
           let _x_262 = x_2 = _x_261 in
           if _x_262 then (let _x_264 = program_node_env_ty_env ctx in

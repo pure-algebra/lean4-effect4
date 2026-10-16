@@ -487,7 +487,7 @@ theorem Annotate.check_eq (s : Signature Op) (e : Eff Op) (env : TyEnv) (p : Lis
     cases h : Checker.term? s env p scrutinee with
     | ok t =>
       simp only [termTy_of_term? h, Except.toOption, Option.bind_some, except_ok_bind]
-      cases ha : d.arms t with
+      cases ha : d.armsIn s.types t with
       | some arms =>
         simp only [Option.map_some, Annotate.check_eq s a0, Annotate.check_eq s a1]
         rfl

@@ -83,7 +83,7 @@ theorem Annotate.check_alg_agreeOn {s s' : Signature Op} (h : SigExtends s s') :
       simp only [Annotate.check.alg, h.service key ty hty, hty, hterm]
     eff_provideContext := by simp only [Annotate.check.alg, hterm]
     eff_catchIf := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_select := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
+    eff_select := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey, h.types]
     eff_iterate := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     eff_restore := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     eff_defs := rfl

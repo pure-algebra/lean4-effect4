@@ -133,7 +133,8 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       EffTy.joinAnswer b.answer h.answer = some answer →
       HasTy sig env (.catchIf test body handler)
         ⟨answer, catchIfError test env.length b.error h.error, b.requires.union h.requires⟩
-  /-- A value-decided fork: the arms are typed at the environments `Decision.arms` gives,
+  /-- A value-decided fork: the arms are typed at the environments `Decision.armsIn` gives under
+  the signature's declaration table,
   their answers join as the least upper bound (S4c: `succeed 1` beside `succeed true` is
   `nat | bool`), and **both** arms' errors and requirements are in the conclusion. Under
   `.bool` this is `if` in a generator body (`E4-FLOW-CE-029`). (The row that is not this one,
@@ -142,7 +143,7 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   | select {env : TyEnv} {s : Term} {d : Decision} {a0 a1 : Eff Op} {t : Ty}
       {e0 e1 : List Ty} {t0 t1 : EffTy} {answer : Ty} :
       termTy sig env s = some t →
-      d.arms t = some (e0, e1) →
+      d.armsIn sig.types t = some (e0, e1) →
       HasTy sig (env ++ e0) a0 t0 →
       HasTy sig (env ++ e1) a1 t1 →
       EffTy.joinAnswer t0.answer t1.answer = some answer →
