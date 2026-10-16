@@ -177,12 +177,15 @@ $(GEN)/derived: $(CHK)/gen-derived.key
 # unnecessary. `make gen-lcnf` is run by name, by `gen`, by the check-ocaml CI job, and by
 # `$(CHK)/ocaml`, which depends on it, so the OCaml gate builds the current machine (LC-3).
 # Its sources are the generator's: the driver, the route (`OCaml5.Lcnf`, `OCaml5.Ml`) and the
-# Conform modules it reads (the mono index, the source evaluator's primitives).
+# Conform modules it reads (the mono index, the source evaluator's primitives), and the modules
+# each artefact imports: `Effect4.Api`, and the to-do host run that the todo lane lowers (LC-6),
+# which reaches no law module.
 LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean src/OCaml5/Ml/*.lean) \
   $(wildcard tools/Conform/Lcnf/*.lean tools/Conform/Core/*.lean tools/Conform/Source/*.lean) \
   ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml $(PRODUCER_COMMON)
-LCNF_OUT := ocaml/eff/eff_types.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv
-LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen Effect4.Api --outputs $(LCNF_OUT)
+LCNF_OUT := ocaml/eff/eff_types.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
+  ocaml/engine/test/todo/todo_gen.ml ocaml/gen/closure-todo_gen.tsv
+LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen Effect4.Api Test.Dogfood.Scenario.Todo.HostRun --outputs $(LCNF_OUT)
 $(CHK)/gen-lcnf.key: FORCE $(GEN)/derived
 	@$(LCNF_KEY)
 $(GEN)/lcnf: $(CHK)/gen-lcnf.key
@@ -365,6 +368,7 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.lean \
   ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens \
   ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
+  ocaml/engine/test/todo/todo_gen.ml ocaml/gen/closure-todo_gen.tsv \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \
   harness/truth/prelude-atoms.gen.ts \

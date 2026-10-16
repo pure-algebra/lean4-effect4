@@ -290,7 +290,10 @@ def generate(families, output):
         if 'lcnf' in families:
             if checking:
                 raise ValueError('LCNF regenerates in place only; the drift check is `git diff`')
-            run(['lake', 'build', 'Effect4'])
+            # Each artefact's imports, read from the recipe, so a lane's Lean roots are built too.
+            recipe = json.loads((ROOT / LCNF_ROOTS).read_text())
+            imports = sorted({m for artefact in recipe['artefacts'] for m in artefact.get('import', [])})
+            run(['lake', 'build', *imports])
             run(['lake', 'build', 'OCaml5.Tools.LcnfGen'])
             run(['lake', 'env', 'lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean',
                  '--recipe', LCNF_ROOTS])
