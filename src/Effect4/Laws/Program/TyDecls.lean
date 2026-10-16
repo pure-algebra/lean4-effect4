@@ -801,36 +801,59 @@ theorem itemPairs_all (ts : List Ty) (xs : List Val) :
 
 namespace TyDecls
 
-/-- **The iteration stops at a closed set**: every name of a round on its answer is in it. -/
-theorem inhabitedFrom_closed (decls : TyDecls) : ∀ (known : List String) (name : String),
-    name ∈ decls.inhabitedRound (decls.inhabitedFrom known) → name ∈ decls.inhabitedFrom known := by
+/-- **Saturation stops at a closed set**: a declared name its test accepts there is in it. -/
+theorem saturate_closed (decls : TyDecls) (holds : List String → String → Bool) :
+    ∀ (known : List String) (name : String), (∃ d ∈ decls, d.1 = name) →
+      holds (decls.saturate holds known) name = true → name ∈ decls.saturate holds known := by
   intro known
-  induction known using TyDecls.inhabitedFrom.induct decls with
+  induction known using TyDecls.saturate.induct decls holds with
   | case1 known hstop =>
-    intro name hname
-    rw [inhabitedFrom, dif_pos hstop] at hname ⊢
+    intro name hdecl hh
+    rw [saturate, dif_pos hstop] at hh ⊢
     cases hc : known.contains name with
     | true => exact List.contains_iff_mem.mp hc
     | false =>
-      have hfresh : name ∈ (decls.inhabitedRound known).filter fun n => !known.contains n :=
-        List.mem_filter.mpr ⟨hname, by rw [hc]; rfl⟩
+      obtain ⟨d, hd, rfl⟩ := hdecl
+      have hround : d.1 ∈ decls.round holds known :=
+        List.mem_filterMap.mpr ⟨d, hd, by rw [if_pos hh]⟩
+      have hfresh : d.1 ∈ (decls.round holds known).filter fun n => !known.contains n :=
+        List.mem_filter.mpr ⟨hround, by rw [hc]; rfl⟩
       rw [hstop] at hfresh
       cases hfresh
   | case2 known hmore ih =>
-    intro name hname
-    rw [inhabitedFrom, dif_neg hmore] at hname ⊢
-    exact ih name hname
+    intro name hdecl hh
+    rw [saturate, dif_neg hmore] at hh ⊢
+    exact ih name hdecl hh
+
+/-- **Saturation keeps an invariant that each round's test establishes**: when the test's
+acceptance of a name, given the invariant on the names known, gives it at the name, every name of
+the saturation has it. The induction principle of both instances. -/
+theorem saturate_inv (decls : TyDecls) (holds : List String → String → Bool)
+    {R : String → Prop} (hstep : ∀ known, (∀ n ∈ known, R n) → ∀ n, holds known n = true → R n) :
+    ∀ known, (∀ n ∈ known, R n) → ∀ n ∈ decls.saturate holds known, R n := by
+  intro known
+  induction known using TyDecls.saturate.induct decls holds with
+  | case1 known hstop =>
+    intro hk
+    rw [saturate, dif_pos hstop]
+    exact hk
+  | case2 known hmore ih =>
+    intro hk
+    rw [saturate, dif_neg hmore]
+    refine ih fun n hn => ?_
+    rcases List.mem_append.mp hn with hold | hnew
+    · exact hk n hold
+    · exact hstep known hk n (mem_round (List.mem_filter.mp hnew).1).2
 
 /-- A declared name whose body the iteration's answer calls inhabited is in the answer. -/
 theorem mem_inhabitedNames {decls : TyDecls} {name : String} {body : Ty}
     (hb : decls.body? name = some body)
     (h : cata_ty (decls.inhabitedWith decls.inhabitedNames) body = true) :
     name ∈ decls.inhabitedNames := by
-  refine inhabitedFrom_closed decls [] name (List.mem_filterMap.mpr ⟨(name, body), mem_of_body? hb, ?_⟩)
-  show (decls.body? name).bind (fun body =>
-    if cata_ty (decls.inhabitedWith decls.inhabitedNames) body = true then some name
-    else none) = some name
-  rw [hb, Option.bind_some, if_pos h]
+  refine decls.saturate_closed decls.inhabitedHolds [] name ⟨(name, body), mem_of_body? hb, rfl⟩ ?_
+  unfold inhabitedHolds
+  rw [hb]
+  exact h
 
 /-- At a type that names no declared name at its head, a step whose questions are inhabited is
 inhabited. -/
@@ -987,7 +1010,7 @@ theorem tyDecls_conservative :
 
 /-! ### Completeness of inhabitance: its parts
 
-A name's declaration is read at its first entry in both judgments (`TyDecls.inhabitedRound`
+A name's declaration is read at its first entry in both judgments (`TyDecls.inhabitedHolds`
 reads `body?`). On a table with a repeated name, reading every entry made inhabitance answer
 `true` at `[("A", never), ("A", unit)]`, where no value is a member of `A`. The battery keeps that
 table as a control. -/
@@ -1202,7 +1225,7 @@ calls inhabited has a member at an extension of any allocation table. Placement:
 a tuple and a record's required fields build their parts in turn, each at the table the previous
 part left, and carry the earlier parts forward (`memberIn_mono`). An external handle takes the
 fresh index `allocated.length`. A declared name takes its witness from `hk`; an option, a list, a
-map, an exit and a cause have a member with no question. Consumer: `witnessed_inhabitedFrom`. -/
+map, an exit and a cause have a member with no question. Consumer: `witnessed_inhabitedNames`. -/
 @[semantics "store-typing" (requirement := R3)]
 theorem exists_memberIn_fresh {decls : TyDecls} {known : List String}
     (hk : decls.Witnessed known) (t : Ty) (h : cata_ty (decls.inhabitedWith known) t = true)
@@ -1360,34 +1383,26 @@ theorem exists_memberIn_fresh {decls : TyDecls} {known : List String}
     exact ⟨.ctor 0 [.list ns, .list xs], al', ext, .step rfl hps hall⟩
 
 /-- **The iteration keeps its invariant**: every name it adds has a witnessed declaration. -/
-theorem witnessed_inhabitedFrom (decls : TyDecls) :
-    ∀ known, decls.Witnessed known → decls.Witnessed (decls.inhabitedFrom known) := by
-  intro known
-  induction known using TyDecls.inhabitedFrom.induct decls with
-  | case1 known hstop =>
-    intro hk
-    rw [TyDecls.inhabitedFrom, dif_pos hstop]
-    exact hk
-  | case2 known hmore ih =>
-    intro hk
-    rw [TyDecls.inhabitedFrom, dif_neg hmore]
-    refine ih fun name hname body hb => ?_
-    rcases List.mem_append.mp hname with hold | hnew
-    · exact hk name hold body hb
-    · exact exists_memberIn_fresh hk body
-        (TyDecls.inhabited_of_inhabitedRound (List.mem_filter.mp hnew).1 hb)
+theorem witnessed_inhabitedNames (decls : TyDecls) : decls.Witnessed decls.inhabitedNames := by
+  refine decls.saturate_inv decls.inhabitedHolds
+    (R := fun name => ∀ body, decls.body? name = some body → ∀ allocated : List String,
+      ∃ (v : Val) (allocated' : List String), Extends allocated allocated' ∧
+        MemberIn decls allocated' v body)
+    ?_ [] (fun _ hn => absurd hn List.not_mem_nil)
+  intro known hk name hh body hb
+  unfold TyDecls.inhabitedHolds at hh
+  rw [hb] at hh
+  exact exists_memberIn_fresh hk body hh
 
 /-- **Inhabitance is complete against membership under the table**: an inhabited type has a
 member at some allocation table. Placement: concept `store-typing`, R3, a step of the claim
-`recursive-types-inhabited`. Proved modulo its parts `memberIn_mono` and
-`exists_memberIn_fresh`. Consumer: `inhabited_iff_memberIn`. It establishes nothing of a world
+`recursive-types-inhabited`, from `exists_memberIn_fresh` and the round invariant. Consumer: `inhabited_iff_memberIn`. It establishes nothing of a world
 (`Fits`). -/
 @[semantics "store-typing" (requirement := R3)]
 theorem exists_memberIn_of_inhabited {decls : TyDecls} {t : Ty}
     (h : decls.inhabited t = true) :
     ∃ (v : Val) (allocated : List String), MemberIn decls allocated v t :=
-  have hw := witnessed_inhabitedFrom decls [] fun _ hn => absurd hn List.not_mem_nil
-  have ⟨v, allocated, _, hv⟩ := exists_memberIn_fresh hw t h []
+  have ⟨v, allocated, _, hv⟩ := exists_memberIn_fresh (witnessed_inhabitedNames decls) t h []
   ⟨v, allocated, hv⟩
 
 /-- **Inhabitance agrees with membership under the table** (claim `recursive-types-inhabited`):
@@ -1719,22 +1734,112 @@ theorem checkerOracle_fixedPoint (decls : TyDecls) : FixedPoint decls (checkerOr
   exact ⟨memberIn_of_hasTyIn [name] v body,
     fun h => (hasTyIn_absorb hb [] v body (hasTyIn_of_memberIn h)).elim id id⟩
 
+/-- A guarded table ranks each of its declared names. -/
+theorem TyDecls.mem_rankedNames {decls : TyDecls} (hg : decls.guarded = true) {name : String}
+    {body : Ty} (hb : decls.body? name = some body) : name ∈ decls.rankedNames := by
+  unfold TyDecls.guarded TyDecls.unguardedAt? at hg
+  cases hf : decls.find? (fun d => !decls.rankedNames.contains d.1) with
+  | some d =>
+    rw [hf] at hg
+    cases hg
+  | none =>
+    have hn := List.find?_eq_none.mp hf (name, body) (TyDecls.mem_of_body? hb)
+    cases hc : decls.rankedNames.contains name with
+    | true => exact List.contains_iff_mem.mp hc
+    | false =>
+      rw [hc] at hn
+      exact absurd rfl hn
+
+/-- The fold reads a union member's verdict from the two oracles alike when they agree at the
+member's name, or when the member names none and the fold agrees at every question. -/
+theorem cata_declAlg_member_agree {decls : TyDecls} {o o' : String → Adm} {m : Ty}
+    (hm : m.isMember = true) (v : Val) (allocated : List String)
+    (href : ∀ name body, decls.unfold? m = some (name, body) → o name v allocated = o' name v allocated)
+    (hq : ∀ ps, Val.obligations v m allocated = some ps → ∀ p ∈ ps,
+      (cata_ty (declAlg decls o) p.2).2 p.1 allocated = (cata_ty (declAlg decls o') p.2).2 p.1 allocated) :
+    (cata_ty (declAlg decls o) m).2 v allocated = (cata_ty (declAlg decls o') m).2 v allocated := by
+  rw [cata_declAlg_step decls o hm, cata_declAlg_step decls o' hm]
+  cases hu : decls.unfold? m with
+  | some x =>
+    obtain ⟨name, body⟩ := x
+    exact href name body hu
+  | none =>
+    unfold obligationsAll
+    cases hobl : Val.obligations v m allocated with
+    | none => rfl
+    | some ps =>
+      apply Bool.eq_iff_iff.mpr
+      rw [List.all_eq_true, List.all_eq_true]
+      exact forall_congr' fun p => imp_congr_right fun hp => by
+        dsimp only
+        rw [hq ps hobl p hp]
+
+/-- The fold reads a type's verdict from the two oracles alike when it does at every member. -/
+theorem cata_declAlg_agree_of_members {decls : TyDecls} {o o' : String → Adm} (t : Ty) (v : Val)
+    (allocated : List String)
+    (h : ∀ m ∈ t.members,
+      (cata_ty (declAlg decls o) m).2 v allocated = (cata_ty (declAlg decls o') m).2 v allocated) :
+    (cata_ty (declAlg decls o) t).2 v allocated = (cata_ty (declAlg decls o') t).2 v allocated := by
+  rw [cata_declAlg_members decls o, cata_declAlg_members decls o']
+  apply Bool.eq_iff_iff.mpr
+  rw [List.any_eq_true, List.any_eq_true]
+  exact exists_congr fun m => and_congr_right fun hm => by rw [h m hm]
+
+/-- **At one value, two fixed points of a guarded table agree at every type**, given that they
+do at smaller values, by recursion on the value's size. At the value itself the names agree
+round by round of the ranking: a name's declaration has at its head only names ranked before it,
+whose oracles agree, and members that ask their questions at smaller values. A step of
+`fixedPoint_agree`. -/
+theorem fixedPoint_agree_at {decls : TyDecls} (hg : decls.guarded = true) {o o' : String → Adm}
+    (ho : FixedPoint decls o) (ho' : FixedPoint decls o') (allocated : List String) (v : Val)
+    (t : Ty) :
+    (cata_ty (declAlg decls o) t).2 v allocated = (cata_ty (declAlg decls o') t).2 v allocated := by
+  have hsmall : ∀ ps, ∀ m, Val.obligations v m allocated = some ps → ∀ p ∈ ps,
+      (cata_ty (declAlg decls o) p.2).2 p.1 allocated =
+        (cata_ty (declAlg decls o') p.2).2 p.1 allocated :=
+    fun ps m hobl p hp =>
+      have := Val.sizeOf_obligation hobl hp
+      fixedPoint_agree_at hg ho ho' allocated p.1 p.2
+  have hranked : ∀ n ∈ decls.rankedNames, ∀ body, decls.body? n = some body →
+      o n v allocated = o' n v allocated := by
+    refine decls.saturate_inv decls.rankHolds
+      (R := fun n => ∀ body, decls.body? n = some body → o n v allocated = o' n v allocated)
+      ?_ [] (fun _ hn => absurd hn List.not_mem_nil)
+    intro known hk n hh body hb
+    unfold TyDecls.rankHolds at hh
+    rw [hb, List.all_eq_true] at hh
+    rw [ho n body hb, ho' n body hb]
+    refine cata_declAlg_agree_of_members body v allocated fun m hm => ?_
+    refine cata_declAlg_member_agree (Ty.members_isMember hm) v allocated ?_
+      fun ps hobl => hsmall ps m hobl
+    intro name body' hu
+    have hname : name ∈ decls.headNames body :=
+      List.mem_filterMap.mpr ⟨m, hm, by rw [hu]; rfl⟩
+    exact hk name (List.contains_iff_mem.mp (hh name hname)) body' (TyDecls.body?_of_unfold? hu)
+  refine cata_declAlg_agree_of_members t v allocated fun m hm => ?_
+  refine cata_declAlg_member_agree (Ty.members_isMember hm) v allocated ?_
+    fun ps hobl => hsmall ps m hobl
+  intro name body hu
+  have hb := TyDecls.body?_of_unfold? hu
+  exact hranked name (TyDecls.mem_rankedNames hg hb) body hb
+termination_by sizeOf v
+
 /-- **Two fixed points of a guarded table agree** at every declared name. Placement: concept
-`store-typing`, R3, the step of the claim `guarded-fixed-point-unique`. Route: strong induction
-on the value's size. At one value, induct along the table's head reach, which guardedness makes
-well founded (`TyDecls.reaches`, `TyDecls.guarded`): a declared reference among a body's union
-members reads the two oracles at the same value and a name nearer the value constructors, and
-every other member asks its questions at smaller values (`cata_declAlg_step`,
-`Val.sizeOf_obligation`). Consumer: `guarded_fixedPoint_unique`. On an unguarded table it fails:
+`store-typing`, R3, the step of the claim `guarded-fixed-point-unique`. Route: recursion on the
+value's size; at one value, induction over the rounds of the ranking (`fixedPoint_agree_at`,
+`TyDecls.rankedNames`). Consumer: `guarded_fixedPoint_unique`. On an unguarded table it fails:
 at `A = A` every oracle is a fixed point, the constant `true` among them (the battery's control). -/
 @[semantics "store-typing" (requirement := R3)]
-proof_goal fixedPoint_agree {decls : TyDecls} (hg : decls.guarded = true) {o o' : String → Adm}
+theorem fixedPoint_agree {decls : TyDecls} (hg : decls.guarded = true) {o o' : String → Adm}
     (ho : FixedPoint decls o) (ho' : FixedPoint decls o') {name : String} {body : Ty}
-    (hb : decls.body? name = some body) : o name = o' name
+    (hb : decls.body? name = some body) : o name = o' name := by
+  funext v allocated
+  rw [ho name body hb, ho' name body hb]
+  exact fixedPoint_agree_at hg ho ho' allocated v body
 
 /-- **On a guarded table the fixed point is unique** (claim `guarded-fixed-point-unique`): every
 fixed point admits exactly the members of each body. So the least fixed point is no choice
-there: it is the greatest one too. Proved modulo its part `fixedPoint_agree`. Consumer: the
+there: it is the greatest one too. Proved from `fixedPoint_agree`. Consumer: the
 formal note's argument that guardedness fixes the meaning, and the table's admission. -/
 @[semantics "store-typing" (requirement := R3)]
 theorem guarded_fixedPoint_unique {decls : TyDecls} (hg : decls.guarded = true)

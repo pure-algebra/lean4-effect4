@@ -20,10 +20,11 @@ note is `docs/research/2026-10-15-recursive-types/formal.md`.
   its body, every other head by its obligations. It recurses on the value's size, then on the
   declared names not yet unfolded since the last value constructor (`TyDecls.unseen`). No fuel:
   the measure is well founded, and a name met again before a value constructor answers `false`.
-- `TyDecls.guarded`: no declared name reaches itself through unions and names alone, so every
-  cycle passes a value constructor (contractivity).
-- `TyDecls.inhabited`: inhabitance, the least fixed point over the table, iterated from no name
-  known until a round adds none.
+- `TyDecls.saturate`: the least set of declared names closed under a round's test, iterated
+  from no name until a round adds none. Inhabitance and guardedness are its two instances.
+- `TyDecls.guarded`: every declared name is ranked, its declaration's head naming only names
+  ranked before it, so every cycle passes a value constructor (contractivity).
+- `TyDecls.inhabited`: inhabitance, the least fixed point over the table.
 
 At the empty table every judgment here is the existing one (`hasTyIn_nil`, `inhabited_nil` in the
 laws). The module is not a Lean module (decisions row 200): it imports `Program/Typed.lean`, a
@@ -132,29 +133,70 @@ theorem body?_of_unfold? {decls : TyDecls} {t : Ty} {name : String} {body : Ty}
       cases h
       exact hb
 
-/-! ## Guardedness -/
+/-! ## Saturation: the least set of names closed under a round -/
 
-/-- Whether `t` reaches the name `target` through unions and declared names alone, unfolding no
-name of `seen` again. A member that is a value constructor's head stops the walk. -/
-def reaches (decls : TyDecls) (seen : List String) (target : String) (t : Ty) : Bool :=
-  t.members.any fun m =>
-    match _h : decls.unfold? m with
-    | some (name, body) =>
-      name == target ||
-        if _hs : seen.contains name then false else decls.reaches (name :: seen) target body
-    | none => false
-termination_by decls.unseen seen
+/-- One round: the declared names that `holds` accepts once the names of `known` are accepted. -/
+def round (decls : TyDecls) (holds : List String → String → Bool) (known : List String) :
+    List String :=
+  decls.filterMap fun d => if holds known d.1 then some d.1 else none
+
+/-- A name of a round is declared, and the round's test accepts it. -/
+theorem mem_round {decls : TyDecls} {holds : List String → String → Bool} {known : List String}
+    {name : String} (h : name ∈ decls.round holds known) :
+    (∃ d ∈ decls, d.1 = name) ∧ holds known name = true := by
+  obtain ⟨d, hd, hn⟩ := List.mem_filterMap.mp h
+  split at hn
+  · rename_i hh
+    cases hn
+    exact ⟨⟨d, hd, rfl⟩, hh⟩
+  · cases hn
+
+/-- **Saturation**, the least fixed point of a round by iteration: add each round's new names
+until a round adds none. Well founded on the declared names not yet known: no fuel. -/
+def saturate (decls : TyDecls) (holds : List String → String → Bool) (known : List String) :
+    List String :=
+  if _h : ((decls.round holds known).filter fun name => !known.contains name) = [] then known
+  else decls.saturate holds
+    (known ++ (decls.round holds known).filter fun name => !known.contains name)
+termination_by decls.unseen known
 decreasing_by
-  exact unseen_cons_lt (body?_of_unfold? _h) (Bool.eq_false_iff.mpr _hs)
+  obtain ⟨name, hname⟩ := List.exists_mem_of_ne_nil _ _h
+  obtain ⟨hround, hfresh⟩ := List.mem_filter.mp hname
+  obtain ⟨⟨d, hd, rfl⟩, _⟩ := mem_round hround
+  have hknown : known.contains d.1 = false := by
+    cases hc : known.contains d.1 with
+    | false => rfl
+    | true =>
+      rw [hc] at hfresh
+      cases hfresh
+  refine unseen_lt (fun x hx => ?_) ⟨d, hd, ?_, hknown⟩
+  · rw [List.contains_append, hx, Bool.true_or]
+  · rw [List.contains_append, List.contains_iff_mem.mpr hname, Bool.or_true]
 
-/-- The first declared name that reaches itself before a value constructor, if any: the name a
-table's admission refuses on its cycle. -/
+/-! ## Guardedness: a rank for every name -/
+
+/-- The declared names a type names at its head: each union member that references one. -/
+def headNames (decls : TyDecls) (t : Ty) : List String :=
+  t.members.filterMap fun m => (decls.unfold? m).map Prod.fst
+
+/-- A round's test of guardedness: every declared name at the head of the name's declaration is
+ranked already. -/
+def rankHolds (decls : TyDecls) (ranked : List String) (name : String) : Bool :=
+  match decls.body? name with
+  | some body => (decls.headNames body).all ranked.contains
+  | none => false
+
+/-- The ranked names: a topological order of the head references, by saturation. A name on a
+head cycle, or one whose head reaches a cycle, is never ranked. -/
+def rankedNames (decls : TyDecls) : List String := decls.saturate decls.rankHolds []
+
+/-- The first declared name that no round ranks, if any: the name a table's admission refuses. Its
+unfolding at one value can return to a name before it reaches a value constructor. -/
 def unguardedAt? (decls : TyDecls) : Option String :=
-  (decls.find? fun d => decls.reaches [d.1] d.1 d.2).map Prod.fst
+  (decls.find? fun d => !decls.rankedNames.contains d.1).map Prod.fst
 
-/-- **Guarded** (contractive): no declared name reaches itself through unions and declared names
-alone, so every cycle of the table passes a value constructor. Stated for a table whose names
-are distinct. -/
+/-- **Guarded** (contractive): every declared name is ranked, so the head references have no
+cycle and every cycle of the table passes a value constructor. -/
 def guarded (decls : TyDecls) : Bool := (decls.unguardedAt?).isNone
 
 end TyDecls
@@ -531,70 +573,16 @@ def inhabitedWith (decls : TyDecls) (known : List String) : TyAlgebra (fun _ => 
     ty_app := fun name args =>
       if (decls.body? name).isSome then known.contains name else inhabitedAlg.ty_app name args }
 
-/-- One round: the declared names whose declarations have a member when `known` does. A name is
-read at its declaration, its first entry (`body?`), as the checker reads it; a repeated name's
-later entries are read nowhere. -/
-def inhabitedRound (decls : TyDecls) (known : List String) : List String :=
-  decls.filterMap fun d =>
-    (decls.body? d.1).bind fun body =>
-      if cata_ty (decls.inhabitedWith known) body then some d.1 else none
+/-- A round's test of inhabitance: the name's declaration, its first entry (`body?`, as the
+checker reads it), has a member when `known`'s names do. A repeated name's later entries are read
+nowhere. -/
+def inhabitedHolds (decls : TyDecls) (known : List String) (name : String) : Bool :=
+  match decls.body? name with
+  | some body => cata_ty (decls.inhabitedWith known) body
+  | none => false
 
-/-- A declared name of a round has an entry. -/
-theorem mem_of_inhabitedRound {decls : TyDecls} {known : List String} {name : String}
-    (h : name ∈ decls.inhabitedRound known) : ∃ d ∈ decls, d.1 = name := by
-  obtain ⟨d, hd, hn⟩ := List.mem_filterMap.mp h
-  refine ⟨d, hd, ?_⟩
-  cases hb : decls.body? d.1 with
-  | none =>
-    rw [hb] at hn
-    cases hn
-  | some body =>
-    rw [hb, Option.bind_some] at hn
-    split at hn
-    · exact Option.some.inj hn
-    · cases hn
-
-/-- A name of a round has a declaration that `known` makes inhabited. -/
-theorem inhabited_of_inhabitedRound {decls : TyDecls} {known : List String} {name : String}
-    {body : Ty} (h : name ∈ decls.inhabitedRound known) (hb : decls.body? name = some body) :
-    cata_ty (decls.inhabitedWith known) body = true := by
-  obtain ⟨d, _, hn⟩ := List.mem_filterMap.mp h
-  cases hd : decls.body? d.1 with
-  | none =>
-    rw [hd] at hn
-    cases hn
-  | some b =>
-    rw [hd, Option.bind_some] at hn
-    split at hn
-    · rename_i hcata
-      cases hn
-      rw [hb] at hd
-      cases hd
-      exact hcata
-    · cases hn
-
-/-- **The least fixed point by iteration**: add each round's new names until a round adds none.
-Well founded on the declared names not yet known: no fuel. -/
-def inhabitedFrom (decls : TyDecls) (known : List String) : List String :=
-  if _h : ((decls.inhabitedRound known).filter fun name => !known.contains name) = [] then known
-  else decls.inhabitedFrom (known ++ (decls.inhabitedRound known).filter fun name => !known.contains name)
-termination_by decls.unseen known
-decreasing_by
-  obtain ⟨name, hname⟩ := List.exists_mem_of_ne_nil _ _h
-  obtain ⟨hround, hfresh⟩ := List.mem_filter.mp hname
-  obtain ⟨d, hd, rfl⟩ := mem_of_inhabitedRound hround
-  have hknown : known.contains d.1 = false := by
-    cases hc : known.contains d.1 with
-    | false => rfl
-    | true =>
-      rw [hc] at hfresh
-      cases hfresh
-  refine unseen_lt (fun x hx => ?_) ⟨d, hd, ?_, hknown⟩
-  · rw [List.contains_append, hx, Bool.true_or]
-  · rw [List.contains_append, List.contains_iff_mem.mpr hname, Bool.or_true]
-
-/-- The declared names that have a member. -/
-def inhabitedNames (decls : TyDecls) : List String := decls.inhabitedFrom []
+/-- The declared names that have a member: the least fixed point by saturation. -/
+def inhabitedNames (decls : TyDecls) : List String := decls.saturate decls.inhabitedHolds []
 
 /-- **Inhabitance under the table**: `inhabited` with every declared name read as the least
 fixed point says. On the empty table it is `inhabited` (`inhabited_nil`). -/
