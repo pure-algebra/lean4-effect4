@@ -172,8 +172,10 @@ namespace Modeled
 /-- **Every modeled value inhabits its type**, at every allocation table: `Model.member` across
 the equivalence (a reader of `modeled-membership` at each instance). -/
 theorem member (α : Type) [m : Modeled α] (a : α) (alloc : List String) :
-    Val.hasTy ((Modeled.image α).toVal a) m.ty alloc = true :=
-  Model.member m.ty m.checked (m.toC a) alloc
+    Val.hasTy ((Modeled.image α).toVal a) m.ty alloc = true := by
+  show Val.hasTy (m.staged.toVal (m.toC a)) m.ty alloc = true
+  rw [m.staged_eq]
+  exact Model.member m.ty m.checked (m.toC a) alloc
 
 /-- **The JSON round trip of a modeled value** (claim `modeled-codec`), at the normal form of its
 type. Membership comes from `Modeled.member` and `hasTy_normalize`. Codec admission stays a

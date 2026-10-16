@@ -384,6 +384,10 @@ private def natPred : Form := .inline ["a"] (Ml.Expr.call "max" [.int 0, .binop 
 -- OCaml's shifts are undefined at 63 and above, so the form answers `0` there.
 private def natShiftRight : Form :=
   .inline ["a", "b"] (.ifThen (.binop ">=" vb (.int 63)) (.int 0) (.binop "lsr" va vb))
+-- The absolute value of an `int`: the negation of a negative word.
+private def intNatAbs : Form := .inline ["a"] (.ifThen (.binop "<" va (.int 0)) (.binop "-" (.int 0) va) va)
+-- `Int.negSucc n` is `-(n + 1)`.
+private def intNegSucc : Form := .inline ["a"] (.binop "-" (.binop "-" (.int 0) va) (.int 1))
 private def u8Mask : Form := .inline ["a"] (.binop "land" va (.int 255))
 private def u8Clamp : Form := .inline ["a"] (Ml.Expr.call "min" [va, .int 255])
 private def listIsEmpty : Form := .inline ["l"] (.binop "=" (.var "l") Ml.Expr.nil)
@@ -438,6 +442,16 @@ def builtins : List Builtin := [
     "Includes Lean's remainder value at zero.",
   row `Nat.sub (.extern "lean_nat_sub" (some .natSub)) (natSub) .domain "0 ≤ a, b < 2^62" []
     "truncated subtraction, spelled out; exact on the representable range.",
+  -- Int: `Int` is `int` (its type row), inside the profile bound (decisions row 321). Lean's
+  -- compiler reads an integer's two constructors through these two (`Store.Image.int`).
+  row `Int.ofNat (.extern "lean_nat_to_int" none) same .domain "0 ≤ n < 2^62" []
+    "`Nat` and `Int` share `int`, so the injection is the word itself.",
+  row `Int.negSucc (.extern "lean_int_neg_succ_of_nat" none) intNegSucc .domain "0 ≤ n < 2^62 - 1" []
+    "`-(n + 1)` on `int`, exact where it is representable.",
+  row `Int.decLt (.extern "lean_int_dec_lt" none) (op "<") .domain "-2^62 ≤ a, b < 2^62" []
+    "`Int` is `int`; OCaml's signed `<` is `Int`'s order on the representable range.",
+  row `Int.natAbs (.extern "lean_nat_abs" none) intNatAbs .domain "-2^62 < a < 2^62" []
+    "the absolute value as a natural: a negative word negated, exact where its negation is representable.",
   row `Nat.pred (.extern "lean_nat_pred" (some .natPred)) (natPred) .domain "a < 2^62" []
     "truncated predecessor.",
   row `Nat.pow (.extern "lean_nat_pow" (some .natPow)) (.support "lcnf_nat_pow") .approximate "a ^ b < max_int" ["pow-saturation"]
@@ -858,13 +872,14 @@ def problems : List String := problemsOf builtins support targetLibrary
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
 #guard etaBinders.all fun b => !protectedNames.contains b && !(targetLibrary.map (·.name)).contains b
 #guard maxArity == 3
-#guard builtins.length == 107
+#guard builtins.length == 111
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
--- row but five (three the session's closure needs, `USize.add`, `panicCore`), and the target
--- evaluator scans with two functions.
+-- row but nine (`Int`'s four, which `Store.Image.int` needs; three the session's closure needs;
+-- `USize.add`; `panicCore`), and the target evaluator scans with two functions.
 #guard sourcePrims.length == 46
 #guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) ==
-  [`String.ofList, `USize.repr, `System.Platform.getNumBits, `USize.add, `panicCore]
+  [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `String.ofList, `USize.repr, `System.Platform.getNumBits, `USize.add,
+    `panicCore]
 #guard targetScans.toList.length == 2 && targetScans["List.exists"]? == some true
 #guard targetArities["Option.value~default"]? == some 2 && (targetArities["List.map"]?).isNone
 

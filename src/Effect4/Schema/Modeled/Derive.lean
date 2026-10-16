@@ -21,7 +21,10 @@ Each refusal is located at the syntax it is about, and so is a generated name th
 exists. Then it writes, under the structure's name: the record type in canonical field order
 (`modeledTy`), its proof of the checked domain (`modeled_checked`: the names' order by `decide`,
 and each field instance's own `checked`, so a field instance may be opaque), the two maps to and from the carrier (`modeledToC`, `modeledOfC`),
-their two inverse equations (`modeled_to_of`, `modeled_of_to`), and the instance. If a
+their two inverse equations (`modeled_to_of`, `modeled_of_to`), the staged image
+(`modeledStaged`: the fold's image at the type written as its combinators, each field's column
+its instance's staged image) with its proof that it is the fold's (`modeled_staged_eq`), and the
+instance. If a
 generated declaration fails, the environment is restored: the command keeps all or none.
 -/
 
@@ -83,6 +86,21 @@ def checkedOf : List Term → MacroM Term
   | [p] => pure p
   | p :: rest => do `(Effect4.Schema.Model.refusal_union $p $(← checkedOf rest))
 
+/-- The staged image of `unionOf`'s union: the members' staged images, right-nested by
+`Image.union` as the type nests `Ty.union`. -/
+def stagedUnionOf : List Term → MacroM Term
+  | [] => `(Effect4.Store.Image.empty)
+  | [m] => pure m
+  | m :: rest => do `(Effect4.Store.Image.union $m $(← stagedUnionOf rest))
+
+/-- The proof that a record's staged image is the fold's: each field's staged image is its fold's
+(`Modeled.staged_eq`), so a field instance may be opaque, and the rest is the fold unfolded at
+the type, by definition. With no field it is definitional alone. -/
+def stagedEqProof (stagedId : Ident) (hasFields : Bool) : MacroM Term :=
+  if hasFields then
+    `(by unfold $stagedId:ident; simp only [Effect4.Schema.Modeled.staged_eq]; rfl)
+  else `(rfl)
+
 /-- Fold a list of terms into the right-nested pair that a record carrier is, ending in `()`. -/
 def nest (items : List Term) : MacroM Term := do
   items.foldrM (fun x acc => `(($x, $acc))) (← `(()))
@@ -138,6 +156,16 @@ def deriveModeledSum (ref : Syntax) (tName : Name) : CommandElabM Unit := do
         let t := c.fields[i]!.2
         `(⟨rfl, Effect4.Schema.Modeled.checked (α := $t), $acc⟩)) (← `(trivial))
     `(Effect4.Schema.Model.refusal_record (by decide) $fields)
+  -- a member's staged image: its columns' combinators, or its tag's literal
+  let stagedMember (c : Ctor) : MacroM Term := do
+    if enum then `(Effect4.Store.Image.lit $(quote c.tag)) else
+    let cols ← (columns c).foldrM (fun col acc => match col with
+      | none => `(Effect4.Store.Columns.cons "_tag" (Effect4.Store.Image.lit $(quote c.tag)) $acc)
+      | some i => do
+        let (f, t) := c.fields[i]!
+        `(Effect4.Store.Columns.cons $(quote (defaultSpelling f))
+          (Effect4.Schema.Modeled.staged (α := $t)) $acc)) (← `(Effect4.Store.Columns.nil))
+    `(Effect4.Store.Image.record $cols)
   let n := ctors.length
   -- a member's carrier value placed at its position of the right-nested union
   let wrap (k : Nat) (v : Term) : MacroM Term := do
@@ -160,11 +188,17 @@ def deriveModeledSum (ref : Syntax) (tName : Name) : CommandElabM Unit := do
   let ofId := mkIdent (`_root_ ++ tName ++ `modeledOfC)
   let toOfId := mkIdent (`_root_ ++ tName ++ `modeled_to_of)
   let ofToId := mkIdent (`_root_ ++ tName ++ `modeled_of_to)
+  let stagedId := mkIdent (`_root_ ++ tName ++ `modeledStaged)
+  let stagedEqId := mkIdent (`_root_ ++ tName ++ `modeled_staged_eq)
   for suffix in [`modeledTy, `modeled_checked, `modeledToC, `modeledOfC, `modeled_to_of,
-      `modeled_of_to] do
+      `modeled_of_to, `modeledStaged, `modeled_staged_eq] do
     if (← getEnv).contains (tName ++ suffix) then
       throwErrorAt ref "derive_modeled: {tName ++ suffix} already exists"
   let members ← liftMacroM <| ctors.mapM member
+  let staged ← liftMacroM do stagedUnionOf (← ctors.mapM stagedMember)
+  -- A union's carrier names its members' images, so its staged image elaborates only where they
+  -- are the fold's by definition, and the proof is that definition.
+  let stagedEq ← liftMacroM `(rfl)
   let ty ← liftMacroM <| unionOf members
   let checked ← liftMacroM do checkedOf (← ctors.mapM memberChecked)
   let vars (c : Ctor) : List Ident :=
@@ -214,8 +248,11 @@ def deriveModeledSum (ref : Syntax) (tName : Name) : CommandElabM Unit := do
     match $cId:ident with $(invAlts.toArray):matchAlt*))
   elabCommand (← `(theorem $ofToId ($xId : $s) : $ofId ($toId $xId) = $xId := by
     cases $xId:ident <;> simp only [$toId:ident, $ofId:ident, Effect4.Schema.Modeled.of_to]))
+  elabCommand (← `(def $stagedId : Effect4.Store.Image (Effect4.Schema.Model.Carrier $tyId) :=
+    $staged))
+  elabCommand (← `(theorem $stagedEqId : $stagedId = Effect4.Schema.Model.image $tyId := $stagedEq))
   elabCommand (← `(instance : Effect4.Schema.Modeled $s :=
-    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId⟩))
+    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId, $stagedId, $stagedEqId⟩))
   if (← get).messages.hasErrors then
     setEnv envBefore
 
@@ -295,10 +332,17 @@ def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × Strin
   let ofId := mkIdent (`_root_ ++ sName ++ `modeledOfC)
   let toOfId := mkIdent (`_root_ ++ sName ++ `modeled_to_of)
   let ofToId := mkIdent (`_root_ ++ sName ++ `modeled_of_to)
+  let stagedId := mkIdent (`_root_ ++ sName ++ `modeledStaged)
+  let stagedEqId := mkIdent (`_root_ ++ sName ++ `modeled_staged_eq)
   let fieldsArr := ofFields.toArray
+  -- The staged image: one column per field in canonical order, each its instance's staged image.
+  let stagedCols ← liftMacroM <| sorted.foldrM (fun (_, sp, t) acc =>
+    `(Effect4.Store.Columns.cons $(quote sp) (Effect4.Schema.Modeled.staged (α := $t)) $acc))
+    (← `(Effect4.Store.Columns.nil))
+  let stagedEq ← liftMacroM <| stagedEqProof stagedId (!sorted.isEmpty)
   -- Every generated name is free before anything is written (overwatch finding OW-02).
   for suffix in [`modeledTy, `modeled_checked, `modeledToC, `modeledOfC, `modeled_to_of,
-      `modeled_of_to] do
+      `modeled_of_to, `modeledStaged, `modeled_staged_eq] do
     if (← getEnv).contains (sName ++ suffix) then
       throwErrorAt ref "derive_modeled: {sName ++ suffix} already exists"
   -- The checked proof composes each field instance's own `checked`, and decides only the names'
@@ -318,8 +362,11 @@ def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × Strin
   elabCommand (← `(theorem $ofToId ($sId : $s) : $ofId ($toId $sId) = $sId := by
     cases $sId:ident
     simp only [$toId:ident, $ofId:ident, Effect4.Schema.Modeled.of_to]))
+  elabCommand (← `(def $stagedId : Effect4.Store.Image (Effect4.Schema.Model.Carrier $tyId) :=
+    Effect4.Store.Image.record $stagedCols))
+  elabCommand (← `(theorem $stagedEqId : $stagedId = Effect4.Schema.Model.image $tyId := $stagedEq))
   elabCommand (← `(instance : Effect4.Schema.Modeled $s :=
-    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId⟩))
+    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId, $stagedId, $stagedEqId⟩))
   -- A declaration that failed leaves nothing behind: the command keeps all or none.
   if (← get).messages.hasErrors then
     setEnv envBefore

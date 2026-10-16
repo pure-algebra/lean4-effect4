@@ -132,10 +132,10 @@ def recipeOutsOf (recipe : Json) : List String :=
   | .ok (.arr rows) => rows.toList.filterMap fun r => (r.getObjValAs? String "out").toOption
   | _ => []
 
-/-- Where a run writes its closure manifest: in `ocaml/gen/` for one of the recipe's artifacts
-(row 70, all of them in one folder, named after the artifact's stem), and beside `--out` for any
-other run, so a probe that redirects its output never writes into the tree (decisions row 174
-(i)). -/
+/-- Where a run writes its closure manifest: in `ocaml/gen/` for one of the committed recipe's
+artifacts (row 70, all of them in one folder, named after the artifact's stem), and beside `--out`
+for any other run, a probe's recipe included, so a probe never writes into the tree (decisions
+row 174 (i)). -/
 def manifestPathFor (out : String) (recipeOuts : List String) : String :=
   let stem := (System.FilePath.mk out).fileStem.getD "closure"
   if recipeOuts.contains out then s!"ocaml/gen/closure-{stem}.tsv"

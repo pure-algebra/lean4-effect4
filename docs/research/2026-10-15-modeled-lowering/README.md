@@ -88,3 +88,11 @@ The manifest's directory does not follow the artifact.
 - The reader's agreement with the fold is tested on four values, not proved.
 - No `Int`, `Option`, `List` or nested field is lowered first-order here.
 - No provider is run through `E4_host`. That is P1's step 6.
+
+## After: what landed
+
+Proposal 1 landed in another form (`docs/research/2026-10-16-modeled-universe/README.md`). The
+deriver writes the fold's image staged at the instance's code, as the image combinators, in place
+of hand-written first-order functions. The staged image is the fold's by `rfl`, so no codec needs
+its own laws. It lowers to native OCaml types and an `'a image` record of two functions. Proposals
+2 and 3 landed as written.

@@ -729,7 +729,14 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     | some r => return r
     | none =>
     match env.find? n with
-    | some (.ctorInfo ci) => return (← ctorApp ci args, none)
+    | some (.ctorInfo ci) =>
+      -- a constructor of a type with a native spelling takes its row's form (`Int.ofNat`,
+      -- `Int.negSucc`: `Int` is `int`, which has no constructor)
+      match builtin? n with
+      | some b =>
+        let as ← args.toList.filterMapM (argAsList s!"{declName}: builtin {n}")
+        return (← applyBuiltin b as, none)
+      | none => return (← ctorApp ci args, none)
     | _ =>
       match builtin? n with
       | some b =>

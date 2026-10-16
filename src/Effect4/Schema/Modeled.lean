@@ -226,7 +226,11 @@ end Model
 
 /-- **A Lean type tied to a checked `Ty`**: an equivalence between the type and the carrier of
 `ty`. The image is the fold's, so membership comes from the fold's law and never from the
-instance. -/
+instance.
+
+`staged` is the fold's image at `ty` written as its combinators: the fold partially evaluated at
+a known code. It is the fold's image by definition (`staged_eq`), so it owes no law of its own,
+and compiled code runs the combinators with no fold over `Ty` (`docs/research/2026-10-15-modeled-lowering/README.md`). -/
 class Modeled (α : Type) where
   ty : Ty
   checked : Model.refusal ty = none
@@ -234,12 +238,14 @@ class Modeled (α : Type) where
   ofC : Model.Carrier ty → α
   to_of : ∀ c, toC (ofC c) = c
   of_to : ∀ a, ofC (toC a) = a
+  staged : Image (Model.Carrier ty) := Model.image ty
+  staged_eq : staged = Model.image ty := by rfl
 
 namespace Modeled
 
-/-- The exact embedding of a modeled type: the carrier's image, across the equivalence. -/
+/-- The exact embedding of a modeled type: the staged carrier image, across the equivalence. -/
 def image (α : Type) [m : Modeled α] : Image α :=
-  Image.equiv (Model.image m.ty) m.ofC m.toC m.of_to m.to_of
+  Image.equiv m.staged m.ofC m.toC m.of_to m.to_of
 
 theorem list_inv {α β : Type} (f : β → α) (g : α → β) (h : ∀ a, f (g a) = a) :
     ∀ xs : List α, (xs.map g).map f = xs
@@ -255,11 +261,12 @@ theorem option_inv {α β : Type} (f : β → α) (g : α → β) (h : ∀ a, f 
     show some (f (g x)) = some x
     rw [h]
 
-instance : Modeled Unit := ⟨.unit, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
-instance : Modeled Bool := ⟨.bool, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
-instance : Modeled Nat := ⟨.nat, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
-instance : Modeled Int := ⟨.int, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
-instance : Modeled String := ⟨.string, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
+instance : Modeled Unit := ⟨.unit, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.unit, rfl⟩
+instance : Modeled Bool := ⟨.bool, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.bool, rfl⟩
+instance : Modeled Nat := ⟨.nat, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.nat, rfl⟩
+instance : Modeled Int := ⟨.int, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.int, rfl⟩
+instance : Modeled String :=
+  ⟨.string, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.string, rfl⟩
 
 instance {α : Type} [m : Modeled α] : Modeled (List α) where
   ty := .list m.ty
@@ -268,6 +275,8 @@ instance {α : Type} [m : Modeled α] : Modeled (List α) where
   ofC cs := List.map m.ofC cs
   to_of := list_inv m.toC m.ofC m.to_of
   of_to := list_inv m.ofC m.toC m.of_to
+  staged := Image.list m.staged
+  staged_eq := congrArg Image.list m.staged_eq
 
 instance {α : Type} [m : Modeled α] : Modeled (Option α) where
   ty := .option m.ty
@@ -276,6 +285,8 @@ instance {α : Type} [m : Modeled α] : Modeled (Option α) where
   ofC c := Option.map m.ofC c
   to_of := option_inv m.toC m.ofC m.to_of
   of_to := option_inv m.ofC m.toC m.of_to
+  staged := Image.option m.staged
+  staged_eq := congrArg Image.option m.staged_eq
 
 instance {α β : Type} [ma : Modeled α] [mb : Modeled β] : Modeled (α × β) where
   ty := .prod ma.ty mb.ty
@@ -287,6 +298,10 @@ instance {α β : Type} [ma : Modeled α] [mb : Modeled β] : Modeled (α × β)
   ofC c := (ma.ofC c.1, mb.ofC c.2)
   to_of c := Prod.ext (ma.to_of c.1) (mb.to_of c.2)
   of_to p := Prod.ext (ma.of_to p.1) (mb.of_to p.2)
+  staged := Image.tuple2 ma.staged mb.staged
+  staged_eq := by
+    show Image.tuple2 ma.staged mb.staged = Image.tuple2 (Model.image ma.ty) (Model.image mb.ty)
+    rw [ma.staged_eq, mb.staged_eq]
 
 end Modeled
 end Effect4.Schema

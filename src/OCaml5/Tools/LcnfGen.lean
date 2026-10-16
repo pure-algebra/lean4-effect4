@@ -54,18 +54,16 @@ def readRecipe (path : System.FilePath) : IO Json := do
 
 def main (argv : List String) : IO Unit := do
   initSearchPath (← findSysroot)
-  -- The artifacts to make, each as its argv, and the recipe's outputs (they place the manifests).
-  let (runs, recipeOuts) ← match argv with
-    | ["--recipe", path] => do
-      let recipe ← readRecipe path
-      let runs ← IO.ofExcept (Gen.recipeArgvs recipe)
-      pure (runs, Gen.recipeOutsOf recipe)
-    | _ => do
-      let path : System.FilePath := "ocaml/gen/roots.json"
-      let outs ← if ← path.pathExists then
-          pure ((Gen.recipeOutsOf <$> (Json.parse (← IO.FS.readFile path)).toOption).getD [])
-        else pure []
-      pure (#[argv], outs)
+  -- The committed recipe's outputs place the manifests: theirs are data in `ocaml/gen/` (row 70),
+  -- and any other output keeps its manifest beside it, whatever recipe runs (row 174 (i)).
+  let committed : System.FilePath := "ocaml/gen/roots.json"
+  let recipeOuts ← if ← committed.pathExists then
+      pure ((Gen.recipeOutsOf <$> (Json.parse (← IO.FS.readFile committed)).toOption).getD [])
+    else pure []
+  -- The artifacts to make, each as its argv.
+  let runs ← match argv with
+    | ["--recipe", path] => IO.ofExcept (Gen.recipeArgvs (← readRecipe path))
+    | _ => pure #[argv]
   -- One environment for each set of imports, in the order the artifacts first name it.
   let mut envs : Array (Array Name × Environment) := #[]
   for run in runs do
