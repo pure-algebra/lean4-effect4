@@ -37,74 +37,11 @@ open Effect4 Effect4.Machine
 
 /-! ## The table
 
-`TyDecls`, its lookup `TyDecls.body?` and `Ty.refName?` are `Program/TyExpand.lean`'s, a Lean
-module that `Modeled` imports. -/
+`TyDecls`, its lookup `TyDecls.body?`, `Ty.refName?`, the unfolding `TyDecls.unfold?` and the
+measure of an unfolding `TyDecls.unseen` are `Program/TyExpand.lean`'s, a Lean module that
+`Modeled` and the checker's head reader (`Program/TyHead.lean`) import. -/
 
 namespace TyDecls
-
-/-- The entries whose names `seen` does not hold: the measure of an unfolding. -/
-def unseen (decls : TyDecls) (seen : List String) : Nat :=
-  (decls.filter fun d => !seen.contains d.1).length
-
-/-- **The measure falls** when `seen` grows by a name that some entry carries. -/
-theorem unseen_lt {decls : TyDecls} {seen seen' : List String}
-    (hsub : ∀ x, seen.contains x = true → seen'.contains x = true)
-    (hnew : ∃ d ∈ decls, seen'.contains d.1 = true ∧ seen.contains d.1 = false) :
-    decls.unseen seen' < decls.unseen seen := by
-  unfold unseen
-  have hfilter : decls.filter (fun d => !seen'.contains d.1) =
-      (decls.filter fun d => !seen.contains d.1).filter fun d => !seen'.contains d.1 := by
-    rw [List.filter_filter]
-    apply List.filter_congr
-    intro d _
-    cases h' : seen'.contains d.1 with
-    | true => rfl
-    | false =>
-      cases h : seen.contains d.1 with
-      | true => exact absurd (hsub d.1 h) (by rw [h']; exact Bool.false_ne_true)
-      | false => rfl
-  rw [hfilter, List.length_filter_lt_length_iff_exists]
-  obtain ⟨d, hd, h', h⟩ := hnew
-  refine ⟨d, List.mem_filter.mpr ⟨hd, ?_⟩, ?_⟩
-  · rw [h]
-    rfl
-  · rw [h']
-    exact Bool.false_ne_true
-
-/-- One more declared name unfolded: the measure falls. -/
-theorem unseen_cons_lt {decls : TyDecls} {seen : List String} {name : String} {body : Ty}
-    (hb : decls.body? name = some body) (hn : seen.contains name = false) :
-    decls.unseen (name :: seen) < decls.unseen seen := by
-  refine unseen_lt (fun x hx => ?_) ⟨(name, body), mem_of_body? hb, ?_, hn⟩
-  · rw [List.contains_cons, hx, Bool.or_true]
-  · rw [List.contains_cons, beq_iff_eq.mpr rfl, Bool.true_or]
-
-end TyDecls
-
-namespace TyDecls
-
-/-- A type that is a reference to a declared name: the name and its body. -/
-def unfold? (decls : TyDecls) (t : Ty) : Option (String × Ty) :=
-  t.refName?.bind fun name => (decls.body? name).map (name, ·)
-
-/-- An unfolding reads the name's body. -/
-theorem body?_of_unfold? {decls : TyDecls} {t : Ty} {name : String} {body : Ty}
-    (h : decls.unfold? t = some (name, body)) : decls.body? name = some body := by
-  unfold unfold? at h
-  cases hr : t.refName? with
-  | none =>
-    rw [hr] at h
-    cases h
-  | some m =>
-    rw [hr] at h
-    cases hb : decls.body? m with
-    | none =>
-      rw [Option.bind_some, hb] at h
-      cases h
-    | some b =>
-      rw [Option.bind_some, hb, Option.map_some] at h
-      cases h
-      exact hb
 
 /-! ## Saturation: the least set of names closed under a round -/
 

@@ -114,6 +114,7 @@ import Test.Program.ReferenceExpansion
 import Test.Program.TyTables
 import Test.Program.TyWave
 import Test.Program.TyDecls
+import Test.Program.DeclaredTypes
 import Test.Program.GuardFoldLift
 import Test.Program.ParkHandshake
 import Test.Program.ExitConnector
