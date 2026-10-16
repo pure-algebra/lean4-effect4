@@ -234,7 +234,7 @@ theorem open_total (b : Api.Built) (id : String) (budget : Api.Budget) (profile 
     Api.HostSession.start b.program b.table profile
         ⟨Api.HostSession.version, id, profile, b.table⟩ budget.compileFuel
       = .ok (Run.open b id budget profile).session := by
-  have hadmit := admitProgram_certificate b.program ⟨b.table, []⟩ b.admitted
+  have hadmit := admitProgram_certificate b.program (.ofTable b.table) b.admitted
   aesop (add norm unfold [Api.HostSession.start]) (add norm simp [hid, hadmit])
 
 /-! ## Small facts the answer rows need -/

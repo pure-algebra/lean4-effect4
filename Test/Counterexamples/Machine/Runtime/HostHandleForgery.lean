@@ -44,8 +44,8 @@ def program : Api.Program :=
 def fiberHeader : Header := ⟨version, "forgery", "forgery-v1", fiberTable⟩
 
 #guard Api.typeOf program fiberTable = some (EffTy.pure .nat)
-#guard admitSig ⟨fiberTable, []⟩ = .error (.row 0 (.internalHandle "answer"))
-#guard match admitProgram program ⟨fiberTable, []⟩ with
+#guard admitSig ⟨fiberTable, [], []⟩ = .error (.row 0 (.internalHandle "answer"))
+#guard match admitProgram program ⟨fiberTable, [], []⟩ with
   | .error (.signature (.row 0 (.internalHandle "answer"))) => true
   | _ => false
 #guard match start program fiberTable "forgery-v1" fiberHeader 1000 with
@@ -57,9 +57,9 @@ def internalTypes : List Ty :=
   [.fiberOf .nat .never, .refOf .nat, .deferredOf .nat .never,
    .handle "Ref.Ref<number>", .handle "Deferred.Deferred<number, number>", .scope, .context]
 #guard internalTypes.all fun ty =>
-  admitSig ⟨[{ fiberRow with answer := ty }], []⟩ = .error (.row 0 (.internalHandle "answer"))
+  admitSig ⟨[{ fiberRow with answer := ty }], [], []⟩ = .error (.row 0 (.internalHandle "answer"))
 #guard internalTypes.all fun ty =>
-  admitSig ⟨[{ fiberRow with answer := .unit, error := ty }], []⟩ =
+  admitSig ⟨[{ fiberRow with answer := .unit, error := ty }], [], []⟩ =
     .error (.row 0 (.internalHandle "error"))
 
 /-- Each recursive value shape must expose its nested handle; each path is independent data. -/
@@ -78,10 +78,10 @@ def nestedTypes : List (Ty × Path) :=
 #guard nestedTypes.all fun (ty, path) =>
   findInternalHandle ["answer"] ty = some (["answer"] ++ path)
 #guard nestedTypes.all fun (ty, _) =>
-  admitSig ⟨[{ fiberRow with answer := ty }], []⟩ = .error (.row 0 (.internalHandle "answer"))
+  admitSig ⟨[{ fiberRow with answer := ty }], [], []⟩ = .error (.row 0 (.internalHandle "answer"))
 -- Request types are outside this reply rule; a later row's answer is still scanned.
-#guard admitSig ⟨[{ fiberRow with request := .fiberOf .nat .never, answer := .unit }], []⟩ = .ok ()
-#guard admitSig ⟨[{ fiberRow with answer := .unit }, fiberRow], []⟩ =
+#guard admitSig ⟨[{ fiberRow with request := .fiberOf .nat .never, answer := .unit }], [], []⟩ = .ok ()
+#guard admitSig ⟨[{ fiberRow with answer := .unit }, fiberRow], [], []⟩ =
   .error (.row 1 (.internalHandle "answer"))
 
 /-- An unknown answer is admitted, so value admission must still reject the live handle. -/
@@ -103,7 +103,7 @@ def unknownParked : Option (Session unknownProgram unknownTable) :=
 def unknownBound : Option (Session unknownProgram unknownTable) :=
   unknownParked.map fun parked => (bindCall parked unknownCall 0).session
 
-#guard (admitProgram unknownProgram ⟨unknownTable, []⟩).toOption.isSome
+#guard (admitProgram unknownProgram ⟨unknownTable, [], []⟩).toOption.isSome
 #guard unknownParked.isSome
 #guard unknownParked.any fun parked =>
   (bindCall parked unknownCall 0).phase = .bound

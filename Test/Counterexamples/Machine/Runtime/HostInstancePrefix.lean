@@ -23,7 +23,7 @@ def table : RowTable := RowDef.table
    Row.host "generic-output" .nat .unit .never "instance-prefix-control"]
 def program : NativeEff :=
   .bind (.perform (.external 0) (.lit (.nat 17))) (.perform (.external 1) (.var 0))
-def admitted : Api.AdmittedProgram program ⟨table, []⟩ where
+def admitted : Api.AdmittedProgram program (.ofTable table) where
   ty := ⟨.unit, .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)

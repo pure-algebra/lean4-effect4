@@ -176,5 +176,9 @@ What this does not establish:
 
 - Nothing reads a reference yet. `Fits`, reply admission and the faces take no table.
 - A recursive type has no expansion. It waits on the carrier of a declared name (§5.2, item 4).
-- Two field types with one short name give a table that the readers' premise refuses. The
-  table's admission (decisions row 401 (2)) refuses a repeated name by its location.
+- Two field types with one short name give a name with two bodies. The language signature's admission (Σ_app)
+  refuses it by its name (decisions row 402 (5)); the deriver does not check it.
+
+The table's admission landed next: `SigApp.types`, checked by the signature's located refusal
+(`admitSig_ok_iff`). At an admitted signature, `Modeled.memberIn_ref_of_lawful` reads its
+premises off the admission, except expandability, which a recursive table lacks.

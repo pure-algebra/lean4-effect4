@@ -45,7 +45,7 @@ def badAnnotation : NativeEff :=
   | none => false
 
 -- Every checked public boundary shares the raw refusal, independent of the tape.
-#guard match admitProgram pureProgram ⟨badTable, []⟩ with
+#guard match admitProgram pureProgram ⟨badTable, [], []⟩ with
   | .error (.formation why) => why.ty = duplicate
   | _ => false
 #guard match Effect4.Codegen.emitModule "main" pureProgram badTable with
@@ -74,14 +74,14 @@ def source : TypeScript.Module :=
   | _ => false
 
 -- Positive controls: none of the new checks is an unconditional refusal.
-#guard (admitProgram pureProgram ⟨validTable, []⟩).isOk
+#guard (admitProgram pureProgram ⟨validTable, [], []⟩).isOk
 #guard (Effect4.Codegen.emitModule "main" pureProgram validTable).isOk
 #guard (Effect4.Codegen.admitModule "main" source validTable).isOk
 #guard match Api.replayChecked pureProgram 10 [Api.evaluate] validTable with
   | .inl run => run.exit = some (.success (.nat 1))
   | _ => false
 -- control (decisions row 317): an integer column of the table is admitted
-#guard (admitProgram pureProgram ⟨[row .nat .int], []⟩).isOk
+#guard (admitProgram pureProgram ⟨[row .nat .int], [], []⟩).isOk
 
 -- Bounds matching traverses names and positions. A record is read in the request's
 -- field order. A seed conflict refuses.
@@ -145,7 +145,7 @@ def recordAnnotation : Term := .record [("x", true, duplicate)] [] .nil
   | _ => false
 
 -- Certificates expose the independent raw judgment.
-example (admitted : AdmittedProgram pureProgram ⟨validTable, []⟩) :
+example (admitted : AdmittedProgram pureProgram ⟨validTable, [], []⟩) :
     Formation.InputFormed pureProgram validTable := admitted.formed
 example (emission : Effect4.Codegen.ModuleEmission pureProgram validTable "main") :
     Formation.InputFormed pureProgram validTable := emission.formed
@@ -174,7 +174,7 @@ its instance, at the row's answer column; `Deferred.make<void, never>()` is form
 -- it by name. The other annotation sites are `Test/Program/FormationClosed.lean`'s.
 #guard (Effect4.Api.typeOf (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit))).map (·.answer) =
   some (.deferredOf .never .nat)
-#guard match admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], []⟩ with
+#guard match admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], [], []⟩ with
   | .error (.formation why) =>
     why.path == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
       why.ty == .var 0 && why.reason == .typeVariable
@@ -231,7 +231,7 @@ def inTermArgument (r : Term) : NativeEff := .bind (.succeed r) (.succeed (.lit 
 #guard Effect4.Api.typeOf (inBinderTerm duplicateRecord) = none
 -- control (decisions row 317): an `int` field is admitted in a term argument and inside a
 -- binder term; the integer scan that refused it went with the integers packet's slice 1
-#guard (admitProgram (inTermArgument intRecord) ⟨[], []⟩).isOk
-#guard (admitProgram (inBinderTerm intRecord) ⟨[], []⟩).isOk
+#guard (admitProgram (inTermArgument intRecord) ⟨[], [], []⟩).isOk
+#guard (admitProgram (inBinderTerm intRecord) ⟨[], [], []⟩).isOk
 
 end Test.Program.FormationContract

@@ -157,13 +157,13 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
   !Val.hasTy (.ctor 6 [.bool true]) Ty.maskRestore []
 
 -- A host answer at the reserved target: the table is refused, at the column, at any depth.
-#guard admitSig ⟨[answerRow Ty.maskRestore], []⟩ = .error (.row 0 (.internalHandle "answer"))
-#guard admitSig ⟨[answerRow (.option Ty.maskRestore)], []⟩ =
+#guard admitSig ⟨[answerRow Ty.maskRestore], [], []⟩ = .error (.row 0 (.internalHandle "answer"))
+#guard admitSig ⟨[answerRow (.option Ty.maskRestore)], [], []⟩ =
   .error (.row 0 (.internalHandle "answer"))
-#guard admitSig ⟨[{ answerRow .unit with error := .list Ty.maskRestore }], []⟩ =
+#guard admitSig ⟨[{ answerRow .unit with error := .list Ty.maskRestore }], [], []⟩ =
   .error (.row 0 (.internalHandle "error"))
 -- Red control: the same row at `nat` is admitted.
-#guard admitSig ⟨[answerRow .nat], []⟩ = .ok ()
+#guard admitSig ⟨[answerRow .nat], [], []⟩ = .ok ()
 
 -- An external allocation may not take the target, and a host number is no saved value.
 #guard !externalHandleTarget Ty.maskRestoreTarget
@@ -171,9 +171,9 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 #guard externalValue Ty.maskRestore [] (.bool true) = none
 
 -- A service may not carry the saved state in the first profile.
-#guard admitSig ⟨[], [(⟨⟨40⟩, ⟨40⟩⟩, Ty.maskRestore)]⟩ = .error (.service 0 .nonFlatCarrier)
+#guard admitSig ⟨[], [(⟨⟨40⟩, ⟨40⟩⟩, Ty.maskRestore)], []⟩ = .error (.service 0 .nonFlatCarrier)
 -- Red control: a scope handle is a flat carrier, at the same key.
-#guard admitSig ⟨[], [(⟨⟨40⟩, ⟨40⟩⟩, Ty.scope)]⟩ = .ok ()
+#guard admitSig ⟨[], [(⟨⟨40⟩, ⟨40⟩⟩, Ty.scope)], []⟩ = .ok ()
 
 /-! ## A restore under a masked caller is the identity
 

@@ -35,7 +35,7 @@ def client : Module NativeOp :=
 
 /-- The built client as a sketch with no hole, and its application. -/
 def built : Option (Sketch × SigApp) :=
-  (Api.Author.build client).toOption.map fun b => ({ program := b.program.expandRefs }, ⟨b.table, []⟩)
+  (Api.Author.build client).toOption.map fun b => ({ program := b.program.expandRefs }, (.ofTable b.table))
 
 /-- The sketch, or the empty program where the build refuses. -/
 def sketch : Sketch := (built.map (·.1)).getD { program := .succeed (.lit .unit) }

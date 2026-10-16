@@ -380,7 +380,7 @@ def pFoldRefuses : Api.Program := .succeed (fold (natList [1, 2]) (n 0) (item (v
 #guard (Api.runSync pFoldInOp 400).1.state.refs == [Val.nat 5]
 #guard (Effect4.Api.typeOf pFold).map (·.answer) = some .nat
 #guard (Effect4.Api.typeOf pFoldInOp).map (·.answer) = some .nat
-#guard (admitProgram pFoldInOp ⟨[], []⟩).isOk
+#guard (admitProgram pFoldInOp ⟨[], [], []⟩).isOk
 -- A failing body. The checker refuses the program: a typed fold answers
 -- (`ListFoldRules.typed`), so only a raw run meets a refusing step. The raw run exits with the
 -- wrong-shape defect, and no partial answer.
@@ -496,10 +496,10 @@ def visibleFold (key : Ty) : Api.Program :=
       "type", "1"] && why.reason == .mapKey
   | none => false
 -- Ordinary admission refuses both, with the same located refusal.
-#guard match admitProgram (visibleFold .nat) ⟨[], []⟩ with
+#guard match admitProgram (visibleFold .nat) ⟨[], [], []⟩ with
   | .error (.formation why) => why.reason == .mapKey && why.ty == .map .nat .nat
   | _ => false
-#guard match admitProgram (hiddenFold .nat) ⟨[], []⟩ with
+#guard match admitProgram (hiddenFold .nat) ⟨[], [], []⟩ with
   | .error (.formation why) =>
     why.reason == .mapKey && why.ty == .map .nat .nat &&
       why.path == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "0", "accTy",
@@ -507,8 +507,8 @@ def visibleFold (key : Ty) : Api.Program :=
   | _ => false
 -- Green control: a string key is formed, and both placements are admitted.
 #guard Formation.checkInput (hiddenFold .string) [] = none
-#guard (admitProgram (hiddenFold .string) ⟨[], []⟩).isOk
-#guard (admitProgram (visibleFold .string) ⟨[], []⟩).isOk
+#guard (admitProgram (hiddenFold .string) ⟨[], [], []⟩).isOk
+#guard (admitProgram (visibleFold .string) ⟨[], [], []⟩).isOk
 
 /-- An alphabet that shows the collector no term: the native operations with the class's default
 reading view. Scope and the term map are the native ones. -/

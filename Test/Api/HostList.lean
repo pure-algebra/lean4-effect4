@@ -24,7 +24,7 @@ open Effect4 Effect4.Machine Effect4.Program
 admitted at the table. -/
 def run (p : Api.Program) (table : RowTable) (exits : List ExitV) (budget : Api.Budget := {}) :
     Option Effect4.Run :=
-  match Api.admitProgram p ⟨table, []⟩ with
+  match Api.admitProgram p (.ofTable table) with
   | .ok admitted =>
     some (Effect4.Run.runWith ⟨table, p, admitted, []⟩
       (Effect4.Run.Reactor.ofHost table (Denote.tapeHost table)) exits "list" budget).1

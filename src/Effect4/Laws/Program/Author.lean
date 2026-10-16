@@ -227,7 +227,7 @@ theorem rebuild_spec {before after : Api.Built} {candidate : Api.Program}
 /-- An already admitted candidate succeeds with its certificate against the unchanged
 host setup. This reuses completeness of the existing admission procedure. -/
 theorem rebuild_admitted (before : Api.Built) (candidate : Api.Program)
-    (admitted : AdmittedProgram candidate ⟨before.table, []⟩) :
+    (admitted : AdmittedProgram candidate (.ofTable before.table)) :
     before.rebuild candidate = .ok
       { table := before.table, program := candidate, admitted := admitted,
         rowNames := before.rowNames } := by

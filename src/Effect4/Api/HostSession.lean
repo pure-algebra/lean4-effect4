@@ -91,7 +91,7 @@ structure RetiredCall where
 deriving DecidableEq
 
 structure Session (program : Api.Program) (table : RowTable) where
-  admitted : AdmittedProgram program ⟨table, []⟩
+  admitted : AdmittedProgram program (.ofTable table)
   header : Header
   machine : Api.Machine
   nextCall : Nat := 0
@@ -144,19 +144,19 @@ structure Result (program : Api.Program) (table : RowTable) where
   phase : Phase
   session : Session program table
 
-/-- **The program's checked call table**, at the signature that admits it (`⟨table, []⟩`), on
+/-- **The program's checked call table**, at the signature that admits it (`SigApp.ofTable table`), on
 the program with its layer references expanded, as the module check types it
 (`Program.programCalls`): a call in a definition's body or in a block's main program has its
 instance at the block's signature (decisions rows 323 and 333). `start` and `Run.open` make it
 once (the session note's slice DM5). -/
 def callTable (program : Api.Program) (table : RowTable) :
     List (List Nat × CallInstance NativeOp) :=
-  Program.programCalls (SigApp.signature ⟨table, []⟩) [] program.expandRefs
+  Program.programCalls (SigApp.signature (.ofTable table)) [] program.expandRefs
 
 /-- Validate an explicit header and retain the indexed admission proof. Empty session IDs
 refuse. The expected binding is the one that the holder selected. The header carries the row
 table only (decisions row 21), so the program is admitted at the table's own signature,
-`⟨table, []⟩`. -/
+`SigApp.ofTable table`. -/
 def start (program : Api.Program) (table : RowTable) (expectedBinding : String)
     (header : Header) (compileFuel : Nat) :
     Except Refusal (Session program table) :=
@@ -164,7 +164,7 @@ def start (program : Api.Program) (table : RowTable) (expectedBinding : String)
   else if header.session = "" then .error .session
   else if header.binding ≠ expectedBinding then .error .profile
   else if header.table ≠ table then .error .table
-  else match admitProgram program ⟨table, []⟩ with
+  else match admitProgram program (.ofTable table) with
     | .error why => .error (.program why)
     | .ok admitted =>
       .ok { admitted, header, machine := Api.load program compileFuel
@@ -191,13 +191,13 @@ def bindCall {program : Api.Program} {table : RowTable} (s : Session program tab
     nextCall := s.nextCall + 1 }⟩
 
 /-- **The checked instance at a call's address** in the session's program (`programCallAt`), at
-the signature that admitted it (`⟨table, []⟩`), on the program with its layer references
+the signature that admitted it (`SigApp.ofTable table`), on the program with its layer references
 expanded, as the module check types it. `none` where no call stands at the address; on an
 admitted program it answers at every call (`instanceAt_complete`). It is the specification of
 the session's table: a session that `start` made answers it (`start_callInstance`). -/
 def instanceAt (program : Api.Program) (table : RowTable) :
     List Nat → Option (CallInstance NativeOp) :=
-  programCallAt (SigApp.signature ⟨table, []⟩) [] program.expandRefs
+  programCallAt (SigApp.signature (.ofTable table)) [] program.expandRefs
 
 /-- The session's checked instance at an address: a lookup in the table that `start` made. -/
 def Session.callInstance {program : Api.Program} {table : RowTable} (s : Session program table)

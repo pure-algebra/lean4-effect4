@@ -94,7 +94,7 @@ def pairProgram : Api.Program :=
     (.bind (.withFiber (.fork (.perform (.external 0) (.lit (.nat 3))) opts))
       (.bind (.awaitFiber (.var 0) .awaitValue) (.awaitFiber (.var 1) .awaitValue)))
 
-def pairAdmitted : Api.AdmittedProgram pairProgram ⟨Test.Api.HostSessionContract.table, []⟩ where
+def pairAdmitted : Api.AdmittedProgram pairProgram ⟨Test.Api.HostSessionContract.table, [], []⟩ where
   ty := ⟨.exitOf .nat (.prod .string .string), .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
@@ -254,7 +254,7 @@ def mixedWorkProgram : Api.Program :=
   .bind (.withFiber (.fork yieldingProgram opts))
     (.perform (.external 0) (.lit (.nat 2)))
 
-def mixedWorkAdmitted : Api.AdmittedProgram mixedWorkProgram ⟨Test.Api.HostSessionContract.table, []⟩ where
+def mixedWorkAdmitted : Api.AdmittedProgram mixedWorkProgram ⟨Test.Api.HostSessionContract.table, [], []⟩ where
   ty := ⟨.nat, .prod .string .string, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)

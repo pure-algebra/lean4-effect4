@@ -239,7 +239,7 @@ def answer (st : State) (req : Request) : State × Answer :=
       (st, unreadable (α := List (ServiceKey × Ty)) req.op "the service declarations do not read"
         req.servicesJson req.id)
     | some program, some holes, some rows, some services =>
-      let app : SigApp := ⟨rows, services⟩
+      let app : SigApp := ⟨rows, services, []⟩
       let name := appName app
       let l := SourceSession.open app { program, holes }
       ({ source := some l, journal := [], app := name },
@@ -314,7 +314,7 @@ def answer (st : State) (req : Request) : State × Answer :=
             "the host answers do not read" req.answersJson req.id)
         | some answers =>
           let rows := (l.app.withHoles l.sketch.holes).rows
-          match Effect4.Program.admitProgram l.sketch.program ⟨rows, []⟩ with
+          match Effect4.Program.admitProgram l.sketch.program (.ofTable rows) with
           | .error why =>
             let result := Json.mkObj [("status", .str "refused"), ("refusal", printJson why)]
             (st, Answer.mk op st.app answerLaws true result none req.id)

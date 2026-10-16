@@ -58,7 +58,7 @@ def hostCall : RProgram :=
 def srcShort (p : NativeEff) : ProgramSource := { program := p, table := [] }
 
 /-- The row is lawful, so the longer source carries its evidence. -/
-theorem rowB_lawful : LawfulSig ⟨[] ++ [rowB], []⟩ := by decide +kernel
+theorem rowB_lawful : LawfulSig ⟨[] ++ [rowB], [], []⟩ := by decide +kernel
 
 def srcLong (p : NativeEff) : ProgramSource :=
   { program := p, table := [] ++ [rowB], lawful := rowB_lawful }
@@ -119,7 +119,7 @@ short source to the long one, at every program, world and type (`typedProg_rows_
 theorem typedProg_table_monotone :
     ∀ (p : NativeEff) (w : Typed.World) (ty : EffTy) (prog : RProgram),
       TypedProg (srcShort p) w ty prog → TypedProg (srcLong p) w ty prog :=
-  fun p _ _ _ h => typedProg_rows_append (srcShort p) (srcLong p) [rowB] rfl rfl rfl h
+  fun p _ _ _ h => typedProg_rows_append (srcShort p) (srcLong p) [rowB] rfl rfl rfl rfl h
 
 /-! ## The entry's transport, the hypothesis seat A's positive control took -/
 

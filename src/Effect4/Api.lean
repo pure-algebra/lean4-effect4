@@ -301,7 +301,7 @@ def replaySteps (program : Program) (fuel : Nat) (tape : List Decision)
 Five different questions are answered by five different checks
 (`docs/research/2026-09-09-foundation-admission-boundary.md` §1), and this face keeps them
 apart. Admission is at an application's signature (`SigApp`, decisions row 21); a caller with a
-row table alone admits at `⟨table, []⟩`, whose signature is `nativeSignature table`. The
+row table alone admits at `SigApp.ofTable table`, whose signature is `nativeSignature table`. The
 execution certificate retains the following checks:
 
 * **typed** — the checker computes an `EffTy` at `app.signature`. Since DI-54 that includes
@@ -337,9 +337,9 @@ export Effect4.Program.Table (lawful)
 end Table
 
 /-- The checked ordinary run: `run`, with the certificate consumed. The certificate is at the
-table's own signature, `⟨table, []⟩`; a run at declared services is the Σ_app slice's step 3. -/
+table's own signature, `SigApp.ofTable table`; a run at declared services is the Σ_app slice's step 3. -/
 def runAdmitted {program : Program} {table : RowTable}
-    (admitted : AdmittedProgram program ⟨table, []⟩) (fuel : Nat)
+    (admitted : AdmittedProgram program (.ofTable table)) (fuel : Nat)
     (compileFuel : Nat := fuel) : Inspection :=
   let _ := admitted.ty
   run program fuel table compileFuel

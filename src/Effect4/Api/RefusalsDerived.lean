@@ -4,16 +4,16 @@
 --   lake exe effect4gen Main --group Refusals --imports Effect4.Api.Codegen,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author --out src/Effect4/Api/RefusalsDerived.lean --append tools/Effect4Gen/guards/refusals.lean \
 --     Effect4.Program.TableRefusal Effect4.Program.FormationReason \
 --    Effect4.Program.FormationRefusal Effect4.Program.RowReason Effect4.Program.ServiceReason \
---    Effect4.Program.SigRefusal Effect4.Program.AdmitRefusal Effect4.Program.Authoring.Reason \
---    Effect4.Program.Authoring.Refusal Effect4.Program.RecordTypingReason \
---    Effect4.Program.RecordTermRefusal Effect4.Program.RecordCauseRefusal \
---    Effect4.Program.TupleTypingReason Effect4.Program.TupleTermRefusal \
---    Effect4.Program.TupleCauseRefusal Effect4.Program.FoldTypingReason \
---    Effect4.Program.FoldTermRefusal Effect4.Program.FoldCauseRefusal \
---    Effect4.Program.TermTypingRefusal Effect4.Program.CauseTypingRefusal \
---    Effect4.Program.RefFault Effect4.Program.TypeReason Effect4.Program.TypeRefusal \
---    Effect4.Api.AuthorRefusal Effect4.Program.ClassRefusal Effect4.Program.PrintRefusal \
---    Effect4.Program.ReadRefusal Effect4.Api.BuildRefusal
+--    Effect4.Program.DeclReason Effect4.Program.SigRefusal Effect4.Program.AdmitRefusal \
+--    Effect4.Program.Authoring.Reason Effect4.Program.Authoring.Refusal \
+--    Effect4.Program.RecordTypingReason Effect4.Program.RecordTermRefusal \
+--    Effect4.Program.RecordCauseRefusal Effect4.Program.TupleTypingReason \
+--    Effect4.Program.TupleTermRefusal Effect4.Program.TupleCauseRefusal \
+--    Effect4.Program.FoldTypingReason Effect4.Program.FoldTermRefusal \
+--    Effect4.Program.FoldCauseRefusal Effect4.Program.TermTypingRefusal \
+--    Effect4.Program.CauseTypingRefusal Effect4.Program.RefFault Effect4.Program.TypeReason \
+--    Effect4.Program.TypeRefusal Effect4.Api.AuthorRefusal Effect4.Program.ClassRefusal \
+--    Effect4.Program.PrintRefusal Effect4.Program.ReadRefusal Effect4.Api.BuildRefusal
 -- Carriers read from: Effect4.Program.Native, Effect4.Program.Formation, Effect4.Program.SigApp, Effect4.Program.Admission, Effect4.Program.Authoring, Effect4.Program.Typing.TermRefusal, Effect4.Program.Refs, Effect4.Program.Typing.Blame, Effect4.Api, Effect4.Codegen.Refusal, Effect4.Api.Author
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/refusals.lean
 import Effect4.Api.Codegen
@@ -411,6 +411,64 @@ instance instCanonical : Canonical (_root_.Effect4.Program.ServiceReason) :=
 
 end ServiceReasonC
 
+namespace DeclReasonC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "DeclReason"
+     [("internalSpelling", 0, []),
+      ("typeVariable", 1, []),
+      ("applied", 2, [])],
+   []⟩
+
+def toVal : _root_.Effect4.Program.DeclReason → Val
+  | .internalSpelling => .ctor 0 []
+  | .typeVariable => .ctor 1 []
+  | .applied => .ctor 2 []
+
+def ofVal : Val → Option (_root_.Effect4.Program.DeclReason)
+  | .ctor 0 [] => some .internalSpelling
+  | .ctor 1 [] => some .typeVariable
+  | .ctor 2 [] => some .applied
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Program.DeclReason) : ofVal (toVal a) = some a := by
+  cases a with
+  | «internalSpelling» => simp only [toVal, ofVal]
+  | «typeVariable» => simp only [toVal, ofVal]
+  | «applied» => simp only [toVal, ofVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.DeclReason} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
+
+theorem fits (a : _root_.Effect4.Program.DeclReason) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «internalSpelling» =>
+    exact accepts_sum _ _ _ 0 "internalSpelling" [] [] rfl (acceptsFields_nil _)
+  | «typeVariable» =>
+    exact accepts_sum _ _ _ 1 "typeVariable" [] [] rfl (acceptsFields_nil _)
+  | «applied» =>
+    exact accepts_sum _ _ _ 2 "applied" [] [] rfl (acceptsFields_nil _)
+
+instance instCanonical : Canonical (_root_.Effect4.Program.DeclReason) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end DeclReasonC
+
 namespace SigRefusalC
 
 def shapeDoc : ShapeDoc :=
@@ -423,11 +481,16 @@ def shapeDoc : ShapeDoc :=
         ("reason", (shape _root_.Effect4.Program.ServiceReason).root)]),
       ("duplicateCode", 3, [("code", (shape _root_.Effect4.ServiceTypeCode).root)]),
       ("unservedKey", 4, [("row", (shape _root_.Nat).root),
-        ("key", (shape _root_.Effect4.ServiceKey).root)])],
+        ("key", (shape _root_.Effect4.ServiceKey).root)]),
+      ("decl", 5, [("index", (shape _root_.Nat).root),
+        ("reason", (shape _root_.Effect4.Program.DeclReason).root)]),
+      ("conflictingDecl", 6, [("name", (shape _root_.String).root)]),
+      ("unguardedDecl", 7, [("name", (shape _root_.String).root)])],
    (shape _root_.Nat).defs ++ (shape _root_.Effect4.Program.RowReason).defs ++
      (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))).defs ++
      (shape _root_.Effect4.Program.ServiceReason).defs ++
-     (shape _root_.Effect4.ServiceTypeCode).defs ++ (shape _root_.Effect4.ServiceKey).defs⟩
+     (shape _root_.Effect4.ServiceTypeCode).defs ++ (shape _root_.Effect4.ServiceKey).defs ++
+     (shape _root_.Effect4.Program.DeclReason).defs ++ (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Program.SigRefusal → Val
   | .row a0 a1 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1]
@@ -435,6 +498,9 @@ def toVal : _root_.Effect4.Program.SigRefusal → Val
   | .service a0 a1 => .ctor 2 [Canonical.toVal a0, Canonical.toVal a1]
   | .duplicateCode a0 => .ctor 3 [Canonical.toVal a0]
   | .unservedKey a0 a1 => .ctor 4 [Canonical.toVal a0, Canonical.toVal a1]
+  | .decl a0 a1 => .ctor 5 [Canonical.toVal a0, Canonical.toVal a1]
+  | .conflictingDecl a0 => .ctor 6 [Canonical.toVal a0]
+  | .unguardedDecl a0 => .ctor 7 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.SigRefusal)
   | .ctor 0 [v0, v1] =>
@@ -454,6 +520,13 @@ def ofVal : Val → Option (_root_.Effect4.Program.SigRefusal)
         Canonical.ofVal (α := _root_.Effect4.ServiceKey) v1 with
     | some a0, some a1 => some (.unservedKey a0 a1)
     | _, _ => none
+  | .ctor 5 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Nat) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.DeclReason) v1 with
+    | some a0, some a1 => some (.decl a0 a1)
+    | _, _ => none
+  | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .conflictingDecl
+  | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unguardedDecl
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.SigRefusal) : ofVal (toVal a) = some a := by
@@ -463,6 +536,9 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.SigRefusal) : ofVal (toVal a) = 
   | «service» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
   | «duplicateCode» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «unservedKey» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «decl» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «conflictingDecl» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unguardedDecl» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.SigRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -497,34 +573,58 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.SigRefusal} (h : ofVal
       simp only [toVal]
       rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
     all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
   all_goals exact nomatch h
 
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_RowReason (x : _root_.Effect4.Program.RowReason) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RowReason).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_ProdStringListRowArg (x : (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))) :
     acceptsIn shapeDoc.defs (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
 theorem lift_ServiceReason (x : _root_.Effect4.Program.ServiceReason) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.ServiceReason).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_ServiceTypeCode (x : _root_.Effect4.ServiceTypeCode) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.ServiceTypeCode).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_ServiceKey (x : _root_.Effect4.ServiceKey) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.ServiceKey).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_DeclReason (x : _root_.Effect4.Program.DeclReason) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.DeclReason).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_String (x : _root_.String) :
+    acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
 
@@ -548,6 +648,16 @@ theorem fits (a : _root_.Effect4.Program.SigRefusal) : shapeDoc.accepts (toVal a
     exact accepts_sum _ _ _ 4 "unservedKey" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_ServiceKey a1) (acceptsFields_nil _)))
+  | «decl» a0 a1 =>
+    exact accepts_sum _ _ _ 5 "decl" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_DeclReason a1) (acceptsFields_nil _)))
+  | «conflictingDecl» a0 =>
+    exact accepts_sum _ _ _ 6 "conflictingDecl" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «unguardedDecl» a0 =>
+    exact accepts_sum _ _ _ 7 "unguardedDecl" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.SigRefusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -3267,12 +3377,16 @@ def rowReasons : List RowReason :=
 
 def serviceReasons : List ServiceReason := [.reservedName, .nonFlatCarrier, .conflictsBuiltin]
 
+/-- Every reason a named type's declaration is refused (decisions row 401 (2)). -/
+def declReasons : List DeclReason := [.internalSpelling, .typeVariable, .applied]
+
 /-- Every fault of a layer reference, in declaration order (decisions row 341). -/
 def refFaults : List RefFault := [.notBefore, .encloses, .noLayer, .toReference, .otherScope]
 
 def signatures : List SigRefusal :=
   rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", [.name "get"])] ++
-    serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩]
+    serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩] ++
+    declReasons.map (SigRefusal.decl 3) ++ [.conflictingDecl "Todo", .unguardedDecl "Loop"]
 
 def admissions : List AdmitRefusal :=
   [.illTyped] ++ signatures.map .signature ++
@@ -3382,6 +3496,7 @@ def printedHead : Effect4.Json → String
 #guard tables.all fun x => Canonical.decode (α := TableRefusal) (Canonical.encode x) = some x
 #guard rowReasons.all fun x => Canonical.decode (α := RowReason) (Canonical.encode x) = some x
 #guard serviceReasons.all fun x => Canonical.decode (α := ServiceReason) (Canonical.encode x) = some x
+#guard declReasons.all fun x => Canonical.decode (α := DeclReason) (Canonical.encode x) = some x
 #guard refFaults.all fun x => Canonical.decode (α := RefFault) (Canonical.encode x) = some x
 #guard refFaults.map Canonical.head == Canonical.heads RefFault
 #guard refFaults.all fun x => Canonical.head x == printedHead (Canonical.print x)

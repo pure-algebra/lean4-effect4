@@ -156,7 +156,6 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine = {
   stuck : stuck option;
   forks : fork_record list;
 }
-and sig_app = { rows : row list; services : (service_key * ty) list }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =
   | RunDecision_fire of fiber_id
   | RunDecision_flush
@@ -227,6 +226,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber = {
   deferred_interrupt : bool;
 }
 and parked = Parked_notParked | Parked_withGuard of int
+and sig_app = { rows : row list; services : (service_key * ty) list; types : (string * ty) list }
 and 'op signature = {
   row_of : 'op -> row;
   atom_of : string -> ty list -> ty option;
@@ -9124,6 +9124,14 @@ let api_load (program : native_op eff) (compile_fuel : int) : (eff_name, eff_thu
 
 
 
+(* LCNF mono: Effect4.Program.SigApp.ofTable (rows : List Effect4.Program.Row) : Effect4.Program.SigApp *)
+
+let program_sig_app_of_table (rows : row list) : sig_app =
+  let _x_1 = [] in
+  ({ rows = rows; services = _x_1; types = _x_1 } : sig_app)
+
+
+
 (* LCNF mono: Effect4.Program.NativeOp.externalPlaceholder : Effect4.Program.Row *)
 
 let program_native_op_external_placeholder : row =
@@ -17628,11 +17636,11 @@ let program_program_calls (s : _ signature) (env0 : ty list) (p : _ eff) : (int 
 (* LCNF mono: Effect4.Api.HostSession.callTable (program : Effect4.Program.Eff Effect4.Program.NativeOp) (table : List Effect4.Program.Row) : List (Prod (List Nat) (Effect4.Program.CallInstance Effect4.Program.NativeOp)) *)
 
 let api_host_session_call_table (program : native_op eff) (table : row list) : (int list * native_op call_instance) list =
-  let _x_1 = [] in
-  let _x_2 = ({ rows = table; services = _x_1 } : sig_app) in
-  let _x_3 = program_sig_app_signature _x_2 in
+  let _x_1 = program_sig_app_of_table table in
+  let _x_2 = program_sig_app_signature _x_1 in
+  let _x_3 = [] in
   let _x_4 = program_eff_expand_refs program in
-  program_program_calls _x_3 _x_1 _x_4
+  program_program_calls _x_2 _x_3 _x_4
 
 
 

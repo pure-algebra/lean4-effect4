@@ -57,19 +57,19 @@ def unionRow : Row :=
 
 /-- Clause 1: the API refuses the program, at the required key with no carrier. -/
 theorem refused :
-    refusalOf (admitProgram callIt ⟨[unservedRow], []⟩) =
+    refusalOf (admitProgram callIt ⟨[unservedRow], [], []⟩) =
       some (.signature (.unservedKey 0 appKey)) := by
   decide +kernel
 
 /-- Clause 2: the API refuses a program over the row that does not bind its answer's parameter. -/
 theorem refused_unscoped :
-    refusalOf (admitProgram (.succeed (.lit .unit)) ⟨[unscopedRow], []⟩) =
+    refusalOf (admitProgram (.succeed (.lit .unit)) ⟨[unscopedRow], [], []⟩) =
       some (.signature (.row 0 .notWellScoped)) := by
   decide +kernel
 
 /-- Clause 3: the API refuses a program over the row with a parameter under a union head. -/
 theorem refused_union :
-    refusalOf (admitProgram (.succeed (.lit .unit)) ⟨[unionRow], []⟩) =
+    refusalOf (admitProgram (.succeed (.lit .unit)) ⟨[unionRow], [], []⟩) =
       some (.signature (.row 0 (.templateNotAdmissible "request"))) := by
   decide +kernel
 
@@ -80,7 +80,7 @@ The repair reads the application's own service declarations (`SigApp.services`, 
 
 /-- Clause 1's table with a flat carrier declared at the key's code (row 114: a free name, a flat
 carrier, a code the built-in table leaves free). -/
-def servedApp : SigApp := ⟨[unservedRow], [(appKey, .nat)]⟩
+def servedApp : SigApp := ⟨[unservedRow], [(appKey, .nat)], []⟩
 
 /-- Green, clause 1: once the application declares the key's carrier, the same program is
 admitted. -/
@@ -92,7 +92,7 @@ def readIt : NativeEff := .service appKey
 
 /-- Green: the checker types the read at the declared carrier, and admission admits it. -/
 theorem admitted_reads_declared :
-    (admitProgram readIt ⟨[], [(appKey, .nat)]⟩).toOption.map (·.ty.answer) = some .nat := by
+    (admitProgram readIt ⟨[], [(appKey, .nat)], []⟩).toOption.map (·.ty.answer) = some .nat := by
   decide +kernel
 
 /-- Red: with no declaration the key has no carrier, and the read does not type. -/
@@ -100,9 +100,9 @@ theorem refused_reads_undeclared : refusalOf (admitProgram readIt) = some .illTy
   decide +kernel
 
 /-- The table of clause 1 is no lawful source, which is why admission refuses it. -/
-theorem not_lawful : ¬ LawfulSig (SigApp.mk [unservedRow] []) := fun h => by
+theorem not_lawful : ¬ LawfulSig (SigApp.mk [unservedRow] [] []) := fun h => by
   have hok := (admitSig_ok_iff _).mpr h
-  have hrefused : admitSig (SigApp.mk [unservedRow] []) = .error (.unservedKey 0 appKey) := by
+  have hrefused : admitSig (SigApp.mk [unservedRow] [] []) = .error (.unservedKey 0 appKey) := by
     decide +kernel
   rw [hrefused] at hok
   cases hok
@@ -112,7 +112,7 @@ theorem not_lawful : ¬ LawfulSig (SigApp.mk [unservedRow] []) := fun h => by
 Each is the old acceptance of a witness, which `admitProgram` gave before the repair. -/
 
 /-- RED, clause 1: the program over the row whose required key has no carrier is admitted. -/
-def red_unserved : Bool := (admitProgram callIt ⟨[unservedRow], []⟩).toOption.isSome
+def red_unserved : Bool := (admitProgram callIt ⟨[unservedRow], [], []⟩).toOption.isSome
 /--
 error: Expression
   red_unserved
@@ -123,7 +123,7 @@ did not evaluate to `true`
 
 /-- RED, clause 2: a program over the row that does not bind its answer's parameter is admitted. -/
 def red_unscoped : Bool :=
-  (admitProgram (.succeed (.lit .unit)) ⟨[unscopedRow], []⟩).toOption.isSome
+  (admitProgram (.succeed (.lit .unit)) ⟨[unscopedRow], [], []⟩).toOption.isSome
 /--
 error: Expression
   red_unscoped
@@ -133,7 +133,7 @@ did not evaluate to `true`
 #guard red_unscoped
 
 /-- RED, clause 3: a program over the row with a parameter under a union head is admitted. -/
-def red_union : Bool := (admitProgram (.succeed (.lit .unit)) ⟨[unionRow], []⟩).toOption.isSome
+def red_union : Bool := (admitProgram (.succeed (.lit .unit)) ⟨[unionRow], [], []⟩).toOption.isSome
 /--
 error: Expression
   red_union

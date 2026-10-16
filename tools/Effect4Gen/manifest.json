@@ -216,6 +216,7 @@
         "Effect4.Program.FormationRefusal",
         "Effect4.Program.RowReason",
         "Effect4.Program.ServiceReason",
+        "Effect4.Program.DeclReason",
         "Effect4.Program.SigRefusal",
         "Effect4.Program.AdmitRefusal",
         "Effect4.Program.Authoring.Reason",

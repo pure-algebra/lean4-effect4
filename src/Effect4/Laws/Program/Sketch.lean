@@ -29,7 +29,7 @@ checker's two extension theorems apply.
 | `Sketch.check_omit_focusAt` | an omission keeps the sketch's type, when the hole row declares the answered type | `Sketch.check_fill_focusAt`, `Sketch.hole_hasTy` |
 
 Each statement is made once, at the typing signature of an application (`SigApp.signature`).
-The form at a row table alone is the instance at `⟨table, []⟩`: `SigApp.signature_nil` holds by
+The form at a row table alone is the instance at `SigApp.ofTable table`: `SigApp.signature_nil` holds by
 definition (`Test/Program/SketchControls.lean` has the instance).
 
 `Sketch.check_fill` and `Sketch.check_omit` are the replacement law of the typing judgment

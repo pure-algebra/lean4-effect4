@@ -28,7 +28,7 @@ An integer column is admitted: the integer scan went with the integers packet's 
 fields witness each check. If admission fails, an exact `AdmitRefusal` reports the failure.
 Admission depends strictly on the program plane and never imports codegen.
 
-A caller at a row table alone admits at `⟨table, []⟩`, whose signature is `nativeSignature table`
+A caller at a row table alone admits at `SigApp.ofTable table`, whose signature is `nativeSignature table`
 by definition (`SigApp.signature_nil`).
 
 `admitStraightProgram` adds membership in the existing straight fragment to that

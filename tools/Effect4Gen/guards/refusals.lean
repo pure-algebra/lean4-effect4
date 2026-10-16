@@ -32,12 +32,16 @@ def rowReasons : List RowReason :=
 
 def serviceReasons : List ServiceReason := [.reservedName, .nonFlatCarrier, .conflictsBuiltin]
 
+/-- Every reason a named type's declaration is refused (decisions row 401 (2)). -/
+def declReasons : List DeclReason := [.internalSpelling, .typeVariable, .applied]
+
 /-- Every fault of a layer reference, in declaration order (decisions row 341). -/
 def refFaults : List RefFault := [.notBefore, .encloses, .noLayer, .toReference, .otherScope]
 
 def signatures : List SigRefusal :=
   rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", [.name "get"])] ++
-    serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩]
+    serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩] ++
+    declReasons.map (SigRefusal.decl 3) ++ [.conflictingDecl "Todo", .unguardedDecl "Loop"]
 
 def admissions : List AdmitRefusal :=
   [.illTyped] ++ signatures.map .signature ++
@@ -147,6 +151,7 @@ def printedHead : Effect4.Json → String
 #guard tables.all fun x => Canonical.decode (α := TableRefusal) (Canonical.encode x) = some x
 #guard rowReasons.all fun x => Canonical.decode (α := RowReason) (Canonical.encode x) = some x
 #guard serviceReasons.all fun x => Canonical.decode (α := ServiceReason) (Canonical.encode x) = some x
+#guard declReasons.all fun x => Canonical.decode (α := DeclReason) (Canonical.encode x) = some x
 #guard refFaults.all fun x => Canonical.decode (α := RefFault) (Canonical.encode x) = some x
 #guard refFaults.map Canonical.head == Canonical.heads RefFault
 #guard refFaults.all fun x => Canonical.head x == printedHead (Canonical.print x)

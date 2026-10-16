@@ -489,4 +489,28 @@ theorem memberIn_iff_expansions {decls : TyDecls} (hg : decls.guarded = true)
   rw [TyDecls.body?_isSome_iff, ← TyDecls.names_expansions, ← TyDecls.body?_isSome_iff, hx]
   rfl
 
+/-- **A consistent table reads each of its entries**: where no name has two bodies, a name's first
+entry is every entry's. A step of `Modeled.memberIn_ref_of_lawful`. -/
+theorem TyDecls.body?_of_consistent {decls : TyDecls}
+    (hc : decls.Pairwise fun d e => d.1 = e.1 → d.2 = e.2) {e : String × Ty} (he : e ∈ decls) :
+    decls.body? e.1 = some e.2 := by
+  induction decls with
+  | nil => cases he
+  | cons d ds ih =>
+    obtain ⟨m, b⟩ := d
+    obtain ⟨hd, hds⟩ := List.pairwise_cons.mp hc
+    unfold TyDecls.body? at ih ⊢
+    simp only [List.lookup]
+    split
+    · rename_i heq
+      rcases List.mem_cons.mp he with rfl | he'
+      · rfl
+      · exact congrArg some (hd e he' (beq_iff_eq.mp heq).symm)
+    · rename_i hne
+      rcases List.mem_cons.mp he with rfl | he'
+      · dsimp only at hne
+        rw [beq_iff_eq.mpr (rfl : m = m)] at hne
+        cases hne
+      · exact ih hds he'
+
 end Effect4.Program

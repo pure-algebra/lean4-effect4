@@ -207,12 +207,12 @@ def counterexample : Api.Program :=
 With `perform` unified as the one invocation form, it is admitted and readable. -/
 
 def admitted (program : Api.Program) (table : RowTable := []) : Bool :=
-  match Api.admitProgram program ⟨table, []⟩ with
+  match Api.admitProgram program (.ofTable table) with
   | .ok _ => true
   | .error _ => false
 
 def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitRefusal :=
-  match Api.admitProgram program ⟨table, []⟩ with
+  match Api.admitProgram program (.ofTable table) with
   | .ok _ => none
   | .error why => some why
 
@@ -249,7 +249,7 @@ typed replay (`Api.Typed.replay`, decisions row 373 (8)) takes the place of the 
 `replayAdmitted`: it replays a session's journal, and the session admits each reply at its call. -/
 
 def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat) : Option ExitV :=
-  match Api.admitProgram program ⟨table, []⟩ with
+  match Api.admitProgram program (.ofTable table) with
   | .ok certificate => (Api.runAdmitted certificate fuel).exit
   | .error _ => none
 

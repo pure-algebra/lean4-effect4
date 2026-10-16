@@ -84,14 +84,14 @@ def some1 : Api.HostSession.Answer := .ofExit (.success (.some (.nat 1)))
 
 -- control: an address of the block itself, or past the main program, holds no part
 #guard (builtOf definedClient).map (fun b =>
-  ((b.program.expandRefs.partAt (SigApp.signature ⟨b.table, []⟩) [] []).isNone,
-    (b.program.expandRefs.partAt (SigApp.signature ⟨b.table, []⟩) [] [2]).isNone,
-    (b.program.expandRefs.partAt (SigApp.signature ⟨b.table, []⟩) [] [0]).isNone)) =
+  ((b.program.expandRefs.partAt (SigApp.signature (.ofTable b.table)) [] []).isNone,
+    (b.program.expandRefs.partAt (SigApp.signature (.ofTable b.table)) [] [2]).isNone,
+    (b.program.expandRefs.partAt (SigApp.signature (.ofTable b.table)) [] [0]).isNone)) =
   some (true, true, true)
 
 /-- A filling's built program as a sketch with no hole, with its application. -/
 def sketchOf (m : Module NativeOp) : Option (Sketch × SigApp) :=
-  (builtOf m).map fun b => ({ program := b.program.expandRefs }, ⟨b.table, []⟩)
+  (builtOf m).map fun b => ({ program := b.program.expandRefs }, (.ofTable b.table))
 
 -- finite evaluation (cutover slice S1): the sketch of filling 2 is admitted at its module's
 -- type, where the checker alone refuses the block (`definitionBlock`)

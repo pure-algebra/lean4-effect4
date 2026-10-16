@@ -46,14 +46,14 @@ def dupTable : RowTable := [row "query" .nat, row "query" .string]
 
 -- tested: the located refusal names the repeated key, and admission reports it
 #guard Table.lawful dupTable == false
-#guard admitSig ⟨dupTable, []⟩ == .error (.duplicateRow (rowKey (row "query" .nat)))
-#guard match admitProgram (.succeed (.lit (.nat 0))) ⟨dupTable, []⟩ with
+#guard admitSig ⟨dupTable, [], []⟩ == .error (.duplicateRow (rowKey (row "query" .nat)))
+#guard match admitProgram (.succeed (.lit (.nat 0))) ⟨dupTable, [], []⟩ with
   | .error (.signature (.duplicateRow k)) => k == rowKey (row "query" .nat)
   | _ => false
 
 /-- TY-05 on a table: `lawful` refuses and the signature's refusal locates (proved, by the
 theorems: a table `Table.lawful` refuses is no lawful signature). -/
-theorem dupTable_located : admitSig ⟨dupTable, []⟩ ≠ .ok () := fun h =>
+theorem dupTable_located : admitSig ⟨dupTable, [], []⟩ ≠ .ok () := fun h =>
   absurd ((admitSig_ok_iff _).mp h).tableLawful (by decide)
 
 /-! ## Rows 127 and 149: the column check -/
@@ -76,12 +76,12 @@ def pNeverPair : NativeEff :=
 
 -- tested: the checks locate CE-015's columns (a host-row answer, a host-row request, a program
 -- answer), and leave the designed bottom and inhabited columns alone
-#guard admitSig ⟨[hostRow .nat (.except .never .never)], []⟩ = .error (.row 0 (.emptyColumn "answer"))
-#guard admitSig ⟨[hostRow (.prod .never .nat) .nat], []⟩ = .error (.row 0 (.emptyColumn "request"))
+#guard admitSig ⟨[hostRow .nat (.except .never .never)], [], []⟩ = .error (.row 0 (.emptyColumn "answer"))
+#guard admitSig ⟨[hostRow (.prod .never .nat) .nat], [], []⟩ = .error (.row 0 (.emptyColumn "request"))
 #guard admitSig ⟨[hostRow .nat .nat, { hostRow .nat (.prod .nat .never) with spelling := "Host.b" }],
-  []⟩ = .error (.row 1 (.emptyColumn "answer"))
+  [], []⟩ = .error (.row 1 (.emptyColumn "answer"))
 #guard admitSig ⟨[hostRow .nat .nat, { hostRow (.list .never) (.option .never) with spelling := "Host.b" }],
-  []⟩ = .ok ()
+  [], []⟩ = .ok ()
 #guard findEmptyColumnInEffTy ⟨.prod .never .nat, .never, .empty⟩ = some ["program", "answer"]
 #guard findEmptyColumnInEffTy ⟨.never, .except .never .never, .empty⟩ = some ["program", "error"]
 #guard findEmptyColumnInEffTy ⟨.never, .never, .empty⟩ = none
@@ -91,22 +91,22 @@ def pNeverPair : NativeEff :=
 -- tested: runner admission refuses CE-015's columns, each at its position (a host-row answer and
 -- a host-row request at the signature, a program answer after every other check has passed),
 -- and still admits the inhabited table
-#guard (match admitProgram pHostNat ⟨[hostRow .nat (.except .never .never)], []⟩ with
+#guard (match admitProgram pHostNat ⟨[hostRow .nat (.except .never .never)], [], []⟩ with
   | .error (.signature why) => why == .row 0 (.emptyColumn "answer")
   | _ => false)
-#guard (match admitProgram (.succeed (.lit (.nat 0))) ⟨[hostRow (.prod .never .nat) .nat], []⟩ with
+#guard (match admitProgram (.succeed (.lit (.nat 0))) ⟨[hostRow (.prod .never .nat) .nat], [], []⟩ with
   | .error (.signature why) => why == .row 0 (.emptyColumn "request")
   | _ => false)
 #guard (match admitProgram pNeverPair with
   | .error (.emptyColumn pos) => pos == ["program", "answer"]
   | _ => false)
-#guard (match admitProgram pHostNat ⟨[hostRow .nat .nat], []⟩ with
+#guard (match admitProgram pHostNat ⟨[hostRow .nat .nat], [], []⟩ with
   | .ok _ => true
   | .error _ => false)
 
 /-- The signature check refuses the CE-015 table (proved). -/
 theorem ce015_table_refused :
-    admitSig ⟨[hostRow .nat (.except .never .never)], []⟩ = .error (.row 0 (.emptyColumn "answer")) := by
+    admitSig ⟨[hostRow .nat (.except .never .never)], [], []⟩ = .error (.row 0 (.emptyColumn "answer")) := by
   decide +kernel
 
 /-- The located scan refuses CE-015's program answer column (proved). -/
@@ -137,7 +137,7 @@ error: Tactic `decide` proved that the proposition
 is false
 -/
 #guard_msgs (error) in
-example : admitSig ⟨[hostRow .nat (.except .never .never)], []⟩ = .ok () := by
+example : admitSig ⟨[hostRow .nat (.except .never .never)], [], []⟩ = .ok () := by
   decide +kernel
 
 end Test.Program.AdmissionColumns

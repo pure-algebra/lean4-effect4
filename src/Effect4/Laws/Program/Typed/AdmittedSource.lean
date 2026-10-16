@@ -23,7 +23,7 @@ Placement (`AGENTS.md`). Concepts: `translation-simulation` (M7) and `residual-p
 (admission). Claims: `m7-admitted` and `admitted-source-lawful`, in R9 and R1. Reach: any
 `SigApp`, declared services included; for M7 the empty row table. The declared services reach
 these statements only through tests until the slice's step 3 (`Author.build` builds at
-`⟨table, []⟩`). It does not establish code generation at `app.signature` (step 4), M7 at a
+`SigApp.ofTable table`). It does not establish code generation at `app.signature` (step 4), M7 at a
 non-empty row table (DI-57, R6), or structured service carriers (decisions row 118). It unlocks
 R1's "every milestone statement takes the signature" for the API's admission, and M6 for every
 admitted program with row 117's closed requirement row.
@@ -47,7 +47,8 @@ theorem lawfulSig_of_admitted {program : NativeEff} {app : SigApp}
 bridge. -/
 def _root_.Effect4.Program.AdmittedProgram.source {program : NativeEff} {app : SigApp}
     (a : AdmittedProgram program app) : ProgramSource :=
-  { program, table := app.rows, services := app.services, lawful := lawfulSig_of_admitted a }
+  { program, table := app.rows, services := app.services, types := app.types,
+    lawful := lawfulSig_of_admitted a }
 
 /-- **M6 for a program the API admits**, at any signature: every machine its admitted tapes reach
 is typed when its requirement row is closed at the load (decisions row 117). -/

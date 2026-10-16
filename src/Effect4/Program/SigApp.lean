@@ -1,11 +1,12 @@
 import Effect4.Program.Columns
 import Effect4.Program.Table
+import Effect4.Program.TyDecls
 
 /-!
 # Program.SigApp — Σ_app: the application's part of the signature, and its located refusal
 
 Decisions rows 111–116 (ruled 2026-10-01). The open part of the signature is Σ_app: the host-row
-table and the application's service declarations (`SigApp`). The core alphabet (`NativeOp`,
+table, the application's service declarations and its named types (`SigApp`). The core alphabet (`NativeOp`,
 `SyncOp`, `FiberOp`, the atoms) stays fixed and grows only under DI-47's finite gate.
 
 * **The signature an application's tables give the checker** (`SigApp.signature`). Service
@@ -17,8 +18,10 @@ table and the application's service declarations (`SigApp`). The core alphabet (
   runner's registration, the program-plane table conditions, the three column scans of
   `Program/Columns.lean` at the root, and the template profile), the row keys are distinct, every
   declaration meets its local checks (`serviceChecks`, row 114), the declared codes are distinct
-  (row 113), and every key a row requires has a carrier. Program admission runs it
-  (`admitProgram`, `Program/Admission.lean`).
+  (row 113), and every key a row requires has a carrier. Then the application's named types
+  (`types`, decisions rows 401 and 402): each declaration meets its local checks (`declChecks`),
+  no name has two bodies, and the table is guarded. Program admission runs it (`admitProgram`,
+  `Program/Admission.lean`).
 
 The theorems live in `Laws/Program/Signature.lean`: the refusal is complete against `LawfulSig`
 (`admitSig_ok_iff`), extension and restriction, and the projections program admission's consumers
@@ -32,13 +35,18 @@ namespace Effect4.Program
 
 open Effect4 (ServiceKey ServiceTypeCode)
 
-/-- The application's part of the signature (row 111): the host-row table and the service
-declarations, each a key and its carrier. -/
+/-- The application's part of the signature (row 111): the host-row table, the service
+declarations, each a key and its carrier, and the declaration table of the application's named
+types (decisions rows 401 and 402). -/
 structure SigApp where
   rows : RowTable := []
   services : List (ServiceKey × Ty) := []
+  types : TyDecls := []
 
 namespace SigApp
+
+/-- The signature of a row table alone: no service declaration and no named type. -/
+def ofTable (rows : RowTable) : SigApp := { rows }
 
 /-- The carrier the application declares for a service code: its first declaration there. -/
 def codeTy (app : SigApp) (code : ServiceTypeCode) : Option Ty :=
@@ -168,6 +176,65 @@ def serviceChecks (e : ServiceKey × Ty) : List (Bool × ServiceReason) :=
    (flatCarrier e.2, .nonFlatCarrier),
    ((SigApp.builtinCodeTy e.1.service).all (· == e.2), .conflictsBuiltin)]
 
+/-- The names a type applies to arguments: each `app n args` with arguments, anywhere in it. -/
+def appliedAlg : TyAlgebra (fun _ => List String) where
+  ty_never := []
+  ty_unit := []
+  ty_nat := []
+  ty_int := []
+  ty_string := []
+  ty_bool := []
+  ty_handle _ := []
+  ty_option m := m
+  ty_list m := m
+  ty_prod a b := a ++ b
+  ty_except a b := a ++ b
+  ty_exitOf a b := a ++ b
+  ty_causeOf m := m
+  ty_fiberOf a b := a ++ b
+  ty_union a b := a ++ b
+  ty_lit _ := []
+  ty_refOf m := m
+  ty_deferredOf a b := a ++ b
+  ty_var _ := []
+  ty_unknown := []
+  ty_record fs := (fs.map fun f => f.2.2).flatten
+  ty_map a b := a ++ b
+  ty_tuple ms := ms.flatten
+  ty_app n args := (if args.isEmpty then [] else [n]) ++ args.flatten
+  ty_null := []
+  ty_undefined := []
+  ty_number := []
+  ty_bytes := []
+  ty_contextOf _ := []
+
+/-- The names a type applies to arguments (`appliedAlg`). -/
+def Ty.appliedNames (t : Ty) : List String := cata_ty appliedAlg t
+
+/-- A declaration's local conditions (decisions row 401 (2)), with their reasons. -/
+inductive DeclReason
+  /-- The name is an internal handle's spelling (`internalHandleTargets`): one spelling, one
+  meaning. -/
+  | internalSpelling
+  /-- The body has a type variable: a declaration is monomorphic. -/
+  | typeVariable
+  /-- The body applies a declared name to arguments: a declared name takes none. -/
+  | applied
+deriving DecidableEq, Repr
+
+/-- A declaration's local checks, in order, against the table it sits in. -/
+def declChecks (decls : TyDecls) (d : String × Ty) : List (Bool × DeclReason) :=
+  [(!internalHandleTargets.contains d.1, .internalSpelling),
+   (d.2.varsOf.isEmpty, .typeVariable),
+   ((d.2.appliedNames.filter fun n => (decls.body? n).isSome).isEmpty, .applied)]
+
+/-- The first name a table declares with two different bodies (decisions row 402 (5)): a
+repeated entry is one declaration, two bodies at one name are two meanings. -/
+def firstConflict : TyDecls → Option String
+  | [] => none
+  | d :: rest => if rest.any (fun e => e.1 == d.1 && e.2 != d.2) then some d.1
+    else firstConflict rest
+
 /-- The first failing check's reason. -/
 def firstFailing {β : Type} (checks : List (Bool × β)) : Option β :=
   (checks.find? fun c => !c.1).map Prod.snd
@@ -186,16 +253,21 @@ def firstDup {α : Type} [DecidableEq α] : List α → Option α
   | x :: xs => if x ∈ xs then some x else firstDup xs
 
 /-- Why a signature is not lawful, located: a row by its position, a declaration by its
-position, a repeated row key or service code, a required key with no carrier. -/
+position, a repeated row key or service code, a required key with no carrier; a named type's
+declaration by its position, a name with two bodies, a name the ranking leaves unranked. -/
 inductive SigRefusal
   | row (index : Nat) (reason : RowReason)
   | duplicateRow (key : String × List RowArg)
   | service (index : Nat) (reason : ServiceReason)
   | duplicateCode (code : ServiceTypeCode)
   | unservedKey (row : Nat) (key : ServiceKey)
+  | decl (index : Nat) (reason : DeclReason)
+  | conflictingDecl (name : String)
+  | unguardedDecl (name : String)
 deriving DecidableEq, Repr
 
-/-- The first refusal, in the order rows, row keys, declarations, codes, required keys. -/
+/-- The first refusal, in the order rows, row keys, declarations, codes, required keys, then the
+named types: each declaration, the names, the ranking. -/
 def sigRefusal? (app : SigApp) : Option SigRefusal :=
   ((firstIndexed (fun r => firstFailing (rowChecks r)) 0 app.rows).map
       fun found => .row found.1 found.2).or <|
@@ -203,8 +275,12 @@ def sigRefusal? (app : SigApp) : Option SigRefusal :=
   ((firstIndexed (fun e => firstFailing (serviceChecks e)) 0 app.services).map
       fun found => .service found.1 found.2).or <|
   ((firstDup (app.services.map (·.1.service))).map .duplicateCode).or <|
-  (firstIndexed (fun r => r.requires.find? fun k => !(app.serviceTy k).isSome) 0 app.rows).map
-      fun found => .unservedKey found.1 found.2
+  ((firstIndexed (fun r => r.requires.find? fun k => !(app.serviceTy k).isSome) 0 app.rows).map
+      fun found => .unservedKey found.1 found.2).or <|
+  ((firstIndexed (fun d => firstFailing (declChecks app.types d)) 0 app.types).map
+      fun found => .decl found.1 found.2).or <|
+  ((firstConflict app.types).map .conflictingDecl).or <|
+  app.types.unguardedAt?.map .unguardedDecl
 
 /-- **Admit a signature**: a located refusal, or `ok`. -/
 def admitSig (app : SigApp) : Except SigRefusal Unit :=

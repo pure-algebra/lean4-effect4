@@ -21,7 +21,7 @@ def table : RowTable := [row "query" .nat, row "cell" (.refOf .nat),
 def program (i : Nat := 0) : NativeEff := .perform (.external i) (.lit (.nat 1))
 
 -- E4-HOST-CE-007: the retained cell fixture is outside the interim host-reply profile.
-#guard match admitProgram (program 0) ⟨table, []⟩ with
+#guard match admitProgram (program 0) (.ofTable table) with
   | .error (.signature (.row 1 (.internalHandle "answer"))) => true
   | _ => false
 

@@ -110,7 +110,7 @@ theorem holes_conservative_table (table holes : RowTable) {e : NativeEff}
     (hp : SigProgram (nativeSignature table) e) (env : TyEnv) (p : List Nat) :
     Checker.check (nativeSignature (table ++ holes)) env p e =
       Checker.check (nativeSignature table) env p e :=
-  holes_conservative ⟨table, []⟩ holes hp env p
+  holes_conservative (.ofTable table) holes hp env p
 
 /-! ## The hole's rule, and its premises -/
 
@@ -178,7 +178,7 @@ def hostA : Row :=
     cite := "control", registration := .external }
 
 /-- An application: one host row, and one service declared at a fresh code. -/
-def app : SigApp := ⟨[hostA], [(greetKey, .string)]⟩
+def app : SigApp := ⟨[hostA], [(greetKey, .string)], []⟩
 
 /-- `g = service greet; hole 0` over `app`: the hole stands after the application's one row. -/
 def withService : Sketch :=
@@ -188,7 +188,7 @@ def withService : Sketch :=
 #guard withService.check app = .ok ⟨.bool, .never, Requirement.single greetKey⟩
 -- red (tested): at the row table alone the key has no carrier, so the laws are stated at the
 -- application's signature and not at the table's
-#guard refusedAt (withService.check ⟨[hostA], []⟩) = some ([0], "serviceUnknown")
+#guard refusedAt (withService.check ⟨[hostA], [], []⟩) = some ([0], "serviceUnknown")
 
 /-! ## Red: a hole row before the application's rows is no extension -/
 
@@ -224,18 +224,18 @@ def hostC : Row := { hostA with name := "c", spelling := "C.c", request := .nat 
 
 /-- A sketch over the application `[hostA]`: one hole, declared at `boolean`, at the root. -/
 def pinned : Sketch :=
-  { program := Sketch.hole ⟨[hostA], []⟩ 0, holes := [Row.hole "h0" .bool] }
+  { program := Sketch.hole ⟨[hostA], [], []⟩ 0, holes := [Row.hole "h0" .bool] }
 
 -- tested: over its own application the hole has its declared type
-#guard pinned.check ⟨[hostA], []⟩ = .ok ⟨.bool, .never, Requirement.empty⟩
+#guard pinned.check ⟨[hostA], [], []⟩ = .ok ⟨.bool, .never, Requirement.empty⟩
 -- red (tested): the application gains a row with a unit request; the stale hole reads that row,
 -- and the sketch is admitted at another type
-#guard pinned.check ⟨[hostA, hostB], []⟩ = .ok ⟨.string, .never, Requirement.empty⟩
+#guard pinned.check ⟨[hostA, hostB], [], []⟩ = .ok ⟨.string, .never, Requirement.empty⟩
 -- red (tested): the application gains a row with another request; the stale hole is refused, at
 -- the hole, for the new row's request
-#guard pinned.check ⟨[hostA, hostC], []⟩ = .error ⟨[], .requestNotSubtype "c" .unit .nat⟩
+#guard pinned.check ⟨[hostA, hostC], [], []⟩ = .error ⟨[], .requestNotSubtype "c" .unit .nat⟩
 -- tested: with the hole written again at its new position the sketch has its type again
-#guard Sketch.check { pinned with program := Sketch.hole ⟨[hostA, hostB], []⟩ 0 } ⟨[hostA, hostB], []⟩ =
+#guard Sketch.check { pinned with program := Sketch.hole ⟨[hostA, hostB], [], []⟩ 0 } ⟨[hostA, hostB], [], []⟩ =
   .ok ⟨.bool, .never, Requirement.empty⟩
 
 /-! ## Which hole rows are lawful host rows

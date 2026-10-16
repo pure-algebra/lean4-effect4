@@ -53,13 +53,13 @@ It is the claim `block-call-instance` (`checkModule_programCallAt`) at the sessi
 which admission types by the module check (`typeOfProgram`). Before decisions row 333's repair a
 program with a block had no instance at any call. -/
 theorem instanceAt_complete {program : Api.Program} {table : RowTable}
-    (admitted : AdmittedProgram program ⟨table, []⟩) {o : List Nat} {op : NativeOp}
+    (admitted : AdmittedProgram program (.ofTable table)) {o : List Nat} {op : NativeOp}
     {request : Term} (hat : (Node.eff program.expandRefs).at_ o = some (.eff (.perform op request))) :
     ∃ c, instanceAt program table o = some c ∧ c.op = op := by
   have ht := admitted.typed
   unfold typeOfProgram at ht
   split at ht
-  · cases hc : Checker.checkModule (SigApp.signature ⟨table, []⟩) program.expandRefs with
+  · cases hc : Checker.checkModule (SigApp.signature (.ofTable table)) program.expandRefs with
     | error _ => rw [hc] at ht; cases ht
     | ok T => exact checkModule_programCallAt hc hat
   · cases ht

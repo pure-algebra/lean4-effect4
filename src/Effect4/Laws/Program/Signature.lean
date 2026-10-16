@@ -307,11 +307,11 @@ theorem rows_append (t t' : RowTable) :
 namespace SigApp
 
 /-- With no declarations the service table is the built-in one. -/
-theorem serviceTy_nil (rows : RowTable) : (⟨rows, []⟩ : SigApp).serviceTy = nativeServiceTy :=
+theorem serviceTy_nil (rows : RowTable) : (SigApp.ofTable rows).serviceTy = nativeServiceTy :=
   rfl
 
 /-- With no declarations the signature is the native one. -/
-theorem signature_nil (rows : RowTable) : (⟨rows, []⟩ : SigApp).signature = nativeSignature rows :=
+theorem signature_nil (rows : RowTable) : (SigApp.ofTable rows).signature = nativeSignature rows :=
   rfl
 
 /-- **Per code (row 113).** Two keys with one code under free names have one carrier. -/
@@ -326,7 +326,7 @@ theorem serviceTy_code (app : SigApp) {key key' : ServiceKey} (hcode : key.servi
 
 /-- An application signature over a longer table extends the shorter one. -/
 theorem rows_append (app : SigApp) (t' : RowTable) :
-    SigExtends app.signature (SigApp.mk (app.rows ++ t') app.services).signature := by
+    SigExtends app.signature (SigApp.mk (app.rows ++ t') app.services app.types).signature := by
   have h := Effect4.Program.rows_append app.rows t'
   exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl⟩
 
@@ -339,11 +339,11 @@ def FreshCode (app : SigApp) (entry : ServiceKey × Ty) : Prop :=
 types keeps its carrier. -/
 theorem services_append (app : SigApp) (s' : List (ServiceKey × Ty))
     (fresh : ∀ entry ∈ s', FreshCode app entry) :
-    SigExtends app.signature (SigApp.mk app.rows (app.services ++ s')).signature := by
+    SigExtends app.signature (SigApp.mk app.rows (app.services ++ s') app.types).signature := by
   refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl, rfl, fun _ _ hk => hk, rfl⟩
   intro key ty hk
   change app.serviceTy key = some ty at hk
-  change SigApp.serviceTy ⟨app.rows, app.services ++ s'⟩ key = some ty
+  change SigApp.serviceTy ⟨app.rows, app.services ++ s', app.types⟩ key = some ty
   unfold serviceTy at hk ⊢
   split at hk
   · exact hk
@@ -351,7 +351,7 @@ theorem services_append (app : SigApp) (s' : List (ServiceKey × Ty))
     · cases hk
     · rename_i hfree
       rw [if_neg hfree]
-      have happ : (SigApp.mk app.rows (app.services ++ s')).codeTy key.service =
+      have happ : (SigApp.mk app.rows (app.services ++ s') app.types).codeTy key.service =
           (app.codeTy key.service).or
             ((s'.find? (fun entry => entry.1.service == key.service)).map Prod.snd) := by
         simp only [codeTy, List.find?_append, Option.map_or]
@@ -1045,7 +1045,33 @@ theorem firstDup_eq_none_iff {α : Type} [DecidableEq α] :
     · rw [if_neg hx, firstDup_eq_none_iff xs]
       exact ⟨fun h => ⟨hx, h⟩, fun h => h.2⟩
 
-/-- **The lawful signatures** (rows 97, 113, 114, 127; C6's shape). -/
+/-- `firstConflict` (`Program/SigApp.lean`) names no name exactly when no name has two bodies.
+A step of `sigRefusal?_eq_none_iff`. -/
+theorem firstConflict_eq_none_iff :
+    ∀ ds : TyDecls, firstConflict ds = none ↔ ds.Pairwise fun d e => d.1 = e.1 → d.2 = e.2
+  | [] => ⟨fun _ => List.Pairwise.nil, fun _ => rfl⟩
+  | d :: rest => by
+    unfold firstConflict
+    rw [List.pairwise_cons]
+    cases h : rest.any (fun e => e.1 == d.1 && e.2 != d.2) with
+    | true =>
+      rw [if_pos rfl]
+      refine ⟨fun hn => (nomatch hn), fun hp => ?_⟩
+      obtain ⟨e, he, hbad⟩ := List.any_eq_true.mp h
+      rw [Bool.and_eq_true, beq_iff_eq, bne_iff_ne] at hbad
+      exact absurd (hp.1 e he hbad.1.symm).symm hbad.2
+    | false =>
+      rw [if_neg Bool.false_ne_true, firstConflict_eq_none_iff rest]
+      refine ⟨fun hr => ⟨fun e he hde => ?_, hr⟩, fun hp => hp.2⟩
+      have hno := List.any_eq_false.mp h e he
+      cases hb : (e.2 == d.2) with
+      | true => exact (beq_iff_eq.mp hb).symm
+      | false =>
+        rw [hde, beq_iff_eq.mpr (rfl : e.1 = e.1), Bool.true_and, bne, hb] at hno
+        exact absurd rfl hno
+
+/-- **The lawful signatures** (rows 97, 113, 114, 127; C6's shape; the named types of rows 401
+and 402). -/
 structure LawfulSig (app : SigApp) : Prop where
   /-- Every row meets its local conditions. -/
   rows : ∀ r ∈ app.rows, ∀ c ∈ rowChecks r, c.1 = true
@@ -1057,29 +1083,40 @@ structure LawfulSig (app : SigApp) : Prop where
   codesDistinct : app.services.Pairwise fun e e' => e.1.service ≠ e'.1.service
   /-- Every key a row requires has a carrier. -/
   served : ∀ r ∈ app.rows, ∀ k ∈ r.requires, (app.serviceTy k).isSome = true
+  /-- Every named type's declaration meets its local conditions (decisions row 401 (2)). -/
+  decls : ∀ d ∈ app.types, ∀ c ∈ declChecks app.types d, c.1 = true
+  /-- No name has two bodies (decisions row 402 (5)). -/
+  declsConsistent : app.types.Pairwise fun d e => d.1 = e.1 → d.2 = e.2
+  /-- The table is guarded: the ranking ranks every name (decisions row 401 (2)). -/
+  guarded : app.types.guarded = true
 
 /-- **The located refusal is complete** (proved): no refusal exactly at a lawful signature. -/
 theorem sigRefusal?_eq_none_iff (app : SigApp) : sigRefusal? app = none ↔ LawfulSig app := by
   unfold sigRefusal?
   rw [Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff,
+    Option.or_eq_none_iff, Option.or_eq_none_iff, Option.or_eq_none_iff,
+    Option.map_eq_none_iff, Option.map_eq_none_iff, Option.map_eq_none_iff,
     Option.map_eq_none_iff, Option.map_eq_none_iff, Option.map_eq_none_iff,
     Option.map_eq_none_iff, Option.map_eq_none_iff,
     firstIndexed_eq_none_iff, firstDup_eq_none_iff, firstIndexed_eq_none_iff,
-    firstDup_eq_none_iff, firstIndexed_eq_none_iff]
+    firstDup_eq_none_iff, firstIndexed_eq_none_iff, firstIndexed_eq_none_iff,
+    firstConflict_eq_none_iff, ← Option.isNone_iff_eq_none]
   constructor
-  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hconsistent, hguarded⟩
     refine ⟨fun r hr => (firstFailing_eq_none_iff _).mp (hrows r hr), List.pairwise_map.mp hkeys,
-      fun e he => (firstFailing_eq_none_iff _).mp (hsvc e he), List.pairwise_map.mp hcodes, ?_⟩
+      fun e he => (firstFailing_eq_none_iff _).mp (hsvc e he), List.pairwise_map.mp hcodes, ?_,
+      fun d hd => (firstFailing_eq_none_iff _).mp (hdecls d hd), hconsistent, hguarded⟩
     intro r hr k hk
     have hk' := List.find?_eq_none.mp (hserved r hr) k hk
     cases hks : (app.serviceTy k).isSome
     · rw [hks] at hk'
       exact absurd rfl hk'
     · rfl
-  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hconsistent, hguarded⟩
     refine ⟨fun r hr => (firstFailing_eq_none_iff _).mpr (hrows r hr), List.pairwise_map.mpr hkeys,
       fun e he => (firstFailing_eq_none_iff _).mpr (hsvc e he), List.pairwise_map.mpr hcodes,
-      fun r hr => List.find?_eq_none.mpr fun k hk hbad => ?_⟩
+      fun r hr => List.find?_eq_none.mpr fun k hk hbad => ?_,
+      fun d hd => (firstFailing_eq_none_iff _).mpr (hdecls d hd), hconsistent, hguarded⟩
     rw [hserved r hr k hk] at hbad
     cases hbad
 
@@ -1119,15 +1156,15 @@ theorem LawfulSig.registered {app : SigApp} (h : LawfulSig app) :
     beq_iff_eq.mp (h.rows r hr _ (List.mem_cons_of_mem _ List.mem_cons_self))⟩
 
 /-- The empty signature is lawful: what every source with no rows and no declarations carries. -/
-theorem SigApp.lawful_empty : LawfulSig (SigApp.mk [] []) :=
+theorem SigApp.lawful_empty : LawfulSig (SigApp.mk [] [] []) :=
   ⟨fun _ h => (nomatch h), List.Pairwise.nil, fun _ h => (nomatch h), List.Pairwise.nil,
-    fun _ h => (nomatch h)⟩
+    fun _ h => (nomatch h), fun _ h => (nomatch h), List.Pairwise.nil, rfl⟩
 
 /-- **C6 (proved)**: an appended signature is lawful exactly when each part's local clauses
 hold, each part's pairwise clauses hold, the cross terms hold, and the whole serves every
 required key: `List.forall_mem_append` and `List.pairwise_append`. -/
 theorem lawful_append (app : SigApp) (rows' : RowTable) (services' : List (ServiceKey × Ty)) :
-    LawfulSig (SigApp.mk (app.rows ++ rows') (app.services ++ services')) ↔
+    LawfulSig (SigApp.mk (app.rows ++ rows') (app.services ++ services') app.types) ↔
       ((∀ r ∈ app.rows, ∀ c ∈ rowChecks r, c.1 = true) ∧
         (∀ r ∈ rows', ∀ c ∈ rowChecks r, c.1 = true)) ∧
       (app.rows.Pairwise (fun r r' => rowKey r ≠ rowKey r') ∧
@@ -1139,12 +1176,17 @@ theorem lawful_append (app : SigApp) (rows' : RowTable) (services' : List (Servi
         services'.Pairwise (fun e e' => e.1.service ≠ e'.1.service) ∧
         ∀ e ∈ app.services, ∀ e' ∈ services', e.1.service ≠ e'.1.service) ∧
       (∀ r ∈ app.rows ++ rows', ∀ k ∈ r.requires,
-        ((SigApp.mk (app.rows ++ rows') (app.services ++ services')).serviceTy k).isSome = true) := by
+        ((SigApp.mk (app.rows ++ rows') (app.services ++ services') app.types).serviceTy k).isSome =
+          true) ∧
+      ((∀ d ∈ app.types, ∀ c ∈ declChecks app.types d, c.1 = true) ∧
+        (app.types.Pairwise fun d e => d.1 = e.1 → d.2 = e.2) ∧ app.types.guarded = true) := by
   constructor
-  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hconsistent, hguarded⟩
     exact ⟨List.forall_mem_append.mp hrows, List.pairwise_append.mp hkeys,
-      List.forall_mem_append.mp hsvc, List.pairwise_append.mp hcodes, hserved⟩
-  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved⟩
+      List.forall_mem_append.mp hsvc, List.pairwise_append.mp hcodes, hserved,
+      hdecls, hconsistent, hguarded⟩
+  · rintro ⟨hrows, hkeys, hsvc, hcodes, hserved, hdecls, hconsistent, hguarded⟩
     exact ⟨List.forall_mem_append.mpr hrows, List.pairwise_append.mpr hkeys,
-      List.forall_mem_append.mpr hsvc, List.pairwise_append.mpr hcodes, hserved⟩
+      List.forall_mem_append.mpr hsvc, List.pairwise_append.mpr hcodes, hserved,
+      hdecls, hconsistent, hguarded⟩
 end Effect4.Program

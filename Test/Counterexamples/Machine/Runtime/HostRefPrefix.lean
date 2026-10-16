@@ -23,7 +23,7 @@ def table : RowTable := RowDef.table
    Row.host "cell-output" .nat .unit .never "cell-prefix-control"]
 def program : NativeEff := .bind (.perform .refMake (.lit (.nat 17)))
   (.bind (.perform (.external 0) (.lit .unit)) (.perform (.external 1) (.var 1)))
-def admitted : Api.AdmittedProgram program ⟨table, []⟩ where
+def admitted : Api.AdmittedProgram program (.ofTable table) where
   ty := ⟨.unit, .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)

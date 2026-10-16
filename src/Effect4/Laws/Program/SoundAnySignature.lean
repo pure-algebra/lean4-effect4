@@ -83,28 +83,28 @@ theorem looped_sigProgram : ∀ (e : NativeEff), Looped e = true → SigProgram 
 /-- **The built-in signature extends to an application's signature** over any table, with its
 service declarations at codes neither the built-in table nor an earlier declaration types. -/
 theorem native_extends_app (t : RowTable) (s : List (ServiceKey × Ty))
-    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, []⟩ entry) :
-    SigExtends nativeSignature (SigApp.mk t s).signature :=
-  (SigApp.rows_append ⟨[], []⟩ t).trans (SigApp.services_append ⟨t, []⟩ s fresh)
+    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, [], []⟩ entry) :
+    SigExtends nativeSignature (SigApp.mk t s []).signature :=
+  (SigApp.rows_append ⟨[], [], []⟩ t).trans (SigApp.services_append ⟨t, [], []⟩ s fresh)
 
 /-- A looped program types at an application's signature exactly as at the built-in one. -/
 theorem effTy_app_of_looped (t : RowTable) (s : List (ServiceKey × Ty))
-    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, []⟩ entry) (e : NativeEff) (hl : Looped e = true) :
-    effTy (SigApp.mk t s).signature [] e = effTy nativeSignature [] e :=
+    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, [], []⟩ entry) (e : NativeEff) (hl : Looped e = true) :
+    effTy (SigApp.mk t s []).signature [] e = effTy nativeSignature [] e :=
   effTy_restrict (native_extends_app t s fresh) (looped_sigProgram e hl) []
 
 /-- **`meaning_typed` at an application's signature** (R1). -/
 theorem meaning_typed_app (t : RowTable) (s : List (ServiceKey × Ty))
-    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, []⟩ entry) (e : NativeEff) (ty : EffTy)
-    (hs : Straight e = true) (hty : effTy (SigApp.mk t s).signature [] e = some ty) :
+    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, [], []⟩ entry) (e : NativeEff) (ty : EffTy)
+    (hs : Straight e = true) (hty : effTy (SigApp.mk t s []).signature [] e = some ty) :
     ExitHasTy ty.answer ty.error (meaning e [] Stores.empty).2 (meaning e [] Stores.empty).1 :=
   meaning_typed e ty hs
     ((effTy_app_of_looped t s fresh e (Looped.of_straight e hs)) ▸ hty)
 
 /-- **`run_typed` (the machine) at an application's signature** (R1). -/
 theorem run_typed_app (t : RowTable) (s : List (ServiceKey × Ty))
-    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, []⟩ entry) (e : NativeEff) (ty : EffTy)
-    (fuel : Nat) (hs : Straight e = true) (hty : effTy (SigApp.mk t s).signature [] e = some ty)
+    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, [], []⟩ entry) (e : NativeEff) (ty : EffTy)
+    (fuel : Nat) (hs : Straight e = true) (hty : effTy (SigApp.mk t s []).signature [] e = some ty)
     (hd : Agreement.depth e ≤ fuel) (hfuel : 2 * Agreement.steps e + 6 ≤ fuel) :
     (Api.run e fuel).outcome = Api.Outcome.finished ∧
       ∃ ex, (Api.run e fuel).exit = some ex ∧
@@ -113,8 +113,8 @@ theorem run_typed_app (t : RowTable) (s : List (ServiceKey × Ty))
 
 /-- **`meaningB_typed` (loops, any budget) at an application's signature** (R1). -/
 theorem meaningB_typed_app (t : RowTable) (s : List (ServiceKey × Ty))
-    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, []⟩ entry) (k : Nat) (e : NativeEff) (ty : EffTy)
-    (hl : Looped e = true) (hty : effTy (SigApp.mk t s).signature [] e = some ty)
+    (fresh : ∀ entry ∈ s, SigApp.FreshCode ⟨t, [], []⟩ entry) (k : Nat) (e : NativeEff) (ty : EffTy)
+    (hl : Looped e = true) (hty : effTy (SigApp.mk t s []).signature [] e = some ty)
     {ex : ExitV} {s' : Stores} (h : meaningB k e [] Stores.empty = (some ex, s')) :
     ExitHasTy ty.answer ty.error s' ex :=
   meaningB_typed k e ty hl ((effTy_app_of_looped t s fresh e hl) ▸ hty) h

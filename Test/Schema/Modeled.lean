@@ -318,6 +318,17 @@ example (d : Drawing) (alloc : List String) :
 -- Control: without the table the reference is the handle arm, and a record frame fits no handle.
 #guard !Val.hasTy ((Modeled.image Drawing).toVal ⟨[], ⟨"ada", 0⟩⟩) (Modeled.ref (α := Drawing)) []
 
+-- Finite evaluation: the signature admits the derived table, its repeated entries one
+-- declaration.
+#guard Effect4.Program.admitSig { types := Modeled.decls (α := Drawing) ++ Modeled.decls (α := Shape) } =
+  .ok ()
+-- Reader: at that admitted signature, the reference has exactly the code's members.
+example (v : Effect4.Store.Val) (alloc : List String) :
+    MemberIn (Modeled.decls (α := Drawing)) alloc v (Modeled.ref (α := Drawing)) ↔
+      Val.hasTy v (Modeled.ty (α := Drawing)) alloc = true :=
+  Modeled.memberIn_ref_of_lawful Drawing (app := { types := Modeled.decls (α := Drawing) })
+    ((admitSig_ok_iff _).mp (by decide +kernel)) (by decide +kernel) (fun _ h => h) alloc v
+
 -- Control: a recursive table is not expandable, so no expansion speaks for it.
 #guard !TyDecls.expandable
   [("L", .union (.lit "nil") (.record [("head", false, .nat), ("tail", false, .handle "L")]))]

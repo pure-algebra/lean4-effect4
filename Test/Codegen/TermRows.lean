@@ -853,8 +853,8 @@ module's representability check and its class table reach them at a located path
       why.reason == .repeatedField "x"
   | none => false
 -- A type argument at `int` is admitted (decisions row 317), as at `unit`.
-#guard (admitProgram (.bind (make .int .never) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk
-#guard (admitProgram (.bind (make .unit .never) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk
+#guard (admitProgram (.bind (make .int .never) (.succeed (.lit (.nat 0)))) ⟨[], [], []⟩).isOk
+#guard (admitProgram (.bind (make .unit .never) (.succeed (.lit (.nat 0)))) ⟨[], [], []⟩).isOk
 -- A module declares the class that a type argument names: its text holds the declaration
 -- before the program. Without the collector's arm the module named `Short` and declared no
 -- such class.

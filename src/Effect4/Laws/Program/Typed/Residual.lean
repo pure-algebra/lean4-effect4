@@ -1500,16 +1500,16 @@ section RowsAppend
 
 variable (src src' : ProgramSource) (t' : RowTable)
   (hprog : src'.program = src.program) (htab : src'.table = src.table ++ t')
-  (hsvc : src'.services = src.services)
-include hprog htab hsvc
+  (hsvc : src'.services = src.services) (htyp : src'.types = src.types)
+include hprog htab hsvc htyp
 
 /-- The longer source's signature extends the shorter one's: an appended row table under the
 same service declarations, and the same program, so the same definition block
 (`SigExtends.withDefs`, decisions row 328). -/
 theorem signature_rows_append : SigExtends src.signature src'.signature := by
   have htables : SigExtends src.sig.signature src'.sig.signature := by
-    show SigExtends src.sig.signature (SigApp.mk src'.table src'.services).signature
-    rw [htab, hsvc]
+    show SigExtends src.sig.signature (SigApp.mk src'.table src'.services src'.types).signature
+    rw [htab, hsvc, htyp]
     exact SigApp.rows_append src.sig t'
   show SigExtends (src.sig.signature.withDefs src.program.defsOf)
     (src'.sig.signature.withDefs src'.program.defsOf)
@@ -1523,7 +1523,7 @@ theorem scopeSig_rows_append (path : List Nat) :
   show SigExtends (src.signature.withParams (scopeParams src.program path))
     (src'.signature.withParams (scopeParams src'.program path))
   rw [hprog]
-  exact (signature_rows_append src src' t' hprog htab hsvc).withParams _
+  exact (signature_rows_append src src' t' hprog htab hsvc htyp).withParams _
 
 /-- A stack's certificates stay along an appended table (slice CX1), at any policy on the
 passed programs' types: each site's check extends. -/
@@ -1537,14 +1537,14 @@ theorem stackCertificates_rows_append {w : World} (policy : ParamDecl → EffTy 
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc site.path) hc
+      exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp site.path) hc
     · exact (congrArg (fun program => StackCertificates src' w policy rest (scopeParams program site.path))
         hprog).mpr (stackCertificates_rows_append policy (stack := rest) hr)
 
 /-- A typed stack stays typed along an appended table (slice CX1). -/
 theorem stackTyped_rows_append {w : World} {ps : List ParamDecl} {stack : List (List ArgSite)}
     (h : StackTyped src w ps stack) : StackTyped src' w ps stack :=
-  stackCertificates_rows_append src src' t' hprog htab hsvc _ h
+  stackCertificates_rows_append src src' t' hprog htab hsvc htyp _ h
 
 theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
     (h : PointTyped src w point ty) : PointTyped src' w point ty := by
@@ -1553,9 +1553,9 @@ theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc point.path) hcheck
+    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp point.path) hcheck
   · rw [hprog]
-    exact stackTyped_rows_append src src' t' hprog htab hsvc hstack
+    exact stackTyped_rows_append src src' t' hprog htab hsvc htyp hstack
 
 theorem loopPointTyped_rows_append {w : World} {point : Point} {ty : EffTy} {cursor : Val}
     (h : LoopPointTyped src w point ty cursor) : LoopPointTyped src' w point ty cursor := by
@@ -1565,11 +1565,11 @@ theorem loopPointTyped_rows_append {w : World} {point : Point} {ty : EffTy} {cur
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc point.path) hcheck
-  · rw [(signature_rows_append src src' t' hprog htab hsvc).termTy env initial]
+    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp point.path) hcheck
+  · rw [(signature_rows_append src src' t' hprog htab hsvc htyp).termTy env initial]
     exact hc0
   · rw [hprog]
-    exact stackTyped_rows_append src src' t' hprog htab hsvc hstack
+    exact stackTyped_rows_append src src' t' hprog htab hsvc htyp hstack
 
 theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
     (h : LayerPointTyped src w point lt) : LayerPointTyped src' w point lt := by
@@ -1578,9 +1578,9 @@ theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc point.path) hcheck
+    exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp point.path) hcheck
   · rw [hprog]
-    exact stackTyped_rows_append src src' t' hprog htab hsvc hstack
+    exact stackTyped_rows_append src src' t' hprog htab hsvc htyp hstack
 
 /-- A capture typed under the shorter source is typed under the longer one: its node is the
 same program's, and the checker's verdicts extend along an appended row table. -/
@@ -1591,16 +1591,16 @@ theorem captureTyped_rows_append {w : World} {c : Capture}
   · rw [hprog]
     exact hnode
   · rw [hprog]
-    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc c.path) hcheck
+    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp c.path) hcheck
   · rw [hprog]
-    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc c.path) hacq
+    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp c.path) hacq
   · rw [hprog]
-    exact stackCertificates_rows_append src src' t' hprog htab hsvc _ hstack
+    exact stackCertificates_rows_append src src' t' hprog htab hsvc htyp _ hstack
 
 theorem finalizerAdmitted_rows_append {w : World} {fin : FinName}
     (h : FinalizerAdmitted src w fin) : FinalizerAdmitted src' w fin := by
   cases fin with
-  | foreign c => exact captureTyped_rows_append src src' t' hprog htab hsvc h
+  | foreign c => exact captureTyped_rows_append src src' t' hprog htab hsvc htyp h
   | _ => exact h
 
 /-- Region admission retains its source at an appended host-row table.
@@ -1608,34 +1608,34 @@ Consumer: bodyTyped_rows_append. -/
 theorem regionTyped_rows_append {w : World} {body : Region} {ty : EffTy}
     (typed : RegionTyped src w body ty) : RegionTyped src' w body ty := by
   fun_cases cata_region (regionTypingAlgebra src w) body with
-  | case1 => exact pointTyped_rows_append src src' t' hprog htab hsvc typed
+  | case1 => exact pointTyped_rows_append src src' t' hprog htab hsvc htyp typed
   | case2 | case3 =>
     obtain ⟨lt, same, point, scope, memo⟩ := typed
-    exact ⟨lt, same, layerPointTyped_rows_append src src' t' hprog htab hsvc point, scope, memo⟩
+    exact ⟨lt, same, layerPointTyped_rows_append src src' t' hprog htab hsvc htyp point, scope, memo⟩
   | case4 =>
     obtain ⟨bodyTy, point, same, carriers⟩ := typed
-    exact ⟨bodyTy, pointTyped_rows_append src src' t' hprog htab hsvc point, same, carriers⟩
+    exact ⟨bodyTy, pointTyped_rows_append src src' t' hprog htab hsvc htyp point, same, carriers⟩
 
 theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
   cases h with
-  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
+  | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc htyp hp)
   | raceCleanup race => exact .raceCleanup race
   | acquireIn p ctx ty hp node services =>
-    refine .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp) ?_ services
+    refine .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc htyp hp) ?_ services
     rw [hprog]
     exact node
   | release p prev ty hp services =>
-    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc hp) services
+    exact .release p prev ty (pointTyped_rows_append src src' t' hprog htab hsvc htyp hp) services
   | layerBuild p m scope lt hp live memo =>
-    exact .layerBuild p m scope lt (layerPointTyped_rows_append src src' t' hprog htab hsvc hp) live
+    exact .layerBuild p m scope lt (layerPointTyped_rows_append src src' t' hprog htab hsvc htyp hp) live
       memo
   | region body bodyTy ty typed answer error =>
-    exact .region body bodyTy ty (regionTyped_rows_append src src' t' hprog htab hsvc typed)
+    exact .region body bodyTy ty (regionTyped_rows_append src src' t' hprog htab hsvc htyp typed)
       answer error
   | contextEntry update body flag bodyTy ty typed answer error updateTyped =>
     exact .contextEntry update body flag bodyTy ty
-      (regionTyped_rows_append src src' t' hprog htab hsvc typed) answer error updateTyped
+      (regionTyped_rows_append src src' t' hprog htab hsvc htyp typed) answer error updateTyped
 
 theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     (h : storePre src w op cert) : storePre src' w op cert := by
@@ -1646,26 +1646,26 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer.1) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp layer.1) hcheck
   | memoBuild layer m =>
     obtain ⟨l, lt, hat, hcheck, hcert⟩ := h
     refine ⟨l, lt, ?_, ?_, hcert⟩
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer.1) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp layer.1) hcheck
   | memoComplete layer m ex =>
     obtain ⟨l, lt, hat, hcheck, hex⟩ := h
     refine ⟨l, lt, ?_, ?_, hex⟩
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer.1) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc htyp layer.1) hcheck
   | scopeAdd scope fin =>
-    exact ⟨h.1, finalizerAdmitted_rows_append src src' t' hprog htab hsvc h.2⟩
+    exact ⟨h.1, finalizerAdmitted_rows_append src src' t' hprog htab hsvc htyp h.2⟩
   | _ => exact h
 
-omit hprog hsvc in
+omit hprog hsvc htyp in
 theorem asyncPre_rows_append {w : World} {register : EffName} {cert : EffTy}
     (h : asyncPre src w register cert) : asyncPre src' w register cert := by
   cases register with
@@ -1679,21 +1679,21 @@ theorem fiberPre_rows_append {w : World} {op : FiberOp} {cert : FiberCert op}
   | raceAll entrants race | raceAllFirst entrants race =>
     intro p hp
     obtain ⟨ty, hpt, ha, he⟩ := h p hp
-    exact ⟨ty, pointTyped_rows_append src src' t' hprog htab hsvc hpt, ha, he⟩
+    exact ⟨ty, pointTyped_rows_append src src' t' hprog htab hsvc htyp hpt, ha, he⟩
   | async register token => exact asyncPre_rows_append src src' t' htab h
-  | «scoped» body => exact pointTyped_rows_append src src' t' hprog htab hsvc h
-  | mask flag body => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
-  | forkScoped child options path => exact pointTyped_rows_append src src' t' hprog htab hsvc h
-  | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab hsvc h
+  | «scoped» body => exact pointTyped_rows_append src src' t' hprog htab hsvc htyp h
+  | mask flag body => exact bodyTyped_rows_append src src' t' hprog htab hsvc htyp h
+  | forkScoped child options path => exact pointTyped_rows_append src src' t' hprog htab hsvc htyp h
+  | fork body options path => exact bodyTyped_rows_append src src' t' hprog htab hsvc htyp h
   | forkIn child options scope path =>
-    exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, h.2⟩
+    exact ⟨pointTyped_rows_append src src' t' hprog htab hsvc htyp h.1, h.2⟩
   | gen p =>
-    refine ⟨pointTyped_rows_append src src' t' hprog htab hsvc h.1, ?_⟩
+    refine ⟨pointTyped_rows_append src src' t' hprog htab hsvc htyp h.1, ?_⟩
     rw [hprog]
     exact h.2
-  | loop p name => exact loopPointTyped_rows_append src src' t' hprog htab hsvc h
+  | loop p name => exact loopPointTyped_rows_append src src' t' hprog htab hsvc htyp h
   | closeIter _ order _ =>
-    exact ⟨fun fin hf => finalizerAdmitted_rows_append src src' t' hprog htab hsvc (h.1 fin hf), h.2⟩
+    exact ⟨fun fin hf => finalizerAdmitted_rows_append src src' t' hprog htab hsvc htyp (h.1 fin hf), h.2⟩
   | _ => exact h
 
 /-- **`TypedProg` is monotone along an appended row table** (TY-12's positive control, proved;
@@ -1708,11 +1708,11 @@ theorem typedProg_rows_append :
   induction h with
   | pure exit => exact .pure exit
   | store cert pre next _entry ih =>
-    exact .store cert (storePre_rows_append src src' t' hprog htab hsvc pre)
+    exact .store cert (storePre_rows_append src src' t' hprog htab hsvc htyp pre)
       fun w' hle ans hpost => ih w' hle ans hpost
   | fiber notGuard notUnguard notFinish notScopeExit cert pre next _entry ih =>
     exact .fiber notGuard notUnguard notFinish notScopeExit cert
-      (fiberPre_rows_append src src' t' hprog htab hsvc pre)
+      (fiberPre_rows_append src src' t' hprog htab hsvc htyp pre)
       fun w' hle ans hpost => ih w' hle ans hpost
   | guard mid body run skip _entry ihbody ihrun =>
     exact .guard mid ihbody (fun w' hle ex hpost => ihrun w' hle ex hpost) skip

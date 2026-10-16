@@ -15,7 +15,7 @@ sum: the scope reader's (a name with no binder, a row or a layer nobody declared
 the surface may write), the checker's (DI-86, the deepest node whose own rule refuses), and
 admission's (the table's signature, formation, the reserved integer type). The type refusal is
 the located one: `admitProgram` answers `illTyped` without a site, so a build that fails to type
-asks `Api.explain` where. The build admits at the table's own signature, `⟨table, []⟩`; a module's
+asks `Api.explain` where. The build admits at the table's own signature, `SigApp.ofTable table`; a module's
 services join the signature in the Σ_app slice's step 3.
 
 The table is the module's own. That is the point of declaring rows: an external position is
@@ -48,7 +48,7 @@ This is the final admission step shared by initial authoring and rebuilding edit
 row names label the table for callers and do not alter admission. -/
 def finishBuild (program : Program) (table : RowTable)
     (rowNames : List (String × Nat)) : Except BuildRefusal Built :=
-  match admitProgram program ⟨table, []⟩ with
+  match admitProgram program (.ofTable table) with
   | .ok admitted =>
     .ok { table := table, program := program, admitted := admitted, rowNames := rowNames }
   | .error .illTyped =>

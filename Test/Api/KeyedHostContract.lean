@@ -91,7 +91,7 @@ def shared : Api.Program := .bind (.perform .refMake (.lit (.nat 0)))
         (.bind (.awaitFiber (.var 2) .awaitValue) (.perform .refGet (.var 0))))))
 def da : Api.Decision := .answerAsync ⟨1⟩ 0 (.ofExit (.success (.nat 1)))
 def db : Api.Decision := .answerAsync ⟨2⟩ 1 (.ofExit (.success (.nat 2)))
-#guard (Api.admitProgram shared ⟨table, []⟩).isOk
+#guard (Api.admitProgram shared (.ofTable table)).isOk
 #guard match Api.replayChecked shared 1000 [Api.evaluate, da, db, .flush] table with
   | .inl run => run.exit = some (.success (.nat 2)) | .inr _ => false
 #guard match Api.replayChecked shared 1000 [Api.evaluate, db, da, .flush] table with

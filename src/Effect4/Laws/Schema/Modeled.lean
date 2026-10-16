@@ -3,6 +3,7 @@ import Effect4.Laws.Schema.Codec
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Program.TyExpand
+import Effect4.Laws.Program.Signature
 
 /-!
 # Laws.Schema.Modeled — membership and the JSON round trip of a modeled value
@@ -23,6 +24,7 @@ constructor for its embeddings. The placement is the revision 3 note's, section 
 - `Modeled.memberIn_ref`: a named type's reference has exactly its code's members, under a
   guarded, expandable table that holds the type's declarations (claim `modeled-name`, decisions
   row 402). `Modeled.memberIn_image`: so its codec writes members of its name.
+  `Modeled.memberIn_ref_of_lawful`: the same at an admitted signature's table.
 
 These laws establish nothing for an identity type, an optional field, or the arms that the
 refusal fold refuses. They establish no TypeScript codec and no target execution.
@@ -217,6 +219,17 @@ theorem memberIn_image (α : Type) [m : Modeled α] {decls : TyDecls} (hg : decl
     (he : decls.expandable = true) (hsub : ∀ e ∈ m.decls, decls.body? e.1 = some e.2) (a : α)
     (alloc : List String) : MemberIn decls alloc ((Modeled.image α).toVal a) m.ref :=
   (memberIn_ref α hg he hsub alloc _).mpr (member α a alloc)
+
+/-- **At an admitted signature**: the signature's admission makes its table guarded and gives no
+name two bodies (`LawfulSig`), so a named type whose declarations the table holds has, at its
+reference, exactly its code's members, when the table's expansions solve it. `memberIn_ref` with
+its premises read off the admission. -/
+theorem memberIn_ref_of_lawful (α : Type) [m : Modeled α] {app : SigApp} (h : LawfulSig app)
+    (he : app.types.expandable = true) (hsub : ∀ e ∈ m.decls, e ∈ app.types)
+    (alloc : List String) (v : Val) :
+    MemberIn app.types alloc v m.ref ↔ Val.hasTy v m.ty alloc = true :=
+  memberIn_ref α h.guarded he
+    (fun e he' => TyDecls.body?_of_consistent h.declsConsistent (hsub e he')) alloc v
 
 end Modeled
 end Effect4.Schema

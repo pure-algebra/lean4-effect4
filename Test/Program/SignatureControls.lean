@@ -63,23 +63,23 @@ theorem append_keeps_call :
 /-- A key with type code 4 (a number) under a free name (`firstFreeName` is 4). -/
 def natKey : ServiceKey := ⟨⟨100⟩, ⟨4⟩⟩
 
-theorem natKey_ty : (SigApp.mk [] []).serviceTy natKey = some .nat := by decide +kernel
+theorem natKey_ty : (SigApp.mk [] [] []).serviceTy natKey = some .nat := by decide +kernel
 
-theorem natKey_bool : (SigApp.mk [] [(natKey, .bool)]).serviceTy natKey = some .bool := by
+theorem natKey_bool : (SigApp.mk [] [(natKey, .bool)] []).serviceTy natKey = some .bool := by
   decide +kernel
 
 /-- **Red control (proved).** A declaration that re-types a code the built-in table types is not
 an extension. -/
 theorem shadow_not_extends :
-    ¬ SigExtends (SigApp.mk [] []).signature (SigApp.mk [] [(natKey, .bool)]).signature := by
+    ¬ SigExtends (SigApp.mk [] [] []).signature (SigApp.mk [] [(natKey, .bool)] []).signature := by
   intro h
   have hk := h.service natKey .nat natKey_ty
-  change (SigApp.mk [] [(natKey, .bool)]).serviceTy natKey = some .nat at hk
+  change (SigApp.mk [] [(natKey, .bool)] []).serviceTy natKey = some .nat at hk
   rw [natKey_bool] at hk
   cases hk
 
 /-- And the freshness premise of `SigApp.services_append` refuses it. -/
-theorem shadow_not_fresh : ¬ SigApp.FreshCode (SigApp.mk [] []) (natKey, .bool) := by
+theorem shadow_not_fresh : ¬ SigApp.FreshCode (SigApp.mk [] [] []) (natKey, .bool) := by
   intro h
   have hb : SigApp.builtinCodeTy natKey.service = some .nat := by decide +kernel
   rw [h.2] at hb
@@ -88,21 +88,21 @@ theorem shadow_not_fresh : ¬ SigApp.FreshCode (SigApp.mk [] []) (natKey, .bool)
 /-- A fresh code (12, a string service of the application's own). -/
 def greetKey : ServiceKey := ⟨⟨12⟩, ⟨12⟩⟩
 
-theorem greet_fresh : SigApp.FreshCode (SigApp.mk [] []) (greetKey, .string) :=
+theorem greet_fresh : SigApp.FreshCode (SigApp.mk [] [] []) (greetKey, .string) :=
   ⟨rfl, by decide +kernel⟩
 
 /-- **Positive control (proved).** A declaration at a fresh code extends the signature, and the
 application's key is typed at its declared carrier. -/
 theorem greet_extends :
-    SigExtends (SigApp.mk [] []).signature (SigApp.mk [] [(greetKey, .string)]).signature :=
-  SigApp.services_append (SigApp.mk [] []) [(greetKey, .string)] (fun entry hmem => by
+    SigExtends (SigApp.mk [] [] []).signature (SigApp.mk [] [(greetKey, .string)] []).signature :=
+  SigApp.services_append (SigApp.mk [] [] []) [(greetKey, .string)] (fun entry hmem => by
     rw [List.mem_singleton] at hmem
     rw [hmem]
     exact greet_fresh)
 
 -- tested: the declared key reads its carrier; a built-in code keeps its own
-#guard (SigApp.mk [] [(greetKey, .string)]).serviceTy greetKey = some .string
-#guard (SigApp.mk [] [(greetKey, .string)]).serviceTy natKey = some .nat
+#guard (SigApp.mk [] [(greetKey, .string)] []).serviceTy greetKey = some .string
+#guard (SigApp.mk [] [(greetKey, .string)] []).serviceTy natKey = some .nat
 
 def keyA : ServiceKey := ⟨⟨20⟩, ⟨12⟩⟩
 def keyB : ServiceKey := ⟨⟨21⟩, ⟨12⟩⟩
@@ -116,8 +116,8 @@ theorem one_code_two_carriers :
 
 /-- **Positive control (proved).** The per-code table gives the two keys one carrier. -/
 theorem per_code_one_carrier :
-    (SigApp.mk [] [(keyA, .string), (keyB, .nat)]).serviceTy keyA =
-      (SigApp.mk [] [(keyA, .string), (keyB, .nat)]).serviceTy keyB :=
+    (SigApp.mk [] [(keyA, .string), (keyB, .nat)] []).serviceTy keyA =
+      (SigApp.mk [] [(keyA, .string), (keyB, .nat)] []).serviceTy keyB :=
   SigApp.serviceTy_code _ rfl (by decide) (by decide) (by decide +kernel) (by decide +kernel)
 
 /-! ## C3's reflection: refusals included, on Σ-programs only -/
@@ -161,9 +161,9 @@ theorem reflection_needs_sigProgram :
 /-! ## Lawful signatures: each clause refuses with its own located reason -/
 
 -- tested: the empty signature and one lawful row are admitted
-#guard admitSig (SigApp.mk [] []) = .ok ()
-#guard admitSig (SigApp.mk [rowA] []) = .ok ()
-#guard admitSig (SigApp.mk [] [(greetKey, .string)]) = .ok ()
+#guard admitSig (SigApp.mk [] [] []) = .ok ()
+#guard admitSig (SigApp.mk [rowA] [] []) = .ok ()
+#guard admitSig (SigApp.mk [] [(greetKey, .string)] []) = .ok ()
 
 /-- A declaration at the memo map's reserved name (row 114). -/
 def memoKey : ServiceKey := ⟨⟨3⟩, ⟨3⟩⟩
@@ -175,26 +175,26 @@ def emptyRequestRow : Row := { rowA with request := .prod .never .nat }
 def cellRow : Row := { rowA with answer := .refOf .nat }
 
 -- tested: each clause refuses, located
-#guard admitSig (SigApp.mk [] [(memoKey, .nat)]) = .error (.service 0 .reservedName)
-#guard admitSig (SigApp.mk [] [(greetKey, .option .nat)]) = .error (.service 0 .nonFlatCarrier)
-#guard admitSig (SigApp.mk [] [(natKey, .bool)]) = .error (.service 0 .conflictsBuiltin)
-#guard admitSig (SigApp.mk [] [(keyA, .string), (keyB, .string)]) = .error (.duplicateCode ⟨12⟩)
-#guard admitSig (SigApp.mk [emptyRequestRow] []) = .error (.row 0 (.emptyColumn "request"))
-#guard admitSig (SigApp.mk [cellRow] []) = .error (.row 0 (.internalHandle "answer"))
-#guard admitSig (SigApp.mk [rowA, rowA] []) = .error (.duplicateRow ("A.a", []))
+#guard admitSig (SigApp.mk [] [(memoKey, .nat)] []) = .error (.service 0 .reservedName)
+#guard admitSig (SigApp.mk [] [(greetKey, .option .nat)] []) = .error (.service 0 .nonFlatCarrier)
+#guard admitSig (SigApp.mk [] [(natKey, .bool)] []) = .error (.service 0 .conflictsBuiltin)
+#guard admitSig (SigApp.mk [] [(keyA, .string), (keyB, .string)] []) = .error (.duplicateCode ⟨12⟩)
+#guard admitSig (SigApp.mk [emptyRequestRow] [] []) = .error (.row 0 (.emptyColumn "request"))
+#guard admitSig (SigApp.mk [cellRow] [] []) = .error (.row 0 (.internalHandle "answer"))
+#guard admitSig (SigApp.mk [rowA, rowA] [] []) = .error (.duplicateRow ("A.a", []))
 
 /-- **Red control (proved).** One code declared twice is not lawful (row 113), whatever the
 carriers. -/
-theorem one_code_twice_not_lawful : ¬ LawfulSig (SigApp.mk [] [(keyA, .string), (keyB, .string)]) := by
+theorem one_code_twice_not_lawful : ¬ LawfulSig (SigApp.mk [] [(keyA, .string), (keyB, .string)] []) := by
   decide +kernel
 
 /-- **Red control (proved, row 127).** A host row whose request is `prod never nat` is not
 lawful: `E4-TYPED-CE-015` at a table column. -/
-theorem empty_request_not_lawful : ¬ LawfulSig (SigApp.mk [emptyRequestRow] []) := by
+theorem empty_request_not_lawful : ¬ LawfulSig (SigApp.mk [emptyRequestRow] [] []) := by
   decide +kernel
 
 /-- A lawful signature is what `admitSig` admits (both directions, `admitSig_ok_iff`). -/
-theorem rowA_lawful : LawfulSig (SigApp.mk [rowA] []) := (admitSig_ok_iff _).mp (by decide +kernel)
+theorem rowA_lawful : LawfulSig (SigApp.mk [rowA] [] []) := (admitSig_ok_iff _).mp (by decide +kernel)
 
 /-! The step's own theorems: shape A (`World.lean`, `Membership.lean`) and the signature. -/
 
@@ -205,9 +205,40 @@ uninhabited (`admitColumn`: no value fits a parameter). -/
 /-- A host row from `List<A>` to `Option<A>`. -/
 def templateRow : Row := { rowA with request := .list (.var 0), answer := .option (.var 0) }
 
-#guard admitSig (SigApp.mk [templateRow] []) = .ok ()
+#guard admitSig (SigApp.mk [templateRow] [] []) = .ok ()
 #guard admitRowColumn (.var 0) = true
 -- red: the program's column check refuses a bare parameter
 #guard admitColumn (.var 0) = false
+
+/-! Decisions rows 401 (2) and 402 (5): the application's named types. Each declaration meets its
+local checks, no name has two bodies, and the table is guarded. -/
+
+/-- A to-do's status and the to-do that names it. -/
+def todoTypes : TyDecls :=
+  [("Status", .union (.lit "open") (.lit "done")),
+   ("Todo", .record [("status", false, .handle "Status"), ("title", false, .string)])]
+
+-- tested: a table with no recursion, a recursive one, and one entry written twice are admitted
+#guard admitSig { types := todoTypes } = .ok ()
+#guard admitSig { types := [("L", .union (.lit "nil") (.record [("tail", false, .handle "L")]))] } =
+  .ok ()
+#guard admitSig { types := todoTypes ++ todoTypes } = .ok ()
+-- tested: each clause refuses, located
+#guard admitSig { types := [(Ty.scopeTarget, .nat)] } = .error (.decl 0 .internalSpelling)
+#guard admitSig { types := [("Box", .list (.var 0))] } = .error (.decl 0 .typeVariable)
+#guard admitSig { types := [("A", .nat), ("B", .app "A" [.nat])] } = .error (.decl 1 .applied)
+#guard admitSig { types := [("A", .nat), ("A", .string)] } = .error (.conflictingDecl "A")
+#guard admitSig { types := [("A", .handle "B"), ("B", .handle "A")] } = .error (.unguardedDecl "A")
+-- control: a row's own refusal comes first, before the table's
+#guard admitSig { rows := [cellRow], types := [("A", .handle "A")] } =
+  .error (.row 0 (.internalHandle "answer"))
+
+/-- **Red control (proved).** A name with two bodies is not lawful, whatever else holds. -/
+theorem two_bodies_not_lawful : ¬ LawfulSig { types := [("A", .nat), ("A", .string)] } := by
+  decide +kernel
+
+/-- A lawful signature with named types, through the located refusal. -/
+theorem todoTypes_lawful : LawfulSig { types := todoTypes } :=
+  (admitSig_ok_iff _).mp (by decide +kernel)
 
 end Test.Program.SignatureControls

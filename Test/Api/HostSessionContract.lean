@@ -15,7 +15,7 @@ def table : RowTable := [Profile.Scalar.waitRow]
 def program : Api.Program :=
   .bind (.perform (.external 0) (.lit (.nat 2))) (.perform (.external 0) (.lit (.nat 3)))
 def header : Header := ⟨version, "session-A", "serial-root-scalar-v1", table⟩
-def admitted : Api.AdmittedProgram program ⟨table, []⟩ where
+def admitted : Api.AdmittedProgram program (.ofTable table) where
   ty := ⟨.nat, .prod .string .string, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)

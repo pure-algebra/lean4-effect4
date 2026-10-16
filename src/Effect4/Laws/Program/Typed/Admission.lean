@@ -102,7 +102,7 @@ theorem evalTerm_fits_native (table : RowTable) {w : World} {env : List Ty} {val
   evalTerm_fits rfl rfl henv hty hev
 
 /-- The program the typed state is about, with its signature (decisions row 111: the host-row
-table and the service declarations, Σ_app) and the evidence that the signature is lawful
+table, the service declarations and the named types, Σ_app) and the evidence that the signature is lawful
 (row 114: M5 and M6 quantify over lawful sources, not over an authoring guard's callers). A
 bare program coerces to a source with the empty signature, which is lawful
 (`SigApp.lawful_empty`). -/
@@ -110,12 +110,13 @@ structure ProgramSource where
   program : NativeEff
   table : RowTable := []
   services : List (ServiceKey × Ty) := []
-  lawful : LawfulSig ⟨table, services⟩ := by exact SigApp.lawful_empty
+  types : TyDecls := []
+  lawful : LawfulSig ⟨table, services, types⟩ := by exact SigApp.lawful_empty
 
 instance : Coe NativeEff ProgramSource := ⟨fun program => { program }⟩
 
 /-- The source's part of the signature. -/
-def ProgramSource.sig (src : ProgramSource) : SigApp := ⟨src.table, src.services⟩
+def ProgramSource.sig (src : ProgramSource) : SigApp := ⟨src.table, src.services, src.types⟩
 
 /-- The checker's signature for the source's program: the signature over its tables
 (`SigApp.signature`), extended by the program's own definition block (`Signature.withDefs`,

@@ -141,7 +141,7 @@ example : ¬ Formation.HeadFormed false (.var 3) := Bool.noConfusion
 -- admitted with a program that performs it.
 #guard Formation.checkInput (.succeed (.lit (.nat 1)) : NativeEff) [templateRow] = none
 #guard rowTy templateRow .nat = some (.pure (.list .nat))
-#guard (admitProgram (.perform (.external 0) (.lit (.nat 1))) ⟨[templateRow], []⟩).isOk
+#guard (admitProgram (.perform (.external 0) (.lit (.nat 1))) ⟨[templateRow], [], []⟩).isOk
 #guard (Effect4.Api.typeOf (.perform (.external 0) (.lit (.nat 1))) [templateRow]).map (·.answer)
   = some (.list .nat)
 

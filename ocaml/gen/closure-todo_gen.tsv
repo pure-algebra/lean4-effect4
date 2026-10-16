@@ -37,7 +37,7 @@ List.range	list_range	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	2	0	0	0	1	0	
 List.find?._at_.Test.Dogfood.Scenario.Todo.Host.externalIndex.spec_0	list_find_opt_at_test_dogfood_scenario_todo_host_external_index_spec_0	true	7	0	0	0	2	3	0	0	0	0	7	0	0	0	0	0	0	0	0	3	10	0	4	0	1	0	14701785658024983593
 Effect4.Api.HostSession.version	api_host_session_version	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	1	0	1	0	7837897056904719604
 Effect4.Api.load	api_load	false	21	0	0	0	2	1	0	2	0	0	18	1	2	0	0	0	0	0	0	15	22	0	2	0	1	0	2731473627740525435
-Effect4.Api.HostSession.callTable	api_host_session_call_table	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	1	7	0	0	0	1	0	10889395051132634155
+Effect4.Api.HostSession.callTable	api_host_session_call_table	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	1	6	0	0	0	1	0	6786340588047340220
 Effect4.Api.evaluate	api_evaluate	false	2	0	0	0	0	1	0	1	0	0	1	0	1	0	0	0	0	0	0	7	1	0	0	0	1	0	6503242508184499272
 Effect4.Rows.control	rows_control	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	2	3	0	0	0	1	0	13940343143625449100
 Effect4.Run.step	run_step	false	8	0	0	0	3	1	0	0	0	0	8	0	0	0	0	0	0	0	0	3	16	0	3	0	1	0	4841275962874525380
@@ -65,7 +65,8 @@ Effect4.Machine.RunMachine.empty._redArg	run_machine_empty	false	5	0	0	0	0	1	0	1
 Effect4.Machine.emptyCtx	empty_ctx	false	4	0	0	0	0	1	0	1	0	0	3	0	1	0	0	0	0	0	0	1	3	0	0	0	1	0	13879202924284214584
 Effect4.Api.compile	api_compile	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	2123751469867190710
 Effect4.Machine.RunFiber.make._at_.Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12.spec_21.spec_28._redArg	run_fiber_make_at_spawn_at_launch_entrant_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_12_spec_21_spec_28	false	9	0	0	0	2	1	0	1	0	0	8	0	1	0	0	0	0	0	0	19	21	0	2	0	1	0	18021635534501594126
-Effect4.Program.SigApp.signature	program_sig_app_signature	false	5	0	0	0	2	1	0	1	0	0	4	0	1	0	0	0	0	0	0	1	18	0	2	0	1	0	9336561310195423584
+Effect4.Program.SigApp.ofTable	program_sig_app_of_table	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	11814394422730190128
+Effect4.Program.SigApp.signature	program_sig_app_signature	false	5	0	0	0	2	1	0	1	0	0	4	0	1	0	0	0	0	0	0	1	18	0	2	0	1	0	7261078937703064400
 Effect4.Program.Eff.expandRefs._redArg	program_eff_expand_refs	false	8	0	0	0	0	1	0	1	0	0	7	0	1	0	0	0	0	0	0	2	10	0	0	0	1	0	661328457617822322
 Effect4.Program.programCalls._redArg	program_program_calls	false	5	0	0	0	0	1	0	1	0	0	4	0	1	0	0	0	0	0	0	2	8	0	0	0	1	0	2398691453991377128
 Effect4.Rows.tape	rows_tape	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	2	0	0	0	1	0	7805654281114079926
@@ -291,7 +292,7 @@ Effect4.Program.NativeOp.withTypeArgs	program_native_op_with_type_args	false	3	0
 Effect4.Program.rowKeyNames	program_row_key_names	false	4	0	0	0	0	1	0	1	0	0	3	0	1	0	0	0	0	0	0	1	4	0	0	0	1	0	9435116272551540050
 Effect4.Program.nativeReservedServiceTypes	program_native_reserved_service_types	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	4	4	0	0	0	1	0	545030543973331463
 List.find?._at_.Effect4.Program.nativeServiceTy.spec_0	list_find_opt_at_program_native_service_ty_spec_0	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	10570449529660402784
-Effect4.Program.SigApp.codeTy	program_sig_app_code_ty	false	3	0	0	0	3	2	0	0	0	0	3	0	0	0	0	0	0	0	0	2	3	0	4	0	1	0	15776699491120113806
+Effect4.Program.SigApp.codeTy	program_sig_app_code_ty	false	3	0	0	0	3	2	0	0	0	0	3	0	0	0	0	0	0	0	0	2	3	0	4	0	1	0	16338726970266495880
 Effect4.Program.SigApp.builtinCodeTy	program_sig_app_builtin_code_ty	false	4	0	0	0	2	2	0	0	0	0	4	0	0	0	0	0	0	0	0	2	3	0	3	0	1	0	16090263393738622966
 Effect4.Program.Eff.refSites._redArg._lam_0	program_eff_ref_sites__red_arg__lam_0	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	1087059972565606535
 Effect4.Program.Eff.refSites._redArg._lam_1	program_eff_ref_sites__red_arg__lam_1	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	473324982223282361
