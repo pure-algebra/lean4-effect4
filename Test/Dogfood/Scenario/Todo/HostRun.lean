@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Todo.Runs
+import Test.Dogfood.Scenario.Todo.Typed
 import Tools.RunRecord
 
 /-!
@@ -6,8 +7,10 @@ import Tools.RunRecord
 
 A built request driven by `Run.runWith` under a host that answers as a repository does and records
 each call: the reference repository (`repository`) and the one that forgets a write
-(`forgetful`), the face's red control. `serveBuiltVal` and `serveBuiltForgetfulVal` give the whole
-result as one value. The LCNF route lowers them into `ocaml/engine/test/todo/todo_gen.ml`
+(`forgetful`), the face's red control. `serveBuiltTyped` takes the host as an argument, a typed
+host (`Typed.Host`), so the lowered run serves any provider of the lowered host record.
+`serveBuiltVal`, `serveBuiltForgetfulVal` and `serveBuiltTypedVal` give the whole result as one
+value. The LCNF route lowers them into `ocaml/engine/test/todo/todo_gen.ml`
 (`ocaml/gen/roots.json`), and the lane there compares each request's result with Lean's, byte for
 byte (`Test/Dogfood/Scenario/Todo/HostLane.lean` writes its fixture).
 
@@ -47,6 +50,13 @@ def serveBuiltForgetful (built : Api.Built) (state : Repo) : (List Call × Optio
     Run.runWith built (recording built.table Test.Dogfood.Scenario.Todo.forgetful) (state, [])
   ((calls, run.exit), next)
 
+/-- One built request over a typed host (`Typed.Host`, the interop plan's P1): the host is an
+argument, so the lowered run takes any provider of the lowered host record. -/
+def serveBuiltTyped (host : Typed.Host Repo) (built : Api.Built) (state : Repo) :
+    (List Call × Option ExitV) × Repo :=
+  let (run, next, calls) := Run.runWith built (recording built.table host.reactor) (state, [])
+  ((calls, run.exit), next)
+
 /-! ## The lane's roots: one request's result as one value
 
 The OCaml lane `ocaml/engine/test/todo/` runs these two, lowered, and compares the canonical bytes
@@ -78,5 +88,9 @@ def serveBuiltVal (built : Api.Built) (state : Repo) : Val := resultVal (serveBu
 /-- `serveBuiltForgetful`'s result as one value. -/
 def serveBuiltForgetfulVal (built : Api.Built) (state : Repo) : Val :=
   resultVal (serveBuiltForgetful built state)
+
+/-- `serveBuiltTyped`'s result as one value. -/
+def serveBuiltTypedVal (host : Typed.Host Repo) (built : Api.Built) (state : Repo) : Val :=
+  resultVal (serveBuiltTyped host built state)
 
 end Test.Dogfood.Scenario.Todo.Host

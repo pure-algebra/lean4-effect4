@@ -106,6 +106,20 @@ as its one relevant field is unboxed to it, and so is a reactor.) -/
   | some (.ofExit (.success (.nat n)), _) => ClockMillis.ofNat n
   | _ => 0
 
+/-- A typed host at a root (decisions row 405): a record of methods `A → σ → B × σ` over the
+host's state, `Effect4.Run.Reactor.method`'s shape. Two fields, so the compiler keeps the record. -/
+structure NatHost (σ : Type) where
+  read : Unit → σ → Nat × σ
+  bump : Nat → σ → Bool × σ
+/-- A typed host's answer reaches the clock as a reactor's does. -/
+@[noinline] def hostClock (h : NatHost Nat) : ClockMillis := ClockMillis.ofNat (h.read () 0).1
+/-- A record of functions that thread no state is no host. -/
+structure NatFns where
+  read : Unit → Nat
+  other : Unit → Nat
+/-- A record of other functions at a root stays unknown production. -/
+@[noinline] def fnsClock (f : NatFns) : ClockMillis := ClockMillis.ofNat (f.read ())
+
 #guard direct.toDecimal = "4611686018427387904"
 #guard numeral.toDecimal = "4611686018427387905"
 #guard positive.toDecimal = "4611686018427387905"

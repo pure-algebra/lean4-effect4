@@ -120,6 +120,11 @@ def fixtureText : Option String :=
 #guard (requests.map fun rs => rs.all fun r => !admitsNat r 0 && !admitsNat r 1) == some true
 -- finite evaluation: Lean admits the reference repository's own answer to each first call
 #guard (requests.map fun rs => rs.all fun r => (firstAnswer r).isSome && admitsFirst r) == some true
+-- finite evaluation: the typed host (`Typed.model`, the interop plan's P1) gives every request
+-- the reference repository's result, byte for byte: the lane's T10 and T11 compare with it
+#guard (requests.map fun rs => rs.all fun r =>
+  Store.Val.encode (serveBuiltTypedVal Typed.model r.built r.state) ==
+    Store.Val.encode (serveBuiltVal r.built r.state)) == some true
 -- control: the repository that forgets a write answers another result on some request, so the
 -- lane's comparison can tell the two hosts apart
 #guard (requests.map fun rs => rs.any fun r =>

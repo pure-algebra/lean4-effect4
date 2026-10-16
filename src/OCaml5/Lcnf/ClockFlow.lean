@@ -19,7 +19,11 @@ exact decimal emitter. Other Nat consumers are unchanged. Finite controls live i
   is a host reactor (`Context.reactor`, the type of `Effect4.Run.Reactor σ`) holds the
   `ingress` origin. A call whose origins are ingress answers checked host data, as the tape's
   answers are root data checked at the engine's ingress (EN8), and is not unknown production.
-  A reactor inside other data, or reached by any other unknown, stays unknown. The obligation it
+  A typed host is a reactor split into its rows' methods (decisions row 405): a root parameter
+  whose structure has one parameter, its state `σ`, and only fields of the shape `A → σ → B × σ`
+  (`isHostRecordType`, `Effect4.Run.Reactor.method`) holds `ingress` too, and so does each method
+  projected out of it. A reactor inside other data, a record of other functions, or a value reached
+  by any other unknown, stays unknown. The obligation it
   leaves: the driver that supplies the reactor applies `E4_engine.check_answer` to every answer
   before the machine reads it. -/
 
@@ -188,6 +192,31 @@ where
     | .app f₁ a₁, .app f₂ a₂ => go f₁ f₂ state >>= go a₁ a₂
     | t, e => if t == e then some state else none
 
+/-- Whether a mono type is a typed host: a structure with one parameter, its state `σ`, whose
+every field is a method `A → σ → B × σ` (`Effect4.Run.Reactor.method`'s shape; the to-do's
+`Typed.Host`). It is a reactor split into its rows' typed methods, supplied by the driver
+(decisions row 405). A record with a field of any other shape is not one. -/
+def isHostRecordType (env : Environment) (ty : Lean.Expr) : Bool := Id.run do
+  let some name := ty.getAppFn.constName? | return false
+  let some (.inductInfo info) := env.find? name | return false
+  unless isStructure env name && info.numParams == 1 && info.numIndices == 0 do return false
+  let [ctor] := info.ctors | return false
+  let some (.ctorInfo ci) := env.find? ctor | return false
+  let .forallE _ _ body _ := ci.type | return false
+  let state := mkConst `_hostState
+  let mut rest := body.instantiate1 state
+  for _ in [0:ci.numFields] do
+    let .forallE _ dom body _ := rest | return false
+    unless isMethod dom state do return false
+    rest := body.instantiate1 (mkConst `_hostField)
+  return ci.numFields > 0
+where
+  /-- `A → σ → B × σ`, with `σ` the host's state. -/
+  isMethod (dom state : Lean.Expr) : Bool :=
+    match dom with
+    | .forallE _ _ (.forallE _ s (.app (.app (.const ``Prod _) _) s') _) _ => s == state && s' == state
+    | _ => false
+
 private structure CallableState where
   values : Std.HashMap ValueKey (Std.HashSet Origin) := {}
   facts : Nat := 0
@@ -265,9 +294,10 @@ private def resolveCallables (ctx : Context) (env : Environment) (roots : Array 
   let mut state : CallableState := { fieldOf }
   for flow in flows do
     if roots.contains flow.name then
-      -- a root's parameter is unknown, unless it is a host's reactor: its answers are ingress
+      -- a root's parameter is unknown, unless it is a host's reactor or a typed host: its answers
+      -- are ingress
       for p in flow.params, ty in flow.paramTypes do
-        let host := ctx.reactor.any (isReactorType · ty)
+        let host := ctx.reactor.any (isReactorType · ty) || isHostRecordType env ty
         state := addOrigins state (flow.name, p) #[if host then .ingress else .unresolved]
     for (id, _) in flow.locals.toArray do
       state := addOrigins state (flow.name, id) #[.callable (.localFn flow.name id) 0]
@@ -353,7 +383,9 @@ private def resolveCallables (ctx : Context) (env : Environment) (roots : Array 
             if let some (.ctorInfo ci) := env.find? ctor then
               if let some (.fvar field) := args[ci.numParams + index]? then
                 state := addEdge state (site.1, field) destination
-      | .callable .. | .ingress => pure ()
+      -- a method read out of a typed host is the host's
+      | .ingress => state := addOrigins state destination #[.ingress]
+      | .callable .. => pure ()
     for (owner, args, result) in watchers.getD source #[] do
       match origin with
       | .callable target supplied =>

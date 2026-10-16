@@ -101,15 +101,21 @@ run_cmd liftTermElabM do
       (text.splitOn "reaches clock ingress after Nat saturation").length > 1) do
     throwError "a builtin callback dropped the narrowing of its argument: {narrowed.problems}"
 
--- A host's reactor at a root is host ingress (decisions row 394 (1)). A callback of another
--- type, a reactor inside other data and a function whose two states differ stay unknown.
+-- A host's reactor at a root is host ingress (decisions row 394 (1)), and so is a typed host
+-- (decisions row 405). A callback of another type, a reactor inside other data, a function whose
+-- two states differ, a record of other functions and a record mixing data and a callback stay
+-- unknown.
 run_cmd liftTermElabM do
   let reactor ← Lcnf.translateClosure #[`Test.ClockLiteralFixtures.reactorClock]
   unless reactor.problems.isEmpty && reactor.missing.isEmpty && reactor.frontier.isEmpty do
     throwError "a host's reactor at a root is refused: {reactor.problems}"
+  let host ← Lcnf.translateClosure #[`Test.ClockLiteralFixtures.hostClock]
+  unless host.problems.isEmpty && host.missing.isEmpty && host.frontier.isEmpty do
+    throwError "a typed host at a root is refused: {host.problems}"
   for root in [`Test.ClockLiteralFixtures.otherCallbackClock,
       `Test.ClockLiteralFixtures.boxedReactorClock,
-      `Test.ClockLiteralFixtures.mixedStateClock] do
+      `Test.ClockLiteralFixtures.mixedStateClock,
+      `Test.ClockLiteralFixtures.fnsClock, `Test.ClockLiteralFixtures.unknownRecordCallback] do
     let translated ← Lcnf.translateClosure #[root]
     unless translated.problems.any (fun text =>
         (text.splitOn "from unknown higher-order Nat production").length > 1) do

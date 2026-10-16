@@ -29,6 +29,12 @@
        lowered `resultVal`, are Lean's `Run.runWith` result, byte for byte.  tested
    T9  The same with the repository written in OCaml (`Native_repo`), a native host: Lean's result
        over the reference repository, byte for byte.                         tested
+   T10 The typed host (Test/Dogfood/Scenario/Todo/Typed.lean, the interop plan's P1): the lowered
+       run over the lowered typed model (`Typed.model`), its four methods over the lowered `todo`
+       record, gives Lean's result over the reference repository, byte for byte.  tested
+   T11 The same with a typed host written in OCaml (`native_typed`): a value of the lowered
+       `host` record, four OCaml functions over native `todo` records, with no value or codec of
+       its own: the lowered methods' codecs carry its answers.             tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
    records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
@@ -167,6 +173,25 @@ module Native_repo = struct
     | _ -> None
 end
 
+(* T11: a typed host written in OCaml, a value of the lowered `host` record: the repository as four
+   functions over native `todo` records and the state `(next id, (id, (title, done)) list)`. It
+   builds no value of the wire; the lowered methods' codecs read its requests and write its
+   answers. *)
+let native_typed : (int * (int * (string * bool)) list) Todo_gen.host =
+  let todo id title d : Todo_gen.todo = { id; title; done_ = d } in
+  { Todo_gen.insert =
+      (fun title (next, items) -> (todo next title false, (next + 1, items @ [ (next, (title, false)) ])));
+    all = (fun () (next, items) -> (List.map (fun (id, (title, d)) -> todo id title d) items, (next, items)));
+    set_done =
+      (fun (id, d) (next, items) ->
+        match List.assoc_opt id items with
+        | Some (title, _) ->
+          ( Some (todo id title d),
+            (next, List.map (fun (i, (t, e)) -> if i = id then (i, (t, d)) else (i, (t, e))) items) )
+        | None -> (None, (next, items)));
+    delete = (fun id (next, items) -> (List.mem_assoc id items, (next, List.filter (fun (i, _) -> i <> id) items)))
+  }
+
 let () =
   let requests = read_fixture "todo-host.txt" in
   check (Printf.sprintf "the fixture holds %d requests" (List.length requests)) (requests <> []);
@@ -179,7 +204,14 @@ let () =
         (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_val built state) = r.result);
       check (name ^ ": the forgetful host's result is Lean's")
         (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_forgetful_val built state)
-         = r.forgetful))
+         = r.forgetful);
+      (* T10 and T11: the typed hosts, lowered and written in OCaml *)
+      check (name ^ ": the lowered typed model's result is Lean's")
+        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
+                   Todo_gen.test_dogfood_scenario_todo_typed_model built state) = r.result);
+      check (name ^ ": the typed host written in OCaml gives Lean's result")
+        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val native_typed
+                   built state) = r.result))
     requests;
   (* T5: the engine runs each request's program at its row table, on both instances, and they
      agree after a reply. *)
