@@ -1,0 +1,5 @@
+$ opam exec --switch=effect4 -- ocamlfind ocamlopt -package unix old_frame.ml landed_frame.ml pool_frame.ml bench.ml -o bench && ./bench
+# load: 10.05 10.28 12.84
+100 to-dos  old  104.30 us  landed   64.46 us (x1.62)  pool   47.96 us (x2.17)
+depth 40    old   10.46 us  landed    5.84 us (x1.79)  pool    5.43 us (x1.93)
+one to-do   old    1.02 us  landed    0.58 us (x1.76)  pool    0.49 us (x2.08)

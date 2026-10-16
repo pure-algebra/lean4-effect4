@@ -6,12 +6,11 @@
    file is Lean's (Test/Dogfood/Scenario/Todo/HostLane.lean, written by write.lean): for each
    request of one script, the built program, its rows, its type, its row names and the
    repository state before it, as canonical bytes, then Lean's two results.
-   Depends on: Todo_gen, Eff_wire, Eff_val, E4_hex, E4_engine.
+   Depends on: Todo_gen, Todo_fixture, Native_todo, Todo_core, Eff_val, E4_engine, E4_host.
 
    Properties:
-   T1  Each input crosses as its canonical bytes and is read exactly: Eff_wire's program, row
-       and type readers, and Eff_val for values. A block that does not read is a failure, never
-       a skip.                                                            by construction
+   T1  Each input crosses as its canonical bytes and is read exactly (todo_fixture.ml's F1): a
+       block that does not read is a failure, never a skip.               by construction
    T2  For every request, the lowered run over the reference repository has Lean's result,
        byte for byte: each host call, the root's exit and the repository's next state.  tested
    T3  The same, over the repository that forgets a write.                tested
@@ -27,19 +26,34 @@
    T8  E4_host drives each request on the engine (both instances), with the lowered reactors as
        providers, and settles; its calls, the root's exit and the host's state, packaged by the
        lowered `resultVal`, are Lean's `Run.runWith` result, byte for byte.  tested
-   T9  The same with the repository written in OCaml (`Native_repo`), a native host: Lean's result
-       over the reference repository, byte for byte.                         tested
+   T9  The same with the repository written in OCaml over the wire's values
+       (`Native_todo.Untyped`), a native host: Lean's result over the reference repository, byte
+       for byte.                                                             tested
    T10 The typed host (Test/Dogfood/Scenario/Todo/Typed.lean, the interop plan's P1): the lowered
        run over the lowered typed model (`Typed.model`), its four methods over the lowered `todo`
        record, gives Lean's result over the reference repository, byte for byte.  tested
-   T11 The same with a typed host written in OCaml (`native_typed`): a value of the lowered
+   T11 The same with a typed host written in OCaml (`Native_todo.record`): a value of the lowered
        `host` record, four OCaml functions over native `todo` records, with no value or codec of
        its own: the lowered methods' codecs carry its answers.             tested
    T12 The broken typed host (`Typed.broken`, whose insert fails with the rows' error), lowered:
        Lean's result for it (the fixture's `broken` line), byte for byte, the failure crossing
        the lowered codec as the tagged pair.                               tested
-   T13 The same with a broken typed host written in OCaml (`native_broken`), an `Error` of the
-       lowered `sql_tag * string`.                                         tested
+   T13 The same with a broken typed host written in OCaml (`Native_todo.broken`), an `Error` of
+       the lowered `sql_tag * string`.                                     tested
+   T14 Typed hosts written in OCaml on the engine: E4_host drives each request (both instances)
+       with the lowered `Typed.Host.reactor` over `Native_todo.record`, over the pure module
+       todo_core.ml behind the module type REPO, and over the imperative `Native_todo.Table`;
+       each settles, and its result is Lean's, byte for byte.              tested
+   T15 A native host that raises answers nothing (E4_host's H5): over `Table` whose insert raises
+       `Sys_error`, a request that calls insert stops with `Raised`, its call outstanding, the
+       table unchanged, and the engine as after a provider that declines insert; every other
+       request is Lean's result. Red control: some request reaches the raise.  tested
+   T16 The same host under `Native_todo.catching`, naming `Sys_error` as the rows' failure, is
+       Lean's result for `Typed.broken`, byte for byte: an OCaml exception crossing as the typed
+       failure. Under a `catching` that names nothing, it still stops with `Raised`.  tested
+   T17 A native host whose insert answers an id outside the profile (-1, 2^53) is not applied
+       (E4_host's H6): the drive stops with `Outside_profile`, as after a provider that declines,
+       and never reaches the machine.                                      tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
    records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
@@ -50,6 +64,7 @@
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/todo *)
 
 open Eff_types
+open Todo_fixture
 
 let failures = ref 0
 let checks = ref 0
@@ -62,155 +77,116 @@ let check name ok =
     Printf.printf "FAIL %s\n" name
   end
 
-(* One request's block of the fixture. *)
-type request = {
-  entry : string;
-  program : string;
-  rows : string list;
-  typed : string;
-  names : string;
-  state : string;
-  result : string;
-  forgetful : string;
-  broken : string;
-  admits : string;
-  answer : string;
-}
+(* T14 to T17: the hosts written in OCaml, driven by E4_host over one engine instance. *)
+module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
+  module H = Effect4_engine.E4_host.Make (E)
 
-let empty entry =
-  { entry; program = ""; rows = []; typed = ""; names = ""; state = ""; result = ""; forgetful = "";
-    broken = ""; admits = ""; answer = "" }
+  let settled (stop : H.stop) = match stop with H.Settled -> true | _ -> false
 
-(* The fixture's blocks, in order. A line this reader does not know is a failure. *)
-let read_fixture (path : string) : request list =
-  let ic = open_in path in
-  let rec go acc cur =
-    match input_line ic with
-    | exception End_of_file -> List.rev (match cur with Some r -> r :: acc | None -> acc)
-    | line when line = "" || line.[0] = '#' -> go acc cur
-    | line ->
-      (match String.index_opt line ' ', cur with
-       | None, _ -> failwith ("fixture: a line with no value: " ^ line)
-       | Some i, _ ->
-         let key = String.sub line 0 i and value = String.sub line (i + 1) (String.length line - i - 1) in
-         (match key, cur with
-          | "request", _ -> go (match cur with Some r -> r :: acc | None -> acc) (Some (empty value))
-          | "program", Some r -> go acc (Some { r with program = value })
-          | "row", Some r -> go acc (Some { r with rows = r.rows @ [ value ] })
-          | "typed", Some r -> go acc (Some { r with typed = value })
-          | "names", Some r -> go acc (Some { r with names = value })
-          | "state", Some r -> go acc (Some { r with state = value })
-          | "result", Some r -> go acc (Some { r with result = value })
-          | "forgetful", Some r -> go acc (Some { r with forgetful = value })
-          | "broken", Some r -> go acc (Some { r with broken = value })
-          | "admits", Some r -> go acc (Some { r with admits = value })
-          | "answer", Some r -> go acc (Some { r with answer = value })
-          | _ -> failwith ("fixture: an unknown line: " ^ key)))
-  in
-  let requests = go [] None in
-  close_in ic;
-  requests
+  let serve (built : Todo_gen.built) provider state =
+    H.serve ~table:built.app.rows provider built.program ~fuel:1000 state
 
-let bytes_of_hex (what : string) (hex : string) : string =
-  match E4_hex.to_bytes hex with
-  | Some b -> b
-  | None -> failwith (Printf.sprintf "fixture: %s is not hexadecimal" what)
+  (* The served run packaged by the lowered `resultVal`, at the host's state read as the lane's. *)
+  let result (s : 'st H.served) (lane : Native_todo.lane_state) : string =
+    hex_of
+      (Todo_gen.test_dogfood_scenario_todo_host_result_val
+         ( ( List.map
+               (fun (c : H.call) ->
+                 ({ Todo_gen.row = c.row; request = c.request; completion = c.answer } : Todo_gen.call))
+               s.calls,
+             E.root_exit_of s.engine ),
+           lane ))
 
-let exactly (what : string) (decode : string -> 'a option) (hex : string) : 'a =
-  match decode (bytes_of_hex what hex) with
-  | Some x -> x
-  | None -> failwith (Printf.sprintf "fixture: %s does not read exactly" what)
+  (* What a drive leaves in the engine: the outcome, the fibers, the trace and the calls waiting. *)
+  let observation (e : E.t) =
+    ( E.outcome e,
+      E.fiber_rows e,
+      E.trace_rows e,
+      List.map (fun (fiber, token, row, request) -> (fiber, token, row, hex_of request)) (E.host_calls e) )
 
-(* The repository state: the next id, then each to-do's id, title and flag (`repoVal`). *)
-let repo_of (v : val_) : int * (int * (string * bool)) list =
-  match v with
-  | Val_list [ Val_nat next; Val_list items ] ->
-    ( next,
-      List.map
-        (function
-          | Val_list [ Val_nat id; Val_str title; Val_bool isDone ] -> (id, (title, isDone))
-          | _ -> failwith "fixture: a stored to-do is not an id, a title and a flag")
-        items )
-  | _ -> failwith "fixture: the state is not a next id and a list"
+  let table_host = Native_todo.host (module Native_todo.Table : Native_todo.REPO with type t = Native_todo.Table.t)
 
-(* The row names: each spelling and its position (`namesVal`). *)
-let names_of (v : val_) : (string * int) list =
-  match v with
-  | Val_list xs ->
-    List.map
-      (function
-        | Val_list [ Val_str name; Val_nat i ] -> (name, i)
-        | _ -> failwith "fixture: a row name is not a spelling and a position")
-      xs
-  | _ -> failwith "fixture: the row names are not a list"
+  let disk_full name = if name = "insert" then raise (Sys_error "disk full")
 
-let built_of (r : request) : Todo_gen.built =
-  { Todo_gen.app =
-      { Todo_gen.rows = List.map (exactly "a row" Eff_wire.decode_row_exact) r.rows;
-        services = [];
-        types = [] };
-    program = exactly "the program" Eff_wire.decode_program_exact r.program;
-    admitted = exactly "the type" Eff_wire.decode_eff_ty_exact r.typed;
-    row_names = names_of (exactly "the row names" Eff_val.decode_exact r.names) }
+  let reached = ref 0
 
-let hex_of (v : val_) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
-
-(* The repository written in OCaml: a native host, not lowered from Lean. It answers the four
-   rows as `repository` states them (Test/Dogfood/Scenario/Todo/Data.lean), over the same state
-   shape, so the lowered `resultVal` packages its runs too. A to-do is the record frame with its
-   fields in canonical order: done, id, title. *)
-module Native_repo = struct
-  let todo id title is_done =
-    Val_ctor (0, [ Val_list [ Val_str "done"; Val_str "id"; Val_str "title" ];
-                   Val_list [ Val_bool is_done; Val_nat id; Val_str title ] ])
-
-  let ok v = Completion_ofExit (Exit_success v)
-
-  let provider (r : row) (sent : val_) ((next, items) : int * (int * (string * bool)) list) =
-    match r.spelling, sent with
-    | "TodoRepo.insert", Val_str title ->
-      Some (ok (todo next title false), (next + 1, items @ [ (next, (title, false)) ]))
-    | "TodoRepo.all", _ ->
-      Some (ok (Val_list (List.map (fun (id, (title, d)) -> todo id title d) items)), (next, items))
-    | "TodoRepo.setDone", Val_list [ Val_nat id; Val_bool d ] -> (
-      match List.assoc_opt id items with
-      | Some (title, _) ->
-        Some (ok (Val_some (todo id title d)),
-              (next, List.map (fun (i, (t, e)) -> if i = id then (i, (t, d)) else (i, (t, e))) items))
-      | None -> Some (ok Val_none, (next, items)))
-    | "TodoRepo.delete", Val_nat id ->
-      Some (ok (Val_bool (List.mem_assoc id items)), (next, List.filter (fun (i, _) -> i <> id) items))
-    | _ -> None
+  let run (i : int) (r : request) (built : Todo_gen.built) (state : Native_todo.lane_state) =
+    let name what = Printf.sprintf "%d %s (%s): %s" i r.entry E.name what in
+    (* T14 *)
+    let through (type s) (h : s Todo_gen.host) (make : unit -> s) (lane : s -> Native_todo.lane_state) =
+      let s = serve built (Native_todo.provider h) (make ()) in
+      settled s.stop && result s (lane s.state) = r.result
+    in
+    check (name "T14 the record host on E4_host is Lean's")
+      (through Native_todo.record (fun () -> state) Fun.id);
+    check (name "T14 the pure core behind REPO on E4_host is Lean's")
+      (through
+         (Native_todo.host (module Native_todo.Core : Native_todo.REPO with type t = Todo_core.t))
+         (fun () -> Native_todo.core_of_lane state)
+         Native_todo.lane_of_core);
+    check (name "T14 the hash table behind REPO on E4_host is Lean's")
+      (through table_host (fun () -> Native_todo.Table.create state) Native_todo.Table.snapshot);
+    (* the provider that declines insert: the reference a raise and a refusal are read against *)
+    let declining row request st =
+      if row.spelling = "TodoRepo.insert" then None else Native_todo.provider Native_todo.record row request st
+    in
+    let declined = serve built declining state in
+    let calls_insert = match declined.stop with H.Declined -> true | _ -> false in
+    let as_declined (type st) (s : st H.served) (lane : st -> Native_todo.lane_state) =
+      observation s.engine = observation declined.engine
+      && E.host_calls s.engine <> []
+      && lane s.state = state
+      && List.length s.calls = List.length declined.calls
+    in
+    (* T15 *)
+    let raised = serve built (Native_todo.provider table_host) (Native_todo.Table.create ~fault:disk_full state) in
+    if calls_insert then begin
+      incr reached;
+      check (name "T15 a raise at insert stops the drive with Raised, as a decline leaves it")
+        ((match raised.stop with H.Raised (Sys_error m) -> m = "disk full" | _ -> false)
+         && as_declined raised Native_todo.Table.snapshot)
+    end
+    else
+      check (name "T15 a raise at insert, never called, leaves Lean's result")
+        (settled raised.stop && result raised (Native_todo.Table.snapshot raised.state) = r.result);
+    (* T16 *)
+    let named = function Sys_error m -> Some (Todo_gen.SqlTag_SqlError, m) | _ -> None in
+    let caught =
+      serve built
+        (Native_todo.provider (Native_todo.catching named table_host))
+        (Native_todo.Table.create ~fault:disk_full state)
+    in
+    check (name "T16 the raise named as the rows' failure is Lean's broken result")
+      (settled caught.stop && result caught (Native_todo.Table.snapshot caught.state) = r.broken);
+    let unnamed =
+      serve built
+        (Native_todo.provider (Native_todo.catching (fun _ -> None) table_host))
+        (Native_todo.Table.create ~fault:disk_full state)
+    in
+    check (name "T16 a raise no catch names is raised again")
+      (if calls_insert then
+         (match unnamed.stop with H.Raised (Sys_error m) -> m = "disk full" | _ -> false)
+         && as_declined unnamed Native_todo.Table.snapshot
+       else settled unnamed.stop);
+    (* T17 *)
+    List.iter
+      (fun id ->
+        let forged =
+          { Native_todo.record with
+            Todo_gen.insert =
+              (fun title (next, items) ->
+                (Ok (Native_todo.todo id title false), (next + 1, items @ [ (next, (title, false)) ]))) }
+        in
+        let s = serve built (Native_todo.provider forged) state in
+        check (name (Printf.sprintf "T17 an id %d outside the profile is never applied" id))
+          (if calls_insert then
+             (match s.stop with H.Outside_profile _ -> true | _ -> false) && as_declined s Fun.id
+           else settled s.stop && result s s.state = r.result))
+      [ -1; 1 lsl 53 ]
 end
 
-(* T11: a typed host written in OCaml, a value of the lowered `host` record: the repository as four
-   functions over native `todo` records and the state `(next id, (id, (title, done)) list)`. It
-   builds no value of the wire; the lowered methods' codecs read its requests and write its
-   answers. *)
-let native_typed : (int * (int * (string * bool)) list) Todo_gen.host =
-  let todo id title d : Todo_gen.todo = { id; title; done_ = d } in
-  { Todo_gen.insert =
-      (fun title (next, items) ->
-        (Ok (todo next title false), (next + 1, items @ [ (next, (title, false)) ])));
-    all =
-      (fun () (next, items) ->
-        (Ok (List.map (fun (id, (title, d)) -> todo id title d) items), (next, items)));
-    set_done =
-      (fun (id, d) (next, items) ->
-        match List.assoc_opt id items with
-        | Some (title, _) ->
-          ( Ok (Some (todo id title d)),
-            (next, List.map (fun (i, (t, e)) -> if i = id then (i, (t, d)) else (i, (t, e))) items) )
-        | None -> (Ok None, (next, items)));
-    delete =
-      (fun id (next, items) ->
-        (Ok (List.mem_assoc id items), (next, List.filter (fun (i, _) -> i <> id) items)))
-  }
-
-(* T13: the same host, whose insert fails with the rows' error. *)
-let native_broken : (int * (int * (string * bool)) list) Todo_gen.host =
-  { native_typed with
-    Todo_gen.insert = (fun _ state -> (Error (Todo_gen.SqlTag_SqlError, "disk full"), state)) }
+module Native_fast = Native_checks (Effect4_engine.E4_engine.Fast)
+module Native_ref = Native_checks (Effect4_engine.E4_engine.Ref)
 
 let () =
   let requests = read_fixture "todo-host.txt" in
@@ -230,14 +206,14 @@ let () =
         (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
                    Todo_gen.test_dogfood_scenario_todo_typed_model built state) = r.result);
       check (name ^ ": the typed host written in OCaml gives Lean's result")
-        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val native_typed
+        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val Native_todo.record
                    built state) = r.result);
       (* T12 and T13: the broken typed hosts, lowered and written in OCaml *)
       check (name ^ ": the lowered broken host's result is Lean's")
         (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
                    Todo_gen.test_dogfood_scenario_todo_typed_broken built state) = r.broken);
       check (name ^ ": the broken host written in OCaml gives Lean's result")
-        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val native_broken
+        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val Native_todo.broken
                    built state) = r.broken))
     requests;
   (* T5: the engine runs each request's program at its row table, on both instances, and they
@@ -296,7 +272,7 @@ let () =
             (List.map (fun (c : HR.call) -> ({ row = c.row; request = c.request; answer = c.answer } : HF.call)) g.calls)
             (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state
         in
-        (f.stop = HF.Settled && g.stop = HR.Settled, rf, rg)
+        ((match f.stop, g.stop with HF.Settled, HR.Settled -> true | _ -> false), rf, rg)
       in
       let settled, rf, rg = through Todo_gen.test_dogfood_scenario_todo_repository in
       check (Printf.sprintf "%d %s: the engine under E4_host, over the reference host, is Lean's" i r.entry)
@@ -305,11 +281,21 @@ let () =
       check (Printf.sprintf "%d %s: the engine under E4_host, over the forgetful host, is Lean's" i r.entry)
         (settled && ff = r.forgetful && fg = r.forgetful);
       (* T9: the same with the repository written in OCaml *)
-      let settled, nf, ng = through Native_repo.provider in
+      let settled, nf, ng = through Native_todo.Untyped.provider in
       check (Printf.sprintf "%d %s: the engine under E4_host, over the OCaml repository, is Lean's" i r.entry)
         (settled && nf = r.result && ng = r.result))
     requests;
   check "red control: the two hosts' results differ on some request"
     (List.exists (fun r -> r.result <> r.forgetful) requests);
+  (* T14 to T17, on both instances *)
+  List.iteri
+    (fun i r ->
+      let built = built_of r in
+      let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
+      Native_fast.run i r built state;
+      Native_ref.run i r built state)
+    requests;
+  check "T15 red control: some request reaches the raise, on both instances"
+    (!Native_fast.reached > 0 && !Native_ref.reached > 0);
   Printf.printf "%d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1

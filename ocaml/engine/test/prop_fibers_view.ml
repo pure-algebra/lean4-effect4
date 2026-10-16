@@ -307,14 +307,15 @@ let fv6 nops =
          | _ -> (show_ex (V.completed !t), show_ex (W.completed !u))
        in
        (* every operation, every time: the maintained view against the walked one AND
-          against the scan of the carrier's own table *)
-       let ca = show_ex (V.completed !t)
-       and cb = show_ex (W.completed !u)
-       and cc = show_ex (lean_completed !l)
-       and cd = show_ex (scan !t) in
-       let sa = show (V.to_list !t) and sb = show (W.to_list !u) in
+          against the scan of the carrier's own table. Compared as values; rendered only for
+          the report of a failure. *)
+       let ca = V.completed !t
+       and cb = W.completed !u
+       and cc = lean_completed !l
+       and cd = scan !t in
+       let sa = V.to_list !t and sb = W.to_list !u in
        if a <> b || sa <> sb || ca <> cb || ca <> cc || ca <> cd then begin
-         bad := Some (!i, a, b, ca, cb, cc, cd, sa, sb);
+         bad := Some (!i, a, b, show_ex ca, show_ex cb, show_ex cc, show_ex cd, show sa, show sb);
          raise Exit
        end
      done

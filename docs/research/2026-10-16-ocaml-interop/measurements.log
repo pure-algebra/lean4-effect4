@@ -1,0 +1,150 @@
+# Measurements of 2026-10-16 (Mac, 8 cores, OCaml 5.1.1, dune 3.24.2). Each block names its command.
+# Load averages are printed beside each run: other seats were building, so CPU time is the figure to read.
+
+## 1. Cold build at base 81f9a4354 (before any change of this seat)
+$ cd ocaml && rm -rf _build && /usr/bin/time -l opam exec --switch=effect4 -- dune build --trace-file T
+  17:25  up 31 days,  3:15, 7 users, load averages: 64.02 29.04 17.11
+         33.94 real        62.43 user        22.59 sys
+             562675712  maximum resident set size
+$ python3 docs/research/2026-10-16-ocaml-interop/dune_trace.py T 14
+  processes: 487; summed CPU 83.2 s; summed wall 178.5 s
+  by program: ocamlopt.opt 191x 60.9s; ocamlc.opt 178x 20.1s; ocamldep.opt 118x 2.2s
+      cpu    wall  rss MB  program       kind  file
+     9.80   17.60     563  ocamlopt.opt  impl  engine/api_engine.ml
+     4.51    9.56     355  ocamlc.opt    impl  engine/test/todo/todo_gen.ml
+     4.16    5.53     231  ocamlopt.opt  impl  engine/test/todo/todo_gen.ml
+     3.66    9.71     308  ocamlc.opt    impl  gen/api_gen.ml
+     3.57    9.03     302  ocamlc.opt    impl  engine/api_engine.ml
+     3.55    8.73     179  ocamlopt.opt  impl  gen/api_gen.ml
+     1.24    3.73     144  ocamlopt.opt  impl  engine/test/test_engine.ml
+     1.23    3.16     139  ocamlopt.opt  impl  engine/e4_engine.ml
+     1.13    2.71     141  ocamlopt.opt  impl  engine/test/scenarios/test_scenarios.ml
+     1.10    3.23     158  ocamlc.opt    impl  engine/e4_engine.ml
+     1.06    2.29     106  ocamlopt.opt  impl  engine/api_engine_inst.ml
+     1.06    2.46     109  ocamlopt.opt  impl  engine/api_engine_ref.ml
+     0.88    1.72     130  ocamlc.opt    impl  engine/api_engine_ref.ml
+     0.86    1.56     125  ocamlc.opt    impl  engine/api_engine_inst.ml
+
+## 2. Cold build at the seat's head
+  17:54  up 31 days,  3:44, 7 users, load averages: 5.71 9.68 12.99
+  real 24.20
+  user 61.93
+  sys 22.68
+  build exit 0
+  processes: 497; summed CPU 82.8 s; summed wall 135.7 s
+  by program: ocamlopt.opt 196x 60.1s; ocamlc.opt 182x 20.6s; ocamldep.opt 119x 2.1s
+      cpu    wall  rss MB  program       kind  file
+     8.54   12.72     577  ocamlopt.opt  impl  engine/api_engine.ml
+     4.77    8.26     354  ocamlc.opt    impl  engine/test/todo/todo_gen.ml
+     3.72    6.38     317  ocamlc.opt    impl  gen/api_gen.ml
+     3.61    6.48     191  ocamlopt.opt  impl  gen/api_gen.ml
+     3.58    5.86     321  ocamlc.opt    impl  engine/api_engine.ml
+     2.92    3.11     232  ocamlopt.opt  impl  engine/test/todo/todo_gen.ml
+     1.35    2.54     146  ocamlopt.opt  impl  engine/test/test_engine.ml
+     1.30    3.32     139  ocamlopt.opt  impl  engine/e4_engine.ml
+
+## 3. Incremental rebuilds at base: one appended comment line, then dune build (each FILE restored from a copy after the build)
+$ printf '\n(* incremental-build probe *)\n' >> FILE && opam exec --switch=effect4 -- dune build --trace-file T && restore FILE
+  -- host
+  processes: 4; summed CPU 0.2 s; summed wall 0.6 s
+     0.19    0.47      22  ocamlopt.opt  impl  engine/e4_host.ml
+     0.02    0.03      16  ocamlc.opt    impl  engine/e4_host.ml
+     0.01    0.05       9  ocamldep.opt  impl  engine/e4_host.ml
+  -- lanetest
+  processes: 6; summed CPU 0.3 s; summed wall 0.4 s
+     0.20    0.22      40  ocamlopt.opt  impl  engine/test/todo/test_todo.ml
+     0.08    0.09      23  ocamlopt.opt  impl  engine/e4_host.ml
+     0.02    0.03      16  ocamlc.opt    impl  engine/e4_host.ml
+  -- todogen
+  processes: 6; summed CPU 7.7 s; summed wall 8.5 s
+     3.74    4.19     231  ocamlopt.opt  impl  engine/test/todo/todo_gen.ml
+     3.48    3.67     352  ocamlc.opt    impl  engine/test/todo/todo_gen.ml
+     0.25    0.34      40  ocamlopt.opt  impl  engine/test/todo/test_todo.ml
+
+## 4. Every lane, at base (tests only; the build was current)
+$ cd ocaml && E4_LEAN_CORPUS=<main checkout>/.lake/corpus opam exec --switch=effect4 -- dune test --force --trace-file T eff gen clock engine
+  17:28  up 31 days,  3:18, 7 users, load averages: 12.59 21.02 16.11
+  exit 0
+  17:28  up 31 days,  3:18, 7 users, load averages: 13.98 20.49 16.12
+  processes: 40; summed CPU 47.1 s; summed wall 149.2 s
+  by program: prop_fibers_view.exe 1x 19.4s; test_diff.exe 1x 7.6s; test_checkpoint.exe 1x 6.1s; test_buckets.exe 1x 2.5s; test_engine.exe 1x 2.3s; test_cache.exe 1x 1.6s; test_host.exe 1x 1.5s; test_query.exe 1x 1.4s; test_math.exe 1x 1.2s; test_index.exe 1x 0.8s; prop_trace.exe 1x 0.7s; test_crash.exe 1x 0.4s; prop_memo.exe 1x 0.3s; test_cas.exe 1x 0.2s; prop_table.exe 1x 0.2s; test_pack.exe 1x 0.2s; test_scenarios.exe 1x 0.2s; test_sched.exe 1x 0.1s; test_pool.exe 1x 0.1s; test_todo.exe 1x 0.1s; test_control.exe 1x 0.1s; test_wal.exe 1x 0.1s; test_bytes.exe 1x 0.1s; test_log.exe 1x 0.0s; prop_point.exe 1x 0.0s; test_queue.exe 1x 0.0s; test_semaphore.exe 1x 0.0s; prop_wire.exe 1x 0.0s; test_eff.exe 1x 0.0s; ocamlc.opt 1x 0.0s; test_replay_steps.exe 1x 0.0s; test_mask.exe 1x 0.0s; test_lean_wire.exe 1x 0.0s; test_frame.exe 1x 0.0s; api_check.exe 1x 0.0s; test_metadata.exe 1x 0.0s; test_val_frames.exe 1x 0.0s; test_clock.exe 1x 0.0s; test_modeled.exe 1x 0.0s; test_ctors.exe 1x 0.0s
+      cpu    wall  rss MB  program       kind  file
+    19.35   29.38      11  prop_fibers_view.exe       
+     7.55   15.23     146  test_diff.exe       
+     6.14   11.75     103  test_checkpoint.exe       
+     2.48    5.19      14  test_buckets.exe       
+     2.29    5.53      53  test_engine.exe       
+     1.56    5.20      50  test_cache.exe       
+     1.47    3.23      28  test_host.exe       
+     1.36    3.82      27  test_query.exe       
+
+## 5. Every lane, at the seat's head
+  17:54  up 31 days,  3:44, 7 users, load averages: 10.83 10.52 13.20
+  test exit 0
+  17:55  up 31 days,  3:45, 7 users, load averages: 12.30 10.89 13.27
+  processes: 40; summed CPU 30.7 s; summed wall 112.5 s
+  by program: test_diff.exe 1x 7.3s; test_checkpoint.exe 1x 5.5s; prop_fibers_view.exe 1x 4.7s; test_buckets.exe 1x 2.4s; test_engine.exe 1x 2.1s; test_cache.exe 1x 1.5s; test_host.exe 1x 1.3s; test_query.exe 1x 1.3s; test_math.exe 1x 0.9s; test_index.exe 1x 0.8s; prop_trace.exe 1x 0.6s; test_crash.exe 1x 0.5s; test_cas.exe 1x 0.2s; prop_memo.exe 1x 0.2s; prop_table.exe 1x 0.2s; test_pack.exe 1x 0.2s; test_scenarios.exe 1x 0.1s; test_sched.exe 1x 0.1s; test_pool.exe 1x 0.1s; test_todo.exe 1x 0.1s; test_wal.exe 1x 0.1s; test_control.exe 1x 0.1s; test_bytes.exe 1x 0.0s; test_queue.exe 1x 0.0s; prop_point.exe 1x 0.0s; test_log.exe 1x 0.0s; test_semaphore.exe 1x 0.0s; test_eff.exe 1x 0.0s; test_replay_steps.exe 1x 0.0s; prop_wire.exe 1x 0.0s; test_mask.exe 1x 0.0s; test_modeled.exe 1x 0.0s; ocamlc.opt 1x 0.0s; test_ctors.exe 1x 0.0s; test_lean_wire.exe 1x 0.0s; test_val_frames.exe 1x 0.0s; test_clock.exe 1x 0.0s; api_check.exe 1x 0.0s; test_frame.exe 1x 0.0s; test_metadata.exe 1x 0.0s
+      cpu    wall  rss MB  program       kind  file
+     7.28   13.31     146  test_diff.exe       
+     5.49    9.89     105  test_checkpoint.exe       
+     4.75   10.05       8  prop_fibers_view.exe       
+     2.38    4.87      14  test_buckets.exe       
+     2.09    4.91      53  test_engine.exe       
+     1.55    5.21      50  test_cache.exe       
+     1.34    2.32      29  test_host.exe       
+     1.32    3.84      25  test_query.exe       
+
+## 6. bench_todo before the framing change (head minus eff_frame.ml and eff_val.ml), load 14-17
+$ cd ocaml && opam exec --switch=effect4 -- dune exec engine/test/todo/bench_todo.exe
+  bench_todo: 7 requests, engine Fast, CPU time per unit
+  1. a drive under E4_host, per host call
+    the lowered reference repository (untyped) (7 calls)                25.11 us
+    the lowered typed model, through the derived codecs (7 calls)       28.49 us
+    OCaml, frames built by hand (Native_todo.Untyped) (7 calls)         28.74 us
+    OCaml, the record (Native_todo.record) (7 calls)                    26.64 us
+    OCaml, the pure core behind REPO (7 calls)                          25.98 us
+    OCaml, the hash table behind REPO (7 calls)                         26.41 us
+  2. the stages of each request's first host call, mean over the requests
+    load the program and evaluate the root                              17.14 us
+    read the host calls (E4_engine.host_calls)                           0.06 us
+    answer: the typed reactor over the record (decode, dispatch, encode)       0.16 us
+    answer: the frames built by hand (Native_todo.Untyped)               0.04 us
+    the ingress check and the decision (E4_engine.answer_async)          0.29 us
+    the admission (E4_engine.admits, Lean's checked replay)              1.34 us
+    the step to the next host call or the end (E4_engine.step)           7.04 us
+  3. the derived codec of a to-do
+    encode one to-do, derived (Modeled image)                            0.05 us
+    encode one to-do, frame built by hand                                0.01 us
+    decode one to-do, derived                                            0.09 us
+    encode 100 to-dos, derived                                           6.77 us
+    decode 100 to-dos, derived                                          10.27 us
+    canonical bytes of 100 to-dos (Eff_val.to_bytes)                   128.15 us
+
+## 7. bench_todo at the seat's head, load 9-11
+  bench_todo: 7 requests, engine Fast, CPU time per unit
+  1. a drive under E4_host, per host call
+    the lowered reference repository (untyped) (7 calls)                12.35 us
+    the lowered typed model, through the derived codecs (7 calls)       16.32 us
+    OCaml, frames built by hand (Native_todo.Untyped) (7 calls)         16.20 us
+    OCaml, the record (Native_todo.record) (7 calls)                    14.35 us
+    OCaml, the pure core behind REPO (7 calls)                          14.81 us
+    OCaml, the hash table behind REPO (7 calls)                         15.43 us
+  2. the stages of each request's first host call, mean over the requests
+    load the program and evaluate the root                               9.51 us
+    read the host calls (E4_engine.host_calls)                           0.04 us
+    answer: the typed reactor over the record (decode, dispatch, encode)       0.13 us
+    answer: the frames built by hand (Native_todo.Untyped)               0.03 us
+    the ingress check and the decision (E4_engine.answer_async)          0.18 us
+    the admission (E4_engine.admits, Lean's checked replay)              0.80 us
+    the step to the next host call or the end (E4_engine.step)           4.15 us
+  3. the derived codec of a to-do
+    encode one to-do, derived (Modeled image)                            0.03 us
+    encode one to-do, frame built by hand                                0.01 us
+    decode one to-do, derived                                            0.05 us
+    encode 100 to-dos, derived                                           3.52 us
+    decode 100 to-dos, derived                                           6.73 us
+    canonical bytes of 100 to-dos (Eff_val.to_bytes)                    46.65 us
+
+## 8. The declarations todo_gen.ml lowers again (the closures the generator writes)
+$ cd ocaml/gen && python3 -c "import sys; n=lambda p: {l.split(chr(9))[0] for l in open(p) if not l.startswith((chr(35),\"lean\"))}; t,a,e=n(\"closure-todo_gen.tsv\"),n(\"closure-api_gen.tsv\"),n(\"closure-api_engine.tsv\"); print(\"todo_gen\",len(t),\"api_gen\",len(a),\"api_engine\",len(e),\"todo_gen and api_gen\",len(t&a),\"todo_gen only\",len(t-a-e))"
+  todo_gen 1420 api_gen 901 api_engine 795 todo_gen and api_gen 795 todo_gen only 625

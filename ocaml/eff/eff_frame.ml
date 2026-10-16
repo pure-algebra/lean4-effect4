@@ -32,6 +32,10 @@
    F4  The Lean image is the domain of encode: emit_nat raises Invalid_argument on a negative
        int, emit_string on a string that is not valid UTF-8.            by construction
    F5  Termination: an element loop advances by at least 9 bytes per element.  by construction
+   F6  The writers allocate no string per frame header: `emit_be64` is one 64-bit write and
+       `emit_nat` writes its digits in place. Their bytes are the per-byte rule's, for every int,
+       the negative ones included.                                    by construction; tested
+       (test_frame B: the old rule on 3 956 ints, both ends and every byte boundary)
    Bound: Lean's Nat is unbounded; this kernel carries 0 .. 2^62 - 1 (OCaml int on 64-bit
    hosts). A Nat frame of nine or more digits, or of eight digits with a top byte >= 0x40,
    is refused as out of range. *)
@@ -59,10 +63,10 @@ let utf8_valid (s : string) : bool = String.is_valid_utf_8 s
 
 (* ---- encoding ---- *)
 
+(* The eight bytes of `n lsr (8 * shift)`, shift 7 down to 0, in one write: the 63-bit int's
+   pattern with bit 63 clear, which `Int64.of_int` sets for a negative int (F6). *)
 let emit_be64 (b : Buffer.t) (n : int) : unit =
-  for shift = 7 downto 0 do
-    Buffer.add_char b (Char.chr ((n lsr (8 * shift)) land 0xff))
-  done
+  Buffer.add_int64_be b (Int64.logand (Int64.of_int n) Int64.max_int)
 
 let emit_frame (b : Buffer.t) (tag : int) (payload : string) : unit =
   Buffer.add_char b (Char.chr tag);
@@ -96,7 +100,16 @@ let emit_unit (b : Buffer.t) (() : unit) : unit = emit_frame b tag_unit ""
 let emit_bool (b : Buffer.t) (v : bool) : unit =
   emit_frame b tag_bool (if v then "\001" else "\000")
 
-let emit_nat (b : Buffer.t) (n : int) : unit = emit_frame b tag_nat (nat_digits n)
+(* `emit_frame b tag_nat (nat_digits n)`, with the digits written in place (F6). *)
+let emit_nat (b : Buffer.t) (n : int) : unit =
+  if n < 0 then invalid_arg "Eff_frame.nat_digits: negative";
+  let rec count m k = if m = 0 then k else count (m lsr 8) (k + 1) in
+  let k = count n 0 in
+  Buffer.add_char b (Char.chr tag_nat);
+  emit_be64 b k;
+  for i = k - 1 downto 0 do
+    Buffer.add_char b (Char.unsafe_chr ((n lsr (8 * i)) land 0xff))
+  done
 
 let emit_string (b : Buffer.t) (s : string) : unit =
   if not (utf8_valid s) then invalid_arg "Eff_frame.emit_string: not valid UTF-8";

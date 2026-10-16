@@ -11,13 +11,22 @@ module Make (E : E4_engine.ENGINE) : sig
       next state; [None] declines. Lean's `Run.Reactor`. *)
   type 'st provider = row -> val_ -> 'st -> (completion * 'st) option
 
-  (** Why the drive stopped. *)
+  (** Why the drive stopped. After [Declined], [Raised], [Refused] and [Outside_profile] the
+      engine and the host's state are the ones before the call, and the call stays outstanding. *)
   type stop =
     | Settled  (** a flush left no host call *)
     | Declined  (** the provider answered [None] *)
+    | Raised of exn
+        (** the provider raised: no answer, as [Declined] (H5); never a typed failure.
+            [Out_of_memory] and [Sys.Break] are raised again. *)
     | Refused  (** the engine did not admit the provider's reply *)
+    | Outside_profile of string
+        (** the reply failed the host-ingress check (EN9, H6) and was not applied *)
     | Unknown_row  (** a call's row position is not in the table *)
     | Out_of_rounds
+
+  val stop_name : stop -> string
+  (** The stop, spelled for a report. *)
 
   (** One answered call: the row's external position, the request and the answer. *)
   type call = { row : int; request : val_; answer : completion }

@@ -16,10 +16,15 @@
        integer reads by the `nat` digit rule (`Eff_frame.decode_neg_int`); the Modeled lane's
        fixture carries them (engine/test/modeled).                     by construction; tested
    V3  Round trip: for every value a fixture carries, `emit (decode bytes) = bytes`.
-                                                                tested (test_scenarios S3) *)
+                                                                tested (test_scenarios S3)
+   V4  A byte string or a digest is written in time linear in its length.  by construction *)
 
+(* The bytes whose codes are listed, in one pass; a code outside 0..255 raises Invalid_argument,
+   as `Char.chr` does (V4). *)
 let string_of_codes (codes : int list) : string =
-  String.init (List.length codes) (fun i -> Char.chr (List.nth codes i))
+  let s = Bytes.create (List.length codes) in
+  List.iteri (fun i code -> Bytes.set s i (Char.chr code)) codes;
+  Bytes.unsafe_to_string s
 
 let be64 (n : int) : string =
   let b = Buffer.create 8 in

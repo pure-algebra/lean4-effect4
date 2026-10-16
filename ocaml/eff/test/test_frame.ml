@@ -4,7 +4,10 @@
    P: payload callbacks run once, before the frame is appended; exceptions escape
       without appending a partial frame, and nested payloads retain their bytes.
    W: invalid windows, including extreme ints, return None; exact and embedded
-      frames still stop at their declared end. These are finite host checks. *)
+      frames still stop at their declared end.
+   B: the one-write writers (Eff_frame's F6) give the per-byte rule's bytes: `emit_be64` and
+      `emit_nat` on 3 956 ints, both ends, the negatives and every byte boundary; and a value's
+      byte string is written whole, a code outside a byte refused. These are finite host checks. *)
 
 let failures = ref 0
 
@@ -116,8 +119,47 @@ let test_windows () =
       (Eff_frame.read_frame (String.make length '\000') 0 length = None)
   done
 
+(* The writers as they were before F6, one byte at a time: the reference B compares against. *)
+let be64_by_bytes (n : int) : string =
+  String.init 8 (fun i -> Char.chr ((n lsr (8 * (7 - i))) land 0xff))
+
+let nat_frame_by_bytes (n : int) : string =
+  let digits = Eff_frame.nat_digits n in
+  String.make 1 (Char.chr Eff_frame.tag_nat) ^ be64_by_bytes (String.length digits) ^ digits
+
+let test_writers () =
+  let s = ref 0x1234ABCD5678 in
+  let next () = s := ((!s * 25214903917) + 11) land 0xFFFFFFFFFFFF; !s in
+  let boundaries =
+    List.concat_map (fun k -> let p = 1 lsl (8 * k) in [ p - 1; p; p + 1 ]) [ 1; 2; 3; 4; 5; 6; 7 ]
+  in
+  let ints =
+    [ 0; 1; 2; 127; 128; 255; 256; max_int; max_int - 1; min_int; min_int + 1; -1; -2; -256 ]
+    @ boundaries @ List.map (fun n -> -n) boundaries
+    @ List.init 3900 (fun i -> let r = (next () lsl 15) lxor next () in if i mod 3 = 0 then -r else r)
+  in
+  let be_ok = List.for_all (fun n -> Eff_frame.to_string Eff_frame.emit_be64 n = be64_by_bytes n) ints in
+  check (Printf.sprintf "B emit_be64 is the per-byte rule on %d ints, negatives included" (List.length ints))
+    be_ok;
+  let nats = List.filter (fun n -> n >= 0) ints in
+  let nat_ok =
+    List.for_all (fun n -> Eff_frame.to_string Eff_frame.emit_nat n = nat_frame_by_bytes n) nats
+  in
+  check (Printf.sprintf "B emit_nat is the frame of nat_digits on %d naturals" (List.length nats)) nat_ok;
+  check "B emit_nat refuses a negative int, as nat_digits does"
+    (try ignore (Eff_frame.to_string Eff_frame.emit_nat (-1)); false
+     with Invalid_argument m -> m = "Eff_frame.nat_digits: negative");
+  let codes = List.init 10000 (fun i -> (i * 7) land 0xff) in
+  let expected = String.init 10000 (fun i -> Char.chr ((i * 7) land 0xff)) in
+  check "B a value's byte string of 10 000 codes is written whole"
+    (Eff_val.to_bytes (Eff_types.Val_bytes codes) = frame Eff_frame.tag_bytes expected);
+  check "B a code outside a byte is refused"
+    (try ignore (Eff_val.to_bytes (Eff_types.Val_bytes [ 1; 256 ])); false
+     with Invalid_argument _ -> true)
+
 let () =
   test_utf8 ();
   test_payload ();
   test_windows ();
+  test_writers ();
   if !failures <> 0 then exit 1

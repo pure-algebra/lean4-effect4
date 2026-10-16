@@ -1,0 +1,14 @@
+# The red control: todo_core.ml with insert's next left unchanged, then the same commands as check.log.
+$ diff todo_core.ml mutant/todo_core.ml
+51c51
+<   (Ok item, { next = s.next + 1; items = snoc s.items item })
+---
+>   (Ok item, { next = s.next; items = snoc s.items item })
+$ opam exec --switch=rocq -- rocq compile -Q . Todo TodoCoreProofs.v
+File "./TodoCoreProofs.v", line 37, characters 14-25:
+Error: In environment
+title : string
+s : t
+Unable to unify "s.(t.next) + 1" with "(snd (insert title s)).(t.next)".
+
+exit 1
