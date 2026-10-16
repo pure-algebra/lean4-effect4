@@ -80,9 +80,17 @@ def annotated : Representation := .string (some [⟨"description", .str "a name"
 #guard (match SchemaCode.ofTy (.handle "Host.Resource") with
     | .error why => some why | .ok _ => none) =
   some "the declaration Host.Resource has no Schema code"
--- The bridge leaves `number` unlowered (decisions rows 121, 158, 160, 161), so it has no code.
-#guard (match SchemaCode.ofTy .number with | .error why => some why | .ok _ => none) =
-  some "the declaration effect4/unlowered/number has no Schema code"
+-- The bridge lowers `number`, `null`, `undefined` and `bytes` (the types audit, §6.1): rc.112's
+-- keywords and its `Uint8Array` constant.
+#guard (SchemaCode.ofTy .number).toOption.map (expr house0 0) = some "Schema.Number"
+#guard (SchemaCode.ofTy (.union .string .null)).toOption.map (expr house0 0) =
+  some "Schema.Union([Schema.String, Schema.Null])"
+#guard (SchemaCode.ofTy .undefined).toOption.map (expr house0 0) = some "Schema.Undefined"
+#guard (SchemaCode.ofTy .bytes).toOption.map (expr house0 0) = some "Schema.Uint8Array"
+-- control: a nominal application stays unlowered, so it has no code.
+#guard (match SchemaCode.ofTy (.app "Queue.Dequeue" [.nat]) with
+    | .error why => some why | .ok _ => none) =
+  some "the declaration effect4/unlowered/app has no Schema code"
 -- Annotations are refused, by the node.
 #guard (match SchemaCode.code annotated with | .error why => some why | .ok _ => none) =
   some "the keyword String carries annotations, and the code printer writes none"

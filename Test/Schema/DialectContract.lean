@@ -11,7 +11,8 @@ import Effect4.Laws.Codegen.ReadLeaf
 This finite battery checks `Bridge.ofSchema ∘ Store.render` on each store shape constructor.
 It establishes no general agreement theorem between the two descriptions.
 
-The unit and option faces still refuse.
+The unit face reads as `null`, and the option face as a union with `null`: `Ty.unit` and
+`Ty.option` are other types.
 The natural-number shape reads as `Ty.int`; the program admission rule still refuses that type.
 The byte and digest faces retain pattern checks that `Ty` does not represent, so they refuse.
 Structures read as structural records, retaining field names without nominal identity.
@@ -33,8 +34,8 @@ def shapeTy (s : Shape) : Option Ty := Bridge.ofSchema (Effect4.Store.render s)
 #guard shapeTy (.list .string) = some (.list .string)
 
 -- disagree: pinned, not blessed
-#guard shapeTy .unit = none
-#guard shapeTy (.option .bool) = none
+#guard shapeTy .unit = some .null
+#guard shapeTy (.option .bool) = some (.union .bool .null)
 #guard shapeTy .nat = some .int
 #guard shapeTy (.pair .nat .string) = some (.prod .int .string)
 

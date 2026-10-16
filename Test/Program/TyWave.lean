@@ -70,18 +70,26 @@ open Effect4.Program
 #guard Ty.renderRaw (.tuple [.nat, .string, .bool]) = "readonly [number, string, boolean]"
 #guard Ty.renderRaw (.app "Queue.Dequeue" [.nat]) = "Queue.Dequeue<number>"
 #guard Ty.renderRaw .null = "null" && Ty.renderRaw .undefined = "undefined" &&
-  Ty.renderRaw .number = "number" && Ty.renderRaw .bytes = "Uint8Array"
+  Ty.renderRaw .number = "Num" && Ty.renderRaw .bytes = "Uint8Array"
 -- the key keeps today's union order: the old heads' codes are unchanged
 #guard Ty.key .nat = [2] && Ty.key (.lit "a") = [15, 97]
 #guard Ty.normalize (.union .bytes .null) = .union .null .bytes
 
--- The unlowered marker refuses at the reader (decisions row 162), at every appended head and under
--- a former, while a handle of the marker's own name, the two forms that normalize away and the
--- leaves already lowered keep their images.
+-- The unlowered marker refuses at the reader (decisions row 162), at the head still unlowered,
+-- while a handle of the marker's own name, the two forms that normalize away and the leaves
+-- already lowered keep their images.
 open Effect4.Schema in
-#guard [("app", Ty.app "x" [.nat]), ("null", .null), ("undefined", .undefined), ("number", .number),
-    ("bytes", .bytes)].all fun (h, t) =>
+#guard [("app", Ty.app "x" [.nat])].all fun (h, t) =>
   Bridge.ofSchema (Bridge.unlowered h) == none && Bridge.ofSchema (Bridge.schema t) == none
+-- reader: `null`, `undefined`, `number` and `bytes` have their Schema commit (the types audit,
+-- §6.1), and each reads back
+open Effect4.Schema in
+#guard [Ty.null, .undefined, .number, .bytes, .union .string .null].all fun t =>
+  Bridge.ofSchema (Bridge.schema t) == some t
+-- control: the handle of `Uint8Array`'s id reads back as `bytes`, so the profile refuses it
+open Effect4.Schema in
+#guard !Bridge.reservedFree (.handle Bridge.uint8ArrayId) &&
+  Bridge.ofSchema (Bridge.schema (.handle Bridge.uint8ArrayId)) == some .bytes
 open Effect4.Schema in
 #guard Bridge.ofSchema (Ty.schema (.option (.record []))) == some (.option (.record []))
 open Effect4.Schema in

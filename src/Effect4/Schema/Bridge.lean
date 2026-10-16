@@ -15,7 +15,8 @@ This module implements Decision 12 (S-1, S-2) from `docs/research/2026-09-10-sch
 1. `Ty.schema : Ty → Representation`: Lowering any program type into an rc.112 `SchemaRepresentation`.
 2. `Ty.ofSchema : Representation → Option Ty`: the reader, recovering the first-order program type.
 3. `ofSchema_schema`: raw retraction on closed types in `reservedFree`'s exact profile.
-   The profile excludes unsupported nodes, nonstring map keys, the two-item tuple alias, and the reserved handle id.
+   The profile excludes unsupported nodes, nonstring map keys, the two-item tuple alias, and the two
+   reserved handle ids (`effect/schema/TypeParameter`, `effect/schema/Uint8Array`).
 4. `ofSchema_exact`: exactness (decisions row 128): `ofSchema r = some t → normS r = schema t`, so
    the pair is an exact embedding modulo `normS` (`N_S`, a fold), not a retraction alone.
 5. `EffTy.document` & `Row.document`: As-an-effect and as-a-plain-object schema documents for program boundaries.
@@ -57,12 +58,17 @@ def defectRep : Representation :=
   .declaration ⟨"effect/schema/Json", .null⟩ none [] []
 
 /-- The declaration the bridge writes for a data-wave form it does not lower yet (decisions row
-162: every appended constructor is refused by name until its Schema commit). `reservedFree` is
+162: every appended constructor is refused by name until its Schema commit). `null`, `undefined`,
+`number` and `bytes` have their commit (the types audit, `docs/research/2026-10-15-type-roundtrip-audit/README.md`
+§6.1, after probe S's table); `app` and `contextOf` remain. `reservedFree` is
 false at each, so the retraction never claims one. Its payload is not `null`, which every
 declaration arm of `ofSchema` demands, so the marker never reads back as the handle of its name
 and a handle of that name keeps its own image (Codex, unlowered-boundary review). -/
 def unlowered (head : String) : Representation :=
   .declaration ⟨"effect4/unlowered/" ++ head, .str "unlowered"⟩ none [] []
+
+/-- The declaration id of rc.112's `Schema.Uint8Array`, which `bytes` writes. -/
+def uint8ArrayId : String := "effect/schema/Uint8Array"
 
 /-- The Schema algebra has one field for every type constructor. -/
 def schemaAlg : TyAlgebra (fun _ => Representation) where
@@ -91,10 +97,15 @@ def schemaAlg : TyAlgebra (fun _ => Representation) where
   ty_map key value := Schema.struct [] [Schema.index key value]
   ty_tuple items := Schema.tuple (items.map fun item => Schema.element item)
   ty_app _ _ := unlowered "app"
-  ty_null := unlowered "null"
-  ty_undefined := unlowered "undefined"
-  ty_number := unlowered "number"
-  ty_bytes := unlowered "bytes"
+  -- rc.112 `Schema.Null`, `Schema.Undefined` and `Schema.Number` (`Schema.ts:3104`, `:3121`,
+  -- `:3154`): keywords with no check. A non-finite number stays outside the value codec
+  -- (decisions row 309 (6)); the Schema names rc.112's own keyword.
+  ty_null := .null none []
+  ty_undefined := .undefined none []
+  ty_number := .number none []
+  -- rc.112 `Schema.Uint8Array` (`Schema.ts:13605`): a declaration with a null payload, a reserved
+  -- id that reads back as `bytes`, never as the handle of its name
+  ty_bytes := .declaration ⟨uint8ArrayId, .null⟩ none [] []
   ty_contextOf _ := unlowered "contextOf"
 
 /-- Write a type through the generated fold. The public writer normalizes first. -/
@@ -241,6 +252,7 @@ def ofSchema : Representation → Option Ty
     if normAnn ann = none then
       if checks.map normCheck = [isIntCheck, nonNegativeCheck] then some .nat
       else if checks.map normCheck = [isIntCheck] then some .int
+      else if checks = [] then some .number
       else none
     else none
   | .string ann [] => if normAnn ann = none then some .string else none
@@ -285,7 +297,9 @@ def ofSchema : Representation → Option Ty
     else none
   | .declaration ⟨id, .null⟩ ann [] [] =>
     if normAnn ann = none then
-      if id = "effect/schema/TypeParameter" then none else some (.handle id)
+      if id = "effect/schema/TypeParameter" then none
+      else if id = uint8ArrayId then some .bytes
+      else some (.handle id)
     else none
   | .arrays ann [] [] [item] =>
     if normAnn ann = none then do
@@ -318,6 +332,8 @@ def ofSchema : Representation → Option Ty
       (elements.mapM fun element =>
         readElement element.isOptional element.annotations (ofSchema element.type)).map Ty.tuple
     else none
+  | .null ann [] => if normAnn ann = none then some .null else none
+  | .undefined ann [] => if normAnn ann = none then some .undefined else none
   | _ => none
 
 decreasing_by
@@ -382,6 +398,16 @@ theorem normS_string (ann : Annotations) (checks : List Check) :
 theorem normS_boolean (ann : Annotations) (checks : List Check) :
     normS (.boolean ann checks) = .boolean (normAnn ann) (checks.map normCheck) := by
   rw [normS, cata_representation_boolean]
+  rfl
+
+theorem normS_null (ann : Annotations) (checks : List Check) :
+    normS (.null ann checks) = .null (normAnn ann) (checks.map normCheck) := by
+  rw [normS, cata_representation_null]
+  rfl
+
+theorem normS_undefined (ann : Annotations) (checks : List Check) :
+    normS (.undefined ann checks) = .undefined (normAnn ann) (checks.map normCheck) := by
+  rw [normS, cata_representation_undefined]
   rfl
 
 theorem normS_literal (ann : Annotations) (checks : List Check) (l : LiteralValue) :
@@ -517,7 +543,8 @@ def reservedProfileAlg : TyAlgebra (fun _ => Bool × Bool) where
   ty_int := (false, true)
   ty_string := (true, true)
   ty_bool := (false, true)
-  ty_handle target := (false, decide (target ≠ "effect/schema/TypeParameter"))
+  ty_handle target :=
+    (false, decide (target ≠ "effect/schema/TypeParameter" ∧ target ≠ uint8ArrayId))
   ty_option a := (false, a.2)
   ty_list a := (false, a.2)
   ty_prod a b := (false, a.2 && b.2)
@@ -535,14 +562,15 @@ def reservedProfileAlg : TyAlgebra (fun _ => Bool × Bool) where
   ty_map key value := (false, key.1 && value.2)
   ty_tuple items := (false, decide (items.length ≠ 2) && items.all Prod.snd)
   ty_app _ _ := (false, false)
-  ty_null := (false, false)
-  ty_undefined := (false, false)
-  ty_number := (false, false)
-  ty_bytes := (false, false)
+  ty_null := (false, true)
+  ty_undefined := (false, true)
+  ty_number := (false, true)
+  ty_bytes := (false, true)
   ty_contextOf _ := (false, false)
 
 /-- The raw Schema profile: supported nodes, string map keys, no two-item tuple alias,
-and no reserved type-parameter handle. The public writer normalizes first. -/
+and no handle of a reserved id (the type parameter's, and `Uint8Array`'s, which reads back as
+`bytes`). The public writer normalizes first. -/
 def reservedFree (t : Ty) : Bool := (cata_ty reservedProfileAlg t).2
 
 /-- The profile's discriminator recognizes exactly the raw string constructor. -/
@@ -636,13 +664,20 @@ theorem ofSchema_schema (t : Ty) (h : t.closed = true) (hr : reservedFree t = tr
   | bool => rw [ofSchema.eq_def]; rfl
   | lit _ => rw [ofSchema.eq_def]; rfl
   | handle target =>
-    have hne : target ≠ "effect/schema/TypeParameter" := of_decide_eq_true hr
+    have hne : target ≠ "effect/schema/TypeParameter" ∧ target ≠ uint8ArrayId :=
+      of_decide_eq_true hr
     rw [ofSchema.eq_def]
     show (if normAnn none = none then
-      (if target = "effect/schema/TypeParameter" then none else some (Ty.handle target)) else none) = _
-    rw [if_pos (show normAnn none = none from rfl), if_neg hne]
+      (if target = "effect/schema/TypeParameter" then none
+        else if target = uint8ArrayId then some Ty.bytes else some (Ty.handle target))
+      else none) = _
+    rw [if_pos (show normAnn none = none from rfl), if_neg hne.1, if_neg hne.2]
   | var _ => exact Bool.noConfusion h
-  | app _ _ _ | null | undefined | number | bytes | contextOf _ => exact Bool.noConfusion hr
+  | null => rw [ofSchema.eq_def]; rfl
+  | undefined => rw [ofSchema.eq_def]; rfl
+  | number => rw [ofSchema.eq_def]; decide +kernel
+  | bytes => rw [ofSchema.eq_def]; decide +kernel
+  | app _ _ _ | contextOf _ => exact Bool.noConfusion hr
   | record fields ih =>
     rw [Ty.closed, Ty.closedFields_eq_all] at h
     rw [reservedFree_record] at hr
@@ -846,35 +881,40 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     cases h
     rw [normS_number, hann, hchecks]
     rfl
-  case case9 ann checks _ hnot hnot' =>
+  case case9 ann hann _ _ =>
+    intro t h
+    cases h
+    rw [normS_number, hann]
+    rfl
+  case case10 ann checks _ hnot hnot' hne =>
     simp only [List.attach_map_val] at hnot hnot'
     intro t h
-    rw [if_neg hnot, if_neg hnot'] at h
+    rw [if_neg hnot, if_neg hnot', if_neg hne] at h
     exact nomatch h
-  case case10 => intro t h; exact nomatch h
-  case case11 ann hann => intro t h; cases h; rw [normS_string, hann]; rfl
-  case case12 => intro t h; exact nomatch h
-  case case13 ann hann => intro t h; cases h; rw [normS_boolean, hann]; rfl
-  case case14 => intro t h; exact nomatch h
-  case case15 ann s hann => intro t h; cases h; rw [normS_literal, hann]; rfl
-  case case16 => intro t h; exact nomatch h
-  case case17 id ann val hann hid ih =>
+  case case11 => intro t h; exact nomatch h
+  case case12 ann hann => intro t h; cases h; rw [normS_string, hann]; rfl
+  case case13 => intro t h; exact nomatch h
+  case case14 ann hann => intro t h; cases h; rw [normS_boolean, hann]; rfl
+  case case15 => intro t h; exact nomatch h
+  case case16 ann s hann => intro t h; cases h; rw [normS_literal, hann]; rfl
+  case case17 => intro t h; exact nomatch h
+  case case18 id ann val hann hid ih =>
     intro t h
     obtain ⟨u, hu, h'⟩ := Option.bind_eq_some_iff.mp h
     cases h'
     obtain rfl := beq_iff_eq.mp hid
     rw [normS_declaration, hann, List.map_cons, List.map_nil, ih u hu]
     rfl
-  case case18 id ann val hann _ hid ih =>
+  case case19 id ann val hann _ hid ih =>
     intro t h
     obtain ⟨u, hu, h'⟩ := Option.bind_eq_some_iff.mp h
     cases h'
     obtain rfl := beq_iff_eq.mp hid
     rw [normS_declaration, hann, List.map_cons, List.map_nil, ih u hu]
     rfl
-  case case19 => intro t h; exact nomatch h
   case case20 => intro t h; exact nomatch h
-  case case21 id ann a b hann hid iha ihb =>
+  case case21 => intro t h; exact nomatch h
+  case case22 id ann a b hann hid iha ihb =>
     intro t h
     obtain ⟨tv, hv, h1⟩ := Option.bind_eq_some_iff.mp h
     obtain ⟨te, he, h2⟩ := Option.bind_eq_some_iff.mp h1
@@ -882,7 +922,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     obtain rfl := beq_iff_eq.mp hid
     rw [normS_declaration, hann, List.map_cons, List.map_cons, List.map_nil, iha tv hv, ihb te he]
     rfl
-  case case22 id ann a b hann _ hid iha ihb =>
+  case case23 id ann a b hann _ hid iha ihb =>
     intro t h
     obtain ⟨tv, hv, h1⟩ := Option.bind_eq_some_iff.mp h
     obtain ⟨te, he, h2⟩ := Option.bind_eq_some_iff.mp h1
@@ -890,7 +930,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     obtain rfl := beq_iff_eq.mp hid
     rw [normS_declaration, hann, List.map_cons, List.map_cons, List.map_nil, iha tv hv, ihb te he]
     rfl
-  case case23 id ann a b hann _ _ hid iha ihb =>
+  case case24 id ann a b hann _ _ hid iha ihb =>
     intro t h
     obtain ⟨tv, hv, h1⟩ := Option.bind_eq_some_iff.mp h
     obtain ⟨te, he, h2⟩ := Option.bind_eq_some_iff.mp h1
@@ -898,7 +938,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     obtain rfl := beq_iff_eq.mp hid
     rw [normS_declaration, hann, List.map_cons, List.map_cons, List.map_nil, iha tv hv, ihb te he]
     rfl
-  case case24 id ann a b hann _ _ _ hid iha =>
+  case case25 id ann a b hann _ _ _ hid iha =>
     intro t h
     obtain ⟨te, he, h1⟩ := Option.bind_eq_some_iff.mp h
     cases h1
@@ -907,9 +947,9 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     rw [normS_declaration, hann, List.map_cons, List.map_cons, List.map_nil, iha te he,
       normS_of_isDefect hdef]
     rfl
-  case case25 => intro t h; exact nomatch h
   case case26 => intro t h; exact nomatch h
-  case case27 id ann val err defect hann hid ihv ihe =>
+  case case27 => intro t h; exact nomatch h
+  case case28 id ann val err defect hann hid ihv ihe =>
     intro t h
     obtain ⟨tv, hv, h1⟩ := Option.bind_eq_some_iff.mp h
     obtain ⟨te, he, h2⟩ := Option.bind_eq_some_iff.mp h1
@@ -919,19 +959,20 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     rw [normS_declaration, hann, List.map_cons, List.map_cons, List.map_cons, List.map_nil,
       ihv tv hv, ihe te he, normS_of_isDefect hdef]
     rfl
-  case case28 => intro t h; exact nomatch h
   case case29 => intro t h; exact nomatch h
   case case30 => intro t h; exact nomatch h
-  case case31 id ann hann _ => intro t h; cases h; rw [normS_declaration, hann]; rfl
-  case case32 => intro t h; exact nomatch h
-  case case33 ann item hann ih =>
+  case case31 => intro t h; exact nomatch h
+  case case32 ann hann _ => intro t h; cases h; rw [normS_declaration, hann]; rfl
+  case case33 id ann hann _ _ => intro t h; cases h; rw [normS_declaration, hann]; rfl
+  case case34 => intro t h; exact nomatch h
+  case case35 ann item hann ih =>
     intro t h
     obtain ⟨u, hu, h'⟩ := Option.bind_eq_some_iff.mp h
     cases h'
     rw [normS_arrays, hann, List.map_cons, List.map_nil, ih u hu]
     rfl
-  case case34 => intro t h; exact nomatch h
-  case case35 ann a annA b annB hann iha ihb =>
+  case case36 => intro t h; exact nomatch h
+  case case37 ann a annA b annB hann iha ihb =>
     intro t h
     obtain ⟨ta, ha, h1⟩ := Option.bind_eq_some_iff.mp h
     obtain ⟨tb, hb, h2⟩ := Option.bind_eq_some_iff.mp h1
@@ -941,16 +982,16 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     simp only [List.map_cons, List.map_nil, ElementOf.map, normElement, hA, hB, iha ta ha,
       ihb tb hb]
     rfl
-  case case36 => intro t h; exact nomatch h
-  case case37 ann a b hann iha ihb =>
+  case case38 => intro t h; exact nomatch h
+  case case39 ann a b hann iha ihb =>
     intro t h
     obtain ⟨ta, ha, h1⟩ := Option.bind_eq_some_iff.mp h
     obtain ⟨tb, hb, h2⟩ := Option.bind_eq_some_iff.mp h1
     cases h2
     rw [normS_union, hann, List.map_cons, List.map_cons, List.map_nil, iha ta ha, ihb tb hb]
     rfl
-  case case38 => intro t h; exact nomatch h
-  case case39 ann properties hann ih =>
+  case case40 => intro t h; exact nomatch h
+  case case41 ann properties hann ih =>
     intro t h
     obtain ⟨fields, hfields, rfl⟩ := Option.map_eq_some_iff.mp h
     rw [schema_record, Schema.struct, normS_objects, hann]
@@ -961,8 +1002,8 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
       (fun field => Schema.property field.1 (schema field.2.2) field.2.1)
       (fun p => normProperty (PropertySignatureOf.map normS p)) properties fields
       (fun p hp field hf => readProperty_exact p field (ih p hp) hf) hfields
-  case case40 => intro t h; exact nomatch h
-  case case41 ann keyAnn value hann ih =>
+  case case42 => intro t h; exact nomatch h
+  case case43 ann keyAnn value hann ih =>
     intro t h
     obtain ⟨ty, hty, rfl⟩ := Option.map_eq_some_iff.mp h
     change normS (.objects ann [] [] [⟨.string keyAnn [], value⟩]) =
@@ -970,8 +1011,8 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     rw [normS_objects, hann.1]
     simp only [List.map_nil, List.map_cons, IndexSignatureOf.map, ih ty hty,
       normS_string, hann.2]
-  case case42 => intro t h; exact nomatch h
-  case case43 ann elements _ hann ih =>
+  case case44 => intro t h; exact nomatch h
+  case case45 ann elements _ hann ih =>
     intro t h
     obtain ⟨items, hitems, rfl⟩ := Option.map_eq_some_iff.mp h
     rw [schema_tuple, Schema.tuple, normS_arrays, hann.1]
@@ -982,8 +1023,12 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
       (fun ty => Schema.element (schema ty))
       (fun e => normElement (ElementOf.map normS e)) elements items
       (fun e he ty ht => readElement_exact e ty (ih e he) ht) hitems
-  case case44 => intro t h; exact nomatch h
-  case case45 => intro t h; exact nomatch h
+  case case46 => intro t h; exact nomatch h
+  case case47 ann hann => intro t h; cases h; rw [normS_null, hann]; rfl
+  case case48 => intro t h; exact nomatch h
+  case case49 ann hann => intro t h; cases h; rw [normS_undefined, hann]; rfl
+  case case50 => intro t h; exact nomatch h
+  case case51 => intro t h; exact nomatch h
 
 /-- Exactness in the vocabulary's shape (`AGENTS.md`, exact embedding): `r ≡ schema t` modulo `N_S`. -/
 theorem ofSchema_exact' {r : Representation} {t : Ty} (h : ofSchema r = some t) :

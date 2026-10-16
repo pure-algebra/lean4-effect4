@@ -65,9 +65,10 @@ open TypeScript (house0)
 #guard (entrySchemas
   { method := "offer", args := [.var 0],
     definition := { name := "queueOffer", request := .unit, answer := .unit } }).isNone
--- The bridge does not lower `number`, so a method that answers one has no Schemas until R-T6.
+-- A method that answers a number has its Schemas: the bridge lowers `number` (the types audit,
+-- §6.1).
 #guard (entrySchemas
   { method := "now", args := [],
-    definition := { name := "clockNow", request := .unit, answer := .number } }).isNone
+    definition := { name := "clockNow", request := .unit, answer := .number } }).isSome
 
 end Test.Codegen.SurfaceContract

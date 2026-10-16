@@ -3,7 +3,8 @@ import Effect4.Codegen.SchemaCode
 
 /-! Emit fresh public codec results for the bounded rc.112 comparison, and each case's typed
 Schema as the code printer writes it (`Codegen.SchemaCode.ofTy`, CR-4): the checker reads these
-Schemas, and writes none by hand but `Schema.Number`, for the type the bridge leaves unlowered. -/
+Schemas and writes none by hand. `unlowered` lists any case whose type has no code; the checker
+refuses a nonempty list. -/
 open Effect4 Effect4.Program
 
 namespace SchemaCodecHost

@@ -25,6 +25,8 @@ with three differences:
   field. Here an object's keys take the printed module's one key form (`Record.keyForm`,
   decisions row 196), and a `__proto__` key is computed, which defines the field.
 - **The defect slot.** The `Json` declaration prints `Schema.Defect()` (`declarations`).
+- **Bytes.** The `Uint8Array` declaration, what `bytes` writes, prints rc.112's constant
+  `Schema.Uint8Array` (`declarationCode`).
 
 The printer refuses, by the node's name, what has no Schema code without more context: a
 reference and a suspension (they need a references table and the thunk's type), an enum and a
@@ -82,6 +84,11 @@ def declarations : List (String × String × Nat) :=
 /-- A declaration's code: its constructor from `declarations`, at a `null` payload and the
 constructor's arity. -/
 def declarationCode (rep : RepresentationAnnotation) (typeParameters : List Expr) : Code :=
+  -- `Schema.Uint8Array` is a constant, not a constructor (`Schema.ts:13605`): what `bytes` writes
+  if rep.id = Schema.Bridge.uint8ArrayId then
+    if rep.payload = .null ∧ typeParameters = [] then .ok (member "Uint8Array")
+    else .error ("the declaration " ++ rep.id ++ " has another payload or arity than its Schema's")
+  else
   match declarations.find? (·.1 == rep.id) with
   | some (_, name, arity) =>
     if rep.payload = .null ∧ typeParameters.length = arity then .ok (call name typeParameters)

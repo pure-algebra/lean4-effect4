@@ -150,12 +150,14 @@ def todoRecord : Ty := .record [("id", false, .int), ("title", false, .string), 
 def sqlError : Ty := .record [("_tag", false, .lit "SqlError"), ("message", false, .string)]
 
 /-- What the bridge reads from each call's four documents, as observed; `none` is the bridge's
-refusal. The hand client's drift shows: an `Int` where the row has a natural, a `Null` where it has
-unit, a `NullOr` where it has an option. -/
+refusal. Since the bridge lowers `null` (decisions row 399 (1)) every call's documents read. The
+hand client's drift shows: an `Int` where the row has a natural, a `Null` where it has unit, a
+`NullOr` (a union with `null`) where it has an option. -/
 def observed : List (List (Option Ty)) :=
   [ [some .string, some todoRecord, some sqlError, some (.exitOf todoRecord sqlError)]
-  , [none, some (.list todoRecord), some sqlError, some (.exitOf (.list todoRecord) sqlError)]
-  , [some (.prod .int .bool), none, some sqlError, none]
+  , [some .null, some (.list todoRecord), some sqlError, some (.exitOf (.list todoRecord) sqlError)]
+  , [some (.prod .int .bool), some (.union todoRecord .null), some sqlError,
+      some (.exitOf (.union todoRecord .null) sqlError)]
   , [some .int, some .bool, some sqlError, some (.exitOf .bool sqlError)] ]
 
 -- a finite evaluation of the open goal `ofJson_image`: every document rc.112 wrote is admitted

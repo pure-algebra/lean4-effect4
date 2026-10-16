@@ -56,9 +56,9 @@ private def docsAnn : Annotations := some [⟨"description", .str "documentation
 #guard ofSchema (.arrays unknownAnn [] [] []) = none
 #guard ofSchema (.arrays none [isIntCheck] [] []) = none
 #guard ofSchema (schema (.handle "effect/schema/TypeParameter")) = none
-#guard ofSchema (schema (.record [("x", false, .bytes)])) = none
-#guard [.null, .undefined, .number, .bytes, Ty.app "Opaque" [.nat]].all fun t =>
-  ofSchema (schema t) == none
+#guard ofSchema (schema (.record [("x", false, .bytes)])) = some (.record [("x", false, .bytes)])
+-- control: `app` stays unlowered, so its Schema reads back to nothing
+#guard ofSchema (schema (Ty.app "Opaque" [.nat])) = none
 
 #guard ofSchema (FaceRow.recordFields.apply []) = none
 #guard ofSchema (FaceRow.tupleItems.apply []) = none

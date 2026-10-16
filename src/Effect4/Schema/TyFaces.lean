@@ -79,10 +79,10 @@ def tyFaces : TyTable FaceRow where
   map := .template (Schema.struct [] [Schema.index (child 0) (child 1)])
   tuple := .tupleItems
   app := .template (Schema.Bridge.unlowered "app")
-  null := .template (Schema.Bridge.unlowered "null")
-  undefined := .template (Schema.Bridge.unlowered "undefined")
-  number := .template (Schema.Bridge.unlowered "number")
-  bytes := .template (Schema.Bridge.unlowered "bytes")
+  null := .template (.null none [])
+  undefined := .template (.undefined none [])
+  number := .template (.number none [])
+  bytes := .template (.declaration ⟨Schema.Bridge.uint8ArrayId, .null⟩ none [] [])
   contextOf := .template (Schema.Bridge.unlowered "contextOf")
 
 end Effect4.Program

@@ -4,7 +4,7 @@ import { Cause, Exit, Option, Result, Schema, SchemaRepresentation } from "effec
 import effectPackage from "effect/package.json"
 // Written fresh by Emit.lean before tsgo checks this file: Lean's codec results, and each case's
 // typed Schema as the code printer writes it (`Codegen.SchemaCode.ofTy`). The checker writes no
-// Schema by hand but `Schema.Number`, at the cases whose type the bridge leaves unlowered.
+// Schema by hand: every case's type has generated code since the bridge lowers `number`.
 import {
   documents, encodingRefusals, encodingRefusalSchemas, encodings as encoded, numericDecodings, refusals,
   refusalSchemas, schemas, unlowered
@@ -12,19 +12,12 @@ import {
 
 assert.equal(effectPackage.version, "4.0.0-rc.112")
 
-/** A case's generated Schema: the printer's, or `Schema.Number` where Lean says the printer
- * refuses the case's type because the bridge does not lower `number` (`Bridge.schemaAlg`). */
+/** A case's generated Schema, the code printer's (`Codegen.SchemaCode.ofTy`). */
 function generated(table: Readonly<Record<string, unknown>>, name: string): unknown {
-  if (Object.hasOwn(table, name)) return table[name]
-  assert.equal(unlowered[name], "the declaration effect4/unlowered/number has no Schema code",
-    `${name}: no generated Schema, and the type is not the unlowered number`)
-  return Schema.Number
+  assert.ok(Object.hasOwn(table, name), `${name}: no generated Schema (${unlowered[name]})`)
+  return table[name]
 }
-let hostNumbers = 0
-for (const [name, why] of Object.entries(unlowered)) {
-  assert.equal(why, "the declaration effect4/unlowered/number has no Schema code", `${name}: ${why}`)
-  hostNumbers++
-}
+assert.deepEqual(unlowered, {}, "every case's type has generated Schema code")
 
 const cause = Cause.fromReasons([
   Cause.makeFailReason("bad"),
@@ -300,4 +293,4 @@ assert.deepEqual(codeDifferences, ["recordKeys"], "rc.112's code differs only at
 assert.throws(() => assert.deepEqual(representationOf(Schema.Tuple([Schema.Number, Schema.String])),
   representationOf(revive("pair"))))
 negativeControls++
-console.log(`PASS schema-codec: ${checked} fresh Lean/rc.112 comparisons, ${checked} host round trips, ${numericNames.length} host encodings observed by Lean decoders, ${matchingRefusals} matching decoder refusals, ${matchingEncoderRefusals} matching encoder refusals, ${negativeControls} negative controls, ${boundaryDifferences} explicit boundary differences; ${Object.keys(schemas).length} generated Schemas, ${revived} equal to rc.112's revival of their documents, ${revived - codeDifferences.length} to its code of them (${codeDifferences.length} difference, its quoted __proto__ key), ${hostNumbers} cases on Schema.Number, which the bridge does not lower`)
+console.log(`PASS schema-codec: ${checked} fresh Lean/rc.112 comparisons, ${checked} host round trips, ${numericNames.length} host encodings observed by Lean decoders, ${matchingRefusals} matching decoder refusals, ${matchingEncoderRefusals} matching encoder refusals, ${negativeControls} negative controls, ${boundaryDifferences} explicit boundary differences; ${Object.keys(schemas).length} generated Schemas, ${revived} equal to rc.112's revival of their documents, ${revived - codeDifferences.length} to its code of them (${codeDifferences.length} difference, its quoted __proto__ key)`)
