@@ -24,9 +24,9 @@
    S2  At every position of every run, on BOTH instances (Fast and Ref), the view of
        `api_replay` on the tape's prefix is the view Lean wrote for its session machine.
                                                                  tested (finite runs)
-   S3  A value crosses as its canonical bytes: `decode_val` reads Lean's `Val.encode`, and
-       `emit_val` writes the engine's value back in the same frames.  For every value a
-       fixture's tape carries, `emit_val (decode_val bytes) = bytes`.       tested
+   S3  A value crosses as its canonical bytes: `Eff_val.decode` reads Lean's `Val.encode`, and
+       `Eff_val.emit` writes the engine's value back in the same frames.  For every value a
+       fixture's tape carries, `emit (decode bytes) = bytes`.               tested
    S4  The table, and the red controls.  A fixture's line `table differs` or `table same`
        is one observed difference, in one projection: whether Lean's raw replay with the
        empty table (what the production wrappers supply) shows another machine view
@@ -185,71 +185,11 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
 
   (* ------------------------------------------------------------ S3: values as bytes *)
 
-  let string_of_codes (codes : int list) : string =
-    String.init (List.length codes) (fun i -> Char.chr (List.nth codes i))
-
-  let be64 (n : int) : string =
-    let b = Buffer.create 8 in
-    Eff_frame.emit_be64 b n;
-    Buffer.contents b
-
-  (* The frames of src/Effect4/Store/Carrier/Val.lean, `Val.encode`. *)
-  let rec emit_val (b : Buffer.t) (v : Eff_types.val_) : unit =
-    match v with
-    | Eff_types.Val_unit -> Eff_frame.emit_unit b ()
-    | Eff_types.Val_bool x -> Eff_frame.emit_bool b x
-    | Eff_types.Val_nat n -> Eff_frame.emit_nat b n
-    | Eff_types.Val_str s -> Eff_frame.emit_string b s
-    | Eff_types.Val_bytes codes -> Eff_frame.emit_frame b Eff_frame.tag_bytes (string_of_codes codes)
-    | Eff_types.Val_list xs -> Eff_frame.emit_list b emit_val xs
-    | Eff_types.Val_pair (x, y) -> Eff_frame.emit_pair b emit_val emit_val (x, y)
-    | Eff_types.Val_none -> Eff_frame.emit_option b emit_val None
-    | Eff_types.Val_some x -> Eff_frame.emit_option b emit_val (Some x)
-    | Eff_types.Val_ctor (index, args) -> Eff_frame.emit_ctor b index (fun p -> List.iter (emit_val p) args)
-    | Eff_types.Val_ref (kind, digest) -> Eff_frame.emit_ref b (kind, string_of_codes digest)
-    | Eff_types.Val_handle (kind, key) -> Eff_frame.emit_handle b (kind, key)
-    | Eff_types.Val_negInt n -> Eff_frame.emit_frame b Eff_frame.tag_int (Eff_frame.nat_digits n)
-    | Eff_types.Val_float bits -> Eff_frame.emit_frame b Eff_frame.tag_float (be64 bits)
-
-  let hex_of_val (v : Eff_types.val_) : string = E4_hex.of_bytes (Eff_frame.to_string emit_val v)
-
-  (* The reader of the same frames.  The tape's values are scalars, lists, options, pairs and
-     constructor applications; a frame outside those is refused, never guessed. *)
-  let rec decode_val : Eff_types.val_ Eff_frame.decoder =
-   fun s pos limit ->
-    match Eff_frame.read_frame s pos limit with
-    | None -> None
-    | Some (tag, p, e, next) ->
-      if tag = Eff_frame.tag_unit then if p = e then Some (Eff_types.Val_unit, next) else None
-      else if tag = Eff_frame.tag_bool then
-        Option.map (fun (x, n) -> (Eff_types.Val_bool x, n)) (Eff_frame.decode_bool s pos limit)
-      else if tag = Eff_frame.tag_nat then
-        Option.map (fun (x, n) -> (Eff_types.Val_nat x, n)) (Eff_frame.decode_nat s pos limit)
-      else if tag = Eff_frame.tag_string then
-        Option.map (fun (x, n) -> (Eff_types.Val_str x, n)) (Eff_frame.decode_string s pos limit)
-      else if tag = Eff_frame.tag_list then
-        Option.map (fun (xs, n) -> (Eff_types.Val_list xs, n)) (Eff_frame.decode_list decode_val s pos limit)
-      else if tag = Eff_frame.tag_pair then
-        Option.map
-          (fun ((x, y), n) -> (Eff_types.Val_pair (x, y), n))
-          (Eff_frame.decode_pair decode_val decode_val s pos limit)
-      else if tag = Eff_frame.tag_none || tag = Eff_frame.tag_some then
-        Option.map
-          (fun (o, n) -> ((match o with None -> Eff_types.Val_none | Some x -> Eff_types.Val_some x), n))
-          (Eff_frame.decode_option decode_val s pos limit)
-      else if tag = Eff_frame.tag_ctor then
-        match Eff_frame.read_ctor s pos limit with
-        | None -> None
-        | Some (index, p', e', next') ->
-          let rec args p acc =
-            if p = e' then Some (List.rev acc)
-            else match decode_val s p e' with None -> None | Some (x, p'') -> args p'' (x :: acc)
-          in
-          Option.map (fun xs -> (Eff_types.Val_ctor (index, xs), next')) (args p' [])
-      else None
+  (* The value frames are Eff_val's, the lanes' one writer and reader of `Val.encode`. *)
+  let hex_of_val (v : Eff_types.val_) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
 
   let val_of_hex (hex : string) : val_ =
-    match Eff_frame.exact decode_val (bytes_of_hex "a value" hex) with
+    match Eff_val.decode_exact (bytes_of_hex "a value" hex) with
     | Some v -> v
     | None -> failwith "fixture: a value's bytes are not exactly one value"
 
