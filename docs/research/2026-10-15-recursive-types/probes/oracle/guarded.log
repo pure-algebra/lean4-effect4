@@ -1,0 +1,7 @@
+# tsgo Version 7.0.0-dev.20260629.1
+## guarded.ts
+guarded.ts(4,13): error TS2456: Type alias 'A' circularly references itself.
+guarded.ts(5,13): error TS2456: Type alias 'B' circularly references itself.
+guarded.ts(6,13): error TS2456: Type alias 'C' circularly references itself.
+guarded.ts(7,13): error TS2456: Type alias 'D' circularly references itself.
+rc=1

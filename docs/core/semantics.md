@@ -310,6 +310,31 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   So an instance inherits the law with no proof of its own (`Modeled.member`).
   It establishes nothing for an identity type, an optional field or a refused constructor, and
   no codec admission (decisions row 330).
+- **Membership under a declaration table (`recursive-types-decided`)**: a table of monomorphic
+  type declarations is read iso-recursively (decisions rows 124, 158 and 400).
+  Its other claims are `recursive-types-unfold`, `recursive-types-conservative`,
+  `recursive-types-sub`, `recursive-types-inhabited`, `recursive-types-normalize` and
+  `guarded-fixed-point-unique`.
+  A body refers to a declared name by `app n args` or by its normal form `handle n`.
+  Membership under the table is an inductive predicate, the least fixed point
+  (`MemberIn`, `src/Effect4/Laws/Program/TyDecls.lean`).
+  A union holds its sides' members, and a declared reference holds its body's members.
+  A head holds a value when the value's shape fits and every question of the step holds
+  (`Val.obligations`, `src/Effect4/Program/TyDecls.lean`).
+  The checker `Val.hasTyIn` decides it on every table, guarded or not (`hasTyIn_iff`).
+  Its measure is the value's size, then the declared names not yet unfolded, with no fuel.
+  A reference has exactly its body's members (`memberIn_unfold_iff`).
+  On the empty table the checker, the predicate and inhabitance are `Val.hasTy`, its answer and
+  `inhabited` (`tyDecls_conservative`).
+  The unchanged `Ty.sub` keeps the members of every table (`memberIn_sub`).
+  The proof reads the predicate as the fold `Val.hasTy.alg` with each declared name read from
+  the checker (`memberIn_iff_cata`).
+  Inhabitance under the table, iterated to its least fixed point, is sound against membership
+  (`inhabited_of_memberIn`).
+  Three properties are planned goals: inhabitance complete against membership, membership
+  invariant under normalization, and one fixed point on a guarded table.
+  It establishes nothing of `Fits`, a world, a parameter or a face.
+  The formal note is `docs/research/2026-10-15-recursive-types/formal.md`.
 - **A step types at its type (`step-language-typed`)**: A step is data over typed inputs
   (`Step`, `src/Effect4/Step.lean`), and it has a source term at every scope.
   Let the caller's terms type at the inputs' types, and let the step's typing facts hold.
