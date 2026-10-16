@@ -76,7 +76,7 @@ Each Lean command ran through `scratch/lean-slot.sh`, one `lake` at a time.
 | `bash probes/host-compile.sh OUT` | `PASS host-compile: ocamlopt types 26804 lines`; 0 errors, 13 warnings 8 (partial match); closure 1330 of cap 4000, no declaration missing |
 | `cd ts/eff && tsgo --noEmit -p tsconfig.json && bun test` | tsgo 7.0.0-dev.20260629.1 clean; 784 pass, 0 fail |
 | `make check-full` | exit 0 at the seventh run (§3.2) |
-| `make check-gen`, `make check-docs` | §3.3 |
+| `make check-gen`, `make check-docs` | both pass after the commits (§3.3) |
 
 ### 3.1 The build's repairs
 
@@ -102,8 +102,11 @@ its verdict columns compared, before its promotion.
 ### 3.3 Drift and documents
 
 `make check-gen` compares the generators' output with the index, so it ran after the commits.
-Before them it listed the eight regenerated files above and nothing else. `make check-docs`
-asked only that this receipt be force-added.
+Before them it listed the eight regenerated files above and nothing else. After them:
+`PASS check-gen: every Lean-only generated file is what its generator emits`.
+
+`make check-docs` first asked that this receipt be force-added. After the commits:
+`PASS check-docs: every path, link, citation and make target in 113 documents resolves`.
 
 ## 4. Axiom output
 
