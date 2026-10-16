@@ -27,6 +27,8 @@
    T8  E4_host drives each request on the engine (both instances), with the lowered reactors as
        providers, and settles; its calls, the root's exit and the host's state, packaged by the
        lowered `resultVal`, are Lean's `Run.runWith` result, byte for byte.  tested
+   T9  The same with the repository written in OCaml (`Native_repo`), a native host: Lean's result
+       over the reference repository, byte for byte.                         tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
    records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
@@ -137,6 +139,34 @@ let built_of (r : request) : Todo_gen.built =
 
 let hex_of (v : val_) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
 
+(* The repository written in OCaml: a native host, not lowered from Lean. It answers the four
+   rows as `repository` states them (Test/Dogfood/Scenario/Todo/Data.lean), over the same state
+   shape, so the lowered `resultVal` packages its runs too. A to-do is the record frame with its
+   fields in canonical order: done, id, title. *)
+module Native_repo = struct
+  let todo id title is_done =
+    Val_ctor (0, [ Val_list [ Val_str "done"; Val_str "id"; Val_str "title" ];
+                   Val_list [ Val_bool is_done; Val_nat id; Val_str title ] ])
+
+  let ok v = Completion_ofExit (Exit_success v)
+
+  let provider (r : row) (sent : val_) ((next, items) : int * (int * (string * bool)) list) =
+    match r.spelling, sent with
+    | "TodoRepo.insert", Val_str title ->
+      Some (ok (todo next title false), (next + 1, items @ [ (next, (title, false)) ]))
+    | "TodoRepo.all", _ ->
+      Some (ok (Val_list (List.map (fun (id, (title, d)) -> todo id title d) items)), (next, items))
+    | "TodoRepo.setDone", Val_list [ Val_nat id; Val_bool d ] -> (
+      match List.assoc_opt id items with
+      | Some (title, _) ->
+        Some (ok (Val_some (todo id title d)),
+              (next, List.map (fun (i, (t, e)) -> if i = id then (i, (t, d)) else (i, (t, e))) items))
+      | None -> Some (ok Val_none, (next, items)))
+    | "TodoRepo.delete", Val_nat id ->
+      Some (ok (Val_bool (List.mem_assoc id items)), (next, List.filter (fun (i, _) -> i <> id) items))
+    | _ -> None
+end
+
 let () =
   let requests = read_fixture "todo-host.txt" in
   check (Printf.sprintf "the fixture holds %d requests" (List.length requests)) (requests <> []);
@@ -214,7 +244,11 @@ let () =
         (settled && rf = r.result && rg = r.result);
       let settled, ff, fg = through Todo_gen.test_dogfood_scenario_todo_forgetful in
       check (Printf.sprintf "%d %s: the engine under E4_host, over the forgetful host, is Lean's" i r.entry)
-        (settled && ff = r.forgetful && fg = r.forgetful))
+        (settled && ff = r.forgetful && fg = r.forgetful);
+      (* T9: the same with the repository written in OCaml *)
+      let settled, nf, ng = through Native_repo.provider in
+      check (Printf.sprintf "%d %s: the engine under E4_host, over the OCaml repository, is Lean's" i r.entry)
+        (settled && nf = r.result && ng = r.result))
     requests;
   check "red control: the two hosts' results differ on some request"
     (List.exists (fun r -> r.result <> r.forgetful) requests);
