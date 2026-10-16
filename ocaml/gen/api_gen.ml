@@ -11090,15 +11090,6 @@ let program_ty_norm_tuple (x_1 : ty list) : ty =
 
 
 
-(* LCNF mono: Effect4.Program.Ty.normApp (name : String) (x.1 : List Effect4.Program.Ty) : Effect4.Program.Ty *)
-
-let program_ty_norm_app (name : string) (x_1 : ty list) : ty =
-  match x_1 with
-    | [] -> Ty_handle name
-    | _ -> Ty_app (name, x_1)
-
-
-
 (* LCNF mono: Effect4.Program.Ty.normalize (x.1 : Effect4.Program.Ty) : Effect4.Program.Ty
    Effect4.Program.Ty.normalizeFields (x.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) : List (Prod String (Prod Bool Effect4.Program.Ty))
    Effect4.Program.Ty.normalizeItems (x.1 : List Effect4.Program.Ty) : List Effect4.Program.Ty *)
@@ -11150,7 +11141,7 @@ let rec program_ty_normalize (x_1 : ty) : ty =
     | Ty_tuple items_63 -> (let _x_64 = program_ty_normalize_items items_63 in
       program_ty_norm_tuple _x_64)
     | Ty_app (name_66, args_67) -> (let _x_68 = program_ty_normalize_items args_67 in
-      program_ty_norm_app name_66 _x_68)
+      Ty_app (name_66, _x_68))
     | Ty_contextOf _ -> x_1
     | _ -> x_1
 

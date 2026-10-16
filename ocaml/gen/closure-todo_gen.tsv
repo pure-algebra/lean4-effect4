@@ -294,7 +294,7 @@ Effect4.Program.Ty.beq	program_ty_beq	true	55	0	1	7	32	54	0	0	0	0	55	0	0	0	0	0	0
 Effect4.instDecidableEqServiceKey	inst_decidable_eq_service_key	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	0	0	1	0	1646365181630179133
 Effect4.Program.Registration.ctorIdx	program_registration_ctor_idx	false	2	0	0	0	1	2	0	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	2	0	1	0	10727365113068853929
 Effect4.Program.RowKind.ctorIdx	program_row_kind_ctor_idx	false	3	0	0	0	1	3	0	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	3	0	1	0	14034235607024829668
-Effect4.Program.Ty.normalize	program_ty_normalize	true	43	0	0	0	1	19	0	0	0	0	43	0	0	0	0	0	0	0	0	0	51	0	18	1	1	0	2128998997096860263
+Effect4.Program.Ty.normalize	program_ty_normalize	true	43	0	0	0	1	19	0	0	0	0	43	0	0	0	0	0	0	0	0	0	51	0	18	1	1	0	11856900022163673879
 _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Api.HostProtocol.hostProtocol.spec_1	list_flat_map_tr_go_at_api_host_protocol_host_protocol_spec_1	true	6	0	0	0	1	2	0	0	0	0	6	0	0	0	0	0	0	0	0	2	10	0	2	0	1	0	13916066788439751529
 Effect4.Machine.Value.fiberHandle	value_fiber_handle	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	18370276275938341816
 Effect4.Machine.Value.maskImage	value_mask_image	false	3	0	0	0	0	1	0	1	0	0	2	0	1	0	0	0	0	0	0	0	2	0	0	0	1	0	768544356998363671
@@ -481,7 +481,6 @@ Effect4.Program.Ty.members	program_ty_members	true	6	0	0	0	1	3	0	0	0	0	6	0	0	0	0
 Effect4.Program.Ty.normalizeFields	program_ty_normalize_fields	true	5	0	0	0	3	2	0	0	0	0	5	0	0	0	0	0	0	0	0	5	8	0	4	0	1	0	693674860554888205
 Effect4.Program.Ty.normalizeItems	program_ty_normalize_items	true	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	4	0	2	0	1	0	12185130089552519516
 Effect4.Program.Ty.normTuple	program_ty_norm_tuple	false	6	0	0	0	3	4	0	0	0	0	6	0	0	0	0	0	0	0	0	0	7	0	3	3	1	0	7238525641424929011
-Effect4.Program.Ty.normApp	program_ty_norm_app	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	3	0	1	1	1	0	16151496094796343740
 List.mapTR.loop._at_.Effect4.Api.HostProtocol.hostProtocol.spec_0	list_map_tr_loop_at_api_host_protocol_host_protocol_spec_0	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	10	0	2	0	1	0	17456802379239088166
 Effect4.Machine.HandleKind.handleOf	handle_kind_handle_of	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	4	0	0	0	1	0	421423371329857516
 Effect4.Machine.ctxImage._lam_0	ctx_image__lam_0	false	9	0	0	0	1	1	0	1	0	0	8	0	1	0	0	0	0	0	0	4	11	0	1	0	1	0	165224061132093708
@@ -1404,7 +1403,7 @@ _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeA
 List.foldl._at_.Effect4.Program.UnionRule.joinAll._at_.Effect4.Program.UnionRule.lift._at_.Effect4.Program.UnionRule.extendAll._at_.Effect4.Program.Checker.exitOf?.spec_0.spec_0.spec_2.spec_3	list_foldl_at_program_union_rule_join_all_at_program_union_rule_lift_at_program_union_rule_extend_all_at_program_checker_exit_of_opt_spec_0_spec_0_spec_2_spec_3	true	4	0	0	0	3	2	0	0	0	0	4	0	0	0	0	0	0	0	0	2	8	0	4	0	1	0	4452940228204140438
 Effect4.Program.foldMap_pos_prod_bool_ty._redArg	program_fold_map_pos_prod_bool_ty	true	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	4	0	1	0	1	0	4995248876592511840
 Nat.digitChar	nat_digit_char	false	49	0	0	0	16	17	0	33	0	0	16	0	16	0	0	0	17	0	0	0	32	0	32	0	1	0	10650562165560200315
-Effect4.Program.Ty.refName?	program_ty_ref_name_opt	false	3	0	0	0	1	3	0	0	0	0	3	0	0	0	0	0	0	0	0	3	2	0	2	1	1	0	2710078669847367835
+Effect4.Program.Ty.refName?	program_ty_ref_name_opt	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	2	1	0	1	1	1	0	14813105615433232680
 List.lookup._at_.Effect4.Program.TyDecls.body?.spec_0._redArg	list_lookup_at_program_ty_decls_body_opt_spec_0	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	2827380289099622258
 List.mapTR.loop._at_.Effect4.Program.handleLive.spec_0	list_map_tr_loop_at_program_handle_live_spec_0	true	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	5	0	3	0	1	0	4237159487516895980
 List.filterTR.loop._at_.Effect4.Cause.stripFail.spec_0._redArg	list_filter_tr_loop_at_cause_strip_fail_spec_0	true	7	0	0	0	2	3	0	0	0	0	7	0	0	0	0	0	0	0	0	1	10	0	4	0	1	0	9221215103452169993
