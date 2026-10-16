@@ -25,7 +25,7 @@ the engine's program types reach no carrier. So one emitter change can give one 
 | LC-4 F: the derived and fixture inputs from the import closure | ready, never built | the same patch; `make -n -W` dry runs only |
 | LC-4 D: constructor origins enter the clock graph only once a field holds a fact | draft | `lc4-unlanded/patchD.py`; 93% of 163,368 clock facts are constructor origins |
 | LC-5 focused tests | not started | |
-| LC-6 the to-do in OCaml from LCNF | the host run landed (§6) | the lowered host run matches Lean byte for byte; the engine takes the row table and admits a reply as Lean's checked replay does; `E4_host`, Lean's `Run.driveFrom` over the engine, reproduces `Run.runWith` byte for byte with the lowered reactors as providers (`test_todo.ml`, T8); open: a provider written in OCaml (a repository not lowered from Lean), and the one report |
+| LC-6 the to-do in OCaml from LCNF | the host run landed (§6) | the lowered host run matches Lean byte for byte; the engine takes the row table and admits a reply as Lean's checked replay does; `E4_host`, Lean's `Run.driveFrom` over the engine, reproduces `Run.runWith` byte for byte with the lowered reactors as providers (`test_todo.ml`, T8), and with a repository written in OCaml (T9); open: the one report of its recorded runs |
 | LC-7 the session from LCNF | not started; blocked | the nine F4 rows are absent from `src/OCaml5/Lcnf/Builtins.lean` (checked by name), with F3, the clock refusal of `Effect4.Live.start` and the run-wide heartbeat budget |
 | LC-8 the carriers as Lean data | not started | the design note comes first |
 | LC-9 the C face | not started | after LC-7 |
