@@ -98,6 +98,7 @@ def Request.text (r : Request) : String :=
   "state " ++ hex (Store.Val.encode (repoVal r.state)) ++ "\n" ++
   "result " ++ hex (Store.Val.encode (serveBuiltVal r.built r.state)) ++ "\n" ++
   "forgetful " ++ hex (Store.Val.encode (serveBuiltForgetfulVal r.built r.state)) ++ "\n" ++
+  "broken " ++ hex (Store.Val.encode (serveBuiltTypedVal Typed.broken r.built r.state)) ++ "\n" ++
   "admits " ++ toString (admitsNat r 0) ++ " " ++ toString (admitsNat r 1) ++ "\n" ++
   (match firstAnswer r with
     | some v => "answer " ++ hex (Store.Val.encode v) ++ " " ++ toString (admitsFirst r) ++ "\n"
@@ -124,6 +125,11 @@ def fixtureText : Option String :=
 -- the reference repository's result, byte for byte: the lane's T10 and T11 compare with it
 #guard (requests.map fun rs => rs.all fun r =>
   Store.Val.encode (serveBuiltTypedVal Typed.model r.built r.state) ==
+    Store.Val.encode (serveBuiltVal r.built r.state)) == some true
+-- control: the broken typed host, whose insert fails, answers another result on some request, so
+-- the lane's T12 compares a failure crossing the lowered codec
+#guard (requests.map fun rs => rs.any fun r =>
+  Store.Val.encode (serveBuiltTypedVal Typed.broken r.built r.state) !=
     Store.Val.encode (serveBuiltVal r.built r.state)) == some true
 -- control: the repository that forgets a write answers another result on some request, so the
 -- lane's comparison can tell the two hosts apart

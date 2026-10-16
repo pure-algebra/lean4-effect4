@@ -353,10 +353,10 @@ interfaces.
 | --- | --- |
 | 1. The to-do record derives `Modeled` | landed: `Typed.Todo`, whose code is the row's record type |
 | 2. The typed host | landed: `Typed.Host`, four methods; `Typed.model`, the reference model over it |
-| 3. Its reactor in core code | landed: `Run.Reactor.method` and `Reactor.first` (`src/Effect4/Run/Method.lean`) |
+| 3. Its reactor in core code | landed: `Run.Reactor.method`, `Reactor.fallible` and `Reactor.first` (`src/Effect4/Run/Method.lean`) |
 | 4. The reactor is a comodel's | no new lemma: every reactor reaches the laws through `reactorHost` |
 | 5. Lower the run over the typed host | landed: `serveBuiltTypedVal` takes the host; the clock ruling reads a typed host as ingress |
-| 6. Run the providers | landed: the to-do lane's T10 (the lowered model) and T11 (a typed host written in OCaml) |
+| 6. Run the providers | landed: the to-do lane's T10 (the lowered model) and T11 (a typed host written in OCaml); T12 and T13 run a host whose insert fails, the failure crossing as the tagged pair |
 | 7. Check the records with `apps/todo/Check.lean` | open |
 
 The measurement the plan asked for came first. `Modeled`'s codec lowers once it is staged

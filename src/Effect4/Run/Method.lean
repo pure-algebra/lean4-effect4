@@ -17,8 +17,10 @@ only through derived codecs. Lowered by the LCNF route, the record is a native O
 functions over native OCaml types, and the codecs are the staged images
 (`ocaml/engine/test/todo/`, decisions row 405).
 
-What it does not do yet: answer a row's error column. A method answers a success; a failing
-method is the next slice.
+A row's error column is answered by a **fallible method** (`Reactor.fallible`): its function
+answers `Except E Ans`, and a failure crosses as the typed failure of `E`'s value
+(`Program.errOf`), as an untyped host writes one. A tagged failure `prod (lit tag) string`
+(`eff_failure Name message`) is a derived one-constructor enum paired with a string.
 -/
 
 namespace Effect4.Run
@@ -35,6 +37,22 @@ def Reactor.method {σ Req Ans : Type} [Modeled Req] [Modeled Ans] (spelling : S
       let (answer, next) := f request state
       (.ofExit (.success ((Modeled.image Ans).toVal answer)), next)
   else none
+
+/-- **A fallible method**: the row spelled `spelling`, answered by `f`, whose failure is the row's
+error column. The request is read by `Modeled.image Req`; a success is written by
+`Modeled.image Ans`, and a failure is the typed failure of `Modeled.image E`'s value
+(`Program.errOf`). Any other row, and a request that does not read, is declined. -/
+def Reactor.fallible {σ Req Ans E : Type} [Modeled Req] [Modeled Ans] [Modeled E]
+    (spelling : String) (f : Req → σ → Except E Ans × σ) : Reactor σ :=
+  fun row sent state =>
+    if row.spelling == spelling then
+      ((Modeled.image Req).ofVal sent).map fun request =>
+        let (answer, next) := f request state
+        match answer with
+        | .ok value => (.ofExit (.success ((Modeled.image Ans).toVal value)), next)
+        | .error e =>
+          (.ofExit (.failure (Cause.fail (Program.errOf ((Modeled.image E).toVal e)))), next)
+    else none
 
 /-- **A host of several reactors**: the first that answers a request answers it. -/
 def Reactor.first {σ : Type} : List (Reactor σ) → Reactor σ

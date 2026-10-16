@@ -163,7 +163,8 @@
         "Test.Dogfood.Scenario.Todo.Host.serveBuiltVal",
         "Test.Dogfood.Scenario.Todo.Host.serveBuiltForgetfulVal",
         "Test.Dogfood.Scenario.Todo.Host.serveBuiltTypedVal",
-        "Test.Dogfood.Scenario.Todo.Typed.model"
+        "Test.Dogfood.Scenario.Todo.Typed.model",
+        "Test.Dogfood.Scenario.Todo.Typed.broken"
       ],
       "open": {
         "module": "Eff_types",

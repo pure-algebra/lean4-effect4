@@ -35,6 +35,11 @@
    T11 The same with a typed host written in OCaml (`native_typed`): a value of the lowered
        `host` record, four OCaml functions over native `todo` records, with no value or codec of
        its own: the lowered methods' codecs carry its answers.             tested
+   T12 The broken typed host (`Typed.broken`, whose insert fails with the rows' error), lowered:
+       Lean's result for it (the fixture's `broken` line), byte for byte, the failure crossing
+       the lowered codec as the tagged pair.                               tested
+   T13 The same with a broken typed host written in OCaml (`native_broken`), an `Error` of the
+       lowered `sql_tag * string`.                                         tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
    records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
@@ -67,13 +72,14 @@ type request = {
   state : string;
   result : string;
   forgetful : string;
+  broken : string;
   admits : string;
   answer : string;
 }
 
 let empty entry =
   { entry; program = ""; rows = []; typed = ""; names = ""; state = ""; result = ""; forgetful = "";
-    admits = ""; answer = "" }
+    broken = ""; admits = ""; answer = "" }
 
 (* The fixture's blocks, in order. A line this reader does not know is a failure. *)
 let read_fixture (path : string) : request list =
@@ -96,6 +102,7 @@ let read_fixture (path : string) : request list =
           | "state", Some r -> go acc (Some { r with state = value })
           | "result", Some r -> go acc (Some { r with result = value })
           | "forgetful", Some r -> go acc (Some { r with forgetful = value })
+          | "broken", Some r -> go acc (Some { r with broken = value })
           | "admits", Some r -> go acc (Some { r with admits = value })
           | "answer", Some r -> go acc (Some { r with answer = value })
           | _ -> failwith ("fixture: an unknown line: " ^ key)))
@@ -180,17 +187,27 @@ end
 let native_typed : (int * (int * (string * bool)) list) Todo_gen.host =
   let todo id title d : Todo_gen.todo = { id; title; done_ = d } in
   { Todo_gen.insert =
-      (fun title (next, items) -> (todo next title false, (next + 1, items @ [ (next, (title, false)) ])));
-    all = (fun () (next, items) -> (List.map (fun (id, (title, d)) -> todo id title d) items, (next, items)));
+      (fun title (next, items) ->
+        (Ok (todo next title false), (next + 1, items @ [ (next, (title, false)) ])));
+    all =
+      (fun () (next, items) ->
+        (Ok (List.map (fun (id, (title, d)) -> todo id title d) items), (next, items)));
     set_done =
       (fun (id, d) (next, items) ->
         match List.assoc_opt id items with
         | Some (title, _) ->
-          ( Some (todo id title d),
+          ( Ok (Some (todo id title d)),
             (next, List.map (fun (i, (t, e)) -> if i = id then (i, (t, d)) else (i, (t, e))) items) )
-        | None -> (None, (next, items)));
-    delete = (fun id (next, items) -> (List.mem_assoc id items, (next, List.filter (fun (i, _) -> i <> id) items)))
+        | None -> (Ok None, (next, items)));
+    delete =
+      (fun id (next, items) ->
+        (Ok (List.mem_assoc id items), (next, List.filter (fun (i, _) -> i <> id) items)))
   }
+
+(* T13: the same host, whose insert fails with the rows' error. *)
+let native_broken : (int * (int * (string * bool)) list) Todo_gen.host =
+  { native_typed with
+    Todo_gen.insert = (fun _ state -> (Error (Todo_gen.SqlTag_SqlError, "disk full"), state)) }
 
 let () =
   let requests = read_fixture "todo-host.txt" in
@@ -211,7 +228,14 @@ let () =
                    Todo_gen.test_dogfood_scenario_todo_typed_model built state) = r.result);
       check (name ^ ": the typed host written in OCaml gives Lean's result")
         (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val native_typed
-                   built state) = r.result))
+                   built state) = r.result);
+      (* T12 and T13: the broken typed hosts, lowered and written in OCaml *)
+      check (name ^ ": the lowered broken host's result is Lean's")
+        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
+                   Todo_gen.test_dogfood_scenario_todo_typed_broken built state) = r.broken);
+      check (name ^ ": the broken host written in OCaml gives Lean's result")
+        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val native_broken
+                   built state) = r.broken))
     requests;
   (* T5: the engine runs each request's program at its row table, on both instances, and they
      agree after a reply. *)

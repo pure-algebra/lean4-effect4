@@ -8,7 +8,9 @@ import Effect4.Schema.Modeled.Derive
 The repository's four rows answered by a record of Lean functions over a derived `Todo`
 (`Effect4.Run.Reactor.method`): each request read by its type's exact embedding, each answer
 written by the answer's. `model` is the reference model (`repository`, `Data.lean`) written over
-`Todo`, and the battery holds it to `repository`'s answers. Lowered by the LCNF route, `Host` is a
+`Todo`, and the battery holds it to `repository`'s answers. Each method may fail with the
+rows' error (`Run.Reactor.fallible`); `broken` fails `insert`, and the battery holds it to an
+untyped host that writes the same failure. Lowered by the LCNF route, `Host` is a
 record of OCaml functions over the lowered `todo`, so a provider written in OCaml is a value of
 it (`ocaml/engine/test/todo/`, `test_todo.ml`'s T10 and T11).
 
@@ -29,34 +31,56 @@ structure Todo where
   done : Bool
   deriving Modeled, DecidableEq, Repr
 
+/-- The tag of the repository's failure: a one-constructor enum, whose code is `lit "SqlError"`. -/
+inductive SqlTag where
+  | SqlError
+  deriving Modeled, DecidableEq, Repr
+
+/-- The repository's failure, the rows' error column `SqlError.ty` (`eff_failure SqlError
+message`): its tag and its message. -/
+abbrev SqlError := SqlTag × String
+
 /-- **The repository's interface**: one function per row of `TodoRepo`, over typed requests and
-answers, threading the host's state. -/
+answers, threading the host's state. Each may fail with the rows' error, `SqlError`. -/
 structure Host (σ : Type) where
-  insert : String → σ → Todo × σ
-  all : Unit → σ → List Todo × σ
-  setDone : Nat × Bool → σ → Option Todo × σ
-  delete : Nat → σ → Bool × σ
+  insert : String → σ → Except SqlError Todo × σ
+  all : Unit → σ → Except SqlError (List Todo) × σ
+  setDone : Nat × Bool → σ → Except SqlError (Option Todo) × σ
+  delete : Nat → σ → Except SqlError Bool × σ
 
 /-- The host as a reactor: each row answered by its method. -/
 def Host.reactor {σ : Type} (h : Host σ) : Run.Reactor σ :=
   Run.Reactor.first [
-    .method "TodoRepo.insert" h.insert, .method "TodoRepo.all" h.all,
-    .method "TodoRepo.setDone" h.setDone, .method "TodoRepo.delete" h.delete]
+    .fallible "TodoRepo.insert" h.insert, .fallible "TodoRepo.all" h.all,
+    .fallible "TodoRepo.setDone" h.setDone, .fallible "TodoRepo.delete" h.delete]
 
 /-- A stored to-do as a `Todo`. -/
 def todoOf (entry : Nat × String × Bool) : Todo := ⟨entry.1, entry.2.1, entry.2.2⟩
 
 /-- **The reference model, typed**: what `repository` states, over `Todo`. -/
 def model : Host Repo where
-  insert title state := (⟨state.1, title, false⟩, (state.1 + 1, state.2 ++ [(state.1, title, false)]))
-  all _ state := (state.2.map todoOf, state)
+  insert title state :=
+    (.ok ⟨state.1, title, false⟩, (state.1 + 1, state.2 ++ [(state.1, title, false)]))
+  all _ state := (.ok (state.2.map todoOf), state)
   setDone request state :=
     match state.2.find? (·.1 == request.1) with
     | some entry =>
-      (some ⟨request.1, entry.2.1, request.2⟩,
+      (.ok (some ⟨request.1, entry.2.1, request.2⟩),
         (state.1, state.2.map fun e => if e.1 == request.1 then (e.1, e.2.1, request.2) else e))
-    | none => (none, state)
-  delete id state := (state.2.any (·.1 == id), (state.1, state.2.filter (·.1 != id)))
+    | none => (.ok none, state)
+  delete id state := (.ok (state.2.any (·.1 == id)), (state.1, state.2.filter (·.1 != id)))
+
+/-- A broken repository: `insert` fails with the rows' error, and every other row answers as
+`model` does. -/
+def broken : Host Repo := { model with insert := fun _ state => (.error (.SqlError, "disk full"), state) }
+
+/-- `broken`, written untyped: the failure as the tagged pair an untyped host writes
+(`Test.Dogfood.Scenario.failed`). -/
+def brokenUntyped : Run.Reactor Repo := fun row sent state =>
+  if row.spelling == "TodoRepo.insert" then
+    if sent matches .str _ then some (Test.Dogfood.Scenario.failed "SqlError" "disk full", state)
+    else none
+  else repository row sent state
 
 /-! ## The battery: the typed model answers as `repository` does
 
@@ -80,6 +104,18 @@ def requests : List (Nat × Val × Repo) := [
   match rows[i]? with
   | some row => model.reactor row request state == repository row request state
   | none => false
+-- finite evaluation: the broken typed host fails as the untyped one does, the failure crossing as
+-- the tagged pair, and answers every other row as it does.
+#guard requests.all fun (i, request, state) =>
+  match rows[i]? with
+  | some row => broken.reactor row request state == brokenUntyped row request state
+  | none => false
+-- control: the broken host's insert answers otherwise than the model's, so the comparison above
+-- reads the failure.
+#guard (rows[0]?.map fun row => broken.reactor row (.str "bread") twoTodos !=
+  model.reactor row (.str "bread") twoTodos) == some true
+-- finite evaluation: the failure's code is the rows' error column `SqlError.ty`.
+#guard Modeled.ty (α := SqlError) == Test.Dogfood.Scenario.Todo.SqlError.ty
 -- control: a request that does not read is declined, as `repository` declines it.
 #guard (rows[0]?.map fun row => (model.reactor row (.nat 3) twoTodos).isNone &&
   (repository row (.nat 3) twoTodos).isNone) == some true
