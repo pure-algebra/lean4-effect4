@@ -78,9 +78,9 @@ export const add = (a: number, b: number): number => inProfile(a + b)
 export const lt = (a: number, b: number): boolean => a < b
 
 /**
- * NativeAtom.eq on two integers or two strings (DI-09, decisions row 121).
+ * NativeAtom.eq on two integers, two strings or two Booleans (DI-09, DI-35, decisions row 121): each a type where `===` compares faithfully.
  */
-export const eq = (a: number | string, b: number | string): boolean => a === b
+export const eq = (a: number | string | boolean, b: number | string | boolean): boolean => a === b
 
 /**
  * `"pair", [a, b] => Val.tuple [a, b]` — a two-element tuple, the wire's JSON array.

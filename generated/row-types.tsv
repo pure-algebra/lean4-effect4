@@ -38,7 +38,7 @@ Atom	pred	mono		[number]	number
 Atom	isZero	mono		[number]	boolean		
 Atom	not	mono		[boolean]	boolean		
 Atom	add	mono		[number, number]	number		
-Atom	lt	mono		[number, number]	boolean		
+Atom	lt	mono		[Int, Int]	boolean		
 Atom	eq	alts					
 Atom	pair	poly		["p0", "p1"]	readonly ["p0", "p1"]		<"p0", "p1">
 Atom	fst	custom					
@@ -76,5 +76,5 @@ Atom	tuple	custom
 Atom	take	poly		[ReadonlyArray<"p0">, number]	ReadonlyArray<"p0">		<"p0">
 Atom	drop	poly		[ReadonlyArray<"p0">, number]	ReadonlyArray<"p0">		<"p0">
 Atom	sameHandle	custom					
-Atom	plus	mono		[number, number]	number		
-Atom	minus	mono		[number, number]	number		
+Atom	plus	mono		[Int, Int]	Int		
+Atom	minus	mono		[Int, Int]	Int		

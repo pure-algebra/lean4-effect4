@@ -1263,6 +1263,9 @@ let sh_dispatcher_insert priority task dispatcher = D.enqueue dispatcher ~priori
   let lcnf_utf8_of_code_points cs =
   let b = Buffer.create 16 in
   List.iter (fun c -> Buffer.add_utf_8_uchar b (Uchar.of_int c)) cs; Buffer.contents b
+  let lcnf_string_of_bytes bs =
+  let b = Buffer.create 16 in
+  List.iter (fun c -> Buffer.add_char b (Char.chr c)) bs; Buffer.contents b
   let lcnf_nat_mul a b =
   if a = 0 then 0 else if b > max_int / a then max_int else a * b
   let rec lcnf_nat_pow a b =
@@ -3151,131 +3154,143 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
   Some _x_9 in
   let _jp_11 = fun _y_12 -> let _x_13 = Val_bool _y_12 in
   Some _x_13 in
+  let _jp_15 = fun _y_16 -> let _x_17 = Val_bool _y_16 in
+  Some _x_17 in
   match (x_1 : native_atom) with
     | NativeAtom_succ -> (match x_2 with
-        | head_15 :: tail_16 -> (match (head_15 : val_) with
-            | Val_nat n_17 -> (match tail_16 with
-                | [] -> (let _x_18 = 1 in
-                  let _x_19 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_17) (E4_clock.of_nat _x_18)) in
-                  let _x_20 = Val_nat _x_19 in
-                  Some _x_20)
+        | head_19 :: tail_20 -> (match (head_19 : val_) with
+            | Val_nat n_21 -> (match tail_20 with
+                | [] -> (let _x_22 = 1 in
+                  let _x_23 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_21) (E4_clock.of_nat _x_22)) in
+                  let _x_24 = Val_nat _x_23 in
+                  Some _x_24)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_pred -> (match x_2 with
-        | head_25 :: tail_26 -> (match (head_25 : val_) with
-            | Val_nat n_27 -> (match tail_26 with
-                | [] -> (let _x_28 = 1 in
-                  let _x_29 = max 0 (n_27 - _x_28) in
-                  let _x_30 = Val_nat _x_29 in
-                  Some _x_30)
+        | head_29 :: tail_30 -> (match (head_29 : val_) with
+            | Val_nat n_31 -> (match tail_30 with
+                | [] -> (let _x_32 = 1 in
+                  let _x_33 = max 0 (n_31 - _x_32) in
+                  let _x_34 = Val_nat _x_33 in
+                  Some _x_34)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_isZero -> (match x_2 with
-        | head_35 :: tail_36 -> (match (head_35 : val_) with
-            | Val_nat n_37 -> (match tail_36 with
-                | [] -> (let _x_38 = 0 in
-                  let _x_39 = n_37 = _x_38 in
-                  let _x_40 = Val_bool _x_39 in
-                  Some _x_40)
+        | head_39 :: tail_40 -> (match (head_39 : val_) with
+            | Val_nat n_41 -> (match tail_40 with
+                | [] -> (let _x_42 = 0 in
+                  let _x_43 = n_41 = _x_42 in
+                  let _x_44 = Val_bool _x_43 in
+                  Some _x_44)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_boolNot -> (match x_2 with
-        | head_45 :: tail_46 -> (match (head_45 : val_) with
-            | Val_bool b_47 -> (match tail_46 with
-                | [] -> if b_47 then (let _x_49 = false in
-                    _jp_3 _x_49) else (let _x_48 = true in
-                    _jp_3 _x_48)
+        | head_49 :: tail_50 -> (match (head_49 : val_) with
+            | Val_bool b_51 -> (match tail_50 with
+                | [] -> if b_51 then (let _x_53 = false in
+                    _jp_3 _x_53) else (let _x_52 = true in
+                    _jp_3 _x_52)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_add -> (match x_2 with
-        | head_53 :: tail_54 -> (match (head_53 : val_) with
-            | Val_nat n_55 -> (match tail_54 with
-                | head_56 :: tail_57 -> (match (head_56 : val_) with
-                    | Val_nat n_58 -> (match tail_57 with
-                        | [] -> (let _x_59 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_55) (E4_clock.of_nat n_58)) in
-                          let _x_60 = Val_nat _x_59 in
-                          Some _x_60)
+        | head_57 :: tail_58 -> (match (head_57 : val_) with
+            | Val_nat n_59 -> (match tail_58 with
+                | head_60 :: tail_61 -> (match (head_60 : val_) with
+                    | Val_nat n_62 -> (match tail_61 with
+                        | [] -> (let _x_63 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_59) (E4_clock.of_nat n_62)) in
+                          let _x_64 = Val_nat _x_63 in
+                          Some _x_64)
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_lt -> (match x_2 with
-        | head_67 :: tail_68 -> (match (head_67 : val_) with
-            | Val_nat n_69 -> (match tail_68 with
-                | head_70 :: tail_71 -> (match (head_70 : val_) with
-                    | Val_nat n_72 -> (match tail_71 with
-                        | [] -> (let _x_73 = n_69 < n_72 in
-                          let _x_74 = Val_bool _x_73 in
-                          Some _x_74)
+        | head_71 :: tail_72 -> (match (head_71 : val_) with
+            | Val_nat n_73 -> (match tail_72 with
+                | head_74 :: tail_75 -> (match (head_74 : val_) with
+                    | Val_nat n_76 -> (match tail_75 with
+                        | [] -> (let _x_77 = n_73 < n_76 in
+                          let _x_78 = Val_bool _x_77 in
+                          Some _x_78)
                         | _ -> None)
-                    | _ -> (match tail_71 with
-                        | [] -> program_int_lt head_67 head_70
+                    | _ -> (match tail_75 with
+                        | [] -> program_int_lt head_71 head_74
                         | _ -> None))
                 | _ -> None)
-            | _ -> (match tail_68 with
-                | head_80 :: tail_81 -> (match tail_81 with
-                    | [] -> program_int_lt head_67 head_80
+            | _ -> (match tail_72 with
+                | head_84 :: tail_85 -> (match tail_85 with
+                    | [] -> program_int_lt head_71 head_84
                     | _ -> None)
                 | _ -> None))
         | _ -> None)
     | NativeAtom_eq -> (match x_2 with
-        | head_86 :: tail_87 -> (match (head_86 : val_) with
-            | Val_nat n_88 -> (match tail_87 with
-                | head_89 :: tail_90 -> (match (head_89 : val_) with
-                    | Val_nat n_91 -> (match tail_90 with
-                        | [] -> (let _x_92 = n_88 = n_91 in
-                          let _x_93 = Val_bool _x_92 in
-                          Some _x_93)
+        | head_90 :: tail_91 -> (match (head_90 : val_) with
+            | Val_nat n_92 -> (match tail_91 with
+                | head_93 :: tail_94 -> (match (head_93 : val_) with
+                    | Val_nat n_95 -> (match tail_94 with
+                        | [] -> (let _x_96 = n_92 = n_95 in
+                          let _x_97 = Val_bool _x_96 in
+                          Some _x_97)
                         | _ -> None)
-                    | _ -> (match tail_90 with
-                        | [] -> program_int_eq head_86 head_89
+                    | _ -> (match tail_94 with
+                        | [] -> program_int_eq head_90 head_93
                         | _ -> None))
                 | _ -> None)
-            | Val_str s_99 -> (match tail_87 with
-                | head_100 :: tail_101 -> (match (head_100 : val_) with
-                    | Val_str s_102 -> (match tail_101 with
-                        | [] -> (let _x_103 = s_99 = s_102 in
-                          let _x_104 = Val_bool _x_103 in
-                          Some _x_104)
+            | Val_str s_103 -> (match tail_91 with
+                | head_104 :: tail_105 -> (match (head_104 : val_) with
+                    | Val_str s_106 -> (match tail_105 with
+                        | [] -> (let _x_107 = s_103 = s_106 in
+                          let _x_108 = Val_bool _x_107 in
+                          Some _x_108)
                         | _ -> None)
-                    | _ -> (match tail_101 with
-                        | [] -> program_int_eq head_86 head_100
+                    | _ -> (match tail_105 with
+                        | [] -> program_int_eq head_90 head_104
                         | _ -> None))
                 | _ -> None)
-            | _ -> (match tail_87 with
-                | head_110 :: tail_111 -> (match tail_111 with
-                    | [] -> program_int_eq head_86 head_110
+            | Val_bool b_114 -> (match tail_91 with
+                | head_115 :: tail_116 -> (match (head_115 : val_) with
+                    | Val_bool b_117 -> (match tail_116 with
+                        | [] -> if b_114 then _jp_7 b_117 else if b_117 then _jp_7 b_114 else (let _x_118 = true in
+                              _jp_7 _x_118)
+                        | _ -> None)
+                    | _ -> (match tail_116 with
+                        | [] -> program_int_eq head_90 head_115
+                        | _ -> None))
+                | _ -> None)
+            | _ -> (match tail_91 with
+                | head_123 :: tail_124 -> (match tail_124 with
+                    | [] -> program_int_eq head_90 head_123
                     | _ -> None)
                 | _ -> None))
         | _ -> None)
     | NativeAtom_pair -> (match x_2 with
-        | _ :: tail_117 -> (match tail_117 with
-            | _ :: tail_119 -> (match tail_119 with
-                | [] -> (let _x_120 = Val_list x_2 in
-                  Some _x_120)
+        | _ :: tail_130 -> (match tail_130 with
+            | _ :: tail_132 -> (match tail_132 with
+                | [] -> (let _x_133 = Val_list x_2 in
+                  Some _x_133)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_fst -> (match x_2 with
-        | head_125 :: tail_126 -> (match (head_125 : val_) with
-            | Val_list xs_127 -> (match xs_127 with
-                | head_128 :: _ -> (match tail_126 with
-                    | [] -> Some head_128
+        | head_138 :: tail_139 -> (match (head_138 : val_) with
+            | Val_list xs_140 -> (match xs_140 with
+                | head_141 :: _ -> (match tail_139 with
+                    | [] -> Some head_141
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_snd -> (match x_2 with
-        | head_135 :: tail_136 -> (match (head_135 : val_) with
-            | Val_list xs_137 -> (match xs_137 with
-                | _ :: tail_139 -> (match tail_139 with
-                    | head_140 :: _ -> (match tail_136 with
-                        | [] -> Some head_140
+        | head_148 :: tail_149 -> (match (head_148 : val_) with
+            | Val_list xs_150 -> (match xs_150 with
+                | _ :: tail_152 -> (match tail_152 with
+                    | head_153 :: _ -> (match tail_149 with
+                        | [] -> Some head_153
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
@@ -3283,329 +3298,329 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
         | _ -> None)
     | NativeAtom_strings -> program_strings_atom x_2
     | NativeAtom_causeIsFail -> (match x_2 with
-        | head_149 :: tail_150 -> (match tail_150 with
-            | [] -> (let _x_151 = ReasonTag_fail in
-              program_query_tag _x_151 head_149)
+        | head_162 :: tail_163 -> (match tail_163 with
+            | [] -> (let _x_164 = ReasonTag_fail in
+              program_query_tag _x_164 head_162)
             | _ -> None)
         | _ -> None)
     | NativeAtom_causeError -> (match x_2 with
-        | head_155 :: tail_156 -> (match tail_156 with
-            | [] -> program_query_error head_155
+        | head_168 :: tail_169 -> (match tail_169 with
+            | [] -> program_query_error head_168
             | _ -> None)
         | _ -> None)
     | NativeAtom_causeIsDie -> (match x_2 with
-        | head_160 :: tail_161 -> (match tail_161 with
-            | [] -> (let _x_162 = ReasonTag_die in
-              program_query_tag _x_162 head_160)
+        | head_173 :: tail_174 -> (match tail_174 with
+            | [] -> (let _x_175 = ReasonTag_die in
+              program_query_tag _x_175 head_173)
             | _ -> None)
         | _ -> None)
     | NativeAtom_causeIsInterrupt -> (match x_2 with
-        | head_166 :: tail_167 -> (match tail_167 with
-            | [] -> (let _x_168 = ReasonTag_interrupt in
-              program_query_tag _x_168 head_166)
+        | head_179 :: tail_180 -> (match tail_180 with
+            | [] -> (let _x_181 = ReasonTag_interrupt in
+              program_query_tag _x_181 head_179)
             | _ -> None)
         | _ -> None)
     | NativeAtom_boolOr -> (match x_2 with
-        | head_172 :: tail_173 -> (match (head_172 : val_) with
-            | Val_bool b_174 -> (match tail_173 with
-                | head_175 :: tail_176 -> (match (head_175 : val_) with
-                    | Val_bool b_177 -> (match tail_176 with
-                        | [] -> if b_174 then _jp_7 b_174 else _jp_7 b_177
+        | head_185 :: tail_186 -> (match (head_185 : val_) with
+            | Val_bool b_187 -> (match tail_186 with
+                | head_188 :: tail_189 -> (match (head_188 : val_) with
+                    | Val_bool b_190 -> (match tail_189 with
+                        | [] -> if b_187 then _jp_11 b_187 else _jp_11 b_190
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_boolAnd -> (match x_2 with
-        | head_183 :: tail_184 -> (match (head_183 : val_) with
-            | Val_bool b_185 -> (match tail_184 with
-                | head_186 :: tail_187 -> (match (head_186 : val_) with
-                    | Val_bool b_188 -> (match tail_187 with
-                        | [] -> if b_185 then _jp_11 b_188 else _jp_11 b_185
+        | head_196 :: tail_197 -> (match (head_196 : val_) with
+            | Val_bool b_198 -> (match tail_197 with
+                | head_199 :: tail_200 -> (match (head_199 : val_) with
+                    | Val_bool b_201 -> (match tail_200 with
+                        | [] -> if b_198 then _jp_15 b_201 else _jp_15 b_198
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_tagIs -> (match x_2 with
-        | head_194 :: tail_195 -> (match (head_194 : val_) with
-            | Val_str s_196 -> (match tail_195 with
-                | head_197 :: tail_198 -> (match tail_198 with
-                    | [] -> (let _x_199 = program_native_atom_tag_hit s_196 head_197 in
-                      let _x_200 = Val_bool _x_199 in
-                      Some _x_200)
+        | head_207 :: tail_208 -> (match (head_207 : val_) with
+            | Val_str s_209 -> (match tail_208 with
+                | head_210 :: tail_211 -> (match tail_211 with
+                    | [] -> (let _x_212 = program_native_atom_tag_hit s_209 head_210 in
+                      let _x_213 = Val_bool _x_212 in
+                      Some _x_213)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_isSome -> (match x_2 with
-        | head_206 :: tail_207 -> (match (head_206 : val_) with
-            | Val_none -> (match tail_207 with
-                | [] -> (let _x_208 = false in
-                  let _x_209 = Val_bool _x_208 in
-                  Some _x_209)
+        | head_219 :: tail_220 -> (match (head_219 : val_) with
+            | Val_none -> (match tail_220 with
+                | [] -> (let _x_221 = false in
+                  let _x_222 = Val_bool _x_221 in
+                  Some _x_222)
                 | _ -> None)
-            | Val_some _ -> (match tail_207 with
-                | [] -> (let _x_213 = true in
-                  let _x_214 = Val_bool _x_213 in
-                  Some _x_214)
+            | Val_some _ -> (match tail_220 with
+                | [] -> (let _x_226 = true in
+                  let _x_227 = Val_bool _x_226 in
+                  Some _x_227)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_getOrElse -> (match x_2 with
-        | head_219 :: tail_220 -> (match (head_219 : val_) with
-            | Val_none -> (match tail_220 with
-                | head_221 :: tail_222 -> (match tail_222 with
-                    | [] -> Some head_221
+        | head_232 :: tail_233 -> (match (head_232 : val_) with
+            | Val_none -> (match tail_233 with
+                | head_234 :: tail_235 -> (match tail_235 with
+                    | [] -> Some head_234
                     | _ -> None)
                 | _ -> None)
-            | Val_some a_226 -> (match tail_220 with
-                | _ :: tail_228 -> (match tail_228 with
-                    | [] -> Some a_226
+            | Val_some a_239 -> (match tail_233 with
+                | _ :: tail_241 -> (match tail_241 with
+                    | [] -> Some a_239
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_ite -> (match x_2 with
-        | head_234 :: tail_235 -> (match (head_234 : val_) with
-            | Val_bool b_236 -> (match tail_235 with
-                | head_237 :: tail_238 -> (match tail_238 with
-                    | head_239 :: tail_240 -> (match tail_240 with
-                        | [] -> if b_236 then Some head_237 else Some head_239
+        | head_247 :: tail_248 -> (match (head_247 : val_) with
+            | Val_bool b_249 -> (match tail_248 with
+                | head_250 :: tail_251 -> (match tail_251 with
+                    | head_252 :: tail_253 -> (match tail_253 with
+                        | [] -> if b_249 then Some head_250 else Some head_252
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_optSome -> (match x_2 with
-        | head_248 :: tail_249 -> (match tail_249 with
-            | [] -> (let _x_250 = Val_some head_248 in
-              Some _x_250)
+        | head_261 :: tail_262 -> (match tail_262 with
+            | [] -> (let _x_263 = Val_some head_261 in
+              Some _x_263)
             | _ -> None)
         | _ -> None)
     | NativeAtom_optNone -> (match x_2 with
-        | [] -> (let _x_254 = Val_none in
-          Some _x_254)
+        | [] -> (let _x_267 = Val_none in
+          Some _x_267)
         | _ -> None)
     | NativeAtom_mul -> (match x_2 with
-        | head_257 :: tail_258 -> (match (head_257 : val_) with
-            | Val_nat n_259 -> (match tail_258 with
-                | head_260 :: tail_261 -> (match (head_260 : val_) with
-                    | Val_nat n_262 -> (match tail_261 with
-                        | [] -> (let _x_263 = E4_clock.to_profile_nat (E4_clock.mul (E4_clock.of_nat n_259) (E4_clock.of_nat n_262)) in
-                          let _x_264 = Val_nat _x_263 in
-                          Some _x_264)
+        | head_270 :: tail_271 -> (match (head_270 : val_) with
+            | Val_nat n_272 -> (match tail_271 with
+                | head_273 :: tail_274 -> (match (head_273 : val_) with
+                    | Val_nat n_275 -> (match tail_274 with
+                        | [] -> (let _x_276 = E4_clock.to_profile_nat (E4_clock.mul (E4_clock.of_nat n_272) (E4_clock.of_nat n_275)) in
+                          let _x_277 = Val_nat _x_276 in
+                          Some _x_277)
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_listNil -> (match x_2 with
-        | [] -> (let _x_271 = Val_list x_2 in
-          Some _x_271)
+        | [] -> (let _x_284 = Val_list x_2 in
+          Some _x_284)
         | _ -> None)
     | NativeAtom_listCons -> (match x_2 with
-        | head_274 :: tail_275 -> (match tail_275 with
-            | head_276 :: tail_277 -> (match tail_277 with
-                | [] -> (let _x_278 = val__as_list_opt head_276 in
-                  match _x_278 with
+        | head_287 :: tail_288 -> (match tail_288 with
+            | head_289 :: tail_290 -> (match tail_290 with
+                | [] -> (let _x_291 = val__as_list_opt head_289 in
+                  match _x_291 with
                     | None -> None
-                    | Some val__280 -> (let _x_281 = head_274 :: val__280 in
-                      let _x_282 = Val_list _x_281 in
-                      Some _x_282))
+                    | Some val__293 -> (let _x_294 = head_287 :: val__293 in
+                      let _x_295 = Val_list _x_294 in
+                      Some _x_295))
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_listGet -> (match x_2 with
-        | head_287 :: tail_288 -> (match tail_288 with
-            | head_289 :: tail_290 -> (match (head_289 : val_) with
-                | Val_nat n_291 -> (match tail_290 with
-                    | [] -> (let _x_292 = val__as_list_opt head_287 in
-                      match _x_292 with
+        | head_300 :: tail_301 -> (match tail_301 with
+            | head_302 :: tail_303 -> (match (head_302 : val_) with
+                | Val_nat n_304 -> (match tail_303 with
+                    | [] -> (let _x_305 = val__as_list_opt head_300 in
+                      match _x_305 with
                         | None -> None
-                        | Some val__294 -> (let _x_295 = list_get_opt_internal val__294 n_291 in
-                          match _x_295 with
-                            | None -> (let _x_296 = Val_none in
-                              Some _x_296)
-                            | Some val__298 -> (let _x_299 = Val_some val__298 in
-                              Some _x_299)))
+                        | Some val__307 -> (let _x_308 = list_get_opt_internal val__307 n_304 in
+                          match _x_308 with
+                            | None -> (let _x_309 = Val_none in
+                              Some _x_309)
+                            | Some val__311 -> (let _x_312 = Val_some val__311 in
+                              Some _x_312)))
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_listLength -> (match x_2 with
-        | head_305 :: tail_306 -> (match tail_306 with
-            | [] -> (let _x_307 = val__as_list_opt head_305 in
-              match _x_307 with
+        | head_318 :: tail_319 -> (match tail_319 with
+            | [] -> (let _x_320 = val__as_list_opt head_318 in
+              match _x_320 with
                 | None -> None
-                | Some val__309 -> (let _x_310 = List.length val__309 in
-                  let _x_311 = Val_nat _x_310 in
-                  Some _x_311))
+                | Some val__322 -> (let _x_323 = List.length val__322 in
+                  let _x_324 = Val_nat _x_323 in
+                  Some _x_324))
             | _ -> None)
         | _ -> None)
     | NativeAtom_listAppend -> (match x_2 with
-        | head_315 :: tail_316 -> (match tail_316 with
-            | head_317 :: tail_318 -> (match tail_318 with
-                | [] -> (let _x_319 = val__as_list_opt head_315 in
-                  match _x_319 with
+        | head_328 :: tail_329 -> (match tail_329 with
+            | head_330 :: tail_331 -> (match tail_331 with
+                | [] -> (let _x_332 = val__as_list_opt head_328 in
+                  match _x_332 with
                     | None -> None
-                    | Some val__321 -> (let _x_322 = val__as_list_opt head_317 in
-                      match _x_322 with
+                    | Some val__334 -> (let _x_335 = val__as_list_opt head_330 in
+                      match _x_335 with
                         | None -> None
-                        | Some val__324 -> (let _x_325 = val__321 @ val__324 in
-                          let _x_326 = Val_list _x_325 in
-                          Some _x_326)))
+                        | Some val__337 -> (let _x_338 = val__334 @ val__337 in
+                          let _x_339 = Val_list _x_338 in
+                          Some _x_339)))
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_natSub -> (match x_2 with
-        | head_331 :: tail_332 -> (match (head_331 : val_) with
-            | Val_nat n_333 -> (match tail_332 with
-                | head_334 :: tail_335 -> (match (head_334 : val_) with
-                    | Val_nat n_336 -> (match tail_335 with
-                        | [] -> (let _x_337 = max 0 (n_333 - n_336) in
-                          let _x_338 = Val_nat _x_337 in
-                          Some _x_338)
+        | head_344 :: tail_345 -> (match (head_344 : val_) with
+            | Val_nat n_346 -> (match tail_345 with
+                | head_347 :: tail_348 -> (match (head_347 : val_) with
+                    | Val_nat n_349 -> (match tail_348 with
+                        | [] -> (let _x_350 = max 0 (n_346 - n_349) in
+                          let _x_351 = Val_nat _x_350 in
+                          Some _x_351)
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_natDiv -> (match x_2 with
-        | head_345 :: tail_346 -> (match (head_345 : val_) with
-            | Val_nat n_347 -> (match tail_346 with
-                | head_348 :: tail_349 -> (match (head_348 : val_) with
-                    | Val_nat n_350 -> (match tail_349 with
-                        | [] -> (let _x_351 = E4_nat.div n_347 n_350 in
-                          let _x_352 = Val_nat _x_351 in
-                          Some _x_352)
+        | head_358 :: tail_359 -> (match (head_358 : val_) with
+            | Val_nat n_360 -> (match tail_359 with
+                | head_361 :: tail_362 -> (match (head_361 : val_) with
+                    | Val_nat n_363 -> (match tail_362 with
+                        | [] -> (let _x_364 = E4_nat.div n_360 n_363 in
+                          let _x_365 = Val_nat _x_364 in
+                          Some _x_365)
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_natMod -> (match x_2 with
-        | head_359 :: tail_360 -> (match (head_359 : val_) with
-            | Val_nat n_361 -> (match tail_360 with
-                | head_362 :: tail_363 -> (match (head_362 : val_) with
-                    | Val_nat n_364 -> (match tail_363 with
-                        | [] -> (let _x_365 = E4_nat.rem n_361 n_364 in
-                          let _x_366 = Val_nat _x_365 in
-                          Some _x_366)
+        | head_372 :: tail_373 -> (match (head_372 : val_) with
+            | Val_nat n_374 -> (match tail_373 with
+                | head_375 :: tail_376 -> (match (head_375 : val_) with
+                    | Val_nat n_377 -> (match tail_376 with
+                        | [] -> (let _x_378 = E4_nat.rem n_374 n_377 in
+                          let _x_379 = Val_nat _x_378 in
+                          Some _x_379)
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_strConcat -> (match x_2 with
-        | head_373 :: tail_374 -> (match (head_373 : val_) with
-            | Val_str s_375 -> (match tail_374 with
-                | head_376 :: tail_377 -> (match (head_376 : val_) with
-                    | Val_str s_378 -> (match tail_377 with
-                        | [] -> (let _x_379 = s_375 ^ s_378 in
-                          let _x_380 = Val_str _x_379 in
-                          Some _x_380)
+        | head_386 :: tail_387 -> (match (head_386 : val_) with
+            | Val_str s_388 -> (match tail_387 with
+                | head_389 :: tail_390 -> (match (head_389 : val_) with
+                    | Val_str s_391 -> (match tail_390 with
+                        | [] -> (let _x_392 = s_388 ^ s_391 in
+                          let _x_393 = Val_str _x_392 in
+                          Some _x_393)
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_mapEmpty -> (match x_2 with
-        | [] -> (let _x_387 = map_empty in
-          Some _x_387)
+        | [] -> (let _x_400 = map_empty in
+          Some _x_400)
         | _ -> None)
     | NativeAtom_mapGet -> (match x_2 with
-        | head_390 :: tail_391 -> (match tail_391 with
-            | head_392 :: tail_393 -> (match (head_392 : val_) with
-                | Val_str s_394 -> (match tail_393 with
-                    | [] -> map_get head_390 s_394
+        | head_403 :: tail_404 -> (match tail_404 with
+            | head_405 :: tail_406 -> (match (head_405 : val_) with
+                | Val_str s_407 -> (match tail_406 with
+                    | [] -> map_get head_403 s_407
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_mapSet -> (match x_2 with
-        | head_400 :: tail_401 -> (match tail_401 with
-            | head_402 :: tail_403 -> (match (head_402 : val_) with
-                | Val_str s_404 -> (match tail_403 with
-                    | head_405 :: tail_406 -> (match tail_406 with
-                        | [] -> map_set head_400 s_404 head_405
+        | head_413 :: tail_414 -> (match tail_414 with
+            | head_415 :: tail_416 -> (match (head_415 : val_) with
+                | Val_str s_417 -> (match tail_416 with
+                    | head_418 :: tail_419 -> (match tail_419 with
+                        | [] -> map_set head_413 s_417 head_418
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_mapKeys -> (match x_2 with
-        | head_413 :: tail_414 -> (match tail_414 with
-            | [] -> map_keys head_413
+        | head_426 :: tail_427 -> (match tail_427 with
+            | [] -> map_keys head_426
             | _ -> None)
         | _ -> None)
     | NativeAtom_mapEntries -> (match x_2 with
-        | head_418 :: tail_419 -> (match tail_419 with
-            | [] -> map_entries head_418
+        | head_431 :: tail_432 -> (match tail_432 with
+            | [] -> map_entries head_431
             | _ -> None)
         | _ -> None)
     | NativeAtom_mapFromEntries -> (match x_2 with
-        | head_423 :: tail_424 -> (match tail_424 with
-            | [] -> map_from_entries head_423
+        | head_436 :: tail_437 -> (match tail_437 with
+            | [] -> map_from_entries head_436
             | _ -> None)
         | _ -> None)
-    | NativeAtom_tuple -> (let _x_428 = Val_list x_2 in
-      Some _x_428)
+    | NativeAtom_tuple -> (let _x_441 = Val_list x_2 in
+      Some _x_441)
     | NativeAtom_listTake -> (match x_2 with
-        | head_430 :: tail_431 -> (match tail_431 with
-            | head_432 :: tail_433 -> (match (head_432 : val_) with
-                | Val_nat n_434 -> (match tail_433 with
-                    | [] -> (let _x_435 = val__as_list_opt head_430 in
-                      match _x_435 with
+        | head_443 :: tail_444 -> (match tail_444 with
+            | head_445 :: tail_446 -> (match (head_445 : val_) with
+                | Val_nat n_447 -> (match tail_446 with
+                    | [] -> (let _x_448 = val__as_list_opt head_443 in
+                      match _x_448 with
                         | None -> None
-                        | Some val__437 -> (let _x_438 = 0 in
-                          let _x_439 = [] in
-                          let _x_440 = list_take_tr_go val__437 val__437 n_434 _x_439 in
-                          let _x_441 = Val_list _x_440 in
-                          Some _x_441))
+                        | Some val__450 -> (let _x_451 = 0 in
+                          let _x_452 = [] in
+                          let _x_453 = list_take_tr_go val__450 val__450 n_447 _x_452 in
+                          let _x_454 = Val_list _x_453 in
+                          Some _x_454))
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_listDrop -> (match x_2 with
-        | head_447 :: tail_448 -> (match tail_448 with
-            | head_449 :: tail_450 -> (match (head_449 : val_) with
-                | Val_nat n_451 -> (match tail_450 with
-                    | [] -> (let _x_452 = val__as_list_opt head_447 in
-                      match _x_452 with
+        | head_460 :: tail_461 -> (match tail_461 with
+            | head_462 :: tail_463 -> (match (head_462 : val_) with
+                | Val_nat n_464 -> (match tail_463 with
+                    | [] -> (let _x_465 = val__as_list_opt head_460 in
+                      match _x_465 with
                         | None -> None
-                        | Some val__454 -> (let _x_455 = list_drop n_451 val__454 in
-                          let _x_456 = Val_list _x_455 in
-                          Some _x_456))
+                        | Some val__467 -> (let _x_468 = list_drop n_464 val__467 in
+                          let _x_469 = Val_list _x_468 in
+                          Some _x_469))
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_sameHandle -> (match x_2 with
-        | head_462 :: tail_463 -> (match (head_462 : val_) with
-            | Val_handle (kind_464, key_465) -> (match tail_463 with
-                | head_466 :: tail_467 -> (match (head_466 : val_) with
-                    | Val_handle (kind_468, key_469) -> (match tail_467 with
-                        | [] -> (let _x_470 = kind_464 = kind_468 in
-                          if _x_470 then (let _x_472 = key_465 = key_469 in
-                            let _x_473 = Val_bool _x_472 in
-                            Some _x_473) else None)
+        | head_475 :: tail_476 -> (match (head_475 : val_) with
+            | Val_handle (kind_477, key_478) -> (match tail_476 with
+                | head_479 :: tail_480 -> (match (head_479 : val_) with
+                    | Val_handle (kind_481, key_482) -> (match tail_480 with
+                        | [] -> (let _x_483 = kind_477 = kind_481 in
+                          if _x_483 then (let _x_485 = key_478 = key_482 in
+                            let _x_486 = Val_bool _x_485 in
+                            Some _x_486) else None)
                         | _ -> None)
                     | _ -> None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_intAdd -> (match x_2 with
-        | head_480 :: tail_481 -> (match tail_481 with
-            | head_482 :: tail_483 -> (match tail_483 with
-                | [] -> program_int_add head_480 head_482
+        | head_493 :: tail_494 -> (match tail_494 with
+            | head_495 :: tail_496 -> (match tail_496 with
+                | [] -> program_int_add head_493 head_495
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeAtom_intSub -> (match x_2 with
-        | head_488 :: tail_489 -> (match tail_489 with
-            | head_490 :: tail_491 -> (match tail_491 with
-                | [] -> program_int_sub head_488 head_490
+        | head_501 :: tail_502 -> (match tail_502 with
+            | head_503 :: tail_504 -> (match tail_504 with
+                | [] -> program_int_sub head_501 head_503
                 | _ -> None)
             | _ -> None)
         | _ -> None)

@@ -20,7 +20,7 @@
    "normal": {"_tag": "int"},
    "metadata": "[10, [3], []]",
    "key": [3],
-   "annotation": "number"},
+   "annotation": "Int"},
   {"raw": {"_tag": "string"},
    "normal": {"_tag": "string"},
    "metadata": "[10, [4], []]",
@@ -151,7 +151,7 @@
    "normal": {"_tag": "number"},
    "metadata": "[10, [26], []]",
    "key": [26],
-   "annotation": "number"},
+   "annotation": "Num"},
   {"raw": {"_tag": "bytes"},
    "normal": {"_tag": "bytes"},
    "metadata": "[10, [27], []]",
@@ -389,7 +389,7 @@
    "metadata":
    "[10, [14], [[10, [20], [[4, [[5, [3, \"x\"], [5, [1, true], [10, [2], []]]]]]]], [10, [20], [[4, [[5, [3, \"x\"], [5, [1, true], [10, [26], []]]]]]]]]]",
    "key": [14, 8, 20, 1, 1, 120, 1, 1, 2, 0, 20, 1, 1, 120, 1, 1, 26, 0],
-   "annotation": "{ readonly x?: number }"},
+   "annotation": "{ readonly x?: Num }"},
   {"raw":
    {"fields":
     [["_tag", [false, {"value": "NotFound", "_tag": "lit"}]],
@@ -913,7 +913,7 @@
    "metadata":
    "[10, [14], [[10, [21], [[10, [4], []], [10, [2], []]]], [10, [21], [[10, [4], []], [10, [26], []]]]]]",
    "key": [14, 4, 21, 1, 4, 2, 21, 1, 4, 26],
-   "annotation": "Readonly<Record<string, number>>"},
+   "annotation": "Readonly<Record<string, Num>>"},
   {"raw":
    {"right": {"value": {"_tag": "number"}, "_tag": "refOf"},
     "left": {"value": {"_tag": "nat"}, "_tag": "refOf"},
@@ -925,7 +925,7 @@
    "metadata":
    "[10, [14], [[10, [16], [[10, [2], []]]], [10, [16], [[10, [26], []]]]]]",
    "key": [14, 2, 16, 2, 16, 26],
-   "annotation": "Ref.Ref<number>"},
+   "annotation": "Ref.Ref<number> | Ref.Ref<Num>"},
   {"raw":
    {"right":
     {"right": {"_tag": "bytes"}, "left": {"_tag": "bool"}, "_tag": "union"},
@@ -989,7 +989,7 @@
     1,
     27,
     0],
-   "annotation": "readonly [number, string, Uint8Array]"},
+   "annotation": "readonly [Num, string, Uint8Array]"},
   {"raw":
    {"fields":
     [["function",
@@ -1030,7 +1030,7 @@
     25,
     0],
    "annotation":
-   "{ readonly \"\": Option.Option<undefined>; readonly \"function\"?: number }"},
+   "{ readonly \"\": Option.Option<undefined>; readonly \"function\"?: Int }"},
   {"raw": {"right": {"_tag": "nat"}, "left": {"_tag": "nat"}, "_tag": "union"},
    "normal": {"_tag": "nat"},
    "metadata": "[10, [14], [[10, [2], []], [10, [2], []]]]",
@@ -1040,13 +1040,13 @@
    "normal": {"_tag": "int"},
    "metadata": "[10, [14], [[10, [2], []], [10, [3], []]]]",
    "key": [14, 1, 2, 3],
-   "annotation": "number"},
+   "annotation": "Int"},
   {"raw":
    {"right": {"_tag": "number"}, "left": {"_tag": "nat"}, "_tag": "union"},
    "normal": {"_tag": "number"},
    "metadata": "[10, [14], [[10, [2], []], [10, [26], []]]]",
    "key": [14, 1, 2, 26],
-   "annotation": "number"},
+   "annotation": "Num"},
   {"raw":
    {"right": {"_tag": "string"}, "left": {"_tag": "nat"}, "_tag": "union"},
    "normal":
@@ -1154,25 +1154,25 @@
    "normal": {"_tag": "int"},
    "metadata": "[10, [14], [[10, [3], []], [10, [2], []]]]",
    "key": [14, 1, 3, 2],
-   "annotation": "number"},
+   "annotation": "Int"},
   {"raw": {"right": {"_tag": "int"}, "left": {"_tag": "int"}, "_tag": "union"},
    "normal": {"_tag": "int"},
    "metadata": "[10, [14], [[10, [3], []], [10, [3], []]]]",
    "key": [14, 1, 3, 3],
-   "annotation": "number"},
+   "annotation": "Int"},
   {"raw":
    {"right": {"_tag": "number"}, "left": {"_tag": "int"}, "_tag": "union"},
    "normal": {"_tag": "number"},
    "metadata": "[10, [14], [[10, [3], []], [10, [26], []]]]",
    "key": [14, 1, 3, 26],
-   "annotation": "number"},
+   "annotation": "Num"},
   {"raw":
    {"right": {"_tag": "string"}, "left": {"_tag": "int"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "string"}, "left": {"_tag": "int"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [3], []], [10, [4], []]]]",
    "key": [14, 1, 3, 4],
-   "annotation": "number | string"},
+   "annotation": "Int | string"},
   {"raw":
    {"right": {"value": "a | b", "_tag": "lit"},
     "left": {"_tag": "int"},
@@ -1183,20 +1183,20 @@
     "_tag": "union"},
    "metadata": "[10, [14], [[10, [3], []], [10, [15], [[3, \"a | b\"]]]]]",
    "key": [14, 1, 3, 15, 97, 32, 124, 32, 98],
-   "annotation": "number | \"a | b\""},
+   "annotation": "Int | \"a | b\""},
   {"raw":
    {"right": {"_tag": "undefined"}, "left": {"_tag": "int"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "undefined"}, "left": {"_tag": "int"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [3], []], [10, [25], []]]]",
    "key": [14, 1, 3, 25],
-   "annotation": "number | undefined"},
+   "annotation": "Int | undefined"},
   {"raw": {"right": {"_tag": "unit"}, "left": {"_tag": "int"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "int"}, "left": {"_tag": "unit"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [3], []], [10, [1], []]]]",
    "key": [14, 1, 3, 1],
-   "annotation": "void | number"},
+   "annotation": "void | Int"},
   {"raw":
    {"right": {"_tag": "unknown"}, "left": {"_tag": "int"}, "_tag": "union"},
    "normal": {"_tag": "unknown"},
@@ -1208,14 +1208,14 @@
    "normal": {"_tag": "int"},
    "metadata": "[10, [14], [[10, [3], []], [10, [], []]]]",
    "key": [14, 1, 3, 0],
-   "annotation": "number"},
+   "annotation": "Int"},
   {"raw":
    {"right": {"_tag": "bytes"}, "left": {"_tag": "int"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "bytes"}, "left": {"_tag": "int"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [3], []], [10, [27], []]]]",
    "key": [14, 1, 3, 27],
-   "annotation": "number | Uint8Array"},
+   "annotation": "Int | Uint8Array"},
   {"raw":
    {"right": {"target": "Context.Context<unknown>", "_tag": "handle"},
     "left": {"_tag": "int"},
@@ -1255,7 +1255,7 @@
     119,
     110,
     62],
-   "annotation": "number | Context.Context<unknown>"},
+   "annotation": "Int | Context.Context<unknown>"},
   {"raw":
    {"right": {"target": " ( A | B ) | B ", "_tag": "handle"},
     "left": {"_tag": "int"},
@@ -1268,32 +1268,32 @@
    "[10, [14], [[10, [3], []], [10, [6], [[3, \" ( A | B ) | B \"]]]]]",
    "key":
    [14, 1, 3, 6, 32, 40, 32, 65, 32, 124, 32, 66, 32, 41, 32, 124, 32, 66, 32],
-   "annotation": "number | A | B"},
+   "annotation": "Int | A | B"},
   {"raw":
    {"right": {"_tag": "nat"}, "left": {"_tag": "number"}, "_tag": "union"},
    "normal": {"_tag": "number"},
    "metadata": "[10, [14], [[10, [26], []], [10, [2], []]]]",
    "key": [14, 1, 26, 2],
-   "annotation": "number"},
+   "annotation": "Num"},
   {"raw":
    {"right": {"_tag": "int"}, "left": {"_tag": "number"}, "_tag": "union"},
    "normal": {"_tag": "number"},
    "metadata": "[10, [14], [[10, [26], []], [10, [3], []]]]",
    "key": [14, 1, 26, 3],
-   "annotation": "number"},
+   "annotation": "Num"},
   {"raw":
    {"right": {"_tag": "number"}, "left": {"_tag": "number"}, "_tag": "union"},
    "normal": {"_tag": "number"},
    "metadata": "[10, [14], [[10, [26], []], [10, [26], []]]]",
    "key": [14, 1, 26, 26],
-   "annotation": "number"},
+   "annotation": "Num"},
   {"raw":
    {"right": {"_tag": "string"}, "left": {"_tag": "number"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "number"}, "left": {"_tag": "string"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [26], []], [10, [4], []]]]",
    "key": [14, 1, 26, 4],
-   "annotation": "string | number"},
+   "annotation": "string | Num"},
   {"raw":
    {"right": {"value": "a | b", "_tag": "lit"},
     "left": {"_tag": "number"},
@@ -1304,7 +1304,7 @@
     "_tag": "union"},
    "metadata": "[10, [14], [[10, [26], []], [10, [15], [[3, \"a | b\"]]]]]",
    "key": [14, 1, 26, 15, 97, 32, 124, 32, 98],
-   "annotation": "\"a | b\" | number"},
+   "annotation": "\"a | b\" | Num"},
   {"raw":
    {"right": {"_tag": "undefined"},
     "left": {"_tag": "number"},
@@ -1315,14 +1315,14 @@
     "_tag": "union"},
    "metadata": "[10, [14], [[10, [26], []], [10, [25], []]]]",
    "key": [14, 1, 26, 25],
-   "annotation": "undefined | number"},
+   "annotation": "undefined | Num"},
   {"raw":
    {"right": {"_tag": "unit"}, "left": {"_tag": "number"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "number"}, "left": {"_tag": "unit"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [26], []], [10, [1], []]]]",
    "key": [14, 1, 26, 1],
-   "annotation": "void | number"},
+   "annotation": "void | Num"},
   {"raw":
    {"right": {"_tag": "unknown"}, "left": {"_tag": "number"}, "_tag": "union"},
    "normal": {"_tag": "unknown"},
@@ -1334,14 +1334,14 @@
    "normal": {"_tag": "number"},
    "metadata": "[10, [14], [[10, [26], []], [10, [], []]]]",
    "key": [14, 1, 26, 0],
-   "annotation": "number"},
+   "annotation": "Num"},
   {"raw":
    {"right": {"_tag": "bytes"}, "left": {"_tag": "number"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "bytes"}, "left": {"_tag": "number"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [26], []], [10, [27], []]]]",
    "key": [14, 1, 26, 27],
-   "annotation": "number | Uint8Array"},
+   "annotation": "Num | Uint8Array"},
   {"raw":
    {"right": {"target": "Context.Context<unknown>", "_tag": "handle"},
     "left": {"_tag": "number"},
@@ -1381,7 +1381,7 @@
     119,
     110,
     62],
-   "annotation": "Context.Context<unknown> | number"},
+   "annotation": "Context.Context<unknown> | Num"},
   {"raw":
    {"right": {"target": " ( A | B ) | B ", "_tag": "handle"},
     "left": {"_tag": "number"},
@@ -1394,7 +1394,7 @@
    "[10, [14], [[10, [26], []], [10, [6], [[3, \" ( A | B ) | B \"]]]]]",
    "key":
    [14, 1, 26, 6, 32, 40, 32, 65, 32, 124, 32, 66, 32, 41, 32, 124, 32, 66, 32],
-   "annotation": "A | B | number"},
+   "annotation": "A | B | Num"},
   {"raw":
    {"right": {"_tag": "nat"}, "left": {"_tag": "string"}, "_tag": "union"},
    "normal":
@@ -1408,14 +1408,14 @@
    {"right": {"_tag": "string"}, "left": {"_tag": "int"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [4], []], [10, [3], []]]]",
    "key": [14, 1, 4, 3],
-   "annotation": "number | string"},
+   "annotation": "Int | string"},
   {"raw":
    {"right": {"_tag": "number"}, "left": {"_tag": "string"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "number"}, "left": {"_tag": "string"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [4], []], [10, [26], []]]]",
    "key": [14, 1, 4, 26],
-   "annotation": "string | number"},
+   "annotation": "string | Num"},
   {"raw":
    {"right": {"_tag": "string"}, "left": {"_tag": "string"}, "_tag": "union"},
    "normal": {"_tag": "string"},
@@ -1541,7 +1541,7 @@
     "_tag": "union"},
    "metadata": "[10, [14], [[10, [15], [[3, \"a | b\"]]], [10, [3], []]]]",
    "key": [14, 6, 15, 97, 32, 124, 32, 98, 3],
-   "annotation": "number | \"a | b\""},
+   "annotation": "Int | \"a | b\""},
   {"raw":
    {"right": {"_tag": "number"},
     "left": {"value": "a | b", "_tag": "lit"},
@@ -1552,7 +1552,7 @@
     "_tag": "union"},
    "metadata": "[10, [14], [[10, [15], [[3, \"a | b\"]]], [10, [26], []]]]",
    "key": [14, 6, 15, 97, 32, 124, 32, 98, 26],
-   "annotation": "\"a | b\" | number"},
+   "annotation": "\"a | b\" | Num"},
   {"raw":
    {"right": {"_tag": "string"},
     "left": {"value": "a | b", "_tag": "lit"},
@@ -1713,7 +1713,7 @@
    {"right": {"_tag": "undefined"}, "left": {"_tag": "int"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [25], []], [10, [3], []]]]",
    "key": [14, 1, 25, 3],
-   "annotation": "number | undefined"},
+   "annotation": "Int | undefined"},
   {"raw":
    {"right": {"_tag": "number"},
     "left": {"_tag": "undefined"},
@@ -1724,7 +1724,7 @@
     "_tag": "union"},
    "metadata": "[10, [14], [[10, [25], []], [10, [26], []]]]",
    "key": [14, 1, 25, 26],
-   "annotation": "undefined | number"},
+   "annotation": "undefined | Num"},
   {"raw":
    {"right": {"_tag": "string"},
     "left": {"_tag": "undefined"},
@@ -1846,14 +1846,14 @@
    {"right": {"_tag": "int"}, "left": {"_tag": "unit"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [1], []], [10, [3], []]]]",
    "key": [14, 1, 1, 3],
-   "annotation": "void | number"},
+   "annotation": "void | Int"},
   {"raw":
    {"right": {"_tag": "number"}, "left": {"_tag": "unit"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "number"}, "left": {"_tag": "unit"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [1], []], [10, [26], []]]]",
    "key": [14, 1, 1, 26],
-   "annotation": "void | number"},
+   "annotation": "void | Num"},
   {"raw":
    {"right": {"_tag": "string"}, "left": {"_tag": "unit"}, "_tag": "union"},
    "normal":
@@ -2078,13 +2078,13 @@
    "normal": {"_tag": "int"},
    "metadata": "[10, [14], [[10, [], []], [10, [3], []]]]",
    "key": [14, 1, 0, 3],
-   "annotation": "number"},
+   "annotation": "Int"},
   {"raw":
    {"right": {"_tag": "number"}, "left": {"_tag": "never"}, "_tag": "union"},
    "normal": {"_tag": "number"},
    "metadata": "[10, [14], [[10, [], []], [10, [26], []]]]",
    "key": [14, 1, 0, 26],
-   "annotation": "number"},
+   "annotation": "Num"},
   {"raw":
    {"right": {"_tag": "string"}, "left": {"_tag": "never"}, "_tag": "union"},
    "normal": {"_tag": "string"},
@@ -2189,14 +2189,14 @@
    {"right": {"_tag": "bytes"}, "left": {"_tag": "int"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [27], []], [10, [3], []]]]",
    "key": [14, 1, 27, 3],
-   "annotation": "number | Uint8Array"},
+   "annotation": "Int | Uint8Array"},
   {"raw":
    {"right": {"_tag": "number"}, "left": {"_tag": "bytes"}, "_tag": "union"},
    "normal":
    {"right": {"_tag": "bytes"}, "left": {"_tag": "number"}, "_tag": "union"},
    "metadata": "[10, [14], [[10, [27], []], [10, [26], []]]]",
    "key": [14, 1, 27, 26],
-   "annotation": "number | Uint8Array"},
+   "annotation": "Num | Uint8Array"},
   {"raw":
    {"right": {"_tag": "string"}, "left": {"_tag": "bytes"}, "_tag": "union"},
    "normal":
@@ -2379,7 +2379,7 @@
     110,
     62,
     3],
-   "annotation": "number | Context.Context<unknown>"},
+   "annotation": "Int | Context.Context<unknown>"},
   {"raw":
    {"right": {"_tag": "number"},
     "left": {"target": "Context.Context<unknown>", "_tag": "handle"},
@@ -2419,7 +2419,7 @@
     110,
     62,
     26],
-   "annotation": "Context.Context<unknown> | number"},
+   "annotation": "Context.Context<unknown> | Num"},
   {"raw":
    {"right": {"_tag": "string"},
     "left": {"target": "Context.Context<unknown>", "_tag": "handle"},
@@ -2840,7 +2840,7 @@
    "[10, [14], [[10, [6], [[3, \" ( A | B ) | B \"]]], [10, [3], []]]]",
    "key":
    [14, 16, 6, 32, 40, 32, 65, 32, 124, 32, 66, 32, 41, 32, 124, 32, 66, 32, 3],
-   "annotation": "number | A | B"},
+   "annotation": "Int | A | B"},
   {"raw":
    {"right": {"_tag": "number"},
     "left": {"target": " ( A | B ) | B ", "_tag": "handle"},
@@ -2871,7 +2871,7 @@
     66,
     32,
     26],
-   "annotation": "A | B | number"},
+   "annotation": "A | B | Num"},
   {"raw":
    {"right": {"_tag": "string"},
     "left": {"target": " ( A | B ) | B ", "_tag": "handle"},

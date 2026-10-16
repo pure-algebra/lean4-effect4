@@ -116,7 +116,7 @@ g199	true	-	-	-	-	-	typed-clean
 g2	false	notFiber	0.0	2345	2345	-	refused-agree
 g20	true	-	-	-	-	-	typed-clean
 g200	false	requestNotSubtype	.	2345|2769	2345	-	refused-agree
-g201	false	term	.	2345|2769|2554	2345	-	refused-agree
+g201	true	-	-	-	-	-	typed-clean
 g202	false	term	.	2345|2769|2554	2345	-	refused-agree
 g203	false	errorNotAdmitted	0.0.0.0.0	-	-	-	refused-silent
 g204	false	term	0.1.0.1	2345|2769|2554	2345|2379	-	refused-agree
