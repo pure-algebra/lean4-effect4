@@ -25,7 +25,7 @@ the engine's program types reach no carrier. So one emitter change can give one 
 | LC-4 F: the derived and fixture inputs from the import closure | ready, never built | the same patch; `make -n -W` dry runs only |
 | LC-4 D: constructor origins enter the clock graph only once a field holds a fact | draft | `lc4-unlanded/patchD.py`; 93% of 163,368 clock facts are constructor origins |
 | LC-5 focused tests | not started | |
-| LC-6 the to-do in OCaml from LCNF | the host run landed (§6) | the lowered host run matches Lean byte for byte; the engine takes the row table, and admits a reply as Lean's checked replay does (`E4_engine.admits`, `answer_async_value`); open: a host driver over them, with a provider record, and the one report |
+| LC-6 the to-do in OCaml from LCNF | the host run landed (§6) | the lowered host run matches Lean byte for byte; the engine takes the row table and admits a reply as Lean's checked replay does; `E4_host`, Lean's `Run.driveFrom` over the engine, reproduces `Run.runWith` byte for byte with the lowered reactors as providers (`test_todo.ml`, T8); open: a provider written in OCaml (a repository not lowered from Lean), and the one report |
 | LC-7 the session from LCNF | not started; blocked | the nine F4 rows are absent from `src/OCaml5/Lcnf/Builtins.lean` (checked by name), with F3, the clock refusal of `Effect4.Live.start` and the run-wide heartbeat budget |
 | LC-8 the carriers as Lean data | not started | the design note comes first |
 | LC-9 the C face | not started | after LC-7 |
@@ -201,6 +201,7 @@ route and `Conform` sit outside `Effect4` and `Effect4.Laws`.
 | LC-6, the to-do in OCaml from LCNF | its commit | `todo_gen.ml` lowers `Test.Dogfood.Scenario.Todo.HostRun` (1,337 declarations, no clock refusal); the lane `ocaml/engine/test/todo/` matches Lean on 7 requests over 2 hosts, 16 checks; its Lean inputs reach no law module |
 | The estate's cleanups beside LC-6 | `eb3c35e83` to `1a55e9b47` | one value codec (`Eff_val`); an unreachable alternative stated, and the generated machine compiled with warnings as errors; `tyO` and `tyV` as folds, no byte moved; the engine takes the row table; one `Api_gen_inst`, whose bench copy had lost a sort |
 | Reply admission on the engine | its commit | `Effect4.Program.admit` lowered into both machines; the to-do lane checks a refused natural and an admitted reference answer against Lean on every request, both instances (T6, T7) |
+| `E4_host`, the host driver | its commit | the to-do on the engine under a provider matches Lean's run on 7 requests, 2 hosts, both instances; 51 checks |
 | K1b, the host boundary in the one module | its commit | `Store.Val`, `Err`, `Defect`, `Reason`, `Exit` and `Completion` join `eff_types.ml`; the engine driver's instance signature drops its ten hand transcriptions of them; every OCaml test and `check-ocaml` pass |
 | LC-6, the to-do on OCaml | the Lean half landed (§6.7); the face waits on three generator features | `Test/Dogfood/Scenario/Todo/Host.lean`: `serve` and `serveBuilt` run one request with a recording repository, and their guards pass in Lean |
 | K7 | ruled out | the scenario writer needs the authored programs, which import the author's laws by decisions row 332; the fixture rerun costs 20.0 s and moves no byte |
