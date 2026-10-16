@@ -295,8 +295,11 @@ def generate(families, output):
             imports = sorted({m for artefact in recipe['artefacts'] for m in artefact.get('import', [])})
             run(['lake', 'build', *imports])
             run(['lake', 'build', 'OCaml5.Tools.LcnfGen'])
-            run(['lake', 'env', 'lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean',
-                 '--recipe', LCNF_ROOTS])
+            # One process per artifact, so a process holds one artifact's imports: the recipe in
+            # one process peaked at 6.3 GB on 2026-10-16, past the cap. The bytes are the same.
+            for index in range(len(recipe['artefacts'])):
+                run(['lake', 'env', 'lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean',
+                     '--recipe', LCNF_ROOTS, '--one', str(index)])
 
 
 def main():

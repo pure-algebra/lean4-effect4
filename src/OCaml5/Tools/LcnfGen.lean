@@ -5,11 +5,14 @@ import OCaml5.Lcnf.Gen
 # LcnfGen — Lean definitions to OCaml modules, through the mono-phase LCNF
 
 A thin driver over `OCaml5.Lcnf.Gen`. With `--recipe <path>` it makes every artifact of the recipe
-(`ocaml/gen/roots.json`, `make gen-lcnf`) in one process: each set of modules is imported once,
-and each artifact gets its own run over it. With an artifact's own arguments it makes that
-artifact alone; that is the command each artifact's header carries.
+(`ocaml/gen/roots.json`) in one process: each set of modules is imported once, and each artifact
+gets its own run over it. With `--recipe <path> --one <n>` it makes the recipe's artifact `n`
+alone, at the arguments the recipe gives it; `make gen-lcnf` runs each artifact so, in its own
+process, so a process holds one artifact's imports (one process for all six peaked at 6.3 GB on
+2026-10-16, past the 4096 MB cap). With an artifact's own arguments it makes that artifact
+alone; that is the command each artifact's header carries. The three forms write the same bytes.
 
-    lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean --recipe ocaml/gen/roots.json
+    lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean --recipe ocaml/gen/roots.json --one 0
     lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean \
       --out ocaml/gen/api_gen.ml --import Effect4.Api --cap 2000 \
       Effect4.Api.run Effect4.Api.replay …
@@ -63,6 +66,11 @@ def main (argv : List String) : IO Unit := do
   -- The artifacts to make, each as its argv.
   let runs ← match argv with
     | ["--recipe", path] => IO.ofExcept (Gen.recipeArgvs (← readRecipe path))
+    | ["--recipe", path, "--one", n] => do
+      let all ← IO.ofExcept (Gen.recipeArgvs (← readRecipe path))
+      match n.toNat?.bind (all[·]?) with
+      | some one => pure #[one]
+      | none => throw (IO.userError s!"{path}: no artifact {n} among {all.size}")
     | _ => pure #[argv]
   -- One environment for each set of imports, in the order the artifacts first name it.
   let mut envs : Array (Array Name × Environment) := #[]
