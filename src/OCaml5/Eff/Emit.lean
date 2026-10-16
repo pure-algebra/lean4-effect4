@@ -1,6 +1,7 @@
 import OCaml5.Eff.World
 import OCaml5.Ml.Render
 import OCaml5.Ml.Check
+import Effect4.Program.TyFoldExtras
 
 /-!
 # OCaml5.Eff.Emit
@@ -478,46 +479,23 @@ def keyO (k : ServiceKey) : Ml.Expr :=
 /-- A constructor of a type of the program, applied. -/
 private def pc (t : Name) (c : String) (args : List Ml.Expr := []) : Ml.Expr := .ctor (octor t c) args
 
-mutual
-def tyO : Ty → Ml.Expr
-  | .never => pc `Effect4.Program.Ty "never"
-  | .unknown => pc `Effect4.Program.Ty "unknown"
-  | .unit => pc `Effect4.Program.Ty "unit"
-  | .nat => pc `Effect4.Program.Ty "nat"
-  | .int => pc `Effect4.Program.Ty "int"
-  | .string => pc `Effect4.Program.Ty "string"
-  | .bool => pc `Effect4.Program.Ty "bool"
-  | .handle target => pc `Effect4.Program.Ty "handle" [.str target]
-  | .option inner => pc `Effect4.Program.Ty "option" [tyO inner]
-  | .list inner => pc `Effect4.Program.Ty "list" [tyO inner]
-  | .prod l r => pc `Effect4.Program.Ty "prod" [tyO l, tyO r]
-  | .except e v => pc `Effect4.Program.Ty "except" [tyO e, tyO v]
-  | .exitOf v e => pc `Effect4.Program.Ty "exitOf" [tyO v, tyO e]
-  | .causeOf e => pc `Effect4.Program.Ty "causeOf" [tyO e]
-  | .fiberOf v e => pc `Effect4.Program.Ty "fiberOf" [tyO v, tyO e]
-  | .union l r => pc `Effect4.Program.Ty "union" [tyO l, tyO r]
-  | .lit s => pc `Effect4.Program.Ty "lit" [.str s]
-  | .refOf v => pc `Effect4.Program.Ty "refOf" [tyO v]
-  | .deferredOf v e => pc `Effect4.Program.Ty "deferredOf" [tyO v, tyO e]
-  | .var i => pc `Effect4.Program.Ty "var" [.int i]
-  | .record fs => pc `Effect4.Program.Ty "record" [.listLit (fieldsO fs)]
-  | .map k v => pc `Effect4.Program.Ty "map" [tyO k, tyO v]
-  | .tuple ts => pc `Effect4.Program.Ty "tuple" [.listLit (itemsO ts)]
-  | .app n ts => pc `Effect4.Program.Ty "app" [.str n, .listLit (itemsO ts)]
-  | .null => pc `Effect4.Program.Ty "null"
-  | .undefined => pc `Effect4.Program.Ty "undefined"
-  | .number => pc `Effect4.Program.Ty "number"
-  | .bytes => pc `Effect4.Program.Ty "bytes"
-  | .contextOf keys => pc `Effect4.Program.Ty "contextOf" [.listLit (keys.elems.map keyO)]
+/-- One argument of a `Ty` constructor as OCaml: a child folded, a payload as its literal. -/
+private def tyArgO : TyArgF Ml.Expr → Ml.Expr
+  | .child r => r
+  | .str s => .str s
+  | .nat n => .int n
+  | .list_prod_string_prod_bool_ty fs => .listLit (fs.map fun (n, o, t) => .tuple [.str n, .tuple [.bool o, t]])
+  | .list_ty ts => .listLit ts
+  | .serviceKey keys => .listLit (keys.elems.map keyO)
+
+/-- A program type as OCaml: each constructor applied to its arguments by its own name, as one
+fold (`TyAlgebra.ofLayer`), so a new constructor of `Ty` needs no line here. -/
+def tyO (t : Ty) : Ml.Expr :=
+  cata_ty (TyAlgebra.ofLayer fun c args => pc `Effect4.Program.Ty c.name (args.map tyArgO)) t
+
 /-- A record's fields, `(string * (bool * ty))` each. -/
-def fieldsO : List (String × Bool × Ty) → List Ml.Expr
-  | [] => []
-  | (n, o, t) :: rest => .tuple [.str n, .tuple [.bool o, tyO t]] :: fieldsO rest
-/-- A tuple's or a reference's items. -/
-def itemsO : List Ty → List Ml.Expr
-  | [] => []
-  | t :: rest => tyO t :: itemsO rest
-end
+def fieldsO (fs : List (String × Bool × Ty)) : List Ml.Expr :=
+  fs.map fun (n, o, t) => .tuple [.str n, .tuple [.bool o, tyO t]]
 
 def litO : Lit → Ml.Expr
   | .unit => pc `Effect4.Program.Lit "unit"

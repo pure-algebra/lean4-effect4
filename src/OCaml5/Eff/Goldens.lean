@@ -91,46 +91,23 @@ def keyV (k : ServiceKey) : V :=
     [ ("name", .struct ``Effect4.ServiceName [("value", .nat k.name.value)])
     , ("service", .struct ``Effect4.ServiceTypeCode [("value", .nat k.service.value)]) ]
 
-mutual
-def tyV : Ty → V
-  | .never => .ctor ``Ty.never []
-  | .unknown => .ctor ``Ty.unknown []
-  | .unit => .ctor ``Ty.unit []
-  | .nat => .ctor ``Ty.nat []
-  | .int => .ctor ``Ty.int []
-  | .string => .ctor ``Ty.string []
-  | .bool => .ctor ``Ty.bool []
-  | .handle target => .ctor ``Ty.handle [.str target]
-  | .option inner => .ctor ``Ty.option [tyV inner]
-  | .list inner => .ctor ``Ty.list [tyV inner]
-  | .prod l r => .ctor ``Ty.prod [tyV l, tyV r]
-  | .except e v => .ctor ``Ty.except [tyV e, tyV v]
-  | .exitOf v e => .ctor ``Ty.exitOf [tyV v, tyV e]
-  | .causeOf e => .ctor ``Ty.causeOf [tyV e]
-  | .fiberOf v e => .ctor ``Ty.fiberOf [tyV v, tyV e]
-  | .union l r => .ctor ``Ty.union [tyV l, tyV r]
-  | .lit s => .ctor ``Ty.lit [.str s]
-  | .refOf v => .ctor ``Ty.refOf [tyV v]
-  | .deferredOf v e => .ctor ``Ty.deferredOf [tyV v, tyV e]
-  | .var i => .ctor ``Ty.var [.nat i]
-  | .record fs => .ctor ``Ty.record [.list (fieldsV fs)]
-  | .map k v => .ctor ``Ty.map [tyV k, tyV v]
-  | .tuple ts => .ctor ``Ty.tuple [.list (itemsV ts)]
-  | .app n ts => .ctor ``Ty.app [.str n, .list (itemsV ts)]
-  | .null => .ctor ``Ty.null []
-  | .undefined => .ctor ``Ty.undefined []
-  | .number => .ctor ``Ty.number []
-  | .bytes => .ctor ``Ty.bytes []
-  | .contextOf keys => .ctor ``Ty.contextOf [.list (keys.elems.map keyV)]
+/-- One argument of a `Ty` constructor as a value: a child folded, a payload as itself. -/
+private def tyArgV : TyArgF V → V
+  | .child r => r
+  | .str s => .str s
+  | .nat n => .nat n
+  | .list_prod_string_prod_bool_ty fs => .list (fs.map fun (n, o, t) => .pair (.str n) (.pair (.bool o) t))
+  | .list_ty ts => .list ts
+  | .serviceKey keys => .list (keys.elems.map keyV)
+
+/-- A program type as a value: each constructor applied to its arguments, as one fold
+(`TyAlgebra.ofLayer`), so a new constructor of `Ty` needs no line here. -/
+def tyV (t : Ty) : V :=
+  cata_ty (TyAlgebra.ofLayer fun c args => .ctor (Name.str ``Ty c.name) (args.map tyArgV)) t
+
 /-- A record's fields, each the nested pair `(name, (optional, type))`. -/
-def fieldsV : List (String × Bool × Ty) → List V
-  | [] => []
-  | (n, o, t) :: rest => .pair (.str n) (.pair (.bool o) (tyV t)) :: fieldsV rest
-/-- A tuple's or a reference's items. -/
-def itemsV : List Ty → List V
-  | [] => []
-  | t :: rest => tyV t :: itemsV rest
-end
+def fieldsV (fs : List (String × Bool × Ty)) : List V :=
+  fs.map fun (n, o, t) => .pair (.str n) (.pair (.bool o) (tyV t))
 
 def litV : Lit → V
   | .unit => .ctor ``Lit.unit []
