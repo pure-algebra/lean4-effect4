@@ -2,6 +2,7 @@ import Effect4.Schema.Modeled
 import Effect4.Laws.Schema.Codec
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Auto.Semantics
+import Effect4.Laws.Program.TyExpand
 
 /-!
 # Laws.Schema.Modeled — membership and the JSON round trip of a modeled value
@@ -19,6 +20,9 @@ constructor for its embeddings. The placement is the revision 3 note's, section 
 - `Modeled.codec_roundtrip`: a modeled value survives JSON and back at the normal form of its
   type. Codec admission is a premise, because it is value-specific: a natural above 2^53
   inhabits `nat` and has no exact JSON image.
+- `Modeled.memberIn_ref`: a named type's reference has exactly its code's members, under a
+  guarded, expandable table that holds the type's declarations (claim `modeled-name`, decisions
+  row 402). `Modeled.memberIn_image`: so its codec writes members of its name.
 
 These laws establish nothing for an identity type, an optional field, or the arms that the
 refusal fold refuses. They establish no TypeScript codec and no target execution.
@@ -191,6 +195,28 @@ theorem codec_roundtrip (α : Type) [m : Modeled α] (a : α)
     exact member α a []
   rw [decode_encode hmem admitted]
   exact (Modeled.image α).ofVal_toVal a
+
+/-- **A named type's reference has exactly the members of its code** (claim `modeled-name`,
+decisions row 402). Take a guarded table whose computed expansions solve it, and that holds each
+of the type's declarations as its entry. Membership under it at the type's reference is then
+`Val.hasTy` at the type's code. Proved from `memberIn_iff_expansions` and the instance's
+`ref_expands`. Placement: concept `store-typing`, R3. Consumer: `memberIn_image`, and the wiring
+slice, where reply admission reads the application's table. -/
+@[semantics "store-typing" (requirement := R3)]
+theorem memberIn_ref (α : Type) [m : Modeled α] {decls : TyDecls} (hg : decls.guarded = true)
+    (he : decls.expandable = true) (hsub : ∀ e ∈ m.decls, decls.body? e.1 = some e.2)
+    (alloc : List String) (v : Val) :
+    MemberIn decls alloc v m.ref ↔ Val.hasTy v m.ty alloc = true := by
+  rw [memberIn_iff_expansions hg he, m.ref_expands decls.expansions
+    (fun e he' => TyDecls.expands_of_expandsAll he (e.1, e.2) (TyDecls.mem_of_body? (hsub e he')))
+    m.checked]
+
+/-- **A named type's codec writes members of its name**, under every table `memberIn_ref` reads:
+`member` across `memberIn_ref`. -/
+theorem memberIn_image (α : Type) [m : Modeled α] {decls : TyDecls} (hg : decls.guarded = true)
+    (he : decls.expandable = true) (hsub : ∀ e ∈ m.decls, decls.body? e.1 = some e.2) (a : α)
+    (alloc : List String) : MemberIn decls alloc ((Modeled.image α).toVal a) m.ref :=
+  (memberIn_ref α hg he hsub alloc _).mpr (member α a alloc)
 
 end Modeled
 end Effect4.Schema

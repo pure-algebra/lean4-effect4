@@ -89,6 +89,7 @@ import Effect4.Program.LayerView
 import Effect4.Program.TyFoldExtras
 import Effect4.Program.TyClasses
 import Effect4.Program.TyDecls
+import Effect4.Program.TyExpand
 import Effect4.Program.Bounds
 import Effect4.Program.Polarity
 import Effect4.Schema.Template

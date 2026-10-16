@@ -2,6 +2,7 @@ module
 
 public import Effect4.Program.Fold
 public import Effect4.Program.TyNormal
+public import Effect4.Program.TyExpand
 public import Effect4.Store.Carrier.Image.Containers
 public import Effect4.Store.Carrier.Image.Record
 
@@ -222,6 +223,76 @@ theorem refusal_union {a b : Ty} (ha : refusal a = none) (hb : refusal b = none)
   rw [ha, hb]
   rfl
 
+/-- An alternative of two refusals is none only when both are. -/
+theorem or_eq_none {a b : Option String} (h : a.or b = none) : a = none ∧ b = none := by
+  cases a with
+  | none => exact ⟨rfl, h⟩
+  | some x => cases h
+
+/-- A record with no refusal has fields with no refusal. A step of `expand_of_checked`. -/
+theorem fields_checked_of_refusal : ∀ fs : List (String × Bool × Ty),
+    fieldsRefusal (fs.map (prodMapSnd (prodMapSnd (cata_ty refusalAlg)))) = none →
+      ∀ q ∈ fs, refusal q.2.2 = none
+  | [], _ => fun q hq => by cases hq
+  | (n, o, t) :: rest, h => by
+    cases o with
+    | true => cases h
+    | false =>
+      have h' : (refusal t).or
+          (fieldsRefusal (rest.map (prodMapSnd (prodMapSnd (cata_ty refusalAlg))))) = none := h
+      have hb := or_eq_none h'
+      intro q hq
+      rcases List.mem_cons.mp hq with hq | hq
+      · rw [hq]
+        exact hb.1
+      · exact fields_checked_of_refusal rest hb.2 q hq
+
+/-- **A checked code expands to itself under every table**: the checked domain refuses `handle`
+and `app`, so a checked code names no declared name. The default proof of
+`Modeled.ref_expands` for an unnamed type, whose reference is its code. -/
+theorem expand_of_checked (exps : TyDecls) {t : Ty} (h : refusal t = none) :
+    Ty.expand exps t = t := by
+  induction t with
+  | never => rfl
+  | unit => rfl
+  | nat => rfl
+  | int => rfl
+  | string => rfl
+  | bool => rfl
+  | lit s => rfl
+  | option inner ih => exact congrArg Ty.option (ih h)
+  | list inner ih => exact congrArg Ty.list (ih h)
+  | prod a b iha ihb =>
+    have hb := or_eq_none h
+    show Ty.prod (Ty.expand exps a) (Ty.expand exps b) = _
+    rw [iha hb.1, ihb hb.2]
+  | union a b iha ihb =>
+    have hb := or_eq_none h
+    show Ty.union (Ty.expand exps a) (Ty.expand exps b) = _
+    rw [iha hb.1, ihb hb.2]
+  | record fs ih =>
+    have hf : ∀ q ∈ fs, refusal q.2.2 = none := by
+      have h' : (if Field.Ascending Field.bytesKey
+            (cata_pos_list_prod_string_prod_bool_ty refusalAlg fs)
+          then fieldsRefusal (cata_pos_list_prod_string_prod_bool_ty refusalAlg fs)
+          else some "record fields out of canonical order") = none := h
+      rw [cata_pos_list_prod_string_prod_bool_ty_eq] at h'
+      split at h'
+      · exact fields_checked_of_refusal fs h'
+      · cases h'
+    have hm : ∀ gs : List (String × Bool × Ty), (∀ q ∈ gs, Ty.expand exps q.2.2 = q.2.2) →
+        gs.map (fun q => (q.1, q.2.1, Ty.expand exps q.2.2)) = gs := by
+      intro gs hg
+      induction gs with
+      | nil => rfl
+      | cons q gs ihg =>
+        rw [List.map_cons, hg q List.mem_cons_self,
+          ihg fun r hr => hg r (List.mem_cons_of_mem q hr)]
+    show Ty.record (Ty.expandFields exps fs) = Ty.record fs
+    rw [Ty.expandFields_eq_map]
+    exact congrArg Ty.record (hm fs fun q hq => ih q hq (hf q hq))
+  | _ => cases h
+
 end Model
 
 /-- **A Lean type tied to a checked `Ty`**: an equivalence between the type and the carrier of
@@ -230,7 +301,16 @@ instance.
 
 `staged` is the fold's image at `ty` written as its combinators: the fold partially evaluated at
 a known code. It is the fold's image by definition (`staged_eq`), so it owes no law of its own,
-and compiled code runs the combinators with no fold over `Ty` (`docs/research/2026-10-15-modeled-lowering/README.md`). -/
+and compiled code runs the combinators with no fold over `Ty` (`docs/research/2026-10-15-modeled-lowering/README.md`).
+
+A named type also has a name in the declaration table (decisions row 402). `decls` holds the
+declarations the type brings: each named type it reaches, its own entry last, whose body names
+each field's type by its reference. `ref` is the type a program writes: `handle n` for a type
+named `n`, the code itself for an unnamed one. `ref_expands` says the reference expands to the
+code under every solution of `decls`. Its last premise is `checked`'s statement, which an
+unnamed type's default proof reads (`Model.expand_of_checked`). So membership at the name under
+the table is membership at the code (`Modeled.memberIn_ref`, `Laws/Schema/Modeled.lean`). An
+unnamed type declares nothing, and its reference is its code. -/
 class Modeled (α : Type) where
   ty : Ty
   checked : Model.refusal ty = none
@@ -240,6 +320,12 @@ class Modeled (α : Type) where
   of_to : ∀ a, ofC (toC a) = a
   staged : Image (Model.Carrier ty) := Model.image ty
   staged_eq : staged = Model.image ty := by rfl
+  decls : TyDecls := []
+  ref : Ty := ty
+  ref_expands : ∀ exps : TyDecls, TyDecls.Expands exps decls → Model.refusal ty = none →
+      Ty.expand exps ref = ty := by
+    intro exps _ hc
+    exact Model.expand_of_checked exps hc
 
 namespace Modeled
 
@@ -261,12 +347,17 @@ theorem option_inv {α β : Type} (f : β → α) (g : α → β) (h : ∀ a, f 
     show some (f (g x)) = some x
     rw [h]
 
-instance : Modeled Unit := ⟨.unit, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.unit, rfl⟩
-instance : Modeled Bool := ⟨.bool, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.bool, rfl⟩
-instance : Modeled Nat := ⟨.nat, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.nat, rfl⟩
-instance : Modeled Int := ⟨.int, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.int, rfl⟩
+instance : Modeled Unit :=
+  ⟨.unit, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.unit, rfl, [], .unit, fun _ _ _ => rfl⟩
+instance : Modeled Bool :=
+  ⟨.bool, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.bool, rfl, [], .bool, fun _ _ _ => rfl⟩
+instance : Modeled Nat :=
+  ⟨.nat, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.nat, rfl, [], .nat, fun _ _ _ => rfl⟩
+instance : Modeled Int :=
+  ⟨.int, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.int, rfl, [], .int, fun _ _ _ => rfl⟩
 instance : Modeled String :=
-  ⟨.string, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.string, rfl⟩
+  ⟨.string, rfl, id, id, fun _ => rfl, fun _ => rfl, Image.string, rfl, [], .string,
+    fun _ _ _ => rfl⟩
 
 instance {α : Type} [m : Modeled α] : Modeled (List α) where
   ty := .list m.ty
@@ -277,6 +368,9 @@ instance {α : Type} [m : Modeled α] : Modeled (List α) where
   of_to := list_inv m.ofC m.toC m.of_to
   staged := Image.list m.staged
   staged_eq := congrArg Image.list m.staged_eq
+  decls := m.decls
+  ref := .list m.ref
+  ref_expands exps h _ := Ty.expand_list_eq (m.ref_expands exps h m.checked)
 
 instance {α : Type} [m : Modeled α] : Modeled (Option α) where
   ty := .option m.ty
@@ -287,6 +381,9 @@ instance {α : Type} [m : Modeled α] : Modeled (Option α) where
   of_to := option_inv m.ofC m.toC m.of_to
   staged := Image.option m.staged
   staged_eq := congrArg Image.option m.staged_eq
+  decls := m.decls
+  ref := .option m.ref
+  ref_expands exps h _ := Ty.expand_option_eq (m.ref_expands exps h m.checked)
 
 instance {α β : Type} [ma : Modeled α] [mb : Modeled β] : Modeled (α × β) where
   ty := .prod ma.ty mb.ty
@@ -302,6 +399,10 @@ instance {α β : Type} [ma : Modeled α] [mb : Modeled β] : Modeled (α × β)
   staged_eq := by
     show Image.tuple2 ma.staged mb.staged = Image.tuple2 (Model.image ma.ty) (Model.image mb.ty)
     rw [ma.staged_eq, mb.staged_eq]
+  decls := ma.decls ++ mb.decls
+  ref := .prod ma.ref mb.ref
+  ref_expands exps h _ := Ty.expand_prod_eq (ma.ref_expands exps h.left ma.checked)
+    (mb.ref_expands exps h.right mb.checked)
 
 end Modeled
 end Effect4.Schema

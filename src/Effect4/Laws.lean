@@ -60,6 +60,7 @@ import Effect4.Laws.Program.EvaluateR
 import Effect4.Laws.Program.ScopeMarkers
 import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.TyDecls
+import Effect4.Laws.Program.TyExpand
 import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.RecordOperations
 import Effect4.Laws.Program.ScopedTyping

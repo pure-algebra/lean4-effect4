@@ -278,6 +278,56 @@ example (d : Drawing) (alloc : List String) :
 
 end Test.Schema.Modeled.Sums
 
+/-! ## Named types (decisions row 402)
+
+A derived type is named in the declaration table by its declaration's last component. Its body
+names each field's named type by reference; its declarations are its fields', then its own. Its
+reference has exactly its code's members (`Modeled.memberIn_ref`). -/
+
+namespace Test.Schema.Modeled.Named
+open Test.Schema.Modeled.Sums
+
+-- Finite evaluation: the reference, the body by reference, and the declarations in order.
+#guard Modeled.ref (α := Drawing) == .handle "Drawing"
+#guard Drawing.modeledBody ==
+  .record [("owner", false, .handle "Account"), ("shapes", false, .list (.handle "Shape"))]
+#guard (Modeled.decls (α := Drawing)).map Prod.fst == ["Account", "Shape", "Drawing"]
+-- Finite evaluation: an unnamed type's reference is its code, and it declares nothing.
+#guard Modeled.ref (α := List Nat) == .list .nat && (Modeled.decls (α := List Nat)).isEmpty
+-- Finite evaluation: the computed expansions take the reference to the code.
+#guard Ty.expand (Modeled.decls (α := Drawing)).expansions (Modeled.ref (α := Drawing)) ==
+  Modeled.ty (α := Drawing)
+
+-- Reader: under the type's own table, its reference has exactly its code's members. The table's
+-- three premises are decided by the kernel.
+example (v : Effect4.Store.Val) (alloc : List String) :
+    MemberIn (Modeled.decls (α := Drawing)) alloc v (Modeled.ref (α := Drawing)) ↔
+      Val.hasTy v (Modeled.ty (α := Drawing)) alloc = true :=
+  Modeled.memberIn_ref Drawing (by decide +kernel) (by decide +kernel) (by decide +kernel) alloc v
+
+-- Reader: the codec writes members of the name.
+example (d : Drawing) (alloc : List String) :
+    MemberIn (Modeled.decls (α := Drawing)) alloc ((Modeled.image Drawing).toVal d)
+      (Modeled.ref (α := Drawing)) :=
+  Modeled.memberIn_image Drawing (by decide +kernel) (by decide +kernel) (by decide +kernel) d
+    alloc
+
+-- Finite evaluation: the checker under the table agrees at a written value.
+#guard Val.hasTyIn (Modeled.decls (α := Drawing)) []
+  ((Modeled.image Drawing).toVal ⟨[.dot, .circle 2], ⟨"ada", -1⟩⟩) (Modeled.ref (α := Drawing)) []
+-- Control: without the table the reference is the handle arm, and a record frame fits no handle.
+#guard !Val.hasTy ((Modeled.image Drawing).toVal ⟨[], ⟨"ada", 0⟩⟩) (Modeled.ref (α := Drawing)) []
+
+-- Control: a recursive table is not expandable, so no expansion speaks for it.
+#guard !TyDecls.expandable
+  [("L", .union (.lit "nil") (.record [("head", false, .nat), ("tail", false, .handle "L")]))]
+-- Control: an alias cycle passes the expansion check and has no member, so the law asks for
+-- guardedness as well.
+#guard TyDecls.expandable [("A", .handle "B"), ("B", .handle "A")] &&
+  !TyDecls.guarded [("A", .handle "B"), ("B", .handle "A")]
+
+end Test.Schema.Modeled.Named
+
 namespace Test.Schema.Modeled.SumControls
 
 /-- error: derive_modeled: a field of Test.Schema.Modeled.SumControls.Unnamed.wrap has no name; name each field -/

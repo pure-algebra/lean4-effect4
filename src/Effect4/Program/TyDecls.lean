@@ -1,5 +1,6 @@
 import Effect4.Program.Typed
 import Effect4.Program.Columns
+import Effect4.Program.TyExpand
 
 /-!
 # Program.TyDecls — the application's type declarations, and recursive types
@@ -34,33 +35,12 @@ specialization site of decisions row 202, whose importers stay non-module.
 namespace Effect4.Program
 open Effect4 Effect4.Machine
 
-/-! ## The table -/
+/-! ## The table
 
-/-- **The declaration table** (decisions rows 124, 158 and 400): each entry a name and its body.
-A body refers to a declaration by `app n args` or `handle n`. A name's first entry is its
-declaration; formation refuses a repeated name. -/
-abbrev TyDecls := List (String × Ty)
+`TyDecls`, its lookup `TyDecls.body?` and `Ty.refName?` are `Program/TyExpand.lean`'s, a Lean
+module that `Modeled` imports. -/
 
 namespace TyDecls
-
-/-- The body a name declares: its first entry. -/
-def body? (decls : TyDecls) (name : String) : Option Ty := decls.lookup name
-
-/-- A declared name has an entry. -/
-theorem mem_of_body? {decls : TyDecls} {name : String} {body : Ty}
-    (h : decls.body? name = some body) : (name, body) ∈ decls := by
-  induction decls with
-  | nil => cases h
-  | cons d decls ih =>
-    obtain ⟨m, b⟩ := d
-    unfold body? at h
-    simp only [List.lookup] at h
-    split at h
-    · rename_i heq
-      cases h
-      rw [beq_iff_eq.mp heq]
-      exact List.mem_cons_self
-    · exact List.mem_cons_of_mem _ (ih h)
 
 /-- The entries whose names `seen` does not hold: the measure of an unfolding. -/
 def unseen (decls : TyDecls) (seen : List String) : Nat :=
@@ -100,13 +80,6 @@ theorem unseen_cons_lt {decls : TyDecls} {seen : List String} {name : String} {b
   · rw [List.contains_cons, beq_iff_eq.mpr rfl, Bool.true_or]
 
 end TyDecls
-
-/-- The name of a nominal reference: `handle n`, or `app n args` at any arguments. A declared
-name is read at both spellings, since `app n []` normalizes to `handle n`. -/
-def Ty.refName? : Ty → Option String
-  | .handle name => some name
-  | .app name _ => some name
-  | _ => none
 
 namespace TyDecls
 

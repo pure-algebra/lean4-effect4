@@ -5,7 +5,7 @@ inputs: tools/ProofGraph/Registry.lean, tools/Tools/Semantics.lean, tools/Driver
 -->
 # Semantics evidence
 
-Effect4 makes 241 claims about Effect's runtime: 234 proved, 2 modulo, 1 refuted, 3 absent, 1 assumed.
+Effect4 makes 243 claims about Effect's runtime: 236 proved, 2 modulo, 1 refuted, 3 absent, 1 assumed.
 
 A claim's evidence comes from its Lean declaration and is never written by hand (decisions row 203). `The open work` lists the planned goals that the remaining claims rest on, and why each waits.
 
@@ -180,7 +180,7 @@ Proved modulo this goal (1), each by its shortest chain of nearest nodes:
 
 ## Store Typing
 
-World-indexed semantic value membership (Fits) and store typings. 29 claims: 28 proved, 1 absent.
+World-indexed semantic value membership (Fits) and store typings. 31 claims: 30 proved, 1 absent.
 
 | Claim | Role | Status | Evidence |
 | --- | --- | --- | --- |
@@ -202,6 +202,8 @@ World-indexed semantic value membership (Fits) and store typings. 29 claims: 28 
 | `recursive-types-inhabited` | decidability | proved | `Effect4.Program.inhabited_iff_memberIn` |
 | `recursive-types-normalize` | compatibility | proved | `Effect4.Program.memberIn_normalize` |
 | `guarded-fixed-point-unique` | compatibility | proved | `Effect4.Program.guarded_fixedPoint_unique` |
+| `tydecls-expansion` | compatibility | proved | `Effect4.Program.memberIn_iff_expand` |
+| `modeled-name` | compatibility | proved | `Effect4.Schema.Modeled.memberIn_ref` |
 | `store-safety` | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) |
 | `semaphore-profile-closed` | preservation | proved | `Effect4.Semaphore.Model.profile_closed` |
 | `waiting-wrapper-typed` | compatibility | proved | `Effect4.Modules.waitRetryAt_answers` |
@@ -503,6 +505,45 @@ Module: `Effect4.Laws.Program.TyDecls` · Literature: TAPL, §21.8, p. 299 (audi
             ∀ (v : Effect4.Machine.Val) (allocated : List String),
               Iff (Eq (o name v allocated) Bool.true)
                 (Effect4.Program.MemberIn decls allocated v body)
+```
+
+### tydecls-expansion
+
+A declared name with no recursion abbreviates its expansion: on a guarded table, take a table of expansions that solves it (TyDecls.Expands: each declared name's entry is its body's expansion) and declares only its names; membership under the table at every type is Val.hasTy at the type's expansion (Ty.expand, which replaces a declared reference only where the checker reads by shape); the expansions are a fixed point because each question of a step expands with its type (obligations_expand), and guardedness makes the fixed point unique; a recursive table has no solution and an alias cycle is unguarded (decisions rows 401 and 402)
+
+A declared name with no recursion abbreviates its expansion (claim `tydecls-expansion`). Take a guarded table, and a table of expansions that solves it and declares only its names. Then membership under the table at every type is `Val.hasTy` at the type's expansion. Proved from the fixed point: the expansions are one (`expandOracle_fixedPoint`), and on a guarded table it agrees with membership (`fixedPoint_agree_at`). Consumer: `memberIn_iff_expansions`, and `Modeled.memberIn_ref`.
+
+Module: `Effect4.Laws.Program.TyExpand`
+
+```lean
+∀ {decls exps : Effect4.Program.TyDecls},
+  Eq decls.guarded Bool.true →
+    exps.Expands decls →
+      (∀ (n : String) (x : Effect4.Program.Ty),
+          Eq (exps.body? n) (Option.some x) → Eq (decls.body? n).isSome Bool.true) →
+        ∀ {allocated : List String} {v : Effect4.Machine.Val} {t : Effect4.Program.Ty},
+          Iff (Effect4.Program.MemberIn decls allocated v t)
+            (Eq (Effect4.Program.Val.hasTy v (Effect4.Program.Ty.expand exps t) allocated)
+              Bool.true)
+```
+
+### modeled-name
+
+A derived Modeled type is named in the declaration table: its reference handle n has exactly its code's members under every guarded table whose computed expansions solve it and that holds the type's declarations (Modeled.memberIn_ref), so its codec writes members of its name (Modeled.memberIn_image); the deriver proves the reference expands to the code from each field instance's own proof, so a field instance may be opaque; nothing reads the reference yet: Fits and reply admission take no table (decisions row 402)
+
+A named type's reference has exactly the members of its code (claim `modeled-name`, decisions row 402). Take a guarded table whose computed expansions solve it, and that holds each of the type's declarations as its entry. Membership under it at the type's reference is then `Val.hasTy` at the type's code. Proved from `memberIn_iff_expansions` and the instance's `ref_expands`. Placement: concept `store-typing`, R3. Consumer: `memberIn_image`, and the wiring slice, where reply admission reads the application's table.
+
+Module: `Effect4.Laws.Schema.Modeled`
+
+```lean
+∀ (α : Type) [m : Effect4.Schema.Modeled α] {decls : Effect4.Program.TyDecls},
+  Eq decls.guarded Bool.true →
+    Eq decls.expandable Bool.true →
+      (∀ (e : Prod String Effect4.Program.Ty),
+          List.instMembership.mem (m.decls α) e → Eq (decls.body? e.fst) (Option.some e.snd)) →
+        ∀ (alloc : List String) (v : Effect4.Store.Val),
+          Iff (Effect4.Program.MemberIn decls alloc v (m.ref α))
+            (Eq (Effect4.Program.Val.hasTy v (m.ty α) alloc) Bool.true)
 ```
 
 ### store-safety
@@ -5729,7 +5770,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | --- | --- | --- | --- | --- |
 | `R1` | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | `checkModule_complete` (proved), `checkModule_sound` (proved), `invoke_hasTy` (proved) | — |
 | `R2` | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved), `meaningUnder_append` (proved) | `denoteBlockB_straight` (proved), `denoteRowsB_looped` (proved), `denoteRowsB_straight` (proved), `checkModule_conservative` (proved), `checkModule_eq_check` (proved), `defs_conservative` (proved), `moduleHasTy_ext` (proved), `typeOfProgram_ext` (proved) | — |
-| `R3` | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `cata_declAlg_normalize` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `exists_memberIn_fresh` (proved), `exists_memberIn_of_inhabited` (proved), `fixedPoint_agree` (proved), `guarded_fixedPoint_unique` (proved), `hasTyIn_iff` (proved), `inhabited_iff_memberIn` (proved), `isPayload_of_hasTy_record` (proved), `memberIn_mono` (proved), `memberIn_normalize` (proved), `memberIn_sub` (proved), `memberIn_unfold_iff` (proved), `tyDecls_conservative` (proved), `ofJson_complete` (modulo), `ofJson_image` (goal), `frame_laws` (proved), `member` (proved), `codec_roundtrip` (proved) | `ofJson_image` |
+| `R3` | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `cata_declAlg_normalize` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `exists_memberIn_fresh` (proved), `exists_memberIn_of_inhabited` (proved), `fixedPoint_agree` (proved), `guarded_fixedPoint_unique` (proved), `hasTyIn_iff` (proved), `inhabited_iff_memberIn` (proved), `isPayload_of_hasTy_record` (proved), `memberIn_iff_expand` (proved), `memberIn_iff_expansions` (proved), `memberIn_mono` (proved), `memberIn_normalize` (proved), `memberIn_sub` (proved), `memberIn_unfold_iff` (proved), `tyDecls_conservative` (proved), `ofJson_complete` (modulo), `ofJson_image` (goal), `frame_laws` (proved), `member` (proved), `codec_roundtrip` (proved), `memberIn_ref` (proved) | `ofJson_image` |
 | `R4` | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `awaitStep_types` (proved), `Latch.Model.closeStep_types` (proved), `flushStep_types` (proved), `initialStep_types` (proved), `isOpenStep_types` (proved), `wakeStep_types` (proved), `Latch.Model.withdrawStep_types` (proved), `image_agrees` (proved), `afterExit_first` (proved), `typed` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `available_types` (proved), `PartitionedSemaphore.initial_types` (proved), `reserve_types` (proved), `tryTake_types` (proved), `Pool.Model.closeStep_types` (proved), `drainStep_types` (proved), `Model.initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `solve_lookup_of_mem` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `loop_sync_op` (proved), `native_sync_answer` (proved), `native_sync_op` (proved), `perform_scoped_iff` (proved), `heap_sites_keep` (proved), `withParams_defOf` (proved), `withParams_of_none` (proved), `withParams_param` (proved), `withParams_serviceTy` (proved), `admitted_heap_history` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `invoke_arm` (proved), `param_arm` (proved), `saved_mask_image_membership` (proved), `scopeParams_ref` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `scopeParams_below` (proved), `scopeParams_body` (proved), `scopeParams_child` (proved), `scopeParams_decl` (proved), `scopeParams_layer_below` (proved), `PubSub.initial_types` (proved), `PubSub.poll_types` (proved), `slide_types` (proved), `subscribe_types` (proved), `tryPublish_types` (proved), `unsubscribe_types` (proved), `ascribe_formed_for_steps` (proved), `empty_typed` (proved), `message_nodes_for_steps` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `offer_nodes_for_steps` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `Queue.poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `modify_callback_answers` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `fromDefinitions_declarations` (proved), `arrayBatch_answers` (proved), `raceCompleteFirst_accepts` (proved), `raceCompleteFirst_keeps` (proved), `get_answers` (proved), `make_answers` (proved), `modify_answers` (proved), `shop_stages` (goal), `atomic` (modulo), `bounded` (proved), `committed` (modulo), `counted` (modulo) | `shop_stages` |
 | `R5` | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `tree_needs_token` (proved), `unauthorized_calls_nothing` (proved) | — |
 | `R6` | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `Run.session_eq_ref` (proved), `denoteRows_eq_session_host` (proved), `runWith_denotes` (proved), `h8_loopedRows` (proved), `denoteRowsB_eq_session_host` (proved), `runWith_denotesB` (proved), `replay_at_call_instance` (proved) | `replay_at_call_instance` (proved), `replay_recorded` (proved), `Live.session_eq_ref` (proved), `view_funded` (proved), `not_withFiber` (proved), `ContextFreeCode.toPlain` (proved), `ContextFreeFrame.toPlain` (proved), `ContextFreeHooks.of_loopedRows` (proved), `ContextFreeHooks.toPlain` (proved), `prepend` (proved), `Leads.refl` (proved), `Leads.trans` (proved), `of_blockRows` (proved), `PlainHooks.of_loopedRows` (proved), `answer` (proved), `contextSame` (proved), `ReachesC.contextStep` (proved), `join` (proved), `ReachesC.refl` (proved), `same` (proved), `ReachesC.step` (proved), `ReachesC.trans` (proved), `ReachesQ.contextStep` (proved), `ReachesQ.refl` (proved), `ReachesQ.step` (proved), `ReachesQ.trans` (proved), `RunJoinC.refl` (proved), `RunJoinC.terminal` (proved), `RunJoinC.trans` (proved), `argSitesAt_body` (proved), `block_context_action` (proved), `block_context_noScoped` (proved), `compilesBO_bind` (proved), `compilesBO_catchCause` (proved), `compilesBO_catchIf` (proved), `compilesBO_exit` (proved), `compilesBO_iterate` (proved), `compilesBO_matchCause` (proved), `compilesBO_onExit` (proved), `compilesBO_select` (proved), `compilesBO_suspend` (proved), `compilesBlk` (proved), `compilesBlk_context` (proved), `compilesBlk_provideContext` (proved), `compilesBlk_provideService` (proved), `compilesBlk_root` (proved), `compilesBlk_service` (proved), `contextBracket_enter` (proved), `contextBracket_leave` (proved), `contextStep_fallback` (proved), `contextStep_finished_stores` (proved), `contextStep_plain` (proved), `contextStep_quiet` (proved), `contextStep_stores` (proved), `contextStep_yieldWrapper` (proved), `context_receipt_finish` (proved), `context_run_finish` (proved), `defBodyPath_body` (proved), `drive_deliver_finish_context` (proved), `drive_deliver_running_context` (proved), `drive_finish_M_context` (proved), `drive_loop_call_context` (proved), `drive_loop_finish_context` (proved), `drive_loop_running_context` (proved), `drive_loop_sync_op_context` (proved), `drive_loop_sync_op_none_context` (proved), `drive_loop_sync_pure_context` (proved), `drive_loop_yield_context` (proved), `drive_receipt_prefix` (proved), `drive_receipt_result` (proved), `drive_receipt_stable` (proved), `drive_seg_receipt` (proved), `evaluateNative_plain_context` (proved), `evaluatePrim_contextStep` (proved), `fire_Myield_answer_context` (proved), `flushAll_Mexit_context` (proved), `flush_Myield_receipt` (proved), `hostRunBlockB_exits` (proved), `iteration_M_context` (proved), `load_evaluate_receipt` (proved), `localRunC_agree` (proved), `localRunC_compileB` (proved), `localRunC_compileBO` (proved), `localRunC_mono` (proved), `localRunC_to_blockB` (proved), `localRunC_to_rowsB` (proved), `localRunC_waits` (proved), `localWaitC_to_rowsB` (proved), `seg_settles_receipt` (proved), `bodyAt` (proved), `bodiesOf_blockRows` (proved), `cata_blockAlgB_loopedDataRows` (proved), `denoteBlockB_context` (proved), `denoteBlockB_exit` (proved), `denoteBlockB_loopedDataRows` (proved), `denoteBlockB_of_asExit` (proved), `denoteBlockB_param` (proved), `denoteBlockB_provideContext` (proved), `denoteBlockB_provideService` (proved), `denoteBlockB_service` (proved), `hostRunB_stable` (proved), `observeRows_project` (proved), `partAt_at` (proved), `partAt_of_hasTy` (proved), `bodyAt_at` (proved), `run_eq_ref_table` (proved), `checkModule_programCallAt` (proved), `handles_of_payloadFieldTy` (proved), `hasTy_callAt` (proved), `lookup_programCalls` (proved), `moduleHasTy_programCallAt` (proved), `programCallAt_rowTy` (proved), `noWithFiber` (proved), `bound_in_tree` (proved), `request_leads` (proved), `agrees_hostRun` (proved), `agrees_hostRun_blocks` (proved), `applied_selects` (proved), `conforms_sat` (proved), `conforms_sat_blocks` (proved), `control_retires` (proved), `denoteRowsB_eq_session_host` (proved), `denoteRows_eq_session` (proved), `denoteRows_eq_session_host` (proved), `ending_of_tape` (proved), `h8_loopedRows` (proved), `h9_blocks` (proved), `runWith_denotes` (proved), `runWith_denotesB` (proved), `runWith_guarded_denotes` (proved), `runWith_guarded_denotesB` (proved), `runWith_host_denotes` (proved), `runWith_host_denotesB` (proved), `runWith_layer_denotes` (proved), `sessionSystem_finished` (proved), `sessionSystem_finishes` (proved), `Run.session_eq_ref` (proved), `session_keys_once` (proved), `stale_never_applies` (proved), `timeout` (modulo), `add_empty_calls_nothing` (proved), `complete_answers_requested` (proved), `complete_failure_escapes` (proved), `complete_idempotent` (proved), `list_after_add` (proved), `serves` (proved), `workers` (proved), `receipt_inert` (proved) | `cleanup_keeps`, `retries_declared` |
@@ -5979,7 +6020,7 @@ flowchart TB
 ### R3: Data: the type language closed under records and variants as Ty growth
 
 - Open, not triaged: variants: the tag select over records landed (decisions row 195 (d)); catchTag's residual, the caught tag subtracted from the error column, waits on decisions row 130
-- Open, after other work (the wiring slice of recursive types (decisions row 400)): recursive types (decisions rows 124 and 400): the foundation is landed beside the core and its seven claims are proved (Effect4.Laws.Program.TyDecls: membership under a table decided, conservative on the empty table, the order sound, invariant under normalization, inhabitance its emptiness test, one fixed point on a guarded table); open: the table in the world, Fits and its callers reading it, the table's admission as a located refusal, the TypeScript, Schema and Lean faces, and parameters (regular recursion)
+- Open, after other work (the wiring slice of recursive types (decisions row 400)): recursive types (decisions rows 124 and 400): the foundation is landed beside the core and its seven claims are proved (Effect4.Laws.Program.TyDecls: membership under a table decided, conservative on the empty table, the order sound, invariant under normalization, inhabitance its emptiness test, one fixed point on a guarded table); a declared name with no recursion abbreviates its expansion (tydecls-expansion), and a derived Modeled type is named, its reference meaning its code (modeled-name, decisions row 402); open: the table in the world, Fits and its callers reading it, the table's admission as a located refusal, the TypeScript and Schema faces printing names, and parameters (regular recursion)
 - Open, not triaged: error payloads: the carrier (decisions row 120, part E1) and the face (part E2: one Data.TaggedError class per tag, printed and read back) landed; int and number fields since the aliases Int and Num read back (decisions row 399 (2)); open: catchTag's residual over records (decisions row 130), a field typed by another class (refused by name), a record update of a class instance (it answers a structural object), and a host row answering a payload (R6, parked)
 - Open, waits on a ruling (decisions row 108: the owner places the numbers slice; row 121 is ruled): int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121); carried since decisions row 317, which removes the admission's int scan; the JSON wires since row 316; the computing rows (plus, minus, and lt and eq at int) since row 319; the Lean judgment and OCaml profile bound landed in row 321, and the TypeScript prelude refusal landed in row 322; the host truth record and comparison of an outside-profile result remain open (slice 7)
 - Open, not triaged: the Schema image of app, and the JSON images of app, null, undefined and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161); null, undefined, number and bytes have their Schema image (the types audit, docs/research/2026-10-15-type-roundtrip-audit/README.md §6.1)
@@ -6000,7 +6041,7 @@ R3 by concept: each concept its nodes are placed at, by tag or by module. An arr
 flowchart TB
   n0["Residual Program Typing<br/>proved · 2 nodes"]
   n1["No concept<br/>proved · 7 nodes"]
-  n2["Store Typing<br/>proved · 17 nodes"]
+  n2["Store Typing<br/>proved · 20 nodes"]
   n3["Exact Codecs<br/>open · 8 nodes, 2 open"]
   n4["Subtyping Algebra<br/>proved · 2 nodes"]
   n2 --> n4
@@ -6036,6 +6077,8 @@ flowchart TB
 | `hasTyIn_iff` | proved | — | — |
 | `inhabited_iff_memberIn` | proved | — | `exists_memberIn_of_inhabited` |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` |
+| `memberIn_iff_expand` | proved | — | `hom_eq_cata_ty` |
+| `memberIn_iff_expansions` | proved | — | `memberIn_iff_expand` |
 | `memberIn_mono` | proved | — | `hom_eq_cata_ty` |
 | `memberIn_normalize` | proved | — | `cata_declAlg_normalize` |
 | `memberIn_sub` | proved | — | — |
@@ -6046,6 +6089,7 @@ flowchart TB
 | `frame_laws` | proved | — | — |
 | `member` | proved | — | — |
 | `codec_roundtrip` | proved | — | `decode_encode`, `member`, `hom_eq_cata_ty`, `normalize_idem` |
+| `memberIn_ref` | proved | — | `memberIn_iff_expansions` |
 | `subN_trans` | proved | — | — |
 | `normalize_idem` | proved | — | — |
 | `subN_refl` | proved | — | — |

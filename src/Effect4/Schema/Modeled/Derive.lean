@@ -24,8 +24,15 @@ and each field instance's own `checked`, so a field instance may be opaque), the
 their two inverse equations (`modeled_to_of`, `modeled_of_to`), the staged image
 (`modeledStaged`: the fold's image at the type written as its combinators, each field's column
 its instance's staged image) with its proof that it is the fold's (`modeled_staged_eq`), and the
-instance. If a
-generated declaration fails, the environment is restored: the command keeps all or none.
+instance.
+
+The type is named in the declaration table by its declaration's last component (decisions row
+402). The body (`modeledBody`) is the code with each field's type written as its reference
+(`Modeled.ref`), so a body names a field's named type and never copies its code. The declarations
+(`modeledDecls`) are each field's, then the type's own entry. The proof that the reference
+`handle n` expands to the code (`modeled_ref_expands`) composes each field instance's own, so a
+field instance may be opaque. If a generated declaration fails, the environment is restored: the
+command keeps all or none.
 -/
 
 public meta section
@@ -105,6 +112,40 @@ def stagedEqProof (stagedId : Ident) (hasFields : Bool) : MacroM Term :=
 def nest (items : List Term) : MacroM Term := do
   items.foldrM (fun x acc => `(($x, $acc))) (← `(()))
 
+/-- A derived type's declarations: each field type's, in order, then its own entry, right-nested
+so that each part is one `TyDecls.Expands.left` or `.right` away. -/
+def declsOf (fieldTys : List Term) (name : String) (bodyId : Ident) : MacroM Term := do
+  fieldTys.foldrM (fun t acc => `(Effect4.Schema.Modeled.decls (α := $t) ++ $acc))
+    (← `([($(quote name), $bodyId)]))
+
+/-- The solution of the `k`th part of `declsOf`'s declarations, from the solution `h` of all:
+`k` steps right, then left; with `last`, the own entry's, `k` steps right. -/
+def partOf (h : Ident) (k : Nat) (last : Bool) : MacroM Term := do
+  let mut acc : Term := ⟨h.raw⟩
+  for _ in [0:k] do acc ← `(Effect4.Program.TyDecls.Expands.right $acc)
+  if last then pure acc else `(Effect4.Program.TyDecls.Expands.left $acc)
+
+/-- The proof that a record of columns expands to the record of the codes: each column a field
+type's reference, by its instance's `ref_expands` at its part, or a tag's literal. -/
+def fieldsExpandOf (exps h : Ident) (cols : List (Option (Term × Nat))) (tag : Option String) :
+    MacroM Term := do
+  cols.foldrM (fun col acc => match col, tag with
+    | some (t, k), _ => do
+      `(Effect4.Program.Ty.expandFields_cons_eq
+        (Effect4.Schema.Modeled.ref_expands (α := $t) $exps $(← partOf h k false)
+          (Effect4.Schema.Modeled.checked (α := $t))) $acc)
+    | none, some tg =>
+      `(Effect4.Program.Ty.expandFields_cons_eq (Effect4.Program.Ty.expand_lit $exps $(quote tg))
+        $acc)
+    | none, none => `(rfl))
+    (← `(Effect4.Program.Ty.expandFields_nil $exps))
+
+/-- The proof that `unionOf`'s union expands side by side, from each member's proof. -/
+def unionExpandOf : List Term → MacroM Term
+  | [] => `(rfl)
+  | [p] => pure p
+  | p :: rest => do `(Effect4.Program.Ty.expand_union_eq $p $(← unionExpandOf rest))
+
 /-- Check an inductive type and write its `Modeled` instance: a union, right-nested, of one member
 per constructor. A constructor is the record of its fields and its `_tag`, the constructor's name,
 in canonical order; when no constructor has a field, each is its tag's literal, so the type is a
@@ -183,6 +224,9 @@ def deriveModeledSum (ref : Syntax) (tName : Name) : CommandElabM Unit := do
     pure acc
   let s := mkCIdent tName
   let tyId := mkIdent (`_root_ ++ tName ++ `modeledTy)
+  let bodyId := mkIdent (`_root_ ++ tName ++ `modeledBody)
+  let declsId := mkIdent (`_root_ ++ tName ++ `modeledDecls)
+  let refExpandsId := mkIdent (`_root_ ++ tName ++ `modeled_ref_expands)
   let checkedId := mkIdent (`_root_ ++ tName ++ `modeled_checked)
   let toId := mkIdent (`_root_ ++ tName ++ `modeledToC)
   let ofId := mkIdent (`_root_ ++ tName ++ `modeledOfC)
@@ -191,10 +235,45 @@ def deriveModeledSum (ref : Syntax) (tName : Name) : CommandElabM Unit := do
   let stagedId := mkIdent (`_root_ ++ tName ++ `modeledStaged)
   let stagedEqId := mkIdent (`_root_ ++ tName ++ `modeled_staged_eq)
   for suffix in [`modeledTy, `modeled_checked, `modeledToC, `modeledOfC, `modeled_to_of,
-      `modeled_of_to, `modeledStaged, `modeled_staged_eq] do
+      `modeled_of_to, `modeledStaged, `modeled_staged_eq, `modeledBody, `modeledDecls,
+      `modeled_ref_expands] do
     if (← getEnv).contains (tName ++ suffix) then
       throwErrorAt ref "derive_modeled: {tName ++ suffix} already exists"
   let members ← liftMacroM <| ctors.mapM member
+  -- The body: each member with its fields' references in place of their codes. The fields of all
+  -- constructors, in order, number the declarations' parts.
+  let fieldTys : List Term := ctors.flatMap fun c =>
+    (columns c).filterMap fun col => col.map fun i => c.fields[i]!.2
+  let firstPart (k : Nat) : Nat :=
+    ((ctors.take k).map fun c => ((columns c).filter Option.isSome).length).sum
+  let bodyMember (c : Ctor) : MacroM Term := do
+    if enum then `(Effect4.Program.Ty.lit $(quote c.tag)) else
+    let items ← (columns c).mapM fun
+      | none => `(("_tag", false, Effect4.Program.Ty.lit $(quote c.tag)))
+      | some i => do
+        let (f, t) := c.fields[i]!
+        `(($(quote (defaultSpelling f)), false, (Effect4.Schema.Modeled.ref (α := $t))))
+    `(Effect4.Program.Ty.record [$(items.toArray),*])
+  let body ← liftMacroM do unionOf (← ctors.mapM bodyMember)
+  let declName := ctorTag tName
+  let decls ← liftMacroM <| declsOf fieldTys declName bodyId
+  let exps := mkIdent `exps
+  let hId := mkIdent `h
+  let memberExpand (c : Ctor) (k : Nat) : MacroM Term := do
+    if enum then `(Effect4.Program.Ty.expand_lit $exps $(quote c.tag)) else
+    let mut j := firstPart k
+    let mut cols : List (Option (Term × Nat)) := []
+    for col in columns c do
+      match col with
+      | none => cols := cols ++ [none]
+      | some i =>
+        cols := cols ++ [some (c.fields[i]!.2, j)]
+        j := j + 1
+    `(Effect4.Program.Ty.expand_record_eq $(← fieldsExpandOf exps hId cols (some c.tag)))
+  let refExpands ← liftMacroM do
+    let own ← partOf hId fieldTys.length true
+    let union ← unionExpandOf (← ctors.zipIdx.mapM fun (c, k) => memberExpand c k)
+    `((Effect4.Program.TyDecls.Expands.named $own).trans $union)
   let staged ← liftMacroM do stagedUnionOf (← ctors.mapM stagedMember)
   -- A union's carrier names its members' images, so its staged image elaborates only where they
   -- are the fold's by definition, and the proof is that definition.
@@ -251,8 +330,16 @@ def deriveModeledSum (ref : Syntax) (tName : Name) : CommandElabM Unit := do
   elabCommand (← `(def $stagedId : Effect4.Store.Image (Effect4.Schema.Model.Carrier $tyId) :=
     $staged))
   elabCommand (← `(theorem $stagedEqId : $stagedId = Effect4.Schema.Model.image $tyId := $stagedEq))
+  elabCommand (← `(def $bodyId : Effect4.Program.Ty := $body))
+  elabCommand (← `(def $declsId : Effect4.Program.TyDecls := $decls))
+  elabCommand (← `(theorem $refExpandsId ($exps : Effect4.Program.TyDecls)
+      ($hId : Effect4.Program.TyDecls.Expands $exps $declsId) :
+      Effect4.Program.Ty.expand $exps (.handle $(quote declName)) = $tyId := by
+    unfold $declsId:ident at $hId:ident
+    exact $refExpands))
   elabCommand (← `(instance : Effect4.Schema.Modeled $s :=
-    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId, $stagedId, $stagedEqId⟩))
+    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId, $stagedId, $stagedEqId, $declsId,
+      .handle $(quote declName), fun $exps $hId _ => $refExpandsId $exps $hId⟩))
   if (← get).messages.hasErrors then
     setEnv envBefore
 
@@ -334,7 +421,22 @@ def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × Strin
   let ofToId := mkIdent (`_root_ ++ sName ++ `modeled_of_to)
   let stagedId := mkIdent (`_root_ ++ sName ++ `modeledStaged)
   let stagedEqId := mkIdent (`_root_ ++ sName ++ `modeled_staged_eq)
+  let bodyId := mkIdent (`_root_ ++ sName ++ `modeledBody)
+  let declsId := mkIdent (`_root_ ++ sName ++ `modeledDecls)
+  let refExpandsId := mkIdent (`_root_ ++ sName ++ `modeled_ref_expands)
   let fieldsArr := ofFields.toArray
+  -- The body: each field's type written as its reference, in canonical order.
+  let bodyItems ← liftMacroM <| sorted.mapM fun (_, sp, t) =>
+    `(($(quote sp), false, (Effect4.Schema.Modeled.ref (α := $t))))
+  let declName := ctorTag sName
+  let decls ← liftMacroM <| declsOf (sorted.map (·.2.2)) declName bodyId
+  let exps := mkIdent `exps
+  let hId := mkIdent `h
+  let refExpands ← liftMacroM do
+    let own ← partOf hId sorted.length true
+    let cols := sorted.zipIdx.map fun ((_, _, t), k) => some (t, k)
+    `((Effect4.Program.TyDecls.Expands.named $own).trans
+      (Effect4.Program.Ty.expand_record_eq $(← fieldsExpandOf exps hId cols none)))
   -- The staged image: one column per field in canonical order, each its instance's staged image.
   let stagedCols ← liftMacroM <| sorted.foldrM (fun (_, sp, t) acc =>
     `(Effect4.Store.Columns.cons $(quote sp) (Effect4.Schema.Modeled.staged (α := $t)) $acc))
@@ -342,7 +444,8 @@ def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × Strin
   let stagedEq ← liftMacroM <| stagedEqProof stagedId (!sorted.isEmpty)
   -- Every generated name is free before anything is written (overwatch finding OW-02).
   for suffix in [`modeledTy, `modeled_checked, `modeledToC, `modeledOfC, `modeled_to_of,
-      `modeled_of_to, `modeledStaged, `modeled_staged_eq] do
+      `modeled_of_to, `modeledStaged, `modeled_staged_eq, `modeledBody, `modeledDecls,
+      `modeled_ref_expands] do
     if (← getEnv).contains (sName ++ suffix) then
       throwErrorAt ref "derive_modeled: {sName ++ suffix} already exists"
   -- The checked proof composes each field instance's own `checked`, and decides only the names'
@@ -365,8 +468,16 @@ def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × Strin
   elabCommand (← `(def $stagedId : Effect4.Store.Image (Effect4.Schema.Model.Carrier $tyId) :=
     Effect4.Store.Image.record $stagedCols))
   elabCommand (← `(theorem $stagedEqId : $stagedId = Effect4.Schema.Model.image $tyId := $stagedEq))
+  elabCommand (← `(def $bodyId : Effect4.Program.Ty := .record [$(bodyItems.toArray),*]))
+  elabCommand (← `(def $declsId : Effect4.Program.TyDecls := $decls))
+  elabCommand (← `(theorem $refExpandsId ($exps : Effect4.Program.TyDecls)
+      ($hId : Effect4.Program.TyDecls.Expands $exps $declsId) :
+      Effect4.Program.Ty.expand $exps (.handle $(quote declName)) = $tyId := by
+    unfold $declsId:ident at $hId:ident
+    exact $refExpands))
   elabCommand (← `(instance : Effect4.Schema.Modeled $s :=
-    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId, $stagedId, $stagedEqId⟩))
+    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId, $stagedId, $stagedEqId, $declsId,
+      .handle $(quote declName), fun $exps $hId _ => $refExpandsId $exps $hId⟩))
   -- A declaration that failed leaves nothing behind: the command keeps all or none.
   if (← get).messages.hasErrors then
     setEnv envBefore

@@ -153,3 +153,28 @@ None of these was read in this session. Each is named for its idea.
 - No lowered `Modeled` codec runs in a committed lane yet.
 - §5.2 is a proposal. No part of items 1 to 5 is built.
 - The literature is named, not read here.
+
+## 8. After: named types landed (decisions row 402)
+
+§5.2's item 1 landed in its first form, for types with no recursion.
+
+| File | Change |
+| --- | --- |
+| `src/Effect4/Program/TyExpand.lean` | the table and its lookup, moved into a Lean module; `Ty.expand`, the solution `TyDecls.Expands`, the computed `TyDecls.expansions` and the check `TyDecls.expandable` |
+| `src/Effect4/Laws/Program/TyExpand.lean` | `memberIn_iff_expand`: on a guarded table with a solution, membership is `Val.hasTy` at the expansion |
+| `src/Effect4/Schema/Modeled.lean` | `Modeled` gains `decls`, `ref` and `ref_expands`; an unnamed type's default proof is `Model.expand_of_checked` |
+| `src/Effect4/Schema/Modeled/Derive.lean` | the deriver writes `modeledBody`, `modeledDecls` and `modeled_ref_expands` for a structure and for an inductive |
+| `src/Effect4/Laws/Schema/Modeled.lean` | `Modeled.memberIn_ref` and `Modeled.memberIn_image` |
+
+The proof reuses the fixed point of recursive types. Each declared name is read as `Val.hasTy`
+at its expansion. That reading is a fixed point, because each question of a step expands with
+its type (`obligations_expand`). On a guarded table the fixed point is unique, so it is
+membership. The code stays structural, so the carrier, the staged image and the lowering do not
+change.
+
+What this does not establish:
+
+- Nothing reads a reference yet. `Fits`, reply admission and the faces take no table.
+- A recursive type has no expansion. It waits on the carrier of a declared name (§5.2, item 4).
+- Two field types with one short name give a table that the readers' premise refuses. The
+  table's admission (decisions row 401 (2)) refuses a repeated name by its location.
