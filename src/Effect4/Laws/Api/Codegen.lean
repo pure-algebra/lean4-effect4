@@ -57,7 +57,9 @@ theorem explain_eq_if_refsWF (program : Program) (table : RowTable) :
         ⟨site, .referenceIllFormed target why⟩ := by
   unfold explain
   cases h : program.firstRefFault with
-  | none => rw [if_pos ((Effect4.Program.Eff.firstRefFault_eq_none program).mp h)]
+  | none =>
+    rw [if_pos ((Effect4.Program.Eff.firstRefFault_eq_none program).mp h)]
+    rfl
   | some f =>
     obtain ⟨site, target, why⟩ := f
     have hwf : program.layerRefsWF = false := by
@@ -100,7 +102,7 @@ theorem printDecl_erasure (name : String) (program : Program) (table : RowTable)
       | some ty, .ok body => (Effect4.Program.printDecl name ty body).toOption
       | _, _ => none := by
   have hformed := (Formation.checkInput_eq_none_iff program table).mpr formed
-  cases checked : checkTypedProgram (nativeSignature table) program with
+  cases checked : checkTypedProgram (SigApp.ofTable table).signature program with
   | none =>
     have typed := checkTypedProgram_refusal_iff.mp checked
     cases body : Effect4.Program.shippedPieces (nativeSignature table) [] program <;>

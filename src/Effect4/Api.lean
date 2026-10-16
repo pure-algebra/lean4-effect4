@@ -87,19 +87,21 @@ abbrev Program := NativeEff
 
 /-! ## Typing and printing -/
 
-/-- The type of a program against the native signature; `none` when ill-typed. Layer
+/-- The type of a program against an application's signature (`SigApp.signature`: its rows, its
+services and its named types; a row table alone coerces to one); `none` when ill-typed. Layer
 references are resolved first (`Program.typeOfProgram`: well-formed, then expanded to their
 targets), so a program with a diamond types as its inlined twin does. -/
-def typeOf (program : Program) (table : RowTable := []) : Option EffTy := Program.typeOfProgram (nativeSignature table) program
+def typeOf (program : Program) (app : SigApp := {}) : Option EffTy :=
+  Program.typeOfProgram app.signature program
 
 /-- Compute the shared typing certificate without the runner's registration checks.
-The result refers to this exact program and table; declarations use the same evidence. -/
-def checkTyping (program : Program) (table : RowTable := []) :
-    Option (Effect4.Program.TypedProgram (nativeSignature table) program) :=
-  Effect4.Program.checkTypedProgram (nativeSignature table) program
+The result refers to this exact program and signature; declarations use the same evidence. -/
+def checkTyping (program : Program) (app : SigApp := {}) :
+    Option (Effect4.Program.TypedProgram app.signature program) :=
+  Effect4.Program.checkTypedProgram app.signature program
 
 /-- Whether the program is well-typed. -/
-def wellTyped (program : Program) (table : RowTable := []) : Bool := (typeOf program table).isSome
+def wellTyped (program : Program) (app : SigApp := {}) : Bool := (typeOf program app).isSome
 
 /-- Where and why a program fails to type (DI-86): the checker's refusal, with the program's
 layer references resolved as `typeOf` resolves them. The facade refuses an ill-formed reference
@@ -110,16 +112,16 @@ for a program with no block (`Program.explain`). The expansion has no reference 
 (`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`), so no arm answers for one
 (decisions row 273). `none` exactly when the program is `wellTyped` (`Api.explain_none_iff`,
 below). -/
-def explain (program : Program) (table : RowTable := []) : Option Effect4.Program.TypeRefusal :=
+def explain (program : Program) (app : SigApp := {}) : Option Effect4.Program.TypeRefusal :=
   match program.firstRefFault with
   | some (site, target, why) => some ⟨site, .referenceIllFormed target why⟩
   | none =>
     Effect4.Program.Checker.refusal
-      (Effect4.Program.Checker.checkModule (nativeSignature table) program.expandRefs)
+      (Effect4.Program.Checker.checkModule app.signature program.expandRefs)
 
 /-- The path of the refusal alone: the deepest node whose own rule refuses. -/
-def blame (program : Program) (table : RowTable := []) : Option (List Nat) :=
-  (explain program table).map (·.path)
+def blame (program : Program) (app : SigApp := {}) : Option (List Nat) :=
+  (explain program app).map (·.path)
 
 /-- The facade's refusal is the checker's (DI-86): `explain` answers `none` exactly when the
 program is `wellTyped`, the layer references resolved the same way on both sides. Both sides
@@ -127,14 +129,14 @@ test the references' formation (`Eff.firstRefFault_eq_none`). Where it holds, bo
 the one module check of the expansion, its refusal and its success. Where it fails, the facade
 refuses at the reference and the program is not `wellTyped`. The proof uses no law of the proof
 graph. -/
-theorem explain_none_iff (program : Program) (table : RowTable) :
-    explain program table = none ↔ wellTyped program table = true := by
+theorem explain_none_iff (program : Program) (app : SigApp) :
+    explain program app = none ↔ wellTyped program app = true := by
   unfold explain wellTyped typeOf Program.typeOfProgram
   cases h : program.firstRefFault with
   | none =>
     rw [if_pos ((Program.Eff.firstRefFault_eq_none program).mp h)]
     show Program.Checker.refusal _ = none ↔ Option.isSome (Except.toOption _) = true
-    cases Program.Checker.checkModule (nativeSignature table) program.expandRefs with
+    cases Program.Checker.checkModule app.signature program.expandRefs with
     | ok _ => exact ⟨fun _ => rfl, fun _ => rfl⟩
     | error _ => exact ⟨nofun, nofun⟩
   | some f =>
@@ -148,8 +150,8 @@ theorem explain_none_iff (program : Program) (table : RowTable) :
     rw [hwf]
     exact ⟨nofun, nofun⟩
 
-theorem blame_none_iff (program : Program) (table : RowTable) :
-    blame program table = none ↔ wellTyped program table = true := by
+theorem blame_none_iff (program : Program) (app : SigApp) :
+    blame program app = none ↔ wellTyped program app = true := by
   simp [blame, ← explain_none_iff]
 
 /-! ## Bytes: how a program crosses a boundary -/
@@ -337,12 +339,12 @@ export Effect4.Program.Table (lawful)
 end Table
 
 /-- The checked ordinary run: `run`, with the certificate consumed. The certificate is at the
-table's own signature, `SigApp.ofTable table`; a run at declared services is the Σ_app slice's step 3. -/
-def runAdmitted {program : Program} {table : RowTable}
-    (admitted : AdmittedProgram program (.ofTable table)) (fuel : Nat)
+application's signature; the machine reads its rows. -/
+def runAdmitted {program : Program} {app : SigApp}
+    (admitted : AdmittedProgram program app) (fuel : Nat)
     (compileFuel : Nat := fuel) : Inspection :=
   let _ := admitted.ty
-  run program fuel table compileFuel
+  run program fuel app.rows compileFuel
 
 /-! ## Certificate first (DI-85)
 
@@ -350,20 +352,20 @@ A program is checked once; what runs, prints or emits afterwards takes the certi
 raw program. `check` is total by `explain_none_iff`: no program is refused without a located
 reason. `author` is the agent's one call from a named source. -/
 
-/-- A program with its typing certificate against a table. -/
-structure Typed (table : RowTable) where
+/-- A program with its typing certificate against an application's signature. -/
+structure Typed (app : SigApp) where
   program : Program
-  certificate : Effect4.Program.TypedProgram (nativeSignature table) program
+  certificate : Effect4.Program.TypedProgram app.signature program
 
 /-- Certificate first: the checker's evidence, or its located and named refusal (DI-86). -/
-def check (program : Program) (table : RowTable := []) :
-    Except Effect4.Program.TypeRefusal (Typed table) :=
-  match h : explain program table with
+def check (program : Program) (app : SigApp := {}) :
+    Except Effect4.Program.TypeRefusal (Typed app) :=
+  match h : explain program app with
   | some refusal => .error refusal
   | none =>
-    match h2 : Program.typeOfProgram (nativeSignature table) program with
+    match h2 : Program.typeOfProgram app.signature program with
     | some ty => .ok ⟨program, ⟨ty, h2⟩⟩
-    | none => absurd ((explain_none_iff program table).mp h) (by simp [wellTyped, typeOf, h2])
+    | none => absurd ((explain_none_iff program app).mp h) (by simp [wellTyped, typeOf, h2])
 
 /-- The command and compile budgets of a run; the defaults are the truth corpus's. -/
 structure Budget where
@@ -373,21 +375,21 @@ deriving DecidableEq, Repr
 
 namespace Typed
 
-variable {table : RowTable}
+variable {app : SigApp}
 
 /-- The certified type. -/
-def ty (t : Typed table) : EffTy := t.certificate.ty
+def ty (t : Typed app) : EffTy := t.certificate.ty
 
-/-- `run` on the certified program: evaluate the root, flush. -/
-def run (t : Typed table) (budget : Budget := {}) : Inspection :=
-  Api.run t.program budget.fuel table budget.compileFuel
+/-- `run` on the certified program: evaluate the root, flush. The machine reads the rows. -/
+def run (t : Typed app) (budget : Budget := {}) : Inspection :=
+  Api.run t.program budget.fuel app.rows budget.compileFuel
 
 /-- `Effect.runSyncExit` on the certified program: the exit alone. -/
-def runSync (t : Typed table) (budget : Budget := {}) : ExitV :=
-  (Api.runSync t.program budget.fuel table budget.compileFuel).2
+def runSync (t : Typed app) (budget : Budget := {}) : ExitV :=
+  (Api.runSync t.program budget.fuel app.rows budget.compileFuel).2
 
 /-- The canonical bytes: the program's identity for a store and a host. -/
-def bytes (t : Typed table) : Store.Bytes := bytesOf t.program
+def bytes (t : Typed app) : Store.Bytes := bytesOf t.program
 
 end Typed
 
@@ -399,11 +401,11 @@ inductive AuthorRefusal
 deriving DecidableEq
 
 /-- The agent's one call: a named source elaborated at the empty scope, then checked. -/
-def author (src : Effect4.Program.Authoring.Src NativeOp) (table : RowTable := []) :
-    Except AuthorRefusal (Typed table) :=
+def author (src : Effect4.Program.Authoring.Src NativeOp) (app : SigApp := {}) :
+    Except AuthorRefusal (Typed app) :=
   match Effect4.Program.Authoring.elaborate src with
   | .error refusal => .error (.scope refusal)
-  | .ok program => (check program table).mapError .typing
+  | .ok program => (check program app).mapError .typing
 
 /-! ## The environment as data
 
@@ -414,13 +416,13 @@ what lets an agent read a composition before running anything. -/
 
 namespace Typed
 
-variable {table : RowTable}
+variable {app : SigApp}
 
 /-- The full keys this program performs against, in the canonical key order. -/
-def requires (t : Typed table) : List ServiceKey := t.ty.requires.elems
+def requires (t : Typed app) : List ServiceKey := t.ty.requires.elems
 
 /-- Whether the program needs nothing of its surroundings: `Effect<A, E, never>`. -/
-def closed (t : Typed table) : Bool := t.ty.requires == Effect4.Machine.Env.Requirement.empty
+def closed (t : Typed app) : Bool := t.ty.requires == Effect4.Machine.Env.Requirement.empty
 
 end Typed
 

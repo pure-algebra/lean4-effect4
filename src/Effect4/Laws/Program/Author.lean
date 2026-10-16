@@ -195,6 +195,7 @@ theorem build_rows_resolve {Op : Type} (m : Module Op) (names : RowNames)
 theorem build_table {m : Module NativeOp} {b : Api.Built} (h : Api.Author.build m = .ok b) :
     b.table = m.table ∧ b.rowNames = m.rowNames := by
   unfold Api.Author.build Api.Author.Internal.finishBuild at h
+  unfold Api.Built.table
   aesop
 
 /-- A built program's table is lawful: the certificate's signature is (`admitSig_ok_iff`), and
@@ -219,17 +220,16 @@ which program and host setup were checked. They compare no program behaviors or 
 returned `Built.admitted` certificate is indexed by those program and table fields. -/
 theorem rebuild_spec {before after : Api.Built} {candidate : Api.Program}
     (h : before.rebuild candidate = .ok after) :
-    after.program = candidate ∧ after.table = before.table ∧
-      after.rowNames = before.rowNames := by
+    after.program = candidate ∧ after.app = before.app ∧ after.rowNames = before.rowNames := by
   unfold Api.Built.rebuild Api.Author.Internal.finishBuild at h
   split at h <;> aesop
 
 /-- An already admitted candidate succeeds with its certificate against the unchanged
 host setup. This reuses completeness of the existing admission procedure. -/
 theorem rebuild_admitted (before : Api.Built) (candidate : Api.Program)
-    (admitted : AdmittedProgram candidate (.ofTable before.table)) :
+    (admitted : AdmittedProgram candidate before.app) :
     before.rebuild candidate = .ok
-      { table := before.table, program := candidate, admitted := admitted,
+      { app := before.app, program := candidate, admitted := admitted,
         rowNames := before.rowNames } := by
   have accepted := admitProgram_eq_ok admitted
   unfold Api.Built.rebuild Api.Author.Internal.finishBuild

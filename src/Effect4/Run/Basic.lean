@@ -52,7 +52,7 @@ structure Run where
   /-- The command and compile budgets of this run; every row is played at `budget.fuel`. -/
   budget : Api.Budget := {}
   /-- The checked session: the machine and the ledger of calls, receipts and retirements. -/
-  session : Session built.program built.table
+  session : Session built.program built.app
   /-- Every row played, in order. -/
   journal : List Command := []
   /-- The verdict of every row played, in order. -/
@@ -108,12 +108,12 @@ def «open» (b : Api.Built) (id : String) (budget : Api.Budget := {})
       { admitted := b.admitted
         header := ⟨Api.HostSession.version, id, binding, b.table⟩
         machine := Api.load b.program budget.compileFuel
-        calls := Api.HostSession.callTable b.program b.table } }
+        calls := Api.HostSession.callTable b.program b.app } }
 
 /-- The run as the runner that plays rows: the program, the table and the job's fuel beside
 the session they index. -/
 def runner (s : Run) : Api.Runner.Runner :=
-  { program := s.built.program, table := s.built.table, fuel := s.budget.fuel,
+  { program := s.built.program, app := s.built.app, fuel := s.budget.fuel,
     session := s.session }
 
 /-- One row played, recorded with its verdict. -/

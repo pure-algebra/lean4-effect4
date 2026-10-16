@@ -46,21 +46,25 @@ deriving DecidableEq
 /-- A session with what indexes it, and the job's step fuel. -/
 structure Runner where
   program : Api.Program
-  table : RowTable
+  /-- The application: the row table and the named types (a row table alone coerces to one). -/
+  app : SigApp
   /-- The fuel of every `apply` and `control` of this job. It is the job's, so two instances
   playing one journal stop at the same places. -/
   fuel : Nat
-  session : Session program table
+  session : Session program app
 
-/-- A runner from a program, its row table and an explicit header, or the refusal. -/
-def load (program : Api.Program) (table : RowTable) (expectedBinding : String)
+/-- The runner's row table. -/
+def Runner.table (p : Runner) : RowTable := p.app.rows
+
+/-- A runner from a program, its application and an explicit header, or the refusal. -/
+def load (program : Api.Program) (app : SigApp) (expectedBinding : String)
     (header : Header) (compileFuel stepFuel : Nat) : Except HostSession.Refusal Runner :=
-  match HostSession.start program table expectedBinding header compileFuel with
+  match HostSession.start program app expectedBinding header compileFuel with
   | .error why => .error why
-  | .ok session => .ok { program, table, fuel := stepFuel, session }
+  | .ok session => .ok { program, app, fuel := stepFuel, session }
 
 /-- The checked transition a command names. -/
-def result (p : Runner) : Command → Result p.program p.table
+def result (p : Runner) : Command → Result p.program p.app
   | .bind call token => HostSession.bindCall p.session call token
   | .submit reply => HostSession.submit p.session reply
   | .apply key => HostSession.applyReply p.session key p.fuel

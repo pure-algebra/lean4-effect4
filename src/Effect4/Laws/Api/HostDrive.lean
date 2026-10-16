@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.RowProtocol
 import Effect4.Laws.Run.Frame
+import Effect4.Laws.Program.TyDecls
 
 /-!
 # Api.HostDrive — the driver's run is answered by its reactor
@@ -173,7 +174,7 @@ theorem answer_tape (s : Run) (key : Key) (c : Answer) (call : Call)
     (hat : Api.HostSession.Call.at s key = some call)
     (hfresh : s.session.active.any (fun b => b.key == key) = false)
     (hslot : s.session.pending.any (fun slot => slot.key == key) = false)
-    (hfits : admit s.built.table s.machine (.answerAsync key.fiber key.token c) = none)
+    (hfits : admit s.built.app s.machine (.answerAsync key.fiber key.token c) = none)
     (hread : (tapeFrom s (Rows.answer s key c)).2 = []) :
     (tapeFrom s (Rows.answer s key c)).1.map (·.decision) = [.answerAsync key.fiber key.token c] := by
   obtain ⟨op, request, hr, hshape⟩ := at_eq s key call hat
@@ -215,14 +216,14 @@ theorem answer_tape (s : Run) (key : Key) (c : Answer) (call : Call)
       (fun slot => slot.key == (Rows.reply s call key c).key) = true := by
     rw [hp1]
     exact any_append_key s.session.pending key
-  have henv : Envelope s.built.table (s.step (.bind call key.token)).session.machine
+  have henv : Envelope s.built.app (s.step (.bind call key.token)).session.machine
       ((⟨call, key.token⟩ : BoundCall).record (Rows.reply s call key c)) := by
     rw [hm1]
     refine ⟨htab, ?_, ?_⟩
     · show requestOf s.session.machine call.fiber key.token = some (call.op, call.request)
       rw [hfib, hop, hreq]
       exact hr
-    · show admit s.built.table s.session.machine (.answerAsync call.fiber key.token c) = none
+    · show admit s.built.app s.session.machine (.answerAsync call.fiber key.token c) = none
       rw [hfib]
       exact hfits
   have hobs1 : Api.HostProtocol.observe (s.step (.bind call key.token)).session.machine =
@@ -342,11 +343,11 @@ answers with exits drives rows whose tape, when it reads every row, the reactor 
 answered: at each answer, the host gives the machine's request the answer's exit, and its state
 moves as the reactor's did. Every decision of the tape is a host's (`hostDecision`). Reach: any
 run of the table, any rounds. Not established: that the drive finishes or reads every row. -/
-theorem drive_hostAnswered {σ : Type} (table : RowTable) (r : Reactor σ)
-    (henv : r.Envelops table) (hexits : r.ExitsOnly) :
-    ∀ (rounds : Nat) (s : Run) (st : σ), s.built.table = table →
+theorem drive_hostAnswered {σ : Type} (app : SigApp) (r : Reactor σ)
+    (henv : r.Envelops app) (hexits : r.ExitsOnly) :
+    ∀ (rounds : Nat) (s : Run) (st : σ), s.built.app = app →
       (tapeFrom s (driveFrom r rounds s st).2.1).2 = [] →
-      HostAnswered table (reactorHost table r) s.built.program s.budget.fuel
+      HostAnswered app.rows (reactorHost app.rows r) s.built.program s.budget.fuel
           ((tapeFrom s (driveFrom r rounds s st).2.1).1.map (·.decision)) s.machine st
           (driveFrom r rounds s st).2.2 ∧
         ((tapeFrom s (driveFrom r rounds s st).2.1).1.map (·.decision)).all hostDecision = true
@@ -366,13 +367,13 @@ theorem drive_hostAnswered {σ : Type} (table : RowTable) (r : Reactor σ)
           dsimp only at hread ⊢
           obtain ⟨hmem, hactive, hpending⟩ := freshCall_facts s await hfreshCall
           obtain ⟨i, hop, hext⟩ := rowOf_external s await.op row hrow
-          rw [htable] at hext
+          replace hext : externalRow app.rows i = some row := by rw [← htable]; exact hext
           obtain ⟨ex, rfl⟩ := hexits row await.request st c next hreact
           have hreq : requestOf s.machine await.fiber await.token =
               some (.external i, await.request) := by
             rw [← hop]
             exact requestOf_of_mem_awaits s.machine await hmem
-          have hfits : admit s.built.table s.machine
+          have hfits : admit s.built.app s.machine
               (.answerAsync (⟨await.fiber, await.token⟩ : Key).fiber
                 (⟨await.fiber, await.token⟩ : Key).token (.ofExit ex)) = none := by
             rw [htable]
@@ -385,14 +386,15 @@ theorem drive_hostAnswered {σ : Type} (table : RowTable) (r : Reactor σ)
             hactive hpending hfits hA
           have hmach := play_machine_stepsBy s _ hA
           rw [hans] at hmach
-          obtain ⟨hrest, hall⟩ := drive_hostAnswered table r henv hexits rounds
+          obtain ⟨hrest, hall⟩ := drive_hostAnswered app r henv hexits rounds
             (s.play (Rows.answer s ⟨await.fiber, await.token⟩ (.ofExit ex))) next
             (by rw [play_built]; exact htable) hB
-          rw [hmach, play_built, play_budget, htable] at hrest
+          rw [hmach, play_built, play_budget] at hrest
+          simp only [Api.Built.table, htable] at hrest
           rw [htape, List.map_append, hans]
-          refine ⟨hostAnswered_append table (reactorHost table r) _ _ _ _ _ st next _
+          refine ⟨hostAnswered_append app.rows (reactorHost app.rows r) _ _ _ _ _ st next _
             ⟨i, await.request, lt_of_externalRow hext, next, hreq,
-              reactorHost_answer table r (lt_of_externalRow hext) hext hreact, rfl⟩ hrest, ?_⟩
+              reactorHost_answer app.rows r (lt_of_externalRow hext) hext hreact, rfl⟩ hrest, ?_⟩
           rw [List.cons_append, List.nil_append, List.all_cons, hall]
           rfl
     · rename_i hfreshCall
@@ -408,7 +410,7 @@ theorem drive_hostAnswered {σ : Type} (table : RowTable) (r : Reactor σ)
         split at hread
         · rename_i hdone
           rw [if_pos hdone]
-          refine ⟨hostAnswered_quiet table _ _ _ st _ _ fun d hd => Or.inl (hflush d hd), ?_⟩
+          refine ⟨hostAnswered_quiet app.rows _ _ _ st _ _ fun d hd => Or.inl (hflush d hd), ?_⟩
           rw [List.all_eq_true]
           intro d hd
           rw [hflush d hd]
@@ -418,12 +420,13 @@ theorem drive_hostAnswered {σ : Type} (table : RowTable) (r : Reactor σ)
           dsimp only at hread ⊢
           obtain ⟨hA, hB, htape⟩ := tapeFrom_append_read s _ _ hread
           have hmach := play_machine_stepsBy s _ hA
-          obtain ⟨hrest, hall⟩ := drive_hostAnswered table r henv hexits rounds
+          obtain ⟨hrest, hall⟩ := drive_hostAnswered app r henv hexits rounds
             (s.play Rows.flush) st (by rw [play_built]; exact htable) hB
-          rw [hmach, play_built, play_budget, htable] at hrest
+          rw [hmach, play_built, play_budget] at hrest
+          simp only [Api.Built.table, htable] at hrest
           rw [htape, List.map_append]
-          refine ⟨hostAnswered_append table (reactorHost table r) _ _ _ _ _ st st _
-            (hostAnswered_quiet table _ _ _ st _ _ fun d hd => Or.inl (hflush d hd)) hrest, ?_⟩
+          refine ⟨hostAnswered_append app.rows (reactorHost app.rows r) _ _ _ _ _ st st _
+            (hostAnswered_quiet app.rows _ _ _ st _ _ fun d hd => Or.inl (hflush d hd)) hrest, ?_⟩
           rw [List.all_append, hall, Bool.and_true, List.all_eq_true]
           intro d hd
           rw [hflush d hd]
@@ -442,7 +445,7 @@ drive it with a reactor inside the envelope that answers with exits. When the ru
 reactor read as a host answered the run's tape from the program's load, its state going from the
 start to the drive's end, and every decision of the tape is a host's. -/
 theorem runWith_hostAnswered {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
-    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.app) (hexits : r.ExitsOnly)
     (hfund : funded (Run.runWith b r st id budget rounds).1 = true) :
     HostAnswered b.table (reactorHost b.table r) b.program budget.fuel
         (tapeOf (Run.runWith b r st id budget rounds).1)
@@ -470,7 +473,7 @@ theorem runWith_hostAnswered {σ : Type} (b : Api.Built) (r : Reactor σ) (st : 
   obtain ⟨hA, hB, htape⟩ := tapeFrom_append_read _ _ _ hread
   have hstart : ∀ x ∈ (tapeFrom (Run.open b id budget) Rows.start).1.map (·.decision),
       x = Api.evaluate := tapeFrom_control _ Api.evaluate
-  obtain ⟨hdrive, hall⟩ := drive_hostAnswered b.table r henv hexits rounds
+  obtain ⟨hdrive, hall⟩ := drive_hostAnswered b.app r henv hexits rounds
     ((Run.open b id budget).play Rows.start) st (by rw [play_built]; rfl) hB
   rw [play_built, play_budget, play_machine_stepsBy _ _ hA] at hdrive
   refine ⟨?_, ?_⟩
@@ -487,7 +490,7 @@ theorem runWith_hostAnswered {σ : Type} (b : Api.Built) (r : Reactor σ) (st : 
 on loops): it is reached, at its program and budget, answered by its reactor read as a host and
 driven by it. -/
 theorem runWith_session {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
-    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.app) (hexits : r.ExitsOnly)
     (hfund : funded (Run.runWith b r st id budget rounds).1 = true) :
     Run.Reached (Run.runWith b r st id budget rounds).1 ∧
       (Run.runWith b r st id budget rounds).1.built = b ∧
@@ -518,7 +521,7 @@ Concept `translation-simulation`, role simulation; requirement R6. Consumer: the
 interface's hosts, composed by `Effects.Comodel` (slice CO-6). -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem runWith_denotes {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
-    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.app) (hexits : r.ExitsOnly)
     (hfrag : StraightRows b.table b.program = true)
     (hfund : funded (Run.runWith b r st id budget rounds).1 = true)
     (hrest : atRest (Run.runWith b r st id budget rounds).1 = true)
@@ -538,43 +541,47 @@ theorem runWith_denotes {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (
 The envelope asks a reactor's answers to be admitted at every machine that holds the call. A
 row's columns decide it, except at a column that allocates an external handle: a success is a
 member of the answer column and holds no handle, and a failure holds no reserved defect and fits
-the error column. Membership at the empty allocation table is membership at every table
-(`hasTy_append`), so a reactor that answers only such exits is inside the envelope, whatever
-the machine. `Reactor.guardRows` makes any reactor one: it refuses every other answer. -/
+the error column, under the application's named types. Membership at the empty allocation table
+is membership at every table (`memberIn_mono`), so a reactor that answers only such exits is
+inside the envelope, whatever the machine. `Reactor.guardRows` makes any reactor one: it refuses
+every other answer. -/
 
-/-- Whether a row's columns admit an answer at every machine: a success that is a member of an
-answer column that allocates nothing and that holds no handle, or a failure with no reserved
-defect whose reasons fit the error column. A delayed cell read is never admitted here. -/
-def answerAdmits (row : Program.Row) : Answer → Bool
+/-- Whether a row's columns admit an answer at every machine, under the named types `types`: a
+success that is a member of an answer column that allocates nothing and that holds no handle,
+or a failure with no reserved defect whose reasons fit the error column. A delayed cell read is
+never admitted here. -/
+def answerAdmits (types : TyDecls) (row : Program.Row) : Answer → Bool
   | .ofExit (.success v) =>
-    !allocates row.answer && Val.hasTy v row.answer [] && (Store.Val.handles v).isEmpty
+    !allocates row.answer && Val.memberIn types v row.answer [] && (Store.Val.handles v).isEmpty
   | .ofExit (.failure cause) =>
-    !cause.reasons.any reservedDie && cause.reasons.all (errAdmits row.error)
+    !cause.reasons.any reservedDie && cause.reasons.all (errAdmits types row.error)
   | .ofRefGet _ => false
 
 /-- A reactor behind its rows' types: it gives the reactor's answer where the row admits it at
-every machine (`answerAdmits`), and no answer otherwise. -/
-def Reactor.guardRows {σ : Type} (r : Reactor σ) : Reactor σ :=
-  fun row request st => (r row request st).filter fun result => answerAdmits row result.1
+every machine under the named types `types` (`answerAdmits`), and no answer otherwise. -/
+def Reactor.guardRows {σ : Type} (r : Reactor σ) (types : TyDecls) : Reactor σ :=
+  fun row request st => (r row request st).filter fun result => answerAdmits types row result.1
 
-/-- Step of `guardRows_envelops`: the machine admits an answer at a call it holds, on a table
-row, where the row admits it at every machine. -/
-theorem admit_of_answerAdmits (table : RowTable) (m : Api.Machine) (fiber : FiberId)
+/-- Step of `guardRows_envelops`: the machine admits an answer at a call it holds, on a row of
+the application, where the row admits it at every machine under the application's types. -/
+theorem admit_of_answerAdmits (app : SigApp) (m : Api.Machine) (fiber : FiberId)
     (token i : Nat) (row : Program.Row) (request : Val) (c : Answer)
     (hreq : requestOf m fiber token = some (.external i, request))
-    (hrow : externalRow table i = some row) (hadmits : answerAdmits row c = true) :
-    admit table m (.answerAsync fiber token c) = none := by
+    (hrow : externalRow app.rows i = some row) (hadmits : answerAdmits app.types row c = true) :
+    admit app m (.answerAsync fiber token c) = none := by
   obtain ⟨f, controller, cancel, origin, hf, hp, -⟩ := requestOf_current m fiber token _ _ hreq
-  have hanswer : admitAnswer row m fiber token c = none := by
+  have hanswer : admitAnswer app.types row m fiber token c = none := by
     cases c with
     | ofExit ex =>
       cases ex with
       | success v =>
         simp only [answerAdmits, Bool.and_eq_true, Bool.not_eq_true'] at hadmits
         obtain ⟨⟨halloc, hty⟩, hhandles⟩ := hadmits
-        have hmember : Val.hasTy v row.answer m.state.externals.allocated = true :=
-          hasTy_append row.answer v [] m.state.externals.allocated hty
-        have hvalue : (externalValue row.answer m.state.externals.allocated v).isNone = false := by
+        have hmember : Val.memberIn app.types v row.answer m.state.externals.allocated = true :=
+          Val.memberIn_iff.mpr (memberIn_mono (extends_append [] m.state.externals.allocated)
+            (Val.memberIn_iff.mp hty))
+        have hvalue :
+            (externalValue app.types row.answer m.state.externals.allocated v).isNone = false := by
           rw [externalValue_unallocating halloc, hmember, hhandles]
           rfl
         have hminted : mintedIn m v = true := by
@@ -589,12 +596,12 @@ theorem admit_of_answerAdmits (table : RowTable) (m : Api.Machine) (fiber : Fibe
   simp only [admit, hf, hp, ne_eq, not_true_eq_false, if_false, hreq, hrow]
   exact hanswer
 
-/-- **A reactor behind its rows' types is inside the envelope**, at every table: each answer it
-gives at a call a machine holds is one the machine admits. -/
-theorem guardRows_envelops {σ : Type} (r : Reactor σ) (table : RowTable) :
-    r.guardRows.Envelops table := by
+/-- **A reactor behind its rows' types is inside the envelope**, at every application: each
+answer it gives at a call a machine holds is one the machine admits. -/
+theorem guardRows_envelops {σ : Type} (r : Reactor σ) (app : SigApp) :
+    (r.guardRows app.types).Envelops app := by
   intro m fiber token i row request st c next hreq hrow hguard
-  have hadmits : answerAdmits row c = true := by
+  have hadmits : answerAdmits app.types row c = true := by
     unfold Reactor.guardRows at hguard
     cases hr : r row request st with
     | none =>
@@ -606,10 +613,11 @@ theorem guardRows_envelops {σ : Type} (r : Reactor σ) (table : RowTable) :
       · cases hguard
         assumption
       · cases hguard
-  exact admit_of_answerAdmits table m fiber token i row request c hreq hrow hadmits
+  exact admit_of_answerAdmits app m fiber token i row request c hreq hrow hadmits
 
 /-- A reactor behind its rows' types answers with exits. -/
-theorem guardRows_exitsOnly {σ : Type} (r : Reactor σ) : r.guardRows.ExitsOnly := by
+theorem guardRows_exitsOnly {σ : Type} (r : Reactor σ) (types : TyDecls) :
+    (r.guardRows types).ExitsOnly := by
   intro row request st c next hguard
   unfold Reactor.guardRows at hguard
   cases hr : r row request st with
@@ -637,14 +645,14 @@ simulation; requirement R6. Consumer: the battery's repository runs
 @[semantics "translation-simulation" (requirement := R6)]
 theorem runWith_guarded_denotes {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
     (budget : Api.Budget) (rounds : Nat) (hfrag : StraightRows b.table b.program = true)
-    (hfund : funded (Run.runWith b r.guardRows st id budget rounds).1 = true)
-    (hrest : atRest (Run.runWith b r.guardRows st id budget rounds).1 = true)
-    (ex : ExitV) (hex : (Run.runWith b r.guardRows st id budget rounds).1.exit = some ex) :
-    hostRun (reactorHost b.table r.guardRows) b.program [] Stores.empty st =
-      some (ex, ((Run.runWith b r.guardRows st id budget rounds).1.machine.state,
-        (Run.runWith b r.guardRows st id budget rounds).2)) :=
-  runWith_denotes b r.guardRows st id budget rounds (guardRows_envelops r b.table)
-    (guardRows_exitsOnly r) hfrag hfund hrest ex hex
+    (hfund : funded (Run.runWith b (r.guardRows b.app.types) st id budget rounds).1 = true)
+    (hrest : atRest (Run.runWith b (r.guardRows b.app.types) st id budget rounds).1 = true)
+    (ex : ExitV) (hex : (Run.runWith b (r.guardRows b.app.types) st id budget rounds).1.exit = some ex) :
+    hostRun (reactorHost b.table (r.guardRows b.app.types)) b.program [] Stores.empty st =
+      some (ex, ((Run.runWith b (r.guardRows b.app.types) st id budget rounds).1.machine.state,
+        (Run.runWith b (r.guardRows b.app.types) st id budget rounds).2)) :=
+  runWith_denotes b (r.guardRows b.app.types) st id budget rounds (guardRows_envelops r b.app)
+    (guardRows_exitsOnly r b.app.types) hfrag hfund hrest ex hex
 
 /-! ## Any host drives the run
 
@@ -673,19 +681,22 @@ def Reactor.ofHost (table : RowTable) {σ : Type} (host : Effects.Comodel (RowSi
 
 /-- Whether a row admits an exit at every machine: `answerAdmits` at an external row, and no
 exit elsewhere. -/
-def externalAdmitsAt (table : RowTable) (op : (RowSig table).Op) (ex : ExitV) : Bool :=
+def externalAdmitsAt (types : TyDecls) (table : RowTable) (op : (RowSig table).Op) (ex : ExitV) :
+    Bool :=
   match externalRow table op.1.val with
-  | some row => answerAdmits row (.ofExit ex)
+  | some row => answerAdmits types row (.ofExit ex)
   | none => false
 
 /-- A host behind its rows' types: its answers that an external row admits at every machine. -/
-def hostGuard (table : RowTable) {σ : Type} (host : Effects.Comodel (RowSig table) σ) :
-    Effects.Comodel (RowSig table) σ :=
-  host.guard (externalAdmitsAt table)
+def hostGuard (types : TyDecls) (table : RowTable) {σ : Type}
+    (host : Effects.Comodel (RowSig table) σ) : Effects.Comodel (RowSig table) σ :=
+  host.guard (externalAdmitsAt types table)
 
 /-- A host whose answers the rows admit is its own guard. -/
-theorem hostGuard_of_meets (table : RowTable) {σ : Type} {host : Effects.Comodel (RowSig table) σ}
-    (h : host.Meets fun op ex => externalAdmitsAt table op ex = true) : hostGuard table host = host :=
+theorem hostGuard_of_meets (types : TyDecls) (table : RowTable) {σ : Type}
+    {host : Effects.Comodel (RowSig table) σ}
+    (h : host.Meets fun op ex => externalAdmitsAt types table op ex = true) :
+    hostGuard types table host = host :=
   Effects.Comodel.guard_of_meets h
 
 /-- Step of `reactorHost_ofHost`: an external row of a table with distinct keys is found at its
@@ -717,26 +728,26 @@ theorem comodel_ext {S : Effects.Signature.{0, 0}} {σ : Type} {a b : Effects.Co
 
 /-- **Reading a host as a reactor and back, behind the rows' types, is the host behind them**,
 at a table with distinct keys. -/
-theorem reactorHost_ofHost (table : RowTable) (hkeys : (table.map rowKey).Nodup) {σ : Type}
-    (host : Effects.Comodel (RowSig table) σ) :
-    reactorHost table (Reactor.ofHost table host).guardRows = hostGuard table host := by
+theorem reactorHost_ofHost (types : TyDecls) (table : RowTable) (hkeys : (table.map rowKey).Nodup)
+    {σ : Type} (host : Effects.Comodel (RowSig table) σ) :
+    reactorHost table ((Reactor.ofHost table host).guardRows types) = hostGuard types table host := by
   apply comodel_ext
   intro op st
   obtain ⟨⟨i, hi⟩, v⟩ := op
   show (match externalRow table i with
       | none => none
       | some row =>
-        match (Reactor.ofHost table host).guardRows row v st with
+        match (Reactor.ofHost table host).guardRows types row v st with
         | some (.ofExit ex, next) => some (ex, next)
         | _ => none) =
     (host.answer ⟨⟨i, hi⟩, v⟩ st).filter fun result =>
-      externalAdmitsAt table ⟨⟨i, hi⟩, v⟩ result.1
+      externalAdmitsAt types table ⟨⟨i, hi⟩, v⟩ result.1
   cases hrow : externalRow table i with
   | none =>
-    have hadmit : ∀ ex, externalAdmitsAt table ⟨⟨i, hi⟩, v⟩ ex = false := by
+    have hadmit : ∀ ex, externalAdmitsAt types table ⟨⟨i, hi⟩, v⟩ ex = false := by
       intro ex
       show (match externalRow table i with
-        | some row => answerAdmits row (.ofExit ex)
+        | some row => answerAdmits types row (.ofExit ex)
         | none => false) = false
       rw [hrow]
     dsimp only
@@ -746,22 +757,22 @@ theorem reactorHost_ofHost (table : RowTable) (hkeys : (table.map rowKey).Nodup)
       rw [Option.filter_some, hadmit result.1]
       rfl
   | some row =>
-    have hadmit : ∀ ex, externalAdmitsAt table ⟨⟨i, hi⟩, v⟩ ex = answerAdmits row (.ofExit ex) := by
+    have hadmit : ∀ ex, externalAdmitsAt types table ⟨⟨i, hi⟩, v⟩ ex = answerAdmits types row (.ofExit ex) := by
       intro ex
       show (match externalRow table i with
-        | some row => answerAdmits row (.ofExit ex)
+        | some row => answerAdmits types row (.ofExit ex)
         | none => false) = _
       rw [hrow]
     have hpos := rowPosition_external hkeys hrow
     dsimp only
     show (match ((Reactor.ofHost table host) row v st).filter
-        (fun result => answerAdmits row result.1) with
+        (fun result => answerAdmits types row result.1) with
       | some (.ofExit ex, next) => some (ex, next)
       | _ => none) = _
     show (match ((match rowPosition table row with
         | none => none
         | some j => (host.answer ⟨j, v⟩ st).map fun result => (Completion.ofExit result.1, result.2))
-          : Option (Answer × σ)).filter (fun result => answerAdmits row result.1) with
+          : Option (Answer × σ)).filter (fun result => answerAdmits types row result.1) with
       | some (.ofExit ex, next) => some (ex, next)
       | _ => none) = _
     rw [hpos]
@@ -771,7 +782,7 @@ theorem reactorHost_ofHost (table : RowTable) (hkeys : (table.map rowKey).Nodup)
     | some result =>
       obtain ⟨ex, next⟩ := result
       rw [Option.map_some, Option.filter_some, Option.filter_some, hadmit ex]
-      by_cases hok : answerAdmits row (.ofExit ex) = true
+      by_cases hok : answerAdmits types row (.ofExit ex) = true
       · rw [if_pos hok, if_pos hok]
         rfl
       · rw [if_neg hok, if_neg hok]
@@ -788,17 +799,17 @@ the battery's recorded and replayed sessions (`Test/Api/SessionMeaning.lean`). -
 theorem runWith_host_denotes {σ : Type} (b : Api.Built) (host : Effects.Comodel (RowSig b.table) σ)
     (st : σ) (id : String) (budget : Api.Budget) (rounds : Nat)
     (hkeys : (b.table.map rowKey).Nodup) (hfrag : StraightRows b.table b.program = true)
-    (hfund : funded (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1
+    (hfund : funded (Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).1
       = true)
-    (hrest : atRest (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1
+    (hrest : atRest (Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).1
       = true)
     (ex : ExitV)
-    (hex : (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1.exit =
+    (hex : (Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).1.exit =
       some ex) :
-    hostRun (hostGuard b.table host) b.program [] Stores.empty st =
-      some (ex, ((Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1.machine.state,
-        (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).2)) := by
-  rw [← reactorHost_ofHost b.table hkeys host]
+    hostRun (hostGuard b.app.types b.table host) b.program [] Stores.empty st =
+      some (ex, ((Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).1.machine.state,
+        (Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).2)) := by
+  rw [← reactorHost_ofHost b.app.types b.table hkeys host]
   exact runWith_guarded_denotes b (Reactor.ofHost b.table host) st id budget rounds hfrag hfund
     hrest ex hex
 
@@ -812,15 +823,15 @@ Then H9 holds at the driver for the layered host itself (`runWith_layer_denotes`
 such a layer at every protocol (`retry_typed`). -/
 
 /-- The rows' protocol: the exits an external row admits at every machine. -/
-def externalProtocol (table : RowTable) : Effects.Protocol (RowSig table) :=
-  fun op ex => externalAdmitsAt table op ex = true
+def externalProtocol (types : TyDecls) (table : RowTable) : Effects.Protocol (RowSig table) :=
+  fun op ex => externalAdmitsAt types table op ex = true
 
 /-- A host behind a typed layer is its own guard. -/
-theorem hostGuard_through (table : RowTable) {T : Effects.Signature.{0, 0}}
+theorem hostGuard_through (types : TyDecls) (table : RowTable) {T : Effects.Signature.{0, 0}}
     {PT : Effects.Protocol T} {impl : Effects.Handler (RowSig table) (Effects.Program T)}
-    (htyped : impl.Typed (externalProtocol table) PT) {σ : Type} {host : Effects.Comodel T σ}
-    (hmeets : host.Meets PT) : hostGuard table (host.through impl) = host.through impl :=
-  hostGuard_of_meets table (Effects.Comodel.Meets.through htyped hmeets)
+    (htyped : impl.Typed (externalProtocol types table) PT) {σ : Type} {host : Effects.Comodel T σ}
+    (hmeets : host.Meets PT) : hostGuard types table (host.through impl) = host.through impl :=
+  hostGuard_of_meets types table (Effects.Comodel.Meets.through htyped hmeets)
 
 /-- **H9 at the driver, for a typed layer.** Implement the rows by a layer typed from the rows'
 protocol to a lower one, over a host that meets the lower protocol, and drive a `StraightRows`
@@ -833,24 +844,24 @@ of slice CO-6b, shape (c). -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem runWith_layer_denotes {σ : Type} {T : Effects.Signature.{0, 0}} {PT : Effects.Protocol T}
     (b : Api.Built) (impl : Effects.Handler (RowSig b.table) (Effects.Program T))
-    (htyped : impl.Typed (externalProtocol b.table) PT) (host : Effects.Comodel T σ)
+    (htyped : impl.Typed (externalProtocol b.app.types b.table) PT) (host : Effects.Comodel T σ)
     (hmeets : host.Meets PT) (st : σ) (id : String) (budget : Api.Budget) (rounds : Nat)
     (hkeys : (b.table.map rowKey).Nodup) (hfrag : StraightRows b.table b.program = true)
-    (hfund : funded (Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id
+    (hfund : funded (Run.runWith b ((Reactor.ofHost b.table (host.through impl)).guardRows b.app.types) st id
       budget rounds).1 = true)
-    (hrest : atRest (Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id
+    (hrest : atRest (Run.runWith b ((Reactor.ofHost b.table (host.through impl)).guardRows b.app.types) st id
       budget rounds).1 = true)
     (ex : ExitV)
-    (hex : (Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id budget
+    (hex : (Run.runWith b ((Reactor.ofHost b.table (host.through impl)).guardRows b.app.types) st id budget
       rounds).1.exit = some ex) :
     hostRun (host.through impl) b.program [] Stores.empty st =
-      some (ex, ((Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id budget
+      some (ex, ((Run.runWith b ((Reactor.ofHost b.table (host.through impl)).guardRows b.app.types) st id budget
         rounds).1.machine.state,
-        (Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id budget
+        (Run.runWith b ((Reactor.ofHost b.table (host.through impl)).guardRows b.app.types) st id budget
           rounds).2)) := by
   have h := runWith_host_denotes b (host.through impl) st id budget rounds hkeys hfrag hfund hrest ex
     hex
-  rw [hostGuard_through b.table htyped hmeets] at h
+  rw [hostGuard_through b.app.types b.table htyped hmeets] at h
   exact h
 
 /-- **A retry**: each row is called, and called once more where its first exit is a failure. -/

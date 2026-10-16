@@ -16,8 +16,8 @@ lawful source, with no premise.
   certificate's `signature` field read through `admitSig_ok_iff`.
 * `AdmittedProgram.source` and `reachable_typed_admitted` (proved): the source an admitted
   program denotes, its rows and its declared services, and M6's consequence for it.
-* `m7_admitted` (proved): at an empty row table, a program the API admits, with a closed
-  requirement row and an answer-free tape, never goes wrong: M7a–c on its replay.
+* `m7_admitted` (proved): at an empty row table and no named type, a program the API admits,
+  with a closed requirement row and an answer-free tape, never goes wrong: M7a–c on its replay.
 
 Placement (`AGENTS.md`). Concepts: `translation-simulation` (M7) and `residual-program-typing`
 (admission). Claims: `m7-admitted` and `admitted-source-lawful`, in R9 and R1. Reach: any
@@ -44,32 +44,32 @@ theorem lawfulSig_of_admitted {program : NativeEff} {app : SigApp}
   (admitSig_ok_iff app).mp a.signature
 
 /-- The source an admitted program denotes: its rows and its declared services, lawful by the
-bridge. -/
+bridge, at an application that declares no named type (`ProgramSource.untyped`). -/
 def _root_.Effect4.Program.AdmittedProgram.source {program : NativeEff} {app : SigApp}
-    (a : AdmittedProgram program app) : ProgramSource :=
+    (a : AdmittedProgram program app) (untyped : app.types = []) : ProgramSource :=
   { program, table := app.rows, services := app.services, types := app.types,
-    lawful := lawfulSig_of_admitted a }
+    lawful := lawfulSig_of_admitted a, untyped }
 
 /-- **M6 for a program the API admits**, at any signature: every machine its admitted tapes reach
 is typed when its requirement row is closed at the load (decisions row 117). -/
 theorem reachable_typed_admitted {program : NativeEff} {app : SigApp}
-    (a : AdmittedProgram program app) (fuel : Nat) (tape : List Api.Decision)
-    (closedRow : a.ty.requires = Env.Requirement.empty)
-    (admitted : AdmittedTape a.source a.ty fuel tape) :
-    ∃ w, MachineTyped a.source a.ty w (replayR program fuel tape).machine :=
-  reachable_typed a.source a.ty fuel a.typed closedRow tape admitted
+    (a : AdmittedProgram program app) (untyped : app.types = []) (fuel : Nat)
+    (tape : List Api.Decision) (closedRow : a.ty.requires = Env.Requirement.empty)
+    (admitted : AdmittedTape (a.source untyped) a.ty fuel tape) :
+    ∃ w, MachineTyped (a.source untyped) a.ty w (replayR program fuel tape).machine :=
+  reachable_typed (a.source untyped) a.ty fuel a.typed closedRow tape admitted
 
 /-- **M7 for a program the API admits** at an empty row table (R9 at the API's admission, within
 `M7Fragment`): with a closed requirement row and an answer-free tape, its replay's exits fit, its
 stores fit, and the frame machine has not halted. The services may be declared. -/
 theorem m7_admitted {program : NativeEff} {app : SigApp} (a : AdmittedProgram program app)
-    (emptyTable : app.rows = []) (fuel : Nat) (tape : List Api.Decision)
+    (untyped : app.types = []) (emptyTable : app.rows = []) (fuel : Nat) (tape : List Api.Decision)
     (closedRow : a.ty.requires = Env.Requirement.empty)
     (answerFree : ∀ d ∈ tape, NoHostAnswer d) :
-    M7Exits a.source a.ty fuel tape ∧ M7Stores a.source a.ty fuel tape ∧
-      M7NoHalt a.source a.ty fuel tape :=
-  have _fragment : M7Fragment a.source a.ty tape :=
+    M7Exits (a.source untyped) a.ty fuel tape ∧ M7Stores (a.source untyped) a.ty fuel tape ∧
+      M7NoHalt (a.source untyped) a.ty fuel tape :=
+  have _fragment : M7Fragment (a.source untyped) a.ty tape :=
     ⟨lawfulSig_of_admitted a, emptyTable, a.typed, closedRow, answerFree⟩
-  m7_proved a.source a.ty fuel tape
+  m7_proved (a.source untyped) a.ty fuel tape
 
 end Effect4.Program.Typed

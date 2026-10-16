@@ -61,8 +61,8 @@ Each lemma below is a step of `tape_replays`, and that theorem is its one consum
 three are facts of any session. The others read one row of a journal. -/
 
 /-- Step of `tape_replays`: a successful preflight returns the reply's own answer decision. -/
-theorem preflight_replyDecision {program : Api.Program} {table : RowTable}
-    (s : Session program table) (reply : Reply) (decision : NativeDecision)
+theorem preflight_replyDecision {program : Api.Program} {app : SigApp}
+    (s : Session program app) (reply : Reply) (decision : NativeDecision)
     (h : Api.HostSession.preflight s reply = .ok decision) : decision = replyDecision reply := by
   obtain ⟨bound, found, _, _, shape⟩ := Api.HostSession.preflight_envelope s reply decision h
   have test := List.find?_some found
@@ -74,12 +74,12 @@ theorem preflight_replyDecision {program : Api.Program} {table : RowTable}
 
 /-- Step of `tape_replays`: an applied reply was stored at the key, and the machine it leaves is
 the raw stepper's on that reply's answer decision. Retiring calls does not touch the machine. -/
-theorem applyReply_applied_machine {program : Api.Program} {table : RowTable}
-    (s : Session program table) (key : Key) (fuel : Nat)
+theorem applyReply_applied_machine {program : Api.Program} {app : SigApp}
+    (s : Session program app) (key : Key) (fuel : Nat)
     (h : (Api.HostSession.applyReply s key fuel).phase = .applied) :
     ∃ reply, Api.HostSession.readReply s.pending key = some reply ∧
       (Api.HostSession.applyReply s key fuel).session.machine =
-        steppedBy program fuel table s.machine (replyDecision reply) := by
+        steppedBy program fuel app.rows s.machine (replyDecision reply) := by
   cases fuel with
   | zero => cases h
   | succ fuel =>
@@ -111,7 +111,7 @@ theorem applyReply_applied_machine {program : Api.Program} {table : RowTable}
             · cases h
 
 /-- Step of `tape_replays`: a reply application ends at a frontier, applied or refused. -/
-theorem applyReply_ends {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem applyReply_ends {program : Api.Program} {app : SigApp} (s : Session program app)
     (key : Key) (fuel : Nat) :
     (Api.HostSession.applyReply s key fuel).phase = .frontier ∨
       (Api.HostSession.applyReply s key fuel).phase = .applied ∨

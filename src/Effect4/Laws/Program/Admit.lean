@@ -66,11 +66,11 @@ theorem mintedIn_iff_MintedIn (m : NativeMachine) (v : Val) :
       exact List.mem_filterMap.mpr ⟨code, hc, hd⟩
 
 /-- A successful decision check identifies the row of the actual guard token. -/
-theorem admitted_row (table : RowTable) (m : NativeMachine) (fiber : FiberId) (token : Nat)
+theorem admitted_row (app : SigApp) (m : NativeMachine) (fiber : FiberId) (token : Nat)
     (answer : Completion Val Err Defect FiberId Ann)
-    (h : admit table m (.answerAsync fiber token answer) = none) :
+    (h : admit app m (.answerAsync fiber token answer) = none) :
     ∃ i request row, requestOf m fiber token = some (.external i, request) ∧
-      externalRow table i = some row ∧ admitAnswer row m fiber token answer = none := by
+      externalRow app.rows i = some row ∧ admitAnswer app.types row m fiber token answer = none := by
   simp only [admit] at h
   split at h <;> try cases h
   split at h <;> try cases h
@@ -83,18 +83,18 @@ theorem admitted_row (table : RowTable) (m : NativeMachine) (fiber : FiberId) (t
 This is the runtime boundary behind M6's no-host-answer scope (row 95, `E4-SCHED-CE-015`). -/
 theorem emptyTable_refuses_every_answer (m : NativeMachine) (fiber : FiberId) (token : Nat)
     (answer : Completion Val Err Defect FiberId Ann) :
-    admit [] m (.answerAsync fiber token answer) ≠ none := by
+    admit {} m (.answerAsync fiber token answer) ≠ none := by
   intro accepted
-  obtain ⟨i, _, _, _, hrow, _⟩ := admitted_row [] m fiber token answer accepted
-  have absent : externalRow [] i = none := rfl
+  obtain ⟨i, _, _, _, hrow, _⟩ := admitted_row {} m fiber token answer accepted
+  have absent : externalRow ({} : SigApp).rows i = none := rfl
   rw [absent] at hrow
   cases hrow
 
 /-- A successful conversion returns a value with the declared type in the resulting
 allocation table. The input scalar index is not itself claimed to have a handle type. -/
-theorem externalValue_typed (ty : Ty) (allocated allocated' : List String) (value result : Val)
-    (h : externalValue ty allocated value = some (allocated', result)) :
-    Val.hasTy result ty allocated' = true := by
+theorem externalValue_typed (decls : TyDecls) (ty : Ty) (allocated allocated' : List String) (value result : Val)
+    (h : externalValue decls ty allocated value = some (allocated', result)) :
+    Val.memberIn decls result ty allocated' = true := by
   unfold externalValue at h
   split at h
   · rename_i target index
@@ -104,6 +104,7 @@ theorem externalValue_typed (ty : Ty) (allocated allocated' : List String) (valu
       simp only [Bool.and_eq_true, beq_iff_eq] at ha
       obtain ⟨ht, rfl⟩ := ha
       have hk : HandleKind.ofByte? 7 = some .external := rfl
+      rw [Val.memberIn_handle]
       simp only [Val.hasTy, hk, ht, Bool.true_and]
       rw [List.getElem?_append_right (Nat.le_refl _)]
       simp only [Nat.sub_self, List.getElem?_cons_zero]
@@ -118,9 +119,9 @@ theorem externalValue_typed (ty : Ty) (allocated allocated' : List String) (valu
 
 /-- Every accepted conversion either keeps a handle-free value and the allocation table,
 or constructs exactly the external handle at the old table's next index. -/
-theorem externalValue_internalFree (ty : Ty) (allocated allocated' : List String)
+theorem externalValue_internalFree (decls : TyDecls) (ty : Ty) (allocated allocated' : List String)
     (value result : Val)
-    (h : externalValue ty allocated value = some (allocated', result)) :
+    (h : externalValue decls ty allocated value = some (allocated', result)) :
     (allocated' = allocated ∧ result = value ∧ result.handles = []) ∨
       ∃ target, ty = .handle target ∧ externalHandleTarget target = true ∧
         value = .nat allocated.length ∧ allocated' = allocated ++ [target] ∧
@@ -144,47 +145,47 @@ theorem externalValue_internalFree (ty : Ty) (allocated allocated' : List String
 
 /-- The host supplies handle-free data even when conversion allocates: that arm takes the
 next scalar index, not a host-created handle. -/
-theorem externalValue_input_handleFree (ty : Ty) (allocated allocated' : List String)
+theorem externalValue_input_handleFree (decls : TyDecls) (ty : Ty) (allocated allocated' : List String)
     (value result : Val)
-    (h : externalValue ty allocated value = some (allocated', result)) : value.handles = [] := by
-  rcases externalValue_internalFree ty allocated allocated' value result h with
+    (h : externalValue decls ty allocated value = some (allocated', result)) : value.handles = [] := by
+  rcases externalValue_internalFree decls ty allocated allocated' value result h with
     ⟨_, rfl, free⟩ | ⟨_, _, _, rfl, _, _⟩
   · exact free
   · rfl
 
 /-- Admission returns a conversion whose actual output, including a freshly minted
 handle, inhabits the parked row's answer type. -/
-theorem external_answer_typed (table : RowTable) (m : NativeMachine)
+theorem external_answer_typed (app : SigApp) (m : NativeMachine)
     (fiber : FiberId) (token : Nat) (value : Val)
-    (h : admit table m (.answerAsync fiber token (.ofExit (.success value))) = none) :
+    (h : admit app m (.answerAsync fiber token (.ofExit (.success value))) = none) :
     ∃ i request row allocated result, requestOf m fiber token = some (.external i, request) ∧
-      externalRow table i = some row ∧
-      externalValue row.answer m.state.externals.allocated value = some (allocated, result) ∧
-      Val.hasTy result row.answer allocated = true := by
-  obtain ⟨i, request, row, hp, hr, ha⟩ := admitted_row table m fiber token _ h
-  cases hv : externalValue row.answer m.state.externals.allocated value with
+      externalRow app.rows i = some row ∧
+      externalValue app.types row.answer m.state.externals.allocated value = some (allocated, result) ∧
+      Val.memberIn app.types result row.answer allocated = true := by
+  obtain ⟨i, request, row, hp, hr, ha⟩ := admitted_row app m fiber token _ h
+  cases hv : externalValue app.types row.answer m.state.externals.allocated value with
   | none => simp [admitAnswer, hv] at ha
   | some converted =>
     obtain ⟨allocated, result⟩ := converted
     exact ⟨i, request, row, allocated, result, hp, hr, hv,
-      externalValue_typed _ _ _ _ _ hv⟩
+      externalValue_typed _ _ _ _ _ _ hv⟩
 
 /-- A row's own admission (`externalAdmits`, the row protocol's check) has the same typed
 conversion as the decision path. -/
-theorem external_oracle_typed (table : RowTable) (i : Nat) (value : Val)
+theorem external_oracle_typed (app : SigApp) (i : Nat) (value : Val)
     (allocated : List String)
-    (h : externalAdmits table i (.ofExit (.success value)) allocated = true) :
-    ∃ row allocated' result, externalRow table i = some row ∧
-      externalValue row.answer allocated value = some (allocated', result) ∧
-      Val.hasTy result row.answer allocated' = true := by
-  cases hr : externalRow table i with
+    (h : externalAdmits app i (.ofExit (.success value)) allocated = true) :
+    ∃ row allocated' result, externalRow app.rows i = some row ∧
+      externalValue app.types row.answer allocated value = some (allocated', result) ∧
+      Val.memberIn app.types result row.answer allocated' = true := by
+  cases hr : externalRow app.rows i with
   | none => simp [externalAdmits, hr] at h
   | some row =>
-    cases hv : externalValue row.answer allocated value with
+    cases hv : externalValue app.types row.answer allocated value with
     | none => simp [externalAdmits, hr, hv] at h
     | some converted =>
       obtain ⟨allocated', result⟩ := converted
-      exact ⟨row, allocated', result, rfl, hv, externalValue_typed _ _ _ _ _ hv⟩
+      exact ⟨row, allocated', result, rfl, hv, externalValue_typed _ _ _ _ _ _ hv⟩
 
 /-! ## The error image and the failure branch
 
@@ -692,17 +693,17 @@ theorem external_failure_internalFree (cause : CauseV) :
 
 /-- An admitted host exit contributes no existing handle. Fresh external allocation occurs
 only when preparing a success; reference-read completions are separate effect requests. -/
-theorem admitAnswer_exit_keys (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
-    (exit : ExitV) (h : admitAnswer row m fiber token (.ofExit exit) = none) :
+theorem admitAnswer_exit_keys (decls : TyDecls) (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
+    (exit : ExitV) (h : admitAnswer decls row m fiber token (.ofExit exit) = none) :
     (Completion.ofExit exit : Completion Val Err Defect FiberId Ann).keys = [] := by
   cases exit with
   | failure cause => rfl
   | success value =>
-    cases hv : externalValue row.answer m.state.externals.allocated value with
+    cases hv : externalValue decls row.answer m.state.externals.allocated value with
     | none => simp only [admitAnswer, hv, Option.isNone_none, if_true] at h; cases h
     | some converted =>
       obtain ⟨allocated, result⟩ := converted
-      have free := externalValue_input_handleFree row.answer m.state.externals.allocated
+      have free := externalValue_input_handleFree decls row.answer m.state.externals.allocated
         allocated value result hv
       simp only [Completion.keys, exitKeys, Val.keys_eq_handles, free, List.filterMap_nil]
 
@@ -710,8 +711,8 @@ theorem admitAnswer_exit_keys (row : Row) (m : NativeMachine) (fiber : FiberId) 
 theorem errAdmits_errOf (ty : Ty) (v : Val) (allocated : List String)
     (a : ReasonAnnotations Ann)
     (hs : supportedErrTy ty = true) (hv : Val.hasTy v ty allocated = true) :
-    errAdmits ty (.fail (errOf v) a) = true := by
-  simp only [errAdmits, reasonAdmits, valOfErr_errOf_supported ty v allocated hs hv]
+    errAdmits [] ty (.fail (errOf v) a) = true := by
+  simp only [errAdmits, Val.memberIn, reasonAdmits, valOfErr_errOf_supported ty v allocated hs hv]
   rw [← hasTy_supported_allocation ty v allocated hs]
   exact hv
 
@@ -732,13 +733,13 @@ theorem Defect.ofError_shapeFree {e : Err} {v : Val} (h : valOfErr e = some v) :
 
 /-- The production reason predicate is the shared fold at default-allocation membership. -/
 theorem errAdmits_eq_reasonAdmits (ty : Ty) (r : Reason Err Defect FiberId Ann) :
-    errAdmits ty r = reasonAdmits (fun v t => Val.hasTy v t) ty r := rfl
+    errAdmits [] ty r = reasonAdmits (fun v t => Val.hasTy v t) ty r := rfl
 
 /-- The bridge as an equality of the two predicates. Stated because it is the shape a
 rewrite under a higher-order argument wants; it needs `funext`, so it carries `Quot.sound`
 and nothing below depends on it. -/
 theorem reasonAdmits_hasTy (ty : Ty) :
-    reasonAdmits (fun v t => Val.hasTy v t) ty = errAdmits ty :=
+    reasonAdmits (fun v t => Val.hasTy v t) ty = errAdmits [] ty :=
   funext fun r => (errAdmits_eq_reasonAdmits ty r).symm
 
 /-- The cause fold at `Val.hasTy` is the reason-wise `errAdmits` the admission check runs
@@ -746,7 +747,7 @@ theorem reasonAdmits_hasTy (ty : Ty) :
 the reason list rather than by `funext` on the predicate, so it stays at `[propext]` and so
 do the two failure-branch theorems below. -/
 theorem causeAdmits_hasTy (ty : Ty) (c : CauseV) :
-    causeAdmits (fun v t => Val.hasTy v t) ty c = c.reasons.all (errAdmits ty) := by
+    causeAdmits (fun v t => Val.hasTy v t) ty c = c.reasons.all (errAdmits [] ty) := by
   aesop
 
 /-- On a reified failed exit the fold is applied to the cause it was built from. -/
@@ -756,7 +757,7 @@ theorem hasTyCause_exitErr_fold (c : CauseV) (e : Ty) :
 
 /-- The same, spelled with the production `errAdmits`: scout B's statement. -/
 theorem hasTyCause_exitErr (c : CauseV) (e : Ty) :
-    hasTyCause (Val.exitErr c) e = c.reasons.all (errAdmits e) := by
+    hasTyCause (Val.exitErr c) e = c.reasons.all (errAdmits [] e) := by
   rw [hasTyCause_exitErr_fold, causeAdmits_hasTy]
 
 /-- Row DI-26. An accepted failing completion identifies the parked external row, and every
@@ -773,7 +774,7 @@ theorem external_error_typed (table : RowTable) (m : NativeMachine)
   refine ⟨i, request, row, hp, hr, ?_⟩
   rw [hasTyCause_exitErr]
   change (if c.reasons.any reservedDie then some (Refusal.reservedDefect fiber token)
-    else if c.reasons.all (errAdmits row.error) then (none : Option Refusal)
+    else if c.reasons.all (errAdmits [] row.error) then (none : Option Refusal)
     else some (.errorType fiber token row.error)) = none at ha
   split at ha
   · cases ha
@@ -785,13 +786,13 @@ theorem external_error_typed (table : RowTable) (m : NativeMachine)
 `E4-HOST-CE-008`): the decision check refuses `badName` and `notImplemented` before it reads the
 error column. The failure half of executable admission's agreement with the typed exit judgment
 (`preflight_failure_noShapeDefect`, `Laws/Api/HostSession.lean`); the value half is row 97's. -/
-theorem admit_failure_reservedFree (table : RowTable) (m : NativeMachine)
+theorem admit_failure_reservedFree (app : SigApp) (m : NativeMachine)
     (fiber : FiberId) (token : Nat) (c : CauseV)
-    (h : admit table m (.answerAsync fiber token (.ofExit (.failure c))) = none) :
+    (h : admit app m (.answerAsync fiber token (.ofExit (.failure c))) = none) :
     c.reasons.any reservedDie = false := by
-  obtain ⟨_, _, row, _, _, ha⟩ := admitted_row table m fiber token _ h
+  obtain ⟨_, _, row, _, _, ha⟩ := admitted_row app m fiber token _ h
   change (if c.reasons.any reservedDie then some (Refusal.reservedDefect fiber token)
-    else if c.reasons.all (errAdmits row.error) then (none : Option Refusal)
+    else if c.reasons.all (errAdmits app.types row.error) then (none : Option Refusal)
     else some (.errorType fiber token row.error)) = none at ha
   cases hany : c.reasons.any reservedDie with
   | false => rfl
@@ -799,11 +800,11 @@ theorem admit_failure_reservedFree (table : RowTable) (m : NativeMachine)
 
 /-- A row's own admission refuses the reserved defects too (`externalAdmits`, the row
 protocol's check). -/
-theorem externalAdmits_failure_reservedFree (table : RowTable) (i : Nat) (c : CauseV)
+theorem externalAdmits_failure_reservedFree (app : SigApp) (i : Nat) (c : CauseV)
     (allocated : List String)
-    (h : externalAdmits table i (.ofExit (.failure c)) allocated = true) :
+    (h : externalAdmits app i (.ofExit (.failure c)) allocated = true) :
     c.reasons.any reservedDie = false := by
-  cases hr : externalRow table i with
+  cases hr : externalRow app.rows i with
   | none => simp [externalAdmits, hr] at h
   | some row =>
     simp only [externalAdmits, hr, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at h
@@ -896,20 +897,20 @@ theorem external_prepared_answer_internalFree (program : NativeEff) (table : Row
     simp only [prepareAsyncAnswer, hs, Option.isSome_none, Bool.false_eq_true, if_false,
       hf, hp, if_true, interpOf, prepareExternalAnswer, hne, hc, hrow, hv]
   refine ⟨result, congrArg Prod.snd prepared, ?_⟩
-  rcases externalValue_internalFree row.answer m.state.externals.allocated allocated value result hv with
+  rcases externalValue_internalFree [] row.answer m.state.externals.allocated allocated value result hv with
     ⟨_, _, free⟩ | ⟨target, _, _, _, halloc, hresult⟩
   · exact Or.inl free
   · exact Or.inr ⟨target, hresult, by rw [prepared]; exact halloc⟩
 
 /-- Every accepted completion names only handles present before the answer. -/
-theorem admitAnswer_minted (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
+theorem admitAnswer_minted (decls : TyDecls) (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
     (answer : Completion Val Err Defect FiberId Ann)
-    (h : admitAnswer row m fiber token answer = none) : MintedIn m answer.keys := by
+    (h : admitAnswer decls row m fiber token answer = none) : MintedIn m answer.keys := by
   cases answer with
   | ofExit exit =>
     cases exit with
     | success value =>
-      cases ht : externalValue row.answer m.state.externals.allocated value with
+      cases ht : externalValue decls row.answer m.state.externals.allocated value with
       | none => simp [admitAnswer, ht] at h
       | some converted =>
         cases hm : mintedIn m value with
@@ -924,42 +925,42 @@ theorem admitAnswer_minted (row : Row) (m : NativeMachine) (fiber : FiberId) (to
       simp [Completion.keys, MintedIn, Ok, Handle.existsIn, RunMachine.world, hlt]
 
 /-- Admission strengthens the existing tape premise at each inspected decision. -/
-theorem admitted_decision_minted (table : RowTable) (m : NativeMachine) (d : NativeDecision)
-    (h : admit table m d = none) :
+theorem admitted_decision_minted (app : SigApp) (m : NativeMachine) (d : NativeDecision)
+    (h : admit app m d = none) :
     (match d with
       | .answerAsync _ _ answer => decide (MintedIn m answer.keys)
       | _ => true) = true := by
   cases d with
   | answerAsync fiber token answer =>
-    obtain ⟨_, _, row, _, _, ha⟩ := admitted_row table m fiber token answer h
-    exact decide_eq_true (admitAnswer_minted row m fiber token answer ha)
+    obtain ⟨_, _, row, _, _, ha⟩ := admitted_row app m fiber token answer h
+    exact decide_eq_true (admitAnswer_minted app.types row m fiber token answer ha)
   | _ => rfl
 
 /-- A checked replay which returns a run satisfies `AnswersValidAt`'s exact walk,
 including its stopping rules at a stuck machine or exhausted driver fuel. -/
-theorem replayCheckedFrom_answersValid (program : NativeEff) (fuel : Nat) (table : RowTable)
+theorem replayCheckedFrom_answersValid (program : NativeEff) (fuel : Nat) (app : SigApp)
     (position : Nat) (tape : List NativeDecision) (m : NativeMachine) (r : NativeReplay)
-    (h : replayCheckedFrom program fuel table position tape m = .inl r) :
-    letI := evaluatorFor program table
-    AnswersValidAt (interpOf program table) fuel tape m := by
-  letI := evaluatorFor program table
-  change answersValid (interpOf program table) fuel tape m = true
+    (h : replayCheckedFrom program fuel app position tape m = .inl r) :
+    letI := evaluatorFor program app.rows
+    AnswersValidAt (interpOf program app.rows) fuel tape m := by
+  letI := evaluatorFor program app.rows
+  change answersValid (interpOf program app.rows) fuel tape m = true
   induction tape generalizing position m r with
   | nil => rfl
   | cons decision rest ih =>
     cases hs : m.stuck with
     | some why => simp [answersValid, hs]
     | none =>
-      cases ha : admit table m decision with
+      cases ha : admit app m decision with
       | some why => simp only [replayCheckedFrom, hs, ha] at h; cases h
       | none =>
         simp only [answersValid, hs]
         apply Bool.and_eq_true_iff.mpr
         constructor
-        · have hd := admitted_decision_minted table m decision ha
+        · have hd := admitted_decision_minted app m decision ha
           cases decision <;> exact hd
         ·
-          generalize he : stepDecisionState (interpOf program table) fuel m decision = next at h ⊢
+          generalize he : stepDecisionState (interpOf program app.rows) fuel m decision = next at h ⊢
           rcases next with ⟨m', continued⟩
           cases continued with
           | false => rfl
@@ -968,12 +969,12 @@ theorem replayCheckedFrom_answersValid (program : NativeEff) (fuel : Nat) (table
             exact ih (position + 1) m' r h
 
 /-- Successful checking returns the very run obtained by the original tape walker. -/
-theorem replayCheckedFrom_eq_replay (program : NativeEff) (fuel : Nat) (table : RowTable)
+theorem replayCheckedFrom_eq_replay (program : NativeEff) (fuel : Nat) (app : SigApp)
     (position : Nat) (tape : List NativeDecision) (m : NativeMachine) (r : NativeReplay)
-    (h : replayCheckedFrom program fuel table position tape m = .inl r) :
-    letI := evaluatorFor program table
-    r = replayEval (interpOf program table) fuel tape m := by
-  letI := evaluatorFor program table
+    (h : replayCheckedFrom program fuel app position tape m = .inl r) :
+    letI := evaluatorFor program app.rows
+    r = replayEval (interpOf program app.rows) fuel tape m := by
+  letI := evaluatorFor program app.rows
   induction tape generalizing position m r with
   | nil =>
     simp only [replayCheckedFrom] at h
@@ -985,12 +986,12 @@ theorem replayCheckedFrom_eq_replay (program : NativeEff) (fuel : Nat) (table : 
       cases h
       simp only [replayEval, hs]
     | none =>
-      cases ha : admit table m decision with
+      cases ha : admit app m decision with
       | some why => simp only [replayCheckedFrom, hs, ha] at h; cases h
       | none =>
         simp only [replayCheckedFrom, hs, ha] at h
         simp only [replayEval, hs]
-        generalize he : stepDecisionState (interpOf program table) fuel m decision = next at h ⊢
+        generalize he : stepDecisionState (interpOf program app.rows) fuel m decision = next at h ⊢
         rcases next with ⟨m', continued⟩
         cases continued with
         | false => exact Sum.inl.inj h.symm
@@ -1195,10 +1196,10 @@ yet states that a run's origin addresses its call. -/
 
 /-- An accepted reply at its call's instance establishes the envelope there, and the decision
 is the one the record names. -/
-theorem acceptAtInstance_sound (table : RowTable)
+theorem acceptAtInstance_sound (app : SigApp)
     (instanceAt : List Nat → Option (CallInstance NativeOp)) (m : NativeMachine)
-    (r : RecordedReply) (d : NativeDecision) (h : acceptAtInstance table instanceAt m r = some d) :
-    InstanceEnvelope table instanceAt m r ∧ d = .answerAsync r.fiber r.token r.completion := by
+    (r : RecordedReply) (d : NativeDecision) (h : acceptAtInstance app instanceAt m r = some d) :
+    InstanceEnvelope app instanceAt m r ∧ d = .answerAsync r.fiber r.token r.completion := by
   unfold acceptAtInstance at h
   split at h
   · rename_i hhead
@@ -1218,19 +1219,19 @@ theorem acceptAtInstance_sound (table : RowTable)
 
 /-- No park, no reply at the instance either: a machine that holds no call at that token
 accepts nothing for it. -/
-theorem acceptAtInstance_none_of_unparked (table : RowTable)
+theorem acceptAtInstance_none_of_unparked (app : SigApp)
     (instanceAt : List Nat → Option (CallInstance NativeOp)) (m : NativeMachine)
     (r : RecordedReply) (h : requestOf m r.fiber r.token = none) :
-    acceptAtInstance table instanceAt m r = none := by
+    acceptAtInstance app instanceAt m r = none := by
   unfold acceptAtInstance
   rw [h]
   exact if_neg fun hc => absurd hc.2.symm (Option.some_ne_none _)
 
 /-- At a column that allocates nothing, `externalValue` is the membership check alone. -/
-theorem externalValue_unallocating {ty : Ty} (h : allocates ty = false) (allocated : List String)
+theorem externalValue_unallocating {decls : TyDecls} {ty : Ty} (h : allocates ty = false) (allocated : List String)
     (value : Val) :
-    externalValue ty allocated value =
-      if Val.hasTy value ty allocated && (Store.Val.handles value).isEmpty then
+    externalValue decls ty allocated value =
+      if Val.memberIn decls value ty allocated && (Store.Val.handles value).isEmpty then
         some (allocated, value) else none := by
   unfold externalValue
   split
@@ -1240,19 +1241,19 @@ theorem externalValue_unallocating {ty : Ty} (h : allocates ty = false) (allocat
 /-- **A success admitted at its call's instance is a member of the instance's answer column**,
 holds no handle, and reaches the program unchanged: the machine's preparation leaves the stores
 as they are and answers the value itself. -/
-theorem instance_prepared_success (program : NativeEff) (table : RowTable)
+theorem instance_prepared_success (program : NativeEff) (app : SigApp)
     (instanceAt : List Nat → Option (CallInstance NativeOp)) (m : NativeMachine)
     (r : RecordedReply) (value : Val) (hs : m.stuck = none)
     (success : r.completion = .ofExit (.success value))
-    (henv : InstanceEnvelope table instanceAt m r) :
+    (henv : InstanceEnvelope app instanceAt m r) :
     ∃ origin c, originOf m r.fiber r.token = some origin ∧ instanceAt origin = some c ∧
-      c.op = r.op ∧ Val.hasTy value c.answer m.state.externals.allocated = true ∧
+      c.op = r.op ∧ Val.memberIn app.types value c.answer m.state.externals.allocated = true ∧
       Store.Val.handles value = [] ∧
-      prepareAsyncAnswer (interpOf program table) m r.fiber r.token r.completion =
+      prepareAsyncAnswer (interpOf program app.rows) m r.fiber r.token r.completion =
         (m.state, .success value) := by
   obtain ⟨_, hreq, i, row, origin, c, hop, hrow, halloc, horigin, hc, hcop, hadmit⟩ := henv
   rw [success] at hadmit
-  have hmem : Val.hasTy value c.answer m.state.externals.allocated = true ∧
+  have hmem : Val.memberIn app.types value c.answer m.state.externals.allocated = true ∧
       Store.Val.handles value = [] := by
     simp only [admitInstance] at hadmit
     split at hadmit
@@ -1263,32 +1264,79 @@ theorem instance_prepared_success (program : NativeEff) (table : RowTable)
   refine ⟨origin, c, horigin, hc, hcop, hmem.1, hmem.2, ?_⟩
   rw [hop] at hreq
   obtain ⟨f, controller, cancel, origin', hf, hp, hcur⟩ := requestOf_current m _ _ _ _ hreq
-  have hne : table.isEmpty = false := by
-    cases table with
-    | nil => simp only [externalRow, List.getElem?_nil] at hrow; cases hrow
+  have hne : app.rows.isEmpty = false := by
+    cases happ : app.rows with
+    | nil => rw [happ] at hrow; simp only [externalRow, List.getElem?_nil] at hrow; cases hrow
     | cons row rest => rfl
   rw [success]
   simp only [prepareAsyncAnswer, hs, Option.isSome_none, Bool.false_eq_true, if_false, hf, hp,
     if_true, interpOf, prepareExternalAnswer, hne, hcur, hrow, externalValue_unallocating halloc]
-  by_cases hv : (Val.hasTy value row.answer m.state.externals.allocated &&
+  by_cases hv : (Val.memberIn [] value row.answer m.state.externals.allocated &&
       (Store.Val.handles value).isEmpty) = true
   · simp only [hv, if_true]
   · simp only [hv]
     rfl
 
 /-- A failure admitted at its call's instance holds no reserved defect (decisions row 191). -/
-theorem instance_failure_reservedFree (table : RowTable)
+theorem instance_failure_reservedFree (app : SigApp)
     (instanceAt : List Nat → Option (CallInstance NativeOp)) (m : NativeMachine)
     (r : RecordedReply) (c : CauseV) (failed : r.completion = .ofExit (.failure c))
-    (henv : InstanceEnvelope table instanceAt m r) :
+    (henv : InstanceEnvelope app instanceAt m r) :
     c.reasons.any reservedDie = false := by
   obtain ⟨_, _, _, _, _, ci, _, _, _, _, _, _, hadmit⟩ := henv
   rw [failed] at hadmit
   change (if c.reasons.any reservedDie then some (Refusal.reservedDefect r.fiber r.token)
-    else if c.reasons.all (errAdmits ci.error) then (none : Option Refusal)
+    else if c.reasons.all (errAdmits app.types ci.error) then (none : Option Refusal)
     else some (.errorType r.fiber r.token ci.error)) = none at hadmit
   cases hany : c.reasons.any reservedDie with
   | false => rfl
   | true => rw [if_pos hany] at hadmit; cases hadmit
+
+/-! ## Failures under the application's named types (decisions row 406 (2)) -/
+
+/-- A failure reason that passes the error check under a table carries a value that is a member
+of the column. -/
+theorem errAdmits_fail {decls : TyDecls} {ty : Ty} {e : Err} {ann : ReasonAnnotations Ann}
+    (h : errAdmits decls ty (.fail e ann) = true) :
+    ∃ x, valOfErr e = some x ∧ Val.memberIn decls x ty = true := by
+  simp only [errAdmits, reasonAdmits] at h
+  split at h
+  · rename_i x hx
+    exact ⟨x, hx, h⟩
+  · cases h
+
+/-- An accepted failure's reasons all pass the error check under the table, and none dies with a
+reserved defect. -/
+theorem admitAnswer_failure {decls : TyDecls} {row : Row} {m : NativeMachine}
+    {fiber : FiberId} {token : Nat} {c : CauseV}
+    (h : admitAnswer decls row m fiber token (.ofExit (.failure c)) = none) :
+    c.reasons.any reservedDie = false ∧ c.reasons.all (errAdmits decls row.error) = true := by
+  change (if c.reasons.any reservedDie then some (Refusal.reservedDefect fiber token)
+    else if c.reasons.all (errAdmits decls row.error) then (none : Option Refusal)
+    else some (.errorType fiber token row.error)) = none at h
+  split at h
+  · cases h
+  · rename_i hany
+    split at h
+    · rename_i hall
+      exact ⟨Bool.eq_false_iff.mpr hany, hall⟩
+    · cases h
+
+/-- **An admitted failure's typed values are members of the error column** under the
+application's named types: each typed failure of the cause carries a value that is a member of
+the parked row's error column. Defects and interruptions are admitted at every error column, as
+`external_error_typed` shows at a row table alone. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+theorem external_error_members (app : SigApp) (m : NativeMachine) (fiber : FiberId)
+    (token : Nat) (c : CauseV)
+    (h : admit app m (.answerAsync fiber token (.ofExit (.failure c))) = none) :
+    ∃ i request row, requestOf m fiber token = some (.external i, request) ∧
+      externalRow app.rows i = some row ∧
+      ∀ r ∈ c.reasons, ∀ (e : Err) (ann : ReasonAnnotations Ann), r = .fail e ann →
+        ∃ x, valOfErr e = some x ∧ Val.memberIn app.types x row.error = true := by
+  obtain ⟨i, request, row, hp, hr, ha⟩ := admitted_row app m fiber token _ h
+  refine ⟨i, request, row, hp, hr, fun r hr' e ann hre => ?_⟩
+  subst hre
+  exact errAdmits_fail (List.all_eq_true.mp (admitAnswer_failure ha).2 _ hr')
 
 end Effect4.Program

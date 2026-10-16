@@ -66,7 +66,7 @@ tells (`src/Effect4/Run/Tape.lean`). -/
 
 /-- What a row that is neither a reply application nor a control leaves alone in a session: the
 machine, the count of applied replies, the consumed calls and the retired calls. -/
-def SessionInert {program : Api.Program} {table : RowTable} (before after : Session program table) :
+def SessionInert {program : Api.Program} {app : SigApp} (before after : Session program app) :
     Prop :=
   after.machine = before.machine ∧ after.applied = before.applied ∧
     after.consumed = before.consumed ∧ after.retired = before.retired
@@ -79,7 +79,7 @@ def Inert (before after : Run) : Prop :=
     after.session.retired = before.session.retired
 
 /-- Helper of `receipt_inert`: binding a call is inert, accepted or refused. -/
-theorem bindCall_inert {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem bindCall_inert {program : Api.Program} {app : SigApp} (s : Session program app)
     (call : Call) (token : Nat) :
     SessionInert s (Api.HostSession.bindCall s call token).session := by
   unfold Api.HostSession.bindCall
@@ -88,7 +88,7 @@ theorem bindCall_inert {program : Api.Program} {table : RowTable} (s : Session p
   all_goals exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- Helper of `receipt_inert`: a reply receipt is inert, accepted or refused. -/
-theorem submit_inert {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem submit_inert {program : Api.Program} {app : SigApp} (s : Session program app)
     (reply : Reply) : SessionInert s (Api.HostSession.submit s reply).session := by
   unfold Api.HostSession.submit
   repeat' split
@@ -136,7 +136,7 @@ theorem receive_receiptRows (s : Run) (key : Key) (completion : Api.HostSession.
 /-- The proposition of `applied_selects`: an applied reply consumes the call bound at the
 selected key, and that call only. -/
 def AppliedSelects : Prop :=
-  ∀ {program : Api.Program} {table : RowTable} (s : Session program table) (key : Key) (fuel : Nat),
+  ∀ {program : Api.Program} {app : SigApp} (s : Session program app) (key : Key) (fuel : Nat),
     (Api.HostSession.applyReply s key fuel).phase = .applied →
     ∃ selected, s.active.find? (fun b => b.key == key) = some selected ∧
       (Api.HostSession.applyReply s key fuel).session.consumed =
@@ -191,7 +191,7 @@ theorem applied_selects : AppliedSelects := by
 survives stays active, and a held call whose guard is gone is retired with the reply that waited
 for it. -/
 def ControlRetires : Prop :=
-  ∀ {program : Api.Program} {table : RowTable} (s : Session program table) (fuel : Nat)
+  ∀ {program : Api.Program} {app : SigApp} (s : Session program app) (fuel : Nat)
     (decision : NativeDecision) (selected : BoundCall),
     selected ∈ s.active →
     (∀ why, (Api.HostSession.advance s fuel decision).phase ≠ .refused why) →

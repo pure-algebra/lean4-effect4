@@ -110,20 +110,20 @@ theorem Keeps.play_reads {allow : Command → Prop} {I : Run → Prop}
 /-- **A decision the session hands its machine.** A control is never an answer: `advance`
 refuses `answerAsync`. An answer reaches the machine only through `applyReply`, whose preflight
 returned it from `acceptReply` or `acceptAtInstance` at that machine. -/
-def Accepted (table : RowTable) (calls : List (List Nat × CallInstance NativeOp))
+def Accepted (app : SigApp) (calls : List (List Nat × CallInstance NativeOp))
     (m : NativeMachine) (d : NativeDecision) : Prop :=
   match d with
-  | .answerAsync _ _ _ => ∃ r, acceptReply table m r = some d ∨
-      acceptAtInstance table (fun origin => calls.lookup origin) m r = some d
+  | .answerAsync _ _ _ => ∃ r, acceptReply app m r = some d ∨
+      acceptAtInstance app (fun origin => calls.lookup origin) m r = some d
   | _ => True
 
 /-- A decision that preflight returns is accepted at the session's machine. -/
-theorem preflight_accepted {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (reply : Api.HostSession.Reply)
+theorem preflight_accepted {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (reply : Api.HostSession.Reply)
     (d : NativeDecision) (h : Api.HostSession.preflight s reply = .ok d) :
-    Accepted table s.calls s.machine d := by
-  have found : ∃ r, acceptReply table s.machine r = some d ∨
-      acceptAtInstance table (fun origin => s.calls.lookup origin) s.machine r = some d := by
+    Accepted app s.calls s.machine d := by
+  have found : ∃ r, acceptReply app s.machine r = some d ∨
+      acceptAtInstance app (fun origin => s.calls.lookup origin) s.machine r = some d := by
     unfold Api.HostSession.preflight at h
     split at h
     · cases h
@@ -180,12 +180,12 @@ theorem result_calls (p : Api.Runner.Runner) (c : Command) :
     all_goals rfl
 
 /-- `applyReply` leaves the machine, or steps it at an accepted decision. -/
-theorem applyReply_machine {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (key : Api.HostSession.Key) (fuel : Nat) :
+theorem applyReply_machine {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (key : Api.HostSession.Key) (fuel : Nat) :
     (Api.HostSession.applyReply s key fuel).session.machine = s.machine ∨
-      ∃ x : Nat × NativeDecision, Accepted table s.calls s.machine x.2 ∧
+      ∃ x : Nat × NativeDecision, Accepted app s.calls s.machine x.2 ∧
         (Api.HostSession.applyReply s key fuel).session.machine =
-          steppedBy program x.1 table s.machine x.2 := by
+          steppedBy program x.1 app.rows s.machine x.2 := by
   unfold Api.HostSession.applyReply
   split
   · exact Or.inl rfl
@@ -202,9 +202,9 @@ theorem applyReply_machine {program : Api.Program} {table : RowTable}
     · exact Or.inl rfl
 
 /-- A decision that is not an answer is accepted: `Accepted` asks nothing of a control. -/
-theorem accepted_of_control (table : RowTable) (calls : List (List Nat × CallInstance NativeOp))
+theorem accepted_of_control (app : SigApp) (calls : List (List Nat × CallInstance NativeOp))
     (m : NativeMachine) (d : NativeDecision) (h : ∀ f t a, d ≠ .answerAsync f t a) :
-    Accepted table calls m d := by
+    Accepted app calls m d := by
   cases d with
   | answerAsync f t a => exact absurd rfl (h f t a)
   | fire _ => trivial
@@ -216,16 +216,16 @@ theorem accepted_of_control (table : RowTable) (calls : List (List Nat × CallIn
   | advance _ => trivial
 
 /-- `advance` leaves the machine, or steps it at a control. -/
-theorem advance_machine {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (fuel : Nat) (d : NativeDecision) :
+theorem advance_machine {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (fuel : Nat) (d : NativeDecision) :
     (Api.HostSession.advance s fuel d).session.machine = s.machine ∨
-      (Accepted table s.calls s.machine d ∧
-        (Api.HostSession.advance s fuel d).session.machine = steppedBy program fuel table s.machine d) := by
+      (Accepted app s.calls s.machine d ∧
+        (Api.HostSession.advance s fuel d).session.machine = steppedBy program fuel app.rows s.machine d) := by
   unfold Api.HostSession.advance
   split
   · exact Or.inl rfl
   · rename_i notAnswer
-    have accepted := accepted_of_control table s.calls s.machine d
+    have accepted := accepted_of_control app s.calls s.machine d
       (fun f t a heq => notAnswer f t a heq)
     split
     · exact Or.inl rfl
@@ -234,14 +234,14 @@ theorem advance_machine {program : Api.Program} {table : RowTable}
         split
         · exact Or.inl rfl
         · refine Or.inr ⟨accepted, ?_⟩
-          show machine = steppedBy program fuel table s.machine d
+          show machine = steppedBy program fuel app.rows s.machine d
           unfold steppedBy
           rw [hstep]
 
 /-- **One row moves a run's machine by at most one accepted decision.** -/
 theorem step_machine (s : Run) (c : Command) :
     (s.step c).machine = s.machine ∨
-      ∃ x : Nat × NativeDecision, Accepted s.built.table s.session.calls s.machine x.2 ∧
+      ∃ x : Nat × NativeDecision, Accepted s.built.app s.session.calls s.machine x.2 ∧
         (s.step c).machine = steppedBy s.built.program x.1 s.built.table s.machine x.2 := by
   cases c with
   | bind call token =>
@@ -270,7 +270,7 @@ accepted by the session at the machine it met. -/
 def HistoryOf (b : Api.Built) (compileFuel : Nat) (m : NativeMachine) : Prop :=
   ∃ history : List (Nat × NativeDecision),
     Lift.Admitted (W := Unit) (fun _ _ => True)
-      (fun _ m x => Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2)
+      (fun _ m x => Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2)
       (stepBy b) (Api.load b.program compileFuel) history ∧
     m = history.foldl (stepBy b) (Api.load b.program compileFuel)
 
@@ -287,7 +287,7 @@ theorem admitted_snoc {W M X : Type} (J : W → M → Prop) (A : W → M → X �
 name, budget and profile, every row. -/
 @[semantics "host-session-protocol" (requirement := R13)]
 theorem reached_history (s : Run) (h : Run.Reached s) :
-    s.session.calls = Api.HostSession.callTable s.built.program s.built.table ∧
+    s.session.calls = Api.HostSession.callTable s.built.program s.built.app ∧
       HistoryOf s.built s.budget.compileFuel s.machine := by
   induction h with
   | opened b id budget profile => exact ⟨rfl, [], trivial, rfl⟩
@@ -312,15 +312,15 @@ history, by `Lift.foldl_lift` at the one-world order. -/
 theorem history_keeps (b : Api.Built) (compileFuel : Nat) (J : NativeMachine → Prop)
     (load : J (Api.load b.program compileFuel))
     (step : ∀ m x, J m →
-      Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 → J (stepBy b m x)) :
+      Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2 → J (stepBy b m x)) :
     ∀ m, HistoryOf b compileFuel m → J m := by
   rintro m ⟨history, adm, rfl⟩
   have weaken : ∀ (xs : List (Nat × NativeDecision)) (m₀ : NativeMachine),
       Lift.Admitted (W := Unit) (fun _ _ => True)
-        (fun _ m x => Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2)
+        (fun _ m x => Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2)
         (stepBy b) m₀ xs →
       Lift.Admitted (W := Unit) (fun _ m => J m)
-        (fun _ m x => Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2)
+        (fun _ m x => Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2)
         (stepBy b) m₀ xs := by
     intro xs
     induction xs with
@@ -329,7 +329,7 @@ theorem history_keeps (b : Api.Built) (compileFuel : Nat) (J : NativeMachine →
       intro m₀ h
       exact ⟨fun w _ => h.1 w trivial, ih _ h.2⟩
   obtain ⟨_, _, hj⟩ := Lift.foldl_lift Lift.unitOrder (fun _ m => J m)
-    (fun _ m x => Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2)
+    (fun _ m x => Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2)
     (stepBy b) (fun _ m x hj ha => ⟨(), trivial, step m x hj ha⟩) history () _ load
     (weaken history _ adm)
   exact hj
@@ -347,9 +347,10 @@ def ControlHistory (b : Api.Built) (compileFuel : Nat) (m : NativeMachine) : Pro
 /-- The empty table has no external row. -/
 theorem externalRow_nil (i : Nat) : externalRow [] i = none := rfl
 
-/-- With the empty table `admit` refuses every answer. -/
-theorem admit_nil_answer (m : NativeMachine) (f : FiberId) (t : Nat)
-    (a : Completion Val Err Defect FiberId Ann) : Program.admit [] m (.answerAsync f t a) ≠ none := by
+/-- With the empty row table `admit` refuses every answer. -/
+theorem admit_nil_answer {app : SigApp} (hrows : app.rows = []) (m : NativeMachine) (f : FiberId)
+    (t : Nat) (a : Completion Val Err Defect FiberId Ann) :
+    Program.admit app m (.answerAsync f t a) ≠ none := by
   unfold Program.admit
   dsimp only
   split
@@ -359,25 +360,26 @@ theorem admit_nil_answer (m : NativeMachine) (f : FiberId) (t : Nat)
     · split
       · exact Option.some_ne_none _
       · split
-        · rw [externalRow_nil]
+        · rw [hrows, externalRow_nil]
           exact Option.some_ne_none _
         · exact Option.some_ne_none _
 
-/-- **With the empty table every accepted decision is a control.** -/
-theorem accepted_nil_control {calls : List (List Nat × CallInstance NativeOp)} {m : NativeMachine}
-    {d : NativeDecision} (h : Accepted [] calls m d) : IsControl d := by
+/-- **With the empty row table every accepted decision is a control.** -/
+theorem accepted_nil_control {app : SigApp} (hrows : app.rows = [])
+    {calls : List (List Nat × CallInstance NativeOp)} {m : NativeMachine}
+    {d : NativeDecision} (h : Accepted app calls m d) : IsControl d := by
   cases d with
   | answerAsync f t a =>
     obtain ⟨r, hr | hr⟩ := h
-    · have henv := acceptReply_envelope [] m r _ hr
-      have hd := acceptReply_decision [] m r _ hr
+    · have henv := acceptReply_envelope app m r _ hr
+      have hd := acceptReply_decision app m r _ hr
       cases hd
-      exact absurd henv.2.2 (admit_nil_answer m _ _ _)
+      exact absurd henv.2.2 (admit_nil_answer hrows m _ _ _)
     · unfold acceptAtInstance at hr
       split at hr
       · split at hr
         · rename_i i origin _ _
-          rw [externalRow_nil] at hr
+          rw [hrows, externalRow_nil] at hr
           cases hr
         · cases hr
       · cases hr
@@ -396,7 +398,7 @@ theorem history_control {b : Api.Built} {compileFuel : Nat} {m : NativeMachine}
   refine ⟨history, ?_, rfl⟩
   have go : ∀ (xs : List (Nat × NativeDecision)) (m₀ : NativeMachine),
       Lift.Admitted (W := Unit) (fun _ _ => True)
-        (fun _ m x => Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2)
+        (fun _ m x => Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2)
         (stepBy b) m₀ xs → ∀ x ∈ xs, IsControl x.2 := by
     intro xs
     induction xs with
@@ -404,26 +406,24 @@ theorem history_control {b : Api.Built} {compileFuel : Nat} {m : NativeMachine}
     | cons y ys ih =>
       intro m₀ hadm x hx
       rcases List.mem_cons.mp hx with rfl | hx
-      · have hy := hadm.1 () trivial
-        rw [htable] at hy
-        exact accepted_nil_control hy
+      · exact accepted_nil_control htable (hadm.1 () trivial)
       · exact ih _ hadm.2 x hx
   exact go history _ adm
 
 
 /-- Accepted answers name a parked host call, including admission at a call instance. -/
-theorem Accepted.host_request {table : RowTable}
+theorem Accepted.host_request {app : SigApp}
     {calls : List (List Nat × CallInstance NativeOp)} {m : NativeMachine}
     {fiber : FiberId} {token : Nat} {answer : Completion Val Err Defect FiberId Ann}
-    (h : Accepted table calls m (.answerAsync fiber token answer)) :
+    (h : Accepted app calls m (.answerAsync fiber token answer)) :
     (requestOf m fiber token).isSome = true := by
   obtain ⟨r, hr | hr⟩ := h
-  · have hd := acceptReply_decision table m r _ hr
-    have he := acceptReply_envelope table m r _ hr
+  · have hd := acceptReply_decision app m r _ hr
+    have he := acceptReply_envelope app m r _ hr
     cases hd
     rw [he.2.1]
     rfl
-  · obtain ⟨he, hd⟩ := acceptAtInstance_sound table (fun origin => calls.lookup origin) m r _ hr
+  · obtain ⟨he, hd⟩ := acceptAtInstance_sound app (fun origin => calls.lookup origin) m r _ hr
     cases hd
     rw [he.2.1]
     rfl

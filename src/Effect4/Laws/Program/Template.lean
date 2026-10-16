@@ -699,6 +699,25 @@ theorem varsOfItems_eq_flatMap (ts : List Ty) : varsOfItems ts = ts.flatMap vars
   | nil => rfl
   | cons t ts ih => rw [varsOfItems, ih, List.flatMap_cons]
 
+/-- **A type with no parameter is closed**, the converse of `varsOf_eq_nil_of_closed`. A step of
+`AdmittedProgram.closed`: the signature's admission refuses a declared body with a type variable
+(`declChecks`), so an admitted application's named types are closed (decisions row 406 (2)). -/
+theorem closed_of_varsOf_nil (t : Ty) (h : varsOf t = []) : closed t = true := by
+  induction t with
+  | record fs ih =>
+    rw [varsOf, varsOfFields_eq_flatMap, List.flatMap_eq_nil_iff] at h
+    simp only [closed, closedFields_eq_all, List.all_eq_true]
+    exact fun p hp => ih p hp (h p hp)
+  | tuple ts ih =>
+    rw [varsOf, varsOfItems_eq_flatMap, List.flatMap_eq_nil_iff] at h
+    simp only [closed, closedItems_eq_all, List.all_eq_true]
+    exact fun t ht => ih t ht (h t ht)
+  | app n ts ih =>
+    rw [varsOf, varsOfItems_eq_flatMap, List.flatMap_eq_nil_iff] at h
+    simp only [closed, closedItems_eq_all, List.all_eq_true]
+    exact fun t ht => ih t ht (h t ht)
+  | _ => aesop (add norm simp [closed, varsOf])
+
 
 /-- An anchor flag changes no parameter of the list. -/
 theorem anchorOcc_firsts (x : Ty) :

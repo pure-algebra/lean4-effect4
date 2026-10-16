@@ -106,7 +106,7 @@ theorem history {W : Type w} (spec : Spec) (b : Api.Built)
       Lift.DecisionLift order (interpOf b.program b.table)
         (fun _ m => ConfigurationAt b.program m ∧ Q m) I O A)
     (admission : ∀ world m d, ConfigurationAt b.program m → Q m →
-      Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m d → A world m d)
+      Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m d → A world m d)
     (load : ∀ compileFuel, ∃ _world : W, Q (Api.load b.program compileFuel)) : History spec b := by
   intro compileFuel m reached
   constructor

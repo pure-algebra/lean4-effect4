@@ -1786,23 +1786,30 @@ theorem closed_serviceTy {app : SigApp}
           (by decide : nativeServiceTypes.all (fun entry => entry.2.closed) = true) entry
           (List.mem_of_find?_eq_some hfind)
 
-/-- **An application's signature has closed atoms and closed carriers when its declared
-carriers are formed.** The atoms are the native ones. A step of `AdmittedProgram.closed`. -/
+/-- **An application's signature has closed atoms, closed carriers and closed named types when
+its declared carriers are formed and its named types are closed.** The atoms are the native
+ones. A step of `AdmittedProgram.closed`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem closedSig_app (app : SigApp) (h : Formation.Formed (Formation.serviceSites app.services)) :
-    ClosedSig app.signature :=
+theorem closedSig_app (app : SigApp) (h : Formation.Formed (Formation.serviceSites app.services))
+    (htypes : ∀ d ∈ app.types, d.2.closed = true) : ClosedSig app.signature :=
   ⟨fun _ _ _ hatom htys => closed_nativeAtomTy htys hatom,
-    fun _ _ hty => closed_serviceTy (Formation.services_closed h) hty,
-    fun _ h => absurd h List.not_mem_nil⟩
+    fun _ _ hty => closed_serviceTy (Formation.services_closed h) hty, htypes⟩
 
-/-- `typeOfProgram_closed` at an application's signature: formation of the input is its one
-premise. -/
+/-- A lawful signature's named types are closed: its admission refuses a body with a type
+variable (`declChecks`, decisions row 401 (2)). -/
+theorem LawfulSig.types_closed {app : SigApp} (h : LawfulSig app) :
+    ∀ d ∈ app.types, d.2.closed = true := fun d hd =>
+  Ty.closed_of_varsOf_nil _ (List.isEmpty_iff.mp (h.decls d hd _ (List.mem_cons_of_mem _ List.mem_cons_self)))
+
+/-- `typeOfProgram_closed` at an application's signature: formation of the input and closed
+named types are its premises. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem typeOfProgram_closed_app (app : SigApp) {e : NativeEff} {t : EffTy}
     (formed : Formation.InputFormed e app.rows app.services)
+    (htypes : ∀ d ∈ app.types, d.2.closed = true)
     (h : typeOfProgram app.signature e = some t) :
     t.answer.closed = true ∧ t.error.closed = true :=
-  typeOfProgram_closed _ (closedSig_app app (Formation.inputFormed_services formed))
+  typeOfProgram_closed _ (closedSig_app app (Formation.inputFormed_services formed) htypes)
     (Formation.inputFormed_program formed) h
 
 /-- **An admitted program has closed types**, with no premise: its certificate holds the formed
@@ -1812,6 +1819,7 @@ admission. -/
 theorem AdmittedProgram.closed {program : NativeEff} {app : SigApp}
     (admitted : AdmittedProgram program app) :
     admitted.ty.answer.closed = true ∧ admitted.ty.error.closed = true :=
-  typeOfProgram_closed_app app admitted.formed admitted.typed
+  typeOfProgram_closed_app app admitted.formed
+    ((admitSig_ok_iff app).mp admitted.signature).types_closed admitted.typed
 
 end Effect4.Program

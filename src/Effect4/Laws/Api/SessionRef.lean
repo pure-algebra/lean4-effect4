@@ -178,13 +178,13 @@ transition changes it. So the instance the session admits a reply at is `instanc
 check at the reply. Concept `host-session-protocol`; a step of the claim
 `reply-at-call-instance`. -/
 theorem reached_callInstance (s : Run) (recorded : Run.Reached s) :
-    s.session.callInstance = Api.HostSession.instanceAt s.built.program s.built.table := by
+    s.session.callInstance = Api.HostSession.instanceAt s.built.program s.built.app := by
   apply Api.HostSession.callInstance_callTable
   induction recorded with
   | opened b id budget profile => rfl
   | step s c _ ih =>
     show (Api.Runner.result s.runner c).session.calls =
-      Api.HostSession.callTable s.built.program s.built.table
+      Api.HostSession.callTable s.built.program s.built.app
     rw [← ih]
     cases c with
     | bind call token => exact Api.HostSession.bindCall_calls _ _ _

@@ -50,7 +50,7 @@ theorem prepare_agree (root : NativeEff) (table : RowTable) (cur : Option NCode)
       | none => dsimp only; exact ⟨rfl, CodeMeans.success value⟩
       | some row =>
         dsimp only
-        cases hv : externalValue row.answer state.externals.allocated value with
+        cases hv : externalValue [] row.answer state.externals.allocated value with
         | none => dsimp only; exact ⟨rfl, CodeMeans.success value⟩
         | some p => dsimp only; exact ⟨rfl, CodeMeans.success _⟩
     · rename_i hnot

@@ -23,7 +23,7 @@ open Effect4.Api.HostSession (Session Call Reply Key Result)
 
 section refusals
 
-variable {program : Api.Program} {table : RowTable} (s : Session program table)
+variable {program : Api.Program} {app : SigApp} (s : Session program app)
 
 theorem bindCall_refused (call : Call) (token : Nat) (why : HostSession.Refusal) :
     (HostSession.bindCall s call token).phase = .refused why →

@@ -15,8 +15,8 @@ sum: the scope reader's (a name with no binder, a row or a layer nobody declared
 the surface may write), the checker's (DI-86, the deepest node whose own rule refuses), and
 admission's (the table's signature, formation, the reserved integer type). The type refusal is
 the located one: `admitProgram` answers `illTyped` without a site, so a build that fails to type
-asks `Api.explain` where. The build admits at the table's own signature, `SigApp.ofTable table`; a module's
-services join the signature in the Σ_app slice's step 3.
+asks `Api.explain` where. The build admits at the application of the module's rows and named
+types (`Built.app`); a module's services join the signature in the Σ_app slice's step 3.
 
 The table is the module's own. That is the point of declaring rows: an external position is
 a position in whichever table is supplied beside the program (DI-22), and a module that
@@ -43,16 +43,16 @@ deriving DecidableEq
 
 namespace Author.Internal
 
-/-- Check already elaborated syntax against a host table and retain its row-name metadata.
-This is the final admission step shared by initial authoring and rebuilding edited syntax;
-row names label the table for callers and do not alter admission. -/
-def finishBuild (program : Program) (table : RowTable)
+/-- Check already elaborated syntax against an application (its rows and its named types), and
+retain its row-name metadata. This is the final admission step shared by initial authoring and
+rebuilding edited syntax; row names label the table for callers and do not alter admission. -/
+def finishBuild (program : Program) (app : SigApp)
     (rowNames : List (String × Nat)) : Except BuildRefusal Built :=
-  match admitProgram program (.ofTable table) with
+  match admitProgram program app with
   | .ok admitted =>
-    .ok { table := table, program := program, admitted := admitted, rowNames := rowNames }
+    .ok { app, program, admitted, rowNames }
   | .error .illTyped =>
-    match Api.explain program table with
+    match Api.explain program app with
     | some refusal => .error (.typing refusal)
     | none => .error (.admission .illTyped)
   | .error why => .error (.admission why)
@@ -79,7 +79,7 @@ def build (m : Module NativeOp) : Except BuildRefusal Built :=
     let table := m.table
     match disagreeingService m table with
     | some refusal => .error refusal
-    | none => Internal.finishBuild program table m.rowNames
+    | none => Internal.finishBuild program { rows := table, types := m.types } m.rowNames
 
 /-- A program with no declarations of its own: the module whose only field is its main. -/
 def program (src : Src NativeOp) : Except BuildRefusal Built := build { main := src }
@@ -94,7 +94,7 @@ its existing location. This does not require or imply the old type or behavior, 
 relocate variables or layer references. Structural editing failures remain the caller's
 separate `Option` result before this operation is called. -/
 def rebuild (b : Built) (candidate : Program) : Except BuildRefusal Built :=
-  Author.Internal.finishBuild candidate b.table b.rowNames
+  Author.Internal.finishBuild candidate b.app b.rowNames
 
 /-- The certified type of the built program. -/
 def ty (b : Built) : EffTy := b.typed.ty

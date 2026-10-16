@@ -49,13 +49,13 @@ theorem elaboration_eq_getD {Op : Type} (result : Except Authoring.Refusal (Eff 
   | error why => cases h
   | ok tree => rfl
 
-/-- Successful final admission retains its program, table and row names.
+/-- Successful final admission retains its program, application and row names.
 Step of the scenario static facts. Consumer: `build_retains`. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem finishBuild_retains {program : Program} {table : RowTable}
+theorem finishBuild_retains {program : Program} {app : SigApp}
     {rowNames : List (String × Nat)} {b : Built}
-    (h : Internal.finishBuild program table rowNames = .ok b) :
-    b.program = program ∧ b.table = table ∧ b.rowNames = rowNames := by
+    (h : Internal.finishBuild program app rowNames = .ok b) :
+    b.program = program ∧ b.app = app ∧ b.rowNames = rowNames := by
   unfold Internal.finishBuild at h
   split at h
   · cases h
@@ -63,11 +63,13 @@ theorem finishBuild_retains {program : Program} {table : RowTable}
   · split at h <;> cases h
   · cases h
 
-/-- A successful build retains its elaboration and the declared table and row names.
-Step of the scenario static facts. Consumers: the two crews' program equations. -/
+/-- A successful build retains its elaboration, the declared table, the row names and the named
+types. Step of the scenario static facts. Consumers: the two crews' program equations, and the
+call tree's untyped premise (`Run.CallTree.bound_in_tree`). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem build_retains {m : Module NativeOp} {b : Built} (h : build m = .ok b) :
-    elaborateModule m = .ok b.program ∧ b.table = m.table ∧ b.rowNames = m.rowNames := by
+    elaborateModule m = .ok b.program ∧ b.table = m.table ∧ b.rowNames = m.rowNames ∧
+      b.app.types = m.types := by
   unfold build at h
   split at h
   · cases h
@@ -75,7 +77,7 @@ theorem build_retains {m : Module NativeOp} {b : Built} (h : build m = .ok b) :
     dsimp only at h
     split at h
     · cases h
-    · obtain ⟨hprogram, htable, hnames⟩ := finishBuild_retains h
-      exact ⟨hprogram ▸ hp, htable, hnames⟩
+    · obtain ⟨hprogram, happ, hnames⟩ := finishBuild_retains h
+      exact ⟨hprogram ▸ hp, by rw [Built.table, happ], hnames, by rw [happ]⟩
 
 end Effect4.Api.Author

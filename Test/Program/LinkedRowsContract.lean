@@ -14,8 +14,8 @@ private def program : NativeEff := .perform (.external 0) (.lit .unit)
   | .ok (.call (.ident "unitOp") []) => true
   | _ => false
 #guard (externalRow [row] 0).map (·.answer) = some (.handle "Resource")
-#guard externalValue row.normalizeTypes.answer [] (.nat 0) = some (["Resource"], Value.external 0)
-#guard externalValue row.answer [] (.nat 0) = none
+#guard externalValue [] row.normalizeTypes.answer [] (.nat 0) = some (["Resource"], Value.external 0)
+#guard externalValue [] row.answer [] (.nat 0) = none
 #guard row.request = .union .unit .never
 #guard (Store.Canonical.image Effect4.Program.Row).decode
   ((Store.Canonical.image Effect4.Program.Row).encode row) = some row

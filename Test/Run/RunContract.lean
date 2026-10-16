@@ -37,7 +37,7 @@ def echo : Run.Reactor Unit := fun _ request st => some (.ofExit (.success reque
 /-- Two host calls in sequence, with the table and the certificate of
 `Test/Api/HostSessionContract.lean`. -/
 def twice : Api.Built :=
-  { table := Test.Api.HostSessionContract.table
+  { app := Test.Api.HostSessionContract.table
     program := Test.Api.HostSessionContract.program
     admitted := Test.Api.HostSessionContract.admitted
     rowNames := [("Host.wait", 0)] }
@@ -102,7 +102,7 @@ def pairAdmitted : Api.AdmittedProgram pairProgram ⟨Test.Api.HostSessionContra
   columnsType := by decide +kernel
 
 def pairUp : Api.Built :=
-  { table := Test.Api.HostSessionContract.table
+  { app := Test.Api.HostSessionContract.table
     program := pairProgram
     admitted := pairAdmitted
     rowNames := [("Host.wait", 0)] }
@@ -176,7 +176,7 @@ def timedAdmitted : Api.AdmittedProgram timedProgram {} where
   columnsType := by decide +kernel
 
 def timed : Api.Built :=
-  { table := [], program := timedProgram, admitted := timedAdmitted }
+  { app := {}, program := timedProgram, admitted := timedAdmitted }
 
 def clockBudget : Api.Budget := { compileFuel := 40, fuel := 1000 }
 
@@ -237,7 +237,7 @@ def yieldingAdmitted : Api.AdmittedProgram yieldingProgram {} where
   columnsType := by decide +kernel
 
 def yielding : Api.Built :=
-  { table := [], program := yieldingProgram, admitted := yieldingAdmitted }
+  { app := {}, program := yieldingProgram, admitted := yieldingAdmitted }
 
 def yielded : Run := (Run.open yielding "yielded").controlOnce
 
@@ -262,7 +262,7 @@ def mixedWorkAdmitted : Api.AdmittedProgram mixedWorkProgram ⟨Test.Api.HostSes
   columnsType := by decide +kernel
 
 def mixedWorkBuilt : Api.Built :=
-  { table := Test.Api.HostSessionContract.table, program := mixedWorkProgram,
+  { app := Test.Api.HostSessionContract.table, program := mixedWorkProgram,
     admitted := mixedWorkAdmitted }
 
 def mixedWork : Run := (Run.open mixedWorkBuilt "mixed-work").controlOnce

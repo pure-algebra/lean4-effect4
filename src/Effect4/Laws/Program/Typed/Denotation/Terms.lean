@@ -903,7 +903,7 @@ theorem evalTerm_progress_env {src : ProgramSource} {path : List Nat} {w : World
     {vals : List Val} (henv : EnvTyped w env vals) {t : Term} {ty : Ty}
     (hty : termTy (src.scopeSig path) env t = some ty) :
     ∃ v, evalTerm vals t = some v ∧ Fits w v ty :=
-  evalTerm_progress rfl rfl (fitsAll_of_pointwise henv.1 henv.2) t ty
+  evalTerm_progress rfl src.untyped (fitsAll_of_pointwise henv.1 henv.2) t ty
     (((src.scopeSig_extends path).termTy env t).symm.trans hty)
 
 /-- **A typed binder term maps its parameter into its type**, at every later world (the claim

@@ -33,8 +33,9 @@ variable {table : RowTable}
 /-! ## A host call's answer at a data row -/
 
 /-- A row answer that is no handle takes the value as it is, and allocates nothing. -/
-theorem externalValue_data {ty : Ty} (hty : ∀ t, ty ≠ .handle t) {alloc : List String}
-    {value : Val} {av : List String × Val} (hv : externalValue ty alloc value = some av) :
+theorem externalValue_data {decls : TyDecls} {ty : Ty} (hty : ∀ t, ty ≠ .handle t)
+    {alloc : List String} {value : Val} {av : List String × Val}
+    (hv : externalValue decls ty alloc value = some av) :
     av = (alloc, value) := by
   unfold externalValue at hv
   split at hv
@@ -65,7 +66,7 @@ theorem prepareExternalAnswer_data {j : Nat} (hrow : dataRow table j = true) (v 
     cases ex with
     | success value =>
       simp only [prepareExternalAnswer, hne, hr, Bool.false_eq_true, if_false]
-      cases hv : externalValue row.answer s.externals.allocated value with
+      cases hv : externalValue [] row.answer s.externals.allocated value with
       | none => rfl
       | some av =>
         -- a data row's answer is no handle: the value comes back as it is, nothing allocated

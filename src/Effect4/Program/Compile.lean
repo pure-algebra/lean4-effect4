@@ -1,4 +1,6 @@
 import Effect4.Program.Typed
+import Effect4.Program.TyDecls
+import Effect4.Program.SigApp
 import Effect4.Machine.Fibers
 
 /-!
@@ -1543,9 +1545,11 @@ def externalRow (table : RowTable) (i : Nat) : Option Row := do
   some row.normalizeTypes
 
 /-- A host gives the next scalar allocation index for an external handle. The
-machine writes the target spelling and constructs the handle. Other values retain
-their shape and carry no handles; a host-supplied handle is never an allocation request. -/
-def externalValue (ty : Ty) (allocated : List String) (value : Val) :
+machine writes the target spelling and constructs the handle. Other values are members of the
+column under the declaration table (`Val.memberIn`) and carry no handles; a host-supplied handle
+is never an allocation request. A declared name's column is `app n []`, never a handle
+(decisions row 406 (1)). -/
+def externalValue (decls : TyDecls) (ty : Ty) (allocated : List String) (value : Val) :
     Option (List String × Val) :=
   match ty, value with
   | .handle target, .nat index =>
@@ -1553,14 +1557,16 @@ def externalValue (ty : Ty) (allocated : List String) (value : Val) :
       some (allocated ++ [target], Value.external index)
     else none
   | _, _ =>
-    if Val.hasTy value ty allocated &&
+    if Val.memberIn decls value ty allocated &&
         (Store.Val.handles value).isEmpty then
       some (allocated, value)
     else none
 
 /-- Prepare the actual answer code, allocating only at a matching external row.
 The unchecked runner retains its raw completion behavior when a reply is refused;
-the checked API reports that refusal before executing this hook. -/
+the checked API reports that refusal before executing this hook, under the application's named
+types. The machine reads no declaration table (`externalValue []`): at a column that is no host
+handle it keeps the reply as the session admitted it. -/
 def prepareExternalAnswer (table : RowTable) (current : Option NCode)
     (answer : Completion Val Err Defect FiberId Ann) (state : Stores) : Stores × NCode :=
   let fallback := (state, embed (completionPrim answer))
@@ -1570,7 +1576,7 @@ def prepareExternalAnswer (table : RowTable) (current : Option NCode)
     match externalRow table i with
     | none => fallback
     | some row =>
-      match externalValue row.answer state.externals.allocated value with
+      match externalValue [] row.answer state.externals.allocated value with
       | none => fallback
       | some (allocated, value) =>
         ({ state with externals := { state.externals with allocated } }, .success value)
@@ -1579,13 +1585,13 @@ def prepareExternalAnswer (table : RowTable) (current : Option NCode)
 /-- A row's own columns admit a typed, handle-free completion with no reserved defect (decisions
 row 191), at the allocations given. The row protocol and a host's guard read it. A reference read
 is an effect and is admitted only by the decision check, with its heap. -/
-def externalAdmits (table : RowTable) (i : Nat) (answer : Completion Val Err Defect FiberId Ann)
+def externalAdmits (app : SigApp) (i : Nat) (answer : Completion Val Err Defect FiberId Ann)
     (allocated : List String := []) : Bool :=
-  match externalRow table i, answer with
+  match externalRow app.rows i, answer with
   | some row, .ofExit (.success v) =>
-    (externalValue row.answer allocated v).isSome && (Store.Val.handles v).isEmpty
+    (externalValue app.types row.answer allocated v).isSome && (Store.Val.handles v).isEmpty
   | some row, .ofExit (.failure cause) =>
-    !cause.reasons.any reservedDie && cause.reasons.all (errAdmits row.error)
+    !cause.reasons.any reservedDie && cause.reasons.all (errAdmits app.types row.error)
   | _, _ => false
 
 /-- The interp of a root program: names mean the subterms they address. -/

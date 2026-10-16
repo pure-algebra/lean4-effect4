@@ -63,12 +63,12 @@ def «open» (b : Api.Built) (id : String) (budget : Api.Budget := {}) (binding 
 program admission at the header's table (`Api.HostSession.start`), so it refuses each header and
 each program that the session refuses, with the session's reason. On success it opens the program
 with the certificate that admission answered, under the header's name. -/
-def start (program : Api.Program) (table : RowTable) (binding : String) (header : Header)
+def start (program : Api.Program) (app : SigApp) (binding : String) (header : Header)
     (budget : Api.Budget := {}) : Except Api.HostSession.Refusal Live :=
-  match Api.HostSession.start program table binding header budget.compileFuel with
+  match Api.HostSession.start program app binding header budget.compileFuel with
   | .error why => .error why
   | .ok session =>
-    .ok (Live.open { table, program, admitted := session.admitted } header.session budget binding)
+    .ok (Live.open { app, program, admitted := session.admitted } header.session budget binding)
 
 /-- Step of `feed`: the run that one event reaches from a live run is reached from an open too.
 
@@ -117,9 +117,9 @@ session header, then a `Runner.Command` journal fed through the session.
   (`Live.replay_at_call_instance`, `src/Effect4/Laws/Api/Live.lean`).
 
 The raw `Api.replay` takes a decision tape and admits nothing. It stays a named test entry. -/
-def replay {table : RowTable} (t : Api.Typed table) (binding : String) (header : Header)
+def replay {app : SigApp} (t : Api.Typed app) (binding : String) (header : Header)
     (journal : List Command) (budget : Api.Budget := {}) : Except Api.HostSession.Refusal Live :=
-  match Live.start t.program table binding header budget with
+  match Live.start t.program app binding header budget with
   | .error why => .error why
   | .ok l => .ok (l.feedAll (journal.map .wire))
 

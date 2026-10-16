@@ -231,10 +231,10 @@ The one thing left to get wrong is an empty name, which is why `start` still has
 refusal and `open` takes the name. -/
 theorem open_total (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String)
     (hid : id ≠ "") :
-    Api.HostSession.start b.program b.table profile
+    Api.HostSession.start b.program b.app profile
         ⟨Api.HostSession.version, id, profile, b.table⟩ budget.compileFuel
       = .ok (Run.open b id budget profile).session := by
-  have hadmit := admitProgram_certificate b.program (.ofTable b.table) b.admitted
+  have hadmit := admitProgram_certificate b.program b.app b.admitted
   aesop (add norm unfold [Api.HostSession.start]) (add norm simp [hid, hadmit])
 
 /-! ## Small facts the answer rows need -/
@@ -298,8 +298,8 @@ theorem allows_answer (key : Key) (target : Api.HostProtocol.State) :
 
 /-- A control row is never refused for an envelope: the envelope is what a reply carries and
 a control carries none. -/
-theorem advance_not_envelope {program : Api.Program} {table : RowTable}
-    (s : Session program table) (fuel : Nat) (decision : NativeDecision) :
+theorem advance_not_envelope {program : Api.Program} {app : SigApp}
+    (s : Session program app) (fuel : Nat) (decision : NativeDecision) :
     (Api.HostSession.advance s fuel decision).phase ≠ .refused .envelope := by
   aesop (add norm unfold [Api.HostSession.advance])
 
@@ -403,24 +403,24 @@ theorem any_append_key (slots : List ReplySlot) (key : Key) :
 
 /-- Preflight succeeds on a reply that names a binding the machine still holds and carries a
 completion the machine admits; the decision it returns is the answer that reply records. -/
-theorem preflight_ok {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem preflight_ok {program : Api.Program} {app : SigApp} (s : Session program app)
     (reply : Reply) (bound : BoundCall)
     (hver : reply.version = Api.HostSession.version)
     (hsess : reply.session = s.header.session)
     (hfind : s.active.find? (fun b => b.key == reply.key) = some bound)
     (hid : reply.callId = bound.call.callId)
-    (henv : Envelope table s.machine (bound.record reply)) :
+    (henv : Envelope app s.machine (bound.record reply)) :
     Api.HostSession.preflight s reply =
       .ok (.answerAsync bound.call.fiber bound.token reply.completion) := by
   have hreq : requestOf s.machine bound.call.fiber bound.token =
       some (bound.call.op, bound.call.request) := henv.2.1
-  have haccept := acceptReply_of_envelope table s.machine (bound.record reply) henv
+  have haccept := acceptReply_of_envelope app s.machine (bound.record reply) henv
   aesop (add norm unfold [Api.HostSession.preflight])
     (add norm simp [hver, hsess, hfind, hid, api_requestOf, hreq, haccept])
 
 /-- A receipt on a bound key with a fresh slot, an admitted completion and a machine waiting
 on a host is accepted: it stores the completion and changes nothing else. -/
-theorem submit_accepted {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem submit_accepted {program : Api.Program} {app : SigApp} (s : Session program app)
     (reply : Reply) (bound : BoundCall)
     (hver : reply.version = Api.HostSession.version)
     (hsess : reply.session = s.header.session)
@@ -428,7 +428,7 @@ theorem submit_accepted {program : Api.Program} {table : RowTable} (s : Session 
     (hid : reply.callId = bound.call.callId)
     (hslot : Api.HostSession.readReply s.pending reply.key = none)
     (hany : s.pending.any (fun slot => slot.key == reply.key) = true)
-    (henv : Envelope table s.machine (bound.record reply))
+    (henv : Envelope app s.machine (bound.record reply))
     (hobs : Api.HostProtocol.observe s.machine = .awaitingAsync) :
     Api.HostSession.submit s reply =
       ⟨.preflight, { s with pending := Api.HostSession.storeReply s.pending reply }⟩ := by
@@ -441,7 +441,7 @@ theorem submit_accepted {program : Api.Program} {table : RowTable} (s : Session 
 /-- Applying a received completion for a bound key, on a machine waiting on a host, is
 accepted: it is applied, or the fuel ran out and the run is at a frontier. It is never
 refused. -/
-theorem applyReply_accepted {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem applyReply_accepted {program : Api.Program} {app : SigApp} (s : Session program app)
     (key : Key) (fuel : Nat) (bound : BoundCall) (reply : Reply) (decision : NativeDecision)
     (hfind : s.active.find? (fun b => b.key == key) = some bound)
     (hread : Api.HostSession.readReply s.pending key = some reply)
@@ -476,7 +476,7 @@ theorem answer_accepted (s : Run) (key : Key) (c : Answer) (call : Call)
     (hat : Api.HostSession.Call.at s key = some call)
     (hfresh : s.session.active.any (fun b => b.key == key) = false)
     (hslot : s.session.pending.any (fun slot => slot.key == key) = false)
-    (hfits : admit s.built.table s.machine (.answerAsync key.fiber key.token c) = none) :
+    (hfits : admit s.built.app s.machine (.answerAsync key.fiber key.token c) = none) :
     (s.answer key c).phases = s.phases ++ [.bound, .preflight, .applied] ∨
       (s.answer key c).phases = s.phases ++ [.bound, .preflight, .frontier] := by
   obtain ⟨op, request, hr, hshape⟩ := at_eq s key call hat
@@ -520,14 +520,14 @@ theorem answer_accepted (s : Run) (key : Key) (c : Answer) (call : Call)
       (fun slot => slot.key == (Rows.reply s call key c).key) = true := by
     rw [hp1]
     exact any_append_key s.session.pending key
-  have henv : Envelope s.built.table (s.step (.bind call key.token)).session.machine
+  have henv : Envelope s.built.app (s.step (.bind call key.token)).session.machine
       ((⟨call, key.token⟩ : BoundCall).record (Rows.reply s call key c)) := by
     rw [hm1]
     refine ⟨htab, ?_, ?_⟩
     · show requestOf s.session.machine call.fiber key.token = some (call.op, call.request)
       rw [hfib, hop, hreq]
       exact hr
-    · show admit s.built.table s.session.machine (.answerAsync call.fiber key.token c) = none
+    · show admit s.built.app s.session.machine (.answerAsync call.fiber key.token c) = none
       rw [hfib]
       exact hfits
   have hobs1 : Api.HostProtocol.observe (s.step (.bind call key.token)).session.machine =
@@ -624,19 +624,19 @@ theorem freshCall_facts (s : Run) (await : Await) (h : s.freshCall = some await)
 holding, on the row that call was made on, is one the machine admits. It is the third part of
 `Envelope` (`Program/Admit.lean`) asked of the host, and the two parts it does not mention —
 the table and the parked request — are the ones the run builds rather than the host. -/
-def Reactor.Envelops {σ : Type} (r : Reactor σ) (table : RowTable) : Prop :=
+def Reactor.Envelops {σ : Type} (r : Reactor σ) (app : SigApp) : Prop :=
   ∀ (m : Api.Machine) (fiber : FiberId) (token i : Nat) (row : Program.Row)
     (request : Val) (st : σ) (c : Answer) (next : σ),
     requestOf m fiber token = some (.external i, request) →
-    externalRow table i = some row →
+    externalRow app.rows i = some row →
     r row request st = some (c, next) →
-    admit table m (.answerAsync fiber token c) = none
+    admit app m (.answerAsync fiber token c) = none
 
 /-- **O-7.** A host inside the envelope is never refused for one. Every phase a drive writes
 is a phase of an answer the session accepted (bound, received, applied or a fuel frontier) or
 of a flush, and a flush carries no envelope at all. -/
-theorem drive_envelope {σ : Type} (r : Reactor σ) (table : RowTable) (henv : r.Envelops table)
-    (rounds : Nat) (s : Run) (st : σ) (htable : s.built.table = table) :
+theorem drive_envelope {σ : Type} (r : Reactor σ) (app : SigApp) (henv : r.Envelops app)
+    (rounds : Nat) (s : Run) (st : σ) (htable : s.built.app = app) :
     ∃ added, (driveFrom r rounds s st).1.phases = s.phases ++ added ∧
       Phase.refused .envelope ∉ added := by
   induction rounds generalizing s st with
@@ -659,7 +659,7 @@ theorem drive_envelope {σ : Type} (r : Reactor σ) (table : RowTable) (henv : r
               (⟨await.fiber, await.token⟩ : Key).token = some (.external i, await.request) := by
             rw [← hop]
             exact hreq
-          have hfits : admit s.built.table s.machine
+          have hfits : admit s.built.app s.machine
               (.answerAsync (⟨await.fiber, await.token⟩ : Key).fiber
                 (⟨await.fiber, await.token⟩ : Key).token completion) = none := by
             rw [htable]
@@ -727,7 +727,7 @@ theorem acceptReply_after_applied (s : Run) (key : Key) (bound : BoundCall) (rep
     (hfind : s.session.active.find? (fun b => b.key == key) = some bound)
     (hkey : bound.key = key)
     (hphase : (Api.HostSession.applyReply s.session key s.budget.fuel).phase = .applied) :
-    acceptReply s.built.table (s.step (.apply key)).machine (bound.record reply) = none := by
+    acceptReply s.built.app (s.step (.apply key)).machine (bound.record reply) = none := by
   have h := Api.HostSession.applied_reply_refused s.session s.budget.fuel bound reply
     (by rw [hkey]; exact hfind) (by rw [hkey]; exact hphase)
   rw [hkey] at h
@@ -858,27 +858,27 @@ theorem replayFrom_cons (program : Api.Program) (table : RowTable) (fuel : Nat)
 
 /-- What a control row can do: refuse and change nothing, or step the machine and retire the
 bindings the step removed. -/
-theorem advance_step {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem advance_step {program : Api.Program} {app : SigApp} (s : Session program app)
     (fuel : Nat) (d : NativeDecision) :
     (∃ why, Api.HostSession.advance s fuel d = ⟨.refused why, s⟩) ∨
       (s.machine.stuck = none ∧ Api.HostSession.advance s fuel d =
-        ⟨if enoughFor program table fuel s.machine d then .progressed else .frontier,
+        ⟨if enoughFor program app.rows fuel s.machine d then .progressed else .frontier,
           Api.HostSession.retire { s with
-            machine := steppedBy program fuel table s.machine d }⟩) := by
+            machine := steppedBy program fuel app.rows s.machine d }⟩) := by
   rcases hstuck : s.machine.stuck with _ | why
-  · cases henough : enoughFor program table fuel s.machine d <;>
+  · cases henough : enoughFor program app.rows fuel s.machine d <;>
       aesop (add norm unfold [Api.HostSession.advance, enoughFor, steppedBy])
   · aesop (add norm unfold [Api.HostSession.advance, enoughFor, steppedBy])
 
 /-- A control row that progressed: the machine before it was not stuck, the step had enough
 fuel, and the machine it leaves is the one the raw stepper leaves. Retiring the bindings a
 step removed does not touch the machine. -/
-theorem advance_progressed {program : Api.Program} {table : RowTable}
-    (s : Session program table) (fuel : Nat) (d : NativeDecision)
+theorem advance_progressed {program : Api.Program} {app : SigApp}
+    (s : Session program app) (fuel : Nat) (d : NativeDecision)
     (h : (Api.HostSession.advance s fuel d).phase = .progressed) :
-    s.machine.stuck = none ∧ enoughFor program table fuel s.machine d = true ∧
+    s.machine.stuck = none ∧ enoughFor program app.rows fuel s.machine d = true ∧
       (Api.HostSession.advance s fuel d).session.machine =
-        steppedBy program fuel table s.machine d := by
+        steppedBy program fuel app.rows s.machine d := by
   have hcases := advance_step s fuel d
   aesop
 

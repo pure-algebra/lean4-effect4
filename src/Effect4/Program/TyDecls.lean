@@ -471,6 +471,54 @@ decreasing_by
       (TyDecls.unseen_cons_lt (TyDecls.body?_of_unfold? _h) (Bool.eq_false_iff.mpr _hs))
   · exact Prod.Lex.left _ _ (Val.sizeOf_obligation _ho _hp)
 
+/-- **Membership under a declaration table, decided**: `Val.hasTy` at the empty table, the
+checker under the table (`Val.hasTyIn`) otherwise. It is the one place where the empty table is a
+case, so every reader built on it is its table-free form at `[]` by definition (decisions row 406
+(2)). It decides `MemberIn` (`memberIn_iff`, `Laws/Program/TyDecls.lean`). -/
+def Val.memberIn (decls : TyDecls) (v : Val) (t : Ty) (allocated : List String := []) : Bool :=
+  match decls with
+  | [] => Val.hasTy v t allocated
+  | _ => Val.hasTyIn decls [] v t allocated
+
+/-- A host handle is no reference, so membership at it reads no table: it is the shape check. -/
+theorem Val.memberIn_handle (decls : TyDecls) (v : Val) (target : String)
+    (allocated : List String) :
+    Val.memberIn decls v (.handle target) allocated = Val.hasTy v (.handle target) allocated := by
+  cases decls with
+  | nil => rfl
+  | cons d ds =>
+    show Val.hasTyIn (d :: ds) [] v (.handle target) allocated = _
+    rw [Val.hasTyIn.eq_1]
+    show [Ty.handle target].any _ = _
+    rw [List.any_cons, List.any_nil, Bool.or_false]
+    split
+    · rename_i h
+      cases h
+    · split
+      · rename_i ps ho
+        have hl : Val.obligations v (.handle target) allocated =
+            if Val.hasTy v (.handle target) allocated then some [] else none := rfl
+        rw [hl] at ho
+        cases hv : Val.hasTy v (.handle target) allocated
+        · rw [hv] at ho
+          cases ho
+        · rw [hv, if_pos rfl] at ho
+          cases ho
+          rfl
+      · rename_i ho
+        have hl : Val.obligations v (.handle target) allocated =
+            if Val.hasTy v (.handle target) allocated then some [] else none := rfl
+        rw [hl] at ho
+        cases hv : Val.hasTy v (.handle target) allocated
+        · rfl
+        · rw [hv, if_pos rfl] at ho
+          cases ho
+
+/-- A reason fits an error column under a table: a typed failure's value is a member of the
+column, at the empty allocation table. Defects and interruptions stay outside `E`. -/
+def errAdmits (decls : TyDecls) (ty : Ty) : Reason Err Defect FiberId Ann → Bool :=
+  reasonAdmits (fun v t => Val.memberIn decls v t) ty
+
 /-! ## Inhabitance: the least fixed point over the table -/
 
 namespace TyDecls

@@ -228,7 +228,7 @@ claim `rows-loop-driver`, role simulation; requirement R6. Consumer: the run int
 on stream and paging modules. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem runWith_denotesB {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
-    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.app) (hexits : r.ExitsOnly)
     (hroot : LoopedRows b.program = true) (hfrag : LoopedDataRows b.table b.program = true)
     (hfund : funded (Run.runWith b r st id budget rounds).1 = true)
     (hrest : atRest (Run.runWith b r st id budget rounds).1 = true)
@@ -251,15 +251,15 @@ the envelope supplied by the guard (`runWith_guarded_denotes` on loops). -/
 theorem runWith_guarded_denotesB {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
     (budget : Api.Budget) (rounds : Nat) (hroot : LoopedRows b.program = true)
     (hfrag : LoopedDataRows b.table b.program = true)
-    (hfund : funded (Run.runWith b r.guardRows st id budget rounds).1 = true)
-    (hrest : atRest (Run.runWith b r.guardRows st id budget rounds).1 = true)
-    (ex : ExitV) (hex : (Run.runWith b r.guardRows st id budget rounds).1.exit = some ex) :
+    (hfund : funded (Run.runWith b (r.guardRows b.app.types) st id budget rounds).1 = true)
+    (hrest : atRest (Run.runWith b (r.guardRows b.app.types) st id budget rounds).1 = true)
+    (ex : ExitV) (hex : (Run.runWith b (r.guardRows b.app.types) st id budget rounds).1.exit = some ex) :
     ∃ lower, ∀ k, lower ≤ k →
-      hostRunB (reactorHost b.table r.guardRows) k b.program [] Stores.empty st =
-        some (some ex, ((Run.runWith b r.guardRows st id budget rounds).1.machine.state,
-          (Run.runWith b r.guardRows st id budget rounds).2)) :=
-  runWith_denotesB b r.guardRows st id budget rounds (guardRows_envelops r b.table)
-    (guardRows_exitsOnly r) hroot hfrag hfund hrest ex hex
+      hostRunB (reactorHost b.table (r.guardRows b.app.types)) k b.program [] Stores.empty st =
+        some (some ex, ((Run.runWith b (r.guardRows b.app.types) st id budget rounds).1.machine.state,
+          (Run.runWith b (r.guardRows b.app.types) st id budget rounds).2)) :=
+  runWith_denotesB b (r.guardRows b.app.types) st id budget rounds (guardRows_envelops r b.app)
+    (guardRows_exitsOnly r b.app.types) hroot hfrag hfund hrest ex hex
 
 /-- **H9 at the driver on loops, for any host**: a host of the row signature read as a reactor
 behind its rows' types, at a table with distinct keys (`runWith_host_denotes` on loops). The
@@ -270,19 +270,19 @@ theorem runWith_host_denotesB {σ : Type} (b : Api.Built)
     (host : Effects.Comodel (RowSig b.table) σ) (st : σ) (id : String) (budget : Api.Budget)
     (rounds : Nat) (hkeys : (b.table.map rowKey).Nodup) (hroot : LoopedRows b.program = true)
     (hfrag : LoopedDataRows b.table b.program = true)
-    (hfund : funded (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1
+    (hfund : funded (Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).1
       = true)
-    (hrest : atRest (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1
+    (hrest : atRest (Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).1
       = true)
     (ex : ExitV)
-    (hex : (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1.exit =
+    (hex : (Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).1.exit =
       some ex) :
     ∃ lower, ∀ k, lower ≤ k →
-      hostRunB (hostGuard b.table host) k b.program [] Stores.empty st =
-        some (some ex, ((Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget
+      hostRunB (hostGuard b.app.types b.table host) k b.program [] Stores.empty st =
+        some (some ex, ((Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget
           rounds).1.machine.state,
-          (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).2)) := by
-  rw [← reactorHost_ofHost b.table hkeys host]
+          (Run.runWith b ((Reactor.ofHost b.table host).guardRows b.app.types) st id budget rounds).2)) := by
+  rw [← reactorHost_ofHost b.app.types b.table hkeys host]
   exact runWith_guarded_denotesB b (Reactor.ofHost b.table host) st id budget rounds hroot hfrag
     hfund hrest ex hex
 

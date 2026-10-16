@@ -112,6 +112,10 @@ structure ProgramSource where
   services : List (ServiceKey × Ty) := []
   types : TyDecls := []
   lawful : LawfulSig ⟨table, services, types⟩ := by exact SigApp.lawful_empty
+  /-- The typed state is claimed at a source that declares no named type: `Fits` reads no
+  declaration table, so the laws that invert the typer against it take an empty one (decisions
+  row 406 (2); the audit's D3, `docs/research/2026-10-16-soundness-audit/README.md`, lifts it). -/
+  untyped : types = [] := by rfl
 
 instance : Coe NativeEff ProgramSource := ⟨fun program => { program }⟩
 

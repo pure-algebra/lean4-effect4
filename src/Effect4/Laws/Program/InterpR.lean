@@ -335,7 +335,7 @@ def prepareAtR (table : RowTable) (index : Option Nat)
     match externalRow table i with
     | none => fallback
     | some row =>
-      match externalValue row.answer state.externals.allocated value with
+      match externalValue [] row.answer state.externals.allocated value with
       | none => fallback
       | some (allocated, value) =>
         ({ state with externals := { state.externals with allocated } }, .pure (.success value))

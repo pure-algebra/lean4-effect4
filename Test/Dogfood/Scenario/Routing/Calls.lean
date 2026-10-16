@@ -52,7 +52,7 @@ theorem held_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
     (external : SourceScope.ExternalOnly s.built.program)
-    (concrete : SourceScope.ConcreteReplies s.built.table)
+    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = [])
     (seen : Seen) (mem : seen ∈ held s) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
       externalRow s.built.table i = some row ∧ row.spelling = seen.row ∧
@@ -65,7 +65,7 @@ theorem held_in_tree (s : Run) (reached : Run.Reached s)
   · next call token =>
     cases decoded
     obtain ⟨i, row, T, operation, present, journal, wait⟩ :=
-      bound_in_tree s reached fragment noCause external concrete call token recorded
+      bound_in_tree s reached fragment noCause external concrete untyped call token recorded
     have found : s.rowOf call.op = some row := by
       rw [operation]
       exact present
@@ -140,8 +140,8 @@ theorem config_checkers :
 
 /-- A value the row admits at a record column has the record's type. -/
 theorem externalValue_record_isSome {fs : List (String × Bool × Ty)} {v : Val}
-    (h : (externalValue (.record fs) [] v).isSome = true) : Val.hasTy v (.record fs) [] = true := by
-  have e : externalValue (.record fs) [] v =
+    (h : (externalValue [] (.record fs) [] v).isSome = true) : Val.hasTy v (.record fs) [] = true := by
+  have e : externalValue [] (.record fs) [] v =
       if (Val.hasTy v (.record fs) [] && (Store.Val.handles v).isEmpty) = true then some ([], v)
       else none := by
     cases v <;> rfl

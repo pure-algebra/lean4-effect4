@@ -1,20 +1,20 @@
 import Effect4.Program.TyHead
-import Effect4.Program.AdmitIn
+import Effect4.Program.Admit
 import Effect4.Program.SigApp
 import Effect4.Program.Typing.TermRefusal
 import Effect4.Program.Authoring
 import Effect4.Program.Decision
 import Effect4.Program.Authoring.Declare
-import Effect4.Api.AuthorIn
+import Effect4.Api.Author
 
 /-!
 # Battery: declared types read by shape, folded at a written field, and admitted at a reply
 
-The readers under a declaration table (`Program/TyHead.lean`, `Program/AdmitIn.lean`; the plan
+The readers under a declaration table (`Program/TyHead.lean`, `Program/Admit.lean`; the plan
 `docs/research/2026-10-16-usability-scope/wiring-plan.md`) at three tables: a declared record, a
 recursive tree, and a declared name for `nat`. Each line is a finite evaluation, or a control
 that shows why the table is read (decisions row 301). The laws are
-`Laws/Program/TyHead.lean` and `Laws/Program/AdmitIn.lean`.
+`Laws/Program/TyHead.lean` and `Laws/Program/Admit.lean`.
 -/
 
 set_option autoImplicit false
@@ -85,7 +85,7 @@ def badNode : Val :=
   [.record [("_tag", false, .lit "node"), ("children", false, .list (.app "Tree" [])),
     ("label", false, .string)]]).isSome
 
-/-! ## The term typer under the application's table (`SigApp.signatureIn`) -/
+/-! ## The term typer under the application's table (`SigApp.signature`) -/
 
 /-- An application that declares `Todo` and `Tree`. -/
 def app : SigApp := { types := todoDecls ++ treeDecls }
@@ -95,17 +95,17 @@ def asTodo (value : Term) : Term :=
   .record [("v", false, .app "Todo" [])] ["v"] (Authoring.termsOfList [value])
 
 -- finite evaluation: the typer reads a field through a declared name.
-#guard termTy app.signatureIn [.app "Todo" []] (.field .required (.var 0) "title") == some .string
--- control: the table-free signature refuses the same read.
-#guard termTy app.signature [.app "Todo" []] (.field .required (.var 0) "title") == none
+#guard termTy app.signature [.app "Todo" []] (.field .required (.var 0) "title") == some .string
+-- control: a signature that declares no type refuses the same read.
+#guard termTy (nativeSignature []) [.app "Todo" []] (.field .required (.var 0) "title") == none
 -- finite evaluation: a field written at `Todo` folds a value of its body, and reading it back
 -- gives the name.
-#guard termTy app.signatureIn [todoBody] (.field .required (asTodo (.var 0)) "v") ==
+#guard termTy app.signature [todoBody] (.field .required (asTodo (.var 0)) "v") ==
   some (.app "Todo" [])
--- control: the table-free signature refuses the fold: the name is nominal there.
-#guard termTy app.signature [todoBody] (.field .required (asTodo (.var 0)) "v") == none
+-- control: a signature that declares no type refuses the fold: the name is nominal there.
+#guard termTy (nativeSignature []) [todoBody] (.field .required (asTodo (.var 0)) "v") == none
 -- finite evaluation: the refusal of a field that `Todo` lacks is located at the record.
-#guard (TermRefusal.diagnose app.signatureIn [.app "Todo" []]
+#guard (TermRefusal.diagnose app.signature [.app "Todo" []]
   (.field .required (.var 0) "owner")).isSome
 
 /-! ## The select rule's arms under the table (`Decision.armsIn`) -/
@@ -125,23 +125,23 @@ def asTodo (value : Term) : Term :=
 /-! ## Reply admission at a declared column -/
 
 -- finite evaluation: a record answer at a declared column is data, kept as it is.
-#guard externalValueIn todoDecls (.app "Todo" []) [] todo == some ([], todo)
+#guard externalValue todoDecls (.app "Todo" []) [] todo == some ([], todo)
 -- control: the table-free conversion refuses it.
-#guard externalValue (.app "Todo" []) [] todo == none
+#guard externalValue [] (.app "Todo" []) [] todo == none
 -- finite evaluation: a tree answer is admitted, and a node with a bad child is refused.
-#guard externalValueIn treeDecls (.app "Tree" []) [] node == some ([], node)
-#guard externalValueIn treeDecls (.app "Tree" []) [] badNode == none
+#guard externalValue treeDecls (.app "Tree" []) [] node == some ([], node)
+#guard externalValue treeDecls (.app "Tree" []) [] badNode == none
 -- finite evaluation: a natural at a declared name for `nat` is data, not an allocation request.
-#guard externalValueIn idDecls (.app "Id" []) [] (.nat 0) == some ([], .nat 0)
+#guard externalValue idDecls (.app "Id" []) [] (.nat 0) == some ([], .nat 0)
 -- finite evaluation: the machine's own conversion mints no handle at a declared column, with no
 -- table: a declared name is `app n []`, never `handle n` (decisions row 406 (1)).
-#guard externalValue (.app "Id" []) [] (.nat 0) == none
+#guard externalValue [] (.app "Id" []) [] (.nat 0) == none
 -- finite evaluation: at a host handle, a natural is still an allocation, under any table.
-#guard externalValueIn idDecls (.handle "Conn") [] (.nat 0) == some (["Conn"], Value.external 0)
+#guard externalValue idDecls (.handle "Conn") [] (.nat 0) == some (["Conn"], Value.external 0)
 -- finite evaluation: the machine's allocation test reads the spelling alone.
 #guard (allocates (.app "Id" []), allocates (.handle "Conn")) == (false, true)
 
-/-! ## A module built under its named types (`Api.Author.buildIn`) -/
+/-! ## A module built under its named types (`Api.Author.build`) -/
 
 open Effect4.Program.Authoring
 
@@ -156,11 +156,12 @@ def readTitle : Src NativeOp :=
 def titleModule : Module NativeOp := { rows := Repo.rows, types := todoDecls, main := readTitle }
 
 -- finite evaluation: the module builds under its named types, at the field's type.
-#guard (match Api.Author.buildIn titleModule with
+#guard (match Api.Author.build titleModule with
   | .ok b => b.ty.answer == .string
   | .error _ => false)
--- control: the table-free build refuses it, since the field read meets an opaque name there.
-#guard (match Api.Author.build titleModule with
+-- control: the module without its named types is refused, since the field read meets an opaque
+-- name there.
+#guard (match Api.Author.build { titleModule with types := [] } with
   | .ok _ => false
   | .error _ => true)
 
@@ -170,16 +171,8 @@ def readOwner : Src NativeOp :=
 
 -- finite evaluation: the build under the named types refuses a field that `Todo` lacks, as a
 -- typing refusal with its location.
-#guard (match Api.Author.buildIn { titleModule with main := readOwner } with
+#guard (match Api.Author.build { titleModule with main := readOwner } with
   | .error (.typing _) => true
   | _ => false)
-
-/-- A module with no named type. -/
-def plainModule : Module NativeOp := { main := succeed (nat 1) }
-
--- finite evaluation: a module with no named type builds under `buildIn` at `build`'s type.
-#guard (match Api.Author.buildIn plainModule, Api.Author.build plainModule with
-  | .ok b, .ok c => decide (b.ty = c.ty)
-  | _, _ => false)
 
 end Test.Program.DeclaredTypes

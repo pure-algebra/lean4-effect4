@@ -91,7 +91,6 @@ import Effect4.Program.TyClasses
 import Effect4.Program.TyDecls
 import Effect4.Program.TyExpand
 import Effect4.Program.TyHead
-import Effect4.Program.AdmitIn
 import Effect4.Program.Bounds
 import Effect4.Program.Polarity
 import Effect4.Schema.Template
@@ -198,7 +197,6 @@ import Effect4.Store.Domain.ShapeRead
 import Effect4.Program.Typing.Call
 import Effect4.Program.Typing.Annotate
 import Effect4.Api.Author
-import Effect4.Api.AuthorIn
 import Effect4.Api.Supervision
 import Effect4.Run
 -- What a tool reads off a run: the machine's view, the raw replay, the tape, a funded run, rest.

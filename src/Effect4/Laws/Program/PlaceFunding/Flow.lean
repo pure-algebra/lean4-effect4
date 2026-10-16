@@ -88,7 +88,7 @@ theorem NativeFlow.history_of_lift {W : Type w} {World : Type v}
     (facts : letI := evaluatorFor b.program b.table
       AnswerFlow.Local (interpOf b.program b.table) J I O A Ready G worldOf)
     (admission : ∀ w m d, J w m →
-      Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m d → A w m d)
+      Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m d → A w m d)
     (compileFuel : Nat)
     (load : ∃ w, J w (Api.load b.program compileFuel) ∧
       Flows G worldOf (Api.load b.program compileFuel))

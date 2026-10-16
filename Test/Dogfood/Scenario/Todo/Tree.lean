@@ -97,6 +97,35 @@ theorem builtAt_program {name : String} {args : List TermSrc} {b : Api.Built} {p
       rw [hp'] at hprog
       exact ⟨(Except.ok.inj hprog).symm, htable.trans (Application.moduleOf_table _ _ _)⟩
 
+/-- **A built entry declares no named type.** The application's modules declare none, so the
+call tree's untyped premise holds (`Run.CallTree.bound_in_tree`). A step of every to-do claim
+that reads the call tree. -/
+theorem builtAt_untyped {name : String} {args : List TermSrc} {b : Api.Built}
+    (h : builtAt name args = some b) : b.app.types = [] := by
+  unfold builtAt at h
+  cases he : application.entry? name with
+  | none =>
+    rw [he] at h
+    cases h
+  | some e =>
+    rw [he] at h
+    cases hbuild : Effect4.Api.Author.build (application.moduleOf e args) with
+    | error why =>
+      have hnone : Test.Dogfood.P2HandlerLayers.built? (application.moduleOf e args) = none := by
+        unfold Test.Dogfood.P2HandlerLayers.built?
+        rw [hbuild]
+        rfl
+      rw [Option.bind_some, hnone] at h
+      cases h
+    | ok b' =>
+      have hsome : Test.Dogfood.P2HandlerLayers.built? (application.moduleOf e args) = some b' := by
+        unfold Test.Dogfood.P2HandlerLayers.built?
+        rw [hbuild]
+        rfl
+      rw [Option.bind_some, hsome] at h
+      cases h
+      exact (Effect4.Api.Author.build_retains hbuild).2.2.2
+
 /-- The kernel elaborates `add` at a free title. A step of `add_empty_calls_nothing` and
 `list_after_add`. -/
 theorem add_elaborates (title : String) :

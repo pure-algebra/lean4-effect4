@@ -566,11 +566,11 @@ theorem point_bind_keys (p : Point) (v : Val) (bind : Bool) :
 or exactly the fresh external handle; existing store handles remain valid. -/
 theorem externalValue_minted (ty : Ty) (s : Stores) (ids : List FiberId)
     (value result : Val) (allocated : List String)
-    (hc : externalValue ty s.externals.allocated value = some (allocated, result))
+    (hc : externalValue [] ty s.externals.allocated value = some (allocated, result))
     (hok : Ok ⟨ids, s⟩ (value.keys ++ s.keys)) :
     let next := { s with externals := { s.externals with allocated } }
     s.le next ∧ Ok ⟨ids, next⟩ (next.keys ++ result.keys) := by
-  rcases externalValue_internalFree ty s.externals.allocated allocated value result hc with
+  rcases externalValue_internalFree [] ty s.externals.allocated allocated value result hc with
     ⟨rfl, rfl, free⟩ | ⟨target, _, _, rfl, rfl, rfl⟩
   · have keys : result.keys = [] := by
       rw [Val.keys_eq_handles, free]

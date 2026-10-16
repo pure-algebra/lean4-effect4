@@ -47,7 +47,18 @@ structure SigApp where
 namespace SigApp
 
 /-- The signature of a row table alone: no service declaration and no named type. -/
-def ofTable (rows : RowTable) : SigApp := { rows }
+abbrev ofTable (rows : RowTable) : SigApp := { rows }
+
+/-- A row table is the application that declares nothing else, so a caller with a table alone
+passes it where an application is asked (decisions row 406 (2)). The coercion writes the
+structure itself, so its projections reduce where a proof reads them. -/
+instance : Coe RowTable SigApp := ⟨fun rows => { rows }⟩
+
+/-- A row table's application has its rows. -/
+@[simp] theorem ofTable_rows (rows : RowTable) : (ofTable rows).rows = rows := rfl
+
+/-- A row table's application declares no named type. -/
+@[simp] theorem ofTable_types (rows : RowTable) : (ofTable rows).types = [] := rfl
 
 /-- The carrier the application declares for a service code: its first declaration there. -/
 def codeTy (app : SigApp) (code : ServiceTypeCode) : Option Ty :=
@@ -69,19 +80,12 @@ def serviceTy (app : SigApp) (key : ServiceKey) : Option Ty :=
       | some ty => some ty
       | none => builtinCodeTy key.service
 
-/-- The checker's signature over an application's tables: its rows and its service carriers. It
-declares no named type, so the term typer reads every declared name as a handle, and program
-admission and the typed state (M5 to M7) read the checker as before. -/
+/-- **The checker's signature over an application's tables**: its rows, its service carriers and
+its named types, which the term typer reads (`Signature.types`; decisions row 406 (2)). With no
+declaration it is the rows' signature. Program admission reads it; the typed state (M5 to M7)
+reads it at a source that declares no type (`ProgramSource.untyped`). -/
 def signature (app : SigApp) : Signature NativeOp :=
-  { nativeSignature app.rows with serviceTy := app.serviceTy }
-
-/-- **The checker's signature under the application's named types**: `signature` with the
-declaration table, which the term typer reads (`Signature.types`; the wiring plan,
-`docs/research/2026-10-16-usability-scope/wiring-plan.md`). At an application with no named type
-it is `signature`. The typed state's guarantee is claimed at `signature` only (the plan's
-decision 5). -/
-def signatureIn (app : SigApp) : Signature NativeOp :=
-  { app.signature with types := app.types }
+  { nativeSignature app.rows with serviceTy := app.serviceTy, types := app.types }
 
 end SigApp
 

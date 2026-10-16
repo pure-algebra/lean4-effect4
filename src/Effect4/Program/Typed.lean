@@ -281,11 +281,6 @@ theorem Val.hasTy_tuple (xs : List Val) (ts : List Ty) (allocated : List String)
       itemsHasTy (ts.map (fun t x => Val.hasTy x t allocated)) xs := by
   rw [Val.hasTy, Val.itemCheckers_eq_map]
 
-/-- The typed error part of a completion; defects and interruptions stay outside `E`.
-This is the shared reason fold at the default empty allocation table. -/
-def errAdmits (ty : Ty) : Reason Err Defect FiberId Ann → Bool :=
-  reasonAdmits (fun v t => Val.hasTy v t) ty
-
 /-- The machine's own defects for malformed code and an unimplemented arm (`badShapeExit`,
 `notImplemented`). A host failure may not carry them: the typed exit judgment excludes exactly
 these two (`NoShapeDefect`, decisions row 152), and M7's shape-defect exclusion rests on it.

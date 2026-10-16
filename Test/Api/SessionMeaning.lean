@@ -248,7 +248,7 @@ def guardedPremises (reactor : Run.Reactor Repo) (main : Src NativeOp) (state : 
     Option (Bool × Bool × Bool × Bool × Bool) :=
   (built? (request main)).map fun b =>
     let run : Run × Repo := Run.runWith b reactor state "todo"
-    let guarded : Run × Repo := Run.runWith b reactor.guardRows state "todo"
+    let guarded : Run × Repo := Run.runWith b (reactor.guardRows b.app.types) state "todo"
     (StraightRows b.table b.program, funded guarded.1, atRest guarded.1, guarded.1.exit.isSome,
       decide (guarded.1.exit = run.1.exit) && decide (guarded.2 = run.2))
 
@@ -279,9 +279,9 @@ def recordReplay (main : Src NativeOp) (state : Repo) :
   (built? (request main)).map fun b =>
     let plain : Run × Repo := Run.runWith b repository state "todo"
     let recorder := (Run.reactorHost b.table repository).record fun _ ex => ex
-    let recorded := Run.runWith b (Run.Reactor.ofHost b.table recorder).guardRows (state, []) "todo"
+    let recorded := Run.runWith b ((Run.Reactor.ofHost b.table recorder).guardRows b.app.types) (state, []) "todo"
     let replayed :=
-      Run.runWith b (Run.Reactor.ofHost b.table (tapeHost b.table)).guardRows recorded.2.2 "todo"
+      Run.runWith b ((Run.Reactor.ofHost b.table (tapeHost b.table)).guardRows b.app.types) recorded.2.2 "todo"
     (decide ((b.table.map rowKey).Nodup) && StraightRows b.table b.program,
       funded recorded.1 && atRest recorded.1,
       decide (recorded.1.exit = plain.1.exit) && decide (recorded.2.1 = plain.2),
@@ -302,8 +302,8 @@ def recordReplay (main : Src NativeOp) (state : Repo) :
 #guard ((built? (request list)).map fun b =>
     let recorder := (Run.reactorHost b.table repository).record fun _ ex => ex
     let recorded :=
-      Run.runWith b (Run.Reactor.ofHost b.table recorder).guardRows ((3, [(1, "milk", false)]), []) "todo"
-    (Run.runWith b (Run.Reactor.ofHost b.table (tapeHost b.table)).guardRows
+      Run.runWith b ((Run.Reactor.ofHost b.table recorder).guardRows b.app.types) ((3, [(1, "milk", false)]), []) "todo"
+    (Run.runWith b ((Run.Reactor.ofHost b.table (tapeHost b.table)).guardRows b.app.types)
       recorded.2.2.dropLast "todo").1.exit) = some none
 
 /-- A locked database: a typed failure that the rows' error column admits. -/
@@ -324,7 +324,7 @@ of `runWith_host_denotes` (distinct keys and the fragment, funded and at rest), 
 def hostDrive (host : (table : RowTable) → Effects.Comodel (RowSig table) (Repo × Bool))
     (main : Src NativeOp) (state : Repo) : Option (Bool × Bool × Option ExitV) :=
   (built? (request main)).map fun b =>
-    let run := Run.runWith b (Run.Reactor.ofHost b.table (host b.table)).guardRows (state, true)
+    let run := Run.runWith b ((Run.Reactor.ofHost b.table (host b.table)).guardRows b.app.types) (state, true)
       "todo"
     (decide ((b.table.map rowKey).Nodup) && StraightRows b.table b.program,
       funded run.1 && atRest run.1, run.1.exit)

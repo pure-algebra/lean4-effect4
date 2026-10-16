@@ -36,9 +36,9 @@ def program : NativeEff :=
 -- a retired spelling has no member, not even an external handle allocated at it (the state plan's
 -- T3a): an external handle may not take an internal spelling
 #guard !Val.hasTy (.handle 7 0) (.handle "Ref.Ref<number>") ["Ref.Ref<number>"]
-#guard externalValue (.handle resource) [] (.nat 0) = some ([resource], .handle 7 0)
-#guard externalValue (.handle resource) [] (.nat 1) = none
-#guard externalValue (.handle resource) [resource] (.handle 7 0) = none
+#guard externalValue [] (.handle resource) [] (.nat 0) = some ([resource], .handle 7 0)
+#guard externalValue [] (.handle resource) [] (.nat 1) = none
+#guard externalValue [] (.handle resource) [resource] (.handle 7 0) = none
 #guard Api.typeOf program table =
   some ⟨.nat, .never, Env.Requirement.empty⟩
 #guard Api.roundTrip program table = .ok program

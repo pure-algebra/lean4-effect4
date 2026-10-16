@@ -80,7 +80,7 @@ theorem load (total cf : Nat) (b : Api.Built) (hb : Api.Author.build (crew total
 /-- History extension of `releases_once`: retain the exact admission predicate and call table. -/
 theorem history_step (b : Api.Built) (cf : Nat) (m : NativeMachine)
     (x : Nat × NativeDecision) (hm : Run.HistoryOf b cf m)
-    (hx : Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2) :
+    (hx : Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2) :
     Run.HistoryOf b cf (Run.stepBy b m x) := by
   obtain ⟨history, adm, heq⟩ := hm
   refine ⟨history ++ [x], ?_, ?_⟩
@@ -129,7 +129,7 @@ It proves no release progress; consumer: `step` and then `history`. -/
 theorem registrations_step :
   ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
     Api.Author.build (crew total) = .ok b → Holds b cf m →
-    Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
+    Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2 →
     Registrations (Run.stepBy b m x) := by
   intro total cf b m x built held accepted
   exact SourceOpportunity.workers_registrations_once total cf b built (Run.stepBy b m x)
@@ -145,7 +145,7 @@ The custody assertion is proved on actual sequential, race-free source histories
 theorem releases_step :
   ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
     Api.Author.build (crew total) = .ok b → Holds b cf m →
-    Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
+    Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2 →
     ReleaseDebits (Run.stepBy b m x) := by
   intro total cf b m x built held accepted
   intro i _
@@ -166,7 +166,7 @@ It proves no host behavior; consumer: `step` and then `history`. -/
 theorem logs_step :
   ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
     Api.Author.build (crew total) = .ok b → Holds b cf m →
-    Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
+    Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2 →
     LogDebits (Run.stepBy b m x) := by
   intro total cf b machine decision built held accepted
   have history := history_step b cf machine decision held.history accepted
@@ -182,7 +182,7 @@ theorem logs_step :
 /-- Step assembly of `releases_once` from its three proved preservation facts. -/
 theorem step (total cf : Nat) (b : Api.Built) (hb : Api.Author.build (crew total) = .ok b)
     (m : NativeMachine) (x : Nat × NativeDecision) (hm : Holds b cf m)
-    (hx : Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2) :
+    (hx : Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m x.2) :
     Holds b cf (Run.stepBy b m x) := by
   by_cases hf : x.2 = .installMiddleware
   · have heq : x = (x.1, .installMiddleware) := Prod.ext rfl hf

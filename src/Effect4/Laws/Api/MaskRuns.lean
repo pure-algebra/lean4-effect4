@@ -60,9 +60,9 @@ table of its root. Each refusal returns no session.
 A step of the proposed registry claim `saved-mask-chain-runs`. Its consumer is
 `Runner.load_maskRuns`. -/
 @[semantics "scope-lifetime-finalization"]
-theorem start_maskRuns (program : Api.Program) (table : RowTable) (expectedProfile : String)
-    (header : Header) (compileFuel : Nat) (s : Session program table)
-    (started : start program table expectedProfile header compileFuel = .ok s) :
+theorem start_maskRuns (program : Api.Program) (app : SigApp) (expectedProfile : String)
+    (header : Header) (compileFuel : Nat) (s : Session program app)
+    (started : start program app expectedProfile header compileFuel = .ok s) :
     MaskRuns [true] s.machine := by
   unfold start at started
   split at started
@@ -80,7 +80,7 @@ theorem start_maskRuns (program : Api.Program) (table : RowTable) (expectedProfi
 
 /-- A binding writes the ledger alone: the machine is the same. A step of
 `Runner.step_maskRuns`. -/
-theorem bindCall_machine {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem bindCall_machine {program : Api.Program} {app : SigApp} (s : Session program app)
     (call : Call) (token : Nat) : (bindCall s call token).session.machine = s.machine := by
   unfold bindCall
   dsimp only
@@ -105,11 +105,11 @@ nothing. The retirement after it writes the ledger alone.
 A step of the proposed registry claim `saved-mask-chain-runs`. Its consumer is
 `Runner.step_maskRuns`. -/
 @[semantics "scope-lifetime-finalization"]
-theorem advance_maskRuns {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem advance_maskRuns {program : Api.Program} {app : SigApp} (s : Session program app)
     (fuel : Nat) (decision : NativeDecision) (bases : List Bool)
     (kept : MaskRuns bases s.machine) :
     ∃ bases', bases <+: bases' ∧ MaskRuns bases' (advance s fuel decision).session.machine := by
-  have stepped := steppedBy_maskRuns program fuel table bases s.machine decision kept
+  have stepped := steppedBy_maskRuns program fuel app.rows bases s.machine decision kept
   unfold advance
   split
   · exact ⟨bases, List.prefix_refl _, kept⟩
@@ -127,8 +127,8 @@ nothing.
 A step of the proposed registry claim `saved-mask-chain-runs`. Its consumers are
 `applyPending_maskRuns` and `Runner.step_maskRuns`. -/
 @[semantics "scope-lifetime-finalization"]
-theorem applyReply_maskRuns {program : Api.Program} {table : RowTable}
-    (s : Session program table) (key : Key) (fuel : Nat) (bases : List Bool)
+theorem applyReply_maskRuns {program : Api.Program} {app : SigApp}
+    (s : Session program app) (key : Key) (fuel : Nat) (bases : List Bool)
     (kept : MaskRuns bases s.machine) :
     ∃ bases', bases <+: bases' ∧ MaskRuns bases' (applyReply s key fuel).session.machine := by
   cases fuel with
@@ -140,7 +140,7 @@ theorem applyReply_maskRuns {program : Api.Program} {table : RowTable}
       · exact ⟨bases, List.prefix_refl _, kept⟩
       · rename_i decision accepted
         have stepped :=
-          steppedBy_maskRuns program (fuel + 1) table bases s.machine decision kept
+          steppedBy_maskRuns program (fuel + 1) app.rows bases s.machine decision kept
         dsimp only
         split
         · exact ⟨bases, List.prefix_refl _, kept⟩
@@ -155,8 +155,8 @@ reply by `applyReply`, or it changes nothing.
 A step of the proposed registry claim `saved-mask-chain-runs`. Its consumer is a law that reads
 the chain at a session which a holder drives by `applyPending`. -/
 @[semantics "scope-lifetime-finalization"]
-theorem applyPending_maskRuns {program : Api.Program} {table : RowTable}
-    (s : Session program table) (fuel : Nat) (bases : List Bool)
+theorem applyPending_maskRuns {program : Api.Program} {app : SigApp}
+    (s : Session program app) (fuel : Nat) (bases : List Bool)
     (kept : MaskRuns bases s.machine) :
     ∃ bases', bases <+: bases' ∧ MaskRuns bases' (applyPending s fuel).session.machine := by
   cases fuel with

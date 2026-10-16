@@ -181,15 +181,16 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
 
 namespace Typed
 
-variable {table : RowTable}
+variable {app : SigApp}
 
-/-- The printed syntax of the certified program. -/
-def print (t : Typed table) : Except PrintRefusal TypeScript.Expr := Api.print t.program table
+/-- The printed syntax of the certified program, at its rows' signature: the faces read a
+declared name once the module writer declares it (the wiring plan, W5). -/
+def print (t : Typed app) : Except PrintRefusal TypeScript.Expr := Api.print t.program app.rows
 
-/-- The certified module emission under a declaration name. -/
-def emit (t : Typed table) (name : String) :
-    Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission t.program table name) :=
-  Api.emitModule name t.program table
+/-- The certified module emission under a declaration name, at its rows' signature. -/
+def emit (t : Typed app) (name : String) :
+    Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission t.program app.rows name) :=
+  Api.emitModule name t.program app.rows
 
 end Typed
 

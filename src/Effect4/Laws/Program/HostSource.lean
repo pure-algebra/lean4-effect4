@@ -78,9 +78,9 @@ theorem ExternalOnly.empty_heap {b : Api.Built} (held : ExternalOnly b.program)
     rfl
 
 /-- The actual row admission refuses every delayed reference read when the heap is empty. -/
-theorem empty_heap_refused (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
-    (cell : RefKey) (empty : m.state.refs = []) :
-    admitAnswer row m fiber token (.ofRefGet cell) = some (.unknownCell cell) := by
+theorem empty_heap_refused (decls : TyDecls) (row : Row) (m : NativeMachine) (fiber : FiberId)
+    (token : Nat) (cell : RefKey) (empty : m.state.refs = []) :
+    admitAnswer decls row m fiber token (.ofRefGet cell) = some (.unknownCell cell) := by
   simp only [admitAnswer, empty, List.getElem?_nil]
 
 end Effect4.Program.SourceScope

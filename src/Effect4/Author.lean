@@ -1,5 +1,4 @@
 import Effect4.Api.Author
-import Effect4.Api.AuthorIn
 import Effect4.Program.Authoring
 import Effect4.Program.Authoring.Ascribe
 import Effect4.Program.Authoring.Atoms
@@ -45,7 +44,7 @@ An agent or a person who writes a program imports this module. It re-exports:
 
 - program authoring: the builders, lifts, rows, loops, records, tuples, folds, masks,
   ascriptions and definition blocks (`Program.Authoring.*`), and authoring against a table
-  (`Api.Author`, `Codegen.Forms`), and under a module's named types (`Api.AuthorIn`);
+  (`Api.Author`, `Codegen.Forms`), a module's named types included;
 - `deriving Modeled` and `field_ref%` (`Schema.Modeled.Derive`, `Schema.FieldRef.Elab`);
 - the step language with its named inputs, lists and renaming, and the words of a step term;
 - the wrappers of a module that waits;

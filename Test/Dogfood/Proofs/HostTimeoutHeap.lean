@@ -24,7 +24,7 @@ theorem outer_not_string {value : Val} (outer : OuterValue value) (allocated : L
 /-- The actual string answer row refuses every delayed read from Timeout's cells. -/
 theorem read_refused (row : Row) (machine : Effect4.Program.NativeMachine) (fiber : FiberId)
     (token : Nat) (cell : RefKey) (answer : row.answer = .string) (heap : OuterHeap machine.state.refs) :
-    admitAnswer row machine fiber token (.ofRefGet cell) ≠ none := by
+    admitAnswer [] row machine fiber token (.ofRefGet cell) ≠ none := by
   unfold admitAnswer
   dsimp only
   cases found : machine.state.refs[cell.index]? with

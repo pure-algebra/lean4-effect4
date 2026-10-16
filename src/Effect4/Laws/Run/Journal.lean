@@ -311,7 +311,7 @@ theorem any_activeKeys {s : Run} {k : Key}
 
 /-! ### What each kind of row can do to a session -/
 
-theorem bindCall_cases {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem bindCall_cases {program : Api.Program} {app : SigApp} (s : Session program app)
     (call : Call) (token : Nat) :
     (∃ why, bindCall s call token = ⟨.refused why, s⟩) ∨
     (s.active.any (fun b => b.key == ⟨call.fiber, token⟩) = false ∧
@@ -338,7 +338,7 @@ theorem bindCall_cases {program : Api.Program} {table : RowTable} (s : Session p
             · next hreq =>
               exact Or.inr ⟨Bool.eq_false_iff.mpr hdup, Decidable.of_not_not hreq, rfl⟩
 
-theorem submit_cases {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem submit_cases {program : Api.Program} {app : SigApp} (s : Session program app)
     (reply : Reply) :
     ((submit s reply).session = s ∧ (submit s reply).phase ≠ .preflight) ∨
     ((submit s reply).phase = .preflight ∧
@@ -354,24 +354,24 @@ theorem submit_cases {program : Api.Program} {table : RowTable} (s : Session pro
         · exact Or.inl ⟨rfl, fun h => by cases h⟩
         · exact Or.inr ⟨rfl, rfl⟩
 
-theorem applyReply_cases {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem applyReply_cases {program : Api.Program} {app : SigApp} (s : Session program app)
     (key : Key) (fuel : Nat) :
     ((applyReply s key fuel).session = s ∧ (applyReply s key fuel).phase ≠ .applied) ∨
     (∃ fuel' decision, (applyReply s key fuel).phase = .frontier ∧
       (applyReply s key fuel).session =
-        { s with machine := steppedBy program (fuel' + 1) table s.machine decision }) ∨
+        { s with machine := steppedBy program (fuel' + 1) app.rows s.machine decision }) ∨
     (∃ fuel' decision bound, s.active.find? (fun b => b.key == key) = some bound ∧
-      Api.requestOf (steppedBy program (fuel' + 1) table s.machine decision)
+      Api.requestOf (steppedBy program (fuel' + 1) app.rows s.machine decision)
         bound.call.fiber bound.token = none ∧
       (applyReply s key fuel).phase = .applied ∧
       (applyReply s key fuel).session = retire { s with
-        machine := steppedBy program (fuel' + 1) table s.machine decision
+        machine := steppedBy program (fuel' + 1) app.rows s.machine decision
         active := s.active.filter (fun b => b.key != key)
         pending := s.pending.filter (fun slot => slot.key != key)
         applied := s.applied + 1
         consumed := s.consumed ++ [bound.call.callId]
         funded := s.funded && (s.machine.stuck.isNone &&
-          enoughFor program table (fuel' + 1) s.machine decision) }) := by
+          enoughFor program app.rows (fuel' + 1) s.machine decision) }) := by
   cases fuel with
   | zero => exact Or.inl ⟨rfl, fun h => by cases h⟩
   | succ fuel =>
@@ -881,7 +881,7 @@ theorem ledger_submit_accepted (s : Run) (reply : Reply) (h : Ledger s)
 retires every live binding whose guard the step removed keeps the ledger. The applied keys grow
 by `removed`, and the retired keys by the retired bindings' keys. -/
 theorem ledger_retire (s : Run) (c : Command) (h : Ledger s) (fuel : Nat) (d : NativeDecision)
-    (removed : List Key) (t : Session s.built.program s.built.table)
+    (removed : List Key) (t : Session s.built.program s.built.app)
     (htm : t.machine = steppedBy s.built.program fuel s.built.table s.machine d)
     (hta : t.active = s.session.active.filter (fun b => !removed.contains b.key))
     (htp : t.pending = s.session.pending.filter (fun slot => !removed.contains slot.key))

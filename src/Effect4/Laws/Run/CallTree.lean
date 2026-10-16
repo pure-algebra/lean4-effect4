@@ -2520,16 +2520,16 @@ private theorem readReply_mem :
       exact ⟨held, List.mem_cons_of_mem _ member, same⟩
 
 /-- Binding a call adds an empty slot. A step of `reached_held`. -/
-private theorem bindCall_pending {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (call : Call) (token : Nat) :
+private theorem bindCall_pending {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (call : Call) (token : Nat) :
     ∀ slot ∈ (Api.HostSession.bindCall s call token).session.pending,
       slot ∈ s.pending ∨ slot.reply = none := by
   unfold Api.HostSession.bindCall
   aesop
 
 /-- Submitting a reply stores that reply and no other. A step of `reached_held`. -/
-private theorem submit_pending {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (reply : Api.HostSession.Reply) :
+private theorem submit_pending {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (reply : Api.HostSession.Reply) :
     ∀ slot ∈ (Api.HostSession.submit s reply).session.pending,
       slot ∈ s.pending ∨ slot.reply = some reply := by
   intro slot held
@@ -2550,15 +2550,15 @@ private theorem submit_pending {program : Api.Program} {table : RowTable}
             exact Or.inl member
 
 /-- Retiring keeps a subset of the slots. A step of `reached_held`. -/
-private theorem retire_pending {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) :
+private theorem retire_pending {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) :
     ∀ slot ∈ (Api.HostSession.retire s).pending, slot ∈ s.pending := by
   unfold Api.HostSession.retire
   aesop
 
 /-- Applying a reply keeps a subset of the slots. A step of `reached_held`. -/
-private theorem applyReply_pending {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (key : Api.HostSession.Key) (fuel : Nat) :
+private theorem applyReply_pending {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (key : Api.HostSession.Key) (fuel : Nat) :
     ∀ slot ∈ (Api.HostSession.applyReply s key fuel).session.pending, slot ∈ s.pending := by
   cases fuel with
   | zero => exact fun _ h => h
@@ -2567,8 +2567,8 @@ private theorem applyReply_pending {program : Api.Program} {table : RowTable}
     aesop (add safe forward retire_pending)
 
 /-- A control keeps a subset of the slots. A step of `reached_held`. -/
-private theorem advance_pending {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (fuel : Nat) (d : NativeDecision) :
+private theorem advance_pending {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (fuel : Nat) (d : NativeDecision) :
     ∀ slot ∈ (Api.HostSession.advance s fuel d).session.pending, slot ∈ s.pending := by
   unfold Api.HostSession.advance
   aesop (add safe forward retire_pending)
@@ -2604,14 +2604,14 @@ private theorem reached_held (s : Run) (reached : Run.Reached s) : HeldSubmitted
 
 /-- `applyReply` leaves the machine, or steps it at the decision that `preflight` makes of a
 reply the session holds. A step of `reached_inv`. -/
-private theorem applyReply_answer {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (key : Api.HostSession.Key) (fuel : Nat) :
+private theorem applyReply_answer {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (key : Api.HostSession.Key) (fuel : Nat) :
     (Api.HostSession.applyReply s key fuel).session.machine = s.machine ∨
       ∃ (n : Nat) (d : NativeDecision) (slot : Api.HostSession.ReplySlot)
         (reply : Api.HostSession.Reply),
         slot ∈ s.pending ∧ slot.reply = some reply ∧ Api.HostSession.preflight s reply = .ok d ∧
         (Api.HostSession.applyReply s key fuel).session.machine =
-          steppedBy program n table s.machine d := by
+          steppedBy program n app.rows s.machine d := by
   unfold Api.HostSession.applyReply
   split
   · exact Or.inl rfl
@@ -2631,12 +2631,12 @@ private theorem applyReply_answer {program : Api.Program} {table : RowTable}
 
 /-- The decision `preflight` makes of a reply answers that reply's completion, accepted plainly
 or at the call's checked instance. A step of `answer_decision`. -/
-private theorem preflight_record {program : Api.Program} {table : RowTable}
-    (s : Api.HostSession.Session program table) (reply : Api.HostSession.Reply)
+private theorem preflight_record {program : Api.Program} {app : SigApp}
+    (s : Api.HostSession.Session program app) (reply : Api.HostSession.Reply)
     (d : NativeDecision) (h : Api.HostSession.preflight s reply = .ok d) :
     ∃ r : RecordedReply, r.completion = reply.completion ∧
-      (acceptReply table s.machine r = some d ∨
-        acceptAtInstance table s.callInstance s.machine r = some d) := by
+      (acceptReply app s.machine r = some d ∨
+        acceptAtInstance app s.callInstance s.machine r = some d) := by
   unfold Api.HostSession.preflight at h
   split at h
   · cases h
@@ -2658,33 +2658,42 @@ private theorem preflight_record {program : Api.Program} {table : RowTable}
                 exact ⟨_, rfl, Or.inr hacc⟩
               · cases h
 
+/-- At an application with no named type, a host check reads the row table alone.
+A step of `answer_decision`: the call tree's reply tape admits at the row table. -/
+private theorem externalAdmits_untyped {app : SigApp} (untyped : app.types = []) (i : Nat)
+    (answer : Completion Val Err Defect FiberId Ann) (allocated : List String) :
+    externalAdmits app i answer allocated = externalAdmits app.rows i answer allocated := by
+  unfold externalAdmits
+  rw [untyped]
+
 /-- **An applied reply's decision is admitted by the call tree**: an exit the journal submitted,
-at a live external call, that the row admits. Consumer: `reached_inv`. -/
-private theorem answer_decision {program : Api.Program} {table : RowTable}
-    (concrete : SourceScope.ConcreteReplies table)
-    (s : Api.HostSession.Session program table)
-    (hcalls : s.calls = Api.HostSession.callTable program table)
+at a live external call, that the row admits. The application declares no named type: the call
+tree's reply tape admits at the row table (decisions row 407 (5)). Consumer: `reached_inv`. -/
+private theorem answer_decision {program : Api.Program} {app : SigApp} (untyped : app.types = [])
+    (concrete : SourceScope.ConcreteReplies app.rows)
+    (s : Api.HostSession.Session program app)
+    (hcalls : s.calls = Api.HostSession.callTable program app)
     (hstore : StoreInv s.machine.state) (journal : List Command)
     (reply : Api.HostSession.Reply) (d : NativeDecision)
     (hpre : Api.HostSession.preflight s reply = .ok d)
     (submitted : Command.submit reply ∈ journal) :
-    CallTreeDecision table journal s.machine d := by
+    CallTreeDecision app.rows journal s.machine d := by
   obtain ⟨r, completion, plain | specialized⟩ := preflight_record s reply d hpre
-  · have same := acceptReply_decision table s.machine r d plain
-    have envelope := acceptReply_envelope table s.machine r d plain
+  · have same := acceptReply_decision app s.machine r d plain
+    have envelope := acceptReply_envelope app s.machine r d plain
     subst same
     obtain ⟨i, request, row, hreq, hrow, hadmit⟩ :=
-      admitted_row table s.machine r.fiber r.token r.completion envelope.2.2
-    obtain ⟨ex, hex⟩ := SourceScope.accepted_exit table s.calls s.machine r.fiber r.token
+      admitted_row app s.machine r.fiber r.token r.completion envelope.2.2
+    obtain ⟨ex, hex⟩ := SourceScope.accepted_exit app s.calls s.machine r.fiber r.token
       r.completion hstore.1 (preflight_accepted s reply _ hpre)
     rw [hex] at hadmit
     have admits := SourceScope.admitted_exit_tape hrow hadmit
-    rw [hstore.2.1] at admits
+    rw [hstore.2.1, externalAdmits_untyped untyped] at admits
     exact ⟨ex, reply, i, request, row, hex, submitted, completion.symm.trans hex, hreq, hrow, admits⟩
   · rw [Api.HostSession.callInstance_callTable s hcalls] at specialized
-    obtain ⟨envelope, same⟩ := acceptAtInstance_sound table _ s.machine r d specialized
+    obtain ⟨envelope, same⟩ := acceptAtInstance_sound app _ s.machine r d specialized
     subst same
-    obtain ⟨ex, hex⟩ := SourceScope.accepted_exit table s.calls s.machine r.fiber r.token
+    obtain ⟨ex, hex⟩ := SourceScope.accepted_exit app s.calls s.machine r.fiber r.token
       r.completion hstore.1 (preflight_accepted s reply _ hpre)
     obtain ⟨index, hop, admits⟩ := SourceScope.instance_exit_tape concrete envelope hex
     obtain ⟨_, hreq, i, row, _, _, hopi, hrow, _⟩ := envelope
@@ -2692,7 +2701,7 @@ private theorem answer_decision {program : Api.Program} {table : RowTable}
     injection hop with hi
     subst hi
     rw [hopi] at hreq
-    rw [hstore.2.1] at admits
+    rw [hstore.2.1, externalAdmits_untyped untyped] at admits
     exact ⟨ex, reply, i, r.request, row, hex, submitted, completion.symm.trans hex, hreq, hrow,
       admits⟩
 
@@ -2701,13 +2710,13 @@ program without cause handlers, with the journal's submitted exits as its tape.
 Consumer: `request_leads`. -/
 private theorem reached_inv (s : Run) (reached : Run.Reached s)
     (hroot : ExtRows s.built.table s.built.program = true)
-    (concrete : SourceScope.ConcreteReplies s.built.table) :
+    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = []) :
     MachineInv s.built.program s.built.table s.budget.compileFuel s.journal s.machine := by
   induction reached with
   | opened b id budget profile => exact load_inv budget.compileFuel [] hroot
   | step s c hs ih =>
-    rw [Run.step_built] at hroot concrete
-    have inv := (ih hroot concrete).mono_journal (j₂ := (s.step c).journal) (fun c' h => by
+    rw [Run.step_built] at hroot concrete untyped
+    have inv := (ih hroot concrete untyped).mono_journal (j₂ := (s.step c).journal) (fun c' h => by
       rw [Run.step_journal]
       exact List.mem_append_left _ h)
     rw [Run.step_built, Run.step_budget]
@@ -2742,7 +2751,7 @@ private theorem reached_inv (s : Run) (reached : Run.Reached s)
       · have here : (s.step (.apply key)).machine =
             steppedBy s.built.program n s.built.table s.machine d := hs'.trans moved
         rw [here]
-        refine stepped n d (answer_decision concrete s.session (Run.reached_history s hs).1
+        refine stepped n d (answer_decision untyped concrete s.session (Run.reached_history s hs).1
           inv.store _ reply d hpre ?_)
         rw [Run.step_journal]
         exact List.mem_append_left _ (reached_held s hs slot member reply held)
@@ -2781,7 +2790,7 @@ theorem request_leads (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
     (external : SourceScope.ExternalOnly s.built.program)
-    (concrete : SourceScope.ConcreteReplies s.built.table)
+    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = [])
     (call : Call) (token : Nat)
     (request : Program.requestOf s.machine call.fiber token = some (call.op, call.request)) :
     ∃ (i : Nat) (row : Program.Row) (tape : ReplyTape) (frame : NFiber) (stores : Stores),
@@ -2795,7 +2804,8 @@ theorem request_leads (s : Run) (reached : Run.Reached s)
   have hroot := extRows_of_at s.built.table s.built.program external s.built.program [] rfl
     fragment noCause
   obtain ⟨_, cur, K, tape, i, _, row, _, _, _, _, _, _, _, _, _, hop, _, hrow, hcall, hcallOf, _, _,
-    htape, hleads, _⟩ := requestOf_active_parkedCall (reached_inv s reached hroot concrete) request
+    htape, hleads, _⟩ :=
+      requestOf_active_parkedCall (reached_inv s reached hroot concrete untyped) request
   exact ⟨i, row, tape, fiberOf cur K true, Stores.empty, hop, hrow, htape, hleads.toLeads, hcall,
     hcallOf⟩
 
@@ -2805,7 +2815,7 @@ theorem request_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
     (external : SourceScope.ExternalOnly s.built.program)
-    (concrete : SourceScope.ConcreteReplies s.built.table)
+    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = [])
     (call : Call) (token : Nat)
     (request : Program.requestOf s.machine call.fiber token = some (call.op, call.request)) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
@@ -2814,7 +2824,7 @@ theorem request_in_tree (s : Run) (reached : Run.Reached s)
         reply.completion = .ofExit ex) ∧
       treeWaits s.built.table s.built.program T = .waiting i call.request := by
   obtain ⟨i, row, tape, frame, stores, op, declared, submitted, leads, callAt, requestAt⟩ :=
-    request_leads s reached fragment noCause external concrete call token request
+    request_leads s reached fragment noCause external concrete untyped call token request
   exact ⟨i, row, tape, op, declared, submitted,
     tree_wait_of_leads s.built.table s.built.program fragment s.budget.compileFuel tape
       frame stores i call.request leads callAt requestAt⟩
@@ -2827,7 +2837,7 @@ theorem bound_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
     (external : SourceScope.ExternalOnly s.built.program)
-    (concrete : SourceScope.ConcreteReplies s.built.table)
+    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = [])
     (call : Call) (token : Nat)
     (bound : ((Command.bind call token), .bound) ∈ s.journal.zip s.phases) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
@@ -2849,8 +2859,12 @@ theorem bound_in_tree (s : Run) (reached : Run.Reached s)
   have concreteRows : SourceScope.ConcreteReplies before.built.table := by
     rw [built]
     exact concrete
+  have untypedBefore : before.built.app.types = [] := by
+    rw [built]
+    exact untyped
   obtain ⟨i, row, tape, op, declared, submitted, waiting⟩ :=
-    request_in_tree before actual admitted handlers operations concreteRows call token request
+    request_in_tree before actual admitted handlers operations concreteRows untypedBefore call token
+      request
   rw [built] at declared waiting
   refine ⟨i, row, tape, op, declared, ?_, waiting⟩
   intro ex member

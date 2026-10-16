@@ -664,6 +664,15 @@ theorem memberIn_nil {allocated : List String} {v : Val} {t : Ty} :
     MemberIn [] allocated v t ↔ Val.hasTy v t allocated = true := by
   rw [← hasTyIn_iff, hasTyIn_nil]
 
+/-- **The decider decides membership** on every table: `Val.memberIn` is `Val.hasTy` at the
+empty table (`memberIn_nil`) and the checker otherwise (`hasTyIn_iff`). The readers of reply
+admission read it (decisions row 406 (2)). -/
+theorem Val.memberIn_iff {decls : TyDecls} {allocated : List String} {v : Val} {t : Ty} :
+    Val.memberIn decls v t allocated = true ↔ MemberIn decls allocated v t := by
+  cases decls with
+  | nil => exact memberIn_nil.symm
+  | cons d ds => exact hasTyIn_iff
+
 /-! ## Membership is the admission fold at the checker's oracle -/
 
 /-- **The checker as an oracle**: a declared name admits what the checker admits at the name's

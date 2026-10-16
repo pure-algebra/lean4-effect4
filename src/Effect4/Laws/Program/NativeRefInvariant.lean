@@ -101,7 +101,7 @@ theorem history {W : Type w} (P : RefHeap → Prop) (b : Api.Built)
     (writes : ∀ world m, J world m → ∀ id fiber, m.fiber? id = some fiber →
       SyncKeeps P b.program b.table m fiber.frame.current)
     (admission : ∀ world m d, J world m →
-      Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m d → A world m d)
+      Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m d → A world m d)
     (compileFuel : Nat) (load : ∃ world, J world (Api.load b.program compileFuel))
     (empty : P []) (m : NativeMachine) (reached : Run.HistoryOf b compileFuel m) : P m.state.refs := by
   obtain ⟨initial, loaded⟩ := load

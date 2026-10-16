@@ -126,11 +126,11 @@ face opens the program with that session's certificate, under the header's name 
 Placement: concept `host-session-protocol`; the accepted half of `start_error`, with the same
 consumer. Reach: every accepted start. It does not establish that the opened session is the one
 that the start answered; `Run.open_total` gives that for a header built from the `Built`. -/
-theorem start_ok (program : Api.Program) (table : RowTable) (binding : String) (header : Header)
-    (budget : Api.Budget) (session : Api.HostSession.Session program table)
-    (h : Api.HostSession.start program table binding header budget.compileFuel = .ok session) :
-    Live.start program table binding header budget =
-      .ok (Live.open { table, program, admitted := session.admitted } header.session budget
+theorem start_ok (program : Api.Program) (app : SigApp) (binding : String) (header : Header)
+    (budget : Api.Budget) (session : Api.HostSession.Session program app)
+    (h : Api.HostSession.start program app binding header budget.compileFuel = .ok session) :
+    Live.start program app binding header budget =
+      .ok (Live.open { app, program, admitted := session.admitted } header.session budget
         binding) := by
   unfold Live.start
   rw [h]
@@ -160,7 +160,7 @@ call that its view lists. It does not establish that the session admits a reply 
 or that the expansion keeps the call at its address (`expansion-keeps-call`). -/
 theorem view_checked (l : Live) (c : CallView) (h : c ∈ l.view.awaiting) :
     c.checked =
-      c.origin.bind (Api.HostSession.instanceAt l.run.built.program l.run.built.table) := by
+      c.origin.bind (Api.HostSession.instanceAt l.run.built.program l.run.built.app) := by
   obtain ⟨call, _, rfl⟩ := List.mem_map.mp h
   show (originOf l.run.machine call.fiber call.token).bind l.run.session.callInstance = _
   rw [Run.reached_callInstance l.run (reached l)]
@@ -420,8 +420,9 @@ theorem rows_upTo (l : Live) (i : Nat) (c : Command) (phase : Phase)
 373 (8)). Take a row of a live run's journal that applied the reply stored at a key. At the run
 after the rows before it (`Live.upTo`), the session held that reply, and its `preflight` admitted
 it. There the session's instance lookup is the checker's instance on the run's program
-(`instanceAt`). So the answer fits its call. A success prepares a member of the row's
-shape-decided answer column (`PreparedSuccess`). Where the row's columns refuse it, it is a
+(`instanceAt`). So the answer fits its call. Where the application declares no named type
+(decisions row 407 (5)), a success prepares a member of the row's shape-decided answer column
+(`PreparedSuccess`). Where the row's columns refuse it, it is a
 handle-free member of the call's checked instance, prepared unchanged (`InstanceSuccess`). A
 failure holds no reserved defect, at every type. `Api.Typed.replay` answers a `Live`, so this holds
 of every run that it replays.
@@ -445,8 +446,8 @@ theorem replay_at_call_instance (l : Live) (i : Nat) (key : Api.HostSession.Key)
       Api.HostSession.readReply (l.upTo i).run.session.pending key = some reply ∧
       Api.HostSession.preflight (l.upTo i).run.session reply = .ok decision ∧
       (l.upTo i).run.session.callInstance =
-        Api.HostSession.instanceAt l.run.built.program l.run.built.table ∧
-      (∀ value, reply.completion = .ofExit (.success value) →
+        Api.HostSession.instanceAt l.run.built.program l.run.built.app ∧
+      (∀ value, reply.completion = .ofExit (.success value) → l.run.built.app.types = [] →
         Api.HostSession.PreparedSuccess (l.upTo i).run.session reply decision ∨
           Api.HostSession.InstanceSuccess (l.upTo i).run.session reply decision) ∧
       (∀ cause, reply.completion = .ofExit (.failure cause) →
@@ -456,9 +457,10 @@ theorem replay_at_call_instance (l : Live) (i : Nat) (key : Api.HostSession.Key)
   obtain ⟨reply, _, _, _, read, _, accepted, _⟩ := Run.application_payload _ reached key applied
   have live := Run.application_live _ reached key applied
   have built : (l.upTo i).run.built = l.run.built := Run.play_built _ _
-  refine ⟨reply, _, read, accepted, ?_, fun value success => ?_, fun cause failed ty => ?_⟩
+  refine ⟨reply, _, read, accepted, ?_, fun value success untyped => ?_, fun cause failed ty => ?_⟩
   · rw [Run.reached_callInstance _ reached, built]
-  · exact Api.HostSession.preflight_success_prepared_fits _ reply _ value live success accepted
+  · exact Api.HostSession.preflight_success_prepared_fits (by rw [built]; exact untyped) _ reply _
+      value live success accepted
   · exact Api.HostSession.preflight_failure_noShapeDefect _ reply _ cause failed accepted ty
 
 
@@ -507,7 +509,7 @@ name, and every typing certificate of its program at its table. It applies `Live
 replays, since the session may refuse its commands. It says nothing of row spellings, or of a
 lowered session. Unlocks: R6, with `replay_at_call_instance`, and R13. -/
 @[semantics "host-session-protocol" (requirement := R6)]
-theorem replay_recorded (l : Live) (t : Api.Typed l.run.built.table)
+theorem replay_recorded (l : Live) (t : Api.Typed l.run.built.app)
     (hprog : t.program = l.run.built.program) (named : l.run.id ≠ "") :
     ∃ l', t.replay l.run.profile
         ⟨Api.HostSession.version, l.run.id, l.run.profile, l.run.built.table⟩
@@ -516,10 +518,10 @@ theorem replay_recorded (l : Live) (t : Api.Typed l.run.built.table)
   obtain ⟨program, certificate⟩ := t
   dsimp only at hprog
   subst hprog
-  have started := start_ok l.run.built.program l.run.built.table l.run.profile
+  have started := start_ok l.run.built.program l.run.built.app l.run.profile
     ⟨Api.HostSession.version, l.run.id, l.run.profile, l.run.built.table⟩ l.run.budget _
     (Run.open_total l.run.built l.run.id l.run.budget l.run.profile named)
-  refine ⟨(Live.open ⟨l.run.built.table, l.run.built.program, l.run.built.admitted, []⟩
+  refine ⟨(Live.open ⟨l.run.built.app, l.run.built.program, l.run.built.admitted, []⟩
       l.run.id l.run.budget l.run.profile).feedAll (l.run.journal.map .wire), ?_, ?_⟩
   · unfold Api.Typed.replay
     rw [started]

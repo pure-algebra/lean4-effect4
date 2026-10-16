@@ -2,8 +2,10 @@ import Effect4.Api.HostProtocol
 import Effect4.Program.Typing.Parts
 
 /-!
-A checked, keyed host-reply session over the existing Eff machine. The program and
-row table are indexed by the existing admission certificate. Recorder call IDs are distinct
+A checked, keyed host-reply session over the existing Eff machine. The program and its
+application (`SigApp`: the row table and the named types; a row table alone coerces to one) are
+indexed by the existing admission certificate. A reply is admitted under the application's named
+types (`acceptReply`, decisions row 406 (2)); the machine steps at its rows. Recorder call IDs are distinct
 from machine guard tokens; `bindCall` is their checked association. No oracle answers are
 loaded. This module owns no JSON decoder, host adequacy theorem or scheduling policy.
 Authority: Test/contracts/foundation-wave2.contract.md, S6b host protocol.
@@ -90,8 +92,8 @@ structure RetiredCall where
   pending : Option Reply
 deriving DecidableEq
 
-structure Session (program : Api.Program) (table : RowTable) where
-  admitted : AdmittedProgram program (.ofTable table)
+structure Session (program : Api.Program) (app : SigApp) where
+  admitted : AdmittedProgram program app
   header : Header
   machine : Api.Machine
   nextCall : Nat := 0
@@ -140,47 +142,46 @@ inductive Phase
   | refused (reason : Refusal)
   deriving DecidableEq, Repr
 
-structure Result (program : Api.Program) (table : RowTable) where
+structure Result (program : Api.Program) (app : SigApp) where
   phase : Phase
-  session : Session program table
+  session : Session program app
 
-/-- **The program's checked call table**, at the signature that admits it (`SigApp.ofTable table`), on
+/-- **The program's checked call table**, at the signature that admits it (`app.signature`), on
 the program with its layer references expanded, as the module check types it
 (`Program.programCalls`): a call in a definition's body or in a block's main program has its
 instance at the block's signature (decisions rows 323 and 333). `start` and `Run.open` make it
 once (the session note's slice DM5). -/
-def callTable (program : Api.Program) (table : RowTable) :
+def callTable (program : Api.Program) (app : SigApp) :
     List (List Nat × CallInstance NativeOp) :=
-  Program.programCalls (SigApp.signature (.ofTable table)) [] program.expandRefs
+  Program.programCalls app.signature [] program.expandRefs
 
 /-- Validate an explicit header and retain the indexed admission proof. Empty session IDs
 refuse. The expected binding is the one that the holder selected. The header carries the row
-table only (decisions row 21), so the program is admitted at the table's own signature,
-`SigApp.ofTable table`. -/
-def start (program : Api.Program) (table : RowTable) (expectedBinding : String)
+table (decisions row 21), and the program is admitted at the application's signature. -/
+def start (program : Api.Program) (app : SigApp) (expectedBinding : String)
     (header : Header) (compileFuel : Nat) :
-    Except Refusal (Session program table) :=
+    Except Refusal (Session program app) :=
   if header.version ≠ version then .error .version
   else if header.session = "" then .error .session
   else if header.binding ≠ expectedBinding then .error .profile
-  else if header.table ≠ table then .error .table
-  else match admitProgram program (.ofTable table) with
+  else if header.table ≠ app.rows then .error .table
+  else match admitProgram program app with
     | .error why => .error (.program why)
     | .ok admitted =>
       .ok { admitted, header, machine := Api.load program compileFuel
-            calls := callTable program table }
+            calls := callTable program app }
 
-def outstanding {program : Api.Program} {table : RowTable} (s : Session program table) :
+def outstanding {program : Api.Program} {app : SigApp} (s : Session program app) :
     List Await := awaits s.machine
 
 /-- Associate exactly the claims recorded at call start with an outstanding guard. The
 next call ID is allocated here; completion application has a separate counter. -/
-def bindCall {program : Api.Program} {table : RowTable} (s : Session program table)
-    (call : Call) (token : Nat) : Result program table :=
+def bindCall {program : Api.Program} {app : SigApp} (s : Session program app)
+    (call : Call) (token : Nat) : Result program app :=
   let refuse := fun why => ⟨.refused why, s⟩
   if call.version ≠ version then refuse .version
   else if call.session ≠ s.header.session then refuse .session
-  else if call.table ≠ table then refuse .table
+  else if call.table ≠ app.rows then refuse .table
   else if s.active.any (fun bound => bound.key == ⟨call.fiber, token⟩) then refuse .duplicateCall
   else if call.callId ≠ s.nextCall then refuse .callOrder
   else if requestOf s.machine call.fiber token ≠ some (call.op, call.request) then
@@ -191,16 +192,16 @@ def bindCall {program : Api.Program} {table : RowTable} (s : Session program tab
     nextCall := s.nextCall + 1 }⟩
 
 /-- **The checked instance at a call's address** in the session's program (`programCallAt`), at
-the signature that admitted it (`SigApp.ofTable table`), on the program with its layer references
+the signature that admitted it (`app.signature`), on the program with its layer references
 expanded, as the module check types it. `none` where no call stands at the address; on an
 admitted program it answers at every call (`instanceAt_complete`). It is the specification of
 the session's table: a session that `start` made answers it (`start_callInstance`). -/
-def instanceAt (program : Api.Program) (table : RowTable) :
+def instanceAt (program : Api.Program) (app : SigApp) :
     List Nat → Option (CallInstance NativeOp) :=
-  programCallAt (SigApp.signature (.ofTable table)) [] program.expandRefs
+  programCallAt app.signature [] program.expandRefs
 
 /-- The session's checked instance at an address: a lookup in the table that `start` made. -/
-def Session.callInstance {program : Api.Program} {table : RowTable} (s : Session program table)
+def Session.callInstance {program : Api.Program} {app : SigApp} (s : Session program app)
     (origin : List Nat) : Option (CallInstance NativeOp) :=
   s.calls.lookup origin
 
@@ -208,7 +209,7 @@ def Session.callInstance {program : Api.Program} {table : RowTable} (s : Session
 columns refuse the completion, the envelope at the call's checked instance
 (`InstanceEnvelope`, decisions row 183). It returns only the recorded answer decision. It
 neither applies a decision nor consumes a reply. -/
-def preflight {program : Api.Program} {table : RowTable} (s : Session program table)
+def preflight {program : Api.Program} {app : SigApp} (s : Session program app)
     (reply : Reply) : Except Refusal NativeDecision :=
   if reply.version ≠ version then .error .version
   else if reply.session ≠ s.header.session then .error .session
@@ -217,20 +218,20 @@ def preflight {program : Api.Program} {table : RowTable} (s : Session program ta
     | some bound =>
       if reply.callId ≠ bound.call.callId then .error .callOrder
       else if requestOf s.machine bound.call.fiber bound.token = none then .error .staleCall
-      else match acceptReply table s.machine (bound.record reply) with
+      else match acceptReply app s.machine (bound.record reply) with
         | some decision => .ok decision
         | none =>
-          match acceptAtInstance table s.callInstance s.machine (bound.record reply) with
+          match acceptAtInstance app s.callInstance s.machine (bound.record reply) with
           | some decision => .ok decision
           | none => .error .envelope
 
 /-- Pending completions in binding order; no application policy is inferred from this list. -/
-def pendingReplies {program : Api.Program} {table : RowTable} (s : Session program table) : List Reply :=
+def pendingReplies {program : Api.Program} {app : SigApp} (s : Session program app) : List Reply :=
   s.pending.filterMap ReplySlot.reply
 
 /-- Receipt stores only. Another key may already have a pending completion. -/
-def submit {program : Api.Program} {table : RowTable} (s : Session program table)
-    (reply : Reply) : Result program table :=
+def submit {program : Api.Program} {app : SigApp} (s : Session program app)
+    (reply : Reply) : Result program app :=
   if (readReply s.pending reply.key).isSome then ⟨.refused .pendingReply, s⟩
   else match preflight s reply with
     | .error why => ⟨.refused why, s⟩
@@ -243,7 +244,7 @@ def submit {program : Api.Program} {table : RowTable} (s : Session program table
 /-- Retire every association whose exact guard was removed by a machine step. Shared
 cancellation may retire more than the selected key. Accepted but unapplied payloads remain
 available to the host cleanup driver, without consuming a machine allocation or a call. -/
-def retire {program : Api.Program} {table : RowTable} (s : Session program table) : Session program table :=
+def retire {program : Api.Program} {app : SigApp} (s : Session program app) : Session program app :=
   let dead := s.active.filter fun bound => (requestOf s.machine bound.call.fiber bound.token).isNone
   { s with
     active := s.active.filter fun bound => (requestOf s.machine bound.call.fiber bound.token).isSome
@@ -257,8 +258,8 @@ this function is deliberately absent from the receipt commutation law.
 The step is taken once, as `advance` takes it, and an applied step keeps whether it had enough
 command fuel at a live machine (`funded`, decisions row 326 (4)). The verdict stays `applied`, so
 the wire does not change. -/
-def applyReply {program : Api.Program} {table : RowTable} (s : Session program table)
-    (key : Key) : Nat → Result program table
+def applyReply {program : Api.Program} {app : SigApp} (s : Session program app)
+    (key : Key) : Nat → Result program app
   | 0 => ⟨.frontier, s⟩
   | fuel + 1 =>
     match s.active.find? (fun bound => bound.key == key), readReply s.pending key with
@@ -266,8 +267,8 @@ def applyReply {program : Api.Program} {table : RowTable} (s : Session program t
       match preflight s reply with
       | .error why => ⟨.refused why, s⟩
       | .ok decision =>
-        let step := (letI := evaluatorFor program table
-          stepDecisionState (interpOf program table) (fuel + 1) s.machine decision)
+        let step := (letI := evaluatorFor program app.rows
+          stepDecisionState (interpOf program app.rows) (fuel + 1) s.machine decision)
         let machine := step.1
         if !HostProtocol.allows (HostProtocol.observe s.machine) (.answer key)
             (HostProtocol.observe machine) then ⟨.refused .protocol, s⟩
@@ -285,8 +286,8 @@ def applyReply {program : Api.Program} {table : RowTable} (s : Session program t
 
 /-- Explicit compatibility convenience for a single pending completion. More than one
 pending reply requires a key; arrival or binding order is never an implicit scheduler. -/
-def applyPending {program : Api.Program} {table : RowTable} (s : Session program table) :
-    Nat → Result program table
+def applyPending {program : Api.Program} {app : SigApp} (s : Session program app) :
+    Nat → Result program app
   | 0 => ⟨.frontier, s⟩
   | fuel + 1 => match pendingReplies s with
     | [reply] => applyReply s reply.key (fuel + 1)
@@ -295,24 +296,24 @@ def applyPending {program : Api.Program} {table : RowTable} (s : Session program
 
 /-- Controls and reply applications are separate tape records. Pending replies do not
 forbid scheduling other fibers. After any control, all removed associations are retired. -/
-def advance {program : Api.Program} {table : RowTable} (s : Session program table)
-    (fuel : Nat) (decision : NativeDecision) : Result program table :=
+def advance {program : Api.Program} {app : SigApp} (s : Session program app)
+    (fuel : Nat) (decision : NativeDecision) : Result program app :=
   match decision with
   | .answerAsync _ _ _ => ⟨.refused .directAnswer, s⟩
   | _ =>
     if s.machine.stuck.isSome then ⟨.refused .stuck, s⟩
     else
-      letI := evaluatorFor program table
-      let (machine, enough) := stepDecisionState (interpOf program table) fuel s.machine decision
+      letI := evaluatorFor program app.rows
+      let (machine, enough) := stepDecisionState (interpOf program app.rows) fuel s.machine decision
       if !HostProtocol.allows (HostProtocol.observe s.machine) (HostProtocol.controlLabel decision)
           (HostProtocol.observe machine) then ⟨.refused .protocol, s⟩
       else ⟨if enough then .progressed else .frontier, retire { s with machine }⟩
 
 /-- Reading a frontier does not execute pending replies or discard the session ledger. -/
-def inspect {program : Api.Program} {table : RowTable} (s : Session program table) :
+def inspect {program : Api.Program} {app : SigApp} (s : Session program app) :
     Api.Inspection :=
-  letI := evaluatorFor program table
-  match replayEval (interpOf program table) 0 [] s.machine with
+  letI := evaluatorFor program app.rows
+  match replayEval (interpOf program app.rows) 0 [] s.machine with
   | .finished m => ⟨.finished, m, []⟩
   | .frontier why m => ⟨.frontier, m, Api.frontierReasons why m⟩
   | .stuck why m => ⟨.stuck why, m, []⟩

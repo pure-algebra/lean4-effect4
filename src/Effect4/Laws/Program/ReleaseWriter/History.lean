@@ -157,7 +157,7 @@ theorem history_funded {W : Type w} {target : Target} (b : Api.Built)
       Lift.DecisionLift order (interpOf b.program b.table)
         (fun _ m => ConfigurationAt b.program m ∧ Q m) I O A)
     (admission : ∀ world m d, ConfigurationAt b.program m → Q m →
-      Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m d → A world m d)
+      Run.Accepted b.app (Api.HostSession.callTable b.program b.app) m d → A world m d)
     (compileFuel : Nat) (load : ∃ _world : W, Q (Api.load b.program compileFuel))
     (m : NativeMachine) (reached : Run.HistoryOf b compileFuel m) :
     (ledger target).Funded 0 m [] [] := by

@@ -82,7 +82,8 @@ theorem add_empty_calls_nothing : AddEmptyCallsNothing := by
       exact List.mem_cons_self
     obtain ⟨i, row, T, -, -, -, hwait⟩ := Routing.Calls.held_in_tree s hreach
       (by rw [hprog, htable]; exact add_straight "") (by rw [hprog]; exact add_noCause "")
-      (by rw [hprog]; exact add_externalOnly "") (by rw [htable]; exact table_concrete) seen hmem
+      (by rw [hprog]; exact add_externalOnly "") (by rw [htable]; exact table_concrete)
+      (builtAt_untyped hbuilt) seen hmem
     rw [hprog, htable, add_empty_waits_nothing] at hwait
     cases hwait
 

@@ -276,7 +276,7 @@ structure SavedMaskImage : Prop where
   /-- The target is reserved. No external allocation takes it. -/
   external : externalHandleTarget Ty.maskRestoreTarget = false ∧
     ∀ (allocated : List String) (index : Nat),
-      externalValue Ty.maskRestore allocated (.nat index) = none
+      externalValue [] Ty.maskRestore allocated (.nat index) = none
   /-- The column scan finds the type at the column's own position, so a host answer or error
   column that mentions it is refused (`rowChecks`, `Program/SigApp.lean`). -/
   column : ∀ pos : Path, findInternalHandle pos Ty.maskRestore = some pos

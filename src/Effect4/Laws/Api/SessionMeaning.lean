@@ -64,11 +64,11 @@ def DenoteRowsEqSession (frag : RowTable → NativeEff → Bool) : Prop :=
 
 /-- Step of `denoteRows_eq_session`: a reply that passes the session's preflight is at a guard the
 machine waits on, on a host row the table registers (`admitted_row`, `acceptAtInstance_sound`). -/
-theorem preflight_row {program : Api.Program} {table : RowTable} (s : Session program table)
+theorem preflight_row {program : Api.Program} {app : SigApp} (s : Session program app)
     (reply : Reply) (decision : NativeDecision)
     (h : Api.HostSession.preflight s reply = .ok decision) :
     ∃ i v row, Program.requestOf s.machine reply.key.fiber reply.key.token = some (.external i, v) ∧
-      externalRow table i = some row := by
+      externalRow app.rows i = some row := by
   unfold Api.HostSession.preflight at h
   split at h
   · cases h
@@ -86,22 +86,22 @@ theorem preflight_row {program : Api.Program} {table : RowTable} (s : Session pr
           · cases h
           · split at h
             · next d hacc =>
-              have henv := acceptReply_envelope table s.machine (bound.record reply) d hacc
+              have henv := acceptReply_envelope app s.machine (bound.record reply) d hacc
               obtain ⟨i, v, row, hreq, hrow, -⟩ :=
-                admitted_row table s.machine _ _ _ henv.2.2
+                admitted_row app s.machine _ _ _ henv.2.2
               exact ⟨i, v, row, hreq, hrow⟩
             · split at h
               · next d hinst =>
                 obtain ⟨⟨-, hreq, i, row, -, -, hop, hrow, -⟩, -⟩ :=
-                  acceptAtInstance_sound table _ s.machine (bound.record reply) d hinst
+                  acceptAtInstance_sound app _ s.machine (bound.record reply) d hinst
                 refine ⟨i, (bound.record reply).request, row, ?_, hrow⟩
                 rw [← hop]
                 exact hreq
               · cases h
 
 /-- Step of `denoteRows_eq_session`: an applied reply passed the preflight. -/
-theorem applyReply_applied_preflight {program : Api.Program} {table : RowTable}
-    (s : Session program table) (key : Key) (fuel : Nat)
+theorem applyReply_applied_preflight {program : Api.Program} {app : SigApp}
+    (s : Session program app) (key : Key) (fuel : Nat)
     (h : (Api.HostSession.applyReply s key fuel).phase = .applied) :
     ∃ reply decision, Api.HostSession.readReply s.pending key = some reply ∧
       Api.HostSession.preflight s reply = .ok decision := by
@@ -391,9 +391,9 @@ theorem tape_holds (program : Api.Program) (table : RowTable) (fuel : Nat)
     hall hA
 
 /-- A session's reading holds the session's machine. -/
-theorem inspect_keeps_machine {program : Api.Program} {table : RowTable}
-    (s : Session program table) : (Api.HostSession.inspect s).machine = s.machine := by
-  have h := Run.machineOf_nil program table 0 s.machine
+theorem inspect_keeps_machine {program : Api.Program} {app : SigApp}
+    (s : Session program app) : (Api.HostSession.inspect s).machine = s.machine := by
+  have h := Run.machineOf_nil program app.rows 0 s.machine
   unfold Run.replayFrom at h
   unfold Api.HostSession.inspect
   split

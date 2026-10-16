@@ -48,17 +48,17 @@ theorem ConcreteReplies.row {table : RowTable} (closed : ConcreteReplies table)
 
 /-- A checked call's concrete reply columns are the linked row's columns.
 Consumer: the actual call-indexed admission branch of `request_leads`. -/
-theorem instance_reply_columns {table : RowTable} (closed : ConcreteReplies table)
+theorem instance_reply_columns {app : SigApp} (closed : ConcreteReplies app.rows)
     {program : Api.Program} {path : List Nat} {checked : CallInstance NativeOp}
-    {index : Nat} {row : Row} (found : externalRow table index = some row)
-    (atCall : Api.HostSession.instanceAt program table path = some checked)
+    {index : Nat} {row : Row} (found : externalRow app.rows index = some row)
+    (atCall : Api.HostSession.instanceAt program app path = some checked)
     (operation : checked.op = .external index) :
     checked.answer = row.answer ∧ checked.error = row.error := by
   obtain ⟨part, rest, request, env, ty, held, _, _, _, typed, answer, error, _⟩ :=
     programCallAt_rowTy atCall
   rw [operation] at typed
   have same := part_external_row (index := index) (by rfl) (by rfl) held
-  change part.sig.rowOf (.external index) = (nativeSignature table).rowOf (.external index) at same
+  change part.sig.rowOf (.external index) = (nativeSignature app.rows).rowOf (.external index) at same
   rw [same, externalRow_signature found] at typed
   obtain ⟨bindings, _, answerTy, errorTy⟩ :=
     checkRow_rowBindings ((rowTy_eq_some_iff _ _ _ _).mp typed)
@@ -73,20 +73,20 @@ theorem instance_reply_columns {table : RowTable} (closed : ConcreteReplies tabl
 
 /-- A plain admitted exit passes the local host check at the current allocation table.
 Consumer: the actual reply tape in `request_leads`. -/
-theorem admitted_exit_tape {table : RowTable} {m : NativeMachine} {fiber : FiberId}
+theorem admitted_exit_tape {app : SigApp} {m : NativeMachine} {fiber : FiberId}
     {token index : Nat} {row : Row} {exit : ExitV}
-    (found : externalRow table index = some row)
-    (accepted : admitAnswer row m fiber token (.ofExit exit) = none) :
-    externalAdmits table index (.ofExit exit) m.state.externals.allocated = true := by
+    (found : externalRow app.rows index = some row)
+    (accepted : admitAnswer app.types row m fiber token (.ofExit exit) = none) :
+    externalAdmits app index (.ofExit exit) m.state.externals.allocated = true := by
   unfold externalAdmits
   rw [found]
   cases exit with
   | success value =>
     simp only [admitAnswer] at accepted
-    cases converted : externalValue row.answer m.state.externals.allocated value with
+    cases converted : externalValue app.types row.answer m.state.externals.allocated value with
     | none => simp only [converted, Option.isNone_none, if_true] at accepted; cases accepted
     | some result =>
-      have free := externalValue_input_handleFree _ _ result.1 value result.2 converted
+      have free := externalValue_input_handleFree _ _ _ result.1 value result.2 converted
       simp only [converted, Option.isSome_some, free, List.isEmpty_nil, Bool.and_self]
   | failure cause =>
     simp only [admitAnswer] at accepted
@@ -101,12 +101,12 @@ theorem admitted_exit_tape {table : RowTable} {m : NativeMachine} {fiber : Fiber
 
 /-- Concrete checked-instance admission passes the same row check at current allocations.
 Consumer: the actual call-indexed reply tape in `request_leads`. -/
-theorem instance_exit_tape {table : RowTable} (closed : ConcreteReplies table)
+theorem instance_exit_tape {app : SigApp} (closed : ConcreteReplies app.rows)
     {program : Api.Program} {m : NativeMachine} {record : RecordedReply} {exit : ExitV}
-    (envelope : InstanceEnvelope table (Api.HostSession.instanceAt program table) m record)
+    (envelope : InstanceEnvelope app (Api.HostSession.instanceAt program app) m record)
     (completion : record.completion = .ofExit exit) :
     ∃ index, record.op = .external index ∧
-      externalAdmits table index (.ofExit exit) m.state.externals.allocated = true := by
+      externalAdmits app index (.ofExit exit) m.state.externals.allocated = true := by
   obtain ⟨_, _, index, row, origin, checked, operation, found, noAllocation,
     _, atCall, same, admitted⟩ := envelope
   obtain ⟨answer, error⟩ := instance_reply_columns closed found atCall (same.trans operation)
@@ -165,25 +165,25 @@ theorem request_source {root : NativeEff} {m : NativeMachine} {fiber : FiberId} 
 
 /-- Neither admission branch accepts a delayed cell read from an empty reference heap.
 Consumer: the actual recorded reply tape in CallTree.request_leads. -/
-theorem accepted_exit (table : RowTable) (calls : List (List Nat × CallInstance NativeOp))
+theorem accepted_exit (app : SigApp) (calls : List (List Nat × CallInstance NativeOp))
     (m : NativeMachine) (fiber : FiberId) (token : Nat)
     (answer : Completion Val Err Defect FiberId Ann) (empty : m.state.refs = [])
-    (accepted : Accepted table calls m (.answerAsync fiber token answer)) :
+    (accepted : Accepted app calls m (.answerAsync fiber token answer)) :
     ∃ exit, answer = .ofExit exit := by
   cases answer with
   | ofExit exit => exact ⟨exit, rfl⟩
   | ofRefGet cell =>
     obtain ⟨record, plain | specialized⟩ := accepted
-    · have same := acceptReply_decision table m record _ plain
+    · have same := acceptReply_decision app m record _ plain
       simp only [RunDecision.answerAsync.injEq] at same
-      have envelope := acceptReply_envelope table m record _ plain
+      have envelope := acceptReply_envelope app m record _ plain
       unfold Envelope at envelope
       rw [← same.2.2] at envelope
-      obtain ⟨_, _, row, _, _, admitted⟩ := admitted_row table m record.fiber record.token
+      obtain ⟨_, _, row, _, _, admitted⟩ := admitted_row app m record.fiber record.token
         (.ofRefGet cell) envelope.2.2
-      rw [empty_heap_refused row m record.fiber record.token cell empty] at admitted
+      rw [empty_heap_refused app.types row m record.fiber record.token cell empty] at admitted
       cases admitted
-    · obtain ⟨envelope, same⟩ := acceptAtInstance_sound table _ m record _ specialized
+    · obtain ⟨envelope, same⟩ := acceptAtInstance_sound app _ m record _ specialized
       simp only [RunDecision.answerAsync.injEq] at same
       obtain ⟨_, _, _, _, _, checked, _, _, _, _, _, _, admitted⟩ := envelope
       rw [← same.2.2] at admitted
@@ -194,7 +194,7 @@ Consumer: the actual session prefix's host tape, without a host-driven-script re
 theorem reached_answer_exit (s : Run) (reached : Run.Reached s)
     (source : ExternalOnly s.built.program) (fiber : FiberId) (token : Nat)
     (answer : Completion Val Err Defect FiberId Ann)
-    (accepted : Accepted s.built.table s.session.calls s.machine (.answerAsync fiber token answer)) :
+    (accepted : Accepted s.built.app s.session.calls s.machine (.answerAsync fiber token answer)) :
     ∃ exit, answer = .ofExit exit :=
   accepted_exit _ _ _ _ _ _
     (source.empty_heap s.budget.compileFuel s.machine (Run.reached_history s reached).2) accepted
