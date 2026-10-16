@@ -315,7 +315,9 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   Its other claims are `recursive-types-unfold`, `recursive-types-conservative`,
   `recursive-types-sub`, `recursive-types-inhabited`, `recursive-types-normalize` and
   `guarded-fixed-point-unique`.
-  A body refers to a declared name by `app n args` or by its normal form `handle n`.
+  A body refers to a declared name by `app n args`, which normalization keeps (decisions row
+  406 (1)).
+  A host handle `handle n` is never a declared name: the signature's admission refuses one.
   Membership under the table is an inductive predicate, the least fixed point
   (`MemberIn`, `src/Effect4/Laws/Program/TyDecls.lean`).
   A union holds its sides' members, and a declared reference holds its body's members.
