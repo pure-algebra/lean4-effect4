@@ -179,22 +179,32 @@ let decode_bool : bool decoder = fun s pos limit ->
      | _ -> None)
   | _ -> None
 
+(* A natural's shortest big-endian digits, s[p..e): no digit is 0, a leading zero is a refusal,
+   and nine digits, or eight above max_int, are out of range. *)
+let nat_of_digits (s : string) (p : int) (e : int) : int option =
+  let len = e - p in
+  if len = 0 then Some 0
+  else if len > 8 then None
+  else if String.unsafe_get s p = '\000' then None
+  else if len = 8 && Char.code (String.unsafe_get s p) >= 0x40 then None
+  else begin
+    let n = ref 0 in
+    for i = p to e - 1 do
+      n := (!n lsl 8) lor Char.code (String.unsafe_get s i)
+    done;
+    Some !n
+  end
+
 let decode_nat : int decoder = fun s pos limit ->
   match expect tag_nat s pos limit with
   | None -> None
-  | Some (p, e, next) ->
-    let len = e - p in
-    if len = 0 then Some (0, next)
-    else if len > 8 then None
-    else if String.unsafe_get s p = '\000' then None
-    else if len = 8 && Char.code (String.unsafe_get s p) >= 0x40 then None
-    else begin
-      let n = ref 0 in
-      for i = p to e - 1 do
-        n := (!n lsl 8) lor Char.code (String.unsafe_get s i)
-      done;
-      Some (!n, next)
-    end
+  | Some (p, e, next) -> Option.map (fun n -> (n, next)) (nat_of_digits s p e)
+
+(* The negative integer `-(n+1)`, as its `n`: tag 13 over n's digits, the `nat` rule. *)
+let decode_neg_int : int decoder = fun s pos limit ->
+  match expect tag_int s pos limit with
+  | None -> None
+  | Some (p, e, next) -> Option.map (fun n -> (n, next)) (nat_of_digits s p e)
 
 let decode_string : string decoder = fun s pos limit ->
   match expect tag_string s pos limit with

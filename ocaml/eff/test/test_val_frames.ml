@@ -219,6 +219,25 @@ let () =
     (Eff_wire.decode_program_exact (to_string emit_handle (1, 3)) = None
      && Eff_wire.decode_program_exact (to_string emit_ref (2, String.make 32 '\000')) = None)
 
+(* V5: a negative integer `-(n+1)` is tag 13 over n's digits (Val.lean's `Tag.int`), and
+   Eff_val reads it back by the `nat` digit rule. *)
+let () =
+  let open Eff_frame in
+  let frame tag payload = to_string (fun b () -> emit_frame b tag payload) () in
+  List.iter
+    (fun n ->
+      check (Printf.sprintf "the negative integer -(%d+1) reads back" n)
+        (Eff_val.decode_exact (Eff_val.to_bytes (Eff_types.Val_negInt n))
+         = Some (Eff_types.Val_negInt n)))
+    [ 0; 1; 255; 256; max_int ];
+  check "a negative integer with a leading zero digit is refused"
+    (Eff_val.decode_exact (frame tag_int "\000\001") = None);
+  check "a negative integer of nine digits is refused"
+    (Eff_val.decode_exact (frame tag_int "\001\000\000\000\000\000\000\000\000") = None);
+  check "the negative integer and the natural do not read each other's frames"
+    (exact decode_neg_int (frame tag_nat "\001") = None
+     && exact decode_nat (frame tag_int "\001") = None)
+
 let () =
   Printf.printf "test_val_frames: %d checks, %d failures\n%!" !checks !failures;
   if !failures > 0 then exit 1

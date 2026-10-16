@@ -2,16 +2,19 @@
 
    What it is: `Val.encode` of src/Effect4/Store/Carrier/Val.lean, as OCaml over Eff_frame, for
    `Eff_types.val_`. The engine's lanes compare a value by these bytes: the scenarios lane
-   (engine/test/scenarios) and the to-do host lane (engine/test/todo).
+   (engine/test/scenarios), the to-do host lane (engine/test/todo) and the Modeled lane
+   (engine/test/modeled).
    Depends on: Eff_frame, Eff_types.
 
    Behaviours it holds itself to:
    V1  `emit` writes every value in Lean's frames: tags 1..14 of Eff_frame, a negative integer
        `-(n+1)` as tag 13 over n's digits, a double's bits as tag 14 over 8 big-endian bytes.
                                                     by construction; tested (test_scenarios S3)
-   V2  `decode` reads scalars, strings, lists, options, pairs and constructor applications, and
-       refuses every other frame (bytes, references, handles, negative integers, doubles): a
-       lane's fixture carries none of them, and a refusal is never a guess.  by construction
+   V2  `decode` reads scalars, strings, lists, options, pairs, constructor applications and
+       negative integers, and refuses every other frame (bytes, references, handles, doubles):
+       a lane's fixture carries none of them, and a refusal is never a guess. A negative
+       integer reads by the `nat` digit rule (`Eff_frame.decode_neg_int`); the Modeled lane's
+       fixture carries them (engine/test/modeled).                     by construction; tested
    V3  Round trip: for every value a fixture carries, `emit (decode bytes) = bytes`.
                                                                 tested (test_scenarios S3) *)
 
@@ -67,6 +70,8 @@ let rec decode : Eff_types.val_ Eff_frame.decoder =
       Option.map
         (fun (o, n) -> ((match o with None -> Eff_types.Val_none | Some x -> Eff_types.Val_some x), n))
         (Eff_frame.decode_option decode s pos limit)
+    else if tag = Eff_frame.tag_int then
+      Option.map (fun (n, next) -> (Eff_types.Val_negInt n, next)) (Eff_frame.decode_neg_int s pos limit)
     else if tag = Eff_frame.tag_ctor then
       match Eff_frame.read_ctor s pos limit with
       | None -> None

@@ -452,6 +452,8 @@ def builtins : List Builtin := [
     "`Int` is `int`; OCaml's signed `<` is `Int`'s order on the representable range.",
   row `Int.natAbs (.extern "lean_nat_abs" none) intNatAbs .domain "-2^62 < a < 2^62" []
     "the absolute value as a natural: a negative word negated, exact where its negation is representable.",
+  row `Int.neg (.extern "lean_int_neg" none) (.inline ["a"] (.binop "-" (.int 0) va)) .domain "-2^62 < a < 2^62" []
+    "`0 - a` on `int`; a negative literal compiles to it (`-3` is `Int.neg 3`). At `-2^62` the negation leaves `int`, as at the type row's bound.",
   row `Nat.pred (.extern "lean_nat_pred" (some .natPred)) (natPred) .domain "a < 2^62" []
     "truncated predecessor.",
   row `Nat.pow (.extern "lean_nat_pow" (some .natPow)) (.support "lcnf_nat_pow") .approximate "a ^ b < max_int" ["pow-saturation"]
@@ -901,14 +903,14 @@ def problems : List String := problemsOf builtins support targetLibrary
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
 #guard etaBinders.all fun b => !protectedNames.contains b && !(targetLibrary.map (·.name)).contains b
 #guard maxArity == 3
-#guard builtins.length == 124
+#guard builtins.length == 125
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
--- row but ten (`Int`'s four, which `Store.Image.int` needs; three the session's closure needs;
--- `String.ofByteArray`, the inverse of the bytes it has no primitive for; `USize.add`;
--- `panicCore`), and the target evaluator scans with two functions.
+-- row but eleven (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
+-- session's closure needs; `String.ofByteArray`, the inverse of the bytes it has no primitive
+-- for; `USize.add`; `panicCore`), and the target evaluator scans with two functions.
 #guard sourcePrims.length == 58
 #guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) ==
-  [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `String.ofList, `String.ofByteArray,
+  [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `Int.neg, `String.ofList, `String.ofByteArray,
     `USize.repr, `System.Platform.getNumBits, `USize.add, `panicCore]
 #guard targetScans.toList.length == 2 && targetScans["List.exists"]? == some true
 #guard targetArities["Option.value~default"]? == some 2 && (targetArities["List.map"]?).isNone

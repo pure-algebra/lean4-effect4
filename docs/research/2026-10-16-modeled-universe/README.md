@@ -182,3 +182,13 @@ What this does not establish:
 The table's admission landed next: `SigApp.types`, checked by the signature's located refusal
 (`admitSig_ok_iff`). At an admitted signature, `Modeled.memberIn_ref_of_lawful` reads its
 premises off the admission, except expandability, which a recursive table lacks.
+
+## 9. After: the lowered codec runs in a committed lane (decisions row 404)
+
+§7's second limit is closed. `Test/Codegen/ModeledLane.lean` derives a record of a record, a sum,
+an enum and the scalar shapes; the LCNF route lowers their staged codec into
+`ocaml/engine/test/modeled/modeled_gen.ml`. Its dune test runs four checks against Lean's bytes.
+Four samples, built by the lowered code, encode to Lean's bytes. Eleven inputs round-trip to
+Lean's answer, seven of them refused for the reasons Lean's reader refuses them. A value built in
+OCaml encodes to Lean's bytes. The lane needed two repairs. `Int.neg`, which a negative literal
+compiles to, had no row. The OCaml value reader `Eff_val` refused a negative integer's frame.
