@@ -20,8 +20,8 @@ ordering that decides how to emit them.
 
 **Depends on.** `OCaml5.Lcnf.Dump` (`monoDecl?`), `OCaml5.Lcnf.Naming`,
 `OCaml5.Lcnf.Types` (the type declarations; the type rows' `builtinTy?`), `OCaml5.Lcnf.Builtins`
-(the builtin table, its prelude and its reserved names), `OCaml5.Lcnf.Clock` (the clock's
-constructors), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
+(the builtin table, its prelude and its reserved names), `OCaml5.Lcnf.Native` (OCaml's own
+datatypes), `OCaml5.Lcnf.Clock` (the clock's constructors), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
 `Lean.Compiler.LCNF.Basic` (`Code.collectUsed`).
 
 **Properties.**
@@ -49,6 +49,14 @@ constructors), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
 * **Erasure is explicit.** A `◾` argument to a constructor or a builtin is dropped (it is a
   type or a proof, and `Types` dropped the field); a `◾` argument anywhere else is `()`, so
   the arity of a call is always the arity LCNF wrote — *by construction*.
+* **A natively spelled type is never declared, and never built or matched as if it were.** A
+  type with a row of the type table has no OCaml record or variant. Its constructors and
+  projections are lowered by their owner (`nativeOwner?`): a builtin row, OCaml's own datatype,
+  the clock, or a transparent structure's field. One with no owner, a projection with none, and
+  a `cases` OCaml cannot match are each refused by name — *by construction*; *checked* by the
+  constructor census (`Test/Audit/ConstructorOwners.lean`) and *tested* by the constructor lane
+  (`ocaml/engine/test/ctors/`). Before 2026-10-16 `ByteArray.mk` became a record of no declared
+  type, which only `ocamlopt` refused.
 * **Nothing is silently lost.** A construct without a rule becomes an `Expr.hole` — rendered
   `(* HOLE: … *)` — and a line in `todos`; a callee without a mono decl is listed in
   `missing`; a callee beyond the cap in `frontier` — *by construction*.
@@ -297,6 +305,38 @@ where
     | k + 1, .forallE n _ b _, acc => go k b (acc.push n)
     | _, _, acc => acc
 
+/-- The projection function of a structure's field, by the field's position among all its fields
+(the index `LetValue.proj` carries). -/
+def projectionFn? (env : Environment) (typeName : Name) (i : Nat) : Option Name :=
+  (getStructureInfo? env typeName).bind fun info => info.fieldNames[i]?.map (typeName ++ ·)
+
+/-- Who lowers a constructor or a projection function of a type the type table spells natively.
+Such a type has no declared record or variant, so one of these owns each of its constructors and
+projections, or the route refuses it by name. -/
+inductive NativeOwner where
+  /-- A row of the builtin table: its form (`Int.ofNat`, `Array.mk`, `UInt8.toBitVec`). -/
+  | row (b : Builtin)
+  /-- One of OCaml's own constructors (`OCaml5.Lcnf.Native`). -/
+  | datatype
+  /-- The clock's constructors (`OCaml5.Lcnf.Clock`). -/
+  | clock
+  /-- A transparent structure's constructor or projection: the one relevant field itself
+  (`transparentStructures`). -/
+  | field
+
+/-- **The owner of a constructor or projection function** `n` of the natively spelled type
+`typeName`, in that order: its row, OCaml's datatype, the clock, the transparent field. `none`
+is refused by name (`ctorApp`, `letValueExpr`). The constructor census reads the same function
+(`Test/Audit/ConstructorOwners.lean`), so what it checks is what the translator does. -/
+def nativeOwner? (typeName n : Name) : Option NativeOwner :=
+  match builtin? n with
+  | some b => some (.row b)
+  | none =>
+    if (Native.find? n).isSome then some .datatype
+    else if Clock.owns typeName then some .clock
+    else if transparentStructures.contains typeName then some .field
+    else none
+
 /-- The `reduceArity` wrapper shape: `let _x := f._redArg …; return _x`. -/
 def redArgTarget? (d : LCNF.Decl .pure) : Option Name :=
   match d.value with
@@ -528,18 +568,26 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
           else useAsList s!"{ci.name}.{fn}" c e
       rel := rel ++ [e]
       named := named ++ [(fieldName fn.toString, e)]
-  -- seat Q (2026-10-01): `Array.mk l` is `l` under the Array-as-list shim (the type row of `Array`);
-  -- `List.zipIdxTR` builds one from `l.toArray`, and the record it rendered refused in ocamlopt.
-  if ci.name == ``Array.mk then
-    if let [l] := rel then return l
-  -- a transparent structure is its one relevant field (`transparentStructures`)
-  if transparentStructures.contains ci.induct then
-    if let [x] := rel then return x
-  -- a `String` from its UTF-8 bytes, a byte list under the `ByteArray` row
-  if ci.name == ``String.ofByteArray then
-    if let [bytes] := rel then return Ml.Expr.call "lcnf_string_of_bytes" [bytes]
-  if let some clock := Clock.constructor? ci.name rel then return clock
-  else if let some native := Native.expression ci.name rel then return native
+  -- A type the type table spells natively has no declared record or variant: its constructor
+  -- is its owner's form (`nativeOwner?`), or it is refused by name, never built as a record of a
+  -- type `ocamlopt` does not know (`ByteArray.mk` was, until its row).
+  if isBuiltinType ci.induct then
+    let owner := nativeOwner? ci.induct ci.name
+    if let some (.row b) := owner then return ← applyBuiltin b rel
+    let form? : Option Ml.Expr := match owner with
+      | some (.row _) => none
+      | some .datatype => Native.expression ci.name rel
+      | some .clock => Clock.constructor? ci.name rel
+      | some .field => match rel with
+        | [x] => some x
+        | _ => none
+      | none => none
+    match form? with
+    | some e => return e
+    | none =>
+      let reason := s!"{ci.name}: a constructor of {ci.induct}, which the type table spells natively, has no form"
+      todo reason
+      return .hole reason (.assertE (.bool false))
   else
     let env ← readEnv
     noteReal ci.induct
@@ -667,14 +715,17 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
   | .proj typeName i s =>
     let env ← readEnv
     let sv := Ml.Expr.var (← nameOf s)
-    if typeName == ``Prod then
-      return (Ml.Expr.call (if i == 0 then "fst" else "snd") [sv], none)
-    -- a transparent structure's one relevant field is the value itself
-    else if transparentStructures.contains typeName then
-      return (sv, none)
-    -- a `String`'s bytes, as `String.toByteArray`'s value row reads them
-    else if typeName == ``String && i == 0 then
-      return (Ml.Expr.call "lcnf_utf8_bytes" [sv], none)
+    -- A type the type table spells natively has no declared record to read a field of. Its
+    -- projection is its projection function's row (`Prod.fst`, `String.toByteArray`,
+    -- `Array.toList`), or, for a transparent structure, the value itself; any other is refused.
+    if isBuiltinType typeName then
+      match (projectionFn? env typeName i).bind (nativeOwner? typeName) with
+      | some (.row b) => return (← applyBuiltin b [sv], none)
+      | some .field => return (sv, none)
+      | _ =>
+        let reason := s!"{declName}: projection {i} of {typeName}, which the type table spells natively, has no form"
+        todo reason
+        return (.hole reason (.assertE (.bool false)), none)
     else
       let ctor? := match env.find? typeName with
         | some (.inductInfo info) =>
@@ -884,6 +935,16 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
     if Clock.owns cs.typeName then
       todo s!"{declName}: raw ClockMillis elimination escapes its checked operations"
       return .hole "raw ClockMillis elimination" (.assertE (.bool false))
+    -- A type the type table spells natively is matched only where OCaml can: by OCaml's own
+    -- constructors (`Native.matchable`), or as a transparent structure's one field. Lean's
+    -- compiler takes every other apart through its projections (`Int` and `Nat` by comparison,
+    -- `String` by its bytes), so a `cases` on one is refused by name, never matched against a
+    -- variant `ocamlopt` does not know.
+    if isBuiltinType cs.typeName && !Native.matchable cs.typeName &&
+        !transparentStructures.contains cs.typeName then
+      let reason := s!"{declName}: cases on {cs.typeName}, which the type table spells natively and OCaml cannot match"
+      todo reason
+      return .hole reason (.assertE (.bool false))
     let d ← nameOf cs.discr
     if cs.typeName == ``Bool then
       let mut t? : Option Ml.Expr := none

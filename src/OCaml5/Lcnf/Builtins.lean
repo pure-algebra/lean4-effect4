@@ -492,6 +492,29 @@ def builtins : List Builtin := [
     "as `UInt64.decEq`.",
   row `UInt64.toNat (.extern "lean_uint64_to_nat" (some .identity)) (same) .domain "the bit pattern < 2^62" []
     "identity on the representation; as `UInt64.decEq` outside the domain.",
+  -- A word's constructor and projection: a word is its bit vector, and a bit vector its natural
+  -- (`transparentStructures`), so both are the identity on `int`. Lean implements them outside
+  -- their bodies, so they are rows (the constructor census, `Test/Audit/ConstructorOwners.lean`).
+  row `UInt8.ofBitVec (.extern "lean_uint8_of_nat_mk" (some .identity)) (same) .exact "" []
+    "identity on the representation.",
+  row `UInt8.toBitVec (.extern "lean_uint8_to_nat" (some .identity)) (same) .exact "" []
+    "identity on the representation.",
+  row `UInt16.ofBitVec (.extern "lean_uint16_of_nat_mk" (some .identity)) (same) .exact "" []
+    "identity on the representation.",
+  row `UInt16.toBitVec (.extern "lean_uint16_to_nat" (some .identity)) (same) .exact "" []
+    "identity on the representation.",
+  row `UInt32.ofBitVec (.extern "lean_uint32_of_nat_mk" (some .identity)) (same) .exact "" []
+    "identity on the representation.",
+  row `UInt32.toBitVec (.extern "lean_uint32_to_nat" (some .identity)) (same) .exact "" []
+    "identity on the representation.",
+  row `UInt64.ofBitVec (.extern "lean_uint64_of_nat_mk" (some .identity)) (same) .domain "the bit pattern < 2^62" []
+    "identity on the representation; as `UInt64.decEq` outside the domain.",
+  row `UInt64.toBitVec (.extern "lean_uint64_to_nat" (some .identity)) (same) .domain "the bit pattern < 2^62" []
+    "identity on the representation; as `UInt64.decEq` outside the domain.",
+  row `USize.ofBitVec (.extern "lean_usize_of_nat_mk" (some .identity)) (same) .domain "the bit pattern < 2^62" []
+    "identity on the representation; `USize` is `int`, as `UInt64`.",
+  row `USize.toBitVec (.extern "lean_usize_to_nat" (some .identity)) (same) .domain "the bit pattern < 2^62" []
+    "identity on the representation; `USize` is `int`, as `UInt64`.",
   -- Bool
   row `Bool.decEq .body (op "=") .exact "" []
     "OCaml `bool` is Lean `Bool`.",
@@ -516,12 +539,16 @@ def builtins : List Builtin := [
     "Emitted helper returns the actual encoded bytes, including non-ASCII keys.",
   row `ByteArray.data (.extern "lean_byte_array_data" (some .identity)) (same) .exact "" []
     "Byte arrays use the same list-of-byte representation as their data array.",
+  row `ByteArray.mk (.extern "lean_byte_array_mk" (some .identity)) (same) .exact "" []
+    "a byte array is its data array, a byte list under the shim. Before this row the constructor built a record of no declared type, which `ocamlopt` refused.",
   -- List
   -- The session's closure (LC-6, LC-7): strings from code points, bytes, and the platform.
   row `String.ofList (.extern "lean_string_mk" none) (.library "lcnf_utf8_of_code_points") .exact "" []
     "A `Char` is its code point, and every one is a Unicode scalar value, so the UTF-8 encoding is the string Lean's `String.ofList` builds.",
   row `String.toByteArray (.extern "lean_string_to_utf8" (some .strToUTF8)) (.library "lcnf_utf8_bytes") .domain "valid UTF-8" []
     "as `String.toUTF8`, whose bytes it is.",
+  row `String.ofByteArray (.extern "lean_string_from_utf8_unchecked" none) (.library "lcnf_string_of_bytes") .domain "valid UTF-8" []
+    "the string whose UTF-8 encoding is the bytes; the constructor's proof is that they are valid, as `String.toByteArray`'s domain.",
   row `ByteArray.emptyWithCapacity (.extern "lean_mk_empty_byte_array" (some .arrayMkEmpty)) (arrayEmpty) .exact "" []
     "the capacity is a hint; the byte list is empty.",
   row `ByteArray.push (.extern "lean_byte_array_push" (some .arrayPush)) (arrayPush) .exact "" []
@@ -584,6 +611,8 @@ def builtins : List Builtin := [
     "",
   row `Array.toList (.extern "lean_array_to_list" (some .arrayToList)) (same) .exact "" []
     "identity under the shim.",
+  row `Array.mk (.extern "lean_array_mk" (some .listToArray)) (same) .exact "" []
+    "identity under the shim, as `List.toArray`.",
   row `List.toArray .body (same) .exact "" []
     "identity under the shim.",
   row `Array.push (.extern "lean_array_push" (some .arrayPush)) (arrayPush) .exact "" []
@@ -872,14 +901,15 @@ def problems : List String := problemsOf builtins support targetLibrary
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
 #guard etaBinders.all fun b => !protectedNames.contains b && !(targetLibrary.map (·.name)).contains b
 #guard maxArity == 3
-#guard builtins.length == 111
+#guard builtins.length == 124
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
--- row but nine (`Int`'s four, which `Store.Image.int` needs; three the session's closure needs;
--- `USize.add`; `panicCore`), and the target evaluator scans with two functions.
-#guard sourcePrims.length == 46
+-- row but ten (`Int`'s four, which `Store.Image.int` needs; three the session's closure needs;
+-- `String.ofByteArray`, the inverse of the bytes it has no primitive for; `USize.add`;
+-- `panicCore`), and the target evaluator scans with two functions.
+#guard sourcePrims.length == 58
 #guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) ==
-  [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `String.ofList, `USize.repr, `System.Platform.getNumBits, `USize.add,
-    `panicCore]
+  [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `String.ofList, `String.ofByteArray,
+    `USize.repr, `System.Platform.getNumBits, `USize.add, `panicCore]
 #guard targetScans.toList.length == 2 && targetScans["List.exists"]? == some true
 #guard targetArities["Option.value~default"]? == some 2 && (targetArities["List.map"]?).isNone
 

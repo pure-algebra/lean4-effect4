@@ -1,8 +1,11 @@
 import Lean
 import OCaml5.Ml.Syntax
 
-/-! The native constructor table owns names once. Construction and matching use the same
-shape; the type annotation policy derives its owner set from this table. -/
+/-! The native constructor table owns names once: the constructors of the types the route spells
+as OCaml's own datatypes (list, option, bool, tuple, result, unit), and `Nat`'s two, whose values
+are `int`s. Construction and matching use the same shape; `matchable` says which types OCaml
+matches on, and the type annotation policy derives its owner set from this table. It is one of
+the owners `OCaml5.Lcnf.nativeOwner?` reads. -/
 namespace OCaml5.Lcnf.Native
 open Lean
 inductive Shape where
@@ -23,6 +26,11 @@ def rules : Array Rule := #[
   ⟨``Nat, ``Nat.zero, .zero⟩, ⟨``Nat, ``Nat.succ, .succ⟩]
 
 def owns (name : Name) : Bool := name == ``Unit || rules.any (·.owner == name)
+
+/-- The types OCaml matches on directly: every constructor is one of OCaml's own, as a pattern
+too. `Nat` is owned for its two constructors' values only: OCaml's `int` has no constructor to
+match, and Lean's compiler takes a natural apart by comparison. -/
+def matchable (name : Name) : Bool := owns name && name != ``Nat
 def find? (name : Name) : Option Shape := (rules.find? (·.constructor == name)).map (·.shape)
 
 def expression (name : Name) (args : List Ml.Expr) : Option Ml.Expr := do

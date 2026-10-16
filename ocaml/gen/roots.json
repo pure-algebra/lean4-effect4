@@ -1,6 +1,6 @@
 {
   "format": "effect4-lcnf-roots-v2",
-  "claim": "Hand-written, not generated. The LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. The first artefact declares the program types alone (no roots): `ocaml/eff/eff_types.ml`, the one OCaml spelling of the program, whose families are `Tools.ProgramStructure.blocks`. The others open it (`open`), so they declare none of its types. The last, `ocaml/engine/test/todo/todo_gen.ml`, is the to-do host lane's (LC-6): the host run of one request, whose result the lane compares with Lean's. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots.",
+  "claim": "Hand-written, not generated. The LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. The first artefact declares the program types alone (no roots): `ocaml/eff/eff_types.ml`, the one OCaml spelling of the program, whose families are `Tools.ProgramStructure.blocks`. The others open it (`open`), so they declare none of its types. `ocaml/engine/test/todo/todo_gen.ml` is the to-do host lane's (LC-6): the host run of one request, whose result the lane compares with Lean's. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots. The last, `ocaml/engine/test/ctors/ctors_gen.ml`, is the constructor lane's: every constructor and projection of a natively spelled type, built, matched and projected (`Test.Codegen.ConstructorLane`), whose answers the lane compares with Lean's.",
   "artefacts": [
     {
       "out": "ocaml/eff/eff_types.ml",
@@ -167,6 +167,58 @@
         "module": "Eff_types",
         "artefact": "ocaml/eff/eff_types.ml"
       }
+    },
+    {
+      "out": "ocaml/engine/test/ctors/ctors_gen.ml",
+      "import": [
+        "Test.Codegen.ConstructorLane"
+      ],
+      "cap": 400,
+      "types": [],
+      "roots": [
+        "Test.Codegen.ConstructorLane.intOfNat",
+        "Test.Codegen.ConstructorLane.intNegSucc",
+        "Test.Codegen.ConstructorLane.intMatch",
+        "Test.Codegen.ConstructorLane.intMatchZero",
+        "Test.Codegen.ConstructorLane.natSucc",
+        "Test.Codegen.ConstructorLane.natZero",
+        "Test.Codegen.ConstructorLane.natMatch",
+        "Test.Codegen.ConstructorLane.arrMk",
+        "Test.Codegen.ConstructorLane.arrToList",
+        "Test.Codegen.ConstructorLane.arrMatch",
+        "Test.Codegen.ConstructorLane.baMk",
+        "Test.Codegen.ConstructorLane.baData",
+        "Test.Codegen.ConstructorLane.baMatch",
+        "Test.Codegen.ConstructorLane.strBytes",
+        "Test.Codegen.ConstructorLane.strMatch",
+        "Test.Codegen.ConstructorLane.strOfBytes",
+        "Test.Codegen.ConstructorLane.charOfNat",
+        "Test.Codegen.ConstructorLane.charVal",
+        "Test.Codegen.ConstructorLane.charMatch",
+        "Test.Codegen.ConstructorLane.u8OfBitVec",
+        "Test.Codegen.ConstructorLane.u8Match",
+        "Test.Codegen.ConstructorLane.u16OfBitVec",
+        "Test.Codegen.ConstructorLane.u16Match",
+        "Test.Codegen.ConstructorLane.u32OfBitVec",
+        "Test.Codegen.ConstructorLane.u32Match",
+        "Test.Codegen.ConstructorLane.u64OfBitVec",
+        "Test.Codegen.ConstructorLane.u64Match",
+        "Test.Codegen.ConstructorLane.bvMatch",
+        "Test.Codegen.ConstructorLane.finMk",
+        "Test.Codegen.ConstructorLane.finMatch",
+        "Test.Codegen.ConstructorLane.subMk",
+        "Test.Codegen.ConstructorLane.subMatch",
+        "Test.Codegen.ConstructorLane.subVal",
+        "Test.Codegen.ConstructorLane.optMatch",
+        "Test.Codegen.ConstructorLane.listMatch",
+        "Test.Codegen.ConstructorLane.prodMatch",
+        "Test.Codegen.ConstructorLane.exceptMatch",
+        "Test.Codegen.ConstructorLane.exceptMk",
+        "Test.Codegen.ConstructorLane.unitMatch",
+        "Test.Codegen.ConstructorLane.shadeMatch",
+        "Test.Codegen.ConstructorLane.ptMk",
+        "Test.Codegen.ConstructorLane.ptY"
+      ]
     }
   ]
 }

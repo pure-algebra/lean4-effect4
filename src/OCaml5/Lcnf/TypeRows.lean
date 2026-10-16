@@ -30,7 +30,9 @@ contract's class (`Fidelity`), which the value table shares.
 
 **What it does not own.** The value rows (`OCaml5.Lcnf.builtins`), the extern seam's carrier
 rows (`OCaml5.Lcnf.Externs`), and the declarations the route emits for every other type
-(`OCaml5.Lcnf.Types`).
+(`OCaml5.Lcnf.Types`). A type with a row has no declaration, so each of its constructors and
+projections has an owner instead (`OCaml5.Lcnf.nativeOwner?`): a value row, OCaml's own datatype,
+the clock, or the transparent field of this module's `transparentStructures`.
 -/
 
 namespace OCaml5.Lcnf

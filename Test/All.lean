@@ -39,6 +39,7 @@ import Test.Codegen.RecordEmission
 import Test.Codegen.PayloadClasses
 import Test.Codegen.RecordTag
 import Test.Codegen.Tuple
+import Test.Codegen.ConstructorLane
 import Test.Codegen.SchemaGenerationContract
 import Test.Codegen.SchemaGenerationCoverage
 import Test.Codegen.SchemaCode
@@ -271,6 +272,7 @@ import Test.Program.CatchIfContract
 import Test.Audit.RuntimeCoverage
 import Test.Audit.ClockLowering
 import Test.Audit.LetReturn
+import Test.Audit.ConstructorOwners
 import Test.Audit.AxiomGate
 import Test.Audit.PositionAnalysis
 import Test.Audit.TypedStateDecl

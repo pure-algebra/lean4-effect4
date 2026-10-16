@@ -360,3 +360,12 @@ check, as the row intends.
 - The numbers are the ones the route had. Decisions row 108 is open.
 - The cost of the four support calls against the inline forms they replace is not measured.
 
+## 10. The constructors of natively spelled types (2026-10-16)
+
+A type with a row of the type table has no OCaml declaration. One owner lowers each of its
+constructors and projections (`nativeOwner?`, `src/OCaml5/Lcnf/Translate.lean`). The owner is
+its builtin row, OCaml's own datatype, the clock, or a transparent structure's field. The translator
+refuses one with no owner by name, and a `cases` that OCaml cannot match too. The census
+(`Test/Audit/ConstructorOwners.lean`) pins each owner, and the constructor lane
+(`ocaml/engine/test/ctors/`) runs each lowering against Lean's answers. The probe that found
+the gaps is `docs/research/2026-10-16-ocaml-constructors/README.md` (decisions row 403).
