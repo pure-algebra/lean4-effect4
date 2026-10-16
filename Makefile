@@ -462,6 +462,11 @@ FORCE:
 # runs compared with an outside implementation. The batteries, the axiom gate over the whole tree,
 # the ratchets, the policies, the drift and the document checks stay callable by name, at a sweep.
 check: build ## after a change: the core and the law graph; audit the landing's modules with `#axiom_audit`
+.PHONY: batteries-touched
+batteries-touched: ## the batteries a change against BASE (default HEAD) edits, imports or names; the whole run is the sweep's
+	@set -e; mods="$$($(PY) scripts/lean-imports.py --touched --base $(or $(BASE),HEAD))"; \
+	if [ -z "$$mods" ]; then echo "batteries-touched: no battery reached"; \
+	else echo "batteries-touched: $$(echo $$mods | wc -w | tr -d ' ') batteries"; $(LAKE) build $$mods; fi
 check-ts: $(addprefix $(CHK)/,tsgo schema-codec schema-ts truth target ts-reader corpus tsdiag host-protocol ingest-smoke service-identity) ## every comparison with Effect and tsgo 7
 check-ocaml: $(addprefix $(CHK)/,native compiler ocaml) ## every comparison on the OCaml route
 check-full: check check-ts check-ocaml ## the build and every outside oracle
