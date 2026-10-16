@@ -93,7 +93,7 @@ structure Prepared (built : Api.Built) where
 /-- Read the checked source lines and code once, against the built program's exact table.
 This reads source addresses, and assumes no connection to expanded call addresses. -/
 def prepare (built : Api.Built) : Prepared built :=
-  let session := EditSession.open ⟨built.table, []⟩ { program := built.program }
+  let session := EditSession.open (SigApp.ofTable built.table) { program := built.program }
   let page := Program.sessionPage session none "" "" "" ""
   let paths := (Program.lines built.program).map (·.path)
   { lines := (paths.zip page.lines.toList).toArray
