@@ -385,3 +385,59 @@ The decisions rows to record: one coordinator row each for §6.3, §6.5 and §6.
 - No implementation follows from this note. Each proposal needs its decisions row first.
 - §6.7's repairs are inferred from the code. No probe has compiled past the three measured gaps.
 - The fan-out counts read import lines, not Lake's traces.
+
+## 8. The next slices, after the landing
+
+The owner asked on 2026-10-15 for the next step toward a solid type language. This section
+recommends four slices. Each slice needs its own ruling or design note.
+
+### 8.1 What the landing showed
+
+- Three writers spell a type as TypeScript by hand: `Codegen.Types.ofTy`, `Ty.renderRaw` and
+  `ts/eff/target-types.ts`. Two readers read it back: `Classes.readNamed` and `ts/eff/read.ts`.
+- The aliases `Int` and `Num` changed all five. The edit missed `Ty.renderRaw` at first. The
+  agreement guard in `Test/Codegen/ExprContract.lean` found it.
+- The store's `Shape` is a second type language. Its named structs, named sums and named
+  references have no counterpart in `Ty`.
+- So a document with a recursive reference is refused (decisions row 398 (4), `E4-SCHEMA-CE-025`).
+  rc.112 admits it through `Schema.suspend`.
+- rc.112's `SchemaAST` has `Declaration` and `Suspend`. TypeScript has named and recursive
+  aliases. OCaml and Lean have named type declarations. `Ty` has `app`, but no table of bodies.
+- The variances of rc.112's own generic types are a generated table already
+  (`src/Effect4/Program/TyVariance.lean`). `sub` reads it at `app`.
+
+### 8.2 The slices, in order
+
+1. **The application's table of type declarations.** Row 158 rules that names, brands, dates,
+   class identity and recursion enter through `Ty.app`. Row 124 sketches recursion: `Fits` by
+   recursion on the value, `sub` by name, inhabitance as a least fixed point. The table of
+   bodies is missing. Each face then prints and reads the table: TypeScript aliases, Schema
+   `Declaration` and `suspend`, OCaml type declarations, and `deriving Modeled` on a recursive
+   inductive. It starts as a design note. CR-11 asks for that note, and this is its scope.
+2. **`Shape` as a fold of `Ty`** (R-T6, row 380 (6)). It needs slice 1, since `Shape`'s named
+   structs, sums and references are declarations. The store's second type language then goes.
+3. **The TypeScript printer and reader generated from Lean** (R-T7, DI-88). The hand copies in
+   `ts/eff` go.
+4. **Repair A** (row 346). The checker's union normal form matches tsgo's. It changes the order
+   on which M7 stands, so it lands alone, with its stop rule.
+
+```mermaid
+flowchart LR
+  D[8.2.1 declarations table] -->|supplies named and recursive types| S[8.2.2 Shape as a fold of Ty]
+  D -->|supplies names| C[CR-11 structured module types]
+  G[8.2.3 generated TypeScript faces] -->|removes| H[hand copies in ts/eff]
+  A[8.2.4 Repair A] -->|re-proves| O[the checker's order under M7]
+```
+
+The diagram records dependencies only. It is not proof evidence.
+
+### 8.3 What waits on the owner
+
+Row 307 (10) parks recursive types (owner, 2026-10-07). Slice 1 brings them in, so it waits on
+the owner's word.
+
+### 8.4 What this section does not establish
+
+- No slice here is designed. The sizes in §5 are estimates.
+- The parity claims compare constructor lists only: rc.112's `SchemaAST` classes against `Ty`'s
+  constructors. No behaviour was compared.
