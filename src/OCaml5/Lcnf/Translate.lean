@@ -532,6 +532,12 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
   -- `List.zipIdxTR` builds one from `l.toArray`, and the record it rendered refused in ocamlopt.
   if ci.name == ``Array.mk then
     if let [l] := rel then return l
+  -- a transparent structure is its one relevant field (`transparentStructures`)
+  if transparentStructures.contains ci.induct then
+    if let [x] := rel then return x
+  -- a `String` from its UTF-8 bytes, a byte list under the `ByteArray` row
+  if ci.name == ``String.ofByteArray then
+    if let [bytes] := rel then return Ml.Expr.call "lcnf_string_of_bytes" [bytes]
   if let some clock := Clock.constructor? ci.name rel then return clock
   else if let some native := Native.expression ci.name rel then return native
   else
@@ -663,6 +669,12 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     let sv := Ml.Expr.var (← nameOf s)
     if typeName == ``Prod then
       return (Ml.Expr.call (if i == 0 then "fst" else "snd") [sv], none)
+    -- a transparent structure's one relevant field is the value itself
+    else if transparentStructures.contains typeName then
+      return (sv, none)
+    -- a `String`'s bytes, as `String.toByteArray`'s value row reads them
+    else if typeName == ``String && i == 0 then
+      return (Ml.Expr.call "lcnf_utf8_bytes" [sv], none)
     else
       let ctor? := match env.find? typeName with
         | some (.inductInfo info) =>
@@ -737,7 +749,24 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
         match wrapperKeep? env n with
         | none =>
           if args.isEmpty then return (g, none)
-          else return (.app g (← argsFor n args.toList), none)
+          -- an application at erased arguments only is a type instantiation; bound by a `let`,
+          -- OCaml's value restriction keeps it monomorphic, so a callback used at several
+          -- types (`Node.addresses`' fold, S3's host probe) refuses. Over the callee's
+          -- remaining parameters it is eta-expanded: a syntactic function, which OCaml
+          -- generalizes.
+          if args.all (· matches .erased) then
+            if let some d := getDeclCore? env monoExt n then
+              if args.size < d.params.size then
+                let mut binders : List String := []
+                let mut full : List Ml.Expr := args.toList.map fun _ => .unit
+                for p in d.params.extract args.size d.params.size do
+                  if p.type.isErased then full := full ++ [.unit]
+                  else
+                    let b ← fresh "_eta"
+                    binders := binders ++ [b]
+                    full := full ++ [.var b]
+                if !binders.isEmpty then return (.fn binders (.app g full), none)
+          return (.app g (← argsFor n args.toList), none)
         | some keep =>
           let wparams := (wrapperParams? env n).getD #[]
           if args.size ≥ wparams.size then
@@ -781,30 +810,32 @@ def altPat (ctor : Name) (ps : Array (LCNF.Param .pure)) (usedVars : FVarIdHashS
       pats := pats.push (some .wild)
   let rel := pats.toList.filterMap id
   if let some native := Native.pattern ctor rel then return native
-  else
-    match env.find? ctor with
-    | some (.ctorInfo ci) =>
-      noteReal ci.induct
-      if isStructure env ci.induct then
-        let names := ctorFieldNames ci
-        let ex ← readExterns
-        let mut fields : List (String × Ml.Pat) := []
-        let mut omitted := false
-        for p? in pats, n in names, p in ps do
-          -- binding a `field`-row field is the other place a carrier enters a declaration
-          if let some c := ex.fieldCarrierIn? env ci.induct n.toString then
-            if p? matches some (.var _) then setCarrier p.fvarId c
-          match p? with
-          | some (.var v) => fields := fields ++ [(fieldName n.toString, .var v)]
-          | some _ => omitted := true
-          | none => pure ()
-        if fields.isEmpty then return .wild
-        return if omitted then .recordOpen fields else .record fields
-      else
-        return .ctor (OCaml5.Lcnf.ctorNameIn (← readTypeNames) ci.induct (shortName ctor)) rel
-    | _ =>
-      todo s!"alternative on unknown constructor {ctor}"
-      return .wild
+  match env.find? ctor with
+  | some (.ctorInfo ci) =>
+    -- a transparent structure's pattern is its one relevant field's
+    if transparentStructures.contains ci.induct then
+      if let [p] := rel then return p
+    noteReal ci.induct
+    if isStructure env ci.induct then
+      let names := ctorFieldNames ci
+      let ex ← readExterns
+      let mut fields : List (String × Ml.Pat) := []
+      let mut omitted := false
+      for p? in pats, n in names, p in ps do
+        -- binding a `field`-row field is the other place a carrier enters a declaration
+        if let some c := ex.fieldCarrierIn? env ci.induct n.toString then
+          if p? matches some (.var _) then setCarrier p.fvarId c
+        match p? with
+        | some (.var v) => fields := fields ++ [(fieldName n.toString, .var v)]
+        | some _ => omitted := true
+        | none => pure ()
+      if fields.isEmpty then return .wild
+      return if omitted then .recordOpen fields else .record fields
+    else
+      return .ctor (OCaml5.Lcnf.ctorNameIn (← readTypeNames) ci.induct (shortName ctor)) rel
+  | _ =>
+    todo s!"alternative on unknown constructor {ctor}"
+    return .wild
 
 /-! ## Code -/
 
@@ -866,10 +897,11 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
       let env ← readEnv
       let tn ← readTypeNames
       let exx ← readExterns
+      let transparent := transparentStructures.contains cs.typeName
       let scrut : Ml.Expr :=
-        if Native.owns cs.typeName then .var d
+        if Native.owns cs.typeName || transparent then .var d
         else .annot (.var d) (tyOfInd exx tn env cs.typeName)
-      unless Native.owns cs.typeName do noteReal cs.typeName
+      unless Native.owns cs.typeName || transparent do noteReal cs.typeName
       let mut arms : List (Ml.Pat × Ml.Expr) := []
       for alt in cs.alts do
         match alt with

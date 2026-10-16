@@ -268,6 +268,7 @@ def targetLibrary : List LibFn := [
   { name := "max_int", arity := 0, isInfix := false, target := .bound },
   prim "max" 2, prim "min" 2, prim "not" 1, prim "fst" 1, prim "snd" 1, prim "failwith" 1,
   prim "lcnf_utf8_bytes" 1, prim "lcnf_utf8_length" 1, unruled "lcnf_utf8_of_code_points" 1,
+  unruled "lcnf_string_of_bytes" 1,
   unruled "string_of_int" 1,
   prim "List.rev" 1, prim "List.rev_append" 2, prim "List.length" 1, prim "List.nth" 2,
   scan "List.exists" true, scan "List.for_all" false, unruled "List.map" 2,
@@ -288,7 +289,7 @@ def libraryArity? (lib : List LibFn) (name : String) : Option Nat :=
 def isOperator (lib : List LibFn) (symbol : String) : Bool :=
   lib.any fun f => f.isInfix && f.name == symbol
 
-/-- The three primitives of the prelude, over the target's string library. Strings admitted by this
+/-- The four primitives of the prelude, over the target's string library. Strings admitted by this
 profile are valid UTF-8; `ByteArray` and `Array UInt8` both use a byte list, and a `Char` is its
 code point. They are structured like every other binding, so `Ml.Check` reads them; the target
 evaluator answers the two it has a rule for by name and reads no body of them. -/
@@ -309,6 +310,14 @@ def preludePrimitives : List Ml.Bind := [
     body := .letIn "b" (Ml.Expr.call "Buffer.create" [.int 16])
       (.seq (Ml.Expr.call "List.iter" [.fn ["c"] (Ml.Expr.call "Buffer.add_utf_8_uchar"
           [.var "b", Ml.Expr.call "Uchar.of_int" [.var "c"]]), .var "cs"])
+        (Ml.Expr.call "Buffer.contents" [.var "b"])) },
+  -- `let b = Buffer.create 16 in List.iter (fun c -> Buffer.add_char b (Char.chr c)) bs;
+  -- Buffer.contents b`: a `String` built by its constructor from its UTF-8 bytes
+  -- (`String.ofByteArray`), the inverse of `lcnf_utf8_bytes` on valid UTF-8
+  { name := "lcnf_string_of_bytes", params := [("bs", none)],
+    body := .letIn "b" (Ml.Expr.call "Buffer.create" [.int 16])
+      (.seq (Ml.Expr.call "List.iter" [.fn ["c"] (Ml.Expr.call "Buffer.add_char"
+          [.var "b", Ml.Expr.call "Char.chr" [.var "c"]]), .var "bs"])
         (Ml.Expr.call "Buffer.contents" [.var "b"])) }]
 
 private def va : Ml.Expr := .var "a"

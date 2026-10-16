@@ -149,6 +149,10 @@ def typeRows : List TypeRow := [
     "Lean's `String` is a sequence of Unicode scalar values; OCaml's is a byte sequence. Equality and concatenation agree; `length`, indexing and any `Char` operation do not.",
   typeRow ``Unit 0 (.con "unit" []) .exact "" "",
   typeRow ``PUnit 0 (.con "unit" []) .exact "" "",
+  typeRow ``Fin 0 int .domain "n < 2^62"
+    "a `Fin n` is its value, a natural below `n`; the bound is a proof, erased (`transparentStructures`).",
+  typeRow ``BitVec 0 int .domain "w ≤ 62"
+    "a bit vector is its natural (`BitVec.toNat`); `int` holds it while the width is at most 62, which `UInt8` to `UInt32` meet and `UInt64` does not (its row is unsound already).",
   typeRow ``Char 0 int .exact ""
     "Lean's compiler represents a `Char` as its `UInt32` code point, and OCaml's `int` holds every Unicode scalar value, so the row is the code point itself. Its operations have no value row, so a `Char` in code is a hole.",
   typeRow ``Float 0 (.con "float" []) .exact ""
@@ -175,6 +179,15 @@ def typeRowIndex : Std.HashMap Name TypeRow :=
 
 /-- The type constants the table spells. -/
 def builtinTypeNames : List Name := typeRows.map (·.lean)
+
+/-- **Transparent structures**: each spelled by its row as its one relevant field is spelled,
+because Lean's compiler represents it by that field (a `UInt32` is its bit vector, a bit vector
+its `Fin`, a `Fin` its natural, a `Char` its `UInt32` code point). Its constructor, its
+projection and its `cases` are the identity on that field (`Translate.ctorApp`, `letValueExpr`,
+`code`). Without the rule the translator built a record of an undeclared type (`{ to_bit_vec = … }
+: uint32`), which `ocamlopt` refused (S3's receipt, the host closure's probe). -/
+def transparentStructures : List Name :=
+  [``Fin, ``BitVec, ``UInt8, ``UInt16, ``UInt32, ``UInt64, ``USize, ``Char]
 
 /-- Whether a type constant has a row. -/
 def isBuiltinType (n : Name) : Bool := typeRowIndex.contains n
@@ -225,7 +238,7 @@ def typeRowProblems (rows : List TypeRow) : List String := Id.run do
   return out
 
 #guard (typeRowProblems typeRows).isEmpty
-#guard typeRows.length == 20
+#guard typeRows.length == 22
 #guard reservedTypeNames == ["int", "bool", "string", "unit", "float", "list", "option", "result"]
 
 /-! ### Controls: each altered copy is refused, for its own reason -/
