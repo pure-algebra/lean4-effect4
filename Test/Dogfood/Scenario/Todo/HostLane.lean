@@ -28,9 +28,11 @@ open Test.Dogfood.Scenario.Todo.Host
 open Test.Dogfood.Scenario.Todo.Cached (consumerBuiltAt)
 open Tools.RunChecks (literal)
 
-/-- The script: each request's entry and literal arguments, in order. -/
+/-- The script: each request's entry and literal arguments, in order. The second title lies
+outside ASCII, where the lowered `String` row is exact only for its bytes (`OCaml5.Lcnf.TypeRows`):
+the host run passes titles through, so its result must still be Lean's. -/
 def script : List (String × List Val) :=
-  [ ("add", [.str "milk"]), ("add", [.str "eggs"]), ("list", []),
+  [ ("add", [.str "milk"]), ("add", [.str "café 日本 🙂"]), ("list", []),
     ("complete", [.nat 1]), ("list", []), ("remove", [.nat 1]), ("list", []) ]
 
 /-- One request of the lane: its entry, its built program, and the repository before it. -/
