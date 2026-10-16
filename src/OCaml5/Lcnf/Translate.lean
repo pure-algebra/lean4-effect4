@@ -909,6 +909,15 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
         | .alt ctor ps k =>
           let pat ← altPat ctor ps k.collectUsed
           arms := arms ++ [(pat, ← code declName k)]
+      -- LCNF drops an alternative it proves unreachable (a decidable equality, after the two
+      -- constructor indices compare equal, keeps one arm). The match states it: a last arm
+      -- that fails, where OCaml would insert the same failure and warn of a partial match.
+      let kept := (cs.alts.filter fun alt => alt matches .alt ..).size
+      let total := match env.find? cs.typeName with
+        | some (.inductInfo info) => info.ctors.length
+        | _ => kept
+      if !(cs.alts.any fun alt => alt matches .default _) && kept < total then
+        arms := arms ++ [(.wild, .assertE (.bool false))]
       return .matchE scrut arms
 
 /-- A local function or join point, then the rest. -/

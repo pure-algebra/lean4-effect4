@@ -9,15 +9,13 @@
  (public_name effect4_gen)
  (modules api_gen)
  (libraries effect4_clock effect4_eff)
- (flags
-  (:standard -warn-error -a)))
+)
 
 (executable
  (name api_check)
  (modules api_check)
  (libraries effect4_gen)
- (flags
-  (:standard -warn-error -a)))
+)
 
 (rule
  (alias runtest)
