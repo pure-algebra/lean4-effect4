@@ -1,0 +1,101 @@
+decode tree3: true treeBad: false
+{
+ "representation": {
+  "_tag": "Reference",
+  "$ref": "Tree"
+ },
+ "references": {
+  "Tree": {
+   "_tag": "Union",
+   "annotations": {
+    "identifier": "Tree"
+   },
+   "checks": [],
+   "types": [
+    {
+     "_tag": "Objects",
+     "checks": [],
+     "propertySignatures": [
+      {
+       "name": {
+        "type": "string",
+        "value": "_tag"
+       },
+       "type": {
+        "_tag": "Literal",
+        "checks": [],
+        "literal": {
+         "type": "string",
+         "value": "leaf"
+        }
+       },
+       "isOptional": false,
+       "isMutable": false
+      }
+     ],
+     "indexSignatures": []
+    },
+    {
+     "_tag": "Objects",
+     "checks": [],
+     "propertySignatures": [
+      {
+       "name": {
+        "type": "string",
+        "value": "_tag"
+       },
+       "type": {
+        "_tag": "Literal",
+        "checks": [],
+        "literal": {
+         "type": "string",
+         "value": "node"
+        }
+       },
+       "isOptional": false,
+       "isMutable": false
+      },
+      {
+       "name": {
+        "type": "string",
+        "value": "children"
+       },
+       "type": {
+        "_tag": "Arrays",
+        "checks": [],
+        "elements": [],
+        "rest": [
+         {
+          "_tag": "Suspend",
+          "checks": [],
+          "thunk": {
+           "_tag": "Reference",
+           "$ref": "Tree"
+          }
+         }
+        ]
+       },
+       "isOptional": false,
+       "isMutable": false
+      },
+      {
+       "name": {
+        "type": "string",
+        "value": "label"
+       },
+       "type": {
+        "_tag": "String",
+        "checks": []
+       },
+       "isOptional": false,
+       "isMutable": false
+      }
+     ],
+     "indexSignatures": []
+    }
+   ],
+   "mode": "anyOf"
+  }
+ }
+}
+revived decode tree3: true treeBad: false
