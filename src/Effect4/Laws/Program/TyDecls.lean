@@ -992,6 +992,29 @@ reads `body?`). On a table with a repeated name, reading every entry made inhabi
 `true` at `[("A", never), ("A", unit)]`, where no value is a member of `A`. The battery keeps that
 table as a control. -/
 
+/-- A step asks the same questions at a larger allocation table: only a leaf reads the table,
+through `Val.hasTy` (`hasTy_mono`). A step of `memberIn_mono`. -/
+theorem Val.obligations_mono {v : Val} {t : Ty} {a b : List String} (ext : Extends a b)
+    {ps : List (Val × Ty)} (h : Val.obligations v t a = some ps) :
+    Val.obligations v t b = some ps := by
+  have hleaf : ∀ {u : Ty}, Val.obligations v u a = (if Val.hasTy v u a then some [] else none) →
+      Val.obligations v u b = (if Val.hasTy v u b then some [] else none) →
+      Val.obligations v u a = some ps → Val.obligations v u b = some ps := by
+    intro u ha hb h
+    rw [ha] at h
+    rw [hb]
+    cases hv : Val.hasTy v u a with
+    | true =>
+      rw [hv, if_pos rfl] at h
+      rw [if_pos (hasTy_mono u v a b ext hv)]
+      exact h
+    | false =>
+      rw [hv] at h
+      cases h
+  cases t
+  case option | list | prod | except | exitOf | causeOf | union | record | map | tuple => exact h
+  all_goals exact hleaf rfl rfl h
+
 /-- **Membership survives the growth of the allocation table.** Placement: concept
 `store-typing`, R3; a step of the claim `recursive-types-inhabited`, and the shape the world order
 needs when the table enters the world. Route: induct on the derivation. A step's questions read
@@ -999,8 +1022,13 @@ the allocation table only at a leaf, through `Val.hasTy` (`hasTy_mono`), so `Val
 answers the same questions at the larger table. Consumer: `exists_memberIn_fresh`, to carry an
 earlier part's member past a later part's allocation. -/
 @[semantics "store-typing" (requirement := R3)]
-proof_goal memberIn_mono {decls : TyDecls} {a b : List String} (ext : Extends a b) {v : Val}
-    {t : Ty} (h : MemberIn decls a v t) : MemberIn decls b v t
+theorem memberIn_mono {decls : TyDecls} {a b : List String} (ext : Extends a b) {v : Val}
+    {t : Ty} (h : MemberIn decls a v t) : MemberIn decls b v t := by
+  induction h with
+  | left _ ih => exact .left ih
+  | right _ ih => exact .right ih
+  | unfold hu _ ih => exact .unfold hu ih
+  | step hu hps _ ih => exact .step hu (Val.obligations_mono ext hps) ih
 
 /-- The names of `known` whose declarations have a member at an extension of every allocation
 table: the invariant of the iteration's rounds. -/
@@ -1008,6 +1036,164 @@ def TyDecls.Witnessed (decls : TyDecls) (known : List String) : Prop :=
   ∀ name ∈ known, ∀ body, decls.body? name = some body → ∀ allocated : List String,
     ∃ (v : Val) (allocated' : List String), Extends allocated allocated' ∧
       MemberIn decls allocated' v body
+
+/-- A value at a leaf whose shape check accepts it is a member, with no question asked. -/
+theorem memberIn_of_hasTy {decls : TyDecls} {allocated : List String} {v : Val} {t : Ty}
+    (hu : decls.unfold? t = none)
+    (hl : Val.obligations v t allocated = if Val.hasTy v t allocated then some [] else none)
+    (hv : Val.hasTy v t allocated = true) : MemberIn decls allocated v t :=
+  .step hu (by rw [hl, if_pos hv]) fun _ hp => absurd hp List.not_mem_nil
+
+/-- A handle at a spelling some kind owns has a member at an extension of any allocation table:
+an external handle at the fresh index `allocated.length`, or the scope, the context, the memo map
+or the mask's saved state at its own spelling (`fits_handle_fresh`'s cases, at the shape check). -/
+theorem exists_hasTy_handle_fresh {target : String}
+    (hr : retiredHandleTargets.contains target = false) (allocated : List String) :
+    ∃ (v : Val) (allocated' : List String), Extends allocated allocated' ∧
+      Val.hasTy v (.handle target) allocated' = true := by
+  cases hc : internalHandleTargets.contains target with
+  | false =>
+    have ht : externalHandleTarget target = true := by
+      unfold externalHandleTarget
+      rw [hc]
+      rfl
+    refine ⟨Val.handle HandleKind.external.byte allocated.length, allocated ++ [target],
+      extends_append allocated [target], ?_⟩
+    show (externalHandleTarget target &&
+      (allocated ++ [target])[allocated.length]? == some target) = true
+    rw [ht, Bool.true_and, List.getElem?_concat_length]
+    exact beq_iff_eq.mpr rfl
+  | true =>
+    have hm : target ∈ internalHandleTargets := List.contains_iff_mem.mp hc
+    simp only [internalHandleTargets, List.mem_cons, List.not_mem_nil, or_false] at hm
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl
+    · exact absurd hr (by decide)
+    · exact absurd hr (by decide)
+    · exact ⟨Val.handle HandleKind.scope.byte 0, allocated, fun _ _ h => h, rfl⟩
+    · exact ⟨Val.context emptyCtx, allocated, fun _ _ h => h, rfl⟩
+    · exact ⟨Val.handle HandleKind.memoMap.byte 0, allocated, fun _ _ h => h, rfl⟩
+    · exact ⟨Val.savedMask false, allocated, fun _ _ h => h, rfl⟩
+
+/-- A record frame's questions exist only at two name and value columns of one shape. -/
+theorem namedPairs_shape (cs : List (String × Bool × Ty)) (ns xs : List Val) :
+    ∀ {ps : List (Val × Ty)}, namedPairs cs ns xs = some ps →
+      (ns = [] ∧ xs = []) ∨ ∃ k ns' x xs', ns = .str k :: ns' ∧ xs = x :: xs' := by
+  fun_induction namedPairs cs ns xs with
+  | case1 => exact fun _ => .inl ⟨rfl, rfl⟩
+  | case2 => exact fun _ => .inl ⟨rfl, rfl⟩
+  | case3 =>
+    intro ps h
+    cases h
+  | case4 => exact fun _ => .inr ⟨_, _, _, _, rfl, rfl⟩
+  | case5 => exact fun _ => .inr ⟨_, _, _, _, rfl, rfl⟩
+  | case6 =>
+    intro ps h
+    cases h
+  | case7 =>
+    intro ps h
+    cases h
+
+/-- An optional field whose name the value columns do not hold is skipped. -/
+theorem namedPairs_skip {m : String} {t : Ty} {l : List (String × Bool × Ty)} {ns xs : List Val}
+    {ps : List (Val × Ty)} (h : namedPairs l ns xs = some ps) (hk : ∀ k, Val.str k ∈ ns → k ≠ m) :
+    namedPairs ((m, true, t) :: l) ns xs = some ps := by
+  rcases namedPairs_shape l ns xs h with ⟨rfl, rfl⟩ | ⟨k, ns', x, xs', rfl, rfl⟩
+  · exact h
+  · show (if k = m then (namedPairs l ns' xs').map ((x, t) :: ·)
+      else if true = true then namedPairs l (.str k :: ns') (x :: xs') else none) = _
+    rw [if_neg (hk k List.mem_cons_self), if_pos rfl]
+    exact h
+
+/-- The record case's construction: one allocation table threaded through the canonical fields;
+an optional field is left out of both columns, a required one gets a member built at the table
+the previous fields left (`namedFit_fresh`'s construction, at the shape check). -/
+theorem namedPairs_fresh {decls : TyDecls} :
+    ∀ (l : List (String × Bool × Ty)), (l.map Prod.fst).Nodup →
+      (∀ q ∈ l, q.2.1 = false → ∀ allocated : List String, ∃ (v : Val) (allocated' : List String),
+        Extends allocated allocated' ∧ MemberIn decls allocated' v q.2.2) →
+      ∀ allocated : List String, ∃ (ns xs : List Val) (ps : List (Val × Ty))
+        (allocated' : List String), Extends allocated allocated' ∧
+        (∀ k, Val.str k ∈ ns → k ∈ l.map Prod.fst) ∧ namedPairs l ns xs = some ps ∧
+        ∀ p ∈ ps, MemberIn decls allocated' p.1 p.2
+  | [], _, _, allocated =>
+    ⟨[], [], [], allocated, fun _ _ h => h, fun _ h => absurd h List.not_mem_nil, rfl,
+      fun _ hp => absurd hp List.not_mem_nil⟩
+  | (m, o, t) :: l, hnd, hw, allocated => by
+    rw [List.map_cons, List.nodup_cons] at hnd
+    have hw' : ∀ q ∈ l, q.2.1 = false → ∀ allocated : List String, ∃ (v : Val)
+        (allocated' : List String), Extends allocated allocated' ∧ MemberIn decls allocated' v q.2.2 :=
+      fun q hq => hw q (List.mem_cons_of_mem _ hq)
+    cases o with
+    | true =>
+      obtain ⟨ns, xs, ps, al', e, hnames, hps, hall⟩ := namedPairs_fresh l hnd.2 hw' allocated
+      refine ⟨ns, xs, ps, al', e, fun k hk => List.mem_cons_of_mem _ (hnames k hk), ?_, hall⟩
+      exact namedPairs_skip hps fun k hk hkm => hnd.1 (hkm ▸ hnames k hk)
+    | false =>
+      obtain ⟨x, al1, e1, hx⟩ := hw (m, false, t) List.mem_cons_self rfl allocated
+      obtain ⟨ns, xs, ps, al2, e2, hnames, hps, hall⟩ := namedPairs_fresh l hnd.2 hw' al1
+      refine ⟨.str m :: ns, x :: xs, (x, t) :: ps, al2, fun i s hi => e2 i s (e1 i s hi), ?_, ?_, ?_⟩
+      · intro k hk
+        rcases List.mem_cons.mp hk with hk | hk
+        · injection hk with hk
+          rw [hk]
+          exact List.mem_cons_self
+        · exact List.mem_cons_of_mem _ (hnames k hk)
+      · show (if m = m then (namedPairs l ns xs).map ((x, t) :: ·)
+          else if false = true then namedPairs l (.str m :: ns) (x :: xs) else none) = _
+        rw [if_pos rfl, hps]
+        rfl
+      · intro p hp
+        rcases List.mem_cons.mp hp with rfl | hp
+        · exact memberIn_mono e2 hx
+        · exact hall p hp
+
+/-- The tuple case's construction: one allocation table threaded through the items. -/
+theorem itemPairs_fresh {decls : TyDecls} :
+    ∀ (l : List Ty), (∀ t ∈ l, ∀ allocated : List String, ∃ (v : Val) (allocated' : List String),
+      Extends allocated allocated' ∧ MemberIn decls allocated' v t) →
+    ∀ allocated : List String, ∃ (xs : List Val) (ps : List (Val × Ty)) (allocated' : List String),
+      Extends allocated allocated' ∧ itemPairs l xs = some ps ∧
+      ∀ p ∈ ps, MemberIn decls allocated' p.1 p.2
+  | [], _, allocated =>
+    ⟨[], [], allocated, fun _ _ h => h, rfl, fun _ hp => absurd hp List.not_mem_nil⟩
+  | t :: l, hw, allocated => by
+    obtain ⟨x, al1, e1, hx⟩ := hw t List.mem_cons_self allocated
+    obtain ⟨xs, ps, al2, e2, hps, hall⟩ :=
+      itemPairs_fresh l (fun u hu => hw u (List.mem_cons_of_mem _ hu)) al1
+    refine ⟨x :: xs, (x, t) :: ps, al2, fun i s hi => e2 i s (e1 i s hi), ?_, ?_⟩
+    · show (itemPairs l xs).map ((x, t) :: ·) = some ((x, t) :: ps)
+      rw [hps]
+      rfl
+    · intro p hp
+      rcases List.mem_cons.mp hp with rfl | hp
+      · exact memberIn_mono e2 hx
+      · exact hall p hp
+
+/-- The record arm of a round's algebra. -/
+theorem TyDecls.inhabitedWith_record (decls : TyDecls) (known : List String)
+    (fs : List (String × Bool × Ty)) :
+    cata_ty (decls.inhabitedWith known) (.record fs) =
+      (Ty.canon fs).all fun q => q.2.1 || cata_ty (decls.inhabitedWith known) q.2.2 := by
+  rw [cata_ty_record]
+  have hpm : prodMapSnd (prodMapSnd (cata_ty (decls.inhabitedWith known))) =
+      fun q : String × Bool × Ty => (q.1, prodMapSnd (cata_ty (decls.inhabitedWith known)) q.2) :=
+    rfl
+  rw [hpm]
+  show (Ty.canon (fs.map fun q => (q.1, prodMapSnd (cata_ty (decls.inhabitedWith known)) q.2))).all
+    (fun p => p.2.1 || p.2.2) = _
+  rw [Ty.canon, Ty.canon, Field.canonBy_map]
+  exact List.all_map
+
+/-- A declared reference with a witnessed declaration has a member at an extension of any
+allocation table. -/
+theorem exists_memberIn_ref {decls : TyDecls} {known : List String} (hk : decls.Witnessed known)
+    {t : Ty} {name : String} {body : Ty} (hu : decls.unfold? t = some (name, body))
+    (hc : known.contains name = true) (allocated : List String) :
+    ∃ (v : Val) (allocated' : List String), Extends allocated allocated' ∧
+      MemberIn decls allocated' v t :=
+  have ⟨v, al', e, hv⟩ :=
+    hk name (List.contains_iff_mem.mp hc) body (TyDecls.body?_of_unfold? hu) allocated
+  ⟨v, al', e, .unfold hu hv⟩
 
 /-- **A round's algebra is complete when its known names are witnessed**: a type that the round
 calls inhabited has a member at an extension of any allocation table. Placement: concept
@@ -1018,11 +1204,160 @@ part left, and carry the earlier parts forward (`memberIn_mono`). An external ha
 fresh index `allocated.length`. A declared name takes its witness from `hk`; an option, a list, a
 map, an exit and a cause have a member with no question. Consumer: `witnessed_inhabitedFrom`. -/
 @[semantics "store-typing" (requirement := R3)]
-proof_goal exists_memberIn_fresh {decls : TyDecls} {known : List String}
+theorem exists_memberIn_fresh {decls : TyDecls} {known : List String}
     (hk : decls.Witnessed known) (t : Ty) (h : cata_ty (decls.inhabitedWith known) t = true)
     (allocated : List String) :
     ∃ (v : Val) (allocated' : List String), Extends allocated allocated' ∧
-      MemberIn decls allocated' v t
+      MemberIn decls allocated' v t := by
+  induction t generalizing allocated with
+  | never => cases h
+  | var _ => cases h
+  | unit => exact ⟨.unit, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | nat => exact ⟨.nat 0, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | int => exact ⟨.nat 0, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | number => exact ⟨.nat 0, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | string => exact ⟨.str "", allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | bool => exact ⟨.bool true, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | lit s =>
+    exact ⟨.str s, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl (beq_iff_eq.mpr rfl)⟩
+  | null => exact ⟨.none, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | undefined => exact ⟨.unit, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | bytes => exact ⟨.bytes [], allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | unknown => exact ⟨.unit, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | fiberOf _ _ _ _ =>
+    exact ⟨Val.fiber ⟨0⟩, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | refOf _ _ => exact ⟨Val.cell ⟨0⟩, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | deferredOf _ _ _ _ =>
+    exact ⟨Val.promise ⟨0⟩, allocated, fun _ _ h => h, memberIn_of_hasTy rfl rfl rfl⟩
+  | contextOf keys =>
+    obtain ⟨services, _, hkeys⟩ := Typed.context_services_fresh
+      (Typed.initialWorld (EffTy.pure .unit) fun _ => some .unit)
+      (fun _ => ⟨.unit, .unit, rfl, trivial, Typed.live_of_handles_nil rfl⟩) keys.elems
+    refine ⟨Val.context (Ctx.withServices services), allocated, fun _ _ h => h,
+      memberIn_of_hasTy rfl rfl ?_⟩
+    have hctx : Val.context? (Val.context (Ctx.withServices services)) =
+        some (Ctx.withServices services) := ctxImage.ofVal_toVal _
+    show (match Val.context? (Val.context (Ctx.withServices services)) with
+      | some ctx => keys.elems.all fun key => (ctx.services.getV key).isSome
+      | none => false) = true
+    rw [hctx, List.all_eq_true]
+    intro key hkey
+    obtain ⟨_, value, _, hg, _⟩ := hkeys key hkey
+    show (services.getV key).isSome = true
+    rw [hg]
+    rfl
+  | option _ _ => exact ⟨.none, allocated, fun _ _ h => h, .step rfl rfl fun _ hp => nomatch hp⟩
+  | list _ _ => exact ⟨.list [], allocated, fun _ _ h => h, .step rfl rfl fun _ hp => nomatch hp⟩
+  | map _ _ _ _ =>
+    exact ⟨.list [], allocated, fun _ _ h => h, .step rfl rfl fun _ hp => nomatch hp⟩
+  | exitOf _ _ _ _ =>
+    exact ⟨Val.exitErr ⟨[]⟩, allocated, fun _ _ h => h, .step rfl rfl fun _ hp => nomatch hp⟩
+  | causeOf _ _ =>
+    exact ⟨Val.exitErr ⟨[]⟩, allocated, fun _ _ h => h, .step rfl rfl fun _ hp => nomatch hp⟩
+  | handle target =>
+    cases hb : decls.body? target with
+    | some body =>
+      have hc : known.contains target = true := by
+        have h' : (if (decls.body? target).isSome then known.contains target
+            else inhabitedAlg.ty_handle target) = true := h
+        rw [hb, Option.isSome_some, if_pos rfl] at h'
+        exact h'
+      have hu : decls.unfold? (.handle target) = some (target, body) := by
+        show (decls.body? target).map (target, ·) = _
+        rw [hb]
+        rfl
+      exact exists_memberIn_ref hk hu hc allocated
+    | none =>
+      have hr : retiredHandleTargets.contains target = false := by
+        have h' : (if (decls.body? target).isSome then known.contains target
+            else inhabitedAlg.ty_handle target) = true := h
+        rw [hb, Option.isSome_none] at h'
+        exact Typed.not_retired_of_inhabited h'
+      have hu : decls.unfold? (.handle target) = none := by
+        show (decls.body? target).map (target, ·) = _
+        rw [hb]
+        rfl
+      obtain ⟨v, al', e, hv⟩ := exists_hasTy_handle_fresh hr allocated
+      exact ⟨v, al', e, memberIn_of_hasTy hu rfl hv⟩
+  | app name args _ =>
+    cases hb : decls.body? name with
+    | some body =>
+      have hc : known.contains name = true := by
+        have h' : (if (decls.body? name).isSome then known.contains name
+            else inhabitedAlg.ty_app name (args.map (cata_ty (decls.inhabitedWith known)))) =
+            true := h
+        rw [hb, Option.isSome_some, if_pos rfl] at h'
+        exact h'
+      have hu : decls.unfold? (.app name args) = some (name, body) := by
+        show (decls.body? name).map (name, ·) = _
+        rw [hb]
+        rfl
+      exact exists_memberIn_ref hk hu hc allocated
+    | none =>
+      have hr : retiredHandleTargets.contains name = false := by
+        have h' : (if (decls.body? name).isSome then known.contains name
+            else inhabitedAlg.ty_app name (args.map (cata_ty (decls.inhabitedWith known)))) =
+            true := h
+        rw [hb, Option.isSome_none] at h'
+        exact Typed.not_retired_of_inhabited h'
+      have hu : decls.unfold? (.app name args) = none := by
+        show (decls.body? name).map (name, ·) = _
+        rw [hb]
+        rfl
+      obtain ⟨v, al', e, hv⟩ := exists_hasTy_handle_fresh hr allocated
+      exact ⟨v, al', e, memberIn_of_hasTy hu rfl hv⟩
+  | prod a b iha ihb =>
+    have h' : (cata_ty (decls.inhabitedWith known) a && cata_ty (decls.inhabitedWith known) b) =
+      true := h
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h'
+    obtain ⟨va, al1, e1, ma⟩ := iha ha allocated
+    obtain ⟨vb, al2, e2, mb⟩ := ihb hb al1
+    refine ⟨.list [va, vb], al2, fun i s hi => e2 i s (e1 i s hi), .step rfl rfl ?_⟩
+    intro p hp
+    rcases List.mem_cons.mp hp with rfl | hp
+    · exact memberIn_mono e2 ma
+    · rcases List.mem_singleton.mp hp with rfl
+      exact mb
+  | except e a ihe iha =>
+    have h' : (cata_ty (decls.inhabitedWith known) e || cata_ty (decls.inhabitedWith known) a) =
+      true := h
+    rcases Bool.or_eq_true_iff.mp h' with he | ha
+    · obtain ⟨v, al', ext, hv⟩ := ihe he allocated
+      refine ⟨.ctor 0 [v], al', ext, .step rfl rfl ?_⟩
+      intro p hp
+      rcases List.mem_singleton.mp hp with rfl
+      exact hv
+    · obtain ⟨v, al', ext, hv⟩ := iha ha allocated
+      refine ⟨.ctor 1 [v], al', ext, .step rfl rfl ?_⟩
+      intro p hp
+      rcases List.mem_singleton.mp hp with rfl
+      exact hv
+  | union l r ihl ihr =>
+    have h' : (cata_ty (decls.inhabitedWith known) l || cata_ty (decls.inhabitedWith known) r) =
+      true := h
+    rcases Bool.or_eq_true_iff.mp h' with hl | hr
+    · obtain ⟨v, al', ext, hv⟩ := ihl hl allocated
+      exact ⟨v, al', ext, .left hv⟩
+    · obtain ⟨v, al', ext, hv⟩ := ihr hr allocated
+      exact ⟨v, al', ext, .right hv⟩
+  | tuple ts ih =>
+    rw [cata_ty_tuple] at h
+    have h' : (ts.map (cata_ty (decls.inhabitedWith known))).all id = true := h
+    rw [List.all_map, List.all_eq_true] at h'
+    obtain ⟨xs, ps, al', ext, hps, hall⟩ :=
+      itemPairs_fresh ts (fun u hu al => ih u hu (h' u hu) al) allocated
+    exact ⟨.list xs, al', ext, .step rfl hps hall⟩
+  | record fs ih =>
+    rw [TyDecls.inhabitedWith_record, List.all_eq_true] at h
+    obtain ⟨ns, xs, ps, al', ext, _, hps, hall⟩ :=
+      namedPairs_fresh (Ty.canon fs) (Field.canonBy_names_nodup _)
+        (fun q hq hreq al => ih q (Ty.mem_canon hq)
+          (by
+            have hq' := h q hq
+            rw [hreq, Bool.false_or] at hq'
+            exact hq') al)
+        allocated
+    exact ⟨.ctor 0 [.list ns, .list xs], al', ext, .step rfl hps hall⟩
 
 /-- **The iteration keeps its invariant**: every name it adds has a witnessed declaration. -/
 theorem witnessed_inhabitedFrom (decls : TyDecls) :
