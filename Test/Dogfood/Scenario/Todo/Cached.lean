@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Todo.Tree
+import Test.Dogfood.Scenario.Todo.CachedProgram
 import Test.Dogfood.ApplicationDefs
 import Effect4.Program.Authoring.ApplicationService
 import Effect4.Laws.Library.Ref.Cache
@@ -56,29 +57,6 @@ open Test.Dogfood.Scenario.Todo (application listCache readingThrough repository
   addAt add_tree listAt)
 open Test.Dogfood.Bank (refCache milk observe)
 open Test.Dogfood.ApplicationDefs (prefixBlock)
-
-/-- The to-do with the banked cache imposed on its service. -/
-def cached : Application NativeOp := { application with imposed := [listCache] }
-
-/-- The service's name. -/
-def service : String := "TodoApp"
-
-/-- An application's service module, built. -/
-def built? (app : Application NativeOp) : Option Api.Built :=
-  (app.serviceModule service).toOption.bind fun m => (Api.Author.build m).toOption
-
-/-- A consumer built over the cached service's unchanged definition module.
-Each run starts from empty stores and calls its own service initializer. -/
-def buildConsumer (main : Src NativeOp) : Option Api.Built :=
-  (cached.serviceModule service).toOption.bind fun m =>
-    (Api.Author.build { m with main := main }).toOption
-
-/-- One recorded request: make the cached service state once, then invoke the named method.
-Unknown entries refuse before the service module builds. -/
-def consumerBuiltAt (name : String) (args : List TermSrc) : Option Api.Built :=
-  (cached.entry? name).bind fun entry =>
-    buildConsumer (bindWith (Def.invoke (service ++ "Context") []) fun state =>
-      Def.invoke (service ++ "_" ++ entry.name) (state :: args))
 
 -- control: an unknown method has no consumer.
 #guard (consumerBuiltAt "missing" []).isNone

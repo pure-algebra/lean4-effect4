@@ -3,6 +3,7 @@ import Tools.ProfileJson
 import Effect4.Api.HostSession
 import Effect4.Program.Profile
 import Effect4.Laws.Program.Validated
+import Tools.RunRecord
 
 /-!
 # Tools.RunChecks — a recorded run's wire, and Lean's checks of the run
@@ -182,12 +183,7 @@ def threaded {σ : Type} (model : Run.Reactor σ) (start : σ) (runs : List (Opt
 
 /-! ## A recorded request -/
 
-/-- One host call of a recorded request: the row's position in the application's table, the
-request, and the host's completion, as the face wrote them. -/
-structure Call where
-  row : Nat
-  request : Val
-  completion : Answer
+-- One host call of a recorded request is `Call`, beside `literal` (`tools/Tools/RunRecord.lean`).
 
 /-- **The record of one request** (the lowering note's §6.1): the entry, its arguments, each host
 call in the order that the face made them, and the root's exit. -/
@@ -232,15 +228,6 @@ def decodeSession (lines : List String) : Except String (Header × List Record) 
   let header :: records := (lines.filter (· != "")).map Json.parse
     | throw "a session with no header"
   return (← decodeHeader (← header), ← records.mapM fun record => do decodeRecord (← record))
-
-/-- An argument of a recorded request as a source literal: a unit, a natural, a Boolean or a
-string. The face writes each argument as a value; `none` for any other value. -/
-def literal : Val → Option Lit
-  | .unit => some .unit
-  | .nat n => some (.nat n)
-  | .bool b => some (.bool b)
-  | .str s => some (.str s)
-  | _ => none
 
 /-- **A host that answers from a record** (the lowering note's §6.1, step 2). At each call it
 gives the record's next completion, where the record's row is the machine's row and its request
