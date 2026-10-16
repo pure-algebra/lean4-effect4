@@ -4,6 +4,8 @@ import Effect4.Program.SigApp
 import Effect4.Program.Typing.TermRefusal
 import Effect4.Program.Authoring
 import Effect4.Program.Decision
+import Effect4.Program.Authoring.Declare
+import Effect4.Api.AuthorIn
 
 /-!
 # Battery: declared types read by shape, folded at a written field, and admitted at a reply
@@ -137,5 +139,46 @@ def asTodo (value : Term) : Term :=
 #guard externalValueIn idDecls (.handle "Conn") [] (.nat 0) == some (["Conn"], Value.external 0)
 -- finite evaluation: the classifier allocates only at the undeclared name.
 #guard (allocatesIn idDecls (.handle "Id"), allocatesIn idDecls (.handle "Conn")) == (false, true)
+
+/-! ## A module built under its named types (`Api.Author.buildIn`) -/
+
+open Effect4.Program.Authoring
+
+eff_rows Repo error .never cite "the declared-types battery" where
+  get(.nat) : .handle "Todo"
+
+/-- A program that reads a declared record's field from a host row's answer. -/
+def readTitle : Src NativeOp :=
+  bindWith (Repo.get (nat 1)) fun todo => succeed (field todo "title")
+
+/-- The module: the row, the table that declares `Todo`, and the program. -/
+def titleModule : Module NativeOp := { rows := Repo.rows, types := todoDecls, main := readTitle }
+
+-- finite evaluation: the module builds under its named types, at the field's type.
+#guard (match Api.Author.buildIn titleModule with
+  | .ok b => b.ty.answer == .string
+  | .error _ => false)
+-- control: the table-free build refuses it, since the field read meets a handle there.
+#guard (match Api.Author.build titleModule with
+  | .ok _ => false
+  | .error _ => true)
+
+/-- A program that reads a field the declared record lacks. -/
+def readOwner : Src NativeOp :=
+  bindWith (Repo.get (nat 1)) fun todo => succeed (field todo "owner")
+
+-- finite evaluation: the build under the named types refuses a field that `Todo` lacks, as a
+-- typing refusal with its location.
+#guard (match Api.Author.buildIn { titleModule with main := readOwner } with
+  | .error (.typing _) => true
+  | _ => false)
+
+/-- A module with no named type. -/
+def plainModule : Module NativeOp := { main := succeed (nat 1) }
+
+-- finite evaluation: a module with no named type builds under `buildIn` at `build`'s type.
+#guard (match Api.Author.buildIn plainModule, Api.Author.build plainModule with
+  | .ok b, .ok c => decide (b.ty = c.ty)
+  | _, _ => false)
 
 end Test.Program.DeclaredTypes

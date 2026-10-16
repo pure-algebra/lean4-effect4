@@ -2,6 +2,7 @@ module
 
 public import Effect4.Program.Refs
 public import Effect4.Program.Native
+public import Effect4.Program.TyExpand
 
 /-!
 # Program.Authoring — the scope reader: names for the program algebra's binders
@@ -513,6 +514,10 @@ structure Module (Op : Type) where
   layers : List (String × LayerSrc Op) := []
   defs : List (DefSrc Op) := []
   main : Src Op
+  /-- The declaration table of the module's named types (decisions rows 400 to 402): a declared
+  name is read by its body where the checker reads a type by shape. A derived type's declarations
+  are `Modeled.decls`. Empty by default; `Api.Author.buildIn` reads it (the wiring plan, W4). -/
+  types : TyDecls := []
 
 /-- Every row a module supplies, in table order: its own declarations, then each service's
 operations in service order. -/

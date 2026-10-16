@@ -95,6 +95,8 @@ structure Application (Op : Type) where
   /-- The declared protocols of the application's rows, by the row's spelling
   (`src/Effect4/Program/RowProtocol.lean`). A row with none has the protocol of its types. -/
   protocols : RowProtocols := []
+  /-- The declaration table of the application's named types (`Module.types`). -/
+  types : TyDecls := []
   entries : List (Application.Entry Op)
 
 namespace Application
@@ -113,7 +115,7 @@ the module's main program answers the unit value; `moduleOf` replaces it by an e
 module's readers (`Module.rowDefs`, `Module.table`) read the declarations. -/
 def declarations (app : Application Op) : Module Op :=
   { rows := app.rows, services := app.services, layers := app.layers, defs := app.defs,
-    main := succeed unit }
+    main := succeed unit, types := app.types }
 
 /-- The module of one entry at its arguments: the application's declarations, and the applied
 body as its main program. `Api.Author.build` builds it as it builds any module. -/

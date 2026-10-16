@@ -170,8 +170,11 @@ it. Program admission and the typed state stay at `SigApp.signature`, so W4 buil
 - **Program admission beside.** `admitProgramIn` and its certificate `AdmittedProgramIn`, the original's
   checks at `SigApp.signatureIn`. At an application with no named type its typing certificate is
   the original's, since `signatureIn` is `signature` there.
-- **The build.** `Api.Author.build` keeps its path when `Module.types` is empty. A module with
-  named types builds through `admitProgramIn`, into a built program that holds its `SigApp`.
+- **The build.** `Api.Author.buildIn` stands beside `Api.Author.build` (`Api/AuthorIn.lean`).
+  It builds through `admitProgramIn`, into a `BuiltIn` that holds its `SigApp`. Its refusal is
+  `explainIn`, complete by `explainIn_none_iff`. `build` keeps its path and reads no table, so a
+  `Built` keeps the typed state's certificate. The callers move to `buildIn` when the session
+  reads it.
 - **The session.** The reply check reads `acceptReplyIn` and `acceptAtInstanceIn` at the
   session's table. The machine still prepares a reply at the row's column with no table.
 - **Preparation at a declared name.** A natural at a column whose head is a declared name would

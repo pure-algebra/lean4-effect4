@@ -110,6 +110,39 @@ def admitProgram (program : NativeEff) (app : SigApp := {}) :
         | none => .ok ⟨typing, hsig,
             (Formation.checkInput_eq_none_iff program app.rows app.services).mp hformed, hcolType⟩
 
+/-! ## Admission under the application's named types (the wiring plan, W4)
+
+`admitProgram` types at `app.signature`, which declares no named type, and the typed state
+(M5 to M7) reads that certificate. `admitProgramIn` makes the same four checks with the checker at
+`app.signatureIn`, which reads the declaration table. Its certificate is a separate structure, so
+nothing that reads `AdmittedProgram` reads it. -/
+
+/-- A program admitted under the application's named types: its type at `app.signatureIn`, the
+signature's admission (which admits the declaration table), raw formation and the column scan. -/
+structure AdmittedProgramIn (program : NativeEff) (app : SigApp)
+    extends TypedProgram app.signatureIn program where
+  signature : admitSig app = .ok ()
+  formed : Formation.InputFormed program app.rows app.services
+  columnsType : findEmptyColumnInEffTy ty = none
+
+/-- Decide admission under the application's named types: `admitProgram`'s checks, with the
+typing certificate at `app.signatureIn`. -/
+def admitProgramIn (program : NativeEff) (app : SigApp := {}) :
+    Except AdmitRefusal (AdmittedProgramIn program app) :=
+  match hsig : admitSig app with
+  | .error why => .error (.signature why)
+  | .ok () =>
+    match hformed : Formation.checkInput program app.rows app.services with
+    | some why => .error (.formation why)
+    | none =>
+      match checkTypedProgram app.signatureIn program with
+      | none => .error .illTyped
+      | some typing =>
+        match hcolType : findEmptyColumnInEffTy typing.ty with
+        | some pos => .error (.emptyColumn pos)
+        | none => .ok ⟨typing, hsig,
+            (Formation.checkInput_eq_none_iff program app.rows app.services).mp hformed, hcolType⟩
+
 /-- Failure of ordinary admission, or a program outside the proved straight fragment.
 Outside-fragment refusal does not mean that the program is ill-typed. -/
 inductive StraightAdmitRefusal

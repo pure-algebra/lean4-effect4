@@ -198,6 +198,7 @@ import Effect4.Store.Domain.ShapeRead
 import Effect4.Program.Typing.Call
 import Effect4.Program.Typing.Annotate
 import Effect4.Api.Author
+import Effect4.Api.AuthorIn
 import Effect4.Api.Supervision
 import Effect4.Run
 -- What a tool reads off a run: the machine's view, the raw replay, the tape, a funded run, rest.
