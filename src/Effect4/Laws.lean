@@ -63,6 +63,7 @@ import Effect4.Laws.Program.TyDecls
 import Effect4.Laws.Program.TyExpand
 import Effect4.Laws.Program.TyHead
 import Effect4.Laws.Program.Typed.FitsIn
+import Effect4.Laws.Program.CallChain
 import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.RecordOperations
 import Effect4.Laws.Program.ScopedTyping
@@ -346,6 +347,8 @@ import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.WriterScope
 import Effect4.Laws.Run.CallTree
 import Effect4.Laws.Run.Journal
+import Effect4.Laws.Run.Outcome
+import Effect4.Laws.Run.CallMap
 import Effect4.Laws.Program.PlaceFunding.Run
 import Effect4.Laws.Machine.WriterActions
 import Effect4.Laws.Api.Live
