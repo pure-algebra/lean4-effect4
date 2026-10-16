@@ -28,8 +28,7 @@
 #   D5  MemoMap.mk retains its constructor row. R1 removes Dispatcher.mk during lowering.
 #       The explicit D.t empty operation handles empty lists at the dispatcher field.
 #       fireState and syncOpStep stay generated.
-#   D6  Q6 (`Nat.div`/`Nat.mod` by zero) is two `fn?` rows: the current root set never reaches
-#       division, so a mandatory row would fail G10.  They fire the moment one does.
+#   D6  Q6 (`Nat.div`/`Nat.mod` by zero) has no row: the builtin table owns both (section Q6).
 #   D7  (lane G2) `Point.path` and `Point.env` are carriers too, and they are the ones the
 #       run time was in (docs/research/2026-09-08-engine-prof-chain.md: 98.5 % of the
 #       retained machine, 58 % of the time).  Two mechanisms carry them that the other rows
@@ -168,10 +167,8 @@ fn Effect4.Program.Point.redirect 2 sh_point_redirect program_node_child
 # still be written here by hand; it is then an override and the stale-ledger check covers it.
 
 # ---- Q6: Lean's division on a zero divisor ------------------------------------------------
-# Answered in the translator, not here.  `Translate.builtin?` guards both rows
-# (src/OCaml5/Lcnf/Translate.lean): `Nat.div` emits `if b = 0 then 0 else a / b` and `Nat.mod`
-# emits `if b = 0 then a else a mod b`, which is what Lean answers, so nothing emitted can
-# raise `Division_by_zero`.  The two rows below stay `fn?`, optional: no declaration in this
-# root set divides, so a mandatory row would be a stale ledger.
-fn? Nat.div 2 E4_nat.div
-fn? Nat.mod 2 E4_nat.rem
+# No rows.  `Nat.div` and `Nat.mod` are rows of the builtin table (src/OCaml5/Lcnf/Builtins.lean),
+# which answer what Lean answers at zero (`if b = 0 then 0 else a / b`, `if b = 0 then a else a
+# mod b`) in every artefact, so nothing emitted raises `Division_by_zero`.  Until 2026-10-16 two
+# `fn?` rows here sent the engine's division to `E4_nat.div`/`E4_nat.rem`: the same answers,
+# but a second owner of one constant, and a row wins over the builtin table.

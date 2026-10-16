@@ -2,7 +2,7 @@
 
    What it checks, and against what:
      N*  E4_nat: the 63-bit host profile of ocaml/gen/NOTES.md §5, including a differential
-         against `pow_reference` (Translate.powClamped transcribed literally) and the edge
+         against `pow_reference` (the prelude's `lcnf_nat_pow` transcribed literally) and the edge
          triple 2^62-1 / 2^62 / max_int.
      S*  E4_sha256: the FIPS 180-4 vectors ("", "abc", the 56- and 112-byte messages, one
          million 'a'), the two byte-vector #guards of src/Effect4/Store/Digest.lean:302-303,
@@ -55,7 +55,7 @@ let test_nat () =
     (E4_nat.fits_wire 0 && E4_nat.fits_wire E4_nat.max_nat && not (E4_nat.fits_wire (-1)));
   check "N4 is_nat 0 / max_nat / -1" (E4_nat.is_nat 0 && E4_nat.is_nat max_int && not (E4_nat.is_nat (-1)));
 
-  (* pow: the rule table of NOTES.md §5 and Translate.lean:127-137 *)
+  (* pow: the rule table of NOTES.md §5 and the prelude's `lcnf_nat_pow` *)
   check "N1 pow 2 10 = 1024" (E4_nat.pow 2 10 = 1024);
   check "N1 pow 2 61 = 2^61 exactly" (E4_nat.pow 2 61 = 1 lsl 61);
   check "N1 pow 2 62 = max_nat (2^62 saturates)" (E4_nat.pow 2 62 = E4_nat.max_nat);
@@ -80,7 +80,7 @@ let test_nat () =
       if E4_nat.pow a b <> E4_nat.pow_reference a b then diff_ok := false
     done
   done;
-  check (Printf.sprintf "N7 pow = Translate.powClamped on %d (a,b) pairs" !diff_n) !diff_ok;
+  check (Printf.sprintf "N7 pow = lcnf_nat_pow on %d (a,b) pairs" !diff_n) !diff_ok;
 
   (* literals *)
   check "N1 of_lit_decimal \"1947\" = 1947" (E4_nat.of_lit_decimal "1947" = Some 1947);

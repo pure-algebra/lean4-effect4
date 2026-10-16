@@ -51,8 +51,8 @@ let rem (a : t) (b : t) : t = if b = 0 then a else a mod b
 let succ (a : t) : t = add a 1
 let pred (a : t) : t = if a <= 0 then 0 else a - 1
 
-(* Translate.powClamped's step: `if a = 0 then 0 else if h > max_int / a then max_int
-   else h * a`, applied b times to 1.  Applying it past its fixed point cannot change the
+(* The step of the prelude's `lcnf_nat_pow` (src/OCaml5/Lcnf/Builtins.lean): `if a = 0 then 0
+   else if h > max_int / a then max_int else h * a`, applied b times to 1.  Applying it past its fixed point cannot change the
    answer, so the loop stops there and `pow 2 (10^9)` terminates. *)
 let pow (a : t) (b : t) : t =
   let step r = if a = 0 then 0 else if r > max_nat / a then max_nat else r * a in

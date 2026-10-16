@@ -2,8 +2,9 @@
 
    What it is: the arithmetic profile the generated engine assumes, as a module, so that a
    hand extern (E4_shim) and the generated code cannot disagree about what `2 ^ 64` or
-   `n / 0` means.  It is the SAME rule the LCNF backend inlines
-   (src/OCaml5/Lcnf/Translate.lean:120-174), written once so it can be tested.
+   `n / 0` means.  It is the SAME rule as the LCNF route's builtin table
+   (src/OCaml5/Lcnf/Builtins.lean: the forms `natDiv`, `natMod`, `natSub` and the prelude's
+   `lcnf_nat_mul`, `lcnf_nat_pow`, `lcnf_nat_shift_left`), written once so it can be tested.
 
    Depends on: the OCaml standard library only.
 
@@ -13,8 +14,9 @@
        Val.lean:279-316) reads as `… < max_int` and keeps the meaning it has in Lean.
                                                                    by construction; tested
    N2  Lean's division: `div n 0 = 0` and `rem n 0 = n` (Lean v4.33.1 core; consolidation
-       review R6).  OCaml's `/` and `mod` raise Division_by_zero — this is the ONE place the
-       generated code is wrong today (NOTES.md:263 "still not guarded").          tested
+       review R6).  OCaml's `/` and `mod` raise Division_by_zero; the builtin table's `Nat.div`
+       and `Nat.mod` forms guard the zero divisor the same way in every generated module.
+                                                                                  tested
    N3  Truncated subtraction: `sub a b = max 0 (a - b)`.                by construction
    N4  Host width: `bits` is Sys.int_size (63 native, 32 under js_of_ocaml, 31 under
        wasm_of_ocaml — git:14e6835:ocaml/wasm/README.md:13, the archived wasm host); `max_nat` is `max_int`; `wire_limit` is the
@@ -23,7 +25,7 @@
    N5  Guarded shifts: OCaml's `lsl`/`lsr` are undefined at >= 63; `shift_right` answers 0
        at or above `bits`, `shift_left` saturates.                     by construction; tested
    N6  Every operation is total: no exception escapes any function of this module.  tested
-   N7  `pow` agrees with `Translate.powClamped` (Translate.lean:127-137) value for value:
+   N7  `pow` agrees with the prelude's `lcnf_nat_pow` (src/OCaml5/Lcnf/Builtins.lean) value for value:
        both are `f^b (1)` for `f r = if a = 0 then 0 else if r > max_int / a then max_int
        else r * a`.  This module iterates and exits at the fixed point instead of recursing
        `b` times, which is why `pow 2 (10^9)` terminates here.        tested (differential)
@@ -40,12 +42,12 @@
        eff_frame.decode_nat refuses (nine digits, or eight with a top byte >= 0x40).
    D2  `of_lit_decimal` is added.  `of_lit : int -> t` cannot see an out-of-range literal,
        because an OCaml int is already in range; the clamp of
-       Translate.letValueExpr sees the literal as an arbitrary-precision Lean `Nat`, and a
+       `letValueExpr` (src/OCaml5/Lcnf/Translate.lean) sees the literal as an arbitrary-precision Lean `Nat`, and a
        decimal string is that literal.  `of_lit` is kept for the in-range case.
-   D3  `add`, `mul` and `shift_left` saturate here; the generator emits raw `+` and `*` for
-       `Nat.add`/`Nat.mul` and `a * powClamped 2 b` for `Nat.shiftLeft` (Translate.lean:
-       148, 166), which wrap.  Saturating is N1's rule applied to the same operations; the
-       two agree on every input that does not overflow, and no corpus input overflows them. *)
+   D3  `add` saturates here; the generator emits raw `+` for `Nat.add`, which wraps.  `mul` and
+       `shift_left` saturate as the prelude's `lcnf_nat_mul` and `lcnf_nat_shift_left` do.
+       Saturating is N1's rule applied to the same operations; the two agree on every input
+       that does not overflow, and no corpus input overflows `+`. *)
 
 type t = int
 (** A Lean `Nat` on this host: 0 .. max_nat.  Negative values are outside the image and
@@ -67,7 +69,7 @@ val of_lit : int -> t
 
 val of_lit_decimal : string -> t option
 (** A Lean literal as decimal digits: >= 2^62 saturates to max_nat, matching
-    Translate.letValueExpr (src/OCaml5/Lcnf/Translate.lean:429).  None on an empty string or
+    `letValueExpr` (src/OCaml5/Lcnf/Translate.lean).  None on an empty string or
     any character outside '0'..'9'. *)
 
 val add : t -> t -> t          (* saturating *)
@@ -75,7 +77,7 @@ val sub : t -> t -> t          (* truncated: max 0 (a - b) *)
 val mul : t -> t -> t          (* saturating *)
 val div : t -> t -> t          (* Lean: div n 0 = 0 *)
 val rem : t -> t -> t          (* Lean: rem n 0 = n *)
-val pow : t -> t -> t          (* saturating at max_nat; Translate.powClamped's value *)
+val pow : t -> t -> t          (* saturating at max_nat; lcnf_nat_pow's value *)
 val succ : t -> t
 val pred : t -> t              (* max 0 (n - 1) *)
 
@@ -95,5 +97,5 @@ val saturates : t -> t -> bool
     differential uses to skip inputs on which host and Lean legitimately differ. *)
 
 val pow_reference : t -> t -> t
-(** Translate.powClamped transcribed literally (recursive, no fixed-point exit), for the N7
+(** The prelude's `lcnf_nat_pow` transcribed literally (recursive, no fixed-point exit), for the N7
     differential only.  Recurses [b] times: do not call it with a large [b]. *)

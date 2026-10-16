@@ -3500,7 +3500,7 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
             | Val_nat n_360 -> (match tail_359 with
                 | head_361 :: tail_362 -> (match (head_361 : val_) with
                     | Val_nat n_363 -> (match tail_362 with
-                        | [] -> (let _x_364 = E4_nat.div n_360 n_363 in
+                        | [] -> (let _x_364 = if n_363 = 0 then 0 else n_360 / n_363 in
                           let _x_365 = Val_nat _x_364 in
                           Some _x_365)
                         | _ -> None)
@@ -3513,7 +3513,7 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
             | Val_nat n_374 -> (match tail_373 with
                 | head_375 :: tail_376 -> (match (head_375 : val_) with
                     | Val_nat n_377 -> (match tail_376 with
-                        | [] -> (let _x_378 = E4_nat.rem n_374 n_377 in
+                        | [] -> (let _x_378 = if n_377 = 0 then n_374 else n_374 mod n_377 in
                           let _x_379 = Val_nat _x_378 in
                           Some _x_379)
                         | _ -> None)
@@ -9950,11 +9950,11 @@ and program_ty_normalize_items (x_1 : ty list) : ty list =
   let _x_1 = 2048 in
   let _x_2 = 52 in
   let _x_3 = if _x_2 >= 63 then 0 else n lsr _x_2 in
-  let _x_4 = E4_nat.rem _x_3 _x_1 in
+  let _x_4 = if _x_1 = 0 then _x_3 else _x_3 mod _x_1 in
   let _x_5 = 2047 in
   let _x_6 = _x_4 = _x_5 in
   if _x_6 then _x_6 else (let _x_7 = 4503599627370496 in
-    let fraction = E4_nat.rem n _x_7 in
+    let fraction = if _x_7 = 0 then n else n mod _x_7 in
     let _x_8 = 0 in
     let _x_9 = _x_4 = _x_8 in
     if _x_9 then (let _x_20 = fraction = _x_8 in
@@ -9968,7 +9968,7 @@ and program_ty_normalize_items (x_1 : ty list) : ty list =
         if _x_13 then _x_11 else (let _x_14 = 2 in
           let _x_15 = max 0 (_x_12 - _x_4) in
           let _x_16 = lcnf_nat_pow _x_14 _x_15 in
-          let _x_17 = E4_nat.rem fraction _x_16 in
+          let _x_17 = if _x_16 = 0 then fraction else fraction mod _x_16 in
           let _x_18 = _x_17 = _x_8 in
           if _x_18 then _x_13 else true))))
 
