@@ -361,6 +361,42 @@ def registry : Registry where
     { id := "step-language-typed", concept := "store-typing", role := .compatibility
       title := "A stored step translates to its indexed type from native atom typing, typed caller inputs and Step.Facts; records retain formation and normality, and empty-value subtyping follows from the shared construction law; a fold additionally requires the caller type list to match the source scope length; Step.normal derives Facts for a closed step; no run, optional field, allocation or host behavior follows (decisions row 330)"
       pointer := .witness `Effect4.Modules.Step.typed },
+    -- recursive types: membership under the application's declaration table (decisions rows
+    -- 124, 158 and 400; seat RECTYPES, docs/research/2026-10-15-recursive-types/formal.md)
+    { id := "recursive-types-decided", concept := "store-typing", role := .decidability
+      title := "Membership under a declaration table is an inductive predicate, MemberIn: a union holds its sides' members, a declared reference its body's, and a head its step's when every question holds (Val.obligations); the checker Val.hasTyIn, well founded on the value's size and then on the declared names not yet unfolded, with no fuel, decides it on every table, guarded or not, so it computes the least fixed point; nothing of Fits, a world, a parameter or a target (decisions rows 124, 158 and 400)"
+      pointer := .witness `Effect4.Program.hasTyIn_iff
+      literature := [
+        { work := "TAPL", locator := "§21.1–§21.2, pp. 282–284 (audit T110)", relation := "definitionUsed" }
+      ] },
+    { id := "recursive-types-unfold", concept := "store-typing", role := .inversion
+      title := "Iso-recursive unfolding: a reference to a declared name, app n args or its normal form handle n, has exactly its body's members; a declared name is read by its body, never as a handle, and an undeclared reference keeps the handle arm (decisions rows 158 and 400)"
+      pointer := .witness `Effect4.Program.memberIn_unfold_iff
+      literature := [
+        { work := "TAPL", locator := "§20.2, p. 275 (audit T110)", relation := "adaptedResult" }
+      ] },
+    { id := "recursive-types-conservative", concept := "store-typing", role := .compatibility
+      title := "On the empty table the checker is Val.hasTy from any set of unfolded names, MemberIn is Val.hasTy's answer, and inhabitance is inhabited, so every statement over them reads the empty table unchanged; nothing of Fits, which takes no table yet (decisions row 400)"
+      pointer := .witness `Effect4.Program.tyDecls_conservative },
+    { id := "recursive-types-sub", concept := "store-typing", role := .preservation
+      title := "The order stays nominal and sound: Ty.sub, unchanged, keeps the members of every table; MemberIn is the admission fold Val.hasTy.alg with each declared name read from the checker (memberIn_iff_cata), so the fold condition AdmitsSub applies; a declared reference is below itself by name, and no rule compares two bodies; nothing of Ty.subN, which waits on recursive-types-normalize (decisions rows 124 and 158)"
+      pointer := .witness `Effect4.Program.memberIn_sub
+      literature := [
+        { work := "TAPL", locator := "§19.3, p. 251 (audit T107)", relation := "definitionUsed" },
+        { work := "TAPL", locator := "§21.11, p. 311 (audit T55)", relation := "excludedFeature" }
+      ] },
+    { id := "recursive-types-inhabited", concept := "store-typing", role := .decidability
+      title := "Inhabitance under a table, the least fixed point iterated from no name known until a round adds none, agrees with membership: a type with a member is inhabited (inhabited_of_memberIn, proved), and an inhabited type has a member (exists_memberIn_of_inhabited, a planned goal); a guarded table can still have an empty name (Stream) (decisions rows 124 and 127)"
+      pointer := .witness `Effect4.Program.inhabited_iff_memberIn },
+    { id := "recursive-types-normalize", concept := "store-typing", role := .compatibility
+      title := "Membership under a table is invariant under type normalization, which spells a reference with no argument as a handle (a planned goal; the wiring slice's fits_normalize and fits_subN under a table need it)"
+      pointer := .witness `Effect4.Program.memberIn_normalize },
+    { id := "guarded-fixed-point-unique", concept := "store-typing", role := .compatibility
+      title := "On a guarded table every fixed point of the admission fold admits exactly the members of each body, so the least fixed point is the greatest; on an unguarded table it fails (A = A has the constant oracle true as a fixed point and no member, Test/Program/TyDecls.lean) (a planned goal)"
+      pointer := .witness `Effect4.Program.guarded_fixedPoint_unique
+      literature := [
+        { work := "TAPL", locator := "§21.8, p. 299 (audit T55)", relation := "adaptedResult" }
+      ] },
     { id := "store-safety", concept := "store-typing", role := .progress
       title := "Store safety through inductive configuration typing"
       pointer := .absent "Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139)"
@@ -1277,7 +1313,7 @@ def registry : Registry where
         `Effect4.Schema.Bridge.ofSchema_exact, `Effect4.Program.readTerm_printTerm,
         `Effect4.Codegen.Metadata.type_metadata_exact, `Effect4.Program.errOf_valOfErr]
       openParts := ["variants: the tag select over records landed (decisions row 195 (d)); catchTag's residual, the caught tag subtracted from the error column, waits on decisions row 130",
-        .ruling "decisions row 124: recursive types as declarations of the application" "recursive types are row 124 (open): nominal Σ_app declarations through Ty.app",
+        .work "the wiring slice of recursive types (decisions row 400)" "recursive types (decisions rows 124 and 400): the foundation is landed beside the core (Effect4.Laws.Program.TyDecls: membership under a table decided, conservative on the empty table, the order sound, inhabitance sound; three planned goals); open: the table in the world, Fits and its callers reading it, the table's admission as a located refusal, the TypeScript, Schema and Lean faces, and parameters (regular recursion)",
         "error payloads: the carrier (decisions row 120, part E1) and the face (part E2: one Data.TaggedError class per tag, printed and read back) landed; int and number fields since the aliases Int and Num read back (decisions row 399 (2)); open: catchTag's residual over records (decisions row 130), a field typed by another class (refused by name), a record update of a class instance (it answers a structural object), and a host row answering a payload (R6, parked)",
         .ruling "decisions row 108: the owner places the numbers slice; row 121 is ruled" "int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121); carried since decisions row 317, which removes the admission's int scan; the JSON wires since row 316; the computing rows (plus, minus, and lt and eq at int) since row 319; the Lean judgment and OCaml profile bound landed in row 321, and the TypeScript prelude refusal landed in row 322; the host truth record and comparison of an outside-profile result remain open (slice 7)",
         "the Schema image of app, and the JSON images of app, null, undefined and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161); null, undefined, number and bytes have their Schema image (the types audit, docs/research/2026-10-15-type-roundtrip-audit/README.md §6.1)",
