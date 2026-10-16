@@ -12,7 +12,8 @@ on or before `@typescript/native-preview` 7.0.0-dev.20260629.1). Each rule names
 transcribes. The excerpts that decide the discriminated decomposition are filed in
 `docs/research/2026-10-11-type-interface/sources/`.
 
-The fragment is the printer's image: the keyword types, string literals, readonly tuples,
+The fragment is the printer's image: the keyword types, the prelude's aliases `Int` and `Num` of
+`number`, string literals, readonly tuples,
 unions, object types of readonly fields, and the named Effect types at their declared variances
 (`vendor/effect-4.0.0-rc.112/src`: `Option.ts` `None<out A>` and `Some<out A>`; `Result.ts` and
 `Exit.ts` `Success<out A, out E>` and `Failure<out A, out E>`; `Cause.ts` `Cause<out E>`;
@@ -97,6 +98,13 @@ def variances : List String → Option (List Variance)
 /-- A keyword type: `.name [k] []`. -/
 def keyword (k : String) : TypeRef := .name [k] []
 
+/-- `getTypeFromTypeAliasReference` (`internal/checker/checker.go`): a reference to a type alias
+is the type it declares. The prelude's aliases (`Types.typeAliasNames`, `type Int = number` and
+`type Num = number`) are `number`; any other type is itself. -/
+def unalias : TypeRef → TypeRef
+  | .name [a] [] => if Types.typeAliasNames.contains a then keyword "number" else keyword a
+  | t => t
+
 /-- The members of a type as a union source: a union's members, or the type itself. -/
 def members : TypeRef → List TypeRef
   | .union xs => xs
@@ -128,10 +136,13 @@ def combinations : List (Nat × List TypeRef) → List (List (Nat × TypeRef))
 /-- **The model of tsgo's assignability** on the printer's fragment, at a recursion bound. Each
 arm names the tsgo function it transcribes (`internal/checker/relater.go`). Every recursive call
 is on a piece strictly inside the compared types, so the bound `size s + size t + 1` of
-`assignable` is never exhausted on a call it starts. -/
+`assignable` is never exhausted on a call it starts. Each side is read through its alias first
+(`unalias`), as the checker resolves a reference before relating it. -/
 def rel : Nat → TypeRef → TypeRef → Bool
   | 0, _, _ => false
-  | n + 1, s, t =>
+  | n + 1, s₀, t₀ =>
+    let s := unalias s₀
+    let t := unalias t₀
     if s == t then true
     else match s, t with
     -- `isSimpleTypeRelatedTo`: `never` is below every type, every type is below `unknown`,
