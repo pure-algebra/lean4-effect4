@@ -274,6 +274,10 @@ module type INSTANCE = sig
   val load : program -> fuel:int -> machine
   val step : row list -> program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
   val run_api : row list -> program -> fuel:int -> outcome * machine
+  (* Lean's checked replay asks this before each decision (`Effect4.Program.admit`): a stale
+     token, a call that is not a host row's, a wrong answer type, a dead handle or a reserved
+     defect is refused. `true` when the decision is admitted. *)
+  val admit : row list -> machine -> api_decision -> bool
 
   (** The free rows. *)
 
@@ -335,6 +339,12 @@ module type ENGINE = sig
       `Completion.ofExit (Exit.success (Val.nat n))`.
       @raise E4_clock.Profile_refusal for a negative or out-of-profile natural. *)
 
+  val answer_async_value : int -> int -> val_ -> decision
+  (* [answer_async_value fiber token v] answers the parked token with `Completion.ofExit
+     (Exit.success v)`, any value, after the host-ingress check every natural passes (EN9,
+     {!check_answer}). Whether it fits the call's row is `admits`'s question.
+     @raise E4_clock.Profile_refusal for an out-of-profile natural inside [v]. *)
+
   val answer_async_float : int -> int -> float -> decision
   (** Answers with the exact IEEE-754 bit pattern when it fits [Val_float]'s carrier.
       @raise E4_clock.Profile_refusal before conversion when those bits do not fit. *)
@@ -364,6 +374,10 @@ module type ENGINE = sig
   (** {2 Driving} *)
 
   val step : t -> decision -> t
+  (* Whether Lean's checked replay (`Api.replayChecked`) admits the decision here, at the
+     program's row table. `step` applies a decision either way, as `Api.replay` does; a host
+     driver asks `admits` first, so a reply that does not fit its row is refused. *)
+  val admits : t -> decision -> bool
 
   val replay : t -> decision list -> t
   (** `Api.replay`'s machine (Api.lean:156-162): decisions are applied until the replay stops

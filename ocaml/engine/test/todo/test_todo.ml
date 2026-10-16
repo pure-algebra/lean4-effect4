@@ -19,11 +19,17 @@
        that tell the hosts apart.                                          tested
    T5  The engine (E4_engine.Fast and Ref) runs each request's program at its row table, and its
        two instances agree after the parked call is answered.             tested
+   T6  The engine's `admits`, on both instances, answers as Lean's checked replay does
+       (`Effect4.Program.admit`, the fixture's `admits` line): a natural refused as the answer of
+       each request's first call, and at a stale token.                    tested
+   T7  The same for the reference repository's own answer to each first call, a to-do, a list
+       or an option, built with `answer_async_value`: admitted, as by Lean.  tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
    records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
-   the table changes (the scenarios lane's S4 does), and its reply is a natural the engine
-   applies with no reply admission: a natural answers `TodoRepo.insert` and the run finishes.
+   the table changes (the scenarios lane's S4 does). `step` applies a decision whether or not it
+   is admitted, as `Api.replay` does; T6 and T7 check the admission a host driver asks first, refused
+   and admitted, on the requests' first calls only.
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/todo *)
 
@@ -50,10 +56,13 @@ type request = {
   state : string;
   result : string;
   forgetful : string;
+  admits : string;
+  answer : string;
 }
 
 let empty entry =
-  { entry; program = ""; rows = []; typed = ""; names = ""; state = ""; result = ""; forgetful = "" }
+  { entry; program = ""; rows = []; typed = ""; names = ""; state = ""; result = ""; forgetful = "";
+    admits = ""; answer = "" }
 
 (* The fixture's blocks, in order. A line this reader does not know is a failure. *)
 let read_fixture (path : string) : request list =
@@ -76,6 +85,8 @@ let read_fixture (path : string) : request list =
           | "state", Some r -> go acc (Some { r with state = value })
           | "result", Some r -> go acc (Some { r with result = value })
           | "forgetful", Some r -> go acc (Some { r with forgetful = value })
+          | "admits", Some r -> go acc (Some { r with admits = value })
+          | "answer", Some r -> go acc (Some { r with answer = value })
           | _ -> failwith ("fixture: an unknown line: " ^ key)))
   in
   let requests = go [] None in
@@ -145,10 +156,25 @@ let () =
       let table = built.Todo_gen.table and program = built.Todo_gen.program in
       let module F = Effect4_engine.E4_engine.Fast in
       let module R = Effect4_engine.E4_engine.Ref in
-      let f = F.step (F.run ~table program ~fuel:100000) (F.answer_async_success 0 0 7) in
-      let g = R.step (R.run ~table program ~fuel:100000) (R.answer_async_success 0 0 7) in
+      let f0 = F.run ~table program ~fuel:100000 and g0 = R.run ~table program ~fuel:100000 in
+      let f = F.step f0 (F.answer_async_success 0 0 7) in
+      let g = R.step g0 (R.answer_async_success 0 0 7) in
       check (Printf.sprintf "%d %s: the engine's two instances agree at the row table after a reply" i r.entry)
-        (F.outcome f = R.outcome g && F.fiber_rows f = R.fiber_rows g))
+        (F.outcome f = R.outcome g && F.fiber_rows f = R.fiber_rows g);
+      (* T6: the engine admits a reply as Lean's checked replay does *)
+      let verdicts t admits answer =
+        Printf.sprintf "%b %b" (admits t (answer 0 7)) (admits t (answer 1 7)) in
+      check (Printf.sprintf "%d %s: the engine admits a natural reply as Lean does (%s)" i r.entry r.admits)
+        (verdicts f0 F.admits (F.answer_async_success 0) = r.admits
+         && verdicts g0 R.admits (R.answer_async_success 0) = r.admits);
+      (* T7: the reference repository's own answer to the first call is admitted, as by Lean *)
+      (match String.split_on_char ' ' r.answer with
+       | [ hex; lean ] ->
+         let v = exactly "the answer" Eff_val.decode_exact hex in
+         check (Printf.sprintf "%d %s: the engine admits the reference answer as Lean does (%s)" i r.entry lean)
+           (string_of_bool (F.admits f0 (F.answer_async_value 0 0 v)) = lean
+            && string_of_bool (R.admits g0 (R.answer_async_value 0 0 v)) = lean)
+       | _ -> check (Printf.sprintf "%d %s: the fixture carries the reference answer" i r.entry) false))
     requests;
   check "red control: the two hosts' results differ on some request"
     (List.exists (fun r -> r.result <> r.forgetful) requests);

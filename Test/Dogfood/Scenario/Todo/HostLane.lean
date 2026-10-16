@@ -64,6 +64,30 @@ def namesVal (names : List (String × Nat)) : Val :=
 /-- Bytes in lowercase hexadecimal. -/
 def hex (bytes : Store.Bytes) : String := Store.hexString bytes
 
+/-- Lean's checked replay's verdict (`Effect4.Program.admit`) on one answer to the request's
+first host call, after `Api.run`: a natural from fiber 0 at `token`. The engine's `admits` must
+give the same. -/
+def admitsNat (r : Request) (token : Nat) : Bool :=
+  let m := (Api.run r.built.program 100000 r.built.table).machine
+  (Effect4.Program.admit r.built.table m (.answerAsync ⟨0⟩ token (.ofExit (.success (.nat 7))))).isNone
+
+/-- The value the reference repository answers the request's first host call with, when it
+answers one with a success: what a host driver would hand the engine. -/
+def firstAnswer (r : Request) : Option Val :=
+  match (serveBuilt r.built r.state).1.1.head? with
+  | some call => match call.completion with
+    | .ofExit (.success v) => some v
+    | _ => none
+  | none => none
+
+/-- Lean's checked replay's verdict on that answer, as `admitsNat` gives it for a natural. -/
+def admitsFirst (r : Request) : Bool :=
+  match firstAnswer r with
+  | some v =>
+    let m := (Api.run r.built.program 100000 r.built.table).machine
+    (Effect4.Program.admit r.built.table m (.answerAsync ⟨0⟩ 0 (.ofExit (.success v)))).isNone
+  | none => false
+
 /-- One request's block of the fixture. -/
 def Request.text (r : Request) : String :=
   "request " ++ r.entry ++ "\n" ++
@@ -73,7 +97,11 @@ def Request.text (r : Request) : String :=
   "names " ++ hex (Store.Val.encode (namesVal r.built.rowNames)) ++ "\n" ++
   "state " ++ hex (Store.Val.encode (repoVal r.state)) ++ "\n" ++
   "result " ++ hex (Store.Val.encode (serveBuiltVal r.built r.state)) ++ "\n" ++
-  "forgetful " ++ hex (Store.Val.encode (serveBuiltForgetfulVal r.built r.state)) ++ "\n"
+  "forgetful " ++ hex (Store.Val.encode (serveBuiltForgetfulVal r.built r.state)) ++ "\n" ++
+  "admits " ++ toString (admitsNat r 0) ++ " " ++ toString (admitsNat r 1) ++ "\n" ++
+  (match firstAnswer r with
+    | some v => "answer " ++ hex (Store.Val.encode v) ++ " " ++ toString (admitsFirst r) ++ "\n"
+    | none => "")
 
 /-- The fixture: a header, then each request's block. `none` when a request does not build. -/
 def fixtureText : Option String :=
@@ -87,6 +115,11 @@ def fixtureText : Option String :=
 -- finite evaluation: the script leaves two to-dos' worth of ids used and one to-do stored
 #guard (requests.map fun rs => rs.getLast?.map fun r => (r.state.1, r.state.2.length)) ==
   some (some (3, 1))
+-- finite evaluation: Lean refuses a natural as the answer of each request's first call (each
+-- row answers a to-do, a list or an option), and refuses the stale token as well
+#guard (requests.map fun rs => rs.all fun r => !admitsNat r 0 && !admitsNat r 1) == some true
+-- finite evaluation: Lean admits the reference repository's own answer to each first call
+#guard (requests.map fun rs => rs.all fun r => (firstAnswer r).isSome && admitsFirst r) == some true
 -- control: the repository that forgets a write answers another result on some request, so the
 -- lane's comparison can tell the two hosts apart
 #guard (requests.map fun rs => rs.any fun r =>

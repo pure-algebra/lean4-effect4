@@ -55,6 +55,9 @@ field Effect4.Machine.RunMachine.trace T.t
 field Effect4.Machine.Stores.refs M.t
 field Effect4.Machine.DeferredStore.cells M.t
 field Effect4.Machine.MemoMap.entries L.t
+# Reply admission (`Effect4.Program.admit`, a root) asks whether a cell or a promise handle is
+# live: the length of the store, read through the table's ordered projection.
+ops M.t to_list M.to_list
 
 # The point's position and environment (lane G2, D7).  `@node` replaces the chain's argument
 # with the generated `node` type: the path CARRIES the node it addresses, so `Point.child` is

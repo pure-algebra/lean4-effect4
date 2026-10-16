@@ -80,6 +80,9 @@ let run_api (table : row list) (p : program) ~(fuel : int) : outcome * machine =
   let r = api_run p fuel table fuel in
   (r.outcome, r.machine)
 
+let admit (table : row list) (m : machine) (d : api_decision) : bool =
+  Option.is_none (program_admit table m d)
+
 (* -- the free rows -------------------------------------------------------------------- *)
 
 let fibers (m : machine) : (fiber_id * fiber) list = E4_fibers_view.bindings m.fibers

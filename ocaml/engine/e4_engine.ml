@@ -184,6 +184,10 @@ module type INSTANCE = sig
   val load : program -> fuel:int -> machine
   val step : row list -> program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
   val run_api : row list -> program -> fuel:int -> outcome * machine
+  (* Lean's checked replay asks this before each decision (`Effect4.Program.admit`): a stale
+     token, a call that is not a host row's, a wrong answer type, a dead handle or a reserved
+     defect is refused. `true` when the decision is admitted. *)
+  val admit : row list -> machine -> api_decision -> bool
   val fibers : machine -> (fiber_id * fiber) list
   val fiber_count : machine -> int
   val trace : machine -> event list
@@ -233,6 +237,12 @@ module type ENGINE = sig
   val fire : int -> decision
   val yield_verdict : int -> bool -> decision
   val answer_async_success : int -> int -> int -> decision
+  val answer_async_value : int -> int -> val_ -> decision
+  (* [answer_async_value fiber token v] answers the parked token with `Completion.ofExit
+     (Exit.success v)`, any value, after the host-ingress check every natural passes (EN9,
+     {!check_answer}). Whether it fits the call's row is `admits`'s question.
+     @raise E4_clock.Profile_refusal for an out-of-profile natural inside [v]. *)
+
   val answer_async_float : int -> int -> float -> decision
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
@@ -246,6 +256,10 @@ module type ENGINE = sig
   val load : ?table:row list -> Eff_wire.program -> fuel:int -> t
   val load_bytes : ?table:row list -> string -> fuel:int -> t option
   val step : t -> decision -> t
+  (* Whether Lean's checked replay (`Api.replayChecked`) admits the decision here, at the
+     program's row table. `step` applies a decision either way, as `Api.replay` does; a host
+     driver asks `admits` first, so a reply that does not fit its row is refused. *)
+  val admits : t -> decision -> bool
   val replay : t -> decision list -> t
   val replay_to : t -> decision list -> t * decision list
   val replay_steps : t -> decision list -> t Seq.t
@@ -303,6 +317,11 @@ module Make (I : INSTANCE) = struct
     I.RunDecision_answerAsync
       (fiber, token, Eff_types.Completion_ofExit (Eff_types.Exit_success (Eff_types.Val_nat n)))
 
+  let answer_async_value fiber token (v : val_) : decision =
+    let answer = Eff_types.Completion_ofExit (Eff_types.Exit_success v) in
+    check_answer answer;
+    I.RunDecision_answerAsync (fiber, token, answer)
+
   let answer_async_float fiber token value : decision =
     let bits = Int64.bits_of_float value in
     if Int64.compare bits 0L < 0 || Int64.compare bits (Int64.of_int max_int) > 0 then
@@ -333,6 +352,8 @@ module Make (I : INSTANCE) = struct
       m = I.load p ~fuel; settled = true; outside_profile = None }
 
   let load ?table (p : Eff_wire.program) ~(fuel : int) : t = load_program ?table (compile p) ~fuel
+
+  let admits (t : t) (d : decision) : bool = I.admit t.table t.m d
 
   let load_bytes ?table (b : string) ~(fuel : int) : t option =
     match of_bytes b with None -> None | Some p -> Some (load_program ?table p ~fuel)

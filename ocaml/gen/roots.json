@@ -64,7 +64,8 @@
       ],
       "roots": [
         "Effect4.Api.run",
-        "Effect4.Api.replay"
+        "Effect4.Api.replay",
+        "Effect4.Program.admit"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",
@@ -141,7 +142,8 @@
         "Effect4.Machine.emptyCtx",
         "Effect4.Program.compile",
         "Effect4.Machine.stores",
-        "Effect4.Program.Node.child"
+        "Effect4.Program.Node.child",
+        "Effect4.Program.admit"
       ],
       "externs": "ocaml/engine/externs.txt",
       "prelude": "ocaml/engine/tools/api_engine_prelude.ml",
