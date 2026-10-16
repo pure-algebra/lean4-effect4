@@ -131,13 +131,12 @@ let read_fixture (path : string) : run list =
 (* ================================================================ the generated engine *)
 
 (* What the adapter reads of a generated instance beyond `E4_engine.INSTANCE`: the replay with
-   its table, and three declarations of the generated type group.  `ocamlopt` checks each
+   its table, and the declarations of the generated type group it names.  `ocamlopt` checks each
    against both instances, so a field or a constructor that moves in api_engine.ml is a build
    error here. *)
 module type GEN = sig
   include E4_engine.INSTANCE
 
-  type await = { fiber : fiber_id; token : int; op : native_op; request : val_ }
   type key = { fiber : fiber_id; token : int }
 
   type frontier_reason =
@@ -157,8 +156,6 @@ module type GEN = sig
     int ->
     inspection
 
-  val reify_exit_val : (val_, err, defect, fiber_id, unit) exit_ -> val_
-  val program_awaits : machine -> await list
 end
 
 (* The one reading that must name a carrier: the timer store's waiters. *)

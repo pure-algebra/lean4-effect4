@@ -278,6 +278,12 @@ module type INSTANCE = sig
      token, a call that is not a host row's, a wrong answer type, a dead handle or a reserved
      defect is refused. `true` when the decision is admitted. *)
   val admit : row list -> machine -> api_decision -> bool
+  (* The calls the machine waits on (`Effect4.Program.awaits`): each parked fiber's token, its
+     operation and its request. A host driver answers the host rows among them. *)
+  type await = { fiber : fiber_id; token : int; op : native_op; request : val_ }
+  val program_awaits : machine -> await list
+  (* An exit as a value (`Effect4.Machine.exitImage`), as Lean's `reifyExitVal` writes it. *)
+  val reify_exit_val : (val_, err, defect, fiber_id, unit) exit_ -> val_
 
   (** The free rows. *)
 
@@ -338,6 +344,10 @@ module type ENGINE = sig
   (** [answer_async_success fiber token n] answers the parked token with
       `Completion.ofExit (Exit.success (Val.nat n))`.
       @raise E4_clock.Profile_refusal for a negative or out-of-profile natural. *)
+
+  val answer_async : int -> int -> (val_, err, defect, int, unit) completion -> decision
+  (* [answer_async fiber token c] answers the parked token with the completion [c], a success or a
+     failure, after the host-ingress check (EN9). *)
 
   val answer_async_value : int -> int -> val_ -> decision
   (* [answer_async_value fiber token v] answers the parked token with `Completion.ofExit
@@ -420,6 +430,11 @@ module type ENGINE = sig
   val outcome : t -> string
   val exits : t -> (int * string) list
   val root_exit : t -> string option
+  val root_exit_of : t -> (val_, err, defect, int, unit) exit_ option
+  (* The root's exit itself, as Lean's `Run.exit` answers it; `root_exit` renders it. *)
+  val host_calls : t -> (int * int * int * val_) list
+  (* The host calls the machine waits on: (fiber, token, the row's external position, request),
+     in the order of `Effect4.Program.awaits`. *)
   val fiber_rows : t -> (int * string) list
   val fiber_count : t -> int
   val trace_rows : t -> string list

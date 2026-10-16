@@ -24,6 +24,9 @@
        each request's first call, and at a stale token.                    tested
    T7  The same for the reference repository's own answer to each first call, a to-do, a list
        or an option, built with `answer_async_value`: admitted, as by Lean.  tested
+   T8  E4_host drives each request on the engine (both instances), with the lowered reactors as
+       providers, and settles; its calls, the root's exit and the host's state, packaged by the
+       lowered `resultVal`, are Lean's `Run.runWith` result, byte for byte.  tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
    records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
@@ -175,6 +178,43 @@ let () =
            (string_of_bool (F.admits f0 (F.answer_async_value 0 0 v)) = lean
             && string_of_bool (R.admits g0 (R.answer_async_value 0 0 v)) = lean)
        | _ -> check (Printf.sprintf "%d %s: the fixture carries the reference answer" i r.entry) false))
+    requests;
+  (* T8: E4_host drives each request on the engine with the lowered reactors as providers, and
+     its result, packaged by the lowered `resultVal`, is Lean's, byte for byte *)
+  let module HF = Effect4_engine.E4_host.Make (Effect4_engine.E4_engine.Fast) in
+  let module HR = Effect4_engine.E4_host.Make (Effect4_engine.E4_engine.Ref) in
+  List.iteri
+    (fun i r ->
+      let built = built_of r in
+      let table = built.Todo_gen.table and program = built.Todo_gen.program in
+      let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
+      let result calls exit st =
+        hex_of
+          (Todo_gen.test_dogfood_scenario_todo_host_result_val
+             ((List.map
+                 (fun (c : HF.call) ->
+                   ({ Todo_gen.row = c.row; request = c.request; completion = c.answer } : Todo_gen.call))
+                 calls,
+               exit),
+              st))
+      in
+      let through provider =
+        let f = HF.serve ~table provider program ~fuel:1000 state in
+        let g = HR.serve ~table provider program ~fuel:1000 state in
+        let rf = result f.calls (Effect4_engine.E4_engine.Fast.root_exit_of f.engine) f.state in
+        let rg =
+          result
+            (List.map (fun (c : HR.call) -> ({ row = c.row; request = c.request; answer = c.answer } : HF.call)) g.calls)
+            (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state
+        in
+        (f.stop = HF.Settled && g.stop = HR.Settled, rf, rg)
+      in
+      let settled, rf, rg = through Todo_gen.test_dogfood_scenario_todo_repository in
+      check (Printf.sprintf "%d %s: the engine under E4_host, over the reference host, is Lean's" i r.entry)
+        (settled && rf = r.result && rg = r.result);
+      let settled, ff, fg = through Todo_gen.test_dogfood_scenario_todo_forgetful in
+      check (Printf.sprintf "%d %s: the engine under E4_host, over the forgetful host, is Lean's" i r.entry)
+        (settled && ff = r.forgetful && fg = r.forgetful))
     requests;
   check "red control: the two hosts' results differ on some request"
     (List.exists (fun r -> r.result <> r.forgetful) requests);

@@ -188,6 +188,12 @@ module type INSTANCE = sig
      token, a call that is not a host row's, a wrong answer type, a dead handle or a reserved
      defect is refused. `true` when the decision is admitted. *)
   val admit : row list -> machine -> api_decision -> bool
+  (* The calls the machine waits on (`Effect4.Program.awaits`): each parked fiber's token, its
+     operation and its request. A host driver answers the host rows among them. *)
+  type await = { fiber : fiber_id; token : int; op : native_op; request : val_ }
+  val program_awaits : machine -> await list
+  (* An exit as a value (`Effect4.Machine.exitImage`), as Lean's `reifyExitVal` writes it. *)
+  val reify_exit_val : (val_, err, defect, fiber_id, unit) exit_ -> val_
   val fibers : machine -> (fiber_id * fiber) list
   val fiber_count : machine -> int
   val trace : machine -> event list
@@ -237,6 +243,10 @@ module type ENGINE = sig
   val fire : int -> decision
   val yield_verdict : int -> bool -> decision
   val answer_async_success : int -> int -> int -> decision
+  val answer_async : int -> int -> (val_, err, defect, int, unit) completion -> decision
+  (* [answer_async fiber token c] answers the parked token with the completion [c], a success or a
+     failure, after the host-ingress check (EN9). *)
+
   val answer_async_value : int -> int -> val_ -> decision
   (* [answer_async_value fiber token v] answers the parked token with `Completion.ofExit
      (Exit.success v)`, any value, after the host-ingress check every natural passes (EN9,
@@ -272,6 +282,11 @@ module type ENGINE = sig
   val outcome : t -> string
   val exits : t -> (int * string) list
   val root_exit : t -> string option
+  val root_exit_of : t -> (val_, err, defect, int, unit) exit_ option
+  (* The root's exit itself, as Lean's `Run.exit` answers it; `root_exit` renders it. *)
+  val host_calls : t -> (int * int * int * val_) list
+  (* The host calls the machine waits on: (fiber, token, the row's external position, request),
+     in the order of `Effect4.Program.awaits`. *)
   val fiber_rows : t -> (int * string) list
   val fiber_count : t -> int
   val trace_rows : t -> string list
@@ -316,6 +331,10 @@ module Make (I : INSTANCE) = struct
     let n = E4_clock.to_profile_nat (E4_clock.of_nat n) in
     I.RunDecision_answerAsync
       (fiber, token, Eff_types.Completion_ofExit (Eff_types.Exit_success (Eff_types.Val_nat n)))
+
+  let answer_async fiber token (answer : (val_, err, defect, int, unit) completion) : decision =
+    check_answer answer;
+    I.RunDecision_answerAsync (fiber, token, answer)
 
   let answer_async_value fiber token (v : val_) : decision =
     let answer = Eff_types.Completion_ofExit (Eff_types.Exit_success v) in
@@ -681,6 +700,19 @@ module Make (I : INSTANCE) = struct
 
   let exits (t : t) : (int * string) list =
     List.map (fun (id, x) -> (id, show_exit x)) (I.completed_exits t.m)
+
+  let host_calls (t : t) : (int * int * int * val_) list =
+    List.filter_map
+      (fun (a : I.await) ->
+        match a.op with
+        | NativeOp_external row -> Some (a.fiber, a.token, row, a.request)
+        | _ -> None)
+      (I.program_awaits t.m)
+
+  let root_exit_of (t : t) : (val_, err, defect, int, unit) exit_ option =
+    match List.assoc_opt 0 (I.fibers t.m) with
+    | None -> None
+    | Some f -> I.f_exit f
 
   let root_exit (t : t) : string option =
     match List.assoc_opt 0 (I.fibers t.m) with
