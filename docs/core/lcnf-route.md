@@ -39,7 +39,9 @@ not made from LCNF (memory `ocaml-only-from-lcnf`).
 | `let x := v; k` | `let` | `letValueExpr` (`:656`) — constructor applications by `ctorApp` (`:535`, field names from `ctorFieldNames`), projections on structures, calls, literals |
 | `fun` / `jp` | local function | `localFun` (`:875`); a join point is a local function, a `jmp` its call |
 | `cases` on `Bool` | `if` | both arms or a default (`:848-856`) |
-| `cases` on an inductive | `match` with alternative patterns | `altPat` (`:777`); default arm kept |
+| `cases` on an inductive | `match` with alternative patterns | `altPat` (`:777`); default arm kept; where the kept alternatives do not cover the type and there is no default, a last arm `\| _ -> assert false` states what LCNF proved unreachable (2026-10-15) |
+| a transparent structure (`Fin`, `BitVec`, the `UInt`s, `USize`, `Char`; `transparentStructures`) | its one relevant field | construction, projection and `cases` are the identity on it (2026-10-15) |
+| an application at erased arguments only | a function of the callee's remaining parameters | eta-expanded, so OCaml generalizes it past the value restriction (2026-10-15) |
 | `return` / `unreach` | variable / `assert false` | |
 | calls to globals | `g' args` and enqueue `g` | the closure; `redArgTarget?`, `wrapperKeep?` strip Lean's wrappers (`:400-431`) |
 | builtins | one table of rows, `builtins` in `src/OCaml5/Lcnf/Builtins.lean` (§9; 106 rows since 2026-10-05) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat.pow` saturates (`lcnf_nat_pow`); `Nat.sub` truncated as Lean's |
