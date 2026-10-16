@@ -25,7 +25,7 @@ the engine's program types reach no carrier. So one emitter change can give one 
 | LC-4 F: the derived and fixture inputs from the import closure | ready, never built | the same patch; `make -n -W` dry runs only |
 | LC-4 D: constructor origins enter the clock graph only once a field holds a fact | draft | `lc4-unlanded/patchD.py`; 93% of 163,368 clock facts are constructor origins |
 | LC-5 focused tests | not started | |
-| LC-6 the to-do in OCaml from LCNF | the host run landed (§6) | the lowered host run matches Lean byte for byte; the engine takes the row table and admits a reply as Lean's checked replay does; `E4_host`, Lean's `Run.driveFrom` over the engine, reproduces `Run.runWith` byte for byte with the lowered reactors as providers (`test_todo.ml`, T8), and with a repository written in OCaml (T9); open: the one report of its recorded runs |
+| LC-6 the to-do in OCaml from LCNF | the host run landed (§6) | the lowered host run matches Lean byte for byte; the engine takes the row table and admits a reply as Lean's checked replay does; `E4_host`, Lean's `Run.driveFrom` over the engine, reproduces `Run.runWith` byte for byte with the lowered reactors as providers (`test_todo.ml`, T8), and with a repository written in OCaml (T9); the report is §6.11 |
 | LC-7 the session from LCNF | not started; blocked | the nine F4 rows are absent from `src/OCaml5/Lcnf/Builtins.lean` (checked by name), with F3, the clock refusal of `Effect4.Live.start` and the run-wide heartbeat budget |
 | LC-8 the carriers as Lean data | not started | the design note comes first |
 | LC-9 the C face | not started | after LC-7 |
@@ -389,3 +389,40 @@ callback's arity: `List.appendTR._redArg` has no kernel constant, and the analys
 arity 0. The reactor call did not cause them. S2 fixes the arity. It also adds row 394's rule (a
 root reactor's answer is host ingress), with red controls, and `E4_engine.check_answer` (EN9),
 which checks each reactor answer's numeric profile.
+
+### 6.11 LC-6, the native to-do: the report of its runs
+
+The to-do runs on OCaml in two ways, and each is compared with Lean's run of the same request.
+The lane is `ocaml/engine/test/todo/`. Lean writes its fixture (`write.lean`, from
+`Test.Dogfood.Scenario.Todo.HostLane`), and `test_todo.ml` reads it.
+
+```mermaid
+flowchart LR
+  L[Lean: Run.runWith over the reference host] -->|fixture: result bytes| C{byte compare}
+  G[todo_gen.ml: the host run lowered through LCNF] --> C
+  E[E4_host over E4_engine Fast and Ref] --> C
+  P1[lowered reactors] --> E
+  P2[Native_repo: a repository written in OCaml] --> E
+```
+
+The diagram records the data flow only. It is not proof evidence.
+
+| Property | What runs | Compared with | Result |
+| --- | --- | --- | --- |
+| T2, T3 | the lowered host run (`todo_gen.ml`) | Lean's result over the reference and the forgetful host | equal on 7 requests |
+| T5 | the engine at each request's row table, after a reply | the other engine instance | equal |
+| T6, T7 | `E4_engine.admits` on a natural reply, a stale token and the reference answer | `Effect4.Program.admit` | equal verdicts: refused, refused, admitted |
+| T8 | `E4_host` on both engine instances, with the lowered reactors as providers | Lean's result over both hosts | equal on 7 requests |
+| T9 | `E4_host` on both engine instances, with `Native_repo` | Lean's result over the reference host | equal on 7 requests |
+
+The run: `cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/todo` gives
+`58 checks, 0 failures`. `make check-ocaml` runs the lane.
+
+What the runs do not establish:
+- The script is seven requests over one repository: two adds (one title outside ASCII), three
+  lists, one call of the entry `complete`, and one remove. No request outside it is run.
+- `Native_repo` is a model of a host in OCaml, not a database. A real store is a provider of the
+  same type.
+- The engine's `step` applies a decision whether or not it is admitted, as `Api.replay` does.
+  `E4_host` asks `admits` first. A driver that does not ask is unchecked.
+- No theorem relates the lowered code to Lean's. The lane is a finite differential.
