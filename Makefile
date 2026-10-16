@@ -463,7 +463,7 @@ FORCE:
 # the ratchets, the policies, the drift and the document checks stay callable by name, at a sweep.
 check: build ## after a change: the core and the law graph; audit the landing's modules with `#axiom_audit`
 .PHONY: batteries-touched
-batteries-touched: ## the batteries a change against BASE (default HEAD) edits, imports or names; the whole run is the sweep's
+batteries-touched: ## the batteries a change against BASE (default HEAD) edits or names, read from Lean's .ilean references (build the edited modules first); the whole run is the sweep's
 	@set -e; mods="$$($(PY) scripts/lean-imports.py --touched --base $(or $(BASE),HEAD))"; \
 	if [ -z "$$mods" ]; then echo "batteries-touched: no battery reached"; \
 	else echo "batteries-touched: $$(echo $$mods | wc -w | tr -d ' ') batteries"; $(LAKE) build $$mods; fi

@@ -23,12 +23,15 @@ producers that run the machine take them (`native_flags` in the `Makefile`). The
 built first, as `build_imports` builds them.
 
 `--touched [--base REV]` prints, on one line, the batteries (`Test/` modules) that a change reaches
-by name: each battery the change edits, each battery that imports an edited module, and each
-battery that names a declaration whose text the change edits or removes. The change is the working
-tree against REV (default `HEAD`). It is a near check for a landing (`make batteries-touched`): a
-battery that reaches an edited declaration only through another declaration is not printed, so the
-whole battery run stays the sweep's.
+by name: each battery the change edits, and each battery whose `.ilean` names a declaration whose
+statement or definition the change edits or removes. A change to an instance, an attribute or a
+notation reaches every battery that imports its module. The change is the working tree against
+REV (default `HEAD`); build the edited modules first, so that their `.ilean` files are current. It
+is a near check for a landing (`make batteries-touched`): a battery that reaches an edited
+declaration only through another declaration is not printed, so the whole battery run stays the
+sweep's.
 """
+import json
 import re
 import subprocess
 import sys
@@ -59,7 +62,12 @@ def closure(roots: list[str], manifest: str | None) -> list[str]:
 _DECL = re.compile(r"^\s*(?:@\[[^\]]*\]\s*)*(?:(?:private|protected|noncomputable|partial|unsafe|public|nonrec)\s+)*"
                    r"(?:def|theorem|lemma|abbrev|structure|inductive|class|instance|opaque|axiom|proof_goal)\s+"
                    r"([^\s(:{\[]+)")
-_HUNK = re.compile(r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@')
+_HUNK = re.compile(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@')
+# A declaration whose statement alone a battery can see: its proof is invisible to every reader.
+_PROOF = re.compile(r"^\s*(?:@\[[^\]]*\]\s*)*(?:(?:private|protected|nonrec)\s+)*(?:theorem|lemma)\b")
+# A change that acts on every importer, not through a name: an instance, an attribute, a notation.
+_AMBIENT = re.compile(r"^\s*(?:@\[[^\]]*\b(?:simp|aesop|macro|term_elab|command_elab|instance|reducible|irreducible)\b"
+                      r"|(?:scoped\s+|local\s+)?(?:instance|notation|infix|infixl|infixr|prefix|postfix|macro|macro_rules|syntax|elab|elab_rules|attribute|set_option)\b)")
 # The batteries the whole-tree gates and the slow lane own (`Test/Slow.lean`): the sweep runs them.
 _SWEEP_ONLY = {'Test.All', 'Test.Slow', 'Test.Audit.AxiomGate'}
 
@@ -80,60 +88,159 @@ def _short(name: str) -> str:
     return name.split('.')[-1].strip('«»')
 
 
-def touched(base: str) -> list[str]:
-    """The battery modules the working tree's change against `base` edits, imports or names."""
+def _main_root() -> Path:
+    """The main checkout of this repository: a worktree shares its references, not its builds."""
+    common = subprocess.run(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=ROOT,
+                            check=True, capture_output=True, text=True).stdout.strip()
+    return Path(common).parent
+
+
+def _ilean(module: str, roots: list[Path]) -> tuple[dict, Path] | None:
+    """Lake's reference file of `module` (`.ilean`): its declarations' ranges and the constants it
+    names, each with its defining module. The first root that holds one answers."""
+    rel = Path('.lake/build/lib/lean', *module.split('.')).with_suffix('.ilean')
+    for root in roots:
+        if (root / rel).is_file():
+            try:
+                return json.loads((root / rel).read_text(encoding='utf-8')), root / rel
+            except (OSError, ValueError):
+                return None
+    return None
+
+
+def _statement_end(lines: list[str], line: int, col: int) -> int:
+    """The line of a declaration's first `:=` outside brackets, from its name: where its
+    statement ends."""
+    depth = 0
+    for i in range(line - 1, len(lines)):
+        text = lines[i][col:] if i == line - 1 else lines[i]
+        for j, ch in enumerate(text):
+            if ch in '([{⟨':
+                depth += 1
+            elif ch in ')]}⟩':
+                depth -= 1
+            elif depth == 0 and text.startswith(':=', j):
+                return i + 1
+    return len(lines)
+
+
+def _edits(base: str) -> tuple[dict[str, list[int]], dict[str, set[str]]]:
+    """The working tree's change against `base`: each edited file's new lines, and the names of
+    the declarations whose first line the change removed, by the module that held them."""
     diff = subprocess.run(['git', 'diff', '-U0', base, '--', '*.lean'], cwd=ROOT, check=True,
                           capture_output=True, text=True).stdout
     edited: dict[str, list[int]] = {}
-    names: set[str] = set()
-    path = None
+    removed: dict[str, set[str]] = {}
+    old = path = None
     for line in diff.splitlines():
-        if line.startswith('+++ '):
+        if line.startswith('--- '):
+            old = None if line[4:] == '/dev/null' else line[6:]
+        elif line.startswith('+++ '):
             path = None if line[4:] == '/dev/null' else line[6:]
             if path is not None:
                 edited.setdefault(path, [])
         elif (m := _HUNK.match(line)) and path is not None:
-            start, count = int(m.group(1)), int(m.group(2) or '1')
+            start, count = int(m.group(3)), int(m.group(4) or '1')
             edited[path].extend(range(start, start + max(count, 1)))
-        elif line.startswith('-') and not line.startswith('---') and (m := _DECL.match(line[1:])):
-            names.add(_short(m.group(1)))
+        elif line.startswith('-') and not line.startswith('---') and old and (m := _DECL.match(line[1:])):
+            if (module := _module_of(old)) is not None:
+                removed.setdefault(module, set()).add(_short(m.group(1)))
+    return edited, removed
+
+
+def touched(base: str) -> list[str]:
+    """The battery modules the working tree's change against `base` edits or names.
+
+    A battery names a declaration when its `.ilean` lists the constant: Lean's own record of the
+    names it elaborated, not a text search. A declaration is changed when the change edits a
+    line of its range, except a theorem whose edits all lie in its proof. A changed private
+    declaration reaches the batteries through the declarations of its file that name it. A
+    change to an instance, an attribute or a notation reaches each battery that imports the module.
+    A file whose `.ilean` is older than its source, or a battery with none, is read by the earlier
+    text rules, and stderr names it."""
+    roots = [ROOT] + ([main] if (main := _main_root()) != ROOT else [])
+    edited, removed = _edits(base)
+    changed: set[str] = set()
+    ambient: set[str] = set()
+    by_text: set[str] = set()
+    stale: list[str] = []
     for path, lines in edited.items():
         source = ROOT / path
-        if not source.is_file():
+        module = _module_of(path)
+        if module is None or not source.is_file() or module.startswith('Test.'):
             continue
         text_lines = source.read_text(encoding='utf-8', errors='replace').splitlines()
-        starts = [(i + 1, _short(m.group(1)), 'private' in text.split(m.group(1))[0])
-                  for i, text in enumerate(text_lines) if (m := _DECL.match(text))]
-        hidden: set[str] = set()
+        current = {_short(m.group(1)) for t in text_lines if (m := _DECL.match(t))}
+        removed[module] = removed.get(module, set()) - current
+        found = _ilean(module, [ROOT])
+        if found is None or found[1].stat().st_mtime < source.stat().st_mtime:
+            stale.append(module)
+            starts = [(i + 1, _short(m.group(1))) for i, t in enumerate(text_lines) if (m := _DECL.match(t))]
+            for line in lines:
+                enclosing = [name for start, name in starts if start <= line]
+                if enclosing:
+                    by_text.add(enclosing[-1])
+            continue
+        ilean = found[0]
+        ranges = [(name, r) for name, r in ilean.get('decls', {}).items()]
+        hit: dict[str, list[int]] = {}
         for line in lines:
-            enclosing = [(name, private) for start, name, private in starts if start <= line]
-            if enclosing:
-                names.add(enclosing[-1][0])
-                if enclosing[-1][1]:
-                    hidden.add(enclosing[-1][0])
-        # No battery names a private declaration, so an edited one reaches the batteries through
-        # the declarations of its file that name it: a public wrapper reads its private helper.
-        blocks = [(name, '\n'.join(text_lines[start - 1:(starts[k + 1][0] - 1) if k + 1 < len(starts) else None]))
-                  for k, (start, name, _) in enumerate(starts)]
-        private = {name for _, name, p in starts if p}
-        while hidden:
-            pattern = re.compile(r"(?<![\w'?!])(?:" + '|'.join(sorted(map(re.escape, hidden))) + r")(?![\w'?!])")
-            hidden = {name for name, block in blocks if name not in names and pattern.search(block)}
-            names |= hidden
-            hidden &= private
+            inside = [(r[2] - r[0], name, r) for name, r in ranges if r[0] <= line <= r[2]]
+            if inside:
+                _, name, _ = min(inside, key=lambda x: x[0])
+                hit.setdefault(name, []).append(line)
+            elif line <= len(text_lines) and _AMBIENT.match(text_lines[line - 1]):
+                ambient.add(module)
+        for name, at in hit.items():
+            r = ilean['decls'][name]
+            head = text_lines[r[0] - 1:r[4]]
+            if any(_AMBIENT.match(t) for t in head):
+                ambient.add(module)
+            if any(_PROOF.match(t) for t in head) and \
+                    min(at) > _statement_end(text_lines, r[4], r[5]):
+                continue
+            changed.add(name)
+        # A private declaration reaches the batteries through its file's declarations that name it.
+        users: dict[str, set[str]] = {}
+        for key, ref in ilean.get('references', {}).items():
+            n = json.loads(key).get('c', {}).get('n')
+            if n is not None:
+                users[n] = {u[4] for u in ref.get('usages', []) if len(u) > 4}
+        frontier = {n for n in changed if n.startswith('_private.')}
+        while frontier:
+            reached = set().union(*(users.get(n, set()) for n in frontier)) - changed
+            changed |= reached
+            frontier = {n for n in reached if n.startswith('_private.')}
+    word = re.compile(r"(?<![\w'?!])(?:" + '|'.join(sorted(map(re.escape, by_text))) + r")(?![\w'?!])") \
+        if by_text else None
     modules = {m for p in edited if (m := _module_of(p))}
-    word = re.compile(r"(?<![\w'?!])(?:" + '|'.join(sorted(map(re.escape, names))) + r")(?![\w'?!])") \
-        if names else None
     sweep = _SWEEP_ONLY | set(imports_of(ROOT / 'Test' / 'Slow.lean'))
-    out = []
+    out, unread = [], []
     for battery in sorted((ROOT / 'Test').rglob('*.lean')):
         module = _module_of(str(battery.relative_to(ROOT)))
         if module in sweep:
             continue
         text = battery.read_text(encoding='utf-8', errors='replace')
-        if (module in modules or any(i in modules for i in header_imports(text))
-                or (word is not None and word.search(text))):
+        imports = header_imports(text)
+        found = _ilean(module, roots)
+        reached = module in modules or any(i in ambient for i in imports) \
+            or (word is not None and word.search(text))
+        if not reached and found is None:
+            unread.append(module)
+            reached = any(i in modules for i in imports)
+        elif not reached:
+            for key in found[0].get('references', {}):
+                c = json.loads(key).get('c', {})
+                n, m = c.get('n'), c.get('m')
+                if n in changed or (n is not None and _short(n) in removed.get(m, ())):
+                    reached = True
+                    break
+        if reached:
             out.append(module)
+    for module in stale:
+        print(f'lean-imports: {module} is newer than its .ilean; its edits are read by name', file=sys.stderr)
+    if unread:
+        print(f'lean-imports: {len(unread)} batteries have no .ilean; each is read by its imports', file=sys.stderr)
     return out
 
 
