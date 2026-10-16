@@ -186,6 +186,54 @@ def string : Image String where
       rfl
     · exact nomatch h
 
+def toInt : Int → Val
+  | .ofNat n => .nat n
+  | .negSucc n => .negInt n
+
+def ofInt : Val → Option Int
+  | .nat n => some (.ofNat n)
+  | .negInt n => some (.negSucc n)
+  | _ => none
+
+/-- `Int` as the integer frames (decisions row 121): a non-negative integer is its `nat` image, and
+`Val.negInt n` is `-(n + 1)`, Lean's `Int.negSucc n`. One integer has one image. -/
+def int : Image Int where
+  toVal := toInt
+  ofVal := ofInt
+  ofVal_toVal a := by cases a <;> rfl
+  ofVal_exact := by
+    intro v a h
+    unfold ofInt at h
+    split at h
+    · injection h with h
+      subst h
+      rfl
+    · injection h with h
+      subst h
+      rfl
+    · exact nomatch h
+
+def ofLit (s : String) : Val → Option Unit
+  | .str t => if t = s then some () else none
+  | _ => none
+
+/-- A string literal type's one value, `Val.str s`, as the unit carrier. -/
+def lit (s : String) : Image Unit where
+  toVal _ := .str s
+  ofVal := ofLit s
+  ofVal_toVal _ := if_pos rfl
+  ofVal_exact := by
+    intro v a h
+    unfold ofLit at h
+    split at h
+    · rename_i t
+      split at h
+      · rename_i ht
+        subst ht
+        rfl
+      · exact nomatch h
+    · exact nomatch h
+
 /-- The carrier's own image: every value is itself, and every value reads. A restriction of it
 (`subtype`) is the image of a value class, as an error payload is one (decisions row 120,
 `Machine/Alphabets.lean`). -/
@@ -487,6 +535,8 @@ theorem unit_handleFree : HandleFree unit := fun _ => rfl
 theorem bool_handleFree : HandleFree bool := fun _ => rfl
 theorem nat_handleFree : HandleFree nat := fun _ => rfl
 theorem string_handleFree : HandleFree string := fun _ => rfl
+theorem int_handleFree : HandleFree int := fun a => by cases a <;> rfl
+theorem lit_handleFree (s : String) : HandleFree (lit s) := fun _ => rfl
 
 theorem equiv_handleFree (I : Image α) (f : α → β) (g : β → α) (hfg : ∀ b, f (g b) = b)
     (hgf : ∀ a, g (f a) = a) (h : HandleFree I) : HandleFree (I.equiv f g hfg hgf) :=

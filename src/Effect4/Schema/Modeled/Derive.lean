@@ -40,12 +40,195 @@ def defaultSpelling : Name → String
 def canonicalOrder (names : List String) : List String :=
   (Effect4.Field.canonBy Effect4.Field.bytesKey (names.map fun n => (n, ()))).map Prod.fst
 
-/-- Check a structure and its renames, then write its `Modeled` instance. -/
+/-- A constructor's tag: its name's last component. -/
+def ctorTag : Name → String
+  | .str _ s => s
+  | n => n.toString (escape := false)
+
+/-- One constructor of an inductive: its name, its tag and its fields, each a name and a type. -/
+structure Ctor where
+  name : Name
+  tag : String
+  fields : List (Name × Term)
+
+/-- Each field of a constructor is named, independent of the others, no proposition, and has an
+instance. -/
+def ctorFields (ref : Syntax) (c : Name) : CommandElabM (List (Name × Term)) := do
+  let info ← liftCoreM (getConstInfoCtor c)
+  withRef ref <| liftTermElabM <| forallTelescope info.type fun xs _ => do
+    xs.toList.mapM fun x => do
+      let decl ← x.fvarId!.getDecl
+      let n := decl.userName
+      if n.hasMacroScopes || n.isAnonymous then
+        throwError "derive_modeled: a field of {c} has no name; name each field"
+      let t ← inferType x
+      if t.hasAnyFVar (fun v => xs.any (·.fvarId! == v)) then
+        throwError "derive_modeled: field type {t} depends on another field"
+      if ← isProp t then
+        throwError "derive_modeled: field type {t} is a proposition"
+      let inst ← mkAppM ``Effect4.Schema.Modeled #[t]
+      unless (← trySynthInstance inst) matches .some _ do
+        throwError "derive_modeled: field type {t} has no Modeled instance"
+      pure (n, ← PrettyPrinter.delab t)
+
+/-- The right-nested union of members, as `Ty.ofMembers` nests it. -/
+def unionOf : List Term → MacroM Term
+  | [] => `(Effect4.Program.Ty.never)
+  | [m] => pure m
+  | m :: rest => do `(Effect4.Program.Ty.union $m $(← unionOf rest))
+
+/-- The checked proof of `unionOf`'s union, from each member's. -/
+def checkedOf : List Term → MacroM Term
+  | [] => `(rfl)
+  | [p] => pure p
+  | p :: rest => do `(Effect4.Schema.Model.refusal_union $p $(← checkedOf rest))
+
+/-- Fold a list of terms into the right-nested pair that a record carrier is, ending in `()`. -/
+def nest (items : List Term) : MacroM Term := do
+  items.foldrM (fun x acc => `(($x, $acc))) (← `(()))
+
+/-- Check an inductive type and write its `Modeled` instance: a union, right-nested, of one member
+per constructor. A constructor is the record of its fields and its `_tag`, the constructor's name,
+in canonical order; when no constructor has a field, each is its tag's literal, so the type is a
+union of string literals (Probe T, rows 12, 13 and 39: rc.112's `Data.TaggedEnum` and a
+TypeScript enum). The members' images never overlap: two records differ in their names or in
+their `_tag` column, which reads before any lowercase field, so each proof of the union carrier
+(`Image.union`) is `rfl`. -/
+def deriveModeledSum (ref : Syntax) (tName : Name) : CommandElabM Unit := do
+  let env ← getEnv
+  let some (.inductInfo info) := env.find? tName
+    | throwErrorAt ref "derive_modeled: {tName} is not a structure or an inductive type"
+  unless info.numParams == 0 && info.numIndices == 0 do
+    throwErrorAt ref "derive_modeled: {tName} has parameters or indices; the first profile is \
+      monomorphic"
+  unless info.levelParams.isEmpty do
+    throwErrorAt ref
+      "derive_modeled: {tName} has universe parameters; the first profile is monomorphic"
+  if info.isRec then
+    throwErrorAt ref "derive_modeled: {tName} is recursive; a value type has no recursion"
+  if info.ctors.isEmpty then
+    throwErrorAt ref "derive_modeled: {tName} has no constructor"
+  let ctors ← info.ctors.mapM fun c => do
+    pure ({ name := c, tag := ctorTag c, fields := ← ctorFields ref c } : Ctor)
+  for c in ctors do
+    if (ctors.filter (·.tag == c.tag)).length > 1 then
+      throwErrorAt ref "derive_modeled: two constructors of {tName} share the tag {c.tag}"
+    if c.fields.any (fun f => defaultSpelling f.1 == "_tag") then
+      throwErrorAt ref "derive_modeled: {c.name} has a field named _tag, which its tag takes"
+  let enum := ctors.all (·.fields.isEmpty)
+  -- each constructor's columns in canonical order: `none` is the tag, `some i` the `i`th field
+  let columns (c : Ctor) : List (Option Nat) :=
+    if enum then [] else
+    let spellings := ("_tag", none) :: (c.fields.zipIdx.map fun ((f, _), i) =>
+      (defaultSpelling f, some i))
+    (canonicalOrder (spellings.map (·.1))).filterMap fun sp => (spellings.find? (·.1 == sp)).map (·.2)
+  let member (c : Ctor) : MacroM Term := do
+    if enum then `(Effect4.Program.Ty.lit $(quote c.tag)) else
+    let items ← (columns c).mapM fun
+      | none => `(("_tag", false, Effect4.Program.Ty.lit $(quote c.tag)))
+      | some i => do
+        let (f, t) := c.fields[i]!
+        `(($(quote (defaultSpelling f)), false, (Effect4.Schema.Modeled.ty (α := $t))))
+    `(Effect4.Program.Ty.record [$(items.toArray),*])
+  let memberChecked (c : Ctor) : MacroM Term := do
+    if enum then `(Effect4.Schema.Model.refusal_lit $(quote c.tag)) else
+    let fields ← (columns c).foldrM (fun col acc => match col with
+      | none => `(⟨rfl, Effect4.Schema.Model.refusal_lit $(quote c.tag), $acc⟩)
+      | some i => do
+        let t := c.fields[i]!.2
+        `(⟨rfl, Effect4.Schema.Modeled.checked (α := $t), $acc⟩)) (← `(trivial))
+    `(Effect4.Schema.Model.refusal_record (by decide) $fields)
+  let n := ctors.length
+  -- a member's carrier value placed at its position of the right-nested union
+  let wrap (k : Nat) (v : Term) : MacroM Term := do
+    let mut acc : Term ← if k + 1 < n then `(⟨Sum.inl $v, rfl⟩) else pure v
+    for _ in [0:k] do acc ← `(⟨Sum.inr $acc, rfl⟩)
+    pure acc
+  let wrapPat (k : Nat) (p : Term) : MacroM Term := do
+    let mut acc : Term ← if k + 1 < n then `(⟨Sum.inl $p, _⟩) else pure p
+    for _ in [0:k] do acc ← `(⟨Sum.inr $acc, _⟩)
+    pure acc
+  -- the equation that a member's value is unchanged, at its position
+  let wrapEq (k : Nat) (e : Term) : MacroM Term := do
+    let mut acc : Term ← if k + 1 < n then `(Subtype.ext (congrArg Sum.inl $e)) else pure e
+    for _ in [0:k] do acc ← `(Subtype.ext (congrArg Sum.inr $acc))
+    pure acc
+  let s := mkCIdent tName
+  let tyId := mkIdent (`_root_ ++ tName ++ `modeledTy)
+  let checkedId := mkIdent (`_root_ ++ tName ++ `modeled_checked)
+  let toId := mkIdent (`_root_ ++ tName ++ `modeledToC)
+  let ofId := mkIdent (`_root_ ++ tName ++ `modeledOfC)
+  let toOfId := mkIdent (`_root_ ++ tName ++ `modeled_to_of)
+  let ofToId := mkIdent (`_root_ ++ tName ++ `modeled_of_to)
+  for suffix in [`modeledTy, `modeled_checked, `modeledToC, `modeledOfC, `modeled_to_of,
+      `modeled_of_to] do
+    if (← getEnv).contains (tName ++ suffix) then
+      throwErrorAt ref "derive_modeled: {tName ++ suffix} already exists"
+  let members ← liftMacroM <| ctors.mapM member
+  let ty ← liftMacroM <| unionOf members
+  let checked ← liftMacroM do checkedOf (← ctors.mapM memberChecked)
+  let vars (c : Ctor) : List Ident :=
+    c.fields.zipIdx.map fun (_, i) => mkIdent (.mkSimple s!"x{i}")
+  -- toC: each constructor's record of its fields' carriers, placed at its position
+  let toAlts ← liftMacroM <| ctors.zipIdx.mapM fun (c, k) => do
+    let vs := vars c
+    let cols ← (columns c).mapM fun
+      | none => `(())
+      | some i => `(Effect4.Schema.Modeled.toC $(vs[i]!))
+    let v ← if enum then `(()) else nest cols
+    `(Lean.Parser.Term.matchAltExpr| | $(mkCIdent c.name) $(vs.toArray.map (⟨·.raw⟩)):term* =>
+        $(← wrap k v))
+  -- ofC: each position's record read back into its constructor
+  let ofAlts ← liftMacroM <| ctors.zipIdx.mapM fun (c, k) => do
+    let vs := vars c
+    let cols ← (columns c).mapM fun
+      | none => `(_)
+      | some i => pure (⟨vs[i]!.raw⟩ : Term)
+    let p ← if enum then `(_) else nest cols
+    let args ← vs.mapM fun (v : Ident) => `(Effect4.Schema.Modeled.ofC $v)
+    `(Lean.Parser.Term.matchAltExpr| | $(← wrapPat k p) =>
+        $(mkCIdent c.name) $(args.toArray):term*)
+  -- to_of: the same patterns, each column's `to_of`
+  let invAlts ← liftMacroM <| ctors.zipIdx.mapM fun (c, k) => do
+    let vs := vars c
+    let cols ← (columns c).mapM fun
+      | none => `(_)
+      | some i => pure (⟨vs[i]!.raw⟩ : Term)
+    let p ← if enum then `(_) else nest cols
+    let e ← if enum then `(rfl) else
+      (columns c).foldrM (fun col acc => match col with
+        | none => `(Prod.ext rfl $acc)
+        | some i => `(Prod.ext (Effect4.Schema.Modeled.to_of $(vs[i]!)) $acc)) (← `(rfl))
+    `(Lean.Parser.Term.matchAltExpr| | $(← wrapPat k p) => $(← wrapEq k e))
+  let xId := mkIdent `x
+  let envBefore ← getEnv
+  elabCommand (← `(def $tyId : Effect4.Program.Ty := $ty))
+  elabCommand (← `(theorem $checkedId : Effect4.Schema.Model.refusal $tyId = none := $checked))
+  let cId := mkIdent `c
+  elabCommand (← `(def $toId ($xId : $s) : Effect4.Schema.Model.Carrier $tyId :=
+    match $xId:ident with $(toAlts.toArray):matchAlt*))
+  elabCommand (← `(def $ofId ($cId : Effect4.Schema.Model.Carrier $tyId) : $s :=
+    match $cId:ident with $(ofAlts.toArray):matchAlt*))
+  elabCommand (← `(theorem $toOfId ($cId : Effect4.Schema.Model.Carrier $tyId) :
+      $toId ($ofId $cId) = $cId :=
+    match $cId:ident with $(invAlts.toArray):matchAlt*))
+  elabCommand (← `(theorem $ofToId ($xId : $s) : $ofId ($toId $xId) = $xId := by
+    cases $xId:ident <;> simp only [$toId:ident, $ofId:ident, Effect4.Schema.Modeled.of_to]))
+  elabCommand (← `(instance : Effect4.Schema.Modeled $s :=
+    ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId⟩))
+  if (← get).messages.hasErrors then
+    setEnv envBefore
+
+/-- Check a structure and its renames, then write its `Modeled` instance. An inductive type that
+is no structure takes `deriveModeledSum`, with no renames. -/
 def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × String)) :
     CommandElabM Unit := do
   let env ← getEnv
   unless isStructure env sName do
-    throwErrorAt ref "derive_modeled: {sName} is not a structure"
+    if renames.isEmpty then
+      deriveModeledSum ref sName
+      return
+    throwErrorAt ref "derive_modeled: {sName} is not a structure; an inductive takes no renames"
   let ctor := getStructureCtor env sName
   unless ctor.numParams == 0 do
     throwErrorAt ref "derive_modeled: {sName} has parameters; the first profile is monomorphic"

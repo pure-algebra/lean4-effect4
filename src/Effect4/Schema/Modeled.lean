@@ -20,7 +20,11 @@ refuses every identity (`Leaves.refused`). The context that carries an identity 
 among them (`src/Effect4/Step.lean`).
 
 The **checked domain** is the set of types the refusal fold (`Model.refusalAlg`) answers `none`
-at. It refuses an identity type, since an identity needs its role's table; an optional field;
+at. An integer is its `nat` or `negInt` frame (`Image.int`), a literal the unit carrier of its one
+string (`Image.lit`), and a union the values of a sum that exactly one side reads
+(`Image.union`): for a union of records with distinct `_tag` literals that is every value of the
+sum, so `deriving Modeled` on an inductive writes one (`Schema.Modeled.Derive`). It refuses an
+identity type, since an identity needs its role's table; an optional field;
 a record whose names are not strictly ascending by their bytes (`Field.Ascending`); and every
 constructor that has no carrier yet. On the checked domain every encoded value inhabits its type
 (`Effect4.Schema.Model.member`, `src/Effect4/Laws/Schema/Modeled.lean`).
@@ -93,7 +97,7 @@ def algAt (L : Leaves) : TyAlgebra (fun _ => M) where
   ty_never := refused
   ty_unit := ⟨Unit, Image.unit⟩
   ty_nat := ⟨Nat, Image.nat⟩
-  ty_int := refused
+  ty_int := ⟨Int, Image.int⟩
   ty_string := ⟨String, Image.string⟩
   ty_bool := ⟨Bool, Image.bool⟩
   ty_handle n := L.handle n
@@ -104,8 +108,8 @@ def algAt (L : Leaves) : TyAlgebra (fun _ => M) where
   ty_exitOf _ _ := refused
   ty_causeOf _ := refused
   ty_fiberOf _ _ := L.fiber
-  ty_union _ _ := refused
-  ty_lit _ := refused
+  ty_union a b := ⟨{s : Sum a.1 b.1 // Image.unambiguous a.2 b.2 s = true}, Image.union a.2 b.2⟩
+  ty_lit s := ⟨Unit, Image.lit s⟩
   ty_refOf _ := L.ref
   ty_deferredOf _ _ := L.deferred
   ty_var _ := L.var
@@ -146,7 +150,7 @@ def refusalAlg : TyAlgebra (fun _ => Option String) where
   ty_never := some "never"
   ty_unit := none
   ty_nat := none
-  ty_int := some "int"
+  ty_int := none
   ty_string := none
   ty_bool := none
   ty_handle _ := some "handle: an identity needs its table"
@@ -157,8 +161,8 @@ def refusalAlg : TyAlgebra (fun _ => Option String) where
   ty_exitOf _ _ := some "exitOf"
   ty_causeOf _ := some "causeOf"
   ty_fiberOf _ _ := some "fiberOf: an identity needs its table"
-  ty_union _ _ := some "union"
-  ty_lit _ := some "lit"
+  ty_union a b := a.or b
+  ty_lit _ := none
   ty_refOf _ := some "refOf: an identity needs its table"
   ty_deferredOf _ _ := some "deferredOf: an identity needs its table"
   ty_var _ := some "var"
@@ -207,6 +211,17 @@ theorem refusal_record {fs : List (String × Bool × Ty)} (ascending : Field.Asc
   rw [if_pos mapped]
   exact fieldsRefusal_of_checked fs fields
 
+/-- A literal is in the checked domain: its carrier is the unit of its one string. -/
+theorem refusal_lit (s : String) : refusal (.lit s) = none := rfl
+
+/-- **A union is in the checked domain** when both sides are. The deriving step of an inductive
+proves its type checked this way, one union per constructor but the last. -/
+theorem refusal_union {a b : Ty} (ha : refusal a = none) (hb : refusal b = none) :
+    refusal (.union a b) = none := by
+  show (refusal a).or (refusal b) = none
+  rw [ha, hb]
+  rfl
+
 end Model
 
 /-- **A Lean type tied to a checked `Ty`**: an equivalence between the type and the carrier of
@@ -243,6 +258,7 @@ theorem option_inv {α β : Type} (f : β → α) (g : α → β) (h : ∀ a, f 
 instance : Modeled Unit := ⟨.unit, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
 instance : Modeled Bool := ⟨.bool, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
 instance : Modeled Nat := ⟨.nat, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
+instance : Modeled Int := ⟨.int, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
 instance : Modeled String := ⟨.string, rfl, id, id, fun _ => rfl, fun _ => rfl⟩
 
 instance {α : Type} [m : Modeled α] : Modeled (List α) where

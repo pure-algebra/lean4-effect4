@@ -114,15 +114,27 @@ theorem member : (t : Ty) → refusal t = none → ∀ (x : Carrier t) (alloc : 
       rw [hcanon, columns_names fs]
       exact member_fields fs h x alloc
     · nomatch h
+  | .int, _, x, _ => by cases x <;> rfl
+  | .lit s, _, _, _ => by
+    show (s == s) = true
+    exact decide_eq_true rfl
+  | .union a b, h, x, alloc => by
+    have hab := or_none h
+    obtain ⟨s, _⟩ := x
+    cases s with
+    | inl y =>
+      show (Val.hasTy ((image a).toVal y) a alloc || Val.hasTy ((image a).toVal y) b alloc) = true
+      rw [member a hab.1 y alloc]
+      rfl
+    | inr y =>
+      show (Val.hasTy ((image b).toVal y) a alloc || Val.hasTy ((image b).toVal y) b alloc) = true
+      rw [member b hab.2 y alloc, Bool.or_true]
   | .never, h, _, _ => nomatch h
-  | .int, h, _, _ => nomatch h
   | .handle _, h, _, _ => nomatch h
   | .except _ _, h, _, _ => nomatch h
   | .exitOf _ _, h, _, _ => nomatch h
   | .causeOf _, h, _, _ => nomatch h
   | .fiberOf _ _, h, _, _ => nomatch h
-  | .union _ _, h, _, _ => nomatch h
-  | .lit _, h, _, _ => nomatch h
   | .refOf _, h, _, _ => nomatch h
   | .deferredOf _ _, h, _, _ => nomatch h
   | .var _, h, _, _ => nomatch h
