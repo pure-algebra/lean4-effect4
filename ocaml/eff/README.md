@@ -15,6 +15,7 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | --- | --- | --- |
 | `eff_frame.ml` | hand | the framing kernel: `emit_*`/`decode_*` for the twelve tags, base-256 naturals, UTF-8 validation |
 | `eff_json_text.ml` | hand | JSON string escaping and number/array/object assembly for the printer |
+| `eff_val.ml` | hand | a value's canonical frames (`Val.encode`): the one writer and reader the engine's lanes compare values by |
 | `eff_types.ml` | **generated** (the LCNF route, `make gen-lcnf`) | the program types, one OCaml variant, record or abbreviation per Lean family, spelled as the generated engines spell them; both engines open it |
 | `eff_ctors.ml` | **generated** | `ctor_index_*` / `wire_tag_*` / `ctor_name_*` / `ctor_names_*` per family, and the literal visitor `lits_*` |
 | `eff_layout.ml` | **generated** | the wire families and their fields, as data |
