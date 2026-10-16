@@ -531,18 +531,47 @@ def inhabitedWith (decls : TyDecls) (known : List String) : TyAlgebra (fun _ => 
     ty_app := fun name args =>
       if (decls.body? name).isSome then known.contains name else inhabitedAlg.ty_app name args }
 
-/-- One round: the declared names whose bodies have a member when `known` does. -/
+/-- One round: the declared names whose declarations have a member when `known` does. A name is
+read at its declaration, its first entry (`body?`), as the checker reads it; a repeated name's
+later entries are read nowhere. -/
 def inhabitedRound (decls : TyDecls) (known : List String) : List String :=
-  decls.filterMap fun d => if cata_ty (decls.inhabitedWith known) d.2 then some d.1 else none
+  decls.filterMap fun d =>
+    (decls.body? d.1).bind fun body =>
+      if cata_ty (decls.inhabitedWith known) body then some d.1 else none
 
 /-- A declared name of a round has an entry. -/
 theorem mem_of_inhabitedRound {decls : TyDecls} {known : List String} {name : String}
     (h : name ∈ decls.inhabitedRound known) : ∃ d ∈ decls, d.1 = name := by
   obtain ⟨d, hd, hn⟩ := List.mem_filterMap.mp h
   refine ⟨d, hd, ?_⟩
-  split at hn
-  · exact Option.some.inj hn
-  · cases hn
+  cases hb : decls.body? d.1 with
+  | none =>
+    rw [hb] at hn
+    cases hn
+  | some body =>
+    rw [hb, Option.bind_some] at hn
+    split at hn
+    · exact Option.some.inj hn
+    · cases hn
+
+/-- A name of a round has a declaration that `known` makes inhabited. -/
+theorem inhabited_of_inhabitedRound {decls : TyDecls} {known : List String} {name : String}
+    {body : Ty} (h : name ∈ decls.inhabitedRound known) (hb : decls.body? name = some body) :
+    cata_ty (decls.inhabitedWith known) body = true := by
+  obtain ⟨d, _, hn⟩ := List.mem_filterMap.mp h
+  cases hd : decls.body? d.1 with
+  | none =>
+    rw [hd] at hn
+    cases hn
+  | some b =>
+    rw [hd, Option.bind_some] at hn
+    split at hn
+    · rename_i hcata
+      cases hn
+      rw [hb] at hd
+      cases hd
+      exact hcata
+    · cases hn
 
 /-- **The least fixed point by iteration**: add each round's new names until a round adds none.
 Well founded on the declared names not yet known: no fuel. -/

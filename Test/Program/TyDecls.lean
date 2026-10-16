@@ -124,6 +124,10 @@ def fits (decls : TyDecls) (v : Val) (t : Ty) (allocated : List String := []) : 
 #guard treeDecls.inhabited (.list tree) && !streamDecls.inhabited (.app "Stream" [])
 -- an optional stream is inhabited by its absence
 #guard streamDecls.inhabited (.option (.app "Stream" []))
+-- a repeated name is read at its declaration, its first entry, in both judgments: `A` is `never`
+-- here, so it is empty and refuses `unit`; reading every entry made inhabitance answer `true`
+#guard !TyDecls.inhabited [("A", .never), ("A", .unit)] (.handle "A") &&
+  !fits [("A", .never), ("A", .unit)] .unit (.handle "A") []
 
 /-! ## Readers of the laws at the tables -/
 

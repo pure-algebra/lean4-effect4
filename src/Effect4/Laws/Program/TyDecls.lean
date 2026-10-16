@@ -827,9 +827,10 @@ theorem mem_inhabitedNames {decls : TyDecls} {name : String} {body : Ty}
     (h : cata_ty (decls.inhabitedWith decls.inhabitedNames) body = true) :
     name ∈ decls.inhabitedNames := by
   refine inhabitedFrom_closed decls [] name (List.mem_filterMap.mpr ⟨(name, body), mem_of_body? hb, ?_⟩)
-  show (if cata_ty (decls.inhabitedWith decls.inhabitedNames) body = true then some name
+  show (decls.body? name).bind (fun body =>
+    if cata_ty (decls.inhabitedWith decls.inhabitedNames) body = true then some name
     else none) = some name
-  rw [if_pos h]
+  rw [hb, Option.bind_some, if_pos h]
 
 /-- At a type that names no declared name at its head, a step whose questions are inhabited is
 inhabited. -/
@@ -984,57 +985,159 @@ theorem tyDecls_conservative :
     (∀ t : Ty, TyDecls.inhabited [] t = inhabited t) :=
   ⟨hasTyIn_nil, fun _ _ _ => memberIn_nil, TyDecls.inhabited_nil⟩
 
+/-! ### Completeness of inhabitance: its parts
+
+A name's declaration is read at its first entry in both judgments (`TyDecls.inhabitedRound`
+reads `body?`). On a table with a repeated name, reading every entry made inhabitance answer
+`true` at `[("A", never), ("A", unit)]`, where no value is a member of `A`. The battery keeps that
+table as a control. -/
+
+/-- **Membership survives the growth of the allocation table.** Placement: concept
+`store-typing`, R3; a step of the claim `recursive-types-inhabited`, and the shape the world order
+needs when the table enters the world. Route: induct on the derivation. A step's questions read
+the allocation table only at a leaf, through `Val.hasTy` (`hasTy_mono`), so `Val.obligations`
+answers the same questions at the larger table. Consumer: `exists_memberIn_fresh`, to carry an
+earlier part's member past a later part's allocation. -/
+@[semantics "store-typing" (requirement := R3)]
+proof_goal memberIn_mono {decls : TyDecls} {a b : List String} (ext : Extends a b) {v : Val}
+    {t : Ty} (h : MemberIn decls a v t) : MemberIn decls b v t
+
+/-- The names of `known` whose declarations have a member at an extension of every allocation
+table: the invariant of the iteration's rounds. -/
+def TyDecls.Witnessed (decls : TyDecls) (known : List String) : Prop :=
+  ∀ name ∈ known, ∀ body, decls.body? name = some body → ∀ allocated : List String,
+    ∃ (v : Val) (allocated' : List String), Extends allocated allocated' ∧
+      MemberIn decls allocated' v body
+
+/-- **A round's algebra is complete when its known names are witnessed**: a type that the round
+calls inhabited has a member at an extension of any allocation table. Placement: concept
+`store-typing`, R3, a step of the claim `recursive-types-inhabited`. Route: induct on `t`, as
+`fits_of_inhabited_fresh` does. A union or an `except` takes a side that is inhabited; a product,
+a tuple and a record's required fields build their parts in turn, each at the table the previous
+part left, and carry the earlier parts forward (`memberIn_mono`). An external handle takes the
+fresh index `allocated.length`. A declared name takes its witness from `hk`; an option, a list, a
+map, an exit and a cause have a member with no question. Consumer: `witnessed_inhabitedFrom`. -/
+@[semantics "store-typing" (requirement := R3)]
+proof_goal exists_memberIn_fresh {decls : TyDecls} {known : List String}
+    (hk : decls.Witnessed known) (t : Ty) (h : cata_ty (decls.inhabitedWith known) t = true)
+    (allocated : List String) :
+    ∃ (v : Val) (allocated' : List String), Extends allocated allocated' ∧
+      MemberIn decls allocated' v t
+
+/-- **The iteration keeps its invariant**: every name it adds has a witnessed declaration. -/
+theorem witnessed_inhabitedFrom (decls : TyDecls) :
+    ∀ known, decls.Witnessed known → decls.Witnessed (decls.inhabitedFrom known) := by
+  intro known
+  induction known using TyDecls.inhabitedFrom.induct decls with
+  | case1 known hstop =>
+    intro hk
+    rw [TyDecls.inhabitedFrom, dif_pos hstop]
+    exact hk
+  | case2 known hmore ih =>
+    intro hk
+    rw [TyDecls.inhabitedFrom, dif_neg hmore]
+    refine ih fun name hname body hb => ?_
+    rcases List.mem_append.mp hname with hold | hnew
+    · exact hk name hold body hb
+    · exact exists_memberIn_fresh hk body
+        (TyDecls.inhabited_of_inhabitedRound (List.mem_filter.mp hnew).1 hb)
+
 /-- **Inhabitance is complete against membership under the table**: an inhabited type has a
 member at some allocation table. Placement: concept `store-typing`, R3, a step of the claim
-`recursive-types-inhabited`. Route: induct on the iteration's rounds. A name added at round `k`
-has a member of its body under the names of round `k`. A type the round's algebra calls
-inhabited then has a member: build it arm by arm, as `fits_of_inhabited_fresh` does, with each
-external handle at a fresh allocation index. Alternatively, unroll each known name `k` times
-into a type with no declared name, and reuse `inhabited_iff_fits`. Consumer:
-`inhabited_iff_memberIn`. It establishes nothing of a world (`Fits`). -/
+`recursive-types-inhabited`. Proved modulo its parts `memberIn_mono` and
+`exists_memberIn_fresh`. Consumer: `inhabited_iff_memberIn`. It establishes nothing of a world
+(`Fits`). -/
 @[semantics "store-typing" (requirement := R3)]
-proof_goal exists_memberIn_of_inhabited {decls : TyDecls} {t : Ty}
-    (h : decls.inhabited t = true) : ∃ (v : Val) (allocated : List String), MemberIn decls allocated v t
+theorem exists_memberIn_of_inhabited {decls : TyDecls} {t : Ty}
+    (h : decls.inhabited t = true) :
+    ∃ (v : Val) (allocated : List String), MemberIn decls allocated v t :=
+  have hw := witnessed_inhabitedFrom decls [] fun _ hn => absurd hn List.not_mem_nil
+  have ⟨v, allocated, _, hv⟩ := exists_memberIn_fresh hw t h []
+  ⟨v, allocated, hv⟩
 
 /-- **Inhabitance agrees with membership under the table** (claim `recursive-types-inhabited`):
 the least fixed point over the table says `true` exactly where some value is a member. The
-soundness half is proved (`inhabited_of_memberIn`); the completeness half is the planned goal
+soundness half is proved (`inhabited_of_memberIn`); the completeness half is
 `exists_memberIn_of_inhabited`. -/
 @[semantics "store-typing" (requirement := R3)]
 theorem inhabited_iff_memberIn {decls : TyDecls} {t : Ty} :
     decls.inhabited t = true ↔ ∃ (v : Val) (allocated : List String), MemberIn decls allocated v t :=
   ⟨exists_memberIn_of_inhabited, fun ⟨_, _, h⟩ => inhabited_of_memberIn h⟩
 
-/-- **Membership under the table is invariant under normalization** (claim
-`recursive-types-normalize`). Placement: concept `store-typing`, R3. It is what the checker's
-order needs: `Ty.subN` compares normal forms, and `app n []` normalizes to `handle n`, which the
-table reads at the same declaration. Route: transport `fits_normalize`'s argument through the
-admission fold at the checker's oracle (`memberIn_iff_cata`); each union member that
-normalization removes is below a kept one in `Ty.sub` (`memberIn_sub`). Consumer: the wiring
-slice's `fits_subN` and `fits_normalize` under a table. It establishes nothing of `Fits`. -/
+/-! ### Normalization: its part -/
+
+/-- **The fold under any oracle is invariant under normalization.** Placement: concept
+`store-typing`, R3, the step of the claim `recursive-types-normalize`. Route: `hasTy_normalize`'s
+induction, arm by arm, over the fold. `declAlg`'s arms are `Val.hasTy.alg`'s except at a
+reference, which reads its name alone at both spellings (`Ty.normalize_app_nil`). A union's
+normal form keeps a member above each one it drops (`declAlg_admitsSub`, `cata_admits_sub`), and
+the congruence arms are `AdmitsNormalize`'s (`Val.hasTy_admitsNormalize`, which no theorem
+consumes yet). At the empty table it is `hasTy_normalize` (`declAlg_nil`), which then becomes its
+instance. Consumer: `memberIn_normalize`. -/
 @[semantics "store-typing" (requirement := R3)]
-proof_goal memberIn_normalize (decls : TyDecls) (allocated : List String) (v : Val) (t : Ty) :
-    MemberIn decls allocated v t.normalize ↔ MemberIn decls allocated v t
+proof_goal cata_declAlg_normalize (decls : TyDecls) (o : String → Adm) (t : Ty) (v : Val)
+    (allocated : List String) :
+    (cata_ty (declAlg decls o) t.normalize).2 v allocated = (cata_ty (declAlg decls o) t).2 v allocated
+
+/-- **Membership under the table is invariant under normalization** (claim
+`recursive-types-normalize`). It is what the checker's order needs: `Ty.subN` compares normal
+forms, and `app n []` normalizes to `handle n`, which the table reads at the same declaration.
+Proved modulo its part `cata_declAlg_normalize`. Consumer: `Ty.subN` under a table, and the
+world's `fits_normalize` once the table enters the world. It establishes nothing of `Fits`. -/
+@[semantics "store-typing" (requirement := R3)]
+theorem memberIn_normalize (decls : TyDecls) (allocated : List String) (v : Val) (t : Ty) :
+    MemberIn decls allocated v t.normalize ↔ MemberIn decls allocated v t := by
+  rw [memberIn_iff_cata, memberIn_iff_cata, cata_declAlg_normalize]
+
+/-! ### The guarded fixed point: its parts -/
 
 /-- An oracle is a **fixed point** of the table when each declared name admits what the fold
-admits at its body, its own names read from the oracle. `MemberIn` is the least one
-(`memberIn_iff_cata`, `cata_of_memberIn`). -/
+admits at its body, its own names read from the oracle. `MemberIn` is one on every table
+(`checkerOracle_fixedPoint`), and the least one (`memberIn_iff_cata`, `cata_of_memberIn`). -/
 def FixedPoint (decls : TyDecls) (o : String → Adm) : Prop :=
   ∀ (name : String) (body : Ty), decls.body? name = some body →
     o name = (cata_ty (declAlg decls o) body).2
 
+/-- **Membership is a fixed point of every table**, guarded or not: the checker at a declared
+name admits what the fold at the checker's oracle admits at the name's body. Placement: concept
+`store-typing`, R3, a step of the claim `guarded-fixed-point-unique`. Consumer:
+`guarded_fixedPoint_unique`. -/
+theorem checkerOracle_fixedPoint (decls : TyDecls) : FixedPoint decls (checkerOracle decls) := by
+  intro name body hb
+  funext v allocated
+  have hc : checkerOracle decls name v allocated = Val.hasTyIn decls [name] v body allocated := by
+    unfold checkerOracle
+    rw [hb]
+  rw [hc]
+  apply Bool.eq_iff_iff.mpr
+  rw [← memberIn_iff_cata]
+  exact ⟨memberIn_of_hasTyIn [name] v body,
+    fun h => (hasTyIn_absorb hb [] v body (hasTyIn_of_memberIn h)).elim id id⟩
+
+/-- **Two fixed points of a guarded table agree** at every declared name. Placement: concept
+`store-typing`, R3, the step of the claim `guarded-fixed-point-unique`. Route: strong induction
+on the value's size. At one value, induct along the table's head reach, which guardedness makes
+well founded (`TyDecls.reaches`, `TyDecls.guarded`): a declared reference among a body's union
+members reads the two oracles at the same value and a name nearer the value constructors, and
+every other member asks its questions at smaller values (`cata_declAlg_step`,
+`Val.sizeOf_obligation`). Consumer: `guarded_fixedPoint_unique`. On an unguarded table it fails:
+at `A = A` every oracle is a fixed point, the constant `true` among them (the battery's control). -/
+@[semantics "store-typing" (requirement := R3)]
+proof_goal fixedPoint_agree {decls : TyDecls} (hg : decls.guarded = true) {o o' : String → Adm}
+    (ho : FixedPoint decls o) (ho' : FixedPoint decls o') {name : String} {body : Ty}
+    (hb : decls.body? name = some body) : o name = o' name
+
 /-- **On a guarded table the fixed point is unique** (claim `guarded-fixed-point-unique`): every
 fixed point admits exactly the members of each body. So the least fixed point is no choice
-there: it is the greatest one too. Placement: concept `store-typing`, R3. Route: strong
-induction on the value's size, then on the names in the order of the table's head reach; a
-guarded table has no head cycle, so each unfolding at one value reaches a value constructor.
-Consumer: the formal note's argument that guardedness fixes the meaning; the table's admission
-(the wiring slice). On an unguarded table it fails: `A = A` has the constant oracle `true` as a
-fixed point and no member (`Test/Program/TyDecls.lean`). -/
+there: it is the greatest one too. Proved modulo its part `fixedPoint_agree`. Consumer: the
+formal note's argument that guardedness fixes the meaning, and the table's admission. -/
 @[semantics "store-typing" (requirement := R3)]
-proof_goal guarded_fixedPoint_unique {decls : TyDecls} (hg : decls.guarded = true)
+theorem guarded_fixedPoint_unique {decls : TyDecls} (hg : decls.guarded = true)
     {o : String → Adm} (ho : FixedPoint decls o) {name : String} {body : Ty}
     (hb : decls.body? name = some body) (v : Val) (allocated : List String) :
-    o name v allocated = true ↔ MemberIn decls allocated v body
+    o name v allocated = true ↔ MemberIn decls allocated v body := by
+  rw [fixedPoint_agree hg ho (checkerOracle_fixedPoint decls) hb,
+    checkerOracle_fixedPoint decls name body hb]
+  exact memberIn_iff_cata.symm
 
 end Effect4.Program
