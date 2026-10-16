@@ -292,7 +292,8 @@ def row : NativeAtom → AtomRow
   | .lt => { name := "lt", arity := some 2, constGeneric := false,
              prelude := "(a: number, b: number): boolean => a < b" }
   | .eq => { name := "eq", arity := some 2, constGeneric := false,
-             prelude := "(a: number | string, b: number | string): boolean => a === b" }
+             prelude := "(a: number | string | boolean, b: number | string | boolean): boolean => \
+                         a === b" }
   | .pair => { name := "pair", arity := some 2, constGeneric := true,
                prelude := "(() => {\n  \
           function build<const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>]\n  \
@@ -562,6 +563,8 @@ def eval : NativeAtom → List Val → Option Val
   | .listDrop, [xs, Val.nat count] => (Val.asList? xs).map fun vs => Val.list (vs.drop count)
   | .sameHandle, [Store.Val.handle kind index, Store.Val.handle kind' index'] =>
     if kind = kind' then some (Val.bool (index = index')) else none
+  -- equality at two Booleans (DI-35: `===` compares them faithfully)
+  | .eq, [Val.bool a, Val.bool b] => some (Val.bool (a == b))
   -- the integer rows (`Machine/Integers.lean`): the widened order and test on every other pair
   -- of integer images, and the two new rows
   | .lt, [x, y] => intLt x y

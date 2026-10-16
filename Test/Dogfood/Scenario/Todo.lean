@@ -199,8 +199,11 @@ def seen (main : Src NativeOp) (moves : List Move) (row : String) : Option (Opti
 The application declares a protocol of two rows (`protocols`, the claims packet's slice
 PROTOCOL). Each line is a finite evaluation or a control (decisions row 301). -/
 
--- control: the atom `eq` has no type at two Booleans, and it has one at two strings
+-- reader: the atom `eq` has a type at two Booleans (DI-35) and at two strings; control: none at a
+-- Boolean and a string
 #guard termTy (nativeSignature application.table) [.bool, .bool]
+    (.app "eq" (termsOfList [.var 0, .var 1])) = some .bool
+#guard termTy (nativeSignature application.table) [.bool, .string]
     (.app "eq" (termsOfList [.var 0, .var 1])) = none
 #guard termTy (nativeSignature application.table) [.string, .string]
     (.app "eq" (termsOfList [.var 0, .var 1])) = some .bool

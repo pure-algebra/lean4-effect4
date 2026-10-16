@@ -36,8 +36,8 @@ Refusals of the value typing, each a `false` of `Val.hasTy` and not a silent one
 The former refusal `TYPED-FB-INT` is retired, the ID kept: `.int` is inhabited by the two
 integer frames, `Val.nat` and `Store.Val.negInt` (`intImage`), admission carries it since
 decisions row 317, and the rows `plus`, `minus`, `lt` and `eq` compute on it since row 319.
-`Ty.render` still sends `nat`, `int` and `number` to `number`; the printer's identification is
-not the typing's (`E4-TYPED-CE-002`).
+`Ty.render` spells the three apart (`number`, `Int`, `Num`, decisions row 399 (2)); the inclusion
+of `nat` in `int` is the typing's, not the printer's (`E4-TYPED-CE-002`).
 
 Since the host rows slice (2026-09-08, DB-15) `.string` is inhabited by the carrier's `str`
 frame and `.option t` by `none` and a `some` of a `t`: strings are machine values on the
@@ -1040,13 +1040,17 @@ theorem sound (a : NativeAtom) : Sound a := by
     refine sound_of_alts rfl ?_
     intro params answer hmem vs hfit
     simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hmem
-    obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
+    obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
     · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
       obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
         obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> exact ⟨_, rfl, rfl⟩
     · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
       obtain ⟨s, rfl⟩ := Val.hasTy_string_inv hx
       obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hy
+      exact ⟨_, rfl, rfl⟩
+    · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv hx
+      obtain ⟨c, rfl⟩ := Val.hasTy_bool_inv hy
       exact ⟨_, rfl, rfl⟩
   | pair =>
     refine sound_of_poly rfl fun σ vs hfit => ?_

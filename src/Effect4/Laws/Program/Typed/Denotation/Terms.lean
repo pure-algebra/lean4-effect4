@@ -606,13 +606,17 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
     · next hguard =>
       have hp := hfit.sub hguard.1 hguard.2
       simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hmem
-      obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
+      obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
       · obtain ⟨x, y, rfl, hx, hy⟩ := hp.pair_inv
         obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
           obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> rfl
       · obtain ⟨x, y, rfl, hx, hy⟩ := hp.pair_inv
         obtain ⟨s, rfl⟩ := fits_string_inv hx
         obtain ⟨t, rfl⟩ := fits_string_inv hy
+        rfl
+      · obtain ⟨x, y, rfl, hx, hy⟩ := hp.pair_inv
+        obtain ⟨a, rfl⟩ := fits_bool_inv hx
+        obtain ⟨b, rfl⟩ := fits_bool_inv hy
         rfl
     · exact nomatch heq
   | pair =>

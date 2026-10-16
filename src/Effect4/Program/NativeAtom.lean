@@ -223,8 +223,10 @@ def spec : NativeAtom → Spec
               cite := "`\"add\", [nat a, nat b] => nat (a + b)`" }
   | .lt => { scheme := .mono [.int, .int] .bool,
              cite := "`\"lt\", [x, y] => bool (x < y)` on two integers (decisions row 121)." }
-  | .eq => { scheme := .alts [([.int, .int], .bool), ([.string, .string], .bool)],
-             cite := "NativeAtom.eq on two integers or two strings (DI-09, decisions row 121)." }
+  | .eq => { scheme := .alts [([.int, .int], .bool), ([.string, .string], .bool),
+                ([.bool, .bool], .bool)],
+             cite := "NativeAtom.eq on two integers, two strings or two Booleans (DI-09, DI-35, \
+                      decisions row 121): each a type where `===` compares faithfully." }
   | .pair =>
       { scheme := .poly [.var 0, .var 1] (.prod (.var 0) (.var 1)),
         cite := "`\"pair\", [a, b] => Val.tuple [a, b]` — a two-element tuple, the wire's JSON \

@@ -3351,13 +3351,18 @@ theorem atomFits (a : NativeAtom) : AtomFits a := by
     refine atomFits_of_alts rfl ?_
     intro params answer hmem w vs v hfit hv
     simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hmem
-    obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
+    obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
     · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
       obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
         obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> cases hv <;> trivial
     · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
       obtain ⟨s, rfl⟩ := fits_string_inv hx
       obtain ⟨t, rfl⟩ := fits_string_inv hy
+      cases hv
+      trivial
+    · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨b, rfl⟩ := fits_bool_inv hx
+      obtain ⟨c, rfl⟩ := fits_bool_inv hy
       cases hv
       trivial
   | pair =>

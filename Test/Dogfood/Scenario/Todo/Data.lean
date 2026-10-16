@@ -77,12 +77,6 @@ def noTodo : Term :=
   .record Todo.fields ["id", "title", "done"]
     (termsOfList [.lit (.nat 0), .lit (.str ""), .lit (.bool false)])
 
-/-- Two Booleans are the same. The atom `eq` has no type at two Booleans (a control in section
-6), so the term is written with `and`, `or` and `not`. -/
-def sameFlag (a b : Term) : Term :=
-  .app "or" (termsOfList [.app "and" (termsOfList [a, b]),
-    .app "and" (termsOfList [.app "not" (termsOfList [a]), .app "not" (termsOfList [b])])])
-
 /-- `setDone(id, done)`: an answered to-do has the id and the flag of the request. -/
 def setDoneProtocol : RowProtocol :=
   { post := .app "or"
@@ -92,8 +86,9 @@ def setDoneProtocol : RowProtocol :=
             [.app "eq" (termsOfList
               [.field .required (.app "getOrElse" (termsOfList [.var 1, noTodo])) "id",
                .app "fst" (termsOfList [.var 0])]),
-             sameFlag (.field .required (.app "getOrElse" (termsOfList [.var 1, noTodo])) "done")
-               (.app "snd" (termsOfList [.var 0]))])]) }
+             .app "eq" (termsOfList
+              [.field .required (.app "getOrElse" (termsOfList [.var 1, noTodo])) "done",
+               .app "snd" (termsOfList [.var 0])])])]) }
 
 /-- The declared protocols of the repository's rows, by spelling. -/
 def protocols : RowProtocols :=

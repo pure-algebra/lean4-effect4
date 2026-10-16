@@ -400,10 +400,10 @@ theorem nativeAtom_handles (atom : String) (vs : List Val) (v : Val)
       exact List.nil_subset _
     · cases h
   -- the four integer rows answer a value that holds no handle (decisions row 319)
-  case h_47 => rw [intLt_handles h]; exact List.nil_subset _
-  case h_48 => rw [intEq_handles h]; exact List.nil_subset _
-  case h_49 => rw [intAdd_handles h]; exact List.nil_subset _
-  case h_50 => rw [intSub_handles h]; exact List.nil_subset _
+  case h_48 => rw [intLt_handles h]; exact List.nil_subset _
+  case h_49 => rw [intEq_handles h]; exact List.nil_subset _
+  case h_50 => rw [intAdd_handles h]; exact List.nil_subset _
+  case h_51 => rw [intSub_handles h]; exact List.nil_subset _
   all_goals cases h
   -- the list laws `keys_norm` gains only in `Laws/Machine/Handles.lean`, above this module
   all_goals sub_tac norm [Val.tuple, Store.Val.handles, Store.Val.handlesList, List.flatMap_cons,
