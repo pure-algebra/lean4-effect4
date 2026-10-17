@@ -154,6 +154,13 @@ val replays : app -> program -> trace -> bool option
 
 (** {1 JSON} *)
 
+val format_version : int
+(** The version of the carriers' formats: the shape documents of [Effect4.Run.Kit]
+    ([admitShape] to [valShape], src/Effect4/Run/Kit.lean) that {!Json} prints and reads by,
+    pinned by digest in engine/test/kit/test_shapes.ml, which reads this number. The rule: a
+    change to any of those shapes moves this number up by one and the test's pins with it, in
+    one commit. *)
+
 module Json : sig
   type t = Eff_json_text.t
 

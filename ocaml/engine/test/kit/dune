@@ -9,3 +9,11 @@
  (modules test_kit)
  (deps verdicts.txt)
  (libraries effect4_kit effect4_eff effect4_gen))
+
+; the carriers' shapes, pinned: a digest of each shape document of Effect4.Run.Kit against a
+; pin taken at Kit.format_version, with the red controls that a changed shape misses its pin.
+
+(test
+ (name test_shapes)
+ (modules test_shapes)
+ (libraries effect4_kit effect4_gen effect4_bytes))
