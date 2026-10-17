@@ -3,11 +3,16 @@
 ; `api_gen.ml` (Effect4.Api.run / Effect4.Api.replay and their whole closure, run by
 ; api_check, with the machine's own functions as coverage roots) is GENERATED; its header
 ; carries the regenerating command, and `make gen-lcnf` runs it (ocaml/gen/roots.json).
+; Its join points are `let[@local always]`, and `-w @55` makes warning 55 an error in every
+; profile: ocamlopt refuses a join point it cannot compile to a static jump. Every stanza that
+; compiles the route's output carries the flag (engine/, and engine/test/ todo, ctors, modeled
+; and rocq).
 
 (library
  (name effect4_gen)
  (public_name effect4_gen)
  (modules api_gen)
+ (flags (:standard -w @55))
  (libraries effect4_clock effect4_eff)
 )
 
@@ -21,3 +26,20 @@
  (alias runtest)
  (action
   (run %{exe:api_check.exe})))
+
+; The flag's red control: join_escape.ml's [@local always] function escapes, so it is no static
+; jump. The rule compiles it as the native build does, with ocamlopt and -w @55 (ocamlc -g never
+; runs the check), and `dune test` passes only on the refusal: exit 2 and the message of
+; join_escape.expected. The sandbox drops the .cmi that ocamlopt writes before it refuses.
+(rule
+ (targets join_escape.stderr)
+ (deps (sandbox always))
+ (action
+  (with-stderr-to %{targets}
+   (with-accepted-exit-codes 2
+    (run %{ocamlopt} -color never -w @55 -c %{dep:join_escape.ml})))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff join_escape.expected join_escape.stderr)))

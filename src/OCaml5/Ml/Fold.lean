@@ -491,6 +491,7 @@ structure ExprAlgebra (R : ExprFam → Type u) where
   expr_binop : (String) → R .expr → R .expr → R .expr
   expr_fn : (List String) → R .expr → R .expr
   expr_letIn : (String) → R .expr → R .expr → R .expr
+  expr_letAttr : (String) → (String) → R .expr → R .expr → R .expr
   expr_letRec : (String) → (List String) → R .expr → R .expr → R .expr
   expr_ifThen : R .expr → R .expr → R .expr → R .expr
   expr_matchE : R .expr → List (OCaml5.Ml.Pat × R .expr) → R .expr
@@ -523,6 +524,7 @@ def cata_expr {R : ExprFam → Type u} (alg : ExprAlgebra R)
   | .binop a0 a1 a2 => alg.expr_binop a0 (cata_expr alg a1) (cata_expr alg a2)
   | .fn a0 a1 => alg.expr_fn a0 (cata_expr alg a1)
   | .letIn a0 a1 a2 => alg.expr_letIn a0 (cata_expr alg a1) (cata_expr alg a2)
+  | .letAttr a0 a1 a2 a3 => alg.expr_letAttr a0 a1 (cata_expr alg a2) (cata_expr alg a3)
   | .letRec a0 a1 a2 a3 => alg.expr_letRec a0 a1 (cata_expr alg a2) (cata_expr alg a3)
   | .ifThen a0 a1 a2 => alg.expr_ifThen (cata_expr alg a0) (cata_expr alg a1) (cata_expr alg a2)
   | .matchE a0 a1 => alg.expr_matchE (cata_expr alg a0) (cata_pos_list_prod_pat_expr alg a1)
@@ -685,6 +687,11 @@ theorem cata_pos_list_prod_string_expr_eq {R : ExprFam → Type u}
     cata_expr alg (.letIn a0 a1 a2) =
       alg.expr_letIn a0 (cata_expr alg a1) (cata_expr alg a2) := rfl
 
+@[simp] theorem cata_expr_letAttr {R : ExprFam → Type u}
+    (alg : ExprAlgebra R) (a0 : String) (a1 : String) (a2 : OCaml5.Ml.Expr) (a3 : OCaml5.Ml.Expr) :
+    cata_expr alg (.letAttr a0 a1 a2 a3) =
+      alg.expr_letAttr a0 a1 (cata_expr alg a2) (cata_expr alg a3) := rfl
+
 @[simp] theorem cata_expr_letRec {R : ExprFam → Type u}
     (alg : ExprAlgebra R) (a0 : String) (a1 : List String) (a2 : OCaml5.Ml.Expr) (a3 : OCaml5.Ml.Expr) :
     cata_expr alg (.letRec a0 a1 a2 a3) =
@@ -794,6 +801,8 @@ structure ExprHom {R : ExprFam → Type u} (alg : ExprAlgebra R) where
     alg.expr_fn a0 (f_expr a1)
   h_expr_letIn : ∀ a0 a1 a2, f_expr (.letIn a0 a1 a2) =
     alg.expr_letIn a0 (f_expr a1) (f_expr a2)
+  h_expr_letAttr : ∀ a0 a1 a2 a3, f_expr (.letAttr a0 a1 a2 a3) =
+    alg.expr_letAttr a0 a1 (f_expr a2) (f_expr a3)
   h_expr_letRec : ∀ a0 a1 a2 a3, f_expr (.letRec a0 a1 a2 a3) =
     alg.expr_letRec a0 a1 (f_expr a2) (f_expr a3)
   h_expr_ifThen : ∀ a0 a1 a2, f_expr (.ifThen a0 a1 a2) =
@@ -854,6 +863,8 @@ theorem hom_eq_cata_expr {R : ExprFam → Type u}
     simp only [cata_expr, hom.h_expr_fn a0 a1, hom_eq_cata_expr hom a1]
   | .letIn a0 a1 a2 =>
     simp only [cata_expr, hom.h_expr_letIn a0 a1 a2, hom_eq_cata_expr hom a1, hom_eq_cata_expr hom a2]
+  | .letAttr a0 a1 a2 a3 =>
+    simp only [cata_expr, hom.h_expr_letAttr a0 a1 a2 a3, hom_eq_cata_expr hom a2, hom_eq_cata_expr hom a3]
   | .letRec a0 a1 a2 a3 =>
     simp only [cata_expr, hom.h_expr_letRec a0 a1 a2 a3, hom_eq_cata_expr hom a2, hom_eq_cata_expr hom a3]
   | .ifThen a0 a1 a2 =>
@@ -950,6 +961,7 @@ def ExprAlgebra.id : ExprAlgebra (ExprSelfCarrier) where
   expr_binop a0 a1 a2 := OCaml5.Ml.Expr.binop a0 a1 a2
   expr_fn a0 a1 := OCaml5.Ml.Expr.fn a0 a1
   expr_letIn a0 a1 a2 := OCaml5.Ml.Expr.letIn a0 a1 a2
+  expr_letAttr a0 a1 a2 a3 := OCaml5.Ml.Expr.letAttr a0 a1 a2 a3
   expr_letRec a0 a1 a2 a3 := OCaml5.Ml.Expr.letRec a0 a1 a2 a3
   expr_ifThen a0 a1 a2 := OCaml5.Ml.Expr.ifThen a0 a1 a2
   expr_matchE a0 a1 := OCaml5.Ml.Expr.matchE a0 a1
@@ -1003,6 +1015,9 @@ mutual
     rfl
   | .letIn a0 a1 a2 =>
     simp only [cata_expr, cata_id_expr a1, cata_id_expr a2]
+    rfl
+  | .letAttr a0 a1 a2 a3 =>
+    simp only [cata_expr, cata_id_expr a2, cata_id_expr a3]
     rfl
   | .letRec a0 a1 a2 a3 =>
     simp only [cata_expr, cata_id_expr a2, cata_id_expr a3]
@@ -1120,6 +1135,8 @@ def foldMap_expr {M : Type u} (unit : M) (op : M → M → M) (node : OCaml5.Ml.
     op (f_expr (.fn a0 a1)) ((foldMap_expr unit op a1 f_expr))
   | .letIn a0 a1 a2 =>
     op (f_expr (.letIn a0 a1 a2)) (op (foldMap_expr unit op a1 f_expr) ((foldMap_expr unit op a2 f_expr)))
+  | .letAttr a0 a1 a2 a3 =>
+    op (f_expr (.letAttr a0 a1 a2 a3)) (op (foldMap_expr unit op a2 f_expr) ((foldMap_expr unit op a3 f_expr)))
   | .letRec a0 a1 a2 a3 =>
     op (f_expr (.letRec a0 a1 a2 a3)) (op (foldMap_expr unit op a2 f_expr) ((foldMap_expr unit op a3 f_expr)))
   | .ifThen a0 a1 a2 =>

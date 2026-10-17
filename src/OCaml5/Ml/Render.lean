@@ -172,6 +172,10 @@ def renderExprAlg : ExprAlgebra Rendered where
     paren (0 < need) ("fun " ++ String.intercalate " " ps ++ " -> " ++ b ind 0)
   expr_letIn n v b := fun ind need =>
     paren (0 < need) ("let " ++ n ++ " = " ++ v ind 0 ++ " in\n" ++ indentOf ind ++ b ind 0)
+  -- `letIn`'s bytes with the attribute after the keyword: drop `[@…]` and the two agree
+  expr_letAttr a n v b := fun ind need =>
+    paren (0 < need)
+      ("let[@" ++ a ++ "] " ++ n ++ " = " ++ v ind 0 ++ " in\n" ++ indentOf ind ++ b ind 0)
   expr_letRec f ps v b := fun ind need =>
     paren (0 < need)
       ("let rec " ++ f ++ (if ps.isEmpty then "" else " " ++ String.intercalate " " ps) ++ " = "
@@ -351,6 +355,9 @@ this file is supposed to produce. -/
 #guard renderExpr 0 (.appL (.var "f") [(.lbl "x", .int 1), (.nolabel, .unit)]) == "f ~x:1 ()"
 #guard renderExpr 0 (.letRec "go" ["n"] (.var "n") (.app (.var "go") [.int 1]))
   == "let rec go n = n in\ngo 1"
+-- a join point: `letIn`'s bytes, with the attribute after `let`
+#guard renderExpr 0 (.letAttr "local always" "j" (.fn ["y"] (.var "y")) (.app (.var "j") [.int 1]))
+  == "let[@local always] j = fun y -> y in\nj 1"
 
 -- Patterns.
 #guard renderPat (.cons (.var "hd") (.var "tl")) == "hd :: tl"

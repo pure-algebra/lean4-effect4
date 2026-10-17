@@ -46,6 +46,13 @@ datatypes), `OCaml5.Lcnf.Clock` (the clock's constructors), `OCaml5.Ml.Syntax`, 
   leaves it in place only where the form evaluates it exactly once, and binds it first
   anywhere else. The fixture that tested callback observations (`lcnf-idioms`) was retired
   with the generator harness on 2026-09-19.
+* **Every join point is a static jump, or the build fails.** A join point, and nothing else, is
+  marked `[@local always]` (`localFun`). Every dune stanza that compiles this output makes
+  warning 55 an error (`-w @55`), so `ocamlopt` refuses a join point it cannot compile to a
+  static jump, where it would otherwise allocate a closure — *tested* by `dune build` of
+  `ocaml/` and by the red control `ocaml/gen/join_escape.ml`, which `dune test gen` passes only
+  when `ocamlopt` refuses it. `ocamlc -g` skips the pass that checks it
+  (`Simplif.simplify_lambda`, `lambda/simplif.ml` of OCaml 5.1.1), so the native build holds it.
 * **Erasure is explicit.** A `◾` argument to a constructor or a builtin is dropped (it is a
   type or a proof, and `Types` dropped the field); a `◾` argument anywhere else is `()`, so
   the arity of a call is always the arity LCNF wrote — *by construction*.
@@ -70,7 +77,8 @@ datatypes), `OCaml5.Lcnf.Clock` (the clock's constructors), `OCaml5.Ml.Syntax`, 
 | --- | --- |
 | `Decl` params `(x : T)…`, type `T₁ → … → R` | `let [rec] f (x : T)… : R =`, with `◾`/`lcAny` as `_` and an all-`_` annotation omitted |
 | `let x := v; k` | `let x = v in k` |
-| `fun f ps := b; k` / `jp j ps := b; k` | `let f = fun ps -> b in k`; `let rec` when `b` mentions `f`; no params → `fun () ->` |
+| `fun f ps := b; k` | `let f = fun ps -> b in k`; `let rec` when `b` mentions `f`; no params → `fun () ->` |
+| `jp j ps := b; k` | `let[@local always] j = fun ps -> b in k`; no params → `fun () ->` |
 | `jmp j args` | `j args`; no args → `j ()` |
 | `cases x : T` on `Bool` | `if x then … else …` |
 | `cases x : T`, other | `match (x : (_,…) t) with` (annotated with the type, so OCaml's record disambiguation never guesses) |
@@ -923,7 +931,7 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
     | .var y => return if x == y then v else .letIn x v body
     | _ => return .letIn x v body
   | .fun decl k => localFun declName decl k
-  | .jp decl k => localFun declName decl k
+  | .jp decl k => localFun declName decl k (join := true)
   | .jmp j args =>
     let jv := Ml.Expr.var (← nameOf j)
     if args.isEmpty then return .app jv [.unit]
@@ -988,8 +996,14 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
         arms := arms ++ [(.wild, .assertE (.bool false))]
       return .matchE scrut arms
 
-/-- A local function or join point, then the rest. -/
-partial def localFun (declName : Name) (decl : FunDecl .pure) (k : Code .pure) : TM Ml.Expr := do
+/-- A local function or join point, then the rest. A join point (`join`) is
+`let[@local always] j = fun ps -> b in k`: LCNF keeps it out of its own body and jumps to it in
+tail position with every argument (`Lean.Compiler.LCNF.Check.Pure.check`,
+`Lean/Compiler/LCNF/Check.lean`), which is what OCaml compiles to a static jump. The attribute
+makes warning 55 refuse one that is not. A join point is never `let rec`: one that named itself
+would be `unbound-value` (`Ml.checkModule`). -/
+partial def localFun (declName : Name) (decl : FunDecl .pure) (k : Code .pure)
+    (join : Bool := false) : TM Ml.Expr := do
   let f ← bindVar decl.fvarId decl.binderName
   let ps ← decl.params.toList.mapM fun p => bindVar p.fvarId p.binderName
   modify fun s => { s with localParams := s.localParams.insert decl.fvarId (decl.params.map (·.fvarId)) }
@@ -999,6 +1013,7 @@ partial def localFun (declName : Name) (decl : FunDecl .pure) (k : Code .pure) :
   let recursive := decl.value.collectUsed.contains decl.fvarId
   let body ← code declName decl.value
   let rest ← code declName k
+  if join then return .letAttr "local always" f (.fn ps body) rest
   if recursive then return .letRec f ps body rest
   return .letIn f (.fn ps body) rest
 

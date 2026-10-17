@@ -193,6 +193,7 @@ def usesAlg (binding : Bool) : Ml.ExprAlgebra (fun _ => List String → Option U
       return { c.deferred with binders := ps ++ c.binders }
     else none
   -- outside both fragments
+  expr_letAttr _ _ _ _ := fun _ => none
   expr_letRec _ _ _ _ := fun _ => none
   expr_matchE _ _ := fun _ => none
   expr_record _ := fun _ => none

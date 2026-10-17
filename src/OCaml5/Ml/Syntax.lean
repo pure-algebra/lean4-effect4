@@ -13,7 +13,8 @@ decisions row 393): `pack`, `SigItem` with `Decl.moduleTypeD`, and `TypeDecl.isP
 no producer builds is not here otherwise. The cut of 2026-10-15 (LC-3 of
 `docs/research/2026-10-14-lowering-cleanup/prompt.md`) measured each removal by a build: the
 avatar's surface of 55 expression constructors became 22. The `eff/` emitter added 6, and verbatim
-expression text went once the prelude's three primitives were structured.
+expression text went once the prelude's three primitives were structured. The join point's
+attributed `let` (`letAttr`) came on 2026-10-17, slice 0.2 of the OCaml estate refactor.
 
 Precedent: `TypeScript.Syntax` in the estate's TypeScript target package — syntax in one module,
 rendering in another. The traversals of the four sorts (`Ty`, `Pat`, `Expr`, `Decl`) are algebras
@@ -138,6 +139,10 @@ inductive Expr where
   | fn (params : List String) (body : Expr)
   /-- `let x = v in body` (§11.7, "let … in"). -/
   | letIn (name : String) (value body : Expr)
+  /-- `let[@attr] x = v in body` (§11.13): `letIn` with an attribute on its binding, which the
+  manual reads as `let x = v [@@attr] in body`. The attribute is text, as `Decl.floatingAttrD`'s
+  is. The LCNF route marks each join point `local always` (`OCaml5.Lcnf.localFun`). -/
+  | letAttr (attr : String) (name : String) (value body : Expr)
   /-- A local `let rec f ps = v in body` (§11.7): one recursive local function. -/
   | letRec (name : String) (params : List String) (value body : Expr)
   /-- `if c then t else e` (§11.7). -/
