@@ -240,7 +240,7 @@ Module: `Effect4.Laws.Program.Typed.Denotation.Terms` · Literature: Ahmed2004, 
 
 The list fold with two binders, the accumulator and the element: its scope, evaluation, failure, weakening and typing rules; a fold the checker types answers a member of its type over values that fit, in a fixed world; a term reads back from its printed image; one Ref.modify whose term the checker types is one store step that answers B and stores A (decisions row 228)
 
-The list fold's rules hold (the claim `fold-typed-atomic-update`), at every signature. Each field is one theorem: the two definitional equations, the builder's scope law (`Authoring.fold_scoped`), `foldlM_refuses`, `evalTerm_weaken`, `termTy_weaken`, `termTy_fold_inv`, `fold_fits`, the fold's cases of `evalTerm_progress` and of `evalTerm_fitsAll`, `refModify_typed_step`, and the fold's cases of `readTerm_printTerm` and `readTerm_exact`.
+The list fold's rules hold (the claim `fold-typed-atomic-update`), at every signature. Each field is one theorem: the two definitional equations, the builder's scope law (`Authoring.fold_scoped`), `foldlM_refuses`, `evalTerm_weaken`, `termTy_weaken`, `termTy_fold_invIn`, `fold_fits`, the fold's cases of `evalTerm_progress` and of `evalTerm_fitsAll`, `refModify_typed_step`, and the fold's cases of `readTerm_printTerm` and `readTerm_exact`.
 
 It establishes nothing about a module that uses the fold and no agreement with a target. Its consumer is the Queue's service pass (decisions row 228), on the M5 and M6 path through `syncRow_typed`.
 
@@ -248,7 +248,7 @@ Module: `Effect4.Laws.Program.Typed.ListFold` · Literature: Ahmed2004, audit P1
 
 ```lean
 ∀ (sig : Effect4.Program.Signature Effect4.Program.NativeOp),
-  Eq sig.types List.nil → Effect4.Program.Typed.ListFoldRules sig
+  Effect4.Program.Typed.ListFoldRules sig
 ```
 
 ### handle-identity-laws
@@ -5656,7 +5656,7 @@ Module: `Effect4.Laws.Library.Ref.Cache`
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 353; inherited (provisional): 2552; unplaced: 0.
+Tagged: 353; inherited (provisional): 2557; unplaced: 0.
 
 ## Plan
 
