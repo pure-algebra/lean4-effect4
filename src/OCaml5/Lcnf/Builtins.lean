@@ -19,8 +19,8 @@ primitive tables (`sourcePrims`, `targetArities`, `targetScans`) are computed fr
 
 **Depends on.** `OCaml5.Ml.Syntax` (a form is OCaml syntax), `OCaml5.Ml.Render` (a form's
 spelling in a report), `OCaml5.Lcnf.Externs` (`stripRedArg`), `OCaml5.Lcnf.TypeRows` (the
-contract's class, `Fidelity`, which the type rows share), `Conform.Lcnf.Semantics` (the source
-evaluator's primitives, `Prim`).
+contract's class, `Fidelity`, and the receipt under the exact spelling, `Receipt` and `Crossing`,
+which the type rows share), `Conform.Lcnf.Semantics` (the source evaluator's primitives, `Prim`).
 
 **Properties.**
 * **One owner.** A constant has a row in `builtins` or the route translates it. `builtin?`,
@@ -87,56 +87,6 @@ inductive LeanRuntime where
 def LeanRuntime.symbol? : LeanRuntime → Option String
   | .body => none
   | .extern symbol _ => some symbol
-
-/-- Where a lowered row refuses: the crossing whose name its refusal carries (decision D-2's
-"exact or refuse"; `docs/research/2026-10-17-ocaml-estate-review/README.md`, D9). -/
-inductive Crossing where
-  /-- A natural literal of the program, against the program's numeric profile (DI-56). -/
-  | literal
-  /-- A host's answer at ingress (`E4_engine` EN9). -/
-  | reply
-  /-- An arithmetic result outside the program's numeric profile (DI-56) or the target's
-  capacity. -/
-  | arithmetic
-  /-- A clock reading taken as a natural (`Effect4.ClockMillis.toNat`). -/
-  | clock
-  /-- A length, an index or an index-sized word beyond the target's index capacity. -/
-  | index
-  /-- The program's own `panic`, where Lean logs and continues with a default value. -/
-  | panic
-  deriving DecidableEq, Repr, Inhabited
-
-namespace Crossing
-protected def toString : Crossing → String
-  | .literal => "literal"
-  | .reply => "reply"
-  | .arithmetic => "arithmetic"
-  | .clock => "clock"
-  | .index => "index"
-  | .panic => "panic"
-instance : ToString Crossing := ⟨Crossing.toString⟩
-end Crossing
-
-/-- A row's receipt under the exact spelling of slice 2.2b of the refactor plan: `Nat` and `Int`
-spelled `Z.t`, the fixed-width words modulo their width, and lengths and indexes checked against
-the target's index capacity. Its class, the domain on which the row is exact there, and the crossing
-at which it refuses outside that domain. A census refuses a receipt of class `approximate` or
-`unsound` (`receiptProblems`). -/
-structure Receipt where
-  fidelity : Fidelity
-  /-- The domain under the exact spelling (`""` when the class is `exact`). -/
-  domain : String
-  /-- The crossing of the refusal outside the domain; `none` for an exact row. -/
-  crossing : Option Crossing
-  deriving Inhabited
-
-namespace Receipt
-/-- Exact on the whole Lean domain, under the exact spelling. -/
-def exact : Receipt := { fidelity := .exact, domain := "", crossing := none }
-/-- Exact on `domain`, and refusing outside it at `crossing`. -/
-def refuses (crossing : Crossing) (domain : String) : Receipt :=
-  { fidelity := .domain, domain, crossing := some crossing }
-end Receipt
 
 /-- One row of the table. No field of the contract or of a column has a default. -/
 structure Builtin where
@@ -796,11 +746,11 @@ def builtins : List Builtin := [
     "the proof that the index is in range is erased; `Lcnf_array.get_exn` answers in range."
     (cost := "O(log (i / 256)) where Lean's is O(1).")
     (receipt := .exact),
-  row `Array.uset (.extern "lean_array_uset" none) (.library "Lcnf_array.set_exn") .exact "" []
+  row `Array.uset (.extern "lean_array_uset" (some .arraySet)) (.library "Lcnf_array.set_exn") .exact "" []
     "Lean's `Array.uset a i v h` replaces the element at `i`, which `h` proves in range. `Lcnf_array.set_exn` answers a new vector and copies the one chunk it changes, so the argument and every version that shares that chunk keep their elements, as Lean's values do."
     (cost := "O(log (n / 256) + 256) per update, where Lean's is O(1) on an array no other reference holds.")
     (receipt := .exact),
-  row `Array.replicate (.extern "lean_mk_array" none) (.library "Lcnf_array.replicate") .exact "" []
+  row `Array.replicate (.extern "lean_mk_array" (some .arrayReplicate)) (.library "Lcnf_array.replicate") .exact "" []
     "`n` copies of `v`; the full chunks share one array that nothing writes."
     (receipt := .refuses .index "n is at most the target's index capacity"),
   row `Option.isSome .body (.library "Option.is_some") .exact "" []
@@ -1085,14 +1035,13 @@ def problems : List String := problemsOf builtins support targetLibrary
 -- No name of the runtime library is one a binder must avoid: each is qualified.
 #guard (support.map (·.name) ++ ["Lcnf_string.utf8_bytes"]).all (!protectedNames.contains ·)
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
--- row but thirteen (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
+-- row but eleven (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
 -- session's closure needs; `String.ofByteArray`, the inverse of the bytes it has no primitive
--- for; `USize.add`; `Array.uset` and `Array.replicate`, which its lanes do not reach; `panicCore`),
--- and the target evaluator scans with two functions.
-#guard sourcePrims.length == 59
+-- for; `USize.add`; `panicCore`), and the target evaluator scans with two functions.
+#guard sourcePrims.length == 61
 #guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) ==
   [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `Int.neg, `String.ofList, `String.ofByteArray,
-    `USize.repr, `System.Platform.getNumBits, `USize.add, `Array.uset, `Array.replicate, `panicCore]
+    `USize.repr, `System.Platform.getNumBits, `USize.add, `panicCore]
 #guard targetScans.toList.length == 2 && targetScans["List.exists"]? == some true
 #guard targetArities["Option.value~default"]? == some 2 && (targetArities["List.map"]?).isNone
 
@@ -1157,19 +1106,9 @@ crossing or no domain, and an exact receipt that names a crossing. Slice 2.2b of
 makes the forms meet these receipts; until then a row's `fidelity` and `domain` describe the
 63-bit spelling it has. -/
 
-/-- Everything wrong with the receipts of `rows`. -/
+/-- Everything wrong with the receipts of `rows` (`Receipt.problems`, by row). -/
 def receiptProblems (rows : List Builtin) : List String :=
-  rows.flatMap fun b =>
-    let r := b.receipt
-    let cls : List String := match r.fidelity with
-      | .approximate | .unsound => [s!"row {b.lean}: class {r.fidelity} under the exact spelling"]
-      | .exact | .domain => []
-    let crossing : List String := match r.fidelity, r.crossing with
-      | .exact, some c => [s!"row {b.lean}: an exact receipt names the crossing {c}"]
-      | .domain, none => [s!"row {b.lean}: a refusing receipt names no crossing"]
-      | _, _ => []
-    cls ++ crossing ++
-      (Fidelity.problems r.fidelity r.domain).map fun p => s!"row {b.lean}: receipt: {p}"
+  rows.flatMap fun b => b.receipt.problems.map fun p => s!"row {b.lean}: {p}"
 
 #guard (receiptProblems builtins).isEmpty
 
