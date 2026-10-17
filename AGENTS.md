@@ -36,12 +36,16 @@ The Flow route of earlier work is at `606918e` in main's history and on branch
 `archive/flow-route`. Do not re-import it, and do not write a second program representation.
 
 The OCaml estate is `ocaml/`, one dune workspace, with its Lean half `src/OCaml5` (lake library
-`OCaml5`). `ocaml/README.md` is its map, and `ocaml/STANDARDS.md` holds it to four rules:
+`OCaml5`). `ocaml/README.md` is its map, and `ocaml/STANDARDS.md` holds it to nine rules. The first
+four govern form:
 
 - libraries with thin drivers;
 - a property list at the head of every component;
 - generated files marked and regenerable;
 - every number in a report behind a command.
+
+The other five govern modeling: interfaces once and small, refusals as values, exact numbers and
+comparison by type, mutation behind pure interfaces, and outside libraries by contract.
 
 ## Representation rules
 

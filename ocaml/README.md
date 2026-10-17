@@ -3,12 +3,15 @@
 OCaml is the primary host of the Effect model (ruling of 2026-09-04, `docs/research/
 2026-09-04-ocaml-estate-and-parity.md`). This directory is one dune workspace that holds every
 OCaml program of the estate. Its Lean half is the lake library `OCaml5` under `src/OCaml5/`
-(root module `src/OCaml5.lean`). `STANDARDS.md` holds the estate to four rules:
+(root module `src/OCaml5.lean`). `STANDARDS.md` holds the estate to nine rules. Four govern form:
 
 * libraries with thin drivers;
 * one component per file, with a property list at its head;
 * generated files marked and regenerable;
 * a command behind every number in a report.
+
+Five govern modeling: interfaces once and small, refusals as values, exact numbers and comparison
+by type, mutation behind pure interfaces, and outside libraries by contract.
 
 One runtime runs here: **the visible machine**, the Lean `RunMachine` itself. It runs in OCaml
 as Lean's own compiler IR translated into typed OCaml (`gen/`). `engine/` is the host engine
