@@ -15,6 +15,8 @@ import Effect4.Laws.Api.Live
 import Effect4.Laws.Api.LiveRecord
 import Effect4.Laws.Run.Tree
 import Effect4.Run.Kit
+import Effect4.Run.Preview
+import Effect4.Laws.Api.Preview
 
 /-!
 # Tools.Session — the edit session as a tool: one request a line, one session held between lines
@@ -387,6 +389,30 @@ def treeStopJson : Effect4.Run.Tree.Stop → List (String × Json)
 def treeRunJson (stop : Effect4.Run.Tree.Stop) (steps : List Effect4.Run.Tree.Step)
     (extra : List (String × Json) := []) : Json :=
   Json.mkObj (extra ++ treeStopJson stop ++ [("steps", Json.arr (steps.map treeStepJson).toArray)])
+
+/-- A reply admission fault (`Kit.ReplyFault`) as JSON. -/
+def replyFaultJson : Effect4.Run.Kit.ReplyFault → Json
+  | .answerType expected =>
+    Json.mkObj [("kind", .str "answerType"), ("expected", printJson expected)]
+  | .errorType expected =>
+    Json.mkObj [("kind", .str "errorType"), ("expected", printJson expected)]
+  | .reservedDefect =>
+    Json.mkObj [("kind", .str "reservedDefect")]
+
+/-- A rejected tape entry (`Preview.Rejected`) as JSON. -/
+def rejectedJson (r : Effect4.Run.Preview.Rejected) : Json :=
+  Json.mkObj [("row", toJson r.row), ("exit", printJson r.exit), ("fault", replyFaultJson r.fault)]
+
+/-- A preview profile refusal (`Preview.Refusal`) as JSON. -/
+def previewRefusalJson : Effect4.Run.Preview.Refusal → Json
+  | .admission why =>
+    Json.mkObj [("reason", .str "admission"), ("refusal", printJson why)]
+  | .outsideTree path =>
+    Json.mkObj [("reason", .str "outsideTree"), ("path", toJson path)]
+  | .genericRow path row =>
+    Json.mkObj [("reason", .str "genericRow"), ("path", toJson path), ("row", toJson row)]
+  | .handleAnswer path row =>
+    Json.mkObj [("reason", .str "handleAnswer"), ("path", toJson path), ("row", toJson row)]
 
 /-- Parse a call selector (`Effect4.Run.Sel`) from `req`'s `fiber`, `token`, or `rowName`. -/
 def selFrom? (req : Request) : Option Effect4.Run.Sel :=
@@ -779,35 +805,59 @@ def answer (st : State) (req : Request) : State × Answer :=
               req.id)
       | "settle" | "frames" | "explore" =>
         let app := l.app.withHoles l.sketch.holes
-        let tape? : Option (List Effect4.Machine.ExitV) := match req.tapeJson with
-          | some j => Tools.JsonBridge.read? j
-          | none => some []
-        match tape? with
-        | none =>
-          (st, unreadable (α := List Effect4.Machine.ExitV) req.op "the tape does not read" req.tapeJson req.id)
-        | some tape =>
-          let program := l.sketch.program
-          let host := Effect4.Run.Tree.Host.tape
-          match op with
-          | "settle" =>
-            let result := match Effect4.Run.Tree.settle app.rows req.limit host tape program with
-              | some (k, o) => treeRunJson o.stop o.steps [("budget", toJson k)]
-              | none => Json.mkObj [("status", .str "unsettled"), ("limit", toJson req.limit),
-                  ("note", .str "cut at every budget up to the limit: a finite probe, not a divergence")]
-            (st, Answer.mk op st.app [``Effect4.Run.Tree.settle_sound, ``Effect4.Run.Tree.probe_stable]
-              true result none req.id)
-          | "frames" =>
-            let frames := Effect4.Run.Tree.frames app.rows req.limit host tape program
-            let result := Json.arr (frames.map fun o => treeRunJson o.stop o.steps).toArray
-            (st, Answer.mk op st.app [``Effect4.Run.Tree.ofProgram_approx] true result none req.id)
-          | _ =>
-            let paths := Effect4.Run.Kit.explore app req.budget req.width program
-            let result := Json.arr (paths.map fun p =>
-              let tape := p.steps.filterMap fun
-                | .called _ _ answer => some answer
-                | .celled _ _ => none
-              treeRunJson p.stop p.steps [("tape", printJson tape)]).toArray
-            (st, Answer.mk op st.app [``Effect4.Run.Tree.ofProgram_approx] true result none req.id)
+        let program := l.sketch.program
+        match Effect4.Run.Preview.admit app program with
+        | .error why =>
+          (st,
+            { op := op, app := st.app, laws := [``Effect4.Run.Preview.checkedTape_admits],
+              ok := false, result := previewRefusalJson why,
+              error := some "preview refused by profile", id := req.id })
+        | .ok _ =>
+          let tape? : Option (List Effect4.Machine.ExitV) := match req.tapeJson with
+            | some j => Tools.JsonBridge.read? j
+            | none => some []
+          match tape? with
+          | none =>
+            (st, unreadable (α := List Effect4.Machine.ExitV) req.op "the tape does not read" req.tapeJson req.id)
+          | some tape =>
+            let host := Effect4.Run.Preview.checkedTape app
+            match op with
+            | "settle" =>
+              let result := match Effect4.Run.Tree.settle app.rows req.limit host tape program with
+                | some (k, o) =>
+                  treeRunJson o.stop o.steps [("budget", toJson k),
+                    ("rejected", match Effect4.Run.Preview.rejected app o with
+                      | some r => rejectedJson r
+                      | none => .null)]
+                | none => Json.mkObj [("status", .str "unsettled"), ("limit", toJson req.limit),
+                    ("note", .str "cut at every budget up to the limit: a finite probe, not a divergence")]
+              (st, Answer.mk op st.app
+                [``Effect4.Run.Preview.checkedTape_admits,
+                  ``Effect4.Run.Preview.checkedTape_success_externalValue,
+                  ``Effect4.Run.Tree.settle_sound, ``Effect4.Run.Tree.probe_stable]
+                true result none req.id)
+            | "frames" =>
+              let frames := Effect4.Run.Tree.frames app.rows req.limit host tape program
+              let result := Json.arr (frames.map fun o =>
+                treeRunJson o.stop o.steps
+                  [("rejected", match Effect4.Run.Preview.rejected app o with
+                    | some r => rejectedJson r
+                    | none => .null)]).toArray
+              (st, Answer.mk op st.app
+                [``Effect4.Run.Preview.checkedTape_admits,
+                  ``Effect4.Run.Preview.checkedTape_success_externalValue,
+                  ``Effect4.Run.Tree.ofProgram_approx]
+                true result none req.id)
+            | _ =>
+              let paths := Effect4.Run.Kit.explore app req.budget req.width program
+              let result := Json.arr (paths.map fun p =>
+                let tape := p.steps.filterMap fun
+                  | .called _ _ answer => some answer
+                  | .celled _ _ => none
+                treeRunJson p.stop p.steps [("tape", printJson tape)]).toArray
+              (st, Answer.mk op st.app
+                [``Effect4.Run.Preview.checkedTape_admits, ``Effect4.Run.Tree.ofProgram_approx]
+                true result none req.id)
       | other => none' s!"unknown operation {other}"
 
 /-- **Answer one line**, with the state after it. -/
