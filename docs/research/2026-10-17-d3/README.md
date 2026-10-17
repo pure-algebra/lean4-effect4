@@ -1,7 +1,7 @@
 # 2026-10-17 D3 landed: named types in the typed state, at every declaration table
 
-Status: research note (history, not authority). Base: `09638d1fc` on `wip/declared-ref` (the
-coordinator's head after D2). Head: `ed11f238a` on branch `seat/d3`, not pushed. Role: the math
+Status: research note (history, not authority). Base: `719e039bf` on `refactor/phase1-phase3`
+(trunk after D2 and the scenario retirement). Head: `16aa8ee1c` on branch `seat/d3`, not pushed. Role: the math
 seat, the one Lean seat. The brief: land D3 of the audit by the math note
 (`docs/research/2026-10-16-math-d3/README.md` §7), in slices that each build. The receipt is
 `docs/research/2026-10-17-seat-d3-receipt.md`.
@@ -31,10 +31,10 @@ equality would lose the native signature at a world with a table. Three readers 
 
 | Slice | Commit | What changed |
 | --- | --- | --- |
-| (a) | `9f03d2854` | an undeclared nominal reference has no member: the duplicate arm `app n _` as a host handle is removed from `Val.hasTy`, `Fits` and `FitsAt` (decisions row 406 (1)) |
-| (b) | `703c41897` | `World.types`, fixed by the order and tied in `MachineTyped`; `Fits` as `FitsAt` at the least closed oracle; `ValueOk` and `CompletionOk` read `Val.memberIn` at the world's table; `FitsIn` retired into `Fits` |
-| (d) | `9e5c9c577` | the term typer's readers under the table, at membership: `fits_liftIn_transfer`, `fits_fieldAdmitsIn`, `fits_listOfIn`, `fits_optionTyIn` |
-| (c) | `ed11f238a` | the premises go: `Tied`, `TyDecls.Within`, the term laws, the library's operation laws, the meaning layer's exit judgment at a table, items 3 and 4, and the column checks of §6 |
+| (a) | `36b88b06f` | an undeclared nominal reference has no member: the duplicate arm `app n _` as a host handle is removed from `Val.hasTy`, `Fits` and `FitsAt` (decisions row 406 (1)) |
+| (b) | `7fe779cbb` | `World.types`, fixed by the order and tied in `MachineTyped`; `Fits` as `FitsAt` at the least closed oracle; `ValueOk` and `CompletionOk` read `Val.memberIn` at the world's table; `FitsIn` retired into `Fits` |
+| (d) | `3ac3c27a3` | the term typer's readers under the table, at membership: `fits_liftIn_transfer`, `fits_fieldAdmitsIn`, `fits_listOfIn`, `fits_optionTyIn` |
+| (c) | `16aa8ee1c` | the premises go: `Tied`, `TyDecls.Within`, the term laws, the library's operation laws, the meaning layer's exit judgment at a table, items 3 and 4, and the column checks of §6 |
 
 Slice (d) landed before (c): the term laws can take the table only once the readers under the table
 hold at membership.
