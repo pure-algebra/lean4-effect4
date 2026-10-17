@@ -10,7 +10,7 @@
    4.3 M/s at 1e6 rows, against `Map.Make(Int)` at 6.5 M/s and 1.6 M/s.  The Lean shape
    `trace ++ events` (src/Effect4/Machine/Fibers.lean:585-587) needs 141 ms for TEN THOUSAND
    rows.
-   Depends on: nothing (Stdlib.Map only).
+   Depends on: effect4_lcnf (Lcnf_array, the carrier).
 
    Properties:
      L1  Append-only: `get t i` never changes for an i already written, and `length` only
@@ -25,16 +25,16 @@
          frozen chunk with the final one.                        [tested: log-persistent]
      L5  Frozen: no array in a `t` is written after the `append` that created it, so a saved
          value holds no mutable structure that anything can observe (brief rule 3).
-         [by construction; tested: log-frozen]
+         [by construction (lcnf_array.mli V4); tested: log-frozen]
 
-   THE CARRIER IS POLYMORPHIC and it is exposed as {!Vec}.  `t` is `row Vec.t` and nothing
-   else.  It is exposed for one named reason: `E4_trace` (the machine's own trace carrier,
-   e4_trace.mli:57-61) is a reversed accumulator whose `nth_opt` is O(length - i), so a
-   viewer walking the reading axis costs O(T^2) on a T-row trace, and `E4_trace` says in so
-   many words that "A3 may substitute a finger tree behind this signature".  {!Vec} IS that
-   substitution, at O(log (T/256)) per row and O(1) amortised per emit.  Lane Q3 did not edit
-   `e4_trace.ml`; lane W did (proposal N2, 2026-09-08-engine-lane-w-delivery.md item 2), so
-   `E4_trace.t` IS `'e Vec.t` today and this module has two clients. *)
+   THE CARRIER IS POLYMORPHIC and it is exposed as {!Vec}, an alias of `Lcnf_array`
+   (ocaml/lcnf/lcnf_array.mli), the one owner of the chunked vector: this module held it until
+   slice 3.2 of the OCaml estate refactor, which spells Lean's `Array` with the same structure.
+   `t` is `row Vec.t` and nothing else.  It is exposed for one named reason: `E4_trace` (the
+   machine's own trace carrier) was a reversed accumulator whose `nth_opt` is O(length - i), so
+   a viewer walking the reading axis cost O(T^2) on a T-row trace.  {!Vec} IS the substitute,
+   at O(log (T/256)) per row and O(1) amortised per emit (proposal N2,
+   2026-09-08-engine-lane-w-delivery.md item 2), so `E4_trace.t` IS `'e Vec.t`. *)
 
 type row = string
 (** One canonical event row.  Bytes are the identity; the sexp face is beside them, never an
@@ -42,38 +42,10 @@ type row = string
 
 (** {1 The carrier} *)
 
-module Vec : sig
-  (** The persistent chunked vector, polymorphic in the element.  {!E4_log.t} is
-      [row Vec.t]; `E4_logindex` holds its entries in an [entry Vec.t]; a follow-up may put
-      `E4_trace` behind it.  Every array is filled once, at the [append] that promotes a
-      full tail, and never written again (L5). *)
-
-  type 'a t
-
-  val empty : 'a t
-  val length : 'a t -> int
-  val is_empty : 'a t -> bool
-
-  val append : 'a t -> 'a -> 'a t
-  (** O(1) amortised: a cons on the open tail, and once every {!E4_log.chunk_size} rows one
-      array fill plus one `Map` insertion at depth log(length / chunk_size). *)
-
-  val get : 'a t -> int -> 'a option
-  (** O(log (length / chunk_size)) in a frozen chunk, O(chunk_size) in the open tail. *)
-
-  val get_exn : 'a t -> int -> 'a
-  (** @raise Invalid_argument outside [0, length). *)
-
-  val slice : 'a t -> from:int -> upto:int -> 'a list
-  (** The half-open range, in index order.  Clamped to [0, length]; empty when
-      [upto <= from]. *)
-
-  val fold : 'a t -> init:'b -> f:(int -> 'a -> 'b -> 'b) -> 'b
-  (** In index order, ascending. *)
-
-  val to_list : 'a t -> 'a list
-  val of_list : 'a list -> 'a t
-end
+module Vec = Lcnf_array
+(** The persistent chunked vector, polymorphic in the element: {!E4_log.t} is [row Vec.t],
+    `E4_logindex` holds its entries in an [entry Vec.t], and `E4_trace.t` is [Vec.t].  Every
+    array is filled once, at the operation that creates it, and never written again (L5). *)
 
 (** {1 The log} *)
 

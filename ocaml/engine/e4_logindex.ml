@@ -223,11 +223,11 @@ let add t e =
     if e.decision = t.cur_dec then (t.segs, t.cur_dec, t.cur_from)
     else
       ( (if t.cur_dec = no_decision then t.segs
-         else E4_log.Vec.append t.segs (t.cur_dec, t.cur_from, t.cur_upto)),
+         else E4_log.Vec.push t.segs (t.cur_dec, t.cur_from, t.cur_upto)),
         e.decision,
         e.index )
   in
-  { entries = E4_log.Vec.append t.entries e;
+  { entries = E4_log.Vec.push t.entries e;
     knd = push t.knd e.kind e.index;
     fib = push_opt t.fib e.fiber e.index;
     tok = push_opt t.tok e.token e.index;

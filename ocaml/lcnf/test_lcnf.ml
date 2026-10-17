@@ -1,7 +1,8 @@
 (* test_lcnf.ml -- the runtime library's own checks: each property of lcnf_string.mli,
-   lcnf_nat.mli and lcnf_list.mli at chosen points, with Lean's answer where the point is inside
-   the row's domain, and a red control beside each claim that shows what the claim rules out.
-   Finite evaluations; no theorem is restated.
+   lcnf_nat.mli, lcnf_list.mli and lcnf_array.mli at chosen points, with Lean's answer where the
+   point is inside the row's domain, and a red control beside each claim that shows what the claim
+   rules out. The chunked vector's checks came here from engine/test/test_log.ml with the vector
+   itself. Finite evaluations; no theorem is restated.
 
    Depends on: effect4_lcnf.
 
@@ -88,11 +89,151 @@ let lists () =
   check "L2 the scan stops at the first true and never reaches a later zero"
     (Lcnf_list.contains dividing [ 2; 0 ] 2)
 
+(* V1-V6: the chunked vector against the list it stands for. Row i of every vector below is
+   distinct, so an order error cannot hide. *)
+let row_at i = (7 * i) + 3
+
+let rec push_rows v from upto =
+  if from >= upto then v else push_rows (Lcnf_array.push v (row_at from)) (from + 1) upto
+
+(* The reference: the indexed answer, `get_exn` at every index in order. *)
+let indexed v = List.init (Lcnf_array.length v) (Lcnf_array.get_exn v)
+
+let raises_invalid f = match f () with _ -> false | exception Invalid_argument _ -> true
+
+let arrays () =
+  let c = Lcnf_array.chunk_size in
+  check "chunk_size is the named constant 256" (c = 256);
+  (* The boundary lengths of the carrier, and one length of several chunks with a partial tail.
+     The two halves a length exercises: frozen chunks below (n / c) * c, the open tail above. *)
+  let lengths =
+    [ (0, "0"); (1, "1"); (c - 1, "chunk_size - 1"); (c, "chunk_size");
+      (c + 1, "chunk_size + 1"); (2 * c, "2 * chunk_size");
+      ((5 * c) + 37, "5 * chunk_size + 37") ]
+  in
+  let vec n = push_rows Lcnf_array.empty 0 n in
+  List.iter
+    (fun (n, label) ->
+       let v = vec n in
+       check (Printf.sprintf "V3 to_list = the indexed answer = push order, length %s" label)
+         (Lcnf_array.to_list v = indexed v && indexed v = List.init n row_at
+          && Lcnf_array.length v = n))
+    lengths;
+  (* Red controls. Each is a wrong walk built from the same fold, and each must disagree with the
+     reference exactly where the claim says it can. Dropping `List.rev` is caught at every length
+     of two rows or more. A walk of the frozen chunks alone is caught exactly at the lengths with
+     an open tail, and a walk of the tail alone exactly at the lengths with a frozen chunk, so the
+     lengths above exercise both halves of the carrier. *)
+  let caught_at wrong =
+    List.filter_map
+      (fun (n, label) -> let v = vec n in if wrong n v <> indexed v then Some label else None)
+      lengths
+  in
+  let labels ns = List.map (fun n -> List.assoc n lengths) ns in
+  let reversed _ v = Lcnf_array.fold v ~init:[] ~f:(fun _ x acc -> x :: acc) in
+  let only keep n v =
+    let tail_from = (n / c) * c in
+    List.rev (Lcnf_array.fold v ~init:[] ~f:(fun i x acc -> if keep i tail_from then x :: acc else acc))
+  in
+  check "V3 (red control): the fold without List.rev is caught at every length of 2 rows or more"
+    (caught_at reversed = labels [ c - 1; c; c + 1; 2 * c; (5 * c) + 37 ]);
+  check "V3 (red control): the frozen chunks alone are caught exactly at the lengths with an open tail"
+    (caught_at (only (fun i t -> i < t)) = labels [ 1; c - 1; c + 1; (5 * c) + 37 ]);
+  check "V3 (red control): the open tail alone is caught exactly at the lengths with a frozen chunk"
+    (caught_at (only (fun i t -> i >= t)) = labels [ c; c + 1; 2 * c; (5 * c) + 37 ]);
+  (* V2 and V5: dense reads, and the proved-index operations refuse outside the range. *)
+  let n = (5 * c) + 37 in
+  let v = vec n in
+  check "V2 get is Some on [0, length) and None outside it"
+    (List.for_all (fun i -> Lcnf_array.get v i = Some (row_at i)) (List.init n Fun.id)
+     && Lcnf_array.get v (-1) = None && Lcnf_array.get v n = None
+     && Lcnf_array.get Lcnf_array.empty 0 = None);
+  check "V5 get_exn and set_exn raise Invalid_argument outside [0, length)"
+    (raises_invalid (fun () -> Lcnf_array.get_exn v n)
+     && raises_invalid (fun () -> Lcnf_array.get_exn v (-1))
+     && raises_invalid (fun () -> Lcnf_array.set_exn v n 0)
+     && raises_invalid (fun () -> Lcnf_array.set_exn Lcnf_array.empty 0 0));
+  (* set_exn at the first and last element of a frozen chunk and inside the open tail: the answer
+     is the list with that element replaced, and the argument still answers its own rows. *)
+  let replaced i x = List.mapi (fun k r -> if k = i then x else r) (List.init n row_at) in
+  List.iter
+    (fun (i, label) ->
+       let w = Lcnf_array.set_exn v i (-9) in
+       check (Printf.sprintf "V1 set_exn at %s answers the replaced list and leaves its argument" label)
+         (Lcnf_array.to_list w = replaced i (-9) && indexed w = replaced i (-9)
+          && Lcnf_array.to_list v = List.init n row_at && Lcnf_array.length w = n))
+    [ (0, "index 0"); (c - 1, "the end of the first chunk"); (c, "the start of a chunk");
+      (n - 1, "the open tail's newest element"); (5 * c, "the open tail's oldest element") ];
+  (* V4, rule 8: two sets on one value at one index each keep their own element, and so does the
+     value both came from. The red control reads each sibling against the other's element. *)
+  let reads w rows = Lcnf_array.to_list w = rows && indexed w = rows in
+  List.iter
+    (fun i ->
+       let a = Lcnf_array.set_exn v i (-1) and b = Lcnf_array.set_exn v i (-2) in
+       check (Printf.sprintf "V4 sibling sets at index %d each keep their element, and the base its row" i)
+         (reads a (replaced i (-1)) && reads b (replaced i (-2)) && reads v (List.init n row_at));
+       check (Printf.sprintf "V4 (red control): each sibling set at index %d read against the other's is caught" i)
+         ((not (reads a (replaced i (-2)))) && not (reads b (replaced i (-1)))))
+    [ 3; n - 2 ];
+  (* replicate: n copies at the boundary lengths. Its full chunks share one array, so a set on one
+     chunk must leave every other chunk, and the replicated value, unchanged (V4). *)
+  List.iter
+    (fun (m, label) ->
+       check (Printf.sprintf "replicate %s copies is the list of them" label)
+         (Lcnf_array.to_list (Lcnf_array.replicate m 4) = List.init m (fun _ -> 4)
+          && Lcnf_array.length (Lcnf_array.replicate m 4) = m))
+    lengths;
+  check "replicate of a negative count is empty" (Lcnf_array.is_empty (Lcnf_array.replicate (-3) 4));
+  let r = Lcnf_array.replicate ((3 * c) + 5) 0 in
+  let r' = Lcnf_array.set_exn r 10 1 in
+  check "V4 a set in one replicated chunk leaves the chunks that shared its array, and the original"
+    (Lcnf_array.get r' 10 = Some 1 && Lcnf_array.get r' (c + 10) = Some 0
+     && Lcnf_array.get r' ((2 * c) + 10) = Some 0 && Lcnf_array.get r 10 = Some 0
+     && Lcnf_array.to_list r = List.init ((3 * c) + 5) (fun _ -> 0));
+  (* V4 by pushes: two pushes onto one shared prefix, and two longer branches that each turn the
+     shared tail into a chunk of their own, all made before any is read. *)
+  let siblings p =
+    let base = vec p in
+    let a = Lcnf_array.push base (-1) and b = Lcnf_array.push base (-2) in
+    (base, a, b, push_rows a (p + 1) (p + c + 1), push_rows b (p + 1) (p + c + 1))
+  in
+  let prefix p = List.init p row_at in
+  let branch p = List.init c (fun k -> row_at (p + 1 + k)) in
+  List.iter
+    (fun (p, label) ->
+       let base, a, b, a_long, b_long = siblings p in
+       check (Printf.sprintf "V4 siblings on a shared prefix of length %s each read their own rows" label)
+         (reads a (prefix p @ [ -1 ]) && reads b (prefix p @ [ -2 ])
+          && reads a_long ((prefix p @ [ -1 ]) @ branch p)
+          && reads b_long ((prefix p @ [ -2 ]) @ branch p) && reads base (prefix p)))
+    lengths;
+  check "V4 (red control): each pushed sibling read against the other's rows is caught"
+    (List.for_all
+       (fun (p, _) ->
+          let _, a, b, a_long, b_long = siblings p in
+          (not (reads a (prefix p @ [ -2 ]))) && (not (reads b (prefix p @ [ -1 ])))
+          && (not (reads a_long ((prefix p @ [ -2 ]) @ branch p)))
+          && not (reads b_long ((prefix p @ [ -1 ]) @ branch p)))
+       lengths);
+  (* The list conversions and the folds. *)
+  check "of_list and append_list are pushes in list order; with_capacity is empty"
+    (Lcnf_array.to_list (Lcnf_array.of_list (List.init n row_at)) = List.init n row_at
+     && Lcnf_array.to_list (Lcnf_array.append_list (vec c) (List.init 9 (fun k -> row_at (c + k))))
+        = List.init (c + 9) row_at
+     && Lcnf_array.is_empty (Lcnf_array.with_capacity 64));
+  check "fold_left is List.fold_left over the elements in order"
+    (Lcnf_array.fold_left (fun acc x -> x :: acc) [] v = List.rev (List.init n row_at));
+  check "slice is the half-open range, clamped"
+    (Lcnf_array.slice v ~from:300 ~upto:303 = [ row_at 300; row_at 301; row_at 302 ]
+     && Lcnf_array.slice v ~from:(-4) ~upto:2 = [ row_at 0; row_at 1 ]
+     && Lcnf_array.slice v ~from:9 ~upto:3 = [])
+
 let () =
-  print_endline "== effect4_lcnf: strings, naturals and membership ==";
+  print_endline "== effect4_lcnf: strings, naturals, membership and arrays ==";
   strings ();
   naturals ();
   lists ();
+  arrays ();
   Printf.printf "== %s: %d failure(s) in %d checks ==\n"
     (if !failures = 0 then "ALL PASS" else "FAILED")
     !failures !checks;
