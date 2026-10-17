@@ -9,7 +9,8 @@ row per constant, as `OCaml5.Lcnf.builtins` is for values. A row is data: the co
 number of Lean arguments it takes, its OCaml spelling over the converted arguments, and its
 contract. The lookup (`builtinTy?`, `isBuiltinType`), the names (`builtinTypeNames`), the
 reserved type names (`reservedTypeNames`) are computed from the rows. The module also owns the
-contract's class (`Fidelity`), which the value table shares.
+contract's class (`Fidelity`) and the receipt under the exact spelling (`Receipt`, `Crossing`),
+which the value table shares.
 
 **Depends on.** `OCaml5.Ml.Syntax` (a spelling is an OCaml type) and `Lean.Name`.
 
@@ -22,6 +23,11 @@ contract's class (`Fidelity`), which the value table shares.
 * **Every row has a contract.** `fidelity`, `domain` and `note` have no default. The class is a
   reading of the row against the Lean type's representation. No theorem proves a row. An
   exact row states no domain, and a row exact under a domain states its domain: *checked*.
+* **Every row has a receipt under the exact spelling.** `receipt` has no default. It is the
+  row's class once `Nat` and `Int` are spelled `Z.t` (slice 2.2b): exact, or exact on a domain
+  and refusing outside it at a named `Crossing`. A receipt of class `approximate` or `unsound`
+  is refused: *checked* (`typeReceiptProblems`, the census `#guard`s). Until 2.2b, a row's
+  `fidelity` and `domain` describe the spelling it has: `UInt64` and `USize` stay `unsound`.
 * **A row's name is taken.** The unqualified OCaml names the rows spell are reserved, so a Lean
   type of the same short name is renamed (`OCaml5.Lcnf.typeName`) rather than shadowing the one
   a row means: *by construction*.
@@ -72,6 +78,69 @@ def problems (fidelity : Fidelity) (domain : String) : List String :=
   | .domain => if domain.isEmpty then ["a row exact under a domain states none"] else []
   | _ => []
 end Fidelity
+
+/-- Where a lowered row refuses: the crossing whose name its refusal carries (decision D-2's
+"exact or refuse"; `docs/research/2026-10-17-ocaml-estate-review/README.md`, D9). -/
+inductive Crossing where
+  /-- A natural literal of the program, against the program's numeric profile (DI-56). -/
+  | literal
+  /-- A host's answer at ingress (`E4_engine` EN9). -/
+  | reply
+  /-- An arithmetic result outside the program's numeric profile (DI-56) or the target's
+  capacity. -/
+  | arithmetic
+  /-- A clock reading taken as a natural (`Effect4.ClockMillis.toNat`). -/
+  | clock
+  /-- A length, an index or an index-sized word beyond the target's index capacity. -/
+  | index
+  /-- The program's own `panic`, where Lean logs and continues with a default value. -/
+  | panic
+  deriving DecidableEq, Repr, Inhabited
+
+namespace Crossing
+protected def toString : Crossing → String
+  | .literal => "literal"
+  | .reply => "reply"
+  | .arithmetic => "arithmetic"
+  | .clock => "clock"
+  | .index => "index"
+  | .panic => "panic"
+instance : ToString Crossing := ⟨Crossing.toString⟩
+end Crossing
+
+/-- A row's receipt under the exact spelling of slice 2.2b of the refactor plan: `Nat` and `Int`
+spelled `Z.t`, the fixed-width words modulo their width, and lengths and indexes checked against
+the target's index capacity. Its class, the domain on which the row is exact there, and the crossing
+at which it refuses outside that domain. Both tables carry one per row, and each census refuses a
+receipt of class `approximate` or `unsound` (`Receipt.problems`). -/
+structure Receipt where
+  fidelity : Fidelity
+  /-- The domain under the exact spelling (`""` when the class is `exact`). -/
+  domain : String
+  /-- The crossing of the refusal outside the domain; `none` for an exact row. -/
+  crossing : Option Crossing
+  deriving Inhabited
+
+namespace Receipt
+/-- Exact on the whole Lean domain, under the exact spelling. -/
+def exact : Receipt := { fidelity := .exact, domain := "", crossing := none }
+/-- Exact on `domain`, and refusing outside it at `crossing`. -/
+def refuses (crossing : Crossing) (domain : String) : Receipt :=
+  { fidelity := .domain, domain, crossing := some crossing }
+
+/-- What is wrong with a receipt: a class of `approximate` or `unsound`, a refusing receipt that
+names no crossing, an exact one that names a crossing, and a domain that disagrees with the class
+(`Fidelity.problems`). Each table's census prefixes its row. -/
+def problems (r : Receipt) : List String :=
+  let cls : List String := match r.fidelity with
+    | .approximate | .unsound => [s!"class {r.fidelity} under the exact spelling"]
+    | .exact | .domain => []
+  let crossing : List String := match r.fidelity, r.crossing with
+    | .exact, some c => [s!"an exact receipt names the crossing {c}"]
+    | .domain, none => ["a refusing receipt names no crossing"]
+    | _, _ => []
+  cls ++ crossing ++ (Fidelity.problems r.fidelity r.domain).map ("receipt: " ++ ·)
+end Receipt
 
 /-! ## 2. The type rows -/
 
@@ -124,53 +193,77 @@ structure TypeRow where
   domain : String
   /-- Why: the difference, or the argument that there is none. -/
   note : String
+  /-- The row under the exact spelling: exact, or refusing at a named crossing. -/
+  receipt : Receipt
   deriving Inhabited
 
 private def typeRow (lean : Name) (arity : Nat) (spelling : TySpelling) (fidelity : Fidelity)
-    (domain note : String) : TypeRow :=
-  { lean, arity, spelling, fidelity, domain, note }
+    (domain note : String) (receipt : Receipt) : TypeRow :=
+  { lean, arity, spelling, fidelity, domain, note, receipt }
 
 private def int : TySpelling := .con "int" []
 
 /-- The Lean type constants with a native OCaml spelling, one row per constant. -/
 def typeRows : List TypeRow := [
   typeRow ``Nat 0 int .domain "n < 2^62"
-    "OCaml `int` is 63-bit, Lean `Nat` unbounded.",
+    "OCaml `int` is 63-bit, Lean `Nat` unbounded."
+    (receipt := .exact),
   typeRow ``Int 0 int .domain "-2^62 ≤ n < 2^62"
-    "and `Int` and `Nat` share one OCaml type, so an emitter cannot tell them apart in an annotation.",
+    "and `Int` and `Nat` share one OCaml type, so an emitter cannot tell them apart in an annotation."
+    (receipt := .exact),
   typeRow ``UInt8 0 int .exact ""
-    "the range 0..255 is inside `int`.",
-  typeRow ``UInt16 0 int .exact "" "",
-  typeRow ``UInt32 0 int .exact "" "",
+    "the range 0..255 is inside `int`."
+    (receipt := .exact),
+  typeRow ``UInt16 0 int .exact "" ""
+    (receipt := .exact),
+  typeRow ``UInt32 0 int .exact "" ""
+    (receipt := .exact),
   typeRow ``UInt64 0 int .unsound "n < 2^62"
-    "**the hole.** `UInt64` values reach 2^64 - 1; OCaml's `int` holds 2^62 - 1. The wire's big-endian 64-bit fields and `Effect4.Store.Val.wf`'s `… < 2 ^ 64` live in this type. Nothing in the route detects the overflow: it wraps.",
+    "**the hole.** `UInt64` values reach 2^64 - 1; OCaml's `int` holds 2^62 - 1. The wire's big-endian 64-bit fields and `Effect4.Store.Val.wf`'s `… < 2 ^ 64` live in this type. Nothing in the route detects the overflow: it wraps."
+    (receipt := .exact),
   typeRow ``USize 0 int .unsound "n < 2^62"
-    "as `UInt64` — and `USize` is the index type of `Array` (`Lcnf_array`), so it is also the type every `Array` index is spelled in.",
-  typeRow ``Bool 0 (.con "bool" []) .exact "" "",
+    "as `UInt64` — and `USize` is the index type of `Array` (`Lcnf_array`), so it is also the type every `Array` index is spelled in."
+    (receipt := .refuses .index "the value is at most the target's index capacity"),
+  typeRow ``Bool 0 (.con "bool" []) .exact "" ""
+    (receipt := .exact),
   typeRow ``String 0 (.con "string" []) .domain "valid UTF-8"
-    "Lean's `String` is the UTF-8 encoding of a sequence of Unicode scalar values, and the OCaml string holds those bytes. Each operation is its own row of `OCaml5.Lcnf.builtins`: equality and concatenation are exact, `length` counts scalar values (`lcnf_utf8_length`), and an operation with no row is refused. A string enters valid: the wire refuses any other (`Eff_frame.decode_string`), and the to-do lane runs a title outside ASCII.",
-  typeRow ``Unit 0 (.con "unit" []) .exact "" "",
-  typeRow ``PUnit 0 (.con "unit" []) .exact "" "",
+    "Lean's `String` is the UTF-8 encoding of a sequence of Unicode scalar values, and the OCaml string holds those bytes. Each operation is its own row of `OCaml5.Lcnf.builtins`: equality and concatenation are exact, `length` counts scalar values (`lcnf_utf8_length`), and an operation with no row is refused. A string enters valid: the wire refuses any other (`Eff_frame.decode_string`), and the to-do lane runs a title outside ASCII."
+    (receipt := .exact),
+  typeRow ``Unit 0 (.con "unit" []) .exact "" ""
+    (receipt := .exact),
+  typeRow ``PUnit 0 (.con "unit" []) .exact "" ""
+    (receipt := .exact),
   typeRow ``Fin 0 int .domain "n < 2^62"
-    "a `Fin n` is its value, a natural below `n`; the bound is a proof, erased (`transparentStructures`).",
+    "a `Fin n` is its value, a natural below `n`; the bound is a proof, erased (`transparentStructures`)."
+    (receipt := .exact),
   typeRow ``BitVec 0 int .domain "w ≤ 62"
-    "a bit vector is its natural (`BitVec.toNat`); `int` holds it while the width is at most 62, which `UInt8` to `UInt32` meet and `UInt64` does not (its row is unsound already).",
+    "a bit vector is its natural (`BitVec.toNat`); `int` holds it while the width is at most 62, which `UInt8` to `UInt32` meet and `UInt64` does not (its row is unsound already)."
+    (receipt := .exact),
   typeRow ``Char 0 int .exact ""
-    "Lean's compiler represents a `Char` as its `UInt32` code point, and OCaml's `int` holds every Unicode scalar value, so the row is the code point itself. Its operations have no value row, so a `Char` in code is a hole.",
+    "Lean's compiler represents a `Char` as its `UInt32` code point, and OCaml's `int` holds every Unicode scalar value, so the row is the code point itself. Its operations have no value row, so a `Char` in code is a hole."
+    (receipt := .exact),
   typeRow ``Float 0 (.con "float" []) .exact ""
-    "both are IEEE 754 binary64. No `Float` operation has a `builtin?` row, so any arithmetic is a hole.",
-  typeRow ``List 1 (.con "list" [0]) .exact "" "",
+    "both are IEEE 754 binary64. No `Float` operation has a `builtin?` row, so any arithmetic is a hole."
+    (receipt := .exact),
+  typeRow ``List 1 (.con "list" [0]) .exact "" ""
+    (receipt := .exact),
   typeRow ``Array 1 (.con "Lcnf_array.t" [0]) .exact ""
-    "the persistent chunked vector of the runtime library (`ocaml/lcnf/lcnf_array.mli`, decision D-3): the element sequence, with a push amortised O(1) and an indexed read or update O(log (n / 256)) where Lean's are O(1). Every version a program keeps answers as it did (rule 8).",
+    "the persistent chunked vector of the runtime library (`ocaml/lcnf/lcnf_array.mli`, decision D-3): the element sequence, with a push amortised O(1) and an indexed read or update O(log (n / 256)) where Lean's are O(1). Every version a program keeps answers as it did (rule 8)."
+    (receipt := .exact),
   typeRow ``ByteArray 0 (.fixed (.con "Lcnf_array.t" [.int])) .exact ""
-    "a byte vector, as `Array UInt8`: each byte an `int` in [0, 255].",
-  typeRow ``Option 1 (.con "option" [0]) .exact "" "",
-  typeRow ``Prod 2 (.tuple [0, 1]) .exact "" "",
+    "a byte vector, as `Array UInt8`: each byte an `int` in [0, 255]."
+    (receipt := .exact),
+  typeRow ``Option 1 (.con "option" [0]) .exact "" ""
+    (receipt := .exact),
+  typeRow ``Prod 2 (.tuple [0, 1]) .exact "" ""
+    (receipt := .exact),
   typeRow ``Except 2 (.con "result" [1, 0]) .exact ""
-    "`Except ε α` is `(α, ε) result`, arguments swapped.",
+    "`Except ε α` is `(α, ε) result`, arguments swapped."
+    (receipt := .exact),
   -- The exact clock: `Effect4.ClockMillis` is `E4_clock.t`, a Zarith integer (`ocaml/clock/`).
   typeRow `Effect4.ClockMillis 0 (.con "E4_clock.t" []) .exact ""
     "`E4_clock.t` is a Zarith integer, which holds every natural. The clock's operations are value rows (`Effect4.ClockMillis.*` in `OCaml5.Lcnf.builtins`), and its two constructors are `OCaml5.Lcnf.Clock.constructor?`."
+    (receipt := .exact)
 ]
 
 /-! ## 3. What the table computes -/
@@ -251,17 +344,70 @@ private def refuses (ps : List String) (reason : String) : Bool :=
 -- two rows for one key
 #guard refuses (typeRowProblems (typeRows ++ typeRows.take 1)) "type row Nat: the key has two rows"
 -- a position past the arguments, and one read twice
-#guard refuses (typeRowProblems [typeRow ``List 1 (.con "list" [1]) .exact "" ""])
+#guard refuses
+  (typeRowProblems [typeRow ``List 1 (.con "list" [1]) .exact "" "" (receipt := .exact)])
   "type row List: position 1 is not an argument"
-#guard refuses (typeRowProblems [typeRow ``Prod 2 (.tuple [0, 0]) .exact "" ""])
+#guard refuses (typeRowProblems [typeRow ``Prod 2 (.tuple [0, 0]) .exact "" "" (receipt := .exact)])
   "type row Prod: position 0 is read twice"
 -- a name outside the type names, and a contract whose domain disagrees with its class
-#guard refuses (typeRowProblems [typeRow ``Bool 0 (.con "Bool" []) .exact "" ""])
+#guard refuses
+  (typeRowProblems [typeRow ``Bool 0 (.con "Bool" []) .exact "" "" (receipt := .exact)])
   "type row Bool: `Bool` is not an OCaml type name"
-#guard refuses (typeRowProblems [typeRow ``Nat 0 int .exact "n < 2^62" ""])
+#guard refuses (typeRowProblems [typeRow ``Nat 0 int .exact "n < 2^62" "" (receipt := .exact)])
   "type row Nat: an exact row states a domain"
-#guard refuses (typeRowProblems [typeRow ``Nat 0 int .domain "" ""])
+#guard refuses (typeRowProblems [typeRow ``Nat 0 int .domain "" "" (receipt := .exact)])
   "type row Nat: a row exact under a domain states none"
+
+/-! ### The receipt under the exact spelling: the census
+
+As for the value table (`OCaml5.Lcnf.receiptProblems`), each type row's receipt is exact, or exact
+on a domain and refusing outside it at a named crossing. A receipt's domain is a set of Lean
+values. Under the exact spelling:
+* `Nat` and `Int` are `Z.t`, which holds every integer.
+* `UInt64` is a 64-bit word modulo its width, as the value rows' receipts read it.
+* `Fin` and `BitVec` are their naturals, `Z.t`, kept modulo their width: a `UInt64` is its
+  `BitVec 64`, which is its `Fin (2^64)` (`transparentStructures`).
+* `USize` stays the target's `int` index type, checked against its capacity.
+* `String` is exact: every Lean string is valid UTF-8. The wire refuses other bytes at ingress,
+  the host's crossing and not a row's. -/
+
+/-- Everything wrong with the receipts of `rows` (`Receipt.problems`, by row). -/
+def typeReceiptProblems (rows : List TypeRow) : List String :=
+  rows.flatMap fun r => r.receipt.problems.map fun p => s!"type row {r.lean}: {p}"
+
+#guard (typeReceiptProblems typeRows).isEmpty
+
+-- The census: the type rows that refuse under the exact spelling, by crossing. Every other row
+-- is exact.
+private def typeRefusingAt (c : Crossing) : List Name :=
+  (typeRows.filter (·.receipt.crossing == some c)).map (·.lean)
+#guard typeRefusingAt .index == [``USize]
+#guard typeRefusingAt .arithmetic == [] && typeRefusingAt .clock == []
+#guard typeRefusingAt .panic == [] && typeRefusingAt .literal == [] && typeRefusingAt .reply == []
+#guard (typeRows.filter (·.receipt.fidelity == .exact)).length == 21
+-- Until 2.2b the classes describe the `int` spelling, so the two words keep theirs.
+#guard (typeRows.filter (·.fidelity == .unsound)).map (·.lean) == [``UInt64, ``USize]
+
+-- Red controls: each altered receipt is refused, for its own reason.
+private def withTypeReceipt (lean : Name) (receipt : Receipt) : List TypeRow :=
+  typeRows.map fun r => if r.lean == lean then { r with receipt } else r
+#guard refuses
+  (typeReceiptProblems
+    (withTypeReceipt ``UInt64 { fidelity := .unsound, domain := "n < 2^62", crossing := none }))
+  "type row UInt64: class unsound under the exact spelling"
+#guard refuses
+  (typeReceiptProblems
+    (withTypeReceipt ``Array { fidelity := .approximate, domain := "", crossing := none }))
+  "type row Array: class approximate under the exact spelling"
+#guard refuses
+  (typeReceiptProblems
+    (withTypeReceipt ``USize { fidelity := .domain, domain := "a domain", crossing := none }))
+  "type row USize: a refusing receipt names no crossing"
+#guard refuses (typeReceiptProblems (withTypeReceipt ``USize (.refuses .index "")))
+  "type row USize: receipt: a row exact under a domain states none"
+#guard refuses
+  (typeReceiptProblems (withTypeReceipt ``Nat { Receipt.exact with crossing := some .literal }))
+  "type row Nat: an exact receipt names the crossing literal"
 
 /-! ### Controls: the spellings the route had -/
 

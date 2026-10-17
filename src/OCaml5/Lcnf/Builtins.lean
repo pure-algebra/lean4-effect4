@@ -19,8 +19,8 @@ primitive tables (`sourcePrims`, `targetArities`, `targetScans`) are computed fr
 
 **Depends on.** `OCaml5.Ml.Syntax` (a form is OCaml syntax), `OCaml5.Ml.Render` (a form's
 spelling in a report), `OCaml5.Lcnf.Externs` (`stripRedArg`), `OCaml5.Lcnf.TypeRows` (the
-contract's class, `Fidelity`, which the type rows share), `Conform.Lcnf.Semantics` (the source
-evaluator's primitives, `Prim`).
+contract's class, `Fidelity`, and the receipt under the exact spelling, `Receipt` and `Crossing`,
+which the type rows share), `Conform.Lcnf.Semantics` (the source evaluator's primitives, `Prim`).
 
 **Properties.**
 * **One owner.** A constant has a row in `builtins` or the route translates it. `builtin?`,
@@ -87,56 +87,6 @@ inductive LeanRuntime where
 def LeanRuntime.symbol? : LeanRuntime → Option String
   | .body => none
   | .extern symbol _ => some symbol
-
-/-- Where a lowered row refuses: the crossing whose name its refusal carries (decision D-2's
-"exact or refuse"; `docs/research/2026-10-17-ocaml-estate-review/README.md`, D9). -/
-inductive Crossing where
-  /-- A natural literal of the program, against the program's numeric profile (DI-56). -/
-  | literal
-  /-- A host's answer at ingress (`E4_engine` EN9). -/
-  | reply
-  /-- An arithmetic result outside the program's numeric profile (DI-56) or the target's
-  capacity. -/
-  | arithmetic
-  /-- A clock reading taken as a natural (`Effect4.ClockMillis.toNat`). -/
-  | clock
-  /-- A length, an index or an index-sized word beyond the target's index capacity. -/
-  | index
-  /-- The program's own `panic`, where Lean logs and continues with a default value. -/
-  | panic
-  deriving DecidableEq, Repr, Inhabited
-
-namespace Crossing
-protected def toString : Crossing → String
-  | .literal => "literal"
-  | .reply => "reply"
-  | .arithmetic => "arithmetic"
-  | .clock => "clock"
-  | .index => "index"
-  | .panic => "panic"
-instance : ToString Crossing := ⟨Crossing.toString⟩
-end Crossing
-
-/-- A row's receipt under the exact spelling of slice 2.2b of the refactor plan: `Nat` and `Int`
-spelled `Z.t`, the fixed-width words modulo their width, and lengths and indexes checked against
-the target's index capacity. Its class, the domain on which the row is exact there, and the crossing
-at which it refuses outside that domain. A census refuses a receipt of class `approximate` or
-`unsound` (`receiptProblems`). -/
-structure Receipt where
-  fidelity : Fidelity
-  /-- The domain under the exact spelling (`""` when the class is `exact`). -/
-  domain : String
-  /-- The crossing of the refusal outside the domain; `none` for an exact row. -/
-  crossing : Option Crossing
-  deriving Inhabited
-
-namespace Receipt
-/-- Exact on the whole Lean domain, under the exact spelling. -/
-def exact : Receipt := { fidelity := .exact, domain := "", crossing := none }
-/-- Exact on `domain`, and refusing outside it at `crossing`. -/
-def refuses (crossing : Crossing) (domain : String) : Receipt :=
-  { fidelity := .domain, domain, crossing := some crossing }
-end Receipt
 
 /-- One row of the table. No field of the contract or of a column has a default. -/
 structure Builtin where
@@ -1157,19 +1107,9 @@ crossing or no domain, and an exact receipt that names a crossing. Slice 2.2b of
 makes the forms meet these receipts; until then a row's `fidelity` and `domain` describe the
 63-bit spelling it has. -/
 
-/-- Everything wrong with the receipts of `rows`. -/
+/-- Everything wrong with the receipts of `rows` (`Receipt.problems`, by row). -/
 def receiptProblems (rows : List Builtin) : List String :=
-  rows.flatMap fun b =>
-    let r := b.receipt
-    let cls : List String := match r.fidelity with
-      | .approximate | .unsound => [s!"row {b.lean}: class {r.fidelity} under the exact spelling"]
-      | .exact | .domain => []
-    let crossing : List String := match r.fidelity, r.crossing with
-      | .exact, some c => [s!"row {b.lean}: an exact receipt names the crossing {c}"]
-      | .domain, none => [s!"row {b.lean}: a refusing receipt names no crossing"]
-      | _, _ => []
-    cls ++ crossing ++
-      (Fidelity.problems r.fidelity r.domain).map fun p => s!"row {b.lean}: receipt: {p}"
+  rows.flatMap fun b => b.receipt.problems.map fun p => s!"row {b.lean}: {p}"
 
 #guard (receiptProblems builtins).isEmpty
 
