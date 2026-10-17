@@ -44,7 +44,7 @@ not made from LCNF (memory `ocaml-only-from-lcnf`).
 | an application at erased arguments only | a function of the callee's remaining parameters | eta-expanded, so OCaml generalizes it past the value restriction (2026-10-15) |
 | `return` / `unreach` | variable / `assert false` | |
 | calls to globals | `g' args` and enqueue `g` | the closure; `redArgTarget?`, `wrapperKeep?` strip Lean's wrappers (`:400-431`) |
-| builtins | one table of rows, `builtins` in `src/OCaml5/Lcnf/Builtins.lean` (§9; 106 rows since 2026-10-05) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat.pow` saturates (`lcnf_nat_pow`); `Nat.sub` truncated as Lean's |
+| builtins | one table of rows, `builtins` in `src/OCaml5/Lcnf/Builtins.lean` (§9; 106 rows since 2026-10-05) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat.pow` saturates (`Lcnf_nat.pow`); `Nat.sub` truncated as Lean's |
 | stdlib functions | translated from their own mono decls | `List.hasDecEq`, `instDecidableEqProd`, `List.filterTR.loop` came out this way (NOTES §260); a table row only where the stdlib body is an `extern` |
 | externs (strings, floats, `IO`) | `Externs.lean` table | a call with no row is a refusal |
 | carriers (`List`-like op rows) | `carrierRewrite?` (`:607`), `useAsList` (`:500`) | a carrier without a `to_list` row is a refusal |
@@ -110,7 +110,7 @@ lane. Target-specific, to write:
    become a `while (true)` with reassignment, or a trampoline; the machine's stepping functions
    are the case that matters (`Machine/Fibers.lean`'s loops).
 5. **Numbers.** `Nat` as `bigint` (exact) or `number` (fast, wrong past 2^53): a policy row, as
-   `max_int` and the saturating `lcnf_nat_pow` are for OCaml. The wire already fixes `Nat` as JSON numbers with the
+   `max_int` and the saturating `Lcnf_nat.pow` are for OCaml. The wire already fixes `Nat` as JSON numbers with the
    `isInt`/non-negative checks.
 6. **Strings and bytes.** OCaml strings are bytes; JavaScript strings are UTF-16. The estate's
    codec is bytes (`Store/Utf8.lean`, strict UTF-8), so string externs need the same rows the
@@ -214,7 +214,7 @@ of the builtin table (reading, `builtins` in `src/OCaml5/Lcnf/Builtins.lean`):
 - natural addition lowers to raw 63-bit `+` (the row `Nat.add`), and so does successor (the row
   `Nat.succ`), so a large enough sum wraps;
 - multiplication, powers and the left shift saturate at the largest integer (the support
-  functions `lcnf_nat_mul`, `lcnf_nat_pow` and `lcnf_nat_shift_left`);
+  functions `Lcnf_nat.mul`, `Lcnf_nat.pow` and `Lcnf_nat.shift_left`);
 - subtraction floors at zero (the row `Nat.sub`).
 
 The table became data on 2026-10-05 (§9). That change moved no number.
@@ -305,9 +305,9 @@ No second list names a row.
 
 **The three forms.** Each form denotes one closed function of the target.
 - An inline form is `fun params -> body`, written in place. Its body binds nothing.
-- A support function is a definition of the prelude (`support`). A form that binds a name, or
-  that calls itself, is a support function: `lcnf_nat_mul`, `lcnf_nat_pow`,
-  `lcnf_nat_shift_left` and `lcnf_list_contains`.
+- A support function lives once in the runtime library `ocaml/lcnf`, and `support` keeps its
+  reference definition for the target evaluator. A form that binds a name, or that calls itself,
+  is one: `Lcnf_nat.mul`, `Lcnf_nat.pow`, `Lcnf_nat.shift_left` and `Lcnf_list.contains`.
 - A library function is a trusted leaf of the target (`libraries`), such as `List.map`.
 
 **Application.** `Builtin.apply` puts the arguments in an inline body's place. That is exact

@@ -235,7 +235,7 @@ above. The rule the backend now follows, and the reason it is a *rule* and not a
   and `Val.wf` (`src/Effect4/Store/Carrier/Val.lean`) decide `… .length < 2 ^ 64` at every
   frame. A wrapping `2 ^ 64` is `0` in 63-bit `int`, so `wf` would answer `false` for every
   value and `Api.ofBytes` would answer `none` for every program — **a wrong answer, not a
-  compile error**. The support function `lcnf_nat_pow` (`OCaml5.Lcnf.Builtins.support`; before
+  compile error**. The support function `Lcnf_nat.pow` (`OCaml5.Lcnf.Builtins.support`; before
   2026-10-05 the local `powClamped` of `Translate`) computes `a ^ b` by repeated multiplication that
   stops at `max_int`, so **`… < 2 ^ 64` reads as `… < max_int`**, and every list OCaml can
   hold is shorter than `max_int`: the guard keeps the meaning it has in Lean.

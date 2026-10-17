@@ -11,7 +11,7 @@ otherwise, with no refusal:
 
 - the TypeScript prelude is `(a: number, b: number): number => a * b`, which rounds above 2^53:
   under bun 1.4.2, `(2^27 + 1) * (2^27 + 1)` is `18014398777917440` (2026-10-11, this session);
-- the OCaml route lowers it to `lcnf_nat_mul`, which saturates at `max_int` above 2^62
+- the OCaml route lowers it to `Lcnf_nat.mul`, which saturates at `max_int` above 2^62
   (`ocaml/gen/api_gen.ml`).
 
 Row 309 says that no multiplication enters, yet the name resolves, and
