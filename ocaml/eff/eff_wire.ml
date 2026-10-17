@@ -11,7 +11,7 @@ open Eff_types
 let keyBefore (a : service_key) (c : service_key) : bool =
   (a.name, a.service) < (c.name, c.service)
 
-let rec emit_service_name (b : Buffer.t) (r : service_name) : unit =
+let rec emit_service_name (b : Eff_frame.writer) (r : service_name) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b r)
 
 let encode_service_name (v : service_name) : string =
@@ -29,7 +29,7 @@ let rec decode_service_name (s : string) (pos : int) (limit : int) : (service_na
 let decode_service_name_exact (s : string) : service_name option =
   Eff_frame.exact decode_service_name s
 
-let rec emit_service_type_code (b : Buffer.t) (r : service_type_code) : unit =
+let rec emit_service_type_code (b : Eff_frame.writer) (r : service_type_code) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b r)
 
 let encode_service_type_code (v : service_type_code) : string =
@@ -47,7 +47,7 @@ let rec decode_service_type_code (s : string) (pos : int) (limit : int) : (servi
 let decode_service_type_code_exact (s : string) : service_type_code option =
   Eff_frame.exact decode_service_type_code s
 
-let rec emit_service_key (b : Buffer.t) (r : service_key) : unit =
+let rec emit_service_key (b : Eff_frame.writer) (r : service_key) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> emit_service_name b r.name; emit_service_type_code b r.service)
 
 let encode_service_key (v : service_key) : string =
@@ -67,7 +67,7 @@ let rec decode_service_key (s : string) (pos : int) (limit : int) : (service_key
 let decode_service_key_exact (s : string) : service_key option =
   Eff_frame.exact decode_service_key s
 
-let rec emit_ty (b : Buffer.t) (v : ty) : unit =
+let rec emit_ty (b : Eff_frame.writer) (v : ty) : unit =
   match v with
     | Ty_never -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | Ty_unit -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -192,7 +192,7 @@ let rec decode_ty (s : string) (pos : int) (limit : int) : (ty * int) option =
 let decode_ty_exact (s : string) : ty option =
   Eff_frame.exact decode_ty s
 
-let rec emit_lit (b : Buffer.t) (v : lit) : unit =
+let rec emit_lit (b : Eff_frame.writer) (v : lit) : unit =
   match v with
     | Lit_unit -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | Lit_nat a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_nat b a0)
@@ -221,7 +221,7 @@ let rec decode_lit (s : string) (pos : int) (limit : int) : (lit * int) option =
 let decode_lit_exact (s : string) : lit option =
   Eff_frame.exact decode_lit s
 
-let rec emit_field_read_mode (b : Buffer.t) (v : field_read_mode) : unit =
+let rec emit_field_read_mode (b : Eff_frame.writer) (v : field_read_mode) : unit =
   match v with
     | FieldReadMode_required -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | FieldReadMode_optional -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -240,7 +240,7 @@ let rec decode_field_read_mode (s : string) (pos : int) (limit : int) : (field_r
 let decode_field_read_mode_exact (s : string) : field_read_mode option =
   Eff_frame.exact decode_field_read_mode s
 
-let rec emit_term (b : Buffer.t) (v : term) : unit =
+let rec emit_term (b : Eff_frame.writer) (v : term) : unit =
   match v with
     | Term_var a0 -> Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b a0)
     | Term_lit a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_lit b a0)
@@ -251,7 +251,7 @@ let rec emit_term (b : Buffer.t) (v : term) : unit =
     | Term_tupleAt (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_term b a0; Eff_frame.emit_nat b a1)
     | Term_fold (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 7 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3)
 
-and emit_terms (b : Buffer.t) (v : terms) : unit =
+and emit_terms (b : Eff_frame.writer) (v : terms) : unit =
   match v with
     | Terms_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | Terms_cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0; emit_terms b a1)
@@ -332,7 +332,7 @@ let decode_term_exact (s : string) : term option =
 let decode_terms_exact (s : string) : terms option =
   Eff_frame.exact decode_terms s
 
-let rec emit_cause_term (b : Buffer.t) (v : cause_term) : unit =
+let rec emit_cause_term (b : Eff_frame.writer) (v : cause_term) : unit =
   match v with
     | CauseTerm_fail a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
     | CauseTerm_die a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0)
@@ -365,7 +365,7 @@ let rec decode_cause_term (s : string) (pos : int) (limit : int) : (cause_term *
 let decode_cause_term_exact (s : string) : cause_term option =
   Eff_frame.exact decode_cause_term s
 
-let rec emit_mask_mode (b : Buffer.t) (v : mask_mode) : unit =
+let rec emit_mask_mode (b : Eff_frame.writer) (v : mask_mode) : unit =
   match v with
     | MaskMode_interruptible -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | MaskMode_uninterruptible -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -386,7 +386,7 @@ let rec decode_mask_mode (s : string) (pos : int) (limit : int) : (mask_mode * i
 let decode_mask_mode_exact (s : string) : mask_mode option =
   Eff_frame.exact decode_mask_mode s
 
-let rec emit_fork_options (b : Buffer.t) (r : fork_options) : unit =
+let rec emit_fork_options (b : Eff_frame.writer) (r : fork_options) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_bool b r.start_immediately; Eff_frame.emit_bool b r.daemon; emit_mask_mode b r.mask_mode)
 
 let encode_fork_options (v : fork_options) : string =
@@ -408,7 +408,7 @@ let rec decode_fork_options (s : string) (pos : int) (limit : int) : (fork_optio
 let decode_fork_options_exact (s : string) : fork_options option =
   Eff_frame.exact decode_fork_options s
 
-let rec emit_observer_mode (b : Buffer.t) (v : observer_mode) : unit =
+let rec emit_observer_mode (b : Eff_frame.writer) (v : observer_mode) : unit =
   match v with
     | ObserverMode_awaitValue -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | ObserverMode_joinEffect -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -427,7 +427,7 @@ let rec decode_observer_mode (s : string) (pos : int) (limit : int) : (observer_
 let decode_observer_mode_exact (s : string) : observer_mode option =
   Eff_frame.exact decode_observer_mode s
 
-let rec emit_finalizer_strategy (b : Buffer.t) (v : finalizer_strategy) : unit =
+let rec emit_finalizer_strategy (b : Eff_frame.writer) (v : finalizer_strategy) : unit =
   match v with
     | FinalizerStrategy_sequential -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | FinalizerStrategy_parallel -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -446,7 +446,7 @@ let rec decode_finalizer_strategy (s : string) (pos : int) (limit : int) : (fina
 let decode_finalizer_strategy_exact (s : string) : finalizer_strategy option =
   Eff_frame.exact decode_finalizer_strategy s
 
-let rec emit_native_op (b : Buffer.t) (v : native_op) : unit =
+let rec emit_native_op (b : Eff_frame.writer) (v : native_op) : unit =
   match v with
     | NativeOp_refMake -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | NativeOp_refGet -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -539,7 +539,7 @@ let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * i
 let decode_native_op_exact (s : string) : native_op option =
   Eff_frame.exact decode_native_op s
 
-let rec emit_decision (b : Buffer.t) (v : decision) : unit =
+let rec emit_decision (b : Eff_frame.writer) (v : decision) : unit =
   match v with
     | Decision_bool -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | Decision_option -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -566,7 +566,7 @@ let rec decode_decision (s : string) (pos : int) (limit : int) : (decision * int
 let decode_decision_exact (s : string) : decision option =
   Eff_frame.exact decode_decision s
 
-let rec emit_def_role (b : Buffer.t) (v : def_role) : unit =
+let rec emit_def_role (b : Eff_frame.writer) (v : def_role) : unit =
   match v with
     | DefRole_plain -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | DefRole_serviceInit a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_string b a0)
@@ -595,7 +595,7 @@ let rec decode_def_role (s : string) (pos : int) (limit : int) : (def_role * int
 let decode_def_role_exact (s : string) : def_role option =
   Eff_frame.exact decode_def_role s
 
-let rec emit_param_decl (b : Buffer.t) (r : param_decl) : unit =
+let rec emit_param_decl (b : Eff_frame.writer) (r : param_decl) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.name; emit_ty b r.request; emit_ty b r.answer; emit_ty b r.error)
 
 let encode_param_decl (v : param_decl) : string =
@@ -619,7 +619,7 @@ let rec decode_param_decl (s : string) (pos : int) (limit : int) : (param_decl *
 let decode_param_decl_exact (s : string) : param_decl option =
   Eff_frame.exact decode_param_decl s
 
-let rec emit_def_decl (b : Buffer.t) (r : def_decl) : unit =
+let rec emit_def_decl (b : Eff_frame.writer) (r : def_decl) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.name; emit_ty b r.request; emit_ty b r.answer; emit_ty b r.error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.requires; emit_def_role b r.role; Eff_frame.emit_list b (fun b y -> emit_param_decl b y) r.params)
 
 let encode_def_decl (v : def_decl) : string =
@@ -649,7 +649,7 @@ let rec decode_def_decl (s : string) (pos : int) (limit : int) : (def_decl * int
 let decode_def_decl_exact (s : string) : def_decl option =
   Eff_frame.exact decode_def_decl s
 
-let rec emit_eff (b : Buffer.t) (v : native_op eff) : unit =
+let rec emit_eff (b : Eff_frame.writer) (v : native_op eff) : unit =
   match v with
     | Eff_succeed a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
     | Eff_fail a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0)
@@ -681,7 +681,7 @@ let rec emit_eff (b : Buffer.t) (v : native_op eff) : unit =
     | Eff_invoke (a0, a1, a2) -> Eff_frame.emit_ctor b 31 (fun b -> Eff_frame.emit_nat b a0; emit_term b a1; emit_effs b a2)
     | Eff_provideContext (a0, a1) -> Eff_frame.emit_ctor b 32 (fun b -> emit_term b a0; emit_eff b a1)
 
-and emit_stmt (b : Buffer.t) (v : native_op stmt) : unit =
+and emit_stmt (b : Eff_frame.writer) (v : native_op stmt) : unit =
   match v with
     | Stmt_bindYield a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0)
     | Stmt_yieldDiscard a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0)
@@ -690,17 +690,17 @@ and emit_stmt (b : Buffer.t) (v : native_op stmt) : unit =
     | Stmt_whileTrue a0 -> Eff_frame.emit_ctor b 4 (fun b -> emit_stmts b a0)
     | Stmt_breakLoop -> Eff_frame.emit_ctor b 5 (fun _ -> ())
 
-and emit_stmts (b : Buffer.t) (v : native_op stmts) : unit =
+and emit_stmts (b : Eff_frame.writer) (v : native_op stmts) : unit =
   match v with
     | Stmts_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | Stmts_cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_stmt b a0; emit_stmts b a1)
 
-and emit_effs (b : Buffer.t) (v : native_op effs) : unit =
+and emit_effs (b : Eff_frame.writer) (v : native_op effs) : unit =
   match v with
     | Effs_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | Effs_cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0; emit_effs b a1)
 
-and emit_action_term (b : Buffer.t) (v : native_op action_term) : unit =
+and emit_action_term (b : Eff_frame.writer) (v : native_op action_term) : unit =
   match v with
     | ActionTerm_fork (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0; emit_fork_options b a1)
     | ActionTerm_forkIn (a0, a1, a2) -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0; emit_fork_options b a1; emit_term b a2)
@@ -720,7 +720,7 @@ and emit_action_term (b : Buffer.t) (v : native_op action_term) : unit =
     | ActionTerm_raceAllFirst a0 -> Eff_frame.emit_ctor b 17 (fun b -> emit_effs b a0)
     | ActionTerm_context a0 -> Eff_frame.emit_ctor b 18 (fun b -> if not (Eff_frame.strictly_ascending keyBefore a0) then invalid_arg "noncanonical requirements"; Eff_frame.emit_list b emit_service_key a0)
 
-and emit_layer_term (b : Buffer.t) (v : native_op layer_term) : unit =
+and emit_layer_term (b : Eff_frame.writer) (v : native_op layer_term) : unit =
   match v with
     | LayerTerm_succeed (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_service_key b a0; emit_lit b a1)
     | LayerTerm_effect (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_service_key b a0; emit_eff b a1)
@@ -733,7 +733,7 @@ and emit_layer_term (b : Buffer.t) (v : native_op layer_term) : unit =
     | LayerTerm_ref a0 -> Eff_frame.emit_ctor b 8 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_nat b y) a0)
     | LayerTerm_mergeAll a0 -> Eff_frame.emit_ctor b 9 (fun b -> emit_layer_terms b a0)
 
-and emit_layer_terms (b : Buffer.t) (v : native_op layer_terms) : unit =
+and emit_layer_terms (b : Eff_frame.writer) (v : native_op layer_terms) : unit =
   match v with
     | LayerTerms_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | LayerTerms_cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_layer_term b a0; emit_layer_terms b a1)
@@ -1104,7 +1104,7 @@ let decode_layer_term_exact (s : string) : native_op layer_term option =
 let decode_layer_terms_exact (s : string) : native_op layer_terms option =
   Eff_frame.exact decode_layer_terms s
 
-let rec emit_row_kind (b : Buffer.t) (v : row_kind) : unit =
+let rec emit_row_kind (b : Eff_frame.writer) (v : row_kind) : unit =
   match v with
     | RowKind_sync -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | RowKind_async -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -1125,7 +1125,7 @@ let rec decode_row_kind (s : string) (pos : int) (limit : int) : (row_kind * int
 let decode_row_kind_exact (s : string) : row_kind option =
   Eff_frame.exact decode_row_kind s
 
-let rec emit_row_shape (b : Buffer.t) (v : row_shape) : unit =
+let rec emit_row_shape (b : Eff_frame.writer) (v : row_shape) : unit =
   match v with
     | RowShape_call -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | RowShape_value -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -1148,7 +1148,7 @@ let rec decode_row_shape (s : string) (pos : int) (limit : int) : (row_shape * i
 let decode_row_shape_exact (s : string) : row_shape option =
   Eff_frame.exact decode_row_shape s
 
-let rec emit_registration (b : Buffer.t) (v : registration) : unit =
+let rec emit_registration (b : Eff_frame.writer) (v : registration) : unit =
   match v with
     | Registration_deferred -> Eff_frame.emit_ctor b 0 (fun _ -> ())
     | Registration_external -> Eff_frame.emit_ctor b 1 (fun _ -> ())
@@ -1167,7 +1167,7 @@ let rec decode_registration (s : string) (pos : int) (limit : int) : (registrati
 let decode_registration_exact (s : string) : registration option =
   Eff_frame.exact decode_registration s
 
-let rec emit_row_arg (b : Buffer.t) (v : row_arg) : unit =
+let rec emit_row_arg (b : Eff_frame.writer) (v : row_arg) : unit =
   match v with
     | RowArg_name a0 -> Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b a0)
     | RowArg_str a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_string b a0)
@@ -1190,7 +1190,7 @@ let rec decode_row_arg (s : string) (pos : int) (limit : int) : (row_arg * int) 
 let decode_row_arg_exact (s : string) : row_arg option =
   Eff_frame.exact decode_row_arg s
 
-let rec emit_row (b : Buffer.t) (r : row) : unit =
+let rec emit_row (b : Eff_frame.writer) (r : row) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.name; Eff_frame.emit_string b r.spelling; emit_row_shape b r.shape; Eff_frame.emit_list b (fun b y -> emit_row_arg b y) r.trailing; emit_row_kind b r.kind; emit_ty b r.request; emit_ty b r.answer; emit_ty b r.error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.requires; Eff_frame.emit_string b r.cite; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.type_args; emit_registration b r.registration)
 
 let encode_row (v : row) : string =
@@ -1230,7 +1230,7 @@ let rec decode_row (s : string) (pos : int) (limit : int) : (row * int) option =
 let decode_row_exact (s : string) : row option =
   Eff_frame.exact decode_row s
 
-let rec emit_eff_ty (b : Buffer.t) (r : eff_ty) : unit =
+let rec emit_eff_ty (b : Eff_frame.writer) (r : eff_ty) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> emit_ty b r.answer; emit_ty b r.error; if not (Eff_frame.strictly_ascending keyBefore r.requires) then invalid_arg "noncanonical requirements"; Eff_frame.emit_list b emit_service_key r.requires)
 
 let encode_eff_ty (v : eff_ty) : string =

@@ -32,10 +32,29 @@
    F4  The Lean image is the domain of encode: emit_nat raises Invalid_argument on a negative
        int, emit_string on a string that is not valid UTF-8.            by construction
    F5  Termination: an element loop advances by at least 9 bytes per element.  by construction
-   F6  The writers allocate no string per frame header: `emit_be64` is one 64-bit write and
-       `emit_nat` writes its digits in place. Their bytes are the per-byte rule's, for every int,
-       the negative ones included.                                    by construction; tested
+   F6  The writers allocate no string per frame header: `emit_be64` is one 64-bit write, and
+       `emit_nat`, `emit_ref` and `emit_handle` write their payloads in place. Their bytes are
+       the per-byte rule's, for every int, the negative ones included.  by construction; tested
        (test_frame B: the old rule on 3 956 ints, both ends and every byte boundary)
+   F7  One pass: an encoding is written into one growable buffer, and the encoder writes each
+       of its bytes once. A nested frame reserves its eight length bytes, writes its payload in
+       place and fills the length after. Doubling the buffer copies the bytes already written,
+       at most once per byte amortised, and the result is one copy of the buffer. Before, each
+       nested payload went into a fresh Buffer and was copied behind its header, so a byte at
+       depth d was written d + 1 times.                 by construction; tested (test_eff goldens)
+       Chosen over folding the sizes first by measurement (bench_frame, ocaml/engine/bench/):
+       the reserve writer was faster on every value measured, by 1.1x to 1.8x, and the fold runs
+       every payload callback twice where this runs it once.
+   F8  An encoding is bounded: `encode ~limit` refuses one that needs more than `limit` bytes as
+       a value (default Sys.max_string_length, the most a string holds, 2^57 - 9 on a 64-bit
+       host). Nothing is published on a refusal, and a refusal that a callback swallows is
+       still one: the writer remembers it. `to_string` raises Invalid_argument there instead,
+       as it does on a value outside the Lean image (F4). Lengths are byte counts in
+       0 .. limit, so every frame length is inside the field's 0 .. 2^62 - 1 that `read_be64`
+       accepts.
+                                                       by construction; tested (test_frame O)
+   F9  A payload callback runs once. If it raises, the writer is rolled back to before the
+       frame and the exception escapes, so no partial frame stays.      tested (test_frame P)
    Bound: Lean's Nat is unbounded; this kernel carries 0 .. 2^62 - 1 (OCaml int on 64-bit
    hosts). A Nat frame of nine or more digits, or of eight digits with a top byte >= 0x40,
    is refused as out of range. *)
@@ -61,24 +80,71 @@ let tag_float = 14
 
 let utf8_valid (s : string) : bool = String.is_valid_utf_8 s
 
-(* ---- encoding ---- *)
+(* ---- encoding: one growable buffer, each nested length reserved and filled after (F7) ---- *)
+
+(* The bytes written so far are buf[0, len). [limit] bounds len, and [over] records that a write
+   was refused past it: sticky, so a refusal a callback swallows is still a refusal (F8). *)
+type writer = { mutable buf : Bytes.t; mutable len : int; limit : int; mutable over : bool }
+
+type too_large = { limit : int }
+
+(* Raised by [reserve] past the limit and caught by [encode]; it never escapes this module
+   unless a caller's own callback lets it through [to_string], which raises its own refusal. *)
+exception Over
+
+let grow (w : writer) (need : int) : unit =
+  let want = w.len + need in
+  let cap = ref (max 64 (2 * Bytes.length w.buf)) in
+  while !cap < want do
+    cap := 2 * !cap
+  done;
+  let b = Bytes.create (min !cap w.limit) in
+  Bytes.blit w.buf 0 b 0 w.len;
+  w.buf <- b
+
+(* Room for [need] more bytes, or the refusal: [need > limit - len] cannot overflow, since
+   0 <= len <= limit. After it, buf[len, len + need) is writable. *)
+let reserve (w : writer) (need : int) : unit =
+  if need > w.limit - w.len then begin
+    w.over <- true;
+    raise Over
+  end
+  else if w.len + need > Bytes.length w.buf then grow w need
+
+(* A frame header at [at]: the tag, then the 63-bit length with bit 63 clear (F6). *)
+let set_header (w : writer) (at : int) (tag : char) (length : int) : unit =
+  Bytes.unsafe_set w.buf at tag;
+  Bytes.set_int64_be w.buf (at + 1) (Int64.logand (Int64.of_int length) Int64.max_int)
 
 (* The eight bytes of `n lsr (8 * shift)`, shift 7 down to 0, in one write: the 63-bit int's
    pattern with bit 63 clear, which `Int64.of_int` sets for a negative int (F6). *)
-let emit_be64 (b : Buffer.t) (n : int) : unit =
-  Buffer.add_int64_be b (Int64.logand (Int64.of_int n) Int64.max_int)
+let emit_be64 (w : writer) (n : int) : unit =
+  reserve w 8;
+  Bytes.set_int64_be w.buf w.len (Int64.logand (Int64.of_int n) Int64.max_int);
+  w.len <- w.len + 8
 
-let emit_frame (b : Buffer.t) (tag : int) (payload : string) : unit =
-  Buffer.add_char b (Char.chr tag);
-  emit_be64 b (String.length payload);
-  Buffer.add_string b payload
+(* The tag is checked before any byte is written; header and payload are reserved together,
+   so a refusal leaves no partial frame. *)
+let emit_frame (w : writer) (tag : int) (payload : string) : unit =
+  let tag = Char.chr tag and k = String.length payload in
+  reserve w (9 + k);
+  set_header w w.len tag k;
+  Bytes.unsafe_blit_string payload 0 w.buf (w.len + 9) k;
+  w.len <- w.len + 9 + k
 
-let with_payload (b : Buffer.t) (tag : int) (f : Buffer.t -> unit) : unit =
-  let p = Buffer.create 32 in
-  f p;
-  Buffer.add_char b (Char.chr tag);
-  emit_be64 b (Buffer.length p);
-  Buffer.add_buffer b p
+(* The header is written with its length reserved, the payload in place, the length after
+   (F7). The callback runs once; if it raises, the writer is rolled back to before the frame
+   and the exception escapes (F9). *)
+let with_payload (w : writer) (tag : int) (f : writer -> unit) : unit =
+  let tag = Char.chr tag and start = w.len in
+  reserve w 9;
+  Bytes.unsafe_set w.buf start tag;
+  w.len <- start + 9;
+  match f w with
+  | () -> Bytes.set_int64_be w.buf (start + 1) (Int64.of_int (w.len - start - 9))
+  | exception e ->
+    w.len <- start;
+    raise e
 
 (* Base-256 digits, big-endian, no leading zero; 0 is the empty string. *)
 let nat_digits (n : int) : string =
@@ -95,58 +161,87 @@ let nat_digits (n : int) : string =
   fill n (k - 1);
   Bytes.to_string s
 
-let emit_unit (b : Buffer.t) (() : unit) : unit = emit_frame b tag_unit ""
+let emit_unit (w : writer) (() : unit) : unit = emit_frame w tag_unit ""
 
-let emit_bool (b : Buffer.t) (v : bool) : unit =
-  emit_frame b tag_bool (if v then "\001" else "\000")
+let emit_bool (w : writer) (v : bool) : unit =
+  emit_frame w tag_bool (if v then "\001" else "\000")
 
-(* `emit_frame b tag_nat (nat_digits n)`, with the digits written in place (F6). *)
-let emit_nat (b : Buffer.t) (n : int) : unit =
-  if n < 0 then invalid_arg "Eff_frame.nat_digits: negative";
+let digit_count (n : int) : int =
   let rec count m k = if m = 0 then k else count (m lsr 8) (k + 1) in
-  let k = count n 0 in
-  Buffer.add_char b (Char.chr tag_nat);
-  emit_be64 b k;
-  for i = k - 1 downto 0 do
-    Buffer.add_char b (Char.unsafe_chr ((n lsr (8 * i)) land 0xff))
+  count n 0
+
+(* The digits of [n], [k] of them, at buf[at, at + k): reserved by the caller (F6). *)
+let set_digits (w : writer) (at : int) (n : int) (k : int) : unit =
+  for i = 0 to k - 1 do
+    Bytes.unsafe_set w.buf (at + i) (Char.unsafe_chr ((n lsr (8 * (k - 1 - i))) land 0xff))
   done
 
-let emit_string (b : Buffer.t) (s : string) : unit =
+(* `emit_frame w tag_nat (nat_digits n)`, with the digits written in place (F6). *)
+let emit_nat (w : writer) (n : int) : unit =
+  if n < 0 then invalid_arg "Eff_frame.nat_digits: negative";
+  let k = digit_count n in
+  reserve w (9 + k);
+  set_header w w.len (Char.unsafe_chr tag_nat) k;
+  set_digits w (w.len + 9) n k;
+  w.len <- w.len + 9 + k
+
+let emit_string (w : writer) (s : string) : unit =
   if not (utf8_valid s) then invalid_arg "Eff_frame.emit_string: not valid UTF-8";
-  emit_frame b tag_string s
+  emit_frame w tag_string s
 
-let emit_list (b : Buffer.t) (f : Buffer.t -> 'a -> unit) (xs : 'a list) : unit =
-  with_payload b tag_list (fun p -> List.iter (f p) xs)
+let emit_list (w : writer) (f : writer -> 'a -> unit) (xs : 'a list) : unit =
+  with_payload w tag_list (fun w -> List.iter (f w) xs)
 
-let emit_option (b : Buffer.t) (f : Buffer.t -> 'a -> unit) (o : 'a option) : unit =
+let emit_option (w : writer) (f : writer -> 'a -> unit) (o : 'a option) : unit =
   match o with
-  | None -> emit_frame b tag_none ""
-  | Some x -> with_payload b tag_some (fun p -> f p x)
+  | None -> emit_frame w tag_none ""
+  | Some x -> with_payload w tag_some (fun w -> f w x)
 
-let emit_pair (b : Buffer.t) (f : Buffer.t -> 'a -> unit) (g : Buffer.t -> 'b -> unit)
+let emit_pair (w : writer) (f : writer -> 'a -> unit) (g : writer -> 'b -> unit)
     ((x, y) : 'a * 'b) : unit =
-  with_payload b tag_pair (fun p -> f p x; g p y)
+  with_payload w tag_pair (fun w -> f w x; g w y)
 
-let emit_ctor (b : Buffer.t) (index : int) (args : Buffer.t -> unit) : unit =
-  with_payload b tag_ctor (fun p -> emit_nat p index; args p)
+let emit_ctor (w : writer) (index : int) (args : writer -> unit) : unit =
+  with_payload w tag_ctor (fun w -> emit_nat w index; args w)
 
 (* A content reference: the kind byte, then the digest bytes (Val.lean:158). The digest is
    opaque — any byte string, the empty one included. *)
-let emit_ref (b : Buffer.t) ((kind, digest) : int * string) : unit =
+let emit_ref (w : writer) ((kind, digest) : int * string) : unit =
   if kind < 0 || kind > 255 then invalid_arg "Eff_frame.emit_ref: kind is not a byte";
-  emit_frame b tag_ref (String.make 1 (Char.chr kind) ^ digest)
+  let k = String.length digest in
+  reserve w (10 + k);
+  set_header w w.len (Char.unsafe_chr tag_ref) (1 + k);
+  Bytes.unsafe_set w.buf (w.len + 9) (Char.unsafe_chr kind);
+  Bytes.unsafe_blit_string digest 0 w.buf (w.len + 10) k;
+  w.len <- w.len + 10 + k
 
 (* A live handle: the kind byte, then the key as Nat digits (Val.lean:159). The key 0 is no
    digits at all, so the payload is the kind byte alone. *)
-let emit_handle (b : Buffer.t) ((kind, key) : int * int) : unit =
+let emit_handle (w : writer) ((kind, key) : int * int) : unit =
   if kind < 0 || kind > 255 then invalid_arg "Eff_frame.emit_handle: kind is not a byte";
   if key < 0 then invalid_arg "Eff_frame.emit_handle: negative key";
-  emit_frame b tag_handle (String.make 1 (Char.chr kind) ^ nat_digits key)
+  let k = digit_count key in
+  reserve w (10 + k);
+  set_header w w.len (Char.unsafe_chr tag_handle) (1 + k);
+  Bytes.unsafe_set w.buf (w.len + 9) (Char.unsafe_chr kind);
+  set_digits w (w.len + 10) key k;
+  w.len <- w.len + 10 + k
 
-let to_string (f : Buffer.t -> 'a -> unit) (v : 'a) : string =
-  let b = Buffer.create 64 in
-  f b v;
-  Buffer.contents b
+(* The default bound: an encoding is a string, so it holds at most Sys.max_string_length bytes
+   (2^57 - 9 on a 64-bit host), below the length field's 0 .. 2^62 - 1 (F8). *)
+let max_length = Sys.max_string_length
+
+let encode ?(limit = max_length) (f : writer -> 'a -> unit) (v : 'a) : (string, too_large) result =
+  let limit = max 0 (min limit max_length) in
+  let w = { buf = Bytes.create (min 256 limit); len = 0; limit; over = false } in
+  match f w v with
+  | () -> if w.over then Error { limit } else Ok (Bytes.sub_string w.buf 0 w.len)
+  | exception Over -> Error { limit }
+
+let to_string (f : writer -> 'a -> unit) (v : 'a) : string =
+  match encode f v with
+  | Ok s -> s
+  | Error { limit } -> invalid_arg (Printf.sprintf "Eff_frame.to_string: the encoding exceeds %d bytes" limit)
 
 (* ---- decoding: (s, pos, limit) -> (value, next) option, never reading at or past limit ---- *)
 

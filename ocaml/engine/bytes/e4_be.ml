@@ -11,9 +11,7 @@ let frame_length (n : int) : int = header_length + n
    this module's. *)
 let be64 (n : int) : string =
   if n < 0 then invalid_arg "E4_be.be64: negative";
-  let b = Buffer.create 8 in
-  Eff_frame.emit_be64 b n;
-  Buffer.contents b
+  Eff_frame.to_string Eff_frame.emit_be64 n
 
 (* Eff_frame.read_be64 reads eight bytes at pos without a check: its one caller,
    Eff_frame.read_frame, has checked the window.  The check of D3 stays before the call. *)
@@ -24,9 +22,7 @@ let read_be64 (s : string) (pos : int) : int option =
    byte is this module's, with its own message. *)
 let framed (tag : int) (payload : string) : string =
   if tag < 0 || tag > 255 then invalid_arg "E4_be.framed: tag is not a byte";
-  let b = Buffer.create (header_length + String.length payload) in
-  Eff_frame.emit_frame b tag payload;
-  Buffer.contents b
+  Eff_frame.to_string (fun w p -> Eff_frame.emit_frame w tag p) payload
 
 (* Eff_frame.read_frame checks its own window before it reads: (tag, payload_start,
    payload_end, next). *)
@@ -51,6 +47,4 @@ let nat_digits (n : int) : string =
 (* Eff_frame reads a natural's digits inside its frame only (decode_nat).  The digits are
    framed and then read: one copy of the digits and nine bytes (D4). *)
 let nat_of_digits (s : string) : int option =
-  let b = Buffer.create (header_length + String.length s) in
-  Eff_frame.emit_frame b Eff_frame.tag_nat s;
-  Eff_frame.exact Eff_frame.decode_nat (Buffer.contents b)
+  Eff_frame.exact Eff_frame.decode_nat (Eff_frame.to_string (fun w d -> Eff_frame.emit_frame w Eff_frame.tag_nat d) s)
