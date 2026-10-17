@@ -90,7 +90,7 @@ let one_root_payload =
     E4_control.pack_end = (3, 4096);
     index_end = (2, 1024);
     generation = 7;
-    scheme_version = 1;
+    scheme_version = 0;  (* the one scheme a reader opens; CF10 *)
     ledger_generation = 5;
     roots = [ mk_root "stdlib/rc112" E4_control.Stdlib E4_kind.Export (dig 0x11) 1 ];
     status = E4_control.Gced;
@@ -123,7 +123,7 @@ let boundary_payload =
     E4_control.pack_end = (E4_control.max_name_length, max_int);
     index_end = (max_int, 0);
     generation = max_int;
-    scheme_version = 0xFFFFFFFF;
+    scheme_version = 0;  (* the field's other values are CF10's refusals *)
     ledger_generation = 0xFFFFFFFF;
     roots = [ mk_root long_name E4_control.Char E4_kind.Table (dig 0xff) max_int ];
     status = E4_control.Reserved (15, "");
@@ -172,6 +172,17 @@ let test_roundtrip () =
           (Printf.sprintf "R2 %s: encode is a function of the payload alone" name)
           (String.equal (E4_control.encode q) b))
     cases;
+
+  (* CF10: a store of another scheme is refused at open, with the scheme read exactly. *)
+  List.iter
+    (fun v ->
+      check (Printf.sprintf "CF10 a scheme_version of %d is refused as Other_scheme %d, never read" v v)
+        (match E4_control.decode (E4_control.encode { one_root_payload with E4_control.scheme_version = v }) with
+         | Error (E4_control.Other_scheme n) -> n = v
+         | Ok _ | Error _ -> false))
+    [ 1; 0xFFFFFFFF ];
+  check "CF10 red control: the same payload at scheme 0 reads"
+    (match E4_control.decode (E4_control.encode one_root_payload) with Ok _ -> true | Error _ -> false);
 
   (* The fixed offsets of CF3: magic, version, then the fixed fields. *)
   let b = E4_control.encode one_root_payload in
@@ -628,6 +639,7 @@ let test_mutation () =
       | Error (E4_control.Stale_binary _) -> "staleBinary"
       | Error (E4_control.Corrupt _) -> "corrupt"
       | Error E4_control.Missing -> "missing"
+      | Error (E4_control.Other_scheme _) -> "otherScheme"
     in
     Hashtbl.replace words w (1 + try Hashtbl.find words w with Not_found -> 0)
   done;

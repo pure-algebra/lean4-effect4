@@ -11,6 +11,7 @@ type decode_error =
   | Short_spec
   | Bad_frame
   | Host_limit
+  | Unknown_tag of int
 
 type scan = {
   refs : E4_addr.Ref.t list;
@@ -20,6 +21,7 @@ type scan = {
 
 type pure_refusal =
   | Oversize of decode_error
+  | Unknown_tag of int
   | Bad_version_byte of int
   | Malformed_ref
   | Handle_in_content
@@ -190,7 +192,7 @@ let walk (s : string) ~(pos : int) ~(limit : int) ~(rem : int)
             if not (float_frame (String.get_int64_be s st)) then raise (Refuse Bad_frame);
             []
           end
-          else raise (Refuse Bad_frame)             (* tag 0, or 15..255: no such frame *)
+          else raise (Refuse (Unknown_tag tag : decode_error))  (* tag 0, or 15..255 *)
         in
         stack := children @ (cont :: rest);
         go ()
@@ -280,6 +282,7 @@ let handle_in_content (n : t) : bool =
 
 let check_pure (n : t) : (unit, pure_refusal) result =
   match payload_ok n.payload with
+  | Error (Unknown_tag tag : decode_error) -> Error (Unknown_tag tag : pure_refusal)
   | Error e -> Error (Oversize e)                        (* 1, 1' -- payload.WF / M9 *)
   | Ok () ->
     if n.version <> 0 then Error (Bad_version_byte n.version)   (* 2 *)

@@ -83,9 +83,11 @@ let decode_error_name = function
   | E4_node.Short_spec -> "Short_spec"
   | E4_node.Bad_frame -> "Bad_frame"
   | E4_node.Host_limit -> "Host_limit"
+  | (E4_node.Unknown_tag t : E4_node.decode_error) -> Printf.sprintf "Unknown_tag %d" t
 
 let refusal_name = function
   | E4_node.Oversize e -> "Oversize(" ^ decode_error_name e ^ ")"
+  | (E4_node.Unknown_tag t : E4_node.pure_refusal) -> Printf.sprintf "Unknown_tag %d" t
   | E4_node.Bad_version_byte b -> Printf.sprintf "Bad_version_byte %d" b
   | E4_node.Malformed_ref -> "Malformed_ref"
   | E4_node.Handle_in_content -> "Handle_in_content"
@@ -540,9 +542,10 @@ let test_node_refusals () =
   refuses "a handle with an empty payload" (E4_be.framed 12 "") E4_node.Bad_frame;
   refuses "a handle whose digits have a leading zero"
     (E4_be.framed 12 "\001\000\001") E4_node.Bad_frame;
-  refuses "tag 0" (E4_be.framed 0 "") E4_node.Bad_frame;
-  refuses "tag 15, the first tag past Lean's" (E4_be.framed 15 "") E4_node.Bad_frame;
-  refuses "tag 255" (E4_be.framed 255 "") E4_node.Bad_frame;
+  refuses "tag 0" (E4_be.framed 0 "") (E4_node.Unknown_tag 0);
+  refuses "tag 15, the first tag past Lean's" (E4_be.framed 15 "") (E4_node.Unknown_tag 15);
+  refuses "tag 255" (E4_be.framed 255 "") (E4_node.Unknown_tag 255);
+  refuses "tag 15 nested in a list" (E4_be.framed 4 (E4_be.framed 15 "")) (E4_node.Unknown_tag 15);
   (* Tags 13 and 14 as `Val.decodeBody` reads them (src/Effect4/Store/Carrier/Val.lean). *)
   let float_bits x =
     let b = Bytes.create 8 in

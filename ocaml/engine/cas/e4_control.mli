@@ -106,6 +106,9 @@
        it is the only side where the bound can bind: an OCaml int on this host holds
        -2^62 .. 2^62-1 (`E4_nat.max_nat`), so a writer cannot even hold such a field and
        `encode` refuses only a negative one.                            by construction; tested
+   CF10 A `scheme_version` other than 0 is refused at open as `Other_scheme`, never read as
+       scheme 0's and never reported as `Corrupt`: the checksum holds, the store is simply of
+       another scheme.                                                  tested (test_control CF10)
 
    ============================================================================
    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.3 (lane P3,
@@ -216,6 +219,7 @@ type open_error =
   | Stale_binary of string  (** the ASCII version we could not match; CF1 *)
   | Corrupt of string  (** the checksum failed, or the payload could not hold; CF2, D3 *)
   | Bad_magic
+  | Other_scheme of int  (** the scheme_version read, which is not scheme 0's; CF10 *)
 
 val encode : payload -> string
 (** The grammar above, checksum filled in.  Raises `Invalid_argument` on an unrepresentable

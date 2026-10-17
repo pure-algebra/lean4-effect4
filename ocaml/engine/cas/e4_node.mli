@@ -61,6 +61,9 @@
        nat's are (D1); a float frame of exactly eight bytes whose bits pass `Val.floatFrame` (a
        double with no integer image). Tag 0 and tags 15 to 255 are no frame, so Lean and this
        walk read one byte language.        tested (test_bytes ND-frame; test_cas G1 val goldens)
+   ND12 A frame tag the walk does not know (0, or 15 to 255) is its own refusal, `Unknown_tag`,
+       in `decode_error` and in `check_pure`: an older reader meeting a newer byte says so,
+       never `Oversize`.                                             tested (test_bytes ND12)
 
    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.5 (lane P0, 2026-09-08):
    D1  `decode`'s payload check validates the frame TREE without building it: tags, lengths,
@@ -94,6 +97,7 @@ type decode_error =
   | Short_spec                   (** fewer than 34 header bytes *)
   | Bad_frame                    (** the payload is not one well-formed frame tree *)
   | Host_limit                   (** a frame length >= 2^62, amendment M9 (ND8) *)
+  | Unknown_tag of int           (** a frame tag no reader knows: 0, or 15 to 255 (ND12) *)
 
 type scan = {
   refs : E4_addr.Ref.t list;     (** Val.refs, in traversal order *)
@@ -106,6 +110,7 @@ type pure_refusal =
                                      carried error is `Host_limit` for amendment M9's case
                                      and lets lane P4 report `hostLimit` apart from
                                      `oversize` (A2 §1.9 CS2 rows 1 and 1') *)
+  | Unknown_tag of int            (** a frame tag no reader knows (ND12), never `Oversize` *)
   | Bad_version_byte of int
   | Malformed_ref
   | Handle_in_content

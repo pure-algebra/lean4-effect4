@@ -127,12 +127,14 @@ type open_error =
   | Stale_binary of string
   | Corrupt of string
   | Bad_magic
+  | Other_scheme of int
 
 let open_error_word = function
   | Missing -> "missing"
   | Bad_magic -> "badMagic"
   | Stale_binary v -> "staleBinary " ^ printable v
   | Corrupt why -> "corrupt " ^ why
+  | Other_scheme n -> "otherScheme " ^ string_of_int n
 
 let add_be64 (b : Buffer.t) (what : string) (n : int) : unit =
   if n < 0 || n > max_wire then
@@ -323,6 +325,9 @@ let decode (s : string) : (payload, open_error) result =
               | n when n >= 3 && n <= 15 -> Reserved (n, body)
               | n -> raise (Bad (Printf.sprintf "unknown status tag %d" n))
             in
+            (* CF10: scheme 0 is the one this reader knows; any other is refused, not read. *)
+            if scheme_version <> 0 then Error (Other_scheme scheme_version)
+            else
             Ok
               {
                 pack_end = (pack_end_seg, pack_end_off);

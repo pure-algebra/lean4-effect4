@@ -224,7 +224,9 @@ val schema_node : E4_node.t
 
 val schema_address : E4_addr.Addr.t
 val ensure_schema : E4_cas.t -> E4_addr.Addr.t
-(** File the schema node if it is not resident and answer its address.  Staged, not durable. *)
+(** File the schema node if it is not resident and answer its address.  Staged, not durable.
+    Raises [E4_cas.Store_error] when the store refuses it or its address holds another node
+    (a collision or a corrupt record); [write] answers the same as a value. *)
 
 (* ---------------------------------------------------------------- the roots *)
 
@@ -240,6 +242,9 @@ val pin_root_name : job:E4_addr.Addr.t -> E4_addr.Cid.t -> string
 
 type write_error =
   | Refused of E4_cas.admission  (** the store refused the checkpoint node *)
+  | Occupied of E4_cas.outcome
+      (** the schema's or the checkpoint's address holds a colliding node or a corrupt record
+          ([E4_cas.Conflict], [E4_cas.Corrupt]); nothing was committed *)
   | Chunk_refused of string  (** the store refused a chunk or manifest node *)
   | Root_refused of E4_control.root_error  (** the head root or a pin *)
 

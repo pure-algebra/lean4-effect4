@@ -185,15 +185,6 @@ let schema_node =
 
 let schema_address = E4_node.address schema_node
 
-let ensure_schema st =
-  (match E4_cas.put st schema_node with
-  | Ok _ -> ()
-  | Error a ->
-    raise
-      (E4_cas.Store_error
-         ("E4_checkpoint: the pending schema node was refused: " ^ E4_cas.admission_word a)));
-  schema_address
-
 (* ================================================================ the roots *)
 
 let head_root_name job = Printf.sprintf "runs/%s/checkpoint" (E4_addr.Addr.hex job)
@@ -205,13 +196,31 @@ let pin_root_name ~job cid =
 
 type write_error =
   | Refused of E4_cas.admission
+  | Occupied of E4_cas.outcome
   | Chunk_refused of string
   | Root_refused of E4_control.root_error
 
 let write_error_word = function
   | Refused a -> "refused " ^ E4_cas.admission_word a
+  | Occupied o -> "occupied " ^ E4_cas.outcome_word o
   | Chunk_refused s -> "chunkRefused " ^ s
   | Root_refused e -> "rootRefused " ^ E4_control.root_error_word e
+
+(* The schema node, filed if absent: its address, or why it was not filed.  An address that
+   holds a colliding node or a corrupt record is refused, never taken for the schema's. *)
+let schema_put st =
+  match E4_cas.put st schema_node with
+  | Ok ((E4_cas.Fresh | E4_cas.Duplicate), _) -> Ok schema_address
+  | Ok (((E4_cas.Conflict _ | E4_cas.Corrupt _) as o), _) -> Error (Occupied o)
+  | Error a -> Error (Refused a)
+
+let ensure_schema st =
+  match schema_put st with
+  | Ok a -> a
+  | Error e ->
+    raise
+      (E4_cas.Store_error
+         ("E4_checkpoint: the pending schema node was not filed: " ^ write_error_word e))
 
 exception Write_refused of string
 
@@ -253,7 +262,9 @@ let advance_head st ~job ~addr ~prev =
 let write_counted st ~job ~position ~machine_image ~prev ?(params = E4_chunk.default)
     ?(threshold = E4_chunk.threshold) ?(manifest = true) ?tape_prefix ?(pin = true)
     ?(pin_via_cid = false) ?(head = true) () =
-  let spec = ensure_schema st in
+  match schema_put st with
+  | Error e -> Error e
+  | Ok spec ->
   let engine = E4_addr.Addr.of_digest (E4_sha256.digest machine_image) in
   let image_length = String.length machine_image in
   match
@@ -285,7 +296,8 @@ let write_counted st ~job ~position ~machine_image ~prev ?(params = E4_chunk.def
     let payload = encode cp in
     match E4_cas.put st (node ~spec cp) with
     | Error a -> Error (Refused a)
-    | Ok (_, addr) -> (
+    | Ok (((E4_cas.Conflict _ | E4_cas.Corrupt _) as o), _) -> Error (Occupied o)
+    | Ok ((E4_cas.Fresh | E4_cas.Duplicate), addr) -> (
       (* the group commit: one write(2) and one fsync(2) for every node this checkpoint
          added, then the roots (E4_cas CS5, D7) *)
       E4_cas.commit st;
