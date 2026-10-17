@@ -5,4 +5,5 @@ SkeletonApprox.v
 Assumptions.v
 StoreCode.v
 StoreLaws.v
+StoreGrammar.v
 StoreAssumptions.v

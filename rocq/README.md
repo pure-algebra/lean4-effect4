@@ -23,6 +23,7 @@ The research developments of 2026-10-16 (the vessel and to-do studies, the hand 
 | `Assumptions.v` | the assumptions of each theorem above, over a module declared at `Eval` | by hand |
 | `StoreCode.v` | `Effect4.Store`'s code: the value and node codecs, the find, the put and its admission, `Word.apply`, `Word.wf` and `verify`, as the functor `Code (E : Prim)`; the hash, the byte codecs of numbers and strings, the float test, `Node.decode`, the zero digest and the equality deciders are `Prim`'s parameters | GENERATED: `make gen-rocq` (`OCaml5.Lcnf.Gallina`, `storeSpec`) |
 | `StoreLaws.v` | the store's laws over `Code`: the hash injective on a sound store's residents, domain separation, the put as a growing map from digest to bytes, a built store ranked by insertion order, `verify` sound | by hand |
+| `StoreGrammar.v` | one byte language: the value codec is prefix-free, so values and nodes have one parse each, and a conflict in a sound store is a collision of bytes; the codec laws are a premise | by hand |
 | `StoreAssumptions.v` | the assumptions of each store theorem, over a module declared at `Prim` and its laws | by hand |
 | `tools/split_types.ml` | the program types' modules (`Ty.t`, `module rec Eff …`) flattened to one type group in the Rocq names (`ty`, `Eff_succeed`), then printed as its components, so rocq-of-ocaml takes it | by hand |
 | `_RocqProject` | the load path (`-Q . E4`) and the files, in order | by hand |
@@ -37,6 +38,7 @@ flowchart LR
   W["src/Effect4/Store/**"] -- "base-phase LCNF<br/>OCaml5.Lcnf.Gallina" --> C["StoreCode.v"]
   E --> C
   C --> SL["StoreLaws.v"]
+  SL --> G["StoreGrammar.v"]
 ```
 
 ## The printer's rules
@@ -75,7 +77,7 @@ Compile the workspace. Run it when `Effect4.Run.Tree` or the printer changes, an
 result in the landing's receipt. No gate runs it:
 
 ```bash
-cd rocq && for f in Eff_types Skeleton SkeletonApprox Assumptions StoreCode StoreLaws StoreAssumptions; do opam exec --switch=rocq -- rocq compile -Q . E4 $f.v || break; done
+cd rocq && for f in Eff_types Skeleton SkeletonApprox Assumptions StoreCode StoreLaws StoreGrammar StoreAssumptions; do opam exec --switch=rocq -- rocq compile -Q . E4 $f.v || break; done
 ```
 
 `Assumptions.v` prints the assumptions of `Approx.ofProgram_approx`. They are the 25 parameters of

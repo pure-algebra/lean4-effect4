@@ -270,6 +270,116 @@ Fixpoint Val_encodeList (v_x_1 : (list val_)) {struct v_x_1} : (list int) :=
   end
 .
 
+Definition Val_tag (v_x_1 : val_) : int :=
+  match v_x_1 with
+  | Val_unit =>
+      let v__x_2 := 9%Z in
+      v__x_2
+  | Val_bool v_b_3 =>
+      let v__x_4 := 1%Z in
+      v__x_4
+  | Val_nat v_n_5 =>
+      let v__x_6 := 2%Z in
+      v__x_6
+  | Val_str v_s_7 =>
+      let v__x_8 := 3%Z in
+      v__x_8
+  | Val_bytes v_bs_9 =>
+      let v__x_10 := 8%Z in
+      v__x_10
+  | Val_list v_xs_11 =>
+      let v__x_12 := 4%Z in
+      v__x_12
+  | Val_pair v_a_13 v_b_14 =>
+      let v__x_15 := 5%Z in
+      v__x_15
+  | Val_none =>
+      let v__x_16 := 6%Z in
+      v__x_16
+  | Val_some v_a_17 =>
+      let v__x_18 := 7%Z in
+      v__x_18
+  | Val_ctor v_index_19 v_args_20 =>
+      let v__x_21 := 10%Z in
+      v__x_21
+  | Val_ref v_kind_22 v_digest_23 =>
+      let v__x_24 := 11%Z in
+      v__x_24
+  | Val_handle v_kind_25 v_key_26 =>
+      let v__x_27 := 12%Z in
+      v__x_27
+  | Val_negInt v_n_28 =>
+      let v__x_29 := 13%Z in
+      v__x_29
+  | Val_float v_bits_30 =>
+      let v__x_31 := 14%Z in
+      v__x_31
+  end
+.
+
+Definition Val_payload (v_x_1 : val_) : (list int) :=
+  let v__jp_2 := (fun (v__y_3 : int) =>
+      let v__x_4 := nil in
+      let v__x_5 := (cons v__y_3 v__x_4) in
+      v__x_5) in
+  match v_x_1 with
+  | Val_bool v_b_6 =>
+      match v_b_6 with
+      | false =>
+          let v__x_7 := 0%Z in
+          (v__jp_2 v__x_7)
+      | true =>
+          let v__x_8 := 1%Z in
+          (v__jp_2 v__x_8)
+      end
+  | Val_nat v_n_9 =>
+      let v__x_10 := (natBytes v_n_9) in
+      v__x_10
+  | Val_str v_s_11 =>
+      let v__x_12 := (String_toUTF8 v_s_11) in
+      let v__x_13 := (id v__x_12) in
+      let v__x_14 := (id v__x_13) in
+      v__x_14
+  | Val_bytes v_bs_15 =>
+      v_bs_15
+  | Val_list v_xs_16 =>
+      let v__x_17 := (Val_encodeList v_xs_16) in
+      v__x_17
+  | Val_pair v_a_18 v_b_19 =>
+      let v__x_20 := (Val_encode v_a_18) in
+      let v__x_21 := (Val_encode v_b_19) in
+      let v__x_22 := (app v__x_20 v__x_21) in
+      v__x_22
+  | Val_some v_a_23 =>
+      let v__x_24 := (Val_encode v_a_23) in
+      v__x_24
+  | Val_ctor v_index_25 v_args_26 =>
+      let v__x_27 := 2%Z in
+      let v__x_28 := (natBytes v_index_25) in
+      let v__x_29 := (framed v__x_27 v__x_28) in
+      let v__x_30 := (Val_encodeList v_args_26) in
+      let v__x_31 := (app v__x_29 v__x_30) in
+      v__x_31
+  | Val_ref v_kind_32 v_digest_33 =>
+      let v__x_34 := (cons v_kind_32 v_digest_33) in
+      v__x_34
+  | Val_handle v_kind_35 v_key_36 =>
+      let v__x_37 := (natBytes v_key_36) in
+      let v__x_38 := (cons v_kind_35 v__x_37) in
+      v__x_38
+  | Val_negInt v_n_39 =>
+      let v__x_40 := (natBytes v_n_39) in
+      v__x_40
+  | Val_float v_bits_41 =>
+      let v__x_42 := (id v_bits_41) in
+      let v__x_43 := (be64 v__x_42) in
+      v__x_43
+  | _ =>
+      let v__x_44 := nil in
+      v__x_44
+  end
+.
+
 Fixpoint Val_wf (v_x_1 : val_) {struct v_x_1} : bool :=
   let v__jp_2 := (fun (v_n : int) =>
       let v__x_3 := (natBytes v_n) in

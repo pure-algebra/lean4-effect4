@@ -518,7 +518,7 @@ field here. The closure walk is not printed: specialization turns its nested `fo
 mutual recursion on two different arguments, which Rocq's guard checker refuses. -/
 def storeSpec : Spec where
   decls := [`Effect4.Store.framed, `Effect4.Store.Val.encode, `Effect4.Store.Val.encodeList,
-    `Effect4.Store.Val.wf, `Effect4.Store.Val.wfList, `Effect4.Store.Val.decWF,
+    `Effect4.Store.Val.tag, `Effect4.Store.Val.payload, `Effect4.Store.Val.wf, `Effect4.Store.Val.wfList, `Effect4.Store.Val.decWF,
     `Effect4.Store.Kind.byte, `Effect4.Store.Kind.all,
     `List.find?._at_.Effect4.Store.Kind.ofByte?.spec_0, `Effect4.Store.Kind.ofByte?,
     `Effect4.Store.Digest.ofBytes?, `Effect4.Store.Val.refs, `Effect4.Store.Val.refsList,
