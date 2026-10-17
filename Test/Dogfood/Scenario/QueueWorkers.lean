@@ -1,11 +1,9 @@
 import Test.Dogfood.Scenario.QueueWorkers.Runs
-import Test.Dogfood.Scenario.QueueWorkers.Assertions
 import Test.Dogfood.Scenario
 import Test.Dogfood.Scenario.QueueWorkers.Model
 import Test.Dogfood.P3WorkerQueue
 import Test.Program.QueueTraces
 import Effect4.Library.Queue.Ops
-import Test.Audit.ScenarioGate
 
 /-!
 # The queue-workers scenario: the two-worker crew over the public Queue
@@ -28,12 +26,6 @@ control of the host protocol.
   handles, the resolved jobs entering feeder offers, the reply receipts, the reply applications, the retired calls, the
   opened and the released connections, the count of finished jobs, the root's exit and the work
   left.
-* **Claim.** `queueWorkers` assembles seven clauses. Three are proved laws: `receipt_inert`,
-  the driver's (`Test/Dogfood/Scenario.lean`), and `applied_selects` and `control_retires`, the
-  session's (`src/Effect4/Laws/Run/Rows.lean`). Four are planned goals over scripts:
-  `held_within_fed`, `fed_accounted`, `queue_settled` and `releases_once`. Each is an instance,
-  on this one program, of a proposed claim of the Queue's law of a whole run. The driver's law
-  `replays` stands beside them as an associated law.
 * **Premises.** A goal's budget premise is `funded` (`src/Effect4/Run/Tape.lean`): no task of
   the run was cut by its budget. The mask is a premise of the program: each worker takes, and
   the feeder offers, outside every mask. A red control breaks each premise.
@@ -59,146 +51,7 @@ open Effect4.Modules
 open Test.Dogfood.P3WorkerQueue (take runJob)
 open Test.Program.QueueTraces (takeOf offerOf takesBack)
 
-/-! ## 4. The claim
-
-Each of the four planned goals is an instance, on this one program, of a proposed claim of the
-semantics registry (`tools/ProofGraph/Registry.lean`, the open parts of R10 to R12). The
-Queue's law of a whole run is not stated (decisions row 275, point 2), so each goal's docstring
-says what the goal would follow from. Those lists are what this scenario needs from that law.
-
-Two premises stand in each statement, and a third in two of them.
-
-* **The budget**: `funded` (`src/Effect4/Run/Tape.lean`). No task of the run was cut by its
-  budget. The statement ranges over every command budget, at the battery's compile budget.
-* **The mask**: the program is `crew`. Each worker takes, and the feeder offers, outside every
-  mask. So an interruption at a wait is taken at the wait.
-* **Rest**, for the two statements about a state between two acts of a host: `atRest`, on a
-  script of host acts (`Move.hostAct`). -/
-
-/-- **No job is held more often than it enters the feeder's offer continuation.**
-Fed counts resolved values reaching Queue.offer, including delayed reference-read completions.
-An accepted reply application that never reaches this continuation feeds no job.
-Under every script of a funded run, each job occurs among held jobs at most as often as among fed jobs. The held jobs are the
-buffered ones, the jobs of the pending offers, the assigned ones, and the job that the root's
-poll took. So the queue and the workers duplicate no job and invent none: a take delivers its
-job to one worker, once.
-
-It is an instance of the proposed claims `queue-expansion-agrees` (R10) and
-`waiting-request-obligation-preserved` (R10 to R12) on the program `crew`. It would follow from
-three things.
-
-1. In a funded run each step of the queue's cell starts at a cell that encodes a state of the
-   first profile, for a request that keeps `Requested`. The attempt laws then give the model's
-   reply and the model's next state (`take_attempt`, `offer_attempt`, `poll_attempt` and the
-   two withdrawals, `src/Effect4/Laws/Library/Queue/Ops.lean`).
-2. No other step writes the queue's cell, and only a worker's note writes `assigned`.
-3. A take that exits with a job enters its caller's continuation once with that job.
-
-Reach: the program `crew`, every script of the driver's alphabet with its raw rows, every command
-budget at the battery's compile budget, under `funded`. It is safety. It does not establish that
-a fed job is ever assigned, the order of two deliveries, fairness, or anything of another client.
-Consumer: the scenario's claim `queueWorkers`. Its controls are finite runs, and the seat's
-receipt records a bounded search. -/
-@[semantics "translation-simulation" (requirement := R10)]
-theorem held_within_fed : HeldWithinFed := by
-  intro total fuel b moves hb hf
-  obtain ⟨a, shows, conserved⟩ := Assertions.jobs_script total fuel b moves hb hf
-  exact Accounting.heldWithin_of_ledger shows conserved
-
-/-- **Each job entering an offer is held, but for one job of a feeder that is gone.** Under every script of
-host acts, where the run is funded and at rest, the fed jobs are no more than the held ones. They
-may be one more where the feeder's connection is released. With `held_within_fed` that is the
-exact account. A take that commits keeps its job when its worker is cancelled. A request that is
-withdrawn consumes nothing. An accepted offer stays accepted. The one job that may be missing is
-the job of a pending offer that an interruption withdrew.
-
-It is an instance of the proposed claims `waiting-request-obligation-preserved` (R10 to R12) and
-`queue-expansion-agrees` (R10) on the program `crew`. It would follow from the three things of
-`held_within_fed` and from two more.
-
-4. A request's end is one of two. A take commits in its own step, or its interrupted wait runs
-   its withdrawal step before its fiber exits, and the withdrawal consumes nothing. An offer is
-   accepted by a step, or its interrupted wait withdraws what is still pending (decisions row
-   222).
-5. At rest no worker stands between its take's commit and its note. The commit and the note run
-   in one task, and no interruption is taken between them, because the caller holds no mask.
-
-Reach: the program `crew`, whose callers hold no mask. Scripts of host acts, every command
-budget, under `funded` and `atRest`. It does not establish that a fed job is ever assigned or
-finished, and it says nothing of a state that is not at rest. Under a masked take it fails: a red
-control. Consumer: `queueWorkers`. Its controls are finite runs, and the seat's receipt records a
-bounded search. -/
-@[semantics "reactive-scheduling" (requirement := R12)]
-theorem fed_accounted : FedAccounted := by
-  intro total fuel b moves hb hh hf hr
-  obtain ⟨a, shows, conserved, custody, lost, _⟩ :=
-    (Assertions.rest_script total fuel b moves hb hf) (Assertions.host_journal fuel b moves hh) hr
-  exact Accounting.accounted_of_ledger shows conserved custody lost
-
-/-- **At rest the queue is settled.** Under every script of host acts, where the run is funded
-and at rest, the observation satisfies `Observation.settled`. The cell has the first profile's
-shape. The waiting takers are the idle workers, and an offer pends exactly where the feeder is
-idle. No job is buffered while a taker waits, and an offer pends only at a full buffer.
-
-It is an instance of the proposed claim `wait-registration-no-gap` (R12) with the Queue's
-profile, and of the delivery clause of `waiting-request-obligation-preserved`, on the program
-`crew`. It would follow from the first, second and fourth things of the goals above, and from
-two more.
-
-6. Each posted helper runs once. It resolves its hint, and the request that awaits the hint
-   runs its next attempt inside the helper's task (decisions rows 238 and 240). So at rest no
-   posted signal is outstanding.
-7. The model's run invariant holds along the run's steps: the first profile, the buffer's
-   bound, and `quiet` at the requests that were signalled (`first_run_inv`,
-   `src/Effect4/Laws/Library/Queue/Invariant.lean`, proved for the model alone).
-
-Reach: as `fed_accounted`. Its first part is the premise of the attempt laws, read at the run's
-end. It is an invariant at rest, and an invariant is not progress. It does not establish that a
-waiting worker ever takes, the order of two takers, fairness or starvation freedom. The cell is
-read up to its handles: the statement does not say which taker is the earliest. Consumer:
-`queueWorkers`. Its controls are finite runs, and the seat's receipt records a bounded search. -/
-@[semantics "reactive-scheduling" (requirement := R12)]
-theorem queue_settled : QueueSettled := by
-  intro total fuel b moves hb hh hf hr
-  obtain ⟨_, shows, _, _, _, rest⟩ :=
-    (Assertions.rest_script total fuel b moves hb hf) (Assertions.host_journal fuel b moves hh) hr
-  exact Accounting.settled_of_ledger shows rest
-
-/-- **Each registration cleans up at most once**, on the crew over the queue. Under every script
-of a funded run, the `released` cell holds no connection twice. It is the first scenario's
-clause on this program (`Test/Dogfood/Scenario/Workers.lean`). Here an interrupted worker runs
-its take's withdrawal before its scope's release, and the feeder its offer's.
-
-It is an instance of R11's first whole-run clause, "at most once per registration, counted by
-identity", on the program `crew`. It would follow from that clause for the crew's three scopes
-(`Effect4.Scope.close_twice`, `src/Effect4/Machine/Scope.lean`, is the scope's own law). It
-needs nothing of the Queue beyond a frame fact: a withdrawal writes the queue's cell and no
-scope.
-
-Reach: the program `crew`, every script of the driver's alphabet, every command budget, under
-`funded`. It does not establish the order of the releases, that a release runs, or the clause
-for another program. Consumer: `queueWorkers`. Its controls are finite runs, and the seat's
-receipt records a bounded search. -/
-@[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem releases_once : ReleasesOnce := by
-  intro total fuel b moves hb hf
-  exact decide_eq_true (Assertions.cleanup_read _ (Assertions.cleanup_script total fuel b moves hb hf))
-
-/-- **The queue-workers scenario's claim.** A reply receipt does not advance the machine. A
-reply application consumes the selected call only. A control retires the held calls whose guard
-it removed. No job is held more often than the host fed it. Each fed job is held, but for one
-job of a feeder that is gone. At rest the queue is settled. No connection is released twice. The
-first three are proved for every run and every session. The other four are planned goals, so
-this theorem is proved modulo them. It does not establish the Queue's law of a whole run,
-fairness, starvation freedom or liveness. -/
-@[semantics "translation-simulation" (requirement := R10)]
-theorem queueWorkers :
-    ReceiptInert ∧ AppliedSelects ∧ ControlRetires ∧ HeldWithinFed ∧ FedAccounted ∧
-      QueueSettled ∧ ReleasesOnce :=
-  ⟨receipt_inert, applied_selects, control_retires, held_within_fed, fed_accounted,
-    queue_settled, releases_once⟩
-
-/-! ## 5. The runs and the controls -/
+/-! ## 1. The runs and the controls -/
 
 /-- The feeder's `Jobs.take` call and a worker's `Jobs.run` call, as the host sees them at a
 key. The feeder is fiber 3. -/
@@ -586,7 +439,7 @@ def runsAndControls : List NamedRun × List Control :=
   | some (b, _unwithdrawn, _silent, _keeps, _masked, _takesBack, _stays, _twice) => (runSet.runs, controlsOf b)
   | none => ([], [green "receipt" "the crew and its faulty twins build" [] fun _ => false])
 
-/-! ## 6. The record -/
+/-! ## 2. The record -/
 
 /-- The queue-workers scenario. The claim assembles the seven clauses. Two laws stand beside
 them as associated laws: the driver's `replays`, and `funded_replays`
@@ -596,39 +449,8 @@ def scenario : Scenario :=
   { name := runSet.name
     program := ``crew
     observation := ``observe
-    claim := ``queueWorkers
-    clauses :=
-      [ ⟨"receipt", ``receipt_inert⟩
-      , ⟨"selection", ``applied_selects⟩
-      , ⟨"retirement", ``control_retires⟩
-      , ⟨"once", ``held_within_fed⟩
-      , ⟨"accounted", ``fed_accounted⟩
-      , ⟨"settled", ``queue_settled⟩
-      , ⟨"cleanup", ``releases_once⟩ ]
-    laws := [⟨"journal", ``replays⟩, ⟨"funded", ``funded_replays⟩]
     runs := runsAndControls.1
     controls := runsAndControls.2 }
 
-/-- Red control of the gate's dependency check (decisions rows 203 and 254): the record under a
-claim that assembles none of its other clauses. Each placement and each control of the record
-still passes, so the gate reads it with the dependency check alone (`#scenario_reach`). -/
-def wrongTop : Scenario :=
-  { scenario with name := "queue-workers under receipt_inert", claim := ``receipt_inert }
-
--- The green control: the gate passes the record. The red control reads the record under the
--- wrong claim, with the dependency check only (its runs are judged above), and names each clause
--- that the wrong claim's proof does not reach.
-#scenario_gate scenario
-
-/--
-error: queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "selection" (Effect4.Run.applied_selects)
-queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "retirement" (Effect4.Run.control_retires)
-queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "once" (Test.Dogfood.Scenario.QueueWorkers.held_within_fed)
-queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "accounted" (Test.Dogfood.Scenario.QueueWorkers.fed_accounted)
-queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "settled" (Test.Dogfood.Scenario.QueueWorkers.queue_settled)
-queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "cleanup" (Test.Dogfood.Scenario.QueueWorkers.releases_once)
--/
-#guard_msgs (error) in
-#scenario_reach wrongTop
-
 end Test.Dogfood.Scenario.QueueWorkers
+

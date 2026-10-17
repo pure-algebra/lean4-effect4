@@ -1,4 +1,4 @@
-import Test.Dogfood.Application
+import Effect4.Program.Authoring.Claims
 import Test.Dogfood.Scenario.Todo
 import Effect4.Laws.Library.Ref.Cache
 import Effect4.Store.Domain.ProgramWire
@@ -9,7 +9,7 @@ import Effect4.Store.Domain.ProgramWire
 Decisions row 378 (1), (4) and (5). A bank entry is a verified implementation: its `Eff`
 definition block, the digest of the block's canonical bytes (`Canonical.digest`), its interface,
 the Lean model it implements, and its claim. The claim is a claim record about an
-implementation (row 378 (7); `ClaimRecord`, `Test/Dogfood/Application.lean`), whose statement is
+implementation (row 378 (7); `ClaimRecord`, `src/Effect4/Program/Authoring/Claims.lean`), whose statement is
 the agreement theorem about the block. Its status is the plan's (`#plan_status`). Proofs stay in
 Lean, and an entry holds the names that the plan checks.
 
@@ -37,7 +37,7 @@ namespace Test.Dogfood.Bank
 open Effect4 Effect4.Program Effect4.Machine
 open Effect4.Machine.Env (Requirement)
 open Effect4.Program.Denote (blockOf? paramsAsRows)
-open Test.Dogfood.Application (About Evidence ClaimRecord)
+open Effect4.Program.Authoring (About Evidence ClaimRecord)
 open Test.Dogfood.Scenario.Todo (application repository Repo todo noTodo)
 
 export Effect4.Bank (Entry)

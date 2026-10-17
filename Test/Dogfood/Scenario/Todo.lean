@@ -27,10 +27,9 @@ scripted host.
 * **Tested: finite runs.** Each run is one script on the Lean machine. An empty title asks the
   repository nothing. A missing to-do fails with its id. A failure of the repository escapes.
 
-No line here is a theorem. The application's call trees stand in
-`Test/Dogfood/Scenario/Todo/Tree.lean`, and its claims and their record in
-`Test/Dogfood/Scenario/Todo/Claims.lean`, the shape of the claims packet
-(`docs/research/2026-10-07-packet-application-claims.md`).
+No line here is a theorem. The application's entries as programs stand in
+`Test/Dogfood/Scenario/Todo/Entries.lean`, and its scenario record in
+`Test/Dogfood/Scenario/Todo/Scenario.lean`.
 
 One finding stands in no guard yet. The module printer refuses `add` as an export name
 because a module imports the atom `add`.

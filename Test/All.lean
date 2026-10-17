@@ -284,7 +284,6 @@ import Test.Audit.ProofGraphPlan
 import Test.Audit.ClosureAudit
 import Test.Audit.LandingPlanControls
 import Test.Audit.Explain
-import Test.Audit.ScenarioGate
 import Test.Machine.StoreKernelBank
 import Test.Machine.MaskDiscipline
 import Test.Machine.MaskRuns
@@ -326,12 +325,7 @@ import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
-import Test.Dogfood.Scenario.Tape
-import Test.Dogfood.Scenario.Lowered
-import Test.Dogfood.Scenario.Gate
-import Test.Dogfood.Scenario.Faces
 import Test.Dogfood.Scenario.Todo
-import Test.Dogfood.Scenario.TodoPaged
 import Test.Program.ScopedOpContract
 import Test.Program.SliceLattice
 import Test.Program.StepCallback
@@ -354,52 +348,22 @@ import Test.Audit.SiteControls
 import Test.Audit.GlyphControls
 
 -- Scenario proof structures and their independent controls.
-import Test.Dogfood.Proofs.HostJournal
-import Test.Dogfood.Proofs.MachinePopTrace
-import Test.Dogfood.Proofs.PrimitiveProducerReader
-import Test.Dogfood.Proofs.AnswerFlowFamilyReader
-import Test.Dogfood.Proofs.HostTimeoutSource
-import Test.Dogfood.Proofs.HostTimeoutDriver
-import Test.Dogfood.Proofs.HostTimeoutNumberLedger
-import Test.Dogfood.Proofs.HostTimeoutNumberEntry
-import Test.Dogfood.Proofs.HostTimeoutNumberFlow
-import Test.Dogfood.Proofs.HostTimeoutNumberCounted
-import Test.Dogfood.Proofs.HostTimeoutNumberFormFamily
-import Test.Dogfood.Proofs.HostAppliedObservation
-import Test.Dogfood.Scenario.SourceFragment
-import Test.Dogfood.Scenario.NativeHeap
-import Test.Dogfood.Scenario.SourceUse
-import Test.Dogfood.Scenario.SourceOpportunity
-import Test.Dogfood.Scenario.RoutingInterrupt
 import Test.Counterexamples.Machine.Runtime.HostClockPrefix
 import Test.Counterexamples.Machine.Runtime.HostRefPrefix
 import Test.Counterexamples.Machine.Runtime.HostInstancePrefix
-import Test.Dogfood.Scenario.Atomic.Writes
-import Test.Dogfood.Scenario.Atomic.Writer
-import Test.Dogfood.Scenario.Atomic.WriterPhase
-import Test.Dogfood.Scenario.Atomic.WriterOwnership
-import Test.Dogfood.Scenario.Atomic.WriterFrames
-import Test.Dogfood.Scenario.Atomic.WriterMachine
-import Test.Dogfood.Proofs.TimeoutCounterexample
-import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst
 import Test.Program.FirstExitSource
 import Test.Program.KernelRfl
 import Test.Run.LiveContract
 -- The application and claim records (the claims packet, seat CLAIMS).
-import Test.Dogfood.Application
-import Test.Dogfood.Scenario.Todo.Claims
 import Test.Program.AddressMove
 import Test.Store.ProgramContent
-import Test.Dogfood.Scenario.Workers.CommandGuard
 -- The to-do application as one Effect service (decisions row 378 (20), seat SVC).
-import Test.Dogfood.Scenario.TodoService
 -- The bank of verified implementations: the banked Ref cache (decisions row 378, seat BANK).
 import Test.Dogfood.Bank
 -- Definitions with program parameters and invocations with programs, authored (row 340, seat IMPOSE).
 import Test.Program.AuthoringInvoke
 -- The to-do's file reads back whole (decisions row 378 (19), (20), seat READ).
-import Test.Dogfood.Scenario.TodoFile
 -- An application whose entries invoke its definitions, a banked block among them (row 378, IMPOSE).
 import Test.Dogfood.ApplicationDefs
 -- The to-do with the banked Ref cache imposed on its service (row 378 (8), seat IMPOSE).
@@ -415,55 +379,19 @@ import Test.Audit.StatementCensusControls
 -- M3: the crews actual allocation and acquired-value obligations.
 
 
-import Test.Dogfood.Proofs.WorkersWriterSource
-import Test.Dogfood.Proofs.QueueWorkersWriter
-import Test.Dogfood.Proofs.QueueWorkersFlow
-import Test.Dogfood.Scenario.QueueWorkers.RefReplyControl
-import Test.Dogfood.Proofs.HostTimeoutNumberPhaseFlow
-import Test.Dogfood.Proofs.HostTimeoutNumberConfiguration
-import Test.Dogfood.Scenario.Timeout.CommandCut
 
 -- M3: shared crew observations and concrete source contracts.
-import Test.Dogfood.Proofs.WorkersLogContract
-import Test.Dogfood.Proofs.QueueWorkersLogContract
 import Test.Program.CodeClosureBank
 
 import Test.Machine.AnswerFlowContextual
 
 -- M3: checked shared producers and their concrete application readers.
-import Test.Dogfood.Proofs.HostTimeoutNumberOrdinary
-import Test.Dogfood.Proofs.HostTimeoutNumberCleanupJoint
-import Test.Dogfood.Proofs.HostTimeoutNumberAttemptNative
-import Test.Dogfood.Proofs.HostTimeoutNumberTerminal
-import Test.Dogfood.Scenario.Atomic.FailureControls
-import Test.Dogfood.Scenario.Atomic.StageRoles
-import Test.Dogfood.Scenario.Atomic.StageObservation
-import Test.Dogfood.Proofs.QueueWorkersJobBinding
-import Test.Dogfood.Proofs.QueueWorkersNotificationFamily
 
 -- M3: full native source accounting and actual application transitions.
-import Test.Dogfood.Proofs.HostTimeoutNumberInjection
-import Test.Dogfood.Proofs.HostTimeoutNumberInterrupt
-import Test.Dogfood.Proofs.HostTimeoutNumberRootLoop
-import Test.Dogfood.Proofs.HostTimeoutNumberTerminalFiber
-import Test.Dogfood.Proofs.QueueWorkersCountSource
-import Test.Dogfood.Proofs.QueueWorkersRetryFamily
-import Test.Dogfood.Proofs.QueueWorkersTakeWithdrawal
-import Test.Dogfood.Proofs.QueueWorkersWorkerBinding
-import Test.Dogfood.Scenario.Atomic.StageNativeJoin
-import Test.Dogfood.Scenario.Timeout.FinishCut
-import Test.Dogfood.Scenario.Timeout.OriginControl
-import Test.Dogfood.Scenario.Timeout.SourceCut
-import Test.Dogfood.Proofs.HostTimeoutNumberCleanupNative
-import Test.Dogfood.Proofs.HostTimeoutNumberRetirement
-import Test.Dogfood.Proofs.QueueWorkersCountHistory
-import Test.Dogfood.Proofs.QueueWorkersJobSourceFamilies
-import Test.Dogfood.Proofs.QueueWorkersOfferWrapper
-import Test.Dogfood.Scenario.Atomic.StageActivation
-import Test.Dogfood.Scenario.Atomic.StageNativeQueue
-import Test.Dogfood.Scenario.Atomic.StageTerminal
 import Test.Program.SelectRulesRed
 import Test.Schema.DocumentJson
+import Test.Dogfood.Scenario.TapeData
+import Test.Dogfood.Scenario.Todo.Scenario
 
 /-!
 # Effect4 test battery

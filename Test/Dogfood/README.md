@@ -24,16 +24,15 @@ of row 204 moves at least one program forward.
   minted name for the cell's value.
 - Every program here imports entry modules (`Effect4.Author`, `Effect4.Run`, `Effect4.Emit`,
   `Effect4.Library`, `Effect4.Laws.Author`), a composed module's own files, or the batteries'
-  support (decisions row 332); `#exposure_report` lists any other import. The gate `#scenario_gate` reads the semantics registry and the planning graph,
-  which are tools, so it stands in `Test/Audit/ScenarioGate.lean`.
+  support (decisions row 332); `#exposure_report` lists any other import.
 - The machine's tape and the laws that name no scenario stand in the library, in the namespace
   `Effect4.Run`. `src/Effect4/Run/Tape.lean` holds the executable definitions: the machine's
   view, the tape, a funded run and rest. `src/Effect4/Laws/Run/Rows.lean` and
   `src/Effect4/Laws/Run/Tape.lean` hold their laws. `Scenario.lean` gives each name that the
   batteries use an alias in its namespace, so a battery writes the short name.
-- `Scenario/` holds one battery per scenario. `Scenario/Tape.lean` holds the text of their lowered
-  runs, and `Scenario/Lowered.lean` binds the engine's fixtures to it. `Scenario/Faces.lean` pins
-  that each scenario's program prints and reads back. `Test/All.lean` imports each one.
+- `Scenario/` holds each scenario's record: its program, its observation, its named runs and its
+  controls. `Scenario/TapeData.lean` writes the engine's fixtures of their lowered runs.
+  `Test/All.lean` imports each one.
 
 ## The reference texts
 
@@ -128,213 +127,24 @@ theorem. An equal answer is a test on one recorded run, and the battery claims n
 
 ## The scenarios
 
-Decisions row 254 (owner, 2026-10-05) adds scenarios to the acceptance programs. A scenario tests
-the semantics where features compose. It is one unit with six parts.
+Decisions row 254 (owner, 2026-10-05) adds scenarios to the acceptance programs. A scenario is a
+program, its scripts and one observation, which the outside lanes perform. Decisions row 410
+(owner, 2026-10-16) retired the scenarios' claims, their proofs and the gate that checked them.
 
 | Part | Content |
 | --- | --- |
 | Program | One program through `Api.Author.build`, built on the consumer of a battery above |
 | Script | A `List Move` (`Scenario.lean`), where `Move` is the library's `Event` (`src/Effect4/Run/Event.lean`): control decisions, held calls, reply receipts, reply applications and a remote host's run command. The record lists each script once, as a named run |
 | Observation | One named structure read from the run. Every control compares it |
-| Claim | One theorem whose proof assembles the clauses. Each clause is a theorem or a planned goal with its placement |
-| Controls | For each clause, and for each associated law, a green control and at least one red control. A control names the runs that its comparison reads |
-| Lowered runs | The same observation on the generated OCaml engine and on the printed TypeScript module, or the stage that run waits on |
+| Controls | Green and red comparisons on the observation. A control names the runs that its comparison reads |
 
 The driver plays a script into the run's own journal. It keeps the reply receipt and the reply
 application apart, and it selects a live call by its key. The run a script reaches is the run its
 journal reaches (`replays`, `Scenario.lean`), so a replay calls no fixture.
 
-A scenario's record names its program, its observation and its claims as declarations
-(`Scenario`, `Scenario.lean`). It lists two kinds of entry.
-
-- An **assembled clause** is a claim that the scenario's claim uses in its proof.
-- An **associated law** has controls only. The record claims no dependency of the claim on it.
-
-`#scenario_gate` stands at the foot of each scenario's battery. It checks the record against the
-environment and runs the controls once. It refuses:
-
-- a program or an observation that does not resolve to a declaration;
-- a claim that is no theorem and no planned goal;
-- a claim with no placement (decisions row 207);
-- a claim whose proof does not reach one of its assembled clauses;
-- a claim that rests on a planned goal which no clause names;
-- a clause or a law with no green control, or with no red control;
-- a record that lists one run's name twice;
-- a named run that no control reads;
-- a control that names no clause and no law;
-- a control that reads a run which the record does not list;
-- a control that fails.
-
-`#scenario_reach` runs the first five checks and plays no run. A red control of the dependency
-check uses it on a record whose runs a green `#scenario_gate` has already judged.
-
-A battery's declaration carries its own placement at a requirement. Any other declaration carries
-`@[semantics]`, or the semantics registry places it: as a requirement's top node, as a claim's
-pointer, or by its module.
-
-The gate measures the two dependency findings on the planning graph (`ProofGraph.buildPlan`,
-`tools/ProofGraph/Plan.lean`). A planned goal is reached when the claim rests on it. A theorem is
-reached when the walk from the claim's proof reaches it through the batteries' declarations.
-
-So no control stands outside a scenario, and no scenario stands without a placed claim. Each
-control is a finite probe: one script on the Lean machine. A claim's standing is derived from its
-proof: `#plan_status` prints it, with the planned goals the claim rests on.
-
-The gate has controls of its own: `Scenario/Gate.lean` runs it over fixture records of that
-battery. The gate accepts some, and it refuses the others by name. Most stand on a planned goal
-of that battery, which states nothing of a program. Some hold named runs on a small program of
-that battery, so that the gate's playing of a run has its controls.
-
-### Where a script lives, and who reads it
-
-A scenario's record lists each of its scripts once, as a **named run** (`NamedRun`,
-`Scenario.lean`). A named run holds a name, the built program opened for a run, and the script.
-A control holds no script. It names the runs that its comparison reads, and the comparison is a
-function of those runs as played.
-
-The diagram shows the three readers of a record's named runs. It claims no order among them.
-
-```mermaid
-flowchart LR
-  R["a scenario's record<br/>runs: each named run, once"]
-  C["a control<br/>reads: the names of its runs"]
-  G["the gate<br/>#scenario_gate"]
-  H["the host lane<br/>harness/truth/session/Keyed.lean"]
-  E["the engine's lane<br/>Scenario/Tape.lean"]
-  C -->|names runs of| R
-  G -->|plays each run of| R
-  G -->|hands the played runs to| C
-  H -->|performs each run of| R
-  E -->|takes the runs that it names from| R
-```
-
-| Reader | What it takes | Where |
-| --- | --- | --- |
-| The gate | It plays each named run once. It hands each control the runs that the control names, as played. | `Scenario.problems`, `Scenario.lean` |
-| The host lane | It performs each named run of the five records, in the record's order. It holds no script. | `Wire.runs`, `harness/truth/session/Keyed.lean` |
-| The engine's lane | It takes the runs that `taken` names. It holds two scripts of its own, which no record lists. | `taken` and `own`, `Scenario/Tape.lean` |
-
-A lane quotes a run as the scenario's name, a slash and the run's name. One name has one script
-on every lane. The engine's lane refuses an own run that carries the name of a record's run
-(`findings`, `Scenario/Tape.lean`), and its writer then writes nothing.
-
-So a changed script of a battery reaches each reader with no second edit:
-
-- the gate, at the battery's next build;
-- the host lane, at the next `make check-ts`;
-- the engine's fixture, at the next `make gen-fixtures`. The lowered battery is red until then.
-
-Some comparisons do more than read a played run.
-
-- The timeout battery's frontier control sets the fuel of a played run to zero. Then it plays
-  one reply application. A script holds no budget, so that one move stands in the comparison.
-- The two journal controls play a run's own journal again from the opened program.
-- One workers control makes the run that `P3WorkerQueue.drive` drives.
-- A control that reads no run compares a program, a typing answer or a run of `Api.run`.
-
-The gate refuses a named run that no control reads. So each run that a lane performs has a
-control on the Lean machine.
-
-| Scenario | Program | Observation | Claim, assembled clauses and associated laws | Lowered runs |
-| --- | --- | --- | --- | --- |
-| workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers` assembles four clauses: `receipt_inert` (a theorem of `Scenario.lean`), `applied_selects` and `control_retires` (theorems of `src/Effect4/Laws/Run/Rows.lean`), and the planned goal `releases_once`. That goal says: under every script the crew releases no connection twice. Associated law: `replays`. | Engine: `workers.txt`, five runs of the machine clause. Host: the keyed lane performs each named run that a host can perform. The host measures six entries by itself: the reply receipts, the reply applications, the retired calls, the root's exit, the live calls and the stored replies. It measures five entries through a reader, at the script's end: the assignment and the cleanups through the cells reader, the timers through the sleeps reader, and the runnable fibers and the armed owners through the dispatchers reader, as a count of zero. Where the run's own wait follows the last act, that wait gives the zero. Those two entries then show only that the host came to rest, and the check's table names the scripts. No entry waits. One script has no host run: a forged reply is no act of a host. The program prints and reads back since the state plan's T5, part A (`Scenario/Faces.lean`). |
-| queue-workers: `Scenario/QueueWorkers.lean`, on p3's consumer and the public Queue | `crew`: a feeder takes each job from the host row `Jobs.take` and offers it to a queue of capacity 1. Two workers take from the queue, note each assignment and run each job on the host row `Jobs.run`. The root reads the queue's size and polls once at its exit. So the program holds the five public operations of `src/Effect4/Library/Queue/Ops.lean`. Each of the three crew members holds a connection that its scope releases. | `Observation`, eleven fields: the assignment, the queue's cell up to its handles, the fed jobs, the accepted reply receipts, the reply applications, the retired calls, the opened and the released connections, the count of finished jobs, the root's exit and the work left. | `queueWorkers` assembles seven clauses. Three are theorems: `receipt_inert` of `Scenario.lean`, and `applied_selects` and `control_retires` of `src/Effect4/Laws/Run/Rows.lean`. Four are planned goals over scripts. `held_within_fed`: no job is held more often than the host fed it. `fed_accounted`: each fed job is held, but for one job of a feeder that is gone. `queue_settled`: at rest the queue's registrations are the crew's waits, and no job is stranded. `releases_once`: no connection is released twice. Each goal takes the budget premise `funded`, and the two middle ones hold at rest, on scripts of host acts. Associated laws: `replays` and `funded_replays`. | Engine: `queue-workers.txt`, three runs of the machine clause: the whole run to the root's exit, and the two cancellations between a reply application and its flush. Host: the keyed lane performs each named run that a host can perform. The host measures seven entries by itself: the fed jobs, the reply receipts, the reply applications, the retired calls, the root's exit, the live calls and the stored replies. It measures eight entries through a reader, at the script's end. Five come through the cells reader: the assignment, the queue's cell, the opened connections, the released connections and the count of finished jobs. The timers come through the sleeps reader. The runnable fibers and the armed owners come through the dispatchers reader, as a count of zero, under the limit of the workers scenario's row. No entry waits. The lane compares the queue's cell up to its handles ("The host runs", below). Six scripts have no host run. A forged reply is no act of a host. Three scripts give another row where the machine has work for a flush. Two cancel a fiber between a reply application and its flush, and the third plays the second one's moves on a faulty crew. A host lets every dispatcher run after each act, so it reaches no such state. The engine's fixture holds the two on the crew. Two scripts run at a command budget that cuts a step, and a host has no budget. The program prints and reads back (`Scenario/Faces.lean`). |
-| routing: `Scenario/Routing.lean`, on p2's consumer | `request`: p2's handler on its two host rows. `handleOn` writes it over any repository row and any two handler tests. | `Observation`, three fields: the exact response or the failure that escapes, the repository's calls, and the refused rows with the session's reason. | `routing` assembles three clauses: `tagIs_pair` (a theorem: the handler's test is exact on the pair spelling), and the planned goals `infrastructure_escapes` and `unauthorized_calls_nothing`. Associated law: `submit_success_prepared_fits`, a theorem of the law graph. | Engine: `routing.txt`, four runs of the machine clause. Host: the keyed lane performs each named run that a host can perform. The host measures the outcome and the repository's calls. The recorder's ledger predicts the refused rows, and Lean's replay gives the session's verdict of each. No field waits. Two scripts have no host run: the session refuses a reply as `envelope`, and a host has no reply admission. A third stays out: tsgo 7 refuses the printed module of the exact error column. The program prints and reads back (`Scenario/Faces.lean`). |
-| atomic: `Scenario/Atomic.lean`, on p4's and p5's consumers | `shop`: a rate-limited ledger. Each request decides over the window in one store step, and an admitted request deposits its number in one store step. Request 2 fails behind both commits. Each request's finalizer notes what it sees. | `Observation`, five fields: each request's outcome, the whole window, the whole account, the count of completed requests and the cleanup log. | `atomic` assembles five clauses. Four are planned goals over every script: `bounded`, `counted`, `committed` and `cleans_once`. One is a theorem on the straight fragment: `unsuspended_runs`. Associated law: `syncRow_typed`, a theorem of the law graph. | Engine: `atomic.txt`, three runs of the machine clause. Host: the keyed lane performs each named run that a host can perform. The shop has no host row, so the host measures no field by itself. It measures all five fields through a reader, at the script's end: the window, the account and the cleanup log through the cells reader, and each request's outcome and the completed count through the fibers reader. No field waits. One script has no host run: it interrupts request 2, whose fiber made no call, so a host with no reader has no name for it. The program prints and reads back since the state plan's T5, part A (`Scenario/Faces.lean`). |
-| timeout: `Scenario/Timeout.lean`, on p1's consumer | `fetch`: p1's quote fetch, with a 2000 ms timeout around each attempt and three retries. Each attempt counts itself before its host call, and its finalizer notes how it ended. | `Observation`, nine fields: what became of each held call, the accepted reply receipts, the reply applications, the retired calls and the stored replies. Then the attempts started, the cleanup log, the root's ending and the timer work. | `timeout` assembles three clauses, each a planned goal: `retries_declared`, `stale_never_applies` and `cleanup_keeps`. Associated laws: `applyReply_zero` and `advance_answer_refuses`, theorems of the law graph, and `replays`. | Engine: `timeout.txt`, six runs of the machine clause, and p1's own program as the handle case. Host: the keyed lane performs each named run that a host can perform. The host measures six fields by itself: each held call's fate, the reply receipts, the reply applications, the retired calls, the stored replies and the root's ending. It measures the attempt count and the cleanup log through the cells reader, at the script's end. It measures the timers through the sleeps reader in each script where every sleeping fiber is the root or made a call. In the other scripts the timers wait: a timer's fiber makes no call, so it has no number on the host, and Lean's replay is the timers' only evidence there. So the scenario's whole-observation comparison waits on the timers in those scripts, and the check's table names them. Two scripts have no host run: a forged reply and a direct answer decision are no acts of a host. The program prints since the state plan's T5, part A, and reads back since part B's second step: the checked type reader reads the retry loop's stated cursor type (`Scenario/Faces.lean`). |
-| todo-paged: `Scenario/TodoPaged.lean`, on the stream consumer | `listPaged` and `completeAll`: `runCollect` and `runForEach` over the repository's stream. | `Observation`, seven fields: the root's exit, the counts of open, pull and close, the completed requests, the waiting rows, and the refused rows. | The claim waits for the claim design (slice 4). | Lowered runs wait for slice 5. |
-
-A statement over a scenario's runs takes its budget as a premise, under one name: `funded`
-(`src/Effect4/Run/Tape.lean`). A funded run is a run that no budget cut: the tape of its own
-journal, read from its fresh open, leaves no row unread. The journal's verdicts alone do not decide it. A
-reply application has the verdict `applied` as soon as its call's guard is gone, whatever fuel
-its step had left. `funded_replays` (`src/Effect4/Laws/Run/Tape.lean`) says what the premise
-gives: the machine of a funded run is the raw replay of its tape's decisions. The queue-workers record holds the controls, on one
-journal at three command budgets. At the battery's budget the run is funded. At a smaller
-budget the journal has a stopped row and the funded run's verdicts, and the queue is not
-settled. At a third budget the cut leaves the machine at rest: no work is left, and the root
-has no exit. So a machine at rest does not show that its run is funded.
-
-Two cases have no control, and each battery's header states its case.
-
-- A cleanup replayed under one registration (atomic). The cleanup log counts writes by identity,
-  and it does not count a finalizer's invocations.
-- A timer that fires inside a masked region (timeout). That cut waits for the mask's contract
-  (decisions rows 244 to 246).
-
-### The lowered runs
-
-The generated OCaml engine holds no session: no stored reply, no retired call, no consumed call.
-So a scenario's observation lands as two clauses.
-
-- **The session clause** is the whole observation. Each scenario's battery checks it on the Lean
-  machine. The host run checks it on the printed TypeScript module, on the keyed lane ("The
-  host runs", below).
-- **The machine clause** is `machineView` (`src/Effect4/Run/Tape.lean`). It holds six
-  readings: the root's exit, the cells, the calls the machine waits on, the armed owners, the
-  runnable fibers and the timers.
-
-`Scenario/Tape.lean` holds what Lean writes for the machine clause: each scenario's lowered runs,
-their machine tapes and the fixture text. Its one gate, of the record `cuts`, reads no committed
-file, so it builds whatever the committed files hold. A lowered run with the name of a record's
-run is that named run. `taken` lists those names, and the lane writes no script of them. The
-lane's own runs are the two of `own`.
-
-The record `cuts` is the journal's cut as a scenario. The tape's reading of a journal stops at
-its first stopped row (`tapeFrom`, `src/Effect4/Run/Tape.lean`). That row ends at a frontier, or
-the raw replay does not read past its decision. The rows before it are the completed prefix.
-
-- **Program and runs.** The crew of the workers scenario, on two of its scripts. The budget
-  `cutBudget` makes each journal stop.
-- **Claim.** `shown_views_opened`: at a fresh open, a lowered run's views are those of its
-  positions, even when later rows stay unread. Its proof uses the clause `position`
-  (`tapeFrom_position_replays`): the machine after a position is the raw replay of the decisions
-  up to it.
-- **Associated laws.** `cut` (`tapeFrom_cut_replays`) and `append` (`tapeFrom_append`). The
-  record claims no dependency of the claim on them. The three laws of the record stand in
-  `src/Effect4/Laws/Run/Tape.lean`.
-- **Controls.** The second record, `unstopped`, plays the same scripts at the workers' own
-  budgets, where no journal stops. The gate must refuse each control that reads a journal for its
-  stop.
-- **Limit.** No law states the machine after a stopped row. Two red controls show that it is not
-  the raw replay of the completed prefix's tape.
-
-A fixture holds the canonical bytes of the admitted program and of each row, and the budgets. It
-also holds the machine tape: each decision that moved the session machine, with the view after
-it. A decision of the tape may leave the view as it was, as a second interruption of an exited
-fiber does. The lane's red control cuts a tape before its last decision that moves the view. That
-shorter tape must end at another view than the whole tape's.
-
-`Scenario/Lowered.lean` binds each committed fixture under `ocaml/engine/test/scenarios/` to that
-text. `ocaml/engine/test/scenarios/test_scenarios.ml` replays each prefix of each tape through the
-generated `api_replay`, with the row table read from its wire bytes, on both instances. It compares
-the engine's view with Lean's at every position.
-
-A fixture's line `table differs` or `table same` records one comparison, in one projection. It
-says whether the raw replay with the empty table shows another machine view at some position.
-`table same` does not say that the replay reads no row of the table. The run `handle/cache` of
-`timeout.txt` is p1's own program, whose first host row answers a handle. It is the one run that
-says `table differs`.
-
-The theorem `tape_replays` (`src/Effect4/Laws/Run/Tape.lean`) is the Lean half. A journal's
-machine is the raw replay of its tape, for every run and every journal whose tape reads to its
-end. The tape holds
-the decision that the session hands the machine: for a reply application, the reply's own answer
-decision. The battery also checks it at every position of every fixture, as finite runs.
-The engine's session clause waits: the engine has no session to compare.
-
-To write the fixtures again, follow these steps from the repository's root.
-
-1. Run `make gen-fixtures`. It builds `Test.Dogfood.Scenario.Tape` and runs the writer,
-   `ocaml/engine/test/scenarios/write.lean`. It writes a file only where its bytes differ.
-2. Build `Test.Dogfood.Scenario.Lowered`, which binds the files.
-3. Run `dune test --force engine/test/scenarios` in `ocaml/`, through `opam exec --switch=effect4`.
-
-Lake does not see a fixture as an input of the battery. So after a change of a fixture alone,
-`lake build` takes the battery from its cache and binds nothing. The group `fixtures` closes
-that gap (`docs/GENERATED.md`). Its marker depends on the fixtures themselves, so
-`make gen-fixtures` writes a changed fixture again from Lean. `make check-gen` refuses a
-committed fixture that Lean does not write, and `make check-ocaml` runs after the group.
+Two lanes read a record's named runs. The keyed lane performs them on rc.112 (below). The engine's
+lane replays the machine tapes that `Scenario/TapeData.lean` writes under
+`ocaml/engine/test/scenarios/`.
 
 ### The host runs
 

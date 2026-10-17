@@ -47,7 +47,7 @@ TSGO = MODULES / '@typescript/native-preview/bin/tsgo'
 # The scenarios' batteries, which `Keyed.lean` imports, and the one tool module beside them.
 SCENARIOS = ['Test.Dogfood.Scenario.Workers', 'Test.Dogfood.Scenario.QueueWorkers',
              'Test.Dogfood.Scenario.Routing', 'Test.Dogfood.Scenario.Atomic',
-             'Test.Dogfood.Scenario.Timeout', 'Test.Dogfood.Scenario.Todo.Claims',
+             'Test.Dogfood.Scenario.Timeout', 'Test.Dogfood.Scenario.Todo.Scenario',
              'Test.Dogfood.Scenario.Todo.Cached', 'Tools.Code.Module',
              'Tools.ProfileJson', 'Tools.RunChecks']
 # The recordings of the lane's four fixture families (two, shared, kv and the streams), as the

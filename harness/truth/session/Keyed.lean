@@ -6,7 +6,7 @@ import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
-import Test.Dogfood.Scenario.Todo.Claims
+import Test.Dogfood.Scenario.Todo.Scenario
 import Test.Dogfood.Scenario.Todo.Cached
 import Effect4.Codegen.RowServices
 import Tools.ProfileJson
@@ -886,7 +886,7 @@ def atomic : Wire :=
     same := fun a b => Scenario.Atomic.observe a == Scenario.Atomic.observe b
     asks := [.cells, .fibers] }
 
-/-- The to-do application (`Test/Dogfood/Scenario/Todo/Claims.lean`), with three fields of its
+/-- The to-do application (`Test/Dogfood/Scenario/Todo/Scenario.lean`), with three fields of its
 observation: the outcome, the held calls with their rows, and the refusals. Its other fields
 (`applied`, `settled`, `conforming`) are Lean's readings of the run, which a host does not make.
 The cache composite shares these checks. A missing consumer refuses fixture construction. -/
@@ -953,7 +953,7 @@ def batch (inputs : List J) : Except String J := do
     return Json.mkObj [("name", .str name), ("result", result)])
 
 /-- The pairs of the to-do's runs under a host as a function (`runsOf`,
-`Test/Dogfood/Scenario/Todo/Claims.lean`): the first run, the second, and the model's state where
+`Test/Dogfood/Scenario/Todo/Scenario.lean`): the first run, the second, and the model's state where
 the first starts. The second starts where the model leaves the first. -/
 def todoPairs : List (String × String × Scenario.Todo.Repo) :=
   [ ("todo/model-add", "todo/model-list", (1, [])), ("todo/forgetful-add", "todo/forgetful-list", (1, []))

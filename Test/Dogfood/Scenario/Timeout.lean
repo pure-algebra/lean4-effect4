@@ -1,7 +1,5 @@
-import Test.Audit.ScenarioGate
 import Test.Dogfood.Scenario.Timeout.Runs
 import Test.Dogfood.Scenario.Timeout.Model
-import Test.Dogfood.Proofs.HostTimeoutHistory
 
 set_option autoImplicit false
 set_option maxRecDepth 8192
@@ -13,86 +11,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Test.Dogfood.Scenario
 open Test.Dogfood.P1HttpCache (getQuote timeoutForm retryForm retryable)
 
-/-! ## 4. The claim -/
-
-/-- The original reply-based claim, retained as a refuted proposition.
-An applied success can yield before the attempt exits, allowing the timer to win. -/
-def ReplyBasedRetriesDeclared : Prop :=
-  ∀ (b : Api.Built) (moves : List Move), Effect4.Api.Author.build fetch = .ok b →
-    moves.all Move.plain = true →
-    (observe (Scenario.play (opened b) moves)).replyBasedRetriesDeclared = true
-
-/-- The proposition of `retries_declared`. -/
-def RetriesDeclared : Prop :=
-  ∀ (b : Api.Built) (moves : List Move), Effect4.Api.Author.build fetch = .ok b →
-    moves.all Move.plain = true →
-    (observe (Scenario.play (opened b) moves)).retriesDeclared = true
-
-/-- **Only returned declared failures retry.** Each later attempt follows a completed timeout
-form that returns a declared typed failure. The client starts at most four attempts.
-Reach: `fetch`, the battery's budgets, and every plain script.
-The observation keeps host reply application separate from the form's complete returned exit.
-The selected entrant identifies its attempt or timer role at the actual exit observer.
-The statement establishes no fairness, physical deadline, or general law of either form.
-Concept: translation-simulation, R10. Consumer: the timeout scenario. -/
-@[semantics "translation-simulation" (requirement := R10)]
-proof_goal retries_declared : RetriesDeclared
-
-/-- The proposition of `stale_never_applies`. -/
-def StaleNeverApplies : Prop :=
-  ∀ (b : Api.Built) (moves : List Move), Effect4.Api.Author.build fetch = .ok b →
-    (observe (Scenario.play (opened b) moves)).staleNeverApplies = true
-
-/-- **A reply of a timed-out attempt never applies to a later attempt.** Under every script the
-observation satisfies `Observation.staleNeverApplies`. A retired call has no reply application,
-no key has two receipts or two applications, and the root answers only the body of a reply that
-was applied at its own call. Reach: the program `fetch`, every script of the driver's alphabet
-with its raw rows, the battery's budgets. The key's identity carries it: a later attempt parks
-under another fiber and another guard token. It does not establish reply admission at the
-application, or the retirement edge of the host protocol: both are open parts of R6. It says
-nothing of a host that answers the second call with the first call's body by its own choice.
-Concept `host-session-protocol`, R6. Consumer: the timeout scenario. Its controls are finite
-runs, and the seat's receipt records a bounded search. -/
-@[semantics "host-session-protocol" (requirement := R6)]
-theorem stale_never_applies : StaleNeverApplies := by
-  intro built moves checked
-  have clauses := Test.Dogfood.Proofs.HostJournal.stale_clauses built moves
-  unfold Observation.staleNeverApplies
-  rw [clauses.1, clauses.2.1, clauses.2.2]
-  simp only [Bool.true_and]
-  cases returned : (observe (Scenario.play (opened built) moves)).root with
-  | running => rfl
-  | answered body => exact Test.Dogfood.Proofs.HostTimeoutHistory.successful_body_seen built moves checked body returned
-  | failed tag message => rfl
-  | interrupted => rfl
-  | other => rfl
-
-/-- The proposition of `cleanup_keeps`. -/
-def CleanupKeeps : Prop :=
-  ∀ (b : Api.Built) (moves : List Move), Effect4.Api.Author.build fetch = .ok b →
-    (observe (Scenario.play (opened b) moves)).cleanupKeeps = true
-
-/-- **Cleanup keeps the committed count.** Under every script the observation satisfies
-`Observation.cleanupKeeps`. Each attempt that ended stands once in the cleanup log, with the
-count its finalizer saw: its own number. So an interruption by the timer takes no committed
-count back. Reach: the program `fetch`, every script of the driver's alphabet, the battery's
-budgets. It is a statement about the log and the count cell: it counts writes by identity. It
-does not count a finalizer's invocations, and it does not establish that a finalizer runs. It
-states no cut inside a masked region: the attempt has none. Concept
-`scope-lifetime-finalization`, R11. Consumer: the timeout scenario. Its controls are finite
-runs, and the seat's receipt records a bounded search. -/
-@[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal cleanup_keeps : CleanupKeeps
-
-/-- **The timeout scenario's claim.** Only the declared failures retry. A reply of a timed-out
-attempt never applies to a later attempt. Cleanup keeps the committed count. The retry and cleanup clauses remain
-planned goals, so this theorem is proved modulo them. It does not establish a Cache contract,
-deadline fairness or a physical clock. -/
-@[semantics "host-session-protocol" (requirement := R6)]
-theorem timeout : RetriesDeclared ∧ StaleNeverApplies ∧ CleanupKeeps :=
-  ⟨retries_declared, stale_never_applies, cleanup_keeps⟩
-
-/-! ## 5. The runs and the controls -/
+/-! ## 1. The runs and the controls -/
 
 /-- A `[count seen, interrupted]` entry of the cleanup log. -/
 def ended (attempt : Nat) (interrupted : Bool) : Val := .list [.nat attempt, .bool interrupted]
@@ -293,7 +212,7 @@ def runsAndControls : List NamedRun × List Control :=
   | some (b, _eager, _resetting) => (runSet.runs, controlsOf b)
   | none => ([], [green "declared" "the client and its variants build" [] fun _ => false])
 
-/-! ## 6. The record -/
+/-! ## 2. The record -/
 
 /-- The timeout scenario. The claim assembles the three clauses. The three laws are associated
 laws: the record claims no dependency of `timeout` on them. -/
@@ -301,18 +220,8 @@ def scenario : Scenario :=
   { name := runSet.name
     program := ``fetch
     observation := ``observe
-    claim := ``timeout
-    clauses :=
-      [ ⟨"declared", ``retries_declared⟩
-      , ⟨"stale", ``stale_never_applies⟩
-      , ⟨"cleanup", ``cleanup_keeps⟩ ]
-    laws :=
-      [ ⟨"frontier", ``Effect4.Api.HostSession.applyReply_zero⟩
-      , ⟨"direct", ``Effect4.Api.HostSession.advance_answer_refuses⟩
-      , ⟨"journal", ``replays⟩ ]
     runs := runsAndControls.1
     controls := runsAndControls.2 }
 
-#scenario_gate scenario
-
 end Test.Dogfood.Scenario.Timeout
+

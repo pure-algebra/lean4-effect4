@@ -33,16 +33,12 @@ and the lowered runs. This module holds what the scenarios share.
   prefix, and that prefix and each position of the tape replay raw too (`tapeFrom_cut_replays`,
   `tapeFrom_position_replays`). Section 4 gives each name that the scenarios use an alias in
   this module's namespace.
-* **The record.** A `Scenario` names its program, its observation and its claim as declarations.
-  It lists the assembled clauses, which the claim's proof uses, and the associated laws, which
-  have controls only. `#scenario_gate`, at the foot of a battery, refuses a name that does not
-  resolve, a claim that is no theorem or has no placement, a clause that the claim's proof does
-  not reach, an entry without its green control or its red control, and a control that fails.
+* **The record.** A `Scenario` names its program and its observation as declarations, and lists
+  its named runs and its controls. Decisions row 410 retired the scenarios' claims and their gate.
 * **The named runs.** A scenario's record lists each of its scripts once, as a `NamedRun`: a
-  name, the built program opened for a run, and the script. A control holds no script. It names
-  the runs that its comparison reads, and the gate plays each named run once. The gate refuses a
-  named run that no control reads. The host lane (`harness/truth/session/Keyed.lean`) and the
-  engine's lane (`Test/Dogfood/Scenario/Tape.lean`) take their scripts from the same list, so
+  name, the built program opened for a run, and the script. A control holds no script; it names
+  the runs that its comparison reads. The host lane (`harness/truth/session/Keyed.lean`) and the
+  engine's lane (`Test/Dogfood/Scenario/TapeData.lean`) take their scripts from the same list, so
   no script is written twice.
 
 The laws of section 4 are the driver's contract, each with its placement (decisions row 207).

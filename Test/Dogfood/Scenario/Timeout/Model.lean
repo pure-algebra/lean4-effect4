@@ -20,11 +20,6 @@ finalizer.
 * **Observation.** `Observation`: what became of each held call, the accepted reply
   receipts, the reply applications, the retired calls, the stored replies, the attempts started,
   the cleanup log, the root's ending, timer work and completed timeout outcomes.
-* **Claim.** `timeout` assembles three clauses, each a planned goal over scripts:
-  `retries_declared`, `stale_never_applies` and `cleanup_keeps`. Three laws stand beside them as
-  associated laws: an application at budget zero stops at a frontier (`applyReply_zero`), the
-  session refuses a direct answer decision (`advance_answer_refuses`), and a script's run
-  replays from its journal (`replays`).
 * **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
   control names the runs that its comparison reads. The red controls are a failure that must not
   retry, a client that retries every failure, a reply after the timeout, a reply application
@@ -34,7 +29,7 @@ finalizer.
   and the retry loop states its cursor's type. The program prints since the state plan's T5,
   part A, and reads back since part B's second step (`Test/Dogfood/Scenario/Faces.lean`). The
   host lane and the engine's lane take their scripts from `runsOf`: the keyed lane performs each
-  named run that a host can perform, and `Test/Dogfood/Scenario/Tape.lean` names the runs of the
+  named run that a host can perform, and `Test/Dogfood/Scenario/TapeData.lean` names the runs of the
   engine's fixture.
 
 One case waits and has no control here: a timer that fires while the attempt is inside a masked

@@ -96,19 +96,11 @@ def cell (s : Run) (index : Nat) : Option Val := s.machine.state.refs[index]?
 export Effect4.Run (MachineView machineViewOf machineView Position openedOf atRest
   tapeFrom tapeOf funded)
 
-/-! ## 5. A scenario's record, and the gate at the foot of a battery -/
-
-/-- One entry of a scenario's record: a clause of its claim, or a law beside it, with the
-declaration that states it. -/
-structure Clause where
-  /-- The entry's name, as its controls quote it. -/
-  name : String
-  /-- The theorem or the planned goal that states the entry. It has a placement. -/
-  claim : Lean.Name
+/-! ## 5. A scenario's record -/
 
 /-- One named run of a scenario: one script on one program. A scenario's record lists each one
-once, and every consumer of a script takes it from that list: the gate, the host lane
-(`harness/truth/session/Keyed.lean`) and the engine's lane (`Test/Dogfood/Scenario/Tape.lean`).
+once, and every consumer of a script takes it from that list: the host lane
+(`harness/truth/session/Keyed.lean`) and the engine's lane (`Test/Dogfood/Scenario/TapeData.lean`).
 A lane quotes a run as the scenario's name, a slash and the run's name (`Scenario.quote`). -/
 structure NamedRun where
   /-- The run's name in its scenario. -/
@@ -168,15 +160,6 @@ structure Scenario where
   program : Lean.Name
   /-- The one named observation every control compares. -/
   observation : Lean.Name
-  /-- The claim: the theorem whose proof assembles the clauses. Its standing is derived from its
-  proof: proved, or proved modulo the clauses that are planned goals. -/
-  claim : Lean.Name
-  /-- The assembled clauses. The claim's proof uses the declaration of each, and rests on no
-  planned goal besides them. The gate measures both, so the record says what the proof does. -/
-  clauses : List Clause
-  /-- The associated laws: laws that the scenario's runs control. The record claims no dependency
-  of the claim on them, and the gate measures none. -/
-  laws : List Clause := []
   /-- The named runs: each script of the scenario, once, on the program it runs on. A name
   stands once, and some control reads each run. The order is the order in which a lane performs
   the runs. -/
@@ -192,59 +175,6 @@ def Scenario.run? (s : Scenario) (name : String) : Option NamedRun :=
 host lane and the engine's lane quote a run by this one function, so a name means one run on
 both. -/
 def Scenario.quote (s : Scenario) (run : NamedRun) : String := s.name ++ "/" ++ run.name
-
-/-- The names that a record lists more than once, each once, in the record's order. -/
-def Scenario.repeated (s : Scenario) : List String :=
-  (s.runs.foldl (fun (state : List String × List String) run =>
-    if !state.1.contains run.name then (state.1 ++ [run.name], state.2)
-    else if state.2.contains run.name then state
-    else (state.1, state.2 ++ [run.name])) ([], [])).2
-
-/-- The named runs that no control reads, by name, in the record's order. The gate refuses such
-a run: a lane would perform it, and no control of the battery would compare it. -/
-def Scenario.unread (s : Scenario) : List String :=
-  (s.runs.map (·.name)).filter fun name => !s.controls.any (·.reads.contains name)
-
-/-- What is wrong with a record as data, each finding in a sentence: a clause or a law with no
-green control or no red control, a run's name listed twice, a named run that no control reads, a
-control that names no entry, a control that reads a run which the record does not list, a
-control that fails. It plays each named run once, and it hands each control the runs that the
-control reads. Empty for a record with no finding. -/
-def Scenario.problems (s : Scenario) : List String :=
-  let played := s.runs.map fun run => (run.name, run.played)
-  let missing := fun (kind : String) (entries : List Clause) =>
-    entries.flatMap fun entry =>
-      [false, true].filterMap fun isRed =>
-        if s.controls.any (fun control => control.clause == entry.name && control.isRed == isRed)
-        then none
-        else some (s.name ++ ": the " ++ kind ++ " \"" ++ entry.name ++ "\" has no " ++
-          (if isRed then "red control" else "green control"))
-  missing "clause" s.clauses ++ missing "law" s.laws ++
-  s.repeated.map (fun name => s.name ++ ": the record lists the run \"" ++ name ++ "\" twice") ++
-  s.unread.map (fun name => s.name ++ ": no control reads the run \"" ++ name ++ "\"") ++
-  s.controls.filterMap fun control =>
-    if !(s.clauses ++ s.laws).any (·.name == control.clause) then
-      some (s.name ++ ": the control \"" ++ control.name ++ "\" names no clause and no law")
-    else
-      match control.reads.find? (fun name => !played.any (·.1 == name)) with
-      | some name =>
-        some (s.name ++ ": the control \"" ++ control.name ++ "\" reads the run \"" ++ name ++
-          "\", which the record does not list")
-      | none =>
-        let runs := control.reads.filterMap fun name => (played.find? (·.1 == name)).map (·.2)
-        if !control.holds runs then some (s.name ++ ": the control \"" ++ control.name ++ "\" fails")
-        else none
-
-/-- The declarations a record names besides its claims. -/
-def Scenario.declarations (s : Scenario) : List Lean.Name := [s.program, s.observation]
-
-/-- The claims a record names: the scenario's claim, then each clause's and each law's. -/
-def Scenario.claims (s : Scenario) : List Lean.Name :=
-  s.claim :: (s.clauses ++ s.laws).map (·.claim)
-
-/-! The gate at the foot of a battery, `#scenario_gate`, reads the semantics registry and the
-planning graph, which are tools. It stands in `Test/Audit/ScenarioGate.lean`, so this module imports
-entry modules only (decisions row 332, cutover slice C4). -/
 
 open Effect4.Program.Authoring
 

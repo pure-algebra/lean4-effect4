@@ -1,5 +1,5 @@
 import Test.Dogfood.Scenario.Todo.HostRun
-import Test.Dogfood.Scenario.Todo.Claims
+import Test.Dogfood.Scenario.Todo.Scenario
 import Test.Dogfood.Scenario.Todo.Cached
 import Tools.RunChecks
 
@@ -11,7 +11,7 @@ and literal arguments (`consumerBuiltAt`), then run as `Test/Dogfood/Scenario/To
 runs a built request. The LCNF route lowers that module's roots, and the lane
 `ocaml/engine/test/todo/` compares their results with Lean's, byte for byte.
 
-`serveForgetful` answers as `forgetful` does (`Test/Dogfood/Scenario/Todo/Claims.lean`): its runs
+`serveForgetful` answers as `forgetful` does (`Test/Dogfood/Scenario/Todo/Scenario.lean`): its runs
 conform, and they do not agree with the model. That is the face's red control.
 
 Each line below is a finite evaluation or a control (decisions row 301).

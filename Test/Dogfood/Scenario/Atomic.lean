@@ -1,14 +1,10 @@
 import Test.Dogfood.Scenario.Atomic.Runs
 import Test.Dogfood.Scenario.Atomic.Model
-import Test.Dogfood.Scenario.Atomic.Store
-import Test.Dogfood.Scenario.Atomic.Cleanup
-import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario
 import Effect4.Author
 import Test.Dogfood.P4RateLimiter
 import Test.Dogfood.P5LedgerService
 import Effect4.Laws.Author
-import Test.Audit.ScenarioGate
 
 /-!
 # The atomic scenario: one atomic update a request, a failure behind the commits, and a cleanup
@@ -30,10 +26,6 @@ finalizer, and a refill on the logical clock.
   script once, as a named run.
 * **Observation.** `Observation`, five fields: each request's outcome, the whole window, the
   whole account, the count of completed requests, and the cleanup log.
-* **Claim.** `atomic` assembles five clauses. Four quantify over every script:
-  `bounded`, `counted`, `committed` and `cleans_once`. The fifth is proved, on the straight
-  fragment: `unsuspended_runs`. One law stands beside them as an associated law: the typing of a
-  read-modify-write row (`syncRow_typed`, a theorem of the law graph).
 * **Controls.** `shopControls` and `aloneControls`: for each entry a green control and at least
   one red control. A control names the runs that its comparison reads. The red controls are the
   separate read and write of today, the store update erased while the answer stays, a finalizer
@@ -42,7 +34,7 @@ finalizer, and a refill on the logical clock.
 * **Lowered runs.** The program's rows carry binder terms that no name images. The program
   prints and reads back since the state plan's T5, part A (`Test/Dogfood/Scenario/Faces.lean`).
   The host lane and the engine's lane take their scripts from `runsOf`: the keyed lane performs
-  each named run that a host can perform, and `Test/Dogfood/Scenario/Tape.lean` names the runs
+  each named run that a host can perform, and `Test/Dogfood/Scenario/TapeData.lean` names the runs
   of the engine's fixture.
 
 One control of the brief is not here: a cleanup replayed under one registration. The cleanup
@@ -64,80 +56,7 @@ open Effect4.Program.Denote (Straight StraightEq)
 open Test.Dogfood.P4RateLimiter (window0 windowTy windowVal decision refill)
 open Test.Dogfood.P5LedgerService (account0 deposited)
 
-/-! ## 4. The claim -/
-
-/-- **Between refills the used capacity stays bounded.** Under every script the window's `used`
-field is at most 3. Reach: the program `shop`, every script of the driver's alphabet, the
-battery's budgets, natural-valued fields. A field that is not there reads as `0`, so the
-statement does not say that the store is formed. It is an application invariant over p4's real
-`Window` transition: one atomic update a request, and a refill that writes zero. It does not
-establish a scheduler guarantee, a host transaction or a whole-run resource theorem. It does not
-hold of a request that reads and writes in two steps: a red control. Concept `store-typing`, R4.
-Consumer: the atomic scenario. Its controls are finite runs, and the seat's receipt records a
-bounded search. -/
-@[semantics "store-typing" (requirement := R4)]
-theorem bounded : Bounded := by
-  intro b moves hb
-  have heap := Effect4.Program.HeapSites.heap_sites_keep b budget.compileFuel Store.UsedOk
-    (SourceFragment.atomic_built_fragment b hb) (Store.shop_sites_used b hb) _ (Store.scenario_control b hb moves)
-  rw [Store.observe_eq]
-  show natField (Scenario.play (opened b) moves).machine.state.refs[0]? "used" ≤ 3
-  cases h0 : (Scenario.play (opened b) moves).machine.state.refs[0]? with
-  | none => exact Nat.zero_le 3
-  | some v => exact heap 0 v h0
-
-/-- **The stores count each request's outcome once.** Under every script the observation
-satisfies `Observation.counted`. An admitted request's deposit stands once in the account, and a
-rejected request has none. The window's counts hold every completed request. When all six are
-completed, the counts are exactly the requests' outcomes. The deposit is per request: its amount
-is the request's number. The window's part is by outcome: the record keeps two counts, and no
-identity. Reach: the program `shop`, every script of the driver's alphabet, the battery's
-budgets. A request that the script interrupts is not completed, and the statement leaves its
-counts open. It does not establish that a request completes. Concept `store-typing`, R4.
-Consumer: the atomic scenario. Its controls are finite runs, and the seat's receipt records a
-bounded search. -/
-@[semantics "store-typing" (requirement := R4)]
-theorem counted : Counted := by
-  intro b moves hb
-  obtain ⟨g, fit⟩ := Store.shop_stages b hb budget.compileFuel _
-    (Store.scenario_control b hb moves)
-  rw [Store.observe_eq]
-  exact Store.counted_of_fit fit
-
-/-- **A request that fails behind its commits leaves them in the stores.** Under every script,
-once request 2 has exited with the planted failure, the observation satisfies
-`Observation.committed`. Its deposit stands once in the account, the window counts an admitted
-request, and its finalizer saw a decided request. Reach: the program `shop`, every script of the
-driver's alphabet, the battery's budgets. The supporting law is
-`Effect4.Program.Denote.meaning_onExit` (`src/Effect4/Laws/Program/Denote.lean`): a finalizer
-runs on the stores its body left, and its own stores stay. That law holds of a finalizer that
-takes the deposit back, and this statement does not: a red control. That law has no placement,
-so the record does not list it. This statement does not establish a host transaction, that
-request 2 fails, a whole-run resource theorem, or anything of a lowered run. Concept
-`store-typing`, R4. Consumer: the atomic scenario. Its controls are finite runs, and the seat's
-receipt records a bounded search. -/
-@[semantics "store-typing" (requirement := R4)]
-theorem committed : Committed := by
-  intro b moves hb
-  dsimp only
-  rw [Store.observe_eq]
-  intro hfail
-  obtain ⟨g, fit⟩ := Store.shop_stages b hb budget.compileFuel _
-    (Store.scenario_control b hb moves)
-  exact Store.committed_of_fit fit hfail
-
-/-- **The cleanup log holds each request once.** Under every script no request's number stands
-twice in the cleanup log. Reach: the program `shop`, every script of the driver's alphabet, the
-battery's budgets. It is a statement about the log: it counts writes by identity. It does not
-count a finalizer's invocations, and it shows no registration that ran twice. Its red control is
-a finalizer that writes its entry twice in one invocation. It does not establish that a
-finalizer runs. Concept `scope-lifetime-finalization`, R11. Consumer: the atomic scenario. Its
-controls are finite runs, and the seat's receipt records a bounded search. -/
-@[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem cleans_once : CleansOnce := by
-  intro b moves built
-  rw [Store.observe_eq]
-  exact Cleanup.cleaned b _ built (Scenario.history b "atomic" budget "" moves)
+/-! ## 1. The claim -/
 
 /-- A program without its suspensions, on the straight fragment's constructors. Any other node
 stays as it is. -/
@@ -151,63 +70,7 @@ def unsuspend : NativeEff → NativeEff
   | .onExit b f => .onExit (unsuspend b) (unsuspend f)
   | e => e
 
-/-- A straight program and the program without its suspensions have one meaning. A step of the
-registry claim `straight-composition-agreement`: it composes the congruences of `StraightEq`
-(`src/Effect4/Laws/Program/MeaningEq.lean`). Its consumer is `unsuspended_runs`. -/
-theorem unsuspend_eq (e : NativeEff) : Straight e = true → StraightEq e (unsuspend e) := by
-  fun_induction unsuspend e with
-  | case1 b ih => exact fun h => (StraightEq.suspend_remove b h).trans (ih h)
-  | case2 a b iha ihb =>
-    exact fun h => (iha (Bool.and_eq_true_iff.mp h).1).bind (ihb (Bool.and_eq_true_iff.mp h).2)
-  | case3 t d a b iha ihb =>
-    exact fun h =>
-      StraightEq.select t d (iha (Bool.and_eq_true_iff.mp h).1) (ihb (Bool.and_eq_true_iff.mp h).2)
-  | case4 b ih => exact fun h => (ih h).exit
-  | case5 b c ihb ihc =>
-    exact fun h =>
-      (ihb (Bool.and_eq_true_iff.mp h).1).catchCause (ihc (Bool.and_eq_true_iff.mp h).2)
-  | case6 b v c ihb ihv ihc =>
-    exact fun h =>
-      (ihb (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1).matchCause
-        (ihv (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).2)
-        (ihc (Bool.and_eq_true_iff.mp h).2)
-  | case7 b f ihb ihf =>
-    exact fun h => (ihb (Bool.and_eq_true_iff.mp h).1).onExit (ihf (Bool.and_eq_true_iff.mp h).2)
-  | case8 e => exact fun h => StraightEq.refl e h
-
-/-- The proposition of `unsuspended_runs`. -/
-def Unsuspended : Prop :=
-  ∀ (e : NativeEff), Straight e = true →
-    (Api.run e (StraightEq.fuelFor e)).outcome = .finished ∧
-      (Api.run (unsuspend e) (StraightEq.fuelFor (unsuspend e))).outcome = .finished ∧
-      (Api.run e (StraightEq.fuelFor e)).exit =
-        (Api.run (unsuspend e) (StraightEq.fuelFor (unsuspend e))).exit ∧
-      (Api.run e (StraightEq.fuelFor e)).stores =
-        (Api.run (unsuspend e) (StraightEq.fuelFor (unsuspend e))).stores
-
-/-- **Removing a program's suspensions keeps its exit and its complete stores.** A straight
-program and the program without its suspensions both finish, each at its own bound, with one
-exit and the same stores. The stores are complete: they hold what a failure left and what a
-finalizer wrote. Reach: the straight fragment (`Straight`), one fiber, the bound `fuelFor` of
-each program. It consumes `StraightEq.run_agrees_at_bound`, so it is a consumer of the registry
-claim `straight-composition-agreement`. It does not reach a program that forks, yields or
-sleeps, as `shop` does. It does not compare traces, a budget below the bound, a host table or a
-lowered run. Concept `translation-simulation`, R8. Consumer: the atomic scenario, on the failing
-request alone (`alone`). -/
-@[semantics "translation-simulation" (requirement := R8)]
-theorem unsuspended_runs : Unsuspended :=
-  fun e straight => (unsuspend_eq e straight).run_agrees_at_bound
-
-/-- **The atomic scenario's claim.** Between refills the used capacity stays bounded. The stores
-count each request's outcome once. A request that fails behind its commits leaves them in the
-stores. The cleanup log holds each request once. Removing a straight program's suspensions keeps
-its exit and its stores. The proof graph records the unfinished dependencies of each clause. It does not establish a scheduler guarantee without a bound, a host
-transaction or a whole-run resource theorem. -/
-@[semantics "store-typing" (requirement := R4)]
-theorem atomic : Bounded ∧ Counted ∧ Committed ∧ CleansOnce ∧ Unsuspended :=
-  ⟨bounded, counted, committed, cleans_once, unsuspended_runs⟩
-
-/-! ## 5. The runs and the controls -/
+/-! ## 2. The runs and the controls -/
 
 /-- A deposit entry of the account's history. -/
 def deposit (amount : Nat) : Val := recordOf ["_tag", "amount"] [.str "Deposit", .nat amount]
@@ -369,7 +232,7 @@ def runsAndControls : List NamedRun × List Control :=
   | some (b, _racy, _erased, _undone, _twice, suspended, plain, aloneUndone) => (runSet.runs, shopControls b ++ aloneControls b suspended plain aloneUndone)
   | none => ([], [green "bounded" "the shop and its variants build" [] fun _ => false])
 
-/-! ## 6. The record -/
+/-! ## 3. The record -/
 
 /-- The atomic scenario. The claim assembles the five clauses. The typing law of a
 read-modify-write row is an associated law: the record claims no dependency of `atomic` on it. -/
@@ -377,17 +240,8 @@ def scenario : Scenario :=
   { name := runSet.name
     program := ``shop
     observation := ``observe
-    claim := ``atomic
-    clauses :=
-      [ ⟨"bounded", ``bounded⟩
-      , ⟨"counted", ``counted⟩
-      , ⟨"committed", ``committed⟩
-      , ⟨"once", ``cleans_once⟩
-      , ⟨"rewrite", ``unsuspended_runs⟩ ]
-    laws := [⟨"typed row", ``Effect4.Program.Typed.syncRow_typed⟩]
     runs := runsAndControls.1
     controls := runsAndControls.2 }
 
-#scenario_gate scenario
-
 end Test.Dogfood.Scenario.Atomic
+

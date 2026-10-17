@@ -1,9 +1,7 @@
 import Test.Dogfood.P3WorkerQueue
 import Test.Dogfood.Scenario.Workers.Runs
-import Test.Dogfood.Scenario.Workers.Assertions
 import Test.Dogfood.Scenario
 import Test.Dogfood.Scenario.Workers.Program
-import Test.Audit.ScenarioGate
 
 /-!
 # The workers scenario: two stored replies, both orders, one cancellation
@@ -22,11 +20,6 @@ answers by key.
 * **Observation.** `Observation`, seven fields: the assignment of jobs to workers, the accepted
   reply receipts, the reply applications, the retired calls, the cleanup identities, the root's
   exit and the work left.
-* **Claim.** `workers` assembles four clauses. Three are proved laws. `receipt_inert` is the
-  driver's (`Test/Dogfood/Scenario.lean`), and `applied_selects` and `control_retires` are the
-  session's (`src/Effect4/Laws/Run/Rows.lean`). The fourth, `releases_once`, is a planned goal:
-  under every script the crew releases no connection twice. The driver's law `replays` stands
-  beside them as an associated law: it has controls, and the claim's proof does not use it.
 * **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
   control names the runs that its comparison reads. One green control of the cleanup clause is
   the lowest-fiber schedule of today: the driver of `P3WorkerQueue.lean` plays it on the same
@@ -35,7 +28,7 @@ answers by key.
   program prints and reads back since the state plan's T5, part A
   (`Test/Dogfood/Scenario/Faces.lean`). The host lane and the engine's lane take their scripts
   from `runsOf`: the keyed lane performs each named run that a host can perform, and
-  `Test/Dogfood/Scenario/Tape.lean` names the runs of the engine's fixture.
+  `Test/Dogfood/Scenario/TapeData.lean` names the runs of the engine's fixture.
   `Observation.machine` is the machine's part of the observation.
 
 Each run is a finite probe: one script on the Lean machine. The claim's standing is derived from
@@ -52,7 +45,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Api.HostSession (Key Reply)
 open Test.Dogfood.P3WorkerQueue (take runJob)
 
-/-! ## 3. The observation -/
+/-! ## 1. The observation -/
 
 /-- The entries of a log cell. -/
 def entries : Option Val → List Val
@@ -106,42 +99,7 @@ def Observation.machine (o : Observation) : MachineView :=
   ⟨o.assignment, o.cleanups, o.rootExit, o.workLeft.runnable, o.workLeft.queued,
     o.workLeft.awaiting, o.workLeft.timers⟩
 
-/-! ## 4. The claim -/
-
-/-- The proposition of `releases_once`: under every script, every budget and every job count, the
-crew's `released` cell holds no connection twice. -/
-def ReleasesOnce : Prop :=
-  ∀ (total : Nat) (budget : Api.Budget) (b : Api.Built) (moves : List Move),
-    Effect4.Api.Author.build (crew total) = .ok b →
-    (observe (Scenario.play (Run.open b "workers" budget) moves)).cleanups.Nodup
-
-/-- **Each registration cleans up at most once**, on the crew. Reach: the program `crew`, every
-script of the driver's alphabet (every control decision, reply receipt, reply application and
-raw row) and every budget. It is R11's whole-run clause "at most once per registration, counted
-by identity", stated on one program and one observation. It does not establish the clause for
-another program, the order of the releases, or that a release runs at all. The scope's own law is
-proved (`Effect4.Scope.close_twice`, `src/Effect4/Machine/Scope.lean`). Its lift to a whole run
-is open (`docs/core/system-map.md` §8, R11). Consumer: the workers scenario. Its controls are
-finite runs. A bounded search over every script of 23 moves up to length 4, from three states,
-found no repeated identity: a finite probe, recorded in the seat's receipt. -/
-@[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem releases_once : ReleasesOnce := by
-  intro total budget b moves hb
-  have history := Scenario.history b "workers" budget "" moves
-  have holds := Assertions.history total budget.compileFuel b hb _ history
-  exact Assertions.read b budget.compileFuel _ holds
-
-/-- **The workers scenario's claim.** A reply receipt does not advance the machine. A reply
-application consumes the selected call only. A control retires the held calls whose guard it
-removed. The crew releases no connection twice. The first three are proved for every run and
-every session. The fourth is the planned goal `releases_once`, so this theorem is proved modulo
-it. It does not establish Queue backpressure or fairness, reply admission at the application, or
-the retirement edge of the host protocol (R6). -/
-@[semantics "host-session-protocol" (requirement := R6)]
-theorem workers : ReceiptInert ∧ AppliedSelects ∧ ControlRetires ∧ ReleasesOnce :=
-  ⟨receipt_inert, applied_selects, control_retires, releases_once⟩
-
-/-! ## 5. The runs and the controls -/
+/-! ## 2. The runs and the controls -/
 
 /-- A `Jobs.take` call and a `Jobs.run` call, as the host sees them at a key. -/
 def takeAt (fiber token : Nat) : Seen := ⟨"Jobs.take", .unit, ⟨⟨fiber⟩, token⟩⟩
@@ -318,7 +276,7 @@ def runsAndControls : List NamedRun × List Control :=
   | some (b, _faulty) => (runSet.runs, controlsOf b)
   | none => ([], [green "receipt" "the crew and its faulty twin build" [] fun _ => false])
 
-/-! ## 6. The record -/
+/-! ## 3. The record -/
 
 /-- The workers scenario. The claim assembles the four clauses. The driver's law `replays` is an
 associated law: the record claims no dependency of `workers` on it. -/
@@ -326,33 +284,8 @@ def scenario : Scenario :=
   { name := runSet.name
     program := ``crew
     observation := ``observe
-    claim := ``workers
-    clauses :=
-      [ ⟨"receipt", ``receipt_inert⟩
-      , ⟨"selection", ``applied_selects⟩
-      , ⟨"retirement", ``control_retires⟩
-      , ⟨"cleanup", ``releases_once⟩ ]
-    laws := [⟨"journal", ``replays⟩]
     runs := runsAndControls.1
     controls := runsAndControls.2 }
 
-/-- Red control of the gate's dependency check (decisions rows 203 and 254): the workers record
-under a claim that assembles none of its other clauses. Each placement and each control of the
-record still passes, so the gate reads it with the dependency check alone (`#scenario_reach`). -/
-def wrongTop : Scenario :=
-  { scenario with name := "workers under receipt_inert", claim := ``receipt_inert }
-
--- The green control: the gate passes the record. The red control reads the record under the
--- wrong claim, with the dependency check only (its runs are judged above), and names each clause
--- that the wrong claim's proof does not reach.
-#scenario_gate scenario
-
-/--
-error: workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "selection" (Effect4.Run.applied_selects)
-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "retirement" (Effect4.Run.control_retires)
-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "cleanup" (Test.Dogfood.Scenario.Workers.releases_once)
--/
-#guard_msgs (error) in
-#scenario_reach wrongTop
-
 end Test.Dogfood.Scenario.Workers
+
