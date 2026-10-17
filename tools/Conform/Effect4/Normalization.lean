@@ -34,6 +34,11 @@ def vectors : List (String × Ty) := [("never", .never), ("unit", .unit), ("nat"
 
 def roots : Array Name := #[``Ty.key, ``Ty.normalize, ``canonicalRaw, ``mergeColumns]
 
+/-- The type names of the emitted module, one table for the translator, the type generator and
+the marshalled fixtures (`LcnfMl.tyT`), so the three spell each constructor alike. The module
+declares `Ty` itself and opens no owner: the empty table, `Ty_never`. -/
+def typeNames : OCaml5.Lcnf.TypeNames := {}
+
 /-- The profile of the run. The evaluation, the report's pins and the selection read these. -/
 def sourceFuel : Nat := 20000
 def targetFuel : Nat := 40000
@@ -55,8 +60,8 @@ def mergeS (x : Option (Option Ty × Ty × List (Nat × Nat))) : Value :=
       .ctor ``Prod.mk #[.nat n, .nat s])]]) x
 
 def mergeT (x : Option (Option Ty × Ty × List (Nat × Nat))) : Target.TValue :=
-  optionT (fun (a, e, rs) => .tupleV #[optionT Conform.Effect4.LcnfMl.tyT a,
-    .tupleV #[Conform.Effect4.LcnfMl.tyT e, Target.TValue.ofList (rs.map fun (n, s) => .tupleV #[.int n, .int s])]]) x
+  optionT (fun (a, e, rs) => .tupleV #[optionT (Conform.Effect4.LcnfMl.tyT typeNames) a,
+    .tupleV #[Conform.Effect4.LcnfMl.tyT typeNames e, Target.TValue.ofList (rs.map fun (n, s) => .tupleV #[.int n, .int s])]]) x
 
 structure Fixture where
   /-- The stable name: the declaration's short name, then the names of its inputs. -/
@@ -73,25 +78,25 @@ def fixtures : Array Fixture := Id.run do
   let mut out := #[]
   let g := OCaml5.Lcnf.globalName
   for (v, t) in vectors do
-    let ml := (Conform.Effect4.LcnfMl.tyT t).render
-    out := out.push ⟨s!"key/{v}", ``Ty.key, #[Conform.Effect4.LcnfSemantics.tyValue t], #[Conform.Effect4.LcnfMl.tyT t],
+    let ml := (Conform.Effect4.LcnfMl.tyT typeNames t).render
+    out := out.push ⟨s!"key/{v}", ``Ty.key, #[Conform.Effect4.LcnfSemantics.tyValue t], #[Conform.Effect4.LcnfMl.tyT typeNames t],
       Value.ofNatList t.key, Conform.Effect4.LcnfMl.natListT t.key,
       s!"{g ``Ty.key} ({ml}) = [{String.intercalate ";" (t.key.map toString)}]"⟩
     for (short, decl) in [("normalize", ``Ty.normalize), ("canonical", ``canonicalRaw)] do
-      out := out.push ⟨s!"{short}/{v}", decl, #[Conform.Effect4.LcnfSemantics.tyValue t], #[Conform.Effect4.LcnfMl.tyT t],
-        Conform.Effect4.LcnfSemantics.tyValue t.normalize, Conform.Effect4.LcnfMl.tyT t.normalize,
-        s!"{g decl} ({ml}) = ({(Conform.Effect4.LcnfMl.tyT t.normalize).render})"⟩
+      out := out.push ⟨s!"{short}/{v}", decl, #[Conform.Effect4.LcnfSemantics.tyValue t], #[Conform.Effect4.LcnfMl.tyT typeNames t],
+        Conform.Effect4.LcnfSemantics.tyValue t.normalize, Conform.Effect4.LcnfMl.tyT typeNames t.normalize,
+        s!"{g decl} ({ml}) = ({(Conform.Effect4.LcnfMl.tyT typeNames t.normalize).render})"⟩
   for (va, a) in vectors.take 8 do
     for (vb, b) in vectors.take 8 do
       let result : Option (Option Ty × Ty × List (Nat × Nat)) := mergeColumns a b
       let expected := match result with
         | none => "None"
         | some (answer, error, rows) =>
-          let ans := match answer with | none => "None" | some t => s!"Some ({(Conform.Effect4.LcnfMl.tyT t).render})"
-          s!"Some ({ans}, ({(Conform.Effect4.LcnfMl.tyT error).render}, [{String.intercalate ";" (rows.map fun (pair : Nat × Nat) => s!"({pair.1},{pair.2})")}]))"
+          let ans := match answer with | none => "None" | some t => s!"Some ({(Conform.Effect4.LcnfMl.tyT typeNames t).render})"
+          s!"Some ({ans}, ({(Conform.Effect4.LcnfMl.tyT typeNames error).render}, [{String.intercalate ";" (rows.map fun (pair : Nat × Nat) => s!"({pair.1},{pair.2})")}]))"
       out := out.push ⟨s!"merge/{va}/{vb}", ``mergeColumns,
-        #[Conform.Effect4.LcnfSemantics.tyValue a, Conform.Effect4.LcnfSemantics.tyValue b], #[Conform.Effect4.LcnfMl.tyT a, Conform.Effect4.LcnfMl.tyT b], mergeS result, mergeT result,
-        s!"{g ``mergeColumns} ({(Conform.Effect4.LcnfMl.tyT a).render}) ({(Conform.Effect4.LcnfMl.tyT b).render}) = ({expected})"⟩
+        #[Conform.Effect4.LcnfSemantics.tyValue a, Conform.Effect4.LcnfSemantics.tyValue b], #[Conform.Effect4.LcnfMl.tyT typeNames a, Conform.Effect4.LcnfMl.tyT typeNames b], mergeS result, mergeT result,
+        s!"{g ``mergeColumns} ({(Conform.Effect4.LcnfMl.tyT typeNames a).render}) ({(Conform.Effect4.LcnfMl.tyT typeNames b).render}) = ({expected})"⟩
   return out
 
 /-! ## The selection -/
@@ -184,7 +189,7 @@ def main (args : List String) : IO UInt32 := do
     let sourceRows := named (differential ctx sourceFuel "normalization.source" cases)
       (cases.map (·.label))
     let nameRoots := Conform.Effect4.CompilerControls.nameRoots
-    let translated ← OCaml5.Lcnf.translateClosure (roots ++ nameRoots) 4000 {} {}
+    let translated ← OCaml5.Lcnf.translateClosure (roots ++ nameRoots) 4000 typeNames {}
     -- No binder of a translated declaration hides a name its body means as free.
     let captures := OCaml5.Lcnf.hygieneProblems translated.decls
     unless captures.isEmpty do
@@ -221,7 +226,7 @@ def main (args : List String) : IO UInt32 := do
         Target.judgeT "normalization.target" subject id targetFuel observed wanted
       | (_, none) =>
         Row.refused "normalization.target" subject s!"{id}: the expected expression gave no value"
-    let gen ← (OCaml5.Lcnf.generate translated.realTypes translated.mentioned {} {}).run'
+    let gen ← (OCaml5.Lcnf.generate translated.realTypes translated.mentioned typeNames {}).run'
     unless gen.unknown.isEmpty do
       throwError "target types: {gen.unknown}"
     unless translated.missing.isEmpty && translated.frontier.isEmpty && translated.todos.isEmpty do
