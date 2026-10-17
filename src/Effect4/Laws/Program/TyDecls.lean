@@ -1280,18 +1280,12 @@ theorem exists_memberIn_fresh {decls : TyDecls} {known : List String}
         rfl
       exact exists_memberIn_ref hk hu hc allocated
     | none =>
-      have hr : retiredHandleTargets.contains name = false := by
-        have h' : (if (decls.body? name).isSome then known.contains name
-            else inhabitedAlg.ty_app name (args.map (cata_ty (decls.inhabitedWith known)))) =
-            true := h
-        rw [hb, Option.isSome_none] at h'
-        exact Typed.not_retired_of_inhabited h'
-      have hu : decls.unfold? (.app name args) = none := by
-        show (decls.body? name).map (name, ·) = _
-        rw [hb]
-        rfl
-      obtain ⟨v, al', e, hv⟩ := exists_hasTy_handle_fresh hr allocated
-      exact ⟨v, al', e, memberIn_of_hasTy hu rfl hv⟩
+      -- an undeclared reference is never inhabited (decisions row 406 (1))
+      have h' : (if (decls.body? name).isSome then known.contains name
+          else inhabitedAlg.ty_app name (args.map (cata_ty (decls.inhabitedWith known)))) =
+          true := h
+      rw [hb, Option.isSome_none] at h'
+      exact Bool.noConfusion h'
   | prod a b iha ihb =>
     have h' : (cata_ty (decls.inhabitedWith known) a && cata_ty (decls.inhabitedWith known) b) =
       true := h
@@ -1529,14 +1523,14 @@ theorem cata_declAlg_record (decls : TyDecls) (o : String → Adm) (fs : List (S
     rw [Ty.canon, hcanon, ← Ty.canon]
   | none => rfl
 
-/-- The fold at a reference reads its name alone: the oracle at a declared name, the handle arm at
-any other. -/
+/-- The fold at a reference reads its name alone: the oracle at a declared name, and no member at
+any other (decisions row 406 (1)). -/
 theorem cata_declAlg_app (decls : TyDecls) (o : String → Adm) (name : String) (args : List Ty)
     (v : Val) (allocated : List String) :
     (cata_ty (declAlg decls o) (.app name args)).2 v allocated =
       match decls.body? name with
       | some _ => o name v allocated
-      | none => Val.hasTy v (.handle name) allocated := by
+      | none => false := by
   show ((declAlg decls o).ty_app name _).2 v allocated = _
   unfold declAlg
   dsimp only

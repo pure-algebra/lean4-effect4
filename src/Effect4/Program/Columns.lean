@@ -63,7 +63,9 @@ def inhabitedAlg : TyAlgebra (fun _ => Bool) where
   ty_record fs := (Ty.canon fs).all fun p => p.2.1 || p.2.2
   ty_map _ _ := true
   ty_tuple ts := ts.all id
-  ty_app name _ := !retiredHandleTargets.contains name
+  -- a nominal reference has no member at no table (decisions row 406 (1)); a declared name is
+  -- read from the table's inhabited names (`TyDecls.inhabitedWith`)
+  ty_app _ _ := false
   ty_null := true
   ty_undefined := true
   ty_number := true
@@ -118,7 +120,7 @@ def internalHandleScan : TyAlgebra (fun _ => Path → Option Path) where
   ty_map key value := fun pos => key (pos ++ ["key"]) <|> value (pos ++ ["value"])
   ty_tuple items := fun pos =>
     items.zipIdx.foldr (fun p acc => p.1 (pos ++ [toString p.2]) <|> acc) none
-  -- a nominal reference is the handle at its name (its arguments are unread by membership)
+  -- a reference at an internal spelling is refused as the handle is: one spelling, one meaning
   ty_app name _ := fun pos => if internalHandleTargets.contains name then some pos else none
   ty_null := fun _ => none
   ty_undefined := fun _ => none

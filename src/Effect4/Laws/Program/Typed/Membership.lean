@@ -206,8 +206,9 @@ exit type the encoded cause is also shape-free (`ShapeFree`, decisions row 152):
 fits `Exit<A, E>` exactly when the exit has `ExitOk`'s base membership and part one's exclusion,
 so the close walk, which passes each finalizer's exit on as a value, keeps the exclusion (`CloseIter`
 of the retired battery `git:68856e778:Test/Program/ProtocolPosts.lean`). A record value is read by
-name in canonical order (`NamedFit`), a map by its sorted entries, a tuple item by item, a nominal reference as the
-handle at its name; `int` and `number` are the nesting images (decisions row 121). A mask's saved
+name in canonical order (`NamedFit`), a map by its sorted entries, a tuple item by item; a nominal
+reference has no member (decisions row 406 (1)); `int` and `number` are the nesting images
+(decisions row 121). A mask's saved
 state has one frame of its own (`Value.savedMask`, decisions row 244): it fits the reserved
 target `Ty.maskRestoreTarget` and no other type but `unknown`, and nothing else fits that
 target (`fits_maskRestore_iff`). -/
@@ -287,12 +288,7 @@ def Fits (w : World) (v : Val) : Ty → Prop
     match v with
     | .list xs => ItemsFit (itemFitters w ts) xs
     | _ => False
-  | .app name _ =>
-    match v with
-    | .handle kind index => HandleFits w kind index name
-    | Value.savedMask (.bool _) => name = Ty.maskRestoreTarget
-    | _ => name = Ty.contextTarget ∧
-        ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services ∧ Live w v
+  | .app _ _ => False
   | .null => match v with | .none => True | _ => False
   | .undefined => match v with | .unit => True | _ => False
   | .number => numberImage v = true
@@ -451,8 +447,7 @@ theorem causeFits_admits {member : Val → Prop} {m : Val → Ty → Bool} {e : 
   | die _ _ => rfl
   | interrupt _ _ => rfl
 
-/-- The handle arm: membership implies the shape check. A nominal reference reads the same arm
-at its name (`fits_app_iff`, `hasTy_app_eq`). -/
+/-- The handle arm: membership implies the shape check. -/
 theorem handle_fits_hasTy (w : World) {v : Val} {target : String} (h : Fits w v (.handle target)) :
     Val.hasTy v (.handle target) w.state.externals.allocated = true := by
   simp only [Fits] at h
@@ -478,13 +473,9 @@ theorem handle_fits_hasTy (w : World) {v : Val} {target : String} (h : Fits w v 
     rw [hctx]
     exact Bool.or_eq_true_iff.mpr (Or.inl (Bool.and_eq_true_iff.mpr ⟨beq_iff_eq.mpr ht, rfl⟩))
 
-/-- A nominal reference's membership is the handle's at its name (decisions row 158). -/
-theorem fits_app_iff (w : World) (v : Val) (name : String) (args : List Ty) :
-    Fits w v (.app name args) ↔ Fits w v (.handle name) := Iff.rfl
-
-/-- A nominal reference's shape check is the handle's at its name. -/
-theorem hasTy_app_eq (v : Val) (name : String) (args : List Ty) (al : List String) :
-    Val.hasTy v (.app name args) al = Val.hasTy v (.handle name) al := rfl
+/-- A nominal reference has no member at no table (decisions row 406 (1)). -/
+theorem hasTy_app (v : Val) (name : String) (args : List Ty) (al : List String) :
+    Val.hasTy v (.app name args) al = false := rfl
 
 /-- A field's membership predicate. -/
 def fitterOf (w : World) (c : Bool × Ty) : Bool × (Val → Prop) := (c.1, fun x => Fits w x c.2)
@@ -841,10 +832,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
       subst heq
       exact ih t1 (List.of_mem_zip ht).1 x hx
     all_goals exact h.elim
-  | app name args _ =>
-    intro v h
-    rw [hasTy_app_eq]
-    exact handle_fits_hasTy w ((fits_app_iff w v name args).mp h)
+  | app _ _ _ => intro v h; exact h.elim
   | int | number => intro v h; exact h
   | null | undefined | bytes =>
     intro v h
@@ -983,7 +971,7 @@ theorem live_validIn {w : World} {v : Val}
     | memoMap => exact hl
     | external => exact decide_eq_true hl
 
-/-- The handle arm keeps declared liveness (shared by a nominal reference, `fits_app_iff`). -/
+/-- The handle arm keeps declared liveness. -/
 theorem handle_fits_live {w : World} {v : Val} {target : String} (h : Fits w v (.handle target)) :
     Live w v := by
   simp only [Fits] at h
@@ -1214,7 +1202,7 @@ theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w 
       obtain ⟨t, ht, rfl⟩ := hP
       exact ih t ht y hy
     all_goals exact h.elim
-  | app name args _ => intro v h; exact handle_fits_live ((fits_app_iff w v name args).mp h)
+  | app _ _ _ => intro v h; exact h.elim
   | int => intro v h; exact live_of_handles_nil (intImage_handles h)
   | number => intro v h; exact live_of_handles_nil (numberImage_handles h)
   | null | undefined | bytes =>
@@ -1372,7 +1360,7 @@ theorem itemsFit_mono :
   | [], _ :: _, _, hlen, _, _ => nomatch hlen
   | _ :: _, [], _, hlen, _, _ => nomatch hlen
 
-/-- The handle arm moves to a later world (shared by a nominal reference, `fits_app_iff`). -/
+/-- The handle arm moves to a later world. -/
 theorem handle_fits_map {w1 w2 : World}
     (hΓ : TableExtends w1.Γ w2.Γ) (hPi : TableExtends w1.«Π» w2.«Π») (hRho : TableExtends w1.Ρ w2.Ρ)
     (halloc : Extends w1.state.externals.allocated w2.state.externals.allocated)
@@ -1529,10 +1517,7 @@ theorem fits_map {w1 w2 : World}
       subst heq
       exact ih t1 (List.of_mem_zip ht).1 x hx
     all_goals exact h.elim
-  | app name args _ =>
-    intro v h
-    exact (fits_app_iff w2 v name args).mpr
-      (handle_fits_map hΓ hPi hRho halloc hstore hsvc ((fits_app_iff w1 v name args).mp h))
+  | app _ _ _ => intro v h; exact h.elim
   | int | null | undefined | number | bytes => intro v h; exact h
 
 /-- The world order fixes the service table, so a later world's lookups are the earlier one's. -/
@@ -1682,7 +1667,7 @@ theorem heads_zip_flag {cf cg : List (String × Bool × Ty)}
 (as `cata_admits_sub`, `Laws/Program/Admits.lean`): `case2` is the leaf table's line
 (`fits_leafRule`, naming no edge); the record case reads the named read's monotonicity; the handle
 arms move the raw step into the checker's order (`Ty.sub_le_subN`) and compose there
-(`Ty.subN_trans`); a nominal reference is the handle at its name, its arguments unread. -/
+(`Ty.subN_trans`); a nominal reference has no member, at both ends. -/
 theorem fits_sub (w : World) {a b : Ty} (hsub : Ty.sub a b = true) : ∀ v, Fits w v a → Fits w v b := by
   fun_induction Ty.sub a b
   case case1 => intro v h; exact h
@@ -2530,11 +2515,7 @@ theorem fits_nat_irrel (w : World) (n m : Nat) : ∀ t, Fits w (Val.nat n) t →
     obtain ⟨_, ctx, hctx, _⟩ := h
     exact (nomatch hctx)
   | int | number => intro _; rfl
-  | app target _ _ =>
-    intro h
-    obtain ⟨_, ctx, hctx, _⟩ := h
-    exact (nomatch hctx)
-  | never | unit | string | bool | option | list | prod | except | exitOf | causeOf
+  | never | unit | string | bool | option | list | prod | except | exitOf | causeOf | app
   | fiberOf | lit | refOf | deferredOf | var | record | map | tuple | null | undefined
   | bytes => intro h; exact h.elim
 
@@ -3686,14 +3667,7 @@ theorem inhabited_of_hasTy :
       rfl
     · rw [Val.hasTy_handle_retired hr] at h
       exact Bool.noConfusion h
-  | app name args _ =>
-    intro v alloc h
-    cases hr : retiredHandleTargets.contains name
-    · show (!retiredHandleTargets.contains name) = true
-      rw [hr]
-      rfl
-    · rw [hasTy_app_eq, Val.hasTy_handle_retired hr] at h
-      exact Bool.noConfusion h
+  | app _ _ _ => intro v alloc h; exact Bool.noConfusion h
   | record fs ih =>
     intro v alloc h
     rw [inhabited_record, List.all_eq_true]
@@ -4336,7 +4310,7 @@ theorem fits_of_inhabited_fresh : ∀ (t : Ty), inhabited t = true → ∀ (w : 
   | null => intro _ w n hn hr; exact ⟨w, n, .none, Grows.refl w, hn, trivial⟩
   | undefined => intro _ w n hn hr; exact ⟨w, n, .unit, Grows.refl w, hn, trivial⟩
   | bytes => intro _ w n hn hr; exact ⟨w, n, .bytes [], Grows.refl w, hn, trivial⟩
-  | app name _ _ => intro hi w n hn hr; exact fits_handle_fresh name (not_retired_of_inhabited hi) w n hn
+  | app _ _ _ => intro hi; exact Bool.noConfusion hi
   | map _ _ _ _ =>
     intro _ w n hn hr
     exact ⟨w, n, .list [], Grows.refl w, hn, rfl, fun _ he => nomatch he⟩

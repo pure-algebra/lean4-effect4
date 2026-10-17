@@ -113,7 +113,9 @@ The scalars against the carrier's own frames; a handle against the spelling of i
 value `Val.context?` reads back — against `Ty.context` (`Eff.lean`); a cell against `.refOf` and a
 promise against `.deferredOf`, at any argument; an external handle at byte 7
 must name its exact target in the supplied allocation table (the default empty table admits
-none), and a nominal reference reads the handle arm at its name; a mask's saved state — a value
+none), and a nominal reference `app n args` has no member here (a declared name is read under its
+table by `Val.hasTyIn`, and `handle n` is the only host handle, decisions row 406 (1)); a mask's
+saved state — a value
 `Val.savedMask?` reads back — against `Ty.maskRestore`, and against no other type but `unknown`
 (decisions row 244); the fiber handle against `.fiberOf`, and a snapshot of fiber handles
 (`Val.snapshot?`) against a `.list` of them; a reified exit against `.exitOf` — a failure's
@@ -207,17 +209,9 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
     match v with
     | .list xs => itemsHasTy (Val.itemCheckers ts allocated) xs
     | _ => false
-  -- a nominal reference: the handle arm at its name, its arguments unread (decisions row 158)
-  | .app name _ =>
-    match v with
-    | .handle kind index =>
-      match HandleKind.ofByte? kind with
-      | some .scope => name == Ty.scopeTarget
-      | some .memoMap => name == Ty.memoMapTarget
-      | some .external => externalHandleTarget name && allocated[index]? == some name
-      | _ => false
-    | _ => (name == Ty.contextTarget && (Val.context? v).isSome) ||
-        (name == Ty.maskRestoreTarget && (Val.savedMask? v).isSome)
+  -- a nominal reference has no member at no table: a declared name is read under its table
+  -- (`Val.hasTyIn`), and `handle n` is the only host handle (decisions row 406 (1))
+  | .app _ _ => false
   | .null => match v with | .none => true | _ => false
   | .undefined => match v with | .unit => true | _ => false
   | .number => numberImage v

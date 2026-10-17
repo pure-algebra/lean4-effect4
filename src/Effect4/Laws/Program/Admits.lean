@@ -778,15 +778,7 @@ theorem Val.hasTy_admitsExtend : AdmitsExtend Val.hasTy.alg where
   app := by
     intro n _ _ v a b ext hv
     dsimp only [Val.hasTy.alg] at hv ⊢
-    split at hv
-    · split at hv
-      · exact hv
-      · exact hv
-      · obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp hv
-        simp only [ht]
-        exact beq_iff_eq.mpr (ext _ n (beq_iff_eq.mp hi))
-      · exact Bool.noConfusion hv
-    · exact hv
+    exact hv
   null := by
     intro v a b ext hv
     dsimp only [Val.hasTy.alg] at hv ⊢

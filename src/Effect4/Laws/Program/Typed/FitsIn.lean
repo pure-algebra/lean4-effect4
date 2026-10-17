@@ -51,7 +51,7 @@ open Effect4.Machine Effect4.Program.Sched
 mutual
 /-- **One level of membership under a declaration table.** Every arm is `Fits`'s arm, with the
 children read by `FitsAt` itself. A reference `app n args` to a declared name reads the oracle
-`o` at the name; a reference to any other name reads the handle arm, as `Fits` does. -/
+`o` at the name; a reference to any other name has no member, as in `Fits`. -/
 def FitsAt (decls : TyDecls) (w : World) (o : String → Val → Prop) (v : Val) : Ty → Prop
   | .never => False
   | .unit => match v with | .unit => True | _ => False
@@ -130,12 +130,7 @@ def FitsAt (decls : TyDecls) (w : World) (o : String → Val → Prop) (v : Val)
   | .app name _ =>
     match decls.body? name with
     | some _ => o name v
-    | none =>
-      match v with
-      | .handle kind index => HandleFits w kind index name
-      | Value.savedMask (.bool _) => name = Ty.maskRestoreTarget
-      | _ => name = Ty.contextTarget ∧
-          ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services ∧ Live w v
+    | none => False
   | .null => match v with | .none => True | _ => False
   | .undefined => match v with | .unit => True | _ => False
   | .number => numberImage v = true
@@ -367,7 +362,7 @@ theorem fitsAt_map {decls : TyDecls} {w1 w2 : World} {o1 o2 : String → Val →
     simp only [FitsAt] at h ⊢
     split at h
     · exact ho name v h
-    · exact hg.fits (t := .handle name) h
+    · exact h.elim
   | never => intro v h; exact h.elim
   | var _ => intro v h; exact h.elim
   | unit => intro v h; exact hg.fits (t := .unit) h
@@ -739,10 +734,7 @@ theorem fitsAt_memberIn {decls : TyDecls} {w : World} {o : String → Val → Pr
     split at h
     · rename_i body hb
       exact ho name body v hb h args
-    · rename_i hb
-      have hu : decls.unfold? (.app name args) = none := by
-        simp only [TyDecls.unfold?, Ty.refName?, Option.bind_some, hb, Option.map_none]
-      exact memberIn_of_hasTy hu rfl (handle_fits_hasTy w (target := name) h)
+    · exact h.elim
   | unit => intro v h; exact memberIn_of_hasTy rfl rfl (fits_hasTy w .unit v h)
   | nat => intro v h; exact memberIn_of_hasTy rfl rfl (fits_hasTy w .nat v h)
   | int => intro v h; exact memberIn_of_hasTy rfl rfl (fits_hasTy w .int v h)
