@@ -29,7 +29,8 @@ refactor plan (`docs/research/2026-10-17-ocaml-estate-review/plan.md`, §2).
 ## Modeling
 
 5. **Interfaces once, and small.** Every library module has an `.mli`; a module without one
-   gains it when it next changes. A module type is
+   gains it when it next changes. Two kinds need none: an `_intf.ml`, and a module that only
+   applies a functor whose result an interface already checks (`api_engine_inst.ml`). A module type is
    written once, in an `_intf.ml` that the `.ml` and the `.mli` include. A public interface
    holds the roots its callers use; helpers stay hidden. A value that exists only after a check
    has an abstract or `private` type, made only by its checker. A checked package is abstract as

@@ -19,7 +19,7 @@
        the frozen chunks with `Im.iter` and the open tail by a bounded recursion, so there is
        NO map lookup per row — into an array of exactly T slots, and the list is then consed
        BACKWARDS out of it, so the result costs T conses and one array rather than 2T conses
-       (`fold` then `List.rev`) or T map walks (`Vec.slice`, which is `Vec.to_list`).  All
+       (`fold` then `List.rev`) or T map walks (`Vec.slice`).  All
        three were measured (test/bench_trace.ml, cell W2c): at 1e6 rows this one takes
        33.3 ms against `fold` + `List.rev`'s 63.6 ms and `Vec.slice`'s 52.2 ms.  (At 6 003
        rows all three are under 0.1 ms, which is noise.)  The transient array is T words and
