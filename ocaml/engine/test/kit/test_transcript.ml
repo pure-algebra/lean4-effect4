@@ -1,6 +1,6 @@
 (* test_transcript.ml -- the production tool's answers, pinned (R3-C-7's net).
 
-   What it is: the replay of transcript.txt beside this file, the tool's required requests with
+   What it is: the replay of serve.transcript beside this file, the tool's required requests with
    their exact answers, through both of Kit_serve's transports: `serve_line` (`eff serve`) and
    `mcp_line` (`eff mcp`). Seat GEN's phase 1 moves the kit onto generated names and adapters,
    and slice 1.7 replaces Kit_serve's request execution; both must keep every answer, and this
@@ -32,7 +32,7 @@
        unchanged, and passes.                                               by construction
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/kit
-   Rewrite: E4_KIT_TRANSCRIPT_REWRITE=$PWD/engine/test/kit/transcript.txt, then the same. *)
+   Rewrite: E4_KIT_TRANSCRIPT_REWRITE=$PWD/engine/test/kit/serve.transcript, then the same. *)
 
 open Effect4_kit
 module J = Eff_json_text
@@ -80,7 +80,7 @@ let parse (lines : string list) : item list =
           let a = String.sub a 2 (String.length a - 2) in
           let answer = if String.equal a no_reply then None else Some a in
           go (n + 2) (Entry { line = n; transport; request; answer } :: acc) rest'
-        | _ -> failwith (Printf.sprintf "transcript.txt:%d: a request with no answer line after it" n)))
+        | _ -> failwith (Printf.sprintf "serve.transcript:%d: a request with no answer line after it" n)))
   in
   go 1 [] lines
 
@@ -144,28 +144,28 @@ let mismatches (e : entry) (pinned : string option) : string list =
   let now = current e in
   let pinned_failure =
     if Option.equal String.equal now pinned then []
-    else [ Printf.sprintf "transcript.txt:%d: the answer moved\n  pinned: %s\n  now:    %s" (e.line + 1) (show pinned) (show now) ]
+    else [ Printf.sprintf "serve.transcript:%d: the answer moved\n  pinned: %s\n  now:    %s" (e.line + 1) (show pinned) (show now) ]
   in
   let twice_failure =
     if Option.equal String.equal now (current e) then []
-    else [ Printf.sprintf "transcript.txt:%d: the answer differs when asked twice" (e.line + 1) ]
+    else [ Printf.sprintf "serve.transcript:%d: the answer differs when asked twice" (e.line + 1) ]
   in
   let mcp_failure =
     match e.transport, pinned with
     | Both, Some answer -> (
       match tools_call e.line e.request with
-      | None -> [ Printf.sprintf "transcript.txt:%d: a both> request names its op" e.line ]
+      | None -> [ Printf.sprintf "serve.transcript:%d: a both> request names its op" e.line ]
       | Some message ->
         let expected = tool_reply e.line answer and got = mcp message in
         if Option.equal String.equal got (Some expected) then []
-        else [ Printf.sprintf "transcript.txt:%d: tools/call answers another text\n  expected: %s\n  got:      %s" e.line expected (show got) ])
-    | Both, None -> [ Printf.sprintf "transcript.txt:%d: a both> request has an answer" e.line ]
+        else [ Printf.sprintf "serve.transcript:%d: tools/call answers another text\n  expected: %s\n  got:      %s" e.line expected (show got) ])
+    | Both, None -> [ Printf.sprintf "serve.transcript:%d: a both> request has an answer" e.line ]
     | (Serve | Mcp), _ -> []
   in
   pinned_failure @ twice_failure @ mcp_failure
 
 let () =
-  let items = parse (read_lines "transcript.txt") in
+  let items = parse (read_lines "serve.transcript") in
   let entries = List.filter_map (function Entry e -> Some e | Text _ -> None) items in
   match Sys.getenv_opt "E4_KIT_TRANSCRIPT_REWRITE" with
   | Some path ->
@@ -198,7 +198,7 @@ let () =
      | Some e ->
        let caught = mismatches e (Option.map (fun a -> a ^ " ") e.answer) in
        check "X5 red control: a pinned answer with one byte changed is reported at its line"
-         (List.exists (fun f -> String.length f > 0 && String.starts_with ~prefix:(Printf.sprintf "transcript.txt:%d:" (e.line + 1)) f) caught)
+         (List.exists (fun f -> String.length f > 0 && String.starts_with ~prefix:(Printf.sprintf "serve.transcript:%d:" (e.line + 1)) f) caught)
      | None -> check "X5 red control: the transcript holds a both> request" false);
     (* The counts the receipt cites. *)
     let count p = List.length (List.filter p entries) in

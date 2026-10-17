@@ -1,4 +1,4 @@
-# transcript.txt -- the production tool's answers, pinned: one request a line, its answer the next.
+# serve.transcript -- the production tool's answers, pinned: one request a line, its answer the next.
 #
 # Kit_serve answers these today (ocaml/engine/kit/kit_serve.ml), and test_transcript.ml replays
 # every one through `serve_line` (`eff serve`) and `mcp_line` (`eff mcp`), byte for byte. It is the
@@ -12,7 +12,7 @@
 #   < ANSWER        the answer to the line above; "< (no reply)" for a message that gets none
 #
 # Never edit an answer by hand. A deliberate change of answer is one reviewed diff:
-#   cd ocaml && E4_KIT_TRANSCRIPT_REWRITE=$PWD/engine/test/kit/transcript.txt \
+#   cd ocaml && E4_KIT_TRANSCRIPT_REWRITE=$PWD/engine/test/kit/serve.transcript \
 #     opam exec --switch=effect4 -- dune test --force engine/test/kit
 
 ## check: the type, and a refusal of each kind (typing, admission)
