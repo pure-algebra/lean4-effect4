@@ -681,9 +681,9 @@ gen-corpus-results: | harness/truth/node_modules ## promote a fresh corpus run t
 # opam switch `rocq`. No gate runs it; rocq/README.md gives the compile that checks the proofs.
 ROCQ_TMP := $(GEN)/rocq-types
 .PHONY: gen-rocq
-gen-rocq: ## regenerate rocq/Eff_types.v and rocq/Skeleton.v (the opam switch rocq)
-	$(LAKE) build Effect4.Run.Tree OCaml5.Lcnf.Gallina
-	$(LAKE) env lean -M4096 --run src/OCaml5/Tools/GallinaGen.lean rocq/Skeleton.v
+gen-rocq: ## regenerate rocq/Eff_types.v, rocq/Skeleton.v and rocq/StoreCode.v (the opam switch rocq)
+	$(LAKE) build Effect4.Run.Tree Effect4.Store.Domain.Word OCaml5.Lcnf.Gallina
+	$(LAKE) env lean -M4096 --run src/OCaml5/Tools/GallinaGen.lean rocq/Skeleton.v rocq/StoreCode.v
 	@rm -rf $(ROCQ_TMP) && mkdir -p $(ROCQ_TMP) && cp rocq/tools/split_types.ml $(ROCQ_TMP)/
 	cd $(ROCQ_TMP) && opam exec --switch=rocq -- ocamlfind ocamlopt -package compiler-libs.common -linkpkg split_types.ml -o split_types
 	$(ROCQ_TMP)/split_types ocaml/eff/eff_types.ml > $(ROCQ_TMP)/eff_types.ml

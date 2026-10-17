@@ -46,6 +46,20 @@ parameter takes an `int`. The file's header lists the counters it chose.
 * A recursive declaration names its structural argument, the parameter its first `cases` reads;
   Rocq's guard checker decides the rest — *tested* (the generated `Skeleton.v` of
   `Effect4.Run.Tree` compiles under Rocq 9.0.1; `docs/research/2026-10-16-native-kit/README.md`).
+* A function on `List T` recursive with a function on `T` (`Val.encodeList` beside `Val.encode`)
+  prints as a local `fix` inside the function on `T`, then as its own fixpoint: Rocq refuses the
+  mutual form over a nested type — *tested* (`StoreCode.v` compiles under Rocq 9.0.1).
+* A library constant prints only by its row of the spec's `prims`, each the Rocq counterpart of
+  the Lean function on the values Lean gives it (`List.appendTR` is `app`, `Nat.decLt` on
+  naturals as Z is `Z.ltb`); `UInt8` and `UInt64` literals print as Z — *by construction*.
+* A proof is erased as the compiler erases it: a `Decidable` is a `bool`, a proof field has no
+  Rocq field, and a pattern binds no proof — *by construction*.
+
+**The store's spec.** `storeSpec` prints `Effect4.Store`'s codec, find, put, replay and verify
+as the functor `Code (E : Prim)` into `StoreCode.v`. The hash, the byte codecs of numbers and
+strings, the float test, `Node.decode`, the zero digest and the equality deciders are `Prim`'s
+parameters, so a theorem about `Code` holds for every hash. The `Skeleton.v` output is unchanged
+by the store's rules (seat rocq-cas, 2026-10-17: byte for byte).
 -/
 
 namespace OCaml5.Lcnf.Gallina
@@ -62,6 +76,21 @@ structure Spec where
   abstractTypes : List String
   variableNamespaces : List Name
   requires : List String
+  /-- Constants outside the variable namespaces that print as parameters too. -/
+  variableNames : List Name := []
+  /-- Library constants with a fixed Rocq counterpart: the text applied to an `int` result, and
+  the text applied to a counter (`nat`) result. -/
+  prims : List (Name × String × String) := []
+  /-- Text after the requires: the Rocq definitions the `prims` texts name. -/
+  preamble : String := ""
+  /-- The namespace a declaration's Rocq name is taken relative to, its components joined by
+  `_` (`Effect4.Store.Val.encode` is `Val_encode`); none keeps the last component. -/
+  root : Option Name := none
+  /-- The module type of the parameters and the functor of the declarations. -/
+  evalName : String := "Eval"
+  moduleName : String := "Skeleton"
+  /-- Print the spec's own types before the module type, because a parameter's type names one. -/
+  typesFirst : Bool := false
 
 /-- A refusal marker: the text a fallback prints, which `render` refuses by the name it carries. -/
 def refused (what : String) : String := s!"(* REFUSED {what} *)"
@@ -81,6 +110,7 @@ def ctorRocq (env : Environment) (n : Name) : Option String :=
   | ``Bool.true => some "true" | ``Bool.false => some "false"
   | ``Prod.mk => some "pair" | ``PUnit.unit => some "tt" | ``Unit.unit => some "tt"
   | ``Nat.zero => some "O" | ``Nat.succ => some "S"
+  | ``Decidable.isTrue => some "true" | ``Decidable.isFalse => some "false"
   | _ =>
     if env.isConstructor n then
       match n.getPrefix with
@@ -97,6 +127,19 @@ def fnRocq (n : Name) : String :=
     if ns == "Eval" then "eval_" ++ s else s
   | _ => "f"
 
+/-- A Rocq identifier under a root namespace: the components below the root joined by `_`, or all
+of them for a constant outside it (`List.any._at_.….spec_0`); `?` is `_opt`, `'` is `_`. -/
+def qualRocq (root : Name) (n : Name) : String :=
+  let parts := if root.isPrefixOf n then n.components.drop root.components.length else n.components
+  "_".intercalate (parts.map fun c => ((toString c).replace "?" "_opt").replace "'" "_"
+    |>.replace "«" "" |>.replace "»" "")
+
+/-- A declaration's or parameter's Rocq name under a spec. -/
+def Spec.name (spec : Spec) (n : Name) : String :=
+  match spec.root with
+  | some r => qualRocq r n
+  | none => fnRocq n
+
 /-- A local name: `v_` and the binder's characters, each non-alphanumeric one as `_`. -/
 def localName (n : Name) : String :=
   "v_" ++ String.ofList ((toString n).toList.map fun c => if c.isAlphanum then c else '_')
@@ -110,6 +153,11 @@ partial def rocqTy (spec : Spec) (counter : Bool) (e : Expr) : String :=
     let args := e.getAppArgs
     match e.getAppFn with
     | .const ``Nat _ => if counter then "nat" else "int"
+    | .const ``Decidable _ => "bool"
+    | .const ``DecidableEq _ =>
+      match args.toList with
+      | [t] => let t := rocqTy spec false t; s!"({t} -> {t} -> bool)"
+      | _ => refused s!"type {e}"
     | .const n _ =>
       match spec.knownTypes.lookup n with
       | some r =>
@@ -177,16 +225,23 @@ def projName (env : Environment) (typeName : Name) (idx : Nat) : String :=
     if typeName == ``Prod then (if idx == 0 then "fst" else "snd")
     else refused s!"projection {typeName}.{idx}"
 
-def valueText (env : Environment) (l : Locals) (d : LetDecl .pure) : String :=
+def valueText (env : Environment) (spec : Spec) (l : Locals) (d : LetDecl .pure) : String :=
   match d.value with
   | .lit (.nat n) => if l.counters.contains d.fvarId then toString n else s!"{n}%Z"
   | .lit (.str s) => s!"\"{s}\"%string"
-  | .lit _ => refused "a literal that is no natural and no string"
+  | .lit (.uint8 n) => s!"{n}%Z"
+  | .lit (.uint64 n) => s!"{n}%Z"
+  | .lit _ => refused "a literal that is no natural, no string, no UInt8 and no UInt64"
   | .erased => "tt"
   | .proj tn idx s => s!"({projName env tn idx} {l.name s})"
   | .const n _ args =>
     let as := args.toList.filterMap (argName l)
-    app ((ctorRocq env n).getD (fnRocq n)) as
+    match spec.prims.lookup n with
+    | some (int, nat) =>
+      let counted := l.counters.contains d.fvarId ||
+        args.any fun | .fvar f => l.counters.contains f | _ => false
+      app (if counted then (if nat.isEmpty then refused s!"{n} at a counter" else nat) else int) as
+    | none => app ((ctorRocq env n).getD (spec.name n)) as
   | .fvar f args => app (l.name f) (args.toList.filterMap (argName l))
 
 def paramText (spec : Spec) (l : Locals) (p : Param .pure) : String :=
@@ -195,7 +250,7 @@ def paramText (spec : Spec) (l : Locals) (p : Param .pure) : String :=
 /-- A code as a Gallina expression, indented by `ind` after each line break. -/
 partial def codeText (env : Environment) (spec : Spec) (l : Locals) (ind : String) :
     Code .pure → String
-  | .let d k => s!"let {l.name d.fvarId} := {valueText env l d} in\n{ind}{codeText env spec l ind k}"
+  | .let d k => s!"let {l.name d.fvarId} := {valueText env spec l d} in\n{ind}{codeText env spec l ind k}"
   | .fun d k =>
     let ps := " ".intercalate (d.params.toList.map (paramText spec l))
     s!"let {l.name d.fvarId} := (fun {ps} =>\n{ind}    {codeText env spec l (ind ++ "    ") d.value}) in\n{ind}{codeText env spec l ind k}"
@@ -213,6 +268,8 @@ partial def codeText (env : Environment) (spec : Spec) (l : Locals) (ind : Strin
       | .alt n ps code =>
         let pat := match ctorRocq env n with
           | some ctor =>
+            -- a proof field is erased: it binds nothing, and its Rocq constructor has no field
+            let ps := ps.filter fun (p : Param .pure) => !p.type.isErased
             if ps.isEmpty then ctor
             else s!"{ctor} {" ".intercalate (ps.toList.map fun (p : Param .pure) => l.name p.fvarId)}"
           | none => refused s!"constructor {n}"
@@ -227,22 +284,34 @@ partial def structArg (ps : Array (Param .pure)) : Code .pure → Option FVarId
   | .cases c => if ps.any (·.fvarId == c.discr) then some c.discr else none
   | _ => none
 
-/-- A type the spec generates, as an `Inductive`, with a projection per field of a structure. -/
-def typeText (env : Environment) (spec : Spec) (n : Name) : Except String String := do
-  let some (.inductInfo ti) := env.find? n | .error s!"{n} is no inductive"
+/-- A type the spec generates, as an `Inductive`, with a projection per field of a structure. A
+proof field (`Digest.length_eq`) is erased, as the compiler erases it: the Rocq constructor has no
+field for it, and it has no projection. -/
+def typeText (env : Environment) (spec : Spec) (n : Name) : MetaM String := do
+  let some (.inductInfo ti) := env.find? n | throwError s!"{n} is no inductive"
   let short := (spec.knownTypes.lookup n).getD (fnRocq n)
   let mut out := s!"Inductive {short} : Set :=\n"
+  let mut kept : List Bool := []
   for c in ti.ctors do
-    let some (.ctorInfo ci) := env.find? c | .error s!"{c} is no constructor"
-    let rec fields : Expr → List String
-      | .forallE _ d b _ => rocqTy spec false d :: fields b
-      | _ => []
-    out := out ++ s!"| {(ctorRocq env c).getD "C"} : {" -> ".intercalate (fields ci.type ++ [short])}\n"
+    let some (.ctorInfo ci) := env.find? c | throwError s!"{c} is no constructor"
+    let (fields, keep) ← Meta.forallTelescope ci.type fun xs _ => do
+      let mut fs : List String := []
+      let mut ks : List Bool := []
+      for x in xs.toList.drop ci.numParams do
+        let t ← Meta.inferType x
+        if ← Meta.isProp t then ks := ks ++ [false]
+        else
+          fs := fs ++ [rocqTy spec false t]
+          ks := ks ++ [true]
+      return (fs, ks)
+    kept := keep
+    out := out ++ s!"| {(ctorRocq env c).getD "C"} : {" -> ".intercalate (fields ++ [short])}\n"
   out := out ++ ".\n"
   if let some info := getStructureInfo? env n then
-    let some ctor := ti.ctors.head? | .error s!"{n} has no constructor"
-    for i in [:info.fieldNames.size] do
-      let vars := (List.range info.fieldNames.size).map fun j => if j == i then "x" else "_"
+    let some ctor := ti.ctors.head? | throwError s!"{n} has no constructor"
+    let live := (List.range info.fieldNames.size).filter fun j => kept.getD j true
+    for i in live do
+      let vars := live.map fun j => if j == i then "x" else "_"
       out := out ++ s!"Definition {projName env n i} (s : {short}) := match s with {(ctorRocq env ctor).getD "C"} {" ".intercalate vars} => x end.\n"
   return out
 
@@ -276,10 +345,21 @@ def render (spec : Spec) (header : String) : CoreM String := do
       for i in [:d.params.size] do
         if l.counters.contains d.params[i]!.fvarId then
           cps := cps.insert d.name (((cps.get? d.name).getD {}).insert i)
+  -- the final names: a variable passed where a declaration of the spec takes a counter is one
+  let localsOf := fun (d : Decl .pure) (ps : Std.HashSet Nat) => Id.run do
+    let mut l := localsOf d ps
+    if let .code c := d.value then
+      for (callee, args) in calls c do
+        if let some set := cps.get? callee then
+          for i in [:args.size] do
+            if let some a := args[i]! then
+              if set.contains i then l := { l with counters := l.counters.insert a }
+    return l
   -- the variables: every constant the skeleton calls that it neither defines nor constructs, each
-  -- in a variable namespace; any other constant has no printing rule and is refused by name
+  -- in a variable namespace or named; any other constant has no printing rule and is refused by name
   let defined : NameSet := spec.decls.foldl (·.insert ·) {}
-  let isVariable (n : Name) : Bool := spec.variableNamespaces.any (·.isPrefixOf n)
+  let isVariable (n : Name) : Bool :=
+    spec.variableNamespaces.any (·.isPrefixOf n) || spec.variableNames.contains n
   let mut vars : Array Name := #[]
   let mut refusals : Array String := #[]
   for d in decls do
@@ -287,6 +367,8 @@ def render (spec : Spec) (header : String) : CoreM String := do
     if let .code c := d.value then
       for (n, args) in calls c do
         if defined.contains n || (ctorRocq env n).isSome then continue
+        -- a library constant with a Rocq counterpart (`prims`); a Nat operation there is exact on Z
+        if (spec.prims.lookup n).isSome then continue
         if natOps.contains n then
           for a in args do
             if let some f := a then
@@ -308,7 +390,7 @@ def render (spec : Spec) (header : String) : CoreM String := do
     let l := localsOf d ((cps.get? d.name).getD {})
     let names := (l.counters.toList.map l.name).toArray.qsort (· < ·)
     unless names.isEmpty do
-      counterLines := counterLines.push s!"     {fnRocq d.name}: {", ".intercalate names.toList}"
+      counterLines := counterLines.push s!"     {spec.name d.name}: {", ".intercalate names.toList}"
   -- the mutual groups: declarations that reach one another through calls
   let callees (d : Decl .pure) : List Name := match d.value with
     | .code c => (calls c).map (·.1) |>.filter defined.contains
@@ -331,37 +413,67 @@ def render (spec : Spec) (header : String) : CoreM String := do
   let counters := "(* Counters (Rocq nat), by declaration; every other natural is int (Z):\n"
     ++ "\n".intercalate counterLines.toList ++ " *)"
   let mut out := header ++ "\n\n" ++ counters ++ "\n\n" ++ "\n".intercalate spec.requires
-    ++ "\n\n(** The evaluator: every constant of a variable namespace, as a parameter. *)\n"
-    ++ "Module Type Eval.\n\n"
-  out := out ++ s!"Parameters {" ".intercalate spec.abstractTypes} : Set.\n"
+    ++ (if spec.preamble.isEmpty then "" else "\n\n" ++ spec.preamble)
+  if spec.typesFirst then
+    out := out ++ "\n\n(** The types. *)\n"
+    for t in spec.types do
+      out := out ++ (← (typeText env spec t).run') ++ "\n"
+  out := out ++ "\n\n(** The evaluator: every constant of a variable namespace, as a parameter. *)\n"
+    ++ s!"Module Type {spec.evalName}.\n\n"
+  unless spec.abstractTypes.isEmpty do
+    out := out ++ s!"Parameters {" ".intercalate spec.abstractTypes} : Set.\n"
   for v in vars do
     let some info := env.find? v | throwError s!"Gallina: no constant {v}"
-    out := out ++ s!"Parameter {fnRocq v} : {rocqTy spec false info.type}.\n"
-  out := out ++ "\nEnd Eval.\n\n(** The skeleton, over any evaluator. *)\nModule Skeleton (E : Eval).\n\nImport E.\n\n"
-  for t in spec.types do
-    match typeText env spec t with
-    | .ok text => out := out ++ text ++ "\n"
-    | .error e => throwError e
+    out := out ++ s!"Parameter {spec.name v} : {rocqTy spec false info.type}.\n"
+  out := out ++ s!"\nEnd {spec.evalName}.\n\n(** The skeleton, over any evaluator. *)\nModule {spec.moduleName} (E : {spec.evalName}).\n\nImport E.\n\n"
+  unless spec.typesFirst do
+    for t in spec.types do
+      out := out ++ (← (typeText env spec t).run') ++ "\n"
   out := out ++ "\n"
+  -- one declaration's head and body: `name params {struct x} : type :=` and the code
+  let headOf (g : Decl .pure) (recursive : Bool) : String := Id.run do
+    let l := localsOf g ((cps.get? g.name).getD {})
+    let .code c := g.value | return refused s!"extern {g.name}"
+    let sa := if recursive then (structArg g.params c).map fun f => s!" \{struct {l.name f}}" else none
+    let mut t := g.type
+    for _ in g.params do
+      if let .forallE _ _ b _ := t then t := b
+    return s!"{spec.name g.name} {" ".intercalate (g.params.toList.map (paramText spec l))}{sa.getD ""} : {rocqTy spec false t}"
+  let bodyOf (g : Decl .pure) (ind : String) : String := Id.run do
+    let l := localsOf g ((cps.get? g.name).getD {})
+    let .code c := g.value | return refused s!"extern {g.name}"
+    return codeText env spec l ind c
+  -- a function on `List T` in a group with a function on `T` (`Val.encodeList` beside
+  -- `Val.encode`) is a nested recursion: Rocq takes it as a local `fix` inside the function on
+  -- `T`, then as its own fixpoint over the defined one
+  let onList (g : Decl .pure) : Bool := Id.run do
+    let .code c := g.value | return false
+    match structArg g.params c with
+    | some f => return g.params.any fun p => p.fvarId == f && p.type.getAppFn.isConstOf ``List
+    | none => return false
   let mut printed : NameSet := {}
   for d in decls do
     if printed.contains d.name then continue
     let group := decls.filter fun e => e.name == d.name || (reaches d.name e.name && reaches e.name d.name)
+    let nested := match group.toList with
+      | [a, b] => if onList b && !onList a then some (a, b) else if onList a && !onList b then some (b, a) else none
+      | _ => none
+    if let some (top, aux) := nested then
+      printed := (printed.insert top.name).insert aux.name
+      let call := s!"({spec.name aux.name} "
+      let inline := s!"((fix {headOf aux true} :=\n      {bodyOf aux "      "}) "
+      out := out ++ s!"Fixpoint {headOf top true} :=\n  {(bodyOf top "  ").replace call inline}\n.\n\n"
+      out := out ++ s!"Fixpoint {headOf aux true} :=\n  {bodyOf aux "  "}\n.\n\n"
+      continue
     let mut first := true
     for g in group do
       printed := printed.insert g.name
-      let l := localsOf g ((cps.get? g.name).getD {})
-      let .code c := g.value | throwError s!"Gallina: {g.name} is extern"
       let recursive := (callees g).any fun n => group.any (·.name == n)
-      let sa := if recursive then (structArg g.params c).map fun f => s!" \{struct {l.name f}}" else none
       let kw := if !first then "with" else if recursive then "Fixpoint" else "Definition"
-      let mut t := g.type
-      for _ in g.params do
-        if let .forallE _ _ b _ := t then t := b
-      out := out ++ s!"{kw} {fnRocq g.name} {" ".intercalate (g.params.toList.map (paramText spec l))}{sa.getD ""} : {rocqTy spec false t} :=\n  {codeText env spec l "  " c}\n"
+      out := out ++ s!"{kw} {headOf g recursive} :=\n  {bodyOf g "  "}\n"
       first := false
     out := out ++ ".\n\n"
-  out := out ++ "End Skeleton.\n"
+  out := out ++ s!"End {spec.moduleName}.\n"
   -- every fallback's marker, refused by the name it carries
   for piece in (out.splitOn "(* REFUSED ").drop 1 do
     refusals := refusals.push ((piece.splitOn " *)").headD piece)
@@ -396,5 +508,72 @@ def treeSpec : Spec where
   variableNamespaces := [`Effect4.Run.Tree.Eval]
   requires := ["From Stdlib Require Import List ZArith String.", "Import ListNotations.",
     "Require Import RocqOfOCaml.RocqOfOCaml.", "Require Import E4.Eff_types."]
+
+/-- **The content-addressed store's code** (`Effect4.Store`): the value and node codecs, the edge
+scan, the find, the put with its admission, the word's replay and `verify`, printed over an
+abstract hash. The hash, the number and string byte codecs, the float test, `Node.decode`, the
+zero digest and the equality deciders are the parameters of `Prim`: a theorem over `Code` holds
+for every hash, and a law it needs of a parameter is a hypothesis of the proof file, never a
+field here. The closure walk is not printed: specialization turns its nested `foldl` into a
+mutual recursion on two different arguments, which Rocq's guard checker refuses. -/
+def storeSpec : Spec where
+  decls := [`Effect4.Store.framed, `Effect4.Store.Val.encode, `Effect4.Store.Val.encodeList,
+    `Effect4.Store.Val.tag, `Effect4.Store.Val.payload, `Effect4.Store.Val.wf, `Effect4.Store.Val.wfList, `Effect4.Store.Val.decWF,
+    `Effect4.Store.Kind.byte, `Effect4.Store.Kind.all,
+    `List.find?._at_.Effect4.Store.Kind.ofByte?.spec_0, `Effect4.Store.Kind.ofByte?,
+    `Effect4.Store.Digest.ofBytes?, `Effect4.Store.Val.refs, `Effect4.Store.Val.refsList,
+    `Effect4.Store.Val.malformedRef, `Effect4.Store.Val.malformedRefList,
+    `Effect4.Store.Node.encode, `Effect4.Store.Node.refsOf, `Effect4.Store.Node.edges,
+    `Effect4.Store.Node.malformedRef, `Effect4.Store.Node.instDecidableIsGenesis._aux_1,
+    `Effect4.Store.Node.instDecidableIsGenesis, `Effect4.Store.Node.checkedEdges,
+    `Effect4.Store.findIn, `Effect4.Store.Store.find, `Effect4.Store.Store.checkEdge,
+    `Effect4.Store.Store.checkAll, `Effect4.Store.Store.checkEdges, `Effect4.Store.Store.putNode,
+    `Effect4.Store.Word.apply, `List.any._at_.Effect4.Store.resolvesAmong.spec_0,
+    `Effect4.Store.resolvesAmong, `List.any._at_.Effect4.Store.Binding.admissibleAfter.spec_0,
+    `List.all._at_.Effect4.Store.Binding.admissibleAfter.spec_1,
+    `Effect4.Store.Binding.admissibleAfter, `Effect4.Store.Word.wfFrom, `Effect4.Store.Word.wf,
+    `Effect4.Store.verifyEdges, `Effect4.Store.Store.verifyNode, `Effect4.Store.verifyNodes,
+    `Effect4.Store.verifyRoots, `Effect4.Store.Store.verify]
+  types := [`Effect4.Store.Kind, `Effect4.Store.Digest, `Effect4.Store.AnyRef, `Effect4.Store.Node,
+    `Effect4.Store.RootKind, `Effect4.Store.Root, `Effect4.Store.Store, `Effect4.Store.Admission,
+    `Effect4.Store.Outcome, `Effect4.Store.Binding, `Effect4.Store.VerifyError]
+  knownTypes := [
+    (`Effect4.Store.Val, "val_"), (`Effect4.Store.Kind, "kind"), (`Effect4.Store.Digest, "digest"),
+    (`Effect4.Store.AnyRef, "any_ref"), (`Effect4.Store.Node, "node"),
+    (`Effect4.Store.RootKind, "rootkind"), (`Effect4.Store.Root, "root"),
+    (`Effect4.Store.Store, "store"), (`Effect4.Store.Admission, "admission"),
+    (`Effect4.Store.Outcome, "outcome"), (`Effect4.Store.Binding, "binding"),
+    (`Effect4.Store.VerifyError, "verify_error"), (`Effect4.Store.Bytes, "(list int)"),
+    (`Effect4.Store.Word, "(list binding)"),
+    (``UInt8, "int"), (``UInt64, "int"), (``String, "string"), (``ByteArray, "(list int)"),
+    (``Array, "list"), (``Except, "Except"),
+    (``List, "list"), (``Option, "option"), (``Prod, "prod"), (``Bool, "bool"),
+    (``Unit, "unit"), (``PUnit, "unit")]
+  abstractTypes := []
+  variableNamespaces := []
+  variableNames := [`Effect4.Store.sha256, `Effect4.Store.be64, `Effect4.Store.natBytes,
+    ``String.toUTF8, `Effect4.Store.Val.floatFrame, `Effect4.Store.zeroDigest,
+    `Effect4.Store.Digest.instDecidableEq, `Effect4.Store.instDecidableEqKind,
+    `Effect4.Store.instDecidableEqNode, `Effect4.Store.Node.decode]
+  prims := [
+    (``List.appendTR, "app", "app"), (``List.lengthTR, "lengthZ", "Stdlib.Lists.List.length"),
+    (``Decidable.decide, "id", ""), (``instDecidableEqUInt8, "Z.eqb", ""),
+    (``instDecidableEqNat, "Z.eqb", "Nat.eqb"), (``Nat.decLt, "Z.ltb", "Nat.ltb"),
+    (``Nat.decLe, "Z.leb", "Nat.leb"), (``Option.instDecidableEq, "option_eqb", ""),
+    (``ByteArray.data, "id", ""), (``Array.toList, "id", ""), (``UInt64.toNat, "id", "")]
+  preamble := "(** The Lean library the code calls, as Rocq spells it. A `UInt8`, a `UInt64` and a natural are\n" ++
+    "    `int` (Z): the code compares them and never computes with them. `ByteArray.data`,\n" ++
+    "    `Array.toList` and `UInt64.toNat` are projections onto the same value, so `id`. *)\n" ++
+    "Definition lengthZ {A : Type} (l : list A) : int := Z.of_nat (Stdlib.Lists.List.length l).\n" ++
+    "Definition option_eqb {A : Type} (eqA : A -> A -> bool) (a b : option A) : bool :=\n" ++
+    "  match a, b with Some x, Some y => eqA x y | None, None => true | _, _ => false end.\n" ++
+    "Inductive Except (e a : Type) : Type := Except_error : e -> Except e a | Except_ok : a -> Except e a.\n" ++
+    "Arguments Except_error {e a} _.\nArguments Except_ok {e a} _."
+  requires := ["From Stdlib Require Import List ZArith String.", "Import ListNotations.",
+    "Require Import RocqOfOCaml.RocqOfOCaml.", "Require Import E4.Eff_types."]
+  root := some `Effect4.Store
+  evalName := "Prim"
+  moduleName := "Code"
+  typesFirst := true
 
 end OCaml5.Lcnf.Gallina
