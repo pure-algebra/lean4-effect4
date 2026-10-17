@@ -129,10 +129,11 @@ module Make (E : E4_engine.ENGINE) = struct
                     read (n - 1) (t, st, calls) (E.step t d) st' ({ row; request; answer } :: calls)
                       ~flushed:false))
           | [] -> read (n - 1) (t, st, calls) (E.step t E.flush) st calls ~flushed:true
-      (* The answer of the step from [before] to [t']; [st'] and [calls'] are the host's state
-         and the calls once that step is taken. A refusal at the profile boundary keeps
-         [before] (H2, H9); a stuck machine and one short of fuel are what the machine reached
-         (H10); a flush that leaves no host call ends the drive with the machine's outcome. *)
+      (* The answer of the step that took [t] to [t']; [st'] and [calls'] are the host's state
+         and the calls once that step is taken. A refusal at the profile boundary keeps [t],
+         [st] and [calls] (H2, H9); a stuck machine and one short of fuel are what the machine
+         reached (H10); a flush that leaves no host call ends the drive with the machine's
+         outcome. *)
       and read n (t, st, calls) t' st' calls' ~flushed =
         match E.answer t' with
         | E4_engine.Outside_profile why -> served t st calls (Host (Outside_profile why))
