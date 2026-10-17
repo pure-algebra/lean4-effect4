@@ -28,6 +28,7 @@
      eff frames PROGRAM [--rows ROWS] [--tape TAPE] [--limit N]
      eff explore PROGRAM [--rows ROWS] [--budget K] [--width N] [--fast]
      eff outside PROGRAM
+     eff view   PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--width N] > run.html
      eff serve
      eff mcp
    PROGRAM is a .json file, a .eff file of canonical bytes, or - for JSON on stdin. ROWS is a JSON
@@ -36,6 +37,24 @@
 open Effect4_kit
 open Kit_serve
 module J = Eff_json_text
+
+(* `eff view`: the page of a run's frames and the program's paths (Kit_view), on stdout. *)
+let view ~title (r : request) : string =
+  let app = Kit.app ~rows:r.rows () in
+  let p = match r.program with Some p -> p | None -> input "no program" in
+  let go : type s. s Kit.host -> s -> string = fun host st ->
+    let settled = Kit.settle ~limit:r.limit app host st p in
+    let last = match settled with
+      | Kit.Settled { budget; _ } -> min r.limit (budget + 2)
+      | Kit.Unsettled _ -> min r.limit 32 in
+    let frames = Kit.frames app ~limit:last host st p in
+    let budget = match settled with Kit.Settled { budget; _ } -> max budget 1 | Kit.Unsettled _ -> 8 in
+    let paths = if r.rows = [] then [] else Kit.explore app ~budget ~width:r.width p in
+    Kit_view.page (Kit_view.data ~title ~app ~frames ~settled ~paths)
+  in
+  match r.tape with
+  | Some t -> go (Kit.Host.guarded app Kit.Host.tape) t
+  | None -> go Kit.Host.silent ()
 
 let lines (f : string -> string option) =
   let rec loop () =
@@ -50,7 +69,7 @@ let serve () = lines (fun line -> Some (serve_line line))
 let mcp () = lines mcp_line
 
 let usage =
-  "usage: eff (check|run|probe|frames|explore|outside) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--budget K]\n\
+  "usage: eff (check|run|probe|frames|explore|outside|view) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--budget K]\n\
   \       eff serve\n\
   \       eff mcp"
 
@@ -71,11 +90,12 @@ let () =
       | flag :: _ -> input "unknown flag %S" flag
     in
     (match
-       answer
-         (parse { op; program = Some (program_of_path path); rows = []; tape = None; limit = 1024; budget = None;
-                  machine = false; fast = false; width = 64 } flags)
+       let r = parse { op; program = Some (program_of_path path); rows = []; tape = None; limit = 1024; budget = None;
+                       machine = false; fast = false; width = 64 } flags in
+       if op = "view" then `Page (view ~title:(Filename.remove_extension (Filename.basename path)) r) else `Json (answer r)
      with
-     | a -> print_endline (Kit.Json.render a)
+     | `Page html -> print_string html
+     | `Json a -> print_endline (Kit.Json.render a)
      | exception Input e -> print_endline (Kit.Json.render (error_json e)); exit 2
      | exception Failure e -> print_endline (Kit.Json.render (error_json e)); exit 2)
   | _ -> prerr_endline usage; exit 2

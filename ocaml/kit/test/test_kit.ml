@@ -40,7 +40,10 @@
        machine.                                                             tested
    T11 Exploration: the replies drawn from a row's types are members of its columns; a program that
        branches on a list's length has a path for each branch and for each failure of its error
-       column; each path's tape replays the path on the machine.            tested *)
+       column; each path's tape replays the path on the machine.            tested
+   T12 The view (Kit_view V1, V3): the page is one HTML file holding its data; a value whose text
+       holds "</script>" does not end the script element; an unsettled run's verdict says it is a
+       finite probe.                                                         tested *)
 
 open Eff_types
 open Effect4_kit
@@ -375,8 +378,31 @@ let t11 () =
   check "T11 each path's tape replays it on the machine"
     (List.for_all (fun path -> Kit_machine.agree_path path (Kit_machine.run app Kit.Host.tape (Kit.tape_of path) p)) paths)
 
+let t12 () =
+  let contains s sub =
+    let n = String.length sub in
+    let rec go i = i + n <= String.length s && (String.sub s i n = sub || go (i + 1)) in
+    go 0 in
+  let count s sub =
+    let n = String.length sub in
+    let rec go i acc = if i + n > String.length s then acc else go (i + 1) (if String.sub s i n = sub then acc + 1 else acc) in
+    go 0 0 in
+  let frames = Kit.frames app ~limit:6 Kit.Host.tape (units 4) doubling in
+  let settled = Kit.settle app Kit.Host.tape (units 4) doubling in
+  let page = Kit_view.page (Kit_view.data ~title:"doubling" ~app ~frames ~settled ~paths:[]) in
+  check "T12 the page is one file with its data"
+    (contains page "<!doctype html>" && contains page "const DATA = " && count page "<script>" = 1);
+  let sneaky = build A.(succeed (str "</script><b>")) in
+  let frames' = Kit.frames app ~limit:1 Kit.Host.silent () sneaky in
+  let settled' = Kit.settle app Kit.Host.silent () sneaky in
+  let page' = Kit_view.page (Kit_view.data ~title:"x" ~app ~frames:frames' ~settled:settled' ~paths:[]) in
+  check "T12 a value cannot end the script" (count page' "</script>" = 1);
+  let page'' = Kit_view.page (Kit_view.data ~title:"forever" ~app ~frames:(Kit.frames app ~limit:3 Kit.Host.silent () forever)
+                                ~settled:(Kit.settle ~limit:3 app Kit.Host.silent () forever) ~paths:[]) in
+  check "T12 an unsettled verdict is a finite probe" (contains page'' "a finite probe, not a divergence")
+
 let () =
   let corpus = fixture () in
-  t1 (); t2 (); t3 corpus; t4 (); t5 corpus; t6 (); t7 (); t8 corpus; t9 (); t10 (); t11 ();
+  t1 (); t2 (); t3 corpus; t4 (); t5 corpus; t6 (); t7 (); t8 corpus; t9 (); t10 (); t11 (); t12 ();
   Printf.printf "test_kit: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1

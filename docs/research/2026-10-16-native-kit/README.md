@@ -36,6 +36,7 @@ Each box ran in this note's session; the commands are in §5.
 | `eff frames P --limit N` | the run at every budget up to `N`, each frame extending the one before |
 | `eff explore P --rows R` | every path of the call tree, each reply drawn from its row's types; each path's calls, stop and tape, and the machine's replay of that tape |
 | `eff outside P` | the address of the first node the call tree has no arm for |
+| `eff view P --rows R --tape T` | one self-contained HTML page: the frames played as a growing run, every budget as a row, every explored path |
 | `eff serve` | the same requests as JSON lines |
 | `eff mcp` | a Model Context Protocol server over stdio with the six tools |
 
@@ -82,8 +83,9 @@ flowchart TB
 | Authoring | `ocaml/kit/kit_author.mli` | programs with named binders (`let*`), rows and definitions by name, `build_checked` |
 | The machine | `ocaml/kit/kit_machine.mli` | any program on the lowered machine (`E4_host.serve`), and `agree` with a tree run |
 | The requests | `ocaml/kit/kit_serve.ml` | one request type for every command, its answer, the JSON-lines protocol and the MCP protocol, each a function of one line |
-| The command line | `ocaml/kit/bin/eff.ml` | a loop over `Kit_serve`: `check`, `run`, `probe`, `frames`, `explore`, `outside`, `serve`, `mcp` |
-| The lane | `ocaml/kit/test/` | `test_kit.ml` (T1 to T11), `verdicts.txt` written by `write.lean` (`make gen-fixtures`) |
+| The view | `ocaml/kit/kit_view.ml` | one HTML page of a run's frames and a program's paths, its labels written in OCaml |
+| The command line | `ocaml/kit/bin/eff.ml` | a loop over `Kit_serve`: `check`, `run`, `probe`, `frames`, `explore`, `outside`, `view`, `serve`, `mcp` |
+| The lane | `ocaml/kit/test/` | `test_kit.ml` (T1 to T12), `verdicts.txt` written by `write.lean` (`make gen-fixtures`) |
 
 ### The semantics in one paragraph each
 
@@ -139,13 +141,16 @@ Each number has its command. The machine is this Mac, shared with other seats' b
 | `eff run`, a 1000-round loop under 1000 replies | median 6.5 ms | case `run 1000-round loop` |
 | `eff run`, a silent loop to the limit 100000 | median 10.1 ms | case `run silent loop` |
 | one check through the Lean session tool | 1.43 to 1.47 s | `docs/research/2026-10-13-agent-ergonomics-probe/README.md`, the tally |
-| the lane | 48 checks, 0 failures | `cd ocaml && opam exec --switch=effect4 -- dune test kit` |
+| the lane | 51 checks, 0 failures | `cd ocaml && opam exec --switch=effect4 -- dune test kit` |
 | the lowered checker against Lean | 408 of 408 verdicts, spellings, reasons and addresses equal | the lane, T5 |
 | the tree against the machine | 95 of 95 corpus programs in the fragment agree, typed or not, generators among them | the lane, T8 |
 | the axiom gate's walk | 311 declarations within `[propext, Quot.sound]`, 3 planned goals (the declared facts) | `#axiom_audit Effect4.Run.Tree Effect4.Run.Kit Effect4.Laws.Run.Tree` |
 
 The timing script runs each command 20 times with `subprocess.run` and prints the median and the
 minimum. The inputs were written by `Kit_author` and `Kit.Json`, in the session's scratch folder.
+
+The Lean session tool answers `settle`, `frames` and `explore` too (`tools/Tools/Session.lean`),
+from the same Lean definitions, each answer naming its laws. It opens the kit's JSON as written.
 
 ## Findings
 
@@ -166,7 +171,9 @@ minimum. The inputs were written by `Kit_author` and `Kit.Json`, in the session'
    identity below 2^62, as `UInt64.toNat`'s. The view of a program (`Eff.view`) has a field whose
    type depends on another (`ArgF.child`'s `R fam`), which the route does not spell. So raw
    formation (`Formation.checkInput`) is the one part of program admission the kit does not decide.
-5. **A new name in `Effect4.Run` shadowed an opened one.** A top-level `Effect4.Run.settle`
+5. **The session tool did not build at the base.** Its `run` built `Api.Built` with the field
+   `table`, which D2 (decisions row 407) replaced by `app`. It builds again with `app`.
+6. **A new name in `Effect4.Run` shadowed an opened one.** A top-level `Effect4.Run.settle`
    shadowed `Machine.settle` inside `namespace Effect4.Run.CallTree`, and that module stopped
    building. Every name of the tree now lives under `Tree`.
 
@@ -191,7 +198,6 @@ minimum. The inputs were written by `Kit_author` and `Kit.Json`, in the session'
 | --- | --- | --- |
 | 1 | Exploration at rc.112: replay each explored path's tape through the keyed recorder | every path checked against the outside implementation, not only the machine |
 | 3 | The TypeScript front end: `eff check prog.ts` through `ts/eff`'s reader | the agent's preferred surface (the ergonomics probe) |
-| 4 | The Lean session tool's `settle` and `frames` | the tool already holds the edit session and the run |
 | 5 | Dependent fields in the LCNF route | raw formation natively, and the generic views |
 | 6 | Edit laws as checked rewrites | `EffEq` from `rocq/Api.v`: a simplifier whose rules keep every outcome |
 
