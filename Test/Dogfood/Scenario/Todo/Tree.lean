@@ -124,7 +124,8 @@ theorem builtAt_untyped {name : String} {args : List TermSrc} {b : Api.Built}
         rfl
       rw [Option.bind_some, hsome] at h
       cases h
-      exact (Effect4.Api.Author.build_retains hbuild).2.2.2
+      exact (congrArg Effect4.Program.SigApp.types
+        (Effect4.Api.Author.build_retains hbuild).2.2.2).trans rfl
 
 /-- The kernel elaborates `add` at a free title. A step of `add_empty_calls_nothing` and
 `list_after_add`. -/

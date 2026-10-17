@@ -192,11 +192,11 @@ section ErrorImage
 #guard errOf (Val.bool true) = Err.boom
 
 -- the bridge, read on each reason shape: `errAdmits` is the fold at `Val.hasTy`
-#guard errAdmits .nat (Reason.fail (Err.tag 7) ReasonAnnotations.empty) =
+#guard errAdmits [] .nat (Reason.fail (Err.tag 7) ReasonAnnotations.empty) =
   reasonAdmits (fun v t => Val.hasTy v t) .nat (Reason.fail (Err.tag 7) ReasonAnnotations.empty)
-#guard errAdmits .nat (Reason.fail Err.boom ReasonAnnotations.empty) =
+#guard errAdmits [] .nat (Reason.fail Err.boom ReasonAnnotations.empty) =
   reasonAdmits (fun v t => Val.hasTy v t) .nat (Reason.fail Err.boom ReasonAnnotations.empty)
-#guard errAdmits .never (Reason.die Defect.badName ReasonAnnotations.empty) =
+#guard errAdmits [] .never (Reason.die Defect.badName ReasonAnnotations.empty) =
   reasonAdmits (fun v t => Val.hasTy v t) .never (Reason.die Defect.badName ReasonAnnotations.empty)
 
 -- `hasTyCause` on a reified failed exit

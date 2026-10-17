@@ -160,7 +160,8 @@ theorem unauthorized_calls_nothing : UnauthorizedCallsNothing := by
       exact concreteReplies_free token id idText
     have huntyped : (Test.Dogfood.Scenario.play (opened b) moves).built.app.types = [] := by
       rw [hbuilt]
-      exact (Effect4.Api.Author.build_retains hb).2.2.2
+      exact (congrArg Effect4.Program.SigApp.types (Effect4.Api.Author.build_retains hb).2.2.2).trans
+        rfl
     obtain ⟨i, row, T, hrow, hspell, hjournal, hwait⟩ :=
       held_in_tree _ hreach hfrag hcause hexternal hconcrete huntyped seen hseen
     rw [hbuilt, hprog, htable] at hwait

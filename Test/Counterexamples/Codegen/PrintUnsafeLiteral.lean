@@ -33,7 +33,7 @@ def beyond : Nat := 2 ^ 53 + 1
 def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
 
 -- The checker admits the program at `nat`.
-#guard (Api.typeOf answersUnsafe []).map (·.answer) = some .nat
+#guard (Api.typeOf answersUnsafe).map (·.answer) = some .nat
 
 -- The attack: the literal is outside the profile, and the printer writes its decimal anyway.
 #guard rc112.natBound < beyond
@@ -59,7 +59,7 @@ def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
 
 -- The reading boundary refuses the same program's text, written by the raw printer, which
 -- checks no profile.
-#guard match Api.typeOf answersUnsafe [] with
+#guard match Api.typeOf answersUnsafe with
   | none => false
   | some ty => match printEntry [] (nativeSignature []) "main" ty answersUnsafe with
     | .error _ => false

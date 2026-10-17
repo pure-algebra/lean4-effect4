@@ -83,27 +83,27 @@ theorem old_effect_carrier_claim_false : ¬ (
     decide +kernel
   exact rejected (h old_effect_admitted)
 
-theorem valueLeak_refused : Api.typeOf valueLeak [] = none := by decide +kernel
-theorem valueLeak_location : Api.explain valueLeak [] =
+theorem valueLeak_refused : Api.typeOf valueLeak = none := by decide +kernel
+theorem valueLeak_location : Api.explain valueLeak =
     some ⟨[0, 0], .valueNotSubtype key .string .nat⟩ := by decide +kernel
 
-theorem succeedLeak_refused : Api.typeOf succeedLeak [] = none := by decide +kernel
-theorem succeedLeak_location : Api.explain succeedLeak [] =
+theorem succeedLeak_refused : Api.typeOf succeedLeak = none := by decide +kernel
+theorem succeedLeak_location : Api.explain succeedLeak =
     some ⟨[0], .valueNotSubtype key .bool .nat⟩ := by decide +kernel
 
-theorem crash2_refused : Api.typeOf crash2 [] = none := by decide +kernel
-theorem crash2_location : Api.explain crash2 [] =
+theorem crash2_refused : Api.typeOf crash2 = none := by decide +kernel
+theorem crash2_location : Api.explain crash2 =
     some ⟨[0, 0], .valueNotSubtype key .bool .nat⟩ := by decide +kernel
 
-theorem untypedSucceed_refused : Api.typeOf untypedSucceed [] = none := by decide +kernel
-theorem untypedSucceed_location : Api.explain untypedSucceed [] =
+theorem untypedSucceed_refused : Api.typeOf untypedSucceed = none := by decide +kernel
+theorem untypedSucceed_location : Api.explain untypedSucceed =
     some ⟨[0], .serviceUnknown unknownKey⟩ := by decide +kernel
 
-theorem untypedEffect_refused : Api.typeOf untypedEffect [] = none := by decide +kernel
-theorem untypedEffect_location : Api.explain untypedEffect [] =
+theorem untypedEffect_refused : Api.typeOf untypedEffect = none := by decide +kernel
+theorem untypedEffect_location : Api.explain untypedEffect =
     some ⟨[0], .serviceUnknown unknownKey⟩ := by decide +kernel
 
-theorem valueControl_checked : Api.typeOf valueControl [] = some (EffTy.pure .nat) := by
+theorem valueControl_checked : Api.typeOf valueControl = some (EffTy.pure .nat) := by
   decide +kernel
 
 /-- Literal-alphabet refusal remains first, including at an unknown key. -/

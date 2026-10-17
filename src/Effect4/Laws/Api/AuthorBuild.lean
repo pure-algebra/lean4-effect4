@@ -63,13 +63,13 @@ theorem finishBuild_retains {program : Program} {app : SigApp}
   · split at h <;> cases h
   · cases h
 
-/-- A successful build retains its elaboration, the declared table, the row names and the named
-types. Step of the scenario static facts. Consumers: the two crews' program equations, and the
+/-- A successful build retains its elaboration, the declared table, the row names and the
+application: the table with the named types. Step of the scenario static facts. Consumers: the two crews' program equations, and the
 call tree's untyped premise (`Run.CallTree.bound_in_tree`). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem build_retains {m : Module NativeOp} {b : Built} (h : build m = .ok b) :
     elaborateModule m = .ok b.program ∧ b.table = m.table ∧ b.rowNames = m.rowNames ∧
-      b.app.types = m.types := by
+      b.app = { rows := m.table, types := m.types } := by
   unfold build at h
   split at h
   · cases h
@@ -78,6 +78,6 @@ theorem build_retains {m : Module NativeOp} {b : Built} (h : build m = .ok b) :
     split at h
     · cases h
     · obtain ⟨hprogram, happ, hnames⟩ := finishBuild_retains h
-      exact ⟨hprogram ▸ hp, by rw [Built.table, happ], hnames, by rw [happ]⟩
+      exact ⟨hprogram ▸ hp, by rw [Built.table, happ], hnames, happ⟩
 
 end Effect4.Api.Author

@@ -75,7 +75,7 @@ def startingWorld : W where
 
 /-! ## Kept from the probe: the checker certificate and the runtime -/
 
-#guard Api.typeOf forkAfterMake [] = some fiberTy
+#guard Api.typeOf forkAfterMake = some fiberTy
 
 /-- The source checker's certificate, kernel checked. -/
 theorem forkAfterMake_checked :
@@ -91,7 +91,7 @@ theorem forkAfterMake_checked :
 
 /- A number cannot stand in for a scope handle at the checker. -/
 #guard Api.typeOf (.withFiber (.forkIn (.succeed (.lit .unit))
-  ⟨true, false, .inherit⟩ (.lit (.nat 0)))) [] = none
+  ⟨true, false, .inherit⟩ (.lit (.nat 0)))) = none
 
 /-- The root point is admitted at the checked type, at every world. -/
 theorem point_admitted (w : W) : PointTyped (forkAfterMake : ProgramSource) w point fiberTy :=

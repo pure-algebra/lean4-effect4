@@ -83,7 +83,7 @@ def firstFail (ex : Option ExitV) : Option Val :=
 /-- Fixture check: the successful payload, or every typed failure with no other reasons,
 fits the checked columns. This is not a general exit-admission judgment. -/
 def rootFits (p : E) : Option Bool :=
-  (Api.typeOf p []).bind fun ty =>
+  (Api.typeOf p).bind fun ty =>
     let r := Api.replay p 200 tape
     r.exit.map fun ex => match ex with
       | .success v => Val.hasTy v ty.answer r.machine.state.externals.allocated
@@ -95,11 +95,11 @@ theorem key_service_nat : (nativeSignature []).serviceTy key = some .nat := by
   decide +kernel
 
 theorem errLeak_checked :
-    Api.typeOf errLeak [] = some ⟨.nat, .string, Env.Requirement.empty⟩ := by
+    Api.typeOf errLeak = some ⟨.nat, .string, Env.Requirement.empty⟩ := by
   decide +kernel
 
 theorem forkLeak_checked :
-    Api.typeOf forkLeak [] = some (EffTy.pure .nat) := by
+    Api.typeOf forkLeak = some (EffTy.pure .nat) := by
   decide +kernel
 
 theorem forkLeak_handle :
@@ -108,10 +108,10 @@ theorem forkLeak_handle :
   decide +kernel
 
 theorem discardLeak_checked :
-    Api.typeOf discardLeak [] = some ⟨.unit, .string, Env.Requirement.empty⟩ := by
+    Api.typeOf discardLeak = some ⟨.unit, .string, Env.Requirement.empty⟩ := by
   decide +kernel
 
-theorem crash1_checked : Api.typeOf crash1 [] = some (EffTy.pure .nat) := by
+theorem crash1_checked : Api.typeOf crash1 = some (EffTy.pure .nat) := by
   decide +kernel
 
 #guard [errLeak, forkLeak, discardLeak, crash1, errLeakControl, valueControl].all fun p =>

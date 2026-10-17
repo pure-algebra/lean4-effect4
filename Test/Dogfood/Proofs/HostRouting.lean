@@ -261,12 +261,14 @@ theorem machineShape (id : Nat) (idText tag message : String) (b : Api.Built)
     (Test.Dogfood.Scenario.play (opened b) (beforeApply tag message)).machine =
       Mcall (fiberOf repoCur K true) Stores.empty 5
         (Test.Dogfood.Scenario.play (opened b) (beforeApply tag message)).machine.trace 1 := by
-  obtain ⟨hprog, htable⟩ := built_request hb
-  obtain ⟨table, program, admitted, rowNames⟩ := b
+  obtain ⟨hprog, -⟩ := built_request hb
+  have happ := (Effect4.Api.Author.build_retains hb).2.2.2
+  obtain ⟨app, program, admitted, rowNames⟩ := b
   have hp : program = progOf "secret" id idText := hprog
-  have ht : table = (request "secret" id idText).table := htable
+  have ha : app = ⟨(request "secret" id idText).table, [], (request "secret" id idText).types⟩ :=
+    happ
   subst hp
-  subst ht
+  subst ha
   kernel_rfl
 
 theorem lastRow (id : Nat) (idText tag message : String) (b : Api.Built)
@@ -274,12 +276,14 @@ theorem lastRow (id : Nat) (idText tag message : String) (b : Api.Built)
     Test.Dogfood.Scenario.play (opened b) (failing tag message) =
       (Test.Dogfood.Scenario.play (opened b) (beforeApply tag message)).step
         (.apply ⟨Api.root, 1⟩) := by
-  obtain ⟨hprog, htable⟩ := built_request hb
-  obtain ⟨table, program, admitted, rowNames⟩ := b
+  obtain ⟨hprog, -⟩ := built_request hb
+  have happ := (Effect4.Api.Author.build_retains hb).2.2.2
+  obtain ⟨app, program, admitted, rowNames⟩ := b
   have hp : program = progOf "secret" id idText := hprog
-  have ht : table = (request "secret" id idText).table := htable
+  have ha : app = ⟨(request "secret" id idText).table, [], (request "secret" id idText).types⟩ :=
+    happ
   subst hp
-  subst ht
+  subst ha
   kernel_rfl
 
 theorem rawFinish (id : Nat) (idText tag message : String) (b : Api.Built)
@@ -322,12 +326,14 @@ theorem lookupFacts (id : Nat) (idText tag message : String) (b : Api.Built)
         (Test.Dogfood.Scenario.play (opened b) (beforeApply tag message)).session (replyOf tag message)) =
       (some (boundOf id idText), some (replyOf tag message),
         .ok (.answerAsync Api.root 1 (failed tag message))) := by
-  obtain ⟨hprog, htable⟩ := built_request hb
-  obtain ⟨table, program, admitted, rowNames⟩ := b
+  obtain ⟨hprog, -⟩ := built_request hb
+  have happ := (Effect4.Api.Author.build_retains hb).2.2.2
+  obtain ⟨app, program, admitted, rowNames⟩ := b
   have hp : program = progOf "secret" id idText := hprog
-  have ht : table = (request "secret" id idText).table := htable
+  have ha : app = ⟨(request "secret" id idText).table, [], (request "secret" id idText).types⟩ :=
+    happ
   subst hp
-  subst ht
+  subst ha
   kernel_rfl
 
 theorem applyFinishes (s : Run) (id : Nat) (idText tag message : String) (tr : NTrace)

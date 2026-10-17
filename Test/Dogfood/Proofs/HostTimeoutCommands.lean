@@ -62,7 +62,7 @@ theorem prepare_exit (current : Option NCode) (exit : ExitV) (state : Stores) :
       | none => rfl
       | some entry =>
         dsimp only
-        cases result : externalValue entry.answer state.externals.allocated value with
+        cases result : externalValue [] entry.answer state.externals.allocated value with
         | none => rfl
         | some prepared =>
           have same := Agreement.externalValue_data

@@ -26,11 +26,9 @@ theorem preflight_exit (s : Run) (reply : Reply) (decision : NativeDecision)
   have call := envelope.elim (fun good => good.2.1) (fun good => good.2.1)
   have exits : ∃ exit, reply.completion = .ofExit exit := by
     rcases envelope with ordinary | instanceCase
-    · change Envelope s.built.table s.machine (bound.record reply) at ordinary
-      have admitted : Envelope Test.Dogfood.Scenario.Timeout.fetch.table s.machine (bound.record reply) := by
-        rw [← table]; exact ordinary
-      exact envelope_exit s.machine (bound.record reply) heap admitted
-    · exact instance_envelope_exit s.built.table s.session.callInstance s.machine (bound.record reply) instanceCase
+    · exact envelope_exit table s.machine (bound.record reply) heap ordinary
+    · exact instance_envelope_exit s.built.app s.session.callInstance s.machine (bound.record reply)
+        instanceCase
   obtain ⟨exit, received⟩ := exits
   exact ⟨bound, exit, found, received, call, by rw [received] at same; exact same⟩
 

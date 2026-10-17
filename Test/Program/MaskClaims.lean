@@ -113,7 +113,7 @@ def keptInCell : Src NativeOp := eff do
 #guard Api.readable (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))) &&
   decide (Api.roundTrip (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))) =
     .ok (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))))
-#guard Api.typeOf (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))) [] = none
+#guard Api.typeOf (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))) = none
 #guard !Api.readable (.restore (.var 0) (.succeed (.lit (.nat 1))))
 
 /-! ## The claims' statements, read at one input each

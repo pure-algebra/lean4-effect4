@@ -167,8 +167,8 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 
 -- An external allocation may not take the target, and a host number is no saved value.
 #guard !externalHandleTarget Ty.maskRestoreTarget
-#guard externalValue Ty.maskRestore [] (.nat 0) = none
-#guard externalValue Ty.maskRestore [] (.bool true) = none
+#guard externalValue [] Ty.maskRestore [] (.nat 0) = none
+#guard externalValue [] Ty.maskRestore [] (.bool true) = none
 
 -- A service may not carry the saved state in the first profile.
 #guard admitSig ⟨[], [(⟨⟨40⟩, ⟨40⟩⟩, Ty.maskRestore)], []⟩ = .error (.service 0 .nonFlatCarrier)

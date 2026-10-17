@@ -35,7 +35,7 @@ def pairOfUnion : Ty := .prod (.union .nat .string) .bool
 def unionOfPairs : Ty := .union (.prod .nat .bool) (.prod .string .bool)
 
 -- The checker's answer is the pair of a union.
-#guard (Api.typeOf pairOf []).map (·.answer) = some pairOfUnion
+#guard (Api.typeOf pairOf).map (·.answer) = some pairOfUnion
 
 -- The attack: its normal form is the union of pairs, and the printer spells the two alike.
 #guard pairOfUnion.normalize = unionOfPairs
