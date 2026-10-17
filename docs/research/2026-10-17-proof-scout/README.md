@@ -1,17 +1,17 @@
 # 2026-10-17 proof scout: the contextual authoring model
 
 Status: research note (history, not authority). Base: `22a46c6aa`, branch `refactor/phase1-phase3`.
-Nothing here is committed, and no tracked file changed. Amended 2026-10-17 after the final review
-(§12).
+The probes ran at the base. The note is tracked since `c43f8b3aa`, slice A's guard. Amended 2026-10-17
+after the final review (§12) and after the guard landed (§7, status table).
 
 **The one thing to know first.** The scout proves its stated local laws with no new planned goal and
 no new Rocq fact, within `[propext, Quot.sound]`. The final review
 (`docs/research/2026-10-17-authoring-model-review/final-review.md`) found four boundary defects in the
 proposed public interface. Each is now an acceptance criterion of its slice (§12). Slice E splits into
 E, persistence, and P, a preview with a declared profile. Slices D and P each owe one small new lemma, not yet probed. The
-previews keep resting on the declared fact `Tree.ofProgram_approx`, as they do today. One defect in
-the tree is new: `Api.Typed.emit` prints a program at another service carrier than its typing
-certificate states (probe A, red control).
+previews keep resting on the declared fact `Tree.ofProgram_approx`, as they do today. The scout found
+one defect in the tree: `Api.Typed.emit` printed a program at another service carrier than its typing
+certificate states (probe A, red control). Slice A's guard closes it (`c43f8b3aa`).
 
 ## 1. Question
 
@@ -448,6 +448,16 @@ their imports reach a specialization site of row 202.
 
 ## 7. The slices
 
+**Status at `3bc40ea3e`.**
+
+| Slice | State | Commits |
+| --- | --- | --- |
+| A, the emission guard | landed | `c43f8b3aa`, and `3bc40ea3e` for the truth harness |
+| A, the tool part | next | none |
+| A′, sketch storage | waits on row 5 (§9) | none |
+| B, E, P | after A | none |
+| C, D | after B | none |
+
 The order: A, then B, E and P in parallel, then C and D in parallel. A′ follows A once row 5 is
 ruled. D needs no cache from C: it
 calls the checker. P needs nothing from E: a preview runs no live session.
@@ -484,7 +494,9 @@ needs lands in a new module that imports the old one.
 | `Effect4.Program.Admission` | 959 | nothing: slice A′'s formation check is a new module beside it |
 | `Effect4.Program.Sketch` | 463 | nothing |
 | `Effect4.Run.Live`, `Effect4.Run.Tree` | 276, 275 | nothing: `LiveRecord` and `Preview` are new |
-| `Effect4.Api.Codegen` | 140 | slice A's guard, once, in its own commit |
+| `Effect4.Codegen.Refusal` | 223 | slice A's guard: the constructor `PrintRefusal.declarations` (landed) |
+| `Effect4.Api.Codegen` | 140 | slice A's guard: `Api.targetSupport` (landed) |
+| `Effect4.Api.RefusalsDerived`, generated | 59 | regenerated for the new constructor (landed) |
 | `Effect4.Program.Typing.SourceSession` | 94 | nothing: `SourceDocument` wraps it |
 | `ProofGraph.Registry` | 25 | the claims of §8, once, at the wave's end |
 | `src/Effect4.lean` (the `Effect4` root) | 15 | each slice, at the coordinator's anchor; no gate reads it (below) |
@@ -511,27 +523,34 @@ the root as it lands.
 | inner loop: edit a new module or a probe | nothing: `lake env lean <file>` against the built tree | none | 1 s to 15 s per file (the probes' times) |
 | a slice's landing, B to P and A′ | the new modules, `Tools.Session` and its 8 dependents | none | `Tools.Session` 13 s; `#axiom_audit` seconds; `make batteries-touched BASE=<rev>` picks the batteries that name a changed declaration |
 | slice A, the tool part | `Tools.Session`, `Tools.Query`, `Tools.Session.Snapshot` and their 19 dependents | none | under a minute |
-| slice A, the emission guard | `Api.Codegen` and the dependents on the way to the gates and the batteries | `make gen-lcnf`, then `check-ts` and `check-ocaml` | lanes, last pass: truth 214 s, host-protocol 208 s, corpus 69 s, schema-codec 15 s, compiler 9 s, ocaml 6 s, service-identity 3 s; with the closure builds, about 15 min once |
+| slice A, the emission guard (landed) | `Codegen.Refusal`, `Api.Codegen`, the regenerated `RefusalsDerived`, and the dependents on the way to the gates and the batteries | `make gen-lcnf`, then `check-ts` and `check-ocaml` | measured: regeneration 103 s; `batteries-touched` 52 batteries, 1331 jobs, 249 s, of which `Test.Program.MaskContract` 152 s; `make check-full` at `3bc40ea3e`, 424 s, every lane green: host-protocol 118 s, corpus 68 s, truth 27 s, target 14 s, compiler 9 s, native 8 s, ocaml 6 s; a first run stopped at the truth harness's compile |
 | the wave's end: the registry claims, the decisions rows | the registry's 25 dependents | `make gen-semantics` | one generation run |
 
-**The batteries.** The guard changes `Typed.emit`, `Typed.print` and `Built.print`. By their `.ilean`
-references, four batteries name them: `Test.Api.MapAuthoring`, `Test.Api.RecordAuthoring`,
-`Test.Api.TupleAuthoring` (`Typed.print`) and `Test.Program.AuthorContract` (`TypedLayer.print`).
-`batteries-touched` builds those. The other 85 importers of `Api.Codegen` go stale, and the next sweep
-rebuilds them once. No step builds `Test`, `Test.All` or the whole tree.
+**The batteries.** The plan expected four batteries, those that name `Typed.print` or
+`TypedLayer.print`. The guard needed a new constructor in `PrintRefusal`, so `batteries-touched`
+selected every battery that names the type or its generated instance: 52. The rest go stale, and the
+next sweep rebuilds them once. No step builds `Test`, `Test.All` or the whole tree.
+
+**A new constructor in an existing alphabet** reaches three things, and the guard met all three.
+Every battery that names the type. The type's generated `Canonical` group
+(`python3 scripts/generate.py --only derived`, 103 s). And each exhaustive `match` outside the
+batteries, which no battery selection sees: `harness/truth/Truth.lean`'s `refusalText` broke the truth
+lane's compile, fixed in `3bc40ea3e`. Before landing such a constructor, search `src`, `tools`, `Test`,
+`harness` and `apps` for matches over the type. Slices B to P add new refusal types, not constructors
+of existing ones.
 
 **Order inside the wave.**
 
-1. Slice A's guard lands first, alone. Its gates run in the background, once their closure build
-   ends.
+1. Slice A's guard lands first, alone (done, `c43f8b3aa`). Its gates run in the background, once
+   their closure build ends.
 2. While they run, slice A's tool part and slice B's inner loop use `lake env lean` only. No second
    `lake build` starts in the tree.
 3. B, E and P touch no gate input, so they need no gate run, merged or not. A gate keyed on unchanged
    content answers from `.git-checks/`.
 4. Seats in worktrees restore the built tree from Lake's artifact cache, kept for this. Each edits
    `Tools.Session`; the coordinator merges and builds it once.
-5. The gate-key change lands with slice A's guard, so one `make check-full` covers both. It edits
-   the `Makefile`, which every lane's key reads.
+5. The gate-key change lands with slice A's guard (done, `b27739d24`), so one `make check-full`
+   covers both. It edits the `Makefile`, which every lane's key reads.
 6. The wave ends with one edit of the semantics registry.
 
 **What still reruns a lane needlessly** (the receipt's open obligations). Any `Makefile` edit reruns
@@ -543,6 +562,22 @@ reruns the lane, because keys hash source text.
 **Goal.** The session tool keeps the full application through `open`, `sketch`, checking and run
 startup. Emission refuses declarations it cannot carry.
 
+**Landed: the emission guard** (`c43f8b3aa`, `3bc40ea3e`).
+
+- `Api.targetSupport` in `src/Effect4/Api/Codegen.lean` is the one decision. `Typed.print`,
+  `Typed.emit` and `Built.print` take it before they print at `app.rows`.
+- It refuses with the new `PrintRefusal.declarations services types`, at the root
+  (`src/Effect4/Codegen/Refusal.lean`). The Refusals group is regenerated, with a sample in
+  `tools/Effect4Gen/guards/refusals.lean`.
+- `TypedLayer.print` prints at its layer's own signature (`printLayerT sig`), so it needs no decision.
+- `Test/Api/TargetSupport.lean` holds controls 5 and 6, a named-type control through `Built.print`, and
+  a reader at the empty application.
+- Probe A's red control `rebound` records the base. Rerun at the new head, it fails by design: `emit`
+  now refuses.
+
+**Remaining: the tool part.** Its files and functions are the five items below, and its
+acceptance controls are 1 to 4.
+
 **Files and functions.**
 
 - `tools/Tools/Session.lean`: `Request` gains `types` and `typesJson`; `answer`'s `open` builds
@@ -551,14 +586,9 @@ startup. Emission refuses declarations it cannot carry.
   l.sketch.holes`, and `Built.app` from it, never `SigApp.ofTable`.
 - `tools/Tools/Query.lean`: `fillPremises`, `omitPremises` and their soundness theorems take an
   application (A1).
-- `tools/Tools/Session/Snapshot.lean`: the cache key holds the application's bytes, and
-  `EditSession.open` takes the application.
-- `src/Effect4/Api/Codegen.lean`: one target-support decision, refusing at the root path when the
-  application declares a service or a named type. `Typed.print`, `Typed.emit` and `Built.print` all
-  call it; each prints at `app.rows` alone today. The guard is a conservative target restriction:
-  empty tables suffice for `SigApp.signature_nil`, and harmless declarations are refused too.
-- `TypedLayer.print` in the same file: read whether it prints at its whole signature, and record the
-  answer in the receipt.
+- `tools/Tools/Session/Snapshot.lean`: `fresh` and `Cache.Valid` call `EditSession.open {}` today.
+  `EditSession.open` already takes an application, so the cache holds the application with the bytes
+  and passes it. `resolve_agrees` keeps its proof, with the application in `Cache`.
 - New `src/Effect4/Laws/Program/SketchAdmission.lean`: A2, placed as the startup compatibility fact
   of `start`. It is a helper of `residual-program-typing` and not the pointer of `sketch-admission`
   (§12, F6).
@@ -578,12 +608,12 @@ startup. Emission refuses declarations it cannot carry.
 6. The final review's `unusedDeclarations` application is refused too. The receipt records it as the
    guard's known cost, until emission checks at the full signature (R1).
 
-**Narrow build.** `LEAN_NUM_THREADS=3 lake build Tools.Session Tools.Query Tools.Session.Snapshot
-Effect4.Laws.Program.SketchAdmission Effect4.Api.Codegen`, then the direct dependents.
+**Narrow build, the tool part.** `LEAN_NUM_THREADS=3 lake build Tools.Session Tools.Query
+Tools.Session.Snapshot Effect4.Laws.Program.SketchAdmission`, then the direct dependents and
+`make batteries-touched`.
 
-**Cost.** `Tools.Session` elaborates in 13 s and has 8 dependents. `Tools.Query` elaborates in 1 s
-and has 11. `Api.Codegen` elaborates in 1 s and has 140 dependents, 89 of them batteries. Land the
-emission guard as its own commit.
+**Cost, the tool part.** `Tools.Session` elaborates in 13 s and has 8 dependents. `Tools.Query`
+elaborates in 1 s and has 11. No gate's key reads either, so the tool part owes no gate run.
 
 **Risks.** The new `appName` changes every application's name in answers; no battery pins one. A
 battery that runs `run` by row name keeps passing at a row-only application. Program admission at the
@@ -931,7 +961,8 @@ another depth, and it refuses those until F lands.
    `fill_by_term_tree_stmt`'s proof. Slice H owes a codec of a run's state.
 8. `expected-type-slice` and `checker-monotone` stay open. No slice A to P needs them: the exact policy
    uses the exact type, and the other policy checks the whole source.
-9. Audit `TypedLayer.print` at the target-support boundary of slice A.
+9. Closed: `TypedLayer.print` prints at its layer's own signature, so it needs no target-support
+   decision (`c43f8b3aa`).
 10. Before a live record leaves the process, fix its wire format's versioning and the branch
     operation's identity and reply routing (slice E).
 11. Before a preview covers generic rows or handle rows, carry the call's checked instance and the
@@ -945,7 +976,8 @@ another depth, and it refuses those until F lands.
    each give targets a new identity or revision. The session owner publishes by compare-and-set.
 2. `Typed.print`, `Typed.emit` and `Built.print` share one target-support decision. It refuses an
    application that declares a service or a named type, until emission checks at the application's
-   typing signature (R1). It is conservative: it refuses some harmless applications too.
+   typing signature (R1). It is conservative: it refuses some harmless applications too. Landed in
+   `c43f8b3aa`; the register's entry is still to be written.
 3. A fixed-base fill set is built only by `FillSet.add`, which applies, collapses or refuses each
    fill at its address. It materializes in the base's address order. Root replacement stays a
    document edit. Its canonical bytes wait for a constructive order on paths.
@@ -1039,7 +1071,7 @@ statement of this note falls. Four boundary defects and six narrowed claims ente
 | F3 | two newly opened documents share revision zero, so one accepts the other's target at another binder type | slice B: the target carries a document identity; opening, undo and fork move identity or revision; publication by compare-and-set |
 | F4 | the preview leaves a valid reply to a generic row waiting. It passes an allocation number where live passes a handle. | slice P: profile 1 refuses generic rows and handle answers; rejected tape entries are reported; one `externalValue` lemma |
 | F6 | A2 relates execution admission to typing and states no storage contract | slice A′ and row 5: a formation check without the runner's restrictions; `sketch-admission` stays open until then |
-| F5 | the emission guard refuses harmless applications; `Typed.print` and `Built.print` share the gap | slice A: one conservative target-support decision for all three |
+| F5 | the emission guard refuses harmless applications; `Typed.print` and `Built.print` share the gap | slice A: one conservative target-support decision for all three; landed in `c43f8b3aa` |
 | performance | quadratic `uniq`; `d.after e` computed twice in `Doc.commit` | slices D and B |
 
 The slice order holds: A, then B, E and P, then C and D. A′ waits on the owner's row 5.

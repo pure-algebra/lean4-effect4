@@ -1,12 +1,12 @@
 # 2026-10-17 receipt: gate keys that stop at what a lane reads
 
-Status: receipt (history, not authority). Base `22a46c6aa`, branch `refactor/phase1-phase3`. Nothing
-is committed.
+Status: receipt (history, not authority). Base `22a46c6aa`, branch `refactor/phase1-phase3`.
+Committed in `b27739d24`. `make check-full` passed at `3bc40ea3e`, with slice A's guard: 424 s, every
+lane green (obligation 1).
 
 **The one thing to know first.** The `Makefile` is an input of every lane's key, so this change reruns
-every lane once. No gate has run on it yet. Run `make check-full` once, together with slice A's
-emission guard (`docs/research/2026-10-17-proof-scout/README.md`, §7.0). That guard reruns seven of
-these lanes anyway; the others take about a minute in all.
+every lane once. That rerun was taken once, with slice A's emission guard
+(`docs/research/2026-10-17-proof-scout/README.md`, §7.0): `make check-full` passed at `3bc40ea3e`.
 
 ## Question
 
@@ -85,8 +85,8 @@ reading, not a run at the base.
 
 ## Open obligations
 
-1. Run `make check-full` once, with slice A's guard. The truth, corpus and compiler lanes then confirm
-   that the narrowed imports compare the same programs.
+1. Done: `make check-full` passed at `3bc40ea3e`, with slice A's guard. The truth, corpus and compiler
+   lanes compared the same programs through the narrowed imports.
 2. The `Makefile` is in every lane's key (`CHECK_CACHE_SOURCES`). Any edit to it reruns every lane.
    Keying each lane on its own expanded recipe (`make -n _run-<lane>`) would confine a Makefile edit
    to the lanes it changes.
