@@ -23,7 +23,9 @@ fold (decisions row 229), is `src/Effect4/Laws/Program/Typed/HandleIdentity.lean
 
 Reach. The world is fixed in the fold's typed evaluation, and only `later` moves it. The
 signature's atoms are the native table's (`sig.atomOf = nativeAtomTy`) where a field types a
-term. The store step is `SyncOp.refModify`'s, at a cell that holds a member of the cell's type.
+term, and its declaration table is within the world's where a field reads membership: the empty
+table at every world, or the source's at a world tied to it (`TyDecls.Within`). The store step is
+`SyncOp.refModify`'s, at a cell that holds a member of the cell's type.
 
 What it does not establish. Nothing about a module that uses the fold. No agreement with a
 target: that a printed fold computes the model's answer on a host is a finite check
@@ -46,7 +48,8 @@ open Effect4.Codegen.Classes (Classes)
 /-! ## The rules as one statement -/
 
 /-- The rules of the list fold (decisions row 228; the design's F1), each over the tree's
-definitions. `sig` is the signature that types a term. -/
+definitions. `sig` is the signature that types a term, under its declaration table; the fields
+that read membership at a world take the table within the world's (`TyDecls.Within`). -/
 structure ListFoldRules (sig : Signature NativeOp) : Prop where
   /-- **Scope.** The list and the initial value are scoped at the fold's level, and the body two
   levels up: it reads the accumulator at the level and the element one above it. -/
@@ -80,13 +83,14 @@ structure ListFoldRules (sig : Signature NativeOp) : Prop where
   weakenTy : ∀ (pre post : TyEnv) (inserted : Ty) (term : Term),
     termTy sig (pre ++ inserted :: post) (Term.weaken pre.length term) =
       termTy sig (pre ++ post) term
-  /-- **Typing.** The list has a list type at the element's type `A`. The fold's type `B` is
-  the stated type, or the initial value's type `B0` where none is stated. `B0` is below `B` in
-  the checker's order. Under `B` at the fold's level and `A` one above it, the body's type is
-  below `B`. -/
+  /-- **Typing.** The list has a list type at the element's type `A`, read under the signature's
+  table (`Checker.listOfIn`). The fold's type `B` is the stated type, or the initial value's type
+  `B0` where none is stated. `B0` is below `B` in the checker's order. Under `B` at the fold's
+  level and `A` one above it, the body's type is below `B`. -/
   typing : ∀ (env : TyEnv) (accTy : Option Ty) (list init body : Term) (B : Ty),
     termTy sig env (.fold accTy list init body) = some B →
-      ∃ listType A B0 C, termTy sig env list = some listType ∧ Checker.listOf? listType = some A ∧
+      ∃ listType A B0 C, termTy sig env list = some listType ∧
+        Checker.listOfIn sig.types listType = some A ∧
         termTy sig env init = some B0 ∧
         B = accTy.getD B0 ∧ Ty.subN B0 B = true ∧
         termTy sig (env ++ [B, A]) body = some C ∧ Ty.subN C B = true
@@ -99,22 +103,25 @@ structure ListFoldRules (sig : Signature NativeOp) : Prop where
       ∃ next, evalTerm (vals ++ [acc, x]) body = some next ∧ Fits w next B) →
     ∃ v, evalTerm vals (.fold accTy list init body) = some v ∧ Fits w v B
   /-- **Typed evaluation: progress.** A fold that the checker types, over values that fit
-  their types at a world, answers, and its answer is a member of its type at that world. -/
+  their types at a world whose table holds the signature's, answers, and its answer is a member
+  of its type at that world. -/
   typed : sig.atomOf = nativeAtomTy → ∀ (w : World) (vals : List Val) (env : List Ty),
-    FitsAll w vals env → ∀ (accTy : Option Ty) (list init body : Term) (B : Ty),
+    TyDecls.Within sig.types w.types → FitsAll w vals env →
+      ∀ (accTy : Option Ty) (list init body : Term) (B : Ty),
       termTy sig env (.fold accTy list init body) = some B →
         ∃ v, evalTerm vals (.fold accTy list init body) = some v ∧ Fits w v B
   /-- **Typed evaluation: preservation.** A fold that the checker types and that answers, over
   values that fit, answers a member of its type. It takes the answer as a premise and proves
   no answer: its premises differ from `typed`'s, and it is a separate theorem. -/
   preserved : sig.atomOf = nativeAtomTy → sig.constAtom = nativeConstAtom →
-    ∀ (w : World) (vals : List Val) (env : List Ty), FitsAll w vals env →
+    ∀ (w : World) (vals : List Val) (env : List Ty), TyDecls.Within sig.types w.types →
+      FitsAll w vals env →
       ∀ (accTy : Option Ty) (list init body : Term) (B : Ty) (v : Val),
         termTy sig env (.fold accTy list init body) = some B →
           evalTerm vals (.fold accTy list init body) = some v → Fits w v B
   /-- **One atomic step** (`refModify_typed_step`): the term may hold a fold. -/
   step : sig.atomOf = nativeAtomTy → ∀ (w : World) (tys : TyEnv) (env : List Val),
-    EnvTyped w tys env → ∀ (f : Term) (A B : Ty),
+    TyDecls.Within sig.types w.types → EnvTyped w tys env → ∀ (f : Term) (A B : Ty),
       termTy sig (tys ++ [A]) f = some (.prod B A) →
         ∀ (s : Stores) (cell : RefKey) (a : Val), refPeek s.refs cell = some a → Fits w a A →
           ∃ b a', evalTerm (env ++ [a]) f = some (Val.tuple [b, a']) ∧
@@ -133,7 +140,7 @@ structure ListFoldRules (sig : Signature NativeOp) : Prop where
 /-- **The list fold's rules hold** (the claim `fold-typed-atomic-update`), at every signature.
 Each field is one theorem: the two definitional equations, the builder's scope law
 (`Authoring.fold_scoped`), `foldlM_refuses`, `evalTerm_weaken`, `termTy_weaken`,
-`termTy_fold_inv`, `fold_fits`, the fold's cases of `evalTerm_progress` and of
+`termTy_fold_invIn`, `fold_fits`, the fold's cases of `evalTerm_progress` and of
 `evalTerm_fitsAll`, `refModify_typed_step`, and the fold's cases of `readTerm_printTerm` and
 `readTerm_exact`.
 
@@ -141,8 +148,7 @@ It establishes nothing about a module that uses the fold and no agreement with a
 consumer is the Queue's service pass (decisions row 228), on the M5 and M6 path through
 `syncRow_typed`. -/
 @[semantics "store-typing" (requirement := R4)]
-theorem fold_typed_atomic_update (sig : Signature NativeOp) (htypes : sig.types = []) :
-    ListFoldRules sig where
+theorem fold_typed_atomic_update (sig : Signature NativeOp) : ListFoldRules sig where
   scope := fun _ _ _ _ _ => rfl
   authored := fun acc item accTy _ _ _ hl hi hb => Authoring.fold_scoped acc item accTy hl hi hb
   eval := evalTerm_fold
@@ -150,16 +156,16 @@ theorem fold_typed_atomic_update (sig : Signature NativeOp) (htypes : sig.types 
     foldlM_refuses (fun acc item => evalTerm (env ++ [acc, item]) body) xs ys x start acc hpre hx
   weakenEval := evalTerm_weaken
   weakenTy := termTy_weaken sig
-  typing := fun _ _ _ _ _ _ h => termTy_fold_inv h htypes
+  typing := fun _ _ _ _ _ _ h => termTy_fold_invIn h
   semantic := fun _ _ _ _ _ _ _ _ _ _ hlist hvalue hinit hstart hbody =>
     fold_fits hlist hvalue hinit hstart hbody
-  typed := fun hatom _ _ _ hfit accTy list init body B hty =>
-    evalTerm_progress hatom (TyDecls.within_of_nil htypes) hfit (.fold accTy list init body) B hty
-  preserved := fun hatom hconst w vals env hfit accTy list init body B v hty hev =>
-    evalTerm_fitsAll sig hatom hconst w (TyDecls.within_of_nil htypes) (.fold accTy list init body) vals env B v
-      hfit hty hev
-  step := fun hatom _ _ _ henv _ _ _ hty _ _ _ hcell ha =>
-    refModify_typed_step hatom (TyDecls.within_of_nil htypes) henv hty hcell ha
+  typed := fun hatom _ _ _ htypes hfit accTy list init body B hty =>
+    evalTerm_progress hatom htypes hfit (.fold accTy list init body) B hty
+  preserved := fun hatom hconst w vals env htypes hfit accTy list init body B v hty hev =>
+    evalTerm_fitsAll sig hatom hconst w htypes (.fold accTy list init body) vals env B v hfit hty
+      hev
+  step := fun hatom _ _ _ htypes henv _ _ _ hty _ _ _ hcell ha =>
+    refModify_typed_step hatom htypes henv hty hcell ha
   readPrint := fun _ _ term hs hc hu => readTerm_printTerm term hs hc hu
   readExact := fun _ _ x _ h => readTerm_exact x h
 

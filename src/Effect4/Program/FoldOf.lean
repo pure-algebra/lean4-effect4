@@ -157,12 +157,24 @@ def pairElemOf (fam : Family) (t : Expr) : MetaM (Option (Nat × Expr)) := do
     return some (j, e)
   | none => return none
 
-/-- Read `g`'s signature: the first binder whose type is a family member, or, when there is
-none, the first whose type is a list of one (the list sibling), or a list of products holding one
-(the field-list sibling). -/
+/-- Read `g`'s signature: the binder its structural recursion descends on, where Lean records
+one (`getStructuralRecArgPos?`) and its type is a family position. Otherwise the first binder
+whose type is a family member, or, when there is none, the first whose type is a list of one (the
+list sibling), or a list of products holding one (the field-list sibling). The recorded position
+comes first because a fixed binder may itself be a list of products holding a member: a
+declaration table `List (String × Ty)` before a field list. -/
 def memberOf? (fam : Family) (g : Name) : MetaM (Option Member) := do
   let info ← getConstInfoDefn g
+  let recArg ← getStructuralRecArgPos? g
   forallTelescope info.type fun xs _ => do
+    if let some i := recArg then
+      if h : i < xs.size then
+        let t ← inferType xs[i]
+        if let some (j, _, isList) ← familyArgsOf fam t then
+          return some { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList }
+        if let some (j, e) ← pairElemOf fam t then
+          return some { fn := g, type := info.type, member := j, at_ := i, arity := xs.size,
+                        isList := true, elem := some e }
     for h : i in [:xs.size] do
       if let some (j, _, false) ← familyArgsOf fam (← inferType xs[i]) then
         return some { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := false }

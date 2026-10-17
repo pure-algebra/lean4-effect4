@@ -457,9 +457,13 @@ theorem flatFits_fits {w : World} {v : Val} {t : Ty} (h : FlatFits w v t) :
 
 /-! ## The judgment and the fold
 
-`fold_of` (`Program/FoldOf.lean`) reads a hand recursion with one fixed parameter. One level of
-membership has three (the table, the world and the oracle), so its algebra is not generated here;
-bundling the three, or teaching `fold_of` a fixed prefix, restores it. No law reads the fold. -/
+`fold_of` (`Program/FoldOf.lean`) reads one level of membership as a fold over `Ty`: the table,
+the world and the oracle are its fixed prefix, the value is an accumulator, and the field and item
+companions are its list siblings. It adds `FitsAt.alg`, its homomorphism witness and the
+connectors `FitsAt.eq_cata`, `fittersAt.eq_foldr` and `itemFittersAt.eq_foldr`. The companions'
+map forms below read the connectors. -/
+
+fold_of Effect4.Program.Typed.FitsAt
 
 /-! ## The valid direction: membership implies the shape check -/
 
@@ -517,24 +521,19 @@ def fitterAtOf (decls : TyDecls) (w : World) (o : String → Val → Prop) (c : 
 /-- A field's membership predicate. -/
 def fitterOf (w : World) (c : Bool × Ty) : Bool × (Val → Prop) := (c.1, fun x => Fits w x c.2)
 
-/-- The field companion of `FitsAt` is a payload map. -/
+/-- The field companion of `FitsAt` is a payload map: the generated connector
+`fittersAt.eq_foldr`, whose fold rebuilds each mapped field. -/
 theorem fittersAt_eq_map (decls : TyDecls) (w : World) (o : String → Val → Prop)
     (fs : List (String × Bool × Ty)) :
     fittersAt decls w o fs = fs.map (fun q => (q.1, fitterAtOf decls w o q.2)) := by
-  induction fs with
-  | nil => rfl
-  | cons p fs ih =>
-    obtain ⟨n, b, t⟩ := p
-    rw [fittersAt, ih]
-    rfl
+  rw [fittersAt.eq_foldr, ← List.map_eq_foldr, List.map_map]
+  rfl
 
+/-- The item companion of `FitsAt` is a map: the generated connector `itemFittersAt.eq_foldr`. -/
 theorem itemFittersAt_eq_map (decls : TyDecls) (w : World) (o : String → Val → Prop)
     (ts : List Ty) : itemFittersAt decls w o ts = ts.map (fun t x => FitsAt decls w o x t) := by
-  induction ts with
-  | nil => rfl
-  | cons t ts ih =>
-    rw [itemFittersAt, ih]
-    rfl
+  rw [itemFittersAt.eq_foldr, ← List.map_eq_foldr, List.map_map]
+  rfl
 
 /-- The field companion of `Fits` is a payload map. -/
 theorem fitters_eq_map (w : World) (fs : List (String × Bool × Ty)) :
