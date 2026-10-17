@@ -1,16 +1,17 @@
 # Receipt: the native kit (2026-10-16)
 
-**The one thing to know before merging.** The kit is now a library of the engine project over the
-one api closure, with one run and Lean's authoring surface. A new lane in `make check-ocaml`
-compares the Rocq tree that the declared facts cite with Lean's tree. The lane found that `InRocq`
-claimed the two context arms, which Rocq's tree does not match, so `InRocq` is narrower. After D3
-merges, run `make gen-lcnf` again: the closure lowers `Kit.samples`, which reads the type table
-that D3 changes.
+**The one thing to know before merging.** The one declared fact now cites a Rocq proof of Lean's
+own code, for every program. `Tree.ofProgram_approx` cites `rocq/SkeletonApprox.v`, over
+`rocq/Skeleton.v`, which `make gen-rocq` prints from `Effect4.Run.Tree`. No declared fact rests
+on the hand transcription any more. `rocq/` is a new tracked workspace at the root, beside
+`ocaml/`. It needs a row in `AGENTS.md`'s authority map, which is the coordinator's to write.
+After D3 merges, run `make gen-lcnf` again: the closure lowers `Kit.samples`, which reads the type
+table that D3 changes.
 
 ## Base and head
 
 - Base: `719e039bf` on `refactor/phase1-phase3`.
-- Head: `3130c1ab1` on `claude/eff-kit` (worktree `interesting-volhard-6ceb2e`); this receipt is
+- Head: `1bc525779` on `claude/eff-kit` (worktree `interesting-volhard-6ceb2e`); this receipt is
   the commit after it. Not pushed.
 - The commits since the first receipt (`5aef3c624`), oldest first:
   - `fa90e4ab6`: `Run.Tree`'s data through `Tree.Eval`; the declared facts claim only what Rocq
@@ -18,7 +19,11 @@ that D3 changes.
   - `c72c1e672`, `107eefca9`: the research commits of the budget relation;
   - `baa0a0a65`: Rocq generated from Lean (`OCaml5.Lcnf.Gallina`, `generated/Skeleton.v`);
   - `dddf95c22`: the kit in the engine, one closure, one run, Lean's authoring;
-  - `3130c1ab1`: the comparison lane, and `InRocq` narrowed.
+  - `3130c1ab1`: the comparison lane, and `InRocq` narrowed;
+  - `1184d6bd7`: the note and the first version of this receipt;
+  - `3a0523748`: the Rocq workspace `rocq/`, the printer's refusals, and the proof over the
+    generated skeleton;
+  - `1bc525779`: `Tree.ofProgram_approx` cites `rocq/` and drops `InRocq`.
 
 ## The coordinator's points
 
@@ -29,41 +34,69 @@ that D3 changes.
 | 3. One lowered closure | the kit's roots are in `ocaml/gen/api_gen.ml`; `ocaml/kit` and `kit_gen.ml` are gone; the hand code is `ocaml/engine/kit` |
 | 4. One run, the fragment hidden | `Kit.run` and Lean's `Run.atBudget`; the host is the machine's `Reactor`; the tape and the silent host are reactors |
 | 5. No third authoring surface; the math seat's files untouched | `Kit_author` is `Program.Authoring` lowered; the four forms it lacked are in `Program/Authoring/Named.lean`; `git diff 719e039bf..HEAD` touches no file of the math seat |
-| Owner, Rocq from Lean | spike (a) landed in `baa0a0a65`: Rocq's guard checker accepts `generated/Skeleton.v` as it stands. Spike (b), rocq-of-ocaml, stopped at 1033 errors |
+| Owner, Rocq from Lean | spike (a) landed in `baa0a0a65`: Rocq's guard checker accepts the generated skeleton as it stands. Spike (b), rocq-of-ocaml, stopped at 1033 errors |
+
+## The coordinator's second message: items (i) to (iii) and five conditions
+
+| Item or condition | Where it stands |
+| --- | --- |
+| (i) the printer in OCaml5, the generated skeleton committed | `OCaml5.Lcnf.Gallina`, `src/OCaml5/Tools/GallinaGen.lean`; `rocq/Skeleton.v` |
+| (ii) the approximation proof over the generated skeleton | `rocq/SkeletonApprox.v`: `Approx.ofProgram_approx`, for every program and every evaluator. No arm resisted, so `InRocq` left every theorem |
+| (iii) one closure, one run | landed before (`dddf95c22`) |
+| 1. The printer refuses by name | each fallback prints a refusal marker, and `render` refuses a text holding one; a constant prints as a declaration of the spec, a constructor, or a parameter of `Eval` (the namespace `Tree.Eval`) |
+| 2. Naturals checked | a natural printed as `int` that meets `natOps` (`Nat.sub`, `Nat.pred`, `Nat.decEq`, the order, …) is refused by name; so is a counter passed where an `Eval` parameter takes an `int`; the header of `Skeleton.v` lists the counters |
+| 3. Location | `rocq/` at the root with `rocq/README.md`; `make gen-rocq` with a `docs/GENERATED.md` row `rocq`; the vessel and to-do studies stay in `docs/research` |
+| 4. `@[noinline]` costs | the kit lane, median of 10 runs: 34 ms before `Tree.Eval` (`5aef3c624`), 34 ms after it (`fa90e4ab6`), 34 ms at the head |
+| 5. Fit with the interaction kernel (§3.10) | `Run.atBudget` and `Kit.run` take a `Reactor`; `Tree.pathsFrom` branches at host calls alone, cells deterministic; `Run.Tree.probe` keeps its name |
 
 ## Changed files since the first receipt
 
 | Area | Files |
 | --- | --- |
 | Lean, new | `src/Effect4/Program/Authoring/Named.lean`, `src/OCaml5/Lcnf/Gallina.lean`, `src/OCaml5/Tools/GallinaGen.lean` |
-| Lean, edited | `src/Effect4/Run/Tree.lean` (`Tree.Eval`, `Run.atBudget`), `src/Effect4/Run/Kit.lean`, `src/Effect4/Laws/Run/Tree.lean` (`Plain`, `InRocq`), `src/OCaml5/Lcnf/Gen.lean` (no empty type group), `src/OCaml5.lean` |
+| Lean, edited | `src/Effect4/Run/Tree.lean` (`Tree.Eval`, `Run.atBudget`), `src/Effect4/Run/Kit.lean`, `src/Effect4/Laws/Run/Tree.lean` (`Plain`, `InRocq`; the declared fact cites `rocq/`), `src/OCaml5/Lcnf/Gen.lean` (no empty type group), `src/OCaml5.lean` |
+| Rocq, new | `rocq/`: `README.md`, `_RocqProject`, `.gitignore`, `Eff_types.v` and `Skeleton.v` (generated by `make gen-rocq`), `SkeletonApprox.v`, `Assumptions.v`, `tools/split_types.ml` (moved from the research tree) |
 | OCaml, moved | `ocaml/kit/*` to `ocaml/engine/kit/` and `ocaml/engine/test/kit/`; `kit_gen.ml` and its manifest removed; `ocaml/dune`, `ocaml/engine/dune`, `ocaml/engine/dune-project` and `ocaml/engine/bytes/dune` as at the base |
 | OCaml, new | `ocaml/engine/test/rocq/`: `test_rocq.ml`, `lane_eval.ml`, `rocq_run.ml` and `.mli` (generated by Rocq), `rocq_gen.ml` (generated by LCNF), `dune` |
 | OCaml, generated | `ocaml/gen/api_gen.ml`, `ocaml/gen/closure-api_gen.tsv`, `ocaml/gen/closure-rocq_gen.tsv`; `ocaml/gen/roots.json` (the kit's and the authoring roots, the cap 2400, the lane's artifact) |
-| Build and documents | `Makefile`, `scripts/generate.py` (as at the base), `docs/GENERATED.md` (the row `rocq-lane`), `ocaml/README.md`, the note, this receipt |
-| Research | under `docs/research/2026-10-16-itrees/`: `rocq/LaneExtract.v`, the budget relation (`rocq/Budget.v`, `BudgetDefs.v`, `Api.v`, `Examples.v`, `BudgetCheck.v`, `TodoBudgetCheck.v`, `BudgetExtract.v`), `generated/Skeleton.v`, `reproduce.sh` (steps 8 to 13), its logs, `README.md`; the budget receipt `docs/research/2026-10-16-seat-itrees-budget-receipt.md` |
+| Build and documents | `Makefile` (`gen-rocq`), `scripts/generate.py` (as at the base), `docs/GENERATED.md` (the rows `rocq-lane` and `rocq`), `ocaml/README.md`, the note, this receipt |
+| Research | under `docs/research/2026-10-16-itrees/`: `rocq/LaneExtract.v`, the budget relation (`rocq/Budget.v`, `BudgetDefs.v`, `Api.v`, `Examples.v`, `BudgetCheck.v`, `TodoBudgetCheck.v`, `BudgetExtract.v`), `reproduce.sh` (steps 8 to 13), its logs, `README.md`; the budget receipt `docs/research/2026-10-16-seat-itrees-budget-receipt.md` |
 
 ## Commands and their results
+
+The first round (the closure, the run, the authoring and the lane):
 
 | Command | Result |
 | --- | --- |
 | `LEAN_NUM_THREADS=3 lake build Effect4.Program.Authoring.Named Effect4.Run.Kit` | `Build completed successfully (192 jobs)` |
-| `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Run.Tree` | `Build completed successfully (344 jobs)` |
 | `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only lcnf` | `PASS generate`; api closure 1959 of the cap 2400; `rocq_gen.ml` 18 of 200; the other artifacts byte-identical |
 | `cd ocaml && opam exec --switch=effect4 -- dune build` | no output: the estate builds |
 | `cd ocaml && opam exec --switch=effect4 -- dune test engine/test/kit --force` | `test_kit: 55 checks, 0 failures` |
 | `cd ocaml && opam exec --switch=effect4 -- dune test engine/test/rocq --force` | `test_rocq: 13 checks, 0 failures` |
 | `cd ocaml && opam exec --switch=effect4 -- dune test engine` | exit 0; the differential `== ALL PASS: 0 failure(s) == (32 checks)` |
-| `bash docs/research/2026-10-16-itrees/reproduce.sh OUTDIR` | exit 0 in 56 s; step 13: `PASS rocq_run.ml is the committed lane input`, and the same for `.mli` |
-| `make batteries-touched BASE=719e039bf` | 1 battery (`Test.Program.SessionToolControls`); `Build completed successfully (1075 jobs)` |
-| `make check-ocaml` | exit 0; `gen-check: PASS`; `PASS ocaml: recorded ebdd303e2bf2`; the regenerated files byte-identical |
-| `python3 scripts/check-language.py --strict` on the note and this receipt | `PASS` |
+
+The second round (the printer's refusals, `rocq/`, the proof, the citation):
+
+| Command | Result |
+| --- | --- |
+| `LEAN_NUM_THREADS=3 lake build OCaml5.Lcnf.Gallina OCaml5` | `Build completed successfully (142 jobs)` |
+| `lake env lean <scratch>/GallinaControl.lean`, a control | `shrink` (a `Nat.sub`): `the natural v_n is printed as int (Z) and meets Nat.sub`, and the same for `v_m`; `callsOther`: `List.lengthTR has no printing rule` |
+| `make gen-rocq` | `wrote rocq/Skeleton.v (23291 bytes)`; `File 'Eff_types.v' successfully generated`; 10 s |
+| `cd rocq && rocq compile -Q . E4` of `Eff_types.v`, `Skeleton.v`, `SkeletonApprox.v`, `Assumptions.v` (the switch `rocq`, Rocq 9.0.1) | each exit 0, 0.86 s to 1.13 s each |
+| `Assumptions.v`: `Print Assumptions A.ofProgram_approx` | 25 assumptions, the parameters of the module declared at `Eval` (23 operations, 2 types), nothing else |
+| the red control: `Skeleton.v` with `unfolded`'s depth-0 cut replaced by `Tree_done eval_badShape` | `SkeletonApprox.v` exit 1 |
+| `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Run.Tree Tools.Session` | `Build completed successfully (609 jobs)` |
+| `bash docs/research/2026-10-16-itrees/reproduce.sh OUTDIR` | exit 0 in 96 s; step 12: `PASS rocq/Eff_types.v is step 2's`, `PASS the mutant fails SkeletonApprox.v`; step 13: both lane inputs pass |
+| the kit lane's time, 10 runs, at `5aef3c624`, `fa90e4ab6` and the head | median 34 ms, 34 ms and 34 ms |
+| `make batteries-touched BASE=719e039bf` | 71 batteries; `Build completed successfully (1440 jobs)`, 3 min 35 s |
+| `make check-ocaml` | exit 0; `gen-check: PASS`; `PASS ocaml: recorded ed186375eba1`; no generated file changed |
+| `python3 scripts/check-language.py --strict` on `rocq/README.md`, the note and this receipt | `PASS` |
 
 The lanes' own counts:
 
 - T5: 408 of 408 of Lean's verdicts are equal.
 - T8: 95 of 95 corpus programs in the tree's fragment agree between the tree and the machine.
-- R2 to R4: Rocq's tree and Lean's run alike at every budget tried. The inputs are the 7 kit
+- R2 to R4: Rocq's hand tree and Lean's run alike at every budget tried. The inputs are the 7 kit
   examples, the 7 to-do requests and 36 typed corpus programs in `InRocq`.
 - R5: two programs outside `InRocq` differ, as red controls.
 - R4 also measures the 15 untyped corpus programs in `InRocq`; one differs (`g200`, `Ref.get 3`).
@@ -72,15 +105,17 @@ The lanes' own counts:
 
 `#axiom_audit Effect4.Run.Tree Effect4.Run.Kit Effect4.Laws.Run.Tree Effect4.Program.Authoring.Named`:
 415 declarations within `[propext, Quot.sound]`, 3 of them modulo planned goals; 2 planned goals.
-The two goals are the declared facts `Tree.ofProgram_approx` and `Tree.ofProgram_eq_denoteRowsB`.
+The goals are `Tree.ofProgram_approx` (declared: `#plan_status` prints `declared: proved in
+rocq/SkeletonApprox.v: Approx.ofProgram_approx, over rocq/Skeleton.v (make gen-rocq)`) and
+`Tree.ofProgram_eq_denoteRowsB` (a planned goal).
 
 ## Placement of the statements
 
 | Statement | Concept and requirement | Status |
 | --- | --- | --- |
-| `Tree.ofProgram_approx` | `translation-simulation`, R12 | declared (Rocq `denoteD_approx`), at `InRocq` |
-| `Tree.ofProgram_eq_denoteRowsB` | `translation-simulation`, R6 | declared (Rocq `denoteBD_same`), at `Plain` |
-| `Tree.settles_of_ends` | `translation-simulation`, R12 | proved |
+| `Tree.ofProgram_approx` | `translation-simulation`, R12 | declared (`rocq/SkeletonApprox.v`, `Approx.ofProgram_approx`), every program |
+| `Tree.ofProgram_eq_denoteRowsB` | `translation-simulation`, R6 | planned goal, at `Plain` |
+| `Tree.settles_of_ends` | `translation-simulation`, R12 | modulo `ofProgram_approx` |
 | `Tree.runFrom_approx` | step of `probe_stable` | proved |
 | `Tree.probe_stable` | consumer: `settle_sound` | modulo `ofProgram_approx` |
 | `Tree.settle_sound` | consumer: `Kit.run`, `Run.atBudget`, the session tool's `settle` | modulo `ofProgram_approx` |
@@ -88,22 +123,30 @@ The two goals are the declared facts `Tree.ofProgram_approx` and `Tree.ofProgram
 ## Proposed rows and claims (the coordinator's; this receipt edits no register)
 
 - **Decisions row 411.** `declared G : P from "where"` (`tools/ProofGraph/Declared.lean`) is a
-  planned goal whose proof lives outside Lean, the owner's exception of 2026-10-16. The gates read
-  it as a goal, and `#plan_status` prints the citation. A comparison lane in `make check-ocaml`
-  holds each cited development to the Lean definition it is about.
+  planned goal whose proof lives outside Lean, the owner's exception of 2026-10-16.
+  - The gates read it as a goal, and `#plan_status` prints the citation.
+  - It cites a theorem in `rocq/`, the tracked workspace beside `ocaml/`; `docs/research` is
+    history, not authority.
+  - A definition the theorem reads is generated from Lean (`make gen-rocq`) and marked. No gate
+    compiles `rocq/`; a landing that changes the tree or the printer records `rocq/README.md`'s
+    compile in its receipt.
+  - The kit's tree-against-machine lane (T8, 95 of 95) stays the floor.
+- **An authority map row** for `AGENTS.md`: `rocq/` owns the Rocq proofs that a declared fact
+  cites, and `rocq/README.md` is its map.
 - **Claim `call-chain-outcome`** (`translation-simulation`, R12): a settled tree run is the
   chain's outcome. Pointer: `Tree.settle_sound`.
 - **Claim `call-chain-equivalence`** (`translation-simulation`, R6): on `Plain`, Lean's tree is
-  `denoteRowsB`'s, node for node. Pointer: `Tree.ofProgram_eq_denoteRowsB`, declared.
+  `denoteRowsB`'s, node for node. Pointer: `Tree.ofProgram_eq_denoteRowsB`, a planned goal.
 - **The kit as a product face of the engine project.** Its two lanes run in `make check-ocaml`.
 
 ## Open obligations
 
-- Move `BudgetDefs.v`'s approximation proof onto `generated/Skeleton.v`, with the evaluator as
-  Section variables. Then each declared fact cites the generated file and `GallinaGen`, and the
-  context arms return to `InRocq`.
-- On an untyped program, a cell request that is no cell is an event in Rocq's tree and a bad shape
-  in Lean's. The citations hold for typed programs; no premise of the declared facts says so.
+- `Tree.ofProgram_eq_denoteRowsB` needs a proof over Lean's code: `denoteRowsB` printed beside the
+  skeleton (it lives in the laws, so its printer spec is new).
+- Adequacy (`BudgetDefs.adequacyD`) is proved only of the hand transcription; Lean states its
+  budget form, which it proves from `ofProgram_approx`.
+- The comparison lane still extracts the hand tree (`docs/research`): it cites nothing, and
+  `InRocq` is its fragment alone.
 - `generated/corpus-index.tsv` is stale at the base (9 programs); `make corpus` writes it again.
 - Raw formation is not lowered (`ArgF.child`'s dependent field).
 - The MCP server is in no client's configuration; adding it to `.mcp.json` is the owner's call.
@@ -111,6 +154,8 @@ The two goals are the declared facts `Tree.ofProgram_approx` and `Tree.ofProgram
 ## Bounded or host-only evidence
 
 - The lanes are finite checks on the programs and budgets they try, not theorems.
+- `Skeleton.v` is Lean's code by the printer's rules (`OCaml5.Lcnf.Gallina`), not by a theorem.
 - `rocq_run.ml` is Rocq's extraction; its `nat` and `Z` are OCaml `int`, outside any proof.
+- The timings are wall times on this Mac.
 - No `make check-full`, no `check-ts` and no `make check-gen` ran.
 - The MCP server ran in-process (T10), not under a real MCP client.
