@@ -56,6 +56,11 @@
        malformedRef, before edge checking").  The store-relative refusals — `dangling` and
        `wrongKind` over `checked_edges` — are lane P4's and are NOT here; what P4 needs from
        this module is `checked_edges`, in order, spec first.                 tested
+   ND11 Tags 13 (`negInt`) and 14 (`float`) are read as `Val.decodeBody` reads them
+       (src/Effect4/Store/Carrier/Val.lean): a negInt's digits in shortest form, unbounded as a
+       nat's are (D1); a float frame of exactly eight bytes whose bits pass `Val.floatFrame` (a
+       double with no integer image). Tag 0 and tags 15 to 255 are no frame, so Lean and this
+       walk read one byte language.        tested (test_bytes ND-frame; test_cas G1 val goldens)
 
    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.5 (lane P0, 2026-09-08):
    D1  `decode`'s payload check validates the frame TREE without building it: tags, lengths,

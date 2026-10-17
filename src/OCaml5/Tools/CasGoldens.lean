@@ -197,12 +197,42 @@ def valRefTree : Val := .ctor 0 [.str "Effect", .ref 2 (List.replicate 32 0)]
 /-- `ocaml/eff/goldens/val_handle.hex`: the tree of `Store/Val.lean:1174-1175`. -/
 def valHandleTree : Val := .ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9]]
 
+/-- The number frames of the value append: a negative integer (tag 13), a double (tag 14), and
+both nested, with a NaN among them. -/
+def valNegIntTree : Val := .negInt 41
+def valFloatTree : Val := .float 0x3FE0000000000000
+def valNumbersTree : Val :=
+  .ctor 0 [.negInt 0, .list [.float 0x400C000000000000, .float 0x7FF8000000000000, .negInt 256]]
+
+/-- Byte strings at the edges of tags 13, 14 and 15. Each case's verdict is `Val.decode`'s, so a
+reader is checked against Lean's decoder on its refusals as well as on its images. -/
+def decodeEdges : List (String × Bytes) :=
+  [ ("negint-no-digits", framed 13 [])
+  , ("negint-two-digits", framed 13 [1, 0])
+  , ("negint-leading-zero", framed 13 [0, 1])
+  , ("float-half", framed 14 (be64 0x3FE0000000000000))
+  , ("float-minus-zero", framed 14 (be64 0x8000000000000000))
+  , ("float-nan", framed 14 (be64 0x7FF8000000000000))
+  , ("float-one", framed 14 (be64 0x3FF0000000000000))
+  , ("float-plus-zero", framed 14 (be64 0))
+  , ("float-two-pow-53", framed 14 (be64 0x4340000000000000))
+  , ("float-seven-bytes", framed 14 [0x3F, 0xE0, 0, 0, 0, 0, 0])
+  , ("tag-15", framed 15 [])
+  , ("tag-0", framed 0 []) ]
+
+/-- `ok` when `Val.decode` reads the bytes as one value, `refused` when it does not. -/
+def decodeVerdict (b : Bytes) : String := if (Val.decode b).isSome then "ok" else "refused"
+
 def a1Cases : List Case :=
   (digestVectors.zipIdx.map fun (v, i) =>
     let n := if i + 1 < 10 then s!"0{i + 1}" else s!"{i + 1}"
     ⟨s!"digest-{n}", "a1", Val.encode v, digestHex (Val.encode v)⟩) ++
   [ ⟨"val_ref", "a1", Val.encode valRefTree, "ok"⟩
-  , ⟨"val_handle", "a1", Val.encode valHandleTree, "ok"⟩ ]
+  , ⟨"val_handle", "a1", Val.encode valHandleTree, "ok"⟩
+  , ⟨"val_negint", "a1", Val.encode valNegIntTree, decodeVerdict (Val.encode valNegIntTree)⟩
+  , ⟨"val_float", "a1", Val.encode valFloatTree, decodeVerdict (Val.encode valFloatTree)⟩
+  , ⟨"val_numbers", "a1", Val.encode valNumbersTree, decodeVerdict (Val.encode valNumbersTree)⟩ ] ++
+  decodeEdges.map fun (n, b) => ⟨s!"a1-decode-{n}", "a1", b, decodeVerdict b⟩
 
 /-! ## G1 — node encodings -/
 
@@ -256,7 +286,7 @@ def g2Cases : List Case :=
   , g2 "g2-ref-fresh" probeStore ⟨0, .tree, probeSchemaAddress, .ref 2 probeEntryAddress.bytes⟩
   , g2 "g2-badVersion" probeStore ⟨1, .«export», probeSchemaAddress, sampleEntry⟩
   , g2 "g2-malformedRef-kind" probeStore
-      ⟨0, .tree, probeSchemaAddress, .ref 16 probeEntryAddress.bytes⟩
+      ⟨0, .tree, probeSchemaAddress, .ref 127 probeEntryAddress.bytes⟩
   , g2 "g2-malformedRef-length" probeStore
       ⟨0, .tree, probeSchemaAddress, .ref 2 (probeEntryAddress.bytes.drop 1)⟩
   , g2 "g2-conflict" occupantStore probeEntry
@@ -394,9 +424,9 @@ def g5Cases : List Case :=
   , g5 "g5-bytes-is-a-leaf" (.bytes (Val.encode (.ref 2 d1)))
   , g5 "g5-bytes-inside-list" (.list [.bytes (Val.encode (.ref 2 d1)), .ref 11 d5])
   , g5 "g5-order" (.list [.ref 1 d1, .pair (.ref 2 d5) (.ref 3 d7), .some (.ref 4 d9)])
-  , g5 "g5-malformed-kind" (.ref 16 d1)
+  , g5 "g5-malformed-kind" (.ref 127 d1)
   , g5 "g5-malformed-length" (.ref 2 (d1.drop 1))
-  , g5 "g5-malformed-nested" (.ctor 0 [.ref 2 d7, .list [.ref 16 d9]])
+  , g5 "g5-malformed-nested" (.ctor 0 [.ref 2 d7, .list [.ref 127 d9]])
   , g5 "g5-no-refs" sampleEntry
   , g5 "g5-handle-is-a-leaf" (.ctor 0 [.handle 2 7, .ref 2 d5]) ]
 
@@ -482,8 +512,10 @@ def header : List String :=
   , "# manifest.txt holds `<name> <sha256 of those bytes>`."
   , "#"
   , "# families"
-  , "#   a1   the SHA-256 vectors over Val.encode (expected = the digest), and the two Store.Val"
-  , "#        frames ocaml/eff/goldens/{val_ref,val_handle}.hex hand-derived on 2026-09-07."
+  , "#   a1   the SHA-256 vectors over Val.encode (expected = the digest); the two Store.Val"
+  , "#        frames ocaml/eff/goldens/{val_ref,val_handle}.hex hand-derived on 2026-09-07; the"
+  , "#        number frames val_negint, val_float and val_numbers; and a1-decode-*, byte strings"
+  , "#        at the edges of tags 13 to 15 (expected = Val.decode's verdict, ok or refused)."
   , "#   g1   node encodings: bytes = Node.encode n, expected = its address."
   , "#   g2   admission: bytes = Node.encode n, expected = the outcome of putNode into that"
   , "#        case's store (empty for g2-genesis-exempt and g2-dangling-spec; the store after"

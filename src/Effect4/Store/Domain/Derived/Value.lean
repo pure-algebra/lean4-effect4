@@ -317,7 +317,15 @@ def shapeDoc : ShapeDoc :=
       ("manifest", 11, []),
       ("component", 12, []),
       ("vector", 13, []),
-      ("fiber", 14, [])],
+      ("fiber", 14, []),
+      ("job", 15, []),
+      ("tape", 16, []),
+      ("log", 17, []),
+      ("exits", 18, []),
+      ("receipt", 19, []),
+      ("checkpoint", 20, []),
+      ("profile", 21, []),
+      ("table", 22, [])],
    []⟩
 
 def toVal : _root_.Effect4.Store.Kind → Val
@@ -336,6 +344,14 @@ def toVal : _root_.Effect4.Store.Kind → Val
   | .component => .ctor 12 []
   | .vector => .ctor 13 []
   | .fiber => .ctor 14 []
+  | .job => .ctor 15 []
+  | .tape => .ctor 16 []
+  | .log => .ctor 17 []
+  | .exits => .ctor 18 []
+  | .receipt => .ctor 19 []
+  | .checkpoint => .ctor 20 []
+  | .profile => .ctor 21 []
+  | .table => .ctor 22 []
 
 def ofVal : Val → Option (_root_.Effect4.Store.Kind)
   | .ctor 0 [] => some .source
@@ -353,6 +369,14 @@ def ofVal : Val → Option (_root_.Effect4.Store.Kind)
   | .ctor 12 [] => some .component
   | .ctor 13 [] => some .vector
   | .ctor 14 [] => some .fiber
+  | .ctor 15 [] => some .job
+  | .ctor 16 [] => some .tape
+  | .ctor 17 [] => some .log
+  | .ctor 18 [] => some .exits
+  | .ctor 19 [] => some .receipt
+  | .ctor 20 [] => some .checkpoint
+  | .ctor 21 [] => some .profile
+  | .ctor 22 [] => some .table
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Store.Kind) : ofVal (toVal a) = some a := by
@@ -372,11 +396,43 @@ theorem ofVal_toVal (a : _root_.Effect4.Store.Kind) : ofVal (toVal a) = some a :
   | «component» => simp only [toVal, ofVal]
   | «vector» => simp only [toVal, ofVal]
   | «fiber» => simp only [toVal, ofVal]
+  | «job» => simp only [toVal, ofVal]
+  | «tape» => simp only [toVal, ofVal]
+  | «log» => simp only [toVal, ofVal]
+  | «exits» => simp only [toVal, ofVal]
+  | «receipt» => simp only [toVal, ofVal]
+  | «checkpoint» => simp only [toVal, ofVal]
+  | «profile» => simp only [toVal, ofVal]
+  | «table» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Store.Kind} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
   · injection h with h
     subst h
     rfl
@@ -456,6 +512,22 @@ theorem fits (a : _root_.Effect4.Store.Kind) : shapeDoc.accepts (toVal a) = true
     exact accepts_sum _ _ _ 13 "vector" [] [] rfl (acceptsFields_nil _)
   | «fiber» =>
     exact accepts_sum _ _ _ 14 "fiber" [] [] rfl (acceptsFields_nil _)
+  | «job» =>
+    exact accepts_sum _ _ _ 15 "job" [] [] rfl (acceptsFields_nil _)
+  | «tape» =>
+    exact accepts_sum _ _ _ 16 "tape" [] [] rfl (acceptsFields_nil _)
+  | «log» =>
+    exact accepts_sum _ _ _ 17 "log" [] [] rfl (acceptsFields_nil _)
+  | «exits» =>
+    exact accepts_sum _ _ _ 18 "exits" [] [] rfl (acceptsFields_nil _)
+  | «receipt» =>
+    exact accepts_sum _ _ _ 19 "receipt" [] [] rfl (acceptsFields_nil _)
+  | «checkpoint» =>
+    exact accepts_sum _ _ _ 20 "checkpoint" [] [] rfl (acceptsFields_nil _)
+  | «profile» =>
+    exact accepts_sum _ _ _ 21 "profile" [] [] rfl (acceptsFields_nil _)
+  | «table» =>
+    exact accepts_sum _ _ _ 22 "table" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Store.Kind) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩

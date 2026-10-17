@@ -73,7 +73,7 @@ open Effect4.Store
 #guard refusedWith (probeStore.putNode ⟨1, .«export», probeSchemaAddress, sampleEntry⟩)
   .badVersion
 #guard refusedWith
-  (probeStore.putNode ⟨0, .tree, probeSchemaAddress, .ref 16 probeEntryAddress.bytes⟩)
+  (probeStore.putNode ⟨0, .tree, probeSchemaAddress, .ref 127 probeEntryAddress.bytes⟩)
   .malformedRef
 #guard refusedWith
   (probeStore.putNode ⟨0, .tree, probeSchemaAddress, .ref 2 (probeEntryAddress.bytes.drop 1)⟩)

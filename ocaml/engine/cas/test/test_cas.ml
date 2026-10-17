@@ -624,7 +624,10 @@ let test_g2 () =
   if rows = [] then skip "G2 the admission goldens" "no g2 rows in cases.txt"
   else begin
     let ok = ref 0 and total = ref 0 and bad = ref [] in
-    let m2_pending = ref [] and k1_pending = ref [] in
+    (* Amendment M2 (a handle frame in a content payload) is an owner call
+       (docs/research/2026-09-08-cas-amendments.md §3): put refuses it, Lean's putNode admits it.
+       The one row that shows the difference is named and reported apart. *)
+    let m2_row = "g2-handle-in-content" and owner_calls = ref [] in
     List.iter
       (fun (name, _, expected) ->
         match golden name with
@@ -647,39 +650,22 @@ let test_g2 () =
               E4_cas.commit s;
               let got = word_word (E4_cas.put s n) in
               E4_cas.close s;
-              let lean_would_call_it_malformed =
-                match E4_node.scan_payload n.E4_node.payload with
-                | Ok sc -> List.exists (fun r -> not (E4_kind.in_lean r.E4_addr.Ref.kind)) sc.E4_node.refs
-                | Error _ -> false
-              in
               if got = expected then incr ok
-              else if expected = "malformedRef" && lean_would_call_it_malformed then begin
-                k1_pending := name :: !k1_pending;
-                incr ok
-              end
-              else if got = "handleInContent" then begin
-                m2_pending := name :: !m2_pending;
-                incr ok
-              end
+              else if String.equal name m2_row && String.equal expected "fresh"
+                      && String.equal got "handleInContent" then
+                owner_calls := name :: !owner_calls
               else begin
                 bad := name :: !bad;
                 note "  g2 %s: Lean says %s, put says %s" name expected got
               end))
       rows;
-    check (Printf.sprintf "G2 %d/%d admission rows agree with Lean" !ok !total) (!bad = []);
-    if !m2_pending <> [] then begin
-      note "amendment M2 is not in Lean yet: %s" (String.concat " " !m2_pending);
-      note "  Lean admits a handle frame in a content payload (`fresh`) — `handleInContent` does";
-      note "  not exist in src/ (lane GLD §4 O3).  This side refuses it, at OQ4's default";
-      note "  position (after malformedRef).  When CAS commit 7 lands, G2 must be re-cut and";
-      note "  this row's `expected` is the one that changes."
-    end;
-    if !k1_pending <> [] then begin
-      note "CAS commit 1 is not in Lean yet: %s" (String.concat " " !k1_pending);
-      note "  the row uses kind byte 16 as `the unregistered byte`; 16 is `job` under the append,";
-      note "  and amendment M4 moved the sentinel to 127.  The node is admissible here and the";
-      note "  refusal moves to the edge check; re-cut at 127 with CAS commit 1."
-    end
+    check (Printf.sprintf "G2 %d/%d admission rows agree with Lean through put" !ok !total)
+      (!bad = [] && !ok + List.length !owner_calls = !total);
+    (* The tripwire: when the owner rules M2 and G2 is re-cut, this row agrees, this check
+       fails, and the exception goes. *)
+    check
+      (Printf.sprintf "G2 the one row that differs is amendment M2's owner call (%s: Lean fresh, put handleInContent)" m2_row)
+      (List.equal String.equal !owner_calls [ m2_row ])
   end
 
 (* ============================================================ golden G3 *)

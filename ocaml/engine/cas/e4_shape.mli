@@ -52,10 +52,11 @@
          Shared cs   several carriers share the byte (finding R1'); no field is decidable
          Unused      the byte is registered and no carrier files under it today
          Tombstoned  `fiber` (15)
-         Pending     bytes 16..23, reserved by CAS commit 1 and amendment M17; the shape is
-                     2026-09-07-cas-design.md §4's and A2 §1.9's, and NOTHING in this estate
-                     mints such a node until the Lean side lands them
-       `E4_kind.in_lean` and `status` are independent facts and both are exposed. by construction
+         Pending     bytes 16..23, the CAS append (DI-25): Lean's `Kind` table holds them, but
+                     no Lean carrier files under them yet, so the shape is
+                     2026-09-07-cas-design.md §4's and A2 §1.9's
+       `status` is about carriers, never about the table: every byte 1..23 is Lean's.
+                                                                           by construction
    SH5 The path language is `Arg i` (the i-th child of a ctor/pair/some/list frame) and `Each`
        (every child of a list frame), and a path resolves to a LIST of frames.  `Each` is why
        `Tree`'s bindings can be a row at all.                      by construction; tested

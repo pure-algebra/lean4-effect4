@@ -469,7 +469,7 @@ def sparseDoc : ShapeDoc :=
 #guard (ShapeDoc.mk (.ref .«export») []).accepts (.ref 1 (List.replicate 32 0)) = false
 #guard (ShapeDoc.mk (.ref .«export») []).accepts (.ref 2 (List.replicate 31 0)) = false
 #guard (ShapeDoc.mk .anyRef []).accepts (.ref 15 (List.replicate 32 0)) = true
-#guard (ShapeDoc.mk .anyRef []).accepts (.ref 16 (List.replicate 32 0)) = false
+#guard (ShapeDoc.mk .anyRef []).accepts (.ref 127 (List.replicate 32 0)) = false
 #guard (ShapeDoc.mk .anyRef []).print (.ref 2 (List.replicate 32 0)) =
   .obj [("kind", .str "export"), ("address", .str (String.ofList (List.replicate 64 '0')))]
 #guard (ShapeDoc.mk .digest []).accepts (.bytes (List.replicate 32 0)) = true
