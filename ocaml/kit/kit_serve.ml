@@ -53,6 +53,7 @@ type request = {
   limit : int;
   budget : int option;
   machine : bool;  (** run on the machine, whatever the fragment *)
+  width : int;  (** how many paths `explore` answers *)
   fast : bool;  (** skip the machine's second run *)
 }
 
@@ -130,6 +131,28 @@ let answer (r : request) : J.t =
             J.Object
               [ ("status", J.String "frames");
                 ("frames", J.Array (List.mapi (fun k f -> Kit.Json.run_json ~app ~budget:k f) frames)) ]) }
+  | "explore" ->
+    let p = program () in
+    let budget = match r.budget with Some k -> k | None -> 64 in
+    let paths = Kit.explore app ~budget ~width:r.width p in
+    let replay (path : Kit.path) =
+      (* each finishing or waiting path, replayed on the machine under its own tape *)
+      if r.fast then []
+      else
+        match path.stop with
+        | Kit.Stop_cut -> []
+        | _ ->
+          let tape = Kit.tape_of path in
+          let m = Kit_machine.run app (Kit.Host.guarded app Kit.Host.tape) tape p in
+          [ ("machine", if Kit_machine.agree_path path m then J.String "agrees" else J.Object [ ("disagrees", Kit_machine.json ~app m) ]) ]
+    in
+    J.Object
+      [ ("status", J.String "paths");
+        ("budget", J.Int budget);
+        ("paths", J.Array (List.map (fun path ->
+             match Kit.Json.path_json ~app path with
+             | J.Object fields -> J.Object (fields @ replay path)
+             | j -> j) paths)) ]
   | op -> input "unknown operation %S" op
 
 let error_json e = J.Object [ ("status", J.String "error"); ("message", J.String e) ]
@@ -147,6 +170,7 @@ let request_of_json (j : J.t) : request =
     limit = int "limit" 1024;
     budget = (match field "budget" with Some (J.Int n) -> Some n | _ -> None);
     machine = (match field "machine" with Some (J.Bool b) -> b | _ -> false);
+    width = int "width" 64;
     fast = (match field "fast" with Some (J.Bool b) -> b | _ -> false) }
 
 (* The tools of `eff mcp`, each a command of this module. *)
@@ -180,6 +204,12 @@ let tools =
       "The runs of an Eff program at every budget from 0 to `limit`: each frame extends the one before, so they animate as one growing run."
       [ ("program", program); ("rows", rows); ("tape", tape); ("limit", prop "the last budget" "integer") ]
       [ "program"; "limit" ];
+    tool "explore"
+      "Every path of an Eff program's call tree at a budget, with each host reply drawn from its row's declared types (small members: 0 and 1, \"\" and \"a\", empty and one-item lists, each union member, and failures from the error column). Each path lists its calls, its stop and its tape; each finishing or waiting path is replayed on the machine under its tape, and the answer says whether the two agree."
+      [ ("program", program); ("rows", rows);
+        ("budget", prop "the budget (default 64)" "integer");
+        ("width", prop "the most paths to answer (default 64)" "integer");
+        ("fast", prop "skip the machine's replays" "boolean") ] [ "program" ];
     tool "outside"
       "The address of the first node of an Eff program that the call tree has no arm for (a fork, a scope, a service, a layer, a generator), or covered."
       [ ("program", program) ] [ "program" ] ]

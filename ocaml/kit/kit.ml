@@ -97,6 +97,15 @@ let wait_reason (a : app) (h : 's host) (r : 's run) =
        (match reply_fault a i ex with Some f -> Some (Refused (ex, f)) | None -> Some No_answer))
   | _ -> None
 
+type path = G.path = { steps : step list; stop : stop }
+
+let samples (a : app) t = G.run_kit_samples a.G.types 4 t
+let replies (a : app) i = G.run_kit_replies a i
+let explore (a : app) ~budget ~width p = G.run_kit_explore a budget width p
+
+let tape_of (p : path) =
+  List.filter_map (function Step_called (_, _, ex) -> Some ex | Step_celled _ -> None) p.steps
+
 module Json = struct
   module J = Eff_json_text
 
@@ -171,6 +180,13 @@ module Json = struct
           ("note", J.String "cut at every budget up to the limit: a finite probe, not a divergence");
           ("calls", J.Array (List.map (call_json app) (calls last)));
           ("steps", J.Int (List.length last.steps)) ]
+
+  let path_json ?app (p : path) =
+    let calls = List.filter_map (function Step_called (i, v, ex) -> Some (i, v, ex) | Step_celled _ -> None) p.steps in
+    J.Object
+      (stop_json app p.stop
+      @ [ ("calls", J.Array (List.map (call_json app) calls));
+          ("tape", J.Array (List.map exit_json (tape_of p))) ])
 
   let wait_json ?app:_ = function
     | No_answer -> J.Object [ ("reason", J.String "noAnswer") ]

@@ -26,6 +26,7 @@
      eff run    PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--machine] [--fast]
      eff probe  PROGRAM --budget K [--rows ROWS] [--tape TAPE]
      eff frames PROGRAM [--rows ROWS] [--tape TAPE] [--limit N]
+     eff explore PROGRAM [--rows ROWS] [--budget K] [--width N] [--fast]
      eff outside PROGRAM
      eff serve
      eff mcp
@@ -49,7 +50,7 @@ let serve () = lines (fun line -> Some (serve_line line))
 let mcp () = lines mcp_line
 
 let usage =
-  "usage: eff (check|run|probe|frames|outside) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--budget K]\n\
+  "usage: eff (check|run|probe|frames|explore|outside) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--budget K]\n\
   \       eff serve\n\
   \       eff mcp"
 
@@ -65,13 +66,14 @@ let () =
       | "--budget" :: n :: rest -> parse { r with budget = Some (int_of_string n) } rest
       | "--machine" :: rest -> parse { r with machine = true } rest
       | "--fast" :: rest -> parse { r with fast = true } rest
+      | "--width" :: n :: rest -> parse { r with width = int_of_string n } rest
       | [] -> r
       | flag :: _ -> input "unknown flag %S" flag
     in
     (match
        answer
          (parse { op; program = Some (program_of_path path); rows = []; tape = None; limit = 1024; budget = None;
-                  machine = false; fast = false } flags)
+                  machine = false; fast = false; width = 64 } flags)
      with
      | a -> print_endline (Kit.Json.render a)
      | exception Input e -> print_endline (Kit.Json.render (error_json e)); exit 2

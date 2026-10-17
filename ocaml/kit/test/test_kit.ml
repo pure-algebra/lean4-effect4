@@ -37,7 +37,10 @@
        lists the five tools, `tools/call` of `run` answers the tree's run with the machine's
        agreement, a notification has no reply, an unknown method is a JSON-RPC error and an
        unreadable program is the tool's error; over JSON lines, a forked program runs on the
-       machine.                                                             tested *)
+       machine.                                                             tested
+   T11 Exploration: the replies drawn from a row's types are members of its columns; a program that
+       branches on a list's length has a path for each branch and for each failure of its error
+       column; each path's tape replays the path on the machine.            tested *)
 
 open Eff_types
 open Effect4_kit
@@ -329,9 +332,9 @@ let t10 () =
   check "T10 a notification has no reply" (call (rpc "notifications/initialized" []) = None);
   (match Option.bind (result (call (rpc ~id:2 "tools/list" []))) (field "tools") with
    | Some (J.Array ts) ->
-     check "T10 five tools"
+     check "T10 six tools"
        (List.filter_map (field "name") ts
-        = List.map (fun n -> J.String n) [ "check"; "run"; "probe"; "frames"; "outside" ])
+        = List.map (fun n -> J.String n) [ "check"; "run"; "probe"; "frames"; "explore"; "outside" ])
    | _ -> check "T10 tools/list" false);
   let tape = J.Array (List.map Kit.Json.exit_json (units 4)) in
   let args = [ ("name", J.String "run");
@@ -355,8 +358,25 @@ let t10 () =
   check "T10 a forked program runs on the machine"
     (field "via" (parse (Kit_serve.serve_line line)) = Some (J.String "machine"))
 
+let t11 () =
+  let add = A.row "Todos.add" ~request:Ty_string ~answer:(Ty_list Ty_string) ~error:Ty_string () in
+  let app = Kit.app ~rows:[ add ] () in
+  let p = match A.build ~app A.(let* todos = perform "Todos.add" (str "milk") in
+                                 if_ (length todos < nat 2) ~then_:(succeed (length todos)) ~else_:(fail (str "full"))) with
+    | Ok e -> e | Error _ -> assert false in
+  let replies = Kit.replies app 0 in
+  check "T11 every drawn reply fits its row" (List.for_all (fun ex -> Kit.reply_fault app 0 ex = None) replies);
+  let paths = Kit.explore app ~budget:8 ~width:64 p in
+  let exits = List.filter_map (fun (path : Kit.path) -> match path.stop with Kit.Stop_finished ex -> Some ex | _ -> None) paths in
+  check "T11 a path for each branch and each failure"
+    (List.length paths = List.length replies
+     && List.mem (Kit.succeed (Val_nat 0)) exits && List.mem (Kit.succeed (Val_nat 1)) exits
+     && List.mem (Kit.fail (Val_str "full")) exits);
+  check "T11 each path's tape replays it on the machine"
+    (List.for_all (fun path -> Kit_machine.agree_path path (Kit_machine.run app Kit.Host.tape (Kit.tape_of path) p)) paths)
+
 let () =
   let corpus = fixture () in
-  t1 (); t2 (); t3 corpus; t4 (); t5 corpus; t6 (); t7 (); t8 corpus; t9 (); t10 ();
+  t1 (); t2 (); t3 corpus; t4 (); t5 corpus; t6 (); t7 (); t8 corpus; t9 (); t10 (); t11 ();
   Printf.printf "test_kit: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1

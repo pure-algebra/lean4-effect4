@@ -62,13 +62,16 @@ let run ?(fuel = 10_000_000) ?(rounds = 100_000) (app : Kit.app) (host : 's Kit.
   in
   { stop; calls; state = served.state }
 
-let agree (t : 's Kit.run) (m : 't run) =
-  Kit.calls t = m.calls
+let agree_steps steps (stop : Kit.stop) (m : 't run) =
+  List.filter_map (function Kit.Step_called (i, v, ex) -> Some (i, v, ex) | Kit.Step_celled _ -> None) steps = m.calls
   &&
-  match t.stop, m.stop with
+  match stop, m.stop with
   | Kit.Stop_finished a, Finished b -> a = b
   | Kit.Stop_waiting (i, v), Waiting (j, w) -> i = j && v = w
   | _ -> false
+
+let agree (t : 's Kit.run) (m : 't run) = agree_steps t.steps t.stop m
+let agree_path (p : Kit.path) (m : 't run) = agree_steps p.steps p.stop m
 
 let json ?app (r : 's run) =
   let named i = match app with

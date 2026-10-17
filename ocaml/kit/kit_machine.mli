@@ -35,4 +35,8 @@ val agree : 's Kit.run -> 't run -> bool
     calls: the per-run check of the session theorems ([denoteRowsB_eq_session_host]). A tree
     run that is cut agrees with nothing. *)
 
+val agree_path : Kit.path -> 't run -> bool
+(** The same check of one path of a program's call tree ([Kit.explore]) against the machine's run
+    under the path's own tape. *)
+
 val json : ?app:Kit.app -> 's run -> Eff_json_text.t

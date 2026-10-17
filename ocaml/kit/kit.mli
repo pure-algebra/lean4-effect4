@@ -151,6 +151,26 @@ val wait_reason : app -> 's host -> 's run -> wait option
     state the run left; a host is a function of its state, so this is the answer it gave.
     [None] when the run does not wait. *)
 
+(** {1 Every path} *)
+
+type path = Kit_gen.path = { steps : step list; stop : stop }
+(** One path of a program's call tree under chosen replies. *)
+
+val samples : app -> Eff_types.ty -> Eff_types.val_ list
+(** A few small members of a type under the application's named types ([Kit.samples]): zero
+    and one, the empty and a one-letter string, [none] and one [some], each union member's. *)
+
+val replies : app -> int -> exit list
+(** The replies a row can give, drawn from its types: a success at each sample of its answer, a
+    failure at each sample of its error column, each one reply admission takes. *)
+
+val explore : app -> budget:int -> width:int -> program -> path list
+(** Every path of the program's call tree at the budget, its replies drawn from the rows' types
+    ([Kit.explore]), the first [width] in depth-first order. *)
+
+val tape_of : path -> exit list
+(** A path's replies, in call order: a reply tape that replays the path. *)
+
 (** {1 JSON} *)
 
 module Json : sig
@@ -187,6 +207,9 @@ module Json : sig
       known, the budget it settled at. *)
 
   val settled_json : ?app:app -> 's settled -> t
+
+  val path_json : ?app:app -> path -> t
+  (** A path: its stop, its calls, and its tape. *)
 
   val wait_json : ?app:app -> wait -> t
 end

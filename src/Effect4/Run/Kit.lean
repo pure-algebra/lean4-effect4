@@ -88,6 +88,65 @@ where
   whatever its registration: the tree's host answers every host row. -/
   columns (app : SigApp) (row : Nat) : Option Program.Row := (app.rows[row]?).map Program.Row.normalizeTypes
 
+/-! ## Replies drawn from the types: every path of a program -/
+
+/-- **A few members of a type**, under the application's named types: the small values a test
+would try first (zero, one and two; the empty and a one-letter string; `none` and one `some`; the
+lists of zero, one and two items; each union member's). Each candidate is
+kept only where it is a member (`Val.memberIn`), so the list holds members and nothing else;
+a type with no small member, such as a handle, gives none. `depth` bounds the nesting. -/
+def samples (decls : TyDecls) : Nat → Ty → List Store.Val
+  | 0, _ => []
+  | n + 1, t =>
+    let first (t : Ty) : List Store.Val := (samples decls n t).take 1
+    let candidates : List Store.Val := match t with
+      | .unit | .undefined => [.unit]
+      | .nat | .number => [.nat 0, .nat 1, .nat 2]
+      | .int => [.nat 0, .negInt 0]
+      | .string => [.str "", .str "a"]
+      | .bool => [.bool false, .bool true]
+      | .lit text => [.str text]
+      | .null => [.none]
+      | .bytes => [.bytes []]
+      | .unknown => [.unit]
+      | .option a => .none :: (first a).map .some
+      | .list a => .list [] :: (first a).flatMap fun x => [.list [x], .list [x, x]]
+      | .prod a b => (first a).flatMap fun x => (first b).map fun y => .list [x, y]
+      | .tuple ts =>
+        match ts.mapM fun t => (first t).head? with
+        | some xs => [.list xs]
+        | none => []
+      | .union a b => (samples decls n a).take 1 ++ (samples decls n b).take 1
+      | .except e a => (first e).map (fun x => .ctor 0 [x]) ++ (first a).map (fun x => .ctor 1 [x])
+      | .record fs =>
+        match (fs.filter fun f => !f.2.1).mapM (fun f => (first f.2.2).head?.map (f.1, ·)) with
+        | some kvs => [.ctor 0 [.list (kvs.map fun kv => .str kv.1), .list (kvs.map (·.2))]]
+        | none => []
+      | .map _ _ => [.list []]
+      | .app _ _ =>
+        match decls.unfold? t with
+        | some (_, body) => samples decls n body
+        | none => []
+      | _ => []
+    candidates.filter fun v => Val.memberIn decls v t []
+
+/-- **The replies a row can give**, drawn from its types: a success at each sample of its answer
+type, and a failure at each sample of its error column, each one that reply admission takes
+(`replyFault`). -/
+def replies (app : SigApp) (row : Nat) : List ExitV :=
+  match (app.rows[row]?).map Program.Row.normalizeTypes with
+  | none => []
+  | some r =>
+    let oks := (samples app.types 4 r.answer).map Exit.success
+    let errs := (samples app.types 4 r.error).map fun v => (Exit.failure (Cause.fail (errOf v)) : ExitV)
+    (oks ++ errs).filter fun ex => (replyFault app row ex).isNone
+
+/-- **Every path of a program** at the budget `k`, its replies drawn from the rows' types
+(`replies`), the first `width` in depth-first order. Each path's replies are a reply tape that
+the machine, or rc.112, replays. -/
+def explore (app : SigApp) (k width : Nat) (program : NativeEff) : List Tree.Path :=
+  Tree.paths app.rows k (fun i _ => replies app i) width program
+
 /-! ## The carriers' images -/
 
 /-- A program's shape document. -/

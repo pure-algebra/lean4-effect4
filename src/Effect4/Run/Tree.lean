@@ -387,6 +387,36 @@ def frames {σ : Type} (table : RowTable) (limit : Nat) (host : Host σ) (state 
     (program : NativeEff) : List (Outcome σ) :=
   (List.range (limit + 1)).map fun k => probe table k host state program
 
+/-! ## Every path of a tree -/
+
+/-- One path of a tree under chosen replies: the steps it takes and how it stops. -/
+structure Path where
+  steps : List Step
+  stop : Stop
+
+/-- **The paths of a tree** under a choice of replies at each call, the first `width` of them in
+depth-first order, appended to `out`. A call with no reply to choose is a path that waits there; a
+cell operation steps the stores as a run does. `acc` holds the steps so far, the latest first. -/
+def pathsFrom (replies : Nat → Val → List ExitV) (width : Nat) :
+    Tree → Stores → List Step → List Path → List Path
+  | done ex, _, acc, out => if out.length < width then out ++ [⟨acc.reverse, .finished ex⟩] else out
+  | cut, _, acc, out => if out.length < width then out ++ [⟨acc.reverse, .cut⟩] else out
+  | call i v resume, s, acc, out =>
+    match replies i v with
+    | [] => if out.length < width then out ++ [⟨acc.reverse, .waiting i v⟩] else out
+    | rs => rs.foldl (fun out a =>
+        if out.length < width then pathsFrom replies width (resume a) s (.called i v a :: acc) out
+        else out) out
+  | cell o resume, s, acc, out =>
+    match syncOpStep o s with
+    | some (s', w) => pathsFrom replies width (resume w) s' (.celled o w :: acc) out
+    | none => pathsFrom replies width (resume Val.unit) s (.celled o Val.unit :: acc) out
+
+/-- **The paths of a program at the budget `k`** under a choice of replies, the first `width`. -/
+def paths (table : RowTable) (k : Nat) (replies : Nat → Val → List ExitV) (width : Nat)
+    (program : NativeEff) : List Path :=
+  pathsFrom replies width (ofProgram table k program) Stores.empty [] []
+
 end Tree
 
 end Effect4.Run
