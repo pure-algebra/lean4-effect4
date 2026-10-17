@@ -1,19 +1,29 @@
-(* split_types.ml -- one recursive OCaml type group, printed again as its strongly connected
-   components in dependency order.
+(* split_types.ml -- the program types of ocaml/eff/eff_types.ml, printed again as one flat type
+   group split into its strongly connected components in dependency order.
 
-   What it is: the LCNF route declares the program types of ocaml/eff/eff_types.ml as one
-   `type ... and ...` group. Rocq needs the same parameters on every type of a mutual inductive,
-   and `'op eff` has one while `ty` has none, so rocq-of-ocaml's translation of the one group is
-   refused. This tool reads a structure, splits each recursive type group into its components
-   (Tarjan), and prints each component as its own group, dependencies first. Nothing else in the
-   structure changes. Depends on: compiler-libs (Parse, Pprintast).
+   What it is: the LCNF route declares each program type in its own module named as Lean names it
+   (`module Ty = struct type t = Never | ... end`), and a cycle as `module rec`. rocq-of-ocaml
+   reads neither shape, and Rocq needs the same parameters on every type of a mutual inductive
+   (`'op Eff.t` has one, `Ty.t` none). So this tool does two things:
+   1. flatten: each module's `t` becomes one flat type named after the module in snake case
+      (`Ty.t` is `ty`, `CauseTerm.t` is `cause_term`; `val` and `exit` take a trailing `_`), each
+      constructor takes its module as a prefix (`Eff.Succeed` is `Eff_succeed`), and every
+      `M.t` in a type expression names the flat type of `M`;
+   2. split: the flat group is printed as its components (Tarjan), dependencies first.
+   These are the names and the order the Rocq workspace was built on, so `Eff_types.v` keeps its
+   spelling when the OCaml layout changes. Depends on: compiler-libs (Parse, Pprintast).
 
    Properties:
-   S1  Every declaration of the input appears once in the output, unchanged.   by construction
+   S0  Every module of the input is one type module or one `module rec` of type signatures, and
+       nothing else: any other item inside a module is refused by name.  by construction
+   S1  Every type declaration of the input appears once in the output, renamed as in step 1 and
+       otherwise unchanged.                                                by construction
    S2  A component lists only declarations that reach each other through their type
-       expressions; a declaration comes after every component it names.      by construction
-   S3  The output type-checks as the input does: a check by `ocamlfind ocamlc -c` of both files
-       is the test (the receipt's commands).                                 tested
+       expressions; a declaration comes after every component it names.  by construction
+   S3  The output type-checks: `ocamlfind ocamlc -c` of the output is the test (`make gen-rocq`).
+                                                                          tested
+   S4  For the types of 6689f0833 the Rocq file is the one the flat layout of 81f9a4354 gave,
+       byte for byte (the receipt of 2026-10-17's seat rocq-cas).          tested
 
    Run: ocamlfind ocamlopt -package compiler-libs.common -linkpkg split_types.ml -o split_types
         ./split_types eff_types.ml > eff_types_split.ml *)
@@ -25,6 +35,100 @@ let read_file path =
   let s = really_input_string ic (in_channel_length ic) in
   close_in ic;
   s
+
+(* ---- 1. flatten ---- *)
+
+(* `CauseTerm` is `cause_term`, `Effect4_row` is `effect4_row`; `val` and `exit` take `_`. *)
+let flat_name (m : string) : string =
+  let b = Buffer.create (String.length m + 4) in
+  String.iteri
+    (fun i c ->
+      let upper = c >= 'A' && c <= 'Z' in
+      if upper && i > 0 then begin
+        let p = m.[i - 1] in
+        if (p >= 'a' && p <= 'z') || (p >= '0' && p <= '9') then Buffer.add_char b '_'
+      end;
+      Buffer.add_char b (Char.lowercase_ascii c))
+    m;
+  let s = Buffer.contents b in
+  if List.mem s [ "val"; "exit" ] then s ^ "_" else s
+
+let refuse what = failwith ("split_types: refused: " ^ what)
+
+(* One declaration of module `m`: `t` is the flat name, `M'.t` names `M'`'s flat type, and each
+   constructor takes `m` as a prefix. *)
+let rename_decl (m : string) (d : type_declaration) : type_declaration =
+  let retarget lid =
+    match lid with
+    | Longident.Lident "t" -> Longident.Lident (flat_name m)
+    | Longident.Ldot ({ txt = Longident.Lident m'; _ }, { txt = "t"; _ }) -> Longident.Lident (flat_name m')
+    | Longident.Lident _ -> lid
+    | _ -> refuse ("a type path in module " ^ m)
+  in
+  let mapper =
+    { Ast_mapper.default_mapper with
+      typ =
+        (fun self t ->
+          match t.ptyp_desc with
+          | Ptyp_constr (lid, args) ->
+            { t with
+              ptyp_desc =
+                Ptyp_constr ({ lid with txt = retarget lid.txt }, List.map (self.typ self) args) }
+          | _ -> Ast_mapper.default_mapper.typ self t);
+      constructor_declaration =
+        (fun self c ->
+          let c = Ast_mapper.default_mapper.constructor_declaration self c in
+          { c with
+            pcd_name = { c.pcd_name with txt = m ^ "_" ^ String.uncapitalize_ascii c.pcd_name.txt } })
+    }
+  in
+  if d.ptype_name.txt <> "t" then refuse ("type " ^ d.ptype_name.txt ^ " in module " ^ m);
+  let d = mapper.type_declaration mapper d in
+  { d with ptype_name = { d.ptype_name with txt = flat_name m } }
+
+let module_name (mb : module_binding) : string =
+  match mb.pmb_name.txt with Some m -> m | None -> refuse "an anonymous module"
+
+(* The type declarations a module item carries, renamed; `None` for an item outside any module. *)
+let decls_of_item (item : structure_item) : type_declaration list option =
+  match item.pstr_desc with
+  | Pstr_module mb ->
+    let m = module_name mb in
+    (match mb.pmb_expr.pmod_desc with
+     | Pmod_structure items ->
+       Some
+         (List.concat_map
+            (fun i ->
+              match i.pstr_desc with
+              | Pstr_type (_, ds) -> List.map (rename_decl m) ds
+              | _ -> refuse ("an item other than a type in module " ^ m))
+            items)
+     | _ -> refuse ("module " ^ m ^ ", which is no structure"))
+  | Pstr_recmodule mbs ->
+    Some
+      (List.concat_map
+         (fun mb ->
+           let m = module_name mb in
+           match mb.pmb_expr.pmod_desc with
+           | Pmod_constraint (_, { pmty_desc = Pmty_signature sigs; _ }) ->
+             List.concat_map
+               (fun s ->
+                 match s.psig_desc with
+                 | Psig_type (_, ds) -> List.map (rename_decl m) ds
+                 | _ -> refuse ("an item other than a type in module rec " ^ m))
+               sigs
+           | _ -> refuse ("module rec " ^ m ^ ", which has no signature"))
+         mbs)
+  | _ -> None
+
+(* Every module's types as one recursive group, after the items that are no module. *)
+let flatten (structure : structure) : structure =
+  let others = List.filter (fun i -> decls_of_item i = None) structure in
+  match List.concat (List.filter_map decls_of_item structure) with
+  | [] -> others
+  | decls -> others @ [ Ast_helper.Str.type_ Asttypes.Recursive decls ]
+
+(* ---- 2. split ---- *)
 
 (* The type constructor names a declaration mentions, unqualified. *)
 let mentions (decl : type_declaration) : string list =
@@ -97,4 +201,4 @@ let split_item (item : structure_item) : structure_item list =
 let () =
   let path = Sys.argv.(1) in
   let structure = Parse.implementation (Lexing.from_string (read_file path)) in
-  Format.printf "%a@." Pprintast.structure (List.concat_map split_item structure)
+  Format.printf "%a@." Pprintast.structure (List.concat_map split_item (flatten structure))

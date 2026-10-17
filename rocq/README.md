@@ -21,7 +21,7 @@ The research developments of 2026-10-16 (the vessel and to-do studies, the hand 
 | `Skeleton.v` | `Effect4.Run.Tree`'s control skeleton: `tree`, `bind`, `loop`, `whileRounds`, `level`, `statements`, `unfolded`, `ofProgram`, as the functor `Skeleton (E : Eval)`; the evaluator `Tree.Eval` is the module type `Eval` | GENERATED: `make gen-rocq` (`src/OCaml5/Tools/GallinaGen.lean`, printer `OCaml5.Lcnf.Gallina`) |
 | `SkeletonApprox.v` | `Approx.ofProgram_approx`: a larger budget only extends the tree, for every program and every evaluator | by hand |
 | `Assumptions.v` | the assumptions of each theorem above, over a module declared at `Eval` | by hand |
-| `tools/split_types.ml` | one recursive OCaml type group printed as its components, so rocq-of-ocaml takes it | by hand |
+| `tools/split_types.ml` | the program types' modules (`Ty.t`, `module rec Eff …`) flattened to one type group in the Rocq names (`ty`, `Eff_succeed`), then printed as its components, so rocq-of-ocaml takes it | by hand |
 | `_RocqProject` | the load path (`-Q . E4`) and the files, in order | by hand |
 
 ```mermaid
