@@ -2,7 +2,7 @@
 
    What it is: two measurements of the frame writer (ocaml/eff/eff_frame.ml).
      1. The choice (slice 5.1): three ways to write a nested frame, each over the same encoder
-        of `Eff_types.val_` (the frames of Eff_val.emit), on values of every shape:
+        of `Eff_types.Val.t` (the frames of Eff_val.emit), on values of every shape:
           copy     the writer before slice 5.1: each nested payload goes into a fresh Buffer and
                    is copied behind its header, so a byte at depth d is written d + 1 times;
           reserve  reserve the 8-byte length, write the payload in place, fill the length after,
@@ -221,30 +221,30 @@ end
 
 (* The frames of Eff_val.emit (ocaml/eff/eff_val.ml), over a writer. *)
 module Val_encoder (W : WRITER) = struct
-  let rec emit w (v : val_) =
+  let rec emit w (v : Val.t) =
     match v with
-    | Val_unit -> W.frame w 9 ""
-    | Val_bool x -> W.frame w 1 (if x then "\001" else "\000")
-    | Val_nat n -> W.nat w n
-    | Val_str s ->
+    | Val.Unit -> W.frame w 9 ""
+    | Val.Bool x -> W.frame w 1 (if x then "\001" else "\000")
+    | Val.Nat n -> W.nat w n
+    | Val.Str s ->
       if not (String.is_valid_utf_8 s) then invalid_arg "Val_encoder: not valid UTF-8";
       W.frame w 3 s
-    | Val_bytes codes -> W.frame w 8 (string_of_codes codes)
-    | Val_list xs -> W.nested w 4 (fun w -> List.iter (emit w) xs)
-    | Val_pair (x, y) ->
+    | Val.Bytes codes -> W.frame w 8 (string_of_codes codes)
+    | Val.List xs -> W.nested w 4 (fun w -> List.iter (emit w) xs)
+    | Val.Pair (x, y) ->
       W.nested w 5 (fun w ->
           emit w x;
           emit w y)
-    | Val_none -> W.frame w 6 ""
-    | Val_some x -> W.nested w 7 (fun w -> emit w x)
-    | Val_ctor (i, args) ->
+    | Val.None -> W.frame w 6 ""
+    | Val.Some x -> W.nested w 7 (fun w -> emit w x)
+    | Val.Ctor (i, args) ->
       W.nested w 10 (fun w ->
           W.nat w i;
           List.iter (emit w) args)
-    | Val_ref (k, d) -> W.frame w 11 (String.make 1 (Char.chr k) ^ string_of_codes d)
-    | Val_handle (k, key) -> W.frame w 12 (String.make 1 (Char.chr k) ^ nat_digits key)
-    | Val_negInt n -> W.frame w 13 (nat_digits n)
-    | Val_float bits -> W.frame w 14 (be64_string bits)
+    | Val.Ref (k, d) -> W.frame w 11 (String.make 1 (Char.chr k) ^ string_of_codes d)
+    | Val.Handle (k, key) -> W.frame w 12 (String.make 1 (Char.chr k) ^ nat_digits key)
+    | Val.NegInt n -> W.frame w 13 (nat_digits n)
+    | Val.Float bits -> W.frame w 14 (be64_string bits)
 
   let to_bytes v = W.run emit v
 end
@@ -255,12 +255,12 @@ module Enc_sizes = Val_encoder (Sizes)
 
 (* ------------------------------------------------------------------ the values *)
 
-let todo i = Val_ctor (0, [ Val_nat i; Val_str (Printf.sprintf "to-do number %d" i); Val_bool (i mod 3 = 0) ])
-let todos n = Val_list (List.init n todo)
-let rec deep_some d = if d = 0 then Val_nat 1 else Val_some (deep_some (d - 1))
-let rec deep_ctor d = if d = 0 then Val_unit else Val_ctor (d land 7, [ Val_str "name"; deep_ctor (d - 1) ])
-let wide n = Val_list (List.init n (fun i -> Val_nat i))
-let rec tree d = if d = 0 then Val_nat d else Val_pair (tree (d - 1), tree (d - 1))
+let todo i = Val.Ctor (0, [ Val.Nat i; Val.Str (Printf.sprintf "to-do number %d" i); Val.Bool (i mod 3 = 0) ])
+let todos n = Val.List (List.init n todo)
+let rec deep_some d = if d = 0 then Val.Nat 1 else Val.Some (deep_some (d - 1))
+let rec deep_ctor d = if d = 0 then Val.Unit else Val.Ctor (d land 7, [ Val.Str "name"; deep_ctor (d - 1) ])
+let wide n = Val.List (List.init n (fun i -> Val.Nat i))
+let rec tree d = if d = 0 then Val.Nat d else Val.Pair (tree (d - 1), tree (d - 1))
 
 let values =
   [ ("1 to-do", todo 7);
@@ -274,9 +274,9 @@ let values =
 
 (* ----------------------------------------------------------------- the programs *)
 
-let lit n = Term_lit (Lit_nat n)
-let rec bind_chain d = if d = 0 then Eff_succeed (lit 1) else Eff_bind (Eff_succeed (lit d), bind_chain (d - 1))
-let rec bind_tree d = if d = 0 then Eff_succeed (lit 1) else Eff_bind (bind_tree (d - 1), bind_tree (d - 1))
+let lit n = Term.Lit (Lit.Nat n)
+let rec bind_chain d = if d = 0 then Eff.Succeed (lit 1) else Eff.Bind (Eff.Succeed (lit d), bind_chain (d - 1))
+let rec bind_tree d = if d = 0 then Eff.Succeed (lit 1) else Eff.Bind (bind_tree (d - 1), bind_tree (d - 1))
 
 let golden_programs () =
   match Sys.readdir goldens with

@@ -29,12 +29,18 @@ properties of the *syntax*, and leaves typing to `ocamlc`. What it decides:
 | `unbound-module-type` | a functor parameter or a packed module whose module type is no declared one |
 | `duplicate-module-type` | one module that declares a module type name twice |
 | `private-abstract` | `private` on an abstract type, which has no body to make private |
+| `rec-module-value` | a member of a recursive module group that declares a value: only a type-only group is evaluated safely |
+
+A qualified constructor (`Eff.Succeed`) is checked when its module is one the checker reads in
+full: a module of this unit, or of a unit an `open` hands it (`Interface.modules`).
 
 ## Two deliberate silences
 
-**Qualified names are not checked.** `M.f` names something in another compilation unit, and this
-module has no way to see it. Every check on a name therefore applies only to unqualified ones.
-That is a real limit: a typo inside a qualified name reaches `ocamlc`.
+**Qualified names are not checked**, unless their module is one the checker reads in full. `M.f`
+names something in another compilation unit, and this module has no way to see it. Every check
+on a name therefore applies only to unqualified ones and to the constructors of a module of this
+unit or of an opened unit's interface (`Eff.Succeed`). That is a real limit: a typo inside any
+other qualified name reaches `ocamlc`.
 
 **`Decl.rawD` is opaque.** Verbatim text is not parsed, so nothing inside it is scoped. The
 structure that holds a `rawD`, the module or a functor's body, is checked with its value scope
@@ -90,6 +96,10 @@ structure Env where
   declaration its own name sets it, and then a reference cannot resolve to a binder other than
   the one the generator meant. -/
   noShadow : Option (List String) := none
+  /-- Modules whose types the checker reads in full: this unit's own and an opened unit's. A
+  constructor qualified by one of them (`Eff.Succeed`) is checked like an unqualified one; a name
+  qualified by any other module belongs to a unit the checker cannot see. -/
+  known : List String := []
 deriving Repr, Inhabited
 
 namespace Env
@@ -153,13 +163,24 @@ def knowsModule (e : Env) (n : String) : Bool :=
 def knowsModuleType (e : Env) (n : String) : Bool :=
   e.openScope || isQualifiedName n || e.moduleTypes.contains n
 
+/-- Whether a qualified name's module is one whose types the checker reads in full
+(`Eff.Succeed` after an `open` of the program types' owner). -/
+def knowsQualifier (e : Env) (n : String) : Bool :=
+  match n.splitOn "." with
+  | [m, _] => e.known.contains m
+  | _ => false
+
 end Env
 
 /-- What an opened compilation unit makes available, as far as this checker reads it: its type
-declarations (their constructors and labels) and its value names. -/
+declarations (their constructors and labels), its modules' type declarations and its value
+names. -/
 structure Interface where
   name : String
   types : List TypeDecl := []
+  /-- The unit's modules, each with the type declarations it holds: an `open` brings their
+  constructors and labels into scope qualified (`Eff.Succeed`, `Row.name`). -/
+  modules : List (String × List TypeDecl) := []
   values : List String := []
 deriving Repr, Inhabited
 
@@ -196,12 +217,22 @@ private def ctorsOfBody : TyBody → List (String × Nat)
   | .variant cs => cs.map fun c => (c.name, c.args.length)
   | _ => []
 
-/-- The scope an `open` of a unit adds: its constructors, its labels and its values. Its type
-names stay out, so a type of the module may shadow one it opens, as in OCaml. -/
+/-- Each module's constructors, qualified by the module (`Eff.Succeed`), with their arity. -/
+private def qualifiedCtors (ms : List (String × List TypeDecl)) : List (String × Nat) :=
+  ms.flatMap fun (m, ds) => ds.flatMap fun d => (ctorsOfBody d.body).map fun (c, k) => (m ++ "." ++ c, k)
+
+/-- Each module's labels, qualified by the module (`Row.name`). -/
+private def qualifiedFields (ms : List (String × List TypeDecl)) : List String :=
+  ms.flatMap fun (m, ds) => ds.flatMap fun d => (fieldsOfBody d.body).map (m ++ "." ++ ·)
+
+/-- The scope an `open` of a unit adds: its constructors, its labels, its modules and its values.
+Its type names stay out, so a type of the module may shadow one it opens, as in OCaml. -/
 def Env.withInterface (e : Env) (u : Interface) : Env :=
-  { e with ctors := u.types.flatMap (ctorsOfBody ·.body) ++ e.ctors,
-           fields := u.types.flatMap (fieldsOfBody ·.body) ++ e.fields,
-           values := u.values ++ e.values }
+  { e with ctors := u.types.flatMap (ctorsOfBody ·.body) ++ qualifiedCtors u.modules ++ e.ctors,
+           fields := u.types.flatMap (fieldsOfBody ·.body) ++ qualifiedFields u.modules ++ e.fields,
+           values := u.values ++ e.values,
+           modules := u.modules.map (·.1) ++ e.modules,
+           known := u.modules.map (·.1) ++ e.known }
 
 /-! ## The checker -/
 
@@ -216,28 +247,29 @@ private def dup (code site : String) (ns : List String) : List Diag :=
 private def badName (site kind : String) (ok : String → Bool) (n : String) : List Diag :=
   if ok n then [] else [{ code := "bad-name", site := site, detail := kind ++ " `" ++ n ++ "`" }]
 
-/-- A constructor is declared, and applied at its arity. A qualified name is not checked: it
-names something in another compilation unit. -/
+/-- A constructor is declared, and applied at its arity. A qualified name is checked when its
+module is one the checker reads in full (`Env.known`: `Eff.Succeed`); any other qualified name
+names something in another compilation unit and is not checked. -/
 def checkCtorUse (env : Env) (site : String) (n : String) (given : Nat) : List Diag :=
-  if Env.isQualifiedName n then []
-  else
-    match env.ctorArity n with
-    | none => [{ code := "unbound-ctor", site := site, detail := "`" ++ n ++ "`" }]
-    | some want =>
-        if want == given then []
-        else [{ code := "ctor-arity", site := site,
-                detail := "`" ++ n ++ "` takes " ++ toString want ++ ", given "
-                            ++ toString given }]
+  match env.ctorArity n with
+  | some want =>
+      if want == given then []
+      else [{ code := "ctor-arity", site := site,
+              detail := "`" ++ n ++ "` takes " ++ toString want ++ ", given " ++ toString given }]
+  | none =>
+      if Env.isQualifiedName n && !env.knowsQualifier n then []
+      else [{ code := "unbound-ctor", site := site, detail := "`" ++ n ++ "`" }]
 
 /-- A constructor applied to one `_`, which matches its arguments at every arity (§11.6): the
-constructor is declared and takes at least one. A qualified name is not checked. -/
+constructor is declared and takes at least one. A qualified name is checked as `checkCtorUse`
+checks it. -/
 def checkCtorAny (env : Env) (site : String) (n : String) : List Diag :=
-  if Env.isQualifiedName n then []
-  else
-    match env.ctorArity n with
-    | none => [{ code := "unbound-ctor", site := site, detail := "`" ++ n ++ "`" }]
-    | some 0 => [{ code := "ctor-arity", site := site, detail := "`" ++ n ++ "` takes 0, given 1" }]
-    | some _ => []
+  match env.ctorArity n with
+  | some 0 => [{ code := "ctor-arity", site := site, detail := "`" ++ n ++ "` takes 0, given 1" }]
+  | some _ => []
+  | none =>
+      if Env.isQualifiedName n && !env.knowsQualifier n then []
+      else [{ code := "unbound-ctor", site := site, detail := "`" ++ n ++ "`" }]
 
 /-- Constructor existence and arity in a pattern, plus duplicate record labels; with each
 pattern, whether it is `_`, so that a constructor applied to one `_` is read at every arity. -/
@@ -396,9 +428,14 @@ def checkDeclAlg (units : List Interface) : DeclAlgebra Checked where
   decl_comment _ := (id, fun _ => [])
   -- what verbatim text binds is invisible, so it opens the scope of the structure that holds it
   decl_rawD _ := (Env.opened, fun _ => [])
-  -- a functor's parameters are modules of its body, each at a module type in scope
+  -- a functor's parameters are modules of its body, each at a module type in scope; a module's
+  -- constructors and labels are known outside it, qualified (`Ty.Never`)
   decl_moduleD n params body :=
-    (fun e => { e with types := n :: e.types, modules := n :: e.modules },
+    (fun e =>
+       let own := body.foldl (fun e d => d.1 e) ({} : Env)
+       { e with types := n :: e.types, modules := n :: e.modules, known := n :: e.known,
+                ctors := own.ctors.map (fun (c, k) => (n ++ "." ++ c, k)) ++ e.ctors,
+                fields := own.fields.map (n ++ "." ++ ·) ++ e.fields },
      fun env =>
        let inner := body.foldl (fun e d => d.1 e) { env with modules := params.map (·.1) ++ env.modules }
        badName n "module name" isUpperIdent n
@@ -417,6 +454,20 @@ def checkDeclAlg (units : List Interface) : DeclAlgebra Checked where
   decl_moduleTypeD n items :=
     (fun e => { e with moduleTypes := n :: e.moduleTypes },
      fun _ => badName n "module type name" isUpperIdent n ++ checkSigItems n items)
+  -- each member is a module of the unit, its signature checked as a module type's; a member
+  -- that declares a value is refused, since only a type-only group is evaluated safely
+  decl_moduleRecD members :=
+    let typesOf (items : List SigItem) : List TypeDecl :=
+      items.filterMap fun | .type d => some d | .value _ _ => none
+    let owned := members.map fun (n, items) => (n, typesOf items)
+    (fun e => { e with types := members.map (·.1) ++ e.types, modules := members.map (·.1) ++ e.modules,
+                       known := members.map (·.1) ++ e.known,
+                       ctors := qualifiedCtors owned ++ e.ctors, fields := qualifiedFields owned ++ e.fields },
+     fun _ => members.flatMap fun (n, items) =>
+       badName n "module name" isUpperIdent n ++ checkSigItems n items
+         ++ items.filterMap fun
+           | .value v _ => some { code := "rec-module-value", site := n, detail := "`" ++ v ++ "`" }
+           | .type _ => none)
 
 /-- Everything a module declares at its top level, under the interfaces of the units it opens. -/
 def Env.ofModule (m : Module) (units : List Interface := []) : Env :=
@@ -492,6 +543,24 @@ private def joinUsed : Expr := .letAttr "local always" "j" (.fn ["y"] (.var "y")
 private def joinSelf : Expr := .letAttr "local always" "j" (.fn ["y"] (.app (.var "j") [.var "y"])) .unit
 #guard one [.letD false [{ name := "f", params := [("x", none)], body := joinUsed }]] == []
 #guard one [.letD false [{ name := "f", body := joinSelf }]] == ["unbound-value"]
+-- The program types at their owner: an `open` of a unit whose interface holds modules checks
+-- each constructor qualified by one of them, at its arity; a module of no handed unit is not read.
+private def effDecl : TypeDecl :=
+  { name := "t", params := ["op"], body := .variant [{ name := "Succeed", args := [Ty.int] }, { name := "Done" }] }
+private def ownerUnit : Interface := { name := "Types", modules := [("Eff", [effDecl])] }
+#guard one [.openD "Types", .letD false [{ name := "x", body := .ctor "Eff.Succeed" [.int 1] }]] [ownerUnit] == []
+#guard one [.openD "Types", .letD false [{ name := "x", body := .ctor "Eff.Succeed" [] }]] [ownerUnit]
+  == ["ctor-arity"]
+#guard one [.openD "Types", .letD false [{ name := "x", body := .ctor "Eff.Missing" [] }]] [ownerUnit]
+  == ["unbound-ctor"]
+#guard one [.openD "Types", .letD false [{ name := "x", body := .ctor "Other.Missing" [] }]] [ownerUnit] == []
+-- A module of the unit is read as well; a recursive group holds types only.
+#guard one [.moduleD "Ty" [] [.types [{ name := "t", body := .variant [{ name := "Never" }] }]],
+    .letD false [{ name := "x", body := .ctor "Ty.Never" [.int 1] }]] == ["ctor-arity"]
+#guard one [.moduleRecD [("A", [.type { name := "t", body := .alias (.named "B.t") }]),
+    ("B", [.type { name := "t", body := .variant [{ name := "Leaf" }, { name := "Node", args := [.named "A.t"] }] }])],
+    .letD false [{ name := "x", body := .ctor "B.Node" [.ctor "B.Leaf" []] }]] == []
+#guard one [.moduleRecD [("A", [.value "v" Ty.int])]] == ["rec-module-value"]
 -- `C _` matches a constructor of every arity from one (the constructor tables' arms); on a
 -- constant constructor it is refused, as OCaml refuses it.
 #guard one [.types [{ name := "t", body := .variant [{ name := "A" }, { name := "B", args := [Ty.int, Ty.int] }] }],

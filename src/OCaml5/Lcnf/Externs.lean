@@ -36,8 +36,8 @@ node it addresses (`docs/research/2026-09-08-engine-prof-chain.md` §5.2, gap 1)
 A token that begins with `+` **appends** a type argument instead of replacing the list, and
 either form may be written `T:i,j,k` — the type constant `T` applied to the arguments at
 those positions *of the element type the chain is handed*. `field
-Effect4.Machine.RunMachine.fibers +exit_:2,3,4,5,6 F.t` spells
-`((ν,σ,β,ε,δ,ι,α,χ,κ,φ) run_fiber, (β,ε,δ,ι,α) exit_) F.t`: a carrier that is a table of
+Effect4.Machine.RunMachine.fibers +Exit.t:2,3,4,5,6 F.t` spells
+`((ν,σ,β,ε,δ,ι,α,χ,κ,φ) run_fiber, (β,ε,δ,ι,α) Exit.t) F.t`: a carrier that is a table of
 fibers **and** keeps their exits needs both types, and neither of them can be named from
 outside the functor (lane G3, `docs/research/2026-09-08-engine-lane-g3-delivery.md`). An index
 the element type does not have becomes a type constructor nothing declares, so a Lean change
@@ -301,7 +301,7 @@ private def chainLit (args : List Ml.Ty) (tok : String) : Ml.Ty :=
 argument list with the literal type `T`, which is how a carrier is applied to a type the
 generator declares *inside* the functor (`["@node", "P.t"]` is `node P.t` whatever it is
 handed); a `+T` token appends one instead of replacing, and either may name the element type's
-own arguments (`+exit_:2,3,4,5,6`), which is how one carrier takes two generated types. -/
+own arguments (`+Exit.t:2,3,4,5,6`), which is how one carrier takes two generated types. -/
 def applyChain (chain : List String) (args : List Ml.Ty) : Ml.Ty :=
   let lits := chain.filterMap fun c => if c.startsWith "@" then some (chainLit args c) else none
   let more := chain.filterMap fun c => if c.startsWith "+" then some (chainLit args c) else none

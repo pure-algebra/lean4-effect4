@@ -31,39 +31,39 @@ let carriers = "ocaml/gen/api_gen.ml as generated: List everywhere, no externs"
 
 type nu = eff_name
 type s = eff_thunk
-type prim_ = (nu, s, val_, err, defect, fiber_id, unit) prim
-type ffiber = (nu, s, val_, err, defect, fiber_id, unit) frame_fiber
-type fevent = (nu, s, val_, err, defect, fiber_id, unit) frame_event
+type prim_ = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) prim
+type ffiber = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_fiber
+type fevent = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_event
 
 type machine =
-  (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_, ffiber, fevent) run_machine
+  (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_, ffiber, fevent) run_machine
 
-type fiber = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, ffiber) run_fiber
-type event = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, fevent) run_event
-type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
+type fiber = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, ffiber) run_fiber
+type event = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, fevent) run_event
+type api_decision = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) run_decision
 
 type interp =
-  (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_) run_interp
+  (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_) run_interp
 
-type program = native_op eff
+type program = NativeOp.t Eff.t
 
-let interp_of (table : row list) (p : program) : interp = program_interp_of p table
+let interp_of (table : Row.t list) (p : program) : interp = program_interp_of p table
 let load (p : program) ~(fuel : int) : machine =
   api_load p fuel
 
 (* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation
    (api_gen.ml); the bool is `Effect4.Machine.settled`. *)
-let step (table : row list) (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
+let step (table : Row.t list) (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
   : machine * bool =
   step_decision_state_at_program_replay_checked_from_spec_1 p table i fuel m d
 
-let run_api (table : row list) (p : program) ~(fuel : int) : outcome * machine =
+let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine =
   let r = api_run p fuel table fuel in
   (r.outcome, r.machine)
 
 (* The machine's admission at the application of this row table, which declares no named type
    (decisions row 407 (5)). *)
-let admit (table : row list) (m : machine) (d : api_decision) : bool =
+let admit (table : Row.t list) (m : machine) (d : api_decision) : bool =
   Option.is_none (program_admit { rows = table; services = []; types = [] } m d)
 
 let fibers (m : machine) : (fiber_id * fiber) list =
@@ -81,11 +81,11 @@ let middleware (m : machine) : bool = m.middleware_installed
 let finished (m : machine) : bool = run_machine_finished m
 
 let completed_exits (m : machine)
-  : (fiber_id * (val_, err, defect, fiber_id, unit) exit_) list =
+  : (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list =
   run_machine_completed_exits m
 
 let stores_of (m : machine) : stores = m.state
-let refs (m : machine) : val_ list = (stores_of m).refs
+let refs (m : machine) : Val.t list = (stores_of m).refs
 let next_name (m : machine) : int = (stores_of m).next_name
 let due_count (m : machine) : int = List.length (stores_of m).deferreds.due
 let cell_count (m : machine) : int = List.length (stores_of m).deferreds.cells
@@ -102,7 +102,7 @@ let memo_paths (m : machine) : (int * (int list * int list list) list) list =
     (stores_of m).memo
 
 let f_id (f : fiber) : fiber_id = f.id
-let f_exit (f : fiber) : (val_, err, defect, fiber_id, unit) exit_ option = f.exit_
+let f_exit (f : fiber) : (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t option = f.exit_
 let f_parked (f : fiber) : parked = f.parked
 let f_running (f : fiber) : bool = f.running
 let f_finalizing (f : fiber) : bool = Option.is_some f.finalizing

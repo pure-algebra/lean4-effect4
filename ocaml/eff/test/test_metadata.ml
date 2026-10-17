@@ -37,12 +37,12 @@ let () =
       | _ -> failwith "metadata TSV arity");
   check "all selected families exercised" (List.length (List.sort_uniq compare !families) = 6);
   let open Eff_types in
-  let key n s = { name = (n);
+  let key n s = { ServiceKey.name = (n);
     service = (s) } in
   let invalid xs =
-    let value = { answer = Ty_nat; error = Ty_never; requires = xs } in
+    let value = { EffTy.answer = Ty.Nat; error = Ty.Never; requires = xs } in
     let bytes = Eff_frame.to_string (fun b () -> Eff_frame.emit_ctor b 0 (fun b ->
-      emit_ty b value.answer; emit_ty b value.error;
+      emit_ty b value.EffTy.answer; emit_ty b value.EffTy.error;
       Eff_frame.emit_list b emit_service_key xs)) () in
     check "unordered requirements decoder" (decode_eff_ty_exact bytes = None);
     check "unordered requirements encoder" (try ignore (encode_eff_ty value); false with Invalid_argument _ -> true)

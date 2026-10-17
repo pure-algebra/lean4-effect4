@@ -3,30 +3,30 @@
 open Eff_types
 module G = Effect4_gen.Api_gen
 
-type program = native_op eff
-type exit = (val_, err, defect, int, unit) exit_
-type completion = (val_, err, defect, int, unit) Eff_types.completion
+type program = NativeOp.t Eff.t
+type exit = (Val.t, Err.t, Defect.t, int, unit) Exit.t
+type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
 type app = G.sig_app
 
 let app ?(rows = []) ?(services = []) () : app = { G.rows; services; types = [] }
-let succeed (v : val_) : exit = Exit_success v
-let fail (v : val_) : exit = Exit_failure [ Reason_fail (G.program_err_of v, []) ]
+let succeed (v : Val.t) : exit = Exit.Success v
+let fail (v : Val.t) : exit = Exit.Failure [ Reason.Fail (G.program_err_of v, []) ]
 let check (a : app) (p : program) = G.run_kit_check a p
 let admit (a : app) (p : program) = G.run_kit_admit a p
 let ty_text = G.run_kit_ty_text
 
-type 's reactor = row -> val_ -> 's -> (completion * 's) option
+type 's reactor = Row.t -> Val.t -> 's -> (completion * 's) option
 
 module Reactor = struct
   let silent : unit reactor = fun _ _ () -> None
 
   let tape : exit list reactor =
-   fun _ _ t -> match t with ex :: rest -> Some (Completion_ofExit ex, rest) | [] -> None
+   fun _ _ t -> match t with ex :: rest -> Some (Completion.OfExit ex, rest) | [] -> None
 
   let by_name named : unit reactor =
-   fun (r : row) v () ->
-    match List.assoc_opt r.name named with
-    | Some f -> Option.map (fun ex -> (Completion_ofExit ex, ())) (f v)
+   fun (r : Row.t) v () ->
+    match List.assoc_opt r.Row.name named with
+    | Some f -> Option.map (fun ex -> (Completion.OfExit ex, ())) (f v)
     | None -> None
 
   let first (rs : 's reactor list) : 's reactor = fun r v st -> List.find_map (fun h -> h r v st) rs
@@ -36,20 +36,20 @@ module Reactor = struct
 end
 
 type reply_fault = G.reply_fault =
-  | ReplyFault_answerType of ty
-  | ReplyFault_errorType of ty
+  | ReplyFault_answerType of Ty.t
+  | ReplyFault_errorType of Ty.t
   | ReplyFault_reservedDefect
 
 type stop =
   | Finished of exit
-  | Waiting of int * val_
-  | Refused of int * val_ * exit * reply_fault option
+  | Waiting of int * Val.t
+  | Refused of int * Val.t * exit * reply_fault option
   | Unsettled
   | Stopped of string
 
 type step = G.step =
-  | Step_called of int * val_ * exit
-  | Step_celled of G.sync_op * val_
+  | Step_called of int * Val.t * exit
+  | Step_celled of G.sync_op * Val.t
 
 type trace = { steps : step list; stop : stop }
 
@@ -69,7 +69,7 @@ let reply_fault (a : app) i ex = G.run_kit_reply_fault a i ex
 
 (* A row's position in the table, found by identity: both runners hand the reactor the table's
    own records (Kit_machine M3). *)
-let position (a : app) (row : row) =
+let position (a : app) (row : Row.t) =
   let rec go i = function [] -> None | r :: rest -> if r == row then Some i else go (i + 1) rest in
   go 0 a.G.rows
 
@@ -77,7 +77,7 @@ let position (a : app) (row : row) =
 let admitted (a : app) (r : 's reactor) : 's reactor =
  fun row v st ->
   match r row v st, position a row with
-  | Some (Completion_ofExit ex, _), Some i when Option.is_some (reply_fault a i ex) -> None
+  | Some (Completion.OfExit ex, _), Some i when Option.is_some (reply_fault a i ex) -> None
   | answer, _ -> answer
 
 (* Why a call waits: the reactor asked again; a reply that does not fit is named with its
@@ -86,7 +86,7 @@ let waiting (a : app) (r : 's reactor) st i v =
   match List.nth_opt a.G.rows i with
   | Some row -> (
     match r row v st with
-    | Some (Completion_ofExit ex, _) -> (
+    | Some (Completion.OfExit ex, _) -> (
       match reply_fault a i ex with Some f -> Refused (i, v, ex, Some f) | None -> Waiting (i, v))
     | _ -> Waiting (i, v))
   | None -> Waiting (i, v)
@@ -109,7 +109,7 @@ let machine_trace a r (m : 's Kit_machine.run) =
          match List.nth_opt a.G.rows i with
          | Some row -> (
            match r row v m.state with
-           | Some (Completion_ofExit ex, _) -> Refused (i, v, ex, None)
+           | Some (Completion.OfExit ex, _) -> Refused (i, v, ex, None)
            | _ -> Waiting (i, v))
          | None -> Waiting (i, v))
        | Kit_machine.Out_of_fuel | Kit_machine.Out_of_rounds -> Unsettled
@@ -214,11 +214,11 @@ module Json = struct
          J.Object
            [ ("status", J.String "ok");
              ("type", eff_ty_json t);
-             ("text", J.String (Printf.sprintf "Effect<%s, %s>" (ty_text t.answer) (ty_text t.error))) ])
+             ("text", J.String (Printf.sprintf "Effect<%s, %s>" (ty_text t.EffTy.answer) (ty_text t.EffTy.error))) ])
     | Error r -> J.Object [ ("status", J.String "refused"); ("refusal", refusal_json r) ]
 
   let row_fields (a : app) i =
-    ("row", J.Int i) :: (match List.nth_opt a.G.rows i with Some (r : row) -> [ ("name", J.String r.name) ] | None -> [])
+    ("row", J.Int i) :: (match List.nth_opt a.G.rows i with Some (r : Row.t) -> [ ("name", J.String r.Row.name) ] | None -> [])
 
   let call_json a (i, v, ex) = J.Object (row_fields a i @ [ ("request", value_json v); ("answer", exit_json ex) ])
 

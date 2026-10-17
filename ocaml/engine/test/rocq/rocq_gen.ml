@@ -18,24 +18,24 @@ let run_tree_plain__lam_0 (x1_1 : bool) (x2_2 : bool) : bool =
 
 (* LCNF mono: Effect4.Run.Tree.InRocq._lam_1 (_x.1 : Bool) (x.2 : Effect4.Program.Eff Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_in_rocq__lam_1 (_x_1 : bool) (x_2 : native_op eff) : bool =
-  match (x_2 : _ eff) with
-    | Eff_succeed _ -> _x_1
-    | Eff_fail _ -> _x_1
-    | Eff_sync _ -> _x_1
-    | Eff_suspend _ -> _x_1
-    | Eff_bind (_, _) -> _x_1
-    | Eff_select (_, _, _, _) -> _x_1
-    | Eff_iterate (_, _, _, _, _, _) -> _x_1
-    | Eff_defs (_, _, _, _) -> _x_1
-    | Eff_invoke (_, _, _) -> _x_1
-    | Eff_perform (op_26, _) -> (match (op_26 : native_op) with
-        | NativeOp_refMake -> _x_1
-        | NativeOp_refGet -> _x_1
-        | NativeOp_refSet -> _x_1
-        | NativeOp_external _ -> _x_1
-        | NativeOp_call _ -> _x_1
-        | NativeOp_param _ -> _x_1
+let run_tree_in_rocq__lam_1 (_x_1 : bool) (x_2 : NativeOp.t Eff.t) : bool =
+  match (x_2 : _ Eff.t) with
+    | Eff.Succeed _ -> _x_1
+    | Eff.Fail _ -> _x_1
+    | Eff.Sync _ -> _x_1
+    | Eff.Suspend _ -> _x_1
+    | Eff.Bind (_, _) -> _x_1
+    | Eff.Select (_, _, _, _) -> _x_1
+    | Eff.Iterate (_, _, _, _, _, _) -> _x_1
+    | Eff.Defs (_, _, _, _) -> _x_1
+    | Eff.Invoke (_, _, _) -> _x_1
+    | Eff.Perform (op_26, _) -> (match (op_26 : NativeOp.t) with
+        | NativeOp.RefMake -> _x_1
+        | NativeOp.RefGet -> _x_1
+        | NativeOp.RefSet -> _x_1
+        | NativeOp.External _ -> _x_1
+        | NativeOp.Call _ -> _x_1
+        | NativeOp.Param _ -> _x_1
         | _ -> false)
     | _ -> false
 
@@ -43,42 +43,42 @@ let run_tree_in_rocq__lam_1 (_x_1 : bool) (x_2 : native_op eff) : bool =
 
 (* LCNF mono: Effect4.Run.Tree.Plain._lam_2 (_x.1 : Bool) (x.2 : Effect4.Program.Stmt Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_plain__lam_2 (_x_1 : bool) (x_2 : native_op stmt) : bool =
+let run_tree_plain__lam_2 (_x_1 : bool) (x_2 : NativeOp.t Stmt.t) : bool =
   _x_1
 
 
 
 (* LCNF mono: Effect4.Run.Tree.Plain._lam_3 (_x.1 : Bool) (x.2 : Effect4.Program.Stmts Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_plain__lam_3 (_x_1 : bool) (x_2 : native_op stmts) : bool =
+let run_tree_plain__lam_3 (_x_1 : bool) (x_2 : NativeOp.t Stmts.t) : bool =
   _x_1
 
 
 
 (* LCNF mono: Effect4.Run.Tree.Plain._lam_4 (_x.1 : Bool) (x.2 : Effect4.Program.Effs Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_plain__lam_4 (_x_1 : bool) (x_2 : native_op effs) : bool =
+let run_tree_plain__lam_4 (_x_1 : bool) (x_2 : NativeOp.t Effs.t) : bool =
   _x_1
 
 
 
 (* LCNF mono: Effect4.Run.Tree.Plain._lam_5 (_x.1 : Bool) (x.2 : Effect4.Program.ActionTerm Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_plain__lam_5 (_x_1 : bool) (x_2 : native_op action_term) : bool =
+let run_tree_plain__lam_5 (_x_1 : bool) (x_2 : NativeOp.t ActionTerm.t) : bool =
   _x_1
 
 
 
 (* LCNF mono: Effect4.Run.Tree.Plain._lam_6 (_x.1 : Bool) (x.2 : Effect4.Program.LayerTerm Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_plain__lam_6 (_x_1 : bool) (x_2 : native_op layer_term) : bool =
+let run_tree_plain__lam_6 (_x_1 : bool) (x_2 : NativeOp.t LayerTerm.t) : bool =
   _x_1
 
 
 
 (* LCNF mono: Effect4.Run.Tree.Plain._lam_7 (_x.1 : Bool) (x.2 : Effect4.Program.LayerTerms Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_plain__lam_7 (_x_1 : bool) (x_2 : native_op layer_terms) : bool =
+let run_tree_plain__lam_7 (_x_1 : bool) (x_2 : NativeOp.t LayerTerms.t) : bool =
   _x_1
 
 
@@ -91,188 +91,188 @@ let run_tree_plain__lam_7 (_x_1 : bool) (x_2 : native_op layer_terms) : bool =
    Effect4.Program.foldMap_layer._redArg (unit : lcAny) (op : lcAny -> lcAny -> lcAny) (node : Effect4.Program.LayerTerm lcAny) (f_eff : (Effect4.Program.Eff lcAny) -> lcAny) (f_stmt : (Effect4.Program.Stmt lcAny) -> lcAny) (f_stmts : (Effect4.Program.Stmts lcAny) -> lcAny) (f_effs : (Effect4.Program.Effs lcAny) -> lcAny) (f_action : (Effect4.Program.ActionTerm lcAny) -> lcAny) (f_layer : (Effect4.Program.LayerTerm lcAny) -> lcAny) (f_layers : (Effect4.Program.LayerTerms lcAny) -> lcAny) : lcAny
    Effect4.Program.foldMap_layers._redArg (unit : lcAny) (op : lcAny -> lcAny -> lcAny) (node : Effect4.Program.LayerTerms lcAny) (f_eff : (Effect4.Program.Eff lcAny) -> lcAny) (f_stmt : (Effect4.Program.Stmt lcAny) -> lcAny) (f_stmts : (Effect4.Program.Stmts lcAny) -> lcAny) (f_effs : (Effect4.Program.Effs lcAny) -> lcAny) (f_action : (Effect4.Program.ActionTerm lcAny) -> lcAny) (f_layer : (Effect4.Program.LayerTerm lcAny) -> lcAny) (f_layers : (Effect4.Program.LayerTerms lcAny) -> lcAny) : lcAny *)
 
-let rec program_fold_map_eff unit (op : _ -> _ -> _) (node : _ eff) (f_eff : _ eff -> _) (f_stmt : _ stmt -> _) (f_stmts : _ stmts -> _) (f_effs : _ effs -> _) (f_action : _ action_term -> _) (f_layer : _ layer_term -> _) (f_layers : _ layer_terms -> _) =
-  match (node : _ eff) with
-    | Eff_suspend body_1 -> (let _x_2 = f_eff node in
+let rec program_fold_map_eff unit (op : _ -> _ -> _) (node : _ Eff.t) (f_eff : _ Eff.t -> _) (f_stmt : _ Stmt.t -> _) (f_stmts : _ Stmts.t -> _) (f_effs : _ Effs.t -> _) (f_action : _ ActionTerm.t -> _) (f_layer : _ LayerTerm.t -> _) (f_layers : _ LayerTerms.t -> _) =
+  match (node : _ Eff.t) with
+    | Eff.Suspend body_1 -> (let _x_2 = f_eff node in
       let _x_3 = program_fold_map_eff unit op body_1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_2 _x_3)
-    | Eff_bind (first_5, rest_6) -> (let _x_7 = f_eff node in
+    | Eff.Bind (first_5, rest_6) -> (let _x_7 = f_eff node in
       let _x_8 = program_fold_map_eff unit op first_5 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_9 = program_fold_map_eff unit op rest_6 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_10 = op _x_8 _x_9 in
       op _x_7 _x_10)
-    | Eff_gen body_12 -> (let _x_13 = f_eff node in
+    | Eff.Gen body_12 -> (let _x_13 = f_eff node in
       let _x_14 = program_fold_map_stmts unit op body_12 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_13 _x_14)
-    | Eff_catchCause (body_16, handler_17) -> (let _x_18 = f_eff node in
+    | Eff.CatchCause (body_16, handler_17) -> (let _x_18 = f_eff node in
       let _x_19 = program_fold_map_eff unit op body_16 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_20 = program_fold_map_eff unit op handler_17 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_21 = op _x_19 _x_20 in
       op _x_18 _x_21)
-    | Eff_matchCause (body_23, on_value_24, on_cause_25) -> (let _x_26 = f_eff node in
+    | Eff.MatchCause (body_23, on_value_24, on_cause_25) -> (let _x_26 = f_eff node in
       let _x_27 = program_fold_map_eff unit op body_23 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_28 = program_fold_map_eff unit op on_value_24 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_29 = program_fold_map_eff unit op on_cause_25 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_30 = op _x_28 _x_29 in
       let _x_31 = op _x_27 _x_30 in
       op _x_26 _x_31)
-    | Eff_onExit (body_33, finalizer_34) -> (let _x_35 = f_eff node in
+    | Eff.OnExit (body_33, finalizer_34) -> (let _x_35 = f_eff node in
       let _x_36 = program_fold_map_eff unit op body_33 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_37 = program_fold_map_eff unit op finalizer_34 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_38 = op _x_36 _x_37 in
       op _x_35 _x_38)
-    | Eff_exit body_40 -> (let _x_41 = f_eff node in
+    | Eff.Exit body_40 -> (let _x_41 = f_eff node in
       let _x_42 = program_fold_map_eff unit op body_40 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_41 _x_42)
-    | Eff_uninterruptible body_44 -> (let _x_45 = f_eff node in
+    | Eff.Uninterruptible body_44 -> (let _x_45 = f_eff node in
       let _x_46 = program_fold_map_eff unit op body_44 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_45 _x_46)
-    | Eff_interruptible body_48 -> (let _x_49 = f_eff node in
+    | Eff.Interruptible body_48 -> (let _x_49 = f_eff node in
       let _x_50 = program_fold_map_eff unit op body_48 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_49 _x_50)
-    | Eff_withFiber action_52 -> (let _x_53 = f_eff node in
+    | Eff.WithFiber action_52 -> (let _x_53 = f_eff node in
       let _x_54 = program_fold_map_action unit op action_52 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_53 _x_54)
-    | Eff_scoped body_56 -> (let _x_57 = f_eff node in
+    | Eff.Scoped body_56 -> (let _x_57 = f_eff node in
       let _x_58 = program_fold_map_eff unit op body_56 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_57 _x_58)
-    | Eff_acquireRelease (acquire_60, release_61) -> (let _x_62 = f_eff node in
+    | Eff.AcquireRelease (acquire_60, release_61) -> (let _x_62 = f_eff node in
       let _x_63 = program_fold_map_eff unit op acquire_60 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_64 = program_fold_map_eff unit op release_61 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_65 = op _x_63 _x_64 in
       op _x_62 _x_65)
-    | Eff_provideLayer (layer_67, _, body_69) -> (let _x_70 = f_eff node in
+    | Eff.ProvideLayer (layer_67, _, body_69) -> (let _x_70 = f_eff node in
       let _x_71 = program_fold_map_layer unit op layer_67 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_72 = program_fold_map_eff unit op body_69 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_73 = op _x_71 _x_72 in
       op _x_70 _x_73)
-    | Eff_provideService (_, _, body_77) -> (let _x_78 = f_eff node in
+    | Eff.ProvideService (_, _, body_77) -> (let _x_78 = f_eff node in
       let _x_79 = program_fold_map_eff unit op body_77 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_78 _x_79)
-    | Eff_catchIf (_, body_82, handler_83) -> (let _x_84 = f_eff node in
+    | Eff.CatchIf (_, body_82, handler_83) -> (let _x_84 = f_eff node in
       let _x_85 = program_fold_map_eff unit op body_82 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_86 = program_fold_map_eff unit op handler_83 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_87 = op _x_85 _x_86 in
       op _x_84 _x_87)
-    | Eff_select (_, _, arm0_91, arm1_92) -> (let _x_93 = f_eff node in
+    | Eff.Select (_, _, arm0_91, arm1_92) -> (let _x_93 = f_eff node in
       let _x_94 = program_fold_map_eff unit op arm0_91 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_95 = program_fold_map_eff unit op arm1_92 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_96 = op _x_94 _x_95 in
       op _x_93 _x_96)
-    | Eff_iterate (_, _, _, _, _, body_103) -> (let _x_104 = f_eff node in
+    | Eff.Iterate (_, _, _, _, _, body_103) -> (let _x_104 = f_eff node in
       let _x_105 = program_fold_map_eff unit op body_103 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_104 _x_105)
-    | Eff_restore (_, body_108) -> (let _x_109 = f_eff node in
+    | Eff.Restore (_, body_108) -> (let _x_109 = f_eff node in
       let _x_110 = program_fold_map_eff unit op body_108 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_109 _x_110)
-    | Eff_defs (_, bodies_113, main_114, layers_115) -> (let _x_116 = f_eff node in
+    | Eff.Defs (_, bodies_113, main_114, layers_115) -> (let _x_116 = f_eff node in
       let _x_117 = program_fold_map_effs unit op bodies_113 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_118 = program_fold_map_eff unit op main_114 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_119 = program_fold_map_layers unit op layers_115 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_120 = op _x_118 _x_119 in
       let _x_121 = op _x_117 _x_120 in
       op _x_116 _x_121)
-    | Eff_invoke (_, _, args_125) -> (let _x_126 = f_eff node in
+    | Eff.Invoke (_, _, args_125) -> (let _x_126 = f_eff node in
       let _x_127 = program_fold_map_effs unit op args_125 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_126 _x_127)
-    | Eff_provideContext (_, body_130) -> (let _x_131 = f_eff node in
+    | Eff.ProvideContext (_, body_130) -> (let _x_131 = f_eff node in
       let _x_132 = program_fold_map_eff unit op body_130 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_131 _x_132)
     | _ -> f_eff node
 
-and program_fold_map_stmts unit (op : _ -> _ -> _) (node : _ stmts) (f_eff : _ eff -> _) (f_stmt : _ stmt -> _) (f_stmts : _ stmts -> _) (f_effs : _ effs -> _) (f_action : _ action_term -> _) (f_layer : _ layer_term -> _) (f_layers : _ layer_terms -> _) =
-  match (node : _ stmts) with
-    | Stmts_nil -> f_stmts node
-    | Stmts_cons (head_2, tail_3) -> (let _x_4 = f_stmts node in
+and program_fold_map_stmts unit (op : _ -> _ -> _) (node : _ Stmts.t) (f_eff : _ Eff.t -> _) (f_stmt : _ Stmt.t -> _) (f_stmts : _ Stmts.t -> _) (f_effs : _ Effs.t -> _) (f_action : _ ActionTerm.t -> _) (f_layer : _ LayerTerm.t -> _) (f_layers : _ LayerTerms.t -> _) =
+  match (node : _ Stmts.t) with
+    | Stmts.Nil -> f_stmts node
+    | Stmts.Cons (head_2, tail_3) -> (let _x_4 = f_stmts node in
       let _x_5 = program_fold_map_stmt unit op head_2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_6 = program_fold_map_stmts unit op tail_3 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_7 = op _x_5 _x_6 in
       op _x_4 _x_7)
 
-and program_fold_map_stmt unit (op : _ -> _ -> _) (node : _ stmt) (f_eff : _ eff -> _) (f_stmt : _ stmt -> _) (f_stmts : _ stmts -> _) (f_effs : _ effs -> _) (f_action : _ action_term -> _) (f_layer : _ layer_term -> _) (f_layers : _ layer_terms -> _) =
-  match (node : _ stmt) with
-    | Stmt_bindYield effect_1 -> (let _x_2 = f_stmt node in
+and program_fold_map_stmt unit (op : _ -> _ -> _) (node : _ Stmt.t) (f_eff : _ Eff.t -> _) (f_stmt : _ Stmt.t -> _) (f_stmts : _ Stmts.t -> _) (f_effs : _ Effs.t -> _) (f_action : _ ActionTerm.t -> _) (f_layer : _ LayerTerm.t -> _) (f_layers : _ LayerTerms.t -> _) =
+  match (node : _ Stmt.t) with
+    | Stmt.BindYield effect_1 -> (let _x_2 = f_stmt node in
       let _x_3 = program_fold_map_eff unit op effect_1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_2 _x_3)
-    | Stmt_yieldDiscard effect_5 -> (let _x_6 = f_stmt node in
+    | Stmt.YieldDiscard effect_5 -> (let _x_6 = f_stmt node in
       let _x_7 = program_fold_map_eff unit op effect_5 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_6 _x_7)
-    | Stmt_ifElse (_, then_b_10, else_b_11) -> (let _x_12 = f_stmt node in
+    | Stmt.IfElse (_, then_b_10, else_b_11) -> (let _x_12 = f_stmt node in
       let _x_13 = program_fold_map_stmts unit op then_b_10 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_14 = program_fold_map_stmts unit op else_b_11 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_15 = op _x_13 _x_14 in
       op _x_12 _x_15)
-    | Stmt_whileTrue body_17 -> (let _x_18 = f_stmt node in
+    | Stmt.WhileTrue body_17 -> (let _x_18 = f_stmt node in
       let _x_19 = program_fold_map_stmts unit op body_17 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_18 _x_19)
     | _ -> f_stmt node
 
-and program_fold_map_action unit (op : _ -> _ -> _) (node : _ action_term) (f_eff : _ eff -> _) (f_stmt : _ stmt -> _) (f_stmts : _ stmts -> _) (f_effs : _ effs -> _) (f_action : _ action_term -> _) (f_layer : _ layer_term -> _) (f_layers : _ layer_terms -> _) =
-  match (node : _ action_term) with
-    | ActionTerm_fork (program_1, _) -> (let _x_3 = f_action node in
+and program_fold_map_action unit (op : _ -> _ -> _) (node : _ ActionTerm.t) (f_eff : _ Eff.t -> _) (f_stmt : _ Stmt.t -> _) (f_stmts : _ Stmts.t -> _) (f_effs : _ Effs.t -> _) (f_action : _ ActionTerm.t -> _) (f_layer : _ LayerTerm.t -> _) (f_layers : _ LayerTerms.t -> _) =
+  match (node : _ ActionTerm.t) with
+    | ActionTerm.Fork (program_1, _) -> (let _x_3 = f_action node in
       let _x_4 = program_fold_map_eff unit op program_1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_3 _x_4)
-    | ActionTerm_forkIn (program_6, _, _) -> (let _x_9 = f_action node in
+    | ActionTerm.ForkIn (program_6, _, _) -> (let _x_9 = f_action node in
       let _x_10 = program_fold_map_eff unit op program_6 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_9 _x_10)
-    | ActionTerm_forkScoped (program_12, _) -> (let _x_14 = f_action node in
+    | ActionTerm.ForkScoped (program_12, _) -> (let _x_14 = f_action node in
       let _x_15 = program_fold_map_eff unit op program_12 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_14 _x_15)
-    | ActionTerm_raceAll entrants_17 -> (let _x_18 = f_action node in
+    | ActionTerm.RaceAll entrants_17 -> (let _x_18 = f_action node in
       let _x_19 = program_fold_map_effs unit op entrants_17 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_18 _x_19)
-    | ActionTerm_raceAllFirst entrants_21 -> (let _x_22 = f_action node in
+    | ActionTerm.RaceAllFirst entrants_21 -> (let _x_22 = f_action node in
       let _x_23 = program_fold_map_effs unit op entrants_21 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_22 _x_23)
     | _ -> f_action node
 
-and program_fold_map_effs unit (op : _ -> _ -> _) (node : _ effs) (f_eff : _ eff -> _) (f_stmt : _ stmt -> _) (f_stmts : _ stmts -> _) (f_effs : _ effs -> _) (f_action : _ action_term -> _) (f_layer : _ layer_term -> _) (f_layers : _ layer_terms -> _) =
-  match (node : _ effs) with
-    | Effs_nil -> f_effs node
-    | Effs_cons (head_2, tail_3) -> (let _x_4 = f_effs node in
+and program_fold_map_effs unit (op : _ -> _ -> _) (node : _ Effs.t) (f_eff : _ Eff.t -> _) (f_stmt : _ Stmt.t -> _) (f_stmts : _ Stmts.t -> _) (f_effs : _ Effs.t -> _) (f_action : _ ActionTerm.t -> _) (f_layer : _ LayerTerm.t -> _) (f_layers : _ LayerTerms.t -> _) =
+  match (node : _ Effs.t) with
+    | Effs.Nil -> f_effs node
+    | Effs.Cons (head_2, tail_3) -> (let _x_4 = f_effs node in
       let _x_5 = program_fold_map_eff unit op head_2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_6 = program_fold_map_effs unit op tail_3 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_7 = op _x_5 _x_6 in
       op _x_4 _x_7)
 
-and program_fold_map_layer unit (op : _ -> _ -> _) (node : _ layer_term) (f_eff : _ eff -> _) (f_stmt : _ stmt -> _) (f_stmts : _ stmts -> _) (f_effs : _ effs -> _) (f_action : _ action_term -> _) (f_layer : _ layer_term -> _) (f_layers : _ layer_terms -> _) =
-  match (node : _ layer_term) with
-    | LayerTerm_effect (_, body_2) -> (let _x_3 = f_layer node in
+and program_fold_map_layer unit (op : _ -> _ -> _) (node : _ LayerTerm.t) (f_eff : _ Eff.t -> _) (f_stmt : _ Stmt.t -> _) (f_stmts : _ Stmts.t -> _) (f_effs : _ Effs.t -> _) (f_action : _ ActionTerm.t -> _) (f_layer : _ LayerTerm.t -> _) (f_layers : _ LayerTerms.t -> _) =
+  match (node : _ LayerTerm.t) with
+    | LayerTerm.Effect (_, body_2) -> (let _x_3 = f_layer node in
       let _x_4 = program_fold_map_eff unit op body_2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_3 _x_4)
-    | LayerTerm_effectDiscard body_6 -> (let _x_7 = f_layer node in
+    | LayerTerm.EffectDiscard body_6 -> (let _x_7 = f_layer node in
       let _x_8 = program_fold_map_eff unit op body_6 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_7 _x_8)
-    | LayerTerm_provide (self_10, that_11) -> (let _x_12 = f_layer node in
+    | LayerTerm.Provide (self_10, that_11) -> (let _x_12 = f_layer node in
       let _x_13 = program_fold_map_layer unit op self_10 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_14 = program_fold_map_layer unit op that_11 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_15 = op _x_13 _x_14 in
       op _x_12 _x_15)
-    | LayerTerm_provideMerge (self_17, that_18) -> (let _x_19 = f_layer node in
+    | LayerTerm.ProvideMerge (self_17, that_18) -> (let _x_19 = f_layer node in
       let _x_20 = program_fold_map_layer unit op self_17 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_21 = program_fold_map_layer unit op that_18 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_22 = op _x_20 _x_21 in
       op _x_19 _x_22)
-    | LayerTerm_merge (left_24, right_25) -> (let _x_26 = f_layer node in
+    | LayerTerm.Merge (left_24, right_25) -> (let _x_26 = f_layer node in
       let _x_27 = program_fold_map_layer unit op left_24 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_28 = program_fold_map_layer unit op right_25 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_29 = op _x_27 _x_28 in
       op _x_26 _x_29)
-    | LayerTerm_fresh inner_31 -> (let _x_32 = f_layer node in
+    | LayerTerm.Fresh inner_31 -> (let _x_32 = f_layer node in
       let _x_33 = program_fold_map_layer unit op inner_31 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_32 _x_33)
-    | LayerTerm_orDie inner_35 -> (let _x_36 = f_layer node in
+    | LayerTerm.OrDie inner_35 -> (let _x_36 = f_layer node in
       let _x_37 = program_fold_map_layer unit op inner_35 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_36 _x_37)
-    | LayerTerm_mergeAll layers_39 -> (let _x_40 = f_layer node in
+    | LayerTerm.MergeAll layers_39 -> (let _x_40 = f_layer node in
       let _x_41 = program_fold_map_layers unit op layers_39 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       op _x_40 _x_41)
     | _ -> f_layer node
 
-and program_fold_map_layers unit (op : _ -> _ -> _) (node : _ layer_terms) (f_eff : _ eff -> _) (f_stmt : _ stmt -> _) (f_stmts : _ stmts -> _) (f_effs : _ effs -> _) (f_action : _ action_term -> _) (f_layer : _ layer_term -> _) (f_layers : _ layer_terms -> _) =
-  match (node : _ layer_terms) with
-    | LayerTerms_nil -> f_layers node
-    | LayerTerms_cons (head_2, tail_3) -> (let _x_4 = f_layers node in
+and program_fold_map_layers unit (op : _ -> _ -> _) (node : _ LayerTerms.t) (f_eff : _ Eff.t -> _) (f_stmt : _ Stmt.t -> _) (f_stmts : _ Stmts.t -> _) (f_effs : _ Effs.t -> _) (f_action : _ ActionTerm.t -> _) (f_layer : _ LayerTerm.t -> _) (f_layers : _ LayerTerms.t -> _) =
+  match (node : _ LayerTerms.t) with
+    | LayerTerms.Nil -> f_layers node
+    | LayerTerms.Cons (head_2, tail_3) -> (let _x_4 = f_layers node in
       let _x_5 = program_fold_map_layer unit op head_2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_6 = program_fold_map_layers unit op tail_3 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers in
       let _x_7 = op _x_5 _x_6 in
@@ -282,7 +282,7 @@ and program_fold_map_layers unit (op : _ -> _ -> _) (node : _ layer_terms) (f_ef
 
 (* LCNF mono: Effect4.Run.Tree.InRocq (program : Effect4.Program.Eff Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_in_rocq (program : native_op eff) : bool =
+let run_tree_in_rocq (program : NativeOp.t Eff.t) : bool =
   let _f_1 = run_tree_plain__lam_0 in
   let _x_2 = true in
   let _f_3 = run_tree_in_rocq__lam_1 _x_2 in
@@ -298,20 +298,20 @@ let run_tree_in_rocq (program : native_op eff) : bool =
 
 (* LCNF mono: Effect4.Run.Tree.Plain._lam_1 (_x.1 : Bool) (x.2 : Effect4.Program.Eff Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_plain__lam_1 (_x_1 : bool) (x_2 : native_op eff) : bool =
-  match (x_2 : _ eff) with
-    | Eff_succeed _ -> _x_1
-    | Eff_fail _ -> _x_1
-    | Eff_sync _ -> _x_1
-    | Eff_suspend _ -> _x_1
-    | Eff_bind (_, _) -> _x_1
-    | Eff_select (_, _, _, _) -> _x_1
-    | Eff_iterate (_, _, _, _, _, _) -> _x_1
-    | Eff_perform (op_19, _) -> (match (op_19 : native_op) with
-        | NativeOp_refMake -> _x_1
-        | NativeOp_refGet -> _x_1
-        | NativeOp_refSet -> _x_1
-        | NativeOp_external _ -> _x_1
+let run_tree_plain__lam_1 (_x_1 : bool) (x_2 : NativeOp.t Eff.t) : bool =
+  match (x_2 : _ Eff.t) with
+    | Eff.Succeed _ -> _x_1
+    | Eff.Fail _ -> _x_1
+    | Eff.Sync _ -> _x_1
+    | Eff.Suspend _ -> _x_1
+    | Eff.Bind (_, _) -> _x_1
+    | Eff.Select (_, _, _, _) -> _x_1
+    | Eff.Iterate (_, _, _, _, _, _) -> _x_1
+    | Eff.Perform (op_19, _) -> (match (op_19 : NativeOp.t) with
+        | NativeOp.RefMake -> _x_1
+        | NativeOp.RefGet -> _x_1
+        | NativeOp.RefSet -> _x_1
+        | NativeOp.External _ -> _x_1
         | _ -> false)
     | _ -> false
 
@@ -319,7 +319,7 @@ let run_tree_plain__lam_1 (_x_1 : bool) (x_2 : native_op eff) : bool =
 
 (* LCNF mono: Effect4.Run.Tree.Plain (program : Effect4.Program.Eff Effect4.Program.NativeOp) : Bool *)
 
-let run_tree_plain (program : native_op eff) : bool =
+let run_tree_plain (program : NativeOp.t Eff.t) : bool =
   let _f_1 = run_tree_plain__lam_0 in
   let _x_2 = true in
   let _f_3 = run_tree_plain__lam_1 _x_2 in

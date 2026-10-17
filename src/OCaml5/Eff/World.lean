@@ -64,12 +64,22 @@ partial def OTy.renderArg : OTy → String
   | t => t.render
 end
 
-/-- The OCaml constructor of `<Type>.<ctor>`, spelled as `ocaml/eff/eff_types.ml` declares it: the
-LCNF route's rule (`OCaml5.Lcnf.ctorName`), since that route writes the one program type. -/
-def octor (t : Name) (short : String) : String := OCaml5.Lcnf.ctorName t short
+/-- The decided names of one program type at its owner, `ocaml/eff/eff_types.ml`: its own module,
+by its short name. `typesInterface` refuses a run whose owner decided another. -/
+def ownerNames (t : Name) : OCaml5.Lcnf.TypeNames :=
+  { modules := ({} : Std.HashMap Name String).insert t (OCaml5.Lcnf.moduleName t) }
 
-/-- The OCaml record field of a Lean structure field, by the same rule (`OCaml5.Lcnf.fieldName`). -/
-def ofield (field : String) : String := OCaml5.Lcnf.fieldName field
+/-- The OCaml constructor of `<Type>.<ctor>`, spelled as `ocaml/eff/eff_types.ml` declares it: the
+LCNF route's rule (`OCaml5.Lcnf.ctorNameIn`), since that route writes the one program type
+(`Eff.Succeed`). -/
+def octor (t : Name) (short : String) : String := OCaml5.Lcnf.ctorNameIn (ownerNames t) t short
+
+/-- The OCaml record field of a field of the structure `t`, by the same rule
+(`OCaml5.Lcnf.fieldNameIn`: `ServiceKey.name`). -/
+def ofield (t : Name) (field : String) : String := OCaml5.Lcnf.fieldNameIn (ownerNames t) t field
+
+/-- The OCaml type of the program type `t` at its owner (`OCaml5.Lcnf.typeNameIn`: `Eff.t`). -/
+def otype (t : Name) : String := OCaml5.Lcnf.typeNameIn (ownerNames t) t
 
 def shortName : Name → String
   | .str _ s => s
@@ -100,6 +110,13 @@ def projectSpec (spec : Tools.ProgramStructure.Spec) : Spec :=
 def blocks : List (List Spec) := Tools.ProgramStructure.blocks.map (·.map projectSpec)
 
 def allSpecs : List Spec := blocks.flatten
+
+/-- The OCaml type a family's label names (`native_op` → `NativeOp.t`). A label is the family's
+name in value names (`encode_native_op`) and in the manifest; the type is its owner's. -/
+def labelType (label : String) : String :=
+  match allSpecs.find? (·.oname == label) with
+  | some s => otype s.leanName
+  | none => label
 
 /-- The only target-specific erasures; unsupported canonical row elements refuse. -/
 def projectShape (path : String) : Tools.ProgramStructure.Shape → Except String OTy
@@ -135,11 +152,11 @@ structure Family where
   ctors : List Ctor
 
 /-- The OCaml type of a family as `eff_types.ml` declares it: its parameters applied
-(`native_op eff`). `pre` qualifies each name (`Eff_types.`). -/
+(`NativeOp.t Eff.t`). `pre` qualifies each name (`Eff_types.`). -/
 def Family.tyRef (f : Family) (pre : String := "") : String :=
-  let name := pre ++ f.spec.oname
+  let name := pre ++ otype f.spec.leanName
   let arg (t : OTy) : String := match t with
-    | .named n => pre ++ n
+    | .named n => pre ++ labelType n
     | t => t.renderArg
   match f.spec.params with
   | [] => name

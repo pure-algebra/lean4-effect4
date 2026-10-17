@@ -42,15 +42,15 @@ let check name ok =
     Printf.printf "FAIL %s\n%!" name
   end
 
-type exit = (val_, err, defect, int, unit) exit_
+type exit = (Val.t, Err.t, Defect.t, int, unit) Exit.t
 
 (* R1 *)
 let rocq_exit (ex : exit) : Lane_eval.exitv = Lane_eval.of_exit ex
 
-type stop = Finished of Lane_eval.exitv | Cut | Waiting of int * val_ | Refused of string
-type run = { calls : (int * val_ * Lane_eval.exitv) list; cells : val_ list; stop : stop }
+type stop = Finished of Lane_eval.exitv | Cut | Waiting of int * Val.t | Refused of string
+type run = { calls : (int * Val.t * Lane_eval.exitv) list; cells : Val.t list; stop : stop }
 
-let lean_run rows k (host : int -> val_ -> 's -> (exit * 's) option) (st : 's) p : run =
+let lean_run rows k (host : int -> Val.t -> 's -> (exit * 's) option) (st : 's) p : run =
   let o = G.run_tree_probe rows k host st p in
   { calls = List.filter_map (function G.Step_called (i, v, ex) -> Some (i, v, rocq_exit ex) | _ -> None) o.steps;
     cells = List.filter_map (function G.Step_celled (_, v) -> Some v | _ -> None) o.steps;
@@ -65,15 +65,15 @@ let lean_run rows k (host : int -> val_ -> 's -> (exit * 's) option) (st : 's) p
 let cells op x w (stores : G.stores) =
   let request, native =
     match op with
-    | "make" -> (x, NativeOp_refMake)
-    | "get" -> (x, NativeOp_refGet)
-    | _ -> (Val_list [ x; w ], NativeOp_refSet)
+    | "make" -> (x, NativeOp.RefMake)
+    | "get" -> (x, NativeOp.RefGet)
+    | _ -> (Val.List [ x; w ], NativeOp.RefSet)
   in
   match G.program_native_op_sync_op_of native [] request with
   | None -> None
-  | Some o -> (match G.sync_op_step o stores with Some (s', v) -> Some (v, s') | None -> Some (Val_unit, stores))
+  | Some o -> (match G.sync_op_step o stores with Some (s', v) -> Some (v, s') | None -> Some (Val.Unit, stores))
 
-let rocq_run k (host : int -> val_ -> 's -> (exit * 's) option) (st : 's) p : run =
+let rocq_run k (host : int -> Val.t -> 's -> (exit * 's) option) (st : 's) p : run =
   let f i v st = Option.map (fun (ex, st') -> (rocq_exit ex, st')) (host i v st) in
   let (steps, stop), _ = R.lane_run cells f k p G.stores_empty st in
   { calls = List.filter_map (function R.Called (i, v, a) -> Some (i, v, a) | R.Celled _ -> None) steps;
@@ -118,15 +118,15 @@ let first_difference ?(name = "") ~upto rows host st p =
   in
   go 0
 
-let tape : int -> val_ -> exit list -> (exit * exit list) option =
+let tape : int -> Val.t -> exit list -> (exit * exit list) option =
  fun _ _ t -> match t with ex :: rest -> Some (ex, rest) | [] -> None
 
-let silent : int -> val_ -> unit -> (exit * unit) option = fun _ _ () -> None
-let unit_ok : exit = Exit_success Val_unit
+let silent : int -> Val.t -> unit -> (exit * unit) option = fun _ _ () -> None
+let unit_ok : exit = Exit.Success Val.Unit
 let units n = List.init n (fun _ -> unit_ok)
 
 let r2 () =
-  let echo = A.row "echo" ~request:Ty_nat ~answer:Ty_unit () in
+  let echo = A.row "echo" ~request:Ty.Nat ~answer:Ty.Unit () in
   let app = Effect4_kit.Kit.app ~rows:[ echo ] () in
   let rows = [ echo ] in
   let build ?defs p = match A.build ~app ?defs p with Ok e -> e | Error r -> failwith (A.refusal_text r) in
@@ -139,20 +139,20 @@ let r2 () =
                (fun i -> set c i) >> get c) in
   let caught = build A.(catch (fail (str "boom")) (fun _ -> succeed (nat 7))) in
   let self_call =
-    build ~defs:[ A.def "f" ~request:Ty_nat ~answer:Ty_nat (fun r -> A.call "f" r) ] (A.call "f" (A.nat 0)) in
+    build ~defs:[ A.def "f" ~request:Ty.Nat ~answer:Ty.Nat (fun r -> A.call "f" r) ] (A.call "f" (A.nat 0)) in
   let twice =
-    build ~defs:[ A.def "twice" ~request:Ty_nat ~answer:Ty_nat (fun r -> A.(let* _ = perform "echo" r in succeed (r * nat 2))) ]
+    build ~defs:[ A.def "twice" ~request:Ty.Nat ~answer:Ty.Nat (fun r -> A.(let* _ = perform "echo" r in succeed (r * nat 2))) ]
       A.(let* a = call "twice" (nat 3) in call "twice" a) in
   let same name host st p =
     check (Printf.sprintf "R2 %s: equal at budgets 0 to 12" name) (first_difference ~name ~upto:12 rows host st p = None)
   in
   same "doubling, four replies" tape (units 4) doubling;
   same "doubling, three replies" tape (units 3) doubling;
-  same "doubling, a refused-looking reply" tape [ unit_ok; Exit_success (Val_str "oops") ] doubling;
+  same "doubling, a refused-looking reply" tape [ unit_ok; Exit.Success (Val.Str "oops") ] doubling;
   same "a cell written in a loop" silent () cells;
   check "R5 a caught failure is outside InRocq" (not (Rocq_gen.run_tree_in_rocq caught));
   check "R5 and its runs differ" (first_difference ~name:"R5 a caught failure" ~upto:12 rows silent () caught <> None);
-  let context = Eff_withFiber (ActionTerm_context []) in
+  let context = Eff.WithFiber (ActionTerm.Context []) in
   check "R5 a context read is outside InRocq" (not (Rocq_gen.run_tree_in_rocq context));
   check "R5 and its runs differ" (first_difference ~name:"R5 a context read" ~upto:12 rows silent () context <> None);
   same "a definition that calls itself" silent () self_call;

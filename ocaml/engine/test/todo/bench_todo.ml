@@ -67,7 +67,7 @@ let () =
   Printf.printf "bench_todo: %d requests, engine %s, CPU time per unit\n" (List.length requests) F.name;
   (* 1. a whole drive per host, divided by the host calls it answered *)
   Printf.printf "1. a drive under E4_host, per host call\n";
-  let per_call (type s) name (provider : row -> val_ -> s -> _) (make : Native_todo.lane_state -> s)
+  let per_call (type s) name (provider : Row.t -> Val.t -> s -> _) (make : Native_todo.lane_state -> s)
       (lane : s -> Native_todo.lane_state) =
     let calls =
       List.fold_left

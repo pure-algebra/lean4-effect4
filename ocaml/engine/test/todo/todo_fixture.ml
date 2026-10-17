@@ -73,24 +73,24 @@ let exactly (what : string) (decode : string -> 'a option) (hex : string) : 'a =
   | None -> failwith (Printf.sprintf "fixture: %s does not read exactly" what)
 
 (* The repository state: the next id, then each to-do's id, title and flag (`repoVal`). *)
-let repo_of (v : val_) : int * (int * (string * bool)) list =
+let repo_of (v : Val.t) : int * (int * (string * bool)) list =
   match v with
-  | Val_list [ Val_nat next; Val_list items ] ->
+  | Val.List [ Val.Nat next; Val.List items ] ->
     ( next,
       List.map
         (function
-          | Val_list [ Val_nat id; Val_str title; Val_bool isDone ] -> (id, (title, isDone))
+          | Val.List [ Val.Nat id; Val.Str title; Val.Bool isDone ] -> (id, (title, isDone))
           | _ -> failwith "fixture: a stored to-do is not an id, a title and a flag")
         items )
   | _ -> failwith "fixture: the state is not a next id and a list"
 
 (* The row names: each spelling and its position (`namesVal`). *)
-let names_of (v : val_) : (string * int) list =
+let names_of (v : Val.t) : (string * int) list =
   match v with
-  | Val_list xs ->
+  | Val.List xs ->
     List.map
       (function
-        | Val_list [ Val_str name; Val_nat i ] -> (name, i)
+        | Val.List [ Val.Str name; Val.Nat i ] -> (name, i)
         | _ -> failwith "fixture: a row name is not a spelling and a position")
       xs
   | _ -> failwith "fixture: the row names are not a list"
@@ -104,4 +104,4 @@ let built_of (r : request) : Todo_gen.built =
     admitted = exactly "the type" Eff_wire.decode_eff_ty_exact r.typed;
     row_names = names_of (exactly "the row names" Eff_val.decode_exact r.names) }
 
-let hex_of (v : val_) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
+let hex_of (v : Val.t) : string = E4_hex.of_bytes (Eff_val.to_bytes v)

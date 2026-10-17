@@ -138,8 +138,8 @@ let eff_goldens_dir () =
     @ List.concat (List.map per (ancestors here 9 [])))
 
 let rec bind_tree (d : int) : Eff_wire.program =
-  if d = 0 then Eff_types.Eff_succeed (Eff_types.Term_lit (Eff_types.Lit_nat 1))
-  else Eff_types.Eff_bind (bind_tree (d - 1), bind_tree (d - 1))
+  if d = 0 then Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat 1))
+  else Eff_types.Eff.Bind (bind_tree (d - 1), bind_tree (d - 1))
 
 let bench_subterm () =
   hr ();

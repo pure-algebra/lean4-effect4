@@ -754,11 +754,11 @@ let ephemeral () =
 
 (* ============================================================ 7. the machine image *)
 
-let rec chain_prog n : E.native_op E.eff =
-  if n <= 0 then E.Eff_succeed (E.Term_lit E.Lit_unit)
+let rec chain_prog n : E.NativeOp.t E.Eff.t =
+  if n <= 0 then E.Eff.Succeed (E.Term.Lit E.Lit.Unit)
   else
-    E.Eff_bind
-      (E.Eff_perform (E.NativeOp_refMake, E.Term_lit (E.Lit_nat (n - 1))), chain_prog (n - 1))
+    E.Eff.Bind
+      (E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (n - 1))), chain_prog (n - 1))
 
 let machine_image () =
   print_endline "";

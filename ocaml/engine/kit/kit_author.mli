@@ -109,14 +109,14 @@ val exit_of : t -> t
 type def
 (** A definition: Lean's [DefSrc] of one request parameter. *)
 
-val def : string -> request:Eff_types.ty -> answer:Eff_types.ty -> ?error:Eff_types.ty -> (term -> t) -> def
+val def : string -> request:Eff_types.Ty.t -> answer:Eff_types.Ty.t -> ?error:Eff_types.Ty.t -> (term -> t) -> def
 
 val call : string -> term -> t
 (** Invoke the definition of this name with the request ([Def.invoke]). *)
 
 (** {1 Rows} *)
 
-val row : string -> request:Eff_types.ty -> answer:Eff_types.ty -> ?error:Eff_types.ty -> ?cite:string -> unit -> Eff_types.row
+val row : string -> request:Eff_types.Ty.t -> answer:Eff_types.Ty.t -> ?error:Eff_types.Ty.t -> ?cite:string -> unit -> Eff_types.Row.t
 (** A row the host answers, by its spelling and its three type columns ([Row.host]): asynchronous
     and externally registered, as the machine's reply admission demands. *)
 
@@ -133,5 +133,5 @@ val build : ?app:Kit.app -> ?defs:def list -> t -> (Kit.program, refusal) result
 
 val build_checked :
   ?app:Kit.app -> ?defs:def list -> t ->
-  (Kit.program * Eff_types.eff_ty, [ `Name of refusal | `Type of Effect4_gen.Api_gen.type_refusal ]) result
+  (Kit.program * Eff_types.EffTy.t, [ `Name of refusal | `Type of Effect4_gen.Api_gen.type_refusal ]) result
 (** The program and its type, or the name or the node it is refused at. *)

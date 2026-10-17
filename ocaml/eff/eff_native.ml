@@ -19,15 +19,15 @@ let const_atom (name : string) : bool =
 
 (* 12 nullary operations, 1 at the faces' type arguments, 8 at their faces (a binder term at the unit literal), 1 over every finalizer_strategy: 23 values. *)
 
-let all_ops : native_op list =
-  [NativeOp_refMake; NativeOp_refGet; NativeOp_refSet; NativeOp_refGetAndSet; NativeOp_refSetAndGet; NativeOp_refUpdateWith (Term_lit Lit_unit); NativeOp_refGetAndUpdateWith (Term_lit Lit_unit); NativeOp_refUpdateAndGetWith (Term_lit Lit_unit); NativeOp_refUpdateSomeWith (Term_lit Lit_unit); NativeOp_refGetAndUpdateSomeWith (Term_lit Lit_unit); NativeOp_refUpdateSomeAndGetWith (Term_lit Lit_unit); NativeOp_refModifyWith (Term_lit Lit_unit); NativeOp_refModifySomeWith (Term_lit Lit_unit); NativeOp_deferredMakeOf (Ty_nat, Ty_nat); NativeOp_deferredIsDone; NativeOp_deferredPoll; NativeOp_deferredSucceed; NativeOp_deferredFail; NativeOp_deferredAwait; NativeOp_scopeMake FinalizerStrategy_sequential; NativeOp_scopeMake FinalizerStrategy_parallel; NativeOp_sleep; NativeOp_clockNow]
+let all_ops : NativeOp.t list =
+  [NativeOp.RefMake; NativeOp.RefGet; NativeOp.RefSet; NativeOp.RefGetAndSet; NativeOp.RefSetAndGet; NativeOp.RefUpdateWith (Term.Lit Lit.Unit); NativeOp.RefGetAndUpdateWith (Term.Lit Lit.Unit); NativeOp.RefUpdateAndGetWith (Term.Lit Lit.Unit); NativeOp.RefUpdateSomeWith (Term.Lit Lit.Unit); NativeOp.RefGetAndUpdateSomeWith (Term.Lit Lit.Unit); NativeOp.RefUpdateSomeAndGetWith (Term.Lit Lit.Unit); NativeOp.RefModifyWith (Term.Lit Lit.Unit); NativeOp.RefModifySomeWith (Term.Lit Lit.Unit); NativeOp.DeferredMakeOf (Ty.Nat, Ty.Nat); NativeOp.DeferredIsDone; NativeOp.DeferredPoll; NativeOp.DeferredSucceed; NativeOp.DeferredFail; NativeOp.DeferredAwait; NativeOp.ScopeMake FinalizerStrategy.Sequential; NativeOp.ScopeMake FinalizerStrategy.Parallel; NativeOp.Sleep; NativeOp.ClockNow]
 
-let scope_key : service_key =
-  ({ name = 0; service = 0 } : service_key)
+let scope_key : ServiceKey.t =
+  ({ ServiceKey.name = 0; ServiceKey.service = 0 } : ServiceKey.t)
 
-let scope_ty : ty =
-  Ty_handle "Scope.Scope"
+let scope_ty : Ty.t =
+  Ty.Handle "Scope.Scope"
 
-let context_ty : ty =
-  Ty_handle "Context.Context<unknown>"
+let context_ty : Ty.t =
+  Ty.Handle "Context.Context<unknown>"
 

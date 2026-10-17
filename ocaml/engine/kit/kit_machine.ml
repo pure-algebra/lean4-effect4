@@ -6,20 +6,20 @@ module E4_host = Effect4_engine.E4_host
 module E = E4_engine.Fast
 module H = E4_host.Make (E4_engine.Fast)
 
-type exit = (val_, err, defect, int, unit) exit_
-type completion = (val_, err, defect, int, unit) Eff_types.completion
+type exit = (Val.t, Err.t, Defect.t, int, unit) Exit.t
+type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
 
 type stop =
   | Finished of exit
-  | Waiting of int * val_
-  | Refused of int * val_
+  | Waiting of int * Val.t
+  | Refused of int * Val.t
   | Out_of_fuel
   | Out_of_rounds
   | Stopped of string
 
-type 's run = { stop : stop; calls : (int * val_ * exit) list; state : 's }
+type 's run = { stop : stop; calls : (int * Val.t * exit) list; state : 's }
 
-let run ?(fuel = 10_000_000) ?(rounds = 100_000) (rows : row list) reactor (st : 's) program : 's run =
+let run ?(fuel = 10_000_000) ?(rounds = 100_000) (rows : Row.t list) reactor (st : 's) program : 's run =
   match H.serve ~table:rows ~rounds reactor program ~fuel st with
   | Error (H.Load_outside_profile why) ->
     { stop = Stopped ("a program outside the host profile: " ^ why); calls = []; state = st }
@@ -27,7 +27,7 @@ let run ?(fuel = 10_000_000) ?(rounds = 100_000) (rows : row list) reactor (st :
     let calls =
       List.filter_map
         (fun (c : H.call) ->
-          match c.answer with Completion_ofExit ex -> Some (c.row, c.request, ex) | Completion_ofRefGet _ -> None)
+          match c.answer with Completion.OfExit ex -> Some (c.row, c.request, ex) | Completion.OfRefGet _ -> None)
         served.calls
     in
     let first_call () = match E.host_calls served.engine with (_, _, i, v) :: _ -> Some (i, v) | [] -> None in

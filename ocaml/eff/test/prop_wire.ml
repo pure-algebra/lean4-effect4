@@ -33,44 +33,44 @@ let strings =
 
 let rand_string () = pick strings
 
-let rand_mask () = pick [ MaskMode_interruptible; MaskMode_uninterruptible; MaskMode_inherit ]
-let rand_mode () = pick [ ObserverMode_awaitValue; ObserverMode_joinEffect ]
+let rand_mask () = pick [ MaskMode.Interruptible; MaskMode.Uninterruptible; MaskMode.Inherit ]
+let rand_mode () = pick [ ObserverMode.AwaitValue; ObserverMode.JoinEffect ]
 
 let rand_options () =
-  { start_immediately = rb (); daemon = rb (); mask_mode = rand_mask () }
+  { ForkOptions.start_immediately = rb (); daemon = rb (); mask_mode = rand_mask () }
 
 let rand_service_key () =
-  { name = (rand_nat ()); service = (rand_nat ()) }
+  { ServiceKey.name = (rand_nat ()); service = (rand_nat ()) }
 
 (* A canonical row of keys: strictly ascending by name, then service (`Effect4.Row`, `ServiceKey.Lt`). *)
 let rand_keys () = List.sort_uniq compare (List.init (ri 4) (fun _ -> rand_service_key ()))
 
 let rand_lit () =
   match ri 4 with
-  | 0 -> Lit_unit
-  | 1 -> Lit_nat (rand_nat ())
-  | 2 -> Lit_bool (rb ())
-  | _ -> Lit_str (rand_string ())
+  | 0 -> Lit.Unit
+  | 1 -> Lit.Nat (rand_nat ())
+  | 2 -> Lit.Bool (rb ())
+  | _ -> Lit.Str (rand_string ())
 
 let rec rand_term d =
-  if d <= 0 then (if rb () then Term_var (ri 20) else Term_lit (rand_lit ()))
+  if d <= 0 then (if rb () then Term.Var (ri 20) else Term.Lit (rand_lit ()))
   else
     match ri 8 with
-    | 0 -> Term_var (rand_nat ())
-    | 1 -> Term_lit (rand_lit ())
-    | 2 -> Term_app (rand_string (), rand_terms (d - 1))
-    | 3 -> Term_record
-        (List.init (ri 4) (fun _ -> rand_string (), (rb (), pick [Ty_nat; Ty_int; Ty_number; Ty_string])),
+    | 0 -> Term.Var (rand_nat ())
+    | 1 -> Term.Lit (rand_lit ())
+    | 2 -> Term.App (rand_string (), rand_terms (d - 1))
+    | 3 -> Term.Record
+        (List.init (ri 4) (fun _ -> rand_string (), (rb (), pick [Ty.Nat; Ty.Int; Ty.Number; Ty.String])),
          List.init (ri 4) (fun _ -> rand_string ()), rand_terms (d - 1))
-    | 4 -> Term_field
-        (pick [FieldReadMode_required; FieldReadMode_optional], rand_term (d - 1), rand_string ())
-    | 5 -> Term_recordSet (rand_term (d - 1), rand_string (), rand_term (d - 1))
-    | 6 -> Term_tupleAt (rand_term (d - 1), rand_nat ())
-    | _ -> Term_fold
-        ((if rb () then None else Some (pick [Ty_nat; Ty_string; Ty_list Ty_nat])),
+    | 4 -> Term.Field
+        (pick [FieldReadMode.Required; FieldReadMode.Optional], rand_term (d - 1), rand_string ())
+    | 5 -> Term.RecordSet (rand_term (d - 1), rand_string (), rand_term (d - 1))
+    | 6 -> Term.TupleAt (rand_term (d - 1), rand_nat ())
+    | _ -> Term.Fold
+        ((if rb () then None else Some (pick [Ty.Nat; Ty.String; Ty.List Ty.Nat])),
          rand_term (d - 1), rand_term (d - 1), rand_term (d - 1))
 
-and rand_terms d = if d <= 0 || ri 3 = 0 then Terms_nil else Terms_cons (rand_term (d - 1), rand_terms (d - 1))
+and rand_terms d = if d <= 0 || ri 3 = 0 then Terms.Nil else Terms.Cons (rand_term (d - 1), rand_terms (d - 1))
 
 (* The 23 built-in op values (`Eff_native.all_ops`) enumerate every FinalizerStrategy and hold
    each of the eight read-modify-write rows once, at its face: the unit literal for its binder
@@ -81,161 +81,161 @@ and rand_terms d = if d <= 0 || ri 3 = 0 then Terms_nil else Terms_cons (rand_te
 let rand_term_op () =
   let f = rand_term 2 in
   match ri 8 with
-  | 0 -> NativeOp_refUpdateWith f
-  | 1 -> NativeOp_refGetAndUpdateWith f
-  | 2 -> NativeOp_refUpdateAndGetWith f
-  | 3 -> NativeOp_refUpdateSomeWith f
-  | 4 -> NativeOp_refGetAndUpdateSomeWith f
-  | 5 -> NativeOp_refUpdateSomeAndGetWith f
-  | 6 -> NativeOp_refModifyWith f
-  | _ -> NativeOp_refModifySomeWith f
+  | 0 -> NativeOp.RefUpdateWith f
+  | 1 -> NativeOp.RefGetAndUpdateWith f
+  | 2 -> NativeOp.RefUpdateAndGetWith f
+  | 3 -> NativeOp.RefUpdateSomeWith f
+  | 4 -> NativeOp.RefGetAndUpdateSomeWith f
+  | 5 -> NativeOp.RefUpdateSomeAndGetWith f
+  | 6 -> NativeOp.RefModifyWith f
+  | _ -> NativeOp.RefModifySomeWith f
 
 let rand_op () =
   match ri 4 with
-  | 0 -> NativeOp_external (rand_nat ())
+  | 0 -> NativeOp.External (rand_nat ())
   | 1 -> rand_term_op ()
   | _ -> pick Eff_native.all_ops
 
 let rec rand_cause d =
   match if d <= 0 then ri 3 else ri 4 with
-  | 0 -> CauseTerm_fail (rand_term d)
-  | 1 -> CauseTerm_die (rand_term d)
-  | 2 -> CauseTerm_interrupt (if rb () then None else Some (rand_term d))
-  | _ -> CauseTerm_both (rand_cause (d - 1), rand_cause (d - 1))
+  | 0 -> CauseTerm.Fail (rand_term d)
+  | 1 -> CauseTerm.Die (rand_term d)
+  | 2 -> CauseTerm.Interrupt (if rb () then None else Some (rand_term d))
+  | _ -> CauseTerm.Both (rand_cause (d - 1), rand_cause (d - 1))
 
 let rand_decision () =
-  pick [Decision_bool; Decision_option; Decision_tag (rand_string ());
-        Decision_recordTag (rand_string ())]
+  pick [Decision.Bool; Decision.Option; Decision.Tag (rand_string ());
+        Decision.RecordTag (rand_string ())]
 
 let rec rand_eff d =
   let t () = rand_term (min d 2) in
   if d <= 0 then
     match ri 4 with
-    | 0 -> Eff_succeed (t ())
-    | 1 -> Eff_yieldNow (rand_nat ())
-    | 2 -> Eff_fail (t ())
-    | _ -> Eff_perform (rand_op (), t ())
+    | 0 -> Eff.Succeed (t ())
+    | 1 -> Eff.YieldNow (rand_nat ())
+    | 2 -> Eff.Fail (t ())
+    | _ -> Eff.Perform (rand_op (), t ())
   else
     let e () = rand_eff (d - 1) in
     match ri 29 with
-    | 0 -> Eff_succeed (t ())
-    | 1 -> Eff_fail (t ())
-    | 2 -> Eff_failCause (rand_cause (d - 1))
-    | 3 -> Eff_fail (t ())
-    | 4 -> Eff_sync (t ())
-    | 5 -> Eff_suspend (e ())
-    | 6 -> Eff_perform (rand_op (), t ())
-    | 7 -> Eff_bind (e (), e ())
-    | 8 -> Eff_gen (rand_stmts (d - 1))
-    | 9 -> Eff_catchCause (e (), e ())
-    | 10 -> Eff_matchCause (e (), e (), e ())
-    | 11 -> Eff_onExit (e (), e ())
-    | 12 -> Eff_exit (e ())
-    | 13 -> Eff_uninterruptible (e ())
-    | 14 -> Eff_interruptible (e ())
-    | 15 -> Eff_select (t (), rand_decision (), e (), e ())
-    | 16 -> Eff_iterate ((if rb () then None else Some Ty_nat), t (), t (), t (), t (), e ())
-    | 17 -> Eff_yieldNow (rand_nat ())
-    | 18 -> Eff_perform (rand_op (), t ())
-    | 19 -> Eff_awaitFiber (t (), rand_mode ())
-    | 20 -> Eff_withFiber (rand_action (d - 1))
-    | 21 -> Eff_scoped (e ())
-    | 22 -> Eff_acquireRelease (e (), e ())
-    | 23 -> Eff_provideLayer (rand_layer (d - 1), rb (), e ())
-    | 24 -> Eff_service (rand_service_key ())
-    | 25 -> Eff_provideService (rand_service_key (), t (), e ())
-    | 26 -> Eff_restore (t (), e ())
-    | 27 -> Eff_provideContext (t (), e ())
-    | _ -> Eff_catchIf (t (), e (), e ())
+    | 0 -> Eff.Succeed (t ())
+    | 1 -> Eff.Fail (t ())
+    | 2 -> Eff.FailCause (rand_cause (d - 1))
+    | 3 -> Eff.Fail (t ())
+    | 4 -> Eff.Sync (t ())
+    | 5 -> Eff.Suspend (e ())
+    | 6 -> Eff.Perform (rand_op (), t ())
+    | 7 -> Eff.Bind (e (), e ())
+    | 8 -> Eff.Gen (rand_stmts (d - 1))
+    | 9 -> Eff.CatchCause (e (), e ())
+    | 10 -> Eff.MatchCause (e (), e (), e ())
+    | 11 -> Eff.OnExit (e (), e ())
+    | 12 -> Eff.Exit (e ())
+    | 13 -> Eff.Uninterruptible (e ())
+    | 14 -> Eff.Interruptible (e ())
+    | 15 -> Eff.Select (t (), rand_decision (), e (), e ())
+    | 16 -> Eff.Iterate ((if rb () then None else Some Ty.Nat), t (), t (), t (), t (), e ())
+    | 17 -> Eff.YieldNow (rand_nat ())
+    | 18 -> Eff.Perform (rand_op (), t ())
+    | 19 -> Eff.AwaitFiber (t (), rand_mode ())
+    | 20 -> Eff.WithFiber (rand_action (d - 1))
+    | 21 -> Eff.Scoped (e ())
+    | 22 -> Eff.AcquireRelease (e (), e ())
+    | 23 -> Eff.ProvideLayer (rand_layer (d - 1), rb (), e ())
+    | 24 -> Eff.Service (rand_service_key ())
+    | 25 -> Eff.ProvideService (rand_service_key (), t (), e ())
+    | 26 -> Eff.Restore (t (), e ())
+    | 27 -> Eff.ProvideContext (t (), e ())
+    | _ -> Eff.CatchIf (t (), e (), e ())
 
 and rand_layer d =
-  if d <= 0 then LayerTerm_succeed (rand_service_key (), rand_lit ())
+  if d <= 0 then LayerTerm.Succeed (rand_service_key (), rand_lit ())
   else
     match ri 8 with
-    | 0 -> LayerTerm_succeed (rand_service_key (), rand_lit ())
-    | 1 -> LayerTerm_effect (rand_service_key (), rand_eff (d - 1))
-    | 2 -> LayerTerm_effectDiscard (rand_eff (d - 1))
-    | 3 -> LayerTerm_provide (rand_layer (d - 1), rand_layer (d - 1))
-    | 4 -> LayerTerm_provideMerge (rand_layer (d - 1), rand_layer (d - 1))
-    | 5 -> LayerTerm_merge (rand_layer (d - 1), rand_layer (d - 1))
-    | 6 -> LayerTerm_fresh (rand_layer (d - 1))
-    | _ -> LayerTerm_orDie (rand_layer (d - 1))
+    | 0 -> LayerTerm.Succeed (rand_service_key (), rand_lit ())
+    | 1 -> LayerTerm.Effect (rand_service_key (), rand_eff (d - 1))
+    | 2 -> LayerTerm.EffectDiscard (rand_eff (d - 1))
+    | 3 -> LayerTerm.Provide (rand_layer (d - 1), rand_layer (d - 1))
+    | 4 -> LayerTerm.ProvideMerge (rand_layer (d - 1), rand_layer (d - 1))
+    | 5 -> LayerTerm.Merge (rand_layer (d - 1), rand_layer (d - 1))
+    | 6 -> LayerTerm.Fresh (rand_layer (d - 1))
+    | _ -> LayerTerm.OrDie (rand_layer (d - 1))
 
 and rand_stmt d =
   match ri 6 with
-  | 0 -> Stmt_bindYield (rand_eff d)
-  | 1 -> Stmt_yieldDiscard (rand_eff d)
-  | 2 -> Stmt_ret (rand_term d)
-  | 3 -> Stmt_ifElse (rand_term d, rand_stmts (d - 1), rand_stmts (d - 1))
-  | 4 -> Stmt_whileTrue (rand_stmts (d - 1))
-  | _ -> Stmt_breakLoop
+  | 0 -> Stmt.BindYield (rand_eff d)
+  | 1 -> Stmt.YieldDiscard (rand_eff d)
+  | 2 -> Stmt.Ret (rand_term d)
+  | 3 -> Stmt.IfElse (rand_term d, rand_stmts (d - 1), rand_stmts (d - 1))
+  | 4 -> Stmt.WhileTrue (rand_stmts (d - 1))
+  | _ -> Stmt.BreakLoop
 
-and rand_stmts d = if d <= 0 || ri 3 = 0 then Stmts_nil else Stmts_cons (rand_stmt (d - 1), rand_stmts (d - 1))
-and rand_effs d = if d <= 0 || ri 3 = 0 then Effs_nil else Effs_cons (rand_eff (d - 1), rand_effs (d - 1))
+and rand_stmts d = if d <= 0 || ri 3 = 0 then Stmts.Nil else Stmts.Cons (rand_stmt (d - 1), rand_stmts (d - 1))
+and rand_effs d = if d <= 0 || ri 3 = 0 then Effs.Nil else Effs.Cons (rand_eff (d - 1), rand_effs (d - 1))
 
 and rand_action d =
   let t () = rand_term (min d 2) in
   match ri 17 with
-  | 0 -> ActionTerm_fork (rand_eff d, rand_options ())
-  | 1 -> ActionTerm_forkIn (rand_eff d, rand_options (), t ())
-  | 2 -> ActionTerm_forkScoped (rand_eff d, rand_options ())
-  | 3 -> ActionTerm_runIn (t (), t ())
-  | 4 -> ActionTerm_interrupt (t ())
-  | 5 -> ActionTerm_interruptScoped (t ())
-  | 6 -> ActionTerm_interruptAll (t (), if rb () then None else Some (t ()))
-  | 7 -> ActionTerm_awaitAll (t ())
-  | 8 -> ActionTerm_awaitAllFailFast (t ())
-  | 9 -> ActionTerm_snapshotChildren
-  | 10 -> ActionTerm_awaitNewChildren (t ())
-  | 11 -> ActionTerm_raceAll (rand_effs d)
-  | 12 -> ActionTerm_context (rand_keys ())
-  | 13 -> ActionTerm_getId
-  | 14 -> ActionTerm_getInterruptible
-  | 15 -> ActionTerm_closeScope (t (), t ())
-  | _ -> ActionTerm_raceAllFirst (rand_effs d)
+  | 0 -> ActionTerm.Fork (rand_eff d, rand_options ())
+  | 1 -> ActionTerm.ForkIn (rand_eff d, rand_options (), t ())
+  | 2 -> ActionTerm.ForkScoped (rand_eff d, rand_options ())
+  | 3 -> ActionTerm.RunIn (t (), t ())
+  | 4 -> ActionTerm.Interrupt (t ())
+  | 5 -> ActionTerm.InterruptScoped (t ())
+  | 6 -> ActionTerm.InterruptAll (t (), if rb () then None else Some (t ()))
+  | 7 -> ActionTerm.AwaitAll (t ())
+  | 8 -> ActionTerm.AwaitAllFailFast (t ())
+  | 9 -> ActionTerm.SnapshotChildren
+  | 10 -> ActionTerm.AwaitNewChildren (t ())
+  | 11 -> ActionTerm.RaceAll (rand_effs d)
+  | 12 -> ActionTerm.Context (rand_keys ())
+  | 13 -> ActionTerm.GetId
+  | 14 -> ActionTerm.GetInterruptible
+  | 15 -> ActionTerm.CloseScope (t (), t ())
+  | _ -> ActionTerm.RaceAllFirst (rand_effs d)
 
 let rec rand_ty d =
   match if d <= 0 then ri 7 else ri 15 with
-  | 0 -> Ty_never
-  | 1 -> Ty_unit
-  | 2 -> Ty_nat
-  | 3 -> Ty_int
-  | 4 -> Ty_string
-  | 5 -> Ty_bool
-  | 6 -> Ty_handle (rand_string ())
-  | 7 -> Ty_option (rand_ty (d - 1))
-  | 8 -> Ty_list (rand_ty (d - 1))
-  | 9 -> Ty_prod (rand_ty (d - 1), rand_ty (d - 1))
-  | 10 -> Ty_except (rand_ty (d - 1), rand_ty (d - 1))
-  | 11 -> Ty_exitOf (rand_ty (d - 1), rand_ty (d - 1))
-  | 12 -> Ty_causeOf (rand_ty (d - 1))
-  | 13 -> Ty_fiberOf (rand_ty (d - 1), rand_ty (d - 1))
-  | _ -> Ty_union (rand_ty (d - 1), rand_ty (d - 1))
+  | 0 -> Ty.Never
+  | 1 -> Ty.Unit
+  | 2 -> Ty.Nat
+  | 3 -> Ty.Int
+  | 4 -> Ty.String
+  | 5 -> Ty.Bool
+  | 6 -> Ty.Handle (rand_string ())
+  | 7 -> Ty.Option (rand_ty (d - 1))
+  | 8 -> Ty.List (rand_ty (d - 1))
+  | 9 -> Ty.Prod (rand_ty (d - 1), rand_ty (d - 1))
+  | 10 -> Ty.Except (rand_ty (d - 1), rand_ty (d - 1))
+  | 11 -> Ty.ExitOf (rand_ty (d - 1), rand_ty (d - 1))
+  | 12 -> Ty.CauseOf (rand_ty (d - 1))
+  | 13 -> Ty.FiberOf (rand_ty (d - 1), rand_ty (d - 1))
+  | _ -> Ty.Union (rand_ty (d - 1), rand_ty (d - 1))
 
 let rand_key () =
-  { name = (rand_nat ()); service = (rand_nat ()) }
+  { ServiceKey.name = (rand_nat ()); service = (rand_nat ()) }
 
 let rand_list f = List.init (ri 4) (fun _ -> f ())
 
 (* Requirement rows are canonical sets in the Lean source image. Invalid ordering and
    duplicates are tested separately by test_metadata; round-trip samples stay in-domain. *)
 let rand_requirements () =
-  let key (k : service_key) = k.name, k.service in
+  let key (k : ServiceKey.t) = k.ServiceKey.name, k.ServiceKey.service in
   List.sort_uniq (fun a b -> compare (key a) (key b)) (rand_list rand_key)
 
 let rand_row_arg () =
-  if rb () then RowArg_name (rand_string ()) else RowArg_str (rand_string ())
+  if rb () then RowArg.Name (rand_string ()) else RowArg.Str (rand_string ())
 
 let rand_row () =
-  { name = rand_string (); spelling = rand_string ();
-    shape = pick [ RowShape_call; RowShape_value; RowShape_tupleCall; RowShape_method ]; trailing = rand_list rand_row_arg;
-    kind = pick [ RowKind_sync; RowKind_async; RowKind_program ];
+  { Row.name = rand_string (); spelling = rand_string ();
+    shape = pick [ RowShape.Call; RowShape.Value; RowShape.TupleCall; RowShape.Method ]; trailing = rand_list rand_row_arg;
+    kind = pick [ RowKind.Sync; RowKind.Async; RowKind.Program ];
     request = rand_ty 2; answer = rand_ty 2; error = rand_ty 2;
     requires = rand_requirements (); cite = rand_string ();
     type_args = rand_list rand_string;
-    registration = pick [ Registration_deferred; Registration_external ] }
+    registration = pick [ Registration.Deferred; Registration.External ] }
 
-let rand_eff_ty () = { answer = rand_ty 3; error = rand_ty 3; requires = rand_requirements () }
+let rand_eff_ty () = { EffTy.answer = rand_ty 3; error = rand_ty 3; requires = rand_requirements () }
 
 let checks = ref 0
 let failures = ref 0
@@ -264,34 +264,34 @@ let property (what : string) (n : int) (gen : unit -> 'a) (encode : 'a -> string
   done
 
 let record_controls =
-  let raw = Term_record
-      (["z", (true, Ty_int); "z", (false, Ty_number); "__proto__", (true, Ty_nat)],
-       ["unknown"; "unknown"], Terms_cons (Term_lit (Lit_nat 1), Terms_nil)) in
+  let raw = Term.Record
+      (["z", (true, Ty.Int); "z", (false, Ty.Number); "__proto__", (true, Ty.Nat)],
+       ["unknown"; "unknown"], Terms.Cons (Term.Lit (Lit.Nat 1), Terms.Nil)) in
   [ raw;
-    Term_record (["x", (true, Ty_nat)], [], Terms_cons (Term_lit (Lit_nat 1), Terms_nil));
-    Term_record (["x", (true, Ty_nat)], [], Terms_nil);
-    Term_field (FieldReadMode_required, raw, "__proto__");
-    Term_field (FieldReadMode_optional, raw, "a-b");
-    Term_recordSet (raw, "a-b", Term_var 3) ]
+    Term.Record (["x", (true, Ty.Nat)], [], Terms.Cons (Term.Lit (Lit.Nat 1), Terms.Nil));
+    Term.Record (["x", (true, Ty.Nat)], [], Terms.Nil);
+    Term.Field (FieldReadMode.Required, raw, "__proto__");
+    Term.Field (FieldReadMode.Optional, raw, "a-b");
+    Term.RecordSet (raw, "a-b", Term.Var 3) ]
 
 let tuple_controls =
-  [ Term_tupleAt (Term_var 0, 0);
-    Term_tupleAt (Term_var 1, 9007199254740993);
-    Term_tupleAt (Term_tupleAt (Term_var 2, 65537), max_int);
-    Term_field (FieldReadMode_optional, Term_tupleAt (Term_var 3, 1), "a-b") ]
+  [ Term.TupleAt (Term.Var 0, 0);
+    Term.TupleAt (Term.Var 1, 9007199254740993);
+    Term.TupleAt (Term.TupleAt (Term.Var 2, 65537), max_int);
+    Term.Field (FieldReadMode.Optional, Term.TupleAt (Term.Var 3, 1), "a-b") ]
 
 (* The list fold (decisions row 228): with no stated type and with one, and a fold inside a
    fold's body. *)
 let fold_controls =
-  [ Term_fold (None, Term_var 0, Term_lit (Lit_nat 0), Term_var 1);
-    Term_fold (Some (Ty_list Ty_nat), Term_var 0, Term_app ("nil", Terms_nil), Term_var 1);
-    Term_fold (None, Term_var 0, Term_var 1,
-      Term_fold (Some Ty_never, Term_var 3, Term_var 2, Term_tupleAt (Term_var 5, 0))) ]
+  [ Term.Fold (None, Term.Var 0, Term.Lit (Lit.Nat 0), Term.Var 1);
+    Term.Fold (Some (Ty.List Ty.Nat), Term.Var 0, Term.App ("nil", Terms.Nil), Term.Var 1);
+    Term.Fold (None, Term.Var 0, Term.Var 1,
+      Term.Fold (Some Ty.Never, Term.Var 3, Term.Var 2, Term.TupleAt (Term.Var 5, 0))) ]
 
 let decision_controls =
-  [ Decision_bool; Decision_option; Decision_tag "Found";
-    Decision_recordTag "Found"; Decision_recordTag "";
-    Decision_recordTag "é\n\"raw" ]
+  [ Decision.Bool; Decision.Option; Decision.Tag "Found";
+    Decision.RecordTag "Found"; Decision.RecordTag "";
+    Decision.RecordTag "é\n\"raw" ]
 
 let () =
   let at d s p l = d s p l in

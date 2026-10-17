@@ -41,15 +41,15 @@
 #       1543) is a Theta(N) filterMap called on essentially every step -- 62.7 % inclusive on
 #       fan-out 512 after G2, and NOT cacheable (G2 measured the memo at 0.0 % hits).  The row
 #       needs the EXIT type as a second carrier argument, which is what the `+` chain token
-#       spells: `+exit_:2,3,4,5,6` is `exit_` applied to arguments 2..6 of the field's element
-#       type `(nu,s,b,e,d,i,a,ch,k,f) run_fiber`, i.e. `(b,e,d,i,a) exit_`.  The functor gains
+#       spells: `+Exit.t:2,3,4,5,6` is `Exit.t` applied to arguments 2..6 of the field's element
+#       type `(nu,s,b,e,d,i,a,ch,k,f) run_fiber`, i.e. `(b,e,d,i,a) Exit.t`.  The functor gains
 #       `(F : FIBERS)`, and the fiber table's five writes take `~exit_of` in the prelude.
 
 # ---- types -------------------------------------------------------------------------------
 type Effect4.Machine.Dispatcher task D.t
 
 # ---- fields (engine-a1 §1.2, F1-F8) --------------------------------------------------------
-field Effect4.Machine.RunMachine.fibers +exit_:2,3,4,5,6 F.t
+field Effect4.Machine.RunMachine.fibers +Exit.t:2,3,4,5,6 F.t
 field Effect4.Machine.RunMachine.trace T.t
 field Effect4.Machine.Stores.refs M.t
 field Effect4.Machine.DeferredStore.cells M.t
@@ -62,8 +62,8 @@ ops M.t to_list M.to_list
 # with the generated `node` type: the path CARRIES the node it addresses, so `Point.child` is
 # a cons and `resolve` is a field read.  `Capture` is `Point` minus the completed view
 # (src/Effect4/Machine/Stores.lean:162), so it takes the same two carriers.
-field Effect4.Program.Point.path @native_op node P.t
-field Effect4.Machine.Capture.path @native_op node P.t
+field Effect4.Program.Point.path @NativeOp.t node P.t
+field Effect4.Machine.Capture.path @NativeOp.t node P.t
 field Effect4.Program.Point.env E.t
 field Effect4.Machine.Capture.env E.t
 # The site of a program that a call passes (decisions row 340) holds the caller's environment,

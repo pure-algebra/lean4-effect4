@@ -18,24 +18,24 @@
         engine refuses to load (its H8) is [Stopped] with the refusal, never an escaping
         exception.                                                         by construction *)
 
-type exit = (Eff_types.val_, Eff_types.err, Eff_types.defect, int, unit) Eff_types.exit_
-type completion = (Eff_types.val_, Eff_types.err, Eff_types.defect, int, unit) Eff_types.completion
+type exit = (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit) Eff_types.Exit.t
+type completion = (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit) Eff_types.Completion.t
 
 type stop =
   | Finished of exit  (** the root ended with this exit *)
-  | Waiting of int * Eff_types.val_  (** the reactor has no answer for this call *)
-  | Refused of int * Eff_types.val_  (** the engine did not admit the reactor's reply to this call *)
+  | Waiting of int * Eff_types.Val.t  (** the reactor has no answer for this call *)
+  | Refused of int * Eff_types.Val.t  (** the engine did not admit the reactor's reply to this call *)
   | Out_of_fuel  (** the machine's fuel ended first ([Delay]) *)
   | Out_of_rounds  (** the drive answered its last round of calls *)
   | Stopped of string
       (** any other end: suspended on a timer or a decision, stuck, a raise, a reply or a
           program outside the host profile *)
 
-type 's run = { stop : stop; calls : (int * Eff_types.val_ * exit) list; state : 's }
+type 's run = { stop : stop; calls : (int * Eff_types.Val.t * exit) list; state : 's }
 
 val run :
-  ?fuel:int -> ?rounds:int -> Eff_types.row list ->
-  (Eff_types.row -> Eff_types.val_ -> 's -> (completion * 's) option) -> 's ->
-  Eff_types.native_op Eff_types.eff -> 's run
+  ?fuel:int -> ?rounds:int -> Eff_types.Row.t list ->
+  (Eff_types.Row.t -> Eff_types.Val.t -> 's -> (completion * 's) option) -> 's ->
+  Eff_types.NativeOp.t Eff_types.Eff.t -> 's run
 (** The program on the machine at the row table under the reactor; [fuel] defaults to 10 000 000
     machine steps and [rounds] to 100 000 host calls. *)

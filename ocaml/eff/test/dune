@@ -44,3 +44,11 @@
  (modules test_metadata)
  (libraries effect4_eff)
  (deps (glob_files %{project_root}/goldens/*)))
+
+; The program types at their owner, read by a client (slice 1.2a): the Eff-Stmt-Stmts cycle
+; traversed with its type parameter kept, the Lean names in the generated tables, and the wire
+; on a program and a record built here.
+(test
+ (name test_owner)
+ (modules test_owner)
+ (libraries effect4_eff))

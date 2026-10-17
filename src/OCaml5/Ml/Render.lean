@@ -268,6 +268,10 @@ private def renderSigItem : SigItem → String
   | .value name ty => "val " ++ name ++ " : " ++ renderTy ty
   | .type d => "type " ++ renderTypeDecl d
 
+/-- A rendered block whose lines after the first move right by `n` steps: a multi-line item
+inside a signature. -/
+private def indentRest (n : Nat) (s : String) : String := s.replace "\n" ("\n" ++ indentOf n)
+
 private def renderBind (b : Bind) : String :=
   b.name
     ++ String.join (b.params.map fun p =>
@@ -286,12 +290,14 @@ def renderDeclAlg : DeclAlgebra (fun _ => Nat → String) where
     "let " ++ (if isRec then "rec " else "") ++ String.intercalate "\n\nand " (binds.map renderBind)
   decl_comment t := fun _ => "(* " ++ t ++ " *)"
   decl_rawD t := fun _ => t
+  -- a plain module's items move right as blocks; a functor body keeps the layout it always had
   decl_moduleD n params body := fun ind =>
     "module " ++ n
       ++ String.join (params.map fun p => " (" ++ p.1 ++ " : " ++ p.2 ++ ")")
       ++ " = struct\n"
       ++ String.join (body.map fun d =>
           let s := d (ind + 1)
+          let s := if params.isEmpty then indentRest (ind + 1) s else s
           (if s.isEmpty then "" else indentOf (ind + 1)) ++ s ++ "\n")
       ++ indentOf ind ++ "end"
   decl_floatingAttrD t := fun _ => "[@@@" ++ t ++ "]"
@@ -301,6 +307,16 @@ def renderDeclAlg : DeclAlgebra (fun _ => Nat → String) where
     "module type " ++ n ++ " = sig\n"
       ++ String.join (items.map fun i => indentOf (ind + 1) ++ renderSigItem i ++ "\n")
       ++ indentOf ind ++ "end"
+  -- each member its own signature, implemented by itself; a blank line between members
+  decl_moduleRecD members := fun ind =>
+    let member (keyword : String) (m : String × List SigItem) : String :=
+      keyword ++ m.1 ++ " : sig\n"
+        ++ String.join (m.2.map fun i => indentOf (ind + 1) ++ indentRest (ind + 1) (renderSigItem i) ++ "\n")
+        ++ indentOf ind ++ "end = " ++ m.1
+    match members with
+    | [] => ""
+    | m :: rest =>
+      member "module rec " m ++ String.join (rest.map fun m => "\n\n" ++ indentOf ind ++ member "and " m)
 
 /-- One declaration, as a top-level structure item. -/
 def renderDecl (d : Decl) : String := cata_decl renderDeclAlg d 0
@@ -407,5 +423,22 @@ this file is supposed to produce. -/
   == "type nat = private int"
 #guard renderDecl (.types [{ name := "t", body := .variant [{ name := "A" }], isPrivate := true }])
   == "type t = private A"
+-- A recursive group of type-only members, each implemented by itself; a wide variant's arms move
+-- right with the signature.
+#guard renderDecl (.moduleRecD
+    [("Terms", [.type { name := "t", body := .variant [{ name := "Nil" }, { name := "Cons", args := [.named "Term.t", .named "t"] }] }]),
+     ("Term", [.type { name := "t", body := .variant [{ name := "Var", args := [Ty.int] }, { name := "App", args := [.named "Terms.t"] }] }])])
+  == "module rec Terms : sig\n  type t = Nil | Cons of Term.t * t\nend = Terms\n\nand Term : sig\n  type t = Var of int | App of Terms.t\nend = Term"
+-- A plain module moves a wide record right as a block; a functor body keeps its layout.
+private def wideRecord : TypeDecl :=
+  { name := "t", body := .record [{ name := "a", ty := Ty.int }, { name := "b", ty := Ty.int }, { name := "c", ty := Ty.int }, { name := "d", ty := Ty.int }] }
+#guard renderDecl (.moduleD "Row" [] [.types [wideRecord]])
+  == "module Row = struct\n  type t = {\n    a : int;\n    b : int;\n    c : int;\n    d : int;\n  }\nend"
+#guard renderDecl (.moduleD "F" [("X", "S")] [.types [wideRecord]])
+  == "module F (X : S) = struct\n  type t = {\n  a : int;\n  b : int;\n  c : int;\n  d : int;\n}\nend"
+private def wideVariant : TypeDecl :=
+  { name := "t", body := .variant [{ name := "A" }, { name := "B" }, { name := "C" }, { name := "D" }] }
+#guard renderDecl (.moduleRecD [("M", [.type wideVariant])])
+  == "module rec M : sig\n  type t =\n    | A\n    | B\n    | C\n    | D\nend = M"
 
 end OCaml5.Ml

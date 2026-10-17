@@ -227,8 +227,8 @@ let () =
   List.iter
     (fun n ->
       check (Printf.sprintf "the negative integer -(%d+1) reads back" n)
-        (Eff_val.decode_exact (Eff_val.to_bytes (Eff_types.Val_negInt n))
-         = Some (Eff_types.Val_negInt n)))
+        (Eff_val.decode_exact (Eff_val.to_bytes (Eff_types.Val.NegInt n))
+         = Some (Eff_types.Val.NegInt n)))
     [ 0; 1; 255; 256; max_int ];
   check "a negative integer with a leading zero digit is refused"
     (Eff_val.decode_exact (frame tag_int "\000\001") = None);

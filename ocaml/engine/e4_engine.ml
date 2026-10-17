@@ -7,36 +7,36 @@ include E4_engine_intf
 (* EN9: every natural of a host's answer passes the profile a natural reply passes (EN8). The
    matches name every constructor, so a constructor added to the answer's types is a compile
    error here rather than a natural this walk skips. *)
-let check_answer (answer : (val_, err, defect, int, unit) completion) : unit =
+let check_answer (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : unit =
   let nat n = ignore (E4_clock.to_profile_nat (E4_clock.of_nat n)) in
   let rec value = function
-    | Val_nat n | Val_negInt n -> nat n
-    | Val_ctor (index, args) -> nat index; List.iter value args
-    | Val_handle (_, key) -> nat key
-    | Val_list items -> List.iter value items
-    | Val_pair (a, b) -> value a; value b
-    | Val_some a -> value a
-    | Val_unit | Val_bool _ | Val_str _ | Val_bytes _ | Val_none | Val_ref _ | Val_float _ -> ()
+    | Val.Nat n | Val.NegInt n -> nat n
+    | Val.Ctor (index, args) -> nat index; List.iter value args
+    | Val.Handle (_, key) -> nat key
+    | Val.List items -> List.iter value items
+    | Val.Pair (a, b) -> value a; value b
+    | Val.Some a -> value a
+    | Val.Unit | Val.Bool _ | Val.Str _ | Val.Bytes _ | Val.None | Val.Ref _ | Val.Float _ -> ()
   in
   let error = function
-    | Err_tag code -> nat code
-    | Err_payload payload -> value payload
-    | Err_boom | Err_tagged _ | Err_text _ -> ()
+    | Err.Tag code -> nat code
+    | Err.Payload payload -> value payload
+    | Err.Boom | Err.Tagged _ | Err.Text _ -> ()
   in
   let defect = function
-    | Defect_user payload -> nat payload
-    | Defect_error e -> error e
-    | Defect_notImplemented | Defect_asyncFiber | Defect_badName | Defect_missingService -> ()
+    | Defect.User payload -> nat payload
+    | Defect.Error e -> error e
+    | Defect.NotImplemented | Defect.AsyncFiber | Defect.BadName | Defect.MissingService -> ()
   in
   let reason = function
-    | Reason_fail (e, _) -> error e
-    | Reason_die (d, _) -> defect d
-    | Reason_interrupt (fiber, _) -> Option.iter nat fiber
+    | Reason.Fail (e, _) -> error e
+    | Reason.Die (d, _) -> defect d
+    | Reason.Interrupt (fiber, _) -> Option.iter nat fiber
   in
   match answer with
-  | Completion_ofExit (Exit_success v) -> value v
-  | Completion_ofExit (Exit_failure cause) -> List.iter reason cause
-  | Completion_ofRefGet cell -> nat cell
+  | Completion.OfExit (Exit.Success v) -> value v
+  | Completion.OfExit (Exit.Failure cause) -> List.iter reason cause
+  | Completion.OfRefGet cell -> nat cell
 
 (* ------------------------------------------------------------------------- the loop *)
 
@@ -53,7 +53,7 @@ module Make (I : INSTANCE) = struct
 
   type t = {
     program : I.program;
-    table : row list;  (** the program's row table, which every step reads *)
+    table : Row.t list;  (** the program's row table, which every step reads *)
     interp : I.interp;
     fuel_ : int;
     m : I.machine;
@@ -71,14 +71,14 @@ module Make (I : INSTANCE) = struct
   let answer_async_success fiber token n : decision =
     let n = E4_clock.to_profile_nat (E4_clock.of_nat n) in
     I.RunDecision_answerAsync
-      (fiber, token, Eff_types.Completion_ofExit (Eff_types.Exit_success (Eff_types.Val_nat n)))
+      (fiber, token, Eff_types.Completion.OfExit (Eff_types.Exit.Success (Eff_types.Val.Nat n)))
 
-  let answer_async fiber token (answer : (val_, err, defect, int, unit) completion) : decision =
+  let answer_async fiber token (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : decision =
     check_answer answer;
     I.RunDecision_answerAsync (fiber, token, answer)
 
-  let answer_async_value fiber token (v : val_) : decision =
-    let answer = Eff_types.Completion_ofExit (Eff_types.Exit_success v) in
+  let answer_async_value fiber token (v : Val.t) : decision =
+    let answer = Eff_types.Completion.OfExit (Eff_types.Exit.Success v) in
     check_answer answer;
     I.RunDecision_answerAsync (fiber, token, answer)
 
@@ -87,7 +87,7 @@ module Make (I : INSTANCE) = struct
     if Int64.compare bits 0L < 0 || Int64.compare bits (Int64.of_int max_int) > 0 then
       raise (E4_clock.Profile_refusal "reply: float bits do not fit the value carrier");
     I.RunDecision_answerAsync
-      (fiber, token, Eff_types.Completion_ofExit (Eff_types.Exit_success (Eff_types.Val_float (Int64.to_int bits))))
+      (fiber, token, Eff_types.Completion.OfExit (Eff_types.Exit.Success (Eff_types.Val.Float (Int64.to_int bits))))
 
   let interrupt_from who target : decision =
     I.RunDecision_interruptFrom (who, [], target)
@@ -102,7 +102,7 @@ module Make (I : INSTANCE) = struct
      program type is the instance's own (`Eff_types`, the LCNF route's), so nothing converts. *)
   let compile (p : Eff_wire.program) : program =
     Eff_ctors.lits_eff
-      (function Lit_nat n -> ignore (E4_clock.to_profile_nat (E4_clock.of_nat n)) | _ -> ()) p;
+      (function Lit.Nat n -> ignore (E4_clock.to_profile_nat (E4_clock.of_nat n)) | _ -> ()) p;
     p
 
   let of_bytes (b : string) : program option = Option.map compile (Eff_wire.decode_program_exact b)
@@ -190,69 +190,69 @@ module Make (I : INSTANCE) = struct
 
   (* -- the renderers -------------------------------------------------------------- *)
 
-  let rec show_val (v : Eff_types.val_) : string =
+  let rec show_val (v : Eff_types.Val.t) : string =
     match v with
-    | Eff_types.Val_unit -> "unit"
-    | Eff_types.Val_bool b -> string_of_bool b
-    | Eff_types.Val_nat n -> string_of_int n
-    | Eff_types.Val_str s -> Printf.sprintf "%S" s
-    | Eff_types.Val_bytes bs ->
+    | Eff_types.Val.Unit -> "unit"
+    | Eff_types.Val.Bool b -> string_of_bool b
+    | Eff_types.Val.Nat n -> string_of_int n
+    | Eff_types.Val.Str s -> Printf.sprintf "%S" s
+    | Eff_types.Val.Bytes bs ->
       "bytes[" ^ String.concat "," (List.map string_of_int bs) ^ "]"
-    | Eff_types.Val_list xs -> "list[" ^ String.concat "," (List.map show_val xs) ^ "]"
-    | Eff_types.Val_pair (a, b) -> "pair(" ^ show_val a ^ "," ^ show_val b ^ ")"
-    | Eff_types.Val_none -> "none"
-    | Eff_types.Val_some x -> "some " ^ show_val x
-    | Eff_types.Val_ctor (i, args) ->
+    | Eff_types.Val.List xs -> "list[" ^ String.concat "," (List.map show_val xs) ^ "]"
+    | Eff_types.Val.Pair (a, b) -> "pair(" ^ show_val a ^ "," ^ show_val b ^ ")"
+    | Eff_types.Val.None -> "none"
+    | Eff_types.Val.Some x -> "some " ^ show_val x
+    | Eff_types.Val.Ctor (i, args) ->
       Printf.sprintf "ctor %d [%s]" i (String.concat ", " (List.map show_val args))
-    | Eff_types.Val_ref (k, path) ->
+    | Eff_types.Val.Ref (k, path) ->
       Printf.sprintf "ref %d/[%s]" k (String.concat "," (List.map string_of_int path))
-    | Eff_types.Val_handle (k, n) -> Printf.sprintf "handle %d/%d" k n
+    | Eff_types.Val.Handle (k, n) -> Printf.sprintf "handle %d/%d" k n
     (* the signed frame holds -(n+1); the binary64 frame its bits (below 2^62: the carrier) *)
-    | Eff_types.Val_negInt n -> "-" ^ string_of_int (n + 1)
-    | Eff_types.Val_float bits -> Printf.sprintf "float %016x" bits
+    | Eff_types.Val.NegInt n -> "-" ^ string_of_int (n + 1)
+    | Eff_types.Val.Float bits -> Printf.sprintf "float %016x" bits
 
-  let show_err (e : Eff_types.err) : string =
+  let show_err (e : Eff_types.Err.t) : string =
     match e with
-    | Eff_types.Err_boom -> "boom"
-    | Eff_types.Err_tag t -> Printf.sprintf "tag %d" t
-    | Eff_types.Err_tagged (tag, msg) -> Printf.sprintf "tagged %s: %s" tag msg
-    | Eff_types.Err_text msg -> Printf.sprintf "text %s" msg
-    | Eff_types.Err_payload p -> "payload " ^ show_val p
+    | Eff_types.Err.Boom -> "boom"
+    | Eff_types.Err.Tag t -> Printf.sprintf "tag %d" t
+    | Eff_types.Err.Tagged (tag, msg) -> Printf.sprintf "tagged %s: %s" tag msg
+    | Eff_types.Err.Text msg -> Printf.sprintf "text %s" msg
+    | Eff_types.Err.Payload p -> "payload " ^ show_val p
 
-  let show_defect (d : Eff_types.defect) : string =
+  let show_defect (d : Eff_types.Defect.t) : string =
     match d with
-    | Eff_types.Defect_notImplemented -> "notImplemented"
-    | Eff_types.Defect_asyncFiber -> "asyncFiber"
-    | Eff_types.Defect_badName -> "badName"
-    | Eff_types.Defect_missingService -> "missingService"
-    | Eff_types.Defect_user n -> Printf.sprintf "user %d" n
-    | Eff_types.Defect_error e -> "error(" ^ show_err e ^ ")"
+    | Eff_types.Defect.NotImplemented -> "notImplemented"
+    | Eff_types.Defect.AsyncFiber -> "asyncFiber"
+    | Eff_types.Defect.BadName -> "badName"
+    | Eff_types.Defect.MissingService -> "missingService"
+    | Eff_types.Defect.User n -> Printf.sprintf "user %d" n
+    | Eff_types.Defect.Error e -> "error(" ^ show_err e ^ ")"
 
-  let show_anns (a : unit Eff_types.reason_annotations) : string =
+  let show_anns (a : unit Eff_types.ReasonAnnotations.t) : string =
     if a = [] then "" else "{" ^ String.concat "," (List.map fst a) ^ "}"
 
-  let show_reason (r : (Eff_types.err, Eff_types.defect, I.fiber_id, unit) Eff_types.reason) : string =
+  let show_reason (r : (Eff_types.Err.t, Eff_types.Defect.t, I.fiber_id, unit) Eff_types.Reason.t) : string =
     match r with
-    | Eff_types.Reason_fail (e, a) -> "fail(" ^ show_err e ^ ")" ^ show_anns a
-    | Eff_types.Reason_die (d, a) -> "die(" ^ show_defect d ^ ")" ^ show_anns a
-    | Eff_types.Reason_interrupt (None, a) -> "interrupt(none)" ^ show_anns a
-    | Eff_types.Reason_interrupt (Some i, a) ->
+    | Eff_types.Reason.Fail (e, a) -> "fail(" ^ show_err e ^ ")" ^ show_anns a
+    | Eff_types.Reason.Die (d, a) -> "die(" ^ show_defect d ^ ")" ^ show_anns a
+    | Eff_types.Reason.Interrupt (None, a) -> "interrupt(none)" ^ show_anns a
+    | Eff_types.Reason.Interrupt (Some i, a) ->
       Printf.sprintf "interrupt(%d)%s" i (show_anns a)
 
-  let show_cause (c : (Eff_types.err, Eff_types.defect, I.fiber_id, unit) Eff_types.cause) : string =
+  let show_cause (c : (Eff_types.Err.t, Eff_types.Defect.t, I.fiber_id, unit) Eff_types.Cause.t) : string =
     "[" ^ String.concat "; " (List.map show_reason c) ^ "]"
 
-  let show_exit (x : (Eff_types.val_, Eff_types.err, Eff_types.defect, I.fiber_id, unit) Eff_types.exit_) : string =
+  let show_exit (x : (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, I.fiber_id, unit) Eff_types.Exit.t) : string =
     match x with
-    | Eff_types.Exit_success v -> "success " ^ show_val v
-    | Eff_types.Exit_failure c -> "failure " ^ show_cause c
+    | Eff_types.Exit.Success v -> "success " ^ show_val v
+    | Eff_types.Exit.Failure c -> "failure " ^ show_cause c
 
   let show_exit_opt = function None -> "-" | Some x -> show_exit x
 
-  let show_observer_mode (m : observer_mode) : string =
+  let show_observer_mode (m : ObserverMode.t) : string =
     match m with
-    | ObserverMode_awaitValue -> "awaitValue"
-    | ObserverMode_joinEffect -> "joinEffect"
+    | ObserverMode.AwaitValue -> "awaitValue"
+    | ObserverMode.JoinEffect -> "joinEffect"
 
   let show_observer (o : I.observer) : string =
     match o with
@@ -283,8 +283,8 @@ module Make (I : INSTANCE) = struct
     Printf.sprintf "ctx(%s;%d;%b)"
       (String.concat ","
          (List.map
-            (fun (sv : Eff_types.val_ I.service) ->
-               Printf.sprintf "%d:%d=%s" sv.I.key.name sv.I.key.service
+            (fun (sv : Eff_types.Val.t I.service) ->
+               Printf.sprintf "%d:%d=%s" sv.I.key.ServiceKey.name sv.I.key.ServiceKey.service
                  (show_val sv.I.value))
             c.I.services))
       c.I.max_ops_before_yield c.I.prevent_yield
@@ -292,7 +292,7 @@ module Make (I : INSTANCE) = struct
   (* `nu` (EffName) and `s` (EffThunk) are the two payloads this projection does not
      descend into -- see the header's note on the differential's reach. *)
   let rec show_prim
-      (p : (I.nu, I.s, Eff_types.val_, Eff_types.err, Eff_types.defect, I.fiber_id, unit) I.prim) : string =
+      (p : (I.nu, I.s, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, I.fiber_id, unit) I.prim) : string =
     match p with
     | I.Prim_success v -> "success " ^ show_val v
     | I.Prim_failure c -> "failure " ^ show_cause c
@@ -317,7 +317,7 @@ module Make (I : INSTANCE) = struct
     | I.Prim_asyncFinalizer _ -> "asyncFinalizer(<name>)"
 
   let show_frame_event
-      (e : (I.nu, I.s, Eff_types.val_, Eff_types.err, Eff_types.defect, I.fiber_id, unit) I.frame_event) : string =
+      (e : (I.nu, I.s, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, I.fiber_id, unit) I.frame_event) : string =
     match e with
     | I.FrameEvent_popped p -> "popped(" ^ show_prim p ^ ")"
     | I.FrameEvent_ranContAll p -> "ranContAll(" ^ show_prim p ^ ")"
@@ -331,12 +331,12 @@ module Make (I : INSTANCE) = struct
       (t :
         ( I.nu,
           I.s,
-          Eff_types.val_,
-          Eff_types.err,
-          Eff_types.defect,
+          Eff_types.Val.t,
+          Eff_types.Err.t,
+          Eff_types.Defect.t,
           I.fiber_id,
           unit,
-          (I.nu, I.s, Eff_types.val_, Eff_types.err, Eff_types.defect, I.fiber_id, unit) I.prim )
+          (I.nu, I.s, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, I.fiber_id, unit) I.prim )
         I.task) : string =
     match t with
     | I.Task_start f -> Printf.sprintf "start(%d)" f
@@ -442,15 +442,15 @@ module Make (I : INSTANCE) = struct
   let exits (t : t) : (int * string) list =
     List.map (fun (id, x) -> (id, show_exit x)) (I.completed_exits t.m)
 
-  let host_calls (t : t) : (int * int * int * val_) list =
+  let host_calls (t : t) : (int * int * int * Val.t) list =
     List.filter_map
       (fun (a : I.await) ->
         match a.op with
-        | NativeOp_external row -> Some (a.fiber, a.token, row, a.request)
+        | NativeOp.External row -> Some (a.fiber, a.token, row, a.request)
         | _ -> None)
       (I.program_awaits t.m)
 
-  let root_exit_of (t : t) : (val_, err, defect, int, unit) exit_ option =
+  let root_exit_of (t : t) : (Val.t, Err.t, Defect.t, int, unit) Exit.t option =
     match List.assoc_opt 0 (I.fibers t.m) with
     | None -> None
     | Some f -> I.f_exit f

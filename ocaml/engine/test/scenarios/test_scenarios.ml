@@ -152,7 +152,7 @@ module type GEN = sig
     program ->
     int ->
     api_decision list ->
-    row list ->
+    Row.t list ->
     int ->
     inspection
 
@@ -169,13 +169,13 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
   (* The table from its wire bytes. A row that is not exactly one row is refused, and so is a
      row with trailing arguments: the engine reads none. The row is `Eff_types`', the one
      program type the engine opens, so nothing converts. *)
-  let table_of (rows : string list) : (row list, string) result =
+  let table_of (rows : string list) : (Row.t list, string) result =
     let rec go acc = function
       | [] -> Ok (List.rev acc)
       | bytes :: rest ->
         (match Eff_wire.decode_row_exact bytes with
          | None -> Error "a row's bytes are not exactly one row"
-         | Some r when r.trailing <> [] -> Error (r.spelling ^ ": trailing arguments")
+         | Some r when r.Row.trailing <> [] -> Error (r.Row.spelling ^ ": trailing arguments")
          | Some r -> go (r :: acc) rest)
     in
     go [] rows
@@ -183,9 +183,9 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
   (* ------------------------------------------------------------ S3: values as bytes *)
 
   (* The value frames are Eff_val's, the lanes' one writer and reader of `Val.encode`. *)
-  let hex_of_val (v : Eff_types.val_) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
+  let hex_of_val (v : Eff_types.Val.t) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
 
-  let val_of_hex (hex : string) : val_ =
+  let val_of_hex (hex : string) : Val.t =
     match Eff_val.decode_exact (bytes_of_hex "a value" hex) with
     | Some v -> v
     | None -> failwith "fixture: a value's bytes are not exactly one value"
@@ -206,13 +206,13 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
     | [ "answer"; f; token; "ok"; hex ] ->
       A.RunDecision_answerAsync
         (int_of_string f, int_of_string token,
-         Eff_types.Completion_ofExit (Eff_types.Exit_success (val_of_hex hex)))
+         Eff_types.Completion.OfExit (Eff_types.Exit.Success (val_of_hex hex)))
     | [ "answer"; f; token; "failed"; tag; message ] ->
       A.RunDecision_answerAsync
         (int_of_string f, int_of_string token,
-         Eff_types.Completion_ofExit
-           (Eff_types.Exit_failure
-              [ Eff_types.Reason_fail (Eff_types.Err_tagged (text_of_word tag, text_of_word message), []) ]))
+         Eff_types.Completion.OfExit
+           (Eff_types.Exit.Failure
+              [ Eff_types.Reason.Fail (Eff_types.Err.Tagged (text_of_word tag, text_of_word message), []) ]))
     | [ "interrupt"; who; target ] ->
       A.RunDecision_interruptFrom
         ((if who = "-" then None else Some (int_of_string who)), [], int_of_string target)
@@ -248,7 +248,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
         (List.map
            (fun (a : A.await) ->
              Printf.sprintf "%d.%d.%s.%s" a.A.fiber a.A.token
-               (match a.A.op with Eff_types.NativeOp_external i -> string_of_int i | _ -> "x")
+               (match a.A.op with Eff_types.NativeOp.External i -> string_of_int i | _ -> "x")
                (hex_of_val a.A.request))
            (A.program_awaits m))
     in
@@ -271,7 +271,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
   let rec take n = function [] -> [] | x :: xs -> if n = 0 then [] else x :: take (n - 1) xs
 
   (* The views of `api_replay` on every prefix of a tape, the loaded machine first. *)
-  let views (program : A.program) (r : run) (table : row list) (tape : A.api_decision list)
+  let views (program : A.program) (r : run) (table : Row.t list) (tape : A.api_decision list)
     : string list =
     List.init (List.length tape + 1) (fun count ->
         view_of (A.api_replay program r.fuel (take count tape) table r.compile))

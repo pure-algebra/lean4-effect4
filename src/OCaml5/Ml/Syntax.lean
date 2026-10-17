@@ -9,8 +9,10 @@ route (`OCaml5.Lcnf.Translate`, `OCaml5.Lcnf.Types`, the builtin table's forms, 
 and the `eff/` library's emitter (`OCaml5.Eff.Emit`), whose forms `fnMatch`, `seq`, `letPat`,
 `ifUnit`, `commented` and `Pat.int` are. Three module-language forms land ahead of their
 producers, the interop plan's P1 and P2 (`docs/research/2026-10-15-interop-plan/README.md`,
-decisions row 393): `pack`, `SigItem` with `Decl.moduleTypeD`, and `TypeDecl.isPrivate`. A form
-no producer builds is not here otherwise. The cut of 2026-10-15 (LC-3 of
+decisions row 393): `pack`, `SigItem` with `Decl.moduleTypeD`, and `TypeDecl.isPrivate`. The
+program types' owner (`ocaml/eff/eff_types.ml`) builds `Decl.moduleD` and `Decl.moduleRecD`, one
+module per type (slice 1.2a of the OCaml estate refactor). A form no producer builds is not here
+otherwise. The cut of 2026-10-15 (LC-3 of
 `docs/research/2026-10-14-lowering-cleanup/prompt.md`) measured each removal by a build: the
 avatar's surface of 55 expression constructors became 22. The `eff/` emitter added 6, and verbatim
 expression text went once the prelude's three primitives were structured. The join point's
@@ -270,6 +272,11 @@ inductive Decl where
   | openD (path : String)
   /-- `module type S = sig … end` (§11.10). -/
   | moduleTypeD (name : String) (items : List SigItem)
+  /-- `module rec A : sig … end = A and B : sig … end = B` (§12.2, recursive modules): each member
+  is its own signature and its own implementation. The program types' owner declares a cycle of
+  types so (`Eff`–`Stmt`–`Stmts`), since a sequential signature cannot name it. A member holds
+  types only: OCaml evaluates such a group safely, and `Ml.checkModule` refuses a `val`. -/
+  | moduleRecD (members : List (String × List SigItem))
 deriving Repr, Inhabited
 
 /-! ## The root -/

@@ -171,7 +171,7 @@ module Coq_service_key :
  sig
  end
 
-type service_key = Eff_types.service_key
+type service_key = Eff_types.ServiceKey.t
 
 type 'a effect4_row = 'a list
 
@@ -179,19 +179,19 @@ module Coq_fork_options :
  sig
  end
 
-type fork_options = Eff_types.fork_options
+type fork_options = Eff_types.ForkOptions.t
 
 module Coq_param_decl :
  sig
  end
 
-type param_decl = Eff_types.param_decl
+type param_decl = Eff_types.ParamDecl.t
 
 module Coq_def_decl :
  sig
  end
 
-type def_decl = Eff_types.def_decl
+type def_decl = Eff_types.DefDecl.t
 
 
 
@@ -199,35 +199,35 @@ type ('e1, 'e2, 'x) sum1 =
 | Inl1 of 'e1
 | Inr1 of 'e2
 
-val fail_exit : Eff_types.val_ -> Lane_eval.exitv
+val fail_exit : Eff_types.Val.t -> Lane_eval.exitv
 
 val bad_shape : Lane_eval.exitv
 
 val outside : Lane_eval.exitv
 
-val eval_term : Eff_types.val_ list -> Eff_types.term -> Eff_types.val_ option
+val eval_term : Eff_types.Val.t list -> Eff_types.Term.t -> Eff_types.Val.t option
 
 val eval_terms :
-  Eff_types.val_ list -> Eff_types.terms -> Eff_types.val_ list option
+  Eff_types.Val.t list -> Eff_types.Terms.t -> Eff_types.Val.t list option
 
 val decide :
-  Eff_types.decision -> Eff_types.val_ -> (bool * Eff_types.val_ list) option
+  Eff_types.Decision.t -> Eff_types.Val.t -> (bool * Eff_types.Val.t list) option
 
 type 'x rowE =
-| Row of int * Eff_types.val_
+| Row of int * Eff_types.Val.t
 
 type 'x storeE =
-| RefMake of Eff_types.val_
-| RefGet of Eff_types.val_
-| RefSet of Eff_types.val_ * Eff_types.val_
+| RefMake of Eff_types.Val.t
+| RefGet of Eff_types.Val.t
+| RefSet of Eff_types.Val.t * Eff_types.Val.t
 
-type frame_args = Eff_types.native_op Eff_types.eff list * Eff_types.val_ list
+type frame_args = Eff_types.NativeOp.t Eff_types.Eff.t list * Eff_types.Val.t list
 
 val effs_list :
-  Eff_types.native_op Eff_types.effs -> Eff_types.native_op Eff_types.eff list
+  Eff_types.NativeOp.t Eff_types.Effs.t -> Eff_types.NativeOp.t Eff_types.Eff.t list
 
 val bodies_of :
-  Eff_types.native_op Eff_types.eff -> Eff_types.native_op Eff_types.eff list
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.NativeOp.t Eff_types.Eff.t list
 
 type ('e, 'r) program =
 | PRet of 'r
@@ -254,32 +254,32 @@ val then_opt :
   program) -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv option) program
 
 val loop_stepB :
-  (Eff_types.val_ list -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
-  option) program) -> Eff_types.val_ list -> Eff_types.term -> Eff_types.term
-  -> Eff_types.term -> Eff_types.val_ -> ((__ storeE, __ rowE, __) sum1,
-  (Lane_eval.exitv option, Eff_types.val_) sum) program
+  (Eff_types.Val.t list -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
+  option) program) -> Eff_types.Val.t list -> Eff_types.Term.t -> Eff_types.Term.t
+  -> Eff_types.Term.t -> Eff_types.Val.t -> ((__ storeE, __ rowE, __) sum1,
+  (Lane_eval.exitv option, Eff_types.Val.t) sum) program
 
 val opt_join : 'a1 option option -> 'a1 option
 
 val leaf : Lane_eval.exitv option -> Lane_eval.exitv
 
 type calls_t =
-  Eff_types.native_op Eff_types.eff -> Eff_types.val_ list -> frame_args list
-  -> Eff_types.val_ -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t list -> frame_args list
+  -> Eff_types.Val.t -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
   option) program
 
 val cut_calls : calls_t
 
 val denoteW :
-  Eff_types.native_op Eff_types.eff list -> int -> calls_t ->
-  Eff_types.native_op Eff_types.eff -> Eff_types.val_ list -> frame_args list
-  -> Eff_types.val_ -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
+  Eff_types.NativeOp.t Eff_types.Eff.t list -> int -> calls_t ->
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t list -> frame_args list
+  -> Eff_types.Val.t -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
   option) program
 
-val denoteD : Eff_types.native_op Eff_types.eff list -> int -> int -> calls_t
+val denoteD : Eff_types.NativeOp.t Eff_types.Eff.t list -> int -> int -> calls_t
 
 val denoteBD :
-  int -> Eff_types.native_op Eff_types.eff -> ((__ storeE, __ rowE, __) sum1,
+  int -> Eff_types.NativeOp.t Eff_types.Eff.t -> ((__ storeE, __ rowE, __) sum1,
   Lane_eval.exitv option) program
 
 val route :
@@ -287,18 +287,18 @@ val route :
   sum1 -> ('a1 * 'a2) -> (__ * ('a1 * 'a2)) option
 
 val fn_host :
-  (int -> Eff_types.val_ -> 'a1 -> (Lane_eval.exitv * 'a1) option) -> __ rowE
+  (int -> Eff_types.Val.t -> 'a1 -> (Lane_eval.exitv * 'a1) option) -> __ rowE
   -> 'a1 -> (__ * 'a1) option
 
 type step =
-| Called of int * Eff_types.val_ * Lane_eval.exitv
-| Celled of string * Eff_types.val_ * Eff_types.val_
+| Called of int * Eff_types.Val.t * Lane_eval.exitv
+| Celled of string * Eff_types.Val.t * Eff_types.Val.t
 
 type stop =
 | Finished of Lane_eval.exitv
 | Cut
-| Waiting of int * Eff_types.val_
-| Refused of string * Eff_types.val_
+| Waiting of int * Eff_types.Val.t
+| Refused of string * Eff_types.Val.t
 
 val step_of : (__ storeE, __ rowE, 'a1) sum1 -> 'a1 -> step
 
@@ -309,15 +309,15 @@ val trace :
   sum1, Lane_eval.exitv option) program -> 'a1 -> (step list * stop) * 'a1
 
 val run_at :
-  int -> ((__ storeE, __ rowE, __) sum1, 'a1) host -> Eff_types.native_op
-  Eff_types.eff -> 'a1 -> (step list * stop) * 'a1
+  int -> ((__ storeE, __ rowE, __) sum1, 'a1) host -> Eff_types.NativeOp.t
+  Eff_types.Eff.t -> 'a1 -> (step list * stop) * 'a1
 
 val cells_fn :
-  (string -> Eff_types.val_ -> Eff_types.val_ -> 'a1 ->
-  (Eff_types.val_ * 'a1) option) -> __ storeE -> 'a1 -> (__ * 'a1) option
+  (string -> Eff_types.Val.t -> Eff_types.Val.t -> 'a1 ->
+  (Eff_types.Val.t * 'a1) option) -> __ storeE -> 'a1 -> (__ * 'a1) option
 
 val lane_run :
-  (string -> Eff_types.val_ -> Eff_types.val_ -> 'a1 ->
-  (Eff_types.val_ * 'a1) option) -> (int -> Eff_types.val_ -> 'a2 ->
-  (Lane_eval.exitv * 'a2) option) -> int -> Eff_types.native_op Eff_types.eff
+  (string -> Eff_types.Val.t -> Eff_types.Val.t -> 'a1 ->
+  (Eff_types.Val.t * 'a1) option) -> (int -> Eff_types.Val.t -> 'a2 ->
+  (Lane_eval.exitv * 'a2) option) -> int -> Eff_types.NativeOp.t Eff_types.Eff.t
   -> 'a1 -> 'a2 -> (step list * stop) * ('a1 * 'a2)

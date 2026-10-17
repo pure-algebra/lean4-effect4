@@ -15,28 +15,28 @@ open Eff_types
 module G = Effect4_gen.Api_gen
 
 (* Denote.exitv *)
-type exitv = Success of val_ | Failure of val_
+type exitv = Success of Val.t | Failure of Val.t
 
-let of_exit (ex : (val_, err, defect, int, unit) exit_) =
-  match ex with Exit_success v -> Success v | ex -> Failure (G.reify_exit_val ex)
+let of_exit (ex : (Val.t, Err.t, Defect.t, int, unit) Exit.t) =
+  match ex with Exit.Success v -> Success v | ex -> Failure (G.reify_exit_val ex)
 
 (* Program.evalTerm *)
-let eval_term (env : val_ list) (t : term) : val_ option = G.program_eval_term env t
+let eval_term (env : Val.t list) (t : Term.t) : Val.t option = G.program_eval_term env t
 
 (* Rocq's eval_terms, eval_term's sibling in one fixpoint: extraction realizes the two
    together. Each term by evalTerm, all or none, as Denote.v writes it. *)
-let rec eval_terms (env : val_ list) (ts : terms) : val_ list option =
+let rec eval_terms (env : Val.t list) (ts : Terms.t) : Val.t list option =
   match ts with
-  | Terms_nil -> Some []
-  | Terms_cons (t, rest) ->
+  | Terms.Nil -> Some []
+  | Terms.Cons (t, rest) ->
     Option.bind (eval_term env t) (fun v -> Option.map (fun vs -> v :: vs) (eval_terms env rest))
 
 (* Decision.decide: what the arm binds, as Rocq's list of zero or one value *)
-let decide (d : decision) (v : val_) : (bool * val_ list) option =
+let decide (d : Decision.t) (v : Val.t) : (bool * Val.t list) option =
   Option.map (fun (b, bound) -> (b, Option.to_list bound)) (G.program_decision_decide d v)
 
 (* Exit.failure (Cause.fail (errOf v)), as Eval.fail writes it *)
-let fail_exit (v : val_) : exitv = of_exit (Exit_failure [ Reason_fail (G.program_err_of v, []) ])
+let fail_exit (v : Val.t) : exitv = of_exit (Exit.Failure [ Reason.Fail (G.program_err_of v, []) ])
 
 (* Eval.badShape, Eval.outside *)
 let bad_shape : exitv = of_exit G.run_tree_eval_bad_shape

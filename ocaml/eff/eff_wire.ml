@@ -8,16 +8,16 @@ open Eff_types
 
 (* The order of a canonical requirement row: by name, then by service. *)
 
-let keyBefore (a : service_key) (c : service_key) : bool =
-  (a.name, a.service) < (c.name, c.service)
+let keyBefore (a : ServiceKey.t) (c : ServiceKey.t) : bool =
+  (a.ServiceKey.name, a.ServiceKey.service) < (c.ServiceKey.name, c.ServiceKey.service)
 
-let rec emit_service_name (b : Eff_frame.writer) (r : service_name) : unit =
+let rec emit_service_name (b : Eff_frame.writer) (r : ServiceName.t) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b r)
 
-let encode_service_name (v : service_name) : string =
+let encode_service_name (v : ServiceName.t) : string =
   Eff_frame.to_string emit_service_name v
 
-let rec decode_service_name (s : string) (pos : int) (limit : int) : (service_name * int) option =
+let rec decode_service_name (s : string) (pos : int) (limit : int) : (ServiceName.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -26,16 +26,16 @@ let rec decode_service_name (s : string) (pos : int) (limit : int) : (service_na
             | Some (a0, p) -> if p = e then Some (a0, next) else None)
         | _ -> None)
 
-let decode_service_name_exact (s : string) : service_name option =
+let decode_service_name_exact (s : string) : ServiceName.t option =
   Eff_frame.exact decode_service_name s
 
-let rec emit_service_type_code (b : Eff_frame.writer) (r : service_type_code) : unit =
+let rec emit_service_type_code (b : Eff_frame.writer) (r : ServiceTypeCode.t) : unit =
   Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b r)
 
-let encode_service_type_code (v : service_type_code) : string =
+let encode_service_type_code (v : ServiceTypeCode.t) : string =
   Eff_frame.to_string emit_service_type_code v
 
-let rec decode_service_type_code (s : string) (pos : int) (limit : int) : (service_type_code * int) option =
+let rec decode_service_type_code (s : string) (pos : int) (limit : int) : (ServiceTypeCode.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -44,16 +44,16 @@ let rec decode_service_type_code (s : string) (pos : int) (limit : int) : (servi
             | Some (a0, p) -> if p = e then Some (a0, next) else None)
         | _ -> None)
 
-let decode_service_type_code_exact (s : string) : service_type_code option =
+let decode_service_type_code_exact (s : string) : ServiceTypeCode.t option =
   Eff_frame.exact decode_service_type_code s
 
-let rec emit_service_key (b : Eff_frame.writer) (r : service_key) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> emit_service_name b r.name; emit_service_type_code b r.service)
+let rec emit_service_key (b : Eff_frame.writer) (r : ServiceKey.t) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> emit_service_name b r.ServiceKey.name; emit_service_type_code b r.ServiceKey.service)
 
-let encode_service_key (v : service_key) : string =
+let encode_service_key (v : ServiceKey.t) : string =
   Eff_frame.to_string emit_service_key v
 
-let rec decode_service_key (s : string) (pos : int) (limit : int) : (service_key * int) option =
+let rec decode_service_key (s : string) (pos : int) (limit : int) : (ServiceKey.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -61,248 +61,248 @@ let rec decode_service_key (s : string) (pos : int) (limit : int) : (service_key
             | None -> None
             | Some (a0, p) -> (match decode_service_type_code s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (({ name = a0; service = a1 } : service_key), next) else None))
+                | Some (a1, p) -> if p = e then Some (({ ServiceKey.name = a0; ServiceKey.service = a1 } : ServiceKey.t), next) else None))
         | _ -> None)
 
-let decode_service_key_exact (s : string) : service_key option =
+let decode_service_key_exact (s : string) : ServiceKey.t option =
   Eff_frame.exact decode_service_key s
 
-let rec emit_ty (b : Eff_frame.writer) (v : ty) : unit =
+let rec emit_ty (b : Eff_frame.writer) (v : Ty.t) : unit =
   match v with
-    | Ty_never -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | Ty_unit -> Eff_frame.emit_ctor b 1 (fun _ -> ())
-    | Ty_nat -> Eff_frame.emit_ctor b 2 (fun _ -> ())
-    | Ty_int -> Eff_frame.emit_ctor b 3 (fun _ -> ())
-    | Ty_string -> Eff_frame.emit_ctor b 4 (fun _ -> ())
-    | Ty_bool -> Eff_frame.emit_ctor b 5 (fun _ -> ())
-    | Ty_handle a0 -> Eff_frame.emit_ctor b 6 (fun b -> Eff_frame.emit_string b a0)
-    | Ty_option a0 -> Eff_frame.emit_ctor b 7 (fun b -> emit_ty b a0)
-    | Ty_list a0 -> Eff_frame.emit_ctor b 8 (fun b -> emit_ty b a0)
-    | Ty_prod (a0, a1) -> Eff_frame.emit_ctor b 9 (fun b -> emit_ty b a0; emit_ty b a1)
-    | Ty_except (a0, a1) -> Eff_frame.emit_ctor b 10 (fun b -> emit_ty b a0; emit_ty b a1)
-    | Ty_exitOf (a0, a1) -> Eff_frame.emit_ctor b 11 (fun b -> emit_ty b a0; emit_ty b a1)
-    | Ty_causeOf a0 -> Eff_frame.emit_ctor b 12 (fun b -> emit_ty b a0)
-    | Ty_fiberOf (a0, a1) -> Eff_frame.emit_ctor b 13 (fun b -> emit_ty b a0; emit_ty b a1)
-    | Ty_union (a0, a1) -> Eff_frame.emit_ctor b 14 (fun b -> emit_ty b a0; emit_ty b a1)
-    | Ty_lit a0 -> Eff_frame.emit_ctor b 15 (fun b -> Eff_frame.emit_string b a0)
-    | Ty_refOf a0 -> Eff_frame.emit_ctor b 16 (fun b -> emit_ty b a0)
-    | Ty_deferredOf (a0, a1) -> Eff_frame.emit_ctor b 17 (fun b -> emit_ty b a0; emit_ty b a1)
-    | Ty_var a0 -> Eff_frame.emit_ctor b 18 (fun b -> Eff_frame.emit_nat b a0)
-    | Ty_unknown -> Eff_frame.emit_ctor b 19 (fun _ -> ())
-    | Ty_record a0 -> Eff_frame.emit_ctor b 20 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_string b y) (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_bool b y) (fun b y -> emit_ty b y) y) y) a0)
-    | Ty_map (a0, a1) -> Eff_frame.emit_ctor b 21 (fun b -> emit_ty b a0; emit_ty b a1)
-    | Ty_tuple a0 -> Eff_frame.emit_ctor b 22 (fun b -> Eff_frame.emit_list b (fun b y -> emit_ty b y) a0)
-    | Ty_app (a0, a1) -> Eff_frame.emit_ctor b 23 (fun b -> Eff_frame.emit_string b a0; Eff_frame.emit_list b (fun b y -> emit_ty b y) a1)
-    | Ty_null -> Eff_frame.emit_ctor b 24 (fun _ -> ())
-    | Ty_undefined -> Eff_frame.emit_ctor b 25 (fun _ -> ())
-    | Ty_number -> Eff_frame.emit_ctor b 26 (fun _ -> ())
-    | Ty_bytes -> Eff_frame.emit_ctor b 27 (fun _ -> ())
-    | Ty_contextOf a0 -> Eff_frame.emit_ctor b 28 (fun b -> if not (Eff_frame.strictly_ascending keyBefore a0) then invalid_arg "noncanonical requirements"; Eff_frame.emit_list b emit_service_key a0)
+    | Ty.Never -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | Ty.Unit -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | Ty.Nat -> Eff_frame.emit_ctor b 2 (fun _ -> ())
+    | Ty.Int -> Eff_frame.emit_ctor b 3 (fun _ -> ())
+    | Ty.String -> Eff_frame.emit_ctor b 4 (fun _ -> ())
+    | Ty.Bool -> Eff_frame.emit_ctor b 5 (fun _ -> ())
+    | Ty.Handle a0 -> Eff_frame.emit_ctor b 6 (fun b -> Eff_frame.emit_string b a0)
+    | Ty.Option a0 -> Eff_frame.emit_ctor b 7 (fun b -> emit_ty b a0)
+    | Ty.List a0 -> Eff_frame.emit_ctor b 8 (fun b -> emit_ty b a0)
+    | Ty.Prod (a0, a1) -> Eff_frame.emit_ctor b 9 (fun b -> emit_ty b a0; emit_ty b a1)
+    | Ty.Except (a0, a1) -> Eff_frame.emit_ctor b 10 (fun b -> emit_ty b a0; emit_ty b a1)
+    | Ty.ExitOf (a0, a1) -> Eff_frame.emit_ctor b 11 (fun b -> emit_ty b a0; emit_ty b a1)
+    | Ty.CauseOf a0 -> Eff_frame.emit_ctor b 12 (fun b -> emit_ty b a0)
+    | Ty.FiberOf (a0, a1) -> Eff_frame.emit_ctor b 13 (fun b -> emit_ty b a0; emit_ty b a1)
+    | Ty.Union (a0, a1) -> Eff_frame.emit_ctor b 14 (fun b -> emit_ty b a0; emit_ty b a1)
+    | Ty.Lit a0 -> Eff_frame.emit_ctor b 15 (fun b -> Eff_frame.emit_string b a0)
+    | Ty.RefOf a0 -> Eff_frame.emit_ctor b 16 (fun b -> emit_ty b a0)
+    | Ty.DeferredOf (a0, a1) -> Eff_frame.emit_ctor b 17 (fun b -> emit_ty b a0; emit_ty b a1)
+    | Ty.Var a0 -> Eff_frame.emit_ctor b 18 (fun b -> Eff_frame.emit_nat b a0)
+    | Ty.Unknown -> Eff_frame.emit_ctor b 19 (fun _ -> ())
+    | Ty.Record a0 -> Eff_frame.emit_ctor b 20 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_string b y) (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_bool b y) (fun b y -> emit_ty b y) y) y) a0)
+    | Ty.Map (a0, a1) -> Eff_frame.emit_ctor b 21 (fun b -> emit_ty b a0; emit_ty b a1)
+    | Ty.Tuple a0 -> Eff_frame.emit_ctor b 22 (fun b -> Eff_frame.emit_list b (fun b y -> emit_ty b y) a0)
+    | Ty.App (a0, a1) -> Eff_frame.emit_ctor b 23 (fun b -> Eff_frame.emit_string b a0; Eff_frame.emit_list b (fun b y -> emit_ty b y) a1)
+    | Ty.Null -> Eff_frame.emit_ctor b 24 (fun _ -> ())
+    | Ty.Undefined -> Eff_frame.emit_ctor b 25 (fun _ -> ())
+    | Ty.Number -> Eff_frame.emit_ctor b 26 (fun _ -> ())
+    | Ty.Bytes -> Eff_frame.emit_ctor b 27 (fun _ -> ())
+    | Ty.ContextOf a0 -> Eff_frame.emit_ctor b 28 (fun b -> if not (Eff_frame.strictly_ascending keyBefore a0) then invalid_arg "noncanonical requirements"; Eff_frame.emit_list b emit_service_key a0)
 
-let encode_ty (v : ty) : string =
+let encode_ty (v : Ty.t) : string =
   Eff_frame.to_string emit_ty v
 
-let rec decode_ty (s : string) (pos : int) (limit : int) : (ty * int) option =
+let rec decode_ty (s : string) (pos : int) (limit : int) : (Ty.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (Ty_never, next) else None
-        | 1 -> if p = e then Some (Ty_unit, next) else None
-        | 2 -> if p = e then Some (Ty_nat, next) else None
-        | 3 -> if p = e then Some (Ty_int, next) else None
-        | 4 -> if p = e then Some (Ty_string, next) else None
-        | 5 -> if p = e then Some (Ty_bool, next) else None
+        | 0 -> if p = e then Some (Ty.Never, next) else None
+        | 1 -> if p = e then Some (Ty.Unit, next) else None
+        | 2 -> if p = e then Some (Ty.Nat, next) else None
+        | 3 -> if p = e then Some (Ty.Int, next) else None
+        | 4 -> if p = e then Some (Ty.String, next) else None
+        | 5 -> if p = e then Some (Ty.Bool, next) else None
         | 6 -> (match Eff_frame.decode_string s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_handle a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.Handle a0, next) else None)
         | 7 -> (match decode_ty s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_option a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.Option a0, next) else None)
         | 8 -> (match decode_ty s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_list a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.List a0, next) else None)
         | 9 -> (match decode_ty s p e with
             | None -> None
             | Some (a0, p) -> (match decode_ty s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Ty_prod (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Ty.Prod (a0, a1), next) else None))
         | 10 -> (match decode_ty s p e with
             | None -> None
             | Some (a0, p) -> (match decode_ty s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Ty_except (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Ty.Except (a0, a1), next) else None))
         | 11 -> (match decode_ty s p e with
             | None -> None
             | Some (a0, p) -> (match decode_ty s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Ty_exitOf (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Ty.ExitOf (a0, a1), next) else None))
         | 12 -> (match decode_ty s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_causeOf a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.CauseOf a0, next) else None)
         | 13 -> (match decode_ty s p e with
             | None -> None
             | Some (a0, p) -> (match decode_ty s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Ty_fiberOf (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Ty.FiberOf (a0, a1), next) else None))
         | 14 -> (match decode_ty s p e with
             | None -> None
             | Some (a0, p) -> (match decode_ty s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Ty_union (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Ty.Union (a0, a1), next) else None))
         | 15 -> (match Eff_frame.decode_string s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_lit a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.Lit a0, next) else None)
         | 16 -> (match decode_ty s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_refOf a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.RefOf a0, next) else None)
         | 17 -> (match decode_ty s p e with
             | None -> None
             | Some (a0, p) -> (match decode_ty s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Ty_deferredOf (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Ty.DeferredOf (a0, a1), next) else None))
         | 18 -> (match Eff_frame.decode_nat s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_var a0, next) else None)
-        | 19 -> if p = e then Some (Ty_unknown, next) else None
+            | Some (a0, p) -> if p = e then Some (Ty.Var a0, next) else None)
+        | 19 -> if p = e then Some (Ty.Unknown, next) else None
         | 20 -> (match (Eff_frame.decode_list (Eff_frame.decode_pair Eff_frame.decode_string (Eff_frame.decode_pair Eff_frame.decode_bool decode_ty))) s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_record a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.Record a0, next) else None)
         | 21 -> (match decode_ty s p e with
             | None -> None
             | Some (a0, p) -> (match decode_ty s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Ty_map (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Ty.Map (a0, a1), next) else None))
         | 22 -> (match (Eff_frame.decode_list decode_ty) s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_tuple a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.Tuple a0, next) else None)
         | 23 -> (match Eff_frame.decode_string s p e with
             | None -> None
             | Some (a0, p) -> (match (Eff_frame.decode_list decode_ty) s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Ty_app (a0, a1), next) else None))
-        | 24 -> if p = e then Some (Ty_null, next) else None
-        | 25 -> if p = e then Some (Ty_undefined, next) else None
-        | 26 -> if p = e then Some (Ty_number, next) else None
-        | 27 -> if p = e then Some (Ty_bytes, next) else None
+                | Some (a1, p) -> if p = e then Some (Ty.App (a0, a1), next) else None))
+        | 24 -> if p = e then Some (Ty.Null, next) else None
+        | 25 -> if p = e then Some (Ty.Undefined, next) else None
+        | 26 -> if p = e then Some (Ty.Number, next) else None
+        | 27 -> if p = e then Some (Ty.Bytes, next) else None
         | 28 -> (match (Eff_frame.decode_checked_list decode_service_key keyBefore) s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Ty_contextOf a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Ty.ContextOf a0, next) else None)
         | _ -> None)
 
-let decode_ty_exact (s : string) : ty option =
+let decode_ty_exact (s : string) : Ty.t option =
   Eff_frame.exact decode_ty s
 
-let rec emit_lit (b : Eff_frame.writer) (v : lit) : unit =
+let rec emit_lit (b : Eff_frame.writer) (v : Lit.t) : unit =
   match v with
-    | Lit_unit -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | Lit_nat a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_nat b a0)
-    | Lit_bool a0 -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_bool b a0)
-    | Lit_str a0 -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_string b a0)
+    | Lit.Unit -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | Lit.Nat a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_nat b a0)
+    | Lit.Bool a0 -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_bool b a0)
+    | Lit.Str a0 -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_string b a0)
 
-let encode_lit (v : lit) : string =
+let encode_lit (v : Lit.t) : string =
   Eff_frame.to_string emit_lit v
 
-let rec decode_lit (s : string) (pos : int) (limit : int) : (lit * int) option =
+let rec decode_lit (s : string) (pos : int) (limit : int) : (Lit.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (Lit_unit, next) else None
+        | 0 -> if p = e then Some (Lit.Unit, next) else None
         | 1 -> (match Eff_frame.decode_nat s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Lit_nat a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Lit.Nat a0, next) else None)
         | 2 -> (match Eff_frame.decode_bool s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Lit_bool a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Lit.Bool a0, next) else None)
         | 3 -> (match Eff_frame.decode_string s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Lit_str a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Lit.Str a0, next) else None)
         | _ -> None)
 
-let decode_lit_exact (s : string) : lit option =
+let decode_lit_exact (s : string) : Lit.t option =
   Eff_frame.exact decode_lit s
 
-let rec emit_field_read_mode (b : Eff_frame.writer) (v : field_read_mode) : unit =
+let rec emit_field_read_mode (b : Eff_frame.writer) (v : FieldReadMode.t) : unit =
   match v with
-    | FieldReadMode_required -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | FieldReadMode_optional -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | FieldReadMode.Required -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | FieldReadMode.Optional -> Eff_frame.emit_ctor b 1 (fun _ -> ())
 
-let encode_field_read_mode (v : field_read_mode) : string =
+let encode_field_read_mode (v : FieldReadMode.t) : string =
   Eff_frame.to_string emit_field_read_mode v
 
-let rec decode_field_read_mode (s : string) (pos : int) (limit : int) : (field_read_mode * int) option =
+let rec decode_field_read_mode (s : string) (pos : int) (limit : int) : (FieldReadMode.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (FieldReadMode_required, next) else None
-        | 1 -> if p = e then Some (FieldReadMode_optional, next) else None
+        | 0 -> if p = e then Some (FieldReadMode.Required, next) else None
+        | 1 -> if p = e then Some (FieldReadMode.Optional, next) else None
         | _ -> None)
 
-let decode_field_read_mode_exact (s : string) : field_read_mode option =
+let decode_field_read_mode_exact (s : string) : FieldReadMode.t option =
   Eff_frame.exact decode_field_read_mode s
 
-let rec emit_term (b : Eff_frame.writer) (v : term) : unit =
+let rec emit_term (b : Eff_frame.writer) (v : Term.t) : unit =
   match v with
-    | Term_var a0 -> Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b a0)
-    | Term_lit a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_lit b a0)
-    | Term_app (a0, a1) -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0; emit_terms b a1)
-    | Term_record (a0, a1, a2) -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_string b y) (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_bool b y) (fun b y -> emit_ty b y) y) y) a0; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) a1; emit_terms b a2)
-    | Term_field (a0, a1, a2) -> Eff_frame.emit_ctor b 4 (fun b -> emit_field_read_mode b a0; emit_term b a1; Eff_frame.emit_string b a2)
-    | Term_recordSet (a0, a1, a2) -> Eff_frame.emit_ctor b 5 (fun b -> emit_term b a0; Eff_frame.emit_string b a1; emit_term b a2)
-    | Term_tupleAt (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_term b a0; Eff_frame.emit_nat b a1)
-    | Term_fold (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 7 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3)
+    | Term.Var a0 -> Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b a0)
+    | Term.Lit a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_lit b a0)
+    | Term.App (a0, a1) -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0; emit_terms b a1)
+    | Term.Record (a0, a1, a2) -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_string b y) (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_bool b y) (fun b y -> emit_ty b y) y) y) a0; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) a1; emit_terms b a2)
+    | Term.Field (a0, a1, a2) -> Eff_frame.emit_ctor b 4 (fun b -> emit_field_read_mode b a0; emit_term b a1; Eff_frame.emit_string b a2)
+    | Term.RecordSet (a0, a1, a2) -> Eff_frame.emit_ctor b 5 (fun b -> emit_term b a0; Eff_frame.emit_string b a1; emit_term b a2)
+    | Term.TupleAt (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_term b a0; Eff_frame.emit_nat b a1)
+    | Term.Fold (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 7 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3)
 
-and emit_terms (b : Eff_frame.writer) (v : terms) : unit =
+and emit_terms (b : Eff_frame.writer) (v : Terms.t) : unit =
   match v with
-    | Terms_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | Terms_cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0; emit_terms b a1)
+    | Terms.Nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | Terms.Cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0; emit_terms b a1)
 
-let encode_term (v : term) : string =
+let encode_term (v : Term.t) : string =
   Eff_frame.to_string emit_term v
 
-let encode_terms (v : terms) : string =
+let encode_terms (v : Terms.t) : string =
   Eff_frame.to_string emit_terms v
 
-let rec decode_term (s : string) (pos : int) (limit : int) : (term * int) option =
+let rec decode_term (s : string) (pos : int) (limit : int) : (Term.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
         | 0 -> (match Eff_frame.decode_nat s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Term_var a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Term.Var a0, next) else None)
         | 1 -> (match decode_lit s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Term_lit a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Term.Lit a0, next) else None)
         | 2 -> (match Eff_frame.decode_string s p e with
             | None -> None
             | Some (a0, p) -> (match decode_terms s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Term_app (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Term.App (a0, a1), next) else None))
         | 3 -> (match (Eff_frame.decode_list (Eff_frame.decode_pair Eff_frame.decode_string (Eff_frame.decode_pair Eff_frame.decode_bool decode_ty))) s p e with
             | None -> None
             | Some (a0, p) -> (match (Eff_frame.decode_list Eff_frame.decode_string) s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_terms s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Term_record (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Term.Record (a0, a1, a2), next) else None)))
         | 4 -> (match decode_field_read_mode s p e with
             | None -> None
             | Some (a0, p) -> (match decode_term s p e with
                 | None -> None
                 | Some (a1, p) -> (match Eff_frame.decode_string s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Term_field (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Term.Field (a0, a1, a2), next) else None)))
         | 5 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match Eff_frame.decode_string s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_term s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Term_recordSet (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Term.RecordSet (a0, a1, a2), next) else None)))
         | 6 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match Eff_frame.decode_nat s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Term_tupleAt (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Term.TupleAt (a0, a1), next) else None))
         | 7 -> (match (Eff_frame.decode_option decode_ty) s p e with
             | None -> None
             | Some (a0, p) -> (match decode_term s p e with
@@ -311,88 +311,88 @@ let rec decode_term (s : string) (pos : int) (limit : int) : (term * int) option
                     | None -> None
                     | Some (a2, p) -> (match decode_term s p e with
                         | None -> None
-                        | Some (a3, p) -> if p = e then Some (Term_fold (a0, a1, a2, a3), next) else None))))
+                        | Some (a3, p) -> if p = e then Some (Term.Fold (a0, a1, a2, a3), next) else None))))
         | _ -> None)
 
-and decode_terms (s : string) (pos : int) (limit : int) : (terms * int) option =
+and decode_terms (s : string) (pos : int) (limit : int) : (Terms.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (Terms_nil, next) else None
+        | 0 -> if p = e then Some (Terms.Nil, next) else None
         | 1 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_terms s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Terms_cons (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Terms.Cons (a0, a1), next) else None))
         | _ -> None)
 
-let decode_term_exact (s : string) : term option =
+let decode_term_exact (s : string) : Term.t option =
   Eff_frame.exact decode_term s
 
-let decode_terms_exact (s : string) : terms option =
+let decode_terms_exact (s : string) : Terms.t option =
   Eff_frame.exact decode_terms s
 
-let rec emit_cause_term (b : Eff_frame.writer) (v : cause_term) : unit =
+let rec emit_cause_term (b : Eff_frame.writer) (v : CauseTerm.t) : unit =
   match v with
-    | CauseTerm_fail a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
-    | CauseTerm_die a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0)
-    | CauseTerm_interrupt a0 -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_option b (fun b y -> emit_term b y) a0)
-    | CauseTerm_both (a0, a1) -> Eff_frame.emit_ctor b 3 (fun b -> emit_cause_term b a0; emit_cause_term b a1)
+    | CauseTerm.Fail a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
+    | CauseTerm.Die a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0)
+    | CauseTerm.Interrupt a0 -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_option b (fun b y -> emit_term b y) a0)
+    | CauseTerm.Both (a0, a1) -> Eff_frame.emit_ctor b 3 (fun b -> emit_cause_term b a0; emit_cause_term b a1)
 
-let encode_cause_term (v : cause_term) : string =
+let encode_cause_term (v : CauseTerm.t) : string =
   Eff_frame.to_string emit_cause_term v
 
-let rec decode_cause_term (s : string) (pos : int) (limit : int) : (cause_term * int) option =
+let rec decode_cause_term (s : string) (pos : int) (limit : int) : (CauseTerm.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
         | 0 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (CauseTerm_fail a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (CauseTerm.Fail a0, next) else None)
         | 1 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (CauseTerm_die a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (CauseTerm.Die a0, next) else None)
         | 2 -> (match (Eff_frame.decode_option decode_term) s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (CauseTerm_interrupt a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (CauseTerm.Interrupt a0, next) else None)
         | 3 -> (match decode_cause_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_cause_term s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (CauseTerm_both (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (CauseTerm.Both (a0, a1), next) else None))
         | _ -> None)
 
-let decode_cause_term_exact (s : string) : cause_term option =
+let decode_cause_term_exact (s : string) : CauseTerm.t option =
   Eff_frame.exact decode_cause_term s
 
-let rec emit_mask_mode (b : Eff_frame.writer) (v : mask_mode) : unit =
+let rec emit_mask_mode (b : Eff_frame.writer) (v : MaskMode.t) : unit =
   match v with
-    | MaskMode_interruptible -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | MaskMode_uninterruptible -> Eff_frame.emit_ctor b 1 (fun _ -> ())
-    | MaskMode_inherit -> Eff_frame.emit_ctor b 2 (fun _ -> ())
+    | MaskMode.Interruptible -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | MaskMode.Uninterruptible -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | MaskMode.Inherit -> Eff_frame.emit_ctor b 2 (fun _ -> ())
 
-let encode_mask_mode (v : mask_mode) : string =
+let encode_mask_mode (v : MaskMode.t) : string =
   Eff_frame.to_string emit_mask_mode v
 
-let rec decode_mask_mode (s : string) (pos : int) (limit : int) : (mask_mode * int) option =
+let rec decode_mask_mode (s : string) (pos : int) (limit : int) : (MaskMode.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (MaskMode_interruptible, next) else None
-        | 1 -> if p = e then Some (MaskMode_uninterruptible, next) else None
-        | 2 -> if p = e then Some (MaskMode_inherit, next) else None
+        | 0 -> if p = e then Some (MaskMode.Interruptible, next) else None
+        | 1 -> if p = e then Some (MaskMode.Uninterruptible, next) else None
+        | 2 -> if p = e then Some (MaskMode.Inherit, next) else None
         | _ -> None)
 
-let decode_mask_mode_exact (s : string) : mask_mode option =
+let decode_mask_mode_exact (s : string) : MaskMode.t option =
   Eff_frame.exact decode_mask_mode s
 
-let rec emit_fork_options (b : Eff_frame.writer) (r : fork_options) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_bool b r.start_immediately; Eff_frame.emit_bool b r.daemon; emit_mask_mode b r.mask_mode)
+let rec emit_fork_options (b : Eff_frame.writer) (r : ForkOptions.t) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_bool b r.ForkOptions.start_immediately; Eff_frame.emit_bool b r.ForkOptions.daemon; emit_mask_mode b r.ForkOptions.mask_mode)
 
-let encode_fork_options (v : fork_options) : string =
+let encode_fork_options (v : ForkOptions.t) : string =
   Eff_frame.to_string emit_fork_options v
 
-let rec decode_fork_options (s : string) (pos : int) (limit : int) : (fork_options * int) option =
+let rec decode_fork_options (s : string) (pos : int) (limit : int) : (ForkOptions.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -402,206 +402,206 @@ let rec decode_fork_options (s : string) (pos : int) (limit : int) : (fork_optio
                 | None -> None
                 | Some (a1, p) -> (match decode_mask_mode s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (({ start_immediately = a0; daemon = a1; mask_mode = a2 } : fork_options), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (({ ForkOptions.start_immediately = a0; ForkOptions.daemon = a1; ForkOptions.mask_mode = a2 } : ForkOptions.t), next) else None)))
         | _ -> None)
 
-let decode_fork_options_exact (s : string) : fork_options option =
+let decode_fork_options_exact (s : string) : ForkOptions.t option =
   Eff_frame.exact decode_fork_options s
 
-let rec emit_observer_mode (b : Eff_frame.writer) (v : observer_mode) : unit =
+let rec emit_observer_mode (b : Eff_frame.writer) (v : ObserverMode.t) : unit =
   match v with
-    | ObserverMode_awaitValue -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | ObserverMode_joinEffect -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | ObserverMode.AwaitValue -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | ObserverMode.JoinEffect -> Eff_frame.emit_ctor b 1 (fun _ -> ())
 
-let encode_observer_mode (v : observer_mode) : string =
+let encode_observer_mode (v : ObserverMode.t) : string =
   Eff_frame.to_string emit_observer_mode v
 
-let rec decode_observer_mode (s : string) (pos : int) (limit : int) : (observer_mode * int) option =
+let rec decode_observer_mode (s : string) (pos : int) (limit : int) : (ObserverMode.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (ObserverMode_awaitValue, next) else None
-        | 1 -> if p = e then Some (ObserverMode_joinEffect, next) else None
+        | 0 -> if p = e then Some (ObserverMode.AwaitValue, next) else None
+        | 1 -> if p = e then Some (ObserverMode.JoinEffect, next) else None
         | _ -> None)
 
-let decode_observer_mode_exact (s : string) : observer_mode option =
+let decode_observer_mode_exact (s : string) : ObserverMode.t option =
   Eff_frame.exact decode_observer_mode s
 
-let rec emit_finalizer_strategy (b : Eff_frame.writer) (v : finalizer_strategy) : unit =
+let rec emit_finalizer_strategy (b : Eff_frame.writer) (v : FinalizerStrategy.t) : unit =
   match v with
-    | FinalizerStrategy_sequential -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | FinalizerStrategy_parallel -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | FinalizerStrategy.Sequential -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | FinalizerStrategy.Parallel -> Eff_frame.emit_ctor b 1 (fun _ -> ())
 
-let encode_finalizer_strategy (v : finalizer_strategy) : string =
+let encode_finalizer_strategy (v : FinalizerStrategy.t) : string =
   Eff_frame.to_string emit_finalizer_strategy v
 
-let rec decode_finalizer_strategy (s : string) (pos : int) (limit : int) : (finalizer_strategy * int) option =
+let rec decode_finalizer_strategy (s : string) (pos : int) (limit : int) : (FinalizerStrategy.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (FinalizerStrategy_sequential, next) else None
-        | 1 -> if p = e then Some (FinalizerStrategy_parallel, next) else None
+        | 0 -> if p = e then Some (FinalizerStrategy.Sequential, next) else None
+        | 1 -> if p = e then Some (FinalizerStrategy.Parallel, next) else None
         | _ -> None)
 
-let decode_finalizer_strategy_exact (s : string) : finalizer_strategy option =
+let decode_finalizer_strategy_exact (s : string) : FinalizerStrategy.t option =
   Eff_frame.exact decode_finalizer_strategy s
 
-let rec emit_native_op (b : Eff_frame.writer) (v : native_op) : unit =
+let rec emit_native_op (b : Eff_frame.writer) (v : NativeOp.t) : unit =
   match v with
-    | NativeOp_refMake -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | NativeOp_refGet -> Eff_frame.emit_ctor b 1 (fun _ -> ())
-    | NativeOp_refSet -> Eff_frame.emit_ctor b 2 (fun _ -> ())
-    | NativeOp_refGetAndSet -> Eff_frame.emit_ctor b 3 (fun _ -> ())
-    | NativeOp_refSetAndGet -> Eff_frame.emit_ctor b 4 (fun _ -> ())
-    | NativeOp_deferredIsDone -> Eff_frame.emit_ctor b 14 (fun _ -> ())
-    | NativeOp_deferredPoll -> Eff_frame.emit_ctor b 15 (fun _ -> ())
-    | NativeOp_deferredSucceed -> Eff_frame.emit_ctor b 16 (fun _ -> ())
-    | NativeOp_deferredFail -> Eff_frame.emit_ctor b 17 (fun _ -> ())
-    | NativeOp_deferredAwait -> Eff_frame.emit_ctor b 18 (fun _ -> ())
-    | NativeOp_scopeMake a0 -> Eff_frame.emit_ctor b 19 (fun b -> emit_finalizer_strategy b a0)
-    | NativeOp_sleep -> Eff_frame.emit_ctor b 20 (fun _ -> ())
-    | NativeOp_clockNow -> Eff_frame.emit_ctor b 21 (fun _ -> ())
-    | NativeOp_external a0 -> Eff_frame.emit_ctor b 22 (fun b -> Eff_frame.emit_nat b a0)
-    | NativeOp_deferredMakeOf (a0, a1) -> Eff_frame.emit_ctor b 23 (fun b -> emit_ty b a0; emit_ty b a1)
-    | NativeOp_refUpdateWith a0 -> Eff_frame.emit_ctor b 24 (fun b -> emit_term b a0)
-    | NativeOp_refGetAndUpdateWith a0 -> Eff_frame.emit_ctor b 25 (fun b -> emit_term b a0)
-    | NativeOp_refUpdateAndGetWith a0 -> Eff_frame.emit_ctor b 26 (fun b -> emit_term b a0)
-    | NativeOp_refUpdateSomeWith a0 -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0)
-    | NativeOp_refGetAndUpdateSomeWith a0 -> Eff_frame.emit_ctor b 28 (fun b -> emit_term b a0)
-    | NativeOp_refUpdateSomeAndGetWith a0 -> Eff_frame.emit_ctor b 29 (fun b -> emit_term b a0)
-    | NativeOp_refModifyWith a0 -> Eff_frame.emit_ctor b 30 (fun b -> emit_term b a0)
-    | NativeOp_refModifySomeWith a0 -> Eff_frame.emit_ctor b 31 (fun b -> emit_term b a0)
-    | NativeOp_call a0 -> Eff_frame.emit_ctor b 32 (fun b -> Eff_frame.emit_nat b a0)
-    | NativeOp_param a0 -> Eff_frame.emit_ctor b 33 (fun b -> Eff_frame.emit_nat b a0)
+    | NativeOp.RefMake -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | NativeOp.RefGet -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | NativeOp.RefSet -> Eff_frame.emit_ctor b 2 (fun _ -> ())
+    | NativeOp.RefGetAndSet -> Eff_frame.emit_ctor b 3 (fun _ -> ())
+    | NativeOp.RefSetAndGet -> Eff_frame.emit_ctor b 4 (fun _ -> ())
+    | NativeOp.DeferredIsDone -> Eff_frame.emit_ctor b 14 (fun _ -> ())
+    | NativeOp.DeferredPoll -> Eff_frame.emit_ctor b 15 (fun _ -> ())
+    | NativeOp.DeferredSucceed -> Eff_frame.emit_ctor b 16 (fun _ -> ())
+    | NativeOp.DeferredFail -> Eff_frame.emit_ctor b 17 (fun _ -> ())
+    | NativeOp.DeferredAwait -> Eff_frame.emit_ctor b 18 (fun _ -> ())
+    | NativeOp.ScopeMake a0 -> Eff_frame.emit_ctor b 19 (fun b -> emit_finalizer_strategy b a0)
+    | NativeOp.Sleep -> Eff_frame.emit_ctor b 20 (fun _ -> ())
+    | NativeOp.ClockNow -> Eff_frame.emit_ctor b 21 (fun _ -> ())
+    | NativeOp.External a0 -> Eff_frame.emit_ctor b 22 (fun b -> Eff_frame.emit_nat b a0)
+    | NativeOp.DeferredMakeOf (a0, a1) -> Eff_frame.emit_ctor b 23 (fun b -> emit_ty b a0; emit_ty b a1)
+    | NativeOp.RefUpdateWith a0 -> Eff_frame.emit_ctor b 24 (fun b -> emit_term b a0)
+    | NativeOp.RefGetAndUpdateWith a0 -> Eff_frame.emit_ctor b 25 (fun b -> emit_term b a0)
+    | NativeOp.RefUpdateAndGetWith a0 -> Eff_frame.emit_ctor b 26 (fun b -> emit_term b a0)
+    | NativeOp.RefUpdateSomeWith a0 -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0)
+    | NativeOp.RefGetAndUpdateSomeWith a0 -> Eff_frame.emit_ctor b 28 (fun b -> emit_term b a0)
+    | NativeOp.RefUpdateSomeAndGetWith a0 -> Eff_frame.emit_ctor b 29 (fun b -> emit_term b a0)
+    | NativeOp.RefModifyWith a0 -> Eff_frame.emit_ctor b 30 (fun b -> emit_term b a0)
+    | NativeOp.RefModifySomeWith a0 -> Eff_frame.emit_ctor b 31 (fun b -> emit_term b a0)
+    | NativeOp.Call a0 -> Eff_frame.emit_ctor b 32 (fun b -> Eff_frame.emit_nat b a0)
+    | NativeOp.Param a0 -> Eff_frame.emit_ctor b 33 (fun b -> Eff_frame.emit_nat b a0)
 
-let encode_native_op (v : native_op) : string =
+let encode_native_op (v : NativeOp.t) : string =
   Eff_frame.to_string emit_native_op v
 
-let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * int) option =
+let rec decode_native_op (s : string) (pos : int) (limit : int) : (NativeOp.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (NativeOp_refMake, next) else None
-        | 1 -> if p = e then Some (NativeOp_refGet, next) else None
-        | 2 -> if p = e then Some (NativeOp_refSet, next) else None
-        | 3 -> if p = e then Some (NativeOp_refGetAndSet, next) else None
-        | 4 -> if p = e then Some (NativeOp_refSetAndGet, next) else None
-        | 14 -> if p = e then Some (NativeOp_deferredIsDone, next) else None
-        | 15 -> if p = e then Some (NativeOp_deferredPoll, next) else None
-        | 16 -> if p = e then Some (NativeOp_deferredSucceed, next) else None
-        | 17 -> if p = e then Some (NativeOp_deferredFail, next) else None
-        | 18 -> if p = e then Some (NativeOp_deferredAwait, next) else None
+        | 0 -> if p = e then Some (NativeOp.RefMake, next) else None
+        | 1 -> if p = e then Some (NativeOp.RefGet, next) else None
+        | 2 -> if p = e then Some (NativeOp.RefSet, next) else None
+        | 3 -> if p = e then Some (NativeOp.RefGetAndSet, next) else None
+        | 4 -> if p = e then Some (NativeOp.RefSetAndGet, next) else None
+        | 14 -> if p = e then Some (NativeOp.DeferredIsDone, next) else None
+        | 15 -> if p = e then Some (NativeOp.DeferredPoll, next) else None
+        | 16 -> if p = e then Some (NativeOp.DeferredSucceed, next) else None
+        | 17 -> if p = e then Some (NativeOp.DeferredFail, next) else None
+        | 18 -> if p = e then Some (NativeOp.DeferredAwait, next) else None
         | 19 -> (match decode_finalizer_strategy s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_scopeMake a0, next) else None)
-        | 20 -> if p = e then Some (NativeOp_sleep, next) else None
-        | 21 -> if p = e then Some (NativeOp_clockNow, next) else None
+            | Some (a0, p) -> if p = e then Some (NativeOp.ScopeMake a0, next) else None)
+        | 20 -> if p = e then Some (NativeOp.Sleep, next) else None
+        | 21 -> if p = e then Some (NativeOp.ClockNow, next) else None
         | 22 -> (match Eff_frame.decode_nat s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_external a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.External a0, next) else None)
         | 23 -> (match decode_ty s p e with
             | None -> None
             | Some (a0, p) -> (match decode_ty s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (NativeOp_deferredMakeOf (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (NativeOp.DeferredMakeOf (a0, a1), next) else None))
         | 24 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_refUpdateWith a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.RefUpdateWith a0, next) else None)
         | 25 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_refGetAndUpdateWith a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.RefGetAndUpdateWith a0, next) else None)
         | 26 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_refUpdateAndGetWith a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.RefUpdateAndGetWith a0, next) else None)
         | 27 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_refUpdateSomeWith a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.RefUpdateSomeWith a0, next) else None)
         | 28 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_refGetAndUpdateSomeWith a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.RefGetAndUpdateSomeWith a0, next) else None)
         | 29 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_refUpdateSomeAndGetWith a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.RefUpdateSomeAndGetWith a0, next) else None)
         | 30 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_refModifyWith a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.RefModifyWith a0, next) else None)
         | 31 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_refModifySomeWith a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.RefModifySomeWith a0, next) else None)
         | 32 -> (match Eff_frame.decode_nat s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_call a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.Call a0, next) else None)
         | 33 -> (match Eff_frame.decode_nat s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (NativeOp_param a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (NativeOp.Param a0, next) else None)
         | _ -> None)
 
-let decode_native_op_exact (s : string) : native_op option =
+let decode_native_op_exact (s : string) : NativeOp.t option =
   Eff_frame.exact decode_native_op s
 
-let rec emit_decision (b : Eff_frame.writer) (v : decision) : unit =
+let rec emit_decision (b : Eff_frame.writer) (v : Decision.t) : unit =
   match v with
-    | Decision_bool -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | Decision_option -> Eff_frame.emit_ctor b 1 (fun _ -> ())
-    | Decision_tag a0 -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0)
-    | Decision_recordTag a0 -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_string b a0)
+    | Decision.Bool -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | Decision.Option -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | Decision.Tag a0 -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0)
+    | Decision.RecordTag a0 -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_string b a0)
 
-let encode_decision (v : decision) : string =
+let encode_decision (v : Decision.t) : string =
   Eff_frame.to_string emit_decision v
 
-let rec decode_decision (s : string) (pos : int) (limit : int) : (decision * int) option =
+let rec decode_decision (s : string) (pos : int) (limit : int) : (Decision.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (Decision_bool, next) else None
-        | 1 -> if p = e then Some (Decision_option, next) else None
+        | 0 -> if p = e then Some (Decision.Bool, next) else None
+        | 1 -> if p = e then Some (Decision.Option, next) else None
         | 2 -> (match Eff_frame.decode_string s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Decision_tag a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Decision.Tag a0, next) else None)
         | 3 -> (match Eff_frame.decode_string s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Decision_recordTag a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Decision.RecordTag a0, next) else None)
         | _ -> None)
 
-let decode_decision_exact (s : string) : decision option =
+let decode_decision_exact (s : string) : Decision.t option =
   Eff_frame.exact decode_decision s
 
-let rec emit_def_role (b : Eff_frame.writer) (v : def_role) : unit =
+let rec emit_def_role (b : Eff_frame.writer) (v : DefRole.t) : unit =
   match v with
-    | DefRole_plain -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | DefRole_serviceInit a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_string b a0)
-    | DefRole_serviceMethod (a0, a1, a2) -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0; Eff_frame.emit_string b a1; Eff_frame.emit_nat b a2)
+    | DefRole.Plain -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | DefRole.ServiceInit a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_string b a0)
+    | DefRole.ServiceMethod (a0, a1, a2) -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0; Eff_frame.emit_string b a1; Eff_frame.emit_nat b a2)
 
-let encode_def_role (v : def_role) : string =
+let encode_def_role (v : DefRole.t) : string =
   Eff_frame.to_string emit_def_role v
 
-let rec decode_def_role (s : string) (pos : int) (limit : int) : (def_role * int) option =
+let rec decode_def_role (s : string) (pos : int) (limit : int) : (DefRole.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (DefRole_plain, next) else None
+        | 0 -> if p = e then Some (DefRole.Plain, next) else None
         | 1 -> (match Eff_frame.decode_string s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (DefRole_serviceInit a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (DefRole.ServiceInit a0, next) else None)
         | 2 -> (match Eff_frame.decode_string s p e with
             | None -> None
             | Some (a0, p) -> (match Eff_frame.decode_string s p e with
                 | None -> None
                 | Some (a1, p) -> (match Eff_frame.decode_nat s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (DefRole_serviceMethod (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (DefRole.ServiceMethod (a0, a1, a2), next) else None)))
         | _ -> None)
 
-let decode_def_role_exact (s : string) : def_role option =
+let decode_def_role_exact (s : string) : DefRole.t option =
   Eff_frame.exact decode_def_role s
 
-let rec emit_param_decl (b : Eff_frame.writer) (r : param_decl) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.name; emit_ty b r.request; emit_ty b r.answer; emit_ty b r.error)
+let rec emit_param_decl (b : Eff_frame.writer) (r : ParamDecl.t) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.ParamDecl.name; emit_ty b r.ParamDecl.request; emit_ty b r.ParamDecl.answer; emit_ty b r.ParamDecl.error)
 
-let encode_param_decl (v : param_decl) : string =
+let encode_param_decl (v : ParamDecl.t) : string =
   Eff_frame.to_string emit_param_decl v
 
-let rec decode_param_decl (s : string) (pos : int) (limit : int) : (param_decl * int) option =
+let rec decode_param_decl (s : string) (pos : int) (limit : int) : (ParamDecl.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -613,19 +613,19 @@ let rec decode_param_decl (s : string) (pos : int) (limit : int) : (param_decl *
                     | None -> None
                     | Some (a2, p) -> (match decode_ty s p e with
                         | None -> None
-                        | Some (a3, p) -> if p = e then Some (({ name = a0; request = a1; answer = a2; error = a3 } : param_decl), next) else None))))
+                        | Some (a3, p) -> if p = e then Some (({ ParamDecl.name = a0; ParamDecl.request = a1; ParamDecl.answer = a2; ParamDecl.error = a3 } : ParamDecl.t), next) else None))))
         | _ -> None)
 
-let decode_param_decl_exact (s : string) : param_decl option =
+let decode_param_decl_exact (s : string) : ParamDecl.t option =
   Eff_frame.exact decode_param_decl s
 
-let rec emit_def_decl (b : Eff_frame.writer) (r : def_decl) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.name; emit_ty b r.request; emit_ty b r.answer; emit_ty b r.error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.requires; emit_def_role b r.role; Eff_frame.emit_list b (fun b y -> emit_param_decl b y) r.params)
+let rec emit_def_decl (b : Eff_frame.writer) (r : DefDecl.t) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.DefDecl.name; emit_ty b r.DefDecl.request; emit_ty b r.DefDecl.answer; emit_ty b r.DefDecl.error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.DefDecl.requires; emit_def_role b r.DefDecl.role; Eff_frame.emit_list b (fun b y -> emit_param_decl b y) r.DefDecl.params)
 
-let encode_def_decl (v : def_decl) : string =
+let encode_def_decl (v : DefDecl.t) : string =
   Eff_frame.to_string emit_def_decl v
 
-let rec decode_def_decl (s : string) (pos : int) (limit : int) : (def_decl * int) option =
+let rec decode_def_decl (s : string) (pos : int) (limit : int) : (DefDecl.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -643,223 +643,223 @@ let rec decode_def_decl (s : string) (pos : int) (limit : int) : (def_decl * int
                                 | None -> None
                                 | Some (a5, p) -> (match (Eff_frame.decode_list decode_param_decl) s p e with
                                     | None -> None
-                                    | Some (a6, p) -> if p = e then Some (({ name = a0; request = a1; answer = a2; error = a3; requires = a4; role = a5; params = a6 } : def_decl), next) else None)))))))
+                                    | Some (a6, p) -> if p = e then Some (({ DefDecl.name = a0; DefDecl.request = a1; DefDecl.answer = a2; DefDecl.error = a3; DefDecl.requires = a4; DefDecl.role = a5; DefDecl.params = a6 } : DefDecl.t), next) else None)))))))
         | _ -> None)
 
-let decode_def_decl_exact (s : string) : def_decl option =
+let decode_def_decl_exact (s : string) : DefDecl.t option =
   Eff_frame.exact decode_def_decl s
 
-let rec emit_eff (b : Eff_frame.writer) (v : native_op eff) : unit =
+let rec emit_eff (b : Eff_frame.writer) (v : NativeOp.t Eff.t) : unit =
   match v with
-    | Eff_succeed a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
-    | Eff_fail a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0)
-    | Eff_failCause a0 -> Eff_frame.emit_ctor b 2 (fun b -> emit_cause_term b a0)
-    | Eff_sync a0 -> Eff_frame.emit_ctor b 4 (fun b -> emit_term b a0)
-    | Eff_suspend a0 -> Eff_frame.emit_ctor b 5 (fun b -> emit_eff b a0)
-    | Eff_perform (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_native_op b a0; emit_term b a1)
-    | Eff_bind (a0, a1) -> Eff_frame.emit_ctor b 7 (fun b -> emit_eff b a0; emit_eff b a1)
-    | Eff_gen a0 -> Eff_frame.emit_ctor b 8 (fun b -> emit_stmts b a0)
-    | Eff_catchCause (a0, a1) -> Eff_frame.emit_ctor b 9 (fun b -> emit_eff b a0; emit_eff b a1)
-    | Eff_matchCause (a0, a1, a2) -> Eff_frame.emit_ctor b 10 (fun b -> emit_eff b a0; emit_eff b a1; emit_eff b a2)
-    | Eff_onExit (a0, a1) -> Eff_frame.emit_ctor b 11 (fun b -> emit_eff b a0; emit_eff b a1)
-    | Eff_exit a0 -> Eff_frame.emit_ctor b 12 (fun b -> emit_eff b a0)
-    | Eff_uninterruptible a0 -> Eff_frame.emit_ctor b 13 (fun b -> emit_eff b a0)
-    | Eff_interruptible a0 -> Eff_frame.emit_ctor b 14 (fun b -> emit_eff b a0)
-    | Eff_yieldNow a0 -> Eff_frame.emit_ctor b 17 (fun b -> Eff_frame.emit_nat b a0)
-    | Eff_awaitFiber (a0, a1) -> Eff_frame.emit_ctor b 19 (fun b -> emit_term b a0; emit_observer_mode b a1)
-    | Eff_withFiber a0 -> Eff_frame.emit_ctor b 20 (fun b -> emit_action_term b a0)
-    | Eff_scoped a0 -> Eff_frame.emit_ctor b 21 (fun b -> emit_eff b a0)
-    | Eff_acquireRelease (a0, a1) -> Eff_frame.emit_ctor b 22 (fun b -> emit_eff b a0; emit_eff b a1)
-    | Eff_provideLayer (a0, a1, a2) -> Eff_frame.emit_ctor b 23 (fun b -> emit_layer_term b a0; Eff_frame.emit_bool b a1; emit_eff b a2)
-    | Eff_service a0 -> Eff_frame.emit_ctor b 24 (fun b -> emit_service_key b a0)
-    | Eff_provideService (a0, a1, a2) -> Eff_frame.emit_ctor b 25 (fun b -> emit_service_key b a0; emit_term b a1; emit_eff b a2)
-    | Eff_catchIf (a0, a1, a2) -> Eff_frame.emit_ctor b 26 (fun b -> emit_term b a0; emit_eff b a1; emit_eff b a2)
-    | Eff_select (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0; emit_decision b a1; emit_eff b a2; emit_eff b a3)
-    | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Eff_frame.emit_ctor b 28 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3; emit_term b a4; emit_eff b a5)
-    | Eff_restore (a0, a1) -> Eff_frame.emit_ctor b 29 (fun b -> emit_term b a0; emit_eff b a1)
-    | Eff_defs (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 30 (fun b -> Eff_frame.emit_list b (fun b y -> emit_def_decl b y) a0; emit_effs b a1; emit_eff b a2; emit_layer_terms b a3)
-    | Eff_invoke (a0, a1, a2) -> Eff_frame.emit_ctor b 31 (fun b -> Eff_frame.emit_nat b a0; emit_term b a1; emit_effs b a2)
-    | Eff_provideContext (a0, a1) -> Eff_frame.emit_ctor b 32 (fun b -> emit_term b a0; emit_eff b a1)
+    | Eff.Succeed a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
+    | Eff.Fail a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0)
+    | Eff.FailCause a0 -> Eff_frame.emit_ctor b 2 (fun b -> emit_cause_term b a0)
+    | Eff.Sync a0 -> Eff_frame.emit_ctor b 4 (fun b -> emit_term b a0)
+    | Eff.Suspend a0 -> Eff_frame.emit_ctor b 5 (fun b -> emit_eff b a0)
+    | Eff.Perform (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_native_op b a0; emit_term b a1)
+    | Eff.Bind (a0, a1) -> Eff_frame.emit_ctor b 7 (fun b -> emit_eff b a0; emit_eff b a1)
+    | Eff.Gen a0 -> Eff_frame.emit_ctor b 8 (fun b -> emit_stmts b a0)
+    | Eff.CatchCause (a0, a1) -> Eff_frame.emit_ctor b 9 (fun b -> emit_eff b a0; emit_eff b a1)
+    | Eff.MatchCause (a0, a1, a2) -> Eff_frame.emit_ctor b 10 (fun b -> emit_eff b a0; emit_eff b a1; emit_eff b a2)
+    | Eff.OnExit (a0, a1) -> Eff_frame.emit_ctor b 11 (fun b -> emit_eff b a0; emit_eff b a1)
+    | Eff.Exit a0 -> Eff_frame.emit_ctor b 12 (fun b -> emit_eff b a0)
+    | Eff.Uninterruptible a0 -> Eff_frame.emit_ctor b 13 (fun b -> emit_eff b a0)
+    | Eff.Interruptible a0 -> Eff_frame.emit_ctor b 14 (fun b -> emit_eff b a0)
+    | Eff.YieldNow a0 -> Eff_frame.emit_ctor b 17 (fun b -> Eff_frame.emit_nat b a0)
+    | Eff.AwaitFiber (a0, a1) -> Eff_frame.emit_ctor b 19 (fun b -> emit_term b a0; emit_observer_mode b a1)
+    | Eff.WithFiber a0 -> Eff_frame.emit_ctor b 20 (fun b -> emit_action_term b a0)
+    | Eff.Scoped a0 -> Eff_frame.emit_ctor b 21 (fun b -> emit_eff b a0)
+    | Eff.AcquireRelease (a0, a1) -> Eff_frame.emit_ctor b 22 (fun b -> emit_eff b a0; emit_eff b a1)
+    | Eff.ProvideLayer (a0, a1, a2) -> Eff_frame.emit_ctor b 23 (fun b -> emit_layer_term b a0; Eff_frame.emit_bool b a1; emit_eff b a2)
+    | Eff.Service a0 -> Eff_frame.emit_ctor b 24 (fun b -> emit_service_key b a0)
+    | Eff.ProvideService (a0, a1, a2) -> Eff_frame.emit_ctor b 25 (fun b -> emit_service_key b a0; emit_term b a1; emit_eff b a2)
+    | Eff.CatchIf (a0, a1, a2) -> Eff_frame.emit_ctor b 26 (fun b -> emit_term b a0; emit_eff b a1; emit_eff b a2)
+    | Eff.Select (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0; emit_decision b a1; emit_eff b a2; emit_eff b a3)
+    | Eff.Iterate (a0, a1, a2, a3, a4, a5) -> Eff_frame.emit_ctor b 28 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3; emit_term b a4; emit_eff b a5)
+    | Eff.Restore (a0, a1) -> Eff_frame.emit_ctor b 29 (fun b -> emit_term b a0; emit_eff b a1)
+    | Eff.Defs (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 30 (fun b -> Eff_frame.emit_list b (fun b y -> emit_def_decl b y) a0; emit_effs b a1; emit_eff b a2; emit_layer_terms b a3)
+    | Eff.Invoke (a0, a1, a2) -> Eff_frame.emit_ctor b 31 (fun b -> Eff_frame.emit_nat b a0; emit_term b a1; emit_effs b a2)
+    | Eff.ProvideContext (a0, a1) -> Eff_frame.emit_ctor b 32 (fun b -> emit_term b a0; emit_eff b a1)
 
-and emit_stmt (b : Eff_frame.writer) (v : native_op stmt) : unit =
+and emit_stmt (b : Eff_frame.writer) (v : NativeOp.t Stmt.t) : unit =
   match v with
-    | Stmt_bindYield a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0)
-    | Stmt_yieldDiscard a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0)
-    | Stmt_ret a0 -> Eff_frame.emit_ctor b 2 (fun b -> emit_term b a0)
-    | Stmt_ifElse (a0, a1, a2) -> Eff_frame.emit_ctor b 3 (fun b -> emit_term b a0; emit_stmts b a1; emit_stmts b a2)
-    | Stmt_whileTrue a0 -> Eff_frame.emit_ctor b 4 (fun b -> emit_stmts b a0)
-    | Stmt_breakLoop -> Eff_frame.emit_ctor b 5 (fun _ -> ())
+    | Stmt.BindYield a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0)
+    | Stmt.YieldDiscard a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0)
+    | Stmt.Ret a0 -> Eff_frame.emit_ctor b 2 (fun b -> emit_term b a0)
+    | Stmt.IfElse (a0, a1, a2) -> Eff_frame.emit_ctor b 3 (fun b -> emit_term b a0; emit_stmts b a1; emit_stmts b a2)
+    | Stmt.WhileTrue a0 -> Eff_frame.emit_ctor b 4 (fun b -> emit_stmts b a0)
+    | Stmt.BreakLoop -> Eff_frame.emit_ctor b 5 (fun _ -> ())
 
-and emit_stmts (b : Eff_frame.writer) (v : native_op stmts) : unit =
+and emit_stmts (b : Eff_frame.writer) (v : NativeOp.t Stmts.t) : unit =
   match v with
-    | Stmts_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | Stmts_cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_stmt b a0; emit_stmts b a1)
+    | Stmts.Nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | Stmts.Cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_stmt b a0; emit_stmts b a1)
 
-and emit_effs (b : Eff_frame.writer) (v : native_op effs) : unit =
+and emit_effs (b : Eff_frame.writer) (v : NativeOp.t Effs.t) : unit =
   match v with
-    | Effs_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | Effs_cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0; emit_effs b a1)
+    | Effs.Nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | Effs.Cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0; emit_effs b a1)
 
-and emit_action_term (b : Eff_frame.writer) (v : native_op action_term) : unit =
+and emit_action_term (b : Eff_frame.writer) (v : NativeOp.t ActionTerm.t) : unit =
   match v with
-    | ActionTerm_fork (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0; emit_fork_options b a1)
-    | ActionTerm_forkIn (a0, a1, a2) -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0; emit_fork_options b a1; emit_term b a2)
-    | ActionTerm_forkScoped (a0, a1) -> Eff_frame.emit_ctor b 2 (fun b -> emit_eff b a0; emit_fork_options b a1)
-    | ActionTerm_runIn (a0, a1) -> Eff_frame.emit_ctor b 3 (fun b -> emit_term b a0; emit_term b a1)
-    | ActionTerm_interrupt a0 -> Eff_frame.emit_ctor b 4 (fun b -> emit_term b a0)
-    | ActionTerm_interruptScoped a0 -> Eff_frame.emit_ctor b 5 (fun b -> emit_term b a0)
-    | ActionTerm_interruptAll (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_term b a0; Eff_frame.emit_option b (fun b y -> emit_term b y) a1)
-    | ActionTerm_awaitAll a0 -> Eff_frame.emit_ctor b 7 (fun b -> emit_term b a0)
-    | ActionTerm_awaitAllFailFast a0 -> Eff_frame.emit_ctor b 8 (fun b -> emit_term b a0)
-    | ActionTerm_snapshotChildren -> Eff_frame.emit_ctor b 9 (fun _ -> ())
-    | ActionTerm_awaitNewChildren a0 -> Eff_frame.emit_ctor b 10 (fun b -> emit_term b a0)
-    | ActionTerm_raceAll a0 -> Eff_frame.emit_ctor b 11 (fun b -> emit_effs b a0)
-    | ActionTerm_getId -> Eff_frame.emit_ctor b 14 (fun _ -> ())
-    | ActionTerm_closeScope (a0, a1) -> Eff_frame.emit_ctor b 15 (fun b -> emit_term b a0; emit_term b a1)
-    | ActionTerm_getInterruptible -> Eff_frame.emit_ctor b 16 (fun _ -> ())
-    | ActionTerm_raceAllFirst a0 -> Eff_frame.emit_ctor b 17 (fun b -> emit_effs b a0)
-    | ActionTerm_context a0 -> Eff_frame.emit_ctor b 18 (fun b -> if not (Eff_frame.strictly_ascending keyBefore a0) then invalid_arg "noncanonical requirements"; Eff_frame.emit_list b emit_service_key a0)
+    | ActionTerm.Fork (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0; emit_fork_options b a1)
+    | ActionTerm.ForkIn (a0, a1, a2) -> Eff_frame.emit_ctor b 1 (fun b -> emit_eff b a0; emit_fork_options b a1; emit_term b a2)
+    | ActionTerm.ForkScoped (a0, a1) -> Eff_frame.emit_ctor b 2 (fun b -> emit_eff b a0; emit_fork_options b a1)
+    | ActionTerm.RunIn (a0, a1) -> Eff_frame.emit_ctor b 3 (fun b -> emit_term b a0; emit_term b a1)
+    | ActionTerm.Interrupt a0 -> Eff_frame.emit_ctor b 4 (fun b -> emit_term b a0)
+    | ActionTerm.InterruptScoped a0 -> Eff_frame.emit_ctor b 5 (fun b -> emit_term b a0)
+    | ActionTerm.InterruptAll (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_term b a0; Eff_frame.emit_option b (fun b y -> emit_term b y) a1)
+    | ActionTerm.AwaitAll a0 -> Eff_frame.emit_ctor b 7 (fun b -> emit_term b a0)
+    | ActionTerm.AwaitAllFailFast a0 -> Eff_frame.emit_ctor b 8 (fun b -> emit_term b a0)
+    | ActionTerm.SnapshotChildren -> Eff_frame.emit_ctor b 9 (fun _ -> ())
+    | ActionTerm.AwaitNewChildren a0 -> Eff_frame.emit_ctor b 10 (fun b -> emit_term b a0)
+    | ActionTerm.RaceAll a0 -> Eff_frame.emit_ctor b 11 (fun b -> emit_effs b a0)
+    | ActionTerm.GetId -> Eff_frame.emit_ctor b 14 (fun _ -> ())
+    | ActionTerm.CloseScope (a0, a1) -> Eff_frame.emit_ctor b 15 (fun b -> emit_term b a0; emit_term b a1)
+    | ActionTerm.GetInterruptible -> Eff_frame.emit_ctor b 16 (fun _ -> ())
+    | ActionTerm.RaceAllFirst a0 -> Eff_frame.emit_ctor b 17 (fun b -> emit_effs b a0)
+    | ActionTerm.Context a0 -> Eff_frame.emit_ctor b 18 (fun b -> if not (Eff_frame.strictly_ascending keyBefore a0) then invalid_arg "noncanonical requirements"; Eff_frame.emit_list b emit_service_key a0)
 
-and emit_layer_term (b : Eff_frame.writer) (v : native_op layer_term) : unit =
+and emit_layer_term (b : Eff_frame.writer) (v : NativeOp.t LayerTerm.t) : unit =
   match v with
-    | LayerTerm_succeed (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_service_key b a0; emit_lit b a1)
-    | LayerTerm_effect (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_service_key b a0; emit_eff b a1)
-    | LayerTerm_effectDiscard a0 -> Eff_frame.emit_ctor b 2 (fun b -> emit_eff b a0)
-    | LayerTerm_provide (a0, a1) -> Eff_frame.emit_ctor b 3 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
-    | LayerTerm_provideMerge (a0, a1) -> Eff_frame.emit_ctor b 4 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
-    | LayerTerm_merge (a0, a1) -> Eff_frame.emit_ctor b 5 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
-    | LayerTerm_fresh a0 -> Eff_frame.emit_ctor b 6 (fun b -> emit_layer_term b a0)
-    | LayerTerm_orDie a0 -> Eff_frame.emit_ctor b 7 (fun b -> emit_layer_term b a0)
-    | LayerTerm_ref a0 -> Eff_frame.emit_ctor b 8 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_nat b y) a0)
-    | LayerTerm_mergeAll a0 -> Eff_frame.emit_ctor b 9 (fun b -> emit_layer_terms b a0)
+    | LayerTerm.Succeed (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_service_key b a0; emit_lit b a1)
+    | LayerTerm.Effect (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_service_key b a0; emit_eff b a1)
+    | LayerTerm.EffectDiscard a0 -> Eff_frame.emit_ctor b 2 (fun b -> emit_eff b a0)
+    | LayerTerm.Provide (a0, a1) -> Eff_frame.emit_ctor b 3 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
+    | LayerTerm.ProvideMerge (a0, a1) -> Eff_frame.emit_ctor b 4 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
+    | LayerTerm.Merge (a0, a1) -> Eff_frame.emit_ctor b 5 (fun b -> emit_layer_term b a0; emit_layer_term b a1)
+    | LayerTerm.Fresh a0 -> Eff_frame.emit_ctor b 6 (fun b -> emit_layer_term b a0)
+    | LayerTerm.OrDie a0 -> Eff_frame.emit_ctor b 7 (fun b -> emit_layer_term b a0)
+    | LayerTerm.Ref a0 -> Eff_frame.emit_ctor b 8 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_nat b y) a0)
+    | LayerTerm.MergeAll a0 -> Eff_frame.emit_ctor b 9 (fun b -> emit_layer_terms b a0)
 
-and emit_layer_terms (b : Eff_frame.writer) (v : native_op layer_terms) : unit =
+and emit_layer_terms (b : Eff_frame.writer) (v : NativeOp.t LayerTerms.t) : unit =
   match v with
-    | LayerTerms_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | LayerTerms_cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_layer_term b a0; emit_layer_terms b a1)
+    | LayerTerms.Nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | LayerTerms.Cons (a0, a1) -> Eff_frame.emit_ctor b 1 (fun b -> emit_layer_term b a0; emit_layer_terms b a1)
 
-let encode_eff (v : native_op eff) : string =
+let encode_eff (v : NativeOp.t Eff.t) : string =
   Eff_frame.to_string emit_eff v
 
-let encode_stmt (v : native_op stmt) : string =
+let encode_stmt (v : NativeOp.t Stmt.t) : string =
   Eff_frame.to_string emit_stmt v
 
-let encode_stmts (v : native_op stmts) : string =
+let encode_stmts (v : NativeOp.t Stmts.t) : string =
   Eff_frame.to_string emit_stmts v
 
-let encode_effs (v : native_op effs) : string =
+let encode_effs (v : NativeOp.t Effs.t) : string =
   Eff_frame.to_string emit_effs v
 
-let encode_action_term (v : native_op action_term) : string =
+let encode_action_term (v : NativeOp.t ActionTerm.t) : string =
   Eff_frame.to_string emit_action_term v
 
-let encode_layer_term (v : native_op layer_term) : string =
+let encode_layer_term (v : NativeOp.t LayerTerm.t) : string =
   Eff_frame.to_string emit_layer_term v
 
-let encode_layer_terms (v : native_op layer_terms) : string =
+let encode_layer_terms (v : NativeOp.t LayerTerms.t) : string =
   Eff_frame.to_string emit_layer_terms v
 
-let rec decode_eff (s : string) (pos : int) (limit : int) : (native_op eff * int) option =
+let rec decode_eff (s : string) (pos : int) (limit : int) : (NativeOp.t Eff.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
         | 0 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_succeed a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Succeed a0, next) else None)
         | 1 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_fail a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Fail a0, next) else None)
         | 2 -> (match decode_cause_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_failCause a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.FailCause a0, next) else None)
         | 4 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_sync a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Sync a0, next) else None)
         | 5 -> (match decode_eff s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_suspend a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Suspend a0, next) else None)
         | 6 -> (match decode_native_op s p e with
             | None -> None
             | Some (a0, p) -> (match decode_term s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Eff_perform (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Eff.Perform (a0, a1), next) else None))
         | 7 -> (match decode_eff s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Eff_bind (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Eff.Bind (a0, a1), next) else None))
         | 8 -> (match decode_stmts s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_gen a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Gen a0, next) else None)
         | 9 -> (match decode_eff s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Eff_catchCause (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Eff.CatchCause (a0, a1), next) else None))
         | 10 -> (match decode_eff s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_eff s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Eff_matchCause (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Eff.MatchCause (a0, a1, a2), next) else None)))
         | 11 -> (match decode_eff s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Eff_onExit (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Eff.OnExit (a0, a1), next) else None))
         | 12 -> (match decode_eff s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_exit a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Exit a0, next) else None)
         | 13 -> (match decode_eff s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_uninterruptible a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Uninterruptible a0, next) else None)
         | 14 -> (match decode_eff s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_interruptible a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Interruptible a0, next) else None)
         | 17 -> (match Eff_frame.decode_nat s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_yieldNow a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.YieldNow a0, next) else None)
         | 19 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_observer_mode s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Eff_awaitFiber (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Eff.AwaitFiber (a0, a1), next) else None))
         | 20 -> (match decode_action_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_withFiber a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.WithFiber a0, next) else None)
         | 21 -> (match decode_eff s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_scoped a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Scoped a0, next) else None)
         | 22 -> (match decode_eff s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Eff_acquireRelease (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Eff.AcquireRelease (a0, a1), next) else None))
         | 23 -> (match decode_layer_term s p e with
             | None -> None
             | Some (a0, p) -> (match Eff_frame.decode_bool s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_eff s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Eff_provideLayer (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Eff.ProvideLayer (a0, a1, a2), next) else None)))
         | 24 -> (match decode_service_key s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Eff_service a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Eff.Service a0, next) else None)
         | 25 -> (match decode_service_key s p e with
             | None -> None
             | Some (a0, p) -> (match decode_term s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_eff s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Eff_provideService (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Eff.ProvideService (a0, a1, a2), next) else None)))
         | 26 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_eff s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Eff_catchIf (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Eff.CatchIf (a0, a1, a2), next) else None)))
         | 27 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_decision s p e with
@@ -868,7 +868,7 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (native_op eff * int
                     | None -> None
                     | Some (a2, p) -> (match decode_eff s p e with
                         | None -> None
-                        | Some (a3, p) -> if p = e then Some (Eff_select (a0, a1, a2, a3), next) else None))))
+                        | Some (a3, p) -> if p = e then Some (Eff.Select (a0, a1, a2, a3), next) else None))))
         | 28 -> (match (Eff_frame.decode_option decode_ty) s p e with
             | None -> None
             | Some (a0, p) -> (match decode_term s p e with
@@ -881,12 +881,12 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (native_op eff * int
                             | None -> None
                             | Some (a4, p) -> (match decode_eff s p e with
                                 | None -> None
-                                | Some (a5, p) -> if p = e then Some (Eff_iterate (a0, a1, a2, a3, a4, a5), next) else None))))))
+                                | Some (a5, p) -> if p = e then Some (Eff.Iterate (a0, a1, a2, a3, a4, a5), next) else None))))))
         | 29 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Eff_restore (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Eff.Restore (a0, a1), next) else None))
         | 30 -> (match (Eff_frame.decode_list decode_def_decl) s p e with
             | None -> None
             | Some (a0, p) -> (match decode_effs s p e with
@@ -895,72 +895,72 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (native_op eff * int
                     | None -> None
                     | Some (a2, p) -> (match decode_layer_terms s p e with
                         | None -> None
-                        | Some (a3, p) -> if p = e then Some (Eff_defs (a0, a1, a2, a3), next) else None))))
+                        | Some (a3, p) -> if p = e then Some (Eff.Defs (a0, a1, a2, a3), next) else None))))
         | 31 -> (match Eff_frame.decode_nat s p e with
             | None -> None
             | Some (a0, p) -> (match decode_term s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_effs s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Eff_invoke (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Eff.Invoke (a0, a1, a2), next) else None)))
         | 32 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Eff_provideContext (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Eff.ProvideContext (a0, a1), next) else None))
         | _ -> None)
 
-and decode_stmt (s : string) (pos : int) (limit : int) : (native_op stmt * int) option =
+and decode_stmt (s : string) (pos : int) (limit : int) : (NativeOp.t Stmt.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
         | 0 -> (match decode_eff s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Stmt_bindYield a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Stmt.BindYield a0, next) else None)
         | 1 -> (match decode_eff s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Stmt_yieldDiscard a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Stmt.YieldDiscard a0, next) else None)
         | 2 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Stmt_ret a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (Stmt.Ret a0, next) else None)
         | 3 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_stmts s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_stmts s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (Stmt_ifElse (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (Stmt.IfElse (a0, a1, a2), next) else None)))
         | 4 -> (match decode_stmts s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (Stmt_whileTrue a0, next) else None)
-        | 5 -> if p = e then Some (Stmt_breakLoop, next) else None
+            | Some (a0, p) -> if p = e then Some (Stmt.WhileTrue a0, next) else None)
+        | 5 -> if p = e then Some (Stmt.BreakLoop, next) else None
         | _ -> None)
 
-and decode_stmts (s : string) (pos : int) (limit : int) : (native_op stmts * int) option =
+and decode_stmts (s : string) (pos : int) (limit : int) : (NativeOp.t Stmts.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (Stmts_nil, next) else None
+        | 0 -> if p = e then Some (Stmts.Nil, next) else None
         | 1 -> (match decode_stmt s p e with
             | None -> None
             | Some (a0, p) -> (match decode_stmts s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Stmts_cons (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Stmts.Cons (a0, a1), next) else None))
         | _ -> None)
 
-and decode_effs (s : string) (pos : int) (limit : int) : (native_op effs * int) option =
+and decode_effs (s : string) (pos : int) (limit : int) : (NativeOp.t Effs.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (Effs_nil, next) else None
+        | 0 -> if p = e then Some (Effs.Nil, next) else None
         | 1 -> (match decode_eff s p e with
             | None -> None
             | Some (a0, p) -> (match decode_effs s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (Effs_cons (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (Effs.Cons (a0, a1), next) else None))
         | _ -> None)
 
-and decode_action_term (s : string) (pos : int) (limit : int) : (native_op action_term * int) option =
+and decode_action_term (s : string) (pos : int) (limit : int) : (NativeOp.t ActionTerm.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -968,64 +968,64 @@ and decode_action_term (s : string) (pos : int) (limit : int) : (native_op actio
             | None -> None
             | Some (a0, p) -> (match decode_fork_options s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (ActionTerm_fork (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (ActionTerm.Fork (a0, a1), next) else None))
         | 1 -> (match decode_eff s p e with
             | None -> None
             | Some (a0, p) -> (match decode_fork_options s p e with
                 | None -> None
                 | Some (a1, p) -> (match decode_term s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (ActionTerm_forkIn (a0, a1, a2), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (ActionTerm.ForkIn (a0, a1, a2), next) else None)))
         | 2 -> (match decode_eff s p e with
             | None -> None
             | Some (a0, p) -> (match decode_fork_options s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (ActionTerm_forkScoped (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (ActionTerm.ForkScoped (a0, a1), next) else None))
         | 3 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_term s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (ActionTerm_runIn (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (ActionTerm.RunIn (a0, a1), next) else None))
         | 4 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (ActionTerm_interrupt a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (ActionTerm.Interrupt a0, next) else None)
         | 5 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (ActionTerm_interruptScoped a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (ActionTerm.InterruptScoped a0, next) else None)
         | 6 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match (Eff_frame.decode_option decode_term) s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (ActionTerm_interruptAll (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (ActionTerm.InterruptAll (a0, a1), next) else None))
         | 7 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (ActionTerm_awaitAll a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (ActionTerm.AwaitAll a0, next) else None)
         | 8 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (ActionTerm_awaitAllFailFast a0, next) else None)
-        | 9 -> if p = e then Some (ActionTerm_snapshotChildren, next) else None
+            | Some (a0, p) -> if p = e then Some (ActionTerm.AwaitAllFailFast a0, next) else None)
+        | 9 -> if p = e then Some (ActionTerm.SnapshotChildren, next) else None
         | 10 -> (match decode_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (ActionTerm_awaitNewChildren a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (ActionTerm.AwaitNewChildren a0, next) else None)
         | 11 -> (match decode_effs s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (ActionTerm_raceAll a0, next) else None)
-        | 14 -> if p = e then Some (ActionTerm_getId, next) else None
+            | Some (a0, p) -> if p = e then Some (ActionTerm.RaceAll a0, next) else None)
+        | 14 -> if p = e then Some (ActionTerm.GetId, next) else None
         | 15 -> (match decode_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_term s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (ActionTerm_closeScope (a0, a1), next) else None))
-        | 16 -> if p = e then Some (ActionTerm_getInterruptible, next) else None
+                | Some (a1, p) -> if p = e then Some (ActionTerm.CloseScope (a0, a1), next) else None))
+        | 16 -> if p = e then Some (ActionTerm.GetInterruptible, next) else None
         | 17 -> (match decode_effs s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (ActionTerm_raceAllFirst a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (ActionTerm.RaceAllFirst a0, next) else None)
         | 18 -> (match (Eff_frame.decode_checked_list decode_service_key keyBefore) s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (ActionTerm_context a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (ActionTerm.Context a0, next) else None)
         | _ -> None)
 
-and decode_layer_term (s : string) (pos : int) (limit : int) : (native_op layer_term * int) option =
+and decode_layer_term (s : string) (pos : int) (limit : int) : (NativeOp.t LayerTerm.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -1033,170 +1033,170 @@ and decode_layer_term (s : string) (pos : int) (limit : int) : (native_op layer_
             | None -> None
             | Some (a0, p) -> (match decode_lit s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (LayerTerm_succeed (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (LayerTerm.Succeed (a0, a1), next) else None))
         | 1 -> (match decode_service_key s p e with
             | None -> None
             | Some (a0, p) -> (match decode_eff s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (LayerTerm_effect (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (LayerTerm.Effect (a0, a1), next) else None))
         | 2 -> (match decode_eff s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (LayerTerm_effectDiscard a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (LayerTerm.EffectDiscard a0, next) else None)
         | 3 -> (match decode_layer_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_layer_term s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (LayerTerm_provide (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (LayerTerm.Provide (a0, a1), next) else None))
         | 4 -> (match decode_layer_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_layer_term s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (LayerTerm_provideMerge (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (LayerTerm.ProvideMerge (a0, a1), next) else None))
         | 5 -> (match decode_layer_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_layer_term s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (LayerTerm_merge (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (LayerTerm.Merge (a0, a1), next) else None))
         | 6 -> (match decode_layer_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (LayerTerm_fresh a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (LayerTerm.Fresh a0, next) else None)
         | 7 -> (match decode_layer_term s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (LayerTerm_orDie a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (LayerTerm.OrDie a0, next) else None)
         | 8 -> (match (Eff_frame.decode_list Eff_frame.decode_nat) s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (LayerTerm_ref a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (LayerTerm.Ref a0, next) else None)
         | 9 -> (match decode_layer_terms s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (LayerTerm_mergeAll a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (LayerTerm.MergeAll a0, next) else None)
         | _ -> None)
 
-and decode_layer_terms (s : string) (pos : int) (limit : int) : (native_op layer_terms * int) option =
+and decode_layer_terms (s : string) (pos : int) (limit : int) : (NativeOp.t LayerTerms.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (LayerTerms_nil, next) else None
+        | 0 -> if p = e then Some (LayerTerms.Nil, next) else None
         | 1 -> (match decode_layer_term s p e with
             | None -> None
             | Some (a0, p) -> (match decode_layer_terms s p e with
                 | None -> None
-                | Some (a1, p) -> if p = e then Some (LayerTerms_cons (a0, a1), next) else None))
+                | Some (a1, p) -> if p = e then Some (LayerTerms.Cons (a0, a1), next) else None))
         | _ -> None)
 
-let decode_eff_exact (s : string) : native_op eff option =
+let decode_eff_exact (s : string) : NativeOp.t Eff.t option =
   Eff_frame.exact decode_eff s
 
-let decode_stmt_exact (s : string) : native_op stmt option =
+let decode_stmt_exact (s : string) : NativeOp.t Stmt.t option =
   Eff_frame.exact decode_stmt s
 
-let decode_stmts_exact (s : string) : native_op stmts option =
+let decode_stmts_exact (s : string) : NativeOp.t Stmts.t option =
   Eff_frame.exact decode_stmts s
 
-let decode_effs_exact (s : string) : native_op effs option =
+let decode_effs_exact (s : string) : NativeOp.t Effs.t option =
   Eff_frame.exact decode_effs s
 
-let decode_action_term_exact (s : string) : native_op action_term option =
+let decode_action_term_exact (s : string) : NativeOp.t ActionTerm.t option =
   Eff_frame.exact decode_action_term s
 
-let decode_layer_term_exact (s : string) : native_op layer_term option =
+let decode_layer_term_exact (s : string) : NativeOp.t LayerTerm.t option =
   Eff_frame.exact decode_layer_term s
 
-let decode_layer_terms_exact (s : string) : native_op layer_terms option =
+let decode_layer_terms_exact (s : string) : NativeOp.t LayerTerms.t option =
   Eff_frame.exact decode_layer_terms s
 
-let rec emit_row_kind (b : Eff_frame.writer) (v : row_kind) : unit =
+let rec emit_row_kind (b : Eff_frame.writer) (v : RowKind.t) : unit =
   match v with
-    | RowKind_sync -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | RowKind_async -> Eff_frame.emit_ctor b 1 (fun _ -> ())
-    | RowKind_program -> Eff_frame.emit_ctor b 2 (fun _ -> ())
+    | RowKind.Sync -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | RowKind.Async -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | RowKind.Program -> Eff_frame.emit_ctor b 2 (fun _ -> ())
 
-let encode_row_kind (v : row_kind) : string =
+let encode_row_kind (v : RowKind.t) : string =
   Eff_frame.to_string emit_row_kind v
 
-let rec decode_row_kind (s : string) (pos : int) (limit : int) : (row_kind * int) option =
+let rec decode_row_kind (s : string) (pos : int) (limit : int) : (RowKind.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (RowKind_sync, next) else None
-        | 1 -> if p = e then Some (RowKind_async, next) else None
-        | 2 -> if p = e then Some (RowKind_program, next) else None
+        | 0 -> if p = e then Some (RowKind.Sync, next) else None
+        | 1 -> if p = e then Some (RowKind.Async, next) else None
+        | 2 -> if p = e then Some (RowKind.Program, next) else None
         | _ -> None)
 
-let decode_row_kind_exact (s : string) : row_kind option =
+let decode_row_kind_exact (s : string) : RowKind.t option =
   Eff_frame.exact decode_row_kind s
 
-let rec emit_row_shape (b : Eff_frame.writer) (v : row_shape) : unit =
+let rec emit_row_shape (b : Eff_frame.writer) (v : RowShape.t) : unit =
   match v with
-    | RowShape_call -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | RowShape_value -> Eff_frame.emit_ctor b 1 (fun _ -> ())
-    | RowShape_tupleCall -> Eff_frame.emit_ctor b 2 (fun _ -> ())
-    | RowShape_method -> Eff_frame.emit_ctor b 3 (fun _ -> ())
+    | RowShape.Call -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | RowShape.Value -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | RowShape.TupleCall -> Eff_frame.emit_ctor b 2 (fun _ -> ())
+    | RowShape.Method -> Eff_frame.emit_ctor b 3 (fun _ -> ())
 
-let encode_row_shape (v : row_shape) : string =
+let encode_row_shape (v : RowShape.t) : string =
   Eff_frame.to_string emit_row_shape v
 
-let rec decode_row_shape (s : string) (pos : int) (limit : int) : (row_shape * int) option =
+let rec decode_row_shape (s : string) (pos : int) (limit : int) : (RowShape.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (RowShape_call, next) else None
-        | 1 -> if p = e then Some (RowShape_value, next) else None
-        | 2 -> if p = e then Some (RowShape_tupleCall, next) else None
-        | 3 -> if p = e then Some (RowShape_method, next) else None
+        | 0 -> if p = e then Some (RowShape.Call, next) else None
+        | 1 -> if p = e then Some (RowShape.Value, next) else None
+        | 2 -> if p = e then Some (RowShape.TupleCall, next) else None
+        | 3 -> if p = e then Some (RowShape.Method, next) else None
         | _ -> None)
 
-let decode_row_shape_exact (s : string) : row_shape option =
+let decode_row_shape_exact (s : string) : RowShape.t option =
   Eff_frame.exact decode_row_shape s
 
-let rec emit_registration (b : Eff_frame.writer) (v : registration) : unit =
+let rec emit_registration (b : Eff_frame.writer) (v : Registration.t) : unit =
   match v with
-    | Registration_deferred -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-    | Registration_external -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+    | Registration.Deferred -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+    | Registration.External -> Eff_frame.emit_ctor b 1 (fun _ -> ())
 
-let encode_registration (v : registration) : string =
+let encode_registration (v : Registration.t) : string =
   Eff_frame.to_string emit_registration v
 
-let rec decode_registration (s : string) (pos : int) (limit : int) : (registration * int) option =
+let rec decode_registration (s : string) (pos : int) (limit : int) : (Registration.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
-        | 0 -> if p = e then Some (Registration_deferred, next) else None
-        | 1 -> if p = e then Some (Registration_external, next) else None
+        | 0 -> if p = e then Some (Registration.Deferred, next) else None
+        | 1 -> if p = e then Some (Registration.External, next) else None
         | _ -> None)
 
-let decode_registration_exact (s : string) : registration option =
+let decode_registration_exact (s : string) : Registration.t option =
   Eff_frame.exact decode_registration s
 
-let rec emit_row_arg (b : Eff_frame.writer) (v : row_arg) : unit =
+let rec emit_row_arg (b : Eff_frame.writer) (v : RowArg.t) : unit =
   match v with
-    | RowArg_name a0 -> Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b a0)
-    | RowArg_str a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_string b a0)
+    | RowArg.Name a0 -> Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b a0)
+    | RowArg.Str a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_string b a0)
 
-let encode_row_arg (v : row_arg) : string =
+let encode_row_arg (v : RowArg.t) : string =
   Eff_frame.to_string emit_row_arg v
 
-let rec decode_row_arg (s : string) (pos : int) (limit : int) : (row_arg * int) option =
+let rec decode_row_arg (s : string) (pos : int) (limit : int) : (RowArg.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
         | 0 -> (match Eff_frame.decode_string s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (RowArg_name a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (RowArg.Name a0, next) else None)
         | 1 -> (match Eff_frame.decode_string s p e with
             | None -> None
-            | Some (a0, p) -> if p = e then Some (RowArg_str a0, next) else None)
+            | Some (a0, p) -> if p = e then Some (RowArg.Str a0, next) else None)
         | _ -> None)
 
-let decode_row_arg_exact (s : string) : row_arg option =
+let decode_row_arg_exact (s : string) : RowArg.t option =
   Eff_frame.exact decode_row_arg s
 
-let rec emit_row (b : Eff_frame.writer) (r : row) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.name; Eff_frame.emit_string b r.spelling; emit_row_shape b r.shape; Eff_frame.emit_list b (fun b y -> emit_row_arg b y) r.trailing; emit_row_kind b r.kind; emit_ty b r.request; emit_ty b r.answer; emit_ty b r.error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.requires; Eff_frame.emit_string b r.cite; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.type_args; emit_registration b r.registration)
+let rec emit_row (b : Eff_frame.writer) (r : Row.t) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.Row.name; Eff_frame.emit_string b r.Row.spelling; emit_row_shape b r.Row.shape; Eff_frame.emit_list b (fun b y -> emit_row_arg b y) r.Row.trailing; emit_row_kind b r.Row.kind; emit_ty b r.Row.request; emit_ty b r.Row.answer; emit_ty b r.Row.error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.Row.requires; Eff_frame.emit_string b r.Row.cite; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.Row.type_args; emit_registration b r.Row.registration)
 
-let encode_row (v : row) : string =
+let encode_row (v : Row.t) : string =
   Eff_frame.to_string emit_row v
 
-let rec decode_row (s : string) (pos : int) (limit : int) : (row * int) option =
+let rec decode_row (s : string) (pos : int) (limit : int) : (Row.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -1224,19 +1224,19 @@ let rec decode_row (s : string) (pos : int) (limit : int) : (row * int) option =
                                                     | None -> None
                                                     | Some (a10, p) -> (match decode_registration s p e with
                                                         | None -> None
-                                                        | Some (a11, p) -> if p = e then Some (({ name = a0; spelling = a1; shape = a2; trailing = a3; kind = a4; request = a5; answer = a6; error = a7; requires = a8; cite = a9; type_args = a10; registration = a11 } : row), next) else None))))))))))))
+                                                        | Some (a11, p) -> if p = e then Some (({ Row.name = a0; Row.spelling = a1; Row.shape = a2; Row.trailing = a3; Row.kind = a4; Row.request = a5; Row.answer = a6; Row.error = a7; Row.requires = a8; Row.cite = a9; Row.type_args = a10; Row.registration = a11 } : Row.t), next) else None))))))))))))
         | _ -> None)
 
-let decode_row_exact (s : string) : row option =
+let decode_row_exact (s : string) : Row.t option =
   Eff_frame.exact decode_row s
 
-let rec emit_eff_ty (b : Eff_frame.writer) (r : eff_ty) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> emit_ty b r.answer; emit_ty b r.error; if not (Eff_frame.strictly_ascending keyBefore r.requires) then invalid_arg "noncanonical requirements"; Eff_frame.emit_list b emit_service_key r.requires)
+let rec emit_eff_ty (b : Eff_frame.writer) (r : EffTy.t) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> emit_ty b r.EffTy.answer; emit_ty b r.EffTy.error; if not (Eff_frame.strictly_ascending keyBefore r.EffTy.requires) then invalid_arg "noncanonical requirements"; Eff_frame.emit_list b emit_service_key r.EffTy.requires)
 
-let encode_eff_ty (v : eff_ty) : string =
+let encode_eff_ty (v : EffTy.t) : string =
   Eff_frame.to_string emit_eff_ty v
 
-let rec decode_eff_ty (s : string) (pos : int) (limit : int) : (eff_ty * int) option =
+let rec decode_eff_ty (s : string) (pos : int) (limit : int) : (EffTy.t * int) option =
   match Eff_frame.read_ctor s pos limit with
     | None -> None
     | Some (i, p, e, next) -> (match i with
@@ -1246,15 +1246,15 @@ let rec decode_eff_ty (s : string) (pos : int) (limit : int) : (eff_ty * int) op
                 | None -> None
                 | Some (a1, p) -> (match (Eff_frame.decode_checked_list decode_service_key keyBefore) s p e with
                     | None -> None
-                    | Some (a2, p) -> if p = e then Some (({ answer = a0; error = a1; requires = a2 } : eff_ty), next) else None)))
+                    | Some (a2, p) -> if p = e then Some (({ EffTy.answer = a0; EffTy.error = a1; EffTy.requires = a2 } : EffTy.t), next) else None)))
         | _ -> None)
 
-let decode_eff_ty_exact (s : string) : eff_ty option =
+let decode_eff_ty_exact (s : string) : EffTy.t option =
   Eff_frame.exact decode_eff_ty s
 
 (* The top level: a program is an Eff over the native alphabet. *)
 
-type program = native_op eff
+type program = NativeOp.t Eff.t
 
 let encode_program : program -> string =
   encode_eff

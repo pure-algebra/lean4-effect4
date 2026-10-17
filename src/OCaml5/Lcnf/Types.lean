@@ -1,6 +1,7 @@
 import Lean
 import OCaml5.Lcnf.Index
 import OCaml5.Ml.Syntax
+import OCaml5.Ml.Fold
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Externs
 import OCaml5.Lcnf.TypeRows
@@ -29,12 +30,18 @@ so that the OCaml types agree with the representation the mono-phase LCNF code a
   in full, the rest as *placeholders* — a variant with one nullary constructor
   `Placeholder_<type>` — so that a generated file always compiles on its own and a reader
   sees exactly which types this run did not port — *tested* (`gen_check`).
-* **One group.** Every declaration goes into one `type … and …` group, so the order of
-  discovery is never an OCaml scoping error — *by construction*.
+* **One group, or one module per type at its owner.** Every declaration goes into one
+  `type … and …` group, so the order of discovery is never an OCaml scoping error — *by
+  construction*. The program types' owner (`ocaml/eff/eff_types.ml`, `TypeNames.modules`)
+  declares each type as its own module instead, in the order of the reference graph's
+  components, a cycle as one `module rec` of type-only signatures (`Generated.items`) — *by
+  construction*; *tested* by `dune build` of `ocaml/` and the client `ocaml/eff/test/test_owner.ml`,
+  which traverses `Eff`–`Stmt`–`Stmts` with its type parameter kept. A cycle's parameters are
+  invariant, since OCaml checks a recursive group against approximations of its members.
 * **Builtins.** A type constant with a row of the type table is spelled by its row
   (`OCaml5.Lcnf.typeRows`): `Nat`, `Int`, `Char` and the `UInt*` are `int`, `Except ε α` is
-  `(α, ε) result`, `Array` is `list` (the route's Array-as-list shim), and so on. No declaration
-  is emitted for it — *by construction*.
+  `(α, ε) result`, `Array α` is `α Lcnf_array.t` (the runtime library's persistent vector,
+  `ocaml/lcnf/lcnf_array.mli`), and so on. No declaration is emitted for it — *by construction*.
 * **Parameters by binder kind.** A type's OCaml parameters are its type parameters, in source
   order. A family over a finite index (`R : I → Type u`, with `I` an inductive whose
   constructors take no argument) is one OCaml parameter per constructor of `I`, and an instance
@@ -359,7 +366,7 @@ def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInf
           if trivialIdx? == some idx then alias := some t
         idx := idx + 1
       let short := shortName ctorName
-      let ctor : Ml.Ctor := { name := OCaml5.Lcnf.ctorNameIn tn n short, args := args.toList }
+      let ctor : Ml.Ctor := { name := OCaml5.Lcnf.declCtorNameIn tn n short, args := args.toList }
       return (ctor, fs, alias, r, u, uf)
     ctors := ctors.push ctor
     fields := fs
@@ -368,7 +375,7 @@ def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInf
     unknown := unknown ++ u
     usedFields := usedFields ++ uf
   let params := slotNames.toList.flatten
-  let tname := OCaml5.Lcnf.typeNameIn tn n
+  let tname := OCaml5.Lcnf.declTypeNameIn tn n
   -- A structure whose every field is erased (`ServiceUniverse`: one `Type`-valued field) has
   -- no relevant data: OCaml refuses an empty record, so it is the abbreviation `unit`, and
   -- its constructions are `()` (`Translate.ctorExpr`).
@@ -395,6 +402,9 @@ def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInf
 structure Generated where
   /-- The one `type … and …` group, in discovery order. -/
   decls : Array Ml.TypeDecl := #[]
+  /-- Each declaration of `decls`, in the same order, with its Lean constant and the type
+  constants it refers to: what `items` orders the modules of a type at its owner by. -/
+  entries : Array (Name × Ml.TypeDecl × Array Name) := #[]
   /-- Types emitted in full. -/
   full : Array Name := #[]
   /-- Types emitted as abbreviations. -/
@@ -447,20 +457,23 @@ partial def generate (full : Array Name) (mentioned : Array Name) (tn : TypeName
     -- A name claimed twice is *reported*, not patched here: renaming a declaration after its
     -- annotations and constructors have been rendered makes the two disagree (the U0 probe's
     -- `val_` failure). The driver re-runs with the collision in `TypeNames`, so `typeInfo?`,
-    -- `kernelTy` and `Translate` all spell the renamed type the same way.
+    -- `kernelTy` and `Translate` all spell the renamed type the same way. The claim is the name
+    -- a use spells: a type at its owner declares `t`, and claims its module's `M.t`.
     let decl := info.decl
     let ph := info.placeholder
-    if let some other := taken[info.decl.name]? then
+    let claim := typeNameIn tn n
+    if let some other := taken[claim]? then
       if other != n then
-        g := { g with collisions := g.collisions.push (info.decl.name, other, n) }
-    taken := taken.insert decl.name n
+        g := { g with collisions := g.collisions.push (claim, other, n) }
+    taken := taken.insert claim n
     if ex.elems.contains n then
       unless g.usedElems.contains n do g := { g with usedElems := g.usedElems.push n }
     for f in info.usedFields do
       unless g.usedFields.contains f do g := { g with usedFields := g.usedFields.push f }
     let emitFull := wantFull || fullSet.contains n || info.isAlias
     if emitFull then
-      g := { g with decls := g.decls.push decl, unknown := g.unknown ++ info.unknown }
+      g := { g with decls := g.decls.push decl, entries := g.entries.push (n, decl, info.refs),
+                    unknown := g.unknown ++ info.unknown }
       if info.isAlias then g := { g with aliases := g.aliases.push n }
       else g := { g with full := g.full.push n }
       -- a full declaration's references need at least a placeholder; the queue decides
@@ -468,7 +481,8 @@ partial def generate (full : Array Name) (mentioned : Array Name) (tn : TypeName
         queue := queue.push (r, fullSet.contains r)
     else
       match ph with
-      | some p => g := { g with decls := g.decls.push p, placeholders := g.placeholders.push n }
+      | some p => g := { g with decls := g.decls.push p, entries := g.entries.push (n, p, #[]),
+                                placeholders := g.placeholders.push n }
       | none => pure ()
   if g.unknown.size > 0 then
     g := { g with decls := g.decls.push { name := unknownTypeName, body := .abstract } }
@@ -478,17 +492,60 @@ partial def generate (full : Array Name) (mentioned : Array Name) (tn : TypeName
 def Generated.item (g : Generated) : Ml.Decl :=
   .types g.decls.toList
 
-/-- A set of types declared in full, as one artifact's own run declares them: no extern table,
-and the renaming loop of the generator (`OCaml5.Lcnf.Gen.run`), whose decided names come back
-with the declarations. A placeholder, a collision or an unspelled field is fatal: a module that
-opens these types would otherwise miss one. `Gen.run` reads an opened artifact's types so, and
-the `eff/` emitter reads the interface of `Eff_types` so. -/
+/-- A declaration's type expressions with its own module's `M.t` written `t`: inside its module a
+type names itself so, since `M` is not yet defined there. -/
+def selfNamed (m : String) (d : Ml.TypeDecl) : Ml.TypeDecl :=
+  let own := m ++ ".t"
+  let ty : Ml.Ty → Ml.Ty := Ml.cata_ty
+    { Ml.TyAlgebra.id with ty_con := fun c args => .con (if c == own then "t" else c) args }
+  let body : Ml.TyBody := match d.body with
+    | .record fs => .record (fs.map fun f => { f with ty := ty f.ty })
+    | .variant cs => .variant (cs.map fun c => { c with args := c.args.map ty })
+    | .alias t => .alias (ty t)
+    | .abstract => .abstract
+  { d with body := body }
+
+/-- The types at their owner as structure items, one module per type: the components of the
+reference graph, dependencies first, a component of one type as `module M = struct … end` and a
+cycle as one `module rec` of type-only signatures (`Eff`–`Stmt`–`Stmts`). A declaration that
+is no type at its owner stays in the flat group, first. A plain module keeps OCaml's variance
+for its parameters; a cycle's parameters are invariant, since OCaml checks a recursive group
+against approximations of its members. -/
+def Generated.items (g : Generated) (tn : TypeNames) : List Ml.Decl :=
+  let flat := g.entries.filter fun (n, _, _) => !tn.modules.contains n
+  let owned := g.entries.filter fun (n, _, _) => tn.modules.contains n
+  let index : Std.HashMap Name Nat := owned.foldl (init := {}) fun m (n, _, _) => m.insert n m.size
+  let edges (i : Nat) : List Nat :=
+    (owned[i]!.2.2.toList.filterMap (index[·]?)).eraseDups
+  let groups := Lean.SCC.scc (List.range owned.size) edges
+  let modOf (n : Name) : String := tn.modules.getD n (moduleName n)
+  let items := groups.map fun comp =>
+    let comp := comp.mergeSort (· ≤ ·)
+    match comp with
+    | [i] =>
+      let (n, d, _) := owned[i]!
+      .moduleD (modOf n) [] [.types [selfNamed (modOf n) d]]
+    | _ => .moduleRecD (comp.map fun i =>
+        let (n, d, _) := owned[i]!
+        (modOf n, [Ml.SigItem.type (selfNamed (modOf n) d)]))
+  (if flat.isEmpty then [] else [Ml.Decl.types (flat.map (·.2.1)).toList]) ++ items
+
+/-- A set of types declared in full at their owner, as the owner's own run declares them: each
+type of the closure its own module (`TypeNames.modules`), no extern table, and the renaming loop
+of the generator, here over module names, whose decided names come back with the declarations.
+A placeholder, a collision or an unspelled field is fatal: a module that opens these types
+would otherwise miss one. The owner's run (`OCaml5.Lcnf.Gen.run`, `--modules`) declares its
+types so, `Gen.run` reads an opened artifact's types so, and the `eff/` emitter reads the
+interface of `Eff_types` so. -/
 def generateInFull (types : Array Name) : MetaM (Generated × TypeNames) := do
-  let mut tn : TypeNames := {}
+  -- the closure first, under flat names; then every type of it at its owner
+  let first ← generate types #[] {} {}
+  let mut tn : TypeNames :=
+    { modules := (first.full ++ first.aliases).foldl (fun m n => m.insert n (moduleName n)) {} }
   let mut g ← generate types #[] tn {}
   for _ in [:4] do
     if g.collisions.isEmpty then break
-    for (_, _, n) in g.collisions do tn := tn.insert n (fullTypeName n)
+    for (_, _, n) in g.collisions do tn := { tn with modules := tn.modules.insert n (fullModuleName n) }
     g ← generate types #[] tn {}
   unless g.placeholders.isEmpty && g.collisions.isEmpty && g.unknown.isEmpty do
     throwError s!"the types are not all declared in full (fatal): placeholders {g.placeholders}, \

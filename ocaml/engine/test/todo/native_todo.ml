@@ -56,7 +56,7 @@ let host (type s) (module R : REPO with type t = s) : s Todo_gen.host =
 
 (* The host as the engine driver's provider: the lowered reactor over its record. *)
 let provider (h : 's Todo_gen.host) :
-    row -> val_ -> 's -> ((val_, err, defect, int, unit) completion * 's) option =
+    Row.t -> Val.t -> 's -> ((Val.t, Err.t, Defect.t, int, unit) Completion.t * 's) option =
   Todo_gen.test_dogfood_scenario_todo_typed_host_reactor h
 
 (* Each method of `h`, with the exceptions `f` names answered as the rows' failure. *)
@@ -80,25 +80,25 @@ let todo id title d : Todo_gen.todo = { id; title; done_ = d }
    fields in canonical order: done, id, title. *)
 module Untyped = struct
   let todo id title is_done =
-    Val_ctor (0, [ Val_list [ Val_str "done"; Val_str "id"; Val_str "title" ];
-                   Val_list [ Val_bool is_done; Val_nat id; Val_str title ] ])
+    Val.Ctor (0, [ Val.List [ Val.Str "done"; Val.Str "id"; Val.Str "title" ];
+                   Val.List [ Val.Bool is_done; Val.Nat id; Val.Str title ] ])
 
-  let ok v = Completion_ofExit (Exit_success v)
+  let ok v = Completion.OfExit (Exit.Success v)
 
-  let provider (r : row) (sent : val_) ((next, items) : lane_state) =
-    match r.spelling, sent with
-    | "TodoRepo.insert", Val_str title ->
+  let provider (r : Row.t) (sent : Val.t) ((next, items) : lane_state) =
+    match r.Row.spelling, sent with
+    | "TodoRepo.insert", Val.Str title ->
       Some (ok (todo next title false), (next + 1, items @ [ (next, (title, false)) ]))
     | "TodoRepo.all", _ ->
-      Some (ok (Val_list (List.map (fun (id, (title, d)) -> todo id title d) items)), (next, items))
-    | "TodoRepo.setDone", Val_list [ Val_nat id; Val_bool d ] -> (
+      Some (ok (Val.List (List.map (fun (id, (title, d)) -> todo id title d) items)), (next, items))
+    | "TodoRepo.setDone", Val.List [ Val.Nat id; Val.Bool d ] -> (
       match List.assoc_opt id items with
       | Some (title, _) ->
-        Some (ok (Val_some (todo id title d)),
+        Some (ok (Val.Some (todo id title d)),
               (next, List.map (fun (i, (t, e)) -> if i = id then (i, (t, d)) else (i, (t, e))) items))
-      | None -> Some (ok Val_none, (next, items)))
-    | "TodoRepo.delete", Val_nat id ->
-      Some (ok (Val_bool (List.mem_assoc id items)), (next, List.filter (fun (i, _) -> i <> id) items))
+      | None -> Some (ok Val.None, (next, items)))
+    | "TodoRepo.delete", Val.Nat id ->
+      Some (ok (Val.Bool (List.mem_assoc id items)), (next, List.filter (fun (i, _) -> i <> id) items))
     | _ -> None
 end
 

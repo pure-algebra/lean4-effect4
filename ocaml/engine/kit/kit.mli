@@ -25,30 +25,30 @@
 
 (** {1 The carriers} *)
 
-type program = Eff_types.native_op Eff_types.eff
+type program = Eff_types.NativeOp.t Eff_types.Eff.t
 (** A program: the Eff tree over the native operations ([Effect4.Api.Program]). *)
 
-type exit = (Eff_types.val_, Eff_types.err, Eff_types.defect, int, unit) Eff_types.exit_
+type exit = (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit) Eff_types.Exit.t
 (** How a program, or a host call, ends: a success with a value or a failure with a cause. *)
 
-type completion = (Eff_types.val_, Eff_types.err, Eff_types.defect, int, unit) Eff_types.completion
+type completion = (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit) Eff_types.Completion.t
 (** A host's answer to a call. *)
 
 type app = Effect4_gen.Api_gen.sig_app
 (** An application: its host rows, its service declarations and its named types ([SigApp]). *)
 
-val app : ?rows:Eff_types.row list -> ?services:(Eff_types.service_key * Eff_types.ty) list -> unit -> app
+val app : ?rows:Eff_types.Row.t list -> ?services:(Eff_types.ServiceKey.t * Eff_types.Ty.t) list -> unit -> app
 (** The application of these rows and services; with neither, the empty one. *)
 
-val succeed : Eff_types.val_ -> exit
+val succeed : Eff_types.Val.t -> exit
 (** A success with this value. *)
 
-val fail : Eff_types.val_ -> exit
+val fail : Eff_types.Val.t -> exit
 (** A failure with this error value: the cause [Cause.fail (errOf v)], as a host writes one. *)
 
 (** {1 Checking} *)
 
-val check : app -> program -> (Eff_types.eff_ty, Effect4_gen.Api_gen.type_refusal) result
+val check : app -> program -> (Eff_types.EffTy.t, Effect4_gen.Api_gen.type_refusal) result
 (** The checker's answer: the program's type at the application ([Effect<A, E, R>]), or the
     address of the refusing node and why ([Api.check]). *)
 
@@ -58,12 +58,12 @@ val admit : app -> program -> Effect4_gen.Api_gen.admit_refusal option
     empty columns. [None] when admitted. Raw formation is not decided natively (the note's
     finding 4). *)
 
-val ty_text : Eff_types.ty -> string
+val ty_text : Eff_types.Ty.t -> string
 (** A type's TypeScript spelling ([Ty.render]). *)
 
 (** {1 Hosts} *)
 
-type 's reactor = Eff_types.row -> Eff_types.val_ -> 's -> (completion * 's) option
+type 's reactor = Eff_types.Row.t -> Eff_types.Val.t -> 's -> (completion * 's) option
 (** A host: the call's row, its request and the host's state, to an answer and the next state;
     [None] leaves the call waiting. Lean's [Run.Reactor], and [E4_host]'s provider. *)
 
@@ -74,7 +74,7 @@ module Reactor : sig
   val tape : exit list reactor
   (** Each call takes the tape's next exit, whatever its row; an empty tape waits. *)
 
-  val by_name : (string * (Eff_types.val_ -> exit option)) list -> unit reactor
+  val by_name : (string * (Eff_types.Val.t -> exit option)) list -> unit reactor
   (** A host by row name: each named row's function answers its calls; a row with no function,
       or a function that answers [None], waits. *)
 
@@ -88,28 +88,28 @@ end
 (** {1 Running} *)
 
 type reply_fault = Effect4_gen.Api_gen.reply_fault =
-  | ReplyFault_answerType of Eff_types.ty  (** a success whose value is no member of the row's answer type *)
-  | ReplyFault_errorType of Eff_types.ty  (** a failure with a reason outside the row's error column *)
+  | ReplyFault_answerType of Eff_types.Ty.t  (** a success whose value is no member of the row's answer type *)
+  | ReplyFault_errorType of Eff_types.Ty.t  (** a failure with a reason outside the row's error column *)
   | ReplyFault_reservedDefect  (** a failure carrying one of the machine's markers of malformed code *)
 
 type stop =
   | Finished of exit  (** the program ended with this exit *)
-  | Waiting of int * Eff_types.val_  (** the host has no reply for a call of this row with this request *)
-  | Refused of int * Eff_types.val_ * exit * reply_fault option
+  | Waiting of int * Eff_types.Val.t  (** the host has no reply for a call of this row with this request *)
+  | Refused of int * Eff_types.Val.t * exit * reply_fault option
       (** the host's reply to this call does not fit the row: the fault, or [None] when the
           engine refused a reply the kit admits *)
   | Unsettled  (** the budget, the fuel or the rounds ended first: a finite probe, not a divergence *)
   | Stopped of string  (** the machine stopped otherwise: suspended on a timer, stuck, a raise *)
 
 type step = Effect4_gen.Api_gen.step =
-  | Step_called of int * Eff_types.val_ * exit  (** a host call: its row, its request, its reply *)
-  | Step_celled of Effect4_gen.Api_gen.sync_op * Eff_types.val_  (** a cell operation and its value *)
+  | Step_called of int * Eff_types.Val.t * exit  (** a host call: its row, its request, its reply *)
+  | Step_celled of Effect4_gen.Api_gen.sync_op * Eff_types.Val.t  (** a cell operation and its value *)
 
 type trace = { steps : step list; stop : stop }
 (** How one run went: its steps in order and how it stopped. The machine's trace holds its host
     calls alone; the call tree's holds its cell operations too. *)
 
-val calls : trace -> (int * Eff_types.val_ * exit) list
+val calls : trace -> (int * Eff_types.Val.t * exit) list
 (** A trace's host calls, in order. *)
 
 val tape_of : trace -> exit list
@@ -133,7 +133,7 @@ val run : ?limit:int -> ?frames:bool -> ?check:bool -> app -> 's reactor -> 's -
 
 (** {1 Every path} *)
 
-val samples : app -> Eff_types.ty -> Eff_types.val_ list
+val samples : app -> Eff_types.Ty.t -> Eff_types.Val.t list
 (** A few small members of a type under the application's named types ([Kit.samples]). *)
 
 val replies : app -> int -> exit list
@@ -170,16 +170,16 @@ module Json : sig
   (** A program from its JSON print (the session tool's form), objects in any order. *)
 
   val program_json : program -> t
-  val rows : t -> Eff_types.row list option
-  val rows_json : Eff_types.row list -> t
-  val services : t -> (Eff_types.service_key * Eff_types.ty) list option
+  val rows : t -> Eff_types.Row.t list option
+  val rows_json : Eff_types.Row.t list -> t
+  val services : t -> (Eff_types.ServiceKey.t * Eff_types.Ty.t) list option
   val exits : t -> exit list option
   (** A reply tape: an array of exits. *)
 
   val exit_json : exit -> t
-  val value_json : Eff_types.val_ -> t
-  val ty_json : Eff_types.ty -> t
-  val eff_ty_json : Eff_types.eff_ty -> t
+  val value_json : Eff_types.Val.t -> t
+  val ty_json : Eff_types.Ty.t -> t
+  val eff_ty_json : Eff_types.EffTy.t -> t
   val refusal_json : Effect4_gen.Api_gen.type_refusal -> t
   val admit_json : Effect4_gen.Api_gen.admit_refusal -> t
 

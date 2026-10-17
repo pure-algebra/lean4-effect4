@@ -20,40 +20,40 @@ open Eff_types
 module J = Eff_json_text
 
 (* A short text of a value, for a label. *)
-let rec value_text (v : val_) : string =
+let rec value_text (v : Val.t) : string =
   match v with
-  | Val_unit -> "()"
-  | Val_bool b -> string_of_bool b
-  | Val_nat n -> string_of_int n
-  | Val_negInt n -> string_of_int (- (n + 1))
-  | Val_str s -> Printf.sprintf "%S" s
-  | Val_bytes d -> Printf.sprintf "<%d bytes>" (List.length d)
-  | Val_list xs -> "[" ^ String.concat ", " (List.map value_text xs) ^ "]"
-  | Val_pair (a, b) -> "(" ^ value_text a ^ ", " ^ value_text b ^ ")"
-  | Val_none -> "none"
-  | Val_some a -> "some " ^ value_text a
-  | Val_ctor (i, args) -> Printf.sprintf "ctor %d [%s]" i (String.concat ", " (List.map value_text args))
-  | Val_ref _ -> "<ref>"
-  | Val_handle (k, n) -> Printf.sprintf "<handle %d %d>" k n
-  | Val_float _ -> "<float>"
+  | Val.Unit -> "()"
+  | Val.Bool b -> string_of_bool b
+  | Val.Nat n -> string_of_int n
+  | Val.NegInt n -> string_of_int (- (n + 1))
+  | Val.Str s -> Printf.sprintf "%S" s
+  | Val.Bytes d -> Printf.sprintf "<%d bytes>" (List.length d)
+  | Val.List xs -> "[" ^ String.concat ", " (List.map value_text xs) ^ "]"
+  | Val.Pair (a, b) -> "(" ^ value_text a ^ ", " ^ value_text b ^ ")"
+  | Val.None -> "none"
+  | Val.Some a -> "some " ^ value_text a
+  | Val.Ctor (i, args) -> Printf.sprintf "ctor %d [%s]" i (String.concat ", " (List.map value_text args))
+  | Val.Ref _ -> "<ref>"
+  | Val.Handle (k, n) -> Printf.sprintf "<handle %d %d>" k n
+  | Val.Float _ -> "<float>"
 
 let err_text = function
-  | Err_boom -> "boom"
-  | Err_tag n -> Printf.sprintf "tag %d" n
-  | Err_tagged (t, m) -> Printf.sprintf "%s: %s" t m
-  | Err_text s -> Printf.sprintf "%S" s
-  | Err_payload v -> value_text v
+  | Err.Boom -> "boom"
+  | Err.Tag n -> Printf.sprintf "tag %d" n
+  | Err.Tagged (t, m) -> Printf.sprintf "%s: %s" t m
+  | Err.Text s -> Printf.sprintf "%S" s
+  | Err.Payload v -> value_text v
 
 let exit_text (ex : Kit.exit) =
   match ex with
-  | Exit_success v -> "ok " ^ value_text v
-  | Exit_failure (Reason_fail (e, _) :: _) -> "failed " ^ err_text e
-  | Exit_failure (Reason_die _ :: _) -> "died"
-  | Exit_failure (Reason_interrupt _ :: _) -> "interrupted"
-  | Exit_failure [] -> "failed"
+  | Exit.Success v -> "ok " ^ value_text v
+  | Exit.Failure (Reason.Fail (e, _) :: _) -> "failed " ^ err_text e
+  | Exit.Failure (Reason.Die _ :: _) -> "died"
+  | Exit.Failure (Reason.Interrupt _ :: _) -> "interrupted"
+  | Exit.Failure [] -> "failed"
 
 let row_name (app : Kit.app) i =
-  match List.nth_opt app.Effect4_gen.Api_gen.rows i with Some (r : row) -> r.name | None -> Printf.sprintf "row %d" i
+  match List.nth_opt app.Effect4_gen.Api_gen.rows i with Some (r : Row.t) -> r.Row.name | None -> Printf.sprintf "row %d" i
 
 let step_json app : Kit.step -> J.t = function
   | Kit.Step_called (i, v, ex) ->

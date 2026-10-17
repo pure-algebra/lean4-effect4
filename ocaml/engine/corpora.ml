@@ -49,7 +49,7 @@ open Eff_types
 type program = {
   name : string;  (** the golden's basename, or `g<NNN>` for a generated program *)
   corpus : string;  (** "goldens" | "truth" | "lean" *)
-  eff : native_op eff;
+  eff : NativeOp.t Eff.t;
   bytes : string option;  (** the canonical wire bytes, when the program came from them *)
   typed : bool option;  (** Lean's `Api.wellTyped` verdict, when the source records it *)
 }
