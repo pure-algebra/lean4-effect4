@@ -74,8 +74,6 @@ TY_VARIANCE = 'src/Effect4/Program/TyVariance.lean'
 # first, the native libraries those modules load are loaded into its run, and the files it
 # writes are the lane's fixtures.
 FIXTURE_LANES = 'ocaml/engine/test'
-# The native kit's lane (`ocaml/kit/test`, its `verdicts.txt`), a lane folder of its own.
-FIXTURE_FOLDERS = ['ocaml/kit/test']
 
 
 def fixture_lanes():
@@ -86,8 +84,7 @@ def fixture_lanes():
     """
     base = ROOT / FIXTURE_LANES
     lanes = []
-    writers = sorted(base.glob('*/write.lean')) + [ROOT / f / 'write.lean' for f in FIXTURE_FOLDERS]
-    for writer in writers:
+    for writer in sorted(base.glob('*/write.lean')):
         modules = lean_imports_of(writer)
         if not modules:
             raise ValueError(f'{writer.relative_to(ROOT)}: the writer imports no module')
@@ -95,8 +92,8 @@ def fixture_lanes():
     if not lanes:
         raise ValueError(f'{FIXTURE_LANES}: no lane holds a writer')
     written = {folder for folder, _ in lanes}
-    texts = list(base.glob('*/*.txt')) + [t for f in FIXTURE_FOLDERS for t in (ROOT / f).glob('*.txt')]
-    orphans = sorted({path.parent.relative_to(ROOT).as_posix() for path in texts} - written)
+    orphans = sorted({path.parent.relative_to(ROOT).as_posix() for path in base.glob('*/*.txt')}
+                     - written)
     if orphans:
         raise ValueError('text fixtures in a folder with no writer (write.lean): ' + ', '.join(orphans))
     return lanes

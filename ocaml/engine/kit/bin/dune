@@ -1,0 +1,5 @@
+; eff -- the native kit's command line: a loop over Kit_serve (../kit_serve.ml).
+
+(executable
+ (name eff)
+ (libraries effect4_kit effect4_eff))

@@ -1,5 +1,1 @@
 (lang dune 3.0)
-; The package makes the engine public (`public_name`), so a sibling project in the ocaml/
-; workspace -- ocaml/kit, whose machine runner drives E4_host over E4_engine -- can name it, with
-; the byte layer it depends on.
-(package (name effect4_engine))

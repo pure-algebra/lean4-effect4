@@ -1,14 +1,16 @@
 import Effect4.Run.Tree
 import Effect4.Api.RefusalsDerived
 import Effect4.Api.RunnerDerived
+import Effect4.Program.Authoring.Named
 
 /-!
 # Run.Kit — what the native kit lowers
 
-The native kit (`ocaml/kit/`) is OCaml made from Lean by LCNF (`ocaml/gen/roots.json`, artefact
-`ocaml/kit/kit_gen.ml`). It runs the call tree of `Effect4.Run.Tree`, checks a program with the
-checker of `Effect4.Api`, and moves every carrier it takes or gives through that carrier's
-canonical image. This module names those entry points as monomorphic constants, so the generated
+The native kit (`ocaml/engine/kit/`) is OCaml made from Lean by LCNF: its roots are in the api
+closure (`ocaml/gen/roots.json`, artefact `ocaml/gen/api_gen.ml`). It runs the call tree of
+`Effect4.Run.Tree`, checks a program with the checker of `Effect4.Api`, authors through
+`Program.Authoring` (`Program/Authoring/Named.lean`), and moves every carrier it takes or gives
+through that carrier's canonical image. This module names those entry points as monomorphic constants, so the generated
 OCaml has one function or one value for each. It declares no new behaviour: each definition is
 a function of `Effect4.Api`, `Effect4.Run.Tree` or the carrier's `Canonical` instance.
 

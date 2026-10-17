@@ -1,7 +1,0 @@
-; eff -- the native kit's command line: a thin driver over Kit (../kit.mli).
-
-(executable
- (name eff)
- (public_name eff)
- (package effect4_kit)
- (libraries effect4_kit effect4_eff))

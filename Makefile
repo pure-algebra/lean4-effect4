@@ -187,8 +187,7 @@ LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean 
 LCNF_OUT := ocaml/eff/eff_types.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
   ocaml/engine/test/todo/todo_gen.ml ocaml/gen/closure-todo_gen.tsv \
   ocaml/engine/test/ctors/ctors_gen.ml ocaml/gen/closure-ctors_gen.tsv \
-  ocaml/engine/test/modeled/modeled_gen.ml ocaml/gen/closure-modeled_gen.tsv \
-  ocaml/kit/kit_gen.ml ocaml/gen/closure-kit_gen.tsv
+  ocaml/engine/test/modeled/modeled_gen.ml ocaml/gen/closure-modeled_gen.tsv
 LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen Effect4.Api Effect4.Run.Kit Test.Dogfood.Scenario.Todo.HostRun Test.Codegen.ConstructorLane Test.Codegen.ModeledLane --outputs $(LCNF_OUT)
 $(CHK)/gen-lcnf.key: FORCE $(GEN)/derived
 	@$(LCNF_KEY)
@@ -291,7 +290,7 @@ SEMANTICS_DOGFOOD := $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),Test.Dogfood.$(subst
 # builds the modules that a writer imports, and no other. Until 2026-10-06 the marker depended
 # on those modules' traces, whose rule is `build`: the group could not repair the staleness that
 # made the build fail.
-ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean) ocaml/kit/test/write.lean
+ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 
 # The root Tools.View.FlowReach imports the view, graph and code planes: their files stale the
 # report (a superset of the closure, so no edit is missed). The report writes its document as
@@ -340,11 +339,11 @@ deploy-site: site ## publish .lake/gen/site to Cloudflare Pages (effect4-docs) w
 # or a writer is added, removed or renamed (the pattern of $(CHK)/inventory), and the producer
 # then refuses a fixture folder that has no writer.
 $(GEN)/fixtures-inventory: FORCE
-	@mkdir -p $(GEN); printf '%s\n' $(sort $(wildcard ocaml/engine/test/*/*.txt ocaml/kit/test/*.txt) $(ENGINE_FIXTURE_WRITERS)) > $@.new; \
+	@mkdir -p $(GEN); printf '%s\n' $(sort $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS)) > $@.new; \
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
 # The writers' inputs are the sources of their import closure (`scripts/lean-imports.py --closure`):
 # an edit outside it, to the LCNF route or the conformance tools, rewrites no fixture (LC-4).
-FIXTURE_OUT := $(sort $(wildcard ocaml/engine/test/*/*.txt ocaml/kit/test/*.txt) $(filter %.txt,$(shell git ls-files -- ocaml/engine/test ocaml/kit/test)))
+FIXTURE_OUT := $(sort $(wildcard ocaml/engine/test/*/*.txt) $(filter %.txt,$(shell git ls-files -- ocaml/engine/test)))
 FIXTURE_KEY = $(PY) scripts/gate-cache.py key gen-fixtures --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(GEN)/fixtures-inventory scripts/generate.py scripts/lib/derived_plan.py --lean $(ENGINE_FIXTURE_WRITERS) --outputs $(FIXTURE_OUT)
 $(CHK)/gen-fixtures.key: FORCE $(GEN)/fixtures-inventory
 	@$(FIXTURE_KEY)
@@ -374,7 +373,6 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.le
   ocaml/engine/test/todo/todo_gen.ml ocaml/gen/closure-todo_gen.tsv \
   ocaml/engine/test/ctors/ctors_gen.ml ocaml/gen/closure-ctors_gen.tsv \
   ocaml/engine/test/modeled/modeled_gen.ml ocaml/gen/closure-modeled_gen.tsv \
-  ocaml/kit/kit_gen.ml ocaml/gen/closure-kit_gen.tsv \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \
   harness/truth/prelude-atoms.gen.ts \
@@ -383,7 +381,7 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.le
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
   generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv \
   generated/semantics.md \
-  ocaml/engine/test/*/*.txt ocaml/kit/test/*.txt
+  ocaml/engine/test/*/*.txt
 
 # ---------------------------------------------------------------------------- corpus
 #
@@ -737,7 +735,7 @@ OCAML_SOURCES := $(wildcard $(shell git ls-files --cached --others --exclude-sta
 $(eval $(call cached_check,ocaml,ocaml,$(CORPUS) $(OCAML_SOURCES) $(CORE_SOURCES),))
 $(CHK)/ocaml.key: $(CORPUS)/index.tsv $(GEN)/fixtures $(GEN)/lcnf
 _run-ocaml:
-	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock kit
+	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock
 	cd ocaml && $(OCAML) dune test engine
 	$(OCAML) bash ocaml/engine/tools/gen-check.sh
 

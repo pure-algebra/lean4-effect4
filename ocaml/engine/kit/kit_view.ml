@@ -3,7 +3,7 @@
    What it is: one self-contained HTML page (no network, no script library) that plays a run's
    frames, the call tree's run at budgets 0, 1, 2, …, as one growing tube, and draws every frame as
    a row of the chain and every explored path as a row of its own. The frames and paths are the
-   kit's (Kit.frames, Kit.explore); this module only lays them out. Every label is written here,
+   kit's (a report's frames, Kit.run; the traces of Kit.explore); this module only lays them out. Every label is written here,
    in OCaml, so the page reads no program or value JSON.
    Depends on: Kit, Eff_types, Eff_json_text.
 
@@ -11,7 +11,8 @@
    V1  The page is one file: its style and its script are inline, and its data is one JSON value
        in the script.                                                   by construction
    V2  A frame is drawn from its steps alone, so a frame that extends the one before draws as the
-       one before with circles added (Kit B3).                          by construction
+       one before with circles added (Kit B3). A run the machine answered is one frame, its host
+       calls.                                                           by construction
    V3  The page names a cut as a cut, never as a divergence: the verdict of an unsettled run says
        it is a finite probe.                                            by construction *)
 
@@ -52,7 +53,7 @@ let exit_text (ex : Kit.exit) =
   | Exit_failure [] -> "failed"
 
 let row_name (app : Kit.app) i =
-  match List.nth_opt app.Kit_gen.rows i with Some (r : row) -> r.name | None -> Printf.sprintf "row %d" i
+  match List.nth_opt app.Effect4_gen.Api_gen.rows i with Some (r : row) -> r.name | None -> Printf.sprintf "row %d" i
 
 let step_json app : Kit.step -> J.t = function
   | Kit.Step_called (i, v, ex) ->
@@ -60,31 +61,43 @@ let step_json app : Kit.step -> J.t = function
   | Kit.Step_celled (_, v) -> J.Object [ ("kind", J.String "cell"); ("text", J.String ("cell → " ^ value_text v)) ]
 
 let stop_json app : Kit.stop -> J.t = function
-  | Kit.Stop_finished ex -> J.Object [ ("kind", J.String "finished"); ("text", J.String ("finished: " ^ exit_text ex)) ]
-  | Kit.Stop_cut -> J.Object [ ("kind", J.String "cut"); ("text", J.String "cut by the budget") ]
-  | Kit.Stop_waiting (i, v) ->
+  | Kit.Finished ex -> J.Object [ ("kind", J.String "finished"); ("text", J.String ("finished: " ^ exit_text ex)) ]
+  | Kit.Unsettled -> J.Object [ ("kind", J.String "cut"); ("text", J.String "cut by the budget") ]
+  | Kit.Waiting (i, v) ->
     J.Object [ ("kind", J.String "waiting"); ("text", J.String (Printf.sprintf "waiting on %s(%s)" (row_name app i) (value_text v))) ]
+  | Kit.Refused (i, v, ex, _) ->
+    J.Object [ ("kind", J.String "waiting");
+               ("text", J.String (Printf.sprintf "refused %s as the reply to %s(%s)" (exit_text ex) (row_name app i) (value_text v))) ]
+  | Kit.Stopped why -> J.Object [ ("kind", J.String "waiting"); ("text", J.String ("stopped: " ^ why)) ]
 
-let run_json app steps stop extra =
-  J.Object (extra @ [ ("steps", J.Array (List.map (step_json app) steps)); ("stop", stop_json app stop) ])
+let trace_json app (t : Kit.trace) extra =
+  J.Object (extra @ [ ("steps", J.Array (List.map (step_json app) t.steps)); ("stop", stop_json app t.stop) ])
 
-(* The page's data: the frames, the settled budget, the paths. *)
-let data ~title ~(app : Kit.app) ~(frames : 's Kit.run list) ~(settled : 's Kit.settled) ~(paths : Kit.path list) : J.t =
+(* The page's data: the frames (the first [shown] of an unsettled run's), the verdict, the
+   paths. *)
+let data ?(shown = 33) ~title ~(app : Kit.app) ~(report : 's Kit.report) ~(paths : Kit.trace list) () : J.t =
+  let frames =
+    match report.frames, report.budget with
+    | [], _ -> [ report.trace ]
+    | fs, Some _ -> fs
+    | fs, None -> List.filteri (fun i _ -> i < shown) fs
+  in
   J.Object
     [ ("title", J.String title);
-      ("frames", J.Array (List.mapi (fun k (f : 's Kit.run) -> run_json app f.steps f.stop [ ("budget", J.Int k) ]) frames));
+      ("frames", J.Array (List.mapi (fun k f -> trace_json app f [ ("budget", J.Int k) ]) frames));
       ("verdict",
        J.String
-         (match settled with
-          | Kit.Settled { budget; run } ->
-            Printf.sprintf "Settles at budget %d: %s. Every larger budget gives the same run." budget
-              (match run.stop with
-               | Kit.Stop_finished ex -> "finished, " ^ exit_text ex
-               | Kit.Stop_waiting (i, v) -> Printf.sprintf "waiting on %s(%s)" (row_name app i) (value_text v)
-               | Kit.Stop_cut -> "cut")
-          | Kit.Unsettled { limit; _ } ->
-            Printf.sprintf "Cut at every budget up to %d: a finite probe, not a divergence." limit));
-      ("paths", J.Array (List.map (fun (p : Kit.path) -> run_json app p.steps p.stop []) paths)) ]
+         (match report.budget, report.trace.stop with
+          | Some k, stop ->
+            Printf.sprintf "Settles at budget %d: %s. Every larger budget gives the same run." k
+              (match stop_json app stop with J.Object [ _; ("text", J.String t) ] -> t | _ -> "")
+          | None, Kit.Unsettled when report.by_tree ->
+            Printf.sprintf "Cut at every budget up to %d: a finite probe, not a divergence."
+              (List.length report.frames - 1)
+          | None, stop ->
+            Printf.sprintf "The machine ran it: %s."
+              (match stop_json app stop with J.Object [ _; ("text", J.String t) ] -> t | _ -> "")));
+      ("paths", J.Array (List.map (fun t -> trace_json app t []) paths)) ]
 
 let style = {|
 :root { --ground:#fbfaf7; --panel:#fff; --ink:#1f2328; --muted:#6a6f76; --line:#d7d4cc; --tube:#e9e4d8;

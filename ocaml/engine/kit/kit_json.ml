@@ -1,13 +1,13 @@
 (* Kit_json — JSON text, and every carrier's JSON through its shape document (hand-written).
 
    What it is: the kit's one JSON reader and one JSON printer. A carrier's JSON is its value tree
-   (Eff_types.val_) printed under its shape document (Kit_gen.shape_doc, which Lean lowers from
+   (Eff_types.val_) printed under its shape document (Effect4_gen.Api_gen.shape_doc, which Lean lowers from
    the carrier's `Canonical.shape`). So a program, a row table, a type, an exit and a refusal print
    as the session tool prints them (`Tools.JsonBridge.printJson`), and read back where the value
    tree reads. This file is the OCaml twin of `ShapeDoc.print`
    (src/Effect4/Store/Domain/Shape.lean) and of `ShapeDoc.order`, `ShapeDoc.arrays` and
    `ShapeDoc.read` (src/Effect4/Store/Domain/ShapeRead.lean), arm for arm.
-   Depends on: Eff_types, Eff_json_text (the tree and its renderer), Kit_gen (the shape types).
+   Depends on: Eff_types, Eff_json_text (the tree and its renderer), Effect4_gen.Api_gen (the shape types).
 
    Behaviours it holds itself to:
    K1  A number is a natural. The tree's own JSON keeps a number as a binary64 bit pattern, which
@@ -159,7 +159,7 @@ let render = J.render
 (* ------------------------------------------------------------------------------------------ *)
 (* Shapes *)
 
-open Kit_gen
+open Effect4_gen.Api_gen
 
 let lookup_all name defs = List.filter_map (fun (n, s) -> if n = name then Some s else None) defs
 

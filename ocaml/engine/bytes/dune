@@ -6,7 +6,6 @@
 ; engine's dune project (ocaml/engine/dune-project), as cas/ is.
 (library
  (name effect4_bytes)
- (public_name effect4_engine.bytes)
  (wrapped false)
  (libraries effect4_eff)
  (flags (:standard -w +a-4-9-40-41-42-44-45-70)))

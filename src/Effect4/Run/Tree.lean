@@ -1,4 +1,5 @@
 import Effect4.Run.Basic
+import Effect4.Run.Event
 
 /-!
 # Run.Tree — a program's call tree at a budget, and how a host runs it
@@ -542,5 +543,62 @@ def paths (table : RowTable) (k : Nat) (replies : Nat → Val → List ExitV) (w
   pathsFrom replies width (ofProgram table k program) Stores.empty [] []
 
 end Tree
+
+/-! ## One entry: a built program at a budget
+
+A caller runs a built program here and never asks which runner answers. A program the call tree
+covers runs as its tree, which settles at the least budget that does not cut it and draws
+frames; any other program runs on the machine (`runWith`), whose fuel and rounds bound it. -/
+
+/-- **A built program's run at a budget.** -/
+structure AtBudget (σ : Type) where
+  /-- whether the call tree answered; otherwise the machine did -/
+  byTree : Bool
+  /-- the least budget whose tree run is not cut; `none` from the machine, or when every
+  budget up to the limit cuts -/
+  budget : Option Nat
+  /-- how the run stopped; a cut is a finite probe, never a divergence -/
+  stop : Tree.Stop
+  /-- the host calls, in order, each with the exit its reply gave (the tree's runs) -/
+  calls : List (Nat × Val × ExitV)
+  /-- the reactor's state at the end -/
+  state : σ
+  /-- the tree's runs at budgets `0` up to `budget`, when asked for -/
+  frames : List (Tree.Outcome σ)
+
+/-- The host calls of a run's steps. -/
+def Tree.callsOf (steps : List Tree.Step) : List (Nat × Val × ExitV) :=
+  steps.filterMap fun
+    | .called i v a => some (i, v, a)
+    | .celled _ _ => none
+
+/-- **Run a built program at a budget** under a reactor (`Reactor`, so a typed host of
+`Reactor.method` serves). A program the call tree covers settles there, up to `limit`
+(`Tree.settle`); with `withFrames`, its frames come too. Any other program runs on the machine
+(`runWith`), with `limit` as its rounds: it stops finished, waiting on the first outstanding call,
+or cut. -/
+def atBudget {σ : Type} (b : Api.Built) (r : Reactor σ) (state : σ) (limit : Nat := 1024)
+    (withFrames : Bool := false) : AtBudget σ :=
+  let rows := b.app.rows
+  let host := Tree.Host.ofReactor rows r
+  if Tree.covers b.program then
+    match Tree.settle rows limit host state b.program with
+    | some (k, o) =>
+      { byTree := true, budget := some k, stop := o.stop, calls := Tree.callsOf o.steps,
+        state := o.state,
+        frames := if withFrames then Tree.frames rows k host state b.program else [] }
+    | none =>
+      let o := Tree.probe rows limit host state b.program
+      { byTree := true, budget := none, stop := .cut, calls := Tree.callsOf o.steps,
+        state := o.state, frames := [] }
+  else
+    let (run, after) := runWith b r state "atBudget" {} limit
+    let stop : Tree.Stop := match run.exit with
+      | some ex => .finished ex
+      | none =>
+        match (Run.live run).head? with
+        | some seen => .waiting ((rows.findIdx? (·.spelling == seen.row)).getD 0) seen.request
+        | none => .cut
+    { byTree := false, budget := none, stop, calls := [], state := after, frames := [] }
 
 end Effect4.Run
