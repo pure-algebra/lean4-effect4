@@ -8,13 +8,13 @@
 
 open Eff_types
 
-let ctor_index_service_name (_ : service_name) : int =
+let ctor_index_service_name (_ : ServiceName.t) : int =
   0
 
-let wire_tag_service_name (_ : service_name) : int =
+let wire_tag_service_name (_ : ServiceName.t) : int =
   0
 
-let ctor_name_service_name (_ : service_name) : string =
+let ctor_name_service_name (_ : ServiceName.t) : string =
   "mk"
 
 let ctor_names_service_name : string list =
@@ -23,13 +23,13 @@ let ctor_names_service_name : string list =
 let field_names_service_name : string list =
   ["value"]
 
-let ctor_index_service_type_code (_ : service_type_code) : int =
+let ctor_index_service_type_code (_ : ServiceTypeCode.t) : int =
   0
 
-let wire_tag_service_type_code (_ : service_type_code) : int =
+let wire_tag_service_type_code (_ : ServiceTypeCode.t) : int =
   0
 
-let ctor_name_service_type_code (_ : service_type_code) : string =
+let ctor_name_service_type_code (_ : ServiceTypeCode.t) : string =
   "mk"
 
 let ctor_names_service_type_code : string list =
@@ -38,13 +38,13 @@ let ctor_names_service_type_code : string list =
 let field_names_service_type_code : string list =
   ["value"]
 
-let ctor_index_service_key (_ : service_key) : int =
+let ctor_index_service_key (_ : ServiceKey.t) : int =
   0
 
-let wire_tag_service_key (_ : service_key) : int =
+let wire_tag_service_key (_ : ServiceKey.t) : int =
   0
 
-let ctor_name_service_key (_ : service_key) : string =
+let ctor_name_service_key (_ : ServiceKey.t) : string =
   "mk"
 
 let ctor_names_service_key : string list =
@@ -53,253 +53,253 @@ let ctor_names_service_key : string list =
 let field_names_service_key : string list =
   ["name"; "service"]
 
-let ctor_index_ty : ty -> int =
+let ctor_index_ty : Ty.t -> int =
   function
-    | Ty_never -> 0
-    | Ty_unit -> 1
-    | Ty_nat -> 2
-    | Ty_int -> 3
-    | Ty_string -> 4
-    | Ty_bool -> 5
-    | Ty_handle _ -> 6
-    | Ty_option _ -> 7
-    | Ty_list _ -> 8
-    | Ty_prod _ -> 9
-    | Ty_except _ -> 10
-    | Ty_exitOf _ -> 11
-    | Ty_causeOf _ -> 12
-    | Ty_fiberOf _ -> 13
-    | Ty_union _ -> 14
-    | Ty_lit _ -> 15
-    | Ty_refOf _ -> 16
-    | Ty_deferredOf _ -> 17
-    | Ty_var _ -> 18
-    | Ty_unknown -> 19
-    | Ty_record _ -> 20
-    | Ty_map _ -> 21
-    | Ty_tuple _ -> 22
-    | Ty_app _ -> 23
-    | Ty_null -> 24
-    | Ty_undefined -> 25
-    | Ty_number -> 26
-    | Ty_bytes -> 27
-    | Ty_contextOf _ -> 28
+    | Ty.Never -> 0
+    | Ty.Unit -> 1
+    | Ty.Nat -> 2
+    | Ty.Int -> 3
+    | Ty.String -> 4
+    | Ty.Bool -> 5
+    | Ty.Handle _ -> 6
+    | Ty.Option _ -> 7
+    | Ty.List _ -> 8
+    | Ty.Prod _ -> 9
+    | Ty.Except _ -> 10
+    | Ty.ExitOf _ -> 11
+    | Ty.CauseOf _ -> 12
+    | Ty.FiberOf _ -> 13
+    | Ty.Union _ -> 14
+    | Ty.Lit _ -> 15
+    | Ty.RefOf _ -> 16
+    | Ty.DeferredOf _ -> 17
+    | Ty.Var _ -> 18
+    | Ty.Unknown -> 19
+    | Ty.Record _ -> 20
+    | Ty.Map _ -> 21
+    | Ty.Tuple _ -> 22
+    | Ty.App _ -> 23
+    | Ty.Null -> 24
+    | Ty.Undefined -> 25
+    | Ty.Number -> 26
+    | Ty.Bytes -> 27
+    | Ty.ContextOf _ -> 28
 
-let wire_tag_ty : ty -> int =
+let wire_tag_ty : Ty.t -> int =
   function
-    | Ty_never -> 0
-    | Ty_unit -> 1
-    | Ty_nat -> 2
-    | Ty_int -> 3
-    | Ty_string -> 4
-    | Ty_bool -> 5
-    | Ty_handle _ -> 6
-    | Ty_option _ -> 7
-    | Ty_list _ -> 8
-    | Ty_prod _ -> 9
-    | Ty_except _ -> 10
-    | Ty_exitOf _ -> 11
-    | Ty_causeOf _ -> 12
-    | Ty_fiberOf _ -> 13
-    | Ty_union _ -> 14
-    | Ty_lit _ -> 15
-    | Ty_refOf _ -> 16
-    | Ty_deferredOf _ -> 17
-    | Ty_var _ -> 18
-    | Ty_unknown -> 19
-    | Ty_record _ -> 20
-    | Ty_map _ -> 21
-    | Ty_tuple _ -> 22
-    | Ty_app _ -> 23
-    | Ty_null -> 24
-    | Ty_undefined -> 25
-    | Ty_number -> 26
-    | Ty_bytes -> 27
-    | Ty_contextOf _ -> 28
+    | Ty.Never -> 0
+    | Ty.Unit -> 1
+    | Ty.Nat -> 2
+    | Ty.Int -> 3
+    | Ty.String -> 4
+    | Ty.Bool -> 5
+    | Ty.Handle _ -> 6
+    | Ty.Option _ -> 7
+    | Ty.List _ -> 8
+    | Ty.Prod _ -> 9
+    | Ty.Except _ -> 10
+    | Ty.ExitOf _ -> 11
+    | Ty.CauseOf _ -> 12
+    | Ty.FiberOf _ -> 13
+    | Ty.Union _ -> 14
+    | Ty.Lit _ -> 15
+    | Ty.RefOf _ -> 16
+    | Ty.DeferredOf _ -> 17
+    | Ty.Var _ -> 18
+    | Ty.Unknown -> 19
+    | Ty.Record _ -> 20
+    | Ty.Map _ -> 21
+    | Ty.Tuple _ -> 22
+    | Ty.App _ -> 23
+    | Ty.Null -> 24
+    | Ty.Undefined -> 25
+    | Ty.Number -> 26
+    | Ty.Bytes -> 27
+    | Ty.ContextOf _ -> 28
 
-let ctor_name_ty : ty -> string =
+let ctor_name_ty : Ty.t -> string =
   function
-    | Ty_never -> "never"
-    | Ty_unit -> "unit"
-    | Ty_nat -> "nat"
-    | Ty_int -> "int"
-    | Ty_string -> "string"
-    | Ty_bool -> "bool"
-    | Ty_handle _ -> "handle"
-    | Ty_option _ -> "option"
-    | Ty_list _ -> "list"
-    | Ty_prod _ -> "prod"
-    | Ty_except _ -> "except"
-    | Ty_exitOf _ -> "exitOf"
-    | Ty_causeOf _ -> "causeOf"
-    | Ty_fiberOf _ -> "fiberOf"
-    | Ty_union _ -> "union"
-    | Ty_lit _ -> "lit"
-    | Ty_refOf _ -> "refOf"
-    | Ty_deferredOf _ -> "deferredOf"
-    | Ty_var _ -> "var"
-    | Ty_unknown -> "unknown"
-    | Ty_record _ -> "record"
-    | Ty_map _ -> "map"
-    | Ty_tuple _ -> "tuple"
-    | Ty_app _ -> "app"
-    | Ty_null -> "null"
-    | Ty_undefined -> "undefined"
-    | Ty_number -> "number"
-    | Ty_bytes -> "bytes"
-    | Ty_contextOf _ -> "contextOf"
+    | Ty.Never -> "never"
+    | Ty.Unit -> "unit"
+    | Ty.Nat -> "nat"
+    | Ty.Int -> "int"
+    | Ty.String -> "string"
+    | Ty.Bool -> "bool"
+    | Ty.Handle _ -> "handle"
+    | Ty.Option _ -> "option"
+    | Ty.List _ -> "list"
+    | Ty.Prod _ -> "prod"
+    | Ty.Except _ -> "except"
+    | Ty.ExitOf _ -> "exitOf"
+    | Ty.CauseOf _ -> "causeOf"
+    | Ty.FiberOf _ -> "fiberOf"
+    | Ty.Union _ -> "union"
+    | Ty.Lit _ -> "lit"
+    | Ty.RefOf _ -> "refOf"
+    | Ty.DeferredOf _ -> "deferredOf"
+    | Ty.Var _ -> "var"
+    | Ty.Unknown -> "unknown"
+    | Ty.Record _ -> "record"
+    | Ty.Map _ -> "map"
+    | Ty.Tuple _ -> "tuple"
+    | Ty.App _ -> "app"
+    | Ty.Null -> "null"
+    | Ty.Undefined -> "undefined"
+    | Ty.Number -> "number"
+    | Ty.Bytes -> "bytes"
+    | Ty.ContextOf _ -> "contextOf"
 
 let ctor_names_ty : string list =
   ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"; "record"; "map"; "tuple"; "app"; "null"; "undefined"; "number"; "bytes"; "contextOf"]
 
-let ctor_index_lit : lit -> int =
+let ctor_index_lit : Lit.t -> int =
   function
-    | Lit_unit -> 0
-    | Lit_nat _ -> 1
-    | Lit_bool _ -> 2
-    | Lit_str _ -> 3
+    | Lit.Unit -> 0
+    | Lit.Nat _ -> 1
+    | Lit.Bool _ -> 2
+    | Lit.Str _ -> 3
 
-let wire_tag_lit : lit -> int =
+let wire_tag_lit : Lit.t -> int =
   function
-    | Lit_unit -> 0
-    | Lit_nat _ -> 1
-    | Lit_bool _ -> 2
-    | Lit_str _ -> 3
+    | Lit.Unit -> 0
+    | Lit.Nat _ -> 1
+    | Lit.Bool _ -> 2
+    | Lit.Str _ -> 3
 
-let ctor_name_lit : lit -> string =
+let ctor_name_lit : Lit.t -> string =
   function
-    | Lit_unit -> "unit"
-    | Lit_nat _ -> "nat"
-    | Lit_bool _ -> "bool"
-    | Lit_str _ -> "str"
+    | Lit.Unit -> "unit"
+    | Lit.Nat _ -> "nat"
+    | Lit.Bool _ -> "bool"
+    | Lit.Str _ -> "str"
 
 let ctor_names_lit : string list =
   ["unit"; "nat"; "bool"; "str"]
 
-let ctor_index_field_read_mode : field_read_mode -> int =
+let ctor_index_field_read_mode : FieldReadMode.t -> int =
   function
-    | FieldReadMode_required -> 0
-    | FieldReadMode_optional -> 1
+    | FieldReadMode.Required -> 0
+    | FieldReadMode.Optional -> 1
 
-let wire_tag_field_read_mode : field_read_mode -> int =
+let wire_tag_field_read_mode : FieldReadMode.t -> int =
   function
-    | FieldReadMode_required -> 0
-    | FieldReadMode_optional -> 1
+    | FieldReadMode.Required -> 0
+    | FieldReadMode.Optional -> 1
 
-let ctor_name_field_read_mode : field_read_mode -> string =
+let ctor_name_field_read_mode : FieldReadMode.t -> string =
   function
-    | FieldReadMode_required -> "required"
-    | FieldReadMode_optional -> "optional"
+    | FieldReadMode.Required -> "required"
+    | FieldReadMode.Optional -> "optional"
 
 let ctor_names_field_read_mode : string list =
   ["required"; "optional"]
 
-let ctor_index_term : term -> int =
+let ctor_index_term : Term.t -> int =
   function
-    | Term_var _ -> 0
-    | Term_lit _ -> 1
-    | Term_app _ -> 2
-    | Term_record _ -> 3
-    | Term_field _ -> 4
-    | Term_recordSet _ -> 5
-    | Term_tupleAt _ -> 6
-    | Term_fold _ -> 7
+    | Term.Var _ -> 0
+    | Term.Lit _ -> 1
+    | Term.App _ -> 2
+    | Term.Record _ -> 3
+    | Term.Field _ -> 4
+    | Term.RecordSet _ -> 5
+    | Term.TupleAt _ -> 6
+    | Term.Fold _ -> 7
 
-let wire_tag_term : term -> int =
+let wire_tag_term : Term.t -> int =
   function
-    | Term_var _ -> 0
-    | Term_lit _ -> 1
-    | Term_app _ -> 2
-    | Term_record _ -> 3
-    | Term_field _ -> 4
-    | Term_recordSet _ -> 5
-    | Term_tupleAt _ -> 6
-    | Term_fold _ -> 7
+    | Term.Var _ -> 0
+    | Term.Lit _ -> 1
+    | Term.App _ -> 2
+    | Term.Record _ -> 3
+    | Term.Field _ -> 4
+    | Term.RecordSet _ -> 5
+    | Term.TupleAt _ -> 6
+    | Term.Fold _ -> 7
 
-let ctor_name_term : term -> string =
+let ctor_name_term : Term.t -> string =
   function
-    | Term_var _ -> "var"
-    | Term_lit _ -> "lit"
-    | Term_app _ -> "app"
-    | Term_record _ -> "record"
-    | Term_field _ -> "field"
-    | Term_recordSet _ -> "recordSet"
-    | Term_tupleAt _ -> "tupleAt"
-    | Term_fold _ -> "fold"
+    | Term.Var _ -> "var"
+    | Term.Lit _ -> "lit"
+    | Term.App _ -> "app"
+    | Term.Record _ -> "record"
+    | Term.Field _ -> "field"
+    | Term.RecordSet _ -> "recordSet"
+    | Term.TupleAt _ -> "tupleAt"
+    | Term.Fold _ -> "fold"
 
 let ctor_names_term : string list =
   ["var"; "lit"; "app"; "record"; "field"; "recordSet"; "tupleAt"; "fold"]
 
-let ctor_index_terms : terms -> int =
+let ctor_index_terms : Terms.t -> int =
   function
-    | Terms_nil -> 0
-    | Terms_cons _ -> 1
+    | Terms.Nil -> 0
+    | Terms.Cons _ -> 1
 
-let wire_tag_terms : terms -> int =
+let wire_tag_terms : Terms.t -> int =
   function
-    | Terms_nil -> 0
-    | Terms_cons _ -> 1
+    | Terms.Nil -> 0
+    | Terms.Cons _ -> 1
 
-let ctor_name_terms : terms -> string =
+let ctor_name_terms : Terms.t -> string =
   function
-    | Terms_nil -> "nil"
-    | Terms_cons _ -> "cons"
+    | Terms.Nil -> "nil"
+    | Terms.Cons _ -> "cons"
 
 let ctor_names_terms : string list =
   ["nil"; "cons"]
 
-let ctor_index_cause_term : cause_term -> int =
+let ctor_index_cause_term : CauseTerm.t -> int =
   function
-    | CauseTerm_fail _ -> 0
-    | CauseTerm_die _ -> 1
-    | CauseTerm_interrupt _ -> 2
-    | CauseTerm_both _ -> 3
+    | CauseTerm.Fail _ -> 0
+    | CauseTerm.Die _ -> 1
+    | CauseTerm.Interrupt _ -> 2
+    | CauseTerm.Both _ -> 3
 
-let wire_tag_cause_term : cause_term -> int =
+let wire_tag_cause_term : CauseTerm.t -> int =
   function
-    | CauseTerm_fail _ -> 0
-    | CauseTerm_die _ -> 1
-    | CauseTerm_interrupt _ -> 2
-    | CauseTerm_both _ -> 3
+    | CauseTerm.Fail _ -> 0
+    | CauseTerm.Die _ -> 1
+    | CauseTerm.Interrupt _ -> 2
+    | CauseTerm.Both _ -> 3
 
-let ctor_name_cause_term : cause_term -> string =
+let ctor_name_cause_term : CauseTerm.t -> string =
   function
-    | CauseTerm_fail _ -> "fail"
-    | CauseTerm_die _ -> "die"
-    | CauseTerm_interrupt _ -> "interrupt"
-    | CauseTerm_both _ -> "both"
+    | CauseTerm.Fail _ -> "fail"
+    | CauseTerm.Die _ -> "die"
+    | CauseTerm.Interrupt _ -> "interrupt"
+    | CauseTerm.Both _ -> "both"
 
 let ctor_names_cause_term : string list =
   ["fail"; "die"; "interrupt"; "both"]
 
-let ctor_index_mask_mode : mask_mode -> int =
+let ctor_index_mask_mode : MaskMode.t -> int =
   function
-    | MaskMode_interruptible -> 0
-    | MaskMode_uninterruptible -> 1
-    | MaskMode_inherit -> 2
+    | MaskMode.Interruptible -> 0
+    | MaskMode.Uninterruptible -> 1
+    | MaskMode.Inherit -> 2
 
-let wire_tag_mask_mode : mask_mode -> int =
+let wire_tag_mask_mode : MaskMode.t -> int =
   function
-    | MaskMode_interruptible -> 0
-    | MaskMode_uninterruptible -> 1
-    | MaskMode_inherit -> 2
+    | MaskMode.Interruptible -> 0
+    | MaskMode.Uninterruptible -> 1
+    | MaskMode.Inherit -> 2
 
-let ctor_name_mask_mode : mask_mode -> string =
+let ctor_name_mask_mode : MaskMode.t -> string =
   function
-    | MaskMode_interruptible -> "interruptible"
-    | MaskMode_uninterruptible -> "uninterruptible"
-    | MaskMode_inherit -> "inherit"
+    | MaskMode.Interruptible -> "interruptible"
+    | MaskMode.Uninterruptible -> "uninterruptible"
+    | MaskMode.Inherit -> "inherit"
 
 let ctor_names_mask_mode : string list =
   ["interruptible"; "uninterruptible"; "inherit"]
 
-let ctor_index_fork_options (_ : fork_options) : int =
+let ctor_index_fork_options (_ : ForkOptions.t) : int =
   0
 
-let wire_tag_fork_options (_ : fork_options) : int =
+let wire_tag_fork_options (_ : ForkOptions.t) : int =
   0
 
-let ctor_name_fork_options (_ : fork_options) : string =
+let ctor_name_fork_options (_ : ForkOptions.t) : string =
   "mk"
 
 let ctor_names_fork_options : string list =
@@ -308,181 +308,181 @@ let ctor_names_fork_options : string list =
 let field_names_fork_options : string list =
   ["startImmediately"; "daemon"; "maskMode"]
 
-let ctor_index_observer_mode : observer_mode -> int =
+let ctor_index_observer_mode : ObserverMode.t -> int =
   function
-    | ObserverMode_awaitValue -> 0
-    | ObserverMode_joinEffect -> 1
+    | ObserverMode.AwaitValue -> 0
+    | ObserverMode.JoinEffect -> 1
 
-let wire_tag_observer_mode : observer_mode -> int =
+let wire_tag_observer_mode : ObserverMode.t -> int =
   function
-    | ObserverMode_awaitValue -> 0
-    | ObserverMode_joinEffect -> 1
+    | ObserverMode.AwaitValue -> 0
+    | ObserverMode.JoinEffect -> 1
 
-let ctor_name_observer_mode : observer_mode -> string =
+let ctor_name_observer_mode : ObserverMode.t -> string =
   function
-    | ObserverMode_awaitValue -> "awaitValue"
-    | ObserverMode_joinEffect -> "joinEffect"
+    | ObserverMode.AwaitValue -> "awaitValue"
+    | ObserverMode.JoinEffect -> "joinEffect"
 
 let ctor_names_observer_mode : string list =
   ["awaitValue"; "joinEffect"]
 
-let ctor_index_finalizer_strategy : finalizer_strategy -> int =
+let ctor_index_finalizer_strategy : FinalizerStrategy.t -> int =
   function
-    | FinalizerStrategy_sequential -> 0
-    | FinalizerStrategy_parallel -> 1
+    | FinalizerStrategy.Sequential -> 0
+    | FinalizerStrategy.Parallel -> 1
 
-let wire_tag_finalizer_strategy : finalizer_strategy -> int =
+let wire_tag_finalizer_strategy : FinalizerStrategy.t -> int =
   function
-    | FinalizerStrategy_sequential -> 0
-    | FinalizerStrategy_parallel -> 1
+    | FinalizerStrategy.Sequential -> 0
+    | FinalizerStrategy.Parallel -> 1
 
-let ctor_name_finalizer_strategy : finalizer_strategy -> string =
+let ctor_name_finalizer_strategy : FinalizerStrategy.t -> string =
   function
-    | FinalizerStrategy_sequential -> "sequential"
-    | FinalizerStrategy_parallel -> "parallel"
+    | FinalizerStrategy.Sequential -> "sequential"
+    | FinalizerStrategy.Parallel -> "parallel"
 
 let ctor_names_finalizer_strategy : string list =
   ["sequential"; "parallel"]
 
-let ctor_index_native_op : native_op -> int =
+let ctor_index_native_op : NativeOp.t -> int =
   function
-    | NativeOp_refMake -> 0
-    | NativeOp_refGet -> 1
-    | NativeOp_refSet -> 2
-    | NativeOp_refGetAndSet -> 3
-    | NativeOp_refSetAndGet -> 4
-    | NativeOp_deferredIsDone -> 5
-    | NativeOp_deferredPoll -> 6
-    | NativeOp_deferredSucceed -> 7
-    | NativeOp_deferredFail -> 8
-    | NativeOp_deferredAwait -> 9
-    | NativeOp_scopeMake _ -> 10
-    | NativeOp_sleep -> 11
-    | NativeOp_clockNow -> 12
-    | NativeOp_external _ -> 13
-    | NativeOp_deferredMakeOf _ -> 14
-    | NativeOp_refUpdateWith _ -> 15
-    | NativeOp_refGetAndUpdateWith _ -> 16
-    | NativeOp_refUpdateAndGetWith _ -> 17
-    | NativeOp_refUpdateSomeWith _ -> 18
-    | NativeOp_refGetAndUpdateSomeWith _ -> 19
-    | NativeOp_refUpdateSomeAndGetWith _ -> 20
-    | NativeOp_refModifyWith _ -> 21
-    | NativeOp_refModifySomeWith _ -> 22
-    | NativeOp_call _ -> 23
-    | NativeOp_param _ -> 24
+    | NativeOp.RefMake -> 0
+    | NativeOp.RefGet -> 1
+    | NativeOp.RefSet -> 2
+    | NativeOp.RefGetAndSet -> 3
+    | NativeOp.RefSetAndGet -> 4
+    | NativeOp.DeferredIsDone -> 5
+    | NativeOp.DeferredPoll -> 6
+    | NativeOp.DeferredSucceed -> 7
+    | NativeOp.DeferredFail -> 8
+    | NativeOp.DeferredAwait -> 9
+    | NativeOp.ScopeMake _ -> 10
+    | NativeOp.Sleep -> 11
+    | NativeOp.ClockNow -> 12
+    | NativeOp.External _ -> 13
+    | NativeOp.DeferredMakeOf _ -> 14
+    | NativeOp.RefUpdateWith _ -> 15
+    | NativeOp.RefGetAndUpdateWith _ -> 16
+    | NativeOp.RefUpdateAndGetWith _ -> 17
+    | NativeOp.RefUpdateSomeWith _ -> 18
+    | NativeOp.RefGetAndUpdateSomeWith _ -> 19
+    | NativeOp.RefUpdateSomeAndGetWith _ -> 20
+    | NativeOp.RefModifyWith _ -> 21
+    | NativeOp.RefModifySomeWith _ -> 22
+    | NativeOp.Call _ -> 23
+    | NativeOp.Param _ -> 24
 
-let wire_tag_native_op : native_op -> int =
+let wire_tag_native_op : NativeOp.t -> int =
   function
-    | NativeOp_refMake -> 0
-    | NativeOp_refGet -> 1
-    | NativeOp_refSet -> 2
-    | NativeOp_refGetAndSet -> 3
-    | NativeOp_refSetAndGet -> 4
-    | NativeOp_deferredIsDone -> 14
-    | NativeOp_deferredPoll -> 15
-    | NativeOp_deferredSucceed -> 16
-    | NativeOp_deferredFail -> 17
-    | NativeOp_deferredAwait -> 18
-    | NativeOp_scopeMake _ -> 19
-    | NativeOp_sleep -> 20
-    | NativeOp_clockNow -> 21
-    | NativeOp_external _ -> 22
-    | NativeOp_deferredMakeOf _ -> 23
-    | NativeOp_refUpdateWith _ -> 24
-    | NativeOp_refGetAndUpdateWith _ -> 25
-    | NativeOp_refUpdateAndGetWith _ -> 26
-    | NativeOp_refUpdateSomeWith _ -> 27
-    | NativeOp_refGetAndUpdateSomeWith _ -> 28
-    | NativeOp_refUpdateSomeAndGetWith _ -> 29
-    | NativeOp_refModifyWith _ -> 30
-    | NativeOp_refModifySomeWith _ -> 31
-    | NativeOp_call _ -> 32
-    | NativeOp_param _ -> 33
+    | NativeOp.RefMake -> 0
+    | NativeOp.RefGet -> 1
+    | NativeOp.RefSet -> 2
+    | NativeOp.RefGetAndSet -> 3
+    | NativeOp.RefSetAndGet -> 4
+    | NativeOp.DeferredIsDone -> 14
+    | NativeOp.DeferredPoll -> 15
+    | NativeOp.DeferredSucceed -> 16
+    | NativeOp.DeferredFail -> 17
+    | NativeOp.DeferredAwait -> 18
+    | NativeOp.ScopeMake _ -> 19
+    | NativeOp.Sleep -> 20
+    | NativeOp.ClockNow -> 21
+    | NativeOp.External _ -> 22
+    | NativeOp.DeferredMakeOf _ -> 23
+    | NativeOp.RefUpdateWith _ -> 24
+    | NativeOp.RefGetAndUpdateWith _ -> 25
+    | NativeOp.RefUpdateAndGetWith _ -> 26
+    | NativeOp.RefUpdateSomeWith _ -> 27
+    | NativeOp.RefGetAndUpdateSomeWith _ -> 28
+    | NativeOp.RefUpdateSomeAndGetWith _ -> 29
+    | NativeOp.RefModifyWith _ -> 30
+    | NativeOp.RefModifySomeWith _ -> 31
+    | NativeOp.Call _ -> 32
+    | NativeOp.Param _ -> 33
 
-let ctor_name_native_op : native_op -> string =
+let ctor_name_native_op : NativeOp.t -> string =
   function
-    | NativeOp_refMake -> "refMake"
-    | NativeOp_refGet -> "refGet"
-    | NativeOp_refSet -> "refSet"
-    | NativeOp_refGetAndSet -> "refGetAndSet"
-    | NativeOp_refSetAndGet -> "refSetAndGet"
-    | NativeOp_deferredIsDone -> "deferredIsDone"
-    | NativeOp_deferredPoll -> "deferredPoll"
-    | NativeOp_deferredSucceed -> "deferredSucceed"
-    | NativeOp_deferredFail -> "deferredFail"
-    | NativeOp_deferredAwait -> "deferredAwait"
-    | NativeOp_scopeMake _ -> "scopeMake"
-    | NativeOp_sleep -> "sleep"
-    | NativeOp_clockNow -> "clockNow"
-    | NativeOp_external _ -> "external"
-    | NativeOp_deferredMakeOf _ -> "deferredMakeOf"
-    | NativeOp_refUpdateWith _ -> "refUpdateWith"
-    | NativeOp_refGetAndUpdateWith _ -> "refGetAndUpdateWith"
-    | NativeOp_refUpdateAndGetWith _ -> "refUpdateAndGetWith"
-    | NativeOp_refUpdateSomeWith _ -> "refUpdateSomeWith"
-    | NativeOp_refGetAndUpdateSomeWith _ -> "refGetAndUpdateSomeWith"
-    | NativeOp_refUpdateSomeAndGetWith _ -> "refUpdateSomeAndGetWith"
-    | NativeOp_refModifyWith _ -> "refModifyWith"
-    | NativeOp_refModifySomeWith _ -> "refModifySomeWith"
-    | NativeOp_call _ -> "call"
-    | NativeOp_param _ -> "param"
+    | NativeOp.RefMake -> "refMake"
+    | NativeOp.RefGet -> "refGet"
+    | NativeOp.RefSet -> "refSet"
+    | NativeOp.RefGetAndSet -> "refGetAndSet"
+    | NativeOp.RefSetAndGet -> "refSetAndGet"
+    | NativeOp.DeferredIsDone -> "deferredIsDone"
+    | NativeOp.DeferredPoll -> "deferredPoll"
+    | NativeOp.DeferredSucceed -> "deferredSucceed"
+    | NativeOp.DeferredFail -> "deferredFail"
+    | NativeOp.DeferredAwait -> "deferredAwait"
+    | NativeOp.ScopeMake _ -> "scopeMake"
+    | NativeOp.Sleep -> "sleep"
+    | NativeOp.ClockNow -> "clockNow"
+    | NativeOp.External _ -> "external"
+    | NativeOp.DeferredMakeOf _ -> "deferredMakeOf"
+    | NativeOp.RefUpdateWith _ -> "refUpdateWith"
+    | NativeOp.RefGetAndUpdateWith _ -> "refGetAndUpdateWith"
+    | NativeOp.RefUpdateAndGetWith _ -> "refUpdateAndGetWith"
+    | NativeOp.RefUpdateSomeWith _ -> "refUpdateSomeWith"
+    | NativeOp.RefGetAndUpdateSomeWith _ -> "refGetAndUpdateSomeWith"
+    | NativeOp.RefUpdateSomeAndGetWith _ -> "refUpdateSomeAndGetWith"
+    | NativeOp.RefModifyWith _ -> "refModifyWith"
+    | NativeOp.RefModifySomeWith _ -> "refModifySomeWith"
+    | NativeOp.Call _ -> "call"
+    | NativeOp.Param _ -> "param"
 
 let ctor_names_native_op : string list =
   ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"; "refUpdateWith"; "refGetAndUpdateWith"; "refUpdateAndGetWith"; "refUpdateSomeWith"; "refGetAndUpdateSomeWith"; "refUpdateSomeAndGetWith"; "refModifyWith"; "refModifySomeWith"; "call"; "param"]
 
-let ctor_index_decision : decision -> int =
+let ctor_index_decision : Decision.t -> int =
   function
-    | Decision_bool -> 0
-    | Decision_option -> 1
-    | Decision_tag _ -> 2
-    | Decision_recordTag _ -> 3
+    | Decision.Bool -> 0
+    | Decision.Option -> 1
+    | Decision.Tag _ -> 2
+    | Decision.RecordTag _ -> 3
 
-let wire_tag_decision : decision -> int =
+let wire_tag_decision : Decision.t -> int =
   function
-    | Decision_bool -> 0
-    | Decision_option -> 1
-    | Decision_tag _ -> 2
-    | Decision_recordTag _ -> 3
+    | Decision.Bool -> 0
+    | Decision.Option -> 1
+    | Decision.Tag _ -> 2
+    | Decision.RecordTag _ -> 3
 
-let ctor_name_decision : decision -> string =
+let ctor_name_decision : Decision.t -> string =
   function
-    | Decision_bool -> "bool"
-    | Decision_option -> "option"
-    | Decision_tag _ -> "tag"
-    | Decision_recordTag _ -> "recordTag"
+    | Decision.Bool -> "bool"
+    | Decision.Option -> "option"
+    | Decision.Tag _ -> "tag"
+    | Decision.RecordTag _ -> "recordTag"
 
 let ctor_names_decision : string list =
   ["bool"; "option"; "tag"; "recordTag"]
 
-let ctor_index_def_role : def_role -> int =
+let ctor_index_def_role : DefRole.t -> int =
   function
-    | DefRole_plain -> 0
-    | DefRole_serviceInit _ -> 1
-    | DefRole_serviceMethod _ -> 2
+    | DefRole.Plain -> 0
+    | DefRole.ServiceInit _ -> 1
+    | DefRole.ServiceMethod _ -> 2
 
-let wire_tag_def_role : def_role -> int =
+let wire_tag_def_role : DefRole.t -> int =
   function
-    | DefRole_plain -> 0
-    | DefRole_serviceInit _ -> 1
-    | DefRole_serviceMethod _ -> 2
+    | DefRole.Plain -> 0
+    | DefRole.ServiceInit _ -> 1
+    | DefRole.ServiceMethod _ -> 2
 
-let ctor_name_def_role : def_role -> string =
+let ctor_name_def_role : DefRole.t -> string =
   function
-    | DefRole_plain -> "plain"
-    | DefRole_serviceInit _ -> "serviceInit"
-    | DefRole_serviceMethod _ -> "serviceMethod"
+    | DefRole.Plain -> "plain"
+    | DefRole.ServiceInit _ -> "serviceInit"
+    | DefRole.ServiceMethod _ -> "serviceMethod"
 
 let ctor_names_def_role : string list =
   ["plain"; "serviceInit"; "serviceMethod"]
 
-let ctor_index_param_decl (_ : param_decl) : int =
+let ctor_index_param_decl (_ : ParamDecl.t) : int =
   0
 
-let wire_tag_param_decl (_ : param_decl) : int =
+let wire_tag_param_decl (_ : ParamDecl.t) : int =
   0
 
-let ctor_name_param_decl (_ : param_decl) : string =
+let ctor_name_param_decl (_ : ParamDecl.t) : string =
   "mk"
 
 let ctor_names_param_decl : string list =
@@ -491,13 +491,13 @@ let ctor_names_param_decl : string list =
 let field_names_param_decl : string list =
   ["name"; "request"; "answer"; "error"]
 
-let ctor_index_def_decl (_ : def_decl) : int =
+let ctor_index_def_decl (_ : DefDecl.t) : int =
   0
 
-let wire_tag_def_decl (_ : def_decl) : int =
+let wire_tag_def_decl (_ : DefDecl.t) : int =
   0
 
-let ctor_name_def_decl (_ : def_decl) : string =
+let ctor_name_def_decl (_ : DefDecl.t) : string =
   "mk"
 
 let ctor_names_def_decl : string list =
@@ -506,382 +506,382 @@ let ctor_names_def_decl : string list =
 let field_names_def_decl : string list =
   ["name"; "request"; "answer"; "error"; "requires"; "role"; "params"]
 
-let ctor_index_eff : native_op eff -> int =
+let ctor_index_eff : NativeOp.t Eff.t -> int =
   function
-    | Eff_succeed _ -> 0
-    | Eff_fail _ -> 1
-    | Eff_failCause _ -> 2
-    | Eff_sync _ -> 3
-    | Eff_suspend _ -> 4
-    | Eff_perform _ -> 5
-    | Eff_bind _ -> 6
-    | Eff_gen _ -> 7
-    | Eff_catchCause _ -> 8
-    | Eff_matchCause _ -> 9
-    | Eff_onExit _ -> 10
-    | Eff_exit _ -> 11
-    | Eff_uninterruptible _ -> 12
-    | Eff_interruptible _ -> 13
-    | Eff_yieldNow _ -> 14
-    | Eff_awaitFiber _ -> 15
-    | Eff_withFiber _ -> 16
-    | Eff_scoped _ -> 17
-    | Eff_acquireRelease _ -> 18
-    | Eff_provideLayer _ -> 19
-    | Eff_service _ -> 20
-    | Eff_provideService _ -> 21
-    | Eff_catchIf _ -> 22
-    | Eff_select _ -> 23
-    | Eff_iterate _ -> 24
-    | Eff_restore _ -> 25
-    | Eff_defs _ -> 26
-    | Eff_invoke _ -> 27
-    | Eff_provideContext _ -> 28
+    | Eff.Succeed _ -> 0
+    | Eff.Fail _ -> 1
+    | Eff.FailCause _ -> 2
+    | Eff.Sync _ -> 3
+    | Eff.Suspend _ -> 4
+    | Eff.Perform _ -> 5
+    | Eff.Bind _ -> 6
+    | Eff.Gen _ -> 7
+    | Eff.CatchCause _ -> 8
+    | Eff.MatchCause _ -> 9
+    | Eff.OnExit _ -> 10
+    | Eff.Exit _ -> 11
+    | Eff.Uninterruptible _ -> 12
+    | Eff.Interruptible _ -> 13
+    | Eff.YieldNow _ -> 14
+    | Eff.AwaitFiber _ -> 15
+    | Eff.WithFiber _ -> 16
+    | Eff.Scoped _ -> 17
+    | Eff.AcquireRelease _ -> 18
+    | Eff.ProvideLayer _ -> 19
+    | Eff.Service _ -> 20
+    | Eff.ProvideService _ -> 21
+    | Eff.CatchIf _ -> 22
+    | Eff.Select _ -> 23
+    | Eff.Iterate _ -> 24
+    | Eff.Restore _ -> 25
+    | Eff.Defs _ -> 26
+    | Eff.Invoke _ -> 27
+    | Eff.ProvideContext _ -> 28
 
-let wire_tag_eff : native_op eff -> int =
+let wire_tag_eff : NativeOp.t Eff.t -> int =
   function
-    | Eff_succeed _ -> 0
-    | Eff_fail _ -> 1
-    | Eff_failCause _ -> 2
-    | Eff_sync _ -> 4
-    | Eff_suspend _ -> 5
-    | Eff_perform _ -> 6
-    | Eff_bind _ -> 7
-    | Eff_gen _ -> 8
-    | Eff_catchCause _ -> 9
-    | Eff_matchCause _ -> 10
-    | Eff_onExit _ -> 11
-    | Eff_exit _ -> 12
-    | Eff_uninterruptible _ -> 13
-    | Eff_interruptible _ -> 14
-    | Eff_yieldNow _ -> 17
-    | Eff_awaitFiber _ -> 19
-    | Eff_withFiber _ -> 20
-    | Eff_scoped _ -> 21
-    | Eff_acquireRelease _ -> 22
-    | Eff_provideLayer _ -> 23
-    | Eff_service _ -> 24
-    | Eff_provideService _ -> 25
-    | Eff_catchIf _ -> 26
-    | Eff_select _ -> 27
-    | Eff_iterate _ -> 28
-    | Eff_restore _ -> 29
-    | Eff_defs _ -> 30
-    | Eff_invoke _ -> 31
-    | Eff_provideContext _ -> 32
+    | Eff.Succeed _ -> 0
+    | Eff.Fail _ -> 1
+    | Eff.FailCause _ -> 2
+    | Eff.Sync _ -> 4
+    | Eff.Suspend _ -> 5
+    | Eff.Perform _ -> 6
+    | Eff.Bind _ -> 7
+    | Eff.Gen _ -> 8
+    | Eff.CatchCause _ -> 9
+    | Eff.MatchCause _ -> 10
+    | Eff.OnExit _ -> 11
+    | Eff.Exit _ -> 12
+    | Eff.Uninterruptible _ -> 13
+    | Eff.Interruptible _ -> 14
+    | Eff.YieldNow _ -> 17
+    | Eff.AwaitFiber _ -> 19
+    | Eff.WithFiber _ -> 20
+    | Eff.Scoped _ -> 21
+    | Eff.AcquireRelease _ -> 22
+    | Eff.ProvideLayer _ -> 23
+    | Eff.Service _ -> 24
+    | Eff.ProvideService _ -> 25
+    | Eff.CatchIf _ -> 26
+    | Eff.Select _ -> 27
+    | Eff.Iterate _ -> 28
+    | Eff.Restore _ -> 29
+    | Eff.Defs _ -> 30
+    | Eff.Invoke _ -> 31
+    | Eff.ProvideContext _ -> 32
 
-let ctor_name_eff : native_op eff -> string =
+let ctor_name_eff : NativeOp.t Eff.t -> string =
   function
-    | Eff_succeed _ -> "succeed"
-    | Eff_fail _ -> "fail"
-    | Eff_failCause _ -> "failCause"
-    | Eff_sync _ -> "sync"
-    | Eff_suspend _ -> "suspend"
-    | Eff_perform _ -> "perform"
-    | Eff_bind _ -> "bind"
-    | Eff_gen _ -> "gen"
-    | Eff_catchCause _ -> "catchCause"
-    | Eff_matchCause _ -> "matchCause"
-    | Eff_onExit _ -> "onExit"
-    | Eff_exit _ -> "exit"
-    | Eff_uninterruptible _ -> "uninterruptible"
-    | Eff_interruptible _ -> "interruptible"
-    | Eff_yieldNow _ -> "yieldNow"
-    | Eff_awaitFiber _ -> "awaitFiber"
-    | Eff_withFiber _ -> "withFiber"
-    | Eff_scoped _ -> "scoped"
-    | Eff_acquireRelease _ -> "acquireRelease"
-    | Eff_provideLayer _ -> "provideLayer"
-    | Eff_service _ -> "service"
-    | Eff_provideService _ -> "provideService"
-    | Eff_catchIf _ -> "catchIf"
-    | Eff_select _ -> "select"
-    | Eff_iterate _ -> "iterate"
-    | Eff_restore _ -> "restore"
-    | Eff_defs _ -> "defs"
-    | Eff_invoke _ -> "invoke"
-    | Eff_provideContext _ -> "provideContext"
+    | Eff.Succeed _ -> "succeed"
+    | Eff.Fail _ -> "fail"
+    | Eff.FailCause _ -> "failCause"
+    | Eff.Sync _ -> "sync"
+    | Eff.Suspend _ -> "suspend"
+    | Eff.Perform _ -> "perform"
+    | Eff.Bind _ -> "bind"
+    | Eff.Gen _ -> "gen"
+    | Eff.CatchCause _ -> "catchCause"
+    | Eff.MatchCause _ -> "matchCause"
+    | Eff.OnExit _ -> "onExit"
+    | Eff.Exit _ -> "exit"
+    | Eff.Uninterruptible _ -> "uninterruptible"
+    | Eff.Interruptible _ -> "interruptible"
+    | Eff.YieldNow _ -> "yieldNow"
+    | Eff.AwaitFiber _ -> "awaitFiber"
+    | Eff.WithFiber _ -> "withFiber"
+    | Eff.Scoped _ -> "scoped"
+    | Eff.AcquireRelease _ -> "acquireRelease"
+    | Eff.ProvideLayer _ -> "provideLayer"
+    | Eff.Service _ -> "service"
+    | Eff.ProvideService _ -> "provideService"
+    | Eff.CatchIf _ -> "catchIf"
+    | Eff.Select _ -> "select"
+    | Eff.Iterate _ -> "iterate"
+    | Eff.Restore _ -> "restore"
+    | Eff.Defs _ -> "defs"
+    | Eff.Invoke _ -> "invoke"
+    | Eff.ProvideContext _ -> "provideContext"
 
 let ctor_names_eff : string list =
   ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"; "defs"; "invoke"; "provideContext"]
 
-let ctor_index_stmt : native_op stmt -> int =
+let ctor_index_stmt : NativeOp.t Stmt.t -> int =
   function
-    | Stmt_bindYield _ -> 0
-    | Stmt_yieldDiscard _ -> 1
-    | Stmt_ret _ -> 2
-    | Stmt_ifElse _ -> 3
-    | Stmt_whileTrue _ -> 4
-    | Stmt_breakLoop -> 5
+    | Stmt.BindYield _ -> 0
+    | Stmt.YieldDiscard _ -> 1
+    | Stmt.Ret _ -> 2
+    | Stmt.IfElse _ -> 3
+    | Stmt.WhileTrue _ -> 4
+    | Stmt.BreakLoop -> 5
 
-let wire_tag_stmt : native_op stmt -> int =
+let wire_tag_stmt : NativeOp.t Stmt.t -> int =
   function
-    | Stmt_bindYield _ -> 0
-    | Stmt_yieldDiscard _ -> 1
-    | Stmt_ret _ -> 2
-    | Stmt_ifElse _ -> 3
-    | Stmt_whileTrue _ -> 4
-    | Stmt_breakLoop -> 5
+    | Stmt.BindYield _ -> 0
+    | Stmt.YieldDiscard _ -> 1
+    | Stmt.Ret _ -> 2
+    | Stmt.IfElse _ -> 3
+    | Stmt.WhileTrue _ -> 4
+    | Stmt.BreakLoop -> 5
 
-let ctor_name_stmt : native_op stmt -> string =
+let ctor_name_stmt : NativeOp.t Stmt.t -> string =
   function
-    | Stmt_bindYield _ -> "bindYield"
-    | Stmt_yieldDiscard _ -> "yieldDiscard"
-    | Stmt_ret _ -> "ret"
-    | Stmt_ifElse _ -> "ifElse"
-    | Stmt_whileTrue _ -> "whileTrue"
-    | Stmt_breakLoop -> "breakLoop"
+    | Stmt.BindYield _ -> "bindYield"
+    | Stmt.YieldDiscard _ -> "yieldDiscard"
+    | Stmt.Ret _ -> "ret"
+    | Stmt.IfElse _ -> "ifElse"
+    | Stmt.WhileTrue _ -> "whileTrue"
+    | Stmt.BreakLoop -> "breakLoop"
 
 let ctor_names_stmt : string list =
   ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]
 
-let ctor_index_stmts : native_op stmts -> int =
+let ctor_index_stmts : NativeOp.t Stmts.t -> int =
   function
-    | Stmts_nil -> 0
-    | Stmts_cons _ -> 1
+    | Stmts.Nil -> 0
+    | Stmts.Cons _ -> 1
 
-let wire_tag_stmts : native_op stmts -> int =
+let wire_tag_stmts : NativeOp.t Stmts.t -> int =
   function
-    | Stmts_nil -> 0
-    | Stmts_cons _ -> 1
+    | Stmts.Nil -> 0
+    | Stmts.Cons _ -> 1
 
-let ctor_name_stmts : native_op stmts -> string =
+let ctor_name_stmts : NativeOp.t Stmts.t -> string =
   function
-    | Stmts_nil -> "nil"
-    | Stmts_cons _ -> "cons"
+    | Stmts.Nil -> "nil"
+    | Stmts.Cons _ -> "cons"
 
 let ctor_names_stmts : string list =
   ["nil"; "cons"]
 
-let ctor_index_effs : native_op effs -> int =
+let ctor_index_effs : NativeOp.t Effs.t -> int =
   function
-    | Effs_nil -> 0
-    | Effs_cons _ -> 1
+    | Effs.Nil -> 0
+    | Effs.Cons _ -> 1
 
-let wire_tag_effs : native_op effs -> int =
+let wire_tag_effs : NativeOp.t Effs.t -> int =
   function
-    | Effs_nil -> 0
-    | Effs_cons _ -> 1
+    | Effs.Nil -> 0
+    | Effs.Cons _ -> 1
 
-let ctor_name_effs : native_op effs -> string =
+let ctor_name_effs : NativeOp.t Effs.t -> string =
   function
-    | Effs_nil -> "nil"
-    | Effs_cons _ -> "cons"
+    | Effs.Nil -> "nil"
+    | Effs.Cons _ -> "cons"
 
 let ctor_names_effs : string list =
   ["nil"; "cons"]
 
-let ctor_index_action_term : native_op action_term -> int =
+let ctor_index_action_term : NativeOp.t ActionTerm.t -> int =
   function
-    | ActionTerm_fork _ -> 0
-    | ActionTerm_forkIn _ -> 1
-    | ActionTerm_forkScoped _ -> 2
-    | ActionTerm_runIn _ -> 3
-    | ActionTerm_interrupt _ -> 4
-    | ActionTerm_interruptScoped _ -> 5
-    | ActionTerm_interruptAll _ -> 6
-    | ActionTerm_awaitAll _ -> 7
-    | ActionTerm_awaitAllFailFast _ -> 8
-    | ActionTerm_snapshotChildren -> 9
-    | ActionTerm_awaitNewChildren _ -> 10
-    | ActionTerm_raceAll _ -> 11
-    | ActionTerm_getId -> 12
-    | ActionTerm_closeScope _ -> 13
-    | ActionTerm_getInterruptible -> 14
-    | ActionTerm_raceAllFirst _ -> 15
-    | ActionTerm_context _ -> 16
+    | ActionTerm.Fork _ -> 0
+    | ActionTerm.ForkIn _ -> 1
+    | ActionTerm.ForkScoped _ -> 2
+    | ActionTerm.RunIn _ -> 3
+    | ActionTerm.Interrupt _ -> 4
+    | ActionTerm.InterruptScoped _ -> 5
+    | ActionTerm.InterruptAll _ -> 6
+    | ActionTerm.AwaitAll _ -> 7
+    | ActionTerm.AwaitAllFailFast _ -> 8
+    | ActionTerm.SnapshotChildren -> 9
+    | ActionTerm.AwaitNewChildren _ -> 10
+    | ActionTerm.RaceAll _ -> 11
+    | ActionTerm.GetId -> 12
+    | ActionTerm.CloseScope _ -> 13
+    | ActionTerm.GetInterruptible -> 14
+    | ActionTerm.RaceAllFirst _ -> 15
+    | ActionTerm.Context _ -> 16
 
-let wire_tag_action_term : native_op action_term -> int =
+let wire_tag_action_term : NativeOp.t ActionTerm.t -> int =
   function
-    | ActionTerm_fork _ -> 0
-    | ActionTerm_forkIn _ -> 1
-    | ActionTerm_forkScoped _ -> 2
-    | ActionTerm_runIn _ -> 3
-    | ActionTerm_interrupt _ -> 4
-    | ActionTerm_interruptScoped _ -> 5
-    | ActionTerm_interruptAll _ -> 6
-    | ActionTerm_awaitAll _ -> 7
-    | ActionTerm_awaitAllFailFast _ -> 8
-    | ActionTerm_snapshotChildren -> 9
-    | ActionTerm_awaitNewChildren _ -> 10
-    | ActionTerm_raceAll _ -> 11
-    | ActionTerm_getId -> 14
-    | ActionTerm_closeScope _ -> 15
-    | ActionTerm_getInterruptible -> 16
-    | ActionTerm_raceAllFirst _ -> 17
-    | ActionTerm_context _ -> 18
+    | ActionTerm.Fork _ -> 0
+    | ActionTerm.ForkIn _ -> 1
+    | ActionTerm.ForkScoped _ -> 2
+    | ActionTerm.RunIn _ -> 3
+    | ActionTerm.Interrupt _ -> 4
+    | ActionTerm.InterruptScoped _ -> 5
+    | ActionTerm.InterruptAll _ -> 6
+    | ActionTerm.AwaitAll _ -> 7
+    | ActionTerm.AwaitAllFailFast _ -> 8
+    | ActionTerm.SnapshotChildren -> 9
+    | ActionTerm.AwaitNewChildren _ -> 10
+    | ActionTerm.RaceAll _ -> 11
+    | ActionTerm.GetId -> 14
+    | ActionTerm.CloseScope _ -> 15
+    | ActionTerm.GetInterruptible -> 16
+    | ActionTerm.RaceAllFirst _ -> 17
+    | ActionTerm.Context _ -> 18
 
-let ctor_name_action_term : native_op action_term -> string =
+let ctor_name_action_term : NativeOp.t ActionTerm.t -> string =
   function
-    | ActionTerm_fork _ -> "fork"
-    | ActionTerm_forkIn _ -> "forkIn"
-    | ActionTerm_forkScoped _ -> "forkScoped"
-    | ActionTerm_runIn _ -> "runIn"
-    | ActionTerm_interrupt _ -> "interrupt"
-    | ActionTerm_interruptScoped _ -> "interruptScoped"
-    | ActionTerm_interruptAll _ -> "interruptAll"
-    | ActionTerm_awaitAll _ -> "awaitAll"
-    | ActionTerm_awaitAllFailFast _ -> "awaitAllFailFast"
-    | ActionTerm_snapshotChildren -> "snapshotChildren"
-    | ActionTerm_awaitNewChildren _ -> "awaitNewChildren"
-    | ActionTerm_raceAll _ -> "raceAll"
-    | ActionTerm_getId -> "getId"
-    | ActionTerm_closeScope _ -> "closeScope"
-    | ActionTerm_getInterruptible -> "getInterruptible"
-    | ActionTerm_raceAllFirst _ -> "raceAllFirst"
-    | ActionTerm_context _ -> "context"
+    | ActionTerm.Fork _ -> "fork"
+    | ActionTerm.ForkIn _ -> "forkIn"
+    | ActionTerm.ForkScoped _ -> "forkScoped"
+    | ActionTerm.RunIn _ -> "runIn"
+    | ActionTerm.Interrupt _ -> "interrupt"
+    | ActionTerm.InterruptScoped _ -> "interruptScoped"
+    | ActionTerm.InterruptAll _ -> "interruptAll"
+    | ActionTerm.AwaitAll _ -> "awaitAll"
+    | ActionTerm.AwaitAllFailFast _ -> "awaitAllFailFast"
+    | ActionTerm.SnapshotChildren -> "snapshotChildren"
+    | ActionTerm.AwaitNewChildren _ -> "awaitNewChildren"
+    | ActionTerm.RaceAll _ -> "raceAll"
+    | ActionTerm.GetId -> "getId"
+    | ActionTerm.CloseScope _ -> "closeScope"
+    | ActionTerm.GetInterruptible -> "getInterruptible"
+    | ActionTerm.RaceAllFirst _ -> "raceAllFirst"
+    | ActionTerm.Context _ -> "context"
 
 let ctor_names_action_term : string list =
   ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "getId"; "closeScope"; "getInterruptible"; "raceAllFirst"; "context"]
 
-let ctor_index_layer_term : native_op layer_term -> int =
+let ctor_index_layer_term : NativeOp.t LayerTerm.t -> int =
   function
-    | LayerTerm_succeed _ -> 0
-    | LayerTerm_effect _ -> 1
-    | LayerTerm_effectDiscard _ -> 2
-    | LayerTerm_provide _ -> 3
-    | LayerTerm_provideMerge _ -> 4
-    | LayerTerm_merge _ -> 5
-    | LayerTerm_fresh _ -> 6
-    | LayerTerm_orDie _ -> 7
-    | LayerTerm_ref _ -> 8
-    | LayerTerm_mergeAll _ -> 9
+    | LayerTerm.Succeed _ -> 0
+    | LayerTerm.Effect _ -> 1
+    | LayerTerm.EffectDiscard _ -> 2
+    | LayerTerm.Provide _ -> 3
+    | LayerTerm.ProvideMerge _ -> 4
+    | LayerTerm.Merge _ -> 5
+    | LayerTerm.Fresh _ -> 6
+    | LayerTerm.OrDie _ -> 7
+    | LayerTerm.Ref _ -> 8
+    | LayerTerm.MergeAll _ -> 9
 
-let wire_tag_layer_term : native_op layer_term -> int =
+let wire_tag_layer_term : NativeOp.t LayerTerm.t -> int =
   function
-    | LayerTerm_succeed _ -> 0
-    | LayerTerm_effect _ -> 1
-    | LayerTerm_effectDiscard _ -> 2
-    | LayerTerm_provide _ -> 3
-    | LayerTerm_provideMerge _ -> 4
-    | LayerTerm_merge _ -> 5
-    | LayerTerm_fresh _ -> 6
-    | LayerTerm_orDie _ -> 7
-    | LayerTerm_ref _ -> 8
-    | LayerTerm_mergeAll _ -> 9
+    | LayerTerm.Succeed _ -> 0
+    | LayerTerm.Effect _ -> 1
+    | LayerTerm.EffectDiscard _ -> 2
+    | LayerTerm.Provide _ -> 3
+    | LayerTerm.ProvideMerge _ -> 4
+    | LayerTerm.Merge _ -> 5
+    | LayerTerm.Fresh _ -> 6
+    | LayerTerm.OrDie _ -> 7
+    | LayerTerm.Ref _ -> 8
+    | LayerTerm.MergeAll _ -> 9
 
-let ctor_name_layer_term : native_op layer_term -> string =
+let ctor_name_layer_term : NativeOp.t LayerTerm.t -> string =
   function
-    | LayerTerm_succeed _ -> "succeed"
-    | LayerTerm_effect _ -> "effect"
-    | LayerTerm_effectDiscard _ -> "effectDiscard"
-    | LayerTerm_provide _ -> "provide"
-    | LayerTerm_provideMerge _ -> "provideMerge"
-    | LayerTerm_merge _ -> "merge"
-    | LayerTerm_fresh _ -> "fresh"
-    | LayerTerm_orDie _ -> "orDie"
-    | LayerTerm_ref _ -> "ref"
-    | LayerTerm_mergeAll _ -> "mergeAll"
+    | LayerTerm.Succeed _ -> "succeed"
+    | LayerTerm.Effect _ -> "effect"
+    | LayerTerm.EffectDiscard _ -> "effectDiscard"
+    | LayerTerm.Provide _ -> "provide"
+    | LayerTerm.ProvideMerge _ -> "provideMerge"
+    | LayerTerm.Merge _ -> "merge"
+    | LayerTerm.Fresh _ -> "fresh"
+    | LayerTerm.OrDie _ -> "orDie"
+    | LayerTerm.Ref _ -> "ref"
+    | LayerTerm.MergeAll _ -> "mergeAll"
 
 let ctor_names_layer_term : string list =
   ["succeed"; "effect"; "effectDiscard"; "provide"; "provideMerge"; "merge"; "fresh"; "orDie"; "ref"; "mergeAll"]
 
-let ctor_index_layer_terms : native_op layer_terms -> int =
+let ctor_index_layer_terms : NativeOp.t LayerTerms.t -> int =
   function
-    | LayerTerms_nil -> 0
-    | LayerTerms_cons _ -> 1
+    | LayerTerms.Nil -> 0
+    | LayerTerms.Cons _ -> 1
 
-let wire_tag_layer_terms : native_op layer_terms -> int =
+let wire_tag_layer_terms : NativeOp.t LayerTerms.t -> int =
   function
-    | LayerTerms_nil -> 0
-    | LayerTerms_cons _ -> 1
+    | LayerTerms.Nil -> 0
+    | LayerTerms.Cons _ -> 1
 
-let ctor_name_layer_terms : native_op layer_terms -> string =
+let ctor_name_layer_terms : NativeOp.t LayerTerms.t -> string =
   function
-    | LayerTerms_nil -> "nil"
-    | LayerTerms_cons _ -> "cons"
+    | LayerTerms.Nil -> "nil"
+    | LayerTerms.Cons _ -> "cons"
 
 let ctor_names_layer_terms : string list =
   ["nil"; "cons"]
 
-let ctor_index_row_kind : row_kind -> int =
+let ctor_index_row_kind : RowKind.t -> int =
   function
-    | RowKind_sync -> 0
-    | RowKind_async -> 1
-    | RowKind_program -> 2
+    | RowKind.Sync -> 0
+    | RowKind.Async -> 1
+    | RowKind.Program -> 2
 
-let wire_tag_row_kind : row_kind -> int =
+let wire_tag_row_kind : RowKind.t -> int =
   function
-    | RowKind_sync -> 0
-    | RowKind_async -> 1
-    | RowKind_program -> 2
+    | RowKind.Sync -> 0
+    | RowKind.Async -> 1
+    | RowKind.Program -> 2
 
-let ctor_name_row_kind : row_kind -> string =
+let ctor_name_row_kind : RowKind.t -> string =
   function
-    | RowKind_sync -> "sync"
-    | RowKind_async -> "async"
-    | RowKind_program -> "program"
+    | RowKind.Sync -> "sync"
+    | RowKind.Async -> "async"
+    | RowKind.Program -> "program"
 
 let ctor_names_row_kind : string list =
   ["sync"; "async"; "program"]
 
-let ctor_index_row_shape : row_shape -> int =
+let ctor_index_row_shape : RowShape.t -> int =
   function
-    | RowShape_call -> 0
-    | RowShape_value -> 1
-    | RowShape_tupleCall -> 2
-    | RowShape_method -> 3
+    | RowShape.Call -> 0
+    | RowShape.Value -> 1
+    | RowShape.TupleCall -> 2
+    | RowShape.Method -> 3
 
-let wire_tag_row_shape : row_shape -> int =
+let wire_tag_row_shape : RowShape.t -> int =
   function
-    | RowShape_call -> 0
-    | RowShape_value -> 1
-    | RowShape_tupleCall -> 2
-    | RowShape_method -> 3
+    | RowShape.Call -> 0
+    | RowShape.Value -> 1
+    | RowShape.TupleCall -> 2
+    | RowShape.Method -> 3
 
-let ctor_name_row_shape : row_shape -> string =
+let ctor_name_row_shape : RowShape.t -> string =
   function
-    | RowShape_call -> "call"
-    | RowShape_value -> "value"
-    | RowShape_tupleCall -> "tupleCall"
-    | RowShape_method -> "method"
+    | RowShape.Call -> "call"
+    | RowShape.Value -> "value"
+    | RowShape.TupleCall -> "tupleCall"
+    | RowShape.Method -> "method"
 
 let ctor_names_row_shape : string list =
   ["call"; "value"; "tupleCall"; "method"]
 
-let ctor_index_registration : registration -> int =
+let ctor_index_registration : Registration.t -> int =
   function
-    | Registration_deferred -> 0
-    | Registration_external -> 1
+    | Registration.Deferred -> 0
+    | Registration.External -> 1
 
-let wire_tag_registration : registration -> int =
+let wire_tag_registration : Registration.t -> int =
   function
-    | Registration_deferred -> 0
-    | Registration_external -> 1
+    | Registration.Deferred -> 0
+    | Registration.External -> 1
 
-let ctor_name_registration : registration -> string =
+let ctor_name_registration : Registration.t -> string =
   function
-    | Registration_deferred -> "deferred"
-    | Registration_external -> "external"
+    | Registration.Deferred -> "deferred"
+    | Registration.External -> "external"
 
 let ctor_names_registration : string list =
   ["deferred"; "external"]
 
-let ctor_index_row_arg : row_arg -> int =
+let ctor_index_row_arg : RowArg.t -> int =
   function
-    | RowArg_name _ -> 0
-    | RowArg_str _ -> 1
+    | RowArg.Name _ -> 0
+    | RowArg.Str _ -> 1
 
-let wire_tag_row_arg : row_arg -> int =
+let wire_tag_row_arg : RowArg.t -> int =
   function
-    | RowArg_name _ -> 0
-    | RowArg_str _ -> 1
+    | RowArg.Name _ -> 0
+    | RowArg.Str _ -> 1
 
-let ctor_name_row_arg : row_arg -> string =
+let ctor_name_row_arg : RowArg.t -> string =
   function
-    | RowArg_name _ -> "name"
-    | RowArg_str _ -> "str"
+    | RowArg.Name _ -> "name"
+    | RowArg.Str _ -> "str"
 
 let ctor_names_row_arg : string list =
   ["name"; "str"]
 
-let ctor_index_row (_ : row) : int =
+let ctor_index_row (_ : Row.t) : int =
   0
 
-let wire_tag_row (_ : row) : int =
+let wire_tag_row (_ : Row.t) : int =
   0
 
-let ctor_name_row (_ : row) : string =
+let ctor_name_row (_ : Row.t) : string =
   "mk"
 
 let ctor_names_row : string list =
@@ -890,13 +890,13 @@ let ctor_names_row : string list =
 let field_names_row : string list =
   ["name"; "spelling"; "shape"; "trailing"; "kind"; "request"; "answer"; "error"; "requires"; "cite"; "typeArgs"; "registration"]
 
-let ctor_index_eff_ty (_ : eff_ty) : int =
+let ctor_index_eff_ty (_ : EffTy.t) : int =
   0
 
-let wire_tag_eff_ty (_ : eff_ty) : int =
+let wire_tag_eff_ty (_ : EffTy.t) : int =
   0
 
-let ctor_name_eff_ty (_ : eff_ty) : string =
+let ctor_name_eff_ty (_ : EffTy.t) : string =
   "mk"
 
 let ctor_names_eff_ty : string list =
@@ -905,267 +905,267 @@ let ctor_names_eff_ty : string list =
 let field_names_eff_ty : string list =
   ["answer"; "error"; "requires"]
 
-let rec lits_service_name (k : lit -> unit) (r : service_name) : unit =
+let rec lits_service_name (k : Lit.t -> unit) (r : ServiceName.t) : unit =
   ()
 
-let rec lits_service_type_code (k : lit -> unit) (r : service_type_code) : unit =
+let rec lits_service_type_code (k : Lit.t -> unit) (r : ServiceTypeCode.t) : unit =
   ()
 
-let rec lits_service_key (k : lit -> unit) (r : service_key) : unit =
-  lits_service_name k r.name; lits_service_type_code k r.service
+let rec lits_service_key (k : Lit.t -> unit) (r : ServiceKey.t) : unit =
+  lits_service_name k r.ServiceKey.name; lits_service_type_code k r.ServiceKey.service
 
-let rec lits_ty (k : lit -> unit) (v : ty) : unit =
+let rec lits_ty (k : Lit.t -> unit) (v : Ty.t) : unit =
   match v with
-    | Ty_never -> ()
-    | Ty_unit -> ()
-    | Ty_nat -> ()
-    | Ty_int -> ()
-    | Ty_string -> ()
-    | Ty_bool -> ()
-    | Ty_handle a0 -> ()
-    | Ty_option a0 -> lits_ty k a0
-    | Ty_list a0 -> lits_ty k a0
-    | Ty_prod (a0, a1) -> lits_ty k a0; lits_ty k a1
-    | Ty_except (a0, a1) -> lits_ty k a0; lits_ty k a1
-    | Ty_exitOf (a0, a1) -> lits_ty k a0; lits_ty k a1
-    | Ty_causeOf a0 -> lits_ty k a0
-    | Ty_fiberOf (a0, a1) -> lits_ty k a0; lits_ty k a1
-    | Ty_union (a0, a1) -> lits_ty k a0; lits_ty k a1
-    | Ty_lit a0 -> ()
-    | Ty_refOf a0 -> lits_ty k a0
-    | Ty_deferredOf (a0, a1) -> lits_ty k a0; lits_ty k a1
-    | Ty_var a0 -> ()
-    | Ty_unknown -> ()
-    | Ty_record a0 -> List.iter (fun y -> let y0, y1 = y in
+    | Ty.Never -> ()
+    | Ty.Unit -> ()
+    | Ty.Nat -> ()
+    | Ty.Int -> ()
+    | Ty.String -> ()
+    | Ty.Bool -> ()
+    | Ty.Handle a0 -> ()
+    | Ty.Option a0 -> lits_ty k a0
+    | Ty.List a0 -> lits_ty k a0
+    | Ty.Prod (a0, a1) -> lits_ty k a0; lits_ty k a1
+    | Ty.Except (a0, a1) -> lits_ty k a0; lits_ty k a1
+    | Ty.ExitOf (a0, a1) -> lits_ty k a0; lits_ty k a1
+    | Ty.CauseOf a0 -> lits_ty k a0
+    | Ty.FiberOf (a0, a1) -> lits_ty k a0; lits_ty k a1
+    | Ty.Union (a0, a1) -> lits_ty k a0; lits_ty k a1
+    | Ty.Lit a0 -> ()
+    | Ty.RefOf a0 -> lits_ty k a0
+    | Ty.DeferredOf (a0, a1) -> lits_ty k a0; lits_ty k a1
+    | Ty.Var a0 -> ()
+    | Ty.Unknown -> ()
+    | Ty.Record a0 -> List.iter (fun y -> let y0, y1 = y in
       (); (let y0, y1 = y1 in
       (); lits_ty k y1)) a0
-    | Ty_map (a0, a1) -> lits_ty k a0; lits_ty k a1
-    | Ty_tuple a0 -> List.iter (fun y -> lits_ty k y) a0
-    | Ty_app (a0, a1) -> (); List.iter (fun y -> lits_ty k y) a1
-    | Ty_null -> ()
-    | Ty_undefined -> ()
-    | Ty_number -> ()
-    | Ty_bytes -> ()
-    | Ty_contextOf a0 -> ()
+    | Ty.Map (a0, a1) -> lits_ty k a0; lits_ty k a1
+    | Ty.Tuple a0 -> List.iter (fun y -> lits_ty k y) a0
+    | Ty.App (a0, a1) -> (); List.iter (fun y -> lits_ty k y) a1
+    | Ty.Null -> ()
+    | Ty.Undefined -> ()
+    | Ty.Number -> ()
+    | Ty.Bytes -> ()
+    | Ty.ContextOf a0 -> ()
 
-let rec lits_lit (k : lit -> unit) (v : lit) : unit =
+let rec lits_lit (k : Lit.t -> unit) (v : Lit.t) : unit =
   match v with
-    | Lit_unit -> ()
-    | Lit_nat a0 -> ()
-    | Lit_bool a0 -> ()
-    | Lit_str a0 -> ()
+    | Lit.Unit -> ()
+    | Lit.Nat a0 -> ()
+    | Lit.Bool a0 -> ()
+    | Lit.Str a0 -> ()
 
-let rec lits_field_read_mode (k : lit -> unit) (v : field_read_mode) : unit =
+let rec lits_field_read_mode (k : Lit.t -> unit) (v : FieldReadMode.t) : unit =
   match v with
-    | FieldReadMode_required -> ()
-    | FieldReadMode_optional -> ()
+    | FieldReadMode.Required -> ()
+    | FieldReadMode.Optional -> ()
 
-let rec lits_term (k : lit -> unit) (v : term) : unit =
+let rec lits_term (k : Lit.t -> unit) (v : Term.t) : unit =
   match v with
-    | Term_var a0 -> ()
-    | Term_lit a0 -> k a0
-    | Term_app (a0, a1) -> (); lits_terms k a1
-    | Term_record (a0, a1, a2) -> List.iter (fun y -> let y0, y1 = y in
+    | Term.Var a0 -> ()
+    | Term.Lit a0 -> k a0
+    | Term.App (a0, a1) -> (); lits_terms k a1
+    | Term.Record (a0, a1, a2) -> List.iter (fun y -> let y0, y1 = y in
       (); (let y0, y1 = y1 in
       (); lits_ty k y1)) a0; List.iter (fun y -> ()) a1; lits_terms k a2
-    | Term_field (a0, a1, a2) -> lits_field_read_mode k a0; lits_term k a1; ()
-    | Term_recordSet (a0, a1, a2) -> lits_term k a0; (); lits_term k a2
-    | Term_tupleAt (a0, a1) -> lits_term k a0; ()
-    | Term_fold (a0, a1, a2, a3) -> Option.iter (fun y -> lits_ty k y) a0; lits_term k a1; lits_term k a2; lits_term k a3
+    | Term.Field (a0, a1, a2) -> lits_field_read_mode k a0; lits_term k a1; ()
+    | Term.RecordSet (a0, a1, a2) -> lits_term k a0; (); lits_term k a2
+    | Term.TupleAt (a0, a1) -> lits_term k a0; ()
+    | Term.Fold (a0, a1, a2, a3) -> Option.iter (fun y -> lits_ty k y) a0; lits_term k a1; lits_term k a2; lits_term k a3
 
-and lits_terms (k : lit -> unit) (v : terms) : unit =
+and lits_terms (k : Lit.t -> unit) (v : Terms.t) : unit =
   match v with
-    | Terms_nil -> ()
-    | Terms_cons (a0, a1) -> lits_term k a0; lits_terms k a1
+    | Terms.Nil -> ()
+    | Terms.Cons (a0, a1) -> lits_term k a0; lits_terms k a1
 
-let rec lits_cause_term (k : lit -> unit) (v : cause_term) : unit =
+let rec lits_cause_term (k : Lit.t -> unit) (v : CauseTerm.t) : unit =
   match v with
-    | CauseTerm_fail a0 -> lits_term k a0
-    | CauseTerm_die a0 -> lits_term k a0
-    | CauseTerm_interrupt a0 -> Option.iter (fun y -> lits_term k y) a0
-    | CauseTerm_both (a0, a1) -> lits_cause_term k a0; lits_cause_term k a1
+    | CauseTerm.Fail a0 -> lits_term k a0
+    | CauseTerm.Die a0 -> lits_term k a0
+    | CauseTerm.Interrupt a0 -> Option.iter (fun y -> lits_term k y) a0
+    | CauseTerm.Both (a0, a1) -> lits_cause_term k a0; lits_cause_term k a1
 
-let rec lits_mask_mode (k : lit -> unit) (v : mask_mode) : unit =
+let rec lits_mask_mode (k : Lit.t -> unit) (v : MaskMode.t) : unit =
   match v with
-    | MaskMode_interruptible -> ()
-    | MaskMode_uninterruptible -> ()
-    | MaskMode_inherit -> ()
+    | MaskMode.Interruptible -> ()
+    | MaskMode.Uninterruptible -> ()
+    | MaskMode.Inherit -> ()
 
-let rec lits_fork_options (k : lit -> unit) (r : fork_options) : unit =
-  (); (); lits_mask_mode k r.mask_mode
+let rec lits_fork_options (k : Lit.t -> unit) (r : ForkOptions.t) : unit =
+  (); (); lits_mask_mode k r.ForkOptions.mask_mode
 
-let rec lits_observer_mode (k : lit -> unit) (v : observer_mode) : unit =
+let rec lits_observer_mode (k : Lit.t -> unit) (v : ObserverMode.t) : unit =
   match v with
-    | ObserverMode_awaitValue -> ()
-    | ObserverMode_joinEffect -> ()
+    | ObserverMode.AwaitValue -> ()
+    | ObserverMode.JoinEffect -> ()
 
-let rec lits_finalizer_strategy (k : lit -> unit) (v : finalizer_strategy) : unit =
+let rec lits_finalizer_strategy (k : Lit.t -> unit) (v : FinalizerStrategy.t) : unit =
   match v with
-    | FinalizerStrategy_sequential -> ()
-    | FinalizerStrategy_parallel -> ()
+    | FinalizerStrategy.Sequential -> ()
+    | FinalizerStrategy.Parallel -> ()
 
-let rec lits_native_op (k : lit -> unit) (v : native_op) : unit =
+let rec lits_native_op (k : Lit.t -> unit) (v : NativeOp.t) : unit =
   match v with
-    | NativeOp_refMake -> ()
-    | NativeOp_refGet -> ()
-    | NativeOp_refSet -> ()
-    | NativeOp_refGetAndSet -> ()
-    | NativeOp_refSetAndGet -> ()
-    | NativeOp_deferredIsDone -> ()
-    | NativeOp_deferredPoll -> ()
-    | NativeOp_deferredSucceed -> ()
-    | NativeOp_deferredFail -> ()
-    | NativeOp_deferredAwait -> ()
-    | NativeOp_scopeMake a0 -> lits_finalizer_strategy k a0
-    | NativeOp_sleep -> ()
-    | NativeOp_clockNow -> ()
-    | NativeOp_external a0 -> ()
-    | NativeOp_deferredMakeOf (a0, a1) -> lits_ty k a0; lits_ty k a1
-    | NativeOp_refUpdateWith a0 -> lits_term k a0
-    | NativeOp_refGetAndUpdateWith a0 -> lits_term k a0
-    | NativeOp_refUpdateAndGetWith a0 -> lits_term k a0
-    | NativeOp_refUpdateSomeWith a0 -> lits_term k a0
-    | NativeOp_refGetAndUpdateSomeWith a0 -> lits_term k a0
-    | NativeOp_refUpdateSomeAndGetWith a0 -> lits_term k a0
-    | NativeOp_refModifyWith a0 -> lits_term k a0
-    | NativeOp_refModifySomeWith a0 -> lits_term k a0
-    | NativeOp_call a0 -> ()
-    | NativeOp_param a0 -> ()
+    | NativeOp.RefMake -> ()
+    | NativeOp.RefGet -> ()
+    | NativeOp.RefSet -> ()
+    | NativeOp.RefGetAndSet -> ()
+    | NativeOp.RefSetAndGet -> ()
+    | NativeOp.DeferredIsDone -> ()
+    | NativeOp.DeferredPoll -> ()
+    | NativeOp.DeferredSucceed -> ()
+    | NativeOp.DeferredFail -> ()
+    | NativeOp.DeferredAwait -> ()
+    | NativeOp.ScopeMake a0 -> lits_finalizer_strategy k a0
+    | NativeOp.Sleep -> ()
+    | NativeOp.ClockNow -> ()
+    | NativeOp.External a0 -> ()
+    | NativeOp.DeferredMakeOf (a0, a1) -> lits_ty k a0; lits_ty k a1
+    | NativeOp.RefUpdateWith a0 -> lits_term k a0
+    | NativeOp.RefGetAndUpdateWith a0 -> lits_term k a0
+    | NativeOp.RefUpdateAndGetWith a0 -> lits_term k a0
+    | NativeOp.RefUpdateSomeWith a0 -> lits_term k a0
+    | NativeOp.RefGetAndUpdateSomeWith a0 -> lits_term k a0
+    | NativeOp.RefUpdateSomeAndGetWith a0 -> lits_term k a0
+    | NativeOp.RefModifyWith a0 -> lits_term k a0
+    | NativeOp.RefModifySomeWith a0 -> lits_term k a0
+    | NativeOp.Call a0 -> ()
+    | NativeOp.Param a0 -> ()
 
-let rec lits_decision (k : lit -> unit) (v : decision) : unit =
+let rec lits_decision (k : Lit.t -> unit) (v : Decision.t) : unit =
   match v with
-    | Decision_bool -> ()
-    | Decision_option -> ()
-    | Decision_tag a0 -> ()
-    | Decision_recordTag a0 -> ()
+    | Decision.Bool -> ()
+    | Decision.Option -> ()
+    | Decision.Tag a0 -> ()
+    | Decision.RecordTag a0 -> ()
 
-let rec lits_def_role (k : lit -> unit) (v : def_role) : unit =
+let rec lits_def_role (k : Lit.t -> unit) (v : DefRole.t) : unit =
   match v with
-    | DefRole_plain -> ()
-    | DefRole_serviceInit a0 -> ()
-    | DefRole_serviceMethod (a0, a1, a2) -> (); (); ()
+    | DefRole.Plain -> ()
+    | DefRole.ServiceInit a0 -> ()
+    | DefRole.ServiceMethod (a0, a1, a2) -> (); (); ()
 
-let rec lits_param_decl (k : lit -> unit) (r : param_decl) : unit =
-  (); lits_ty k r.request; lits_ty k r.answer; lits_ty k r.error
+let rec lits_param_decl (k : Lit.t -> unit) (r : ParamDecl.t) : unit =
+  (); lits_ty k r.ParamDecl.request; lits_ty k r.ParamDecl.answer; lits_ty k r.ParamDecl.error
 
-let rec lits_def_decl (k : lit -> unit) (r : def_decl) : unit =
-  (); lits_ty k r.request; lits_ty k r.answer; lits_ty k r.error; List.iter (fun y -> lits_service_key k y) r.requires; lits_def_role k r.role; List.iter (fun y -> lits_param_decl k y) r.params
+let rec lits_def_decl (k : Lit.t -> unit) (r : DefDecl.t) : unit =
+  (); lits_ty k r.DefDecl.request; lits_ty k r.DefDecl.answer; lits_ty k r.DefDecl.error; List.iter (fun y -> lits_service_key k y) r.DefDecl.requires; lits_def_role k r.DefDecl.role; List.iter (fun y -> lits_param_decl k y) r.DefDecl.params
 
-let rec lits_eff (k : lit -> unit) (v : native_op eff) : unit =
+let rec lits_eff (k : Lit.t -> unit) (v : NativeOp.t Eff.t) : unit =
   match v with
-    | Eff_succeed a0 -> lits_term k a0
-    | Eff_fail a0 -> lits_term k a0
-    | Eff_failCause a0 -> lits_cause_term k a0
-    | Eff_sync a0 -> lits_term k a0
-    | Eff_suspend a0 -> lits_eff k a0
-    | Eff_perform (a0, a1) -> lits_native_op k a0; lits_term k a1
-    | Eff_bind (a0, a1) -> lits_eff k a0; lits_eff k a1
-    | Eff_gen a0 -> lits_stmts k a0
-    | Eff_catchCause (a0, a1) -> lits_eff k a0; lits_eff k a1
-    | Eff_matchCause (a0, a1, a2) -> lits_eff k a0; lits_eff k a1; lits_eff k a2
-    | Eff_onExit (a0, a1) -> lits_eff k a0; lits_eff k a1
-    | Eff_exit a0 -> lits_eff k a0
-    | Eff_uninterruptible a0 -> lits_eff k a0
-    | Eff_interruptible a0 -> lits_eff k a0
-    | Eff_yieldNow a0 -> ()
-    | Eff_awaitFiber (a0, a1) -> lits_term k a0; lits_observer_mode k a1
-    | Eff_withFiber a0 -> lits_action_term k a0
-    | Eff_scoped a0 -> lits_eff k a0
-    | Eff_acquireRelease (a0, a1) -> lits_eff k a0; lits_eff k a1
-    | Eff_provideLayer (a0, a1, a2) -> lits_layer_term k a0; (); lits_eff k a2
-    | Eff_service a0 -> lits_service_key k a0
-    | Eff_provideService (a0, a1, a2) -> lits_service_key k a0; lits_term k a1; lits_eff k a2
-    | Eff_catchIf (a0, a1, a2) -> lits_term k a0; lits_eff k a1; lits_eff k a2
-    | Eff_select (a0, a1, a2, a3) -> lits_term k a0; lits_decision k a1; lits_eff k a2; lits_eff k a3
-    | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Option.iter (fun y -> lits_ty k y) a0; lits_term k a1; lits_term k a2; lits_term k a3; lits_term k a4; lits_eff k a5
-    | Eff_restore (a0, a1) -> lits_term k a0; lits_eff k a1
-    | Eff_defs (a0, a1, a2, a3) -> List.iter (fun y -> lits_def_decl k y) a0; lits_effs k a1; lits_eff k a2; lits_layer_terms k a3
-    | Eff_invoke (a0, a1, a2) -> (); lits_term k a1; lits_effs k a2
-    | Eff_provideContext (a0, a1) -> lits_term k a0; lits_eff k a1
+    | Eff.Succeed a0 -> lits_term k a0
+    | Eff.Fail a0 -> lits_term k a0
+    | Eff.FailCause a0 -> lits_cause_term k a0
+    | Eff.Sync a0 -> lits_term k a0
+    | Eff.Suspend a0 -> lits_eff k a0
+    | Eff.Perform (a0, a1) -> lits_native_op k a0; lits_term k a1
+    | Eff.Bind (a0, a1) -> lits_eff k a0; lits_eff k a1
+    | Eff.Gen a0 -> lits_stmts k a0
+    | Eff.CatchCause (a0, a1) -> lits_eff k a0; lits_eff k a1
+    | Eff.MatchCause (a0, a1, a2) -> lits_eff k a0; lits_eff k a1; lits_eff k a2
+    | Eff.OnExit (a0, a1) -> lits_eff k a0; lits_eff k a1
+    | Eff.Exit a0 -> lits_eff k a0
+    | Eff.Uninterruptible a0 -> lits_eff k a0
+    | Eff.Interruptible a0 -> lits_eff k a0
+    | Eff.YieldNow a0 -> ()
+    | Eff.AwaitFiber (a0, a1) -> lits_term k a0; lits_observer_mode k a1
+    | Eff.WithFiber a0 -> lits_action_term k a0
+    | Eff.Scoped a0 -> lits_eff k a0
+    | Eff.AcquireRelease (a0, a1) -> lits_eff k a0; lits_eff k a1
+    | Eff.ProvideLayer (a0, a1, a2) -> lits_layer_term k a0; (); lits_eff k a2
+    | Eff.Service a0 -> lits_service_key k a0
+    | Eff.ProvideService (a0, a1, a2) -> lits_service_key k a0; lits_term k a1; lits_eff k a2
+    | Eff.CatchIf (a0, a1, a2) -> lits_term k a0; lits_eff k a1; lits_eff k a2
+    | Eff.Select (a0, a1, a2, a3) -> lits_term k a0; lits_decision k a1; lits_eff k a2; lits_eff k a3
+    | Eff.Iterate (a0, a1, a2, a3, a4, a5) -> Option.iter (fun y -> lits_ty k y) a0; lits_term k a1; lits_term k a2; lits_term k a3; lits_term k a4; lits_eff k a5
+    | Eff.Restore (a0, a1) -> lits_term k a0; lits_eff k a1
+    | Eff.Defs (a0, a1, a2, a3) -> List.iter (fun y -> lits_def_decl k y) a0; lits_effs k a1; lits_eff k a2; lits_layer_terms k a3
+    | Eff.Invoke (a0, a1, a2) -> (); lits_term k a1; lits_effs k a2
+    | Eff.ProvideContext (a0, a1) -> lits_term k a0; lits_eff k a1
 
-and lits_stmt (k : lit -> unit) (v : native_op stmt) : unit =
+and lits_stmt (k : Lit.t -> unit) (v : NativeOp.t Stmt.t) : unit =
   match v with
-    | Stmt_bindYield a0 -> lits_eff k a0
-    | Stmt_yieldDiscard a0 -> lits_eff k a0
-    | Stmt_ret a0 -> lits_term k a0
-    | Stmt_ifElse (a0, a1, a2) -> lits_term k a0; lits_stmts k a1; lits_stmts k a2
-    | Stmt_whileTrue a0 -> lits_stmts k a0
-    | Stmt_breakLoop -> ()
+    | Stmt.BindYield a0 -> lits_eff k a0
+    | Stmt.YieldDiscard a0 -> lits_eff k a0
+    | Stmt.Ret a0 -> lits_term k a0
+    | Stmt.IfElse (a0, a1, a2) -> lits_term k a0; lits_stmts k a1; lits_stmts k a2
+    | Stmt.WhileTrue a0 -> lits_stmts k a0
+    | Stmt.BreakLoop -> ()
 
-and lits_stmts (k : lit -> unit) (v : native_op stmts) : unit =
+and lits_stmts (k : Lit.t -> unit) (v : NativeOp.t Stmts.t) : unit =
   match v with
-    | Stmts_nil -> ()
-    | Stmts_cons (a0, a1) -> lits_stmt k a0; lits_stmts k a1
+    | Stmts.Nil -> ()
+    | Stmts.Cons (a0, a1) -> lits_stmt k a0; lits_stmts k a1
 
-and lits_effs (k : lit -> unit) (v : native_op effs) : unit =
+and lits_effs (k : Lit.t -> unit) (v : NativeOp.t Effs.t) : unit =
   match v with
-    | Effs_nil -> ()
-    | Effs_cons (a0, a1) -> lits_eff k a0; lits_effs k a1
+    | Effs.Nil -> ()
+    | Effs.Cons (a0, a1) -> lits_eff k a0; lits_effs k a1
 
-and lits_action_term (k : lit -> unit) (v : native_op action_term) : unit =
+and lits_action_term (k : Lit.t -> unit) (v : NativeOp.t ActionTerm.t) : unit =
   match v with
-    | ActionTerm_fork (a0, a1) -> lits_eff k a0; lits_fork_options k a1
-    | ActionTerm_forkIn (a0, a1, a2) -> lits_eff k a0; lits_fork_options k a1; lits_term k a2
-    | ActionTerm_forkScoped (a0, a1) -> lits_eff k a0; lits_fork_options k a1
-    | ActionTerm_runIn (a0, a1) -> lits_term k a0; lits_term k a1
-    | ActionTerm_interrupt a0 -> lits_term k a0
-    | ActionTerm_interruptScoped a0 -> lits_term k a0
-    | ActionTerm_interruptAll (a0, a1) -> lits_term k a0; Option.iter (fun y -> lits_term k y) a1
-    | ActionTerm_awaitAll a0 -> lits_term k a0
-    | ActionTerm_awaitAllFailFast a0 -> lits_term k a0
-    | ActionTerm_snapshotChildren -> ()
-    | ActionTerm_awaitNewChildren a0 -> lits_term k a0
-    | ActionTerm_raceAll a0 -> lits_effs k a0
-    | ActionTerm_getId -> ()
-    | ActionTerm_closeScope (a0, a1) -> lits_term k a0; lits_term k a1
-    | ActionTerm_getInterruptible -> ()
-    | ActionTerm_raceAllFirst a0 -> lits_effs k a0
-    | ActionTerm_context a0 -> ()
+    | ActionTerm.Fork (a0, a1) -> lits_eff k a0; lits_fork_options k a1
+    | ActionTerm.ForkIn (a0, a1, a2) -> lits_eff k a0; lits_fork_options k a1; lits_term k a2
+    | ActionTerm.ForkScoped (a0, a1) -> lits_eff k a0; lits_fork_options k a1
+    | ActionTerm.RunIn (a0, a1) -> lits_term k a0; lits_term k a1
+    | ActionTerm.Interrupt a0 -> lits_term k a0
+    | ActionTerm.InterruptScoped a0 -> lits_term k a0
+    | ActionTerm.InterruptAll (a0, a1) -> lits_term k a0; Option.iter (fun y -> lits_term k y) a1
+    | ActionTerm.AwaitAll a0 -> lits_term k a0
+    | ActionTerm.AwaitAllFailFast a0 -> lits_term k a0
+    | ActionTerm.SnapshotChildren -> ()
+    | ActionTerm.AwaitNewChildren a0 -> lits_term k a0
+    | ActionTerm.RaceAll a0 -> lits_effs k a0
+    | ActionTerm.GetId -> ()
+    | ActionTerm.CloseScope (a0, a1) -> lits_term k a0; lits_term k a1
+    | ActionTerm.GetInterruptible -> ()
+    | ActionTerm.RaceAllFirst a0 -> lits_effs k a0
+    | ActionTerm.Context a0 -> ()
 
-and lits_layer_term (k : lit -> unit) (v : native_op layer_term) : unit =
+and lits_layer_term (k : Lit.t -> unit) (v : NativeOp.t LayerTerm.t) : unit =
   match v with
-    | LayerTerm_succeed (a0, a1) -> lits_service_key k a0; k a1
-    | LayerTerm_effect (a0, a1) -> lits_service_key k a0; lits_eff k a1
-    | LayerTerm_effectDiscard a0 -> lits_eff k a0
-    | LayerTerm_provide (a0, a1) -> lits_layer_term k a0; lits_layer_term k a1
-    | LayerTerm_provideMerge (a0, a1) -> lits_layer_term k a0; lits_layer_term k a1
-    | LayerTerm_merge (a0, a1) -> lits_layer_term k a0; lits_layer_term k a1
-    | LayerTerm_fresh a0 -> lits_layer_term k a0
-    | LayerTerm_orDie a0 -> lits_layer_term k a0
-    | LayerTerm_ref a0 -> List.iter (fun y -> ()) a0
-    | LayerTerm_mergeAll a0 -> lits_layer_terms k a0
+    | LayerTerm.Succeed (a0, a1) -> lits_service_key k a0; k a1
+    | LayerTerm.Effect (a0, a1) -> lits_service_key k a0; lits_eff k a1
+    | LayerTerm.EffectDiscard a0 -> lits_eff k a0
+    | LayerTerm.Provide (a0, a1) -> lits_layer_term k a0; lits_layer_term k a1
+    | LayerTerm.ProvideMerge (a0, a1) -> lits_layer_term k a0; lits_layer_term k a1
+    | LayerTerm.Merge (a0, a1) -> lits_layer_term k a0; lits_layer_term k a1
+    | LayerTerm.Fresh a0 -> lits_layer_term k a0
+    | LayerTerm.OrDie a0 -> lits_layer_term k a0
+    | LayerTerm.Ref a0 -> List.iter (fun y -> ()) a0
+    | LayerTerm.MergeAll a0 -> lits_layer_terms k a0
 
-and lits_layer_terms (k : lit -> unit) (v : native_op layer_terms) : unit =
+and lits_layer_terms (k : Lit.t -> unit) (v : NativeOp.t LayerTerms.t) : unit =
   match v with
-    | LayerTerms_nil -> ()
-    | LayerTerms_cons (a0, a1) -> lits_layer_term k a0; lits_layer_terms k a1
+    | LayerTerms.Nil -> ()
+    | LayerTerms.Cons (a0, a1) -> lits_layer_term k a0; lits_layer_terms k a1
 
-let rec lits_row_kind (k : lit -> unit) (v : row_kind) : unit =
+let rec lits_row_kind (k : Lit.t -> unit) (v : RowKind.t) : unit =
   match v with
-    | RowKind_sync -> ()
-    | RowKind_async -> ()
-    | RowKind_program -> ()
+    | RowKind.Sync -> ()
+    | RowKind.Async -> ()
+    | RowKind.Program -> ()
 
-let rec lits_row_shape (k : lit -> unit) (v : row_shape) : unit =
+let rec lits_row_shape (k : Lit.t -> unit) (v : RowShape.t) : unit =
   match v with
-    | RowShape_call -> ()
-    | RowShape_value -> ()
-    | RowShape_tupleCall -> ()
-    | RowShape_method -> ()
+    | RowShape.Call -> ()
+    | RowShape.Value -> ()
+    | RowShape.TupleCall -> ()
+    | RowShape.Method -> ()
 
-let rec lits_registration (k : lit -> unit) (v : registration) : unit =
+let rec lits_registration (k : Lit.t -> unit) (v : Registration.t) : unit =
   match v with
-    | Registration_deferred -> ()
-    | Registration_external -> ()
+    | Registration.Deferred -> ()
+    | Registration.External -> ()
 
-let rec lits_row_arg (k : lit -> unit) (v : row_arg) : unit =
+let rec lits_row_arg (k : Lit.t -> unit) (v : RowArg.t) : unit =
   match v with
-    | RowArg_name a0 -> ()
-    | RowArg_str a0 -> ()
+    | RowArg.Name a0 -> ()
+    | RowArg.Str a0 -> ()
 
-let rec lits_row (k : lit -> unit) (r : row) : unit =
-  (); (); lits_row_shape k r.shape; List.iter (fun y -> lits_row_arg k y) r.trailing; lits_row_kind k r.kind; lits_ty k r.request; lits_ty k r.answer; lits_ty k r.error; List.iter (fun y -> lits_service_key k y) r.requires; (); List.iter (fun y -> ()) r.type_args; lits_registration k r.registration
+let rec lits_row (k : Lit.t -> unit) (r : Row.t) : unit =
+  (); (); lits_row_shape k r.Row.shape; List.iter (fun y -> lits_row_arg k y) r.Row.trailing; lits_row_kind k r.Row.kind; lits_ty k r.Row.request; lits_ty k r.Row.answer; lits_ty k r.Row.error; List.iter (fun y -> lits_service_key k y) r.Row.requires; (); List.iter (fun y -> ()) r.Row.type_args; lits_registration k r.Row.registration
 
-let rec lits_eff_ty (k : lit -> unit) (r : eff_ty) : unit =
-  lits_ty k r.answer; lits_ty k r.error; ()
+let rec lits_eff_ty (k : Lit.t -> unit) (r : EffTy.t) : unit =
+  lits_ty k r.EffTy.answer; lits_ty k r.EffTy.error; ()
 

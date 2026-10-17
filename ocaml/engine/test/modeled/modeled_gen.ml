@@ -9,7 +9,7 @@ open Eff_types
 
 
 
-type 'a image = { to_val : 'a -> val_; of_val : val_ -> 'a option }
+type 'a image = { to_val : 'a -> Val.t; of_val : Val.t -> 'a option }
 and status = Status_pending | Status_closed of string
 and todo = { id : int; title : string; done_ : bool }
 and color = Color_red | Color_green | Color_blue
@@ -22,23 +22,23 @@ and item = {
   todo : todo;
   color : color;
 }
-and 'r columns = { names : string list; to_vals : 'r -> val_ list; of_vals : val_ list -> 'r option }
+and 'r columns = { names : string list; to_vals : 'r -> Val.t list; of_vals : Val.t list -> 'r option }
 and ('a, 'b) sum = Sum_inl of 'a | Sum_inr of 'b
 
 
 
 (* LCNF mono: Effect4.Store.Image.lit._lam_0 (s : String) (x.1 : PUnit) : Effect4.Store.Val *)
 
-let store_image_lit__lam_0 (s : string) (x_1 : unit) : val_ =
-  Val_str s
+let store_image_lit__lam_0 (s : string) (x_1 : unit) : Val.t =
+  Val.Str s
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofLit (s : String) (x.1 : Effect4.Store.Val) : Option PUnit *)
 
-let store_image_of_lit (s : string) (x_1 : val_) : unit option =
-  match (x_1 : val_) with
-    | Val_str s_2 -> (let _x_3 = s_2 = s in
+let store_image_of_lit (s : string) (x_1 : Val.t) : unit option =
+  match (x_1 : Val.t) with
+    | Val.Str s_2 -> (let _x_3 = s_2 = s in
       if _x_3 then (let _x_5 = () in
         Some _x_5) else None)
     | _ -> None
@@ -56,7 +56,7 @@ let store_image_lit (s : string) : unit image =
 
 (* LCNF mono: Effect4.Store.Image.unionVal._redArg (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (x.1 : Sum lcAny lcAny) : Effect4.Store.Val *)
 
-let store_image_union_val (i : _ image) (j : _ image) (x_1 : (_, _) sum) : val_ =
+let store_image_union_val (i : _ image) (j : _ image) (x_1 : (_, _) sum) : Val.t =
   match (x_1 : (_, _) sum) with
     | Sum_inl val__2 -> (match (i : _ image) with
         | { to_val = to_val; _ } -> to_val val__2)
@@ -67,14 +67,14 @@ let store_image_union_val (i : _ image) (j : _ image) (x_1 : (_, _) sum) : val_ 
 
 (* LCNF mono: Effect4.Store.Image.union._redArg._lam_0 (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (s : Sum lcAny lcAny) : Effect4.Store.Val *)
 
-let store_image_union__red_arg__lam_0 (i : _ image) (j : _ image) (s : (_, _) sum) : val_ =
+let store_image_union__red_arg__lam_0 (i : _ image) (j : _ image) (s : (_, _) sum) : Val.t =
   store_image_union_val i j s
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofUnionSum._redArg (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (v : Effect4.Store.Val) : Option (Sum lcAny lcAny) *)
 
-let store_image_of_union_sum (i : _ image) (j : _ image) (v : val_) : (_, _) sum option =
+let store_image_of_union_sum (i : _ image) (j : _ image) (v : Val.t) : (_, _) sum option =
   match (i : _ image) with
     | { of_val = of_val; _ } -> (let _x_1 = of_val v in
       match _x_1 with
@@ -116,7 +116,7 @@ let store_image_unambiguous (i : _ image) (j : _ image) (x_1 : (_, _) sum) : boo
 
 (* LCNF mono: Effect4.Store.Image.union._redArg._lam_1 (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (v : Effect4.Store.Val) : Option (Sum lcAny lcAny) *)
 
-let store_image_union__red_arg__lam_1 (i : _ image) (j : _ image) (v : val_) : (_, _) sum option =
+let store_image_union__red_arg__lam_1 (i : _ image) (j : _ image) (v : Val.t) : (_, _) sum option =
   let _x_1 = store_image_of_union_sum i j v in
   match _x_1 with
     | None -> None
@@ -150,16 +150,16 @@ let test_codegen_modeled_lane_color_modeled_staged : (unit, (unit, unit) sum) su
 
 (* LCNF mono: Effect4.Store.Image.string._lam_0 (s : String) : Effect4.Store.Val *)
 
-let store_image_string__lam_0 (s : string) : val_ =
-  Val_str s
+let store_image_string__lam_0 (s : string) : Val.t =
+  Val.Str s
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofString (x.1 : Effect4.Store.Val) : Option String *)
 
-let store_image_of_string (x_1 : val_) : string option =
-  match (x_1 : val_) with
-    | Val_str s_2 -> Some s_2
+let store_image_of_string (x_1 : Val.t) : string option =
+  match (x_1 : Val.t) with
+    | Val.Str s_2 -> Some s_2
     | _ -> None
 
 
@@ -175,22 +175,22 @@ let store_image_string : string image =
 
 (* LCNF mono: Effect4.Store.Image.toOption._redArg (I : Effect4.Store.Image lcAny) (x.1 : Option lcAny) : Effect4.Store.Val *)
 
-let store_image_to_option (i : _ image) (x_1 : _ option) : val_ =
+let store_image_to_option (i : _ image) (x_1 : _ option) : Val.t =
   match x_1 with
-    | None -> Val_none
+    | None -> Val.None
     | Some val__3 -> (match (i : _ image) with
         | { to_val = to_val; _ } -> (let _x_4 = to_val val__3 in
-          Val_some _x_4))
+          Val.Some _x_4))
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofOption._redArg (I : Effect4.Store.Image lcAny) (x.1 : Effect4.Store.Val) : Option (Option lcAny) *)
 
-let store_image_of_option (i : _ image) (x_1 : val_) : _ option option =
-  match (x_1 : val_) with
-    | Val_none -> (let _x_2 = None in
+let store_image_of_option (i : _ image) (x_1 : Val.t) : _ option option =
+  match (x_1 : Val.t) with
+    | Val.None -> (let _x_2 = None in
       Some _x_2)
-    | Val_some a_4 -> (match (i : _ image) with
+    | Val.Some a_4 -> (match (i : _ image) with
         | { of_val = of_val; _ } -> (let _x_5 = of_val a_4 in
           match _x_5 with
             | None -> None
@@ -210,25 +210,25 @@ let store_image_option (i : _ image) : _ option image =
 
 (* LCNF mono: Effect4.Store.Image.toInt (x.1 : Int) : Effect4.Store.Val *)
 
-let store_image_to_int (x_1 : int) : val_ =
+let store_image_to_int (x_1 : int) : Val.t =
   let nat_zero = 0 in
   let int_zero = nat_zero in
   let is_neg = x_1 < int_zero in
   if is_neg then (let abs = if x_1 < 0 then 0 - x_1 else x_1 in
     let one = 1 in
     let a_4 = max 0 (abs - one) in
-    Val_negInt a_4) else (let a_2 = if x_1 < 0 then 0 - x_1 else x_1 in
-    Val_nat a_2)
+    Val.NegInt a_4) else (let a_2 = if x_1 < 0 then 0 - x_1 else x_1 in
+    Val.Nat a_2)
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofInt (x.1 : Effect4.Store.Val) : Option Int *)
 
-let store_image_of_int (x_1 : val_) : int option =
-  match (x_1 : val_) with
-    | Val_nat n_2 -> (let _x_3 = n_2 in
+let store_image_of_int (x_1 : Val.t) : int option =
+  match (x_1 : Val.t) with
+    | Val.Nat n_2 -> (let _x_3 = n_2 in
       Some _x_3)
-    | Val_negInt n_5 -> (let _x_6 = 0 - n_5 - 1 in
+    | Val.NegInt n_5 -> (let _x_6 = 0 - n_5 - 1 in
       Some _x_6)
     | _ -> None
 
@@ -245,14 +245,14 @@ let store_image_int : int image =
 
 (* LCNF mono: Effect4.Store.Columns.nil._lam_0 (x.1 : PUnit) : List Effect4.Store.Val *)
 
-let store_columns_nil__lam_0 (x_1 : unit) : val_ list =
+let store_columns_nil__lam_0 (x_1 : unit) : Val.t list =
   []
 
 
 
 (* LCNF mono: Effect4.Store.Columns.nil._lam_1 (x.1 : List Effect4.Store.Val) : Option PUnit *)
 
-let store_columns_nil__lam_1 (x_1 : val_ list) : unit option =
+let store_columns_nil__lam_1 (x_1 : Val.t list) : unit option =
   match x_1 with
     | [] -> (let _x_2 = () in
       Some _x_2)
@@ -272,7 +272,7 @@ let store_columns_nil : unit columns =
 
 (* LCNF mono: Effect4.Store.Columns.cons._redArg._lam_0 (I : Effect4.Store.Image lcAny) (toVals : lcAny -> (List Effect4.Store.Val)) (x : Prod lcAny lcAny) : List Effect4.Store.Val *)
 
-let store_columns_cons__red_arg__lam_0 (i : _ image) (to_vals : _ -> val_ list) (x : _ * _) : val_ list =
+let store_columns_cons__red_arg__lam_0 (i : _ image) (to_vals : _ -> Val.t list) (x : _ * _) : Val.t list =
   match (i : _ image) with
     | { to_val = to_val; _ } -> (match x with
         | fst_1, snd_1 -> (let _x_1 = to_val fst_1 in
@@ -283,7 +283,7 @@ let store_columns_cons__red_arg__lam_0 (i : _ image) (to_vals : _ -> val_ list) 
 
 (* LCNF mono: Effect4.Store.Columns.cons._redArg._lam_1 (I : Effect4.Store.Image lcAny) (ofVals : (List Effect4.Store.Val) -> (Option lcAny)) (x.1 : List Effect4.Store.Val) : Option (Prod lcAny lcAny) *)
 
-let store_columns_cons__red_arg__lam_1 (i : _ image) (of_vals : val_ list -> _ option) (x_1 : val_ list) : (_ * _) option =
+let store_columns_cons__red_arg__lam_1 (i : _ image) (of_vals : Val.t list -> _ option) (x_1 : Val.t list) : (_ * _) option =
   match x_1 with
     | [] -> None
     | head_3 :: tail_4 -> (match (i : _ image) with
@@ -311,10 +311,10 @@ let store_columns_cons (n : string) (i : _ image) (r : _ columns) : (_ * _) colu
 
 (* LCNF mono: List.mapTR.loop._at_.Effect4.Store.Image.record.spec_0 (a.1 : List String) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_image_record_spec_0 (a_1 : string list) (a_2 : val_ list) : val_ list =
+let rec list_map_tr_loop_at_store_image_record_spec_0 (a_1 : string list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = Val_str head_4 in
+    | head_4 :: tail_5 -> (let _x_6 = Val.Str head_4 in
       let _x_7 = _x_6 :: a_2 in
       list_map_tr_loop_at_store_image_record_spec_0 tail_5 _x_7)
 
@@ -322,17 +322,17 @@ let rec list_map_tr_loop_at_store_image_record_spec_0 (a_1 : string list) (a_2 :
 
 (* LCNF mono: Effect4.Store.Image.record._redArg._lam_0 (R : Effect4.Store.Columns lcAny) (r : lcAny) : Effect4.Store.Val *)
 
-let store_image_record__red_arg__lam_0 (r : _ columns) r_1 : val_ =
+let store_image_record__red_arg__lam_0 (r : _ columns) r_1 : Val.t =
   match (r : _ columns) with
     | { names = names; to_vals = to_vals; _ } -> (let _x_1 = 0 in
       let _x_2 = [] in
       let _x_3 = list_map_tr_loop_at_store_image_record_spec_0 names _x_2 in
-      let _x_4 = Val_list _x_3 in
+      let _x_4 = Val.List _x_3 in
       let _x_5 = to_vals r_1 in
-      let _x_6 = Val_list _x_5 in
+      let _x_6 = Val.List _x_5 in
       let _x_7 = _x_6 :: _x_2 in
       let _x_8 = _x_4 :: _x_7 in
-      Val_ctor (_x_1, _x_8))
+      Val.Ctor (_x_1, _x_8))
 
 
 
@@ -370,58 +370,58 @@ let inst_decidable_eq_list (inst_1 : _ -> _ -> bool) (xs : _ list) (ys : _ list)
 (* LCNF mono: Effect4.Store.Val.beq (x.1 : Effect4.Store.Val) (x.2 : Effect4.Store.Val) : Bool
    Effect4.Store.Val.beqList (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Store.Val) : Bool *)
 
-let rec store_val__beq (x_1 : val_) (x_2 : val_) : bool =
-  match (x_1 : val_) with
-    | Val_unit -> (match (x_2 : val_) with
-        | Val_unit -> true
+let rec store_val__beq (x_1 : Val.t) (x_2 : Val.t) : bool =
+  match (x_1 : Val.t) with
+    | Val.Unit -> (match (x_2 : Val.t) with
+        | Val.Unit -> true
         | _ -> false)
-    | Val_bool b_5 -> (match (x_2 : val_) with
-        | Val_bool b_6 -> if b_5 then b_6 else if b_6 then b_5 else true
+    | Val.Bool b_5 -> (match (x_2 : Val.t) with
+        | Val.Bool b_6 -> if b_5 then b_6 else if b_6 then b_5 else true
         | _ -> false)
-    | Val_nat n_9 -> (match (x_2 : val_) with
-        | Val_nat n_10 -> n_9 = n_10
+    | Val.Nat n_9 -> (match (x_2 : Val.t) with
+        | Val.Nat n_10 -> n_9 = n_10
         | _ -> false)
-    | Val_str s_13 -> (match (x_2 : val_) with
-        | Val_str s_14 -> s_13 = s_14
+    | Val.Str s_13 -> (match (x_2 : Val.t) with
+        | Val.Str s_14 -> s_13 = s_14
         | _ -> false)
-    | Val_bytes bs_17 -> (match (x_2 : val_) with
-        | Val_bytes bs_18 -> (let _x_19 = fun _b1 _b2 -> _b1 = _b2 in
+    | Val.Bytes bs_17 -> (match (x_2 : Val.t) with
+        | Val.Bytes bs_18 -> (let _x_19 = fun _b1 _b2 -> _b1 = _b2 in
           inst_decidable_eq_list _x_19 bs_17 bs_18)
         | _ -> false)
-    | Val_list xs_22 -> (match (x_2 : val_) with
-        | Val_list xs_23 -> store_val__beq_list xs_22 xs_23
+    | Val.List xs_22 -> (match (x_2 : Val.t) with
+        | Val.List xs_23 -> store_val__beq_list xs_22 xs_23
         | _ -> false)
-    | Val_pair (a_26, b_27) -> (match (x_2 : val_) with
-        | Val_pair (a_28, b_29) -> (let _x_30 = store_val__beq a_26 a_28 in
+    | Val.Pair (a_26, b_27) -> (match (x_2 : Val.t) with
+        | Val.Pair (a_28, b_29) -> (let _x_30 = store_val__beq a_26 a_28 in
           if _x_30 then store_val__beq b_27 b_29 else _x_30)
         | _ -> false)
-    | Val_none -> (match (x_2 : val_) with
-        | Val_none -> true
+    | Val.None -> (match (x_2 : Val.t) with
+        | Val.None -> true
         | _ -> false)
-    | Val_some a_35 -> (match (x_2 : val_) with
-        | Val_some a_36 -> store_val__beq a_35 a_36
+    | Val.Some a_35 -> (match (x_2 : Val.t) with
+        | Val.Some a_36 -> store_val__beq a_35 a_36
         | _ -> false)
-    | Val_ctor (index_39, args_40) -> (match (x_2 : val_) with
-        | Val_ctor (index_41, args_42) -> (let _x_43 = index_39 = index_41 in
+    | Val.Ctor (index_39, args_40) -> (match (x_2 : Val.t) with
+        | Val.Ctor (index_41, args_42) -> (let _x_43 = index_39 = index_41 in
           if _x_43 then store_val__beq_list args_40 args_42 else _x_43)
         | _ -> false)
-    | Val_ref (kind_46, digest_47) -> (match (x_2 : val_) with
-        | Val_ref (kind_48, digest_49) -> (let _x_50 = kind_46 = kind_48 in
+    | Val.Ref (kind_46, digest_47) -> (match (x_2 : Val.t) with
+        | Val.Ref (kind_48, digest_49) -> (let _x_50 = kind_46 = kind_48 in
           if _x_50 then (let _x_51 = fun _b1 _b2 -> _b1 = _b2 in
             inst_decidable_eq_list _x_51 digest_47 digest_49) else _x_50)
         | _ -> false)
-    | Val_handle (kind_54, key_55) -> (match (x_2 : val_) with
-        | Val_handle (kind_56, key_57) -> (let _x_58 = kind_54 = kind_56 in
+    | Val.Handle (kind_54, key_55) -> (match (x_2 : Val.t) with
+        | Val.Handle (kind_56, key_57) -> (let _x_58 = kind_54 = kind_56 in
           if _x_58 then key_55 = key_57 else _x_58)
         | _ -> false)
-    | Val_negInt n_61 -> (match (x_2 : val_) with
-        | Val_negInt n_62 -> n_61 = n_62
+    | Val.NegInt n_61 -> (match (x_2 : Val.t) with
+        | Val.NegInt n_62 -> n_61 = n_62
         | _ -> false)
-    | Val_float bits_65 -> (match (x_2 : val_) with
-        | Val_float bits_66 -> bits_65 = bits_66
+    | Val.Float bits_65 -> (match (x_2 : Val.t) with
+        | Val.Float bits_66 -> bits_65 = bits_66
         | _ -> false)
 
-and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
+and store_val__beq_list (x_1 : Val.t list) (x_2 : Val.t list) : bool =
   match x_1 with
     | [] -> (match x_2 with
         | [] -> true
@@ -435,22 +435,22 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
 
 (* LCNF mono: Effect4.Store.Val.instDecidableEq (a : Effect4.Store.Val) (b : Effect4.Store.Val) : Bool *)
 
-let store_val__inst_decidable_eq (a : val_) (b : val_) : bool =
+let store_val__inst_decidable_eq (a : Val.t) (b : Val.t) : bool =
   store_val__beq a b
 
 
 
 (* LCNF mono: Effect4.Store.Image.record._redArg._lam_1 (R : Effect4.Store.Columns lcAny) (v : Effect4.Store.Val) : Option lcAny *)
 
-let store_image_record__red_arg__lam_1 (r : _ columns) (v : val_) : _ option =
-  match (v : val_) with
-    | Val_ctor (index_1, args_2) -> (let _x_3 = 0 in
+let store_image_record__red_arg__lam_1 (r : _ columns) (v : Val.t) : _ option =
+  match (v : Val.t) with
+    | Val.Ctor (index_1, args_2) -> (let _x_3 = 0 in
       let _x_4 = index_1 = _x_3 in
       if _x_4 then (match args_2 with
-          | head_6 :: tail_7 -> (match (head_6 : val_) with
-              | Val_list xs_8 -> (match tail_7 with
-                  | head_9 :: tail_10 -> (match (head_9 : val_) with
-                      | Val_list xs_11 -> (match tail_10 with
+          | head_6 :: tail_7 -> (match (head_6 : Val.t) with
+              | Val.List xs_8 -> (match tail_7 with
+                  | head_9 :: tail_10 -> (match (head_9 : Val.t) with
+                      | Val.List xs_11 -> (match tail_10 with
                           | [] -> (match (r : _ columns) with
                               | { names = names; of_vals = of_vals; _ } -> (let _x_12 = store_val__inst_decidable_eq in
                                 let _x_13 = list_map_tr_loop_at_store_image_record_spec_0 names tail_10 in
@@ -496,7 +496,7 @@ let test_codegen_modeled_lane_status_modeled_staged : (unit * unit, unit * (stri
 
 (* LCNF mono: List.mapTR.loop._at_.Effect4.Store.Image.toList.spec_0._redArg (_x.1 : lcAny -> Effect4.Store.Val) (a.2 : List lcAny) (a.3 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_image_to_list_spec_0 (_x_1 : _ -> val_) (a_2 : _ list) (a_3 : val_ list) : val_ list =
+let rec list_map_tr_loop_at_store_image_to_list_spec_0 (_x_1 : _ -> Val.t) (a_2 : _ list) (a_3 : Val.t list) : Val.t list =
   match a_2 with
     | [] -> List.rev a_3
     | head_5 :: tail_6 -> (let _x_7 = _x_1 head_5 in
@@ -507,17 +507,17 @@ let rec list_map_tr_loop_at_store_image_to_list_spec_0 (_x_1 : _ -> val_) (a_2 :
 
 (* LCNF mono: Effect4.Store.Image.toList._redArg (I : Effect4.Store.Image lcAny) (xs : List lcAny) : Effect4.Store.Val *)
 
-let store_image_to_list (i : _ image) (xs : _ list) : val_ =
+let store_image_to_list (i : _ image) (xs : _ list) : Val.t =
   match (i : _ image) with
     | { to_val = to_val; _ } -> (let _x_1 = [] in
       let _x_2 = list_map_tr_loop_at_store_image_to_list_spec_0 to_val xs _x_1 in
-      Val_list _x_2)
+      Val.List _x_2)
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofListAux._redArg (I : Effect4.Store.Image lcAny) (x.1 : List Effect4.Store.Val) : Option (List lcAny) *)
 
-let rec store_image_of_list_aux (i : _ image) (x_1 : val_ list) : _ list option =
+let rec store_image_of_list_aux (i : _ image) (x_1 : Val.t list) : _ list option =
   match x_1 with
     | [] -> (let _x_2 = [] in
       Some _x_2)
@@ -535,9 +535,9 @@ let rec store_image_of_list_aux (i : _ image) (x_1 : val_ list) : _ list option 
 
 (* LCNF mono: Effect4.Store.Image.ofList._redArg (I : Effect4.Store.Image lcAny) (x.1 : Effect4.Store.Val) : Option (List lcAny) *)
 
-let store_image_of_list (i : _ image) (x_1 : val_) : _ list option =
-  match (x_1 : val_) with
-    | Val_list xs_2 -> store_image_of_list_aux i xs_2
+let store_image_of_list (i : _ image) (x_1 : Val.t) : _ list option =
+  match (x_1 : Val.t) with
+    | Val.List xs_2 -> store_image_of_list_aux i xs_2
     | _ -> None
 
 
@@ -553,16 +553,16 @@ let store_image_list (i : _ image) : _ list image =
 
 (* LCNF mono: Effect4.Store.Image.bool._lam_0 (b : Bool) : Effect4.Store.Val *)
 
-let store_image_bool__lam_0 (b : bool) : val_ =
-  Val_bool b
+let store_image_bool__lam_0 (b : bool) : Val.t =
+  Val.Bool b
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofBool (x.1 : Effect4.Store.Val) : Option Bool *)
 
-let store_image_of_bool (x_1 : val_) : bool option =
-  match (x_1 : val_) with
-    | Val_bool b_2 -> Some b_2
+let store_image_of_bool (x_1 : Val.t) : bool option =
+  match (x_1 : Val.t) with
+    | Val.Bool b_2 -> Some b_2
     | _ -> None
 
 
@@ -578,16 +578,16 @@ let store_image_bool : bool image =
 
 (* LCNF mono: Effect4.Store.Image.nat._lam_0 (n : Nat) : Effect4.Store.Val *)
 
-let store_image_nat__lam_0 (n : int) : val_ =
-  Val_nat n
+let store_image_nat__lam_0 (n : int) : Val.t =
+  Val.Nat n
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofNat (x.1 : Effect4.Store.Val) : Option Nat *)
 
-let store_image_of_nat (x_1 : val_) : int option =
-  match (x_1 : val_) with
-    | Val_nat n_2 -> Some n_2
+let store_image_of_nat (x_1 : Val.t) : int option =
+  match (x_1 : Val.t) with
+    | Val.Nat n_2 -> Some n_2
     | _ -> None
 
 
@@ -785,7 +785,7 @@ let test_codegen_modeled_lane_item_modeled_to_c (s : item) : (unit, (unit, unit)
 
 (* LCNF mono: Effect4.Store.Image.equiv._redArg._lam_0 (I : Effect4.Store.Image lcAny) (g : lcAny -> lcAny) (b : lcAny) : Effect4.Store.Val *)
 
-let store_image_equiv__red_arg__lam_0 (i : _ image) (g : _ -> _) b : val_ =
+let store_image_equiv__red_arg__lam_0 (i : _ image) (g : _ -> _) b : Val.t =
   match (i : _ image) with
     | { to_val = to_val; _ } -> (let _x_1 = g b in
       to_val _x_1)
@@ -794,7 +794,7 @@ let store_image_equiv__red_arg__lam_0 (i : _ image) (g : _ -> _) b : val_ =
 
 (* LCNF mono: Effect4.Store.Image.equiv._redArg._lam_1 (I : Effect4.Store.Image lcAny) (f : lcAny -> lcAny) (v : Effect4.Store.Val) : Option lcAny *)
 
-let store_image_equiv__red_arg__lam_1 (i : _ image) (f : _ -> _) (v : val_) : _ option =
+let store_image_equiv__red_arg__lam_1 (i : _ image) (f : _ -> _) (v : Val.t) : _ option =
   match (i : _ image) with
     | { of_val = of_val; _ } -> (let _x_1 = of_val v in
       match _x_1 with
@@ -825,7 +825,7 @@ let schema_modeled_image_at_test_codegen_modeled_lane_encode_item_spec_0 : item 
 
 (* LCNF mono: Test.Codegen.ModeledLane.encodeItem (i : Test.Codegen.ModeledLane.Item) : Effect4.Store.Val *)
 
-let test_codegen_modeled_lane_encode_item (i : item) : val_ =
+let test_codegen_modeled_lane_encode_item (i : item) : Val.t =
   let _x_1 = schema_modeled_image_at_test_codegen_modeled_lane_encode_item_spec_0 in
   match (_x_1 : _ image) with
     | { to_val = to_val; _ } -> to_val i
@@ -834,7 +834,7 @@ let test_codegen_modeled_lane_encode_item (i : item) : val_ =
 
 (* LCNF mono: Test.Codegen.ModeledLane.decodeItem (v : Effect4.Store.Val) : Option Test.Codegen.ModeledLane.Item *)
 
-let test_codegen_modeled_lane_decode_item (v : val_) : item option =
+let test_codegen_modeled_lane_decode_item (v : Val.t) : item option =
   let _x_1 = schema_modeled_image_at_test_codegen_modeled_lane_encode_item_spec_0 in
   match (_x_1 : _ image) with
     | { of_val = of_val; _ } -> of_val v
@@ -843,7 +843,7 @@ let test_codegen_modeled_lane_decode_item (v : val_) : item option =
 
 (* LCNF mono: Test.Codegen.ModeledLane.roundTrip (v : Effect4.Store.Val) : Option Effect4.Store.Val *)
 
-let test_codegen_modeled_lane_round_trip (v : val_) : val_ option =
+let test_codegen_modeled_lane_round_trip (v : Val.t) : Val.t option =
   let _x_1 = test_codegen_modeled_lane_decode_item v in
   match _x_1 with
     | None -> None
@@ -913,7 +913,7 @@ let test_codegen_modeled_lane_samples : item list =
 
 (* LCNF mono: List.mapTR.loop._at_.Test.Codegen.ModeledLane.sampleVals.spec_0 (a.1 : List Test.Codegen.ModeledLane.Item) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_test_codegen_modeled_lane_sample_vals_spec_0 (a_1 : item list) (a_2 : val_ list) : val_ list =
+let rec list_map_tr_loop_at_test_codegen_modeled_lane_sample_vals_spec_0 (a_1 : item list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = test_codegen_modeled_lane_encode_item head_4 in
@@ -924,7 +924,7 @@ let rec list_map_tr_loop_at_test_codegen_modeled_lane_sample_vals_spec_0 (a_1 : 
 
 (* LCNF mono: Test.Codegen.ModeledLane.sampleVals : List Effect4.Store.Val *)
 
-let test_codegen_modeled_lane_sample_vals : val_ list =
+let test_codegen_modeled_lane_sample_vals : Val.t list =
   let _x_1 = test_codegen_modeled_lane_samples in
   let _x_2 = [] in
   list_map_tr_loop_at_test_codegen_modeled_lane_sample_vals_spec_0 _x_1 _x_2

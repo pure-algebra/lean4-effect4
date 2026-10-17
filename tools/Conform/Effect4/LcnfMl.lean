@@ -17,7 +17,8 @@ that ran this reader on 20,387 vectors went on 2026-10-15: no gate ran it
 (`git:fef45fb5a:tools/Conform/Effect4/LcnfMl.lean`, decisions row 391).
 
 **The reader refuses by name.** The reader reads every form the route builds; a join point's
-attributed `let` reads as its `let`. The syntax also
+attributed `let` reads as its `let`, and a label qualified by its owner's module
+(`ServiceKey.name`) as the label. The syntax also
 holds the `eff/` emitter's forms and the module language (`OCaml5.Ml.Syntax`): a trailing comment
 reads as its expression, an integer pattern as the target's, and `function`, a sequence, a
 pattern `let`, an `if` without `else` and a packed module are refused by name, each an `Except`
@@ -49,6 +50,11 @@ def litCtor? : String → Option Target.Pat
   | "()" => some .unit
   | _ => none
 
+/-- A record label as the target keys it: the label alone. The route qualifies a label of a
+type at its owner by the type's module (`ServiceKey.name`); the target's records are untyped,
+keyed by label, as a marshalled one is (`tyT`). -/
+def label (k : String) : String := ((k.splitOn ".").getLast?).getD k
+
 /-- A pattern, read. -/
 def ofPatAlg : OCaml5.Ml.PatAlgebra (fun _ => Target.Pat) where
   pat_wild := .wild
@@ -57,8 +63,8 @@ def ofPatAlg : OCaml5.Ml.PatAlgebra (fun _ => Target.Pat) where
     match litCtor? n, args with
     | some p, [] => p
     | _, _ => .ctor n args
-  pat_record fs := .record fs false
-  pat_recordOpen fs := .record fs true
+  pat_record fs := .record (fs.map fun (k, p) => (label k, p)) false
+  pat_recordOpen fs := .record (fs.map fun (k, p) => (label k, p)) true
   pat_tuple ps := .tuple ps
   pat_cons h t := .ctor "::" [h, t]
   pat_int n := .int n
@@ -114,8 +120,8 @@ def ofExprAlg : OCaml5.Ml.ExprAlgebra (fun _ => Except String Target.Expr) where
   expr_ifThen c t e := do return .ifThen (← c) (← t) (← e)
   expr_matchE scrut arms := do
     return .matchE (← scrut) (← arms.mapM fun (p, body) => do return (ofPat p, ← body))
-  expr_record fs := do return .record (← fs.mapM fun (k, e) => do return (k, ← e))
-  expr_field e n := do return .field (← e) n
+  expr_record fs := do return .record (← fs.mapM fun (k, e) => do return (label k, ← e))
+  expr_field e n := do return .field (← e) (label n)
   expr_tuple parts := do return .tuple (← all parts)
   expr_listLit items := do
     let es ← all items
@@ -179,11 +185,16 @@ def assemble (decls : Array OCaml5.Lcnf.Translated) (word : Target.Word := { bit
 
 /-! ## 2. Marshalling `Ty` into the OCaml value domain
 
-The OCaml constructor names come from `OCaml5.Lcnf.ctorName` — the same function the
-translator uses — so a rename in `Naming` breaks this differential rather than silently
-comparing two different representations. -/
+The OCaml constructor names come from `OCaml5.Lcnf.ctorNameIn` under the names of the program
+types' owner (`Ty.Never`) — the function the translator spells them with — so a rename in
+`Naming` breaks this differential rather than silently comparing two different
+representations. -/
 
-def tyCtor (c : String) : String := OCaml5.Lcnf.ctorName ``Ty c
+/-- `Ty` at its owner, `ocaml/eff/eff_types.ml`: its own module. -/
+def tyOwner : OCaml5.Lcnf.TypeNames :=
+  { modules := ({} : Std.HashMap Name String).insert ``Ty (OCaml5.Lcnf.moduleName ``Ty) }
+
+def tyCtor (c : String) : String := OCaml5.Lcnf.ctorNameIn tyOwner ``Ty c
 
 mutual
 def tyT : Ty → Target.TValue

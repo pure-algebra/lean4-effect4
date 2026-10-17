@@ -63,9 +63,9 @@ let check name ok =
     Printf.printf "FAIL %s\n%!" name
   end
 
-let unit_ok : Kit.exit = Kit.succeed Val_unit
+let unit_ok : Kit.exit = Kit.succeed Val.Unit
 let units n = List.init n (fun _ -> unit_ok)
-let echo = A.row "echo" ~request:Ty_nat ~answer:Ty_unit ()
+let echo = A.row "echo" ~request:Ty.Nat ~answer:Ty.Unit ()
 let app = Kit.app ~rows:[ echo ] ()
 
 (* the doubling loop of Examples.v, by name *)
@@ -81,13 +81,13 @@ let forever =
            ~result:(fun _ -> A.unit) (fun _ -> A.succeed A.unit))
 
 let self_call =
-  build ~defs:[ A.def "f" ~request:Ty_nat ~answer:Ty_nat (fun r -> A.call "f" r) ] (A.call "f" (A.nat 0))
+  build ~defs:[ A.def "f" ~request:Ty.Nat ~answer:Ty.Nat (fun r -> A.call "f" r) ] (A.call "f" (A.nat 0))
 
 let stop_text : Kit.stop -> string = function
-  | Kit.Finished (Exit_success (Val_nat n)) -> Printf.sprintf "finished %d" n
+  | Kit.Finished (Exit.Success (Val.Nat n)) -> Printf.sprintf "finished %d" n
   | Kit.Finished _ -> "finished other"
   | Kit.Unsettled -> "unsettled"
-  | Kit.Waiting (i, Val_nat n) -> Printf.sprintf "waiting %d %d" i n
+  | Kit.Waiting (i, Val.Nat n) -> Printf.sprintf "waiting %d %d" i n
   | Kit.Waiting (i, _) -> Printf.sprintf "waiting %d" i
   | Kit.Refused (i, _, _, _) -> Printf.sprintf "refused %d" i
   | Kit.Stopped why -> "stopped " ^ why
@@ -175,7 +175,7 @@ let t3 corpus =
     | Error _ -> false
   in
   check "T3 a row table round trips" rows_back;
-  let tape = [ unit_ok; Kit.fail (Val_str "boom"); Kit.succeed (Val_list [ Val_nat 3 ]) ] in
+  let tape = [ unit_ok; Kit.fail (Val.Str "boom"); Kit.succeed (Val.List [ Val.Nat 3 ]) ] in
   let tape_back =
     match Kit.Json.parse (Kit.Json.render (J.Array (List.map Kit.Json.exit_json tape))) with
     | Ok j -> Kit.Json.exits j = Some tape
@@ -197,25 +197,25 @@ let t3 corpus =
 
 let t4 () =
   let raw =
-    let v0 = Term_var 0 in
-    let lt a b = Term_app ("lt", Terms_cons (a, Terms_cons (b, Terms_nil))) in
-    let mul a b = Term_app ("mul", Terms_cons (a, Terms_cons (b, Terms_nil))) in
-    Eff_iterate (None, Term_lit (Lit_nat 1), lt v0 (Term_lit (Lit_nat 16)), mul v0 (Term_lit (Lit_nat 2)), v0,
-                 Eff_perform (NativeOp_external 0, v0))
+    let v0 = Term.Var 0 in
+    let lt a b = Term.App ("lt", Terms.Cons (a, Terms.Cons (b, Terms.Nil))) in
+    let mul a b = Term.App ("mul", Terms.Cons (a, Terms.Cons (b, Terms.Nil))) in
+    Eff.Iterate (None, Term.Lit (Lit.Nat 1), lt v0 (Term.Lit (Lit.Nat 16)), mul v0 (Term.Lit (Lit.Nat 2)), v0,
+                 Eff.Perform (NativeOp.External 0, v0))
   in
   check "T4 the doubling loop by name is the raw one" (doubling = raw);
   let reason p = match A.build ~app p with Error (r : A.refusal) -> Some r.reason | Ok _ -> None in
   check "T4 an unbound row is refused by name"
-    (reason (A.perform "nope" A.unit) = Some (Effect4_gen.Api_gen.Effect4_program_authoring_reason_unboundRow "nope"));
+    (reason (A.perform "nope" A.unit) = Some (Effect4_gen.Api_gen.Reason_unboundRow "nope"));
   check "T4 an unbound definition is refused by name"
-    (reason (A.call "nope" A.unit) = Some (Effect4_gen.Api_gen.Effect4_program_authoring_reason_unboundDef "nope"));
+    (reason (A.call "nope" A.unit) = Some (Effect4_gen.Api_gen.Reason_unboundDef "nope"));
   check "T4 a row declared twice is refused"
     (match A.build ~app:(Kit.app ~rows:[ echo; echo ] ()) (A.succeed A.unit) with
-     | Error r -> r.reason = Effect4_gen.Api_gen.Effect4_program_authoring_reason_duplicateRow "echo"
+     | Error r -> r.reason = Effect4_gen.Api_gen.Reason_duplicateRow "echo"
      | Ok _ -> false);
   (match A.build_checked ~app doubling_src with
    | Ok (_, t) -> check "T4 doubling types at Effect<number, never>"
-                    (Kit.ty_text t.answer = "number" && Kit.ty_text t.error = "never")
+                    (Kit.ty_text t.EffTy.answer = "number" && Kit.ty_text t.EffTy.error = "never")
    | Error _ -> check "T4 doubling types" false)
 
 let reason_head (r : Effect4_gen.Api_gen.type_refusal) =
@@ -239,7 +239,7 @@ let t5 corpus =
         | None -> Some (e.name ^ ": no decode")
         | Some p ->
           let ours = match Kit.check empty p with
-            | Ok t -> [ "typed"; Kit.ty_text t.answer; Kit.ty_text t.error ]
+            | Ok t -> [ "typed"; Kit.ty_text t.EffTy.answer; Kit.ty_text t.EffTy.error ]
             | Error r -> [ "refused"; reason_head r; path_text r ] in
           if ours = e.verdict then None
           else Some (Printf.sprintf "%s: %s, Lean %s" e.name (String.concat " " ours) (String.concat " " e.verdict)))
@@ -256,18 +256,18 @@ let t6 () =
   check "T6 the right one types" (match A.build_checked ~app (A.perform "echo" (A.nat 1)) with Ok _ -> true | _ -> false)
 
 let t7 () =
-  let bad = [ unit_ok; Kit.succeed (Val_str "oops"); unit_ok; unit_ok ] in
+  let bad = [ unit_ok; Kit.succeed (Val.Str "oops"); unit_ok; unit_ok ] in
   let r = Kit.run app Kit.Reactor.tape bad doubling in
   check "T7 the run stops refused at the reply, with the fault"
-    (r.trace.stop = Kit.Refused (0, Val_nat 2, Kit.succeed (Val_str "oops"), Some (Kit.ReplyFault_answerType Ty_unit)));
+    (r.trace.stop = Kit.Refused (0, Val.Nat 2, Kit.succeed (Val.Str "oops"), Some (Kit.ReplyFault_answerType Ty.Unit)));
   check "T7 the refused reply is not applied" (List.length (Kit.calls r.trace) = 1);
   check "T7 the machine refuses it too" (r.agrees = Some true);
-  let failing_row = A.row "lookup" ~request:Ty_nat ~answer:Ty_string ~error:Ty_string () in
+  let failing_row = A.row "lookup" ~request:Ty.Nat ~answer:Ty.String ~error:Ty.String () in
   let app2 = Kit.app ~rows:[ failing_row ] () in
   let p = match A.build ~app:app2 (A.perform "lookup" (A.nat 1)) with Ok e -> e | Error _ -> assert false in
-  let r2 = Kit.run app2 Kit.Reactor.tape [ Kit.fail (Val_str "missing") ] p in
+  let r2 = Kit.run app2 Kit.Reactor.tape [ Kit.fail (Val.Str "missing") ] p in
   check "T7 a failure in the error column is applied"
-    (match r2.trace.stop with Kit.Finished (Exit_failure _) -> true | _ -> false)
+    (match r2.trace.stop with Kit.Finished (Exit.Failure _) -> true | _ -> false)
 
 let t8 corpus =
   let agrees name app reactor st p =
@@ -300,7 +300,7 @@ let t8 corpus =
   check "T8 the runners agree on the fixture" (differ = [])
 
 let t9 () =
-  let deferred = { echo with registration = Registration_deferred } in
+  let deferred = { echo with Row.registration = Registration.Deferred } in
   let refused = Kit.admit (Kit.app ~rows:[ deferred ] ()) doubling in
   check "T9 a deferred host row is refused at admission"
     (match refused with Some (Effect4_gen.Api_gen.AdmitRefusal_signature _) -> true | _ -> false);
@@ -344,7 +344,7 @@ let t10 () =
   let bad = [ ("name", J.String "check"); ("arguments", J.Object [ ("program", J.Int 3) ]) ] in
   check "T10 an unreadable program is the tool's error"
     (Option.bind (result (call (rpc ~id:5 "tools/call" bad))) (field "isError") = Some (J.Bool true));
-  let fork = Eff_withFiber (ActionTerm_fork (Eff_succeed (Term_lit (Lit_nat 7)), { start_immediately = false; daemon = false; mask_mode = MaskMode_inherit })) in
+  let fork = Eff.WithFiber (ActionTerm.Fork (Eff.Succeed (Term.Lit (Lit.Nat 7)), { ForkOptions.start_immediately = false; daemon = false; mask_mode = MaskMode.Inherit })) in
   let line op = Kit.Json.render (J.Object [ ("op", J.String op); ("program", Kit.Json.program_json fork) ]) in
   check "T10 a forked program runs on the machine"
     (field "via" (parse (Kit_serve.serve_line (line "run"))) = Some (J.String "machine"));
@@ -352,7 +352,7 @@ let t10 () =
     (field "status" (parse (Kit_serve.serve_line (line "explore"))) = Some (J.String "outside"))
 
 let t11 () =
-  let add = A.row "Todos.add" ~request:Ty_string ~answer:(Ty_list Ty_string) ~error:Ty_string () in
+  let add = A.row "Todos.add" ~request:Ty.String ~answer:(Ty.List Ty.String) ~error:Ty.String () in
   let app = Kit.app ~rows:[ add ] () in
   let p = match A.build ~app A.(let* todos = perform "Todos.add" (str "milk") in
                                  if_ (length todos < nat 2) ~then_:(succeed (length todos)) ~else_:(fail (str "full"))) with
@@ -365,8 +365,8 @@ let t11 () =
     let exits = List.filter_map (fun (t : Kit.trace) -> match t.stop with Kit.Finished ex -> Some ex | _ -> None) paths in
     check "T11 a path for each branch and each failure"
       (List.length paths = List.length replies
-       && List.mem (Kit.succeed (Val_nat 0)) exits && List.mem (Kit.succeed (Val_nat 1)) exits
-       && List.mem (Kit.fail (Val_str "full")) exits);
+       && List.mem (Kit.succeed (Val.Nat 0)) exits && List.mem (Kit.succeed (Val.Nat 1)) exits
+       && List.mem (Kit.fail (Val.Str "full")) exits);
     check "T11 each path's tape replays it on the machine"
       (List.for_all (fun t -> Kit.replays app p t = Some true) paths)
 

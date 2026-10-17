@@ -575,7 +575,7 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
           if ex.fieldCarrierIn? env ci.induct fn.toString == some c then pure e
           else useAsList s!"{ci.name}.{fn}" c e
       rel := rel ++ [e]
-      named := named ++ [(fieldName fn.toString, e)]
+      named := named ++ [(fieldNameIn (← readTypeNames) ci.induct fn.toString, e)]
   -- A type the type table spells natively has no declared record or variant: its constructor
   -- is its owner's form (`nativeOwner?`), or it is refused by name, never built as a record of a
   -- type `ocamlopt` does not know (`ByteArray.mk` was, until its row).
@@ -750,7 +750,8 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
           noteReal typeName
           let fld := (names[i]?.getD (Name.mkSimple s!"_{i}")).toString
           -- reading a `field`-row field is where a carrier enters a declaration
-          return (.field sv (fieldName fld), (← readExterns).fieldCarrierIn? env typeName fld)
+          return (.field sv (fieldNameIn (← readTypeNames) typeName fld),
+            (← readExterns).fieldCarrierIn? env typeName fld)
         else
           todo s!"{declName}: proj on {typeName} #{i} (a single-constructor inductive that is not a structure)"
           return (.hole s!"proj {typeName} #{i}" (.assertE (.bool false)), none)
@@ -892,7 +893,7 @@ def altPat (ctor : Name) (ps : Array (LCNF.Param .pure)) (usedVars : FVarIdHashS
         if let some c := ex.fieldCarrierIn? env ci.induct n.toString then
           if p? matches some (.var _) then setCarrier p.fvarId c
         match p? with
-        | some (.var v) => fields := fields ++ [(fieldName n.toString, .var v)]
+        | some (.var v) => fields := fields ++ [(fieldNameIn (← readTypeNames) ci.induct n.toString, .var v)]
         | some _ => omitted := true
         | none => pure ()
       if fields.isEmpty then return .wild

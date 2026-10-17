@@ -102,7 +102,7 @@ let () =
   check "Eff index 17 with no payload is refused (yieldNow needs a nat)"
     (Eff_wire.decode_eff_exact (bad_index 17) = None);
   let yield0 = Eff_frame.to_string (fun b () -> Eff_frame.emit_ctor b 17 (fun b -> Eff_frame.emit_nat b 0)) () in
-  check "Eff index 17 with a nat is yieldNow 0" (Eff_wire.decode_eff_exact yield0 = Some (Eff_yieldNow 0));
+  check "Eff index 17 with a nat is yieldNow 0" (Eff_wire.decode_eff_exact yield0 = Some (Eff.YieldNow 0));
   let extra = Eff_frame.to_string (fun b () -> Eff_frame.emit_ctor b 17 (fun b -> Eff_frame.emit_nat b 0; Eff_frame.emit_nat b 0)) () in
   check "an extra argument inside the frame is refused" (Eff_wire.decode_eff_exact extra = None)
 

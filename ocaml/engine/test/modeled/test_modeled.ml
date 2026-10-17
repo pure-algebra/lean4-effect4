@@ -17,9 +17,9 @@
    M4  Red control: the fixture holds inputs Lean refuses and inputs it reads, so M2 compares
        both answers.                                                   tested *)
 
-let hex_of (v : Eff_types.val_) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
+let hex_of (v : Eff_types.Val.t) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
 
-let val_of_hex (hex : string) : Eff_types.val_ =
+let val_of_hex (hex : string) : Eff_types.Val.t =
   match E4_hex.to_bytes hex with
   | None -> failwith ("fixture: not hexadecimal: " ^ hex)
   | Some b -> (

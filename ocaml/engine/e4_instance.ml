@@ -60,27 +60,27 @@ struct
 
   type nu = eff_name
   type s = eff_thunk
-  type prim_ = (nu, s, val_, err, defect, fiber_id, unit) prim
-  type ffiber = (nu, s, val_, err, defect, fiber_id, unit) frame_fiber
-  type fevent = (nu, s, val_, err, defect, fiber_id, unit) frame_event
+  type prim_ = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) prim
+  type ffiber = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_fiber
+  type fevent = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_event
 
   type machine =
-    (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_, ffiber, fevent) run_machine
+    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_, ffiber, fevent) run_machine
 
-  type fiber = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, ffiber) run_fiber
-  type event = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, fevent) run_event
+  type fiber = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, ffiber) run_fiber
+  type event = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, fevent) run_event
   (* The tape's decision. `decision` itself is the program's `Decision` (`select`'s carrier),
      generated with the rest of the program types. *)
-  type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
-  type interp = (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_) run_interp
+  type api_decision = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) run_decision
+  type interp = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_) run_interp
 
   (* No program conversion: the generated engine opens `Eff_types`, the one program type of the
      wire and every instance, so no instance names a program type of its own. *)
-  type program = native_op eff
+  type program = NativeOp.t Eff.t
 
   (* -- loading and stepping ----------------------------------------------------------- *)
 
-  let interp_of (table : row list) (p : program) : interp = program_interp_of p table
+  let interp_of (table : Row.t list) (p : program) : interp = program_interp_of p table
 
   let load (p : program) ~(fuel : int) : machine =
     sh_api_load program_compile empty_ctx stores p fuel
@@ -88,17 +88,17 @@ struct
   (* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation (the generated
      `step_decision_state_at_program_replay_checked_from_spec_1`); the bool is
      `Effect4.Machine.settled`, which `Api.replay` reads. *)
-  let step (table : row list) (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
+  let step (table : Row.t list) (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
     : machine * bool =
     step_decision_state_at_program_replay_checked_from_spec_1 p table i fuel m d
 
-  let run_api (table : row list) (p : program) ~(fuel : int) : outcome * machine =
+  let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine =
     let r = api_run p fuel table fuel in
     (r.outcome, r.machine)
 
   (* The machine's admission at the application of this row table: the wire carries no named
      type, so the application declares none (decisions row 407 (5)). *)
-  let admit (table : row list) (m : machine) (d : api_decision) : bool =
+  let admit (table : Row.t list) (m : machine) (d : api_decision) : bool =
     Option.is_none (program_admit { rows = table; services = []; types = [] } m d)
 
   (* -- the free rows ------------------------------------------------------------------ *)
@@ -116,11 +116,11 @@ struct
   let finished (m : machine) : bool = sh_machine_finished m
 
   let completed_exits (m : machine)
-    : (fiber_id * (val_, err, defect, fiber_id, unit) exit_) list =
+    : (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list =
     sh_machine_completed_exits m
 
   let stores_of (m : machine) : stores = m.state
-  let refs (m : machine) : val_ list = M.to_list (stores_of m).refs
+  let refs (m : machine) : Val.t list = M.to_list (stores_of m).refs
   let next_name (m : machine) : int = (stores_of m).next_name
   let due_count (m : machine) : int = List.length (stores_of m).deferreds.due
   let cell_count (m : machine) : int = M.cardinal (stores_of m).deferreds.cells
@@ -135,7 +135,7 @@ struct
   (* -- the fiber's own fields --------------------------------------------------------- *)
 
   let f_id (f : fiber) : fiber_id = f.id
-  let f_exit (f : fiber) : (val_, err, defect, fiber_id, unit) exit_ option = f.exit_
+  let f_exit (f : fiber) : (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t option = f.exit_
   let f_parked (f : fiber) : parked = f.parked
   let f_running (f : fiber) : bool = f.running
   let f_finalizing (f : fiber) : bool = Option.is_some f.finalizing

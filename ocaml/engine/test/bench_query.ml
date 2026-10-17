@@ -278,18 +278,18 @@ let retention (type m d) label (tape : d array) (replay : m -> d -> m) (initial 
   (label, over)
 
 (* the G0 fork program, in `Eff_types`, as lane D writes it (test_engine.ml:103-114) *)
-let fork_opts : E.fork_options =
-  { E.start_immediately = false;
+let fork_opts : E.ForkOptions.t =
+  { E.ForkOptions.start_immediately = false;
     daemon = false;
-    mask_mode = E.MaskMode_inherit }
+    mask_mode = E.MaskMode.Inherit }
 
-let p_fork : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_withFiber
-        (E.ActionTerm_fork
-           ( E.Eff_bind (E.Eff_yieldNow 0, E.Eff_succeed (E.Term_lit (E.Lit_nat 7))),
+let p_fork : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.WithFiber
+        (E.ActionTerm.Fork
+           ( E.Eff.Bind (E.Eff.YieldNow 0, E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 7))),
              fork_opts )),
-      E.Eff_awaitFiber (E.Term_var 0, E.ObserverMode_awaitValue) )
+      E.Eff.AwaitFiber (E.Term.Var 0, E.ObserverMode.AwaitValue) )
 
 let dec_of (d : E4_diff.decision) : F.decision =
   match d with

@@ -76,33 +76,33 @@ let guard (f : unit -> 'a) : ('a, string) result =
 
 (* ================================================================ the G0 programs *)
 
-let p42 : E.native_op E.eff = E.Eff_succeed (E.Term_lit (E.Lit_nat 42))
+let p42 : E.NativeOp.t E.Eff.t = E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 42))
 
-let fork_opts : E.fork_options =
-  { E.start_immediately = false;
+let fork_opts : E.ForkOptions.t =
+  { E.ForkOptions.start_immediately = false;
     daemon = false;
-    mask_mode = E.MaskMode_inherit }
+    mask_mode = E.MaskMode.Inherit }
 
-let p_fork : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_withFiber
-        (E.ActionTerm_fork
-           ( E.Eff_bind (E.Eff_yieldNow 0, E.Eff_succeed (E.Term_lit (E.Lit_nat 7))),
+let p_fork : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.WithFiber
+        (E.ActionTerm.Fork
+           ( E.Eff.Bind (E.Eff.YieldNow 0, E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 7))),
              fork_opts )),
-      E.Eff_awaitFiber (E.Term_var 0, E.ObserverMode_awaitValue) )
+      E.Eff.AwaitFiber (E.Term.Var 0, E.ObserverMode.AwaitValue) )
 
-let p_await : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_perform (E.NativeOp_deferredMakeOf (E.Ty_nat, E.Ty_nat), E.Term_lit E.Lit_unit),
-      E.Eff_perform (E.NativeOp_deferredAwait, E.Term_var 0) )
+let p_await : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.Perform (E.NativeOp.DeferredMakeOf (E.Ty.Nat, E.Ty.Nat), E.Term.Lit E.Lit.Unit),
+      E.Eff.Perform (E.NativeOp.DeferredAwait, E.Term.Var 0) )
 
 (* `chain 0 = succeed unit`, `chain (n+1) = bind (perform refMake (lit (nat n))) (chain n)`
    -- Test/Program/RuntimeRContract.lean's `chain`, the quadratic detector (A1 §6.1 W2). *)
-let rec chain n : E.native_op E.eff =
-  if n <= 0 then E.Eff_succeed (E.Term_lit E.Lit_unit)
+let rec chain n : E.NativeOp.t E.Eff.t =
+  if n <= 0 then E.Eff.Succeed (E.Term.Lit E.Lit.Unit)
   else
-    E.Eff_bind
-      ( E.Eff_perform (E.NativeOp_refMake, E.Term_lit (E.Lit_nat (n - 1))),
+    E.Eff.Bind
+      ( E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (n - 1))),
         chain (n - 1) )
 
 (* The term rows' environment (decisions row 43; the state plan's T3b).  A read-modify-write
@@ -112,45 +112,45 @@ let rec chain n : E.native_op E.eff =
    E.t`, externs.txt) and `sh_ref_step` extends it with `E.snoc`.  The programs and their
    values are Test/Program/CompileContract.lean's `pRefUpdateCapture`, `pRefUpdateLevel` and
    `pRefModifyOther`. *)
-let nat_lit n = E.Term_lit (E.Lit_nat n)
-let succ_at n = E.Term_app ("succ", E.Terms_cons (E.Term_var n, E.Terms_nil))
+let nat_lit n = E.Term.Lit (E.Lit.Nat n)
+let succ_at n = E.Term.App ("succ", E.Terms.Cons (E.Term.Var n, E.Terms.Nil))
 
 (* `Ref.make(5)`, a bound `10`, `Ref.update(ref, a => add(a, x))`, then `Ref.get(ref)`: the
    term captures the outer `x` (`var 1`) and reads the cell's value at the node's level
    (`var 2`). *)
-let p_capture : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_perform (E.NativeOp_refMake, nat_lit 5),
-      E.Eff_bind
-        ( E.Eff_succeed (nat_lit 10),
-          E.Eff_bind
-            ( E.Eff_perform
-                ( E.NativeOp_refUpdateWith
-                    (E.Term_app
-                       ("add", E.Terms_cons (E.Term_var 2, E.Terms_cons (E.Term_var 1, E.Terms_nil)))),
-                  E.Term_var 0 ),
-              E.Eff_perform (E.NativeOp_refGet, E.Term_var 0) ) ) )
+let p_capture : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.Perform (E.NativeOp.RefMake, nat_lit 5),
+      E.Eff.Bind
+        ( E.Eff.Succeed (nat_lit 10),
+          E.Eff.Bind
+            ( E.Eff.Perform
+                ( E.NativeOp.RefUpdateWith
+                    (E.Term.App
+                       ("add", E.Terms.Cons (E.Term.Var 2, E.Terms.Cons (E.Term.Var 1, E.Terms.Nil)))),
+                  E.Term.Var 0 ),
+              E.Eff.Perform (E.NativeOp.RefGet, E.Term.Var 0) ) ) )
 
 (* `Ref.make(5)`, then `Ref.modify(ref, a => ["s", a])`: the row answers the string and stores
    the number it read (`pRefModifyOther`).  `B` is the term's, not the cell's. *)
-let p_modify_other : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_perform (E.NativeOp_refMake, nat_lit 5),
-      E.Eff_perform
-        ( E.NativeOp_refModifyWith
-            (E.Term_app
+let p_modify_other : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.Perform (E.NativeOp.RefMake, nat_lit 5),
+      E.Eff.Perform
+        ( E.NativeOp.RefModifyWith
+            (E.Term.App
                ( "pair",
-                 E.Terms_cons
-                   (E.Term_lit (E.Lit_str "s"), E.Terms_cons (E.Term_var 1, E.Terms_nil)) )),
-          E.Term_var 0 ) )
+                 E.Terms.Cons
+                   (E.Term.Lit (E.Lit.Str "s"), E.Terms.Cons (E.Term.Var 1, E.Terms.Nil)) )),
+          E.Term.Var 0 ) )
 
 (* `Ref.make(5)`, a bound `10`, then `Ref.updateAndGet(ref, f)` at a node of level 2. *)
-let p_level (f : E.term) : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_perform (E.NativeOp_refMake, nat_lit 5),
-      E.Eff_bind
-        ( E.Eff_succeed (nat_lit 10),
-          E.Eff_perform (E.NativeOp_refUpdateAndGetWith f, E.Term_var 0) ) )
+let p_level (f : E.Term.t) : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.Perform (E.NativeOp.RefMake, nat_lit 5),
+      E.Eff.Bind
+        ( E.Eff.Succeed (nat_lit 10),
+          E.Eff.Perform (E.NativeOp.RefUpdateAndGetWith f, E.Term.Var 0) ) )
 
 (* The list fold with two binders (decisions row 228).  A fold's body runs at the environment
    extended by the accumulator and the element, so it reads the accumulator at the fold's level
@@ -158,59 +158,59 @@ let p_level (f : E.term) : E.native_op E.eff =
    carrier, extended by `E.append` in the evaluator's own loop
    (`list_foldl_m_at_program_eval_term_spec_0`, api_engine.ml).  The programs and their values
    are Test/Program/FoldContract.lean's. *)
-let app f args = E.Term_app (f, List.fold_right (fun a t -> E.Terms_cons (a, t)) args E.Terms_nil)
+let app f args = E.Term.App (f, List.fold_right (fun a t -> E.Terms.Cons (a, t)) args E.Terms.Nil)
 let nil_t = app "nil" []
 let nat_list xs = List.fold_right (fun x acc -> app "cons" [ nat_lit x; acc ]) xs nil_t
 let snoc xs x = app "append" [ xs; app "cons" [ x; nil_t ] ]
 
 (* From the head: `((10 - 1) - 2) - 3`. *)
-let p_fold : E.native_op E.eff =
-  E.Eff_succeed
-    (E.Term_fold (None, nat_list [ 1; 2; 3 ], nat_lit 10, app "sub" [ E.Term_var 0; E.Term_var 1 ]))
+let p_fold : E.NativeOp.t E.Eff.t =
+  E.Eff.Succeed
+    (E.Term.Fold (None, nat_list [ 1; 2; 3 ], nat_lit 10, app "sub" [ E.Term.Var 0; E.Term.Var 1 ]))
 
 (* A bound `100`; the body reads it below the fold's level: `(0 + (1 + 100)) + (2 + 100)`. *)
-let p_fold_capture : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_succeed (nat_lit 100),
-      E.Eff_succeed
-        (E.Term_fold
+let p_fold_capture : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.Succeed (nat_lit 100),
+      E.Eff.Succeed
+        (E.Term.Fold
            ( None, nat_list [ 1; 2 ], nat_lit 0,
-             app "add" [ E.Term_var 1; app "add" [ E.Term_var 2; E.Term_var 0 ] ] )) )
+             app "add" [ E.Term.Var 1; app "add" [ E.Term.Var 2; E.Term.Var 0 ] ] )) )
 
 (* A fold inside a fold, with a stated accumulator type: the inner body reads the outer element
    (`var 2`), and pairs each item with the length of its own list. *)
-let p_fold_nested : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_succeed (app "cons" [ nat_list [ 1; 2 ]; app "cons" [ nat_list [ 3 ]; nil_t ] ]),
-      E.Eff_succeed
-        (E.Term_fold
-           ( Some (E.Ty_list (E.Ty_prod (E.Ty_nat, E.Ty_nat))), E.Term_var 0, nil_t,
-             E.Term_fold
-               ( None, E.Term_var 2, E.Term_var 1,
-                 snoc (E.Term_var 3) (app "tuple" [ E.Term_var 4; app "length" [ E.Term_var 2 ] ]) ) )) )
+let p_fold_nested : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.Succeed (app "cons" [ nat_list [ 1; 2 ]; app "cons" [ nat_list [ 3 ]; nil_t ] ]),
+      E.Eff.Succeed
+        (E.Term.Fold
+           ( Some (E.Ty.List (E.Ty.Prod (E.Ty.Nat, E.Ty.Nat))), E.Term.Var 0, nil_t,
+             E.Term.Fold
+               ( None, E.Term.Var 2, E.Term.Var 1,
+                 snoc (E.Term.Var 3) (app "tuple" [ E.Term.Var 4; app "length" [ E.Term.Var 2 ] ]) ) )) )
 
 (* `Ref.make(5)`, then `Ref.modify(ref, a => [fold(xs, a, (b, x) => b + x), a])`: the term's
    binder is `var 1`, so the fold inside it binds `var 2` and `var 3`.  One store step answers
    `5 + 1 + 2 + 3` and stores the `5` it read. *)
-let p_fold_in_op : E.native_op E.eff =
-  E.Eff_bind
-    ( E.Eff_perform (E.NativeOp_refMake, nat_lit 5),
-      E.Eff_perform
-        ( E.NativeOp_refModifyWith
+let p_fold_in_op : E.NativeOp.t E.Eff.t =
+  E.Eff.Bind
+    ( E.Eff.Perform (E.NativeOp.RefMake, nat_lit 5),
+      E.Eff.Perform
+        ( E.NativeOp.RefModifyWith
             (app "pair"
-               [ E.Term_fold
-                   ( None, nat_list [ 1; 2; 3 ], E.Term_var 1,
-                     app "add" [ E.Term_var 2; E.Term_var 3 ] );
-                 E.Term_var 1 ]),
-          E.Term_var 0 ) )
+               [ E.Term.Fold
+                   ( None, nat_list [ 1; 2; 3 ], E.Term.Var 1,
+                     app "add" [ E.Term.Var 2; E.Term.Var 3 ] );
+                 E.Term.Var 1 ]),
+          E.Term.Var 0 ) )
 
 (* An empty list answers the initial value, and the body, which would refuse, is not run. *)
-let p_fold_empty : E.native_op E.eff =
-  E.Eff_succeed (E.Term_fold (None, nil_t, nat_lit 7, E.Term_tupleAt (E.Term_var 1, 5)))
+let p_fold_empty : E.NativeOp.t E.Eff.t =
+  E.Eff.Succeed (E.Term.Fold (None, nil_t, nat_lit 7, E.Term.TupleAt (E.Term.Var 1, 5)))
 
 (* A body that refuses on an element refuses the fold: no partial answer. *)
-let p_fold_refuses : E.native_op E.eff =
-  E.Eff_succeed (E.Term_fold (None, nat_list [ 1; 2 ], nat_lit 0, E.Term_tupleAt (E.Term_var 1, 0)))
+let p_fold_refuses : E.NativeOp.t E.Eff.t =
+  E.Eff.Succeed (E.Term.Fold (None, nat_list [ 1; 2 ], nat_lit 0, E.Term.TupleAt (E.Term.Var 1, 0)))
 
 (* ================================================================ one report per run *)
 
@@ -252,11 +252,11 @@ module Rep (En : E4_engine.ENGINE) = struct
       r_store = En.store_row t;
       r_root = En.root_exit t }
 
-  let report (p : E.native_op E.eff) ~(fuel : int) : report = of_t (En.run p ~fuel)
+  let report (p : E.NativeOp.t E.Eff.t) ~(fuel : int) : report = of_t (En.run p ~fuel)
 
   (* The instance's OWN generated `Effect4.Api.run`, so the drive loop is checked against
      the function it is a re-implementation of. *)
-  let api_outcome (p : E.native_op E.eff) ~(fuel : int) : string = En.api_run (En.compile p) ~fuel
+  let api_outcome (p : E.NativeOp.t E.Eff.t) ~(fuel : int) : string = En.api_run (En.compile p) ~fuel
 end
 
 module RF = Rep (En_fast)
@@ -284,7 +284,7 @@ let differ (a : report) (b : report) : string list =
 
 let g0 () =
   print_endline "== 1. G0 on both instances (fuel 1000) ==";
-  let one name (p : E.native_op E.eff) expect_outcome expect_fibers expect_root =
+  let one name (p : E.NativeOp.t E.Eff.t) expect_outcome expect_fibers expect_root =
     match guard (fun () -> (RF.report p ~fuel:1000, RR.report p ~fuel:1000)) with
     | Error e -> fail_note ("G0 " ^ name) e
     | Ok (f, r) ->
@@ -344,7 +344,7 @@ let origin_prelude_check () =
     let parent = List.assoc 0 (I.fibers machine) in
     check "Fast creation origin: the root has no fork record"
       (match machine.forks with [] -> true | _ -> false);
-    let options = { Eff_types.start_immediately = true; daemon = true; mask_mode = Eff_types.MaskMode_inherit } in
+    let options = { Eff_types.ForkOptions.start_immediately = true; daemon = true; mask_mode = Eff_types.MaskMode.Inherit } in
     let spawned, (_, child_id) = I.sh_spawn (I.interp_of [] program) machine parent
       parent.frame.current options [3; 1] in
     let _child = List.assoc child_id (I.fibers spawned) in
@@ -361,7 +361,7 @@ let origin_prelude_check () =
     let parent = List.assoc 0 (I.fibers machine) in
     check "Ref creation origin: the root has no fork record"
       (match machine.forks with [] -> true | _ -> false);
-    let options = { Eff_types.start_immediately = true; daemon = true; mask_mode = Eff_types.MaskMode_inherit } in
+    let options = { Eff_types.ForkOptions.start_immediately = true; daemon = true; mask_mode = Eff_types.MaskMode.Inherit } in
     let spawned, (_, child_id) = I.sh_spawn (I.interp_of [] program) machine parent
       parent.frame.current options [3; 1] in
     let _child = List.assoc child_id (I.fibers spawned) in
@@ -417,8 +417,8 @@ let clock_profile_check () =
     check (prefix ^ "successive large advances exceed signed 64-bit exactly")
       (clock_is later "9223372036854775837")
   in
-  let sleep_then_42 = E.Eff_bind
-    (E.Eff_perform (E.NativeOp_sleep, E.Term_lit (E.Lit_nat 17)), p42) in
+  let sleep_then_42 = E.Eff.Bind
+    (E.Eff.Perform (E.NativeOp.Sleep, E.Term.Lit (E.Lit.Nat 17)), p42) in
   let () =
     let module I = Api_engine_inst in
     let p = sleep_then_42 in
@@ -430,7 +430,7 @@ let clock_profile_check () =
       (fun m -> List.map (fun (w : E4_clock.t I.waiter) -> w.payload)
         (I.stores_of m).timers.wake.waiters)
       (fun m -> match List.assoc_opt 0 (I.completed_exits m) with
-        | Some (Eff_types.Exit_success (Eff_types.Val_nat 42)) -> true | _ -> false)
+        | Some (Eff_types.Exit.Success (Eff_types.Val.Nat 42)) -> true | _ -> false)
   in
   let () =
     let module I = Api_engine_ref in
@@ -443,13 +443,13 @@ let clock_profile_check () =
       (fun m -> List.map (fun (w : E4_clock.t I.waiter) -> w.payload)
         (I.stores_of m).timers.wake.waiters)
       (fun m -> match List.assoc_opt 0 (I.completed_exits m) with
-        | Some (Eff_types.Exit_success (Eff_types.Val_nat 42)) -> true | _ -> false)
+        | Some (Eff_types.Exit.Success (Eff_types.Val.Nat 42)) -> true | _ -> false)
   in
   let check_instance (module En : E4_engine.ENGINE) =
     let module Projection = E4_diff.Of (En) in
-    let p = E.Eff_bind
-      (E.Eff_perform (E.NativeOp_refMake, E.Term_lit (E.Lit_nat 7)),
-       E.Eff_perform (E.NativeOp_clockNow, E.Term_lit E.Lit_unit)) in
+    let p = E.Eff.Bind
+      (E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat 7)),
+       E.Eff.Perform (E.NativeOp.ClockNow, E.Term.Lit E.Lit.Unit)) in
     let prefix = En.name ^ " exact clock: " in
     let m0 = En.load p ~fuel:100 in
     let m = En.step m0 (En.advance_exact (E4_clock.literal "4611686018427387904")) in
@@ -475,10 +475,10 @@ let clock_profile_check () =
 (* The generated multiplication row observes exact products only inside the profile.
    Out-of-profile products refuse at the decision boundary and retain its input. *)
 let multiplication_profile_check () =
-  let program a b = E.Eff_bind
-    (E.Eff_perform (E.NativeOp_refMake, nat_lit 7),
-     E.Eff_succeed (E.Term_app ("mul",
-       E.Terms_cons (nat_lit a, E.Terms_cons (nat_lit b, E.Terms_nil))))) in
+  let program a b = E.Eff.Bind
+    (E.Eff.Perform (E.NativeOp.RefMake, nat_lit 7),
+     E.Eff.Succeed (E.Term.App ("mul",
+       E.Terms.Cons (nat_lit a, E.Terms.Cons (nat_lit b, E.Terms.Nil))))) in
   let check_instance (module En : E4_engine.ENGINE) =
     let prefix = En.name ^ " multiplication profile: " in
     List.iter (fun (label, a, b, expected) ->
@@ -520,13 +520,13 @@ let numeric_ingress_check () =
     ignore (En.answer_async_success 0 0 0);
     ignore (En.answer_async_success 0 0 (Int64.to_int 9007199254740991L));
     check (prefix ^ "negative literal refused")
-      (refused (fun () -> En.compile (E.Eff_succeed (E.Term_lit (E.Lit_nat (-1))))));
+      (refused (fun () -> En.compile (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (-1))))));
     check (prefix ^ "large literal refused")
       (refused (fun () -> En.compile
-        (E.Eff_succeed (E.Term_lit (E.Lit_nat (Int64.to_int 9007199254740992L))))));
+        (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Int64.to_int 9007199254740992L))))));
     check (prefix ^ "large wire literal refused")
       (refused (fun () -> En.of_bytes (Eff_wire.encode_program
-        (E.Eff_succeed (E.Term_lit (E.Lit_nat (Int64.to_int 9007199254740992L)))))));
+        (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Int64.to_int 9007199254740992L)))))));
     ignore (En.answer_async_float 0 0 0.0);
     ignore (En.answer_async_float 0 0 1.5);
     ignore (En.answer_async_float 0 0 (Int64.float_of_bits (Int64.of_int max_int)));
@@ -543,37 +543,37 @@ let numeric_ingress_check () =
    reactors that answer a natural outside the profile, at the top and nested; the green ones
    answer naturals inside it and fields that are no naturals. *)
 let answer_ingress_check () =
-  let reactor answer = fun () (_ : E.val_) state -> Some (answer, state) in
-  let driven r = match r () E.Val_unit 0 with
+  let reactor answer = fun () (_ : E.Val.t) state -> Some (answer, state) in
+  let driven r = match r () E.Val.Unit 0 with
     | None -> ()
     | Some (answer, _) -> E4_engine.check_answer answer
   in
   let refused answer = match driven (reactor answer) with
     | () -> false | exception E4_clock.Profile_refusal _ -> true
   in
-  let success v = E.Completion_ofExit (E.Exit_success v) in
-  let failure reasons = E.Completion_ofExit (E.Exit_failure reasons) in
+  let success v = E.Completion.OfExit (E.Exit.Success v) in
+  let failure reasons = E.Completion.OfExit (E.Exit.Failure reasons) in
   let top = Int64.to_int 9007199254740991L and above = Int64.to_int 9007199254740992L in
   List.iter (fun (label, answer) ->
       check ("answer ingress: " ^ label ^ " refused") (refused answer))
-    ["a natural above the profile", success (E.Val_nat above);
-     "a negative natural", success (E.Val_nat (-1));
-     "a nested natural", success (E.Val_list [E.Val_pair (E.Val_unit, E.Val_some (E.Val_nat above))]);
-     "a constructor index", success (E.Val_ctor (above, []));
-     "a handle key", success (E.Val_handle (0, -1));
-     "a negative integer's magnitude", success (E.Val_negInt above);
-     "an error code", failure [E.Reason_fail (E.Err_tag above, [])];
-     "an error's payload", failure [E.Reason_fail (E.Err_payload (E.Val_nat (-1)), [])];
-     "a defect's payload", failure [E.Reason_die (E.Defect_user above, [])];
-     "an interrupting fiber", failure [E.Reason_interrupt (Some (-1), [])];
-     "a ref key", E.Completion_ofRefGet (-1)];
+    ["a natural above the profile", success (E.Val.Nat above);
+     "a negative natural", success (E.Val.Nat (-1));
+     "a nested natural", success (E.Val.List [E.Val.Pair (E.Val.Unit, E.Val.Some (E.Val.Nat above))]);
+     "a constructor index", success (E.Val.Ctor (above, []));
+     "a handle key", success (E.Val.Handle (0, -1));
+     "a negative integer's magnitude", success (E.Val.NegInt above);
+     "an error code", failure [E.Reason.Fail (E.Err.Tag above, [])];
+     "an error's payload", failure [E.Reason.Fail (E.Err.Payload (E.Val.Nat (-1)), [])];
+     "a defect's payload", failure [E.Reason.Die (E.Defect.User above, [])];
+     "an interrupting fiber", failure [E.Reason.Interrupt (Some (-1), [])];
+     "a ref key", E.Completion.OfRefGet (-1)];
   List.iter (fun (label, answer) ->
       check ("answer ingress: " ^ label ^ " passes") (not (refused answer)))
-    ["the top natural", success (E.Val_nat top);
-     "nested naturals", success (E.Val_ctor (0, [E.Val_nat top; E.Val_negInt 0]));
-     "no natural", success (E.Val_list [E.Val_str "x"; E.Val_bytes [255]; E.Val_float 1; E.Val_ref (1, [2])]);
-     "a failure", failure [E.Reason_die (E.Defect_error (E.Err_tag top), []); E.Reason_interrupt (Some 0, [])];
-     "a ref key", E.Completion_ofRefGet top]
+    ["the top natural", success (E.Val.Nat top);
+     "nested naturals", success (E.Val.Ctor (0, [E.Val.Nat top; E.Val.NegInt 0]));
+     "no natural", success (E.Val.List [E.Val.Str "x"; E.Val.Bytes [255]; E.Val.Float 1; E.Val.Ref (1, [2])]);
+     "a failure", failure [E.Reason.Die (E.Defect.Error (E.Err.Tag top), []); E.Reason.Interrupt (Some 0, [])];
+     "a ref key", E.Completion.OfRefGet top]
 
 (* ================================================================ the bench *)
 
@@ -598,7 +598,7 @@ let bench () =
       (float_of_int iters /. (ms /. 1000.0))
       (2.0 *. float_of_int iters /. (ms /. 1000.0))
   in
-  let w1_pair prog (p : E.native_op E.eff) =
+  let w1_pair prog (p : E.NativeOp.t E.Eff.t) =
     let pf = En_fast.compile p and pr = En_ref.compile p in
     w1 prog "Fast" (fun () -> for _ = 1 to iters do ignore (En_fast.api_run pf ~fuel:100) done);
     w1 prog "Ref" (fun () -> for _ = 1 to iters do ignore (En_ref.api_run pr ~fuel:100) done)
@@ -648,16 +648,16 @@ let bench () =
 (* E4-PROV-CE-005: the layer's lexical environment starts closed, matching its checker. *)
 let layer_environment_check () =
   let key = {
-    E.name = 4;
+    E.ServiceKey.name = 4;
     service = 4;
   } in
   let program =
-    E.Eff_bind (E.Eff_succeed (E.Term_lit (E.Lit_nat 9)),
-      E.Eff_scoped (E.Eff_provideLayer (
-        E.LayerTerm_effect (key,
-          E.Eff_bind (E.Eff_succeed (E.Term_lit (E.Lit_str "x")),
-            E.Eff_fail (E.Term_var 0))),
-        false, E.Eff_service key)))
+    E.Eff.Bind (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 9)),
+      E.Eff.Scoped (E.Eff.ProvideLayer (
+        E.LayerTerm.Effect (key,
+          E.Eff.Bind (E.Eff.Succeed (E.Term.Lit (E.Lit.Str "x")),
+            E.Eff.Fail (E.Term.Var 0))),
+        false, E.Eff.Service key)))
   in
   let expected = Some "failure [fail(text x)]" in
   let fast = En_fast.root_exit (En_fast.run program ~fuel:200) in

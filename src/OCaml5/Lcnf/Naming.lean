@@ -41,6 +41,8 @@ construction rather than by convention.
 | type `Effect4.Api.Result` | as above; a type row's name gets a `_` suffix | `result_` |
 | field `currentOpCount`, `exit` | camel → snake, keyword/shadowed → `_` suffix | `current_op_count`, `exit_` |
 | constructor `Task.resume` | `<TypeShort>_<ctor>` | `Task_resume` |
+| type at its owner `Effect4.Program.Eff` (`TypeNames.modules`) | a module by the short name; the type is `t` | `Eff.t` |
+| its constructor `Eff.succeed`, its field `Row.typeArgs` | the Lean name, capitalised; a field as above | `Eff.Succeed`, `Row.type_args` |
 | placeholder type `Prim` | `Placeholder_<type>` | `Placeholder_prim` |
 | global `Effect4.Machine.Dispatcher.insert._redArg` | drop `._redArg`, private prefix, `Effect4.[Machine.]`; `._at_.` → `at`; components joined by `_` | `dispatcher_insert` |
 | global `List.mapTR.loop._at_.Effect4.Machine.Dispatcher.drain.spec_0` | same | `list_map_tr_loop_at_dispatcher_drain_spec_0` |
@@ -96,48 +98,89 @@ def reserveType (s : String) : String :=
 /-- The OCaml type name of a Lean type constant. -/
 def typeName (n : Name) : String := reserveType (snake (shortName n))
 
-/-- Type constants whose short name is claimed by another constant of the same run, and the
-OCaml name they take instead (the full path, snake case). `typeName` is the last component,
-so two Lean types with one short name — `Effect4.Api.Outcome` and `Effect4.Machine.Outcome`,
-say — would otherwise be spelled the same. The map is decided once per run, **before**
-anything is rendered, so a declaration, an annotation and a constructor never disagree about
-which of the two a name means. -/
-abbrev TypeNames := Std.HashMap Name String
+/-- The decided OCaml names of a run's type constants, fixed once per run **before** anything is
+rendered, so a declaration, an annotation and a constructor never disagree about a name.
+
+* `renamed`: type constants whose short name is claimed by another constant of the same run, and
+  the OCaml name they take instead (the full path, snake case). `typeName` is the last
+  component, so two Lean types with one short name — `Effect4.Api.Outcome` and
+  `Effect4.Machine.Outcome`, say — would otherwise be spelled the same.
+* `modules`: the types declared at their owner (`ocaml/eff/eff_types.ml`, the program types),
+  each its own OCaml module: the type is `M.t`, a constructor `M.C` and a field `M.f`, by the
+  Lean names. Every artifact that opens the owner spells them so. -/
+structure TypeNames where
+  renamed : Std.HashMap Name String := {}
+  modules : Std.HashMap Name String := {}
+deriving Inhabited
 
 /-- The full-path OCaml name a colliding type constant falls back to. -/
 def fullTypeName (n : Name) : String := reserveType (snake ("_".intercalate (components n)))
 
-/-- The OCaml type name of a Lean type constant under a decided rename map. -/
-def typeNameIn (tn : TypeNames) (n : Name) : String := tn.getD n (typeName n)
+/-- A name with its first character in upper case: an OCaml module or constructor name from a
+Lean one (`succeed` → `Succeed`). -/
+def capital (s : String) : String :=
+  match s.toList with
+  | c :: rest => String.ofList ((if c.isLower then c.toUpper else c) :: rest)
+  | [] => "T"
+
+/-- The OCaml module of a type declared at its owner: the Lean short name (`Effect4.Program.Eff`
+→ `Eff`). -/
+def moduleName (n : Name) : String := capital (shortName n)
+
+/-- The module a type declared at its owner falls back to when its short name is claimed twice
+(`Effect4.Row` beside `Effect4.Program.Row` → `Effect4_row`). -/
+def fullModuleName (n : Name) : String := capital (fullTypeName n)
+
+/-- The OCaml type name of a Lean type constant under the decided names: `M.t` for a type at its
+owner, else its flat name. -/
+def typeNameIn (tn : TypeNames) (n : Name) : String :=
+  match tn.modules[n]? with
+  | some m => m ++ ".t"
+  | none => tn.renamed.getD n (typeName n)
+
+/-- The name a declaration states: `t` inside its module for a type at its owner, else the flat
+name its uses spell. -/
+def declTypeNameIn (tn : TypeNames) (n : Name) : String :=
+  if tn.modules.contains n then "t" else typeNameIn tn n
 
 /-- The OCaml field name of a Lean structure field. -/
 def fieldName (s : String) : String := snake s
 
+/-- A field of a structure under the decided names: `M.f` for a type at its owner, so a use never
+depends on the label being in scope. -/
+def fieldNameIn (tn : TypeNames) (typeConst : Name) (s : String) : String :=
+  match tn.modules[typeConst]? with
+  | some m => m ++ "." ++ fieldName s
+  | none => fieldName s
+
 /-- The OCaml constructor name of a Lean constructor: the type's short name, verbatim and
 capitalised, then `_`, then the constructor's own name verbatim. -/
 def ctorName (typeConst : Name) (ctor : String) : String :=
-  let t := shortName typeConst
-  let t := match t.toList with
-    | c :: rest => String.ofList ((if c.isLower then c.toUpper else c) :: rest)
-    | [] => "T"
-  t ++ "_" ++ ctor
+  capital (shortName typeConst) ++ "_" ++ ctor
 
-/-- `ctorName` under a decided rename map: a renamed type's constructors are prefixed by the
-renamed type's own OCaml name, so two types that shared a short name no longer share their
-constructor names either. -/
+/-- A constructor of a type declared at its owner, as the declaration states it inside its
+module: the Lean name, capitalised (`succeed` → `Succeed`). -/
+def ownedCtor (ctor : String) : String := capital ctor
+
+/-- `ctorName` under the decided names: `M.C` for a type at its owner (`Eff.Succeed`); a renamed
+type's constructors are prefixed by the renamed type's own OCaml name, so two types that shared
+a short name no longer share their constructor names either. -/
 def ctorNameIn (tn : TypeNames) (typeConst : Name) (ctor : String) : String :=
-  match tn[typeConst]? with
-  | none => ctorName typeConst ctor
-  | some t =>
-    let t := match t.toList with
-      | c :: rest => String.ofList ((if c.isLower then c.toUpper else c) :: rest)
-      | [] => "T"
-    t ++ "_" ++ ctor
+  match tn.modules[typeConst]?, tn.renamed[typeConst]? with
+  | some m, _ => m ++ "." ++ ownedCtor ctor
+  | none, none => ctorName typeConst ctor
+  | none, some t => capital t ++ "_" ++ ctor
+
+/-- The name a declaration states for a constructor: `C` inside its module for a type at its
+owner, else the flat name its uses spell. -/
+def declCtorNameIn (tn : TypeNames) (typeConst : Name) (ctor : String) : String :=
+  if tn.modules.contains typeConst then ownedCtor ctor else ctorNameIn tn typeConst ctor
 
 /-- The constructor name of a placeholder type. -/
 def placeholderCtor (typeConst : Name) : String := "Placeholder_" ++ typeName typeConst
 
-/-- `placeholderCtor` under a decided rename map. -/
+/-- `placeholderCtor` under a decided rename map. A type at its owner is declared in full, never
+as a placeholder (`generateInFull`). -/
 def placeholderCtorIn (tn : TypeNames) (typeConst : Name) : String :=
   "Placeholder_" ++ typeNameIn tn typeConst
 
@@ -189,6 +232,18 @@ def tyVar (n : Name) : String := Ml.tyVarName (shortName n)
 #guard fullTypeName `Result == "result_"
 #guard ctorName `Effect4.Machine.Task "resume" == "Task_resume"
 #guard ctorName `Effect4.Machine.Parked "notParked" == "Parked_notParked"
+-- a type at its owner: a module, its type `t`, its constructors and fields by the Lean names
+private def ownerNames : TypeNames := { modules := ({} : Std.HashMap Name String).insert `Effect4.Program.Eff "Eff" }
+#guard typeNameIn ownerNames `Effect4.Program.Eff == "Eff.t"
+#guard declTypeNameIn ownerNames `Effect4.Program.Eff == "t"
+#guard ctorNameIn ownerNames `Effect4.Program.Eff "failCause" == "Eff.FailCause"
+#guard declCtorNameIn ownerNames `Effect4.Program.Eff "failCause" == "FailCause"
+#guard fieldNameIn ownerNames `Effect4.Program.Eff "typeArgs" == "Eff.type_args"
+-- any other type keeps its flat spelling, and a renamed one its full path
+#guard ctorNameIn ownerNames `Effect4.Machine.Task "resume" == "Task_resume"
+#guard ctorNameIn { renamed := ({} : Std.HashMap Name String).insert `Effect4.Row "effect4_row" } `Effect4.Row "x"
+  == "Effect4_row_x"
+#guard fullModuleName `Effect4.Row == "Effect4_row" && moduleName `Effect4.Program.Row == "Row"
 #guard globalName `Effect4.Machine.Dispatcher.insert._redArg == "dispatcher_insert"
 #guard globalName `Effect4.Machine.RunMachine.fiber?._redArg == "run_machine_fiber_opt"
 #guard globalName `List.appendTR._redArg == "list_append_tr"

@@ -5,14 +5,14 @@
 
 open Eff_types
 
-type completion = (val_, err, defect, int, unit) Eff_types.completion
+type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
 
 (** The host's types. None mentions the engine, so they are declared once here and every
     instance of {!Make} re-exports them with type equalities (H12). *)
 module Types : sig
   (** The host: a call's row, its request and the host's state, to a completion and the host's
       next state; [None] declines. Lean's `Run.Reactor`. *)
-  type 'st provider = row -> val_ -> 'st -> (completion * 'st) option
+  type 'st provider = Row.t -> Val.t -> 'st -> (completion * 'st) option
 
   (** What the machine reached, read off the engine's answer ([E4_engine.answer], H10). The
       engine served is the machine after the step that reached it. *)
@@ -50,7 +50,7 @@ module Types : sig
   type load_refusal = Load_outside_profile of string
 
   (** One answered call: the row's external position, the request and the answer. *)
-  type call = { row : int; request : val_; answer : completion }
+  type call = { row : int; request : Val.t; answer : completion }
 end
 
 include module type of struct include Types end
@@ -61,7 +61,7 @@ module Make (E : E4_engine.ENGINE) : sig
   type 'st served = { engine : E.t; state : 'st; calls : call list; stop : stop }
 
   val serve :
-    ?table:row list -> ?rounds:int -> 'st provider -> Eff_wire.program -> fuel:int -> 'st ->
+    ?table:Row.t list -> ?rounds:int -> 'st provider -> Eff_wire.program -> fuel:int -> 'st ->
     ('st served, load_refusal) result
   (** The program loaded at [fuel] and driven under the provider from the host's [state]: the
       drive, or the loading refusal. Nothing it refuses escapes as an exception. *)

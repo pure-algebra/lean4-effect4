@@ -110,7 +110,7 @@ let status_of (t : F.t) : E4_query.status =
 (* The log is the FINAL machine's trace, stamped with the decision whose step appended each
    row.  `trace_length` is O(1) (e4_trace.mli TR4), so the stamps cost one int per decision
    and the rows are rendered ONCE, at the end -- never once per position. *)
-let build ?(replay = hold) (p : E.native_op E.eff) ~(fuel : int) (dtape : E4_diff.decision list) ~(k : int)
+let build ?(replay = hold) (p : E.NativeOp.t E.Eff.t) ~(fuel : int) (dtape : E4_diff.decision list) ~(k : int)
   : (F.t, F.decision) E4_query.source =
   let arr = Array.of_list (List.map dec_of dtape) in
   let n = Array.length arr in
@@ -262,7 +262,7 @@ let gate () =
 
 let show_divs ds = String.concat "; " (List.map E4_diff.show_divergence ds)
 
-let laws (p : E.native_op E.eff) (name : string) (dtape : E4_diff.decision list) =
+let laws (p : E.NativeOp.t E.Eff.t) (name : string) (dtape : E4_diff.decision list) =
   print_endline "";
   Printf.printf "== the query laws on %s (|tape| = %d) ==\n" name (List.length dtape);
   let k = 8 in

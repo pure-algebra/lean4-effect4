@@ -1,7 +1,7 @@
 (* Kit_json — JSON text, and every carrier's JSON through its shape document (hand-written).
 
    What it is: the kit's one JSON reader and one JSON printer. A carrier's JSON is its value tree
-   (Eff_types.val_) printed under its shape document (Effect4_gen.Api_gen.shape_doc, which Lean lowers from
+   (Eff_types.Val.t) printed under its shape document (Effect4_gen.Api_gen.shape_doc, which Lean lowers from
    the carrier's `Canonical.shape`). So a program, a row table, a type, an exit and a refusal print
    as the session tool prints them (`Tools.JsonBridge.printJson`), and read back where the value
    tree reads. This file is the OCaml twin of `ShapeDoc.print`
@@ -181,27 +181,27 @@ let be64_hex (bits : int) : string =
   String.concat "" (List.init 8 (fun i -> Printf.sprintf "%02x" ((bits lsr (8 * (7 - i))) land 0xFF)))
 
 (** The printer under a shape (`printIn`). *)
-let rec print_in defs (s : shape) (v : val_) : J.t =
+let rec print_in defs (s : shape) (v : Val.t) : J.t =
   match v with
-  | Val_unit -> J.Null
-  | Val_bool b -> J.Bool b
-  | Val_nat n -> J.Int n
-  | Val_str t -> J.String t
-  | Val_bytes d -> J.String (hex_string d)
-  | Val_none -> J.Null
-  | Val_some a ->
+  | Val.Unit -> J.Null
+  | Val.Bool b -> J.Bool b
+  | Val.Nat n -> J.Int n
+  | Val.Str t -> J.String t
+  | Val.Bytes d -> J.String (hex_string d)
+  | Val.None -> J.Null
+  | Val.Some a ->
     (match head_shape defs s with
      | Shape_option item -> print_in defs item a
      | _ -> print_in defs Shape_unit a)
-  | Val_list xs ->
+  | Val.List xs ->
     (match head_shape defs s with
      | Shape_list item -> J.Array (List.map (print_in defs item) xs)
      | _ -> J.Array (List.map (print_in defs Shape_unit) xs))
-  | Val_pair (a, b) ->
+  | Val.Pair (a, b) ->
     (match head_shape defs s with
      | Shape_pair (f, g) -> J.Array [print_in defs f a; print_in defs g b]
      | _ -> J.Array [print_in defs Shape_unit a; print_in defs Shape_unit b])
-  | Val_ctor (i, args) ->
+  | Val.Ctor (i, args) ->
     let by_structure () =
       J.Object [("_ctor", J.Int i); ("args", J.Array (List.map (print_in defs Shape_unit) args))]
     in
@@ -214,14 +214,14 @@ let rec print_in defs (s : shape) (v : val_) : J.t =
           else J.Object (("_tag", J.String name) :: print_fields defs fields args)
         | None -> by_structure ())
      | _ -> by_structure ())
-  | Val_ref (_, d) ->
+  | Val.Ref (_, d) ->
     (* the kind table is not lowered: an `anyRef`'s kind prints as null (`kindJson`'s miss) *)
     (match head_shape defs s with
      | Shape_anyRef -> J.Object [("kind", J.Null); ("address", J.String (hex_string d))]
      | _ -> J.String (hex_string d))
-  | Val_handle (k, n) -> J.Object [("handle", J.Int k); ("key", J.Int n)]
-  | Val_negInt n -> J.Object [("int", J.String (string_of_int (- (n + 1))))]
-  | Val_float b -> J.Object [("float64", J.String (be64_hex b))]
+  | Val.Handle (k, n) -> J.Object [("handle", J.Int k); ("key", J.Int n)]
+  | Val.NegInt n -> J.Object [("int", J.String (string_of_int (- (n + 1))))]
+  | Val.Float b -> J.Object [("float64", J.String (be64_hex b))]
 
 and print_fields defs fields args =
   match fields, args with
@@ -360,33 +360,33 @@ let canonical_hex (h : string) : int list option =
     go 0 []
 
 (** Read a value tree under a shape (`readIn`). *)
-let rec read_in defs budget s (j : J.t) : val_ option =
+let rec read_in defs budget s (j : J.t) : Val.t option =
   if budget = 0 then None
   else
     let n = budget - 1 in
     match head_shape defs s, j with
-    | Shape_unit, J.Null -> Some Val_unit
-    | Shape_option _, J.Null -> Some Val_none
-    | Shape_option item, j' -> Option.map (fun v -> Val_some v) (read_in defs n item j')
-    | Shape_bool, J.Bool b -> Some (Val_bool b)
-    | Shape_nat, J.Int x -> if x >= 0 then Some (Val_nat x) else None
-    | Shape_string, J.String t -> Some (Val_str t)
-    | (Shape_bytes | Shape_digest), J.String h -> Option.map (fun d -> Val_bytes d) (canonical_hex h)
-    | Shape_list item, J.Array js -> Option.map (fun vs -> Val_list vs) (read_list defs n item js)
+    | Shape_unit, J.Null -> Some Val.Unit
+    | Shape_option _, J.Null -> Some Val.None
+    | Shape_option item, j' -> Option.map (fun v -> Val.Some v) (read_in defs n item j')
+    | Shape_bool, J.Bool b -> Some (Val.Bool b)
+    | Shape_nat, J.Int x -> if x >= 0 then Some (Val.Nat x) else None
+    | Shape_string, J.String t -> Some (Val.Str t)
+    | (Shape_bytes | Shape_digest), J.String h -> Option.map (fun d -> Val.Bytes d) (canonical_hex h)
+    | Shape_list item, J.Array js -> Option.map (fun vs -> Val.List vs) (read_list defs n item js)
     | Shape_pair (f, g), J.Array [ a; b ] ->
-      Option.bind (read_in defs n f a) (fun x -> Option.map (fun y -> Val_pair (x, y)) (read_in defs n g b))
+      Option.bind (read_in defs n f a) (fun x -> Option.map (fun y -> Val.Pair (x, y)) (read_in defs n g b))
     | Shape_struct (_, fields), J.Object entries ->
-      Option.map (fun vs -> Val_ctor (0, vs)) (read_fields defs n fields entries)
+      Option.map (fun vs -> Val.Ctor (0, vs)) (read_fields defs n fields entries)
     | Shape_sum (_, cases), J.String name ->
       if all_nullary cases then
         Option.bind (tag_of_name name cases) (fun (tag, fields) ->
-            if fields = [] then Some (Val_ctor (tag, [])) else None)
+            if fields = [] then Some (Val.Ctor (tag, [])) else None)
       else None
     | Shape_sum (_, cases), J.Object (("_tag", J.String name) :: entries) ->
       if all_nullary cases then None
       else
         Option.bind (tag_of_name name cases) (fun (tag, fields) ->
-            Option.map (fun vs -> Val_ctor (tag, vs)) (read_fields defs n fields entries))
+            Option.map (fun vs -> Val.Ctor (tag, vs)) (read_fields defs n fields entries))
     | _, _ -> None
 
 and read_list defs budget item js =
@@ -412,12 +412,12 @@ and read_fields defs budget fields entries =
 (* A carrier's JSON *)
 
 (** A value tree's JSON under a shape document, each list as an array (`Canonical.printArrays`). *)
-let print (doc : shape_doc) (v : val_) : J.t =
+let print (doc : shape_doc) (v : Val.t) : J.t =
   let j = print_in doc.defs doc.root v in
   arrays_in doc.defs (read_budget j) doc.root j
 
 (** A value tree from JSON whose objects may be in any order and whose lists may be arrays
     (`ShapeDoc.order`, then `ShapeDoc.read`). *)
-let read (doc : shape_doc) (j : J.t) : val_ option =
+let read (doc : shape_doc) (j : J.t) : Val.t option =
   let ordered = order_in doc.defs (read_budget j) doc.root j in
   read_in doc.defs (read_budget ordered) doc.root ordered

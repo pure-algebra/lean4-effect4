@@ -123,10 +123,10 @@ let sh_api_load compile ectx interp program fuel =
 let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options site =
   let child_id = m.next_id in
   let child_interruptible =
-    match options.mask_mode with
-    | MaskMode_interruptible -> true
-    | MaskMode_uninterruptible -> false
-    | MaskMode_inherit ->
+    match options.ForkOptions.mask_mode with
+    | MaskMode.Interruptible -> true
+    | MaskMode.Uninterruptible -> false
+    | MaskMode.Inherit ->
       (* `core.interruptible parent.frame` (Fibers.lean:933), which the mono phase reads off
          the frame record; the annotation is needed because `interruptible` is also a field of
          `fiber_core`, where it is a function. *)
@@ -152,10 +152,10 @@ let sh_spawn_generic mk_fiber (core : (_, _, _, _, _, _, _, _) fiber_core) inter
     (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options site =
   let child_id = m.next_id in
   let child_interruptible =
-    match options.mask_mode with
-    | MaskMode_interruptible -> true
-    | MaskMode_uninterruptible -> false
-    | MaskMode_inherit -> core.interruptible parent.frame
+    match options.ForkOptions.mask_mode with
+    | MaskMode.Interruptible -> true
+    | MaskMode.Uninterruptible -> false
+    | MaskMode.Inherit -> core.interruptible parent.frame
   in
   let child =
     mk_fiber core child_id program child_interruptible (interp.budget_of parent.context)
@@ -201,27 +201,27 @@ let sh_machine_drop_token m token =
    the state plan's T3b), so `env ++ [a]` is `E.snoc env a`: the term reads its outer binders
    below the current value, at the node's level.  The term's answer is read as Lean's arm
    reads it: the option frames
-   (`Store.Image.ofOption Store.Image.ident`: `Val_none`, `Val_some`) and the two-element
-   tuple (`Store.Image.ofTuple2`: `Val_list [b; a]`); any other answer is a frontier. *)
+   (`Store.Image.ofOption Store.Image.ident`: `Val.None`, `Val.Some`) and the two-element
+   tuple (`Store.Image.ofTuple2`: `Val.List [b; a]`); any other answer is a frontier. *)
 let sh_ref_step eval_term op heap =
   let run env f a = eval_term (E.snoc env a) f in
   let option_of = function
-    | Val_none -> Some None
-    | Val_some v -> Some (Some v)
+    | Val.None -> Some None
+    | Val.Some v -> Some (Some v)
     | _ -> None in
   let pair_of = function
-    | Val_list [b; v] -> Some (b, v)
+    | Val.List [b; v] -> Some (b, v)
     | _ -> None in
   match op with
   | SyncOp_refMake initial ->
     let k = M.cardinal heap in
-    Some (Val_handle (2, k), M.add k initial heap)
+    Some (Val.Handle (2, k), M.add k initial heap)
   | SyncOp_refGet cell ->
     (match M.find_opt cell heap with None -> None | Some a -> Some (a, heap))
   | SyncOp_refSet (cell, value) ->
     (match M.find_opt cell heap with
      | None -> None
-     | Some _ -> Some (Val_handle (2, cell), M.set cell value heap))
+     | Some _ -> Some (Val.Handle (2, cell), M.set cell value heap))
   | SyncOp_refGetAndSet (cell, value) ->
     (match M.find_opt cell heap with
      | None -> None
@@ -236,7 +236,7 @@ let sh_ref_step eval_term op heap =
      | Some a ->
        (match run env f a with
         | None -> None
-        | Some a' -> Some (Val_unit, M.set cell a' heap)))
+        | Some a' -> Some (Val.Unit, M.set cell a' heap)))
   | SyncOp_refGetAndUpdate (cell, f, env) ->
     (match M.find_opt cell heap with
      | None -> None
@@ -257,8 +257,8 @@ let sh_ref_step eval_term op heap =
      | Some a ->
        (match Option.bind (run env f a) option_of with
         | None -> None
-        | Some None -> Some (Val_unit, heap)
-        | Some (Some a') -> Some (Val_unit, M.set cell a' heap)))
+        | Some None -> Some (Val.Unit, heap)
+        | Some (Some a') -> Some (Val.Unit, M.set cell a' heap)))
   | SyncOp_refGetAndUpdateSome (cell, f, env) ->
     (match M.find_opt cell heap with
      | None -> None
@@ -400,7 +400,7 @@ let sh_memo_delete_entry w id layer =
    Proof: if the test holds, `P.node c p = walk c (P.root p) (P.to_list p)` (PPATH PP3) and
    `P.root p` is `n` up to the reallocated constructor; otherwise it is `P.walk`, which IS
    `Node.at_`. *)
-let sh_node_at child (n : native_op node) (p : native_op node P.t) : native_op node option =
+let sh_node_at child (n : NativeOp.t node) (p : NativeOp.t node P.t) : NativeOp.t node option =
   match n, P.root p with
   | Node_eff a, Node_eff b when a == b -> P.node child p
   | _ -> P.walk child n (P.to_list p)
@@ -410,7 +410,7 @@ let sh_node_at child (n : native_op node) (p : native_op node P.t) : native_op n
    passed programs (decisions row 340) and the running call (row 341, step 3) start empty).
    The spine has to be told which program it addresses, and the generated `rootPoint` is not: `Program.compile` -- its only caller -- holds the root
    under that name, so the row hands it in. *)
-let sh_root_point (root : native_op eff) (fuel : int) (tape : bool list) : point =
+let sh_root_point (root : NativeOp.t Eff.t) (fuel : int) (tape : bool list) : point =
   ({ path = P.make (Node_eff root); env = E.empty; fuel; tape; completed = []; root = 0;
      params = []; call = [] }
    : point)

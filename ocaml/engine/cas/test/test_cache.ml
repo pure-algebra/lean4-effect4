@@ -460,10 +460,10 @@ let test_decoded (b : built) =
 
 open Eff_types
 
-let t_unit = Term_lit Lit_unit
-let t_n i = Term_lit (Lit_nat i)
-let ea = Eff_succeed (t_n 1)
-let eb = Eff_succeed (t_n 2)
+let t_unit = Term.Lit Lit.Unit
+let t_n i = Term.Lit (Lit.Nat i)
+let ea = Eff.Succeed (t_n 1)
+let eb = Eff.Succeed (t_n 2)
 
 (* A witness of EVERY constructor of EVERY sort (L-SUB-3, M3), GENERATED
    (`Eff_subterm.witnesses`, src/OCaml5/Eff/Emit.lean): argument j of a witness is seeded with
@@ -474,13 +474,13 @@ let embedded : (E4_subterm.Tree.node * Eff_wire.program * int list) list =
   List.map
     (fun (w : E4_subterm.Tree.node) ->
       match w with
-      | N_eff e -> (w, Eff_suspend e, [ 0 ])
-      | N_stmts ss -> (w, Eff_gen ss, [ 0 ])
-      | N_stmt st -> (w, Eff_gen (Stmts_cons (st, Stmts_nil)), [ 0; 0 ])
-      | N_action a -> (w, Eff_withFiber a, [ 0 ])
-      | N_effs es -> (w, Eff_withFiber (ActionTerm_raceAll es), [ 0; 0 ])
-      | N_layer l -> (w, Eff_provideLayer (l, false, ea), [ 0 ])
-      | N_layers ls -> (w, Eff_provideLayer (LayerTerm_mergeAll ls, false, ea), [ 0; 0 ]))
+      | N_eff e -> (w, Eff.Suspend e, [ 0 ])
+      | N_stmts ss -> (w, Eff.Gen ss, [ 0 ])
+      | N_stmt st -> (w, Eff.Gen (Stmts.Cons (st, Stmts.Nil)), [ 0; 0 ])
+      | N_action a -> (w, Eff.WithFiber a, [ 0 ])
+      | N_effs es -> (w, Eff.WithFiber (ActionTerm.RaceAll es), [ 0; 0 ])
+      | N_layer l -> (w, Eff.ProvideLayer (l, false, ea), [ 0 ])
+      | N_layers ls -> (w, Eff.ProvideLayer (LayerTerm.MergeAll ls, false, ea), [ 0; 0 ]))
     E4_subterm.Tree.witnesses
 
 let eff_goldens_dir () =
@@ -762,7 +762,7 @@ let test_path_spaces () =
 let test_subterm_misc () =
   print_endline "-- E4_subterm: Cids, refusals, and the index as a function of the bytes";
   (* two occurrences of one subterm *)
-  let prog = Eff_bind (Eff_scoped ea, Eff_scoped ea) in
+  let prog = Eff.Bind (Eff.Scoped ea, Eff.Scoped ea) in
   let bytes = Eff_wire.encode_program prog in
   let ix = E4_subterm.of_program bytes in
   let l = E4_subterm.at_prog_path ix [ 0 ] and r = E4_subterm.at_prog_path ix [ 1 ] in
@@ -969,7 +969,7 @@ let test_deps_truncated () =
 let test_mutations (b : built) =
   print_endline "-- mutation checks (cas-design §11 commit 9)";
   (* X1: the slice law must go red when the offset is wrong. *)
-  let bytes = Eff_wire.encode_program (Eff_bind (ea, eb)) in
+  let bytes = Eff_wire.encode_program (Eff.Bind (ea, eb)) in
   let ix = E4_subterm.of_program bytes in
   let e = match E4_subterm.at_prog_path ix [ 1 ] with Some x -> x | None -> assert false in
   let wrong = { e with E4_subterm.off = e.E4_subterm.off - 1 } in
@@ -998,7 +998,7 @@ let test_mutations (b : built) =
      (`branch` held this control until it retired into `select`; `catchIf` has the same shape,
      a term first and two programs after it.) *)
   check "X3 the ValPath of `catchIf` is falsifiable: argument 0 is a term, not an eff"
-    (let p = Eff_wire.encode_program (Eff_catchIf (t_unit, ea, eb)) in
+    (let p = Eff_wire.encode_program (Eff.CatchIf (t_unit, ea, eb)) in
      let i = E4_subterm.of_program p in
      match E4_subterm.at_prog_path i [ 0 ] with
      | None -> false

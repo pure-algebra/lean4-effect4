@@ -25,37 +25,37 @@ let check name ok =
 
 (* ---------------------------------------------------------------- printing *)
 
-let rec show_val (v : Eff_types.val_) =
+let rec show_val (v : Eff_types.Val.t) =
   match v with
-  | Eff_types.Val_unit -> "unit"
-  | Eff_types.Val_bool b -> string_of_bool b
-  | Eff_types.Val_nat n -> string_of_int n
-  | Eff_types.Val_str s -> "\"" ^ s ^ "\""
-  | Eff_types.Val_none -> "none"
-  | Eff_types.Val_some x -> "some " ^ show_val x
-  | Eff_types.Val_pair (a, b) -> "pair (" ^ show_val a ^ ", " ^ show_val b ^ ")"
-  | Eff_types.Val_list xs -> "list [" ^ String.concat ", " (List.map show_val xs) ^ "]"
-  | Eff_types.Val_bytes _ -> "bytes"
-  | Eff_types.Val_ctor (i, args) ->
+  | Eff_types.Val.Unit -> "unit"
+  | Eff_types.Val.Bool b -> string_of_bool b
+  | Eff_types.Val.Nat n -> string_of_int n
+  | Eff_types.Val.Str s -> "\"" ^ s ^ "\""
+  | Eff_types.Val.None -> "none"
+  | Eff_types.Val.Some x -> "some " ^ show_val x
+  | Eff_types.Val.Pair (a, b) -> "pair (" ^ show_val a ^ ", " ^ show_val b ^ ")"
+  | Eff_types.Val.List xs -> "list [" ^ String.concat ", " (List.map show_val xs) ^ "]"
+  | Eff_types.Val.Bytes _ -> "bytes"
+  | Eff_types.Val.Ctor (i, args) ->
     Printf.sprintf "ctor %d [%s]" i (String.concat ", " (List.map show_val args))
-  | Eff_types.Val_ref (k, _) -> Printf.sprintf "ref %d" k
-  | Eff_types.Val_handle (k, n) -> Printf.sprintf "handle %d/%d" k n
-  | Eff_types.Val_negInt n -> string_of_int (- (n + 1))
-  | Eff_types.Val_float b -> Printf.sprintf "float %d" b
+  | Eff_types.Val.Ref (k, _) -> Printf.sprintf "ref %d" k
+  | Eff_types.Val.Handle (k, n) -> Printf.sprintf "handle %d/%d" k n
+  | Eff_types.Val.NegInt n -> string_of_int (- (n + 1))
+  | Eff_types.Val.Float b -> Printf.sprintf "float %d" b
 
 let show_reason = function
-  | Eff_types.Reason_fail (Eff_types.Err_boom, _) -> "fail(boom)"
-  | Eff_types.Reason_fail (Eff_types.Err_tag t, _) -> Printf.sprintf "fail(tag %d)" t
-  | Eff_types.Reason_fail (Eff_types.Err_payload p, _) -> "fail(payload " ^ show_val p ^ ")"
-  | Eff_types.Reason_fail _ -> "fail"
-  | Eff_types.Reason_die (_, _) -> "die"
-  | Eff_types.Reason_interrupt (None, _) -> "interrupt(none)"
-  | Eff_types.Reason_interrupt (Some i, _) -> Printf.sprintf "interrupt(%d)" i
+  | Eff_types.Reason.Fail (Eff_types.Err.Boom, _) -> "fail(boom)"
+  | Eff_types.Reason.Fail (Eff_types.Err.Tag t, _) -> Printf.sprintf "fail(tag %d)" t
+  | Eff_types.Reason.Fail (Eff_types.Err.Payload p, _) -> "fail(payload " ^ show_val p ^ ")"
+  | Eff_types.Reason.Fail _ -> "fail"
+  | Eff_types.Reason.Die (_, _) -> "die"
+  | Eff_types.Reason.Interrupt (None, _) -> "interrupt(none)"
+  | Eff_types.Reason.Interrupt (Some i, _) -> Printf.sprintf "interrupt(%d)" i
 
 let show_exit = function
   | None -> "<no exit>"
-  | Some (Eff_types.Exit_success v) -> "success " ^ show_val v
-  | Some (Eff_types.Exit_failure c) ->
+  | Some (Eff_types.Exit.Success v) -> "success " ^ show_val v
+  | Some (Eff_types.Exit.Failure c) ->
     "failure [" ^ String.concat "; " (List.map show_reason c) ^ "]"
 
 let show_outcome = function
@@ -72,7 +72,7 @@ let root_exit (r : A.inspection) =
   | None -> None
   | Some f -> f.A.exit_
 
-let run_and_show name (p : Eff_types.native_op Eff_types.eff) =
+let run_and_show name (p : Eff_types.NativeOp.t Eff_types.Eff.t) =
   let r = A.api_run p 1000 [] 1000 in
   let e = root_exit r in
   Printf.printf "  %s: outcome=%s fibers=%d exit=%s\n" name (show_outcome r.A.outcome)
@@ -81,33 +81,33 @@ let run_and_show name (p : Eff_types.native_op Eff_types.eff) =
 
 (* ---------------------------------------------------------------- the programs *)
 
-let p42 : Eff_types.native_op Eff_types.eff = Eff_types.Eff_succeed (Eff_types.Term_lit (Eff_types.Lit_nat 42))
+let p42 : Eff_types.NativeOp.t Eff_types.Eff.t = Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat 42))
 
-let fork_options : Eff_types.fork_options =
-  { Eff_types.start_immediately = false; daemon = false; mask_mode = Eff_types.MaskMode_inherit }
+let fork_options : Eff_types.ForkOptions.t =
+  { Eff_types.ForkOptions.start_immediately = false; daemon = false; mask_mode = Eff_types.MaskMode.Inherit }
 
-let p_fork : Eff_types.native_op Eff_types.eff =
-  Eff_types.Eff_bind
-    ( Eff_types.Eff_withFiber
-        (Eff_types.ActionTerm_fork
-           ( Eff_types.Eff_bind (Eff_types.Eff_yieldNow 0, Eff_types.Eff_succeed (Eff_types.Term_lit (Eff_types.Lit_nat 7))),
+let p_fork : Eff_types.NativeOp.t Eff_types.Eff.t =
+  Eff_types.Eff.Bind
+    ( Eff_types.Eff.WithFiber
+        (Eff_types.ActionTerm.Fork
+           ( Eff_types.Eff.Bind (Eff_types.Eff.YieldNow 0, Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat 7))),
              fork_options )),
-      Eff_types.Eff_awaitFiber (Eff_types.Term_var 0, Eff_types.ObserverMode_awaitValue) )
+      Eff_types.Eff.AwaitFiber (Eff_types.Term.Var 0, Eff_types.ObserverMode.AwaitValue) )
 
-let p_await : Eff_types.native_op Eff_types.eff =
-  Eff_types.Eff_bind
-    ( Eff_types.Eff_perform (Eff_types.NativeOp_deferredMakeOf (Eff_types.Ty_nat, Eff_types.Ty_nat), Eff_types.Term_lit Eff_types.Lit_unit),
-      Eff_types.Eff_perform (Eff_types.NativeOp_deferredAwait, Eff_types.Term_var 0) )
+let p_await : Eff_types.NativeOp.t Eff_types.Eff.t =
+  Eff_types.Eff.Bind
+    ( Eff_types.Eff.Perform (Eff_types.NativeOp.DeferredMakeOf (Eff_types.Ty.Nat, Eff_types.Ty.Nat), Eff_types.Term.Lit Eff_types.Lit.Unit),
+      Eff_types.Eff.Perform (Eff_types.NativeOp.DeferredAwait, Eff_types.Term.Var 0) )
 
 let () =
   print_endline "== G0. the generated engine runs a program (Api.run, fuel 1000) ==";
   let _, e = run_and_show "p42" p42 in
-  check "p42 exits success 42" (e = Some (Eff_types.Exit_success (Eff_types.Val_nat 42)));
+  check "p42 exits success 42" (e = Some (Eff_types.Exit.Success (Eff_types.Val.Nat 42)));
   (* `awaitFiber … awaitValue` answers the child's *reified exit*, `ctor 0 [nat 7]`, not a
      bare 7; the Lean side (`Api.run Wire.Corpus.pFork 1000`) prints exactly the same. *)
   let r, e = run_and_show "pFork" p_fork in
   check "pFork exits success (ctor 0 [7]), two fibers"
-    (e = Some (Eff_types.Exit_success (Eff_types.Val_ctor (0, [ Eff_types.Val_nat 7 ])))
+    (e = Some (Eff_types.Exit.Success (Eff_types.Val.Ctor (0, [ Eff_types.Val.Nat 7 ])))
     && List.length r.A.machine.A.fibers = 2);
   let _, e = run_and_show "pAwait" p_await in
   check "pAwait parks on the deferred (no exit, frontier)" (e = None)
@@ -115,35 +115,35 @@ let () =
 let () =
   print_endline "== generated option atoms (bounded smoke checks) ==";
   check "isSome none is false"
-    (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val_none ]
-    = Some (Eff_types.Val_bool false));
+    (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val.None ]
+    = Some (Eff_types.Val.Bool false));
   check "isSome some unit is true"
-    (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val_some Eff_types.Val_unit ]
-    = Some (Eff_types.Val_bool true));
+    (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val.Some Eff_types.Val.Unit ]
+    = Some (Eff_types.Val.Bool true));
   check "getOrElse none selects the default"
-    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val_none; Eff_types.Val_nat 9 ]
-    = Some (Eff_types.Val_nat 9));
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.None; Eff_types.Val.Nat 9 ]
+    = Some (Eff_types.Val.Nat 9));
   check "getOrElse some selects its payload"
     (A.program_native_atom_eval A.NativeAtom_getOrElse
-       [ Eff_types.Val_some (Eff_types.Val_nat 3); Eff_types.Val_nat 9 ]
-    = Some (Eff_types.Val_nat 3));
+       [ Eff_types.Val.Some (Eff_types.Val.Nat 3); Eff_types.Val.Nat 9 ]
+    = Some (Eff_types.Val.Nat 3));
   check "getOrElse retains a nested none payload"
     (A.program_native_atom_eval A.NativeAtom_getOrElse
-       [ Eff_types.Val_some Eff_types.Val_none; Eff_types.Val_some (Eff_types.Val_nat 9) ]
-    = Some Eff_types.Val_none);
+       [ Eff_types.Val.Some Eff_types.Val.None; Eff_types.Val.Some (Eff_types.Val.Nat 9) ]
+    = Some Eff_types.Val.None);
   check "isSome refuses a malformed outer shape"
-    (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val_nat 3 ] = None);
+    (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val.Nat 3 ] = None);
   check "getOrElse refuses a malformed outer shape"
-    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val_nat 3; Eff_types.Val_nat 9 ]
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.Nat 3; Eff_types.Val.Nat 9 ]
     = None);
   let kind = A.handle_kind_byte A.HandleKind_external in
-  let payload = Eff_types.Val_handle (kind, 41) in
-  let fallback = Eff_types.Val_handle (kind, 77) in
+  let payload = Eff_types.Val.Handle (kind, 41) in
+  let fallback = Eff_types.Val.Handle (kind, 77) in
   check "getOrElse preserves the selected payload handle"
-    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val_some payload; fallback ]
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.Some payload; fallback ]
     = Some payload);
   check "getOrElse preserves the selected default handle"
-    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val_none; fallback ]
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.None; fallback ]
     = Some fallback)
 
 let () =

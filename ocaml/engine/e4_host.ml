@@ -68,10 +68,10 @@
 
 open Eff_types
 
-type completion = (val_, err, defect, int, unit) Eff_types.completion
+type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
 
 module Types = struct
-  type 'st provider = row -> val_ -> 'st -> (completion * 'st) option
+  type 'st provider = Row.t -> Val.t -> 'st -> (completion * 'st) option
 
   type outcome = Finished | Waiting | Delay | Stuck of string
 
@@ -99,7 +99,7 @@ module Types = struct
 
   type load_refusal = Load_outside_profile of string
 
-  type call = { row : int; request : val_; answer : completion }
+  type call = { row : int; request : Val.t; answer : completion }
 end
 
 include Types

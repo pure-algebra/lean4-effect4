@@ -132,7 +132,7 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
       (through table_host (fun () -> Native_todo.Table.create state) Native_todo.Table.snapshot);
     (* the provider that declines insert: the reference a raise and a refusal are read against *)
     let declining row request st =
-      if row.spelling = "TodoRepo.insert" then None else Native_todo.provider Native_todo.record row request st
+      if row.Row.spelling = "TodoRepo.insert" then None else Native_todo.provider Native_todo.record row request st
     in
     let declined = serve built declining state in
     let calls_insert = match declined.stop with H.Host H.Declined -> true | _ -> false in

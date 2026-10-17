@@ -171,12 +171,12 @@ module Tree : sig
 
   type node = Eff_subterm.node =
     | N_eff of Eff_wire.program
-    | N_stmts of Eff_types.native_op Eff_types.stmts
-    | N_stmt of Eff_types.native_op Eff_types.stmt
-    | N_action of Eff_types.native_op Eff_types.action_term
-    | N_effs of Eff_types.native_op Eff_types.effs
-    | N_layer of Eff_types.native_op Eff_types.layer_term
-    | N_layers of Eff_types.native_op Eff_types.layer_terms
+    | N_stmts of Eff_types.NativeOp.t Eff_types.Stmts.t
+    | N_stmt of Eff_types.NativeOp.t Eff_types.Stmt.t
+    | N_action of Eff_types.NativeOp.t Eff_types.ActionTerm.t
+    | N_effs of Eff_types.NativeOp.t Eff_types.Effs.t
+    | N_layer of Eff_types.NativeOp.t Eff_types.LayerTerm.t
+    | N_layers of Eff_types.NativeOp.t Eff_types.LayerTerms.t
 
   val family_of : node -> family
   val ctor_index : node -> int

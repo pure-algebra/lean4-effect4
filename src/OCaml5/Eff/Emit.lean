@@ -81,7 +81,8 @@ def headerItems (what : String) : List Ml.Decl :=
       ++ "src/OCaml5/Tools/EffGen.lean <outdir>. Do not edit."),
    .comment what]
 
-/-- The OCaml type of a carrier (`OTy.render`'s spelling), as syntax. -/
+/-- The OCaml type of a carrier as syntax: a family by its owner's type (`labelType`), where
+`OTy.render` keeps the label. -/
 partial def OTy.ml : OTy → Ml.Ty
   | .int => .int
   | .bool => .bool
@@ -90,14 +91,14 @@ partial def OTy.ml : OTy → Ml.Ty
   | .option a => .option a.ml
   | .list a => .list a.ml
   | .prod a b => .tuple [a.ml, b.ml]
-  | .named n => .named n
-  | .requirements => .list (.named "service_key")
+  | .named n => .named (labelType n)
+  | .requirements => .list (.named (otype ``Effect4.ServiceKey))
 
 /-- The OCaml type of a family as `eff_types.ml` declares it (`Family.tyRef`), as syntax. `pre`
 qualifies each family name (`Eff_types.`). -/
 def Family.ty (f : Family) (pre : String := "") : Ml.Ty :=
-  .con (pre ++ f.spec.oname) (f.spec.params.map fun t => match t with
-    | .named n => .named (pre ++ n)
+  .con (pre ++ otype f.spec.leanName) (f.spec.params.map fun t => match t with
+    | .named n => .named (pre ++ labelType n)
     | t => t.ml)
 
 /-- A constructor matched whatever its arguments: `C`, or `C _` at every arity from one. -/
@@ -111,11 +112,17 @@ def ctorPatNamed (t : Name) (c : Ctor) : Ml.Pat := .ctor (octor t c.short) ((arg
 
 def ctorApp (t : Name) (c : Ctor) (args : List Ml.Expr) : Ml.Expr := .ctor (octor t c.short) args
 
-/-- The interface of `Eff_types` these modules read: the families' declarations, made by the LCNF
-route's type generator (`OCaml5.Lcnf.generateInFull`) as `eff_types.ml` declares them. -/
+/-- The interface of `Eff_types` these modules read: each type's module and declaration, made by
+the LCNF route's type generator (`OCaml5.Lcnf.generateInFull`) as `eff_types.ml` declares them.
+A family whose module the owner decided otherwise than `ownerNames` (a short name claimed
+twice) is refused, so every name here is the owner's. -/
 def typesInterface (bs : List (List Family)) : MetaM Ml.Interface := do
-  let (g, _) ← OCaml5.Lcnf.generateInFull (bs.flatten.map (·.spec.leanName)).toArray
-  return { name := "Eff_types", types := g.decls.toList }
+  let (g, tn) ← OCaml5.Lcnf.generateInFull (bs.flatten.map (·.spec.leanName)).toArray
+  for f in bs.flatten do
+    unless tn.modules[f.spec.leanName]? == some (OCaml5.Lcnf.moduleName f.spec.leanName) do
+      throwError s!"EffGen: the owner names {f.spec.leanName} {tn.modules[f.spec.leanName]?}, not its short name"
+  return { name := "Eff_types",
+           modules := g.entries.toList.filterMap fun (n, d, _) => (tn.modules[n]?).map fun m => (m, [d]) }
 
 /-! ## eff_ctors.ml: the constructor tables and the literal visitor -/
 
@@ -152,13 +159,13 @@ def litsBind (f : Family) : Ml.Bind :=
   let o := f.spec.oname
   let visit (c : Ctor) (vals : List Ml.Expr) : Ml.Expr :=
     seqOf ((c.args.zip vals).map fun ((_, t), a) => litsOf t a)
-  let k : String × Ml.Ty := ("k", .arrow (.named "lit") .unit)
+  let k : String × Ml.Ty := ("k", .arrow (.named (labelType "lit")) .unit)
   if f.trivial then
     bind s!"lits_{o}" [k, ("r", f.ty)] .unit (visit f.ctors.head! [.var "r"])
   else if f.isStruct then
     let c := f.ctors.head!
     bind s!"lits_{o}" [k, ("r", f.ty)] .unit
-      (visit c (c.args.map fun (nm, _) => .field (.var "r") (ofield nm)))
+      (visit c (c.args.map fun (nm, _) => .field (.var "r") (ofield f.spec.leanName nm)))
   else
     bind s!"lits_{o}" [k, ("v", f.ty)] .unit (.matchE (.var "v") (f.ctors.map fun c =>
       (ctorPatNamed f.spec.leanName c, visit c ((argNames c).map .var))))
@@ -205,7 +212,7 @@ def emitterBind (f : Family) : Ml.Bind :=
   if f.isStruct then
     let c := f.ctors.head!
     let parts := if f.trivial then c.args.map fun (_, t) => emitOf t (.var "r")
-      else c.args.map fun (nm, t) => emitOf t (.field (.var "r") (ofield nm))
+      else c.args.map fun (nm, t) => emitOf t (.field (.var "r") (ofield f.spec.leanName nm))
     bind s!"emit_{o}" [buffer, ("r", f.ty)] .unit
       (call "Eff_frame.emit_ctor" [.var "b", .int 0, .fn ["b"] (seqOf parts)])
   else
@@ -238,7 +245,7 @@ def decoderBind (f : Family) : Ml.Bind :=
       [decodeArm 0 c fun names =>
         if c.args.isEmpty then .unit
         else if f.trivial then seqOf (names.map .var)
-        else .annot (.record ((c.args.zip names).map fun ((nm, _), a) => (ofield nm, .var a))) f.ty]
+        else .annot (.record ((c.args.zip names).map fun ((nm, _), a) => (ofield f.spec.leanName nm, .var a))) f.ty]
     else f.ctors.map fun c => decodeArm c.tag c fun names => ctorApp f.spec.leanName c (names.map .var)
   bind s!"decode_{o}" [("s", .string), ("pos", .int), ("limit", .int)]
     (.option (.tuple [f.ty, .int]))
@@ -248,12 +255,13 @@ def decoderBind (f : Family) : Ml.Bind :=
         .matchE (.var "i") (arms ++ [(.wild, .ctor "None" [])]))])
 
 def wireModule (bs : List (List Family)) : Ml.Module :=
-  let field (v f : String) : Ml.Expr := .field (.var v) (ofield f)
+  let field (v f : String) : Ml.Expr := .field (.var v) (ofield ``Effect4.ServiceKey f)
+  let key : Ml.Ty := .named (otype ``Effect4.ServiceKey)
   { name := "eff_wire",
     items := headerItems ("Eff_wire: the canonical bytes of every carrier of Eff_types, and the exact decoder. Rule (src/Effect4/Store/Domain/Canonical.lean): framed tag payload = tag :: be64 (length payload) ++ payload; Unit 9 [], Bool 1 [0|1], Nat 2 base-256 big-endian no leading zero, String 3 utf8, List 4 concat, none 6 [] / some 7 x, pair 5 a++b, a constructor of an inductive 10 (encode t ++ args) where t is the constructor's wire tag from tools/Effect4Gen/wire-tags.json (Eff_ctors.wire_tag_<t>; not its declaration position, and a retired tag decodes as a refusal), a structure as constructor 0 with its fields in order. Decoding is length-directed and exact: a wrong tag, a bad index, a non-canonical Nat, invalid UTF-8, a short or long payload, or (for the _exact forms) trailing bytes are refusals (by construction: every arm checks p = e; tested: goldens, property test). encode_<t> raises Invalid_argument on a negative int or a string that is not valid UTF-8 (values outside the Lean image).")
       ++ [.openD "Eff_types",
           .comment "The order of a canonical requirement row: by name, then by service.",
-          letOne (bind "keyBefore" [("a", .named "service_key"), ("c", .named "service_key")] .bool
+          letOne (bind "keyBefore" [("a", key), ("c", key)] .bool
             (.binop "<" (.tuple [field "a" "name", field "a" "service"])
               (.tuple [field "c" "name", field "c" "service"])))]
       ++ bs.flatMap (fun b =>
@@ -264,7 +272,7 @@ def wireModule (bs : List (List Family)) : Ml.Module :=
           ++ b.map fun f => letOne (bind s!"decode_{f.spec.oname}_exact" [("s", .string)]
                (.option f.ty) (call "Eff_frame.exact" [.var s!"decode_{f.spec.oname}", .var "s"])))
       ++ [.comment "The top level: a program is an Eff over the native alphabet.",
-          .types [{ name := "program", body := .alias (.con "eff" [.named "native_op"]) }],
+          .types [{ name := "program", body := .alias (.con (otype ``Effect4.Program.Eff) [.named (otype ``Effect4.Program.NativeOp)]) }],
           letOne (bind "encode_program" [] (.arrow (.named "program") .string) (.var "encode_eff")),
           letOne (bind "decode_program" [] (.arrow .string (.option (.tuple [.named "program", .int])))
             (.fn ["s"] (call "decode_eff" [.var "s", .int 0, call "String.length" [.var "s"]]))),
@@ -293,7 +301,7 @@ def jsonBind (f : Family) : Ml.Bind :=
   if f.isStruct then
     let c := f.ctors.head!
     let fields := c.args.map fun (nm, t) =>
-      Ml.Expr.tuple [.str nm, jsonOf t (if f.trivial then .var "r" else .field (.var "r") (ofield nm))]
+      Ml.Expr.tuple [.str nm, jsonOf t (if f.trivial then .var "r" else .field (.var "r") (ofield f.spec.leanName nm))]
     bind s!"json_{o}" [("r", f.ty)] (.named "Eff_json_text.t")
       (.ctor "Eff_json_text.Object" [.listLit fields])
   else
@@ -346,7 +354,8 @@ def applied (f : Family) (c : Ctor) (args : List Ml.Expr) : Ml.Expr :=
     | [a] => a
     | _ => .tuple args
   else if f.isStruct then
-    .annot (.record ((c.args.zip args).map fun ((nm, _), v) => (ofield nm, v))) (f.ty "Eff_types.")
+    .annot (.record ((c.args.zip args).map fun ((nm, _), v) => ("Eff_types." ++ ofield f.spec.leanName nm, v)))
+      (f.ty "Eff_types.")
   else .ctor ("Eff_types." ++ octor f.spec.leanName c.short) args
 
 /-- A constructor applied to the least value of every argument. -/
@@ -473,8 +482,9 @@ def manifest (bs : List (List Family)) : String :=
 /-! ## eff_native.ml — the alphabet as data, rendered from Lean values -/
 
 def keyO (k : ServiceKey) : Ml.Expr :=
-  .annot (.record [(ofield "name", .int k.name.value), (ofield "service", .int k.service.value)])
-    (.named "service_key")
+  .annot (.record [(ofield ``Effect4.ServiceKey "name", .int k.name.value),
+                   (ofield ``Effect4.ServiceKey "service", .int k.service.value)])
+    (.named (otype ``Effect4.ServiceKey))
 
 /-- A constructor of a type of the program, applied. -/
 private def pc (t : Name) (c : String) (args : List Ml.Expr := []) : Ml.Expr := .ctor (octor t c) args
@@ -581,10 +591,10 @@ def nativeModule (nullaryOps typedOps termOps stratOps : Nat) : Ml.Module :=
           letOne (bind "const_atoms" [] (.list .string) (.listLit (constAtomNames.map .str))),
           letOne (bind "const_atom" [("name", .string)] .bool (call "List.mem" [.var "name", .var "const_atoms"])),
           .comment s!"{nullaryOps} nullary operations, {typedOps} at the faces' type arguments, {termOps} at their faces (a binder term at the unit literal), {stratOps} over every finalizer_strategy: {allOps.length} values.",
-          letOne (bind "all_ops" [] (.list (.named "native_op")) (.listLit (allOps.map opO))),
-          letOne (bind "scope_key" [] (.named "service_key") (keyO nativeScopeKey)),
-          letOne (bind "scope_ty" [] (.named "ty") (tyO Ty.scope)),
-          letOne (bind "context_ty" [] (.named "ty") (tyO Ty.context))] }
+          letOne (bind "all_ops" [] (.list (.named (otype ``Effect4.Program.NativeOp))) (.listLit (allOps.map opO))),
+          letOne (bind "scope_key" [] (.named (otype ``Effect4.ServiceKey)) (keyO nativeScopeKey)),
+          letOne (bind "scope_ty" [] (.named (otype ``Effect4.Program.Ty)) (tyO Ty.scope)),
+          letOne (bind "context_ty" [] (.named (otype ``Effect4.Program.Ty)) (tyO Ty.context))] }
 
 /-! ## eff_layout.ml — the source structure as data -/
 

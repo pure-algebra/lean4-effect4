@@ -555,7 +555,7 @@ module Coq_service_key =
  struct
  end
 
-type service_key = Eff_types.service_key
+type service_key = Eff_types.ServiceKey.t
 
 type 'a effect4_row = 'a list
 
@@ -563,19 +563,19 @@ module Coq_fork_options =
  struct
  end
 
-type fork_options = Eff_types.fork_options
+type fork_options = Eff_types.ForkOptions.t
 
 module Coq_param_decl =
  struct
  end
 
-type param_decl = Eff_types.param_decl
+type param_decl = Eff_types.ParamDecl.t
 
 module Coq_def_decl =
  struct
  end
 
-type def_decl = Eff_types.def_decl
+type def_decl = Eff_types.DefDecl.t
 
 
 
@@ -583,7 +583,7 @@ type ('e1, 'e2, 'x) sum1 =
 | Inl1 of 'e1
 | Inr1 of 'e2
 
-(** val fail_exit : Eff_types.val_ -> Lane_eval.exitv **)
+(** val fail_exit : Eff_types.Val.t -> Lane_eval.exitv **)
 
 let fail_exit = Lane_eval.fail_exit
 
@@ -596,45 +596,45 @@ let bad_shape = Lane_eval.bad_shape
 let outside = Lane_eval.outside
 
 (** val eval_term :
-    Eff_types.val_ list -> Eff_types.term -> Eff_types.val_ option **)
+    Eff_types.Val.t list -> Eff_types.Term.t -> Eff_types.Val.t option **)
 
 let rec eval_term = Lane_eval.eval_term
 
 (** val eval_terms :
-    Eff_types.val_ list -> Eff_types.terms -> Eff_types.val_ list option **)
+    Eff_types.Val.t list -> Eff_types.Terms.t -> Eff_types.Val.t list option **)
 
 and eval_terms = Lane_eval.eval_terms
 
 (** val decide :
-    Eff_types.decision -> Eff_types.val_ -> (bool * Eff_types.val_ list)
+    Eff_types.Decision.t -> Eff_types.Val.t -> (bool * Eff_types.Val.t list)
     option **)
 
 let decide = Lane_eval.decide
 
 type 'x rowE =
-| Row of int * Eff_types.val_
+| Row of int * Eff_types.Val.t
 
 type 'x storeE =
-| RefMake of Eff_types.val_
-| RefGet of Eff_types.val_
-| RefSet of Eff_types.val_ * Eff_types.val_
+| RefMake of Eff_types.Val.t
+| RefGet of Eff_types.Val.t
+| RefSet of Eff_types.Val.t * Eff_types.Val.t
 
-type frame_args = Eff_types.native_op Eff_types.eff list * Eff_types.val_ list
+type frame_args = Eff_types.NativeOp.t Eff_types.Eff.t list * Eff_types.Val.t list
 
 (** val effs_list :
-    Eff_types.native_op Eff_types.effs -> Eff_types.native_op Eff_types.eff
+    Eff_types.NativeOp.t Eff_types.Effs.t -> Eff_types.NativeOp.t Eff_types.Eff.t
     list **)
 
 let rec effs_list = function
-| Eff_types.Effs_nil -> []
-| Eff_types.Effs_cons (e, rest) -> e :: (effs_list rest)
+| Eff_types.Effs.Nil -> []
+| Eff_types.Effs.Cons (e, rest) -> e :: (effs_list rest)
 
 (** val bodies_of :
-    Eff_types.native_op Eff_types.eff -> Eff_types.native_op Eff_types.eff
+    Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.NativeOp.t Eff_types.Eff.t
     list **)
 
 let bodies_of = function
-| Eff_types.Eff_defs (_, bs, _, _) -> effs_list bs
+| Eff_types.Eff.Defs (_, bs, _, _) -> effs_list bs
 | _ -> []
 
 type ('e, 'r) program =
@@ -686,16 +686,16 @@ let then_opt p rest =
                     | None -> PRet None)
 
 (** val loop_stepB :
-    (Eff_types.val_ list -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
-    option) program) -> Eff_types.val_ list -> Eff_types.term ->
-    Eff_types.term -> Eff_types.term -> Eff_types.val_ -> ((__ storeE, __
-    rowE, __) sum1, (Lane_eval.exitv option, Eff_types.val_) sum) program **)
+    (Eff_types.Val.t list -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
+    option) program) -> Eff_types.Val.t list -> Eff_types.Term.t ->
+    Eff_types.Term.t -> Eff_types.Term.t -> Eff_types.Val.t -> ((__ storeE, __
+    rowE, __) sum1, (Lane_eval.exitv option, Eff_types.Val.t) sum) program **)
 
 let loop_stepB body env test step0 result c =
   match eval_term (app env (c :: [])) test with
   | Some v ->
     (match v with
-     | Eff_types.Val_bool b ->
+     | Eff_types.Val.Bool b ->
        if b
        then pbind (body (app env (c :: []))) (fun o ->
               match o with
@@ -728,8 +728,8 @@ let leaf = function
 | None -> bad_shape
 
 type calls_t =
-  Eff_types.native_op Eff_types.eff -> Eff_types.val_ list -> frame_args list
-  -> Eff_types.val_ -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t list -> frame_args list
+  -> Eff_types.Val.t -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
   option) program
 
 (** val cut_calls : calls_t **)
@@ -738,37 +738,37 @@ let cut_calls _ _ _ _ =
   PRet None
 
 (** val denoteW :
-    Eff_types.native_op Eff_types.eff list -> int -> calls_t ->
-    Eff_types.native_op Eff_types.eff -> Eff_types.val_ list -> frame_args
-    list -> Eff_types.val_ -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
+    Eff_types.NativeOp.t Eff_types.Eff.t list -> int -> calls_t ->
+    Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t list -> frame_args
+    list -> Eff_types.Val.t -> ((__ storeE, __ rowE, __) sum1, Lane_eval.exitv
     option) program **)
 
 let rec denoteW bodies k call e env ps ctx =
   match e with
-  | Eff_types.Eff_succeed t ->
+  | Eff_types.Eff.Succeed t ->
     PRet (Some
       (leaf (option_map (fun x -> Lane_eval.Success x) (eval_term env t))))
-  | Eff_types.Eff_fail t ->
+  | Eff_types.Eff.Fail t ->
     PRet (Some (leaf (option_map fail_exit (eval_term env t))))
-  | Eff_types.Eff_sync t ->
+  | Eff_types.Eff.Sync t ->
     PRet (Some (Lane_eval.Success
       (match eval_term env t with
        | Some v -> v
-       | None -> Eff_types.Val_unit)))
-  | Eff_types.Eff_suspend b -> denoteW bodies k call b env ps ctx
-  | Eff_types.Eff_perform (op, r) ->
+       | None -> Eff_types.Val.Unit)))
+  | Eff_types.Eff.Suspend b -> denoteW bodies k call b env ps ctx
+  | Eff_types.Eff.Perform (op, r) ->
     (match eval_term env r with
      | Some v ->
        (match op with
-        | Eff_types.NativeOp_refMake ->
+        | Eff_types.NativeOp.RefMake ->
           PVis ((Inl1 (RefMake v)), (fun x -> PRet (Some (Lane_eval.Success
             (Obj.magic x)))))
-        | Eff_types.NativeOp_refGet ->
+        | Eff_types.NativeOp.RefGet ->
           PVis ((Inl1 (RefGet v)), (fun x -> PRet (Some (Lane_eval.Success
             (Obj.magic x)))))
-        | Eff_types.NativeOp_refSet ->
+        | Eff_types.NativeOp.RefSet ->
           (match v with
-           | Eff_types.Val_list l ->
+           | Eff_types.Val.List l ->
              (match l with
               | [] -> PRet (Some bad_shape)
               | c :: l0 ->
@@ -781,13 +781,13 @@ let rec denoteW bodies k call e env ps ctx =
                         (Lane_eval.Success (Obj.magic x)))))
                     | _ :: _ -> PRet (Some bad_shape))))
            | _ -> PRet (Some bad_shape))
-        | Eff_types.NativeOp_external i ->
+        | Eff_types.NativeOp.External i ->
           PVis ((Inr1 (Row (i, v))), (fun x -> PRet (Some (Obj.magic x))))
-        | Eff_types.NativeOp_call n0 ->
+        | Eff_types.NativeOp.Call n0 ->
           (match nth_error bodies (Z.to_nat n0) with
            | Some body -> call body (v :: []) (([], []) :: ps) ctx
            | None -> PRet (Some bad_shape))
-        | Eff_types.NativeOp_param i ->
+        | Eff_types.NativeOp.Param i ->
           (match ps with
            | [] -> PRet (Some bad_shape)
            | f :: below ->
@@ -797,17 +797,17 @@ let rec denoteW bodies k call e env ps ctx =
               | None -> PRet (Some bad_shape)))
         | _ -> PRet (Some outside))
      | None -> PRet (Some bad_shape))
-  | Eff_types.Eff_bind (a, b) ->
+  | Eff_types.Eff.Bind (a, b) ->
     then_opt (denoteW bodies k call a env ps ctx) (fun ex ->
       match ex with
       | Lane_eval.Success v ->
         denoteW bodies k call b (app env (v :: [])) ps ctx
       | Lane_eval.Failure _ -> PRet (Some ex))
-  | Eff_types.Eff_withFiber a ->
+  | Eff_types.Eff.WithFiber a ->
     (match a with
-     | Eff_types.ActionTerm_context _ -> PRet (Some (Lane_eval.Success ctx))
+     | Eff_types.ActionTerm.Context _ -> PRet (Some (Lane_eval.Success ctx))
      | _ -> PRet (Some outside))
-  | Eff_types.Eff_select (t, d, a, b) ->
+  | Eff_types.Eff.Select (t, d, a, b) ->
     (match option_map (decide d) (eval_term env t) with
      | Some o ->
        (match o with
@@ -818,7 +818,7 @@ let rec denoteW bodies k call e env ps ctx =
           else denoteW bodies k call b (app env bound) ps ctx
         | None -> PRet (Some bad_shape))
      | None -> PRet (Some bad_shape))
-  | Eff_types.Eff_iterate (_, initial, test, step0, result, body) ->
+  | Eff_types.Eff.Iterate (_, initial, test, step0, result, body) ->
     (match eval_term env initial with
      | Some c0 ->
        pmap opt_join
@@ -827,23 +827,23 @@ let rec denoteW bodies k call e env ps ctx =
              env test step0 result)
            k c0)
      | None -> PRet (Some bad_shape))
-  | Eff_types.Eff_defs (_, _, main, _) ->
+  | Eff_types.Eff.Defs (_, _, main, _) ->
     denoteW bodies k call main env ps ctx
-  | Eff_types.Eff_invoke (n0, r, args) ->
+  | Eff_types.Eff.Invoke (n0, r, args) ->
     (match eval_term env r with
      | Some v ->
        (match nth_error bodies (Z.to_nat n0) with
         | Some body -> call body (v :: []) (((effs_list args), env) :: ps) ctx
         | None -> PRet (Some bad_shape))
      | None -> PRet (Some bad_shape))
-  | Eff_types.Eff_provideContext (t, b) ->
+  | Eff_types.Eff.ProvideContext (t, b) ->
     (match eval_term env t with
      | Some c -> denoteW bodies k call b env ps c
      | None -> PRet (Some bad_shape))
   | _ -> PRet (Some outside)
 
 (** val denoteD :
-    Eff_types.native_op Eff_types.eff list -> int -> int -> calls_t **)
+    Eff_types.NativeOp.t Eff_types.Eff.t list -> int -> int -> calls_t **)
 
 let rec denoteD bodies k d =
   denoteW bodies k
@@ -853,11 +853,11 @@ let rec denoteD bodies k d =
        d)
 
 (** val denoteBD :
-    int -> Eff_types.native_op Eff_types.eff -> ((__ storeE, __ rowE, __)
+    int -> Eff_types.NativeOp.t Eff_types.Eff.t -> ((__ storeE, __ rowE, __)
     sum1, Lane_eval.exitv option) program **)
 
 let denoteBD k main =
-  denoteD (bodies_of main) k k main [] [] Eff_types.Val_unit
+  denoteD (bodies_of main) k k main [] [] Eff_types.Val.Unit
 
 (** val route :
     (__ storeE, 'a1) host -> (__ rowE, 'a2) host -> (__ storeE, __ rowE, __)
@@ -875,21 +875,21 @@ let route cs rows e st =
      | None -> None)
 
 (** val fn_host :
-    (int -> Eff_types.val_ -> 'a1 -> (Lane_eval.exitv * 'a1) option) -> __
+    (int -> Eff_types.Val.t -> 'a1 -> (Lane_eval.exitv * 'a1) option) -> __
     rowE -> 'a1 -> (__ * 'a1) option **)
 
 let fn_host f e s =
   let Row (i, v) = e in Obj.magic f i v s
 
 type step =
-| Called of int * Eff_types.val_ * Lane_eval.exitv
-| Celled of string * Eff_types.val_ * Eff_types.val_
+| Called of int * Eff_types.Val.t * Lane_eval.exitv
+| Celled of string * Eff_types.Val.t * Eff_types.Val.t
 
 type stop =
 | Finished of Lane_eval.exitv
 | Cut
-| Waiting of int * Eff_types.val_
-| Refused of string * Eff_types.val_
+| Waiting of int * Eff_types.Val.t
+| Refused of string * Eff_types.Val.t
 
 (** val step_of : (__ storeE, __ rowE, 'a1) sum1 -> 'a1 -> step **)
 
@@ -900,7 +900,7 @@ let step_of e x =
      | RefMake v -> Celled ("make", v, (Obj.magic x))
      | RefGet c0 -> Celled ("get", c0, (Obj.magic x))
      | RefSet (c0, w) ->
-       Celled ("set", (Eff_types.Val_list (c0 :: (w :: []))), (Obj.magic x)))
+       Celled ("set", (Eff_types.Val.List (c0 :: (w :: []))), (Obj.magic x)))
   | Inr1 r -> let Row (i, v) = r in Called (i, v, (Obj.magic x))
 
 (** val stop_of : (__ storeE, __ rowE, 'a1) sum1 -> stop **)
@@ -910,7 +910,7 @@ let stop_of = function
   (match c with
    | RefMake v -> Refused ("make", v)
    | RefGet c0 -> Refused ("get", c0)
-   | RefSet (c0, w) -> Refused ("set", (Eff_types.Val_list (c0 :: (w :: [])))))
+   | RefSet (c0, w) -> Refused ("set", (Eff_types.Val.List (c0 :: (w :: [])))))
 | Inr1 r -> let Row (i, v) = r in Waiting (i, v)
 
 (** val trace :
@@ -932,27 +932,27 @@ let rec trace h p s =
      | None -> (([], (stop_of e)), s))
 
 (** val run_at :
-    int -> ((__ storeE, __ rowE, __) sum1, 'a1) host -> Eff_types.native_op
-    Eff_types.eff -> 'a1 -> (step list * stop) * 'a1 **)
+    int -> ((__ storeE, __ rowE, __) sum1, 'a1) host -> Eff_types.NativeOp.t
+    Eff_types.Eff.t -> 'a1 -> (step list * stop) * 'a1 **)
 
 let run_at k h e s =
   trace h (denoteBD k e) s
 
 (** val cells_fn :
-    (string -> Eff_types.val_ -> Eff_types.val_ -> 'a1 ->
-    (Eff_types.val_ * 'a1) option) -> __ storeE -> 'a1 -> (__ * 'a1) option **)
+    (string -> Eff_types.Val.t -> Eff_types.Val.t -> 'a1 ->
+    (Eff_types.Val.t * 'a1) option) -> __ storeE -> 'a1 -> (__ * 'a1) option **)
 
 let cells_fn c e s =
   match e with
-  | RefMake v -> Obj.magic c "make" v Eff_types.Val_unit s
-  | RefGet x -> Obj.magic c "get" x Eff_types.Val_unit s
+  | RefMake v -> Obj.magic c "make" v Eff_types.Val.Unit s
+  | RefGet x -> Obj.magic c "get" x Eff_types.Val.Unit s
   | RefSet (x, w) -> Obj.magic c "set" x w s
 
 (** val lane_run :
-    (string -> Eff_types.val_ -> Eff_types.val_ -> 'a1 ->
-    (Eff_types.val_ * 'a1) option) -> (int -> Eff_types.val_ -> 'a2 ->
-    (Lane_eval.exitv * 'a2) option) -> int -> Eff_types.native_op
-    Eff_types.eff -> 'a1 -> 'a2 -> (step list * stop) * ('a1 * 'a2) **)
+    (string -> Eff_types.Val.t -> Eff_types.Val.t -> 'a1 ->
+    (Eff_types.Val.t * 'a1) option) -> (int -> Eff_types.Val.t -> 'a2 ->
+    (Lane_eval.exitv * 'a2) option) -> int -> Eff_types.NativeOp.t
+    Eff_types.Eff.t -> 'a1 -> 'a2 -> (step list * stop) * ('a1 * 'a2) **)
 
 let lane_run c f k e cs s =
   run_at k (fun _ -> route (fun _ -> cells_fn c) (fun _ -> fn_host f)) e (cs,

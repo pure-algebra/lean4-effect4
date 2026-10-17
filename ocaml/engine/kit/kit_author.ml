@@ -4,8 +4,8 @@ open Eff_types
 module G = Effect4_gen.Api_gen
 
 type refusal = G.effect4_program_authoring_refusal
-type term = G.env -> int list -> (Eff_types.term, refusal) result
-type t = G.env -> int list -> (native_op eff, refusal) result
+type term = G.env -> int list -> (Eff_types.Term.t, refusal) result
+type t = G.env -> int list -> (NativeOp.t Eff.t, refusal) result
 
 (* A literal reads no scope, so LCNF lowers it at its reduced arity (`_redArg`); the scope is
    taken here. *)
@@ -49,34 +49,34 @@ let catch body handler : t = G.program_authoring_catch_with body handler
 let on_exit body finalizer : t = G.program_authoring_on_exit_with body finalizer
 let exit_of body : t = G.program_authoring_exit_ body
 
-type def = native_op G.def_src
+type def = NativeOp.t G.def_src
 
 (* One parameter: Lean reads its request through `requestParts 1`, a list of one term. *)
-let def name ~request ~answer ?(error = Ty_never) (body : term -> t) : def =
+let def name ~request ~answer ?(error = Ty.Never) (body : term -> t) : def =
   { G.name; params = [ ("request", request) ]; answer; error; requires = [];
     body = (function r :: _ -> body r | [] -> body unit);
-    role = DefRole_plain; program_params = [] }
+    role = DefRole.Plain; program_params = [] }
 
 let call name request : t = G.program_authoring_def_invoke name [ request ]
 
-let row name ~request ~answer ?(error = Ty_never) ?(cite = "") () : row =
+let row name ~request ~answer ?(error = Ty.Never) ?(cite = "") () : Row.t =
   G.program_authoring_row_host name request answer error cite
 
 let refusal_text (r : refusal) =
   let at = match r.path with [] -> "the root" | path -> "node " ^ String.concat "." (List.map string_of_int path) in
   let why =
     match r.reason with
-    | G.Effect4_program_authoring_reason_unbound n -> Printf.sprintf "no binder names %S" n
-    | G.Effect4_program_authoring_reason_unboundLayer n -> Printf.sprintf "no layer is named %S" n
-    | G.Effect4_program_authoring_reason_duplicateLayer n -> Printf.sprintf "two layers are named %S" n
-    | G.Effect4_program_authoring_reason_placement n -> Printf.sprintf "the layer %S could not be placed" n
-    | G.Effect4_program_authoring_reason_unboundRow n -> Printf.sprintf "no row is named %S" n
-    | G.Effect4_program_authoring_reason_reservedName n -> Printf.sprintf "%S is a name only the surface writes" n
-    | G.Effect4_program_authoring_reason_duplicateRow n -> Printf.sprintf "two rows are named %S" n
-    | G.Effect4_program_authoring_reason_unboundDef n -> Printf.sprintf "no definition is named %S" n
-    | G.Effect4_program_authoring_reason_duplicateDef n -> Printf.sprintf "two definitions are named %S" n
-    | G.Effect4_program_authoring_reason_unboundParam n -> Printf.sprintf "no program parameter is named %S" n
-    | G.Effect4_program_authoring_reason_duplicateParam n -> Printf.sprintf "two program parameters are named %S" n
+    | G.Reason_unbound n -> Printf.sprintf "no binder names %S" n
+    | G.Reason_unboundLayer n -> Printf.sprintf "no layer is named %S" n
+    | G.Reason_duplicateLayer n -> Printf.sprintf "two layers are named %S" n
+    | G.Reason_placement n -> Printf.sprintf "the layer %S could not be placed" n
+    | G.Reason_unboundRow n -> Printf.sprintf "no row is named %S" n
+    | G.Reason_reservedName n -> Printf.sprintf "%S is a name only the surface writes" n
+    | G.Reason_duplicateRow n -> Printf.sprintf "two rows are named %S" n
+    | G.Reason_unboundDef n -> Printf.sprintf "no definition is named %S" n
+    | G.Reason_duplicateDef n -> Printf.sprintf "two definitions are named %S" n
+    | G.Reason_unboundParam n -> Printf.sprintf "no program parameter is named %S" n
+    | G.Reason_duplicateParam n -> Printf.sprintf "two program parameters are named %S" n
   in
   Printf.sprintf "%s, at %s" why at
 

@@ -183,9 +183,9 @@ let test_writers () =
   let codes = List.init 10000 (fun i -> (i * 7) land 0xff) in
   let expected = String.init 10000 (fun i -> Char.chr ((i * 7) land 0xff)) in
   check "B a value's byte string of 10 000 codes is written whole"
-    (Eff_val.to_bytes (Eff_types.Val_bytes codes) = frame Eff_frame.tag_bytes expected);
+    (Eff_val.to_bytes (Eff_types.Val.Bytes codes) = frame Eff_frame.tag_bytes expected);
   check "B a code outside a byte is refused"
-    (try ignore (Eff_val.to_bytes (Eff_types.Val_bytes [ 1; 256 ])); false
+    (try ignore (Eff_val.to_bytes (Eff_types.Val.Bytes [ 1; 256 ])); false
      with Invalid_argument _ -> true)
 
 let () =

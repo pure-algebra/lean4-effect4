@@ -68,7 +68,7 @@ module type INSTANCE = sig
   type parked = Parked_notParked | Parked_withGuard of int  (* :234 *)
 
   type observer =  (* :353-359 *)
-    | Observer_resumeAwait of fiber_id * int * observer_mode
+    | Observer_resumeAwait of fiber_id * int * ObserverMode.t
     | Observer_untrackChild of fiber_id
     | Observer_dropScopeFinalizer of int * int
     | Observer_countdown of fiber_id * int
@@ -77,18 +77,18 @@ module type INSTANCE = sig
 
   type scope_mode = ScopeMode_forkIn | ScopeMode_fiberRunIn  (* :540 *)
   type outcome = Outcome_finished | Outcome_frontier | Outcome_stuck of stuck  (* :78 *)
-  type 'u service = { key : service_key; value : 'u }  (* :749 *)
+  type 'u service = { key : ServiceKey.t; value : 'u }  (* :749 *)
   type 'u context = 'u service list  (* :778 *)
 
   type ctx = {  (* :235 *)
-    services : val_ context;
+    services : Val.t context;
     max_ops_before_yield : int;
     prevent_yield : bool;
   }
 
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =  (* :408-426 *)
     | Prim_success of 'b
-    | Prim_failure of ('e, 'd, 'i, 'a) cause
+    | Prim_failure of ('e, 'd, 'i, 'a) Cause.t
     | Prim_sync of 's
     | Prim_suspend of 's
     | Prim_withFiber of 's
@@ -111,10 +111,10 @@ module type INSTANCE = sig
     | FrameEvent_popped of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
     | FrameEvent_ranContAll of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
     | FrameEvent_pushed of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
-    | FrameEvent_ranFinalizer of 'nu * ('b, 'e, 'd, 'i, 'a) exit_
-    | FrameEvent_substituted of ('e, 'd, 'i, 'a) cause
-    | FrameEvent_deferred of ('e, 'd, 'i, 'a) cause
-    | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) exit_
+    | FrameEvent_ranFinalizer of 'nu * ('b, 'e, 'd, 'i, 'a) Exit.t
+    | FrameEvent_substituted of ('e, 'd, 'i, 'a) Cause.t
+    | FrameEvent_deferred of ('e, 'd, 'i, 'a) Cause.t
+    | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) Exit.t
 
   type handle_kind =
     | HandleKind_fiber
@@ -144,23 +144,23 @@ module type INSTANCE = sig
     | RunEvent_childrenInterrupted of fiber_id * fiber_id list
     | RunEvent_observerFired of fiber_id * observer
     | RunEvent_frame of fiber_id * 'h
-    | RunEvent_finalizerProgram of fiber_id * 'nu * ('b, 'e, 'd, 'i, 'a) exit_
+    | RunEvent_finalizerProgram of fiber_id * 'nu * ('b, 'e, 'd, 'i, 'a) Exit.t
     | RunEvent_scopeLinked of scope_mode * int * int * fiber_id
     | RunEvent_scopeClosedOnLink of int * fiber_id
     | RunEvent_raceStarted of int * fiber_id * int
     | RunEvent_raceLaunched of int * fiber_id
-    | RunEvent_raceSettled of int * ('b, 'e, 'd, 'i, 'a) exit_
+    | RunEvent_raceSettled of int * ('b, 'e, 'd, 'i, 'a) Exit.t
     | RunEvent_contextSet of fiber_id * 'ch
-    | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) exit_
-    | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) exit_
+    | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) Exit.t
+    | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) Exit.t
 
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =  (* :69-76 *)
     | RunDecision_fire of fiber_id
     | RunDecision_flush
     | RunDecision_evaluate of fiber_id
     | RunDecision_yieldVerdict of fiber_id * bool
-    | RunDecision_answerAsync of fiber_id * int * ('b, 'e, 'd, 'i, 'a) completion
-    | RunDecision_interruptFrom of fiber_id option * 'a reason_annotations * fiber_id
+    | RunDecision_answerAsync of fiber_id * int * ('b, 'e, 'd, 'i, 'a) Completion.t
+    | RunDecision_interruptFrom of fiber_id option * 'a ReasonAnnotations.t * fiber_id
     | RunDecision_installMiddleware
     | RunDecision_advance of E4_clock.t
 
@@ -170,42 +170,42 @@ module type INSTANCE = sig
   type machine
   type fiber
   type interp
-  type program = native_op eff
+  type program = NativeOp.t Eff.t
 
   type event =
     ( nu,
       s,
-      val_,
-      err,
-      defect,
+      Val.t,
+      Err.t,
+      Defect.t,
       fiber_id,
       unit,
       ctx,
-      (nu, s, val_, err, defect, fiber_id, unit) prim,
-      (nu, s, val_, err, defect, fiber_id, unit) frame_event )
+      (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) prim,
+      (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_event )
     run_event
 
-  type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
+  type api_decision = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) run_decision
 
   val api_evaluate : api_decision
   (** `Effect4.Api.evaluate`, the first row of `Api.run`'s tape. *)
 
   (** The row table: the program's host rows, as `Api.Built` carries them; `[]` for a program
       with none. *)
-  val interp_of : row list -> program -> interp
+  val interp_of : Row.t list -> program -> interp
   val load : program -> fuel:int -> machine
-  val step : row list -> program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
-  val run_api : row list -> program -> fuel:int -> outcome * machine
+  val step : Row.t list -> program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
+  val run_api : Row.t list -> program -> fuel:int -> outcome * machine
   (* Lean's checked replay asks this before each decision (`Effect4.Program.admit`): a stale
      token, a call that is not a host row's, a wrong answer type, a dead handle or a reserved
      defect is refused. `true` when the decision is admitted. *)
-  val admit : row list -> machine -> api_decision -> bool
+  val admit : Row.t list -> machine -> api_decision -> bool
   (* The calls the machine waits on (`Effect4.Program.awaits`): each parked fiber's token, its
      operation and its request. A host driver answers the host rows among them. *)
-  type await = { fiber : fiber_id; token : int; op : native_op; request : val_ }
+  type await = { fiber : fiber_id; token : int; op : NativeOp.t; request : Val.t }
   val program_awaits : machine -> await list
   (* An exit as a value (`Effect4.Machine.exitImage`), as Lean's `reifyExitVal` writes it. *)
-  val reify_exit_val : (val_, err, defect, fiber_id, unit) exit_ -> val_
+  val reify_exit_val : (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t -> Val.t
 
   (** The free rows. *)
 
@@ -221,8 +221,8 @@ module type INSTANCE = sig
   val middleware : machine -> bool
   val finished : machine -> bool
   val completed_exits :
-    machine -> (fiber_id * (val_, err, defect, fiber_id, unit) exit_) list
-  val refs : machine -> val_ list
+    machine -> (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list
+  val refs : machine -> Val.t list
   val next_name : machine -> int
   val due_count : machine -> int
   val cell_count : machine -> int
@@ -230,7 +230,7 @@ module type INSTANCE = sig
   val memo_map_count : machine -> int
   val memo_paths : machine -> (int * (int list * int list list) list) list
   val f_id : fiber -> fiber_id
-  val f_exit : fiber -> (val_, err, defect, fiber_id, unit) exit_ option
+  val f_exit : fiber -> (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t option
   val f_parked : fiber -> parked
   val f_running : fiber -> bool
   val f_finalizing : fiber -> bool
@@ -267,18 +267,18 @@ module type ENGINE = sig
       `Completion.ofExit (Exit.success (Val.nat n))`.
       @raise E4_clock.Profile_refusal for a negative or out-of-profile natural. *)
 
-  val answer_async : int -> int -> (val_, err, defect, int, unit) completion -> decision
+  val answer_async : int -> int -> (Val.t, Err.t, Defect.t, int, unit) Completion.t -> decision
   (* [answer_async fiber token c] answers the parked token with the completion [c], a success or a
      failure, after the host-ingress check (EN9). *)
 
-  val answer_async_value : int -> int -> val_ -> decision
+  val answer_async_value : int -> int -> Val.t -> decision
   (* [answer_async_value fiber token v] answers the parked token with `Completion.ofExit
      (Exit.success v)`, any value, after the host-ingress check every natural passes (EN9,
      {!check_answer}). Whether it fits the call's row is `admits`'s question.
      @raise E4_clock.Profile_refusal for an out-of-profile natural inside [v]. *)
 
   val answer_async_float : int -> int -> float -> decision
-  (** Answers with the exact IEEE-754 bit pattern when it fits [Val_float]'s carrier.
+  (** Answers with the exact IEEE-754 bit pattern when it fits [Val.Float]'s carrier.
       @raise E4_clock.Profile_refusal before conversion when those bits do not fit. *)
 
   val interrupt_from : int option -> int -> decision
@@ -299,9 +299,9 @@ module type ENGINE = sig
 
   (* [?table] is the program's row table (`Api.Built.table`); [[]] when omitted, for a program
      with no host row. Every step reads it. *)
-  val load_program : ?table:row list -> program -> fuel:int -> t
-  val load : ?table:row list -> Eff_wire.program -> fuel:int -> t
-  val load_bytes : ?table:row list -> string -> fuel:int -> t option
+  val load_program : ?table:Row.t list -> program -> fuel:int -> t
+  val load : ?table:Row.t list -> Eff_wire.program -> fuel:int -> t
+  val load_bytes : ?table:Row.t list -> string -> fuel:int -> t option
 
   (** {2 Driving} *)
 
@@ -339,10 +339,10 @@ module type ENGINE = sig
   val drive : t -> t
   (** `Api.run`'s tape, `[evaluate root; flush]` (Api.lean:171-172). *)
 
-  val run : ?table:row list -> Eff_wire.program -> fuel:int -> t
-  val run_program : ?table:row list -> program -> fuel:int -> t
+  val run : ?table:Row.t list -> Eff_wire.program -> fuel:int -> t
+  val run_program : ?table:Row.t list -> program -> fuel:int -> t
 
-  val api_run : ?table:row list -> program -> fuel:int -> string
+  val api_run : ?table:Row.t list -> program -> fuel:int -> string
   (** The GENERATED `Effect4.Api.run`, unwrapped, answering only its outcome: the W1 bench
       cell, and the oracle {!run} is checked against. *)
 
@@ -352,9 +352,9 @@ module type ENGINE = sig
   val outcome : t -> string
   val exits : t -> (int * string) list
   val root_exit : t -> string option
-  val root_exit_of : t -> (val_, err, defect, int, unit) exit_ option
+  val root_exit_of : t -> (Val.t, Err.t, Defect.t, int, unit) Exit.t option
   (* The root's exit itself, as Lean's `Run.exit` answers it; `root_exit` renders it. *)
-  val host_calls : t -> (int * int * int * val_) list
+  val host_calls : t -> (int * int * int * Val.t) list
   (* The host calls the machine waits on: (fiber, token, the row's external position, request),
      in the order of `Effect4.Program.awaits`. *)
   val fiber_rows : t -> (int * string) list
@@ -377,7 +377,7 @@ module type E4_engine = sig
 
   (** {1 A host's answer at ingress} *)
 
-  val check_answer : (val_, err, defect, int, unit) completion -> unit
+  val check_answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t -> unit
   (** EN9: every natural of a host's answer ([Api.HostSession.Answer], src/Effect4/Api/HostSession.lean)
       through [E4_clock.to_profile_nat (E4_clock.of_nat n)]: [Val.nat], a [Val.ctor] index, a
       [Val.handle] key, a [Val.negInt] magnitude, [Err.tag], [Defect.user], an interrupting

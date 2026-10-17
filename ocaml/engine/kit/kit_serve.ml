@@ -46,7 +46,7 @@ let tape_of_json j = match Kit.Json.exits j with Some t -> t | None -> input "th
 type request = {
   op : string;
   program : Kit.program option;
-  rows : Eff_types.row list;
+  rows : Eff_types.Row.t list;
   tape : Kit.exit list option;
   limit : int;
   frames : bool;  (** `run` answers the tree's runs at every budget too *)
