@@ -35,7 +35,8 @@ module Alphabet = struct
     | Finished
     | Suspended of frontier
     | Refused of string  (** the `Stuck` constructor, spelled *)
-    | Outside_profile of string  (** host numeric boundary; the input machine is retained *)
+    | Outside_profile of E4_clock.refusal
+        (** a value refused at a named crossing (D9); the input machine is retained *)
     | Delay of frontier  (** the fuel ran out; the command residue is non-empty *)
 end
 
@@ -265,7 +266,7 @@ module type ENGINE = sig
   val answer_async_success : int -> int -> int -> decision
   (** [answer_async_success fiber token n] answers the parked token with
       `Completion.ofExit (Exit.success (Val.nat n))`.
-      @raise E4_clock.Profile_refusal for a negative or out-of-profile natural. *)
+      @raise E4_clock.Profile_refusal at [Reply] for a negative or out-of-profile natural. *)
 
   val answer_async : int -> int -> (Val.t, Err.t, Defect.t, int, unit) Completion.t -> decision
   (* [answer_async fiber token c] answers the parked token with the completion [c], a success or a
@@ -275,11 +276,12 @@ module type ENGINE = sig
   (* [answer_async_value fiber token v] answers the parked token with `Completion.ofExit
      (Exit.success v)`, any value, after the host-ingress check every natural passes (EN9,
      {!check_answer}). Whether it fits the call's row is `admits`'s question.
-     @raise E4_clock.Profile_refusal for an out-of-profile natural inside [v]. *)
+     @raise E4_clock.Profile_refusal at [Reply] for an out-of-profile natural or a string that
+     is not valid UTF-8 inside [v]. *)
 
   val answer_async_float : int -> int -> float -> decision
   (** Answers with the exact IEEE-754 bit pattern when it fits [Val.Float]'s carrier.
-      @raise E4_clock.Profile_refusal before conversion when those bits do not fit. *)
+      @raise E4_clock.Profile_refusal at [Reply] before conversion when those bits do not fit. *)
 
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
@@ -293,7 +295,8 @@ module type ENGINE = sig
   val compile : Eff_wire.program -> program
   (** The program, its natural literals checked against the selected profile. The program type
       is `Eff_types`', which the LCNF route declares once for every instance.
-      @raise E4_clock.Profile_refusal for a negative or out-of-profile natural literal. *)
+      @raise E4_clock.Profile_refusal at [Literal] for a negative or out-of-profile natural
+      literal. *)
 
   val of_bytes : string -> program option
 
@@ -379,10 +382,12 @@ module type E4_engine = sig
 
   val check_answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t -> unit
   (** EN9: every natural of a host's answer ([Api.HostSession.Answer], src/Effect4/Api/HostSession.lean)
-      through [E4_clock.to_profile_nat (E4_clock.of_nat n)]: [Val.nat], a [Val.ctor] index, a
-      [Val.handle] key, a [Val.negInt] magnitude, [Err.tag], [Defect.user], an interrupting
-      fiber and a [RefKey]. Raises [E4_clock.Profile_refusal] at the first natural outside the
-      profile. The byte, bit-pattern and string fields are no naturals and are not read here. *)
+      through [E4_clock.check_nat Reply]: [Val.nat], a [Val.ctor] index, a [Val.handle] key, a
+      [Val.negInt] magnitude, [Err.tag], [Defect.user], an interrupting fiber and a [RefKey].
+      Every string of the answer must be valid UTF-8, since a Lean [String] is: [Val.str], both
+      strings of [Err.tagged], [Err.text] and each annotation's key. Raises
+      [E4_clock.Profile_refusal] at [Reply] at the first natural outside the profile or the first
+      string that is not valid UTF-8. The byte and bit-pattern fields are not read here. *)
 
   module type INSTANCE = INSTANCE
   module type ENGINE = ENGINE

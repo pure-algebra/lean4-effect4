@@ -33,9 +33,10 @@ module Types : sig
         (** the provider raised: no answer, as [Declined] (H5); never a typed failure.
             [Out_of_memory] and [Sys.Break] are raised again. *)
     | Refused  (** the engine did not admit the provider's reply *)
-    | Outside_profile of string
+    | Outside_profile of E4_clock.refusal
         (** a reply failed the host-ingress check (EN9, H6), or a step left the host numeric
-            profile and was not taken (H2, H9): the engine is the one before it *)
+            profile and was not taken (H2, H9): the engine is the one before it. The refusal
+            names its crossing (D9). *)
     | Unknown_row  (** a call's row position is not in the table *)
     | Out_of_rounds  (** the last round was played with the machine still live *)
 
@@ -47,7 +48,7 @@ module Types : sig
 
   (** Why the program was not loaded (H8): [E.load] refused it at the host numeric profile
       (EN8), for a natural literal outside it or a value its loading computes outside it. *)
-  type load_refusal = Load_outside_profile of string
+  type load_refusal = Load_outside_profile of E4_clock.refusal
 
   (** One answered call: the row's external position, the request and the answer. *)
   type call = { row : int; request : Val.t; answer : completion }

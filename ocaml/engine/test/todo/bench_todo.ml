@@ -7,13 +7,16 @@
    check with the decision, the admission and the step. Last it times the derived codec of a
    to-do against the frame built by hand, and the canonical bytes of the same value. Each figure
    is CPU time (Sys.time): the median of five samples of at least 0.1 s, so the load of other
-   processes moves it little.
+   processes moves it little. Beside it stand the words the same unit allocates, read from
+   Gc.counters around one run after a warm-up run, so they do not depend on the timing.
    Depends on: Todo_gen (GENERATED), Todo_fixture, Native_todo, E4_engine, E4_host, Eff_val.
 
    Properties:
    B1  Each host's drive is checked to finish with Lean's result once before it is timed, and
        each codec to round-trip, so no figure times a failing path.        by construction
    B2  Nothing is asserted about the numbers.                               by construction
+   B3  A unit's words are minor + major - promoted words over one run, read after a minor
+       collection, as bench_array reads them.                               by construction
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune exec engine/test/todo/bench_todo.exe
         [-- PATH-TO-todo-host.txt] *)
@@ -36,7 +39,21 @@ let sample f =
 
 let median xs = List.nth (List.sort Float.compare xs) (List.length xs / 2)
 let time f = median (List.init 5 (fun _ -> sample f))
-let report name seconds = Printf.printf "  %-62s %10.2f us\n%!" name (seconds *. 1e6)
+
+(* The words one run of [f] allocates (B3), after one run that warms it up. *)
+let words f =
+  ignore (Sys.opaque_identity (f ()));
+  Gc.minor ();
+  let mi0, pr0, ma0 = Gc.counters () in
+  ignore (Sys.opaque_identity (f ()));
+  Gc.minor ();
+  let mi1, pr1, ma1 = Gc.counters () in
+  mi1 -. mi0 +. (ma1 -. ma0) -. (pr1 -. pr0)
+
+(* A unit's CPU time and words, each divided by the units that one run of [f] covers. *)
+let report name ?(units = 1.) f =
+  let seconds = time f /. units and allocated = words f /. units in
+  Printf.printf "  %-62s %10.2f us %12.0f words\n%!" name (seconds *. 1e6) allocated
 
 let fixture_path () =
   if Array.length Sys.argv > 1 then Sys.argv.(1)
@@ -52,7 +69,8 @@ let () =
   let drive (built : Todo_gen.built) provider state =
     match H.serve ~table:built.app.rows provider built.program ~fuel:1000 state with
     | Ok served -> served
-    | Error (H.Load_outside_profile why) -> failwith ("a request's program did not load: " ^ why)
+    | Error (H.Load_outside_profile why) ->
+      failwith ("a request's program did not load: " ^ E4_clock.refusal_text why)
   in
   let result (type st) (s : st H.served) lane =
     hex_of
@@ -64,7 +82,7 @@ let () =
              F.root_exit_of s.engine ),
            lane ))
   in
-  Printf.printf "bench_todo: %d requests, engine %s, CPU time per unit\n" (List.length requests) F.name;
+  Printf.printf "bench_todo: %d requests, engine %s, CPU time and words per unit\n" (List.length requests) F.name;
   (* 1. a whole drive per host, divided by the host calls it answered *)
   Printf.printf "1. a drive under E4_host, per host call\n";
   let per_call (type s) name (provider : Row.t -> Val.t -> s -> _) (make : Native_todo.lane_state -> s)
@@ -79,10 +97,10 @@ let () =
           n + List.length s.calls)
         0 requests
     in
-    let t =
-      time (fun () -> List.iter (fun (_, built, state) -> ignore (drive built provider (make state))) requests)
-    in
-    report (Printf.sprintf "%s (%d calls)" name calls) (t /. float_of_int calls)
+    report
+      (Printf.sprintf "%s (%d calls)" name calls)
+      ~units:(float_of_int calls)
+      (fun () -> List.iter (fun (_, built, state) -> ignore (drive built provider (make state))) requests)
   in
   per_call "the lowered reference repository (untyped)" Todo_gen.test_dogfood_scenario_todo_repository Fun.id Fun.id;
   per_call "the lowered typed model, through the derived codecs"
@@ -113,19 +131,20 @@ let () =
   let answer provider (_, state, _, _, _, row, request) =
     match provider row request state with Some (c, _) -> c | None -> failwith "declined"
   in
-  let mean f = time (fun () -> List.iter (fun x -> ignore (f x)) firsts) /. n in
-  report "load the program and evaluate the root" (mean (fun (built, _, _, _, _, _, _) -> evaluated built));
-  report "read the host calls (E4_engine.host_calls)" (mean (fun (_, _, t, _, _, _, _) -> F.host_calls t));
-  report "answer: the typed reactor over the record (decode, dispatch, encode)" (mean (answer typed));
-  report "answer: the frames built by hand (Native_todo.Untyped)" (mean (answer Native_todo.Untyped.provider));
-  report "the ingress check and the decision (E4_engine.answer_async)"
-    (mean (fun ((_, _, _, fiber, token, _, _) as x) -> F.answer_async fiber token (answer typed x)));
+  let over xs f () = List.iter (fun x -> ignore (f x)) xs in
+  let mean name f = report name ~units:n (over firsts f) in
+  mean "load the program and evaluate the root" (fun (built, _, _, _, _, _, _) -> evaluated built);
+  mean "read the host calls (E4_engine.host_calls)" (fun (_, _, t, _, _, _, _) -> F.host_calls t);
+  mean "answer: the typed reactor over the record (decode, dispatch, encode)" (answer typed);
+  mean "answer: the frames built by hand (Native_todo.Untyped)" (answer Native_todo.Untyped.provider);
+  mean "the ingress check and the decision (E4_engine.answer_async)"
+    (fun ((_, _, _, fiber, token, _, _) as x) -> F.answer_async fiber token (answer typed x));
   let decided =
     List.map (fun ((_, _, t, fiber, token, _, _) as x) -> (t, F.answer_async fiber token (answer typed x))) firsts
   in
-  let mean_decided f = time (fun () -> List.iter (fun x -> ignore (f x)) decided) /. n in
-  report "the admission (E4_engine.admits, Lean's checked replay)" (mean_decided (fun (t, d) -> F.admits t d));
-  report "the step to the next host call or the end (E4_engine.step)" (mean_decided (fun (t, d) -> F.step t d));
+  let mean_decided name f = report name ~units:n (over decided f) in
+  mean_decided "the admission (E4_engine.admits, Lean's checked replay)" (fun (t, d) -> F.admits t d);
+  mean_decided "the step to the next host call or the end (E4_engine.step)" (fun (t, d) -> F.step t d);
   (* 3. the derived codec of a to-do, against the frame built by hand *)
   Printf.printf "3. the derived codec of a to-do\n";
   let image =
@@ -141,9 +160,9 @@ let () =
     failwith "the derived codec does not round-trip";
   if Eff_val.to_bytes (image.to_val one) <> Eff_val.to_bytes (Native_todo.Untyped.todo 7 "write the bench" false) then
     failwith "the derived codec and the hand frame disagree";
-  report "encode one to-do, derived (Modeled image)" (time (fun () -> image.to_val one));
-  report "encode one to-do, frame built by hand" (time (fun () -> Native_todo.Untyped.todo 7 "write the bench" false));
-  report "decode one to-do, derived" (let v = image.to_val one in time (fun () -> image.of_val v));
-  report "encode 100 to-dos, derived" (time (fun () -> list_image.to_val many));
-  report "decode 100 to-dos, derived" (time (fun () -> list_image.of_val frame));
-  report "canonical bytes of 100 to-dos (Eff_val.to_bytes)" (time (fun () -> Eff_val.to_bytes frame))
+  report "encode one to-do, derived (Modeled image)" (fun () -> image.to_val one);
+  report "encode one to-do, frame built by hand" (fun () -> Native_todo.Untyped.todo 7 "write the bench" false);
+  report "decode one to-do, derived" (let v = image.to_val one in fun () -> image.of_val v);
+  report "encode 100 to-dos, derived" (fun () -> list_image.to_val many);
+  report "decode 100 to-dos, derived" (fun () -> list_image.of_val frame);
+  report "canonical bytes of 100 to-dos (Eff_val.to_bytes)" (fun () -> Eff_val.to_bytes frame)

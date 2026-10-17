@@ -293,8 +293,9 @@ def targetLibrary : List LibFn := [
   { name := "Option.value", arity := 2, isInfix := false, target := .prim "Option.value~default" },
   unruled "Option.map" 2, unruled "Option.bind" 2,
   unruled "E4_clock.of_nat" 1, unruled "E4_clock.to_profile_nat" 1, unruled "E4_clock.add" 2,
-  unruled "E4_clock.mul" 2, unruled "E4_clock.le" 2, unruled "E4_clock.lt" 2,
-  unruled "E4_clock.equal" 2, unruled "E4_clock.to_decimal" 1, unruled "E4_clock.of_decimal" 1]
+  unruled "E4_clock.profile_add" 2, unruled "E4_clock.profile_mul" 2, unruled "E4_clock.le" 2,
+  unruled "E4_clock.lt" 2, unruled "E4_clock.equal" 2, unruled "E4_clock.to_decimal" 1,
+  unruled "E4_clock.of_decimal" 1]
 
 /-- The arity of a function or value of the library. -/
 def libraryArity? (lib : List LibFn) (name : String) : Option Nat :=
@@ -782,25 +783,21 @@ def builtins : List Builtin := [
     (receipt := .refuses .panic "a run that does not reach `panic`"),
   -- The exact clock: `Effect4.ClockMillis` is `E4_clock.t`, a Zarith integer.
   row `Effect4.ClockMillis.ofNat .body (.library "E4_clock.of_nat") .domain "n < 2^62, the natural as the `int` that carries it" []
-    "`E4_clock.of_nat` is `Z.of_int` on a non-negative `int`, and raises `Profile_refusal` on a negative one. A literal reaches the clock by `clockNatIngress?` as exact decimal text, and a natural that the literal rule narrowed is refused at generation. Read against `ocaml/clock/e4_clock.ml`; its own tests are `ocaml/clock/test_clock.ml`."
+    "`E4_clock.of_nat` is `Z.of_int` on a non-negative `int`, and refuses a negative one at the clock crossing (`Profile_refusal`). A literal reaches the clock by `clockNatIngress?` as exact decimal text, and a natural that the literal rule narrowed is refused at generation. Read against `ocaml/clock/e4_clock.ml`; its own tests are `ocaml/clock/test_clock.ml`."
     (receipt := .exact),
   row `Effect4.ClockMillis.toNat .body (.library "E4_clock.to_profile_nat") .domain "millis ≤ 2^53 - 1 and the value fits `int`" []
-    "`E4_clock.to_profile_nat` raises `Profile_refusal` outside the domain: a refusal outside the program's result, never a wrapped value (DI-56)."
+    "`E4_clock.to_profile_nat` refuses outside the domain at the clock crossing (`Profile_refusal`): a refusal outside the program's result, never a wrapped value (DI-56)."
     (receipt := .refuses .clock "millis ≤ 2^53 - 1, the program's profile (DI-56)"),
   -- The one addition that can leave the profile (decisions row 321): `succ`, `add`, `plus` and
   -- `minus` grow through it, and its form refuses outside the bound.
-  row `Effect4.Program.Profile.grow .body
-    (.inline ["a", "b"] (.call "E4_clock.to_profile_nat"
-      [.call "E4_clock.add" [.call "E4_clock.of_nat" [.var "a"], .call "E4_clock.of_nat" [.var "b"]]]))
+  row `Effect4.Program.Profile.grow .body (.library "E4_clock.profile_add")
     .domain "a + b ≤ 2^53 - 1, and each of a and b fits `int`" []
-    "Exact addition on `E4_clock.t`, then `E4_clock.to_profile_nat`, which raises `Profile_refusal` outside the domain: a refusal outside the program's result, never a wrapped value (DI-56, decisions row 108). The engine answers it as `Outside_profile` with the input machine retained (`ocaml/engine/e4_engine.mli`)."
+    "`E4_clock.profile_add` adds exactly on `Z.t` and refuses outside the domain at the arithmetic crossing (`E4_clock.Profile_refusal`): a refusal outside the program's result, never a wrapped value (DI-56, decisions row 108). The engine answers it as `Outside_profile` with the input machine retained (`ocaml/engine/e4_engine.mli`)."
     "two conversions and one Zarith addition for one machine addition"
     (receipt := .refuses .arithmetic "a + b ≤ 2^53 - 1, the program's profile (DI-56)"),
-  row `Effect4.Program.Profile.scale .body
-    (.inline ["a", "b"] (.call "E4_clock.to_profile_nat"
-      [.call "E4_clock.mul" [.call "E4_clock.of_nat" [.var "a"], .call "E4_clock.of_nat" [.var "b"]]]))
+  row `Effect4.Program.Profile.scale .body (.library "E4_clock.profile_mul")
     .domain "a * b ≤ 2^53 - 1, and nonnegative a and b fit `int`" []
-    "Exact Zarith multiplication followed by checked natural observation. Outside the domain, Profile_refusal remains outside the program result (DI-56)."
+    "`E4_clock.profile_mul` multiplies exactly on `Z.t` and refuses outside the domain at the arithmetic crossing, outside the program's result (DI-56)."
     "two conversions and one Zarith multiplication"
     (receipt := .refuses .arithmetic "a * b ≤ 2^53 - 1, the program's profile (DI-56)"),
   row `Effect4.ClockMillis.add .body (.library "E4_clock.add") .exact "" []

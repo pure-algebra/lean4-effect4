@@ -1,6 +1,8 @@
 (* Independent boundary controls for the exact clock. Depends on effect4_clock only.
    Tests decimal identity, arithmetic/order beyond both JavaScript's exact integer range
-   and OCaml max_int, and refusal that leaves an already stored clock unchanged. *)
+   and OCaml max_int, refusal that leaves an already stored clock unchanged, and the crossing
+   each refusal names (D9 of the estate review: a literal, a reply, an addition and a clock
+   reading each name their own crossing, not the clock's). *)
 let get text =
   match E4_clock.of_decimal text with
   | Some value -> value
@@ -56,3 +58,49 @@ let () =
     | _ -> false | exception E4_clock.Profile_refusal _ -> true)
     "first product outside the profile admitted";
   print_endline "PASS multiplication: exact product and profile refusal"
+
+(* Each refusal names its crossing (D9), and the program's profile rows answer at their edge. *)
+let () =
+  let refusal f =
+    match f () with
+    | _ -> None
+    | exception E4_clock.Profile_refusal r -> Some (E4_clock.refusal_text r)
+  in
+  let refused_at crossing f =
+    match f () with
+    | _ -> false
+    | exception E4_clock.Profile_refusal r -> r.E4_clock.crossing = crossing
+  in
+  let edge = Int64.to_int 9007199254740991L in
+  check (E4_clock.profile_add (edge - 1) 1 = edge) "the largest profile sum refused";
+  check (E4_clock.profile_mul 6 7 = 42) "an ordinary profile product refused";
+  check (refused_at E4_clock.Arithmetic (fun () -> E4_clock.profile_add edge 1))
+    "a sum past the profile is not refused at arithmetic";
+  check (refused_at E4_clock.Arithmetic (fun () -> E4_clock.profile_mul 4503599627370496 2))
+    "a product past the profile is not refused at arithmetic";
+  check (refused_at E4_clock.Clock (fun () -> E4_clock.to_profile_nat (get "9007199254740992")))
+    "a reading past the profile is not refused at the clock";
+  check (refused_at E4_clock.Clock (fun () -> E4_clock.of_nat (-1)))
+    "a negative clock is not refused at the clock";
+  check (refused_at E4_clock.Literal (fun () -> E4_clock.literal "01"))
+    "a noncanonical literal is not refused at the literal";
+  check (refused_at E4_clock.Literal (fun () -> E4_clock.check_nat E4_clock.Literal (edge + 1)))
+    "a literal past the profile is not refused at the literal";
+  check (refused_at E4_clock.Reply (fun () -> E4_clock.check_nat E4_clock.Reply (-1)))
+    "a negative reply is not refused at the reply";
+  check (E4_clock.check_nat E4_clock.Reply edge = ()) "the largest profile reply refused";
+  check
+    (refusal (fun () -> E4_clock.profile_add edge 1)
+     = Some "arithmetic: a sum outside the program's profile (DI-56)")
+    "the arithmetic refusal's text";
+  (* Red control: before D9 the four refusals below answered one text, the clock's. *)
+  let texts =
+    List.filter_map refusal
+      [ (fun () -> E4_clock.check_nat E4_clock.Literal (edge + 1));
+        (fun () -> E4_clock.check_nat E4_clock.Reply (edge + 1));
+        (fun () -> ignore (E4_clock.profile_add edge 1));
+        (fun () -> ignore (E4_clock.to_profile_nat (get "9007199254740992"))) ]
+  in
+  check (List.length texts = 4 && List.length (List.sort_uniq compare texts) = 4)
+    "two crossings answer one refusal text";
+  print_endline "PASS refusals: each names its crossing, and the profile rows answer at their edge"

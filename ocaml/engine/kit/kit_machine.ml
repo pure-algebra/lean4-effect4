@@ -22,7 +22,7 @@ type 's run = { stop : stop; calls : (int * Val.t * exit) list; state : 's }
 let run ?(fuel = 10_000_000) ?(rounds = 100_000) (rows : Row.t list) reactor (st : 's) program : 's run =
   match H.serve ~table:rows ~rounds reactor program ~fuel st with
   | Error (H.Load_outside_profile why) ->
-    { stop = Stopped ("a program outside the host profile: " ^ why); calls = []; state = st }
+    { stop = Stopped ("a program outside the host profile: " ^ E4_clock.refusal_text why); calls = []; state = st }
   | Ok served ->
     let calls =
       List.filter_map
@@ -42,7 +42,7 @@ let run ?(fuel = 10_000_000) ?(rounds = 100_000) (rows : Row.t list) reactor (st
       | H.Host H.Refused -> (match first_call () with Some (i, v) -> Refused (i, v) | None -> Stopped "refused")
       | H.Host H.Out_of_rounds -> Out_of_rounds
       | H.Host (H.Raised e) -> Stopped ("the host raised " ^ Printexc.to_string e)
-      | H.Host (H.Outside_profile why) -> Stopped ("outside the host profile: " ^ why)
+      | H.Host (H.Outside_profile why) -> Stopped ("outside the host profile: " ^ E4_clock.refusal_text why)
       | H.Host H.Unknown_row -> Stopped "a call's row is not in the table"
     in
     { stop; calls; state = served.state }

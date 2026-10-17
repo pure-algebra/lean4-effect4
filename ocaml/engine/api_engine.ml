@@ -3081,7 +3081,7 @@ and store_val__handles_list (x_1 : Val.t list) : (int * int) list =
   let program_int_add (x_1 : Val.t) (x_2 : Val.t) : Val.t option =
   match (x_1 : Val.t) with
     | Val.Nat n_3 -> (match (x_2 : Val.t) with
-        | Val.Nat n_4 -> (let _x_5 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_3) (E4_clock.of_nat n_4)) in
+        | Val.Nat n_4 -> (let _x_5 = E4_clock.profile_add n_3 n_4 in
           let _x_6 = Val.Nat _x_5 in
           Some _x_6)
         | Val.NegInt n_8 -> (let _x_9 = n_8 < n_3 in
@@ -3105,7 +3105,7 @@ and store_val__handles_list (x_1 : Val.t list) : (int * int) list =
         | Val.NegInt n_30 -> (let _x_31 = 1 in
           let _x_32 = n_19 + _x_31 in
           let _x_33 = n_30 + _x_31 in
-          let _x_34 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat _x_32) (E4_clock.of_nat _x_33)) in
+          let _x_34 = E4_clock.profile_add _x_32 _x_33 in
           let _x_35 = max 0 (_x_34 - _x_31) in
           let _x_36 = Val.NegInt _x_35 in
           Some _x_36)
@@ -3150,7 +3150,7 @@ and store_val__handles_list (x_1 : Val.t list) : (int * int) list =
         | head_19 :: tail_20 -> (match (head_19 : Val.t) with
             | Val.Nat n_21 -> (match tail_20 with
                 | [] -> (let _x_22 = 1 in
-                  let _x_23 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_21) (E4_clock.of_nat _x_22)) in
+                  let _x_23 = E4_clock.profile_add n_21 _x_22 in
                   let _x_24 = Val.Nat _x_23 in
                   Some _x_24)
                 | _ -> None)
@@ -3190,7 +3190,7 @@ and store_val__handles_list (x_1 : Val.t list) : (int * int) list =
             | Val.Nat n_59 -> (match tail_58 with
                 | head_60 :: tail_61 -> (match (head_60 : Val.t) with
                     | Val.Nat n_62 -> (match tail_61 with
-                        | [] -> (let _x_63 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_59) (E4_clock.of_nat n_62)) in
+                        | [] -> (let _x_63 = E4_clock.profile_add n_59 n_62 in
                           let _x_64 = Val.Nat _x_63 in
                           Some _x_64)
                         | _ -> None)
@@ -3396,7 +3396,7 @@ and store_val__handles_list (x_1 : Val.t list) : (int * int) list =
             | Val.Nat n_272 -> (match tail_271 with
                 | head_273 :: tail_274 -> (match (head_273 : Val.t) with
                     | Val.Nat n_275 -> (match tail_274 with
-                        | [] -> (let _x_276 = E4_clock.to_profile_nat (E4_clock.mul (E4_clock.of_nat n_272) (E4_clock.of_nat n_275)) in
+                        | [] -> (let _x_276 = E4_clock.profile_mul n_272 n_275 in
                           let _x_277 = Val.Nat _x_276 in
                           Some _x_277)
                         | _ -> None)
