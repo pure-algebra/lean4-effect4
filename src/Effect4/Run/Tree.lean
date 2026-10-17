@@ -26,7 +26,7 @@ Three facts make the budget usable as a test oracle. The Rocq development of
 The tree's arms are `Laws/Program/DenoteRowsB.lean`'s `denoteRowsB` arms. Beside them it has
 the definition arms of `rocq/BudgetDefs.v`: `call`, `param`, `invoke`, the root's definition
 block, `provideContext` and the `context` read. A program outside these arms, such as a fork, a
-scope, a service or a layer, answers `outsideExit`. `covers` decides the fragment before a run,
+scope, a service or a layer, answers `Eval.outside`. `covers` decides the fragment before a run,
 so a caller can send such a program to the machine instead.
 
 The context is the machine's own (`Machine.Ctx`): the root's is `emptyCtx`, a `context` read
@@ -72,27 +72,114 @@ def andThen (t : Tree) (k : Val → Tree) : Tree :=
     | .success v => k v
     | .failure c => done (.failure c)
 
-/-! ## The exits the tree writes -/
+/-! ## The evaluator: everything the tree reads of data
 
-/-- `Compile.badShape` as an exit: a term that does not evaluate, or a value of the wrong
-shape (`Denote.badShapeExit`). -/
-def badShapeExit : ExitV := Exit.failure (Cause.die Defect.badName)
+Each operation of the tree on data goes through one function of `Eval`: a term's value, an exit,
+a cause, a decision, a cell operation, the context, the table's rows and the definitions'
+bodies. The tree's control (`bind`, `andThen`, `loop`, `whileRounds`, `level`, `statements`,
+`unfolded`, `ofProgram`) calls nothing else on data. So the Rocq statements about the control take
+these functions as variables, and the evaluator is never copied. Each is `@[noinline]`, so the
+compiler keeps it one call that the Rocq printer reads as one variable. -/
+
+namespace Eval
+
+/-- `Compile.badShape` as an exit: a term that does not evaluate, or a value of the wrong shape
+(`Denote.badShapeExit`). -/
+@[noinline] def badShape : ExitV := Exit.failure (Cause.die Defect.badName)
 
 /-- A form outside the tree's arms (`Denote.outsideExit`). -/
-def outsideExit : ExitV := Exit.failure (Cause.die Defect.notImplemented)
+@[noinline] def outside : ExitV := Exit.failure (Cause.die Defect.notImplemented)
 
-/-- A term's value as an exit, or `badShapeExit`. -/
-def valueExit (env : List Val) (t : Term) : ExitV :=
+/-- The environment extended by one value. -/
+@[noinline] def push (env : List Val) (v : Val) : List Val := env ++ [v]
+
+/-- The environment extended by what a decision binds. -/
+@[noinline] def pushAll (env : List Val) (bound : Option Val) : List Val := env ++ bound.toList
+
+/-- A term's value. -/
+@[noinline] def term (env : List Val) (t : Term) : Option Val := evalTerm env t
+
+/-- A term's value as an exit, or `badShape` (`succeed`, a loop's result, `ret`). -/
+@[noinline] def value (env : List Val) (t : Term) : ExitV :=
   match evalTerm env t with
   | some v => .success v
-  | none => badShapeExit
+  | none => badShape
 
-/-- A finalizer's exit as `Exit.restoreAfterFinalizer` reads it (`Denote.finVoid`). -/
-def finVoid : ExitV → VoidExitV
-  | .success _ => Exit.void
-  | .failure c => .failure c
+/-- `fail e`'s exit. -/
+@[noinline] def fail (env : List Val) (e : Term) : ExitV :=
+  match evalTerm env e with
+  | some x => .failure (Cause.fail (errOf x))
+  | none => badShape
 
-/-! ## One loop round -/
+/-- `failCause c`'s exit. -/
+@[noinline] def failCause (env : List Val) (c : CauseTerm) : ExitV :=
+  match causeOf env c with
+  | some cause => .failure cause
+  | none => badShape
+
+/-- `sync t`'s exit: the term's value, `Val.unit` when it has none. -/
+@[noinline] def sync (env : List Val) (t : Term) : ExitV := .success ((evalTerm env t).getD Val.unit)
+
+/-- A test's value, where it is a boolean (a loop's test, a generator's `if`). -/
+@[noinline] def test (env : List Val) (t : Term) : Option Bool :=
+  match evalTerm env t with
+  | some (Val.bool b) => some b
+  | _ => none
+
+/-- `select`'s decision at its scrutinee: the arm and the value it binds. -/
+@[noinline] def choose (env : List Val) (t : Term) (d : Decision) : Option (Bool × Option Val) :=
+  (evalTerm env t).bind d.decide
+
+/-- An exit as the value `exit` answers. -/
+@[noinline] def exitVal (ex : ExitV) : Val := reifyExitVal ex
+
+/-- A failure's cause as the value a handler binds (`Val.exitErr`). -/
+@[noinline] def causeVal (c : CauseV) : Val := Val.exitErr c
+
+/-- `catchIf`'s test: the value its handler binds, when it catches the cause. -/
+@[noinline] def caught (env : List Val) (test : Term) (cause : CauseV) : Option Val :=
+  caughtErrorValue? env test cause
+
+/-- The exit after a finalizer (`Exit.restoreAfterFinalizer`, with `Denote.finVoid`). -/
+@[noinline] def restore (ex fex : ExitV) : ExitV :=
+  Exit.restoreAfterFinalizer ex (match fex with
+    | .success _ => Exit.void
+    | .failure c => .failure c)
+
+/-- Whether a host row's position is in the table. -/
+@[noinline] def inTable (table : RowTable) (i : Nat) : Bool := Nat.blt i table.length
+
+/-- A cell operation: `some (some o)` for a cell row whose request decodes, `some none` for one
+whose request does not, `none` for an operation that is no cell row. -/
+@[noinline] def cellOp (op : NativeOp) (env : List Val) (v : Val) : Option (Option SyncOp) :=
+  match (NativeOp.row op).kind with
+  | .sync => some (NativeOp.syncOpOf op env v)
+  | _ => none
+
+/-- A definition's body, by its position. -/
+@[noinline] def body (bodies : List NativeEff) (d : Nat) : Option NativeEff := bodies[d]?
+
+/-- A passed program, by its parameter's position. -/
+@[noinline] def arg (args : List NativeEff) (j : Nat) : Option NativeEff := args[j]?
+
+/-- The programs an invocation passes. -/
+@[noinline] def programs (args : Effs NativeOp) : List NativeEff := args.toList
+
+/-- The context `provideContext` sets for its body: the provided services merged over the
+current ones (`Env.ContextUpdate.provide`, `Ctx.withServices`), where the value is a context. -/
+@[noinline] def provide (ctx : Ctx) (c : Val) : Option Ctx :=
+  (Val.context? c).map fun built =>
+    Ctx.withServices ((Env.ContextUpdate.provide built.services).apply ctx.services)
+
+/-- The context as the value `context` reads (`getContext`). -/
+@[noinline] def contextVal (ctx : Ctx) : Val := Val.context ctx
+
+/-- The root's context. -/
+@[noinline] def root : Ctx := emptyCtx
+
+end Eval
+
+/-! ## Loops -/
 
 /-- A loop at the cursor `c`, with `n` tests left (`Denote.iter` over `Denote.loopStep`). The
 test runs first: true runs the body and steps the cursor, false answers the result. With no
@@ -100,16 +187,22 @@ test left, the tree is cut. -/
 def loop (body : List Val → Tree) (env : List Val) (test step result : Term) : Nat → Val → Tree
   | 0, _ => cut
   | n + 1, c =>
-    match evalTerm (env ++ [c]) test with
-    | some (Val.bool true) =>
-      (body (env ++ [c])).bind fun
+    match Eval.test (Eval.push env c) test with
+    | some true =>
+      (body (Eval.push env c)).bind fun
         | .failure cause => done (.failure cause)
         | .success a =>
-          match evalTerm (env ++ [c, a]) step with
+          match Eval.term (Eval.push (Eval.push env c) a) step with
           | some c' => loop body env test step result n c'
-          | none => done badShapeExit
-    | some (Val.bool false) => done (valueExit (env ++ [c]) result)
-    | _ => done badShapeExit
+          | none => done Eval.badShape
+    | some false => done (Eval.value (Eval.push env c) result)
+    | none => done Eval.badShape
+
+/-- A generator's `while`: `round` runs the body once, given what follows the round, at most `n`
+times; then the tree is cut. -/
+def whileRounds (round : (Unit → Tree) → Unit → Tree) : Nat → Unit → Tree
+  | 0 => fun _ => cut
+  | n + 1 => round (whileRounds round n)
 
 /-! ## The tree of a program -/
 
@@ -126,7 +219,7 @@ abbrev Unfold := NativeEff → List Val → List Frame → Ctx → Tree
 
 /-- The definition bodies of a program's root block (`defBodyPath`); none outside a block. -/
 def bodiesOf : NativeEff → List NativeEff
-  | .defs _ bodies _ _ => bodies.toList
+  | .defs _ bodies _ _ => Eval.programs bodies
   | _ => []
 
 mutual
@@ -137,127 +230,117 @@ programs it passes with its own environment. A parameter's run takes the innermo
 program at that frame's environment and the request, at the stack below the frame. -/
 def level (table : RowTable) (bodies : List NativeEff) (k : Nat) (unfold : Unfold) :
     NativeEff → List Val → List Frame → Ctx → Tree
-  | .succeed v, env, _, _ => done (valueExit env v)
-  | .fail e, env, _, _ =>
-    done (match evalTerm env e with
-      | some x => .failure (Cause.fail (errOf x))
-      | none => badShapeExit)
-  | .failCause c, env, _, _ =>
-    done (match causeOf env c with
-      | some cause => .failure cause
-      | none => badShapeExit)
-  | .sync t, env, _, _ => done (.success ((evalTerm env t).getD Val.unit))
+  | .succeed v, env, _, _ => done (Eval.value env v)
+  | .fail e, env, _, _ => done (Eval.fail env e)
+  | .failCause c, env, _, _ => done (Eval.failCause env c)
+  | .sync t, env, _, _ => done (Eval.sync env t)
   | .suspend b, env, ps, ctx => level table bodies k unfold b env ps ctx
   | .perform op r, env, ps, ctx =>
-    match evalTerm env r with
-    | none => done badShapeExit
+    match Eval.term env r with
+    | none => done Eval.badShape
     | some v =>
       match op with
-      | .external i => if i < table.length then call i v done else done outsideExit
+      | .external i => if Eval.inTable table i then call i v done else done Eval.outside
       | .call d =>
-        match bodies[d]? with
+        match Eval.body bodies d with
         | some body => unfold body [v] (⟨[], []⟩ :: ps) ctx
-        | none => done badShapeExit
+        | none => done Eval.badShape
       | .param j =>
         match ps with
         | frame :: below =>
-          match frame.args[j]? with
-          | some arg => unfold arg (frame.env ++ [v]) below ctx
-          | none => done badShapeExit
-        | [] => done badShapeExit
+          match Eval.arg frame.args j with
+          | some arg => unfold arg (Eval.push frame.env v) below ctx
+          | none => done Eval.badShape
+        | [] => done Eval.badShape
       | _ =>
-        match (NativeOp.row op).kind with
-        | .sync =>
-          match NativeOp.syncOpOf op env v with
-          | some o => cell o fun w => done (.success w)
-          | none => done badShapeExit
-        | _ => done outsideExit
+        match Eval.cellOp op env v with
+        | some (some o) => cell o fun w => done (.success w)
+        | some none => done Eval.badShape
+        | none => done Eval.outside
   | .bind a b, env, ps, ctx =>
     (level table bodies k unfold a env ps ctx).andThen fun v =>
-      level table bodies k unfold b (env ++ [v]) ps ctx
+      level table bodies k unfold b (Eval.push env v) ps ctx
   | .select t d a b, env, ps, ctx =>
-    match (evalTerm env t).bind d.decide with
-    | some (true, bound) => level table bodies k unfold a (env ++ bound.toList) ps ctx
-    | some (false, bound) => level table bodies k unfold b (env ++ bound.toList) ps ctx
-    | none => done badShapeExit
+    match Eval.choose env t d with
+    | some (true, bound) => level table bodies k unfold a (Eval.pushAll env bound) ps ctx
+    | some (false, bound) => level table bodies k unfold b (Eval.pushAll env bound) ps ctx
+    | none => done Eval.badShape
   | .exit b, env, ps, ctx =>
-    (level table bodies k unfold b env ps ctx).bind fun ex => done (.success (reifyExitVal ex))
+    (level table bodies k unfold b env ps ctx).bind fun ex => done (.success (Eval.exitVal ex))
   | .catchCause b h, env, ps, ctx =>
     (level table bodies k unfold b env ps ctx).bind fun
       | .success v => done (.success v)
-      | .failure c => level table bodies k unfold h (env ++ [Val.exitErr c]) ps ctx
+      | .failure c => level table bodies k unfold h (Eval.push env (Eval.causeVal c)) ps ctx
   | .catchIf test b h, env, ps, ctx =>
     (level table bodies k unfold b env ps ctx).bind fun
       | .success v => done (.success v)
       | .failure cause =>
-        match caughtErrorValue? env test cause with
-        | some value => level table bodies k unfold h (env ++ [value]) ps ctx
+        match Eval.caught env test cause with
+        | some value => level table bodies k unfold h (Eval.push env value) ps ctx
         | none => done (.failure cause)
   | .matchCause b v c, env, ps, ctx =>
     (level table bodies k unfold b env ps ctx).bind fun
-      | .success x => level table bodies k unfold v (env ++ [x]) ps ctx
-      | .failure cause => level table bodies k unfold c (env ++ [Val.exitErr cause]) ps ctx
+      | .success x => level table bodies k unfold v (Eval.push env x) ps ctx
+      | .failure cause => level table bodies k unfold c (Eval.push env (Eval.causeVal cause)) ps ctx
   | .onExit b f, env, ps, ctx =>
     (level table bodies k unfold b env ps ctx).bind fun ex =>
-      (level table bodies k unfold f (env ++ [reifyExitVal ex]) ps ctx).bind fun fex =>
-        done (Exit.restoreAfterFinalizer ex (finVoid fex))
+      (level table bodies k unfold f (Eval.push env (Eval.exitVal ex)) ps ctx).bind fun fex =>
+        done (Eval.restore ex fex)
   | .iterate _ initial test step result body, env, ps, ctx =>
-    match evalTerm env initial with
+    match Eval.term env initial with
     | some c₀ => loop (fun env' => level table bodies k unfold body env' ps ctx) env test step
         result k c₀
-    | none => done badShapeExit
+    | none => done Eval.badShape
   | .provideContext t b, env, ps, ctx =>
-    match (evalTerm env t).bind Val.context? with
-    | some built =>
-      level table bodies k unfold b env ps
-        (Ctx.withServices ((Env.ContextUpdate.provide built.services).apply ctx.services))
-    | none => done badShapeExit
-  | .withFiber (.context _), _, _, ctx => done (.success (Val.context ctx))
+    match Eval.term env t with
+    | some c =>
+      match Eval.provide ctx c with
+      | some inner => level table bodies k unfold b env ps inner
+      | none => done Eval.badShape
+    | none => done Eval.badShape
+  | .withFiber (.context _), _, _, ctx => done (.success (Eval.contextVal ctx))
   | .defs _ _ main _, env, ps, ctx => level table bodies k unfold main env ps ctx
   | .invoke d r args, env, ps, ctx =>
-    match evalTerm env r, bodies[d]? with
-    | some v, some body => unfold body [v] (⟨args.toList, env⟩ :: ps) ctx
-    | _, _ => done badShapeExit
+    match Eval.term env r, Eval.body bodies d with
+    | some v, some body => unfold body [v] (⟨Eval.programs args, env⟩ :: ps) ctx
+    | _, _ => done Eval.badShape
   | .gen body, env, ps, ctx =>
     statements table bodies k unfold body env ps ctx (fun _ => done (.success Val.unit)) none
-  | _, _, _, _ => done outsideExit
+  | _, _, _, _ => done Eval.outside
 
 /-- **A generator's statements** (`Compile.runStmts`), with the rest of the enclosing block as
 `next` and the statement after the innermost `while` as `exit`. A `bindYield` extends the
 environment by its value; leaving a block drops its bindings, since `next` and `exit` keep the
 environment they were made at. A yield's failure ends the generator with its cause, and `ret`
 ends it with its value. A `while` runs its body at most `k` times, then the tree is cut, as a
-loop's test is (decisions row 330's `whileTrue`, `breakLoop`). The thunks keep the rounds not yet
-reached unbuilt. -/
+loop's test is (`whileRounds`). The thunks keep the rounds not yet reached unbuilt. -/
 def statements (table : RowTable) (bodies : List NativeEff) (k : Nat) (unfold : Unfold) :
     Stmts NativeOp → List Val → List Frame → Ctx → (Unit → Tree) → Option (Unit → Tree) → Tree
   | .nil, _, _, _, next, _ => next ()
   | .cons (.bindYield e) rest, env, ps, ctx, next, exit =>
     (level table bodies k unfold e env ps ctx).andThen fun v =>
-      statements table bodies k unfold rest (env ++ [v]) ps ctx next exit
+      statements table bodies k unfold rest (Eval.push env v) ps ctx next exit
   | .cons (.yieldDiscard e) rest, env, ps, ctx, next, exit =>
     (level table bodies k unfold e env ps ctx).andThen fun _ =>
       statements table bodies k unfold rest env ps ctx next exit
-  | .cons (.ret v) _, env, _, _, _, _ => done (valueExit env v)
+  | .cons (.ret v) _, env, _, _, _, _ => done (Eval.value env v)
   | .cons (.ifElse t a b) rest, env, ps, ctx, next, exit =>
-    match evalTerm env t with
-    | some (Val.bool true) =>
+    match Eval.test env t with
+    | some true =>
       statements table bodies k unfold a env ps ctx
         (fun _ => statements table bodies k unfold rest env ps ctx next exit) exit
-    | some (Val.bool false) =>
+    | some false =>
       statements table bodies k unfold b env ps ctx
         (fun _ => statements table bodies k unfold rest env ps ctx next exit) exit
-    | _ => done badShapeExit
+    | none => done Eval.badShape
   | .cons (.whileTrue body) rest, env, ps, ctx, next, exit =>
     let after : Unit → Tree := fun _ => statements table bodies k unfold rest env ps ctx next exit
-    let rounds : Unit → Tree := (List.range k).foldr
-      (fun _ again => fun _ => statements table bodies k unfold body env ps ctx again (some after))
-      (fun _ => cut)
-    rounds ()
+    whileRounds (fun again => fun _ => statements table bodies k unfold body env ps ctx again (some after))
+      k ()
   | .cons .breakLoop _, _, _, _, _, exit =>
     match exit with
     | some after => after ()
-    | none => done badShapeExit
+    | none => done Eval.badShape
 end
 
 /-- **The tree with calls unfolded `depth` levels deep** (`rocq/BudgetDefs.v`, `denoteD`). At
@@ -270,7 +353,7 @@ def unfolded (table : RowTable) (bodies : List NativeEff) (k : Nat) : Nat → Un
 empty environment and stack, under the root's context (`emptyCtx`; `rocq/BudgetDefs.v`,
 `denoteBD`). -/
 def ofProgram (table : RowTable) (k : Nat) (main : NativeEff) : Tree :=
-  level table (bodiesOf main) k (unfolded table (bodiesOf main) k k) main [] [] emptyCtx
+  level table (bodiesOf main) k (unfolded table (bodiesOf main) k k) main [] [] Eval.root
 
 /-! ## The fragment -/
 
@@ -289,7 +372,7 @@ def armOf : NativeEff → Bool
 
 /-- **The first node outside the tree's arms**, by its address in program order, or `none` when
 every node is an arm (a fold of the program, `foldMapAt_eff`). A program outside the arms runs on
-the machine (`Run.runWith`); its tree would answer `outsideExit` at that node. -/
+the machine (`Run.runWith`); its tree would answer `Eval.outside` at that node. -/
 def outsideAt (program : NativeEff) : Option (List Nat) :=
   foldMapAt_eff none (fun a b => a <|> b) [] program fun node path =>
     if armOf node then none else some path
