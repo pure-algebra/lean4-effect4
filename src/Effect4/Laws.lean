@@ -432,6 +432,7 @@ import Effect4.Laws.Program.ParkedOrigin
 import Effect4.Laws.Schema.DocumentJson
 import Effect4.Laws.Program.SketchAdmission
 import Effect4.Laws.Program.SourceDocument
+import Effect4.Laws.Api.LiveRecord
 
 /-!
 # Effect4 proof graph

@@ -10,7 +10,9 @@ import Effect4.Laws.Program.SketchWire
 import Effect4.Laws.Program.SketchAdmission
 import Effect4.Api.RunnerDerived
 import Effect4.Run.Live
+import Effect4.Run.LiveRecord
 import Effect4.Laws.Api.Live
+import Effect4.Laws.Api.LiveRecord
 import Effect4.Laws.Run.Tree
 import Effect4.Run.Kit
 
@@ -54,6 +56,12 @@ one.
 | `journal` | nothing | each edit, its address and its delta | none |
 | `sketch` | nothing | the sketch and the application as JSON, and as bytes with `hex` | `Sketch.decode_exact`, `Canonical.decode_exact` |
 | `catalogue` | nothing; open or not | the program's forms, the atoms with their typing schemes, the application's rows by index (`Tools.Catalogue`) | `Canonical.ofJsonAnyOrder_exact`, `NativeAtom.atom_table_wf` |
+| `start` | nothing | admits the sketch at `app.withHoles`, opens a `Live` session, feeds `.start`, and answers the live view | `Sketch.sourceCheck_of_admitted`, `Live.reached` |
+| `receive` | `fiber`, `token` or `rowName`; `answer` or `answerJson` | feeds `.receive` into the live session and answers the verdict and live view | `Live.reached` |
+| `apply` | `fiber`, `token` or `rowName` | feeds `.apply` and `.flush` into the live session and answers the verdict and live view | `Live.reached` |
+| `liveView` | nothing | the live session's outcome, exit, and waiting calls with keys and checked instances | `Live.reached`, `Live.view_awaits`, `Live.view_checked` |
+| `save` | `hex` (optional) | the live session saved as a `LiveRecord` (`recordJson` and `record`) | `LiveRecord.restore_save`, `LiveRecord.decode_encode` |
+| `load` | `record` (hex) or `recordJson` | restores a `LiveRecord`, replacing the tool's live session, and answers the live view | `LiveRecord.restore_save`, `Live.reached` |
 | `run` | `answers` (hex) or `answersJson`, a script of `(row, answer)` pairs, if any | the outcome, the exit (`ExitV`) and any waiting calls through `Live.feedAll`; `syncExit` (`Api.Built.runSync`) when closed | `Live.reached` |
 | `settle` | `tapeJson`, the replies in call order as exits, if any; `limit` | the least budget whose call tree's run is not cut, and that run: `finished`, `waiting` or, past the limit, `unsettled` (`Tree.settle`) | `Tree.settle_sound`, `Tree.probe_stable` |
 | `frames` | `tapeJson`, `limit` | the call tree's run at each budget from 0 to `limit` (`Tree.frames`) | `Tree.ofProgram_approx` |
@@ -86,7 +94,8 @@ open Tools.Query (Answer refused effTyJson refusalJson entryJson focusJson holeR
 open Tools.JsonBridge (printJson valueFrom? toHex locate)
 
 /-- **The tool's state**: the session, once opened, its document identity and revision, its
-journal, the latest step first, the next opening generation, and the name of its application. -/
+journal, the latest step first, the next opening generation, its persistent live session, and the
+name of its application. -/
 structure State where
   /-- the edit session of the sketch as written, once opened -/
   source : Option SourceSession := none
@@ -100,6 +109,8 @@ structure State where
   revision : Nat := 0
   /-- the next generation counter allocated on `open` or `fork` -/
   generation : Nat := 0
+  /-- the persistent live session, once started or loaded -/
+  live : Option Effect4.Live := none
 
 /-- **What the session shows, as an edit session**: the application, the sketch as written and
 the table at the source's addresses (`SourceSession.shown`). The view tools draw it. -/
@@ -166,6 +177,20 @@ structure Request where
   expectedJson : Option Json := none
   /-- the validation policy for `Doc.commit`: `"keepExactType"` (default) or `"recheckSource"` -/
   policy : Option String := none
+  /-- the fiber id of a call key or fiber selector for `receive` and `apply` -/
+  fiber : Option Nat := none
+  /-- the guard token of a call key selector for `receive` and `apply` -/
+  token : Option Nat := none
+  /-- the row spelling of a row selector for `receive` and `apply` -/
+  rowName : Option String := none
+  /-- one host answer for `receive`, as canonical bytes in hex -/
+  answer : Option String := none
+  /-- one host answer for `receive` as its JSON print, in place of `answer` -/
+  answerJson : Option Json := none
+  /-- a saved live record (`LiveRecord.Tuple`) for `load`, as canonical bytes in hex -/
+  record : Option String := none
+  /-- a saved live record (`LiveRecord.Tuple`) for `load`, as its JSON print -/
+  recordJson : Option Json := none
 
 /-- Whether a request supplies an explicit edit target (`revision`, `expected`, `docName`, or
 `docGeneration`). -/
@@ -198,12 +223,20 @@ def Request.fromJson? (j : Json) : Except String Request := do
   let expected ← optField j "expected" (Lean.fromJson? (α := String))
   let expectedJson := (j.getObjVal? "expectedJson").toOption
   let policy ← optField j "policy" (Lean.fromJson? (α := String))
+  let fiber ← optField j "fiber" (Lean.fromJson? (α := Nat))
+  let token ← optField j "token" (Lean.fromJson? (α := Nat))
+  let rowName ← optField j "rowName" (Lean.fromJson? (α := String))
+  let answer ← optField j "answer" (Lean.fromJson? (α := String))
+  let answerJson := (j.getObjVal? "answerJson").toOption
+  let record ← optField j "record" (Lean.fromJson? (α := String))
+  let recordJson := (j.getObjVal? "recordJson").toOption
   return Request.mk op program holes (path.getD []) replacement (holeName.getD "h0") id
     programJson replacementJson rows services (j.getObjVal? "holesJson").toOption
     (j.getObjVal? "rowsJson").toOption (j.getObjVal? "servicesJson").toOption (hex.getD false)
     answers (j.getObjVal? "answersJson").toOption (j.getObjVal? "tapeJson").toOption
     (limit.getD 256) (budget.getD 64) (width.getD 64) types (j.getObjVal? "typesJson").toOption
-    docName docGeneration revision expected expectedJson policy
+    docName docGeneration revision expected expectedJson policy fiber token rowName answer
+    answerJson record recordJson
 
 /-- Write a request, as `Request.fromJson?` reads it. -/
 def Request.toJson (r : Request) : Json :=
@@ -230,6 +263,13 @@ def Request.toJson (r : Request) : Json :=
     (r.expected.map fun hex => ("expected", Json.str hex)).toList ++
     (r.expectedJson.map fun j => ("expectedJson", j)).toList ++
     (r.policy.map fun s => ("policy", Json.str s)).toList ++
+    (r.fiber.map fun n => ("fiber", Lean.toJson n)).toList ++
+    (r.token.map fun n => ("token", Lean.toJson n)).toList ++
+    (r.rowName.map fun s => ("rowName", Json.str s)).toList ++
+    (r.answer.map fun hex => ("answer", Json.str hex)).toList ++
+    (r.answerJson.map fun j => ("answerJson", j)).toList ++
+    (r.record.map fun hex => ("record", Json.str hex)).toList ++
+    (r.recordJson.map fun j => ("recordJson", j)).toList ++
     [("limit", Lean.toJson r.limit), ("budget", Lean.toJson r.budget), ("width", Lean.toJson r.width)] ++
     (if r.hex then [("hex", Json.bool true)] else []) ++
     (r.id.map fun id => ("id", id)).toList
@@ -348,6 +388,58 @@ def treeRunJson (stop : Effect4.Run.Tree.Stop) (steps : List Effect4.Run.Tree.St
     (extra : List (String × Json) := []) : Json :=
   Json.mkObj (extra ++ treeStopJson stop ++ [("steps", Json.arr (steps.map treeStepJson).toArray)])
 
+/-- Parse a call selector (`Effect4.Run.Sel`) from `req`'s `fiber`, `token`, or `rowName`. -/
+def selFrom? (req : Request) : Option Effect4.Run.Sel :=
+  match req.fiber, req.token, req.rowName with
+  | some f, some t, _ => some (.key ⟨⟨f⟩, t⟩)
+  | some f, none, _ => some (.fiber ⟨f⟩)
+  | none, _, some r => some (.row r)
+  | none, _, none => none
+
+/-- A call's checked instance (`CallInstance NativeOp`) as JSON. -/
+def callInstanceJson (c : CallInstance NativeOp) : Json :=
+  Json.mkObj [("request", printJson c.request), ("answer", printJson c.answer),
+    ("error", printJson c.error)]
+
+/-- One waiting call (`Live.CallView`) as JSON, with its key and checked instance. -/
+def callViewJson (s : Effect4.Run) (c : Effect4.Live.CallView) : Json :=
+  let row := match s.rowOf c.await.op with
+    | some r => r.spelling
+    | none => ""
+  Json.mkObj [("row", .str row),
+    ("key", Json.mkObj [("fiber", toJson c.await.fiber.value), ("token", toJson c.await.token)]),
+    ("fiber", toJson c.await.fiber.value),
+    ("token", toJson c.await.token),
+    ("request", printJson c.await.request),
+    ("origin", match c.origin with | some p => toJson p | none => .null),
+    ("checked", match c.checked with | some inst => callInstanceJson inst | none => .null)]
+
+/-- The live session's view as JSON: outcome, exit, and waiting calls with keys and checked
+instances. -/
+def liveViewJson (l : Effect4.Live) : Json :=
+  let v := l.view
+  let waiting := v.awaiting.map (callViewJson l.run)
+  Json.mkObj [("session", .str l.run.id),
+    ("outcome", printJson v.outcome),
+    ("exit", match v.exit with | some exit => printJson exit | none => .null),
+    ("waiting", Json.arr waiting.toArray),
+    ("steps", toJson v.steps),
+    ("applied", toJson v.applied),
+    ("funded", toJson v.funded),
+    ("atRest", toJson v.atRest)]
+
+/-- A live feed verdict (`Effect4.Run.Verdict`) as JSON. -/
+def verdictJson : Effect4.Run.Verdict → Json
+  | .played phases =>
+    Json.mkObj [("kind", .str "played"), ("phases", Json.arr (phases.map printJson).toArray)]
+  | .unresolved sel =>
+    let selJson := match sel with
+      | .key k =>
+        Json.mkObj [("kind", .str "key"), ("fiber", toJson k.fiber.value), ("token", toJson k.token)]
+      | .fiber f => Json.mkObj [("kind", .str "fiber"), ("fiber", toJson f.value)]
+      | .row r => Json.mkObj [("kind", .str "row"), ("row", .str r)]
+    Json.mkObj [("kind", .str "unresolved"), ("selector", selJson)]
+
 /-- Feed one draft edit (`Doc.draft`), record it, and answer its delta and the view. -/
 def feedAnswer (st : State) (d : Doc) (req : Request) (e : Edit)
     (readLaws : List Lean.Name := []) : State × Answer :=
@@ -436,13 +528,96 @@ def answer (st : State) (req : Request) : State × Answer :=
       let docId : DocId := ⟨req.docName.getD "default", st.generation⟩
       let d := Doc.open app { program, holes } docId
       ({ source := some d.session, journal := [], app := name,
-          docId := d.id, revision := d.revision, generation := st.generation + 1 },
+          docId := d.id, revision := d.revision, generation := st.generation + 1,
+          live := st.live },
         Answer.mk req.op name (readLaws ++ [``SourceSession.reached_view]) true
           (viewJson d.session) none req.id)
   | "catalogue" =>
     let rows := (st.source.map (·.app.rows)).getD []
     (st, Answer.mk req.op st.app [``Canonical.ofJsonAnyOrder_exact, ``NativeAtom.atom_table_wf] true
       (Tools.Catalogue.catalogueJson rows) none req.id)
+  | "receive" =>
+    match st.live with
+    | none => none' "no live session is open"
+    | some live =>
+      match selFrom? req with
+      | none => none' "a call selector is required"
+      | some sel =>
+        match valueFrom? (α := Effect4.Api.HostSession.Answer) req.answer req.answerJson with
+        | some (some ans, ansLaws) =>
+          let (live', verdict) := live.feed (.receive sel ans)
+          let ok := match verdict with | .played _ => true | .unresolved _ => false
+          ({ st with live := some live' },
+            { op := req.op, app := st.app,
+              laws := (ansLaws ++ [``Effect4.Live.reached]).eraseDups,
+              ok := ok,
+              result := Json.mkObj [("verdict", verdictJson verdict), ("live", liveViewJson live')],
+              error := if ok then none else some "the call selector is unresolved",
+              id := req.id })
+        | _ =>
+          (st, unreadable (α := Effect4.Api.HostSession.Answer) req.op
+            "the host answer does not read" req.answerJson req.id)
+  | "apply" =>
+    match st.live with
+    | none => none' "no live session is open"
+    | some live =>
+      match selFrom? req with
+      | none => none' "a call selector is required"
+      | some sel =>
+        let (live1, verdict) := live.feed (.apply sel)
+        let (live', ok) := match verdict with
+          | .played _ => ((live1.feed .flush).1, true)
+          | .unresolved _ => (live1, false)
+        ({ st with live := some live' },
+          { op := req.op, app := st.app,
+            laws := [``Effect4.Live.reached],
+            ok := ok,
+            result := Json.mkObj [("verdict", verdictJson verdict), ("live", liveViewJson live')],
+            error := if ok then none else some "the call selector is unresolved",
+            id := req.id })
+  | "liveView" =>
+    match st.live with
+    | none => none' "no live session is open"
+    | some live =>
+      (st, Answer.mk req.op st.app
+        [``Effect4.Live.reached, ``Effect4.Live.view_awaits, ``Effect4.Live.view_checked] true
+        (liveViewJson live) none req.id)
+  | "save" =>
+    match st.live with
+    | none => none' "no live session is open"
+    | some live =>
+      let saved := Effect4.LiveRecord.save live
+      let result := Json.mkObj <|
+        [("recordJson", printJson saved.toTuple)] ++
+        if req.hex then [("record", .str (toHex saved.toTuple))] else []
+      (st, Answer.mk req.op st.app
+        [``Effect4.LiveRecord.restore_save, ``Effect4.LiveRecord.decode_encode] true result none
+        req.id)
+  | "load" =>
+    match valueFrom? (α := Effect4.LiveRecord.Tuple) req.record req.recordJson with
+    | some (some tuple, recLaws) =>
+      let saved := Effect4.LiveRecord.ofTuple tuple
+      match Effect4.LiveRecord.restore saved with
+      | .error (.unsupportedVersion v) =>
+        (st,
+          { op := req.op, app := st.app,
+            laws := (recLaws ++ [``Effect4.LiveRecord.restore_unsupportedVersion]).eraseDups,
+            ok := false,
+            result := Json.mkObj [("reason", .str "unsupportedVersion"), ("version", toJson v)],
+            error := some s!"unsupported live record version {v}", id := req.id })
+      | .error (.admission why) =>
+        (st,
+          { op := req.op, app := st.app, laws := recLaws, ok := false,
+            result := Json.mkObj [("reason", .str "admission"), ("refusal", printJson why)],
+            error := some "the saved live record failed program admission", id := req.id })
+      | .ok live' =>
+        let st' := { st with live := some live' }
+        (st', Answer.mk req.op st.app
+          (recLaws ++ [``Effect4.LiveRecord.restore_save, ``Effect4.Live.reached]).eraseDups true
+          (liveViewJson live') none req.id)
+    | _ =>
+      (st, unreadable (α := Effect4.LiveRecord.Tuple) req.op "the live record does not read"
+        req.recordJson req.id)
   | op =>
     match st.doc with
     | none => none' "no session is open"
@@ -547,6 +722,25 @@ def answer (st : State) (req : Request) : State × Answer :=
             ("typesJson", printJson l.app.types)]
         (st, Answer.mk op st.app [``Sketch.decode_exact, ``Canonical.decode_exact] true result
           none req.id)
+      | "start" =>
+        let app := l.app.withHoles l.sketch.holes
+        let sourceType := match l.view.type with
+          | some t => effTyJson t
+          | none => .null
+        match Effect4.Program.admitProgram l.sketch.program app with
+        | .error why =>
+          let result := Json.mkObj [("status", .str "refused"), ("sourceType", sourceType),
+            ("refusal", printJson why)]
+          (st, Answer.mk op st.app [``Sketch.sourceCheck_of_admitted] true result none req.id)
+        | .ok admitted =>
+          let rowNames := app.rows.zipIdx.map fun (r, i) => (r.spelling, i)
+          let b : Effect4.Api.Built := { app, program := l.sketch.program, admitted, rowNames }
+          let (live', verdict) := (Effect4.Live.open b st.app).feed .start
+          let st' := { st with live := some live' }
+          let result := Json.mkObj [("status", .str "ok"), ("sourceType", sourceType),
+            ("verdict", verdictJson verdict), ("live", liveViewJson live')]
+          (st', Answer.mk op st.app [``Sketch.sourceCheck_of_admitted, ``Effect4.Live.reached] true
+            result none req.id)
       | "run" =>
         let (answers?, answerLaws) :=
           listFrom? (α := String × Effect4.Api.HostSession.Answer) req.answers req.answersJson

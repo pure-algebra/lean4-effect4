@@ -265,6 +265,7 @@ import Test.Api.TupleAuthoring
 import Test.Api.TargetSupport
 import Test.Program.SketchAdmissionControls
 import Test.Program.SourceDocumentControls
+import Test.Program.LiveRecordControls
 import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract
