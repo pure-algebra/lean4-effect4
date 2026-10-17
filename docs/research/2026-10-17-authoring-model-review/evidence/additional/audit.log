@@ -1,0 +1,21 @@
+#axiom_audit: 743 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+#axiom_audit: 52 declarations within [propext, Quot.sound], 3 of them modulo planned goals; 2 planned goals
+Effect4.Program.SourceSession.feed_coherent: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.SourceSession.view_type: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.check_restrict: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.Checker.check_rebase: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.Sketch.table_fill: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Run.Tree.ofProgram_approx: goal; nearest []; 0 lemmas, 0 definitions
+Effect4.Run.Tree.ofProgram_eq_denoteRowsB: goal; nearest []; 0 lemmas, 0 definitions
+Effect4.Run.Tree.probe_stable: modulo [Effect4.Run.Tree.ofProgram_approx]; nearest [Effect4.Run.Tree.ofProgram_approx]; 0 lemmas, 0 definitions
+Effect4.Run.Tree.settle_sound: modulo [Effect4.Run.Tree.ofProgram_approx]; nearest [Effect4.Run.Tree.probe_stable]; 0 lemmas, 0 definitions
+next goals: 2
+  goal Effect4.Run.Tree.ofProgram_approx : ∀ (table : Effect4.Program.RowTable) {k k' : Nat},
+  k ≤ k' →
+    ∀ (program : Effect4.Program.NativeEff),
+      (Effect4.Run.Tree.ofProgram table k program).Approx (Effect4.Run.Tree.ofProgram table k' program)
+    declared: proved in rocq/SkeletonApprox.v: Approx.ofProgram_approx, over rocq/Skeleton.v (make gen-rocq)
+  goal Effect4.Run.Tree.ofProgram_eq_denoteRowsB : ∀ (table : Effect4.Program.RowTable) (k : Nat) (program : Effect4.Program.NativeEff),
+  Effect4.Run.Tree.Plain program = true →
+    Effect4.Run.Tree.ofProgram table k program =
+      Effect4.Run.Tree.ofRows (Effect4.Program.Denote.denoteRowsB table k program [])

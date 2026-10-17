@@ -27,6 +27,9 @@ The half of the application face that crosses to TypeScript, in the namespace `E
   emission's surface (`ModuleEmission.surface`, `Codegen/Surface.lean`) is the second module a
   consumer imports: each data service's Schemas, and its layer that decodes each entry's input.
 * `Typed.print`, `Typed.emit`, `TypedLayer.print` and `Built.print` print the certified values.
+  `Typed.print`, `Typed.emit` and `Built.print` print at the rows' signature, so their application
+  passes one decision first, `targetSupport`: no declared service and no named type, until emission
+  checks at the whole typing signature. `TypedLayer.print` prints at its layer's own signature.
 * The Schema half: persisted `SchemaRepresentation` JSON syntax (`schemaDocument`,
   `schemaRepresentation`), the JSON payload beside it (`jsonExpr`), and a type's typed Schema
   code (`schemaCode`), the expression an Effect user writes.
@@ -179,18 +182,33 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
 
 /-! ## The certified values, printed -/
 
+/-- The one target-support decision of the certified faces (`Typed.print`, `Typed.emit`,
+`Built.print`). They print at the rows' signature. An application that declares no service and
+no named type is `SigApp.ofTable` of its rows, whose signature is the rows' (`SigApp.signature_nil`),
+so the print reads the certificate's own signature. Any other application is refused at the root
+with `.declarations`. Before this decision, a redeclared built-in service code printed at its
+built-in carrier while the certificate stated another (the proof scout's control `rebound`). -/
+def targetSupport (app : SigApp) : Except PrintRefusal Unit :=
+  if app.services.isEmpty && app.types.isEmpty then .ok ()
+  else .error (.declarations app.services.length app.types.length)
+
 namespace Typed
 
 variable {app : SigApp}
 
-/-- The printed syntax of the certified program, at its rows' signature: the faces read a
-declared name once the module writer declares it (the wiring plan, W5). -/
-def print (t : Typed app) : Except PrintRefusal TypeScript.Expr := Api.print t.program app.rows
+/-- The printed syntax of the certified program, at its rows' signature, when the application
+passes `targetSupport`: the faces read a declared name once the module writer declares it (the
+wiring plan, W5). -/
+def print (t : Typed app) : Except PrintRefusal TypeScript.Expr :=
+  (targetSupport app).bind fun _ => Api.print t.program app.rows
 
-/-- The certified module emission under a declaration name, at its rows' signature. -/
+/-- The certified module emission under a declaration name, at its rows' signature, when the
+application passes `targetSupport`. -/
 def emit (t : Typed app) (name : String) :
     Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission t.program app.rows name) :=
-  Api.emitModule name t.program app.rows
+  match targetSupport app with
+  | .error why => .error (.print why)
+  | .ok () => Api.emitModule name t.program app.rows
 
 end Typed
 

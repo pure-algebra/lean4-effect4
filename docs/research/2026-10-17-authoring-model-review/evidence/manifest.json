@@ -1,0 +1,84 @@
+{
+  "recorded_at_utc": "2026-10-17T06:53:38.433780+00:00",
+  "head": "22a46c6aa0c419de1c3b047516418e48bfc201a5",
+  "branch": "refactor/phase1-phase3",
+  "source_changes": "",
+  "reviewers": [
+    {
+      "name": "math_model",
+      "model": "gpt-6.1-sol",
+      "scope": "mathematics and PL",
+      "evidence": "source inspection; no independent Lean process"
+    },
+    {
+      "name": "execution_cas",
+      "model": "gpt-6.1-sol",
+      "scope": "execution, CAS, merge and performance",
+      "evidence": "source inspection; no independent Lean process"
+    },
+    {
+      "name": "authoring_api",
+      "model": "gpt-6.1-sol",
+      "scope": "authoring and API",
+      "evidence": "source inspection; no independent Lean process"
+    }
+  ],
+  "opus": {
+    "status": "owner_handles_separately",
+    "reason": "User explicitly directed: no dont worry about opus ill run that just do your reviews",
+    "initial_attempt": "No model response; local runner reported Not logged in with zero model usage",
+    "retry": "Automatic approval rejected external transfer; no review ran. Later authorization was received, but Opus remains with the owner per their direct instruction."
+  },
+  "finite_guard_count": 28,
+  "finite_group_count": 10,
+  "checks": [
+    {
+      "command": "LEAN_NUM_THREADS=3 lake build Effect4.Program.Typing.SourceSession Test.Machine.Runtime.TapeAction",
+      "exit_code": 0,
+      "log": "build.log"
+    },
+    {
+      "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true evidence/probes.lean",
+      "exit_code": 0,
+      "log": "probes.log",
+      "actual_input_at_run": "/private/tmp/effect4-authoring-review-probes.lean"
+    },
+    {
+      "command": "LEAN_NUM_THREADS=3 lake build Test.Program.MeaningEqContract Test.Program.LayerSharingContract Effect4.Laws.Program.Sketch Effect4.Laws.Program.SourceTable Effect4.Laws.Program.Address Effect4.Laws.Run.Tape Effect4.Laws.Api.HostSession Effect4.Laws.Program.Folds.TyCache ProofGraph.AxiomAudit",
+      "exit_code": 0,
+      "log": "laws-build.log"
+    },
+    {
+      "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true evidence/audit.lean",
+      "exit_code": 0,
+      "log": "audit.log",
+      "actual_input_at_run": "/private/tmp/effect4-authoring-review-audit.lean"
+    }
+  ],
+  "iteration_notes": [
+    "First narrow build hit sandbox denial while writing Lake shared artifact cache. Authorized rerun passed.",
+    "Initial probe used nonexistent Except.isError. Both occurrences changed to toOption.isNone. Final run passed with an empty diagnostic log."
+  ],
+  "sha256": {
+    "README.md": "6d3cd536b34170729a9b503d8a5f73f4600a259e9a5359fa4e1b4ebc1ded2747",
+    "evidence/audit.lean": "752c86c15f8cf05167f463c63a19c7f1fa0f70c076fd0afef627b703457f9adf",
+    "evidence/audit.log": "e2751a9d80e0df83cb7464fbf7d52f33d8c407a47ed96bfd397b92d2bb211755",
+    "evidence/build.log": "cdd344211051597dca8a20671f590e8c682936c6f3db93fafeeec234047a22cb",
+    "evidence/final-checks.json": "4399b5a5db3407672db08f15df8910f958ea3dcf0fd0eb2d77383a7c3c5a6d23",
+    "evidence/language.log": "9f219f3d0b05dd9bb11af566b78323d9a818f682dfe9cd55a0cad519ca9e31fa",
+    "evidence/laws-build.log": "d52420d11e03cb205255d4ec170cf4ba235f133f0bc7e398a10c9eb6f103d1ba",
+    "evidence/original-proposal.txt": "57cc1d42d8ef22b1238be5c600ef4764ea77e462ede7b109bfcf2d61aa33e9ef",
+    "evidence/probes.lean": "6cec547bcd68a9cad2e1d8f43eb134c8b05753f9ea18b9c771ab8c8650d8af76",
+    "evidence/probes.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reviews/api.md": "11f70765cfb30b15caf9e3ae190e9e17eb1577ce747529640a12e69fefc46517",
+    "reviews/consolidation.md": "668c812fecfb8aec6f423333f88a323534862f01dd2a3a9a690f649447295b06",
+    "reviews/execution.md": "7b83c89f52114894f3e8168675bd979c2a856a606bf80014288885877fb7f184",
+    "reviews/math.md": "94738b4c0d6f6fe8c658be841b286ae9fe2292c4b711a2a07d641a20f6f7320f"
+  },
+  "final_checks": "final-checks.json",
+  "language_check": {
+    "command": "python3 scripts/check-language.py --strict docs/research/2026-10-17-authoring-model-review/README.md docs/research/2026-10-17-authoring-model-review/reviews/consolidation.md",
+    "exit_code": 0,
+    "log": "language.log"
+  }
+}

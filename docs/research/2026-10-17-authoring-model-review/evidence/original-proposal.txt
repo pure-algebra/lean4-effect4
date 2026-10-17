@@ -1,0 +1,98 @@
+The CAS already has a design history in the tree: the repository-algebra note and `Store/Word.lean`. Reading those first so the first-principles pass builds on them rather than repeating them.
+
+The tree already treats a hole as a row. Checking what a hole row carries before building on that.
+
+The 2026-09-08 algebra note promised graft laws (associativity, commutativity, slicing, monotonicity, congruence) proved for the free operad of contexts, but I've confirmed none of them actually landed in `src/`—only the design note and a scratch project exist, with the OCaml index wrongly citing proofs that were never ported. I'll proceed by building from the semantics itself: recognizing that holes, unanswered calls, and host-less rows are all the same `Vis` node in the interaction tree, and work the algebra forward from there rather than from git history.
+
+The focus of a hole (`Focus`: environment and type) and the checked instance of a held call (`CallInstance`: request, answer and error) are therefore the same notion: what an interpretation must be at this occurrence. Every authoring act and every hosting act an agent performs is "interpret this occurrence" by a value, a program or a host.
+
+## 2. The relations, and what each one lets the API do
+
+| # | Relation | Status | What the store can do with it |
+|---|---|---|---|
+| R1 | A hole is a row, so a sketch is a program over the app plus its holes | in the tree (`Row.hole`, `holes_conservative`, `sketch_weakening`) | one verb, `interpret(occurrence, by)`, for authoring and for hosting |
+| R2 | A fill that checks at a hole's focus keeps the whole program's type | in the tree (`check_fill_focusAt`, `fillPremises_sound`) | a fragment's certificate is portable: it is keyed by the focus, not by where the fragment sits |
+| R3 | Strengthening: a subterm's typing depends only on the types of the variables it actually uses | to state | closed fragments are typed once for the whole store; open ones are keyed by the digest and their used variables |
+| R4 | Grafting is an operad: it is associative, and grafts at incomparable paths commute | scratch only (`graftE_graftE`, `graftE_comm`) | a workspace is a base plus a map from holes to fragments, filled in any order |
+| R5 | Requirements grow along grafts, and are a join-semilattice | scratch (`requires_graft_mono`); the row laws are in the tree | "does this fragment fit this hole" is a subset test, so indexes merge without coordination |
+| R6 | A fold out of the initial algebra is unique (`hom_eq_cata_eff`) | in the tree | every generated fold is a global memo table keyed by subterm digest |
+| R7 | Filling a hole and then running equals running with the hole handled by the fill | an instance of `run_through` from `effects`; to state for `Eff` | sketches can run; the answers given at a hole become examples the eventual fill must reproduce |
+| R8 | A run is a function of its program and its tape, and is closed under prefixes | in the tree (`journal_replays`, `replay_unique`, `replayEval_append`) | runs are content; their checkpoints form a graph of plays any agent can extend |
+| R9 | Each fact is invariant under some equivalence | per fact; to state | equivalence classes become indexes, never the identity, which keeps the 2026-09-08 ruling |
+| R10 | Renaming invariance, T2: a fragment means the same under a renaming of its row table | open | fragments can be shared across applications as (bytes, table) pairs |
+
+## 3. Four of these, in the weeds
+
+**(a) Portable certificates: R2 and R3 together turn the type index into a proof index.**
+- A fragment `s` checked at a focus `(Γ, τ)` stays checked wherever a hole has that focus. The certificate is the lowered checker's verdict, keyed by (s's digest, focus digest).
+- Strengthening shrinks Γ to the variables `s` actually uses, so the hit rate is high. Closed fragments become global.
+- τ is an effect type: answer, error and required rows. Retrieval is then: the answer type matches, the error is a subtype, and the required rows are a subset of the rows the hole can reach.
+- The row part is monotone, so the index is a positive Datalog view. Two stores' indexes merge by union, which the prior note already reads through CALM.
+
+For agents this is `search(focus)`: a list of stored fragments, each already proved to fit this hole. Those are verified examples to put in the prompt, ranked by how often other programs use them (the dependents index of the prior note).
+
+**(b) Running unfinished programs: R7 makes holes live, and tapes become examples.**
+- Running a sketch is safe today, because a hole is an async row. When execution reaches a hole, it becomes a held call. An agent can answer it by hand and keep exploring: live programming with typed holes (Omar et al., POPL 2019).
+- R7 says that filling the hole with a program `p` later gives the same run as answering it with `p`'s results. So the recorded answers at a hole are examples `p` has to reproduce.
+- That is type-and-example-directed synthesis: Myth (Osera and Zdancewic, PLDI 2015). Our focus is the type; our tape at the hole is the examples.
+
+One cheap change makes this real. Today a hole row's request is `unit`, so its examples carry outputs only. If the request were the values of the hole's environment, each answer would become an input–output pair.
+
+**(c) The graph of plays: R8 turns runs into a cache that agents share.**
+- An outcome depends only on (program, app, budget, tape), so a run is a derivation in Nix's sense: memoizable forever.
+- Unlike Nix, a longer tape extends a shorter one. The engine's checkpoint address is a function of the job, the position and the machine content only (its law LOG-REL), so the cache is a graph:
+  - each node is a checkpoint digest;
+  - each edge is a (row, answer) pair;
+  - two histories that are equivalent up to commuting rows reach the same node automatically, because equal content has an equal digest.
+- Exploration, replay and an agent's next step all extend the same shared graph.
+
+The missing law is `checkpoint_resume`, the prior note's P4: running from a checkpoint on the rest of a tape equals running from the start on the whole tape.
+
+**(d) A workspace is a base plus a map of fills: R4 makes assembly coordination-free.**
+- The state of an assembly is a base context's digest plus a partial map from occurrences to fragments' digests.
+- By `graftE_comm`, the assembled digest doesn't depend on fill order.
+- Merging two agents' maps is their union. A conflict is exactly one occurrence filled with two different digests, located there, with both values kept, as in a multi-value register.
+- That gives conflict-free parallel authoring by construction, from a law, not from a protocol.
+
+## 4. Where this departs from the usual designs
+
+| Usual design | What it does | What our semantics does instead |
+|---|---|---|
+| git | bytes, trees, mutable refs; merges text | the unit is an open term; a merge is a union of fills; a conflict is an occurrence |
+| Unison | hashes definitions, with the type in the digest; caches type checks and pure test results | the type stays out of the digest; certificates are portable by focus; runs with outside answers are content too |
+| Nix and Bazel | outputs keyed by inputs | runs keyed by inputs and also extendable, since a run is a monoid action, with states merged by content |
+| Dhall | identity is the normal form's hash | normal forms are indexes with proved invariance; identity stays the bytes |
+| Hazel | typed holes, live evaluation | the same, plus holes as rows, so one verb also covers hosts and agents |
+
+## 5. The store's interface, as the laws shape it
+
+| Verb | What it does | The laws behind it |
+|---|---|---|
+| `put` / `get(digest, path)` | content and slices | `slice_atPath`, the identity ruling |
+| `open(digest)` | the open operations of a sketch or a checkpoint, each with its focus | R1 |
+| `interpret(base, occurrence, by)` | by a digest, a value or a host; certificate checked at the focus; moves past fills at other occurrences | R2, R4, R7 |
+| `search(focus)` | fragments certified to fit | R2, R3, R5 |
+| `run(digest, tape)` and `extend(checkpoint, answers)` | the graph of plays | R8, `checkpoint_resume` |
+| `fact(fold, digest)` | memoized folds and equivalence-class facts | R6, R9 |
+
+Six verbs. Underneath sit codecs, digests, packs, checking, the machine and the indexes.
+
+## 6. What it asks of the proofs
+
+Each obligation, with what uses it:
+1. **Land the graft laws** from the scratch project: `TreeSig`, `graftE_graftE`, `graftE_comm`, `slice_atPath` and `requires_graft_mono`. Used by `interpret` and by the OCaml subterm index, which already cites `slice_atPath`.
+2. **State R3, strengthening.** Used by the certificate cache.
+3. **State R7 for `Eff`**, as an instance of `run_through`. Used by running sketches and by examples at holes.
+4. **Prove `checkpoint_resume`.** Used by the graph of plays.
+5. **One invariance theorem per cached fact.** Used by the equivalence indexes.
+6. **T2, renaming invariance.** Used for sharing fragments across applications. Open since 2026-09-08.
+
+The commutation laws from last turn and the operad laws from 2026-09-08 are the same family: diamonds. One generic theorem about traces under an independence relation serves fills (`graftE_comm`), receipts (`reply_commute`) and the graph of plays.
+
+## 7. Choices that are yours
+
+1. **A hole row's request.** Should it carry the hole's environment rather than `unit`, so that answers at holes become input–output examples? It changes the hole row's type, and nothing else that I've found.
+2. **Workspace = base + fill map as the authoring state**, replacing the single sketch value. It's a representation change, so it needs a plan first.
+3. **Equivalence indexes as views beside the identity**, extending the 2026-09-08 ruling rather than reversing it.
+
+The literature here is cited from memory, not reread this session: Omar et al., POPL 2019; Osera and Zdancewic, PLDI 2015; and the prior note's sources (Leinster; Earnshaw, Hefford and Román; Hellerstein and Alvaro on CALM).

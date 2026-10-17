@@ -1,0 +1,197 @@
+[
+  {
+    "label": "dependencies",
+    "command": [
+      "lake",
+      "build",
+      "Effect4.Laws.Api.HostSession",
+      "Effect4.Laws.Api.Live",
+      "Effect4.Laws.Machine.Approximation",
+      "Effect4.Laws.Program.AddressMove",
+      "Effect4.Laws.Program.CheckedTyping",
+      "Effect4.Laws.Program.Definitions",
+      "Effect4.Laws.Program.Edit",
+      "Effect4.Laws.Program.Folds.TyCache",
+      "Effect4.Laws.Program.PathFold",
+      "Effect4.Laws.Program.ReferenceTyping",
+      "Effect4.Laws.Program.Signature",
+      "Effect4.Laws.Program.Sketch",
+      "Effect4.Laws.Program.SourceTable",
+      "Effect4.Laws.Program.Typing.Call",
+      "Effect4.Laws.Program.Typing.PartsTable",
+      "Effect4.Laws.Program.Typing.Rebase",
+      "Effect4.Laws.Run",
+      "Effect4.Laws.Run.Journal",
+      "Effect4.Laws.Run.Tape",
+      "Effect4.Laws.Run.Tree",
+      "Effect4.Program.Scoped",
+      "ProofGraph.AxiomAudit",
+      "ProofGraph.Plan",
+      "Tools.Session"
+    ],
+    "exit_code": 0,
+    "seconds": 0.54
+  },
+  {
+    "label": "A",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/probes/A.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/A.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 13.655
+  },
+  {
+    "label": "B",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/probes/B.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/B.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 7.382
+  },
+  {
+    "label": "C",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/probes/C.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/C.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 2.425
+  },
+  {
+    "label": "D",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/probes/D.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/D.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 4.261
+  },
+  {
+    "label": "E",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/probes/E.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/E.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 1.776
+  },
+  {
+    "label": "R",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/probes/R.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/R.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 1.54
+  },
+  {
+    "label": "FGH",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/probes/FGH.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/FGH.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 1.639
+  },
+  {
+    "label": "Audit",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/Audit.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 3.584
+  },
+  {
+    "label": "Status",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-proof-scout/probes/Status.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 4.822
+  },
+  {
+    "label": "review",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-authoring-model-review/evidence/final",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/probes.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-authoring-model-review/evidence/final/probes.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 1.726
+  },
+  {
+    "label": "handles",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-authoring-model-review/evidence/final",
+      "-o",
+      "/private/tmp/effect4-final-review-gxbr5i0y/handles.olean",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-authoring-model-review/evidence/final/handles.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 1.562
+  },
+  {
+    "label": "review-audit",
+    "command": [
+      "lean",
+      "-DwarningAsError=true",
+      "-R",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-authoring-model-review/evidence/final",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-authoring-model-review/evidence/final/audit.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 2.064
+  }
+]

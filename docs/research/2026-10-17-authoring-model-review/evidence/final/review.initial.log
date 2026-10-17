@@ -1,0 +1,3 @@
+/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-authoring-model-review/evidence/final/probes.lean:115:0: error: Expression
+  decide (Option.map (fun l => l.run.live.length) (receiveFirst some1) = some 0)
+did not evaluate to `true`

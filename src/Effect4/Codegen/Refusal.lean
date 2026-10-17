@@ -92,6 +92,12 @@ inductive PrintRefusal
   missing, or its request is not the service's state and the method's arguments
   (`serviceFaultOf`). -/
   | serviceMethod (service method : String)
+  /-- An application that declares services or named types, by how many of each, refused at the
+  root by the certified faces (`Api.targetSupport`). They print at the rows' signature alone, which
+  types a declared service code at its built-in carrier, so the printed types could differ from the
+  certificate's silently. Conservative: an unused declaration is refused too. Kept until emission
+  checks at the application's whole typing signature (R1). -/
+  | declarations (services types : Nat)
 deriving DecidableEq, Repr
 
 /-- Why the reader declined a tree. The TypeScript reader's alphabet is generated from this one

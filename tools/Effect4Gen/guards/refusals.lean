@@ -78,7 +78,8 @@ def prints : List PrintRefusal :=
    .payloadClass "NotFound" .fieldsDiffer, .payloadClass "NotFound" .construction,
    .payloadClass "Rate" .unreadable, .binderTerm "Ref.modify", .callbackRequirement [1, 1],
    .invocation 2, .emptyBlock, .bodies 1, .serviceName "CounterLayer",
-   .strayMethod "readCounter" "Clock", .service "Counter", .serviceMethod "Counter" "read"]
+   .strayMethod "readCounter" "Clock", .service "Counter", .serviceMethod "Counter" "read",
+   .declarations 1 0]
 
 def reads : List ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",

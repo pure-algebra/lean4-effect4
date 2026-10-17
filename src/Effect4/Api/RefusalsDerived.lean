@@ -2925,7 +2925,9 @@ def shapeDoc : ShapeDoc :=
         ("service", (shape _root_.String).root)]),
       ("service", 12, [("name", (shape _root_.String).root)]),
       ("serviceMethod", 13, [("service", (shape _root_.String).root),
-        ("method", (shape _root_.String).root)])],
+        ("method", (shape _root_.String).root)]),
+      ("declarations", 14, [("services", (shape _root_.Nat).root),
+        ("types", (shape _root_.Nat).root)])],
    (shape _root_.String).defs ++ (shape (@_root_.List (_root_.Nat))).defs ++
      (shape _root_.Effect4.Program.ClassRefusal).defs ++ (shape _root_.Nat).defs⟩
 
@@ -2944,6 +2946,7 @@ def toVal : _root_.Effect4.Program.PrintRefusal → Val
   | .strayMethod a0 a1 => .ctor 11 [Canonical.toVal a0, Canonical.toVal a1]
   | .service a0 => .ctor 12 [Canonical.toVal a0]
   | .serviceMethod a0 a1 => .ctor 13 [Canonical.toVal a0, Canonical.toVal a1]
+  | .declarations a0 a1 => .ctor 14 [Canonical.toVal a0, Canonical.toVal a1]
 
 def ofVal : Val → Option (_root_.Effect4.Program.PrintRefusal)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .internalAction
@@ -2970,6 +2973,10 @@ def ofVal : Val → Option (_root_.Effect4.Program.PrintRefusal)
     match Canonical.ofVal (α := _root_.String) v0, Canonical.ofVal (α := _root_.String) v1 with
     | some a0, some a1 => some (.serviceMethod a0 a1)
     | _, _ => none
+  | .ctor 14 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Nat) v0, Canonical.ofVal (α := _root_.Nat) v1 with
+    | some a0, some a1 => some (.declarations a0 a1)
+    | _, _ => none
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.PrintRefusal) : ofVal (toVal a) = some a := by
@@ -2988,6 +2995,7 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.PrintRefusal) : ofVal (toVal a) 
   | «strayMethod» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
   | «service» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «serviceMethod» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «declarations» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.PrintRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -3050,6 +3058,13 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.PrintRefusal} (h : ofV
     subst hj
     simp only [toVal]
     rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
   · split at h
     · rename_i b0 b1 h0 h1
       injection h with h
@@ -3123,6 +3138,10 @@ theorem fits (a : _root_.Effect4.Program.PrintRefusal) : shapeDoc.accepts (toVal
     exact accepts_sum _ _ _ 13 "serviceMethod" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_String a1) (acceptsFields_nil _)))
+  | «declarations» a0 a1 =>
+    exact accepts_sum _ _ _ 14 "declarations" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a1) (acceptsFields_nil _)))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.PrintRefusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -3461,7 +3480,8 @@ def prints : List PrintRefusal :=
    .payloadClass "NotFound" .fieldsDiffer, .payloadClass "NotFound" .construction,
    .payloadClass "Rate" .unreadable, .binderTerm "Ref.modify", .callbackRequirement [1, 1],
    .invocation 2, .emptyBlock, .bodies 1, .serviceName "CounterLayer",
-   .strayMethod "readCounter" "Clock", .service "Counter", .serviceMethod "Counter" "read"]
+   .strayMethod "readCounter" "Clock", .service "Counter", .serviceMethod "Counter" "read",
+   .declarations 1 0]
 
 def reads : List ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",
