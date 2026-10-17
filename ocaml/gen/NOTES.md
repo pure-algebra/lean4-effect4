@@ -245,11 +245,11 @@ above. The rule the backend now follows, and the reason it is a *rule* and not a
   guarded at 63, where OCaml's shift is undefined; `Nat.land/lor/xor` are `land/lor/lxor`.
 * `UInt8` is `int` (`Types.builtinTy?`): `decEq`/`beq` → `=`, `ofNat` → `land 255`,
   `toNat`/`toUInt32`/`toUInt64` → identity.
-* `USize` is the shim's index type, so it is `int` too: `ofNat`/`toNat` identity, `decEq` `=`,
-  `sub` `max 0 (a - b)`, and `Array.uget` → `List.nth`. These four are not cosmetic: without
-  them `List.setTR.go`'s `Array.foldrMUnsafe.fold` is four `extern` holes, so `List.set` —
-  and therefore `DeferredStore.setCell` and `RefHeap.set` — would be `assert false` at run
-  time. With them `api_gen.ml` has **no holes at all**.
+* `USize` is the target's index type, so it is `int` too, refusing beyond the index capacity:
+  `ofNat`/`toNat` identity, `decEq` `=`, `sub` `max 0 (a - b)`. Since slice 3.2 an `Array` is
+  `Lcnf_array.t` and `Array.uget` is `Lcnf_array.get_exn`. These rows are not cosmetic: without
+  them `List.setTR.go`'s `Array.foldrMUnsafe.fold` is `extern` holes, so `List.set` — and
+  therefore `DeferredStore.setCell` and `RefHeap.set` — would be `assert false` at run time.
 
 The rule is a *host profile*, not a theorem: a program whose payload really is longer than
 `max_int` bytes cannot exist on this host, which is why saturating is sound here and wrapping
