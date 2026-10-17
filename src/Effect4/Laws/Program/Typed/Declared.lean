@@ -206,6 +206,100 @@ theorem fits_iff_membersIn (w : World) (t : Ty) (v : Val) :
   · rintro ⟨x, hx, hv⟩
     exact fits_of_reaches (reaches_iff.mp hx) hv
 
+/-! ## The readers under the table
+
+Each reader of the term typer under a table (`Program/TyHead.lean`) is sound for membership at a
+world whose table it reads. A lifted rule reads the head members (`fits_liftIn_transfer`), and
+the fold of a written field reads the unfolding (`fits_fieldAdmitsIn`). The `MemberIn` forms are
+`Laws/Program/TyHead.lean`'s; these are their `Fits` forms, through `fits_iff_membersIn` and
+`fits_unfold`. -/
+
+/-- **A lifted rule under the world's table carries a property of its members**: the membership
+form of `UnionRule.liftIn_transfer`. A property that each member's answer gives every member of
+that member, and that each join keeps, holds of the lifted answer at every member of the
+target. -/
+theorem fits_liftIn_transfer {α : Type} [UnionRule.Answer α] {w : World} {P : Val → α → Prop}
+    (left : ∀ {v : Val} (a b : α), P v a → P v (UnionRule.Answer.join a b))
+    (right : ∀ {v : Val} (a b : α), P v b → P v (UnionRule.Answer.join a b))
+    {rule : Ty → Option α} {t : Ty}
+    (member : ∀ {m : Ty} {a : α} {v : Val}, m ∈ Ty.membersIn w.types t → rule m = some a →
+      Fits w v m → P v a)
+    {a : α} {v : Val} (typed : UnionRule.liftIn w.types rule t = some a) (fit : Fits w v t) :
+    P v a := by
+  rw [UnionRule.liftIn_eq] at typed
+  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp typed
+  obtain ⟨m, hm, hfit⟩ := (fits_iff_membersIn w t v).mp fit
+  obtain ⟨c, hc, hrule⟩ := UnionRule.mapM_answer hanswers m hm
+  exact UnionRule.joinAll_keeps (fun a b => left a b) (fun a b => right a b) hc
+    (member hm hrule hfit)
+
+/-- **The fold of a written field is sound for membership**: the membership form of
+`Record.fieldAdmitsIn_sound`. Below the declared type in the order, `fits_subN` carries a member;
+at a declared name, a member of the body is a member of the name (`fits_unfold`). -/
+theorem fits_fieldAdmitsIn {w : World} {v : Val} {actual declared : Ty}
+    (h : Program.Record.fieldAdmitsIn w.types actual declared = true) (fit : Fits w v actual) :
+    Fits w v declared := by
+  have byOrder : Ty.sub actual.normalize declared.normalize = true → Fits w v declared :=
+    fun hs => fits_subN w hs v fit
+  cases hd : w.types with
+  | nil =>
+    rw [hd] at h
+    exact byOrder h
+  | cons d ds =>
+    rw [hd] at h
+    unfold Program.Record.fieldAdmitsIn at h
+    rcases Bool.or_eq_true_iff.mp h with hs | hf
+    · exact byOrder hs
+    · split at hf
+      · rename_i name body hu
+        have hb : Fits w v body := fits_subN w hf v fit
+        have hu' : w.types.unfold? declared.normalize = some (name, body) := by
+          rw [hd]
+          exact hu
+        exact (fits_normalize w declared v).mp ((fits_unfold hu').mpr hb)
+      · cases hf
+
+/-- **The list rule under the world's table bounds a member**: a member of a type the rule reads
+is a member of the list of its answer. At the empty table it is `listOf_upper`. -/
+theorem fits_listOfIn {w : World} {t item : Ty} {v : Val}
+    (typed : Checker.listOfIn w.types t = some item) (fit : Fits w v t) :
+    Fits w v (.list item) := by
+  cases hd : w.types with
+  | nil =>
+    rw [hd] at typed
+    exact fits_subN w (listOf_upper typed) v fit
+  | cons d ds =>
+    rw [hd] at typed
+    simp only [Checker.listOfIn, UnionRule.extendAllIn] at typed
+    cases hl : Member.list t with
+    | some a =>
+      rw [hl] at typed
+      cases typed
+      obtain rfl := Member.list_eliminator.shape hl
+      exact fit
+    | none =>
+      rw [hl] at typed
+      have typed' : UnionRule.liftIn w.types Member.list t = some item := by
+        rw [hd]
+        exact typed
+      exact fits_liftIn_transfer (P := fun v a => Fits w v (.list a))
+        (fun a b h => fits_subN w ((Ty.subN_list_iff a _).mpr (Ty.subN_join_left a b)) _ h)
+        (fun a b h => fits_subN w ((Ty.subN_list_iff b _).mpr (Ty.subN_join_right a b)) _ h)
+        (fun _ hrule hfit => by
+          obtain rfl := Member.list_eliminator.shape hrule
+          exact hfit) typed' fit
+
+/-- **The option rule under the world's table bounds a member**: a member of a type the rule reads
+is a member of the option of its answer. At the empty table it is `optionTy_upper`. -/
+theorem fits_optionTyIn {w : World} {t a : Ty} {v : Val}
+    (typed : optionTyIn w.types t = some a) (fit : Fits w v t) : Fits w v (.option a) :=
+  fits_liftIn_transfer (P := fun v a => Fits w v (.option a))
+    (fun a b h => fits_subN w ((Ty.subN_option_iff a _).mpr (Ty.subN_join_left a b)) _ h)
+    (fun a b h => fits_subN w ((Ty.subN_option_iff b _).mpr (Ty.subN_join_right a b)) _ h)
+    (fun _ hrule hfit => by
+      obtain rfl := Member.option_eliminator.shape hrule
+      exact hfit) typed fit
+
 /-! ## A declared name adds members
 
 The shape check reads no table, and a table's only arm reads a reference, which the shape check
@@ -214,7 +308,8 @@ refuses. So a member at the empty table is a member at every table (`MemberIn.of
 
 /-- **A member at the empty table is a member at every table.** A step at the empty table is at
 no reference: the shape check refuses a reference, so a reference's questions are refused. -/
-theorem _root_.Effect4.Program.MemberIn.of_nil {decls : TyDecls} {allocated : List String} {v : Val} {t : Ty}
+theorem _root_.Effect4.Program.MemberIn.of_nil
+    {decls : TyDecls} {allocated : List String} {v : Val} {t : Ty}
     (h : MemberIn [] allocated v t) : MemberIn decls allocated v t := by
   induction h with
   | left _ ih => exact .left ih
@@ -231,12 +326,14 @@ theorem _root_.Effect4.Program.MemberIn.of_nil {decls : TyDecls} {allocated : Li
       cases hobl
 
 /-- The shape check implies membership under every table (`MemberIn.of_nil`). -/
-theorem _root_.Effect4.Program.Val.memberIn_of_hasTy {decls : TyDecls} {allocated : List String} {v : Val} {t : Ty}
+theorem _root_.Effect4.Program.Val.memberIn_of_hasTy
+    {decls : TyDecls} {allocated : List String} {v : Val} {t : Ty}
     (h : Val.hasTy v t allocated = true) : Val.memberIn decls v t allocated = true :=
   Val.memberIn_iff.mpr (MemberIn.of_nil (memberIn_nil.mpr h))
 
 /-- **`never` has a member at no table.** -/
-theorem _root_.Effect4.Program.not_memberIn_never {decls : TyDecls} {allocated : List String} {v : Val} :
+theorem _root_.Effect4.Program.not_memberIn_never
+    {decls : TyDecls} {allocated : List String} {v : Val} :
     ¬ MemberIn decls allocated v .never := by
   intro h
   cases h with
@@ -244,7 +341,8 @@ theorem _root_.Effect4.Program.not_memberIn_never {decls : TyDecls} {allocated :
   | step _ hobl _ => cases hobl
 
 /-- The decider refuses every value at `never`, at every table. -/
-theorem _root_.Effect4.Program.Val.memberIn_never {decls : TyDecls} {allocated : List String} {v : Val} :
+theorem _root_.Effect4.Program.Val.memberIn_never
+    {decls : TyDecls} {allocated : List String} {v : Val} :
     Val.memberIn decls v .never allocated = false := by
   cases h : Val.memberIn decls v .never allocated
   · rfl
