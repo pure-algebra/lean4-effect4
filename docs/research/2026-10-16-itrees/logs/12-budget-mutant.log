@@ -1,0 +1,40 @@
+$ diff rocq/Budget.v budget-mutant/Budget.v
+223c223
+<     | Some c0 => pmap opt_join (iterB (loop_stepB (fun env' => denoteB k body env') env test step result) k c0)
+---
+>     | Some c0 => pmap opt_join (iterB (loop_stepB (fun env' => denoteB k body env') env test step result) (S k) c0)
+$ rocq compile -Q . E4 Budget.v   (must fail)
+File "./Budget.v", line 536, characters 10-25:
+Error:
+In environment
+k : nat
+o : option ty
+t, t0, t1, t2 : term
+e : eff native_op
+IHe :
+  forall env : list val_,
+  in_fragment e = true -> denoteT k e env ≈ embed (denoteB k e env)
+env : list val_
+Hin : in_fragment e = true
+c0 : val_
+Unable to unify
+ "paco2 (eqit_ eq true true id) bot2
+    (iter_upto (loop_stepT ?M6948 ?M6951 ?M6952 ?M6953 ?M6954) ?M6955 ?M6956)
+    (embed
+       (iterB (loop_stepB ?M6949 ?M6951 ?M6952 ?M6953 ?M6954) ?M6955 ?M6956))"
+with
+ "paco2 (eqit_ eq true true id) bot2
+    (iter_upto
+       (loop_stepT (fun env' : list val_ => denoteT k e env') env t0 t1 t2) k
+       c0)
+    (embed
+       (pbind
+          (loop_stepB (fun env' : list val_ => denoteB k e env') env t0 t1 t2
+             c0)
+          (iter_next
+             (iterB
+                (loop_stepB (fun env' : list val_ => denoteB k e env') env t0
+                   t1 t2)
+                k))))".
+
+PASS the mutant fails Budget.v

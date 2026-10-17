@@ -1,0 +1,40 @@
+$ rocq compile -Q . E4 Budget.v
+real 2.79
+user 2.66
+sys 0.09
+$ rocq compile -Q . E4 Api.v
+real 0.73
+user 0.61
+sys 0.08
+$ rocq compile -Q . E4 Examples.v
+real 0.40
+user 0.31
+sys 0.06
+$ rocq compile -Q . E4 BudgetCheck.v
+real 0.47
+user 0.37
+sys 0.06
+$ rocq compile -Q . E4 BudgetExtract.v
+File "./BudgetExtract.v", line 19, characters 0-173:
+Warning: The extraction is currently set to bypass opacity, the following
+opaque constant bodies have been accessed : Basics.String.ltb_spec.
+ [extraction-opaque-accessed,extraction,default]
+File "./BudgetExtract.v", line 19, characters 0-173:
+Warning: Setting extraction output directory by default to
+"/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4--claude-worktrees-interesting-volhard-6ceb2e/d222cb0b-a731-4d29-9f5b-76d24cd7f968/scratchpad/repro2/rocq".
+Use "Set Extraction Output Directory" or command line option
+"-output-directory" to set a different directory for extracted files to
+appear in. [extraction-default-directory,extraction,default]
+real 0.47
+user 0.38
+sys 0.06
+$ inrocq rocq compile -Q . E4 Speed.v
+File "./Speed.v", line 4, characters 0-70:
+Warning: To avoid stack overflow, large numbers in nat are interpreted as
+applications of Init.Nat.of_num_uint. [abstract-large-number,numbers,default]
+     = Cut
+     : stop
+Finished transaction in 0.161 secs (0.15u,0.005s) (successful)
+     = 1001
+     : nat
+Finished transaction in 0.494 secs (0.478u,0.005s) (successful)
