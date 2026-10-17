@@ -102,7 +102,9 @@ let differential_valid (t : tally) =
   t.t_div = 0 && t.t_profile_refusals = 0 && t.t_errors = 0
 
 let classification_controls () =
-  let refused = Error (E4_clock.Profile_refusal "classification control") in
+  let refused =
+    Error (E4_clock.Profile_refusal { E4_clock.crossing = E4_clock.Reply; reason = "classification control" })
+  in
   let raised = Error (Failure "classification control") in
   let incomplete name runs ~profile ~error =
     let t = fresh () in

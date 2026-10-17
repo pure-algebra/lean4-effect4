@@ -4,34 +4,42 @@
 open Eff_types
 include E4_engine_intf
 
-(* EN9: every natural of a host's answer passes the profile a natural reply passes (EN8). The
-   matches name every constructor, so a constructor added to the answer's types is a compile
-   error here rather than a natural this walk skips. *)
+(* EN9: every natural of a host's answer passes the profile a natural reply passes (EN8), and
+   every string is valid UTF-8, as a Lean `String` is; each refusal names the reply crossing (D9).
+   The matches name every constructor, so a constructor added to the answer's types is a compile
+   error here rather than a field this walk skips. *)
 let check_answer (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : unit =
-  let nat n = ignore (E4_clock.to_profile_nat (E4_clock.of_nat n)) in
+  let nat n = E4_clock.check_nat E4_clock.Reply n in
+  let str s =
+    if not (String.is_valid_utf_8 s) then E4_clock.refuse E4_clock.Reply "a string that is not valid UTF-8"
+  in
   let rec value = function
     | Val.Nat n | Val.NegInt n -> nat n
+    | Val.Str s -> str s
     | Val.Ctor (index, args) -> nat index; List.iter value args
     | Val.Handle (_, key) -> nat key
     | Val.List items -> List.iter value items
     | Val.Pair (a, b) -> value a; value b
     | Val.Some a -> value a
-    | Val.Unit | Val.Bool _ | Val.Str _ | Val.Bytes _ | Val.None | Val.Ref _ | Val.Float _ -> ()
+    | Val.Unit | Val.Bool _ | Val.Bytes _ | Val.None | Val.Ref _ | Val.Float _ -> ()
   in
   let error = function
     | Err.Tag code -> nat code
+    | Err.Tagged (tag, message) -> str tag; str message
+    | Err.Text message -> str message
     | Err.Payload payload -> value payload
-    | Err.Boom | Err.Tagged _ | Err.Text _ -> ()
+    | Err.Boom -> ()
   in
   let defect = function
     | Defect.User payload -> nat payload
     | Defect.Error e -> error e
     | Defect.NotImplemented | Defect.AsyncFiber | Defect.BadName | Defect.MissingService -> ()
   in
+  let keys annotations = List.iter (fun (key, ()) -> str key) annotations in
   let reason = function
-    | Reason.Fail (e, _) -> error e
-    | Reason.Die (d, _) -> defect d
-    | Reason.Interrupt (fiber, _) -> Option.iter nat fiber
+    | Reason.Fail (e, annotations) -> error e; keys annotations
+    | Reason.Die (d, annotations) -> defect d; keys annotations
+    | Reason.Interrupt (fiber, annotations) -> Option.iter nat fiber; keys annotations
   in
   match answer with
   | Completion.OfExit (Exit.Success v) -> value v
@@ -43,7 +51,7 @@ let check_answer (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : u
 module Make (I : INSTANCE) = struct
   let () =
     if Sys.int_size <> 63 then
-      raise (E4_clock.Profile_refusal "engine: a 63-bit integer host is required")
+      E4_clock.refuse E4_clock.Index "a 63-bit integer host is required"
 
   let name = I.name
   let carriers = I.carriers
@@ -58,7 +66,7 @@ module Make (I : INSTANCE) = struct
     fuel_ : int;
     m : I.machine;
     settled : bool;  (** the generated `settled` of the LAST step; true after a load *)
-    outside_profile : string option;
+    outside_profile : E4_clock.refusal option;
   }
 
   (* -- the tape ------------------------------------------------------------------- *)
@@ -69,7 +77,7 @@ module Make (I : INSTANCE) = struct
   let yield_verdict id b : decision = I.RunDecision_yieldVerdict (id, b)
 
   let answer_async_success fiber token n : decision =
-    let n = E4_clock.to_profile_nat (E4_clock.of_nat n) in
+    E4_clock.check_nat E4_clock.Reply n;
     I.RunDecision_answerAsync
       (fiber, token, Eff_types.Completion.OfExit (Eff_types.Exit.Success (Eff_types.Val.Nat n)))
 
@@ -85,7 +93,7 @@ module Make (I : INSTANCE) = struct
   let answer_async_float fiber token value : decision =
     let bits = Int64.bits_of_float value in
     if Int64.compare bits 0L < 0 || Int64.compare bits (Int64.of_int max_int) > 0 then
-      raise (E4_clock.Profile_refusal "reply: float bits do not fit the value carrier");
+      E4_clock.refuse E4_clock.Reply "float bits that the value carrier does not hold";
     I.RunDecision_answerAsync
       (fiber, token, Eff_types.Completion.OfExit (Eff_types.Exit.Success (Eff_types.Val.Float (Int64.to_int bits))))
 
@@ -102,7 +110,7 @@ module Make (I : INSTANCE) = struct
      program type is the instance's own (`Eff_types`, the LCNF route's), so nothing converts. *)
   let compile (p : Eff_wire.program) : program =
     Eff_ctors.lits_eff
-      (function Lit.Nat n -> ignore (E4_clock.to_profile_nat (E4_clock.of_nat n)) | _ -> ()) p;
+      (function Lit.Nat n -> E4_clock.check_nat E4_clock.Literal n | _ -> ()) p;
     p
 
   let of_bytes (b : string) : program option = Option.map compile (Eff_wire.decode_program_exact b)
@@ -434,7 +442,7 @@ module Make (I : INSTANCE) = struct
   (* Exactly `replayEval`'s verdict (api_engine.ml:11489-11507) read off the same state. *)
   let outcome (t : t) : string =
     match t.outside_profile with
-    | Some why -> "outside-profile " ^ why
+    | Some why -> "outside-profile " ^ E4_clock.refusal_text why
     | None -> match I.stuck_of t.m with
     | Some s -> "stuck " ^ show_stuck s
     | None -> if t.settled && I.finished t.m then "finished" else "frontier"

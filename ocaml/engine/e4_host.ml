@@ -79,7 +79,7 @@ module Types = struct
     | Declined
     | Raised of exn
     | Refused
-    | Outside_profile of string
+    | Outside_profile of E4_clock.refusal
     | Unknown_row
     | Out_of_rounds
 
@@ -93,11 +93,11 @@ module Types = struct
     | Host Declined -> "declined"
     | Host (Raised e) -> "raised " ^ Printexc.to_string e
     | Host Refused -> "refused"
-    | Host (Outside_profile why) -> "outside the profile: " ^ why
+    | Host (Outside_profile why) -> "outside the profile: " ^ E4_clock.refusal_text why
     | Host Unknown_row -> "unknown row"
     | Host Out_of_rounds -> "out of rounds"
 
-  type load_refusal = Load_outside_profile of string
+  type load_refusal = Load_outside_profile of E4_clock.refusal
 
   type call = { row : int; request : Val.t; answer : completion }
 end

@@ -69,7 +69,8 @@ let () =
   let drive (built : Todo_gen.built) provider state =
     match H.serve ~table:built.app.rows provider built.program ~fuel:1000 state with
     | Ok served -> served
-    | Error (H.Load_outside_profile why) -> failwith ("a request's program did not load: " ^ why)
+    | Error (H.Load_outside_profile why) ->
+      failwith ("a request's program did not load: " ^ E4_clock.refusal_text why)
   in
   let result (type st) (s : st H.served) lane =
     hex_of

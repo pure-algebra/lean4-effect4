@@ -237,7 +237,7 @@ let show_answer (a : E4_engine.answer) =
   | E4_engine.Finished -> "Finished"
   | E4_engine.Suspended f -> "Suspended " ^ show_frontier f
   | E4_engine.Refused r -> "Refused " ^ r
-  | E4_engine.Outside_profile r -> "Outside_profile " ^ r
+  | E4_engine.Outside_profile r -> "Outside_profile " ^ E4_clock.refusal_text r
   | E4_engine.Delay f -> "Delay " ^ show_frontier f
 
 module Rep (En : E4_engine.ENGINE) = struct
@@ -457,8 +457,10 @@ let clock_profile_check () =
       (match En.answer m with E4_engine.Outside_profile _ -> false | _ -> true);
     let before = (En.refs m, En.trace_rows m, En.fiber_rows m, En.store_row m) in
     let refused, residue = En.replay_to m [En.evaluate 0; En.flush] in
-    check (prefix ^ "clockNow explicitly refuses the numeric profile")
-      (match En.answer refused with E4_engine.Outside_profile _ -> true | _ -> false);
+    check (prefix ^ "clockNow explicitly refuses the numeric profile, at the clock crossing")
+      (match En.answer refused with
+       | E4_engine.Outside_profile r -> r.E4_clock.crossing = E4_clock.Clock
+       | _ -> false);
     check (prefix ^ "mid-decision refusal retains the input machine")
       (before = (En.refs refused, En.trace_rows refused, En.fiber_rows refused, En.store_row refused));
     check (prefix ^ "refused decision stays unread") (List.length residue = 2);
@@ -493,8 +495,10 @@ let multiplication_profile_check () =
       let before = En.load (program a b) ~fuel:100 in
       let observation m = En.refs m, En.trace_rows m, En.fiber_rows m, En.store_row m in
       let result, remaining = En.replay_to before [En.evaluate 0; En.flush] in
-      check (prefix ^ label ^ " refuses")
-        (match En.answer result with E4_engine.Outside_profile _ -> true | _ -> false);
+      check (prefix ^ label ^ " refuses, at the arithmetic crossing")
+        (match En.answer result with
+         | E4_engine.Outside_profile r -> r.E4_clock.crossing = E4_clock.Arithmetic
+         | _ -> false);
       check (prefix ^ label ^ " retains the input")
         (observation result = observation before);
       check (prefix ^ label ^ " retains the decision") (List.length remaining = 2))
@@ -508,31 +512,32 @@ let multiplication_profile_check () =
 
 (* Public engine inputs refuse before narrowing or constructing a decision. *)
 let numeric_ingress_check () =
-  let refused f = match f () with
-    | _ -> false | exception E4_clock.Profile_refusal _ -> true
+  let refused_at crossing f = match f () with
+    | _ -> false | exception E4_clock.Profile_refusal r -> r.E4_clock.crossing = crossing
   in
+  let reply f = refused_at E4_clock.Reply f and literal f = refused_at E4_clock.Literal f in
   let check_instance (module En : E4_engine.ENGINE) =
     let prefix = En.name ^ " numeric ingress: " in
-    check (prefix ^ "negative natural refused")
-      (refused (fun () -> En.answer_async_success 0 0 (-1)));
-    check (prefix ^ "large natural refused")
-      (refused (fun () -> En.answer_async_success 0 0 (Int64.to_int 9007199254740992L)));
+    check (prefix ^ "negative natural refused, at the reply")
+      (reply (fun () -> En.answer_async_success 0 0 (-1)));
+    check (prefix ^ "large natural refused, at the reply")
+      (reply (fun () -> En.answer_async_success 0 0 (Int64.to_int 9007199254740992L)));
     ignore (En.answer_async_success 0 0 0);
     ignore (En.answer_async_success 0 0 (Int64.to_int 9007199254740991L));
-    check (prefix ^ "negative literal refused")
-      (refused (fun () -> En.compile (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (-1))))));
-    check (prefix ^ "large literal refused")
-      (refused (fun () -> En.compile
+    check (prefix ^ "negative literal refused, at the literal")
+      (literal (fun () -> En.compile (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (-1))))));
+    check (prefix ^ "large literal refused, at the literal")
+      (literal (fun () -> En.compile
         (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Int64.to_int 9007199254740992L))))));
-    check (prefix ^ "large wire literal refused")
-      (refused (fun () -> En.of_bytes (Eff_wire.encode_program
+    check (prefix ^ "large wire literal refused, at the literal")
+      (literal (fun () -> En.of_bytes (Eff_wire.encode_program
         (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Int64.to_int 9007199254740992L)))))));
     ignore (En.answer_async_float 0 0 0.0);
     ignore (En.answer_async_float 0 0 1.5);
     ignore (En.answer_async_float 0 0 (Int64.float_of_bits (Int64.of_int max_int)));
     List.iter (fun value ->
-      check (prefix ^ "unrepresentable float refused")
-        (refused (fun () -> En.answer_async_float 0 0 value)))
+      check (prefix ^ "unrepresentable float refused, at the reply")
+        (reply (fun () -> En.answer_async_float 0 0 value)))
       [2.0; -0.0; -1.0; infinity; nan]
   in
   check_instance (module En_fast);
@@ -540,8 +545,9 @@ let numeric_ingress_check () =
 
 (* EN9: a host's answer is host ingress. A reactor, as a driver holds one, answers; the driver
    applies E4_engine.check_answer before the machine reads the answer. The red controls are
-   reactors that answer a natural outside the profile, at the top and nested; the green ones
-   answer naturals inside it and fields that are no naturals. *)
+   reactors that answer a natural outside the profile or a string that is not valid UTF-8, at
+   the top and nested, each refused at the reply crossing; the green ones answer naturals inside
+   the profile, valid UTF-8 outside ASCII, and fields that are no naturals. *)
 let answer_ingress_check () =
   let reactor answer = fun () (_ : E.Val.t) state -> Some (answer, state) in
   let driven r = match r () E.Val.Unit 0 with
@@ -549,7 +555,7 @@ let answer_ingress_check () =
     | Some (answer, _) -> E4_engine.check_answer answer
   in
   let refused answer = match driven (reactor answer) with
-    | () -> false | exception E4_clock.Profile_refusal _ -> true
+    | () -> false | exception E4_clock.Profile_refusal r -> r.E4_clock.crossing = E4_clock.Reply
   in
   let success v = E.Completion.OfExit (E.Exit.Success v) in
   let failure reasons = E.Completion.OfExit (E.Exit.Failure reasons) in
@@ -566,14 +572,26 @@ let answer_ingress_check () =
      "an error's payload", failure [E.Reason.Fail (E.Err.Payload (E.Val.Nat (-1)), [])];
      "a defect's payload", failure [E.Reason.Die (E.Defect.User above, [])];
      "an interrupting fiber", failure [E.Reason.Interrupt (Some (-1), [])];
-     "a ref key", E.Completion.OfRefGet (-1)];
+     "a ref key", E.Completion.OfRefGet (-1);
+     (* a Lean String is valid UTF-8, so a reply's string must be (2.2a's open item) *)
+     "a string with a byte no UTF-8 starts with", success (E.Val.Str "\xff");
+     "a nested truncated sequence", success (E.Val.List [E.Val.Some (E.Val.Str "caf\xc3")]);
+     "an encoded surrogate", success (E.Val.Str "\xed\xa0\x80");
+     "an error's text", failure [E.Reason.Fail (E.Err.Text "\xff", [])];
+     "an error's tag", failure [E.Reason.Fail (E.Err.Tagged ("\xc0\xaf", "message"), [])];
+     "an error's tagged message", failure [E.Reason.Fail (E.Err.Tagged ("tag", "\xff"), [])];
+     "an annotation's key", failure [E.Reason.Die (E.Defect.BadName, [ ("\xff", ()) ])]];
   List.iter (fun (label, answer) ->
       check ("answer ingress: " ^ label ^ " passes") (not (refused answer)))
     ["the top natural", success (E.Val.Nat top);
      "nested naturals", success (E.Val.Ctor (0, [E.Val.Nat top; E.Val.NegInt 0]));
      "no natural", success (E.Val.List [E.Val.Str "x"; E.Val.Bytes [255]; E.Val.Float 1; E.Val.Ref (1, [2])]);
      "a failure", failure [E.Reason.Die (E.Defect.Error (E.Err.Tag top), []); E.Reason.Interrupt (Some 0, [])];
-     "a ref key", E.Completion.OfRefGet top]
+     "a ref key", E.Completion.OfRefGet top;
+     (* the red controls' green twins: valid UTF-8 outside ASCII passes *)
+     "a string outside ASCII", success (E.Val.Str "caf\xc3\xa9 \xf0\x9f\x98\x80");
+     "texts outside ASCII",
+     failure [E.Reason.Fail (E.Err.Tagged ("t\xc3\xa9", "\xe2\x82\xac"), [ ("k\xc3\xa9", ()) ])]]
 
 (* ================================================================ the bench *)
 

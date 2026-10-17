@@ -171,7 +171,7 @@ module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t = struct
     | E4_engine.Finished -> "Finished"
     | E4_engine.Suspended f -> "Suspended " ^ show_frontier f
     | E4_engine.Refused r -> "Refused " ^ r
-    | E4_engine.Outside_profile r -> "Outside_profile " ^ r
+    | E4_engine.Outside_profile r -> "Outside_profile " ^ E4_clock.refusal_text r
     | E4_engine.Delay f -> "Delay " ^ show_frontier f
 
   let project (t : t) : projection =

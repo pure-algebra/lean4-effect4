@@ -88,7 +88,8 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
   let serve (built : Todo_gen.built) provider state =
     match H.serve ~table:built.app.rows provider built.program ~fuel:1000 state with
     | Ok served -> served
-    | Error (H.Load_outside_profile why) -> failwith ("a request's program did not load: " ^ why)
+    | Error (H.Load_outside_profile why) ->
+      failwith ("a request's program did not load: " ^ E4_clock.refusal_text why)
 
   (* The served run packaged by the lowered `resultVal`, at the host's state read as the lane's. *)
   let result (s : 'st H.served) (lane : Native_todo.lane_state) : string =

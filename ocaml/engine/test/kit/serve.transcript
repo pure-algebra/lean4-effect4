@@ -77,10 +77,10 @@ both> {"op":"run","program":{"_tag":"perform","op":{"_tag":"sleep"},"request":{"
 < {"status":"stopped","note":"suspended: no host call, a timer or a decision is due","via":"machine","calls":[]}
 # run stopped: outside the profile
 both> {"op":"run","program":{"_tag":"bind","first":{"_tag":"withFiber","action":{"_tag":"fork","program":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":7}}},"options":{"startImmediately":false,"daemon":false,"maskMode":"inherit"}}},"rest":{"_tag":"succeed","value":{"_tag":"app","atom":"add","args":[{"_tag":"lit","value":{"_tag":"nat","value":9007199254740991}},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}}}}
-< {"status":"stopped","note":"outside the host profile: clockNow: milliseconds outside natural-number profile","via":"machine","calls":[]}
+< {"status":"stopped","note":"outside the host profile: arithmetic: a sum outside the program's profile (DI-56)","via":"machine","calls":[]}
 # run stopped: a literal outside the profile
 both> {"op":"run","program":{"_tag":"bind","first":{"_tag":"withFiber","action":{"_tag":"fork","program":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":7}}},"options":{"startImmediately":false,"daemon":false,"maskMode":"inherit"}}},"rest":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":9007199254740992}}}}}
-< {"status":"stopped","note":"a program outside the host profile: clockNow: milliseconds outside natural-number profile","via":"machine","calls":[]}
+< {"status":"stopped","note":"a program outside the host profile: literal: a natural outside the program's profile (DI-56)","via":"machine","calls":[]}
 
 ## explore: the paths, and a program outside the call tree
 # explore paths
