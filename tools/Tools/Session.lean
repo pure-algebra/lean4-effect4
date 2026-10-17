@@ -5,9 +5,11 @@ import Effect4.Laws.Store.ShapeRead
 import Effect4.Program.Typing.SourceSession
 import Effect4.Program.Typing.SourceDocument
 import Effect4.Program.Typing.CheckCache
+import Effect4.Program.Typing.FillSet
 import Effect4.Laws.Program.SourceTable
 import Effect4.Laws.Program.SourceDocument
 import Effect4.Laws.Program.Typing.CheckCache
+import Effect4.Laws.Program.FillSet
 import Effect4.Laws.Program.SketchWire
 import Effect4.Laws.Program.SketchAdmission
 import Effect4.Api.RunnerDerived
@@ -117,6 +119,8 @@ structure State where
   live : Option Effect4.Live := none
   /-- the checker-verdict cache across candidate searches -/
   cache : List CheckCache.Entry := []
+  /-- the fixed-base fill set (`FillSet`) for parallel fills -/
+  fills : Option FillSet := none
 
 /-- **What the session shows, as an edit session**: the application, the sketch as written and
 the table at the source's addresses (`SourceSession.shown`). The view tools draw it. -/
@@ -203,6 +207,10 @@ structure Request where
   candidates : Option String := none
   /-- optional extra candidate programs for `suggest`, as their JSON print -/
   candidatesJson : Option Json := none
+  /-- batch of `(path, filling)` pairs for `fills.add`, as canonical bytes in hex -/
+  fills : Option String := none
+  /-- batch of `(path, filling)` pairs for `fills.add`, as their JSON print -/
+  fillsJson : Option Json := none
 
 /-- Whether a request supplies an explicit edit target (`revision`, `expected`, `docName`, or
 `docGeneration`). -/
@@ -245,13 +253,15 @@ def Request.fromJson? (j : Json) : Except String Request := do
   let cursor ← optField j "cursor" (Lean.fromJson? (α := Nat))
   let candidates ← optField j "candidates" (Lean.fromJson? (α := String))
   let candidatesJson := (j.getObjVal? "candidatesJson").toOption
+  let fills ← optField j "fills" (Lean.fromJson? (α := String))
+  let fillsJson := (j.getObjVal? "fillsJson").toOption
   return Request.mk op program holes (path.getD []) replacement (holeName.getD "h0") id
     programJson replacementJson rows services (j.getObjVal? "holesJson").toOption
     (j.getObjVal? "rowsJson").toOption (j.getObjVal? "servicesJson").toOption (hex.getD false)
     answers (j.getObjVal? "answersJson").toOption (j.getObjVal? "tapeJson").toOption
     (limit.getD 256) (budget.getD 64) (width.getD 64) types (j.getObjVal? "typesJson").toOption
     docName docGeneration revision expected expectedJson policy fiber token rowName answer
-    answerJson record recordJson (cursor.getD 0) candidates candidatesJson
+    answerJson record recordJson (cursor.getD 0) candidates candidatesJson fills fillsJson
 
 /-- Write a request, as `Request.fromJson?` reads it. -/
 def Request.toJson (r : Request) : Json :=
@@ -287,6 +297,8 @@ def Request.toJson (r : Request) : Json :=
     (r.recordJson.map fun j => ("recordJson", j)).toList ++
     (r.candidates.map fun hex => ("candidates", Json.str hex)).toList ++
     (r.candidatesJson.map fun j => ("candidatesJson", j)).toList ++
+    (r.fills.map fun hex => ("fills", Json.str hex)).toList ++
+    (r.fillsJson.map fun j => ("fillsJson", j)).toList ++
     [("limit", Lean.toJson r.limit), ("budget", Lean.toJson r.budget),
       ("width", Lean.toJson r.width), ("cursor", Lean.toJson r.cursor)] ++
     (if r.hex then [("hex", Json.bool true)] else []) ++
@@ -484,6 +496,44 @@ def suggestResultJson (res : CheckCache.SuggestResult) (hex : Bool := false) : J
     ("cacheEntries", toJson res.cache.length),
     ("suggestions", Json.arr (res.suggestions.map fun s => suggestionJson sig s hex).toArray)]
 
+/-- A fill addition refusal (`AddRefusal`) as JSON. -/
+def addRefusalJson : AddRefusal → Json
+  | .root => Json.mkObj [("reason", .str "root")]
+  | .unknownAddress => Json.mkObj [("reason", .str "unknownAddress")]
+  | .notCertified => Json.mkObj [("reason", .str "notCertified")]
+  | .conflict => Json.mkObj [("reason", .str "conflict")]
+  | .overlap existing =>
+    Json.mkObj [("reason", .str "overlap"), ("existing", toJson existing)]
+
+/-- One fill addition outcome (`AddOutcome`) as JSON. -/
+def addOutcomeJson : AddOutcome → Json
+  | .applied path => Json.mkObj [("outcome", .str "applied"), ("path", toJson path)]
+  | .collapsed path => Json.mkObj [("outcome", .str "collapsed"), ("path", toJson path)]
+  | .refused path why =>
+    Json.mkObj [("outcome", .str "refused"), ("path", toJson path), ("refusal", addRefusalJson why)]
+
+/-- One `(path, program)` fill entry as JSON. -/
+def fillEntryJson (entry : List Nat × NativeEff) (hex : Bool := false) : Json :=
+  Json.mkObj <|
+    [("path", toJson entry.1), ("programJson", printJson entry.2)] ++
+    if hex then [("program", .str (toHex entry.2))] else []
+
+/-- A materialization refusal (`MaterializeRefusal`) as JSON. -/
+def materializeRefusalJson (sig : Signature NativeOp) (prog : Option NativeEff) :
+    MaterializeRefusal → Json
+  | .conflict path =>
+    Json.mkObj [("reason", .str "conflict"), ("path", toJson path)]
+  | .notApplicable =>
+    Json.mkObj [("reason", .str "notApplicable")]
+  | .refused why =>
+    Json.mkObj [("reason", .str "refused"), ("refusal", refusalJson why prog sig)]
+  | .foreignDoc expected actual =>
+    Json.mkObj [("reason", .str "foreignDoc"), ("expected", docIdJson expected),
+      ("actual", docIdJson actual)]
+  | .staleRevision expected actual =>
+    Json.mkObj [("reason", .str "staleRevision"), ("expected", toJson expected),
+      ("actual", toJson actual)]
+
 /-- Parse a call selector (`Effect4.Run.Sel`) from `req`'s `fiber`, `token`, or `rowName`. -/
 def selFrom? (req : Request) : Option Effect4.Run.Sel :=
   match req.fiber, req.token, req.rowName with
@@ -625,7 +675,7 @@ def answer (st : State) (req : Request) : State × Answer :=
       let d := Doc.open app { program, holes } docId
       ({ source := some d.session, journal := [], app := name,
           docId := d.id, revision := d.revision, generation := st.generation + 1,
-          live := st.live, cache := st.cache },
+          live := st.live, cache := st.cache, fills := some (FillSet.ofDoc d) },
         Answer.mk req.op name (readLaws ++ [``SourceSession.reached_view]) true
           (viewJson d.session) none req.id)
   | "catalogue" =>
@@ -753,6 +803,70 @@ def answer (st : State) (req : Request) : State × Answer :=
               (supLaws ++ [``sketchSigData_signature, ``CheckCache.lookup_sound,
                 ``CheckCache.evaluateCandidate_valid_and_sound]).eraseDups
               true (suggestResultJson res req.hex) none req.id)
+      | "fills.add" =>
+        let fs0 := st.fills.getD (FillSet.ofDoc d)
+        let items? : Option (Option (List (List Nat × NativeEff)) × List Lean.Name) :=
+          if req.fills.isSome || req.fillsJson.isSome then
+            let (batch?, laws) := listFrom? (α := List Nat × NativeEff) req.fills req.fillsJson
+            some (batch?, laws)
+          else
+            match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
+            | some (some q, laws) => some (some [(req.path, q)], laws)
+            | some (none, laws) => some (none, laws)
+            | none => none
+        match items? with
+        | none => none' "no fills supplied"
+        | some (none, _) =>
+          if req.fills.isSome || req.fillsJson.isSome then
+            (st, unreadable (α := List (List Nat × NativeEff)) req.op "the fills do not read"
+              req.fillsJson req.id)
+          else
+            (st, unreadable (α := NativeEff) req.op "the filling does not read"
+              req.replacementJson req.id)
+        | some (some items, readLaws) =>
+          let (fs', outs) := fs0.add items
+          let allOk := outs.all fun o => match o with | .refused _ _ => false | _ => true
+          let st' := { st with fills := some fs' }
+          let result := Json.mkObj
+            [("doc", docIdJson fs'.doc),
+              ("revision", toJson fs'.revision),
+              ("outcomes", Json.arr (outs.map addOutcomeJson).toArray),
+              ("fills", Json.arr (fs'.view.map fun e => fillEntryJson e req.hex).toArray)]
+          (st',
+            { op := op, app := st.app,
+              laws := (readLaws ++ [``FillSet.add_wf]).eraseDups,
+              ok := allOk,
+              result := result,
+              error := if allOk then none else some "one or more fills were refused",
+              id := req.id })
+      | "fills.view" =>
+        let fs := st.fills.getD (FillSet.ofDoc d)
+        let result := Json.mkObj
+          [("doc", docIdJson fs.doc),
+            ("revision", toJson fs.revision),
+            ("fills", Json.arr (fs.view.map fun e => fillEntryJson e req.hex).toArray)]
+        (st, Answer.mk op st.app [``ordered_congr] true result none req.id)
+      | "fills.materialize" =>
+        let fs := st.fills.getD (FillSet.ofDoc d)
+        match fs.materializeDoc d with
+        | .error why =>
+          (st,
+            { op := op, app := st.app,
+              laws := [``FillSet.add_wf, ``materialize_congr],
+              ok := false,
+              result := materializeRefusalJson sig (some d.session.sketch.program) why,
+              error := some "the fill set did not materialize",
+              id := req.id })
+        | .ok d' =>
+          let st' := { (st.withDoc d') with fills := some (FillSet.ofDoc d') }
+          let result := Json.mkObj
+            [("doc", docIdJson d'.id),
+              ("revision", toJson d'.revision),
+              ("view", viewJson d'.session)]
+          (st', Answer.mk op st.app
+            [``FillSet.add_wf, ``materialize_congr, ``ordered_compose, ``materialize_refFree,
+              ``SourceSession.reached_view]
+            true result none req.id)
       | "replace" | "commit" =>
         match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
         | some (some q, readLaws) => commitAnswer st d req (.fill q) readLaws
@@ -787,7 +901,7 @@ def answer (st : State) (req : Request) : State × Answer :=
       | "fork" =>
         let newId : DocId := ⟨req.docName.getD d.id.name, st.generation⟩
         let d' := d.fork newId
-        let st' := { (st.withDoc d') with generation := st.generation + 1 }
+        let st' := { (st.withDoc d') with generation := st.generation + 1, fills := some (FillSet.ofDoc d') }
         let result := Json.mkObj [("doc", docIdJson d'.id), ("revision", toJson d'.revision),
           ("view", viewJson d'.session)]
         (st', Answer.mk op st.app [``SourceSession.reached_view] true result none req.id)

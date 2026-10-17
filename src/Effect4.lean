@@ -269,6 +269,7 @@ import Effect4.Program.Typing.SourceDocument
 import Effect4.Run.LiveRecord
 import Effect4.Run.Preview
 import Effect4.Program.Typing.CheckCache
+import Effect4.Program.Typing.FillSet
 
 /-!
 # Effect4
