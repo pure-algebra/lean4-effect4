@@ -13,6 +13,12 @@
                            entry whose index is not above the last one
      index-total       X3  every row is in `by_index`, and in `by_fiber` iff it names a fiber
 
+   plus `Vec.to_list`, which goes through `Vec.fold`, against the indexed answer (`get_exn` at
+   every index, kept here as the reference): at the boundary lengths 0, 1, chunk_size - 1,
+   chunk_size, chunk_size + 1, 2 * chunk_size and 5 * chunk_size + 37 (log-order), and on
+   sibling vectors made on one shared prefix before either is read (log-frozen), each with
+   its red controls;
+
    plus the codec (`parse_run_event_row`) against the rows `E4_engine` renders, including
    the two shapes that break a naive splitter -- a nested `resume(1,1,success 7)` argument
    and a `Val.str` payload holding a comma and a paren inside quotes -- and the segment law
@@ -152,6 +158,106 @@ let log_laws () =
     && E4_log.length (E4_log.of_list []) = 0);
   check "log: chunk_size is the named constant 256, and it is not max_int"
     (E4_log.chunk_size = 256)
+
+(* ===================================================== Vec.to_list, through its fold *)
+
+(* The reference: the indexed answer, `get_exn` at every index in order.  `Vec.to_list` was
+   this before it went through `fold`; the library no longer holds it, and this test does. *)
+let indexed (v : 'a E4_log.Vec.t) : 'a list =
+  List.init (E4_log.Vec.length v) (E4_log.Vec.get_exn v)
+
+(* Row i of every vector below.  The rows are distinct, so an order error cannot hide. *)
+let row_at i = (7 * i) + 3
+
+let rec append_rows v from upto =
+  if from >= upto then v else append_rows (E4_log.Vec.append v (row_at from)) (from + 1) upto
+
+let vec_to_list () =
+  print_endline "";
+  print_endline "== Vec.to_list through its fold: boundary lengths and sibling vectors ==";
+  let c = E4_log.chunk_size in
+  (* The boundary lengths of the chunked carrier, and one length of several chunks with a
+     partial tail.  The two halves a length exercises: frozen chunks below (n / c) * c, the
+     open tail above it. *)
+  let lengths =
+    [ (0, "0"); (1, "1"); (c - 1, "chunk_size - 1"); (c, "chunk_size");
+      (c + 1, "chunk_size + 1"); (2 * c, "2 * chunk_size");
+      ((5 * c) + 37, "5 * chunk_size + 37") ]
+  in
+  let vec n = append_rows E4_log.Vec.empty 0 n in
+  List.iter
+    (fun (n, label) ->
+       let v = vec n in
+       check
+         (Printf.sprintf "log-order: Vec.to_list = the indexed answer = emission order, length %s"
+            label)
+         (E4_log.Vec.to_list v = indexed v && indexed v = List.init n row_at))
+    lengths;
+  (* Red controls.  Each is a wrong walk built from the same fold, and each must disagree with
+     the reference exactly where the claim says it can.  Dropping `List.rev` is caught at every
+     length of two rows or more.  A walk of the frozen chunks alone is caught exactly at the
+     lengths with an open tail, and a walk of the tail alone exactly at the lengths with a
+     frozen chunk, so the lengths above exercise both halves of the carrier. *)
+  let caught_at wrong =
+    List.filter_map
+      (fun (n, label) ->
+         let v = vec n in
+         if wrong n v <> indexed v then Some label else None)
+      lengths
+  in
+  let labels ns = List.map (fun n -> List.assoc n lengths) ns in
+  let reversed _ v = E4_log.Vec.fold v ~init:[] ~f:(fun _ x acc -> x :: acc) in
+  let only keep n v =
+    let tail_from = (n / c) * c in
+    List.rev
+      (E4_log.Vec.fold v ~init:[] ~f:(fun i x acc -> if keep i tail_from then x :: acc else acc))
+  in
+  let chunks_only = only (fun i tail_from -> i < tail_from) in
+  let tail_only = only (fun i tail_from -> i >= tail_from) in
+  check "log-order (red control): the fold without List.rev is caught at every length of 2 rows or more"
+    (caught_at reversed = labels [ c - 1; c; c + 1; 2 * c; (5 * c) + 37 ]);
+  check "log-order (red control): the frozen chunks alone are caught exactly at the lengths with an open tail"
+    (caught_at chunks_only = labels [ 1; c - 1; c + 1; (5 * c) + 37 ]);
+  check "log-order (red control): the open tail alone is caught exactly at the lengths with a frozen chunk"
+    (caught_at tail_only = labels [ c; c + 1; 2 * c; (5 * c) + 37 ]);
+  (* Siblings: two appends onto one shared prefix, and two longer branches that each promote
+     the shared tail into a chunk of their own.  Both siblings are made before either is read,
+     and each is checked against the reference AND against its own rows, which no aliasing
+     between the siblings could satisfy. *)
+  let reads v rows = E4_log.Vec.to_list v = indexed v && indexed v = rows in
+  let siblings p =
+    let base = vec p in
+    let a = E4_log.Vec.append base (-1) in
+    let b = E4_log.Vec.append base (-2) in
+    let a_long = append_rows a (p + 1) (p + c + 1) in
+    let b_long = append_rows b (p + 1) (p + c + 1) in
+    (base, a, b, a_long, b_long)
+  in
+  let prefix p = List.init p row_at in
+  let branch p = List.init c (fun k -> row_at (p + 1 + k)) in
+  List.iter
+    (fun (p, label) ->
+       let base, a, b, a_long, b_long = siblings p in
+       check
+         (Printf.sprintf
+            "log-frozen: siblings on a shared prefix of length %s each read their own rows" label)
+         (reads a (prefix p @ [ -1 ])
+          && reads b (prefix p @ [ -2 ])
+          && reads a_long ((prefix p @ [ -1 ]) @ branch p)
+          && reads b_long ((prefix p @ [ -2 ]) @ branch p)
+          && reads base (prefix p)))
+    lengths;
+  (* The siblings' red control: each sibling read against the OTHER's rows is caught, at every
+     prefix, so the check above tells the two apart. *)
+  check "log-frozen (red control): each sibling read against the other's rows is caught"
+    (List.for_all
+       (fun (p, _) ->
+          let _, a, b, a_long, b_long = siblings p in
+          (not (reads a (prefix p @ [ -2 ])))
+          && (not (reads b (prefix p @ [ -1 ])))
+          && (not (reads a_long ((prefix p @ [ -2 ]) @ branch p)))
+          && not (reads b_long ((prefix p @ [ -1 ]) @ branch p)))
+       lengths)
 
 (* ================================================================== the codec *)
 
@@ -370,6 +476,7 @@ let () =
     "== lane Q3a: the persistent log (L1-L5), the codec, and the incremental indexes (X1-X3) ==";
   print_endline "";
   log_laws ();
+  vec_to_list ();
   codec ();
   index_laws ();
   print_endline "";
