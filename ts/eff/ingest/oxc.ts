@@ -980,10 +980,15 @@ class Normalize {
         if (y.type !== "YieldExpression" || !y.delegate) return reject("E-STMT-SHAPE", "expression")
         out.push({ _tag: "yieldDiscard", value: this.program(node(y, "argument"), env) }); continue
       }
+      // A branch or a loop body is a block, as the compiler reader requires: `list` reads a body
+      // with no `body` list as empty, so `if (c) return x` would lose its return.
       if (n.type === "IfStatement") {
-        out.push({ _tag: "ifElse", condition: this.term(node(n, "test"), env), thenBranch: this.statements(list(node(n, "consequent"), "body"), env), elseBranch: isNode(n.alternate) ? this.statements(list(n.alternate, "body"), env) : [] }); continue
+        const thenS = node(n, "consequent"), elseS = isNode(n.alternate) ? n.alternate : undefined
+        if (thenS.type !== "BlockStatement" || (elseS && elseS.type !== "BlockStatement")) return reject("E-NODE", "if body")
+        out.push({ _tag: "ifElse", condition: this.term(node(n, "test"), env), thenBranch: this.statements(list(thenS, "body"), env), elseBranch: elseS ? this.statements(list(elseS, "body"), env) : [] }); continue
       }
       if (n.type === "WhileStatement" && node(n, "test").type === "Literal" && node(n, "test").value === true) {
+        if (node(n, "body").type !== "BlockStatement") return reject("E-NODE", "statement")
         out.push({ _tag: "whileTrue", body: this.statements(list(node(n, "body"), "body"), env) }); continue
       }
       if (n.type === "BreakStatement" && !n.label) { out.push({ _tag: "breakTo" }); continue }
