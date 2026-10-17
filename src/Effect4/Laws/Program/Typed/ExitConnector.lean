@@ -52,22 +52,23 @@ namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program
 
 /-- `FitsExit` gives the meaning layer's exit judgment when the world allocates no external
-handle and a successful value is valid in the store; each premise is necessary
+handle, declares no name (the meaning layer reads no table), and a successful value is valid in
+the store; each premise is necessary
 (`Test/Program/ExitConnector.lean`: `allocation_needed`, `validity_needed`). -/
 theorem exitHasTy_of_fitsExit (w : Typed.World) (ty : EffTy) (s : Stores) (ex : ExitV)
-    (halloc : w.state.externals.allocated = [])
+    (halloc : w.state.externals.allocated = []) (htypes : w.types = [])
     (hvalid : ∀ v, ex = .success v → v.validIn s = true)
     (h : FitsExit w ty ex) : Denote.ExitHasTy ty.answer ty.error s ex := by
   cases ex with
   | success v =>
     have hf : Fits w v ty.answer := (fitsExit_success_iff w ty v).mp h
-    have hs := fits_hasTy w ty.answer v hf
+    have hs := fits_hasTy w htypes ty.answer v hf
     rw [halloc] at hs
     exact ⟨hs, hvalid v rfl⟩
   | failure c =>
     have hc : FitsCause w ty.error c := fitsExit_failure_cause h
     exact causeFits_admits (fun x hx => by
-      have hs := fits_hasTy w ty.error x hx
+      have hs := fits_hasTy w htypes ty.error x hx
       rw [halloc] at hs
       exact hs) c hc
 

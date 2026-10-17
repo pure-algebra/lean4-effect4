@@ -1,6 +1,7 @@
 import Effect4.Api
 import Effect4.Laws.Program.RuntimeR
 import Effect4.Laws.Program.Typed.World
+import Effect4.Laws.Program.Typed.Declared
 
 /-!
 E4-SCHED-CE-008, U-01: the signed interruption divergence from rc.112.
@@ -64,12 +65,15 @@ def escaped_no_longer : Bool :=
 
 /-- The delivered exit does not fit the program's checked type at any world. -/
 theorem escaped_exit_does_not_fit (w : TWorld) : ¬ ExitFits w checkedTy escapedExit :=
-  fun h => Bool.noConfusion h
+  fun h => Bool.noConfusion (causeAdmits_mono (g := fun _ _ => false) _
+    (fun v hv => by simpa only [checkedTy, Val.memberIn_never] using hv) _ h)
 
 /-- The same failure fits the masked region's own type, so the catch was the only frame
 that could have removed it. -/
 theorem escaped_exit_fits_region (w : TWorld) :
-    ExitFits w ⟨.never, .nat, .empty⟩ escapedExit := rfl
+    ExitFits w ⟨.never, .nat, .empty⟩ escapedExit :=
+  causeAdmits_mono (f := fun v ty => Val.hasTy v ty w.state.externals.allocated) _
+    (fun _ h => Val.memberIn_of_hasTy h) _ rfl
 
 /-- Contagion: the escaped string failure passes the inner catch, the walk is re-masked by
 `interruptible`'s restoration, and the outer catch typed at `nat` runs its handler on a

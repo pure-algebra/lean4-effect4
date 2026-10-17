@@ -145,7 +145,7 @@ theorem obligations_expand (exps : TyDecls) {m : Ty}
   | app n args =>
     show Val.obligations v ((exps.body? n).getD (.app n args)) allocated = _
     rw [hm n rfl]
-    exact leaf_map _ _
+    exact leaf_map false _
   | option inner => cases v <;> rfl
   | list item =>
     cases v with

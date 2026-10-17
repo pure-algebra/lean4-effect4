@@ -43,9 +43,9 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
 when the world allocates no external handle: `ExitOk`'s fit through the connector, its validity
 premise from capability membership (`fits_validIn`). -/
 theorem exitHasTy_of_exitOk {root : ProgramSource} {w : World} (store : StoreTyped root w)
-    (ty : EffTy) (ex : ExitV) (halloc : w.state.externals.allocated = []) (h : ExitOk w ty ex) :
-    Denote.ExitHasTy ty.answer ty.error w.state ex :=
-  exitHasTy_of_fitsExit w ty w.state ex halloc
+    (ty : EffTy) (ex : ExitV) (halloc : w.state.externals.allocated = []) (htypes : w.types = [])
+    (h : ExitOk w ty ex) : Denote.ExitHasTy ty.answer ty.error w.state ex :=
+  exitHasTy_of_fitsExit w ty w.state ex halloc htypes
     (fun v hv => by
       subst hv
       exact fits_validIn store ((fitsExit_success_iff w ty v).mp h.1)) h.1
@@ -71,7 +71,7 @@ theorem exits_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape :
   obtain ⟨ty, declared, ok⟩ := hexits id ex hmem
   refine ⟨ty, declared, ?_⟩
   rw [← hstate]
-  exact exitHasTy_of_exitOk store ty ex halloc ok
+  exact exitHasTy_of_exitOk store ty ex halloc (typed.types.trans root.untyped) ok
 
 /-- **A checked program's result has its checked type**: the root fiber's recorded exit satisfies
 the meaning layer's judgment at the program's type (`exits_hasTy` at the root). -/

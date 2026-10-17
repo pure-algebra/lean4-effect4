@@ -215,7 +215,7 @@ theorem configTyped_register {root : ProgramSource} {rootTy : EffTy} {w : World}
       fun r hr => ?_, stores, wide.fiberIds, wide.raceIds, wide.racesBelow, wide.raceHosts,
       fun k hk => ?_, wide.requestsBelow, fun fiber token r hr hk => ?_, wide.services,
       ⟨wide.live.running, fun o ho => wide.live.dueOwners o (by rw [← due]; exact ho)⟩, timers,
-      waiters, wide.liveBelow, wide.sourceWF⟩
+      waiters, wide.liveBelow, wide.sourceWF, wide.types⟩
     · show (w.Ρ key).isSome = true ↔ key.index < s.refs.length
       rw [refs]
       exact wide.heap key
@@ -715,7 +715,7 @@ theorem machineWide_rupdate_request {root : ProgramSource} {rootTy : EffTy} {w :
     wide.racesBelow, fun race hr => ?_, fun key hk => ?_,
     fun fiber token r hr => ?_, fun fiber token r hr hk => ?_, wide.services,
     ⟨wide.live.running, fun o ho owner priority mode => ?_⟩, wide.timers, wide.waiters,
-    wide.liveBelow, wide.sourceWF⟩
+    wide.liveBelow, wide.sourceWF, wide.types⟩
   · obtain ⟨x, hx⟩ := wide.raceHosts race hr
     rw [rfiber?_update, hx, Option.map_some]
     exact ⟨_, rfl⟩

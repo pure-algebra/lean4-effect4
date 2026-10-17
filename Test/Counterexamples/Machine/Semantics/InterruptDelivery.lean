@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Contracts
+import Effect4.Laws.Program.Typed.Declared
 
 /-!
 E4-SCHED-CE-006/007: counterexamples to the 2026-09-21 input audit's proposed
@@ -45,7 +46,9 @@ theorem masked_has_provenance : InterruptProvenance masked := by
   · intro h
     exact Bool.noConfusion h
 
-theorem original_failure_fits_input (w : TWorld) : ExitFits w beforeCatch failure := rfl
+theorem original_failure_fits_input (w : TWorld) : ExitFits w beforeCatch failure :=
+  causeAdmits_mono (f := fun v ty => Val.hasTy v ty w.state.externals.allocated) _
+    (fun _ h => Val.memberIn_of_hasTy h) _ rfl
 
 /-- The proposed guard-miss-only skip premise admits exactly this ordinary catch.
 Together with restoreMask's identity arrow and the empty tail, its proposed stack
@@ -60,7 +63,7 @@ theorem reviewed_catch_skip (w : TWorld) (ex : ExitV) (typed : ExitFits w before
 not in the handler's result or the ordinary skip premise. -/
 theorem reviewed_catch_run (w : TWorld) (ex : ExitV) :
     ∃ result, recovery ex = .pure result ∧ ExitFits w afterCatch result :=
-  ⟨.success (.nat 0), rfl, rfl⟩
+  ⟨.success (.nat 0), rfl, Val.memberIn_of_hasTy rfl⟩
 
 /-- Restoring the mask inside popR makes the catch skip, even though the entry mask
 was false and the audit's correlation held at entry. U-01 now sanitizes that skip. -/
@@ -74,7 +77,9 @@ theorem proposed_entry_mask_exception_false (w : TWorld) :
       (masked.interruptible = true ∧ masked.interruptedCause.isSome = true)) := by
   intro h
   cases h with
-  | inl fits => exact Bool.noConfusion fits
+  | inl fits =>
+    exact Bool.noConfusion (causeAdmits_mono (g := fun _ _ => false) _
+      (fun v hv => by simpa only [afterCatch, EffTy.pure, Val.memberIn_never] using hv) _ fits)
   | inr flags => exact Bool.noConfusion flags.1
 
 /-- Setting deferredInterrupt does not repair the failing-exit branch: deliverR only

@@ -214,11 +214,11 @@ theorem CellsTyped.restate {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
     exact fun _ _ h => h
   have ord : w.leHost { w with state := st' } := by
     refine ⟨⟨⟨fun _ h => h, syncOpStep_le op w.state st' ans step⟩, fun _ _ h => h,
-      fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩, fun _ _ _ h => h, rfl⟩, alloc⟩
+      fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩, fun _ _ _ h => h, rfl, rfl⟩, alloc⟩
     · intro key ty h
       refine ⟨h.1, fun value hv => ?_⟩
       exact value_transport w { w with state := st' } ty value alloc
-        (fits_hasTy w ty value (values key.index value hv ty h.1))
+        (Val.memberIn_iff.mpr (fits_memberIn w (values key.index value hv ty h.1)))
     · intro key types h
       refine ⟨h.1, fun c' hc completion hcomp => ?_⟩
       rcases completions key c' hc completion hcomp with ⟨c, hc0, same⟩ | fresh
@@ -411,7 +411,7 @@ theorem CellsTyped.addRef {w : World} (cells : CellsTyped w) (initial : Val) (ty
       have := (cells.heap ⟨w.state.refs.length⟩).mp (by rw [h]; rfl)
       exact absurd this (Nat.lt_irrefl _)
   obtain ⟨le, _⟩ := refMake_extension w initial ty _ _ (syncOpStep_refMake w.state initial) fresh
-    (fits_hasTy w ty initial fits)
+    (Val.memberIn_iff.mpr (fits_memberIn w fits))
   have ord : w.leHost (w.addRef { w.state with refs := w.state.refs ++ [initial] }
       ⟨w.state.refs.length⟩ ty) := ⟨le, fun _ _ h => h⟩
   refine ⟨ord, ⟨?_, cells.promises, ?_⟩⟩

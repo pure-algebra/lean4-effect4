@@ -627,7 +627,8 @@ theorem configTyped_addRace {root : ProgramSource} {rootTy : EffTy} {w : World} 
         · exact wide.liveBelow raceId r' old id hid'
         · rw [live] at hid'
           cases hid'
-      sourceWF := wide.sourceWF }
+      sourceWF := wide.sourceWF
+      types := wide.types }
   have fiberOk : ∀ x ∈ ({ M with races := M.races ++ [race], nextRace := M.nextRace + 1 } :
       RState).fibers, FiberTyped root w
         { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } x := by

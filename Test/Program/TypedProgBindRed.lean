@@ -114,7 +114,7 @@ theorem bind_not_typed (root : ProgramSource) (w : Typed.World) :
     have hs := (skip w (leHost_refl w) (.success (Val.nat 1)) hb rfl).1
     rw [fitsExit_success_iff] at hs
     change Typed.Fits w (Val.nat 1) .unit at hs
-    simp only [Typed.Fits] at hs
+    simp only [Typed.Fits, Typed.FitsAt] at hs
 
 /-- The same refutation in the shape of `typedProg_not_bind_closed`. -/
 theorem guard_bind_not_closed (root : ProgramSource) (w : Typed.World) :

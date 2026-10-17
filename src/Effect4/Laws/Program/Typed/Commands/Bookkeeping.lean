@@ -249,14 +249,16 @@ structure MachineWide (root : ProgramSource) (rootTy : EffTy) (w : World) (m : R
     id.value < m.nextId
   /-- The source's layer references are well formed (decisions row 170; `MachineTyped.sourceWF`). -/
   sourceWF : SourceWF root
+  /-- The world's declaration table is the source's (`MachineTyped.types`). -/
+  types : w.types = root.types
 
 theorem MachineTyped.wide {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     (typed : MachineTyped root rootTy w m) : MachineWide root rootTy w m := by
-  obtain ⟨⟨valid, ok, _, sched, _, _⟩, services, _, live, sourceWF⟩ := typed
+  obtain ⟨⟨valid, ok, _, sched, _, _⟩, services, _, live, sourceWF, types⟩ := typed
   exact ⟨valid.ids, valid.fibers, valid.heap, valid.promises, valid.tokenBound, valid.tokenTargets,
     valid.state, valid.wf, valid.cells, valid.root, ok.c1, ok.c2, sched.fiberIds, sched.raceIds, sched.racesBelow,
     sched.raceHosts, sched.keysBelow, sched.requestsBelow, sched.requestsOwned, services, live,
-    valid.timers, valid.waiters, sched.liveBelow, sourceWF⟩
+    valid.timers, valid.waiters, sched.liveBelow, sourceWF, types⟩
 
 theorem MachineTyped.fiber {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     (typed : MachineTyped root rootTy w m) {f : RFiber} (hf : f ∈ m.fibers) :
@@ -287,7 +289,7 @@ theorem machineTyped_of {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
       fun f hf => (fibers f hf).targetsBelow, fun f hf => (fibers f hf).observersBelow⟩,
     ⟨fun f hf => (fibers f hf).pendingOwner, fun f hf => (fibers f hf).observers⟩,
     fun f hf => (fibers f hf).registration⟩,
-    wide.services, fun f hf => (fibers f hf).code, wide.live, wide.sourceWF⟩
+    wide.services, fun f hf => (fibers f hf).code, wide.live, wide.sourceWF, wide.types⟩
 
 /-! ## The observer correlations and the queue between two machines -/
 
@@ -874,7 +876,7 @@ theorem machineWide_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     fun fiber token r hr => wide.requestsBelow fiber token r (requests fiber token r hr),
     fun fiber token r hr hk => ?_, wide.services,
     ⟨wide.live.running, fun o ho owner priority mode => ?_⟩, wide.timers, wide.waiters,
-    wide.liveBelow, wide.sourceWF⟩
+    wide.liveBelow, wide.sourceWF, wide.types⟩
   · obtain ⟨x, hx⟩ := wide.raceHosts race hr
     rw [rfiber?_update, hx, Option.map_some]
     exact ⟨_, rfl⟩
@@ -1636,7 +1638,7 @@ theorem leHost_cells {w : World} {s : Stores} (le : w.state.le s) (refs : s.refs
     rw [externals]
     exact fun _ _ h => h
   refine ⟨⟨⟨fun _ h => h, le⟩, fun _ _ h => h, fun _ _ h => h, fun _ _ h => h, ⟨?_, ?_⟩,
-    fun _ _ _ h => h, rfl⟩, ext⟩
+    fun _ _ _ h => h, rfl, rfl⟩, ext⟩
   · intro key ty h
     refine ⟨h.1, fun value hv => ?_⟩
     have hv' : refPeek w.state.refs key = some value := by
@@ -1821,7 +1823,7 @@ theorem machineWide_frame {root : ProgramSource} {rootTy : EffTy} {w : World} {m
     fun key hk => wide.keysBelow key (keys hk), wide.requestsBelow,
     fun fiber token r hr hk => wide.requestsOwned fiber token r hr (keys hk), wide.services,
     ⟨wide.live.running, due⟩, WakeTyped.of_subset frame.timers wide.timers,
-    fun key cell hc a e declared => ?_, wide.liveBelow, wide.sourceWF⟩
+    fun key cell hc a e declared => ?_, wide.liveBelow, wide.sourceWF, wide.types⟩
   · show (w.Ρ key).isSome = true ↔ key.index < s.refs.length
     rw [frame.refs]
     exact wide.heap key
@@ -3209,7 +3211,7 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
       fun key hk => wide.keysBelow key (by rw [← keys]; exact hk), wide.requestsBelow,
       fun fiber token r' hr'' hk => wide.requestsOwned fiber token r' hr'' (by rw [← keys]; exact hk),
       wide.services, ⟨wide.live.running, wide.live.dueOwners⟩, wide.timers, wide.waiters,
-      fun r race hr' id hid' => ?_, wide.sourceWF⟩ (fun x hx => ?_), readCode_races (m := m) rfl lookFwd code,
+      fun r race hr' id hid' => ?_, wide.sourceWF, wide.types⟩ (fun x hx => ?_), readCode_races (m := m) rfl lookFwd code,
       ⟨queue.payload, fun c hc => ?_,
       fun c hc => commandDelivery_view (m := m) (m' := m.updateRace new) (fun _ => rfl) lookFwd c
         (queue.delivery c hc), ?_,

@@ -555,6 +555,6 @@ theorem fits_restrict {app app' : SigApp} (hext : SigExtends app.signature app'.
         rw [ha] at hc
         cases hc
   exact @fits_map w (restrictWorld app w) (table_refl _) (table_refl _) (table_refl _)
-    (fun _ _ hx => hx) (Stores.le_refl _) same ty v h
+    (fun _ _ hx => hx) (Stores.le_refl _) same rfl ty v h
 
 end Effect4.Program.Typed

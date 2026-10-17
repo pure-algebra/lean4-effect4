@@ -167,6 +167,77 @@ the world its point is built at, with the point's environment and view moved the
 
 /-! ### The value-decided fork (`select`) -/
 
+/-! ### Tag readers at membership
+
+A tag reader reads a value's discriminant only: a pair's literal first cell or a record's `_tag`
+field. A literal holds no nominal reference, so each reader below holds at every declaration
+table, though a tagged member's payload may name a declared type. -/
+
+/-- A member of a tagged member (`prod (lit tag) _`) is a pair the pair reader reads: the
+membership form of `Ty.tagPayload_of_tagged`. -/
+theorem fits_tagPayload_of_tagged {w : World} {tag : String} {m : Ty} {v : Val}
+    (hm : Ty.isTagged tag m = true) (hv : Fits w v m) : (Val.tagPayload? tag v).isSome = true := by
+  cases m with
+  | prod a b =>
+    cases a with
+    | lit t =>
+      obtain ⟨x, y, rfl, hx, _⟩ := (fits_prod_iff w v _ b).mp hv
+      have hx' := fits_hasTy_of_payloadFieldTy w (ty := .lit t) rfl hx
+      cases x with
+      | str s =>
+        simp only [Ty.isTagged, beq_iff_eq] at hm
+        subst hm
+        simp only [Val.hasTy] at hx'
+        simp only [Val.tagPayload?, hx', ↓reduceIte, Option.isSome_some]
+      | _ => exact nomatch hx'
+    | _ => exact nomatch hm
+  | _ => exact nomatch hm
+
+/-- The tag test hits a member of a tagged member. -/
+theorem fits_tagHit_of_tagged {w : World} {tag : String} {m : Ty} {v : Val}
+    (hm : Ty.isTagged tag m = true) (hv : Fits w v m) : NativeAtom.tagHit tag v = true := by
+  simp only [NativeAtom.tagHit_eq, fits_tagPayload_of_tagged hm hv, Bool.true_or]
+
+/-- **The tag test's miss** keeps a member in the residual: the membership form of
+`Ty.diffTag_sound`. -/
+theorem fits_diffTag {w : World} {tag : String} {e : Ty} {v : Val} (hv : Fits w v e)
+    (hfalse : NativeAtom.tagHit tag v = false) : Fits w v (Ty.diffTag tag e) := by
+  obtain ⟨m, hm, hvm⟩ := (fits_members w v e).mpr hv
+  unfold Ty.diffTag
+  rw [fits_ofMembers]
+  refine ⟨m, List.mem_filter.mpr ⟨hm, ?_⟩, hvm⟩
+  cases htag : Ty.isTagged tag m
+  · rfl
+  · rw [fits_tagHit_of_tagged htag hvm] at hfalse
+    exact Bool.noConfusion hfalse
+
+/-- The record discriminant of a member equals its alternative's literal: the membership form of
+`Record.tagOf_lookup`. -/
+theorem fits_tagOf_lookup {w : World} {type : Ty} {actual : String} {v : Val}
+    (ht : Record.tagOf type = some actual) (hv : Fits w v type) :
+    Machine.Record.lookup v "_tag" = some (some (.str actual)) := by
+  cases type with
+  | record fields =>
+    simp only [Record.tagOf] at ht
+    split at ht
+    · next declared hf =>
+      cases ht
+      obtain ⟨value, hlookup, hvalue⟩ := record_lookup_required hv hf
+      have hvalue' : Val.hasTy value (.lit actual) = true := by
+        simpa only [Val.hasTy] using fits_hasTy_of_payloadFieldTy w (ty := .lit actual) rfl hvalue
+      rw [Val.hasTy_lit_inv hvalue'] at hlookup
+      exact hlookup
+    · exact nomatch ht
+  | _ => exact nomatch ht
+
+/-- On a member of a tagged record alternative, the runtime test and the type partition choose
+the same side: the membership form of `Record.tagHit_eq_isTag`. -/
+theorem fits_tagHit_eq_isTag {w : World} {type : Ty} {v : Val} (tag : String)
+    (ht : (Record.tagOf type).isSome = true) (hv : Fits w v type) :
+    Record.tagHit tag v = Record.isTag tag type := by
+  obtain ⟨actual, hactual⟩ := Option.isSome_iff_exists.mp ht
+  rw [Record.tagHit, fits_tagOf_lookup hactual hv, Record.isTag, hactual]
+
 /-- What a decision's chosen arm binds, at the arm's environment extension: nothing against
 nothing, one value fitting one type (`Decision.BoundTyped`'s membership form). -/
 def BoundFits (w : World) : Option Val → List Ty → Prop
@@ -226,7 +297,7 @@ theorem decide_fits {w : World} {d : Decision} {t : Ty} {e0 e1 : List Ty} {v : V
           refine ⟨m, List.mem_filter.mpr ⟨hm, ?_⟩, hvm⟩
           cases htag : Ty.isTagged name m
           · rfl
-          · have hsome := Ty.tagPayload_of_tagged name m v _ htag (fits_hasTy w m v hvm)
+          · have hsome := fits_tagPayload_of_tagged htag hvm
             rw [hp] at hsome
             exact nomatch hsome
     · exact nomatch harms
@@ -241,8 +312,7 @@ theorem decide_fits {w : World} {d : Decision} {t : Ty} {e0 e1 : List Ty} {v : V
       cases hparts
       have hn := (fits_normalize w t v).mpr hv
       obtain ⟨branch, hmember, hbranch⟩ := (fits_members w v t.normalize).mpr hn
-      have htag := Record.tagHit_eq_isTag name
-        (List.all_eq_true.mp hcolumn branch hmember) (fits_hasTy w branch v hbranch)
+      have htag := fits_tagHit_eq_isTag name (List.all_eq_true.mp hcolumn branch hmember) hbranch
       cases hb : Record.tagHit name v with
       | false =>
         change Fits w v (Ty.ofMembers _)
@@ -808,11 +878,9 @@ theorem catchIf_miss_fits {w : World} {env : List Val} {test : Term} {be he : Ty
             · rfl
             · rw [h, if_pos rfl] at hmiss
               exact nomatch hmiss
-          have hbad := Ty.diffTag_sound tag be.normalize value _
-            (by rw [hasTy_normalize]; exact fits_hasTy w be value hv)
-            (by rw [NativeAtom.eval_tagIs, hfalse])
+          have hbad := fits_diffTag ((fits_normalize w be value).mpr hv) hfalse
           rw [hnever] at hbad
-          exact nomatch hbad
+          exact hbad.elim
       · exact causeFits_map (fun x hx => fits_join_left w be he x hx) hc
     · exact causeFits_map (fun x hx => fits_join_left w be he x hx) hc
 
@@ -908,7 +976,7 @@ in its order (`unionFold_subN`). -/
 arm of `Fits`). -/
 theorem fiber_of_fits {w : World} {x : Val} {a e : Ty} (h : Fits w x (.fiberOf a e)) :
     ∃ index, x = Value.fiber index ∧ FiberDeclared w ⟨index⟩ a e := by
-  simp only [Fits] at h
+  simp only [Fits, FitsAt] at h
   split at h
   · rename_i index
     exact ⟨index, rfl, h⟩
@@ -1097,7 +1165,7 @@ theorem ambientScope_typed (root : ProgramSource) (w : World) :
 /-- A value at an exit type decodes as an exit (`exitOfVal`, the exit image read back). -/
 theorem exitOfVal_of_fits {w : World} {v : Val} {a e : Ty} (h : Fits w v (.exitOf a e)) :
     ∃ ex, exitOfVal v = some ex := by
-  simp only [Fits] at h
+  simp only [Fits, FitsAt] at h
   split at h
   · rename_i x
     exact ⟨_, exitOfVal_exitOk x⟩

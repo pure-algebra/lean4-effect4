@@ -517,9 +517,9 @@ typed state's `Typed.ExitOk` at a world over them whose store fits, read by
 success is valid in a store that fits (`CellsTyped.fits_validIn`). -/
 theorem exitHasTy_of_reaches {A : Type} {p : Effects.Program StoreSig A} {w : Typed.World}
     {ty : EffTy} {ex : ExitV} (hstate : w.state = (runP p Stores.empty).2) (store : StoreFits w)
-    (h : Typed.ExitOk w ty ex) : ExitHasTy ty.answer ty.error w.state ex :=
+    (htypes : w.types = []) (h : Typed.ExitOk w ty ex) : ExitHasTy ty.answer ty.error w.state ex :=
   Typed.exitHasTy_of_fitsExit w ty w.state ex
-    (by rw [hstate, runP_externals]; rfl)
+    (by rw [hstate, runP_externals]; rfl) htypes
     (fun v hv => by
       subst hv
       exact store.toCellsTyped.fits_validIn ((Typed.fitsExit_success_iff w ty v).mp h.1))
@@ -532,7 +532,7 @@ theorem meaning_typed (e : NativeEff) (t : EffTy) (hs : Straight e = true)
     ExitHasTy t.answer t.error (meaning e [] Stores.empty).2 (meaning e [] Stores.empty).1 := by
   obtain ⟨w', hs', ok, hex⟩ :=
     (sound badShapeExit e [] [] (Typed.initialWorld t) t hs hty (TypedAt.empty t)).reaches
-  have h := exitHasTy_of_reaches hs' ok.store hex
+  have h := exitHasTy_of_reaches hs' ok.store (Typed.le_types ok.le.1) hex
   rw [hs'] at h
   exact h
 

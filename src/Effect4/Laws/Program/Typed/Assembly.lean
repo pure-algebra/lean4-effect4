@@ -375,6 +375,11 @@ structure MachineTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : 
   shape). The load discharges them from the checker's verdict (`layerRefsWF_of_typeOf`,
   `bodiesTyped_of_typeOf`); every step keeps them. A field of `J`, not of `ProgramSource`. -/
   sourceWF : SourceWF root
+  /-- The world's declaration table is the source's (the audit's D3): the world order fixes the
+  table (`le_types`), so the tie holds along every run once it holds at the load
+  (`initialWorld rootTy root.sig.serviceTy root.types`), and `Fits` reads the source's named
+  types. -/
+  types : w.types = root.types
 
 /-- **`I`**, the typed configuration (decisions row 134): the machine with the residue the
 command loop runs. -/
@@ -882,7 +887,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     (nextId : m'.nextId = m.nextId) (nextToken : m'.nextToken = m.nextToken)
     (nextRace : m'.nextRace = m.nextRace) (stuck : m'.stuck = m.stuck)
     (typed : MachineTyped root rootTy w m) : MachineTyped root rootTy w m' := by
-  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, services, code, live, sourceWF⟩ := typed
+  obtain ⟨⟨valid, ok, deliv, sched, obsv, reg⟩, services, code, live, sourceWF, types⟩ := typed
   have member : ∀ f, f ∈ m'.fibers → f ∈ m.fibers := fun f hf => by rw [← fibers]; exact hf
   have raceMember : ∀ r, r ∈ m'.races → r ∈ m.races := fun r hr => by rw [← races]; exact hr
   have lookup : ∀ id, m'.fiber? id = m.fiber? id := fun id => by
@@ -903,7 +908,8 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     ⟨fun f hf => obsv.pendingOwner f (member f hf), fun f hf o ho =>
       storedObserverOk_congr lookup raceLookup state o (obsv.observers f (member f hf) o ho)⟩,
     fun f hf raceId marker => ?_⟩, services, fun f hf hx hr hm hp ty d =>
-      MCodeOk.races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm hp ty d), ?_, sourceWF⟩
+      MCodeOk.races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm hp ty d), ?_, sourceWF,
+      types⟩
   · exact
       { ids := by rw [fibers]; exact valid.ids
         fibers := fun id => by rw [fibers]; exact valid.fibers id
@@ -1270,9 +1276,9 @@ read at that world only (decisions row 175; before it this premise demanded ever
 false for a program that reads a service, `E4-TYPED-CE-022`). -/
 theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
-    TypedState root rootTy (initialWorld rootTy root.sig.serviceTy)
+    TypedState root rootTy (initialWorld rootTy root.sig.serviceTy root.types)
       (loadR root.program fuel compileFuel) := by
-  have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
+  have declared : (initialWorld rootTy root.sig.serviceTy root.types).Γ Api.root = some rootTy :=
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
   refine ⟨initial_world_valid_at _ _ root.program fuel compileFuel, ⟨?_, ?_, ?_⟩, ?_,
     schedulerState_load root.program fuel compileFuel,
@@ -1284,7 +1290,7 @@ theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compile
     subst hf
     refine ⟨⟨?_⟩, ?_, ?_, ?_, ⟨?_⟩, ?_⟩
     · intro ty hty
-      change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
+      change (initialWorld rootTy root.sig.serviceTy root.types).Γ Api.root = some ty at hty
       rw [declared] at hty
       cases hty
       exact ⟨finalPos rootTy true, true, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
@@ -1312,20 +1318,20 @@ liveness and the source's well-formedness (decisions row 170, `MachineTyped.sour
 theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (sourceWF : SourceWF root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
-    (code : AmbientProg root (initialWorld rootTy root.sig.serviceTy) Env.Requirement.empty
-      (rootTy, Env.Requirement.empty, Env.Requirement.empty)
+    (code : AmbientProg root (initialWorld rootTy root.sig.serviceTy root.types)
+      Env.Requirement.empty (rootTy, Env.Requirement.empty, Env.Requirement.empty)
       (denoteR root.program root.program (rootPoint compileFuel))) :
-    MachineTyped root rootTy (initialWorld rootTy root.sig.serviceTy)
+    MachineTyped root rootTy (initialWorld rootTy root.sig.serviceTy root.types)
       (loadR root.program fuel compileFuel) := by
-  have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
+  have declared : (initialWorld rootTy root.sig.serviceTy root.types).Γ Api.root = some rootTy :=
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
   refine ⟨typedState_of_load root rootTy fuel compileFuel noMarker, rfl, ?_,
-    machineLive_of_quiet _ rfl rfl, sourceWF⟩
+    machineLive_of_quiet _ rfl rfl, sourceWF, rfl⟩
   intro f hf _ _ _ _ ty hty
   change f ∈ [_] at hf
   rw [List.mem_singleton] at hf
   subst hf
-  change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
+  change (initialWorld rootTy root.sig.serviceTy root.types).Γ Api.root = some ty at hty
   rw [declared] at hty
   cases hty
   exact ⟨Env.Requirement.empty, finalPos rootTy true, true, Env.Context.satisfies_empty _, rfl,

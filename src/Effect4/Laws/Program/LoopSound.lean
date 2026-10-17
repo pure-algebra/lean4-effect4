@@ -491,7 +491,7 @@ theorem meaningB_typed (k : Nat) (e : NativeEff) (t : EffTy) (hl : Looped e = tr
     (soundB badShapeExit k e [] [] (Typed.initialWorld t) t hl hty (TypedAt.empty t)).reaches
   have hfinished : (meaningB k e [] Stores.empty).1 = some ex := by rw [h]
   have hleft : (meaningB k e [] Stores.empty).2 = s' := by rw [h]
-  have typed := exitHasTy_of_reaches hs' ok.store (hex ex hfinished)
+  have typed := exitHasTy_of_reaches hs' ok.store (Typed.le_types ok.le.1) (hex ex hfinished)
   rw [hs'] at typed
   rw [← hleft]
   exact typed

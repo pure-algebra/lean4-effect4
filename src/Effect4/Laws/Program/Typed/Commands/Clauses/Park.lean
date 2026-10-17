@@ -342,7 +342,8 @@ theorem configTyped_token {root : ProgramSource} {rootTy : EffTy} {w : World} {m
       waiters := fun k cell hc a e hk => WakeTyped.mono (fun id => ord.1.2.2.2.2.2.1 id)
         (wide.waiters k cell hc a e hk)
       liveBelow := wide.liveBelow
-      sourceWF := wide.sourceWF }
+      sourceWF := wide.sourceWF
+      types := wide.types }
 
 /-! ## `yieldNow`: a park on the fresh token, its resume posted on the fiber's own dispatcher -/
 

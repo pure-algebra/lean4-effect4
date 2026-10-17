@@ -126,8 +126,9 @@ theorem shared_key_not_fits (w : Typed.World) :
 
 /-- The same type has a member once each position has its own key (proved, by the agreement). -/
 theorem two_cells_inhabited :
-    ∃ (w : Typed.World) (v : Val), Typed.Fits w v (.prod (.refOf .nat) (.refOf .string)) :=
-  (Typed.inhabited_iff_fits (.prod (.refOf .nat) (.refOf .string))).mp rfl
+    ∃ (w : Typed.World) (v : Val), Typed.Fits w v (.prod (.refOf .nat) (.refOf .string)) := by
+  obtain ⟨w, v, _, h⟩ := (Typed.inhabited_iff_fits (.prod (.refOf .nat) (.refOf .string))).mp rfl
+  exact ⟨w, v, h⟩
 
 -- **Red control.** The old acceptance of CE-015's host table does not close against the
 -- signature check.

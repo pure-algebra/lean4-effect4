@@ -96,11 +96,14 @@ def World.leHost (w newer : World) : Prop :=
 /-- The world a loaded program starts at: the root declared at its type, empty tables, the
 empty store, and the source's static service table (decisions row 112: `machineTyped_load` passes
 `root.sig.serviceTy`; the default is the built-in table, which is the source's for every source
-with no service declarations, `SigApp.serviceTy_nil`). -/
-def initialWorld (rootTy : EffTy) (serviceTy : ServiceKey → Option Ty := nativeServiceTy) : World :=
+with no service declarations, `SigApp.serviceTy_nil`), and the source's declaration table (the
+audit's D3; empty by default). -/
+def initialWorld (rootTy : EffTy) (serviceTy : ServiceKey → Option Ty := nativeServiceTy)
+    (types : TyDecls := []) : World :=
   { ids := [Api.root], state := Stores.empty,
     Γ := tableInsert (fun _ => none) Api.root rootTy,
-    «Π» := fun _ => none, Ρ := fun _ => none, Θ := fun _ _ => none, serviceTy := serviceTy }
+    «Π» := fun _ => none, Ρ := fun _ => none, Θ := fun _ _ => none, serviceTy := serviceTy,
+    types := types }
 
 theorem valid_refMake_fresh (rootTy : EffTy) (w : World) (m : RState)
     (valid : WorldValid rootTy w m) : w.Ρ ⟨m.state.refs.length⟩ = none := by
@@ -144,32 +147,46 @@ theorem leHost_base (w newer : World) (ordered : w.leHost newer) : w.le newer :=
 def hostOrder : Effect4.Laws.Effects.WorldOrder World :=
   ⟨World.leHost, leHost_refl, fun h₁ h₂ => leHost_trans _ _ _ h₁ h₂⟩
 
+/-- The table's membership decider grows with the allocation table, at one declaration table. -/
+theorem memberIn_decide_mono {decls : TyDecls} {ty : Ty} {value : Val} {a b : List String}
+    (ext : Extends a b) (h : Val.memberIn decls value ty a = true) :
+    Val.memberIn decls value ty b = true :=
+  Val.memberIn_iff.mpr (memberIn_mono ext (Val.memberIn_iff.mp h))
+
 theorem value_transport (w newer : World) (ty : Ty) (value : Val)
     (ext : Extends w.state.externals.allocated newer.state.externals.allocated)
-    (typed : ValueOk w ty value) : ValueOk newer ty value :=
-  hasTy_mono ty value _ _ ext typed
+    (typed : ValueOk w ty value) (htypes : newer.types = w.types := by rfl) :
+    ValueOk newer ty value := by
+  unfold ValueOk at typed ⊢
+  rw [htypes]
+  exact memberIn_decide_mono ext typed
 
 theorem completion_transport (w newer : World) (types : Ty × Ty)
     (table : TableExtends w.Ρ newer.Ρ)
-    (ext : Extends w.state.externals.allocated newer.state.externals.allocated) :
-    ∀ completion, CompletionOk w types completion → CompletionOk newer types completion := by
-  intro completion typed
+    (ext : Extends w.state.externals.allocated newer.state.externals.allocated)
+    (completion : Completion Val Err Defect FiberId Ann) (typed : CompletionOk w types completion)
+    (htypes : newer.types = w.types := by rfl) : CompletionOk newer types completion := by
   cases completion with
   | ofExit exit =>
     cases exit with
-    | success value => exact value_transport w newer types.1 value ext typed
-    | failure cause => exact causeAdmits_mono_sub (fun value h => hasTy_mono types.2 value _ _ ext h) cause typed
+    | success value => exact value_transport w newer types.1 value ext typed htypes
+    | failure cause =>
+      show causeAdmits (fun value ty => Val.memberIn newer.types value ty _) _ cause = true
+      rw [htypes]
+      exact causeAdmits_mono_sub (fun value h => memberIn_decide_mono ext h) cause typed
   | ofRefGet cell =>
     obtain ⟨ty, declared, sub⟩ := typed
     exact ⟨ty, table cell ty declared, sub⟩
 
 theorem valueOk_mono (w newer : World) (ty : Ty) (value : Val) (ordered : w.leHost newer) :
-    ValueOk w ty value → ValueOk newer ty value := value_transport w newer ty value ordered.2
+    ValueOk w ty value → ValueOk newer ty value :=
+  fun h => value_transport w newer ty value ordered.2 h (le_types ordered.1)
 
 theorem completionOk_mono (w newer : World) (types : Ty × Ty)
     (completion : Completion Val Err Defect FiberId Ann) (ordered : w.leHost newer) :
     CompletionOk w types completion → CompletionOk newer types completion :=
-  completion_transport w newer types ordered.1.2.2.2.1 ordered.2 completion
+  fun h => completion_transport w newer types ordered.1.2.2.2.1 ordered.2 completion h
+    (le_types ordered.1)
 
 theorem heapTypedAt_mono (w newer : World) (key : RefKey) (ty : Ty) (ordered : w.leHost newer) :
     HeapTypedAt w key ty → HeapTypedAt newer key ty := heap_typed_at_mono w newer key ty ordered.1
@@ -185,8 +202,8 @@ theorem exitFits_mono (w newer : World) (ty : EffTy) (ex : ExitV) (ordered : w.l
 /-- The initial world is valid for the loaded machine, at every static service table (validity
 reads no service table). -/
 theorem initial_world_valid_at (rootTy : EffTy) (serviceTy : ServiceKey → Option Ty) (e : NativeEff)
-    (fuel compileFuel : Nat) :
-    WorldValid rootTy (initialWorld rootTy serviceTy) (loadR e fuel compileFuel) := by
+    (fuel compileFuel : Nat) {types : TyDecls} :
+    WorldValid rootTy (initialWorld rootTy serviceTy types) (loadR e fuel compileFuel) := by
   constructor
   · rfl
   · intro id

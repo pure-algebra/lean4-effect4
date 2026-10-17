@@ -451,9 +451,9 @@ member of its type. The denotation also needs progress: every `none` branch of a
 evaluation in `denoteR` is the wrong-shape exit, which no exit type admits. The coarse
 `evalTerm_isSome` (`Laws/Program/Typed.lean`) reads `Val.hasTy` at the empty allocation table,
 where no external handle has a type, so it cannot see an environment holding one; progress is
-proved here at membership, atom by atom, through the allocation-general lemmas where the coarse
-tree has them (`projectProduct_typed`, `queryTag_typed`, `queryError_typed`, read at the world's
-table through `fits_hasTy`). -/
+proved here at membership, atom by atom: a projection reads the product's frame
+(`projectProduct_progress`) and a cause query its reasons (`fits_queryReasons`), at every
+declaration table. -/
 
 theorem FitsAll.getElem? {w : World} {vs : List Val} {tys : List Ty} (h : FitsAll w vs tys) :
     ∀ {i : Nat} {t : Ty}, tys[i]? = some t → ∃ v, vs[i]? = some v ∧ Fits w v t := by
@@ -466,6 +466,34 @@ theorem FitsAll.getElem? {w : World} {vs : List Val} {tys : List Ty} (h : FitsAl
       cases ht
       exact ⟨_, rfl, hv⟩
     | succ i => exact ih ht
+
+/-- **A projection answers at a member** of a product, or of a union of products: `fst` and
+`snd` read the product's frame, which every member of the input has. The progress companion of
+`projectProduct_fits`. -/
+theorem projectProduct_progress (w : World) (second : Bool) :
+    ∀ (input output : Ty) (v : Val), NativeAtom.projectProduct second input = some output →
+      Fits w v input → (NativeAtom.eval (if second then .snd else .fst) [v]).isSome = true := by
+  intro input
+  induction input with
+  | never => intro output v _ hv; exact hv.elim
+  | prod a b _ _ =>
+    intro output v _ hv
+    obtain ⟨x, y, rfl, _, _⟩ := (fits_prod_iff w v a b).mp hv
+    cases second <;> rfl
+  | union a b iha ihb =>
+    intro output v hproject hv
+    cases hleft : NativeAtom.projectProduct second a with
+    | none => simp only [NativeAtom.projectProduct, hleft, Option.bind_eq_bind, Option.bind_none,
+        reduceCtorEq] at hproject
+    | some left =>
+      cases hright : NativeAtom.projectProduct second b with
+      | none => simp only [NativeAtom.projectProduct, hleft, hright,
+          Option.bind_eq_bind, Option.bind_some, Option.bind_none, reduceCtorEq] at hproject
+      | some right =>
+        rcases hv with ha | hb
+        · exact iha left v hleft ha
+        · exact ihb right v hright hb
+  | _ => intro output v hproject; simp only [NativeAtom.projectProduct, reduceCtorEq] at hproject
 
 private theorem progress_of_mono {a : NativeAtom} {params : List Ty} {answer : Ty}
     (hs : (NativeAtom.spec a).scheme = .mono params answer)
@@ -628,8 +656,7 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
       NativeAtom.CustomScheme.apply, NativeAtom.projectRule] at hty
     split at hty
     · obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-      obtain ⟨r, he, _⟩ := NativeAtom.projectProduct_typed _ _ _ v _ hty (fits_hasTy w _ v hv)
-      exact Option.isSome_iff_exists.mpr ⟨r, he⟩
+      exact projectProduct_progress w _ _ _ v hty hv
     all_goals exact nomatch hty
   | causeIsFail | causeIsDie | causeIsInterrupt =>
     simp only [NativeAtom.typeOf, NativeAtom.spec, NativeAtom.Scheme.apply,
@@ -637,9 +664,10 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
     split at hty
     · obtain ⟨error, hdomain, _⟩ := Option.map_eq_some_iff.mp hty
       obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
-      obtain ⟨_, he, _⟩ := queryTag_typed _ value _ error _ hdomain (fits_hasTy w _ value hv)
+      obtain ⟨_, hquery, _⟩ := fits_queryReasons w value _ error hdomain hv
       show (queryTag _ value).isSome = true
-      rw [he]
+      unfold queryTag
+      rw [hquery]
       rfl
     all_goals exact nomatch hty
   | causeError =>
@@ -648,9 +676,10 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
     split at hty
     · obtain ⟨error, hdomain, _⟩ := Option.map_eq_some_iff.mp hty
       obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
-      obtain ⟨_, he, _⟩ := queryError_typed value _ error _ hdomain (fits_hasTy w _ value hv)
+      obtain ⟨_, hquery, _⟩ := fits_queryReasons w value _ error hdomain hv
       show (queryError value).isSome = true
-      rw [he]
+      unfold queryError
+      rw [hquery]
       rfl
     all_goals exact nomatch hty
   | isSome =>
@@ -924,11 +953,51 @@ theorem termMaps_of_typed {sig : Signature NativeOp} (hatom : sig.atomOf = nativ
   have henv' := envTyped_append (envTyped_mono ord henv) ha
   exact evalTerm_progress hatom htypes (fitsAll_of_pointwise henv'.1 henv'.2) f R hty
 
+/-- A tag type is a payload field type. -/
+theorem payloadFieldTy_of_isTagTy {t : Ty} (h : isTagTy t = true) : payloadFieldTy t = true := by
+  induction t with
+  | string | lit _ => rfl
+  | union a b iha ihb =>
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
+    exact Bool.and_eq_true_iff.mpr ⟨iha ha, ihb hb⟩
+  | _ => contradiction
+
+/-- A member of a type in the raw error profile passes the shape check, at every declaration
+table: the profile holds no nominal reference (its tags and payload fields are payload field
+types, `fits_hasTy_of_payloadFieldTy`). -/
+theorem hasTy_of_rawSupported_fits (w : World) :
+    ∀ (t : Ty) (v : Val), rawSupportedErrTy t = true → Fits w v t →
+      Val.hasTy v t w.state.externals.allocated = true := by
+  intro t
+  induction t with
+  | never => intro v _ hv; exact hv.elim
+  | nat | string | lit _ => intro v _ hv; exact fits_hasTy_of_payloadFieldTy w rfl hv
+  | prod a b _ _ =>
+    intro v hs hv
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
+    exact fits_hasTy_of_payloadFieldTy w
+      (Bool.and_eq_true_iff.mpr ⟨payloadFieldTy_of_isTagTy ha, payloadFieldTy_of_isTagTy hb⟩) hv
+  | union a b iha ihb =>
+    intro v hs hv
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
+    simp only [Val.hasTy]
+    exact Bool.or_eq_true_iff.mpr (hv.imp (iha v ha) (ihb v hb))
+  | record fs _ =>
+    intro v hs hv
+    exact fits_hasTy_of_payloadFieldTy w (payloadFieldTys_of_payloadRecordTy hs) hv
+  | _ =>
+    intro v hs
+    simp only [rawSupportedErrTy] at hs
+    contradiction
+
 /-- An admitted error value is represented: its error image reads back (`valOfErr_errOf_supported`
-at the world's allocation table), so it is not the payload-discarding `boom`. -/
+at the world's allocation table, through `hasTy_of_rawSupported_fits` at the normal form), so it
+is not the payload-discarding `boom`. -/
 theorem valOfErr_errOf_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy e = true)
-    (hv : Fits w v e) : valOfErr (errOf v) = some v :=
-  valOfErr_errOf_supported e v _ hs (fits_hasTy w e v hv)
+    (hv : Fits w v e) : valOfErr (errOf v) = some v := by
+  apply valOfErr_errOf_supported e v _ hs
+  rw [← hasTy_normalize]
+  exact hasTy_of_rawSupported_fits w _ v hs ((fits_normalize w e v).mpr hv)
 
 /-- A defect made from an admitted error value is not a shape defect. -/
 theorem shapeFree_die_of_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy e = true)

@@ -62,7 +62,8 @@ import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.TyDecls
 import Effect4.Laws.Program.TyExpand
 import Effect4.Laws.Program.TyHead
-import Effect4.Laws.Program.Typed.FitsIn
+import Effect4.Laws.Program.Typed.Declared
+import Effect4.Laws.Program.TyDeclsInhabited
 import Effect4.Laws.Program.CallChain
 import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.RecordOperations

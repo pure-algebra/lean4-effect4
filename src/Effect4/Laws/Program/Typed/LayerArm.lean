@@ -157,7 +157,7 @@ theorem fits_memoMap (w : World) (o : MemoMapId) (h : MemoLive w o) : Fits w (Va
 /-- A member of the memo map type is a memo map's handle. -/
 theorem fits_memoMap_inv {w : World} {y : Val} (h : Fits w y Ty.memoMap) :
     ∃ o, y = Val.memoMap o ∧ MemoLive w o := by
-  simp only [Fits, Ty.memoMap] at h
+  simp only [Fits, FitsAt, Ty.memoMap] at h
   split at h
   · rename_i kind index
     simp only [HandleFits] at h
@@ -577,7 +577,7 @@ theorem reasonsOfList_fit {w : World} {a e : Ty} : ∀ (xs : List Val),
     simp only [reasonsOfList, List.mem_append] at hr
     rcases hr with hx | hrest
     · have hfx := hall x (List.mem_cons_self ..)
-      simp only [Fits] at hfx
+      simp only [Fits, FitsAt] at hfx
       split at hfx
       · simp only [reasonsOfVal] at hx
         exact nomatch hx

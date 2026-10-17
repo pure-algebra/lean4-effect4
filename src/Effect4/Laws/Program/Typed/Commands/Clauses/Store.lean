@@ -56,7 +56,7 @@ theorem machineWide_store_step {root : ProgramSource} {rootTy : EffTy}
     (fun key hk => wide.keysBelow key (keys hk)), wide.requestsBelow,
     (fun fiber token r hr hk => wide.requestsOwned fiber token r hr (keys hk)),
     (le_serviceTy ord.1).trans wide.services, ⟨wide.live.running, due⟩,
-    timers, waiters, wide.liveBelow, wide.sourceWF⟩
+    timers, waiters, wide.liveBelow, wide.sourceWF, (le_types ord.1).trans wide.types⟩
   · rw [gamma]
     exact wide.fibers id
   · rw [theta] at declared

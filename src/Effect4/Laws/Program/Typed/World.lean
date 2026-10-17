@@ -3,6 +3,7 @@ import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.Typed.State
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Program.TyDecls
 
 /-!
 Phase B World statement skeleton. Proof obligations remain explicit below.
@@ -59,6 +60,11 @@ structure World extends Effect4.Machine.World where
   ties it to the source's signature. The default is the built-in table, the one every world
   read before the field existed. -/
   serviceTy : ServiceKey → Option Ty := nativeServiceTy
+  /-- The declaration table of the application's named types (decisions rows 401 and 402; the
+  audit's D3): membership reads a declared name by its body. The world order fixes it
+  (`World.le`), and the typed state ties it to the source's table (`MachineTyped.types`). Empty by
+  default: no name is declared. -/
+  types : TyDecls := []
 
 /-- Existing keys retain their declarations; unused keys are unconstrained. -/
 def TableExtends {K A : Type} (old newer : K → Option A) : Prop :=
@@ -69,9 +75,11 @@ def tableInsert {K A : Type} [DecidableEq K]
     (table : K → Option A) (key : K) (value : A) : K → Option A :=
   fun query => if query = key then some value else table query
 
-/-- Shape admission at the actual external allocation table, not handle typing. -/
+/-- Shape admission at the actual external allocation table and the world's declaration table,
+not handle typing: `Val.memberIn`, the shape check at the empty table and the table's checker
+otherwise. -/
 def ValueOk (w : World) (ty : Ty) (value : Val) : Prop :=
-  Val.hasTy value ty w.state.externals.allocated = true
+  Val.memberIn w.types value ty w.state.externals.allocated = true
 
 /-- Completion typing has no heap-existence premise. The reference arm reads Ρ
 and requires its value type to be below the promise's answer column in the checker's order
@@ -81,7 +89,7 @@ def CompletionOk (w : World) (types : Ty × Ty) :
     Completion Val Err Defect FiberId Ann → Prop
   | .ofExit (.success value) => ValueOk w types.1 value
   | .ofExit (.failure cause) =>
-    causeAdmits (fun value ty => Val.hasTy value ty w.state.externals.allocated)
+    causeAdmits (fun value ty => Val.memberIn w.types value ty w.state.externals.allocated)
       types.2 cause = true
   | .ofRefGet cell => ∃ ty, w.Ρ cell = some ty ∧ Ty.subN ty types.1 = true
 
@@ -138,7 +146,7 @@ def World.le (w newer : World) : Prop :=
   TableExtends w.Γ newer.Γ ∧ TableExtends w.«Π» newer.«Π» ∧
   TableExtends w.Ρ newer.Ρ ∧ CellCompatible w newer ∧
   (∀ id, TableExtends (w.Θ id) (newer.Θ id)) ∧
-  newer.serviceTy = w.serviceTy
+  newer.serviceTy = w.serviceTy ∧ newer.types = w.types
 
 /-- **Scope presence at a store** (decisions rows 139 and 156): the store holds an entry for
 scope `sc`, open or closed (`ScopeStore.entryAt`). The one name for the fact wherever it is read
@@ -300,7 +308,7 @@ theorem insert_other {K A : Type} [DecidableEq K] (table : K → Option A) (key 
 
 theorem order_refl (w : World) : w.le w :=
   ⟨Effect4.Machine.World.le_refl _, table_refl _, table_refl _, table_refl _,
-    ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _, rfl⟩
+    ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _, rfl, rfl⟩
 
 theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
   fun hab hbc =>
@@ -311,11 +319,15 @@ theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
      ⟨fun key ty h => hbc.2.2.2.2.1.1 key ty (hab.2.2.2.2.1.1 key ty h),
       fun key types h => hbc.2.2.2.2.1.2 key types (hab.2.2.2.2.1.2 key types h)⟩,
      fun id => table_trans _ _ _ (hab.2.2.2.2.2.1 id) (hbc.2.2.2.2.2.1 id),
-     hbc.2.2.2.2.2.2.trans hab.2.2.2.2.2.2⟩
+     hbc.2.2.2.2.2.2.1.trans hab.2.2.2.2.2.2.1, hbc.2.2.2.2.2.2.2.trans hab.2.2.2.2.2.2.2⟩
 
 /-- The world order fixes the static service table (shape A, decisions row 112). -/
 theorem le_serviceTy {w newer : World} (ordered : w.le newer) : newer.serviceTy = w.serviceTy :=
-  ordered.2.2.2.2.2.2
+  ordered.2.2.2.2.2.2.1
+
+/-- The world order fixes the declaration table (the audit's D3). -/
+theorem le_types {w newer : World} (ordered : w.le newer) : newer.types = w.types :=
+  ordered.2.2.2.2.2.2.2
 
 /-- **Scope presence persists along the world order** (decisions row 156): a scope entry is never
 removed (`Stores.le`'s scope component, under the machine world order). -/
@@ -336,7 +348,7 @@ theorem park_extension (w : World) (id : FiberId) (token : Nat) (ty : EffTy)
     (fresh : w.Θ id token = none) :
     w.le (w.addToken id token ty) ∧ (w.addToken id token ty).Θ id token = some ty := by
   refine ⟨⟨Effect4.Machine.World.le_refl _, table_refl _, table_refl _, table_refl _,
-    ⟨fun _ _ h => h, fun _ _ h => h⟩, ?_, rfl⟩, ?_⟩
+    ⟨fun _ _ h => h, fun _ _ h => h⟩, ?_, rfl, rfl⟩, ?_⟩
   · intro target
     by_cases same : target = id
     · subst target
@@ -404,19 +416,19 @@ theorem promise_coverage_iff (w : World) :
 /-- Completion typing only grows with the heap table when the allocation table is unchanged. -/
 theorem completionOk_extends (w newer : World) (types : Ty × Ty)
     (hΡ : TableExtends w.Ρ newer.Ρ)
-    (hext : newer.state.externals.allocated = w.state.externals.allocated) :
-    ∀ completion, CompletionOk w types completion → CompletionOk newer types completion := by
-  intro completion h
+    (hext : newer.state.externals.allocated = w.state.externals.allocated)
+    (completion : Completion Val Err Defect FiberId Ann) (h : CompletionOk w types completion)
+    (htypes : newer.types = w.types := by rfl) : CompletionOk newer types completion := by
   cases completion with
   | ofExit exit =>
     cases exit with
     | success value =>
       simp only [CompletionOk, ValueOk] at h ⊢
-      rw [hext]
+      rw [hext, htypes]
       exact h
     | failure cause =>
       simp only [CompletionOk] at h ⊢
-      rw [hext]
+      rw [hext, htypes]
       exact h
   | ofRefGet cell =>
     simp only [CompletionOk] at h ⊢
@@ -432,7 +444,7 @@ theorem fork_extension (w : World) (id : FiberId) (ty : EffTy) (fresh : w.Γ id 
       (PromiseCoverage w → PromiseCoverage (w.addFiber id ty)) :=
   ⟨⟨⟨fun _ h => List.mem_append_left _ h, Stores.le_refl _⟩,
      insert_extends _ _ _ fresh, table_refl _, table_refl _,
-     ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _, rfl⟩,
+     ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _, rfl, rfl⟩,
    insert_here _ _ _, fun h => h, fun h => h, fun h => h, fun h => h⟩
 
 theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
@@ -452,7 +464,7 @@ theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (
   have hΡ : ∀ q, (w.addRef { w.state with refs := w.state.refs ++ [value] } ⟨w.state.refs.length⟩ ty).Ρ q =
       tableInsert w.Ρ ⟨w.state.refs.length⟩ ty q := fun _ => rfl
   refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, table_refl _, insert_extends _ _ _ fresh,
-    ⟨?_, ?_⟩, fun _ => table_refl _, rfl⟩,
+    ⟨?_, ?_⟩, fun _ => table_refl _, rfl, rfl⟩,
     ?_, ?_, ?_, ?_, ?_⟩
   · intro key' ty' hty'
     obtain ⟨hk, hv⟩ := hty'
@@ -529,10 +541,12 @@ theorem promise_extension (w : World) (types : Ty × Ty) (state : Stores)
   have hΡeq : (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types).Ρ = w.Ρ := rfl
   have keep : ∀ completion, CompletionOk w types completion →
       CompletionOk (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types) types completion :=
-    completionOk_extends w _ types (fun _ _ h => h) (by rw [hstate, hext])
+    fun c hc => completionOk_extends w (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types)
+      types (fun _ _ h => h) hext c hc
   have keepAt : ∀ (types' : Ty × Ty) completion, CompletionOk w types' completion →
       CompletionOk (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types) types' completion :=
-    fun types' => completionOk_extends w _ types' (fun _ _ h => h) (by rw [hstate, hext])
+    fun types' c hc => completionOk_extends w
+      (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types) types' (fun _ _ h => h) hext c hc
   have valueKeep : ∀ (ty : Ty) (v : Val), ValueOk w ty v →
       ValueOk (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types) ty v := by
     intro ty v h
@@ -540,7 +554,7 @@ theorem promise_extension (w : World) (types : Ty × Ty) (state : Stores)
     rw [hstate, hext]
     exact h
   refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, insert_extends _ _ _ fresh, table_refl _,
-    ⟨?_, ?_⟩, fun _ => table_refl _, rfl⟩,
+    ⟨?_, ?_⟩, fun _ => table_refl _, rfl, rfl⟩,
     ?_, ?_, ?_, ?_, ?_⟩
   · intro key' ty' hty'
     obtain ⟨hk, hv⟩ := hty'

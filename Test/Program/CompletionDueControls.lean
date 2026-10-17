@@ -32,7 +32,7 @@ def badOwed : Owed (Completion Val Err Defect FiberId Ann) := ⟨Api.root, 0, ba
 
 theorem growing : w0.leHost w1 := by
   refine ⟨⟨Effect4.Machine.World.le_refl _, table_refl _, table_refl _, table_refl _,
-    ⟨fun _ _ h => h, fun _ _ h => h⟩, ?_, rfl⟩, fun _ _ h => h⟩
+    ⟨fun _ _ h => h, fun _ _ h => h⟩, ?_, rfl, rfl⟩, fun _ _ h => h⟩
   intro id token ty h
   cases h
 
