@@ -529,8 +529,9 @@ run_cmd liftTermElabM do
 
 /-! ### A row without a contract does not elaborate
 
-The contract's fields and the runtime column have no default, so an omission is an error of the
-elaborator and not a row that reads as exact or as a body. -/
+The contract's fields, the runtime column and the receipt under the exact spelling have no
+default, so an omission is an error of the elaborator and not a row that reads as exact or as a
+body. -/
 
 run_cmd liftTermElabM do
   let elaborates (row : Term) : TermElabM Bool :=
@@ -540,13 +541,19 @@ run_cmd liftTermElabM do
     catch _ => pure false
   let complete ← `(({ lean := `Nat.add, runtime := .extern "lean_nat_add" (some .natAdd),
                       form := Lcnf.Form.op "+", fidelity := Lcnf.Fidelity.exact,
-                      domain := "", controls := [], note := "", cost := "" } : Lcnf.Builtin))
+                      domain := "", controls := [], note := "", cost := "",
+                      receipt := Lcnf.Receipt.exact } : Lcnf.Builtin))
   let contractless ← `(({ lean := `Nat.add, runtime := .body, form := Lcnf.Form.op "+" } : Lcnf.Builtin))
   let noRuntime ← `(({ lean := `Nat.add, form := Lcnf.Form.op "+",
                         fidelity := Lcnf.Fidelity.exact, domain := "", controls := [], note := "",
-                        cost := "" } : Lcnf.Builtin))
+                        cost := "", receipt := Lcnf.Receipt.exact } : Lcnf.Builtin))
+  -- the receipt under the exact spelling has no default either: a row cannot leave it out
+  let noReceipt ← `(({ lean := `Nat.add, runtime := .extern "lean_nat_add" (some .natAdd),
+                        form := Lcnf.Form.op "+", fidelity := Lcnf.Fidelity.exact,
+                        domain := "", controls := [], note := "", cost := "" } : Lcnf.Builtin))
   unless ← elaborates complete do throwError "the complete row did not elaborate"
   if ← elaborates contractless then throwError "a row without a contract elaborated"
   if ← elaborates noRuntime then throwError "a row without its runtime column elaborated"
+  if ← elaborates noReceipt then throwError "a row without its receipt elaborated"
 
 end Conform.Effect4.CompilerControls
