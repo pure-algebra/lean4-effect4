@@ -185,59 +185,64 @@ def assemble (decls : Array OCaml5.Lcnf.Translated) (word : Target.Word := { bit
 
 /-! ## 2. Marshalling `Ty` into the OCaml value domain
 
-The OCaml constructor names come from `OCaml5.Lcnf.ctorNameIn` under the names of the program
-types' owner (`Ty.Never`) — the function the translator spells them with — so a rename in
+The OCaml constructor names come from `OCaml5.Lcnf.ctorNameIn` — the function the translator
+spells them with — under the type names the module under test was emitted with, so a rename in
 `Naming` breaks this differential rather than silently comparing two different
-representations. -/
+representations. A module that declares `Ty` itself, emitted with no table (the compiler
+checkpoint's), spells `Ty_never`; one that reads `Ty` at its owner, `ocaml/eff/eff_types.ml`,
+spells `Ty.Never`. -/
 
-/-- `Ty` at its owner, `ocaml/eff/eff_types.ml`: its own module. -/
-def tyOwner : OCaml5.Lcnf.TypeNames :=
-  { modules := ({} : Std.HashMap Name String).insert ``Ty (OCaml5.Lcnf.moduleName ``Ty) }
-
-def tyCtor (c : String) : String := OCaml5.Lcnf.ctorNameIn tyOwner ``Ty c
+/-- One constructor of `Ty`, as a module emitted under `tn` spells it. -/
+def tyCtor (tn : OCaml5.Lcnf.TypeNames) (c : String) : String := OCaml5.Lcnf.ctorNameIn tn ``Ty c
 
 mutual
-def tyT : Ty → Target.TValue
-  | .never => .ctorV (tyCtor "never") #[]
-  | .unit => .ctorV (tyCtor "unit") #[]
-  | .nat => .ctorV (tyCtor "nat") #[]
-  | .int => .ctorV (tyCtor "int") #[]
-  | .string => .ctorV (tyCtor "string") #[]
-  | .bool => .ctorV (tyCtor "bool") #[]
-  | .handle t => .ctorV (tyCtor "handle") #[.str t]
-  | .option i => .ctorV (tyCtor "option") #[tyT i]
-  | .list i => .ctorV (tyCtor "list") #[tyT i]
-  | .prod l r => .ctorV (tyCtor "prod") #[tyT l, tyT r]
-  | .except e v => .ctorV (tyCtor "except") #[tyT e, tyT v]
-  | .exitOf v e => .ctorV (tyCtor "exitOf") #[tyT v, tyT e]
-  | .causeOf e => .ctorV (tyCtor "causeOf") #[tyT e]
-  | .fiberOf v e => .ctorV (tyCtor "fiberOf") #[tyT v, tyT e]
-  | .union l r => .ctorV (tyCtor "union") #[tyT l, tyT r]
-  | .lit s => .ctorV (tyCtor "lit") #[.str s]
-  | .refOf v => .ctorV (tyCtor "refOf") #[tyT v]
-  | .deferredOf v e => .ctorV (tyCtor "deferredOf") #[tyT v, tyT e]
-  | .var i => .ctorV (tyCtor "var") #[.int i]
-  | .unknown => .ctorV (tyCtor "unknown") #[]
-  | .record fs => .ctorV (tyCtor "record") #[Target.TValue.ofList (fieldTs fs)]
-  | .map k v => .ctorV (tyCtor "map") #[tyT k, tyT v]
-  | .tuple ts => .ctorV (tyCtor "tuple") #[Target.TValue.ofList (itemTs ts)]
-  | .app n ts => .ctorV (tyCtor "app") #[.str n, Target.TValue.ofList (itemTs ts)]
-  | .null => .ctorV (tyCtor "null") #[]
-  | .undefined => .ctorV (tyCtor "undefined") #[]
-  | .number => .ctorV (tyCtor "number") #[]
-  | .bytes => .ctorV (tyCtor "bytes") #[]
+/-- A `Ty`, as a module emitted under `tn` holds it. -/
+def tyT (tn : OCaml5.Lcnf.TypeNames) : Ty → Target.TValue
+  | .never => .ctorV (tyCtor tn "never") #[]
+  | .unit => .ctorV (tyCtor tn "unit") #[]
+  | .nat => .ctorV (tyCtor tn "nat") #[]
+  | .int => .ctorV (tyCtor tn "int") #[]
+  | .string => .ctorV (tyCtor tn "string") #[]
+  | .bool => .ctorV (tyCtor tn "bool") #[]
+  | .handle t => .ctorV (tyCtor tn "handle") #[.str t]
+  | .option i => .ctorV (tyCtor tn "option") #[tyT tn i]
+  | .list i => .ctorV (tyCtor tn "list") #[tyT tn i]
+  | .prod l r => .ctorV (tyCtor tn "prod") #[tyT tn l, tyT tn r]
+  | .except e v => .ctorV (tyCtor tn "except") #[tyT tn e, tyT tn v]
+  | .exitOf v e => .ctorV (tyCtor tn "exitOf") #[tyT tn v, tyT tn e]
+  | .causeOf e => .ctorV (tyCtor tn "causeOf") #[tyT tn e]
+  | .fiberOf v e => .ctorV (tyCtor tn "fiberOf") #[tyT tn v, tyT tn e]
+  | .union l r => .ctorV (tyCtor tn "union") #[tyT tn l, tyT tn r]
+  | .lit s => .ctorV (tyCtor tn "lit") #[.str s]
+  | .refOf v => .ctorV (tyCtor tn "refOf") #[tyT tn v]
+  | .deferredOf v e => .ctorV (tyCtor tn "deferredOf") #[tyT tn v, tyT tn e]
+  | .var i => .ctorV (tyCtor tn "var") #[.int i]
+  | .unknown => .ctorV (tyCtor tn "unknown") #[]
+  | .record fs => .ctorV (tyCtor tn "record") #[Target.TValue.ofList (fieldTs tn fs)]
+  | .map k v => .ctorV (tyCtor tn "map") #[tyT tn k, tyT tn v]
+  | .tuple ts => .ctorV (tyCtor tn "tuple") #[Target.TValue.ofList (itemTs tn ts)]
+  | .app n ts => .ctorV (tyCtor tn "app") #[.str n, Target.TValue.ofList (itemTs tn ts)]
+  | .null => .ctorV (tyCtor tn "null") #[]
+  | .undefined => .ctorV (tyCtor tn "undefined") #[]
+  | .number => .ctorV (tyCtor tn "number") #[]
+  | .bytes => .ctorV (tyCtor tn "bytes") #[]
   -- the row is the engine's `service_key effect4_row`, a list of key records; not in the vectors
-  | .contextOf keys => .ctorV (tyCtor "contextOf") #[Target.TValue.ofList (keys.elems.map fun k =>
+  | .contextOf keys => .ctorV (tyCtor tn "contextOf") #[Target.TValue.ofList (keys.elems.map fun k =>
       .recordV #[("name", .int k.name.value), ("service", .int k.service.value)])]
 /-- A record's fields, each the OCaml tuple `(name, (optional, type))`. -/
-def fieldTs : List (String × Bool × Ty) → List Target.TValue
+def fieldTs (tn : OCaml5.Lcnf.TypeNames) : List (String × Bool × Ty) → List Target.TValue
   | [] => []
-  | (n, o, t) :: rest => .tupleV #[.str n, .tupleV #[.bool o, tyT t]] :: fieldTs rest
+  | (n, o, t) :: rest => .tupleV #[.str n, .tupleV #[.bool o, tyT tn t]] :: fieldTs tn rest
 /-- A tuple's or a reference's items. -/
-def itemTs : List Ty → List Target.TValue
+def itemTs (tn : OCaml5.Lcnf.TypeNames) : List Ty → List Target.TValue
   | [] => []
-  | t :: rest => tyT t :: itemTs rest
+  | t :: rest => tyT tn t :: itemTs tn rest
 end
+
+-- the two spellings, each the namer's: a module that declares `Ty` and the owner's
+#guard tyCtor {} "never" == "Ty_never"
+#guard tyCtor { modules := ({} : Std.HashMap Name String).insert ``Ty (OCaml5.Lcnf.moduleName ``Ty) }
+  "never" == "Ty.Never"
 
 def natListT (ns : List Nat) : Target.TValue :=
   Target.TValue.ofList (ns.map fun n => Target.TValue.int (Int.ofNat n))
