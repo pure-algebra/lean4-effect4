@@ -7,7 +7,9 @@ open Eff_types
 
 type completion = (val_, err, defect, int, unit) Eff_types.completion
 
-module Make (E : E4_engine.ENGINE) : sig
+(** The host's types. None mentions the engine, so they are declared once here and every
+    instance of {!Make} re-exports them with type equalities (H12). *)
+module Types : sig
   (** The host: a call's row, its request and the host's state, to a completion and the host's
       next state; [None] declines. Lean's `Run.Reactor`. *)
   type 'st provider = row -> val_ -> 'st -> (completion * 'st) option
@@ -49,6 +51,12 @@ module Make (E : E4_engine.ENGINE) : sig
 
   (** One answered call: the row's external position, the request and the answer. *)
   type call = { row : int; request : val_; answer : completion }
+end
+
+include module type of struct include Types end
+
+module Make (E : E4_engine.ENGINE) : sig
+  include module type of struct include Types end
 
   type 'st served = { engine : E.t; state : 'st; calls : call list; stop : stop }
 

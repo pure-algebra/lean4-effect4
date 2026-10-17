@@ -60,13 +60,17 @@
            state before the call (H2);
        (c) `driveFrom` plays on past a stuck machine (`HostSession.advance` refuses each row)
            and past a step short of fuel (that row's phase is `frontier`); here the drive
-           stops at the first, as `replayEval` does (EN4b).               by construction *)
+           stops at the first, as `replayEval` does (EN4b).               by construction
+   H12 The host's types (`provider`, `outcome`, `host_stop`, `stop`, `load_refusal`, `call`)
+       mention no engine, so they are declared once, in `Types`, and every instance of `Make`
+       re-exports them with type equalities: two instances' stops and calls are one type.
+                                            by construction; tested (test_todo T8 compiles) *)
 
 open Eff_types
 
 type completion = (val_, err, defect, int, unit) Eff_types.completion
 
-module Make (E : E4_engine.ENGINE) = struct
+module Types = struct
   type 'st provider = row -> val_ -> 'st -> (completion * 'st) option
 
   type outcome = Finished | Waiting | Delay | Stuck of string
@@ -96,6 +100,12 @@ module Make (E : E4_engine.ENGINE) = struct
   type load_refusal = Load_outside_profile of string
 
   type call = { row : int; request : val_; answer : completion }
+end
+
+include Types
+
+module Make (E : E4_engine.ENGINE) = struct
+  include Types
 
   type 'st served = { engine : E.t; state : 'st; calls : call list; stop : stop }
 
