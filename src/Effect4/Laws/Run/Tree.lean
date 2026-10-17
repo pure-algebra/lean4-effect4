@@ -6,21 +6,21 @@ import ProofGraph.Declared
 # Laws.Run.Tree — what the call tree at a budget guarantees
 
 `Effect4.Run.Tree` builds a program's call tree at a budget and runs it under a host. Its uses
-rest on two facts. Each is proved in Rocq of the transcription in
-`docs/research/2026-10-16-itrees/rocq/`, at the fragment that transcription has, and is declared
-here (`declared … from`). That is the
-owner's declared exception to the proof gates (2026-10-16): the gates read a declared fact as a
-planned goal, and the plan status prints its citation.
+rest on one fact, proved in Rocq of this module's own code and declared here (`declared … from`).
+That is the owner's declared exception to the proof gates (2026-10-16): the gates read a declared
+fact as a planned goal, and the plan status prints its citation.
 
-* **Monotone in the budget** (`ofProgram_approx`): at `InRocq`'s programs, a larger budget grows
-  cuts into more tree and changes nothing else (Rocq `BudgetDefs.denoteD_approx`).
+* **Monotone in the budget** (`ofProgram_approx`): for every program, a larger budget grows cuts
+  into more tree and changes nothing else. The Rocq theorem is `Approx.ofProgram_approx`
+  (`rocq/SkeletonApprox.v`), over `rocq/Skeleton.v`, which `make gen-rocq` prints from this
+  module's base-phase LCNF (`OCaml5.Lcnf.Gallina`). It holds for every evaluator: `Tree.Eval`
+  is the functor's parameter, and its assumptions are that parameter's operations alone.
 * **Lean's tree, where Lean has one** (`ofProgram_eq_denoteRowsB`): at `Budget.v`'s fragment
-  (`Plain`), the tree is `denoteRowsB`'s, node for node (Rocq `BudgetDefs.denoteBD_same`). So the session theorems that read `denoteRowsB`
-  (`Laws/Run/Outcome.lean`) speak of this tree's runs.
-* **Adequacy stays Rocq's.** Every finish and wait of the meaning's run is found at some budget
-  (Rocq `BudgetDefs.adequacyD`), and the meaning's divergence is a cut at every budget
-  (`BudgetDefs.divergesD_iff`). Lean has no interaction-tree meaning to state either against, so
-  Lean states only their budget form, which it proves (`settles_of_ends`).
+  (`Plain`), the tree is `denoteRowsB`'s, node for node. It is a planned goal: the hand
+  transcription proves it of itself (`BudgetDefs.denoteBD_same`, history), and no proof over
+  Lean's code states it yet.
+* **Adequacy stays Rocq's.** Lean has no interaction-tree meaning to state it against, so Lean
+  states only its budget form, which it proves (`settles_of_ends`).
 
 Lean proves the rest from the first fact: a run that is not cut is stable (`probe_stable`), and
 `settle` answers a probe that is not cut (`settle_sound`).
@@ -31,14 +31,13 @@ Placement (`AGENTS.md`, five points), shared by the statements below:
    chain of finite approximants with three outcomes; R12's separation of a frontier from
    divergence.
 2. Questions: the claims `call-chain-outcome` (R12) and `call-chain-equivalence` (R6), at the
-   tree with definitions; the consumers are `settle`'s answer, the session tool's `settle` and
-   `frames`, and the native kit (`ocaml/kit`).
-3. Reach: every row table, budget, host and start; the programs of `InRocq`, and of `Plain` for
-   `ofProgram_eq_denoteRowsB`. The Rocq transcription is by hand; the owner's direction is to
-   generate it from this module (the native kit's note).
+   tree with definitions; the consumers are `settle`'s answer, `Run.atBudget`, the session
+   tool's `settle` and `frames`, and the native kit (`ocaml/engine/kit`).
+3. Reach: every row table, budget, host, start and program for `ofProgram_approx` and what
+   follows from it; `Plain`'s programs for `ofProgram_eq_denoteRowsB`.
 4. Does not establish: anything of the machine (`rows_divergence_adequate` stays a goal of
-   `Laws/Run/Outcome.lean`), the context's services, or a fork, scope, service or layer, which
-   answer `Tree.Eval.outside`.
+   `Laws/Run/Outcome.lean`), or that `Skeleton.v` is this module's code beyond its printer's
+   rules (`OCaml5.Lcnf.Gallina`: one printing rule per constant, naturals checked).
 5. Unlocks: a test oracle that never reports a false finish or a false hang, and frames that a
    view plays as one growing run.
 -/
@@ -102,9 +101,9 @@ def Plain (program : NativeEff) : Bool :=
     | .perform .refMake _ | .perform .refGet _ | .perform .refSet _ | .perform (.external _) _ => true
     | _ => false
 
-/-- **`BudgetDefs.v`'s fragment**: the arms of the Rocq tree with definitions (`denoteW` there)
-whose tree is this module's, the arms `ofProgram_approx`'s proof reads: `Plain`'s, the definition
-block, a call, a parameter's run and an invocation. The comparison lane checks it
+/-- **The hand Rocq tree's fragment** (`denoteW` of `BudgetDefs.v`, history): the arms whose tree
+is this module's: `Plain`'s, the definition block, a call, a parameter's run and an invocation.
+No theorem takes it. It picks the programs of the comparison lane, which checks it
 (`ocaml/engine/test/rocq/test_rocq.ml`, R4): with Lean's evaluator in place of Rocq's, the two
 trees run alike at every budget it tries, on every program here that the checker types.
 
@@ -125,13 +124,11 @@ def InRocq (program : NativeEff) : Bool :=
 
 
 /-- **A larger budget only extends the tree**: the loop budget and the definitions' depth both
-grow, and each arm is monotone in both. The Rocq proof reads `BudgetDefs.v`'s arms, so the
-statement holds at `InRocq`'s programs. -/
+grow, and each arm is monotone in both, for every program. -/
 @[semantics "translation-simulation" (requirement := R12)]
-declared ofProgram_approx (table : RowTable) {k k' : Nat} (h : k ≤ k') (program : NativeEff)
-    (hrocq : InRocq program = true) :
+declared ofProgram_approx (table : RowTable) {k k' : Nat} (h : k ≤ k') (program : NativeEff) :
     Approx (ofProgram table k program) (ofProgram table k' program)
-  from "docs/research/2026-10-16-itrees/rocq/BudgetDefs.v: denoteD_approx, denoteBD_approx"
+  from "rocq/SkeletonApprox.v: Approx.ofProgram_approx, over rocq/Skeleton.v (make gen-rocq)"
 
 /-- `Effects.Program`'s tree over the stores and the rows as this tree: a cut is `none`. -/
 def ofRows {table : RowTable} :
@@ -142,37 +139,36 @@ def ofRows {table : RowTable} :
   | .vis (.inr ⟨i, v⟩) next => call i.val v fun a => ofRows (next a)
 
 /-- **Where Lean has a tree, this is it**: on `Budget.v`'s fragment, the tree is `denoteRowsB`'s,
-node for node. -/
+node for node. A planned goal: a proof over Lean's code needs `denoteRowsB` printed too. -/
 @[semantics "translation-simulation" (requirement := R6)]
-declared ofProgram_eq_denoteRowsB (table : RowTable) (k : Nat) (program : NativeEff)
+proof_goal ofProgram_eq_denoteRowsB (table : RowTable) (k : Nat) (program : NativeEff)
     (h : Plain program = true) :
     ofProgram table k program = ofRows (Denote.denoteRowsB table k program [])
-  from "docs/research/2026-10-16-itrees/rocq/BudgetDefs.v: denoteBD_same"
 
 /-! ## What Lean proves from them -/
 
 /-- **A run that is not cut is the run at every larger budget.** -/
 theorem probe_stable {σ : Type} (table : RowTable) (host : Host σ) (state : σ)
-    (program : NativeEff) (hrocq : InRocq program = true) {k k' : Nat} (hk : k ≤ k')
+    (program : NativeEff) {k k' : Nat} (hk : k ≤ k')
     (h : (probe table k host state program).stop.isCut = false) :
     probe table k' host state program = probe table k host state program :=
-  runFrom_approx host (ofProgram_approx table hk program hrocq) _ _ _ h
+  runFrom_approx host (ofProgram_approx table hk program) _ _ _ h
 
 /-- **A run that finishes or waits at a budget is the run at every larger one.** This is all
 Lean states of adequacy: Lean has no interaction-tree meaning to state adequacy against, so the
 statement that every end of the meaning's run is found at some budget stays Rocq's
-(`BudgetDefs.adequacyD`). -/
+(`BudgetDefs.adequacyD`, of the hand transcription). -/
 theorem settles_of_ends {σ : Type} (table : RowTable) (host : Host σ) (state : σ)
-    (program : NativeEff) (hrocq : InRocq program = true) (k : Nat)
+    (program : NativeEff) (k : Nat)
     (h : (probe table k host state program).stop.isCut = false) :
     ∃ k₀, k₀ ≤ k ∧ (probe table k₀ host state program).stop.isCut = false ∧
       ∀ j, k₀ ≤ j → probe table j host state program = probe table k₀ host state program :=
-  ⟨k, Nat.le_refl k, h, fun _ hj => probe_stable table host state program hrocq hj h⟩
+  ⟨k, Nat.le_refl k, h, fun _ hj => probe_stable table host state program hj h⟩
 
-/-- **`settle` answers a real run**: the probe at the budget it names, which is not cut; at
-`InRocq`'s programs, the run at every larger budget too. -/
+/-- **`settle` answers a real run**: the probe at the budget it names, which is not cut, and the
+run at every larger budget too. -/
 theorem settle_sound {σ : Type} (table : RowTable) (limit : Nat) (host : Host σ) (state : σ)
-    (program : NativeEff) (hrocq : InRocq program = true) {k : Nat} {o : Outcome σ}
+    (program : NativeEff) {k : Nat} {o : Outcome σ}
     (h : settle table limit host state program = some (k, o)) :
     o = probe table k host state program ∧ o.stop.isCut = false ∧
       ∀ j, k ≤ j → probe table j host state program = o := by
@@ -186,6 +182,6 @@ theorem settle_sound {σ : Type} (table : RowTable) (limit : Nat) (host : Host �
     | false =>
       simp only [hc, Bool.false_eq_true, if_false, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨rfl, hc, fun j hj => probe_stable table host state program hrocq hj hc⟩
+      exact ⟨rfl, hc, fun j hj => probe_stable table host state program hj hc⟩
 
 end Effect4.Run.Tree
