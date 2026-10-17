@@ -17,6 +17,7 @@ BUILD=$ROOT/ocaml/_build/default
 RUNS="20a54feed085-a1c48e b1eadbb02044-c3b98e dca7dc5dd65c-55a575 0c11ca2d8218-54b36b e974939c2d7c-5b805b 28b063ee1f3e-e99f3d"
 mkdir -p "$OUT"/{gen,rocq,check,ctree,lane,logs}
 cp "$HERE"/gen/* "$OUT/gen/"
+cp "$ROOT/rocq/tools/split_types.ml" "$OUT/gen/"
 cp "$HERE"/rocq/*.v "$OUT/rocq/"
 log() { printf '$ %s\n' "$*" >> "$OUT/logs/$LOG"; }
 run() { log "$@"; "$@" >> "$OUT/logs/$LOG" 2>&1; }
@@ -245,21 +246,34 @@ else
   echo "PASS the mutant fails BudgetDefs.v" >> "$OUT/logs/$LOG"
 fi
 
-# 12. The skeleton generated from Lean (generated/Skeleton.v, written by
-#     src/OCaml5/Tools/GallinaGen.lean from the base-phase LCNF of Effect4.Run.Tree): Rocq's guard
-#     checker must accept it as it stands, with the evaluator as Section variables.
-LOG=14-skeleton.log
-cp "$ROOT/$HERE/generated/Skeleton.v" "$OUT/rocq/"
-cd "$OUT/rocq"
-log "rocq compile -Q . E4 Skeleton.v"
-{ /usr/bin/time -p opam exec --switch=rocq -- rocq compile -Q . E4 Skeleton.v; } >> "$OUT/logs/$LOG" 2>&1
-cat > SkeletonAssumptions.v <<'EOF'
-Require Import E4.Skeleton.
-Print Assumptions E4.Skeleton.ofProgram.
-EOF
-run inrocq rocq compile -Q . E4 SkeletonAssumptions.v
-
-echo "reproduce.sh: done; logs in $OUT/logs"
+# 12. The tracked Rocq workspace (rocq/, rocq/README.md): its program types must be what step 2
+#     generates; its skeleton, the proof over it and the assumptions compile; and the red
+#     control, a skeleton whose depth-0 unfolding is not a cut, fails the proof.
+LOG=14-rocq-workspace.log
+mkdir -p "$OUT/rocq-ws" "$OUT/rocq-ws-mutant"
+cp "$ROOT"/rocq/*.v "$OUT/rocq-ws/"
+log "diff <(tail -n +3 rocq/Eff_types.v) rocq/Eff_types.v (step 2's)"
+if tail -n +3 "$ROOT/rocq/Eff_types.v" | diff - "$OUT/rocq/Eff_types.v" >> "$OUT/logs/$LOG" 2>&1; then
+  echo "PASS rocq/Eff_types.v is step 2's" >> "$OUT/logs/$LOG"
+else
+  echo "FAIL rocq/Eff_types.v differs from step 2's: run make gen-rocq" >> "$OUT/logs/$LOG"; exit 1
+fi
+cd "$OUT/rocq-ws"
+for f in Eff_types Skeleton SkeletonApprox Assumptions; do
+  log "rocq compile -Q . E4 $f.v"
+  { /usr/bin/time -p opam exec --switch=rocq -- rocq compile -Q . E4 "$f.v"; } >> "$OUT/logs/$LOG" 2>&1
+done
+cp "$ROOT/rocq/Eff_types.v" "$ROOT/rocq/SkeletonApprox.v" "$OUT/rocq-ws-mutant/"
+sed 's/let v__x_6 := Tree_cut in/let v__x_6 := (Tree_done eval_badShape) in/' "$ROOT/rocq/Skeleton.v" > "$OUT/rocq-ws-mutant/Skeleton.v"
+cd "$OUT/rocq-ws-mutant"
+log "diff rocq/Skeleton.v rocq-ws-mutant/Skeleton.v"; diff "$ROOT/rocq/Skeleton.v" Skeleton.v >> "$OUT/logs/$LOG" || true
+for f in Eff_types Skeleton; do inrocq rocq compile -Q . E4 "$f.v" > /dev/null 2>&1; done
+log "rocq compile -Q . E4 SkeletonApprox.v   (must fail)"
+if inrocq rocq compile -Q . E4 SkeletonApprox.v >> "$OUT/logs/$LOG" 2>&1; then
+  echo "FAIL the mutant passed SkeletonApprox.v" >> "$OUT/logs/$LOG"; exit 1
+else
+  echo "PASS the mutant fails SkeletonApprox.v" >> "$OUT/logs/$LOG"
+fi
 
 # 13. The comparison lane's input (rocq/LaneExtract.v): Rocq's tree with Lean's evaluator
 #     realized, extracted. Below its five header lines, the committed
