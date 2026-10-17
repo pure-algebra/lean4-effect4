@@ -11,7 +11,7 @@ refactors fast if we know what we're shooting for. Lack of a consumer isn't the 
 coherence of the algebra is — modelled on the universal initial algebra. Build in parallel, a
 second file, then slot it in; delete once we're at a good place." Instrument:
 `src/Effect4/Laws/Auto/Traversals.lean` (`#traversal_census`); driver:
-`Test/Audit/TraversalCensus.lean` (`lake build Test.Audit.TraversalCensus` prints it). Tree at
+`git:37cca5d0d6e7cc335094d42288512f58bbd4316f:Test/Audit/TraversalCensus.lean` (`lake build Test.Audit.TraversalCensus` prints it). Tree at
 `58f31703` plus the instrument.
 
 ## 1. What the instrument measures
@@ -42,8 +42,8 @@ on fuel (`runStmts`); the instrument does not ask which, and §7.4 gives the rea
 without a fold. A definition that reads two families is a row in each. Helpers the compiler
 makes (`noConfusion`, `ctorIdx`, `brecOn.go`, a derived `decEq_n`, a match splitter — 77 of the
 first run's 157 "structural" rows for `Eff` were these) are not rows. Nothing is asserted about
-the tree; the instrument's own red controls are (`Test/Audit/TraversalCensus.lean`, over the
-planted shapes of `Test/Audit/TraversalFixture.lean` and four definitions of the tree).
+the tree; the instrument's own red controls are (`git:37cca5d0d6e7cc335094d42288512f58bbd4316f:Test/Audit/TraversalCensus.lean`, over the
+planted shapes of `git:f0831fc93c2125fcf96a7c75f6c1d932fde45fef:Test/Audit/TraversalFixture.lean` and four definitions of the tree).
 
 **The distance.** The `structural` and `wf` rows are the hand traversals; their count, less the
 members of the two fold definitions (`Checker.check`'s seven, `argTy`/`argsTy`, §7.8–§7.9), is
@@ -601,8 +601,8 @@ only through the family's own `casesOn`, so a `match` with a catch-all, compiled
 `casesOn` named after another definition, was invisible. The repair (`Laws/Auto/Traversals.lean`)
 reads a definition's own code through the compiler's helpers, admits private definitions under
 their written name, and gives a case analysis that does not recurse its own class, `one-level`
-(§1). Its red controls are pinned in `Test/Audit/TraversalCensus.lean`: the planted shapes of
-`Test/Audit/TraversalFixture.lean` (the instrument of `dceae006` misreads five of the nine and
+(§1). Its red controls are pinned in `git:37cca5d0d6e7cc335094d42288512f58bbd4316f:Test/Audit/TraversalCensus.lean`: the planted shapes of
+`git:f0831fc93c2125fcf96a7c75f6c1d932fde45fef:Test/Audit/TraversalFixture.lean` (the instrument of `dceae006` misreads five of the nine and
 does not see the private one), and the classes of `Ty.sub` (`wf`), `Codegen.Types.ofNormalized`
 (`structural`, `[private]`), `Ty.isFactor` (`one-level`) and `Ty.closed` (`structural`).
 
@@ -684,7 +684,7 @@ classifiers, four generic folds reading the columns of a classifier table or, fo
 searches, a hit predicate; the union-spine folds, one fold at four atoms; the mirrors, one
 reflection at five carriers. The rule for a constructor append is "no hand case analysis on `Ty`
 outside the generated folds and `Laws/Program/Typed/Membership.lean`", once checked by
-`scripts/check-ty-rule.py` over this instrument's output (R1–R4), which row 410 deleted; its distance at `630e6c37` is 78 rows (R1 21, R2 13, R3 38, R4 6), the gate on at
+`git:370300fba78b2b53bd2730854ea4b681463b4223:scripts/check-ty-rule.py` over this instrument's output (R1–R4), which row 410 deleted; its distance at `630e6c37` is 78 rows (R1 21, R2 13, R3 38, R4 6), the gate on at
 the wave's commit 4. The named exemptions for `Ty` are `Fits` and `FlatFits` (the typed state's
 module), the derived `Repr` and `DecidableEq` until generated, the two pass-through matchers
 (`selectRefusal`, `Decision.arms`' outer match), and the `Test` fixtures and counterexample models.

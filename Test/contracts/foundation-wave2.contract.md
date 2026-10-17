@@ -71,7 +71,7 @@ corpus as a uniformly valid TypeScript suite. Host results remain finite observa
 
 ## Compatibility
 
-Keep `Test/fixtures/baseline/66ee4657/` unchanged. A supplement records frozen-revision payloads,
+Keep `git:3709604fe32c105418e2bbbf33e67c0cd2e15aa5:Test/fixtures/baseline/66ee4657` unchanged. A supplement records frozen-revision payloads,
 field order, byte maps, framing and consumer selection with reproducible provenance.
 Reject constructor removal/reorder/reframing and tag reuse. Compare wire/structure, exact old
 decoding, admission/types and execution permission separately. Named narrowing/widening in S2/S4
