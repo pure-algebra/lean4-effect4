@@ -187,8 +187,9 @@ LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean 
 LCNF_OUT := ocaml/eff/eff_types.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
   ocaml/engine/test/todo/todo_gen.ml ocaml/gen/closure-todo_gen.tsv \
   ocaml/engine/test/ctors/ctors_gen.ml ocaml/gen/closure-ctors_gen.tsv \
-  ocaml/engine/test/modeled/modeled_gen.ml ocaml/gen/closure-modeled_gen.tsv
-LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen Effect4.Api Effect4.Run.Kit Test.Dogfood.Scenario.Todo.HostRun Test.Codegen.ConstructorLane Test.Codegen.ModeledLane --outputs $(LCNF_OUT)
+  ocaml/engine/test/modeled/modeled_gen.ml ocaml/gen/closure-modeled_gen.tsv \
+  ocaml/engine/test/rocq/rocq_gen.ml ocaml/gen/closure-rocq_gen.tsv
+LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen Effect4.Api Effect4.Run.Kit Test.Dogfood.Scenario.Todo.HostRun Test.Codegen.ConstructorLane Test.Codegen.ModeledLane Effect4.Laws.Run.Tree --outputs $(LCNF_OUT)
 $(CHK)/gen-lcnf.key: FORCE $(GEN)/derived
 	@$(LCNF_KEY)
 $(GEN)/lcnf: $(CHK)/gen-lcnf.key

@@ -102,16 +102,23 @@ def Plain (program : NativeEff) : Bool :=
     | .perform .refMake _ | .perform .refGet _ | .perform .refSet _ | .perform (.external _) _ => true
     | _ => false
 
-/-- **`BudgetDefs.v`'s fragment**: the arms of the Rocq tree with definitions (`denoteW` there),
-the arms `ofProgram_approx`'s proof reads: `Plain`'s, the definition block, a call, a parameter's
-run, an invocation, `provideContext` and the `context` read. The arms beyond it (`exit`, the cause
-handlers, `onExit`, `failCause`, the other cell operations and the generator's statements) are
-Lean's alone until the Rocq tree is generated from this module. -/
+/-- **`BudgetDefs.v`'s fragment**: the arms of the Rocq tree with definitions (`denoteW` there)
+whose tree is this module's, the arms `ofProgram_approx`'s proof reads: `Plain`'s, the definition
+block, a call, a parameter's run and an invocation. The comparison lane checks it
+(`ocaml/engine/test/rocq/test_rocq.ml`, R4): with Lean's evaluator in place of Rocq's, the two
+trees run alike at every budget it tries, on every program here that the checker types.
+
+Two arms of `denoteW` are outside: `provideContext` and the `context` read. Rocq's context is a
+value replaced at each `provideContext`, from `Val.unit` at the root; this tree's is the machine's
+context, merged (`Eval.provide`) from the empty one (`Eval.root`). On a program the checker
+refuses, a cell operation whose request is no cell is an event in Rocq's tree and a bad shape
+here (`Eval.cellOp`). The arms beyond (`exit`, the cause handlers, `onExit`, `failCause`, the other
+cell operations, the generator's statements and the context) are Lean's alone until the Rocq
+tree is generated from this module (`docs/research/2026-10-16-itrees/generated/Skeleton.v`). -/
 def InRocq (program : NativeEff) : Bool :=
   foldMap_eff true (· && ·) program fun
     | .succeed _ | .fail _ | .sync _ | .suspend _ | .bind _ _ | .select _ _ _ _ => true
-    | .iterate _ _ _ _ _ _ | .defs _ _ _ _ | .invoke _ _ _ | .provideContext _ _ => true
-    | .withFiber (.context _) => true
+    | .iterate _ _ _ _ _ _ | .defs _ _ _ _ | .invoke _ _ _ => true
     | .perform .refMake _ | .perform .refGet _ | .perform .refSet _ | .perform (.external _) _ => true
     | .perform (.call _) _ | .perform (.param _) _ => true
     | _ => false

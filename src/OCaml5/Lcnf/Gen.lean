@@ -217,8 +217,10 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   let emitted ← match emit closure.decls with
     | .ok items => pure items
     | .error message => throwError message
+  -- An artifact whose closure needs no type of its own (every type is the opened module's)
+  -- declares no group: an empty `type` item is no OCaml.
   let body : List Ml.Decl :=
-    [gen.item, .blank]
+    (if gen.decls.isEmpty then [] else [gen.item, .blank])
       ++ (match preludeText with | none => [] | some t => [.rawD t, .blank])
       ++ emitted
   -- Without a table the file is what it always was; with one, the type group mentions the

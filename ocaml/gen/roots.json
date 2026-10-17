@@ -1,6 +1,6 @@
 {
   "format": "effect4-lcnf-roots-v2",
-  "claim": "Hand-written, not generated. The LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. The first artefact declares the program types alone (no roots): `ocaml/eff/eff_types.ml`, the one OCaml spelling of the program, whose families are `Tools.ProgramStructure.blocks`. The others open it (`open`), so they declare none of its types. `ocaml/engine/test/todo/todo_gen.ml` is the to-do host lane's (LC-6): the host run of one request, whose result the lane compares with Lean's. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots. `ocaml/engine/test/ctors/ctors_gen.ml` is the constructor lane's: every constructor and projection of a natively spelled type, built, matched and projected (`Test.Codegen.ConstructorLane`), whose answers the lane compares with Lean's. The last, `ocaml/engine/test/modeled/modeled_gen.ml`, is the Modeled lane's: a derived codec's staged image (`Test.Codegen.ModeledLane`), whose bytes the lane compares with Lean's.",
+  "claim": "Hand-written, not generated. The LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. The first artefact declares the program types alone (no roots): `ocaml/eff/eff_types.ml`, the one OCaml spelling of the program, whose families are `Tools.ProgramStructure.blocks`. The others open it (`open`), so they declare none of its types. `ocaml/engine/test/todo/todo_gen.ml` is the to-do host lane's (LC-6): the host run of one request, whose result the lane compares with Lean's. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots. `ocaml/engine/test/ctors/ctors_gen.ml` is the constructor lane's: every constructor and projection of a natively spelled type, built, matched and projected (`Test.Codegen.ConstructorLane`), whose answers the lane compares with Lean's. `ocaml/engine/test/modeled/modeled_gen.ml` is the Modeled lane's: a derived codec's staged image (`Test.Codegen.ModeledLane`), whose bytes the lane compares with Lean's. The last, `ocaml/engine/test/rocq/rocq_gen.ml`, is the comparison lane's: the premises of the declared facts of `Effect4.Laws.Run.Tree` (`InRocq`, `Plain`), by which the lane picks the programs whose Rocq tree it compares with Lean's.",
   "artefacts": [
     {
       "out": "ocaml/eff/eff_types.ml",
@@ -297,6 +297,22 @@
         "Test.Codegen.ModeledLane.decodeItem",
         "Test.Codegen.ModeledLane.roundTrip",
         "Test.Codegen.ModeledLane.sampleVals"
+      ],
+      "open": {
+        "module": "Eff_types",
+        "artefact": "ocaml/eff/eff_types.ml"
+      }
+    },
+    {
+      "out": "ocaml/engine/test/rocq/rocq_gen.ml",
+      "import": [
+        "Effect4.Laws.Run.Tree"
+      ],
+      "cap": 200,
+      "types": [],
+      "roots": [
+        "Effect4.Run.Tree.InRocq",
+        "Effect4.Run.Tree.Plain"
       ],
       "open": {
         "module": "Eff_types",

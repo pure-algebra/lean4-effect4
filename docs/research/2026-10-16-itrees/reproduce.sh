@@ -260,3 +260,18 @@ EOF
 run inrocq rocq compile -Q . E4 SkeletonAssumptions.v
 
 echo "reproduce.sh: done; logs in $OUT/logs"
+
+# 13. The comparison lane's input (rocq/LaneExtract.v): Rocq's tree with Lean's evaluator
+#     realized, extracted. Below its five header lines, the committed
+#     ocaml/engine/test/rocq/rocq_run.ml and .mli must be what Rocq writes.
+LOG=15-lane-extract.log
+cd "$OUT/rocq"
+run inrocq rocq compile -Q . E4 LaneExtract.v
+for ext in ml mli; do
+  log "diff <(tail -n +6 ocaml/engine/test/rocq/rocq_run.$ext) rocq_run.$ext"
+  if tail -n +6 "$ROOT/ocaml/engine/test/rocq/rocq_run.$ext" | diff - "rocq_run.$ext" >> "$OUT/logs/$LOG" 2>&1; then
+    echo "PASS rocq_run.$ext is the committed lane input" >> "$OUT/logs/$LOG"
+  else
+    echo "FAIL rocq_run.$ext differs from the committed lane input" >> "$OUT/logs/$LOG"; exit 1
+  fi
+done
