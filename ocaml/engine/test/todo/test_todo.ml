@@ -261,7 +261,7 @@ let () =
         hex_of
           (Todo_gen.test_dogfood_scenario_todo_host_result_val
              ((List.map
-                 (fun (c : HF.call) ->
+                 (fun (c : Effect4_engine.E4_host.call) ->
                    ({ Todo_gen.row = c.row; request = c.request; completion = c.answer } : Todo_gen.call))
                  calls,
                exit),
@@ -272,11 +272,7 @@ let () =
         match HF.serve ~table provider program ~fuel:1000 state, HR.serve ~table provider program ~fuel:1000 state with
         | Ok f, Ok g ->
           let rf = result f.calls (Effect4_engine.E4_engine.Fast.root_exit_of f.engine) f.state in
-          let rg =
-            result
-              (List.map (fun (c : HR.call) -> ({ row = c.row; request = c.request; answer = c.answer } : HF.call)) g.calls)
-              (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state
-          in
+          let rg = result g.calls (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state in
           ((match f.stop, g.stop with HF.Machine HF.Finished, HR.Machine HR.Finished -> true | _ -> false), rf, rg)
         | _ -> (false, "", "")
       in
