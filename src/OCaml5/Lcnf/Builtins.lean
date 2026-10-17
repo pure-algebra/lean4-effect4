@@ -494,6 +494,8 @@ def builtins : List Builtin := [
     "as `UInt64.decEq`.",
   row `UInt64.toNat (.extern "lean_uint64_to_nat" (some .identity)) (same) .domain "the bit pattern < 2^62" []
     "identity on the representation; as `UInt64.decEq` outside the domain.",
+  row `UInt64.ofNat (.extern "lean_uint64_of_nat" (some .identity)) (same) .domain "the natural < 2^62" []
+    "identity on the representation: `UInt64.ofNat n` is `n` mod 2^64, which is `n` below 2^62 (the float frame's bits, `Store.Val.decodeBody`); as `UInt64.decEq` outside the domain.",
   -- A word's constructor and projection: a word is its bit vector, and a bit vector its natural
   -- (`transparentStructures`), so both are the identity on `int`. Lean implements them outside
   -- their bodies, so they are rows (the constructor census, `Test/Audit/ConstructorOwners.lean`).
@@ -903,12 +905,12 @@ def problems : List String := problemsOf builtins support targetLibrary
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
 #guard etaBinders.all fun b => !protectedNames.contains b && !(targetLibrary.map (·.name)).contains b
 #guard maxArity == 3
-#guard builtins.length == 125
+#guard builtins.length == 126
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
 -- row but eleven (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
 -- session's closure needs; `String.ofByteArray`, the inverse of the bytes it has no primitive
 -- for; `USize.add`; `panicCore`), and the target evaluator scans with two functions.
-#guard sourcePrims.length == 58
+#guard sourcePrims.length == 59
 #guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) ==
   [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `Int.neg, `String.ofList, `String.ofByteArray,
     `USize.repr, `System.Platform.getNumBits, `USize.add, `panicCore]

@@ -240,6 +240,52 @@
         "module": "Eff_types",
         "artefact": "ocaml/eff/eff_types.ml"
       }
+    },
+    {
+      "out": "ocaml/kit/kit_gen.ml",
+      "import": [
+        "Effect4.Run.Kit"
+      ],
+      "cap": 4000,
+      "types": [],
+      "roots": [
+        "Effect4.Run.Tree.ofProgram",
+        "Effect4.Run.Tree.run",
+        "Effect4.Run.Tree.outsideAt",
+        "Effect4.Run.Tree.Host.tape",
+        "Effect4.Run.Tree.Host.silent",
+        "Effect4.Run.Tree.probe",
+        "Effect4.Run.Tree.settle",
+        "Effect4.Run.Tree.frames",
+        "Effect4.Run.Kit.check",
+        "Effect4.Run.Kit.admit",
+        "Effect4.Run.Kit.admitShape",
+        "Effect4.Run.Kit.admitToVal",
+        "Effect4.Run.Kit.replyFault",
+        "Effect4.Run.Kit.programShape",
+        "Effect4.Run.Kit.programToVal",
+        "Effect4.Run.Kit.programOfVal",
+        "Effect4.Run.Kit.rowsShape",
+        "Effect4.Run.Kit.rowsToVal",
+        "Effect4.Run.Kit.rowsOfVal",
+        "Effect4.Run.Kit.servicesShape",
+        "Effect4.Run.Kit.servicesOfVal",
+        "Effect4.Run.Kit.tyShape",
+        "Effect4.Run.Kit.tyToVal",
+        "Effect4.Run.Kit.effTyShape",
+        "Effect4.Run.Kit.effTyToVal",
+        "Effect4.Run.Kit.refusalShape",
+        "Effect4.Run.Kit.refusalToVal",
+        "Effect4.Run.Kit.exitShape",
+        "Effect4.Run.Kit.exitToVal",
+        "Effect4.Run.Kit.exitOfVal",
+        "Effect4.Run.Kit.valShape",
+        "Effect4.Run.Kit.tyText"
+      ],
+      "open": {
+        "module": "Eff_types",
+        "artefact": "ocaml/eff/eff_types.ml"
+      }
     }
   ]
 }

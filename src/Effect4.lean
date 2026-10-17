@@ -202,6 +202,8 @@ import Effect4.Run
 -- What a tool reads off a run: the machine's view, the raw replay, the tape, a funded run, rest.
 import Effect4.Run.Tape
 import Effect4.Run.Method
+-- What the native kit lowers (`ocaml/kit/`): the call tree's runs, the checker, the carriers' images.
+import Effect4.Run.Kit
 -- The entry modules a user imports (decisions row 332): authoring, emitting, and the prebuilt
 -- composed modules. `Effect4.Run` above is the fourth, and `Effect4.Laws.Author` the fifth.
 import Effect4.Author

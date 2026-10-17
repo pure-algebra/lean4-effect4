@@ -9,5 +9,6 @@
 ; engine; `cd ocaml && dune build engine`).
 (library
  (name effect4_engine)
+ (public_name effect4_engine)
  (libraries unix threads.posix effect4_eff effect4_clock effect4_bytes)
  (flags (:standard -w +a-4-9-40-41-42-44-45-70)))
