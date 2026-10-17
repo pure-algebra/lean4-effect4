@@ -10,7 +10,7 @@ receipt's complete completion at the call bound to its key (`application_payload
 `preflight` admitted the receipt first, and the machine was not stuck (`application_live`).
 
 The ledger and `application_payload` moved here unchanged from the timeout battery
-(`Test/Dogfood/Proofs/HostPayloads.lean`, where they landed on 2026-10-11). The law graph reads
+(`git:451b05e15:Test/Dogfood/Proofs/HostPayloads.lean`, retired by row 410, where they landed on 2026-10-11). The law graph reads
 them here: the typed replay's law applies them (`Live.replay_at_call_instance`,
 `src/Effect4/Laws/Api/Live.lean`; decisions rows 98 and 373 (8)). The battery keeps its own
 readers and names the moved declarations from here.

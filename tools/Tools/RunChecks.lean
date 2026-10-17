@@ -31,7 +31,7 @@ This module holds what both read. It is tooling over the law graph: it states no
   decides the five checks of each request of a session.
 
 Placement (AGENTS.md, Trust): each decision is graded `validated` in the claim record
-(`Test/Dogfood/Application.lean`). Its consumers are `Effect4.Run.conforms_sat` and
+(`git:451b05e15:Test/Dogfood/Application.lean`, retired by row 410). Its consumers are `Effect4.Run.conforms_sat` and
 `Effect4.Run.agrees_hostRun` (`src/Effect4/Laws/Program/Validated.lean`). What a decision does not
 establish: anything of a run that no check read; the host's behaviour beyond the recorded
 completions; concurrency between requests.

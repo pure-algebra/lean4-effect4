@@ -277,7 +277,7 @@ ledgers: the raw replay has none. It does not reach a journal that stops at a fr
 says nothing of a lowered engine: that link is the finite comparison of
 `ocaml/engine/test/scenarios/test_scenarios.ml`. It extends `play_controls_eq_replay`
 (`src/Effect4/Laws/Run.lean`) from control rows to reply applications. Concept
-`translation-simulation`, R8. Consumer: the lowered runs of `Test/Dogfood/Scenario/Lowered.lean`,
+`translation-simulation`, R8. Consumer: the lowered runs of `git:451b05e15:Test/Dogfood/Scenario/Lowered.lean`, retired by row 410,
 whose finite runs check it at every position of every fixture. -/
 @[semantics "translation-simulation" (requirement := R8)]
 theorem tape_replays : TapeReplays := by
@@ -332,7 +332,7 @@ machine is, and a second run command on it is no continuation of the first (deci
 226). Concept `translation-simulation`. The laws stand at R13, beside `journal_replays`
 (`src/Effect4/Laws/Run.lean`): the rows of a journal's prefix give the raw replay's machine.
 They serve R8's replay view, the views of a lowered run (`shown_views_opened`,
-`Test/Dogfood/Scenario/Tape.lean`). Their controls are the record `cuts` of that module. -/
+`git:451b05e15:Test/Dogfood/Scenario/Tape.lean`, retired by row 410). Their controls are the record `cuts` of that module. -/
 
 /-- **The tape of a journal in two parts.** When the tape of the first part reads every row,
 the tape of `a ++ b` is the positions of `a`, then the tape of `b` from the run after `a`. When
@@ -341,7 +341,7 @@ the unread rows: no row of `b` is read. Reach: any run and any two lists of rows
 establish what the machine is after a stopped row, and it reads no row after one. Concept
 `translation-simulation`, R13: a journal's tape splits where `Run.play_append` splits its run.
 Consumer: no theorem of this module uses it. It is the law of a driver that plays a script in
-parts, and the record `cuts` (`Test/Dogfood/Scenario/Tape.lean`) holds its controls. -/
+parts, and the record `cuts` (`git:451b05e15:Test/Dogfood/Scenario/Tape.lean`, retired by row 410) holds its controls. -/
 @[semantics "translation-simulation" (requirement := R13)]
 theorem tapeFrom_append (s : Run) (a b : List Command) :
     tapeFrom s (a ++ b) =
@@ -420,7 +420,7 @@ before it reports its frontier, and the completed prefix ends before it. It does
 equal session ledgers, since the raw replay has none. It says nothing of resumable ownership
 (R12, decisions row 226) or of a generated engine. Concept `translation-simulation`, R13: it is
 `tape_replays` on the completed prefix. Consumer: the controls of the record `cuts`
-(`Test/Dogfood/Scenario/Tape.lean`), and later the laws of the scenario driver. -/
+(`git:451b05e15:Test/Dogfood/Scenario/Tape.lean`, retired by row 410), and later the laws of the scenario driver. -/
 @[semantics "translation-simulation" (requirement := R13)]
 theorem tapeFrom_cut_replays (s : Run) (rows : List Command) :
     ∃ done, rows = done ++ (tapeFrom s rows).2 ∧
@@ -491,7 +491,7 @@ It does not establish the machine after a stopped row, equal session ledgers, or
 generated engine. It replays from the run's own machine: a replay from a new load needs a fresh
 open, which the consumer states. Concept `translation-simulation`, R13: it is `tape_replays` on
 the prefix that ends at the position's row. Consumer: `shown_views_opened`
-(`Test/Dogfood/Scenario/Tape.lean`), the views of a lowered run. -/
+(`git:451b05e15:Test/Dogfood/Scenario/Tape.lean`, retired by row 410), the views of a lowered run. -/
 @[semantics "translation-simulation" (requirement := R13)]
 theorem tapeFrom_position_replays (s : Run) (rows : List Command)
     (i : Nat) (position : Position)

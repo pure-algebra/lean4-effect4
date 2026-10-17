@@ -81,7 +81,7 @@ protocols (`Effects.Program.Sat`) holds of the root's exit.
 
 Placement: concept `host-session-protocol`, role adequacy; question: the proposed registry claim
 `run-conforms-postcondition`; consumer: `Todo.complete_answers_requested`
-(`Test/Dogfood/Scenario/Todo/Claims.lean`). Reach: H9's (`denoteRows_eq_session_host`), the run's
+(`git:451b05e15:Test/Dogfood/Scenario/Todo/Claims.lean`, retired by row 410). Reach: H9's (`denoteRows_eq_session_host`), the run's
 own tape. Does not establish: that a host conforms; the demand on the requests, which the proof
 does not read; progress. Unlocks: a claim under a promise of the rows, read on a real run by a
 decided premise (R6). -/
@@ -120,7 +120,7 @@ is the root's exit with the run's stores, and the model ends at `finish`.
 
 Placement: concept `translation-simulation`, role simulation; question: the proposed registry
 claim `run-agrees-model`; consumers: `Todo.list_after_add` and `Todo.complete_idempotent`
-(`Test/Dogfood/Scenario/Todo/Claims.lean`). Reach: H9's (`denoteRows_eq_session_host`), with its
+(`git:451b05e15:Test/Dogfood/Scenario/Todo/Claims.lean`, retired by row 410). Reach: H9's (`denoteRows_eq_session_host`), with its
 premise `HostAnswered` decided by `agrees` (`hostAnsweredCheck_sound`). Does not establish: that
 a host agrees with the model on another run; progress. Unlocks: a claim under the laws of the
 rows, read on a real run by a decided premise (R6). -/
