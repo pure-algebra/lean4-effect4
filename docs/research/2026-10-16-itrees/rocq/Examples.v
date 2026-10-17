@@ -6,7 +6,7 @@
 From Stdlib Require Import List ZArith String.
 Import ListNotations.
 Require Import RocqOfOCaml.RocqOfOCaml.
-Require Import E4.Eff_types E4.Denote E4.Run E4.Judgments E4.Budget E4.Api.
+Require Import E4.Eff_types E4.Denote E4.Run E4.Judgments E4.Budget E4.BudgetDefs E4.Api.
 Import Author.
 
 Local Open Scope Z_scope.
@@ -31,6 +31,21 @@ Definition cell_counter : eff native_op :=
 (** An edit: a decision on the literal [true], before and after [when_true_law]. *)
 Definition before_edit : eff native_op := when (bool_ true) doubling ping.
 Definition after_edit : eff native_op := doubling.
+
+(** The doubling loop as a recursive definition: definition 0 calls host row 0 with its request
+    and then itself at the double, while the request is below 16. Five calls deep, it ends with
+    16. *)
+Definition doubling_rec : eff native_op :=
+  define [when (lt_ (var 0) (num 16)) (seq (row 0 (var 0)) (call 0 (mul_ (var 0) (num 2)))) (ret (var 0))]
+         (call 0 (num 1)).
+
+(** A definition that calls itself at once, forever, and calls nothing else. *)
+Definition self_call : eff native_op := define [call 0 (var 0)] (call 0 (num 0)).
+
+(** An invocation: definition 0 runs its passed program twice, at the request 7; the passed
+    program calls host row 0 with what it is given. *)
+Definition twice : eff native_op :=
+  define [seq (param 0 (var 0)) (param 0 (var 0))] (invoke 0 (num 7) [row 0 (var 0)]).
 
 (** Every host call answered with [unit]. *)
 Definition answer_unit : host RowE unit := fn_host (fun _ _ s => Some (Success Val_unit, s)).

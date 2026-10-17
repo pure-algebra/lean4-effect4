@@ -141,11 +141,12 @@ else
 fi
 
 # 8. The budget relation (rocq/Budget.v): Lean's budgeted call tree is the budget-k truncation of
-#    the meaning. Then the API on it, the examples and their checks, each file timed, with Rocq's
-#    own evaluator timed on two runs; every assumption printed.
+#    the meaning; with definitions by budgeted unfolding, for every program (rocq/BudgetDefs.v).
+#    Then the API on it, the examples and their checks, the to-do fixture at a budget, each file
+#    timed, with Rocq's own evaluator timed on two runs; every assumption printed.
 LOG=9-budget.log
 cd "$OUT/rocq"
-for f in Budget Api Examples BudgetCheck BudgetExtract; do
+for f in Budget BudgetDefs Api Examples BudgetCheck TodoBudgetCheck BudgetExtract; do
   log "rocq compile -Q . E4 $f.v"
   { /usr/bin/time -p opam exec --switch=rocq -- rocq compile -Q . E4 "$f.v"; } >> "$OUT/logs/$LOG" 2>&1
 done
@@ -159,7 +160,7 @@ EOF
 run inrocq rocq compile -Q . E4 Speed.v
 LOG=10-budget-assumptions.log
 cat > BudgetAssumptions.v <<'EOF'
-Require Import E4.Budget E4.Api E4.BudgetCheck.
+Require Import E4.Budget E4.BudgetDefs E4.Api E4.BudgetCheck E4.TodoBudgetCheck.
 Print Assumptions E4.Budget.denoteB_approx.
 Print Assumptions E4.Budget.meaning_fragment.
 Print Assumptions E4.Budget.truncation_is_denoteB.
@@ -169,6 +170,15 @@ Print Assumptions E4.Budget.meaning_finishes_iff.
 Print Assumptions E4.Budget.meaning_waits_iff.
 Print Assumptions E4.Budget.meaning_diverges_under_iff.
 Print Assumptions E4.Budget.meaning_diverges_iff.
+Print Assumptions E4.BudgetDefs.denoteD_approx.
+Print Assumptions E4.BudgetDefs.denoteD_below.
+Print Assumptions E4.BudgetDefs.adequacyD.
+Print Assumptions E4.BudgetDefs.finishesD_iff.
+Print Assumptions E4.BudgetDefs.waitsD_iff.
+Print Assumptions E4.BudgetDefs.divergesD_iff.
+Print Assumptions E4.BudgetDefs.meaning_divergesD_iff.
+Print Assumptions E4.BudgetDefs.denoteBD_same.
+Print Assumptions E4.Api.run_at_lean.
 Print Assumptions E4.Api.run_at_finished.
 Print Assumptions E4.Api.run_at_waits.
 Print Assumptions E4.Api.run_at_grows.
@@ -181,6 +191,10 @@ Print Assumptions E4.BudgetCheck.doubling_finishes.
 Print Assumptions E4.BudgetCheck.doubling_waits.
 Print Assumptions E4.BudgetCheck.forever_cut_everywhere.
 Print Assumptions E4.BudgetCheck.edit_outcomes.
+Print Assumptions E4.BudgetCheck.doubling_rec_finishes.
+Print Assumptions E4.BudgetCheck.self_call_diverges.
+Print Assumptions E4.TodoBudgetCheck.reference_0.
+Print Assumptions E4.TodoBudgetCheck.broken_6.
 EOF
 run inrocq rocq compile -Q . E4 BudgetAssumptions.v
 
@@ -212,6 +226,23 @@ if inrocq rocq compile -Q . E4 Budget.v >> "$OUT/logs/$LOG" 2>&1; then
   echo "FAIL the mutant passed Budget.v" >> "$OUT/logs/$LOG"; exit 1
 else
   echo "PASS the mutant fails Budget.v" >> "$OUT/logs/$LOG"
+fi
+
+# 11. The red control on the definitions: a call's body run at the caller's environment instead
+#     of its request alone. BudgetDefs.v must fail, at denoteW_below.
+LOG=13-defs-mutant.log
+mkdir -p "$OUT/defs-mutant"
+cp "$OUT/rocq"/{Eff_types.v,Denote.v,Run.v,Judgments.v,Budget.v} "$OUT/defs-mutant/"
+sed 's/| Some body => call body \[v\] ((\[\], \[\]) :: ps) ctx/| Some body => call body env (([], []) :: ps) ctx/' \
+  "$OUT/rocq/BudgetDefs.v" > "$OUT/defs-mutant/BudgetDefs.v"
+cd "$OUT/defs-mutant"
+log "diff rocq/BudgetDefs.v defs-mutant/BudgetDefs.v"; diff "$OUT/rocq/BudgetDefs.v" BudgetDefs.v >> "$OUT/logs/$LOG" || true
+for f in Eff_types Denote Run Judgments Budget; do inrocq rocq compile -Q . E4 "$f.v" > /dev/null 2>&1; done
+log "rocq compile -Q . E4 BudgetDefs.v   (must fail)"
+if inrocq rocq compile -Q . E4 BudgetDefs.v >> "$OUT/logs/$LOG" 2>&1; then
+  echo "FAIL the mutant passed BudgetDefs.v" >> "$OUT/logs/$LOG"; exit 1
+else
+  echo "PASS the mutant fails BudgetDefs.v" >> "$OUT/logs/$LOG"
 fi
 
 echo "reproduce.sh: done; logs in $OUT/logs"

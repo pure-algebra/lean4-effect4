@@ -1,12 +1,14 @@
 (** * Api: write, run, view and edit Eff programs at a budget, with the theorems behind each
 
     [Budget.v] proves that Lean's budgeted call tree is the budget-[k] truncation of the tree
-    meaning. This file makes that a working surface.
+    meaning; [BudgetDefs.v] extends the tree to definitions, for every program. This file makes
+    that a working surface. Every theorem below holds for every program.
 
-    - **Writing** ([Author]): first-order constructors for the shared fragment, and a scope check
-      for the positional variables.
+    - **Writing** ([Author]): first-order constructors, definitions and calls among them, and a
+      scope check for the positional variables.
     - **Running**: hosts as data (the cells, a reply tape, a host function, two routed side by
-      side), [run_at k] (the run of Lean's tree at budget [k], with every answered call), and
+      side), [run_at k] (the run of the tree at budget [k], with every answered call; Lean's
+      tree where [denoteRowsB] has an arm, [run_at_lean]), and
       [settle] (the least budget at which the run is no longer cut). A finish or a wait it reports
       is the meaning's ([run_at_finished], [run_at_waits], [settle_finished]); it reports a
       finish at some limit exactly when the meaning finishes ([settle_complete]); and the
@@ -25,7 +27,7 @@ From ITree Require Import ITree ITreeFacts.
 From Paco Require Import paco.
 Import ITreeNotations.
 Require Import RocqOfOCaml.RocqOfOCaml.
-Require Import E4.Eff_types E4.Denote E4.Run E4.Judgments E4.Budget.
+Require Import E4.Eff_types E4.Denote E4.Run E4.Judgments E4.Budget E4.BudgetDefs.
 
 Local Open Scope list_scope.
 
@@ -78,6 +80,24 @@ Definition cell_new (t : term) : eff native_op := Eff_perform NativeOp_refMake t
 Definition cell_get (c : term) : eff native_op := Eff_perform NativeOp_refGet c.
 Definition cell_set (c v : term) : eff native_op := Eff_perform NativeOp_refSet (pair_ c v).
 
+Fixpoint effs_of (es : list (eff native_op)) : effs native_op :=
+  match es with [] => Effs_nil | e :: rest => Effs_cons e (effs_of rest) end.
+
+(** [define bodies main]: [main] with the definitions [bodies]; definition [n] is [bodies]'s
+    [n]th, and its body sees the request alone, at position 0. *)
+Definition define (bodies : list (eff native_op)) (main : eff native_op) : eff native_op :=
+  Eff_defs [] (effs_of bodies) main LayerTerms_nil.
+(** A call of definition [n] with a request. *)
+Definition call (n : Z) (request : term) : eff native_op := Eff_perform (NativeOp_call n) request.
+(** An invocation of definition [n], passing programs; each runs at this environment and its
+    request, when the body runs [param i]. *)
+Definition invoke (n : Z) (request : term) (args : list (eff native_op)) : eff native_op :=
+  Eff_invoke n request (effs_of args).
+Definition param (i : Z) (request : term) : eff native_op := Eff_perform (NativeOp_param i) request.
+(** The context: set it for a program, and read it. *)
+Definition with_context (t : term) (b : eff native_op) : eff native_op := Eff_provideContext t b.
+Definition context : eff native_op := Eff_withFiber (ActionTerm_context []).
+
 (** **The scope check**: every variable stands below the environment's length where it is read.
     A program that passes reads no variable past its environment. *)
 Fixpoint term_scoped (n : nat) (t : term) : bool :=
@@ -100,6 +120,13 @@ Fixpoint scoped (n : nat) (e : eff native_op) : bool :=
   | Eff_succeed t | Eff_fail t | Eff_sync t => term_scoped n t
   | Eff_perform _ r => term_scoped n r
   | Eff_suspend b => scoped n b
+  | Eff_provideContext t b => term_scoped n t && scoped n b
+  | Eff_withFiber (ActionTerm_context _) => true
+  | Eff_defs _ _ main _ => scoped n main
+  (* a passed program runs at this environment and its request *)
+  | Eff_invoke _ r args =>
+    term_scoped n r && (fix all (es : effs native_op) : bool :=
+                          match es with Effs_nil => true | Effs_cons a rest => scoped (S n) a && all rest end) args
   | Eff_bind a b => scoped n a && scoped (S n) b
   | Eff_select t Decision_option a b => term_scoped n t && scoped n a && scoped (S n) b
   | Eff_select t _ a b => term_scoped n t && scoped n a && scoped n b
@@ -109,8 +136,9 @@ Fixpoint scoped (n : nat) (e : eff native_op) : bool :=
   | _ => false
   end.
 
-(** A program ready for the theorems: in the fragment and in scope at the empty environment. *)
-Definition ready (e : eff native_op) : bool := in_fragment e && scoped 0 e.
+(** A program in scope: its root at the empty environment, each definition at its request. *)
+Definition ready (e : eff native_op) : bool :=
+  scoped 0 e && forallb (scoped 1) (bodies_of e).
 
 End Author.
 
@@ -223,25 +251,25 @@ Qed.
 
 (** **The run at budget [k]**: Lean's tree [denoteRowsB k] under the host. *)
 Definition run_at {St} (k : nat) (h : host E1 St) (e : eff native_op) (s : St) : list step * stop * St :=
-  trace h (denoteB k e []) s.
+  trace h (denoteBD k e) s.
 
 Definition is_wait (st : stop) : bool :=
   match st with Waiting _ _ | Refused _ _ => true | _ => false end.
 
 (** **A reported finish is the meaning's.** *)
-Theorem run_at_finished {St} (h : host E1 St) k e s steps ex s' : in_fragment e = true ->
+Theorem run_at_finished {St} (h : host E1 St) k e s steps ex s' :
   run_at k h e s = (steps, Finished ex, s') -> run_tree h (meaning e) s ≈ Ret (s', ex).
 Proof.
-  intros Hin Hr. apply meaning_finishes_iff; [exact Hin |]. exists k.
+  intros Hr. apply finishesD_iff. exists k.
   rewrite <- trace_project. unfold run_at in Hr. rewrite Hr. reflexivity.
 Qed.
 
 (** **A reported wait is a frontier of the meaning's run.** *)
-Theorem run_at_waits {St} (h : host E1 St) k e s steps st s' : in_fragment e = true ->
+Theorem run_at_waits {St} (h : host E1 St) k e s steps st s' :
   run_at k h e s = (steps, st, s') -> is_wait st = true ->
   exists X (ev : StuckE E1 X) kk, run_tree h (meaning e) s ≈ Vis ev kk.
 Proof.
-  intros Hin Hr Hw. apply meaning_waits_iff; [exact Hin |]. exists k.
+  intros Hr Hw. apply waitsD_iff. exists k.
   rewrite <- trace_project. unfold run_at in Hr. rewrite Hr. destruct st; try discriminate; reflexivity.
 Qed.
 
@@ -269,7 +297,19 @@ Theorem run_at_grows {St} (h : host E1 St) k k' e s : k <= k' ->
   run_at k h e s = run_at k' h e s \/
   exists steps s1, run_at k h e s = (steps, Cut, s1) /\
                    exists rest, steps_of (run_at k' h e s) = steps ++ rest.
-Proof. intros Hk. apply trace_approx, denoteB_approx; exact Hk. Qed.
+Proof. intros Hk. apply trace_approx, denoteBD_approx; exact Hk. Qed.
+
+(** Same trees, same run with the same steps. *)
+Lemma same_trace {St} (h : host E1 St) (p q : program E1 (option exitv)) s : same p q -> trace h p s = trace h q s.
+Proof.
+  intros H; revert s; induction H as [r | X e k k' _ IH]; intros s; cbn; [reflexivity |].
+  destruct (h X e s) as [[x s'] |]; [rewrite IH; reflexivity | reflexivity].
+Qed.
+
+(** **Where [denoteRowsB] has an arm, the run is the run of Lean's tree**, step for step. *)
+Theorem run_at_lean {St} (h : host E1 St) k e s : in_fragment e = true ->
+  run_at k h e s = trace h (denoteB k e []) s.
+Proof. intros Hin. apply same_trace, denoteBD_same; exact Hin. Qed.
 
 (** **[settle limit]**: the least budget up to [limit] whose run is not cut, and that run. *)
 Fixpoint settle {St} (limit : nat) (h : host E1 St) (e : eff native_op) (s : St)
@@ -286,7 +326,7 @@ Fixpoint settle {St} (limit : nat) (h : host E1 St) (e : eff native_op) (s : St)
 Lemma settle_some {St} (h : host E1 St) e s : forall limit k r,
   settle limit h e s = Some (k, r) -> k <= limit /\ r = run_at k h e s /\ stop_at r <> Cut.
 Proof.
-  induction limit as [| l IH]; intros k r Hs; cbn in Hs.
+  induction limit as [| l IH]; intros k r Hs; cbn [settle] in Hs.
   - destruct (stop_at (run_at 0 h e s)) eqn:Hst; inversion Hs; subst;
       (split; [lia | split; [reflexivity | rewrite Hst; discriminate]]).
   - destruct (settle l h e s) as [[k0 r0] |] eqn:Hl.
@@ -298,7 +338,7 @@ Qed.
 Lemma settle_none {St} (h : host E1 St) e s : forall limit,
   settle limit h e s = None <-> forall k, k <= limit -> stop_at (run_at k h e s) = Cut.
 Proof.
-  induction limit as [| l IH]; cbn.
+  induction limit as [| l IH]; cbn [settle].
   - split.
     + intros Hs k Hk. assert (k = 0) by lia; subst.
       destruct (stop_at (run_at 0 h e s)); congruence.
@@ -313,19 +353,19 @@ Proof.
 Qed.
 
 (** **A settled finish is the meaning's.** *)
-Theorem settle_finished {St} (h : host E1 St) limit e s k steps ex s' : in_fragment e = true ->
+Theorem settle_finished {St} (h : host E1 St) limit e s k steps ex s' :
   settle limit h e s = Some (k, (steps, Finished ex, s')) -> run_tree h (meaning e) s ≈ Ret (s', ex).
 Proof.
-  intros Hin Hs. destruct (settle_some h e s limit k _ Hs) as (_ & Hr & _).
-  apply (run_at_finished h k e s steps); [exact Hin | symmetry; exact Hr].
+  intros Hs. destruct (settle_some h e s limit k _ Hs) as (_ & Hr & _).
+  apply (run_at_finished h k e s steps); symmetry; exact Hr.
 Qed.
 
 (** **Complete for finishes**: where the meaning finishes, some limit settles on that finish. *)
-Theorem settle_complete {St} (h : host E1 St) e s ex s' : in_fragment e = true ->
+Theorem settle_complete {St} (h : host E1 St) e s ex s' :
   run_tree h (meaning e) s ≈ Ret (s', ex) ->
   exists limit k steps, settle limit h e s = Some (k, (steps, Finished ex, s')).
 Proof.
-  intros Hin Hm. apply meaning_finishes_iff in Hm as [k Hk]; [| exact Hin].
+  intros Hm. apply finishesD_iff in Hm as [k Hk].
   exists k. destruct (settle k h e s) as [[k0 r] |] eqn:Hs.
   - destruct (settle_some h e s k k0 r Hs) as (Hk0 & Hr & Hc). subst r.
     (* the first budget that is not cut is a finish, the same finish *)
@@ -341,16 +381,16 @@ Qed.
 
 (** **Divergence is never settling**: the meaning's run diverges exactly when no limit settles.
     One limit that has not settled shows nothing of divergence. *)
-Theorem diverges_iff_never_settles {St} (h : host E1 St) e s : in_fragment e = true ->
+Theorem diverges_iff_never_settles {St} (h : host E1 St) e s :
   Diverges (run_tree h (meaning e) s) <-> forall limit, settle limit h e s = None.
 Proof.
-  intros Hin. rewrite <- meaning_diverges_under_iff; [| exact Hin]. unfold ChainDiverges. split.
+  rewrite <- divergesD_iff. unfold ChainDivergesD. split.
   - intros Hd limit. apply settle_none. intros k _. destruct (Hd k) as [s' Hs'].
     rewrite <- trace_project in Hs'. unfold stop_at, run_at.
-    destruct (trace h (denoteB k e []) s) as [[steps st] s2]. destruct st; inversion Hs'; reflexivity.
+    destruct (trace h (denoteBD k e) s) as [[steps st] s2]. destruct st; inversion Hs'; reflexivity.
   - intros Hn k. pose proof (proj1 (settle_none h e s k) (Hn k) k (le_n _)) as Hc.
     exists (snd (run_at k h e s)). rewrite <- trace_project. unfold stop_at, run_at in *.
-    destruct (trace h (denoteB k e []) s) as [[steps st] s2]. cbn in Hc. subst st. reflexivity.
+    destruct (trace h (denoteBD k e) s) as [[steps st] s2]. cbn in Hc. subst st. reflexivity.
 Qed.
 
 (** **Frames**: the runs at budgets [0 .. n], each with its budget. *)

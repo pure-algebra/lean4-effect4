@@ -6,7 +6,7 @@
 <title>Budget frames</title>
 <!-- budget_view.html -- the template of the animated view of budgeted runs.
      reproduce.sh puts the JSON that gen/budget_view.ml writes in place of the marker below.
-     Frame k is the run of Lean's tree denoteRowsB k under a host (rocq/Api.v, run_at). -->
+     Frame k is the run of the budgeted tree at budget k under a host (rocq/Api.v, run_at). -->
 <style>
   :root {
     --ground: #fbfaf7; --panel: #ffffff; --ink: #1f2328; --muted: #6a6f76; --line: #d7d4cc;
@@ -64,10 +64,11 @@
 <body>
 <main>
   <h1>Budget frames</h1>
-  <p class="lead">Each frame is the run of Lean's budgeted call tree <code>denoteRowsB k</code> under one host, at budget
-    <code>k</code>. Frames only grow; the first frame that is not cut is the program's end, and every later frame is the
-    same (<code>Api.frames_grow</code>, <code>Budget.finishes_iff</code>). A program that is cut at every budget diverges
-    (<code>Budget.diverges_iff</code>); the frames below show a finite number of budgets only.</p>
+  <p class="lead">Each frame is the run of the budgeted call tree at budget <code>k</code> under one host: Lean's
+    <code>denoteRowsB k</code> where it has an arm, with definitions unfolded <code>k</code> calls deep
+    (<code>BudgetDefs.v</code>). Frames only grow; the first frame that is not cut is the program's end, and every later
+    frame is the same (<code>Api.frames_grow</code>, <code>BudgetDefs.finishesD_iff</code>). A program that is cut at
+    every budget diverges (<code>BudgetDefs.divergesD_iff</code>); the frames below show a finite number of budgets only.</p>
   <div class="pills" id="pills"></div>
   <div class="grid">
     <section class="card">
@@ -129,13 +130,17 @@ function term(t) {
     case "var": return "v" + t[1];
     case "lit": return val(t[1]);
     case "app": return t[1] + "(" + terms(t[2]).join(", ") + ")";
+    case "record": { const vs = terms(t[3]); return "{" + t[2].map((n, i) => n + ": " + vs[i]).join(", ") + "}"; }
+    case "field": return term(t[2]) + "." + t[3];
     default: return t[0];
   }
 }
+function effs(es) { const out = []; while (es[0] === "cons") { out.push(es[1]); es = es[2]; } return out; }
 function op(o) {
   switch (o[0]) {
     case "external": return "row " + o[1];
     case "refMake": return "cell.new"; case "refGet": return "cell.get"; case "refSet": return "cell.set";
+    case "call": return "call " + o[1]; case "param": return "param " + o[1];
     default: return o[0];
   }
 }
@@ -152,6 +157,13 @@ function prog(e, ind) {
     case "iterate":
       return pad + "loop from " + term(e[2]) + " while " + term(e[3]) + " step " + term(e[4]) +
         " result " + term(e[5]) + "\n" + prog(e[6], ind + 1);
+    case "defs":
+      return effs(e[2]).map((b, i) => pad + "def " + i + " =\n" + prog(b, ind + 1)).join("\n") +
+        "\n" + pad + "main =\n" + prog(e[3], ind + 1);
+    case "invoke":
+      return pad + "invoke " + e[1] + " " + term(e[2]) + " passing\n" + effs(e[3]).map(a => prog(a, ind + 1)).join("\n");
+    case "provideContext": return pad + "with context " + term(e[1]) + "\n" + prog(e[2], ind + 1);
+    case "withFiber": return pad + (e[1][0] === "context" ? "context" : "fiber " + e[1][0]);
     default: return pad + e[0];
   }
 }
@@ -230,7 +242,8 @@ function choose(i) {
   document.getElementById("verdict").innerHTML = ex.settled
     ? "Settles at <b>budget " + ex.settled.budget + "</b>: " + stopText(ex.settled.stop) + ". Every larger budget gives the same run."
     : "Cut at every budget up to <b>" + (ex.frames.length - 1) + "</b>. That is a finite probe; divergence is the theorem " +
-      "that every budget cuts" + (ex.name === "forever" ? " (<code>BudgetCheck.forever_cut_everywhere</code> proves it here)." : ".");
+      "that every budget cuts" + (ex.name === "forever" ? " (<code>BudgetCheck.forever_cut_everywhereD</code> proves it here)."
+        : ex.name === "self call" ? " (<code>BudgetCheck.self_call_cut_everywhere</code> proves it here)." : ".");
   render();
 }
 function stop() { if (timer) clearInterval(timer); timer = null; playBtn.textContent = "Play"; }

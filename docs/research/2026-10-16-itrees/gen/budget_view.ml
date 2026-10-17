@@ -5,7 +5,8 @@
    answered call kept (Api.frames). For each program of rocq/Examples.v it writes the program,
    its frames and the budget at which it settles; then it times the frames of a long run. A view
    and a measurement; it is no lane of the estate.
-   Depends on: Budget_run (extracted), effect4_eff (Eff_types, Eff_json, Eff_json_text).
+   Depends on: Budget_run (extracted, with two requests of the to-do fixture), effect4_eff
+   (Eff_types, Eff_json, Eff_json_text).
 
    Usage: budget_view OUT.json
 
@@ -116,7 +117,17 @@ let () =
       (fun () -> example "before an edit" "a decision on the literal true: doubling, else ping" "a tape of 4 replies"
         (host by_tape) ([], units 4) 8 before_edit);
       (fun () -> example "after the edit" "the decision removed by when_true_law" "a tape of 4 replies"
-        (host by_tape) ([], units 4) 8 after_edit) ]
+        (host by_tape) ([], units 4) 8 after_edit);
+      (fun () -> example "recursive doubling" "the doubling loop as a definition that calls itself" "a tape of 4 replies"
+        (host by_tape) ([], units 4) 8 doubling_rec);
+      (fun () -> example "self call" "a definition that calls itself at once, forever" "a tape of no replies"
+        (host by_tape) ([], []) 8 self_call);
+      (fun () -> example "twice" "an invocation that runs its passed program twice" "a tape of 2 replies"
+        (host by_tape) ([], units 2) 6 twice);
+      (fun () -> example "to-do request 0" "the to-do lane's first request, with definitions, cells and the context"
+        "its recorded reply tape" (host by_tape) ([], tape_of calls_0) 5 program_0);
+      (fun () -> example "to-do request 2" "the to-do lane's third request" "its recorded reply tape"
+        (host by_tape) ([], tape_of calls_2) 5 program_2) ]
   in
   (* the long run: ping under a host that always answers, budgets 0 .. n *)
   let n = 1000 in

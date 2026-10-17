@@ -1,11 +1,51 @@
 # 2026-10-16 seat itrees budget receipt: Lean's budgeted call tree is the truncated tree meaning
 
 **The one thing to know before merging:** Lean's divergence of a program, a cut at every budget, is
-now the Rocq divergence `≈ ITree.spin`. Rocq proves this for every host on the fragment both
-meanings share, and `Print Assumptions` finds no axiom behind it. The commit adds research files
-only, under `docs/research/2026-10-16-itrees/`, and joins no gate of the tree.
+now the Rocq divergence `≈ ITree.spin`. Rocq proves this for every host and, with definitions
+unfolded by budget, for every program. `Print Assumptions` finds no axiom behind it. The two
+commits add research files only, under `docs/research/2026-10-16-itrees/`, and join no gate.
 
 The research note is `docs/research/2026-10-16-itrees/README.md`, §6.
+
+## Second commit: definitions by budgeted unfolding
+
+The first commit covered the fragment both meanings have arms for. The second gives the budgeted
+tree every arm of `Denote.denote`, so the relation holds for every program (README §6.3).
+
+| File | Change |
+| --- | --- |
+| `rocq/BudgetDefs.v` | new: `denoteW`, `denoteD`, `denoteBD`, `M`; monotone, below, adequacy, the three outcomes for every program; node for node Lean's tree on the fragment |
+| `rocq/TodoBudgetCheck.v` | new: the to-do fixture at a budget, 14 checks and two controls |
+| `rocq/Budget.v` | the loop lemma bounded (`adequacy_loop_upto`); `adequacy_loop` its corollary; monotonicity proved without unfolding `iterB` |
+| `rocq/Api.v` | the runner runs `denoteBD`, so every run theorem holds for every program; `run_at_lean`; constructors for definitions, calls, invocations, parameters and the context |
+| `rocq/Examples.v`, `rocq/BudgetCheck.v` | three programs with definitions; `self_call_diverges` from the budgets |
+| `rocq/BudgetExtract.v`, `gen/budget_view.ml`, `gen/budget_view.html`, `generated/budget-view.html` | the new examples and two to-do requests in the view |
+| `reproduce.sh` | `BudgetDefs.v` and `TodoBudgetCheck.v` built; 13 more assumptions printed; step 11, the control on the call arms |
+| `logs/9-budget.log` to `logs/13-defs-mutant.log` | the final reproduction's logs |
+| `README.md` §6, this receipt | updated |
+
+| Command | Result |
+| --- | --- |
+| `bash docs/research/2026-10-16-itrees/reproduce.sh OUTDIR` | exit 0 in 1 min 53 s from an empty folder, under a load average of 14 |
+| `python3 scripts/check-language.py --strict` on the README and this receipt | PASS, no finding |
+
+| Result | Assumes |
+| --- | --- |
+| `denoteD_approx`, `denoteD_below`, `adequacyD`, `finishesD_iff`, `waitsD_iff`, `divergesD_iff`, `meaning_divergesD_iff`, `denoteBD_same`, `run_at_lean` | nothing: closed under the global context |
+| `doubling_rec_finishes`, `self_call_diverges`, `TodoBudgetCheck.reference_0`, `TodoBudgetCheck.broken_6` | nothing |
+
+| Claim | Evidence |
+| --- | --- |
+| The budgeted tree with definitions is below the meaning, and reaches each of its ends, for every program and host | proved in Rocq |
+| Where `denoteRowsB` has an arm, the tree with definitions is Lean's transcription, node for node | proved in Rocq |
+| A definition that calls itself at once has a divergent meaning | proved in Rocq, from the budgets |
+| The seven to-do requests under both tapes settle at budget 2 or 3 on Lean's calls and exits | finite checks by kernel computation |
+| The call arms follow `Denote.v`: a call at the wrong environment fails `denoteW_below` | tested (`logs/13-defs-mutant.log`) |
+
+## The first commit
+
+The sections below record the first commit, `2051d3249`; base, branch and open obligations hold
+for both.
 
 ## Base and head
 
@@ -13,7 +53,7 @@ The research note is `docs/research/2026-10-16-itrees/README.md`, §6.
 | --- | --- |
 | Branch | `claude/interesting-volhard-6ceb2e`, moved onto `seat/itrees` before any change |
 | Base | `5e2c01d99` (`seat/itrees`) |
-| Head | the commit that adds this receipt |
+| Head | `2051d3249` (first commit), then the commit that adds the definitions |
 | Pushed | no |
 
 ## Changed files
@@ -94,8 +134,8 @@ extracted runner also assumes Rocq's extraction.
 
 ## Open obligations
 
-1. Definitions by budgeted unfolding, the brief's bonus, are not done. A call's body is no subterm
-   of the program, so the proof needs an induction on the run's silent steps rather than on syntax.
+1. Definitions by budgeted unfolding: done by the second commit, above. The call depth is this
+   folder's count, a proposal for Lean's arms (README proposal 1).
 2. The README's proposal 8, for the math seat: R12 by the route of `adequacy_loop`.
 3. A Rocq `host` is any function. That Lean's `rowsHost` is the instance `route cells_host` is
    read, not proved.

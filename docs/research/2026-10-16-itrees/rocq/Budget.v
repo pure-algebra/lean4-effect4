@@ -870,16 +870,18 @@ Proof.
   exists n0; split; [reflexivity | eapply ends_eq_itree; [exact H1 | exact Huu']].
 Qed.
 
-Lemma adequacy_loop {St} (h : host E1 St) (bodyF : list val_ -> itree E1 exitv)
+(** The loop, for a body whose ends are reached at some budget up to [N] silent steps: so are
+    the loop's ends, up to [N]. *)
+Lemma adequacy_loop_upto {St} (h : host E1 St) (N : nat) (bodyF : list val_ -> itree E1 exitv)
     (bodyB : nat -> list val_ -> program E1 (option exitv))
     (Hmono : forall k k' env, k <= k' -> approx (bodyB k env) (bodyB k' env))
-    (Hadq : forall env s o, Ends (run_tree h (bodyF env) s) o ->
+    (Hadq : forall m env s o, m <= N -> ends m (run_tree h (bodyF env) s) o ->
               exists k, crun h (bodyB k env) s = outcome_of o)
     env test step result :
-  forall n c s o, ends n (run_tree h (ITree.iter (loop_stepF bodyF env test step result) c) s) o ->
+  forall n c s o, n <= N -> ends n (run_tree h (ITree.iter (loop_stepF bodyF env test step result) c) s) o ->
     exists k, crun h (pmap opt_join (iterB (loop_stepB (bodyB k) env test step result) k c)) s = outcome_of o.
 Proof.
-  intros n; induction n as [n IHn] using lt_wf_ind; intros c s o H.
+  intros n; induction n as [n IHn] using lt_wf_ind; intros c s o HN H.
   set (g := loop_stepF bodyF env test step result) in *.
   set (K := fun lr : val_ + exitv => match lr with inl c' => Tau (ITree.iter g c') | inr r => Ret r end).
   assert (Hu : run_tree h (ITree.iter g c) s ≅
@@ -893,7 +895,7 @@ Proof.
     match goal with bb : bool |- _ => destruct bb end;
       [| exfalso; eapply ends_ret_inv in Hw; [discriminate | apply run_ret]].
     destruct (ends_bind_inv n _ None Hw _ _ (run_bind h _ _ s)) as [[_ Hb] | ([s2 x] & n3 & n4 & H3 & H4 & _)].
-    + destruct (Hadq (env ++ [c]) s None (ex_intro _ n Hb)) as [kb Hkb].
+    + destruct (Hadq n (env ++ [c]) s None HN Hb) as [kb Hkb].
       exists (S kb). rewrite crun_round. unfold loop_stepB. rewrite Htest, crun_bind.
       rewrite (crun_outcome_approx h _ _ s None (Hmono kb (S kb) _ (le_S _ _ (le_n _))) Hkb). reflexivity.
     + exfalso. destruct x as [a | image]; cbn in H4;
@@ -916,16 +918,16 @@ Proof.
     match goal with bb : bool |- _ => destruct bb end.
     2: { eapply Hret; [apply run_ret | exact H1 | unfold loop_stepB; rewrite Htest; reflexivity]. }
     (* the test holds: the body ran *)
-    destruct (ends_bind_inv n1 _ _ H1 _ _ (run_bind h _ _ s)) as [[Hc _] | ([s2 x] & n3 & n4 & H3 & H4 & _)];
+    destruct (ends_bind_inv n1 _ _ H1 _ _ (run_bind h _ _ s)) as [[Hc _] | ([s2 x] & n3 & n4 & H3 & H4 & Hn3)];
       [discriminate |].
-    destruct (Hadq (env ++ [c]) s (Some (s2, x)) (ex_intro _ n3 H3)) as [kb Hkb].
+    destruct (Hadq n3 (env ++ [c]) s (Some (s2, x)) ltac:(lia) H3) as [kb Hkb].
     assert (Hb : forall k, kb <= k -> crun h (bodyB k (env ++ [c])) s = Some (Some x, s2)).
     { intros k Hk. apply (crun_outcome_approx h _ _ s (Some (s2, x)) (Hmono kb k _ Hk) Hkb). }
     destruct x as [a | image]; cbn in H4.
     + destruct (eval_term (env ++ [c; a]) step) as [c' |] eqn:Hstep.
       * eapply ends_ret_inv in H4; [| apply run_ret]. inversion H4; subst s2 lr.
         cbn in H2. destruct (ends_tau_inv n2 _ _ o H2 (run_tau h _ s1)) as [m [-> Hm]].
-        destruct (IHn m ltac:(lia) c' s1 o Hm) as [k1 Hk1].
+        destruct (IHn m ltac:(lia) c' s1 o ltac:(lia) Hm) as [k1 Hk1].
         exists (S (Nat.max kb k1)). rewrite crun_round. unfold loop_stepB at 1. rewrite Htest, crun_bind.
         rewrite (Hb (S (Nat.max kb k1)) ltac:(lia)). cbn. rewrite Hstep. cbn.
         eapply crun_outcome_approx; [| exact Hk1].
@@ -938,6 +940,19 @@ Proof.
       cbn in H2. eapply ends_ret_inv in H2; [| apply run_ret]. subst o.
       exists (S kb). rewrite crun_round. unfold loop_stepB at 1. rewrite Htest, crun_bind.
       rewrite (Hb (S kb) ltac:(lia)). reflexivity.
+Qed.
+
+Lemma adequacy_loop {St} (h : host E1 St) (bodyF : list val_ -> itree E1 exitv)
+    (bodyB : nat -> list val_ -> program E1 (option exitv))
+    (Hmono : forall k k' env, k <= k' -> approx (bodyB k env) (bodyB k' env))
+    (Hadq : forall env s o, Ends (run_tree h (bodyF env) s) o ->
+              exists k, crun h (bodyB k env) s = outcome_of o)
+    env test step result :
+  forall n c s o, ends n (run_tree h (ITree.iter (loop_stepF bodyF env test step result) c) s) o ->
+    exists k, crun h (pmap opt_join (iterB (loop_stepB (bodyB k) env test step result) k c)) s = outcome_of o.
+Proof.
+  intros n c s o H. apply (adequacy_loop_upto h n bodyF bodyB Hmono) with (n := n); [| lia | exact H].
+  intros m env' s' o' _ Hm. apply Hadq. exists m; exact Hm.
 Qed.
 
 #[global] Instance Ends_eq_itree_proper {F A} : Proper (eq_itree eq ==> eq ==> iff) (@Ends F A).
