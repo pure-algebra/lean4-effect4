@@ -22,8 +22,9 @@ let raises_division f = match f () with _ -> false | exception Division_by_zero 
 let strings () =
   let s = "é🙂\n" in
   check "S1 utf8_bytes is Lean's String.toUTF8 on a string outside ASCII"
-    (Lcnf_string.utf8_bytes s = [ 195; 169; 240; 159; 153; 130; 10 ]);
-  check "S1 utf8_bytes of the empty string is empty" (Lcnf_string.utf8_bytes "" = []);
+    (Lcnf_array.to_list (Lcnf_string.utf8_bytes s) = [ 195; 169; 240; 159; 153; 130; 10 ]);
+  check "S1 utf8_bytes of the empty string is empty"
+    (Lcnf_array.is_empty (Lcnf_string.utf8_bytes ""));
   check "S2 utf8_length counts scalar values, as Lean's String.length: 2 for \"é🙂\""
     (Lcnf_string.utf8_length "é🙂" = 2 && Lcnf_string.utf8_length "" = 0
     && Lcnf_string.utf8_length "abc" = 3);
@@ -34,11 +35,13 @@ let strings () =
     (Lcnf_string.of_code_points [ 0xE9; 0x1F642; 10 ] = s);
   check "S3 of_utf8_bytes inverts utf8_bytes"
     (Lcnf_string.of_utf8_bytes (Lcnf_string.utf8_bytes s) = s
-    && Lcnf_string.utf8_bytes (Lcnf_string.of_utf8_bytes [ 0; 127; 128; 255 ]) = [ 0; 127; 128; 255 ]);
+    && Lcnf_array.to_list
+         (Lcnf_string.utf8_bytes (Lcnf_string.of_utf8_bytes (Lcnf_array.of_list [ 0; 127; 128; 255 ])))
+       = [ 0; 127; 128; 255 ]);
   (* red control: a code point is not a byte; reading the scalar values as bytes is refused by
      Char.chr, so the two inverses are not interchangeable *)
   check "S3 (red control): a code point above 255 is no byte"
-    (match Lcnf_string.of_utf8_bytes [ 0x1F642 ] with
+    (match Lcnf_string.of_utf8_bytes (Lcnf_array.of_list [ 0x1F642 ]) with
      | _ -> false
      | exception Invalid_argument _ -> true)
 

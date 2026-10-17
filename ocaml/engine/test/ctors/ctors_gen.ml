@@ -76,64 +76,64 @@ let test_codegen_constructor_lane_nat_match (x_1 : int) : int =
 
 (* LCNF mono: Test.Codegen.ConstructorLane.arrMk (l : List Nat) : Array Nat *)
 
-let test_codegen_constructor_lane_arr_mk (l : int list) : int list =
-  l
+let test_codegen_constructor_lane_arr_mk (l : int list) : int Lcnf_array.t =
+  Lcnf_array.of_list l
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.arrToList (a : Array Nat) : List Nat *)
 
-let test_codegen_constructor_lane_arr_to_list (a : int list) : int list =
-  a
+let test_codegen_constructor_lane_arr_to_list (a : int Lcnf_array.t) : int list =
+  Lcnf_array.to_list a
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.arrMatch (x.1 : Array Nat) : Nat *)
 
-let test_codegen_constructor_lane_arr_match (x_1 : int list) : int =
-  let to_list_2 = x_1 in
+let test_codegen_constructor_lane_arr_match (x_1 : int Lcnf_array.t) : int =
+  let to_list_2 = Lcnf_array.to_list x_1 in
   List.length to_list_2
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.baMk (a : Array UInt8) : ByteArray *)
 
-let test_codegen_constructor_lane_ba_mk (a : int list) : int list =
+let test_codegen_constructor_lane_ba_mk (a : int Lcnf_array.t) : int Lcnf_array.t =
   a
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.baData (b : ByteArray) : Array UInt8 *)
 
-let test_codegen_constructor_lane_ba_data (b : int list) : int list =
+let test_codegen_constructor_lane_ba_data (b : int Lcnf_array.t) : int Lcnf_array.t =
   b
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.baMatch (x.1 : ByteArray) : Array UInt8 *)
 
-let test_codegen_constructor_lane_ba_match (x_1 : int list) : int list =
+let test_codegen_constructor_lane_ba_match (x_1 : int Lcnf_array.t) : int Lcnf_array.t =
   x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.strBytes (s : String) : ByteArray *)
 
-let test_codegen_constructor_lane_str_bytes (s : string) : int list =
+let test_codegen_constructor_lane_str_bytes (s : string) : int Lcnf_array.t =
   Lcnf_string.utf8_bytes s
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.strMatch (x.1 : String) : ByteArray *)
 
-let test_codegen_constructor_lane_str_match (x_1 : string) : int list =
+let test_codegen_constructor_lane_str_match (x_1 : string) : int Lcnf_array.t =
   Lcnf_string.utf8_bytes x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.strOfBytes (b : ByteArray) (h : lcErased) : String *)
 
-let test_codegen_constructor_lane_str_of_bytes (b : int list) h : string =
+let test_codegen_constructor_lane_str_of_bytes (b : int Lcnf_array.t) h : string =
   Lcnf_string.of_utf8_bytes b
 
 

@@ -6,7 +6,7 @@
    Char, the fixed-width words, BitVec, Fin, Subtype, OCaml's own datatypes, and a declared variant
    and record for contrast. The fixture ctors.txt beside this file is Lean's (write.lean): one
    line per call, the call and its answer.
-   Depends on: Ctors_gen.
+   Depends on: Ctors_gen, Lcnf_array (an `Array` and a `ByteArray` are its vectors).
 
    Properties:
    C1  Every function of the lane compiles: no constructor or projection of a natively spelled
@@ -18,6 +18,9 @@
 open Ctors_gen
 
 let ints xs = "[" ^ String.concat ", " (List.map string_of_int xs) ^ "]"
+(* An `Array` and a `ByteArray` are a vector (Lcnf_array): built from a list, read as one. *)
+let arr xs = Lcnf_array.of_list xs
+let vec v = ints (Lcnf_array.to_list v)
 let b = string_of_bool
 let i = string_of_int
 
@@ -33,15 +36,15 @@ let answers = [
   "natZero = " ^ i test_codegen_constructor_lane_nat_zero;
   "natMatch 0 = " ^ i (test_codegen_constructor_lane_nat_match 0);
   "natMatch 5 = " ^ i (test_codegen_constructor_lane_nat_match 5);
-  "arrMk = " ^ ints (test_codegen_constructor_lane_arr_mk [1; 2]);
-  "arrToList = " ^ ints (test_codegen_constructor_lane_arr_to_list [3; 4]);
-  "arrMatch = " ^ i (test_codegen_constructor_lane_arr_match [1; 2; 3]);
-  "baMk = " ^ ints (test_codegen_constructor_lane_ba_mk [5; 6]);
-  "baData = " ^ ints (test_codegen_constructor_lane_ba_data [1; 2]);
-  "baMatch = " ^ ints (test_codegen_constructor_lane_ba_match [7]);
-  "strBytes = " ^ ints (test_codegen_constructor_lane_str_bytes "h\xc3\xa9");
-  "strMatch = " ^ ints (test_codegen_constructor_lane_str_match "ab");
-  "strOfBytes = " ^ test_codegen_constructor_lane_str_of_bytes [104; 195; 169] ();
+  "arrMk = " ^ vec (test_codegen_constructor_lane_arr_mk [1; 2]);
+  "arrToList = " ^ ints (test_codegen_constructor_lane_arr_to_list (arr [3; 4]));
+  "arrMatch = " ^ i (test_codegen_constructor_lane_arr_match (arr [1; 2; 3]));
+  "baMk = " ^ vec (test_codegen_constructor_lane_ba_mk (arr [5; 6]));
+  "baData = " ^ vec (test_codegen_constructor_lane_ba_data (arr [1; 2]));
+  "baMatch = " ^ vec (test_codegen_constructor_lane_ba_match (arr [7]));
+  "strBytes = " ^ vec (test_codegen_constructor_lane_str_bytes "h\xc3\xa9");
+  "strMatch = " ^ vec (test_codegen_constructor_lane_str_match "ab");
+  "strOfBytes = " ^ test_codegen_constructor_lane_str_of_bytes (arr [104; 195; 169]) ();
   "charOfNat 65 = " ^ i (test_codegen_constructor_lane_char_of_nat 65);
   "charOfNat 55296 = " ^ i (test_codegen_constructor_lane_char_of_nat 55296);
   "charVal = " ^ i (test_codegen_constructor_lane_char_val (Char.code 'z'));
