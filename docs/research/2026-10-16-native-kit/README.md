@@ -10,8 +10,9 @@ production-level APIs to write, type, run and watch programs.
 An agent checks an Eff program with Lean's own checker in milliseconds, and runs it with one call.
 The run answers from the call tree where the tree covers the program, and from the machine
 elsewhere. Every run stops one of five named ways. A cut is never reported as a failure or as a
-divergence. All of it is Lean code compiled by LCNF into one closure. A lane in `make check-ocaml`
-compares the Rocq tree that the declared facts cite with the tree that Lean runs.
+divergence. All of it is Lean code compiled by LCNF into one closure. The budget's one law,
+`Tree.ofProgram_approx`, is proved in Rocq of Lean's own tree, printed from Lean's compiler IR
+into the tracked workspace `rocq/`.
 
 ## What an agent does
 
@@ -50,11 +51,14 @@ flowchart TB
     T["Effect4.Run.Tree<br/>the call tree, its runs, settle, frames, atBudget"]
     K["Effect4.Run.Kit<br/>check, admit, replyFault, samples, the carriers' images"]
     A["Effect4.Program.Authoring<br/>with Authoring/Named.lean"]
-    L["Effect4.Laws.Run.Tree<br/>InRocq, declared facts, Lean proofs from them"]
+    L["Effect4.Laws.Run.Tree<br/>the declared fact, Lean proofs from it"]
   end
-  subgraph Rocq["Rocq: research"]
-    B["BudgetDefs.v<br/>denoteD_approx, denoteBD_same"]
-    S["generated/Skeleton.v<br/>printed from Lean's base-phase LCNF"]
+  subgraph Rocq["rocq/: the cited proofs"]
+    S["Skeleton.v<br/>GENERATED: make gen-rocq"]
+    P["SkeletonApprox.v<br/>Approx.ofProgram_approx"]
+  end
+  subgraph Research["docs/research: history"]
+    B["BudgetDefs.v<br/>the hand transcription"]
   end
   subgraph OCaml["OCaml: the engine project"]
     G["gen/api_gen.ml<br/>GENERATED: one closure"]
@@ -62,7 +66,8 @@ flowchart TB
     E["eff: check, run, explore, view, serve, mcp"]
     Q["engine/test/rocq: the comparison lane"]
   end
-  B -. "declared … from" .-> L
+  P -. "declared … from" .-> L
+  S --> P
   T --> G
   K --> G
   A --> G
@@ -70,7 +75,7 @@ flowchart TB
   B -- "extracted, Lean's evaluator realized" --> Q
   G --> Q
   L -- "InRocq, lowered" --> Q
-  T -. "GallinaGen" .-> S
+  T -- "base-phase LCNF, GallinaGen" --> S
 ```
 
 | Piece | Where | What it holds |
@@ -78,7 +83,8 @@ flowchart TB
 | The call tree | `src/Effect4/Run/Tree.lean` | `Tree`, `Tree.ofProgram`, `Tree.run`, `Tree.probe`, `Tree.settle`, `Tree.frames`, `Tree.paths`, `Tree.outsideAt`, `Tree.Host.ofReactor`; `Run.atBudget`, the one run in Lean |
 | The kit's Lean face | `src/Effect4/Run/Kit.lean` | `Kit.check`, `Kit.admit`, `Kit.replyFault`, `Kit.samples`, `Kit.replies`, `Kit.explore`, each carrier's shape, value tree and reading |
 | Authoring for an author outside Lean | `src/Effect4/Program/Authoring/Named.lean` | `Row.callNamed`, `catchWith`, `loopWith`, `elaborateAt`: each one application of an existing operation |
-| The laws | `src/Effect4/Laws/Run/Tree.lean` | `Tree.Approx`, `Plain`, `InRocq`; two declared facts; `runFrom_approx`, `probe_stable`, `settles_of_ends` and `settle_sound` |
+| The laws | `src/Effect4/Laws/Run/Tree.lean` | `Tree.Approx`, `Plain`, `InRocq`; the declared fact `ofProgram_approx`; the planned goal `ofProgram_eq_denoteRowsB`; `runFrom_approx`, `probe_stable`, `settles_of_ends` and `settle_sound` |
+| The cited proof | `rocq/` (`rocq/README.md`) | `Skeleton.v` and `Eff_types.v` (generated, `make gen-rocq`); `SkeletonApprox.v`; `Assumptions.v` |
 | The closure | `ocaml/gen/api_gen.ml` | the api roots and the kit's roots, 1959 declarations (`make gen-lcnf`, recipe `ocaml/gen/roots.json`) |
 | The face | `ocaml/engine/kit/kit.mli` | carriers, `check`, `admit`, reactors (`Reactor.silent`, `tape`, `by_name`, `first`, `counted`), `run`, traces, `explore`, `replays`, JSON |
 | Authoring | `ocaml/engine/kit/kit_author.mli` | Lean's authoring functions under OCaml spellings; binders are OCaml functions; `build` is `elaborateAt` |
@@ -129,8 +135,9 @@ the scope back (`Kit_author.nat`).
 
 ### The comparison lane
 
-The declared facts cite Rocq's theorems about `BudgetDefs.denoteBD`. The lane checks that
-`denoteBD` is the tree Lean runs, on finite inputs, budget by budget.
+The lane checks that the hand Rocq tree, `BudgetDefs.denoteBD`, is the tree Lean runs, on finite
+inputs, budget by budget. It was the floor while the declared facts cited the hand tree. Now the
+declared fact cites a proof of the generated tree, and the lane measures the hand tree.
 
 ```mermaid
 flowchart LR
@@ -145,7 +152,7 @@ flowchart LR
 - `rocq/LaneExtract.v` extracts `Api.run_at` under two host functions. `Extract Constant`
   realizes `Denote.v`'s evaluator (`eval_term`, `decide`, `fail_exit` and the two marked exits)
   by Lean's lowered ones (`lane_eval.ml`). So the lane compares trees, not evaluators.
-- The program set is the declared facts' own premise, `InRocq`, lowered into `rocq_gen.ml`.
+- The program set is the hand tree's fragment, `InRocq`, lowered into `rocq_gen.ml`.
 - Step 13 of `docs/research/2026-10-16-itrees/reproduce.sh` extracts the file again. It refuses a
   difference from the committed `rocq_run.ml`.
 
@@ -196,6 +203,12 @@ scratch folder.
    other artifacts are byte-identical.
 7. **`iterateWith` has no compiled declaration to lower.** `loopWith` is the monomorphic form
    with the parts as arguments.
+8. **The Rocq printer used to approximate.** A constant outside the spec became a Section
+   variable, an unknown type printed as `unknown`, and an unknown constructor as `_`. Each is now
+   refused by name. The skeleton of `Effect4.Run.Tree` needs none of them: it prints as before.
+9. **A section's variables do not reach a second file.** Rocq abstracts each definition over the
+   variables it uses, so a proof file could not name the skeleton's evaluator. The skeleton is
+   now a functor over the module type `Eval`, and the proof is a functor over the same `Eval`.
 
 Three findings of the first landing still hold:
 
@@ -206,19 +219,19 @@ Three findings of the first landing still hold:
 ## What this does not establish
 
 - The lane is a finite check, not a proof. It holds on the programs and budgets it tries.
-- Each declared fact still rests on the hand Rocq tree. `generated/Skeleton.v` is printed from
-  Lean and accepted by Rocq's guard checker, but no proof is moved onto it yet.
-- The context arms, the cause handlers, `exit`, `onExit` and the generator's statements are Lean's
-  alone. The kit's lane checks them against the machine (T8), and no Rocq proof reads them.
-- On a program the checker refuses, the trees differ at a cell request that is no cell
-  (finding 2). The citations are for programs the checker types.
+- `rocq/Skeleton.v` is Lean's code by the printer's rules, not by a theorem: one printing rule
+  per constant, naturals checked.
+- `Tree.ofProgram_eq_denoteRowsB` is a planned goal: no proof over Lean's code states it.
+- Adequacy is proved only of the hand transcription.
+- On a program the checker refuses, the hand tree and Lean's differ at a cell request that is no
+  cell (finding 2). This bounds the comparison lane, not the declared fact.
 - The MCP server is in no client's configuration. Adding it to `.mcp.json` is the owner's call.
 
 ## Next, ranked by value to an agent
 
 | Rank | Change | Why |
 | --- | --- | --- |
-| 1 | Move `BudgetDefs.v`'s approximation proof onto `generated/Skeleton.v`, with the evaluator as Section variables | each declared fact cites a file generated from Lean, and the context arms return to the premise |
+| 1 | Print `denoteRowsB` beside the skeleton, and prove `ofProgram_eq_denoteRowsB` over both | the session theorems then speak of the tree the kit runs |
 | 2 | Exploration at rc.112: replay each explored path's tape through the keyed recorder | every path checked against the outside implementation |
 | 3 | The TypeScript front end: `eff check prog.ts` through `ts/eff`'s reader | the agent's preferred surface |
 | 4 | Dependent fields in the LCNF route | raw formation natively |
@@ -227,11 +240,11 @@ Three findings of the first landing still hold:
 
 - **Decisions row 411, declared facts.** `declared G : P from "where"` is a planned goal whose
   proof lives outside Lean, the owner's exception of 2026-10-16. The gates read it as a goal.
-  `#plan_status` prints the citation. A comparison lane in `make check-ocaml` holds each cited
-  development to the Lean definition it is about.
+  `#plan_status` prints the citation. It cites a theorem in `rocq/`, over definitions generated
+  from Lean (`make gen-rocq`).
 - **The kit is a product face of the engine project.** `ocaml/engine/kit` reads the api closure.
   Its lanes run in `make check-ocaml` (`dune test engine`).
 - **Claim `call-chain-outcome`** (concept `translation-simulation`, R12). A settled tree run is
   the chain's outcome: `Tree.settle_sound` with `Tree.probe_stable`, in `src/Effect4/Laws/Run/Tree.lean`.
 - **Claim `call-chain-equivalence`** (concept `translation-simulation`, R6). On `Plain`, the tree
-  is `denoteRowsB`'s, node for node: `Tree.ofProgram_eq_denoteRowsB`, declared.
+  is `denoteRowsB`'s, node for node: `Tree.ofProgram_eq_denoteRowsB`, a planned goal.

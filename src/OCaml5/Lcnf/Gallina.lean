@@ -8,8 +8,10 @@ import OCaml5.Lcnf.Dump
 (`OCaml5.Lcnf.Translate`); this one writes Gallina from the base phase, so that a Rocq development
 proves facts of Lean's definitions and not of a hand copy. It prints a *skeleton*: the
 declarations a spec names print as `Fixpoint`s and `Definition`s, the types it names as
-`Inductive`s, and every other constant the skeleton calls prints as a Section `Variable` typed from
-its Lean signature. The program types come from the generated `Eff_types.v` (rocq-of-ocaml over
+`Inductive`s, and every other constant the skeleton calls prints as a `Parameter` of the module
+type `Eval`, typed from its Lean signature. The skeleton is the functor `Skeleton (E : Eval)`, so a
+proof file states its theorems in a functor over the same `Eval` and reads the definitions as
+they are printed. The program types come from the generated `Eff_types.v` (rocq-of-ocaml over
 `ocaml/eff/eff_types.ml`), so a constructor of `Effect4.Program.Eff` is `Eff_succeed` here as it
 is there.
 
@@ -21,7 +23,10 @@ stays on a variable its match binds, which is what the guard checker reads.
 **Naturals.** A natural the code cases on as `zero`/`succ`, a successor field, and every argument or
 parameter position a counter flows to or from, print as Rocq `nat`: budget counters, which recurse
 structurally. Every other natural prints as `int` (Z), as the generated program types spell
-Lean's `Nat`.
+Lean's `Nat`. Z is exact for a natural only where no Nat operation reads it (`Nat.sub` truncates
+at zero, and Z's subtraction does not), so the inference is checked: a natural printed as `int`
+that meets a Nat operation is refused by name, and so is a counter passed where an `Eval`
+parameter takes an `int`. The file's header lists the counters it chose.
 
 **Depends on.** `Lean` and `OCaml5.Lcnf.Dump` (`baseDecl?`, the persisted base phase).
 
@@ -29,8 +34,13 @@ Lean's `Nat`.
 * Every printed declaration is the base-phase code of its Lean declaration, node for node: a `let`
   as `let`, a `fun` and a join point as a local `fun`, a `jmp` as an application, `cases` as
   `match`, `return` as the variable — *by construction*.
-* A constant outside the spec is never inlined or copied: it is one Section `Variable` —
-  *by construction*.
+* Every constant has one printing rule, or the printer refuses it by name: a declaration of the
+  spec prints as itself, a constructor by `ctorRocq`, a constant of a variable namespace as one
+  `Eval` parameter. Each fallback prints a refusal marker, and `render` refuses a text holding
+  one, so nothing is approximated (decisions row 403's rule on the OCaml route) — *by
+  construction*.
+* A natural printed as `int` meets no Nat operation (`natOps`), and no counter is passed where an
+  `Eval` parameter takes an `int` — *checked* at each render.
 * Names are per declaration: LCNF numbers its variables per declaration, so the printer's map from
   variables to names is rebuilt for each — *by construction*.
 * A recursive declaration names its structural argument, the parameter its first `cases` reads;
@@ -43,13 +53,25 @@ namespace OCaml5.Lcnf.Gallina
 open Lean Compiler LCNF
 
 /-- What to print: the skeleton's declarations in dependency order, its own types, the Rocq names
-of the other types it mentions, the types left abstract, and the file's header lines. -/
+of the other types it mentions, the types left abstract, the namespaces whose constants print as
+`Eval` parameters, and the file's header lines. -/
 structure Spec where
   decls : List Name
   types : List Name
   knownTypes : List (Name × String)
   abstractTypes : List String
+  variableNamespaces : List Name
   requires : List String
+
+/-- A refusal marker: the text a fallback prints, which `render` refuses by the name it carries. -/
+def refused (what : String) : String := s!"(* REFUSED {what} *)"
+
+/-- The Nat operations that read a natural in a way Z does not (`Nat.sub` truncates at zero):
+a natural printed as `int` that meets one is refused. -/
+def natOps : List Name :=
+  [``Nat.sub, ``Nat.pred, ``Nat.decEq, ``instOrdNat, ``Nat.beq, ``Nat.ble, ``Nat.blt,
+   ``Nat.decLt, ``Nat.decLe, ``Nat.pow, ``Nat.div, ``Nat.mod, ``Nat.log2, ``instDecidableEqNat,
+   ``HSub.hSub, ``Sub.sub, ``instSubNat, ``Nat.min, ``Nat.max]
 
 /-- The constructor names the Rocq standard library and the generated types use. -/
 def ctorRocq (env : Environment) (n : Name) : Option String :=
@@ -92,8 +114,8 @@ partial def rocqTy (spec : Spec) (counter : Bool) (e : Expr) : String :=
       match spec.knownTypes.lookup n with
       | some r =>
         if args.isEmpty then r else s!"({r} {" ".intercalate (args.toList.map (rocqTy spec false))})"
-      | none => s!"(* {n} *) unknown"
-    | _ => s!"(* {e} *) unknown"
+      | none => refused s!"type {n}"
+    | _ => refused s!"type {e}"
 
 /-- The printer's state for one declaration: a name for each variable, and the counters. -/
 structure Locals where
@@ -150,20 +172,22 @@ def projName (env : Environment) (typeName : Name) (idx : Nat) : String :=
   | some info =>
     match info.fieldNames[idx]? with
     | some f => s!"{(fnRocq typeName).toLower}_{f}"
-    | none => s!"proj_{idx}"
-  | none => if typeName == ``Prod then (if idx == 0 then "fst" else "snd") else s!"proj_{idx}"
+    | none => refused s!"projection {typeName}.{idx}"
+  | none =>
+    if typeName == ``Prod then (if idx == 0 then "fst" else "snd")
+    else refused s!"projection {typeName}.{idx}"
 
 def valueText (env : Environment) (l : Locals) (d : LetDecl .pure) : String :=
   match d.value with
   | .lit (.nat n) => if l.counters.contains d.fvarId then toString n else s!"{n}%Z"
   | .lit (.str s) => s!"\"{s}\"%string"
-  | .lit _ | .erased => "tt"
+  | .lit _ => refused "a literal that is no natural and no string"
+  | .erased => "tt"
   | .proj tn idx s => s!"({projName env tn idx} {l.name s})"
   | .const n _ args =>
     let as := args.toList.filterMap (argName l)
     app ((ctorRocq env n).getD (fnRocq n)) as
   | .fvar f args => app (l.name f) (args.toList.filterMap (argName l))
-  | _ => "tt"
 
 def paramText (spec : Spec) (l : Locals) (p : Param .pure) : String :=
   s!"({l.name p.fvarId} : {rocqTy spec (l.counters.contains p.fvarId) p.type})"
@@ -183,7 +207,7 @@ partial def codeText (env : Environment) (spec : Spec) (l : Locals) (ind : Strin
     let as := args.toList.filterMap (argName l)
     app (l.name f) (if as.isEmpty then ["tt"] else as)
   | .return f => l.name f
-  | .unreach _ => "ltac:(exact (False_rect _ _))"
+  | .unreach _ => refused "unreachable code"
   | .cases c =>
     let arms := c.alts.toList.map fun
       | .alt n ps code =>
@@ -191,7 +215,7 @@ partial def codeText (env : Environment) (spec : Spec) (l : Locals) (ind : Strin
           | some ctor =>
             if ps.isEmpty then ctor
             else s!"{ctor} {" ".intercalate (ps.toList.map fun (p : Param .pure) => l.name p.fvarId)}"
-          | none => "_"
+          | none => refused s!"constructor {n}"
         s!"{ind}| {pat} =>\n{ind}    {codeText env spec l (ind ++ "    ") code}"
       | .default code => s!"{ind}| _ =>\n{ind}    {codeText env spec l (ind ++ "    ") code}"
       | _ => ""
@@ -252,14 +276,39 @@ def render (spec : Spec) (header : String) : CoreM String := do
       for i in [:d.params.size] do
         if l.counters.contains d.params[i]!.fvarId then
           cps := cps.insert d.name (((cps.get? d.name).getD {}).insert i)
-  -- the variables: every constant the skeleton calls that it neither defines nor constructs
+  -- the variables: every constant the skeleton calls that it neither defines nor constructs, each
+  -- in a variable namespace; any other constant has no printing rule and is refused by name
   let defined : NameSet := spec.decls.foldl (·.insert ·) {}
+  let isVariable (n : Name) : Bool := spec.variableNamespaces.any (·.isPrefixOf n)
   let mut vars : Array Name := #[]
+  let mut refusals : Array String := #[]
   for d in decls do
+    let l := localsOf d ((cps.get? d.name).getD {})
     if let .code c := d.value then
-      for (n, _) in calls c do
-        if !defined.contains n && (ctorRocq env n).isNone && !vars.contains n then
-          vars := vars.push n
+      for (n, args) in calls c do
+        if defined.contains n || (ctorRocq env n).isSome then continue
+        if natOps.contains n then
+          for a in args do
+            if let some f := a then
+              if !l.counters.contains f then
+                refusals := refusals.push s!"{d.name}: the natural {l.name f} is printed as int (Z) and meets {n}"
+          refusals := refusals.push s!"{d.name}: {n} has no printing rule"
+        else if !isVariable n then
+          refusals := refusals.push s!"{d.name}: {n} has no printing rule"
+        else
+          -- an `Eval` parameter takes every natural as `int`: a counter passed to it is refused
+          for a in args do
+            if let some f := a then
+              if l.counters.contains f then
+                refusals := refusals.push s!"{d.name}: the counter {l.name f} (nat) is passed to {n}, which takes int"
+          if !vars.contains n then vars := vars.push n
+  -- the counters chosen, by declaration, for the header
+  let mut counterLines : Array String := #[]
+  for d in decls do
+    let l := localsOf d ((cps.get? d.name).getD {})
+    let names := (l.counters.toList.map l.name).toArray.qsort (· < ·)
+    unless names.isEmpty do
+      counterLines := counterLines.push s!"     {fnRocq d.name}: {", ".intercalate names.toList}"
   -- the mutual groups: declarations that reach one another through calls
   let callees (d : Decl .pure) : List Name := match d.value with
     | .code c => (calls c).map (·.1) |>.filter defined.contains
@@ -279,15 +328,20 @@ def render (spec : Spec) (header : String) : CoreM String := do
           if next.contains b then found := true
           todo := next ++ todo
     return found
-  let mut out := header ++ "\n\n" ++ "\n".intercalate spec.requires ++ "\n\nSection Skeleton.\n\n"
-  out := out ++ s!"Variables {" ".intercalate spec.abstractTypes} : Set.\n\n"
+  let counters := "(* Counters (Rocq nat), by declaration; every other natural is int (Z):\n"
+    ++ "\n".intercalate counterLines.toList ++ " *)"
+  let mut out := header ++ "\n\n" ++ counters ++ "\n\n" ++ "\n".intercalate spec.requires
+    ++ "\n\n(** The evaluator: every constant of a variable namespace, as a parameter. *)\n"
+    ++ "Module Type Eval.\n\n"
+  out := out ++ s!"Parameters {" ".intercalate spec.abstractTypes} : Set.\n"
+  for v in vars do
+    let some info := env.find? v | throwError s!"Gallina: no constant {v}"
+    out := out ++ s!"Parameter {fnRocq v} : {rocqTy spec false info.type}.\n"
+  out := out ++ "\nEnd Eval.\n\n(** The skeleton, over any evaluator. *)\nModule Skeleton (E : Eval).\n\nImport E.\n\n"
   for t in spec.types do
     match typeText env spec t with
     | .ok text => out := out ++ text ++ "\n"
     | .error e => throwError e
-  for v in vars do
-    let some info := env.find? v | throwError s!"Gallina: no constant {v}"
-    out := out ++ s!"Variable {fnRocq v} : {rocqTy spec false info.type}.\n"
   out := out ++ "\n"
   let mut printed : NameSet := {}
   for d in decls do
@@ -307,10 +361,17 @@ def render (spec : Spec) (header : String) : CoreM String := do
       out := out ++ s!"{kw} {fnRocq g.name} {" ".intercalate (g.params.toList.map (paramText spec l))}{sa.getD ""} : {rocqTy spec false t} :=\n  {codeText env spec l "  " c}\n"
       first := false
     out := out ++ ".\n\n"
-  return out ++ "End Skeleton.\n"
+  out := out ++ "End Skeleton.\n"
+  -- every fallback's marker, refused by the name it carries
+  for piece in (out.splitOn "(* REFUSED ").drop 1 do
+    refusals := refusals.push ((piece.splitOn " *)").headD piece)
+  unless refusals.isEmpty do
+    throwError s!"Gallina: {refusals.size} refused:\n{"\n".intercalate refusals.toList}"
+  return out
 
 /-- **The call tree's control skeleton** (`Effect4.Run.Tree`): the spec of the generated
-`Skeleton.v`. The evaluator (`Tree.Eval`) is variables; the program types are `Eff_types.v`'s. -/
+`Skeleton.v`. The evaluator (`Tree.Eval`) is the module type `Eval`; the program types are
+`Eff_types.v`'s. -/
 def treeSpec : Spec where
   decls := [`Effect4.Run.Tree.bind, `Effect4.Run.Tree.andThen, `Effect4.Run.Tree.loop,
     `Effect4.Run.Tree.whileRounds, `Effect4.Run.Tree.bodiesOf, `Effect4.Run.Tree.level,
@@ -332,6 +393,7 @@ def treeSpec : Spec where
     (``List, "list"), (``Option, "option"), (``Prod, "prod"), (``Bool, "bool"),
     (``Unit, "unit"), (``PUnit, "unit")]
   abstractTypes := ["sync_op", "ctx"]
+  variableNamespaces := [`Effect4.Run.Tree.Eval]
   requires := ["From Stdlib Require Import List ZArith String.", "Import ListNotations.",
     "Require Import RocqOfOCaml.RocqOfOCaml.", "Require Import E4.Eff_types."]
 

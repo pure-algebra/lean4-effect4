@@ -73,7 +73,7 @@ Three findings matter beyond the measurement:
 ```mermaid
 flowchart LR
   L[Lean: Eff, Val, Ty] -- LCNF --> O[ocaml/eff/eff_types.ml]
-  O -- gen/split_types.ml --> S[the type group by components]
+  O -- rocq/tools/split_types.ml --> S[the type group by components]
   S -- rocq-of-ocaml --> V[rocq: Eff_types.v]
   B[Lean's bytes: todo-host.txt, replay.json] -- OCaml toplevel prints --> F[OCaml values]
   F -- re-encoded, compared --> B
