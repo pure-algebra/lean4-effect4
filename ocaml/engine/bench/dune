@@ -1,10 +1,13 @@
 ; The engine's measurements that no lane owns: probes that settle a representation decision.
 ;   bench_array  slice 3.1 of the OCaml estate refactor (decision D-3): four spellings of a
 ;                Lean `Array` against the list shim the LCNF route uses today, each answer
-;                checked against the shim's. An executable, not a test: a bench is a
-;                measurement, not a gate, so `dune test` does not run it.
+;                checked against the shim's.
+;   bench_frame  phase 5: three ways to write a nested frame of the canonical wire, checked
+;                against Eff_val.to_bytes, and the real writer (Eff_val, Eff_wire) on values
+;                and programs, so one source measures before and after a change.
+; Executables, not tests: a bench is a measurement, not a gate, so `dune test` runs neither.
 
-(executable
- (name bench_array)
- (modules bench_array)
- (libraries unix))
+(executables
+ (names bench_array bench_frame)
+ (modules bench_array bench_frame)
+ (libraries unix effect4_eff))

@@ -170,6 +170,10 @@ let replays (a : app) p (t : trace) =
     let r = admitted a Reactor.tape in
     Some (agree t (machine_trace a Reactor.tape (Kit_machine.run a.G.rows r (tape_of t) p)))
 
+(* The carriers' format version: moved with the pins of engine/test/kit/test_shapes.ml, in one
+   commit, whenever a shape of Effect4.Run.Kit changes (the rule is kit.mli's). *)
+let format_version = 1
+
 module Json = struct
   module J = Eff_json_text
 

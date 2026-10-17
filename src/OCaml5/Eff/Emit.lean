@@ -201,7 +201,7 @@ partial def decoderOf : OTy → Ml.Expr
 
 def emitterBind (f : Family) : Ml.Bind :=
   let o := f.spec.oname
-  let buffer : String × Ml.Ty := ("b", .named "Buffer.t")
+  let buffer : String × Ml.Ty := ("b", .named "Eff_frame.writer")
   if f.isStruct then
     let c := f.ctors.head!
     let parts := if f.trivial then c.args.map fun (_, t) => emitOf t (.var "r")

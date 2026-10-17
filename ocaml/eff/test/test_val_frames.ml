@@ -78,7 +78,7 @@ type v =
   | Ref of int * string
   | Handle of int * int
 
-let rec emit (b : Buffer.t) (t : v) : unit =
+let rec emit (b : Eff_frame.writer) (t : v) : unit =
   match t with
   | Nat n -> Eff_frame.emit_nat b n
   | Str s -> Eff_frame.emit_string b s

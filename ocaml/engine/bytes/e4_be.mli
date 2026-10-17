@@ -42,8 +42,9 @@
    D1  Corrected on 2026-10-05.  Lane M transcribed the framing layer, because the engine
        did not link `effect4_eff` then.  ocaml/engine/dune lists `effect4_eff` now, and
        this module delegates, as A1 §3.4 wrote.  The golden test (B1) is the delegation
-       check.  The cost: `be64`, `framed` and `nat_of_digits` build their bytes in a Buffer,
-       one copy more than the transcription made.  The cost is not measured.
+       check.  The cost: `be64`, `framed` and `nat_of_digits` build their bytes in
+       Eff_frame's writer (`Eff_frame.to_string`), one copy more than the transcription made.
+       The cost is not measured.
    D2  `program_of_bytes`, `bytes_of_program` and `address` are NOT here: their types name
        `Eff_wire.program`, the one program type (`Eff_types`).
    D3  `read_be64` bounds-checks its window (Eff_frame's reads eight bytes unconditionally

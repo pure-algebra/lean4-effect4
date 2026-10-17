@@ -1,8 +1,11 @@
 (* Eff_frame boundary checks, using explicit UTF-8 byte sequences and frame bytes.
    U: legal scalar boundaries, NUL, BOM and noncharacters remain accepted; malformed
       sequences are refused by both the encoder and decoder.
-   P: payload callbacks run once, before the frame is appended; exceptions escape
-      without appending a partial frame, and nested payloads retain their bytes.
+   P: a payload callback runs once and writes the frame's payload in place; an exception
+      escapes with every open frame rolled back, an invalid tag is refused before the callback,
+      and a writer kept past its encoding cannot change the bytes published (Eff_frame's F9).
+   O: an encoding over its limit is refused as a value and nothing is published, even when a
+      callback swallows the refusal; at its exact size it is published whole (F8).
    W: invalid windows, including extreme ints, return None; exact and embedded
       frames still stop at their declared end.
    B: the one-write writers (Eff_frame's F6) give the per-byte rule's bytes: `emit_be64` and
@@ -37,50 +40,62 @@ let test_utf8 () =
     "\xf5\x80\x80\x80"; "\xfe"; "\xff"; "valid\x80"
   ] in
   List.iteri (fun i s ->
-    let b = Buffer.create 16 in
-    Buffer.add_string b "prefix";
-    let refused =
-      try Eff_frame.emit_string b s; false
-      with Invalid_argument message -> message = "Eff_frame.emit_string: not valid UTF-8"
+    let refused = ref false in
+    let out =
+      Eff_frame.to_string
+        (fun w () ->
+          Eff_frame.emit_frame w 3 "prefix";
+          try Eff_frame.emit_string w s
+          with Invalid_argument message -> refused := message = "Eff_frame.emit_string: not valid UTF-8")
+        ()
     in
     check (Printf.sprintf "U malformed UTF-8 boundary %d is refused" i)
-      (not (Eff_frame.utf8_valid s) && refused && Buffer.contents b = "prefix"
+      (not (Eff_frame.utf8_valid s) && !refused && out = frame 3 "prefix"
        && Eff_frame.exact Eff_frame.decode_string (frame 3 s) = None)) invalid
 
 exception Payload_failure of int
 
 let test_payload () =
-  let b = Buffer.create 1 in
-  Buffer.add_string b "prefix";
   let calls = ref 0 in
-  Eff_frame.with_payload b 3 (fun p ->
-    incr calls;
-    check "P callback sees destination before frame" (Buffer.contents b = "prefix");
-    Buffer.add_string b ":";
-    Buffer.add_string p "abc");
-  check "P callback runs once; its destination writes precede the frame"
-    (!calls = 1 && Buffer.contents b = "prefix:" ^ frame 3 "abc");
-  let before = Buffer.contents b in
-  let escaped =
-    try
-      Eff_frame.with_payload b 3 (fun p ->
-        incr calls; Buffer.add_string p "discarded"; raise (Payload_failure 17));
-      false
-    with Payload_failure n -> n = 17
+  let prefixed f = Eff_frame.to_string (fun w () -> Eff_frame.emit_frame w 3 "prefix"; f w) () in
+  let out =
+    prefixed (fun w -> Eff_frame.with_payload w 3 (fun w -> incr calls; Eff_frame.emit_frame w 3 "abc"))
+  in
+  check "P callback runs once; its writes are the frame's payload"
+    (!calls = 1 && out = frame 3 "prefix" ^ frame 3 (frame 3 "abc"));
+  let escaped = ref false in
+  let out =
+    prefixed (fun w ->
+      try
+        Eff_frame.with_payload w 3 (fun w ->
+          incr calls; Eff_frame.emit_frame w 3 "discarded"; raise (Payload_failure 17))
+      with Payload_failure n -> escaped := n = 17)
   in
   check "P callback exception escapes without a partial frame"
-    (escaped && !calls = 2 && Buffer.contents b = before);
-  let escaped =
-    try Eff_frame.with_payload b 256 (fun _ -> incr calls); false
-    with Invalid_argument _ -> true
+    (!escaped && !calls = 2 && out = frame 3 "prefix");
+  let escaped = ref false in
+  let out =
+    prefixed (fun w ->
+      try
+        Eff_frame.with_payload w 4 (fun w ->
+          Eff_frame.emit_nat w 1;
+          Eff_frame.with_payload w 5 (fun w -> Eff_frame.emit_nat w 2; raise (Payload_failure 3)))
+      with Payload_failure n -> escaped := n = 3)
   in
-  check "P invalid tag is checked after the callback without appending bytes"
-    (escaped && !calls = 3 && Buffer.contents b = before);
-  let retained = ref None in
-  Eff_frame.with_payload b 3 (fun p -> retained := Some p; Buffer.add_string p "copy");
-  Option.iter (fun p -> Buffer.clear p; Buffer.add_string p "changed") !retained;
-  check "P payload bytes are copied before later callback-buffer mutation"
-    (Buffer.contents b = before ^ frame 3 "copy");
+  check "P an exception two frames deep rolls back every open frame"
+    (!escaped && out = frame 3 "prefix");
+  let escaped = ref false in
+  let out =
+    prefixed (fun w ->
+      try Eff_frame.with_payload w 256 (fun _ -> incr calls)
+      with Invalid_argument _ -> escaped := true)
+  in
+  check "P an invalid tag is refused before the callback, with no bytes appended"
+    (!escaped && !calls = 2 && out = frame 3 "prefix");
+  let kept = ref None in
+  let out = Eff_frame.to_string (fun w () -> kept := Some w; Eff_frame.emit_frame w 3 "copy") () in
+  Option.iter (fun w -> Eff_frame.emit_frame w 3 "changed") !kept;
+  check "P a writer kept past its encoding cannot change the bytes published" (out = frame 3 "copy");
   let nested = Eff_frame.to_string
       (fun out pairs -> Eff_frame.emit_list out
         (fun p pair -> Eff_frame.emit_pair p Eff_frame.emit_nat Eff_frame.emit_string pair) pairs)
@@ -94,9 +109,25 @@ let test_payload () =
      = "\009\000\000\000\000\000\000\000\000");
   let large = String.make 65536 '\255' in
   check "P payload growth retains every byte"
-    (Eff_frame.to_string
-       (fun b p -> Eff_frame.with_payload b 8 (fun inner -> Buffer.add_string inner p)) large
-     = frame 8 large)
+    (Eff_frame.to_string (fun w p -> Eff_frame.with_payload w 8 (fun w -> Eff_frame.emit_frame w 3 p)) large
+     = frame 8 (frame 3 large))
+
+let test_overflow () =
+  let write w xs = Eff_frame.emit_list w Eff_frame.emit_nat xs in
+  let value = List.init 40 (fun i -> i * 1000) in
+  let whole = Eff_frame.to_string write value in
+  let size = String.length whole in
+  check (Printf.sprintf "O at its exact size (%d bytes) the encoding is published whole" size)
+    (Eff_frame.encode ~limit:size write value = Ok whole);
+  check "O one byte short, the encoding is refused as a value and nothing is published"
+    (Eff_frame.encode ~limit:(size - 1) write value = Error { Eff_frame.limit = size - 1 });
+  let swallowing w xs = (try write w xs with _ -> ()); Eff_frame.emit_unit w () in
+  check "O a refusal that a callback swallows is still a refusal, so no shorter encoding escapes"
+    (Eff_frame.encode ~limit:(size - 1) swallowing value = Error { Eff_frame.limit = size - 1 });
+  check "O red control: with room, the swallowing callback's own bytes are published"
+    (Eff_frame.encode ~limit:(size + 9) swallowing value = Ok (whole ^ frame Eff_frame.tag_unit ""));
+  check "O a negative limit is no room at all"
+    (Eff_frame.encode ~limit:(-1) write [] = Error { Eff_frame.limit = 0 })
 
 let test_windows () =
   let s = "xx" ^ frame 3 "abc" ^ "tail" in
@@ -160,6 +191,7 @@ let test_writers () =
 let () =
   test_utf8 ();
   test_payload ();
+  test_overflow ();
   test_windows ();
   test_writers ();
   if !failures <> 0 then exit 1

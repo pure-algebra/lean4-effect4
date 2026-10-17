@@ -26,13 +26,10 @@ let string_of_codes (codes : int list) : string =
   List.iteri (fun i code -> Bytes.set s i (Char.chr code)) codes;
   Bytes.unsafe_to_string s
 
-let be64 (n : int) : string =
-  let b = Buffer.create 8 in
-  Eff_frame.emit_be64 b n;
-  Buffer.contents b
+let be64 (n : int) : string = Eff_frame.to_string Eff_frame.emit_be64 n
 
 (* The frames of `Val.encode`. *)
-let rec emit (b : Buffer.t) (v : Eff_types.val_) : unit =
+let rec emit (b : Eff_frame.writer) (v : Eff_types.val_) : unit =
   match v with
   | Eff_types.Val_unit -> Eff_frame.emit_unit b ()
   | Eff_types.Val_bool x -> Eff_frame.emit_bool b x
