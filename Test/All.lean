@@ -267,6 +267,7 @@ import Test.Program.SketchAdmissionControls
 import Test.Program.SourceDocumentControls
 import Test.Program.LiveRecordControls
 import Test.Program.PreviewControls
+import Test.Program.CheckCacheControls
 import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract

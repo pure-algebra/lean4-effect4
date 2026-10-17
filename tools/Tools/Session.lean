@@ -4,8 +4,10 @@ import Tools.Catalogue
 import Effect4.Laws.Store.ShapeRead
 import Effect4.Program.Typing.SourceSession
 import Effect4.Program.Typing.SourceDocument
+import Effect4.Program.Typing.CheckCache
 import Effect4.Laws.Program.SourceTable
 import Effect4.Laws.Program.SourceDocument
+import Effect4.Laws.Program.Typing.CheckCache
 import Effect4.Laws.Program.SketchWire
 import Effect4.Laws.Program.SketchAdmission
 import Effect4.Api.RunnerDerived
@@ -113,6 +115,8 @@ structure State where
   generation : Nat := 0
   /-- the persistent live session, once started or loaded -/
   live : Option Effect4.Live := none
+  /-- the checker-verdict cache across candidate searches -/
+  cache : List CheckCache.Entry := []
 
 /-- **What the session shows, as an edit session**: the application, the sketch as written and
 the table at the source's addresses (`SourceSession.shown`). The view tools draw it. -/
@@ -193,6 +197,12 @@ structure Request where
   record : Option String := none
   /-- a saved live record (`LiveRecord.Tuple`) for `load`, as its JSON print -/
   recordJson : Option Json := none
+  /-- the pagination cursor for `suggest` -/
+  cursor : Nat := 0
+  /-- optional extra candidate programs for `suggest`, as canonical bytes of `List NativeEff` in hex -/
+  candidates : Option String := none
+  /-- optional extra candidate programs for `suggest`, as their JSON print -/
+  candidatesJson : Option Json := none
 
 /-- Whether a request supplies an explicit edit target (`revision`, `expected`, `docName`, or
 `docGeneration`). -/
@@ -232,13 +242,16 @@ def Request.fromJson? (j : Json) : Except String Request := do
   let answerJson := (j.getObjVal? "answerJson").toOption
   let record ← optField j "record" (Lean.fromJson? (α := String))
   let recordJson := (j.getObjVal? "recordJson").toOption
+  let cursor ← optField j "cursor" (Lean.fromJson? (α := Nat))
+  let candidates ← optField j "candidates" (Lean.fromJson? (α := String))
+  let candidatesJson := (j.getObjVal? "candidatesJson").toOption
   return Request.mk op program holes (path.getD []) replacement (holeName.getD "h0") id
     programJson replacementJson rows services (j.getObjVal? "holesJson").toOption
     (j.getObjVal? "rowsJson").toOption (j.getObjVal? "servicesJson").toOption (hex.getD false)
     answers (j.getObjVal? "answersJson").toOption (j.getObjVal? "tapeJson").toOption
     (limit.getD 256) (budget.getD 64) (width.getD 64) types (j.getObjVal? "typesJson").toOption
     docName docGeneration revision expected expectedJson policy fiber token rowName answer
-    answerJson record recordJson
+    answerJson record recordJson (cursor.getD 0) candidates candidatesJson
 
 /-- Write a request, as `Request.fromJson?` reads it. -/
 def Request.toJson (r : Request) : Json :=
@@ -272,7 +285,10 @@ def Request.toJson (r : Request) : Json :=
     (r.answerJson.map fun j => ("answerJson", j)).toList ++
     (r.record.map fun hex => ("record", Json.str hex)).toList ++
     (r.recordJson.map fun j => ("recordJson", j)).toList ++
-    [("limit", Lean.toJson r.limit), ("budget", Lean.toJson r.budget), ("width", Lean.toJson r.width)] ++
+    (r.candidates.map fun hex => ("candidates", Json.str hex)).toList ++
+    (r.candidatesJson.map fun j => ("candidatesJson", j)).toList ++
+    [("limit", Lean.toJson r.limit), ("budget", Lean.toJson r.budget),
+      ("width", Lean.toJson r.width), ("cursor", Lean.toJson r.cursor)] ++
     (if r.hex then [("hex", Json.bool true)] else []) ++
     (r.id.map fun id => ("id", id)).toList
 
@@ -413,6 +429,60 @@ def previewRefusalJson : Effect4.Run.Preview.Refusal → Json
     Json.mkObj [("reason", .str "genericRow"), ("path", toJson path), ("row", toJson row)]
   | .handleAnswer path row =>
     Json.mkObj [("reason", .str "handleAnswer"), ("path", toJson path), ("row", toJson row)]
+
+/-- A part signature tag (`PartSig`) as JSON. -/
+def partSigJson : PartSig → Json
+  | .root => Json.mkObj [("kind", .str "root")]
+  | .block decls =>
+    Json.mkObj [("kind", .str "block"), ("decls", printJson decls)]
+  | .body decls params =>
+    Json.mkObj [("kind", .str "body"), ("decls", printJson decls), ("params", printJson params)]
+
+/-- Contextual signature data (`SigData`) as JSON. -/
+def sigDataJson (d : SigData) : Json :=
+  Json.mkObj [("app", .str (appName d.app)), ("rows", printJson d.app.rows),
+    ("services", printJson d.app.services), ("types", printJson d.app.types),
+    ("holes", printJson d.holes), ("part", partSigJson d.part)]
+
+/-- Candidate contextual evidence (`CheckCache.Evidence`) as JSON. -/
+def evidenceJson (sig : Signature NativeOp) (prog : Option NativeEff) :
+    CheckCache.Evidence → Json
+  | .exactFit ty fromCache =>
+    Json.mkObj [("kind", .str "exactFit"), ("type", effTyJson ty), ("fromCache", toJson fromCache)]
+  | .typeMismatch expected actual fromCache =>
+    Json.mkObj [("kind", .str "typeMismatch"), ("expected", effTyJson expected),
+      ("actual", effTyJson actual), ("fromCache", toJson fromCache)]
+  | .refused why fromCache =>
+    Json.mkObj [("kind", .str "refused"), ("refusal", refusalJson why prog sig),
+      ("fromCache", toJson fromCache)]
+  | .differentEnv sourceEnv targetEnv =>
+    Json.mkObj [("kind", .str "differentEnv"), ("sourceEnv", printJson sourceEnv),
+      ("targetEnv", printJson targetEnv)]
+
+/-- One candidate suggestion (`CheckCache.Suggestion`) as JSON. -/
+def suggestionJson (sig : Signature NativeOp) (s : CheckCache.Suggestion)
+    (hex : Bool := false) : Json :=
+  Json.mkObj <|
+    [("programJson", printJson s.program),
+      ("sourcePath", match s.sourcePath with | some p => toJson p | none => .null),
+      ("env", printJson s.key.env),
+      ("evidence", evidenceJson sig (some s.program) s.evidence)] ++
+    if hex then [("program", .str (toHex s.program))] else []
+
+/-- A bounded candidate search response (`CheckCache.SuggestResult`) as JSON. -/
+def suggestResultJson (res : CheckCache.SuggestResult) (hex : Bool := false) : Json :=
+  let sig := res.sig.signature
+  Json.mkObj [("doc", docIdJson res.doc),
+    ("revision", toJson res.revision),
+    ("path", toJson res.path),
+    ("bounds", Json.mkObj [("cursor", toJson res.cursor), ("limit", toJson res.limit),
+      ("total", toJson res.total),
+      ("nextCursor", match res.nextCursor with | some n => toJson n | none => .null)]),
+    ("context", sigDataJson res.sig),
+    ("env", printJson res.env),
+    ("expected", effTyJson res.expected),
+    ("cacheEntries", toJson res.cache.length),
+    ("suggestions", Json.arr (res.suggestions.map fun s => suggestionJson sig s hex).toArray)]
 
 /-- Parse a call selector (`Effect4.Run.Sel`) from `req`'s `fiber`, `token`, or `rowName`. -/
 def selFrom? (req : Request) : Option Effect4.Run.Sel :=
@@ -555,7 +625,7 @@ def answer (st : State) (req : Request) : State × Answer :=
       let d := Doc.open app { program, holes } docId
       ({ source := some d.session, journal := [], app := name,
           docId := d.id, revision := d.revision, generation := st.generation + 1,
-          live := st.live },
+          live := st.live, cache := st.cache },
         Answer.mk req.op name (readLaws ++ [``SourceSession.reached_view]) true
           (viewJson d.session) none req.id)
   | "catalogue" =>
@@ -657,6 +727,7 @@ def answer (st : State) (req : Request) : State × Answer :=
         | some ins =>
           let result := Json.mkObj
             [("target", targetJson ins.target req.hex),
+              ("context", sigDataJson (sketchSigData l.sketch l.app req.path)),
               ("focus", focusJson ins.focus req.hex),
               ("entry", match ins.entry with
                 | some e => entryJson e (some l.sketch.program) sig
@@ -664,8 +735,24 @@ def answer (st : State) (req : Request) : State × Answer :=
               ("refusal", match ins.refusal with
                 | some r => refusalJson r (some l.sketch.program) sig
                 | none => .null)]
-          (st, Answer.mk op st.app [``SourceSession.reached_view, ``SourceSession.focusAt_typed]
+          (st, Answer.mk op st.app
+            [``SourceSession.reached_view, ``SourceSession.focusAt_typed, ``sketchSigData_signature]
             true result none req.id)
+      | "suggest" =>
+        let (supplied?, supLaws) := listFrom? (α := NativeEff) req.candidates req.candidatesJson
+        match supplied? with
+        | none =>
+          (st, unreadable (α := List NativeEff) req.op "the candidate programs do not read"
+            req.candidatesJson req.id)
+        | some supplied =>
+          match CheckCache.suggest d st.cache req.path req.limit req.cursor supplied with
+          | none => none' "no typed focus at the address"
+          | some res =>
+            let st' := { st with cache := res.cache }
+            (st', Answer.mk op st.app
+              (supLaws ++ [``sketchSigData_signature, ``CheckCache.lookup_sound,
+                ``CheckCache.evaluateCandidate_valid_and_sound]).eraseDups
+              true (suggestResultJson res req.hex) none req.id)
       | "replace" | "commit" =>
         match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
         | some (some q, readLaws) => commitAnswer st d req (.fill q) readLaws
