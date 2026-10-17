@@ -16,7 +16,8 @@ through them: the input is exactly the syntax tree `OCaml5.Ml.Render` renders. T
 that ran this reader on 20,387 vectors went on 2026-10-15: no gate ran it
 (`git:fef45fb5a:tools/Conform/Effect4/LcnfMl.lean`, decisions row 391).
 
-**The reader refuses by name.** The reader reads every form the route builds. The syntax also
+**The reader refuses by name.** The reader reads every form the route builds; a join point's
+attributed `let` reads as its `let`. The syntax also
 holds the `eff/` emitter's forms and the module language (`OCaml5.Ml.Syntax`): a trailing comment
 reads as its expression, an integer pattern as the target's, and `function`, a sequence, a
 pattern `let`, an `if` without `else` and a packed module are refused by name, each an `Except`
@@ -107,6 +108,8 @@ def ofExprAlg : OCaml5.Ml.ExprAlgebra (fun _ => Except String Target.Expr) where
     else .error s!"Ml.Expr.binop `{op}`"
   expr_fn params body := do return .fn params (← body)
   expr_letIn n v b := do return .letIn n (← v) (← b)
+  -- a join point's attribute asks for a static jump, which changes no value: its `let`
+  expr_letAttr _ n v b := do return .letIn n (← v) (← b)
   expr_letRec f ps v b := do return .letRec [(f, ps, ← v)] (← b)
   expr_ifThen c t e := do return .ifThen (← c) (← t) (← e)
   expr_matchE scrut arms := do

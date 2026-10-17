@@ -1,0 +1,4 @@
+File "./join_escape.ml", line 18, characters 26-35:
+18 |   let[@local always] join y = x + y in
+                               ^^^^^^^^^
+Error (warning 55 [inlining-impossible]): Cannot inline: This function cannot be compiled into a static continuation

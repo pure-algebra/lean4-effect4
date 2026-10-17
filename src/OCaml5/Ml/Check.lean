@@ -273,6 +273,8 @@ def checkExprAlg (site : String) : ExprAlgebra (fun _ => Env → List Diag) wher
   expr_binop _ l r := fun env => l env ++ r env
   expr_fn ps b := fun env => env.shadows site ps ++ b (env.withValues ps)
   expr_letIn n v b := fun env => env.shadows site [n] ++ v env ++ b (env.withValue n)
+  -- the attribute is no binder: `letIn`'s scope, so the name is not in scope in its own value
+  expr_letAttr _ n v b := fun env => env.shadows site [n] ++ v env ++ b (env.withValue n)
   expr_letRec f ps v b := fun env =>
     let inner := env.withValue f
     env.shadows site [f] ++ inner.shadows site ps ++ v (inner.withValues ps) ++ b inner
@@ -484,6 +486,12 @@ private def someArm : Expr := .fnMatch [(.ctor "Some" [.var "x"], .var "x"), (.w
 #guard one [.letD false [{ name := "f", params := [("p", none)], body := overBody }]] == []
 #guard one [.letD false [{ name := "f", params := [("p", none)], body := overValue }]] == ["unbound-value"]
 #guard one [.letD false [{ name := "f", body := someArm }]] == []
+-- An attributed `let` (a join point) binds over its body and not over its value: a join point
+-- that named itself would be refused here, before `ocamlopt` sees it.
+private def joinUsed : Expr := .letAttr "local always" "j" (.fn ["y"] (.var "y")) (.app (.var "j") [.var "x"])
+private def joinSelf : Expr := .letAttr "local always" "j" (.fn ["y"] (.app (.var "j") [.var "y"])) .unit
+#guard one [.letD false [{ name := "f", params := [("x", none)], body := joinUsed }]] == []
+#guard one [.letD false [{ name := "f", body := joinSelf }]] == ["unbound-value"]
 -- `C _` matches a constructor of every arity from one (the constructor tables' arms); on a
 -- constant constructor it is refused, as OCaml refuses it.
 #guard one [.types [{ name := "t", body := .variant [{ name := "A" }, { name := "B", args := [Ty.int, Ty.int] }] }],

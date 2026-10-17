@@ -793,7 +793,7 @@ let test_codegen_modeled_lane_todo_modeled_to_c (s : todo) : bool * (int * (stri
 let test_codegen_modeled_lane_item_modeled_to_c (s : item) : (unit, (unit, unit) sum) sum * (string * (string option * (int * ((unit * unit, unit * (string * unit)) sum * (string list * ((bool * (int * (string * unit))) * unit)))))) =
   match (s : item) with
     | { name = name; qty = qty; tags = tags; note = note; status = status; todo = todo; color = color } -> (let _x_1 = test_codegen_modeled_lane_color_modeled_to_c color in
-      let _jp_2 = fun _y_3 -> let _x_4 = test_codegen_modeled_lane_status_modeled_to_c status in
+      let[@local always] _jp_2 = fun _y_3 -> let _x_4 = test_codegen_modeled_lane_status_modeled_to_c status in
       let _x_5 = [] in
       let _x_6 = list_map_tr_loop_at_test_codegen_modeled_lane_item_modeled_to_c_spec_0 tags _x_5 in
       let _x_7 = test_codegen_modeled_lane_todo_modeled_to_c todo in

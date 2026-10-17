@@ -171,7 +171,7 @@ let test_codegen_constructor_lane_str_of_bytes (b : int list) h : string =
 (* LCNF mono: Char.ofNat (n : Nat) : UInt32 *)
 
 let char_of_nat (n : int) : int =
-  let _jp_1 = fun () -> 0 in
+  let[@local always] _jp_1 = fun () -> 0 in
   let _x_4 = 55296 in
   let _x_5 = n < _x_4 in
   if _x_5 then n else (let _x_6 = 57343 in
