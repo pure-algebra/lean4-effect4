@@ -9,4 +9,4 @@
  (modules modeled_gen test_modeled)
  (flags (:standard -w @55))
  (deps modeled.txt)
- (libraries effect4_eff effect4_bytes))
+ (libraries effect4_eff effect4_bytes effect4_lcnf))

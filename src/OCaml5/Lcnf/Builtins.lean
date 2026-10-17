@@ -12,9 +12,10 @@ import OCaml5.Lcnf.Prim
 the route does not translate from its own body. A row is data: the constant, how Lean itself
 realizes it (its body, or a C function of Lean's runtime and the source evaluator's primitive),
 its OCaml form and its contract. Beside the rows stands the target's library, one entry for each
-function and operator a form names, with the target evaluator's rule for it. The lookup, the
-prelude, the reserved names, the fidelity inventory and both evaluators' primitive tables
-(`sourcePrims`, `targetArities`, `targetScans`) are computed from the rows.
+function and operator a form names, with the target evaluator's rule for it, and the runtime
+library's functions that a form names (`support`, `ocaml/lcnf`), each with the definition the
+target evaluator runs. The lookup, the reserved names, the fidelity inventory and both evaluators'
+primitive tables (`sourcePrims`, `targetArities`, `targetScans`) are computed from the rows.
 
 **Depends on.** `OCaml5.Ml.Syntax` (a form is OCaml syntax), `OCaml5.Ml.Render` (a form's
 spelling in a report), `OCaml5.Lcnf.Externs` (`stripRedArg`), `OCaml5.Lcnf.TypeRows` (the
@@ -23,15 +24,16 @@ evaluator's primitives, `Prim`).
 
 **Properties.**
 * **One owner.** A constant has a row in `builtins` or the route translates it. `builtin?`,
-  `prelude`, `reservedNames`, `Form.spelling` and the evaluators' tables are computed from
+  `runtimeModules`, `reservedNames`, `Form.spelling` and the evaluators' tables are computed from
   `builtins`, `support` and `targetLibrary`. No second list names a row: *by construction*.
 * **The runtime column is Lean's.** A row's `runtime` names the C symbol of Lean's runtime
   exactly when Lean's extern attribute names one. A row holds the source evaluator's primitive
   only beside such a symbol, since that evaluator reads every other constant's body: *checked*
   against the environment (`Conform.Effect4.CompilerControls`).
 * **A form binds nothing at a call site.** An inline body is binder-free. A support function is
-  a closed definition of the prelude. An application adds a binder only by eta-expansion, and
-  the eta binders are in `reservedNames`: *checked* (`problemsOf`, the `#guard`s at the foot).
+  a closed function of the runtime library, named by its path. An application adds a binder only
+  by eta-expansion, and the eta binders are in `reservedNames`: *checked* (`problemsOf`, the
+  `#guard`s at the foot).
 * **A form states what it needs.** Every free name of a row is a function of `targetLibrary`
   or of `support`, and every operator is an operator of `targetLibrary`. A body outside its
   fragment is refused: *checked* (`problemsOf`).
@@ -61,7 +63,7 @@ open Lean
 inductive Form where
   /-- `fun params -> body`, written in place at a call site. `body` is binder-free. -/
   | inline (params : List String) (body : Ml.Expr)
-  /-- A function that `support` defines in the prelude. -/
+  /-- A function of the runtime library that `support` defines for the target evaluator. -/
   | support (name : String)
   /-- A function of the target's own library, named in `targetLibrary`: a trusted leaf. -/
   | library (name : String)
@@ -101,7 +103,8 @@ structure Builtin where
   cost : String
   deriving Inhabited
 
-/-- A function of the prelude that the route itself defines. -/
+/-- A function of the runtime library (`ocaml/lcnf`), with the definition the target evaluator
+runs: its qualified name, its parameters and its body. -/
 structure Support where
   name : String
   params : List String
@@ -222,7 +225,7 @@ def substAlg (σ : List (String × Ml.Expr)) : Ml.ExprAlgebra Ml.ExprSelfCarrier
 /-- An inline body with its parameters replaced. -/
 def substExpr (σ : List (String × Ml.Expr)) (e : Ml.Expr) : Ml.Expr := Ml.cata_expr (substAlg σ) e
 
-/-! ## 3. The target's library and the prelude -/
+/-! ## 3. The target's library and the runtime library -/
 
 /-- How the target evaluator (`Conform.Lcnf.Target`, `tools/Conform/Lcnf/SemanticsTarget.lean`)
 answers a function or an operator of the target's library. -/
@@ -258,9 +261,10 @@ private def unruled (name : String) (arity : Nat) : LibFn :=
   { name, arity, isInfix := false, target := .unruled }
 
 /-- The target's library: every function, value and operator that a form or a support body may
-name, with the number of arguments it takes and the target evaluator's rule for it.
-`lcnf_utf8_bytes` and `lcnf_utf8_length` are two of the prelude's primitives
-(`preludePrimitives`), which the target evaluator answers by name. The labelled call `Option.value o ~default:d` is the evaluator's primitive
+name, with the number of arguments it takes and the target evaluator's rule for it. The four
+`Lcnf_string` functions are the string primitives of the runtime library (`ocaml/lcnf`, library
+`effect4_lcnf`); the target evaluator answers two of them by name and has no rule for the other
+two. The labelled call `Option.value o ~default:d` is the evaluator's primitive
 `Option.value~default` (`Conform.Effect4.LcnfMl.ofExpr`). -/
 def targetLibrary : List LibFn := [
   infixOp "=", infixOp "<", infixOp "<=", infixOp ">", infixOp ">=", infixOp "+", infixOp "-",
@@ -268,8 +272,8 @@ def targetLibrary : List LibFn := [
   infixOp "lsr", infixOp "&&", infixOp "||", infixOp "^", infixOp "@",
   { name := "max_int", arity := 0, isInfix := false, target := .bound },
   prim "max" 2, prim "min" 2, prim "not" 1, prim "fst" 1, prim "snd" 1, prim "failwith" 1,
-  prim "lcnf_utf8_bytes" 1, prim "lcnf_utf8_length" 1, unruled "lcnf_utf8_of_code_points" 1,
-  unruled "lcnf_string_of_bytes" 1,
+  prim "Lcnf_string.utf8_bytes" 1, prim "Lcnf_string.utf8_length" 1,
+  unruled "Lcnf_string.of_code_points" 1, unruled "Lcnf_string.of_utf8_bytes" 1,
   unruled "string_of_int" 1,
   prim "List.rev" 1, prim "List.rev_append" 2, prim "List.length" 1, prim "List.nth" 2,
   scan "List.exists" true, scan "List.for_all" false, unruled "List.map" 2,
@@ -290,37 +294,6 @@ def libraryArity? (lib : List LibFn) (name : String) : Option Nat :=
 def isOperator (lib : List LibFn) (symbol : String) : Bool :=
   lib.any fun f => f.isInfix && f.name == symbol
 
-/-- The four primitives of the prelude, over the target's string library. Strings admitted by this
-profile are valid UTF-8; `ByteArray` and `Array UInt8` both use a byte list, and a `Char` is its
-code point. They are structured like every other binding, so `Ml.Check` reads them; the target
-evaluator answers the two it has a rule for by name and reads no body of them. -/
-def preludePrimitives : List Ml.Bind := [
-  -- `List.init (String.length s) (fun i -> Char.code (String.get s i))`
-  { name := "lcnf_utf8_bytes", params := [("s", none)],
-    body := Ml.Expr.call "List.init" [Ml.Expr.call "String.length" [.var "s"],
-      .fn ["i"] (Ml.Expr.call "Char.code" [Ml.Expr.call "String.get" [.var "s", .var "i"]])] },
-  -- `String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s`: the
-  -- bytes that start a scalar
-  { name := "lcnf_utf8_length", params := [("s", none)],
-    body := Ml.Expr.call "String.fold_left" [.fn ["n", "c"]
-        (.ifThen (.binop "=" (.binop "land" (Ml.Expr.call "Char.code" [.var "c"]) (.int 192)) (.int 128))
-          (.var "n") (.binop "+" (.var "n") (.int 1))),
-      .int 0, .var "s"] },
-  -- `let b = Buffer.create 16 in List.iter (fun c -> …) cs; Buffer.contents b`
-  { name := "lcnf_utf8_of_code_points", params := [("cs", none)],
-    body := .letIn "b" (Ml.Expr.call "Buffer.create" [.int 16])
-      (.seq (Ml.Expr.call "List.iter" [.fn ["c"] (Ml.Expr.call "Buffer.add_utf_8_uchar"
-          [.var "b", Ml.Expr.call "Uchar.of_int" [.var "c"]]), .var "cs"])
-        (Ml.Expr.call "Buffer.contents" [.var "b"])) },
-  -- `let b = Buffer.create 16 in List.iter (fun c -> Buffer.add_char b (Char.chr c)) bs;
-  -- Buffer.contents b`: a `String` built by its constructor from its UTF-8 bytes
-  -- (`String.ofByteArray`), the inverse of `lcnf_utf8_bytes` on valid UTF-8
-  { name := "lcnf_string_of_bytes", params := [("bs", none)],
-    body := .letIn "b" (Ml.Expr.call "Buffer.create" [.int 16])
-      (.seq (Ml.Expr.call "List.iter" [.fn ["c"] (Ml.Expr.call "Buffer.add_char"
-          [.var "b", Ml.Expr.call "Char.chr" [.var "c"]]), .var "bs"])
-        (Ml.Expr.call "Buffer.contents" [.var "b"])) }]
-
 private def va : Ml.Expr := .var "a"
 private def vb : Ml.Expr := .var "b"
 
@@ -330,8 +303,14 @@ private def saturating (x y product : Ml.Expr) : Ml.Expr :=
   .ifThen (.binop "=" x (.int 0)) (.int 0)
     (.ifThen (.binop ">" y (.binop "/" (.var "max_int") x)) (.var "max_int") product)
 
-/-- The functions the prelude defines, in dependency order. A form that binds a name, or that
-calls itself, is here and not inline, so that no call site carries its binders.
+/-- The functions of the runtime library (`ocaml/lcnf`, library `effect4_lcnf`) that a form names
+and the target evaluator runs from a definition, in dependency order. A form that binds a name, or
+that calls itself, is one of these and not inline, so that no call site carries its binders.
+Each body here is the reference definition of the library function of its name: the library
+holds the OCaml that every generated file calls, and the target evaluator binds these
+(`Conform.Effect4.LcnfMl.supportBinds`). The host checks hold the two to the same answers, once on
+the evaluator and once in compiled OCaml that carries the library's own modules
+(`Conform.Effect4.Normalization`), and the library's tests are `ocaml/lcnf/test_lcnf.ml`.
 
 The 63-bit rule. `Nat` is unbounded and OCaml's `int` is 63-bit, so a faithful `a * b` or
 `a ^ b` does not exist; a wrapping one is worse than a saturating one, because
@@ -340,28 +319,32 @@ value: a silently wrong `Api.ofBytes`, not a compile error. Saturating makes `2 
 `max_int`, and every list OCaml can hold is shorter than `max_int`, so the guard keeps its
 meaning. Recorded in `ocaml/gen/NOTES.md` §5. -/
 def support : List Support := [
-  { name := "lcnf_nat_mul", params := ["a", "b"],
+  { name := "Lcnf_nat.mul", params := ["a", "b"],
     body := saturating va vb (.binop "*" va vb) },
-  { name := "lcnf_nat_pow", params := ["a", "b"], recursive := true,
+  { name := "Lcnf_nat.pow", params := ["a", "b"], recursive := true,
     body := .ifThen (.binop "=" vb (.int 0)) (.int 1)
-      (.letIn "h" (Ml.Expr.call "lcnf_nat_pow" [va, .binop "-" vb (.int 1)])
+      (.letIn "h" (Ml.Expr.call "Lcnf_nat.pow" [va, .binop "-" vb (.int 1)])
         (saturating va (.var "h") (.binop "*" (.var "h") va))) },
   -- The scale and the final product are both stopped: stopping only the power still wrapped.
-  { name := "lcnf_nat_shift_left", params := ["a", "b"],
-    body := .letIn "s" (Ml.Expr.call "lcnf_nat_pow" [.int 2, vb])
+  { name := "Lcnf_nat.shift_left", params := ["a", "b"],
+    body := .letIn "s" (Ml.Expr.call "Lcnf_nat.pow" [.int 2, vb])
       (saturating va (.var "s") (.binop "*" va (.var "s"))) },
   -- `contains as a` is `elem a as`: the target is the first argument of the instance.
-  { name := "lcnf_list_contains", params := ["inst", "l", "a"],
+  { name := "Lcnf_list.contains", params := ["inst", "l", "a"],
     body := Ml.Expr.call "List.exists"
       [.fn ["e"] (.app (.var "inst") [va, .var "e"]), .var "l"] }]
 
-/-- The prelude of an emitted module: the three primitives, then the support functions.
-The production backend emits it, and it is part of the manifest, never patched into a
-generated file. -/
-def prelude : List Ml.Decl :=
-  preludePrimitives.map (fun b => Ml.Decl.letD false [b])
-    ++ support.map (fun s => Ml.Decl.letD s.recursive [s.bind])
-    ++ [.blank]
+/-- The modules of the runtime library that the table names, each once and sorted: the module part
+of every qualified name of `support` and of `targetLibrary` that starts with `Lcnf_`. A program
+that carries the library's modules itself, as the compiler checkpoint's module does, reads this
+list. -/
+def runtimeModules : List String :=
+  let names := support.map (·.name) ++ targetLibrary.map (·.name)
+  let modules := names.filterMap fun n =>
+    match n.splitOn "." with
+    | [m, _] => if m.startsWith "Lcnf_" then some m else none
+    | _ => none
+  (modules.eraseDups.toArray.qsort (· < ·)).toList
 
 /-! ## 4. The table -/
 
@@ -435,7 +418,7 @@ def builtins : List Builtin := [
     "as `Nat.decLt`.",
   row `Nat.add (.extern "lean_nat_add" (some .natAdd)) (op "+") .domain "a + b < 2^62" []
     "OCaml `+` wraps at 2^62 without a trap; Lean's `Nat.add` does not.",
-  row `Nat.mul (.extern "lean_nat_mul" (some .natMul)) (.support "lcnf_nat_mul") .domain "a * b < 2^62" ["mul-saturation"]
+  row `Nat.mul (.extern "lean_nat_mul" (some .natMul)) (.support "Lcnf_nat.mul") .domain "a * b < 2^62" ["mul-saturation"]
     "saturating: a product above `max_int` reads as `max_int`, where OCaml's raw `*` would wrap. The check is `b > max_int / a`, so no intermediate overflows.",
   row `Nat.div (.extern "lean_nat_div" (some .natDiv)) (natDiv) .domain "0 ≤ a, b < 2^62" ["div-zero"]
     "Includes Lean's total value at zero; unbounded input representation remains outside this target profile.",
@@ -457,9 +440,9 @@ def builtins : List Builtin := [
     "`0 - a` on `int`; a negative literal compiles to it (`-3` is `Int.neg 3`). At `-2^62` the negation leaves `int`, as at the type row's bound.",
   row `Nat.pred (.extern "lean_nat_pred" (some .natPred)) (natPred) .domain "a < 2^62" []
     "truncated predecessor.",
-  row `Nat.pow (.extern "lean_nat_pow" (some .natPow)) (.support "lcnf_nat_pow") .approximate "a ^ b < max_int" ["pow-saturation"]
+  row `Nat.pow (.extern "lean_nat_pow" (some .natPow)) (.support "Lcnf_nat.pow") .approximate "a ^ b < max_int" ["pow-saturation"]
     "saturating: `2 ^ 64` reads as `max_int` rather than wrapping to 0. The host profile of `ocaml/gen/NOTES.md` §5. Note the helper's own multiplications are checked against `max_int / a`, so the saturation is monotone.",
-  row `Nat.shiftLeft (.extern "lean_nat_shiftl" (some .natShiftLeft)) (.support "lcnf_nat_shift_left") .approximate "a * 2^b ≤ max_int" ["shift-saturation"]
+  row `Nat.shiftLeft (.extern "lean_nat_shiftl" (some .natShiftLeft)) (.support "Lcnf_nat.shift_left") .approximate "a * 2^b ≤ max_int" ["shift-saturation"]
     "Checks both the power and final multiplication; larger results saturate at max_int.",
   row `Nat.shiftRight (.extern "lean_nat_shiftr" (some .natShiftRight)) (natShiftRight) .domain "a < 2^62" []
     "OCaml's `lsr` is undefined at shift ≥ 63, so the row guards it; `lsr` on a non-negative `int` is Lean's `shiftRight` below 2^62.",
@@ -538,9 +521,9 @@ def builtins : List Builtin := [
     "as `String.decEq`.",
   row `String.append (.extern "lean_string_append" (some .strAppend)) (op "^") .exact "" []
     "concatenation of UTF-8 byte sequences is the encoding of the concatenation.",
-  row `String.length (.extern "lean_string_length" (some .strLength)) (.library "lcnf_utf8_length") .domain "valid UTF-8; scalar count fits int" ["utf8-length"]
+  row `String.length (.extern "lean_string_length" (some .strLength)) (.library "Lcnf_string.utf8_length") .domain "valid UTF-8; scalar count fits int" ["utf8-length"]
     "Counts leading UTF-8 bytes, hence Unicode scalar values for represented Lean strings.",
-  row `String.toUTF8 (.extern "lean_string_to_utf8" (some .strToUTF8)) (.library "lcnf_utf8_bytes") .domain "valid UTF-8" ["utf8-literal-bytes"]
+  row `String.toUTF8 (.extern "lean_string_to_utf8" (some .strToUTF8)) (.library "Lcnf_string.utf8_bytes") .domain "valid UTF-8" ["utf8-literal-bytes"]
     "Emitted helper returns the actual encoded bytes, including non-ASCII keys.",
   row `ByteArray.data (.extern "lean_byte_array_data" (some .identity)) (same) .exact "" []
     "Byte arrays use the same list-of-byte representation as their data array.",
@@ -548,11 +531,11 @@ def builtins : List Builtin := [
     "a byte array is its data array, a byte list under the shim. Before this row the constructor built a record of no declared type, which `ocamlopt` refused.",
   -- List
   -- The session's closure (LC-6, LC-7): strings from code points, bytes, and the platform.
-  row `String.ofList (.extern "lean_string_mk" none) (.library "lcnf_utf8_of_code_points") .exact "" []
+  row `String.ofList (.extern "lean_string_mk" none) (.library "Lcnf_string.of_code_points") .exact "" []
     "A `Char` is its code point, and every one is a Unicode scalar value, so the UTF-8 encoding is the string Lean's `String.ofList` builds.",
-  row `String.toByteArray (.extern "lean_string_to_utf8" (some .strToUTF8)) (.library "lcnf_utf8_bytes") .domain "valid UTF-8" []
+  row `String.toByteArray (.extern "lean_string_to_utf8" (some .strToUTF8)) (.library "Lcnf_string.utf8_bytes") .domain "valid UTF-8" []
     "as `String.toUTF8`, whose bytes it is.",
-  row `String.ofByteArray (.extern "lean_string_from_utf8_unchecked" none) (.library "lcnf_string_of_bytes") .domain "valid UTF-8" []
+  row `String.ofByteArray (.extern "lean_string_from_utf8_unchecked" none) (.library "Lcnf_string.of_utf8_bytes") .domain "valid UTF-8" []
     "the string whose UTF-8 encoding is the bytes; the constructor's proof is that they are valid, as `String.toByteArray`'s domain.",
   row `ByteArray.emptyWithCapacity (.extern "lean_mk_empty_byte_array" (some .arrayMkEmpty)) (arrayEmpty) .exact "" []
     "the capacity is a hint; the byte list is empty.",
@@ -583,7 +566,7 @@ def builtins : List Builtin := [
     "",
   row `List.elem .body (listElem) .exact "" ["elem-order"]
     "`[BEq α]` is a one-field structure at mono, so the instance is a relevant argument. Lean's `List.elem a (b :: l)` tests `a == b`, i.e. `inst a b`; `List.exists (inst a) l` tests the same, in the same order.",
-  row `List.contains .body (.support "lcnf_list_contains") .exact "" ["contains-order", "callback-exception"]
+  row `List.contains .body (.support "Lcnf_list.contains") .exact "" ["contains-order", "callback-exception"]
     "`contains as a` is `elem a as`, so the target is the first BEq argument, as in the `elem` row; an asymmetric instance sees the same order on both sides (the `contains-order` control).",
   row `List.map .body (.library "List.map") .exact "" []
     "",
@@ -719,7 +702,7 @@ def Builtin.arity (b : Builtin) : Nat := b.form.arity
 def Form.freeNames : Form → List String
   | .inline ps body =>
     ((((usesExpr false ps body).map (·.free)).getD []).filter (!isQualified ·)).eraseDups
-  | .support n => [n]
+  | .support n => if isQualified n then [] else [n]
   | .library n => if isQualified n then [] else [n]
 
 /-- Whether the form evaluates each of its parameters exactly once, whenever it is evaluated.
@@ -764,11 +747,11 @@ def Builtin.apply (b : Builtin) (args : List Ml.Expr) : Ml.Expr :=
     .fn extra (b.form.saturated (args ++ extra.map Ml.Expr.var))
   else .app (b.form.saturated (args.take k)) (args.drop k)
 
-/-- The names a call site must reach: the names the prelude defines, and every unqualified
-name a row leaves free at a call site. A binder that took one would capture a reference. -/
+/-- The names a call site must reach: every unqualified name a row leaves free at a call site. A
+binder that took one would capture a reference. A qualified name, such as a function of the
+runtime library, is no binder's. -/
 def protectedNames : List String :=
-  (preludePrimitives.map (·.name) ++ support.map (·.name)
-    ++ builtins.flatMap (·.form.freeNames)).eraseDups
+  (builtins.flatMap (·.form.freeNames)).eraseDups
 
 /-- The names no source binder of a declaration may take: the eta binders and the protected
 names. -/
@@ -852,7 +835,7 @@ def problemsOf (rows : List Builtin) (sup : List Support) (lib : List LibFn) :
       | none => out := out ++ [s!"row {r.lean}: the library function `{n}` is not declared"]
       | some 0 => out := out ++ [s!"row {r.lean}: `{n}` is not a function"]
       | some _ => pure ()
-  -- the library and the prelude
+  -- the library and the runtime library's definitions
   for n in repeated (lib.map (·.name)) do
     out := out ++ [s!"library `{n}`: declared twice"]
   for f in lib do
@@ -872,9 +855,6 @@ def problemsOf (rows : List Builtin) (sup : List Support) (lib : List LibFn) :
     | _ => none
   for n in repeated spellings do
     out := out ++ [s!"library: the evaluator's primitive `{n}` answers two entries"]
-  for b in preludePrimitives do
-    unless libraryArity? lib b.name == some b.params.length do
-      out := out ++ [s!"primitive `{b.name}`: not declared with its arity"]
   for n in repeated supNames do
     out := out ++ [s!"support `{n}`: defined twice"]
   let mut earlier : List String := []
@@ -907,6 +887,10 @@ def problems : List String := problemsOf builtins support targetLibrary
 #guard etaBinders.all fun b => !protectedNames.contains b && !(targetLibrary.map (·.name)).contains b
 #guard maxArity == 3
 #guard builtins.length == 126
+-- The runtime library's modules that the table names: the three of `ocaml/lcnf`.
+#guard runtimeModules == ["Lcnf_list", "Lcnf_nat", "Lcnf_string"]
+-- No name of the runtime library is one a binder must avoid: each is qualified.
+#guard (support.map (·.name) ++ ["Lcnf_string.utf8_bytes"]).all (!protectedNames.contains ·)
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
 -- row but eleven (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
 -- session's closure needs; `String.ofByteArray`, the inverse of the bytes it has no primitive
@@ -924,16 +908,16 @@ private def refuses (ps : List String) (reason : String) : Bool :=
   ps.any fun p => (p.splitOn reason).length > 1
 
 -- a support definition left out: its row has no function, and its dependent no declaration
-#guard refuses (problemsOf builtins (support.filter (·.name != "lcnf_nat_pow")) targetLibrary)
-  "the support function `lcnf_nat_pow` is not defined"
-#guard refuses (problemsOf builtins (support.filter (·.name != "lcnf_nat_pow")) targetLibrary)
-  "support `lcnf_nat_shift_left`: `lcnf_nat_pow` is not declared before it"
+#guard refuses (problemsOf builtins (support.filter (·.name != "Lcnf_nat.pow")) targetLibrary)
+  "the support function `Lcnf_nat.pow` is not defined"
+#guard refuses (problemsOf builtins (support.filter (·.name != "Lcnf_nat.pow")) targetLibrary)
+  "support `Lcnf_nat.shift_left`: `Lcnf_nat.pow` is not declared before it"
 -- the definitions out of order
 #guard refuses (problemsOf builtins support.reverse targetLibrary)
-  "support `lcnf_nat_shift_left`: `lcnf_nat_pow` is not declared before it"
+  "support `Lcnf_nat.shift_left`: `Lcnf_nat.pow` is not declared before it"
 -- a library dependency left out
 #guard refuses (problemsOf builtins support (targetLibrary.filter (·.name != "max_int")))
-  "support `lcnf_nat_mul`: `max_int` is not declared before it"
+  "support `Lcnf_nat.mul`: `max_int` is not declared before it"
 #guard refuses (problemsOf builtins support (targetLibrary.filter (·.name != "max")))
   "row Nat.sub: `max` is not declared"
 -- a contract whose domain disagrees with its class
@@ -982,11 +966,11 @@ private def spelled (name : Name) (args : List Ml.Expr) : String :=
 #guard spelled `Nat.sub [.var "x", .var "y"] == "max 0 (x - y)"
 #guard spelled `Nat.div [.var "x", .var "y"] == "if y = 0 then 0 else x / y"
 #guard spelled `Nat.mod [.var "x", .var "y"] == "if y = 0 then x else x mod y"
-#guard spelled `Nat.mul [.var "x", .var "_mula"] == "lcnf_nat_mul x _mula"
-#guard spelled `Nat.shiftLeft [.var "_shift_scale", .var "y"] == "lcnf_nat_shift_left _shift_scale y"
+#guard spelled `Nat.mul [.var "x", .var "_mula"] == "Lcnf_nat.mul x _mula"
+#guard spelled `Nat.shiftLeft [.var "_shift_scale", .var "y"] == "Lcnf_nat.shift_left _shift_scale y"
 #guard spelled `List.all [.var "l", .var "p"] == "List.for_all p l"
 #guard spelled `List.elem [.var "inst", .var "x", .var "l"] == "List.exists (inst x) l"
-#guard spelled `List.contains [.var "inst", .var "l", .var "_elem"] == "lcnf_list_contains inst l _elem"
+#guard spelled `List.contains [.var "inst", .var "l", .var "_elem"] == "Lcnf_list.contains inst l _elem"
 #guard spelled `Array.mkEmpty [.var "n"] == "[]"
 #guard spelled `Array.push [.var "xs", .var "x"] == "xs @ [x]"
 #guard spelled `Option.getD [.var "o", .var "d"] == "Option.value o ~default:d"

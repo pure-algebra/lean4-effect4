@@ -1056,36 +1056,6 @@ and 'op typed_program = eff_ty
 
 
 
-let lcnf_utf8_bytes s =
-  List.init (String.length s) (fun i -> Char.code (String.get s i))
-
-let lcnf_utf8_length s =
-  String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
-
-let lcnf_utf8_of_code_points cs =
-  let b = Buffer.create 16 in
-  List.iter (fun c -> Buffer.add_utf_8_uchar b (Uchar.of_int c)) cs; Buffer.contents b
-
-let lcnf_string_of_bytes bs =
-  let b = Buffer.create 16 in
-  List.iter (fun c -> Buffer.add_char b (Char.chr c)) bs; Buffer.contents b
-
-let lcnf_nat_mul a b =
-  if a = 0 then 0 else if b > max_int / a then max_int else a * b
-
-let rec lcnf_nat_pow a b =
-  if b = 0 then 1 else (let h = lcnf_nat_pow a (b - 1) in
-    if a = 0 then 0 else if h > max_int / a then max_int else h * a)
-
-let lcnf_nat_shift_left a b =
-  let s = lcnf_nat_pow 2 b in
-  if a = 0 then 0 else if s > max_int / a then max_int else a * s
-
-let lcnf_list_contains inst l a =
-  List.exists (fun e -> inst a e) l
-
-
-
 (* LCNF mono: List.any._at_.Test.Dogfood.Scenario.Todo.repository.spec_0 (n.1 : Nat) (x.2 : List (Prod Nat (Prod String Bool))) : Bool *)
 
 let rec list_any_at_test_dogfood_scenario_todo_repository_spec_0 (n_1 : int) (x_2 : (int * (string * bool)) list) : bool =
@@ -1203,7 +1173,7 @@ let rec list_map_tr_loop_at_field_bytes_key_spec_0 (a_1 : int list) (a_2 : int l
 (* LCNF mono: Effect4.Field.bytesKey (s : String) : List Nat *)
 
 let field_bytes_key (s : string) : int list =
-  let _x_1 = lcnf_utf8_bytes s in
+  let _x_1 = Lcnf_string.utf8_bytes s in
   let _x_2 = _x_1 in
   let _x_3 = _x_2 in
   let _x_4 = [] in
@@ -11166,7 +11136,7 @@ let rec store_utf8_chars (x_1 : int) (x_2 : int list) : int list option =
                         | Some val__100 -> (let _x_101 = 192 in
                           let _x_102 = max 0 (_x_9 - _x_101) in
                           let _x_103 = 64 in
-                          let _x_104 = lcnf_nat_mul _x_102 _x_103 in
+                          let _x_104 = Lcnf_nat.mul _x_102 _x_103 in
                           let _x_105 = _x_104 + val__98 in
                           let _x_106 = char_of_nat _x_105 in
                           let _x_107 = _x_106 :: val__100 in
@@ -11181,9 +11151,9 @@ let rec store_utf8_chars (x_1 : int) (x_2 : int list) : int list option =
                               | Some val__67 -> (let _x_68 = 2048 in
                                 let _x_69 = max 0 (_x_9 - _x_14) in
                                 let _x_70 = 4096 in
-                                let _x_71 = lcnf_nat_mul _x_69 _x_70 in
+                                let _x_71 = Lcnf_nat.mul _x_69 _x_70 in
                                 let _x_72 = 64 in
-                                let _x_73 = lcnf_nat_mul val__65 _x_72 in
+                                let _x_73 = Lcnf_nat.mul val__65 _x_72 in
                                 let _x_74 = _x_71 + _x_73 in
                                 let _x_75 = _x_74 + val__67 in
                                 let[@local always] _jp_76 = fun () -> let _x_77 = store_utf8_chars n_8 tail_63 in
@@ -11215,12 +11185,12 @@ let rec store_utf8_chars (x_1 : int) (x_2 : int list) : int list option =
                                         | Some val__32 -> (let _x_33 = 65536 in
                                           let _x_34 = max 0 (_x_9 - _x_16) in
                                           let _x_35 = 262144 in
-                                          let _x_36 = lcnf_nat_mul _x_34 _x_35 in
+                                          let _x_36 = Lcnf_nat.mul _x_34 _x_35 in
                                           let _x_37 = 4096 in
-                                          let _x_38 = lcnf_nat_mul val__28 _x_37 in
+                                          let _x_38 = Lcnf_nat.mul val__28 _x_37 in
                                           let _x_39 = _x_36 + _x_38 in
                                           let _x_40 = 64 in
-                                          let _x_41 = lcnf_nat_mul val__30 _x_40 in
+                                          let _x_41 = Lcnf_nat.mul val__30 _x_40 in
                                           let _x_42 = _x_39 + _x_41 in
                                           let _x_43 = _x_42 + val__32 in
                                           let _x_44 = _x_33 <= _x_43 in
@@ -11275,7 +11245,7 @@ let store_decode_string (b : int list) : string option =
   match _x_2 with
     | None -> None
     | Some _ -> (let _x_5 = list_to_byte_array b in
-      let _x_6 = lcnf_string_of_bytes _x_5 in
+      let _x_6 = Lcnf_string.of_utf8_bytes _x_5 in
       Some _x_6)
 
 
@@ -11290,7 +11260,7 @@ let program_row_key_namespace_opt (row : row) : (service_key * string) option =
               let _x_4 = program_inst_decidable_eq_row_shape shape _x_3 in
               if _x_4 then (let _x_6 = trailing = [] in
                 if _x_6 then (let _x_8 = type_args = [] in
-                  if _x_8 then (let _x_10 = lcnf_utf8_bytes spelling in
+                  if _x_8 then (let _x_10 = Lcnf_string.utf8_bytes spelling in
                     let _x_11 = _x_10 in
                     let _x_12 = _x_11 in
                     let _x_13 = program_split_dot _x_12 in
@@ -13491,12 +13461,12 @@ let nat_repr_fast (n : int) : string =
   let _x_3 = n < _x_2 in
   if _x_3 then List.nth _x_1 n else (let _x_4 = 2 in
     let _x_5 = system_platform_num_bits in
-    let _x_6 = lcnf_nat_pow _x_4 _x_5 in
+    let _x_6 = Lcnf_nat.pow _x_4 _x_5 in
     let _x_7 = n < _x_6 in
     if _x_7 then (let _x_11 = n in
       string_of_int _x_11) else (let _x_8 = 10 in
       let _x_9 = nat_to_digits _x_8 n in
-      lcnf_utf8_of_code_points _x_9))
+      Lcnf_string.of_code_points _x_9))
 
 
 
@@ -18514,7 +18484,7 @@ let store_val__float_frame (b : int) : bool =
         let _x_13 = _x_12 <= _x_4 in
         if _x_13 then _x_11 else (let _x_14 = 2 in
           let _x_15 = max 0 (_x_12 - _x_4) in
-          let _x_16 = lcnf_nat_pow _x_14 _x_15 in
+          let _x_16 = Lcnf_nat.pow _x_14 _x_15 in
           let _x_17 = if _x_16 = 0 then fraction else fraction mod _x_16 in
           let _x_18 = _x_17 = _x_8 in
           if _x_18 then _x_13 else true))))

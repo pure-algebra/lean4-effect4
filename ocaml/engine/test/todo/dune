@@ -17,7 +17,7 @@
  (modules todo_gen todo_fixture todo_core native_todo)
  (flags (:standard -w @55))
  (no_dynlink)
- (libraries effect4_eff effect4_clock effect4_bytes effect4_engine))
+ (libraries effect4_eff effect4_clock effect4_bytes effect4_engine effect4_lcnf))
 
 (test
  (name test_todo)

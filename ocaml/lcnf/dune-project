@@ -1,0 +1,5 @@
+(lang dune 3.0)
+; The package makes `effect4_lcnf` public, so the projects whose generated files call it
+; (ocaml/gen and ocaml/engine, siblings in the ocaml/ workspace) can name it; a private library
+; is scoped to its own project.
+(package (name effect4_lcnf))

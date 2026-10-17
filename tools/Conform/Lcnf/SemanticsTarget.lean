@@ -372,18 +372,17 @@ def applyPrim (pe : PrimEnv) (op : String) (args : Array TValue) : TOutcome :=
       | some m => .exn s!"Failure(\"{m}\")"
       | none => .stuck "failwith: not a string"
     | _ => .stuck "failwith: arity"
-  -- Two shapes a target needs for an extern the LCNF route cannot emit. They are *proposals*
-  -- for extern rows, not existing OCaml functions: `utf8_bytes s` is
-  -- `List.map Char.code (List.of_seq (String.to_seq s))` — one line, and exact, because an
-  -- OCaml string already *is* the UTF-8 byte sequence a Lean `String.toUTF8` produces.
-  | "utf8_bytes" | "lcnf_utf8_bytes" => match args with
+  -- The two string primitives of the LCNF route's runtime library (`Lcnf_string`,
+  -- `ocaml/lcnf/lcnf_string.mli`). `utf8_bytes s` is exact because an OCaml string already *is*
+  -- the UTF-8 byte sequence a Lean `String.toUTF8` produces; `utf8_length` counts scalar values.
+  | "Lcnf_string.utf8_bytes" => match args with
     | #[a] => match asStr a with
       | some s => .value (TValue.ofList (s.toUTF8.data.toList.map fun b => TValue.int b.toNat))
-      | none => .stuck "utf8_bytes: not a string"
-    | _ => .stuck "utf8_bytes: arity"
-  | "lcnf_utf8_length" => match args with
+      | none => .stuck "Lcnf_string.utf8_bytes: not a string"
+    | _ => .stuck "Lcnf_string.utf8_bytes: arity"
+  | "Lcnf_string.utf8_length" => match args with
     | #[.str s] => .value (.int s.length)
-    | _ => .stuck "lcnf_utf8_length: expected string"
+    | _ => .stuck "Lcnf_string.utf8_length: expected string"
   | "id" => match args with
     | #[a] => .value a
     | _ => .stuck "id: arity"

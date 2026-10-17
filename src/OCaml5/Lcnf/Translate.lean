@@ -20,7 +20,7 @@ ordering that decides how to emit them.
 
 **Depends on.** `OCaml5.Lcnf.Dump` (`monoDecl?`), `OCaml5.Lcnf.Naming`,
 `OCaml5.Lcnf.Types` (the type declarations; the type rows' `builtinTy?`), `OCaml5.Lcnf.Builtins`
-(the builtin table, its prelude and its reserved names), `OCaml5.Lcnf.Native` (OCaml's own
+(the builtin table and its reserved names), `OCaml5.Lcnf.Native` (OCaml's own
 datatypes), `OCaml5.Lcnf.Clock` (the clock's constructors), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
 `Lean.Compiler.LCNF.Basic` (`Code.collectUsed`).
 
@@ -1309,8 +1309,8 @@ def retranslate (c : Closure) (tn : TypeNames) (ex : Externs) : CoreM Closure :=
 /-- Dependencies first on the translated-name graph. Wrapper/twin aliases and the
 extern leading-argument dependencies use this same graph. Duplicate output names are a
 refusal before any map insertion, because overwriting a vertex loses a declaration. A
-declaration whose name a builtin form leaves free, or the prelude defines, is a refusal too: it
-would stand between every later declaration and that name. -/
+declaration whose name a builtin form leaves free is a refusal too: it would stand between every
+later declaration and that name. -/
 def emissionGroups (ds : Array Translated) : Except String (List (List Nat)) := do
   let mut byName : Std.HashMap String Nat := {}
   for i in [:ds.size] do
@@ -1324,12 +1324,14 @@ def emissionGroups (ds : Array Translated) : Except String (List (List Nat)) := 
       t.externDeps.filterMap fun n => byName[n]?
   return Lean.SCC.scc (List.range ds.size) (fun i => adj[i]!.toList)
 
-/-- One binding group per component, preserving input/successor order and origin comments,
-after the prelude. A run that translated nothing declares types alone, and carries no prelude. -/
+/-- One binding group per component, preserving input/successor order and origin comments. The
+functions a form names come from the runtime library (`ocaml/lcnf`), which every generated file
+links, so no module carries a prelude of its own. A run that translated nothing declares types
+alone. -/
 def emit (ds : Array Translated) : Except String (List Ml.Decl) := do
   if ds.isEmpty then return []
   let groups ← emissionGroups ds
-  return prelude ++ groups.flatMap fun comp =>
+  return groups.flatMap fun comp =>
     let binds := comp.map fun v => ds[v]!.bind
     let isRec := comp.length > 1 || comp.any fun v => ds[v]!.recursive
     let origin := String.intercalate "\n   " (comp.map fun v => ds[v]!.signature)

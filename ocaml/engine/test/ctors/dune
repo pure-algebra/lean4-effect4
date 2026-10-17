@@ -9,4 +9,5 @@
  (name test_ctors)
  (modules ctors_gen test_ctors)
  (flags (:standard -w @55))
- (deps ctors.txt))
+ (deps ctors.txt)
+ (libraries effect4_lcnf))
