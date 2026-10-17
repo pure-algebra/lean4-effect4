@@ -221,10 +221,23 @@ def apply : Prim → Array Value → Option Value
   | .arrayGet, #[a, i] => match a, i with
     | .array xs, .nat k => xs[k]?
     | _, _ => none
+  | .arraySet, #[a, i, x] => match a, i with
+    | .array xs, .nat k => if h : k < xs.size then some (.array (xs.set k x h)) else none
+    | _, _ => none
+  | .arrayReplicate, #[n, x] => do return .array (Array.replicate (← n.toNat?) x)
   | .listLength, #[a] => do return .nat (← a.toList?).length
   | _, _ => none
 
 end Prim
+
+-- The two array rows that no lane reaches, on finite arguments: `Array.uset` replaces the
+-- element at an index in range and is stuck outside it, and `Array.replicate` answers `n` copies.
+#guard (Prim.apply .arraySet #[.array #[.nat 1, .nat 2], .nat 1, .nat 7]).map Value.render ==
+  some "#[1, 7]"
+#guard (Prim.apply .arraySet #[.array #[.nat 1, .nat 2], .nat 2, .nat 7]).isNone
+#guard (Prim.apply .arrayReplicate #[.nat 3, .str "a"]).map Value.render ==
+  some "#[\"a\", \"a\", \"a\"]"
+#guard (Prim.apply .arrayReplicate #[.nat 0, .nat 5]).map Value.render == some "#[]"
 
 /-! ## 3. The interpreter -/
 

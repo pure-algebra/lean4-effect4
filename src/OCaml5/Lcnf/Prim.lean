@@ -39,6 +39,11 @@ inductive Prim where
   something the value domain can produce. A stuck row is a refusal a report can carry; a
   wrong answer is not. -/
   | arrayGet
+  /-- `Array.uset`: the array with the element at an index replaced. Its proof puts the index
+  in range; outside the range this row is *stuck*, as `arrayGet` is. -/
+  | arraySet
+  /-- `Array.replicate`: `n` copies of the value. -/
+  | arrayReplicate
   | listLength
   deriving DecidableEq, Repr, Inhabited
 
@@ -58,7 +63,8 @@ def arity : Prim → Nat
   | .uintOfNat _ => 1
   | .uintSub _ => 2
   | .arrayToList | .listToArray | .arrayMkEmpty | .arraySize | .listLength => 1
-  | .arrayPush | .arrayGet => 2
+  | .arrayPush | .arrayGet | .arrayReplicate => 2
+  | .arraySet => 3
 
 protected def toString : Prim → String
   | .uintOfNat bits => s!"uintOfNat {bits}"

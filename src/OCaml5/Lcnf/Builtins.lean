@@ -746,11 +746,11 @@ def builtins : List Builtin := [
     "the proof that the index is in range is erased; `Lcnf_array.get_exn` answers in range."
     (cost := "O(log (i / 256)) where Lean's is O(1).")
     (receipt := .exact),
-  row `Array.uset (.extern "lean_array_uset" none) (.library "Lcnf_array.set_exn") .exact "" []
+  row `Array.uset (.extern "lean_array_uset" (some .arraySet)) (.library "Lcnf_array.set_exn") .exact "" []
     "Lean's `Array.uset a i v h` replaces the element at `i`, which `h` proves in range. `Lcnf_array.set_exn` answers a new vector and copies the one chunk it changes, so the argument and every version that shares that chunk keep their elements, as Lean's values do."
     (cost := "O(log (n / 256) + 256) per update, where Lean's is O(1) on an array no other reference holds.")
     (receipt := .exact),
-  row `Array.replicate (.extern "lean_mk_array" none) (.library "Lcnf_array.replicate") .exact "" []
+  row `Array.replicate (.extern "lean_mk_array" (some .arrayReplicate)) (.library "Lcnf_array.replicate") .exact "" []
     "`n` copies of `v`; the full chunks share one array that nothing writes."
     (receipt := .refuses .index "n is at most the target's index capacity"),
   row `Option.isSome .body (.library "Option.is_some") .exact "" []
@@ -1035,14 +1035,13 @@ def problems : List String := problemsOf builtins support targetLibrary
 -- No name of the runtime library is one a binder must avoid: each is qualified.
 #guard (support.map (·.name) ++ ["Lcnf_string.utf8_bytes"]).all (!protectedNames.contains ·)
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
--- row but thirteen (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
+-- row but eleven (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
 -- session's closure needs; `String.ofByteArray`, the inverse of the bytes it has no primitive
--- for; `USize.add`; `Array.uset` and `Array.replicate`, which its lanes do not reach; `panicCore`),
--- and the target evaluator scans with two functions.
-#guard sourcePrims.length == 59
+-- for; `USize.add`; `panicCore`), and the target evaluator scans with two functions.
+#guard sourcePrims.length == 61
 #guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) ==
   [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `Int.neg, `String.ofList, `String.ofByteArray,
-    `USize.repr, `System.Platform.getNumBits, `USize.add, `Array.uset, `Array.replicate, `panicCore]
+    `USize.repr, `System.Platform.getNumBits, `USize.add, `panicCore]
 #guard targetScans.toList.length == 2 && targetScans["List.exists"]? == some true
 #guard targetArities["Option.value~default"]? == some 2 && (targetArities["List.map"]?).isNone
 
