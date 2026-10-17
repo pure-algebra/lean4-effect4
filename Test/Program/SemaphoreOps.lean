@@ -304,7 +304,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (countHeld : captured[level]? = some (Val.nat n)) (countTyped : tys[level]? = some .nat)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.take_attempt_minted sig atoms types tb s id n hint injective (path := path)
+  Semaphore.take_attempt_minted sig atoms (TyDecls.within_of_nil types)
+    tb s id n hint injective (path := path)
     (countSrc := var x) depth tyDepth typedEnv (takeRow_identity caller).1
     (takeRow_identity caller).2 idHeld idTyped (takeRow_hint caller).1 (takeRow_hint caller).2
     hintHeld hintTyped (countReads path _ written bound countHeld)
@@ -322,7 +323,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (idTyped : tys[(masked caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.take_withdrawal_minted sig atoms types tb s id injective (path := path) depth tyDepth
+  Semaphore.take_withdrawal_minted sig atoms (TyDecls.within_of_nil types)
+    tb s id injective (path := path) depth tyDepth
     typedEnv (takeWithdrawRow_identity caller).1 (takeWithdrawRow_identity caller).2 idHeld
     idTyped held member
 
@@ -338,7 +340,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (cursorTyped : tys[(released caller).names.length]? = some (.option .nat))
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.visit_attempt_minted sig atoms types tb s cursor (path := path) depth tyDepth typedEnv
+  Semaphore.visit_attempt_minted sig atoms (TyDecls.within_of_nil types)
+    tb s cursor (path := path) depth tyDepth typedEnv
     (walkRow_cursor caller).1 (walkRow_cursor caller).2 cursorHeld cursorTyped held member
 
 /-- The release's step at a row's scope, with the count a caller's variable: the caller's own
@@ -353,7 +356,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (countTyped : tys[level]? = some .nat) (stores : Stores) (q : RefKey)
     (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.release_attempt sig atoms types tb s n (path := path) (countSrc := var x) depth tyDepth
+  Semaphore.release_attempt sig atoms (TyDecls.within_of_nil types)
+    tb s n (path := path) (countSrc := var x) depth tyDepth
     typedEnv (countReads path _ written bound countHeld)
     (countTypes sig path _ written bound countTyped) held member
 
@@ -369,7 +373,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (countTyped : tys[level]? = some .nat) (stores : Stores) (q : RefKey)
     (held : refPeek stores.refs q = some (cellVal tb s))
     (member : Fits w (cellVal tb s) Semaphore.cellTy) :=
-  Semaphore.takeIfAvailable_attempt sig atoms types tb s n (path := path) (countSrc := var x) depth
+  Semaphore.takeIfAvailable_attempt sig atoms (TyDecls.within_of_nil types)
+    tb s n (path := path) (countSrc := var x) depth
     tyDepth typedEnv (countReads path _ written bound countHeld)
     (countTypes sig path _ written bound countTyped) held member
 

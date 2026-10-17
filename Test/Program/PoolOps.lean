@@ -165,7 +165,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (hintTyped : tys[(looped caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.lease_attempt_minted sig atoms types canonical tb res s id hint injective (path := path) depth
+  Pool.lease_attempt_minted sig atoms (TyDecls.within_of_nil types)
+    canonical tb res s id hint injective (path := path) depth
     tyDepth typedEnv (takeRow_identity caller).1 (takeRow_identity caller).2 idHeld idTyped
     (takeRow_hint caller).1 (takeRow_hint caller).2 hintHeld hintTyped held member
 
@@ -182,7 +183,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (idTyped : tys[(masked caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.withdraw_attempt_minted sig atoms types canonical tb res s id injective (path := path) depth
+  Pool.withdraw_attempt_minted sig atoms (TyDecls.within_of_nil types)
+    canonical tb res s id injective (path := path) depth
     tyDepth typedEnv (takeWithdrawRow_identity caller).1 (takeWithdrawRow_identity caller).2
     idHeld idTyped held member
 
@@ -198,7 +200,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (itemTyped : tys[(masked caller).names.length]? = some (Pool.itemTy A))
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.return_attempt_minted sig atoms types canonical tb res s it (path := path) depth tyDepth
+  Pool.return_attempt_minted sig atoms (TyDecls.within_of_nil types)
+    canonical tb res s it (path := path) depth tyDepth
     typedEnv (returnRow_item caller).1 (returnRow_item caller).2 itemHeld itemTyped held member
 
 /-- The closer's attempt at the wrapper's own binders: the closer's wrapper stands at
@@ -218,7 +221,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (hintTyped : tys[(looped (closeBase closer)).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.drain_attempt_minted sig atoms types canonical tb res s id hint injective (path := path) depth
+  Pool.drain_attempt_minted sig atoms (TyDecls.within_of_nil types)
+    canonical tb res s id hint injective (path := path) depth
     tyDepth typedEnv (takeRow_identity (closeBase closer)).1
     (takeRow_identity (closeBase closer)).2 idHeld idTyped (takeRow_hint (closeBase closer)).1
     (takeRow_hint (closeBase closer)).2 hintHeld hintTyped held member
@@ -232,7 +236,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (typedEnv : EnvTyped w tys captured) (stores : Stores) (q : RefKey)
     (held : refPeek stores.refs q = some (cellVal tb res s))
     (member : Fits w (cellVal tb res s) (Pool.cellTy A)) :=
-  Pool.select_attempt sig atoms types canonical tb res s 1 (path := path) (countSrc := nat 1) depth
+  Pool.select_attempt sig atoms (TyDecls.within_of_nil types)
+    canonical tb res s 1 (path := path) (countSrc := nat 1) depth
     tyDepth typedEnv (reads_nat 1 _ path _) (types_nat 1) held member
 
 end OwnBinders

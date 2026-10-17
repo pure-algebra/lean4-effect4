@@ -1049,7 +1049,8 @@ theorem clause_mask (root : ProgramSource) (rootTy : EffTy) (flag : Bool) (body 
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   let p := bodyPosition row body cert
   have typedBody : AmbientProg root w row p (bodyR (interpRAt root.program m.completedExits) body) :=
-    bodyTyped_ambient root ev.typed.machine.sourceWF ev.typed.machine.services m.completedExits
+    bodyTyped_ambient root ev.typed.machine.sourceWF
+      ⟨ev.typed.machine.services, ev.typed.machine.types⟩ m.completedExits
       typedB requires acquired coverage
   have answer : MFrame root w (p, f.frame.interruptible) (q, f.frame.interruptible) (.answer next) :=
     .answer next fun w' o ex hex => by
@@ -2366,7 +2367,7 @@ theorem clause_scoped (root : ProgramSource) (rootTy : EffTy) (body : Point) :
       (((cert, ctx.services.keysRow, ctx.services.keysRow) : AmbientPosition))
       (bodyR (interpRAt root.program m.completedExits) (.at_ body)) :=
     denoteAt_ambient root (w := { w with state := s }) ev.typed.machine.sourceWF
-      ev.typed.machine.services (pointTyped_mono ord hpt)
+      ⟨ev.typed.machine.services, ev.typed.machine.types⟩ (pointTyped_mono ord hpt)
       ((Provision.satisfies_iff_subset_keysRow _ _).mp scopeCovers)
       (ambientStackTyped_widen rowSub (ambientStackTyped_mono ord hstk))
   have typedCode : AmbientProg root { w with state := s } ctx.services.keysRow

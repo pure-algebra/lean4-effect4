@@ -68,7 +68,7 @@ Consumer: a wrapper's law, with a step's typing statement
 `src/Effect4/Laws/Library/Semaphore/Typing.lean`). -/
 @[semantics "store-typing" (requirement := R4)]
 theorem step_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) {w : Typed.World} {tys : TyEnv} {captured : List Val} (typedEnv : EnvTyped w tys captured)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) {tys : TyEnv} {captured : List Val} (typedEnv : EnvTyped w tys captured)
     {f : Term} {C B : Ty} (typed : termTy sig (tys ++ [C]) f = some (.prod B C))
     {stores : Stores} {q : RefKey} {cell reply next : Val}
     (held : refPeek stores.refs q = some cell) (member : Fits w cell C)

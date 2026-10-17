@@ -459,14 +459,14 @@ theorem bindService_exit {w : World} {key : Option ServiceKey} {v : Val}
 /-- `Context.add(CurrentMemoMap, memoMap)` over a built context (`addCurrentMemoMapR`): the context
 read back, the memo map added under a key that types nothing; the output row stays held. -/
 theorem addCurrentMemoMap_exit {w : World} {m : MemoMapId} {v : Val} {out : Env.Requirement}
-    (htie : w.serviceTy = root.sig.serviceTy) (hm : MemoLive w m) (hv : Fits w v (.contextOf out)) :
+    (htie : Tied root w) (hm : MemoLive w m) (hv : Fits w v (.contextOf out)) :
     ∃ v', addCurrentMemoMapR m v = .pure (.success v') ∧ Fits w v' (.contextOf out) := by
   obtain ⟨ctx, hctx, hsvc, hcov, hdecl⟩ := contextOf_parts hv
   unfold addCurrentMemoMapR
   rw [hctx]
   refine ⟨_, rfl, fits_contextOf_intro (servicesFit_addV_undeclared hsvc ?_
     (live_memoMap w m hm)) (satisfies_addV _ _ hcov) hdecl⟩
-  rw [htie]
+  rw [htie.services]
   exact serviceTy_currentMemoMapKey _
 
 /-- What `provideWith`'s combiner answers: `provide` the dependent's output, `provideMerge` both
@@ -538,7 +538,7 @@ theorem provideWith_typed {w : World} {available : Env.Requirement} {dependency 
 `provideService(CurrentMemoMap)`, the region `buildAdding` adding the map to its answer; the key
 types nothing, and the installed context keeps the entry row. -/
 theorem buildWithMemoMap_typed {w : World} {available : Env.Requirement} {point : Point}
-    {m : MemoMapId} {scope : Nat} {lt : LayerTy} (htie : w.serviceTy = root.sig.serviceTy)
+    {m : MemoMapId} {scope : Nat} {lt : LayerTy} (htie : Tied root w)
     (hpt : LayerPointTyped root w point lt) (hlive : ScopeLive w scope) (hm : MemoLive w m)
     (hreq : Row.Subset lt.requires available)
     (hstack : AmbientStackTyped root w available (scopeParams root.program point.path)
@@ -551,7 +551,7 @@ theorem buildWithMemoMap_typed {w : World} {available : Env.Requirement} {point 
     (fun later grew previous members => ?_) (fun previous covered => ?_)
   · refine servicesFit_merge members (servicesFit_addV_undeclared (servicesFit_empty later) ?_
       (live_memoMap later m (memoLive_mono grew.1 hm)))
-    rw [serviceTy_leHost grew htie]
+    rw [(Tied.mono grew htie).services]
     exact serviceTy_currentMemoMapKey _
   · show (previous.merge ((Env.Context.empty : Env.Ctx).addV Env.currentMemoMapKey
         (Val.memoMap m))).Satisfies lt.requires ∧
@@ -1157,7 +1157,7 @@ provided under the scope key, the body at the leaf's child point as the installe
 the body's row: the scope key from the install, the rest from the layer's requirement row. -/
 theorem construction_typed {w : World} {available : Env.Requirement} {q : Point}
     {key : Option ServiceKey} {bodyTy : EffTy} {lt : LayerTy} {layerScope : Nat}
-    (htie : w.serviceTy = root.sig.serviceTy) (hls : ScopeLive w layerScope)
+    (htie : Tied root w) (hls : ScopeLive w layerScope)
     (hbody : PointTyped root w (q.child 0) bodyTy)
     (hout : lt.out = constructOut key) (herr : lt.error = bodyTy.error)
     (hreq : Row.Subset (Row.diff bodyTy.requires (Env.Requirement.single Env.scopeKey)) available)
@@ -1176,7 +1176,7 @@ theorem construction_typed {w : World} {available : Env.Requirement} {q : Point}
   · have live := fits_scopeHandle later layerScope (scopeLive_mono grew.1 hls)
     refine servicesFit_merge members (servicesFit_addV (servicesFit_empty later) ?_
       (fits_flatFits rfl live) (fits_live later _ _ live))
-    rw [serviceTy_leHost grew htie]
+    rw [(Tied.mono grew htie).services]
     exact serviceTy_scopeKey _
   · show (previous.merge ((Env.Context.empty : Env.Ctx).addV Env.scopeKey
         (Val.scopeHandle layerScope))).Satisfies bodyTy.requires ∧
@@ -1203,7 +1203,7 @@ world whose service table is the source's, into a present scope through a presen
 parameters, within the hop's fuel bound. -/
 abbrev BuildsTyped (root : ProgramSource) (K : Nat) (l : LayerTerm NativeOp) : Prop :=
   ∀ (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId) (scope : Nat)
-    (available : Env.Requirement), q.fuel ≤ K → w.serviceTy = root.sig.serviceTy →
+    (available : Env.Requirement), q.fuel ≤ K → Tied root w →
     Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
     ScopeLive w scope → MemoLive w m → Row.Subset lt.requires available →
     AmbientStackTyped root w available (scopeParams root.program q.path) q.params →
@@ -1231,7 +1231,7 @@ theorem succeed_builds {key : ServiceKey} {value : Lit} {K : Nat} :
   obtain ⟨ctx, hbind, hfits⟩ := bindService_exit (key := some key) (v := x)
     (fun k hk => by
       cases hk
-      exact ⟨ty, by rw [htie]; exact hsty',
+      exact ⟨ty, by rw [htie.services]; exact hsty',
         fits_flatFits (serviceTy_flat root key ty hsty) (fits_subN w hsub x hfx)⟩)
     (live_of_handles_nil (Effect4.Program.RawHandles.lit_toVal_handles value x hx))
   show AmbientProg root w available _ (bindServiceR (some key) x)
@@ -1256,7 +1256,7 @@ theorem fresh_builds {inner : LayerTerm NativeOp} {K : Nat} (hi : BuildsTyped ro
   · obtain ⟨id, rfl, hid⟩ := fits_memoMap_inv hv
     simp only [seqR, Val.memoMap?_memoMap]
     exact hi (q.child 0) w' lt id scope available (Nat.le_trans (Nat.sub_le _ _) hK)
-      (serviceTy_leHost o htie) (Node.at_child hat rfl)
+      (Tied.mono o htie) (Node.at_child hat rfl)
       (layerPointTyped_child hat rfl hc henv (completed_mono o hview) (stackTyped_mono o hstk))
       (scopeLive_mono o.1 hlive) hid hreq
       (layerStack_below hat [0] rfl rfl (ambientStackTyped_mono o hstack))
@@ -1309,7 +1309,7 @@ theorem leaf_builds {key : Option ServiceKey} {body : NativeEff} {l : LayerTerm 
   refine fromBuild_typed hlive (fun w1 o1 child hchild => ?_)
   refine memoize_typed hat hcheck hchild (fun w2 o2 layerScope hls => ?_)
   have o12 := leHost_trans _ _ _ o1 o2
-  refine construction_typed (serviceTy_leHost o12 htie) hls ?_ hout herr ?_ ?_
+  refine construction_typed (Tied.mono o12 htie) hls ?_ hout herr ?_ ?_
     (layerStack_below hat [0] rfl rfl (ambientStackTyped_mono o12 hstack))
   · refine pointTyped_scope (scopeParams_layer_below hat [0]) (below q hat) hcb ?_
       (completed_mono o12 hview) (stackTyped_mono o12 hstk)
@@ -1324,7 +1324,7 @@ theorem leaf_builds {key : Option ServiceKey} {body : NativeEff} {l : LayerTerm 
     obtain ⟨ty, hsty, hsub⟩ := hkeys k hk
     rw [root.scopeSig_serviceTy] at hsty
     have hsty' : root.sig.serviceTy k = some ty := hsty
-    exact ⟨ty, by rw [serviceTy_leHost o12 htie]; exact hsty', hsub, serviceTy_flat root k ty hsty⟩
+    exact ⟨ty, by rw [(Tied.mono o12 htie).services]; exact hsty', hsub, serviceTy_flat root k ty hsty⟩
 
 /-- **`Layer.effect`** (`Layer.ts:1482`). -/
 theorem effect_builds {key : ServiceKey} {body : NativeEff} {K : Nat} :
@@ -1376,7 +1376,7 @@ theorem dependency_builds {self that : LayerTerm NativeOp} {l : LayerTerm Native
   rw [hrow] at hreq
   refine provideWith_typed (that := lt') (self := ls)
     (ht (q.child 1) w1 lt' m child available (Nat.le_trans (Nat.sub_le _ _) hK)
-      (serviceTy_leHost o1 htie) (Node.at_child hat c1)
+      (Tied.mono o1 htie) (Node.at_child hat c1)
       (layerPointTyped_child hat c1 hct henv hview1 (stackTyped_mono o1 hstk)) hchild
       (memoLive_mono o1.1 hmemo) (Row.subset_trans (Row.subset_union_right _ _) hreq)
       (layerStack_below hat [1] rfl rfl (ambientStackTyped_mono o1 hstack)))
@@ -1515,7 +1515,7 @@ parameters the reference's or none. -/
 theorem ref_builds {target : List Nat} {K : Nat} (hwf : root.program.layerRefsWF = true)
     (hmod : ModuleLayersTyped root)
     (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId)
-      (scope : Nat) (available : Env.Requirement), q.fuel < K → w.serviceTy = root.sig.serviceTy →
+      (scope : Nat) (available : Env.Requirement), q.fuel < K → Tied root w →
       Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
       ScopeLive w scope → MemoLive w m → Row.Subset lt.requires available →
       AmbientStackTyped root w available (scopeParams root.program q.path) q.params →
@@ -1706,7 +1706,7 @@ reference's hop, which leaves the term, by `hhop` at the next fuel down. -/
 theorem layerTerm_typed (hwf : root.program.layerRefsWF = true) (hmod : ModuleLayersTyped root)
     (K : Nat)
     (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId)
-      (scope : Nat) (available : Env.Requirement), q.fuel < K → w.serviceTy = root.sig.serviceTy →
+      (scope : Nat) (available : Env.Requirement), q.fuel < K → Tied root w →
       Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
       ScopeLive w scope → MemoLive w m → Row.Subset lt.requires available →
       AmbientStackTyped root w available (scopeParams root.program q.path) q.params →
@@ -1727,7 +1727,7 @@ theorem layerTerm_typed (hwf : root.program.layerRefsWF = true) (hmod : ModuleLa
 /-- **The layer family's build** (by induction on the fuel a reference's hop spends). -/
 theorem layerBuild_typed (hwf : root.program.layerRefsWF = true) (hmod : ModuleLayersTyped root)
     (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId) (scope : Nat)
-    (available : Env.Requirement) (htie : w.serviceTy = root.sig.serviceTy)
+    (available : Env.Requirement) (htie : Tied root w)
     (hat : Node.at_ (.eff root.program) q.path = some (.layer l)) (hpt : LayerPointTyped root w q lt)
     (hlive : ScopeLive w scope) (hmemo : MemoLive w m) (hreq : Row.Subset lt.requires available)
     (hstack : AmbientStackTyped root w available (scopeParams root.program q.path) q.params) :
@@ -1756,7 +1756,7 @@ built through it at the closed build point (`layerBuild_typed`), the body under
 
 /-- `MemoMap.fork` read back, then the build through the forked map (`buildWithMemoMap`). -/
 theorem forkBuild_typed {w : World} {available : Env.Requirement} {parent : Option MemoMapId}
-    {point : Point} {scope : Nat} {lt : LayerTy} (htie : w.serviceTy = root.sig.serviceTy)
+    {point : Point} {scope : Nat} {lt : LayerTy} (htie : Tied root w)
     (hpt : ∀ w', w.leHost w' → LayerPointTyped root w' point lt) (hlive : ScopeLive w scope)
     (hreq : Row.Subset lt.requires available)
     (hstack : AmbientStackTyped root w available (scopeParams root.program point.path)
@@ -1775,7 +1775,7 @@ theorem forkBuild_typed {w : World} {available : Env.Requirement} {parent : Opti
       ⟨Row.subset_refl _, Row.subset_refl _⟩
   · obtain ⟨id, rfl, hid⟩ := fits_memoMap_inv hv
     simp only [seqR, Val.memoMap?_memoMap]
-    exact buildWithMemoMap_typed (serviceTy_leHost o htie) (hpt w' o) (scopeLive_mono o.1 hlive)
+    exact buildWithMemoMap_typed (Tied.mono o htie) (hpt w' o) (scopeLive_mono o.1 hlive)
       hid hreq (ambientStackTyped_mono o hstack)
 
 /-- **The layer family's arm** (decisions rows 176 (b) and 349): a typed `provideLayer` point
@@ -1784,7 +1784,7 @@ context of the layer's output row (`layerBuild_typed`); the body's exit, or its 
 region under the built context with the layer's output discharged
 (`ambient_updateContext_provide`), is typed at the body's type, widened to the join of the two
 error columns the checker gives the node. -/
-theorem provideLayer_arm (f : Nat) {w : World} (htie : w.serviceTy = root.sig.serviceTy)
+theorem provideLayer_arm (f : Nat) {w : World} (htie : Tied root w)
     {p : Point} {ty : EffTy} {l : LayerTerm NativeOp} {i : Bool} {b : NativeEff}
     (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.provideLayer l i b)))
@@ -1835,7 +1835,7 @@ theorem provideLayer_arm (f : Nat) {w : World} (htie : w.serviceTy = root.sig.se
     exact ambientStackTyped_mono o13 savedParams
   refine ambient_seqGuard (mid := buildTy lt) ?_ (Ty.subN_join_right _ _) (fun w5 o5 u hu => ?_)
   · cases i with
-    | true => exact forkBuild_typed (serviceTy_leHost o13 htie) hlpt hlive hreq hlstack
+    | true => exact forkBuild_typed (Tied.mono o13 htie) hlpt hlive hreq hlstack
     | false =>
       refine ambient_seqGuard (mid := ⟨.contextOf Env.Requirement.empty, .never, Env.Requirement.empty⟩)
         (ambient_getContext_typed root w3 Env.Requirement.empty available
@@ -1844,7 +1844,7 @@ theorem provideLayer_arm (f : Nat) {w : World} (htie : w.serviceTy = root.sig.se
       obtain ⟨ctx, hctx, -, -, -⟩ := contextOf_parts hx
       simp only [seqR]
       rw [hctx]
-      exact forkBuild_typed (serviceTy_leHost (leHost_trans _ _ _ o13 o) htie)
+      exact forkBuild_typed (Tied.mono (leHost_trans _ _ _ o13 o) htie)
         (fun w'' o' => hlpt w'' (leHost_trans _ _ _ o o')) (scopeLive_mono o.1 hlive) hreq
         (ambientStackTyped_mono o hlstack)
   -- the body, under the built context, at child 1 of the constructed point
@@ -1860,7 +1860,7 @@ theorem provideLayer_arm (f : Nat) {w : World} (htie : w.serviceTy = root.sig.se
   cases hsub : inlineYield b (({ p with completed } : Point).child 1) with
   | some ex =>
     refine .pure ⟨exitOk_widen (mid := tb) (Ty.subN_refl _) (Ty.subN_join_left _ _)
-      (inlineYield_typed f _ hfuel1 hatb hchild hsub), ?_⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
+      (inlineYield_typed (Tied.mono o15 htie) f _ hfuel1 hatb hchild hsub), ?_⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
     cases ex <;> exact Row.subset_refl _
   | none =>
     refine ambientProg_widen root (before := (⟨tb.answer, tb.error, tb.requires⟩, available, available))

@@ -380,12 +380,12 @@ takes its wrong-shape refusal (`Checker.inv_restore`, `evalTerm_progress_env`,
 @[semantics "residual-program-typing"]
 theorem restore_saved_evaluates
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.restore saved body)))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     ∃ flag, evalTerm p.env saved = some (Val.savedMask flag) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_restore] at hcheck
   obtain ⟨savedTy, hsaved, hsub_saved, -⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
-  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
+  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv htie.within hsaved
   obtain ⟨flag, rfl⟩ := fits_maskRestore_inv (fits_subN w (b := .maskRestore) hsub_saved v hvfit)
   exact ⟨flag, hv⟩
 
@@ -436,7 +436,7 @@ structure RestoreBodyBoundary : Prop where
       CodeMeans root (compileEff (.restore saved body) p) (denoteR root (.restore saved body) p)
   /-- At a typed point the saved term evaluates to an image, so no lookup fails. -/
   evaluates : ∀ (root : ProgramSource) (w : World) (p : Point) (ty : EffTy) (saved : Term)
-    (body : NativeEff),
+    (body : NativeEff), Tied root w →
     Node.at_ (.eff root.program) p.path = some (.eff (.restore saved body)) →
       PointTyped root w p ty → ∃ flag, evalTerm p.env saved = some (Val.savedMask flag)
   /-- The body's point is typed at the node's type, in the node's environment and view. -/
@@ -448,7 +448,7 @@ structure RestoreBodyBoundary : Prop where
   holding its requirement row and typing its parameters (decisions row 349): M5's ambient
   judgment, at either saved choice. -/
   typed : ∀ (root : ProgramSource) (w : World) (p : Point) (ty : EffTy) (saved : Term)
-    (body : NativeEff), SourceWF root → w.serviceTy = root.sig.serviceTy →
+    (body : NativeEff), SourceWF root → Tied root w →
     Node.at_ (.eff root.program) p.path = some (.eff (.restore saved body)) →
       PointTyped root w p ty → ∀ available, Row.Subset ty.requires available →
       AmbientStackTyped root w available (scopeParams root.program p.path) p.params →
@@ -482,7 +482,7 @@ theorem scoped_body_substitution_boundary : RestoreBodyBoundary where
   trueBit := fun _ _ _ _ _ hf hsaved hat =>
     ⟨compileEff_restore_true hf hsaved, by rw [actionAt_restore hat, resolve_restore_body hat]⟩
   related := fun root p saved body hat => code_intro root (.restore saved body) p hat
-  evaluates := fun _ _ _ _ _ _ hat hpt => restore_saved_evaluates hat hpt
+  evaluates := fun _ _ _ _ _ _ htie hat hpt => restore_saved_evaluates hat hpt htie
   bodyTyped := fun _ _ _ _ _ _ hat hpt => restore_body_typed hat hpt
   typed := fun root w p ty saved body hwf htie hat hpt =>
     denotesTyped root hwf w htie p (.restore saved body) ty hat hpt

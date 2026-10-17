@@ -592,7 +592,7 @@ def WalkOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) (R : En
 
 /-- **One walk from a typed position is typed** (`walkR`, by induction on its fuel). -/
 theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
-    (htie : w.serviceTy = root.sig.serviceTy) {P0 : List Nat} {T E : Ty} {R : Env.Requirement}
+    (htie : Tied root w) {P0 : List Nat} {T E : Ty} {R : Env.Requirement}
     {p : Point} (hpath : p.path = P0) (view : ViewTyped w p.completed)
     (hscope : ∀ x, P0 <+: x → scopeParams root.program x = scopeParams root.program P0)
     (hstack : AmbientStackTyped root w R (scopeParams root.program P0) p.params) :
@@ -710,7 +710,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             denotesTyped root hwf w htie _ e t hnode hpt R hreqs.1 hstackq, herr.1,
             fun w' o v hv => ⟨ctx, k + 1, hpc, next w' o v hv⟩⟩
         | some ex =>
-          have hex := inlineYield_typed (fuel + 1)
+          have hex := inlineYield_typed htie (fuel + 1)
             { p with path := p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0],
                      env := env, fuel := fuel + 1 } rfl hnode hpt hin
           cases ex with
@@ -760,7 +760,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             denotesTyped root hwf w htie _ e t hnode hpt R hreqs.1 hstackq, herr.1,
             fun w' o _ _ => ⟨ctx, k + 1, hpc, next w' o⟩⟩
         | some ex =>
-          have hex := inlineYield_typed (fuel + 1)
+          have hex := inlineYield_typed htie (fuel + 1)
             { p with path := p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0],
                      env := env, fuel := fuel + 1 } rfl hnode hpt hin
           cases ex with
@@ -779,7 +779,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         | nil =>
           rw [expandIn_ret, expandIn_nil] at hcheck
           obtain ⟨ty, hty, rfl⟩ := Checker.inv_stmts_ret _ _ _ _ _ g hcheck
-          obtain ⟨val, hval, hfit⟩ := evalTerm_progress_env (src := root) henv hty
+          obtain ⟨val, hval, hfit⟩ := evalTerm_progress_env (src := root) henv htie.within hty
           simp only
           rw [hval]
           exact fits_subN w (hanswer ty rfl) val hfit
@@ -787,7 +787,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         rw [expandIn_ifElse] at hcheck
         obtain ⟨testTy, htest, hsub_test, ga, gb, r, hca, hcb, hcr, rfl⟩ :=
           Checker.inv_stmts_ifElse _ _ _ _ _ _ _ _ g hcheck
-        obtain ⟨val, hval, hfit⟩ := evalTerm_progress_env (src := root) henv htest
+        obtain ⟨val, hval, hfit⟩ := evalTerm_progress_env (src := root) henv htie.within htest
         obtain ⟨bb, rfl⟩ := fits_bool_inv (fits_subN w (b := .bool) hsub_test val hfit)
         have hans := ansBelow_join hanswer
         have hansM := ansBelow_join hans.1
@@ -896,7 +896,7 @@ the source's service declarations, and the programs the position's stack passes 
 requirement rows within the row (what M5 reads at a yield). -/
 def GenSt (root : ProgramSource) : AmbientIterState → Prop
   | (w, s, f, tin, tout, name) =>
-    SourceWF root ∧ w.serviceTy = root.sig.serviceTy ∧ f = s ∧ tin.error = tout.error ∧
+    SourceWF root ∧ Tied root w ∧ f = s ∧ tin.error = tout.error ∧
       (tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty) ∧
       ∃ (q : Point) (pc : List Nat) (bind : Bool), name = .gen q pc bind ∧
         (∀ x, q.path <+: x → scopeParams root.program x = scopeParams root.program q.path) ∧
@@ -915,7 +915,7 @@ theorem genSt_closed {root : ProgramSource} :
   subst hfs
   refine ⟨herr, hreq, fun w' o C view v hv => ?_⟩
   obtain ⟨ctx, k, rfl, hpos⟩ := pos w' o v hv
-  have htie' : w'.serviceTy = root.sig.serviceTy := (le_serviceTy o.1).trans htie
+  have htie' : Tied root w' := Tied.mono o htie
   have hstep : ((interpRAt root.program C).iterNext (.gen q (ctx.block ++ List.replicate k 1) bind)
       v).2 = (walkR root.program { q with completed := C } q.fuel (ctx.block ++ List.replicate k 1)
         (if bind then q.env ++ [v] else q.env) []).2 := rfl

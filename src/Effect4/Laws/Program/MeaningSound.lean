@@ -190,7 +190,7 @@ theorem TypedAt.bound {tys : TyEnv} {env : List Val} {w : Typed.World} (h : Type
 theorem TypedAt.eval {tys : TyEnv} {env : List Val} {w : Typed.World} (h : TypedAt tys env w)
     {r : Term} {ty : Ty} (hty : termTy nativeSignature tys r = some ty) :
     ∃ x, evalTerm env r = some x ∧ Typed.Fits w x ty :=
-  Typed.evalTerm_progress (sig := nativeSignature) rfl rfl
+  Typed.evalTerm_progress (sig := nativeSignature) rfl (TyDecls.within_nil _)
     (Typed.fitsAll_of_pointwise h.fits.1 h.fits.2) r ty hty
 
 /-- **Soundness of one run of a pair of programs**, the first with the parameter and the second
@@ -353,7 +353,7 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
     obtain ⟨ty, hc, rfl⟩ := inv_failCause nativeSignature tys c t hty
     obtain ⟨cause, hcause, hfits, hshape⟩ :=
       Typed.causeOf_progress (src := ({ program := .failCause c } : Typed.ProgramSource))
-        (path := []) hat.fits c ty (by
+        (path := []) hat.fits (TyDecls.within_nil _) c ty (by
           show causeTy (Typed.ProgramSource.signature { program := .failCause c }) tys c = some ty
           rw [Typed.ProgramSource.signature_of_defsOf_nil rfl]
           exact hc)
@@ -517,9 +517,9 @@ typed state's `Typed.ExitOk` at a world over them whose store fits, read by
 success is valid in a store that fits (`CellsTyped.fits_validIn`). -/
 theorem exitHasTy_of_reaches {A : Type} {p : Effects.Program StoreSig A} {w : Typed.World}
     {ty : EffTy} {ex : ExitV} (hstate : w.state = (runP p Stores.empty).2) (store : StoreFits w)
-    (htypes : w.types = []) (h : Typed.ExitOk w ty ex) : ExitHasTy ty.answer ty.error w.state ex :=
+    (h : Typed.ExitOk w ty ex) : ExitHasTy ty.answer ty.error w.state ex w.types :=
   Typed.exitHasTy_of_fitsExit w ty w.state ex
-    (by rw [hstate, runP_externals]; rfl) htypes
+    (by rw [hstate, runP_externals]; rfl)
     (fun v hv => by
       subst hv
       exact store.toCellsTyped.fits_validIn ((Typed.fitsExit_success_iff w ty v).mp h.1))
@@ -532,8 +532,8 @@ theorem meaning_typed (e : NativeEff) (t : EffTy) (hs : Straight e = true)
     ExitHasTy t.answer t.error (meaning e [] Stores.empty).2 (meaning e [] Stores.empty).1 := by
   obtain ⟨w', hs', ok, hex⟩ :=
     (sound badShapeExit e [] [] (Typed.initialWorld t) t hs hty (TypedAt.empty t)).reaches
-  have h := exitHasTy_of_reaches hs' ok.store (Typed.le_types ok.le.1) hex
-  rw [hs'] at h
+  have h := exitHasTy_of_reaches hs' ok.store hex
+  rw [hs', Typed.le_types ok.le.1] at h
   exact h
 
 /-- **A typed straight program does not go wrong.** Whatever exit the wrong-shape arms are

@@ -478,7 +478,7 @@ theorem leaseStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = na
       (Val.tuple [reply, next])) :
     Typed.Fits w reply (leaseReplyTy A) ∧ Typed.Fits w next (Pool.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms types typedEnv
+  exact step_keeps_cell sig atoms (TyDecls.within_of_nil types) typedEnv
     ((leaseStep_types sig atoms canonical depth typesId typesHint typesCell false).tree tree)
     held member value
 
@@ -497,7 +497,7 @@ theorem selectStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = n
       (Val.tuple [reply, next])) :
     Typed.Fits w reply selectReplyTy ∧ Typed.Fits w next (Pool.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms types typedEnv
+  exact step_keeps_cell sig atoms (TyDecls.within_of_nil types) typedEnv
     ((selectStep_types sig atoms canonical typesCount typesCell false).tree tree) held member
     value
 
@@ -517,7 +517,7 @@ theorem returnStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = n
       (Val.tuple [reply, next])) :
     Typed.Fits w reply returnReplyTy ∧ Typed.Fits w next (Pool.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms types typedEnv
+  exact step_keeps_cell sig atoms (TyDecls.within_of_nil types) typedEnv
     ((returnStep_types sig atoms canonical depth typesItem typesLease typesCell false).tree tree)
     held member value
 
@@ -538,7 +538,7 @@ theorem drainStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = na
       (Val.tuple [reply, next])) :
     Typed.Fits w reply .bool ∧ Typed.Fits w next (Pool.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms types typedEnv
+  exact step_keeps_cell sig atoms (TyDecls.within_of_nil types) typedEnv
     ((drainStep_types sig atoms canonical depth typesId typesHint typesCell false).tree tree)
     held member value
 

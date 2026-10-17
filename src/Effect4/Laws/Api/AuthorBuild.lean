@@ -64,8 +64,9 @@ theorem finishBuild_retains {program : Program} {app : SigApp}
   · cases h
 
 /-- A successful build retains its elaboration, the declared table, the row names and the
-application: the table with the named types. Step of the scenario static facts. Consumers: the two crews' program equations, and the
-call tree's untyped premise (`Run.CallTree.bound_in_tree`). -/
+application: the table with the named types. Step of the scenario static facts. Consumers: the
+two crews' program equations, and the call tree's declaration table (`Run.CallTree.bound_in_tree`,
+read at `b.app.types`). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem build_retains {m : Module NativeOp} {b : Built} (h : build m = .ok b) :
     elaborateModule m = .ok b.program ∧ b.table = m.table ∧ b.rowNames = m.rowNames ∧

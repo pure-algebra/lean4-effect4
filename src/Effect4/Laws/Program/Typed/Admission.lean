@@ -86,20 +86,23 @@ def EnvTyped (w : World) (env : List Ty) (vals : List Val) : Prop :=
 /-- **Term soundness for membership (TY-07, proved)**, in the environment judgment the typed
 state reads (`PointTyped`): under a signature whose atoms are the native table's (every
 `nativeSignature`, every source signature), a term that types in a typed environment and
-evaluates there evaluates to a value of the term's type. The proof is `evalTerm_fitsAll`
-(`Typed/Membership.lean`) through `fitsAll_of_pointwise`. -/
+evaluates there evaluates to a value of the term's type, where the signature's declaration table
+is within the world's (`TyDecls.Within`: empty, or the world's own). The proof is
+`evalTerm_fitsAll` (`Typed/RecordOperations.lean`) through `fitsAll_of_pointwise`. -/
 theorem evalTerm_fits {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
-    (hconst : sig.constAtom = nativeConstAtom) (htypes : sig.types = []) {w : World} {env : List Ty}
+    (hconst : sig.constAtom = nativeConstAtom) {w : World}
+    (htypes : TyDecls.Within sig.types w.types) {env : List Ty}
     {vals : List Val} {t : Term} {ty : Ty} {v : Val} (henv : EnvTyped w env vals)
     (hty : termTy sig env t = some ty) (hev : evalTerm vals t = some v) : Fits w v ty :=
-  evalTerm_fitsAll sig hatom hconst htypes w t vals env ty v (fitsAll_of_pointwise henv.1 henv.2) hty hev
+  evalTerm_fitsAll sig hatom hconst w htypes t vals env ty v (fitsAll_of_pointwise henv.1 henv.2)
+    hty hev
 
 /-- `evalTerm_fits` at a native signature over any row table. -/
 theorem evalTerm_fits_native (table : RowTable) {w : World} {env : List Ty} {vals : List Val}
     {t : Term} {ty : Ty} {v : Val} (henv : EnvTyped w env vals)
     (hty : termTy (nativeSignature table) env t = some ty) (hev : evalTerm vals t = some v) :
     Fits w v ty :=
-  evalTerm_fits rfl rfl rfl henv hty hev
+  evalTerm_fits rfl rfl (TyDecls.within_nil _) henv hty hev
 
 /-- The program the typed state is about, with its signature (decisions row 111: the host-row
 table, the service declarations and the named types, Σ_app) and the evidence that the signature is lawful
@@ -112,15 +115,30 @@ structure ProgramSource where
   services : List (ServiceKey × Ty) := []
   types : TyDecls := []
   lawful : LawfulSig ⟨table, services, types⟩ := by exact SigApp.lawful_empty
-  /-- The typed state is claimed at a source that declares no named type: `Fits` reads no
-  declaration table, so the laws that invert the typer against it take an empty one (decisions
-  row 406 (2); the audit's D3, `docs/research/2026-10-16-soundness-audit/README.md`, lifts it). -/
-  untyped : types = [] := by rfl
 
 instance : Coe NativeEff ProgramSource := ⟨fun program => { program }⟩
 
 /-- The source's part of the signature. -/
 def ProgramSource.sig (src : ProgramSource) : SigApp := ⟨src.table, src.services, src.types⟩
+
+/-- **A world tied to its source**: the world's static tables are the source's, the service table
+(decisions row 112) and the declaration table (the audit's D3), so `ServicesFit` reads the
+source's carriers and `Fits` the source's named types. The world order fixes both tables
+(`le_serviceTy`, `le_types`), so the tie holds along every run once it holds at the load
+(`Tied.mono`). -/
+structure Tied (src : ProgramSource) (w : World) : Prop where
+  services : w.serviceTy = src.sig.serviceTy
+  types : w.types = src.types
+
+/-- A world tied to its source reads a declaration table the source's is within. -/
+theorem Tied.within {src : ProgramSource} {w : World} (tie : Tied src w) :
+    TyDecls.Within src.types w.types :=
+  TyDecls.within_of_eq tie.types.symm
+
+/-- The world order keeps the tie. -/
+theorem Tied.mono {src : ProgramSource} {w w' : World} (ord : w.leHost w') (tie : Tied src w) :
+    Tied src w' :=
+  ⟨(le_serviceTy ord.1).trans tie.services, (le_types ord.1).trans tie.types⟩
 
 /-- The checker's signature for the source's program: the signature over its tables
 (`SigApp.signature`), extended by the program's own definition block (`Signature.withDefs`,

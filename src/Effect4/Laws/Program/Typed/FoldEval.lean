@@ -106,7 +106,8 @@ second, a member of `A`, in the cell. The term may hold a fold: the whole fold i
 one evaluation. The term's map is `termMaps_of_typed`, and the step is the census clause
 `refStep_modify`. It reads the fixed world `w` and no later one. -/
 theorem refModify_typed_step {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
-    (htypes : sig.types = []) {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env) {f : Term}
+    {w : World} (htypes : TyDecls.Within sig.types w.types) {tys : TyEnv} {env : List Val}
+    (henv : EnvTyped w tys env) {f : Term}
     {A B : Ty} (hty : termTy sig (tys ++ [A]) f = some (.prod B A)) {s : Stores}
     {cell : RefKey} {a : Val} (hcell : refPeek s.refs cell = some a) (ha : Fits w a A) :
     ∃ b a', evalTerm (env ++ [a]) f = some (Val.tuple [b, a']) ∧

@@ -41,7 +41,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Progr
 /-- **A checked point's code is typed** at every row covering its requirement row and typing its
 parameters: M5 at the point, through the interpreter's body hook. -/
 theorem denoteAt_ambient (root : ProgramSource) {w : World} (hwf : SourceWF root)
-    (htie : w.serviceTy = root.sig.serviceTy) {available : Env.Requirement} {p : Point}
+    (htie : Tied root w) {available : Env.Requirement} {p : Point}
     {ty : EffTy} (h : PointTyped root w p ty) (requires : Row.Subset ty.requires available)
     (stack : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available ((ty, available, available) : AmbientPosition)
@@ -181,7 +181,7 @@ checker's verdicts, the environment extended by the acquired value, the context'
 parameters and requirement row within the context's keys), and the acquired value as the answer,
 after the release when the scope was already closed. -/
 theorem acquireIn_ambient (root : ProgramSource) {w : World} (hwf : SourceWF root)
-    (htie : w.serviceTy = root.sig.serviceTy) {available : Env.Requirement} {p : Point}
+    (htie : Tied root w) {available : Env.Requirement} {p : Point}
     {ctx : Ctx} {ty : EffTy} (h : PointTyped root w p ty) {acquire release : NativeEff}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.acquireRelease acquire release)))
     (hsvc : ServicesFit w ctx.services) (covered : ctx.services.Satisfies available)
@@ -265,7 +265,7 @@ context covers: a point's program (M5), a layer's build (`layerBuild_typed`), th
 memo map added (`addCurrentMemoMap_exit`), a leaf's construction with its answer bound
 (`bindService_exit`). -/
 theorem region_ambient (root : ProgramSource) {w : World} (hwf : SourceWF root)
-    (htie : w.serviceTy = root.sig.serviceTy) (completed : List (FiberId × ExitV))
+    (htie : Tied root w) (completed : List (FiberId × ExitV))
     {available : Env.Requirement} {region : Region} {intrinsic ty : EffTy}
     (typed : RegionTyped root w region intrinsic)
     (answer : Ty.subN intrinsic.answer ty.answer = true)
@@ -299,7 +299,7 @@ theorem region_ambient (root : ProgramSource) {w : World} (hwf : SourceWF root)
     refine ambient_seqGuard (layerBuild_typed hwf.refs hwf.layers l point w lt memo scope available
       htie hat ⟨l, hat, hrest⟩ hlive hmemo requires stack) (Ty.subN_refl _) (fun w1 o1 v hv => ?_)
     simp only [seqR]
-    obtain ⟨v', hv', fits'⟩ := addCurrentMemoMap_exit (serviceTy_leHost o1 htie)
+    obtain ⟨v', hv', fits'⟩ := addCurrentMemoMap_exit (Tied.mono o1 htie)
       (memoLive_mono o1.1 hmemo) hv
     rw [hv']
     exact .pure ⟨strongExit_success w1 _ _ fits', Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
@@ -432,7 +432,7 @@ def bodyPosition (available : Env.Requirement) (body : Body) (cert : EffTy) : Am
 entered at a row the fiber's context covers, is typed by the ambient judgment at the body's
 position. -/
 theorem bodyTyped_ambient (root : ProgramSource) {w : World} (hwf : SourceWF root)
-    (htie : w.serviceTy = root.sig.serviceTy) (completed : List (FiberId × ExitV)) {b : Body}
+    (htie : Tied root w) (completed : List (FiberId × ExitV)) {b : Body}
     {cert : EffTy} {available : Env.Requirement}
     (typed : BodyTyped root w b cert) (requires : Row.Subset cert.requires available)
     (acquired : ∀ point ctx, b = .acquireIn point ctx → ctx.services.Satisfies available)

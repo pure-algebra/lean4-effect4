@@ -62,7 +62,7 @@ under an environment its values fit; the cursor fits the cursor type; the progra
 stack passes have their requirement rows within the row. -/
 def LoopFrameTyped (root : ProgramSource) : AmbientLoopState → Prop
   | (w, s, f, tin, tout, name, cursor) =>
-    SourceWF root ∧ w.serviceTy = root.sig.serviceTy ∧ f = s ∧ Row.Subset tin.requires s ∧
+    SourceWF root ∧ Tied root w ∧ f = s ∧ Row.Subset tin.requires s ∧
     ∃ (p : Point) (env : List Ty) (ct : Ty) (cursorTy : Option Ty) (initial test step result : Term)
       (body : NativeEff),
       name = .loop p ∧ LoopChecked root p env ct tin tout cursorTy initial test step result body ∧
@@ -108,7 +108,7 @@ theorem loopEnter_typed {w : World} {s f : Env.Requirement} {tin tout : EffTy} {
   rw [entered]
   have hcur : EnvTyped w (env ++ [ct]) (p.env ++ [cursor]) := envTyped_append henv hfit
   obtain ⟨testTy, htest, hsub_bool⟩ := checked.htest
-  obtain ⟨tv, htv, hfitv⟩ := evalTerm_progress_env (src := root) hcur htest
+  obtain ⟨tv, htv, hfitv⟩ := evalTerm_progress_env (src := root) hcur htie.within htest
   obtain ⟨b, rfl⟩ := fits_bool_inv (fits_subN w (b := .bool) hsub_bool tv hfitv)
   have hloop := loopAt_of_node C checked.hnode
   cases b with
@@ -125,7 +125,7 @@ theorem loopEnter_typed {w : World} {s f : Env.Requirement} {tin tout : EffTy} {
       henv, hfit, hstack⟩
   | false =>
     obtain ⟨d, hd, htout⟩ := checked.hresult
-    obtain ⟨answer, hanswer, hfita⟩ := evalTerm_progress_env (src := root) hcur hd
+    obtain ⟨answer, hanswer, hfita⟩ := evalTerm_progress_env (src := root) hcur htie.within hd
     have unfolded : loopNextRAt root.program { p with completed := C } cursor =
         .finish (.pure (.success answer)) := by
       simp only [loopNextRAt, hloop, htv, loopFinishRAt, loopResultAt_of_node C checked.hnode,
@@ -142,7 +142,7 @@ theorem loopFrameTyped_mono {w w' : World} (ord : w.leHost w') {s f : Env.Requir
     LoopFrameTyped root (w', s, f, tin, tout, name, cursor) := by
   obtain ⟨hwf, htie, hfs, hreq, p, env, ct, cursorTy, initial, test, step, result, body, hname,
     checked, henv, hfit, hstack⟩ := h
-  exact ⟨hwf, serviceTy_leHost ord htie, hfs, hreq, p, env, ct, cursorTy, initial, test, step,
+  exact ⟨hwf, Tied.mono ord htie, hfs, hreq, p, env, ct, cursorTy, initial, test, step,
     result, body, hname, checked, envTyped_mono ord henv, fits_mono ord hfit,
     ambientStackTyped_mono ord hstack⟩
 
@@ -163,14 +163,14 @@ theorem loopFrameTyped_closed :
     have two := envTyped_append (envTyped_append (envTyped_mono o henv) (fits_mono o hfit)) hv
     simp only [List.append_assoc, List.singleton_append] at two
     exact two
-  obtain ⟨next, hnext, hfitn⟩ := evalTerm_progress_env (src := root) henv' hc1
+  obtain ⟨next, hnext, hfitn⟩ := evalTerm_progress_env (src := root) henv' (Tied.mono o htie).within hc1
   have resumed : (interpRAt root.program C).loopResume (.loop p) cursor v =
       (interpRAt root.program C).loopEnter (.loop p) next := by
     show loopResumeRAt root.program { p with completed := C } cursor v =
       loopNextRAt root.program { p with completed := C } next
     simp only [loopResumeRAt, loopAt_of_node C checked.hnode, hnext]
   have later : LoopFrameTyped root (w', s, f, tin, ⟨d, tin.error, tin.requires⟩, .loop p, next) :=
-    ⟨hwf, serviceTy_leHost o htie, hfs, hreq, p, env, ct, cursorTy, initial, test, step, result,
+    ⟨hwf, Tied.mono o htie, hfs, hreq, p, env, ct, cursorTy, initial, test, step, result,
       body, rfl, checked, envTyped_mono o henv, fits_subN w' hsub1 next hfitn,
       ambientStackTyped_mono o hstack⟩
   have entered := loopEnter_typed later view
@@ -194,7 +194,7 @@ loop's requirement row and the stack's: the checker's `iterate` rule read at the
 (`Checker.inv_iterate`), the cursor type the initial term's (`cursorTy.getD c0`), the body's
 requirement row the loop's. -/
 theorem loopFrameTyped_of_point {w : World} {available : Env.Requirement} {p : Point} {ty : EffTy}
-    {cursor : Val} (hwf : SourceWF root) (htie : w.serviceTy = root.sig.serviceTy)
+    {cursor : Val} (hwf : SourceWF root) (htie : Tied root w)
     (h : LoopPointTyped root w p ty cursor) (coverage : Row.Subset ty.requires available)
     (params : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     ∃ tin, LoopFrameTyped root (w, available, available, tin, ty, .loop p, cursor) := by
@@ -237,7 +237,7 @@ theorem clause_loop (root : ProgramSource) (rootTy : EffTy) (p : Point) (cursor 
   obtain ⟨hloop, coverage, params⟩ := pre
   change EffTy at cert
   obtain ⟨tb, frame⟩ :=
-    loopFrameTyped_of_point ev.typed.machine.sourceWF ev.typed.machine.services hloop coverage params
+    loopFrameTyped_of_point ev.typed.machine.sourceWF ⟨ev.typed.machine.services, ev.typed.machine.types⟩ hloop coverage params
   have answer : MFrame root w (((cert, row, row) : AmbientPosition), f.frame.interruptible)
       (q, f.frame.interruptible) (.answer next) :=
     .answer next fun w' o ex hex => by

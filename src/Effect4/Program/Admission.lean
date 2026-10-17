@@ -45,24 +45,33 @@ request, answer and error column is the signature's (`RowReason.emptyColumn`, `r
 program's inferred answer and error are this module's (`findEmptyColumnInEffTy`). Its refusal is
 `emptyColumn at` (row 149). `admitProgram` runs it last, so every earlier refusal keeps its statement. -/
 
+/-- The column check under a declaration table: the designed bottom, or a column that has a member
+with every declared name read by the table's inhabited names (`TyDecls.inhabited`, the audit's
+D3). At the empty table it is `admitColumn` (`TyDecls.inhabited_nil`). -/
+def admitColumnIn (decls : TyDecls) (t : Ty) : Bool :=
+  t.normalize == .never || TyDecls.inhabited decls t
+
 /-- The column check at a position: the position when the column is refused (rows 127, 149). -/
-def emptyColumnAt (pos : Path) (t : Ty) : Option Path :=
-  if admitColumn t then none else some pos
+def emptyColumnAt (decls : TyDecls) (pos : Path) (t : Ty) : Option Path :=
+  if admitColumnIn decls t then none else some pos
 
-/-- The program's own columns: the inferred answer and error. -/
-def findEmptyColumnInEffTy (ty : EffTy) : Option Path :=
-  emptyColumnAt ["program", "answer"] ty.answer <|> emptyColumnAt ["program", "error"] ty.error
+/-- The program's own columns, under the application's declaration table: the inferred answer and
+error. -/
+def findEmptyColumnInEffTy (decls : TyDecls) (ty : EffTy) : Option Path :=
+  emptyColumnAt decls ["program", "answer"] ty.answer <|>
+    emptyColumnAt decls ["program", "error"] ty.error
 
-theorem emptyColumnAt_eq_none_iff (pos : Path) (t : Ty) :
-    emptyColumnAt pos t = none ↔ admitColumn t = true := by
+theorem emptyColumnAt_eq_none_iff (decls : TyDecls) (pos : Path) (t : Ty) :
+    emptyColumnAt decls pos t = none ↔ admitColumnIn decls t = true := by
   unfold emptyColumnAt
-  cases admitColumn t with
+  cases admitColumnIn decls t with
   | true => exact ⟨fun _ => rfl, fun _ => rfl⟩
   | false => exact ⟨fun h => (nomatch h), fun h => (nomatch h)⟩
 
 /-- **The program scan finds nothing exactly when both columns are admitted (proved).** -/
-theorem findEmptyColumnInEffTy_eq_none_iff (ty : EffTy) :
-    findEmptyColumnInEffTy ty = none ↔ admitColumn ty.answer = true ∧ admitColumn ty.error = true := by
+theorem findEmptyColumnInEffTy_eq_none_iff (decls : TyDecls) (ty : EffTy) :
+    findEmptyColumnInEffTy decls ty = none ↔
+      admitColumnIn decls ty.answer = true ∧ admitColumnIn decls ty.error = true := by
   unfold findEmptyColumnInEffTy
   simp only [Option.orElse_eq_orElse, Option.orElse_eq_or, Option.or_eq_none_iff,
     emptyColumnAt_eq_none_iff]
@@ -89,7 +98,7 @@ structure AdmittedProgram (program : NativeEff) (app : SigApp)
     extends TypedProgram app.signature program where
   signature : admitSig app = .ok ()
   formed : Formation.InputFormed program app.rows app.services
-  columnsType : findEmptyColumnInEffTy ty = none
+  columnsType : findEmptyColumnInEffTy app.types ty = none
 
 /-- Decide admission: the signature's admission (`admitSig`), raw formation, the one typing
 certificate (`checkTypedProgram`, shared with code generation) at the signature, and last the
@@ -106,7 +115,7 @@ def admitProgram (program : NativeEff) (app : SigApp := {}) :
       match checkTypedProgram app.signature program with
       | none => .error .illTyped
       | some typing =>
-        match hcolType : findEmptyColumnInEffTy typing.ty with
+        match hcolType : findEmptyColumnInEffTy app.types typing.ty with
         | some pos => .error (.emptyColumn pos)
         | none => .ok ⟨typing, hsig,
             (Formation.checkInput_eq_none_iff program app.rows app.services).mp hformed, hcolType⟩

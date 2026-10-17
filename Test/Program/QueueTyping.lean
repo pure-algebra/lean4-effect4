@@ -392,7 +392,7 @@ theorem withdrawOffer_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf 
       (evalTerm (captured ++ [cell]) f = some (Val.tuple [reply, next]) →
         Typed.Fits w reply wakeReplyTy ∧ Typed.Fits w next (Queue.cellTy A)) := by
   obtain ⟨f, tree, typed⟩ := typeAt_tree (withdrawOffer_typed sig atoms A message)
-  exact ⟨f, tree, fun value => step_keeps_cell sig atoms types typedEnv typed held member value⟩
+  exact ⟨f, tree, fun value => step_keeps_cell sig atoms (TyDecls.within_of_nil types) typedEnv typed held member value⟩
 
 /-- **A step's tree is one tree, at every scope.** The tree that a step's reading evaluates is
 the tree that the step's theorem types (`Types.tree`). So a withdrawal of a take that reads a
@@ -413,7 +413,7 @@ theorem withdrawTake_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf =
       (Val.tuple [reply, next])) :
     Typed.Fits w reply wakeReplyTy ∧ Typed.Fits w next (Queue.cellTy A) := by
   obtain ⟨f, tree, value⟩ := reads
-  exact step_keeps_cell sig atoms types typedEnv
+  exact step_keeps_cell sig atoms (TyDecls.within_of_nil types) typedEnv
     ((withdrawTake_types sig atoms A message depth typesId typesCell false).tree tree) held
     member value
 

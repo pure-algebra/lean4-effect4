@@ -344,7 +344,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (hintTyped : tys[(looped caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb msg s))
     (member : Fits w (cellVal tb msg s) (Queue.cellTy A)) :=
-  Queue.take_attempt_minted sig atoms types A message tb msg s id hint profile requested injective
+  Queue.take_attempt_minted sig atoms (TyDecls.within_of_nil types)
+    A message tb msg s id hint profile requested injective
     (path := path) depth tyDepth typedEnv (takeRow_identity caller).1 (takeRow_identity caller).2
     idHeld idTyped (takeRow_hint caller).1 (takeRow_hint caller).2 hintHeld hintTyped held member
 
@@ -361,7 +362,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (idTyped : tys[(masked caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb msg s))
     (member : Fits w (cellVal tb msg s) (Queue.cellTy A)) :=
-  Queue.take_withdrawal_minted sig atoms types A message tb msg s id profile injective (path := path)
+  Queue.take_withdrawal_minted sig atoms (TyDecls.within_of_nil types)
+    A message tb msg s id profile injective (path := path)
     depth tyDepth typedEnv (takeWithdrawRow_identity caller).1
     (takeWithdrawRow_identity caller).2 idHeld idTyped held member
 
@@ -390,7 +392,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
       (offerRow caller).names).trans bound
   have inside : level < captured.length := (List.getElem?_eq_some_iff.mp messageHeld).1
   have insideTy : level < tys.length := (List.getElem?_eq_some_iff.mp messageTyped).1
-  Queue.offer_attempt_minted sig atoms types A message tb msg s id a hint profile requested fresh
+  Queue.offer_attempt_minted sig atoms (TyDecls.within_of_nil types)
+    A message tb msg s id a hint profile requested fresh
     (path := path) (messageSrc := var x) depth tyDepth typedEnv (offerRow_identity caller).1
     (offerRow_identity caller).2 idHeld idTyped (offerRow_hint caller).1 (offerRow_hint caller).2
     hintHeld hintTyped
@@ -412,7 +415,8 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (idTyped : tys[(masked caller).names.length]? = some idTy)
     (stores : Stores) (q : RefKey) (held : refPeek stores.refs q = some (cellVal tb msg s))
     (member : Fits w (cellVal tb msg s) (Queue.cellTy A)) :=
-  Queue.offer_withdrawal_minted sig atoms types A message tb msg s id profile injective (path := path)
+  Queue.offer_withdrawal_minted sig atoms (TyDecls.within_of_nil types)
+    A message tb msg s id profile injective (path := path)
     depth tyDepth typedEnv (offerWithdrawRow_identity caller).1
     (offerWithdrawRow_identity caller).2 idHeld idTyped held member
 

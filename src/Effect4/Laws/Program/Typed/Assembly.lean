@@ -1231,7 +1231,7 @@ by `PointTyped` itself (row 175, `E4-TYPED-CE-021`). The three witnesses are
 `Test/Program/TypedDenotation.lean`'s. -/
 def DenotesTyped (root : ProgramSource) : Prop :=
   SourceWF root →
-    ∀ (w : World), w.serviceTy = root.sig.serviceTy → ∀ (p : Point) (e : NativeEff) (ty : EffTy),
+    ∀ (w : World), Tied root w → ∀ (p : Point) (e : NativeEff) (ty : EffTy),
       Node.at_ (.eff root.program) p.path = some (.eff e) → PointTyped root w p ty →
         ∀ available : Env.Requirement, Row.Subset ty.requires available →
           AmbientStackTyped root w available (scopeParams root.program p.path) p.params →
@@ -1377,7 +1377,7 @@ theorem rootCode_typed (root : ProgramSource) (rootTy : EffTy) (compileFuel : Na
     (denotes : DenotesTyped root)
     (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
     (closedRow : rootTy.requires = Env.Requirement.empty)
-    (w : World) (htie : w.serviceTy = root.sig.serviceTy) :
+    (w : World) (htie : Tied root w) :
     AmbientProg root w Env.Requirement.empty (rootTy, Env.Requirement.empty, Env.Requirement.empty)
       (denoteR root.program root.program (rootPoint compileFuel)) := by
   have covers : Row.Subset rootTy.requires Env.Requirement.empty := closedRow ▸ Row.subset_refl _
@@ -1436,7 +1436,7 @@ theorem load_typed_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
     (closedRow : rootTy.requires = Env.Requirement.empty) :
     ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) :=
   ⟨_, machineTyped_load root rootTy fuel compileFuel (sourceWF_of_typeOf checked) noMarker
-    (rootCode_typed root rootTy compileFuel denotes checked closedRow _ rfl)⟩
+    (rootCode_typed root rootTy compileFuel denotes checked closedRow _ ⟨rfl, rfl⟩)⟩
 
 /-- **M5 from the layer family's arm** (`Typed/Denotation.lean`, `childDenotes_upto`: every arm of
 `denoteR` by induction on fuel). The layer family's arm (`ProvideLayerArm`, decisions row 176 (b)) is

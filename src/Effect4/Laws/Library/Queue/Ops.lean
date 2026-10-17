@@ -210,11 +210,11 @@ step answers the model's reply with the model's signals as two lists, and it wri
 next state. The reply and the stored value are members of their types. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) (A : Ty)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
     (injective : tb.Injective) {idSrc hintSrc : TermSrc} {env : Env} {path : List Nat}
-    {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Captured idSrc (env.push [env.mint "current"]) path
@@ -261,10 +261,10 @@ attempt's: the store step answers the takers that the model wakes, and it writes
 next state. The table does not change. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) (A : Ty)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {idSrc : TermSrc} {env : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Captured idSrc (env.push [env.mint "current"]) path
@@ -299,11 +299,11 @@ scope alone. The store step answers the model's reply and the takers that the mo
 it writes the model's next state. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem offer_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) (A : Ty)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
     (fresh : ∀ o ∈ s.offers, o.id ≠ id) {idSrc hintSrc messageSrc : TermSrc} {env : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Reads idSrc (env.push [env.mint "current"]) path
@@ -352,10 +352,10 @@ takers that the model wakes, and it writes the model's next state: an offer that
 accepted is not pending, so its message stays accepted (decisions row 222). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem offer_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) (A : Ty)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {idSrc : TermSrc} {env : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Captured idSrc (env.push [env.mint "current"]) path
@@ -390,9 +390,9 @@ the model's reply and the offers that entered, and it writes the model's next st
 wakes no taker. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem poll_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) (A : Ty)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State)
-    (profile : FirstProfile s) {env : Env} {path : List Nat} {tys : List Ty} {w : Typed.World}
+    (profile : FirstProfile s) {env : Env} {path : List Nat} {tys : List Ty}
     {captured : List Val} (depth : captured.length = env.names.length)
     (tyDepth : tys.length = env.names.length) (typedEnv : EnvTyped w tys captured)
     {stores : Stores} {q : RefKey} (held : refPeek stores.refs q = some (cellVal tb msg s))
@@ -469,11 +469,11 @@ those levels. The row's own binder is no later binder that shadows either name
 names that `bindWith` mints. The scope binds each, and no later binder shadows either. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (A : Ty) (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
     (injective : tb.Injective) {env outerId outerHint : Env} {path : List Nat}
-    {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {tys : List Ty} {captured : List Val}
     {beforeId afterId beforeHint afterHint : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
@@ -515,10 +515,10 @@ theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nat
 `bindWith` mints. The scope binds it, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (A : Ty) (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {env outerId : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     {beforeId afterId : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
@@ -547,11 +547,11 @@ names that `bindWith` mints. The scope binds each, and no later binder shadows e
 message stays a caller's term, with its reading and its type at the row's scope. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem offer_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (A : Ty) (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
     (fresh : ∀ o ∈ s.offers, o.id ≠ id) {messageSrc : TermSrc} {env outerId outerHint : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     {beforeId afterId beforeHint afterHint : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
@@ -597,10 +597,10 @@ theorem offer_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = na
 `bindWith` mints. The scope binds it, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem offer_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (A : Ty) (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {env outerId : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     {beforeId afterId : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)

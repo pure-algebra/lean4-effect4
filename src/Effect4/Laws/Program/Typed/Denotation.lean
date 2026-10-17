@@ -238,6 +238,26 @@ theorem fits_tagHit_eq_isTag {w : World} {type : Ty} {v : Val} (tag : String)
   obtain ⟨actual, hactual⟩ := Option.isSome_iff_exists.mp ht
   rw [Record.tagHit, fits_tagOf_lookup hactual hv, Record.isTag, hactual]
 
+/-- **The tag dispatch under a table within the world's partitions a member**: the runtime test
+picks the arm a member of the target is a member of. The membership form of
+`Record.tagArmsIn_partition`, with the arm the test chooses (`fits_tagHit_eq_isTag`). -/
+theorem fits_tagArmsIn {w : World} {decls : TyDecls} (hw : decls.Within w.types) {tag : String}
+    {t hit miss : Ty} {v : Val} (h : Program.Record.tagArmsIn decls tag t = some (hit, miss))
+    (fit : Fits w v t) : Fits w v (if Program.Record.tagHit tag v then hit else miss) := by
+  simp only [Program.Record.tagArmsIn] at h
+  split at h
+  · rename_i hall
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨x, hx, hxv⟩ := (fits_iff_membersIn hw t v).mp fit
+    have htag := fits_tagHit_eq_isTag tag (List.all_eq_true.mp hall x hx) hxv
+    cases hb : Program.Record.tagHit tag v with
+    | false =>
+      exact (fits_ofMembers w v _).mpr ⟨x, List.mem_filter.mpr ⟨hx, by rw [← htag, hb]; rfl⟩, hxv⟩
+    | true =>
+      exact (fits_ofMembers w v _).mpr ⟨x, List.mem_filter.mpr ⟨hx, by rw [← htag, hb]⟩, hxv⟩
+  · cases h
+
 /-- What a decision's chosen arm binds, at the arm's environment extension: nothing against
 nothing, one value fitting one type (`Decision.BoundTyped`'s membership form). -/
 def BoundFits (w : World) : Option Val → List Ty → Prop
@@ -368,7 +388,7 @@ variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {f : Nat}
 /-- **`suspend`**: the counted step, then the body constructed with the view at its invocation. -/
 theorem suspend_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.suspend b)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hb : ChildDenotes root f b (p.path ++ [0]))
     (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
@@ -380,26 +400,49 @@ theorem suspend_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fue
   refine ambient_suspendR_typed root (Row.subset_refl _) (fun w' o =>
     ambient_constructR_typed root (Row.subset_refl _) (fun w'' o' completed hc => ?_))
   have o'' := leHost_trans _ _ _ o o'
-  exact hb w'' (serviceTy_leHost o'' htie) ({ p with completed }.child 0) ty
+  exact hb w'' (Tied.mono o'' htie) ({ p with completed }.child 0) ty
     (child_fuel_eq (p := { p with completed }) hfuel 0) rfl
     (pointTyped_child (q := { p with completed }.child 0) hat rfl rfl hcb (envTyped_mono o'' henv) hc (stackTyped_mono o'' hstack)) available coverage
     (ambientStackTyped_child (q := { p with completed }.child 0) hat rfl rfl
       (ambientStackTyped_mono o'' savedParams))
 
-/-- `decide_fits` at the arms under a table that declares no type, as a signature's with no
-named type gives them (the wiring plan's decision 5). -/
-theorem decide_fitsIn {w : World} {decls : TyDecls} (htypes : decls = []) {d : Decision} {t : Ty}
-    {e0 e1 : List Ty} {v : Val} (harms : d.armsIn decls t = some (e0, e1)) (hv : Fits w v t) :
+/-- `decide_fits` at the arms under a table within the world's: at the empty table the arms are
+the table-free ones (`Decision.armsIn` matches on the table first), and under a table an option
+reads its members through `fits_optionTyIn` and a record tag through `fits_tagArmsIn`. -/
+theorem decide_fitsIn {w : World} {decls : TyDecls} (htypes : decls.Within w.types) {d : Decision}
+    {t : Ty} {e0 e1 : List Ty} {v : Val} (harms : d.armsIn decls t = some (e0, e1))
+    (hv : Fits w v t) :
     ∃ first bound, d.decide v = some (first, bound) ∧
       BoundFits w bound (if first then e0 else e1) := by
-  subst htypes
-  exact decide_fits harms hv
+  cases decls with
+  | nil => exact decide_fits harms hv
+  | cons x xs =>
+    cases d with
+    | option =>
+      simp only [Decision.armsIn] at harms
+      obtain ⟨a, hopt, heq⟩ := Option.map_eq_some_iff.mp harms
+      cases heq
+      rcases fits_option_inv (fits_optionTyIn htypes hopt hv) with rfl | ⟨y, rfl, hy⟩
+      · exact ⟨true, none, rfl, trivial⟩
+      · exact ⟨false, some y, rfl, hy⟩
+    | recordTag name =>
+      simp only [Decision.armsIn] at harms
+      obtain ⟨⟨hit, miss⟩, hparts, heq⟩ := Option.map_eq_some_iff.mp harms
+      cases heq
+      refine ⟨Record.tagHit name v, some v, rfl, ?_⟩
+      have h := fits_tagArmsIn htypes hparts hv
+      cases hb : Record.tagHit name v
+      · rw [hb] at h
+        exact h
+      · rw [hb] at h
+        exact h
+    | _ => exact decide_fits harms hv
 
 /-- **`select`**: the counted step, the scrutinee decides (`decide_fits`), and the chosen arm runs
 at its point with the value it binds, widened to the join of the arms. -/
 theorem select_arm {available : Env.Requirement} {s : Term} {d : Decision} {a0 a1 : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.select s d a0 a1)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (h0 : ChildDenotes root f a0 (p.path ++ [0])) (h1 : ChildDenotes root f a1 (p.path ++ [1]))
     (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
@@ -412,14 +455,15 @@ theorem select_arm {available : Env.Requirement} {s : Term} {d : Decision} {a0 a
     Row.subset_trans (Row.subset_union_left _ _) coverage
   have required1 : Row.Subset t1.requires available :=
     Row.subset_trans (Row.subset_union_right _ _) coverage
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hsty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hsty
   rw [denoteR_select _ _ _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine ambient_suspendR_typed root (Row.subset_refl _) (fun w' o =>
     ambient_constructR_typed root (Row.subset_refl _) (fun w'' o' completed hc => ?_))
   have o'' := leHost_trans _ _ _ o o'
-  have htie'' := serviceTy_leHost o'' htie
+  have htie'' := Tied.mono o'' htie
   obtain ⟨first, bound, hdec, hbound⟩ :=
-    decide_fitsIn ((root.scopeSig_extends p.path).types.trans root.untyped) harms (fits_mono o'' hfit)
+    decide_fitsIn (TyDecls.within_of_eq ((root.scopeSig_extends p.path).types.trans
+      htie''.types.symm)) harms (fits_mono o'' hfit)
   show AmbientProg root w'' available
     ((⟨t0.answer.join t1.answer, t0.error.join t1.error, Row.union t0.requires t1.requires⟩ : EffTy),
       available, available) (match (evalTerm p.env s).bind d.decide with
@@ -489,7 +533,7 @@ variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {f : Nat}
 body admits, the caught cause bound at `Cause<E>`, widened to the join of the answers. -/
 theorem catchCause_arm {available : Env.Requirement} {b h : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.catchCause b h)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hb : ChildDenotes root f b (p.path ++ [0])) (hh : ChildDenotes root f h (p.path ++ [1]))
     (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
@@ -517,7 +561,7 @@ theorem catchCause_arm {available : Env.Requirement} {b h : NativeEff} (hfuel : 
         (after := ((⟨tb.answer.join th.answer, th.error, Row.union tb.requires th.requires⟩ : EffTy),
           available, available))
         (Ty.subN_join_right _ _) (Ty.subN_refl _) (Row.subset_refl _) (Row.subset_refl _) ?_
-      exact hh after (serviceTy_leHost future htie) ({ p with completed }.childWith 1 (Val.exitErr cause)) th
+      exact hh after (Tied.mono future htie) ({ p with completed }.childWith 1 (Val.exitErr cause)) th
         (childWith_fuel_eq (p := { p with completed }) hfuel 1 (Val.exitErr cause)) rfl
         (pointTyped_child (q := { p with completed }.childWith 1 (Val.exitErr cause)) hat rfl rfl hch
           (envTyped_append (envTyped_mono future henv) (fits_exitErr_causeOf causeFit))
@@ -532,7 +576,7 @@ theorem catchCause_arm {available : Env.Requirement} {b h : NativeEff} (hfuel : 
 arm on a failure, each widened to the join. -/
 theorem matchCause_arm {available : Env.Requirement} {b v c : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.matchCause b v c)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (coverage : Row.Subset ty.requires available)
     (hb : ChildDenotes root f b (p.path ++ [0])) (hv : ChildDenotes root f v (p.path ++ [1]))
     (hc : ChildDenotes root f c (p.path ++ [2]))
@@ -560,7 +604,7 @@ theorem matchCause_arm {available : Env.Requirement} {b v c : NativeEff} (hfuel 
       (after := ((⟨tv.answer.join tc.answer, tv.error.join tc.error,
         Row.union (Row.union tb.requires tv.requires) tc.requires⟩ : EffTy), available, available))
       (Ty.subN_join_left _ _) (Ty.subN_join_left _ _) (Row.subset_refl _) (Row.subset_refl _) ?_
-    exact hv after (serviceTy_leHost future htie) ({ p with completed }.childWith 1 value) tv
+    exact hv after (Tied.mono future htie) ({ p with completed }.childWith 1 value) tv
       (childWith_fuel_eq (p := { p with completed }) hfuel 1 value) rfl
       (pointTyped_child (q := { p with completed }.childWith 1 value) hat rfl rfl hcv
         (envTyped_append (envTyped_mono future henv) (fits_mono grew ((fitsExit_success_iff later tb value).mp payload.1.1)))
@@ -573,7 +617,7 @@ theorem matchCause_arm {available : Env.Requirement} {b v c : NativeEff} (hfuel 
       (after := ((⟨tv.answer.join tc.answer, tv.error.join tc.error,
         Row.union (Row.union tb.requires tv.requires) tc.requires⟩ : EffTy), available, available))
       (Ty.subN_join_right _ _) (Ty.subN_join_right _ _) (Row.subset_refl _) (Row.subset_refl _) ?_
-    exact hc after (serviceTy_leHost future htie) ({ p with completed }.childWith 2 (Val.exitErr cause)) tc
+    exact hc after (Tied.mono future htie) ({ p with completed }.childWith 2 (Val.exitErr cause)) tc
       (childWith_fuel_eq (p := { p with completed }) hfuel 2 (Val.exitErr cause)) rfl
       (pointTyped_child (q := { p with completed }.childWith 2 (Val.exitErr cause)) hat rfl rfl hcc
         (envTyped_append (envTyped_mono future henv)
@@ -585,7 +629,7 @@ theorem matchCause_arm {available : Env.Requirement} {b v c : NativeEff} (hfuel 
 the body admits, the exit bound as `Exit<A, E>`. -/
 theorem onExit_arm {available : Env.Requirement} {b fin : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.onExit b fin)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (coverage : Row.Subset ty.requires available)
     (hb : ChildDenotes root f b (p.path ++ [0])) (hf : ChildDenotes root f fin (p.path ++ [1]))
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
@@ -604,7 +648,7 @@ theorem onExit_arm {available : Env.Requirement} {b fin : NativeEff} (hfuel : p.
     (fun later ordered exit payload => ?_)
   refine ambient_constructR_typed root (Row.subset_refl _) (fun after grew completed completedTyped => ?_)
   have future := leHost_trans _ _ _ ordered grew
-  exact hf after (serviceTy_leHost future htie) ({ p with completed }.childWith 1 (reifyExitVal exit)) tf
+  exact hf after (Tied.mono future htie) ({ p with completed }.childWith 1 (reifyExitVal exit)) tf
     (childWith_fuel_eq (p := { p with completed }) hfuel 1 (reifyExitVal exit)) rfl
     (pointTyped_child (q := { p with completed }.childWith 1 (reifyExitVal exit)) hat rfl rfl hcf
       (envTyped_append (envTyped_mono future henv) (fitsExit_mono grew payload.1))
@@ -652,14 +696,14 @@ theorem iterate_arm {available : Env.Requirement} {cursorTy : Option Ty} {initia
     (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.iterate cursorTy initial test step result body)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (hpt : PointTyped root w p ty) (htie : Tied root w) (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.iterate cursorTy initial test step result body) p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   have checked := hcheck
   rw [Eff.expandIn_iterate] at hcheck
   obtain ⟨c0, _, _, _, _, hc0, _, _, _, _, _, hsub0, _, _⟩ := Checker.inv_iterate _ _ _ _ _ _ _ _ _ _ hcheck
-  obtain ⟨cursor, hcursor, hfit⟩ := evalTerm_progress_env henv hc0
+  obtain ⟨cursor, hcursor, hfit⟩ := evalTerm_progress_env henv htie.within hc0
   have pre : LoopPointTyped root w p ty cursor := ⟨cursorTy, initial, test, step, result, body, env,
     c0, hat, checked, henv, hview, ((root.scopeSig_extends p.path).termTy env initial).symm.trans hc0,
     fits_subN w (a := c0) (b := cursorTy.getD c0) hsub0 cursor hfit, hstack⟩
@@ -905,7 +949,7 @@ is caught when the test holds (the handler runs with it bound at the body's erro
 otherwise the cause is rethrown, which the conditional bound admits (`catchIf_miss_fits`). -/
 theorem catchIf_arm {available : Env.Requirement} {test : Term} {b h : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.catchIf test b h)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hb : ChildDenotes root f b (p.path ++ [0])) (hh : ChildDenotes root f h (p.path ++ [1]))
     (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
@@ -939,7 +983,7 @@ theorem catchIf_arm {available : Env.Requirement} {test : Term} {b h : NativeEff
         refine ambientProg_widen root (before := (th, available, available))
           (Ty.subN_join_right _ _) (subN_catchIfError test env.length tb.error th.error)
           (Row.subset_refl _) (Row.subset_refl _) ?_
-        exact hh after (serviceTy_leHost future htie) _ th (childWith_fuel_eq (p := { p with completed }) hfuel 1 value) rfl
+        exact hh after (Tied.mono future htie) _ th (childWith_fuel_eq (p := { p with completed }) hfuel 1 value) rfl
           (pointTyped_child (q := { p with completed }.childWith 1 value) hat rfl rfl hch
             (envTyped_append (envTyped_mono future henv) valueFits) completedTyped
             (stackTyped_mono future hstack)) available handlerCovered
@@ -1240,7 +1284,7 @@ await row, whose post answers at the declared type, below the handle's columns
 (`await_fits`; by value, `subN_exitOf`). -/
 theorem awaitFiber_arm {available : Env.Requirement} {t : Term} {mode : Supervision.ObserverMode} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.awaitFiber t mode)))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.awaitFiber t mode) p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
@@ -1248,7 +1292,7 @@ theorem awaitFiber_arm {available : Env.Requirement} {t : Term} {mode : Supervis
   cases mode with
   | joinEffect =>
     obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_join _ _ _ _ _ hcheck
-    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
     replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
     obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
     rw [hv]
@@ -1275,7 +1319,7 @@ theorem awaitFiber_arm {available : Env.Requirement} {t : Term} {mode : Supervis
         exact .pure ⟨await_fits hfit o hΓ' hex.1 _, hex.2⟩
   | awaitValue =>
     obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_await _ _ _ _ _ hcheck
-    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
     replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
     obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
     rw [hv]
@@ -1347,14 +1391,14 @@ theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Superv
 theorem forkIn_arm {available : Env.Requirement} {b : NativeEff} {options : Supervision.ForkOptions} {scope : Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.forkIn b options scope))))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (hpt : PointTyped root w p ty) (htie : Tied root w) (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_forkIn] at hcheck
   obtain ⟨q, scopeTy, hcq, hscope, hsub_scope, rfl⟩ :=
     Checker.inv_action_forkIn _ _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hscope
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hscope
   obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv (fits_subN w (b := .scope) hsub_scope v hfit)
   have hact : actionAt root.program p = some (WithFiberAction.forkIn
       (resolve root.program ((p.child 0).child 0)) options sc (p.child 0).path) := by
@@ -1427,16 +1471,16 @@ theorem forkScoped_arm {available : Env.Requirement} {b : NativeEff} {options : 
 /-- **`runIn`**: a declared fiber and a present scope (the row's pre), answering `unit`. -/
 theorem runIn_arm {available : Env.Requirement} {target scope : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.runIn target scope))))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, scopeTy, hty, hfib, hscope, hsub_scope, rfl⟩ :=
     Checker.inv_action_runIn _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
   replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
   obtain ⟨index, rfl, fty, hΓ, -, -⟩ := fiber_of_fits hfit
-  obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv hscope
+  obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv htie.within hscope
   obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv (fits_subN w (b := .scope) hsub_scope u hufit)
   have hact : actionAt root.program p = some (WithFiberAction.runIn ⟨index⟩ sc) := by
     unfold actionAt
@@ -1459,13 +1503,13 @@ theorem runIn_arm {available : Env.Requirement} {target scope : Term}
 /-- **`interrupt`**: the target a fiber handle; the row answers `unit`. -/
 theorem interrupt_arm {available : Env.Requirement} {target : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.interrupt target))))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, hty, hfib, rfl⟩ :=
     Checker.inv_action_interrupt _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
   replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
   obtain ⟨index, rfl, fty, hdecl, -⟩ := fiber_of_fits hfit
   have hact : actionAt root.program p = some (WithFiberAction.interrupt ⟨index⟩) := by
@@ -1488,13 +1532,13 @@ theorem interrupt_arm {available : Env.Requirement} {target : Term}
 theorem interruptScoped_arm {available : Env.Requirement} {target : Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.interruptScoped target))))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, hty, hfib, rfl⟩ :=
     Checker.inv_action_interruptScoped _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
   replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
   obtain ⟨index, rfl, fty, hdecl, -⟩ := fiber_of_fits hfit
   have hact : actionAt root.program p = some (WithFiberAction.interruptScoped ⟨index⟩) := by
@@ -1528,7 +1572,7 @@ pre), the interruptor a number; the row answers `unit`. -/
 theorem interruptAll_arm {available : Env.Requirement} {targets : Term} {who : Option Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.interruptAll targets who))))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
@@ -1536,7 +1580,7 @@ theorem interruptAll_arm {available : Env.Requirement} {targets : Term} {who : O
   cases who with
   | none =>
     obtain ⟨ts, inner, pair, hts, hlist, hfib, rfl⟩ := Checker.inv_action_interruptAll_self _ _ _ _ _ hc
-    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hts
     replace hfit := fits_subN w (listOf_upper hlist) v hfit
     replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
     obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
@@ -1569,10 +1613,10 @@ theorem interruptAll_arm {available : Env.Requirement} {targets : Term} {who : O
       (fun w' _ ans post => unitAnswer_typed root post)
   | some who =>
     obtain ⟨ts, inner, pair, whoTy, hts, hlist, hfib, hwho, hsub_who, rfl⟩ := Checker.inv_action_interruptAll_by _ _ _ _ _ _ hc
-    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+    obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hts
     replace hfit := fits_subN w (listOf_upper hlist) v hfit
     replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
-    obtain ⟨n, hn, hnfit⟩ := evalTerm_progress_env henv hwho
+    obtain ⟨n, hn, hnfit⟩ := evalTerm_progress_env henv htie.within hwho
     obtain ⟨m, rfl⟩ := fits_nat_inv (fits_subN w (b := .nat) hsub_who n hnfit)
     obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
         some (WithFiberAction.interruptAll ids (some ⟨m⟩)) ∧
@@ -1608,13 +1652,13 @@ raw unions of their declared columns (`awaitAllCert`), whose answer is below the
 exits. -/
 theorem awaitAll_arm {available : Env.Requirement} {targets : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.awaitAll targets))))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨ts, inner, pair, hts, hlist, hfib, rfl⟩ :=
     Checker.inv_action_awaitAll _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hts
   replace hfit := fits_subN w (listOf_upper hlist) v hfit
   replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
   obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
@@ -1652,13 +1696,13 @@ theorem awaitAll_arm {available : Env.Requirement} {targets : Term}
 theorem awaitAllFailFast_arm {available : Env.Requirement} {targets : Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.awaitAllFailFast targets))))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨ts, inner, pair, hts, hlist, hfib, rfl⟩ :=
     Checker.inv_action_awaitAllFailFast _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hts
   replace hfit := fits_subN w (listOf_upper hlist) v hfit
   replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
   obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
@@ -1719,13 +1763,13 @@ theorem snapshotChildren_arm {available : Env.Requirement}
 theorem awaitNewChildren_arm {available : Env.Requirement} {snapshot : Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.awaitNewChildren snapshot))))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨s, hs, hsub, rfl⟩ :=
     Checker.inv_action_awaitNewChildren _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hs
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hs
   have hfit' : Fits w v (.list (.fiberOf .unknown .unknown)) :=
     fits_sub w hsub v ((fits_normalize w s v).mpr hfit)
   obtain ⟨ids, hact⟩ : ∃ ids, actionAt root.program p =
@@ -1884,15 +1928,15 @@ theorem getInterruptible_arm {available : Env.Requirement}
 `Exit<unknown, unknown>` (the row's pre, F-CLOSE); the close answers an exit at `pure unit`. -/
 theorem closeScope_arm {available : Env.Requirement} {scope exit : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.closeScope scope exit))))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨scopeTy, exitTy, pair, hs, hsub_scope, hex, hexit, rfl⟩ :=
     Checker.inv_action_closeScope _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv hs
+  obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv htie.within hs
   obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv (fits_subN w (b := .scope) hsub_scope u hufit)
-  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hex
+  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv htie.within hex
   replace hvfit := fits_subN w (exitOf_upper hexit) v hvfit
   obtain ⟨ex, hexv⟩ := exitOfVal_of_fits hvfit
   have hact : actionAt root.program p = some (WithFiberAction.closeScope sc ex) := by
@@ -1924,23 +1968,23 @@ theorem closeScope_arm {available : Env.Requirement} {scope exit : Term}
 /-- **`withFiber`**: the seventeen actions, each by its arm. -/
 theorem withFiber_arm {available : Env.Requirement} {a : ActionTerm NativeOp} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber a)))
-    (hpt : PointTyped root w p ty) (services : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (services : Tied root w)
     (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.withFiber a) p) := by
   rw [denoteR_withFiber _ _ _ hfuel]
   cases a with
   | fork b options => exact fork_arm hat hpt coverage savedParams
-  | forkIn b options scope => exact forkIn_arm hat hpt coverage savedParams
+  | forkIn b options scope => exact forkIn_arm hat hpt services coverage savedParams
   | forkScoped b options => exact forkScoped_arm hat hpt coverage savedParams
-  | runIn target scope => exact runIn_arm hat hpt
-  | interrupt target => exact interrupt_arm hat hpt
-  | interruptScoped target => exact interruptScoped_arm hat hpt
-  | interruptAll targets who => exact interruptAll_arm hat hpt
-  | awaitAll targets => exact awaitAll_arm hat hpt
-  | awaitAllFailFast targets => exact awaitAllFailFast_arm hat hpt
+  | runIn target scope => exact runIn_arm hat hpt services
+  | interrupt target => exact interrupt_arm hat hpt services
+  | interruptScoped target => exact interruptScoped_arm hat hpt services
+  | interruptAll targets who => exact interruptAll_arm hat hpt services
+  | awaitAll targets => exact awaitAll_arm hat hpt services
+  | awaitAllFailFast targets => exact awaitAllFailFast_arm hat hpt services
   | snapshotChildren => exact snapshotChildren_arm hat hpt
-  | awaitNewChildren snapshot => exact awaitNewChildren_arm hat hpt
+  | awaitNewChildren snapshot => exact awaitNewChildren_arm hat hpt services
   | raceAll es => exact raceAll_arm hat hpt coverage savedParams
   | raceAllFirst es => exact raceAllFirst_arm hat hpt coverage savedParams
   | context keys =>
@@ -1950,7 +1994,7 @@ theorem withFiber_arm {available : Env.Requirement} {a : ActionTerm NativeOp} (h
     rw [denoteR_withFiber _ _ _ hfuel] at typed
     exact typed
   | getId => exact getId_arm hat hpt
-  | closeScope scope exit => exact closeScope_arm hat hpt
+  | closeScope scope exit => exact closeScope_arm hat hpt services
   | getInterruptible => exact getInterruptible_arm hat hpt
 
 end FiberArms
@@ -2016,7 +2060,8 @@ at. When the request bound no element type its instance is `never`, the cell's t
 member, and both hold vacuously: such a node is dead. A step of `denote-typed`; its consumer is
 `syncRow_typed` at the eight term rows. It says nothing of a term the checker refuses. -/
 theorem bindTerm_termMaps {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
-    (htypes : sig.types = []) {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env) {f : Term}
+    {w : World} (htypes : TyDecls.Within sig.types w.types) {tys : TyEnv} {env : List Val}
+    (henv : EnvTyped w tys env) {f : Term}
     (s : FnShape) {σ σ' : Ty.Subst}
     (hbind : bindTerm σ (some ⟨s.param, s.result, fun A => termTy sig (tys ++ [A]) f⟩) = .ok σ')
     {ty : Ty} (hequiv : Equiv ty (Ty.instantiate σ (.var 0))) :
@@ -2176,7 +2221,8 @@ at every instance and term the checker admits, at every world; it says nothing o
 @[semantics "residual-program-typing" (requirement := R4)]
 theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     (op : NativeOp) (hk : NativeOp.kind op = .sync) {env : List Val} {tys : TyEnv}
-    (henv : EnvTyped w tys env) {reqTy : Ty} {t : EffTy}
+    (henv : EnvTyped w tys env) (htypes : TyDecls.Within root.types w.types) {reqTy : Ty}
+    {t : EffTy}
     (hrow : rowTy (NativeOp.row op).normalizeTypes reqTy (root.signature.termUse tys op) = some t)
     (v : Val) (hfit : Fits w v reqTy) :
     ∃ o, NativeOp.syncOpOf op env v = some o ∧
@@ -2188,7 +2234,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     cases op with
     | refUpdateWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
-      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl root.untyped henv .update hbind hequiv
+      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl htypes henv .update hbind hequiv
       refine ⟨SyncOp.refUpdate k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refUpdate k f env) (cert := ()) ⟨t', hlookup, hmaps⟩ ?_
       intro w' ord ans post
@@ -2197,7 +2243,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refGetAndUpdateWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, hcell⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl root.untyped henv .update hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl htypes henv .update hbind hequiv
       refine ⟨SyncOp.refGetAndUpdate k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refGetAndUpdate k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2209,7 +2255,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refUpdateAndGetWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, hcell⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl root.untyped henv .update hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl htypes henv .update hbind hequiv
       refine ⟨SyncOp.refUpdateAndGet k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refUpdateAndGet k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2221,7 +2267,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refUpdateSomeWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, -⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl root.untyped henv .updateSome hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl htypes henv .updateSome hbind hequiv
       refine ⟨SyncOp.refUpdateSome k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refUpdateSome k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2231,7 +2277,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refGetAndUpdateSomeWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, hcell⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl root.untyped henv .updateSome hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl htypes henv .updateSome hbind hequiv
       refine ⟨SyncOp.refGetAndUpdateSome k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refGetAndUpdateSome k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2243,7 +2289,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refUpdateSomeAndGetWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, hcell⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl root.untyped henv .updateSome hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl htypes henv .updateSome hbind hequiv
       refine ⟨SyncOp.refUpdateSomeAndGet k f env, rfl, ?_⟩
       refine TypedProg.store (op := SyncOp.refUpdateSomeAndGet k f env) (cert := ())
         ⟨t', hlookup, hmaps⟩ ?_
@@ -2254,7 +2300,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
       exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 0 (hcell w' ans hfit')))
     | refModifyWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
-      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl root.untyped henv .modify hbind hequiv
+      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl htypes henv .modify hbind hequiv
       refine ⟨SyncOp.refModify k f env, rfl, ?_⟩
       -- the certificate is the answer type `B` the term bound: it may differ from the cell's
       refine TypedProg.store (op := SyncOp.refModify k f env)
@@ -2264,7 +2310,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     | refModifySomeWith f =>
       obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
       obtain ⟨hmaps, -⟩ :=
-        bindTerm_termMaps (sig := root.signature) rfl root.untyped henv .modifySome hbind hequiv
+        bindTerm_termMaps (sig := root.signature) rfl htypes henv .modifySome hbind hequiv
       refine ⟨SyncOp.refModifySome k f env, rfl, ?_⟩
       -- the certificate is the answer type `B` the term bound: it may differ from the cell's
       refine TypedProg.store (op := SyncOp.refModifySome k f env)
@@ -2516,13 +2562,13 @@ through `rowTy_fits`. A step of `denote-typed`; its consumers are `syncPerform_a
 theorem builtinPerform_inv {op : NativeOp} {r : Term} {q : Point} {t : EffTy}
     (hk : NativeOp.kind op ≠ .program)
     (hat : Node.at_ (.eff root.program) q.path = some (.eff (.perform op r)))
-    (hpt : PointTyped root w q t) :
+    (hpt : PointTyped root w q t) (htie : Tied root w) :
     ∃ tys v reqTy, EnvTyped w tys q.env ∧ evalTerm q.env r = some v ∧ Fits w v reqTy ∧
       rowTy (NativeOp.row op).normalizeTypes reqTy (root.signature.termUse tys op) = some t := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨reqTy, -, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
-  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hreq
+  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv htie.within hreq
   -- a built-in row is no invocation, so the block's signature reads the tables' row there
   have hnone : root.sig.signature.callOf op = none := by
     cases op with
@@ -2554,11 +2600,11 @@ theorem syncOpOf_not_foreign_scopeAdd (op : NativeOp) (env : List Val) (value : 
 theorem syncPerform_arm {available : Env.Requirement} {op : NativeOp} {r : Term} (hk : NativeOp.kind op = .sync)
     (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.perform op r) p) := by
   obtain ⟨tys, v, reqTy, henv, hv, hfit, hrow⟩ :=
-    builtinPerform_inv (by rw [hk]; exact nofun) hat hpt
-  obtain ⟨o, ho, htyped⟩ := syncRow_typed root (req := ty.requires) op hk henv hrow v hfit
+    builtinPerform_inv (by rw [hk]; exact nofun) hat hpt htie
+  obtain ⟨o, ho, htyped⟩ := syncRow_typed root (req := ty.requires) op hk henv htie.within hrow v hfit
   rw [denoteR_perform_sync _ _ _ hfuel ((NativeOp.row_kind op).trans hk), hv, Option.bind_some, ho]
   exact ambient_storeR_of_typed root available (fun scope capture identity =>
     syncOpOf_not_foreign_scopeAdd op p.env v scope capture (identity ▸ ho)) htyped
@@ -2567,9 +2613,9 @@ theorem syncPerform_arm {available : Env.Requirement} {op : NativeOp} {r : Term}
 declared columns (`asyncPre`), which are equivalent to the instance's in the checker's order. -/
 theorem deferredAwait_arm {available : Env.Requirement} {r : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform .deferredAwait r)))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.perform .deferredAwait r) p) := by
-  obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
+  obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt htie
   obtain ⟨σ, hinst, rfl, -⟩ := rowTy_fits_none hrow hfit
   obtain ⟨k, rfl, a', e', hPi, ⟨ha, -⟩, ⟨he, -⟩⟩ := fits_deferredOf_inv hinst
   rw [denoteR_perform _ _ _ hfuel]
@@ -2586,9 +2632,9 @@ theorem deferredAwait_arm {available : Env.Requirement} {r : Term} (hfuel : p.fu
 timer's registration, met at `(unit, never)`. -/
 theorem sleep_arm {available : Env.Requirement} {r : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform .sleep r)))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.perform .sleep r) p) := by
-  obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
+  obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt htie
   obtain ⟨σ, hinst, rfl, -⟩ := rowTy_fits_none hrow hfit
   obtain ⟨n, rfl⟩ := fits_nat_inv hinst
   rw [denoteR_perform _ _ _ hfuel]
@@ -2617,7 +2663,7 @@ decisions row 183). A host answer admitted at the certificate is admitted at the
 no bridge through the template. A step of `denote-typed`; its consumer is `perform_arm`. -/
 theorem external_arm {available : Env.Requirement} {i : Nat} {request : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform (.external i) request)))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : Tied root w) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.perform (.external i) request) p) := by
   obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
@@ -2626,7 +2672,7 @@ theorem external_arm {available : Env.Requirement} {i : Nat} {request : Term} (h
   rw [(root.scopeSig_of_none p.path (op := .external i) rfl).1] at hdom
   rw [(root.scopeSig_of_none p.path (op := .external i) rfl).2,
     (root.scopeSig_extends p.path).termUse] at hrow
-  obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hreq
+  obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv htie.within hreq
   rw [denoteR_perform _ _ _ hfuel]
   show AmbientProg root w available (ty, available, available) (denoteForeign (.external i) request p)
   unfold denoteForeign
@@ -2660,7 +2706,7 @@ declared columns (`rowTy_closed_some`). The body is typed at its point by the bl
 columns (`DefDecl.admits`). Its consumer is `perform_arm`. -/
 theorem call_arm {available : Env.Requirement} {k : Nat} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform (.call k) r)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hbodies : BodiesTyped root)
     (hden : ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path)
@@ -2695,7 +2741,7 @@ theorem call_arm {available : Env.Requirement} {k : Nat} {r : Term} {f : Nat} (h
   obtain ⟨⟨hans, herr⟩, required⟩ := hadmits
   have bodyCovered : Row.Subset tb.requires available :=
     Row.subset_trans (of_decide_eq_true required) coverage
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hreq
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hreq
   rw [denoteR_perform _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine ambient_suspendR_typed root (Row.subset_refl _) (fun w' o =>
     ambient_constructR_typed root (Row.subset_refl _) (fun w'' o' completed hc => ?_))
@@ -2706,7 +2752,7 @@ theorem call_arm {available : Env.Requirement} {k : Nat} {r : Term} {f : Nat} (h
     (after := ((⟨d.row.normalizeTypes.answer.normalize, d.row.normalizeTypes.error.normalize,
       Env.Requirement.ofList d.row.normalizeTypes.requires⟩ : EffTy), available, available)) ?_ ?_
     (Row.subset_refl _) (Row.subset_refl _) (hden body path hbody w''
-    (serviceTy_leHost o'' htie) { p.redirect path with completed, env := [v], params := [] :: p.params, call := p.path :: p.call } tb (by simp only [Point.redirect, hfuel]; rfl) rfl
+    (Tied.mono o'' htie) { p.redirect path with completed, env := [v], params := [] :: p.params, call := p.path :: p.call } tb (by simp only [Point.redirect, hfuel]; rfl) rfl
     ⟨body, [d.request.normalize], hbody, hbcheck', ?_, hc, ?_⟩ available bodyCovered ?_)
   · show Ty.sub tb.answer.normalize d.answer.normalize.normalize.normalize = true
     rw [Ty.normalize_idem, Ty.normalize_idem]
@@ -2732,7 +2778,7 @@ that move the run to another node of the root: `invoke_arm` to a body, `param_ar
 theorem hop_typed {root : ProgramSource} {f : Nat} {available : Env.Requirement}
     (hden : ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path)
-    {w : World} (htie : w.serviceTy = root.sig.serviceTy) {q : Point} {node : NativeEff}
+    {w : World} (htie : Tied root w) {q : Point} {node : NativeEff}
     {env : List Ty} {t T : EffTy} (hfuel : q.fuel = f)
     (hat : Node.at_ (.eff root.program) q.path = some (.eff node))
     (hcheck : Checker.check (root.scopeSig q.path) env q.path (Eff.expandIn root.program node) =
@@ -2786,7 +2832,7 @@ slice CX1 (`docs/research/2026-10-10-cx-lexical-scope.md` §9), proved in CX2. I
 theorem param_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {i : Nat}
     {r : Term} {f : Nat} {available : Env.Requirement} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform (.param i) r)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hbodies : BodiesTyped root)
     (hden : ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path)
@@ -2817,14 +2863,14 @@ theorem param_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {i
   obtain ⟨hadm, required⟩ := hadm
   simp only [ParamDecl.admits, Bool.and_eq_true] at hadm
   obtain ⟨hans, herr⟩ := hadm
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hreq
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hreq
   rw [denoteR_perform _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine ambient_suspendR_typed root (Row.subset_refl _) (fun w' o =>
     ambient_constructR_typed root (Row.subset_refl _) (fun w'' o' completed hc => ?_))
   have o'' := leHost_trans _ _ _ o o'
   simp only [hv, hparams, hsite, hnode]
   -- the site's program at its own point, at the caller's values and the stack below the call
-  refine hop_typed hden (serviceTy_leHost o'' htie) (t := t)
+  refine hop_typed hden (Tied.mono o'' htie) (t := t)
     (by simp only [Point.redirect, hfuel]; rfl) hnode hacheck ?_ hc (ambientStackTyped_mono o'' hrest) ?_ ?_ required
   · have hreqFit : Fits w'' v q.request.normalize :=
       fits_subN w'' (show Ty.sub reqTy.normalize q.request.normalize.normalize = true from hsub)
@@ -2842,7 +2888,7 @@ theorem param_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {i
 parameter's run (`param_arm`). -/
 theorem perform_arm {available : Env.Requirement} {op : NativeOp} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hbodies : BodiesTyped root)
     (hden : ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path)
@@ -2851,12 +2897,12 @@ theorem perform_arm {available : Env.Requirement} {op : NativeOp} {r : Term} {f 
     AmbientProg root w available (ty, available, available) (denoteR root.program (.perform op r) p) := by
   have hpos : p.fuel ≠ 0 := by rw [hfuel]; exact Nat.succ_ne_zero f
   cases op with
-  | external i => exact external_arm hpos hat hpt
+  | external i => exact external_arm hpos hat hpt htie
   | call k => exact call_arm hfuel hat hpt htie hbodies hden coverage
   | param i => exact param_arm hfuel hat hpt htie hbodies hden saved
-  | deferredAwait => exact deferredAwait_arm hpos hat hpt
-  | sleep => exact sleep_arm hpos hat hpt
-  | _ => exact syncPerform_arm rfl hpos hat hpt
+  | deferredAwait => exact deferredAwait_arm hpos hat hpt htie
+  | sleep => exact sleep_arm hpos hat hpt htie
+  | _ => exact syncPerform_arm rfl hpos hat hpt htie
 
 /-- **The frame an invocation pushes is typed at its definition's parameters** (K4, slice CX2;
 `docs/research/2026-10-10-cx-lexical-scope.md` §9): each program the invocation passes stands at
@@ -2906,7 +2952,7 @@ dispatch (`childDenotes_upto`). -/
 theorem invoke_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {k : Nat}
     {r : Term} {args : Effs NativeOp} {f : Nat} {available : Env.Requirement} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.invoke k r args)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hbodies : BodiesTyped root)
     (hden : ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path)
@@ -2937,7 +2983,7 @@ theorem invoke_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {
     (Ty.closed_normalize _ hreqc) (Ty.closed_normalize _ hansc) (Ty.closed_normalize _ herrc) hrow
   simp only [DefDecl.admits, Bool.and_eq_true] at hadmits
   obtain ⟨⟨hans, herr⟩, bodyRequired⟩ := hadmits
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hreq
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hreq
   -- the frame the invocation pushes, typed at the definition's parameters
   have hframe : AmbientStackTyped root w available d.params (argSitesAt (p.path ++ [0]) p.env args :: p.params) :=
     ambient_argument_birth henv saved d.params args (p.path ++ [0]) ts
@@ -2951,7 +2997,7 @@ theorem invoke_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {
   have o'' := leHost_trans _ _ _ o o'
   simp only [hv, hpath, hbody]
   -- the body at its point, typed at its own type, widened to the declared columns
-  refine hop_typed hden (serviceTy_leHost o'' htie) (t := tb)
+  refine hop_typed hden (Tied.mono o'' htie) (t := tb)
     (by simp only [Point.redirect, hfuel]; rfl) hbody hbcheck' ?_ hc ?_ ?_ ?_
     (Row.subset_trans (of_decide_eq_true bodyRequired)
       (Row.subset_trans (Row.subset_union_left _ _) coverage))
@@ -3048,7 +3094,7 @@ variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {f : Nat}
 (`ServicesFit`, the world's table being the source's), or the missing-service defect, which the
 part-one exclusion admits; the defect is not a successful service value. -/
 theorem service_arm {available : Env.Requirement} {key : ServiceKey} (hfuel : p.fuel ≠ 0)
-    (htie : w.serviceTy = root.sig.serviceTy)
+    (htie : Tied root w)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.service key)))
     (hpt : PointTyped root w p ty) :
     AmbientProg root w available (ty, available, available)
@@ -3077,7 +3123,7 @@ theorem service_arm {available : Env.Requirement} {key : ServiceKey} (hfuel : p.
       cases found : ctx.services.getV key with
       | some val =>
         have declared : later.serviceTy key = some sty := by
-          rw [serviceTy_leHost ordered htie]
+          rw [(Tied.mono ordered htie).services]
           exact hsty
         exact .pure ⟨strongExit_success later _ val
           (flatFits_fits (members.1 key val sty found declared)), bound⟩ ⟨bound, Row.subset_refl _⟩
@@ -3109,7 +3155,7 @@ context binding the value (its services fit: `fits_flatFits`, the carrier flat b
 theorem provideService_arm {available : Env.Requirement} {key : ServiceKey} {value : Term} {b : NativeEff}
     (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.provideService key value b)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (coverage : Row.Subset ty.requires available)
     (saved : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available)
@@ -3118,7 +3164,7 @@ theorem provideService_arm {available : Env.Requirement} {key : ServiceKey} {val
   rw [Eff.expandIn_provideService] at hcheck
   obtain ⟨sty, vty, tb, hsty, hvty, hsub, hcb, rfl⟩ :=
     Checker.inv_provideService _ _ _ _ _ _ _ hcheck
-  obtain ⟨v, evaluated, _⟩ := evalTerm_progress_env henv hvty
+  obtain ⟨v, evaluated, _⟩ := evalTerm_progress_env henv htie.within hvty
   have protocol := checked_provideService_arm root w p env key value (Eff.expandIn root.program b)
     available _ v hcheck henv evaluated htie (fun carrier declared => serviceTy_flat root key carrier declared)
     coverage (by rw [hfuel]; exact Nat.succ_ne_zero f) (fun bodyTy checked =>
@@ -3136,7 +3182,7 @@ exit `inlineYield` reads off the source is admitted at the point's type. The wro
 never fire at a typed point: every request, value and target the checker types evaluates and
 decodes (term progress, `syncRow_typed`, the handle inversions); a completed target answers from
 the view (row 175); `exit` of an immediate exit is that exit's success, by induction on fuel. -/
-theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
+theorem inlineYield_typed {root : ProgramSource} {w : World} (htie : Tied root w) (f : Nat) :
     ∀ (p : Point) {e : NativeEff} {ty : EffTy} {ex : ExitV}, p.fuel = f →
       Node.at_ (.eff root.program) p.path = some (.eff e) → PointTyped root w p ty →
       inlineYield e p = some ex → ExitOk w ty ex := by
@@ -3156,7 +3202,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_of_round _ _ rfl] at hcheck
       obtain ⟨t', hty, rfl⟩ := Checker.inv_succeed _ _ _ _ _ hcheck
-      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
       simp only [hv, Option.some.injEq] at hinline
       subst hinline
       exact strongExit_success w _ v hfit
@@ -3164,7 +3210,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_of_round _ _ rfl] at hcheck
       obtain ⟨e, hty, hadm, rfl⟩ := Checker.inv_fail _ _ _ _ _ hcheck
-      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
       simp only [hv, Option.some.injEq] at hinline
       subst hinline
       refine ⟨(fitsExit_failure_iff _ _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩, fun r hr => ?_⟩
@@ -3178,7 +3224,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_of_round _ _ rfl] at hcheck
       obtain ⟨e, hty, rfl⟩ := Checker.inv_failCause _ _ _ _ _ hcheck
-      obtain ⟨cause, hc, hfits, hshape⟩ := causeOf_progress henv c e hty
+      obtain ⟨cause, hc, hfits, hshape⟩ := causeOf_progress henv htie.within c e hty
       simp only [hc, Option.some.injEq] at hinline
       subst hinline
       exact ⟨(fitsExit_failure_iff _ _ _).mpr ⟨hfits, hshape⟩, hshape⟩
@@ -3188,21 +3234,21 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
         rw [Eff.expandIn_of_round _ _ rfl] at hcheck
         obtain ⟨reqTy, -, hreq, -⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
-        obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hreq
+        obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv htie.within hreq
         simp only [inlineAsyncYield, hv] at hinline
         exact nomatch hinline
       -- an invocation has no immediate exit: its row is a program's (`NativeOp.kind`)
       | call k => exact nomatch hinline
       | param i => exact nomatch hinline
       | sleep =>
-        obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
+        obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt htie
         obtain ⟨σ, hinst, -, -⟩ := rowTy_fits_none hrow hfit
         obtain ⟨n, rfl⟩ := fits_nat_inv hinst
         simp only [NativeOp.row_kind, NativeOp.kind, inlineAsyncYield, hv, Option.bind_some,
           NativeOp.sleepMillisOf] at hinline
         exact nomatch hinline
       | deferredAwait =>
-        obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
+        obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt htie
         obtain ⟨σ, hinst, -, -⟩ := rowTy_fits_none hrow hfit
         obtain ⟨k, rfl, -⟩ := fits_deferredOf_inv hinst
         simp only [NativeOp.row_kind, NativeOp.kind, inlineAsyncYield, hv, Option.bind_some,
@@ -3210,8 +3256,9 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         exact nomatch hinline
       | _ =>
         obtain ⟨_, v, reqTy, henv, hv, hfit, hrow⟩ :=
-          builtinPerform_inv (kind_ne_program_of_sync rfl) hat hpt
+          builtinPerform_inv (kind_ne_program_of_sync rfl) hat hpt htie
         obtain ⟨o, ho, -⟩ := syncRow_typed root (req := Env.Requirement.empty) _ rfl henv
+          htie.within
           hrow v hfit
         simp only [NativeOp.row_kind, NativeOp.kind, hv, Option.bind_some, ho] at hinline
         exact nomatch hinline
@@ -3221,7 +3268,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       cases mode with
       | joinEffect =>
         obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_join _ _ _ _ _ hcheck
-        obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+        obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
         replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
         obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
         simp only [hv] at hinline
@@ -3229,7 +3276,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         exact view_exitOk hview hmem hid hdecl _
       | awaitValue =>
         obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_await _ _ _ _ _ hcheck
-        obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+        obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
         replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
         obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
         simp only [hv] at hinline
@@ -3255,7 +3302,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       rw [Eff.expandIn_provideContext] at hcheck
       obtain ⟨contextTy, keys, bodyTy, termCheck, normalized, bodyCheck, rfl⟩ :=
         Checker.inv_provideContext _ _ _ _ _ _ hcheck
-      obtain ⟨value, evaluated, members⟩ := evalTerm_progress_env henv termCheck
+      obtain ⟨value, evaluated, members⟩ := evalTerm_progress_env henv htie.within termCheck
       have given : Fits w value (.contextOf keys) := by
         rw [← normalized]
         exact (fits_normalize _ _ _).mpr members
@@ -3268,7 +3315,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       obtain ⟨env, hcheck, henv, -, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_provideService] at hcheck
       obtain ⟨sty, vty, tb, -, hvty, -, -, -⟩ := Checker.inv_provideService _ _ _ _ _ _ _ hcheck
-      obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hvty
+      obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv htie.within hvty
       simp only [hv] at hinline
       exact nomatch hinline
     -- a restore site: its saved term's value is a saved image; at a false bit the body's own
@@ -3277,7 +3324,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_restore] at hcheck
       obtain ⟨savedTy, hsaved, hsub_saved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
-      obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
+      obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv htie.within hsaved
       obtain ⟨flag, rfl⟩ := fits_maskRestore_inv (fits_subN w (b := .maskRestore) hsub_saved v hvfit)
       simp only [hv, Option.bind_some, Val.savedMask?_savedMask] at hinline
       cases flag with
@@ -3296,7 +3343,7 @@ variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {f : Nat}
 theorem provideContext_arm {available : Env.Requirement} {context : Term} {body : NativeEff}
     (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.provideContext context body)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (hpt : PointTyped root w p ty) (htie : Tied root w) (coverage : Row.Subset ty.requires available)
     (saved : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideContext context body) p) := by
@@ -3304,7 +3351,7 @@ theorem provideContext_arm {available : Env.Requirement} {context : Term} {body 
   rw [Eff.expandIn_provideContext] at hcheck
   obtain ⟨contextTy, keys, bodyTy, termCheck, normalized, bodyCheck, rfl⟩ :=
     Checker.inv_provideContext _ _ _ _ _ _ hcheck
-  obtain ⟨value, evaluated, members⟩ := evalTerm_progress_env henv termCheck
+  obtain ⟨value, evaluated, members⟩ := evalTerm_progress_env henv htie.within termCheck
   have given : Fits w value (.contextOf keys) := by
     rw [← normalized]
     exact (fits_normalize _ _ _).mpr members
@@ -3319,7 +3366,7 @@ theorem provideContext_arm {available : Env.Requirement} {context : Term} {body 
   | some exit =>
     refine .pure ⟨?_, ?_⟩ ⟨Row.subset_refl available, Row.subset_refl _⟩
     · exact exitOk_widen (mid := bodyTy) (Ty.subN_refl _) (Ty.subN_refl _)
-        (inlineYield_typed f (p.child 0) (child_fuel_eq hfuel 0)
+        (inlineYield_typed htie f (p.child 0) (child_fuel_eq hfuel 0)
           (Node.at_child hat rfl) child immediate)
     · cases exit <;> exact Row.subset_refl available
   | none =>
@@ -3339,7 +3386,7 @@ exit by `inlineYield_typed`, otherwise the body at the child under the both-arm 
 (`allGuard_typed`). -/
 theorem exit_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.exit b)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hb : ChildDenotes root f b (p.path ++ [0]))
     (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
@@ -3351,7 +3398,7 @@ theorem exit_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel =
   rw [denoteR_exit _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   cases hsub : inlineYield b (p.child 0) with
   | some ex' =>
-    exact .pure ⟨strongExit_success w _ _ (inlineYield_typed f (p.child 0) (child_fuel_eq hfuel 0)
+    exact .pure ⟨strongExit_success w _ _ (inlineYield_typed htie f (p.child 0) (child_fuel_eq hfuel 0)
       (Node.at_child hat rfl) hchild hsub).1, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   | none =>
     refine ambient_guardBind root
@@ -3373,7 +3420,7 @@ read the one checked body at child 0, in the node's environment and at the node'
 `interruptible_arm`; a false bit is the body's own denotation, with no row of the node's. -/
 theorem restore_arm {available : Env.Requirement} {saved : Term} {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.restore saved b)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (hb : ChildDenotes root f b (p.path ++ [0]))
     (coverage : Row.Subset ty.requires available)
     (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
@@ -3381,7 +3428,7 @@ theorem restore_arm {available : Env.Requirement} {saved : Term} {b : NativeEff}
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_restore] at hcheck
   obtain ⟨savedTy, hsaved, hsub_saved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
-  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
+  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv htie.within hsaved
   obtain ⟨flag, rfl⟩ := fits_maskRestore_inv (fits_subN w (b := .maskRestore) hsub_saved v hvfit)
   have hchild : PointTyped root w (p.child 0) ty := pointTyped_child hat rfl rfl hcb henv hview hstack
   rw [denoteR_restore _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hv, Option.bind_some,
@@ -3429,7 +3476,7 @@ def ProvideLayerArm (root : ProgramSource) : Prop :=
   root.program.layerRefsWF = true → ModuleLayersTyped root → ∀ (f : Nat),
     (∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path) →
-    ∀ (w : World), w.serviceTy = root.sig.serviceTy → ∀ (p : Point) (ty : EffTy)
+    ∀ (w : World), Tied root w → ∀ (p : Point) (ty : EffTy)
       (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff), p.fuel = f + 1 →
       Node.at_ (.eff root.program) p.path = some (.eff (.provideLayer l i b)) →
       PointTyped root w p ty → ∀ available, Row.Subset ty.requires available →
@@ -3459,10 +3506,10 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
           ChildDenotes root f c' (q.path ++ [i]) :=
         fun c' i hci => ih f (Nat.le_refl f) c' (q.path ++ [i]) (Node.at_child hat hci)
       cases c with
-      | succeed t => exact succeed_arm hpos hat hqt
-      | fail t => exact fail_arm hpos hat hqt
-      | failCause c => exact failCause_arm hpos hat hqt
-      | sync t => exact sync_arm hpos hat hqt
+      | succeed t => exact succeed_arm hpos hat hqt htie
+      | fail t => exact fail_arm hpos hat hqt htie
+      | failCause c => exact failCause_arm hpos hat hqt htie
+      | sync t => exact sync_arm hpos hat hqt htie
       | suspend b => exact suspend_arm hq hat hqt htie (hch b 0 rfl) coverage savedParams
       | perform op r =>
         exact perform_arm hq hat hqt htie hbodies (fun c' path' hc' => ih f (Nat.le_refl f) c' path' hc') coverage savedParams
@@ -3475,17 +3522,17 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | uninterruptible b => exact uninterruptible_arm hq hat hqt coverage savedParams
       | interruptible b => exact interruptible_arm hq hat hqt coverage savedParams
       | yieldNow priority => exact yieldNow_arm hpos hat hqt
-      | awaitFiber t mode => exact awaitFiber_arm hpos hat hqt
+      | awaitFiber t mode => exact awaitFiber_arm hpos hat hqt htie
       | withFiber a => exact withFiber_arm hpos hat hqt htie coverage savedParams
       | «scoped» b => exact scoped_arm hq hat hqt coverage savedParams
       | acquireRelease a r => exact acquireRelease_arm hq hat hqt coverage savedParams
-      | provideContext context body => exact provideContext_arm hq hat hqt coverage savedParams
+      | provideContext context body => exact provideContext_arm hq hat hqt htie coverage savedParams
       | provideLayer l i b => exact hlayer hwf hmod f ih w htie q ty l i b hq hat hqt available coverage savedParams
       | service key => exact service_arm hpos htie hat hqt
       | provideService key value b => exact provideService_arm hq hat hqt htie coverage savedParams
       | catchIf test b h => exact catchIf_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl) coverage savedParams
       | select s d a0 a1 => exact select_arm hq hat hqt htie (hch a0 0 rfl) (hch a1 1 rfl) coverage savedParams
-      | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt coverage savedParams
+      | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt htie coverage savedParams
       | restore saved b => exact restore_arm hq hat hqt htie (hch b 0 rfl) coverage savedParams
       | defs decls bodies main _ => exact (defs_not_typed hat hqt).elim
       | invoke k r args =>

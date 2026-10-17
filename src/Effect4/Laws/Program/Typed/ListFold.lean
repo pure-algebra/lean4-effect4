@@ -154,11 +154,12 @@ theorem fold_typed_atomic_update (sig : Signature NativeOp) (htypes : sig.types 
   semantic := fun _ _ _ _ _ _ _ _ _ _ hlist hvalue hinit hstart hbody =>
     fold_fits hlist hvalue hinit hstart hbody
   typed := fun hatom _ _ _ hfit accTy list init body B hty =>
-    evalTerm_progress hatom htypes hfit (.fold accTy list init body) B hty
+    evalTerm_progress hatom (TyDecls.within_of_nil htypes) hfit (.fold accTy list init body) B hty
   preserved := fun hatom hconst w vals env hfit accTy list init body B v hty hev =>
-    evalTerm_fitsAll sig hatom hconst htypes w (.fold accTy list init body) vals env B v hfit hty hev
+    evalTerm_fitsAll sig hatom hconst w (TyDecls.within_of_nil htypes) (.fold accTy list init body) vals env B v
+      hfit hty hev
   step := fun hatom _ _ _ henv _ _ _ hty _ _ _ hcell ha =>
-    refModify_typed_step hatom htypes henv hty hcell ha
+    refModify_typed_step hatom (TyDecls.within_of_nil htypes) henv hty hcell ha
   readPrint := fun _ _ term hs hc hu => readTerm_printTerm term hs hc hu
   readExact := fun _ _ x _ h => readTerm_exact x h
 

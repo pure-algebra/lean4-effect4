@@ -4,6 +4,7 @@ import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Admit
 import Effect4.Laws.Program.Typed.Membership
 import Effect4.Laws.Program.Typed.Admission
+import Effect4.Laws.Program.Typed.AnswerSchema
 import Effect4.Laws.Program.Typing.Call
 import Effect4.Laws.Program.Typing.Table
 import Effect4.Laws.Program.Typing.Parts
@@ -373,12 +374,54 @@ A success that the row's own columns refuse is admitted at the call's checked in
 shape-decided premise, and the value reaches the program unchanged.
 -/
 
-/-- At an application with no named type, admission reads the row table alone. A step of
-`preflight_success_prepared_fits`: the row's path reads the row table's own admission. -/
-theorem admit_untyped {app : SigApp} (untyped : app.types = []) (m : NativeMachine)
-    (d : NativeDecision) : admit app m d = admit app.rows m d := by
-  unfold admit
-  rw [untyped]
+/-- The frame machine converts an answer at the row table, reading no declaration table
+(`prepareExternalAnswer`, DI-57). Where the application's admission converts it under its table,
+the machine's conversion agrees, or refuses and passes the value unchanged: a handle converts
+alike at every table, and any other value is kept as it is. A step of
+`external_prepared_answer_typedIn`. -/
+theorem externalValue_agree {decls : TyDecls} {ty : Ty} {allocated allocated' : List String}
+    {value result : Val} (h : externalValue decls ty allocated value = some (allocated', result)) :
+    externalValue [] ty allocated value = some (allocated', result) ∨
+      (externalValue [] ty allocated value = none ∧ allocated' = allocated ∧ result = value) := by
+  unfold externalValue at h ⊢
+  split at h
+  · exact Or.inl h
+  · split at h
+    · cases h
+      split <;> (try split) <;>
+        first | exact Or.inl rfl | exact Or.inr ⟨rfl, rfl, rfl⟩
+    · cases h
+
+/-- **The actual prepared success at the row's path, under the application's declaration table**:
+the form of `external_prepared_answer_typed` at an application. The session's admission converts
+the answer under the application's table (`external_answer_typed`); the machine prepares the
+converted value, or the value itself where its table-blind conversion refuses
+(`externalValue_agree`), and either is a member of the row's answer column under the table at
+the prepared allocation. -/
+theorem external_prepared_answer_typedIn (program : NativeEff) (app : SigApp)
+    (m : NativeMachine) (fiber : FiberId) (token : Nat) (value : Val) (hs : m.stuck = none)
+    (ha : admit app m (.answerAsync fiber token (.ofExit (.success value))) = none) :
+    ∃ i request row result, requestOf m fiber token = some (.external i, request) ∧
+      externalRow app.rows i = some row ∧
+      (Machine.prepareAsyncAnswer (interpOf program app.rows) m fiber token
+        (.ofExit (.success value))).2 = .success result ∧
+      Val.memberIn app.types result row.answer
+        (Machine.prepareAsyncAnswer (interpOf program app.rows) m fiber token
+          (.ofExit (.success value))).1.externals.allocated = true := by
+  obtain ⟨i, request, row, allocated, result, hreq, hrow, hv, ht⟩ :=
+    external_answer_typed app m fiber token value ha
+  obtain ⟨f, controller, cancel, origin, hf, hp, hc⟩ := requestOf_current m fiber token _ _ hreq
+  have hne : app.rows.isEmpty = false := by
+    cases hrows : app.rows with
+    | nil =>
+      rw [hrows] at hrow
+      simp [externalRow] at hrow
+    | cons row rest => rfl
+  refine ⟨i, request, row, result, hreq, hrow, ?_, ?_⟩ <;>
+    rcases externalValue_agree hv with h0 | ⟨h0, rfl, rfl⟩ <;>
+    simp only [Machine.prepareAsyncAnswer, hs, Option.isSome_none, Bool.false_eq_true, if_false,
+      hf, hp, if_true, interpOf, prepareExternalAnswer, hne, hc, hrow, h0] <;>
+    first | rfl | exact ht
 
 /-- The selected association, parked row and actual successful preparation, with value
 membership on the shape-decided fragment. No token declaration in a typed world is inferred. -/
@@ -416,7 +459,7 @@ membership requires the selected row's shape-decided answer column. Failures, wo
 columns and token-world correlation remain outside this theorem. The session is not executed
 here. -/
 theorem preflight_success_prepared_fits {program : Api.Program} {app : SigApp}
-    (untyped : app.types = []) (s : Session program app) (reply : Reply) (decision : NativeDecision) (value : Machine.Val)
+    (s : Session program app) (reply : Reply) (decision : NativeDecision) (value : Machine.Val)
     (live : s.machine.stuck = none)
     (success : reply.completion = .ofExit (.success value))
     (accepted : preflight s reply = .ok decision) :
@@ -431,17 +474,17 @@ theorem preflight_success_prepared_fits {program : Api.Program} {app : SigApp}
     exact Or.inr ⟨bound, origin, c, value, selected, callId, decisionEq, success, horigin, hc, hcop,
       hmem, hhandles, hprep⟩
   left
-  have admitted : admit app.rows s.machine
+  have admitted : admit app s.machine
       (.answerAsync bound.call.fiber bound.token (.ofExit (.success value))) = none := by
-    rw [← admit_untyped untyped]
     simpa only [BoundCall.record, success] using envelope.2.2
   obtain ⟨i, request, row, result, parked, rowAt, prepared, typed⟩ :=
-    external_prepared_answer_typed program app.rows s.machine bound.call.fiber bound.token value
+    external_prepared_answer_typedIn program app s.machine bound.call.fiber bound.token value
       live admitted
   refine ⟨bound, i, request, row, result, selected, callId, decisionEq, parked, rowAt, ?_, ?_⟩
   · simpa only [success] using prepared
   · intro w decided
-    exact Typed.fits_of_hasTy_shapeDecides w row.answer decided result _ typed
+    exact Typed.fits_of_hasTy_shapeDecides w row.answer decided result _
+      (Typed.hasTy_of_memberIn_shapeDecides (Val.memberIn_iff.mp typed) decided)
 
 /-- A cause with no reserved defect satisfies the typed exit judgment's defect exclusion at
 every type (`NoShapeDefect` reads exactly `badName` and `notImplemented`). -/
@@ -486,14 +529,14 @@ theorem preflight_failure_noShapeDefect {program : Api.Program} {app : SigApp}
 /-- A received successful completion carries the same exact preparation witness as preflight.
 Receipt stores the reply; this theorem neither applies it nor proves the whole machine typed. -/
 theorem submit_success_prepared_fits {program : Api.Program} {app : SigApp}
-    (untyped : app.types = []) (s : Session program app) (reply : Reply) (value : Machine.Val)
+    (s : Session program app) (reply : Reply) (value : Machine.Val)
     (live : s.machine.stuck = none)
     (success : reply.completion = .ofExit (.success value))
     (received : (submit s reply).phase = .preflight) :
     ∃ decision, preflight s reply = .ok decision ∧
       (PreparedSuccess s reply decision ∨ InstanceSuccess s reply decision) := by
   obtain ⟨_, ⟨decision, accepted⟩, _, _⟩ := submit_conditions s reply received
-  exact ⟨decision, accepted, preflight_success_prepared_fits untyped s reply decision value
+  exact ⟨decision, accepted, preflight_success_prepared_fits s reply decision value
     live success accepted⟩
 
 

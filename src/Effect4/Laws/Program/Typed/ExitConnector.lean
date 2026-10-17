@@ -5,12 +5,14 @@ import Effect4.Laws.Program.Typed.Membership
 
 Two judgments say that an exit has its program's type. The typed state's `FitsExit w ty ex`
 (`Typed/Membership.lean`) reads the reified exit with `Fits` at a world, as every typed position
-does. The meaning layer's `Denote.ExitHasTy answer error s ex` (defined here since 2026-10-04, so
+does. The meaning layer's `Denote.ExitHasTy answer error s ex types` (defined here since 2026-10-04, so
 that the straight theorems of `MeaningSound.lean` can read the connector), which `meaning_typed`
-and the run theorems conclude, reads a success with the executable shape check `Val.hasTy` at its
-default, empty allocation list and asks it to be valid in the store `s`, and a failure's cause with
-`causeAdmits`. `exitHasTy_of_fitsExit` takes the first to the second
-under two premises, and each is necessary (the red controls are `Test/Program/ExitConnector.lean`):
+and the run theorems conclude, reads a success with the decider of membership under a
+declaration table (`Val.memberIn`; at the empty table, the default, the executable shape check
+`Val.hasTy`) at the empty allocation list and asks it to be valid in the store `s`, and a failure's
+cause with `causeAdmits`. `exitHasTy_of_fitsExit` takes the first to the second at the world's
+table, under two premises, and each is necessary (the red controls are
+`Test/Program/ExitConnector.lean`):
 
 * **The world allocates no external handle** (`w.state.externals.allocated = []`). `Fits` admits
   an external handle the world allocated at its spelled type, while `Val.hasTy` at the empty
@@ -41,9 +43,10 @@ typed failure of a cause is inside the error type. Named `ExitOk` until 2026-10-
 that `ExitOk` names one judgment, the typed state's `Typed.ExitOk` (`FitsExit ∧ NoShapeDefect`,
 `Typed/Admission.lean`), landing plan O5. The typed state's `FitsExit` reaches this judgment
 through `Typed.exitHasTy_of_fitsExit` below, under two premises. -/
-def ExitHasTy (answer error : Ty) (s : Stores) : ExitV → Prop
-  | .success v => Val.hasTy v answer = true ∧ v.validIn s = true
-  | .failure c => causeAdmits (fun w ty => Val.hasTy w ty) error c = true
+def ExitHasTy (answer error : Ty) (s : Stores) (ex : ExitV) (types : TyDecls := []) : Prop :=
+  match ex with
+  | .success v => Val.memberIn types v answer [] = true ∧ v.validIn s = true
+  | .failure c => causeAdmits (fun w ty => Val.memberIn types w ty []) error c = true
 
 end Effect4.Program.Denote
 
@@ -51,25 +54,25 @@ namespace Effect4.Program.Typed
 
 open Effect4 Effect4.Machine Effect4.Program
 
-/-- `FitsExit` gives the meaning layer's exit judgment when the world allocates no external
-handle, declares no name (the meaning layer reads no table), and a successful value is valid in
-the store; each premise is necessary
-(`Test/Program/ExitConnector.lean`: `allocation_needed`, `validity_needed`). -/
+/-- `FitsExit` gives the meaning layer's exit judgment at the world's declaration table when the
+world allocates no external handle and a successful value is valid in the store; each premise is
+necessary (`Test/Program/ExitConnector.lean`: `allocation_needed`, `validity_needed`). Membership
+gives the table's membership (`fits_memberIn`), which its decider decides (`Val.memberIn_iff`). -/
 theorem exitHasTy_of_fitsExit (w : Typed.World) (ty : EffTy) (s : Stores) (ex : ExitV)
-    (halloc : w.state.externals.allocated = []) (htypes : w.types = [])
+    (halloc : w.state.externals.allocated = [])
     (hvalid : ∀ v, ex = .success v → v.validIn s = true)
-    (h : FitsExit w ty ex) : Denote.ExitHasTy ty.answer ty.error s ex := by
+    (h : FitsExit w ty ex) : Denote.ExitHasTy ty.answer ty.error s ex w.types := by
   cases ex with
   | success v =>
     have hf : Fits w v ty.answer := (fitsExit_success_iff w ty v).mp h
-    have hs := fits_hasTy w htypes ty.answer v hf
+    have hs := fits_memberIn w hf
     rw [halloc] at hs
-    exact ⟨hs, hvalid v rfl⟩
+    exact ⟨Val.memberIn_iff.mpr hs, hvalid v rfl⟩
   | failure c =>
     have hc : FitsCause w ty.error c := fitsExit_failure_cause h
     exact causeFits_admits (fun x hx => by
-      have hs := fits_hasTy w htypes ty.error x hx
+      have hs := fits_memberIn w hx
       rw [halloc] at hs
-      exact hs) c hc
+      exact Val.memberIn_iff.mpr hs) c hc
 
 end Effect4.Program.Typed

@@ -27,11 +27,11 @@ open Queue.Model
 /-- The compiled take attempt commits the model's cell and job transition, retaining all pending commands. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) (A : Ty)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
     (injective : tb.Injective) {idSrc hintSrc : TermSrc} {env : Env} {path : List Nat}
-    {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Captured idSrc (env.push [env.mint "current"]) path
@@ -91,11 +91,11 @@ theorem take_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
 /-- The compiled offer attempt commits the model's cell and job transition, retaining all pending commands. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem offer_loop (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) (A : Ty)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) (A : Ty)
     (message : MessageTy A) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
     (fresh : ∀ o ∈ s.offers, o.id ≠ id) {idSrc hintSrc messageSrc : TermSrc} {env : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Reads idSrc (env.push [env.mint "current"]) path

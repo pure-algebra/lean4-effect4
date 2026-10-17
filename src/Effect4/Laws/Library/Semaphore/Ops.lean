@@ -499,10 +499,10 @@ state through the table that holds the hint at the request. The reply and the st
 members of their types. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) (tb : Table)
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) (tb : Table)
     (s : State) (id n : Nat) (hint : DeferredKey) (injective : tb.Injective)
     {countSrc idSrc hintSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty}
-    {w : Typed.World} {captured : List Val}
+    {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsCount : Reads countSrc (env.push [env.mint "current"]) path
@@ -542,9 +542,9 @@ it writes the model's next state: the request's entry leaves, and no other field
 table does not change. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_withdrawal (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (tb : Table) (s : State) (id : Nat) (injective : tb.Injective) {idSrc : TermSrc} {env : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Captured idSrc (env.push [env.mint "current"]) path
@@ -577,9 +577,9 @@ premise names the count: the step releases at most what is taken, as the model's
 row's scope alone. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem release_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (tb : Table) (s : State) (n : Nat) {countSrc : TermSrc} {env : Env} {path : List Nat}
-    {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsCount : Reads countSrc (env.push [env.mint "current"]) path
@@ -608,9 +608,9 @@ theorem release_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeA
 whether the request took, and it writes the model's next state. It enrols nobody. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem takeIfAvailable_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (tb : Table) (s : State) (n : Nat) {countSrc : TermSrc} {env : Env} {path : List Nat}
-    {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsCount : Reads countSrc (env.push [env.mint "current"]) path
@@ -644,9 +644,9 @@ record through the table, or nothing, and it writes the model's next state. A vi
 nothing: `taken` stays (`visit_reserves_nothing`). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem visit_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (tb : Table) (s : State) (cursor : Nat) {cursorSrc : TermSrc} {env : Env} {path : List Nat}
-    {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsCursor : Captured cursorSrc (env.push [env.mint "current"]) path
@@ -735,10 +735,10 @@ names that `bindWith` mints. The scope binds each, and no later binder shadows e
 stays a caller's term, with its reading and its type at the row's scope. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (tb : Table) (s : State) (id n : Nat) (hint : DeferredKey) (injective : tb.Injective)
     {countSrc : TermSrc} {env outerId outerHint : Env} {path : List Nat} {tys : List Ty}
-    {w : Typed.World} {captured : List Val} {beforeId afterId beforeHint afterHint : Names}
+    {captured : List Val} {beforeId afterId beforeHint afterHint : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (idScope : env.names = beforeId ++ outerId.mint "answer" :: afterId)
@@ -774,9 +774,9 @@ theorem take_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nat
 `bindWith` mints. The scope binds it, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem take_withdrawal_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (tb : Table) (s : State) (id : Nat) (injective : tb.Injective) {env outerId : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     {beforeId afterId : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
@@ -803,9 +803,9 @@ loop mints, and it holds an option of a stamp: the visit reads it through `getOr
 scope binds the name, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem visit_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     (tb : Table) (s : State) (cursor : Nat) {env outer : Env} {path : List Nat}
-    {tys : List Ty} {w : Typed.World} {captured : List Val} {before later : Names}
+    {tys : List Ty} {captured : List Val} {before later : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (cursorScope : env.names = before ++ outer.mint "cursor" :: later)

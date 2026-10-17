@@ -84,9 +84,14 @@ def admitColumn (t : Ty) : Bool := t.normalize == .never || inhabited t
 /-- Inhabitance at a row's template column (decisions row 155 (a)): `inhabitedAlg` with a template
 parameter read as inhabited. A parameter alone has no member (`inhabited_iff_fits`), so without
 this reading a well-scoped template row (`request := var 0`) would be refused at its columns; its
-instances are the program's, whose own columns `admitColumn` checks. -/
+instances are the program's, whose own columns `admitColumn` checks. A row is checked without the
+table, so a reference to a name is read as inhabited too, unless its spelling is retired: the
+table answers for a declared name (its bodies, `TyDecls.inhabitedNames`), and the signature
+refuses an undeclared one (`DeclReason.undeclaredName`). -/
 def rowColumnInhabitedAlg : TyAlgebra (fun _ => Bool) :=
-  { inhabitedAlg with ty_var := fun _ => true }
+  { inhabitedAlg with
+    ty_var := fun _ => true
+    ty_app := fun name _ => !retiredHandleTargets.contains name }
 
 /-- The column check of a row's template columns (`rowChecks`, `Program/SigApp.lean`): the
 designed bottom, or a column that is inhabited with every parameter read as inhabited. On a

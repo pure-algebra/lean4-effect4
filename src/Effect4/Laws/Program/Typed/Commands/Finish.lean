@@ -52,7 +52,7 @@ theorem load_typed_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
     ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) :=
   load_typed_of_denotesTyped root rootTy fuel compileFuel denotes
     (raceRegistrationR_ambient (rootCode_typed root rootTy compileFuel denotes
-      checked closedRow (initialWorld rootTy root.sig.serviceTy root.types) rfl)) checked closedRow
+      checked closedRow (initialWorld rootTy root.sig.serviceTy root.types) ⟨rfl, rfl⟩)) checked closedRow
 
 /-- M5's proposition from the connector, with row 117's closed-row premise. -/
 theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)

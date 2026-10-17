@@ -15,9 +15,11 @@ lawful source, with no premise.
 * `lawfulSig_of_admitted` (proved): an admitted program's signature is lawful. It is the
   certificate's `signature` field read through `admitSig_ok_iff`.
 * `AdmittedProgram.source` and `reachable_typed_admitted` (proved): the source an admitted
-  program denotes, its rows and its declared services, and M6's consequence for it.
-* `m7_admitted` (proved): at an empty row table and no named type, a program the API admits,
-  with a closed requirement row and an answer-free tape, never goes wrong: M7a–c on its replay.
+  program denotes, its rows, its declared services and its named types, and M6's consequence for
+  it, at every declaration table (the audit's D3).
+* `m7_admitted` (proved): at an empty row table, a program the API admits, with a closed
+  requirement row and an answer-free tape, never goes wrong: M7a–c on its replay. Its named types
+  may be declared.
 
 Placement (`AGENTS.md`). Concepts: `translation-simulation` (M7) and `residual-program-typing`
 (admission). Claims: `m7-admitted` and `admitted-source-lawful`, in R9 and R1. Reach: any
@@ -43,33 +45,33 @@ theorem lawfulSig_of_admitted {program : NativeEff} {app : SigApp}
     (a : AdmittedProgram program app) : LawfulSig app :=
   (admitSig_ok_iff app).mp a.signature
 
-/-- The source an admitted program denotes: its rows and its declared services, lawful by the
-bridge, at an application that declares no named type (`ProgramSource.untyped`). -/
+/-- The source an admitted program denotes: its rows, its declared services and its named types,
+lawful by the bridge. -/
 def _root_.Effect4.Program.AdmittedProgram.source {program : NativeEff} {app : SigApp}
-    (a : AdmittedProgram program app) (untyped : app.types = []) : ProgramSource :=
+    (a : AdmittedProgram program app) : ProgramSource :=
   { program, table := app.rows, services := app.services, types := app.types,
-    lawful := lawfulSig_of_admitted a, untyped }
+    lawful := lawfulSig_of_admitted a }
 
 /-- **M6 for a program the API admits**, at any signature: every machine its admitted tapes reach
 is typed when its requirement row is closed at the load (decisions row 117). -/
 theorem reachable_typed_admitted {program : NativeEff} {app : SigApp}
-    (a : AdmittedProgram program app) (untyped : app.types = []) (fuel : Nat)
+    (a : AdmittedProgram program app) (fuel : Nat)
     (tape : List Api.Decision) (closedRow : a.ty.requires = Env.Requirement.empty)
-    (admitted : AdmittedTape (a.source untyped) a.ty fuel tape) :
-    ∃ w, MachineTyped (a.source untyped) a.ty w (replayR program fuel tape).machine :=
-  reachable_typed (a.source untyped) a.ty fuel a.typed closedRow tape admitted
+    (admitted : AdmittedTape a.source a.ty fuel tape) :
+    ∃ w, MachineTyped a.source a.ty w (replayR program fuel tape).machine :=
+  reachable_typed a.source a.ty fuel a.typed closedRow tape admitted
 
 /-- **M7 for a program the API admits** at an empty row table (R9 at the API's admission, within
 `M7Fragment`): with a closed requirement row and an answer-free tape, its replay's exits fit, its
 stores fit, and the frame machine has not halted. The services may be declared. -/
 theorem m7_admitted {program : NativeEff} {app : SigApp} (a : AdmittedProgram program app)
-    (untyped : app.types = []) (emptyTable : app.rows = []) (fuel : Nat) (tape : List Api.Decision)
+    (emptyTable : app.rows = []) (fuel : Nat) (tape : List Api.Decision)
     (closedRow : a.ty.requires = Env.Requirement.empty)
     (answerFree : ∀ d ∈ tape, NoHostAnswer d) :
-    M7Exits (a.source untyped) a.ty fuel tape ∧ M7Stores (a.source untyped) a.ty fuel tape ∧
-      M7NoHalt (a.source untyped) a.ty fuel tape :=
-  have _fragment : M7Fragment (a.source untyped) a.ty tape :=
+    M7Exits a.source a.ty fuel tape ∧ M7Stores a.source a.ty fuel tape ∧
+      M7NoHalt a.source a.ty fuel tape :=
+  have _fragment : M7Fragment a.source a.ty tape :=
     ⟨lawfulSig_of_admitted a, emptyTable, a.typed, closedRow, answerFree⟩
-  m7_proved (a.source untyped) a.ty fuel tape
+  m7_proved a.source a.ty fuel tape
 
 end Effect4.Program.Typed

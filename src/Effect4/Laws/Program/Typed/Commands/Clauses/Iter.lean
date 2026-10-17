@@ -45,7 +45,7 @@ yield is the denotation of the yielded effect at its point, typed only at a well
 the source's service table, and a row holding the point's and its stack's requirement rows. -/
 def GenProtocol (root : ProgramSource) : Prop :=
   SourceWF root →
-    ∀ (w : World), w.serviceTy = root.sig.serviceTy →
+    ∀ (w : World), Tied root w →
       ∀ (available : Env.Requirement) (p : Point) (body : Stmts NativeOp) (cert : EffTy),
         Node.at_ (.eff root.program) p.path = some (.eff (.gen body)) → PointTyped root w p cert →
           Row.Subset cert.requires available →
@@ -97,7 +97,7 @@ theorem clause_gen_of (root : ProgramSource) (rootTy : EffTy) (producer : GenPro
       (.answer next :: f.frame.stack) :=
     .cons (.inl answer) stack
   obtain ⟨_, _, entry⟩ := AmbientIteratorProtocol.unfold
-    (producer ev.typed.machine.sourceWF w ev.typed.machine.services row p body cert hat hpt coverage
+    (producer ev.typed.machine.sourceWF w ⟨ev.typed.machine.services, ev.typed.machine.types⟩ row p body cert hat hpt coverage
       params)
   have step := entry w (leHost_refl w) m.completedExits ev.view .unit
     (show Fits w Val.unit Ty.unit from trivial)

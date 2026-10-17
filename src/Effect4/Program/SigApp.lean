@@ -82,8 +82,8 @@ def serviceTy (app : SigApp) (key : ServiceKey) : Option Ty :=
 
 /-- **The checker's signature over an application's tables**: its rows, its service carriers and
 its named types, which the term typer reads (`Signature.types`; decisions row 406 (2)). With no
-declaration it is the rows' signature. Program admission reads it; the typed state (M5 to M7)
-reads it at a source that declares no type (`ProgramSource.untyped`). -/
+declaration it is the rows' signature. Program admission reads it, and so does the typed state
+(M5 to M7) at a world tied to the source (`Typed.Tied`). -/
 def signature (app : SigApp) : Signature NativeOp :=
   { nativeSignature app.rows with serviceTy := app.serviceTy, types := app.types }
 

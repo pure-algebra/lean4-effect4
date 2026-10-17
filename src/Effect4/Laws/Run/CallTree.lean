@@ -38,22 +38,27 @@ def NoClockRead (program : NativeEff) : Bool :=
     | _ => true
 
 /-- The reply host that answers a call with the tape's next exit only where the row's own
-columns admit it (`externalAdmits`). It is the reply tape as the session reads it. -/
-def admittedTapeHost (table : RowTable) : Effects.Comodel (RowSig table) ReplyTape where
+columns admit it under the application's declaration table (`externalAdmits`, decisions row 406
+(2); the empty table by default). It is the reply tape as the session reads it. -/
+def admittedTapeHost (table : RowTable) (types : TyDecls := []) :
+    Effects.Comodel (RowSig table) ReplyTape where
   answer op tape :=
     match tape with
     | [] => none
-    | ex :: rest => if externalAdmits table op.1.val (.ofExit ex) then some (ex, rest) else none
+    | ex :: rest =>
+      if externalAdmits ⟨table, [], types⟩ op.1.val (.ofExit ex) then some (ex, rest) else none
 
 /-- Where a tree waits under a tape: the row and the request of the call that found the tape
 empty, or no wait. -/
-def treeWaits (table : RowTable) (program : NativeEff) (T : ReplyTape) : RowsStop :=
-  (observeRows (admittedTapeHost table) (some <$> denoteRows table program []) Stores.empty T).stop
+def treeWaits (table : RowTable) (program : NativeEff) (T : ReplyTape) (types : TyDecls := []) :
+    RowsStop :=
+  (observeRows (admittedTapeHost table types) (some <$> denoteRows table program []) Stores.empty
+    T).stop
 
 /-- An empty admitted reply tape answers no call.
 Consumer: `tree_wait_of_leads`. -/
-theorem admitted_tape_empty (table : RowTable) (code : NCode) :
-    hostAnswer (admittedTapeHost table) code [] = none := by
+theorem admitted_tape_empty (table : RowTable) {types : TyDecls} (code : NCode) :
+    hostAnswer (admittedTapeHost table types) code [] = none := by
   unfold hostAnswer
   split
   · show (if _ : _ < table.length then (none : Option (ExitV × ReplyTape)) else none) = none
@@ -62,16 +67,16 @@ theorem admitted_tape_empty (table : RowTable) (code : NCode) :
 
 /-- Existing local agreement fixes the row and request of a straight call-tree wait.
 Consumer: `request_in_tree`; no settled-machine or sufficient-budget premise enters this reader. -/
-theorem tree_wait_of_leads (table : RowTable) (program : NativeEff)
+theorem tree_wait_of_leads (table : RowTable) {types : TyDecls} (program : NativeEff)
     (fragment : StraightRows table program = true) (compileFuel : Nat) (tape : ReplyTape)
     (frame : NFiber) (stores : Stores) (row : Nat) (request : Val)
-    (leads : Leads (admittedTapeHost table) program
+    (leads : Leads (admittedTapeHost table types) program
       (.live (fiberOf (compile program compileFuel) []) Stores.empty) tape
       (.live frame stores) [])
     (call : IsCall frame.current = true)
     (atCall : callOf frame.current = some (row, request)) :
-    treeWaits table program tape = .waiting row request := by
-  obtain ⟨lower, waiting⟩ := localWaitC_to_rowsB (admittedTapeHost table) program
+    treeWaits table program tape types = .waiting row request := by
+  obtain ⟨lower, waiting⟩ := localWaitC_to_rowsB (admittedTapeHost table types) program
     (loopedDataRows_of_straightRows program fragment) compileFuel tape [] leads call
     (admitted_tape_empty table frame.current) atCall
   have actual := waiting lower (Nat.le_refl lower)
@@ -187,7 +192,8 @@ theorem extRows_of_source (table : RowTable) (root : NativeEff)
     ExtRows table root = true :=
   extRows_of_at table root external root [] rfl hstr hnc
 
-theorem ExtRows.suspendDecided_iff {table : RowTable} {e : NativeEff} (he : ExtRows table e = true) :
+theorem ExtRows.suspendDecided_iff {table : RowTable} {e : NativeEff}
+    (he : ExtRows table e = true) :
     e.suspendDecided = true ↔
       (∃ b, e = .suspend b) ∨ (∃ s d a b, e = .select s d a b) := by
   cases e with
@@ -226,7 +232,8 @@ def ExtPlainFrame (table : RowTable) : NCode → Bool
 def ExtPlainStack (table : RowTable) (K : List NCode) : Prop :=
   ∀ fr ∈ K, ExtPlainFrame table fr = true
 
-theorem ExtPlainName.toContextFree {n : EffName} (h : ExtPlainName n = true) : ContextFreeName n = true := by
+theorem ExtPlainName.toContextFree {n : EffName}
+    (h : ExtPlainName n = true) : ContextFreeName n = true := by
   cases n <;> simp only [ExtPlainName, ContextFreeName, Bool.false_eq_true] at h ⊢
 
 theorem ExtCall.toIsCall {table : RowTable} {c : NCode} (h : ExtCall table c = true) :
@@ -276,7 +283,8 @@ theorem ExtPlainCode.extCall_of_isCall {table : RowTable} {c : NCode}
   cases c <;> simp only [IsCall, ExtPlainCode, Bool.false_eq_true] at hc h ⊢
   exact h
 
-theorem ExtPlainFrame.toContextFree {table : RowTable} {fr : NCode} (h : ExtPlainFrame table fr = true) :
+theorem ExtPlainFrame.toContextFree {table : RowTable} {fr : NCode}
+    (h : ExtPlainFrame table fr = true) :
     ContextFreeFrame fr = true := by
   cases fr <;> simp only [ExtPlainFrame, ContextFreeFrame, Bool.and_eq_true, Bool.false_eq_true] at h ⊢
   · exact ⟨ExtPlainCode.toContextFree h.1, ExtPlainName.toContextFree h.2⟩
@@ -305,7 +313,8 @@ theorem ExtPlainStack.tail {table : RowTable} {fr : NCode} {K : List NCode}
     (hK : ExtPlainStack table (fr :: K)) : ExtPlainStack table K :=
   fun f hf => hK f (List.mem_cons_of_mem fr hf)
 
-theorem ExtPlainStack.toContextFree {table : RowTable} {K : List NCode} (hK : ExtPlainStack table K) :
+theorem ExtPlainStack.toContextFree {table : RowTable} {K : List NCode}
+    (hK : ExtPlainStack table K) :
     ContextFreeStack K :=
   fun fr hfr => ExtPlainFrame.toContextFree (hK fr hfr)
 
@@ -599,41 +608,42 @@ theorem YieldStack.eq_of_isCall {cur : NCode} {K : List NCode} {cur' : NCode} {K
   | resuming _ => simp only [IsCall, Bool.false_eq_true] at hc
 
 /-- Reaching a live local fiber under any suffix of the reply tape. -/
-def LeadsTape (table : RowTable) (root : NativeEff)
+def LeadsTape (table : RowTable) (types : TyDecls) (root : NativeEff)
     (fr₀ : NFiber) (s₀ : Stores) (tape : ReplyTape) (fr : NFiber) (s : Stores) : Prop :=
   ∃ c, ∀ rest : ReplyTape,
-    ReachesC (admittedTapeHost table) root c fr₀ s₀ (tape ++ rest) fr s rest
+    ReachesC (admittedTapeHost table types) root c fr₀ s₀ (tape ++ rest) fr s rest
 
-theorem LeadsTape.refl (table : RowTable) (root : NativeEff) (fr₀ : NFiber) (s₀ : Stores) :
-    LeadsTape table root fr₀ s₀ [] fr₀ s₀ :=
-  ⟨0, fun rest => ReachesC.refl (admittedTapeHost table) root fr₀ s₀ rest⟩
+theorem LeadsTape.refl (table : RowTable) (types : TyDecls) (root : NativeEff) (fr₀ : NFiber)
+    (s₀ : Stores) :
+    LeadsTape table types root fr₀ s₀ [] fr₀ s₀ :=
+  ⟨0, fun rest => ReachesC.refl (admittedTapeHost table types) root fr₀ s₀ rest⟩
 
-theorem LeadsTape.step {table : RowTable} {root : NativeEff}
+theorem LeadsTape.step {table : RowTable} {types : TyDecls} {root : NativeEff}
     {fr₀ fr fr' : NFiber} {s₀ s s' : Stores} {tape : ReplyTape}
-    (hL : LeadsTape table root fr₀ s₀ tape fr s)
+    (hL : LeadsTape table types root fr₀ s₀ tape fr s)
     (hstep : localStep root fr s = .running fr' s')
     (hcall : IsCall fr.current = false) (hwith : ∀ thunk, fr.current ≠ Prim.withFiber thunk) :
-    LeadsTape table root fr₀ s₀ tape fr' s' := by
+    LeadsTape table types root fr₀ s₀ tape fr' s' := by
   obtain ⟨c, hc⟩ := hL
   exact ⟨c + 1, fun rest => (hc rest).trans (ReachesC.step hstep hcall hwith rest)⟩
 
-theorem LeadsTape.answer {table : RowTable} {root : NativeEff}
+theorem LeadsTape.answer {table : RowTable} {types : TyDecls} {root : NativeEff}
     {fr₀ fr : NFiber} {s₀ s : Stores} {tape : ReplyTape} {ex : ExitV}
-    (hL : LeadsTape table root fr₀ s₀ tape fr s)
+    (hL : LeadsTape table types root fr₀ s₀ tape fr s)
     (hcall : IsCall fr.current = true)
     (hadm : ∀ rest : ReplyTape,
-      hostAnswer (admittedTapeHost table) fr.current (ex :: rest) = some (ex, rest))
+      hostAnswer (admittedTapeHost table types) fr.current (ex :: rest) = some (ex, rest))
     (hp : prepareExternalAnswer table (some fr.current) (.ofExit ex) s = (s, Prim.ofExit ex)) :
-    LeadsTape table root fr₀ s₀ (tape ++ [ex]) { fr with current := Prim.ofExit ex } s := by
+    LeadsTape table types root fr₀ s₀ (tape ++ [ex]) { fr with current := Prim.ofExit ex } s := by
   obtain ⟨c, hc⟩ := hL
   refine ⟨c + 1, fun rest => ?_⟩
   rw [List.append_assoc, List.singleton_append]
   exact (hc (ex :: rest)).trans (ReachesC.answer s hcall (hadm rest) hp)
 
-theorem LeadsTape.toLeads {table : RowTable} {root : NativeEff}
+theorem LeadsTape.toLeads {table : RowTable} {types : TyDecls} {root : NativeEff}
     {fr₀ fr : NFiber} {s₀ s : Stores} {tape : ReplyTape}
-    (hL : LeadsTape table root fr₀ s₀ tape fr s) :
-    Leads (admittedTapeHost table) root (.live fr₀ s₀) tape (.live fr s) [] := by
+    (hL : LeadsTape table types root fr₀ s₀ tape fr s) :
+    Leads (admittedTapeHost table types) root (.live fr₀ s₀) tape (.live fr s) [] := by
   obtain ⟨c, hc⟩ := hL
   have h0 := hc []
   rw [List.append_nil] at h0
@@ -1213,7 +1223,7 @@ private inductive ActiveSub (nt : Nat) (cur : NCode) (K : List NCode) (f : NRunF
       (hdisp : DispInv tok f.dispatcher)
 
 /-- The three modes of the root fiber across arbitrary machine execution. -/
-private inductive FiberMode (root : NativeEff) (table : RowTable) (cf : Nat)
+private inductive FiberMode (root : NativeEff) (table : RowTable) (types : TyDecls) (cf : Nat)
     (journal : List Command) (nt : Nat) (f : NRunFiber) : Prop
   | active (cur : NCode) (K : List NCode) (tape : ReplyTape)
       (hexit : f.exit = none)
@@ -1223,7 +1233,7 @@ private inductive FiberMode (root : NativeEff) (table : RowTable) (cf : Nat)
       (hpl : ExtPlainCode table cur = true)
       (hK : ExtPlainStack table K)
       (htape : TapeSubmitted journal tape)
-      (hleads : LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
+      (hleads : LeadsTape table types root (fiberOf (compile root cf) []) Stores.empty
         tape (fiberOf cur K true) Stores.empty)
       (hsub : ActiveSub nt cur K f)
   | interrupted (ic c : CauseV) (K₀ : List NCode)
@@ -1245,10 +1255,10 @@ private theorem ActiveSub.mono {nt nt' : Nat} (hle : nt ≤ nt') {cur : NCode} {
   · exact .parkedYield tok (Nat.lt_of_lt_of_le htok hle) hp hrun hcur hys
   · exact .parkedCall tok (Nat.lt_of_lt_of_le htok hle) hp hrun hcall hcur hstk hdisp
 
-private theorem FiberMode.mono {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem FiberMode.mono {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} {nt nt' : Nat} (hle : nt ≤ nt') {f : NRunFiber}
-    (hm : FiberMode root table cf journal nt f) :
-    FiberMode root table cf journal nt' f := by
+    (hm : FiberMode root table types cf journal nt f) :
+    FiberMode root table types cf journal nt' f := by
   rcases hm with ⟨cur, K, tape, hexit, hintr, hic, hdef, hpl, hK, htape, hleads, hsub⟩ |
     ⟨ic, c, K₀, hexit, hintr, hic, hdef, hK₀, hys, hpark⟩ | ⟨hp, hdone⟩
   · exact .active cur K tape hexit hintr hic hdef hpl hK htape hleads (hsub.mono hle)
@@ -1257,10 +1267,11 @@ private theorem FiberMode.mono {root : NativeEff} {table : RowTable} {cf : Nat}
       exact ⟨Nat.lt_of_lt_of_le htok hle, hrun, hcur⟩)
   · exact .halted hp hdone
 
-private theorem FiberMode.mono_journal {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem FiberMode.mono_journal {root : NativeEff} {table : RowTable} {types : TyDecls}
+    {cf : Nat}
     {j₁ j₂ : List Command} (hj : ∀ c ∈ j₁, c ∈ j₂) {nt : Nat} {f : NRunFiber}
-    (hm : FiberMode root table cf j₁ nt f) :
-    FiberMode root table cf j₂ nt f := by
+    (hm : FiberMode root table types cf j₁ nt f) :
+    FiberMode root table types cf j₂ nt f := by
   rcases hm with ⟨cur, K, tape, hexit, hintr, hic, hdef, hpl, hK, htape, hleads, hsub⟩ |
     ⟨ic, c, K₀, hexit, hintr, hic, hdef, hK₀, hys, hpark⟩ | ⟨hp, hdone⟩
   · refine .active cur K tape hexit hintr hic hdef hpl hK (fun ex hex => ?_) hleads hsub
@@ -1270,17 +1281,18 @@ private theorem FiberMode.mono_journal {root : NativeEff} {table : RowTable} {cf
   · exact .halted hp hdone
 
 /-- The machine invariant for an external-only straight program without cause handlers. -/
-private structure MachineInv (root : NativeEff) (table : RowTable) (cf : Nat)
+private structure MachineInv (root : NativeEff) (table : RowTable) (types : TyDecls) (cf : Nat)
     (journal : List Command) (m : NativeMachine) : Prop where
   notStuck : m.stuck = none
   noRaces : m.races = []
   store : StoreInv m.state
   fiber : ∃ f, m.fibers = [f] ∧ FiberBase m.nextToken f ∧
-    FiberMode root table cf journal m.nextToken f
+    FiberMode root table types cf journal m.nextToken f
 
-private theorem MachineInv.mono_journal {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem MachineInv.mono_journal {root : NativeEff} {table : RowTable} {types : TyDecls}
+    {cf : Nat}
     {j₁ j₂ : List Command} (hj : ∀ c ∈ j₁, c ∈ j₂) {m : NativeMachine}
-    (hm : MachineInv root table cf j₁ m) : MachineInv root table cf j₂ m := by
+    (hm : MachineInv root table types cf j₁ m) : MachineInv root table types cf j₂ m := by
   obtain ⟨hs, hr, hst, f, hf, hbase, hmode⟩ := hm
   exact ⟨hs, hr, hst, f, hf, hbase, hmode.mono_journal hj⟩
 
@@ -1294,13 +1306,14 @@ private def SnapshotInv (m : NativeMachine)
   TasksInv m.nextToken ts ∧ CallParkBound m (fun tok => TasksInv tok ts)
 
 /-- The active or interrupted state of a running root fiber during `Cmd.loop`. -/
-private def LoopActiveOrInterrupted (root : NativeEff) (table : RowTable) (cf : Nat)
+private def LoopActiveOrInterrupted (root : NativeEff) (table : RowTable) (types : TyDecls)
+    (cf : Nat)
     (journal : List Command) (f : NRunFiber) : Prop :=
   (∃ cur K tape,
     f.frame.interruptedCause = none ∧
     ExtPlainCode table cur = true ∧ ExtPlainStack table K ∧
     TapeSubmitted journal tape ∧
-    LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
+    LeadsTape table types root (fiberOf (compile root cf) []) Stores.empty
       tape (fiberOf cur K true) Stores.empty ∧
     YieldStack cur K f.frame.current f.frame.stack) ∨
   (∃ ic c K₀,
@@ -1309,21 +1322,23 @@ private def LoopActiveOrInterrupted (root : NativeEff) (table : RowTable) (cf : 
     YieldStack (Prim.failure c) K₀ f.frame.current f.frame.stack)
 
 private theorem LoopActiveOrInterrupted.toFiberMode {root : NativeEff} {table : RowTable}
+    {types : TyDecls}
     {cf : Nat} {journal : List Command} {f : NRunFiber} (nt : Nat)
     (hexit : f.exit = none) (hintr : f.frame.interruptible = true)
     (hdef : f.frame.deferredInterrupt = false) (hp : f.parked = .notParked)
-    (hl : LoopActiveOrInterrupted root table cf journal f) :
-    FiberMode root table cf journal nt f := by
+    (hl : LoopActiveOrInterrupted root table types cf journal f) :
+    FiberMode root table types cf journal nt f := by
   rcases hl with ⟨cur, K, tape, hic, hpl, hK, htape, hleads, hys⟩ | ⟨ic, c, K₀, hic, hK₀, hys⟩
   · exact .active cur K tape hexit hintr hic hdef hpl hK htape hleads (.unparked hp hys)
   · exact .interrupted ic c K₀ hexit hintr hic hdef hK₀ hys (fun tok h => by rw [hp] at h; cases h)
 
 private theorem FiberMode.toLoopActiveOrInterrupted {root : NativeEff} {table : RowTable}
+    {types : TyDecls}
     {cf : Nat} {journal : List Command} {nt : Nat} {f : NRunFiber}
-    (hm : FiberMode root table cf journal nt f)
+    (hm : FiberMode root table types cf journal nt f)
     (hexit : f.exit = none) (hrun : f.running = false) (hp : f.parked = .notParked) :
     f.frame.interruptible = true ∧ f.frame.deferredInterrupt = false ∧
-      LoopActiveOrInterrupted root table cf journal f := by
+      LoopActiveOrInterrupted root table types cf journal f := by
   rcases hm with ⟨cur, K, tape, _, hintr, hic, hdef, hpl, hK, htape, hleads, hsub⟩ |
     ⟨ic, c, K₀, _, hintr, hic, hdef, hK₀, hys, _⟩ | ⟨_, hdone⟩
   · rcases hsub with ⟨_, hys⟩ | ⟨_, _, hp', _, _, _⟩ | ⟨_, _, hp', _, _, _, _, _⟩
@@ -1336,37 +1351,38 @@ private theorem FiberMode.toLoopActiveOrInterrupted {root : NativeEff} {table : 
     · rw [hrun] at h; cases h
 
 /-- The command-queue invariant during `driveState`. -/
-private inductive CmdQueueInv (root : NativeEff) (table : RowTable) (cf : Nat)
+private inductive CmdQueueInv (root : NativeEff) (table : RowTable) (types : TyDecls) (cf : Nat)
     (journal : List Command) (m : NativeMachine) :
     List (Cmd EffName EffThunk Val Err Defect FiberId Ann NCode) → Prop
   | passive (cmds : List _)
       (hpass : ∀ c ∈ cmds, PassiveCmd m.nextToken c)
       (hcall : CallParkBound m (fun tok => ∀ c ∈ cmds, PassiveCmd tok c)) :
-      CmdQueueInv root table cf journal m cmds
+      CmdQueueInv root table types cf journal m cmds
   | loop (yielding : Bool) (rest : List _)
       (hrest : ∀ c ∈ rest, PassiveCmd m.nextToken c)
       (hrun : ∀ f, m.fibers = [f] →
         f.exit = none ∧ f.running = true ∧ f.parked = .notParked ∧
         f.frame.interruptible = true ∧ f.frame.deferredInterrupt = false ∧
-        LoopActiveOrInterrupted root table cf journal f) :
-      CmdQueueInv root table cf journal m (Cmd.loop Api.root yielding :: rest)
+        LoopActiveOrInterrupted root table types cf journal f) :
+      CmdQueueInv root table types cf journal m (Cmd.loop Api.root yielding :: rest)
   | deliver (yielding : Bool) (rest : List _)
       (hrest : ∀ c ∈ rest, PassiveCmd m.nextToken c)
       (hdel : ∀ f, m.fibers = [f] → ∃ K tape v,
         f.exit = none ∧ f.running = true ∧ f.parked = .notParked ∧
         f.frame = fiberOf (Prim.success v) K true ∧
         ExtPlainStack table K ∧ TapeSubmitted journal tape ∧
-        LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
+        LeadsTape table types root (fiberOf (compile root cf) []) Stores.empty
           tape (fiberOf (Prim.success v) K true) Stores.empty) :
-      CmdQueueInv root table cf journal m (Cmd.deliver Api.root yielding :: rest)
+      CmdQueueInv root table types cf journal m (Cmd.deliver Api.root yielding :: rest)
   | finish (ex : ExitV) (rest : List _)
       (hrest : ∀ c ∈ rest, PassiveCmd m.nextToken c)
       (hfin : ∀ f, m.fibers = [f] →
         f.parked = .notParked ∧ (f.exit.isSome = true ∨ f.running = true)) :
-      CmdQueueInv root table cf journal m (Cmd.finish Api.root ex :: rest)
+      CmdQueueInv root table types cf journal m (Cmd.finish Api.root ex :: rest)
 
 /-- The decision admission predicate for `DecisionLift`. -/
-private def CallTreeDecision (table : RowTable) (journal : List Command) (m : NativeMachine) :
+private def CallTreeDecision (table : RowTable) (types : TyDecls) (journal : List Command)
+    (m : NativeMachine) :
     NativeDecision → Prop
   | .answerAsync f t a =>
     ∃ (ex : ExitV) (reply : Api.HostSession.Reply) (i : Nat) (v : Val) (row : Program.Row),
@@ -1375,20 +1391,21 @@ private def CallTreeDecision (table : RowTable) (journal : List Command) (m : Na
       reply.completion = .ofExit ex ∧
       Program.requestOf m f t = some (.external i, v) ∧
       externalRow table i = some row ∧
-      externalAdmits table i (.ofExit ex) [] = true
+      externalAdmits ⟨table, [], types⟩ i (.ofExit ex) [] = true
   | _ => True
 
 /-- Answering an external call on `admittedTapeHost` with an admitted exit at the head of a tape
 returns that exit and the tail of the tape. -/
-private theorem admittedTapeHost_cons (table : RowTable) (i : Nat) (v : Val) (w : List Nat)
+private theorem admittedTapeHost_cons (table : RowTable) {types : TyDecls} (i : Nat) (v : Val)
+    (w : List Nat)
     (ex : ExitV) (rest : ReplyTape) (hi : i < table.length)
-    (hadm : externalAdmits table i (.ofExit ex) [] = true) :
-    hostAnswer (admittedTapeHost table)
+    (hadm : externalAdmits ⟨table, [], types⟩ i (.ofExit ex) [] = true) :
+    hostAnswer (admittedTapeHost table types)
       (Prim.async (.external (.external i) v w) false none) (ex :: rest) =
       some (ex, rest) := by
   unfold hostAnswer
   show (if _ : i < table.length then
-      (if externalAdmits table i (.ofExit ex) [] then some (ex, rest) else none)
+      (if externalAdmits ⟨table, [], types⟩ i (.ofExit ex) [] then some (ex, rest) else none)
     else none) = some (ex, rest)
   rw [dif_pos hi, if_pos hadm]
 
@@ -1404,9 +1421,10 @@ private theorem frame_eta {fr : NFiber} {c : NCode} {S : List NCode} {ic? : Opti
   subst hc hs hi hic hd
   rfl
 
-private theorem requestOf_active_parkedCall {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem requestOf_active_parkedCall {root : NativeEff} {table : RowTable}
+    {types : TyDecls} {cf : Nat}
     {journal : List Command} {m : NativeMachine}
-    (hm : MachineInv root table cf journal m)
+    (hm : MachineInv root table types cf journal m)
     {fid : FiberId} {tok : Nat} {op : NativeOp} {req : Val}
     (hreq : Program.requestOf m fid tok = some (op, req)) :
     ∃ (f : NRunFiber) (cur : NCode) (K : List NCode) (tape : ReplyTape)
@@ -1420,7 +1438,7 @@ private theorem requestOf_active_parkedCall {root : NativeEff} {table : RowTable
       IsCall cur = true ∧ callOf cur = some (i, req) ∧
       ExtPlainCode table cur = true ∧ ExtPlainStack table K ∧
       TapeSubmitted journal tape ∧
-      LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
+      LeadsTape table types root (fiberOf (compile root cf) []) Stores.empty
         tape (fiberOf cur K true) Stores.empty ∧
       DispInv tok f.dispatcher := by
   have hne : Program.requestOf m fid tok ≠ none := by
@@ -1497,8 +1515,9 @@ private theorem CallParkBound.of_not_isCall {m : NativeMachine} {f : NRunFiber}
   rw [hc] at hcg
   cases hcg
 
-private theorem MachineInv.dispInv_of_callPark {root : NativeEff} {table : RowTable} {cf : Nat}
-    {journal : List Command} {m : NativeMachine} (hm : MachineInv root table cf journal m) :
+private theorem MachineInv.dispInv_of_callPark {root : NativeEff} {table : RowTable}
+    {types : TyDecls} {cf : Nat}
+    {journal : List Command} {m : NativeMachine} (hm : MachineInv root table types cf journal m) :
     CallParkBound m (fun tok => ∀ f, m.fibers = [f] → DispInv tok f.dispatcher) := by
   intro g hg tok hpg hcg f' hf'
   rw [hg] at hf'
@@ -1520,9 +1539,9 @@ private theorem MachineInv.dispInv_of_callPark {root : NativeEff} {table : RowTa
 private theorem lift_nil (_w : Unit) (m : NativeMachine) : SnapshotInv m [] :=
   ⟨fun _ h => (by cases h), fun _ _ _ _ _ _ h => (by cases h)⟩
 
-private theorem lift_evaluate {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_evaluate {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (id : FiberId) :
-    CmdQueueInv root table cf journal m [Cmd.evaluate id, Cmd.drainDue] := by
+    CmdQueueInv root table types cf journal m [Cmd.evaluate id, Cmd.drainDue] := by
   refine .passive _ (fun c hc => ?_) (fun _ _ _ _ _ c hc => ?_)
   · simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
     rcases hc with rfl | rfl
@@ -1533,10 +1552,10 @@ private theorem lift_evaluate {root : NativeEff} {table : RowTable} {cf : Nat}
     · exact Or.inr (Or.inl ⟨id, rfl⟩)
     · exact Or.inl rfl
 
-private theorem lift_drain {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_drain {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (owner : FiberId) (f : NRunFiber)
-    (hj : MachineInv root table cf journal m) (hf : m.fiber? owner = some f) :
-    MachineInv root table cf journal
+    (hj : MachineInv root table types cf journal m) (hf : m.fiber? owner = some f) :
+    MachineInv root table types cf journal
         ((m.update { f with dispatcher := (f.dispatcher.drain).2 }).disarm owner) ∧
       SnapshotInv ((m.update { f with dispatcher := (f.dispatcher.drain).2 }).disarm owner)
         (f.dispatcher.drain).1 := by
@@ -1544,7 +1563,7 @@ private theorem lift_drain {root : NativeEff} {table : RowTable} {cf : Nat}
   obtain ⟨rfl, _⟩ := fiber?_one hmg hf
   have hdrain := DispInv.drain hbase.2.2.2.2
   have hup := update_one (f' := { f with dispatcher := (f.dispatcher.drain).2 }) hmg rfl
-  have hmode' : FiberMode root table cf journal m.nextToken
+  have hmode' : FiberMode root table types cf journal m.nextToken
       { f with dispatcher := (f.dispatcher.drain).2 } := by
     rcases hmode with ⟨cur, K, tape, hexit, hintr, hic, hdef, hpl, hK, htape, hleads, hsub⟩ |
       ⟨ic, c, K₀, hexit, hintr, hic, hdef, hK₀, hys, hpark⟩ | ⟨hp, hdone⟩
@@ -1567,19 +1586,19 @@ private theorem lift_drain {root : NativeEff} {table : RowTable} {cf : Nat}
   have hdisp_tok := hj.dispInv_of_callPark f hmg tok hpg' hcg' f hmg
   exact (DispInv.drain hdisp_tok).1
 
-private theorem lift_ran {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_ran {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (owner : FiberId)
     (t : Machine.Task EffName EffThunk Val Err Defect FiberId Ann NCode)
-    (hj : MachineInv root table cf journal m) :
-    MachineInv root table cf journal (m.emit [RunEvent.ranTask owner t]) :=
+    (hj : MachineInv root table types cf journal m) :
+    MachineInv root table types cf journal (m.emit [RunEvent.ranTask owner t]) :=
   ⟨hj.notStuck, hj.noRaces, hj.store, hj.fiber⟩
 
-private theorem lift_task {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_task {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (owner : FiberId)
     (t : Machine.Task EffName EffThunk Val Err Defect FiberId Ann NCode)
     (ts : List (Machine.Task EffName EffThunk Val Err Defect FiberId Ann NCode))
     (ho : SnapshotInv m (t :: ts)) :
-    CmdQueueInv root table cf journal (m.emit [RunEvent.ranTask owner t]) (taskCmds t) ∧
+    CmdQueueInv root table types cf journal (m.emit [RunEvent.ranTask owner t]) (taskCmds t) ∧
       SnapshotInv (m.emit [RunEvent.ranTask owner t]) ts := by
   obtain ⟨hts, hcall⟩ := ho
   obtain ⟨tok₀, hlt₀, heq₀⟩ := hts t (List.mem_cons_self ..)
@@ -1606,10 +1625,10 @@ private theorem lift_skip (_w : Unit) (m : NativeMachine)
   ⟨fun t' ht' => ho.1 t' (List.mem_cons_of_mem t ht'),
     fun f hf tok hp hcur t' ht' => ho.2 f hf tok hp hcur t' (List.mem_cons_of_mem t ht')⟩
 
-private theorem lift_yield {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_yield {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (id : FiberId) (v : Bool)
-    (hj : MachineInv root table cf journal m) :
-    MachineInv root table cf journal (m.modify id fun f => { f with yieldOverride := some v }) := by
+    (hj : MachineInv root table types cf journal m) :
+    MachineInv root table types cf journal (m.modify id fun f => { f with yieldOverride := some v }) := by
   unfold RunMachine.modify
   cases hf : m.fiber? id with
   | none => exact hj
@@ -1629,9 +1648,10 @@ private theorem lift_yield {root : NativeEff} {table : RowTable} {cf : Nat}
     · exact .interrupted ic c K₀ hexit hintr hic hdef hK₀ hys hpark
     · exact .halted hp hdone
 
-private theorem FiberMode.not_contAll_of_unhalted {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem FiberMode.not_contAll_of_unhalted {root : NativeEff} {table : RowTable}
+    {types : TyDecls} {cf : Nat}
     {journal : List Command} {nt : Nat} {f : NRunFiber}
-    (hm : FiberMode root table cf journal nt f)
+    (hm : FiberMode root table types cf journal nt f)
     (hexit : f.exit = none) (hrun : f.running = false) :
     f.frame.interruptible = true ∧ f.frame.deferredInterrupt = false ∧
       (∀ fr ∈ f.frame.stack, fr.hasArm .contAll = false) := by
@@ -1647,9 +1667,10 @@ private theorem FiberMode.not_contAll_of_unhalted {root : NativeEff} {table : Ro
     · rw [hexit] at h; cases h
     · rw [hrun] at h; cases h
 
-private theorem FiberMode.notParked_of_running {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem FiberMode.notParked_of_running {root : NativeEff} {table : RowTable}
+    {types : TyDecls} {cf : Nat}
     {journal : List Command} {nt : Nat} {f : NRunFiber}
-    (hm : FiberMode root table cf journal nt f) (hrun : f.running = true) :
+    (hm : FiberMode root table types cf journal nt f) (hrun : f.running = true) :
     f.parked = .notParked := by
   rcases hm with ⟨_, _, _, _, _, _, _, _, _, _, _, hsub⟩ | ⟨_, _, _, _, _, _, _, _, _, hpark⟩ | ⟨hp, _⟩
   · rcases hsub with ⟨hp, _⟩ | ⟨_, _, _, hr, _, _⟩ | ⟨_, _, _, hr, _, _, _, _⟩
@@ -1663,9 +1684,10 @@ private theorem FiberMode.notParked_of_running {root : NativeEff} {table : RowTa
       rw [hrun] at hr; cases hr
   · exact hp
 
-private theorem FiberMode.notParked_of_exit {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem FiberMode.notParked_of_exit {root : NativeEff} {table : RowTable}
+    {types : TyDecls} {cf : Nat}
     {journal : List Command} {nt : Nat} {f : NRunFiber}
-    (hm : FiberMode root table cf journal nt f) (hex : f.exit.isSome = true) :
+    (hm : FiberMode root table types cf journal nt f) (hex : f.exit.isSome = true) :
     f.parked = .notParked := by
   rcases hm with ⟨_, _, _, hexit, _, _, _, _, _, _, _, _⟩ |
     ⟨_, _, _, hexit, _, _, _, _, _, _⟩ | ⟨hp, _⟩
@@ -1673,11 +1695,11 @@ private theorem FiberMode.notParked_of_exit {root : NativeEff} {table : RowTable
   · rw [hexit] at hex; cases hex
   · exact hp
 
-private theorem lift_interrupt {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_interrupt {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (target : FiberId) (t : NRunFiber)
-    (hj : MachineInv root table cf journal m) (ht : m.fiber? target = some t) :
-    MachineInv root table cf journal (Lift.interruptEdit (interpOf root table) m who extra target t) := by
+    (hj : MachineInv root table types cf journal m) (ht : m.fiber? target = some t) :
+    MachineInv root table types cf journal (Lift.interruptEdit (interpOf root table) m who extra target t) := by
   obtain ⟨f, hmf, hbase, hmode⟩ := hj.fiber
   obtain ⟨rfl, _⟩ := fiber?_one hmf ht
   let r := interruptRecord (interpOf root table) who extra t
@@ -1698,7 +1720,7 @@ private theorem lift_interrupt {root : NativeEff} {table : RowTable} {cf : Nat}
     · split
       · split <;> exact hbase
       · exact hbase
-  have hmode' : FiberMode root table cf journal m.nextToken r.1 := by
+  have hmode' : FiberMode root table types cf journal m.nextToken r.1 := by
     unfold r
     rw [hform]
     by_cases hex : t.exit.isSome = true
@@ -1720,40 +1742,40 @@ private theorem lift_interrupt {root : NativeEff} {table : RowTable} {cf : Nat}
   · exact ⟨hj.notStuck, hj.noRaces, hj.store, r.1, update_one hmf hhid, hbase', hmode'⟩
   · exact ⟨hj.notStuck, hj.noRaces, hj.store, r.1, update_one hmf hhid, hbase', hmode'⟩
 
-private theorem lift_middleware {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_middleware {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine)
-    (hj : MachineInv root table cf journal m) :
-    MachineInv root table cf journal { m with middlewareInstalled := true } :=
+    (hj : MachineInv root table types cf journal m) :
+    MachineInv root table types cf journal { m with middlewareInstalled := true } :=
   ⟨hj.notStuck, hj.noRaces, hj.store, hj.fiber⟩
 
-private theorem lift_clockNone {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_clockNone {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (millis : ClockMillis) (st : Stores)
-    (hj : MachineInv root table cf journal m)
+    (hj : MachineInv root table types cf journal m)
     (hc : (interpOf root table).clockStep millis m.state = (none, st)) :
-    ∃ w', Lift.unitOrder.le _w w' ∧ MachineInv root table cf journal { m with state := st } :=
+    ∃ w', Lift.unitOrder.le _w w' ∧ MachineInv root table types cf journal { m with state := st } :=
   ⟨(), trivial, ⟨hj.notStuck, hj.noRaces, StoreInv.clockStep_none root table millis hj.store hc,
     hj.fiber⟩⟩
 
-private theorem lift_clockSome {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_clockSome {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (millis : ClockMillis)
     (owed : Owed NCode) (st : Stores)
-    (hj : MachineInv root table cf journal m)
+    (hj : MachineInv root table types cf journal m)
     (hc : (interpOf root table).clockStep millis m.state = (some owed, st)) :
     ∃ w', Lift.unitOrder.le _w w' ∧
-      MachineInv root table cf journal (drainOwed { m with state := st } [owed]).1 ∧
+      MachineInv root table types cf journal (drainOwed { m with state := st } [owed]).1 ∧
       ((drainOwed { m with state := st } [owed]).1.stuck = none →
-        CmdQueueInv root table cf journal (drainOwed { m with state := st } [owed]).1
+        CmdQueueInv root table types cf journal (drainOwed { m with state := st } [owed]).1
           ((drainOwed { m with state := st } [owed]).2 ++ [Cmd.drainDue])) :=
   (StoreInv.clockStep_some_false root table millis hj.store hc).elim
 
-private theorem lift_answer {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_answer {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (_w : Unit) (m : NativeMachine) (id : FiberId) (token : Nat)
     (answer : Completion Val Err Defect FiberId Ann)
-    (hj : MachineInv root table cf journal m)
-    (ha : CallTreeDecision table journal m (.answerAsync id token answer)) :
+    (hj : MachineInv root table types cf journal m)
+    (ha : CallTreeDecision table types journal m (.answerAsync id token answer)) :
     ∃ w', Lift.unitOrder.le _w w' ∧
-      Lift.Guarded (fun _ => MachineInv root table cf journal)
-        (fun _ => CmdQueueInv root table cf journal)
+      Lift.Guarded (fun _ => MachineInv root table types cf journal)
+        (fun _ => CmdQueueInv root table types cf journal)
         (fun _ => SnapshotInv) [] w'
         (driveStep (interpOf root table)
           { m with state := (prepareAsyncAnswer (interpOf root table) m id token answer).1 }
@@ -1811,10 +1833,10 @@ private theorem lift_answer {root : NativeEff} {table : RowTable} {cf : Nat}
       subst hex'
       exact ⟨reply, hsub_mem, hsub_comp⟩
   have hhost : ∀ rest : ReplyTape,
-      hostAnswer (admittedTapeHost table) (fiberOf cur K true).current (ex :: rest) =
+      hostAnswer (admittedTapeHost table types) (fiberOf cur K true).current (ex :: rest) =
         some (ex, rest) := by
     intro rest
-    change hostAnswer (admittedTapeHost table) cur (ex :: rest) = some (ex, rest)
+    change hostAnswer (admittedTapeHost table types) cur (ex :: rest) = some (ex, rest)
     rw [hcur_eq]
     exact admittedTapeHost_cons table i v w' ex rest (lt_of_externalRow hrow) hadm
   have hp_empty : prepareExternalAnswer table (some (fiberOf cur K true).current) (.ofExit ex)
@@ -1822,17 +1844,17 @@ private theorem lift_answer {root : NativeEff} {table : RowTable} {cf : Nat}
     change prepareExternalAnswer table (some cur) (.ofExit ex) Stores.empty = _
     rw [hcur_eq]
     exact prepareExternalAnswer_data hdrow v w' ex Stores.empty
-  have hleads' : LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
+  have hleads' : LeadsTape table types root (fiberOf (compile root cf) []) Stores.empty
       (tape ++ [ex]) (fiberOf (Prim.ofExit ex) K true) Stores.empty :=
     LeadsTape.answer hleads hcall hhost hp_empty
   have hys' : YieldStack (Prim.ofExit ex) K f'.frame.current f'.frame.stack := by
     rw [hframe']
     exact .plain
-  have hmode' : FiberMode root table cf journal m.nextToken f' :=
+  have hmode' : FiberMode root table types cf journal m.nextToken f' :=
     .active (Prim.ofExit ex) K (tape ++ [ex]) hexit (by rw [hframe']; rfl)
       (by rw [hframe']; rfl) (by rw [hframe']; rfl) (extPlainCode_ofExit table ex) hK
       htape' hleads' (.unparked rfl hys')
-  have hinv' : MachineInv root table cf journal
+  have hinv' : MachineInv root table types cf journal
       ((m.update f').emit [RunEvent.resumedWith Api.root token (Prim.ofExit ex)]) :=
     ⟨hj.notStuck, hj.noRaces, hj.store, f', hup, hbase, hmode'⟩
   refine ⟨(), trivial, hinv', fun _ => ⟨lift_evaluate () _ Api.root, lift_nil () _⟩⟩
@@ -1862,12 +1884,13 @@ private def isSync : NCode → Bool
   | _ => false
 
 private theorem LoopActiveOrInterrupted.yielding {root : NativeEff} {table : RowTable}
+    {types : TyDecls}
     {cf : Nat} {journal : List Command} {f f' : NRunFiber}
-    (hl : LoopActiveOrInterrupted root table cf journal f)
+    (hl : LoopActiveOrInterrupted root table types cf journal f)
     (hfr : f'.frame = ⟨Prim.yieldNowWith 0,
       Prim.onSuccessConst (Prim.yieldNowWith 0) f.frame.current :: f.frame.stack,
       true, f.frame.interruptedCause, false⟩) :
-    LoopActiveOrInterrupted root table cf journal f' := by
+    LoopActiveOrInterrupted root table types cf journal f' := by
   rcases hl with ⟨cur, K, tape, hic, hpl, hK, htape, hleads, hys⟩ | ⟨ic, c, K₀, hic, hK₀, hys⟩
   · refine Or.inl ⟨cur, K, tape, ?_, hpl, hK, htape, hleads, ?_⟩
     · rw [hfr]; exact hic
@@ -1876,18 +1899,18 @@ private theorem LoopActiveOrInterrupted.yielding {root : NativeEff} {table : Row
     · rw [hfr]; exact hic
     · rw [hfr]; exact .yielding hys
 
-private theorem driveStep_passive {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem driveStep_passive {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (m : NativeMachine)
     (c : Cmd EffName EffThunk Val Err Defect FiberId Ann NCode)
     (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann NCode))
     (ts : List (Machine.Task EffName EffThunk Val Err Defect FiberId Ann NCode))
-    (hj : MachineInv root table cf journal m)
+    (hj : MachineInv root table types cf journal m)
     (hpass : ∀ c' ∈ c :: rest, PassiveCmd m.nextToken c')
     (hcall : CallParkBound m (fun tok => ∀ c' ∈ c :: rest, PassiveCmd tok c'))
     (ho : SnapshotInv m ts) :
     letI := evaluatorFor root table
-    MachineInv root table cf journal (driveStep (interpOf root table) m c rest).1 ∧
-      CmdQueueInv root table cf journal (driveStep (interpOf root table) m c rest).1
+    MachineInv root table types cf journal (driveStep (interpOf root table) m c rest).1 ∧
+      CmdQueueInv root table types cf journal (driveStep (interpOf root table) m c rest).1
         (driveStep (interpOf root table) m c rest).2 ∧
       SnapshotInv (driveStep (interpOf root table) m c rest).1 ts := by
   letI := evaluatorFor root table
@@ -1927,12 +1950,12 @@ private theorem driveStep_passive {root : NativeEff} {table : RowTable} {cf : Na
         obtain ⟨hintr, hdef, hl⟩ := hmode.toLoopActiveOrInterrupted hexit hrun_false hp_not
         let f' : NRunFiber := { f with running := true, currentOpCount := 0 }
         have hup := update_one (f' := f') hmg rfl
-        have hmode' : FiberMode root table cf journal m.nextToken f' :=
+        have hmode' : FiberMode root table types cf journal m.nextToken f' :=
           LoopActiveOrInterrupted.toFiberMode m.nextToken hexit hintr hdef hp_not hl
-        have hj' : MachineInv root table cf journal
+        have hj' : MachineInv root table types cf journal
             ((m.update f').emit [RunEvent.started Api.root]) :=
           ⟨hj.notStuck, hj.noRaces, hj.store, f', hup, hbase, hmode'⟩
-        have hq' : CmdQueueInv root table cf journal
+        have hq' : CmdQueueInv root table types cf journal
             ((m.update f').emit [RunEvent.started Api.root]) (Cmd.loop Api.root false :: rest) := by
           refine .loop false rest hrest (fun g' hg' => ?_)
           change (m.update f').fibers = [g'] at hg'
@@ -1984,7 +2007,7 @@ private theorem driveStep_passive {root : NativeEff} {table : RowTable} {cf : Na
             pending := f.pending.filter fun p => p.token ≠ parkedToken
             frame := { f.frame with current := Prim.success Val.unit } }
           have hup := update_one (f' := f') hmg rfl
-          have hmode' : FiberMode root table cf journal m.nextToken f' := by
+          have hmode' : FiberMode root table types cf journal m.nextToken f' := by
             rcases hmode with ⟨cur, K, tape, hexit, hintr, hic, hdef, hpl, hK, htape, hleads, hsub⟩ |
               ⟨ic, c', K₀, hexit, hintr, hic, hdef, hK₀, hys, _⟩ | ⟨hp', _⟩
             · rcases hsub with ⟨hp', _⟩ | ⟨_, _, _, _, _, hys⟩ | ⟨_, _, _, _, hcall_c, hcur, _, _⟩
@@ -2000,7 +2023,7 @@ private theorem driveStep_passive {root : NativeEff} {table : RowTable} {cf : Na
                 f.frame.stack
               rw [hframe_eq]; exact hys
             · rw [hp] at hp'; cases hp'
-          have hj' : MachineInv root table cf journal
+          have hj' : MachineInv root table types cf journal
               ((m.update f').emit [RunEvent.resumedWith Api.root parkedToken (Prim.success Val.unit)]) :=
             ⟨hj.notStuck, hj.noRaces, hj.store, f', hup, hbase, hmode'⟩
           have hpass' : ∀ c' ∈ Cmd.evaluate Api.root :: rest, PassiveCmd m.nextToken c' := by
@@ -2008,7 +2031,7 @@ private theorem driveStep_passive {root : NativeEff} {table : RowTable} {cf : Na
             rcases List.mem_cons.mp hc' with rfl | hc'
             · exact Or.inr (Or.inl ⟨Api.root, rfl⟩)
             · exact hrest c' hc'
-          have hq' : CmdQueueInv root table cf journal
+          have hq' : CmdQueueInv root table types cf journal
               ((m.update f').emit [RunEvent.resumedWith Api.root parkedToken (Prim.success Val.unit)])
               (Cmd.evaluate Api.root :: rest) :=
             .passive _ hpass' (CallParkBound.of_notParked hup rfl)
@@ -2020,12 +2043,13 @@ private theorem driveStep_passive {root : NativeEff} {table : RowTable} {cf : Na
           exact ⟨hj, .passive rest hrest hcall_rest, ho⟩
 
 private theorem settle_evaluateNative_ext_nonSync {root : NativeEff} {table : RowTable}
+    {types : TyDecls}
     {cf : Nat} {journal : List Command} (hroot : ExtRows table root = true)
     (m : NativeMachine) (f₀ f₁ : NRunFiber) (yielding : Bool)
     (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann NCode))
     (ts : List (Machine.Task EffName EffThunk Val Err Defect FiberId Ann NCode))
     (cur : NCode) (K : List NCode) (tape : ReplyTape)
-    (hj : MachineInv root table cf journal m)
+    (hj : MachineInv root table types cf journal m)
     (ho : SnapshotInv m ts)
     (hrest : ∀ c ∈ rest, PassiveCmd m.nextToken c)
     (hmf₀ : m.fibers = [f₀]) (hbase₀ : FiberBase m.nextToken f₀)
@@ -2035,11 +2059,11 @@ private theorem settle_evaluateNative_ext_nonSync {root : NativeEff} {table : Ro
     (hfr₁ : f₁.frame = fiberOf cur K true)
     (hpl : ExtPlainCode table cur = true) (hK : ExtPlainStack table K)
     (htape : TapeSubmitted journal tape)
-    (hleads : LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
+    (hleads : LeadsTape table types root (fiberOf (compile root cf) []) Stores.empty
       tape (fiberOf cur K true) Stores.empty)
     (hns : ∀ t, cur ≠ Prim.sync t) (hnc : IsCall cur = false) :
-    MachineInv root table cf journal (settle Api.root rest (evaluateNative root m f₁ yielding table)).1 ∧
-      CmdQueueInv root table cf journal (settle Api.root rest (evaluateNative root m f₁ yielding table)).1
+    MachineInv root table types cf journal (settle Api.root rest (evaluateNative root m f₁ yielding table)).1 ∧
+      CmdQueueInv root table types cf journal (settle Api.root rest (evaluateNative root m f₁ yielding table)).1
         (settle Api.root rest (evaluateNative root m f₁ yielding table)).2 ∧
       SnapshotInv (settle Api.root rest (evaluateNative root m f₁ yielding table)).1 ts := by
   obtain ⟨ev, heval⟩ := evaluateNative_ext_nonSync root table m f₁ yielding cur K
@@ -2055,9 +2079,9 @@ private theorem settle_evaluateNative_ext_nonSync {root : NativeEff} {table : Ro
     let f' : NRunFiber := { f₁ with frame := fiberOf cur' K' true }
     have hup : ((m.emit ev).update f').fibers = [f'] := update_one hmf₀ hid₁₀
     have hleads' := LeadsTape.step hleads hstep_empty hnc (fun thunk => ExtPlainCode.noWithFiber hpl thunk)
-    have hl' : LoopActiveOrInterrupted root table cf journal f' :=
+    have hl' : LoopActiveOrInterrupted root table types cf journal f' :=
       Or.inl ⟨cur', K', tape, rfl, hpl', hK', htape, hleads', .plain⟩
-    have hmode' : FiberMode root table cf journal m.nextToken f' :=
+    have hmode' : FiberMode root table types cf journal m.nextToken f' :=
       LoopActiveOrInterrupted.toFiberMode m.nextToken hexit₁ rfl rfl hp₁ hl'
     refine ⟨⟨hj.notStuck, hj.noRaces, hj.store, f', hup, hbase₁, hmode'⟩,
       .loop yielding rest hrest (fun g hg => ?_),
@@ -2069,7 +2093,7 @@ private theorem settle_evaluateNative_ext_nonSync {root : NativeEff} {table : Ro
     dsimp only [settle, settleOutcome, List.nil_append]
     let f' : NRunFiber := { f₁ with frame := frameExitState f₁.frame }
     have hup : ((m.emit ev).update f').fibers = [f'] := update_one hmf₀ hid₁₀
-    have hmode' : FiberMode root table cf journal m.nextToken f' :=
+    have hmode' : FiberMode root table types cf journal m.nextToken f' :=
       .halted hp₁ (Or.inr hrun₁)
     refine ⟨⟨hj.notStuck, hj.noRaces, hj.store, f', hup, hbase₁, hmode'⟩,
       .finish ex rest hrest (fun g hg => ?_),
@@ -2078,21 +2102,21 @@ private theorem settle_evaluateNative_ext_nonSync {root : NativeEff} {table : Ro
     cases hg
     exact ⟨hp₁, Or.inr hrun₁⟩
 
-private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem driveStep_loop {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (hroot : ExtRows table root = true)
     (m : NativeMachine) (yielding : Bool)
     (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann NCode))
     (ts : List (Machine.Task EffName EffThunk Val Err Defect FiberId Ann NCode))
-    (hj : MachineInv root table cf journal m)
+    (hj : MachineInv root table types cf journal m)
     (hrest : ∀ c ∈ rest, PassiveCmd m.nextToken c)
     (hrun : ∀ f, m.fibers = [f] →
       f.exit = none ∧ f.running = true ∧ f.parked = .notParked ∧
       f.frame.interruptible = true ∧ f.frame.deferredInterrupt = false ∧
-      LoopActiveOrInterrupted root table cf journal f)
+      LoopActiveOrInterrupted root table types cf journal f)
     (ho : SnapshotInv m ts) :
     letI := evaluatorFor root table
-    MachineInv root table cf journal (driveStep (interpOf root table) m (Cmd.loop Api.root yielding) rest).1 ∧
-      CmdQueueInv root table cf journal (driveStep (interpOf root table) m (Cmd.loop Api.root yielding) rest).1
+    MachineInv root table types cf journal (driveStep (interpOf root table) m (Cmd.loop Api.root yielding) rest).1 ∧
+      CmdQueueInv root table types cf journal (driveStep (interpOf root table) m (Cmd.loop Api.root yielding) rest).1
         (driveStep (interpOf root table) m (Cmd.loop Api.root yielding) rest).2 ∧
       SnapshotInv (driveStep (interpOf root table) m (Cmd.loop Api.root yielding) rest).1 ts := by
   letI := evaluatorFor root table
@@ -2117,10 +2141,10 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
         ⟨Prim.onSuccessConst (Prim.yieldNowWith 0) f.frame.current,
           f.frame.stack, true, f.frame.interruptedCause, false⟩ :=
       frame_eta rfl rfl hintr rfl hdef
-    change MachineInv root table cf journal
+    change MachineInv root table types cf journal
         (settle Api.root rest (evaluateNative root
           (m.emit [RunEvent.yieldInjected f₁.id f₁.currentOpCount]) f₂ true table)).1 ∧
-      CmdQueueInv root table cf journal
+      CmdQueueInv root table types cf journal
         (settle Api.root rest (evaluateNative root
           (m.emit [RunEvent.yieldInjected f₁.id f₁.currentOpCount]) f₂ true table)).1
         (settle Api.root rest (evaluateNative root
@@ -2139,8 +2163,8 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
         [RunEvent.frame f₂.id (FrameEvent.pushed
           (Prim.onSuccessConst (Prim.yieldNowWith 0) f.frame.current))]).update f₃).fibers = [f₃] :=
       update_one hmf rfl
-    have hl' : LoopActiveOrInterrupted root table cf journal f₃ := hl.yielding rfl
-    have hmode' : FiberMode root table cf journal m.nextToken f₃ :=
+    have hl' : LoopActiveOrInterrupted root table types cf journal f₃ := hl.yielding rfl
+    have hmode' : FiberMode root table types cf journal m.nextToken f₃ :=
       LoopActiveOrInterrupted.toFiberMode m.nextToken hexit rfl rfl hp hl'
     refine ⟨⟨hj.notStuck, hj.noRaces, hj.store, f₃, hup, hbase, hmode'⟩,
       .loop true rest hrest (fun g hg => ?_),
@@ -2150,8 +2174,8 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
     exact ⟨hexit, hrunning, hp, rfl, rfl, hl'⟩
   · rw [if_neg hy]
     dsimp only
-    change MachineInv root table cf journal (settle Api.root rest (evaluateNative root m f₁ yielding table)).1 ∧
-      CmdQueueInv root table cf journal (settle Api.root rest (evaluateNative root m f₁ yielding table)).1
+    change MachineInv root table types cf journal (settle Api.root rest (evaluateNative root m f₁ yielding table)).1 ∧
+      CmdQueueInv root table types cf journal (settle Api.root rest (evaluateNative root m f₁ yielding table)).1
         (settle Api.root rest (evaluateNative root m f₁ yielding table)).2 ∧
       SnapshotInv (settle Api.root rest (evaluateNative root m f₁ yielding table)).1 ts
     have hrest_succ : ∀ c ∈ rest, PassiveCmd (m.nextToken + 1) c :=
@@ -2186,7 +2210,7 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
           exact DispInv.enqueue 0 m.nextToken (Nat.lt_succ_self _) (hbase.2.2.2.2.mono (Nat.le_succ _))
         have hbase' : FiberBase (m.nextToken + 1) f₃ :=
           ⟨hbase.1, hbase.2.1, hbase.2.2.1, hbase.2.2.2.1, hdisp'⟩
-        have hmode' : FiberMode root table cf journal (m.nextToken + 1) f₃ :=
+        have hmode' : FiberMode root table types cf journal (m.nextToken + 1) f₃ :=
           .active cur K tape hexit rfl rfl rfl hpl hK htape hleads
             (.parkedYield m.nextToken (Nat.lt_succ_self _) rfl rfl rfl (.resuming hys'))
         exact ⟨⟨hj.notStuck, hj.noRaces, hj.store, f₃, hup, hbase', hmode'⟩,
@@ -2203,9 +2227,9 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
         have hup : ((m.emit [RunEvent.frame f₁.id
             (FrameEvent.popped (Prim.onSuccessConst (Prim.yieldNowWith 0) c₁))]).update f₃).fibers = [f₃] :=
           update_one hmf rfl
-        have hl' : LoopActiveOrInterrupted root table cf journal f₃ :=
+        have hl' : LoopActiveOrInterrupted root table types cf journal f₃ :=
           Or.inl ⟨cur, K, tape, rfl, hpl, hK, htape, hleads, hys'⟩
-        have hmode' : FiberMode root table cf journal m.nextToken f₃ :=
+        have hmode' : FiberMode root table types cf journal m.nextToken f₃ :=
           LoopActiveOrInterrupted.toFiberMode m.nextToken hexit rfl rfl hp hl'
         refine ⟨⟨hj.notStuck, hj.noRaces, hj.store, f₃, hup, hbase, hmode'⟩,
           .loop yielding rest hrest (fun g hg => ?_),
@@ -2227,11 +2251,11 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
           let v := syncValueAt root (EffThunk.pure p)
           let f₃ : NRunFiber := { f₁ with frame := fiberOf (Prim.success v) K true }
           have hup : (m.update f₃).fibers = [f₃] := update_one hmf rfl
-          have hleads' : LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
+          have hleads' : LeadsTape table types root (fiberOf (compile root cf) []) Stores.empty
               tape (fiberOf (Prim.success v) K true) Stores.empty :=
             LeadsTape.step hleads (step_sync_pure root p K true Stores.empty) rfl
               (by intros; intro h; cases h)
-          have hmode' : FiberMode root table cf journal m.nextToken f₃ :=
+          have hmode' : FiberMode root table types cf journal m.nextToken f₃ :=
             .active (Prim.success v) K tape hexit rfl rfl rfl rfl hK htape hleads'
               (.unparked hp .plain)
           refine ⟨⟨hj.notStuck, hj.noRaces, hj.store, f₃, hup, hbase, hmode'⟩,
@@ -2271,7 +2295,7 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
             have hstk₃ : f₃.frame.stack = K := by
               change f₁.frame.stack = K
               rw [hfr₁]; rfl
-            have hmode' : FiberMode root table cf journal (m.nextToken + 1) f₃ :=
+            have hmode' : FiberMode root table types cf journal (m.nextToken + 1) f₃ :=
               .active _ K tape hexit (by change f₁.frame.interruptible = true; rw [hfr₁]; rfl)
                 (by change f₁.frame.interruptedCause = none; rw [hfr₁]; rfl)
                 (by change f₁.frame.deferredInterrupt = false; rw [hfr₁]; rfl)
@@ -2317,7 +2341,7 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
           exact DispInv.enqueue 0 m.nextToken (Nat.lt_succ_self _) (hbase.2.2.2.2.mono (Nat.le_succ _))
         have hbase' : FiberBase (m.nextToken + 1) f₃ :=
           ⟨hbase.1, hbase.2.1, hbase.2.2.1, hbase.2.2.2.1, hdisp'⟩
-        have hmode' : FiberMode root table cf journal (m.nextToken + 1) f₃ :=
+        have hmode' : FiberMode root table types cf journal (m.nextToken + 1) f₃ :=
           .interrupted ic c K₀ hexit rfl rfl rfl hK₀ (.resuming hys')
             (fun tok hpg => by cases hpg; exact ⟨Nat.lt_succ_self _, rfl, rfl⟩)
         exact ⟨⟨hj.notStuck, hj.noRaces, hj.store, f₃, hup, hbase', hmode'⟩,
@@ -2334,9 +2358,9 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
         have hup : ((m.emit [RunEvent.frame f₁.id
             (FrameEvent.popped (Prim.onSuccessConst (Prim.yieldNowWith 0) c₁))]).update f₃).fibers = [f₃] :=
           update_one hmf rfl
-        have hl' : LoopActiveOrInterrupted root table cf journal f₃ :=
+        have hl' : LoopActiveOrInterrupted root table types cf journal f₃ :=
           Or.inr ⟨ic, c, K₀, rfl, hK₀, hys'⟩
-        have hmode' : FiberMode root table cf journal m.nextToken f₃ :=
+        have hmode' : FiberMode root table types cf journal m.nextToken f₃ :=
           LoopActiveOrInterrupted.toFiberMode m.nextToken hexit rfl rfl hp hl'
         refine ⟨⟨hj.notStuck, hj.noRaces, hj.store, f₃, hup, hbase, hmode'⟩,
           .loop yielding rest hrest (fun g hg => ?_),
@@ -2353,7 +2377,7 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
         dsimp only [settle, settleOutcome, List.nil_append]
         let f₃ : NRunFiber := { f₁ with frame := frameExitState f₁.frame }
         have hup : ((m.emit ev).update f₃).fibers = [f₃] := update_one hmf rfl
-        have hmode' : FiberMode root table cf journal m.nextToken f₃ :=
+        have hmode' : FiberMode root table types cf journal m.nextToken f₃ :=
           .halted hp (Or.inr hrunning)
         refine ⟨⟨hj.notStuck, hj.noRaces, hj.store, f₃, hup, hbase, hmode'⟩,
           .finish ex rest hrest (fun g hg => ?_),
@@ -2362,23 +2386,23 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
         cases hg
         exact ⟨hp, Or.inr hrunning⟩
 
-private theorem driveStep_deliver {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem driveStep_deliver {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (hroot : ExtRows table root = true)
     (m : NativeMachine) (yielding : Bool)
     (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann NCode))
     (ts : List (Machine.Task EffName EffThunk Val Err Defect FiberId Ann NCode))
-    (hj : MachineInv root table cf journal m)
+    (hj : MachineInv root table types cf journal m)
     (hrest : ∀ c ∈ rest, PassiveCmd m.nextToken c)
     (hdel : ∀ f, m.fibers = [f] → ∃ K tape v,
       f.exit = none ∧ f.running = true ∧ f.parked = .notParked ∧
       f.frame = fiberOf (Prim.success v) K true ∧
       ExtPlainStack table K ∧ TapeSubmitted journal tape ∧
-      LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
+      LeadsTape table types root (fiberOf (compile root cf) []) Stores.empty
         tape (fiberOf (Prim.success v) K true) Stores.empty)
     (ho : SnapshotInv m ts) :
     letI := evaluatorFor root table
-    MachineInv root table cf journal (driveStep (interpOf root table) m (Cmd.deliver Api.root yielding) rest).1 ∧
-      CmdQueueInv root table cf journal (driveStep (interpOf root table) m (Cmd.deliver Api.root yielding) rest).1
+    MachineInv root table types cf journal (driveStep (interpOf root table) m (Cmd.deliver Api.root yielding) rest).1 ∧
+      CmdQueueInv root table types cf journal (driveStep (interpOf root table) m (Cmd.deliver Api.root yielding) rest).1
         (driveStep (interpOf root table) m (Cmd.deliver Api.root yielding) rest).2 ∧
       SnapshotInv (driveStep (interpOf root table) m (Cmd.deliver Api.root yielding) rest).1 ts := by
   letI := evaluatorFor root table
@@ -2391,16 +2415,16 @@ private theorem driveStep_deliver {root : NativeEff} {table : RowTable} {cf : Na
     hj ho hrest hmf hbase hexit hbase hexit hrunning hp hfr rfl hK htape hleads
     (fun _ h => by cases h) rfl
 
-private theorem driveStep_finish {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem driveStep_finish {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (m : NativeMachine) (ex : ExitV)
     (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann NCode))
     (ts : List (Machine.Task EffName EffThunk Val Err Defect FiberId Ann NCode))
-    (hj : MachineInv root table cf journal m)
+    (hj : MachineInv root table types cf journal m)
     (hrest : ∀ c ∈ rest, PassiveCmd m.nextToken c)
     (ho : SnapshotInv m ts) :
     letI := evaluatorFor root table
-    MachineInv root table cf journal (driveStep (interpOf root table) m (Cmd.finish Api.root ex) rest).1 ∧
-      CmdQueueInv root table cf journal (driveStep (interpOf root table) m (Cmd.finish Api.root ex) rest).1
+    MachineInv root table types cf journal (driveStep (interpOf root table) m (Cmd.finish Api.root ex) rest).1 ∧
+      CmdQueueInv root table types cf journal (driveStep (interpOf root table) m (Cmd.finish Api.root ex) rest).1
         (driveStep (interpOf root table) m (Cmd.finish Api.root ex) rest).2 ∧
       SnapshotInv (driveStep (interpOf root table) m (Cmd.finish Api.root ex) rest).1 ts := by
   letI := evaluatorFor root table
@@ -2428,7 +2452,7 @@ private theorem driveStep_finish {root : NativeEff} {table : RowTable} {cf : Nat
     update_one hmf rfl
   have hup₂ : (((m.update f₁).emit [RunEvent.exited f₁.id ex]).update f₂).fibers = [f₂] :=
     update_one hup₁ rfl
-  have hmode₂ : FiberMode root table cf journal m.nextToken f₂ :=
+  have hmode₂ : FiberMode root table types cf journal m.nextToken f₂ :=
     .halted rfl (Or.inl rfl)
   have hpass' : ∀ c' ∈ Cmd.drainDue :: rest, PassiveCmd m.nextToken c' := by
     intro c' hc'
@@ -2440,20 +2464,20 @@ private theorem driveStep_finish {root : NativeEff} {table : RowTable} {cf : Nat
     .passive _ hpass' (CallParkBound.of_notParked hup₂ rfl),
     ⟨ho.1, CallParkBound.of_notParked hup₂ rfl⟩⟩
 
-private theorem lift_step {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem lift_step {root : NativeEff} {table : RowTable} {types : TyDecls} {cf : Nat}
     {journal : List Command} (hroot : ExtRows table root = true) :
     letI := evaluatorFor root table
     ∀ ts, Lift.StepKeeps Lift.unitOrder (interpOf root table)
-      (Lift.Guarded (fun _ => MachineInv root table cf journal)
-        (fun _ => CmdQueueInv root table cf journal)
+      (Lift.Guarded (fun _ => MachineInv root table types cf journal)
+        (fun _ => CmdQueueInv root table types cf journal)
         (fun _ => SnapshotInv) ts) := by
   letI := evaluatorFor root table
   intro ts _w m c rest _hstuck hguarded
   obtain ⟨hj, hqo⟩ := hguarded
   obtain ⟨hi, ho⟩ := hqo hj.notStuck
   have hstep :
-      MachineInv root table cf journal (driveStep (interpOf root table) m c rest).1 ∧
-        CmdQueueInv root table cf journal (driveStep (interpOf root table) m c rest).1
+      MachineInv root table types cf journal (driveStep (interpOf root table) m c rest).1 ∧
+        CmdQueueInv root table types cf journal (driveStep (interpOf root table) m c rest).1
           (driveStep (interpOf root table) m c rest).2 ∧
         SnapshotInv (driveStep (interpOf root table) m c rest).1 ts := by
     rcases hi with ⟨_, hpass, hcall⟩ | ⟨yielding, _, hrest, hrun⟩ |
@@ -2464,14 +2488,15 @@ private theorem lift_step {root : NativeEff} {table : RowTable} {cf : Nat}
     · exact driveStep_finish m ex rest ts hj hrest ho
   exact ⟨(), trivial, hstep.1, fun _ => ⟨hstep.2.1, hstep.2.2⟩⟩
 
-private theorem callTree_decision_lift {root : NativeEff} {table : RowTable} {cf : Nat}
+private theorem callTree_decision_lift {root : NativeEff} {table : RowTable} {types : TyDecls}
+    {cf : Nat}
     {journal : List Command} (hroot : ExtRows table root = true) :
     letI := evaluatorFor root table
     Lift.DecisionLift Lift.unitOrder (interpOf root table)
-      (fun _ => MachineInv root table cf journal)
-      (fun _ => CmdQueueInv root table cf journal)
+      (fun _ => MachineInv root table types cf journal)
+      (fun _ => CmdQueueInv root table types cf journal)
       (fun _ => SnapshotInv)
-      (fun _ => CallTreeDecision table journal) := by
+      (fun _ => CallTreeDecision table types journal) := by
   letI := evaluatorFor root table
   exact {
     step := lift_step hroot
@@ -2493,13 +2518,14 @@ private theorem callTree_decision_lift {root : NativeEff} {table : RowTable} {cf
 
 /-- The call-tree invariant holds at the load: one unparked root fiber at the compiled program,
 the empty tape behind it. A step of `reached_inv`. -/
-private theorem load_inv {root : NativeEff} {table : RowTable} (cf : Nat) (journal : List Command)
+private theorem load_inv {root : NativeEff} {table : RowTable} {types : TyDecls} (cf : Nat)
+    (journal : List Command)
     (hroot : ExtRows table root = true) :
-    MachineInv root table cf journal (Api.load root cf) :=
+    MachineInv root table types cf journal (Api.load root cf) :=
   ⟨rfl, rfl, StoreInv.empty, _, rfl, ⟨rfl, rfl, rfl, rfl, fun _ hb => nomatch hb⟩,
     .active (compile root cf) [] [] rfl rfl rfl rfl
       (extPlainCode_compileEff table root _ hroot) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (LeadsTape.refl table root _ _) (.unparked rfl .plain)⟩
+      (LeadsTape.refl table types root _ _) (.unparked rfl .plain)⟩
 
 /-- Every reply the session holds was submitted in the run's journal.
 Consumer: `reached_inv`, at each applied reply. -/
@@ -2658,18 +2684,10 @@ private theorem preflight_record {program : Api.Program} {app : SigApp}
                 exact ⟨_, rfl, Or.inr hacc⟩
               · cases h
 
-/-- At an application with no named type, a host check reads the row table alone.
-A step of `answer_decision`: the call tree's reply tape admits at the row table. -/
-private theorem externalAdmits_untyped {app : SigApp} (untyped : app.types = []) (i : Nat)
-    (answer : Completion Val Err Defect FiberId Ann) (allocated : List String) :
-    externalAdmits app i answer allocated = externalAdmits app.rows i answer allocated := by
-  unfold externalAdmits
-  rw [untyped]
-
 /-- **An applied reply's decision is admitted by the call tree**: an exit the journal submitted,
-at a live external call, that the row admits. The application declares no named type: the call
-tree's reply tape admits at the row table (decisions row 407 (5)). Consumer: `reached_inv`. -/
-private theorem answer_decision {program : Api.Program} {app : SigApp} (untyped : app.types = [])
+at a live external call, that the row admits under the application's declaration table, as the
+session admits it (decisions row 406 (2)). Consumer: `reached_inv`. -/
+private theorem answer_decision {program : Api.Program} {app : SigApp}
     (concrete : SourceScope.ConcreteReplies app.rows)
     (s : Api.HostSession.Session program app)
     (hcalls : s.calls = Api.HostSession.callTable program app)
@@ -2677,7 +2695,7 @@ private theorem answer_decision {program : Api.Program} {app : SigApp} (untyped 
     (reply : Api.HostSession.Reply) (d : NativeDecision)
     (hpre : Api.HostSession.preflight s reply = .ok d)
     (submitted : Command.submit reply ∈ journal) :
-    CallTreeDecision app.rows journal s.machine d := by
+    CallTreeDecision app.rows app.types journal s.machine d := by
   obtain ⟨r, completion, plain | specialized⟩ := preflight_record s reply d hpre
   · have same := acceptReply_decision app s.machine r d plain
     have envelope := acceptReply_envelope app s.machine r d plain
@@ -2688,7 +2706,7 @@ private theorem answer_decision {program : Api.Program} {app : SigApp} (untyped 
       r.completion hstore.1 (preflight_accepted s reply _ hpre)
     rw [hex] at hadmit
     have admits := SourceScope.admitted_exit_tape hrow hadmit
-    rw [hstore.2.1, externalAdmits_untyped untyped] at admits
+    rw [hstore.2.1] at admits
     exact ⟨ex, reply, i, request, row, hex, submitted, completion.symm.trans hex, hreq, hrow, admits⟩
   · rw [Api.HostSession.callInstance_callTable s hcalls] at specialized
     obtain ⟨envelope, same⟩ := acceptAtInstance_sound app _ s.machine r d specialized
@@ -2701,7 +2719,7 @@ private theorem answer_decision {program : Api.Program} {app : SigApp} (untyped 
     injection hop with hi
     subst hi
     rw [hopi] at hreq
-    rw [hstore.2.1, externalAdmits_untyped untyped] at admits
+    rw [hstore.2.1] at admits
     exact ⟨ex, reply, i, r.request, row, hex, submitted, completion.symm.trans hex, hreq, hrow,
       admits⟩
 
@@ -2710,18 +2728,21 @@ program without cause handlers, with the journal's submitted exits as its tape.
 Consumer: `request_leads`. -/
 private theorem reached_inv (s : Run) (reached : Run.Reached s)
     (hroot : ExtRows s.built.table s.built.program = true)
-    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = []) :
-    MachineInv s.built.program s.built.table s.budget.compileFuel s.journal s.machine := by
+    (concrete : SourceScope.ConcreteReplies s.built.table) :
+    MachineInv s.built.program s.built.table s.built.app.types s.budget.compileFuel s.journal
+      s.machine := by
   induction reached with
   | opened b id budget profile => exact load_inv budget.compileFuel [] hroot
   | step s c hs ih =>
-    rw [Run.step_built] at hroot concrete untyped
-    have inv := (ih hroot concrete untyped).mono_journal (j₂ := (s.step c).journal) (fun c' h => by
+    rw [Run.step_built] at hroot concrete
+    have inv := (ih hroot concrete).mono_journal (j₂ := (s.step c).journal) (fun c' h => by
       rw [Run.step_journal]
       exact List.mem_append_left _ h)
     rw [Run.step_built, Run.step_budget]
-    have stepped : ∀ n d, CallTreeDecision s.built.table (s.step c).journal s.machine d →
-        MachineInv s.built.program s.built.table s.budget.compileFuel (s.step c).journal
+    have stepped : ∀ n d, CallTreeDecision s.built.table s.built.app.types (s.step c).journal
+        s.machine d →
+        MachineInv s.built.program s.built.table s.built.app.types s.budget.compileFuel
+          (s.step c).journal
           (steppedBy s.built.program n s.built.table s.machine d) := fun n d ha => by
       letI := evaluatorFor s.built.program s.built.table
       obtain ⟨_, _, moved⟩ := Lift.stepDecisionState_lift
@@ -2751,14 +2772,16 @@ private theorem reached_inv (s : Run) (reached : Run.Reached s)
       · have here : (s.step (.apply key)).machine =
             steppedBy s.built.program n s.built.table s.machine d := hs'.trans moved
         rw [here]
-        refine stepped n d (answer_decision untyped concrete s.session (Run.reached_history s hs).1
+        refine stepped n d (answer_decision concrete s.session (Run.reached_history s hs).1
           inv.store _ reply d hpre ?_)
         rw [Run.step_journal]
         exact List.mem_append_left _ (reached_held s hs slot member reply held)
     | control d =>
       have hs' := congrArg Api.HostSession.Session.machine (Run.step_session_control s d)
-      have moveBy : CallTreeDecision s.built.table (s.step (.control d)).journal s.machine d →
-          MachineInv s.built.program s.built.table s.budget.compileFuel (s.step (.control d)).journal
+      have moveBy : CallTreeDecision s.built.table s.built.app.types (s.step (.control d)).journal
+          s.machine d →
+          MachineInv s.built.program s.built.table s.built.app.types s.budget.compileFuel
+            (s.step (.control d)).journal
             (s.step (.control d)).machine := fun ha => by
         rcases advance_machine s.session s.budget.fuel d with same | ⟨_, moved⟩
         · have here : (s.step (.control d)).machine = s.machine := hs'.trans same
@@ -2790,14 +2813,14 @@ theorem request_leads (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
     (external : SourceScope.ExternalOnly s.built.program)
-    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = [])
+    (concrete : SourceScope.ConcreteReplies s.built.table)
     (call : Call) (token : Nat)
     (request : Program.requestOf s.machine call.fiber token = some (call.op, call.request)) :
     ∃ (i : Nat) (row : Program.Row) (tape : ReplyTape) (frame : NFiber) (stores : Stores),
       call.op = .external i ∧ externalRow s.built.table i = some row ∧
       (∀ ex ∈ tape, ∃ reply, Command.submit reply ∈ s.journal ∧
         reply.completion = .ofExit ex) ∧
-      Leads (admittedTapeHost s.built.table) s.built.program
+      Leads (admittedTapeHost s.built.table s.built.app.types) s.built.program
         (.live (fiberOf (compile s.built.program s.budget.compileFuel) []) Stores.empty) tape
         (.live frame stores) [] ∧
       IsCall frame.current = true ∧ callOf frame.current = some (i, call.request) := by
@@ -2805,7 +2828,7 @@ theorem request_leads (s : Run) (reached : Run.Reached s)
     fragment noCause
   obtain ⟨_, cur, K, tape, i, _, row, _, _, _, _, _, _, _, _, _, hop, _, hrow, hcall, hcallOf, _, _,
     htape, hleads, _⟩ :=
-      requestOf_active_parkedCall (reached_inv s reached hroot concrete untyped) request
+      requestOf_active_parkedCall (reached_inv s reached hroot concrete) request
   exact ⟨i, row, tape, fiberOf cur K true, Stores.empty, hop, hrow, htape, hleads.toLeads, hcall,
     hcallOf⟩
 
@@ -2815,16 +2838,16 @@ theorem request_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
     (external : SourceScope.ExternalOnly s.built.program)
-    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = [])
+    (concrete : SourceScope.ConcreteReplies s.built.table)
     (call : Call) (token : Nat)
     (request : Program.requestOf s.machine call.fiber token = some (call.op, call.request)) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
       call.op = .external i ∧ externalRow s.built.table i = some row ∧
       (∀ ex ∈ T, ∃ reply, Command.submit reply ∈ s.journal ∧
         reply.completion = .ofExit ex) ∧
-      treeWaits s.built.table s.built.program T = .waiting i call.request := by
+      treeWaits s.built.table s.built.program T s.built.app.types = .waiting i call.request := by
   obtain ⟨i, row, tape, frame, stores, op, declared, submitted, leads, callAt, requestAt⟩ :=
-    request_leads s reached fragment noCause external concrete untyped call token request
+    request_leads s reached fragment noCause external concrete call token request
   exact ⟨i, row, tape, op, declared, submitted,
     tree_wait_of_leads s.built.table s.built.program fragment s.budget.compileFuel tape
       frame stores i call.request leads callAt requestAt⟩
@@ -2837,14 +2860,14 @@ theorem bound_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
     (external : SourceScope.ExternalOnly s.built.program)
-    (concrete : SourceScope.ConcreteReplies s.built.table) (untyped : s.built.app.types = [])
+    (concrete : SourceScope.ConcreteReplies s.built.table)
     (call : Call) (token : Nat)
     (bound : ((Command.bind call token), .bound) ∈ s.journal.zip s.phases) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
       call.op = .external i ∧ externalRow s.built.table i = some row ∧
       (∀ ex ∈ T, ∃ reply, Command.submit reply ∈ s.journal ∧
         reply.completion = .ofExit ex) ∧
-      treeWaits s.built.table s.built.program T = .waiting i call.request := by
+      treeWaits s.built.table s.built.program T s.built.app.types = .waiting i call.request := by
   obtain ⟨before, actual, built, recordedBefore, request⟩ :=
     bound_request_prefix s reached call token bound
   have admitted : StraightRows before.built.table before.built.program = true := by
@@ -2859,12 +2882,8 @@ theorem bound_in_tree (s : Run) (reached : Run.Reached s)
   have concreteRows : SourceScope.ConcreteReplies before.built.table := by
     rw [built]
     exact concrete
-  have untypedBefore : before.built.app.types = [] := by
-    rw [built]
-    exact untyped
   obtain ⟨i, row, tape, op, declared, submitted, waiting⟩ :=
-    request_in_tree before actual admitted handlers operations concreteRows untypedBefore call token
-      request
+    request_in_tree before actual admitted handlers operations concreteRows call token request
   rw [built] at declared waiting
   refine ⟨i, row, tape, op, declared, ?_, waiting⟩
   intro ex member
@@ -2891,33 +2910,33 @@ theorem runRowsO_pbind {table : RowTable} {σ : Type} (host : Effects.Comodel (R
   runRowsO_bind host k p s st
 
 /-- Where a tree waits, read off its detailed run. -/
-theorem treeWaits_eq (table : RowTable) (program : NativeEff) (T : ReplyTape) :
-    treeWaits table program T =
-      (match runRowsO (admittedTapeHost table) (denoteRows table program []) Stores.empty T with
+theorem treeWaits_eq (table : RowTable) {types : TyDecls} (program : NativeEff) (T : ReplyTape) :
+    treeWaits table program T types =
+      (match runRowsO (admittedTapeHost table types) (denoteRows table program []) Stores.empty T with
         | .done a _ _ => RowsStop.finished a
         | .waiting i v _ _ => RowsStop.waiting i v) := by
   unfold treeWaits
   rw [observeRows_eq_runRowsO]
-  show (RowsEnd.observe (runRowsO (admittedTapeHost table)
+  show (RowsEnd.observe (runRowsO (admittedTapeHost table types)
     (Effects.Program.bind (denoteRows table program []) fun a => Effects.Program.pure (some a))
     Stores.empty T)).stop = _
   rw [runRowsO_pbind]
-  cases runRowsO (admittedTapeHost table) (denoteRows table program []) Stores.empty T <;> rfl
+  cases runRowsO (admittedTapeHost table types) (denoteRows table program []) Stores.empty T <;> rfl
 
 /-- The admitted reply host at a call: the tape's next exit where the row admits it, else a
 wait. -/
-theorem runRowsO_admitted_vis {table : RowTable} (op : (RowSig table).Op)
+theorem runRowsO_admitted_vis {table : RowTable} {types : TyDecls} (op : (RowSig table).Op)
     (k : ExitV → Effects.Program (RowsSig table) ExitV) (s : Stores) (ex : ExitV)
     (rest : ReplyTape) :
-    runRowsO (admittedTapeHost table) (.vis (.inr op) k) s (ex :: rest) =
-      if externalAdmits table op.1.val (.ofExit ex) then
-        runRowsO (admittedTapeHost table) (k ex) s rest
+    runRowsO (admittedTapeHost table types) (.vis (.inr op) k) s (ex :: rest) =
+      if externalAdmits ⟨table, [], types⟩ op.1.val (.ofExit ex) then
+        runRowsO (admittedTapeHost table types) (k ex) s rest
       else .waiting op.1.val op.2 s (ex :: rest) := by
   rw [runRowsO.eq_def]
   dsimp only
   unfold admittedTapeHost
   dsimp only
-  cases externalAdmits table op.1.val (.ofExit ex) with
+  cases externalAdmits ⟨table, [], types⟩ op.1.val (.ofExit ex) with
   | true => rfl
   | false => rfl
 
@@ -2931,9 +2950,10 @@ def catchK (table : RowTable) (env : List Val) (test : Term) (h : NativeEff) :
     | none => pure (Exit.failure cause)
 
 /-- A handler that answers a term never waits. -/
-theorem catchK_done (table : RowTable) (env : List Val) (test response : Term) (a : ExitV)
+theorem catchK_done (table : RowTable) {types : TyDecls} (env : List Val) (test response : Term)
+    (a : ExitV)
     (s : Stores) (st : ReplyTape) :
-    ∃ x s' st', runRowsO (admittedTapeHost table)
+    ∃ x s' st', runRowsO (admittedTapeHost table types)
       (catchK table env test (.succeed response) a) s st = .done x s' st' := by
   cases a with
   | success v => exact ⟨_, _, _, rfl⟩
@@ -2944,9 +2964,9 @@ theorem catchK_done (table : RowTable) (env : List Val) (test response : Term) (
     | none => exact ⟨_, _, _, rfl⟩
 
 /-- A response after a sequence never waits. -/
-theorem seqSucceed_done (table : RowTable) (term : Term) (a : ExitV) (s : Stores)
+theorem seqSucceed_done (table : RowTable) {types : TyDecls} (term : Term) (a : ExitV) (s : Stores)
     (st : ReplyTape) :
-    ∃ x s' st', runRowsO (admittedTapeHost table)
+    ∃ x s' st', runRowsO (admittedTapeHost table types)
       (seqRows (fun v => denoteRows table (.succeed term) ([] ++ [v])) a) s st =
         .done x s' st' := by
   cases a with

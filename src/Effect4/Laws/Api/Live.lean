@@ -447,7 +447,7 @@ theorem replay_at_call_instance (l : Live) (i : Nat) (key : Api.HostSession.Key)
       Api.HostSession.preflight (l.upTo i).run.session reply = .ok decision ∧
       (l.upTo i).run.session.callInstance =
         Api.HostSession.instanceAt l.run.built.program l.run.built.app ∧
-      (∀ value, reply.completion = .ofExit (.success value) → l.run.built.app.types = [] →
+      (∀ value, reply.completion = .ofExit (.success value) →
         Api.HostSession.PreparedSuccess (l.upTo i).run.session reply decision ∨
           Api.HostSession.InstanceSuccess (l.upTo i).run.session reply decision) ∧
       (∀ cause, reply.completion = .ofExit (.failure cause) →
@@ -457,10 +457,9 @@ theorem replay_at_call_instance (l : Live) (i : Nat) (key : Api.HostSession.Key)
   obtain ⟨reply, _, _, _, read, _, accepted, _⟩ := Run.application_payload _ reached key applied
   have live := Run.application_live _ reached key applied
   have built : (l.upTo i).run.built = l.run.built := Run.play_built _ _
-  refine ⟨reply, _, read, accepted, ?_, fun value success untyped => ?_, fun cause failed ty => ?_⟩
+  refine ⟨reply, _, read, accepted, ?_, fun value success => ?_, fun cause failed ty => ?_⟩
   · rw [Run.reached_callInstance _ reached, built]
-  · exact Api.HostSession.preflight_success_prepared_fits (by rw [built]; exact untyped) _ reply _
-      value live success accepted
+  · exact Api.HostSession.preflight_success_prepared_fits _ reply _ value live success accepted
   · exact Api.HostSession.preflight_failure_noShapeDefect _ reply _ cause failed accepted ty
 
 

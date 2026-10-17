@@ -116,7 +116,7 @@ theorem checked_context_arm (root : ProgramSource) (w : World) (p : Point)
     (env : TyEnv) (keys available : Env.Requirement) (ty : EffTy)
     (node : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.context keys))))
     (checked : Checker.checkAction (root.scopeSig p.path) env p.path (.context keys) = .ok ty)
-    (services : w.serviceTy = root.sig.serviceTy) (covered : Row.Subset keys available) :
+    (services : Tied root w) (covered : Row.Subset keys available) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨declared, rfl⟩ := Checker.inv_action_context _ _ _ _ _ checked
   have action : actionAt root.program p = some WithFiberAction.getContext := by
@@ -128,7 +128,7 @@ theorem checked_context_arm (root : ProgramSource) (w : World) (p : Point)
   intro key member
   obtain ⟨carrier, present⟩ := declared key member
   have present' : w.serviceTy key = some carrier := by
-    rw [services]
+    rw [services.services]
     change root.signature.serviceTy key = some carrier
     rw [← root.scopeSig_serviceTy p.path]
     exact present
@@ -141,7 +141,7 @@ theorem checked_context_denotation (root : ProgramSource) (w : World) (p : Point
     (env : TyEnv) (keys available : Env.Requirement) (ty : EffTy)
     (node : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.context keys))))
     (checked : Checker.check (root.scopeSig p.path) env p.path (.withFiber (.context keys)) = .ok ty)
-    (services : w.serviceTy = root.sig.serviceTy) (coverage : Row.Subset ty.requires available) :
+    (services : Tied root w) (coverage : Row.Subset ty.requires available) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.withFiber (.context keys)) p) := by
   have actionCheck := Checker.inv_withFiber _ _ _ _ _ checked
@@ -763,7 +763,7 @@ theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point
     (checked : Checker.check (root.scopeSig p.path) env p.path
       (.provideContext context body) = .ok ty)
     (values : EnvTyped w env p.env) (evaluated : evalTerm p.env context = some (Val.context supplied))
-    (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
+    (tie : Tied root w) (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
     (immediate : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
       ∀ exit, inlineYield body (p.child 0) = some exit → ExitOk w bodyTy exit)
     (child : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
@@ -779,7 +779,8 @@ theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point
   have atoms : (root.scopeSig p.path).atomOf = nativeAtomTy :=
     (root.scopeSig_extends p.path).atomOf.trans rfl
   have members := evalTerm_fits (sig := root.scopeSig p.path) atoms constants
-    ((root.scopeSig_extends p.path).types.trans root.untyped) values termCheck evaluated
+    (TyDecls.within_of_eq ((root.scopeSig_extends p.path).types.trans tie.types.symm)) values
+    termCheck evaluated
   have given : Fits w (Val.context supplied) (.contextOf keys) := by
     rw [← normalized]
     exact (fits_normalize _ _ _).mpr members
@@ -807,7 +808,7 @@ theorem checked_provideContext_reader (root : ProgramSource) (w : World) (p : Po
     (checked : Checker.check (root.scopeSig p.path) env p.path
       (.provideContext context (.withFiber (.context required))) = .ok ty)
     (values : EnvTyped w env p.env) (evaluated : evalTerm p.env context = some (Val.context supplied))
-    (_services : w.serviceTy = root.sig.serviceTy) (coverage : Row.Subset ty.requires available)
+    (services : Tied root w) (coverage : Row.Subset ty.requires available)
     (budget : p.fuel ≠ 0)
     (admitted : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0])
       (.withFiber (.context required)) = .ok bodyTy → PointTyped root w (p.child 0) bodyTy)
@@ -816,7 +817,7 @@ theorem checked_provideContext_reader (root : ProgramSource) (w : World) (p : Po
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideContext context (.withFiber (.context required))) p) := by
   refine checked_provideContext_arm root w p env context (.withFiber (.context required))
-    available ty supplied checked values evaluated coverage budget ?_ ?_ saved
+    available ty supplied checked values evaluated services coverage budget ?_ ?_ saved
   · intro bodyTy bodyCheck exit head
     have noInline : inlineYield (.withFiber (.context required)) (p.child 0) = none := by
       unfold inlineYield
@@ -834,7 +835,7 @@ theorem checked_provideService_arm (root : ProgramSource) (w : World) (p : Point
     (checked : Checker.check (root.scopeSig p.path) env p.path
       (.provideService key value body) = .ok ty)
     (values : EnvTyped w env p.env) (evaluated : evalTerm p.env value = some provided)
-    (services : w.serviceTy = root.sig.serviceTy)
+    (services : Tied root w)
     (carriers : ∀ carrier, root.sig.serviceTy key = some carrier → flatCarrier carrier = true)
     (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
     (child : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
@@ -848,13 +849,14 @@ theorem checked_provideService_arm (root : ProgramSource) (w : World) (p : Point
   have declaredRoot : root.sig.serviceTy key = some carrier := by
     rw [root.scopeSig_serviceTy] at declared
     exact declared
-  have declaredWorld : w.serviceTy key = some carrier := services ▸ declaredRoot
+  have declaredWorld : w.serviceTy key = some carrier := services.services ▸ declaredRoot
   have constants : (root.scopeSig p.path).constAtom = nativeConstAtom :=
     (root.scopeSig_extends p.path).constAtom.trans rfl
   have atoms : (root.scopeSig p.path).atomOf = nativeAtomTy :=
     (root.scopeSig_extends p.path).atomOf.trans rfl
   have valueFit := evalTerm_fits (sig := root.scopeSig p.path) atoms constants
-    ((root.scopeSig_extends p.path).types.trans root.untyped) values termCheck evaluated
+    (TyDecls.within_of_eq ((root.scopeSig_extends p.path).types.trans services.types.symm)) values
+    termCheck evaluated
   have carrierFit : Fits w provided carrier := fits_subN w orderedValue provided valueFit
   let supplied : Ctx := Ctx.withServices ((Env.Context.empty : Env.Ctx).addV key provided)
   have given : Fits w (Val.context supplied) (.contextOf (Env.Requirement.single key)) := by
@@ -884,7 +886,7 @@ theorem checked_provideService_reader (root : ProgramSource) (w : World) (p : Po
     (checked : Checker.check (root.scopeSig p.path) env p.path
       (.provideService key value (.withFiber (.context required))) = .ok ty)
     (values : EnvTyped w env p.env) (evaluated : evalTerm p.env value = some provided)
-    (services : w.serviceTy = root.sig.serviceTy)
+    (services : Tied root w)
     (carriers : ∀ carrier, root.sig.serviceTy key = some carrier → flatCarrier carrier = true)
     (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
     (admitted : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0])

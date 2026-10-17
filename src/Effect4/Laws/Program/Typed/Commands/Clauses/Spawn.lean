@@ -268,7 +268,7 @@ theorem clause_fork (root : ProgramSource) (rootTy : EffTy) (child : Body)
     ambientProg_fiber_inv current (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   change EffTy at cert
-  have typedChild := bodyTyped_ambient root ev.typed.machine.sourceWF ev.typed.machine.services
+  have typedChild := bodyTyped_ambient root ev.typed.machine.sourceWF ⟨ev.typed.machine.services, ev.typed.machine.types⟩
     m.completedExits typedB requires acquired coverage
   obtain ⟨r, hr⟩ := bodyPosition_result row child cert
   rw [hr] at typedChild
@@ -314,7 +314,7 @@ theorem clause_forkIn (root : ProgramSource) (rootTy : EffTy) (child : Point)
   change EffTy at cert
   have typedChild : AmbientProg root w row ((cert, row, row) : AmbientPosition)
       (bodyR (interpRAt root.program m.completedExits) (.at_ child)) :=
-    denoteAt_ambient root ev.typed.machine.sourceWF ev.typed.machine.services pre.1 requires pre.2
+    denoteAt_ambient root ev.typed.machine.sourceWF ⟨ev.typed.machine.services, ev.typed.machine.types⟩ pre.1 requires pre.2
   have live : m.state.ScopeLive scope := by
     have l : w.state.ScopeLive scope := hlive
     rw [ev.typed.machine.wide.state] at l
@@ -353,7 +353,7 @@ theorem clause_forkScoped (root : ProgramSource) (rootTy : EffTy) (child : Point
   change EffTy at cert
   have typedChild : AmbientProg root w row ((cert, row, row) : AmbientPosition)
       (bodyR (interpRAt root.program m.completedExits) (.at_ child)) :=
-    denoteAt_ambient root ev.typed.machine.sourceWF ev.typed.machine.services pre.1 requires pre.2
+    denoteAt_ambient root ev.typed.machine.sourceWF ⟨ev.typed.machine.services, ev.typed.machine.types⟩ pre.1 requires pre.2
   have freshΓ : w.Γ ⟨m.nextId⟩ = none := (fresh_of_typed ev.typed.machine).2
   have ord : w.leHost (w.addFiber ⟨m.nextId⟩ cert) := addFiber_leHost freshΓ
   have typedCode : AmbientProg root (w.addFiber ⟨m.nextId⟩ cert) row q
@@ -745,7 +745,7 @@ theorem clause_raceAll (root : ProgramSource) (rootTy : EffTy) (entrants : List 
       obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hcode
       obtain ⟨pty, ptyped, ha, he, required⟩ := pre p hp
       exact ⟨pty, row, ambientProg_mono root ord (denoteAt_ambient root ev.typed.machine.sourceWF
-        ev.typed.machine.services ptyped.1 required ptyped.2), Row.subset_refl _,
+        ⟨ev.typed.machine.services, ev.typed.machine.types⟩ ptyped.1 required ptyped.2), Row.subset_refl _,
         Ty.sub_le_subN ha, Ty.sub_le_subN he⟩
   have internal : ∀ k ∈ Guard.internalKeys (m.update f), k ≠ (f.id, m.nextToken) :=
     fun k hk same => by
@@ -835,7 +835,7 @@ theorem clause_raceAllFirst (root : ProgramSource) (rootTy : EffTy) (entrants : 
       obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hcode
       obtain ⟨pty, ptyped, ha, he, required⟩ := pre p hp
       exact ⟨pty, row, ambientProg_mono root ord (denoteAt_ambient root ev.typed.machine.sourceWF
-        ev.typed.machine.services ptyped.1 required ptyped.2), Row.subset_refl _,
+        ⟨ev.typed.machine.services, ev.typed.machine.types⟩ ptyped.1 required ptyped.2), Row.subset_refl _,
         Ty.sub_le_subN ha, Ty.sub_le_subN he⟩
   have internal : ∀ k ∈ Guard.internalKeys (m.update f), k ≠ (f.id, m.nextToken) :=
     fun k hk same => by

@@ -6,7 +6,8 @@ import Effect4.Laws.Program.Typed.ExitConnector
 
 T1 of the foundations note (`docs/research/2026-10-03-claude-lead/foundations.md` §7). The typed
 state's exit judgment (`ExitOk`: `FitsExit` at a world) and the meaning layer's
-(`Denote.ExitHasTy`: the executable shape check `Val.hasTy` and store validity, what
+(`Denote.ExitHasTy`: membership under the source's declaration table, decided by `Val.memberIn`,
+and store validity; at the empty table the executable shape check `Val.hasTy`, what
 `meaning_typed` concludes for straight-line code) agree on every exit the frame machine records,
 on every fragment: scheduled programs, layers, generators and loops as well as straight code.
 
@@ -43,9 +44,9 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
 when the world allocates no external handle: `ExitOk`'s fit through the connector, its validity
 premise from capability membership (`fits_validIn`). -/
 theorem exitHasTy_of_exitOk {root : ProgramSource} {w : World} (store : StoreTyped root w)
-    (ty : EffTy) (ex : ExitV) (halloc : w.state.externals.allocated = []) (htypes : w.types = [])
-    (h : ExitOk w ty ex) : Denote.ExitHasTy ty.answer ty.error w.state ex :=
-  exitHasTy_of_fitsExit w ty w.state ex halloc htypes
+    (ty : EffTy) (ex : ExitV) (halloc : w.state.externals.allocated = [])
+    (h : ExitOk w ty ex) : Denote.ExitHasTy ty.answer ty.error w.state ex w.types :=
+  exitHasTy_of_fitsExit w ty w.state ex halloc
     (fun v hv => by
       subst hv
       exact fits_validIn store ((fitsExit_success_iff w ty v).mp h.1)) h.1
@@ -61,7 +62,7 @@ theorem exits_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape :
     ∃ Γ : FiberId → Option EffTy, Γ Api.root = some rootTy ∧
       ∀ id ex, (id, some ex) ∈ (obs (Api.replay root.program fuel tape).machine).exits →
         ∃ ty, Γ id = some ty ∧ Denote.ExitHasTy ty.answer ty.error
-          (obs (Api.replay root.program fuel tape).machine).stores ex := by
+          (obs (Api.replay root.program fuel tape).machine).stores ex root.types := by
   obtain ⟨w, typed, ⟨hroot, hstate, hexits⟩, _, _⟩ := obs_typed root rootTy fuel tape checked closedRow admitted
   have store := storeTyped_of_typedState typed
   have halloc : w.state.externals.allocated = [] := by
@@ -71,7 +72,9 @@ theorem exits_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape :
   obtain ⟨ty, declared, ok⟩ := hexits id ex hmem
   refine ⟨ty, declared, ?_⟩
   rw [← hstate]
-  exact exitHasTy_of_exitOk store ty ex halloc (typed.types.trans root.untyped) ok
+  have h := exitHasTy_of_exitOk store ty ex halloc ok
+  rw [typed.types] at h
+  exact h
 
 /-- **A checked program's result has its checked type**: the root fiber's recorded exit satisfies
 the meaning layer's judgment at the program's type (`exits_hasTy` at the root). -/
@@ -82,7 +85,7 @@ theorem root_exit_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (admitted : AdmittedTape root rootTy fuel tape) (ex : ExitV)
     (recorded : (Api.root, some ex) ∈ (obs (Api.replay root.program fuel tape).machine).exits) :
     Denote.ExitHasTy rootTy.answer rootTy.error
-      (obs (Api.replay root.program fuel tape).machine).stores ex := by
+      (obs (Api.replay root.program fuel tape).machine).stores ex root.types := by
   obtain ⟨Γ, hΓ, hexits⟩ := exits_hasTy root rootTy fuel tape checked closedRow admitted
   obtain ⟨ty, declared, hty⟩ := hexits _ ex recorded
   obtain rfl := Option.some.inj (hΓ.symm.trans declared)

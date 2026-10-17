@@ -15,8 +15,8 @@ Placement of the claims (`AGENTS.md`, five points):
 1. Concept `store-typing` (concept 1 of `docs/core/semantics.md`), the property that membership
    in a world reads the application's declared names by their bodies and keeps the laws the term
    typer's readers need.
-2. Questions: the claim `fits-declared`, its readers' step `fits_iff_membersIn` (R3) and its term
-   step `evalTerm_progressIn` (R9).
+2. Questions: the claim `fits-declared`, its readers' step `fits_iff_membersIn` (R3); its term
+   step is `evalTerm_progress` at a table within the world's (R9, `Typed/Denotation/Terms.lean`).
 3. Reach: every table, world, value and type; native atoms for terms.
 4. Does not establish: anything of a host row (F1, R6).
 5. Unlocks: the term laws at the source's table, so the typed state at every table.
@@ -26,6 +26,49 @@ set_option autoImplicit false
 
 namespace Effect4.Program.Typed
 open Effect4.Machine Effect4.Program.Sched
+
+/-! ## A table within the world's
+
+The term typer reads the program's table, and membership reads the world's. They agree when each
+name the program's table declares, the world's declares at the same body (`TyDecls.Within`): the
+empty table is within every table (a native signature at every world), and a table is within
+itself (a source at a world tied to it). -/
+
+/-- **A table within another**: each name it declares, the other declares at the same body. -/
+def _root_.Effect4.Program.TyDecls.Within (decls outer : TyDecls) : Prop :=
+  ∀ name body, decls.body? name = some body → outer.body? name = some body
+
+/-- The empty table is within every table. -/
+theorem _root_.Effect4.Program.TyDecls.within_nil (outer : TyDecls) :
+    TyDecls.Within [] outer :=
+  fun _ _ h => by cases h
+
+/-- A table is within itself. -/
+theorem _root_.Effect4.Program.TyDecls.within_refl (decls : TyDecls) : decls.Within decls :=
+  fun _ _ h => h
+
+/-- An empty table is within every table. -/
+theorem _root_.Effect4.Program.TyDecls.within_of_nil {decls outer : TyDecls} (h : decls = []) :
+    decls.Within outer :=
+  h ▸ TyDecls.within_nil outer
+
+/-- A table equal to the world's is within it. -/
+theorem _root_.Effect4.Program.TyDecls.within_of_eq {decls outer : TyDecls} (h : decls = outer) :
+    decls.Within outer :=
+  h ▸ TyDecls.within_refl decls
+
+/-- An unfolding under a table is an unfolding under every table it is within. -/
+theorem _root_.Effect4.Program.TyDecls.Within.unfold? {decls outer : TyDecls}
+    (hw : decls.Within outer) {t : Ty} {name : String} {body : Ty} (hu : decls.unfold? t = some (name, body)) :
+    outer.unfold? t = some (name, body) := by
+  obtain ⟨n, args, rfl⟩ := TyDecls.ref_of_unfold? hu
+  have hb := TyDecls.body?_of_unfold? hu
+  have hn : n = name := by
+    simp only [TyDecls.unfold?, Ty.refName?, Option.bind_some, Option.map_eq_some_iff] at hu
+    obtain ⟨_, _, he⟩ := hu
+    exact (Prod.mk.inj he).1
+  subst hn
+  simp only [TyDecls.unfold?, Ty.refName?, Option.bind_some, hw _ _ hb, Option.map_some]
 
 /-! ## Chains through members and unfoldings
 
@@ -118,12 +161,14 @@ theorem reaches_iff {decls : TyDecls} {t x : Ty} :
     x ∈ Ty.headMembers decls [] t ↔ ReachesAvoid decls [] t x :=
   ⟨ReachesAvoid.of_mem_headMembers _ [] rfl, ReachesAvoid.mem_headMembers _ [] rfl⟩
 
-/-- A chain's end membership is membership at its start. -/
-theorem fits_of_reaches {w : World} {seen : List String} {t x : Ty} {v : Val}
-    (h : ReachesAvoid w.types seen t x) (hv : Fits w v x) : Fits w v t := by
+/-- A chain's end membership is membership at its start, under a table within the world's. -/
+theorem fits_of_reaches {w : World} {decls : TyDecls} (hw : decls.Within w.types)
+    {seen : List String} {t x : Ty} {v : Val}
+    (h : ReachesAvoid decls seen t x) (hv : Fits w v x) : Fits w v t := by
   induction h with
   | here hm _ => exact (fits_members w v _).mp ⟨_, hm, hv⟩
-  | step hm hu _ _ ih => exact (fits_members w v _).mp ⟨_, hm, (fits_unfold hu).mpr (ih hv)⟩
+  | step hm hu _ _ ih =>
+    exact (fits_members w v _).mp ⟨_, hm, (fits_unfold (hw.unfold? hu)).mpr (ih hv)⟩
 
 /-- One level of membership at a type is at one of its union members. -/
 theorem fitsAt_members {decls : TyDecls} {w : World} {o : String → Val → Prop} {v : Val} :
@@ -141,94 +186,91 @@ theorem fitsAt_members {decls : TyDecls} {w : World} {o : String → Val → Pro
   | .record _, h | .map _ _, h | .tuple _, h | .app _ _, h | .null, h | .undefined, h
   | .number, h | .bytes, h | .contextOf _, h => ⟨_, List.mem_singleton_self _, h⟩
 
-/-- **Membership at a type is membership at the end of one of its chains.** The least fixed point
-lies below the reading "a member of the end of a chain from the name's body", which one level of
-membership closes: a union member that is no reference ends a chain, and a declared one
-continues it. -/
-theorem fits_reaches {w : World} {t : Ty} {v : Val} (h : Fits w v t) :
-    ∃ x, ReachesAvoid w.types [] t x ∧ Fits w v x := by
-  let P : String → Val → Prop := fun n u =>
-    ∃ b x, w.types.body? n = some b ∧ ReachesAvoid w.types [] b x ∧ Fits w u x
-  have hle : ∀ n u, P n u → NameFits w.types w n u := by
-    rintro n u ⟨b, x, hb, hr, hx⟩
-    exact (nameFits_iff hb).mpr (fits_of_reaches hr hx)
+/-- **Membership at a type is membership at the end of one of its chains**, under a table within
+the world's. The least fixed point lies below the reading "a member of the name, and of the end of
+a chain from its body under the table", which one level of membership closes: a union member that
+is no reference under the table ends a chain, and a declared one continues it. -/
+theorem fits_reaches {w : World} {decls : TyDecls} (hw : decls.Within w.types) {t : Ty} {v : Val}
+    (h : Fits w v t) : ∃ x, ReachesAvoid decls [] t x ∧ Fits w v x := by
+  let P : String → Val → Prop := fun n u => NameFits w.types w n u ∧
+    ∀ b, decls.body? n = some b → ∃ x, ReachesAvoid decls [] b x ∧ Fits w u x
+  have hle : ∀ n u, P n u → NameFits w.types w n u := fun _ _ hp => hp.1
   have hc : NamesClosed w.types w P := by
     intro n b u hb hu
+    refine ⟨(nameFits_iff hb).mpr (fitsAt_oracle_mono hle hu), fun b' hb' => ?_⟩
+    rw [hw _ _ hb'] at hb
+    cases hb
     obtain ⟨m, hm, hmv⟩ := fitsAt_members b hu
-    cases hum : w.types.unfold? m with
-    | none =>
-      exact ⟨b, m, hb, .here hm hum, fitsAt_oracle_mono hle hmv⟩
+    cases hum : decls.unfold? m with
+    | none => exact ⟨m, .here hm hum, fitsAt_oracle_mono hle hmv⟩
     | some nb =>
-      obtain ⟨n', b'⟩ := nb
-      have hm' : FitsAt w.types w P u m := hmv
-      cases m
-      case app n'' args =>
-        have hb' := TyDecls.body?_of_unfold? hum
-        have hn : n'' = n' := by
-          simp only [TyDecls.unfold?, Ty.refName?, Option.bind_some, Option.map_eq_some_iff] at hum
-          obtain ⟨_, _, he⟩ := hum
-          exact (Prod.mk.inj he).1
-        subst hn
-        simp only [FitsAt, hb'] at hm'
-        obtain ⟨b'', x, hb'', hr, hx⟩ := hm'
-        rw [hb'] at hb''
-        cases hb''
-        exact ⟨b, x, hb, .step hm hum rfl hr, hx⟩
-      all_goals simp only [TyDecls.unfold?, Ty.refName?, Option.bind_none] at hum; cases hum
+      obtain ⟨n', b''⟩ := nb
+      obtain ⟨n'', args, rfl⟩ := TyDecls.ref_of_unfold? hum
+      have hwu := hw.unfold? hum
+      have hb'' := TyDecls.body?_of_unfold? hum
+      have hn : n'' = n' := by
+        simp only [TyDecls.unfold?, Ty.refName?, Option.bind_some, Option.map_eq_some_iff] at hum
+        obtain ⟨_, _, he⟩ := hum
+        exact (Prod.mk.inj he).1
+      subst hn
+      have hm' : FitsAt w.types w P u (.app n'' args) := hmv
+      simp only [FitsAt, hw _ _ hb''] at hm'
+      obtain ⟨x, hr, hx⟩ := hm'.2 b'' hb''
+      exact ⟨x, .step hm hum rfl hr, hx⟩
   obtain ⟨m, hm, hmv⟩ := (fits_members w v t).mpr h
-  cases hum : w.types.unfold? m with
+  cases hum : decls.unfold? m with
   | none => exact ⟨m, .here hm hum, hmv⟩
   | some nb =>
     obtain ⟨n, b⟩ := nb
-    have hnf : NameFits w.types w n v := by
-      have := (fits_unfold hum).mp hmv
-      exact (nameFits_iff (TyDecls.body?_of_unfold? hum)).mpr this
-    obtain ⟨b', x, hb', hr, hx⟩ := hnf P hc
-    rw [TyDecls.body?_of_unfold? hum] at hb'
-    cases hb'
+    have hwu := hw.unfold? hum
+    have hnf : NameFits w.types w n v :=
+      (nameFits_iff (TyDecls.body?_of_unfold? hwu)).mpr ((fits_unfold hwu).mp hmv)
+    obtain ⟨x, hr, hx⟩ := (hnf P hc).2 b (TyDecls.body?_of_unfold? hum)
     exact ⟨x, .step hm hum rfl hr, hx⟩
 
-/-- **Membership under the table reads the union members under the table**: the `Fits` form of
-`memberIn_iff_membersIn`, at every table, guarded or not. Placement: concept `store-typing`, R3,
-the readers' step of the claim `fits-declared`. Route: `fits_normalize`; a member's membership is
-at the end of one of its chains (`fits_reaches`, by the least fixed point's induction principle),
-and the head members are the chains' ends (`reaches_iff`, by shortening a chain past a repeated
-name). Consumer: the four readers of the term typer under the table (a field read, an update, a
-fold and a tag dispatch). -/
+/-- **Membership reads the union members under a table within the world's**: the `Fits` form of
+`memberIn_iff_membersIn`, at every such table, guarded or not; at the world's own table
+(`TyDecls.within_refl`) and at the empty one (`TyDecls.within_nil`). Placement: concept
+`store-typing`, R3, the readers' step of the claim `fits-declared`. Route: `fits_normalize`; a
+member's membership is at the end of one of its chains (`fits_reaches`, by the least fixed point's
+induction principle), and the head members are the chains' ends (`reaches_iff`, by shortening a
+chain past a repeated name). Consumer: the readers of the term typer under the table (a field
+read, an update, a construction, a fold and a decision). -/
 @[semantics "store-typing" (requirement := R3)]
-theorem fits_iff_membersIn (w : World) (t : Ty) (v : Val) :
-    Fits w v t ↔ ∃ x ∈ Ty.membersIn w.types t, Fits w v x := by
+theorem fits_iff_membersIn {w : World} {decls : TyDecls} (hw : decls.Within w.types) (t : Ty)
+    (v : Val) : Fits w v t ↔ ∃ x ∈ Ty.membersIn decls t, Fits w v x := by
   rw [Ty.membersIn_eq, ← fits_normalize w t v]
   constructor
   · intro h
-    obtain ⟨x, hr, hx⟩ := fits_reaches h
+    obtain ⟨x, hr, hx⟩ := fits_reaches hw h
     exact ⟨x, reaches_iff.mpr hr, hx⟩
   · rintro ⟨x, hx, hv⟩
-    exact fits_of_reaches (reaches_iff.mp hx) hv
+    exact fits_of_reaches hw (reaches_iff.mp hx) hv
 
 /-! ## The readers under the table
 
 Each reader of the term typer under a table (`Program/TyHead.lean`) is sound for membership at a
-world whose table it reads. A lifted rule reads the head members (`fits_liftIn_transfer`), and
-the fold of a written field reads the unfolding (`fits_fieldAdmitsIn`). The `MemberIn` forms are
-`Laws/Program/TyHead.lean`'s; these are their `Fits` forms, through `fits_iff_membersIn` and
-`fits_unfold`. -/
+world whose table holds it (`TyDecls.Within`). A lifted rule reads the head members
+(`fits_liftIn_transfer`), and the fold of a written field reads the unfolding
+(`fits_fieldAdmitsIn`). The `MemberIn` forms are `Laws/Program/TyHead.lean`'s; these are their
+`Fits` forms, through `fits_iff_membersIn` and `fits_unfold`. -/
 
-/-- **A lifted rule under the world's table carries a property of its members**: the membership
-form of `UnionRule.liftIn_transfer`. A property that each member's answer gives every member of
-that member, and that each join keeps, holds of the lifted answer at every member of the
-target. -/
-theorem fits_liftIn_transfer {α : Type} [UnionRule.Answer α] {w : World} {P : Val → α → Prop}
+/-- **A lifted rule under a table within the world's carries a property of its members**: the
+membership form of `UnionRule.liftIn_transfer`. A property that each member's answer gives every
+member of that member, and that each join keeps, holds of the lifted answer at every member of
+the target. -/
+theorem fits_liftIn_transfer {α : Type} [UnionRule.Answer α] {w : World} {decls : TyDecls}
+    (hw : decls.Within w.types) {P : Val → α → Prop}
     (left : ∀ {v : Val} (a b : α), P v a → P v (UnionRule.Answer.join a b))
     (right : ∀ {v : Val} (a b : α), P v b → P v (UnionRule.Answer.join a b))
     {rule : Ty → Option α} {t : Ty}
-    (member : ∀ {m : Ty} {a : α} {v : Val}, m ∈ Ty.membersIn w.types t → rule m = some a →
+    (member : ∀ {m : Ty} {a : α} {v : Val}, m ∈ Ty.membersIn decls t → rule m = some a →
       Fits w v m → P v a)
-    {a : α} {v : Val} (typed : UnionRule.liftIn w.types rule t = some a) (fit : Fits w v t) :
+    {a : α} {v : Val} (typed : UnionRule.liftIn decls rule t = some a) (fit : Fits w v t) :
     P v a := by
   rw [UnionRule.liftIn_eq] at typed
   obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp typed
-  obtain ⟨m, hm, hfit⟩ := (fits_iff_membersIn w t v).mp fit
+  obtain ⟨m, hm, hfit⟩ := (fits_iff_membersIn hw t v).mp fit
   obtain ⟨c, hc, hrule⟩ := UnionRule.mapM_answer hanswers m hm
   exact UnionRule.joinAll_keeps (fun a b => left a b) (fun a b => right a b) hc
     (member hm hrule hfit)
@@ -236,40 +278,31 @@ theorem fits_liftIn_transfer {α : Type} [UnionRule.Answer α] {w : World} {P : 
 /-- **The fold of a written field is sound for membership**: the membership form of
 `Record.fieldAdmitsIn_sound`. Below the declared type in the order, `fits_subN` carries a member;
 at a declared name, a member of the body is a member of the name (`fits_unfold`). -/
-theorem fits_fieldAdmitsIn {w : World} {v : Val} {actual declared : Ty}
-    (h : Program.Record.fieldAdmitsIn w.types actual declared = true) (fit : Fits w v actual) :
-    Fits w v declared := by
+theorem fits_fieldAdmitsIn {w : World} {decls : TyDecls} (hw : decls.Within w.types) {v : Val}
+    {actual declared : Ty} (h : Program.Record.fieldAdmitsIn decls actual declared = true)
+    (fit : Fits w v actual) : Fits w v declared := by
   have byOrder : Ty.sub actual.normalize declared.normalize = true → Fits w v declared :=
     fun hs => fits_subN w hs v fit
-  cases hd : w.types with
-  | nil =>
-    rw [hd] at h
-    exact byOrder h
+  cases decls with
+  | nil => exact byOrder h
   | cons d ds =>
-    rw [hd] at h
     unfold Program.Record.fieldAdmitsIn at h
     rcases Bool.or_eq_true_iff.mp h with hs | hf
     · exact byOrder hs
     · split at hf
       · rename_i name body hu
         have hb : Fits w v body := fits_subN w hf v fit
-        have hu' : w.types.unfold? declared.normalize = some (name, body) := by
-          rw [hd]
-          exact hu
-        exact (fits_normalize w declared v).mp ((fits_unfold hu').mpr hb)
+        exact (fits_normalize w declared v).mp ((fits_unfold (hw.unfold? hu)).mpr hb)
       · cases hf
 
-/-- **The list rule under the world's table bounds a member**: a member of a type the rule reads
-is a member of the list of its answer. At the empty table it is `listOf_upper`. -/
-theorem fits_listOfIn {w : World} {t item : Ty} {v : Val}
-    (typed : Checker.listOfIn w.types t = some item) (fit : Fits w v t) :
+/-- **The list rule under a table within the world's bounds a member**: a member of a type the
+rule reads is a member of the list of its answer. At the empty table it is `listOf_upper`. -/
+theorem fits_listOfIn {w : World} {decls : TyDecls} (hw : decls.Within w.types) {t item : Ty}
+    {v : Val} (typed : Checker.listOfIn decls t = some item) (fit : Fits w v t) :
     Fits w v (.list item) := by
-  cases hd : w.types with
-  | nil =>
-    rw [hd] at typed
-    exact fits_subN w (listOf_upper typed) v fit
+  cases decls with
+  | nil => exact fits_subN w (listOf_upper typed) v fit
   | cons d ds =>
-    rw [hd] at typed
     simp only [Checker.listOfIn, UnionRule.extendAllIn] at typed
     cases hl : Member.list t with
     | some a =>
@@ -279,21 +312,18 @@ theorem fits_listOfIn {w : World} {t item : Ty} {v : Val}
       exact fit
     | none =>
       rw [hl] at typed
-      have typed' : UnionRule.liftIn w.types Member.list t = some item := by
-        rw [hd]
-        exact typed
-      exact fits_liftIn_transfer (P := fun v a => Fits w v (.list a))
+      exact fits_liftIn_transfer hw (P := fun v a => Fits w v (.list a))
         (fun a b h => fits_subN w ((Ty.subN_list_iff a _).mpr (Ty.subN_join_left a b)) _ h)
         (fun a b h => fits_subN w ((Ty.subN_list_iff b _).mpr (Ty.subN_join_right a b)) _ h)
         (fun _ hrule hfit => by
           obtain rfl := Member.list_eliminator.shape hrule
-          exact hfit) typed' fit
+          exact hfit) typed fit
 
-/-- **The option rule under the world's table bounds a member**: a member of a type the rule reads
-is a member of the option of its answer. At the empty table it is `optionTy_upper`. -/
-theorem fits_optionTyIn {w : World} {t a : Ty} {v : Val}
-    (typed : optionTyIn w.types t = some a) (fit : Fits w v t) : Fits w v (.option a) :=
-  fits_liftIn_transfer (P := fun v a => Fits w v (.option a))
+/-- **The option rule under a table within the world's bounds a member**: a member of a type the
+rule reads is a member of the option of its answer. At the empty table it is `optionTy_upper`. -/
+theorem fits_optionTyIn {w : World} {decls : TyDecls} (hw : decls.Within w.types) {t a : Ty}
+    {v : Val} (typed : optionTyIn decls t = some a) (fit : Fits w v t) : Fits w v (.option a) :=
+  fits_liftIn_transfer hw (P := fun v a => Fits w v (.option a))
     (fun a b h => fits_subN w ((Ty.subN_option_iff a _).mpr (Ty.subN_join_left a b)) _ h)
     (fun a b h => fits_subN w ((Ty.subN_option_iff b _).mpr (Ty.subN_join_right a b)) _ h)
     (fun _ hrule hfit => by
@@ -347,16 +377,5 @@ theorem _root_.Effect4.Program.Val.memberIn_never
   cases h : Val.memberIn decls v .never allocated
   · rfl
   · exact absurd (Val.memberIn_iff.mp h) not_memberIn_never
-
-/-- **Term progress under the table** (planned goal): `evalTerm_progress` at the world's table.
-Placement: concept `store-typing`, R9. Route: `evalTerm_progress`'s induction; a field read, an
-update and a fold read their target through `fits_iff_membersIn`, and a written field folds
-through `fits_unfold`. Consumer: the term laws at the source's table, and so M5 to M7. -/
-@[semantics "store-typing" (requirement := R9)]
-proof_goal evalTerm_progressIn (sig : Signature NativeOp) (w : World) (vals : List Val)
-    (env : List Ty) (t : Term) (ty : Ty) :
-    sig.atomOf = nativeAtomTy → sig.types = w.types → env.length = vals.length →
-    (∀ (i : Nat) (a : Ty) (x : Val), env[i]? = some a → vals[i]? = some x → Fits w x a) →
-    termTy sig env t = some ty → ∃ v, evalTerm vals t = some v ∧ Fits w v ty
 
 end Effect4.Program.Typed

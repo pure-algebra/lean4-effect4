@@ -757,10 +757,10 @@ and the leased item's record, if any. It writes the model's next state through t
 holds the hint at the request. The reply and the stored value are members of their types. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem lease_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) {A : Ty}
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) (id : Nat)
     (hint : DeferredKey) (injective : tb.Injective) {idSrc hintSrc : TermSrc} {env : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Captured idSrc (env.push [env.mint "current"]) path
@@ -796,10 +796,10 @@ and it writes the model's next state: the request's entry leaves, and no other f
 The table does not change. A borrower's withdrawal and the closer's are this one statement. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem withdraw_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) {A : Ty}
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) (id : Nat)
     (injective : tb.Injective) {idSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty}
-    {w : Typed.World} {captured : List Val}
+    {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Captured idSrc (env.push [env.mint "current"]) path
@@ -832,10 +832,10 @@ writes the model's next state. No premise names the lease: a return of a lease t
 nothing changes nothing, as the model's does. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem return_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) {A : Ty}
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (item lease : Nat) {itemSrc leaseSrc : TermSrc} {env : Env} {path : List Nat}
-    {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsItem : Captured itemSrc (env.push [env.mint "current"]) path
@@ -872,9 +872,9 @@ selected waiters' records through the table, in order, and it writes the model's
 selection reserves nothing: only the waiters change (`select_takes_first`). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem select_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) {A : Ty}
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) (count : Nat)
-    {countSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty} {w : Typed.World}
+    {countSrc : TermSrc} {env : Env} {path : List Nat} {tys : List Ty}
     {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
@@ -907,9 +907,9 @@ the close and the count of the waiters, and it writes the model's next state: th
 new leases from now on (`close_refuses`). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem close_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) {A : Ty}
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) {env : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     {stores : Stores} {q : RefKey} (held : refPeek stores.refs q = some (cellVal tb res s))
@@ -935,10 +935,10 @@ The store step answers whether no lease is outstanding (`drain_waits`). It write
 next state through the table that holds the hint at the closer. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem drain_attempt (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = []) {A : Ty}
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types) {A : Ty}
     (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State) (id : Nat)
     (hint : DeferredKey) (injective : tb.Injective) {idSrc hintSrc : TermSrc} {env : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (readsId : Captured idSrc (env.push [env.mint "current"]) path
@@ -1051,10 +1051,10 @@ above are already at the operation's own binders. -/
 names that `bindWith` mints. The scope binds each, and no later binder shadows either. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem lease_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     {A : Ty} (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (id : Nat) (hint : DeferredKey) (injective : tb.Injective) {env outerId outerHint : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     {beforeId afterId beforeHint afterHint : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
@@ -1087,10 +1087,10 @@ theorem lease_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = na
 `bindWith` mints. The scope binds it, and no later binder shadows it. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem withdraw_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     {A : Ty} (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (id : Nat) (injective : tb.Injective) {env outerId : Env} {path : List Nat} {tys : List Ty}
-    {w : Typed.World} {captured : List Val} {beforeId afterId : Names}
+    {captured : List Val} {beforeId afterId : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
     (idScope : env.names = beforeId ++ outerId.mint "answer" :: afterId)
@@ -1117,9 +1117,9 @@ stamp as two fields of it, each under the step's folds. The scope binds the name
 binder shadows it. The return is the model's `giveBack` at the record's two stamps. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem return_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     {A : Ty} (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
-    (it : Model.Item) {env outerItem : Env} {path : List Nat} {tys : List Ty} {w : Typed.World}
+    (it : Model.Item) {env outerItem : Env} {path : List Nat} {tys : List Ty}
     {captured : List Val} {before after : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)
@@ -1155,10 +1155,10 @@ hint are names that `bindWith` mints. The scope binds each, and no later binder 
 either. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem drain_attempt_minted (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    (types : sig.types = [])
+    {w : Typed.World} (types : TyDecls.Within sig.types w.types)
     {A : Ty} (canonical : A.normalize = A) (tb : Table) (res : Nat → Val) (s : Model.State)
     (id : Nat) (hint : DeferredKey) (injective : tb.Injective) {env outerId outerHint : Env}
-    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    {path : List Nat} {tys : List Ty} {captured : List Val}
     {beforeId afterId beforeHint afterHint : Names}
     (depth : captured.length = env.names.length) (tyDepth : tys.length = env.names.length)
     (typedEnv : EnvTyped w tys captured)

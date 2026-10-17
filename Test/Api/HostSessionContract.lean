@@ -134,7 +134,7 @@ theorem received_prepares_nat (w : Typed.World) :
       (prepareAsyncAnswer (interpOf program table) bound0.machine Api.root 0
         reply0.completion).2 = .success result ∧ Typed.Fits w result .nat := by
   obtain ⟨decision, _, path⟩ :=
-    submit_success_prepared_fits rfl bound0 reply0 (.nat 2) (by decide) rfl (by decide)
+    submit_success_prepared_fits bound0 reply0 (.nat 2) (by decide) rfl (by decide)
   have selectedAt : bound0.active.find? (fun b => b.key == reply0.key) =
       some (⟨call0, 0⟩ : BoundCall) := by decide
   rcases path with ⟨bound, i, request, row, result, selected, _, _, parkedAt,

@@ -346,11 +346,6 @@ theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} 
       simp only [List.getElem?_cons_succ, List.getElem?_nil] at ht
       cases ht
 
-/-- The world order keeps the service table, so a later world is one `J` ranges over too. -/
-theorem serviceTy_leHost {root : ProgramSource} {w w' : World} (ord : w.leHost w')
-    (tie : w.serviceTy = root.sig.serviceTy) : w'.serviceTy = root.sig.serviceTy :=
-  (le_serviceTy ord.1).trans tie
-
 /-- A completed view typed at a world stays typed at every later one. -/
 theorem completed_mono {w w' : World} (ord : w.leHost w') {completed : List (FiberId × ExitV)}
     (h : ∀ q ∈ completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) :
@@ -807,11 +802,17 @@ variable {sig : Signature NativeOp} {w : World}
 mutual
 /-- **Term progress at a world** (proved): a term the checker types, over values that fit their
 types at a world, evaluates, and its value fits the term's type (`atomFits`). Under any signature
-whose atoms are the native table's; the const-generic flag is the signature's own. The world is
-fixed. The environment is the theorem's own binder, since a list fold's body runs at the
-environment extended by its accumulator and its element (decisions row 228). -/
+whose atoms are the native table's and whose declaration table is within the world's
+(`TyDecls.Within`: the empty table, or the world's own); the const-generic flag is the signature's
+own. The world is fixed. The environment is the theorem's own binder, since a list fold's body
+runs at the environment extended by its accumulator and its element (decisions row 228).
+Placement: concept `store-typing`, R9, the term step of the claim `fits-declared` (the D3 note's
+planned goal `evalTerm_progressIn`, at `TyDecls.within_of_eq`). Route: the readers under the table
+at membership (`record_fieldTypeIn_fits`, `record_setTypeIn_fits`, `fits_fieldAdmitsIn`,
+`fits_listOfIn`). Consumer: the term laws at the source's table, so M5 to M7 at every table. -/
+@[semantics "store-typing" (requirement := R9)]
 theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf = nativeAtomTy)
-    (htypes : sig.types = []) (hfit : FitsAll w vals env) :
+    (htypes : TyDecls.Within sig.types w.types) (hfit : FitsAll w vals env) :
     ∀ (t : Term) (ty : Ty), termTy sig env t = some ty →
       ∃ v, evalTerm vals t = some v ∧ Fits w v ty
   | .var i, ty, hty => hfit.getElem? hty
@@ -836,18 +837,18 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
     rw [hname]
     exact hv
   | .record fields names values, ty, hty => by
-    obtain ⟨types, ht, hc⟩ := termTy_record_inv hty htypes
+    obtain ⟨types, ht, hc⟩ := termTy_record_invIn hty
     obtain ⟨vs, hvs, hfitvs⟩ := evalTerms_progress hatom htypes hfit true values types ht
-    obtain ⟨out, hout, hfitout⟩ := record_build_fits hc hfitvs
+    obtain ⟨out, hout, hfitout⟩ :=
+      record_buildIn_fits (fun h hv => fits_fieldAdmitsIn htypes h hv) hc hfitvs
     refine ⟨out, ?_, hfitout⟩
     show (evalTerms vals values).bind (Machine.Record.build names) = some out
     rw [hvs, Option.bind_some, hout]
   | .field mode target name, ty, hty => by
     have ht : (termTy sig env target).bind (fun ty => Record.fieldTypeIn sig.types (mode = .optional) ty name) = some ty := hty
-    rw [htypes] at ht
     obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
     obtain ⟨value, he, hfitvalue⟩ := evalTerm_progress hatom htypes hfit target targetType ht
-    obtain ⟨out, hout, hfitout⟩ := record_fieldType_fits hc hfitvalue
+    obtain ⟨out, hout, hfitout⟩ := record_fieldTypeIn_fits htypes hc hfitvalue
     refine ⟨out, ?_, hfitout⟩
     show (evalTerm vals target).bind (fun value => Machine.Record.read (mode = .optional) value name) = some out
     rw [he, Option.bind_some, hout]
@@ -855,7 +856,6 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
     have ht : ((termTy sig env target).bind fun targetType =>
       (argTy sig env true replacement).bind fun replacementType =>
       Record.setTypeIn sig.types targetType name replacementType) = some ty := hty
-    rw [htypes] at ht
     obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
     obtain ⟨replacementType, hr, hc⟩ := Option.bind_eq_some_iff.mp hc
     obtain ⟨value, he, hfitvalue⟩ := evalTerm_progress hatom htypes hfit target targetType ht
@@ -865,7 +865,7 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
         exact ⟨next, hn, fits_lit w true l next hn⟩
       · exact evalTerm_progress hatom htypes hfit replacement replacementType hr
     obtain ⟨next, hn, hnext⟩ := hnext
-    obtain ⟨out, hout, hfitout⟩ := record_setType_fits hc hfitvalue hnext
+    obtain ⟨out, hout, hfitout⟩ := record_setTypeIn_fits htypes hc hfitvalue hnext
     refine ⟨out, ?_, hfitout⟩
     show ((evalTerm vals target).bind fun value => (evalTerm vals replacement).bind
       fun next => Machine.Record.set value name next) = some out
@@ -884,9 +884,9 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
   -- fold's type and an element, so it answers a member of the body's type, which is below it
   | .fold accTy list init body, ty, hty => by
     obtain ⟨listType, item, initType, bodyType, hlist, hitem, hinit, _, hsubInit, hbody, hsubBody⟩ :=
-      termTy_fold_inv hty htypes
+      termTy_fold_invIn hty
     obtain ⟨value, hlv, hfitList⟩ := evalTerm_progress hatom htypes hfit list listType hlist
-    replace hfitList := fits_subN w (listOf_upper hitem) value hfitList
+    replace hfitList := fits_listOfIn htypes hitem hfitList
     obtain ⟨start, hstart, hfitStart⟩ := evalTerm_progress hatom htypes hfit init initType hinit
     refine fold_fits hlv hfitList hstart (fits_subN w hsubInit start hfitStart) ?_
     intro acc x hacc hx
@@ -897,7 +897,8 @@ termination_by t => sizeOf t
 
 /-- The argument list's form. -/
 theorem evalTerms_progress {vals : List Val} {env : List Ty}
-    (hatom : sig.atomOf = nativeAtomTy) (htypes : sig.types = []) (hfit : FitsAll w vals env) :
+    (hatom : sig.atomOf = nativeAtomTy) (htypes : TyDecls.Within sig.types w.types)
+    (hfit : FitsAll w vals env) :
     ∀ (const : Bool) (ts : Terms) (tl : List Ty),
       argsTy sig env const ts = some tl → ∃ vs, evalTerms vals ts = some vs ∧ FitsAll w vs tl
   | _, .nil, tl, hty => by
@@ -926,13 +927,14 @@ end
 end TermProgress
 
 /-- Term progress in the environment judgment `PointTyped` reads, under the signature of a
-scope (`ProgramSource.scopeSig`; the source's own at `path := []`). A term types alike in every
-scope (`ProgramSource.scopeSig_extends`). -/
+scope (`ProgramSource.scopeSig`; the source's own at `path := []`), at a world whose declaration
+table the source's is within (`Tied.within`; `TyDecls.within_nil` for a source that declares no
+name). A term types alike in every scope (`ProgramSource.scopeSig_extends`). -/
 theorem evalTerm_progress_env {src : ProgramSource} {path : List Nat} {w : World} {env : List Ty}
-    {vals : List Val} (henv : EnvTyped w env vals) {t : Term} {ty : Ty}
-    (hty : termTy (src.scopeSig path) env t = some ty) :
+    {vals : List Val} (henv : EnvTyped w env vals) (htypes : TyDecls.Within src.types w.types)
+    {t : Term} {ty : Ty} (hty : termTy (src.scopeSig path) env t = some ty) :
     ∃ v, evalTerm vals t = some v ∧ Fits w v ty :=
-  evalTerm_progress rfl src.untyped (fitsAll_of_pointwise henv.1 henv.2) t ty
+  evalTerm_progress rfl htypes (fitsAll_of_pointwise henv.1 henv.2) t ty
     (((src.scopeSig_extends path).termTy env t).symm.trans hty)
 
 /-- **A typed binder term maps its parameter into its type**, at every later world (the claim
@@ -946,12 +948,15 @@ the environment stays typed at every later world (`envTyped_mono`), the current 
 nothing of a term the checker refuses. -/
 @[semantics "store-typing" (requirement := R4)]
 theorem termMaps_of_typed {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
-    (htypes : sig.types = []) {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env)
-    {f : Term} {A R : Ty} (hty : termTy sig (tys ++ [A]) f = some R) :
+    {w : World} (htypes : TyDecls.Within sig.types w.types) {tys : TyEnv} {env : List Val}
+    (henv : EnvTyped w tys env) {f : Term} {A R : Ty} (hty : termTy sig (tys ++ [A]) f = some R) :
     TermMaps w f env A R := by
   intro w' ord a ha
   have henv' := envTyped_append (envTyped_mono ord henv) ha
-  exact evalTerm_progress hatom htypes (fitsAll_of_pointwise henv'.1 henv'.2) f R hty
+  have htypes' : TyDecls.Within sig.types w'.types := by
+    rw [le_types ord.1]
+    exact htypes
+  exact evalTerm_progress hatom htypes' (fitsAll_of_pointwise henv'.1 henv'.2) f R hty
 
 /-- A tag type is a payload field type. -/
 theorem payloadFieldTy_of_isTagTy {t : Ty} (h : isTagTy t = true) : payloadFieldTy t = true := by
@@ -1011,7 +1016,7 @@ theorem shapeFree_die_of_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy
 evaluates, in a typed environment, to a cause whose typed failures fit the column and which no
 shape defect enters. -/
 theorem causeOf_progress {src : ProgramSource} {path : List Nat} {w : World} {env : List Ty}
-    {vals : List Val} (henv : EnvTyped w env vals) :
+    {vals : List Val} (henv : EnvTyped w env vals) (htypes : TyDecls.Within src.types w.types) :
     ∀ (c : CauseTerm) (e : Ty), causeTy (src.scopeSig path) env c = some e →
       ∃ cause, causeOf vals c = some cause ∧ FitsCause w e cause ∧ ShapeFree cause
   | .fail error, e, h => by
@@ -1020,7 +1025,7 @@ theorem causeOf_progress {src : ProgramSource} {path : List Nat} {w : World} {en
     split at hadm
     · next hs =>
       cases hadm
-      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv he'
+      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htypes he'
       refine ⟨Cause.fail (errOf v), by simp only [causeOf, hv, Option.map_some], ?_, ?_⟩
       · intro r hr
         simp only [Cause.fail, List.mem_singleton] at hr
@@ -1037,7 +1042,7 @@ theorem causeOf_progress {src : ProgramSource} {path : List Nat} {w : World} {en
     split at hadm
     · next hs =>
       cases hadm
-      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hd
+      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htypes hd
       refine ⟨Cause.die (Defect.ofError (errOf v)), by simp only [causeOf, hv, Option.map_some],
         ?_, shapeFree_die_of_fits hs hfit⟩
       intro r hr
@@ -1064,7 +1069,7 @@ theorem causeOf_progress {src : ProgramSource} {path : List Nat} {w : World} {en
     split at hnat
     · next htn =>
       cases hnat
-      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv ht
+      obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htypes ht
       obtain ⟨n, rfl⟩ := fits_nat_inv (fits_subN w (b := .nat) htn v hfit)
       refine ⟨Cause.interrupt (some ⟨n⟩), by simp only [causeOf, hv], ?_, ?_⟩
       · intro r hr
@@ -1082,8 +1087,8 @@ theorem causeOf_progress {src : ProgramSource} {path : List Nat} {w : World} {en
     obtain ⟨l, hl, h''⟩ := Option.bind_eq_some_iff.mp h'
     obtain ⟨r, hr, hjoin⟩ := Option.bind_eq_some_iff.mp h''
     cases hjoin
-    obtain ⟨cl, hcl, hfl, hsl⟩ := causeOf_progress henv left l hl
-    obtain ⟨cr, hcr, hfr, hsr⟩ := causeOf_progress henv right r hr
+    obtain ⟨cl, hcl, hfl, hsl⟩ := causeOf_progress henv htypes left l hl
+    obtain ⟨cr, hcr, hfr, hsr⟩ := causeOf_progress henv htypes right r hr
     refine ⟨Cause.combine cl cr, ?_, ?_, ?_⟩
     · simp only [causeOf, hcl, hcr]
       rfl
@@ -1158,11 +1163,11 @@ theorem denoteR_zero_typed (e : NativeEff) (hzero : p.fuel = 0) :
 /-- **`succeed`**: the term's value, which fits the term's type (`evalTerm_progress_env`). -/
 theorem succeed_arm {t : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.succeed t)))
-    (hpt : PointTyped root w p ty) : AmbientProg root w available (ty, available, available) (denoteR root.program (.succeed t) p) := by
+    (hpt : PointTyped root w p ty) (htie : Tied root w) : AmbientProg root w available (ty, available, available) (denoteR root.program (.succeed t) p) := by
   obtain ⟨env, hcheck, henv, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨t', hty, rfl⟩ := Checker.inv_succeed _ _ _ _ _ hcheck
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
   rw [denoteR_succeed _ _ hfuel, hv]
   exact .pure ⟨strongExit_success w _ v hfit, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
@@ -1170,11 +1175,11 @@ theorem succeed_arm {t : Term} (hfuel : p.fuel ≠ 0)
 (`valOfErr_errOf_fits`). -/
 theorem fail_arm {t : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.fail t)))
-    (hpt : PointTyped root w p ty) : AmbientProg root w available (ty, available, available) (denoteR root.program (.fail t) p) := by
+    (hpt : PointTyped root w p ty) (htie : Tied root w) : AmbientProg root w available (ty, available, available) (denoteR root.program (.fail t) p) := by
   obtain ⟨env, hcheck, henv, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨e, hty, hadm, rfl⟩ := Checker.inv_fail _ _ _ _ _ hcheck
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
   rw [denoteR_fail _ _ hfuel, hv]
   refine .pure ⟨?_, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   refine ⟨(fitsExit_failure_iff _ _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩, fun r hr => ?_⟩
@@ -1189,11 +1194,11 @@ theorem fail_arm {t : Term} (hfuel : p.fuel ≠ 0)
 enters (`causeOf_progress`). -/
 theorem failCause_arm {c : CauseTerm} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.failCause c)))
-    (hpt : PointTyped root w p ty) : AmbientProg root w available (ty, available, available) (denoteR root.program (.failCause c) p) := by
+    (hpt : PointTyped root w p ty) (htie : Tied root w) : AmbientProg root w available (ty, available, available) (denoteR root.program (.failCause c) p) := by
   obtain ⟨env, hcheck, henv, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨e, hty, rfl⟩ := Checker.inv_failCause _ _ _ _ _ hcheck
-  obtain ⟨cause, hc, hfits, hshape⟩ := causeOf_progress henv c e hty
+  obtain ⟨cause, hc, hfits, hshape⟩ := causeOf_progress henv htie.within c e hty
   rw [denoteR_failCause _ _ hfuel, hc]
   exact .pure ⟨⟨(fitsExit_failure_iff _ _ _).mpr ⟨hfits, hshape⟩, hshape⟩,
     Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
@@ -1201,11 +1206,11 @@ theorem failCause_arm {c : CauseTerm} (hfuel : p.fuel ≠ 0)
 /-- **`sync`**: the counted step answering the term's value, which fits the term's type. -/
 theorem sync_arm {t : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.sync t)))
-    (hpt : PointTyped root w p ty) : AmbientProg root w available (ty, available, available) (denoteR root.program (.sync t) p) := by
+    (hpt : PointTyped root w p ty) (htie : Tied root w) : AmbientProg root w available (ty, available, available) (denoteR root.program (.sync t) p) := by
   obtain ⟨env, hcheck, henv, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨t', hty, rfl⟩ := Checker.inv_sync _ _ _ _ _ hcheck
-  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv htie.within hty
   rw [denoteR_sync _ _ hfuel, hv]
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) () trivial (fun w' o ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
@@ -1234,7 +1239,7 @@ end TermArms
 
 /-- The existing M5 child judgment retains its actual entry and common completion row. -/
 def ChildDenotes (root : ProgramSource) (f : Nat) (c : NativeEff) (path : List Nat) : Prop :=
-  ∀ (w : World), w.serviceTy = root.sig.serviceTy → ∀ (q : Point) (ty : EffTy),
+  ∀ (w : World), Tied root w → ∀ (q : Point) (ty : EffTy),
     q.fuel = f → q.path = path → PointTyped root w q ty →
     ∀ available : Env.Requirement, Row.Subset ty.requires available →
       AmbientStackTyped root w available (scopeParams root.program q.path) q.params →
@@ -1254,7 +1259,7 @@ variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {f : Nat}
 /-- The actual source bind uses the same shared guard arrow with both checked child requirements. -/
 theorem bind_arm {a b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.bind a b)))
-    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hpt : PointTyped root w p ty) (htie : Tied root w)
     (ha : ChildDenotes root f a (p.path ++ [0])) (hb : ChildDenotes root f b (p.path ++ [1]))
     (coverage : Row.Subset ty.requires available)
     (saved : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
@@ -1289,7 +1294,7 @@ theorem bind_arm {a b : NativeEff} (hfuel : p.fuel = f + 1)
         (after := ((⟨tr.answer, tf.error.join tr.error, Row.union tf.requires tr.requires⟩ : EffTy),
           available, available))
         (Ty.subN_refl _) (Ty.subN_join_right _ _) (Row.subset_refl _) (Row.subset_refl _) ?_
-      exact hb after (serviceTy_leHost future htie) ({ p with completed }.childWith 1 value) tr
+      exact hb after (Tied.mono future htie) ({ p with completed }.childWith 1 value) tr
         (childWith_fuel_eq (p := { p with completed }) hfuel 1 value) rfl
         (pointTyped_child (w := after) (q := { p with completed := completed }.childWith 1 value) hat rfl rfl hcr
           (envTyped_append (envTyped_mono future henv) (fits_mono grew member)) completedView

@@ -82,9 +82,9 @@ def pNeverPair : NativeEff :=
   [], []⟩ = .error (.row 1 (.emptyColumn "answer"))
 #guard admitSig ⟨[hostRow .nat .nat, { hostRow (.list .never) (.option .never) with spelling := "Host.b" }],
   [], []⟩ = .ok ()
-#guard findEmptyColumnInEffTy ⟨.prod .never .nat, .never, .empty⟩ = some ["program", "answer"]
-#guard findEmptyColumnInEffTy ⟨.never, .except .never .never, .empty⟩ = some ["program", "error"]
-#guard findEmptyColumnInEffTy ⟨.never, .never, .empty⟩ = none
+#guard findEmptyColumnInEffTy [] ⟨.prod .never .nat, .never, .empty⟩ = some ["program", "answer"]
+#guard findEmptyColumnInEffTy [] ⟨.never, .except .never .never, .empty⟩ = some ["program", "error"]
+#guard findEmptyColumnInEffTy [] ⟨.never, .never, .empty⟩ = none
 -- tested (TY-13): the column check admits `list int`, which has a member, and refuses
 -- `prod never nat`, which has none
 #guard admitColumn (.list .int) && !admitColumn (.prod .never .nat)
@@ -110,7 +110,7 @@ theorem ce015_table_refused :
   decide +kernel
 
 /-- The located scan refuses CE-015's program answer column (proved). -/
-theorem ce015_program_refused : findEmptyColumnInEffTy ⟨.prod .never .nat, .never, .empty⟩ ≠ none := by
+theorem ce015_program_refused : findEmptyColumnInEffTy [] ⟨.prod .never .nat, .never, .empty⟩ ≠ none := by
   decide +kernel
 
 /-- **Red control (proved).** Two handle positions cannot share a key: a pair naming cell 0
