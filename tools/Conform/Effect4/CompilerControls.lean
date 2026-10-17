@@ -20,9 +20,9 @@ private def decl (name : String) (deps : Array String := #[]) : Lcnf.Translated 
   .ok [[1], [0], [2, 3]]
 #guard Lcnf.emissionGroups #[decl "a", decl "a"] = .error "duplicate emitted name: a"
 
-/-- The program a builtin's form is evaluated in: the support functions, read from the
-definitions the prelude prints, `max_int`, and the evaluator's primitives computed from the
-table. -/
+/-- The program a builtin's form is evaluated in: the runtime library's functions, read from
+their reference definitions (`OCaml5.Lcnf.support`), `max_int`, and the evaluator's primitives
+computed from the table. -/
 private def programOf (support : List Lcnf.Support) : Except String Target.Program :=
   (Conform.Effect4.LcnfMl.supportBinds { bits := 63 } support).map fun binds =>
     { binds, pe := Conform.Effect4.LcnfMl.primEnv }
@@ -71,11 +71,11 @@ private def maxInt : Target.TValue := .int 4611686018427387903
 #guard equals (evaluate `String.length [.str "é🙂"]) (.int 2)
 #guard equals (evaluate `String.toUTF8 [.str "é"]) (Target.TValue.ofList [.int 195, .int 169])
 
-/-! ### The support functions run from their own definitions
+/-! ### The runtime library's functions run from their reference definitions
 
-The evaluator reads each support body from `OCaml5.Lcnf.support`, the list the prelude prints.
-The saturating rows answer as before, and now through `lcnf_nat_mul`, `lcnf_nat_pow` and
-`lcnf_nat_shift_left`. -/
+The evaluator reads each body from `OCaml5.Lcnf.support`, the reference definition of the
+runtime library's function of that name (`ocaml/lcnf`). The saturating rows answer through
+`Lcnf_nat.mul`, `Lcnf_nat.pow` and `Lcnf_nat.shift_left`. -/
 
 #guard equals (evaluate `Nat.shiftLeft [.int 3, .int 62]) maxInt
 #guard equals (evaluate `Nat.shiftLeft [.int 3, .int 2]) (.int 12)
@@ -88,12 +88,12 @@ The saturating rows answer as before, and now through `lcnf_nat_mul`, `lcnf_nat_
 
 -- A wrong body is what runs: the altered definition changes the answer.
 private def squaring : List Lcnf.Support := Lcnf.support.map fun s =>
-  if s.name == "lcnf_nat_mul" then { s with body := .binop "*" (.var "a") (.var "a") } else s
+  if s.name == "Lcnf_nat.mul" then { s with body := .binop "*" (.var "a") (.var "a") } else s
 #guard equals (evaluateIn squaring `Nat.mul [.int 3, .int 5]) (.int 9)
 -- A missing definition, a body outside the reader's fragment and a primitive's name are
 -- refusals with their reason, never a silent default.
-#guard refused (evaluateIn (Lcnf.support.filter (·.name != "lcnf_nat_mul")) `Nat.mul [.int 3, .int 5])
-  "unbound name `lcnf_nat_mul`"
+#guard refused (evaluateIn (Lcnf.support.filter (·.name != "Lcnf_nat.mul")) `Nat.mul [.int 3, .int 5])
+  "unbound name `Lcnf_nat.mul`"
 #guard refused (evaluateIn [{ name := "lcnf_x", params := ["a"], body := .seq (.var "a") (.var "a") }]
     `Nat.add [.int 1, .int 2])
   "support `lcnf_x`: Ml.Expr.seq"
@@ -123,8 +123,8 @@ fixtures below; these are the same shapes built by hand. -/
 /-! ### Callback functions: the callback goes through `applyT`
 
 `List.exists` and `List.for_all` are the two library functions with a rule that take a function.
-Four rows of the table reach them: `List.contains` through the support function
-`lcnf_list_contains`, `List.elem`, `List.any` and `List.all`. -/
+Four rows of the table reach them: `List.contains` through the runtime library's
+`Lcnf_list.contains`, `List.elem`, `List.any` and `List.all`. -/
 
 /-- An asymmetric instance: `a == b` is `a < b`. -/
 private def lessThan : Ml.Expr := .fn ["a", "b"] (.binop "<" (.var "a") (.var "b"))
@@ -145,7 +145,7 @@ private def ints (xs : List Nat) : Ml.Expr := .listLit (xs.map Ml.Expr.int)
 -- The red control of that order: a support body that hands the element first answers the
 -- opposite, so the control tells the two orders apart.
 private def elementFirst : List Lcnf.Support := Lcnf.support.map fun s =>
-  if s.name == "lcnf_list_contains" then
+  if s.name == "Lcnf_list.contains" then
     { s with body := (Ml.Expr.call "List.exists"
         [.fn ["e"] (.app (.var "inst") [.var "e", .var "a"]), .var "l"]) }
   else s
@@ -375,7 +375,7 @@ private def agreeing (support : List Lcnf.Support) : List String :=
     | _ => none
 
 -- The evaluator answers every host check as the check expects: the asymmetric
--- `contains-order` among them, through `lcnf_list_contains` and `List.exists`.
+-- `contains-order` among them, through `Lcnf_list.contains` and `List.exists`.
 #guard agreeing Lcnf.support == hostChecks.map (·.1)
 -- The red control: with the element-first support body, the two checks of the row
 -- `List.contains` no longer agree, and every other check does. The order check answers
@@ -424,18 +424,20 @@ run_cmd liftTermElabM do
       unless v.beq (.int (Int.ofNat expected)) do
         throwError "name fixtures: {name} {args}: Lean answers {expected}, the target {v.render}"
     | other => throwError "name fixtures: {name} {args}: {other.render}"
-  -- the binders that took a reserved name were named again, and the forms kept their names
+  -- the binders that took a reserved name were named again, and the forms kept their names;
+  -- helperCap's `lcnf_nat_mul` keeps its own, since the runtime library's function is the
+  -- qualified `Lcnf_nat.mul`, which no binder can take
   let body (root : Name) : String :=
     ((translated.decls.find? (·.leanName == root)).map fun d => Ml.renderExpr 0 d.bind.body).getD ""
   let params (root : Name) : List String :=
     ((translated.decls.find? (·.leanName == root)).map fun d => d.bind.params.map (·.1)).getD []
   let mulBody := body ``LoweringNames.mulCap
-  unless mulBody == "lcnf_nat_mul x _mula" do
+  unless mulBody == "Lcnf_nat.mul x _mula" do
     throwError "name fixtures: mulCap is {mulBody}"
   for (root, expected) in [
       (``LoweringNames.etaCap, ["_b1_1", "y"]),
       (``LoweringNames.freeCap, ["max_1", "a", "b"]),
-      (``LoweringNames.helperCap, ["lcnf_nat_mul_1", "a", "b"]),
+      (``LoweringNames.helperCap, ["lcnf_nat_mul", "a", "b"]),
       (``LoweringNames.globalCap, ["conform_effect4_lowering_names_apply_to_1", "y"])] do
     let found := params root
     unless found == expected do

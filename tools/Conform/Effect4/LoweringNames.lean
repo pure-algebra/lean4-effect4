@@ -4,7 +4,8 @@ checkpoint translates their persisted mono LCNF and compares each with Lean's ow
 
 Each `…Cap` definition names a binder as one of: a temporary that an earlier builtin form bound
 at its call site (`_mula`, `_shift_scale`), an eta binder (`_b1`), a free name of a builtin form
-(`max`), a function of the prelude (`lcnf_nat_mul`), a generated declaration that the body calls.
+(`max`), a function the route once printed into each file (`lcnf_nat_mul`), a generated
+declaration that the body calls.
 Each `…Ok` definition is its neighbour with an ordinary name. A translation that lets one of
 these binders capture a reference answers differently from Lean: before the builtin table was
 data, `mulCap 3 5` was 9, `shiftCap 3 2` was 16 and `etaCap 3 5` was 10.
@@ -30,7 +31,9 @@ namespace Conform.Effect4.LoweringNames
 @[noinline] def freeCap (max : Nat → Nat → Nat) (a b : Nat) : Nat := max (a - b) b
 @[noinline] def freeCapAt (a b : Nat) : Nat := freeCap (fun p q => p * q + 1) a b
 
-/-- A binder named as a function the prelude defines. -/
+/-- A binder named as the function the route once printed into each file. The runtime library's
+function is the qualified `Lcnf_nat.mul`, so no binder can take its name, and this one keeps its
+own. -/
 @[noinline] def helperCap (lcnf_nat_mul : Nat → Nat → Nat) (a b : Nat) : Nat :=
   lcnf_nat_mul (a * b) b
 @[noinline] def helperCapAt (a b : Nat) : Nat := helperCap (fun p q => p + q + 1) a b

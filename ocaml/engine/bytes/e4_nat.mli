@@ -3,8 +3,9 @@
    What it is: the arithmetic profile the generated engine assumes, as a module, so that a
    hand extern (E4_shim) and the generated code cannot disagree about what `2 ^ 64` or
    `n / 0` means.  It is the SAME rule as the LCNF route's builtin table
-   (src/OCaml5/Lcnf/Builtins.lean: the forms `natDiv`, `natMod`, `natSub` and the prelude's
-   `lcnf_nat_mul`, `lcnf_nat_pow`, `lcnf_nat_shift_left`), written once so it can be tested.
+   (src/OCaml5/Lcnf/Builtins.lean: the forms `natDiv`, `natMod`, `natSub`, and the runtime
+   library's `Lcnf_nat.mul`, `Lcnf_nat.pow`, `Lcnf_nat.shift_left`, ocaml/lcnf/lcnf_nat.ml),
+   written once so it can be tested.
 
    Depends on: the OCaml standard library only.
 
@@ -25,7 +26,7 @@
    N5  Guarded shifts: OCaml's `lsl`/`lsr` are undefined at >= 63; `shift_right` answers 0
        at or above `bits`, `shift_left` saturates.                     by construction; tested
    N6  Every operation is total: no exception escapes any function of this module.  tested
-   N7  `pow` agrees with the prelude's `lcnf_nat_pow` (src/OCaml5/Lcnf/Builtins.lean) value for value:
+   N7  `pow` agrees with the runtime library's `Lcnf_nat.pow` (ocaml/lcnf/lcnf_nat.ml) value for value:
        both are `f^b (1)` for `f r = if a = 0 then 0 else if r > max_int / a then max_int
        else r * a`.  This module iterates and exits at the fixed point instead of recursing
        `b` times, which is why `pow 2 (10^9)` terminates here.        tested (differential)
@@ -45,7 +46,7 @@
        `letValueExpr` (src/OCaml5/Lcnf/Translate.lean) sees the literal as an arbitrary-precision Lean `Nat`, and a
        decimal string is that literal.  `of_lit` is kept for the in-range case.
    D3  `add` saturates here; the generator emits raw `+` for `Nat.add`, which wraps.  `mul` and
-       `shift_left` saturate as the prelude's `lcnf_nat_mul` and `lcnf_nat_shift_left` do.
+       `shift_left` saturate as the runtime library's `Lcnf_nat.mul` and `Lcnf_nat.shift_left` do.
        Saturating is N1's rule applied to the same operations; the two agree on every input
        that does not overflow, and no corpus input overflows `+`. *)
 
@@ -77,7 +78,7 @@ val sub : t -> t -> t          (* truncated: max 0 (a - b) *)
 val mul : t -> t -> t          (* saturating *)
 val div : t -> t -> t          (* Lean: div n 0 = 0 *)
 val rem : t -> t -> t          (* Lean: rem n 0 = n *)
-val pow : t -> t -> t          (* saturating at max_nat; lcnf_nat_pow's value *)
+val pow : t -> t -> t          (* saturating at max_nat; Lcnf_nat.pow's value *)
 val succ : t -> t
 val pred : t -> t              (* max 0 (n - 1) *)
 
@@ -97,5 +98,5 @@ val saturates : t -> t -> bool
     differential uses to skip inputs on which host and Lean legitimately differ. *)
 
 val pow_reference : t -> t -> t
-(** The prelude's `lcnf_nat_pow` transcribed literally (recursive, no fixed-point exit), for the N7
+(** The runtime library's `Lcnf_nat.pow` transcribed literally (recursive, no fixed-point exit), for the N7
     differential only.  Recurses [b] times: do not call it with a large [b]. *)

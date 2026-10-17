@@ -58,7 +58,8 @@ PROFILES = {
 }
 
 # The emitted-code mutations of the compiler checkpoint. Each alters one definition of the
-# emitted prelude and names the first observation that reads the altered definition: the key
+# runtime library (`ocaml/lcnf`), whose modules the compiled module carries, and names the first
+# observation that reads the altered definition: the key
 # of the handle type whose name is not ASCII, the product of the first name fixture, and the
 # membership test under an asymmetric instance, whose two arguments the third one swaps. The
 # name is a host fixture of the selection, never a position in a list.

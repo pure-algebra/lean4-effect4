@@ -10,7 +10,7 @@ is the law of `let x = e in x`: the route writes `v` where the LCNF has `let x :
 
 **Why the law is here and not in a battery.** Every statement about `Target.evalT` reaches
 `Classical.choice`, proved or planned, because the evaluator's own definition does. Two rules
-of `Target.applyPrim` traverse a `String`: the rule `lcnf_utf8_length` calls `String.length`,
+of `Target.applyPrim` traverse a `String`: the rule `Lcnf_string.utf8_length` calls `String.length`,
 and `cmp?` orders two strings with `<`. The axiom gate (`Test/Audit/AxiomGate.lean`) holds
 every declaration of a `Test.*` module to `[propext, Quot.sound]`, so such a statement cannot
 be a declaration there. This module is tooling, outside the gate's audit. The battery

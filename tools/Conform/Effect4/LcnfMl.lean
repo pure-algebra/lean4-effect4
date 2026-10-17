@@ -136,14 +136,17 @@ def ofBind (b : OCaml5.Ml.Bind) : Except String (String × List String × Target
 
 /-! ## 1b. The program an emitted module is
 
-An emitted module is its prelude and then its declarations. The target program is assembled the
-same way, from the same data: each support function is read from the definition the prelude
-prints (`OCaml5.Lcnf.support`), so the evaluator runs the body that OCaml compiles. The
-prelude's primitives (`OCaml5.Lcnf.preludePrimitives`) and the target's own library are not read:
-they are the evaluator's primitives (`Target.applyPrim`), named assumptions. -/
+An emitted module is its declarations, which call the route's runtime library (`ocaml/lcnf`,
+library `effect4_lcnf`). The target program is the same declarations, beside a binding for each
+library function that `OCaml5.Lcnf.support` defines, read from that reference definition. The
+library holds the OCaml of the same functions; the host checks hold the two to the same answers,
+on this evaluator and in compiled OCaml (`Conform.Effect4.Normalization`). The library's string
+primitives and the target's own library are not read: they are the evaluator's primitives
+(`Target.applyPrim`), named assumptions. -/
 
-/-- The bindings every emitted module starts from: `max_int` for the profile's word, and the
-support functions. A support function called from another binding starts from its parameters
+/-- The bindings every target program starts from: `max_int` for the profile's word, and the
+runtime library's functions that `OCaml5.Lcnf.support` defines, each under its library path. A
+support function called from another binding starts from its parameters
 alone (`Target.applyNamed`), so `max_int` is a binding of the program and not of a caller's
 environment. A body the reader refuses, a name bound twice and a name the evaluator already
 answers as a primitive are errors here, never missing bindings. -/

@@ -189,8 +189,9 @@ def main (args : List String) : IO UInt32 := do
     let captures := OCaml5.Lcnf.hygieneProblems translated.decls
     unless captures.isEmpty do
       throwError "name hygiene: {captures}"
-    -- The target program is the emitted module's: the prelude's support functions, then the
-    -- declarations. A body the reader refuses stops the checkpoint here.
+    -- The target program is the emitted module's declarations, beside the runtime library's
+    -- functions read from their reference definitions. A body the reader refuses stops the
+    -- checkpoint here.
     let target ← match Conform.Effect4.LcnfMl.assemble translated.decls (word := word) with
       | .ok program => pure program
       | .error why => throwError "target program: {why}"
@@ -226,7 +227,16 @@ def main (args : List String) : IO UInt32 := do
     unless translated.missing.isEmpty && translated.frontier.isEmpty && translated.todos.isEmpty do
       throwError "target closure missing={translated.missing} frontier={translated.frontier} holes={translated.todos}"
     let emitted ← IO.ofExcept (OCaml5.Lcnf.emit translated.decls)
-    let module : OCaml5.Ml.Module := { name := "normalization", items := [gen.item, .blank] ++ emitted }
+    -- The compiled module carries the runtime library's modules (`ocaml/lcnf`), each read from
+    -- its own files, so the runner compiles one file, and the emitted-code mutations alter the
+    -- library's own definitions. Every generated file links the same modules as `effect4_lcnf`.
+    let library ← OCaml5.Lcnf.runtimeModules.mapM fun m => do
+      let file := "ocaml/lcnf/" ++ m.decapitalize
+      let sig ← IO.FS.readFile (file ++ ".mli")
+      let impl ← IO.FS.readFile (file ++ ".ml")
+      return OCaml5.Ml.Decl.rawD s!"module {m} : sig\n{sig}end = struct\n{impl}end"
+    let module : OCaml5.Ml.Module :=
+      { name := "normalization", items := library ++ [gen.item, .blank] ++ emitted }
     -- One observation of the compiled module: its name and `PASS`, or its name and `FAIL` and
     -- the end of the run.
     let observe (id condition : String) : String :=
@@ -254,10 +264,10 @@ def main (args : List String) : IO UInt32 := do
       if observed.any (·.outcome == .counterexample) then
         Row.pass "normalization.control" subject .tested "the mutated source fails a selected comparison"
       else Row.refused "normalization.control" subject "mutation did not produce a counterexample"
-    -- A wrong support body must reach the target evaluator: the program assembled from an
-    -- altered `lcnf_nat_mul` fails a comparison that the name fixtures select.
+    -- A wrong reference definition must reach the target evaluator: the program assembled from
+    -- an altered `Lcnf_nat.mul` fails a comparison that the name fixtures select.
     let squaring := OCaml5.Lcnf.support.map fun s =>
-      if s.name == "lcnf_nat_mul" then { s with body := .binop "*" (.var "a") (.var "a") } else s
+      if s.name == "Lcnf_nat.mul" then { s with body := .binop "*" (.var "a") (.var "a") } else s
     let supportSubject : Subject := ⟨"mutation", [supportMutation]⟩
     let supportRow :=
       match Conform.Effect4.LcnfMl.assemble translated.decls (word := word) (support := squaring) with

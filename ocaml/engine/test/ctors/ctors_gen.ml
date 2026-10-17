@@ -10,36 +10,6 @@ and pt = { x : int; y : int }
 
 
 
-let lcnf_utf8_bytes s =
-  List.init (String.length s) (fun i -> Char.code (String.get s i))
-
-let lcnf_utf8_length s =
-  String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
-
-let lcnf_utf8_of_code_points cs =
-  let b = Buffer.create 16 in
-  List.iter (fun c -> Buffer.add_utf_8_uchar b (Uchar.of_int c)) cs; Buffer.contents b
-
-let lcnf_string_of_bytes bs =
-  let b = Buffer.create 16 in
-  List.iter (fun c -> Buffer.add_char b (Char.chr c)) bs; Buffer.contents b
-
-let lcnf_nat_mul a b =
-  if a = 0 then 0 else if b > max_int / a then max_int else a * b
-
-let rec lcnf_nat_pow a b =
-  if b = 0 then 1 else (let h = lcnf_nat_pow a (b - 1) in
-    if a = 0 then 0 else if h > max_int / a then max_int else h * a)
-
-let lcnf_nat_shift_left a b =
-  let s = lcnf_nat_pow 2 b in
-  if a = 0 then 0 else if s > max_int / a then max_int else a * s
-
-let lcnf_list_contains inst l a =
-  List.exists (fun e -> inst a e) l
-
-
-
 (* LCNF mono: Test.Codegen.ConstructorLane.intOfNat (n : Nat) : Int *)
 
 let test_codegen_constructor_lane_int_of_nat (n : int) : int =
@@ -150,21 +120,21 @@ let test_codegen_constructor_lane_ba_match (x_1 : int list) : int list =
 (* LCNF mono: Test.Codegen.ConstructorLane.strBytes (s : String) : ByteArray *)
 
 let test_codegen_constructor_lane_str_bytes (s : string) : int list =
-  lcnf_utf8_bytes s
+  Lcnf_string.utf8_bytes s
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.strMatch (x.1 : String) : ByteArray *)
 
 let test_codegen_constructor_lane_str_match (x_1 : string) : int list =
-  lcnf_utf8_bytes x_1
+  Lcnf_string.utf8_bytes x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.strOfBytes (b : ByteArray) (h : lcErased) : String *)
 
 let test_codegen_constructor_lane_str_of_bytes (b : int list) h : string =
-  lcnf_string_of_bytes b
+  Lcnf_string.of_utf8_bytes b
 
 
 

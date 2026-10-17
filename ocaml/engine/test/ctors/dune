@@ -8,4 +8,5 @@
 (test
  (name test_ctors)
  (modules ctors_gen test_ctors)
- (deps ctors.txt))
+ (deps ctors.txt)
+ (libraries effect4_lcnf))

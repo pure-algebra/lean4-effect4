@@ -8,4 +8,4 @@
  (name test_modeled)
  (modules modeled_gen test_modeled)
  (deps modeled.txt)
- (libraries effect4_eff effect4_bytes))
+ (libraries effect4_eff effect4_bytes effect4_lcnf))

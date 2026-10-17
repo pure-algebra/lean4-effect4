@@ -16,9 +16,9 @@
 #   C2  The oracle is green and untouched: `dune build gen && dune build @gen/runtest`.
 #       `ocaml/gen/api_gen.ml` is the in-process oracle and lane G never edits it.
 #   C3  The seam compiles: `dune build engine`, and — the real statement — `api_engine.ml`
-#       type-checks against the E4_clock and E4_nat interfaces, with no carrier instance or
-#       numeric implementation. A functor body that type-checks checks the extern table's
-#       type closure (engine-a1 §1.3).
+#       type-checks against the E4_clock and E4_nat interfaces and those of the runtime
+#       library (`ocaml/lcnf`), with no carrier instance or numeric implementation. A
+#       functor body that type-checks checks the extern table's type closure (engine-a1 §1.3).
 #   C4  The checked-in generated file carries the CURRENT prelude, verbatim: an edit to
 #       ocaml/engine/tools/api_engine_prelude.ml without a regeneration is caught here.
 set -u
@@ -86,17 +86,19 @@ iso=$(mktemp -d)
 cp "$GEN" "$iso/"
 # The clock and natural-number externs are explicit target dependencies. Admit only their
 # signatures: copying a compiled engine or numeric implementation would hide the seam.
-# The program types are the recipe's own first artifact, which the engine opens.
+# The program types are the recipe's own first artifact, which the engine opens. The runtime
+# library's functions (`ocaml/lcnf`) enter by their signatures too.
 cp "$REPO/ocaml/clock/e4_clock.mli" "$iso/"
 cp "$REPO/ocaml/engine/bytes/e4_nat.mli" "$iso/"
 cp "$REPO/ocaml/eff/eff_types.ml" "$iso/"
-if (cd "$iso" && ocamlfind ocamlopt -opaque -c e4_clock.mli e4_nat.mli &&
+cp "$REPO"/ocaml/lcnf/lcnf_*.mli "$iso/"
+if (cd "$iso" && ocamlfind ocamlopt -opaque -c e4_clock.mli e4_nat.mli lcnf_*.mli &&
     ocamlfind ocamlopt -c eff_types.ml &&
     ocamlfind ocamlopt -c -w +a-4-9-40-41-42-44-45-70 api_engine.ml) >/tmp/geng-c3b.log 2>&1; then
-  note ok "C3b api_engine.ml type-checks against E4_clock/E4_nat interfaces and Eff_types: the functor needs no instance, so the"
+  note ok "C3b api_engine.ml type-checks against E4_clock/E4_nat/Lcnf_* interfaces and Eff_types: the functor needs no instance, so the"
   note ""  "     extern table is closed (every unconverted carrier site would be a type error)"
 else
-  note FAIL "C3b api_engine.ml does not type-check against E4_clock/E4_nat interfaces — the extern table has a hole:"
+  note FAIL "C3b api_engine.ml does not type-check against E4_clock/E4_nat/Lcnf_* interfaces — the extern table has a hole:"
   cat /tmp/geng-c3b.log; fail=1
 fi
 rm -rf "$iso"
