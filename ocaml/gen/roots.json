@@ -1,6 +1,6 @@
 {
   "format": "effect4-lcnf-roots-v2",
-  "claim": "Hand-written, not generated. The LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. The first artefact declares the program types alone (no roots): `ocaml/eff/eff_types.ml`, the one OCaml spelling of the program, whose families are `Tools.ProgramStructure.blocks`. The others open it (`open`), so they declare none of its types. `ocaml/engine/test/todo/todo_gen.ml` is the to-do host lane's (LC-6): the host run of one request, whose result the lane compares with Lean's. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots. `ocaml/engine/test/ctors/ctors_gen.ml` is the constructor lane's: every constructor and projection of a natively spelled type, built, matched and projected (`Test.Codegen.ConstructorLane`), whose answers the lane compares with Lean's. The last, `ocaml/engine/test/modeled/modeled_gen.ml`, is the Modeled lane's: a derived codec's staged image (`Test.Codegen.ModeledLane`), whose bytes the lane compares with Lean's.",
+  "claim": "Hand-written, not generated. The LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. The first artefact declares the program types alone (no roots): `ocaml/eff/eff_types.ml`, the one OCaml spelling of the program, whose families are `Tools.ProgramStructure.blocks`. The others open it (`open`), so they declare none of its types. `ocaml/engine/test/todo/todo_gen.ml` is the to-do host lane's (LC-6): the host run of one request, whose result the lane compares with Lean's. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots. `ocaml/engine/test/ctors/ctors_gen.ml` is the constructor lane's: every constructor and projection of a natively spelled type, built, matched and projected (`Test.Codegen.ConstructorLane`), whose answers the lane compares with Lean's. `ocaml/engine/test/modeled/modeled_gen.ml` is the Modeled lane's: a derived codec's staged image (`Test.Codegen.ModeledLane`), whose bytes the lane compares with Lean's. The last, `ocaml/engine/test/rocq/rocq_gen.ml`, is the comparison lane's: the premises of the declared facts of `Effect4.Laws.Run.Tree` (`InRocq`, `Plain`), by which the lane picks the programs whose Rocq tree it compares with Lean's.",
   "artefacts": [
     {
       "out": "ocaml/eff/eff_types.ml",
@@ -52,9 +52,10 @@
     {
       "out": "ocaml/gen/api_gen.ml",
       "import": [
-        "Effect4.Api"
+        "Effect4.Api",
+        "Effect4.Run.Kit"
       ],
-      "cap": 2000,
+      "cap": 2400,
       "types": [
         "Effect4.Program.RowShape",
         "Effect4.Program.DefDecl",
@@ -65,7 +66,68 @@
       "roots": [
         "Effect4.Api.run",
         "Effect4.Api.replay",
-        "Effect4.Program.admit"
+        "Effect4.Program.admit",
+        "Effect4.Run.Tree.ofProgram",
+        "Effect4.Run.Tree.run",
+        "Effect4.Run.Tree.outsideAt",
+        "Effect4.Run.Tree.Host.tape",
+        "Effect4.Run.Tree.Host.silent",
+        "Effect4.Run.Tree.Host.ofReactor",
+        "Effect4.Run.Tree.probe",
+        "Effect4.Run.Tree.settle",
+        "Effect4.Run.Tree.frames",
+        "Effect4.Run.Kit.check",
+        "Effect4.Run.Kit.admit",
+        "Effect4.Run.Kit.admitShape",
+        "Effect4.Run.Kit.admitToVal",
+        "Effect4.Run.Kit.replyFault",
+        "Effect4.Run.Kit.samples",
+        "Effect4.Run.Kit.replies",
+        "Effect4.Run.Kit.explore",
+        "Effect4.Run.Kit.programShape",
+        "Effect4.Run.Kit.programToVal",
+        "Effect4.Run.Kit.programOfVal",
+        "Effect4.Run.Kit.rowsShape",
+        "Effect4.Run.Kit.rowsToVal",
+        "Effect4.Run.Kit.rowsOfVal",
+        "Effect4.Run.Kit.servicesShape",
+        "Effect4.Run.Kit.servicesOfVal",
+        "Effect4.Run.Kit.tyShape",
+        "Effect4.Run.Kit.tyToVal",
+        "Effect4.Run.Kit.effTyShape",
+        "Effect4.Run.Kit.effTyToVal",
+        "Effect4.Run.Kit.refusalShape",
+        "Effect4.Run.Kit.refusalToVal",
+        "Effect4.Run.Kit.exitShape",
+        "Effect4.Run.Kit.exitToVal",
+        "Effect4.Run.Kit.exitOfVal",
+        "Effect4.Run.Kit.valShape",
+        "Effect4.Run.Kit.tyText",
+        "Effect4.Program.Authoring.var",
+        "Effect4.Program.Authoring.nat",
+        "Effect4.Program.Authoring.str",
+        "Effect4.Program.Authoring.bool",
+        "Effect4.Program.Authoring.unit",
+        "Effect4.Program.Authoring.app",
+        "Effect4.Program.Authoring.succeed",
+        "Effect4.Program.Authoring.fail",
+        "Effect4.Program.Authoring.sync",
+        "Effect4.Program.Authoring.suspend",
+        "Effect4.Program.Authoring.bindWith",
+        "Effect4.Program.Authoring.andThen",
+        "Effect4.Program.Authoring.ifElse",
+        "Effect4.Program.Authoring.selectOptionWith",
+        "Effect4.Program.Authoring.loopWith",
+        "Effect4.Program.Authoring.catchWith",
+        "Effect4.Program.Authoring.onExitWith",
+        "Effect4.Program.Authoring.exit",
+        "Effect4.Program.Authoring.Ref.make",
+        "Effect4.Program.Authoring.Ref.get",
+        "Effect4.Program.Authoring.Ref.set",
+        "Effect4.Program.Authoring.Row.host",
+        "Effect4.Program.Authoring.Row.callNamed",
+        "Effect4.Program.Authoring.Def.invoke",
+        "Effect4.Program.Authoring.elaborateAt"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",
@@ -235,6 +297,22 @@
         "Test.Codegen.ModeledLane.decodeItem",
         "Test.Codegen.ModeledLane.roundTrip",
         "Test.Codegen.ModeledLane.sampleVals"
+      ],
+      "open": {
+        "module": "Eff_types",
+        "artefact": "ocaml/eff/eff_types.ml"
+      }
+    },
+    {
+      "out": "ocaml/engine/test/rocq/rocq_gen.ml",
+      "import": [
+        "Effect4.Laws.Run.Tree"
+      ],
+      "cap": 200,
+      "types": [],
+      "roots": [
+        "Effect4.Run.Tree.InRocq",
+        "Effect4.Run.Tree.Plain"
       ],
       "open": {
         "module": "Eff_types",

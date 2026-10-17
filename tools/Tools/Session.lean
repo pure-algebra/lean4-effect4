@@ -8,6 +8,8 @@ import Effect4.Laws.Program.SketchWire
 import Effect4.Api.RunnerDerived
 import Effect4.Run.Live
 import Effect4.Laws.Api.Live
+import Effect4.Laws.Run.Tree
+import Effect4.Run.Kit
 
 /-!
 # Tools.Session — the edit session as a tool: one request a line, one session held between lines
@@ -44,6 +46,9 @@ names bytes; no answer assumes two applications with one digest are one.
 | `sketch` | nothing | the sketch and the application as JSON, and as bytes with `hex` | `Sketch.decode_exact`, `Canonical.decode_exact` |
 | `catalogue` | nothing; open or not | the program's forms, the atoms with their typing schemes, the application's rows by index (`Tools.Catalogue`) | `Canonical.ofJsonAnyOrder_exact`, `NativeAtom.atom_table_wf` |
 | `run` | `answers` (hex) or `answersJson`, a script of `(row, answer)` pairs, if any | the outcome, the exit (`ExitV`) and any waiting calls through `Live.feedAll`; `syncExit` (`Api.Built.runSync`) when closed | `Live.reached` |
+| `settle` | `tapeJson`, the replies in call order as exits, if any; `limit` | the least budget whose call tree's run is not cut, and that run: `finished`, `waiting` or, past the limit, `unsettled` (`Tree.settle`) | `Tree.settle_sound`, `Tree.probe_stable` |
+| `frames` | `tapeJson`, `limit` | the call tree's run at each budget from 0 to `limit` (`Tree.frames`) | `Tree.ofProgram_approx` |
+| `explore` | `budget`, `width` | every path of the call tree at the budget, each reply drawn from its row's types, with its tape (`Kit.explore`) | `Tree.ofProgram_approx` |
 
 **The delta names its law.** An edit of the sketch as written that moves the expansion at its
 address alone is the expansion's own edit. A fill that splices names `Sketch.table_fill`, an
@@ -114,6 +119,14 @@ structure Request where
   answers : Option String := none
   /-- the host answers for `run` as their JSON print, in place of `answers` -/
   answersJson : Option Json := none
+  /-- the replies for `settle` and `frames`, in call order: the JSON print of a list of exits -/
+  tapeJson : Option Json := none
+  /-- the largest budget `settle` tries, and the last of `frames` -/
+  limit : Nat := 256
+  /-- the budget of `explore` -/
+  budget : Nat := 64
+  /-- the most paths `explore` answers -/
+  width : Nat := 64
 
 /-- Read a request; a field of the wrong type is refused with its name. -/
 def Request.fromJson? (j : Json) : Except String Request := do
@@ -130,10 +143,14 @@ def Request.fromJson? (j : Json) : Except String Request := do
   let services ← optField j "services" (Lean.fromJson? (α := String))
   let hex ← optField j "hex" (Lean.fromJson? (α := Bool))
   let answers ← optField j "answers" (Lean.fromJson? (α := String))
+  let limit ← optField j "limit" (Lean.fromJson? (α := Nat))
+  let budget ← optField j "budget" (Lean.fromJson? (α := Nat))
+  let width ← optField j "width" (Lean.fromJson? (α := Nat))
   return Request.mk op program holes (path.getD []) replacement (holeName.getD "h0") id
     programJson replacementJson rows services (j.getObjVal? "holesJson").toOption
     (j.getObjVal? "rowsJson").toOption (j.getObjVal? "servicesJson").toOption (hex.getD false)
-    answers (j.getObjVal? "answersJson").toOption
+    answers (j.getObjVal? "answersJson").toOption (j.getObjVal? "tapeJson").toOption
+    (limit.getD 256) (budget.getD 64) (width.getD 64)
 
 /-- Write a request, as `Request.fromJson?` reads it. -/
 def Request.toJson (r : Request) : Json :=
@@ -151,6 +168,8 @@ def Request.toJson (r : Request) : Json :=
     (r.servicesJson.map fun j => ("servicesJson", j)).toList ++
     (r.answers.map fun hex => ("answers", Json.str hex)).toList ++
     (r.answersJson.map fun j => ("answersJson", j)).toList ++
+    (r.tapeJson.map fun j => ("tapeJson", j)).toList ++
+    [("limit", Lean.toJson r.limit), ("budget", Lean.toJson r.budget), ("width", Lean.toJson r.width)] ++
     (if r.hex then [("hex", Json.bool true)] else []) ++
     (r.id.map fun id => ("id", id)).toList
 
@@ -208,6 +227,25 @@ def stepJson (s : Edit.Step) : Json :=
       | .fill _ _ => "fill"
       | .omitAt _ _ => "omit")),
     ("path", toJson s.edit.path), ("delta", deltaJson s.delta)]
+
+/-- A step of the call tree's run: a host call, or a cell operation. -/
+def treeStepJson : Effect4.Run.Tree.Step → Json
+  | .called row request answer =>
+    Json.mkObj [("row", toJson row), ("request", printJson request), ("answer", printJson answer)]
+  | .celled _ value => Json.mkObj [("cell", printJson value)]
+
+/-- How the call tree's run stopped. -/
+def treeStopJson : Effect4.Run.Tree.Stop → List (String × Json)
+  | .finished exit => [("status", .str "finished"), ("exit", printJson exit)]
+  | .cut => [("status", .str "cut")]
+  | .waiting row request =>
+    [("status", .str "waiting"),
+      ("waiting", Json.mkObj [("row", toJson row), ("request", printJson request)])]
+
+/-- A run of the call tree: how it stopped, its steps, and any further fields. -/
+def treeRunJson (stop : Effect4.Run.Tree.Stop) (steps : List Effect4.Run.Tree.Step)
+    (extra : List (String × Json) := []) : Json :=
+  Json.mkObj (extra ++ treeStopJson stop ++ [("steps", Json.arr (steps.map treeStepJson).toArray)])
 
 /-- Feed one edit, record it, and answer its delta and the view. -/
 def feedAnswer (st : State) (l : SourceSession) (req : Request) (e : Edit)
@@ -319,7 +357,7 @@ def answer (st : State) (req : Request) : State × Answer :=
             let result := Json.mkObj [("status", .str "refused"), ("refusal", printJson why)]
             (st, Answer.mk op st.app answerLaws true result none req.id)
           | .ok admitted =>
-            let b : Effect4.Api.Built := { table := rows, program := l.sketch.program, admitted }
+            let b : Effect4.Api.Built := { app := .ofTable rows, program := l.sketch.program, admitted }
             let events : List Effect4.Run.Event :=
               [.start] ++
               answers.flatMap (fun (row, ans) => [.receive (.row row) ans, .apply (.row row)]) ++
@@ -336,6 +374,37 @@ def answer (st : State) (req : Request) : State × Answer :=
               (if answers.isEmpty && rows.isEmpty then [("syncExit", printJson b.runSync)] else [])
             (st, Answer.mk op st.app (answerLaws ++ [``Effect4.Live.reached]) true result none
               req.id)
+      | "settle" | "frames" | "explore" =>
+        let app := l.app.withHoles l.sketch.holes
+        let tape? : Option (List Effect4.Machine.ExitV) := match req.tapeJson with
+          | some j => Tools.JsonBridge.read? j
+          | none => some []
+        match tape? with
+        | none =>
+          (st, unreadable (α := List Effect4.Machine.ExitV) req.op "the tape does not read" req.tapeJson req.id)
+        | some tape =>
+          let program := l.sketch.program
+          let host := Effect4.Run.Tree.Host.tape
+          match op with
+          | "settle" =>
+            let result := match Effect4.Run.Tree.settle app.rows req.limit host tape program with
+              | some (k, o) => treeRunJson o.stop o.steps [("budget", toJson k)]
+              | none => Json.mkObj [("status", .str "unsettled"), ("limit", toJson req.limit),
+                  ("note", .str "cut at every budget up to the limit: a finite probe, not a divergence")]
+            (st, Answer.mk op st.app [``Effect4.Run.Tree.settle_sound, ``Effect4.Run.Tree.probe_stable]
+              true result none req.id)
+          | "frames" =>
+            let frames := Effect4.Run.Tree.frames app.rows req.limit host tape program
+            let result := Json.arr (frames.map fun o => treeRunJson o.stop o.steps).toArray
+            (st, Answer.mk op st.app [``Effect4.Run.Tree.ofProgram_approx] true result none req.id)
+          | _ =>
+            let paths := Effect4.Run.Kit.explore app req.budget req.width program
+            let result := Json.arr (paths.map fun p =>
+              let tape := p.steps.filterMap fun
+                | .called _ _ answer => some answer
+                | .celled _ _ => none
+              treeRunJson p.stop p.steps [("tape", printJson tape)]).toArray
+            (st, Answer.mk op st.app [``Effect4.Run.Tree.ofProgram_approx] true result none req.id)
       | other => none' s!"unknown operation {other}"
 
 /-- **Answer one line**, with the state after it. -/

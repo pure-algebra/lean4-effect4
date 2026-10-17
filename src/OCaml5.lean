@@ -28,3 +28,4 @@ import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
 import OCaml5.Lcnf.TypeRows
 import OCaml5.Lcnf.Gen
+import OCaml5.Lcnf.Gallina

@@ -1,0 +1,20 @@
+$ ineffect4 ocamlfind ocamlopt -package zarith -linkpkg -w -a -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/eff/.effect4_eff.objs/byte -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/eff/.effect4_eff.objs/native -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/clock/.effect4_clock.objs/native -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/engine/bytes/.effect4_bytes.objs/byte -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/engine/bytes/.effect4_bytes.objs/native -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/engine/.effect4_engine.objs/byte -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/engine/.effect4_engine.objs/native -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/engine/test/todo/.todo_lane.objs/byte -I /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/engine/test/todo/.todo_lane.objs/native /Users/pooks/Dev/lean4-effect4/.claude/worktrees/interesting-volhard-6ceb2e/ocaml/_build/default/eff/effect4_eff.cmxa budget_run.mli budget_run.ml budget_view.ml -o budget_view
+$ uptime
+20:36  up 31 days,  6:26, 7 users, load averages: 14.21 9.68 9.75
+$ ./budget_view frames.json
+frames grow: doubling, 9 frames
+frames grow: doubling, short tape, 9 frames
+frames grow: forever, 9 frames
+frames grow: ping, 9 frames
+frames grow: cell counter, 9 frames
+frames grow: before an edit, 9 frames
+frames grow: after the edit, 9 frames
+frames grow: recursive doubling, 9 frames
+frames grow: self call, 9 frames
+frames grow: twice, 7 frames
+frames grow: to-do request 0, 6 frames
+frames grow: to-do request 2, 6 frames
+frames 0..1000 of ping (500500 steps in all): 0.182 s CPU, 363 ns a step
+one frame at budget 100000 of ping: 0.073 s CPU, 730 ns a step
+wrote frames.json
+$ budget_view.html with frames.json in place of its marker > budget-view.html

@@ -140,4 +140,138 @@ else
   echo "PASS the mutant fails TodoCheck" >> "$OUT/logs/$LOG"
 fi
 
+# 8. The budget relation (rocq/Budget.v): Lean's budgeted call tree is the budget-k truncation of
+#    the meaning; with definitions by budgeted unfolding, for every program (rocq/BudgetDefs.v).
+#    Then the API on it, the examples and their checks, the to-do fixture at a budget, each file
+#    timed, with Rocq's own evaluator timed on two runs; every assumption printed.
+LOG=9-budget.log
+cd "$OUT/rocq"
+for f in Budget BudgetDefs Api Examples BudgetCheck TodoBudgetCheck BudgetExtract; do
+  log "rocq compile -Q . E4 $f.v"
+  { /usr/bin/time -p opam exec --switch=rocq -- rocq compile -Q . E4 "$f.v"; } >> "$OUT/logs/$LOG" 2>&1
+done
+cat > Speed.v <<'EOF'
+From Stdlib Require Import List ZArith.
+Import ListNotations.
+Require Import E4.Eff_types E4.Budget E4.Api E4.Examples.
+Time Eval vm_compute in stop_at (run_at 100000 by_unit ping ([], tt)).
+Time Eval vm_compute in length (frames 1000 by_unit ping ([], tt)).
+EOF
+run inrocq rocq compile -Q . E4 Speed.v
+LOG=10-budget-assumptions.log
+cat > BudgetAssumptions.v <<'EOF'
+Require Import E4.Budget E4.BudgetDefs E4.Api E4.BudgetCheck E4.TodoBudgetCheck.
+Print Assumptions E4.Budget.denoteB_approx.
+Print Assumptions E4.Budget.meaning_fragment.
+Print Assumptions E4.Budget.truncation_is_denoteB.
+Print Assumptions E4.Budget.denoteB_below_meaning.
+Print Assumptions E4.Budget.adequacy.
+Print Assumptions E4.Budget.meaning_finishes_iff.
+Print Assumptions E4.Budget.meaning_waits_iff.
+Print Assumptions E4.Budget.meaning_diverges_under_iff.
+Print Assumptions E4.Budget.meaning_diverges_iff.
+Print Assumptions E4.BudgetDefs.denoteD_approx.
+Print Assumptions E4.BudgetDefs.denoteD_below.
+Print Assumptions E4.BudgetDefs.adequacyD.
+Print Assumptions E4.BudgetDefs.finishesD_iff.
+Print Assumptions E4.BudgetDefs.waitsD_iff.
+Print Assumptions E4.BudgetDefs.divergesD_iff.
+Print Assumptions E4.BudgetDefs.meaning_divergesD_iff.
+Print Assumptions E4.BudgetDefs.denoteBD_same.
+Print Assumptions E4.Api.run_at_lean.
+Print Assumptions E4.Api.run_at_finished.
+Print Assumptions E4.Api.run_at_waits.
+Print Assumptions E4.Api.run_at_grows.
+Print Assumptions E4.Api.settle_finished.
+Print Assumptions E4.Api.settle_complete.
+Print Assumptions E4.Api.diverges_iff_never_settles.
+Print Assumptions E4.Api.edit_congruence.
+Print Assumptions E4.Api.edit_keeps_outcomes.
+Print Assumptions E4.BudgetCheck.doubling_finishes.
+Print Assumptions E4.BudgetCheck.doubling_waits.
+Print Assumptions E4.BudgetCheck.forever_cut_everywhere.
+Print Assumptions E4.BudgetCheck.edit_outcomes.
+Print Assumptions E4.BudgetCheck.doubling_rec_finishes.
+Print Assumptions E4.BudgetCheck.self_call_diverges.
+Print Assumptions E4.TodoBudgetCheck.reference_0.
+Print Assumptions E4.TodoBudgetCheck.broken_6.
+EOF
+run inrocq rocq compile -Q . E4 BudgetAssumptions.v
+
+# 9. The view: the extracted runner writes the frames of each example; the page plays them.
+LOG=11-view.log
+mkdir -p "$OUT/view"
+cp "$OUT/rocq/budget_run.ml" "$OUT/rocq/budget_run.mli" "$OUT/gen/budget_view.ml" "$OUT/view/"
+cd "$OUT/view"
+# shellcheck disable=SC2086
+run ineffect4 ocamlfind ocamlopt -package zarith -linkpkg -w -a $INC "$BUILD/eff/effect4_eff.cmxa" \
+  budget_run.mli budget_run.ml budget_view.ml -o budget_view
+log "uptime"; uptime >> "$OUT/logs/$LOG"
+run ./budget_view frames.json
+log "budget_view.html with frames.json in place of its marker > budget-view.html"
+python3 -c "import sys; t=open(sys.argv[1]).read(); j=open(sys.argv[2]).read(); assert '/*FRAMES_JSON*/' in t; open(sys.argv[3],'w').write(t.replace('/*FRAMES_JSON*/', j, 1))" \
+  "$OUT/gen/budget_view.html" frames.json budget-view.html
+
+# 10. The red control on the budget: Lean's tree given one more test per loop, the truncation
+#     unchanged. Budget.v must fail, at truncation_is_denoteB.
+LOG=12-budget-mutant.log
+mkdir -p "$OUT/budget-mutant"
+cp "$OUT/rocq"/{Eff_types.v,Denote.v,Run.v,Judgments.v} "$OUT/budget-mutant/"
+sed '/(iterB (loop_stepB/ s/ k c0)$/ (S k) c0)/' "$OUT/rocq/Budget.v" > "$OUT/budget-mutant/Budget.v"
+cd "$OUT/budget-mutant"
+log "diff rocq/Budget.v budget-mutant/Budget.v"; diff "$OUT/rocq/Budget.v" Budget.v >> "$OUT/logs/$LOG" || true
+for f in Eff_types Denote Run Judgments; do inrocq rocq compile -Q . E4 "$f.v" > /dev/null 2>&1; done
+log "rocq compile -Q . E4 Budget.v   (must fail)"
+if inrocq rocq compile -Q . E4 Budget.v >> "$OUT/logs/$LOG" 2>&1; then
+  echo "FAIL the mutant passed Budget.v" >> "$OUT/logs/$LOG"; exit 1
+else
+  echo "PASS the mutant fails Budget.v" >> "$OUT/logs/$LOG"
+fi
+
+# 11. The red control on the definitions: a call's body run at the caller's environment instead
+#     of its request alone. BudgetDefs.v must fail, at denoteW_below.
+LOG=13-defs-mutant.log
+mkdir -p "$OUT/defs-mutant"
+cp "$OUT/rocq"/{Eff_types.v,Denote.v,Run.v,Judgments.v,Budget.v} "$OUT/defs-mutant/"
+sed 's/| Some body => call body \[v\] ((\[\], \[\]) :: ps) ctx/| Some body => call body env (([], []) :: ps) ctx/' \
+  "$OUT/rocq/BudgetDefs.v" > "$OUT/defs-mutant/BudgetDefs.v"
+cd "$OUT/defs-mutant"
+log "diff rocq/BudgetDefs.v defs-mutant/BudgetDefs.v"; diff "$OUT/rocq/BudgetDefs.v" BudgetDefs.v >> "$OUT/logs/$LOG" || true
+for f in Eff_types Denote Run Judgments Budget; do inrocq rocq compile -Q . E4 "$f.v" > /dev/null 2>&1; done
+log "rocq compile -Q . E4 BudgetDefs.v   (must fail)"
+if inrocq rocq compile -Q . E4 BudgetDefs.v >> "$OUT/logs/$LOG" 2>&1; then
+  echo "FAIL the mutant passed BudgetDefs.v" >> "$OUT/logs/$LOG"; exit 1
+else
+  echo "PASS the mutant fails BudgetDefs.v" >> "$OUT/logs/$LOG"
+fi
+
+# 12. The skeleton generated from Lean (generated/Skeleton.v, written by
+#     src/OCaml5/Tools/GallinaGen.lean from the base-phase LCNF of Effect4.Run.Tree): Rocq's guard
+#     checker must accept it as it stands, with the evaluator as Section variables.
+LOG=14-skeleton.log
+cp "$ROOT/$HERE/generated/Skeleton.v" "$OUT/rocq/"
+cd "$OUT/rocq"
+log "rocq compile -Q . E4 Skeleton.v"
+{ /usr/bin/time -p opam exec --switch=rocq -- rocq compile -Q . E4 Skeleton.v; } >> "$OUT/logs/$LOG" 2>&1
+cat > SkeletonAssumptions.v <<'EOF'
+Require Import E4.Skeleton.
+Print Assumptions E4.Skeleton.ofProgram.
+EOF
+run inrocq rocq compile -Q . E4 SkeletonAssumptions.v
+
 echo "reproduce.sh: done; logs in $OUT/logs"
+
+# 13. The comparison lane's input (rocq/LaneExtract.v): Rocq's tree with Lean's evaluator
+#     realized, extracted. Below its five header lines, the committed
+#     ocaml/engine/test/rocq/rocq_run.ml and .mli must be what Rocq writes.
+LOG=15-lane-extract.log
+cd "$OUT/rocq"
+run inrocq rocq compile -Q . E4 LaneExtract.v
+for ext in ml mli; do
+  log "diff <(tail -n +6 ocaml/engine/test/rocq/rocq_run.$ext) rocq_run.$ext"
+  if tail -n +6 "$ROOT/ocaml/engine/test/rocq/rocq_run.$ext" | diff - "rocq_run.$ext" >> "$OUT/logs/$LOG" 2>&1; then
+    echo "PASS rocq_run.$ext is the committed lane input" >> "$OUT/logs/$LOG"
+  else
+    echo "FAIL rocq_run.$ext differs from the committed lane input" >> "$OUT/logs/$LOG"; exit 1
+  fi
+done

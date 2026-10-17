@@ -1,0 +1,213 @@
+(* test_rocq.ml -- the comparison lane: Rocq's budgeted runner against Lean's call tree, lowered.
+
+   What it is: Rocq_run is the extraction of docs/research/2026-10-16-itrees/rocq/LaneExtract.v
+   (GENERATED, beside this file): Rocq's [Api.run_at], the run of [BudgetDefs.denoteBD k] under
+   the cells and a host function. Lean's call tree is [Effect4.Run.Tree.probe], lowered by LCNF
+   into ocaml/gen/api_gen.ml. One OCaml host answers both runs. For each program and each budget
+   up to a bound, the lane compares the two: the host calls with their replies, the cells'
+   answers, and how the run stopped. The declared facts of src/Effect4/Laws/Run/Tree.lean cite
+   Rocq's theorems about [denoteBD]; this lane checks, on these programs, that [denoteBD] is the
+   tree Lean runs. It is a finite check, the floor under the citations, not a proof.
+   Depends on: Rocq_run (extracted), Effect4_gen.Api_gen (generated), Effect4_kit (Kit_author),
+   the to-do lane (Todo_fixture, Native_todo), Eff_types, Eff_wire.
+
+   Properties:
+   R1  A reply crosses as Rocq's exit: a success as its value, a failure as Lean's exit image
+       (Lane_eval.of_exit, over reifyExitVal lowered from Lean). A cell operation crosses as Lean's operation of the
+       same request (NativeOp.syncOpOf), stepped on Lean's stores.          by construction
+   R2  On the kit's examples under their hosts, at budgets 0 to 12, the two runs are equal.
+                                                                             tested
+   R3  On every request of the to-do fixture under its typed record host, at budgets 0 to 8, the
+       two runs are equal.                                                   tested
+   R4  On every program of the printed corpus in InRocq that the checker types, under the silent
+       host and under a tape of units, at budgets 0 to 8, the two runs are equal. The programs
+       the checker refuses are measured, not checked: a cell operation whose request is no cell
+       is an event in Rocq's tree and a bad shape in Lean's (InRocq's docstring).  tested
+   R5  Red controls: two programs outside InRocq differ, a caught failure (no arm in Rocq's tree)
+       and a context read (Rocq's context is not Lean's), so R2 to R4 compare runs that can
+       differ.                                                               tested *)
+
+open Eff_types
+module G = Effect4_gen.Api_gen
+module A = Effect4_kit.Kit_author
+module R = Rocq_run
+
+let failures = ref 0
+let checks = ref 0
+
+let check name ok =
+  incr checks;
+  if not ok then begin
+    incr failures;
+    Printf.printf "FAIL %s\n%!" name
+  end
+
+type exit = (val_, err, defect, int, unit) exit_
+
+(* R1 *)
+let rocq_exit (ex : exit) : Lane_eval.exitv = Lane_eval.of_exit ex
+
+type stop = Finished of Lane_eval.exitv | Cut | Waiting of int * val_ | Refused of string
+type run = { calls : (int * val_ * Lane_eval.exitv) list; cells : val_ list; stop : stop }
+
+let lean_run rows k (host : int -> val_ -> 's -> (exit * 's) option) (st : 's) p : run =
+  let o = G.run_tree_probe rows k host st p in
+  { calls = List.filter_map (function G.Step_called (i, v, ex) -> Some (i, v, rocq_exit ex) | _ -> None) o.steps;
+    cells = List.filter_map (function G.Step_celled (_, v) -> Some v | _ -> None) o.steps;
+    stop =
+      (match o.stop with
+       | G.Stop_finished ex -> Finished (rocq_exit ex)
+       | G.Stop_cut -> Cut
+       | G.Stop_waiting (i, v) -> Waiting (i, v)) }
+
+(* R1: Rocq's cell operation as Lean's, stepped on Lean's stores; a step Lean refuses answers
+   unit and leaves the stores, as Tree.runFrom does. *)
+let cells op x w (stores : G.stores) =
+  let request, native =
+    match op with
+    | "make" -> (x, NativeOp_refMake)
+    | "get" -> (x, NativeOp_refGet)
+    | _ -> (Val_list [ x; w ], NativeOp_refSet)
+  in
+  match G.program_native_op_sync_op_of native [] request with
+  | None -> None
+  | Some o -> (match G.sync_op_step o stores with Some (s', v) -> Some (v, s') | None -> Some (Val_unit, stores))
+
+let rocq_run k (host : int -> val_ -> 's -> (exit * 's) option) (st : 's) p : run =
+  let f i v st = Option.map (fun (ex, st') -> (rocq_exit ex, st')) (host i v st) in
+  let (steps, stop), _ = R.lane_run cells f k p G.stores_empty st in
+  { calls = List.filter_map (function R.Called (i, v, a) -> Some (i, v, a) | R.Celled _ -> None) steps;
+    cells = List.filter_map (function R.Celled (_, _, a) -> Some a | R.Called _ -> None) steps;
+    stop =
+      (match stop with
+       | R.Finished ex -> Finished ex
+       | R.Cut -> Cut
+       | R.Waiting (i, v) -> Waiting (i, v)
+       | R.Refused (op, _) -> Refused op) }
+
+let value_text v = Effect4_kit.Kit.Json.(render (value_json v))
+let exit_text = function Lane_eval.Success v -> "success " ^ value_text v | Lane_eval.Failure v -> "failure " ^ value_text v
+
+let run_text (r : run) =
+  Printf.sprintf "calls [%s] cells [%s] %s"
+    (String.concat "; " (List.map (fun (i, v, a) -> Printf.sprintf "%d %s -> %s" i (value_text v) (exit_text a)) r.calls))
+    (String.concat "; " (List.map value_text r.cells))
+    (match r.stop with
+     | Finished ex -> "finished " ^ exit_text ex
+     | Cut -> "cut"
+     | Waiting (i, v) -> Printf.sprintf "waiting %d %s" i (value_text v)
+     | Refused op -> "refused " ^ op)
+
+let shown = ref 0
+
+(* The first budget up to [upto] at which the runs differ; the first few differences print both
+   runs. *)
+let first_difference ?(name = "") ~upto rows host st p =
+  let rec go k =
+    if k > upto then None
+    else
+      let l = lean_run rows k host st p and r = rocq_run k host st p in
+      if l = r then go (k + 1)
+      else begin
+        if !shown < 12 then begin
+          incr shown;
+          Printf.printf "  %s at budget %d\n    Lean %s\n    Rocq %s\n" name k (run_text l) (run_text r)
+        end;
+        Some k
+      end
+  in
+  go 0
+
+let tape : int -> val_ -> exit list -> (exit * exit list) option =
+ fun _ _ t -> match t with ex :: rest -> Some (ex, rest) | [] -> None
+
+let silent : int -> val_ -> unit -> (exit * unit) option = fun _ _ () -> None
+let unit_ok : exit = Exit_success Val_unit
+let units n = List.init n (fun _ -> unit_ok)
+
+let r2 () =
+  let echo = A.row "echo" ~request:Ty_nat ~answer:Ty_unit () in
+  let app = Effect4_kit.Kit.app ~rows:[ echo ] () in
+  let rows = [ echo ] in
+  let build ?defs p = match A.build ~app ?defs p with Ok e -> e | Error r -> failwith (A.refusal_text r) in
+  let doubling =
+    build (A.loop ~init:(A.nat 1) ~test:(fun c -> A.(c < nat 16)) ~step:(fun c _ -> A.(c * nat 2))
+             ~result:(fun c -> c) (fun c -> A.perform "echo" c)) in
+  let cells =
+    build A.(let* c = cell (nat 0) in
+             loop ~init:(nat 1) ~test:(fun i -> i < nat 8) ~step:(fun i _ -> i * nat 2) ~result:(fun _ -> unit)
+               (fun i -> set c i) >> get c) in
+  let caught = build A.(catch (fail (str "boom")) (fun _ -> succeed (nat 7))) in
+  let self_call =
+    build ~defs:[ A.def "f" ~request:Ty_nat ~answer:Ty_nat (fun r -> A.call "f" r) ] (A.call "f" (A.nat 0)) in
+  let twice =
+    build ~defs:[ A.def "twice" ~request:Ty_nat ~answer:Ty_nat (fun r -> A.(let* _ = perform "echo" r in succeed (r * nat 2))) ]
+      A.(let* a = call "twice" (nat 3) in call "twice" a) in
+  let same name host st p =
+    check (Printf.sprintf "R2 %s: equal at budgets 0 to 12" name) (first_difference ~name ~upto:12 rows host st p = None)
+  in
+  same "doubling, four replies" tape (units 4) doubling;
+  same "doubling, three replies" tape (units 3) doubling;
+  same "doubling, a refused-looking reply" tape [ unit_ok; Exit_success (Val_str "oops") ] doubling;
+  same "a cell written in a loop" silent () cells;
+  check "R5 a caught failure is outside InRocq" (not (Rocq_gen.run_tree_in_rocq caught));
+  check "R5 and its runs differ" (first_difference ~name:"R5 a caught failure" ~upto:12 rows silent () caught <> None);
+  let context = Eff_withFiber (ActionTerm_context []) in
+  check "R5 a context read is outside InRocq" (not (Rocq_gen.run_tree_in_rocq context));
+  check "R5 and its runs differ" (first_difference ~name:"R5 a context read" ~upto:12 rows silent () context <> None);
+  same "a definition that calls itself" silent () self_call;
+  same "a definition called twice" tape (units 2) twice
+
+let r3 () =
+  let requests = Todo_fixture.read_fixture "../todo/todo-host.txt" in
+  let provider = Native_todo.provider Native_todo.record in
+  let differ =
+    List.filter_map
+      (fun (r : Todo_fixture.request) ->
+        let built = Todo_fixture.built_of r in
+        let state = Todo_fixture.repo_of (Todo_fixture.exactly "the state" Eff_val.decode_exact r.state) in
+        let rows = built.app.rows in
+        let host = G.run_tree_host_of_reactor rows provider in
+        match first_difference ~name:r.entry ~upto:8 rows host state built.program with
+        | None -> None
+        | Some k -> Some (Printf.sprintf "%s at %d" r.entry k))
+      requests
+  in
+  Printf.printf "R3 to-do fixture: %d requests, %d differ%s\n" (List.length requests) (List.length differ)
+    (if differ = [] then "" else ": " ^ String.concat ", " (List.filteri (fun i _ -> i < 8) differ));
+  check "R3 the to-do fixture: equal at budgets 0 to 8" (differ = [])
+
+(* The printed corpus: verdicts.txt of the kit's lane, one program a line. *)
+let corpus () =
+  let bytes_of_hex h = String.init (String.length h / 2) (fun i -> Char.chr (int_of_string ("0x" ^ String.sub h (2 * i) 2))) in
+  In_channel.with_open_bin "../kit/verdicts.txt" In_channel.input_all
+  |> String.split_on_char '\n'
+  |> List.filter_map (fun l ->
+         match String.split_on_char '\t' l with
+         | name :: hex :: _ :: _ -> Option.map (fun p -> (name, p)) (Eff_wire.decode_eff_exact (bytes_of_hex hex))
+         | _ -> None)
+
+let r4 () =
+  let empty = Effect4_kit.Kit.app () in
+  let fragment = List.filter (fun (_, p) -> Rocq_gen.run_tree_in_rocq p) (corpus ()) in
+  let typed, refused = List.partition (fun (_, p) -> Result.is_ok (Effect4_kit.Kit.check empty p)) fragment in
+  let differ host st programs =
+    List.filter_map
+      (fun (name, p) -> Option.map (fun k -> Printf.sprintf "%s at %d" name k) (first_difference ~name ~upto:8 [] host st p))
+      programs
+  in
+  let names xs = if xs = [] then "" else " (" ^ String.concat ", " (List.filteri (fun i _ -> i < 8) xs) ^ ")" in
+  let silent_differ = differ silent () typed and tape_differ = differ tape (units 4) typed in
+  let refused_differ = differ silent () refused in
+  Printf.printf "R4 corpus: %d programs in InRocq, %d of them typed; %d differ under the silent host%s, %d under four units%s\n"
+    (List.length fragment) (List.length typed) (List.length silent_differ) (names silent_differ)
+    (List.length tape_differ) (names tape_differ);
+  Printf.printf "R4 the %d the checker refuses, a measurement: %d differ under the silent host%s\n"
+    (List.length refused) (List.length refused_differ) (names refused_differ);
+  check "R4 the corpus, the silent host: equal at budgets 0 to 8" (silent_differ = []);
+  check "R4 the corpus, four units: equal at budgets 0 to 8" (tape_differ = [])
+
+let () =
+  r2 (); r3 (); r4 ();
+  Printf.printf "test_rocq: %d checks, %d failures\n" !checks !failures;
+  if !failures > 0 then exit 1

@@ -1,0 +1,26 @@
+$ diff rocq/BudgetDefs.v defs-mutant/BudgetDefs.v
+78c78
+<         | Some body => call body [v] (([], []) :: ps) ctx
+---
+>         | Some body => call body env (([], []) :: ps) ctx
+$ rocq compile -Q . E4 BudgetDefs.v   (must fail)
+File "./BudgetDefs.v", line 304, characters 82-93:
+Error:
+In environment
+bodies : list (eff native_op)
+k : nat
+call : calls_t
+Hc :
+  forall (e : eff native_op) (env : list val_) (ps : list frame_args)
+    (ctx : val_),
+  below (call e env ps ctx) (M bodies e env ps ctx)
+i : int
+r : term
+env : list val_
+ps : list frame_args
+ctx, v : val_
+body : eff native_op
+Unable to unify "M bodies body [v] (([], []) :: ps) ctx" with
+ "M bodies body env (([], []) :: ps) ctx".
+
+PASS the mutant fails BudgetDefs.v

@@ -1,4 +1,5 @@
 import ProofGraph.Goal
+import ProofGraph.Declared
 import ProofGraph.Proof
 import ProofGraph.Population
 
@@ -186,6 +187,8 @@ def Plan.describe (p : Plan) (tops : Array Name) : MetaM String := do
   for g in next do
     let some (.thmInfo t) := (← getEnv).find? g | continue
     out := out ++ s!"\n  goal {g} : {← ppExpr t.type}"
+    if let some source := declaredSource? (← getEnv) g then
+      out := out ++ s!"\n    declared: proved in {source}"
   return out
 
 /-- `#plan_status G₁ …`: the standing of each `Gᵢ`, and the statements of the goals they rest on.

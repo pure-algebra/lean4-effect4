@@ -52,7 +52,7 @@ let result_val calls exit_ (state : Native_todo.lane_state) : Eff_types.val_ =
 let fuel = 1_000_000
 
 let run (built : Todo_gen.built) provider make lane =
-  match Itree_run.run_n fuel (host_of built.table provider) built.program (make ()) with
+  match Itree_run.run_n fuel (host_of built.app.rows provider) built.program (make ()) with
   | Itree_run.Done ((st, calls), ex) -> Some (hex_of (result_val calls ex (lane st)))
   | Itree_run.Waiting _ | Itree_run.Unfinished -> None
 
@@ -101,11 +101,11 @@ let () =
   let all = List.map (fun r -> (built_of r, repo_of (exactly "the state" Eff_val.decode_exact r.state))) requests in
   let tree () =
     List.iter
-      (fun ((b : Todo_gen.built), st) -> ignore (Itree_run.run_n fuel (host_of b.table provider) b.program st))
+      (fun ((b : Todo_gen.built), st) -> ignore (Itree_run.run_n fuel (host_of b.app.rows provider) b.program st))
       all
   in
   let engine () =
-    List.iter (fun ((b : Todo_gen.built), st) -> ignore (H.serve ~table:b.table provider b.program ~fuel:1000 st)) all
+    List.iter (fun ((b : Todo_gen.built), st) -> ignore (H.serve ~table:b.app.rows provider b.program ~fuel:1000 st)) all
   in
   let n = float_of_int (List.length all) in
   let t_tree = time tree /. n and t_engine = time engine /. n in
