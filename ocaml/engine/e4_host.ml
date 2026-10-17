@@ -50,7 +50,7 @@
        `Refused`, with its reason) and `Delay` stop the drive after any step, with the engine
        after it. So no stuck, refused, short-of-fuel or out-of-profile machine reads as
        `Finished`. `Waiting` and `Delay` are live frontiers, never errors.
-                                                          tested (test_serve S3, S4, S5, S6)
+       tested (test_serve S3, S4, S6; S5 over a stand-in engine, as no program reaches `Stuck`)
    H11 The drive stops where `driveFrom` stops, and at three places where it does not, since
        `driveFrom` reads no step's verdict and its naturals are unbounded:
        (a) the host numeric profile (H2, H6, H8, H9) exists only in OCaml;
