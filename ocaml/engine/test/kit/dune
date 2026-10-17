@@ -17,3 +17,12 @@
  (name test_shapes)
  (modules test_shapes)
  (libraries effect4_kit effect4_gen effect4_bytes))
+
+; the production tool's answers, pinned: transcript.txt replayed through Kit_serve's serve_line
+; and mcp_line, byte for byte; test_transcript's header holds the rule for a deliberate rewrite.
+
+(test
+ (name test_transcript)
+ (modules test_transcript)
+ (deps transcript.txt)
+ (libraries effect4_kit effect4_eff))
