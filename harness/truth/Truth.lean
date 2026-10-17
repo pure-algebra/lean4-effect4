@@ -1744,6 +1744,8 @@ def refusalText : PrintRefusal → String
   | .strayMethod definition service => s!"method {definition} of undeclared service {service}"
   | .service name => s!"service {name}"
   | .serviceMethod service method => s!"method {service}.{method}"
+  | .declarations services types =>
+    s!"an application that declares {services} services and {types} named types"
 
 /-- One fiber of the machine's own record, under the machine's ids: its exit is recorded and
 never compared. -/
