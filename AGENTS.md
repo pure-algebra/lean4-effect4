@@ -21,6 +21,7 @@ documents that the current task names.
 | `src/Effect4/` | API and functional utilities through `Effect4`; the proof graph through `Effect4.Laws`, with declaration namespaces unchanged |
 | `Test/` | batteries, counterexamples and proof receipts; `Test/Audit/AxiomGate.lean` holds the gates: the axiom gate, the module-closure gate and the library-root gate |
 | `generated/` | deterministic projections only; never hand-edited |
+| `rocq/` | the Rocq proofs that a declared fact cites (`declared … from`, decisions row 411), over definitions generated from Lean (`make gen-rocq`); `rocq/README.md` is its map |
 | `docs/research/` (gitignored; the notes that matter are force-added) | working notes, scout briefs and notes, receipts, evidence trees; history, not authority |
 
 If two files appear to own the same fact, stop and repair the ownership map.
