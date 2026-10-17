@@ -3,7 +3,8 @@
 **The one thing to know before merging:** `make gen-rocq` now also writes `rocq/StoreCode.v`, the
 store's code printed from Lean over an abstract hash. Properties 1 to 5 are proved over it in
 `rocq/StoreLaws.v` and `rocq/StoreGrammar.v`. Each rests on the printed parameters and three
-equality laws, and on no hash assumption. The branch sits on `6689f0833` and waits for the
+equality laws, and on no hash assumption. `ShapeDoc.document` is not injective: it drops a sum's
+wire tags, so `specOf` does too (Part 4). The branch sits on `6689f0833` and waits for the
 coordinator's tip to rebase onto. No Lean theorem changed.
 
 The research note, with the byte language for the code seat, is
@@ -15,7 +16,7 @@ The research note, with the byte language for the code seat, is
 | --- | --- |
 | Branch | `seat/rocq-cas`, in the worktree `.claude/worktrees/modest-sammet-90f7b7` |
 | Base | `6689f0833` (slice 1.2a) |
-| Commits | `3fadf051f` the `gen-rocq` repair; `e96aec466` the store's code and its laws; `30de6d516` one byte language; the commit that adds this receipt and the note |
+| Commits | `3fadf051f` the `gen-rocq` repair; `e96aec466` the store's code and its laws; `30de6d516` one byte language; `8cdfda262` this receipt and the note; the commit that adds Part 4 (shape digests) |
 | Pushed | no |
 | Rebase | pending: the coordinator sends the tip |
 
@@ -33,6 +34,7 @@ The research note, with the byte language for the code seat, is
 | `rocq/StoreAssumptions.v` | new: the assumptions of 16 store theorems |
 | `rocq/README.md`, `rocq/_RocqProject` | the map, the printer's rules, the compile command |
 | `docs/research/2026-10-17-seat-rocq-cas/README.md` | new: the note |
+| `docs/research/2026-10-17-seat-rocq-cas/ShapeWitness.lean` | new: the Lean proof that `ShapeDoc.document` is not injective, outside every build |
 | `docs/research/2026-10-17-seat-rocq-cas-receipt.md` | new: this receipt |
 
 ## Part 1: the `gen-rocq` repair
@@ -108,6 +110,24 @@ matters. That is a natural at least 0, float bits below 2^64, and a spec of thir
 The statement vocabulary is written by hand, because LCNF carries no `Prop`. These are `Resolves`,
 `Closed`, `Addressed`, `Sound`, `Sub`, `Ranked`, `Built`, `rank_of`, `bytes_at`, `InRange` and
 `NodeInRange`. Each restates a Lean `Prop` field for field, or names the range Lean's types carry.
+
+## Part 4: shape digests
+
+`ShapeDoc.document` (`src/Effect4/Schema/OfShape.lean`) writes a sum's cases by name and fields,
+never by wire tag. `ShapeWitness.lean` proves it in Lean:
+
+| Theorem | Statement | Assumes |
+| --- | --- | --- |
+| `tag_lost_nullary`, `tag_lost_fields` | two sums that differ only in a tag have one document (`rfl`) | nothing |
+| `document_not_injective` | `¬ Function.Injective ShapeDoc.document` | `propext` |
+
+`lean-slot.sh lake env lean docs/research/2026-10-17-seat-rocq-cas/ShapeWitness.lean` passes. A
+scratch copy with `#print axioms` printed `[propext]`.
+
+So `specOf` does not pin a carrier's wire tags, whatever the hash. The OCaml pin in
+`test_shapes.ml` prints the tag and drops a reference's kind. C4 should not move the pin to
+`specOf` until `render` writes the tag (the note's §5). The statement is in Lean, not Rocq. A
+witness is a closed computation, so printing the Schema types to Rocq would add nothing.
 
 ## Axiom output
 
@@ -200,7 +220,9 @@ in place of the hand `rank_of`, the same function.
    Until then OCaml mints none (`E4_checkpoint` mints kind 21 today).
 2. **No handle in content.** Lean's `Store.putNode` refuses a handle frame in a content kind, as
    OCaml does (`Handle_in_content`, attack B2).
-3. **The store's parameters in `rocq/`.** A law a proof needs of a `Prim` parameter is a premise
+3. **A spec pins the wire tags.** `render` writes each sum case's tag, so `specOf` changes when a
+   tag does. Every spec of a sum moves once, with the goldens.
+4. **The store's parameters in `rocq/`.** A law a proof needs of a `Prim` parameter is a premise
    or a field of `PrimLaws`. Each one names the Lean theorem or the erased proof that holds it.
 
 ## Open obligations
@@ -212,7 +234,8 @@ in place of the hand `rank_of`, the same function.
 4. Some code is not printed, so no proof reads it. That is the closure walk (the guard checker),
    `Val.decode` and `Node.decode` (parameters), the pin, and the roots plane (`Built`'s `roots`
    arm stands in).
-5. Scope only, no statement written in Rocq: the log's prefix semantics, checkpoint replay and an
+5. `render`'s injectivity once it writes the tag: the claim C4 waits on, not stated in a proof yet.
+6. Scope only, no statement written in Rocq: the log's prefix semantics, checkpoint replay and an
    action cache (the note's §4).
 
 ## Evidence
@@ -223,4 +246,5 @@ in place of the hand `rank_of`, the same function.
 | The printer's store rules leave `Skeleton.v` unchanged | tested: byte for byte |
 | Properties 1 to 5 hold of Lean's printed store code, for every hash | proved in Rocq 9.0.1, assuming the parameters, the equality laws and the translators; property 5 also takes the codec laws as a premise |
 | The proofs read the code they name | tested: three mutants of the generated code fail |
+| `ShapeDoc.document` is not injective | proved in Lean by a witness, assuming `propext` |
 | The note and the receipt follow the writing rules | `python3 scripts/check-language.py --strict` passes on both |

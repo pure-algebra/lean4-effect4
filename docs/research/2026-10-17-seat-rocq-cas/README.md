@@ -3,7 +3,7 @@
 **The one thing to know first:** Lean's own store code now prints to Rocq (`rocq/StoreCode.v`), over
 an abstract hash. Every proved property below holds of that printed code for every hash. The
 byte language that both Lean and OCaml must implement is stated in §2. The three differences
-in §3 are the code seat's work.
+in §3 are the code seat's work. §5 shows that a shape's spec digest drops a sum's wire tags.
 
 Status: research note (history, not authority). Seat rocq-cas, 2026-10-17, branch `seat/rocq-cas`
 from `6689f0833`. The receipt is `docs/research/2026-10-17-seat-rocq-cas-receipt.md`.
@@ -119,3 +119,32 @@ statement is that a hit equals running the action, given two premises. The actio
 deterministic, and the key holds every input. A key collision is the one way to break it. So the
 honest form is level 0: a hit is the run's result, or two different keys share a digest,
 exhibited. The cache must keep each key's bytes for that check, as `put_conflict` does.
+
+## 5. Shape digests: the spec drops a sum's wire tags
+
+`specOf α` is `sha256 (schemaNode (shape α).document).encode` (`src/Effect4/Store/Domain/Node.lean`).
+`ShapeDoc.document` (`src/Effect4/Schema/OfShape.lean`) is not injective. Its `render` writes a
+nullary sum as its case names. It writes a sum with fields as tagged structs of names and fields.
+Neither writes a case's wire tag.
+
+`ShapeWitness.lean` beside this note proves it in Lean, with `rfl` on two witnesses:
+
+* `tag_lost_nullary`: two nullary sums that differ only in a tag have one document;
+* `tag_lost_fields`: two sums with fields that differ only in a tag have one document;
+* `document_not_injective`: `¬ Function.Injective ShapeDoc.document`, which assumes `propext` only.
+
+So two carriers whose shapes differ only in a wire tag get one `specOf`, whatever the hash. The
+tag is what a value's `ctor` frame carries, so a renumbered constructor changes a value's bytes and
+keeps its spec. The OCaml pin in `ocaml/engine/test/kit/test_shapes.ml` prints the tag (`%d`) and
+drops a reference's kind. So neither digest pins the whole shape today, and they differ in what
+each drops.
+
+Two fixes, either before C4 moves the pin to `specOf`:
+
+1. `render` writes each case's tag, as an annotation like `refKey`. Then the claim to prove is
+   `render` injective, and `ShapeDoc.document` injective with it. Every spec of a sum changes once.
+2. The pin hashes the shape document's own canonical bytes rather than its rendered `Document`.
+   This needs a `Canonical ShapeDoc`, whose encoding is exact by the class laws.
+
+The first keeps one definition of a spec, so it is the recommendation. No proof of `render`'s
+injectivity on the other arms is written: the claim stays open until the tag is rendered.
