@@ -1,4 +1,5 @@
 import Effect4.Api
+import Effect4.Api.HostSession
 
 /-!
 # Api.Built — a program with its table and its certificate, as one value
@@ -16,7 +17,7 @@ set_option autoImplicit false
 
 namespace Effect4.Api
 
-open Effect4.Program (RowTable SigApp AdmittedProgram)
+open Effect4.Program (RowTable SigApp AdmittedProgram CallInstance NativeOp externalRow)
 
 /-- A built program: its application, the program, the certificate, and the row names in table
 order. -/
@@ -37,6 +38,17 @@ abbrev table (b : Built) : RowTable := b.app.rows
 certificate, so every reading `Typed` has is this one's, through this projection and not by
 a second definition. -/
 def typed (b : Built) : Typed b.app := ⟨b.program, b.admitted.toTypedProgram⟩
+
+/-- **The call map** (dogfood friction F10): each host call of the program, at its address, with
+the spelling of the row it calls and the checker's instance there (`HostSession.callTable`). A
+call of a built-in operation calls no row and is left out. The laws beneath it:
+`Run.reached_callInstance` (a run's session reads these instances) and
+`Run.request_performed` (each host request of a run is performed at a site of the program). -/
+def calls (b : Built) : List (List Nat × String × CallInstance NativeOp) :=
+  (HostSession.callTable b.program b.app).filterMap fun (path, c) =>
+    match c.op with
+    | .external i => (externalRow b.app.rows i).map fun row => (path, row.spelling, c)
+    | _ => none
 
 end Built
 

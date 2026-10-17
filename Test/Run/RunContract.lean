@@ -42,6 +42,10 @@ def twice : Api.Built :=
     admitted := Test.Api.HostSessionContract.admitted
     rowNames := [("Host.wait", 0)] }
 
+-- finite evaluation: the call map lists the program's two host calls, each at its address, by
+-- the spelling of the row it calls (`Api.Built.calls`, dogfood friction F10)
+#guard twice.calls.map (fun c => (c.1, c.2.1)) == [([0], "Host.wait"), ([1], "Host.wait")]
+
 /-- The run the host drove, opened under the name the hand-written battery uses. -/
 def driven : Run := (Run.runWith twice echo () (id := "session-A")).1
 

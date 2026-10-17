@@ -49,7 +49,7 @@ R6. Route: `runWith_denotesB` at its lower bound. Consumer: `runWith_exit_of_div
 `effEquiv_runWith`. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 theorem runWith_finishes {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
-    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.app) (hexits : r.ExitsOnly)
     (hroot : LoopedRows b.program = true) (hfrag : LoopedDataRows b.table b.program = true)
     (hfund : funded (Run.runWith b r st id budget rounds).1 = true)
     (hrest : atRest (Run.runWith b r st id budget rounds).1 = true)
@@ -69,7 +69,7 @@ Route: an exit is the chain's finish (`runWith_finishes`), and a finish excludes
 divergence adequacy, with the planned goal `rows_divergence_adequate`. -/
 @[semantics "host-session-protocol" (requirement := R12)]
 theorem runWith_exit_of_diverges {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ)
-    (id : String) (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table)
+    (id : String) (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.app)
     (hexits : r.ExitsOnly) (hroot : LoopedRows b.program = true)
     (hfrag : LoopedDataRows b.table b.program = true)
     (hfund : funded (Run.runWith b r st id budget rounds).1 = true)
@@ -152,7 +152,7 @@ as the closed entry of `effChain_bind_succeed`. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 theorem effEquiv_runWith {σ : Type} (b : Api.Built) (e : NativeEff)
     (hequiv : EffEquiv b.table b.program e) (r : Reactor σ) (st : σ) (id : String)
-    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.app) (hexits : r.ExitsOnly)
     (hroot : LoopedRows b.program = true) (hfrag : LoopedDataRows b.table b.program = true)
     (hfund : funded (Run.runWith b r st id budget rounds).1 = true)
     (hrest : atRest (Run.runWith b r st id budget rounds).1 = true)
@@ -175,7 +175,7 @@ It establishes no progress and no fairness. Consumer: R12's divergence adequacy,
 `runWith_exit_of_diverges` its other direction. -/
 @[semantics "host-session-protocol" (requirement := R12)]
 proof_goal rows_divergence_adequate (σ : Type) (b : Api.Built) (r : Reactor σ) (st : σ)
-    (id : String) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (id : String) (rounds : Nat) (henv : r.Envelops b.app) (hexits : r.ExitsOnly)
     (hroot : LoopedRows b.program = true) (hfrag : LoopedDataRows b.table b.program = true) :
     (∀ budget : Api.Budget, (Run.runWith b r st id budget rounds).1.exit = none ∧
       Program.awaits (Run.runWith b r st id budget rounds).1.machine = []) →
