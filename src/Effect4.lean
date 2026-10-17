@@ -265,6 +265,7 @@ import Effect4.Library.Ref.CacheModel
 import Effect4.Api.Codegen
 import Effect4.Library.Stream.ArrayModel
 import Effect4.Schema.Prepare
+import Effect4.Program.Typing.SourceDocument
 
 /-!
 # Effect4
