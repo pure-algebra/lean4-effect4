@@ -3,3 +3,6 @@ Eff_types.v
 Skeleton.v
 SkeletonApprox.v
 Assumptions.v
+StoreCode.v
+StoreLaws.v
+StoreAssumptions.v
