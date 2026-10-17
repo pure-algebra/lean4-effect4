@@ -39,8 +39,8 @@ def check (app : SigApp) (program : NativeEff) : Except TypeRefusal EffTy :=
 
 /-- **Program admission**, as far as the native route lowers it (`Program.admitProgram`): the
 signature's own admission (`admitSig`: each row's registration and kind, its key, the service
-declarations), then no empty answer or error column in the program's type
-(`findEmptyColumnInEffTy`). `none` when both pass. Typing's located refusal is `check`'s, so a
+declarations), then no empty answer or error column in the program's type, under the
+application's declaration table (`findEmptyColumnInEffTy`). `none` when both pass. Typing's located refusal is `check`'s, so a
 program that does not type answers `none` here. Raw formation (`Formation.checkInput`) is the one
 part not decided here: its view of a program (`Eff.view`) has a child field whose type depends on
 another field (`ArgF.child`'s `R fam`), which the LCNF route does not spell. -/
@@ -49,7 +49,7 @@ def admit (app : SigApp) (program : NativeEff) : Option AdmitRefusal :=
   | .error why => some (.signature why)
   | .ok () =>
     match Api.typeOf program app with
-    | some t => (findEmptyColumnInEffTy t).map .emptyColumn
+    | some t => (findEmptyColumnInEffTy app.types t).map .emptyColumn
     | none => none
 
 /-- An admission refusal's shape document. -/

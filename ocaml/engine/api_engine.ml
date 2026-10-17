@@ -10143,34 +10143,7 @@ and program_ty_normalize_items (x_1 : ty list) : ty list =
         | Val_list xs_171 -> (let _x_172 = program_val__item_checkers items_170 allocated in
           program_items_has_ty _x_172 xs_171)
         | _ -> false)
-    | Ty_app (name_175, _) -> (let _jp_177 = fun _y_178 -> let _x_179 = "MaskRestore" in
-      let _x_180 = name_175 = _x_179 in
-      if _x_180 then (let _x_181 = val__saved_mask_opt v in
-        match _x_181 with
-          | None -> _y_178
-          | Some _ -> _x_180) else _x_180 in
-      let _jp_183 = fun _y_184 -> if _y_184 then _y_184 else _jp_177 _y_184 in
-      match (v : val_) with
-        | Val_handle (kind_185, key_186) -> (let _x_187 = handle_kind_of_byte_opt kind_185 in
-          match _x_187 with
-            | Some val__188 -> (match (val__188 : handle_kind) with
-                | HandleKind_scope -> (let _x_189 = "Scope.Scope" in
-                  name_175 = _x_189)
-                | HandleKind_memoMap -> (let _x_191 = "Layer.MemoMap" in
-                  name_175 = _x_191)
-                | HandleKind_external -> (let _x_193 = program_external_handle_target name_175 in
-                  if _x_193 then (let _x_194 = list_get_opt_internal allocated key_186 in
-                    let _x_195 = Some name_175 in
-                    option_inst_beq_beq_at_std_http_header_transfer_encoding_validate_spec_0 _x_194 _x_195) else _x_193)
-                | _ -> false)
-            | _ -> false)
-        | _ -> (let _x_199 = "Context.Context<unknown>" in
-          let _x_200 = name_175 = _x_199 in
-          if _x_200 then (let _x_201 = val__context_opt v in
-            match _x_201 with
-              | None -> (let _x_202 = false in
-                _jp_177 _x_202)
-              | Some _ -> _jp_183 _x_200) else _jp_183 _x_200))
+    | Ty_app (_, _) -> false
     | Ty_null -> (match (v : val_) with
         | Val_none -> true
         | _ -> false)
@@ -10178,10 +10151,10 @@ and program_ty_normalize_items (x_1 : ty list) : ty list =
     | Ty_bytes -> (match (v : val_) with
         | Val_bytes _ -> true
         | _ -> false)
-    | Ty_contextOf keys_210 -> (let _x_211 = val__context_opt v in
-      match _x_211 with
+    | Ty_contextOf keys_184 -> (let _x_185 = val__context_opt v in
+      match _x_185 with
         | None -> false
-        | Some val__213 -> list_all_at_program_val__has_ty_spec_3 val__213 keys_210)
+        | Some val__187 -> list_all_at_program_val__has_ty_spec_3 val__187 keys_184)
     | _ -> (match (v : val_) with
         | Val_unit -> true
         | _ -> false)

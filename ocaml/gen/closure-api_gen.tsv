@@ -12,7 +12,7 @@ Effect4.Run.Tree.probe._redArg	run_tree_probe	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	
 Effect4.Run.Tree.settle._redArg	run_tree_settle	false	12	0	1	2	4	3	0	2	0	0	10	0	2	0	0	0	0	0	0	6	27	0	7	0	1	0	4422305502413010356
 Effect4.Run.Tree.frames._redArg	run_tree_frames	false	5	0	0	0	0	1	0	1	0	0	4	0	1	0	0	0	0	0	0	1	9	0	0	0	1	0	3217344486431265057
 Effect4.Run.Kit.check	run_kit_check	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	4	4	0	3	0	1	0	5657534042492703087
-Effect4.Run.Kit.admit	run_kit_admit	false	9	0	0	0	3	4	0	0	0	0	9	0	0	0	0	0	0	0	0	4	8	0	6	0	1	0	11271993840219554789
+Effect4.Run.Kit.admit	run_kit_admit	false	9	0	0	0	4	4	0	0	0	0	9	0	0	0	0	0	0	0	0	4	9	0	7	0	1	0	4647553248507641410
 Effect4.Run.Kit.admitShape	run_kit_admit_shape	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	11016488139317923928
 Effect4.Run.Kit.admitToVal	run_kit_admit_to_val	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	0	0	1	0	7867411273566104000
 Effect4.Run.Kit.replyFault	run_kit_reply_fault	false	16	0	0	0	10	7	0	0	0	0	16	0	0	0	0	0	0	0	0	8	17	0	16	0	1	0	11946624735679349867
@@ -137,7 +137,7 @@ List.mapTR.loop._at_.Effect4.Run.Tree.frames.spec_0._redArg	list_map_tr_loop_at_
 Effect4.Api.check	api_check	false	6	0	0	0	2	2	1	0	0	0	6	0	0	0	0	0	0	0	0	5	9	0	4	0	1	0	3805014332452501556
 Effect4.Program.admitSig	program_admit_sig	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	4	3	0	2	0	1	0	11369010221160144574
 Effect4.Api.typeOf	api_type_of	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	3	0	0	0	1	0	15568471883492371847
-Effect4.Program.findEmptyColumnInEffTy	program_find_empty_column_in_eff_ty	false	10	0	0	0	2	2	0	3	0	0	7	0	0	3	0	0	0	0	0	5	12	0	3	0	1	0	11105206628024189278
+Effect4.Program.findEmptyColumnInEffTy	program_find_empty_column_in_eff_ty	false	10	0	0	0	2	2	0	3	0	0	7	0	0	3	0	0	0	0	0	5	14	0	3	0	1	0	17104996736580342908
 Effect4.Store.RefusalsGen.AdmitRefusalC.shapeDoc	store_refusals_gen_admit_refusal_c_shape_doc	false	38	0	0	0	2	1	0	11	0	0	27	0	4	7	0	0	0	0	0	30	45	0	2	0	1	0	158145453870860409
 Effect4.Store.RefusalsGen.AdmitRefusalC.toVal	store_refusals_gen_admit_refusal_c_to_val	false	19	0	0	0	1	4	0	4	0	0	15	0	4	0	0	0	0	0	0	7	19	0	4	0	1	0	1463963178823387530
 Effect4.Run.Kit.replyFault.columns	run_kit_reply_fault_columns	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	4	0	3	0	1	0	2750596764146257634
@@ -350,7 +350,7 @@ Effect4.Api.explain	api_explain	false	8	0	0	0	3	2	0	0	0	0	8	0	0	0	0	0	0	0	0	1	11
 Effect4.Program.SigApp.signature	program_sig_app_signature	false	6	0	0	0	2	1	0	1	0	0	5	0	1	0	0	0	0	0	0	2	19	0	2	0	1	0	6803411863687971338
 Effect4.Program.typeOfProgram._redArg	program_type_of_program	false	6	0	0	0	2	3	0	0	0	0	6	0	0	0	0	0	0	0	0	3	5	0	4	0	1	0	6098587975048913884
 Effect4.Program.sigRefusal?	program_sig_refusal_opt	false	37	0	0	0	15	10	0	1	0	0	36	0	1	0	0	0	0	0	0	11	49	0	24	0	1	0	16704906708672909180
-Effect4.Program.emptyColumnAt	program_empty_column_at	false	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	2	2	0	2	0	1	0	12020372699305764294
+Effect4.Program.emptyColumnAt	program_empty_column_at	false	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	2	3	0	2	0	1	0	2914643544405245697
 Effect4.Store.RefusalsGen.SigRefusalC.shapeDoc	store_refusals_gen_sig_refusal_c_shape_doc	false	91	0	0	0	6	1	0	24	0	0	67	0	9	15	0	0	0	0	0	75	115	0	6	0	1	0	2932026600644852265
 Effect4.Store.RefusalsGen.FormationRefusalC.shapeDoc	store_refusals_gen_formation_refusal_c_shape_doc	false	21	0	0	0	1	1	0	5	0	0	16	0	0	5	0	0	0	0	0	10	22	0	1	0	1	0	17785986357084632745
 Effect4.Store.RefusalsGen.SigRefusalC.toVal	store_refusals_gen_sig_refusal_c_to_val	false	58	0	0	0	2	9	0	9	0	0	49	0	9	0	0	0	0	0	0	23	65	0	10	0	1	0	11028043222694952172
@@ -649,7 +649,7 @@ List.any._at_.Effect4.Api.hasRunnable.spec_0	list_any_at_api_has_runnable_spec_0
 Effect4.Program.Registration.ctorIdx	program_registration_ctor_idx	false	2	0	0	0	1	2	0	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	2	0	1	0	10727365113068853929
 Effect4.Program.RowKind.ctorIdx	program_row_kind_ctor_idx	false	3	0	0	0	1	3	0	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	3	0	1	0	14034235607024829668
 List.all._at_.Effect4.Program.mintedIn.spec_0	list_all_at_program_minted_in_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	10514041738803728398
-Effect4.Program.Val.hasTy	program_val__has_ty	true	129	0	4	8	63	90	0	14	0	0	114	1	5	8	1	0	0	0	0	4	131	0	119	37	1	0	18325010769852165776
+Effect4.Program.Val.hasTy	program_val__has_ty	true	112	0	2	4	54	81	0	10	0	0	101	1	5	4	1	0	0	0	0	3	110	0	102	34	1	0	9168258126188728772
 Effect4.Program.Val.hasTyIn	program_val__has_ty_in	true	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	0	0	1	0	3053277670787057723
 Effect4.Program.Effs.toList._redArg	program_effs_to_list	true	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	2	3	0	2	0	1	0	1459076838342515783
 Effect4.Program.causeOf	program_cause_of	true	24	0	0	0	8	11	0	0	0	0	24	0	0	0	0	0	0	0	0	11	25	0	16	2	1	0	9457042485382529284
@@ -714,7 +714,7 @@ Effect4.Program.sigRefusal?._lam_3	program_sig_refusal_opt__lam_3	false	2	0	0	0	
 Effect4.Program.sigRefusal?._lam_4	program_sig_refusal_opt__lam_4	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	3220003995539886170
 Effect4.Program.firstConflict	program_first_conflict	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	4	0	5	0	1	0	5719831512523777634
 Effect4.Program.TyDecls.unguardedAt?	program_ty_decls_unguarded_at_opt	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	2	3	0	3	0	1	0	11445602739199957163
-Effect4.Program.admitColumn	program_admit_column	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	4	0	2	0	1	0	1332247809666051573
+Effect4.Program.admitColumnIn	program_admit_column_in	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	5	0	2	0	1	0	375150450134400613
 Effect4.Store.RefusalsGen.RowReasonC.shapeDoc	store_refusals_gen_row_reason_c_shape_doc	false	48	0	0	0	0	1	0	18	0	0	30	0	8	10	0	0	0	0	0	44	56	0	0	0	1	0	6171355714262774691
 Effect4.Store.RefusalsGen.ServiceReasonC.shapeDoc	store_refusals_gen_service_reason_c_shape_doc	false	19	0	0	0	0	1	0	7	0	0	12	0	3	4	0	0	0	0	0	16	22	0	0	0	1	0	12577741327827044215
 Effect4.Store.RefusalsGen.DeclReasonC.shapeDoc	store_refusals_gen_decl_reason_c_shape_doc	false	29	0	0	0	0	1	0	11	0	0	18	0	5	6	0	0	0	0	0	26	34	0	0	0	1	0	12225932419189668558
@@ -1041,7 +1041,7 @@ Effect4.Program.nameChecks	program_name_checks	false	9	0	0	0	0	1	0	0	0	0	9	0	0	0
 List.any._at_.Effect4.Program.firstConflict.spec_0	list_any_at_program_first_conflict_spec_0	true	5	0	1	2	6	4	0	0	0	0	5	0	0	0	0	0	0	0	0	0	10	0	10	0	1	0	8148121264964478624
 List.find?._at_.Effect4.Program.TyDecls.unguardedAt?.spec_0	list_find_opt_at_program_ty_decls_unguarded_at_opt_spec_0	true	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	2	6	0	5	0	1	0	9008886699168440893
 Effect4.Program.Ty.beq	program_ty_beq	true	55	0	1	7	32	54	0	0	0	0	55	0	0	0	0	0	0	0	0	0	57	0	62	29	1	0	3316859951880268699
-Effect4.Program.inhabited	program_inhabited	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	2	0	0	0	1	0	13307497563956062045
+Effect4.Program.TyDecls.inhabited	program_ty_decls_inhabited	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	5	0	0	0	1	0	9902747348510450387
 Effect4.Store.ProgramGen.RowArgC.toVal	store_program_gen_row_arg_c_to_val	false	10	0	0	0	1	2	0	2	0	0	8	0	2	0	0	0	0	0	0	4	10	0	2	0	1	0	3263267698716457294
 Effect4.Program.valOfErr	program_val_of_err	false	13	0	0	0	1	5	0	0	0	0	13	0	0	0	0	0	0	0	0	8	13	0	5	0	1	0	16115292132834522894
 Effect4.Machine.Payload.image._lam_0	payload_image__lam_0	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	18277938310519281132
@@ -1282,7 +1282,8 @@ Effect4.Program.TyDecls.rankedNames	program_ty_decls_ranked_names	false	3	0	0	0	
 Effect4.Program.Ty.beq_pos_list_prod_string_prod_bool_ty	program_ty_beq_pos_list_prod_string_prod_bool_ty	true	5	0	0	0	4	5	0	0	0	0	5	0	0	0	0	0	0	0	0	0	4	0	6	2	1	0	8876415229095347355
 Effect4.Program.Ty.beq_pos_list_ty	program_ty_beq_pos_list_ty	true	5	0	0	0	4	5	0	0	0	0	5	0	0	0	0	0	0	0	0	0	4	0	6	2	1	0	10825795090485110324
 Effect4.instDecidableEqServiceKey	inst_decidable_eq_service_key	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	0	0	1	0	1646365181630179133
-Effect4.Program.inhabitedAlg	program_inhabited_alg	false	14	0	0	0	0	1	0	0	0	0	14	0	0	0	0	0	0	0	0	1	36	0	0	0	1	0	7315797726194987955
+Effect4.Program.TyDecls.inhabitedNames	program_ty_decls_inhabited_names	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	1	4	0	0	0	1	0	17090260860111976236
+Effect4.Program.TyDecls.inhabitedWith	program_ty_decls_inhabited_with	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	1	32	0	1	0	1	0	445407809858225813
 Effect4.Program.cata_ty._redArg	program_cata_ty	true	39	0	0	0	30	29	0	0	0	0	21	18	0	0	0	0	0	0	0	0	68	0	58	0	1	0	18019351986715514176
 Effect4.Store.Image.subtype._at_.Effect4.Machine.Payload.image.spec_0._redArg._lam_0	store_image_subtype_at_payload_image_spec_0__red_arg__lam_0	false	1	0	0	0	1	1	0	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	1	0	1	0	11950672081061204365
 Effect4.Store.Image.subtype._at_.Effect4.Machine.Payload.image.spec_0._redArg._lam_1	store_image_subtype_at_payload_image_spec_0__red_arg__lam_1	false	5	0	0	0	3	3	0	0	0	0	4	1	0	0	0	0	0	0	0	3	3	0	5	0	1	0	7148256228954928667
@@ -1457,7 +1458,7 @@ Effect4.Program.NativeAtom.row	program_native_atom_row	false	268	0	0	0	1	45	0	13
 Effect4.Program.Row.keyNamespace?	program_row_key_namespace_opt	false	18	0	0	0	9	8	0	0	0	0	18	0	0	0	0	0	0	0	0	11	12	0	14	2	1	0	3110667605688971955
 List.eraseDups._at_.Effect4.Program.rowKeyNames.spec_1._lam_0	list_erase_dups_at_program_row_key_names_spec_1__lam_0	false	2	0	0	0	3	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	5208033993289476294
 List.eraseDupsBy._redArg	list_erase_dups_by	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	427837197282923787
-Effect4.Program.rowColumnInhabitedAlg	program_row_column_inhabited_alg	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	1	29	0	1	0	1	0	913845912727974932
+Effect4.Program.rowColumnInhabitedAlg	program_row_column_inhabited_alg	false	6	0	0	0	1	1	0	0	0	0	6	0	0	0	0	0	0	0	0	1	29	0	1	0	1	0	7571719527747687016
 Effect4.Program.Ty.templateAdmissibleFields	program_ty_template_admissible_fields	true	3	0	0	0	4	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	6	0	1	0	12286190900254832788
 Effect4.Program.Ty.templateAdmissibleItems	program_ty_template_admissible_items	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	4	0	1	0	8228086700580083234
 Effect4.Program.Ty.closedItems	program_ty_closed_items	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	4	0	1	0	4503414187681862381
@@ -1476,17 +1477,9 @@ Effect4.Program.spelledAlg	program_spelled_alg	false	11	0	0	0	0	1	0	0	0	0	11	0	0
 Effect4.Program.TyDecls.rankHolds	program_ty_decls_rank_holds	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	6	0	2	0	1	0	1090118628645366911
 Effect4.Program.TyDecls.saturate	program_ty_decls_saturate	true	6	0	0	0	1	2	0	0	0	0	6	0	0	0	0	0	0	0	0	1	12	0	2	0	1	0	4928798106544227794
 Effect4.Program.Ty.beq_pos_prod_string_prod_bool_ty	program_ty_beq_pos_prod_string_prod_bool_ty	true	2	0	0	0	3	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	3307993193063419077
-Effect4.Program.inhabitedAlg._lam_0	program_inhabited_alg__lam_0	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	2	0	2	0	1	0	11408345958589960776
-List.all._at_.List.and.spec_0	list_all_at_list_and__spec_0	true	2	0	0	0	2	3	0	0	0	0	2	0	0	0	0	0	0	0	0	0	1	0	4	0	1	0	14334127706815950674
-Effect4.Program.inhabitedAlg._lam_1	program_inhabited_alg__lam_1	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	2	0	2	0	1	0	14291551255555774733
-Effect4.Program.inhabitedAlg._lam_2	program_inhabited_alg__lam_2	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	3	0	0	0	1	0	10613493487014089264
-Effect4.Program.inhabitedAlg._lam_3	program_inhabited_alg__lam_3	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	12581041977248415179
-Effect4.Program.inhabitedAlg._lam_4	program_inhabited_alg__lam_4	false	0	0	0	0	1	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	2	0	1	0	10455900620467928025
-Effect4.Program.inhabitedAlg._lam_5	program_inhabited_alg__lam_5	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	4404592860125140434
-Effect4.Program.inhabitedAlg._lam_6	program_inhabited_alg__lam_6	false	0	0	0	0	1	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	2	0	1	0	6068581362095316041
-Effect4.Program.inhabitedAlg._lam_7	program_inhabited_alg__lam_7	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	5857202676633725978
-Effect4.Program.inhabitedAlg._lam_8	program_inhabited_alg__lam_8	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	7217573765507508256
-Effect4.Program.inhabitedAlg._lam_9	program_inhabited_alg__lam_9	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	11355386434980446784
+Effect4.Program.TyDecls.inhabitedHolds	program_ty_decls_inhabited_holds	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	6	0	2	0	1	0	1662987557255165469
+Effect4.Program.inhabitedAlg	program_inhabited_alg	false	14	0	0	0	0	1	0	0	0	0	14	0	0	0	0	0	0	0	0	1	37	0	0	0	1	0	6033364289614003896
+Effect4.Program.TyDecls.inhabitedWith._lam_0	program_ty_decls_inhabited_with__lam_0	false	3	0	0	0	2	2	0	0	0	0	2	1	0	0	0	0	0	0	0	0	6	0	3	0	1	0	1692304750115693231
 Effect4.Program.cata_pos_list_prod_string_prod_bool_ty._redArg	program_cata_pos_list_prod_string_prod_bool_ty	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	2	6	0	2	0	1	0	676018860631822570
 Effect4.Program.cata_pos_list_ty._redArg	program_cata_pos_list_ty	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	2	6	0	2	0	1	0	5625238549347336329
 Effect4.Machine.isPayload	is_payload	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	3	0	2	0	1	0	12926592802874634671
@@ -1615,6 +1608,7 @@ Effect4.Program.splitDot	program_split_dot	true	12	0	0	0	5	5	0	1	0	0	11	0	0	0	1	
 Effect4.Store.decodeString	store_decode_string	false	6	0	0	0	1	2	0	0	0	0	6	0	0	0	0	0	0	0	0	3	6	0	2	0	1	0	12086527097034760904
 List.eraseDupsBy.loop._redArg	list_erase_dups_by_loop	true	6	0	0	0	2	3	0	0	0	0	5	1	0	0	0	0	0	0	0	1	12	0	4	0	1	0	10334176138436477533
 Effect4.Program.rowColumnInhabitedAlg._lam_0	program_row_column_inhabited_alg__lam_0	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	9385006177533321161
+Effect4.Program.rowColumnInhabitedAlg._lam_1	program_row_column_inhabited_alg__lam_1	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	2	0	2	0	1	0	13831294302366120808
 List.elem._at_.Lean.Meta.Occurrences.contains.spec_0	list_elem_at_lean_meta_occurrences_contains_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	2347754221992661860
 Effect4.Program.internalHandleScan._lam_0	program_internal_handle_scan__lam_0	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	0	0	0	1	0	12718422749313958333
 Effect4.Program.internalHandleScan._lam_1	program_internal_handle_scan__lam_1	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	2	3	0	2	0	1	0	9942501093609138023
@@ -1663,8 +1657,17 @@ List.all._at_.Effect4.Program.TyDecls.rankHolds.spec_0	list_all_at_program_ty_de
 Effect4.Program.TyDecls.round	program_ty_decls_round	false	3	0	0	0	0	1	0	1	0	0	2	0	1	0	0	0	0	0	0	1	5	0	0	0	1	0	14104900810715014568
 List.filterTR.loop._at_.Effect4.Program.TyDecls.saturate.spec_0	list_filter_tr_loop_at_program_ty_decls_saturate_spec_0	true	5	0	0	0	2	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	4	0	1	0	16880346326934150515
 Effect4.Program.Ty.beq_pos_prod_bool_ty	program_ty_beq_pos_prod_bool_ty	true	2	0	0	0	5	4	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	8	0	1	0	2510246585220374964
-Effect4.Program.retiredHandleTargets	program_retired_handle_targets	false	5	0	0	0	0	1	0	2	0	0	3	0	0	2	0	0	0	0	0	3	4	0	0	0	1	0	618521393057152938
-List.all._at_.Effect4.Program.inhabitedAlg.spec_0	list_all_at_program_inhabited_alg_spec_0	true	3	0	0	0	5	4	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	8	0	1	0	1413367681402426877
+List.all._at_.List.and.spec_0	list_all_at_list_and__spec_0	true	2	0	0	0	2	3	0	0	0	0	2	0	0	0	0	0	0	0	0	0	1	0	4	0	1	0	14334127706815950674
+Effect4.Program.inhabitedAlg._lam_0	program_inhabited_alg__lam_0	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	2	0	2	0	1	0	15861605000448264319
+Effect4.Program.inhabitedAlg._lam_1	program_inhabited_alg__lam_1	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	3	0	0	0	1	0	4655479216062239440
+Effect4.Program.inhabitedAlg._lam_2	program_inhabited_alg__lam_2	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	10681212204884386848
+Effect4.Program.inhabitedAlg._lam_3	program_inhabited_alg__lam_3	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	12581041977248415179
+Effect4.Program.inhabitedAlg._lam_4	program_inhabited_alg__lam_4	false	0	0	0	0	1	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	2	0	1	0	10455900620467928025
+Effect4.Program.inhabitedAlg._lam_5	program_inhabited_alg__lam_5	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	4404592860125140434
+Effect4.Program.inhabitedAlg._lam_6	program_inhabited_alg__lam_6	false	0	0	0	0	1	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	2	0	1	0	6068581362095316041
+Effect4.Program.inhabitedAlg._lam_7	program_inhabited_alg__lam_7	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	5857202676633725978
+Effect4.Program.inhabitedAlg._lam_8	program_inhabited_alg__lam_8	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	7217573765507508256
+Effect4.Program.inhabitedAlg._lam_9	program_inhabited_alg__lam_9	false	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	11355386434980446784
 Effect4.Program.cata_pos_prod_string_prod_bool_ty._redArg	program_cata_pos_prod_string_prod_bool_ty	true	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	2	4	0	1	0	1	0	9601629556625565974
 Effect4.Program.Ty.LeafHead.ctorIdx	program_ty_leaf_head_ctor_idx	false	7	0	0	0	1	7	0	7	0	0	0	0	7	0	0	0	0	0	0	0	0	0	7	0	1	0	1725633411231376985
 Effect4.Program.Ty.leafEdges	program_ty_leaf_edges	false	16	0	0	0	0	1	0	0	0	0	16	0	0	0	0	0	0	0	0	13	16	0	0	0	1	0	4142723065578555978
@@ -1764,6 +1767,7 @@ List.elem._at_.Effect4.Program.splitDot.spec_0	list_elem_at_program_split_dot_sp
 Effect4.Store.utf8Chars	store_utf8_chars	true	90	0	1	2	28	28	0	19	0	0	71	0	19	0	0	0	0	0	0	29	86	0	46	10	1	0	9610393985408795666
 List.toByteArray	list_to_byte_array	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	2	0	0	0	1	0	18360517561173011186
 List.any._at_.List.eraseDupsBy.loop.spec_0._redArg	list_any_at_list_erase_dups_by_loop_spec_0	true	3	0	0	0	2	3	0	0	0	0	2	1	0	0	0	0	0	0	0	0	3	0	4	0	1	0	8464992000766546918
+Effect4.Program.retiredHandleTargets	program_retired_handle_targets	false	5	0	0	0	0	1	0	2	0	0	3	0	0	2	0	0	0	0	0	3	4	0	0	0	1	0	618521393057152938
 List.foldrTR._at_.Effect4.Program.internalHandleScan.spec_0	list_foldr_tr_at_program_internal_handle_scan_spec_0	false	7	0	0	0	1	2	0	2	0	0	5	0	1	0	0	0	0	0	1	2	10	0	2	0	1	0	813259869888003751
 List.foldrTR._at_.Effect4.Program.internalHandleScan.spec_1	list_foldr_tr_at_program_internal_handle_scan_spec_1	false	7	0	0	0	1	2	0	2	0	0	5	0	1	0	0	0	0	0	1	2	10	0	2	0	1	0	7672572554298504383
 Effect4.Program.NativeOp.termRows._lam_0	program_native_op_term_rows__lam_0	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	0	0	1	0	12016990547618526820
@@ -1780,6 +1784,7 @@ List.mapTR.loop._at_.Effect4.Program.spelledAlg.spec_1	list_map_tr_loop_at_progr
 _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Program.spelledAlg.spec_0	list_flat_map_tr_go_at_program_spelled_alg_spec_0	true	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	5	0	2	0	1	0	3935039009292355968
 List.filterMapTR.go._at_.Effect4.Program.TyDecls.headNames.spec_0	list_filter_map_tr_go_at_program_ty_decls_head_names_spec_0	true	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	2	11	0	5	0	1	0	14685911461641624114
 List.filterMapTR.go._at_.Effect4.Program.TyDecls.round.spec_0	list_filter_map_tr_go_at_program_ty_decls_round_spec_0	true	5	0	0	0	3	3	0	0	0	0	4	1	0	0	0	0	0	0	0	2	13	0	5	0	1	0	10495764573746334323
+List.all._at_.Effect4.Program.inhabitedAlg.spec_0	list_all_at_program_inhabited_alg_spec_0	true	3	0	0	0	5	4	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	8	0	1	0	1413367681402426877
 Effect4.Program.cata_pos_prod_bool_ty._redArg	program_cata_pos_prod_bool_ty	true	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	2	4	0	1	0	1	0	11786664451908696983
 List.any._at_.Effect4.Program.Ty.leafReach.spec_0	list_any_at_program_ty_leaf_reach_spec_0	true	4	0	1	2	4	3	0	0	0	0	4	0	0	0	0	0	0	0	0	0	13	0	7	0	1	0	15296543027261079191
 Effect4.Program.Ty.keyFields	program_ty_key_fields	true	16	0	1	2	4	2	0	3	0	0	13	0	3	0	0	0	0	0	0	6	21	0	6	0	1	0	8389370874320358188

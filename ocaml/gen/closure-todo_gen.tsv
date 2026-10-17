@@ -734,7 +734,7 @@ Effect4.Machine.Record.entries	record_entries	false	8	0	0	0	4	4	0	0	0	0	8	0	0	0	
 Effect4.Machine.Val.snapshot?	val__snapshot_opt	false	9	0	0	0	5	5	0	1	0	0	7	1	1	0	0	0	0	0	0	4	4	0	6	3	1	0	10756995249695490589
 List.mapTR.loop._at_.Effect4.Machine.Val.asList?.spec_0	list_map_tr_loop_at_val__as_list_opt_spec_0	true	5	0	0	0	1	2	0	1	0	0	4	0	0	0	1	0	0	0	0	1	7	0	2	0	1	0	9370517203020323234
 List.replicateTR.loop._redArg	list_replicate_tr_loop	true	6	0	0	0	1	2	0	2	0	0	4	0	2	0	0	0	0	0	0	1	9	0	2	0	1	0	2740294555953109827
-Effect4.Program.Val.hasTy	program_val__has_ty	true	129	0	4	8	63	90	0	14	0	0	114	1	5	8	1	0	0	0	0	4	131	0	119	37	1	0	18325010769852165776
+Effect4.Program.Val.hasTy	program_val__has_ty	true	112	0	2	4	54	81	0	10	0	0	101	1	5	4	1	0	0	0	0	3	110	0	102	34	1	0	9168258126188728772
 Effect4.Program.Val.hasTyIn	program_val__has_ty_in	true	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	0	0	1	0	3053277670787057723
 Effect4.Store.Val.handlesList	store_val__handles_list	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	4	0	2	0	1	0	17642722262835923874
 Effect4.Program.internalHandleTargets	program_internal_handle_targets	false	13	0	0	0	0	1	0	6	0	0	7	0	0	6	0	0	0	0	0	7	12	0	0	0	1	0	1447441681227792211

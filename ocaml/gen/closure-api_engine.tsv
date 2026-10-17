@@ -357,7 +357,7 @@ Effect4.Program.externalHandleTarget	program_external_handle_target	false	4	0	0	
 List.all._at_.Effect4.Program.mintedIn.spec_0	list_all_at_program_minted_in_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	10514041738803728398
 Effect4.Program.reservedDie	program_reserved_die	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	1	0	1	1	1	0	12554831901199630118
 Effect4.Program.errAdmits	program_err_admits	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	6821688878907122298
-Effect4.Program.Val.hasTy	program_val__has_ty	true	129	0	4	8	63	90	0	14	0	0	114	1	5	8	1	0	0	0	0	4	131	0	119	37	1	0	18325010769852165776
+Effect4.Program.Val.hasTy	program_val__has_ty	true	112	0	2	4	54	81	0	10	0	0	101	1	5	4	1	0	0	0	0	3	110	0	102	34	1	0	9168258126188728772
 Effect4.Program.Val.hasTyIn	program_val__has_ty_in	true	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	0	0	1	0	3053277670787057723
 Effect4.Program.blockAt	program_block_at	false	10	0	0	0	3	3	0	1	0	0	9	0	1	0	0	0	0	0	0	6	10	0	3	2	1	0	2069135953198576010
 Effect4.Program.blockExit	program_block_exit	false	25	0	1	4	9	5	0	2	0	0	23	0	2	0	0	0	0	0	0	15	33	0	10	6	1	0	14731333120004506061

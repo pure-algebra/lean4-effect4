@@ -12005,34 +12005,7 @@ let rec program_val__has_ty (v : val_) (ty : ty) (allocated : string list) : boo
         | Val_list xs_171 -> (let _x_172 = program_val__item_checkers items_170 allocated in
           program_items_has_ty _x_172 xs_171)
         | _ -> false)
-    | Ty_app (name_175, _) -> (let _jp_177 = fun _y_178 -> let _x_179 = "MaskRestore" in
-      let _x_180 = name_175 = _x_179 in
-      if _x_180 then (let _x_181 = val__saved_mask_opt v in
-        match _x_181 with
-          | None -> _y_178
-          | Some _ -> _x_180) else _x_180 in
-      let _jp_183 = fun _y_184 -> if _y_184 then _y_184 else _jp_177 _y_184 in
-      match (v : val_) with
-        | Val_handle (kind_185, key_186) -> (let _x_187 = handle_kind_of_byte_opt kind_185 in
-          match _x_187 with
-            | Some val__188 -> (match (val__188 : handle_kind) with
-                | HandleKind_scope -> (let _x_189 = "Scope.Scope" in
-                  name_175 = _x_189)
-                | HandleKind_memoMap -> (let _x_191 = "Layer.MemoMap" in
-                  name_175 = _x_191)
-                | HandleKind_external -> (let _x_193 = program_external_handle_target name_175 in
-                  if _x_193 then (let _x_194 = list_get_opt_internal allocated key_186 in
-                    let _x_195 = Some name_175 in
-                    option_inst_beq_beq_at_std_http_header_transfer_encoding_validate_spec_0 _x_194 _x_195) else _x_193)
-                | _ -> false)
-            | _ -> false)
-        | _ -> (let _x_199 = "Context.Context<unknown>" in
-          let _x_200 = name_175 = _x_199 in
-          if _x_200 then (let _x_201 = val__context_opt v in
-            match _x_201 with
-              | None -> (let _x_202 = false in
-                _jp_177 _x_202)
-              | Some _ -> _jp_183 _x_200) else _jp_183 _x_200))
+    | Ty_app (_, _) -> false
     | Ty_null -> (match (v : val_) with
         | Val_none -> true
         | _ -> false)
@@ -12040,10 +12013,10 @@ let rec program_val__has_ty (v : val_) (ty : ty) (allocated : string list) : boo
     | Ty_bytes -> (match (v : val_) with
         | Val_bytes _ -> true
         | _ -> false)
-    | Ty_contextOf keys_210 -> (let _x_211 = val__context_opt v in
-      match _x_211 with
+    | Ty_contextOf keys_184 -> (let _x_185 = val__context_opt v in
+      match _x_185 with
         | None -> false
-        | Some val__213 -> list_all_at_program_val__has_ty_spec_3 val__213 keys_210)
+        | Some val__187 -> list_all_at_program_val__has_ty_spec_3 val__187 keys_184)
     | _ -> (match (v : val_) with
         | Val_unit -> true
         | _ -> false)
@@ -26229,6 +26202,15 @@ let run_kit_check (app : sig_app) (program : native_op eff) : (eff_ty, type_refu
 
 
 
+(* LCNF mono: List.all._at_.List.and.spec_0 (x.1 : List Bool) : Bool *)
+
+let rec list_all_at_list_and__spec_0 (x_1 : bool list) : bool =
+  match x_1 with
+    | [] -> true
+    | head_3 :: tail_4 -> if head_3 then list_all_at_list_and__spec_0 tail_4 else head_3
+
+
+
 (* LCNF mono: Effect4.Program.retiredHandleTargets : List String *)
 
 let program_retired_handle_targets : string list =
@@ -26240,27 +26222,9 @@ let program_retired_handle_targets : string list =
 
 
 
-(* LCNF mono: Effect4.Program.inhabitedAlg._lam_0 (name : String) (x.1 : List Bool) : Bool *)
+(* LCNF mono: Effect4.Program.inhabitedAlg._lam_0 (target : String) : Bool *)
 
-let program_inhabited_alg__lam_0 (name : string) (x_1 : bool list) : bool =
-  let _x_2 = program_retired_handle_targets in
-  let _x_3 = list_elem_at_program_ty_head_members_spec_0 name _x_2 in
-  if _x_3 then false else true
-
-
-
-(* LCNF mono: List.all._at_.List.and.spec_0 (x.1 : List Bool) : Bool *)
-
-let rec list_all_at_list_and__spec_0 (x_1 : bool list) : bool =
-  match x_1 with
-    | [] -> true
-    | head_3 :: tail_4 -> if head_3 then list_all_at_list_and__spec_0 tail_4 else head_3
-
-
-
-(* LCNF mono: Effect4.Program.inhabitedAlg._lam_1 (target : String) : Bool *)
-
-let program_inhabited_alg__lam_1 (target : string) : bool =
+let program_inhabited_alg__lam_0 (target : string) : bool =
   let _x_1 = program_retired_handle_targets in
   let _x_2 = list_elem_at_program_ty_head_members_spec_0 target _x_1 in
   if _x_2 then false else true
@@ -26278,12 +26242,19 @@ let rec list_all_at_program_inhabited_alg_spec_0 (x_1 : (string * (bool * bool))
 
 
 
-(* LCNF mono: Effect4.Program.inhabitedAlg._lam_2 (fs : List (Prod String (Prod Bool Bool))) : Bool *)
+(* LCNF mono: Effect4.Program.inhabitedAlg._lam_1 (fs : List (Prod String (Prod Bool Bool))) : Bool *)
 
-let program_inhabited_alg__lam_2 (fs : (string * (bool * bool)) list) : bool =
+let program_inhabited_alg__lam_1 (fs : (string * (bool * bool)) list) : bool =
   let _x_1 = field_bytes_key in
   let _x_2 = field_canon_by _x_1 fs in
   list_all_at_program_inhabited_alg_spec_0 _x_2
+
+
+
+(* LCNF mono: Effect4.Program.inhabitedAlg._lam_2 (_x.1 : Bool) (x.2 : String) (x.3 : List Bool) : Bool *)
+
+let program_inhabited_alg__lam_2 (_x_1 : bool) (x_2 : string) (x_3 : bool list) : bool =
+  _x_1
 
 
 
@@ -26339,20 +26310,20 @@ let program_inhabited_alg__lam_9 (_x_1 : bool) (x_2 : service_key list) : bool =
 (* LCNF mono: Effect4.Program.inhabitedAlg : Effect4.Program.TyAlgebra lcAny *)
 
 let program_inhabited_alg : _ ty_algebra =
-  let _f_1 = program_inhabited_alg__lam_0 in
-  let _f_2 = list_all_at_list_and__spec_0 in
+  let _f_1 = list_all_at_list_and__spec_0 in
+  let _f_2 = program_inhabited_alg__lam_0 in
   let _f_3 = program_inhabited_alg__lam_1 in
-  let _f_4 = program_inhabited_alg__lam_2 in
-  let _x_5 = false in
-  let _f_6 = program_inhabited_alg__lam_3 _x_5 in
-  let _f_7 = program_inhabited_alg__lam_4 _x_5 in
+  let _x_4 = false in
+  let _f_5 = program_inhabited_alg__lam_2 _x_4 in
+  let _f_6 = program_inhabited_alg__lam_3 _x_4 in
+  let _f_7 = program_inhabited_alg__lam_4 _x_4 in
   let _x_8 = true in
   let _f_9 = program_inhabited_alg__lam_5 _x_8 in
   let _f_10 = program_inhabited_alg__lam_6 _x_8 in
   let _f_11 = program_inhabited_alg__lam_7 _x_8 in
   let _f_12 = program_inhabited_alg__lam_8 _x_8 in
   let _f_13 = program_inhabited_alg__lam_9 _x_8 in
-  ({ ty_never = _x_5; ty_unit = _x_8; ty_nat = _x_8; ty_int = _x_8; ty_string = _x_8; ty_bool = _x_8; ty_handle = _f_3; ty_option = _f_9; ty_list = _f_9; ty_prod = _f_7; ty_except = _f_10; ty_exit_of = _f_11; ty_cause_of = _f_9; ty_fiber_of = _f_11; ty_union = _f_10; ty_lit = _f_12; ty_ref_of = _f_9; ty_deferred_of = _f_11; ty_var = _f_6; ty_unknown = _x_8; ty_record = _f_4; ty_map = _f_11; ty_tuple = _f_2; ty_app = _f_1; ty_null = _x_8; ty_undefined = _x_8; ty_number = _x_8; ty_bytes = _x_8; ty_context_of = _f_13 } : _ ty_algebra)
+  ({ ty_never = _x_4; ty_unit = _x_8; ty_nat = _x_8; ty_int = _x_8; ty_string = _x_8; ty_bool = _x_8; ty_handle = _f_2; ty_option = _f_9; ty_list = _f_9; ty_prod = _f_7; ty_except = _f_10; ty_exit_of = _f_11; ty_cause_of = _f_9; ty_fiber_of = _f_11; ty_union = _f_10; ty_lit = _f_12; ty_ref_of = _f_9; ty_deferred_of = _f_11; ty_var = _f_6; ty_unknown = _x_8; ty_record = _f_3; ty_map = _f_11; ty_tuple = _f_1; ty_app = _f_5; ty_null = _x_8; ty_undefined = _x_8; ty_number = _x_8; ty_bytes = _x_8; ty_context_of = _f_13 } : _ ty_algebra)
 
 
 
@@ -26363,15 +26334,25 @@ let program_row_column_inhabited_alg__lam_0 (x_1 : int) : bool =
 
 
 
+(* LCNF mono: Effect4.Program.rowColumnInhabitedAlg._lam_1 (name : String) (x.1 : List Bool) : Bool *)
+
+let program_row_column_inhabited_alg__lam_1 (name : string) (x_1 : bool list) : bool =
+  let _x_2 = program_retired_handle_targets in
+  let _x_3 = list_elem_at_program_ty_head_members_spec_0 name _x_2 in
+  if _x_3 then false else true
+
+
+
 (* LCNF mono: Effect4.Program.rowColumnInhabitedAlg : Effect4.Program.TyAlgebra lcAny *)
 
 let program_row_column_inhabited_alg : _ ty_algebra =
   let _x_1 = program_inhabited_alg in
   match (_x_1 : _ ty_algebra) with
-    | { ty_handle = ty_handle; ty_option = ty_option; ty_list = ty_list; ty_prod = ty_prod; ty_except = ty_except; ty_exit_of = ty_exit_of; ty_cause_of = ty_cause_of; ty_fiber_of = ty_fiber_of; ty_union = ty_union; ty_lit = ty_lit; ty_ref_of = ty_ref_of; ty_deferred_of = ty_deferred_of; ty_record = ty_record; ty_map = ty_map; ty_tuple = ty_tuple; ty_app = ty_app; ty_context_of = ty_context_of; _ } -> (let _x_2 = true in
+    | { ty_handle = ty_handle; ty_option = ty_option; ty_list = ty_list; ty_prod = ty_prod; ty_except = ty_except; ty_exit_of = ty_exit_of; ty_cause_of = ty_cause_of; ty_fiber_of = ty_fiber_of; ty_union = ty_union; ty_lit = ty_lit; ty_ref_of = ty_ref_of; ty_deferred_of = ty_deferred_of; ty_record = ty_record; ty_map = ty_map; ty_tuple = ty_tuple; ty_context_of = ty_context_of; _ } -> (let _x_2 = true in
       let _x_3 = false in
       let _f_4 = program_row_column_inhabited_alg__lam_0 in
-      ({ ty_never = _x_3; ty_unit = _x_2; ty_nat = _x_2; ty_int = _x_2; ty_string = _x_2; ty_bool = _x_2; ty_handle = ty_handle; ty_option = ty_option; ty_list = ty_list; ty_prod = ty_prod; ty_except = ty_except; ty_exit_of = ty_exit_of; ty_cause_of = ty_cause_of; ty_fiber_of = ty_fiber_of; ty_union = ty_union; ty_lit = ty_lit; ty_ref_of = ty_ref_of; ty_deferred_of = ty_deferred_of; ty_var = _f_4; ty_unknown = _x_2; ty_record = ty_record; ty_map = ty_map; ty_tuple = ty_tuple; ty_app = ty_app; ty_null = _x_2; ty_undefined = _x_2; ty_number = _x_2; ty_bytes = _x_2; ty_context_of = ty_context_of } : _ ty_algebra))
+      let _f_5 = program_row_column_inhabited_alg__lam_1 in
+      ({ ty_never = _x_3; ty_unit = _x_2; ty_nat = _x_2; ty_int = _x_2; ty_string = _x_2; ty_bool = _x_2; ty_handle = ty_handle; ty_option = ty_option; ty_list = ty_list; ty_prod = ty_prod; ty_except = ty_except; ty_exit_of = ty_exit_of; ty_cause_of = ty_cause_of; ty_fiber_of = ty_fiber_of; ty_union = ty_union; ty_lit = ty_lit; ty_ref_of = ty_ref_of; ty_deferred_of = ty_deferred_of; ty_var = _f_4; ty_unknown = _x_2; ty_record = ty_record; ty_map = ty_map; ty_tuple = ty_tuple; ty_app = _f_5; ty_null = _x_2; ty_undefined = _x_2; ty_number = _x_2; ty_bytes = _x_2; ty_context_of = ty_context_of } : _ ty_algebra))
 
 
 
@@ -28026,47 +28007,91 @@ let api_type_of (program : native_op eff) (app : sig_app) : eff_ty option =
 
 
 
-(* LCNF mono: Effect4.Program.inhabited (t : Effect4.Program.Ty) : Bool *)
+(* LCNF mono: Effect4.Program.TyDecls.inhabitedWith._lam_0 (decls : List (Prod String Effect4.Program.Ty)) (_x.1 : Effect4.Program.TyAlgebra lcAny) (known : List String) (name : String) (args : List Bool) : Bool *)
 
-let program_inhabited (t : ty) : bool =
+let program_ty_decls_inhabited_with__lam_0 (decls : (string * ty) list) (_x_1 : _ ty_algebra) (known : string list) (name : string) (args : bool list) : bool =
+  let _x_2 = list_lookup_at_program_ty_decls_body_opt_spec_0 name decls in
+  match _x_2 with
+    | None -> (match (_x_1 : _ ty_algebra) with
+        | { ty_app = ty_app; _ } -> ty_app name args)
+    | Some _ -> list_elem_at_program_ty_head_members_spec_0 name known
+
+
+
+(* LCNF mono: Effect4.Program.TyDecls.inhabitedWith (decls : List (Prod String Effect4.Program.Ty)) (known : List String) : Effect4.Program.TyAlgebra lcAny *)
+
+let program_ty_decls_inhabited_with (decls : (string * ty) list) (known : string list) : _ ty_algebra =
   let _x_1 = program_inhabited_alg in
-  program_cata_ty _x_1 t
+  match (_x_1 : _ ty_algebra) with
+    | { ty_handle = ty_handle; ty_option = ty_option; ty_list = ty_list; ty_prod = ty_prod; ty_except = ty_except; ty_exit_of = ty_exit_of; ty_cause_of = ty_cause_of; ty_fiber_of = ty_fiber_of; ty_union = ty_union; ty_lit = ty_lit; ty_ref_of = ty_ref_of; ty_deferred_of = ty_deferred_of; ty_var = ty_var; ty_record = ty_record; ty_map = ty_map; ty_tuple = ty_tuple; ty_context_of = ty_context_of; _ } -> (let _x_2 = true in
+      let _x_3 = false in
+      let _f_4 = program_ty_decls_inhabited_with__lam_0 decls _x_1 known in
+      ({ ty_never = _x_3; ty_unit = _x_2; ty_nat = _x_2; ty_int = _x_2; ty_string = _x_2; ty_bool = _x_2; ty_handle = ty_handle; ty_option = ty_option; ty_list = ty_list; ty_prod = ty_prod; ty_except = ty_except; ty_exit_of = ty_exit_of; ty_cause_of = ty_cause_of; ty_fiber_of = ty_fiber_of; ty_union = ty_union; ty_lit = ty_lit; ty_ref_of = ty_ref_of; ty_deferred_of = ty_deferred_of; ty_var = ty_var; ty_unknown = _x_2; ty_record = ty_record; ty_map = ty_map; ty_tuple = ty_tuple; ty_app = _f_4; ty_null = _x_2; ty_undefined = _x_2; ty_number = _x_2; ty_bytes = _x_2; ty_context_of = ty_context_of } : _ ty_algebra))
 
 
 
-(* LCNF mono: Effect4.Program.admitColumn (t : Effect4.Program.Ty) : Bool *)
+(* LCNF mono: Effect4.Program.TyDecls.inhabitedHolds (decls : List (Prod String Effect4.Program.Ty)) (known : List String) (name : String) : Bool *)
 
-let program_admit_column (t : ty) : bool =
+let program_ty_decls_inhabited_holds (decls : (string * ty) list) (known : string list) (name : string) : bool =
+  let _x_1 = list_lookup_at_program_ty_decls_body_opt_spec_0 name decls in
+  match _x_1 with
+    | None -> false
+    | Some val__3 -> (let _x_4 = program_ty_decls_inhabited_with decls known in
+      program_cata_ty _x_4 val__3)
+
+
+
+(* LCNF mono: Effect4.Program.TyDecls.inhabitedNames (decls : List (Prod String Effect4.Program.Ty)) : List String *)
+
+let program_ty_decls_inhabited_names (decls : (string * ty) list) : string list =
+  let _x_1 = program_ty_decls_inhabited_holds decls in
+  let _x_2 = [] in
+  program_ty_decls_saturate decls _x_1 _x_2
+
+
+
+(* LCNF mono: Effect4.Program.TyDecls.inhabited (decls : List (Prod String Effect4.Program.Ty)) (t : Effect4.Program.Ty) : Bool *)
+
+let program_ty_decls_inhabited (decls : (string * ty) list) (t : ty) : bool =
+  let _x_1 = program_ty_decls_inhabited_names decls in
+  let _x_2 = program_ty_decls_inhabited_with decls _x_1 in
+  program_cata_ty _x_2 t
+
+
+
+(* LCNF mono: Effect4.Program.admitColumnIn (decls : List (Prod String Effect4.Program.Ty)) (t : Effect4.Program.Ty) : Bool *)
+
+let program_admit_column_in (decls : (string * ty) list) (t : ty) : bool =
   let _x_1 = program_ty_normalize t in
   let _x_2 = Ty_never in
   let _x_3 = program_ty_beq _x_1 _x_2 in
-  if _x_3 then _x_3 else program_inhabited t
+  if _x_3 then _x_3 else program_ty_decls_inhabited decls t
 
 
 
-(* LCNF mono: Effect4.Program.emptyColumnAt (pos : List String) (t : Effect4.Program.Ty) : Option (List String) *)
+(* LCNF mono: Effect4.Program.emptyColumnAt (decls : List (Prod String Effect4.Program.Ty)) (pos : List String) (t : Effect4.Program.Ty) : Option (List String) *)
 
-let program_empty_column_at (pos : string list) (t : ty) : string list option =
-  let _x_1 = program_admit_column t in
+let program_empty_column_at (decls : (string * ty) list) (pos : string list) (t : ty) : string list option =
+  let _x_1 = program_admit_column_in decls t in
   if _x_1 then None else Some pos
 
 
 
-(* LCNF mono: Effect4.Program.findEmptyColumnInEffTy (ty : Effect4.Program.EffTy) : Option (List String) *)
+(* LCNF mono: Effect4.Program.findEmptyColumnInEffTy (decls : List (Prod String Effect4.Program.Ty)) (ty : Effect4.Program.EffTy) : Option (List String) *)
 
-let program_find_empty_column_in_eff_ty (ty : eff_ty) : string list option =
+let program_find_empty_column_in_eff_ty (decls : (string * ty) list) (ty : eff_ty) : string list option =
   match (ty : eff_ty) with
     | { answer = answer; error = error; _ } -> (let _x_1 = "program" in
       let _x_2 = "answer" in
       let _x_3 = [] in
       let _x_4 = _x_2 :: _x_3 in
       let _x_5 = _x_1 :: _x_4 in
-      let _x_6 = program_empty_column_at _x_5 answer in
+      let _x_6 = program_empty_column_at decls _x_5 answer in
       match _x_6 with
         | None -> (let _x_7 = "error" in
           let _x_8 = _x_7 :: _x_3 in
           let _x_9 = _x_1 :: _x_8 in
-          program_empty_column_at _x_9 error)
+          program_empty_column_at decls _x_9 error)
         | Some _ -> _x_6)
 
 
@@ -28081,11 +28106,12 @@ let run_kit_admit (app : sig_app) (program : native_op eff) : admit_refusal opti
     | Ok _ -> (let _x_6 = api_type_of program app in
       match _x_6 with
         | None -> None
-        | Some val__8 -> (let _x_9 = program_find_empty_column_in_eff_ty val__8 in
-          match _x_9 with
-            | None -> None
-            | Some val__11 -> (let _x_12 = AdmitRefusal_emptyColumn val__11 in
-              Some _x_12)))
+        | Some val__8 -> (match (app : sig_app) with
+            | { types = types; _ } -> (let _x_9 = program_find_empty_column_in_eff_ty types val__8 in
+              match _x_9 with
+                | None -> None
+                | Some val__11 -> (let _x_12 = AdmitRefusal_emptyColumn val__11 in
+                  Some _x_12))))
 
 
 
