@@ -75,12 +75,11 @@ module Vec = struct
     let rec go i acc = if i < lo then acc else go (i - 1) (get_exn t i :: acc) in
     if hi <= lo then [] else go (hi - 1) []
 
-  let to_list t = slice t ~from:0 ~upto:t.len
-
   (* Ascending, and NOT via `get`: the frozen chunks are walked in `Im.iter`'s own ascending
      key order and the open tail by a bounded (<= chunk_size) recursion that applies `f` on
      the way OUT, so the whole fold costs one visit per row and no map lookup per row.  This
-     is the call `E4_logindex.of_log` sits on, and it is what the B-Q3c floor measures. *)
+     is the call `E4_logindex.of_log` sits on, and it is what the B-Q3c floor measures;
+     `to_list` below is built on it too. *)
   let fold t ~init ~f =
     let acc = ref init in
     Im.iter
@@ -99,6 +98,11 @@ module Vec = struct
     in
     asc (t.len - 1) t.tail;
     !acc
+
+  (* Index order through `fold`: the ascending walk conses the rows most recent first, and one
+     `List.rev` turns them.  The indexed answer, `get_exn` at every index, is test_log.ml's
+     reference and lives only there. *)
+  let to_list t = List.rev (fold t ~init:[] ~f:(fun _ x acc -> x :: acc))
 
   let of_list xs = List.fold_left append empty xs
 end
