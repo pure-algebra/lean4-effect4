@@ -36,13 +36,13 @@ def natMatch : Nat → Nat
   | 0 => 7
   | n + 1 => n
 
-/-! ## Array: `list`, under the shim -/
+/-! ## Array: the runtime library's vector, `Lcnf_array` -/
 def arrMk (l : List Nat) : Array Nat := Array.mk l
 def arrToList (a : Array Nat) : List Nat := a.toList
 def arrMatch : Array Nat → Nat
   | ⟨l⟩ => l.length
 
-/-! ## ByteArray: `int list` -/
+/-! ## ByteArray: a vector of bytes, `int Lcnf_array.t` -/
 def baMk (a : Array UInt8) : ByteArray := ⟨a⟩
 def baData (b : ByteArray) : Array UInt8 := b.data
 def baMatch : ByteArray → Array UInt8
@@ -116,6 +116,71 @@ def shadeMatch : Shade → Nat
 def ptMk (x : Nat) (y : Int) : Pt := ⟨x, y⟩
 def ptY (p : Pt) : Int := p.y
 
+/-! ## Array's update rows: a minimal hash map over `replicate`, `uget` and `uset`
+
+The rows that Lean's own hash maps need (slice 3.2 of the OCaml estate refactor). The lane runs
+insertion, lookup, an update of a bound key, and the versions a program keeps: a map that a later
+insertion is built from still answers as it did, and two insertions into one map each keep their
+own binding. Above 256 buckets the vector has a frozen chunk and an open one, and the keys below
+reach both. -/
+
+/-- Buckets of `(key, value)` pairs; a key's bucket is the key modulo the bucket count. -/
+structure NatMap where
+  buckets : Array (List (Nat × Nat))
+
+/-- `n + 1` empty buckets, so the bucket count is never zero. -/
+def NatMap.empty (n : Nat) : NatMap := ⟨Array.replicate (n + 1) []⟩
+
+/-- The bucket of a key. -/
+def NatMap.slot (m : NatMap) (k : Nat) : USize := (k % m.buckets.size).toUSize
+
+/-- The map with `k` bound to `v`, in place of an earlier binding of `k`. -/
+def NatMap.insert (m : NatMap) (k v : Nat) : NatMap :=
+  let i := m.slot k
+  if h : i.toNat < m.buckets.size then
+    ⟨m.buckets.uset i ((k, v) :: (m.buckets.uget i h).filter (·.1 != k)) h⟩
+  else m
+
+/-- The value bound to `k`, if any. -/
+def NatMap.find? (m : NatMap) (k : Nat) : Option Nat :=
+  let i := m.slot k
+  if h : i.toNat < m.buckets.size then (m.buckets.uget i h).lookup k else none
+
+/-- The bindings of `kvs`, inserted in order into `n + 1` buckets. -/
+def NatMap.ofList (n : Nat) (kvs : List (Nat × Nat)) : NatMap :=
+  kvs.foldl (fun m kv => m.insert kv.1 kv.2) (NatMap.empty n)
+
+/-- Insertion and lookup: the map of `kvs` in `n + 1` buckets, read at `k`. -/
+def mapFind (n : Nat) (kvs : List (Nat × Nat)) (k : Nat) : Option Nat :=
+  (NatMap.ofList n kvs).find? k
+
+/-- The layout: each bucket's bindings, in bucket order, the newest first. -/
+def mapBuckets (n : Nat) (kvs : List (Nat × Nat)) : List (List (Nat × Nat)) :=
+  (NatMap.ofList n kvs).buckets.toList
+
+/-- A kept version: the map of `kvs` read at `k`, before and after one more binding of `k`. -/
+def mapRetained (n : Nat) (kvs : List (Nat × Nat)) (k v : Nat) : Option Nat × Option Nat :=
+  let m := NatMap.ofList n kvs
+  (m.find? k, (m.insert k v).find? k)
+
+/-- Siblings: two insertions of `k` into one map, each read, and the map they share. -/
+def mapSiblings (n : Nat) (kvs : List (Nat × Nat)) (k : Nat) :
+    Option Nat × Option Nat × Option Nat :=
+  let m := NatMap.ofList n kvs
+  let a := m.insert k 1
+  let b := m.insert k 2
+  (a.find? k, b.find? k, m.find? k)
+
+private def opt : Option Nat → String
+  | none => "-"
+  | some n => toString n
+
+private def bucketText (b : List (Nat × Nat)) : String :=
+  ",".intercalate (b.map fun kv => s!"{kv.1}:{kv.2}")
+
+/-- The keys of the large map: a thousand squares, so its 301 buckets fill both chunks. -/
+def squares : List (Nat × Nat) := (List.range 1000).map fun i => (i, i * i)
+
 /-- Each call the dune test makes, with Lean's answer, one per line. -/
 def answers : List String := [
   s!"intOfNat 5 = {intOfNat 5}", s!"intNegSucc 4 = {intNegSucc 4}",
@@ -146,7 +211,17 @@ def answers : List String := [
   s!"exceptMk true = {exceptMatch (exceptMk true)}",
   s!"exceptMk false = {exceptMatch (exceptMk false)}",
   s!"unitMatch = {unitMatch ()}", s!"shadeMatch = {shadeMatch (.dark 4)}",
-  s!"ptY = {ptY (ptMk 1 (-2))}"]
+  s!"ptY = {ptY (ptMk 1 (-2))}",
+  s!"mapFind bound = {opt (mapFind 4 [(1, 10), (7, 70), (12, 120)] 7)}",
+  s!"mapFind absent = {opt (mapFind 4 [(1, 10), (7, 70), (12, 120)] 5)}",
+  s!"mapFind updated = {opt (mapFind 4 [(1, 10), (6, 60), (1, 11)] 1)}",
+  s!"mapBuckets = {" | ".intercalate ((mapBuckets 2 [(1, 10), (2, 20), (4, 40), (1, 11)]).map bucketText)}",
+  s!"mapRetained = {opt (mapRetained 4 [(1, 10)] 1 99).1} {opt (mapRetained 4 [(1, 10)] 1 99).2}",
+  s!"mapSiblings frozen = {opt (mapSiblings 300 [(3, 30)] 8).1} {opt (mapSiblings 300 [(3, 30)] 8).2.1} {opt (mapSiblings 300 [(3, 30)] 8).2.2}",
+  s!"mapSiblings open = {opt (mapSiblings 300 [(3, 30)] 290).1} {opt (mapSiblings 300 [(3, 30)] 290).2.1} {opt (mapSiblings 300 [(3, 30)] 290).2.2}",
+  s!"mapLarge frozen = {opt (mapFind 300 squares 777)}",
+  s!"mapLarge open = {opt (mapFind 300 squares 290)}",
+  s!"mapLarge absent = {opt (mapFind 300 squares 1000)}"]
 
 /-- The fixture: `answers` under the generated header, which `write.lean` writes beside the test. -/
 def fixtureText : String :=

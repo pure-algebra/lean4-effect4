@@ -383,6 +383,55 @@ def applyPrim (pe : PrimEnv) (op : String) (args : Array TValue) : TOutcome :=
   | "Lcnf_string.utf8_length" => match args with
     | #[.str s] => .value (.int s.length)
     | _ => .stuck "Lcnf_string.utf8_length: expected string"
+  -- The runtime library's vector (`Lcnf_array`, `ocaml/lcnf/lcnf_array.mli`). A value of it is
+  -- modelled by its element list in index order, so a byte array is the list of its bytes too.
+  -- The refusals raise what the library raises: `Invalid_argument` outside the index range.
+  | "Lcnf_array.with_capacity" => match args with
+    | #[_] => .value (TValue.ofList [])
+    | _ => .stuck "Lcnf_array.with_capacity: arity"
+  | "Lcnf_array.push" => match args with
+    | #[a, x] => match asListV a with
+      | some xs => .value (TValue.ofList (xs ++ [x]))
+      | none => .stuck "Lcnf_array.push: not a vector"
+    | _ => .stuck "Lcnf_array.push: arity"
+  | "Lcnf_array.length" => match args with
+    | #[a] => match asListV a with
+      | some xs => .value (.int (Int.ofNat xs.length))
+      | none => .stuck "Lcnf_array.length: not a vector"
+    | _ => .stuck "Lcnf_array.length: arity"
+  | "Lcnf_array.get_exn" => match args with
+    | #[a, i] => match asListV a, asInt i with
+      | some xs, some k =>
+        let outside := s!"Invalid_argument(\"Lcnf_array.get_exn: {k} outside [0,{xs.length})\")"
+        if k < 0 then .exn outside
+        else match xs[k.toNat]? with
+          | some v => .value v
+          | none => .exn outside
+      | _, _ => .stuck "Lcnf_array.get_exn: shape"
+    | _ => .stuck "Lcnf_array.get_exn: arity"
+  | "Lcnf_array.set_exn" => match args with
+    | #[a, i, v] => match asListV a, asInt i with
+      | some xs, some k =>
+        if k < 0 || k.toNat ≥ xs.length then
+          .exn s!"Invalid_argument(\"Lcnf_array.set_exn: {k} outside [0,{xs.length})\")"
+        else .value (TValue.ofList (xs.set k.toNat v))
+      | _, _ => .stuck "Lcnf_array.set_exn: shape"
+    | _ => .stuck "Lcnf_array.set_exn: arity"
+  | "Lcnf_array.to_list" | "Lcnf_array.of_list" => match args with
+    | #[a] => match asListV a with
+      | some _ => .value a
+      | none => .stuck s!"{op}: not a list"
+    | _ => .stuck s!"{op}: arity"
+  | "Lcnf_array.append_list" => match args with
+    | #[a, b] => match asListV a, asListV b with
+      | some x, some y => .value (TValue.ofList (x ++ y))
+      | _, _ => .stuck "Lcnf_array.append_list: not lists"
+    | _ => .stuck "Lcnf_array.append_list: arity"
+  | "Lcnf_array.replicate" => match args with
+    | #[n, v] => match asInt n with
+      | some k => .value (TValue.ofList (List.replicate k.toNat v))
+      | none => .stuck "Lcnf_array.replicate: not an integer"
+    | _ => .stuck "Lcnf_array.replicate: arity"
   | "id" => match args with
     | #[a] => .value a
     | _ => .stuck "id: arity"

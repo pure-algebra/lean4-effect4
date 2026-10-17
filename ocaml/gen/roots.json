@@ -282,7 +282,11 @@
         "Test.Codegen.ConstructorLane.unitMatch",
         "Test.Codegen.ConstructorLane.shadeMatch",
         "Test.Codegen.ConstructorLane.ptMk",
-        "Test.Codegen.ConstructorLane.ptY"
+        "Test.Codegen.ConstructorLane.ptY",
+        "Test.Codegen.ConstructorLane.mapFind",
+        "Test.Codegen.ConstructorLane.mapBuckets",
+        "Test.Codegen.ConstructorLane.mapRetained",
+        "Test.Codegen.ConstructorLane.mapSiblings"
       ]
     },
     {

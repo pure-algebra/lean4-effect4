@@ -320,7 +320,8 @@ private def unruled (name : String) (arity : Nat) : LibFn :=
 name, with the number of arguments it takes and the target evaluator's rule for it. The four
 `Lcnf_string` functions are the string primitives of the runtime library (`ocaml/lcnf`, library
 `effect4_lcnf`); the target evaluator answers two of them by name and has no rule for the other
-two. The labelled call `Option.value o ~default:d` is the evaluator's primitive
+two. The `Lcnf_array` functions are the runtime library's vector, which the target evaluator
+models by its element list. The labelled call `Option.value o ~default:d` is the evaluator's primitive
 `Option.value~default` (`Conform.Effect4.LcnfMl.ofExpr`). -/
 def targetLibrary : List LibFn := [
   infixOp "=", infixOp "<", infixOp "<=", infixOp ">", infixOp ">=", infixOp "+", infixOp "-",
@@ -330,6 +331,9 @@ def targetLibrary : List LibFn := [
   prim "max" 2, prim "min" 2, prim "not" 1, prim "fst" 1, prim "snd" 1, prim "failwith" 1,
   prim "Lcnf_string.utf8_bytes" 1, prim "Lcnf_string.utf8_length" 1,
   unruled "Lcnf_string.of_code_points" 1, unruled "Lcnf_string.of_utf8_bytes" 1,
+  prim "Lcnf_array.with_capacity" 1, prim "Lcnf_array.push" 2, prim "Lcnf_array.length" 1,
+  prim "Lcnf_array.get_exn" 2, prim "Lcnf_array.set_exn" 3, prim "Lcnf_array.to_list" 1,
+  prim "Lcnf_array.of_list" 1, prim "Lcnf_array.append_list" 2, prim "Lcnf_array.replicate" 2,
   unruled "string_of_int" 1,
   prim "List.rev" 1, prim "List.rev_append" 2, prim "List.length" 1, prim "List.nth" 2,
   scan "List.exists" true, scan "List.for_all" false, unruled "List.map" 2,
@@ -441,8 +445,6 @@ private def listAll : Form :=
 private def listAny : Form :=
   .inline ["l", "p"] (Ml.Expr.call "List.exists" [.var "p", .var "l"])
 -- The capacity is a hint, and the list has none.
-private def arrayEmpty : Form := .inline ["n"] Ml.Expr.nil
-private def arrayPush : Form := .inline ["a", "x"] (.binop "@" va (.listLit [.var "x"]))
 private def optionGetD : Form :=
   .inline ["o", "d"]
     (.appL (.var "Option.value") [(.nolabel, .var "o"), (.lbl "default", .var "d")])
@@ -640,10 +642,10 @@ def builtins : List Builtin := [
     "Emitted helper returns the actual encoded bytes, including non-ASCII keys."
     (receipt := .exact),
   row `ByteArray.data (.extern "lean_byte_array_data" (some .identity)) (same) .exact "" []
-    "Byte arrays use the same list-of-byte representation as their data array."
+    "a byte array and its data array are one `int Lcnf_array.t`."
     (receipt := .exact),
   row `ByteArray.mk (.extern "lean_byte_array_mk" (some .identity)) (same) .exact "" []
-    "a byte array is its data array, a byte list under the shim. Before this row the constructor built a record of no declared type, which `ocamlopt` refused."
+    "a byte array is its data array, an `int Lcnf_array.t`. Before this row the constructor built a record of no declared type, which `ocamlopt` refused."
     (receipt := .exact),
   -- List
   -- The session's closure (LC-6, LC-7): strings from code points, bytes, and the platform.
@@ -656,12 +658,11 @@ def builtins : List Builtin := [
   row `String.ofByteArray (.extern "lean_string_from_utf8_unchecked" none) (.library "Lcnf_string.of_utf8_bytes") .domain "valid UTF-8" []
     "the string whose UTF-8 encoding is the bytes; the constructor's proof is that they are valid, as `String.toByteArray`'s domain."
     (receipt := .exact),
-  row `ByteArray.emptyWithCapacity (.extern "lean_mk_empty_byte_array" (some .arrayMkEmpty)) (arrayEmpty) .exact "" []
-    "the capacity is a hint; the byte list is empty."
+  row `ByteArray.emptyWithCapacity (.extern "lean_mk_empty_byte_array" (some .arrayMkEmpty)) (.library "Lcnf_array.with_capacity") .exact "" []
+    "the capacity is a hint; the byte vector is empty."
     (receipt := .exact),
-  row `ByteArray.push (.extern "lean_byte_array_push" (some .arrayPush)) (arrayPush) .exact "" []
-    ""
-    (cost := "O(n) per push, as `Array.push` under the shim.")
+  row `ByteArray.push (.extern "lean_byte_array_push" (some .arrayPush)) (.library "Lcnf_array.push") .exact "" []
+    "the byte vector with the byte appended, as `Array.push`."
     (receipt := .exact),
   row `Char.ofNatAux (.extern "lean_uint32_of_nat" (some .identity)) (same) .exact "" []
     "the proof that the natural is a scalar value is erased; the code point is the natural."
@@ -738,38 +739,38 @@ def builtins : List Builtin := [
   row `List.filterMapTR .body (.library "List.filter_map") .exact "" []
     ""
     (receipt := .exact),
-  -- Array as list: the shim. `USize` is the shim's index type.
-  row `Array.mkEmpty (.extern "lean_mk_empty_array_with_capacity" (some .arrayMkEmpty)) (arrayEmpty) .exact "" []
-    "`Array` is `list`; the capacity hint is dropped."
+  -- Array: the persistent chunked vector of the runtime library (`Lcnf_array`, decision D-3).
+  -- `USize` is its index type.
+  row `Array.mkEmpty (.extern "lean_mk_empty_array_with_capacity" (some .arrayMkEmpty)) (.library "Lcnf_array.with_capacity") .exact "" []
+    "the capacity is a hint; the vector is empty."
     (receipt := .exact),
-  row `Array.emptyWithCapacity (.extern "lean_mk_empty_array_with_capacity" (some .arrayMkEmpty)) (arrayEmpty) .exact "" []
-    ""
+  row `Array.emptyWithCapacity (.extern "lean_mk_empty_array_with_capacity" (some .arrayMkEmpty)) (.library "Lcnf_array.with_capacity") .exact "" []
+    "as `Array.mkEmpty`."
     (receipt := .exact),
-  row `Array.toList (.extern "lean_array_to_list" (some .arrayToList)) (same) .exact "" []
-    "identity under the shim."
+  row `Array.toList (.extern "lean_array_to_list" (some .arrayToList)) (.library "Lcnf_array.to_list") .exact "" []
+    "the elements in index order."
     (receipt := .exact),
-  row `Array.mk (.extern "lean_array_mk" (some .listToArray)) (same) .exact "" []
-    "identity under the shim, as `List.toArray`."
+  row `Array.mk (.extern "lean_array_mk" (some .listToArray)) (.library "Lcnf_array.of_list") .exact "" []
+    "the vector of the list's elements in order, as `List.toArray`."
     (receipt := .exact),
-  row `List.toArray .body (same) .exact "" []
-    "identity under the shim."
+  row `List.toArray .body (.library "Lcnf_array.of_list") .exact "" []
+    "as `Array.mk`."
     (receipt := .exact),
-  row `Array.push (.extern "lean_array_push" (some .arrayPush)) (arrayPush) .exact "" []
-    "`a @ [x]` is the sequence with `x` appended."
-    (cost := "O(n) per push where Lean's `Array.push` is amortised O(1); a `push` in a loop is quadratic.")
+  row `Array.push (.extern "lean_array_push" (some .arrayPush)) (.library "Lcnf_array.push") .exact "" []
+    "the vector with `x` appended."
+    (cost := "amortised O(1), as Lean's; every 256th push fills one chunk and inserts it in the chunk map.")
     (receipt := .exact),
-  row `Array.size (.extern "lean_array_get_size" (some .arraySize)) (.library "List.length") .exact "" []
-    "the length of the list that stands for the array."
-    (cost := "O(n) where Lean's is O(1).")
+  row `Array.size (.extern "lean_array_get_size" (some .arraySize)) (.library "Lcnf_array.length") .exact "" []
+    "the vector's length, kept in the value."
     (receipt := .exact),
-  row `Array.appendList .body (op "@") .exact "" []
-    ""
+  row `Array.appendList .body (.library "Lcnf_array.append_list") .exact "" []
+    "the vector with the list's elements appended in order."
     (receipt := .exact),
-  row `List.foldl._at_.Array.appendList.spec_0 .body (op "@") .exact "" []
+  row `List.foldl._at_.Array.appendList.spec_0 .body (.library "Lcnf_array.append_list") .exact "" []
     "the specialisation of the fold that `Array.appendList` compiles to."
     (receipt := .exact),
   row `USize.ofNat (.extern "lean_usize_of_nat" (some (.uintOfNat 64))) (same) .domain "a < 2^62" []
-    "`USize` is the shim's index type and is `int`."
+    "`USize` is the index type of `Array` (`Lcnf_array`) and is `int`."
     (receipt := .refuses .index "n is at most the target's index capacity; Lean reduces it mod 2^64"),
   row `USize.toNat (.extern "lean_usize_to_nat" (some .identity)) (same) .exact "" []
     ""
@@ -786,15 +787,22 @@ def builtins : List Builtin := [
   row `USize.add (.extern "lean_usize_add" none) (op "+") .unsound "a + b < 2^62" []
     "`USize.add` wraps at 2^64 in Lean; OCaml's `+` wraps at 2^62. Two different wrapping points."
     (receipt := .refuses .index "a + b is at most the target's index capacity; Lean wraps at 2^64"),
-  row `Array.uget (.extern "lean_array_uget" (some .arrayGet)) (.library "List.nth") .unsound "i < length" []
-    "Lean's `Array.uget a i h` is total (`h` proves `i` in range) and the row is `List.nth`, which **raises** `Failure \"nth\"` out of range and `Invalid_argument` on a negative index."
-    (cost := "O(i) under the shim where Lean's is O(1).")
+  row `Array.uget (.extern "lean_array_uget" (some .arrayGet)) (.library "Lcnf_array.get_exn") .exact "" []
+    "Lean's `Array.uget a i h` is total because `h` proves `i` in range; `Lcnf_array.get_exn` answers in range, and raises `Invalid_argument` only outside it, which `h` excludes."
+    (cost := "O(log (i / 256)) where Lean's is O(1).")
     (receipt := .exact),
   -- Option, Prod, panic
-  row `Array.getInternal (.extern "lean_array_fget" (some .arrayGet)) (.library "List.nth") .exact "" []
-    "the proof that the index is in range is erased; `List.nth` answers in range."
-    (cost := "O(i) under the shim where Lean's is O(1).")
+  row `Array.getInternal (.extern "lean_array_fget" (some .arrayGet)) (.library "Lcnf_array.get_exn") .exact "" []
+    "the proof that the index is in range is erased; `Lcnf_array.get_exn` answers in range."
+    (cost := "O(log (i / 256)) where Lean's is O(1).")
     (receipt := .exact),
+  row `Array.uset (.extern "lean_array_uset" none) (.library "Lcnf_array.set_exn") .exact "" []
+    "Lean's `Array.uset a i v h` replaces the element at `i`, which `h` proves in range. `Lcnf_array.set_exn` answers a new vector and copies the one chunk it changes, so the argument and every version that shares that chunk keep their elements, as Lean's values do."
+    (cost := "O(log (n / 256) + 256) per update, where Lean's is O(1) on an array no other reference holds.")
+    (receipt := .exact),
+  row `Array.replicate (.extern "lean_mk_array" none) (.library "Lcnf_array.replicate") .exact "" []
+    "`n` copies of `v`; the full chunks share one array that nothing writes."
+    (receipt := .refuses .index "n is at most the target's index capacity"),
   row `Option.isSome .body (.library "Option.is_some") .exact "" []
     ""
     (receipt := .exact),
@@ -1069,19 +1077,22 @@ def problems : List String := problemsOf builtins support targetLibrary
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
 #guard etaBinders.all fun b => !protectedNames.contains b && !(targetLibrary.map (·.name)).contains b
 #guard maxArity == 3
-#guard builtins.length == 126
--- The runtime library's modules that the table names: the three of `ocaml/lcnf`.
-#guard runtimeModules == ["Lcnf_list", "Lcnf_nat", "Lcnf_string"]
+#guard builtins.length == 128
+-- The runtime library's modules that the table names: the four of `ocaml/lcnf`. Sorted, they are
+-- also in dependency order (`Lcnf_string` reads `Lcnf_array`), which a program that carries them
+-- in one file needs.
+#guard runtimeModules == ["Lcnf_array", "Lcnf_list", "Lcnf_nat", "Lcnf_string"]
 -- No name of the runtime library is one a binder must avoid: each is qualified.
 #guard (support.map (·.name) ++ ["Lcnf_string.utf8_bytes"]).all (!protectedNames.contains ·)
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
--- row but eleven (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
+-- row but thirteen (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
 -- session's closure needs; `String.ofByteArray`, the inverse of the bytes it has no primitive
--- for; `USize.add`; `panicCore`), and the target evaluator scans with two functions.
+-- for; `USize.add`; `Array.uset` and `Array.replicate`, which its lanes do not reach; `panicCore`),
+-- and the target evaluator scans with two functions.
 #guard sourcePrims.length == 59
 #guard (builtins.filter fun b => b.runtime matches .extern _ none).map (·.lean) ==
   [`Int.ofNat, `Int.negSucc, `Int.decLt, `Int.natAbs, `Int.neg, `String.ofList, `String.ofByteArray,
-    `USize.repr, `System.Platform.getNumBits, `USize.add, `panicCore]
+    `USize.repr, `System.Platform.getNumBits, `USize.add, `Array.uset, `Array.replicate, `panicCore]
 #guard targetScans.toList.length == 2 && targetScans["List.exists"]? == some true
 #guard targetArities["Option.value~default"]? == some 2 && (targetArities["List.map"]?).isNone
 
@@ -1169,11 +1180,12 @@ private def refusingAt (c : Crossing) : List Name :=
   (builtins.filter (·.receipt.crossing == some c)).map (·.lean)
 #guard refusingAt .arithmetic ==
   [`Nat.pow, `Nat.shiftLeft, `Effect4.Program.Profile.grow, `Effect4.Program.Profile.scale]
-#guard refusingAt .index == [`USize.ofBitVec, `USize.ofNat, `USize.ofNatLT, `USize.sub, `USize.add]
+#guard refusingAt .index ==
+  [`USize.ofBitVec, `USize.ofNat, `USize.ofNatLT, `USize.sub, `USize.add, `Array.replicate]
 #guard refusingAt .clock == [`Effect4.ClockMillis.toNat]
 #guard refusingAt .panic == [`panic, `panicCore]
 #guard refusingAt .literal == [] && refusingAt .reply == []
-#guard (builtins.filter (·.receipt.fidelity == .exact)).length == 114
+#guard (builtins.filter (·.receipt.fidelity == .exact)).length == 115
 
 -- Red controls: each altered receipt is refused, for its own reason.
 private def withReceipt (lean : Name) (receipt : Receipt) : List Builtin :=
@@ -1213,8 +1225,9 @@ private def spelled (name : Name) (args : List Ml.Expr) : String :=
 #guard spelled `List.all [.var "l", .var "p"] == "List.for_all p l"
 #guard spelled `List.elem [.var "inst", .var "x", .var "l"] == "List.exists (inst x) l"
 #guard spelled `List.contains [.var "inst", .var "l", .var "_elem"] == "Lcnf_list.contains inst l _elem"
-#guard spelled `Array.mkEmpty [.var "n"] == "[]"
-#guard spelled `Array.push [.var "xs", .var "x"] == "xs @ [x]"
+#guard spelled `Array.mkEmpty [.var "n"] == "Lcnf_array.with_capacity n"
+#guard spelled `Array.push [.var "xs", .var "x"] == "Lcnf_array.push xs x"
+#guard spelled `Array.uset [.var "xs", .var "i", .var "v"] == "Lcnf_array.set_exn xs i v"
 #guard spelled `Option.getD [.var "o", .var "d"] == "Option.value o ~default:d"
 -- under-applied: eta binders; over-applied: the rest is applied to the result, which the
 -- renderer prints with its parentheses (`OCaml5.Ml.renderExprAlg`, an application's head)
@@ -1230,6 +1243,6 @@ private def spelled (name : Name) (args : List Ml.Expr) : String :=
 #guard (builtin? `Nat.div).any (!·.form.strict)       -- `b` twice
 #guard (builtin? `Option.getD).any (·.form.strict)    -- each argument once, always
 #guard (builtin? `Bool.and).any (!·.form.strict)      -- the right operand is lazy
-#guard (builtin? `Array.mkEmpty).any (!·.form.strict) -- the capacity is dropped
+#guard (builtin? `Array.mkEmpty).any (·.form.strict)  -- a library call evaluates the capacity
 
 end OCaml5.Lcnf

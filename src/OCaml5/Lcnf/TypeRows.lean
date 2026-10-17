@@ -145,7 +145,7 @@ def typeRows : List TypeRow := [
   typeRow ``UInt64 0 int .unsound "n < 2^62"
     "**the hole.** `UInt64` values reach 2^64 - 1; OCaml's `int` holds 2^62 - 1. The wire's big-endian 64-bit fields and `Effect4.Store.Val.wf`'s `… < 2 ^ 64` live in this type. Nothing in the route detects the overflow: it wraps.",
   typeRow ``USize 0 int .unsound "n < 2^62"
-    "as `UInt64` — and `USize` is the shim's index type, so it is also the type every `Array` index is spelled in.",
+    "as `UInt64` — and `USize` is the index type of `Array` (`Lcnf_array`), so it is also the type every `Array` index is spelled in.",
   typeRow ``Bool 0 (.con "bool" []) .exact "" "",
   typeRow ``String 0 (.con "string" []) .domain "valid UTF-8"
     "Lean's `String` is the UTF-8 encoding of a sequence of Unicode scalar values, and the OCaml string holds those bytes. Each operation is its own row of `OCaml5.Lcnf.builtins`: equality and concatenation are exact, `length` counts scalar values (`lcnf_utf8_length`), and an operation with no row is refused. A string enters valid: the wire refuses any other (`Eff_frame.decode_string`), and the to-do lane runs a title outside ASCII.",
@@ -160,10 +160,10 @@ def typeRows : List TypeRow := [
   typeRow ``Float 0 (.con "float" []) .exact ""
     "both are IEEE 754 binary64. No `Float` operation has a `builtin?` row, so any arithmetic is a hole.",
   typeRow ``List 1 (.con "list" [0]) .exact "" "",
-  typeRow ``Array 1 (.con "list" [0]) .approximate ""
-    "the shim: denotationally a sequence, operationally a different cost model (see `Array.push`, `Array.uget`).",
-  typeRow ``ByteArray 0 (.fixed (.list .int)) .approximate ""
-    "a byte list, as `Array UInt8` under the shim.",
+  typeRow ``Array 1 (.con "Lcnf_array.t" [0]) .exact ""
+    "the persistent chunked vector of the runtime library (`ocaml/lcnf/lcnf_array.mli`, decision D-3): the element sequence, with a push amortised O(1) and an indexed read or update O(log (n / 256)) where Lean's are O(1). Every version a program keeps answers as it did (rule 8).",
+  typeRow ``ByteArray 0 (.fixed (.con "Lcnf_array.t" [.int])) .exact ""
+    "a byte vector, as `Array UInt8`: each byte an `int` in [0, 255].",
   typeRow ``Option 1 (.con "option" [0]) .exact "" "",
   typeRow ``Prod 2 (.tuple [0, 1]) .exact "" "",
   typeRow ``Except 2 (.con "result" [1, 0]) .exact ""
@@ -267,7 +267,8 @@ private def refuses (ps : List String) (reason : String) : Bool :=
 
 #guard builtinTy? ``Except [.var "e", .var "a"] == some (.con "result" [.var "a", .var "e"])
 #guard builtinTy? ``Prod [Ml.Ty.int, Ml.Ty.bool] == some (.tuple [Ml.Ty.int, Ml.Ty.bool])
-#guard builtinTy? ``Array [Ml.Ty.int] == some (Ml.Ty.list Ml.Ty.int)
+#guard builtinTy? ``Array [Ml.Ty.int] == some (.con "Lcnf_array.t" [Ml.Ty.int])
+#guard builtinTy? ``ByteArray [] == some (.con "Lcnf_array.t" [Ml.Ty.int])
 #guard builtinTy? ``Char [] == some Ml.Ty.int
 #guard builtinTy? `Effect4.ClockMillis [] == some (.con "E4_clock.t" [])
 -- an argument count that is not the row's has no spelling

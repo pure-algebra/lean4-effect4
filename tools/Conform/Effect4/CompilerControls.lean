@@ -323,7 +323,10 @@ def hostChecks : List (String × Ml.Expr × Expect) := [
   ("mul-saturation", host `Nat.mul [.var "max_int", .int 2], .value (.var "max_int")),
   ("pow-saturation", host `Nat.pow [.int 2, .int 64], .value (.var "max_int")),
   ("utf8-length", host `String.length [.str "é🙂"], .value (.int 2)),
-  ("utf8-literal-bytes", host `String.toUTF8 [.str "é🙂\n"],
+  -- a byte array is a vector (`Lcnf_array`), so the check reads its bytes as Lean's
+  -- `s.toUTF8.data.toList` does
+  ("utf8-literal-bytes",
+    host `Array.toList [host `ByteArray.data [host `String.toUTF8 [.str "é🙂\n"]]],
     .value (ints [195, 169, 240, 159, 153, 130, 10])),
   ("u8-clamp", host `UInt8.ofNatTruncate [.int 256], .value (.int 255)),
   ("div-zero", host `Nat.div [.int 5, .int 0], .value (.int 0)),

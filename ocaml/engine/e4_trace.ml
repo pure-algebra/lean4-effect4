@@ -44,7 +44,7 @@ let is_empty (t : 'e t) : bool = E4_log.Vec.is_empty t
 (* TR2 is the `[] ->` arm: the argument itself, physically.  The general arm appends in list
    order, which is the order `RunMachine.emit` appends in (Fibers.lean:585-587). *)
 let emit (evs : 'e list) (t : 'e t) : 'e t =
-  match evs with [] -> t | _ -> List.fold_left E4_log.Vec.append t evs
+  match evs with [] -> t | _ -> List.fold_left E4_log.Vec.push t evs
 
 let to_list (t : 'e t) : 'e list =
   let n = E4_log.Vec.length t in

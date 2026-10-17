@@ -10,7 +10,7 @@
  (name effect4_lcnf)
  (public_name effect4_lcnf)
  (wrapped false)
- (modules lcnf_list lcnf_nat lcnf_string)
+ (modules lcnf_array lcnf_list lcnf_nat lcnf_string)
  (flags (:standard -w +a-4-9-40-41-42-44-45-70)))
 
 (test

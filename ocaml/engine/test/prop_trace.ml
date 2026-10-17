@@ -196,6 +196,6 @@ let () =
   tr7 st;
   tr9 ();
   argue "TR3 emit is O(length evs); to_list is O(length t), called once per run"
-    "emit is one E4_log.Vec.append per event onto the open chunk (a cons, plus one 256-element array and one Map insertion every 256 events) and never walks t; to_list is one Vec.fold and one List.rev; the numbers are in test/bench_carriers.ml";
+    "emit is one E4_log.Vec.push per event onto the open chunk (a cons, plus one 256-element array and one Map insertion every 256 events) and never walks t; to_list is one Vec.fold and one List.rev; the numbers are in test/bench_carriers.ml";
   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;
   exit (if !failures = 0 then 0 else 1)

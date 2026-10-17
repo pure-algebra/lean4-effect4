@@ -1469,14 +1469,14 @@ let rec program_local_binds (x_1 : native_op stmts) (x_2 : int) : int =
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.takeTR.go._redArg (l : List lcAny) (a.1 : List lcAny) (a.2 : Nat) (a.3 : Array lcAny) : List lcAny *)
 
-let rec list_take_tr_go (l : _ list) (a_1 : _ list) (a_2 : int) (a_3 : _ list) : _ list =
+let rec list_take_tr_go (l : _ list) (a_1 : _ list) (a_2 : int) (a_3 : _ Lcnf_array.t) : _ list =
   match a_1 with
     | [] -> l
     | head_4 :: tail_5 -> (let zero = 0 in
       let is_zero = a_2 = zero in
-      if is_zero then a_3 else (let one = 1 in
+      if is_zero then Lcnf_array.to_list a_3 else (let one = 1 in
         let n_7 = max 0 (a_2 - one) in
-        let _x_8 = a_3 @ [head_4] in
+        let _x_8 = Lcnf_array.push a_3 head_4 in
         list_take_tr_go l tail_5 n_7 _x_8))
 
 
@@ -1491,7 +1491,7 @@ let program_block_env (root : native_op eff) (p : point) (block : int list) (k :
       let _x_4 = program_local_binds val__2 k in
       let _x_5 = max 0 (_x_3 - _x_4) in
       let _x_6 = 0 in
-      let _x_7 = [] in
+      let _x_7 = Lcnf_array.with_capacity _x_6 in
       list_take_tr_go env env _x_5 _x_7)
 
 
@@ -3071,7 +3071,7 @@ let rec list_map_tr_loop_at_field_bytes_key_spec_0 (a_1 : int list) (a_2 : int l
 let field_bytes_key (s : string) : int list =
   let _x_1 = Lcnf_string.utf8_bytes s in
   let _x_2 = _x_1 in
-  let _x_3 = _x_2 in
+  let _x_3 = Lcnf_array.to_list _x_2 in
   let _x_4 = [] in
   list_map_tr_loop_at_field_bytes_key_spec_0 _x_3 _x_4
 
@@ -3804,7 +3804,7 @@ let program_native_atom_eval (x_1 : native_atom) (x_2 : val_ list) : val_ option
                       match _x_448 with
                         | None -> None
                         | Some val__450 -> (let _x_451 = 0 in
-                          let _x_452 = [] in
+                          let _x_452 = Lcnf_array.with_capacity _x_451 in
                           let _x_453 = list_take_tr_go val__450 val__450 n_447 _x_452 in
                           let _x_454 = Val_list _x_453 in
                           Some _x_454))
@@ -6021,11 +6021,11 @@ let wake_list_wake_all (l : _ wake_list) : _ waiter list * _ wake_list =
 
 (* LCNF mono: _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_._private.Init.Data.List.Impl.0.List.setTR.go.spec_0._redArg (as : Array lcAny) (i : USize) (stop : USize) (b : List lcAny) : List lcAny *)
 
-let rec array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_set_tr_go_spec_0 (as_ : _ list) (i : int) (stop : int) (b : _ list) : _ list =
+let rec array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_set_tr_go_spec_0 (as_ : _ Lcnf_array.t) (i : int) (stop : int) (b : _ list) : _ list =
   let _x_1 = i = stop in
   if _x_1 then b else (let _x_2 = 1 in
     let _x_3 = max 0 (i - _x_2) in
-    let _x_4 = List.nth as_ _x_3 in
+    let _x_4 = Lcnf_array.get_exn as_ _x_3 in
     let _x_5 = _x_4 :: b in
     array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_set_tr_go_spec_0 as_ _x_3 stop _x_5)
 
@@ -6033,19 +6033,19 @@ let rec array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_set_tr_g
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.setTR.go._redArg (l : List lcAny) (a : lcAny) (a.1 : List lcAny) (a.2 : Nat) (a.3 : Array lcAny) : List lcAny *)
 
-let rec list_set_tr_go (l : _ list) a (a_1 : _ list) (a_2 : int) (a_3 : _ list) : _ list =
+let rec list_set_tr_go (l : _ list) a (a_1 : _ list) (a_2 : int) (a_3 : _ Lcnf_array.t) : _ list =
   match a_1 with
     | [] -> l
     | head_4 :: tail_5 -> (let zero = 0 in
       let is_zero = a_2 = zero in
       if is_zero then (let _x_6 = a :: tail_5 in
-        let _x_7 = List.length a_3 in
+        let _x_7 = Lcnf_array.length a_3 in
         let _x_8 = zero < _x_7 in
         if _x_8 then (let _x_9 = _x_7 in
           let _x_10 = 0 in
           array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_set_tr_go_spec_0 a_3 _x_9 _x_10 _x_6) else _x_6) else (let one = 1 in
         let n_12 = max 0 (a_2 - one) in
-        let _x_13 = a_3 @ [head_4] in
+        let _x_13 = Lcnf_array.push a_3 head_4 in
         list_set_tr_go l a tail_5 n_12 _x_13))
 
 
@@ -6055,7 +6055,7 @@ let rec list_set_tr_go (l : _ list) a (a_1 : _ list) (a_2 : int) (a_3 : _ list) 
 let deferred_store_set_cell (self : _ deferred_store) (cell : int) (value : _ deferred_cell) : _ deferred_store =
   match (self : _ deferred_store) with
     | { cells = cells; due = due } -> (let _x_1 = 0 in
-      let _x_2 = [] in
+      let _x_2 = Lcnf_array.with_capacity _x_1 in
       let _x_3 = list_set_tr_go cells value cells cell _x_2 in
       ({ cells = _x_3; due = due } : _ deferred_store))
 
@@ -6635,7 +6635,7 @@ let memo_world_delete_entry (w : memo_map list) (id : int) (layer : int list * i
 
 let ref_poke (heap : val_ list) (cell : int) (value : val_) : val_ list =
   let _x_1 = 0 in
-  let _x_2 = [] in
+  let _x_2 = Lcnf_array.with_capacity _x_1 in
   list_set_tr_go heap value heap cell _x_2
 
 
@@ -7590,11 +7590,11 @@ let inst_decidable_eq_waiter_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ waiter) (
 
 (* LCNF mono: _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_._private.Init.Data.List.Impl.0.List.eraseTR.go._at_.Effect4.Machine.WakeList.wakeBy._at_.Effect4.Machine.TimerStore.fireNext.spec_0.spec_0.spec_1 (as : Array (Effect4.Machine.Waiter Effect4.ClockMillis)) (i : USize) (stop : USize) (b : List (Effect4.Machine.Waiter Effect4.ClockMillis)) : List (Effect4.Machine.Waiter Effect4.ClockMillis) *)
 
-let rec array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0_spec_1 (as_ : E4_clock.t waiter list) (i : int) (stop : int) (b : E4_clock.t waiter list) : E4_clock.t waiter list =
+let rec array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0_spec_1 (as_ : E4_clock.t waiter Lcnf_array.t) (i : int) (stop : int) (b : E4_clock.t waiter list) : E4_clock.t waiter list =
   let _x_1 = i = stop in
   if _x_1 then b else (let _x_2 = 1 in
     let _x_3 = max 0 (i - _x_2) in
-    let _x_4 = List.nth as_ _x_3 in
+    let _x_4 = Lcnf_array.get_exn as_ _x_3 in
     let _x_5 = _x_4 :: b in
     array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0_spec_1 as_ _x_3 stop _x_5)
 
@@ -7602,17 +7602,17 @@ let rec array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_erase_tr
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.eraseTR.go._at_.Effect4.Machine.WakeList.wakeBy._at_.Effect4.Machine.TimerStore.fireNext.spec_0.spec_0 (l : List (Effect4.Machine.Waiter Effect4.ClockMillis)) (a : Effect4.Machine.Waiter Effect4.ClockMillis) (a.1 : List (Effect4.Machine.Waiter Effect4.ClockMillis)) (a.2 : Array (Effect4.Machine.Waiter Effect4.ClockMillis)) : List (Effect4.Machine.Waiter Effect4.ClockMillis) *)
 
-let rec list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0 (l : E4_clock.t waiter list) (a : E4_clock.t waiter) (a_1 : E4_clock.t waiter list) (a_2 : E4_clock.t waiter list) : E4_clock.t waiter list =
+let rec list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0 (l : E4_clock.t waiter list) (a : E4_clock.t waiter) (a_1 : E4_clock.t waiter list) (a_2 : E4_clock.t waiter Lcnf_array.t) : E4_clock.t waiter list =
   match a_1 with
     | [] -> l
     | head_3 :: tail_4 -> (let _x_5 = fun _b1 _b2 -> E4_clock.equal _b1 _b2 in
       let _x_6 = inst_decidable_eq_waiter_dec_eq _x_5 head_3 a in
-      if _x_6 then (let _x_9 = List.length a_2 in
+      if _x_6 then (let _x_9 = Lcnf_array.length a_2 in
         let _x_10 = 0 in
         let _x_11 = _x_10 < _x_9 in
         if _x_11 then (let _x_12 = _x_9 in
           let _x_13 = 0 in
-          array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0_spec_1 a_2 _x_12 _x_13 tail_4) else tail_4) else (let _x_7 = a_2 @ [head_3] in
+          array_foldr_munsafe_fold_at__private_init_data_list_impl_0_list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0_spec_1 a_2 _x_12 _x_13 tail_4) else tail_4) else (let _x_7 = Lcnf_array.push a_2 head_3 in
         list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0 l a tail_4 _x_7))
 
 
@@ -7625,7 +7625,7 @@ let wake_list_wake_by_at_timer_store_fire_next_spec_0 (l : E4_clock.t wake_list)
       match _x_1 with
         | None -> _x_1, l
         | Some val__3 -> (let _x_4 = 0 in
-          let _x_5 = [] in
+          let _x_5 = Lcnf_array.with_capacity _x_4 in
           let _x_6 = list_erase_tr_go_at_wake_list_wake_by_at_timer_store_fire_next_spec_0_spec_0 waiters val__3 waiters _x_5 in
           let _x_7 = 1 in
           let _x_8 = phase + _x_7 in
@@ -9275,7 +9275,7 @@ let program_point_layer_build (p : point) : point =
   let _x_2 = program_point_child p _x_1 in
   match (_x_2 : point) with
     | { path = path; fuel = fuel; tape = tape; completed = completed; root = root; params = params; call = call; _ } -> (match (p : point) with
-        | { env = env; _ } -> (let _x_3 = [] in
+        | { env = env; _ } -> (let _x_3 = Lcnf_array.with_capacity _x_1 in
           let _x_4 = list_take_tr_go env env _x_1 _x_3 in
           ({ path = path; env = _x_4; fuel = fuel; tape = tape; completed = completed; root = root; params = params; call = call } : point)))
 
@@ -10340,7 +10340,7 @@ let program_suspend_body_at (root : native_op eff) (x_1 : eff_thunk) : (eff_name
                                 match _x_62 with
                                   | Some val__63 -> (let _x_64 = program_point_redirect p_6 val__63 in
                                     match (_x_64 : point) with
-                                      | { path = path_1; fuel = fuel_1; tape = tape; completed = completed; root = root_1; _ } -> (let _x_65 = [] in
+                                      | { path = path_1; fuel = fuel_1; tape = tape; completed = completed; root = root_1; _ } -> (let _x_65 = Lcnf_array.with_capacity zero in
                                         let _x_66 = list_take_tr_go env env zero _x_65 in
                                         let _x_67 = [] in
                                         let _x_68 = val__61 :: _x_67 in
@@ -10377,7 +10377,7 @@ let program_suspend_body_at (root : native_op eff) (x_1 : eff_thunk) : (eff_name
                             match _x_102 with
                               | Some val__103 -> (let _x_104 = program_point_redirect p_6 val__103 in
                                 match (_x_104 : point) with
-                                  | { path = path_4; fuel = fuel_3; tape = tape_2; completed = completed_2; root = root_3; _ } -> (let _x_105 = [] in
+                                  | { path = path_4; fuel = fuel_3; tape = tape_2; completed = completed_2; root = root_3; _ } -> (let _x_105 = Lcnf_array.with_capacity zero in
                                     let _x_106 = list_take_tr_go env env zero _x_105 in
                                     let _x_107 = [] in
                                     let _x_108 = val__101 :: _x_107 in
@@ -10488,13 +10488,13 @@ let rec list_map_tr_loop_at_program_ty_product_members_spec_0 (x : ty) (a_1 : ty
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Program.Ty.productMembers.spec_1 (b : Effect4.Program.Ty) (a.1 : List Effect4.Program.Ty) (a.2 : Array Effect4.Program.Ty) : List Effect4.Program.Ty *)
 
-let rec list_flat_map_tr_go_at_program_ty_product_members_spec_1 (b : ty) (a_1 : ty list) (a_2 : ty list) : ty list =
+let rec list_flat_map_tr_go_at_program_ty_product_members_spec_1 (b : ty) (a_1 : ty list) (a_2 : ty Lcnf_array.t) : ty list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (let _x_6 = program_ty_factors b in
       let _x_7 = [] in
       let _x_8 = list_map_tr_loop_at_program_ty_product_members_spec_0 head_4 _x_6 _x_7 in
-      let _x_9 = a_2 @ _x_8 in
+      let _x_9 = Lcnf_array.append_list a_2 _x_8 in
       list_flat_map_tr_go_at_program_ty_product_members_spec_1 b tail_5 _x_9)
 
 
@@ -10504,7 +10504,7 @@ let rec list_flat_map_tr_go_at_program_ty_product_members_spec_1 (b : ty) (a_1 :
 let program_ty_product_members (a : ty) (b : ty) : ty list =
   let _x_1 = program_ty_factors a in
   let _x_2 = 0 in
-  let _x_3 = [] in
+  let _x_3 = Lcnf_array.with_capacity _x_2 in
   list_flat_map_tr_go_at_program_ty_product_members_spec_1 b _x_1 _x_3
 
 
@@ -10797,12 +10797,12 @@ let rec list_zip_with_at_list_zip_spec_0 (x_1 : _ list) (x_2 : _ list) : (_ * _)
 
 (* LCNF mono: _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.zipIdxTR.spec_0._redArg (as : Array lcAny) (i : USize) (stop : USize) (b : Prod Nat (List (Prod lcAny Nat))) : Prod Nat (List (Prod lcAny Nat)) *)
 
-let rec array_foldr_munsafe_fold_at_list_zip_idx_tr_spec_0 (as_ : _ list) (i : int) (stop : int) (b : int * (_ * int) list) : int * (_ * int) list =
+let rec array_foldr_munsafe_fold_at_list_zip_idx_tr_spec_0 (as_ : _ Lcnf_array.t) (i : int) (stop : int) (b : int * (_ * int) list) : int * (_ * int) list =
   let _x_1 = i = stop in
   if _x_1 then b else (match b with
       | fst_2, snd_3 -> (let _x_4 = 1 in
         let _x_5 = max 0 (i - _x_4) in
-        let _x_6 = List.nth as_ _x_5 in
+        let _x_6 = Lcnf_array.get_exn as_ _x_5 in
         let _x_7 = 1 in
         let _x_8 = max 0 (fst_2 - _x_7) in
         let _x_9 = _x_6, _x_8 in
@@ -10815,8 +10815,8 @@ let rec array_foldr_munsafe_fold_at_list_zip_idx_tr_spec_0 (as_ : _ list) (i : i
 (* LCNF mono: List.zipIdxTR._redArg (l : List lcAny) (n : Nat) : List (Prod lcAny Nat) *)
 
 let list_zip_idx_tr (l : _ list) (n : int) : (_ * int) list =
-  let as_ = l in
-  let _x_1 = List.length as_ in
+  let as_ = Lcnf_array.of_list l in
+  let _x_1 = Lcnf_array.length as_ in
   let _x_2 = [] in
   let _x_3 = 0 in
   let _x_4 = _x_3 < _x_1 in
@@ -11152,14 +11152,14 @@ and list_all_at_program_ty_sub_spec_2 (name_1 : string) (x_2 : ((ty * int) * (ty
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Program.Ty.key.spec_0 (a.1 : List Effect4.ServiceKey) (a.2 : Array Nat) : List Nat *)
 
-let rec list_flat_map_tr_go_at_program_ty_key_spec_0 (a_1 : service_key list) (a_2 : int list) : int list =
+let rec list_flat_map_tr_go_at_program_ty_key_spec_0 (a_1 : service_key list) (a_2 : int Lcnf_array.t) : int list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match (head_4 : service_key) with
         | { name = name; service = service } -> (let _x_6 = [] in
           let _x_7 = service :: _x_6 in
           let _x_8 = name :: _x_7 in
-          let _x_9 = a_2 @ _x_8 in
+          let _x_9 = Lcnf_array.append_list a_2 _x_8 in
           list_flat_map_tr_go_at_program_ty_key_spec_0 tail_5 _x_9))
 
 
@@ -11289,7 +11289,7 @@ let rec program_ty_key (x_1 : ty) : int list =
       _x_141 :: _x_142)
     | Ty_contextOf keys_144 -> (let _x_145 = 28 in
       let _x_146 = 0 in
-      let _x_147 = [] in
+      let _x_147 = Lcnf_array.with_capacity _x_146 in
       let _x_148 = list_flat_map_tr_go_at_program_ty_key_spec_0 keys_144 _x_147 in
       _x_145 :: _x_148)
 
@@ -12635,10 +12635,10 @@ let rec list_map_tr_loop_at_dispatcher_drain_spec_0 (a_1 : (_, _, _, _, _, _, _,
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Machine.Dispatcher.drain.spec_1._redArg (a.1 : List (List (Effect4.Machine.Task lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny))) (a.2 : Array (Effect4.Machine.Task lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) : List (Effect4.Machine.Task lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) *)
 
-let rec list_flat_map_tr_go_at_dispatcher_drain_spec_1 (a_1 : (_, _, _, _, _, _, _, _) task list list) (a_2 : (_, _, _, _, _, _, _, _) task list) : (_, _, _, _, _, _, _, _) task list =
+let rec list_flat_map_tr_go_at_dispatcher_drain_spec_1 (a_1 : (_, _, _, _, _, _, _, _) task list list) (a_2 : (_, _, _, _, _, _, _, _) task Lcnf_array.t) : (_, _, _, _, _, _, _, _) task list =
   match a_1 with
-    | [] -> a_2
-    | head_4 :: tail_5 -> (let _x_6 = a_2 @ head_4 in
+    | [] -> Lcnf_array.to_list a_2
+    | head_4 :: tail_5 -> (let _x_6 = Lcnf_array.append_list a_2 head_4 in
       list_flat_map_tr_go_at_dispatcher_drain_spec_1 tail_5 _x_6)
 
 
@@ -12649,7 +12649,7 @@ let dispatcher_drain (d : (_, _, _, _, _, _, _, _) bucket list) : (_, _, _, _, _
   let _x_1 = [] in
   let _x_2 = list_map_tr_loop_at_dispatcher_drain_spec_0 d _x_1 in
   let _x_3 = 0 in
-  let _x_4 = [] in
+  let _x_4 = Lcnf_array.with_capacity _x_3 in
   let _x_5 = list_flat_map_tr_go_at_dispatcher_drain_spec_1 _x_2 _x_4 in
   _x_5, _x_1
 
@@ -12814,14 +12814,14 @@ let inject_yield_at_iteration_at_drive_step_at_drive_state_at_step_decision_stat
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Machine.RunMachine.completedExits.spec_0._redArg (a.1 : List (Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (a.2 : Array (Prod Nat (Effect4.Exit lcAny lcAny lcAny lcAny lcAny))) : List (Prod Nat (Effect4.Exit lcAny lcAny lcAny lcAny lcAny)) *)
 
-let rec list_filter_map_tr_go_at_run_machine_completed_exits_spec_0 (a_1 : (_, _, _, _, _, _, _, _, _, _) run_fiber list) (a_2 : (int * (_, _, _, _, _) exit_) list) : (int * (_, _, _, _, _) exit_) list =
+let rec list_filter_map_tr_go_at_run_machine_completed_exits_spec_0 (a_1 : (_, _, _, _, _, _, _, _, _, _) run_fiber list) (a_2 : (int * (_, _, _, _, _) exit_) Lcnf_array.t) : (int * (_, _, _, _, _) exit_) list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match (head_4 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
         | { id = id; exit_ = exit_; _ } -> (match exit_ with
             | None -> list_filter_map_tr_go_at_run_machine_completed_exits_spec_0 tail_5 a_2
             | Some val__7 -> (let _x_8 = id, val__7 in
-              let _x_9 = a_2 @ [_x_8] in
+              let _x_9 = Lcnf_array.push a_2 _x_8 in
               list_filter_map_tr_go_at_run_machine_completed_exits_spec_0 tail_5 _x_9)))
 
 
@@ -12831,7 +12831,7 @@ let rec list_filter_map_tr_go_at_run_machine_completed_exits_spec_0 (a_1 : (_, _
 let run_machine_completed_exits (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) : (int * (_, _, _, _, _) exit_) list =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; _ } -> (let _x_1 = 0 in
-      let _x_2 = [] in
+      let _x_2 = Lcnf_array.with_capacity _x_1 in
       list_filter_map_tr_go_at_run_machine_completed_exits_spec_0 fibers _x_2)
 
 
@@ -16689,14 +16689,14 @@ let api_is_compile_frontier (x_1 : (eff_name, eff_thunk, val_, err, defect, int,
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Api.compileReasons.spec_0 (a.1 : List (Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (a.2 : Array Effect4.Api.FrontierReason) : List Effect4.Api.FrontierReason *)
 
-let rec list_filter_map_tr_go_at_api_compile_reasons_spec_0 (a_1 : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber list) (a_2 : frontier_reason list) : frontier_reason list =
+let rec list_filter_map_tr_go_at_api_compile_reasons_spec_0 (a_1 : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber list) (a_2 : frontier_reason Lcnf_array.t) : frontier_reason list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match (head_4 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
         | { id = id; frame = frame; _ } -> (match (frame : (_, _, _, _, _, _, _) frame_fiber) with
             | { current = current; _ } -> (let _x_6 = api_is_compile_frontier current in
               if _x_6 then (let _x_8 = FrontierReason_compileFuel id in
-                let _x_9 = a_2 @ [_x_8] in
+                let _x_9 = Lcnf_array.push a_2 _x_8 in
                 list_filter_map_tr_go_at_api_compile_reasons_spec_0 tail_5 _x_9) else list_filter_map_tr_go_at_api_compile_reasons_spec_0 tail_5 a_2)))
 
 
@@ -16706,7 +16706,7 @@ let rec list_filter_map_tr_go_at_api_compile_reasons_spec_0 (a_1 : (eff_name, ef
 let api_compile_reasons (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) : frontier_reason list =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; _ } -> (let _x_1 = 0 in
-      let _x_2 = [] in
+      let _x_2 = Lcnf_array.with_capacity _x_1 in
       list_filter_map_tr_go_at_api_compile_reasons_spec_0 fibers _x_2)
 
 
@@ -16732,9 +16732,9 @@ let program_request_of (m : (eff_name, eff_thunk, val_, err, defect, int, unit, 
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.awaits.spec_0 (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (a.1 : List (Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (a.2 : Array Effect4.Program.Await) : List Effect4.Program.Await *)
 
-let rec list_filter_map_tr_go_at_program_awaits_spec_0 (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (a_1 : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber list) (a_2 : await list) : await list =
+let rec list_filter_map_tr_go_at_program_awaits_spec_0 (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (a_1 : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber list) (a_2 : await Lcnf_array.t) : await list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match (head_4 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
         | { id = id; parked = parked; _ } -> (match (parked : parked) with
             | Parked_notParked -> list_filter_map_tr_go_at_program_awaits_spec_0 m tail_5 a_2
@@ -16743,7 +16743,7 @@ let rec list_filter_map_tr_go_at_program_awaits_spec_0 (m : (eff_name, eff_thunk
                 | None -> list_filter_map_tr_go_at_program_awaits_spec_0 m tail_5 a_2
                 | Some val__10 -> (match val__10 with
                     | fst_11, snd_12 -> (let _x_13 = ({ fiber = id; token = token_7; op = fst_11; request = snd_12 } : await) in
-                      let _x_14 = a_2 @ [_x_13] in
+                      let _x_14 = Lcnf_array.push a_2 _x_13 in
                       list_filter_map_tr_go_at_program_awaits_spec_0 m tail_5 _x_14)))))
 
 
@@ -16753,7 +16753,7 @@ let rec list_filter_map_tr_go_at_program_awaits_spec_0 (m : (eff_name, eff_thunk
 let program_awaits (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) : await list =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; _ } -> (let _x_1 = 0 in
-      let _x_2 = [] in
+      let _x_2 = Lcnf_array.with_capacity _x_1 in
       list_filter_map_tr_go_at_program_awaits_spec_0 m fibers _x_2)
 
 
@@ -19668,13 +19668,13 @@ and program_bounds_cands_args (v : variance) (name : string) (k : int) (template
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Program.Bounds.candsList.spec_0 (a.1 : List (Prod Effect4.Program.Ty Effect4.Program.Ty)) (a.2 : Array (Prod Nat (Prod Effect4.Program.Ty.Variance Effect4.Program.Ty))) : List (Prod Nat (Prod Effect4.Program.Ty.Variance Effect4.Program.Ty)) *)
 
-let rec list_flat_map_tr_go_at_program_bounds_cands_list_spec_0 (a_1 : (ty * ty) list) (a_2 : (int * (variance * ty)) list) : (int * (variance * ty)) list =
+let rec list_flat_map_tr_go_at_program_bounds_cands_list_spec_0 (a_1 : (ty * ty) list) (a_2 : (int * (variance * ty)) Lcnf_array.t) : (int * (variance * ty)) list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, snd_1 -> (let _x_6 = Variance_co in
           let _x_7 = program_bounds_cands _x_6 fst_1 snd_1 in
-          let _x_8 = a_2 @ _x_7 in
+          let _x_8 = Lcnf_array.append_list a_2 _x_7 in
           list_flat_map_tr_go_at_program_bounds_cands_list_spec_0 tail_5 _x_8))
 
 
@@ -19684,7 +19684,7 @@ let rec list_flat_map_tr_go_at_program_bounds_cands_list_spec_0 (a_1 : (ty * ty)
 let program_bounds_cands_list (params : ty list) (requests : ty list) : (int * (variance * ty)) list =
   let _x_1 = list_zip_with_at_list_zip_spec_0 params requests in
   let _x_2 = 0 in
-  let _x_3 = [] in
+  let _x_3 = Lcnf_array.with_capacity _x_2 in
   list_flat_map_tr_go_at_program_bounds_cands_list_spec_0 _x_1 _x_3
 
 
@@ -19721,15 +19721,15 @@ let rec list_lookup_at_program_bounds_solve_spec_0 (x_1 : int) (x_2 : (int * _) 
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.Bounds.lowers.spec_0 (i : Nat) (a.1 : List (Prod Nat (Prod Effect4.Program.Ty.Variance Effect4.Program.Ty))) (a.2 : Array Effect4.Program.Ty) : List Effect4.Program.Ty *)
 
-let rec list_filter_map_tr_go_at_program_bounds_lowers_spec_0 (i : int) (a_1 : (int * (variance * ty)) list) (a_2 : ty list) : ty list =
+let rec list_filter_map_tr_go_at_program_bounds_lowers_spec_0 (i : int) (a_1 : (int * (variance * ty)) list) (a_2 : ty Lcnf_array.t) : ty list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, snd_1 -> (let _x_6 = fst_1 = i in
           if _x_6 then (match snd_1 with
               | fst_2, snd_2 -> (let _x_8 = Variance_contra in
                 let _x_9 = program_ty_inst_decidable_eq_variance fst_2 _x_8 in
-                if _x_9 then list_filter_map_tr_go_at_program_bounds_lowers_spec_0 i tail_5 a_2 else if _x_6 then (let _x_11 = a_2 @ [snd_2] in
+                if _x_9 then list_filter_map_tr_go_at_program_bounds_lowers_spec_0 i tail_5 a_2 else if _x_6 then (let _x_11 = Lcnf_array.push a_2 snd_2 in
                     list_filter_map_tr_go_at_program_bounds_lowers_spec_0 i tail_5 _x_11) else list_filter_map_tr_go_at_program_bounds_lowers_spec_0 i tail_5 a_2)) else list_filter_map_tr_go_at_program_bounds_lowers_spec_0 i tail_5 a_2))
 
 
@@ -19738,7 +19738,7 @@ let rec list_filter_map_tr_go_at_program_bounds_lowers_spec_0 (i : int) (a_1 : (
 
 let program_bounds_lowers (cs : (int * (variance * ty)) list) (i : int) : ty list =
   let _x_1 = 0 in
-  let _x_2 = [] in
+  let _x_2 = Lcnf_array.with_capacity _x_1 in
   list_filter_map_tr_go_at_program_bounds_lowers_spec_0 i cs _x_2
 
 
@@ -19765,9 +19765,9 @@ let rec program_bounds_join_cands (x_1 : ty list) : ty =
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.Bounds.solve.spec_1 (seed : List (Prod Nat Effect4.Program.Ty)) (cs : List (Prod Nat (Prod Effect4.Program.Ty.Variance Effect4.Program.Ty))) (a.1 : List (Prod Nat (Prod Effect4.Program.Ty.Variance Effect4.Program.Ty))) (a.2 : Array (Prod Nat Effect4.Program.Ty)) : List (Prod Nat Effect4.Program.Ty) *)
 
-let rec list_filter_map_tr_go_at_program_bounds_solve_spec_1 (seed : (int * ty) list) (cs : (int * (variance * ty)) list) (a_1 : (int * (variance * ty)) list) (a_2 : (int * ty) list) : (int * ty) list =
+let rec list_filter_map_tr_go_at_program_bounds_solve_spec_1 (seed : (int * ty) list) (cs : (int * (variance * ty)) list) (a_1 : (int * (variance * ty)) list) (a_2 : (int * ty) Lcnf_array.t) : (int * ty) list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, snd_1 -> (match snd_1 with
             | fst_2, _ -> (let _x_6 = Variance_contra in
@@ -19777,7 +19777,7 @@ let rec list_filter_map_tr_go_at_program_bounds_solve_spec_1 (seed : (int * ty) 
                   | None -> (let _x_9 = program_bounds_lowers cs fst_1 in
                     let _x_10 = program_bounds_join_cands _x_9 in
                     let _x_11 = fst_1, _x_10 in
-                    let _x_12 = a_2 @ [_x_11] in
+                    let _x_12 = Lcnf_array.push a_2 _x_11 in
                     list_filter_map_tr_go_at_program_bounds_solve_spec_1 seed cs tail_5 _x_12)
                   | Some _ -> list_filter_map_tr_go_at_program_bounds_solve_spec_1 seed cs tail_5 a_2))))
 
@@ -19787,7 +19787,7 @@ let rec list_filter_map_tr_go_at_program_bounds_solve_spec_1 (seed : (int * ty) 
 
 let program_bounds_solve (seed : (int * ty) list) (cs : (int * (variance * ty)) list) : (int * ty) list =
   let _x_1 = 0 in
-  let _x_2 = [] in
+  let _x_2 = Lcnf_array.with_capacity _x_1 in
   let _x_3 = list_filter_map_tr_go_at_program_bounds_solve_spec_1 seed cs cs _x_2 in
   seed @ _x_3
 
@@ -20771,25 +20771,25 @@ let rec store_utf8_chars (x_1 : int) (x_2 : int list) : int list option =
 
 (* LCNF mono: ByteArray.empty : ByteArray *)
 
-let byte_array_empty : int list =
+let byte_array_empty : int Lcnf_array.t =
   let _x_1 = 0 in
-  []
+  Lcnf_array.with_capacity _x_1
 
 
 
 (* LCNF mono: List.toByteArray.loop (x.1 : List UInt8) (x.2 : ByteArray) : ByteArray *)
 
-let rec list_to_byte_array_loop (x_1 : int list) (x_2 : int list) : int list =
+let rec list_to_byte_array_loop (x_1 : int list) (x_2 : int Lcnf_array.t) : int Lcnf_array.t =
   match x_1 with
     | [] -> x_2
-    | head_3 :: tail_4 -> (let _x_5 = x_2 @ [head_3] in
+    | head_3 :: tail_4 -> (let _x_5 = Lcnf_array.push x_2 head_3 in
       list_to_byte_array_loop tail_4 _x_5)
 
 
 
 (* LCNF mono: List.toByteArray (bs : List UInt8) : ByteArray *)
 
-let list_to_byte_array (bs : int list) : int list =
+let list_to_byte_array (bs : int list) : int Lcnf_array.t =
   let _x_1 = byte_array_empty in
   list_to_byte_array_loop bs _x_1
 
@@ -20820,7 +20820,7 @@ let program_row_key_namespace_opt (row : row) : (service_key * string) option =
                 if _x_6 then (let _x_8 = type_args = [] in
                   if _x_8 then (let _x_10 = Lcnf_string.utf8_bytes spelling in
                     let _x_11 = _x_10 in
-                    let _x_12 = _x_11 in
+                    let _x_12 = Lcnf_array.to_list _x_11 in
                     let _x_13 = program_split_dot _x_12 in
                     match _x_13 with
                       | None -> None
@@ -20837,13 +20837,13 @@ let program_row_key_namespace_opt (row : row) : (service_key * string) option =
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.rowKeyNames.spec_0 (a.1 : List Effect4.Program.Row) (a.2 : Array (Prod Effect4.ServiceKey String)) : List (Prod Effect4.ServiceKey String) *)
 
-let rec list_filter_map_tr_go_at_program_row_key_names_spec_0 (a_1 : row list) (a_2 : (service_key * string) list) : (service_key * string) list =
+let rec list_filter_map_tr_go_at_program_row_key_names_spec_0 (a_1 : row list) (a_2 : (service_key * string) Lcnf_array.t) : (service_key * string) list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (let _x_6 = program_row_key_namespace_opt head_4 in
       match _x_6 with
         | None -> list_filter_map_tr_go_at_program_row_key_names_spec_0 tail_5 a_2
-        | Some val__8 -> (let _x_9 = a_2 @ [val__8] in
+        | Some val__8 -> (let _x_9 = Lcnf_array.push a_2 val__8 in
           list_filter_map_tr_go_at_program_row_key_names_spec_0 tail_5 _x_9))
 
 
@@ -20900,7 +20900,7 @@ let list_erase_dups_at_program_row_key_names_spec_1 (as_ : (service_key * string
 
 let program_row_key_names (table : row list) : (service_key * string) list =
   let _x_1 = 0 in
-  let _x_2 = [] in
+  let _x_2 = Lcnf_array.with_capacity _x_1 in
   let _x_3 = list_filter_map_tr_go_at_program_row_key_names_spec_0 table _x_2 in
   list_erase_dups_at_program_row_key_names_spec_1 _x_3
 
@@ -22290,11 +22290,12 @@ let rec list_map_tr_loop_at__private_init_data_repr_0_nat_repr_array_spec_0 (a_1
 
 (* LCNF mono: _private.Init.Data.Repr.0.Nat.reprArray : Array String *)
 
-let nat_repr_array : string list =
+let nat_repr_array : string Lcnf_array.t =
   let _x_1 = 128 in
   let _x_2 = list_range _x_1 in
   let _x_3 = [] in
-  list_map_tr_loop_at__private_init_data_repr_0_nat_repr_array_spec_0 _x_2 _x_3
+  let _x_4 = list_map_tr_loop_at__private_init_data_repr_0_nat_repr_array_spec_0 _x_2 _x_3 in
+  Lcnf_array.of_list _x_4
 
 
 
@@ -22375,9 +22376,9 @@ let nat_to_digits (base : int) (n : int) : int list =
 
 let nat_repr_fast (n : int) : string =
   let _x_1 = nat_repr_array in
-  let _x_2 = List.length _x_1 in
+  let _x_2 = Lcnf_array.length _x_1 in
   let _x_3 = n < _x_2 in
-  if _x_3 then List.nth _x_1 n else (let _x_4 = 2 in
+  if _x_3 then Lcnf_array.get_exn _x_1 n else (let _x_4 = 2 in
     let _x_5 = system_platform_num_bits in
     let _x_6 = Lcnf_nat.pow _x_4 _x_5 in
     let _x_7 = n < _x_6 in
@@ -22660,13 +22661,13 @@ let program_union_rule_lift_at_program_union_rule_lift_in_at_program_record_fiel
 let rec program_ty_head_members (decls : (string * ty) list) (seen : string list) (t : ty) : ty list =
   let _x_1 = program_ty_members t in
   let _x_2 = 0 in
-  let _x_3 = [] in
+  let _x_3 = Lcnf_array.with_capacity _x_2 in
   list_flat_map_tr_go_at_program_ty_head_members_spec_1 decls seen _x_1 _x_3
 
-and list_flat_map_tr_go_at_program_ty_head_members_spec_1 (decls : (string * ty) list) (seen : string list) (a_1 : ty list) (a_2 : ty list) : ty list =
+and list_flat_map_tr_go_at_program_ty_head_members_spec_1 (decls : (string * ty) list) (seen : string list) (a_1 : ty list) (a_2 : ty Lcnf_array.t) : ty list =
   match a_1 with
-    | [] -> a_2
-    | head_4 :: tail_5 -> (let[@local always] _jp_6 = fun _y_7 -> let _x_8 = a_2 @ _y_7 in
+    | [] -> Lcnf_array.to_list a_2
+    | head_4 :: tail_5 -> (let[@local always] _jp_6 = fun _y_7 -> let _x_8 = Lcnf_array.append_list a_2 _y_7 in
       list_flat_map_tr_go_at_program_ty_head_members_spec_1 decls seen tail_5 _x_8 in
       let _x_10 = program_ty_decls_unfold_opt decls head_4 in
       match _x_10 with
@@ -23133,11 +23134,11 @@ let program_term_refusal_algebra__lam_6 (infer_args : ty list -> bool -> terms -
 
 (* LCNF mono: _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.foldrTR._at_.Effect4.Program.TermRefusal.readField.spec_0.spec_0 (name : String) (mode : Effect4.Program.FieldReadMode) (as : Array Effect4.Program.Ty) (i : USize) (stop : USize) (b : Option Effect4.Program.RecordTypingReason) : Option Effect4.Program.RecordTypingReason *)
 
-let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_read_field_spec_0_spec_0 (name : string) (mode : field_read_mode) (as_ : ty list) (i : int) (stop : int) (b : record_typing_reason option) : record_typing_reason option =
+let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_read_field_spec_0_spec_0 (name : string) (mode : field_read_mode) (as_ : ty Lcnf_array.t) (i : int) (stop : int) (b : record_typing_reason option) : record_typing_reason option =
   let _x_1 = i = stop in
   if _x_1 then b else (let _x_2 = 1 in
     let _x_3 = max 0 (i - _x_2) in
-    let _x_4 = List.nth as_ _x_3 in
+    let _x_4 = Lcnf_array.get_exn as_ _x_3 in
     match (_x_4 : ty) with
       | Ty_record fields_5 -> (let _x_6 = field_first_of name fields_5 in
         match _x_6 with
@@ -23158,8 +23159,8 @@ let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_read_f
 (* LCNF mono: List.foldrTR._at_.Effect4.Program.TermRefusal.readField.spec_0 (name : String) (mode : Effect4.Program.FieldReadMode) (init : Option Effect4.Program.RecordTypingReason) (l : List Effect4.Program.Ty) : Option Effect4.Program.RecordTypingReason *)
 
 let list_foldr_tr_at_program_term_refusal_read_field_spec_0 (name : string) (mode : field_read_mode) (init : record_typing_reason option) (l : ty list) : record_typing_reason option =
-  let _x_1 = l in
-  let _x_2 = List.length _x_1 in
+  let _x_1 = Lcnf_array.of_list l in
+  let _x_2 = Lcnf_array.length _x_1 in
   let _x_3 = 0 in
   let _x_4 = _x_3 < _x_2 in
   if _x_4 then (let _x_5 = _x_2 in
@@ -23243,11 +23244,11 @@ let program_term_refusal_algebra__lam_10 (infer : ty list -> bool -> term -> ty 
 
 (* LCNF mono: _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.foldrTR._at_.Effect4.Program.TermRefusal.tupleIndex.spec_0.spec_0 (index : Nat) (as : Array Effect4.Program.Ty) (i : USize) (stop : USize) (b : Option Effect4.Program.TupleTypingReason) : Option Effect4.Program.TupleTypingReason *)
 
-let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_tuple_index_spec_0_spec_0 (index : int) (as_ : ty list) (i : int) (stop : int) (b : tuple_typing_reason option) : tuple_typing_reason option =
+let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_tuple_index_spec_0_spec_0 (index : int) (as_ : ty Lcnf_array.t) (i : int) (stop : int) (b : tuple_typing_reason option) : tuple_typing_reason option =
   let _x_1 = i = stop in
   if _x_1 then b else (let _x_2 = 1 in
     let _x_3 = max 0 (i - _x_2) in
-    let _x_4 = List.nth as_ _x_3 in
+    let _x_4 = Lcnf_array.get_exn as_ _x_3 in
     let _x_5 = program_tuple_project index _x_4 in
     match _x_5 with
       | None -> (match (_x_4 : ty) with
@@ -23269,8 +23270,8 @@ let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_tuple_
 (* LCNF mono: List.foldrTR._at_.Effect4.Program.TermRefusal.tupleIndex.spec_0 (index : Nat) (init : Option Effect4.Program.TupleTypingReason) (l : List Effect4.Program.Ty) : Option Effect4.Program.TupleTypingReason *)
 
 let list_foldr_tr_at_program_term_refusal_tuple_index_spec_0 (index : int) (init : tuple_typing_reason option) (l : ty list) : tuple_typing_reason option =
-  let _x_1 = l in
-  let _x_2 = List.length _x_1 in
+  let _x_1 = Lcnf_array.of_list l in
+  let _x_2 = Lcnf_array.length _x_1 in
   let _x_3 = 0 in
   let _x_4 = _x_3 < _x_2 in
   if _x_4 then (let _x_5 = _x_2 in
@@ -24734,13 +24735,13 @@ let program_ty_payload_of (tag : string) (x_1 : ty) : ty option =
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.Ty.payloadTy.spec_0 (tag : String) (a.1 : List Effect4.Program.Ty) (a.2 : Array Effect4.Program.Ty) : List Effect4.Program.Ty *)
 
-let rec list_filter_map_tr_go_at_program_ty_payload_ty_spec_0 (tag : string) (a_1 : ty list) (a_2 : ty list) : ty list =
+let rec list_filter_map_tr_go_at_program_ty_payload_ty_spec_0 (tag : string) (a_1 : ty list) (a_2 : ty Lcnf_array.t) : ty list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (let _x_6 = program_ty_payload_of tag head_4 in
       match _x_6 with
         | None -> list_filter_map_tr_go_at_program_ty_payload_ty_spec_0 tag tail_5 a_2
-        | Some val__8 -> (let _x_9 = a_2 @ [val__8] in
+        | Some val__8 -> (let _x_9 = Lcnf_array.push a_2 val__8 in
           list_filter_map_tr_go_at_program_ty_payload_ty_spec_0 tag tail_5 _x_9))
 
 
@@ -24750,7 +24751,7 @@ let rec list_filter_map_tr_go_at_program_ty_payload_ty_spec_0 (tag : string) (a_
 let program_ty_payload_ty (tag : string) (t : ty) : ty option =
   let _x_1 = program_ty_members t in
   let _x_2 = 0 in
-  let _x_3 = [] in
+  let _x_3 = Lcnf_array.with_capacity _x_2 in
   let _x_4 = list_filter_map_tr_go_at_program_ty_payload_ty_spec_0 tag _x_1 _x_3 in
   match _x_4 with
     | [] -> None
@@ -26696,11 +26697,11 @@ let program_internal_handle_scan__lam_10 (x_1 : int) (x_2 : string list) : strin
 
 (* LCNF mono: _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.foldrTR._at_.Effect4.Program.internalHandleScan.spec_0.spec_0 (pos : List String) (as : Array (Prod String (Prod Bool ((List String) -> (Option (List String)))))) (i : USize) (stop : USize) (b : Option (List String)) : Option (List String) *)
 
-let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_internal_handle_scan_spec_0_spec_0 (pos : string list) (as_ : (string * (bool * (string list -> string list option))) list) (i : int) (stop : int) (b : string list option) : string list option =
+let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_internal_handle_scan_spec_0_spec_0 (pos : string list) (as_ : (string * (bool * (string list -> string list option))) Lcnf_array.t) (i : int) (stop : int) (b : string list option) : string list option =
   let _x_1 = i = stop in
   if _x_1 then b else (let _x_2 = 1 in
     let _x_3 = max 0 (i - _x_2) in
-    let _x_4 = List.nth as_ _x_3 in
+    let _x_4 = Lcnf_array.get_exn as_ _x_3 in
     match _x_4 with
       | fst_1, snd_1 -> (match snd_1 with
           | _, snd_2 -> (let _x_5 = [] in
@@ -26716,8 +26717,8 @@ let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_internal_handle_sca
 (* LCNF mono: List.foldrTR._at_.Effect4.Program.internalHandleScan.spec_0 (pos : List String) (init : Option (List String)) (l : List (Prod String (Prod Bool ((List String) -> (Option (List String)))))) : Option (List String) *)
 
 let list_foldr_tr_at_program_internal_handle_scan_spec_0 (pos : string list) (init : string list option) (l : (string * (bool * (string list -> string list option))) list) : string list option =
-  let _x_1 = l in
-  let _x_2 = List.length _x_1 in
+  let _x_1 = Lcnf_array.of_list l in
+  let _x_2 = Lcnf_array.length _x_1 in
   let _x_3 = 0 in
   let _x_4 = _x_3 < _x_2 in
   if _x_4 then (let _x_5 = _x_2 in
@@ -26753,11 +26754,11 @@ let program_internal_handle_scan__lam_12 (key : string list -> string list optio
 
 (* LCNF mono: _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.foldrTR._at_.Effect4.Program.internalHandleScan.spec_1.spec_2 (pos : List String) (as : Array (Prod ((List String) -> (Option (List String))) Nat)) (i : USize) (stop : USize) (b : Option (List String)) : Option (List String) *)
 
-let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_internal_handle_scan_spec_1_spec_2 (pos : string list) (as_ : ((string list -> string list option) * int) list) (i : int) (stop : int) (b : string list option) : string list option =
+let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_internal_handle_scan_spec_1_spec_2 (pos : string list) (as_ : ((string list -> string list option) * int) Lcnf_array.t) (i : int) (stop : int) (b : string list option) : string list option =
   let _x_1 = i = stop in
   if _x_1 then b else (let _x_2 = 1 in
     let _x_3 = max 0 (i - _x_2) in
-    let _x_4 = List.nth as_ _x_3 in
+    let _x_4 = Lcnf_array.get_exn as_ _x_3 in
     match _x_4 with
       | fst_1, snd_1 -> (let _x_5 = nat_repr_fast snd_1 in
         let _x_6 = [] in
@@ -26773,8 +26774,8 @@ let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_internal_handle_sca
 (* LCNF mono: List.foldrTR._at_.Effect4.Program.internalHandleScan.spec_1 (pos : List String) (init : Option (List String)) (l : List (Prod ((List String) -> (Option (List String))) Nat)) : Option (List String) *)
 
 let list_foldr_tr_at_program_internal_handle_scan_spec_1 (pos : string list) (init : string list option) (l : ((string list -> string list option) * int) list) : string list option =
-  let _x_1 = l in
-  let _x_2 = List.length _x_1 in
+  let _x_1 = Lcnf_array.of_list l in
+  let _x_2 = Lcnf_array.length _x_1 in
   let _x_3 = 0 in
   let _x_4 = _x_3 < _x_2 in
   if _x_4 then (let _x_5 = _x_2 in
@@ -27436,10 +27437,10 @@ let rec list_map_tr_loop_at_program_applied_alg_spec_1 (a_1 : (string * (bool * 
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Program.appliedAlg.spec_0 (a.1 : List (List String)) (a.2 : Array String) : List String *)
 
-let rec list_flat_map_tr_go_at_program_applied_alg_spec_0 (a_1 : string list list) (a_2 : string list) : string list =
+let rec list_flat_map_tr_go_at_program_applied_alg_spec_0 (a_1 : string list list) (a_2 : string Lcnf_array.t) : string list =
   match a_1 with
-    | [] -> a_2
-    | head_4 :: tail_5 -> (let _x_6 = a_2 @ head_4 in
+    | [] -> Lcnf_array.to_list a_2
+    | head_4 :: tail_5 -> (let _x_6 = Lcnf_array.append_list a_2 head_4 in
       list_flat_map_tr_go_at_program_applied_alg_spec_0 tail_5 _x_6)
 
 
@@ -27450,7 +27451,7 @@ let program_applied_alg__lam_1 (fs : (string * (bool * string list)) list) : str
   let _x_1 = [] in
   let _x_2 = list_map_tr_loop_at_program_applied_alg_spec_1 fs _x_1 in
   let _x_3 = 0 in
-  let _x_4 = [] in
+  let _x_4 = Lcnf_array.with_capacity _x_3 in
   list_flat_map_tr_go_at_program_applied_alg_spec_0 _x_2 _x_4
 
 
@@ -27459,7 +27460,7 @@ let program_applied_alg__lam_1 (fs : (string * (bool * string list)) list) : str
 
 let program_applied_alg__lam_2 (ms : string list list) : string list =
   let _x_1 = 0 in
-  let _x_2 = [] in
+  let _x_2 = Lcnf_array.with_capacity _x_1 in
   list_flat_map_tr_go_at_program_applied_alg_spec_0 ms _x_2
 
 
@@ -27482,7 +27483,7 @@ let program_applied_alg__lam_4 (_x_1 : string list) (x_2 : int) : string list =
 
 let program_applied_alg__lam_5 (_x_1 : string list) (n : string) (args : string list list) : string list =
   let[@local always] _jp_2 = fun _y_3 -> let _x_4 = 0 in
-  let _x_5 = [] in
+  let _x_5 = Lcnf_array.with_capacity _x_4 in
   let _x_6 = list_flat_map_tr_go_at_program_applied_alg_spec_0 args _x_5 in
   _y_3 @ _x_6 in
   let _x_8 = args = [] in
@@ -27556,10 +27557,10 @@ let rec list_map_tr_loop_at_program_spelled_alg_spec_1 (a_1 : (string * (bool * 
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Program.spelledAlg.spec_0 (a.1 : List (List (Prod Bool String))) (a.2 : Array (Prod Bool String)) : List (Prod Bool String) *)
 
-let rec list_flat_map_tr_go_at_program_spelled_alg_spec_0 (a_1 : (bool * string) list list) (a_2 : (bool * string) list) : (bool * string) list =
+let rec list_flat_map_tr_go_at_program_spelled_alg_spec_0 (a_1 : (bool * string) list list) (a_2 : (bool * string) Lcnf_array.t) : (bool * string) list =
   match a_1 with
-    | [] -> a_2
-    | head_4 :: tail_5 -> (let _x_6 = a_2 @ head_4 in
+    | [] -> Lcnf_array.to_list a_2
+    | head_4 :: tail_5 -> (let _x_6 = Lcnf_array.append_list a_2 head_4 in
       list_flat_map_tr_go_at_program_spelled_alg_spec_0 tail_5 _x_6)
 
 
@@ -27570,7 +27571,7 @@ let program_spelled_alg__lam_1 (fs : (string * (bool * (bool * string) list)) li
   let _x_1 = [] in
   let _x_2 = list_map_tr_loop_at_program_spelled_alg_spec_1 fs _x_1 in
   let _x_3 = 0 in
-  let _x_4 = [] in
+  let _x_4 = Lcnf_array.with_capacity _x_3 in
   list_flat_map_tr_go_at_program_spelled_alg_spec_0 _x_2 _x_4
 
 
@@ -27579,7 +27580,7 @@ let program_spelled_alg__lam_1 (fs : (string * (bool * (bool * string) list)) li
 
 let program_spelled_alg__lam_2 (ms : (bool * string) list list) : (bool * string) list =
   let _x_1 = 0 in
-  let _x_2 = [] in
+  let _x_2 = Lcnf_array.with_capacity _x_1 in
   list_flat_map_tr_go_at_program_spelled_alg_spec_0 ms _x_2
 
 
@@ -27611,7 +27612,7 @@ let program_spelled_alg__lam_5 (_x_1 : (bool * string) list) (x_2 : int) : (bool
 
 let program_spelled_alg__lam_6 (_x_1 : (bool * string) list) (n : string) (args : (bool * string) list list) : (bool * string) list =
   let[@local always] _jp_2 = fun _y_3 -> let _x_4 = 0 in
-  let _x_5 = [] in
+  let _x_5 = Lcnf_array.with_capacity _x_4 in
   let _x_6 = list_flat_map_tr_go_at_program_spelled_alg_spec_0 args _x_5 in
   _y_3 @ _x_6 in
   let _x_8 = args = [] in
@@ -27781,14 +27782,14 @@ let rec program_first_conflict (x_1 : (string * ty) list) : string option =
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.TyDecls.headNames.spec_0 (decls : List (Prod String Effect4.Program.Ty)) (a.1 : List Effect4.Program.Ty) (a.2 : Array String) : List String *)
 
-let rec list_filter_map_tr_go_at_program_ty_decls_head_names_spec_0 (decls : (string * ty) list) (a_1 : ty list) (a_2 : string list) : string list =
+let rec list_filter_map_tr_go_at_program_ty_decls_head_names_spec_0 (decls : (string * ty) list) (a_1 : ty list) (a_2 : string Lcnf_array.t) : string list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (let _x_6 = program_ty_decls_unfold_opt decls head_4 in
       match _x_6 with
         | None -> list_filter_map_tr_go_at_program_ty_decls_head_names_spec_0 decls tail_5 a_2
         | Some val__8 -> (match val__8 with
-            | fst_1, _ -> (let _x_9 = a_2 @ [fst_1] in
+            | fst_1, _ -> (let _x_9 = Lcnf_array.push a_2 fst_1 in
               list_filter_map_tr_go_at_program_ty_decls_head_names_spec_0 decls tail_5 _x_9)))
 
 
@@ -27798,7 +27799,7 @@ let rec list_filter_map_tr_go_at_program_ty_decls_head_names_spec_0 (decls : (st
 let program_ty_decls_head_names (decls : (string * ty) list) (t : ty) : string list =
   let _x_1 = program_ty_members t in
   let _x_2 = 0 in
-  let _x_3 = [] in
+  let _x_3 = Lcnf_array.with_capacity _x_2 in
   list_filter_map_tr_go_at_program_ty_decls_head_names_spec_0 decls _x_1 _x_3
 
 
@@ -27826,12 +27827,12 @@ let program_ty_decls_rank_holds (decls : (string * ty) list) (ranked : string li
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.TyDecls.round.spec_0 (holds : (List String) -> String -> Bool) (known : List String) (a.1 : List (Prod String Effect4.Program.Ty)) (a.2 : Array String) : List String *)
 
-let rec list_filter_map_tr_go_at_program_ty_decls_round_spec_0 (holds : string list -> string -> bool) (known : string list) (a_1 : (string * ty) list) (a_2 : string list) : string list =
+let rec list_filter_map_tr_go_at_program_ty_decls_round_spec_0 (holds : string list -> string -> bool) (known : string list) (a_1 : (string * ty) list) (a_2 : string Lcnf_array.t) : string list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, _ -> (let _x_6 = holds known fst_1 in
-          if _x_6 then (let _x_8 = a_2 @ [fst_1] in
+          if _x_6 then (let _x_8 = Lcnf_array.push a_2 fst_1 in
             list_filter_map_tr_go_at_program_ty_decls_round_spec_0 holds known tail_5 _x_8) else list_filter_map_tr_go_at_program_ty_decls_round_spec_0 holds known tail_5 a_2))
 
 
@@ -27840,7 +27841,7 @@ let rec list_filter_map_tr_go_at_program_ty_decls_round_spec_0 (holds : string l
 
 let program_ty_decls_round (decls : (string * ty) list) (holds : string list -> string -> bool) (known : string list) : string list =
   let _x_1 = 0 in
-  let _x_2 = [] in
+  let _x_2 = Lcnf_array.with_capacity _x_1 in
   list_filter_map_tr_go_at_program_ty_decls_round_spec_0 holds known decls _x_2
 
 
@@ -29440,9 +29441,9 @@ let rec list_map_tr_loop_at_run_kit_samples_spec_1 (a_1 : val_ list) (a_2 : val_
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Run.Kit.samples.spec_2 (a.1 : List Effect4.Store.Val) (a.2 : Array Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_flat_map_tr_go_at_run_kit_samples_spec_2 (a_1 : val_ list) (a_2 : val_ list) : val_ list =
+let rec list_flat_map_tr_go_at_run_kit_samples_spec_2 (a_1 : val_ list) (a_2 : val_ Lcnf_array.t) : val_ list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (let _x_6 = [] in
       let _x_7 = head_4 :: _x_6 in
       let _x_8 = Val_list _x_7 in
@@ -29450,7 +29451,7 @@ let rec list_flat_map_tr_go_at_run_kit_samples_spec_2 (a_1 : val_ list) (a_2 : v
       let _x_10 = Val_list _x_9 in
       let _x_11 = _x_10 :: _x_6 in
       let _x_12 = _x_8 :: _x_11 in
-      let _x_13 = a_2 @ _x_12 in
+      let _x_13 = Lcnf_array.append_list a_2 _x_12 in
       list_flat_map_tr_go_at_run_kit_samples_spec_2 tail_5 _x_13)
 
 
@@ -29583,12 +29584,12 @@ let rec run_kit_samples (decls : (string * ty) list) (x_1 : int) (x_2 : ty) : va
       | Ty_list inner_53 -> (let _x_54 = [] in
         let _x_55 = Val_list _x_54 in
         let _x_56 = run_kit_samples__lam_2 decls n_8 inner_53 in
-        let _x_57 = [] in
+        let _x_57 = Lcnf_array.with_capacity zero in
         let _x_58 = list_flat_map_tr_go_at_run_kit_samples_spec_2 _x_56 _x_57 in
         let _x_59 = _x_55 :: _x_58 in
         _jp_3 _x_59)
       | Ty_prod (left_60, right_61) -> (let _x_62 = run_kit_samples__lam_2 decls n_8 left_60 in
-        let _x_63 = [] in
+        let _x_63 = Lcnf_array.with_capacity zero in
         let _x_64 = list_flat_map_tr_go_at_run_kit_samples_spec_4 decls n_8 right_61 _x_62 _x_63 in
         _jp_3 _x_64)
       | Ty_tuple items_65 -> (let _x_66 = [] in
@@ -29599,7 +29600,7 @@ let rec run_kit_samples (decls : (string * ty) list) (x_1 : int) (x_2 : ty) : va
             let _x_70 = _x_69 :: _x_66 in
             _jp_3 _x_70))
       | Ty_union (left_71, right_72) -> (let _x_73 = run_kit_samples decls n_8 left_71 in
-        let _x_74 = [] in
+        let _x_74 = Lcnf_array.with_capacity zero in
         let _x_75 = list_take_tr_go _x_73 _x_73 one _x_74 in
         let _x_76 = run_kit_samples decls n_8 right_72 in
         let _x_77 = list_take_tr_go _x_76 _x_76 one _x_74 in
@@ -29644,33 +29645,33 @@ and run_kit_samples__lam_2 (decls : (string * ty) list) (n_1 : int) (t : ty) : v
   let _x_2 = 1 in
   let _x_3 = run_kit_samples decls n_1 t in
   let _x_4 = 0 in
-  let _x_5 = [] in
+  let _x_5 = Lcnf_array.with_capacity _x_4 in
   list_take_tr_go _x_3 _x_3 _x_2 _x_5
 
-and list_flat_map_tr_go_at_run_kit_samples_spec_4 (decls : (string * ty) list) (n_1 : int) (right_2 : ty) (a_3 : val_ list) (a_4 : val_ list) : val_ list =
+and list_flat_map_tr_go_at_run_kit_samples_spec_4 (decls : (string * ty) list) (n_1 : int) (right_2 : ty) (a_3 : val_ list) (a_4 : val_ Lcnf_array.t) : val_ list =
   match a_3 with
-    | [] -> a_4
+    | [] -> Lcnf_array.to_list a_4
     | head_6 :: tail_7 -> (let _x_8 = 1 in
       let _x_9 = run_kit_samples decls n_1 right_2 in
       let _x_10 = 0 in
-      let _x_11 = [] in
+      let _x_11 = Lcnf_array.with_capacity _x_10 in
       let _x_12 = list_take_tr_go _x_9 _x_9 _x_8 _x_11 in
       let _x_13 = [] in
       let _x_14 = list_map_tr_loop_at_run_kit_samples_spec_3 head_6 _x_12 _x_13 in
-      let _x_15 = a_4 @ _x_14 in
+      let _x_15 = Lcnf_array.append_list a_4 _x_14 in
       list_flat_map_tr_go_at__private_init_data_list_impl_0_list_flat_map_tr_go_at_run_kit_samples_spec_4_spec_4 decls n_1 right_2 tail_7 _x_15)
 
-and list_flat_map_tr_go_at__private_init_data_list_impl_0_list_flat_map_tr_go_at_run_kit_samples_spec_4_spec_4 (decls : (string * ty) list) (n_1 : int) (right_2 : ty) (a_3 : val_ list) (a_4 : val_ list) : val_ list =
+and list_flat_map_tr_go_at__private_init_data_list_impl_0_list_flat_map_tr_go_at_run_kit_samples_spec_4_spec_4 (decls : (string * ty) list) (n_1 : int) (right_2 : ty) (a_3 : val_ list) (a_4 : val_ Lcnf_array.t) : val_ list =
   match a_3 with
-    | [] -> a_4
+    | [] -> Lcnf_array.to_list a_4
     | head_6 :: tail_7 -> (let _x_8 = 1 in
       let _x_9 = run_kit_samples decls n_1 right_2 in
       let _x_10 = 0 in
-      let _x_11 = [] in
+      let _x_11 = Lcnf_array.with_capacity _x_10 in
       let _x_12 = list_take_tr_go _x_9 _x_9 _x_8 _x_11 in
       let _x_13 = [] in
       let _x_14 = list_map_tr_loop_at_run_kit_samples_spec_3 head_6 _x_12 _x_13 in
-      let _x_15 = a_4 @ _x_14 in
+      let _x_15 = Lcnf_array.append_list a_4 _x_14 in
       list_flat_map_tr_go_at__private_init_data_list_impl_0_list_flat_map_tr_go_at_run_kit_samples_spec_4_spec_4 decls n_1 right_2 tail_7 _x_15)
 
 and list_map_m_loop_at_run_kit_samples_spec_5 (decls : (string * ty) list) (n_1 : int) (x_2 : ty list) (x_3 : val_ list) : val_ list option =
@@ -29680,7 +29681,7 @@ and list_map_m_loop_at_run_kit_samples_spec_5 (decls : (string * ty) list) (n_1 
     | head_6 :: tail_7 -> (let _x_8 = 1 in
       let _x_9 = run_kit_samples decls n_1 head_6 in
       let _x_10 = 0 in
-      let _x_11 = [] in
+      let _x_11 = Lcnf_array.with_capacity _x_10 in
       let _x_12 = list_take_tr_go _x_9 _x_9 _x_8 _x_11 in
       let _x_13 = list_head_opt _x_12 in
       match _x_13 with
@@ -29695,7 +29696,7 @@ and list_map_m_loop_at_list_map_m_loop_at_run_kit_samples_spec_5_spec_6 (decls :
     | head_6 :: tail_7 -> (let _x_8 = 1 in
       let _x_9 = run_kit_samples decls n_1 head_6 in
       let _x_10 = 0 in
-      let _x_11 = [] in
+      let _x_11 = Lcnf_array.with_capacity _x_10 in
       let _x_12 = list_take_tr_go _x_9 _x_9 _x_8 _x_11 in
       let _x_13 = list_head_opt _x_12 in
       match _x_13 with
@@ -29712,7 +29713,7 @@ and list_map_m_loop_at_run_kit_samples_spec_9 (decls : (string * ty) list) (n_1 
             | _, snd_2 -> (let _x_8 = 1 in
               let _x_9 = run_kit_samples decls n_1 snd_2 in
               let _x_10 = 0 in
-              let _x_11 = [] in
+              let _x_11 = Lcnf_array.with_capacity _x_10 in
               let _x_12 = list_take_tr_go _x_9 _x_9 _x_8 _x_11 in
               let _x_13 = list_head_opt _x_12 in
               match _x_13 with
@@ -29730,7 +29731,7 @@ and list_map_m_loop_at_list_map_m_loop_at_run_kit_samples_spec_9_spec_11 (decls 
             | _, snd_2 -> (let _x_8 = 1 in
               let _x_9 = run_kit_samples decls n_1 snd_2 in
               let _x_10 = 0 in
-              let _x_11 = [] in
+              let _x_11 = Lcnf_array.with_capacity _x_10 in
               let _x_12 = list_take_tr_go _x_9 _x_9 _x_8 _x_11 in
               let _x_13 = list_head_opt _x_12 in
               match _x_13 with
@@ -37891,7 +37892,7 @@ let run_kit_ty_text (t : ty) : string =
 let program_authoring_name_reserved (name : string) : bool =
   let _x_1 = Lcnf_string.utf8_bytes name in
   let _x_2 = _x_1 in
-  let _x_3 = _x_2 in
+  let _x_3 = Lcnf_array.to_list _x_2 in
   match _x_3 with
     | head_4 :: tail_5 -> (let _x_6 = 95 in
       let _x_7 = head_4 = _x_6 in
@@ -38599,11 +38600,11 @@ let program_authoring_layer_names_of (layers : (string * (env -> int list -> (_ 
 
 (* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Program.Authoring.Module.rowDefs.spec_0 (a.1 : List Effect4.Program.Authoring.ServiceDef) (a.2 : Array Effect4.Program.Row) : List Effect4.Program.Row *)
 
-let rec list_flat_map_tr_go_at_program_authoring_module__row_defs_spec_0 (a_1 : service_def list) (a_2 : row list) : row list =
+let rec list_flat_map_tr_go_at_program_authoring_module__row_defs_spec_0 (a_1 : service_def list) (a_2 : row Lcnf_array.t) : row list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match (head_4 : service_def) with
-        | { ops = ops; _ } -> (let _x_6 = a_2 @ ops in
+        | { ops = ops; _ } -> (let _x_6 = Lcnf_array.append_list a_2 ops in
           list_flat_map_tr_go_at_program_authoring_module__row_defs_spec_0 tail_5 _x_6))
 
 
@@ -38613,7 +38614,7 @@ let rec list_flat_map_tr_go_at_program_authoring_module__row_defs_spec_0 (a_1 : 
 let program_authoring_module__row_defs (m : _ module_) : row list =
   match (m : _ module_) with
     | { rows = rows; services = services; _ } -> (let _x_1 = 0 in
-      let _x_2 = [] in
+      let _x_2 = Lcnf_array.with_capacity _x_1 in
       let _x_3 = list_flat_map_tr_go_at_program_authoring_module__row_defs_spec_0 services _x_2 in
       rows @ _x_3)
 
@@ -38966,15 +38967,15 @@ let program_authoring_placeholder_opt (x_1 : int list) : int option =
 
 (* LCNF mono: List.filterMapTR.go._at_._private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.placeholderSites.spec_0 (a.1 : List (Prod (List Nat) (List Nat))) (a.2 : Array (Prod (List Nat) Nat)) : List (Prod (List Nat) Nat) *)
 
-let rec list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_0 (a_1 : (int list * int list) list) (a_2 : (int list * int) list) : (int list * int) list =
+let rec list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_0 (a_1 : (int list * int list) list) (a_2 : (int list * int) Lcnf_array.t) : (int list * int) list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match head_4 with
         | fst_6, snd_7 -> (let _x_8 = program_authoring_placeholder_opt snd_7 in
           match _x_8 with
             | None -> list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_0 tail_5 a_2
             | Some val__10 -> (let _x_11 = fst_6, val__10 in
-              let _x_12 = a_2 @ [_x_11] in
+              let _x_12 = Lcnf_array.push a_2 _x_11 in
               list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_0 tail_5 _x_12)))
 
 
@@ -39046,13 +39047,13 @@ let rec list_find_opt_at__private_effect4_program_authoring_0_effect4_program_au
 
 (* LCNF mono: List.filterMapTR.go._at_._private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.placeholderSites.spec_4 (sites : List (Prod (List Nat) Nat)) (a.1 : List (List Nat)) (a.2 : Array (Prod (List Nat) Nat)) : List (Prod (List Nat) Nat) *)
 
-let rec list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_4 (sites : (int list * int) list) (a_1 : int list list) (a_2 : (int list * int) list) : (int list * int) list =
+let rec list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_4 (sites : (int list * int) list) (a_1 : int list list) (a_2 : (int list * int) Lcnf_array.t) : (int list * int) list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (let _x_6 = list_find_opt_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_2 head_4 sites in
       match _x_6 with
         | None -> list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_4 sites tail_5 a_2
-        | Some val__8 -> (let _x_9 = a_2 @ [val__8] in
+        | Some val__8 -> (let _x_9 = Lcnf_array.push a_2 val__8 in
           list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_4 sites tail_5 _x_9))
 
 
@@ -39064,7 +39065,7 @@ let program_authoring_placeholder_sites (tree : _ eff) : (int list * int) list =
   let _x_2 = [] in
   let _x_3 = program_eff_ref_sites _x_2 tree in
   let _x_4 = 0 in
-  let _x_5 = [] in
+  let _x_5 = Lcnf_array.with_capacity _x_4 in
   let sites = list_filter_map_tr_go_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_0 _x_3 _x_5 in
   let _x_6 = list_map_tr_loop_at__private_effect4_program_authoring_0_effect4_program_authoring_placeholder_sites_spec_3 sites _x_2 in
   let paths = program_path_sort_by _f_1 _x_6 in
@@ -42155,13 +42156,13 @@ let run_sync_exit (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Cause.squash.spec_0._redArg (a.1 : List (Effect4.Reason lcAny lcAny lcAny lcAny)) (a.2 : Array lcAny) : List lcAny *)
 
-let rec list_filter_map_tr_go_at_cause_squash_spec_0 (a_1 : (_, _, _, _) reason list) (a_2 : _ list) : _ list =
+let rec list_filter_map_tr_go_at_cause_squash_spec_0 (a_1 : (_, _, _, _) reason list) (a_2 : _ Lcnf_array.t) : _ list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (let _x_6 = reason_error_opt head_4 in
       match _x_6 with
         | None -> list_filter_map_tr_go_at_cause_squash_spec_0 tail_5 a_2
-        | Some val__8 -> (let _x_9 = a_2 @ [val__8] in
+        | Some val__8 -> (let _x_9 = Lcnf_array.push a_2 val__8 in
           list_filter_map_tr_go_at_cause_squash_spec_0 tail_5 _x_9))
 
 
@@ -42177,13 +42178,13 @@ let reason_defect_opt (x_1 : (_, _, _, _) reason) : _ option =
 
 (* LCNF mono: List.filterMapTR.go._at_.Effect4.Cause.squash.spec_1._redArg (a.1 : List (Effect4.Reason lcAny lcAny lcAny lcAny)) (a.2 : Array lcAny) : List lcAny *)
 
-let rec list_filter_map_tr_go_at_cause_squash_spec_1 (a_1 : (_, _, _, _) reason list) (a_2 : _ list) : _ list =
+let rec list_filter_map_tr_go_at_cause_squash_spec_1 (a_1 : (_, _, _, _) reason list) (a_2 : _ Lcnf_array.t) : _ list =
   match a_1 with
-    | [] -> a_2
+    | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (let _x_6 = reason_defect_opt head_4 in
       match _x_6 with
         | None -> list_filter_map_tr_go_at_cause_squash_spec_1 tail_5 a_2
-        | Some val__8 -> (let _x_9 = a_2 @ [val__8] in
+        | Some val__8 -> (let _x_9 = Lcnf_array.push a_2 val__8 in
           list_filter_map_tr_go_at_cause_squash_spec_1 tail_5 _x_9))
 
 
@@ -42205,7 +42206,7 @@ let cause_squash_of (errors : _ list) (defects : _ list) (reasons : (_, _, _, _)
 
 let cause_squash (self : (_, _, _, _) reason list) : (_, _) squashed =
   let _x_1 = 0 in
-  let _x_2 = [] in
+  let _x_2 = Lcnf_array.with_capacity _x_1 in
   let _x_3 = list_filter_map_tr_go_at_cause_squash_spec_0 self _x_2 in
   let _x_4 = list_filter_map_tr_go_at_cause_squash_spec_1 self _x_2 in
   cause_squash_of _x_3 _x_4 self

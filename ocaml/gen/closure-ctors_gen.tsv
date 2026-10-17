@@ -41,4 +41,16 @@ Test.Codegen.ConstructorLane.unitMatch	test_codegen_constructor_lane_unit_match	
 Test.Codegen.ConstructorLane.shadeMatch	test_codegen_constructor_lane_shade_match	false	1	0	0	0	1	2	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	1	0	17144929265605652530
 Test.Codegen.ConstructorLane.ptMk	test_codegen_constructor_lane_pt_mk	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	0	0	1	0	806545249308268496
 Test.Codegen.ConstructorLane.ptY	test_codegen_constructor_lane_pt_y	false	0	0	0	0	1	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	1	0	7158819123662762654
+Test.Codegen.ConstructorLane.mapFind	test_codegen_constructor_lane_map_find	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	2759105079111609621
+Test.Codegen.ConstructorLane.mapBuckets	test_codegen_constructor_lane_map_buckets	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	6447738689305805199
+Test.Codegen.ConstructorLane.mapRetained	test_codegen_constructor_lane_map_retained	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	2	11	0	0	0	1	0	3324832541038520018
+Test.Codegen.ConstructorLane.mapSiblings	test_codegen_constructor_lane_map_siblings	false	10	0	0	0	0	1	0	2	0	0	8	0	2	0	0	0	0	0	0	4	18	0	0	0	1	0	2197192372642981011
 Char.ofNat	char_of_nat	false	10	0	1	2	3	3	0	4	0	0	6	0	4	0	0	0	0	0	0	2	9	0	6	0	1	0	1180261079374064912
+Test.Codegen.ConstructorLane.NatMap.ofList	test_codegen_constructor_lane_nat_map_of_list	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	3	0	0	0	1	0	6179211944505914923
+Test.Codegen.ConstructorLane.NatMap.find?	test_codegen_constructor_lane_nat_map_find_opt	false	7	0	0	0	1	2	0	0	0	0	7	0	0	0	0	0	0	0	0	4	10	0	2	0	1	0	12113789417775642199
+Test.Codegen.ConstructorLane.NatMap.insert	test_codegen_constructor_lane_nat_map_insert	false	10	0	0	0	1	2	0	0	0	0	10	0	0	0	0	0	0	0	0	9	18	0	2	0	1	0	16966913645160876108
+Test.Codegen.ConstructorLane.NatMap.empty	test_codegen_constructor_lane_nat_map_empty	false	4	0	0	0	0	1	0	1	0	0	3	0	1	0	0	0	0	0	0	2	4	0	0	0	1	0	2742376391957631478
+List.foldl._at_.Test.Codegen.ConstructorLane.NatMap.ofList.spec_0	list_foldl_at_test_codegen_constructor_lane_nat_map_of_list_spec_0	true	2	0	0	0	2	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	5	0	3	0	1	0	15187639505047360451
+Test.Codegen.ConstructorLane.NatMap.slot	test_codegen_constructor_lane_nat_map_slot	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	1	4	0	0	0	1	0	3657315817455173979
+List.lookup._at_.Test.Codegen.ConstructorLane.NatMap.find?.spec_0._redArg	list_lookup_at_test_codegen_constructor_lane_nat_map_find_opt_spec_0	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	489606003213199820
+List.filterTR.loop._at_.Test.Codegen.ConstructorLane.NatMap.insert.spec_0	list_filter_tr_loop_at_test_codegen_constructor_lane_nat_map_insert_spec_0	true	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	5	0	1	0	10390712954316915801
