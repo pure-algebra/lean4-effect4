@@ -82,6 +82,17 @@
  (modules test_engine)
  (libraries effect4_engine effect4_eff unix))
 
+; the host boundary — E4_host, the driver over the engine.
+;   test_serve  E4_host.Make.serve's stops on Fast AND Ref: a reply refused while applied and
+;               one admission refuses, each leaving everything as before the call; the machine's
+;               outcomes (finished, waiting on a timer, short of fuel, a stuck answer through a
+;               stand-in engine); and the loading refusal as a value. Each check has its control.
+
+(test
+ (name test_serve)
+ (modules test_serve)
+ (libraries effect4_engine effect4_eff effect4_clock))
+
 ; lane X — the differential over every corpus, three engines.
 ;   test_diff   `Corpora` (the 37 byte goldens, the truth corpus's Lean-cut wire goldens,
 ;               and the Lean corpus `make corpus` prints under .lake/corpus: 400 programs
