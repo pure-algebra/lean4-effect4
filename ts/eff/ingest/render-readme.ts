@@ -26,10 +26,9 @@ Use \`--force\` to bypass that index. Gates always read fresh inputs. Workers pr
 at most 500 files and are replaced. Bun 1.4.2 and Node 22.23.2 are checked at entry.
 For Node, pass \`--experimental-transform-types --disable-warning=ExperimentalWarning\`.
 
-\`bash scripts/check-ingest.sh\` freshly constructs the printer and foreign corpora,
-compares each with its original JSON and wire oracle, checks foreign key tables,
-runs source-edit tests, verifies refusal reachability and checks OCaml decoding.
-Printer-image entrypoints are test seams and never fallbacks for foreign admission.
+\`make check-ingest-smoke\` reads the printed corpus through both engines and compares each
+module with its original JSON and wire oracle (decisions row 409 removed the constructed
+foreign census). Printer-image entrypoints are test seams and never fallbacks for foreign admission.
 Only source locations are excluded from comparisons across source edits; same-input
 engine comparisons retain the entire lifted record.
 

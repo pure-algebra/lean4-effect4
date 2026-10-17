@@ -3,7 +3,6 @@ import Effect4.Store.Domain.ProgramWire
 import OCaml5.Eff.Goldens
 import TypeScript.Render
 import Drivers.Styles
-import Drivers.ForeignCorpus
 import Effect4.Codegen.Diagnostics
 import Effect4.Api.Codegen
 import Tools.Code.Module
@@ -117,9 +116,8 @@ def writeProgram (dir name : String) (p : Eff NativeOp) : IO (Option String) := 
   | _, _ => return none
 
 def main (args : List String) : IO Unit := do
-  let foreign := args.contains "--foreign"
-  let styles := args.contains "--styles" || foreign
-  let args := args.filter (fun a => a != "--styles" && a != "--foreign")
+  let styles := args.contains "--styles"
+  let args := args.filter (fun a => a != "--styles")
   let dir := args.getD 0 "."
   let count := (args.getD 1 "400").toNat!
   let depth := (args.getD 2 "4").toNat!
@@ -127,8 +125,7 @@ def main (args : List String) : IO Unit := do
     let generated := (List.range count).filterMap fun i =>
       let p := Test.Program.Gen.program i depth
       match Api.print p with | .ok _ => some (s!"g{i}", p) | _ => none
-    if foreign then Tools.ForeignCorpus.corpus dir (generated ++ Wire.Corpus.all)
-    else Tools.Styles.corpus dir (generated ++ Wire.Corpus.all)
+    Tools.Styles.corpus dir (generated ++ Wire.Corpus.all)
     return
   IO.FS.createDirAll (dir ++ "/modules/controls")
   for (name, p) in controls do

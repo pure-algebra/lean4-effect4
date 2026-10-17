@@ -3,8 +3,8 @@
 
 Read-only: nothing is installed, and nothing is written. A package whose `os` or `cpu` names
 another platform is not installed here, and is counted apart. It exits 1 when a package of this
-platform is absent or stands at another version. `scripts/check-ingest.sh` runs it in place of
-an install (decisions row 295): the Makefile's rule `ts/eff/node_modules` is the one place that
+platform is absent or stands at another version. The TypeScript lanes run it in place of an
+install (decisions row 295): the Makefile's rule `ts/eff/node_modules` is the one place that
 installs. Usage: check-lock-install.py <repository>."""
 import json, pathlib, platform, re, sys
 

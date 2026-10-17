@@ -321,7 +321,7 @@ def Exposure.userImportable : Exposure → Bool
 environment with another such module, so the drivers stay out and are measured from disk. -/
 def roots : List String := [
   "Test", "OCaml5", "ProofGraph.Goal", "ProofGraph.Plan", "ProofGraph.Sketch", "ProofGraph.Search",
-  "Tools.ProgramStructure", "Tools.WireTags", "Drivers.Styles", "Drivers.ForeignCorpus",
+  "Tools.ProgramStructure", "Tools.WireTags", "Drivers.Styles",
   "Tools.ProfileJson", "Tools.GeneratedStamp",
   "Conform.Core.Evidence", "Conform.Core.Obligation", "Conform.Core.Policy",
   "Conform.Core.Report", "Conform.Layout.Build", "Conform.Layout.Check", "Conform.Layout.Laws",

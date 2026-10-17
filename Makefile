@@ -453,7 +453,7 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots native compiler ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
+CHECKS := roots native compiler ts-reader truth truth-release target schema-codec ocaml ingest-smoke \
   host-protocol service-identity census schema-ts schema-pins tools corpus tsgo tsdiag semantics docs language
 .PHONY: check check-ts check-full check-sweep check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
@@ -470,7 +470,7 @@ batteries-touched: ## the batteries a change against BASE (default HEAD) edits o
 check-ts: $(addprefix $(CHK)/,tsgo schema-codec schema-ts truth target ts-reader corpus tsdiag host-protocol ingest-smoke service-identity) ## every comparison with Effect and tsgo 7
 check-ocaml: $(addprefix $(CHK)/,native compiler ocaml) ## every comparison on the OCaml route
 check-full: check check-ts check-ocaml ## the build and every outside oracle
-check-sweep: $(addprefix $(CHK)/,roots docs language semantics census schema-pins tools ingest) check-gen check-conservativity check-ty-rule check-slow $(if $(EFFECT4_RELEASE_NODE_MODULES),$(CHK)/truth-release) ## batteries, axioms, drift, documents, controls and the slow lanes
+check-sweep: $(addprefix $(CHK)/,roots docs language semantics census schema-pins tools) check-gen check-conservativity check-ty-rule check-slow $(if $(EFFECT4_RELEASE_NODE_MODULES),$(CHK)/truth-release) ## batteries, axioms, drift, documents, controls and the slow lanes
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -764,18 +764,10 @@ gen-tsdiag: $(CORPUS)/index.tsv | ts/eff/node_modules ## promote a fresh diagnos
 	$(NODE) harness/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag) --promote
 
 # The ingest smoke: the printed corpus through the foreign recognizer's printed contract.
-# The census over the constructed foreign corpus is check-ingest (nightly).
 $(eval $(call cached_check,ingest-smoke,ts,$(CORPUS) $(TS_EFF_SOURCES) $(TS_PINS) $(TS_INSTALL),))
 $(CHK)/ingest-smoke.key: $(CORPUS)/index.tsv | ts/eff/node_modules
 _run-ingest-smoke:
 	$(BUN) ts/eff/ingest/check-corpus.ts printed $(abspath $(CORPUS))
-
-# The fidelity step observes modules through harness/truth/run-truth.ts, which resolves `effect`
-# through the truth link; a fresh worktree has none (order-only, like every other consumer).
-$(eval $(call cached_check,ingest,all,$(CORPUS) $(TS_EFF_SOURCES) tools/Drivers/ForeignCorpus.lean tools/Drivers/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh scripts/check-lock-install.py $(TS_PINS) $(TS_INSTALL),tools/Drivers/Corpus.lean tools/Drivers/Styles.lean))
-$(CHK)/ingest.key: $(CORPUS)/index.tsv | harness/truth/node_modules ts/eff/node_modules
-_run-ingest:
-	bash scripts/check-ingest.sh
 
 # The keyed lane also performs the scenarios' scripts (decisions row 254), so the batteries that
 # `harness/truth/session/Keyed.lean` imports are its inputs, by their sources. It performs the

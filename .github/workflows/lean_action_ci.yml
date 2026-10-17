@@ -152,25 +152,6 @@ jobs:
       - name: Every generated group re-cut from scratch, host-cut groups included, and compared
         run: make build check-gen-full
 
-  nightly-ingest:
-    if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/lean
-        with:
-          save: "true"
-      - uses: ./.github/actions/typescript
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-          node-version: ${{ env.NODE_VERSION }}
-      - uses: ./.github/actions/ocaml
-        with:
-          ocaml-compiler: ${{ env.OCAML_COMPILER }}
-      - name: The full ingest census (the constructed foreign corpus through both recognizers, the OCaml decode)
-        run: make build check-ingest OCAML="opam exec --"
-
   nightly-host:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
     runs-on: ubuntu-latest

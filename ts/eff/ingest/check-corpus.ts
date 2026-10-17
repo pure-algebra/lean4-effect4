@@ -11,7 +11,7 @@ import { compareVerdicts } from "./gate.ts"
 import { decodeVerdict } from "./contract.ts"
 
 const [mode, dir, offset = "0", count = "500"] = process.argv.slice(2)
-if (!dir) throw new Error("check-corpus.ts printed|foreign|inclusion|printed-batch|foreign-batch|inclusion-batch <directory> [offset] [count]")
+if (!dir) throw new Error("check-corpus.ts printed|inclusion|printed-batch|inclusion-batch <directory> [offset] [count]")
 
 // ---- the inclusion property (DI-37) --------------------------------------------------
 // The two ingest contracts differ on three axes: the admitted language, the refusal
@@ -102,24 +102,14 @@ if (mode === "inclusion-batch") {
     report.push({ file: basename(base), verdict: check(readFileSync(base + ".ts", "utf8"), file, expected) })
   }
   process.stdout.write(report.map(r => `${r.file}\t${r.verdict}`).join("\n") + "\n")
-} else if (mode === "printed-batch" || mode === "foreign-batch") {
+} else if (mode === "printed-batch") {
   for (const file of names.slice(Number(offset), Number(offset) + Number(count))) {
     const base = join(dir, file.slice(0, -3)), source = readFileSync(base + ".ts", "utf8")
     const expected: unknown = JSON.parse(readFileSync(base + ".json", "utf8")), wire = readFileSync(base + ".eff").toString("hex")
     try {
-      if (mode === "printed-batch") {
-        for (const engine of [ck, oxc]) {
-          const p = engine.readPrintedSource(source, file)
-          if (!isDeepStrictEqual(effJson(p), expected) || Buffer.from(encodeProgram(p)).toString("hex") !== wire) throw new Error("printer oracle mismatch")
-        }
-      } else {
-        const left = ck.recognizeSource(source, file), right = oxc.recognizeSource(source, file)
-        const expectedKeys: unknown = JSON.parse(readFileSync(base + ".keys.json", "utf8"))
-        if (compareVerdicts(left, right).status !== "agree") throw new Error(`engine disagreement: ${JSON.stringify({ left: left.map(v => v.kind === "refusal" ? v : { kind: v.kind, unit: v.unit, keys: v.keys }), right: right.map(v => v.kind === "refusal" ? v : { kind: v.kind, unit: v.unit, keys: v.keys }) })}`)
-        if (left.length !== 1 || left[0]?.kind !== "lifted") throw new Error(`expected one lift: ${JSON.stringify(left)}`)
-        for (const v of [left[0], right[0]]) {
-          if (v?.kind !== "lifted" || !isDeepStrictEqual(effJson(v.eff), expected) || v.wireHex !== wire || !isDeepStrictEqual(v.keys, expectedKeys)) throw new Error(`foreign oracle mismatch: ${JSON.stringify(v)}`)
-        }
+      for (const engine of [ck, oxc]) {
+        const p = engine.readPrintedSource(source, file)
+        if (!isDeepStrictEqual(effJson(p), expected) || Buffer.from(encodeProgram(p)).toString("hex") !== wire) throw new Error("printer oracle mismatch")
       }
     } catch (e) { throw new Error(`${basename(base)}: ${String(e)}`, { cause: e }) }
   }
@@ -146,25 +136,10 @@ if (mode === "inclusion-batch") {
   const histogram = [...refusals].sort().map(([code, n]) => `${code} x${n}`).join(", ")
   console.log(`PASS inclusion: ${lines.length} printed modules, ${included.length} lifted by both engines to the printed oracle up to service-key renumbering${bases.size ? `; ${[...bases].join(", ")}` : ""}${refusals.size ? `; ${lines.length - included.length} refused by the foreign contract: ${histogram}` : "; no refusals"}`)
 } else {
-  if (mode !== "printed" && mode !== "foreign") throw new Error("unknown corpus mode")
-  if (mode === "foreign") {
-    const index = readFileSync(join(dir, "index.tsv"), "utf8").trimEnd().split("\n").slice(1)
-    const indexed = index.map(r => r.split("\t")[0] + ".ts").sort()
-    if (!isDeepStrictEqual(indexed, names)) throw new Error("foreign index differs from files")
-    const counts = new Map<string, number>()
-    for (const row of index) { const style = row.split("\t")[1]!; counts.set(style, (counts.get(style) ?? 0) + 1) }
-    for (const row of readFileSync(join(dir, "counts.tsv"), "utf8").trimEnd().split("\n").slice(1)) {
-      const [style, n] = row.split("\t")
-      if (counts.get(style!) !== Number(n)) throw new Error(`style count mismatch: ${style}`)
-    }
-    // The file count is pinned: 21 isolated styles over the skeletons, the probes and the forms at
-    // four depths, and one file for each of the 11520 products (`tools/Drivers/ForeignCorpus.lean`
-    // prints it). It moved from 22314 on 2026-10-06, with the four mask probes under each style.
-    if (counts.size !== 21 + 11520 || names.length !== 22398) throw new Error("foreign construction coverage/count changed")
-  }
+  if (mode !== "printed") throw new Error("unknown corpus mode")
   for (let at = 0; at < names.length; at += 500) {
     const run = spawnSync(process.execPath, [import.meta.filename, mode + "-batch", dir, String(at), "500"], { encoding: "utf8", maxBuffer: 2 ** 24 })
     if (run.status !== 0) { process.stderr.write(run.stderr); throw new Error(`corpus batch ${at} failed: ${run.status} ${run.error ?? ""}`) }
   }
-  console.log(`PASS ${mode}: ${names.length} exact JSON/wire comparisons on each parser with shared form lowering${mode === "foreign" ? ", exact key tables and complete verdict agreement" : ""}; batch bound 500`)
+  console.log(`PASS ${mode}: ${names.length} exact JSON/wire comparisons on each parser with shared form lowering; batch bound 500`)
 }

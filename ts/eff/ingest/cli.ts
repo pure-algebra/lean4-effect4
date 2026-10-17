@@ -18,7 +18,7 @@ const flag = (name: string) => { const i = args.indexOf(name); if (i < 0) return
 try {
   checkRuntime()
   if (!verb || verb === "--help" || verb === "help") {
-    process.stdout.write("ingest recognize <paths...> [--engine ck|oxc|both] [--format jsonl|tsv] [--workers N] [--batch-size N] [--root PATH] [--cache PATH] [--force] [--bytes]\ningest gate --printed DIR --foreign DIR\ningest census [--root FOLDLAB] [--out DIR] [--force]\ningest roundtrip <paths...> [--root PROJECT] [--out DIR] [--timeout MS]\ningest roundtrip --census FILES_JSONL [--root FOLDLAB] [--out DIR]\n")
+    process.stdout.write("ingest recognize <paths...> [--engine ck|oxc|both] [--format jsonl|tsv] [--workers N] [--batch-size N] [--root PATH] [--cache PATH] [--force] [--bytes]\ningest census [--root FOLDLAB] [--out DIR] [--force]\ningest roundtrip <paths...> [--root PROJECT] [--out DIR] [--timeout MS]\ningest roundtrip --census FILES_JSONL [--root FOLDLAB] [--out DIR]\n")
   } else if (verb === "recognize") {
     const engine = option("--engine", "both"), format = option("--format", "jsonl"), workers = Number(option("--workers", String(availableParallelism()))), batchSize = Number(option("--batch-size", "500")), from = option("--root", process.cwd()), cacheDir = option("--cache", ""), force = flag("--force")
     flag("--bytes") // wireHex is always present in lifted verdicts.
@@ -30,13 +30,6 @@ try {
       red ||= report.agreement === "disagree"; count++
     }
     process.exitCode = count ? red ? 1 : 0 : 2
-  } else if (verb === "gate") {
-    const printed = resolve(option("--printed", ".lake/ingest-c3-printed")), foreign = resolve(option("--foreign", ".lake/ingest-c3-foreign"))
-    if (args.length) throw new Error("unknown gate arguments")
-    for (const [mode, path] of [["printed", printed], ["foreign", foreign]]) {
-      const r = spawnSync(process.execPath, [fileURLToPath(new URL("./check-corpus.ts", import.meta.url)), mode!, path!], { stdio: "inherit", cwd: root })
-      if (r.status !== 0) { process.exitCode = r.status === null ? 2 : 1; break }
-    }
   } else if (verb === "census") {
     const root = resolve(option("--root", "/Users/pooks/Dev/foldlab")), manifest = option("--manifest", root + "/experiments/parser-census/corpus-manifest.json"), labels = option("--labels", root + "/experiments/parser-census/project-labels.json"), out = resolve(option("--out", ".lake/ingest-census")), workers = Number(option("--workers", String(availableParallelism()))), batchSize = Number(option("--batch-size", "500")), engine = option("--engine", "both"), cacheDir = option("--cache", ""), force = flag("--force")
     if (args.length || !["ck", "oxc", "both"].includes(engine)) throw new Error("invalid census arguments")
