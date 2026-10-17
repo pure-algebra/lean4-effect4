@@ -43,8 +43,9 @@
        nested payload went into a fresh Buffer and was copied behind its header, so a byte at
        depth d was written d + 1 times.                 by construction; tested (test_eff goldens)
        Chosen over folding the sizes first by measurement (bench_frame, ocaml/engine/bench/):
-       the reserve writer was faster on every value measured, by 1.1x to 1.8x, and the fold runs
-       every payload callback twice where this runs it once.
+       in two runs the reserve writer was faster on every value of 6 KB and more, by 1.14x to
+       1.97x, and level on a 61-byte value; and the fold runs every payload callback twice
+       where this runs it once.
    F8  An encoding is bounded: `encode ~limit` refuses one that needs more than `limit` bytes as
        a value (default Sys.max_string_length, the most a string holds, 2^57 - 9 on a 64-bit
        host). Nothing is published on a refusal, and a refusal that a callback swallows is
