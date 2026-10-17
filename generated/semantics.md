@@ -26,7 +26,7 @@ A register record links a claim to a historical attack. Read the whole row: an e
 
 ## Open work
 
-The open part of the plan: 7 planned goals, and 10 theorems proved modulo them. A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem reaches a goal. Each step is an edge of the plan, from a node to a node its proof reaches first.
+The open part of the plan: 13 planned goals, and 10 theorems proved modulo them. A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem reaches a goal. Each step is an edge of the plan, from a node to a node its proof reaches first.
 
 ### once_placed_outside_census
 
@@ -57,6 +57,104 @@ Module: `Effect4.Laws.Program.FinalizerRun` · Claims: `once-placed-finalizer` �
 Proved modulo this goal (1), each by its shortest chain of nearest nodes:
 
 - `once_placed_pushes_once` → `once_placed_outside_census`
+
+### evalTerm_progressIn
+
+Term progress under the table (planned goal): `evalTerm_progress` without its premise `sig.types = []`. A term that the term typer types under the signature's table, over values that fit their types under the same table, evaluates, and its value fits the term's type. Placement: concept `store-typing`, R9, the step of the typed state that the 41 premises `types = []` of the term laws guard (`docs/research/2026-10-16-math-d3/README.md` §3). Reach: every signature whose atoms are the native table's, every world, environment and term. Route: `evalTerm_progress`'s induction; a field read, an update and a fold read their target through the goal `fitsIn_iff_membersIn` and fold a written field through `fitsIn_unfold`; each atom's law (`atomFits`) is restated over `FitsAt`. It does not establish the typed state at a non-empty table: that is the landing, which replaces `Fits` by `FitsIn` in `J`. Consumer: the landing's term laws, `evalTerm_fits`, `termMaps_of_typed` and the library's operation laws.
+
+Module: `Effect4.Laws.Program.Typed.FitsIn` · Claims: — · Requirements: `R9`
+
+```lean
+∀ (sig : Effect4.Program.Signature Effect4.Program.NativeOp) (w : Effect4.Program.Typed.World)
+  (vals : List Effect4.Machine.Val) (env : List Effect4.Program.Ty) (t : Effect4.Program.Term)
+  (ty : Effect4.Program.Ty),
+  Eq sig.atomOf Effect4.Program.nativeAtomTy →
+    Eq env.length vals.length →
+      (∀ (i : Nat) (a : Effect4.Program.Ty) (x : Effect4.Machine.Val),
+          Eq (List.instGetElem?NatLtLength.getElem? env i) (Option.some a) →
+            Eq (List.instGetElem?NatLtLength.getElem? vals i) (Option.some x) →
+              Effect4.Program.Typed.FitsIn sig.types w x a) →
+        Eq (Effect4.Program.termTy sig env t) (Option.some ty) →
+          Exists fun v =>
+            And (Eq (Effect4.Program.evalTerm vals t) (Option.some v))
+              (Effect4.Program.Typed.FitsIn sig.types w v ty)
+```
+
+### fitsIn_iff_membersIn
+
+Membership under the table reads the union members under the table (planned goal): the `FitsIn` form of `memberIn_iff_membersIn`. Placement: concept `store-typing`, R3, a step of the proposed claim `fits-declared`. Reach: every table, world, value and type. Route: the goal `fitsIn_normalize`, then the head members: a union member reads its sides (`fits_members`'s argument over `FitsAt`), and a reference to a declared name unfolds (`fitsIn_unfold`). A reference met again before a value constructor adds no member; the cut is `hasTyIn_absorb`'s, by the induction principle `nameFits_least`. Consumer: the four readers of the term typer under the table (a field read, an update, a fold, a tag dispatch), each the existing law at a head member.
+
+Module: `Effect4.Laws.Program.Typed.FitsIn` · Claims: — · Requirements: `R3`
+
+```lean
+∀ (decls : Effect4.Program.TyDecls) (w : Effect4.Program.Typed.World) (t : Effect4.Program.Ty)
+  (v : Effect4.Machine.Val),
+  Iff (Effect4.Program.Typed.FitsIn decls w v t)
+    (Exists fun x =>
+      And (List.instMembership.mem (Effect4.Program.Ty.membersIn decls t) x)
+        (Effect4.Program.Typed.FitsIn decls w v x))
+```
+
+### fitsIn_live
+
+A member under the table is live (planned goal): `fits_live` at every table. Placement: concept `store-typing`, R3, a step of the proposed claim `fits-declared`. Reach: every table, world, value and type. Route: the least fixed point lies below the reading "the value is live" (`nameFits_least`), which is closed by `fits_live`'s induction over `FitsAt` with that oracle. Consumer: the landing's `fits_live`, which `Live` at `unknown` and the stores' validity read.
+
+Module: `Effect4.Laws.Program.Typed.FitsIn` · Claims: — · Requirements: `R3`
+
+```lean
+∀ (decls : Effect4.Program.TyDecls) (w : Effect4.Program.Typed.World) (t : Effect4.Program.Ty)
+  (v : Effect4.Machine.Val),
+  Effect4.Program.Typed.FitsIn decls w v t → Effect4.Program.Typed.Live w v
+```
+
+### fitsIn_normalize
+
+Membership under the table is invariant under normalization (planned goal): `fits_normalize` at every table. Placement: concept `store-typing`, R3, a step of the proposed claim `fits-declared` (`fits-normalize` under a table). Reach: every table, world, value and type. Route: `fits_normalize`'s induction over `FitsAt`; normalization keeps a reference's name and maps its arguments (decisions row 406 (1)), and the reference arm reads the name alone, as `cata_declAlg_normalize` reads it. Consumer: the landing's `fits_normalize` and `fits_subN`.
+
+Module: `Effect4.Laws.Program.Typed.FitsIn` · Claims: — · Requirements: `R3`
+
+```lean
+∀ (decls : Effect4.Program.TyDecls) (w : Effect4.Program.Typed.World) (t : Effect4.Program.Ty)
+  (v : Effect4.Machine.Val),
+  Iff (Effect4.Program.Typed.FitsIn decls w v t.normalize)
+    (Effect4.Program.Typed.FitsIn decls w v t)
+```
+
+### fitsIn_sub
+
+The order is sound for membership under the table (planned goal): `fits_sub` at every table. Placement: concept `store-typing`, R3, a step of the proposed claim `fits-declared` (`fits-subn` under a table). Reach: `Ty.sub`, every table, world and value. Route: `fits_sub`'s induction over `FitsAt` with the oracle fixed. The one new arm is a reference to a declared name: `Ty.sub` compares a name with the same name only, so both ends read one oracle answer, as `declAlg_admitsSub` reads one admission. It does not establish `Ty.subN` (the goal `fitsIn_normalize` gives it). Consumer: the landing's `fits_sub` and every typing rule that widens.
+
+Module: `Effect4.Laws.Program.Typed.FitsIn` · Claims: — · Requirements: `R3`
+
+```lean
+∀ (decls : Effect4.Program.TyDecls) (w : Effect4.Program.Typed.World) (a b : Effect4.Program.Ty)
+  (v : Effect4.Machine.Val),
+  Eq (a.sub b) Bool.true →
+    Effect4.Program.Typed.FitsIn decls w v a → Effect4.Program.Typed.FitsIn decls w v b
+```
+
+### rows_divergence_adequate
+
+Divergence adequacy at the driver, on loops (planned goal): a program whose driven run, at every budget, neither exits nor waits on a call has a diverging chain under the reactor. Placement: concept `host-session-protocol`, the proposed claim `rows-divergence-adequate`, role adequacy; requirement R12, the system map's open part "divergence is witnessed by compatible finite prefixes". Reach: the row fragment with loops, a reactor inside the envelope that answers with exits, a fixed round count. Route: at a budget `k`, case on the chain's run under the reactor host. A cut is the goal. A finish or a wait needs a session budget at which the drive is funded and at rest; that is the open claim `embedded-budget-sufficient`. Then `runWith_finishes`'s converse direction (H9 on loops) gives an exit, and `frontier_waits` a wait, against the premise. It establishes no progress and no fairness. Consumer: R12's divergence adequacy, with `runWith_exit_of_diverges` its other direction.
+
+Module: `Effect4.Laws.Run.Outcome` · Claims: — · Requirements: `R12`
+
+```lean
+∀ (σ : Type) (b : Effect4.Api.Built) (r : Effect4.Run.Reactor σ) (st : σ) (id : String)
+  (rounds : Nat),
+  r.Envelops b.app →
+    r.ExitsOnly →
+      Eq (Effect4.Program.Denote.LoopedRows b.program) Bool.true →
+        Eq (Effect4.Program.Denote.LoopedDataRows b.table b.program) Bool.true →
+          (∀ (budget : Effect4.Api.Budget),
+              And (Eq (Effect4.Run.runWith b r st id budget rounds).fst.exit Option.none)
+                (Eq
+                  (Effect4.Program.awaits (Effect4.Run.runWith b r st id budget rounds).fst.machine)
+                  List.nil)) →
+            (Effect4.Program.effChain b.table b.program List.nil).Diverges
+              (Effect4.Program.Denote.rowsHost (Effect4.Run.reactorHost b.table r))
+              { fst := Effect4.Machine.Stores.empty, snd := st }
+```
 
 ### ofJson_image
 
@@ -299,13 +397,16 @@ Module: `Effect4.Laws.Program.Typed.Denotation.Terms` · Literature: Ahmed2004, 
 ```lean
 ∀ {sig : Effect4.Program.Signature Effect4.Program.NativeOp},
   Eq sig.atomOf Effect4.Program.nativeAtomTy →
-    ∀ {w : Effect4.Program.Typed.World} {tys : Effect4.Program.TyEnv}
-      {env : List Effect4.Machine.Val},
-      Effect4.Program.Typed.EnvTyped w tys env →
-        ∀ {f : Effect4.Program.Term} {A R : Effect4.Program.Ty},
-          Eq (Effect4.Program.termTy sig (instHAppendOfAppend.hAppend tys (List.cons A List.nil)) f)
-              (Option.some R) →
-            Effect4.Program.Typed.TermMaps w f env A R
+    Eq sig.types List.nil →
+      ∀ {w : Effect4.Program.Typed.World} {tys : Effect4.Program.TyEnv}
+        {env : List Effect4.Machine.Val},
+        Effect4.Program.Typed.EnvTyped w tys env →
+          ∀ {f : Effect4.Program.Term} {A R : Effect4.Program.Ty},
+            Eq
+                (Effect4.Program.termTy sig (instHAppendOfAppend.hAppend tys (List.cons A List.nil))
+                  f)
+                (Option.some R) →
+              Effect4.Program.Typed.TermMaps w f env A R
 ```
 
 ### fold-typed-atomic-update
@@ -320,7 +421,7 @@ Module: `Effect4.Laws.Program.Typed.ListFold` · Literature: Ahmed2004, audit P1
 
 ```lean
 ∀ (sig : Effect4.Program.Signature Effect4.Program.NativeOp),
-  Effect4.Program.Typed.ListFoldRules sig
+  Eq sig.types List.nil → Effect4.Program.Typed.ListFoldRules sig
 ```
 
 ### handle-identity-laws
@@ -476,7 +577,7 @@ Module: `Effect4.Laws.Program.TyDecls`
 
 Membership under a table is invariant under type normalization, which spells a reference with no argument as a handle: the admission fold under any oracle keeps its admission (cata_declAlg_normalize, hasTy_normalize's induction over declAlg; the congruence arms through AdmitsNormalize); the wiring slice's fits_normalize and fits_subN under a table need it
 
-Membership under the table is invariant under normalization (claim `recursive-types-normalize`). It is what the checker's order needs: `Ty.subN` compares normal forms, and `app n []` normalizes to `handle n`, which the table reads at the same declaration. Proved modulo its part `cata_declAlg_normalize`. Consumer: `Ty.subN` under a table, and the world's `fits_normalize` once the table enters the world. It establishes nothing of `Fits`.
+Membership under the table is invariant under normalization (claim `recursive-types-normalize`). It is what the checker's order needs: `Ty.subN` compares normal forms, and a reference keeps its name in its normal form (decisions row 406 (1)). Proved modulo its part `cata_declAlg_normalize`. Consumer: `Ty.subN` under a table, and the world's `fits_normalize` once the table enters the world. It establishes nothing of `Fits`.
 
 Module: `Effect4.Laws.Program.TyDecls`
 
@@ -1022,7 +1123,7 @@ Module: `Effect4.Laws.Program.Author`
 ∀ {before after : Effect4.Api.Built} {candidate : Effect4.Api.Program},
   Eq (before.rebuild candidate) (Except.ok after) →
     And (Eq after.program candidate)
-      (And (Eq after.table before.table) (Eq after.rowNames before.rowNames))
+      (And (Eq after.app before.app) (Eq after.rowNames before.rowNames))
 ```
 
 ### denote-typed-layer-free
@@ -3933,7 +4034,7 @@ Module: `Effect4.Laws.Run.Frame`
 ```lean
 ∀ (s : Effect4.Run),
   s.Reached →
-    And (Eq s.session.calls (Effect4.Api.HostSession.callTable s.built.program s.built.table))
+    And (Eq s.session.calls (Effect4.Api.HostSession.callTable s.built.program s.built.app))
       (Effect4.Run.HistoryOf s.built s.budget.compileFuel s.machine)
 ```
 
@@ -3981,8 +4082,8 @@ Two accepted receipts for distinct keys commute as whole sessions. The machine, 
 Module: `Effect4.Laws.Api.HostSession` · Literature: LynchVaandrager1995, audit C4 (analogy)
 
 ```lean
-∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
-  (s : Effect4.Api.HostSession.Session program table) (a b : Effect4.Api.HostSession.Reply),
+∀ {program : Effect4.Api.Program} {app : Effect4.Program.SigApp}
+  (s : Effect4.Api.HostSession.Session program app) (a b : Effect4.Api.HostSession.Reply),
   Ne a.key b.key →
     Eq (Effect4.Api.HostSession.submit s a).phase Effect4.Api.HostSession.Phase.preflight →
       Eq (Effect4.Api.HostSession.submit s b).phase Effect4.Api.HostSession.Phase.preflight →
@@ -3999,22 +4100,23 @@ A session-accepted successful completion prepares the actual row-typed value, or
 Module: `Effect4.Laws.Api.HostSession`
 
 ```lean
-∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
-  (s : Effect4.Api.HostSession.Session program table) (reply : Effect4.Api.HostSession.Reply)
-  (decision : Effect4.Program.NativeDecision) (value : Effect4.Machine.Val),
-  Eq
-      (s.machine.stuck
-        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
-          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
-        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
-          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
-        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
-          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
-      Option.none →
-    Eq reply.completion (Effect4.Machine.Completion.ofExit (Effect4.Exit.success value)) →
-      Eq (Effect4.Api.HostSession.preflight s reply) (Except.ok decision) →
-        Or (Effect4.Api.HostSession.PreparedSuccess s reply decision)
-          (Effect4.Api.HostSession.InstanceSuccess s reply decision)
+∀ {program : Effect4.Api.Program} {app : Effect4.Program.SigApp},
+  Eq app.types List.nil →
+    ∀ (s : Effect4.Api.HostSession.Session program app) (reply : Effect4.Api.HostSession.Reply)
+      (decision : Effect4.Program.NativeDecision) (value : Effect4.Machine.Val),
+      Eq
+          (s.machine.stuck
+            (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+            (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+              Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+          Option.none →
+        Eq reply.completion (Effect4.Machine.Completion.ofExit (Effect4.Exit.success value)) →
+          Eq (Effect4.Api.HostSession.preflight s reply) (Except.ok decision) →
+            Or (Effect4.Api.HostSession.PreparedSuccess s reply decision)
+              (Effect4.Api.HostSession.InstanceSuccess s reply decision)
 ```
 
 ### reply-at-call-instance
@@ -4026,7 +4128,7 @@ A success admitted at its call's instance is a member of the instance's answer c
 Module: `Effect4.Laws.Program.Admit`
 
 ```lean
-∀ (program : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable)
+∀ (program : Effect4.Program.NativeEff) (app : Effect4.Program.SigApp)
   (instanceAt : List Nat → Option (Effect4.Program.CallInstance Effect4.Program.NativeOp))
   (m : Effect4.Program.NativeMachine) (r : Effect4.Program.RecordedReply)
   (value : Effect4.Machine.Val),
@@ -4040,7 +4142,7 @@ Module: `Effect4.Laws.Program.Admit`
           Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
       Option.none →
     Eq r.completion (Effect4.Machine.Completion.ofExit (Effect4.Exit.success value)) →
-      Effect4.Program.InstanceEnvelope table instanceAt m r →
+      Effect4.Program.InstanceEnvelope app instanceAt m r →
         Exists fun origin =>
           Exists fun c =>
             And (Eq (Effect4.Program.originOf m r.fiber r.token) (Option.some origin))
@@ -4048,7 +4150,7 @@ Module: `Effect4.Laws.Program.Admit`
                 (And (Eq c.op r.op)
                   (And
                     (Eq
-                      (Effect4.Program.Val.hasTy value c.answer
+                      (Effect4.Program.Val.memberIn app.types value c.answer
                         (m.state
                               (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk
                                 Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
@@ -4062,8 +4164,9 @@ Module: `Effect4.Laws.Program.Admit`
                       Bool.true)
                     (And (Eq (Effect4.Store.Val.handles value) List.nil)
                       (Eq
-                        (Effect4.Machine.prepareAsyncAnswer (Effect4.Program.interpOf program table)
-                          m r.fiber r.token r.completion)
+                        (Effect4.Machine.prepareAsyncAnswer
+                          (Effect4.Program.interpOf program app.rows) m r.fiber r.token
+                          r.completion)
                         {
                           fst :=
                             m.state
@@ -4106,8 +4209,8 @@ An accepted failing reply has no shape defect (decisions row 191, `E4-HOST-CE-00
 Module: `Effect4.Laws.Api.HostSession`
 
 ```lean
-∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
-  (s : Effect4.Api.HostSession.Session program table) (reply : Effect4.Api.HostSession.Reply)
+∀ {program : Effect4.Api.Program} {app : Effect4.Program.SigApp}
+  (s : Effect4.Api.HostSession.Session program app) (reply : Effect4.Api.HostSession.Reply)
   (decision : Effect4.Program.NativeDecision) (c : Effect4.Machine.CauseV),
   Eq reply.completion (Effect4.Machine.Completion.ofExit (Effect4.Exit.failure c)) →
     Eq (Effect4.Api.HostSession.preflight s reply) (Except.ok decision) →
@@ -4169,7 +4272,7 @@ Effect4.Run.H9FrontierLoopedRows
 
 At a row of a live run that applied the reply stored at a key, the session held that reply at the run before the row and its preflight admitted it, and the session's instance lookup is the checker's instanceAt on the run's program: a success prepares a member of the row's shape-decided column or of the call's checked instance, and a failure holds no shape defect; Typed.replay answers a Live, so the law reads every replayed run; the converse half is Live.replay_recorded; nothing of membership in the instance from the row's columns (admitAnswer_instance), handle rows, AnswerOk or progress (decisions rows 98 and 373 (8))
 
-A replayed run's applied answers were admitted at their call (decisions rows 98, 323 and 373 (8)). Take a row of a live run's journal that applied the reply stored at a key. At the run after the rows before it (`Live.upTo`), the session held that reply, and its `preflight` admitted it. There the session's instance lookup is the checker's instance on the run's program (`instanceAt`). So the answer fits its call. A success prepares a member of the row's shape-decided answer column (`PreparedSuccess`). Where the row's columns refuse it, it is a handle-free member of the call's checked instance, prepared unchanged (`InstanceSuccess`). A failure holds no reserved defect, at every type. `Api.Typed.replay` answers a `Live`, so this holds of every run that it replays.
+A replayed run's applied answers were admitted at their call (decisions rows 98, 323 and 373 (8)). Take a row of a live run's journal that applied the reply stored at a key. At the run after the rows before it (`Live.upTo`), the session held that reply, and its `preflight` admitted it. There the session's instance lookup is the checker's instance on the run's program (`instanceAt`). So the answer fits its call. Where the application declares no named type (decisions row 407 (5)), a success prepares a member of the row's shape-decided answer column (`PreparedSuccess`). Where the row's columns refuse it, it is a handle-free member of the call's checked instance, prepared unchanged (`InstanceSuccess`). A failure holds no reserved defect, at every type. `Api.Typed.replay` answers a `Live`, so this holds of every run that it replays.
 
 Placement: concept `host-session-protocol`, property `typed-replay-session`. Question: the proposed claim `replay-at-call-instance` (role preservation), an open part of R6. Consumers: `Api.Typed.replay`, then the OCaml checked session (slice DM7), then row 99's typed answers on data rows. Reach: every `Live` and every row whose verdict is `applied`. The instance path stands only where the row's answer column allocates nothing. It applies `application_payload`, `application_live`, `reached_callInstance`, `preflight_success_prepared_fits` and `preflight_failure_noShapeDefect`. It does not establish that the row's columns admit only members of the call's instance (`admitAnswer_instance`). It does not establish that the expansion of layer references keeps a call at its address (`expansion-keeps-call`). It says nothing of handle rows or delayed cell reads (row 100), or of the ghost admission `AnswerOk` (row 99). It does not establish that a run is funded, host progress, or anything of a lowered session. Unlocks: R6, and row 99's step on data rows.
 
@@ -4191,16 +4294,17 @@ Module: `Effect4.Laws.Api.Live`
               (Except.ok decision))
             (And
               (Eq (l.upTo i).run.session.callInstance
-                (Effect4.Api.HostSession.instanceAt l.run.built.program l.run.built.table))
+                (Effect4.Api.HostSession.instanceAt l.run.built.program l.run.built.app))
               (And
                 (∀ (value : Effect4.Machine.Val),
                   Eq reply.completion
                       (Effect4.Machine.Completion.ofExit (Effect4.Exit.success value)) →
-                    Or
-                      (Effect4.Api.HostSession.PreparedSuccess (l.upTo i).run.session reply
-                        decision)
-                      (Effect4.Api.HostSession.InstanceSuccess (l.upTo i).run.session reply
-                        decision))
+                    Eq l.run.built.app.types List.nil →
+                      Or
+                        (Effect4.Api.HostSession.PreparedSuccess (l.upTo i).run.session reply
+                          decision)
+                        (Effect4.Api.HostSession.InstanceSuccess (l.upTo i).run.session reply
+                          decision))
                 (∀
                   (cause :
                     Effect4.Cause Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
@@ -4328,25 +4432,26 @@ Module: `Effect4.Laws.Run.CallTree`
       Eq (Effect4.Run.CallTree.NoCauseHandler s.built.program) Bool.true →
         Effect4.Program.SourceScope.ExternalOnly s.built.program →
           Effect4.Program.SourceScope.ConcreteReplies s.built.table →
-            ∀ (call : Effect4.Api.HostSession.Call) (token : Nat),
-              List.instMembership.mem (s.journal.zip s.phases)
-                  { fst := Effect4.Api.Runner.Command.bind call token,
-                    snd := Effect4.Api.HostSession.Phase.bound } →
-                Exists fun i =>
-                  Exists fun row =>
-                    Exists fun T =>
-                      And (Eq call.op (Effect4.Program.NativeOp.external i))
-                        (And (Eq (Effect4.Program.externalRow s.built.table i) (Option.some row))
-                          (And
-                            (∀ (ex : Effect4.Machine.ExitV),
-                              List.instMembership.mem T ex →
-                                Exists fun reply =>
-                                  And
-                                    (List.instMembership.mem s.journal
-                                      (Effect4.Api.Runner.Command.submit reply))
-                                    (Eq reply.completion (Effect4.Machine.Completion.ofExit ex)))
-                            (Eq (Effect4.Run.CallTree.treeWaits s.built.table s.built.program T)
-                              (Effect4.Program.Denote.RowsStop.waiting i call.request))))
+            Eq s.built.app.types List.nil →
+              ∀ (call : Effect4.Api.HostSession.Call) (token : Nat),
+                List.instMembership.mem (s.journal.zip s.phases)
+                    { fst := Effect4.Api.Runner.Command.bind call token,
+                      snd := Effect4.Api.HostSession.Phase.bound } →
+                  Exists fun i =>
+                    Exists fun row =>
+                      Exists fun T =>
+                        And (Eq call.op (Effect4.Program.NativeOp.external i))
+                          (And (Eq (Effect4.Program.externalRow s.built.table i) (Option.some row))
+                            (And
+                              (∀ (ex : Effect4.Machine.ExitV),
+                                List.instMembership.mem T ex →
+                                  Exists fun reply =>
+                                    And
+                                      (List.instMembership.mem s.journal
+                                        (Effect4.Api.Runner.Command.submit reply))
+                                      (Eq reply.completion (Effect4.Machine.Completion.ofExit ex)))
+                              (Eq (Effect4.Run.CallTree.treeWaits s.built.table s.built.program T)
+                                (Effect4.Program.Denote.RowsStop.waiting i call.request))))
 ```
 
 ### run-eq-meaning
@@ -4649,7 +4754,7 @@ Module: `Effect4.Laws.Api.SessionMeaningLoop`
 ```lean
 ∀ {σ : Type} (b : Effect4.Api.Built) (r : Effect4.Run.Reactor σ) (st : σ) (id : String)
   (budget : Effect4.Api.Budget) (rounds : Nat),
-  r.Envelops b.table →
+  r.Envelops b.app →
     r.ExitsOnly →
       Eq (Effect4.Program.Denote.LoopedRows b.program) Bool.true →
         Eq (Effect4.Program.Denote.LoopedDataRows b.table b.program) Bool.true →
@@ -4726,7 +4831,7 @@ Module: `Effect4.Laws.Api.HostDrive`
 ```lean
 ∀ {σ : Type} (b : Effect4.Api.Built) (r : Effect4.Run.Reactor σ) (st : σ) (id : String)
   (budget : Effect4.Api.Budget) (rounds : Nat),
-  r.Envelops b.table →
+  r.Envelops b.app →
     r.ExitsOnly →
       Eq (Effect4.Program.Denote.StraightRows b.table b.program) Bool.true →
         Eq (Effect4.Run.runWith b r st id budget rounds).fst.funded Bool.true →
@@ -4830,15 +4935,15 @@ Module: `Effect4.Laws.Program.Typed.AdmittedSource`
 
 ```lean
 ∀ {program : Effect4.Program.NativeEff} {app : Effect4.Program.SigApp}
-  (a : Effect4.Program.AdmittedProgram program app),
+  (a : Effect4.Program.AdmittedProgram program app) (untyped : Eq app.types List.nil),
   Eq app.rows List.nil →
     ∀ (fuel : Nat) (tape : List Effect4.Api.Decision),
       Eq a.ty.requires Effect4.Machine.Env.Requirement.empty →
         (∀ (d : Effect4.Api.Decision),
             List.instMembership.mem tape d → Effect4.Program.Typed.NoHostAnswer d) →
-          And (Effect4.Program.Typed.M7Exits a.source a.ty fuel tape)
-            (And (Effect4.Program.Typed.M7Stores a.source a.ty fuel tape)
-              (Effect4.Program.Typed.M7NoHalt a.source a.ty fuel tape))
+          And (Effect4.Program.Typed.M7Exits (a.source untyped) a.ty fuel tape)
+            (And (Effect4.Program.Typed.M7Stores (a.source untyped) a.ty fuel tape)
+              (Effect4.Program.Typed.M7NoHalt (a.source untyped) a.ty fuel tape))
 ```
 
 ### m7-exit-handles-valid
@@ -5758,7 +5863,7 @@ Test.Dogfood.Scenario.Todo.Cached.CachedListAfterAdd
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 351; inherited (provisional): 2532; unplaced: 0.
+Tagged: 351; inherited (provisional): 2534; unplaced: 0.
 
 ## Plan
 
@@ -5770,20 +5875,20 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | --- | --- | --- | --- | --- |
 | `R1` | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | `checkModule_complete` (proved), `checkModule_sound` (proved), `invoke_hasTy` (proved) | — |
 | `R2` | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved), `meaningUnder_append` (proved) | `denoteBlockB_straight` (proved), `denoteRowsB_looped` (proved), `denoteRowsB_straight` (proved), `checkModule_conservative` (proved), `checkModule_eq_check` (proved), `defs_conservative` (proved), `moduleHasTy_ext` (proved), `typeOfProgram_ext` (proved) | — |
-| `R3` | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `cata_declAlg_normalize` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `exists_memberIn_fresh` (proved), `exists_memberIn_of_inhabited` (proved), `fixedPoint_agree` (proved), `guarded_fixedPoint_unique` (proved), `hasTyIn_iff` (proved), `inhabited_iff_memberIn` (proved), `isPayload_of_hasTy_record` (proved), `memberIn_iff_expand` (proved), `memberIn_iff_expansions` (proved), `memberIn_mono` (proved), `memberIn_normalize` (proved), `memberIn_sub` (proved), `memberIn_unfold_iff` (proved), `tyDecls_conservative` (proved), `ofJson_complete` (modulo), `ofJson_image` (goal), `frame_laws` (proved), `member` (proved), `codec_roundtrip` (proved), `memberIn_ref` (proved) | `ofJson_image` |
+| `R3` | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `closed_armsIn` (proved), `closed_checkIn` (proved), `closed_fieldTypeIn` (proved), `closed_membersIn` (proved), `closed_setTypeIn` (proved), `closed_tagArmsIn` (proved), `fieldAdmitsIn_sound` (proved), `liftIn_closed` (proved), `tagArmsIn_partition` (proved), `fitsIn_iff_membersIn` (goal), `fitsIn_live` (goal), `fitsIn_map` (proved), `fitsIn_memberIn` (proved), `fitsIn_mono` (proved), `fitsIn_nil` (proved), `fitsIn_normalize` (goal), `fitsIn_sub` (goal), `fitsIn_unfold` (proved), `liftIn_transfer` (proved), `cata_declAlg_normalize` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `exists_memberIn_fresh` (proved), `exists_memberIn_of_inhabited` (proved), `fixedPoint_agree` (proved), `guarded_fixedPoint_unique` (proved), `hasTyIn_iff` (proved), `inhabited_iff_memberIn` (proved), `isPayload_of_hasTy_record` (proved), `memberIn_iff_expand` (proved), `memberIn_iff_expansions` (proved), `memberIn_iff_membersIn` (proved), `memberIn_mono` (proved), `memberIn_normalize` (proved), `memberIn_sub` (proved), `memberIn_unfold_iff` (proved), `tyDecls_conservative` (proved), `wiring_readers_conservative` (proved), `ofJson_complete` (modulo), `ofJson_image` (goal), `frame_laws` (proved), `member` (proved), `codec_roundtrip` (proved), `memberIn_ref` (proved) | `fitsIn_iff_membersIn`, `fitsIn_live`, `fitsIn_normalize`, `fitsIn_sub`, `ofJson_image` |
 | `R4` | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `awaitStep_types` (proved), `Latch.Model.closeStep_types` (proved), `flushStep_types` (proved), `initialStep_types` (proved), `isOpenStep_types` (proved), `wakeStep_types` (proved), `Latch.Model.withdrawStep_types` (proved), `image_agrees` (proved), `afterExit_first` (proved), `typed` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `available_types` (proved), `PartitionedSemaphore.initial_types` (proved), `reserve_types` (proved), `tryTake_types` (proved), `Pool.Model.closeStep_types` (proved), `drainStep_types` (proved), `Model.initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `solve_lookup_of_mem` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `loop_sync_op` (proved), `native_sync_answer` (proved), `native_sync_op` (proved), `perform_scoped_iff` (proved), `heap_sites_keep` (proved), `withParams_defOf` (proved), `withParams_of_none` (proved), `withParams_param` (proved), `withParams_serviceTy` (proved), `admitted_heap_history` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `invoke_arm` (proved), `param_arm` (proved), `saved_mask_image_membership` (proved), `scopeParams_ref` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `scopeParams_below` (proved), `scopeParams_body` (proved), `scopeParams_child` (proved), `scopeParams_decl` (proved), `scopeParams_layer_below` (proved), `PubSub.initial_types` (proved), `PubSub.poll_types` (proved), `slide_types` (proved), `subscribe_types` (proved), `tryPublish_types` (proved), `unsubscribe_types` (proved), `ascribe_formed_for_steps` (proved), `empty_typed` (proved), `message_nodes_for_steps` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `offer_nodes_for_steps` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `Queue.poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `modify_callback_answers` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `fromDefinitions_declarations` (proved), `arrayBatch_answers` (proved), `raceCompleteFirst_accepts` (proved), `raceCompleteFirst_keeps` (proved), `get_answers` (proved), `make_answers` (proved), `modify_answers` (proved), `shop_stages` (goal), `atomic` (modulo), `bounded` (proved), `committed` (modulo), `counted` (modulo) | `shop_stages` |
 | `R5` | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `tree_needs_token` (proved), `unauthorized_calls_nothing` (proved) | — |
-| `R6` | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `Run.session_eq_ref` (proved), `denoteRows_eq_session_host` (proved), `runWith_denotes` (proved), `h8_loopedRows` (proved), `denoteRowsB_eq_session_host` (proved), `runWith_denotesB` (proved), `replay_at_call_instance` (proved) | `replay_at_call_instance` (proved), `replay_recorded` (proved), `Live.session_eq_ref` (proved), `view_funded` (proved), `not_withFiber` (proved), `ContextFreeCode.toPlain` (proved), `ContextFreeFrame.toPlain` (proved), `ContextFreeHooks.of_loopedRows` (proved), `ContextFreeHooks.toPlain` (proved), `prepend` (proved), `Leads.refl` (proved), `Leads.trans` (proved), `of_blockRows` (proved), `PlainHooks.of_loopedRows` (proved), `answer` (proved), `contextSame` (proved), `ReachesC.contextStep` (proved), `join` (proved), `ReachesC.refl` (proved), `same` (proved), `ReachesC.step` (proved), `ReachesC.trans` (proved), `ReachesQ.contextStep` (proved), `ReachesQ.refl` (proved), `ReachesQ.step` (proved), `ReachesQ.trans` (proved), `RunJoinC.refl` (proved), `RunJoinC.terminal` (proved), `RunJoinC.trans` (proved), `argSitesAt_body` (proved), `block_context_action` (proved), `block_context_noScoped` (proved), `compilesBO_bind` (proved), `compilesBO_catchCause` (proved), `compilesBO_catchIf` (proved), `compilesBO_exit` (proved), `compilesBO_iterate` (proved), `compilesBO_matchCause` (proved), `compilesBO_onExit` (proved), `compilesBO_select` (proved), `compilesBO_suspend` (proved), `compilesBlk` (proved), `compilesBlk_context` (proved), `compilesBlk_provideContext` (proved), `compilesBlk_provideService` (proved), `compilesBlk_root` (proved), `compilesBlk_service` (proved), `contextBracket_enter` (proved), `contextBracket_leave` (proved), `contextStep_fallback` (proved), `contextStep_finished_stores` (proved), `contextStep_plain` (proved), `contextStep_quiet` (proved), `contextStep_stores` (proved), `contextStep_yieldWrapper` (proved), `context_receipt_finish` (proved), `context_run_finish` (proved), `defBodyPath_body` (proved), `drive_deliver_finish_context` (proved), `drive_deliver_running_context` (proved), `drive_finish_M_context` (proved), `drive_loop_call_context` (proved), `drive_loop_finish_context` (proved), `drive_loop_running_context` (proved), `drive_loop_sync_op_context` (proved), `drive_loop_sync_op_none_context` (proved), `drive_loop_sync_pure_context` (proved), `drive_loop_yield_context` (proved), `drive_receipt_prefix` (proved), `drive_receipt_result` (proved), `drive_receipt_stable` (proved), `drive_seg_receipt` (proved), `evaluateNative_plain_context` (proved), `evaluatePrim_contextStep` (proved), `fire_Myield_answer_context` (proved), `flushAll_Mexit_context` (proved), `flush_Myield_receipt` (proved), `hostRunBlockB_exits` (proved), `iteration_M_context` (proved), `load_evaluate_receipt` (proved), `localRunC_agree` (proved), `localRunC_compileB` (proved), `localRunC_compileBO` (proved), `localRunC_mono` (proved), `localRunC_to_blockB` (proved), `localRunC_to_rowsB` (proved), `localRunC_waits` (proved), `localWaitC_to_rowsB` (proved), `seg_settles_receipt` (proved), `bodyAt` (proved), `bodiesOf_blockRows` (proved), `cata_blockAlgB_loopedDataRows` (proved), `denoteBlockB_context` (proved), `denoteBlockB_exit` (proved), `denoteBlockB_loopedDataRows` (proved), `denoteBlockB_of_asExit` (proved), `denoteBlockB_param` (proved), `denoteBlockB_provideContext` (proved), `denoteBlockB_provideService` (proved), `denoteBlockB_service` (proved), `hostRunB_stable` (proved), `observeRows_project` (proved), `partAt_at` (proved), `partAt_of_hasTy` (proved), `bodyAt_at` (proved), `run_eq_ref_table` (proved), `checkModule_programCallAt` (proved), `handles_of_payloadFieldTy` (proved), `hasTy_callAt` (proved), `lookup_programCalls` (proved), `moduleHasTy_programCallAt` (proved), `programCallAt_rowTy` (proved), `noWithFiber` (proved), `bound_in_tree` (proved), `request_leads` (proved), `agrees_hostRun` (proved), `agrees_hostRun_blocks` (proved), `applied_selects` (proved), `conforms_sat` (proved), `conforms_sat_blocks` (proved), `control_retires` (proved), `denoteRowsB_eq_session_host` (proved), `denoteRows_eq_session` (proved), `denoteRows_eq_session_host` (proved), `ending_of_tape` (proved), `h8_loopedRows` (proved), `h9_blocks` (proved), `runWith_denotes` (proved), `runWith_denotesB` (proved), `runWith_guarded_denotes` (proved), `runWith_guarded_denotesB` (proved), `runWith_host_denotes` (proved), `runWith_host_denotesB` (proved), `runWith_layer_denotes` (proved), `sessionSystem_finished` (proved), `sessionSystem_finishes` (proved), `Run.session_eq_ref` (proved), `session_keys_once` (proved), `stale_never_applies` (proved), `timeout` (modulo), `add_empty_calls_nothing` (proved), `complete_answers_requested` (proved), `complete_failure_escapes` (proved), `complete_idempotent` (proved), `list_after_add` (proved), `serves` (proved), `workers` (proved), `receipt_inert` (proved) | `cleanup_keeps`, `retries_declared` |
+| `R6` | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `Run.session_eq_ref` (proved), `denoteRows_eq_session_host` (proved), `runWith_denotes` (proved), `h8_loopedRows` (proved), `denoteRowsB_eq_session_host` (proved), `runWith_denotesB` (proved), `replay_at_call_instance` (proved) | `replay_at_call_instance` (proved), `replay_recorded` (proved), `Live.session_eq_ref` (proved), `view_funded` (proved), `not_withFiber` (proved), `ContextFreeCode.toPlain` (proved), `ContextFreeFrame.toPlain` (proved), `ContextFreeHooks.of_loopedRows` (proved), `ContextFreeHooks.toPlain` (proved), `prepend` (proved), `Leads.refl` (proved), `Leads.trans` (proved), `of_blockRows` (proved), `PlainHooks.of_loopedRows` (proved), `answer` (proved), `contextSame` (proved), `ReachesC.contextStep` (proved), `join` (proved), `ReachesC.refl` (proved), `same` (proved), `ReachesC.step` (proved), `ReachesC.trans` (proved), `ReachesQ.contextStep` (proved), `ReachesQ.refl` (proved), `ReachesQ.step` (proved), `ReachesQ.trans` (proved), `RunJoinC.refl` (proved), `RunJoinC.terminal` (proved), `RunJoinC.trans` (proved), `argSitesAt_body` (proved), `block_context_action` (proved), `block_context_noScoped` (proved), `compilesBO_bind` (proved), `compilesBO_catchCause` (proved), `compilesBO_catchIf` (proved), `compilesBO_exit` (proved), `compilesBO_iterate` (proved), `compilesBO_matchCause` (proved), `compilesBO_onExit` (proved), `compilesBO_select` (proved), `compilesBO_suspend` (proved), `compilesBlk` (proved), `compilesBlk_context` (proved), `compilesBlk_provideContext` (proved), `compilesBlk_provideService` (proved), `compilesBlk_root` (proved), `compilesBlk_service` (proved), `contextBracket_enter` (proved), `contextBracket_leave` (proved), `contextStep_fallback` (proved), `contextStep_finished_stores` (proved), `contextStep_plain` (proved), `contextStep_quiet` (proved), `contextStep_stores` (proved), `contextStep_yieldWrapper` (proved), `context_receipt_finish` (proved), `context_run_finish` (proved), `defBodyPath_body` (proved), `drive_deliver_finish_context` (proved), `drive_deliver_running_context` (proved), `drive_finish_M_context` (proved), `drive_loop_call_context` (proved), `drive_loop_finish_context` (proved), `drive_loop_running_context` (proved), `drive_loop_sync_op_context` (proved), `drive_loop_sync_op_none_context` (proved), `drive_loop_sync_pure_context` (proved), `drive_loop_yield_context` (proved), `drive_receipt_prefix` (proved), `drive_receipt_result` (proved), `drive_receipt_stable` (proved), `drive_seg_receipt` (proved), `evaluateNative_plain_context` (proved), `evaluatePrim_contextStep` (proved), `fire_Myield_answer_context` (proved), `flushAll_Mexit_context` (proved), `flush_Myield_receipt` (proved), `hostRunBlockB_exits` (proved), `iteration_M_context` (proved), `load_evaluate_receipt` (proved), `localRunC_agree` (proved), `localRunC_compileB` (proved), `localRunC_compileBO` (proved), `localRunC_mono` (proved), `localRunC_to_blockB` (proved), `localRunC_to_rowsB` (proved), `localRunC_waits` (proved), `localWaitC_to_rowsB` (proved), `seg_settles_receipt` (proved), `bodyAt` (proved), `bodiesOf_blockRows` (proved), `cata_blockAlgB_loopedDataRows` (proved), `denoteBlockB_context` (proved), `denoteBlockB_exit` (proved), `denoteBlockB_loopedDataRows` (proved), `denoteBlockB_of_asExit` (proved), `denoteBlockB_param` (proved), `denoteBlockB_provideContext` (proved), `denoteBlockB_provideService` (proved), `denoteBlockB_service` (proved), `hostRunB_stable` (proved), `observeRows_project` (proved), `partAt_at` (proved), `partAt_of_hasTy` (proved), `hostRunB_iff` (proved), `bodyAt_at` (proved), `run_eq_ref_table` (proved), `checkModule_programCallAt` (proved), `effChain_bind_succeed` (proved), `external_error_members` (proved), `handles_of_payloadFieldTy` (proved), `hasTy_callAt` (proved), `lookup_programCalls` (proved), `moduleHasTy_programCallAt` (proved), `programCallAt_rowTy` (proved), `noWithFiber` (proved), `bound_in_tree` (proved), `request_leads` (proved), `agrees_hostRun` (proved), `agrees_hostRun_blocks` (proved), `applied_selects` (proved), `conforms_sat` (proved), `conforms_sat_blocks` (proved), `control_retires` (proved), `denoteRowsB_eq_session_host` (proved), `denoteRows_eq_session` (proved), `denoteRows_eq_session_host` (proved), `effEquiv_runWith` (proved), `ending_of_tape` (proved), `h8_loopedRows` (proved), `h9_blocks` (proved), `request_performed` (proved), `runWith_denotes` (proved), `runWith_denotesB` (proved), `runWith_finishes` (proved), `runWith_guarded_denotes` (proved), `runWith_guarded_denotesB` (proved), `runWith_host_denotes` (proved), `runWith_host_denotesB` (proved), `runWith_layer_denotes` (proved), `sessionSystem_finished` (proved), `sessionSystem_finishes` (proved), `Run.session_eq_ref` (proved), `session_keys_once` (proved), `stale_never_applies` (proved), `timeout` (modulo), `add_empty_calls_nothing` (proved), `complete_answers_requested` (proved), `complete_failure_escapes` (proved), `complete_idempotent` (proved), `list_after_add` (proved), `serves` (proved), `workers` (proved), `receipt_inert` (proved) | `cleanup_keeps`, `retries_declared` |
 | `R7` | open | — | — | — |
 | `R8` | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved) | `printTypedAt_none` (proved), `eraseJoinArgs_printTyped` (proved), `eraseJoinArgs_printTypedAt` (proved), `eraseJoinArgs_printTypedSitesAt` (proved), `readTyped_exact` (proved), `readTyped_printTyped` (proved), `readTyped_printTypedAt` (proved), `localRunC_of_localRun` (proved), `focusAtTable_annotate` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved), `readModule_printModule_defs` (proved), `funded_replays` (proved), `tape_replays` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved) | — |
-| `R9` | open | `m7_proved` (proved), `m7_admitted` (proved) | `countdown_parks_positional` (proved) | — |
+| `R9` | open | `m7_proved` (proved), `m7_admitted` (proved) | `countdown_parks_positional` (proved), `evalTerm_progressIn` (goal) | `evalTerm_progressIn` |
 | `R10` | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `build_retains` (proved), `elaborateModule_no_declarations` (proved), `elaboration_eq_getD` (proved), `finishBuild_retains` (proved), `mapDoneEffectOf_protocol` (proved), `mapEffectOf_protocol` (proved), `awaitStep_agrees` (proved), `Latch.Model.closeStep_agrees` (proved), `flushStep_agrees` (proved), `initialStep_agrees` (proved), `isOpenStep_agrees` (proved), `latch_registration_agrees` (proved), `latch_steps_agree` (proved), `wakeStep_agrees` (proved), `Latch.Model.withdrawStep_agrees` (proved), `frame` (proved), `sound` (proved), `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `available_eval` (proved), `available_reads` (proved), `bookkeeping_agrees` (proved), `PartitionedSemaphore.Model.initial_eval` (proved), `PartitionedSemaphore.Model.initial_reads` (proved), `reserve_eval` (proved), `reserve_reads` (proved), `tryTake_eval` (proved), `tryTake_reads` (proved), `Pool.Model.closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `hostRunBlockB_stable` (proved), `call_unfolds_at_limitB` (proved), `cata_blockAlgB_approx` (proved), `cata_blockAlgB_effs` (proved), `cata_blockAlgB_effs_approx` (proved), `denoteBlockB_approx` (proved), `denoteBlockB_bind` (proved), `denoteBlockB_call` (proved), `denoteBlockB_invoke` (proved), `hostRunBlockB_bind` (proved), `invoke_unfolds_at_limitB` (proved), `params_approx_lookup` (proved), `runRowsH_map_some` (proved), `tagHit_record` (proved), `modify_loop` (proved), `sub_instantiate_polarity` (proved), `semiring_laws` (proved), `mask_printed_form_profile` (proved), `PubSub.Model.initial_eval` (proved), `PubSub.Model.initial_reads` (proved), `poll_eval` (proved), `poll_reads` (proved), `single_steps_agree` (proved), `slide_eval` (proved), `slide_reads` (proved), `subscribe_eval` (proved), `subscribe_reads` (proved), `tryPublish_eval` (proved), `tryPublish_reads` (proved), `unsubscribe_eval` (proved), `unsubscribe_reads` (proved), `catchDone_meaning` (proved), `matchAnswer_meaning` (proved), `matchEffect_meaning` (proved), `matchEffect_protocol` (proved), `offer_loop` (proved), `take_loop` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `flatMap_split` (proved), `offerStep_agrees` (proved), `offer_jobs` (proved), `pollStep_agrees` (proved), `poll_jobs` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `stateJobs_afterAccept` (proved), `Queue.Model.takeStep_agrees` (proved), `take_jobs` (proved), `withdrawOffer_agrees` (proved), `withdrawOffer_jobs` (proved), `withdrawTake_agrees` (proved), `withdrawTake_jobs` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `cache_agrees` (proved), `denoteBlockB_getBody` (proved), `Cache.get_agrees` (proved), `get_hit` (proved), `get_miss` (proved), `get_session` (proved), `holding_self` (proved), `hostRunBlockB_call_invalidate` (proved), `hostRunBlockB_invoke_get` (proved), `hostRun_bind_call` (proved), `hostRun_bind_straight` (proved), `invalidate_agrees` (proved), `invalidate_get` (proved), `invalidate_run` (proved), `Cache.make_agrees` (proved), `refPoke_peek` (proved), `decode_modifySome` (proved), `decode_option` (proved), `encode_getD` (proved), `getAndSet_agrees` (proved), `getAndUpdateSome_agrees` (proved), `getAndUpdate_agrees` (proved), `Ref.get_agrees` (proved), `kernel_agrees` (proved), `Ref.make_agrees` (proved), `modifySome_agrees` (proved), `modify_agrees` (proved), `modify_callback_agrees` (proved), `ref_steps_agree` (proved), `setAndGet_agrees` (proved), `set_agrees` (proved), `updateAndGet_agrees` (proved), `updateSomeAndGet_agrees` (proved), `updateSome_agrees` (proved), `update_agrees` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `arrayStep_agrees` (proved), `queue_built_program` (proved), `queue_elaborates` (proved), `queue_main_eq` (proved), `queue_main_some` (proved), `queue_refs_nil` (proved), `workers_built_program` (proved), `workers_elaborates` (proved), `workers_main_eq` (proved), `workers_main_some` (proved), `workers_refs_nil` (proved), `accounted_of_ledger` (proved), `exit_eq` (proved), `fed_perm` (proved), `filterMap_gave` (proved), `flatMap_offers` (proved), `heldWithin_of_ledger` (proved), `held_of_shows` (proved), `ledger_opened` (proved), `opened_exit` (proved), `jobs_step` (goal), `held_within_fed` (modulo), `queueWorkers` (modulo), `infrastructure_escapes` (proved), `routing` (proved), `tagIs_pair` (proved), `retries_declared` (goal), `add_on_model_at` (proved), `built_cached_bodies` (proved), `cached_list_after_add` (proved), `denoteBlockB_call_add` (proved), `denoteBlockB_call_list` (proved) | `jobs_step`, `rest_step`, `retries_declared` |
 | `R11` | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `replace_sum` (proved), `replace_sum_le_omitted` (proved), `finalizerOr_debit` (proved), `getCont_le` (proved), `step_debit` (proved), `getCont_spec` (proved), `StackLedger.funded_reachable` (proved), `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `census_pushes_once` (proved), `FinalizerRun.funded_reachable` (proved), `once_placed_direct_pushes_once` (proved), `once_placed_outside_census` (goal), `once_placed_pushes_once` (modulo), `starts_le_pushes` (proved), `evaluateNative_maskChain` (proved), `evaluateNative_under` (proved), `evaluatePrim_producer` (proved), `evaluatePrim_under` (proved), `iteration_currentOpCount` (proved), `iteration_under` (proved), `Local.history_funded` (proved), `LocalOn.history_funded` (proved), `AdministrativeKept.non_evaluator` (proved), `AdministrativeQueue.non_evaluator` (proved), `armE` (proved), `failure_stack_eq` (proved), `getCont_cause` (proved), `popFrom_cause` (proved), `resumeCause` (proved), `CommandClosure.command` (proved), `joined` (proved), `read` (proved), `after_add_code_credits` (proved), `async_route_credits` (proved), `close_program_credits` (proved), `compile_credits` (proved), `emit_credits` (proved), `fin_program_credits` (proved), `load_credits` (proved), `load_funded` (proved), `prog_of_credits` (proved), `registration_template` (proved), `response_credits_bounded` (proved), `source_op_credits` (proved), `stack_before_action` (proved), `stack_before_iterator` (proved), `stack_before_push` (proved), `stack_before_suspend` (proved), `stack_credits_bounded` (proved), `update_credits` (proved), `add_memo_credits` (proved), `bind_service_credits` (proved), `build_scope_credits` (proved), `combine_credits` (proved), `constant_push_credits` (proved), `constant_stack_credits` (proved), `constant_start` (proved), `contA_credits` (proved), `contE_credits` (proved), `context_credits` (proved), `exit_credits` (proved), `failure_fiber_le` (proved), `failure_stack_le` (proved), `forced_yield_iteration` (proved), `forced_yield_loop_funded` (proved), `layer_compile_credits` (proved), `layer_construction_credits` (proved), `layer_inner_credits` (proved), `layer_resolve_credits` (proved), `layer_with_credits` (proved), `layer_zero_credits` (proved), `loop_top_credits` (proved), `merge_context_credits` (proved), `provide_body_credits` (proved), `provide_layer_credits` (proved), `provide_then_credits` (proved), `region_credits` (proved), `resolve_credits` (proved), `service_lookup_credits` (proved), `store_contA_credits` (proved), `store_contE_credits` (proved), `store_exit_credits` (proved), `suspend_credits` (proved), `update_body_credits` (proved), `yield_wrapper_credits` (proved), `Execution.history` (proved), `Execution.load` (proved), `outer_custody` (proved), `ready_emit` (proved), `ready_update` (proved), `armA_counts` (proved), `armE_counts` (proved), `finalizerEvents_no_push` (proved), `frame_failure_le` (proved), `getCont_no_push` (proved), `interp_loopEnter` (proved), `interp_suspend` (proved), `joinPushed_no_push` (proved), `noPush_append` (proved), `noPush_counts` (proved), `passEvents_no_push` (proved), `passPushed_no_push` (proved), `popFrom_no_push` (proved), `push_onSuccess` (proved), `registrations_append` (proved), `resumeCause_counts` (proved), `resumeValue_counts` (proved), `stack_full` (proved), `starts_append` (proved), `FrameDebit.step` (proved), `sync_stack_le` (proved), `withFiber_suspend_le` (proved), `FrameSequencing.step` (proved), `decision` (proved), `fold_lift` (proved), `deliver` (proved), `loop` (proved), `sync_op` (proved), `NativeIterationDebit.iteration` (proved), `NativeMachineShape.iteration` (proved), `NativeMachineShape.native` (proved), `primitive` (proved), `NativeScopeDebit.native` (proved), `action_noAdd` (proved), `action_not_finished` (proved), `action_returned` (proved), `countdown_noAdd` (proved), `exit_pop_noAdd` (proved), `finalizer_returned_template` (proved), `frame_step_template` (proved), `iteration_returned_template` (proved), `loop_top` (proved), `loop_top_source` (proved), `native_returned_template` (proved), `primitive_returned_template` (proved), `returned_clean` (proved), `scoped_exit_returned` (proved), `step_frame_template` (proved), `armA` (proved), `getCont_value` (proved), `resumeValue` (proved), `value_cap` (proved), `answerOf_clean` (proved), `armA_noAdd` (proved), `armE_noAdd` (proved), `constant_push_kept` (proved), `ensure_noAdd` (proved), `forced_unwrap` (proved), `getCont_cause_kept` (proved), `getCont_noAdd` (proved), `getCont_value_finalizer` (proved), `noAdd_append` (proved), `noAdd_cons` (proved), `noAdd_tail` (proved), `passPushed_noAdd` (proved), `popFrom_cause_kept` (proved), `popFrom_noAdd` (proved), `popFrom_value_finalizer` (proved), `resumeCause_clean` (proved), `resumeCause_kept` (proved), `resumeValue_clean` (proved), `resumeValue_kept` (proved), `resumeValue_kept_clear` (proved), `cancel` (proved), `closeSeq_credits` (proved), `interp_contA` (proved), `interp_contE` (proved), `interp_iter` (proved), `interp_loopResume` (proved), `iterator_future` (proved), `loopFinish_credits` (proved), `loopNext_credits` (proved), `loopResume_credits` (proved), `runStmts_credits` (proved), `store_cancel` (proved), `yieldOf_credits` (proved), `terminal` (proved), `RuntimeShape.load` (proved), `close` (proved), `link` (proved), `syncOp` (proved), `acquired_registration` (proved), `async_noAdd` (proved), `async_producer` (proved), `forced_push` (proved), `forced_wrapper` (proved), `interrupt` (proved), `Sequencing.load` (proved), `noAdd_asyncFinalizer` (proved), `noAdd_empty` (proved), `noAdd_full` (proved), `noAdd_mask` (proved), `opaque_noAdd` (proved), `raw_yield_excluded` (proved), `registration_step` (proved), `resume_command` (proved), `resume_frame_debit` (proved), `saved_resume` (proved), `stable_cause` (proved), `stable_full` (proved), `stable_refGet` (proved), `stable_value` (proved), `value_response` (proved), `yield_producer` (proved), `yield_response_full` (proved), `yield_stable` (proved), `add_open` (proved), `after_add_exit` (proved), `after_add_exit_credit` (proved), `after_add_unit` (proved), `after_add_unit_credit` (proved), `close_chain_transfer` (proved), `close_scope` (proved), `close_seq_command` (proved), `close_seq_start` (proved), `foreign_suspension` (proved), `release_loop_debit` (proved), `release_start` (proved), `release_start_count` (proved), `release_start_debit` (proved), `release_start_registered` (proved), `scope_add_closed` (proved), `scope_add_open` (proved), `StackRegion.command` (proved), `compiled_region_bracket_of_prefix` (proved), `drive` (proved), `settle_callback` (proved), `clause_closeScope` (proved), `clause_scoped` (proved), `foreignFinalizer_ambient` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `guarded_driveStep_liveTransports` (proved), `stepped_live` (proved), `log_debits` (proved), `evaluation` (proved), `WriterHistory.history_funded` (proved), `cleans_once` (proved), `crew_acquire_once_placed` (proved), `queueCrew_acquire_once_placed` (proved), `queue_acquisition_sites` (proved), `queue_placement` (proved), `workers_acquisition_sites` (proved), `workers_placement` (proved), `cleanup_step` (proved), `logs_history` (proved), `registrations` (proved), `releases` (proved), `QueueWorkers.releases_once` (proved), `cleanup_keeps` (goal), `logs_step` (proved), `registrations_step` (proved), `releases_step` (proved), `Workers.releases_once` (proved) | `once_placed_outside_census`, `cleanup_keeps` |
-| `R12` | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved) | `driveState_loop` (proved), `iteration_below_budget` (proved), `loop_of_iteration` (proved), `bounded` (proved), `complete_unique` (proved), `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `quiet_nil` (proved), `settled_of_ledger` (proved), `settled_of_view` (proved), `spent_one` (proved), `within_one` (proved), `rest_step` (goal), `fed_accounted` (modulo), `queue_settled` (modulo) | `rest_step`, `jobs_step` |
+| `R12` | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved) | `driveState_loop` (proved), `iteration_below_budget` (proved), `loop_of_iteration` (proved), `bounded` (proved), `complete_unique` (proved), `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `frontier_of_diverges` (proved), `frontier_waits` (proved), `rows_divergence_adequate` (goal), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved), `runWith_exit_of_diverges` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `quiet_nil` (proved), `settled_of_ledger` (proved), `settled_of_view` (proved), `spent_one` (proved), `within_one` (proved), `rest_step` (goal), `fed_accounted` (modulo), `queue_settled` (modulo) | `rows_divergence_adequate`, `rest_step`, `jobs_step` |
 | `R13` | open | `Run.journal_replays` (proved) | `Live.journal_replays` (proved), `reached` (proved), `reached_history` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `history` (proved), `keeps` (proved), `replays` (proved) | — |
 | `R14` | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `Program.refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved), `callAt_rowTy` (proved), `Program.annotate_eq_table` (proved), `Sketch.annotate_eq_table` (proved), `table_fill` (proved), `EditSession.reached_view` (proved), `check_filled_module` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `checkAction_eq` (proved), `checkEffs_eq` (proved), `checkLayer_eq` (proved), `checkLayers_eq` (proved), `checkStmt_eq` (proved), `checkStmts_eq` (proved), `check_alg_agreeOn` (proved), `check_eq` (proved), `Annotate.check_restrict` (proved), `bodyAt_typed` (proved), `BodiesHasTy.replace` (proved), `matchArgsB_monotone` (proved), `checkAction_rebase` (proved), `checkEffs_rebase` (proved), `checkLayer_rebase` (proved), `checkLayers_rebase` (proved), `checkStmt_rebase` (proved), `checkStmt_step_binds` (proved), `checkStmts_rebase` (proved), `check_rebase` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `EditSession.Coherent.ext` (proved), `EditSession.feed_coherent` (proved), `feed_edit` (proved), `EditSession.feed_keeps` (proved), `feed_omit_sketch` (proved), `feed_repaint` (proved), `feed_shown` (proved), `feed_spliced` (proved), `EditSession.feed_undo` (proved), `EditSession.open_coherent` (proved), `EditSession.reached_coherent` (proved), `EditSession.reached_view` (proved), `EditSession.run_coherent` (proved), `EditSession.run_keeps` (proved), `EditSession.view_refusals` (proved), `EditSession.view_type` (proved), `addresses_expandRefs` (proved), `addresses_rounds_filter` (proved), `eq_defs_of_isBlock` (proved), `mem_addresses_expandRefs` (proved), `ne_defs_of_isBlock` (proved), `partAt_plain` (proved), `partAt_resig` (proved), `scopeOf_append` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `declAnnotations_all` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `isBlock` (proved), `all_of_dropWhile_nil` (proved), `all_of_takeWhile_length` (proved), `dropWhile_eq_nil_of_all` (proved), `filter_eq_nil_of_all_false` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `addresses_eq_cons` (proved), `addresses_expandRound_filter` (proved), `addresses_root` (proved), `at_append` (proved), `at_child` (proved), `at_layers_nil` (proved), `at_mapRefs` (proved), `at_replaceAt_above` (proved), `at_replaceAt_below` (proved), `at_snoc` (proved), `at_stmts_nil` (proved), `belowRef_cons` (proved), `belowRef_of_expandRound` (proved), `belowRef_ref` (proved), `childEnv_replace_kept` (proved), `child_add_three` (proved), `child_expandRound` (proved), `child_mapRefs` (proved), `child_ref` (proved), `envAt_append` (proved), `envAt_child` (proved), `eq_of_refTarget?` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `layerAt_mapRefs` (proved), `mem_childAddresses` (proved), `mem_foldList_iff` (proved), `ne_ref_of_refTarget?` (proved), `not_belowRef_nil` (proved), `not_belowRef_of_mem` (proved), `refTarget?_expandRound` (proved), `ref_expandRound` (proved), `replaceAt_append` (proved), `replaceAt_cons_isBlock` (proved), `replaceAt_defs_body` (proved), `replaceAt_defs_main` (proved), `replaceAt_eff` (proved), `replaceAt_effs_head` (proved), `replaceAt_effs_tail` (proved), `setChild_isBlock` (proved), `sizeOf_child_lt` (proved), `stmtsHead_replace_kept` (proved), `child_step` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `bodyAt_resig` (proved), `bodyAt_sig` (proved), `lt_append_left` (proved), `prefix_cases` (proved), `properPrefix_append_left` (proved), `properPrefix_eq_true_iff` (proved), `rebase_append` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `extends_withDefs` (proved), `Sketch.annotate_eq_table` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_fill_kept` (proved), `check_filled` (proved), `check_filled_module` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `decode_encode` (proved), `decode_exact` (proved), `expand_table_filter` (proved), `fillAt_of_replaceAt` (proved), `fillAt_some` (proved), `focusAt_at` (proved), `focusAt_more_holes` (proved), `Sketch.focusAt_nil` (proved), `hole_hasTy` (proved), `hole_hasTy_focus` (proved), `mem_sourceTable` (proved), `Sketch.refusals_head` (proved), `Sketch.refusals_nil_iff` (proved), `refusals_of_check` (proved), `sigAt_extends` (proved), `sigAt_nil` (proved), `sigAt_part` (proved), `sourceAnnotate_eq_sourceTable` (proved), `sourceCheck_ok` (proved), `sourceCheck_toOption` (proved), `sourceEntry_path` (proved), `sourceRefusals_head` (proved), `sourceRefusals_nil_iff` (proved), `sourceRefusals_of_ok` (proved), `sourceTable_find` (proved), `sourceTable_focus` (proved), `sourceTable_head` (proved), `sourceTable_result_refusal_none` (proved), `sourceTable_typedAt` (proved), `tableEntry_path` (proved), `table_fill` (proved), `Sketch.table_head` (proved), `table_more_holes` (proved), `table_omit` (proved), `table_result_refusal_none` (proved), `SourceSession.Coherent.ext` (proved), `SourceSession.feed_coherent` (proved), `SourceSession.feed_keeps` (proved), `SourceSession.feed_undo` (proved), `SourceSession.focusAt_typed` (proved), `SourceSession.open_coherent` (proved), `open_shown_of_refSites_nil` (proved), `SourceSession.reached_coherent` (proved), `SourceSession.reached_view` (proved), `SourceSession.run_coherent` (proved), `SourceSession.run_keeps` (proved), `table_eq` (proved), `SourceSession.view_refusals` (proved), `SourceSession.view_type` (proved), `bodies_eq` (proved), `bodies_mem_under` (proved), `bodies_restrict` (proved), `bodies_splice` (proved), `bodies_under` (proved), `bodyEntry_head` (proved), `bodyEntry_nil` (proved), `bodyEntry_nodecl` (proved), `bodyEntry_tail` (proved), `find?_map_at` (proved), `mem_splice` (proved), `moduleLayers_restrict` (proved), `splice_all_under` (proved), `splice_append_out_left` (proved), `splice_append_out_right` (proved), `splice_three` (proved), `typedAt_table` (proved), `typedAt_table_nil` (proved), `typedAt_table_of_focusAt` (proved), `under_append` (proved), `under_prefix_false` (proved), `under_self` (proved), `under_sibling_false` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extendAll_adjoint` (proved), `extendAll_bot` (proved), `extendAll_isSome_iff` (proved), `extendAll_laws` (proved), `extendAll_least` (proved), `extendAll_lift` (proved), `extendAll_mono` (proved), `extendAll_upper` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extendAll_agrees` (proved), `extendAll_closed` (proved), `extendAll_closed_pair` (proved), `extendAll_eq_some_iff` (proved), `extendAll_never` (proved), `extendAll_of_extend` (proved), `extendAll_refused` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `actionHasTy_sigProgram` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `annotateModule_fill` (proved), `annotateModule_fill_body` (proved), `annotateModule_fill_layers` (proved), `annotateModule_fill_main` (proved), `annotateModule_fill_plain` (proved), `annotateModule_plain` (proved), `annotateModule_restrict` (proved), `Program.annotate_eq_table` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `at_of_mem_refSites` (proved), `belowSite_refSites_iff` (proved), `bodiesHasTy_sigProgram` (proved), `callAt_rowTy` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `checkBodies_restrict` (proved), `checkModule_ext` (proved), `checkModule_programFocusAt` (proved), `checkModule_replace_programFocusAt` (proved), `checkModule_restrict` (proved), `checkRow_rowBindings` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `childAddresses_map_tableEntryAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effTy_of_check` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `effsHasTy_sigProgram` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `Program.focusAt_nil` (proved), `Program.focusAt_typed` (proved), `foldMapAt_action_base` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_action_hom` (proved), `foldMapAt_action_paths_cons` (proved), `foldMapAt_action_paths_shift` (proved), `foldMapAt_eff_base` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_eff_hom` (proved), `foldMapAt_eff_paths_cons` (proved), `foldMapAt_eff_paths_shift` (proved), `foldMapAt_effs_base` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_effs_hom` (proved), `foldMapAt_effs_paths_cons` (proved), `foldMapAt_effs_paths_shift` (proved), `foldMapAt_layer_base` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layer_hom` (proved), `foldMapAt_layer_paths_cons` (proved), `foldMapAt_layer_paths_shift` (proved), `foldMapAt_layers_base` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_layers_hom` (proved), `foldMapAt_layers_paths_cons` (proved), `foldMapAt_layers_paths_shift` (proved), `foldMapAt_stmt_base` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmt_hom` (proved), `foldMapAt_stmt_paths_cons` (proved), `foldMapAt_stmt_paths_shift` (proved), `foldMapAt_stmts_base` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_stmts_hom` (proved), `foldMapAt_stmts_paths_cons` (proved), `foldMapAt_stmts_paths_shift` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `hasTy_sigProgram` (proved), `holes_conservative` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layerHasTy_sigProgram` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `layersHasTy_sigProgram` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `moduleHasTy_partAt_typed` (proved), `moduleHasTy_programFocusAt` (proved), `moduleHasTy_replace_programFocusAt` (proved), `moduleHasTy_sigProgram` (proved), `nodeAnswer_replace_kept` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `references_move` (proved), `Program.refusals_head` (proved), `Program.refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sigOkKey_of_serviceTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `stmtsHasTy_sigProgram` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `tableAt_eq_cons` (proved), `tableAt_mem_path` (proved), `tableAt_none` (proved), `tableAt_path` (proved), `tableAt_perform` (proved), `tableAt_rebase` (proved), `tableAt_splice` (proved), `tableEntryAt_nil` (proved), `table_eq_tableAt` (proved), `Program.table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `table_splice` (proved), `termTy_closed` (proved), `termTy_of_term?` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved), `ofJsonAnyOrder_exact` (proved), `ofJson_exact` (proved), `read_exact` (proved), `canonicalHex?_exact` (proved), `natOfBinary64_exact` (proved), `natOfBinary64_finite` (proved), `readFields_exact` (proved), `readIn_exact` (proved), `readList_exact` (proved), `tagOfName_exact` (proved), `except_error_bind` (proved), `except_ok_bind` (proved), `except_pure` (proved) | — |
 
-Next goals (7): `ofJson_image`, `shop_stages`, `cleanup_keeps`, `retries_declared`, `jobs_step`, `rest_step`, `once_placed_outside_census`
+Next goals (13): `fitsIn_iff_membersIn`, `fitsIn_live`, `fitsIn_normalize`, `fitsIn_sub`, `ofJson_image`, `shop_stages`, `cleanup_keeps`, `retries_declared`, `evalTerm_progressIn`, `jobs_step`, `rest_step`, `once_placed_outside_census`, `rows_divergence_adequate`
 
 Open parts, with no planned goal (87), by state:
 
@@ -6030,9 +6135,13 @@ The open part of R3: its planned goals and the theorems proved modulo them. An a
 
 ```mermaid
 flowchart TB
-  n0["ofJson_complete<br/>modulo"]
-  n1["ofJson_image<br/>goal"]
-  n0 --> n1
+  n0["fitsIn_iff_membersIn<br/>goal"]
+  n1["fitsIn_live<br/>goal"]
+  n2["fitsIn_normalize<br/>goal"]
+  n3["fitsIn_sub<br/>goal"]
+  n4["ofJson_complete<br/>modulo"]
+  n5["ofJson_image<br/>goal"]
+  n4 --> n5
 ```
 
 R3 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
@@ -6041,13 +6150,14 @@ R3 by concept: each concept its nodes are placed at, by tag or by module. An arr
 flowchart TB
   n0["Residual Program Typing<br/>proved · 2 nodes"]
   n1["No concept<br/>proved · 7 nodes"]
-  n2["Store Typing<br/>proved · 20 nodes"]
+  n2["Store Typing<br/>open · 32 nodes, 4 open"]
   n3["Exact Codecs<br/>open · 8 nodes, 2 open"]
-  n4["Subtyping Algebra<br/>proved · 2 nodes"]
+  n4["Subtyping Algebra<br/>proved · 30 nodes"]
   n2 --> n4
   n2 --> n1
   n1 --> n3
   n3 --> n1
+  n4 --> n2
   n0 --> n1
   n0 --> n3
   n0 --> n2
@@ -6067,6 +6177,25 @@ flowchart TB
 | `type_metadata_exact` | proved | — | — |
 | `errOf_valOfErr` | proved | — | `errOf_payload` |
 | `admitModule_classDecls` | proved | — | `checkInput_eq_none_iff` |
+| `closed_armsIn` | proved | — | `closed_tagArmsIn`, `option_closed`, `liftIn_closed`, `closed_arms` |
+| `closed_checkIn` | proved | — | — |
+| `closed_fieldTypeIn` | proved | — | `closed_fieldOf`, `liftIn_closed` |
+| `closed_membersIn` | proved | — | — |
+| `closed_setTypeIn` | proved | — | `closed_setOf`, `liftIn_closed` |
+| `closed_tagArmsIn` | proved | — | `closed_membersIn` |
+| `fieldAdmitsIn_sound` | proved | — | `memberIn_sub`, `memberIn_normalize` |
+| `liftIn_closed` | proved | — | `closed_membersIn`, `mapM_source`, `closed_join`, `joinAll_all` |
+| `tagArmsIn_partition` | proved | — | `memberIn_iff_membersIn` |
+| `fitsIn_iff_membersIn` | goal | `fitsIn_iff_membersIn` | — |
+| `fitsIn_live` | goal | `fitsIn_live` | — |
+| `fitsIn_map` | proved | — | — |
+| `fitsIn_memberIn` | proved | — | — |
+| `fitsIn_mono` | proved | — | `fitsIn_map` |
+| `fitsIn_nil` | proved | — | — |
+| `fitsIn_normalize` | goal | `fitsIn_normalize` | — |
+| `fitsIn_sub` | goal | `fitsIn_sub` | — |
+| `fitsIn_unfold` | proved | — | — |
+| `liftIn_transfer` | proved | — | `joinAll_keeps`, `mapM_answer`, `memberIn_iff_membersIn` |
 | `cata_declAlg_normalize` | proved | — | `hom_eq_cata_ty` |
 | `errOf_ne_boom_of_supported` | proved | — | `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record` |
 | `errOf_payload` | proved | — | — |
@@ -6079,11 +6208,13 @@ flowchart TB
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` |
 | `memberIn_iff_expand` | proved | — | `hom_eq_cata_ty` |
 | `memberIn_iff_expansions` | proved | — | `memberIn_iff_expand` |
+| `memberIn_iff_membersIn` | proved | — | `hasTyIn_iff`, `memberIn_normalize` |
 | `memberIn_mono` | proved | — | `hom_eq_cata_ty` |
 | `memberIn_normalize` | proved | — | `cata_declAlg_normalize` |
 | `memberIn_sub` | proved | — | — |
 | `memberIn_unfold_iff` | proved | — | — |
 | `tyDecls_conservative` | proved | — | `hom_eq_cata_ty`, `hasTyIn_iff` |
+| `wiring_readers_conservative` | proved | — | — |
 | `ofJson_complete` | modulo | `ofJson_image` | `ofJson_image` |
 | `ofJson_image` | goal | `ofJson_image` | — |
 | `frame_laws` | proved | — | — |
@@ -6093,8 +6224,27 @@ flowchart TB
 | `subN_trans` | proved | — | — |
 | `normalize_idem` | proved | — | — |
 | `subN_refl` | proved | — | — |
+| `option_closed` | proved | — | — |
+| `closed_arms` | proved | — | `closed_tagArms`, `closed_diffTag`, `closed_payloadTy`, `closed_optionTy` |
+| `closed_fieldOf` | proved | — | — |
+| `closed_setOf` | proved | — | — |
+| `mapM_source` | proved | — | `mapM_cons_eq_some` |
+| `closed_join` | proved | — | — |
+| `joinAll_all` | proved | — | `foldl_all` |
+| `joinAll_keeps` | proved | — | `foldl_keeps` |
+| `mapM_answer` | proved | — | `mapM_cons_eq_some` |
 | `handles_of_payloadFieldTy` | proved | — | — |
 | `decode_encode` | proved | — | — |
+| `closed_tagArms` | proved | — | — |
+| `closed_diffTag` | proved | — | — |
+| `closed_payloadTy` | proved | — | `closed_payloadOf` |
+| `closed_optionTy` | proved | — | `option_closed`, `lift_closed` |
+| `mapM_cons_eq_some` | proved | — | — |
+| `foldl_all` | proved | — | — |
+| `foldl_keeps` | proved | — | — |
+| `closed_payloadOf` | proved | — | — |
+| `lift_closed` | proved | — | `closed_join`, `lift_all` |
+| `lift_all` | proved | — | `mapM_source`, `joinAll_all` |
 
 ### R4: State: the world types every cell at any type, with rows as templates
 
@@ -6464,7 +6614,7 @@ R5 by concept: each concept its nodes are placed at, by tag or by module. An arr
 ```mermaid
 flowchart TB
   n0["Context Requirements<br/>proved · 2 nodes"]
-  n1["Translation & Simulation<br/>proved · 28 nodes"]
+  n1["Translation & Simulation<br/>proved · 30 nodes"]
   n2["Reactive Scheduling<br/>proved · 2 nodes"]
   n3["Host Session Protocol<br/>proved · 6 nodes"]
   n4["Initial Algebras & Folds<br/>proved · 15 nodes"]
@@ -6485,11 +6635,12 @@ flowchart TB
 | `expanded_refs_nil_of_wf` | proved | — | — |
 | `typeOfProgram_expandRefs` | proved | — | `expanded_refs_nil_of_wf` |
 | `tree_needs_token` | proved | — | — |
-| `unauthorized_calls_nothing` | proved | — | `tree_needs_token`, `bound_in_tree`, `checkInput_eq_none_iff` |
+| `unauthorized_calls_nothing` | proved | — | `tree_needs_token`, `bound_in_tree`, `build_retains`, `checkInput_eq_none_iff` |
 | `satisfies_union` | proved | — | — |
 | `satisfies_weaken` | proved | — | — |
 | `satisfies_empty` | proved | — | — |
 | `bound_in_tree` | proved | — | `denoteRowsB_straight`, `localWaitC_to_rowsB`, `request_leads`, `driveState_lift`, `evaluatePrim_producer`, `reached` |
+| `build_retains` | proved | — | `finishBuild_retains`, `checkInput_eq_none_iff` |
 | `checkInput_eq_none_iff` | proved | — | — |
 | `denoteRowsB_straight` | proved | — | — |
 | `localWaitC_to_rowsB` | proved | — | `localRunC_agree`, `contextStep_fallback`, `localRunC_mono`, `localRunC_compileBO`, `localRunC_waits`, `terminal` |
@@ -6497,6 +6648,7 @@ flowchart TB
 | `driveState_lift` | proved | — | — |
 | `evaluatePrim_producer` | proved | — | — |
 | `reached` | proved | — | — |
+| `finishBuild_retains` | proved | — | `checkInput_eq_none_iff` |
 | `localRunC_agree` | proved | — | `localRunC_mono` |
 | `contextStep_fallback` | proved | — | — |
 | `localRunC_mono` | proved | — | — |
@@ -6569,9 +6721,9 @@ R6 by concept: each concept its nodes are placed at, by tag or by module. An arr
 ```mermaid
 flowchart TB
   n0["No concept<br/>proved · 29 nodes"]
-  n1["Host Session Protocol<br/>open · 34 nodes, 1 open"]
-  n2["Translation & Simulation<br/>open · 141 nodes, 1 open"]
-  n3["Store Typing<br/>proved · 12 nodes"]
+  n1["Host Session Protocol<br/>open · 38 nodes, 1 open"]
+  n2["Translation & Simulation<br/>open · 143 nodes, 1 open"]
+  n3["Store Typing<br/>proved · 14 nodes"]
   n4["Initial Algebras & Folds<br/>proved · 24 nodes"]
   n5["Reactive Scheduling<br/>proved · 3 nodes"]
   n6["Scope Lifetime & Finalization<br/>open · 189 nodes, 1 open"]
@@ -6589,12 +6741,14 @@ flowchart TB
   n1 --> n4
   n2 --> n5
   n1 --> n2
+  n2 --> n3
   n1 --> n5
   n1 --> n6
   n0 --> n7
   n0 --> n8
   n0 --> n5
   n4 --> n0
+  n3 --> n0
   n6 --> n0
   n6 --> n2
   n6 --> n1
@@ -6605,7 +6759,6 @@ flowchart TB
   n0 --> n9
   n6 --> n4
   n6 --> n5
-  n3 --> n0
   n6 --> n3
   n6 --> n7
   n6 --> n8
@@ -6736,9 +6889,12 @@ flowchart TB
 | `observeRows_project` | proved | — | — |
 | `partAt_at` | proved | — | `bodyAt_at` |
 | `partAt_of_hasTy` | proved | — | — |
+| `hostRunB_iff` | proved | — | — |
 | `bodyAt_at` | proved | — | — |
 | `run_eq_ref_table` | proved | — | `at_snoc` |
 | `checkModule_programCallAt` | proved | — | `checkModule_sound`, `moduleHasTy_programCallAt` |
+| `effChain_bind_succeed` | proved | — | — |
+| `external_error_members` | proved | — | — |
 | `handles_of_payloadFieldTy` | proved | — | — |
 | `hasTy_callAt` | proved | — | `checkRow_rowBindings`, `focusAt_typed`, `hasTy_focusAt` |
 | `lookup_programCalls` | proved | — | `mem_addresses_iff`, `programCallAt_rowTy` |
@@ -6754,10 +6910,13 @@ flowchart TB
 | `conforms_sat_blocks` | proved | — | `h9_blocks` |
 | `control_retires` | proved | — | — |
 | `denoteRows_eq_session` | proved | — | `contextStep_fallback`, `localRunC_mono`, `localRunC_agree`, `localRunC_waits`, `RunJoinC.terminal`, `denoteRowsB_straight`, `localRunC_compileB`, `PlainHooks.of_loopedRows`, `answer`, `join`, `Leads.trans`, `seg_settles_receipt`, `Leads.refl`, `load_evaluate_receipt`, `flush_Myield_receipt`, `funded_replays` |
+| `effEquiv_runWith` | proved | — | `runWith_finishes` |
 | `ending_of_tape` | proved | — | `funded_replays` |
 | `h9_blocks` | proved | — | `hostRunBlockB_exits`, `of_blockRows`, `answer`, `join`, `Leads.trans`, `seg_settles_receipt`, `Leads.refl`, `load_evaluate_receipt`, `flush_Myield_receipt`, `funded_replays` |
-| `runWith_guarded_denotes` | proved | — | `hom_eq_cata_ty`, `runWith_denotes` |
-| `runWith_guarded_denotesB` | proved | — | `hom_eq_cata_ty`, `runWith_denotesB` |
+| `request_performed` | proved | — | `mem_addresses_iff`, `origin_addresses_call` |
+| `runWith_finishes` | proved | — | `runWith_denotesB` |
+| `runWith_guarded_denotes` | proved | — | `memberIn_mono`, `hasTyIn_iff`, `hom_eq_cata_ty`, `runWith_denotes` |
+| `runWith_guarded_denotesB` | proved | — | `memberIn_mono`, `hasTyIn_iff`, `hom_eq_cata_ty`, `runWith_denotesB` |
 | `runWith_host_denotes` | proved | — | `runWith_guarded_denotes` |
 | `runWith_host_denotesB` | proved | — | `runWith_guarded_denotesB` |
 | `runWith_layer_denotes` | proved | — | `runWith_host_denotes` |
@@ -6766,7 +6925,7 @@ flowchart TB
 | `session_keys_once` | proved | — | `driveState_lift`, `evaluatePrim_producer`, `reached` |
 | `stale_never_applies` | proved | — | `checkInput_eq_none_iff` |
 | `timeout` | modulo | `cleanup_keeps`, `retries_declared` | `cleanup_keeps`, `stale_never_applies`, `retries_declared`, `checkInput_eq_none_iff` |
-| `add_empty_calls_nothing` | proved | — | `bound_in_tree`, `build_retains`, `checkInput_eq_none_iff` |
+| `add_empty_calls_nothing` | proved | — | `build_retains`, `checkInput_eq_none_iff`, `bound_in_tree` |
 | `complete_answers_requested` | proved | — | `conforms_sat`, `build_retains`, `checkInput_eq_none_iff` |
 | `complete_failure_escapes` | proved | — | `denoteRows_eq_session`, `build_retains`, `checkInput_eq_none_iff` |
 | `complete_idempotent` | proved | — | `agrees_hostRun`, `build_retains`, `checkInput_eq_none_iff` |
@@ -6804,6 +6963,8 @@ flowchart TB
 | `reached_history` | proved | — | — |
 | `normalize_idem` | proved | — | — |
 | `bodyAt_sig` | proved | — | — |
+| `memberIn_mono` | proved | — | `hom_eq_cata_ty` |
+| `hasTyIn_iff` | proved | — | — |
 | `hom_eq_cata_ty` | proved | — | — |
 | `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` |
 | `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` |
@@ -7247,42 +7408,49 @@ flowchart TB
 
 - Open, waits on a ruling (decisions row 117: the frame contract, designed first): part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)
 
+The open part of R9: its planned goals and the theorems proved modulo them. An arrow goes from a node to a node its proof reaches first.
+
+```mermaid
+flowchart TB
+  n0["evalTerm_progressIn<br/>goal"]
+```
+
 R9 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
   n0["No concept<br/>proved · 25 nodes"]
   n1["Reactive Scheduling<br/>proved · 2 nodes"]
-  n2["Residual Program Typing<br/>proved · 18 nodes"]
-  n3["Store Typing<br/>proved · 12 nodes"]
+  n2["Store Typing<br/>open · 13 nodes, 1 open"]
+  n3["Residual Program Typing<br/>proved · 18 nodes"]
   n4["Subtyping Algebra<br/>proved · 44 nodes"]
   n5["Initial Algebras & Folds<br/>proved · 5 nodes"]
   n6["Scope Lifetime & Finalization<br/>proved · 4 nodes"]
   n7["Exact Codecs<br/>proved · 1 nodes"]
-  n0 --> n2
-  n1 --> n3
-  n1 --> n0
-  n1 --> n2
   n0 --> n3
+  n1 --> n2
+  n1 --> n0
+  n1 --> n3
+  n0 --> n2
   n0 --> n4
   n0 --> n1
   n0 --> n5
-  n2 --> n5
-  n2 --> n3
-  n3 --> n4
+  n3 --> n5
+  n3 --> n2
   n2 --> n4
+  n3 --> n4
   n0 --> n6
   n0 --> n7
   n5 --> n0
-  n3 --> n0
-  n6 --> n3
-  n6 --> n4
+  n2 --> n0
   n6 --> n2
+  n6 --> n4
+  n6 --> n3
   n6 --> n5
   n6 --> n0
   n4 --> n0
-  n2 --> n0
-  n2 --> n7
+  n3 --> n0
+  n3 --> n7
 ```
 
 | Node | Status | Rests on | Nearest nodes |
@@ -7290,6 +7458,7 @@ flowchart TB
 | `m7_proved` | proved | — | `decision_preserves`, `loadsTyped`, `m7_of_ledger` |
 | `m7_admitted` | proved | — | `m7_proved`, `lawfulSig_of_admitted` |
 | `countdown_parks_positional` | proved | — | `order_refl`, `fits_mono`, `order_trans`, `mono`, `satisfies_empty`, `fits_subN`, `close_typed` |
+| `evalTerm_progressIn` | goal | `evalTerm_progressIn` | — |
 | `decision_preserves` | proved | — | `fits_subN`, `satisfies_empty`, `order_refl`, `fits_mono`, `order_trans`, `mono`, `subN_trans`, `configTyped_frame`, `hom_eq_cata_ty`, `wake_preserves`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
 | `loadsTyped` | proved | — | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound`, `satisfies_empty` |
 | `m7_of_ledger` | proved | — | `at_snoc`, `order_trans`, `order_refl` |
@@ -7737,7 +7906,7 @@ flowchart TB
 | `control_retires` | proved | — | — |
 | `applied_selects` | proved | — | — |
 | `receipt_inert` | proved | — | — |
-| `unauthorized_calls_nothing` | proved | — | `tree_needs_token`, `bound_in_tree`, `checkInput_eq_none_iff` |
+| `unauthorized_calls_nothing` | proved | — | `tree_needs_token`, `bound_in_tree`, `build_retains`, `checkInput_eq_none_iff` |
 | `denoteRowsB_straight` | proved | — | — |
 | `denoteBlockB_loopedDataRows` | proved | — | `cata_blockAlgB_loopedDataRows` |
 | `at_snoc` | proved | — | `at_append` |
@@ -8541,14 +8710,15 @@ The open part of R12: its planned goals and the theorems proved modulo them. An 
 
 ```mermaid
 flowchart TB
-  n0["fed_accounted<br/>modulo"]
-  n1["queue_settled<br/>modulo"]
-  n2["rest_step<br/>goal"]
-  n3["jobs_step<br/>goal"]
-  n0 --> n2
-  n0 --> n3
-  n1 --> n2
+  n0["rows_divergence_adequate<br/>goal"]
+  n1["fed_accounted<br/>modulo"]
+  n2["queue_settled<br/>modulo"]
+  n3["rest_step<br/>goal"]
+  n4["jobs_step<br/>goal"]
   n1 --> n3
+  n1 --> n4
+  n2 --> n3
+  n2 --> n4
 ```
 
 R12 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
@@ -8556,19 +8726,20 @@ R12 by concept: each concept its nodes are placed at, by tag or by module. An ar
 ```mermaid
 flowchart TB
   n0["Reactive Scheduling<br/>open · 24 nodes, 3 open"]
-  n1["Host Session Protocol<br/>proved · 3 nodes"]
-  n2["Scope Lifetime & Finalization<br/>proved · 3 nodes"]
-  n3["Translation & Simulation<br/>open · 84 nodes, 1 open"]
-  n4["No concept<br/>proved · 3 nodes"]
+  n1["Scope Lifetime & Finalization<br/>proved · 3 nodes"]
+  n2["Host Session Protocol<br/>open · 10 nodes, 1 open"]
+  n3["Translation & Simulation<br/>open · 90 nodes, 1 open"]
+  n4["No concept<br/>proved · 4 nodes"]
   n5["Initial Algebras & Folds<br/>proved · 2 nodes"]
-  n1 --> n3
+  n2 --> n3
   n0 --> n4
   n0 --> n3
-  n0 --> n1
   n0 --> n2
+  n0 --> n1
   n3 --> n4
-  n2 --> n3
-  n2 --> n4
+  n1 --> n3
+  n1 --> n4
+  n3 --> n2
   n3 --> n5
 ```
 
@@ -8587,6 +8758,10 @@ flowchart TB
 | `first_run_flags` | proved | — | `first_run_inv` |
 | `first_run_inv` | proved | — | `first_step_inv` |
 | `first_step_inv` | proved | — | `positive_suspend_step_capacity`, `first_profile_closed` |
+| `frontier_of_diverges` | proved | — | `frontier_waits` |
+| `frontier_waits` | proved | — | `observeRows_project`, `rows_loop_frontier_host` |
+| `rows_divergence_adequate` | goal | `rows_divergence_adequate` | — |
+| `runWith_exit_of_diverges` | proved | — | `runWith_finishes` |
 | `visit_selects_earliest` | proved | — | — |
 | `visit_stops_iff` | proved | — | — |
 | `quiet_nil` | proved | — | — |
@@ -8609,6 +8784,8 @@ flowchart TB
 | `funded_replays` | proved | — | `journal_replays`, `tape_replays` |
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` |
 | `first_profile_closed` | proved | — | — |
+| `observeRows_project` | proved | — | — |
+| `runWith_finishes` | proved | — | `runWith_denotesB` |
 | `checkInput_eq_none_iff` | proved | — | — |
 | `accounted_of_ledger` | proved | — | `held_of_shows` |
 | `exit_eq` | proved | — | — |
@@ -8635,6 +8812,7 @@ flowchart TB
 | `journal_replays` | proved | — | — |
 | `tape_replays` | proved | — | — |
 | `acceptLoop_length_le` | proved | — | — |
+| `runWith_denotesB` | proved | — | `denoteRowsB_eq_session_host`, `allows_answer`, `observe_awaitingAsync_iff`, `tapeFrom_append` |
 | `held_of_shows` | proved | — | `flatMap_offers`, `filterMap_gave` |
 | `opened_exit` | proved | — | `exit_eq` |
 | `queue_placement` | proved | — | — |
@@ -8673,6 +8851,10 @@ flowchart TB
 | `prepend` | proved | — | `ReachesQ.trans` |
 | `drive_receipt_prefix` | proved | — | `drive_receipt_stable` |
 | `ReachesC.contextStep` | proved | — | — |
+| `denoteRowsB_eq_session_host` | proved | — | `hostRunB_stable`, `localRunC_to_rowsB`, `PlainHooks.of_loopedRows`, `answer`, `join`, `Leads.trans`, `seg_settles_receipt`, `Leads.refl`, `load_evaluate_receipt`, `flush_Myield_receipt`, `funded_replays` |
+| `allows_answer` | proved | — | — |
+| `observe_awaitingAsync_iff` | proved | — | — |
+| `tapeFrom_append` | proved | — | — |
 | `flatMap_offers` | proved | — | — |
 | `filterMap_gave` | proved | — | — |
 | `queue_refs_nil` | proved | — | — |
@@ -8689,10 +8871,13 @@ flowchart TB
 | `evaluateNative_plain_context` | proved | — | — |
 | `evaluatePrim_contextStep` | proved | — | `contextStep_fallback` |
 | `ReachesQ.trans` | proved | — | `ReachesC.trans` |
+| `hostRunB_stable` | proved | — | — |
+| `localRunC_to_rowsB` | proved | — | `contextStep_fallback`, `localRunC_agree`, `localRunC_waits`, `localRunC_mono`, `localRunC_compileB` |
 | `queue_main_some` | proved | — | — |
 | `elaboration_eq_getD` | proved | — | — |
 | `contextSame` | proved | — | — |
 | `at_append` | proved | — | — |
+| `localRunC_compileB` | proved | — | `localRunC_compileBO` |
 
 ### R13: A run's inputs are data: equal recorded inputs give equal replay observations
 
@@ -8741,10 +8926,10 @@ R14 by concept: each concept its nodes are placed at, by tag or by module. An ar
 
 ```mermaid
 flowchart TB
-  n0["Subtyping Algebra<br/>proved · 327 nodes"]
+  n0["Subtyping Algebra<br/>proved · 334 nodes"]
   n1["Initial Algebras & Folds<br/>proved · 304 nodes"]
   n2["Exact Codecs<br/>proved · 12 nodes"]
-  n3["No concept<br/>proved · 8 nodes"]
+  n3["No concept<br/>proved · 9 nodes"]
   n4["Host Session Protocol<br/>proved · 4 nodes"]
   n1 --> n3
   n0 --> n3
@@ -8774,7 +8959,7 @@ flowchart TB
 | `max_idem` | proved | — | `max_le` |
 | `max_le` | proved | — | — |
 | `max_mono` | proved | — | `max_le` |
-| `closed` | proved | — | `typeOfProgram_closed_app` |
+| `closed` | proved | — | `admitSig_ok_iff`, `typeOfProgram_closed_app` |
 | `checkAction_eq` | proved | — | `tableAt_eq_cons`, `tableAt_none`, `checkStmt_step_binds`, `effTy_of_check`, `termTy_of_term?` |
 | `checkEffs_eq` | proved | — | `tableAt_eq_cons`, `tableAt_none`, `checkStmt_step_binds`, `effTy_of_check`, `termTy_of_term?` |
 | `checkLayer_eq` | proved | — | `tableAt_eq_cons`, `tableAt_none`, `checkStmt_step_binds`, `effTy_of_check`, `termTy_of_term?` |
@@ -9129,7 +9314,7 @@ flowchart TB
 | `normal_ofMembers` | proved | — | — |
 | `prod_antisymm` | proved | — | — |
 | `subN_iff_le` | proved | — | — |
-| `actionHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_arms`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
+| `actionHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_armsIn`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
 | `actionHasTy_replace` | proved | — | `NodeHasTy.replace` |
 | `actionHasTy_sigProgram` | proved | — | `sigOkKey_of_serviceTy` |
 | `addresses_eff_head` | proved | — | — |
@@ -9141,8 +9326,8 @@ flowchart TB
 | `annotateModule_fill_plain` | proved | — | `ne_defs_of_isBlock`, `checkModule_eq_check`, `check_sound`, `table_splice`, `Program.annotate_eq_table`, `annotateModule_plain`, `replaceAt_cons_isBlock`, `isBlock` |
 | `annotateModule_plain` | proved | — | — |
 | `annotateModule_restrict` | proved | — | `moduleLayers_restrict`, `bodies_restrict`, `Annotate.check_restrict` |
-| `argTy_closed` | proved | — | `closed_typeAt`, `closed_setType`, `closed_fieldType`, `closed_of_formed`, `closed_check`, `closed_litArgTy` |
-| `argsTy_closed` | proved | — | `closed_typeAt`, `closed_setType`, `closed_fieldType`, `closed_of_formed`, `closed_check`, `closed_litArgTy` |
+| `argTy_closed` | proved | — | `closed_typeAt`, `closed_setTypeIn`, `closed_fieldTypeIn`, `closed_of_formed`, `closed_checkIn`, `closed_litArgTy` |
+| `argsTy_closed` | proved | — | `closed_typeAt`, `closed_setTypeIn`, `closed_fieldTypeIn`, `closed_of_formed`, `closed_checkIn`, `closed_litArgTy` |
 | `at_of_mem_refSites` | proved | — | `exists_at_of_mem_foldList` |
 | `belowSite_refSites_iff` | proved | — | `at_of_mem_refSites` |
 | `bodiesHasTy_sigProgram` | proved | — | `hasTy_sigProgram` |
@@ -9178,7 +9363,7 @@ flowchart TB
 | `closed_serviceTy` | proved | — | — |
 | `effTy_map_of_hasTy` | proved | — | `check_complete`, `check_sound` |
 | `effTy_of_check` | proved | — | `check_sound`, `check_complete` |
-| `effsHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_arms`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
+| `effsHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_armsIn`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
 | `effsHasTy_replace` | proved | — | `NodeHasTy.replace` |
 | `effsHasTy_sigProgram` | proved | — | `sigOkKey_of_serviceTy` |
 | `exitOf_exitOf` | proved | — | `extendAll_agrees` |
@@ -9225,15 +9410,15 @@ flowchart TB
 | `foldMapAt_stmts_paths_shift` | proved | — | `foldMapAt_stmts_hom`, `foldMapAt_stmts_base` |
 | `foldMapAt_term_fuse` | proved | — | — |
 | `foldMapAt_terms_fuse` | proved | — | — |
-| `hasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_arms`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
+| `hasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_armsIn`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
 | `hasTy_focusAt` | proved | — | `check_complete`, `check_sound`, `focusAt_eq_some`, `replace_envAt` |
 | `hasTy_replace` | proved | — | `NodeHasTy.replace` |
 | `hasTy_replace_focusAt` | proved | — | `check_complete`, `check_sound`, `replace_envAt`, `focusAt_eq_some` |
 | `hasTy_sigProgram` | proved | — | `sigOkKey_of_serviceTy` |
-| `layerHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_arms`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
+| `layerHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_armsIn`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
 | `layerHasTy_replace` | proved | — | `NodeHasTy.replace` |
 | `layerHasTy_sigProgram` | proved | — | `sigOkKey_of_serviceTy` |
-| `layersHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_arms`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
+| `layersHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_armsIn`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
 | `layersHasTy_cons` | proved | — | — |
 | `layersHasTy_replace` | proved | — | `NodeHasTy.replace` |
 | `layersHasTy_sigProgram` | proved | — | `sigOkKey_of_serviceTy` |
@@ -9254,7 +9439,7 @@ flowchart TB
 | `sigOkKey_of_serviceTy` | proved | — | — |
 | `sketch_more_holes` | proved | — | `withHoles_extends`, `check_ext`, `withHoles_withHoles` |
 | `sketch_reads_its_holes` | proved | — | `withHoles_extends`, `Program.check_restrict`, `withHoles_withHoles` |
-| `stmtsHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_arms`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
+| `stmtsHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_armsIn`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
 | `stmtsHasTy_replace` | proved | — | `NodeHasTy.replace` |
 | `stmtsHasTy_sigProgram` | proved | — | `sigOkKey_of_serviceTy` |
 | `subN_causeOf_causeUpper` | proved | — | — |
@@ -9351,6 +9536,7 @@ flowchart TB
 | `check_sound` | proved | — | — |
 | `check_complete` | proved | — | — |
 | `checkModule_eq_check` | proved | — | — |
+| `admitSig_ok_iff` | proved | — | — |
 | `cata_eff_congr_on` | proved | — | — |
 | `hom_eq_cata_eff` | proved | — | — |
 | `matchArgsB_least` | proved | — | `candsList_below`, `solve_between` |
@@ -9363,6 +9549,10 @@ flowchart TB
 | `checkModule_sound` | proved | — | `check_sound` |
 | `bodyAt_at` | proved | — | — |
 | `subN_equiv_iff` | proved | — | `sub_antisymm_canonical`, `normalize_idem` |
+| `closed_armsIn` | proved | — | `closed_tagArmsIn`, `option_closed`, `liftIn_closed`, `closed_arms` |
+| `closed_setTypeIn` | proved | — | `closed_setOf`, `liftIn_closed` |
+| `closed_fieldTypeIn` | proved | — | `closed_fieldOf`, `liftIn_closed` |
+| `closed_checkIn` | proved | — | — |
 | `moduleHasTy_ext` | proved | — | — |
 | `checkModule_complete` | proved | — | `checkModule_eq_check`, `check_complete` |
 | `partAt_of_hasTy` | proved | — | — |
@@ -9372,6 +9562,8 @@ flowchart TB
 | `solve_between` | proved | — | `joinCands_upper`, `solve_lookup_of_mem`, `mem_lowers`, `joinCands_least`, `instantiate_solve` |
 | `covers` | proved | — | `above_args`, `above_prod`, `prod_or_not`, `recovers`, `cands_args`, `args`, `below_args`, `cands_union_right`, `head`, `cands_var` |
 | `sub_antisymm_canonical` | proved | — | — |
+| `closed_tagArmsIn` | proved | — | `closed_membersIn` |
+| `liftIn_closed` | proved | — | `closed_membersIn`, `mapM_source`, `closed_join`, `joinAll_all` |
 | `cands_below` | proved | — | `args`, `comp_ne_contra`, `cands_args`, `below_args`, `cands_union_right`, `cands_mem_members`, `head`, `cands_var` |
 | `joinCands_upper` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` |
 | `solve_lookup_of_mem` | proved | — | — |
@@ -9388,6 +9580,7 @@ flowchart TB
 | `cands_union_right` | proved | — | — |
 | `head` | proved | — | — |
 | `cands_var` | proved | — | — |
+| `closed_membersIn` | proved | — | — |
 | `comp_ne_contra` | proved | — | `comp_inv`, `comp_co` |
 | `cands_mem_members` | proved | — | `cands_union_right` |
 | `subN_join_least` | proved | — | `normalize_idem` |
