@@ -245,4 +245,18 @@ else
   echo "PASS the mutant fails BudgetDefs.v" >> "$OUT/logs/$LOG"
 fi
 
+# 12. The skeleton generated from Lean (generated/Skeleton.v, written by
+#     src/OCaml5/Tools/GallinaGen.lean from the base-phase LCNF of Effect4.Run.Tree): Rocq's guard
+#     checker must accept it as it stands, with the evaluator as Section variables.
+LOG=14-skeleton.log
+cp "$ROOT/$HERE/generated/Skeleton.v" "$OUT/rocq/"
+cd "$OUT/rocq"
+log "rocq compile -Q . E4 Skeleton.v"
+{ /usr/bin/time -p opam exec --switch=rocq -- rocq compile -Q . E4 Skeleton.v; } >> "$OUT/logs/$LOG" 2>&1
+cat > SkeletonAssumptions.v <<'EOF'
+Require Import E4.Skeleton.
+Print Assumptions E4.Skeleton.ofProgram.
+EOF
+run inrocq rocq compile -Q . E4 SkeletonAssumptions.v
+
 echo "reproduce.sh: done; logs in $OUT/logs"
