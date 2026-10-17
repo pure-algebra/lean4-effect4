@@ -24,8 +24,9 @@
    T7  The same for the reference repository's own answer to each first call, a to-do, a list
        or an option, built with `answer_async_value`: admitted, as by Lean.  tested
    T8  E4_host drives each request on the engine (both instances), with the lowered reactors as
-       providers, and settles; its calls, the root's exit and the host's state, packaged by the
-       lowered `resultVal`, are Lean's `Run.runWith` result, byte for byte.  tested
+       providers, and stops with the machine finished; its calls, the root's exit and the host's
+       state, packaged by the lowered `resultVal`, are Lean's `Run.runWith` result, byte for
+       byte.                                                                tested
    T9  The same with the repository written in OCaml over the wire's values
        (`Native_todo.Untyped`), a native host: Lean's result over the reference repository, byte
        for byte.                                                             tested
@@ -43,17 +44,17 @@
    T14 Typed hosts written in OCaml on the engine: E4_host drives each request (both instances)
        with the lowered `Typed.Host.reactor` over `Native_todo.record`, over the pure module
        todo_core.ml behind the module type REPO, and over the imperative `Native_todo.Table`;
-       each settles, and its result is Lean's, byte for byte.              tested
+       each stops with the machine finished, and its result is Lean's, byte for byte.  tested
    T15 A native host that raises answers nothing (E4_host's H5): over `Table` whose insert raises
-       `Sys_error`, a request that calls insert stops with `Raised`, its call outstanding, the
-       table unchanged, and the engine as after a provider that declines insert; every other
-       request is Lean's result. Red control: some request reaches the raise.  tested
+       `Sys_error`, a request that calls insert stops with the host stop `Raised`, its call
+       outstanding, the table unchanged, and the engine as after a provider that declines insert;
+       every other request is Lean's result. Red control: some request reaches the raise.  tested
    T16 The same host under `Native_todo.catching`, naming `Sys_error` as the rows' failure, is
        Lean's result for `Typed.broken`, byte for byte: an OCaml exception crossing as the typed
        failure. Under a `catching` that names nothing, it still stops with `Raised`.  tested
    T17 A native host whose insert answers an id outside the profile (-1, 2^53) is not applied
-       (E4_host's H6): the drive stops with `Outside_profile`, as after a provider that declines,
-       and never reaches the machine.                                      tested
+       (E4_host's H6): the drive stops with the host stop `Outside_profile`, as after a provider
+       that declines, and never reaches the machine.                       tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
    records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
@@ -81,10 +82,13 @@ let check name ok =
 module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
   module H = Effect4_engine.E4_host.Make (E)
 
-  let settled (stop : H.stop) = match stop with H.Settled -> true | _ -> false
+  let finished (stop : H.stop) = match stop with H.Machine H.Finished -> true | _ -> false
 
+  (* Every request's program is inside the profile, so a loading refusal is a broken fixture. *)
   let serve (built : Todo_gen.built) provider state =
-    H.serve ~table:built.app.rows provider built.program ~fuel:1000 state
+    match H.serve ~table:built.app.rows provider built.program ~fuel:1000 state with
+    | Ok served -> served
+    | Error (H.Load_outside_profile why) -> failwith ("a request's program did not load: " ^ why)
 
   (* The served run packaged by the lowered `resultVal`, at the host's state read as the lane's. *)
   let result (s : 'st H.served) (lane : Native_todo.lane_state) : string =
@@ -115,7 +119,7 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
     (* T14 *)
     let through (type s) (h : s Todo_gen.host) (make : unit -> s) (lane : s -> Native_todo.lane_state) =
       let s = serve built (Native_todo.provider h) (make ()) in
-      settled s.stop && result s (lane s.state) = r.result
+      finished s.stop && result s (lane s.state) = r.result
     in
     check (name "T14 the record host on E4_host is Lean's")
       (through Native_todo.record (fun () -> state) Fun.id);
@@ -131,7 +135,7 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
       if row.spelling = "TodoRepo.insert" then None else Native_todo.provider Native_todo.record row request st
     in
     let declined = serve built declining state in
-    let calls_insert = match declined.stop with H.Declined -> true | _ -> false in
+    let calls_insert = match declined.stop with H.Host H.Declined -> true | _ -> false in
     let as_declined (type st) (s : st H.served) (lane : st -> Native_todo.lane_state) =
       observation s.engine = observation declined.engine
       && E.host_calls s.engine <> []
@@ -143,12 +147,12 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
     if calls_insert then begin
       incr reached;
       check (name "T15 a raise at insert stops the drive with Raised, as a decline leaves it")
-        ((match raised.stop with H.Raised (Sys_error m) -> m = "disk full" | _ -> false)
+        ((match raised.stop with H.Host (H.Raised (Sys_error m)) -> m = "disk full" | _ -> false)
          && as_declined raised Native_todo.Table.snapshot)
     end
     else
       check (name "T15 a raise at insert, never called, leaves Lean's result")
-        (settled raised.stop && result raised (Native_todo.Table.snapshot raised.state) = r.result);
+        (finished raised.stop && result raised (Native_todo.Table.snapshot raised.state) = r.result);
     (* T16 *)
     let named = function Sys_error m -> Some (Todo_gen.SqlTag_SqlError, m) | _ -> None in
     let caught =
@@ -157,7 +161,7 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
         (Native_todo.Table.create ~fault:disk_full state)
     in
     check (name "T16 the raise named as the rows' failure is Lean's broken result")
-      (settled caught.stop && result caught (Native_todo.Table.snapshot caught.state) = r.broken);
+      (finished caught.stop && result caught (Native_todo.Table.snapshot caught.state) = r.broken);
     let unnamed =
       serve built
         (Native_todo.provider (Native_todo.catching (fun _ -> None) table_host))
@@ -165,9 +169,9 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
     in
     check (name "T16 a raise no catch names is raised again")
       (if calls_insert then
-         (match unnamed.stop with H.Raised (Sys_error m) -> m = "disk full" | _ -> false)
+         (match unnamed.stop with H.Host (H.Raised (Sys_error m)) -> m = "disk full" | _ -> false)
          && as_declined unnamed Native_todo.Table.snapshot
-       else settled unnamed.stop);
+       else finished unnamed.stop);
     (* T17 *)
     List.iter
       (fun id ->
@@ -180,8 +184,8 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
         let s = serve built (Native_todo.provider forged) state in
         check (name (Printf.sprintf "T17 an id %d outside the profile is never applied" id))
           (if calls_insert then
-             (match s.stop with H.Outside_profile _ -> true | _ -> false) && as_declined s Fun.id
-           else settled s.stop && result s s.state = r.result))
+             (match s.stop with H.Host (H.Outside_profile _) -> true | _ -> false) && as_declined s Fun.id
+           else finished s.stop && result s s.state = r.result))
       [ -1; 1 lsl 53 ]
 end
 
@@ -263,27 +267,29 @@ let () =
                exit),
               st))
       in
+      (* A loading refusal makes the check fail: every request's program is inside the profile. *)
       let through provider =
-        let f = HF.serve ~table provider program ~fuel:1000 state in
-        let g = HR.serve ~table provider program ~fuel:1000 state in
-        let rf = result f.calls (Effect4_engine.E4_engine.Fast.root_exit_of f.engine) f.state in
-        let rg =
-          result
-            (List.map (fun (c : HR.call) -> ({ row = c.row; request = c.request; answer = c.answer } : HF.call)) g.calls)
-            (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state
-        in
-        ((match f.stop, g.stop with HF.Settled, HR.Settled -> true | _ -> false), rf, rg)
+        match HF.serve ~table provider program ~fuel:1000 state, HR.serve ~table provider program ~fuel:1000 state with
+        | Ok f, Ok g ->
+          let rf = result f.calls (Effect4_engine.E4_engine.Fast.root_exit_of f.engine) f.state in
+          let rg =
+            result
+              (List.map (fun (c : HR.call) -> ({ row = c.row; request = c.request; answer = c.answer } : HF.call)) g.calls)
+              (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state
+          in
+          ((match f.stop, g.stop with HF.Machine HF.Finished, HR.Machine HR.Finished -> true | _ -> false), rf, rg)
+        | _ -> (false, "", "")
       in
-      let settled, rf, rg = through Todo_gen.test_dogfood_scenario_todo_repository in
+      let finished, rf, rg = through Todo_gen.test_dogfood_scenario_todo_repository in
       check (Printf.sprintf "%d %s: the engine under E4_host, over the reference host, is Lean's" i r.entry)
-        (settled && rf = r.result && rg = r.result);
-      let settled, ff, fg = through Todo_gen.test_dogfood_scenario_todo_forgetful in
+        (finished && rf = r.result && rg = r.result);
+      let finished, ff, fg = through Todo_gen.test_dogfood_scenario_todo_forgetful in
       check (Printf.sprintf "%d %s: the engine under E4_host, over the forgetful host, is Lean's" i r.entry)
-        (settled && ff = r.forgetful && fg = r.forgetful);
+        (finished && ff = r.forgetful && fg = r.forgetful);
       (* T9: the same with the repository written in OCaml *)
-      let settled, nf, ng = through Native_todo.Untyped.provider in
+      let finished, nf, ng = through Native_todo.Untyped.provider in
       check (Printf.sprintf "%d %s: the engine under E4_host, over the OCaml repository, is Lean's" i r.entry)
-        (settled && nf = r.result && ng = r.result))
+        (finished && nf = r.result && ng = r.result))
     requests;
   check "red control: the two hosts' results differ on some request"
     (List.exists (fun r -> r.result <> r.forgetful) requests);

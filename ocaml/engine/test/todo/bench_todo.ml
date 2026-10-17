@@ -11,7 +11,7 @@
    Depends on: Todo_gen (GENERATED), Todo_fixture, Native_todo, E4_engine, E4_host, Eff_val.
 
    Properties:
-   B1  Each host's drive is checked to settle with Lean's result once before it is timed, and
+   B1  Each host's drive is checked to finish with Lean's result once before it is timed, and
        each codec to round-trip, so no figure times a failing path.        by construction
    B2  Nothing is asserted about the numbers.                               by construction
 
@@ -50,7 +50,9 @@ let () =
       (read_fixture (fixture_path ()))
   in
   let drive (built : Todo_gen.built) provider state =
-    H.serve ~table:built.app.rows provider built.program ~fuel:1000 state
+    match H.serve ~table:built.app.rows provider built.program ~fuel:1000 state with
+    | Ok served -> served
+    | Error (H.Load_outside_profile why) -> failwith ("a request's program did not load: " ^ why)
   in
   let result (type st) (s : st H.served) lane =
     hex_of
@@ -72,7 +74,7 @@ let () =
         (fun n (r, built, state) ->
           let s = drive built provider (make state) in
           (match s.stop with
-           | H.Settled when result s (lane s.state) = r.result -> ()
+           | H.Machine H.Finished when result s (lane s.state) = r.result -> ()
            | _ -> failwith (name ^ ": the drive is not Lean's"));
           n + List.length s.calls)
         0 requests

@@ -9,11 +9,14 @@
     Depends on: E4_engine, E4_host, Eff_types.
 
     Behaviours it holds itself to:
-    M1  The decisions are [E4_host]'s (its H1 to H7).                      by construction
+    M1  The decisions are [E4_host]'s (its H1 to H11).                     by construction
     M2  A fuel or round limit that ends the drive is [Out_of_fuel] or [Out_of_rounds]: a finite
         probe, never a divergence and never a failure (the machine's [Delay]).  by construction
     M3  A call's row is found by identity in the table the engine hands the reactor, so two rows
-        with one name stay apart.                                          by construction *)
+        with one name stay apart.                                          by construction
+    M4  [Finished] is read only off [E4_host]'s [Machine Finished] (its H10), and a program the
+        engine refuses to load (its H8) is [Stopped] with the refusal, never an escaping
+        exception.                                                         by construction *)
 
 type exit = (Eff_types.val_, Eff_types.err, Eff_types.defect, int, unit) Eff_types.exit_
 type completion = (Eff_types.val_, Eff_types.err, Eff_types.defect, int, unit) Eff_types.completion
@@ -24,7 +27,9 @@ type stop =
   | Refused of int * Eff_types.val_  (** the engine did not admit the reactor's reply to this call *)
   | Out_of_fuel  (** the machine's fuel ended first ([Delay]) *)
   | Out_of_rounds  (** the drive answered its last round of calls *)
-  | Stopped of string  (** any other end: suspended on a timer or a decision, stuck, a raise *)
+  | Stopped of string
+      (** any other end: suspended on a timer or a decision, stuck, a raise, a reply or a
+          program outside the host profile *)
 
 type 's run = { stop : stop; calls : (int * Eff_types.val_ * exit) list; state : 's }
 
