@@ -1,4 +1,3 @@
-import Effect4
 import Effect4.Laws.Program.Bounds
 import Effect4.Program.Native
 import Effect4.Program.NativeAtom

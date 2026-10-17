@@ -42,7 +42,19 @@ fi
 # table (`Api/Frontier.lean`'s runnable ids, `completedExits`' filterMap) removes nothing, and a
 # write that maps every fiber keeps them all (`fibers := m.fibers.map …`, whose body may filter
 # a fiber's own observers). `\b` keeps `filterMap` out.
-hits=$(grep -rEn --include='*.lean' --exclude-dir=Laws --exclude=Laws.lean 'fibers[[:space:]]*:=[^\n]*fibers\.(filter|erase|removeAll|dropWhile|eraseP|removeIf)\b' "$REPO/src/Effect4/")
+# The hits are sorted and relative to the repository, so they are the same in every worktree:
+# the ocaml lane's content key reads them (`--c1-hits`), not every core source.
+c1_hits() {
+  (cd "$REPO" && grep -rEn --include='*.lean' --exclude-dir=Laws --exclude=Laws.lean 'fibers[[:space:]]*:=[^\n]*fibers\.(filter|erase|removeAll|dropWhile|eraseP|removeIf)\b' src/Effect4/)
+}
+if [ "${1:-}" = "--c1-hits" ]; then
+  hits=$(c1_hits)
+  scan_status=$?
+  [ "$scan_status" -gt 1 ] && exit 2
+  [ -n "$hits" ] && printf '%s\n' "$hits" | LC_ALL=C sort
+  exit 0
+fi
+hits=$(c1_hits)
 scan_status=$?
 if [ "$scan_status" -gt 1 ]; then
   note FAIL "C1 cannot scan the core sources"

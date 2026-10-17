@@ -3,7 +3,8 @@ import Conform.Lcnf.Validity
 import OCaml5.Lcnf.Translate
 import OCaml5.Lcnf.Types
 import OCaml5.Ml.Render
-import Effect4
+import Effect4.Program.Ty
+import Effect4.Machine.Key
 
 /-!
 # Conform.Effect4.LcnfMl — rung 3: the emitted OCaml, read into the target semantics

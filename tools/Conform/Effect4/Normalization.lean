@@ -2,6 +2,7 @@ import Conform.Effect4.NormalizationInputs
 import Conform.Effect4.CompilerControls
 import Conform.Effect4.LcnfMl
 import Conform.Effect4.LcnfSemantics
+import Effect4.Store.Carrier.Digest
 
 /-! A bounded production checkpoint for normalization, canonical construction and generator
 merging. The two interpreters and compiled OCaml consume the same named input selection.

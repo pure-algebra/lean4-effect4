@@ -1,6 +1,7 @@
 import Conform.Lcnf.Semantics
 import OCaml5.Lcnf.Builtins
-import Effect4
+import Effect4.Program.Ty
+import Effect4.Machine.Key
 
 /-!
 # Conform.Effect4.LcnfSemantics — rung 2's validation: the interpreter against Lean itself

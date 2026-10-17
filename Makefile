@@ -747,9 +747,14 @@ _run-schema-codec:
 # depends on the LCNF group, so a change of the machine re-cuts the generated engine before
 # the lane builds it (finding N10 of docs/research/2026-10-14-lowering-collation/README.md).
 # The seam check also scans core sources for writes that remove fibers. Laws cannot enter the core.
+# The lane reads no other core source: the key holds the scan's hits (`--c1-hits`), so an edit
+# elsewhere in the core reruns the lane only through the corpus, the fixtures or the LCNF group.
 OCAML_SOURCES := $(wildcard $(shell git ls-files --cached --others --exclude-standard -- ocaml))
-$(eval $(call cached_check,ocaml,ocaml,$(CORPUS) $(OCAML_SOURCES) $(CORE_SOURCES),))
-$(CHK)/ocaml.key: $(CORPUS)/index.tsv $(GEN)/fixtures $(GEN)/lcnf
+$(CHK)/fiber-writes: FORCE
+	@mkdir -p $(CHK) && bash ocaml/engine/tools/gen-check.sh --c1-hits > $@.new && \
+	  { if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi; }
+$(eval $(call cached_check,ocaml,ocaml,$(CORPUS) $(OCAML_SOURCES) $(CHK)/fiber-writes $(BUILD_PINS),))
+$(CHK)/ocaml.key: $(CORPUS)/index.tsv $(GEN)/fixtures $(GEN)/lcnf $(CHK)/fiber-writes
 _run-ocaml:
 	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock
 	cd ocaml && $(OCAML) dune test engine

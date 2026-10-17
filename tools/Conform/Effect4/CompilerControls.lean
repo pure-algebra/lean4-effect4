@@ -1,6 +1,7 @@
 import Conform.Effect4.LcnfMl
 import Conform.Effect4.NormalizationInputs
 import Conform.Effect4.LoweringNames
+import Effect4.Program.Native
 
 /-! Focused regressions for the compiler adoption. All expressions below come from the
 production builtin table (`OCaml5.Lcnf.builtins`); the evaluator is a separate consumer of that
