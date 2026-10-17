@@ -93,7 +93,8 @@ theorem runFrom_approx {σ : Type} (host : Host σ) {t t' : Tree} (h : Approx t 
 /-! ## The declared facts -/
 
 /-- **A larger budget only extends the tree**: the loop budget and the definitions' depth both
-grow, and each arm is monotone in both. -/
+grow, and each arm is monotone in both. The Rocq proof reads `BudgetDefs.v`'s arms. A generator's
+`while` (`Tree.statements`) is beyond them; its rounds grow with the budget as a loop's do. -/
 @[semantics "translation-simulation" (requirement := R12)]
 declared ofProgram_approx (table : RowTable) {k k' : Nat} (h : k ≤ k') (program : NativeEff) :
     Approx (ofProgram table k program) (ofProgram table k' program)
@@ -107,11 +108,11 @@ def ofRows {table : RowTable} :
   | .vis (.inl o) next => cell o fun w => ofRows (next w)
   | .vis (.inr ⟨i, v⟩) next => call i.val v fun a => ofRows (next a)
 
-/-- Whether a program has no definition or context form: no block, invocation, call,
-parameter's run, `provideContext` or `context` read. -/
+/-- Whether a program has no definition, context or generator form: no block, invocation, call,
+parameter's run, `provideContext`, `context` read or `gen`. -/
 def Plain (program : NativeEff) : Bool :=
   foldMap_eff true (· && ·) program fun
-    | .defs _ _ _ _ | .invoke _ _ _ | .provideContext _ _ | .withFiber (.context _) => false
+    | .defs _ _ _ _ | .invoke _ _ _ | .provideContext _ _ | .withFiber (.context _) | .gen _ => false
     | .perform (.call _) _ | .perform (.param _) _ => false
     | _ => true
 

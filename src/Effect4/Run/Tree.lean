@@ -129,6 +129,7 @@ def bodiesOf : NativeEff → List NativeEff
   | .defs _ bodies _ _ => bodies.toList
   | _ => []
 
+mutual
 /-- **One level of the tree** (`rocq/BudgetDefs.v`, `denoteW`). Each arm is `denoteRowsB`'s at
 the loop budget `k`, and a call, an invocation and a parameter's run go to `unfold`. A call runs
 the definition's body at the request alone with an empty frame pushed. An invocation pushes the
@@ -217,7 +218,47 @@ def level (table : RowTable) (bodies : List NativeEff) (k : Nat) (unfold : Unfol
     match evalTerm env r, bodies[d]? with
     | some v, some body => unfold body [v] (⟨args.toList, env⟩ :: ps) ctx
     | _, _ => done badShapeExit
+  | .gen body, env, ps, ctx =>
+    statements table bodies k unfold body env ps ctx (fun _ => done (.success Val.unit)) none
   | _, _, _, _ => done outsideExit
+
+/-- **A generator's statements** (`Compile.runStmts`), with the rest of the enclosing block as
+`next` and the statement after the innermost `while` as `exit`. A `bindYield` extends the
+environment by its value; leaving a block drops its bindings, since `next` and `exit` keep the
+environment they were made at. A yield's failure ends the generator with its cause, and `ret`
+ends it with its value. A `while` runs its body at most `k` times, then the tree is cut, as a
+loop's test is (decisions row 330's `whileTrue`, `breakLoop`). The thunks keep the rounds not yet
+reached unbuilt. -/
+def statements (table : RowTable) (bodies : List NativeEff) (k : Nat) (unfold : Unfold) :
+    Stmts NativeOp → List Val → List Frame → Ctx → (Unit → Tree) → Option (Unit → Tree) → Tree
+  | .nil, _, _, _, next, _ => next ()
+  | .cons (.bindYield e) rest, env, ps, ctx, next, exit =>
+    (level table bodies k unfold e env ps ctx).andThen fun v =>
+      statements table bodies k unfold rest (env ++ [v]) ps ctx next exit
+  | .cons (.yieldDiscard e) rest, env, ps, ctx, next, exit =>
+    (level table bodies k unfold e env ps ctx).andThen fun _ =>
+      statements table bodies k unfold rest env ps ctx next exit
+  | .cons (.ret v) _, env, _, _, _, _ => done (valueExit env v)
+  | .cons (.ifElse t a b) rest, env, ps, ctx, next, exit =>
+    match evalTerm env t with
+    | some (Val.bool true) =>
+      statements table bodies k unfold a env ps ctx
+        (fun _ => statements table bodies k unfold rest env ps ctx next exit) exit
+    | some (Val.bool false) =>
+      statements table bodies k unfold b env ps ctx
+        (fun _ => statements table bodies k unfold rest env ps ctx next exit) exit
+    | _ => done badShapeExit
+  | .cons (.whileTrue body) rest, env, ps, ctx, next, exit =>
+    let after : Unit → Tree := fun _ => statements table bodies k unfold rest env ps ctx next exit
+    let rounds : Unit → Tree := (List.range k).foldr
+      (fun _ again => fun _ => statements table bodies k unfold body env ps ctx again (some after))
+      (fun _ => cut)
+    rounds ()
+  | .cons .breakLoop _, _, _, _, _, exit =>
+    match exit with
+    | some after => after ()
+    | none => done badShapeExit
+end
 
 /-- **The tree with calls unfolded `depth` levels deep** (`rocq/BudgetDefs.v`, `denoteD`). At
 depth zero a call, an invocation and a parameter's run are cut. -/
@@ -243,7 +284,7 @@ def armOf : NativeEff → Bool
   | .bind _ _ | .catchCause _ _ | .catchIf _ _ _ | .onExit _ _ | .matchCause _ _ _ => true
   | .select _ _ _ _ | .iterate _ _ _ _ _ _ | .provideContext _ _ => true
   | .withFiber (.context _) => true
-  | .defs _ _ _ _ | .invoke _ _ _ => true
+  | .defs _ _ _ _ | .invoke _ _ _ | .gen _ => true
   | _ => false
 
 /-- **The first node outside the tree's arms**, by its address in program order, or `none` when

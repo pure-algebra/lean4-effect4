@@ -29,8 +29,8 @@
        fault; a failure inside the row's error column is applied; with every reply fitting, the
        guarded run is the unguarded one.                                    tested
    T8  The two runners agree (Kit_machine M3): on the examples under their tapes, and on every
-       fixture program that types and lies in the tree's fragment, the tree's settled run and the
-       machine's run finish or wait alike, with the same host calls.        tested
+       fixture program in the tree's fragment, typed or not, generators among them, the tree's
+       settled run and the machine's run finish or wait alike, with the same host calls.  tested
    T9  Admission: a host row registered `deferred` is refused at admission, at its index, though
        the program types; the same row registered `external` is admitted.  tested
    T10 The protocols (Kit_serve S3, S4): over MCP, `initialize` names the server, `tools/list`
@@ -298,14 +298,14 @@ let t8 corpus =
     List.filter_map
       (fun e ->
         match e.program with
-        | Some p when Kit.outside p = None && Result.is_ok (Kit.check empty p) ->
+        | Some p when Kit.outside p = None ->
           Some (agree_on e.name empty Kit.Host.silent () p)
         | _ -> None)
       corpus
   in
   let count f = List.length (List.filter f results) in
   let differ = List.filter_map (function `Differ (n, _, _) -> Some n | _ -> None) results in
-  Printf.printf "T8 fixture: %d typed programs in the fragment; %d agree, %d unsettled at 256, %d differ%s\n"
+  Printf.printf "T8 fixture: %d programs in the fragment; %d agree, %d unsettled at 256, %d differ%s\n"
     (List.length results) (count (( = ) `Agree)) (count (( = ) `Unsettled)) (List.length differ)
     (if differ = [] then "" else ": " ^ String.concat " " (List.filteri (fun i _ -> i < 12) differ));
   check "T8 the runners agree on the fixture" (differ = [])

@@ -91,7 +91,8 @@ flowchart TB
 operation are nodes, and an answer selects the rest. At a budget `k`, every loop invocation
 tests its condition at most `k` times, and definition calls nest at most `k` deep. Where the
 budget ends, the tree has a `cut`. The arms are `denoteRowsB`'s, with the definition arms of
-`rocq/BudgetDefs.v`. The context is the machine's `Ctx`: the root's `emptyCtx`, read by
+`rocq/BudgetDefs.v` and a generator's statements (`Tree.statements`, after `Compile.runStmts`; a
+`while` runs at most `k` rounds). The context is the machine's `Ctx`: the root's `emptyCtx`, read by
 `Val.context`, merged by `provideContext`.
 
 **The stops.** A run of a tree under a host stops `finished` with an exit, `waiting` on a call the
@@ -140,7 +141,7 @@ Each number has its command. The machine is this Mac, shared with other seats' b
 | one check through the Lean session tool | 1.43 to 1.47 s | `docs/research/2026-10-13-agent-ergonomics-probe/README.md`, the tally |
 | the lane | 48 checks, 0 failures | `cd ocaml && opam exec --switch=effect4 -- dune test kit` |
 | the lowered checker against Lean | 408 of 408 verdicts, spellings, reasons and addresses equal | the lane, T5 |
-| the tree against the machine | 55 of 55 typed programs in the fragment agree | the lane, T8 |
+| the tree against the machine | 95 of 95 corpus programs in the fragment agree, typed or not, generators among them | the lane, T8 |
 | the axiom gate's walk | 311 declarations within `[propext, Quot.sound]`, 3 planned goals (the declared facts) | `#axiom_audit Effect4.Run.Tree Effect4.Run.Kit Effect4.Laws.Run.Tree` |
 
 The timing script runs each command 20 times with `subprocess.run` and prints the median and the
@@ -173,8 +174,9 @@ minimum. The inputs were written by `Kit_author` and `Kit.Json`, in the session'
 
 - The Lean tree's correspondence to `rocq/BudgetDefs.v` is a hand transcription. The declared facts
   trust it, as the owner ruled. The arms beyond `Budget.v`'s fragment (`exit`, the cause handlers,
-  `onExit`) are `denoteRowsB`'s arms written with `Tree.bind`, which no Rocq proof reads.
-- `Eff.gen`, fibers, scopes, services and layers have no tree arm. The kit runs them on the
+  `onExit`) are `denoteRowsB`'s arms written with `Tree.bind`, which no Rocq proof reads. So is
+  the generator's walk (`Tree.statements`); the differential T8 checks it against the machine.
+- Fibers, scopes, services and layers have no tree arm. The kit runs them on the
   machine, whose fuel bound is a finite probe with no divergence theorem (R12-c).
 - Raw formation is not decided natively (finding 4).
 - A JSON natural above 2^53 prints exactly here and inexactly in Lean's printer.
@@ -188,7 +190,6 @@ minimum. The inputs were written by `Kit_author` and `Kit.Json`, in the session'
 | Rank | Change | Why |
 | --- | --- | --- |
 | 1 | Exploration at rc.112: replay each explored path's tape through the keyed recorder | every path checked against the outside implementation, not only the machine |
-| 2 | `Eff.gen` in the tree | the printed TypeScript writes `Effect.gen`, so agents' programs use it |
 | 3 | The TypeScript front end: `eff check prog.ts` through `ts/eff`'s reader | the agent's preferred surface (the ergonomics probe) |
 | 4 | The Lean session tool's `settle` and `frames` | the tool already holds the edit session and the run |
 | 5 | Dependent fields in the LCNF route | raw formation natively, and the generic views |

@@ -4673,13 +4673,57 @@ let ctx_with_services (services : _ service list) : ctx =
 
 
 
+(* LCNF mono: Effect4.Run.Tree.level._lam_10 (x.1 : PUnit) : Effect4.Run.Tree *)
+
+let run_tree_level__lam_10 (x_1 : unit) : tree =
+  let _x_2 = Val_unit in
+  let _x_3 = Exit_success _x_2 in
+  Tree_done _x_3
+
+
+
+(* LCNF mono: Effect4.Run.Tree.statements._lam_4 (x.1 : PUnit) : Effect4.Run.Tree *)
+
+let run_tree_statements__lam_4 (x_1 : unit) : tree =
+  Tree_cut
+
+
+
+(* LCNF mono: List.range.loop (a.1 : Nat) (a.2 : List Nat) : List Nat *)
+
+let rec list_range_loop (a_1 : int) (a_2 : int list) : int list =
+  let zero = 0 in
+  let is_zero = a_1 = zero in
+  if is_zero then a_2 else (let one = 1 in
+    let n_3 = max 0 (a_1 - one) in
+    let _x_4 = n_3 :: a_2 in
+    list_range_loop n_3 _x_4)
+
+
+
+(* LCNF mono: List.range (n : Nat) : List Nat *)
+
+let list_range (n : int) : int list =
+  let _x_1 = [] in
+  list_range_loop n _x_1
+
+
+
 (* LCNF mono: Effect4.Run.Tree.level (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (x.1 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) : Effect4.Run.Tree
    Effect4.Run.Tree.level._lam_2 (x.1 : List Effect4.Store.Val) (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (rest.2 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (v : Effect4.Store.Val) : Effect4.Run.Tree
    Effect4.Run.Tree.level._lam_4 (x.1 : List Effect4.Store.Val) (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (handler.2 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (x.5 : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Run.Tree
    Effect4.Run.Tree.level._lam_5 (x.1 : List Effect4.Store.Val) (test.2 : Effect4.Program.Term) (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (handler.3 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.4 : List Effect4.Run.Tree.Frame) (x.5 : Effect4.Machine.Ctx) (x.6 : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Run.Tree
    Effect4.Run.Tree.level._lam_6 (x.1 : List Effect4.Store.Val) (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (onValue.2 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (onCause.5 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.6 : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Run.Tree
    Effect4.Run.Tree.level._lam_8 (x.1 : List Effect4.Store.Val) (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (finalizer.2 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (ex : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Run.Tree
-   Effect4.Run.Tree.level._lam_9 (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (body.1 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.2 : List Effect4.Run.Tree.Frame) (x.3 : Effect4.Machine.Ctx) (env' : List Effect4.Store.Val) : Effect4.Run.Tree *)
+   Effect4.Run.Tree.level._lam_9 (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (body.1 : Effect4.Program.Eff Effect4.Program.NativeOp) (x.2 : List Effect4.Run.Tree.Frame) (x.3 : Effect4.Machine.Ctx) (env' : List Effect4.Store.Val) : Effect4.Run.Tree
+   Effect4.Run.Tree.statements (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (x.1 : Effect4.Program.Stmts Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (x.5 : PUnit -> Effect4.Run.Tree) (x.6 : Option (PUnit -> Effect4.Run.Tree)) : Effect4.Run.Tree
+   Effect4.Run.Tree.statements._lam_0 (x.1 : List Effect4.Store.Val) (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (tail.2 : Effect4.Program.Stmts Effect4.Program.NativeOp) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (x.5 : PUnit -> Effect4.Run.Tree) (x.6 : Option (PUnit -> Effect4.Run.Tree)) (v : Effect4.Store.Val) : Effect4.Run.Tree
+   Effect4.Run.Tree.statements._lam_1 (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (tail.1 : Effect4.Program.Stmts Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (x.5 : PUnit -> Effect4.Run.Tree) (x.6 : Option (PUnit -> Effect4.Run.Tree)) (x.7 : Effect4.Store.Val) : Effect4.Run.Tree
+   Effect4.Run.Tree.statements._lam_2 (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (tail.1 : Effect4.Program.Stmts Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (x.5 : PUnit -> Effect4.Run.Tree) (x.6 : Option (PUnit -> Effect4.Run.Tree)) (x.7 : PUnit) : Effect4.Run.Tree
+   List.foldrTR._at_.Effect4.Run.Tree.statements.spec_1 (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (tail.1 : Effect4.Program.Stmts Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (x.5 : PUnit -> Effect4.Run.Tree) (x.6 : Option (PUnit -> Effect4.Run.Tree)) (body.7 : Effect4.Program.Stmts Effect4.Program.NativeOp) (init : PUnit -> Effect4.Run.Tree) (l : List Nat) (_y.8 : PUnit) : Effect4.Run.Tree
+   _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.foldrTR._at_.Effect4.Run.Tree.statements.spec_1.spec_1._redArg (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (tail.1 : Effect4.Program.Stmts Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (x.5 : PUnit -> Effect4.Run.Tree) (x.6 : Option (PUnit -> Effect4.Run.Tree)) (body.7 : Effect4.Program.Stmts Effect4.Program.NativeOp) (i : USize) (stop : USize) (b : PUnit -> Effect4.Run.Tree) (_y.8 : PUnit) : Effect4.Run.Tree
+   _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.foldrTR._at_.Effect4.Run.Tree.statements.spec_1.spec_1._redArg._lam_0 (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (tail.1 : Effect4.Program.Stmts Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (x.5 : PUnit -> Effect4.Run.Tree) (x.6 : Option (PUnit -> Effect4.Run.Tree)) (x.7 : PUnit) : Effect4.Run.Tree
+   _private.Init.Data.Array.Basic.0.Array.foldrMUnsafe.fold._at_.List.foldrTR._at_.Effect4.Run.Tree.statements.spec_1.spec_1._redArg._lam_1 (after : PUnit -> Effect4.Run.Tree) (table : List Effect4.Program.Row) (bodies : List (Effect4.Program.Eff Effect4.Program.NativeOp)) (k : Nat) (unfold : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (List Effect4.Store.Val) -> (List Effect4.Run.Tree.Frame) -> Effect4.Machine.Ctx -> Effect4.Run.Tree) (body.1 : Effect4.Program.Stmts Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Run.Tree.Frame) (x.4 : Effect4.Machine.Ctx) (b : PUnit -> Effect4.Run.Tree) (_y.5 : PUnit) : Effect4.Run.Tree *)
 
 let rec run_tree_level (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (x_1 : native_op eff) (x_2 : val_ list) (x_3 : frame list) (x_4 : ctx) : tree =
   let _jp_5 = fun () -> let _x_6 = run_tree_outside_exit in
@@ -4833,6 +4877,9 @@ let rec run_tree_level (table : row list) (bodies : native_op eff list) (k : int
               unfold val__181 _x_183 _x_186 x_4)
             | _ -> _jp_21 ())
         | _ -> _jp_21 ())
+    | Eff_gen body_188 -> (let _f_189 = run_tree_level__lam_10 in
+      let _x_190 = None in
+      run_tree_statements table bodies k unfold body_188 x_2 x_3 x_4 _f_189 _x_190)
     | _ -> _jp_5 ()
 
 and run_tree_level__lam_2 (x_1 : val_ list) (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (rest_2 : native_op eff) (x_3 : frame list) (x_4 : ctx) (v : val_) : tree =
@@ -4894,6 +4941,75 @@ and run_tree_level__lam_8 (x_1 : val_ list) (table : row list) (bodies : native_
 
 and run_tree_level__lam_9 (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (body_1 : native_op eff) (x_2 : frame list) (x_3 : ctx) (env' : val_ list) : tree =
   run_tree_level table bodies k unfold body_1 env' x_2 x_3
+
+and run_tree_statements (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (x_1 : native_op stmts) (x_2 : val_ list) (x_3 : frame list) (x_4 : ctx) (x_5 : unit -> tree) (x_6 : (unit -> tree) option) : tree =
+  let _jp_7 = fun () -> let _x_8 = run_tree_bad_shape_exit in
+  Tree_done _x_8 in
+  match (x_1 : _ stmts) with
+    | Stmts_nil -> (let _x_10 = () in
+      x_5 _x_10)
+    | Stmts_cons (head_12, tail_13) -> (match (head_12 : _ stmt) with
+        | Stmt_bindYield effect_14 -> (let _f_15 = run_tree_statements__lam_0 x_2 table bodies k unfold tail_13 x_3 x_4 x_5 x_6 in
+          let _x_16 = run_tree_level table bodies k unfold effect_14 x_2 x_3 x_4 in
+          run_tree_and_then _x_16 _f_15)
+        | Stmt_yieldDiscard effect_18 -> (let _f_19 = run_tree_statements__lam_1 table bodies k unfold tail_13 x_2 x_3 x_4 x_5 x_6 in
+          let _x_20 = run_tree_level table bodies k unfold effect_18 x_2 x_3 x_4 in
+          run_tree_and_then _x_20 _f_19)
+        | Stmt_ret value_22 -> (let _x_23 = run_tree_value_exit x_2 value_22 in
+          Tree_done _x_23)
+        | Stmt_ifElse (test_25, then_b_26, else_b_27) -> (let _x_28 = program_eval_term x_2 test_25 in
+          match _x_28 with
+            | Some val__29 -> (match (val__29 : val_) with
+                | Val_bool b_30 -> if b_30 then (let _f_33 = run_tree_statements__lam_2 table bodies k unfold tail_13 x_2 x_3 x_4 x_5 x_6 in
+                    run_tree_statements table bodies k unfold then_b_26 x_2 x_3 x_4 _f_33 x_6) else (let _f_31 = run_tree_statements__lam_2 table bodies k unfold tail_13 x_2 x_3 x_4 x_5 x_6 in
+                    run_tree_statements table bodies k unfold else_b_27 x_2 x_3 x_4 _f_31 x_6)
+                | _ -> _jp_7 ())
+            | _ -> _jp_7 ())
+        | Stmt_whileTrue body_35 -> (let _f_36 = run_tree_statements__lam_4 in
+          let _x_37 = list_range k in
+          let _x_38 = () in
+          list_foldr_tr_at_run_tree_statements_spec_1 table bodies k unfold tail_13 x_2 x_3 x_4 x_5 x_6 body_35 _f_36 _x_37 _x_38)
+        | Stmt_breakLoop -> (match x_6 with
+            | None -> (let _x_40 = run_tree_bad_shape_exit in
+              Tree_done _x_40)
+            | Some val__42 -> (let _x_43 = () in
+              val__42 _x_43)))
+
+and run_tree_statements__lam_0 (x_1 : val_ list) (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (tail_2 : native_op stmts) (x_3 : frame list) (x_4 : ctx) (x_5 : unit -> tree) (x_6 : (unit -> tree) option) (v : val_) : tree =
+  let _x_7 = [] in
+  let _x_8 = v :: _x_7 in
+  let _x_9 = x_1 @ _x_8 in
+  run_tree_statements table bodies k unfold tail_2 _x_9 x_3 x_4 x_5 x_6
+
+and run_tree_statements__lam_1 (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (tail_1 : native_op stmts) (x_2 : val_ list) (x_3 : frame list) (x_4 : ctx) (x_5 : unit -> tree) (x_6 : (unit -> tree) option) (x_7 : val_) : tree =
+  run_tree_statements table bodies k unfold tail_1 x_2 x_3 x_4 x_5 x_6
+
+and run_tree_statements__lam_2 (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (tail_1 : native_op stmts) (x_2 : val_ list) (x_3 : frame list) (x_4 : ctx) (x_5 : unit -> tree) (x_6 : (unit -> tree) option) (x_7 : unit) : tree =
+  run_tree_statements table bodies k unfold tail_1 x_2 x_3 x_4 x_5 x_6
+
+and list_foldr_tr_at_run_tree_statements_spec_1 (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (tail_1 : native_op stmts) (x_2 : val_ list) (x_3 : frame list) (x_4 : ctx) (x_5 : unit -> tree) (x_6 : (unit -> tree) option) (body_7 : native_op stmts) (init : unit -> tree) (l : int list) (_y_8 : unit) : tree =
+  let _x_9 = l in
+  let _x_10 = List.length _x_9 in
+  let _x_11 = 0 in
+  let _x_12 = _x_11 < _x_10 in
+  if _x_12 then (let _x_14 = _x_10 in
+    let _x_15 = 0 in
+    array_foldr_munsafe_fold_at_list_foldr_tr_at_run_tree_statements_spec_1_spec_1 table bodies k unfold tail_1 x_2 x_3 x_4 x_5 x_6 body_7 _x_14 _x_15 init _y_8) else init _y_8
+
+and array_foldr_munsafe_fold_at_list_foldr_tr_at_run_tree_statements_spec_1_spec_1 (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (tail_1 : native_op stmts) (x_2 : val_ list) (x_3 : frame list) (x_4 : ctx) (x_5 : unit -> tree) (x_6 : (unit -> tree) option) (body_7 : native_op stmts) (i : int) (stop : int) (b : unit -> tree) (_y_8 : unit) : tree =
+  let _x_9 = i = stop in
+  if _x_9 then b _y_8 else (let after = array_foldr_munsafe_fold_at_list_foldr_tr_at_run_tree_statements_spec_1_spec_1__red_arg__lam_0 table bodies k unfold tail_1 x_2 x_3 x_4 x_5 x_6 in
+    let _f_10 = array_foldr_munsafe_fold_at_list_foldr_tr_at_run_tree_statements_spec_1_spec_1__red_arg__lam_1 after table bodies k unfold body_7 x_2 x_3 x_4 b in
+    let _x_11 = 1 in
+    let _x_12 = max 0 (i - _x_11) in
+    array_foldr_munsafe_fold_at_list_foldr_tr_at_run_tree_statements_spec_1_spec_1 table bodies k unfold tail_1 x_2 x_3 x_4 x_5 x_6 body_7 _x_12 stop _f_10 _y_8)
+
+and array_foldr_munsafe_fold_at_list_foldr_tr_at_run_tree_statements_spec_1_spec_1__red_arg__lam_0 (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (tail_1 : native_op stmts) (x_2 : val_ list) (x_3 : frame list) (x_4 : ctx) (x_5 : unit -> tree) (x_6 : (unit -> tree) option) (x_7 : unit) : tree =
+  run_tree_statements table bodies k unfold tail_1 x_2 x_3 x_4 x_5 x_6
+
+and array_foldr_munsafe_fold_at_list_foldr_tr_at_run_tree_statements_spec_1_spec_1__red_arg__lam_1 (after : unit -> tree) (table : row list) (bodies : native_op eff list) (k : int) (unfold : native_op eff -> val_ list -> frame list -> ctx -> tree) (body_1 : native_op stmts) (x_2 : val_ list) (x_3 : frame list) (x_4 : ctx) (b : unit -> tree) (_y_5 : unit) : tree =
+  let _x_6 = Some after in
+  run_tree_statements table bodies k unfold body_1 x_2 x_3 x_4 b _x_6
 
 
 
@@ -6160,6 +6276,7 @@ let run_tree_arm_of (x_1 : native_op eff) : bool =
         | _ -> false)
     | Eff_defs (_, _, _, _) -> true
     | Eff_invoke (_, _, _) -> true
+    | Eff_gen _ -> true
     | _ -> false
 
 
@@ -6741,26 +6858,6 @@ let run_tree_settle (table : row list) (limit : int) (host : int -> val_ -> _ ->
     match _x_11 with
       | None -> None
       | Some val__13 -> _jp_1 val__13) else _jp_1 _x_7
-
-
-
-(* LCNF mono: List.range.loop (a.1 : Nat) (a.2 : List Nat) : List Nat *)
-
-let rec list_range_loop (a_1 : int) (a_2 : int list) : int list =
-  let zero = 0 in
-  let is_zero = a_1 = zero in
-  if is_zero then a_2 else (let one = 1 in
-    let n_3 = max 0 (a_1 - one) in
-    let _x_4 = n_3 :: a_2 in
-    list_range_loop n_3 _x_4)
-
-
-
-(* LCNF mono: List.range (n : Nat) : List Nat *)
-
-let list_range (n : int) : int list =
-  let _x_1 = [] in
-  list_range_loop n _x_1
 
 
 
