@@ -41,8 +41,8 @@ paragraph says what the words mean. Sources: the model probe
 
 - **`Σ_core` is the closed inductives the language owns:** the `Eff` and `Ty` constructors, the
   built-in `NativeOp` rows, `SyncOp`, `FiberOp`, `NativeAtom`, `Err`, `Defect`, `HandleKind`. It
-  grows only by constructor appends under DI-47's finite gate over the retained baseline (read by the mirror census's configuration; no comparator has run since `243ca0dd`)
-  (`Test/fixtures/baseline/`, rows 56 and 61): a finite gate and a discipline, not a theorem.
+  grows only by constructor appends, a discipline and not a theorem (DI-47; rows 56 and 61). The
+  retained baseline and its conservativity check were deleted by row 410.
 - **`Σ_app` is data an application supplies:** the row table and the service table (row 111).
   Later, and only if admitted, nominal data declarations (row 2; DB-15) and code entries (row 82).
   "Lawful" is one decidable check with a located refusal, whose evidence travels with the program

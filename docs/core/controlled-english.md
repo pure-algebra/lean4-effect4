@@ -302,7 +302,7 @@ Each entry is one row of six columns:
 | **axiom** | A constant assumed without proof. The trust ceiling allows two. | — | — | — | — |
 | **trust ceiling** | `[propext, Quot.sound]`: the axioms that a declaration of `Effect4.*` or `Test.*` may reach. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
 | **axiom gate** | The check over every compiled `Effect4` and `Test` declaration: no `unsafe`, `partial`, declared axiom, `extern`, `implemented_by` or bodyless `opaque`, and nothing beyond the trust ceiling. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | Lean: `#print axioms` gives one declaration's axioms | "trust gate", "axiom audit", "trust audit" | — |
-| **module-closure gate** | The check that every audited source is reachable from the audit root, `Test/All.lean` or `Test/Slow.lean`. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
+| **module-closure gate** | The check that every audited source is reachable from the audit root, `Test/All.lean`. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
 | **library-root gate** | The check that both library roots are imported, that every library source reaches one, and that `Effect4` never reaches `Effect4.Laws`. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
 | **trust token** | `sorry`, `partial`, `unsafe`, `native_decide`, `axiom`, `extern` or `implemented_by`: never written in the tree. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
 | **`#guard`** | A check that a battery runs during Lean elaboration. Rendered bytes stay inside it. | — | — | — | — |
@@ -344,7 +344,7 @@ Each entry is one row of six columns:
 | **fixture** | Input data for a test, under `Test/fixtures/`. | — | — | — | — |
 | **scenario** | An acceptance program with one named observation, its claim, its clauses and its controls, declared as one record. A scenario gate checks the record. | `Scenario` (`Test/Dogfood/Scenario.lean`) | — | — | — |
 | **named run** | One list of moves of a scenario, under one name, on one program. The scenario's record lists it once, and each lane takes it from there. | `NamedRun` (`Test/Dogfood/Scenario.lean`) | — | — | — |
-| **battery** | A `Test` module of checks, reachable from `Test/All.lean`, or from `Test/Slow.lean` for the slow lane. | `slowLane` (`Test/Audit/AxiomGate.lean`) | — | — | — |
+| **battery** | A `Test` module of checks, reachable from `Test/All.lean`. | `Test/All.lean` | — | — | — |
 | **census** | A measurement over an explicit universe, with its exclusions, roots and freshness recorded. A census is not a proof that a list is whole. A census command inspects Lean's `Environment`. | `#traversal_census` (`src/Effect4/Laws/Auto/Traversals.lean`); `#auto_census` (`src/Effect4/Laws/Auto/Census.lean`); `#semantics_census` (`src/Effect4/Laws/Auto/Semantics.lean`) | — | — | — |
 | **gate** | A check that refuses a build or a merge under a stated policy. A passing gate is a verdict of its policy, not a proof. The axiom ceiling, runtime coverage and evidence validation are distinct gates. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
 | **check** (make check) | A `make check-<name>` target: a marker rule, skipped while its inputs are unchanged. | `Makefile` | — | — | — |
@@ -361,7 +361,7 @@ Each entry is one row of six columns:
 | **slice** | A bounded change, landed as commits by explicit paths. | — | — | — | — |
 | **wave** | A set of slices that run in parallel. | — | — | — | — |
 | **sweep** | The whole battery with `make check` and `make check-full`, run when the owner asks. | — | — | — | — |
-| **lane** | One check pipeline: the truth lane, the corpus lane, the OCaml lane, the slow lane. | — | — | — | — |
+| **lane** | One check pipeline: the truth lane, the corpus lane, the OCaml lane. | — | — | — | — |
 
 ### 3.5 Algebra and category theory
 
@@ -430,7 +430,7 @@ Each entry is one row of six columns:
 | **handler adequacy** | Each row's handler answers inside the row's post, over a store that stays typed. | `storeStep_typed` (`src/Effect4/Laws/Program/Typed/Adequacy.lean`) | — | — | — |
 | **fiber** | A thread of the machine, named by a `FiberId`. | `FiberId` (`src/Effect4/Machine/Fiber.lean`) | — | — | — |
 | **root fiber** | The first fiber of a run, typed by the program's certified type. A run has one root. | — | — | — | — |
-| **fork ledger** | The append-only history of forks, written by `spawn` only. | `ForkRecord` (`src/Effect4/Machine/Fibers.lean`); `step_agrees` (`Test/Api/TraceOrigin.lean`) | history variable (Abadi and Lamport 1991), by name | — | — |
+| **fork ledger** | The append-only history of forks, written by `spawn` only. | `ForkRecord` (`src/Effect4/Machine/Fibers.lean`) | history variable (Abadi and Lamport 1991), by name | — | — |
 | **scope** (Effect scope) | A resource container with a finalizer table. It closes once, runs its finalizers in reverse order, and sets its closed bit before cleanup. A ledger scope and a lexical scope are different things. | `Scope`, `closeOrder_eq` (`src/Effect4/Machine/Scope.lean`) | regions (ATTAPL ch. 3, audit §1a), by analogy | — | — |
 | **finalizer** | A cleanup registered in a scope. | `closeOrder_eq` (`src/Effect4/Machine/Scope.lean`) | — | — | — |
 | **cause** | The ordered list of reasons a run failed: typed failures, defects and interrupts. | `Cause` (`src/Effect4/Machine/Cause.lean`) | — | — | — |

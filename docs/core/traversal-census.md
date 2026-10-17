@@ -1,8 +1,9 @@
 # The traversal census — how every definition reads each free object (2026-09-17)
 
 > **Record of 2026-09-17/18, with its §1 counting rule and §7.11 restated on 2026-10-01 (row 143).**
-> Current status: the census at HEAD (`lake build Test.Audit.TraversalCensus` prints it; §7.11 holds
-> the latest measured table) and `docs/core/system-map.md` §5; this document and the instrument
+> Current status: the battery that printed the census at HEAD was deleted with the slow lane
+> (row 410); the instrument `#traversal_census` still prints it on demand, and §7.11 holds the last
+> measured table and `docs/core/system-map.md` §5; this document and the instrument
 > `Laws/Auto/Traversals.lean` are the census's one owner (row 142).
 
 Owner: "do the census; we're smarter now, we can use Lean's metaprogramming to do these
@@ -682,9 +683,8 @@ its own algebra: the spelling folds are a face table read by one interpreter per
 classifiers, four generic folds reading the columns of a classifier table or, for the two located
 searches, a hit predicate; the union-spine folds, one fold at four atoms; the mirrors, one
 reflection at five carriers. The rule for a constructor append is "no hand case analysis on `Ty`
-outside the generated folds and `Laws/Program/Typed/Membership.lean`", checked by
-`scripts/check-ty-rule.py` (U's `check-commit4-rule.py`, landed by seat W2) over this instrument's
-output (R1–R4); its distance at `630e6c37` is 78 rows (R1 21, R2 13, R3 38, R4 6), the gate on at
+outside the generated folds and `Laws/Program/Typed/Membership.lean`", once checked by
+`scripts/check-ty-rule.py` over this instrument's output (R1–R4), which row 410 deleted; its distance at `630e6c37` is 78 rows (R1 21, R2 13, R3 38, R4 6), the gate on at
 the wave's commit 4. The named exemptions for `Ty` are `Fits` and `FlatFits` (the typed state's
 module), the derived `Repr` and `DecidableEq` until generated, the two pass-through matchers
 (`selectRefusal`, `Decision.arms`' outer match), and the `Test` fixtures and counterexample models.

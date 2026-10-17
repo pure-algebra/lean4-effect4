@@ -95,9 +95,8 @@ end PointwiseSpellings
 
 /-!
 Constructor order is contractual for each leaf alphabet, and the census listings above pin it by
-`decide` (`LiteralKind.census = [...]` and its siblings). No check compares a snapshot of it: the
-baseline directory (`Test/fixtures/baseline/`, the row of that name in `AGENTS.md`) is read by the
-mirror census only (`tools/Conform/Effect4/mirrors.json`), which no make target runs.
+`decide` (`LiteralKind.census = [...]` and its siblings). No check compares a snapshot of it:
+decisions row 410 deleted the retained baseline and its conservativity check.
 The executable attacks once kept under `Test/Counterexamples/Schema/` were deleted with row 39
 (`d75f5c25`, 2026-10-01); their rows are in `Test/Counterexamples/Archive/REGISTER.md`.
 -/

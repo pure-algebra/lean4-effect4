@@ -455,7 +455,7 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 CHECKS := roots native compiler ts-reader truth truth-release target schema-codec ocaml ingest-smoke \
   host-protocol service-identity census schema-ts schema-pins tools corpus tsgo tsdiag semantics docs language
-.PHONY: check check-ts check-full check-sweep check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
+.PHONY: check check-ts check-full check-sweep check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
 FORCE:
 
 # The aggregates hold only the gates that test behaviour (owner, 2026-10-10): the proofs, and the
@@ -470,7 +470,7 @@ batteries-touched: ## the batteries a change against BASE (default HEAD) edits o
 check-ts: $(addprefix $(CHK)/,tsgo schema-codec schema-ts truth target ts-reader corpus tsdiag host-protocol ingest-smoke service-identity) ## every comparison with Effect and tsgo 7
 check-ocaml: $(addprefix $(CHK)/,native compiler ocaml) ## every comparison on the OCaml route
 check-full: check check-ts check-ocaml ## the build and every outside oracle
-check-sweep: $(addprefix $(CHK)/,roots docs language semantics census schema-pins tools) check-gen check-conservativity check-ty-rule check-slow $(if $(EFFECT4_RELEASE_NODE_MODULES),$(CHK)/truth-release) ## batteries, axioms, drift, documents, controls and the slow lanes
+check-sweep: $(addprefix $(CHK)/,roots docs language semantics census schema-pins tools) check-gen $(if $(EFFECT4_RELEASE_NODE_MODULES),$(CHK)/truth-release) ## batteries, axioms, drift and documents
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -481,20 +481,13 @@ define refuse_drift
 	  if [ -n "$$untracked" ]; then echo "FAIL check-gen: untracked generated files:"; echo "$$untracked"; exit 1; fi
 endef
 
-# The slow lane (owner, 2026-10-02): the batteries out of the default build, at a sweep.
-check-slow:
-	$(LAKE) build Test.Slow
-
 # The kernel rung, at a sweep only: every compiled Effect4 and Test declaration in the closure of the
 # battery roots, replayed through the kernel into one environment of their dependencies
 # (tools/Drivers/KernelReplay.lean). Never a bare `leanchecker`: it holds one environment per core.
 check-kernel: ## (sweep) replay every compiled Effect4 and Test declaration through the kernel, after its self-test
-	$(LAKE) build kernel-replay Test Test.Slow
+	$(LAKE) build kernel-replay Test
 	$(LAKE) exe kernel-replay --self-test
-	$(LAKE) exe kernel-replay Test Test.Slow
-
-traversal-census: ## print the traversal census (`docs/core/traversal-census.md`)
-	$(LAKE) build Test.Audit.TraversalCensus
+	$(LAKE) exe kernel-replay Test
 
 check-gen: gen-hermetic $(CORPUS)/index.tsv ## regenerate the stale Lean-only groups and the corpus index; refuse a changed committed file
 	$(refuse_drift)
@@ -833,31 +826,6 @@ _run-tools:
 	$(call build_imports,tools/Drivers/ProgramStructureCheck.lean)
 	$(LAKE) env lean --run tools/Drivers/ProgramStructureCheck.lean
 	bash scripts/test-trust-boundaries.sh
-
-# The conservativity check of an alphabet append (DI-47, decisions row 172; seat W2): goldens
-# byte-identical unless the baseline policy names them, tags and manifests append-only, every
-# verdict unchanged, every addition named, the generated diff recorded (C1-C5,
-# scripts/lib/conservativity.py). It judges committed files, so an append's producers and
-# `make corpus` run first. `make check-conservativity` runs its controls (mutations of HEAD and
-# unresolvable revisions); `make check-conservativity BASE=<rev>` also judges the working tree
-# against BASE. Not `--strict` until the owner rules on promoting refOf, deferredOf, var and
-# unknown in the baseline policy (row 172).
-.PHONY: check-conservativity
-check-conservativity:
-	bash scripts/check-conservativity.sh --self-test
-	@if [ -n "$(BASE)" ]; then bash scripts/check-conservativity.sh $(BASE); fi
-
-# The rule for the `Ty` append (decisions row 182; probe U §6.1; seat W2): no hand case analysis on
-# `Ty` outside the generated folds and Laws/Program/Typed/Membership.lean, read from the census and
-# the exhaustiveness gate, after the checker has established that it read a whole census (row 182
-# amended: an empty, truncated or error-carrying log refuses with exit 2). `make check-ty-rule`
-# runs its eighteen controls (seven log controls, eleven tree controls: the explicit producer
-# inventory and every producer's exit status, seat ty-rule); `python3 scripts/check-ty-rule.py
-# --tree` runs the census over the tree
-# and prints the distance from the rule. The gate turns on with the append (seat W4): not in `check`.
-.PHONY: check-ty-rule
-check-ty-rule:
-	$(PY) scripts/check-ty-rule.py --self-test
 
 # ---------------------------------------------------------------------------- help
 

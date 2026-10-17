@@ -68,8 +68,8 @@ _PROOF = re.compile(r"^\s*(?:@\[[^\]]*\]\s*)*(?:(?:private|protected|nonrec)\s+)
 # A change that acts on every importer, not through a name: an instance, an attribute, a notation.
 _AMBIENT = re.compile(r"^\s*(?:@\[[^\]]*\b(?:simp|aesop|macro|term_elab|command_elab|instance|reducible|irreducible)\b"
                       r"|(?:scoped\s+|local\s+)?(?:instance|notation|infix|infixl|infixr|prefix|postfix|macro|macro_rules|syntax|elab|elab_rules|attribute|set_option)\b)")
-# The batteries the whole-tree gates and the slow lane own (`Test/Slow.lean`): the sweep runs them.
-_SWEEP_ONLY = {'Test.All', 'Test.Slow', 'Test.Audit.AxiomGate'}
+# The batteries the whole-tree gates own: the sweep runs them.
+_SWEEP_ONLY = {'Test.All', 'Test.Audit.AxiomGate'}
 
 
 def _module_of(path: str) -> str | None:
@@ -214,7 +214,7 @@ def touched(base: str) -> list[str]:
     word = re.compile(r"(?<![\w'?!])(?:" + '|'.join(sorted(map(re.escape, by_text))) + r")(?![\w'?!])") \
         if by_text else None
     modules = {m for p in edited if (m := _module_of(p))}
-    sweep = _SWEEP_ONLY | set(imports_of(ROOT / 'Test' / 'Slow.lean'))
+    sweep = _SWEEP_ONLY
     # The batteries are the modules `Test.All` reaches; a fixture under `Test/` is no target.
     batteries = {m for p in closure(['Test.All'], None) if (m := _module_of(p)) and m.startswith('Test.')}
     out, unread = [], []

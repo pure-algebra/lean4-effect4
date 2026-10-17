@@ -15,7 +15,7 @@ name: Lean Action CI
 #
 # The long censuses run nightly, one job each, and the proofs are replayed weekly from a fresh
 # checkout with no cache. The batteries and the whole-tree axiom gate run at a sweep, by name
-# (`make check-slow`, `make check-roots`). The setup steps are the local actions under
+# (`make check-roots`). The setup steps are the local actions under
 # .github/actions: the toolchain and the cache, the pinned TypeScript, the OCaml compiler.
 #
 # A pull request is not a trigger: its branch is pushed here, so it ran twice.

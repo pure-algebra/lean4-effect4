@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Controls for root repair, negative fixtures, slow batteries and Laws separation."""
+"""Controls for root repair, negative fixtures and Laws separation."""
 import importlib.util
 import tempfile
 import unittest
@@ -20,9 +20,7 @@ class RootRepair(unittest.TestCase):
             'src/Effect4/Core.lean': '',
             'src/Effect4/Laws.lean': 'import Effect4\n',
             'Test/All.lean': 'import Effect4.Laws\nimport Test.Audit.AxiomGate\n\n#effect4_axiom_gate\n',
-            'Test/Audit/AxiomGate.lean': 'private def slowLane : List String := ["Test/Slow.lean", "Test/Long.lean"]\n',
-            'Test/Slow.lean': 'import Test.All\nimport Test.Long\n',
-            'Test/Long.lean': '',
+            'Test/Audit/AxiomGate.lean': '',
             'Test/fixtures/Negative.lean': 'this cannot compile\n',
         }.items():
             self.write(path, text)
@@ -50,11 +48,6 @@ class RootRepair(unittest.TestCase):
         self.write('src/Effect4/New.lean', 'import Effect4.Laws.New\n')
         self.write('src/Effect4/Laws/New.lean', '')
         with self.assertRaisesRegex(ValueError, 'orphan core module reaches Laws'):
-            roots.plan(self.root)
-
-    def test_slow_exception_does_not_spread_silently(self):
-        self.write('Test/New.lean', 'import Test.Long\n')
-        with self.assertRaisesRegex(ValueError, 'orphan battery reaches the slow lane'):
             roots.plan(self.root)
 
     def test_cycles_refuse_before_writing(self):

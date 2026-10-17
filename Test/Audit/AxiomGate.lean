@@ -367,29 +367,16 @@ private def findProjectRoot (directory : System.FilePath) : IO System.FilePath :
     | none => throw <| IO.userError "Effect4 axiom gate: could not locate the project root"
   throw <| IO.userError "Effect4 axiom gate: project-root search exceeded 64 parents"
 
-/-- The slow lane (owner, 2026-10-02): the batteries out of the default build, each minutes where
-a contract takes seconds. `Test/Slow.lean` imports exactly these with `Test.All` and runs this
-gate over them at a sweep (`make check-slow`), where they must be reached like every other source;
-from `Test.All` they are admitted unreachable. -/
-private def slowLane : List String :=
-  ["Test/Slow.lean", "Test/Program/ExitTypeLane.lean", "Test/Api/TraceOrigin.lean",
-    "Test/Api/SupervisionContract.lean", "Test/Machine/StepInvRulesRed.lean",
-    "Test/Audit/ExhaustiveFixture.lean", "Test/Audit/TraversalFixture.lean",
-    "Test/Audit/TraversalCensus.lean", "Test/Program/LayerSharingCertificate.lean"]
-
-private def auditedSources (projectRoot : System.FilePath) (slowRoot : Bool) :
+private def auditedSources (projectRoot : System.FilePath) :
     IO (Array System.FilePath) := do
   let effect4 ← (projectRoot / "src" / "Effect4").walkDir
   let effect4 := effect4.filter fun path => path.extension == some "lean"
   -- `Test/fixtures/` holds fixtures (`scripts/test-trust-boundaries.sh`'s planted declarations,
   -- sample trees), not battery modules.
   let fixturesRoot := (projectRoot / "Test" / "fixtures").toString
-  let slow : List System.FilePath :=
-    if slowRoot then [] else slowLane.map fun (rel : String) => (projectRoot / rel).normalize
   let tests ← (projectRoot / "Test").walkDir
   let tests := tests.filter fun path =>
-    path.extension == some "lean" && !path.toString.startsWith fixturesRoot &&
-      !slow.contains path.normalize
+    path.extension == some "lean" && !path.toString.startsWith fixturesRoot
   return effect4 ++ tests |>.push (projectRoot / "src" / "Effect4.lean")
 
 /--
@@ -422,8 +409,7 @@ elab "#effect4_axiom_gate" : command => do
   let some sourceDirectory := sourceFile.parent
     | throwError "Effect4 axiom gate: source file has no parent directory"
   let projectRoot ← liftIO <| findProjectRoot sourceDirectory
-  let slowRoot := sourceFile.normalize == (projectRoot / "Test" / "Slow.lean").normalize
-  let sources ← liftIO <| auditedSources projectRoot slowRoot
+  let sources ← liftIO <| auditedSources projectRoot
   let importedPaths : Std.HashSet String := environment.header.moduleNames.foldl
     (fun set moduleName => set.insert (modulePath projectRoot moduleName).toString) {}
   for source in sources do

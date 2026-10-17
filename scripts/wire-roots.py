@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Connect orphan library modules and batteries to their existing roots.
 
-The axiom gate remains the authority for root separation and the slow-lane exception.
-This repair adds imports only. It never changes the slow lane or imports negative fixtures.
+The axiom gate remains the authority for root separation. This repair adds imports only, and it
+never imports a negative fixture.
 """
 import argparse
 import re
@@ -19,20 +19,11 @@ def module_name(path):
     return path.removeprefix('src/').removesuffix('.lean').replace('/', '.')
 
 
-def slow_sources(root):
-    text = (root / 'Test/Audit/AxiomGate.lean').read_text(encoding='utf-8')
-    match = re.search(r'private def slowLane : List String :=\s*\[([^]]*)\]', text)
-    if not match:
-        raise ValueError('cannot read slowLane from Test/Audit/AxiomGate.lean')
-    return set(re.findall(r'"([^"]+)"', match[1]))
-
-
 def plan(root):
     """Return the smallest acyclic set of orphan import roots, without writing files."""
-    slow = slow_sources(root)
     inventory = {p.relative_to(root).as_posix() for folder in ('src/Effect4', 'Test')
                  for p in (root / folder).rglob('*.lean')}
-    inventory -= slow | set(ROOTS)
+    inventory -= set(ROOTS)
     inventory = {p for p in inventory if not p.startswith('Test/fixtures/')}
     groups = {
         ROOTS[0]: {p for p in inventory if p.startswith('src/') and not p.startswith('src/Effect4/Laws/')},
@@ -52,8 +43,6 @@ def plan(root):
             raise ValueError('orphan import cycle: ' + ', '.join(sorted(missing - covered)))
         if target == ROOTS[0] and any(p.startswith('src/Effect4/Laws') for p in covered):
             raise ValueError('an orphan core module reaches Laws; repair its import before wiring roots')
-        if target == ROOTS[2] and covered & slow:
-            raise ValueError('an orphan battery reaches the slow lane; place it before wiring roots')
         if entries:
             result[target] = [module_name(path) for path in entries]
     return result

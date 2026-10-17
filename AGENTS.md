@@ -18,7 +18,6 @@ documents that the current task names.
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
 | `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
-| `Test/fixtures/baseline/<commit>/` | retained pre-change baselines of the descriptions and alphabets, the independent authority a compatibility gate compares against (DI-47). No generator writes here; it changes only by a named promotion command, and a diff in it is a review event, not drift; the mirror census reads it, and no comparator runs against it |
 | `src/Effect4/` | API and functional utilities through `Effect4`; the proof graph through `Effect4.Laws`, with declaration namespaces unchanged |
 | `Test/` | batteries, counterexamples and proof receipts; `Test/Audit/AxiomGate.lean` holds the gates: the axiom gate, the module-closure gate and the library-root gate |
 | `generated/` | deterministic projections only; never hand-edited |
@@ -152,8 +151,6 @@ its arrows. Anything else is a leak.
   import the Laws graph. The library-root gate checks both roots.
 - Every battery file under `Test/` must be reachable from `Test/All.lean`, or the module-closure
   gate refuses the build.
-- The slow lane is the one exception: the files `slowLane` lists in `Test/Audit/AxiomGate.lean`,
-  reached from `Test/Slow.lean` and built at a sweep (`make check-sweep`).
 - Name the exact judgment, observation, theorem or gate before you say "sound", "equivalent",
   "preserves", "fully reified" or "complete". Name its assumptions and the remaining host
   boundary too.
@@ -234,7 +231,7 @@ its arrows. Anything else is a leak.
   - the registers;
   - the documents' stale references.
 - `make build` connects orphan modules to their roots before building.
-  The axiom gate keeps its root separation and slow-lane rules.
+  The axiom gate keeps its root separation.
 - `make check-sweep` repairs deleted paths to their last Git citations, then checks every authority reference.
   A cited research note must be tracked (force-added).
 - History (`docs/research/`, the archives, `ATTACKS.md`) is not checked. What these tools measure

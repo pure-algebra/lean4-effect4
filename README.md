@@ -347,7 +347,7 @@ make check-ts       # every comparison with Effect and tsgo 7
 make check-ocaml    # native layouts, the compiler and the OCaml estate
 make check-full     # the build and both comparison lanes
 make check-gen      # regenerate stale groups and refuse committed drift
-make check-sweep    # batteries, axioms, documents, controls and slow lanes
+make check-sweep    # batteries, axioms, drift and documents
 make check-kernel   # replay compiled declarations through Lean's kernel
 make status         # measured build, checks, claims, registers and references
 ```

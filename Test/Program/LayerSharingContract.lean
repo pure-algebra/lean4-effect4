@@ -2,9 +2,7 @@ import Effect4.Api.Codegen
 
 /-! Closed counted-layer instance: one actual reference site versus two nested
 reference sites, with the same table and ordinary run tape. The two programs and their
-well-formedness live here, where the authoring contracts read them; the kernel-checked run
-certificate over them is in the slow lane (`Test/Program/LayerSharingCertificate.lean`,
-`Test/Slow.lean`). -/
+well-formedness live here, where the authoring contracts read them. -/
 set_option autoImplicit false
 
 namespace Test.Program.LayerSharingContract
