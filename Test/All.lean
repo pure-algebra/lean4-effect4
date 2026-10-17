@@ -263,6 +263,7 @@ import Test.Api.RecordAuthoring
 import Test.Api.MapAuthoring
 import Test.Api.TupleAuthoring
 import Test.Api.TargetSupport
+import Test.Program.SketchAdmissionControls
 import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract

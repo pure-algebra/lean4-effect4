@@ -5,6 +5,7 @@ import Effect4.Laws.Store.ShapeRead
 import Effect4.Program.Typing.SourceSession
 import Effect4.Laws.Program.SourceTable
 import Effect4.Laws.Program.SketchWire
+import Effect4.Laws.Program.SketchAdmission
 import Effect4.Api.RunnerDerived
 import Effect4.Run.Live
 import Effect4.Laws.Api.Live
@@ -29,15 +30,16 @@ order and whose lists may come as arrays. One function reads each way at every c
 `Canonical.ofJsonAnyOrder`). Answers give JSON; a request with `"hex": true` gets the canonical
 bytes beside it. An agent never needs them: a digest names the bytes where a name is wanted.
 
-**The application travels with `open`** (decisions row 373 (10)): the row table and the
-service declarations (`rows` or `rowsJson`, `services` or `servicesJson`). With neither, the
-application is the empty one. The catalogue gives a row's JSON form. An answer names the
-application: `empty`, or `sha256:` and the digest of the canonical bytes of the pair. A digest
-names bytes; no answer assumes two applications with one digest are one.
+**The application travels with `open`** (decisions row 373 (10)): the row table, the
+service declarations and the named types (`rows` or `rowsJson`, `services` or `servicesJson`,
+`types` or `typesJson`). With none, the application is the empty one. The catalogue gives a row's
+JSON form. An answer names the application: `empty`, or `sha256:` and the digest of the canonical
+bytes of the triple. A digest names bytes; no answer assumes two applications with one digest are
+one.
 
 | Operation | Takes | Answers | The laws it names |
 | --- | --- | --- | --- |
-| `open` | `program` (hex) or `programJson`, and the hole table, the rows and the services if any, each as hex or JSON | the view | `SourceSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJsonAnyOrder_exact` for JSON |
+| `open` | `program` (hex) or `programJson`, and the hole table, the rows, the services and the types if any, each as hex or JSON | the view | `SourceSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJsonAnyOrder_exact` for JSON |
 | `fill` | `path`, `replacement` (hex) or `replacementJson` | the delta and the view; refused where the path is no part of the sketch | the law the delta took, `SourceSession.feed_coherent`, and `SourceSession.reached_view` |
 | `omit` | `path`, `holeName` | the delta and the view; the hole row declares the focus's type | the same |
 | `view` | `path`, or none | at an address, its entry and its focus; with none, the whole table | `SourceSession.reached_view`; `SourceSession.focusAt_typed` at an address |
@@ -65,7 +67,7 @@ undo is stated for a fill.
 **What it is not.** It is no MCP server: an MCP tool is a thin wrapper over `answerLine`. It
 holds one session. It does not admit the application's signature (`admitSig`) at `open`: it shows
 the checker's answers at that signature (the open part `sketch-admission` of R14), and `run`
-admits the sketch at its rows (`admitProgram`).
+admits the sketch at the application extended by its holes (`admitProgram`).
 -/
 
 namespace Tools.Session
@@ -127,6 +129,10 @@ structure Request where
   budget : Nat := 64
   /-- the most paths `explore` answers -/
   width : Nat := 64
+  /-- the application's named type declarations, as their canonical bytes in hex -/
+  types : Option String := none
+  /-- the named type declarations as their JSON print, in place of `types` -/
+  typesJson : Option Json := none
 
 /-- Read a request; a field of the wrong type is refused with its name. -/
 def Request.fromJson? (j : Json) : Except String Request := do
@@ -141,6 +147,7 @@ def Request.fromJson? (j : Json) : Except String Request := do
   let replacementJson := (j.getObjVal? "replacementJson").toOption
   let rows ← optField j "rows" (Lean.fromJson? (α := String))
   let services ← optField j "services" (Lean.fromJson? (α := String))
+  let types ← optField j "types" (Lean.fromJson? (α := String))
   let hex ← optField j "hex" (Lean.fromJson? (α := Bool))
   let answers ← optField j "answers" (Lean.fromJson? (α := String))
   let limit ← optField j "limit" (Lean.fromJson? (α := Nat))
@@ -150,7 +157,7 @@ def Request.fromJson? (j : Json) : Except String Request := do
     programJson replacementJson rows services (j.getObjVal? "holesJson").toOption
     (j.getObjVal? "rowsJson").toOption (j.getObjVal? "servicesJson").toOption (hex.getD false)
     answers (j.getObjVal? "answersJson").toOption (j.getObjVal? "tapeJson").toOption
-    (limit.getD 256) (budget.getD 64) (width.getD 64)
+    (limit.getD 256) (budget.getD 64) (width.getD 64) types (j.getObjVal? "typesJson").toOption
 
 /-- Write a request, as `Request.fromJson?` reads it. -/
 def Request.toJson (r : Request) : Json :=
@@ -163,9 +170,11 @@ def Request.toJson (r : Request) : Json :=
     (r.replacementJson.map fun j => ("replacementJson", j)).toList ++
     (r.rows.map fun hex => ("rows", Json.str hex)).toList ++
     (r.services.map fun hex => ("services", Json.str hex)).toList ++
+    (r.types.map fun hex => ("types", Json.str hex)).toList ++
     (r.holesJson.map fun j => ("holesJson", j)).toList ++
     (r.rowsJson.map fun j => ("rowsJson", j)).toList ++
     (r.servicesJson.map fun j => ("servicesJson", j)).toList ++
+    (r.typesJson.map fun j => ("typesJson", j)).toList ++
     (r.answers.map fun hex => ("answers", Json.str hex)).toList ++
     (r.answersJson.map fun j => ("answersJson", j)).toList ++
     (r.tapeJson.map fun j => ("tapeJson", j)).toList ++
@@ -193,8 +202,8 @@ def listFrom? {α : Type} [Canonical (List α)] (hex : Option String) (json : Op
 /-- **The application's name**: `empty` for the empty application, and otherwise `sha256:` and
 the digest of the canonical bytes of its row table and its declarations. -/
 def appName (app : SigApp) : String :=
-  if app.rows.isEmpty && app.services.isEmpty then "empty"
-  else "sha256:" ++ (sha256 (Canonical.encode (app.rows, app.services))).hex
+  if app.rows.isEmpty && app.services.isEmpty && app.types.isEmpty then "empty"
+  else "sha256:" ++ (sha256 (Canonical.encode (app.rows, app.services, app.types))).hex
 
 /-- What a delta says. -/
 def deltaJson : Edit.Delta → Json
@@ -268,16 +277,23 @@ def answer (st : State) (req : Request) : State × Answer :=
     let (holes?, holeLaws) := listFrom? (α := Row) req.holes req.holesJson
     let (rows?, rowLaws) := listFrom? (α := Row) req.rows req.rowsJson
     let (services?, serviceLaws) := listFrom? (α := ServiceKey × Ty) req.services req.servicesJson
-    let readLaws := (programLaws ++ holeLaws ++ rowLaws ++ serviceLaws).eraseDups
-    match program?, holes?, rows?, services? with
-    | none, _, _, _ => (st, unreadable (α := NativeEff) req.op "the program does not read" req.programJson req.id)
-    | _, none, _, _ => (st, unreadable (α := RowTable) req.op "the hole table does not read" req.holesJson req.id)
-    | _, _, none, _ => (st, unreadable (α := RowTable) req.op "the row table does not read" req.rowsJson req.id)
-    | _, _, _, none =>
+    let (types?, typeLaws) := listFrom? (α := String × Ty) req.types req.typesJson
+    let readLaws := (programLaws ++ holeLaws ++ rowLaws ++ serviceLaws ++ typeLaws).eraseDups
+    match program?, holes?, rows?, services?, types? with
+    | none, _, _, _, _ =>
+      (st, unreadable (α := NativeEff) req.op "the program does not read" req.programJson req.id)
+    | _, none, _, _, _ =>
+      (st, unreadable (α := RowTable) req.op "the hole table does not read" req.holesJson req.id)
+    | _, _, none, _, _ =>
+      (st, unreadable (α := RowTable) req.op "the row table does not read" req.rowsJson req.id)
+    | _, _, _, none, _ =>
       (st, unreadable (α := List (ServiceKey × Ty)) req.op "the service declarations do not read"
         req.servicesJson req.id)
-    | some program, some holes, some rows, some services =>
-      let app : SigApp := ⟨rows, services, []⟩
+    | _, _, _, _, none =>
+      (st, unreadable (α := TyDecls) req.op "the type declarations do not read"
+        req.typesJson req.id)
+    | some program, some holes, some rows, some services, some types =>
+      let app : SigApp := ⟨rows, services, types⟩
       let name := appName app
       let l := SourceSession.open app { program, holes }
       ({ source := some l, journal := [], app := name },
@@ -337,10 +353,12 @@ def answer (st : State) (req : Request) : State × Answer :=
         let result := Json.mkObj <|
           (if req.hex then
             [("program", .str (toHex l.sketch.program)), ("holes", .str (toHex l.sketch.holes)),
-              ("rows", .str (toHex l.app.rows)), ("services", .str (toHex l.app.services))]
+              ("rows", .str (toHex l.app.rows)), ("services", .str (toHex l.app.services)),
+              ("types", .str (toHex l.app.types))]
           else []) ++
           [("programJson", printJson l.sketch.program), ("holesJson", printJson l.sketch.holes),
-            ("rowsJson", printJson l.app.rows), ("servicesJson", printJson l.app.services)]
+            ("rowsJson", printJson l.app.rows), ("servicesJson", printJson l.app.services),
+            ("typesJson", printJson l.app.types)]
         (st, Answer.mk op st.app [``Sketch.decode_exact, ``Canonical.decode_exact] true result
           none req.id)
       | "run" =>
@@ -351,13 +369,17 @@ def answer (st : State) (req : Request) : State × Answer :=
           (st, unreadable (α := List (String × Effect4.Api.HostSession.Answer)) req.op
             "the host answers do not read" req.answersJson req.id)
         | some answers =>
-          let rows := (l.app.withHoles l.sketch.holes).rows
-          match Effect4.Program.admitProgram l.sketch.program (.ofTable rows) with
+          let app := l.app.withHoles l.sketch.holes
+          let sourceType := match l.view.type with
+            | some t => effTyJson t
+            | none => .null
+          match Effect4.Program.admitProgram l.sketch.program app with
           | .error why =>
-            let result := Json.mkObj [("status", .str "refused"), ("refusal", printJson why)]
+            let result := Json.mkObj [("status", .str "refused"), ("sourceType", sourceType),
+              ("refusal", printJson why)]
             (st, Answer.mk op st.app answerLaws true result none req.id)
           | .ok admitted =>
-            let b : Effect4.Api.Built := { app := .ofTable rows, program := l.sketch.program, admitted }
+            let b : Effect4.Api.Built := { app, program := l.sketch.program, admitted }
             let events : List Effect4.Run.Event :=
               [.start] ++
               answers.flatMap (fun (row, ans) => [.receive (.row row) ans, .apply (.row row)]) ++
@@ -366,12 +388,13 @@ def answer (st : State) (req : Request) : State × Answer :=
             let waiting := (Effect4.Run.live run).map fun c =>
               Json.mkObj [("row", .str c.row), ("request", printJson c.request)]
             let result := Json.mkObj <|
-              [("status", .str "ok"), ("outcome", printJson run.inspect.outcome),
+              [("status", .str "ok"), ("sourceType", sourceType),
+                ("outcome", printJson run.inspect.outcome),
                 ("exit", match run.exit with
                   | some exit => printJson exit
                   | none => .null),
                 ("waiting", Json.arr waiting.toArray)] ++
-              (if answers.isEmpty && rows.isEmpty then [("syncExit", printJson b.runSync)] else [])
+              (if answers.isEmpty && app.rows.isEmpty then [("syncExit", printJson b.runSync)] else [])
             (st, Answer.mk op st.app (answerLaws ++ [``Effect4.Live.reached]) true result none
               req.id)
       | "settle" | "frames" | "explore" =>

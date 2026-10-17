@@ -268,8 +268,9 @@ def holeRow (name : String) (focus : Focus NativeOp) : Row :=
 /-- The premises of `Sketch.check_omit_focusAt` at an answered focus: the checker admits the
 sketch, the focus's answer and error are closed and in normal form, and the hole row's columns
 are formed. -/
-def omitPremises (sketch : Sketch) (name : String) (focus : Focus NativeOp) : Bool :=
-  (sketch.check {}).toOption.isSome &&
+def omitPremises (sketch : Sketch) (name : String) (focus : Focus NativeOp)
+    (app : SigApp := {}) : Bool :=
+  (sketch.check app).toOption.isSome &&
     focus.ty.answer.closed && focus.ty.error.closed &&
     decide (focus.ty.answer.normalize = focus.ty.answer) &&
     decide (focus.ty.error.normalize = focus.ty.error) &&
@@ -279,57 +280,73 @@ def omitPremises (sketch : Sketch) (name : String) (focus : Focus NativeOp) : Bo
 sketch, and it admits the filling at the focus's type in the focus's environment, at the
 address's signature (`Sketch.sigAt`: inside a definition block, the block's). -/
 def fillPremises (sketch : Sketch) (path : List Nat) (focus : Focus NativeOp)
-    (filling : NativeEff) : Bool :=
-  (sketch.check {}).toOption.isSome &&
-    effTy (sketch.sigAt {} path) focus.env filling == some focus.ty
+    (filling : NativeEff) (app : SigApp := {}) : Bool :=
+  (sketch.check app).toOption.isSome &&
+    effTy (sketch.sigAt app path) focus.env filling == some focus.ty
 
 /-- **The fill decider is sound.** Where `fillPremises` answers `true` at the focus that the
-sketch answers, the filling applies and keeps the sketch's type: the conclusion of
+sketch answers at `app`, the filling applies and keeps the sketch's type: the conclusion of
 `Sketch.check_fill_focusAt`, the law that the `fill` answer names. So that answer is an instance
-of a theorem, not a tested claim (seat ORG's theory map, section 5.3). -/
+of a theorem, not a tested claim (seat ORG's theory map, section 5.3).
+
+- **Concept**: `residual-program-typing` (`docs/core/semantics.md`); property: typing preservation
+  under replacement.
+- **Question**: helper of `sketch-fill` (consumer: `Tools.Query.answer` on `"fill"`).
+- **Reach**: every `sketch : Sketch`, `app : SigApp`, `path : List Nat`, `focus : Focus NativeOp`
+  answered by `sketch.focusAt app path`, and `filling : NativeEff`.
+- **Exclusions**: does not admit `app` (`admitSig`) or establish any property of a run.
+- **Unlocks**: R14 (`docs/core/system-map.md`). -/
 theorem fillPremises_sound {sketch : Sketch} {path : List Nat} {focus : Focus NativeOp}
-    {filling : NativeEff} (hf : sketch.focusAt {} path = some focus)
-    (h : fillPremises sketch path focus filling = true) :
-    ∃ T s', sketch.check {} = .ok T ∧ sketch.fillAt path filling = some s' ∧
-      s'.check {} = .ok T := by
+    {filling : NativeEff} {app : SigApp} (hf : sketch.focusAt app path = some focus)
+    (h : fillPremises sketch path focus filling app = true) :
+    ∃ T s', sketch.check app = .ok T ∧ sketch.fillAt path filling = some s' ∧
+      s'.check app = .ok T := by
   simp only [fillPremises, Bool.and_eq_true] at h
   obtain ⟨hcheck, hty⟩ := h
-  obtain ⟨T, hT⟩ : ∃ T, sketch.check {} = .ok T := by
-    cases hc : sketch.check {} with
+  obtain ⟨T, hT⟩ : ∃ T, sketch.check app = .ok T := by
+    cases hc : sketch.check app with
     | ok T => exact ⟨T, rfl⟩
     | error e =>
       rw [hc] at hcheck
       cases hcheck
-  have hty' : effTy (sketch.sigAt {} path) focus.env filling = some focus.ty := eq_of_beq hty
+  have hty' : effTy (sketch.sigAt app path) focus.env filling = some focus.ty := eq_of_beq hty
   have hs0 : ({ sketch with holes := sketch.holes ++ [] } : Sketch) = sketch := by
     cases sketch
     simp only [List.append_nil]
-  have hq : Checker.check (Sketch.sigAt { sketch with holes := sketch.holes ++ [] } {} path)
+  have hq : Checker.check (Sketch.sigAt { sketch with holes := sketch.holes ++ [] } app path)
       focus.env path filling = .ok focus.ty := by
     rw [hs0]
     exact Conform.Effect4.Typing.check_complete _ _ _ _
       (Conform.Effect4.Typing.effTy_sound _ _ _ _ hty') path
-  obtain ⟨s', hfill, hs'⟩ := Sketch.check_fill_focusAt sketch {} hT hf [] hq
+  obtain ⟨s', hfill, hs'⟩ := Sketch.check_fill_focusAt sketch app hT hf [] hq
   rw [hs0] at hfill
   exact ⟨T, s', hT, hfill, hs'⟩
 
 /-- **The omit decider is sound.** Where `omitPremises` answers `true` at the focus that the
-sketch answers, the omission applies and keeps the sketch's type: the conclusion of
-`Sketch.check_omit_focusAt`, the law that the `omit` answer names. -/
+sketch answers at `app`, the omission applies and keeps the sketch's type: the conclusion of
+`Sketch.check_omit_focusAt`, the law that the `omit` answer names.
+
+- **Concept**: `residual-program-typing` (`docs/core/semantics.md`); property: typing preservation
+  under omission.
+- **Question**: helper of `sketch-omit` (consumer: `Tools.Query.answer` on `"omit"`).
+- **Reach**: every `sketch : Sketch`, `app : SigApp`, `path : List Nat`, `name : String`, and
+  `focus : Focus NativeOp` answered by `sketch.focusAt app path`.
+- **Exclusions**: does not admit `app` (`admitSig`) or establish any property of a run.
+- **Unlocks**: R14 (`docs/core/system-map.md`). -/
 theorem omitPremises_sound {sketch : Sketch} {path : List Nat} {name : String}
-    {focus : Focus NativeOp} (hf : sketch.focusAt {} path = some focus)
-    (h : omitPremises sketch name focus = true) :
-    ∃ T s', sketch.check {} = .ok T ∧ sketch.omitAt {} path (holeRow name focus) = some s' ∧
-      s'.check {} = .ok T := by
+    {focus : Focus NativeOp} {app : SigApp} (hf : sketch.focusAt app path = some focus)
+    (h : omitPremises sketch name focus app = true) :
+    ∃ T s', sketch.check app = .ok T ∧ sketch.omitAt app path (holeRow name focus) = some s' ∧
+      s'.check app = .ok T := by
   simp only [omitPremises, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨⟨⟨⟨hcheck, hans⟩, herr⟩, hansN⟩, herrN⟩, hform⟩ := h
-  obtain ⟨T, hT⟩ : ∃ T, sketch.check {} = .ok T := by
-    cases hc : sketch.check {} with
+  obtain ⟨T, hT⟩ : ∃ T, sketch.check app = .ok T := by
+    cases hc : sketch.check app with
     | ok T => exact ⟨T, rfl⟩
     | error e =>
       rw [hc] at hcheck
       cases hcheck
-  obtain ⟨s', homit, hs'⟩ := Sketch.check_omit_focusAt sketch {} hT hf name hans herr hansN herrN
+  obtain ⟨s', homit, hs'⟩ := Sketch.check_omit_focusAt sketch app hT hf name hans herr hansN herrN
     ((Formation.check_eq_none_iff _).mp (Option.isNone_iff_eq_none.mp hform))
   exact ⟨T, s', hT, homit, hs'⟩
 
