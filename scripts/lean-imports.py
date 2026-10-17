@@ -167,7 +167,7 @@ def touched(base: str) -> list[str]:
     for path, lines in edited.items():
         source = ROOT / path
         module = _module_of(path)
-        if module is None or not source.is_file() or module.startswith('Test.'):
+        if module is None or not source.is_file() or not path.startswith(('src/', 'tools/')):
             continue
         text_lines = source.read_text(encoding='utf-8', errors='replace').splitlines()
         current = {_short(m.group(1)) for t in text_lines if (m := _DECL.match(t))}
@@ -215,10 +215,12 @@ def touched(base: str) -> list[str]:
         if by_text else None
     modules = {m for p in edited if (m := _module_of(p))}
     sweep = _SWEEP_ONLY | set(imports_of(ROOT / 'Test' / 'Slow.lean'))
+    # The batteries are the modules `Test.All` reaches; a fixture under `Test/` is no target.
+    batteries = {m for p in closure(['Test.All'], None) if (m := _module_of(p)) and m.startswith('Test.')}
     out, unread = [], []
     for battery in sorted((ROOT / 'Test').rglob('*.lean')):
         module = _module_of(str(battery.relative_to(ROOT)))
-        if module in sweep:
+        if module in sweep or module not in batteries:
             continue
         text = battery.read_text(encoding='utf-8', errors='replace')
         imports = header_imports(text)
