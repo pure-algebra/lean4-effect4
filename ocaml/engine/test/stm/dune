@@ -1,0 +1,46 @@
+; lane STM -- parallel model tests of the hand concurrent code (plan E2): qcheck-stm runs each
+; component against a hand model, sequentially and from two domains at once, beside red
+; controls that must fail. Each file's header names its model, its tests and its controls. The
+; evidence is host-only: finite runs on this machine; no theorem reaches it.
+;   stm_mailbox  E4_mailbox: a bounded FIFO of stamps with its counters (M1-M5).
+;   stm_inbox    E4_inbox: an unbounded FIFO with a close flag and its counters (I1-I3).
+;   stm_admit    E4_sched's admission: the host's saved state behind spawn, send and admit (S2).
+;   stm_disk     E4_disk: per store, the slot whose writer holds it, and its root's head (CS4).
+;   stm_tool     Kit_tool: a session is the function of the requests it served (T1-T4).
+
+(library
+ (name e4_stm_support)
+ (wrapped false)
+ (modules stm_support)
+ (libraries qcheck-core qcheck-core.runner))
+
+; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+(rule
+ (alias runtest)
+ (deps (sandbox none) (:cmt (glob_files .e4_stm_support.objs/byte/*.cmt)))
+ (action (chdir %{workspace_root} (run %{exe:../../../tools/typed_lint/main.exe} %{cmt}))))
+
+(test
+ (name stm_mailbox)
+ (modules stm_mailbox)
+ (libraries effect4_engine e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain))
+
+(test
+ (name stm_inbox)
+ (modules stm_inbox)
+ (libraries effect4_engine e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain))
+
+(test
+ (name stm_admit)
+ (modules stm_admit)
+ (libraries effect4_engine e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain))
+
+(test
+ (name stm_disk)
+ (modules stm_disk)
+ (libraries effect4_engine_cas effect4_disk_test_support e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain zarith))
+
+(test
+ (name stm_tool)
+ (modules stm_tool)
+ (libraries effect4_kit effect4_gen effect4_eff e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain))

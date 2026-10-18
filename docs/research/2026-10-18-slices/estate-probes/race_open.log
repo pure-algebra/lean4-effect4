@@ -1,0 +1,10 @@
+$ race_open.exe 2000 cold   # E4_pack.open_ from two domains at once, a fresh directory
+raised: Effect4_engine_cas.E4_pack.Bad_pack("<dir>/pack/000000.pack: the segment is shorter than its 27-byte head")
+raised: Effect4_engine_cas.E4_pack.Bad_pack("<dir>/pack/000000.pack: the segment is shorter than its 27-byte head")
+raised: Effect4_engine_cas.E4_pack.Bad_pack("<dir>/pack/000000.pack: the segment is shorter than its 27-byte head")
+trials=2000 both-opened=1871 one-opened=129 none=0 raised=6
+$ race_open.exe 2000 warm   # the same, the pack directory made first
+raised: Effect4_engine_cas.E4_pack.Bad_pack("<dir>/pack/000000.pack: the segment is shorter than its 27-byte head")
+raised: Effect4_engine_cas.E4_pack.Bad_pack("<dir>/pack/000000.pack: the segment is shorter than its 27-byte head")
+raised: Effect4_engine_cas.E4_pack.Bad_pack("<dir>/pack/000000.pack: the segment is shorter than its 27-byte head")
+trials=2000 both-opened=1938 one-opened=62 none=0 raised=20

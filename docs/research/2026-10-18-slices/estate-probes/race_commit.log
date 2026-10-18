@@ -1,0 +1,6 @@
+$ NO_OPENER=1 race_commit.exe 200   # control: the holder commits alone
+A: 200 commits ok, 0 failed
+$ race_commit.exe 200   # the holder commits while another domain keeps opening
+A: 0 commits ok, 200 failed (first: host:fault:io rename <dir>/control.tmp: No such file or directory)
+B:      8  fault:locked <dir>
+B:      1  ok (a second writer)

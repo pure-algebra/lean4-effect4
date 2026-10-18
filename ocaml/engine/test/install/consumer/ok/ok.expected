@@ -1,0 +1,2 @@
+{"status":"ok","type":{"answer":{"_tag":"nat"},"error":{"_tag":"never"},"requires":[]},"text":"Effect<number, never>"}
+{"budget":0,"status":"finished","exit":{"_tag":"success","value":{"_tag":"nat","n":7}},"via":"tree","calls":[],"machine":"agrees"}

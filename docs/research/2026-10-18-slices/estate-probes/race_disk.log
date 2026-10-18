@@ -1,0 +1,6 @@
+$ race_disk.exe 300   # E4_disk.open_ from two domains at once (paths folded to <dir>)
+  146  ok | refused fault:io rename <dir>/control.tmp: No such file or directory
+  128  refused fault:io rename <dir>/control.tmp: No such file or directory | ok
+   17  ok | ok
+    6  ok | refused fault:locked <dir>
+    3  refused fault:locked <dir> | ok

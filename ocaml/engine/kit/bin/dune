@@ -1,5 +1,8 @@
-; eff -- the native kit's command line: a loop over Kit_serve (../kit_serve.ml).
+; eff -- the native kit's command line: a loop over Kit_serve (../kit_serve.ml). It installs with
+; the kit's package (ocaml/engine/dune-project), unstable as the kit is.
 
 (executable
  (name eff)
+ (public_name eff)
+ (package effect4_kit)
  (libraries effect4_kit effect4_eff))

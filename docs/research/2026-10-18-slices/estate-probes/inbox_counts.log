@@ -1,0 +1,3 @@
+$ inbox_counts.exe   # one draw of stm_inbox.ml generators from Stm_support.seed
+sequential: 500 lists, 275 hold a blocking Pop, 726 Pops in all
+parallel P1: 200 triples, 37 with a blocking Pop in the consumer domain
