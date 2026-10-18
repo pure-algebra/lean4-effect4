@@ -50,7 +50,7 @@ theorem apply_ok {o : Oracle} {engine : Digest} {cas cas' : Cas} {env : Envelope
     · exact nomatch h
     · generalize (serve o resolved.state env.request).value = served at h ⊢
       obtain ⟨next, r⟩ := served
-      unfold finish at h
+      simp only [finish, Port.commit] at h
       cases hreq : env.request with
       | ask q =>
         rw [hreq] at h
@@ -160,7 +160,7 @@ theorem keeps_refl (cas : Cas) : Keeps cas cas := fun _ _ h => h
 theorem keeps_commit {cas cas' : Cas} {txn : Txn} {receipt : Receipt}
     (accepted : cas.commit txn = .ok (receipt, cas')) : Keeps cas cas' := by
   intro d e h
-  unfold entryAt at h ⊢
+  simp only [entryAt, Port.entry] at h ⊢
   split at h
   · exact nomatch h
   · next got read =>
@@ -174,7 +174,7 @@ theorem entryAt_committed {cas cas' : Cas} {txn : Txn} {receipt : Receipt} {e : 
     entryAt cas' (address e).digest = .ok e := by
   have found : cas'.store.find (address e).digest = some (nodeOf e) :=
     commit_reads (Cas.commit_store accepted) (nodeOf e) member
-  unfold entryAt
+  simp only [entryAt, Port.entry]
   rw [Cas.get_nodeOf (ref := (⟨(address e).digest⟩ : Ref SessionEntry)) e found]
 
 theorem originAt_keeps {cas cas' : Cas} (keeps : Keeps cas cas') {d : Digest} {steps : Steps}
@@ -677,7 +677,7 @@ theorem load_own {o : Oracle} {engine : Digest} {cas cas' : Cas} {env : Envelope
       subst hpub
       rw [hstate] at hcommit
       obtain ⟨root, hroot, hdigest⟩ := commit_move_root (Cas.commit_store hcommit)
-      simp only [headOf, Publish.name?, Option.bind_some] at hhead
+      simp only [headOf, Publish.name?, Option.bind_some, Port.root] at hhead
       simp only [moveName] at hroot
       rw [hroot] at hhead
       injection hhead with hhead
@@ -694,7 +694,7 @@ theorem load_own {o : Oracle} {engine : Digest} {cas cas' : Cas} {env : Envelope
       injection hpub with hpub
       subst hpub
       obtain ⟨root, hroot, hdigest⟩ := commit_move_root (Cas.commit_store hcommit)
-      simp only [headOf, Publish.name?, Option.bind_some] at hhead
+      simp only [headOf, Publish.name?, Option.bind_some, Port.root] at hhead
       simp only [moveName] at hroot
       rw [hroot] at hhead
       injection hhead with hhead
@@ -708,7 +708,7 @@ theorem load_own {o : Oracle} {engine : Digest} {cas cas' : Cas} {env : Envelope
       injection hpub with hpub
       subst hpub
       obtain ⟨root, hroot, hdigest⟩ := commit_move_root (Cas.commit_store hcommit)
-      simp only [headOf, Publish.name?, Option.bind_some] at hhead
+      simp only [headOf, Publish.name?, Option.bind_some, Port.root] at hhead
       simp only [moveName] at hroot
       rw [hroot] at hhead
       injection hhead with hhead

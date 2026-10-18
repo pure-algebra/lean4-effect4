@@ -30,8 +30,10 @@ comparison catches a race after resolution, A→B→A included (`staleBase`). `s
 moved session head; a moved document revision stays the tool's own `stale` refusal, inside the
 reply. An exact-entry base serves queries only (`readOnly`).
 
-The laws are in `src/Effect4/Laws/Tool/Exchange.lean`: `load_own`, `apply_commits_once` and
-`apply_refuses`.
+`Port` owns the four store operations: typed entries, roots, schema membership and commit.
+The definitions below are generic in a pure store value. `casPort` supplies the reached store.
+The laws at that instance are in `src/Effect4/Laws/Tool/Exchange.lean`: `load_own`,
+`apply_commits_once` and `apply_refuses`. Arbitrary port instances carry no store-law claim.
 -/
 
 set_option autoImplicit false
@@ -70,21 +72,39 @@ structure Chain where
 
 namespace Exchange
 
-/-- The entry at an address, through the store's typed read. -/
-def entryAt (cas : Cas) (d : Digest) : Except LoadRefusal SessionEntry :=
-  match Cas.get (α := SessionEntry) cas ⟨d⟩ with
-  | .error why => .error (.unreadable d why)
-  | .ok entry => .ok entry
+/-- The exchange's four store operations. This interface describes pure store values.
+The native disk adapter must represent host faults separately from model refusals.
+`contains` serves schema publication, which needs no node payload. -/
+class Port (σ : Type) where
+  entry : σ → Digest → Except LoadRefusal SessionEntry
+  root : σ → String → Option Root
+  contains : σ → Digest → Bool
+  commit : σ → Txn → Except TxnRefusal (Receipt × σ)
+
+/-- The existing reached store supplies the exchange's model instance. -/
+instance casPort : Port Cas where
+  entry cas d := match Cas.get (α := SessionEntry) cas ⟨d⟩ with
+    | .error why => .error (.unreadable d why)
+    | .ok entry => .ok entry
+  root cas name := cas.store.root? name
+  contains cas d := (cas.store.find d).isSome
+  commit := Cas.commit
+
+variable {σ : Type} [Port σ]
+
+/-- The entry at an address, through the port's typed read. -/
+def entryAt (cas : σ) (d : Digest) : Except LoadRefusal SessionEntry :=
+  Port.entry cas d
 
 /-- The origin a first action names. -/
-def originAt (cas : Cas) (d : Digest) (steps : Steps) : Except LoadRefusal Chain :=
+def originAt (cas : σ) (d : Digest) (steps : Steps) : Except LoadRefusal Chain :=
   match entryAt cas d with
   | .error why => .error why
   | .ok (.origin protocol codec engine) => .ok ⟨protocol, codec, engine, steps⟩
   | .ok (.action ..) => .error (.noOrigin d)
 
 /-- Walk from the action entry at `d`, expected at transcript index `n`, to the origin. -/
-def walk (cas : Cas) : Nat → Digest → Steps → Except LoadRefusal Chain
+def walk (cas : σ) : Nat → Digest → Steps → Except LoadRefusal Chain
   | n, d, steps =>
     match entryAt cas d with
     | .error why => .error why
@@ -97,7 +117,7 @@ def walk (cas : Cas) : Nat → Digest → Steps → Except LoadRefusal Chain
       else .error (.outOfOrder d n index)
 
 /-- The chain ending at an entry: an origin alone, or an action walked to its origin. -/
-def chainAt (cas : Cas) (d : Digest) : Except LoadRefusal Chain :=
+def chainAt (cas : σ) (d : Digest) : Except LoadRefusal Chain :=
   match entryAt cas d with
   | .error why => .error why
   | .ok (.origin protocol codec engine) => .ok ⟨protocol, codec, engine, []⟩
@@ -124,7 +144,7 @@ def replay (o : Oracle) : Nat → State → Steps → Checked (Except LoadRefusa
     | .ok next => replay o (index + 1) next rest
 
 /-- **Load a chain** into a tool state: the six steps above. -/
-def load (o : Oracle) (cas : Cas) (head : Ref SessionEntry) : Checked (Except LoadRefusal State) :=
+def load (o : Oracle) (cas : σ) (head : Ref SessionEntry) : Checked (Except LoadRefusal State) :=
   match chainAt cas head.digest with
   | .error why => pure (.error why)
   | .ok chain =>
@@ -179,36 +199,36 @@ structure Resolved where
   publish : Publish
 
 /-- Load a base's state, or refuse. -/
-def loaded (o : Oracle) (cas : Cas) (entry : Ref SessionEntry) (publish : Publish) :
+def loaded (o : Oracle) (cas : σ) (entry : Ref SessionEntry) (publish : Publish) :
     Checked (Except Refusal Resolved) := do
   match ← load o cas entry with
   | .error why => pure (.error (.load why))
   | .ok s => pure (.ok ⟨s, publish⟩)
 
 /-- **Resolve a base**: compare the head expectation, then load the chain it names. -/
-def resolve (o : Oracle) (cas : Cas) : Base → Checked (Except Refusal Resolved)
+def resolve (o : Oracle) (cas : σ) : Base → Checked (Except Refusal Resolved)
   | .at_ entry => loaded o cas entry .readOnly
   | .head name none =>
-    match cas.store.root? (rootName name) with
+    match Port.root cas (rootName name) with
     | some root => pure (.error (.staleBase name none (some root.head)))
     | none => pure (.ok ⟨empty, .create name⟩)
   | .head name (some expected) =>
-    match cas.store.root? (rootName name) with
+    match Port.root cas (rootName name) with
     | none => pure (.error (.staleBase name (some expected) none))
     | some root =>
       if root.head = expected then loaded o cas ⟨expected.digest⟩ (.advance name expected)
       else pure (.error (.staleBase name (some expected) (some root.head)))
   | .fork from_ name =>
-    match cas.store.root? (rootName name) with
+    match Port.root cas (rootName name) with
     | some root => pure (.error (.staleBase name none (some root.head)))
     | none => loaded o cas from_ (.fork name from_)
 
 /-- The schema nodes a publication needs that the store does not hold: the genesis, the entry's
 specification and, with a program, the program's. -/
-def schemas (cas : Cas) (program : Bool) : List Node :=
-  (if (cas.store.find genesisAddress).isSome then [] else [genesisNode]) ++
-  (if (cas.store.find (specOf SessionEntry)).isSome then [] else [nodeOf (shape SessionEntry).document]) ++
-  (if program ∧ (cas.store.find (specOf Program.NativeEff)).isNone
+def schemas (cas : σ) (program : Bool) : List Node :=
+  (if Port.contains cas genesisAddress then [] else [genesisNode]) ++
+  (if Port.contains cas (specOf SessionEntry) then [] else [nodeOf (shape SessionEntry).document]) ++
+  (if program ∧ !Port.contains cas (specOf Program.NativeEff)
     then [nodeOf (shape Program.NativeEff).document] else [])
 
 /-- The entry an accepted action appends after `parent`, from the state it was served at. -/
@@ -216,12 +236,12 @@ def entryAfter (parent : Ref SessionEntry) (s : State) (a : Action) (next : Stat
   .action parent s.transcript.length a (afterOf next.raw)
 
 /-- The nodes before an action's entry: the missing schemas and the program after it. -/
-def support (cas : Cas) (next : State) : List Node :=
+def support (cas : σ) (next : State) : List Node :=
   schemas cas (afterOf next.raw).isSome ++ (next.raw.doc.map fun d => [nodeOf d.session.sketch.program]).getD []
 
 /-- **The publication** of an accepted action served at `s`: the nodes children first, then the
 one head move. -/
-def publication (engine : Digest) (cas : Cas) (s : State) (a : Action) (next : State) :
+def publication (engine : Digest) (cas : σ) (s : State) (a : Action) (next : State) :
     Publish → Option Txn
   | .readOnly => none
   | .create name =>
@@ -239,18 +259,18 @@ def publication (engine : Digest) (cas : Cas) (s : State) (a : Action) (next : S
       [.create (rootName name) .journal ⟨.entry, (address entry).digest⟩]⟩
 
 /-- The session head after an exchange, where the base names a session. -/
-def headOf (cas : Cas) (publish : Publish) : Option (Head Digest) :=
-  publish.name?.bind fun name => (cas.store.root? (rootName name)).map Root.head
+def headOf (cas : σ) (publish : Publish) : Option (Head Digest) :=
+  publish.name?.bind fun name => (Port.root cas (rootName name)).map Root.head
 
 /-- **After serving**: publish an accepted action in one commit, or return the store unchanged. -/
-def finish (engine : Digest) (cas : Cas) (resolved : Resolved) (request : Request) (next : State)
-    (reply : Reply) : Except Refusal (Reply × Option (Head Digest) × Cas) :=
+def finish (engine : Digest) (cas : σ) (resolved : Resolved) (request : Request) (next : State)
+    (reply : Reply) : Except Refusal (Reply × Option (Head Digest) × σ) :=
   match request, reply.result with
   | .act a, .ok _ =>
     match publication engine cas resolved.state a next resolved.publish with
     | none => .error .readOnly
     | some txn =>
-      match cas.commit txn with
+      match Port.commit cas txn with
       | .ok (_, cas') => .ok (reply, headOf cas' resolved.publish, cas')
       | .error (.staleRoot _ expected actual) =>
         .error (.staleBase ((resolved.publish.name?).getD "") expected actual)
@@ -259,8 +279,8 @@ def finish (engine : Digest) (cas : Cas) (resolved : Resolved) (request : Reques
 
 /-- **Serve one request at a base**: the reply, the session head, and the store. A query and a
 refused request publish nothing; an accepted action commits once. -/
-def apply (o : Oracle) (engine : Digest) (cas : Cas) (env : Envelope) :
-    Checked (Except Refusal (Reply × Option (Head Digest) × Cas)) := do
+def apply (o : Oracle) (engine : Digest) (cas : σ) (env : Envelope) :
+    Checked (Except Refusal (Reply × Option (Head Digest) × σ)) := do
   match ← resolve o cas env.base with
   | .error why => pure (.error why)
   | .ok resolved =>
@@ -272,8 +292,8 @@ def apply (o : Oracle) (engine : Digest) (cas : Cas) (env : Envelope) :
 
 /-- **A lost acknowledgement**: after an interruption at publication, the caller reads the head.
 The act was applied when the head's entry follows the expected head with the request's action. -/
-def applied (cas : Cas) (name : String) (expected : Head Digest) (a : Action) : Bool :=
-  match cas.store.root? (rootName name) with
+def applied (cas : σ) (name : String) (expected : Head Digest) (a : Action) : Bool :=
+  match Port.root cas (rootName name) with
   | none => false
   | some root =>
     match entryAt cas root.head.digest with
