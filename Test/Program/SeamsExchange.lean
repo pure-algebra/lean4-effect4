@@ -172,9 +172,16 @@ def opening (parent : SessionEntry) (after : Option (Ref NativeEff) := some prog
 #guard match loadAt [origin 2, opening (origin 2)] (opening (origin 2)) with
   | some (.error (.version 2 1)) => true
   | _ => false
--- An entry at index 1 whose parent is the origin is out of parent order.
+-- An entry at index 1 whose parent is the origin reaches the origin while index 0 is owed.
 #guard match loadAt [origin, .action (address origin) 1 .reset none] (.action (address origin) 1 .reset none) with
-  | some (.error (.parent d)) => d == (address origin).digest
+  | some (.error (.early d 0)) => d == (address origin).digest
+  | _ => false
+-- red (tested): a head recording index 5 over an action that records 0 where the walk expects 4
+-- is out of order, named with both indices (it was the same `parent` refusal as the case above).
+#guard match loadAt [origin, opening origin, .action (address (opening origin)) 0 .reset none,
+    .action (address (.action (address (opening origin)) 0 .reset none)) 5 .reset none]
+    (.action (address (.action (address (opening origin)) 0 .reset none)) 5 .reset none) with
+  | some (.error (.outOfOrder d 4 0)) => d == (address (.action (address (opening origin)) 0 .reset none : SessionEntry)).digest
   | _ => false
 -- A first action whose parent is another action names no origin.
 #guard match loadAt [origin, opening origin, .action (address (opening origin)) 0 .reset none]

@@ -12,8 +12,8 @@ A session is a journal root `session/<name>` over a chain of `SessionEntry` node
 
 1. read every entry through the store's typed read (`Cas.get`: version, kind, specification and
    exact payload; `unreadable`);
-2. check parent order by the entries' indices, and that index 0 names an origin (`parent`,
-   `noOrigin`); the walk is structural in the index, so it needs no fuel;
+2. check parent order by the entries' indices, and that index 0 names an origin (`early`,
+   `outOfOrder`, `noOrigin`); the walk is structural in the index, so it needs no fuel;
 3. check the origin's protocol and codec versions (`version`);
 4. replay the actions from the empty state through `serve`, under the caller's oracle; the first
    refused action refuses (`refused index`);
@@ -44,9 +44,11 @@ open Effect4 Effect4.Store Effect4.Program.Check
 inductive LoadRefusal where
   /-- the entry at this address does not read at kind `entry` -/
   | unreadable (at_ : Digest) (why : ReadRefusal)
-  /-- the entry at this address does not follow its child: an origin where an action belongs, or
-  an index out of order -/
-  | parent (at_ : Digest)
+  /-- the chain reaches its origin at this address while the action at this transcript index is
+  still owed -/
+  | early (at_ : Digest) (index : Nat)
+  /-- the action at this address records another transcript index than its place in the chain -/
+  | outOfOrder (at_ : Digest) (expected found : Nat)
   /-- the first action's parent is not an origin -/
   | noOrigin (at_ : Digest)
   /-- the origin records a protocol or codec version this tool does not read -/
@@ -86,13 +88,13 @@ def walk (cas : Cas) : Nat → Digest → Steps → Except LoadRefusal Chain
   | n, d, steps =>
     match entryAt cas d with
     | .error why => .error why
-    | .ok (.origin ..) => .error (.parent d)
+    | .ok (.origin ..) => .error (.early d n)
     | .ok (.action parent index a after) =>
       if index = n then
         match n with
         | 0 => originAt cas parent.digest ((a, after) :: steps)
         | m + 1 => walk cas m parent.digest ((a, after) :: steps)
-      else .error (.parent d)
+      else .error (.outOfOrder d n index)
 
 /-- The chain ending at an entry: an origin alone, or an action walked to its origin. -/
 def chainAt (cas : Cas) (d : Digest) : Except LoadRefusal Chain :=
