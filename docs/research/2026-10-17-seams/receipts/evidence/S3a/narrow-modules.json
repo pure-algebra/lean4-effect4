@@ -1,0 +1,36 @@
+{
+ "changed": [
+  "Effect4",
+  "Effect4.Laws",
+  "Effect4.Laws.Tool.Serve",
+  "Effect4.Tool.Actions",
+  "Effect4.Tool.Protocol",
+  "Effect4.Tool.Queries",
+  "Effect4.Tool.Replay",
+  "Effect4.Tool.Serve",
+  "ProofGraph.Registry",
+  "Test.All",
+  "Test.Program.SeamsS3a",
+  "Test.Program.SeamsS3aDifferentEnv",
+  "Test.Program.SeamsS3aInspection"
+ ],
+ "build": [
+  "Effect4.Laws.Author.Explain",
+  "Effect4.Laws.Tool.Serve",
+  "Effect4.Tool.Actions",
+  "Effect4.Tool.Protocol",
+  "Effect4.Tool.Queries",
+  "Effect4.Tool.Replay",
+  "Effect4.Tool.Serve",
+  "ProofGraph.Registry",
+  "ProofGraph.Why",
+  "Test.Audit.AxiomGate",
+  "Test.Audit.ClosureAudit",
+  "Test.Program.SeamsS3a",
+  "Test.Program.SeamsS3aDifferentEnv",
+  "Test.Program.SeamsS3aInspection",
+  "Tools.LoadPaths",
+  "Tools.Semantics",
+  "Tools.View.Glyph"
+ ]
+}

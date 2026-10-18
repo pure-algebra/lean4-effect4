@@ -1,0 +1,58 @@
+tools/Drivers/Query.lean:1:import Tools.Query
+tools/Drivers/Query.lean:7:(`Tools.Query.answerLine`). A blank line is skipped. It holds no state between two lines.
+tools/Drivers/Query.lean:22:    IO.println (Tools.Query.answerLine request)
+tools/Drivers/Live.lean:102:        (← IO.getStderr).putStrLn (Lean.toJson (Tools.Query.refused "request" why)).compress
+tools/Tools/Session/Snapshot.lean:22:namespace Tools.Session.Snapshot
+tools/Tools/Session/Snapshot.lean:117:end Tools.Session.Snapshot
+tools/Tools/Query.lean:13:# Tools.Query — one function that answers a request about a program (slice QUERY)
+tools/Tools/Query.lean:33:law's premises (`omitPremises`, `fillPremises`, and a typed focus at `slots`). Elsewhere the
+tools/Tools/Query.lean:36:(`fillPremises_sound`, `omitPremises_sound`): where one answers `true`, the edit applies and the
+tools/Tools/Query.lean:53:namespace Tools.Query
+tools/Tools/Query.lean:271:def omitPremises (sketch : Sketch) (name : String) (focus : Focus NativeOp)
+tools/Tools/Query.lean:282:def fillPremises (sketch : Sketch) (path : List Nat) (focus : Focus NativeOp)
+tools/Tools/Query.lean:287:/-- **The fill decider is sound.** Where `fillPremises` answers `true` at the focus that the
+tools/Tools/Query.lean:294:- **Question**: helper of `sketch-fill` (consumer: `Tools.Query.answer` on `"fill"`).
+tools/Tools/Query.lean:299:theorem fillPremises_sound {sketch : Sketch} {path : List Nat} {focus : Focus NativeOp}
+tools/Tools/Query.lean:301:    (h : fillPremises sketch path focus filling app = true) :
+tools/Tools/Query.lean:304:  simp only [fillPremises, Bool.and_eq_true] at h
+tools/Tools/Query.lean:325:/-- **The omit decider is sound.** Where `omitPremises` answers `true` at the focus that the
+tools/Tools/Query.lean:331:- **Question**: helper of `sketch-omit` (consumer: `Tools.Query.answer` on `"omit"`).
+tools/Tools/Query.lean:336:theorem omitPremises_sound {sketch : Sketch} {path : List Nat} {name : String}
+tools/Tools/Query.lean:338:    (h : omitPremises sketch name focus app = true) :
+tools/Tools/Query.lean:341:  simp only [omitPremises, Bool.and_eq_true, decide_eq_true_eq] at h
+tools/Tools/Query.lean:416:          done (if omitPremises sketch req.holeName focus then [``Sketch.check_omit_focusAt]
+tools/Tools/Query.lean:431:            | some focus => fillPremises sketch req.path focus filling
+tools/Tools/Query.lean:455:end Tools.Query
+Test/Program/SketchAdmissionControls.lean:2:import Tools.Session.Snapshot
+Test/Program/SketchAdmissionControls.lean:13:3. **Reader (`Sketch.sourceCheck_of_admitted`, `fillPremises_sound`, `omitPremises_sound`)**:
+Test/Program/SketchAdmissionControls.lean:62:/-- Reader: `Tools.Query.fillPremises_sound` applied at `appFull`. -/
+Test/Program/SketchAdmissionControls.lean:65:    (h : Tools.Query.fillPremises { program := progSvc } [0] focus (.service kSvc) appFull = true) :
+Test/Program/SketchAdmissionControls.lean:69:  Tools.Query.fillPremises_sound hf h
+Test/Program/SketchAdmissionControls.lean:71:/-- Reader: `Tools.Session.Snapshot.resolve_agrees` applied at `appFull`. -/
+Test/Program/SketchAdmissionControls.lean:73:    (cache : Option Tools.Session.Snapshot.Cache)
+Test/Program/SketchAdmissionControls.lean:74:    (h : Tools.Session.Snapshot.Valid cache) :
+Test/Program/SketchAdmissionControls.lean:75:    Tools.Session.Snapshot.resolve bytes cache appFull =
+Test/Program/SketchAdmissionControls.lean:76:      Tools.Session.Snapshot.fresh bytes appFull :=
+Test/Program/SketchAdmissionControls.lean:77:  Tools.Session.Snapshot.resolve_agrees bytes cache h appFull
+tools/Tools/View/Live.lean:124:    (ans : Tools.Query.Answer) (l : EditSession) (memo : Inc.Memo) : Page × Inc.Memo :=
+tools/Tools/View/Live.lean:169:    State × Tools.Query.Answer × List String :=
+tools/Tools/Session.lean:1:import Tools.Query
+tools/Tools/Session.lean:28:The query tool (`Tools.Query`) answers one request about a program and keeps nothing. This tool
+tools/Tools/Session.lean:36:(`Tools.Query.Answer`). Every carrier a request takes, a program, a filling, a hole table, a row
+tools/Tools/Session.lean:40:(`Tools.JsonBridge.valueFrom?`: the store's exact decoder, `Canonical.decode`, or
+tools/Tools/Session.lean:107:open Tools.Query (Answer refused effTyJson refusalJson entryJson focusJson holeRow optField)
+tools/Tools/Session.lean:108:open Tools.JsonBridge (printJson valueFrom? toHex locate)
+tools/Tools/Session.lean:335:  match valueFrom? hex json with
+tools/Tools/Session.lean:629:    match valueFrom? (α := NativeEff) req.expected req.expectedJson with
+tools/Tools/Session.lean:662:    let (program?, programLaws) := ((valueFrom? (α := NativeEff) req.program req.programJson).getD
+tools/Tools/Session.lean:703:        match valueFrom? (α := Effect4.Api.HostSession.Answer) req.answer req.answerJson with
+tools/Tools/Session.lean:754:    match valueFrom? (α := Effect4.LiveRecord.Tuple) req.record req.recordJson with
+tools/Tools/Session.lean:827:            match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
+tools/Tools/Session.lean:899:        match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
+tools/Tools/Session.lean:906:        match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
+tools/Tools/JsonBridge.lean:112:def valueFrom? {α : Type} [Canonical α] (hex : Option String) (json : Option Lean.Json) :
+Test/Program/SessionToolControls.lean:27:#guard (match Tools.Query.fixtureLines (include_str "../fixtures/session/requests.jsonl") with
+Test/Program/QueryControls.lean:1:import Tools.Query
+Test/Program/QueryControls.lean:9:bytes. `tools/Drivers/Query.lean` prints `Tools.Query.answerLine` for each line of its input.
+Test/Program/QueryControls.lean:36:open Tools.Query
+Test/Program/SourceDocumentControls.lean:205:  let unchanged (r : State × Tools.Query.Answer) : Bool :=

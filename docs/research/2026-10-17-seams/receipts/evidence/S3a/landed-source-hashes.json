@@ -1,0 +1,17 @@
+{
+  "Test/All.lean": "abbe7843209eb55579c6b153bb6eea9c98e0594740deb3873f07b9ec141c618b",
+  "Test/Program/SeamsS3a.lean": "f7ce7f25136640dd6c43b4308076e3ec54515de68c6dd15c387185663a1096b9",
+  "Test/Program/SeamsS3aDifferentEnv.lean": "71f8179f737630298126514f286cbd1b9e8ba0f178cad31c0e6c49a06e346935",
+  "Test/Program/SeamsS3aInspection.lean": "7607d9f61aa1dd967b26130fb34e09b444d9258ff34e57b423b2c59a30abcee7",
+  "docs/core/semantics.md": "d52addb547267776f21fbf3e7fde13429e48b7d1547fc51254981be522fb5df4",
+  "generated/semantics.md": "02166d05d2cddcf1e635cf18eb82cae303cc610c5329ea9f7d3826f65dd54823",
+  "src/Effect4.lean": "f8c5e0e04713e619ec0b5bac1ae39d12f03f736b2e1e5bdb31bde66e210a000b",
+  "src/Effect4/Laws.lean": "9675a9b715d3e86cc4d1f62a1cf2de7f5cf6163868856a52631d619cf46851f1",
+  "src/Effect4/Laws/Tool/Serve.lean": "0718c330bd2b6f1d3dbf788eb820852614b7421764f094a81306121743f310d0",
+  "src/Effect4/Tool/Actions.lean": "88e6863cc9143dde6f2138727e89dd19862daa3fe3ff6b6f66076a89fd5c077f",
+  "src/Effect4/Tool/Protocol.lean": "a244f4de4362bd48eb66d07ffc4118c8d0c0b4558e3d65ad4b9f0bc04d6e57d2",
+  "src/Effect4/Tool/Queries.lean": "919bd8833a01795fa9bf8ef1f5934995333ba1548ffc69ef700367e1135841e5",
+  "src/Effect4/Tool/Replay.lean": "04ee8c490ecf7a80247cf59d5dcc898c8f4258ddedf0d31031de54989cb69c45",
+  "src/Effect4/Tool/Serve.lean": "25cdc6b1eabaf5165c32a6c208a84531b7289a44bf49d72cadaedff55c437cde",
+  "tools/ProofGraph/Registry.lean": "d2f1df5fdb950f31528239a0c490f3d28fce2753309a74545e7d3efc99104536"
+}

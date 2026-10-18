@@ -1,0 +1,66 @@
+{
+  "status": "paused at owner request; no S3a compilation has run",
+  "paths": [
+    {
+      "path": "Controls.lean",
+      "sha256": "5b4a4488dc176a9abe8c97576c050dd1a8c643e6eb1b6ec040d0c907918cca54",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "DifferentEnvControl.lean",
+      "sha256": "62915a0241befa318450271403f7ca12afe3be6fe3b57e225553fd082bc4c430",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "InspectionControls.lean",
+      "sha256": "597f2d4de84bdabd4ff9959b247d3d99e4935d5d663a94e3dfc04ed5f8bd2d7b",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "SuggestionKeyControls.lean",
+      "sha256": "b813e8538df54c00ade6cfda3fac3270572527a72845799ddb2e03adcb3c6737",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "evidence/s0-Check.lean",
+      "sha256": "d628d6a46d7d352dd24311556c76256f7b7d06abb90c3a094834331838748e4d",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "evidence/v1-owner-draft-Check.lean",
+      "sha256": "ec2ffba9b4d38fe48da7c7c607310b26d4f5bf612697be98041412ef45a29c01",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "overlay/src/Effect4/Laws/Tool/Serve.lean",
+      "sha256": "5627de92f46ec174f2edd75c56d74434958337940ea3052a326e4fec0135c3a1",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "overlay/src/Effect4/Tool/Actions.lean",
+      "sha256": "2b5decb2492b87df2de6c4a77b45fa83e73c25bd501d84bcb271dcdf42c2d7f2",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "overlay/src/Effect4/Tool/Protocol.lean",
+      "sha256": "948590900ae9c4f06532b20b42aee37028ae982305bd7d540fb76be9388653d5",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "overlay/src/Effect4/Tool/Queries.lean",
+      "sha256": "30e4ab73eefab289dc833da9d55317242e216a731509dc9cd89a31e7c090c9d0",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "overlay/src/Effect4/Tool/Replay.lean",
+      "sha256": "5e61125f0099b5e5526d308f9c8f036052c097b4b68b56007e1cacb48732c458",
+      "status": "draft; not compiled"
+    },
+    {
+      "path": "overlay/src/Effect4/Tool/Serve.lean",
+      "sha256": "c7e1eabe96f236a7906f011ceb66140afab88b70b2f3fb52cce85be36e4c4348",
+      "status": "draft; not compiled"
+    }
+  ],
+  "production_edits": false
+}

@@ -15,7 +15,7 @@ The owner pauses work after V1.
 | S1 | `2e71c9dc69b1d06e2b2241f8374e0600daa90a0f` ; receipt `4de971df3ecce776ec1cc914aa326adcf88ec333` | [S1](S1.md) | Required checks pass; thirteen placed goals remain. |
 | S2 | `e15394b0934f14158970b21abf65d6b391c61fe4` | [S2](S2.md) | Required checks pass; three new placed goals remain. |
 | S4 | `6d403efeda4d3e366cfc2d4fa2b5edcbd717d649` | [S4](S4.md) | Required checks pass; two claims proved, no planned goals. |
-| S3a | Pending | Pending | Open |
+| S3a | `23f710f2873083ba762c3b9bd03df499b7a35814` | [S3a](S3a.md) | Required checks pass; five claims proved, no planned goals. |
 | S3b | Pending | Pending | Open |
 | ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` ; receipt `0bb42e37d4fa99fd84979df03beb3dd0391a4e98` | [ST1a](ST1a.md) | Required checks pass. |
 | ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` ; receipt `709f9f10a9401150af66870a8665860e45cc63d3` | [ST1b](ST1b.md) | Required checks pass. |
@@ -83,6 +83,10 @@ The owner pauses work after V1.
 | S4 | `Built.ofProgram` admits at an exact application; `LiveRecord.restore` uses it, so `restore_save` keeps its statement. |
 | S4 | Two callers outside the prepared train moved: `typedReplayExit` and the host-handle forgery counterexample. |
 
+| S3a | The five tool laws are proved from the definitions; none stays a planned goal. |
+| S3a | Four compile repairs to the never-compiled drafts and one inspection control that could never pass. |
+| S3a | Retiring `Tools.Query` moves to S3b: its JSON-lines driver needs the generated Tool codecs. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -115,5 +119,8 @@ The owner pauses work after V1.
 
 | S4 | Adopt `Built.ofSketch` at the application extended by hole rows, and `Built.ofProgram` at an exact application for restore. |
 | S4 | Retire the five raw entry points; seal `Built` in the generated interface; record a run's origin as data. |
+
+| S3a | Adopt `Tool.serve` over one action interpreter, with a state sealed by its transcript's replay. |
+| S3a | Append `Tool.Refusal.suggest`, `place` and `noProgram` after the original constructors; renumber no tag. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.
