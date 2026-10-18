@@ -2,8 +2,25 @@
 ; The package makes the library public (`public_name`), so a sibling project in the
 ; ocaml/ workspace — ocaml/engine, which forwards its framing to Eff_frame and converts
 ; Eff_types.eff — can name it; a private library is scoped to its own project.
-(package (name effect4_eff))
 ; effect4_eff: the Eff program IR of lean4-effect4 as an OCaml library (syntax,
 ; wire and JSON codecs). Its own project root, so it builds alone with `dune build --root .` from
 ; inside ocaml/eff (its own ocaml/eff/_build, which does not contend with the ocaml/
 ; workspace another lane drives), and as `dune build eff` from the ocaml/ workspace root.
+;
+; Install metadata (plan E1, docs/research/2026-10-18-slices/README.md, ruling 4): dune writes
+; effect4_eff.opam from the fields below (`generate_opam_files`). The package is unstable: no
+; release is published, and its names may change when the generated name manifest lands.
+; ocaml/engine/test/install checks the installed packages from a project outside ocaml/.
+(generate_opam_files true)
+(source (github pure-algebra/lean4-effect4))
+(license MIT)
+(authors "The Fold Lab")
+(maintainers "The Fold Lab")
+
+(package
+ (name effect4_eff)
+ (synopsis "Unstable: Effect4's Eff program IR as an OCaml library")
+ (description
+  "The Eff program IR of lean4-effect4 in OCaml: its types, its canonical wire and its JSON print, generated from Lean over a hand-written framing kernel. Unstable: no release is published, and names may change.")
+ (depends
+  (ocaml (>= 5.1.1))))

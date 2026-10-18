@@ -2,4 +2,24 @@
 ; The package makes `effect4_gen` public so the engine's differential (ocaml/engine, a
 ; sibling project in the ocaml/ workspace) can drive the generated oracle `Api_gen` beside
 ; its own instances; a private library is scoped to its own project.
-(package (name effect4_gen))
+;
+; Install metadata (plan E1, docs/research/2026-10-18-slices/README.md, ruling 4): dune writes
+; effect4_gen.opam from the fields below (`generate_opam_files`). The package is unstable: no
+; release is published, and its names may change when the generated name manifest lands.
+; ocaml/engine/test/install checks the installed packages from a project outside ocaml/.
+(generate_opam_files true)
+(source (github pure-algebra/lean4-effect4))
+(license MIT)
+(authors "The Fold Lab")
+(maintainers "The Fold Lab")
+
+(package
+ (name effect4_gen)
+ (synopsis "Unstable: Effect4's checker, call tree and tool, lowered from Lean")
+ (description
+  "Lean's checker, call tree, authoring surface and authoring tool for Effect4, lowered to OCaml through LCNF (Api_gen, generated). Unstable: no release is published, and names may change.")
+ (depends
+  (ocaml (>= 5.1.1))
+  effect4_clock
+  effect4_eff
+  effect4_lcnf))

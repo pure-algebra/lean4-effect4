@@ -1,0 +1,5 @@
+(lang dune 3.0)
+; The outside consumer (plan E1): a dune project of its own, built from a copy outside ocaml/ by
+; ../check_install.sh with OCAMLPATH set to a scratch prefix that `dune install` filled. It sees
+; the installed packages and the opam switch, never the ocaml/ workspace. In the workspace this
+; directory is data (../dune, `data_only_dirs`).

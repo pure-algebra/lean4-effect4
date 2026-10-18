@@ -1,0 +1,6 @@
+; The red control: a test library of the workspace (ocaml/engine/cas/test) is private, so nothing
+; installs it and the outside project cannot name it. ../../check_install.sh expects this build to
+; fail with the line of red.expected.
+(executable
+ (name red)
+ (libraries effect4_disk_test_support))

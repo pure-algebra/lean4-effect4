@@ -1,0 +1,21 @@
+; lane INSTALL -- the install metadata, checked from outside (plan E1; docs/research/2026-10-18-slices/
+; README.md §9, ruling 4: names first, no release).
+;   check_install.sh  installs every package into a scratch prefix with `dune install`, then builds
+;                     a copy of consumer/ outside ocaml/ against that prefix alone: it links the
+;                     installed kit, checks and runs one program, and the installed `eff` answers
+;                     the same. Red control: the copy cannot name a test library. Its header holds
+;                     the behaviours I1-I4.
+; consumer/ is the outside project's source. The workspace never builds it: it is data here.
+
+(data_only_dirs consumer)
+
+(rule
+ (alias runtest)
+ (deps
+  (sandbox none)
+  (alias_rec %{workspace_root}/install)
+  (source_tree consumer)
+  installed.expected
+  check_install.sh)
+ (action
+  (run bash %{dep:check_install.sh} %{workspace_root} consumer installed.expected)))

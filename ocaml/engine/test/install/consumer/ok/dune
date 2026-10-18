@@ -1,0 +1,4 @@
+; The outside consumer's program: it links the installed kit and nothing of the workspace.
+(executable
+ (name ok)
+ (libraries effect4_kit))
