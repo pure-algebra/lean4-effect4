@@ -19,6 +19,11 @@
 
 open Effect4_engine_cas
 
+let open_writer ~dir opts =
+  match E4_cas.open_rw ~dir opts with
+  | Ok writer -> writer
+  | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+
 let now = Unix.gettimeofday
 let rate n dt = if dt <= 0.0 then infinity else float_of_int n /. dt
 let hr () = print_endline (String.make 78 '-')
@@ -50,7 +55,7 @@ let v_ref k d = E4_be.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
 let node kind spec payload = { E4_node.version = 0; kind; spec; payload }
 
 let build ~dir ~n =
-  let st = E4_cas.open_rw ~dir { E4_cas.default_opts with index_slots = 1 lsl 16 } in
+  let st = open_writer ~dir { E4_cas.default_opts with index_slots = 1 lsl 16 } in
   let g = node E4_kind.Schema E4_node.zero_digest (v_ctor 0 [ v_nat 0 ]) in
   ignore (E4_cas.put st g);
   let schema = E4_addr.Addr.bytes (E4_node.address g) in

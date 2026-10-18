@@ -49,10 +49,13 @@
          5  `Wrong_kind`       a checked edge names another kind      spec edge first]
        The genesis (kind `schema` with the zero spec) is exempt from the spec edge and nothing
        else is (`Node.checkedEdges`, Node.checkedEdges (src/Effect4/Store/Domain/Node.lean)).      tested: golden G2, prop L-CAS-4
+   Raw native payload strings pass byte reading before the CS2 semantic stages.
+       `put` and `put_bytes` check identical encoded bytes through the same entrance.
+       The Lean Val-data oversize-before-version law keeps its original scope.
    CS3  The address is `sha256 (E4_node.encode n)` and nothing else is ever hashed
        (`Store.address`, address (src/Effect4/Store/Domain/Node.lean); L-CAS-1).                    by construction; tested
    CS4  Single writer, checked: `open_rw` takes the pack's exclusive lock on <store>/LOCK and
-       raises `Locked` when another writer holds it.  Readers take no lock.       tested (X5)
+       returns `Fault (Locked _)` when another writer holds it. Readers take no lock.       tested (X5)
    CS5  Durability is per COMMIT, not per put: `put` stages, `commit` performs ONE write(2)
        and ONE fsync(2) per touched pack segment and then one tmp+rename+fsync of the control
        file — the group commit and the watermark advance are one durable step.
@@ -166,15 +169,10 @@ type outcome =
       (** the resident record's bytes do not hash to its address: corruption; nothing
           changed (CS1) *)
 
-type admission =
-  | Oversize  (** the payload is not one well-formed frame tree (Lean: ¬ payload.WF) *)
-  | Unknown_tag of int  (** a frame tag no reader here knows (CS2 row 1b), never [Oversize] *)
-  | Host_limit of string  (** a frame length >= 2^62 — amendment M9, not a Lean refusal *)
-  | Bad_version of int  (** the version byte that was not 0 *)
-  | Malformed_ref
-  | Handle_in_content  (** amendment M2; its position in the order is A2 OQ4 *)
-  | Dangling of E4_addr.Addr.t
-  | Wrong_kind of { at : E4_addr.Addr.t; expected : E4_kind.t; actual : E4_kind.t }
+type admission = E4_admission.t =
+  | Model of E4_admission.model
+  | Capacity of string
+  | Fault of E4_fault.t
 
 type verify_error =
   | Digest_mismatch of E4_addr.Addr.t
@@ -217,12 +215,21 @@ val verify_error_word : verify_error -> string
     "dangling <missing hex>" | "wrongKind" | "rootUnresolved <name>" — golden G7's vocabulary,
     with "handleInContent" added for amendment M2 (CS7). *)
 
+(** Frozen checked values. Node bytes pass the exact reader and ordered admission.
+    Root targets lie within image_boundary; generations remain exact. *)
+type image = {
+  image_nodes : (E4_addr.Addr.t * string) list;
+  image_roots : E4_control.root list;
+  image_boundary : int * int;
+}
+val checked_image : ro -> (image, admission) result
+
 (* ---------------------------------------------------------------- opening *)
 
 type open_opts = {
   seg_max : int;  (** pack segment rotation, bytes *)
   index_slots : int;  (** the index's initial capacity *)
-  verify_on_open : bool;  (** run `verify` after recovery and raise `Store_error` on a fault *)
+  verify_on_open : bool;  (** run `verify` after recovery; opening returns a concrete fault on failure *)
 }
 
 val default_opts : open_opts
@@ -254,10 +261,10 @@ type recovery = {
 val recovery_stop_word : recovery_stop -> string
 val recovery : t -> recovery
 
-val open_rw : dir:string -> open_opts -> t
+val open_rw : dir:string -> open_opts -> (t, admission) result
 (** Create or open the store at [dir], take the writer lock, recover the tail (CS6) and commit
-    the watermark.  Raises `Locked` when another writer holds the lock, and `Store_error` when
-    the control file or a pack head cannot be read. *)
+    the watermark. Opening returns located admission refusals, capacity limits, or concrete faults.
+    A held writer lock returns [Fault (Locked _)]. *)
 
 val open_ro : dir:string -> ro
 (** A read view over what the control file says is durable.  Takes no lock, admits nothing and
@@ -273,6 +280,21 @@ val reopen_ro : ro -> ro
 (** Re-read the control file and index whatever another writer has committed since (X5). *)
 
 val dir : t -> string
+
+(** Full preflight precedes every write. Hooks expose actual write, sync, and publication points for kill controls. *)
+type transaction = { txn_nodes : string list; txn_moves : E4_control.move list }
+type node_outcome = Fresh_node | Duplicate_node
+type move_outcome = Created of Z.t | Advanced of Z.t | Duplicate_move of Z.t
+type receipt = {
+  receipt_nodes : (E4_addr.Addr.t * node_outcome) list;
+  receipt_moves : move_outcome list;
+}
+type transaction_error =
+  | Node_refused of { index : Z.t; why : admission }
+  | Move_refused of { name : string; why : E4_control.root_error }
+  | Host_refused of admission
+type commit_point = Before_write of int | After_write of int | After_sync | Before_publish | After_publish
+val commit_transaction : ?hook:(commit_point -> unit) -> t -> transaction -> (receipt, transaction_error) result
 
 (* ---------------------------------------------------------------- nodes *)
 

@@ -23,6 +23,11 @@
 
 open Effect4_engine_cas
 
+let open_writer ~dir opts =
+  match E4_cas.open_rw ~dir opts with
+  | Ok writer -> writer
+  | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+
 let n_nodes = try int_of_string (Sys.getenv "E4_BENCH_N") with _ -> 20_000
 let batch = try int_of_string (Sys.getenv "E4_BENCH_BATCH") with _ -> 512
 let chain_len = try int_of_string (Sys.getenv "E4_BENCH_CHAIN") with _ -> 2_000
@@ -87,7 +92,7 @@ let bench_size dir size =
   let dir = Printf.sprintf "%s-%d" dir size in
   mkdir_p dir;
   let opts = { E4_cas.default_opts with seg_max = 1 lsl 30; index_slots = n_nodes } in
-  let s = E4_cas.open_rw ~dir opts in
+  let s = open_writer ~dir opts in
   ignore (E4_cas.put s genesis);
   E4_cas.commit s;
   let nodes = Array.init n_nodes (flat size) in
@@ -146,7 +151,7 @@ let bench_closure dir =
   let dir = dir ^ "-chain" in
   mkdir_p dir;
   let opts = { E4_cas.default_opts with seg_max = 1 lsl 30; index_slots = chain_len } in
-  let s = E4_cas.open_rw ~dir opts in
+  let s = open_writer ~dir opts in
   ignore (E4_cas.put s genesis);
   let prev = ref (E4_node.address genesis) in
   let tip = ref (E4_node.address genesis) in

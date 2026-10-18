@@ -258,6 +258,7 @@ def registry : Registry where
       title := "Translation & Simulation: Semantic preservation, replay relations, and capstone M7"
       defaultModules := [
         `Effect4.Laws.Program.Agreement.Machine,
+        `Effect4.Laws.Store.Recovery,
         `Effect4.Laws.Program.Agreement.Segment,
         `Effect4.Laws.Program.HostRuns,
         `Effect4.Laws.Api.HostDrive,
@@ -1206,6 +1207,15 @@ def registry : Registry where
     { id := "references-move", concept := "initial-algebras-folds", role := .preservation
       title := "A subtree whose layer references stay inside it keeps every reference well formed when it is pasted with Node.rebaseRefs, at an address below the root, outside the module's layers and in one scope; nothing of typing, of references that leave the subtree, of variable levels or row positions, or of any run (decisions row 336 (6); seat ORG's L9)"
       pointer := .witness `Effect4.Program.references_move },
+    { id := "cas-restore-roots", concept := "translation-simulation", role := .compatibility
+      title := "Checked empty-store restoration retains the exact root table, including legacy generations; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)"
+      pointer := .witness `Effect4.Store.restore_roots },
+    { id := "cas-restore-closed", concept := "translation-simulation", role := .preservation
+      title := "Checked empty-store restoration establishes node closure through shared admission; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)"
+      pointer := .witness `Effect4.Store.restore_closed },
+    { id := "cas-restore-targets", concept := "translation-simulation", role := .preservation
+      title := "Every restored root resolves to a durable resident of its fixed kind; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)"
+      pointer := .witness `Effect4.Store.restore_targets },
     { id := "cas-node-read-exact", concept := "exact-codecs", role := .compatibility
       title := "Successful node byte reading returns its exact encoded node; no admission, hashing, capacity, or persistence claim (seams ST1a, R13)"
       pointer := .witness `Effect4.Store.Node.read_exact },

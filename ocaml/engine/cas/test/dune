@@ -203,3 +203,36 @@
  (name test_shared_facts)
  (modules test_shared_facts)
  (libraries effect4_engine_cas effect4_bytes zarith))
+
+(test
+ (name test_disk)
+ (modules test_disk)
+ (libraries effect4_engine_cas effect4_bytes effect4_eff effect4_disk_test_support unix zarith))
+
+(library
+ (name effect4_disk_test_support)
+ (wrapped false)
+ (modules disk_test_support)
+ (libraries effect4_engine_cas effect4_bytes effect4_eff unix zarith))
+
+(test
+ (name test_disk_kill)
+ (modules test_disk_kill)
+ (deps (glob_files ../goldens/*))
+ (libraries effect4_engine_cas effect4_disk_test_support unix zarith))
+
+(test
+ (name test_disk_stm)
+ (modules test_disk_stm)
+ (deps (glob_files ../goldens/*))
+ (libraries effect4_engine_cas effect4_bytes effect4_disk_test_support qcheck-core qcheck-core.runner qcheck-stm.sequential unix zarith))
+
+(test
+ (name test_disk_damage)
+ (modules test_disk_damage)
+ (libraries effect4_engine_cas effect4_disk_test_support effect4_bytes unix))
+
+(test
+ (name test_disk_boundary)
+ (modules test_disk_boundary)
+ (libraries effect4_engine_cas effect4_disk_test_support effect4_bytes unix zarith))

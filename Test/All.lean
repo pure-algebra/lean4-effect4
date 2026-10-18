@@ -161,6 +161,7 @@ import Test.Store.NodeContract
 import Test.Store.SeamsAdmission
 import Test.Store.SeamsRead
 import Test.Store.SeamsTransactions
+import Test.Store.SeamsRecovery
 import Test.Store.SeamsHeadPrinter
 import Test.Store.WordContract
 import Test.Store.TraitContract

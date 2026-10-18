@@ -207,6 +207,8 @@ type scan_stop =
   | Bad_tag of { seg : seg; off : off; byte : int }  (** the byte here is not 'R' (D2) *)
   | Bad_head of { seg : seg }                        (** the segment head does not check (D2) *)
 
+exception Damaged_sealed of { seg : int; off : int; reason : scan_stop }
+
 val scan_stop_to_string : scan_stop -> string
 
 type recovery = {

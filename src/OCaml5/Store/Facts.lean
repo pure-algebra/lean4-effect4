@@ -83,7 +83,7 @@ def admissionFiles : MetaM (String × String) := do
   let declarations ← (← inductiveCtors ``Admission).mapM constructorType
   let arms ← (← inductiveCtors ``Node.ReadRefusal).mapM readArm
   let types := "type model =\n" ++ "\n".intercalate declarations ++
-    "\n\ntype t = Model of model | Capacity of string\n"
+    "\n\ntype t = Model of model | Capacity of string | Fault of E4_fault.t\n"
   let interface := header "The one semantic node-read refusal mapping; capacity is a host result." ++
     types ++ "\nval of_decode : E4_node.decode_error -> t\n"
   let implementation := header "The one semantic node-read refusal mapping; capacity is a host result." ++

@@ -1627,6 +1627,15 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
 (`run_eq_meaning` in `src/Effect4/Laws/Program/Agreement/Segment.lean`, `M7Fragment` in `src/Effect4/Laws/Program/Typed/Assembly.lean`).
 
 #### 4. Required Properties and Obligations
+
+- **Checked disk-image recovery (seams ST2, R13)**: Recovery starts at the empty store and uses shared node admission.
+  `restore_roots` states checked empty-store restoration retains the exact root table, including legacy generations.
+  `restore_closed` states checked empty-store restoration establishes node closure through shared admission.
+  `restore_targets` states every restored root resolves to a durable resident of its fixed kind.
+  Their owner is `src/Effect4/Laws/Store/Recovery.lean`.
+  The claims are `cas-restore-roots`, `cas-restore-closed`, and `cas-restore-targets`.
+  They establish no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress.
+
 - **Recorded calls occur in the admitted call tree (`recorded-call-tree-prefix`)**: Each recorded call binding names a wait in that program's admitted call tree.
   `Run.CallTree.bound_in_tree` states the obligation in `src/Effect4/Laws/Run/CallTree.lean`.
   Its premises are `StraightRows`, no cause handlers and a reached run.

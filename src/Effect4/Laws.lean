@@ -167,6 +167,7 @@ import Effect4.Laws.Codegen.PrintReadable
 import Effect4.Laws.Codegen.PrintTyped
 import Effect4.Laws.Api.ModuleReadable
 import Effect4.Laws.Store.CanonicalSpec
+import Effect4.Laws.Store.Recovery
 import Effect4.Laws.Schema.Codec
 import Effect4.Laws.Schema.Modeled
 import Effect4.Laws.Program.TyNormal

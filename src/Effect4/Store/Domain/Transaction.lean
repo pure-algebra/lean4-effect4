@@ -38,6 +38,20 @@ structure Head (D : Type) where
   generation : Nat
   deriving DecidableEq, Repr
 
+/-- A root fixes its policy and target kind at creation. -/
+structure Root where
+  name : String
+  policy : RootPolicy
+  kind : Kind
+  head : Head Digest
+  deriving DecidableEq, Repr
+
+/-- A decoded image. Raw bytes must pass Node.read before constructing its nodes. -/
+structure RecoveryImage where
+  nodes : List Node
+  roots : List Root
+  deriving DecidableEq, Repr
+
 /-- Create a root, or compare its complete head before advancing it. -/
 inductive Move where
   | create (name : String) (policy : RootPolicy) (target : AnyRef)
@@ -78,6 +92,7 @@ inductive Cut where
 inductive Event where
   | commit (transaction : Txn)
   | interrupt (transaction : Txn) (cut : Cut)
+  | restore (image : RecoveryImage)
   deriving DecidableEq, Repr
 
 end Effect4.Store

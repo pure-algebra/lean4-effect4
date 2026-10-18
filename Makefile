@@ -210,7 +210,7 @@ $(GEN)/wire: $(GEN)/derived src/OCaml5/Tools/EffWire.lean $(PRODUCER_COMMON) $(C
 	$(PY) scripts/generate.py --only wire
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/cas: $(GEN)/derived src/OCaml5/Tools/CasGoldens.lean src/OCaml5/Tools/CasFacts.lean src/OCaml5/Store/Facts.lean scripts/lib/store_facts.py $(PRODUCER_COMMON) $(CORE_SOURCES)
+$(GEN)/cas: $(GEN)/derived src/OCaml5/Tools/CasDiskOracle.lean src/OCaml5/Tools/CasDiskCuts.lean src/OCaml5/Store/DiskOracle.lean src/OCaml5/Tools/CasGoldens.lean src/OCaml5/Tools/CasFacts.lean src/OCaml5/Store/Facts.lean scripts/lib/store_facts.py $(PRODUCER_COMMON) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only cas
 	@mkdir -p $(GEN) && touch $@
 

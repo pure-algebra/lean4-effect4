@@ -21,6 +21,11 @@
 
 open Effect4_engine_cas
 
+let open_writer ~dir opts =
+  match E4_cas.open_rw ~dir opts with
+  | Ok writer -> writer
+  | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+
 let now = Unix.gettimeofday
 
 let rate n dt = if dt <= 0.0 then infinity else float_of_int n /. dt
@@ -226,7 +231,7 @@ let bench_deps () =
       let dir = Filename.concat base_dir (Printf.sprintf "deps%d" n) in
       rm_rf dir;
       Unix.mkdir dir 0o755;
-      let st = E4_cas.open_rw ~dir { E4_cas.default_opts with index_slots = 1 lsl 16 } in
+      let st = open_writer ~dir { E4_cas.default_opts with index_slots = 1 lsl 16 } in
       let g = node E4_kind.Schema E4_node.zero_digest (v_ctor 0 [ v_nat 0 ]) in
       ignore (E4_cas.put st g);
       let schema = E4_addr.Addr.bytes (E4_node.address g) in

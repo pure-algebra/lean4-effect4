@@ -146,6 +146,8 @@ def rootWord (r : Except TxnRefusal (Receipt × Store)) : String :=
   match r with
   | .ok _ => "ok"
   | .error (.node _ a) | .error (.target _ a) => admissionWord a
+  | .error .restoreNonempty => "restoreNonempty"
+  | .error (.duplicateRoot name) => "duplicateRoot " ++ name
   | .error (.noRoot name) => "noRoot " ++ name
   | .error (.staleRoot name expected actual) => s!"staleRoot {name} {headWord expected} {headWord actual}"
   | .error (.pinned name) => "pinned " ++ name

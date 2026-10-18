@@ -57,6 +57,11 @@
 
 open Effect4_engine_cas
 
+let open_writer ~dir opts =
+  match E4_cas.open_rw ~dir opts with
+  | Ok writer -> writer
+  | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+
 let failures = ref 0
 
 let check name ok =
@@ -301,7 +306,7 @@ type built = {
    frames are indistinguishable from any other blob (finding R1). *)
 let build_store ~(n : int) ~(jobs : int) : built =
   let dir = fresh_dir () in
-  let st = E4_cas.open_rw ~dir { E4_cas.default_opts with index_slots = 1 lsl 14 } in
+  let st = open_writer ~dir { E4_cas.default_opts with index_slots = 1 lsl 14 } in
   let genesis = node E4_kind.Schema E4_node.zero_digest (v_ctor 0 [ v_nat 0 ]) in
   (match E4_cas.put st genesis with
   | Ok _ -> ()
@@ -1008,7 +1013,7 @@ let test_mutations (b : built) =
        not (String.equal (E4_subterm.slice p ent) (Eff_wire.encode_term t_unit)));
   (* X4: the poison test is falsifiable — a store whose pack really is damaged fails verify. *)
   let d = fresh_dir () in
-  let st = E4_cas.open_rw ~dir:d E4_cas.default_opts in
+  let st = open_writer ~dir:d E4_cas.default_opts in
   let g = node E4_kind.Schema E4_node.zero_digest (v_ctor 0 [ v_nat 1 ]) in
   ignore (E4_cas.put st g);
   let n1 = node E4_kind.Entry (E4_addr.Addr.bytes (E4_node.address g)) (v_ctor 0 [ v_nat 5 ]) in

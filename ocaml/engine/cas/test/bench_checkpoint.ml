@@ -26,6 +26,11 @@ open Effect4_engine_cas
 module Ch = E4_chunk
 module Ck = E4_checkpoint
 
+let open_writer ~dir opts =
+  match E4_cas.open_rw ~dir opts with
+  | Ok writer -> writer
+  | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+
 let ref_bytes = 42 (* a framed ref: tag + be64 + kind byte + 32 *)
 
 (* ============================================================ the synthetic image *)
@@ -165,7 +170,7 @@ let section_b dir s =
   let run ~chunk sub =
     let d = Filename.concat dir sub in
     (try Unix.mkdir d 0o755 with Unix.Unix_error _ -> ());
-    let st = E4_cas.open_rw ~dir:d E4_cas.default_opts in
+    let st = open_writer ~dir:d E4_cas.default_opts in
     let spec = Ck.ensure_schema st in
     let job =
       match

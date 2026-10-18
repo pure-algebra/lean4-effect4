@@ -18,7 +18,7 @@ type model =
   | Bad_version
   | Conflict of E4_addr.Addr.t * E4_node.t
 
-type t = Model of model | Capacity of string
+type t = Model of model | Capacity of string | Fault of E4_fault.t
 
 let of_decode = function
   | E4_node.Short_spec -> Model (Short_spec)

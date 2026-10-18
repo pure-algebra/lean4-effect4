@@ -165,15 +165,6 @@ let test_roundtrip () =
   let b0 = E4_control.encode { one_root_payload with E4_control.status = E4_control.Fresh } in
   check "R4 status is LAST: an empty-bodied status is the final byte"
     (Char.code b0.[String.length b0 - 1] = 0);
-  check "R4 the bytes before status do not move when only the status changes"
-    (String.equal
-       (String.sub b0 0 (String.length b0 - 1))
-       (String.sub (E4_control.encode { one_root_payload with E4_control.status = E4_control.Gced })
-          0
-          (String.length b0 - 1))
-    = false
-    (* the checksum covers the status, so the CHECKSUM moves; everything else must not *)
-    || true);
   let only_checksum_moves =
     let x = String.sub b0 0 (String.length b0 - 1) in
     let y =

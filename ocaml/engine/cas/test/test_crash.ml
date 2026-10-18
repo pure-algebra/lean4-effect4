@@ -1,4 +1,4 @@
-(* test_crash.ml — lane P4's crash families: what `E4_cas.open_rw` makes of a store a crash
+(* test_crash.ml — lane P4's crash families: what `open_writer` makes of a store a crash
    left behind (2026-09-08).
 
    The families are docs/research/2026-09-08-engine-a2-persistence.md §4.3, restricted to the
@@ -33,6 +33,11 @@
    removed at the end.  Exit code 0 iff every check passed. *)
 
 open Effect4_engine_cas
+
+let open_writer ~dir opts =
+  match E4_cas.open_rw ~dir opts with
+  | Ok writer -> writer
+  | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
 
 let failures = ref 0
 
@@ -131,7 +136,7 @@ let chain n =
 let opts = { E4_cas.default_opts with seg_max = 1 lsl 20 }
 
 let build dir nodes =
-  let s = E4_cas.open_rw ~dir opts in
+  let s = open_writer ~dir opts in
   List.iter (fun n -> ignore (E4_cas.put s n)) nodes;
   E4_cas.commit s;
   E4_cas.close s
@@ -188,10 +193,11 @@ let test_x1 () =
       let d = fresh_dir () in
       Unix.mkdir (Filename.concat d "pack") 0o755;
       write_file (seg0 d) (String.sub full 0 (min cut (String.length full)));
-      (* the control file is the one the crash left: it names the whole pack *)
+      (* A writable uncommitted tail starts after the published empty boundary.
+         Published bytes lost are damage, covered by test_disk_damage. *)
       E4_control.commit ~path:(E4_control.control_path ~dir:d)
-        { E4_control.initial with pack_end = (0, String.length full); generation = 1 };
-      let s = E4_cas.open_rw ~dir:d opts in
+        { E4_control.initial with pack_end = (0, E4_pack.head_length); generation = 1 };
+      let s = open_writer ~dir:d opts in
       let ro = E4_cas.read_only s in
       let want = List.filter (fun (off, len) -> off + E4_pack.record_overhead + len <= cut) recs in
       let got = E4_cas.nodes ro in
@@ -244,7 +250,7 @@ let corrupt_tail_case name field =
     | `Payload -> off + E4_pack.record_header_length (* the first node byte *)
   in
   flip_byte (seg0 d) pos;
-  let s = E4_cas.open_rw ~dir:d opts in
+  let s = open_writer ~dir:d opts in
   let ro = E4_cas.read_only s in
   let r = E4_cas.recovery s in
   let stop_ok =
@@ -321,7 +327,7 @@ let test_x2 () =
       originals
   in
   let d1 = forge_with corrupted in
-  let s = E4_cas.open_rw ~dir:d1 opts in
+  let s = open_writer ~dir:d1 opts in
   let ro = E4_cas.read_only s in
   check "X2(b1) a record corrupted BELOW the watermark does not stop the open"
     ((E4_cas.recovery s).E4_cas.stop = E4_cas.Clean);
@@ -335,9 +341,10 @@ let test_x2 () =
   E4_cas.close s;
   check "X2(b1) verify_on_open turns it into a refusal to open"
     (match E4_cas.open_rw ~dir:d1 { opts with E4_cas.verify_on_open = true } with
-     | exception E4_cas.Store_error m ->
+     | Error (E4_cas.Fault (E4_fault.Store m)) ->
        String.length m > 7 && String.sub m 0 7 = "verify:"
-     | t ->
+     | Error _ -> false
+     | Ok t ->
        E4_cas.close t;
        false);
   rm_rf d1;
@@ -345,7 +352,7 @@ let test_x2 () =
   build d2 nodes;
   let off, _ = List.nth (records d2) 1 in
   flip_byte (seg0 d2) (off + E4_pack.record_header_length);
-  let s = E4_cas.open_rw ~dir:d2 opts in
+  let s = open_writer ~dir:d2 opts in
   let ro = E4_cas.read_only s in
   check "X2(b2) a raw flipped byte below the watermark does not stop the open"
     ((E4_cas.recovery s).E4_cas.stop = E4_cas.Clean);
@@ -390,7 +397,7 @@ let test_x3 () =
   check "X3 verify is unchanged by either" (E4_cas.verify ro1 = Ok ());
   E4_cas.close_ro ro1;
   (* an index file whose coverage is past the pack's end is discarded, not believed *)
-  let s = E4_cas.open_rw ~dir:d opts in
+  let s = open_writer ~dir:d opts in
   E4_cas.close s;
   let idx_file = Filename.concat idx_dir "000000.idx" in
   if Sys.file_exists idx_file then begin
@@ -412,7 +419,7 @@ let test_x4 () =
   build d nodes;
   let tmp = E4_control.tmp_path ~path:(E4_control.control_path ~dir:d) in
   write_file tmp "torn nonsense that never got renamed";
-  let s = E4_cas.open_rw ~dir:d opts in
+  let s = open_writer ~dir:d opts in
   check "X4(a) a stale control.tmp is removed and `control` is used"
     ((not (Sys.file_exists tmp)) && List.length (E4_cas.nodes (E4_cas.read_only s)) = List.length nodes);
   E4_cas.close s;
@@ -422,17 +429,14 @@ let test_x4 () =
   build d nodes;
   let size = file_size (seg0 d) in
   set_watermark d (0, size + 4096);
-  let s = E4_cas.open_rw ~dir:d opts in
-  let ro = E4_cas.read_only s in
-  let written_watermark =
-    match E4_control.read ~path:(E4_control.control_path ~dir:d) with
-    | Ok p -> E4_control.pack_end p
-    | Error _ -> (-1, -1)
-  in
-  check "X4(b) a pack_end past the pack's end is lowered to the scan's end, and the store opens"
-    (List.length (E4_cas.nodes ro) = List.length nodes && written_watermark = (0, size));
-  check "X4(b) and it verifies" (E4_cas.verify ro = Ok ());
-  E4_cas.close s;
+  let original_control = read_file (E4_control.control_path ~dir:d) in
+  check "X4(b) a published boundary past the bytes is a fault value"
+    (match E4_cas.open_rw ~dir:d opts with
+     | Error (E4_cas.Fault _) -> true
+     | Error _ -> false
+     | Ok writer -> E4_cas.close writer; false);
+  check "X4(b) the published boundary is not silently rewritten"
+    (String.equal original_control (read_file (E4_control.control_path ~dir:d)));
   rm_rf d;
   (* (c) a corrupt checksum, and (d) an unknown ASCII version — DIFFERENT verdicts *)
   let d = fresh_dir () in
@@ -442,24 +446,26 @@ let test_x4 () =
   flip_byte path (String.length good - 1);
   check "X4(c) a corrupt control file is `corrupt`, and the store refuses to open"
     (match E4_cas.open_rw ~dir:d opts with
-     | exception E4_cas.Store_error m ->
+     | Error (E4_cas.Fault (E4_fault.Store m)) ->
        let want = "control: corrupt" in
        String.length m >= String.length want && String.sub m 0 (String.length want) = want
-     | t ->
+     | Error _ -> false
+     | Ok t ->
        E4_cas.close t;
        false);
   write_file path (String.sub good 0 6 ^ "00000009" ^ String.sub good 14 (String.length good - 14));
   check "X4(d) an unknown ASCII version is `staleBinary` — a DIFFERENT verdict, and a different operator action"
     (match E4_cas.open_rw ~dir:d opts with
-     | exception E4_cas.Store_error m ->
+     | Error (E4_cas.Fault (E4_fault.Store m)) ->
        let want = "control: staleBinary" in
        String.length m >= String.length want && String.sub m 0 (String.length want) = want
-     | t ->
+     | Error _ -> false
+     | Ok t ->
        E4_cas.close t;
        false);
   write_file path good;
   check "X4(c/d) the store opens again once the control file is restored"
-    (let s = E4_cas.open_rw ~dir:d opts in
+    (let s = open_writer ~dir:d opts in
      let ok = List.length (E4_cas.nodes (E4_cas.read_only s)) = List.length nodes in
      E4_cas.close s;
      ok);
@@ -472,7 +478,7 @@ let test_x4 () =
    | Error _ -> check "X4(e) the control file reads back" false
    | Ok p ->
      E4_control.commit ~path (E4_control.set_status p (E4_control.Reserved (7, "a future writer's body")));
-     let s = E4_cas.open_rw ~dir:d opts in
+     let s = open_writer ~dir:d opts in
      ignore (E4_cas.put s (node E4_kind.Schema zero (v_str "another")));
      E4_cas.commit s;
      E4_cas.close s;
@@ -488,16 +494,14 @@ let test_x5 () =
   print_endline "-- X5: two writers, and a reader's consistent prefix";
   let nodes = chain 4 in
   let d = fresh_dir () in
-  let s = E4_cas.open_rw ~dir:d opts in
+  let s = open_writer ~dir:d opts in
   List.iter (fun n -> ignore (E4_cas.put s n)) nodes;
   E4_cas.commit s;
   check "X5 a second open_rw is refused with Locked"
     (match E4_cas.open_rw ~dir:d opts with
-     | exception E4_cas.Locked _ -> true
-     | exception E4_pack.Locked _ -> true
-     | t ->
-       E4_cas.close t;
-       false);
+     | Error (E4_cas.Fault (E4_fault.Locked _)) -> true
+     | Error _ -> false
+     | Ok writer -> E4_cas.close writer; false);
   let ro = E4_cas.open_ro ~dir:d in
   check "X5 a reader takes no lock and sees the committed prefix"
     (List.length (E4_cas.nodes ro) = List.length nodes);
@@ -540,7 +544,7 @@ let test_x7 () =
       write_file (seg0 d2) (read_file (seg0 d));
       E4_control.commit ~path:(E4_control.control_path ~dir:d2)
         { E4_control.initial with pack_end = (0, off); generation = 1 };
-      let s = E4_cas.open_rw ~dir:d2 opts in
+      let s = open_writer ~dir:d2 opts in
       let ro = E4_cas.read_only s in
       let r = E4_cas.recovery s in
       if r.E4_cas.admitted <> List.length recs - i then ok := false;
@@ -570,13 +574,13 @@ let test_x7 () =
   E4_pack.close p;
   E4_control.commit ~path:(E4_control.control_path ~dir:d3)
     { E4_control.initial with pack_end = (0, E4_pack.head_length); generation = 1 };
-  let s = E4_cas.open_rw ~dir:d3 opts in
+  let s = open_writer ~dir:d3 opts in
   let ro = E4_cas.read_only s in
   let r = E4_cas.recovery s in
   check "X7(b) recovery stops at the first record it cannot admit"
     (r.E4_cas.admitted = 2
      && match r.E4_cas.stop with
-        | E4_cas.Refused { why = E4_cas.Dangling _; _ } -> true
+        | E4_cas.Refused { why = E4_cas.Model (E4_admission.Dangling _); _ } -> true
         | _ -> false);
   check "X7(b) the prefix is readable and Closed"
     (List.length (E4_cas.nodes ro) = 2 && E4_cas.closed ro && E4_cas.verify ro = Ok ());
@@ -590,7 +594,7 @@ let test_x7 () =
   (* (c) the root race: a stale read loses, re-reads, and wins *)
   let d4 = fresh_dir () in
   build d4 nodes;
-  let s = E4_cas.open_rw ~dir:d4 opts in
+  let s = open_writer ~dir:d4 opts in
   let ro = E4_cas.read_only s in
   let target = E4_node.address genesis in
   let create = E4_control.Create ("runs/head", E4_control.Swap, {kind = E4_kind.Schema; digest = target}) in

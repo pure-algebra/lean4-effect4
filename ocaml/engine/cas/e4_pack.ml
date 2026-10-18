@@ -146,6 +146,8 @@ type scan_stop =
   | Bad_tag of { seg : seg; off : off; byte : int }
   | Bad_head of { seg : seg }
 
+exception Damaged_sealed of { seg : int; off : int; reason : scan_stop }
+
 let scan_stop_to_string = function
   | Eof -> "Eof"
   | Short { seg; off } -> Printf.sprintf "Short(seg=%d,off=%d)" seg off
@@ -585,11 +587,13 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
   mkdir_p dir;
   mkdir_p (pack_subdir dir);
   let lock_fd, lock_key = acquire_lock dir in
-  let refuse_open msg =
+  let refuse_open ?damage msg =
     (try Unix.lockf lock_fd Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
     (try Unix.close lock_fd with Unix.Unix_error _ -> ());
     Hashtbl.remove held lock_key;
-    raise (Bad_pack msg)
+    match damage with
+    | None -> raise (Bad_pack msg)
+    | Some (seg, off, reason) -> raise (Damaged_sealed {seg; off; reason})
   in
   let finish_with r cur_seg cur_end fds =
     { w_dir = dir;
@@ -608,6 +612,7 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
       w_closed = false;
       w_recovery = r }
   in
+  try (
   match list_segments dir with
   | [] ->
     let fd = create_segment ~dir 0 in
@@ -633,6 +638,8 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
                   | Some n -> n < head_length
                   | None -> true)
                  && rest <> [] ->
+            if not (writable (seg_path ~dir s)) then
+              refuse_open ~damage:(s, 0, Bad_head {seg = s}) "short sealed segment head";
             (try Sys.remove (seg_path ~dir s) with Sys_error _ -> ());
             drop (List.rev rest)
           | _ -> l
@@ -660,10 +667,16 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
     (* PK9: a sealed segment holds only bytes a sync had fsynced, so a record that fails
        inside one is damage, not a torn tail.  Recovery never truncates it: the open is
        refused and nothing is cut. *)
-    if truncate && cut && not (writable (seg_path ~dir cseg)) then
-      refuse_open
-        (Printf.sprintf "%s is sealed and recovery fails inside it (%s): damage, not a torn tail"
-           (seg_path ~dir cseg) (scan_stop_to_string stop));
+    let damaged_position = match stop with
+      | Bad_head {seg} -> Some (seg, 0)
+      | _ when cut -> Some (cseg, coff)
+      | _ -> None in
+    (match damaged_position with
+     | Some (seg, off) when truncate && not (writable (seg_path ~dir seg)) ->
+       refuse_open ~damage:(seg, off, stop)
+         (Printf.sprintf "%s is sealed and recovery fails inside it (%s): damage, not a torn tail"
+           (seg_path ~dir seg) (scan_stop_to_string stop))
+     | _ -> ());
     let fds = ref [] in
     if truncate && cut then begin
       (* PK3: the torn tail becomes the file's end, and every later segment goes. *)
@@ -698,6 +711,11 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
         truncated = !did_truncate;
         verified = verify }
       cseg coff !fds
+) with failure ->
+    (try Unix.lockf lock_fd Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
+    (try Unix.close lock_fd with Unix.Unix_error _ -> ());
+    Hashtbl.remove held lock_key;
+    raise failure
 
 let open_ ~dir ~seg_max = open_at ~dir ~seg_max ()
 

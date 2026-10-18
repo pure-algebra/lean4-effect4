@@ -301,6 +301,12 @@ def generate(families, output):
             source = 'tools/Drivers/TsGen.lean' if family == 'ts' else 'src/OCaml5/Tools/' + tool + '.lean'
             run(['lake', 'build', ('Drivers.' if family == 'ts' else 'OCaml5.Tools.') + tool])
             run(['lake', 'env', 'lean', '-M4096', '--run', source, str(temp)])
+            if family == 'cas':
+                for oracle, filename in [('CasDiskOracle', 'disk-oracle.tsv'),
+                                         ('CasDiskCuts', 'disk-cuts.tsv')]:
+                    run(['lake', 'build', 'OCaml5.Tools.' + oracle])
+                    run(['lake', 'env', 'lean', '-M4096', '--run',
+                         'src/OCaml5/Tools/' + oracle + '.lean', str(temp / filename)])
             if not checking:
                 for source in sorted(temp.rglob('*')):
                     if source.is_file():

@@ -31,6 +31,8 @@ inductive TxnRefusal where
   | pinned (name : String)
   | target (name : String) (why : Admission)
   | fork (name : String) (head target : Digest)
+  | restoreNonempty
+  | duplicateRoot (name : String)
   deriving DecidableEq, Repr
 
 /-- The designated parent field, independent of incidental payload references. -/
@@ -139,10 +141,44 @@ def Store.interrupted (store : Store) (transaction : Txn) (cut : Cut) : Except T
       let kept :=  (prefixes.take count).getLast?.getD store
       .ok {kept with roots := store.roots}
 
+/-- Read every raw image item before shared semantic admission. -/
+def RecoveryImage.readNodes : Nat → List Bytes → Except TxnRefusal (List Node)
+  | _, [] => .ok []
+  | index, bytes :: rest => match Node.read bytes with
+    | .error why => .error (.node index (.ofRead why))
+    | .ok node => match RecoveryImage.readNodes (index + 1) rest with
+      | .error why => .error why
+      | .ok nodes => .ok (node :: nodes)
+
+/-- The raw byte entrance constructs no decoded image on refusal. -/
+def RecoveryImage.read (nodes : List Bytes) (roots : List Root) : Except TxnRefusal RecoveryImage := do
+  let nodes ← RecoveryImage.readNodes 0 nodes
+  pure ⟨nodes, roots⟩
+
+/-- Check root names and each durable target without changing policy or generation. -/
+def Store.checkImageRoots (store : Store) : List String → List Root → Except TxnRefusal Unit
+  | _, [] => .ok ()
+  | names, root :: rest =>
+    if names.contains root.name then .error (.duplicateRoot root.name)
+    else match checkEdge store ⟨root.kind, root.head.digest⟩ with
+      | .error why => .error (.target root.name why)
+      | .ok () => store.checkImageRoots (root.name :: names) rest
+
+/-- Checked recovery starts at empty and retains the exact root table, not an invented history. -/
+def Store.restore (store : Store) (image : RecoveryImage) : Except TxnRefusal Store :=
+  if store.nodes.isEmpty && store.roots.isEmpty then
+    match Store.empty.stageNodes 0 image.nodes with
+    | .error why => .error why
+    | .ok (_, staged, _) => match staged.checkImageRoots [] image.roots with
+      | .error why => .error why
+      | .ok () => .ok {staged with roots := image.roots}
+  else .error .restoreNonempty
+
 /-- The one store event interpreter. -/
 def eventStep (store : Store) : Event → Except TxnRefusal Store
   | .commit transaction => (store.commit transaction).map Prod.snd
   | .interrupt transaction cut => store.interrupted transaction cut
+  | .restore image => store.restore image
 
 /-- Canonical event replay, starting with the empty store. -/
 def replayEventsFrom : Store → List Event → Except TxnRefusal Store
@@ -554,6 +590,15 @@ namespace Cas
 /-- The empty reached store uses the empty event journal. -/
 @[no_expose] def empty : Cas := CasOf.mk Store.empty ⟨[], rfl⟩
 
+/-- A checked image reaches Cas through its explicit canonical recovery event. -/
+@[no_expose] def restore (image : RecoveryImage) : Except TxnRefusal Cas :=
+  CasOf.ofReplay replayEvents [.restore image]
+
+/-- Disk and far bytes pass the exact node reader before checked recovery. -/
+@[no_expose] def restoreBytes (nodes : List Bytes) (roots : List Root) : Except TxnRefusal Cas := do
+  let image ← RecoveryImage.read nodes roots
+  Cas.restore image
+
 /-- Commit extends the reached witness through the one canonical event interpreter. -/
 @[no_expose] def commit (cas : Cas) (transaction : Txn) :
     Except TxnRefusal (Receipt × Cas) :=
@@ -565,6 +610,12 @@ namespace Cas
       rw [replay_append, reached]
       change eventStep cas.store (.commit transaction) = .ok store
       simp only [eventStep, accepted, Except.map]))
+
+/-- Raw transaction nodes pass the same exact byte entrance before shared admission. -/
+@[no_expose] def commitBytes (cas : Cas) (nodes : List Bytes) (moves : List Move) :
+    Except TxnRefusal (Receipt × Cas) := do
+  let nodes ← RecoveryImage.readNodes 0 nodes
+  cas.commit ⟨nodes, moves⟩
 
 /-- An interruption also extends the reached witness after full transaction validation. -/
 @[no_expose] def interrupted (cas : Cas) (transaction : Txn) (cut : Cut) :

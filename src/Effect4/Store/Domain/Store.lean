@@ -51,14 +51,6 @@ open Effect4 (Document)
 
 /-! ## Roots and the store -/
 
-/-- A root fixes its policy and target kind at creation. -/
-structure Root where
-  name : String
-  policy : RootPolicy
-  kind : Kind
-  head : Head Digest
-  deriving DecidableEq, Repr
-
 /-- The store: nodes keyed by digest, in insertion order, and the roots. -/
 structure Store where
   nodes : List (Digest × Node)

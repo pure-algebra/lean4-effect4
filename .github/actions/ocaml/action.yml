@@ -13,4 +13,4 @@ runs:
       with:
         ocaml-compiler: ${{ inputs.ocaml-compiler }}
     - shell: bash
-      run: opam install --yes dune ocamlfind zarith.1.14
+      run: opam install --yes dune ocamlfind zarith.1.14 qcheck-core.0.91 qcheck-multicoretests-util.0.10 qcheck-stm.0.10

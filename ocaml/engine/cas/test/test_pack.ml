@@ -730,7 +730,7 @@ let test_rotation () =
   let before = sizes d in
   let refused () =
     match E4_pack.open_at ~from:(s0, E4_pack.head_length) ~dir:d ~seg_max () with
-    | exception E4_pack.Bad_pack _ -> true
+    | exception E4_pack.Damaged_sealed {seg; off; reason = E4_pack.Bad_crc _} when seg = s0 && off = o0 -> true
     | exception (E4_pack.Locked _ | Unix.Unix_error _) -> false
     | t ->
       E4_pack.close t;
@@ -738,7 +738,7 @@ let test_rotation () =
   in
   let first = refused () in
   let again = refused () in
-  check "Z13 a record that fails inside a sealed segment: open_ refuses with Bad_pack, cuts nothing, and frees the lock"
+  check "Z13 a record that fails inside a sealed segment: open_ refuses with structured sealed damage, cuts nothing, and frees the lock"
     (s0 = 0 && first && again && sizes d = before);
   rm_rf d;
   let d, offs = rotated () in
@@ -829,18 +829,13 @@ let test_truncate_to () =
   check "T7 the records of the segments before it are still delivered, in write order"
     (List.length (List.filter (function E4_pack.Scanned _ -> true | _ -> false) items) >= 1);
   E4_pack.close_reader rd;
-  check "T8 an interior bad head does not stop open_ (the LAST head still checks); recovery names it, and no segment is deleted"
+  check "T8 an interior sealed bad head refuses as structured damage and retains segments"
     (match E4_pack.open_at ~from:(0, E4_pack.head_length) ~dir:d ~seg_max:1024 () with
+     | exception E4_pack.Damaged_sealed {seg = 1; off = 0; reason = E4_pack.Bad_head {seg = 1}} ->
+       let reader = E4_pack.open_reader ~dir:d in
+       let still = List.length (E4_pack.segments reader) in E4_pack.close_reader reader; still = segs
      | exception E4_pack.Bad_pack _ -> false
-     | t ->
-       let r = E4_pack.recovery t in
-       let rd = E4_pack.open_reader ~dir:d in
-       let still = List.length (E4_pack.segments rd) in
-       E4_pack.close_reader rd;
-       E4_pack.close t;
-       (match r.E4_pack.stop with
-        | E4_pack.Bad_head { seg = 1 } -> (not r.E4_pack.truncated) && still = segs
-        | _ -> false));
+     | writer -> E4_pack.close writer; false);
   rm_rf d
 
 (* ============================================================ P: a property sweep *)

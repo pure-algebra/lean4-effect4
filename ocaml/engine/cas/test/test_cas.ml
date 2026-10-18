@@ -30,6 +30,11 @@
 
 open Effect4_engine_cas
 
+let open_writer ~dir opts =
+  match E4_cas.open_rw ~dir opts with
+  | Ok writer -> writer
+  | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+
 let failures = ref 0
 
 let check name ok =
@@ -272,7 +277,7 @@ let opts = { E4_cas.default_opts with seg_max = 1 lsl 20 }
 
 let with_store f =
   let d = fresh_dir () in
-  let s = E4_cas.open_rw ~dir:d opts in
+  let s = open_writer ~dir:d opts in
   let r = f d s in
   E4_cas.close s;
   r
@@ -387,11 +392,18 @@ let test_admission_order () =
         check (Printf.sprintf "L-CAS-4 %s -> %s" name want) (got = want);
         if got <> want then note "  got %s" got
       in
-      (* every one of these fails at least two tests at once; the answer is the FIRST *)
-      says "oversize + badVersion (oversize is tested first)"
-        (node ~version:1 E4_kind.Export spec (v_list [ bad_frame ])) "oversize";
-      says "unknownTag + badVersion (the tag is read in the payload test, first; never oversize)"
-        (node ~version:1 E4_kind.Export spec (v_list [ unknown_frame ])) "unknownTag 253";
+      (* Raw strings pass byte admission first. Lean Val data retains its semantic
+         oversize-before-version law; a malformed native frame is outside that data domain. *)
+      says "raw badVersion precedes malformed payload at byte admission"
+        (node ~version:1 E4_kind.Export spec (v_list [ bad_frame ])) "badVersion";
+      says "raw badVersion precedes unknown payload tag at byte admission"
+        (node ~version:1 E4_kind.Export spec (v_list [ unknown_frame ])) "badVersion";
+      List.iter (fun payload ->
+        let raw = node ~version:1 E4_kind.Export spec payload in
+        let bytes = E4_node.encode raw in
+        check "raw put and put_bytes report the same first byte refusal"
+          (word_word (E4_cas.put s raw) = word_word (E4_cas.put_bytes s bytes)))
+        [v_list [bad_frame]; v_list [unknown_frame]];
       says "badVersion + malformedRef + handleInContent"
         (node ~version:3 E4_kind.Export spec (v_list [ malformed; handled ])) "badVersion";
       says "malformedRef + handleInContent + dangling"
@@ -445,7 +457,7 @@ let test_outcomes () =
         (E4_addr.Addr.bytes entry_addr, E4_node.encode occupant) ]
       []
   in
-  let s = E4_cas.open_rw ~dir:d opts in
+  let s = open_writer ~dir:d opts in
   let ro = E4_cas.read_only s in
   let before = E4_cas.count ro in
   (match E4_cas.put s probe_entry with
@@ -522,7 +534,7 @@ let test_verify_handles () =
     let w = function Ok () -> "ok" | Error e -> E4_cas.verify_error_word e in
     let r = (w (E4_cas.verify ro), w (E4_cas.verify_node ro a)) in
     let put_word =
-      let s = E4_cas.open_rw ~dir:(fresh_dir ()) opts in
+      let s = open_writer ~dir:(fresh_dir ()) opts in
       ignore (E4_cas.put s probe_schema);
       let pw = word_word (E4_cas.put s n) in
       E4_cas.close s;
@@ -542,7 +554,7 @@ let test_verify_handles () =
 (* ============================================================ L-CAS-7 / G6: two orders *)
 
 let build_order dir order =
-  let s = E4_cas.open_rw ~dir opts in
+  let s = open_writer ~dir opts in
   List.iter (fun n -> ignore (E4_cas.put s n)) order;
   E4_cas.commit s;
   s
@@ -594,7 +606,7 @@ let test_two_orders () =
    | _ -> skip "G6 `nodes` against Lean's cut" "no g6-nodes-a/b golden");
   (* the replay: apply the closure into an empty store *)
   let dr = fresh_dir () in
-  let sr = E4_cas.open_rw ~dir:dr opts in
+  let sr = open_writer ~dir:dr opts in
   let applied = E4_cas.apply_word sr ca in
   E4_cas.commit sr;
   check "G6 the closure replays into an empty store" (applied = Ok ());
@@ -637,7 +649,7 @@ let test_word_goldens () =
       check "G6 Word.wf probeWord = true" (E4_cas.word_wf bw);
       check "G6 Word.wf probeWord.reverse = false" (not (E4_cas.word_wf br));
       let d = fresh_dir () in
-      let s = E4_cas.open_rw ~dir:d opts in
+      let s = open_writer ~dir:d opts in
       check "G6 probeWord applies" (E4_cas.apply_word s bw = Ok ());
       E4_cas.commit s;
       (match golden "g6-probeWord-replayed" with
@@ -645,7 +657,7 @@ let test_word_goldens () =
        | None -> skip "G6 probeWord-replayed" "no golden");
       E4_cas.close s;
       let d2 = fresh_dir () in
-      let s2 = E4_cas.open_rw ~dir:d2 opts in
+      let s2 = open_writer ~dir:d2 opts in
       let got =
         match E4_cas.apply_word s2 br with
         | Ok () -> "ok"
@@ -708,7 +720,7 @@ let test_g2 () =
             | Some n ->
               incr total;
               let dir, preload = g2_store_for name in
-              let s = E4_cas.open_rw ~dir opts in
+              let s = open_writer ~dir opts in
               List.iter (fun m -> ignore (E4_cas.put s m)) preload;
               E4_cas.commit s;
               let got = word_word (E4_cas.put s n) in
@@ -753,7 +765,7 @@ let test_g3 () =
   let create = E4_control.Create ("stdlib/rc112", E4_control.Swap, {kind = E4_kind.Export; digest = entry_addr}) in
   let advance = E4_control.Advance ("stdlib/rc112", {digest = entry_addr; generation = Z.one}, {kind = E4_kind.Export; digest = alternate_addr}) in
   let store_with moves =
-    let s = E4_cas.open_rw ~dir:(fresh_dir ()) opts in
+    let s = open_writer ~dir:(fresh_dir ()) opts in
     List.iter (fun n -> ignore (E4_cas.put s n)) [probe_schema; probe_entry; alternate];
     List.iter (fun move -> ignore (E4_cas.advance_root s move)) moves;
     s in
@@ -774,7 +786,7 @@ let test_g3 () =
         E4_cas.close s
       end) rows;
   check "G3 roots are present" (rows <> []);
-  let store = E4_cas.open_rw ~dir:(fresh_dir ()) opts in
+  let store = open_writer ~dir:(fresh_dir ()) opts in
   ignore (E4_cas.put store probe_schema);
   ignore (E4_cas.put store probe_entry);
   let origin = node E4_kind.Entry (E4_addr.Addr.bytes schema_addr) (v_ctor 0 [v_nat 1; v_nat 1; v_str "engine"]) in
@@ -896,7 +908,7 @@ let test_d5 () =
   let order_b = List.rev !order_b in
   let build order =
     let d = fresh_dir () in
-    let s = E4_cas.open_rw ~dir:d opts in
+    let s = open_writer ~dir:d opts in
     List.iter (fun i -> ignore (E4_cas.put s (fst built.(i)))) order;
     E4_cas.commit s;
     s
@@ -919,7 +931,7 @@ let test_d5 () =
   check "D5 the closure is a well-formed word" (E4_cas.word_wf ca);
   check "D5 the closure replays into a store that is closed"
     (let d = fresh_dir () in
-     let s = E4_cas.open_rw ~dir:d opts in
+     let s = open_writer ~dir:d opts in
      let r = E4_cas.apply_word s ca = Ok () in
      E4_cas.commit s;
      let c = E4_cas.closed (E4_cas.read_only s) in
@@ -944,7 +956,7 @@ let test_mutation () =
    | Some bytes ->
      let mutated = flip bytes (String.length bytes - 1) in
      let d = fresh_dir () in
-     let s = E4_cas.open_rw ~dir:d opts in
+     let s = open_writer ~dir:d opts in
      ignore (E4_cas.put s probe_schema);
      E4_cas.commit s;
      let ok_before = word_word (E4_cas.put s (Option.get (raw_node bytes))) = "fresh" in
@@ -1023,7 +1035,7 @@ let test_queries () =
 let test_reopen () =
   print_endline "-- a second view, and the durable prefix";
   let d = fresh_dir () in
-  let s = E4_cas.open_rw ~dir:d opts in
+  let s = open_writer ~dir:d opts in
   ignore (E4_cas.put s probe_schema);
   E4_cas.commit s;
   let ro = E4_cas.open_ro ~dir:d in
@@ -1037,15 +1049,13 @@ let test_reopen () =
   check "X5 the generation is strictly increasing across commits" (E4_cas.generation ro > g0);
   check "X5 a second writer is refused with Locked"
     (match E4_cas.open_rw ~dir:d opts with
-     | exception E4_cas.Locked _ -> true
-     | exception E4_pack.Locked _ -> true
-     | t ->
-       E4_cas.close t;
-       false);
+     | Error (E4_cas.Fault (E4_fault.Locked _)) -> true
+     | Error _ -> false
+     | Ok writer -> E4_cas.close writer; false);
   E4_cas.close_ro ro;
   E4_cas.close s;
   (* and after the writer is gone, a new writer opens it *)
-  let s2 = E4_cas.open_rw ~dir:d opts in
+  let s2 = open_writer ~dir:d opts in
   check "X5 the lock is released at close" (E4_cas.mem (E4_cas.read_only s2) entry_addr);
   check "X5 reopening admits nothing new"
     ((E4_cas.recovery s2).E4_cas.admitted = 0
@@ -1072,7 +1082,10 @@ let test_reopen () =
   check "CF10 open_ro refuses a store of scheme 1, naming the scheme"
     (refused (fun () -> E4_cas.close_ro (E4_cas.open_ro ~dir:d3)));
   check "CF10 open_rw refuses it too"
-    (refused (fun () -> E4_cas.close (E4_cas.open_rw ~dir:d3 opts)))
+    (match E4_cas.open_rw ~dir:d3 opts with
+     | Error (E4_cas.Fault (E4_fault.Store why)) -> String.equal why "control: otherScheme 1"
+     | Error _ -> false
+     | Ok writer -> E4_cas.close writer; false)
 
 (* ============================================================ *)
 

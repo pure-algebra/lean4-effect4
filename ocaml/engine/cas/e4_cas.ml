@@ -13,8 +13,6 @@
      8. opening, recovery, closing *)
 
 
-let host_limit_why = "a frame length at or above 2^62 (amendment M9)"
-
 (* ============================================================ 1. the view *)
 
 type counters = { mutable commits : int; mutable fsyncs : int; mutable conflicts : int }
@@ -65,15 +63,10 @@ type ro = view
 
 type outcome = Fresh | Duplicate | Conflict of E4_node.t | Corrupt of E4_addr.Addr.t
 
-type admission =
-  | Oversize
-  | Unknown_tag of int
-  | Host_limit of string
-  | Bad_version of int
-  | Malformed_ref
-  | Handle_in_content
-  | Dangling of E4_addr.Addr.t
-  | Wrong_kind of { at : E4_addr.Addr.t; expected : E4_kind.t; actual : E4_kind.t }
+type admission = E4_admission.t =
+  | Model of E4_admission.model
+  | Capacity of string
+  | Fault of E4_fault.t
 
 type verify_error =
   | Digest_mismatch of E4_addr.Addr.t
@@ -143,14 +136,21 @@ let outcome_word = function
   | Corrupt _ -> "corrupt"
 
 let admission_word = function
-  | Oversize -> "oversize"
-  | Unknown_tag t -> "unknownTag " ^ string_of_int t
-  | Host_limit why -> "hostLimit " ^ why
-  | Bad_version _ -> "badVersion"
-  | Malformed_ref -> "malformedRef"
-  | Handle_in_content -> "handleInContent"
-  | Dangling a -> "dangling " ^ E4_addr.Addr.hex a
-  | Wrong_kind _ -> "wrongKind"
+  | Model model -> (match model with
+    | E4_admission.Oversize -> "oversize"
+    | E4_admission.Unknown_tag tag -> "unknownTag " ^ string_of_int tag
+    | E4_admission.Bad_version -> "badVersion"
+    | E4_admission.Malformed_ref -> "malformedRef"
+    | E4_admission.Handle_in_content -> "handleInContent"
+    | E4_admission.Dangling addr -> "dangling " ^ E4_addr.Addr.hex addr
+    | E4_admission.Wrong_kind _ -> "wrongKind"
+    | E4_admission.Short_spec -> "shortSpec"
+    | E4_admission.Unregistered_kind byte -> "unregisteredKind " ^ string_of_int byte
+    | E4_admission.Bad_frame -> "badFrame"
+    | E4_admission.Trailing -> "trailing"
+    | E4_admission.Conflict _ -> "conflict")
+  | Capacity reason -> "capacity " ^ reason
+  | Fault fault -> E4_fault.word fault
 
 let verify_error_word = function
   | Digest_mismatch _ -> "digestMismatch"
@@ -366,19 +366,17 @@ let admission_stages = [ St_bad_version; St_malformed_ref; St_handle_in_content 
    first for the same reason (Store.putNode (src/Effect4/Store/Domain/Store.lean)).  The three that CAN move are the list, and
    moving amendment M2's handle test — A2 owner question OQ4 — is moving one element of it. *)
 let stage_refusal (n : E4_node.t) (sc : E4_node.scan) = function
-  | St_bad_version -> if n.E4_node.version <> 0 then Some (Bad_version n.E4_node.version) else None
-  | St_malformed_ref -> if sc.E4_node.malformed then Some Malformed_ref else None
+  | St_bad_version -> if n.E4_node.version <> 0 then Some (Model E4_admission.Bad_version) else None
+  | St_malformed_ref -> if sc.E4_node.malformed then Some (Model E4_admission.Malformed_ref) else None
   | St_handle_in_content ->
-    if E4_kind.is_content n.E4_node.kind && sc.E4_node.handles <> [] then Some Handle_in_content
+    if E4_kind.is_content n.E4_node.kind && sc.E4_node.handles <> [] then Some (Model E4_admission.Handle_in_content)
     else None
 
 let check_pure (n : E4_node.t) =
   (* ONE traversal of the payload for all three tests: `payload_ok`, `malformed_ref` and
      `handles` are the same walk, and the put path is hot. *)
   match E4_node.scan_payload n.E4_node.payload with
-  | Error E4_node.Host_limit -> Error (Host_limit host_limit_why)
-  | Error (E4_node.Unknown_tag t) -> Error (Unknown_tag t)
-  | Error _ -> Error Oversize
+  | Error why -> Error (E4_admission.of_decode why)
   | Ok sc ->
     let rec go = function
       | [] -> Ok ()
@@ -394,14 +392,76 @@ let check_edges view (n : E4_node.t) =
     | [] -> Ok ()
     | (e : E4_addr.Ref.t) :: rest -> (
       match get_kind view e.E4_addr.Ref.addr with
-      | None -> Error (Dangling e.E4_addr.Ref.addr)
+      | None -> Error (Model (E4_admission.Dangling e.E4_addr.Ref.addr))
       | Some k ->
         if E4_kind.equal k e.E4_addr.Ref.kind then go rest
-        else Error (Wrong_kind { at = e.E4_addr.Ref.addr; expected = e.E4_addr.Ref.kind; actual = k }))
+        else Error (Model (E4_admission.Wrong_kind (e.E4_addr.Ref.addr, e.E4_addr.Ref.kind, k))))
   in
   go (E4_node.checked_edges n)
 
 let admissible view n = match check_pure n with Error a -> Error a | Ok () -> check_edges view n
+
+
+(* A snapshot contains values only: no mutable view, index, or pack handle. *)
+type image = {
+  image_nodes : (E4_addr.Addr.t * string) list;
+  image_roots : E4_control.root list;
+  image_boundary : int * int;
+}
+
+let empty_admission_view view =
+  {view with v_index = Some (E4_index.create ~slots:8); v_cids = None;
+    v_end = E4_index.from_start; v_staged = Hashtbl.create 16; v_order = [];
+    v_control = E4_control.initial}
+
+let checked_image view =
+  let shadow = empty_admission_view view in
+  let bytes = ref [] and ending = ref E4_index.from_start in
+  let exception Refused_image of admission in
+  let refuse why = raise (Refused_image why) in
+  let record_fault (seg, off) reason = Fault (E4_fault.Record {seg; off; reason}) in
+  try
+    let stop =
+      if not (pos_lt E4_index.from_start view.v_end) then E4_pack.Eof else
+      walk_records view ~from:E4_index.from_start ~upto:view.v_end ~f:(fun ((seg, off) as position) record ->
+        let address = record.E4_pack.r_addr in
+        let raw = match E4_pack.read_at view.v_reader ~seg ~off with
+          | None -> refuse (record_fault position "record checksum or framing")
+          | Some (_, raw) -> raw in
+        if not (String.equal (E4_sha256.digest raw) (key_of address)) then
+          refuse (Fault (E4_fault.Corrupt address));
+        let node = match E4_node.decode raw with
+          | Error why -> refuse (E4_admission.of_decode why)
+          | Ok node -> node in
+        (match admissible shadow node with Error why -> refuse why | Ok () -> ());
+        (match Hashtbl.find_opt shadow.v_staged (key_of address) with
+         | Some old when not (String.equal old.st_bytes raw) ->
+           (match E4_node.decode old.st_bytes with
+            | Ok occupant -> refuse (Model (E4_admission.Conflict (address, occupant)))
+            | Error why -> refuse (E4_admission.of_decode why))
+         | Some _ -> ()
+         | None -> Hashtbl.add shadow.v_staged (key_of address)
+             {st_bytes = raw; st_seg = seg; st_off = off; st_kind = node.E4_node.kind});
+        bytes := (address, String.sub raw 0 (String.length raw)) :: !bytes;
+        ending := record_end position record.E4_pack.r_len)
+    in
+    if !ending <> view.v_end then
+      refuse (record_fault !ending ("durable boundary: " ^ E4_pack.scan_stop_to_string stop));
+    let rec roots names = function
+      | [] -> ()
+      | (root : E4_control.root) :: rest ->
+        if List.exists (String.equal root.name) names then
+          refuse (Fault (E4_fault.Root {name = root.name; reason = "duplicate name"}));
+        (match get_kind shadow root.head.digest with
+         | None -> refuse (Fault (E4_fault.Root {name = root.name; reason = "target absent from durable image"}))
+         | Some kind when not (E4_kind.equal kind root.kind) ->
+           refuse (Fault (E4_fault.Root {name = root.name; reason = "target kind"}))
+         | Some _ -> ());
+        roots (root.name :: names) rest in
+    let image_roots = E4_control.roots view.v_control in
+    roots [] image_roots;
+    Ok {image_nodes = List.rev !bytes; image_roots; image_boundary = view.v_end}
+  with Refused_image why -> Error why
 
 (* ============================================================ 5. put, commit, roots *)
 
@@ -426,7 +486,7 @@ let occupant_node bytes =
         raise (Store_error "the occupant's kind byte is not registered; it cannot be exhibited"))
     else raise (Store_error "the occupant is shorter than a node header")
 
-let put t (n : E4_node.t) =
+let put_admitted t (n : E4_node.t) =
   ensure_open t;
   let view = t.w_view in
   match admissible view n with
@@ -452,13 +512,16 @@ let put t (n : E4_node.t) =
       view.v_order <- key :: view.v_order;
       Ok (Fresh, addr))
 
+(* Both native entrances read the exact raw bytes before shared node admission. *)
 let put_bytes t bytes =
   match E4_node.decode bytes with
-  | Ok n -> put t n
-  | Error (E4_node.Bad_version b) -> Error (Bad_version b)
-  | Error E4_node.Host_limit -> Error (Host_limit host_limit_why)
-  | Error (E4_node.Unknown_tag t) -> Error (Unknown_tag t)
-  | Error _ -> Error Oversize
+  | Ok node -> put_admitted t node
+  | Error why -> Error (E4_admission.of_decode why)
+
+let put t (node : E4_node.t) =
+  if node.E4_node.version < 0 || node.E4_node.version > 255 then
+    Error (Capacity "node version is outside the byte domain")
+  else put_bytes t (E4_node.encode node)
 
 let promote_staged view =
   if Hashtbl.length view.v_staged > 0 then begin
@@ -569,6 +632,103 @@ let move_at_head view name policy (target : E4_control.target) =
   match root view name with
   | None -> E4_control.Create (name, policy, target)
   | Some old -> E4_control.Advance (name, old.E4_control.head, target)
+
+(* Transactions preflight entirely in a private value view before staging any bytes. *)
+type transaction = { txn_nodes : string list; txn_moves : E4_control.move list }
+type node_outcome = Fresh_node | Duplicate_node
+type move_outcome = Created of Z.t | Advanced of Z.t | Duplicate_move of Z.t
+type receipt = {
+  receipt_nodes : (E4_addr.Addr.t * node_outcome) list;
+  receipt_moves : move_outcome list;
+}
+type transaction_error =
+  | Node_refused of { index : Z.t; why : admission }
+  | Move_refused of { name : string; why : E4_control.root_error }
+  | Host_refused of admission
+
+type commit_point = Before_write of int | After_write of int | After_sync | Before_publish | After_publish
+
+type prepared = {
+  prepared_fresh : (E4_addr.Addr.t * E4_node.t * string) list;
+  prepared_control : E4_control.t;
+  prepared_receipt : receipt;
+}
+
+let prepare_transaction view transaction =
+  let shadow = {view with v_staged = Hashtbl.copy view.v_staged; v_order = view.v_order} in
+  let exception Refused_transaction of transaction_error in
+  let refuse why = raise (Refused_transaction why) in
+  try
+    let fresh = ref [] in
+    let outcomes = List.mapi (fun index raw ->
+      let node = match E4_node.decode raw with
+        | Error why -> refuse (Node_refused {index = Z.of_int index; why = E4_admission.of_decode why})
+        | Ok node -> node in
+      (match admissible shadow node with Error why -> refuse (Node_refused {index = Z.of_int index; why}) | Ok () -> ());
+      let address = E4_addr.Addr.of_digest (E4_sha256.digest raw) in
+      let outcome = match resident_bytes shadow address with
+        | Some bytes when String.equal bytes raw -> Duplicate_node
+        | Some bytes ->
+          let why = if not (String.equal (E4_sha256.digest bytes) (key_of address)) then
+            Fault (E4_fault.Corrupt address)
+          else match E4_node.decode bytes with
+            | Error why -> E4_admission.of_decode why
+            | Ok occupant -> Model (E4_admission.Conflict (address, occupant)) in
+          refuse (Node_refused {index = Z.of_int index; why})
+        | None ->
+          Hashtbl.add shadow.v_staged (key_of address)
+            {st_bytes = raw; st_seg = 0; st_off = 0; st_kind = node.E4_node.kind};
+          fresh := (address, node, raw) :: !fresh;
+          Fresh_node in
+      address, outcome) transaction.txn_nodes in
+    let moves = List.map (fun move ->
+      let name = match move with E4_control.Create (name, _, _) | E4_control.Advance (name, _, _) -> name in
+      let before = root shadow name in
+      match E4_control.advance_root shadow.v_control ~resolve:(get_kind shadow)
+          ~parent:(designated_parent shadow) move with
+      | Error why -> refuse (Move_refused {name; why})
+      | Ok control ->
+        shadow.v_control <- control;
+        match root shadow name, before with
+        | Some next, None -> Created next.head.generation
+        | Some next, Some previous when E4_control.head_equal next.head previous.head ->
+          Duplicate_move next.head.generation
+        | Some next, Some _ -> Advanced next.head.generation
+        | None, _ -> refuse (Host_refused (Fault (E4_fault.Store "accepted move has no root")))) transaction.txn_moves in
+    (try ignore (E4_control.encode shadow.v_control) with
+     | Invalid_argument reason -> refuse (Host_refused (Capacity reason)));
+    Ok {prepared_fresh = List.rev !fresh; prepared_control = shadow.v_control;
+      prepared_receipt = {receipt_nodes = outcomes; receipt_moves = moves}}
+  with Refused_transaction why -> Error why
+
+let commit_transaction ?hook writer transaction =
+  ensure_open writer;
+  let view = writer.w_view in
+  match checked_image view with
+  | Error why -> Error (Host_refused why)
+  | Ok _ -> match prepare_transaction view transaction with
+    | Error why -> Error why
+    | Ok prepared ->
+      let call point = match hook with None -> () | Some callback -> callback point in
+      List.iteri (fun index (address, node, raw) ->
+        call (Before_write index);
+        let seg, off = E4_pack.stage writer.w_pack ~addr:address ~node_bytes:raw in
+        Hashtbl.replace view.v_staged (key_of address)
+          {st_bytes = raw; st_seg = seg; st_off = off; st_kind = node.E4_node.kind};
+        view.v_order <- key_of address :: view.v_order;
+        (match hook with None -> () | Some _ -> E4_pack.flush writer.w_pack);
+        call (After_write (index + 1))) prepared.prepared_fresh;
+      E4_pack.sync writer.w_pack;
+      call After_sync;
+      promote_staged view;
+      let ending = E4_pack.pack_end writer.w_pack in
+      if ending <> view.v_end then refresh_reader view;
+      view.v_end <- ending;
+      call Before_publish;
+      view.v_control <- E4_control.set_pack_end prepared.prepared_control ending;
+      write_control view;
+      call After_publish;
+      Ok prepared.prepared_receipt
 
 (* ============================================================ 6. words *)
 
@@ -957,14 +1117,8 @@ let readmit_tail view ~from ~pack_recovery =
              end
              else (
                match E4_node.decode bytes with
-               | Error E4_node.Host_limit ->
-                 stop := Refused { seg; off; addr = a; why = Host_limit host_limit_why };
-                 raise Exit
-               | Error (E4_node.Bad_version b) ->
-                 stop := Refused { seg; off; addr = a; why = Bad_version b };
-                 raise Exit
-               | Error _ ->
-                 stop := Refused { seg; off; addr = a; why = Oversize };
+               | Error why ->
+                 stop := Refused { seg; off; addr = a; why = E4_admission.of_decode why };
                  raise Exit
                | Ok n -> (
                  match admissible view n with
@@ -983,22 +1137,27 @@ let readmit_tail view ~from ~pack_recovery =
   { from; admitted = !admitted; duplicates = !duplicates; ends_at = !ends_at; stop = !stop;
     pack = pack_recovery }
 
-let open_rw ~dir opts =
+let open_rw_exn ~dir opts =
   mkdir_p dir;
   mkdir_p (Filename.concat dir "index");
   E4_control.cleanup ~dir;
   let control = match read_control ~dir with Some p -> p | None -> E4_control.initial in
-  let want = clamp_watermark ~dir (E4_control.pack_end control) in
+  let published = E4_control.pack_end control in
+  let want = clamp_watermark ~dir published in
+  let empty_sentinel = published = (0, 0) && E4_control.roots control = [] in
+  if want <> published && not empty_sentinel then
+    raise (Store_error "published durable boundary is outside the pack");
   let pack =
     try E4_pack.open_at ~from:want ~verify:true ~truncate:true ~dir ~seg_max:opts.seg_max ()
     with
     | E4_pack.Locked d -> raise (Locked d)
-    | E4_pack.Bad_pack why -> raise (Store_error ("pack: " ^ why))
   in
+  let acquired_view = ref None in
+  try (
   let view = make_view ~dir ~slots:opts.index_slots ~control ~upto:want in
-  (* Everything below the watermark was admitted when it was written and the control commit is
-     the proof; the index over it is a cache with a rebuild (L-IDX-0), so a valid snapshot is
-     loaded and anything else is rebuilt from the pack. *)
+  acquired_view := Some view;
+  (* The control boundary limits tail recovery. checked_image separately reads and admits
+     every durable record before Disk exposes its value snapshot. The index is a cache. *)
   (match
      try E4_index.load_at ~path:(index_path ~dir) ~pack_end:want with
      | Sys_error _ | Unix.Unix_error _ -> Error E4_index.No_file
@@ -1030,5 +1189,22 @@ let open_rw ~dir opts =
       close t;
       raise (Store_error ("verify: " ^ verify_error_word e)));
   t
+) with failure ->
+    (match !acquired_view with Some view -> close_ro view | None -> ());
+    (try E4_pack.close pack with Invalid_argument _ | Unix.Unix_error _ -> ());
+    raise failure
+
+(* The disk opening boundary returns faults as values, including sealed damage. *)
+let open_rw ~dir opts =
+  try Ok (open_rw_exn ~dir opts) with
+  | E4_pack.Damaged_sealed {seg; off; reason} ->
+    Error (Fault (E4_fault.Sealed_segment {seg; off; reason = E4_pack.scan_stop_to_string reason}))
+  | E4_pack.Bad_pack reason -> Error (Fault (E4_fault.Pack reason))
+  | Locked directory | E4_pack.Locked directory -> Error (Fault (E4_fault.Locked directory))
+  | Store_error reason -> Error (Fault (E4_fault.Store reason))
+  | Invalid_argument reason -> Error (Capacity reason)
+  | Sys_error reason -> Error (Fault (E4_fault.Io reason))
+  | Unix.Unix_error (error, call, argument) ->
+    Error (Fault (E4_fault.Io (call ^ " " ^ argument ^ ": " ^ Unix.error_message error)))
 
 let recovery t = t.w_recovery

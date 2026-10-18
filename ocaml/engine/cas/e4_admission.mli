@@ -18,6 +18,6 @@ type model =
   | Bad_version
   | Conflict of E4_addr.Addr.t * E4_node.t
 
-type t = Model of model | Capacity of string
+type t = Model of model | Capacity of string | Fault of E4_fault.t
 
 val of_decode : E4_node.decode_error -> t

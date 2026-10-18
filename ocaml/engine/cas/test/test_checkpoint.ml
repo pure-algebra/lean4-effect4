@@ -39,6 +39,11 @@ module En = E4_engine.Fast
 module Ck = E4_checkpoint
 module Ch = E4_chunk
 
+let open_writer ~dir opts =
+  match E4_cas.open_rw ~dir opts with
+  | Ok writer -> writer
+  | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+
 let failures = ref 0
 let checks = ref 0
 
@@ -443,7 +448,7 @@ let job_node ~spec tag =
 
 (* a store with the pending schema and one job filed *)
 let store_with_job ?(tag = "job-a") dir =
-  let st = E4_cas.open_rw ~dir opts in
+  let st = open_writer ~dir opts in
   let spec = Ck.ensure_schema st in
   let job = put_ok st (job_node ~spec tag) in
   E4_cas.commit st;
@@ -521,13 +526,13 @@ let round_trips () =
     (match
        Ck.write st ~job:(addr_of 77) ~position:0 ~machine_image:small ~prev:None ()
      with
-     | Error (Ck.Refused (E4_cas.Dangling a)) -> E4_addr.Addr.equal a (addr_of 77)
+     | Error (Ck.Refused (E4_cas.Model (E4_admission.Dangling a))) -> E4_addr.Addr.equal a (addr_of 77)
      | _ -> false);
   check "CP2 a checkpoint whose prev is not stored is refused Dangling"
     (match
        Ck.write st ~job ~position:9 ~machine_image:small ~prev:(Some (addr_of 78)) ~head:false ()
      with
-     | Error (Ck.Refused (E4_cas.Dangling _)) -> true
+     | Error (Ck.Refused (E4_cas.Model (E4_admission.Dangling _))) -> true
      | _ -> false);
   E4_cas.close st;
   (* ---- LAW LOG-REL ---- *)
@@ -574,7 +579,7 @@ let round_trips () =
      order must give the same checkpoint address (differential D3 in miniature) *)
   let d3 = fresh_dir () in
   let st3 =
-    E4_cas.open_rw ~dir:d3 { E4_cas.seg_max = 4096; index_slots = 8; verify_on_open = false }
+    open_writer ~dir:d3 { E4_cas.seg_max = 4096; index_slots = 8; verify_on_open = false }
   in
   let spec3 = Ck.ensure_schema st3 in
   (* file some unrelated nodes first, so the pack layout and the insertion order differ *)
@@ -739,7 +744,7 @@ let occupied () =
   (* (a) the schema's address holds other bytes *)
   let d = fresh_dir () in
   forge d [ (E4_addr.Addr.bytes Ck.schema_address, squatter) ];
-  let st = E4_cas.open_rw ~dir:d opts in
+  let st = open_writer ~dir:d opts in
   let ro = E4_cas.read_only st in
   let before = E4_cas.count ro in
   (match Ck.write st ~job ~position:0 ~machine_image:img ~prev:None () with
@@ -763,7 +768,7 @@ let occupied () =
     [ (E4_addr.Addr.bytes Ck.schema_address, E4_node.encode Ck.schema_node);
       (E4_addr.Addr.bytes job, job_bytes);
       (E4_addr.Addr.bytes cp_addr, squatter) ];
-  let st = E4_cas.open_rw ~dir:d opts in
+  let st = open_writer ~dir:d opts in
   let ro = E4_cas.read_only st in
   let before = E4_cas.count ro in
   (match Ck.write st ~job ~position:0 ~machine_image:img ~prev:None () with
