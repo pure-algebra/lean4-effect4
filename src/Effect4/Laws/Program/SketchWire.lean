@@ -16,8 +16,8 @@ of exact embeddings is one. Requirement R14 (program as data), under decisions r
 - **`sketch-wire`** (claim, role compatibility; pointer `Sketch.decode_exact`). Reach: every
   sketch whose two value trees are well-formed. Not established: a stored sketch's renumbering
   when its application gains a row (`sketch-renumbering`); the admission of the hole table
-  (`sketch-admission`). Consumer: the query tool, whose requests carry a hole table and whose
-  omission answers carry the grown one.
+  (`sketch-admission`). Consumer: none since the query tool was retired (seams §2.2); the
+  session tool carries a sketch through its generated codec.
 -/
 
 set_option autoImplicit false

@@ -87,20 +87,10 @@ the encoding `ts/eff/eff.gen.ts` types, and `Canonical.ofJsonAnyOrder` reads it.
 def printJson {α : Type} [Canonical α] (a : α) : Lean.Json :=
   toLeanJson (Canonical.printArrays a)
 
-/-! ## A value on the wire: its canonical bytes in hex, or its JSON print
-
-Every carrier a tool takes or gives travels one of two ways, read by one function each, at every
-canonical carrier: a program, a filling, a hole table, a row table, service declarations. -/
+/-! ## A value read from its JSON print -/
 
 /-- The nesting a request's JSON may take. -/
 def depth : Nat := 4096
-
-/-- **A value from its canonical bytes in lowercase hex**: the store's exact decoder. -/
-def ofHex? {α : Type} [Canonical α] (hex : String) : Option α :=
-  (bytesOfHex hex.toList).bind Canonical.decode
-
-/-- **A value's canonical bytes**, in lowercase hex. -/
-def toHex {α : Type} [Canonical α] (a : α) : String := hexString (Canonical.encode a)
 
 /-- **A value from its JSON print**: its objects in any order, its lists as arrays or as their
 cases (`Canonical.ofJsonAnyOrder`). -/

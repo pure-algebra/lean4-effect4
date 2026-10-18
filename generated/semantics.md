@@ -2877,7 +2877,7 @@ Effect4.Program.MaskRowsPremises
 
 ### sketch-wire
 
-A sketch's bytes are its program's canonical bytes and its hole table's (Sketch.encode): a well-formed sketch reads back (Sketch.decode_encode), and whatever reads was that sketch's bytes, well-formed (Sketch.decode_exact); the query tool takes a hole table with a request and gives the grown one with an omission, so the sketch it answers can be sent back; nothing of a stored sketch's renumbering when its application gains a row (decisions row 305, point 3)
+A sketch's bytes are its program's canonical bytes and its hole table's (Sketch.encode): a well-formed sketch reads back (Sketch.decode_encode), and whatever reads was that sketch's bytes, well-formed (Sketch.decode_exact); no consumer since the query tool was retired (seams §2.2), the session tool carrying a sketch through its generated codec; nothing of a stored sketch's renumbering when its application gains a row (decisions row 305, point 3)
 
 Exactness: whatever reads as a sketch was that sketch's bytes, and its value trees are well-formed. The pointer of `sketch-wire`.
 
@@ -4023,7 +4023,7 @@ Module: `Effect4.Laws.Program.Typing.Replace`
 
 The address table of a program has one entry for each address of a node, and no other (mem_addresses_iff); an entry of a program holds the environment that the step function answers and the checker's answer there; the distinct refusals of the entries start with the located refusal of explain (refusals_head), and the list is empty exactly when the checker admits the program; an entry after a refused sibling is not reached and holds no answer; the table is a specification, and each entry costs up to one check of the program; no law orders the refusals after the head (decisions row 302)
 
-The list of refusals is empty exactly when the checker admits the program. It is the table's form of `explain_none_iff`. The pointer of the claim `address-table`. Its consumer is the query driver's refusals (slice QUERY).
+The list of refusals is empty exactly when the checker admits the program. It is the table's form of `explain_none_iff`. The pointer of the claim `address-table`. Its consumer is R14, which lists it among its tops (`tools/ProofGraph/Registry.lean`).
 
 Module: `Effect4.Laws.Program.Typing.Table`
 
@@ -4120,7 +4120,7 @@ Module: `Effect4.Laws.Program.Edit`
 
 The address table of a sketch reads a whole program, definition block included: the root's entry holds the module check's answer, and every other address is read in the part that holds it, at the part's signature and environment, located at the whole program's address; the distinct refusals start with the sketch's check's refusal (Sketch.refusals_head), and the list is empty exactly when the sketch checks; every part of a typed module is typed (moduleHasTy_partAt_typed); no law orders the refusals after the head, and no law yet equates the table with the program's off a block (cutover slice S1; decisions rows 302, 328 and 333)
 
-The list of refusals of a sketch is empty exactly when the sketch checks, block included: the proposed claim `module-address-table`. Its consumer is the query tool's refusals.
+The list of refusals of a sketch is empty exactly when the sketch checks, block included: the proposed claim `module-address-table`. Its consumer is the edit session's view (`EditSession.view_refusals`).
 
 Module: `Effect4.Laws.Program.Sketch`
 

@@ -25,8 +25,8 @@ proves what a caller reads from each:
 
 Placement (AGENTS.md, Trust): concept initial-algebras-folds (`docs/core/semantics.md` §2.7),
 requirement R14. The claims are `address-table` (pointer `refusals_nil_iff`) and
-`term-slot-environment` (pointer `hasTy_extSlotEnv`). The consumers are the query driver
-(slice QUERY of `docs/research/2026-10-06-next-slices-plan.md`), the TypeScript printer at an
+`term-slot-environment` (pointer `hasTy_extSlotEnv`). The consumers are the session tool's reads
+(its address table, addresses and term slots, `Tool/Queries.lean`), the TypeScript printer at an
 eliminator inside a term (slice PRINT), and a pass that answers every address (slice PASS),
 whose specification is the table.
 
@@ -75,7 +75,8 @@ theorem yieldAt_addressYield (m : Node Op) (p : List Nat) :
 /-- **The address list holds exactly the addresses of a node's nodes**: a path is in
 `Node.addresses` exactly when a node stands at it. It is `Node.mem_foldList_iff` at the address
 yield. It says nothing of the order of the list. A step of `address-table`. Its consumers are
-the table's entries, each of which stands at an address, and the query driver (slice QUERY). -/
+the table's entries, each of which stands at an address, and the session tool's `addresses`
+read. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem mem_addresses_iff (n : Node Op) (a : List Nat) :
     a ∈ Node.addresses n ↔ (n.at_ a).isSome = true := by
@@ -149,8 +150,7 @@ theorem refusals_of_hasTy {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {T : Ef
 
 /-- **The head of the list of refusals is the located refusal of `explain`.** The root's entry
 is first in the table, and its answer is the checker's on the whole program. It says nothing
-of the order after the head. A step of `address-table`. Its consumers are `refusals_nil_iff`
-and the query driver's refusals (slice QUERY). -/
+of the order after the head. A step of `address-table`. Its consumer is `refusals_nil_iff`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem refusals_head (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
     (refusals s env0 p).head? = explain s env0 p := by
@@ -172,7 +172,7 @@ theorem refusals_head (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
 
 /-- **The list of refusals is empty exactly when the checker admits the program.** It is the
 table's form of `explain_none_iff`. The pointer of the claim `address-table`. Its consumer is
-the query driver's refusals (slice QUERY). -/
+R14, which lists it among its tops (`tools/ProofGraph/Registry.lean`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem refusals_nil_iff (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
     refusals s env0 p = [] ↔ (effTy s env0 p).isSome = true := by

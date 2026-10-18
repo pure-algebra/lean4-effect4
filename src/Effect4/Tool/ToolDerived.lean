@@ -29,15 +29,16 @@
 --    Effect4.Machine.MemoMap Effect4.Machine.TimerStore Effect4.Machine.ExternalStore \
 --    Effect4.Machine.Stores Effect4.Run.Tree.Outcome@(List@Effect4.Machine.ExitV) \
 --    Effect4.Tool.Origin Effect4.Tool.RunId Effect4.Tool.RunForm Effect4.Tool.PreviewQuery \
---    Effect4.Tool.Action Effect4.Tool.Query Effect4.Tool.Request Effect4.Tool.HoleView \
---    Effect4.Tool.Inspection Effect4.Tool.DocView Effect4.Tool.Refusal \
---    Effect4.Tool.ActionAnswer Except@Effect4.Tool.Refusal@Effect4.Tool.ActionAnswer \
---    Effect4.Tool.Candidate Effect4.Tool.RunAnswer Effect4.Tool.PreviewAnswer \
---    Effect4.Tool.Answer Except@Effect4.Tool.Refusal@Effect4.Tool.Answer Effect4.Tool.Reply \
+--    Effect4.Tool.Action Effect4.Program.ExtSlot Effect4.Tool.Query Effect4.Tool.Request \
+--    Effect4.Tool.HoleView Effect4.Tool.SlotView Effect4.Tool.Inspection Effect4.Tool.DocView \
+--    Effect4.Tool.Refusal Effect4.Tool.ActionAnswer \
+--    Except@Effect4.Tool.Refusal@Effect4.Tool.ActionAnswer Effect4.Tool.Candidate \
+--    Effect4.Tool.RunAnswer Effect4.Tool.PreviewAnswer Effect4.Tool.Answer \
+--    Except@Effect4.Tool.Refusal@Effect4.Tool.Answer Effect4.Tool.Reply \
 --    Effect4.Tool.CodecProfile.Refusal Effect4.Tool.Wire.Refusal \
 --    Effect4.Tool.Wire.Envelope@Effect4.Tool.Request \
 --    Effect4.Tool.Wire.Envelope@Effect4.Tool.Reply
--- Carriers read from: Effect4.Program.Sketch, Effect4.Program.Typing.Focus, Effect4.Program.Edit, Effect4.Program.Typing.SourceDocument, Effect4.Program.Typing.SourceSession, Effect4.Program.Typing.FillSet, Effect4.Program.Typing.CheckCache, Effect4.Api, Effect4.Run.LiveRecord, Effect4.Run.Event, Effect4.Program.Typing.Call, Effect4.Run.View, Effect4.Machine.Wake, Effect4.Machine.Alphabets, Effect4.Machine.Stores, Effect4.Program.Compile, Effect4.Machine.Context, Effect4.Run.Preview, Effect4.Run.Tree, Effect4.Machine.Scope, Effect4.Machine.Timer, Effect4.Tool.Origin, Effect4.Tool.Protocol, Init.Prelude, Effect4.Tool.CodecProfile, Effect4.Tool.WireTypes
+-- Carriers read from: Effect4.Program.Sketch, Effect4.Program.Typing.Focus, Effect4.Program.Edit, Effect4.Program.Typing.SourceDocument, Effect4.Program.Typing.SourceSession, Effect4.Program.Typing.FillSet, Effect4.Program.Typing.CheckCache, Effect4.Api, Effect4.Run.LiveRecord, Effect4.Run.Event, Effect4.Program.Typing.Call, Effect4.Run.View, Effect4.Machine.Wake, Effect4.Machine.Alphabets, Effect4.Machine.Stores, Effect4.Program.Compile, Effect4.Machine.Context, Effect4.Run.Preview, Effect4.Run.Tree, Effect4.Machine.Scope, Effect4.Machine.Timer, Effect4.Tool.Origin, Effect4.Tool.Protocol, Effect4.Program.Typing.Table, Init.Prelude, Effect4.Tool.CodecProfile, Effect4.Tool.WireTypes
 import Effect4.Tool.Serve
 import Effect4.Tool.WireTypes
 import Effect4.Tool.CheckDerived
@@ -8802,6 +8803,62 @@ instance instCanonical : Canonical (_root_.Effect4.Tool.Action) :=
 
 end T_95_root_95__46_Effect4_46_Tool_46_ActionC
 
+namespace T_95_root_95__46_Effect4_46_Program_46_ExtSlotC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "_root_.Effect4.Program.ExtSlot"
+     [("catchIfTest", 0, []),
+      ("iterateTest", 1, []),
+      ("iterateStep", 2, []),
+      ("iterateResult", 3, []),
+      ("opTerm", 4, [])],
+   []⟩
+
+def toVal : _root_.Effect4.Program.ExtSlot → Val
+  | .catchIfTest => .ctor 0 []
+  | .iterateTest => .ctor 1 []
+  | .iterateStep => .ctor 2 []
+  | .iterateResult => .ctor 3 []
+  | .opTerm => .ctor 4 []
+
+def ofVal : Val → Option (_root_.Effect4.Program.ExtSlot)
+  | .ctor 0 [] => some .catchIfTest
+  | .ctor 1 [] => some .iterateTest
+  | .ctor 2 [] => some .iterateStep
+  | .ctor 3 [] => some .iterateResult
+  | .ctor 4 [] => some .opTerm
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Program.ExtSlot) : ofVal (toVal a) = some a := by
+  cases a with
+  | «catchIfTest» => rfl
+  | «iterateTest» => rfl
+  | «iterateStep» => rfl
+  | «iterateResult» => rfl
+  | «opTerm» => rfl
+
+theorem fits (a : _root_.Effect4.Program.ExtSlot) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «catchIfTest» =>
+    exact accepts_sum _ _ _ 0 "catchIfTest" [] [] rfl (acceptsFields_nil _)
+  | «iterateTest» =>
+    exact accepts_sum _ _ _ 1 "iterateTest" [] [] rfl (acceptsFields_nil _)
+  | «iterateStep» =>
+    exact accepts_sum _ _ _ 2 "iterateStep" [] [] rfl (acceptsFields_nil _)
+  | «iterateResult» =>
+    exact accepts_sum _ _ _ 3 "iterateResult" [] [] rfl (acceptsFields_nil _)
+  | «opTerm» =>
+    exact accepts_sum _ _ _ 4 "opTerm" [] [] rfl (acceptsFields_nil _)
+
+instance instCanonical : Canonical (_root_.Effect4.Program.ExtSlot) :=
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end T_95_root_95__46_Effect4_46_Program_46_ExtSlotC
+
 namespace T_95_root_95__46_Effect4_46_Tool_46_QueryC
 
 def shapeDoc : ShapeDoc :=
@@ -8817,12 +8874,18 @@ def shapeDoc : ShapeDoc :=
         ("form", (shape _root_.Effect4.Tool.RunForm).root)]),
       ("preview", 5, [("q", (shape _root_.Effect4.Tool.PreviewQuery).root)]),
       ("dry", 6, [("a", (shape _root_.Effect4.Tool.Action).root)]),
-      ("discover", 7, [])],
+      ("discover", 7, []),
+      ("table", 8, []),
+      ("addresses", 9, []),
+      ("slots", 10, [("at_", (shape (@_root_.List (_root_.Nat))).root),
+        ("slot", (shape (@_root_.Option (_root_.Effect4.Program.ExtSlot))).root)])],
    (shape (@_root_.Option (@_root_.List (_root_.Nat)))).defs ++
      (shape _root_.Effect4.Program.Snap).defs ++ (shape _root_.Effect4.Program.Place).defs ++
      (shape (@_root_.List (_root_.Effect4.Program.NativeEff))).defs ++ (shape _root_.Nat).defs ++
      (shape _root_.Effect4.Tool.RunId).defs ++ (shape _root_.Effect4.Tool.RunForm).defs ++
-     (shape _root_.Effect4.Tool.PreviewQuery).defs ++ (shape _root_.Effect4.Tool.Action).defs⟩
+     (shape _root_.Effect4.Tool.PreviewQuery).defs ++ (shape _root_.Effect4.Tool.Action).defs ++
+     (shape (@_root_.List (_root_.Nat))).defs ++
+     (shape (@_root_.Option (_root_.Effect4.Program.ExtSlot))).defs⟩
 
 def toVal : _root_.Effect4.Tool.Query → Val
   | .doc a0 => .ctor 0 [Canonical.toVal a0]
@@ -8834,6 +8897,9 @@ def toVal : _root_.Effect4.Tool.Query → Val
   | .preview a0 => .ctor 5 [Canonical.toVal a0]
   | .dry a0 => .ctor 6 [Canonical.toVal a0]
   | .discover => .ctor 7 []
+  | .table => .ctor 8 []
+  | .addresses => .ctor 9 []
+  | .slots a0 a1 => .ctor 10 [Canonical.toVal a0, Canonical.toVal a1]
 
 def ofVal : Val → Option (_root_.Effect4.Tool.Query)
   | .ctor 0 [v0] => (Canonical.ofVal (α := (@_root_.Option (@_root_.List (_root_.Nat)))) v0).map .doc
@@ -8854,6 +8920,13 @@ def ofVal : Val → Option (_root_.Effect4.Tool.Query)
   | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.Effect4.Tool.PreviewQuery) v0).map .preview
   | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.Effect4.Tool.Action) v0).map .dry
   | .ctor 7 [] => some .discover
+  | .ctor 8 [] => some .table
+  | .ctor 9 [] => some .addresses
+  | .ctor 10 [v0, v1] =>
+    match Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0,
+        Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.ExtSlot))) v1 with
+    | some a0, some a1 => some (.slots a0 a1)
+    | _, _ => none
   | _ => none
 
 /-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
@@ -8881,6 +8954,12 @@ theorem ofVal_arm5 (v0 : Val) :
 theorem ofVal_arm6 (v0 : Val) :
     ofVal (.ctor 6 [v0]) =
       (Canonical.ofVal (α := _root_.Effect4.Tool.Action) v0).map .dry := rfl
+theorem ofVal_arm10 (v0 : Val) (v1 : Val) :
+    ofVal (.ctor 10 [v0, v1]) =
+      (match Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0,
+          Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.ExtSlot))) v1 with
+      | some a0, some a1 => some (.slots a0 a1)
+      | _, _ => none) := rfl
 
 theorem ofVal_toVal (a : _root_.Effect4.Tool.Query) : ofVal (toVal a) = some a := by
   cases a with
@@ -8892,45 +8971,57 @@ theorem ofVal_toVal (a : _root_.Effect4.Tool.Query) : ofVal (toVal a) = some a :
   | «preview» a0 => simp only [toVal, ofVal_arm5, Canonical.ofVal_toVal, Option.map_some]
   | «dry» a0 => simp only [toVal, ofVal_arm6, Canonical.ofVal_toVal, Option.map_some]
   | «discover» => rfl
+  | «table» => rfl
+  | «addresses» => rfl
+  | «slots» a0 a1 => simp only [toVal, ofVal_arm10, Canonical.ofVal_toVal]
 
 theorem lift_T_64__95_root_95__46_Option_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41_ (x : (@_root_.Option (@_root_.List (_root_.Nat)))) :
     acceptsIn shapeDoc.defs (shape (@_root_.Option (@_root_.List (_root_.Nat)))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Program_46_Snap (x : _root_.Effect4.Program.Snap) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Snap).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Program_46_Place (x : _root_.Effect4.Program.Place) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Place).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_NativeEff_41_ (x : (@_root_.List (_root_.Effect4.Program.NativeEff))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Program.NativeEff))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Nat (x : _root_.Nat) :
     acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_RunId (x : _root_.Effect4.Tool.RunId) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.RunId).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_RunForm (x : _root_.Effect4.Tool.RunForm) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.RunForm).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_PreviewQuery (x : _root_.Effect4.Tool.PreviewQuery) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.PreviewQuery).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_Action (x : _root_.Effect4.Tool.Action) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.Action).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Nat_41_ (x : (@_root_.List (_root_.Nat))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_ExtSlot_41_ (x : (@_root_.Option (_root_.Effect4.Program.ExtSlot))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Option (_root_.Effect4.Program.ExtSlot))).root
+      (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
 
@@ -8962,6 +9053,14 @@ theorem fits (a : _root_.Effect4.Tool.Query) : shapeDoc.accepts (toVal a) = true
       (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Tool_46_Action a0) (acceptsFields_nil _))
   | «discover» =>
     exact accepts_sum _ _ _ 7 "discover" [] [] rfl (acceptsFields_nil _)
+  | «table» =>
+    exact accepts_sum _ _ _ 8 "table" [] [] rfl (acceptsFields_nil _)
+  | «addresses» =>
+    exact accepts_sum _ _ _ 9 "addresses" [] [] rfl (acceptsFields_nil _)
+  | «slots» a0 a1 =>
+    exact accepts_sum _ _ _ 10 "slots" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Nat_41_ a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_ExtSlot_41_ a1) (acceptsFields_nil _)))
 
 instance instCanonical : Canonical (_root_.Effect4.Tool.Query) :=
   ⟨shapeDoc, toVal, guarded toVal ofVal,
@@ -9108,6 +9207,89 @@ instance instCanonical : Canonical (_root_.Effect4.Tool.HoleView) :=
 #guard shapeDoc.wellTagged
 
 end T_95_root_95__46_Effect4_46_Tool_46_HoleViewC
+
+namespace T_95_root_95__46_Effect4_46_Tool_46_SlotViewC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.struct "_root_.Effect4.Tool.SlotView" [("slot", (shape _root_.Effect4.Program.ExtSlot).root),
+     ("term", (shape (@_root_.Option (_root_.Effect4.Program.Term))).root),
+     ("env", (shape (@_root_.Option (_root_.Effect4.Program.TyEnv))).root),
+     ("ty", (shape (@_root_.Option (_root_.Effect4.Program.Ty))).root)],
+   (shape _root_.Effect4.Program.ExtSlot).defs ++
+     (shape (@_root_.Option (_root_.Effect4.Program.Term))).defs ++
+     (shape (@_root_.Option (_root_.Effect4.Program.TyEnv))).defs ++
+     (shape (@_root_.Option (_root_.Effect4.Program.Ty))).defs⟩
+
+def toVal : _root_.Effect4.Tool.SlotView → Val
+  | .mk a0 a1 a2 a3 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2,
+      Canonical.toVal a3]
+
+def ofVal : Val → Option (_root_.Effect4.Tool.SlotView)
+  | .ctor 0 [v0, v1, v2, v3] =>
+    match Canonical.ofVal (α := _root_.Effect4.Program.ExtSlot) v0,
+        Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Term))) v1,
+        Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.TyEnv))) v2,
+        Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Ty))) v3 with
+    | some a0, some a1, some a2, some a3 => some ⟨a0, a1, a2, a3⟩
+    | _, _, _, _ => none
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Tool.SlotView) : ofVal (toVal a) = some a := by
+  obtain ⟨a0, a1, a2, a3⟩ := a
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Tool.SlotView} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · next v0 v1 v2 v3 =>
+    split at h
+    · next b0 b1 b2 b3 h0 h1 h2 h3 =>
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2,
+        Canonical.ofVal_exact h3]
+    · exact nomatch h
+  · exact nomatch h
+
+theorem lift_T_95_root_95__46_Effect4_46_Program_46_ExtSlot (x : _root_.Effect4.Program.ExtSlot) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.ExtSlot).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_Term_41_ (x : (@_root_.Option (_root_.Effect4.Program.Term))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Option (_root_.Effect4.Program.Term))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_TyEnv_41_ (x : (@_root_.Option (_root_.Effect4.Program.TyEnv))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Option (_root_.Effect4.Program.TyEnv))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_Ty_41_ (x : (@_root_.Option (_root_.Effect4.Program.Ty))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Option (_root_.Effect4.Program.Ty))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Tool.SlotView) : shapeDoc.accepts (toVal a) = true := by
+  obtain ⟨a0, a1, a2, a3⟩ := a
+  apply accepts_struct
+  exact
+    (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_ExtSlot a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_Term_41_ a1)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_TyEnv_41_ a2)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_Ty_41_ a3) (acceptsFields_nil _)))))
+
+instance instCanonical : Canonical (_root_.Effect4.Tool.SlotView) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end T_95_root_95__46_Effect4_46_Tool_46_SlotViewC
 
 namespace T_95_root_95__46_Effect4_46_Tool_46_InspectionC
 
@@ -10042,7 +10224,13 @@ def shapeDoc : ShapeDoc :=
       ("dry", 7, [
         ("result", (shape (@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.ActionAnswer))).root)]),
       ("methods", 8, [
-        ("supported", (shape (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (_root_.Nat))))).root)])],
+        ("supported", (shape (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (_root_.Nat))))).root)]),
+      ("table", 9, [
+        ("entries", (shape (@_root_.List (_root_.Effect4.Program.Table.Entry))).root)]),
+      ("addresses", 10, [("paths", (shape (@_root_.List (@_root_.List (_root_.Nat)))).root)]),
+      ("slots", 11, [("at_", (shape (@_root_.List (_root_.Nat))).root),
+        ("typed", (shape _root_.Bool).root),
+        ("slots", (shape (@_root_.List (_root_.Effect4.Tool.SlotView))).root)])],
    (shape _root_.Effect4.Tool.ActionAnswer).defs ++ (shape _root_.Effect4.Tool.DocView).defs ++
      (shape (@_root_.List (_root_.Effect4.Program.DocAction))).defs ++
      (shape (@_root_.Option (_root_.Effect4.Program.Snap))).defs ++
@@ -10052,7 +10240,11 @@ def shapeDoc : ShapeDoc :=
      (shape _root_.Effect4.Tool.RunAnswer).defs ++
      (shape _root_.Effect4.Tool.PreviewAnswer).defs ++
      (shape (@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.ActionAnswer))).defs ++
-     (shape (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (_root_.Nat))))).defs⟩
+     (shape (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (_root_.Nat))))).defs ++
+     (shape (@_root_.List (_root_.Effect4.Program.Table.Entry))).defs ++
+     (shape (@_root_.List (@_root_.List (_root_.Nat)))).defs ++
+     (shape (@_root_.List (_root_.Nat))).defs ++ (shape _root_.Bool).defs ++
+     (shape (@_root_.List (_root_.Effect4.Tool.SlotView))).defs⟩
 
 def toVal : _root_.Effect4.Tool.Answer → Val
   | .acted a0 => .ctor 0 [Canonical.toVal a0]
@@ -10064,6 +10256,9 @@ def toVal : _root_.Effect4.Tool.Answer → Val
   | .preview a0 => .ctor 6 [Canonical.toVal a0]
   | .dry a0 => .ctor 7 [Canonical.toVal a0]
   | .methods a0 => .ctor 8 [Canonical.toVal a0]
+  | .table a0 => .ctor 9 [Canonical.toVal a0]
+  | .addresses a0 => .ctor 10 [Canonical.toVal a0]
+  | .slots a0 a1 a2 => .ctor 11 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2]
 
 def ofVal : Val → Option (_root_.Effect4.Tool.Answer)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Tool.ActionAnswer) v0).map .acted
@@ -10087,6 +10282,14 @@ def ofVal : Val → Option (_root_.Effect4.Tool.Answer)
   | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.Effect4.Tool.PreviewAnswer) v0).map .preview
   | .ctor 7 [v0] => (Canonical.ofVal (α := (@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.ActionAnswer))) v0).map .dry
   | .ctor 8 [v0] => (Canonical.ofVal (α := (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (_root_.Nat))))) v0).map .methods
+  | .ctor 9 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.Table.Entry))) v0).map .table
+  | .ctor 10 [v0] => (Canonical.ofVal (α := (@_root_.List (@_root_.List (_root_.Nat)))) v0).map .addresses
+  | .ctor 11 [v0, v1, v2] =>
+    match Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0,
+        Canonical.ofVal (α := _root_.Bool) v1,
+        Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Tool.SlotView))) v2 with
+    | some a0, some a1, some a2 => some (.slots a0 a1 a2)
+    | _, _, _ => none
   | _ => none
 
 /-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
@@ -10127,6 +10330,19 @@ theorem ofVal_arm7 (v0 : Val) :
 theorem ofVal_arm8 (v0 : Val) :
     ofVal (.ctor 8 [v0]) =
       (Canonical.ofVal (α := (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (_root_.Nat))))) v0).map .methods := rfl
+theorem ofVal_arm9 (v0 : Val) :
+    ofVal (.ctor 9 [v0]) =
+      (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.Table.Entry))) v0).map .table := rfl
+theorem ofVal_arm10 (v0 : Val) :
+    ofVal (.ctor 10 [v0]) =
+      (Canonical.ofVal (α := (@_root_.List (@_root_.List (_root_.Nat)))) v0).map .addresses := rfl
+theorem ofVal_arm11 (v0 : Val) (v1 : Val) (v2 : Val) :
+    ofVal (.ctor 11 [v0, v1, v2]) =
+      (match Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0,
+          Canonical.ofVal (α := _root_.Bool) v1,
+          Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Tool.SlotView))) v2 with
+      | some a0, some a1, some a2 => some (.slots a0 a1 a2)
+      | _, _, _ => none) := rfl
 
 theorem ofVal_toVal (a : _root_.Effect4.Tool.Answer) : ofVal (toVal a) = some a := by
   cases a with
@@ -10139,62 +10355,88 @@ theorem ofVal_toVal (a : _root_.Effect4.Tool.Answer) : ofVal (toVal a) = some a 
   | «preview» a0 => simp only [toVal, ofVal_arm6, Canonical.ofVal_toVal, Option.map_some]
   | «dry» a0 => simp only [toVal, ofVal_arm7, Canonical.ofVal_toVal, Option.map_some]
   | «methods» a0 => simp only [toVal, ofVal_arm8, Canonical.ofVal_toVal, Option.map_some]
+  | «table» a0 => simp only [toVal, ofVal_arm9, Canonical.ofVal_toVal, Option.map_some]
+  | «addresses» a0 => simp only [toVal, ofVal_arm10, Canonical.ofVal_toVal, Option.map_some]
+  | «slots» a0 a1 a2 => simp only [toVal, ofVal_arm11, Canonical.ofVal_toVal]
 
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_ActionAnswer (x : _root_.Effect4.Tool.ActionAnswer) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.ActionAnswer).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_DocView (x : _root_.Effect4.Tool.DocView) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.DocView).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_DocAction_41_ (x : (@_root_.List (_root_.Effect4.Program.DocAction))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Program.DocAction))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_Snap_41_ (x : (@_root_.Option (_root_.Effect4.Program.Snap))) :
     acceptsIn shapeDoc.defs (shape (@_root_.Option (_root_.Effect4.Program.Snap))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__64__95_root_95__46_Prod_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_NativeEff_41__41_ (x : (@_root_.List (@_root_.Prod (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.NativeEff)))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (@_root_.Prod (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.NativeEff)))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Tool_46_Candidate_41_ (x : (@_root_.List (_root_.Effect4.Tool.Candidate))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Tool.Candidate))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Nat_41_ (x : (@_root_.Option (_root_.Nat))) :
     acceptsIn shapeDoc.defs (shape (@_root_.Option (_root_.Nat))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_RunId (x : _root_.Effect4.Tool.RunId) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.RunId).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_RunAnswer (x : _root_.Effect4.Tool.RunAnswer) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.RunAnswer).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Tool_46_PreviewAnswer (x : _root_.Effect4.Tool.PreviewAnswer) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Tool.PreviewAnswer).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Tool_46_Refusal_41__32__40__95_root_95__46_Effect4_46_Tool_46_ActionAnswer_41_ (x : (@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.ActionAnswer))) :
     acceptsIn shapeDoc.defs (shape (@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.ActionAnswer))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__64__95_root_95__46_Prod_32__40__95_root_95__46_String_41__32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__41_ (x : (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (_root_.Nat))))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (_root_.Nat))))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_Table_46_Entry_41_ (x : (@_root_.List (_root_.Effect4.Program.Table.Entry))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Program.Table.Entry))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_List_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41_ (x : (@_root_.List (@_root_.List (_root_.Nat)))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (@_root_.List (_root_.Nat)))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Nat_41_ (x : (@_root_.List (_root_.Nat))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_T_95_root_95__46_Bool (x : _root_.Bool) :
+    acceptsIn shapeDoc.defs (shape _root_.Bool).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Tool_46_SlotView_41_ (x : (@_root_.List (_root_.Effect4.Tool.SlotView))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Tool.SlotView))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
@@ -10231,6 +10473,17 @@ theorem fits (a : _root_.Effect4.Tool.Answer) : shapeDoc.accepts (toVal a) = tru
   | «methods» a0 =>
     exact accepts_sum _ _ _ 8 "methods" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__64__95_root_95__46_Prod_32__40__95_root_95__46_String_41__32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__41_ a0) (acceptsFields_nil _))
+  | «table» a0 =>
+    exact accepts_sum _ _ _ 9 "table" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_Table_46_Entry_41_ a0) (acceptsFields_nil _))
+  | «addresses» a0 =>
+    exact accepts_sum _ _ _ 10 "addresses" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41_ a0) (acceptsFields_nil _))
+  | «slots» a0 a1 a2 =>
+    exact accepts_sum _ _ _ 11 "slots" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Nat_41_ a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Bool a1)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Tool_46_SlotView_41_ a2) (acceptsFields_nil _))))
 
 instance instCanonical : Canonical (_root_.Effect4.Tool.Answer) :=
   ⟨shapeDoc, toVal, guarded toVal ofVal,

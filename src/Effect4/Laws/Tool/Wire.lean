@@ -159,8 +159,8 @@ theorem preview_pairs (d : Program.Doc) (q : PreviewQuery) (answer : PreviewAnsw
       rfl
 
 /-- **An answered query pairs with the query** (claim `tool-serve-answers`). A run query answers
-its own run in the requested form; a preview pairs by `preview_pairs`, and a `dry` run by
-`action_pairs`. -/
+its own run in the requested form, and a slots read its own address; a preview pairs by
+`preview_pairs`, and a `dry` run by `action_pairs`. -/
 theorem query_pairs (o : Oracle) (st : Internal.Raw) (q : Query) (answer : Answer)
     (h : (Internal.query o st q).value = .ok answer) : Wire.queryPairs q answer = true := by
   cases q with
@@ -268,6 +268,42 @@ theorem query_pairs (o : Oracle) (st : Internal.Raw) (q : Query) (answer : Answe
     simp only [Internal.query, pure, Checked.pure'] at h
     cases h
     rfl
+  | table =>
+    simp only [Internal.query, pure, Checked.pure'] at h
+    cases hd : Internal.requireDoc st with
+    | error why =>
+      simp only [hd, Except.map] at h
+      cases h
+    | ok d =>
+      simp only [hd, Except.map] at h
+      cases h
+      rfl
+  | addresses =>
+    simp only [Internal.query, pure, Checked.pure'] at h
+    cases hd : Internal.requireDoc st with
+    | error why =>
+      simp only [hd, Except.map] at h
+      cases h
+    | ok d =>
+      simp only [hd, Except.map] at h
+      cases h
+      rfl
+  | slots path only =>
+    simp only [Internal.query, pure, Checked.pure'] at h
+    cases hd : Internal.requireDoc st with
+    | error why =>
+      simp only [hd, bind, Except.bind] at h
+      cases h
+    | ok d =>
+      simp only [hd, bind, Except.bind] at h
+      cases hs : Internal.slots d path only with
+      | error why =>
+        simp only [hs] at h
+        cases h
+      | ok found =>
+        simp only [hs] at h
+        cases h
+        exact decide_eq_true rfl
 
 /-- **Every reply `serve` gives pairs with its request** (`tool-serve-answers`). A refusal pairs
 with any request; an accepted action's answer pairs by `action_pairs`, and an answered query by

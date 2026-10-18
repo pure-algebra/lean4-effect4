@@ -270,8 +270,8 @@ theorem Canonical.ofJson_exact {α : Type} [Canonical α] {j : Json} {a : α}
 /-- **A carrier read from an agent's JSON is the carrier whose canonical print the normalised JSON
 is**: exactness modulo the named normaliser (`ShapeDoc.order`), which puts objects in the shape's
 order and writes each list given as an array as its cases. A step of `json-read-exact`. Its
-consumer: the session and query tools, which read a request's program through
-`Canonical.ofJsonAnyOrder` and print through `Canonical.printArrays`. -/
+consumer: the session tool's JSON profile (`Tool.CodecProfile`), which reads a request through
+`Canonical.ofJsonAnyOrder` and prints through `Canonical.printArrays`. -/
 @[semantics "exact-codecs" (requirement := R14)]
 theorem Canonical.ofJsonAnyOrder_exact {α : Type} [Canonical α] {j : Json} {a : α}
     (h : Canonical.ofJsonAnyOrder j = some a) :

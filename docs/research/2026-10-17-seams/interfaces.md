@@ -112,7 +112,7 @@ design, not patched at its symptoms.
 | Goes | Replaced by | Slice |
 | --- | --- | --- |
 | the 41-field request in `tools/Tools/Session.lean`, its string dispatch, nine state fields, `commitAnswer`, `feedAnswer`, the second `feedStep` | `Tool.serve` over `Action` and `Query` | S3a, S3b |
-| `Tools.Query` as a protocol source, `fillPremises`, `omitPremises` | `Query.doc` and `Query.dry` | S3a |
+| `Tools.Query` as a protocol source, `fillPremises`, `omitPremises` | `Query.doc` and `Query.dry`, with the reads `Query.table`, `Query.addresses` and `Query.slots` | S3a; cut after S3b ([receipt](receipts/S3b-query.md)) |
 | `Tools.Session.Snapshot` | `Doc`'s replayed state, after its callers move | S3b |
 | `JsonBridge.valueFrom?`'s hex-over-JSON precedence | one generated encoding per field | S3b |
 | `Doc`'s free `revision` field, `Doc.undo`, `Doc.fork`, `Doc.commit`'s own checks | `Doc.step` over the history; revert as an action | S1 |

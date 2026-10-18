@@ -139,7 +139,7 @@
       "retired": {}
     },
     "Effect4.Tool.Query": {
-      "active": {"doc": 0, "history": 1, "fills": 2, "suggest": 3, "run": 4, "preview": 5, "dry": 6, "discover": 7},
+      "active": {"doc": 0, "history": 1, "fills": 2, "suggest": 3, "run": 4, "preview": 5, "dry": 6, "discover": 7, "table": 8, "addresses": 9, "slots": 10},
       "retired": {}
     },
     "Effect4.Tool.Request": {
@@ -163,7 +163,7 @@
       "retired": {}
     },
     "Effect4.Tool.Answer": {
-      "active": {"acted": 0, "doc": 1, "history": 2, "fills": 3, "suggested": 4, "run": 5, "preview": 6, "dry": 7, "methods": 8},
+      "active": {"acted": 0, "doc": 1, "history": 2, "fills": 3, "suggested": 4, "run": 5, "preview": 6, "dry": 7, "methods": 8, "table": 9, "addresses": 10, "slots": 11},
       "retired": {}
     }
   }

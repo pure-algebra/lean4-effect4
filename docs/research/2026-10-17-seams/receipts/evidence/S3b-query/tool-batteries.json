@@ -1,0 +1,26 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "lake",
+    "build",
+    "Test.Program.SessionToolControls",
+    "Test.Program.SeamsS3a",
+    "Test.Program.SeamsS3aInspection",
+    "Test.Program.SeamsS3bWire",
+    "Test.Program.SketchAdmissionControls",
+    "Test.Program.LiveRecordControls",
+    "Test.Program.PreviewControls",
+    "Test.Program.CheckCacheControls",
+    "Test.Program.FillSetControls",
+    "Test.Program.SourceDocumentControls",
+    "Test.Program.SourceFeedControls",
+    "Test.Program.JsonFormControls",
+    "Test.Schema.DocumentJson"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4/.claude/worktrees/gracious-shamir-5b34bd",
+  "started_utc": "2026-10-18T09:02:59.423035+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 16.043,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S3b-query/tool-batteries.log"
+}

@@ -12,9 +12,9 @@ and whatever reads was that sketch's bytes (`Sketch.decode_exact`), in
 `Laws/Program/SketchWire.lean`. Both are the store's laws (`Canonical.decode_encode`,
 `Canonical.decode_exact`) at the two carriers.
 
-The consumer is the query tool (`tools/Tools/Query.lean`): a request may carry a hole table, and
-an omission's answer carries the grown one, so the sketch it answers can be sent back. This is
-the open part `sketch-wire` of R14 (decisions row 305, point 3).
+Its consumer was the query tool, retired at seams §2.2: the session tool carries a sketch through
+its generated codec (`Tool/ToolDerived.lean`), so this pair has no consumer now. It is the open
+part `sketch-wire` of R14 (decisions row 305, point 3).
 -/
 
 set_option autoImplicit false

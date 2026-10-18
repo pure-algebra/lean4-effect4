@@ -572,7 +572,9 @@ of refusals of a sketch is empty exactly when the sketch checks, block included.
 `refusals_nil_iff` (`Laws/Program/Typing/Table.lean`) for the module check. Reach: every sketch
 and every application. Not established: the order of the refusals after the head, and agreement
 with the program's table off a block (the table of a program with no block is entrywise the
-program's, and no law states it yet). Consumer: the query tool's refusals and table. -/
+program's, and no law states it yet). Consumers: the edit session's view
+(`EditSession.view_refusals`) and the source table's laws at the expansion
+(`Laws/Program/SourceTable.lean`). -/
 
 /-- The root's entry is first, and it holds the sketch's check. A step of
 `Sketch.refusals_head`. -/
@@ -651,7 +653,8 @@ theorem Sketch.refusals_head (s : Sketch) (app : SigApp) :
     rfl
 
 /-- **The list of refusals of a sketch is empty exactly when the sketch checks**, block
-included: the proposed claim `module-address-table`. Its consumer is the query tool's refusals. -/
+included: the proposed claim `module-address-table`. Its consumer is the edit session's view
+(`EditSession.view_refusals`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.refusals_nil_iff (s : Sketch) (app : SigApp) :
     s.refusals app = [] ↔ (s.check app).toOption.isSome = true := by

@@ -164,8 +164,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   result back at the source's addresses (`source-annotation-agrees`). An
   edit that keeps its focus's type splices the address table, inside any part of a whole
   program (`edit-splices-table`, `module-table-splices`). A filled sketch is checked as its
-  module (`module-holes-conservative`). A sketch has canonical bytes, so the query tool takes a
-  hole table and gives back an omission's (`sketch-wire`).
+  module (`module-holes-conservative`). A sketch has canonical bytes (`sketch-wire`); their one
+  consumer, the query tool, was retired at seams §2.2.
 - **The edit session** (row 334). `EditSession` (`src/Effect4/Program/Edit.lean`) keeps a sketch
   and its table, with the face `open`, `feed` and `view`. Its edits fill an address and omit
   one into a hole. A fill that keeps its focus's type checks only the new subtree, and an

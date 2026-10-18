@@ -60,6 +60,9 @@ def queryPairs : Query → Answer → Bool
   | .dry a, .dry (.ok answer) => actionPairs a answer
   | .dry _, .dry (.error _) => true
   | .discover, .methods .. => true
+  | .table, .table .. => true
+  | .addresses, .addresses .. => true
+  | .slots path _, .slots path' .. => decide (path = path')
   | _, _ => false
 
 /-- **The reply answers the request**: a refusal answers any request; an answer pairs with it. -/

@@ -17,6 +17,7 @@ The owner pauses work after V1.
 | S4 | `6d403efeda4d3e366cfc2d4fa2b5edcbd717d649` | [S4](S4.md) | Required checks pass; two claims proved, no planned goals. |
 | S3a | `23f710f2873083ba762c3b9bd03df499b7a35814` | [S3a](S3a.md) | Required checks pass; five claims proved, no planned goals. |
 | S3b | `bc40095bbdaa6cc21e2df281250373bced2fef98` | [S3b](S3b.md) | Required checks pass; one claim proved, serve_answers a placed goal. |
+| S3b, query cut | this commit | [S3b-query](S3b-query.md) | Required checks pass; `Tools.Query` deleted, its reads in the tool. |
 | ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` ; receipt `0bb42e37d4fa99fd84979df03beb3dd0391a4e98` | [ST1a](ST1a.md) | Required checks pass. |
 | ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` ; receipt `709f9f10a9401150af66870a8665860e45cc63d3` | [ST1b](ST1b.md) | Required checks pass. |
 | ST2 | `e163b1ac64aa9c4c8ce91f2b7d54bd4d3aa3d061` | [ST2](ST2.md) | Required checks pass; all three recovery claims are proved. |

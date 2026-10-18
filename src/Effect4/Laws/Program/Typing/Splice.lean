@@ -22,7 +22,7 @@ Requirement R14. The claim `edit-splices-table`, role preservation, pointer `tab
   edit of equal layer type may remove a referenced target); a program that the checker refuses;
   the cost, which no theorem counts.
 - Unlocks: R14, live editing at the cost of the edited subtree: the edit session's coherence, the
-  query tool's `fill` without a new check of the context, and the view's repaint set.
+  session tool's fill without a new check of the context, and the view's repaint set.
 - Route: `tableAt_eq_cons` unfolds the table one node at a time along the path. `child_step`
   gives the edited child's type; the other children keep their environments, because a step reads
   only the types of earlier siblings and the node's terms, and the edited child keeps its type.

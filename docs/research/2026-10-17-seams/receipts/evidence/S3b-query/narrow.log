@@ -1,0 +1,13 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "lake", "build", "Effect4.Tool.Protocol", "Effect4.Tool.Queries", "Effect4.Tool.Wire", "Effect4.Tool.ToolDerived", "Effect4.Program.SketchWire", "Effect4.Laws.Program.Sketch", "Effect4.Laws.Program.SketchWire", "Effect4.Laws.Program.Typing.Splice", "Effect4.Laws.Program.Typing.Table", "Effect4.Laws.Store.ShapeRead", "Effect4.Laws.Tool.Serve", "Effect4.Laws.Tool.Wire", "Tools.JsonBridge", "Tools.WireText", "Tools.Catalogue", "Tools.LoadPaths", "Tools.RunChecks", "Tools.Semantics", "Tools.SemanticsDocument", "Tools.View.Build", "Tools.View.Cell", "Tools.View.CellSheet", "Tools.View.Glyph", "Tools.View.GlyphSheet", "Tools.View.Live", "Tools.View.LiveChecks", "Drivers.GlyphSheet", "Drivers.Live", "Drivers.Semantics", "Drivers.SemanticsControls", "Drivers.Session", "Drivers.View", "ProofGraph.Registry", "ProofGraph.AxiomAudit", "ProofGraph.Why", "Effect4", "Effect4.Laws"], "cwd": "/Users/pooks/Dev/lean4-effect4/.claude/worktrees/gracious-shamir-5b34bd", "started_utc": "2026-10-18T08:59:32.559383+00:00"}
+✔ [1571/1582] Built Tools.WireText (4.8s)
+✔ [1572/1582] Built Effect4 (4.6s)
+✔ [1574/1582] Built Drivers.Session (1.4s)
+✔ [1575/1582] Built Drivers.View (2.3s)
+✔ [1576/1582] Built Effect4.Laws (6.7s)
+✔ [1577/1582] Built Drivers.Live (1.7s)
+✔ [1578/1582] Built Tools.View.Glyph (1.9s)
+✔ [1579/1582] Built Tools.View.Cell (1.7s)
+✔ [1580/1582] Built Tools.View.GlyphSheet (1.8s)
+✔ [1581/1582] Built Tools.View.CellSheet (1.5s)
+✔ [1582/1582] Built Drivers.GlyphSheet (1.7s)
+Build completed successfully (1582 jobs).

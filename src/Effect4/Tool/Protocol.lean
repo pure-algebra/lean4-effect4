@@ -13,7 +13,9 @@ stored, replayed and compared across drivers. `Tool.serve` (`Tool/Serve.lean`) o
 
 - An `Action` changes the state when it is accepted: open a document, edit it, add and publish
   fills, start, restore and play runs.
-- A `Query` reads the state and never changes it, a `dry` run included.
+- A `Query` reads the state and never changes it, a `dry` run included. The document's reads are
+  its view, the inspection at an address, the whole address table, the addresses, and the term
+  slots of a node.
 - A `Reply` carries the answer or one located `Refusal`, and the current snapshot.
 
 Three outcome kinds stay apart: a refused request leaves the state unchanged; a refused item inside
@@ -63,6 +65,12 @@ inductive Query where
   | dry (a : Action)
   /-- the supported method versions; selection is the connection's, outside the state -/
   | discover
+  /-- the whole address table, one entry for each address of the program as written -/
+  | table
+  /-- the addresses of the program as written, in the table's order -/
+  | addresses
+  /-- the term slots of the node at an address: the one slot named, or every slot -/
+  | slots (at_ : List Nat) (slot : Option ExtSlot)
 
 /-- **A request**: an action or a query. -/
 inductive Request where
@@ -85,6 +93,14 @@ structure Inspection where
   focus : Option (Focus NativeOp)
   entry : Option Table.Entry
   refusal : Option TypeRefusal
+
+/-- **One term slot of a node**: its term, the environment the term reads, and the term's type
+there. A slot has an environment and a type where the rule's earlier reads type. -/
+structure SlotView where
+  slot : ExtSlot
+  term : Option Term
+  env : Option TyEnv
+  ty : Option Ty
 
 /-- **What the tool shows of a document**: snapshot, root type, refusals, holes and an optional
 inspection. -/
@@ -151,6 +167,11 @@ inductive Answer where
   | preview (result : PreviewAnswer)
   | dry (result : Except Refusal ActionAnswer)
   | methods (supported : List (String × List Nat))
+  | table (entries : List Table.Entry)
+  | addresses (paths : List (List Nat))
+  /-- `typed`: the node is typed in its part, so every slot with a term has an environment and a
+  type there (`hasTy_extSlotEnv`) -/
+  | slots (at_ : List Nat) (typed : Bool) (slots : List SlotView)
 
 /-- **A reply**: the answer or a refusal, and the current snapshot. -/
 structure Reply where
@@ -176,10 +197,14 @@ def Request.method : Request → String
   | .ask (.preview ..) => "preview"
   | .ask (.dry ..) => "dry"
   | .ask .discover => "discover"
+  | .ask .table => "table"
+  | .ask .addresses => "addresses"
+  | .ask (.slots ..) => "slots"
 
 /-- **The supported methods**, each at version 1. Selection is the connection's, outside the state. -/
 def supportedMethods : List (String × List Nat) :=
   ["open","edit","fill","publish","reset","start","restore","play",
-    "doc","history","fills","suggest","run","preview","dry","discover"].map
+    "doc","history","fills","suggest","run","preview","dry","discover","table","addresses",
+    "slots"].map
     fun name => (name,[1])
 end Effect4.Tool
