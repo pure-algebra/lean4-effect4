@@ -282,6 +282,7 @@ import Test.Program.SeamsS3a
 import Test.Program.SeamsS3aInspection
 import Test.Program.SeamsS3aDifferentEnv
 import Test.Program.SeamsS3bWire
+import Test.Program.SeamsExchange
 import Test.Program.FillSetControls
 import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract

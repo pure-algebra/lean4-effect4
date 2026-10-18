@@ -28,7 +28,7 @@ def verdict (p : NativeEff) : String :=
     s!"refused\t{r.reason.head}\t{path}"
 
 def line (name : String) (p : NativeEff) : String :=
-  s!"{name}\t{Tools.JsonBridge.toHex p}\t{verdict p}\t{(Tools.JsonBridge.printJson p).compress}\n"
+  s!"{name}\t{Effect4.Store.hexString (Effect4.Store.Canonical.encode p)}\t{verdict p}\t{(Tools.JsonBridge.printJson p).compress}\n"
 
 def main (args : List String) : IO UInt32 := do
   let folder := args.head?.getD "ocaml/engine/test/kit"

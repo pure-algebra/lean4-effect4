@@ -48,7 +48,7 @@ def Node.designatedParent (node : Node) : Option Digest :=
     | .ref byte bytes => if byte = kind.byte then Digest.ofBytes? bytes else none
     | _ => none
   match node.kind, node.payload with
-  | .entry, .ctor 1 [parent, _, _] => readRef .entry parent
+  | .entry, .ctor 1 [parent, _, _, _] => readRef .entry parent
   | .tape, .ctor 0 [_, .some parent, _] => readRef .tape parent
   | .checkpoint, .ctor 0 [_, _, _, .some parent, _, _, _] => readRef .checkpoint parent
   | _, _ => none
@@ -642,6 +642,19 @@ namespace Cas
       rw [replay_append, reached]
       change eventStep cas.store (.commit transaction) = .ok store
       simp only [eventStep, accepted, Except.map]))
+
+/-- A reached commit is the store's own commit (seams ST4). Helper of `session-load-own` and
+`session-commits-once`: the session laws read the store laws through it. -/
+theorem commit_store {cas next : Cas} {transaction : Txn} {receipt : Receipt}
+    (accepted : cas.commit transaction = .ok (receipt, next)) :
+    cas.store.commit transaction = .ok (receipt, next.store) := by
+  unfold Cas.commit at accepted
+  split at accepted
+  · exact nomatch accepted
+  · next receipt' store committed =>
+    injection accepted with same
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj same
+    exact committed
 
 /-- Raw transaction nodes pass the same exact byte entrance before shared admission. -/
 @[no_expose] def commitBytes (cas : Cas) (nodes : List Bytes) (moves : List Move) :

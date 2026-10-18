@@ -699,11 +699,17 @@ let designated_parent view address =
           when kind = E4_kind.byte expected && String.length digest = 32 && ending = limit ->
         Some (E4_addr.Addr.of_digest digest)
       | _ -> None in
+    let rec skip_frames count pos limit =
+      if count = 0 then Some pos
+      else match Eff_frame.read_frame bytes pos limit with
+        | Some (_, _, _, next) -> skip_frames (count - 1) next limit
+        | None -> None in
     match Eff_frame.read_ctor bytes 0 (String.length bytes) with
     | Some (1, start, limit, ending) when E4_kind.equal node.E4_node.kind E4_kind.Entry && ending = String.length bytes ->
+      (* a session entry's action (seams ST4): [parent, index, action, after] *)
       (match Eff_frame.decode_ref bytes start limit with
-       | Some (parent, after) -> (match Eff_frame.read_frame bytes after limit with
-         | Some (_, _, _, next) -> finish E4_kind.Entry (Some parent) next limit
+       | Some (parent, after) -> (match skip_frames 2 after limit with
+         | Some next -> finish E4_kind.Entry (Some parent) next limit
          | None -> None)
        | None -> None)
     | Some (0, start, limit, ending) when E4_kind.equal node.E4_node.kind E4_kind.Tape && ending = String.length bytes ->

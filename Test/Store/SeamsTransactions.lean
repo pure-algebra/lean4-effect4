@@ -83,7 +83,7 @@ def lateBad : Txn := {prefixTxn with moves := prefixTxn.moves ++ [.advance "abse
 def origin : Node := ⟨0, .entry, probeSchemaAddress, .ctor 0 [.nat 1, .nat 1, .str "engine"]⟩
 def originAddress : Digest := sha256 origin.encode
 def entry (parent : Digest) (action : Val) : Node :=
-  ⟨0, .entry, probeSchemaAddress, .ctor 1 [.ref Kind.entry.byte parent.bytes, action, .none]⟩
+  ⟨0, .entry, probeSchemaAddress, .ctor 1 [.ref Kind.entry.byte parent.bytes, .nat 0, action, .none]⟩
 def child : Node := entry originAddress (.str "act")
 def childAddress : Digest := sha256 child.encode
 def incidental : Node := ⟨0, .entry, probeSchemaAddress,

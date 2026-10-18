@@ -982,6 +982,18 @@ def registry : Registry where
     { id := "tool-serve-answers", concept := "host-session-protocol", role := .compatibility
       title := "Every reply that serve gives pairs with its request (Wire.responds); no JSON decoding exactness, native driver or host progress claim (seams S3b, R6)"
       pointer := .witness `Effect4.Tool.serve_answers },
+    { id := "session-load-own", concept := "host-session-protocol", role := .compatibility
+      title := "After an exchange commits an accepted action, loading the head it reports gives the state serve reached from the resolved base; no repeated host effect, host progress or hash injectivity claim (seams ST4, R6 and R13)"
+      pointer := .witness `Effect4.Tool.Exchange.load_own },
+    { id := "session-commits-once", concept := "host-session-protocol", role := .compatibility
+      title := "An accepted action commits one transaction whose last node is its entry and whose one move publishes that entry; no host acknowledgement or exactly-once host effect claim (seams ST4, R6)"
+      pointer := .witness `Effect4.Tool.Exchange.apply_commits_once },
+    { id := "session-refuses", concept := "host-session-protocol", role := .preservation
+      title := "A query or a refused request returns the store it was given; no IO rollback claim (seams ST4, R6)"
+      pointer := .witness `Effect4.Tool.Exchange.apply_refuses },
+    { id := "session-entry-exact", concept := "exact-codecs", role := .compatibility
+      title := "A session entry's reader answers only its own value tree; no action acceptance or execution truth claim (seams ST4, R13)"
+      pointer := .witness `Effect4.Tool.SessionEntry.ofVal_exact },
     { id := "codec-profile-retains-value", concept := "exact-codecs", role := .compatibility
       title := "A successful guarded JSON write reads back as the original canonical value; no total writing, raw JSON text identity or native parser claim (seams S3b, R12)"
       pointer := .witness `Effect4.Tool.CodecProfile.write_read },

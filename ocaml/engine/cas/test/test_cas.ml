@@ -797,7 +797,7 @@ let test_g3 () =
   let origin = node E4_kind.Entry (E4_addr.Addr.bytes schema_addr) (v_ctor 0 [v_nat 1; v_nat 1; v_str "engine"]) in
   let origin_addr = address origin in
   let action parent = node E4_kind.Entry (E4_addr.Addr.bytes schema_addr)
-    (v_ctor 1 [v_ref (E4_kind.byte E4_kind.Entry) (E4_addr.Addr.bytes parent); v_str "act"; E4_be.framed Eff_frame.tag_none ""]) in
+    (v_ctor 1 [v_ref (E4_kind.byte E4_kind.Entry) (E4_addr.Addr.bytes parent); v_nat 0; v_str "act"; E4_be.framed Eff_frame.tag_none ""]) in
   let child = action origin_addr in
   let grandchild = action (address child) in
   let incidental = node E4_kind.Entry (E4_addr.Addr.bytes schema_addr)
