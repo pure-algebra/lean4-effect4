@@ -1177,6 +1177,33 @@ def registry : Registry where
     { id := "cas-admission-handles", concept := "exact-codecs", role := .preservation
       title := "Every successful node insertion passes the kind's handle rule before edge and resident checks; no progress or host persistence claim (seams ST1a, R13)"
       pointer := .witness `Effect4.Store.putNode_ok_handleFree },
+    { id := "cas-advance-head", concept := "exact-codecs", role := .compatibility
+      title := "Changed accepted root moves check the complete expected head and increase its generation exactly once; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.advance_head },
+    { id := "cas-advance-stale", concept := "exact-codecs", role := .compatibility
+      title := "A stale complete expected head refuses before every target or policy check; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.advance_stale },
+    { id := "cas-advance-duplicate", concept := "exact-codecs", role := .compatibility
+      title := "An identical complete target retains the exact store and generation; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.advance_duplicate },
+    { id := "cas-journal-fast-forward", concept := "exact-codecs", role := .preservation
+      title := "A changed accepted journal target reaches the prior head through designated parent fields; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.journal_ff },
+    { id := "cas-commit-grows", concept := "exact-codecs", role := .preservation
+      title := "Accepted transactions retain every earlier resident at its digest; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.commit_grows },
+    { id := "cas-commit-bytes", concept := "exact-codecs", role := .preservation
+      title := "Reading an earlier resident after an accepted transaction returns the same node; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.bytes_never_change },
+    { id := "cas-commit-reads", concept := "exact-codecs", role := .compatibility
+      title := "Every submitted node reads back after an accepted transaction; conflicts refuse; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.commit_reads },
+    { id := "cas-interrupted-closed", concept := "exact-codecs", role := .preservation
+      title := "An accepted cut from a closed store retains node closure after complete transaction validation; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.interrupted_closed },
+    { id := "cas-interrupted-roots", concept := "exact-codecs", role := .compatibility
+      title := "An accepted cut retains the exact old root table or returns the exact committed store; no host persistence, crash, or progress claim (seams ST1b, R13)"
+      pointer := .witness `Effect4.Store.interrupted_roots },
     { id := "cas-resident-injective", concept := "exact-codecs", role := .compatibility
       title := "Two nodes resident at their own equal addresses in one store are equal; both lookup premises remain; no hash injectivity or host persistence claim (seams K0, R13)"
       pointer := .witness `Effect4.Store.address_inj_resident },

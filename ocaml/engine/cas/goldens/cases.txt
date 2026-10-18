@@ -13,7 +13,7 @@
 #        case's store (empty for g2-genesis-exempt and g2-dangling-spec; the store after
 #        probeSchema for g2-entry-fresh; the hand-built occupant store for g2-conflict;
 #        probeStore otherwise). probeStore = probeSchema then probeEntry.
-#   g3   roots: bytes = rootVal r, expected = the outcome of putRoot into probeStore
+#   g3   roots: bytes = moveVal move, expected = the outcome of commit into rootBase
 #        (into the store after g3-v1 for g3-advance-v2).
 #   g4   memo world: bytes = worldVal w, expected = none | some <hex>. entryAt cases answer
 #        Val.encode (entryVal e); get cases answer Val.encode (pair (nat owner) (entryVal e)).
@@ -26,7 +26,9 @@
 # tool-side projections (the Lean tree has no Canonical instance for Root, Binding, Store,
 # MemoEntry or MemoMap, so these five shapes are this tool's; every other byte is a Lean
 # Node.encode, Val.encode or Digest):
-#   rootVal r    = ctor 0 [str name, nat rootKindIndex, nat kind.byte, bytes digest, nat version]
+#   rootVal r    = ctor 0 [str name, nat policyIndex, nat kind.byte, bytes digest, nat generation]
+#   moveVal create = ctor 0 [str name, nat policy, nat kind.byte, bytes digest]
+#   moveVal advance = ctor 1 [str name, bytes expected.digest, nat expected.generation, nat kind.byte, bytes digest]
 #   bindingVal b = pair (bytes digest) (bytes (Node.encode node))
 #   wordVal w    = list (map bindingVal w)
 #   nodesVal ns  = list (map (fun (d, n) => pair (bytes d) (bytes (Node.encode n))) ns)
@@ -39,7 +41,7 @@
 #   entriesVal   = list (pair (list (map nat layer)) (entryVal entry))
 #   layer path   = list (map nat path)
 #
-# rootKindIndex: stdlib=0 journal=1 daemon=2 schema=3 char=4 (RootKind (src/Effect4/Store/Domain/Store.lean)).
+# policyIndex: swap=0 journal=1 pin=2 (RootPolicy (src/Effect4/Store/Domain/Transaction.lean)).
 # Not cut, and why: docs/research/2026-09-08-engine-lane-gld-delivery.md.
 digest-01	a1	a66c701845710c6cd6082b9789002c9bd6f626f14801c76e55cdc6b0298508ea
 digest-02	a1	7cc15f3ca164271165e1e9172ffa9c348f1c556045511a92896658cb11e20749
@@ -125,10 +127,11 @@ g2-conflict	g2	conflict
 g2-occupant	g2	d2ea438f7891712cd29444f5c0fb6485acae0af226b0f9cbade84e873bade6ae
 g2-handle-in-content	g2	handleInContent
 g3-v1	g3	ok
-g3-stale	g3	staleRoot stdlib/rc112 1 2
+g3-stale	g3	staleRoot stdlib/rc112 none 0014c107b3900a17bdd5905f4d9f8709f4ae01df9a8dc48fc6dbe39d9b9ab82a:1
 g3-wrongKind	g3	wrongKind
 g3-dangling	g3	dangling 0000000000000000000000000000000000000000000000000000000000000000
 g3-advance-v2	g3	ok
+g3-target-v2	g3node	ok
 g3-roots-after-v1	g3	ok
 g3-roots-after-v2	g3	ok
 g4-entryAt-own	g4	some 0a0000000000000027020000000000000000020000000000000001030200000000000000010c02000000000000000166

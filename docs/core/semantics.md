@@ -820,6 +820,25 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 - **Content handles (`cas-admission-handles`)**: every successful node insertion passes the kind's handle rule before edges and residency.
   The pointer is `putNode_ok_handleFree` (`src/Effect4/Store/Domain/Store.lean`), with preservation role.
   `Store.Sound.handles` and accepted words carry this rule; no host persistence or progress claim follows.
+- **`cas-advance-head`**: Changed accepted root moves check the complete expected head and increase its generation exactly once.
+  The pointer is `advance_head` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
+- **`cas-advance-stale`**: A stale complete expected head refuses before every target or policy check.
+  The pointer is `advance_stale` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
+- **`cas-advance-duplicate`**: An identical complete target retains the exact store and generation.
+  The pointer is `advance_duplicate` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
+- **`cas-journal-fast-forward`**: A changed accepted journal target reaches the prior head through designated parent fields.
+  The pointer is `journal_ff` (`src/Effect4/Store/Domain/Cas.lean`), with preservation role.
+- **`cas-commit-grows`**: Accepted transactions retain every earlier resident at its digest.
+  The pointer is `commit_grows` (`src/Effect4/Store/Domain/Cas.lean`), with preservation role.
+- **`cas-commit-bytes`**: Reading an earlier resident after an accepted transaction returns the same node.
+  The pointer is `bytes_never_change` (`src/Effect4/Store/Domain/Cas.lean`), with preservation role.
+- **`cas-commit-reads`**: Every submitted node reads back after an accepted transaction; conflicts refuse.
+  The pointer is `commit_reads` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
+- **`cas-interrupted-closed`**: An accepted cut from a closed store retains node closure after complete transaction validation.
+  The pointer is `interrupted_closed` (`src/Effect4/Store/Domain/Cas.lean`), with preservation role.
+- **`cas-interrupted-roots`**: An accepted cut retains the exact old root table or returns the exact committed store.
+  The pointer is `interrupted_roots` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
+  These transaction laws establish no host persistence, crash, or progress property.
 - **Resident node identity (`cas-resident-injective`)**: two nodes resident at their own equal addresses in one store are equal.
   `address_inj_resident` (`src/Effect4/Store/Domain/Store.lean`) keeps both lookup premises.
   It assumes no hash injectivity and establishes no cross-store equality or host persistence property.

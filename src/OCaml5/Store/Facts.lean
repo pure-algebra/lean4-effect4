@@ -123,4 +123,20 @@ def kindFiles : String × String := Id.run do
      "val equal : t -> t -> bool", "val compare : t -> t -> int"] ++ "\n"
   return (implementation, interface)
 
+/-- The canonical root policy alphabet, rendered once for native consumers. -/
+def rootPolicyFiles : MetaM (String × String) := do
+  let constructors ← inductiveCtors ``RootPolicy
+  let types := "type t =\n  | " ++ " | ".intercalate (constructors.map ctor) ++ "\n"
+  let shared := header "Root policy bytes and names from Effect4.Store.RootPolicy." ++ types
+  let arms (read : RootPolicy → String) := "\n".intercalate
+    (RootPolicy.all.map fun policy => "  | " ++ policy.name.capitalize ++ " -> " ++ read policy)
+  let implementation := shared ++ "\nlet byte = function\n" ++
+    arms (fun policy => toString policy.byte.toNat) ++ "\n\nlet name = function\n" ++
+    arms (fun policy => "\"" ++ policy.name ++ "\"") ++ "\n\nlet all = [" ++
+    "; ".intercalate (RootPolicy.all.map fun policy => policy.name.capitalize) ++ "]\n\n" ++
+    "let of_byte = function\n" ++ "\n".intercalate (RootPolicy.all.map fun policy =>
+      s!"  | {policy.byte.toNat} -> Some {policy.name.capitalize}") ++ "\n  | _ -> None\n"
+  let interface := shared ++ "\nval all : t list\nval byte : t -> int\nval of_byte : int -> t option\nval name : t -> string\n"
+  return (implementation, interface)
+
 end OCaml5.Store.Facts

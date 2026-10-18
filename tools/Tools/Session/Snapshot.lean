@@ -14,7 +14,7 @@ The consumer is the experimental MCP preview driver.
 Placement: `docs/research/2026-10-10-live-graph-support/PLAN.md`.
 
 The laws concern exact snapshot resolution, not published roots or concurrent commits.
-The stable root authority remains `Store.putRoot`.
+`Store.move` in `src/Effect4/Store/Domain/Cas.lean` owns root moves.
 -/
 
 set_option autoImplicit false

@@ -92,10 +92,10 @@
    CP2 / L-CP-1  `write` refuses unless the job — and the tape prefix and the predecessor when
        given — are already stored at their kinds.  The refusal is the store's own `Dangling`
        or `Wrong_kind`, not a check here.                                    tested
-   CP3  The `prev` chain is checked at PUBLISH: the head root `runs/<job hex>/checkpoint` is a
-       `Registry` root, so `E4_control.advance_root ~prev` refuses a move whose `prev` is not
-       the resident head with `Fork` (amendment M7), and a racing publisher gets `Stale_root`
-       and retries.                                                          tested
+   CP3  New checkpoint head roots use journal policy.
+       A changed target follows only canonical checkpoint prev fields to the current head.
+       Missing ancestry refuses Fork. The complete expected head catches stale publishers.
+       Legacy version-1 roots retain their mapped swap policy. Tested by test_checkpoint.
    CP4  Handles inside the image are allocation indices of a replay of `job` from a fresh
        load (M2), and nothing else in the image is host-relative: every field of the image is
        a free row of `E4_engine.ENGINE`, which is a pure function of a machine VALUE holding
@@ -155,7 +155,7 @@
        own address is already a checked edge, so a second copy of it would be a stamp that
        proves nothing; the image's digest is what a reader cannot otherwise check.
    D6  Pins at publish (amendment M1, L-CAS-11) go through `advance_root` with
-       `root_kind = Pin` over the address `write` JUST produced, not through
+       `policy = Pin` over the address `write` JUST produced, not through
        `E4_cas.pin_all`.  M1's mechanism is "a pin root over the node address `by_cid` finds
        for the Cid" and that address is exactly this one, so the root minted is the same root;
        what is skipped is the lookup.  A FINDING for the coordinator: lane P4's `by_cid` is a
@@ -231,7 +231,7 @@ val ensure_schema : E4_cas.t -> E4_addr.Addr.t
 (* ---------------------------------------------------------------- the roots *)
 
 val head_root_name : E4_addr.Addr.t -> string
-(** `runs/<job hex>/checkpoint` — a `Registry` root, so the `prev` check of amendment M7
+(** `runs/<job hex>/checkpoint` — a `swap` root, so the `prev` check of amendment M7
     applies to it (CP3). *)
 
 val pin_root_name : job:E4_addr.Addr.t -> E4_addr.Cid.t -> string

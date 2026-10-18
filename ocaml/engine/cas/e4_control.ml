@@ -1,18 +1,17 @@
-(* E4_control — the control file.  The grammar, the behaviour list and the deviations are in
-   e4_control.mli; this file is the transcription and nothing else. *)
+(* Control-file bytes and root moves. Depends on E4_addr and the byte codecs.
+   Properties by construction: exact names, fixed policy/kind, stale-first full-head comparison.
+   Properties tested by test_control: legacy/v2 bytes, generations, pins, journal parents,
+   framing damage, and generated root goldens. The interface states the wire capacity. *)
 
 
 (* ---------------------------------------------------------------- the plane *)
 
-type root_kind = Stdlib | Journal | Daemon | Schema | Char | Registry | Pin
+type root_policy = E4_root_policy.t = Swap | Journal | Pin
 
-type root = {
-  name : string;
-  root_kind : root_kind;
-  kind : E4_kind.t;
-  digest : E4_addr.Addr.t;
-  version : int;
-}
+type head = { digest : E4_addr.Addr.t; generation : Z.t }
+type target = { kind : E4_kind.t; digest : E4_addr.Addr.t }
+type root = { name : string; policy : root_policy; kind : E4_kind.t; head : head }
+type move = Create of string * root_policy * target | Advance of string * head * target
 
 type status = Fresh | Gced | Imported | Reserved of int * string
 
@@ -42,10 +41,10 @@ let initial : t =
 (* ---------------------------------------------------------------- constants *)
 
 let magic = "E4CAS\000"
-let version_string = "00000001"
+let version_string = "00000002"
 let filename = "control"
 let tmp_filename = "control.tmp"
-let max_name_length = 512
+let max_name_length = 65535
 
 (* be64 pack_end_seg/off, index_end_seg/off, generation; be32 checksum, scheme_version,
    ledger_generation, root_count. *)
@@ -68,53 +67,31 @@ let max_be32 = 0xFFFFFFFF
 
 (* ---------------------------------------------------------------- names and words *)
 
-let normalise_name = String.lowercase_ascii
+let normalise_name name = name
 
-let valid_name (s : string) : bool =
-  let n = String.length s in
-  n >= 1 && n <= max_name_length
-  &&
-  let ok = ref true in
-  String.iter
-    (fun c ->
-      let b = Char.code c in
-      if b < 0x21 || b > 0x7e || (b >= Char.code 'A' && b <= Char.code 'Z') then ok := false)
-    s;
-  !ok
+(* Names retain their exact UTF-8 bytes. The control framing bounds their byte length. *)
+let valid_name s = String.length s <= 65535 && Eff_frame.utf8_valid s
 
-let root_kind_index = function
-  | Stdlib -> 0
-  | Journal -> 1
-  | Daemon -> 2
-  | Schema -> 3
-  | Char -> 4
-  | Registry -> 5
-  | Pin -> 6
+(* A v1 reader retains the old byte-format domain before applying D2. *)
+let legacy_valid_name s =
+  let length = String.length s in
+  length >= 1 && length <= 512 &&
+  String.for_all (fun character ->
+    let byte = Char.code character in
+    byte >= 0x21 && byte <= 0x7e && not (byte >= 0x41 && byte <= 0x5a)) s
 
-let root_kind_of_index = function
-  | 0 -> Some Stdlib
-  | 1 -> Some Journal
-  | 2 -> Some Daemon
-  | 3 -> Some Schema
-  | 4 -> Some Char
-  | 5 -> Some Registry
+let root_policy_index = E4_root_policy.byte
+let root_policy_of_index = E4_root_policy.of_byte
+let root_policy_name = E4_root_policy.name
+
+(* D2: these are legacy bytes, never the new policy alphabet. *)
+let legacy_policy_of_index = function
+  | 0 | 1 | 2 | 3 | 4 | 5 -> Some Swap
   | 6 -> Some Pin
   | _ -> None
 
-let root_kind_name = function
-  | Stdlib -> "stdlib"
-  | Journal -> "journal"
-  | Daemon -> "daemon"
-  | Schema -> "schema"
-  | Char -> "char"
-  | Registry -> "registry"
-  | Pin -> "pin"
-
-let status_tag = function
-  | Fresh -> 0
-  | Gced -> 1
-  | Imported -> 2
-  | Reserved (n, _) -> n
+let head_equal (a : head) (b : head) =
+  Z.equal a.generation b.generation && E4_addr.Addr.equal a.digest b.digest
 
 (* An operator word never carries a raw byte: a corrupted version field is arbitrary. *)
 let printable (s : string) : string =
@@ -159,14 +136,16 @@ let read_be16 (s : string) (pos : int) : int option =
 let add_root (b : Buffer.t) (r : root) : unit =
   if not (valid_name r.name) then
     invalid_arg
-      (Printf.sprintf "E4_control.encode: root name %S is not 1..%d lowercase printable ASCII"
+      (Printf.sprintf "E4_control.encode: root name %S is outside its format domain (wire limit %d bytes)"
          r.name max_name_length);
   add_be16 b "root name length" (String.length r.name);
   Buffer.add_string b r.name;
-  Buffer.add_char b (Char.chr (root_kind_index r.root_kind));
+  Buffer.add_char b (Char.chr (root_policy_index r.policy));
   Buffer.add_char b (Char.chr (E4_kind.byte r.kind));
-  Buffer.add_string b (E4_addr.Addr.bytes r.digest);
-  add_be64 b "root version" r.version
+  Buffer.add_string b (E4_addr.Addr.bytes r.head.digest);
+  if Z.sign r.head.generation < 0 || Z.gt r.head.generation (Z.of_int max_wire) then
+    invalid_arg "E4_control.encode: root generation exceeds wire capacity";
+  add_be64 b "root generation" (Z.to_int r.head.generation)
 
 let add_status (b : Buffer.t) (st : status) : unit =
   match st with
@@ -216,7 +195,7 @@ let decode (s : string) : (payload, open_error) result =
   else
     let v = String.sub s magic_length version_length in
     (* CF1: the version is matched as a string before any field is read. *)
-    if v <> version_string then Error (Stale_binary v)
+    if v <> version_string && v <> "00000001" then Error (Stale_binary v)
     else
       let plen = len - header_length in
       if plen < fixed_payload_length then
@@ -282,16 +261,16 @@ let decode (s : string) : (payload, open_error) result =
                 raise (Bad (Printf.sprintf "truncated root at offset %d" !pos));
               let name = String.sub s !pos name_len in
               pos := !pos + name_len;
-              if not (valid_name name) then
+              if not ((if String.equal v "00000001" then legacy_valid_name else valid_name) name) then
                 raise
                   (Bad
-                     (Printf.sprintf "root name %S is not 1..%d lowercase printable ASCII" name
+                     (Printf.sprintf "root name %S is outside its format domain (wire limit %d bytes)" name
                         max_name_length));
               let rk =
-                match root_kind_of_index (Char.code s.[!pos]) with
+                match (if String.equal v "00000001" then legacy_policy_of_index else root_policy_of_index) (Char.code s.[!pos]) with
                 | Some k -> k
                 | None ->
-                  raise (Bad (Printf.sprintf "unregistered root kind byte %d" (Char.code s.[!pos])))
+                  raise (Bad (Printf.sprintf "unregistered root policy byte %d" (Char.code s.[!pos])))
               in
               incr pos;
               let k =
@@ -304,7 +283,7 @@ let decode (s : string) : (payload, open_error) result =
               let digest = E4_addr.Addr.of_digest (String.sub s !pos 32) in
               pos := !pos + 32;
               let version = u64 "root version" in
-              { name; root_kind = rk; kind = k; digest; version }
+              { name; policy = rk; kind = k; head = { digest; generation = Z.of_int version } }
             in
             let rec take n acc = if n = 0 then List.rev acc else take (n - 1) (read_root () :: acc) in
             if root_count > len then raise (Bad "root_count is larger than the file");
@@ -393,9 +372,6 @@ let root (p : payload) (name : string) : root option =
   let name = normalise_name name in
   List.find_opt (fun r -> String.equal r.name name) p.roots
 
-let next_version (p : payload) (name : string) : int =
-  match root p name with Some old -> old.version + 1 | None -> 1
-
 let roots (p : t) = p.roots
 let pack_end (p : t) = p.pack_end
 let index_end (p : t) = p.index_end
@@ -407,61 +383,61 @@ let status (p : t) = p.status
 (* ---------------------------------------------------------------- the plane, moved *)
 
 type root_error =
-  | Stale_root of { name : string; expected : int; actual : int }
+  | No_root of string
+  | Stale_root of { name : string; expected : head option; actual : head option }
+  | Pinned of string
   | Dangling of E4_addr.Addr.t
   | Wrong_kind of { at : E4_addr.Addr.t; expected : E4_kind.t; actual : E4_kind.t }
-  | Fork of { name : string; head : E4_addr.Addr.t; prev : E4_addr.Addr.t }
+  | Fork of { name : string; head : E4_addr.Addr.t; target : E4_addr.Addr.t }
+
+let head_word (value : head option) = match value with
+  | None -> "none"
+  | Some h -> E4_addr.Addr.hex h.digest ^ ":" ^ Z.to_string h.generation
 
 let root_error_word = function
-  | Stale_root { name; expected; actual } ->
-    Printf.sprintf "staleRoot %s %d %d" name expected actual
-  | Wrong_kind _ -> "wrongKind"
+  | No_root name -> "noRoot " ^ name
+  | Stale_root {name; expected; actual} -> "staleRoot " ^ name ^ " " ^ head_word expected ^ " " ^ head_word actual
+  | Pinned name -> "pinned " ^ name
   | Dangling d -> "dangling " ^ E4_addr.Addr.hex d
-  | Fork { name; head; prev } ->
-    Printf.sprintf "fork %s %s %s" name (E4_addr.Addr.hex head) (E4_addr.Addr.hex prev)
+  | Wrong_kind _ -> "wrongKind"
+  | Fork {name; head; target} -> "fork " ^ name ^ " " ^ E4_addr.Addr.hex head ^ " " ^ E4_addr.Addr.hex target
 
-(* CF5, in Store.putRoot's order (Store.putRoot (src/Effect4/Store/Domain/Store.lean)): version, then resolution, then kind.
-   The M7 prev check sits with the version check — both ask "is this move against the head you
-   think it is" — and is unreachable for any root kind but Registry (D2). *)
 let advance_root (p : payload) ~(resolve : E4_addr.Addr.t -> E4_kind.t option)
-    ?(prev : E4_addr.Addr.t option) (r : root) : (payload, root_error) result =
-  let name = normalise_name r.name in
-  if not (valid_name name) then
-    invalid_arg
-      (Printf.sprintf "E4_control.advance_root: root name %S is not 1..%d lowercase printable ASCII"
-         r.name max_name_length);
-  if r.version < 0 then
-    invalid_arg "E4_control.advance_root: a root version is a be64 below 2^62 (M9)";
-  let r = { r with name } in
-  let expected = next_version p name in
-  if r.version <> expected then Error (Stale_root { name; expected; actual = r.version })
-  else
-    let head = match root p name with Some q -> q.digest | None -> E4_addr.Addr.zero in
-    let forked =
-      match r.root_kind with
-      | Registry ->
-        let prev = match prev with Some d -> d | None -> E4_addr.Addr.zero in
-        if E4_addr.Addr.equal prev head then None else Some (Fork { name; head; prev })
-      | _ -> None
-    in
-    match forked with
-    | Some e -> Error e
-    | None -> (
-      match resolve r.digest with
-      | None -> Error (Dangling r.digest)
-      | Some k when not (E4_kind.equal k r.kind) ->
-        Error (Wrong_kind { at = r.digest; expected = r.kind; actual = k })
-      | Some _ ->
-        (* CF8: the moved root is the head and the resident of that name is filtered out —
-           `r :: s.roots.filter fun q => q.name ≠ r.name` (Store.putRoot (src/Effect4/Store/Domain/Store.lean)). *)
-        Ok
-          {
-            p with
-            roots = r :: List.filter (fun q -> not (String.equal q.name name)) p.roots;
-            generation = p.generation + 1;
-          })
-
-let put_root = advance_root
+    ?(parent = fun _ -> None) (move : move) : (payload, root_error) result =
+  let install (r : root) = Ok {p with roots = r :: List.filter (fun q -> not (String.equal q.name r.name)) p.roots;
+    generation = p.generation + 1} in
+  let check_target expected (target : target) =
+    if not (E4_kind.equal target.kind expected) then
+      Error (Wrong_kind {at = target.digest; expected; actual = target.kind})
+    else match resolve target.digest with
+      | None -> Error (Dangling target.digest)
+      | Some actual when not (E4_kind.equal actual expected) ->
+        Error (Wrong_kind {at = target.digest; expected; actual})
+      | Some _ -> Ok () in
+  match move with
+  | Create (name, policy, target) ->
+    (match root p name with
+     | Some old -> Error (Stale_root {name; expected = None; actual = Some old.head})
+     | None -> match check_target target.kind target with
+       | Error e -> Error e
+       | Ok () -> install {name; policy; kind = target.kind; head = {digest = target.digest; generation = Z.one}})
+  | Advance (name, expected, target) ->
+    (match root p name with
+     | None -> Error (No_root name)
+     | Some old when not (head_equal old.head expected) ->
+       Error (Stale_root {name; expected = Some expected; actual = Some old.head})
+     | Some old when E4_kind.equal target.kind old.kind && E4_addr.Addr.equal target.digest old.head.digest -> Ok p
+     | Some old when old.policy = Pin -> Error (Pinned name)
+     | Some old -> match check_target old.kind target with
+       | Error e -> Error e
+       | Ok () ->
+         let rec reaches seen address =
+           E4_addr.Addr.equal address old.head.digest ||
+           (not (List.exists (E4_addr.Addr.equal address) seen) &&
+            match parent address with None -> false | Some previous -> reaches (address :: seen) previous) in
+         if old.policy = Journal && not (reaches [] target.digest) then
+           Error (Fork {name; head = old.head.digest; target = target.digest})
+         else install {old with head = {digest = target.digest; generation = Z.succ old.head.generation}})
 
 (* ---------------------------------------------------------------- the watermark *)
 

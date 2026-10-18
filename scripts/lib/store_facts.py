@@ -12,7 +12,8 @@ import shutil
 import tempfile
 
 FILES = tuple(Path('ocaml/engine/cas') / name for name in
-              ('e4_kind.ml', 'e4_kind.mli', 'e4_admission.ml', 'e4_admission.mli'))
+              ('e4_kind.ml', 'e4_kind.mli', 'e4_admission.ml', 'e4_admission.mli',
+               'e4_root_policy.ml', 'e4_root_policy.mli'))
 
 
 def generate(root, out, checking, run, install):

@@ -5,7 +5,7 @@ inputs: tools/ProofGraph/Registry.lean, tools/Tools/Semantics.lean, tools/Driver
 -->
 # Semantics evidence
 
-Effect4 makes 246 claims about Effect's runtime: 239 proved, 2 modulo, 1 refuted, 3 absent, 1 assumed.
+Effect4 makes 255 claims about Effect's runtime: 248 proved, 2 modulo, 1 refuted, 3 absent, 1 assumed.
 
 A claim's evidence comes from its Lean declaration and is never written by hand (decisions row 203). `The open work` lists the planned goals that the remaining claims rest on, and why each waits.
 
@@ -2225,7 +2225,7 @@ Module: `Effect4.Laws.Library.Pool.Profile`
 
 ## Exact Codecs
 
-Invertible embeddings for JSON and Schema representations. 26 claims: 25 proved, 1 modulo.
+Invertible embeddings for JSON and Schema representations. 35 claims: 34 proved, 1 modulo.
 
 | Claim | Role | Status | Evidence |
 | --- | --- | --- | --- |
@@ -2253,6 +2253,15 @@ Invertible embeddings for JSON and Schema representations. 26 claims: 25 proved,
 | `cas-node-read-exact` | compatibility | proved | `Effect4.Store.Node.read_exact` |
 | `cas-get-exact` | compatibility | proved | `Effect4.Store.Cas.get_exact` |
 | `cas-admission-handles` | preservation | proved | `Effect4.Store.putNode_ok_handleFree` |
+| `cas-advance-head` | compatibility | proved | `Effect4.Store.advance_head` |
+| `cas-advance-stale` | compatibility | proved | `Effect4.Store.advance_stale` |
+| `cas-advance-duplicate` | compatibility | proved | `Effect4.Store.advance_duplicate` |
+| `cas-journal-fast-forward` | preservation | proved | `Effect4.Store.journal_ff` |
+| `cas-commit-grows` | preservation | proved | `Effect4.Store.commit_grows` |
+| `cas-commit-bytes` | preservation | proved | `Effect4.Store.bytes_never_change` |
+| `cas-commit-reads` | compatibility | proved | `Effect4.Store.commit_reads` |
+| `cas-interrupted-closed` | preservation | proved | `Effect4.Store.interrupted_closed` |
+| `cas-interrupted-roots` | compatibility | proved | `Effect4.Store.interrupted_roots` |
 | `cas-resident-injective` | compatibility | proved | `Effect4.Store.address_inj_resident` |
 | `program-digest-exact` | compatibility | proved | `Effect4.Store.address_eq_or_collision` |
 
@@ -2660,6 +2669,159 @@ Module: `Effect4.Store.Domain.Store`
   {d : Effect4.Store.Digest} {s' : Effect4.Store.Store},
   Eq (s.putNode n) (Except.ok { fst := o, snd := { fst := d, snd := s' } }) →
     Eq n.handleInContent Bool.false
+```
+
+### cas-advance-head
+
+Changed accepted root moves check the complete expected head and increase its generation exactly once; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+advance_head: a changed accepted target raises exactly one generation.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store next : Effect4.Store.Store} {name : String} {old : Effect4.Store.Root}
+  {target : Effect4.Store.AnyRef} {outcome : Effect4.Store.MoveOutcome},
+  Eq (store.root? name) (Option.some old) →
+    Not (And (Eq target.kind old.kind) (Eq target.digest old.head.digest)) →
+      Eq (store.move (Effect4.Store.Move.advance name old.head target))
+          (Except.ok { fst := outcome, snd := next }) →
+        And (Eq outcome (Effect4.Store.MoveOutcome.advanced (instHAdd.hAdd old.head.generation 1)))
+          (Eq next
+            (store.installRoot
+              { name := old.name, policy := old.policy, kind := old.kind,
+                head :=
+                  { digest := target.digest, generation := instHAdd.hAdd old.head.generation 1 } }))
+```
+
+### cas-advance-stale
+
+A stale complete expected head refuses before every target or policy check; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+advance_head: a stale full head refuses before every target check.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store : Effect4.Store.Store} {name : String} {old : Effect4.Store.Root}
+  {expected : Effect4.Store.Head Effect4.Store.Digest} (target : Effect4.Store.AnyRef),
+  Eq (store.root? name) (Option.some old) →
+    Ne old.head expected →
+      Eq (store.move (Effect4.Store.Move.advance name expected target))
+        (Except.error
+          (Effect4.Store.TxnRefusal.staleRoot name (Option.some expected) (Option.some old.head)))
+```
+
+### cas-advance-duplicate
+
+An identical complete target retains the exact store and generation; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+advance_head: an identical complete target retains the previous generation.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store : Effect4.Store.Store} {name : String} {old : Effect4.Store.Root},
+  Eq (store.root? name) (Option.some old) →
+    Eq
+      (store.move
+        (Effect4.Store.Move.advance name old.head { kind := old.kind, digest := old.head.digest }))
+      (Except.ok { fst := Effect4.Store.MoveOutcome.duplicate old.head.generation, snd := store })
+```
+
+### cas-journal-fast-forward
+
+A changed accepted journal target reaches the prior head through designated parent fields; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+journal_ff: a changed journal target reaches the previous head through designated parents.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store next : Effect4.Store.Store} {name : String} {old : Effect4.Store.Root}
+  {target : Effect4.Store.AnyRef} {outcome : Effect4.Store.MoveOutcome},
+  Eq (store.root? name) (Option.some old) →
+    Eq old.policy Effect4.Store.RootPolicy.journal →
+      Not (And (Eq target.kind old.kind) (Eq target.digest old.head.digest)) →
+        Eq (store.move (Effect4.Store.Move.advance name old.head target))
+            (Except.ok { fst := outcome, snd := next }) →
+          Eq (store.parentReaches old.head.digest store.nodes.length target.digest) Bool.true
+```
+
+### cas-commit-grows
+
+Accepted transactions retain every earlier resident at its digest; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+commit_grows: every accepted transaction retains every earlier resident.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store next : Effect4.Store.Store} {transaction : Effect4.Store.Txn}
+  {receipt : Effect4.Store.Receipt},
+  Eq (store.commit transaction) (Except.ok { fst := receipt, snd := next }) → store.sub next
+```
+
+### cas-commit-bytes
+
+Reading an earlier resident after an accepted transaction returns the same node; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+bytes_never_change: reading a resident after an accepted commit returns the same node.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store next : Effect4.Store.Store} {transaction : Effect4.Store.Txn}
+  {receipt : Effect4.Store.Receipt} {digest : Effect4.Store.Digest} {node : Effect4.Store.Node},
+  Eq (store.commit transaction) (Except.ok { fst := receipt, snd := next }) →
+    Eq (store.find digest) (Option.some node) → Eq (next.find digest) (Option.some node)
+```
+
+### cas-commit-reads
+
+Every submitted node reads back after an accepted transaction; conflicts refuse; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+commit_reads: every submitted node reads back after an accepted atomic commit.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store next : Effect4.Store.Store} {transaction : Effect4.Store.Txn}
+  {receipt : Effect4.Store.Receipt},
+  Eq (store.commit transaction) (Except.ok { fst := receipt, snd := next }) →
+    ∀ (node : Effect4.Store.Node),
+      List.instMembership.mem transaction.nodes node →
+        Eq (next.find (Effect4.Store.sha256 node.encode)) (Option.some node)
+```
+
+### cas-interrupted-closed
+
+An accepted cut from a closed store retains node closure after complete transaction validation; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+interrupted_closed: every accepted cut of a closed store retains node closure.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store next : Effect4.Store.Store} {transaction : Effect4.Store.Txn} {cut : Effect4.Store.Cut},
+  Effect4.Store.Closed store →
+    Eq (store.interrupted transaction cut) (Except.ok next) → Effect4.Store.Closed next
+```
+
+### cas-interrupted-roots
+
+An accepted cut retains the exact old root table or returns the exact committed store; no host persistence, crash, or progress claim (seams ST1b, R13)
+
+interrupted_roots: every cut has the exact old roots or the exact published store.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ {store next : Effect4.Store.Store} {transaction : Effect4.Store.Txn} {cut : Effect4.Store.Cut},
+  Eq (store.interrupted transaction cut) (Except.ok next) →
+    Or (Eq next.roots store.roots)
+      (Exists fun receipt =>
+        Eq (store.commit transaction) (Except.ok { fst := receipt, snd := next }))
 ```
 
 ### cas-resident-injective

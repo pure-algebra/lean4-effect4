@@ -4,6 +4,7 @@ public import Effect4.Store.Domain.Store
 meta import Effect4.Store.Carrier.Digest
 meta import Effect4.Store.Carrier.Kind
 meta import Effect4.Store.Domain.Node
+meta import Effect4.Store.Domain.Transaction
 meta import Effect4.Store.Domain.Store
 
 /-!
@@ -784,7 +785,7 @@ def verifyNodes (s : Store) : List (Digest × Node) → Except VerifyError Unit
 def verifyRoots (s : Store) : List Root → Except VerifyError Unit
   | [] => .ok ()
   | r :: rest =>
-    match s.find r.digest with
+    match s.find r.head.digest with
     | some m => if m.kind = r.kind then verifyRoots s rest else .error (.rootUnresolved r.name)
     | none => .error (.rootUnresolved r.name)
 
@@ -869,7 +870,7 @@ theorem verifyNodes_ok {s : Store} {l : List (Digest × Node)} (h : verifyNodes 
     · exact ih hrest p hp
 
 theorem verifyRoots_ok {s : Store} : ∀ {rs : List Root},
-    verifyRoots s rs = .ok () → ∀ r ∈ rs, ∃ m, s.find r.digest = some m ∧ m.kind = r.kind
+    verifyRoots s rs = .ok () → ∀ r ∈ rs, ∃ m, s.find r.head.digest = some m ∧ m.kind = r.kind
   | [], _, _, hr => nomatch hr
   | r :: rs, h, r', hr' => by
     simp only [verifyRoots] at h
@@ -906,7 +907,7 @@ theorem verify_sound {s : Store} (h : s.verify = .ok ()) : s.Sound := by
 
 /-- A store that verifies resolves every root at its kind. -/
 theorem verify_roots {s : Store} (h : s.verify = .ok ()) :
-    ∀ r ∈ s.roots, ∃ m, s.find r.digest = some m ∧ m.kind = r.kind :=
+    ∀ r ∈ s.roots, ∃ m, s.find r.head.digest = some m ∧ m.kind = r.kind :=
   verifyRoots_ok (verify_ok h).2
 
 /-! ## Words, closures, layers, the outbox and verify, guarded -/
@@ -979,9 +980,9 @@ def verified (r : Except VerifyError Unit) : Bool :=
 #guard (match (Store.mk [(probeEntryAddress, probeEntry)] []).verify with
   | .error (.dangling node missing) => node = probeEntryAddress ∧ missing = probeSchemaAddress
   | _ => false)
-#guard (match (Store.mk probeStore.nodes [⟨"stdlib/rc112", .stdlib, .schema, probeEntryAddress, 1⟩]).verify with
+#guard (match (Store.mk probeStore.nodes [⟨"stdlib/rc112", .swap, .schema, ⟨probeEntryAddress, 1⟩⟩]).verify with
   | .error (.rootUnresolved name) => name = "stdlib/rc112"
   | _ => false)
-#guard verified (Store.mk probeStore.nodes [⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 1⟩]).verify
+#guard verified (Store.mk probeStore.nodes [⟨"stdlib/rc112", .swap, .«export», ⟨probeEntryAddress, 1⟩⟩]).verify
 
 end Effect4.Store

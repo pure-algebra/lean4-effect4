@@ -175,9 +175,9 @@ let parse_exact s = match parse_v s 0 (String.length s) with
 
 let root_of_v = function
   | VCtor (0, [ VStr name; VNat rk; VNat kb; VBytes dig; VNat version ]) -> (
-    match (E4_control.root_kind_of_index rk, E4_kind.of_byte kb) with
-    | Some root_kind, Some kind when String.length dig = 32 ->
-      Some { E4_control.name; root_kind; kind; digest = addr_of dig; version }
+    match (E4_control.root_policy_of_index rk, E4_kind.of_byte kb) with
+    | Some policy, Some kind when String.length dig = 32 ->
+      Some { E4_control.name; policy; kind; head = {digest = addr_of dig; generation = Z.of_int version} }
     | _ -> None)
   | _ -> None
 
@@ -196,10 +196,10 @@ let bindings_of_v = function
 let root_val (r : E4_control.root) =
   v_ctor 0
     [ v_str r.E4_control.name;
-      v_nat (E4_control.root_kind_index r.E4_control.root_kind);
+      v_nat (E4_control.root_policy_index r.E4_control.policy);
       v_nat (E4_kind.byte r.E4_control.kind);
-      v_bytes (E4_addr.Addr.bytes r.E4_control.digest);
-      v_nat r.E4_control.version ]
+      v_bytes (E4_addr.Addr.bytes r.E4_control.head.digest);
+      v_nat (Z.to_int r.E4_control.head.generation) ]
 
 let word_val bs =
   v_list (List.map (fun (d, b) -> v_pair (v_bytes d) (v_bytes b)) bs)
@@ -735,126 +735,77 @@ let test_g2 () =
 
 (* ============================================================ golden G3 *)
 
+let move_of_v = function
+  | VCtor (0, [VStr name; VNat policy; VNat kind; VBytes digest]) ->
+    (match E4_control.root_policy_of_index policy, E4_kind.of_byte kind with
+     | Some policy, Some kind when String.length digest = 32 -> Some (E4_control.Create (name, policy, {kind; digest = addr_of digest}))
+     | _ -> None)
+  | VCtor (1, [VStr name; VBytes digest; VNat generation; VNat kind; VBytes target]) ->
+    (match E4_kind.of_byte kind with
+     | Some kind when String.length digest = 32 && String.length target = 32 ->
+       Some (E4_control.Advance (name, {digest = addr_of digest; generation = Z.of_int generation}, {kind; digest = addr_of target}))
+     | _ -> None)
+  | _ -> None
+
 let test_g3 () =
-  print_endline "-- golden G3: the roots plane, with the kind and dangling checks real";
-  let rows = List.filter (fun (_, f, _) -> f = "g3") (cases ()) in
-  if rows = [] then skip "G3 the roots goldens" "no g3 rows in cases.txt"
-  else begin
-    let ok = ref 0 and total = ref 0 and bad = ref [] in
-    let v1 =
-      { E4_control.name = "stdlib/rc112"; root_kind = E4_control.Stdlib; kind = E4_kind.Export;
-        digest = entry_addr; version = 1 }
-    in
-    let v2 = { v1 with E4_control.kind = E4_kind.Schema; digest = schema_addr; version = 2 } in
-    let store_with moves =
-      let d = fresh_dir () in
-      let s = E4_cas.open_rw ~dir:d opts in
-      ignore (E4_cas.put s probe_schema);
-      ignore (E4_cas.put s probe_entry);
-      E4_cas.commit s;
-      List.iter (fun r -> ignore (E4_cas.advance_root s r)) moves;
-      s
-    in
-    let single name expected r =
-      (* g3-advance-v2 runs against the store AFTER g3-v1 (cases.txt's header) *)
-      let s = store_with (if name = "g3-advance-v2" then [ v1 ] else []) in
-      let got =
-        match E4_cas.advance_root s r with Ok () -> "ok" | Error e -> E4_control.root_error_word e
-      in
-      E4_cas.close s;
-      incr total;
-      if got = expected then incr ok
-      else begin
-        bad := name :: !bad;
-        note "  g3 %s: Lean says %s, advance_root says %s" name expected got
-      end
-    in
-    let plane name moves =
-      match golden name with
-      | None -> ()
-      | Some bytes ->
-        incr total;
-        let s = store_with moves in
-        let rs = E4_cas.roots (E4_cas.read_only s) in
-        E4_cas.close s;
-        let mine = List.map root_val rs in
-        if bytes = v_list mine || (List.length mine = 1 && bytes = List.hd mine) then incr ok
-        else begin
-          bad := name :: !bad;
-          note "  g3 %s: the roots plane does not match Lean's cut (%d root(s) here)" name
-            (List.length rs)
-        end
-    in
-    List.iter
-      (fun (name, _, expected) ->
-        if name = "g3-roots-after-v1" then plane name [ v1 ]
-        else if name = "g3-roots-after-v2" then plane name [ v1; v2 ]
-        else
-          match golden name with
-          | None -> ()
-          | Some bytes -> (
-            match parse_exact bytes with
-            | Some v -> (
-              match root_of_v v with
-              | Some r -> single name expected r
-              | None ->
-                incr total;
-                bad := (name ^ " (not a rootVal)") :: !bad)
-            | None ->
-              incr total;
-              bad := (name ^ " (not a frame tree)") :: !bad))
-      rows;
-    check (Printf.sprintf "G3 %d/%d root rows agree with Lean" !ok !total) (!bad = []);
-    (* the plane itself: one root per name, head first, and the version rule *)
-    let d = fresh_dir () in
-    let s = E4_cas.open_rw ~dir:d opts in
-    ignore (E4_cas.put s probe_schema);
-    ignore (E4_cas.put s probe_entry);
-    E4_cas.commit s;
-    let ro = E4_cas.read_only s in
-    let r1 =
-      { E4_control.name = "stdlib/rc112"; root_kind = E4_control.Stdlib; kind = E4_kind.Export;
-        digest = entry_addr; version = 1 }
-    in
-    check "G3 next_version of an absent name is 1" (E4_cas.next_version ro "stdlib/rc112" = 1);
-    check "G3 the first move is ok" (E4_cas.advance_root s r1 = Ok ());
-    check "G3 the name answers the new root" (E4_cas.root ro "stdlib/rc112" = Some r1);
-    check "G3 next_version is now 2" (E4_cas.next_version ro "stdlib/rc112" = 2);
-    check "G3 the same move again is staleRoot"
-      (match E4_cas.advance_root s r1 with
-       | Error e -> E4_control.root_error_word e = "staleRoot stdlib/rc112 2 1"
-       | Ok () -> false);
-    let r2 = { r1 with E4_control.kind = E4_kind.Schema; digest = schema_addr; version = 2 } in
-    check "G3 a second advance leaves one root" (E4_cas.advance_root s r2 = Ok ()
-                                                 && List.length (E4_cas.roots ro) = 1);
-    check "G3 a root at the wrong kind is wrongKind"
-      (match
-         E4_cas.advance_root s { r1 with E4_control.kind = E4_kind.Schema; digest = entry_addr; version = 3 }
-       with
-       | Error e -> E4_control.root_error_word e = "wrongKind"
-       | Ok () -> false);
-    check "G3 a root at the zero digest dangles"
-      (match E4_cas.advance_root s { r1 with E4_control.digest = addr_of zero; version = 3 } with
-       | Error e -> E4_control.root_error_word e = "dangling " ^ E4_hex.of_bytes zero
-       | Ok () -> false);
-    check "G3 the generation is strictly increasing" (E4_cas.generation ro > 0);
-    check "G3 a root makes its target reachable" (E4_cas.reachable ro schema_addr);
-    (* M1's pins (D8): a Cid with no filing refuses the publish and files nothing *)
-    let cid = addr_of (E4_sha256.digest probe_entry.E4_node.payload) in
-    let before = List.length (E4_cas.roots ro) in
-    check "G3/M1 pin_all mints one Pin root per filing"
-      (E4_cas.pin_all s ~job:entry_addr [ cid ] = Ok ()
-       && List.length (E4_cas.roots ro) = before + 1
-       && List.exists (fun (r : E4_control.root) -> r.E4_control.root_kind = E4_control.Pin)
-            (E4_cas.roots ro));
-    let unfiled = addr_of (String.make 32 '\042') in
-    check "G3/M1 a Cid with no filing refuses the publish, and files nothing"
-      ((match E4_cas.pin_all s ~job:entry_addr [ unfiled ] with
-        | Error (E4_control.Dangling a) -> E4_addr.Addr.equal a unfiled
-        | _ -> false)
-       && List.length (E4_cas.roots ro) = before + 1);
-    E4_cas.close s
-  end
+  let alternate = node E4_kind.Export (E4_addr.Addr.bytes schema_addr) (v_str "alternate") in
+  let alternate_addr = address alternate in
+  let create = E4_control.Create ("stdlib/rc112", E4_control.Swap, {kind = E4_kind.Export; digest = entry_addr}) in
+  let advance = E4_control.Advance ("stdlib/rc112", {digest = entry_addr; generation = Z.one}, {kind = E4_kind.Export; digest = alternate_addr}) in
+  let store_with moves =
+    let s = E4_cas.open_rw ~dir:(fresh_dir ()) opts in
+    List.iter (fun n -> ignore (E4_cas.put s n)) [probe_schema; probe_entry; alternate];
+    List.iter (fun move -> ignore (E4_cas.advance_root s move)) moves;
+    s in
+  let rows = List.filter (fun (_, family, _) -> family = "g3") (cases ()) in
+  List.iter (fun (name, _, expected) -> match golden name with
+    | None -> check ("G3 missing " ^ name) false
+    | Some bytes ->
+      if name = "g3-roots-after-v1" || name = "g3-roots-after-v2" then begin
+        let s = store_with (if name = "g3-roots-after-v1" then [create] else [create; advance]) in
+        check ("G3 " ^ name) (bytes = v_list (List.map root_val (E4_cas.roots (E4_cas.read_only s))));
+        E4_cas.close s
+      end else begin
+        let s = store_with (if name = "g3-v1" then [] else [create]) in
+        let got = match Option.bind (parse_exact bytes) move_of_v with
+          | None -> "malformedMove"
+          | Some move -> match E4_cas.advance_root s move with Ok () -> "ok" | Error e -> E4_control.root_error_word e in
+        check ("G3 " ^ name ^ " " ^ got) (got = expected);
+        E4_cas.close s
+      end) rows;
+  check "G3 roots are present" (rows <> []);
+  let store = E4_cas.open_rw ~dir:(fresh_dir ()) opts in
+  ignore (E4_cas.put store probe_schema);
+  ignore (E4_cas.put store probe_entry);
+  let origin = node E4_kind.Entry (E4_addr.Addr.bytes schema_addr) (v_ctor 0 [v_nat 1; v_nat 1; v_str "engine"]) in
+  let origin_addr = address origin in
+  let action parent = node E4_kind.Entry (E4_addr.Addr.bytes schema_addr)
+    (v_ctor 1 [v_ref (E4_kind.byte E4_kind.Entry) (E4_addr.Addr.bytes parent); v_str "act"; E4_be.framed Eff_frame.tag_none ""]) in
+  let child = action origin_addr in
+  let grandchild = action (address child) in
+  let incidental = node E4_kind.Entry (E4_addr.Addr.bytes schema_addr)
+    (v_ctor 0 [v_ref (E4_kind.byte E4_kind.Entry) (E4_addr.Addr.bytes origin_addr); v_nat 1; v_str "origin"]) in
+  List.iter (fun node -> ignore (E4_cas.put store node)) [origin; child; grandchild; incidental];
+  check "journal create at origin" (E4_cas.advance_root store (E4_control.Create ("session/test", E4_control.Journal,
+    {kind = E4_kind.Entry; digest = origin_addr})) = Ok ());
+  check "incidental edge is not a designated parent" (match E4_cas.advance_root store (E4_control.Advance
+    ("session/test", {digest = origin_addr; generation = Z.one}, {kind = E4_kind.Entry; digest = address incidental})) with
+    | Error (E4_control.Fork _) -> true | _ -> false);
+  check "native journal follows transitive canonical parents" (E4_cas.advance_root store (E4_control.Advance
+    ("session/test", {digest = origin_addr; generation = Z.one}, {kind = E4_kind.Entry; digest = address grandchild})) = Ok ());
+  let ro = E4_cas.read_only store in
+  check "root closure keeps its schema reachable" (E4_cas.reachable ro schema_addr);
+  let cid = addr_of (E4_sha256.digest probe_entry.E4_node.payload) in
+  let before = List.length (E4_cas.roots ro) in
+  check "G3/M1 pin_all mints one pin root per filing"
+    (E4_cas.pin_all store ~job:entry_addr [cid] = Ok () && List.length (E4_cas.roots ro) = before + 1 &&
+      List.exists (fun (root : E4_control.root) -> root.policy = E4_control.Pin) (E4_cas.roots ro));
+  let unfiled = addr_of (String.make 32 '\042') in
+  check "G3/M1 unfiled content refuses and publishes nothing"
+    ((match E4_cas.pin_all store ~job:entry_addr [unfiled] with
+      | Error (E4_control.Dangling actual) -> E4_addr.Addr.equal actual unfiled
+      | _ -> false) && List.length (E4_cas.roots ro) = before + 1);
+  E4_cas.close store
 
 (* ============================================================ golden G7 *)
 
@@ -1056,8 +1007,7 @@ let test_queries () =
       check "reachable is false with no roots" (not (E4_cas.reachable ro schema_addr));
       ignore
         (E4_cas.advance_root s
-           { E4_control.name = "stdlib/rc112"; root_kind = E4_control.Stdlib; kind = E4_kind.Export;
-             digest = entry_addr; version = 1 });
+           (E4_control.Create ("stdlib/rc112", E4_control.Swap, {kind = E4_kind.Export; digest = entry_addr})));
       check "reachable follows the checked edges from a root"
         (E4_cas.reachable ro entry_addr && E4_cas.reachable ro schema_addr
          && not (E4_cas.reachable ro tree_addr));

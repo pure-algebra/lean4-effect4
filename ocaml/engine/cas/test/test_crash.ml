@@ -593,15 +593,12 @@ let test_x7 () =
   let s = E4_cas.open_rw ~dir:d4 opts in
   let ro = E4_cas.read_only s in
   let target = E4_node.address genesis in
-  let mk v = { E4_control.name = "runs/head"; root_kind = E4_control.Journal;
-               kind = E4_kind.Schema; digest = target; version = v } in
-  check "X7(c) the first move wins" (E4_cas.advance_root s (mk 1) = Ok ());
-  check "X7(c) a writer holding a stale read loses with staleRoot"
-    (match E4_cas.advance_root s (mk 1) with
-     | Error e -> E4_control.root_error_word e = "staleRoot runs/head 2 1"
-     | Ok () -> false);
-  check "X7(c) and wins after re-reading next_version"
-    (E4_cas.advance_root s (mk (E4_cas.next_version ro "runs/head")) = Ok ());
+  let create = E4_control.Create ("runs/head", E4_control.Swap, {kind = E4_kind.Schema; digest = target}) in
+  check "X7(c) the first move wins" (E4_cas.advance_root s create = Ok ());
+  check "X7(c) stale absence refuses" (match E4_cas.advance_root s create with Error (E4_control.Stale_root _) -> true | _ -> false);
+  check "X7(c) full-head duplicate retains generation" (match E4_cas.root ro "runs/head" with
+    | Some root -> E4_cas.advance_root s (E4_control.Advance ("runs/head", root.head, {kind = E4_kind.Schema; digest = target})) = Ok ()
+    | None -> false);
   check "X7(c) the plane holds one root of that name, and no node was overwritten"
     (List.length (List.filter (fun (r : E4_control.root) -> r.E4_control.name = "runs/head")
                     (E4_cas.roots ro))

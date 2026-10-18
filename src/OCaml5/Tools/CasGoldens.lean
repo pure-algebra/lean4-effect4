@@ -1,5 +1,6 @@
 import Tools.GeneratedStamp
 import Effect4.Store.Domain.Word
+import Effect4.Store.Domain.Cas
 import Effect4.Store.Domain.Genesis
 import Effect4.Machine.Stores
 import TestSupport.CasEntry
@@ -66,17 +67,17 @@ def digestHex (bs : Bytes) : String := (sha256 bs).hex
 
 /-! ## The tool-side projections (see the module header) -/
 
-def rootKindIndex : RootKind → Nat
-  | .stdlib => 0
-  | .journal => 1
-  | .daemon => 2
-  | .schema => 3
-  | .char => 4
+def policyIndex (policy : RootPolicy) : Nat := policy.byte.toNat
 
-/-- A root as a value tree: name, root-kind index, kind byte, digest, version. -/
 def rootVal (r : Root) : Val :=
-  .ctor 0 [.str r.name, .nat (rootKindIndex r.rootKind), .nat r.kind.byte.toNat,
-    .bytes r.digest.bytes, .nat r.version]
+  .ctor 0 [.str r.name, .nat (policyIndex r.policy), .nat r.kind.byte.toNat,
+    .bytes r.head.digest.bytes, .nat r.head.generation]
+
+def moveVal : Move → Val
+  | .create name policy target => .ctor 0 [.str name, .nat (policyIndex policy),
+      .nat target.kind.byte.toNat, .bytes target.digest.bytes]
+  | .advance name expected target => .ctor 1 [.str name, .bytes expected.digest.bytes,
+      .nat expected.generation, .nat target.kind.byte.toNat, .bytes target.digest.bytes]
 
 /-- One binding: the digest, then the node's own `Node.encode` bytes. -/
 def bindingVal (b : Binding) : Val := .pair (.bytes b.digest.bytes) (.bytes b.node.encode)
@@ -128,7 +129,6 @@ def admissionWord : Admission → String
   | .unknownTag found => s!"unknownTag {found.toNat}"
   | .oversize => "oversize"
   | .badVersion => "badVersion"
-  | .staleRoot name expected actual => s!"staleRoot {name} {expected} {actual}"
   | .conflict _ _ => "conflict"
 
 def putWord (r : Except Admission (Outcome × Digest × Store)) : String :=
@@ -138,10 +138,18 @@ def putWord (r : Except Admission (Outcome × Digest × Store)) : String :=
   | .ok (.conflict _, _, _) => "conflict"
   | .error a => admissionWord a
 
-def rootWord (r : Except Admission Store) : String :=
+def headWord : Option (Head Digest) → String
+  | none => "none"
+  | some h => s!"{h.digest.hex}:{h.generation}"
+
+def rootWord (r : Except TxnRefusal (Receipt × Store)) : String :=
   match r with
   | .ok _ => "ok"
-  | .error a => admissionWord a
+  | .error (.node _ a) | .error (.target _ a) => admissionWord a
+  | .error (.noRoot name) => "noRoot " ++ name
+  | .error (.staleRoot name expected actual) => s!"staleRoot {name} {headWord expected} {headWord actual}"
+  | .error (.pinned name) => "pinned " ++ name
+  | .error (.fork name head target) => s!"fork {name} {head.hex} {target.hex}"
 
 def verifyWord (r : Except VerifyError Unit) : String :=
   match r with
@@ -305,23 +313,33 @@ def g2Cases : List Case :=
 
 def rc112 : String := "stdlib/rc112"
 
-def rootV1 : Root := ⟨rc112, .stdlib, .«export», probeEntryAddress, 1⟩
+def rootV1 : Root := ⟨rc112, .swap, .«export», ⟨probeEntryAddress, 1⟩⟩
+def alternate : Node := {probeEntry with payload := .str "alternate"}
+def alternateAddress : Digest := sha256 alternate.encode
+def rootBase : Store := afterPut probeStore alternate
 
-def storeAfterRootV1 : Store := putRootOr probeStore rootV1
+def commitOr (store : Store) (move : Move) : Store :=
+  match store.commit ⟨[], [move]⟩ with
+  | .ok (_, next) => next
+  | .error _ => store
 
-def g3 (name : String) (s : Store) (r : Root) : Case :=
-  caseOfVal name "g3" (rootVal r) (rootWord (s.putRoot r))
+def createV1 : Move := .create rc112 .swap ⟨.«export», probeEntryAddress⟩
+def advanceV2 : Move := .advance rc112 rootV1.head ⟨.«export», alternateAddress⟩
+def storeAfterRootV1 : Store := commitOr rootBase createV1
+
+def g3 (name : String) (s : Store) (move : Move) : Case :=
+  caseOfVal name "g3" (moveVal move) (rootWord (s.commit ⟨[], [move]⟩))
 
 def g3Cases : List Case :=
-  [ g3 "g3-v1" probeStore rootV1
-  , g3 "g3-stale" probeStore ⟨rc112, .stdlib, .«export», probeEntryAddress, 2⟩
-  , g3 "g3-wrongKind" probeStore ⟨rc112, .stdlib, .schema, probeEntryAddress, 1⟩
-  , g3 "g3-dangling" probeStore ⟨rc112, .stdlib, .«export», zeroDigest, 1⟩
-  , g3 "g3-advance-v2" storeAfterRootV1 ⟨rc112, .stdlib, .schema, probeSchemaAddress, 2⟩
+  [ g3 "g3-v1" rootBase createV1
+  , g3 "g3-stale" storeAfterRootV1 createV1
+  , g3 "g3-wrongKind" storeAfterRootV1 (.advance rc112 rootV1.head ⟨.schema, probeEntryAddress⟩)
+  , g3 "g3-dangling" storeAfterRootV1 (.advance rc112 rootV1.head ⟨.«export», zeroDigest⟩)
+  , g3 "g3-advance-v2" storeAfterRootV1 advanceV2
+  , caseOfVal "g3-target-v2" "g3node" (.bytes alternate.encode) "ok"
   , caseOfVal "g3-roots-after-v1" "g3" (.list (storeAfterRootV1.roots.map rootVal)) "ok"
   , caseOfVal "g3-roots-after-v2" "g3"
-      (.list ((putRootOr storeAfterRootV1
-        ⟨rc112, .stdlib, .schema, probeSchemaAddress, 2⟩).roots.map rootVal)) "ok" ]
+      (.list ((commitOr storeAfterRootV1 advanceV2).roots.map rootVal)) "ok" ]
 
 /-! ## G4 — the memo world -/
 
@@ -491,10 +509,10 @@ def storeWrongKey : Store :=
 def storeDangling : Store := Store.mk [(probeEntryAddress, probeEntry)] []
 
 def storeRootWrongKind : Store :=
-  Store.mk probeStore.nodes [⟨rc112, .stdlib, .schema, probeEntryAddress, 1⟩]
+  Store.mk probeStore.nodes [⟨rc112, .swap, .schema, ⟨probeEntryAddress, 1⟩⟩]
 
 def storeRootOk : Store :=
-  Store.mk probeStore.nodes [⟨rc112, .stdlib, .«export», probeEntryAddress, 1⟩]
+  Store.mk probeStore.nodes [⟨rc112, .swap, .«export», ⟨probeEntryAddress, 1⟩⟩]
 
 def g7 (name : String) (s : Store) : Case := caseOfVal name "g7" (storeVal s) (verifyWord s.verify)
 
@@ -528,7 +546,7 @@ def header : List String :=
   , "#        case's store (empty for g2-genesis-exempt and g2-dangling-spec; the store after"
   , "#        probeSchema for g2-entry-fresh; the hand-built occupant store for g2-conflict;"
   , "#        probeStore otherwise). probeStore = probeSchema then probeEntry."
-  , "#   g3   roots: bytes = rootVal r, expected = the outcome of putRoot into probeStore"
+  , "#   g3   roots: bytes = moveVal move, expected = the outcome of commit into rootBase"
   , "#        (into the store after g3-v1 for g3-advance-v2)."
   , "#   g4   memo world: bytes = worldVal w, expected = none | some <hex>. entryAt cases answer"
   , "#        Val.encode (entryVal e); get cases answer Val.encode (pair (nat owner) (entryVal e))."
@@ -541,7 +559,9 @@ def header : List String :=
   , "# tool-side projections (the Lean tree has no Canonical instance for Root, Binding, Store,"
   , "# MemoEntry or MemoMap, so these five shapes are this tool's; every other byte is a Lean"
   , "# Node.encode, Val.encode or Digest):"
-  , "#   rootVal r    = ctor 0 [str name, nat rootKindIndex, nat kind.byte, bytes digest, nat version]"
+  , "#   rootVal r    = ctor 0 [str name, nat policyIndex, nat kind.byte, bytes digest, nat generation]"
+  , "#   moveVal create = ctor 0 [str name, nat policy, nat kind.byte, bytes digest]"
+  , "#   moveVal advance = ctor 1 [str name, bytes expected.digest, nat expected.generation, nat kind.byte, bytes digest]"
   , "#   bindingVal b = pair (bytes digest) (bytes (Node.encode node))"
   , "#   wordVal w    = list (map bindingVal w)"
   , "#   nodesVal ns  = list (map (fun (d, n) => pair (bytes d) (bytes (Node.encode n))) ns)"
@@ -554,7 +574,7 @@ def header : List String :=
   , "#   entriesVal   = list (pair (list (map nat layer)) (entryVal entry))"
   , "#   layer path   = list (map nat path)"
   , "#"
-  , "# rootKindIndex: stdlib=0 journal=1 daemon=2 schema=3 char=4 (RootKind (src/Effect4/Store/Domain/Store.lean))."
+  , "# policyIndex: swap=0 journal=1 pin=2 (RootPolicy (src/Effect4/Store/Domain/Transaction.lean))."
   , "# Not cut, and why: docs/research/2026-09-08-engine-lane-gld-delivery.md." ]
 
 def familyCount (cs : List Case) (f : String) : Nat := (cs.filter fun c => c.family = f).length

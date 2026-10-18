@@ -1,8 +1,10 @@
 module
 
 public import Effect4.Store.Domain.NodeRead
+public import Effect4.Store.Domain.Transaction
 meta import Effect4.Store.Carrier.Kind
 meta import Effect4.Store.Domain.Node
+meta import Effect4.Store.Domain.Transaction
 
 /-!
 # Store.Store
@@ -35,8 +37,8 @@ The typed `put` applies `putNode` to `nodeOf`, with its digest typed as `Ref α`
 It checks version, kind, spec, and canonical payload before returning a value.
 `put_conflict` identifies an occupied address with a different node.
 `put_duplicate` requires the resident node's admission premises because admission precedes lookup.
-Roots (Q7): the one mutable plane, moved by compare-and-set on an optimistic version
-(`putRoot`), each root's target resolving at its kind.
+Roots hold fixed policies, target kinds, and complete heads.
+`Store.move` in `src/Effect4/Store/Domain/Cas.lean` owns their checked transitions.
 -/
 
 @[expose] public section
@@ -49,31 +51,13 @@ open Effect4 (Document)
 
 /-! ## Roots and the store -/
 
-/-- The plane a root belongs to. -/
-inductive RootKind where
-  | stdlib
-  | journal
-  | daemon
-  | schema
-  | char
-deriving DecidableEq, Repr, Inhabited
-
-/-- The root kind's spelling. -/
-def RootKind.name : RootKind → String
-  | .stdlib => "stdlib"
-  | .journal => "journal"
-  | .daemon => "daemon"
-  | .schema => "schema"
-  | .char => "char"
-
-/-- A root: a name for a node, with the kind the node must have and an optimistic version. -/
+/-- A root fixes its policy and target kind at creation. -/
 structure Root where
   name : String
-  rootKind : RootKind
+  policy : RootPolicy
   kind : Kind
-  digest : Digest
-  version : Nat
-deriving DecidableEq, Repr
+  head : Head Digest
+  deriving DecidableEq, Repr
 
 /-- The store: nodes keyed by digest, in insertion order, and the roots. -/
 structure Store where
@@ -189,8 +173,6 @@ inductive Admission where
   | oversize
   /-- A version byte other than `0`. -/
   | badVersion
-  /-- A root move whose version is not the resident's plus one. -/
-  | staleRoot (name : String) (expected actual : Nat)
   /-- A word's binding whose address holds a different node: an exhibited collision, surfaced by
   `Word.apply`, never overwritten. -/
   | conflict (address : Digest) (occupant : Node)
@@ -561,49 +543,6 @@ end Content
 /-- The root with a name, if any. -/
 def Store.root? (s : Store) (name : String) : Option Root := s.roots.find? fun r => r.name = name
 
-/-- The version a root move must carry: the resident's plus one, or `1` when absent. -/
-def Store.nextVersion (s : Store) (name : String) : Nat :=
-  match s.root? name with
-  | some old => old.version + 1
-  | none => 1
-
-/-- Compare-and-set on a root: the version must be the next one, the target must resolve at the
-root's kind; the resident root of that name is replaced. -/
-def Store.putRoot (s : Store) (r : Root) : Except Admission Store :=
-  if r.version = s.nextVersion r.name then
-    match s.find r.digest with
-    | some m =>
-      if m.kind = r.kind then .ok { s with roots := r :: s.roots.filter fun q => q.name ≠ r.name }
-      else .error (.wrongKind r.digest r.kind m.kind)
-    | none => .error (.dangling r.digest)
-  else .error (.staleRoot r.name (s.nextVersion r.name) r.version)
-
-/-- A root move touches no node. -/
-theorem putRoot_nodes {s s' : Store} {r : Root} (h : s.putRoot r = .ok s') : s'.nodes = s.nodes := by
-  unfold Store.putRoot at h
-  split at h
-  · split at h
-    · split at h
-      · injection h with h
-        subst h
-        rfl
-      · exact nomatch h
-    · exact nomatch h
-  · exact nomatch h
-
-/-- After a root move, the name answers the new root. -/
-theorem putRoot_root? {s s' : Store} {r : Root} (h : s.putRoot r = .ok s') : s'.root? r.name = some r := by
-  unfold Store.putRoot at h
-  split at h
-  · split at h
-    · split at h
-      · injection h with h
-        subst h
-        simp [Store.root?, List.find?]
-      · exact nomatch h
-    · exact nomatch h
-  · exact nomatch h
-
 /-! ## Admission and the outcomes, guarded
 
 A genesis-shaped schema node (kind `schema`, zero spec) enters an empty store; a node whose spec
@@ -663,31 +602,5 @@ def probeStore : Store := afterPut (afterPut Store.empty probeSchema) probeEntry
 #guard outcomeIs ((Store.mk [(probeSchemaAddress, probeSchema), (probeEntryAddress, ⟨0, .«export», probeSchemaAddress, .nat 1⟩)] []).putNode probeEntry)
   (.conflict ⟨0, .«export», probeSchemaAddress, .nat 1⟩)
 #guard (afterPut (Store.mk [(probeSchemaAddress, probeSchema), (probeEntryAddress, ⟨0, .«export», probeSchemaAddress, .nat 1⟩)] []) probeEntry).nodes.length = 2
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 1⟩ with
-  | .ok s => s.root? "stdlib/rc112" = some ⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 1⟩
-  | .error _ => false)
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 2⟩ with
-  | .error (.staleRoot "stdlib/rc112" 1 2) => true
-  | _ => false)
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .schema, probeEntryAddress, 1⟩ with
-  | .error (.wrongKind _ .schema .«export») => true
-  | _ => false)
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .«export», zeroDigest, 1⟩ with
-  | .error (.dangling _) => true
-  | _ => false)
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 1⟩ with
-  | .ok s =>
-    match s.putRoot ⟨"stdlib/rc112", .stdlib, .schema, probeSchemaAddress, 2⟩ with
-    | .ok s' => s'.root? "stdlib/rc112" = some ⟨"stdlib/rc112", .stdlib, .schema, probeSchemaAddress, 2⟩ ∧ s'.roots.length = 1
-    | .error _ => false
-  | .error _ => false)
-
-/-! ## The total combinators a fold needs -/
-
-/-- The store after an admitted root move; the store unchanged when the move refused. -/
-def putRootOr (store : Store) (root : Root) : Store :=
-  match store.putRoot root with
-  | .ok moved => moved
-  | .error _ => store
 
 end Effect4.Store

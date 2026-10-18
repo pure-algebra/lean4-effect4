@@ -513,22 +513,62 @@ let commit t =
 
 let root view name = E4_control.root view.v_control name
 let roots view = E4_control.roots view.v_control
-let next_version view name = E4_control.next_version view.v_control name
 let generation view = E4_control.generation view.v_control
 let dir t = t.w_view.v_dir
 let read_only t = t.w_view
 
-let advance_root t ?prev (r : E4_control.root) =
+(* Designated parents match Node.designatedParent in the Lean model. *)
+let designated_parent view address =
+  match get_node view address with
+  | None -> None
+  | Some node ->
+    let bytes = node.E4_node.payload in
+    let finish expected parent after limit =
+      match parent, Eff_frame.read_frame bytes after limit with
+      | Some (kind, digest), Some (_, _, _, ending)
+          when kind = E4_kind.byte expected && String.length digest = 32 && ending = limit ->
+        Some (E4_addr.Addr.of_digest digest)
+      | _ -> None in
+    match Eff_frame.read_ctor bytes 0 (String.length bytes) with
+    | Some (1, start, limit, ending) when E4_kind.equal node.E4_node.kind E4_kind.Entry && ending = String.length bytes ->
+      (match Eff_frame.decode_ref bytes start limit with
+       | Some (parent, after) -> (match Eff_frame.read_frame bytes after limit with
+         | Some (_, _, _, next) -> finish E4_kind.Entry (Some parent) next limit
+         | None -> None)
+       | None -> None)
+    | Some (0, start, limit, ending) when E4_kind.equal node.E4_node.kind E4_kind.Tape && ending = String.length bytes ->
+      (match Eff_frame.read_frame bytes start limit with
+       | Some (_, _, _, next) -> (match Eff_frame.decode_option Eff_frame.decode_ref bytes next limit with
+         | Some (parent, after) -> finish E4_kind.Tape parent after limit
+         | None -> None)
+       | None -> None)
+    | Some (0, start, limit, ending) when E4_kind.equal node.E4_node.kind E4_kind.Checkpoint && ending = String.length bytes ->
+      let rec skip count pos = if count = 0 then Some pos else
+        match Eff_frame.read_frame bytes pos limit with Some (_, _, _, next) -> skip (count - 1) next | None -> None in
+      (match skip 3 start with
+       | None -> None
+       | Some pos -> match Eff_frame.decode_option Eff_frame.decode_ref bytes pos limit with
+         | Some (Some (kind, digest), after) when kind = E4_kind.byte E4_kind.Checkpoint && String.length digest = 32 ->
+           (match skip 3 after with Some final when final = limit -> Some (E4_addr.Addr.of_digest digest) | _ -> None)
+         | _ -> None)
+    | _ -> None
+
+let advance_root t (move : E4_control.move) =
   ensure_open t;
   commit t;
   let view = t.w_view in
   let resolve a = get_kind view a in
-  match E4_control.advance_root view.v_control ~resolve ?prev r with
+  match E4_control.advance_root view.v_control ~resolve ~parent:(designated_parent view) move with
   | Error e -> Error e
   | Ok payload ->
     view.v_control <- payload;
     write_control view;
     Ok ()
+
+let move_at_head view name policy (target : E4_control.target) =
+  match root view name with
+  | None -> E4_control.Create (name, policy, target)
+  | Some old -> E4_control.Advance (name, old.E4_control.head, target)
 
 (* ============================================================ 6. words *)
 
@@ -668,7 +708,7 @@ let verify view =
   let rec roots_pass = function
     | [] -> Ok ()
     | (r : E4_control.root) :: rest -> (
-      match kind_at (key_of r.E4_control.digest) with
+      match kind_at (key_of r.E4_control.head.digest) with
       | Some k when E4_kind.equal k r.E4_control.kind -> roots_pass rest
       | _ -> Error (Root_unresolved r.E4_control.name))
   in
@@ -733,7 +773,7 @@ let reachable view (a : E4_addr.Addr.t) =
       | Some n -> List.exists (fun (e : E4_addr.Ref.t) -> go e.E4_addr.Ref.addr) (E4_node.checked_edges n)
     end
   in
-  List.exists (fun (r : E4_control.root) -> go r.E4_control.digest) (roots view)
+  List.exists (fun (r : E4_control.root) -> go r.E4_control.head.digest) (roots view)
 
 (* ---- the pins (amendment M1; D8) ---- *)
 
@@ -745,7 +785,7 @@ let pin t ~name kind (c : E4_addr.Cid.t) =
   | a :: _ ->
     let name = E4_control.normalise_name name in
     advance_root t
-      { E4_control.name; root_kind = E4_control.Pin; kind; digest = a; version = next_version view name }
+      (move_at_head view name E4_control.Pin {E4_control.kind; digest = a})
 
 let pin_all t ~job cids =
   ensure_open t;
@@ -770,11 +810,7 @@ let pin_all t ~job cids =
             in
             match
               advance_root t
-                { E4_control.name;
-                  root_kind = E4_control.Pin;
-                  kind;
-                  digest = a;
-                  version = next_version view name }
+                (move_at_head view name E4_control.Pin {E4_control.kind; digest = a})
             with
             | Error e -> Error e
             | Ok () -> one (i + 1) more)

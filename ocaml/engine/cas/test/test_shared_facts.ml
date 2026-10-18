@@ -31,8 +31,14 @@ let () =
   require (read (prefix ^ "\001") = E4_admission.Model E4_admission.Bad_frame) "bad frame";
   require (match E4_admission.of_decode E4_node.Host_limit with
     | E4_admission.Capacity _ -> true | _ -> false) "capacity outside model";
+  require (E4_root_policy.all = [E4_root_policy.Swap; E4_root_policy.Journal; E4_root_policy.Pin]) "policy alphabet";
+  List.iter (fun (policy, byte, name) ->
+    require (E4_root_policy.byte policy = byte) "policy byte";
+    require (E4_root_policy.of_byte byte = Some policy) "policy byte round trip";
+    require (E4_root_policy.name policy = name) "policy name")
+    [E4_root_policy.Swap, 0, "swap"; E4_root_policy.Journal, 1, "journal"; E4_root_policy.Pin, 2, "pin"];
+  require (E4_root_policy.of_byte 6 = None) "legacy pin byte stays outside new policy";
   let large = Z.shift_left Z.one 100 in
-  require (match E4_admission.Stale_root ("large", large, Z.succ large) with
-    | E4_admission.Stale_root (_, expected, actual) -> Z.equal (Z.sub actual expected) Z.one
-    | _ -> false) "exact semantic naturals";
-  print_endline "shared facts: kind and node refusal controls passed"
+  let head : E4_control.head = {digest = E4_addr.Addr.zero; generation = large} in
+  require (Z.equal (Z.sub (Z.succ head.generation) head.generation) Z.one) "exact head generation";
+  print_endline "shared facts: kind, policy and node refusal controls passed"

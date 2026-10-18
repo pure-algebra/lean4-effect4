@@ -4,7 +4,7 @@
 
    What it is: `src/Effect4/Store/Domain/Store.lean` and `src/Effect4/Store/Domain/Word.lean` as a durable
    object.  `put` is `Store.putNode` (Store.putNode (src/Effect4/Store/Domain/Store.lean)); `get_node` is `Store.find` Store.find (src/Effect4/Store/Domain/Store.lean);
-   `advance_root` is `Store.putRoot` Store.putRoot (src/Effect4/Store/Domain/Store.lean); `closure` is `Store.closure` (Store.closure (src/Effect4/Store/Domain/Word.lean));
+   `advance_root` is `Store.move` Store.move (src/Effect4/Store/Domain/Store.lean); `closure` is `Store.closure` (Store.closure (src/Effect4/Store/Domain/Word.lean));
    `word_wf` is `Word.wf` Word.wf (src/Effect4/Store/Domain/Word.lean); `apply_word` is `Word.apply` Word.apply (src/Effect4/Store/Domain/Word.lean); `verify` is `Store.verify`
    (Store.verify (src/Effect4/Store/Domain/Word.lean)).  The pack holds the nodes, an index finds them, the control file holds the
    roots and the durable end.
@@ -139,7 +139,7 @@
        names the roots after the job's parts (`runs/<job>/program`, `/tape`, `/profile`),
        which a bare `Cid` list cannot distinguish.  `pin` mints one root under a name the
        caller chooses and is what a publisher should use; `pin_all` is §1.8's signature kept
-       working.  `RootKind.pin` is not in Lean (`RootKind (src/Effect4/Store/Domain/Store.lean)`) and lane GLD reports M1 as
+       working.  `RootPolicy.pin` is not in Lean (`RootPolicy (src/Effect4/Store/Domain/Store.lean)`) and lane GLD reports M1 as
        owed (2026-09-08-engine-lane-gld-delivery.md §4 O4), so no golden pins the names.
    D9  `verify_node` re-hashes and re-decodes its one node and resolves its edges through the
        ordinary lookup; only whole-store `verify` refuses to consult the index (CS7).  A
@@ -310,14 +310,11 @@ val count : ro -> int
 
 val root : ro -> string -> E4_control.root option
 val roots : ro -> E4_control.root list
-val next_version : ro -> string -> int
 val generation : ro -> int
 
-val advance_root :
-  t -> ?prev:E4_addr.Addr.t -> E4_control.root -> (unit, E4_control.root_error) result
-(** `Store.putRoot` Store.putRoot (src/Effect4/Store/Domain/Store.lean) with the version, dangling and kind checks all real: the
-    resolver is this store's own kind lookup.  Commits the pack first (D7) and the control
-    file after, so a root never names a node that is not durable. *)
+val advance_root : t -> E4_control.move -> (unit, E4_control.root_error) result
+(** Full-head comparison, fixed policy and kind, and designated-parent journal moves.
+    Commits current nodes before publishing the new root table. *)
 
 val pin : t -> name:string -> E4_kind.t -> E4_addr.Cid.t -> (unit, E4_control.root_error) result
 (** Amendment M1's `pin name target`: a `Pin` root over the address `by_cid` finds for that

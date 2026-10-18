@@ -22,6 +22,7 @@ Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
 import Effect4.Store.Domain.Word
+import Effect4.Store.Domain.Cas
 
 namespace Test.Store.WordContract
 
@@ -157,30 +158,30 @@ open Effect4.Store
 
 /-! ## Roots, the one mutable plane -/
 
--- A root moves under compare-and-set, and the name answers the new root.
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 1⟩ with
-  | .ok s => s.root? "stdlib/rc112" =
-      some ⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 1⟩
+-- Root creation fixes policy and target kind.
+#guard (match probeStore.commit ⟨[], [.create "stdlib/rc112" .swap ⟨.«export», probeEntryAddress⟩]⟩ with
+  | .ok (_, store) => store.root? "stdlib/rc112" =
+      some ⟨"stdlib/rc112", .swap, .«export», ⟨probeEntryAddress, 1⟩⟩
   | .error _ => false)
--- A stale version is refused, never merged: the error carries the version held and the
--- version offered.
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 2⟩ with
-  | .error (.staleRoot "stdlib/rc112" 1 2) => true
+-- The complete expected head catches a stale generation before target checks.
+#guard (match probeStore.commit ⟨[], [.create "stdlib/rc112" .swap ⟨.«export», probeEntryAddress⟩,
+    .advance "stdlib/rc112" ⟨probeEntryAddress, 0⟩ ⟨.schema, zeroDigest⟩]⟩ with
+  | .error (.staleRoot "stdlib/rc112" _ _) => true
   | _ => false)
--- A root must name a resident node of its own kind.
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .schema, probeEntryAddress, 1⟩ with
-  | .error (.wrongKind _ .schema .«export») => true
+-- Target resolution retains the existing wrong-kind and missing-target refusals.
+#guard (match probeStore.commit ⟨[], [.create "stdlib/rc112" .swap ⟨.schema, probeEntryAddress⟩]⟩ with
+  | .error (.target _ (.wrongKind _ .schema .«export»)) => true
   | _ => false)
-#guard (match probeStore.putRoot ⟨"stdlib/rc112", .stdlib, .«export», zeroDigest, 1⟩ with
-  | .error (.dangling _) => true
+#guard (match probeStore.commit ⟨[], [.create "stdlib/rc112" .swap ⟨.«export», zeroDigest⟩]⟩ with
+  | .error (.target _ (.dangling _)) => true
   | _ => false)
 -- A root the store does not resolve at its kind fails verification.
 #guard (match (Store.mk probeStore.nodes
-    [⟨"stdlib/rc112", .stdlib, .schema, probeEntryAddress, 1⟩]).verify with
+    [⟨"stdlib/rc112", .swap, .schema, ⟨probeEntryAddress, 1⟩⟩]).verify with
   | .error (.rootUnresolved name) => name = "stdlib/rc112"
   | _ => false)
 #guard verified (Store.mk probeStore.nodes
-  [⟨"stdlib/rc112", .stdlib, .«export», probeEntryAddress, 1⟩]).verify
+  [⟨"stdlib/rc112", .swap, .«export», ⟨probeEntryAddress, 1⟩⟩]).verify
 
 /-! ## The laws, stated -/
 
@@ -188,7 +189,6 @@ example := @Effect4.Store.put_duplicate
 example := @Effect4.Store.put_conflict
 example := @Effect4.Store.put_preserves
 example := @Effect4.Store.putNode_closed
-example := @Effect4.Store.putRoot_root?
 example := @Effect4.Store.empty_closed
 -- A real faithful, closed prefix is the starting store of the suffix replay.
 example (hw : Word.wfFrom [⟨probeSchemaAddress, probeSchema⟩]

@@ -1,35 +1,7 @@
-(* test_control.ml — lane P3's checks: the control file (2026-09-08).
-
-   What it checks, and against what:
-     R*  Round trip: `decode (encode p) = Ok p` for every shape of payload the grammar of
-         e4_control.mli admits — no roots, many roots, a reserved status with a body, the
-         maximum name, the host-limit boundary — and the same through a real file.
-     E*  Every refusal of `open_error`: Missing, Bad_magic, Stale_binary (CF1), and each way a
-         file can be Corrupt (CF2, D3) — a failed checksum, a short payload, a truncated root,
-         an unregistered kind byte, an unregistered root-kind byte, an uppercase root name, a
-         body at a tag 0..2, an unknown status tag, a be64 at or above 2^62 (CF9, M9).
-     X*  The three crash families of A2 §4.3 X4 that concern this file: (a) a torn control.tmp
-         left behind, (b) a rename that did not happen, (c) a checksum mismatch.  In all three
-         the PREVIOUS control is the truth.
-     P9  Reserved tags 3..15 round-trip verbatim through a commit by a reader that does not
-         understand them — the format-revision property (CF3).
-     C*  The CAS on the roots plane (CF5-CF8): the outcome vocabulary of Store.putRoot
-         (Store.putRoot (src/Effect4/Store/Domain/Store.lean)), the head-first cons, the lowercasing of M8,
-         the monotone generation of CF7, and the M7 fork refusal that Lean does not have.
-     W*  The pack_end watermark: what `set_pack_end` records and what a re-read gives back.
-     G3  The roots CAS sequence of A2 §4.1 G3, replayed against ../goldens: each `g3-*.hex` is
-         a `rootVal` frame tree (2026-09-08-engine-lane-gld-delivery.md §2), decoded into a
-         root, put into the payload with a resolver STUBBED FROM THE g1 GOLDENS (the
-         store-relative checks are lane P4's), and its outcome word compared with cases.txt's
-         `expected` column.  The two `g3-roots-after-*` cases are the roots plane itself,
-         re-encoded as `list (rootVal r)` and compared byte for byte; a mismatch prints both.
-         M7's `prev` and M1's `pinAll` are SKIPped with the reason lane GLD gives
-         (2026-09-08-engine-lane-gld-delivery.md §4 O4).  When ../goldens is absent every G3
-         line is a SKIP and the run still ends green.
-     M*  The mutation check: flipping any one byte of a well-formed control file makes `read`
-         refuse, and an in-memory root advance at a stale version is `staleRoot`.
-
-   Exit code 0 iff every check passed. *)
+(* Root control bytes and policies.
+   Depends on E4_control, node codecs, and generated G3 Move goldens.
+   Properties tested: v1 legacy mapping; v2 policy bytes; exact names; full-head staleness;
+   duplicate generations; journal ancestry; pins; checksum and framing refusals; root goldens. *)
 
 open Effect4_engine_cas
 
@@ -39,10 +11,6 @@ let skips = ref 0
 let check name ok =
   Printf.printf "%s  %s\n" (if ok then "PASS" else "FAIL") name;
   if not ok then incr failures
-
-let skip name why =
-  Printf.printf "SKIP  %s (%s)\n" name why;
-  incr skips
 
 let note fmt = Printf.printf ("NOTE  " ^^ fmt ^^ "\n")
 
@@ -81,7 +49,7 @@ let cleanup_scratch () =
 let dig i = E4_addr.Addr.of_digest (String.make 32 (Char.chr i))
 
 let mk_root name rk k d v : E4_control.root =
-  { E4_control.name; root_kind = rk; kind = k; digest = d; version = v }
+  { E4_control.name; policy = rk; kind = k; head = {digest = d; generation = Z.of_int v} }
 
 let empty_payload = E4_control.initial
 
@@ -92,7 +60,7 @@ let one_root_payload =
     generation = 7;
     scheme_version = 0;  (* the one scheme a reader opens; CF10 *)
     ledger_generation = 5;
-    roots = [ mk_root "stdlib/rc112" E4_control.Stdlib E4_kind.Export (dig 0x11) 1 ];
+    roots = [ mk_root "stdlib/rc112" E4_control.Swap E4_kind.Export (dig 0x11) 1 ];
     status = E4_control.Gced;
   }
 
@@ -106,7 +74,7 @@ let many_root_payload =
     roots =
       [
         mk_root "c" E4_control.Pin E4_kind.Chunk (dig 3) 9;
-        mk_root "b/x" E4_control.Registry E4_kind.Program (dig 2) 2;
+        mk_root "b/x" E4_control.Swap E4_kind.Program (dig 2) 2;
         mk_root "a" E4_control.Journal E4_kind.Schema (dig 1) 1;
       ];
     status = E4_control.Imported;
@@ -125,16 +93,16 @@ let boundary_payload =
     generation = max_int;
     scheme_version = 0;  (* the field's other values are CF10's refusals *)
     ledger_generation = 0xFFFFFFFF;
-    roots = [ mk_root long_name E4_control.Char E4_kind.Table (dig 0xff) max_int ];
+    roots = [ mk_root long_name E4_control.Swap E4_kind.Table (dig 0xff) max_int ];
     status = E4_control.Reserved (15, "");
   }
 
 let root_equal (a : E4_control.root) (b : E4_control.root) =
   String.equal a.E4_control.name b.E4_control.name
-  && a.E4_control.root_kind = b.E4_control.root_kind
+  && a.E4_control.policy = b.E4_control.policy
   && E4_kind.equal a.E4_control.kind b.E4_control.kind
-  && E4_addr.Addr.equal a.E4_control.digest b.E4_control.digest
-  && a.E4_control.version = b.E4_control.version
+  && E4_addr.Addr.equal a.E4_control.head.digest b.E4_control.head.digest
+  && Z.equal a.E4_control.head.generation b.E4_control.head.generation
 
 let payload_equal (a : E4_control.payload) (b : E4_control.payload) =
   a.E4_control.pack_end = b.E4_control.pack_end
@@ -190,7 +158,7 @@ let test_roundtrip () =
     (String.length b > 6 && String.equal (String.sub b 0 6) E4_control.magic);
   check "R3 the version is the next eight, ASCII, exact"
     (String.equal (String.sub b 6 8) E4_control.version_string
-    && String.equal E4_control.version_string "00000001");
+    && String.equal E4_control.version_string "00000002");
   check "R3 the fixed payload is 56 bytes and the header 14"
     (E4_control.fixed_payload_length = 56 && String.length b >= 70);
   (* status is last: the file's last byte is the status tag when the body is empty. *)
@@ -267,10 +235,10 @@ let test_refusals () =
   check "E2 Bad_magic: a file too short to hold the magic"
     (E4_control.read ~path = Error E4_control.Bad_magic);
 
-  write_bytes path (E4_control.magic ^ "00000002" ^ payload_of good);
+  write_bytes path (E4_control.magic ^ "00000003" ^ payload_of good);
   check "E3 Stale_binary: an unknown ASCII version, never a parse (CF1)"
     (match E4_control.read ~path with
-     | Error (E4_control.Stale_binary v) -> String.equal v "00000002"
+     | Error (E4_control.Stale_binary v) -> String.equal v "00000003"
      | _ -> false);
   write_bytes path (E4_control.magic ^ "0000000" ^ payload_of good);
   check "E3 Stale_binary: a version of the right width but the wrong bytes"
@@ -313,9 +281,18 @@ let test_refusals () =
   write_bytes path (craft (fixed ~roots:[ a_root ~rk:9 () ] ~status:"\000"));
   check "E6 Corrupt: an unregistered root-kind byte" (is_corrupt (E4_control.read ~path));
   write_bytes path (craft (fixed ~roots:[ a_root ~name:"Nope" () ] ~status:"\000"));
-  check "E6 Corrupt: an uppercase root name (amendment M8)" (is_corrupt (E4_control.read ~path));
+  check "E6 uppercase name retains its bytes" (match E4_control.read ~path with
+    | Ok state -> (match E4_control.roots state with [root] -> root.name = "Nope" | _ -> false) | _ -> false);
   write_bytes path (craft (fixed ~roots:[ a_root ~name:"a b" () ] ~status:"\000"));
-  check "E6 Corrupt: a space in a root name" (is_corrupt (E4_control.read ~path));
+  check "E6 spaces retain their bytes" (match E4_control.read ~path with
+    | Ok state -> (match E4_control.roots state with [root] -> root.name = "a b" | _ -> false) | _ -> false);
+  write_bytes path (craft ~version:"00000001" (fixed ~roots:[a_root ~name:"Nope" ()] ~status:"\000"));
+  check "E6 legacy uppercase remains outside v1 domain" (is_corrupt (E4_control.read ~path));
+  write_bytes path (craft (fixed ~roots:[a_root ~name:"文档/α" ()] ~status:"\000"));
+  check "E6 UTF-8 names retain exact bytes" (match E4_control.read ~path with
+    | Ok state -> (match E4_control.roots state with [root] -> root.name = "文档/α" | _ -> false) | _ -> false);
+  write_bytes path (craft (fixed ~roots:[a_root ~name:"\255" ()] ~status:"\000"));
+  check "E6 invalid UTF-8 is byte damage" (is_corrupt (E4_control.read ~path));
   write_bytes path
     (craft (fixed ~roots:[ a_root ~vers:(String.make 8 '\255') () ] ~status:"\000"));
   check "E7 Corrupt: a root version at or above 2^62 (CF9, M9)"
@@ -347,12 +324,12 @@ let test_refusals () =
          E4_control.encode
            { empty_payload with
              E4_control.roots =
-               [ mk_root (String.make 513 'a') E4_control.Stdlib E4_kind.Export (dig 1) 1 ] }));
-  check "E11 encode refuses an uppercase root name"
-    (raises (fun () ->
+               [ mk_root (String.make 65536 'a') E4_control.Swap E4_kind.Export (dig 1) 1 ] }));
+  check "E11 encode retains an uppercase root name"
+    (not (raises (fun () ->
          E4_control.encode
            { empty_payload with
-             E4_control.roots = [ mk_root "Nope" E4_control.Stdlib E4_kind.Export (dig 1) 1 ] }));
+             E4_control.roots = [ mk_root "Nope" E4_control.Swap E4_kind.Export (dig 1) 1 ] })));
   (* CF9: 2^62 is not representable as an OCaml int (max_int = 2^62-1), so
      the write side of M9 can only refuse a negative field; the read side is E7 above. *)
   check "E11 encode refuses a negative be64 field (CF9, M9)"
@@ -464,8 +441,6 @@ let test_reserved () =
 
 (* ============================================================ C: the roots CAS *)
 
-let no_resolve (_ : E4_addr.Addr.t) : E4_kind.t option = None
-
 let table_resolve (tbl : (E4_addr.Addr.t * E4_kind.t) list) (a : E4_addr.Addr.t) =
   match List.find_opt (fun (d, _) -> E4_addr.Addr.equal d a) tbl with
   | Some (_, k) -> Some k
@@ -475,149 +450,89 @@ let outcome_word = function
   | Ok _ -> "ok"
   | Error e -> E4_control.root_error_word e
 
+let test_legacy_policy () =
+  let root = mk_root "legacy" E4_control.Swap E4_kind.Export (dig 1) 1 in
+  let bytes = E4_control.encode {empty_payload with E4_control.roots = [root]} in
+  let payload = Bytes.of_string (payload_of bytes) in
+  let position = E4_control.fixed_payload_length + 2 + String.length root.name in
+  for tag = 0 to 6 do
+    Bytes.set payload position (Char.chr tag);
+    let legacy = craft ~version:"00000001" (Bytes.to_string payload) in
+    check (Printf.sprintf "D2 legacy policy byte %d" tag) (match E4_control.decode legacy with
+      | Ok state -> (match E4_control.roots state with
+        | [root] -> root.policy = (if tag = 6 then E4_control.Pin else E4_control.Swap)
+        | _ -> false)
+      | Error _ -> false)
+  done;
+  Bytes.set payload position '\001';
+  check "D2 v2 byte one is journal" (match E4_control.decode (craft (Bytes.to_string payload)) with
+    | Ok state -> (match E4_control.roots state with [root] -> root.policy = E4_control.Journal | _ -> false)
+    | _ -> false);
+  Bytes.set payload position '\006';
+  check "D2 v2 refuses legacy pin byte" (is_corrupt (E4_control.decode (craft (Bytes.to_string payload))));
+  let old_root = {root with E4_control.head = {root.head with generation = Z.of_int 2}} in
+  let old_bytes = E4_control.encode {empty_payload with E4_control.roots = [old_root]} in
+  let legacy = E4_control.decode (craft ~version:"00000001" (payload_of old_bytes)) in
+  let target : E4_control.target = {kind = root.kind; digest = root.head.digest} in
+  let resolve _ = Some root.kind in
+  let fresh = E4_control.advance_root empty_payload ~resolve (E4_control.Create (root.name, E4_control.Swap, target)) in
+  let duplicate = match fresh with
+    | Error error -> Error error
+    | Ok state -> E4_control.advance_root state ~resolve (E4_control.Advance (root.name, root.head, target)) in
+  check "ST2 legacy generation two stays distinct from new create plus duplicate"
+    (match legacy, duplicate with
+     | Ok old, Ok fresh -> (match E4_control.root old root.name, E4_control.root fresh root.name with
+       | Some old, Some fresh -> Z.equal old.head.generation (Z.of_int 2) && Z.equal fresh.head.generation Z.one
+       | _ -> false)
+     | _ -> false)
+
 let test_cas () =
-  print_endline "-- C: compare-and-set on the roots plane (CF5-CF8, Store.putRoot (src/Effect4/Store/Domain/Store.lean))";
-  let d1 = dig 0x21 and d2 = dig 0x22 and d3 = dig 0x23 in
-  let resolve =
-    table_resolve [ (d1, E4_kind.Export); (d2, E4_kind.Schema); (d3, E4_kind.Export) ]
-  in
-  let r1 = mk_root "stdlib/rc112" E4_control.Stdlib E4_kind.Export d1 1 in
-  check "C1 nextVersion of an absent name is 1" (E4_control.next_version empty_payload "x" = 1);
-  let s1 =
-    match E4_control.advance_root empty_payload ~resolve r1 with
-    | Ok p -> p
-    | Error _ ->
-      check "C1 the first move at version 1 is ok" false;
-      empty_payload
-  in
-  check "C1 the first move at version 1 is ok" (List.length (E4_control.roots s1) = 1);
-  check "C1 the root reads back" (E4_control.root s1 "stdlib/rc112" <> None);
-  check "C2 nextVersion after the move is 2" (E4_control.next_version s1 "stdlib/rc112" = 2);
-  check "C2 a re-put at version 1 is staleRoot 2 1"
-    (outcome_word (E4_control.advance_root s1 ~resolve r1) = "staleRoot stdlib/rc112 2 1");
-  check "C2 a jump to version 3 is staleRoot 2 3"
-    (outcome_word (E4_control.advance_root s1 ~resolve { r1 with E4_control.version = 3 })
-    = "staleRoot stdlib/rc112 2 3");
-  check "C3 a move whose target does not resolve is dangling <hex>"
-    (outcome_word
-       (E4_control.advance_root empty_payload ~resolve
-          { r1 with E4_control.digest = E4_addr.Addr.zero })
-    = "dangling " ^ E4_addr.Addr.hex E4_addr.Addr.zero);
-  check "C3 with no resolver at all every move dangles"
-    (outcome_word (E4_control.advance_root empty_payload ~resolve:no_resolve r1)
-    = "dangling " ^ E4_addr.Addr.hex d1);
-  check "C4 a target that resolves at another kind is wrongKind"
-    (outcome_word
-       (E4_control.advance_root empty_payload ~resolve { r1 with E4_control.kind = E4_kind.Schema })
-    = "wrongKind");
-  check "C5 the order is Lean's: the version is checked before resolution"
-    (outcome_word
-       (E4_control.advance_root s1 ~resolve
-          { r1 with E4_control.digest = E4_addr.Addr.zero; version = 1 })
-    = "staleRoot stdlib/rc112 2 1");
-  check "C5 and resolution before the kind"
-    (outcome_word
-       (E4_control.advance_root empty_payload ~resolve
-          { r1 with E4_control.digest = E4_addr.Addr.zero; kind = E4_kind.Schema })
-    = "dangling " ^ E4_addr.Addr.hex E4_addr.Addr.zero);
-
-  (* CF8: head-first, one entry per name (Store.putRoot (src/Effect4/Store/Domain/Store.lean)). *)
-  let s2 =
-    match
-      E4_control.advance_root s1 ~resolve
-        { r1 with E4_control.kind = E4_kind.Schema; digest = d2; version = 2 }
-    with
-    | Ok p -> p
-    | Error _ ->
-      check "C6 the advance to version 2 is ok" false;
-      s1
-  in
-  check "C6 the advance leaves exactly one root of that name (Store.putRoot (src/Effect4/Store/Domain/Store.lean))"
-    (List.length (E4_control.roots s2) = 1);
-  check "C6 and it is the new one, at the head"
-    (match E4_control.roots s2 with
-     | r :: _ -> r.E4_control.version = 2 && E4_addr.Addr.equal r.E4_control.digest d2
-     | [] -> false);
-  let s3 =
-    match
-      E4_control.advance_root s2 ~resolve (mk_root "other" E4_control.Daemon E4_kind.Export d1 1)
-    with
-    | Ok p -> p
-    | Error _ -> s2
-  in
-  check "C6 a second name conses in front and leaves the first alone"
-    (List.length (E4_control.roots s3) = 2
-    &&
-    match E4_control.roots s3 with
-    | r :: _ -> String.equal r.E4_control.name "other"
-    | [] -> false);
-
-  (* CF6: M8's lowercasing. *)
-  let s4 =
-    match
-      E4_control.advance_root empty_payload ~resolve
-        (mk_root "STDLIB/RC112" E4_control.Stdlib E4_kind.Export d1 1)
-    with
-    | Ok p -> p
-    | Error _ -> empty_payload
-  in
-  check "C7 a name is stored lowercase (M8)"
-    (match E4_control.roots s4 with
-     | r :: _ -> String.equal r.E4_control.name "stdlib/rc112"
-     | [] -> false);
-  check "C7 and looked up in either case"
-    (E4_control.root s4 "StdLib/RC112" <> None && E4_control.root s4 "stdlib/rc112" <> None);
-
-  (* CF7: the generation is strictly increasing across changes. *)
-  let gens =
-    let a = empty_payload in
-    let b = E4_control.set_pack_end a (1, 2) in
-    let c = E4_control.set_index_end b (1, 2) in
-    let d = E4_control.set_ledger_generation c 4 in
-    let e = E4_control.set_status d E4_control.Gced in
-    let f = match E4_control.advance_root e ~resolve r1 with Ok p -> p | Error _ -> e in
-    List.map E4_control.generation [ a; b; c; d; e; f ]
-  in
-  check "C8 generation is strictly increasing across every change (CF7)"
-    (let rec inc = function
-       | x :: (y :: _ as rest) -> y = x + 1 && inc rest
-       | _ -> true
-     in
-     inc gens);
-  note "  generations: %s" (String.concat " " (List.map string_of_int gens));
-
-  (* D2: the M7 fork refusal, which Lean has no RootKind for. *)
-  let reg v d = mk_root "reg/name" E4_control.Registry E4_kind.Export d v in
-  let f1 =
-    match E4_control.advance_root empty_payload ~resolve (reg 1 d1) with
-    | Ok p -> p
-    | Error _ -> empty_payload
-  in
-  check "C9 a Registry root's first publication needs no prev (head = zero)"
-    (List.length (E4_control.roots f1) = 1);
-  check "C9 a second publication with the right prev is ok"
-    (outcome_word (E4_control.advance_root f1 ~resolve ~prev:d1 (reg 2 d3)) = "ok");
-  check "C9 a second publication with the wrong prev is a fork (M7, D2)"
-    (outcome_word (E4_control.advance_root f1 ~resolve ~prev:d2 (reg 2 d3))
-    = Printf.sprintf "fork reg/name %s %s" (E4_addr.Addr.hex d1) (E4_addr.Addr.hex d2));
-  check "C9 a second publication with no prev at all is a fork against zero"
-    (outcome_word (E4_control.advance_root f1 ~resolve (reg 2 d3))
-    = Printf.sprintf "fork reg/name %s %s" (E4_addr.Addr.hex d1)
-        (E4_addr.Addr.hex E4_addr.Addr.zero));
-  check "C9 the prev check does not apply to a non-Registry root"
-    (outcome_word
-       (E4_control.advance_root s1 ~resolve ~prev:d2
-          { r1 with E4_control.digest = d2; kind = E4_kind.Schema; version = 2 })
-    = "ok");
-
-  (* the plane survives the bytes *)
-  let path = scratch "control-cas" in
-  E4_control.commit ~path s3;
-  check "C10 the moved plane survives a commit and a read"
-    (match E4_control.read ~path with Ok p -> payload_equal s3 p | Error _ -> false);
-  remove_if path
-
-(* ============================================================ M: mutation *)
+  print_endline "-- complete-head root moves";
+  let d1 = dig 1 and d2 = dig 2 and d3 = dig 3 in
+  let target digest : E4_control.target = {kind = E4_kind.Export; digest} in
+  let head digest generation : E4_control.head = {digest; generation = Z.of_int generation} in
+  let resolve = table_resolve [d1, E4_kind.Export; d2, E4_kind.Export; d3, E4_kind.Export] in
+  let run state move = E4_control.advance_root state ~resolve move in
+  let get = function Ok state -> state | Error error -> failwith (E4_control.root_error_word error) in
+  let create = E4_control.Create ("docs/a", E4_control.Swap, target d1) in
+  let first = get (run empty_payload create) in
+  check "create generation one" (match E4_control.root first "docs/a" with
+    | Some root -> E4_control.head_equal root.head (head d1 1) | None -> false);
+  check "duplicate create stale" (match run first create with Error (E4_control.Stale_root _) -> true | _ -> false);
+  let duplicate = get (run first (E4_control.Advance ("docs/a", head d1 1, target d1))) in
+  check "identical target retains exact payload" (payload_equal duplicate first);
+  let second = get (run first (E4_control.Advance ("docs/a", head d1 1, target d2))) in
+  let third = get (run second (E4_control.Advance ("docs/a", head d2 2, target d1))) in
+  check "ABA retains generation" (match E4_control.root third "docs/a" with
+    | Some root -> E4_control.head_equal root.head (head d1 3) | None -> false);
+  check "ABA stale expectation refuses" (match run third (E4_control.Advance ("docs/a", head d1 1, target d2)) with
+    | Error (E4_control.Stale_root _) -> true | _ -> false);
+  check "stale precedes wrong kind" (match run first (E4_control.Advance ("docs/a", head d2 1,
+      {kind = E4_kind.Schema; digest = E4_addr.Addr.zero})) with
+    | Error (E4_control.Stale_root _) -> true | _ -> false);
+  check "absent advance precedes target" (match run empty_payload (E4_control.Advance ("none", head d1 1, target d3)) with
+    | Error (E4_control.No_root "none") -> true | _ -> false);
+  check "target kind remains fixed" (match run first (E4_control.Advance ("docs/a", head d1 1,
+      {kind = E4_kind.Schema; digest = d1})) with Error (E4_control.Wrong_kind _) -> true | _ -> false);
+  check "dangling target refuses" (match run first (E4_control.Advance ("docs/a", head d1 1, target E4_addr.Addr.zero)) with
+    | Error (E4_control.Dangling _) -> true | _ -> false);
+  let pin = get (run empty_payload (E4_control.Create ("pin/a", E4_control.Pin, target d1))) in
+  check "pin duplicate accepted" (match run pin (E4_control.Advance ("pin/a", head d1 1, target d1)) with Ok _ -> true | _ -> false);
+  check "pin changed target refuses" (match run pin (E4_control.Advance ("pin/a", head d1 1, target d2)) with Error (E4_control.Pinned _) -> true | _ -> false);
+  let journal = get (run empty_payload (E4_control.Create ("session/a", E4_control.Journal, target d1))) in
+  check "journal without designated parent refuses" (match run journal (E4_control.Advance ("session/a", head d1 1, target d2)) with Error (E4_control.Fork _) -> true | _ -> false);
+  let parent address = if E4_addr.Addr.equal address d3 then Some d2 else if E4_addr.Addr.equal address d2 then Some d1 else None in
+  check "journal follows transitive designated parents" (match E4_control.advance_root journal ~resolve ~parent
+      (E4_control.Advance ("session/a", head d1 1, target d3)) with Ok _ -> true | _ -> false);
+  check "fork creates independent journal name" (match run journal (E4_control.Create ("session/fork", E4_control.Journal, target d2)) with
+    | Ok state -> List.length (E4_control.roots state) = 2 | _ -> false);
+  let exact = get (run first (E4_control.Create ("Docs/a", E4_control.Swap, target d2))) in
+  check "names retain case exactly" (List.length (E4_control.roots exact) = 2);
+  let large = Z.shift_left Z.one 100 in
+  let old : E4_control.root = {name = "large"; policy = E4_control.Swap; kind = E4_kind.Export; head = {digest = d1; generation = large}} in
+  let state = {empty_payload with E4_control.roots = [old]} in
+  check "generation arithmetic is exact beyond machine integers" (match run state (E4_control.Advance ("large", old.head, target d2)) with
+    | Ok next -> (match E4_control.root next "large" with Some root -> Z.equal root.head.generation (Z.succ large) | None -> false) | _ -> false)
 
 let test_mutation () =
   print_endline "-- M: one flipped byte anywhere in the file, and read must refuse";
@@ -653,13 +568,14 @@ let test_mutation () =
     (match E4_control.read ~path with
      | Ok p -> payload_equal one_root_payload p
      | Error _ -> false);
-  check "M2 an in-memory root advance at a stale version is staleRoot"
+  check "M2 a repeated create refuses stale absence"
     (let d = dig 0x31 in
-     let resolve = table_resolve [ (d, E4_kind.Export) ] in
-     let r = mk_root "a/b" E4_control.Stdlib E4_kind.Export d 1 in
-     match E4_control.advance_root empty_payload ~resolve r with
+     let resolve = table_resolve [d, E4_kind.Export] in
+     let move = E4_control.Create ("a/b", E4_control.Swap, {kind = E4_kind.Export; digest = d}) in
+     match E4_control.advance_root empty_payload ~resolve move with
      | Error _ -> false
-     | Ok p -> outcome_word (E4_control.advance_root p ~resolve r) = "staleRoot a/b 2 1");
+     | Ok state -> match E4_control.advance_root state ~resolve move with
+       | Error (E4_control.Stale_root _) -> true | _ -> false);
   remove_if path
 
 (* ============================================================ G3: the goldens *)
@@ -730,51 +646,16 @@ let v_bytes b = E4_be.framed Eff_frame.tag_bytes b
 let v_list xs = E4_be.framed Eff_frame.tag_list (String.concat "" xs)
 let v_ctor i args = E4_be.framed Eff_frame.tag_ctor (v_nat i ^ String.concat "" args)
 
-(* rootVal r = ctor 0 [str name, nat rootKindIndex, nat kind.byte, bytes digest, nat version]
+(* rootVal r = ctor 0 [str name, nat policyIndex, nat kind.byte, bytes digest, nat generation]
    (2026-09-08-engine-lane-gld-delivery.md §2). *)
 let root_val (r : E4_control.root) =
   v_ctor 0
     [ v_str r.E4_control.name;
-      v_nat (E4_control.root_kind_index r.E4_control.root_kind);
+      v_nat (E4_control.root_policy_index r.E4_control.policy);
       v_nat (E4_kind.byte r.E4_control.kind);
-      v_bytes (E4_addr.Addr.bytes r.E4_control.digest);
-      v_nat r.E4_control.version ]
+      v_bytes (E4_addr.Addr.bytes r.E4_control.head.digest);
+      v_nat (Z.to_int r.E4_control.head.generation) ]
 
-let parse_root_val (b : string) : E4_control.root option =
-  let n = String.length b in
-  match Eff_frame.read_ctor b 0 n with
-  | Some (0, p0, e, next) when next = n -> (
-    match Eff_frame.decode_string b p0 e with
-    | None -> None
-    | Some (name, p1) -> (
-      match Eff_frame.decode_nat b p1 e with
-      | None -> None
-      | Some (rki, p2) -> (
-        match Eff_frame.decode_nat b p2 e with
-        | None -> None
-        | Some (kb, p3) -> (
-          match Eff_frame.read_frame b p3 e with
-          | Some (t, bp, be_, p4) when t = Eff_frame.tag_bytes -> (
-            match Eff_frame.decode_nat b p4 e with
-            | Some (vers, p5) when p5 = e -> (
-              match
-                ( E4_control.root_kind_of_index rki,
-                  E4_kind.of_byte kb,
-                  E4_addr.Addr.of_digest_opt (String.sub b bp (be_ - bp)) )
-              with
-              | Some rk, Some k, Some d ->
-                Some
-                  { E4_control.name; root_kind = rk; kind = k; digest = d; version = vers }
-              | _ -> None)
-            | _ -> None)
-          | _ -> None))))
-  | _ -> None
-
-(* The resolver is stubbed from the g1 goldens: every g1 case whose bytes are a node envelope
-   (version byte 0, kind byte, 32-byte spec) maps its address — cases.txt's `expected` column —
-   to the kind byte at offset 1.  That is exactly probeSchemaAddress -> schema and
-   probeEntryAddress -> export, derived from the cut rather than typed in.  The store-relative
-   checks themselves are lane P4's. *)
 let resolver_of_goldens dir cases =
   let tbl = ref [] in
   List.iter
@@ -789,100 +670,66 @@ let resolver_of_goldens dir cases =
     cases;
   (!tbl, table_resolve !tbl)
 
+let decode_move bytes =
+  let ( let* ) value f = Option.bind value f in
+  let read_bytes bytes pos limit =
+    let* tag, start, ending, next = Eff_frame.read_frame bytes pos limit in
+    if tag = Eff_frame.tag_bytes then Some (String.sub bytes start (ending - start), next) else None in
+  let decode bytes pos limit =
+    let* tag, start, ending, next = Eff_frame.read_ctor bytes pos limit in
+    let* name, p1 = Eff_frame.decode_string bytes start ending in
+    match tag with
+    | 0 ->
+      let* policy, p2 = Eff_frame.decode_nat bytes p1 ending in
+      let* kind, p3 = Eff_frame.decode_nat bytes p2 ending in
+      let* digest, p4 = read_bytes bytes p3 ending in
+      let* policy = E4_control.root_policy_of_index policy in
+      let* kind = E4_kind.of_byte kind in
+      if p4 = ending && String.length digest = 32 then
+        Some (E4_control.Create (name, policy, {kind; digest = E4_addr.Addr.of_digest digest}), next) else None
+    | 1 ->
+      let* digest, p2 = read_bytes bytes p1 ending in
+      let* generation, p3 = Eff_frame.decode_nat bytes p2 ending in
+      let* kind, p4 = Eff_frame.decode_nat bytes p3 ending in
+      let* target, p5 = read_bytes bytes p4 ending in
+      let* kind = E4_kind.of_byte kind in
+      if p5 = ending && String.length digest = 32 && String.length target = 32 then
+        Some (E4_control.Advance (name, {digest = E4_addr.Addr.of_digest digest; generation = Z.of_int generation},
+          {kind; digest = E4_addr.Addr.of_digest target}), next) else None
+    | _ -> None in
+  Eff_frame.exact decode bytes
+
 let test_goldens () =
-  print_endline "-- G3: the roots CAS sequence of A2 §4.1 G3, replayed against ../goldens";
   match goldens_dir () with
-  | None ->
-    skip "G3 the roots CAS sequence" "goldens/ not found";
-    skip "G3 the roots plane after each ok" "goldens/ not found";
-    skip "G3 M7 prev / M1 pinAll" "goldens/ not found"
-  | Some dir -> (
-    note "goldens directory: %s" dir;
-    let cases = load_cases dir in
-    let g3 = List.filter (fun (_, f, _) -> String.equal f "g3") cases in
-    if g3 = [] then begin
-      skip "G3 the roots CAS sequence" "no g3 rows in cases.txt";
-      skip "G3 the roots plane after each ok" "no g3 rows in cases.txt";
-      skip "G3 M7 prev / M1 pinAll" "no g3 rows in cases.txt"
-    end
-    else begin
-      note "%d g3 case(s)" (List.length g3);
-      let tbl, resolve = resolver_of_goldens dir cases in
-      note "resolver stubbed from %d g1 node golden(s)" (List.length tbl);
-      let expected_of name =
-        match List.find_opt (fun (n, _, _) -> String.equal n name) g3 with
-        | Some (_, _, e) -> Some e
-        | None -> None
-      in
-      let root_of name =
-        match case_bytes dir name with None -> None | Some b -> parse_root_val b
-      in
-      (* The sequence of §4.1 G3 / the GLD delivery §3.4: the four cases against probeStore
-         (an empty roots plane), then the advance against the plane g3-v1 leaves. *)
-      let step state name =
-        match (root_of name, expected_of name) with
-        | Some r, Some exp ->
-          let out = E4_control.advance_root state ~resolve r in
-          let got = outcome_word out in
-          check (Printf.sprintf "G3 %s -> %s" name exp) (String.equal got exp);
-          if not (String.equal got exp) then begin
-            note "  expected: %s" exp;
-            note "  got:      %s" got
-          end;
-          (match out with Ok p -> p | Error _ -> state)
-        | None, _ ->
-          skip (Printf.sprintf "G3 %s" name) "no such .hex, or it is not a rootVal frame tree";
-          state
-        | _, None ->
-          skip (Printf.sprintf "G3 %s" name) "no such row in cases.txt";
-          state
-      in
-      let base = E4_control.initial in
-      let after_v1 = step base "g3-v1" in
-      ignore (step base "g3-stale" : E4_control.payload);
-      ignore (step base "g3-wrongKind" : E4_control.payload);
-      ignore (step base "g3-dangling" : E4_control.payload);
-      let after_v2 = step after_v1 "g3-advance-v2" in
-      check "G3 the plane after the advance still holds exactly one root (Store.putRoot (src/Effect4/Store/Domain/Store.lean))"
-        (List.length (E4_control.roots after_v2) = 1);
-
-      (* The two `roots-after` cases are the roots plane itself, as `list (rootVal r)`. *)
-      let plane_check name (p : E4_control.payload) =
-        match case_bytes dir name with
-        | None -> skip (Printf.sprintf "G3 %s" name) "no such .hex"
-        | Some want ->
-          let got = v_list (List.map root_val (E4_control.roots p)) in
-          check
-            (Printf.sprintf "G3 %s: the roots plane, byte for byte" name)
-            (String.equal got want);
-          if not (String.equal got want) then begin
-            note "  expected: %s" (E4_hex.of_bytes want);
-            note "  got:      %s" (E4_hex.of_bytes got)
-          end
-      in
-      plane_check "g3-roots-after-v1" after_v1;
-      plane_check "g3-roots-after-v2" after_v2;
-
-      (* M7 and M1: lane GLD reports both owed. *)
-      let mentions_registry =
-        List.exists
-          (fun (n, _, e) ->
-            let has sub s =
-              let ls = String.length s and lb = String.length sub in
-              let rec go i = i + lb <= ls && (String.sub s i lb = sub || go (i + 1)) in
-              go 0
-            in
-            has "registry" n || has "pin" n || has "fork" e)
-          g3
-      in
-      if mentions_registry then
-        note "a g3 row now mentions registry/pin/fork — re-check the M7 and M1 arms"
-      else
-        skip "G3 M7 prev (registry fork) and M1 pinAll"
-          "lane GLD O4: RootKind (src/Effect4/Store/Domain/Store.lean) has no `registry` and no `pin` RootKind, and \
-           advanceRoot/Publication/pinAll have 0 hits in src/ — nothing to cut. The OCaml \
-           arms are covered in-memory by C9."
-    end)
+  | None -> check "G3 goldens must be available" false
+  | Some dir ->
+    let rows = load_cases dir in
+    let table, _ = resolver_of_goldens dir rows in
+    let extra = match case_bytes dir "g3-target-v2" with
+      | Some bytes -> (match Eff_frame.read_frame bytes 0 (String.length bytes) with
+        | Some (tag, start, ending, next) when tag = Eff_frame.tag_bytes && next = String.length bytes ->
+          let bytes = String.sub bytes start (ending - start) in
+          (match E4_node.decode bytes with Ok node -> [E4_node.address node, node.E4_node.kind] | Error _ -> [])
+        | _ -> [])
+      | None -> [] in
+    let resolve = table_resolve (extra @ table) in
+    let state = ref E4_control.initial in
+    List.iter (fun name ->
+      let expected = match List.find_opt (fun (label, _, _) -> label = name) rows with
+        | Some (_, _, expected) -> expected | None -> "MISSING" in
+      match case_bytes dir name with
+      | None -> check ("G3 missing " ^ name) false
+      | Some bytes ->
+        if name = "g3-roots-after-v1" || name = "g3-roots-after-v2" then
+          check ("G3 control " ^ name) (bytes = v_list (List.map root_val (E4_control.roots !state)))
+        else match decode_move bytes with
+          | None -> check ("G3 decode " ^ name) false
+          | Some move ->
+            let result = E4_control.advance_root !state ~resolve move in
+            check ("G3 control " ^ name) (outcome_word result = expected);
+            (match result with Ok next -> state := next | Error _ -> ()))
+      ["g3-v1"; "g3-roots-after-v1"; "g3-stale"; "g3-wrongKind"; "g3-dangling";
+       "g3-advance-v2"; "g3-roots-after-v2"]
 
 (* ============================================================ *)
 
@@ -891,6 +738,7 @@ let () =
   test_refusals ();
   test_crash ();
   test_reserved ();
+  test_legacy_policy ();
   test_cas ();
   test_mutation ();
   test_goldens ();

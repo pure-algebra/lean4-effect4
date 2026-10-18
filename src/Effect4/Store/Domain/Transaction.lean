@@ -8,7 +8,8 @@ public import Effect4.Store.Domain.Node
 The syntax signature contains node lists, root moves, and interrupted publication points.
 Every field is data. No field is a function or a host object.
 `Event` is the store's accepted event alphabet from the seams plan.
-The transaction interpreter lands in ST1b; this module introduces no alternate operation.
+`src/Effect4/Store/Domain/Cas.lean` owns the transaction interpreter.
+This module holds only its event data.
 -/
 
 @[expose] public section
@@ -19,6 +20,17 @@ namespace Effect4.Store
 inductive RootPolicy where
   | swap | journal | pin
   deriving DecidableEq, Repr
+
+/-- The registered policy alphabet in wire order. -/
+def RootPolicy.all : List RootPolicy := [.swap, .journal, .pin]
+
+/-- The version-2 policy byte; legacy version-1 planes belong to the disk reader. -/
+def RootPolicy.byte : RootPolicy → UInt8
+  | .swap => 0 | .journal => 1 | .pin => 2
+
+/-- The canonical policy name. -/
+def RootPolicy.name : RootPolicy → String
+  | .swap => "swap" | .journal => "journal" | .pin => "pin"
 
 /-- The complete expectation for a root move, including repeated digests. -/
 structure Head (D : Type) where

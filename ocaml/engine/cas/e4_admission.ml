@@ -16,7 +16,6 @@ type model =
   | Unknown_tag of int
   | Oversize
   | Bad_version
-  | Stale_root of string * Z.t * Z.t
   | Conflict of E4_addr.Addr.t * E4_node.t
 
 type t = Model of model | Capacity of string

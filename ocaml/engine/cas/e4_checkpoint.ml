@@ -236,28 +236,19 @@ type written = {
   image_bytes_written : int;
 }
 
-let mint_pin st ~job ~cid ~addr =
+let move_at_head st name policy addr =
   let view = E4_cas.read_only st in
-  let name = E4_control.normalise_name (pin_root_name ~job cid) in
-  let version = E4_cas.next_version view name in
-  E4_cas.advance_root st
-    { E4_control.name;
-      root_kind = E4_control.Pin;
-      kind = E4_kind.Checkpoint;
-      digest = addr;
-      version }
+  let target : E4_control.target = {kind = E4_kind.Checkpoint; digest = addr} in
+  let move = match E4_cas.root view name with
+    | None -> E4_control.Create (name, policy, target)
+    | Some old -> E4_control.Advance (name, old.E4_control.head, target) in
+  E4_cas.advance_root st move
 
-let advance_head st ~job ~addr ~prev =
-  let view = E4_cas.read_only st in
-  let name = E4_control.normalise_name (head_root_name job) in
-  let version = E4_cas.next_version view name in
-  let prev_addr = match prev with Some a -> a | None -> E4_addr.Addr.zero in
-  E4_cas.advance_root st ~prev:prev_addr
-    { E4_control.name;
-      root_kind = E4_control.Registry;
-      kind = E4_kind.Checkpoint;
-      digest = addr;
-      version }
+let mint_pin st ~job ~cid ~addr =
+  move_at_head st (pin_root_name ~job cid) E4_control.Pin addr
+
+let advance_head st ~job ~addr =
+  move_at_head st (head_root_name job) E4_control.Journal addr
 
 let write_counted st ~job ~position ~machine_image ~prev ?(params = E4_chunk.default)
     ?(threshold = E4_chunk.threshold) ?(manifest = true) ?tape_prefix ?(pin = true)
@@ -310,7 +301,7 @@ let write_counted st ~job ~position ~machine_image ~prev ?(params = E4_chunk.def
       match pinned with
       | Error e -> Error (Root_refused e)
       | Ok () -> (
-        match if head then advance_head st ~job ~addr ~prev else Ok () with
+        match if head then advance_head st ~job ~addr else Ok () with
         | Error e -> Error (Root_refused e)
         | Ok () ->
           Ok
@@ -397,7 +388,7 @@ let read_parts ro addr =
 
 let head ro job =
   match E4_cas.root ro (E4_control.normalise_name (head_root_name job)) with
-  | Some r -> Some r.E4_control.digest
+  | Some r -> Some r.E4_control.head.digest
   | None -> None
 
 (* ================================================================ the chain (CP8) *)

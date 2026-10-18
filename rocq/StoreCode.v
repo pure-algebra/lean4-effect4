@@ -66,22 +66,25 @@ Definition node_kind (s : node) := match s with Node_mk _ x _ _ => x end.
 Definition node_spec (s : node) := match s with Node_mk _ _ x _ => x end.
 Definition node_payload (s : node) := match s with Node_mk _ _ _ x => x end.
 
-Inductive rootkind : Set :=
-| RootKind_stdlib : rootkind
-| RootKind_journal : rootkind
-| RootKind_daemon : rootkind
-| RootKind_schema : rootkind
-| RootKind_char : rootkind
+Inductive root_policy_kind : Set :=
+| RootPolicy_swap : root_policy_kind
+| RootPolicy_journal : root_policy_kind
+| RootPolicy_pin : root_policy_kind
 .
 
-Inductive root : Set :=
-| Root_mk : string -> rootkind -> kind -> digest -> int -> root
+Inductive head (v_D : Set) : Set :=
+| Head_mk : v_D -> int -> (head v_D)
 .
-Definition root_name (s : root) := match s with Root_mk x _ _ _ _ => x end.
-Definition root_rootKind (s : root) := match s with Root_mk _ x _ _ _ => x end.
-Definition root_kind (s : root) := match s with Root_mk _ _ x _ _ => x end.
-Definition root_digest (s : root) := match s with Root_mk _ _ _ x _ => x end.
-Definition root_version (s : root) := match s with Root_mk _ _ _ _ x => x end.
+Definition head_digest {v_D : Set} (s : (head v_D)) := match s with Head_mk _ x _ => x end.
+Definition head_generation {v_D : Set} (s : (head v_D)) := match s with Head_mk _ _ x => x end.
+
+Inductive root : Set :=
+| Root_mk : string -> root_policy_kind -> kind -> (head digest) -> root
+.
+Definition root_name (s : root) := match s with Root_mk x _ _ _ => x end.
+Definition root_policy (s : root) := match s with Root_mk _ x _ _ => x end.
+Definition root_kind (s : root) := match s with Root_mk _ _ x _ => x end.
+Definition root_head (s : root) := match s with Root_mk _ _ _ x => x end.
 
 Inductive store : Set :=
 | Store_mk : (list (prod digest node)) -> (list root) -> store
@@ -101,7 +104,6 @@ Inductive admission : Set :=
 | Admission_unknownTag : int -> admission
 | Admission_oversize : admission
 | Admission_badVersion : admission
-| Admission_staleRoot : string -> int -> int -> admission
 | Admission_conflict : digest -> node -> admission
 .
 
@@ -1544,27 +1546,28 @@ Fixpoint verifyRoots (v_s : store) (v_x_1 : (list root)) {struct v_x_1} : (Excep
       let v__x_3 := (Except_ok v__x_2) in
       v__x_3
   | cons v_head_4 v_tail_5 =>
-      let v__x_6 := (root_digest v_head_4) in
-      let v__x_7 := (Store_find v_s v__x_6) in
-      match v__x_7 with
+      let v__x_6 := (root_head v_head_4) in
+      let v__x_7 := (head_digest v__x_6) in
+      let v__x_8 := (Store_find v_s v__x_7) in
+      match v__x_8 with
       | None =>
-          let v__x_8 := (root_name v_head_4) in
-          let v__x_9 := (VerifyError_rootUnresolved v__x_8) in
-          let v__x_10 := (Except_error v__x_9) in
-          v__x_10
-      | Some v_val_11 =>
-          let v__x_12 := (node_kind v_val_11) in
-          let v__x_13 := (root_kind v_head_4) in
-          let v__x_14 := (instDecidableEqKind v__x_12 v__x_13) in
-          match v__x_14 with
+          let v__x_9 := (root_name v_head_4) in
+          let v__x_10 := (VerifyError_rootUnresolved v__x_9) in
+          let v__x_11 := (Except_error v__x_10) in
+          v__x_11
+      | Some v_val_12 =>
+          let v__x_13 := (node_kind v_val_12) in
+          let v__x_14 := (root_kind v_head_4) in
+          let v__x_15 := (instDecidableEqKind v__x_13 v__x_14) in
+          match v__x_15 with
           | false =>
-              let v__x_16 := (root_name v_head_4) in
-              let v__x_17 := (VerifyError_rootUnresolved v__x_16) in
-              let v__x_18 := (Except_error v__x_17) in
-              v__x_18
+              let v__x_17 := (root_name v_head_4) in
+              let v__x_18 := (VerifyError_rootUnresolved v__x_17) in
+              let v__x_19 := (Except_error v__x_18) in
+              v__x_19
           | true =>
-              let v__x_20 := (verifyRoots v_s v_tail_5) in
-              v__x_20
+              let v__x_21 := (verifyRoots v_s v_tail_5) in
+              v__x_21
           end
       end
   end

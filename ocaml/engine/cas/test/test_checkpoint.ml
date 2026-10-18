@@ -624,7 +624,7 @@ let chain_and_head () =
        | None -> E4_addr.Addr.zero
      in
      match E4_cas.root ro (E4_control.normalise_name (Ck.pin_root_name ~job cid)) with
-     | Some r -> E4_addr.Addr.equal r.E4_control.digest head && r.E4_control.root_kind = E4_control.Pin
+     | Some r -> E4_addr.Addr.equal r.E4_control.head.digest head && r.E4_control.policy = E4_control.Pin
      | None -> false);
   check "CP3 a publish whose prev is not the head is refused (M7 Fork)"
     (match

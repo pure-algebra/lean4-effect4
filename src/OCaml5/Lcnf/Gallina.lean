@@ -145,10 +145,10 @@ def localName (n : Name) : String :=
   "v_" ++ String.ofList ((toString n).toList.map fun c => if c.isAlphanum then c else '_')
 
 /-- A Lean type as a Rocq type; `counter` says a natural is a budget counter. -/
-partial def rocqTy (spec : Spec) (counter : Bool) (e : Expr) : String :=
+partial def rocqTy (spec : Spec) (counter : Bool) (e : Expr) (typeLocals : List (FVarId × String) := []) : String :=
   let e := e.consumeMData
   match e with
-  | .forallE _ d b _ => s!"({rocqTy spec false d} -> {rocqTy spec counter b})"
+  | .forallE _ d b _ => s!"({rocqTy spec false d typeLocals} -> {rocqTy spec counter b typeLocals})"
   | _ =>
     let args := e.getAppArgs
     match e.getAppFn with
@@ -156,12 +156,13 @@ partial def rocqTy (spec : Spec) (counter : Bool) (e : Expr) : String :=
     | .const ``Decidable _ => "bool"
     | .const ``DecidableEq _ =>
       match args.toList with
-      | [t] => let t := rocqTy spec false t; s!"({t} -> {t} -> bool)"
+      | [t] => let t := rocqTy spec false t typeLocals; s!"({t} -> {t} -> bool)"
       | _ => refused s!"type {e}"
+    | .fvar f => (typeLocals.lookup f).getD (refused s!"type {e}")
     | .const n _ =>
       match spec.knownTypes.lookup n with
       | some r =>
-        if args.isEmpty then r else s!"({r} {" ".intercalate (args.toList.map (rocqTy spec false))})"
+        if args.isEmpty then r else s!"({r} {" ".intercalate (args.toList.map (fun t => rocqTy spec false t typeLocals))})"
       | none => refused s!"type {n}"
     | _ => refused s!"type {e}"
 
@@ -290,29 +291,39 @@ field for it, and it has no projection. -/
 def typeText (env : Environment) (spec : Spec) (n : Name) : MetaM String := do
   let some (.inductInfo ti) := env.find? n | throwError s!"{n} is no inductive"
   let short := (spec.knownTypes.lookup n).getD (fnRocq n)
-  let mut out := s!"Inductive {short} : Set :=\n"
+  let parameters ← Meta.forallTelescope ti.type fun xs _ =>
+    xs.toList.take ti.numParams |>.mapM fun x => do
+      let decl ← x.fvarId!.getDecl
+      unless ← Meta.isDefEq decl.type (mkSort (.succ .zero)) do
+        throwError "Gallina: type parameter {decl.userName} is not Type"
+      return localName decl.userName
+  let parameterBinders := " ".intercalate (parameters.map fun name => s!"({name} : Set)")
+  let applied := if parameters.isEmpty then short else s!"({short} {" ".intercalate parameters})"
+  let mut out := s!"Inductive {short}{if parameters.isEmpty then "" else " " ++ parameterBinders} : Set :=\n"
   let mut kept : List Bool := []
   for c in ti.ctors do
     let some (.ctorInfo ci) := env.find? c | throwError s!"{c} is no constructor"
     let (fields, keep) ← Meta.forallTelescope ci.type fun xs _ => do
       let mut fs : List String := []
       let mut ks : List Bool := []
+      let typeLocals := (xs.toList.take ci.numParams).zip parameters |>.map fun (x, name) => (x.fvarId!, name)
       for x in xs.toList.drop ci.numParams do
         let t ← Meta.inferType x
         if ← Meta.isProp t then ks := ks ++ [false]
         else
-          fs := fs ++ [rocqTy spec false t]
+          fs := fs ++ [rocqTy spec false t typeLocals]
           ks := ks ++ [true]
       return (fs, ks)
     kept := keep
-    out := out ++ s!"| {(ctorRocq env c).getD "C"} : {" -> ".intercalate (fields ++ [short])}\n"
+    out := out ++ s!"| {(ctorRocq env c).getD "C"} : {" -> ".intercalate (fields ++ [applied])}\n"
   out := out ++ ".\n"
   if let some info := getStructureInfo? env n then
     let some ctor := ti.ctors.head? | throwError s!"{n} has no constructor"
     let live := (List.range info.fieldNames.size).filter fun j => kept.getD j true
     for i in live do
-      let vars := live.map fun j => if j == i then "x" else "_"
-      out := out ++ s!"Definition {projName env n i} (s : {short}) := match s with {(ctorRocq env ctor).getD "C"} {" ".intercalate vars} => x end.\n"
+      let vars := (parameters.map fun _ => "_") ++ live.map fun j => if j == i then "x" else "_"
+      let implicitParameters := " ".intercalate (parameters.map fun name => "{" ++ name ++ " : Set}")
+      out := out ++ s!"Definition {projName env n i}{if implicitParameters.isEmpty then "" else " " ++ implicitParameters} (s : {applied}) := match s with {(ctorRocq env ctor).getD "C"} {" ".intercalate vars} => x end.\n"
   return out
 
 /-- **The skeleton as one Rocq file.** -/
@@ -538,12 +549,12 @@ def storeSpec : Spec where
     `Effect4.Store.verifyEdges, `Effect4.Store.Store.verifyNode, `Effect4.Store.verifyNodes,
     `Effect4.Store.verifyRoots, `Effect4.Store.Store.verify]
   types := [`Effect4.Store.Kind, `Effect4.Store.Digest, `Effect4.Store.AnyRef, `Effect4.Store.Node,
-    `Effect4.Store.RootKind, `Effect4.Store.Root, `Effect4.Store.Store, `Effect4.Store.Admission,
+    `Effect4.Store.RootPolicy, `Effect4.Store.Head, `Effect4.Store.Root, `Effect4.Store.Store, `Effect4.Store.Admission,
     `Effect4.Store.Outcome, `Effect4.Store.Binding, `Effect4.Store.VerifyError]
   knownTypes := [
     (`Effect4.Store.Val, "val_"), (`Effect4.Store.Kind, "kind"), (`Effect4.Store.Digest, "digest"),
     (`Effect4.Store.AnyRef, "any_ref"), (`Effect4.Store.Node, "node"),
-    (`Effect4.Store.RootKind, "rootkind"), (`Effect4.Store.Root, "root"),
+    (`Effect4.Store.RootPolicy, "root_policy_kind"), (`Effect4.Store.Head, "head"), (`Effect4.Store.Root, "root"),
     (`Effect4.Store.Store, "store"), (`Effect4.Store.Admission, "admission"),
     (`Effect4.Store.Outcome, "outcome"), (`Effect4.Store.Binding, "binding"),
     (`Effect4.Store.VerifyError, "verify_error"), (`Effect4.Store.Bytes, "(list int)"),
