@@ -20,7 +20,7 @@ The owner pauses work after V1.
 | ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` ; receipt `0bb42e37d4fa99fd84979df03beb3dd0391a4e98` | [ST1a](ST1a.md) | Required checks pass. |
 | ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` ; receipt `709f9f10a9401150af66870a8665860e45cc63d3` | [ST1b](ST1b.md) | Required checks pass. |
 | ST2 | `e163b1ac64aa9c4c8ce91f2b7d54bd4d3aa3d061` | [ST2](ST2.md) | Required checks pass; all three recovery claims are proved. |
-| ST3 | Pending | Pending | Open |
+| ST3 | `2062a13aafd8afbe8d6017e77be426ee6c64090b` | [ST3](ST3.md) | Required checks pass; `cas-result-envelope` and `cas-result-once` proved, no planned goals. |
 | ST4 | Pending | Pending | Open |
 | S6 | Pending | Pending | Open |
 
@@ -97,6 +97,12 @@ The owner pauses work after V1.
 | S3b | `--qualified-names` qualifies foreign identifiers too; the service context has a hand-written exact codec. |
 | S3b | `Tools.Query` stays until its `slots`, `table` and `addresses` reads join the tool's queries. |
 
+| ST3 | A query's specification names its input's shape, as `Annotation` does; the result envelope keeps one specification. |
+| ST3 | `Shape.value` (tag 14) carries raw outputs; its JSON reader refuses it. |
+| ST3 | `Content Document` moves below the store; one result operation serves three entrances; `Store.Sound` gains the rule. |
+| ST3 | The native word check gains M2's handle test; the native store indexes results by query. |
+| ST3 | Gate stamps are phony and the shared-result reader alone decides; it reads every short Make option. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -139,5 +145,8 @@ The owner pauses work after V1.
 
 | S3b | Adopt the generated Tool and Check wire codecs, the JSON profile, and one JSON-lines driver over `Tool.Wire.serveJson`. |
 | S3b | Retire the string dispatcher, its snapshot cache and `JsonBridge.valueFrom?`; keep `Tools.Query` until its reads move. |
+
+| ST3 | Admit at most one result node per designated query at every entrance; name both results when a second refuses. |
+| ST3 | Key a shared gate result by its input snapshot and its complete command. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

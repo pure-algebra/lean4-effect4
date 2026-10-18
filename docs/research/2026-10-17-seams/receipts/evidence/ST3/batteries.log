@@ -1,0 +1,18 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "make", "batteries-touched", "BASE=025df9b346e901e0165a0d9b8e6c251de1030e5d"], "cwd": "/Users/pooks/Dev/lean4-effect4", "started_utc": "2026-10-18T09:20:38.235129+00:00"}
+lean-imports: Effect4.Laws is newer than its .ilean; its edits are read by name
+lean-imports: 2 batteries have no .ilean; each is read by its imports
+batteries-touched: 8 batteries
+✔ [315/724] Built Effect4.Store.Domain.Document:c.o (311ms)
+✔ [327/724] Built Effect4.Store.Domain.Action:c.o (515ms)
+✔ [341/724] Built Effect4.Store.Domain.Store:c.o (437ms)
+✔ [363/724] Built Effect4.Store.Domain.ShapeRead:c.o (723ms)
+✔ [368/724] Built Effect4.Store.Domain.Genesis:c.o (57ms)
+✔ [457/724] Built Effect4.Store.Domain.Word:c.o (445ms)
+✔ [650/724] Built Effect4.Store.Domain.Derived.Value:c.o (1.1s)
+✔ [720/724] Built Effect4:c.o (100ms)
+✔ [721/724] Built Effect4.Store.Domain.Cas:c.o (604ms)
+✔ [722/724] Built Effect4.Store.Domain.Derived.Schema:c.o (2.3s)
+✔ [723/794] Built Effect4:shared (431ms)
+✔ [913/914] Built Test.Store.TraitContract (782ms)
+✔ [914/914] Built Test.Program.Gen (1.7s)
+Build completed successfully (914 jobs).

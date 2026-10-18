@@ -1,0 +1,17 @@
+{"command": ["python3", "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/9702bd4d-c422-4d7e-85c6-6052708a5ba3/scratchpad/st3-gate-red.py"], "cwd": "/Users/pooks/Dev/lean4-effect4", "started_utc": "2026-10-18T09:20:38.155406+00:00"}
+test_commands_keep_distinct_result_records (gate_tests.GateCache.test_commands_keep_distinct_result_records) ... FAIL
+
+======================================================================
+FAIL: test_commands_keep_distinct_result_records (gate_tests.GateCache.test_commands_keep_distinct_result_records)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/pooks/Dev/lean4-effect4/scripts/test-gate-cache.py", line 91, in test_commands_keep_distinct_result_records
+    self.assertNotEqual(query_key(input_key, commands[0]), query_key(input_key, commands[1]))
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '23217d5dc32172dab54fb02a9234d816e9c169af98fe6fa10bc38e17cfac4e82' == '23217d5dc32172dab54fb02a9234d816e9c169af98fe6fa10bc38e17cfac4e82'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)
+RED CONTROL FAILS AS REQUIRED

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/9702bd4d-c422-4d7e-85c6-6052708a5ba3/scratchpad/seams-st3-rocq-production.py"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4",
+  "started_utc": "2026-10-18T09:20:29.362619+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 3.479,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/ST3/rocq.log"
+}

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/9702bd4d-c422-4d7e-85c6-6052708a5ba3/scratchpad/st3-gate-red.py"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4",
+  "started_utc": "2026-10-18T09:20:38.155406+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 0.058,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/ST3/gate-cache-red.log"
+}

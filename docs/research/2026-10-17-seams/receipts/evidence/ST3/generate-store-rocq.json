@@ -1,0 +1,15 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "python3",
+    "scripts/generate.py",
+    "--only",
+    "store-rocq"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4",
+  "started_utc": "2026-10-18T09:20:23.187509+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 6.146,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/ST3/generate-store-rocq.log"
+}
