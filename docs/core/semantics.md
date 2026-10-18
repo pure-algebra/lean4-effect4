@@ -1570,7 +1570,7 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   A state's transcript replays to it (`tool-transcript-replays`). The theorems live in `src/Effect4/Laws/Tool/Serve.lean`.
   They serve R6 and R13 and establish no native execution, external-effect rollback or host progress.
 - **Tool replies pair with requests (seams S3b)**: every reply that `Tool.serve` gives pairs with its request
-  (`tool-serve-answers`, pointer `Tool.serve_answers` in `src/Effect4/Laws/Tool/Wire.lean`, a planned goal).
+  (`tool-serve-answers`, `Tool.serve_answers` in `src/Effect4/Laws/Tool/Wire.lean`, by cases on each action and query branch).
   It serves R6 and establishes no JSON decoding exactness, native driver behaviour or host progress.
 - **Typed replay under session (`typed-replay-session`)**: Opening requires full admission at the application extended by the sketch's hole rows.
   `Api.Built.ofSketch_error_iff` states the exact refusal in `src/Effect4/Laws/Api/Built.lean` (`built-admission-exact`, R6 and R13).
