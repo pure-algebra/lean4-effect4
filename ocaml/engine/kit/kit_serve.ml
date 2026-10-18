@@ -1,9 +1,9 @@
 (* Kit_serve — the kit's requests and answers, for the command line and its servers (hand-written).
 
    What it is: one request type for every command (check, run, explore), its reading from JSON,
-   its answer as JSON, and the two line protocols: JSON lines (`eff serve`) and the Model Context
-   Protocol over stdio (`eff mcp`). Each protocol is a function from one input line to its output
-   line, so the lane tests it in-process and `eff` is a loop around it.
+   its answer as JSON, and its line protocol, JSON lines (`eff serve`): a function from one input
+   line to its output line, so the lane tests it in-process and `eff` is a loop around it. The
+   Model Context Protocol face (`eff mcp`) is the authoring tool's (Kit_mcp), not these commands'.
    Depends on: Kit, Eff_json_text.
 
    Behaviours it holds itself to:
@@ -14,11 +14,7 @@
        probe (Kit B2, B3).                                             by construction
    S3  `run` is `Kit.run`: a request never names a runner. The answer says which one answered
        ("via"), and for a settled tree run whether the machine agrees ("machine": "agrees");
-       "fast" skips the machine's run.                                 tested (T10)
-   S4  The MCP protocol answers `initialize`, `ping`, `tools/list` and `tools/call`, replies to no
-       notification, and answers any other request with a JSON-RPC error; a tool's answer is the
-       command's answer as text, and an unreadable input is the tool's error (`isError`).
-                                                                       tested (T10) *)
+       "fast" skips the machine's run.                                 tested (T10) *)
 
 module J = Eff_json_text
 
@@ -112,77 +108,6 @@ let request_of_json (j : J.t) : request =
     budget = int "budget" 64;
     width = int "width" 64;
     fast = flag "fast" }
-
-(* The tools of `eff mcp`, each a command of this module. *)
-let tools =
-  let obj fields = J.Object fields in
-  let str s = J.String s in
-  let prop desc ty = obj [ ("type", str ty); ("description", str desc) ] in
-  let program = prop "the program as its JSON print, the session tool's form ({\"_tag\":\"bind\",…})" "object" in
-  let rows = prop "the application's host rows, an array of row records (name, spelling, shape, kind \"async\", registration \"external\", request, answer, error, …)" "array" in
-  let tape = prop "the host's replies in call order, an array of exits ({\"_tag\":\"success\",\"value\":…} or {\"_tag\":\"failure\",\"cause\":…}); with none, every call waits" "array" in
-  let schema required props =
-    obj [ ("type", str "object");
-          ("properties", obj props);
-          ("required", J.Array (List.map str required)) ] in
-  let tool name desc props required =
-    obj [ ("name", str name); ("description", str desc); ("inputSchema", schema required props) ] in
-  [ tool "check"
-      "Type an Eff program at its application with Lean's checker, natively: its Effect<A, E> type, or the address of the refusing node and why; then program admission (the rows' registration and kind)."
-      [ ("program", program); ("rows", rows) ] [ "program" ];
-    tool "run"
-      "Run an Eff program under a reply tape and report how it stops: finished (with its exit), waiting (the call the host has no reply for), refused (the reply that does not fit its row, and why), unsettled (the budget ended first: a finite probe, never a divergence) or stopped. Each call is listed with its request and reply. A program in the call tree's fragment settles at the least budget that does not cut it, and is run on the machine too; the answer says whether the two agree. Any other program runs on the machine."
-      [ ("program", program); ("rows", rows); ("tape", tape);
-        ("limit", prop "the largest budget to try, or the machine's rounds (default 1024)" "integer");
-        ("frames", prop "also answer the call tree's runs at every budget up to the one it settles at: each extends the one before, so they play as one growing run" "boolean");
-        ("fast", prop "skip the machine's run" "boolean") ] [ "program" ];
-    tool "explore"
-      "Every path of an Eff program's call tree at a budget, with each host reply drawn from its row's declared types (small members: 0 and 1, \"\" and \"a\", empty and one-item lists, each union member, and failures from the error column). Each path lists its calls, its stop and its tape; each path the budget does not cut is replayed on the machine under its tape, and the answer says whether the two agree."
-      [ ("program", program); ("rows", rows);
-        ("budget", prop "the budget (default 64)" "integer");
-        ("width", prop "the most paths to answer (default 64)" "integer");
-        ("fast", prop "skip the machine's replays" "boolean") ] [ "program" ] ]
-
-(* One JSON-RPC message to its reply, or none for a notification. *)
-let mcp_message (msg : J.t) : J.t option =
-  let reply id result = J.Object [ ("jsonrpc", J.String "2.0"); ("id", id); ("result", result) ] in
-  let failure id code message =
-    J.Object [ ("jsonrpc", J.String "2.0"); ("id", id);
-               ("error", J.Object [ ("code", J.Int code); ("message", J.String message) ]) ] in
-  match msg with
-  | J.Object fields ->
-    let field k = List.assoc_opt k fields in
-    let params = match field "params" with Some (J.Object p) -> p | _ -> [] in
-    (match field "method", field "id" with
-     | Some (J.String "initialize"), Some id ->
-       let version = match List.assoc_opt "protocolVersion" params with Some v -> v | None -> J.String "2025-06-18" in
-       Some (reply id (J.Object [ ("protocolVersion", version);
-                                  ("capabilities", J.Object [ ("tools", J.Object []) ]);
-                                  ("serverInfo", J.Object [ ("name", J.String "effect4-kit"); ("version", J.String "0.1.0") ]) ]))
-     | Some (J.String "ping"), Some id -> Some (reply id (J.Object []))
-     | Some (J.String "tools/list"), Some id -> Some (reply id (J.Object [ ("tools", J.Array tools) ]))
-     | Some (J.String "tools/call"), Some id ->
-       let name = match List.assoc_opt "name" params with Some (J.String n) -> n | _ -> "" in
-       let args = match List.assoc_opt "arguments" params with Some (J.Object a) -> a | _ -> [] in
-       let answer, is_error =
-         try (answer (request_of_json (J.Object (("op", J.String name) :: args))), false)
-         with Input e -> (error_json e, true)
-       in
-       Some (reply id (J.Object [ ("content", J.Array [ J.Object [ ("type", J.String "text"); ("text", J.String (Kit.Json.render answer)) ] ]);
-                                  ("isError", J.Bool is_error) ]))
-     | Some (J.String _), None -> None
-     | Some (J.String m), Some id -> Some (failure id (-32601) ("unknown method " ^ m))
-     | _, Some id -> Some (failure id (-32600) "not a request")
-     | _, None -> None)
-  | _ -> Some (failure J.Null (-32600) "not a request")
-
-(* `eff mcp`'s line: one message in, its reply out, or nothing for a notification. *)
-let mcp_line (line : string) : string option =
-  match Kit.Json.parse line with
-  | Error e ->
-    Some (Kit.Json.render (J.Object [ ("jsonrpc", J.String "2.0"); ("id", J.Null);
-                                      ("error", J.Object [ ("code", J.Int (-32700)); ("message", J.String e) ]) ]))
-  | Ok msg -> Option.map Kit.Json.render (mcp_message msg)
 
 (* `eff serve`'s line: one request in, its answer out. *)
 let serve_line (line : string) : string =

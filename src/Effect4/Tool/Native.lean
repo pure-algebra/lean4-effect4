@@ -1,5 +1,6 @@
 import Effect4.Tool.ToolDerived
 import Effect4.Tool.Wire
+import Effect4.Tool.Methods
 
 /-!
 # Tool.Native — the tool at the native boundary
@@ -74,5 +75,8 @@ def refusalShape : ShapeDoc := shape Wire.Refusal
 
 /-- A wire refusal's value tree. -/
 def refusalToVal (why : Wire.Refusal) : Val := Canonical.toVal why
+
+/-- The tool table an MCP server lists (`Tool/Methods.lean`). -/
+def methods : List Methods.Entry := Methods.entries
 
 end Effect4.Tool.Native

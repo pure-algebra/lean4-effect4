@@ -36,3 +36,11 @@
  (modules test_tool)
  (deps tool-requests.jsonl tool-replies.jsonl tool-numbers.jsonl tool-numbers-replies.jsonl)
  (libraries effect4_kit effect4_eff effect4_gen))
+
+; the authoring tool's MCP server (Kit_mcp, `eff mcp`): the JSON-RPC methods, the tool table
+; generated from Lean's request shape, and tool calls against Kit_tool's replies.
+(test
+ (name test_mcp)
+ (modules test_mcp)
+ (deps tool-requests.jsonl)
+ (libraries effect4_kit effect4_eff effect4_gen))

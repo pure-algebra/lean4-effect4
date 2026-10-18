@@ -4,11 +4,12 @@
 ;   program and reply admission, each carrier's canonical image (Effect4.Run.Kit), and Lean's
 ;   authoring surface (Effect4.Program.Authoring). The modules here are host code over it: the
 ;   face and its one run (Kit), JSON by shapes (Kit_json), the authoring face (Kit_author), the
-;   machine under a reactor (Kit_machine, over E4_host), the requests and protocols (Kit_serve)
-;   and the animated view (Kit_view). The driver `eff` is bin/.
+;   machine under a reactor (Kit_machine, over E4_host), the commands' requests (Kit_serve), the
+;   animated view (Kit_view), and the authoring tool's shells: JSON lines (Kit_tool) and MCP
+;   (Kit_mcp). The driver `eff` is bin/.
 
 (library
  (name effect4_kit)
- (modules kit_json kit kit_author kit_machine kit_serve kit_view kit_tool)
+ (modules kit_json kit kit_author kit_machine kit_serve kit_view kit_tool kit_mcp)
  (flags (:standard -w -4-9-26-27-32-33-35-37-39-40-41-42-44-45-69-70))
  (libraries effect4_eff effect4_clock effect4_gen effect4_engine))

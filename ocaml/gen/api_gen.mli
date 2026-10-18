@@ -1386,6 +1386,14 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
   layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
 }
 and request = Request_act of action | Request_ask of query
+and effect4_tool_methods_entry = {
+  name : string;
+  description : string;
+  kind : string;
+  field : string;
+  case_name : string;
+  schema : string;
+}
 and record_typing_reason =
     RecordTypingReason_duplicateDeclaration of string
   | RecordTypingReason_duplicateSupplied of string
@@ -2396,6 +2404,7 @@ val tool_native_envelope_shape : shape_doc
 val tool_native_reply_envelope_shape : shape_doc
 val tool_native_refusal_shape : shape_doc
 val tool_native_refusal_to_val : effect4_tool_wire_refusal -> Eff_types.Val.t
+val tool_native_methods : effect4_tool_methods_entry list
 val program_check_run : check_input -> verdict
 val program_check_oracle_uncached : oracle
 val program_check_checked_pure' : 'a0 -> 'a0 checked

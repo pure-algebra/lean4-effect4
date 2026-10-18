@@ -35,11 +35,9 @@
        fragment runs on the machine.                                        tested
    T9  Admission: a host row registered `deferred` is refused at admission, at its index, though
        the program types; the same row registered `external` is admitted.  tested
-   T10 The protocols (Kit_serve S3, S4): over MCP, `initialize` names the server, `tools/list`
-       lists the three tools, `tools/call` of `run` answers the tree's run with the machine's
-       agreement and its frames when asked, a notification has no reply, an unknown method is a
-       JSON-RPC error and an unreadable program is the tool's error; over JSON lines, a forked
-       program runs on the machine, and `explore` of it answers the address outside the tree.
+   T10 The JSON lines protocol (Kit_serve S3): `run` answers the tree's run with the machine's
+       agreement and its frames when asked, an unreadable program is an error, a forked program
+       runs on the machine, and `explore` of it answers the address outside the tree.
                                                                             tested
    T11 Exploration: the replies drawn from a row's types fit its row; a program that branches on
        a list's length has a path for each branch and for each failure of its error column; each
@@ -310,46 +308,21 @@ let t9 () =
 let t10 () =
   let field k = function J.Object f -> List.assoc_opt k f | _ -> None in
   let parse s = match Kit.Json.parse s with Ok j -> j | Error e -> failwith e in
-  let call m = Option.map parse (Kit_serve.mcp_line (Kit.Json.render m)) in
-  let rpc ?id meth params =
-    J.Object ([ ("jsonrpc", J.String "2.0"); ("method", J.String meth); ("params", J.Object params) ]
-              @ match id with Some i -> [ ("id", J.Int i) ] | None -> []) in
-  let result r = Option.bind r (field "result") in
-  check "T10 initialize names the server"
-    (Option.bind (result (call (rpc ~id:1 "initialize" []))) (field "serverInfo")
-     |> Option.map (fun j -> field "name" j = Some (J.String "effect4-kit")) = Some true);
-  check "T10 a notification has no reply" (call (rpc "notifications/initialized" []) = None);
-  (match Option.bind (result (call (rpc ~id:2 "tools/list" []))) (field "tools") with
-   | Some (J.Array ts) ->
-     check "T10 three tools"
-       (List.filter_map (field "name") ts = List.map (fun n -> J.String n) [ "check"; "run"; "explore" ])
-   | _ -> check "T10 tools/list" false);
+  let line fields = parse (Kit_serve.serve_line (Kit.Json.render (J.Object fields))) in
   let tape = J.Array (List.map Kit.Json.exit_json (units 4)) in
-  let args = [ ("name", J.String "run");
-               ("arguments", J.Object [ ("program", Kit.Json.program_json doubling);
-                                        ("rows", Kit.Json.rows_json [ echo ]); ("tape", tape);
-                                        ("frames", J.Bool true) ]) ] in
-  let text r = match Option.bind (result r) (field "content") with
-    | Some (J.Array [ c ]) -> (match field "text" c with Some (J.String t) -> Some (parse t) | _ -> None)
-    | _ -> None in
-  (match text (call (rpc ~id:3 "tools/call" args)) with
-   | Some answer ->
-     check "T10 run finishes" (field "status" answer = Some (J.String "finished"));
-     check "T10 the machine agrees" (field "machine" answer = Some (J.String "agrees"));
-     check "T10 the frames come when asked"
-       (match field "frames" answer with Some (J.Array fs) -> List.length fs = 6 | _ -> false)
-   | None -> check "T10 tools/call answers" false);
-  check "T10 an unknown method is an error"
-    (Option.bind (call (rpc ~id:4 "nope" [])) (field "error") <> None);
-  let bad = [ ("name", J.String "check"); ("arguments", J.Object [ ("program", J.Int 3) ]) ] in
-  check "T10 an unreadable program is the tool's error"
-    (Option.bind (result (call (rpc ~id:5 "tools/call" bad))) (field "isError") = Some (J.Bool true));
+  let answer = line [ ("op", J.String "run"); ("program", Kit.Json.program_json doubling);
+                      ("rows", Kit.Json.rows_json [ echo ]); ("tape", tape); ("frames", J.Bool true) ] in
+  check "T10 run finishes" (field "status" answer = Some (J.String "finished"));
+  check "T10 the machine agrees" (field "machine" answer = Some (J.String "agrees"));
+  check "T10 the frames come when asked"
+    (match field "frames" answer with Some (J.Array fs) -> List.length fs = 6 | _ -> false);
+  check "T10 an unreadable program is an error"
+    (field "status" (line [ ("op", J.String "check"); ("program", J.Int 3) ]) = Some (J.String "error"));
   let fork = Eff.WithFiber (ActionTerm.Fork (Eff.Succeed (Term.Lit (Lit.Nat 7)), { ForkOptions.start_immediately = false; daemon = false; mask_mode = MaskMode.Inherit })) in
-  let line op = Kit.Json.render (J.Object [ ("op", J.String op); ("program", Kit.Json.program_json fork) ]) in
-  check "T10 a forked program runs on the machine"
-    (field "via" (parse (Kit_serve.serve_line (line "run"))) = Some (J.String "machine"));
+  let op name = [ ("op", J.String name); ("program", Kit.Json.program_json fork) ] in
+  check "T10 a forked program runs on the machine" (field "via" (line (op "run")) = Some (J.String "machine"));
   check "T10 explore of a forked program answers its address outside the tree"
-    (field "status" (parse (Kit_serve.serve_line (line "explore"))) = Some (J.String "outside"))
+    (field "status" (line (op "explore")) = Some (J.String "outside"))
 
 let t11 () =
   let add = A.row "Todos.add" ~request:Ty.String ~answer:(Ty.List Ty.String) ~error:Ty.String () in

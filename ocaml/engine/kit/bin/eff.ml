@@ -2,10 +2,11 @@
 
    What it is: the native kit's command line. Each command reads a program (its JSON print, the
    session tool's form, or its canonical bytes), the application's rows, and a reply tape, and
-   answers one JSON object. `eff serve` answers the same requests as JSON lines, and `eff mcp`
-   is a Model Context Protocol server.
-   Depends on: Effect4_kit.Kit_serve (every request and answer), Effect4_kit.Kit,
-   Effect4_kit.Kit_view.
+   answers one JSON object, and `eff serve` answers the same requests as JSON lines. `eff tool`
+   serves the authoring tool as JSON lines (Kit_tool), and `eff mcp` serves it as a Model Context
+   Protocol server (Kit_mcp), its tool table generated from Lean's request shape.
+   Depends on: Effect4_kit.Kit_serve (the commands' requests and answers), Effect4_kit.Kit,
+   Effect4_kit.Kit_view, Effect4_kit.Kit_tool, Effect4_kit.Kit_mcp.
 
    Behaviours it holds itself to:
    E1  Every answer is one JSON object with a "status": the commands' own ("ok", "refused",
@@ -15,9 +16,8 @@
        (Kit_serve S2, S3).                                            by construction
    E3  The exit code is 0 for an answer, 2 for an "error" (an unreadable input).  by construction
    E4  `eff mcp` is a Model Context Protocol server over stdio (JSON-RPC 2.0, one message a
-       line): `initialize`, `tools/list` and `tools/call` for check, run and explore, whose
-       arguments are `eff serve`'s request fields; each result is the command's answer as text
-       (Kit_serve S4).                                                by construction
+       line) for the authoring tool: one tool per method, one session for the server's life
+       (Kit_mcp M1-M4).                                               tested (test_mcp)
 
    Usage:
      eff check   PROGRAM [--rows ROWS]
@@ -25,6 +25,7 @@
      eff explore PROGRAM [--rows ROWS] [--budget K] [--width N] [--fast]
      eff view    PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--width N] > run.html
      eff serve
+     eff tool
      eff mcp
    PROGRAM is a .json file, a .eff file of canonical bytes, or - for JSON on stdin. ROWS is a JSON
    array of row records; TAPE a JSON array of exits (with none, every call waits). *)
@@ -60,7 +61,9 @@ let serve () = lines (fun line -> Some (serve_line line))
 let tool () =
   let session = Kit_tool.create () in
   lines (fun line -> Some (Kit_tool.serve_line session line))
-let mcp () = lines mcp_line
+let mcp () =
+  let server = Kit_mcp.create () in
+  lines (Kit_mcp.line server)
 
 let usage =
   "usage: eff (check|run|explore|view) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--frames] [--budget K] [--width N] [--fast]\n\
