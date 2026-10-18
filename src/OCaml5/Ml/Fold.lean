@@ -1227,6 +1227,7 @@ structure DeclAlgebra (R : DeclFam → Type u) where
   decl_openD : (String) → R .decl
   decl_moduleTypeD : (String) → (List OCaml5.Ml.SigItem) → R .decl
   decl_moduleRecD : (List (Prod String (List OCaml5.Ml.SigItem))) → R .decl
+  decl_moduleAliasD : (String) → (String) → R .decl
 
 mutual
 def cata_decl {R : DeclFam → Type u} (alg : DeclAlgebra R)
@@ -1242,6 +1243,7 @@ def cata_decl {R : DeclFam → Type u} (alg : DeclAlgebra R)
   | .openD a0 => alg.decl_openD a0
   | .moduleTypeD a0 a1 => alg.decl_moduleTypeD a0 a1
   | .moduleRecD a0 => alg.decl_moduleRecD a0
+  | .moduleAliasD a0 a1 => alg.decl_moduleAliasD a0 a1
 termination_by structural node
 def cata_pos_list_decl {R : DeclFam → Type u} (alg : DeclAlgebra R)
     (xs : List OCaml5.Ml.Decl) : List (R .decl) :=
@@ -1309,6 +1311,11 @@ theorem cata_pos_list_decl_eq {R : DeclFam → Type u}
     cata_decl alg (.moduleRecD a0) =
       alg.decl_moduleRecD a0 := rfl
 
+@[simp] theorem cata_decl_moduleAliasD {R : DeclFam → Type u}
+    (alg : DeclAlgebra R) (a0 : String) (a1 : String) :
+    cata_decl alg (.moduleAliasD a0 a1) =
+      alg.decl_moduleAliasD a0 a1 := rfl
+
 structure DeclHom {R : DeclFam → Type u} (alg : DeclAlgebra R) where
   f_decl : OCaml5.Ml.Decl → R .decl
   h_decl_types : ∀ a0, f_decl (.types a0) =
@@ -1331,6 +1338,8 @@ structure DeclHom {R : DeclFam → Type u} (alg : DeclAlgebra R) where
     alg.decl_moduleTypeD a0 a1
   h_decl_moduleRecD : ∀ a0, f_decl (.moduleRecD a0) =
     alg.decl_moduleRecD a0
+  h_decl_moduleAliasD : ∀ a0 a1, f_decl (.moduleAliasD a0 a1) =
+    alg.decl_moduleAliasD a0 a1
 
 mutual
 theorem hom_eq_cata_decl {R : DeclFam → Type u}
@@ -1357,6 +1366,8 @@ theorem hom_eq_cata_decl {R : DeclFam → Type u}
     simp only [cata_decl, hom.h_decl_moduleTypeD a0 a1]
   | .moduleRecD a0 =>
     simp only [cata_decl, hom.h_decl_moduleRecD a0]
+  | .moduleAliasD a0 a1 =>
+    simp only [cata_decl, hom.h_decl_moduleAliasD a0 a1]
 termination_by structural node
 theorem hom_pos_list_decl {R : DeclFam → Type u}
     {alg : DeclAlgebra R} (hom : DeclHom alg) (xs : List OCaml5.Ml.Decl) :
@@ -1381,6 +1392,7 @@ def DeclAlgebra.id : DeclAlgebra (DeclSelfCarrier) where
   decl_openD a0 := OCaml5.Ml.Decl.openD a0
   decl_moduleTypeD a0 a1 := OCaml5.Ml.Decl.moduleTypeD a0 a1
   decl_moduleRecD a0 := OCaml5.Ml.Decl.moduleRecD a0
+  decl_moduleAliasD a0 a1 := OCaml5.Ml.Decl.moduleAliasD a0 a1
 
 mutual
 @[simp] theorem cata_id_decl (node : OCaml5.Ml.Decl) :
@@ -1416,6 +1428,9 @@ mutual
   | .moduleRecD a0 =>
     simp only [cata_decl]
     rfl
+  | .moduleAliasD a0 a1 =>
+    simp only [cata_decl]
+    rfl
 termination_by structural node
 theorem cata_id_pos_list_decl (xs : List OCaml5.Ml.Decl) :
     cata_pos_list_decl (DeclAlgebra.id) xs = xs := by
@@ -1449,6 +1464,8 @@ def foldMap_decl {M : Type u} (unit : M) (op : M → M → M) (node : OCaml5.Ml.
     f_decl (.moduleTypeD a0 a1)
   | .moduleRecD a0 =>
     f_decl (.moduleRecD a0)
+  | .moduleAliasD a0 a1 =>
+    f_decl (.moduleAliasD a0 a1)
 termination_by structural node
 def foldMap_pos_list_decl {M : Type u} (unit : M) (op : M → M → M) (xs : List OCaml5.Ml.Decl)
     (f_decl : OCaml5.Ml.Decl → M := fun _ => unit) : M :=

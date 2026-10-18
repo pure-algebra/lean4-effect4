@@ -8,7 +8,8 @@ import OCaml5.Lcnf.TypeRows
 **What it is.** How a Lean name becomes an OCaml one on the LCNF route: type names, field
 names, constructor names, global value names and local binder names. One place, so that
 `Types` (which emits the declarations) and `Translate` (which emits the uses) agree by
-construction rather than by convention.
+construction rather than by convention. It also holds the public rule (`publicName`, R6.2): the
+path a client writes for a public declaration, read off the Lean name before LCNF changes it.
 
 **Depends on.** `OCaml5.Ml.Identifier` (`reservedNames`, `tyVarName`),
 `OCaml5.Lcnf.TypeRows` (`reservedTypeNames`) and `Lean.Name`.
@@ -23,6 +24,8 @@ construction rather than by convention.
 * A type name never shadows one a type row spells: `typeName` and `fullTypeName` append `_` to a
   name of `reservedTypeNames` (a Lean `Result` is `result_`, and `result` stays `Except`'s) —
   *by construction*.
+* Public paths are refused, never renumbered: `publicNames` refuses two declarations with one
+  public path by both names — *tested* (`aB` and `a_b`, below).
 * Readability over injectivity: `snake` is *not* injective (`aB` and `a_b` both go to
   `a_b`). This route names *whole declarations and fields of one file*, where a collision
   is a build error the generator reports, not a silent hole. Within one function
@@ -255,5 +258,153 @@ private def ownerNames : TypeNames := { modules := ({} : Std.HashMap Name String
 #guard localName `val == "val_"
 #guard tyVar `ν == "nu"
 #guard tyVar `St == "st"
+
+/-! ## Public names (R6.2)
+
+A public name is the OCaml path a client writes for a Lean declaration. It is read off the Lean
+name before LCNF changes it, so a reduction, a specialisation or a lifted lambda never moves a
+public path, and `globalName` keeps spelling the generated units as it always has. The rule:
+
+| Lean | public path |
+| --- | --- |
+| value `Effect4.Run.Tree.ofProgram` | `Effect4.Run.Tree.of_program`: the namespace as modules, the name by `snake` |
+| type `Effect4.Program.Eff` | `Effect4.Program.Eff.t`: one module per type, the type `t` |
+| constructor `Effect4.Program.Eff.succeed` | `Effect4.Program.Eff.Succeed`: capitalised at its owner (`ownedCtor`) |
+| field `Effect4.ServiceKey.name` | `Effect4.ServiceKey.name`: at its owner, by `fieldName` |
+| value `Effect4.Live.open` | `Effect4.Live.open_`: a reserved word takes `_`, `snake`'s one rule |
+
+A name the rule cannot spell is refused, never mangled: a private, hygienic or numeric component,
+a component that starts with `_` (the compiler's `_redArg`, `_lam_0`, `_at_`, `spec` markers), or a
+namespace component that is no OCaml module name. Two declarations with one path are refused by
+both names, in the order listed: the rule never renumbers a path because another arrived. -/
+
+/-- What a public name names, which is its namespace in OCaml. -/
+inductive PublicKind where
+  /-- A value: a root of the recipe. -/
+  | value
+  /-- A type, `t` in its own module. -/
+  | type
+  /-- A constructor, at its type's module. -/
+  | ctor
+  /-- A record field, at its type's module. -/
+  | field
+deriving DecidableEq, Repr, Inhabited, Hashable
+
+/-- A Lean declaration's public OCaml path. -/
+structure PublicName where
+  source : Name
+  kind : PublicKind
+  /-- The module path, outermost first (`["Effect4", "Run", "Tree"]`). -/
+  modules : List String
+  /-- The name inside the innermost module (`of_program`, `t`, `Succeed`). -/
+  localName : String
+deriving DecidableEq, Repr, Inhabited
+
+/-- The path as a client writes it (`Effect4.Run.Tree.of_program`). -/
+def PublicName.path (p : PublicName) : String := ".".intercalate (p.modules ++ [p.localName])
+
+/-- The path as a name, the client name of a facade row (`OCaml5.Lcnf.Export.ExportPlan.facade`). -/
+def PublicName.asName (p : PublicName) : Name :=
+  (p.modules ++ [p.localName]).foldl Name.mkStr .anonymous
+
+/-- Why a Lean name has no public path. -/
+inductive NameRefusal where
+  /-- The rule cannot spell it; `why` says which component. -/
+  | unsupported (source : Name) (why : String)
+  /-- Two Lean declarations with one public path, the first listed and the second. -/
+  | collision (first second : Name)
+deriving DecidableEq, Repr, Inhabited
+
+/-- The refusal as one line of the generator's report. -/
+def NameRefusal.message : NameRefusal → String
+  | .unsupported n why => s!"public names: {n} has no public path: {why}"
+  | .collision a b => s!"public names: {a} and {b} have one public path; rename one of them"
+
+/-- The string components of a source name, or the reason the rule cannot read it. -/
+private def publicComponents (source : Name) : Except NameRefusal (List String) := do
+  if source.isAnonymous then throw (.unsupported source "an anonymous name")
+  if isPrivateName source then throw (.unsupported source "a private name")
+  if source.hasMacroScopes then throw (.unsupported source "a hygienic name")
+  let parts ← source.components.mapM fun
+    | .str _ s => pure s
+    | _ => throw (.unsupported source "a numeric component")
+  if let some s := parts.find? (·.startsWith "_") then
+    throw (.unsupported source s!"the compiler-made component `{s}`")
+  return parts
+
+/-- The public path of one Lean declaration of the given kind (R6.2's `publicName`). A value's
+modules are its namespace; a type is `t` in a module of its own; a constructor and a field live in
+their type's module. -/
+def publicName (kind : PublicKind) (source : Name) : Except NameRefusal PublicName := do
+  let parts ← publicComponents source
+  let (owner, last) ← match kind, parts.reverse with
+    | .type, _ :: _ => pure (parts, "t")
+    | _, l :: rest@(_ :: _) =>
+      pure (rest.reverse, match kind with
+        | .ctor => ownedCtor l
+        | .field => fieldName l
+        | _ => snake l)
+    | _, _ => throw (.unsupported source "no namespace to hold it")
+  let modules := owner.map capital
+  if let some m := modules.find? (!Ml.isUpperIdent ·) then
+    throw (.unsupported source s!"`{m}` is no OCaml module name")
+  let valid := match kind with
+    | .ctor => Ml.isUpperIdent last
+    | _ => Ml.isLowerIdent last || last == "t"
+  unless valid do throw (.unsupported source s!"`{last}` is no OCaml name of its kind")
+  return { source := source, kind := kind, modules := modules, localName := last }
+
+/-- The public paths of a list of declarations, refusing the first two distinct declarations of
+one kind's namespace that share a path. A declaration listed twice under one kind is one name. -/
+def publicNames (sources : List (PublicKind × Name)) : Except NameRefusal (List PublicName) := do
+  let mut out : Array PublicName := #[]
+  let mut taken : Std.HashMap (PublicKind × List String × String) Name := {}
+  for (kind, source) in sources.eraseDups do
+    let p ← publicName kind source
+    match taken[(kind, p.modules, p.localName)]? with
+    | some first => throw (.collision first source)
+    | none =>
+      taken := taken.insert (kind, p.modules, p.localName) source
+      out := out.push p
+  return out.toList
+
+/-! ### Controls of the public rule -/
+
+private def pathOf (kind : PublicKind) (n : Name) : String :=
+  match publicName kind n with
+  | .ok p => p.path
+  | .error r => r.message
+
+-- R6.2's frozen paths, by the rule
+#guard pathOf .type `Effect4.Program.Eff == "Effect4.Program.Eff.t"
+#guard pathOf .ctor `Effect4.Program.Eff.succeed == "Effect4.Program.Eff.Succeed"
+#guard pathOf .value `Effect4.Program.Authoring.loopWith == "Effect4.Program.Authoring.loop_with"
+#guard pathOf .value `Effect4.Run.Tree.ofProgram == "Effect4.Run.Tree.of_program"
+#guard pathOf .type `Effect4.Store.Val == "Effect4.Store.Val.t"
+#guard pathOf .type `Effect4.Tool.Native.Session == "Effect4.Tool.Native.Session.t"
+-- a reserved word takes `_`, by `snake`'s one rule; a field keeps its owner's spelling
+#guard pathOf .value `Effect4.Live.open == "Effect4.Live.open_"
+#guard pathOf .value `Effect4.Program.Check.HitRule.or == "Effect4.Program.Check.HitRule.or_"
+#guard pathOf .field `Effect4.Program.Row.typeArgs == "Effect4.Program.Row.type_args"
+-- the compiler's names have no public path
+#guard match publicName .value `Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1 with
+  | .error (.unsupported _ _) => true
+  | _ => false
+#guard match publicName .value `Effect4.Machine.Dispatcher.insert._redArg with
+  | .error (.unsupported _ _) => true
+  | _ => false
+#guard match publicName .value `topLevel with
+  | .error (.unsupported _ _) => true
+  | _ => false
+-- red control (R6.2): `aB` and `a_b` share `a_b`; the rule refuses both by name and never
+-- renumbers one of them
+#guard match publicNames [(.value, `Test.Names.aB), (.value, `Test.Names.a_b)] with
+  | .error (.collision a b) => a == `Test.Names.aB && b == `Test.Names.a_b
+  | _ => false
+-- green twins: a value `t` and a type share a module but not a namespace, and one name listed
+-- twice is one name
+#guard match publicNames [(.type, `A.B), (.value, `A.B.t), (.value, `A.B.t)] with
+  | .ok ps => ps.map PublicName.path == ["A.B.t", "A.B.t"]
+  | .error _ => false
 
 end OCaml5.Lcnf

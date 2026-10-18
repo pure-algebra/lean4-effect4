@@ -118,10 +118,13 @@ def onlyCoverage (p : ExportPlan) (n : Name) : Bool :=
   p.roots.any (fun r => r.source == n && r.cls == .coverage)
     && !p.roots.any (fun r => r.source == n && r.cls == .«public»)
 
+/-- The roots one consumer's facade does not resolve to themselves under a client spelling. -/
+def unresolvedAt (p : ExportPlan) (consumer : String) (client : Name → Name := id) : List Name :=
+  (p.rootsFor consumer).filter fun n => (p.facade consumer client).lookup (client n) != some n
+
 /-- The roots a consumer's facade does not resolve to themselves, each with its consumer. -/
 def unresolved (p : ExportPlan) (client : Name → Name := id) : List (String × Name) :=
-  p.consumers.flatMap fun c =>
-    ((p.rootsFor c).filter fun n => (p.facade c client).lookup (client n) != some n).map (c, ·)
+  p.consumers.flatMap fun c => (p.unresolvedAt c client).map (c, ·)
 
 /-- `facade_resolves` (R6.1) as a finite check of the plan: every root a consumer may see is a row of
 its facade that resolves to the root itself. -/

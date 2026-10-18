@@ -87,7 +87,7 @@ fresh run.
 
 | generated | generator | command |
 | --- | --- | --- |
-| `eff/eff_types.ml`, `gen/api_gen.ml`, `engine/api_engine.ml`, their `.mli` interfaces, `gen/closure-*.tsv` | `src/OCaml5/Tools/LcnfGen.lean` and `gen/interface/lcnf_interface.ml` | `make gen-lcnf` (the recipe `gen/roots.json`; each file's header carries its command) |
+| `eff/eff_types.ml`, `gen/api_gen.ml`, `engine/api_engine.ml`, their `.mli` interfaces, `gen/closure-*.tsv`, the public facade `gen/facade/effect4.ml` and `.mli`, the public-name manifest `gen/public-names.tsv` | `src/OCaml5/Tools/LcnfGen.lean` and `gen/interface/lcnf_interface.ml` | `make gen-lcnf` (the recipe `gen/roots.json`; each file's header carries its command) |
 | `engine/test/rocq/rocq_run.ml`, `engine/test/rocq/rocq_run.mli` | Rocq's extraction of `docs/research/2026-10-16-itrees/rocq/LaneExtract.v` (the opam switch `rocq`) | `bash docs/research/2026-10-16-itrees/reproduce.sh OUTDIR`: step 13 writes them and refuses a difference from the committed files below their header |
 | `eff/eff_{ctors,wire,subterm,json,native,layout}.ml`, `eff/eff_manifest.txt`, `eff/goldens/*` | `src/OCaml5/Tools/EffGen.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` |
 | `goldens/eff/*` | `src/OCaml5/Tools/EffWire.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` |
@@ -106,7 +106,13 @@ fresh run.
 The LCNF producer infers interfaces from fresh OCaml typed trees.
 Each recipe root has one export class (`OCaml5.Lcnf.Export`): public, linkage, internal or coverage.
 It exports the public and linkage roots and retained prelude values, and hides the internal and coverage roots.
-`scripts/check-export-classes.py` compiles clients against the result: a linkage root links, and a hidden root is unbound.
 It seals the packages the recipe lists (`abstract` in `gen/roots.json`) as whole abstract types: the checker's `Checked`, `Memo`, `Oracle` and `HitRule`, `Live`, `Built`, and the tool's native `Session` and `State`.
 It compiles every interface and implementation before publishing the generated family.
 `gen/interface/test_interface.ml` checks root selection, abstract packages, final ascriptions, and refusals.
+`scripts/check-export-classes.py` compiles clients against the result: a linkage root links, and a hidden root is unbound.
+
+The run that holds the public roots also writes the public face (`OCaml5.Lcnf.Public`): the manifest `gen/public-names.tsv` and the facade `gen/facade/effect4.ml`, the library `effect4_gen.effect4`.
+The manifest lists each public root, program type, constructor, field and sealed package with its Lean path, and it is append-only at one version.
+The facade aliases `Api_gen` and `Eff_types`, so a client writes `Effect4.Program.Eff.Succeed` and `Effect4.Run.Tree.of_program`; `Api_gen` keeps its own names.
+`scripts/check-public-facade.py` builds a project outside `ocaml/` against the installed facade.
+Through the facade a coverage or linkage root is unbound, and no sealed package can be built.

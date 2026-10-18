@@ -11,7 +11,8 @@ and the `eff/` library's emitter (`OCaml5.Eff.Emit`), whose forms `fnMatch`, `se
 producers, the interop plan's P1 and P2 (`docs/research/2026-10-15-interop-plan/README.md`,
 decisions row 393): `pack`, `SigItem` with `Decl.moduleTypeD`, and `TypeDecl.isPrivate`. The
 program types' owner (`ocaml/eff/eff_types.ml`) builds `Decl.moduleD` and `Decl.moduleRecD`, one
-module per type (slice 1.2a of the OCaml estate refactor). A form no producer builds is not here
+module per type (slice 1.2a of the OCaml estate refactor). The public facade
+(`OCaml5.Lcnf.Public`) builds `Decl.moduleAliasD`. A form no producer builds is not here
 otherwise. The cut of 2026-10-15 (LC-3 of
 `docs/research/2026-10-14-lowering-cleanup/prompt.md`) measured each removal by a build: the
 avatar's surface of 55 expression constructors became 22. The `eff/` emitter added 6, and verbatim
@@ -277,6 +278,11 @@ inductive Decl where
   types so (`Eff`–`Stmt`–`Stmts`), since a sequential signature cannot name it. A member holds
   types only: OCaml evaluates such a group safely, and `Ml.checkModule` refuses a `val`. -/
   | moduleRecD (members : List (String × List SigItem))
+  /-- `module M = P` (§11.11, "module-name = module-expr" with a module path; §12.13, "module
+  aliases"): `M` is another name for the module at `P`, its types equal and its constructors and
+  fields reachable through `M`. The public facade re-exports each program type's module at its
+  owner so (`OCaml5.Lcnf.Public`), since OCaml re-exports constructors only with their module. -/
+  | moduleAliasD (name : String) (path : String)
 deriving Repr, Inhabited
 
 /-! ## The root -/
