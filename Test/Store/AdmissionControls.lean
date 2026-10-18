@@ -9,7 +9,7 @@ These are finite evaluations. The invariant proofs remain `putNode_ok_handleFree
 -/
 
 set_option autoImplicit false
-namespace Test.Store.SeamsAdmission
+namespace Test.Store.AdmissionControls
 open Effect4.Store
 
 /- The baseline counterexample satisfies every old local admission premise. -/
@@ -62,4 +62,4 @@ def badWord : Word := [⟨sha256 handleGenesis.encode, handleGenesis⟩]
 #guard Admission.ofRead (.unregisteredKind 127) = .unregisteredKind 127
 #guard Admission.ofRead (.badVersion 4) = .badVersion
 
-end Test.Store.SeamsAdmission
+end Test.Store.AdmissionControls

@@ -1,7 +1,7 @@
 import OCaml5.Lcnf.Gallina
 import Lean
 
-namespace Test.Store.SeamsHeadPrinter
+namespace Test.Store.GallinaHeadPrinter
 
 /-- A value parameter must not be silently printed as a type parameter. -/
 structure Indexed (count : Nat) where
@@ -16,4 +16,4 @@ run_meta do
      variableNamespaces := [], requires := []}
   discard <| OCaml5.Lcnf.Gallina.typeText env spec ``Indexed
 
-end Test.Store.SeamsHeadPrinter
+end Test.Store.GallinaHeadPrinter

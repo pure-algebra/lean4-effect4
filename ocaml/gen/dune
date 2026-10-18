@@ -45,11 +45,11 @@
   (diff join_escape.expected join_escape.stderr)))
 
 (test
- (name test_seams_s0)
- (modules test_seams_s0)
+ (name test_native_boundary)
+ (modules test_native_boundary)
  (libraries effect4_gen effect4_eff))
 
 (test
- (name test_seams_v1)
- (modules test_seams_v1)
+ (name test_checker_native)
+ (modules test_checker_native)
  (libraries effect4_gen effect4_eff))

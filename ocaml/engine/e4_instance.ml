@@ -88,7 +88,7 @@ struct
   (* The stable `Effect4.Program.stepChecked` root. The bool is the machine's
      stopping flag, as used by `Effect4.Program.replayCheckedFrom`. *)
   (* stepChecked rebuilds interpOf p table. The old interpreter argument remains
-     for INSTANCE compatibility; test_seams_step also supplies a mismatched interpreter. *)
+     for INSTANCE compatibility; test_stable_step also supplies a mismatched interpreter. *)
   let step (table : Row.t list) (p : program) (_i : interp) ~(fuel : int) (m : machine) (d : api_decision)
     : machine * bool =
     program_step_checked p table fuel m d

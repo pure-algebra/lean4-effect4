@@ -1,6 +1,6 @@
 import Effect4.Tool.Serve
 set_option autoImplicit false
-namespace Test.Program.SeamsS3a
+namespace Test.Program.ToolServeControls
 open Effect4 Effect4.Program Program.Check Tool
 
 def ask : Row :=
@@ -44,4 +44,4 @@ def dry := (serve Oracle.uncached opened.1 (.ask (.dry (.start snap {})))).value
 #guard dry.1.transcript.length = 1
 #guard dry.1.raw.runs.isEmpty
 #guard match dry.2.result with | .ok (.dry (.ok (.started ..))) => true | _ => false
-end Test.Program.SeamsS3a
+end Test.Program.ToolServeControls

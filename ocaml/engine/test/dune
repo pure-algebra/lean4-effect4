@@ -218,6 +218,6 @@
  (libraries effect4_engine))
 
 (test
- (name test_seams_step)
- (modules test_seams_step)
+ (name test_stable_step)
+ (modules test_stable_step)
  (libraries effect4_engine effect4_eff e4_gen_instance))

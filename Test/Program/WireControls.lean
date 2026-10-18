@@ -2,7 +2,7 @@ import Effect4.Tool.Wire
 import Effect4.Laws.Tool.CodecProfile
 
 /-!
-# Test.Program.SeamsS3bWire — the tool's JSON profile, codecs and wire adapter (seams S3b)
+# Test.Program.WireControls — the tool's JSON profile, codecs and wire adapter (seams S3b)
 
 Finite controls. The JSON profile refuses `Option Unit` and a rounded natural, and keeps an
 ordinary one. The Check codecs refuse unknown tags and missing fields. The wire adapter decodes a
@@ -12,7 +12,7 @@ state as it was. An accepted request through `serveJson` appends one action.
 -/
 
 set_option autoImplicit false
-namespace Test.Program.SeamsS3bWire
+namespace Test.Program.WireControls
 open Effect4 Effect4.Program Effect4.Program.Check Effect4.Store Effect4.Tool
 open Effect4.Tool.Wire (Envelope Connection decode serveJson)
 
@@ -83,4 +83,4 @@ def refused := (serveJson Oracle.uncached ⟨[]⟩ empty (framed "open" 1 openRe
 #guard refused.1.transcript.isEmpty
 #guard refused.2.toOption.isNone
 
-end Test.Program.SeamsS3bWire
+end Test.Program.WireControls

@@ -1,7 +1,7 @@
 import Effect4.Store.Domain.Cas
 
 set_option autoImplicit false
-namespace Test.Store.SeamsTransactions
+namespace Test.Store.TransactionControls
 open Effect4.Store
 
 def accepted (result : Except TxnRefusal (Receipt × Store)) : Store :=
@@ -155,4 +155,4 @@ def checkpointChild : Node := {checkpointParent with payload := .ctor 0 [.nat 0,
 #guard ({checkpointParent with payload := .ctor 0 [
   .ref Kind.checkpoint.byte checkpointParentAddress.bytes, .nat 0, .none, .none,
   .bytes zeroDigest.bytes, .nat 0, .nat 0]} : Node).designatedParent = none
-end Test.Store.SeamsTransactions
+end Test.Store.TransactionControls

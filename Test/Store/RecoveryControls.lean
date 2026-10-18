@@ -1,8 +1,8 @@
 import Effect4.Laws.Store.Recovery
-import Test.Store.SeamsTransactions
+import Test.Store.TransactionControls
 
 /-!
-# Test.Store.SeamsRecovery — checked recovery from a disk image (seams ST2)
+# Test.Store.RecoveryControls — checked recovery from a disk image (seams ST2)
 
 Finite controls of `Cas.restore` and `Cas.restoreBytes`. A legacy root at generation two restores
 with its exact head. A nonempty store, a duplicate root, a dangling or wrong-kind target, an unknown
@@ -10,9 +10,9 @@ tag and a bad version each refuse, with the address or the index that names the 
 `restore_roots`, `restore_closed` and `restore_targets` in `Laws/Store/Recovery.lean`.
 -/
 set_option autoImplicit false
-namespace Test.Store.SeamsRecovery
+namespace Test.Store.RecoveryControls
 open Effect4.Store
-open Test.Store.SeamsTransactions
+open Test.Store.TransactionControls
 
 def legacyRoot : Root := ⟨"docs/a", .swap, .«export», ⟨probeEntryAddress, 2⟩⟩
 def legacy : RecoveryImage := ⟨[probeSchema, probeEntry], [legacyRoot]⟩
@@ -55,4 +55,4 @@ example {next : Store} (accepted : Store.empty.restore legacy = .ok next) :
   restore_targets accepted legacyRoot (by
     rw [restore_roots accepted]
     exact List.mem_cons_self)
-end Test.Store.SeamsRecovery
+end Test.Store.RecoveryControls

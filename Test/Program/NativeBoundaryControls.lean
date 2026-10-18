@@ -7,7 +7,7 @@ The tests use the real oracle, annotation collector, admission, open, and restor
 They establish these observations only. They claim no universal native translation theorem.
 -/
 
-namespace Test.Program.SeamsS0
+namespace Test.Program.NativeBoundaryControls
 open Effect4 Effect4.Program
 
 def program : NativeEff := .succeed (.lit (.nat 7))
@@ -61,4 +61,4 @@ def annotationPaths : Bool :=
     [["program", "0", "argument", "0", "term", "fields"]]
 
 #guard annotationPaths
-end Test.Program.SeamsS0
+end Test.Program.NativeBoundaryControls

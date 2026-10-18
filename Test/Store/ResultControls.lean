@@ -30,7 +30,7 @@ These are finite evaluations. `Cas.result_once` (`src/Effect4/Laws/Store/Results
 -/
 
 set_option autoImplicit false
-namespace Test.Store.SeamsResults
+namespace Test.Store.ResultControls
 open Effect4 Effect4.Store
 
 /-! ## The carriers -/
@@ -172,4 +172,4 @@ def reached : Option Cas :=
 -- A typed read returns the exact envelope.
 #guard (reached.bind fun cas => (Cas.get cas (address resultA)).toOption.map (·.output)) = some (.nat 7)
 
-end Test.Store.SeamsResults
+end Test.Store.ResultControls

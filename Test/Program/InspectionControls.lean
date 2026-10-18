@@ -1,6 +1,6 @@
 import Effect4.Tool.Queries
 set_option autoImplicit false
-namespace Test.Program.SeamsS3aInspection
+namespace Test.Program.InspectionControls
 open Effect4 Effect4.Program Program.Check Tool
 
 def program : NativeEff := .succeed (.lit (.nat 7))
@@ -34,4 +34,4 @@ def structuredDoc : Doc := (Doc.open_ ⟨⟨"inspect",0⟩,{},⟨structured,[]�
   | some _ => match Tool.Internal.inspection structuredDoc path with
       | .error (.noProgram refused) => refused == path
       | _ => false
-end Test.Program.SeamsS3aInspection
+end Test.Program.InspectionControls

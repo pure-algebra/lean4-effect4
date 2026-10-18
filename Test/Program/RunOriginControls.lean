@@ -1,12 +1,12 @@
 import Effect4.Tool.Origin
 import Effect4.Run.LiveRecord
-import Test.Program.SeamsS4
+import Test.Program.RunAdmissionControls
 
 /-! Finite controls using S1's actual Snap and replayed Doc.
 Snapshot origins retain their source data; standalone restoration invents no document identity. -/
-namespace Test.Program.SeamsS4Origin
+namespace Test.Program.RunOriginControls
 open Effect4 Effect4.Program Effect4.Program.Check
-open Test.Program.SeamsS4
+open Test.Program.RunAdmissionControls
 
 def doc : Doc := (Doc.open_ ⟨⟨"demo", 0⟩, app, sketch⟩).value
 
@@ -41,4 +41,4 @@ def standalone : Option (Tool.Origin × Live) :=
   | some (.standalone, live) => live.run.id == "demo" &&
       live.run.budget.fuel == 71 && live.run.budget.compileFuel == 109
   | _ => false
-end Test.Program.SeamsS4Origin
+end Test.Program.RunOriginControls

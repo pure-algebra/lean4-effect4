@@ -12,7 +12,7 @@ That replay tests read refusal; it claims no admitted-store or hash invariant.
 -/
 
 set_option autoImplicit false
-namespace Test.Store.SeamsRead
+namespace Test.Store.TypedReadControls
 open Effect4 Effect4.Store
 open Effect4.Store.Templates
 
@@ -68,4 +68,4 @@ example {replay : List Event → Except TxnRefusal Store} {cas : CasOf replay}
     cas.store.find ref.digest = some (nodeOf value) :=
   Cas.get_exact h
 
-end Test.Store.SeamsRead
+end Test.Store.TypedReadControls

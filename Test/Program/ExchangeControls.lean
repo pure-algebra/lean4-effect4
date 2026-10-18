@@ -1,6 +1,6 @@
 import Effect4.Tool.Exchange
 import Effect4.Laws.Tool.Exchange
-import Test.Program.SeamsS4
+import Test.Program.RunAdmissionControls
 
 /-!
 # Sessions over the store: the controls (seams ST4)
@@ -26,10 +26,10 @@ the laws.
 
 set_option autoImplicit false
 
-namespace Test.Program.SeamsExchange
+namespace Test.Program.ExchangeControls
 
 open Effect4 Effect4.Program Effect4.Program.Check Effect4.Store Effect4.Tool Effect4.Tool.Exchange
-open Test.Program.SeamsS4 (app program sketch budget)
+open Test.Program.RunAdmissionControls (app program sketch budget)
 
 def engine : Digest := zeroDigest
 
@@ -193,4 +193,4 @@ def opening (parent : SessionEntry) (after : Option (Ref NativeEff) := some prog
   | some (.error (.unreadable _ (.missing _))) => true
   | _ => false
 
-end Test.Program.SeamsExchange
+end Test.Program.ExchangeControls

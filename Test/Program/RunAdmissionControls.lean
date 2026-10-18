@@ -5,7 +5,7 @@ import Effect4.Run.View
 /-! Finite S4 admission and run controls. The restored-run theorem keeps its full statement.
 The tests claim no native translation theorem or host progress. -/
 set_option autoImplicit false
-namespace Test.Program.SeamsS4
+namespace Test.Program.RunAdmissionControls
 open Effect4 Effect4.Program
 
 def ask : Row :=
@@ -61,4 +61,4 @@ def restored : Option Live :=
 #guard restored.map (·.run.id) = some ""
 #guard restored.map (·.run.built.rowNames) = some [("stored", 9)]
 #guard restored.map (·.run.budget) = some budget
-end Test.Program.SeamsS4
+end Test.Program.RunAdmissionControls
