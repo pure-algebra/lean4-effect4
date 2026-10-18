@@ -1,0 +1,83 @@
+lawful-alias: exit 0, expected 0
+
+prepared-alias: exit 0, expected 0
+
+prepared-table-update: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 38-43:
+2 | let forge (p : A.prepared) = { p with table = [] }
+                                          ^^^^^
+Error: Unbound record field table
+
+prepared-interpreter-read: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 37-43:
+2 | let interpreter (p : A.prepared) = p.interp
+                                         ^^^^^^
+Error: Unbound record field interp
+
+built-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 3, characters 36-39:
+3 | let forged : public_built_alias = { app = { rows = []; services = []; types = [] }; program = Eff_types.Eff.Perform (Eff_types.NativeOp.External 0, Eff_types.Term.Lit Eff_types.Lit.Unit); admitted = { answer = Eff_types.Ty.Nat; error = Eff_types.Ty.Never; requires = [] }; row_names = [] }
+                                        ^^^
+Error: Unbound record field app
+
+memo-public-alias: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 3, characters 28-30:
+3 | let forged : public_alias = []
+                                ^^
+Error: This expression has type 'a list
+       but an expression was expected of type
+         public_alias = Effect4_gen.Api_gen.memo
+
+checked-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 31-36:
+2 | let forged : int A.checked = { value = 7; trace = [] }
+                                   ^^^^^
+Error: Unbound record field value
+
+oracle-callback: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 24-62:
+2 | let forged : A.oracle = fun input -> A.program_check_run input
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This expression should not be a function, the expected type is
+       A.oracle
+
+hit-rule-callback: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 26-41:
+2 | let forged : A.hit_rule = fun _ _ -> true
+                              ^^^^^^^^^^^^^^^
+Error: This expression should not be a function, the expected type is
+       A.hit_rule
+
+checked-update: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 41-46:
+2 | let forge (c : int A.checked) = { c with value = 99 }
+                                             ^^^^^
+Error: Unbound record field value
+
+hidden-helper: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 13-42:
+2 | let helper = A.program_check_typed_program
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Unbound value A.program_check_typed_program
+
+session-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 27-32:
+2 | let forged : A.session = { state = A.tool_native_start; memo = [] }
+                               ^^^^^
+Error: Unbound record field state
+
+state-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 25-35:
+2 | let forged : A.state = { transcript = []; raw = Obj.magic 0 }
+                             ^^^^^^^^^^
+Error: Unbound record field transcript
+
+memo-as-session: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-3l2lgf5z/client.ml", line 2, characters 33-72:
+2 | let forged = A.tool_native_serve ([] : (A.check_input * A.verdict) list)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This expression has type (A.check_input * A.verdict) list
+       but an expression was expected of type
+         A.session = Effect4_gen.Api_gen.session
+
+PASS: 2 lawful aliases and 12 hostile sealed-package clients

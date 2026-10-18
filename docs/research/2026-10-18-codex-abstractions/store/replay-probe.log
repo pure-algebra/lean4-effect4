@@ -1,0 +1,6 @@
+ℹ [1155/1155] Built Tools.StoreSessionProbe (146s)
+info: tools/Tools/StoreSessionProbe.lean:32:0: actions=1 nodes=6 loaded=(some 1) load_ns=99884667
+actions=10 nodes=15 loaded=(some 10) load_ns=18320625
+actions=50 nodes=55 loaded=(some 50) load_ns=72472125
+actions=100 nodes=105 loaded=(some 100) load_ns=155667292
+Build completed successfully (1155 jobs).

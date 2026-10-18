@@ -78,17 +78,43 @@ The decisions:
 - **C (the result envelope):** taken; it is prepared, not extended, and its laws say so.
 - **D (store laws):** not taken. It runs against the 2026-10-16 steer that hard proofs live in Rocq, so it is yours.
 
+## Codex's core abstractions, folded in (`76a71a03e`)
+
+Codex answered the six questions of the [brief](../2026-10-18-codex-abstractions/brief.md) in its
+[report](../2026-10-18-codex-abstractions/README.md), and four of its slices are merged:
+
+| Commit | What changed, in plain words |
+| --- | --- |
+| `bb95dbacb` | `eff mcp` follows its declared MCP protocol (stdio, 2025-06-18): 52 native controls, and 61 checks against the official schema (`scripts/check-mcp-protocol.py`) |
+| `f4a01c5c4` | The exchange is generic over `Port`, its four store operations (entry, root, membership, commit), the S6b design's first slice. Its laws stay at the `Cas` instance |
+| `4b2193074` | The S1 feed splices only where `SourceSession.canSplice` holds: no ill-formed reference on either side. This repairs bug 1. The native engine builds and seals its interpreter once (`Program.Prepared`) |
+| `6c09715f0` | The report and receipts. The raw gate logs stay at that commit (`4f3d4f2f9`) |
+
+The merge reconciles Codex's feed with the proof seat's laws:
+- Five laws are stated over `canSplice`.
+- `feed_keepExact` takes Codex's exact splice delta.
+- Every bug-1 counterexample now evaluates false and is gone: eight refutations (`git:d048b9a1b`).
+
+Evidence:
+- **Build:** `Effect4`, `Effect4.Laws` and seven batteries, 1,873 jobs green.
+- **Audit:** `#axiom_audit` over the nine touched modules gives 2,109 declarations within
+  `[propext, Quot.sound]`: 15 rest on planned goals, and there are 4 planned goals.
+- **Gate:** `make check-ocaml` passes in 3 min 8 s.
+
 ## For you
 
-- **The S1 feed has two bugs** (`SourceSession.feed`, `src/Effect4/Program/Typing/SourceSession.lean`). The proofs found them, and the counterexamples are kernel-checked:
-  1. A splice of a candidate holding an ill-formed layer reference writes a second root entry over the edited address's entry.
-  2. A kept-exact omission at a refused root keeps the old refused root entry, even where the new hole row types the root.
-
-  So the session tool shows wrong tables on these routes. The fault-free forms of both laws are proved (`feed_coherent_of_faultFree`, `feed_keepExact_of_faultFree`). The fix is yours:
-  - **A1** (the proof seat's recommendation). A draft rechecks when the candidate holds an ill-formed reference. A kept-exact feed splices only when nothing is ill formed and the edit is a fill or the root is typed. `feed_keepExact` is then proved. `feed_coherent` rests on one new goal: `splice_coherent` for a fill at a refused root, which holds on 10 probed instances.
-  - **A2**: A1, and kept fills only at typed roots. Both laws are then fully proved, in a scratch model. `brokenElsewhere` flips, and "a kept fill at an initially refused root" goes away.
-  - **C**: restate the claims with premises and leave the feed. Not recommended: the wrong tables stay.
-
+- **The S1 feed's second bug** (`SourceSession.feed`). The first is repaired by Codex's
+  `canSplice`. The second stays: a kept-exact omission at a refused root keeps the old refused root
+  entry, even where the new hole row types the root (`FeedCounterexample.keep_omit_refused`). So
+  `feed_coherent`, and the fifteen document laws that rest on it, stay false at head. The fix is
+  yours:
+  - **A1's second clause** (the proof seat's recommendation): a kept-exact feed splices only when
+    the edit is a fill or the root is typed, and otherwise rechecks. `feed_coherent` then rests on
+    one new goal, `splice_coherent` for a fill at a refused root, which holds on 10 probed instances.
+  - **A2**: kept fills only at typed roots. `feed_coherent` is then fully proved, in a scratch
+    model. `brokenElsewhere` flips, and "a kept fill at an initially refused root" goes away.
+- **Decision D:** Codex recommends that Rocq own the hard store proofs, after aligning Rocq's
+  missing result-uniqueness condition (report, question 6).
 - **`AGENTS.md`:** a one-page draft that leads with the core abstractions is at
   [2026-10-18-agents-md-draft.md](../2026-10-18-agents-md-draft.md). The live file is unchanged.
 - **Decision D:** who owns the store's node laws, Lean or Rocq.

@@ -60,9 +60,7 @@ module Make (I : INSTANCE) = struct
   type decision = I.api_decision
 
   type t = {
-    program : I.program;
-    table : Row.t list;  (** the program's row table, which every step reads *)
-    interp : I.interp;
+    prepared : I.prepared;
     fuel_ : int;
     m : I.machine;
     settled : bool;  (** the generated `settled` of the LAST step; true after a load *)
@@ -116,12 +114,12 @@ module Make (I : INSTANCE) = struct
   let of_bytes (b : string) : program option = Option.map compile (Eff_wire.decode_program_exact b)
 
   let load_program ?(table = []) (p : program) ~(fuel : int) : t =
-    { program = p; table; interp = I.interp_of table p; fuel_ = fuel;
+    { prepared = I.prepare table p; fuel_ = fuel;
       m = I.load p ~fuel; settled = true; outside_profile = None }
 
   let load ?table (p : Eff_wire.program) ~(fuel : int) : t = load_program ?table (compile p) ~fuel
 
-  let admits (t : t) (d : decision) : bool = I.admit t.table t.m d
+  let admits (t : t) (d : decision) : bool = I.admit t.prepared t.m d
 
   let load_bytes ?table (b : string) ~(fuel : int) : t option =
     match of_bytes b with None -> None | Some p -> Some (load_program ?table p ~fuel)
@@ -132,7 +130,7 @@ module Make (I : INSTANCE) = struct
     match t.outside_profile with
     | Some _ -> t
     | None ->
-      match I.step t.table t.program t.interp ~fuel:t.fuel_ t.m d with
+      match I.step t.prepared ~fuel:t.fuel_ t.m d with
       | m, settled -> { t with m; settled }
       | exception E4_clock.Profile_refusal why ->
         (* Generated transitions are pure. Keep the input machine when a numeric

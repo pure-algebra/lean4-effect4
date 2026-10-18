@@ -156,7 +156,9 @@
         "Effect4.Machine.reifyExitVal",
         "Effect4.Machine.RunMachine.completedExits",
         "Effect4.Machine.RunMachine.finished",
-        "Effect4.Program.stepChecked",
+        "Effect4.Program.Prepared.make",
+        "Effect4.Program.Prepared.step",
+        "Effect4.Program.Prepared.admit",
         "Effect4.Run.Tree.Eval.badShape",
         "Effect4.Run.Tree.Eval.outside",
         "Effect4.Program.NativeAtom.eval",
@@ -251,7 +253,8 @@
         "Effect4.Live",
         "Effect4.Api.Built",
         "Effect4.Tool.Native.Session",
-        "Effect4.Tool.State"
+        "Effect4.Tool.State",
+        "Effect4.Program.Prepared"
       ]
     },
     {
@@ -283,7 +286,9 @@
         "Effect4.Program.Node.child",
         "Effect4.Program.admit",
         "Effect4.Program.interpOf",
-        "Effect4.Program.stepChecked",
+        "Effect4.Program.Prepared.make",
+        "Effect4.Program.Prepared.step",
+        "Effect4.Program.Prepared.admit",
         "Effect4.Api.evaluate",
         "Effect4.Program.awaits",
         "Effect4.Machine.reifyExitVal"
@@ -293,7 +298,10 @@
       "open": {
         "module": "Eff_types",
         "artefact": "ocaml/eff/eff_types.ml"
-      }
+      },
+      "abstract": [
+        "Effect4.Program.Prepared"
+      ]
     },
     {
       "out": "ocaml/engine/test/todo/todo_gen.ml",

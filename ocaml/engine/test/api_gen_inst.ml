@@ -47,16 +47,16 @@ type interp =
 
 type program = NativeOp.t Eff.t
 
+let prepare (table : Row.t list) (p : program) : prepared = program_prepared_make p table
+
 let interp_of (table : Row.t list) (p : program) : interp = program_interp_of p table
 let load (p : program) ~(fuel : int) : machine =
   api_load p fuel
 
-(* The stable `Effect4.Program.stepChecked` root and its machine stopping flag. *)
-(* stepChecked rebuilds interpOf p table. The old interpreter argument remains
-   for INSTANCE compatibility; test_stable_step also supplies a mismatched interpreter. *)
-let step (table : Row.t list) (p : program) (_i : interp) ~(fuel : int) (m : machine) (d : api_decision)
+(* The prepared package retains the interpreter and native evaluator. *)
+let step (prepared : prepared) ~(fuel : int) (m : machine) (d : api_decision)
   : machine * bool =
-  program_step_checked p table fuel m d
+  program_prepared_step prepared fuel m d
 
 let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine =
   let r = api_run p fuel table fuel in
@@ -64,8 +64,8 @@ let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine
 
 (* The machine's admission at the application of this row table, which declares no named type
    (decisions row 407 (5)). *)
-let admit (table : Row.t list) (m : machine) (d : api_decision) : bool =
-  Option.is_none (program_admit { rows = table; services = []; types = [] } m d)
+let admit (prepared : prepared) (m : machine) (d : api_decision) : bool =
+  Option.is_none (program_prepared_admit prepared m d)
 
 let fibers (m : machine) : (fiber_id * fiber) list =
   List.map (fun (f : fiber) -> (f.id, f)) m.fibers
