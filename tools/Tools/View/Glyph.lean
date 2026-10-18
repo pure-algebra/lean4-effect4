@@ -9,8 +9,8 @@ constructor by the same mark: a fork is one arrow in the program's picture, the 
 module's motion (point 6). This module holds that vocabulary once.
 
 * `Shape`: the marks, each with what it draws and its glyph in text (`Shape.glyph`), after the
-  design language (`docs/design/design-language.md`, §2, §3, §9) and row 354's promise-and-keeping
-  family (hollow promised, filled kept).
+  design language (`git:4a81cc034:docs/design/design-language.md`, §2, §3, §9) and row 354's
+  promise-and-keeping family (hollow promised, filled kept).
 * `table`: one `Row` per constructor of each sort the pictures fold: its mark, the variant that
   tells it from a sibling, its spoken word and what it draws.
 * `sorts`: the sorts, each with its constructors as the environment declares them (`ctors_of%`), so

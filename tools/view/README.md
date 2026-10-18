@@ -4,6 +4,10 @@ Frames of a program as it is built and as it runs, in a window, a terminal or fi
 is data computed in Lean (`tools/Tools/View/`). The C programs here replay it and decide nothing.
 The design and its rulings: `docs/research/2026-10-09-visual-pipeline.md` and decisions row 336.
 
+The view is being pared back to one graph layout, `Tools.View.Graph.layout` (the owner, 2026-10-18).
+A run, the journal's or the host's, is to be shown as a plain table, not as a graph. A proposal
+for the graph's interface is pending, and it decides what the view keeps.
+
 ## Prerequisites (macOS)
 
 - Lean through elan: `lake` on the `PATH`. The command `v` also finds `~/.elan/bin` itself.

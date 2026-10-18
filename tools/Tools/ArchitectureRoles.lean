@@ -195,7 +195,6 @@ def areas : List Area := [
   ⟨"docs/DESIGN-ISSUES.md", .docs, 0, "DESIGN-ISSUES", "the DI register; a ruling exists only when written here", false, true⟩,
   ⟨"AGENTS.md", .docs, 0, "AGENTS", "the operating rules and the vocabulary", false, true⟩,
   ⟨"docs/research", .docs, 0, "docs/research", "history, not authority, and not walked (two gigabytes of evidence trees); the notes that matter are force-added", false, false⟩,
-  ⟨"docs/design", .docs, 0, "docs/design", "the design language notes", false, true⟩,
   -- pinned references
   ⟨"vendor/effect-4.0.0-rc.112", .vendor, 0, "effect rc.112", "the behavioral reference every citation points into", false, false⟩,
   ⟨"vendor/termbox2-2.5.0", .vendor, 0, "termbox2", "the terminal library of the view's console, vendored whole (decisions row 336)", false, false⟩,
