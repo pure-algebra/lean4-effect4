@@ -14,10 +14,11 @@ meta import Effect4.Store.Domain.Canonical
 # Json — generated `Canonical` instances
 
 One emitted declaration per rule of the facts note's Q2 and Q5: `shapeDoc`, `toVal`,
-`ofVal`, `ofVal_toVal`, `ofVal_exact`, `fits` and the instance, per type, in
-declaration order, fields through their own types' instances; a `Content` instance
-follows where the group names the carrier's kind. The proofs are lane S1's template
-scripts; nothing here was written or repaired by hand.
+`ofVal`, `ofVal_toVal`, `fits` and the instance, per type, in declaration order,
+fields through their own types' instances. A structure adds `ofVal_exact`; a sum reads
+through the re-encode guard, its round trip proved by one `rfl` equation per reader
+arm. A `Content` instance follows where the group names the carrier's kind. Nothing
+here was written or repaired by hand.
 -/
 
 @[expose] public section
@@ -165,21 +166,49 @@ def rawL2 : List Val → Option (@_root_.List (@_root_.Prod (_root_.String) (_ro
     | _, _ => none
 end
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proofs below. -/
+
+theorem rawJson_arm1 (v0 : Val) :
+    rawJson (.ctor 1 [v0]) =
+      (match Canonical.ofVal (α := _root_.Bool) v0 with
+      | some a0 => some (.bool a0)
+      | _ => none) := rfl
+theorem rawJson_arm2 (v0 : Val) :
+    rawJson (.ctor 2 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Float64) v0 with
+      | some a0 => some (.number a0)
+      | _ => none) := rfl
+theorem rawJson_arm3 (v0 : Val) :
+    rawJson (.ctor 3 [v0]) =
+      (match Canonical.ofVal (α := _root_.String) v0 with
+      | some a0 => some (.str a0)
+      | _ => none) := rfl
+theorem rawJson_arm4 (v0 : List Val) :
+    rawJson (.ctor 4 [(.list v0)]) =
+      (match rawL0 v0 with
+      | some a0 => some (.arr a0)
+      | _ => none) := rfl
+theorem rawJson_arm5 (v0 : List Val) :
+    rawJson (.ctor 5 [(.list v0)]) =
+      (match rawL2 v0 with
+      | some a0 => some (.obj a0)
+      | _ => none) := rfl
+
 mutual
 theorem rawJson_toValJson (a : _root_.Effect4.Json) :
     rawJson (toValJson a) = some a := by
   cases a with
   | «null» => rfl
   | «bool» a0 =>
-    simp only [toValJson, rawJson, Canonical.ofVal_toVal]
+    simp only [toValJson, rawJson_arm1, Canonical.ofVal_toVal]
   | «number» a0 =>
-    simp only [toValJson, rawJson, Canonical.ofVal_toVal]
+    simp only [toValJson, rawJson_arm2, Canonical.ofVal_toVal]
   | «str» a0 =>
-    simp only [toValJson, rawJson, Canonical.ofVal_toVal]
+    simp only [toValJson, rawJson_arm3, Canonical.ofVal_toVal]
   | «arr» a0 =>
-    simp only [toValJson, rawJson, rawL0_toValL0 a0]
+    simp only [toValJson, rawJson_arm4, rawL0_toValL0 a0]
   | «obj» a0 =>
-    simp only [toValJson, rawJson, rawL2_toValL2 a0]
+    simp only [toValJson, rawJson_arm5, rawL2_toValL2 a0]
 termination_by structural a
 theorem rawL0_toValL0 (xs : @_root_.List (_root_.Effect4.Json)) :
     rawL0 (toValL0 xs) = some xs := by

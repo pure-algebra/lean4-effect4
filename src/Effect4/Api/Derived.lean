@@ -14,10 +14,11 @@ import Effect4.Store.Domain.Clock
 # Api — generated `Canonical` instances
 
 One emitted declaration per rule of the facts note's Q2 and Q5: `shapeDoc`, `toVal`,
-`ofVal`, `ofVal_toVal`, `ofVal_exact`, `fits` and the instance, per type, in
-declaration order, fields through their own types' instances; a `Content` instance
-follows where the group names the carrier's kind. The proofs are lane S1's template
-scripts; nothing here was written or repaired by hand.
+`ofVal`, `ofVal_toVal`, `fits` and the instance, per type, in declaration order,
+fields through their own types' instances. A structure adds `ofVal_exact`; a sum reads
+through the re-encode guard, its round trip proved by one `rfl` equation per reader
+arm. A `Content` instance follows where the group names the carrier's kind. Nothing
+here was written or repaired by hand.
 -/
 
 set_option autoImplicit false
@@ -158,20 +159,8 @@ def ofVal : Val → Option (_root_.Effect4.Machine.Exhaustion)
 
 theorem ofVal_toVal (a : _root_.Effect4.Machine.Exhaustion) : ofVal (toVal a) = some a := by
   cases a with
-  | «fuel» => simp only [toVal, ofVal]
-  | «tape» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Machine.Exhaustion} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «fuel» => rfl
+  | «tape» => rfl
 
 theorem fits (a : _root_.Effect4.Machine.Exhaustion) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -181,7 +170,8 @@ theorem fits (a : _root_.Effect4.Machine.Exhaustion) : shapeDoc.accepts (toVal a
     exact accepts_sum _ _ _ 1 "tape" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Machine.Exhaustion) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -220,40 +210,28 @@ def ofVal : Val → Option (_root_.Effect4.Api.FrontierReason)
   | .ctor 4 [] => some .awaitDecision
   | _ => none
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm1 (v0 : Val) :
+    ofVal (.ctor 1 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.FiberId) v0).map .compileFuel := rfl
+theorem ofVal_arm2 (v0 : Val) :
+    ofVal (.ctor 2 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Api.HostProtocol.Key) v0).map .awaitHost := rfl
+theorem ofVal_arm3 (v0 : Val) (v1 : Val) :
+    ofVal (.ctor 3 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.FiberId) v0,
+          Canonical.ofVal (α := _root_.Effect4.ClockMillis) v1 with
+      | some a0, some a1 => some (.awaitTimer a0 a1)
+      | _, _ => none) := rfl
+
 theorem ofVal_toVal (a : _root_.Effect4.Api.FrontierReason) : ofVal (toVal a) = some a := by
   cases a with
-  | «commandFuel» => simp only [toVal, ofVal]
-  | «compileFuel» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «awaitHost» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «awaitTimer» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
-  | «awaitDecision» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Api.FrontierReason} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · split at h
-    · rename_i b0 b1 h0 h1
-      injection h with h
-      subst h
-      simp only [toVal]
-      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-    all_goals exact nomatch h
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «commandFuel» => rfl
+  | «compileFuel» a0 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal, Option.map_some]
+  | «awaitHost» a0 => simp only [toVal, ofVal_arm2, Canonical.ofVal_toVal, Option.map_some]
+  | «awaitTimer» a0 a1 => simp only [toVal, ofVal_arm3, Canonical.ofVal_toVal]
+  | «awaitDecision» => rfl
 
 theorem lift_FiberId (x : _root_.Effect4.FiberId) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.FiberId).root (Canonical.toVal x) = true :=
@@ -287,7 +265,8 @@ theorem fits (a : _root_.Effect4.Api.FrontierReason) : shapeDoc.accepts (toVal a
     exact accepts_sum _ _ _ 4 "awaitDecision" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Api.FrontierReason) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged

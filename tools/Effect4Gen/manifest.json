@@ -273,9 +273,9 @@
       ]
     },
     {
-      "Note": "The checker's public data for the tool wire (seams V1, S3b): keys, verdicts, sites and explanations. No Oracle, Checked, Memo or HitRule package is encoded. Qualified names keep repeated short heads apart; arm lemmas keep the round-trip proofs linear in the arm count (docs/research/2026-10-18-codec-generator-large-recursive-sums.md).",
+      "Note": "The checker's public data for the tool wire (seams V1, S3b): keys, verdicts, sites and explanations. No Oracle, Checked, Memo or HitRule package is encoded. Qualified names keep repeated short heads apart.",
       "Name": "Check",
-      "Flags": ["--qualified-names", "--arm-lemmas"],
+      "Flags": ["--qualified-names"],
       "Imports": "Effect4.Program.Check,Effect4.Api.RefusalsDerived",
       "Out": "src\\Effect4\\Tool\\CheckDerived.lean",
       "Guards": "",
@@ -296,7 +296,7 @@
     {
       "Note": "The tool protocol's requests and replies (seams S3a, S3b), with every carrier they hold. A reply carries the run view (`Live.View`), which reaches the machine's continuation names (`EffName`, 57 arms) and stores; the machine's service context has the hand instance in Store/Domain/ContextCanonical.lean, imported here. Every applied carrier is listed before the type that holds it.",
       "Name": "Tool",
-      "Flags": ["--qualified-names", "--arm-lemmas"],
+      "Flags": ["--qualified-names"],
       "Imports": "Effect4.Tool.Serve,Effect4.Tool.WireTypes,Effect4.Tool.CheckDerived,Effect4.Api.RunnerDerived,Effect4.Store.Domain.ContextCanonical",
       "Out": "src\\Effect4\\Tool\\ToolDerived.lean",
       "Guards": "",

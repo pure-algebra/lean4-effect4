@@ -27,10 +27,11 @@ meta import Effect4.Store.Domain.RowCanonical
 # Program — generated `Canonical` instances
 
 One emitted declaration per rule of the facts note's Q2 and Q5: `shapeDoc`, `toVal`,
-`ofVal`, `ofVal_toVal`, `ofVal_exact`, `fits` and the instance, per type, in
-declaration order, fields through their own types' instances; a `Content` instance
-follows where the group names the carrier's kind. The proofs are lane S1's template
-scripts; nothing here was written or repaired by hand.
+`ofVal`, `ofVal_toVal`, `fits` and the instance, per type, in declaration order,
+fields through their own types' instances. A structure adds `ofVal_exact`; a sum reads
+through the re-encode guard, its round trip proved by one `rfl` equation per reader
+arm. A `Content` instance follows where the group names the carrier's kind. Nothing
+here was written or repaired by hand.
 -/
 
 @[expose] public section
@@ -64,33 +65,24 @@ def ofVal : Val → Option (_root_.Effect4.Program.Lit)
   | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .str
   | _ => none
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm1 (v0 : Val) :
+    ofVal (.ctor 1 [v0]) =
+      (Canonical.ofVal (α := _root_.Nat) v0).map .nat := rfl
+theorem ofVal_arm2 (v0 : Val) :
+    ofVal (.ctor 2 [v0]) =
+      (Canonical.ofVal (α := _root_.Bool) v0).map .bool := rfl
+theorem ofVal_arm3 (v0 : Val) :
+    ofVal (.ctor 3 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .str := rfl
+
 theorem ofVal_toVal (a : _root_.Effect4.Program.Lit) : ofVal (toVal a) = some a := by
   cases a with
-  | «unit» => simp only [toVal, ofVal]
-  | «nat» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «bool» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «str» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Lit} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  all_goals exact nomatch h
+  | «unit» => rfl
+  | «nat» a0 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal, Option.map_some]
+  | «bool» a0 => simp only [toVal, ofVal_arm2, Canonical.ofVal_toVal, Option.map_some]
+  | «str» a0 => simp only [toVal, ofVal_arm3, Canonical.ofVal_toVal, Option.map_some]
 
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
@@ -120,7 +112,8 @@ theorem fits (a : _root_.Effect4.Program.Lit) : shapeDoc.accepts (toVal a) = tru
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.Lit) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -146,20 +139,8 @@ def ofVal : Val → Option (_root_.Effect4.FinalizerStrategy)
 
 theorem ofVal_toVal (a : _root_.Effect4.FinalizerStrategy) : ofVal (toVal a) = some a := by
   cases a with
-  | «sequential» => simp only [toVal, ofVal]
-  | «parallel» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.FinalizerStrategy} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «sequential» => rfl
+  | «parallel» => rfl
 
 theorem fits (a : _root_.Effect4.FinalizerStrategy) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -169,7 +150,8 @@ theorem fits (a : _root_.Effect4.FinalizerStrategy) : shapeDoc.accepts (toVal a)
     exact accepts_sum _ _ _ 1 "parallel" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.FinalizerStrategy) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -198,24 +180,9 @@ def ofVal : Val → Option (_root_.Effect4.Supervision.MaskMode)
 
 theorem ofVal_toVal (a : _root_.Effect4.Supervision.MaskMode) : ofVal (toVal a) = some a := by
   cases a with
-  | «interruptible» => simp only [toVal, ofVal]
-  | «uninterruptible» => simp only [toVal, ofVal]
-  | «inherit» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Supervision.MaskMode} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «interruptible» => rfl
+  | «uninterruptible» => rfl
+  | «inherit» => rfl
 
 theorem fits (a : _root_.Effect4.Supervision.MaskMode) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -227,7 +194,8 @@ theorem fits (a : _root_.Effect4.Supervision.MaskMode) : shapeDoc.accepts (toVal
     exact accepts_sum _ _ _ 2 "inherit" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Supervision.MaskMode) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -253,20 +221,8 @@ def ofVal : Val → Option (_root_.Effect4.Supervision.ObserverMode)
 
 theorem ofVal_toVal (a : _root_.Effect4.Supervision.ObserverMode) : ofVal (toVal a) = some a := by
   cases a with
-  | «awaitValue» => simp only [toVal, ofVal]
-  | «joinEffect» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Supervision.ObserverMode} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «awaitValue» => rfl
+  | «joinEffect» => rfl
 
 theorem fits (a : _root_.Effect4.Supervision.ObserverMode) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -276,7 +232,8 @@ theorem fits (a : _root_.Effect4.Supervision.ObserverMode) : shapeDoc.accepts (t
     exact accepts_sum _ _ _ 1 "joinEffect" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Supervision.ObserverMode) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -306,32 +263,21 @@ def ofVal : Val → Option (_root_.Effect4.Program.Decision)
   | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .recordTag
   | _ => none
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm2 (v0 : Val) :
+    ofVal (.ctor 2 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .tag := rfl
+theorem ofVal_arm3 (v0 : Val) :
+    ofVal (.ctor 3 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .recordTag := rfl
+
 theorem ofVal_toVal (a : _root_.Effect4.Program.Decision) : ofVal (toVal a) = some a := by
   cases a with
-  | «bool» => simp only [toVal, ofVal]
-  | «option» => simp only [toVal, ofVal]
-  | «tag» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «recordTag» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Decision} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  all_goals exact nomatch h
+  | «bool» => rfl
+  | «option» => rfl
+  | «tag» a0 => simp only [toVal, ofVal_arm2, Canonical.ofVal_toVal, Option.map_some]
+  | «recordTag» a0 => simp only [toVal, ofVal_arm3, Canonical.ofVal_toVal, Option.map_some]
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -352,7 +298,8 @@ theorem fits (a : _root_.Effect4.Program.Decision) : shapeDoc.accepts (toVal a) 
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.Decision) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -729,6 +676,100 @@ def rawL3 : List Val → Option (@_root_.List (_root_.Effect4.Program.Ty))
     | _, _ => none
 end
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proofs below. -/
+
+theorem rawTy_arm6 (v0 : Val) :
+    rawTy (.ctor 6 [v0]) =
+      (match Canonical.ofVal (α := _root_.String) v0 with
+      | some a0 => some (.handle a0)
+      | _ => none) := rfl
+theorem rawTy_arm7 (v0 : Val) :
+    rawTy (.ctor 7 [v0]) =
+      (match rawTy v0 with
+      | some a0 => some (.option a0)
+      | _ => none) := rfl
+theorem rawTy_arm8 (v0 : Val) :
+    rawTy (.ctor 8 [v0]) =
+      (match rawTy v0 with
+      | some a0 => some (.list a0)
+      | _ => none) := rfl
+theorem rawTy_arm9 (v0 : Val) (v1 : Val) :
+    rawTy (.ctor 9 [v0, v1]) =
+      (match rawTy v0, rawTy v1 with
+      | some a0, some a1 => some (.prod a0 a1)
+      | _, _ => none) := rfl
+theorem rawTy_arm10 (v0 : Val) (v1 : Val) :
+    rawTy (.ctor 10 [v0, v1]) =
+      (match rawTy v0, rawTy v1 with
+      | some a0, some a1 => some (.except a0 a1)
+      | _, _ => none) := rfl
+theorem rawTy_arm11 (v0 : Val) (v1 : Val) :
+    rawTy (.ctor 11 [v0, v1]) =
+      (match rawTy v0, rawTy v1 with
+      | some a0, some a1 => some (.exitOf a0 a1)
+      | _, _ => none) := rfl
+theorem rawTy_arm12 (v0 : Val) :
+    rawTy (.ctor 12 [v0]) =
+      (match rawTy v0 with
+      | some a0 => some (.causeOf a0)
+      | _ => none) := rfl
+theorem rawTy_arm13 (v0 : Val) (v1 : Val) :
+    rawTy (.ctor 13 [v0, v1]) =
+      (match rawTy v0, rawTy v1 with
+      | some a0, some a1 => some (.fiberOf a0 a1)
+      | _, _ => none) := rfl
+theorem rawTy_arm14 (v0 : Val) (v1 : Val) :
+    rawTy (.ctor 14 [v0, v1]) =
+      (match rawTy v0, rawTy v1 with
+      | some a0, some a1 => some (.union a0 a1)
+      | _, _ => none) := rfl
+theorem rawTy_arm15 (v0 : Val) :
+    rawTy (.ctor 15 [v0]) =
+      (match Canonical.ofVal (α := _root_.String) v0 with
+      | some a0 => some (.lit a0)
+      | _ => none) := rfl
+theorem rawTy_arm16 (v0 : Val) :
+    rawTy (.ctor 16 [v0]) =
+      (match rawTy v0 with
+      | some a0 => some (.refOf a0)
+      | _ => none) := rfl
+theorem rawTy_arm17 (v0 : Val) (v1 : Val) :
+    rawTy (.ctor 17 [v0, v1]) =
+      (match rawTy v0, rawTy v1 with
+      | some a0, some a1 => some (.deferredOf a0 a1)
+      | _, _ => none) := rfl
+theorem rawTy_arm18 (v0 : Val) :
+    rawTy (.ctor 18 [v0]) =
+      (match Canonical.ofVal (α := _root_.Nat) v0 with
+      | some a0 => some (.var a0)
+      | _ => none) := rfl
+theorem rawTy_arm20 (v0 : List Val) :
+    rawTy (.ctor 20 [(.list v0)]) =
+      (match rawL2 v0 with
+      | some a0 => some (.record a0)
+      | _ => none) := rfl
+theorem rawTy_arm21 (v0 : Val) (v1 : Val) :
+    rawTy (.ctor 21 [v0, v1]) =
+      (match rawTy v0, rawTy v1 with
+      | some a0, some a1 => some (.map a0 a1)
+      | _, _ => none) := rfl
+theorem rawTy_arm22 (v0 : List Val) :
+    rawTy (.ctor 22 [(.list v0)]) =
+      (match rawL3 v0 with
+      | some a0 => some (.tuple a0)
+      | _ => none) := rfl
+theorem rawTy_arm23 (v0 : Val) (v1 : List Val) :
+    rawTy (.ctor 23 [v0, (.list v1)]) =
+      (match Canonical.ofVal (α := _root_.String) v0, rawL3 v1 with
+      | some a0, some a1 => some (.app a0 a1)
+      | _, _ => none) := rfl
+theorem rawTy_arm28 (v0 : Val) :
+    rawTy (.ctor 28 [v0]) =
+      (match
+          Canonical.ofVal (α := (@_root_.Effect4.Row (_root_.Effect4.ServiceKey) (_root_.Effect4.instLTServiceKey))) v0 with
+      | some a0 => some (.contextOf a0)
+      | _ => none) := rfl
+
 mutual
 theorem rawTy_toValTy (a : _root_.Effect4.Program.Ty) :
     rawTy (toValTy a) = some a := by
@@ -740,46 +781,46 @@ theorem rawTy_toValTy (a : _root_.Effect4.Program.Ty) :
   | «string» => rfl
   | «bool» => rfl
   | «handle» a0 =>
-    simp only [toValTy, rawTy, Canonical.ofVal_toVal]
+    simp only [toValTy, rawTy_arm6, Canonical.ofVal_toVal]
   | «option» a0 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0]
+    simp only [toValTy, rawTy_arm7, rawTy_toValTy a0]
   | «list» a0 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0]
+    simp only [toValTy, rawTy_arm8, rawTy_toValTy a0]
   | «prod» a0 a1 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy_arm9, rawTy_toValTy a0, rawTy_toValTy a1]
   | «except» a0 a1 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy_arm10, rawTy_toValTy a0, rawTy_toValTy a1]
   | «exitOf» a0 a1 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy_arm11, rawTy_toValTy a0, rawTy_toValTy a1]
   | «causeOf» a0 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0]
+    simp only [toValTy, rawTy_arm12, rawTy_toValTy a0]
   | «fiberOf» a0 a1 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy_arm13, rawTy_toValTy a0, rawTy_toValTy a1]
   | «union» a0 a1 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy_arm14, rawTy_toValTy a0, rawTy_toValTy a1]
   | «lit» a0 =>
-    simp only [toValTy, rawTy, Canonical.ofVal_toVal]
+    simp only [toValTy, rawTy_arm15, Canonical.ofVal_toVal]
   | «refOf» a0 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0]
+    simp only [toValTy, rawTy_arm16, rawTy_toValTy a0]
   | «deferredOf» a0 a1 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy_arm17, rawTy_toValTy a0, rawTy_toValTy a1]
   | «var» a0 =>
-    simp only [toValTy, rawTy, Canonical.ofVal_toVal]
+    simp only [toValTy, rawTy_arm18, Canonical.ofVal_toVal]
   | «unknown» => rfl
   | «record» a0 =>
-    simp only [toValTy, rawTy, rawL2_toValL2 a0]
+    simp only [toValTy, rawTy_arm20, rawL2_toValL2 a0]
   | «map» a0 a1 =>
-    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy_arm21, rawTy_toValTy a0, rawTy_toValTy a1]
   | «tuple» a0 =>
-    simp only [toValTy, rawTy, rawL3_toValL3 a0]
+    simp only [toValTy, rawTy_arm22, rawL3_toValL3 a0]
   | «app» a0 a1 =>
-    simp only [toValTy, rawTy, Canonical.ofVal_toVal, rawL3_toValL3 a1]
+    simp only [toValTy, rawTy_arm23, Canonical.ofVal_toVal, rawL3_toValL3 a1]
   | «null» => rfl
   | «undefined» => rfl
   | «number» => rfl
   | «bytes» => rfl
   | «contextOf» a0 =>
-    simp only [toValTy, rawTy, Canonical.ofVal_toVal]
+    simp only [toValTy, rawTy_arm28, Canonical.ofVal_toVal]
 termination_by structural a
 theorem rawP0_toValP0 (p : @_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty)) :
     rawP0 (toValP0 p) = some p := by
@@ -1004,20 +1045,8 @@ def ofVal : Val → Option (_root_.Effect4.Program.FieldReadMode)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.FieldReadMode) : ofVal (toVal a) = some a := by
   cases a with
-  | «required» => simp only [toVal, ofVal]
-  | «optional» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FieldReadMode} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «required» => rfl
+  | «optional» => rfl
 
 theorem fits (a : _root_.Effect4.Program.FieldReadMode) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -1027,7 +1056,8 @@ theorem fits (a : _root_.Effect4.Program.FieldReadMode) : shapeDoc.accepts (toVa
     exact accepts_sum _ _ _ 1 "optional" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Program.FieldReadMode) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -1136,27 +1166,79 @@ def rawTerms : Val → Option (_root_.Effect4.Program.Terms)
   | _ => none
 end
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proofs below. -/
+
+theorem rawTerm_arm0 (v0 : Val) :
+    rawTerm (.ctor 0 [v0]) =
+      (match Canonical.ofVal (α := _root_.Nat) v0 with
+      | some a0 => some (.var a0)
+      | _ => none) := rfl
+theorem rawTerm_arm1 (v0 : Val) :
+    rawTerm (.ctor 1 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Lit) v0 with
+      | some a0 => some (.lit a0)
+      | _ => none) := rfl
+theorem rawTerm_arm2 (v0 : Val) (v1 : Val) :
+    rawTerm (.ctor 2 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.String) v0, rawTerms v1 with
+      | some a0, some a1 => some (.app a0 a1)
+      | _, _ => none) := rfl
+theorem rawTerm_arm3 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawTerm (.ctor 3 [v0, v1, v2]) =
+      (match
+          Canonical.ofVal (α := (@_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))))) v0,
+          Canonical.ofVal (α := (@_root_.List (_root_.String))) v1, rawTerms v2 with
+      | some a0, some a1, some a2 => some (.record a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawTerm_arm4 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawTerm (.ctor 4 [v0, v1, v2]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.FieldReadMode) v0, rawTerm v1,
+          Canonical.ofVal (α := _root_.String) v2 with
+      | some a0, some a1, some a2 => some (.field a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawTerm_arm5 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawTerm (.ctor 5 [v0, v1, v2]) =
+      (match rawTerm v0, Canonical.ofVal (α := _root_.String) v1, rawTerm v2 with
+      | some a0, some a1, some a2 => some (.recordSet a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawTerm_arm6 (v0 : Val) (v1 : Val) :
+    rawTerm (.ctor 6 [v0, v1]) =
+      (match rawTerm v0, Canonical.ofVal (α := _root_.Nat) v1 with
+      | some a0, some a1 => some (.tupleAt a0 a1)
+      | _, _ => none) := rfl
+theorem rawTerm_arm7 (v0 : Val) (v1 : Val) (v2 : Val) (v3 : Val) :
+    rawTerm (.ctor 7 [v0, v1, v2, v3]) =
+      (match Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Ty))) v0, rawTerm v1,
+          rawTerm v2, rawTerm v3 with
+      | some a0, some a1, some a2, some a3 => some (.fold a0 a1 a2 a3)
+      | _, _, _, _ => none) := rfl
+theorem rawTerms_arm1 (v0 : Val) (v1 : Val) :
+    rawTerms (.ctor 1 [v0, v1]) =
+      (match rawTerm v0, rawTerms v1 with
+      | some a0, some a1 => some (.cons a0 a1)
+      | _, _ => none) := rfl
+
 mutual
 theorem rawTerm_toValTerm (a : _root_.Effect4.Program.Term) :
     rawTerm (toValTerm a) = some a := by
   cases a with
   | «var» a0 =>
-    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal]
+    simp only [toValTerm, rawTerm_arm0, Canonical.ofVal_toVal]
   | «lit» a0 =>
-    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal]
+    simp only [toValTerm, rawTerm_arm1, Canonical.ofVal_toVal]
   | «app» a0 a1 =>
-    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerms_toValTerms a1]
+    simp only [toValTerm, rawTerm_arm2, Canonical.ofVal_toVal, rawTerms_toValTerms a1]
   | «record» a0 a1 a2 =>
-    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerms_toValTerms a2]
+    simp only [toValTerm, rawTerm_arm3, Canonical.ofVal_toVal, rawTerms_toValTerms a2]
   | «field» a0 a1 a2 =>
-    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerm_toValTerm a1]
+    simp only [toValTerm, rawTerm_arm4, Canonical.ofVal_toVal, rawTerm_toValTerm a1]
   | «recordSet» a0 a1 a2 =>
-    simp only [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal,
+    simp only [toValTerm, rawTerm_arm5, rawTerm_toValTerm a0, Canonical.ofVal_toVal,
       rawTerm_toValTerm a2]
   | «tupleAt» a0 a1 =>
-    simp only [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal]
+    simp only [toValTerm, rawTerm_arm6, rawTerm_toValTerm a0, Canonical.ofVal_toVal]
   | «fold» a0 a1 a2 a3 =>
-    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerm_toValTerm a1,
+    simp only [toValTerm, rawTerm_arm7, Canonical.ofVal_toVal, rawTerm_toValTerm a1,
       rawTerm_toValTerm a2, rawTerm_toValTerm a3]
 termination_by structural a
 theorem rawTerms_toValTerms (a : _root_.Effect4.Program.Terms) :
@@ -1164,7 +1246,7 @@ theorem rawTerms_toValTerms (a : _root_.Effect4.Program.Terms) :
   cases a with
   | «nil» => rfl
   | «cons» a0 a1 =>
-    simp only [toValTerms, rawTerms, rawTerm_toValTerm a0, rawTerms_toValTerms a1]
+    simp only [toValTerms, rawTerms_arm1, rawTerm_toValTerm a0, rawTerms_toValTerms a1]
 termination_by structural a
 end
 
@@ -1380,130 +1462,78 @@ def ofVal : Val → Option (_root_.Effect4.Program.NativeOp)
   | .ctor 33 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .param
   | _ => none
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm10 (v0 : Val) :
+    ofVal (.ctor 19 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.FinalizerStrategy) v0).map .scopeMake := rfl
+theorem ofVal_arm13 (v0 : Val) :
+    ofVal (.ctor 22 [v0]) =
+      (Canonical.ofVal (α := _root_.Nat) v0).map .external := rfl
+theorem ofVal_arm14 (v0 : Val) (v1 : Val) :
+    ofVal (.ctor 23 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1 with
+      | some a0, some a1 => some (.deferredMakeOf a0 a1)
+      | _, _ => none) := rfl
+theorem ofVal_arm15 (v0 : Val) :
+    ofVal (.ctor 24 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refUpdateWith := rfl
+theorem ofVal_arm16 (v0 : Val) :
+    ofVal (.ctor 25 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refGetAndUpdateWith := rfl
+theorem ofVal_arm17 (v0 : Val) :
+    ofVal (.ctor 26 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refUpdateAndGetWith := rfl
+theorem ofVal_arm18 (v0 : Val) :
+    ofVal (.ctor 27 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refUpdateSomeWith := rfl
+theorem ofVal_arm19 (v0 : Val) :
+    ofVal (.ctor 28 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refGetAndUpdateSomeWith := rfl
+theorem ofVal_arm20 (v0 : Val) :
+    ofVal (.ctor 29 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refUpdateSomeAndGetWith := rfl
+theorem ofVal_arm21 (v0 : Val) :
+    ofVal (.ctor 30 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refModifyWith := rfl
+theorem ofVal_arm22 (v0 : Val) :
+    ofVal (.ctor 31 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refModifySomeWith := rfl
+theorem ofVal_arm23 (v0 : Val) :
+    ofVal (.ctor 32 [v0]) =
+      (Canonical.ofVal (α := _root_.Nat) v0).map .call := rfl
+theorem ofVal_arm24 (v0 : Val) :
+    ofVal (.ctor 33 [v0]) =
+      (Canonical.ofVal (α := _root_.Nat) v0).map .param := rfl
+
 theorem ofVal_toVal (a : _root_.Effect4.Program.NativeOp) : ofVal (toVal a) = some a := by
   cases a with
-  | «refMake» => simp only [toVal, ofVal]
-  | «refGet» => simp only [toVal, ofVal]
-  | «refSet» => simp only [toVal, ofVal]
-  | «refGetAndSet» => simp only [toVal, ofVal]
-  | «refSetAndGet» => simp only [toVal, ofVal]
-  | «deferredIsDone» => simp only [toVal, ofVal]
-  | «deferredPoll» => simp only [toVal, ofVal]
-  | «deferredSucceed» => simp only [toVal, ofVal]
-  | «deferredFail» => simp only [toVal, ofVal]
-  | «deferredAwait» => simp only [toVal, ofVal]
-  | «scopeMake» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «sleep» => simp only [toVal, ofVal]
-  | «clockNow» => simp only [toVal, ofVal]
-  | «external» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «deferredMakeOf» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
-  | «refUpdateWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «refGetAndUpdateWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «refUpdateAndGetWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «refUpdateSomeWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «refGetAndUpdateSomeWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «refUpdateSomeAndGetWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «refModifyWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «refModifySomeWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «call» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «param» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.NativeOp} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · split at h
-    · rename_i b0 b1 h0 h1
-      injection h with h
-      subst h
-      simp only [toVal]
-      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-    all_goals exact nomatch h
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  all_goals exact nomatch h
+  | «refMake» => rfl
+  | «refGet» => rfl
+  | «refSet» => rfl
+  | «refGetAndSet» => rfl
+  | «refSetAndGet» => rfl
+  | «deferredIsDone» => rfl
+  | «deferredPoll» => rfl
+  | «deferredSucceed» => rfl
+  | «deferredFail» => rfl
+  | «deferredAwait» => rfl
+  | «scopeMake» a0 => simp only [toVal, ofVal_arm10, Canonical.ofVal_toVal, Option.map_some]
+  | «sleep» => rfl
+  | «clockNow» => rfl
+  | «external» a0 => simp only [toVal, ofVal_arm13, Canonical.ofVal_toVal, Option.map_some]
+  | «deferredMakeOf» a0 a1 => simp only [toVal, ofVal_arm14, Canonical.ofVal_toVal]
+  | «refUpdateWith» a0 => simp only [toVal, ofVal_arm15, Canonical.ofVal_toVal, Option.map_some]
+  | «refGetAndUpdateWith» a0 => simp only [toVal, ofVal_arm16, Canonical.ofVal_toVal, Option.map_some]
+  | «refUpdateAndGetWith» a0 => simp only [toVal, ofVal_arm17, Canonical.ofVal_toVal, Option.map_some]
+  | «refUpdateSomeWith» a0 => simp only [toVal, ofVal_arm18, Canonical.ofVal_toVal, Option.map_some]
+  | «refGetAndUpdateSomeWith» a0 => simp only [toVal, ofVal_arm19, Canonical.ofVal_toVal, Option.map_some]
+  | «refUpdateSomeAndGetWith» a0 => simp only [toVal, ofVal_arm20, Canonical.ofVal_toVal, Option.map_some]
+  | «refModifyWith» a0 => simp only [toVal, ofVal_arm21, Canonical.ofVal_toVal, Option.map_some]
+  | «refModifySomeWith» a0 => simp only [toVal, ofVal_arm22, Canonical.ofVal_toVal, Option.map_some]
+  | «call» a0 => simp only [toVal, ofVal_arm23, Canonical.ofVal_toVal, Option.map_some]
+  | «param» a0 => simp only [toVal, ofVal_arm24, Canonical.ofVal_toVal, Option.map_some]
 
 theorem lift_FinalizerStrategy (x : _root_.Effect4.FinalizerStrategy) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.FinalizerStrategy).root
@@ -1591,7 +1621,8 @@ theorem fits (a : _root_.Effect4.Program.NativeOp) : shapeDoc.accepts (toVal a) 
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.NativeOp) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -1711,18 +1742,41 @@ def rawCauseTerm : Val → Option (_root_.Effect4.Program.CauseTerm)
   | _ => none
 end
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proofs below. -/
+
+theorem rawCauseTerm_arm0 (v0 : Val) :
+    rawCauseTerm (.ctor 0 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.fail a0)
+      | _ => none) := rfl
+theorem rawCauseTerm_arm1 (v0 : Val) :
+    rawCauseTerm (.ctor 1 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.die a0)
+      | _ => none) := rfl
+theorem rawCauseTerm_arm2 (v0 : Val) :
+    rawCauseTerm (.ctor 2 [v0]) =
+      (match Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Term))) v0 with
+      | some a0 => some (.interrupt a0)
+      | _ => none) := rfl
+theorem rawCauseTerm_arm3 (v0 : Val) (v1 : Val) :
+    rawCauseTerm (.ctor 3 [v0, v1]) =
+      (match rawCauseTerm v0, rawCauseTerm v1 with
+      | some a0, some a1 => some (.both a0 a1)
+      | _, _ => none) := rfl
+
 mutual
 theorem rawCauseTerm_toValCauseTerm (a : _root_.Effect4.Program.CauseTerm) :
     rawCauseTerm (toValCauseTerm a) = some a := by
   cases a with
   | «fail» a0 =>
-    simp only [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
+    simp only [toValCauseTerm, rawCauseTerm_arm0, Canonical.ofVal_toVal]
   | «die» a0 =>
-    simp only [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
+    simp only [toValCauseTerm, rawCauseTerm_arm1, Canonical.ofVal_toVal]
   | «interrupt» a0 =>
-    simp only [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
+    simp only [toValCauseTerm, rawCauseTerm_arm2, Canonical.ofVal_toVal]
   | «both» a0 a1 =>
-    simp only [toValCauseTerm, rawCauseTerm, rawCauseTerm_toValCauseTerm a0,
+    simp only [toValCauseTerm, rawCauseTerm_arm3, rawCauseTerm_toValCauseTerm a0,
       rawCauseTerm_toValCauseTerm a1]
 termination_by structural a
 end
@@ -1804,31 +1858,23 @@ def ofVal : Val → Option (_root_.Effect4.Program.DefRole)
     | _, _, _ => none
   | _ => none
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm1 (v0 : Val) :
+    ofVal (.ctor 1 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .serviceInit := rfl
+theorem ofVal_arm2 (v0 : Val) (v1 : Val) (v2 : Val) :
+    ofVal (.ctor 2 [v0, v1, v2]) =
+      (match Canonical.ofVal (α := _root_.String) v0, Canonical.ofVal (α := _root_.String) v1,
+          Canonical.ofVal (α := _root_.Nat) v2 with
+      | some a0, some a1, some a2 => some (.serviceMethod a0 a1 a2)
+      | _, _, _ => none) := rfl
+
 theorem ofVal_toVal (a : _root_.Effect4.Program.DefRole) : ofVal (toVal a) = some a := by
   cases a with
-  | «plain» => simp only [toVal, ofVal]
-  | «serviceInit» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «serviceMethod» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.DefRole} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · split at h
-    · rename_i b0 b1 b2 h0 h1 h2
-      injection h with h
-      subst h
-      simp only [toVal]
-      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
-    all_goals exact nomatch h
-  all_goals exact nomatch h
+  | «plain» => rfl
+  | «serviceInit» a0 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal, Option.map_some]
+  | «serviceMethod» a0 a1 a2 => simp only [toVal, ofVal_arm2, Canonical.ofVal_toVal]
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -1853,7 +1899,8 @@ theorem fits (a : _root_.Effect4.Program.DefRole) : shapeDoc.accepts (toVal a) =
           (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a2) (acceptsFields_nil _))))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.DefRole) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -2532,85 +2579,411 @@ def rawLayerTerms :
   | _ => none
 end
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proofs below. -/
+
+theorem rawEff_arm0 (v0 : Val) :
+    rawEff (.ctor 0 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.succeed a0)
+      | _ => none) := rfl
+theorem rawEff_arm1 (v0 : Val) :
+    rawEff (.ctor 1 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.fail a0)
+      | _ => none) := rfl
+theorem rawEff_arm2 (v0 : Val) :
+    rawEff (.ctor 2 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.CauseTerm) v0 with
+      | some a0 => some (.failCause a0)
+      | _ => none) := rfl
+theorem rawEff_arm3 (v0 : Val) :
+    rawEff (.ctor 4 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.sync a0)
+      | _ => none) := rfl
+theorem rawEff_arm4 (v0 : Val) :
+    rawEff (.ctor 5 [v0]) =
+      (match rawEff v0 with
+      | some a0 => some (.suspend a0)
+      | _ => none) := rfl
+theorem rawEff_arm5 (v0 : Val) (v1 : Val) :
+    rawEff (.ctor 6 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.NativeOp) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v1 with
+      | some a0, some a1 => some (.perform a0 a1)
+      | _, _ => none) := rfl
+theorem rawEff_arm6 (v0 : Val) (v1 : Val) :
+    rawEff (.ctor 7 [v0, v1]) =
+      (match rawEff v0, rawEff v1 with
+      | some a0, some a1 => some (.bind a0 a1)
+      | _, _ => none) := rfl
+theorem rawEff_arm7 (v0 : Val) :
+    rawEff (.ctor 8 [v0]) =
+      (match rawStmts v0 with
+      | some a0 => some (.gen a0)
+      | _ => none) := rfl
+theorem rawEff_arm8 (v0 : Val) (v1 : Val) :
+    rawEff (.ctor 9 [v0, v1]) =
+      (match rawEff v0, rawEff v1 with
+      | some a0, some a1 => some (.catchCause a0 a1)
+      | _, _ => none) := rfl
+theorem rawEff_arm9 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawEff (.ctor 10 [v0, v1, v2]) =
+      (match rawEff v0, rawEff v1, rawEff v2 with
+      | some a0, some a1, some a2 => some (.matchCause a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawEff_arm10 (v0 : Val) (v1 : Val) :
+    rawEff (.ctor 11 [v0, v1]) =
+      (match rawEff v0, rawEff v1 with
+      | some a0, some a1 => some (.onExit a0 a1)
+      | _, _ => none) := rfl
+theorem rawEff_arm11 (v0 : Val) :
+    rawEff (.ctor 12 [v0]) =
+      (match rawEff v0 with
+      | some a0 => some (.exit a0)
+      | _ => none) := rfl
+theorem rawEff_arm12 (v0 : Val) :
+    rawEff (.ctor 13 [v0]) =
+      (match rawEff v0 with
+      | some a0 => some (.uninterruptible a0)
+      | _ => none) := rfl
+theorem rawEff_arm13 (v0 : Val) :
+    rawEff (.ctor 14 [v0]) =
+      (match rawEff v0 with
+      | some a0 => some (.interruptible a0)
+      | _ => none) := rfl
+theorem rawEff_arm14 (v0 : Val) :
+    rawEff (.ctor 17 [v0]) =
+      (match Canonical.ofVal (α := _root_.Nat) v0 with
+      | some a0 => some (.yieldNow a0)
+      | _ => none) := rfl
+theorem rawEff_arm15 (v0 : Val) (v1 : Val) :
+    rawEff (.ctor 19 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0,
+          Canonical.ofVal (α := _root_.Effect4.Supervision.ObserverMode) v1 with
+      | some a0, some a1 => some (.awaitFiber a0 a1)
+      | _, _ => none) := rfl
+theorem rawEff_arm16 (v0 : Val) :
+    rawEff (.ctor 20 [v0]) =
+      (match rawActionTerm v0 with
+      | some a0 => some (.withFiber a0)
+      | _ => none) := rfl
+theorem rawEff_arm17 (v0 : Val) :
+    rawEff (.ctor 21 [v0]) =
+      (match rawEff v0 with
+      | some a0 => some (.scoped a0)
+      | _ => none) := rfl
+theorem rawEff_arm18 (v0 : Val) (v1 : Val) :
+    rawEff (.ctor 22 [v0, v1]) =
+      (match rawEff v0, rawEff v1 with
+      | some a0, some a1 => some (.acquireRelease a0 a1)
+      | _, _ => none) := rfl
+theorem rawEff_arm19 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawEff (.ctor 23 [v0, v1, v2]) =
+      (match rawLayerTerm v0, Canonical.ofVal (α := _root_.Bool) v1, rawEff v2 with
+      | some a0, some a1, some a2 => some (.provideLayer a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawEff_arm20 (v0 : Val) :
+    rawEff (.ctor 24 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.ServiceKey) v0 with
+      | some a0 => some (.service a0)
+      | _ => none) := rfl
+theorem rawEff_arm21 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawEff (.ctor 25 [v0, v1, v2]) =
+      (match Canonical.ofVal (α := _root_.Effect4.ServiceKey) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v1, rawEff v2 with
+      | some a0, some a1, some a2 => some (.provideService a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawEff_arm22 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawEff (.ctor 26 [v0, v1, v2]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0, rawEff v1, rawEff v2 with
+      | some a0, some a1, some a2 => some (.catchIf a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawEff_arm23 (v0 : Val) (v1 : Val) (v2 : Val) (v3 : Val) :
+    rawEff (.ctor 27 [v0, v1, v2, v3]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Decision) v1, rawEff v2, rawEff v3 with
+      | some a0, some a1, some a2, some a3 => some (.select a0 a1 a2 a3)
+      | _, _, _, _ => none) := rfl
+theorem rawEff_arm24 (v0 : Val) (v1 : Val) (v2 : Val) (v3 : Val) (v4 : Val) (v5 : Val) :
+    rawEff (.ctor 28 [v0, v1, v2, v3, v4, v5]) =
+      (match Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Ty))) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v1,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v2,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v3,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v4, rawEff v5 with
+      | some a0, some a1, some a2, some a3, some a4, some a5 => some (.iterate a0 a1 a2 a3 a4 a5)
+      | _, _, _, _, _, _ => none) := rfl
+theorem rawEff_arm25 (v0 : Val) (v1 : Val) :
+    rawEff (.ctor 29 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0, rawEff v1 with
+      | some a0, some a1 => some (.restore a0 a1)
+      | _, _ => none) := rfl
+theorem rawEff_arm26 (v0 : Val) (v1 : Val) (v2 : Val) (v3 : Val) :
+    rawEff (.ctor 30 [v0, v1, v2, v3]) =
+      (match Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.DefDecl))) v0,
+          rawEffs v1, rawEff v2, rawLayerTerms v3 with
+      | some a0, some a1, some a2, some a3 => some (.defs a0 a1 a2 a3)
+      | _, _, _, _ => none) := rfl
+theorem rawEff_arm27 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawEff (.ctor 31 [v0, v1, v2]) =
+      (match Canonical.ofVal (α := _root_.Nat) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v1, rawEffs v2 with
+      | some a0, some a1, some a2 => some (.invoke a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawEff_arm28 (v0 : Val) (v1 : Val) :
+    rawEff (.ctor 32 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0, rawEff v1 with
+      | some a0, some a1 => some (.provideContext a0 a1)
+      | _, _ => none) := rfl
+theorem rawStmt_arm0 (v0 : Val) :
+    rawStmt (.ctor 0 [v0]) =
+      (match rawEff v0 with
+      | some a0 => some (.bindYield a0)
+      | _ => none) := rfl
+theorem rawStmt_arm1 (v0 : Val) :
+    rawStmt (.ctor 1 [v0]) =
+      (match rawEff v0 with
+      | some a0 => some (.yieldDiscard a0)
+      | _ => none) := rfl
+theorem rawStmt_arm2 (v0 : Val) :
+    rawStmt (.ctor 2 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.ret a0)
+      | _ => none) := rfl
+theorem rawStmt_arm3 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawStmt (.ctor 3 [v0, v1, v2]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0, rawStmts v1, rawStmts v2 with
+      | some a0, some a1, some a2 => some (.ifElse a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawStmt_arm4 (v0 : Val) :
+    rawStmt (.ctor 4 [v0]) =
+      (match rawStmts v0 with
+      | some a0 => some (.whileTrue a0)
+      | _ => none) := rfl
+theorem rawStmts_arm1 (v0 : Val) (v1 : Val) :
+    rawStmts (.ctor 1 [v0, v1]) =
+      (match rawStmt v0, rawStmts v1 with
+      | some a0, some a1 => some (.cons a0 a1)
+      | _, _ => none) := rfl
+theorem rawEffs_arm1 (v0 : Val) (v1 : Val) :
+    rawEffs (.ctor 1 [v0, v1]) =
+      (match rawEff v0, rawEffs v1 with
+      | some a0, some a1 => some (.cons a0 a1)
+      | _, _ => none) := rfl
+theorem rawActionTerm_arm0 (v0 : Val) (v1 : Val) :
+    rawActionTerm (.ctor 0 [v0, v1]) =
+      (match rawEff v0, Canonical.ofVal (α := _root_.Effect4.Supervision.ForkOptions) v1 with
+      | some a0, some a1 => some (.fork a0 a1)
+      | _, _ => none) := rfl
+theorem rawActionTerm_arm1 (v0 : Val) (v1 : Val) (v2 : Val) :
+    rawActionTerm (.ctor 1 [v0, v1, v2]) =
+      (match rawEff v0, Canonical.ofVal (α := _root_.Effect4.Supervision.ForkOptions) v1,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v2 with
+      | some a0, some a1, some a2 => some (.forkIn a0 a1 a2)
+      | _, _, _ => none) := rfl
+theorem rawActionTerm_arm2 (v0 : Val) (v1 : Val) :
+    rawActionTerm (.ctor 2 [v0, v1]) =
+      (match rawEff v0, Canonical.ofVal (α := _root_.Effect4.Supervision.ForkOptions) v1 with
+      | some a0, some a1 => some (.forkScoped a0 a1)
+      | _, _ => none) := rfl
+theorem rawActionTerm_arm3 (v0 : Val) (v1 : Val) :
+    rawActionTerm (.ctor 3 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v1 with
+      | some a0, some a1 => some (.runIn a0 a1)
+      | _, _ => none) := rfl
+theorem rawActionTerm_arm4 (v0 : Val) :
+    rawActionTerm (.ctor 4 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.interrupt a0)
+      | _ => none) := rfl
+theorem rawActionTerm_arm5 (v0 : Val) :
+    rawActionTerm (.ctor 5 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.interruptScoped a0)
+      | _ => none) := rfl
+theorem rawActionTerm_arm6 (v0 : Val) (v1 : Val) :
+    rawActionTerm (.ctor 6 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0,
+          Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Term))) v1 with
+      | some a0, some a1 => some (.interruptAll a0 a1)
+      | _, _ => none) := rfl
+theorem rawActionTerm_arm7 (v0 : Val) :
+    rawActionTerm (.ctor 7 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.awaitAll a0)
+      | _ => none) := rfl
+theorem rawActionTerm_arm8 (v0 : Val) :
+    rawActionTerm (.ctor 8 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.awaitAllFailFast a0)
+      | _ => none) := rfl
+theorem rawActionTerm_arm10 (v0 : Val) :
+    rawActionTerm (.ctor 10 [v0]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
+      | some a0 => some (.awaitNewChildren a0)
+      | _ => none) := rfl
+theorem rawActionTerm_arm11 (v0 : Val) :
+    rawActionTerm (.ctor 11 [v0]) =
+      (match rawEffs v0 with
+      | some a0 => some (.raceAll a0)
+      | _ => none) := rfl
+theorem rawActionTerm_arm13 (v0 : Val) (v1 : Val) :
+    rawActionTerm (.ctor 15 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Term) v1 with
+      | some a0, some a1 => some (.closeScope a0 a1)
+      | _, _ => none) := rfl
+theorem rawActionTerm_arm15 (v0 : Val) :
+    rawActionTerm (.ctor 17 [v0]) =
+      (match rawEffs v0 with
+      | some a0 => some (.raceAllFirst a0)
+      | _ => none) := rfl
+theorem rawActionTerm_arm16 (v0 : Val) :
+    rawActionTerm (.ctor 18 [v0]) =
+      (match
+          Canonical.ofVal (α := (@_root_.Effect4.Row (_root_.Effect4.ServiceKey) (_root_.Effect4.instLTServiceKey))) v0 with
+      | some a0 => some (.context a0)
+      | _ => none) := rfl
+theorem rawLayerTerm_arm0 (v0 : Val) (v1 : Val) :
+    rawLayerTerm (.ctor 0 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.ServiceKey) v0,
+          Canonical.ofVal (α := _root_.Effect4.Program.Lit) v1 with
+      | some a0, some a1 => some (.succeed a0 a1)
+      | _, _ => none) := rfl
+theorem rawLayerTerm_arm1 (v0 : Val) (v1 : Val) :
+    rawLayerTerm (.ctor 1 [v0, v1]) =
+      (match Canonical.ofVal (α := _root_.Effect4.ServiceKey) v0, rawEff v1 with
+      | some a0, some a1 => some (.effect a0 a1)
+      | _, _ => none) := rfl
+theorem rawLayerTerm_arm2 (v0 : Val) :
+    rawLayerTerm (.ctor 2 [v0]) =
+      (match rawEff v0 with
+      | some a0 => some (.effectDiscard a0)
+      | _ => none) := rfl
+theorem rawLayerTerm_arm3 (v0 : Val) (v1 : Val) :
+    rawLayerTerm (.ctor 3 [v0, v1]) =
+      (match rawLayerTerm v0, rawLayerTerm v1 with
+      | some a0, some a1 => some (.provide a0 a1)
+      | _, _ => none) := rfl
+theorem rawLayerTerm_arm4 (v0 : Val) (v1 : Val) :
+    rawLayerTerm (.ctor 4 [v0, v1]) =
+      (match rawLayerTerm v0, rawLayerTerm v1 with
+      | some a0, some a1 => some (.provideMerge a0 a1)
+      | _, _ => none) := rfl
+theorem rawLayerTerm_arm5 (v0 : Val) (v1 : Val) :
+    rawLayerTerm (.ctor 5 [v0, v1]) =
+      (match rawLayerTerm v0, rawLayerTerm v1 with
+      | some a0, some a1 => some (.merge a0 a1)
+      | _, _ => none) := rfl
+theorem rawLayerTerm_arm6 (v0 : Val) :
+    rawLayerTerm (.ctor 6 [v0]) =
+      (match rawLayerTerm v0 with
+      | some a0 => some (.fresh a0)
+      | _ => none) := rfl
+theorem rawLayerTerm_arm7 (v0 : Val) :
+    rawLayerTerm (.ctor 7 [v0]) =
+      (match rawLayerTerm v0 with
+      | some a0 => some (.orDie a0)
+      | _ => none) := rfl
+theorem rawLayerTerm_arm8 (v0 : Val) :
+    rawLayerTerm (.ctor 8 [v0]) =
+      (match Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0 with
+      | some a0 => some (.ref a0)
+      | _ => none) := rfl
+theorem rawLayerTerm_arm9 (v0 : Val) :
+    rawLayerTerm (.ctor 9 [v0]) =
+      (match rawLayerTerms v0 with
+      | some a0 => some (.mergeAll a0)
+      | _ => none) := rfl
+theorem rawLayerTerms_arm1 (v0 : Val) (v1 : Val) :
+    rawLayerTerms (.ctor 1 [v0, v1]) =
+      (match rawLayerTerm v0, rawLayerTerms v1 with
+      | some a0, some a1 => some (.cons a0 a1)
+      | _, _ => none) := rfl
+
 mutual
 theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp)) :
     rawEff (toValEff a) = some a := by
   cases a with
   | «succeed» a0 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff_arm0, Canonical.ofVal_toVal]
   | «fail» a0 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff_arm1, Canonical.ofVal_toVal]
   | «failCause» a0 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff_arm2, Canonical.ofVal_toVal]
   | «sync» a0 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff_arm3, Canonical.ofVal_toVal]
   | «suspend» a0 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff_arm4, rawEff_toValEff a0]
   | «perform» a0 a1 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff_arm5, Canonical.ofVal_toVal]
   | «bind» a0 a1 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
+    simp only [toValEff, rawEff_arm6, rawEff_toValEff a0, rawEff_toValEff a1]
   | «gen» a0 =>
-    simp only [toValEff, rawEff, rawStmts_toValStmts a0]
+    simp only [toValEff, rawEff_arm7, rawStmts_toValStmts a0]
   | «catchCause» a0 a1 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
+    simp only [toValEff, rawEff_arm8, rawEff_toValEff a0, rawEff_toValEff a1]
   | «matchCause» a0 a1 a2 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1, rawEff_toValEff a2]
+    simp only [toValEff, rawEff_arm9, rawEff_toValEff a0, rawEff_toValEff a1, rawEff_toValEff a2]
   | «onExit» a0 a1 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
+    simp only [toValEff, rawEff_arm10, rawEff_toValEff a0, rawEff_toValEff a1]
   | «exit» a0 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff_arm11, rawEff_toValEff a0]
   | «uninterruptible» a0 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff_arm12, rawEff_toValEff a0]
   | «interruptible» a0 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff_arm13, rawEff_toValEff a0]
   | «yieldNow» a0 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff_arm14, Canonical.ofVal_toVal]
   | «awaitFiber» a0 a1 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff_arm15, Canonical.ofVal_toVal]
   | «withFiber» a0 =>
-    simp only [toValEff, rawEff, rawActionTerm_toValActionTerm a0]
+    simp only [toValEff, rawEff_arm16, rawActionTerm_toValActionTerm a0]
   | «scoped» a0 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff_arm17, rawEff_toValEff a0]
   | «acquireRelease» a0 a1 =>
-    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
+    simp only [toValEff, rawEff_arm18, rawEff_toValEff a0, rawEff_toValEff a1]
   | «provideLayer» a0 a1 a2 =>
-    simp only [toValEff, rawEff, rawLayerTerm_toValLayerTerm a0, Canonical.ofVal_toVal,
+    simp only [toValEff, rawEff_arm19, rawLayerTerm_toValLayerTerm a0, Canonical.ofVal_toVal,
       rawEff_toValEff a2]
   | «service» a0 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff_arm20, Canonical.ofVal_toVal]
   | «provideService» a0 a1 a2 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a2]
+    simp only [toValEff, rawEff_arm21, Canonical.ofVal_toVal, rawEff_toValEff a2]
   | «catchIf» a0 a1 a2 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1, rawEff_toValEff a2]
+    simp only [toValEff, rawEff_arm22, Canonical.ofVal_toVal, rawEff_toValEff a1,
+      rawEff_toValEff a2]
   | «select» a0 a1 a2 a3 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a2, rawEff_toValEff a3]
+    simp only [toValEff, rawEff_arm23, Canonical.ofVal_toVal, rawEff_toValEff a2,
+      rawEff_toValEff a3]
   | «iterate» a0 a1 a2 a3 a4 a5 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a5]
+    simp only [toValEff, rawEff_arm24, Canonical.ofVal_toVal, rawEff_toValEff a5]
   | «restore» a0 a1 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1]
+    simp only [toValEff, rawEff_arm25, Canonical.ofVal_toVal, rawEff_toValEff a1]
   | «defs» a0 a1 a2 a3 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEffs_toValEffs a1, rawEff_toValEff a2,
-      rawLayerTerms_toValLayerTerms a3]
+    simp only [toValEff, rawEff_arm26, Canonical.ofVal_toVal, rawEffs_toValEffs a1,
+      rawEff_toValEff a2, rawLayerTerms_toValLayerTerms a3]
   | «invoke» a0 a1 a2 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEffs_toValEffs a2]
+    simp only [toValEff, rawEff_arm27, Canonical.ofVal_toVal, rawEffs_toValEffs a2]
   | «provideContext» a0 a1 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1]
+    simp only [toValEff, rawEff_arm28, Canonical.ofVal_toVal, rawEff_toValEff a1]
 termination_by structural a
 theorem rawStmt_toValStmt (a : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp)) :
     rawStmt (toValStmt a) = some a := by
   cases a with
   | «bindYield» a0 =>
-    simp only [toValStmt, rawStmt, rawEff_toValEff a0]
+    simp only [toValStmt, rawStmt_arm0, rawEff_toValEff a0]
   | «yieldDiscard» a0 =>
-    simp only [toValStmt, rawStmt, rawEff_toValEff a0]
+    simp only [toValStmt, rawStmt_arm1, rawEff_toValEff a0]
   | «ret» a0 =>
-    simp only [toValStmt, rawStmt, Canonical.ofVal_toVal]
+    simp only [toValStmt, rawStmt_arm2, Canonical.ofVal_toVal]
   | «ifElse» a0 a1 a2 =>
-    simp only [toValStmt, rawStmt, Canonical.ofVal_toVal, rawStmts_toValStmts a1,
+    simp only [toValStmt, rawStmt_arm3, Canonical.ofVal_toVal, rawStmts_toValStmts a1,
       rawStmts_toValStmts a2]
   | «whileTrue» a0 =>
-    simp only [toValStmt, rawStmt, rawStmts_toValStmts a0]
+    simp only [toValStmt, rawStmt_arm4, rawStmts_toValStmts a0]
   | «breakLoop» => rfl
 termination_by structural a
 theorem rawStmts_toValStmts
@@ -2619,78 +2992,78 @@ theorem rawStmts_toValStmts
   cases a with
   | «nil» => rfl
   | «cons» a0 a1 =>
-    simp only [toValStmts, rawStmts, rawStmt_toValStmt a0, rawStmts_toValStmts a1]
+    simp only [toValStmts, rawStmts_arm1, rawStmt_toValStmt a0, rawStmts_toValStmts a1]
 termination_by structural a
 theorem rawEffs_toValEffs (a : @_root_.Effect4.Program.Effs (_root_.Effect4.Program.NativeOp)) :
     rawEffs (toValEffs a) = some a := by
   cases a with
   | «nil» => rfl
   | «cons» a0 a1 =>
-    simp only [toValEffs, rawEffs, rawEff_toValEff a0, rawEffs_toValEffs a1]
+    simp only [toValEffs, rawEffs_arm1, rawEff_toValEff a0, rawEffs_toValEffs a1]
 termination_by structural a
 theorem rawActionTerm_toValActionTerm
   (a : @_root_.Effect4.Program.ActionTerm (_root_.Effect4.Program.NativeOp)) :
     rawActionTerm (toValActionTerm a) = some a := by
   cases a with
   | «fork» a0 a1 =>
-    simp only [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm0, rawEff_toValEff a0, Canonical.ofVal_toVal]
   | «forkIn» a0 a1 a2 =>
-    simp only [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm1, rawEff_toValEff a0, Canonical.ofVal_toVal]
   | «forkScoped» a0 a1 =>
-    simp only [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm2, rawEff_toValEff a0, Canonical.ofVal_toVal]
   | «runIn» a0 a1 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm3, Canonical.ofVal_toVal]
   | «interrupt» a0 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm4, Canonical.ofVal_toVal]
   | «interruptScoped» a0 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm5, Canonical.ofVal_toVal]
   | «interruptAll» a0 a1 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm6, Canonical.ofVal_toVal]
   | «awaitAll» a0 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm7, Canonical.ofVal_toVal]
   | «awaitAllFailFast» a0 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm8, Canonical.ofVal_toVal]
   | «snapshotChildren» => rfl
   | «awaitNewChildren» a0 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm10, Canonical.ofVal_toVal]
   | «raceAll» a0 =>
-    simp only [toValActionTerm, rawActionTerm, rawEffs_toValEffs a0]
+    simp only [toValActionTerm, rawActionTerm_arm11, rawEffs_toValEffs a0]
   | «getId» => rfl
   | «closeScope» a0 a1 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm13, Canonical.ofVal_toVal]
   | «getInterruptible» => rfl
   | «raceAllFirst» a0 =>
-    simp only [toValActionTerm, rawActionTerm, rawEffs_toValEffs a0]
+    simp only [toValActionTerm, rawActionTerm_arm15, rawEffs_toValEffs a0]
   | «context» a0 =>
-    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm_arm16, Canonical.ofVal_toVal]
 termination_by structural a
 theorem rawLayerTerm_toValLayerTerm
   (a : @_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp)) :
     rawLayerTerm (toValLayerTerm a) = some a := by
   cases a with
   | «succeed» a0 a1 =>
-    simp only [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal]
+    simp only [toValLayerTerm, rawLayerTerm_arm0, Canonical.ofVal_toVal]
   | «effect» a0 a1 =>
-    simp only [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal, rawEff_toValEff a1]
+    simp only [toValLayerTerm, rawLayerTerm_arm1, Canonical.ofVal_toVal, rawEff_toValEff a1]
   | «effectDiscard» a0 =>
-    simp only [toValLayerTerm, rawLayerTerm, rawEff_toValEff a0]
+    simp only [toValLayerTerm, rawLayerTerm_arm2, rawEff_toValEff a0]
   | «provide» a0 a1 =>
-    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
+    simp only [toValLayerTerm, rawLayerTerm_arm3, rawLayerTerm_toValLayerTerm a0,
       rawLayerTerm_toValLayerTerm a1]
   | «provideMerge» a0 a1 =>
-    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
+    simp only [toValLayerTerm, rawLayerTerm_arm4, rawLayerTerm_toValLayerTerm a0,
       rawLayerTerm_toValLayerTerm a1]
   | «merge» a0 a1 =>
-    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
+    simp only [toValLayerTerm, rawLayerTerm_arm5, rawLayerTerm_toValLayerTerm a0,
       rawLayerTerm_toValLayerTerm a1]
   | «fresh» a0 =>
-    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0]
+    simp only [toValLayerTerm, rawLayerTerm_arm6, rawLayerTerm_toValLayerTerm a0]
   | «orDie» a0 =>
-    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0]
+    simp only [toValLayerTerm, rawLayerTerm_arm7, rawLayerTerm_toValLayerTerm a0]
   | «ref» a0 =>
-    simp only [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal]
+    simp only [toValLayerTerm, rawLayerTerm_arm8, Canonical.ofVal_toVal]
   | «mergeAll» a0 =>
-    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerms_toValLayerTerms a0]
+    simp only [toValLayerTerm, rawLayerTerm_arm9, rawLayerTerms_toValLayerTerms a0]
 termination_by structural a
 theorem rawLayerTerms_toValLayerTerms
   (a : @_root_.Effect4.Program.LayerTerms (_root_.Effect4.Program.NativeOp)) :
@@ -2698,7 +3071,7 @@ theorem rawLayerTerms_toValLayerTerms
   cases a with
   | «nil» => rfl
   | «cons» a0 a1 =>
-    simp only [toValLayerTerms, rawLayerTerms, rawLayerTerm_toValLayerTerm a0,
+    simp only [toValLayerTerms, rawLayerTerms_arm1, rawLayerTerm_toValLayerTerm a0,
       rawLayerTerms_toValLayerTerms a1]
 termination_by structural a
 end
@@ -3170,24 +3543,9 @@ def ofVal : Val → Option (_root_.Effect4.Program.RowKind)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.RowKind) : ofVal (toVal a) = some a := by
   cases a with
-  | «sync» => simp only [toVal, ofVal]
-  | «async» => simp only [toVal, ofVal]
-  | «program» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RowKind} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «sync» => rfl
+  | «async» => rfl
+  | «program» => rfl
 
 theorem fits (a : _root_.Effect4.Program.RowKind) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -3199,7 +3557,8 @@ theorem fits (a : _root_.Effect4.Program.RowKind) : shapeDoc.accepts (toVal a) =
     exact accepts_sum _ _ _ 2 "program" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Program.RowKind) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -3231,28 +3590,10 @@ def ofVal : Val → Option (_root_.Effect4.Program.RowShape)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.RowShape) : ofVal (toVal a) = some a := by
   cases a with
-  | «call» => simp only [toVal, ofVal]
-  | «value» => simp only [toVal, ofVal]
-  | «tupleCall» => simp only [toVal, ofVal]
-  | «method» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RowShape} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «call» => rfl
+  | «value» => rfl
+  | «tupleCall» => rfl
+  | «method» => rfl
 
 theorem fits (a : _root_.Effect4.Program.RowShape) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -3266,7 +3607,8 @@ theorem fits (a : _root_.Effect4.Program.RowShape) : shapeDoc.accepts (toVal a) 
     exact accepts_sum _ _ _ 3 "method" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Program.RowShape) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -3292,20 +3634,8 @@ def ofVal : Val → Option (_root_.Effect4.Program.Registration)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.Registration) : ofVal (toVal a) = some a := by
   cases a with
-  | «deferred» => simp only [toVal, ofVal]
-  | «external» => simp only [toVal, ofVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Registration} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · injection h with h
-    subst h
-    rfl
-  · injection h with h
-    subst h
-    rfl
-  all_goals exact nomatch h
+  | «deferred» => rfl
+  | «external» => rfl
 
 theorem fits (a : _root_.Effect4.Program.Registration) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -3315,7 +3645,8 @@ theorem fits (a : _root_.Effect4.Program.Registration) : shapeDoc.accepts (toVal
     exact accepts_sum _ _ _ 1 "external" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Program.Registration) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
@@ -3339,24 +3670,19 @@ def ofVal : Val → Option (_root_.Effect4.Program.RowArg)
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .str
   | _ => none
 
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm0 (v0 : Val) :
+    ofVal (.ctor 0 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .name := rfl
+theorem ofVal_arm1 (v0 : Val) :
+    ofVal (.ctor 1 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .str := rfl
+
 theorem ofVal_toVal (a : _root_.Effect4.Program.RowArg) : ofVal (toVal a) = some a := by
   cases a with
-  | «name» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «str» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RowArg} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-    subst hj
-    simp only [toVal]
-    rw [Canonical.ofVal_exact hx]
-  all_goals exact nomatch h
+  | «name» a0 => simp only [toVal, ofVal_arm0, Canonical.ofVal_toVal, Option.map_some]
+  | «str» a0 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal, Option.map_some]
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -3373,7 +3699,8 @@ theorem fits (a : _root_.Effect4.Program.RowArg) : shapeDoc.accepts (toVal a) = 
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.RowArg) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
 
 -- No sum of the document gives one wire tag to two cases.
 #guard shapeDoc.wellTagged
