@@ -599,6 +599,40 @@ theorem feed_keepExact_sketch {o : Oracle} {s next : SourceSession} {e : Edit}
     obtain ⟨rfl, -⟩ := Prod.mk.inj hr
     rfl
 
+/-- **A draft recheck is accepted**: `finish` accepts every draft. A step of `source-feed-edit`.
+Its consumer is `feed_draft_ok`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem recheck_draft_ok (o : Oracle) (s : SourceSession) (c : Sketch) (e : Edit)
+    (old : NativeEff) : ∃ r, (s.recheck o .draft c e old).value = .ok r := by
+  unfold recheck
+  rw [Checked.bind_value, Checked.pure_value]
+  exact ⟨_, rfl⟩
+
+/-- **A draft is never refused.** A step of `source-session-undo` and of
+`source-session-draft-transport`. Its consumers are `feed_undo` and
+`DocInternal.replay_drafts_fold`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_draft_ok (o : Oracle) (s : SourceSession) (e : Edit) :
+    ∃ r, (s.feed o .draft e).value = .ok r := by
+  unfold feed
+  split
+  · split
+    · exact recheck_draft_ok _ _ _ _ _
+    · dsimp only
+      split
+      · split
+        · exact recheck_draft_ok _ _ _ _ _
+        · split
+          · exact recheck_draft_ok _ _ _ _ _
+          · rw [Checked.bind_value]
+            split
+            · split
+              · exact ⟨_, rfl⟩
+              · exact recheck_draft_ok _ _ _ _ _
+            · exact recheck_draft_ok _ _ _ _ _
+      · exact recheck_draft_ok _ _ _ _ _
+  · exact ⟨_, rfl⟩
+
 /-- **An accepted feed keeps a coherent session coherent.** The pointer of `source-feed-coherent`.
 It is false at head (`FeedCounterexample.feed_coherent_refuted`): `SourceSession.splice` places
 the part's table through `Table.atSource` with the candidate's ill-formed reference, which puts a
@@ -756,13 +790,31 @@ theorem feed_root (o : Oracle) (policy : FeedPolicy) (s : SourceSession)
   unfold feed
   simp only [hp, hedit, Node.at_]
 
+/-- **Undo**: an edit that applies, then the draft that puts back the old sub-program as written,
+restores a coherent session exactly. The path lens's get-put (`replaceAt_spec`) restores the
+sketch, a draft is never refused, and coherence fixes the table (`Coherent.ext`). The pointer of
+`source-session-undo`. It is proved modulo `feed_coherent`, and it is false at head with it
+(`FeedCounterexample.feed_undo_refuted`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal feed_undo {o : Oracle} {s next : SourceSession} {a : List Nat} {q old : NativeEff}
+theorem feed_undo {o : Oracle} {s next : SourceSession} {a : List Nat} {q old : NativeEff}
     {candidate : Sketch} {step : Edit.Step} (hc : s.Coherent)
     (hat : (Node.eff s.sketch.program).at_ a = some (.eff old))
     (hfill : s.sketch.fillAt a q = some candidate)
     (hnext : (s.feed o .draft (.fill a q)).value = .ok (next,step)) :
-    ∃ back, (next.feed o .draft (.fill a old)).value = .ok (s,back)
+    ∃ back, (next.feed o .draft (.fill a old)).value = .ok (s,back) := by
+  have hnc : next.Coherent := feed_coherent hc hnext
+  obtain ⟨happ, -, -, hsk⟩ := feed_keeps hnext
+  have hs1 : next.sketch = candidate := hsk candidate hfill
+  obtain ⟨⟨b, back⟩, hv⟩ := feed_draft_ok o next (.fill a old)
+  have hbc : b.Coherent := feed_coherent hnc hv
+  obtain ⟨happ2, -, -, hsk2⟩ := feed_keeps hv
+  have hback : next.sketch.edit next.app (.fill a old) = some s.sketch := by
+    rw [hs1]
+    obtain ⟨p', hrep, rfl⟩ := Sketch.fillAt_some hfill
+    exact Sketch.fillAt_of_replaceAt ((Node.replaceAt_spec hrep).2.2 _ hat)
+  have hb : b = s := Coherent.ext hbc hc (happ2.trans happ) (hsk2 _ hback)
+  subst hb
+  exact ⟨back, hv⟩
 
 end SourceSession
 
@@ -788,26 +840,218 @@ theorem Doc.step_ok {o : Check.Oracle} {d next : Doc} {at_ : Snap} {action : Doc
       cases h
       exact ⟨fresh, hfresh, rfl, rfl, rfl, rfl⟩
 
-/-- Placement: initial-algebras-folds; source-session-coherent's reachable-state obligation, R14.
-The sealed replay witnesses every accepted action history, including revert.
-Consumer: SourceSession.reached_view. This establishes no admission or progress claim. -/
+/-! ## The document's replay keeps coherence
+
+Each action runs feeds in order (`DocInternal.apply`): a commit's batch, a draft, or a revert's
+inverses. Each statement below is a step of `source-document-coherent`, proved modulo
+`SourceSession.feed_coherent`, and names its consumer. -/
+
+namespace DocInternal
+open _root_.Effect4.Program.Check
+
+/-- **A batch of feeds that each keep coherence keeps it.** A step of
+`source-document-coherent`. Its consumer is `apply_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal Doc.coherent (d : Doc) : d.session.Coherent
+theorem batch_coherent {o : Oracle} {policy : FeedPolicy}
+    (hfeed : ∀ {s next : SourceSession} {e : Edit} {step : Edit.Step}, s.Coherent →
+      (s.feed o policy e).value = .ok (next, step) → next.Coherent) :
+    ∀ (items : List (Place × Change)) (s : SourceSession) (idx : Nat) (fresh : Fresh),
+      s.Coherent → (batch o policy s idx items).value = .ok fresh → fresh.session.Coherent
+  | [], s, idx, fresh, hc, h => by
+    simp only [batch, Checked.pure_value] at h
+    cases h
+    exact hc
+  | (place, change) :: rest, s, idx, fresh, hc, h => by
+    unfold batch at h
+    split at h
+    · cases h
+    · split at h
+      · cases h
+      · rw [Checked.bind_value] at h
+        split at h
+        · cases h
+        · rename_i next step hf
+          rw [Checked.bind_value] at h
+          split at h
+          · cases h
+          · rename_i later hlater
+            rw [Checked.pure_value] at h
+            cases h
+            exact batch_coherent hfeed rest next (idx + 1) later (hfeed hc hf) hlater
+
+/-- **A revert's inverses, each a feed that keeps coherence, keep it.** A step of
+`source-document-coherent`. Its consumer is `apply_coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem undoItems_coherent {o : Oracle} {policy : FeedPolicy}
+    (hfeed : ∀ {s next : SourceSession} {e : Edit} {step : Edit.Step}, s.Coherent →
+      (s.feed o policy e).value = .ok (next, step) → next.Coherent) :
+    ∀ (items : List UndoItem) (s : SourceSession) (idx : Nat) (fresh : Fresh),
+      s.Coherent → (undoItems o policy s idx items).value = .ok fresh → fresh.session.Coherent
+  | [], s, idx, fresh, hc, h => by
+    simp only [undoItems, Checked.pure_value] at h
+    cases h
+    exact hc
+  | item :: rest, s, idx, fresh, hc, h => by
+    unfold undoItems at h
+    split at h
+    · cases h
+    · rw [Checked.bind_value] at h
+      split at h
+      · cases h
+      · rename_i next step hf
+        rw [Checked.bind_value] at h
+        split at h
+        · cases h
+        · rename_i later hlater
+          rw [Checked.pure_value] at h
+          cases h
+          exact undoItems_coherent hfeed rest next (idx + 1) later (hfeed hc hf) hlater
+
+/-- **The sole interpreter keeps coherence**, modulo `SourceSession.feed_coherent`. A step of
+`source-document-coherent`. Its consumer is `replayStep_coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem apply_coherent {o : Oracle} {st : State} {a : DocAction} {fresh : Fresh}
+    (hc : st.session.Coherent) (h : (apply o st a).value = .ok fresh) :
+    fresh.session.Coherent := by
+  unfold apply at h
+  split at h
+  · cases h
+  · exact batch_coherent (fun hs hf => SourceSession.feed_coherent hs hf) _ _ _ _ hc h
+  · rw [Checked.bind_value] at h
+    split at h
+    · cases h
+    · rename_i next step hf
+      rw [Checked.pure_value] at h
+      cases h
+      exact SourceSession.feed_coherent hc hf
+  · split at h
+    · cases h
+    · exact undoItems_coherent (fun hs hf => SourceSession.feed_coherent hs hf) _ _ _ _ hc h
+
+/-- One replay step keeps coherence. A step of `source-document-coherent`. Its consumer is
+`foldl_replayStep_coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem replayStep_coherent {x : Except (Nat × DocRefusal) State} {a : DocAction} {st : State}
+    (hx : ∀ st, x = .ok st → st.session.Coherent)
+    (h : (replayStep Oracle.uncached x a).value = .ok st) : st.session.Coherent := by
+  cases x with
+  | error why => cases h
+  | ok prev =>
+    change (advance prev (apply Oracle.uncached prev a).value) = .ok st at h
+    cases happ : (apply Oracle.uncached prev a).value with
+    | error why =>
+      rw [happ] at h
+      cases h
+    | ok fresh =>
+      rw [happ] at h
+      cases h
+      exact apply_coherent (hx prev rfl) happ
+
+/-- A run of replay steps keeps coherence. A step of `source-document-coherent`. Its consumer
+is `replayState_coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldl_replayStep_coherent :
+    ∀ (l : List DocAction) (x : Except (Nat × DocRefusal) State),
+      (∀ st, x = .ok st → st.session.Coherent) → ∀ st,
+      l.foldl (fun st a => (replayStep Oracle.uncached st a).value) x = .ok st →
+      st.session.Coherent
+  | [], _, hx, st, h => hx st h
+  | _ :: l, _, hx, st, h =>
+    foldl_replayStep_coherent l _ (fun _ h' => replayStep_coherent hx h') st h
+
+/-- **Every replayed state is coherent**: the origin opens a coherent session
+(`SourceSession.open_coherent`). A step of `source-document-coherent`. Its consumer is
+`Doc.coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem replayState_coherent (origin : DocOrigin) (history : List DocAction) (st : State)
+    (h : replayState origin history = .ok st) : st.session.Coherent := by
+  refine foldl_replayStep_coherent history _ ?_ st h
+  intro st0 h0
+  change (Except.ok ⟨(SourceSession.open Oracle.uncached origin.app origin.sketch).value, []⟩ :
+    Except (Nat × DocRefusal) State) = .ok st0 at h0
+  cases h0
+  exact SourceSession.open_coherent _ _ _
+
+/-- **A replay of drafts keeps the application, folds the edited sketch, and keeps coherence**,
+modulo `SourceSession.feed_coherent`. A step of `source-session-draft-transport`. Its consumer is
+`SourceSession.replay_drafts_view`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem replay_drafts_fold (app : SigApp) :
+    ∀ (edits : List Edit) (st : State), st.session.Coherent → st.session.app = app →
+      ∃ st', (edits.map DocAction.draft).foldl
+          (fun x a => (replayStep Oracle.uncached x a).value) (.ok st) = .ok st' ∧
+        st'.session.app = app ∧
+        st'.session.sketch = edits.foldl (fun s e => (s.edit app e).getD s) st.session.sketch ∧
+        st'.session.Coherent
+  | [], st, hc, happ => ⟨st, rfl, happ, rfl, hc⟩
+  | e :: rest, st, hc, happ => by
+    obtain ⟨⟨next, step⟩, hv⟩ := SourceSession.feed_draft_ok Oracle.uncached st.session e
+    have hstep : (replayStep Oracle.uncached (.ok st) (.draft e)).value =
+        .ok ⟨next, st.entries ++ [⟨.draft, record next step⟩]⟩ := by
+      show advance st (apply Oracle.uncached st (.draft e)).value = _
+      simp only [apply, Checked.bind_value, hv, Checked.pure_value]
+      rfl
+    obtain ⟨happ', -, hnone, hsome⟩ := SourceSession.feed_keeps hv
+    have hnc := SourceSession.feed_coherent hc hv
+    obtain ⟨st', hfold, h1, h2, h3⟩ := replay_drafts_fold app rest
+      ⟨next, st.entries ++ [⟨.draft, record next step⟩]⟩ hnc (happ'.trans happ)
+    refine ⟨st', ?_, h1, ?_, h3⟩
+    · simp only [List.map_cons, List.foldl_cons]
+      rw [hstep]
+      exact hfold
+    · rw [h2]
+      simp only [List.foldl_cons]
+      congr 1
+      rw [← happ]
+      cases hed : st.session.sketch.edit st.session.app e with
+      | none =>
+        rw [hnone hed]
+        rfl
+      | some c =>
+        rw [hsome c hed]
+        rfl
+
+end DocInternal
+
+/-- **Every sealed document's session is coherent**: its runtime state is a replay of its
+history (`Doc.replayedState`), and every replayed state is coherent. The pointer of
+`source-document-coherent`. It is proved modulo `SourceSession.feed_coherent`, and it is false
+at head with it (`FeedCounterexample.doc_coherent_refuted`). Placement: initial-algebras-folds;
+source-session-coherent's reachable-state obligation, R14. Consumer:
+`SourceSession.reached_view`. This establishes no admission or progress claim. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Doc.coherent (d : Doc) : d.session.Coherent :=
+  DocInternal.replayState_coherent d.origin d.history d.runtime d.replayedState
 
 namespace SourceSession
+open _root_.Effect4.Program.Check in
 /-- The old draft-list reach, stated through the sole document replay.
 Placement: source-session-coherent, initial-algebras-folds, R14.
 This retains every old application, initial sketch, and edit list without a coherence premise.
 Consumer: the draft case of Doc.coherent and transport of the old reached_view observation.
-It establishes no admission, progress, or native behavior. -/
+It establishes no admission, progress, or native behavior. It is proved modulo
+`feed_coherent`, and it is false at head with it
+(`FeedCounterexample.replay_drafts_view_refuted`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal replay_drafts_view (app : SigApp) (initial : Sketch) (edits : List Edit) (id : DocId) :
+theorem replay_drafts_view (app : SigApp) (initial : Sketch) (edits : List Edit) (id : DocId) :
     ∃ session, replayDoc ⟨id,app,initial⟩ (edits.map DocAction.draft) = .ok session ∧
       session.app = app ∧
       session.sketch = edits.foldl (fun s e => (s.edit app e).getD s) initial ∧
       session.view.table = session.sketch.sourceTable app ∧
       session.view.refusals = session.sketch.sourceRefusals app ∧
-      session.view.type = (session.sketch.sourceCheck app).toOption
+      session.view.type = (session.sketch.sourceCheck app).toOption := by
+  obtain ⟨st', hfold, happ, hsk, hc⟩ := DocInternal.replay_drafts_fold app edits
+    ⟨(SourceSession.open Oracle.uncached app initial).value, []⟩
+    (SourceSession.open_coherent _ _ _) rfl
+  refine ⟨st'.session, ?_, happ, hsk, ?_⟩
+  · have hstate : DocInternal.replayState ⟨id, app, initial⟩ (edits.map DocAction.draft) =
+        .ok st' := hfold
+    unfold replayDoc
+    rw [hstate]
+    rfl
+  · have hv := SourceSession.view_eq hc
+    rw [happ] at hv
+    exact hv
 
 /-- Every sealed document exposes the exact source table, refusals, and root observation. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
