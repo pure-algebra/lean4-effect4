@@ -191,10 +191,10 @@ def digestVectors : List Val :=
   , .ref 2 (List.replicate 32 0)
   , .handle 2 7 ]
 
-/-- `ocaml/eff/goldens/val_ref.hex`: the tree of `Store/Val.lean:1147`. -/
+/-- `ocaml/eff/goldens/val_ref.hex`: the nested reference control for `Val.handles` in `src/Effect4/Store/Carrier/Val.lean`. -/
 def valRefTree : Val := .ctor 0 [.str "Effect", .ref 2 (List.replicate 32 0)]
 
-/-- `ocaml/eff/goldens/val_handle.hex`: the tree of `Store/Val.lean:1174-1175`. -/
+/-- `ocaml/eff/goldens/val_handle.hex`: a nested handle control for `Val.handles` in `src/Effect4/Store/Carrier/Val.lean`. -/
 def valHandleTree : Val := .ctor 0 [.handle 1 3, .list [.handle 2 4, .nat 9]]
 
 /-- The number frames of the value append: a negative integer (tag 13), a double (tag 14), and
@@ -236,7 +236,7 @@ def a1Cases : List Case :=
 
 /-! ## G1 — node encodings -/
 
-/-- `Store/Node.lean:437`'s `sampleNode`, restated (it is `private` there): the census entry
+/-- `sampleNode (src/Effect4/Store/Domain/Node.lean)`'s `sampleNode`, restated (it is `private` there): the census entry
 filed as an export under the zero spec. 108 bytes, first two bytes `00 02`. -/
 def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
 
@@ -266,7 +266,7 @@ def g1Cases : List Case :=
 
 def storeAfterSchema : Store := afterPut Store.empty probeSchema
 
-/-- The hand-built occupant of `Store/Store.lean:614`: another node at the entry's address. -/
+/-- The hand-built occupant of `probeEntry (src/Effect4/Store/Domain/Store.lean)`: another node at the entry's address. -/
 def occupantNode : Node := ⟨0, .«export», probeSchemaAddress, .nat 1⟩
 
 def occupantStore : Store :=
@@ -469,7 +469,7 @@ def g6Cases : List Case :=
 /-! ## G7 — `Store.verify` on a good store and four mutations -/
 
 /-- The entry's payload with one byte flipped (`1947 = 0x079b` to `1946 = 0x079a`), left under
-the old key: `Store/Word.lean:941-945`. -/
+the old key: `verify_sound (src/Effect4/Store/Domain/Word.lean)`. -/
 def flippedEntry : Node :=
   ⟨0, .«export», probeSchemaAddress, .ctor 0 [.str "Effect", .str "gen", .ctor 0 [], .nat 1946]⟩
 
@@ -547,7 +547,7 @@ def header : List String :=
   , "#   entriesVal   = list (pair (list (map nat layer)) (entryVal entry))"
   , "#   layer path   = list (map nat path)"
   , "#"
-  , "# rootKindIndex: stdlib=0 journal=1 daemon=2 schema=3 char=4 (Store/Store.lean:47-53)."
+  , "# rootKindIndex: stdlib=0 journal=1 daemon=2 schema=3 char=4 (RootKind (src/Effect4/Store/Domain/Store.lean))."
   , "# Not cut, and why: docs/research/2026-09-08-engine-lane-gld-delivery.md." ]
 
 def familyCount (cs : List Case) (f : String) : Nat := (cs.filter fun c => c.family = f).length

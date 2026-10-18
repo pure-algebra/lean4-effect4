@@ -29,7 +29,7 @@ A *handle* is a live allocation in a running machine's stores: rc.112's `FiberIm
 `Scope` (`internal/effect.ts:3914-3922`) and `MemoMap` (`Layer.ts:421-458`) objects. It is the
 carrier's `handle` frame (tag 12) with a kind byte from `HandleKind`; the byte table is
 separate from `Store.Kind`, which numbers *content* kinds, because a handle is not content
-and no node carries one (`Store/Val.lean`). Distinct kinds stay distinct: the typing
+and no node carries one (`src/Effect4/Store/Carrier/Val.lean`). Distinct kinds stay distinct: the typing
 (`Program/Typed.lean` `Val.hasTy`), the key discipline (`Machine/Handles.lean` `Val.keys`)
 and the truth wire (`harness/truth/Truth.lean`) all read the kind.
 

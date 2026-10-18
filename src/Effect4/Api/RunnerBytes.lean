@@ -18,11 +18,11 @@ TypeScript holders get the same bytes from the same declarations.
   concatenation (`replayBytes_append`), like `Runner.replay`.
 * **Every boundary value carries its schema.** `schemas` lists the shape document of every
   type that crosses, and `schemaBytes` writes one as content, by the instance of `ShapeDoc`
-  itself (`Store/Derived/Value.lean`).
+  itself (`ValueGen.ShapeDocC.instCanonical`, `src/Effect4/Store/Domain/Derived/Value.lean`).
 
 A value inside a row (a call's request, a reply's answer) is written as its description, the
 generated sum `Val`. A live handle therefore never enters content as a handle: a shape accepts
-no handle (`Store/Shape.lean`), and a described handle is two numbers. Whether a holder should
+no handle (`src/Effect4/Store/Domain/Shape.lean`), and a described handle is two numbers. Whether a holder should
 refuse a row that describes one is a policy above this module.
 -/
 

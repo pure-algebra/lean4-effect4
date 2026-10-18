@@ -4,7 +4,7 @@
    What it checks (docs/research/2026-09-08-engine-brief.md §2.1; the lane's acceptance):
 
      1  G0 reproduced on BOTH instances.  `p42` / `pFork` / `pAwait` -- the byte-pinned
-        corpus of src/Effect4/Program/Wire.lean:74-106, written in `Eff_types`, the one
+        corpus of p42 (src/Effect4/Store/Domain/ProgramWire.lean), written in `Eff_types`, the one
         program type of the wire and both instances -- give `finished ... success 42`, `finished fibers=2 success
         ctor 0 [7]` and `frontier fibers=1`; and `Fast` answers what `Ref` answers.
         With them, the term rows' environment (the state plan's T3b): a read-modify-write

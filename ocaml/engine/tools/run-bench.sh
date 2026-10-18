@@ -153,7 +153,7 @@ if want engine; then
       ./$B/engine/test/bench_carriers.exe
   run "B-Q3a–c, B-Q5a–c log/index/query (lane Q3, \`bench_query\`)" \
       ./$B/engine/test/bench_query.exe
-  run "the trace over E4_log.Vec (lane W, \`bench_trace\`)" \
+  run "the trace over Lcnf_array (lane W, \`bench_trace\`)" \
       ./$B/engine/test/bench_trace.exe
   run "B-Q1a/B-Q1b dispatcher + the 100 000-op differential (lane Q1, \`test_buckets\`)" \
       ./$B/engine/test/test_buckets.exe

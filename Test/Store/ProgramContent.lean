@@ -20,8 +20,8 @@ rank 5, `docs/research/2026-10-08-seat-ORG-theory-map.md` §7).
   (`docs/research/2026-10-09-mcp-code-mode-design.md` §10.2), still open.
 
 Placement. The readers instantiate laws at the program carrier; the battery states nothing of a
-subtree's key, of sharing between programs, or of hash injectivity, which `address_inj` takes as a
-named premise.
+subtree's key, of sharing between programs, or of hash injectivity.
+`address_inj_resident` (`src/Effect4/Store/Domain/Store.lean`) applies only to residents at their own addresses in one store.
 -/
 
 set_option autoImplicit false

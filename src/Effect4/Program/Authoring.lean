@@ -516,7 +516,7 @@ structure Module (Op : Type) where
   main : Src Op
   /-- The declaration table of the module's named types (decisions rows 400 to 402): a declared
   name is read by its body where the checker reads a type by shape. A derived type's declarations
-  are `Modeled.decls`. Empty by default; `Api.Author.buildIn` reads it (the wiring plan, W4). -/
+  are `Modeled.decls`. Empty by default; `Api.Author.build` reads it (`src/Effect4/Api/Author.lean`). -/
   types : TyDecls := []
 
 /-- Every row a module supplies, in table order: its own declarations, then each service's

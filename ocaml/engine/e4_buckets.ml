@@ -4,11 +4,11 @@
 
    THE ABSTRACTION FUNCTION, once, for both carriers:
 
-       bucket_contents (front, back) = front @ List.rev back        (Lib/Deque.lean:92-96)
-       to_list t = the (priority, bucket_contents) pairs, ascending  (Lib/Map.lean:9-14)
+       bucket_contents (front, back) = front @ List.rev back        (Deque (git:79752b3e6^:src/OCaml5/Lib/Deque.lean))
+       to_list t = the (priority, bucket_contents) pairs, ascending  (Map (git:79752b3e6^:src/OCaml5/Lib/Map.lean))
 
    `enqueue` conses onto `back` (O(1)); `drain` reverses each `back` exactly once (O(n) for
-   the whole snapshot). The Lean carrier's `tasks ++ [t]` (Fibers.lean:140) is the same
+   the whole snapshot). The Lean carrier's `tasks ++ [t]` (Dispatcher.insert (src/Effect4/Machine/Fibers.lean)) is the same
    observation at quadratic cost: 79 x slower at bucket depth 1 024 and 18 500 x at 1e5
    (design §6.2), which is D-A3-1.
 
@@ -32,7 +32,7 @@ module type S = sig
 end
 
 (* The one place a priority is refused, shared by both carriers. `Dispatcher.enqueue` takes a
-   `Nat` (Fibers.lean:145), so a negative priority cannot arise from the generated code; it is
+   `Nat` (Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean)), so a negative priority cannot arise from the generated code; it is
    a violated precondition, hence an exception and not a `result` (Mirage's rule, survey §7). *)
 let check_priority p =
   if p < 0 then invalid_arg "E4_buckets: negative priority"
@@ -59,7 +59,7 @@ module Assoc : S = struct
   let bucket_is_empty b = match (b.front, b.back) with [], [] -> true | _ -> false
   let is_empty t = List.for_all bucket_is_empty t.buckets
 
-  (* `Dispatcher.insert` (Fibers.lean:136-142), with `tasks ++ [task]` replaced by a cons onto
+  (* `Dispatcher.insert` (Dispatcher.insert (src/Effect4/Machine/Fibers.lean)), with `tasks ++ [task]` replaced by a cons onto
      the back list. The recursion depth is the number of priorities, 1..16 in a real
      dispatcher and 256 in the tripwire bench. *)
   let rec insert p x = function

@@ -4,8 +4,7 @@
    `Ref` instance's fiber table (api_engine_ref.ml) and the differential's left-hand side.
 
    The point of the twin: `completed` here MAINTAINS NOTHING.  It is Lean's
-   `m.fibers.filterMap (fun f => f.exit.map ((f.id, ·)))` (src/Effect4/Machine/Fibers.lean:
-   1543), walked at read time, exactly as the generated engine did before lane G3.  So
+   `m.fibers.filterMap (fun f => f.exit.map ((f.id, ·)))` RunMachine.completedExits (src/Effect4/Machine/Fibers.lean), walked at read time, exactly as the generated engine did before lane G3.  So
    `Ref` vs `Fast` — 74 306 replay positions of lane X's differential — is precisely the
    question "does the maintained view answer what the scan answers", at every step of every
    tape of every corpus program.  If the twin maintained a view too, that question would not
@@ -20,18 +19,17 @@
    Depends on: the OCaml standard library only.
 
    The Lean operation each function reproduces:
-     find_opt   `List.find?`                     (Fibers.lean:573-575 fiber?)
-     set        replace-by-key `List.map`, a NO-OP on an absent key   (:577-579 update)
-     add        `xs ++ [(k, v)]` when fresh                           (:877 spawn)
-     map        `List.map`                                           (:1256, :1344)
-     for_all    `List.all`                                           (:608-609 finished)
-     completed  `List.filterMap`                                     (:1541-1543)
+     find_opt   `List.find?`                     RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)
+     set        replace-by-key `List.map`, a NO-OP on an absent key   RunMachine.update (src/Effect4/Machine/Fibers.lean)
+     add        `xs ++ [(k, v)]` when fresh                           spawn (src/Effect4/Machine/Fibers.lean)
+     map        `List.map`                                           dropObservers (src/Effect4/Machine/Fibers.lean)
+     for_all    `List.all`                                           RunMachine.finished (src/Effect4/Machine/Fibers.lean)
+     completed  `List.filterMap`                                     RunMachine.completedExits (src/Effect4/Machine/Fibers.lean)
 
    Behaviours:
    TFV1 the internal list is in ALLOCATION order, exactly Lean's carrier   by construction
    TFV2 `bindings`, `to_list` and `completed` are ASCENDING by key.  For every table the
-        machine can build the two orders COINCIDE (ids are minted monotonically, Fibers.lean:
-        867, :877; lane C's licence, re-verified)                          by construction
+        machine can build the two orders COINCIDE (ids are minted by spawn (src/Effect4/Machine/Fibers.lean); lane C's licence)                          by construction
    TFV3 at most one binding per key                                        by construction
    TFV4 no polymorphic comparison touches a value: every comparison is on an int key
         (ocaml/STANDARDS.md §4)                                            by construction *)

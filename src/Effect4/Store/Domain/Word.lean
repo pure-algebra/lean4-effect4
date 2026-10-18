@@ -21,7 +21,7 @@ the remote's closure into the local; `LocalFirst` keeps an outbox word beside it
 `sync` replays the outbox into a remote; `Store.verify` recomputes every address over
 `Node.encode`, re-decodes every node, re-checks every edge and resolves every root at its kind.
 
-The laws: `wf_closed` (a well-formed word replays from the empty store into a closed one),
+The laws: `wf_apply` (a well-formed word replays from the empty store into a closed one),
 `apply_idempotent` (replaying a word into the store it produced changes nothing),
 `closure_wf` (a closure is a well-formed word, for every store and every fuel, because a node
 is emitted only when its edges resolve among the bindings already emitted), `closure_closed`
@@ -323,12 +323,6 @@ theorem wf_apply {w : Word} (h : Word.wf w = true) :
   have := wfFrom_apply w [] h faithful_nil empty_closed
   rw [List.nil_append] at this
   exact this
-
-/-- The brief's form: a well-formed word projects to a closed store. -/
-theorem wf_closed {w : Word} (h : Word.wf w = true) :
-    ∃ s, Word.apply w Store.empty = .ok s ∧ Closed s :=
-  let ⟨ha, _, hc⟩ := wf_apply h
-  ⟨Word.toStore w, ha, hc⟩
 
 /-! ## Closure: the reachable subgraph, children first -/
 
@@ -873,11 +867,6 @@ theorem verify_sound {s : Store} (h : s.verify = .ok ()) : s.Sound := by
   exact ⟨fun d n hd => (hall d n hd).2.2.1, fun d n hd => (hall d n hd).2.1,
     fun d n hd => (hall d n hd).2.2.2.1, fun d n hd => (hall d n hd).1,
     fun d n hd => (hall d n hd).2.2.2.2⟩
-
-/-- The brief's form: closed, and every node at the hash of its bytes. -/
-theorem verify_sound' {s : Store} (h : s.verify = .ok ()) :
-    Closed s ∧ ∀ d n, s.find d = some n → d = sha256 n.encode :=
-  ⟨(verify_sound h).closed, (verify_sound h).addressed⟩
 
 /-- A store that verifies resolves every root at its kind. -/
 theorem verify_roots {s : Store} (h : s.verify = .ok ()) :

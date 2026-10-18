@@ -23,7 +23,7 @@
 
    THREE CARRIER CHOICES, each because the key says so.
      `by_index`     the trace index is DENSE and MONOTONE, so the entries live in an
-                    `E4_log.Vec` (the same chunked vector as the log), not in a `Map`:
+                    `Lcnf_array` (the same chunked vector as the log), not in a `Map`:
                     O(1) append, O(log (n/256)) get, and one fewer balanced tree per row.
      `by_decision`  the rows of one decision are CONTIGUOUS (a decision appends a segment,
                     design-language §1.6), so a decision needs no posting list at all: the
@@ -93,7 +93,7 @@ val parse_run_event_row : decision:int -> int -> E4_log.row -> entry
     `E4_engine.ENGINE.trace_rows` prints (`ocaml/engine/e4_engine.ml:472-505`), which are
     `name(arg,arg,...)` with the arguments nested by parentheses and brackets.  It reads the
     head name to a {!kind}, and the identities off the argument positions Lean declares
-    (`src/Effect4/Machine/Fibers.lean:355-374`); an unrecognised head is {!kind_unknown}
+    (`RunEvent (src/Effect4/Machine/Fibers.lean)`); an unrecognised head is {!kind_unknown}
     with every identity [None], never a guess.
 
     THE OWED ROWS ARE OWED HERE (A3 §1.3.4).  `scopeLinked`/`scopeClosedOnLink` supply the

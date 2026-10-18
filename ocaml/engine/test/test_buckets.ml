@@ -7,7 +7,7 @@
      B6, B7      the armed flag (a host fact with no Lean counterpart, refusal W4-DEQ-ARMED)
                  and persistence;
      DIFF        a differential against Dispatcher_ref -- the literal transcription of
-                 Fibers.lean:115-155 -- over 100 000 random enqueue/drain/arm/disarm
+                 Dispatcher (src/Effect4/Machine/Fibers.lean) -- over 100 000 random enqueue/drain/arm/disarm
                  operations: `to_list` and `armed` must be equal after EVERY operation, and a
                  drain must deliver the same list;
      BENCH       the B-Q1a / B-Q1b cells at p in {1, 4, 16, 256} and drain intervals
@@ -254,7 +254,7 @@ let differential (module B : E4_buckets.S) label ops =
       incr step)
     ops;
   check
-    (Printf.sprintf "%s buckets-differential  %d ops against Dispatcher_ref (Fibers.lean:115-155)"
+    (Printf.sprintf "%s buckets-differential  %d ops against Dispatcher_ref (Dispatcher (src/Effect4/Machine/Fibers.lean))"
        label differential_ops)
     (!bad = 0);
   if !bad <> 0 then note "%s: %d divergences, first at op %d" label !bad !first_bad

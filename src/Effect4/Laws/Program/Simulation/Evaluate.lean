@@ -1,6 +1,7 @@
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Simulation.Actions
 import Effect4.Laws.Auto.Inversion
+import Effect4.Store.Domain.Store
 
 /-!
 # The concrete evaluator agreement (P3, step 4e)

@@ -140,7 +140,7 @@ module Make (I : INSTANCE) = struct
            This is a host boundary result, not a simulated transition. *)
         { t with outside_profile = Some why }
 
-  (* `replayEval` STOPS consuming the tape (Fibers.lean:2028-2040, generated at
+  (* `replayEval` STOPS consuming the tape (replayEval (src/Effect4/Machine/Fibers.lean), generated at
      api_engine.ml's `replayEval`): at a stuck machine it answers `stuck why m` WITHOUT
      applying the decision, and at an unsettled step -- a non-empty command residue, i.e. the
      fuel ran out -- it answers `frontier r.1` and reads no further.  Everything after that
@@ -178,7 +178,7 @@ module Make (I : INSTANCE) = struct
     Seq.scan step_or_hold t (List.to_seq tape)
 
   (* RUN positions: the machines the replay actually visits.  It ends where `replayEval` ends
-     (Fibers.lean:2028-2040) and repeats nothing, so `Seq.length` of it is the number of
+     (replayEval (src/Effect4/Machine/Fibers.lean)) and repeats nothing, so `Seq.length` of it is the number of
      positions the run has.  Lane P6's finding F1 is exactly the difference between this and
      the sequence above: a 64-decision tape whose fuel runs out at the first decision has
      |tape| + 1 = 65 TAPE positions and 2 RUN positions. *)

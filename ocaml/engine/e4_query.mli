@@ -41,7 +41,7 @@
    Properties:
      Q1  Free: INV-TAPE-1(query) above.       [by type; gated; tested: query-free]
      Q2  Agreement: `at s i` equals the machine `replay program fuel (take i tape)`
-         produces.  [licensed by Api.replay's agreement theorem (src/Effect4/Api.lean:156-162,
+         produces.  [licensed by Api.replay's agreement theorem (replay (src/Effect4/Api.lean),
          commit 781cfbc); DIFFERENTIAL DF-3: for every corpus program and tape, `at s i` for
          every i must equal what replaying the tape prefix produces, on every projection;
          tested: query-agreement / DF-3 in test_query.ml]

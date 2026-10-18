@@ -8,14 +8,14 @@ public import Effect4.Data.Json
 Owner: a JSON number from a natural — the binary64 datum the host would parse — built from
 the number's bits alone, so it reaches no `Float` primitive and no axiom.
 
-`highestBit`, `binary64OfNat` and `Json.ofNat` are `Store/JsonCanonical.lean:61-81` moved
+`highestBit`, `binary64OfNat` and `Json.ofNat` are the declarations in `git:a47c26821^:src/Effect4/Store/JsonCanonical.lean`, moved
 verbatim when that module retired with the JSON tag alphabet (the CAS trait,
 `docs/research/2026-09-04-cas-trait-plan.md` §6): the helpers were never part of the address,
 only of the printers, and the printers outlive the alphabet. The namespace stays
 `Effect4.Arch` because six modules address them as `Arch.Json.ofNat` and `Arch.binary64OfNat`
 (`Surface/Entity.lean:532`, `Surface/Api.lean:1855`, `Surface/Deploy.lean:520`,
 `Codegen/JsonSchema.lean:428-601`, `Ingest/JsonSchema.lean:280`, `Evidence/Views.lean`,
-`StdLib/Entry.lean:68`), and the store's own printer (`Store/Shape.lean`) reads them
+`StdLib/Entry.lean:68`), and the store's own printer (`src/Effect4/Store/Domain/Shape.lean`) reads them
 the same way. `binary64OfNat` is a binary64 datum only below 2^1024: exact for a natural of at
 most 53 significant bits (every natural up to 2^53), truncated toward zero for any other, so it
 is not injective on `Nat` (`Surface/Annotate.lean:58`). From 2^1024 up the biased exponent leaves

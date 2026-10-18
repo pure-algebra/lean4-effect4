@@ -13,7 +13,7 @@
 
 ; lane Q1 — the dispatcher.
 ;   test_buckets  E4_buckets over BOTH carriers, the 100 000-op differential against
-;                 dispatcher_ref (the literal transcription of Fibers.lean:115-155), and the
+;                 dispatcher_ref (Dispatcher in src/Effect4/Machine/Fibers.lean), and the
 ;                 B-Q1a/B-Q1b bench at p in {1,4,16,256}.
 ; The due queue, the wake protocol and the timer store are the machine's own
 ; (src/Effect4/Machine/Wake.lean, src/Effect4/Machine/Timer.lean), made from LCNF into
@@ -167,7 +167,7 @@
  (modules test_replay_steps)
  (libraries effect4_engine effect4_eff))
 
-;   bench_trace  lane W item 2: `E4_trace` over `E4_log.Vec` — the viewer's walk (nth_opt at
+;   bench_trace  lane W item 2: `E4_trace` over `Lcnf_array` — the viewer's walk (nth_opt at
 ;                every index of a 6 003-row trace), emit throughput, and to_list.  An
 ;                executable, not a test: a bench is a measurement, not a gate.
 

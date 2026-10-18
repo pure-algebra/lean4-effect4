@@ -2,7 +2,7 @@
    src/OCaml5/Lcnf/Externs.lean `carrierSignatures`), backed by the list Lean actually
    carries, in binding order.
 
-   It reproduces `Effect4.Program.Point.childWith` (src/Effect4/Program/Compile.lean:164-165,
+   It reproduces `Effect4.Program.Point.childWith` (childWith (src/Effect4/Program/Compile.lean),
    `env := p.env ++ [v]`), `env[i]?` (`List.get?`), `List.length` and `List.take` operation
    for operation, so `Ref` still means what Lean means and the only difference from E4_env is
    the Θ(depth) copy per child — which is the point of the differential (test/test_diff.ml,

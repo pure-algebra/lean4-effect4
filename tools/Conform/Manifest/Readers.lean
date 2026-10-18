@@ -64,6 +64,15 @@ something else. -/
 def leadingIdent (s : String) : String :=
   (s.takeWhile fun c => c.isAlphanum || c == '_' || c == '\'').toString
 
+/-- An OCaml constructor path, including module qualifiers. Every component starts uppercase.
+Wildcards, value patterns, and empty components are outside this reader's grammar. -/
+def leadingConstructor? (s : String) : Option String :=
+  let name := (s.takeWhile fun c => c.isAlphanum || c == '_' || c == '\'' || c == '.').toString
+  if (name.splitOn ".").all (fun part =>
+      match part.toList with
+      | c :: _ => c.isUpper
+      | [] => false) then some name else none
+
 /-- Split on spaces that are **outside** parentheses, so `interrupt(term option)` is one item and
 not two. Refuses nothing: an unbalanced line simply yields one long item, which the caller's
 comparison then reports. Not `String.splitOn`: that grammar is the whole point of this helper. -/
@@ -250,11 +259,14 @@ def tsTaggedUnion (text : String) (key : String) : Except String (Array String) 
 one artefact that already *is* the list, so it needs no normalisation. -/
 def ocamlCtorNames (text : String) (key : String) : Except String (Array String) := do
   let ls := lines text
-  let header := "let ctor_names_" ++ key ++ " : string list = ["
+  let header := "let ctor_names_" ++ key ++ " : string list ="
   for h : i in [0:ls.size] do
-    let l := ls[i]
-    if l.startsWith header then
-      match (dropS l header.length).splitOn "]" with
+    let l := tr ls[i]
+    if l == header || l.startsWith (header ++ " [") then
+      let body := if l == header then tr (ls[i + 1]?.getD "") else tr (dropS l header.length)
+      if !body.startsWith "[" || !body.endsWith "]" then
+        throw s!"line {i + 1}: `{header}` needs one bracketed name list"
+      match (dropS body 1).splitOn "]" with
       | body :: _ =>
         let items := (body.splitOn ";").filter fun s => !(tr s).isEmpty
         let mut out : Array String := #[]
@@ -366,7 +378,7 @@ indentation of the first of them, ending at the first non-blank line indented *l
 the next `let` ends it). A hand copy has no other stable anchor, and naming the line makes the
 configuration say exactly what it pinned.
 
-One allowance, because it is the other half of the same idiom: a single `match … with` line may
+A single `function` or `match … with` line may
 stand between the header and the arms (`let rec json_ty (v : ty) : … =` then `  match v with`).
 Anything else between them is a refusal. -/
 def ocamlMatchArms (text : String) (key : String) : Except String (Array String) := do
@@ -385,22 +397,22 @@ def ocamlMatchArms (text : String) (key : String) : Except String (Array String)
           continue
         match armIndent with
         | none =>
-          if allowedMatch && t.startsWith "match " && t.endsWith " with" then
+          if allowedMatch && (t == "function" || (t.startsWith "match " && t.endsWith " with")) then
             allowedMatch := false
             j := j + 1
             continue
           if !t.startsWith "|" then
-            throw s!"line {j + 1}: the line after `{key}` is neither `match … with` nor an `|` alternative"
+            throw s!"line {j + 1}: the line after `{key}` is neither `function`, `match … with`, nor an `|` alternative"
           armIndent := some (indentOf raw)
-          let n := leadingIdent (tr (dropS t 1))
-          if n.isEmpty then throw s!"line {j + 1}: `{t}` has no constructor name after `|`"
-          out := out.push n
+          match leadingConstructor? (tr (dropS t 1)) with
+          | none => throw s!"line {j + 1}: `{t}` has no constructor name after `|`"
+          | some n => out := out.push n
         | some ind =>
           if indentOf raw < ind then break
           if indentOf raw == ind && t.startsWith "|" then
-            let n := leadingIdent (tr (dropS t 1))
-            if n.isEmpty then throw s!"line {j + 1}: `{t}` has no constructor name after `|`"
-            out := out.push n
+            match leadingConstructor? (tr (dropS t 1)) with
+            | none => throw s!"line {j + 1}: `{t}` has no constructor name after `|`"
+            | some n => out := out.push n
         j := j + 1
       if out.isEmpty then throw s!"`{key}` is followed by no `|` alternative"
       return out

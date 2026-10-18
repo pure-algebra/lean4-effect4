@@ -335,7 +335,7 @@ let resolves view (r : E4_addr.Ref.t) =
   | Some k -> E4_kind.equal k r.E4_addr.Ref.kind
   | None -> false
 
-(* `Store.nodes` (Store.lean:73-75): insertion order, which is the pack's write order.  It is
+(* `Store.nodes` (Store (src/Effect4/Store/Domain/Store.lean)): insertion order, which is the pack's write order.  It is
    read back from the pack rather than held in memory — the index is off-heap on purpose and a
    list of every address would put it back on the heap. *)
 let addresses view =
@@ -354,7 +354,7 @@ let nodes view =
 (* ============================================================ 4. admission *)
 
 (* CS2 / L-CAS-4.  The stages that are functions of the node alone, in Lean's order
-   (Store.lean:262-276), with amendment M2's handle test at A2 owner question OQ4's default
+   (Store.putNode (src/Effect4/Store/Domain/Store.lean)), with amendment M2's handle test at A2 owner question OQ4's default
    position — after `malformedRef`, before the edges.  Moving it is moving one element of this
    list, and `E4_node.check_pure` (lane P0's ND10) is the same order stated once more. *)
 type stage = St_bad_version | St_malformed_ref | St_handle_in_content
@@ -363,7 +363,7 @@ let admission_stages = [ St_bad_version; St_malformed_ref; St_handle_in_content 
 
 (* `Oversize` is not in the list because it cannot move: `malformedRef` and the handle test
    are defined only on a payload that parses (lane P0's D3), and Lean tests `payload.WF`
-   first for the same reason (Store.lean:263).  The three that CAN move are the list, and
+   first for the same reason (Store.putNode (src/Effect4/Store/Domain/Store.lean)).  The three that CAN move are the list, and
    moving amendment M2's handle test — A2 owner question OQ4 — is moving one element of it. *)
 let stage_refusal (n : E4_node.t) (sc : E4_node.scan) = function
   | St_bad_version -> if n.E4_node.version <> 0 then Some (Bad_version n.E4_node.version) else None
@@ -386,7 +386,8 @@ let check_pure (n : E4_node.t) =
     in
     go admission_stages
 
-(* `Store.checkAll` (Store.lean:192-198) over `Node.checkedEdges` (:297): in order, spec edge
+(* `Store.checkAll` (src/Effect4/Store/Domain/Store.lean) over
+   `Node.checkedEdges` (src/Effect4/Store/Domain/Node.lean): in order, spec edge
    first, the genesis exempt from it and nothing else. *)
 let check_edges view (n : E4_node.t) =
   let rec go = function
@@ -531,7 +532,7 @@ let advance_root t ?prev (r : E4_control.root) =
 
 (* ============================================================ 6. words *)
 
-(* `Binding.admissibleAfter` (src/Effect4/Store/Word.lean:59-63) with the bindings before it
+(* `Binding.admissibleAfter` (Binding.admissibleAfter (src/Effect4/Store/Domain/Word.lean)) with the bindings before it
    carried as a digest -> kind table. *)
 let admissible_after (seen : (string, E4_kind.t) Hashtbl.t) (b : binding) =
   let n = b.node in
@@ -559,7 +560,7 @@ let word_wf w =
       else false)
     w
 
-(* `closureGo` / `Store.closure` (Word.lean:334-346), transcribed: skip what is already
+(* `closureGo` / `Store.closure` (Store.closure (src/Effect4/Store/Domain/Word.lean)), transcribed: skip what is already
    emitted, walk the checked edges with one unit of fuel less, then emit under `emit`'s guard.
    `seen` is exactly the accumulator's digests, so the guard is `emit`'s. *)
 let closure view (r : E4_addr.Ref.t) =
@@ -645,7 +646,7 @@ let verify view =
     in
     go (E4_node.checked_edges n)
   in
-  (* `Store.verifyNode` (Word.lean:749-755), in `verifyNodes`' order. *)
+  (* `Store.verifyNode` (Store.verifyNode (src/Effect4/Store/Domain/Word.lean)), in `verifyNodes`' order. *)
   let verify_one key pos =
     let a = E4_addr.Addr.of_digest key in
     match read_bytes pos with

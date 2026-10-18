@@ -1,4 +1,4 @@
-(* bench_trace.ml — lane W, item 2: what `E4_trace` costs now that it is `E4_log.Vec`.
+(* bench_trace.ml — lane W, item 2: what `E4_trace` costs now that it is `Lcnf_array`.
 
    Three cells, all on the carrier alone (no machine, no tape), so the number is the carrier's
    and nothing else's:
@@ -7,8 +7,8 @@
           reading axis of 2026-09-08-design-language.md §3 and the Theta(T^2) that lane Q3's
           proposal N2 is about.  6 003 rows is `pStmts`' order of magnitude.
      W2b  `emit` throughput, one event per call, which is the shape `RunMachine.emit` has on
-          the innermost step (src/Effect4/Machine/Fibers.lean:1123).
-     W2c  `to_list` -- the once-per-run read (`Api.Run.trace`, Api.lean:185-186).
+          the innermost step (finishFrame (src/Effect4/Machine/Fibers.lean)).
+     W2c  `to_list` -- the once-per-run read (`Api.Inspection.trace`, Inspection.trace (src/Effect4/Api.lean)).
 
    A bench is a measurement and not a gate: this file prints a table and fails nothing.
 
@@ -87,7 +87,7 @@ let to_list_cell () =
     [ 6_003; 1_000_000 ]
 
 let () =
-  print_endline "bench_trace — lane W item 2 (E4_trace over E4_log.Vec)";
+  print_endline "bench_trace — lane W item 2 (E4_trace over Lcnf_array)";
   walk ();
   emit_cell ();
   to_list_cell ();

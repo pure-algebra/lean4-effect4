@@ -3,22 +3,22 @@
    What it checks, and against what:
      C*  E4_crc: the five standard CRC-32 vectors, composition over every split, the window
          form, the 32-bit range, and the be32 field.
-     K*  E4_kind: the table of src/Effect4/Store/Kind.lean:60-104 and its ten #guards
-         (:145-158), the reserved append 16..23, and the unregistered-byte refusal.
+     K*  E4_kind: the table and guards of `Kind.byte` and `Kind.ofByte?`
+         (src/Effect4/Store/Carrier/Kind.lean), the append 16..23, and the unregistered-byte refusal.
      A*  E4_addr: the 32-byte law, the hex delegation to E4_hex, prefix63's range, and the
          presentation round trips of amendment M6.
-     N*  E4_node: the layout and the exactness refusals of src/Effect4/Store/Node.lean:439-448,
-         the edge scan #guards (:449-460), the AnyRef frame shape (:462-463), the traversal
+     N*  E4_node: the layout and the exactness refusals of sampleNode (src/Effect4/Store/Domain/Node.lean),
+         `Node.refsOf` and `AnyRef` frame guards in src/Effect4/Store/Domain/Node.lean, the traversal
          order (L-SCAN-1), the bytes-is-a-leaf case (L-SCAN-2, which has no Lean #guard yet —
          A2 §4.1 G5 says it must exist), the malformed verdicts (L-SCAN-3), the handle scan
-         (M2), the host limit (M9) and the pure admission order of Store.lean:262-276.
+         (M2), the host limit (M9) and the pure admission order of Store.putNode (src/Effect4/Store/Domain/Store.lean).
      G*  The goldens of ../goldens (families G1 and G5, cut from Lean by lane GLD): every
          *.hex re-encoded and re-addressed, manifest.txt's digests, cases.txt's expectations,
          and the mutation check — flip one byte and the comparison must go red.  When the
          directory is absent every G* line is a SKIP and the run still ends green.
 
    The value frames below are built from E4_be.framed alone — the byte rule of
-   src/Effect4/Store/Val.lean:147-159 — so nothing under test builds its own input.
+   Val.encode (src/Effect4/Store/Carrier/Val.lean) — so nothing under test builds its own input.
 
    Exit code 0 iff every check passed. *)
 
@@ -49,7 +49,7 @@ let rand_bytes n = String.init n (fun _ -> Char.chr (rand 256))
 
 (* ============================================================ the value frames
 
-   src/Effect4/Store/Val.lean:147-159, transcribed with E4_be.framed and nothing else. *)
+   Val.encode (src/Effect4/Store/Carrier/Val.lean), transcribed with E4_be.framed and nothing else. *)
 
 let v_unit = E4_be.framed Eff_frame.tag_unit ""
 let v_bool b = E4_be.framed Eff_frame.tag_bool (if b then "\001" else "\000")
@@ -65,7 +65,7 @@ let v_ref k d = E4_be.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
 let v_handle k n =
   E4_be.framed Eff_frame.tag_handle (String.make 1 (Char.chr k) ^ E4_be.nat_digits n)
 
-(* src/Effect4/Store/Val.lean:1150 -- sampleEntry, the input of Digest.lean's third #guard. *)
+(* sampleEntry (src/Effect4/Store/Carrier/Val.lean) -- sampleEntry, the input of Digest.lean's third #guard. *)
 let sample_entry = v_ctor 0 [ v_str "Effect"; v_str "gen"; v_ctor 0 []; v_nat 1947 ]
 
 let zero32 = String.make 32 '\000'
@@ -165,7 +165,7 @@ let test_crc () =
 (* ============================================================ E4_kind *)
 
 let test_kind () =
-  print_endline "-- E4_kind: the table of src/Effect4/Store/Kind.lean, appended per CAS commit 1";
+  print_endline "-- E4_kind: the table of src/Effect4/Store/Carrier/Kind.lean, appended per CAS commit 1";
   check "K1 all has 23 entries" (List.length E4_kind.all = 23);
   check "K1 all is in byte order 1..23"
     (List.mapi (fun i k -> E4_kind.byte k = i + 1) E4_kind.all |> List.for_all (fun x -> x));
@@ -181,7 +181,7 @@ let test_kind () =
     (List.length (List.sort_uniq compare (List.map E4_kind.name E4_kind.all)) = 23
      && List.for_all (fun k -> E4_kind.of_name (E4_kind.name k) = Some k) E4_kind.all);
 
-  (* Kind.lean:145-158 -- the ten #guards, verbatim. *)
+  (* Kind.name (src/Effect4/Store/Carrier/Kind.lean) -- the ten #guards, verbatim. *)
   check "K1 #guard source=1 export=2 schema=4 program=5 annotation=6"
     (E4_kind.byte E4_kind.Source = 1 && E4_kind.byte E4_kind.Export = 2
      && E4_kind.byte E4_kind.Schema = 4 && E4_kind.byte E4_kind.Program = 5
@@ -193,8 +193,8 @@ let test_kind () =
   check "K1 #guard of_byte 2 = Some export" (E4_kind.of_byte 2 = Some E4_kind.Export);
   check "K5 #guard of_name \"export\" = Some export, of_name \"Export\" = None"
     (E4_kind.of_name "export" = Some E4_kind.Export && E4_kind.of_name "Export" = None);
-  note "Kind.lean:155's #guard `ofByte? 16 = none` does NOT transfer: byte 16 is `job` under";
-  note "CAS commit 1's append, and amendment M4 moved the unregistered-kind sentinel to 127.";
+  note "Kind.ofByte? (src/Effect4/Store/Carrier/Kind.lean) maps byte 16 to job; the legacy unregistered-byte example no longer applies.";
+  note "Kind.sentinel in that owner is 127, the unregistered-kind witness from amendment M4.";
 
   (* K2: the refusals, at the appended table. *)
   check "K2 of_byte 127 = None (the sentinel, amendment M4)"
@@ -334,15 +334,15 @@ let test_addr () =
 (* ============================================================ E4_node: the layout *)
 
 let test_node_layout () =
-  print_endline "-- E4_node: the envelope (src/Effect4/Store/Node.lean:170-182)";
+  print_endline "-- E4_node: the envelope (Node.encode (src/Effect4/Store/Domain/Node.lean))";
   let b = E4_node.encode sample_node in
 
-  (* Digest.lean:315 -- the third #guard pins that sample_entry above IS Lean's sampleEntry. *)
-  check "N0 sha256 (Val.encode sampleEntry) = 8fab1618… (Digest.lean:315)"
+  (* sha256 (src/Effect4/Store/Carrier/Digest.lean) -- the third #guard pins that sample_entry above IS Lean's sampleEntry. *)
+  check "N0 sha256 (Val.encode sampleEntry) = 8fab1618… (sha256 (src/Effect4/Store/Carrier/Digest.lean))"
     (E4_sha256.hex sample_entry
      = "8fab161870afe7d35c681679cf5dced52845b5ebef2b84b6c85e4b49d00661fa");
 
-  (* Node.lean:439-441 *)
+  (* sampleNode (src/Effect4/Store/Domain/Node.lean) *)
   check "N1 #guard sampleNode.encode.length = 108" (String.length b = 108);
   check "N1 #guard sampleNode.encode.take 2 = [0, 2]"
     (String.sub b 0 2 = "\000\002");
@@ -350,7 +350,7 @@ let test_node_layout () =
     (String.sub b 34 (String.length b - 34) = sample_entry);
   check "N1 the spec sits at bytes 2..33" (String.sub b 2 32 = zero32);
 
-  (* Node.lean:442-448 -- the round trip and the four refusals. *)
+  (* Node.decode (src/Effect4/Store/Domain/Node.lean) -- the round trip and the four refusals. *)
   check "N1 #guard decode (encode sampleNode) = some sampleNode"
     (E4_node.decode b = Ok sample_node);
   check "N2 #guard decode (encode ++ [0]) = none  -> Trailing"
@@ -370,8 +370,8 @@ let test_node_layout () =
     (E4_node.decode "" = Error E4_node.Short_spec
      && E4_node.decode "\000" = Error E4_node.Short_spec
      && E4_node.decode "\000\002" = Error E4_node.Short_spec);
-  note "Node.lean:445's #guard uses kind byte 16; under CAS commit 1 that is `job`, so this";
-  note "lane uses 127 (amendment M4's sentinel) as the unregistered-byte witness.";
+  note "Node.decode (src/Effect4/Store/Domain/Node.lean) and this lane use byte 127";
+  note "as the unregistered-byte witness (amendment M4).";
 
   (* ND1/ND2 as properties over a spread of kinds and payloads. *)
   let rt_ok = ref true and exact_ok = ref true in
@@ -413,9 +413,9 @@ let test_node_layout () =
 (* ============================================================ E4_node: the edge scan *)
 
 let test_node_scan () =
-  print_endline "-- E4_node: the edge scan (Val.refs / Val.malformedRef, Node.lean:241-266)";
+  print_endline "-- E4_node: the edge scan (Val.refs / Val.malformedRef, Val.refs (src/Effect4/Store/Domain/Node.lean))";
 
-  (* Node.lean:449-453 -- sampleNode has no refs and its one edge is the spec. *)
+  (* Node.refsOf (src/Effect4/Store/Domain/Node.lean) -- sampleNode has no refs and its one edge is the spec. *)
   check "N6 #guard sampleNode.refsOf = []" (E4_node.refs sample_node = []);
   check "N6 #guard sampleNode.malformedRef = false" (not (E4_node.malformed_ref sample_node));
   check "N6 #guard sampleNode.edges = [<schema, zeroDigest>]"
@@ -435,7 +435,7 @@ let test_node_scan () =
      && not (E4_node.is_genesis
                (E4_node.make ~version:0 ~kind:E4_kind.Export ~spec:zero32 ~payload:v_unit)));
 
-  (* Node.lean:454-460 -- the #guards, with byte 16 replaced by the sentinel 127 (see the
+  (* Val.refs (src/Effect4/Store/Domain/Node.lean) -- the #guards, with byte 16 replaced by the sentinel 127 (see the
      note in test_node_layout: 16 is `job` under CAS commit 1). *)
   check "N6 #guard (Val.ref 2 (replicate 32 1)).refs = [<export, 1…>]"
     (present_refs (E4_node.scan_refs (v_ref 2 (dig 1)))
@@ -457,7 +457,7 @@ let test_node_scan () =
   check "N6 #guard (Val.ctor 0 [ref 4 …7, nat 3]).malformedRef = false"
     (not (E4_node.scan_malformed_ref (v_ctor 0 [ v_ref 4 (dig 7); v_nat 3 ])));
 
-  (* Node.lean:462-463 -- the AnyRef frame: 42 bytes, prefix 0b 00*7 21 02. *)
+  (* instCanonicalAnyRef (src/Effect4/Store/Domain/Node.lean) -- the AnyRef frame: 42 bytes, prefix 0b 00*7 21 02. *)
   let anyref = v_ref 2 zero32 in
   check "N9 #guard (Canonical.encode (AnyRef export zeroDigest)).length = 42"
     (String.length anyref = 42);
@@ -498,7 +498,7 @@ let test_node_scan () =
   let with_handle = v_list [ v_handle 1 0; v_nat 5; v_some (v_handle 3 70000) ] in
   check "ND6 handles lists the tag-12 frames in traversal order"
     (E4_node.scan_handles with_handle = [ (1, 0); (3, 70000) ]);
-  check "ND6 a handle key of 0 is the kind byte and no digits (Val.lean:1136)"
+  check "ND6 a handle key of 0 is the kind byte and no digits (Val.encode (src/Effect4/Store/Carrier/Val.lean))"
     (v_handle 1 0 = E4_be.framed 12 "\001");
   check "ND6 handle_in_content is true at a content kind, false at a run-relative one"
     (E4_node.handle_in_content
@@ -600,7 +600,7 @@ let test_node_refusals () =
      && E4_node.scan_handles oversize_frame = []
      && E4_node.scan_payload oversize_frame = Error E4_node.Host_limit);
 
-  (* ND10: the pure admission order of Store.lean:262-276. *)
+  (* ND10: the pure admission order of Store.putNode (src/Effect4/Store/Domain/Store.lean). *)
   let node k v p = { E4_node.version = v; kind = k; spec = dig 1; payload = p } in
   let bad_payload = oversize_frame in
   let malformed = v_ref 127 (dig 1) in

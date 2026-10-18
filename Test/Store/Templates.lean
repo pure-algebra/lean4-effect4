@@ -19,7 +19,7 @@ Dropped from the spike's `Test/Store/Templates.lean`: the hand `Canonical Float6
 instance in the same environment is an ambiguity rather than a template. The nested-recursion
 receipts that exercised them are kept below against the derived instance; the printer and
 document receipts moved with the instance and are that module's own guards
-(`Store/Derived/Json.lean`, the `JsonAcceptance` section).
+(`JsonAcceptance.samples` and `JsonAcceptance.floats` in `src/Effect4/Store/Domain/Derived/Json.lean`).
 -/
 
 import Effect4.Store.Domain.Canonical
@@ -226,7 +226,7 @@ end Templates
 
 `Json` recurses through `List Json` and through `List (String × Json)`, two levels below its
 constructor. The hand template that proved it retired with the landing; these are the same
-round trip and refusal on `Store/Derived/Json.lean`'s generated instance. -/
+round trip and refusal on `JsonGen.JsonC.instCanonicalJson` (`src/Effect4/Store/Domain/Derived/Json.lean`). -/
 
 /-- A JSON value touching every constructor. -/
 def templateJson : Effect4.Json :=

@@ -4,7 +4,7 @@
    What it checks, and against what:
      A*  the slot arithmetic of e4_index.mli's layout (D1): pack/unpack round trips over the
          whole legal range of (seg, off, kind), the refusals past `max_seg` / `max_off`, and the
-         fact that no occupied slot can encode as 0 (Kind.byte_pos, Kind.lean:137).
+         fact that no occupied slot can encode as 0 (Kind.byte_pos, Kind.byte (src/Effect4/Store/Carrier/Kind.lean)).
      B*  build and look up (IX1) over a real pack: every staged record is found at the offset
          `append` returned, and every non-resident digest answers None.
      C*  the confirmation, and a HAND-FORCED 62-bit prefix collision (L-IDX-1): two digests

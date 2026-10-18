@@ -1,5 +1,6 @@
 /-
-Contract: the value tree and its byte codec (`Effect4/Store/{Val,Digest,Canonical}.lean`).
+Contract: the value tree and its byte codec (`Val` in `src/Effect4/Store/Carrier/Val.lean`;
+`Digest` in `src/Effect4/Store/Carrier/Digest.lean`; `Canonical` in `src/Effect4/Store/Domain/Canonical.lean`).
 
 Frozen: the tag byte of every `Val` constructor, the canonical bytes of every primitive the
 trait carries, the exactness of `Val.decode` in both directions, the five refusals a decoder

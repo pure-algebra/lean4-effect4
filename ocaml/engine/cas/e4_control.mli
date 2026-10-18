@@ -1,18 +1,18 @@
 (* E4_control — the control file: the store's roots, its durable end, and its status.
 
    What it is: the ONLY mutable bytes in the CAS.  Written by tmp+rename under the writer
-   lock; read by anyone.  It carries the roots plane (src/Effect4/Store/Store.lean:510-556)
+   lock; read by anyone.  It carries the roots plane (Store.putRoot (src/Effect4/Store/Domain/Store.lean))
    verbatim, the pack's durable end (`pack_end`), the index's coverage, a monotone
    `generation` and a reserved-tag `status` field.  The shape is irmin-pack's discipline as
-   docs/research/2026-09-07-ocaml-ecosystem-survey.md row #4 transcribes it (`:243-278`,
-   `version.ml` + `unix/control_file.ml`), and proposal 22: fixed-width ASCII version FIRST,
+   docs/research/2026-09-07-ocaml-ecosystem-survey.md row #4 transcribes it
+   (`version.ml` + `unix/control_file.ml`), and proposal 22: fixed-width ASCII version FIRST,
    the checksum computed over the payload with its own field ZEROED, `status` LAST so that
    everything before it sits at a fixed offset, reserved status tags a future writer may use
    and an old reader may tag-decode and preserve, and tmp-write + atomic rename.
 
    For 0.1 the roots plane lives ONLY here (A2 owner question OQ7), and it moves by
    compare-and-set on an optimistic version exactly as `Store.putRoot`
-   (src/Effect4/Store/Store.lean:523-530).
+   (Store.putRoot (src/Effect4/Store/Domain/Store.lean)).
 
    Depends on: E4_kind, E4_addr, E4_crc, E4_be (be64, from effect4_engine), unix.
    It writes no second framing writer and no hash of any kind: a CRC-32 here detects a torn
@@ -43,7 +43,7 @@
                    root_kind                          1   0 stdlib 1 journal 2 daemon
                                                           3 schema 4 char 5 registry 6 pin
                                                           (cas-design §6; Lean has 0..4 only,
-                                                          Store.lean:47-53)
+                                                          RootKind (src/Effect4/Store/Domain/Store.lean))
                    kind                               1   E4_kind.byte of the target's kind
                    digest                            32
                    be64 version                       8   Store.Root.version, the optimistic
@@ -61,7 +61,7 @@
    The fixed part is therefore 6 + 8 + 56 = 70 bytes, plus 44 + name_len per root, plus 1 for
    the status tag.
 
-   One consequence the survey argues at `:273-278` and this file makes operational: the ASCII
+   One consequence the survey argues in row #4 and this file makes operational: the ASCII
    version distinguishes a STALE BINARY (the version does not match) from CORRUPTION (the
    version matches and the checksum fails).  They are two different operator actions, so they
    are two different constructors of [open_error].
@@ -84,7 +84,7 @@
        never-renamed tmp is not read by anyone, and `cleanup` removes it.  by construction;
                                                                                        tested
    CF5 `advance_root` is compare-and-set on the optimistic version exactly as `Store.putRoot`
-       (Store.lean:523-530), in Lean's order: version, then resolution, then kind.  The move's
+       (Store.putRoot (src/Effect4/Store/Domain/Store.lean)), in Lean's order: version, then resolution, then kind.  The move's
        version must equal `next_version name` (the resident's plus one, or 1 when absent),
        else `Stale_root`; the target must resolve, else `Dangling`; it must resolve at the
        root's kind, else `Wrong_kind`.  For a `Registry` root the new publication's `prev`
@@ -98,13 +98,13 @@
        `set_ledger_generation`, `bump` — increments it, and `commit` writes what it is given.
        A reader that re-reads and sees the same generation saw the same roots.
                                                                        by construction; tested
-   CF8 Roots are head-first, as `Store.putRoot` conses (`:527`): the moved root is the head and
+   CF8 Roots are head-first, as `Store.putRoot` conses Store.putRoot (src/Effect4/Store/Domain/Store.lean): the moved root is the head and
        the resident of that name is filtered out, so a name appears at most once and
        `roots` has the same order the Lean plane does.                     tested: golden G3
    CF9 Every be64 field is refused at or above 2^62 (amendment M9, the host limit): it is
        reported as a refusal, never misread.  `E4_be.read_be64` is the one that refuses, and
        it is the only side where the bound can bind: an OCaml int on this host holds
-       -2^62 .. 2^62-1 (`E4_nat.max_nat`), so a writer cannot even hold such a field and
+       -2^62 .. 2^62-1 (`max_int`), so a writer cannot even hold such a field and
        `encode` refuses only a negative one.                            by construction; tested
    CF10 A `scheme_version` other than 0 is refused at open as `Other_scheme`, never read as
        scheme 0's and never reported as `Corrupt`: the checksum holds, the store is simply of
@@ -122,7 +122,7 @@
        This lane answers `Fork`: the constructor exists for it, and §2.1 L-CAS-10 states the
        law as "the move is refused" without naming a constructor.  `Fork` is unreachable for
        any root kind other than `Registry`, and no Lean golden pins it — `RootKind`
-       (Store.lean:47-53) has no `registry` and no `pin`, and lane GLD reports M7 and M1 as
+       (RootKind (src/Effect4/Store/Domain/Store.lean)) has no `registry` and no `pin`, and lane GLD reports M7 and M1 as
        owed (2026-09-08-engine-lane-gld-delivery.md §4 O4).
    D3  `Corrupt of string` carries the reason.  §1.3 documents it as "the checksum failed",
        which is CF2's case, but a truncated or structurally impossible payload is corruption
@@ -154,7 +154,7 @@
 (* ---------------------------------------------------------------- the plane *)
 
 type root_kind = Stdlib | Journal | Daemon | Schema | Char | Registry | Pin
-(** `Store.RootKind` (src/Effect4/Store/Store.lean:47-53) for 0..4, extended by
+(** `Store.RootKind` (RootKind (src/Effect4/Store/Domain/Store.lean)) for 0..4, extended by
     2026-09-07-cas-design.md §6 with `Registry` (5) and `Pin` (6), which Lean does not have. *)
 
 type root = {
@@ -164,7 +164,7 @@ type root = {
   digest : E4_addr.Addr.t;
   version : int;
 }
-(** `Store.Root` (Store.lean:64-70), field for field. *)
+(** `Store.Root` (Root (src/Effect4/Store/Domain/Store.lean)), field for field. *)
 
 type status = Fresh | Gced | Imported | Reserved of int * string
 (** `Reserved (tag, body)`: 3 <= tag <= 15, and the body is whatever a future writer put
@@ -246,10 +246,10 @@ val cleanup : dir:string -> unit
 (* ---------------------------------------------------------------- the plane, read *)
 
 val root : payload -> string -> root option
-(** `Store.root?` (Store.lean:513), lowercasing the name asked for (CF6). *)
+(** `Store.root?` (Store.root? (src/Effect4/Store/Domain/Store.lean)), lowercasing the name asked for (CF6). *)
 
 val next_version : payload -> string -> int
-(** `Store.nextVersion` (Store.lean:516-519): the resident's version plus one, or 1 when the
+(** `Store.nextVersion` (Store.nextVersion (src/Effect4/Store/Domain/Store.lean)): the resident's version plus one, or 1 when the
     name is absent.  Lowercases the name asked for (CF6). *)
 
 val roots : t -> root list

@@ -9,9 +9,9 @@ Owner: the exact-image trait of a carrier in the value tree *without* a shape, t
 derived from it once, and the combinators that build the image of a compound carrier from the
 images of its parts.
 
-`Canonical` (`Store/Canonical.lean`) is this trait plus a `shape` and its `fits` law, and every
+`Canonical` (`src/Effect4/Store/Domain/Canonical.lean`) is this trait plus a `shape` and its `fits` law, and every
 `Canonical` carrier is an `Image` (`Canonical.image`, declared there). The Machine layer cannot
-name a `Shape` without importing the Schema plane (`Store/Shape.lean` imports
+name a `Shape` without importing the Schema plane (`src/Effect4/Store/Domain/Shape.lean` imports
 `Effect4.Schema.Authoring`), so the runtime's views of the shared carrier — the handle kinds,
 exits, causes, contexts and configuration results of
 `docs/research/2026-09-07-u0-value-foundation.md` — are stated at this level, over `Val` alone.

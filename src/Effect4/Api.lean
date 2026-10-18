@@ -12,7 +12,6 @@ import Effect4.Program.Authoring.Folds
 import Effect4.Api.Derived
 import Effect4.Program.Packages
 import Effect4.Store.Domain.ProgramWire
-import Effect4.Store.Domain.Cascade
 import Effect4.Schema.Bridge
 import Effect4.Schema.OfShape
 import Effect4.Schema.Codec
@@ -466,9 +465,5 @@ def closed (l : TypedLayer sig) : Bool :=
   l.ty.requires == Effect4.Machine.Env.Requirement.empty
 
 end TypedLayer
-
-/-! ## Multi-Tier Cascading CAS Store -/
-
-export Effect4.Store (CascadingStore)
 
 end Effect4.Api

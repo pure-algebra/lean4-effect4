@@ -1,9 +1,9 @@
 (* prop_trace.ml — the property tests of E4_trace (lane C, docs/research/
    2026-09-08-engine-a1-state.md §4.3 TR1-TR6, plus TR7 nth_opt and TR8 the twin
-   differential; TR9 was added by lane W when `E4_trace` became `E4_log.Vec`).
+   differential; TR9 was added by lane W when `E4_trace` became `Lcnf_array`).
 
    Every law of e4_trace.mli is one named PASS/FAIL line.  The twin is e4_trace_list.ml,
-   which reproduces `Effect4.Machine.RunMachine.emit` (src/Effect4/Machine/Fibers.lean:585-587)
+   which reproduces `Effect4.Machine.RunMachine.emit` (RunMachine.emit (src/Effect4/Machine/Fibers.lean))
    verbatim, empty guard included.  Exit code 0 iff every line passed.
 
    The TRACE module type below is lane G's text (A1 §1.5), verbatim: if either carrier drifts
@@ -53,7 +53,7 @@ let next () =
 let rand n = if n <= 0 then 0 else next () mod n
 
 (* An emission schedule shaped like the machine's: `emit` is called on the innermost step
-   (Fibers.lean:1123) and USUALLY with [] — the empty case is the common one, which is why
+   (finishFrame (src/Effect4/Machine/Fibers.lean)) and USUALLY with [] — the empty case is the common one, which is why
    TR2 is a law and not a micro-optimisation. *)
 let schedule n =
   reset ();
@@ -140,7 +140,7 @@ let tr7 (fast, slow, expected) =
   done;
   check "TR7 nth_opt i t = List.nth_opt (to_list t) i, None outside the range" !ok
 
-(* TR9 — lane W, proposal N2: the carrier is `E4_log.Vec`, so `nth_opt` is a lookup and not a
+(* TR9 — lane W, proposal N2: the carrier is `Lcnf_array`, so `nth_opt` is a lookup and not a
    walk.  The law is TR7's, taken over a trace LONGER THAN THE CHUNK (6 003 rows against a
    chunk of 256, so 23 frozen chunks and an open tail of 131): every index, in an order that
    is not the walk's, against the list twin AND against the list the trace itself renders.
@@ -196,6 +196,6 @@ let () =
   tr7 st;
   tr9 ();
   argue "TR3 emit is O(length evs); to_list is O(length t), called once per run"
-    "emit is one E4_log.Vec.push per event onto the open chunk (a cons, plus one 256-element array and one Map insertion every 256 events) and never walks t; to_list is one Vec.fold and one List.rev; the numbers are in test/bench_carriers.ml";
+    "emit is one Lcnf_array.push per event onto the open chunk (a cons, plus one 256-element array and one Map insertion every 256 events) and never walks t; to_list delegates to Lcnf_array.to_list, which uses a bounded temporary array or its fold/reverse fallback; allocation observations are in ocaml/lcnf/test_array_conversion.ml";
   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;
   exit (if !failures = 0 then 0 else 1)

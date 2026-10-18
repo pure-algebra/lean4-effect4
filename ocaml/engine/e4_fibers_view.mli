@@ -3,8 +3,7 @@
    parameter, `RunMachine.fibers`, field F2 of docs/research/2026-09-08-engine-a1-state.md
    §1.2).
 
-   What it is and why it exists.  `RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean:
-   1541-1543) is `m.fibers.filterMap (fun f => f.exit.map ((f.id, ·)))` and it is called on
+   What it is and why it exists.  `RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean) is `m.fibers.filterMap (fun f => f.exit.map ((f.id, ·)))` and it is called on
    essentially every step (`Program.evaluateNative`, `Program.exitScoped`, through
    `interpAt`).  Over a `TABLE` that is a Θ(N) `Map.fold` per step — 62.7 % inclusive on
    fan-out 512 after lane G2 (that receipt §6).  A cache does not fix it: lane G2 built the
@@ -32,12 +31,12 @@
        (exit_of f)) (bindings t)` — the maintained view is the scan it replaces, ascending by
        id, for the SAME `exit_of` the writes were given.    tested (>= 12 000 ops, LCG)
    FV2 `set` on an ABSENT key is a no-op on the table AND on the view: Lean's replace-by-key
-       map matches nothing (Fibers.lean:577-579) and `E4_table.set` does not insert (lane C
+       map matches nothing (RunMachine.update (src/Effect4/Machine/Fibers.lean)) and `E4_table.set` does not insert (lane C
        law T1).                                                            tested
    FV3 `add` inserts at the key; the view gains `(k, x)` in id order when `exit_of v` is
-       `Some x` and nothing otherwise.  `spawn`'s child (Fibers.lean:867-877) has
+       `Some x` and nothing otherwise.  `spawn`'s child (spawn (src/Effect4/Machine/Fibers.lean)) has
        `exit = none`, so the common case adds nothing.                     tested
-   FV4 `map` is id-preserving (Fibers.lean:1256, :1344 are `fibers.map`) and RE-DERIVES the
+   FV4 `map` is id-preserving (dropObservers (src/Effect4/Machine/Fibers.lean) are `fibers.map`) and RE-DERIVES the
        view from the mapped table, so a mapping function that changes an exit is still
        answered exactly.  It is Θ(N), which is what the map itself costs.  tested
    FV5 the view is INVISIBLE to every other operation: `find_opt`, `bindings`, `to_list`,

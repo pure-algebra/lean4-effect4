@@ -11,7 +11,7 @@ module IMap = Map.Make (Int)
 
    `n` is carried so `cardinal` is O(1), for the same reason lane C carries it (E4_table D5).
    `view` is the exits of the fibers whose exit is set, ASCENDING by id: exactly the value
-   `RunMachine.completedExits` answers (src/Effect4/Machine/Fibers.lean:1543), maintained by
+   `RunMachine.completedExits` answers (completedExits (src/Effect4/Machine/Fibers.lean)), maintained by
    every write, so `completed` is this field and nothing else (FV1). *)
 type ('a, 'x) t = { n : int; m : 'a IMap.t; view : (int * 'x) list }
 
@@ -49,7 +49,7 @@ let derive ~(exit_of : 'a -> 'x option) (m : 'a IMap.t) : (int * 'x) list =
        (fun k v acc -> match exit_of v with None -> acc | Some x -> (k, x) :: acc)
        m [])
 
-(* `RunMachine.update` (Fibers.lean:577-579): the replace-by-key map, a NO-OP on an absent id
+(* `RunMachine.update` (RunMachine.update (src/Effect4/Machine/Fibers.lean)): the replace-by-key map, a NO-OP on an absent id
    (FV2).  `IMap.update` answering `None` rebuilds nothing and the stdlib's `if l == ll then m`
    gives the absent case back PHYSICALLY, which is what makes the no-op exact.
 
@@ -74,7 +74,7 @@ let set ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
       let same = match !old with None -> false | Some o -> x == exit_of o in
       if same then { t with m } else { n = t.n; m; view = view_put k x t.view }
 
-(* `spawn`'s `m.fibers ++ [child]` (Fibers.lean:877) and `Api.load`'s root: an insertion at a
+(* `spawn`'s `m.fibers ++ [child]` (spawn (src/Effect4/Machine/Fibers.lean)) and `Api.load`'s root: an insertion at a
    freshly minted id.  Written to be right at a key that is already there as well, because
    `add` is not documented to refuse one. *)
 let add ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 'x) t =
@@ -93,7 +93,7 @@ let add ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
                             | Some o -> x == exit_of o in
     if same then { n; m; view = t.view } else { n; m; view = view_put k x t.view }
 
-(* `dropObservers`' bulk `fibers.map` (Fibers.lean:1256, :1344).  Id-preserving, and the view
+(* `dropObservers`' bulk `fibers.map` (dropObservers (src/Effect4/Machine/Fibers.lean)).  Id-preserving, and the view
    is re-derived rather than remapped: `f` is the caller's, so it may set or clear an exit,
    and FV1 must hold for every `f`.  Θ(N), which the map itself already is. *)
 let map ~(exit_of : 'a -> 'x option) (f : 'a -> 'a) (t : ('a, 'x) t) : ('a, 'x) t =

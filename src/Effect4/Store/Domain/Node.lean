@@ -35,11 +35,11 @@ zero spec; every other schema node's spec is the genesis's address, and every ot
 is the address of its shape's schema node. Since that spec is chosen per value (the meta-schema
 itself gets zero, every other document gets the genesis's address), `nodeOf` reads it through
 `specFor`, which is `specOf α` except at the genesis. The address lattice is stated once over
-`Content`: level 0 needs no premise about the hash (equal addresses are equal carriers or an
-exhibited collision), level 1 holds under a named `Function.Injective sha256` that is never an
-instance, and level 2 is shown empty. Both levels take the well-formedness of the two payloads,
-because `Val.encode` is injective only there (`Val.encode_injective`); admission refuses anything
-else as `oversize`, so every stored node satisfies the premise.
+`Content`: equal addresses are equal carriers or an exhibited collision.
+This law takes both payloads' well-formedness because `Val.encode_injective` needs it.
+Admission refuses other payloads as `oversize`.
+For nodes resident at their own addresses in one store, `address_inj_resident` establishes equality
+(`src/Effect4/Store/Domain/Store.lean`). It keeps both lookup premises and assumes no hash injectivity.
 
 Everything that needs `Canonical Document` — the meta-schema, the genesis, `specOf`, `nodeOf`,
 `address` and their laws — is written under `variable [Content Document]`, so the module
@@ -82,10 +82,10 @@ structure AnyRef where
 deriving DecidableEq, Repr
 
 /-- A name space as store content: name → reference pairs, in the order the namer wrote them.
-The payload of every node at kind `tree` (`Store/Kind.lean:45`); the entries are `AnyRef`
+The payload of every node at kind `tree` (`src/Effect4/Store/Carrier/Kind.lean:45`); the entries are `AnyRef`
 because a name space binds targets of several kinds, and each binding is an edge admission
 resolves at the kind it carries. Its `Canonical` and `Content` instances are generated beside
-`Pin`'s (`Store/PinDerived.lean`). Moved here from the census module at the landing. -/
+`Pin`'s (`src/Effect4/Store/Domain/PinDerived.lean`). Moved here from the census module at the landing. -/
 structure Tree where
   /-- The bindings, in order; a name occurs once. -/
   bindings : List (String × AnyRef)
@@ -423,12 +423,6 @@ theorem address_eq_or_collision {α : Type} [Content α] {a b : α} (ha : (toVal
   by_cases he : (nodeOf a).encode = (nodeOf b).encode
   · exact Or.inl (nodeOf_encode_injective ha hb he)
   · exact Or.inr ⟨he, hd⟩
-
-/-- Level 1: under a named injectivity premise for the hash, the address is injective. The
-premise is a hypothesis, never an instance. -/
-theorem address_inj (hInj : Function.Injective sha256) {α : Type} [Content α] {a b : α}
-    (ha : (toVal a).WF) (hb : (toVal b).WF) (h : address a = address b) : a = b :=
-  nodeOf_encode_injective ha hb (hInj (congrArg Ref.digest h))
 
 end Genesis
 

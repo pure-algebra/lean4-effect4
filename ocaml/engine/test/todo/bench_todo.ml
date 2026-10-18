@@ -16,7 +16,7 @@
        each codec to round-trip, so no figure times a failing path.        by construction
    B2  Nothing is asserted about the numbers.                               by construction
    B3  A unit's words are minor + major - promoted words over one run, read after a minor
-       collection, as bench_array reads them.                               by construction
+       collection, from the runtime counters.                               by construction
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune exec engine/test/todo/bench_todo.exe
         [-- PATH-TO-todo-host.txt] *)

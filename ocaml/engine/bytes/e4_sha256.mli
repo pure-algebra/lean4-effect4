@@ -1,7 +1,7 @@
 (* E4_sha256 — SHA-256 (FIPS 180-4) in pure OCaml.
 
    What it is: the one hash of the content address.  `Effect4.Store.sha256`
-   (src/Effect4/Store/Digest.lean:57) is lean4-hash's `Hash.Sha256.sha256`; OCaml's stdlib
+   (sha256 (src/Effect4/Store/Carrier/Digest.lean)) is lean4-hash's `Hash.Sha256.sha256`; OCaml's stdlib
    ships MD5 only (Digest), so this module is the OCaml side of that address.  A digest is
    an address and no security property is claimed (Digest.lean header).
 
@@ -10,19 +10,19 @@
    Behaviours:
    S1  FIPS 180-4 test vectors: "" , "abc", the 56-byte and 112-byte NIST messages, and
        one million 'a' -- the last as a streamed feed.                            tested
-   S2  Lean agreement: the three digests src/Effect4/Store/Digest.lean #guards
-       (`sha256 [] = e3b0c442…` :302, `sha256 [0xb4,0x19,0x0e] = dff2e730…` :303,
-       `sha256 (Val.encode sampleEntry) = 8fab1618…` :315) are reproduced byte for byte.
+   S2  Lean agreement: the three digests src/Effect4/Store/Carrier/Digest.lean #guards
+       (`sha256 [] = e3b0c442…`, `sha256 [0xb4,0x19,0x0e] = dff2e730…`,
+       `sha256 (Val.encode sampleEntry) = 8fab1618…`) are reproduced byte for byte.
        The third input is built in the test out of E4_be frames from
        `sampleEntry = .ctor 0 [.str "Effect", .str "gen", .ctor 0 [], .nat 1947]`
-       (src/Effect4/Store/Val.lean:1150-1155), so the vector also pins E4_be.      tested
+       (sampleEntry (src/Effect4/Store/Carrier/Val.lean)), so the vector also pins E4_be.      tested
    S3  Streaming equals one-shot: for every split of a byte string, feeding the parts
        through `update` and `finish` equals `digest` of the whole.        tested (property)
    S4  Length: `digest` is always 32 bytes; `hex` is always 64 lowercase characters.
                                                                          by construction
    S5  Endianness and padding are the standard's: big-endian words, the 0x80 pad byte, the
        64-bit big-endian bit length.  Messages above 2^61 - 1 bytes cannot exist on this
-       host (E4_nat.N4), so the length field never overflows.             by construction
+       host (Sys.max_string_length), so the length field never overflows.             by construction
    S6  No allocation per block beyond the 64-word schedule: `update` writes into a
        preallocated int array, and a run of whole blocks is compressed straight out of the
        caller's string with no copy.  The Bytes/int-array buffer is step-local and never

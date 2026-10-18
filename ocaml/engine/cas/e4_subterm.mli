@@ -69,8 +69,9 @@
    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.6's `Subterm` (lane P7,
    2026-09-08).  Nothing named there is missing or renamed.
 
-   D1  §1.6's `entry` has no family, and it must: a `ProgPath` addresses nodes of five mutually
-       recursive families (`Node` is `eff | stmts | stmt | action | effs`, Compile.lean:51-59)
+   D1  §1.6's `entry` has no family, and it must: a `ProgPath` addresses the mutually
+       recursive node sorts (`Node` in src/Effect4/Program/Node.lean):
+       `eff | stmts | stmt | action | effs | layer | layers`
        and `at_prog_path` cannot say what it found without one.  `family` is added to `entry`.
    D2  §1.6 says `of_program : string -> t` and does not say what a malformed program does.
        `of_program` raises and `of_program_opt` is added (SB7); nothing in this estate should
@@ -165,7 +166,7 @@ val cid_of_bytes : string -> E4_addr.Cid.t
 (* ============================================================ the value side (D3) *)
 
 module Tree : sig
-  (** `Effect4.Program.Node` (src/Effect4/Program/Compile.lean:51-115) over `Eff_types`, and
+  (** `Effect4.Program.Node` (src/Effect4/Program/Node.lean) over `Eff_types`, and
       the family encoders of `Eff_wire`.  This is the second computation SB1 is checked
       against, and `effSig`'s `children`/`rebuild` half (amendment M18). *)
 
@@ -189,7 +190,7 @@ module Tree : sig
       order (GENERATED). *)
 
   val at_ : node -> int list -> node option
-  (** `Node.at_` (Compile.lean:118-120). *)
+  (** `Node.at_` (Node.at_ (src/Effect4/Program/Refs.lean)). *)
 
   val encode : node -> string
   (** The family's own encoder from `Eff_wire`; for `N_eff` at the root it is

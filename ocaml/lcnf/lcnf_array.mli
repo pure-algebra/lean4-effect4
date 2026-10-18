@@ -1,13 +1,9 @@
 (* Lcnf_array -- Lean's `Array` as the route spells it: a persistent chunked vector, and the one
    owner of that structure in the estate (decision D-3).
 
-   What it is: frozen chunks of `chunk_size` elements under a `Map` from chunk number, plus the
-   open chunk as a list, most recent first; the structure `E4_log.Vec` introduced for the public
-   log, which is now an alias of this module. Slice 3.1 of the refactor plan measured it against
-   the list the route spelled `Array` with (ocaml/engine/bench/bench_array.ml): it answers as the
-   list everywhere, a push is amortised O(1), an indexed read is O(log (n / chunk_size)), and it
-   retains about one word per element. The rows of `OCaml5.Lcnf.builtins` name its functions for
-   `Array` and `ByteArray`, and the target evaluator models a value of it as its element list.
+   The carrier has frozen chunks under a Map and an open tail, most recent first.
+   E4_log and E4_trace both use this owner. The builtin rows of OCaml5.Lcnf.Builtins
+   spell Lean's Array and ByteArray through it.
 
    Depends on: the standard library (Map, Array, List).
 
@@ -17,7 +13,7 @@
        later.                                                           tested (test_lcnf)
    V2  Dense: `get t i` is `Some` exactly for `0 <= i < length t`.     tested (test_lcnf)
    V3  Order: `to_list` is the elements in index order, and `fold` visits them ascending.
-                                                                        tested (test_lcnf)
+                                                                        tested (test_lcnf, test_array_conversion)
    V4  Frozen: no array a value can reach is written after the operation that created it. `push`
        fills a fresh chunk, `set_exn` writes a copy of the one chunk it changes, and `replicate`
        shares one chunk that nothing writes. So a retained value and its siblings keep their
@@ -69,7 +65,11 @@ val fold_left : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b
 (** [fold] in the argument order of [List.fold_left]. *)
 
 val to_list : 'a t -> 'a list
-(** Lean's [Array.toList]. *)
+(** Lean's [Array.toList]. Uses a temporary array within host capacity and a list fold above it. *)
+
+val to_list_with_capacity : capacity:int -> 'a t -> 'a list
+(** The same conversion with a smaller temporary-array capacity, for the allocation controls.
+    The capacity never exceeds either host array bound. It does not bound the returned list. *)
 
 val of_list : 'a list -> 'a t
 (** Lean's [Array.mk] and [List.toArray]. *)

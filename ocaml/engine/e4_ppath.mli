@@ -2,7 +2,7 @@
    the node it addresses (docs/research/2026-09-08-engine-prof-chain.md §5.1, finding P-6).
 
    What it is: the carrier behind `Effect4.Program.Point.path` and
-   `Effect4.Machine.Capture.path` (src/Effect4/Program/Compile.lean:127-165).  Lean's field
+   `Effect4.Machine.Capture.path` (Capture (src/Effect4/Machine/Stores.lean)).  Lean's field
    is a `List Nat` extended at the TAIL — `p.path ++ [i]` in `Point.child`/`childWith` and at
    nine inline sites — so every child allocates a fresh spine of its parent's length: Σ|path|
    = n(n-1)/2 cons cells at chain-n, which lane PROF measured as 98.5 % of the finished

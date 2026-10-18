@@ -23,7 +23,7 @@ inductives themselves): its `toVal` writes the tree this module used to frame by
 `ctor` node per constructor carrying the 0-based index in declaration order and the
 arguments, a structure as constructor 0 with its fields in declaration order, the mutual list
 types (`Terms`, `Stmts`, `Effs`) as inductives with `nil = 0` and `cons = 1`, `Option Term` as
-the `none`/`some` frames — and `Val.encode` (`Store/Val.lean`) frames every node as `tag ::
+the `none`/`some` frames — and `Val.encode` (`src/Effect4/Store/Carrier/Val.lean`) frames every node as `tag ::
 be64 length ++ payload`. The bytes are the hand encoder's to the last byte: the eight goldens
 under `ocaml/goldens/eff/*.hex` were cut from that encoder and are guarded below against this
 one, and `p42`'s payload digest is the facts note's `fa5f40…62a3`.
@@ -32,7 +32,7 @@ one, and `p42`'s payload digest is the facts note's `fa5f40…62a3`.
 tree — a wrong tag, a short payload, a leading zero digit, a non-shortest UTF-8 sequence, an
 unconsumed byte inside a frame or after the program are refusals, never repairs; fuel is the
 byte length, enough because every frame costs at least nine bytes — and the instance's `ofVal`
-reads the program off the tree exactly (`Store/Canonical.lean`, `guarded`: the structural
+reads the program off the tree exactly (`src/Effect4/Store/Domain/Canonical.lean`, `guarded`: the structural
 reader re-encodes what it read). The two laws this module owed as corpus `#guard`s are
 theorems from the class: `decode_encode` under the well-formedness of the tree (every frame's
 payload shorter than `2^64`, which `Val.WF` decides; every program a machine can hold), and

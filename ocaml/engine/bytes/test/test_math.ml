@@ -1,16 +1,13 @@
 (* test_math.ml — the checks of the engine's math modules (lane M, 2026-09-08).
 
    What it checks, and against what:
-     N*  E4_nat: the 63-bit host profile of ocaml/gen/NOTES.md §5, including a differential
-         against `pow_reference` (the runtime library's `Lcnf_nat.pow` transcribed literally) and the edge
-         triple 2^62-1 / 2^62 / max_int.
      S*  E4_sha256: the FIPS 180-4 vectors ("", "abc", the 56- and 112-byte messages, one
-         million 'a'), the two byte-vector #guards of src/Effect4/Store/Digest.lean:302-303,
-         the third #guard (:315) over `Val.encode sampleEntry` — whose input is BUILT here
-         out of E4_be frames from src/Effect4/Store/Val.lean:1150 and checked against that
-         file's own three shape #guards (:1153-1155) — the streaming law, and the throughput
+         million 'a'), the two byte-vector #guards of sha256 (src/Effect4/Store/Carrier/Digest.lean),
+         the third `sha256` guard over `Val.encode sampleEntry` — whose input is BUILT here
+         out of E4_be frames from sampleEntry (src/Effect4/Store/Carrier/Val.lean) and checked against that
+         file's `sampleEntry` encoding guards — the streaming law, and the throughput
          of a 64 MiB buffer.
-     H*  E4_hex: the #guards of Digest.lean:306-314 and the two round-trip laws as
+     H*  E4_hex: the #guards of Digest.ofHex? (src/Effect4/Store/Carrier/Digest.lean) and the two round-trip laws as
          properties over pseudo-random input (a fixed LCG, so the run is reproducible).
      B*  E4_be: be64/framing/nat-digit laws, the refusals, and the golden bytes of
          ocaml/eff/goldens (two embedded verbatim, plus every *.bin in that directory when
@@ -40,150 +37,10 @@ let rand n = if n <= 0 then 0 else next_rand () mod n
 let rand_bytes n =
   String.init n (fun _ -> Char.chr (rand 256))
 
-(* ============================================================ E4_nat *)
-
-let two_62_minus_1 = E4_nat.max_nat (* 4611686018427387903 on a 63-bit host *)
-
-let test_nat () =
-  print_endline "-- E4_nat: the 63-bit host profile (ocaml/gen/NOTES.md §5)";
-  check "N4 bits = Sys.int_size" (E4_nat.bits = Sys.int_size);
-  check "N4 max_nat = max_int and is 2^(bits-1) - 1"
-    (E4_nat.max_nat = max_int && E4_nat.max_nat = (1 lsl (E4_nat.bits - 1)) - 1);
-  check "N4 wire_limit = max_nat (D1: 2^62 is not an OCaml int)"
-    (E4_nat.wire_limit = E4_nat.max_nat);
-  check "N4 fits_wire: 0, max_nat yes; -1 no"
-    (E4_nat.fits_wire 0 && E4_nat.fits_wire E4_nat.max_nat && not (E4_nat.fits_wire (-1)));
-  check "N4 is_nat 0 / max_nat / -1" (E4_nat.is_nat 0 && E4_nat.is_nat max_int && not (E4_nat.is_nat (-1)));
-
-  (* pow: the rule table of NOTES.md §5 and the runtime library's `Lcnf_nat.pow` *)
-  check "N1 pow 2 10 = 1024" (E4_nat.pow 2 10 = 1024);
-  check "N1 pow 2 61 = 2^61 exactly" (E4_nat.pow 2 61 = 1 lsl 61);
-  check "N1 pow 2 62 = max_nat (2^62 saturates)" (E4_nat.pow 2 62 = E4_nat.max_nat);
-  check "N1 pow 2 64 = max_nat (Val.wf's `< 2^64` reads as `< max_int`)"
-    (E4_nat.pow 2 64 = E4_nat.max_nat);
-  check "N1 pow 10 18 = 10^18 exactly" (E4_nat.pow 10 18 = 1_000_000_000_000_000_000);
-  check "N1 pow 10 19 = max_nat" (E4_nat.pow 10 19 = E4_nat.max_nat);
-  check "N1 pow 0 0 = 1, pow 0 5 = 0, pow 5 0 = 1"
-    (E4_nat.pow 0 0 = 1 && E4_nat.pow 0 5 = 0 && E4_nat.pow 5 0 = 1);
-  check "N1 pow 1 max_nat = 1 (terminates: the fixed-point exit)" (E4_nat.pow 1 max_int = 1);
-  check "N1 pow 2 1000000000 = max_nat (terminates)" (E4_nat.pow 2 1_000_000_000 = E4_nat.max_nat);
-  let pow_exact_ok = ref true in
-  for b = 0 to 61 do
-    if E4_nat.pow 2 b <> 1 lsl b then pow_exact_ok := false
-  done;
-  check "N1 pow 2 b = 1 lsl b for every b <= 61" !pow_exact_ok;
-  let diff_ok = ref true in
-  let diff_n = ref 0 in
-  for a = 0 to 20 do
-    for b = 0 to 70 do
-      incr diff_n;
-      if E4_nat.pow a b <> E4_nat.pow_reference a b then diff_ok := false
-    done
-  done;
-  check (Printf.sprintf "N7 pow = Lcnf_nat.pow on %d (a,b) pairs" !diff_n) !diff_ok;
-
-  (* literals *)
-  check "N1 of_lit_decimal \"1947\" = 1947" (E4_nat.of_lit_decimal "1947" = Some 1947);
-  check "N1 of_lit_decimal \"0\" = 0" (E4_nat.of_lit_decimal "0" = Some 0);
-  check "N1 of_lit_decimal (2^62 - 1) is exact"
-    (E4_nat.of_lit_decimal "4611686018427387903" = Some E4_nat.max_nat);
-  check "N1 of_lit_decimal (2^62) saturates to max_nat"
-    (E4_nat.of_lit_decimal "4611686018427387904" = Some E4_nat.max_nat);
-  check "N1 of_lit_decimal (2^64) saturates to max_nat"
-    (E4_nat.of_lit_decimal "18446744073709551616" = Some E4_nat.max_nat);
-  check "N1 of_lit_decimal refuses \"\" and \"12a\""
-    (E4_nat.of_lit_decimal "" = None && E4_nat.of_lit_decimal "12a" = None);
-  check "N1 of_lit is the identity in range, max_nat on a negative"
-    (E4_nat.of_lit 7 = 7 && E4_nat.of_lit 0 = 0 && E4_nat.of_lit (-1) = E4_nat.max_nat);
-
-  (* N2: Lean's division *)
-  check "N2 div 7 2 = 3, div 7 0 = 0, div 0 0 = 0"
-    (E4_nat.div 7 2 = 3 && E4_nat.div 7 0 = 0 && E4_nat.div 0 0 = 0);
-  check "N2 rem 7 2 = 1, rem 7 0 = 7, rem 0 0 = 0"
-    (E4_nat.rem 7 2 = 1 && E4_nat.rem 7 0 = 7 && E4_nat.rem 0 0 = 0);
-  check "N2 div/rem never raise Division_by_zero"
-    (try
-       ignore (E4_nat.div max_int 0);
-       ignore (E4_nat.rem max_int 0);
-       true
-     with _ -> false);
-
-  (* N3: truncated subtraction *)
-  check "N3 sub 5 3 = 2, sub 3 5 = 0, sub 0 max_nat = 0"
-    (E4_nat.sub 5 3 = 2 && E4_nat.sub 3 5 = 0 && E4_nat.sub 0 max_int = 0);
-  check "N3 pred 0 = 0, pred 1 = 0" (E4_nat.pred 0 = 0 && E4_nat.pred 1 = 0);
-
-  (* N1: saturating add / mul / succ *)
-  check "N1 add max_nat 1 = max_nat, add max_nat max_nat = max_nat"
-    (E4_nat.add max_int 1 = E4_nat.max_nat && E4_nat.add max_int max_int = E4_nat.max_nat);
-  check "N1 add is exact below the bound" (E4_nat.add 2 3 = 5 && E4_nat.add 0 max_int = max_int);
-  check "N1 mul max_nat 2 = max_nat, mul is exact below the bound"
-    (E4_nat.mul max_int 2 = E4_nat.max_nat && E4_nat.mul 6 7 = 42 && E4_nat.mul 0 max_int = 0);
-  check "N1 succ max_nat = max_nat" (E4_nat.succ max_int = E4_nat.max_nat);
-  check "N1 saturates max_nat 2 / 2 3 / 0 anything"
-    (E4_nat.saturates max_int 2 && not (E4_nat.saturates 2 3)
-     && not (E4_nat.saturates 0 max_int));
-
-  (* N5: guarded shifts *)
-  check "N5 shift_left 1 61 = 2^61, shift_left 1 62 = max_nat"
-    (E4_nat.shift_left 1 61 = 1 lsl 61 && E4_nat.shift_left 1 62 = E4_nat.max_nat);
-  check "N5 shift_left 3 62 = max_nat, shift_left 0 100 = 0"
-    (E4_nat.shift_left 3 62 = E4_nat.max_nat && E4_nat.shift_left 0 100 = 0);
-  check "N5 shift_right 1024 3 = 128" (E4_nat.shift_right 1024 3 = 128);
-  check "N5 shift_right max_nat 62 = 0 and at bits/64/1000 = 0 (OCaml's lsr is undefined there)"
-    (E4_nat.shift_right max_int 62 = 0
-     && E4_nat.shift_right max_int E4_nat.bits = 0
-     && E4_nat.shift_right max_int 64 = 0
-     && E4_nat.shift_right max_int 1000 = 0);
-  check "N5 land_/lor_/lxor_"
-    (E4_nat.land_ 0xf0 0x3c = 0x30 && E4_nat.lor_ 0xf0 0x0c = 0xfc
-     && E4_nat.lxor_ 0xff 0x0f = 0xf0);
-
-  (* the edge triple: 2^62 - 1, 2^62, max_int *)
-  check "edge 2^62-1 = max_int is carried exactly"
-    (two_62_minus_1 = 4611686018427387903 && E4_nat.of_lit two_62_minus_1 = two_62_minus_1);
-  check "edge 2^62 is unreachable: every route to it answers max_nat"
-    (E4_nat.pow 2 62 = E4_nat.max_nat
-     && E4_nat.shift_left 1 62 = E4_nat.max_nat
-     && E4_nat.add two_62_minus_1 1 = E4_nat.max_nat
-     && E4_nat.of_lit_decimal "4611686018427387904" = Some E4_nat.max_nat);
-  check "edge max_int is a fixed point of succ/add 1/mul 1"
-    (E4_nat.succ max_int = max_int && E4_nat.add max_int 1 = max_int
-     && E4_nat.mul max_int 1 = max_int);
-
-  (* N6: totality over a grid *)
-  let grid = [ 0; 1; 2; 3; 7; 63; 64; 255; 1947; 1 lsl 31; 1 lsl 61; two_62_minus_1; max_int ] in
-  let total_ok = ref true in
-  let n_ops = ref 0 in
-  List.iter
-    (fun a ->
-      List.iter
-        (fun b ->
-          incr n_ops;
-          try
-            ignore (E4_nat.add a b);
-            ignore (E4_nat.sub a b);
-            ignore (E4_nat.mul a b);
-            ignore (E4_nat.div a b);
-            ignore (E4_nat.rem a b);
-            ignore (E4_nat.pow a b);
-            ignore (E4_nat.shift_left a b);
-            ignore (E4_nat.shift_right a b);
-            ignore (E4_nat.land_ a b);
-            ignore (E4_nat.lor_ a b);
-            ignore (E4_nat.lxor_ a b);
-            ignore (E4_nat.succ a);
-            ignore (E4_nat.pred a);
-            ignore (E4_nat.saturates a b)
-          with _ -> total_ok := false)
-        grid)
-    grid;
-  check (Printf.sprintf "N6 total: 14 operations over %d input pairs, no exception" !n_ops) !total_ok
-
 (* ============================================================ E4_hex *)
 
 let test_hex () =
-  print_endline "-- E4_hex: Digest.lean:62-93 and its #guards (:306-314)";
+  print_endline "-- E4_hex: hexOfBytes (src/Effect4/Store/Carrier/Digest.lean) and its byte and hex guards";
   check "H1 of_bytes [255;10] = \"ff0a\"" (E4_hex.of_bytes "\xff\x0a" = "ff0a");
   check "H1 of_bytes \"\" = \"\"" (E4_hex.of_bytes "" = "");
   check "H2 to_bytes \"ff00\" = Some [255;0]" (E4_hex.to_bytes "ff00" = Some "\xff\x00");
@@ -301,14 +158,14 @@ let test_be () =
   let be_ok = ref true in
   for _ = 1 to 2000 do
     let n = (next_rand () lsl 31) lor next_rand () in
-    let n = n land E4_nat.max_nat in
+    let n = n land max_int in
     if E4_be.read_be64 (E4_be.be64 n) 0 <> Some n then be_ok := false
   done;
-  check "B2 read_be64 (be64 n) = Some n, 2000 random n in 0..max_nat" !be_ok;
+  check "B2 read_be64 (be64 n) = Some n, 2000 random n in 0..max_int" !be_ok;
   check "B5 read_be64 refuses a top byte >= 0x40 (a length at or above 2^62)"
     (E4_be.read_be64 "\x40\000\000\000\000\000\000\000" 0 = None
      && E4_be.read_be64 "\xff\xff\xff\xff\xff\xff\xff\xff" 0 = None
-     && E4_be.read_be64 "\x3f\xff\xff\xff\xff\xff\xff\xff" 0 = Some E4_nat.max_nat);
+     && E4_be.read_be64 "\x3f\xff\xff\xff\xff\xff\xff\xff" 0 = Some max_int);
   check "B4 read_be64 refuses a truncated window and a negative position"
     (E4_be.read_be64 "\000\000\000\000\000\000\000" 0 = None
      && E4_be.read_be64 (E4_be.be64 1) 1 = None
@@ -357,7 +214,7 @@ let test_be () =
      && E4_be.nat_digits 256 = "\001\000" && E4_be.nat_digits 1947 = "\x07\x9b");
   let nat_ok = ref true in
   for _ = 1 to 2000 do
-    let n = ((next_rand () lsl 31) lor next_rand ()) land E4_nat.max_nat in
+    let n = ((next_rand () lsl 31) lor next_rand ()) land max_int in
     if E4_be.nat_of_digits (E4_be.nat_digits n) <> Some n then nat_ok := false;
     let d = E4_be.nat_digits n in
     if String.length d > 0 && String.unsafe_get d 0 = '\000' then nat_ok := false
@@ -368,7 +225,7 @@ let test_be () =
   check "B5 nat_of_digits refuses nine digits and eight with a top byte >= 0x40"
     (E4_be.nat_of_digits (String.make 9 '\001') = None
      && E4_be.nat_of_digits ("\x40" ^ String.make 7 '\000') = None
-     && E4_be.nat_of_digits ("\x3f" ^ String.make 7 '\xff') = Some E4_nat.max_nat);
+     && E4_be.nat_of_digits ("\x3f" ^ String.make 7 '\xff') = Some max_int);
   check "B6 the readers are total on 300 random strings, positions and limits"
     (let ok = ref true in
      for _ = 1 to 300 do
@@ -512,7 +369,7 @@ let edge_ints = [ min_int; min_int + 1; -65536; -256; -1; 0; 1; 255; 256; 65535;
                   1 lsl 61; max_int - 1; max_int ]
 
 let random_int () =
-  let n = ((next_rand () lsl 31) lor next_rand ()) land E4_nat.max_nat in
+  let n = ((next_rand () lsl 31) lor next_rand ()) land max_int in
   let n = n lsr rand 62 in
   if rand 4 = 0 then -n else n
 
@@ -613,21 +470,21 @@ let test_be_delegation () =
   done;
   check "B1 nat_of_digits = the transcription, 3000 random digit strings of 0 to 10 bytes" !long_ok;
   check "B5 nat_of_digits at the bound: eight digits below 0x40 read, at 0x40 refused, nine refused"
-    (E4_be.nat_of_digits ("\x3f" ^ String.make 7 '\xff') = Some E4_nat.max_nat
+    (E4_be.nat_of_digits ("\x3f" ^ String.make 7 '\xff') = Some max_int
      && E4_be.nat_of_digits ("\x40" ^ String.make 7 '\000') = None
      && E4_be.nat_of_digits (String.make 9 '\001') = None
      && E4_be.nat_of_digits (String.make 70000 '\001') = None)
 
 (* ============================================================ E4_sha256 *)
 
-(* The value frames of src/Effect4/Store/Val.lean, built out of E4_be — the tags are
+(* The value frames of src/Effect4/Store/Carrier/Val.lean, built out of E4_be — the tags are
    Canonical.lean's (2 nat, 3 string, 10 constructor). *)
 let v_nat n = E4_be.framed 2 (E4_be.nat_digits n)
 let v_str s = E4_be.framed 3 s
 let v_ctor i args = E4_be.framed 10 (v_nat i ^ String.concat "" args)
 
 (* sampleEntry = .ctor 0 [.str "Effect", .str "gen", .ctor 0 [], .nat 1947]
-   (src/Effect4/Store/Val.lean:1150-1151). *)
+   (sampleEntry (src/Effect4/Store/Carrier/Val.lean)). *)
 let sample_entry_bytes = v_ctor 0 [ v_str "Effect"; v_str "gen"; v_ctor 0 []; v_nat 1947 ]
 
 let nist_56 = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
@@ -636,7 +493,7 @@ let nist_112 =
   "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
 
 let test_sha256 () =
-  print_endline "-- E4_sha256: FIPS 180-4, and the #guards of src/Effect4/Store/Digest.lean";
+  print_endline "-- E4_sha256: FIPS 180-4, and the #guards of src/Effect4/Store/Carrier/Digest.lean";
   check "S1 sha256 \"\" = e3b0c442…b855"
     (E4_sha256.hex "" = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
   check "S1 sha256 \"abc\" = ba7816bf…f20015ad"
@@ -653,17 +510,17 @@ let test_sha256 () =
      done;
      E4_hex.of_bytes (E4_sha256.finish c)
      = "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
-  check "S2 Digest.lean:303  sha256 [0xb4,0x19,0x0e] = dff2e730…975c2"
+  check "S2 sha256 (src/Effect4/Store/Carrier/Digest.lean)  sha256 [0xb4,0x19,0x0e] = dff2e730…975c2"
     (E4_sha256.hex "\xb4\x19\x0e"
      = "dff2e73091f6c05e528896c4c831b9448653dc2ff043528f6769437bc7b975c2");
   (* the third vector: the input is built here and pinned by Val.lean's own #guards *)
-  check "S2 Val.lean:1153  (Val.encode sampleEntry).length = 74"
+  check "S2 sampleEntry (src/Effect4/Store/Carrier/Val.lean)  (Val.encode sampleEntry).length = 74"
     (String.length sample_entry_bytes = 74);
-  check "S2 Val.lean:1154  take 10 = [0x0a,0,0,0,0,0,0,0,0x41,0x02]"
+  check "S2 sampleEntry (src/Effect4/Store/Carrier/Val.lean)  take 10 = [0x0a,0,0,0,0,0,0,0,0x41,0x02]"
     (String.sub sample_entry_bytes 0 10 = "\x0a\000\000\000\000\000\000\000\x41\x02");
-  check "S2 Val.lean:1155  drop 63 = [0x02,0,0,0,0,0,0,0,0x02,0x07,0x9b]"
+  check "S2 sampleEntry (src/Effect4/Store/Carrier/Val.lean)  drop 63 = [0x02,0,0,0,0,0,0,0,0x02,0x07,0x9b]"
     (String.sub sample_entry_bytes 63 11 = "\x02\000\000\000\000\000\000\000\x02\x07\x9b");
-  check "S2 Digest.lean:315  sha256 (Val.encode sampleEntry) = 8fab1618…0661fa"
+  check "S2 sha256 (src/Effect4/Store/Carrier/Digest.lean)  sha256 (Val.encode sampleEntry) = 8fab1618…0661fa"
     (E4_sha256.hex sample_entry_bytes
      = "8fab161870afe7d35c681679cf5dced52845b5ebef2b84b6c85e4b49d00661fa");
   (* S3: streaming = one-shot *)
@@ -729,7 +586,6 @@ let bench_sha256 () =
   check "S6 the 64 MiB digest is 32 bytes and the run completed" (String.length d = 32)
 
 let () =
-  test_nat ();
   test_hex ();
   test_be ();
   test_be_delegation ();

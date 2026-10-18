@@ -4,9 +4,9 @@
    (docs/research/2026-09-08-engine-a2-persistence.md §1.4, proposal 18 / survey #12).  A row
    is `be32 len :: be32 crc :: body`; a segment is a file under `<store>/log/<job-hex>/`
    named by the index of its first row; replay is from a checkpoint position plus the tail.
-   This is the DURABLE SPINE.  A3's `E4_log` (ocaml/engine/query/e4_log.mli) is the in-memory
-   projection over the same rows, and `replay` here is what feeds it at load; nothing else
-   writes `E4_log`.
+   `E4_checkpoint` (ocaml/engine/cas/e4_checkpoint.ml) consumes the durable rows for run
+   persistence. `E4_log` (ocaml/engine/e4_log.mli) is a separate in-memory projection.
+   This module does not feed or own that projection.
 
    A row body is an OPAQUE canonical byte string plus a row-kind byte.  This module never
    parses a decision, so it does not depend on today's decision alphabet (`evaluate`,

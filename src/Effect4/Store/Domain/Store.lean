@@ -92,6 +92,16 @@ def findIn : List (Digest × Node) → Digest → Option Node
 /-- The node at a digest, if any. -/
 def Store.find (s : Store) (d : Digest) : Option Node := findIn s.nodes d
 
+/-- Resident node identity for `cas-resident-injective` (R13, decisions row 411 (1)).
+Both nodes reside at their own addresses in the same store. No hash injectivity premise is needed.
+`Test/Store/NodeContract.lean` consumes this law before the transaction slices. -/
+theorem address_inj_resident {s : Store} {n m : Node}
+    (hn : s.find (sha256 n.encode) = some n)
+    (hm : s.find (sha256 m.encode) = some m)
+    (he : sha256 n.encode = sha256 m.encode) : n = m := by
+  rw [he] at hn
+  exact Option.some.inj (hn.symm.trans hm)
+
 /-- The untyped read. -/
 def Store.getNode (s : Store) (d : Digest) : Option Node := s.find d
 
@@ -388,11 +398,6 @@ theorem putNode_closed {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : S
   · exact hc
   · exact hc
 
-/-- The brief's name for closure preservation. -/
-theorem putNode_fresh_closed {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
-    (hc : Closed s) (h : s.putNode n = .ok (o, d, s')) : Closed s' :=
-  putNode_closed hc h
-
 /-- The invariant a store built by `putNode` keeps: every resident node would be admitted into
 the store around it, and sits at its own address. -/
 structure Store.Sound (s : Store) : Prop where
@@ -640,20 +645,6 @@ def probeStore : Store := afterPut (afterPut Store.empty probeSchema) probeEntry
   | .error _ => false)
 
 /-! ## The total combinators a fold needs -/
-
-section
-variable [Content Document]
-
-/-- The store after an admitted put; the store unchanged when admission refused. A store built
-children-first admits every put, and a refusal shows as a missing node rather than as an error,
-which is what a battery counts. Moved here from the census module at the landing: three
-families build stores by folding this. -/
-def putOr {α : Type} [Content α] (store : Store) (value : α) : Store :=
-  match store.put value with
-  | .ok (_, _, moved) => moved
-  | .error _ => store
-
-end
 
 /-- The store after an admitted root move; the store unchanged when the move refused. -/
 def putRootOr (store : Store) (root : Root) : Store :=

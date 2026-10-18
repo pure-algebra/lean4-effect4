@@ -50,25 +50,25 @@ module type INSTANCE = sig
 
   (** The two payloads the projection does not descend into. *)
 
-  type nu  (** [Effect4.Program.EffName], api_engine.ml:279 *)
+  type nu  (** [Effect4.Program.EffName]; [eff_name] in ocaml/engine/api_engine.ml. *)
 
-  type s  (** [Effect4.Program.EffThunk], api_engine.ml:392 *)
+  type s  (** [Effect4.Program.EffThunk]; [eff_thunk] in ocaml/engine/api_engine.ml. *)
 
   (** The machine-side alphabet, transcribed from api_engine.ml. The program alphabet is
       `Eff_types`, opened here and by the generated engine. `ocamlopt` checks this transcription
       against every instance: a constructor added, dropped, renamed or re-ordered in the generated file is
       a compile error here. *)
 
-  type fiber_id = int  (* :775 *)
+  type fiber_id = int  (* fiber_id (ocaml/engine/api_engine.ml) *)
 
-  type stuck =  (* :651 *)
+  type stuck =  (* stuck (ocaml/engine/api_engine.ml) *)
     | Stuck_unknownFiber of fiber_id
     | Stuck_unknownScope of int
     | Stuck_unknownRace of int
 
-  type parked = Parked_notParked | Parked_withGuard of int  (* :234 *)
+  type parked = Parked_notParked | Parked_withGuard of int  (* parked (ocaml/engine/api_engine.ml) *)
 
-  type observer =  (* :353-359 *)
+  type observer =  (* observer (ocaml/engine/api_engine.ml) *)
     | Observer_resumeAwait of fiber_id * int * ObserverMode.t
     | Observer_untrackChild of fiber_id
     | Observer_dropScopeFinalizer of int * int
@@ -76,18 +76,18 @@ module type INSTANCE = sig
     | Observer_raceCallback of int
     | Observer_callback of int
 
-  type scope_mode = ScopeMode_forkIn | ScopeMode_fiberRunIn  (* :540 *)
-  type outcome = Outcome_finished | Outcome_frontier | Outcome_stuck of stuck  (* :78 *)
-  type 'u service = { key : ServiceKey.t; value : 'u }  (* :749 *)
-  type 'u context = 'u service list  (* :778 *)
+  type scope_mode = ScopeMode_forkIn | ScopeMode_fiberRunIn  (* scope_mode (ocaml/engine/api_engine.ml) *)
+  type outcome = Outcome_finished | Outcome_frontier | Outcome_stuck of stuck  (* outcome (ocaml/engine/api_engine.ml) *)
+  type 'u service = { key : ServiceKey.t; value : 'u }  (* service (ocaml/engine/api_engine.ml) *)
+  type 'u context = 'u service list  (* context (ocaml/engine/api_engine.ml) *)
 
-  type ctx = {  (* :235 *)
+  type ctx = {  (* ctx (ocaml/engine/api_engine.ml) *)
     services : Val.t context;
     max_ops_before_yield : int;
     prevent_yield : bool;
   }
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =  (* :408-426 *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =  (* prim (ocaml/engine/api_engine.ml) *)
     | Prim_success of 'b
     | Prim_failure of ('e, 'd, 'i, 'a) Cause.t
     | Prim_sync of 's
@@ -108,7 +108,7 @@ module type INSTANCE = sig
     | Prim_async of 'nu * bool * 'nu option
     | Prim_asyncFinalizer of 'nu
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =  (* :765-772 *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =  (* frame_event (ocaml/engine/api_engine.ml) *)
     | FrameEvent_popped of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
     | FrameEvent_ranContAll of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
     | FrameEvent_pushed of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
@@ -127,12 +127,12 @@ module type INSTANCE = sig
 
   type wake_key = { kind : handle_kind; index : int }
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =  (* :734 *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =  (* task (ocaml/engine/api_engine.ml) *)
     | Task_start of fiber_id
     | Task_resume of fiber_id * int * 'k
     | Task_wake of wake_key * int
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =  (* :174-195 *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =  (* run_event (ocaml/engine/api_engine.ml) *)
     | RunEvent_forked of fiber_id * fiber_id * bool
     | RunEvent_started of fiber_id
     | RunEvent_scheduledTask of fiber_id * int * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
@@ -155,7 +155,7 @@ module type INSTANCE = sig
     | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) Exit.t
     | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) Exit.t
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =  (* :69-76 *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =  (* run_decision (ocaml/engine/api_engine.ml) *)
     | RunDecision_fire of fiber_id
     | RunDecision_flush
     | RunDecision_evaluate of fiber_id
@@ -315,7 +315,7 @@ module type ENGINE = sig
   val admits : t -> decision -> bool
 
   val replay : t -> decision list -> t
-  (** `Api.replay`'s machine (Api.lean:156-162): decisions are applied until the replay stops
+  (** `Api.replay`'s machine (replay (src/Effect4/Api.lean)): decisions are applied until the replay stops
       (EN4), and the rest of the tape is never read. *)
 
   val replay_to : t -> decision list -> t * decision list
@@ -340,7 +340,7 @@ module type ENGINE = sig
       tape is spent. *)
 
   val drive : t -> t
-  (** `Api.run`'s tape, `[evaluate root; flush]` (Api.lean:171-172). *)
+  (** `Api.run`'s tape, `[evaluate root; flush]` (run (src/Effect4/Api.lean)). *)
 
   val run : ?table:Row.t list -> Eff_wire.program -> fuel:int -> t
   val run_program : ?table:Row.t list -> program -> fuel:int -> t

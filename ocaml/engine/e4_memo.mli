@@ -7,8 +7,8 @@
    body (`LayerId := List Nat × CallId`, `CallId := List (List Nat)`,
    src/Effect4/Machine/Alphabets.lean; decisions row 341, step 3).
 
-   The world itself (`MemoWorld = List MemoMap`, :855) is NOT tabled: the append is inline in
-   syncOpStep's memoFork arm (:2238) and syncOpStep must stay generated (A1 §1.2, owner
+   The world itself (`MemoWorld`, src/Effect4/Machine/Stores.lean) is NOT tabled.
+   Its append stays in `syncOpStep`'s `memoFork` arm in that file; `syncOpStep` stays generated (A1 §1.2, owner
    decision Q3).  One map per `Layer.provide` site; measure before revisiting.  `lookup`
    below is the world's parent walk, spelled here so that the engine and A2's cache share one
    spelling.
@@ -23,20 +23,21 @@
 
    Behaviours (each is a named PASS/FAIL line in test/prop_memo.ml):
    MM1 find_opt is entryAt: `(m.entries.find? fun e => e.1 = layer).map Prod.snd`
-       (Stores.lean:866-867) — the FIRST binding                              tested
-   MM2 insert KEEPS an existing binding.  Lean appends unconditionally (:876-880) and
+       (MemoWorld.entryAt (src/Effect4/Machine/Stores.lean)) — the FIRST binding                              tested
+   MM2 insert KEEPS an existing binding.  Lean appends unconditionally (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean) and
        `find?` answers the FIRST, so a duplicate insert is invisible to entryAt;
-       updateEntry (:869-873) and deleteEntry (:883-886) touch ALL matching entries, so
+       `MemoWorld.updateEntry` and `MemoWorld.deleteEntry` (src/Effect4/Machine/Stores.lean) touch
+       ALL matching entries, so
        after either one the list and the map agree again.  Therefore "insert-if-absent" is
        EXACT for every observation the machine can make.  This is the one carrier law that
        is not an obvious equality; the property test against e4_memo_list.ml (which DOES
        append the duplicate, as Lean does) is what carries it.                tested
-   MM3 update is a no-op on an absent key (Lean's map-by-key, :869-873)       tested
-   MM4 delete removes EVERY matching entry (:883-886), so after a delete no duplicate
+   MM3 update is a no-op on an absent key (`MemoWorld.updateEntry`, src/Effect4/Machine/Stores.lean)       tested
+   MM4 delete removes EVERY matching entry (`MemoWorld.deleteEntry`, src/Effect4/Machine/Stores.lean), so after a delete no duplicate
        survives in the twin either                                            tested
-   MM5 the parent chain's fuel is `world length + 1` (:890-904).  A forged parent id can
-       make the chain cyclic (:906-910: the model cannot stop a program from forging a
-       path), so the fuel MUST be kept: `lookup` answers None at exhaustion rather than
+   MM5 the parent chain's fuel is `world length + 1` (`MemoWorld.lookup`, src/Effect4/Machine/Stores.lean).  A forged parent id can
+       make the chain cyclic (`MemoMap.parent`, src/Effect4/Machine/Stores.lean), so the fuel
+       MUST be kept: `lookup` answers None at exhaustion rather than
        looping.                                                               tested
    MM6 bindings is in ASCENDING KEY ORDER (`compare_key`: the path lexicographic on int list,
        shorter-first on a prefix, then the call, path by path), which is NOT Lean's insertion
@@ -98,7 +99,7 @@ val lookup :
   int ->
   (int * 'a) option
 (** [lookup ~parent ~id ~entries world layer start] is `MemoWorld.get`
-    (src/Effect4/Machine/Stores.lean:890-904): the map at [start] first, then the parent
+    (MemoWorld.lookup (src/Effect4/Machine/Stores.lean)): the map at [start] first, then the parent
     chain, with fuel `List.length world + 1` (MM5).  `mapAt` is `world.find?`, so the FIRST
     map with a given id wins.  Answers None at fuel exhaustion — a forged parent can make
     the chain cyclic and the fuel is what makes `lookup` total. *)

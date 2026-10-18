@@ -391,27 +391,6 @@ def rcNatDocument : Representation := .number none [rcIsIntFilter, rcNonNegative
 example := @ofSchema_exact
 example := @ofSchema_schema
 
-/-! ## Multi-Tier Cascading CAS -/
-
-open Effect4.Store
-
--- CascadingStore operations
-private def cs0 : CascadingStore := CascadingStore.empty
-#guard cs0.find Effect4.Store.zeroDigest = none
-#guard !cs0.contains Effect4.Store.zeroDigest
-#guard cs0.findWithSource Effect4.Store.zeroDigest = none
-
-private def testNode : Effect4.Store.Node := ⟨0, .schema, Effect4.Store.zeroDigest, .str "test"⟩
-private def testNodeAddress : Effect4.Store.Digest := Effect4.Store.sha256 testNode.encode
-
-#guard match cs0.putLocal testNode with
-  | .ok (.fresh, d, cs1) =>
-      d = testNodeAddress &&
-      cs1.contains testNodeAddress &&
-      cs1.find testNodeAddress = some testNode &&
-      (cs1.findWithSource testNodeAddress).map Prod.snd = some .«local»
-  | _ => false
-
 /-! ## S-3: the checked JSON boundary, owner amendment 2026-09-11 -/
 
 open Effect4.Program
@@ -717,37 +696,6 @@ private def pGenBytes := Api.bytesOf pGen
 
 private def pRefScopeBytes := Api.bytesOf pRefScope
 #guard Api.ofBytes pRefScopeBytes = some pRefScope
-
--- 9. Multi-Tier Cascading CAS with Serialized Programs and Codec Data
-private def progCasNode : Effect4.Store.Node :=
-  ⟨0, .schema, Effect4.Store.zeroDigest, Store.Val.bytes pCallBytes⟩
-private def progCasDigest : Effect4.Store.Digest :=
-  Effect4.Store.sha256 progCasNode.encode
-
--- Put in local tier of CascadingStore
-private def csWithProg : CascadingStore :=
-  match cs0.putLocal progCasNode with
-  | .ok (_, _, s) => s
-  | .error _ => cs0
-
-#guard csWithProg.contains progCasDigest
-#guard csWithProg.find progCasDigest = some progCasNode
-#guard csWithProg.findWithSource progCasDigest = some (progCasNode, .«local»)
-
--- Deserializing back from CAS payload
-#guard match (csWithProg.find progCasDigest).map (·.payload) with
-  | some (Store.Val.bytes b) => Api.ofBytes b = some pLoopProg
-  | _ => false
-
--- Cascading upstream lookup via promote
-private def csTiered : CascadingStore :=
-  match csWithProg.promote progCasDigest with
-  | .ok (_, _, csPromoted) => { csPromoted with localStore := Store.empty }
-  | .error _ => cs0
-
-#guard csTiered.contains progCasDigest
-#guard csTiered.find progCasDigest = some progCasNode
-#guard csTiered.findWithSource progCasDigest = some (progCasNode, .upstream)
 
 /-! ## Decisions row 8 (C): the references table written once per key
 

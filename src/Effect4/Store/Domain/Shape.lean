@@ -73,7 +73,7 @@ deriving Inhabited
 
 namespace Shape
 
-/-! A structural `Repr`, by hand, for the same reason `Val`'s is (`Store/Val.lean`): the
+/-! A structural `Repr`, by hand, for the same reason `Val`'s is (`src/Effect4/Store/Carrier/Val.lean`): the
 derived one on a nested inductive is a `partial` definition the trust gate refuses. -/
 
 mutual

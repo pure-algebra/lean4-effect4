@@ -325,7 +325,7 @@ hex codec both ways, and the facts note §6 payload digest of the census entry. 
 /-! ## A digest from bytes -/
 
 /-- A digest from exactly thirty-two bytes; the one length check the codecs share. Moved here
-from `Store/Node.lean` at the landing (2026-09-05) so a module that needs only a `Digest`
+from `src/Effect4/Store/Domain/Node.lean` at the landing (2026-09-05) so a module that needs only a `Digest`
 (`Surface/Annotate.lean`) never imports the node layer. -/
 def Digest.ofBytes? (bs : Bytes) : Option Digest :=
   if h : bs.length = 32 then some ⟨bs, h⟩ else none

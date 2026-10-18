@@ -120,7 +120,7 @@
    D1  `store` and `store_manifest` take `~spec`.  §1.9's signature is
        `store : E4_cas.t -> params -> string -> Ref.t list`, which cannot file a node: every
        non-genesis node's edge 0 is its spec at kind `schema` and `E4_cas` refuses a spec that
-       resolves to nothing (`Node.checkedEdges`, Node.lean:297; golden G2's `dangling-zero`).
+       resolves to nothing (`Node.checkedEdges`, Node.checkedEdges (src/Effect4/Store/Domain/Node.lean); golden G2's `dangling-zero`).
        The spec is the caller's because the schema is the caller's — `E4_checkpoint` supplies
        the pending one.
    D2  `store_counted` is added beside `store`: the same work, answering how many chunk nodes

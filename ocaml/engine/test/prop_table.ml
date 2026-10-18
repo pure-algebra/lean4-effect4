@@ -302,7 +302,7 @@ let r6 () =
 let tl2 () =
   (* TL2: for a monotone (machine-reachable) allocation sequence the twin's INSERTION order
      and its ascending `bindings` coincide — the licence A1 §4.2 states for the fiber table
-     and Stores.lean:1150/:1366 state for the dense heaps. *)
+     and `refStep` and `DeferredStore.make` (src/Effect4/Machine/Stores.lean) state for the dense heaps. *)
   let ok = ref true in
   List.iter
     (fun n ->

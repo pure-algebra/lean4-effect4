@@ -26,7 +26,7 @@ type pure_refusal =
   | Malformed_ref
   | Handle_in_content
 
-(* src/Effect4/Store/Node.lean:276 -- `zeroDigest : Digest := ⟨List.replicate 32 0, _⟩`. *)
+(* zeroDigest (src/Effect4/Store/Domain/Node.lean) -- `zeroDigest : Digest := ⟨List.replicate 32 0, _⟩`. *)
 let zero_digest = String.make 32 '\000'
 
 let header_length = 34                 (* version 1 + kind 1 + spec 32 *)
@@ -37,7 +37,7 @@ let make ~version ~kind ~spec ~payload =
   if version < 0 || version > 255 then invalid_arg "E4_node.make: the version is not a byte";
   { version; kind; spec; payload }
 
-(* src/Effect4/Store/Node.lean:170-171 --
+(* Node.encode (src/Effect4/Store/Domain/Node.lean) --
      `def encode (n : Node) : Bytes := n.version :: n.kind.byte :: (n.spec.bytes ++ Val.encode n.payload)` *)
 let encode (n : t) : string =
   if String.length n.spec <> E4_addr.Addr.length then
@@ -54,15 +54,15 @@ let encode (n : t) : string =
 
 (* ------------------------------------------------------------------ the payload walk
 
-   One frame is `tag :: be64 len :: payload` (src/Effect4/Store/Val.lean:147-159, the
+   One frame is `tag :: be64 len :: payload` (Val.encode (src/Effect4/Store/Carrier/Val.lean), the
    `framed` rule; E4_be.read_frame is the reader).  A region is a byte range that must hold a
    given number of frames back to back: rem = -1 for "as many as fit exactly" (a list's
-   elements, a ctor's arguments, Val.lean's `decodeSeq`), 2 for a pair (:595-601), 1 for a
-   `some` (:603-606) and for the payload of a node as a whole (`Val.decode` is one tree and
-   nothing else, :985).
+   elements and a ctor's arguments), 2 for a pair, and 1 for `some`.
+   `Val.decodeBody` and `Val.decodeSeq` (src/Effect4/Store/Carrier/Val.lean) own those cases.
+   `Val.decode` in that file reads exactly one tree, as the node payload requires.
 
    Descend only into tags 4, 5, 7, 10.  Tag 8 (`bytes`) is a LEAF: `Val.refs (.bytes bs) = []`
-   (Node.lean:250), so a bytes payload that happens to be a valid ref frame yields no ref
+   (Val.refs (src/Effect4/Store/Domain/Node.lean)), so a bytes payload that happens to be a valid ref frame yields no ref
    (L-SCAN-2).  Tags 1, 2, 3, 6, 9, 11, 12, 13 and 14 are leaves too. *)
 
 exception Refuse of decode_error
@@ -113,7 +113,7 @@ let walk (s : string) ~(pos : int) ~(limit : int) ~(rem : int)
         let tag = Char.code (String.unsafe_get s p) in
         let cont = (e, l, if rm < 0 then -1 else rm - 1) in
         let children =
-          (* Val.lean:584-622 `decodeBody`, one arm per tag. *)
+          (* Val.decode (src/Effect4/Store/Carrier/Val.lean) `decodeBody`, one arm per tag. *)
           if tag = Eff_frame.tag_unit then begin
             if flen <> 0 then raise (Refuse Bad_frame);
             []
@@ -130,12 +130,12 @@ let walk (s : string) ~(pos : int) ~(limit : int) ~(rem : int)
             []
           end
           else if tag = Eff_frame.tag_nat then begin
-            (* Val.lean:591: a leading zero digit is a refusal; the value is unbounded (D1). *)
+            (* Val.decode (src/Effect4/Store/Carrier/Val.lean): a leading zero digit is a refusal; the value is unbounded (D1). *)
             if flen > 0 && String.unsafe_get s st = '\000' then raise (Refuse Bad_frame);
             []
           end
           else if tag = Eff_frame.tag_string then begin
-            (* Val.lean:592 / Utf8.lean:118-153: strict UTF-8, shortest forms, no surrogates. *)
+            (* Val.decode (src/Effect4/Store/Carrier/Val.lean) / utf8Chars (src/Effect4/Store/Carrier/Utf8.lean): strict UTF-8, shortest forms, no surrogates. *)
             if not (Eff_frame.utf8_valid (String.sub s st flen)) then raise (Refuse Bad_frame);
             []
           end
@@ -144,7 +144,7 @@ let walk (s : string) ~(pos : int) ~(limit : int) ~(rem : int)
           else if tag = Eff_frame.tag_pair then [ (st, e, 2) ]
           else if tag = Eff_frame.tag_some then [ (st, e, 1) ]
           else if tag = Eff_frame.tag_ctor then begin
-            (* Val.lean:607-612: the index is one `nat` frame in shortest form, then the
+            (* Val.decode (src/Effect4/Store/Carrier/Val.lean): the index is one `nat` frame in shortest form, then the
                arguments back to back. *)
             if st + E4_be.header_length > e then raise (Refuse Bad_frame);
             if Char.code (String.unsafe_get s st) <> Eff_frame.tag_nat then
@@ -160,14 +160,14 @@ let walk (s : string) ~(pos : int) ~(limit : int) ~(rem : int)
             [ (ist + ilen, e, -1) ]
           end
           else if tag = Eff_frame.tag_ref then begin
-            (* Val.lean:614-617: the kind byte, then the digest bytes; an empty payload has no
+            (* Val.decode (src/Effect4/Store/Carrier/Val.lean): the kind byte, then the digest bytes; an empty payload has no
                kind byte and is refused. *)
             if flen < 1 then raise (Refuse Bad_frame);
             on_ref (Char.code (String.unsafe_get s st)) (st + 1) (flen - 1);
             []
           end
           else if tag = Eff_frame.tag_handle then begin
-            (* Val.lean:618-621: the kind byte, then the key's nat digits, shortest form. *)
+            (* Val.decode (src/Effect4/Store/Carrier/Val.lean): the kind byte, then the key's nat digits, shortest form. *)
             if flen < 1 then raise (Refuse Bad_frame);
             let dlen = flen - 1 in
             if dlen > 0 && String.unsafe_get s (st + 1) = '\000' then raise (Refuse Bad_frame);
@@ -208,7 +208,7 @@ let payload_ok (p : string) : (unit, decode_error) result =
   | () -> Ok ()
   | exception Refuse e -> Error e
 
-(* Val.refs (Node.lean:241-255) and Val.malformedRef (:260-266) in one pass: a ref frame
+(* `Val.refs` and `Val.malformedRef` (src/Effect4/Store/Domain/Node.lean) in one pass: a ref frame
    contributes a Ref exactly when its kind byte is registered AND its digest is 32 bytes, and
    is malformed in every other case. *)
 let scan_payload (p : string) : (scan, decode_error) result =
@@ -239,7 +239,7 @@ let refs (n : t) : E4_addr.Ref.t list = scan_refs n.payload
 let malformed_ref (n : t) : bool = scan_malformed_ref n.payload
 let handles (n : t) : (int * int) list = scan_handles n.payload
 
-(* Node.lean:175-182 `decode`: two header bytes, version 0, a registered kind byte, thirty-two
+(* Node.decode (src/Effect4/Store/Domain/Node.lean) `decode`: two header bytes, version 0, a registered kind byte, thirty-two
    spec bytes, then one value tree and nothing else. *)
 let decode (s : string) : (t, decode_error) result =
   let len = String.length s in
@@ -259,10 +259,10 @@ let decode (s : string) : (t, decode_error) result =
            | Error e -> Error e
            | Ok () -> Ok { version = 0; kind; spec = String.sub s 2 32; payload })
 
-(* Node.lean:354 `address` -- sha256 of the node bytes and of nothing else. *)
+(* address (src/Effect4/Store/Domain/Node.lean) `address` -- sha256 of the node bytes and of nothing else. *)
 let address (n : t) : E4_addr.Addr.t = E4_addr.Addr.of_digest (E4_sha256.digest (encode n))
 
-(* Node.lean:291 IsGenesis, :287 edges, :297 checkedEdges. *)
+(* `Node.IsGenesis`, `Node.edges`, and `Node.checkedEdges` (src/Effect4/Store/Domain/Node.lean). *)
 let is_genesis (n : t) : bool =
   E4_kind.equal n.kind E4_kind.Schema && String.equal n.spec zero_digest
 
@@ -271,7 +271,7 @@ let edges (n : t) : E4_addr.Ref.t list =
 
 let checked_edges (n : t) : E4_addr.Ref.t list = if is_genesis n then refs n else edges n
 
-(* Store.lean:262-276 `putNode`, the prefix that is a function of the node alone. *)
+(* Store.putNode (src/Effect4/Store/Domain/Store.lean) `putNode`, the prefix that is a function of the node alone. *)
 let oversize (n : t) : bool =
   match payload_ok n.payload with Ok () -> false | Error _ -> true
 

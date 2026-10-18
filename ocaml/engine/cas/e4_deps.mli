@@ -37,7 +37,7 @@
        answer exactly what they answered before.                by construction; tested (D6)
    DP3 NO PROPAGATE (L-DEP-2).  There is no `propagate` and there will not be one: a
        row-preserving edit is not a meaning-preserving edit here, because
-       `exists_carrier_collision` (src/Effect4/Machine/Key.lean:383-386) says type identity
+       `exists_carrier_collision` (exists_carrier_collision (src/Effect4/Machine/Key.lean)) says type identity
        never recovers code identity.  A change under a name mints a new `Publication`; nothing
        is ever re-hashed automatically.                          by construction (the function
                                                                  does not exist)

@@ -1,6 +1,6 @@
 (* Eff_frame — the framing kernel of the canonical wire (hand-written).
 
-   What it is: the byte rule of src/Effect4/Store/Canonical.lean, as OCaml.
+   What it is: the byte rule of src/Effect4/Store/Domain/Canonical.lean, as OCaml.
      framed tag payload = tag :: be64 (length payload) ++ payload, be64 = 8 big-endian bytes.
      Unit 9 [] | Bool 1 [0|1] | Nat 2 base-256 big-endian digits, no leading zero, 0 = []
      | String 3 utf8 | List 4 (concat) | none 6 [] | some 7 x | pair 5 (a ++ b)
@@ -10,7 +10,7 @@
 
    Tags 11 and 12 are the two frames the shared value foundation adds on top of the ten of
    Canonical.lean; the authority for their payloads is the Lean encoder itself,
-   src/Effect4/Store/Val.lean:158-159 (`.ref k d => framed Tag.ref (k :: d)` and
+   src/Effect4/Store/Carrier/Val.lean:158-159 (`.ref k d => framed Tag.ref (k :: d)` and
    `.handle k n => framed Tag.handle (k :: natBytes n)`), restated at :203-204 as `payload`.
    A ref's digest is opaque bytes of any length, including none; a handle's key is the same
    shortest-form digit string a Nat frame carries, so the key 0 is one kind byte and no

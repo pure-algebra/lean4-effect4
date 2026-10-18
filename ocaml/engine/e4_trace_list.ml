@@ -1,7 +1,7 @@
 (* E4_trace_list — the LIST twin of E4_trace: the same signature (`TRACE`, 2026-09-08-engine-
    a1-state.md §1.5), backed by the list Lean actually carries, in emission order.
 
-   It reproduces `Effect4.Machine.RunMachine.emit` (src/Effect4/Machine/Fibers.lean:585-587)
+   It reproduces `Effect4.Machine.RunMachine.emit` (RunMachine.emit (src/Effect4/Machine/Fibers.lean))
    operation for operation, INCLUDING the empty guard:
        trace := if events.isEmpty then m.trace else m.trace ++ events
    so `emit [] t` is physically `t` here too, and the only difference from E4_trace is the

@@ -11,9 +11,9 @@ public import Effect4.Store.Domain.Derived.Schema
 Owner: the one instance that closes the loop — `Content Document` at kind `schema` — and the
 theorems it turns from statements under a binder into facts.
 
-`Store/Node.lean` writes everything that needs `Canonical Document` — the meta-schema, the
+`src/Effect4/Store/Domain/Node.lean` writes everything that needs `Canonical Document` — the meta-schema, the
 genesis node, `specOf`, `nodeOf`, `address` and the lattice — under `variable [Content
-Document]`, and `Store/Derived/Schema.lean` derives `Canonical Document` from the carrier
+Document]`, and `SchemaGen.DocumentC.instCanonical` (`src/Effect4/Store/Domain/Derived/Schema.lean`) derives `Canonical Document` from the carrier
 itself. This module supplies the kind, and with it every statement of that section is an
 ordinary theorem: the meta-schema is the genesis node (`nodeOf_metaSchema'`), the spec of
 `Document` is the genesis address (`specOf_document`), every other document's node is a schema

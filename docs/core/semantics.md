@@ -810,6 +810,9 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 (`decode_iff`, `src/Effect4/Laws/Schema/Codec.lean`; `ofSchema_exact`, `src/Effect4/Schema/Bridge.lean`).
 
 #### 4. Required Properties and Obligations
+- **Resident node identity (`cas-resident-injective`)**: two nodes resident at their own equal addresses in one store are equal.
+  `address_inj_resident` (`src/Effect4/Store/Domain/Store.lean`) keeps both lookup premises.
+  It assumes no hash injectivity and establishes no cross-store equality or host persistence property.
 - **Exactness modulo key sorting (`decode-iff`)**: JSON decoding is exact modulo `normJ`
   (`decode_iff` (`src/Effect4/Laws/Schema/Codec.lean`)).
 - **Retraction on codec-admitted values (`decode-encode`)**: at a canonical type (`CTy`), decoding the

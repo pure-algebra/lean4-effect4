@@ -42,6 +42,7 @@ import Test.Codegen.Tuple
 import Test.Codegen.ConstructorLane
 import Test.Codegen.ModeledLane
 import Test.Codegen.SchemaGenerationContract
+import Test.Codegen.MirrorReaders
 import Test.Codegen.SchemaGenerationCoverage
 import Test.Codegen.SchemaCode
 import Test.Codegen.SurfaceContract

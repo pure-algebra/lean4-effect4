@@ -14,7 +14,7 @@
      P9  Reserved tags 3..15 round-trip verbatim through a commit by a reader that does not
          understand them — the format-revision property (CF3).
      C*  The CAS on the roots plane (CF5-CF8): the outcome vocabulary of Store.putRoot
-         (src/Effect4/Store/Store.lean:523-530), the head-first cons, the lowercasing of M8,
+         (Store.putRoot (src/Effect4/Store/Domain/Store.lean)), the head-first cons, the lowercasing of M8,
          the monotone generation of CF7, and the M7 fork refusal that Lean does not have.
      W*  The pack_end watermark: what `set_pack_end` records and what a re-read gives back.
      G3  The roots CAS sequence of A2 §4.1 G3, replayed against ../goldens: each `g3-*.hex` is
@@ -117,7 +117,7 @@ let reserved_payload =
 
 let long_name = String.make E4_control.max_name_length 'z'
 
-(* max_int is 2^62-1 on this host (E4_nat.max_nat): the largest be64 the wire admits (M9). *)
+(* max_int is 2^62-1 on this host (max_int): the largest be64 the wire admits (M9). *)
 let boundary_payload =
   {
     E4_control.pack_end = (E4_control.max_name_length, max_int);
@@ -353,7 +353,7 @@ let test_refusals () =
          E4_control.encode
            { empty_payload with
              E4_control.roots = [ mk_root "Nope" E4_control.Stdlib E4_kind.Export (dig 1) 1 ] }));
-  (* CF9: 2^62 is not representable as an OCaml int (E4_nat.max_nat = max_int = 2^62-1), so
+  (* CF9: 2^62 is not representable as an OCaml int (max_int = 2^62-1), so
      the write side of M9 can only refuse a negative field; the read side is E7 above. *)
   check "E11 encode refuses a negative be64 field (CF9, M9)"
     (raises (fun () -> E4_control.encode { empty_payload with E4_control.generation = -1 }));
@@ -476,7 +476,7 @@ let outcome_word = function
   | Error e -> E4_control.root_error_word e
 
 let test_cas () =
-  print_endline "-- C: compare-and-set on the roots plane (CF5-CF8, Store.lean:523-530)";
+  print_endline "-- C: compare-and-set on the roots plane (CF5-CF8, Store.putRoot (src/Effect4/Store/Domain/Store.lean))";
   let d1 = dig 0x21 and d2 = dig 0x22 and d3 = dig 0x23 in
   let resolve =
     table_resolve [ (d1, E4_kind.Export); (d2, E4_kind.Schema); (d3, E4_kind.Export) ]
@@ -521,7 +521,7 @@ let test_cas () =
           { r1 with E4_control.digest = E4_addr.Addr.zero; kind = E4_kind.Schema })
     = "dangling " ^ E4_addr.Addr.hex E4_addr.Addr.zero);
 
-  (* CF8: head-first, one entry per name (Store.lean:527). *)
+  (* CF8: head-first, one entry per name (Store.putRoot (src/Effect4/Store/Domain/Store.lean)). *)
   let s2 =
     match
       E4_control.advance_root s1 ~resolve
@@ -532,7 +532,7 @@ let test_cas () =
       check "C6 the advance to version 2 is ok" false;
       s1
   in
-  check "C6 the advance leaves exactly one root of that name (Store.lean:527)"
+  check "C6 the advance leaves exactly one root of that name (Store.putRoot (src/Effect4/Store/Domain/Store.lean))"
     (List.length (E4_control.roots s2) = 1);
   check "C6 and it is the new one, at the head"
     (match E4_control.roots s2 with
@@ -723,7 +723,7 @@ let case_bytes dir name =
   let path = Filename.concat dir (name ^ ".hex") in
   if not (Sys.file_exists path) then None else E4_hex.to_bytes (strip (read_file path))
 
-(* The Val frames of src/Effect4/Store/Val.lean:147-159, built from E4_be.framed alone. *)
+(* The Val frames of Val.encode (src/Effect4/Store/Carrier/Val.lean), built from E4_be.framed alone. *)
 let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
 let v_str s = E4_be.framed Eff_frame.tag_string s
 let v_bytes b = E4_be.framed Eff_frame.tag_bytes b
@@ -843,7 +843,7 @@ let test_goldens () =
       ignore (step base "g3-wrongKind" : E4_control.payload);
       ignore (step base "g3-dangling" : E4_control.payload);
       let after_v2 = step after_v1 "g3-advance-v2" in
-      check "G3 the plane after the advance still holds exactly one root (Store.lean:527)"
+      check "G3 the plane after the advance still holds exactly one root (Store.putRoot (src/Effect4/Store/Domain/Store.lean))"
         (List.length (E4_control.roots after_v2) = 1);
 
       (* The two `roots-after` cases are the roots plane itself, as `list (rootVal r)`. *)
@@ -879,7 +879,7 @@ let test_goldens () =
         note "a g3 row now mentions registry/pin/fork — re-check the M7 and M1 arms"
       else
         skip "G3 M7 prev (registry fork) and M1 pinAll"
-          "lane GLD O4: Store.lean:47-53 has no `registry` and no `pin` RootKind, and \
+          "lane GLD O4: RootKind (src/Effect4/Store/Domain/Store.lean) has no `registry` and no `pin` RootKind, and \
            advanceRoot/Publication/pinAll have 0 hits in src/ — nothing to cut. The OCaml \
            arms are covered in-memory by C9."
     end)

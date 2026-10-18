@@ -1,10 +1,10 @@
 (* E4_addr — the two pointer classes: the identity that reaches disk, and the repo-local
    accelerator that never does.
 
-   What it is: `Addr` is `Store.Digest` (src/Effect4/Store/Digest.lean:35-37) — thirty-two
+   What it is: `Addr` is `Store.Digest` (Digest (src/Effect4/Store/Carrier/Digest.lean)) — thirty-two
    bytes, the SHA-256 of a node's canonical bytes, the only thing that is ever encoded, hashed,
    named in a root, or carried across a process.  `Ref` is `Store.AnyRef`
-   (src/Effect4/Store/Node.lean:71-74): an address with the kind byte its target must file
+   (AnyRef (src/Effect4/Store/Domain/Node.lean)): an address with the kind byte its target must file
    under.  `Cid` is the payload digest, kind-free (amendment M6).  `Handle` is the repository's
    private accelerator — where a node's bytes sit in this process's pack — and it is NOT an
    address: it never reaches a byte anyone else reads.  Survey #5 / proposal 23; Irmin's
@@ -16,9 +16,9 @@
    Behaviours:
    AD1 `Addr.t` is exactly 32 bytes; `of_digest` refuses anything else with Invalid_argument
        and `of_digest_opt` with None.  It mirrors `Store.Digest`, whose length is carried in
-       the type (Digest.lean:35-37).                             by construction; tested
+       the type (Digest (src/Effect4/Store/Carrier/Digest.lean)).                             by construction; tested
    AD2 `Addr.hex` and `Addr.of_hex` FORWARD to E4_hex (`of_bytes`, `digest_of_hex`); lowercase
-       out, either case in, exactly `Digest.hex` / `Digest.ofHex?` (Digest.lean:252-259,
+       out, either case in, exactly `Digest.hex` / `Digest.ofHex?` (Digest.hex (src/Effect4/Store/Carrier/Digest.lean),
        amendment M8).                                            by construction; tested
    AD3 A `Handle` is never encoded, never compared by offset, never crosses a process boundary
        and has no inverse: `Handle.addr` is total, and there is no `Handle.of_addr`, no
@@ -28,7 +28,7 @@
        cas-design §3); `Ref.parse (Ref.present r) = Some r` and
        `Cid.parse (Cid.present k c) = Some (k, c)`, and each parser refuses the other's form,
        an unregistered kind name, a wrong-length hex string and a non-hex character.  tested
-   AD5 `Addr.zero` is `zeroDigest` (Node.lean:276): thirty-two zero bytes, the spec of the
+   AD5 `Addr.zero` is `zeroDigest` (zeroDigest (src/Effect4/Store/Domain/Node.lean)): thirty-two zero bytes, the spec of the
        genesis and of nothing else.                                          by construction
    AD6 `Addr.prefix63` is a pure function of the leading bytes, always in 0 .. 2^62-1, and
        equal for two addresses iff their leading 62 bits are equal.  It is an index key and
@@ -37,7 +37,7 @@
    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.5 (lane P0, 2026-09-08):
    D1  `prefix63` returns the leading **62** bits, not 63.  A2 wrote "the leading 8 bytes, top
        bit cleared", which is a value in 0 .. 2^63-1; an OCaml int on this host holds
-       -2^62 .. 2^62-1 (`E4_nat.max_nat`), so no such value is representable as a
+       -2^62 .. 2^62-1 (`max_int`), so no such value is representable as a
        non-negative int.  Rather than let the key go negative — A2's index stores keys in a
        `Bigarray.int`, which would carry a negative fine, but `Addr.prefix63`'s type says
        nothing about it and a signed key is a trap for the next reader — this lane keeps the
@@ -74,12 +74,12 @@ module Addr : sig
   (** The leading 62 bits, as a non-negative int; an index key, never an identity (AD6, D1). *)
 
   val zero : t
-  (** zeroDigest — thirty-two zero bytes (Node.lean:276) (AD5). *)
+  (** zeroDigest — thirty-two zero bytes (zeroDigest (src/Effect4/Store/Domain/Node.lean)) (AD5). *)
 end
 
 module Ref : sig
   type t = { kind : E4_kind.t; addr : Addr.t }
-  (** Store.AnyRef (src/Effect4/Store/Node.lean:71-74). *)
+  (** Store.AnyRef (AnyRef (src/Effect4/Store/Domain/Node.lean)). *)
 
   val make : E4_kind.t -> Addr.t -> t
 

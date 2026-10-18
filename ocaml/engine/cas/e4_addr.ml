@@ -16,7 +16,7 @@ module Addr = struct
 
   let bytes (t : t) : string = t
 
-  (* AD2: forwarded, never reimplemented (Digest.hex / Digest.ofHex?, Digest.lean:252-259). *)
+  (* AD2: forwarded, never reimplemented (Digest.hex / Digest.ofHex?, Digest.hex (src/Effect4/Store/Carrier/Digest.lean)). *)
   let hex (t : t) : string = E4_hex.of_bytes t
   let of_hex (s : string) : t option = E4_hex.digest_of_hex s
 

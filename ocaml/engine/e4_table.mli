@@ -4,10 +4,11 @@
 
    What it is: `Map.Make(Int)` with a Lean-shaped API and a small-size representation.
    The `set` / `add` split is the whole point: Lean's `List.set` is a NO-OP out of range
-   (src/Effect4/Machine/Stores.lean:1120 refPoke, :1374 DeferredStore.setCell) and Lean's
-   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,
-   Fibers.lean:579 RunMachine.update), whereas allocation is an APPEND (Stores.lean:1150
-   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, Fibers.lean:877 spawn).
+   (`refPoke` and `DeferredStore.setCell`, src/Effect4/Machine/Stores.lean).
+   Replace-by-key `List.map` leaves an absent key unchanged (`ScopeStore.setEntry` in
+   src/Effect4/Machine/Stores.lean; `RunMachine.update` in src/Effect4/Machine/Fibers.lean).
+   Allocation appends (`refStep` at `SyncOp.refMake`, `DeferredStore.make`, and `ScopeStore.make`
+   in src/Effect4/Machine/Stores.lean; `spawn` in src/Effect4/Machine/Fibers.lean).
    A carrier with one `add` would silently create cells Lean never mints.
 
    This module satisfies the generated functor's `TABLE` signature
@@ -47,7 +48,7 @@
                                List.mapi (fun i v -> (i, v)) (to_list t)   tested
    T5  fold and filter_map visit in ASCENDING key order.  `for_all` does NOT: it keeps
        Map.for_all's node-first traversal so that it still SHORT-CIRCUITS, exactly as Lean's
-       `List.all` does (Fibers.lean:609).  Its answer is a conjunction and therefore
+       `List.all` does (RunMachine.finished (src/Effect4/Machine/Fibers.lean)).  Its answer is a conjunction and therefore
        order-independent, and `finished` is its only caller; no law of any carrier in this
        lane depends on the order `for_all` visits in.  (A1 §4.1's T5 named `for_all` among
        the ordered operations — MEASURED FALSE for Map.Make and corrected here; the
@@ -65,7 +66,7 @@
    R6b representation independence: two tables with the same bindings, built by different
        op sequences, have the same `bindings`, `cardinal` and `is_small`   tested
    Bound: keys are host ints.  Lean's keys are `Nat` (RefKey.index, DeferredKey.index,
-   ScopeEntry.key, FiberId) and every one of them is < E4_nat.max_nat on this host. *)
+   ScopeEntry.key, FiberId) and every one of them is < max_int on this host. *)
 
 type 'a t
 
@@ -77,8 +78,8 @@ val find_opt : int -> 'a t -> 'a option
 (** The key first: the shape the generated call sites use. *)
 
 val find_opt' : 'a t -> int -> 'a option
-(** The TABLE first: Lean's argument order for `RunMachine.fiber?` (Fibers.lean:573) and
-    `DeferredStore.cellAt` (Stores.lean:1369), so an extern row is a name substitution and
+(** The TABLE first: Lean's argument order for `RunMachine.fiber?` (RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)) and
+    `DeferredStore.cellAt` (DeferredStore.cellAt (src/Effect4/Machine/Stores.lean)), so an extern row is a name substitution and
     not an argument permutation.  See the deviation note in
     docs/research/2026-09-08-engine-lane-c-delivery.md. *)
 
@@ -97,13 +98,13 @@ val cardinal : 'a t -> int
 (** O(1): carried in the value.  See the representation note above. *)
 
 val map : ('a -> 'a) -> 'a t -> 'a t
-(** Key-preserving bulk transform (RunMachine.dropObservers, Fibers.lean:1256, :1344). *)
+(** Key-preserving bulk transform (RunMachine.dropObservers, dropObservers (src/Effect4/Machine/Fibers.lean)). *)
 
 val filter_map : (int -> 'a -> 'b option) -> 'a t -> 'b list
-(** ASCENDING; the shape of RunMachine.completedExits (Fibers.lean:1543). *)
+(** ASCENDING; the shape of RunMachine.completedExits (completedExits (src/Effect4/Machine/Fibers.lean)). *)
 
 val for_all : (int -> 'a -> bool) -> 'a t -> bool
-(** The shape of RunMachine.finished (Fibers.lean:609).  Short-circuits; the visit ORDER is
+(** The shape of RunMachine.finished (RunMachine.finished (src/Effect4/Machine/Fibers.lean)).  Short-circuits; the visit ORDER is
     unspecified (T5) — the answer is not. *)
 
 val fold : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b

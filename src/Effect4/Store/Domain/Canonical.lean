@@ -65,7 +65,7 @@ theorem toVal_injective {a b : α} (h : toVal a = toVal b) : a = b := by
   rw [h, ofVal_toVal] at h1
   exact (Option.some.inj h1).symm
 
-/-- Every canonical carrier is an exact image (`Store/Image.lean`): the shape and `fits` are
+/-- Every canonical carrier is an exact image (`src/Effect4/Store/Carrier/Image.lean`): the shape and `fits` are
 forgotten, the writer, the reader and the two laws are kept. This is how a hand-written image
 in the Machine layer is compared with the instance the generator emits for the same
 declaration, without the Machine layer naming a `Shape`. -/

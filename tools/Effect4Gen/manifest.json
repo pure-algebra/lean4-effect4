@@ -159,7 +159,7 @@
       ]
     },
     {
-      "Note": "`Tree` is the store's own carrier (a name space as content, Store/Node.lean); its instance is emitted here beside `Pin`'s so no area above the store supplies a store type's instance (coordinator, 2026-09-05, after lane C's note).",
+      "Note": "`Tree` is the store's own carrier (a name space as content, src/Effect4/Store/Domain/Node.lean); its instance is emitted here beside `Pin`'s so no area above the store supplies a store type's instance (coordinator, 2026-09-05, after lane C's note).",
       "Name": "Pin",
       "Flags": ["--module", "--meta-imports", "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node"],
       "Imports": "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node",

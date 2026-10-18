@@ -61,7 +61,7 @@ val show_decision : decision -> string
 val show_tape : decision list -> string
 
 val drive_tape : decision list
-(** `Api.run`'s own tape: `[Evaluate 0; Flush]` (Api.lean:171-172). *)
+(** `Api.run`'s own tape: `[Evaluate 0; Flush]` (run (src/Effect4/Api.lean)). *)
 
 (** {1 The projection} *)
 

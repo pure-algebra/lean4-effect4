@@ -2,11 +2,11 @@
    canonical bytes, admission in Lean's order, the three put outcomes, the roots plane, closure,
    recovery and verification.
 
-   What it is: `src/Effect4/Store/Store.lean` and `src/Effect4/Store/Word.lean` as a durable
-   object.  `put` is `Store.putNode` (Store.lean:262-276); `get_node` is `Store.find` (:87);
-   `advance_root` is `Store.putRoot` (:523-530); `closure` is `Store.closure` (Word.lean:346);
-   `word_wf` is `Word.wf` (:70); `apply_word` is `Word.apply` (:73); `verify` is `Store.verify`
-   (Word.lean:772).  The pack holds the nodes, an index finds them, the control file holds the
+   What it is: `src/Effect4/Store/Domain/Store.lean` and `src/Effect4/Store/Domain/Word.lean` as a durable
+   object.  `put` is `Store.putNode` (Store.putNode (src/Effect4/Store/Domain/Store.lean)); `get_node` is `Store.find` Store.find (src/Effect4/Store/Domain/Store.lean);
+   `advance_root` is `Store.putRoot` Store.putRoot (src/Effect4/Store/Domain/Store.lean); `closure` is `Store.closure` (Store.closure (src/Effect4/Store/Domain/Word.lean));
+   `word_wf` is `Word.wf` Word.wf (src/Effect4/Store/Domain/Word.lean); `apply_word` is `Word.apply` Word.apply (src/Effect4/Store/Domain/Word.lean); `verify` is `Store.verify`
+   (Store.verify (src/Effect4/Store/Domain/Word.lean)).  The pack holds the nodes, an index finds them, the control file holds the
    roots and the durable end.
 
    The store directory (A2 §1.0):
@@ -48,9 +48,9 @@
          4  `Dangling`         a checked edge names no node          [checked_edges order,
          5  `Wrong_kind`       a checked edge names another kind      spec edge first]
        The genesis (kind `schema` with the zero spec) is exempt from the spec edge and nothing
-       else is (`Node.checkedEdges`, Node.lean:297).      tested: golden G2, prop L-CAS-4
+       else is (`Node.checkedEdges`, Node.checkedEdges (src/Effect4/Store/Domain/Node.lean)).      tested: golden G2, prop L-CAS-4
    CS3  The address is `sha256 (E4_node.encode n)` and nothing else is ever hashed
-       (`Store.address`, Node.lean:354; L-CAS-1).                    by construction; tested
+       (`Store.address`, address (src/Effect4/Store/Domain/Node.lean); L-CAS-1).                    by construction; tested
    CS4  Single writer, checked: `open_rw` takes the pack's exclusive lock on <store>/LOCK and
        raises `Locked` when another writer holds it.  Readers take no lock.       tested (X5)
    CS5  Durability is per COMMIT, not per put: `put` stages, `commit` performs ONE write(2)
@@ -61,7 +61,9 @@
        re-scanned and re-admitted in write order; the scan stops at the first record that
        fails CRC, digest or admission.  A torn or corrupt record is truncated away by the pack
        (E4_pack PK3/PK7); an ADMISSION failure is not (see D6).  Licensed by `Word.wf` /
-       `wf_closed`: a children-first word replays from a closed store into a closed store.
+       `wfFrom_apply` (src/Effect4/Store/Domain/Word.lean): replay starts at
+       `Word.toStore earlier`, with `Word.wfFrom earlier w = true`, `Word.Faithful earlier`,
+       and `Closed (Word.toStore earlier)`. The result remains faithful and closed.
                                                                      tested (X1, X2, X7)
    CS7 / L-CAS-6  `verify` is `Store.verify`: it re-reads every record from the pack and
        re-hashes it, re-decodes it, re-resolves every checked edge at its kind and resolves
@@ -69,7 +71,7 @@
        default; `Verify_handle_in_content`, OCaml only).  It NEVER consults the index and
        never trusts a record's recorded digest — both are caches of it.
                                                     by construction; tested (G7, X3, CS7-h)
-   CS8  The store never collects (Store.lean:19, cas-design §8).  `reachable` and `by_cid` are
+   CS8  The store never collects (Store (src/Effect4/Store/Domain/Store.lean), cas-design §8).  `reachable` and `by_cid` are
        queries, never edges (amendment M1: `Reachable` does not walk `Cid` fields), and
        `pin_all` mints the pin roots a publish owes.                          tested (G3)
    CS9 / L-CAS-7  `closure` is the transfer unit: it is a well-formed word, children first,
@@ -94,13 +96,13 @@
        `Oversize of decode_error` is split here into `Oversize` and `Host_limit` (CS2 rows 1
        and 1'), which is what §1.8's two rows ask for.
    D3  `apply_word` answers its own error type.  Lean's `Word.apply` refuses a conflicting
-       binding with `Admission.conflict address occupant` (Word.lean:73-81), and §1.8's
+       binding with `Admission.conflict address occupant` (Word.apply (src/Effect4/Store/Domain/Word.lean)), and §1.8's
        `admission` has no such constructor — `put` can never return one.  `word_error` is
        therefore `Refused_by of admission | Word_conflict of { at; occupant }`.
    D4  Added, and each of them is a read of state this module already holds: `read_only` (the
        writer's own read view — §1.8 types `put` on `t` and `get_node` on `ro` and gives no
        bridge), `dir`, `generation`, `nodes` (`Store.nodes`, in insertion order, which is what
-       makes L-CAS-7 testable), `addresses`, `closed` (`Closed`, Store.lean:241, as a
+       makes L-CAS-7 testable), `addresses`, `closed` (`Closed`, Closed (src/Effect4/Store/Domain/Store.lean), as a
        decision), `recovery`, `drop_index`, `index_count`, and the four printers
        `outcome_word` / `admission_word` / `verify_error_word` / `recovery_stop_word`, whose
        vocabulary is Lean's so a golden's `expected` column compares as a string.
@@ -137,7 +139,7 @@
        names the roots after the job's parts (`runs/<job>/program`, `/tape`, `/profile`),
        which a bare `Cid` list cannot distinguish.  `pin` mints one root under a name the
        caller chooses and is what a publisher should use; `pin_all` is §1.8's signature kept
-       working.  `RootKind.pin` is not in Lean (`Store.lean:47-53`) and lane GLD reports M1 as
+       working.  `RootKind.pin` is not in Lean (`RootKind (src/Effect4/Store/Domain/Store.lean)`) and lane GLD reports M1 as
        owed (2026-09-08-engine-lane-gld-delivery.md §4 O4), so no golden pins the names.
    D9  `verify_node` re-hashes and re-decodes its one node and resolves its edges through the
        ordinary lookup; only whole-store `verify` refuses to consult the index (CS7).  A
@@ -207,7 +209,7 @@ val outcome_word : outcome -> string
 val admission_word : admission -> string
 (** "oversize" | "unknownTag <n>" | "hostLimit <why>" | "badVersion" | "malformedRef" |
     "handleInContent" | "dangling <hex>" | "wrongKind" — `Store.Admission`'s spelling
-    (Store.lean:153-169), with the refusals Lean does not have named as the amendments name
+    (Admission (src/Effect4/Store/Domain/Store.lean)), with the refusals Lean does not have named as the amendments name
     them, and `unknownTag` as CS2 row 1b names it. *)
 
 val verify_error_word : verify_error -> string
@@ -288,17 +290,17 @@ val commit : t -> unit
     watermark has not moved. *)
 
 val get_node : ro -> E4_addr.Addr.t -> E4_node.t option
-(** `Store.find` (Store.lean:87). *)
+(** `Store.find` (Store.find (src/Effect4/Store/Domain/Store.lean)). *)
 
 val get_bytes : ro -> E4_addr.Addr.t -> string option
 val get_kind : ro -> E4_addr.Addr.t -> E4_kind.t option
 val mem : ro -> E4_addr.Addr.t -> bool
 
 val resolves : ro -> E4_addr.Ref.t -> bool
-(** `Store.Resolves` (:182): a node is filed at that digest, at that kind. *)
+(** `Store.Resolves` Store.Resolves (src/Effect4/Store/Domain/Store.lean): a node is filed at that digest, at that kind. *)
 
 val nodes : ro -> (E4_addr.Addr.t * E4_node.t) list
-(** `Store.nodes` (:73-75): the bindings in INSERTION order, which is the pack's write order.
+(** `Store.nodes` Store (src/Effect4/Store/Domain/Store.lean): the bindings in INSERTION order, which is the pack's write order.
     Order-dependent by construction — that is what L-CAS-7 is about. *)
 
 val addresses : ro -> E4_addr.Addr.t list
@@ -313,7 +315,7 @@ val generation : ro -> int
 
 val advance_root :
   t -> ?prev:E4_addr.Addr.t -> E4_control.root -> (unit, E4_control.root_error) result
-(** `Store.putRoot` (:523-530) with the version, dangling and kind checks all real: the
+(** `Store.putRoot` Store.putRoot (src/Effect4/Store/Domain/Store.lean) with the version, dangling and kind checks all real: the
     resolver is this store's own kind lookup.  Commits the pack first (D7) and the control
     file after, so a root never names a node that is not durable. *)
 
@@ -330,13 +332,13 @@ val pin_all :
 (* ---------------------------------------------------------------- words, closure, verify *)
 
 type binding = { addr : E4_addr.Addr.t; node : E4_node.t }
-(** `Word.Binding` (src/Effect4/Store/Word.lean:44-48). *)
+(** `Word.Binding` (Binding (src/Effect4/Store/Domain/Word.lean)). *)
 
 val word_wf : binding list -> bool
-(** `Word.wf` (:70): children first, digests exact, no digest twice. *)
+(** `Word.wf` Word.wf (src/Effect4/Store/Domain/Word.lean): children first, digests exact, no digest twice. *)
 
 val closure : ro -> E4_addr.Ref.t -> binding list
-(** `Store.closure` (:346): the reachable subgraph of a reference, children first, each digest
+(** `Store.closure` Store.closure (src/Effect4/Store/Domain/Word.lean): the reachable subgraph of a reference, children first, each digest
     once, with `Word.emit`'s guard, at fuel `count`.  Order-independent (L-CAS-7). *)
 
 type word_error =
@@ -348,19 +350,19 @@ type word_error =
       (** a binding whose address holds a record that does not hash to it (CS1) *)
 
 val apply_word : t -> binding list -> (unit, word_error) result
-(** `Word.apply` (:73-81): a fold of `put`; a `Duplicate` is fine, a `Conflict` or a `Corrupt`
+(** `Word.apply` Word.apply (src/Effect4/Store/Domain/Word.lean): a fold of `put`; a `Duplicate` is fine, a `Conflict` or a `Corrupt`
     refuses. *)
 
 val verify : ro -> (unit, verify_error) result
-(** `Store.verify` (Word.lean:772).  CS7: its own scan of the pack, every record re-hashed and
+(** `Store.verify` (Store.verify (src/Effect4/Store/Domain/Word.lean)).  CS7: its own scan of the pack, every record re-hashed and
     re-decoded, every checked edge re-resolved at its kind, every root resolved.  The index is
     not consulted and the recorded digest is not trusted. *)
 
 val verify_node : ro -> E4_addr.Addr.t -> (unit, verify_error) result
-(** `Store.verifyNode` (Word.lean:749-755) for one address (D9). *)
+(** `Store.verifyNode` (Store.verifyNode (src/Effect4/Store/Domain/Word.lean)) for one address (D9). *)
 
 val closed : ro -> bool
-(** `Closed` (Store.lean:241): every resident node's checked edges resolve at their kinds. *)
+(** `Closed` (Closed (src/Effect4/Store/Domain/Store.lean)): every resident node's checked edges resolve at their kinds. *)
 
 (* ---------------------------------------------------------------- queries that are not edges *)
 

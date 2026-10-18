@@ -162,7 +162,7 @@ theorem encodeProgram_decodeProgram {b : Bytes} {p : Eff NativeOp} :
 T2b is the load-bearing half: with it, `decodeProgram` is a partial inverse whose domain is
 exactly the image of `encodeProgram`, which makes trailing bytes, a leading-zero natural digit,
 an out-of-range constructor index and a short payload refusals *by construction* rather than by
-case analysis. The route: prove the framing lemma first — for `Store/Canonical.lean`'s
+case analysis. The route: prove the framing lemma first — for `src/Effect4/Store/Domain/Canonical.lean`'s
 framing, `readFrame (framed t p ++ r) = some (t, p, r)` and conversely
 `readFrame b = some (t, p, r) → b = framed t p ++ r` — then lift it through the mutual
 `encEff`/`decEff` recursion, with a `natOfDigits`/`digits` canonicity lemma for the `Nat` case.

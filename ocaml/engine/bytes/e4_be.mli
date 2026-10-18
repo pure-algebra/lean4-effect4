@@ -1,7 +1,6 @@
 (* E4_be — the canonical framing.
 
-   What it is: the engine's name for the byte rule of src/Effect4/Store/Canonical.lean and
-   src/Effect4/Program/Wire.lean:
+   What it is: the engine's name for `framed` (src/Effect4/Store/Carrier/Val.lean):
 
      framed tag payload = tag :: be64 (String.length payload) ++ payload,  be64 = 8 big-endian
      bytes; a natural is base-256 big-endian with no leading zero and 0 is the empty digit
@@ -30,7 +29,7 @@
        repairs (Eff_frame.read_frame, Eff_frame.exact).                 by construction; tested
    B5  Bound: a be64 whose top byte is >= 0x40 -- a length at or above 2^62 -- is refused,
        and so is a natural of nine digits, or of eight with a top byte >= 0x40
-       (E4_nat.fits_wire; Eff_frame.read_be64, Eff_frame.decode_nat).   by construction; tested
+       (max_int < 2^64; Eff_frame.read_be64, Eff_frame.decode_nat).   by construction; tested
    B6  Total on the reading side: no exception escapes `read_be64`, `read_frame`,
        `nat_of_digits` or `exact_frame` for any string, position and limit.       tested
    B7  The writing side refuses what the rule does not carry, each with this module's own

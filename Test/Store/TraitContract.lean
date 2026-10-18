@@ -8,7 +8,7 @@ the subject's bytes and address are the same before and after any number of trai
 it. `effective` resolves node, then spec, then the kind-registry row, most specific first, and
 supersession through `prev` moves the head without deleting anything.
 
-The fixtures are the substrate's own (`Store/Traits.lean`): a trait spec under the stand-in
+The fixtures are the substrate's own (`src/Effect4/Store/Domain/Traits.lean`): a trait spec under the stand-in
 genesis, a trait on the census entry, the trait that supersedes it, a trait on the entry's
 spec node, a registry tree with a default trait, and two further exports that resolve at the
 spec and registry levels.

@@ -47,7 +47,7 @@ applied nominal carriers that mention a block member (`ElementOf Representation`
 of which share one `defs` table and refer to each other by `.named`. An item is *recursive*
 when any constructor argument mentions a member.
 
-- A recursive item reads through `guarded toVal raw` (`Store/Canonical.lean`): `raw` is the
+- A recursive item reads through `guarded toVal raw` (`src/Effect4/Store/Domain/Canonical.lean`): `raw` is the
   structural reader, the guard compares the re-encoding, so `ofVal_toVal` needs only the left
   inverse `raw (toVal a) = some a` and `ofVal_exact` is free. That is S1's recipe for the `Eff`
   family, moved here verbatim.
@@ -527,7 +527,7 @@ def kindFor (kinds : Array KindReq) (m : MemberInfo) : Option String :=
   (kinds.find? fun k => k.ty == m.ty).map (·.kind)
 
 /-- The `Content` instance right after a member's `Canonical` instance: the kind byte's row for
-every node carrying the carrier (`Store/Node.lean`, `Content`). -/
+every node carrying the carrier (`src/Effect4/Store/Domain/Node.lean`, `Content`). -/
 def emitContent (name : String) (m : MemberInfo) (kind : String) : EmitM Unit := do
   emit s!"/-- Every node carrying a `{m.shapeName}` files under kind `{kind}`. -/"
   emitTwo "" s!"instance {name} :" s!"Content ({m.tyText}) := ⟨.{kind}⟩"

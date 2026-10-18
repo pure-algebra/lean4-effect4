@@ -1,7 +1,8 @@
 import TestSupport.CasEntry
 /-
 Contract: the node layer — kinds, typed references, node bytes, and the genesis
-(`Effect4/Store/{Kind,Node,Genesis}.lean`).
+(`Kind` in `src/Effect4/Store/Carrier/Kind.lean`;
+`Node` in `src/Effect4/Store/Domain/Node.lean`; `instContentDocument` in `src/Effect4/Store/Domain/Genesis.lean`).
 
 Frozen: the kind byte of every kind and its round trip; the two refusals a typed `Ref` makes
 before any store is consulted (a wrong kind byte, a wrong address length); the census entry's
@@ -14,7 +15,7 @@ meta-schema's 92,462-byte payload, the genesis address `2794d9…2926`, the entr
 `Templates.Entry` files as `export` content here rather than in the library: nothing in `src/`
 carries this four-field shape (the census entry gained a `source : Ref Source` field at the
 landing, `StdLib/Entry.lean`), so the illustration's kind belongs with the
-illustration. `Store/Val.lean`'s `sampleEntry` is its value tree, which is why the §6 and §6a
+illustration. `src/Effect4/Store/Carrier/Val.lean`'s `sampleEntry` is its value tree, which is why the §6 and §6a
 numbers still hold.
 
 Measured 2026-09-05 (lane B, `docs/research/2026-09-05-workshop-cas/NOTES-B.md`): the whole file, genesis guards
@@ -26,6 +27,7 @@ Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
 import Effect4.Store.Domain.Genesis
+import Effect4.Store.Domain.Store
 import Test.Store.Templates
 
 namespace Test.Store.NodeContract
@@ -172,7 +174,16 @@ def entryTyped : Ref Effect4.Store.Templates.Entry := ⟨entryAddress⟩
 
 example := @Effect4.Store.address_congr
 example := @Effect4.Store.address_eq_or_collision
-example := @Effect4.Store.address_inj
+-- The lookup reader needs both residents, even when the two addresses agree.
+example {n : Effect4.Store.Node}
+    (hn : probeStore.find (sha256 n.encode) = some n)
+    (hm : probeStore.find probeEntryAddress = some probeEntry)
+    (he : sha256 n.encode = probeEntryAddress) : n = probeEntry :=
+  address_inj_resident hn hm he
+
+-- Equal addresses alone supply no resident: the empty store has neither premise.
+#guard Store.empty.find probeEntryAddress = none
+#guard probeStore.find probeEntryAddress = some probeEntry
 example := @Effect4.Store.Node.decode_encode
 example := @Effect4.Store.Node.decode_exact
 example := @Effect4.Store.Node.encode_injective

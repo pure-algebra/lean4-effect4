@@ -1165,6 +1165,9 @@ def registry : Registry where
     { id := "references-move", concept := "initial-algebras-folds", role := .preservation
       title := "A subtree whose layer references stay inside it keeps every reference well formed when it is pasted with Node.rebaseRefs, at an address below the root, outside the module's layers and in one scope; nothing of typing, of references that leave the subtree, of variable levels or row positions, or of any run (decisions row 336 (6); seat ORG's L9)"
       pointer := .witness `Effect4.Program.references_move },
+    { id := "cas-resident-injective", concept := "exact-codecs", role := .compatibility
+      title := "Two nodes resident at their own equal addresses in one store are equal; both lookup premises remain; no hash injectivity or host persistence claim (seams K0, R13)"
+      pointer := .witness `Effect4.Store.address_inj_resident },
     { id := "program-digest-exact", concept := "exact-codecs", role := .compatibility
       title := "A program files in the store under kind program (Content (Eff NativeOp), generated), so two programs with one address are equal or a digest collision (address_eq_or_collision at programs); nothing of a piece's key, which moves with its depth (the MCP note's ruling 3)"
       pointer := .witness `Effect4.Store.address_eq_or_collision },

@@ -57,7 +57,7 @@ let delete (p : key) (t : 'a t) : 'a t = PMap.remove p t
 let bindings (t : 'a t) : (key * 'a) list = PMap.bindings t
 let cardinal (t : 'a t) : int = PMap.cardinal t
 
-(* MemoWorld.lookup (Stores.lean:890-904).  `mapAt` is `w.find? (·.id = id)`: the FIRST map
+(* MemoWorld.lookup (MemoWorld.lookup (src/Effect4/Machine/Stores.lean)).  `mapAt` is `w.find? (·.id = id)`: the FIRST map
    with that id.  The fuel is `w.length + 1` and the `0` arm is `none` — a forged parent id
    can make the chain cyclic, and the fuel is what keeps this total (MM5). *)
 let lookup ~(parent : 'm -> int option) ~(id : 'm -> int) ~(entries : 'm -> 'a t)

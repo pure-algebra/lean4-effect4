@@ -1,6 +1,6 @@
 /-
 Contract: admission, words, closures, the layered read, the outbox and verification
-(`Effect4/Store/{Store,Word}.lean`).
+(`Store` in `src/Effect4/Store/Domain/Store.lean`; `Word` in `src/Effect4/Store/Domain/Word.lean`).
 
 Frozen: the three put outcomes (`fresh`, `duplicate`, `conflict`) and the refusals that come
 before them (`dangling`, `wrongKind`, `badVersion`, `malformedRef`), each on a real address —
@@ -11,7 +11,7 @@ an outbox synced twice is the same remote; that `verify` passes on a sound store
 after one byte of one payload is flipped; and that a root move under a stale version is
 refused rather than merged.
 
-The fixtures are the substrate's own (`Store/Store.lean`, `Store/Word.lean`): a stand-in
+The fixtures are the substrate's own (`src/Effect4/Store/Domain/Store.lean`, `src/Effect4/Store/Domain/Word.lean`): a stand-in
 genesis `probeSchema` (kind `schema`, zero spec), the census entry `probeEntry` under it, and
 the two-binding word `probeWord`. They are library declarations because the substrate proves
 its laws against them; this battery is what says the *behaviour* is frozen, and it adds what
@@ -191,7 +191,19 @@ example := @Effect4.Store.put_preserves
 example := @Effect4.Store.putNode_closed
 example := @Effect4.Store.putRoot_root?
 example := @Effect4.Store.empty_closed
-example := @Effect4.Store.wf_closed
+-- A real faithful, closed prefix is the starting store of the suffix replay.
+example (hw : Word.wfFrom [⟨probeSchemaAddress, probeSchema⟩]
+    [⟨probeEntryAddress, probeEntry⟩] = true)
+    (hf : Word.Faithful [⟨probeSchemaAddress, probeSchema⟩])
+    (hc : Closed (Word.toStore [⟨probeSchemaAddress, probeSchema⟩])) :
+    Word.apply [⟨probeEntryAddress, probeEntry⟩]
+      (Word.toStore [⟨probeSchemaAddress, probeSchema⟩]) = .ok (Word.toStore probeWord) :=
+  (wfFrom_apply _ _ hw hf hc).1
+
+#guard Word.wfFrom [⟨probeSchemaAddress, probeSchema⟩] [⟨probeEntryAddress, probeEntry⟩]
+
+-- A dangling prefix cannot substitute for the faithful, closed prefix above.
+#guard Word.wf [⟨probeEntryAddress, probeEntry⟩] = false
 example := @Effect4.Store.apply_idempotent
 example := @Effect4.Store.closure_wf
 example := @Effect4.Store.closure_closed

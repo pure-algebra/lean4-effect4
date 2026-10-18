@@ -95,7 +95,7 @@ let rec build depth id =
 
 let root_tree = build 6 0
 
-(* the reference: Lean's `Node.at_` (src/Effect4/Program/Compile.lean:118-122) *)
+(* the reference: Lean's `Node.at_` (Node.at_ (src/Effect4/Program/Refs.lean)) *)
 let rec at_ n l =
   match l with
   | [] -> Some n

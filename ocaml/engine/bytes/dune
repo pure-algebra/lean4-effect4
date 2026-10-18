@@ -1,5 +1,5 @@
 ; effect4_bytes — the byte layer of the engine and the CAS: big-endian framing (E4_be, which
-; forwards to Eff_frame), hexadecimal (E4_hex), the host profile's 63-bit naturals (E4_nat)
+; forwards to Eff_frame), hexadecimal (E4_hex),
 ; and SHA-256 (E4_sha256). It names no engine module, so it sits below the engine and the CAS:
 ; the CAS needs the engine only for E4_checkpoint. Unwrapped, as effect4_eff and effect4_clock
 ; are, so the generated engine and the CAS name its modules directly. A sub-library of the

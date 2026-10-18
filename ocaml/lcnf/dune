@@ -17,3 +17,8 @@
  (name test_lcnf)
  (modules test_lcnf)
  (libraries effect4_lcnf))
+
+(test
+ (name test_array_conversion)
+ (modules test_array_conversion)
+ (libraries effect4_lcnf))

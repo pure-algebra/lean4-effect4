@@ -8,7 +8,7 @@
    under a `Map` from chunk number, plus an open tail list.
    Measured (2026-09-08-engine-a3-queue-query.md §6.3): append 76 M rows/s and random get
    4.3 M/s at 1e6 rows, against `Map.Make(Int)` at 6.5 M/s and 1.6 M/s.  The Lean shape
-   `trace ++ events` (src/Effect4/Machine/Fibers.lean:585-587) needs 141 ms for TEN THOUSAND
+   `trace ++ events` (RunMachine.emit (src/Effect4/Machine/Fibers.lean)) needs 141 ms for TEN THOUSAND
    rows.
    Depends on: effect4_lcnf (Lcnf_array, the carrier).
 
@@ -27,25 +27,12 @@
          value holds no mutable structure that anything can observe (brief rule 3).
          [by construction (lcnf_array.mli V4); tested: log-frozen]
 
-   THE CARRIER IS POLYMORPHIC and it is exposed as {!Vec}, an alias of `Lcnf_array`
-   (ocaml/lcnf/lcnf_array.mli), the one owner of the chunked vector: this module held it until
-   slice 3.2 of the OCaml estate refactor, which spells Lean's `Array` with the same structure.
-   `t` is `row Vec.t` and nothing else.  It is exposed for one named reason: `E4_trace` (the
-   machine's own trace carrier) was a reversed accumulator whose `nth_opt` is O(length - i), so
-   a viewer walking the reading axis cost O(T^2) on a T-row trace.  {!Vec} IS the substitute,
-   at O(log (T/256)) per row and O(1) amortised per emit (proposal N2,
-   2026-09-08-engine-lane-w-delivery.md item 2), so `E4_trace.t` IS `'e Vec.t`. *)
+   The carrier is `Lcnf_array` (ocaml/lcnf/lcnf_array.mli).
+   The log and the machine trace share that persistent vector. *)
 
 type row = string
 (** One canonical event row.  Bytes are the identity; the sexp face is beside them, never an
     address (2026-09-07-ocaml-proposals.md §0.2). *)
-
-(** {1 The carrier} *)
-
-module Vec = Lcnf_array
-(** The persistent chunked vector, polymorphic in the element: {!E4_log.t} is [row Vec.t],
-    `E4_logindex` holds its entries in an [entry Vec.t], and `E4_trace.t` is [Vec.t].  Every
-    array is filled once, at the operation that creates it, and never written again (L5). *)
 
 (** {1 The log} *)
 
@@ -59,7 +46,7 @@ val length : t -> int
 val append : t -> row -> t
 val append_all : t -> row list -> t
 (** Appends in list order; this is the shape `RunMachine.emit` has
-    (src/Effect4/Machine/Fibers.lean:585-587), so that the index (`E4_logindex`) can be fed
+    (RunMachine.emit (src/Effect4/Machine/Fibers.lean)), so that the index (`E4_logindex`) can be fed
     by the SAME call and never by a rescan (A3 §1.4d). *)
 
 val get : t -> int -> row option

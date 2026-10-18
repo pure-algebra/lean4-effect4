@@ -1,7 +1,7 @@
 /-! ## Acceptance: the meta-schema is a stored carrier
 
 Appended verbatim by `--append`; not generated. There is no hand oracle for this group, so
-the guards are the laws made executable on real values: the `Document` that `Store/Shape.lean`
+the guards are the laws made executable on real values: the `Document` that `src/Effect4/Store/Domain/Shape.lean`
 derives for the census entry, and the `Document` of `Document` itself, which is the
 meta-schema. A carrier that round-trips its own spec is the fixed point the plan's §4 asks
 for. -/
@@ -12,7 +12,7 @@ open Effect4 (Representation Check Document MultiDocument ReferenceEntry Annotat
   AnnotationEntry LiteralValue EnumValue EnumEntry PropertyKey UnionMode ReferenceKey
   GlobalSymbolKey RepresentationAnnotation Json)
 
-/-- The spec of the census entry, derived by `Store/Shape.lean` from `entryDoc`: a real
+/-- The spec of the census entry, derived by `src/Effect4/Store/Domain/Shape.lean` from `entryDoc`: a real
 `Document` with a struct root, a named sum reference and `identifier` annotations. -/
 def entrySpec : Document := entryDoc.document
 

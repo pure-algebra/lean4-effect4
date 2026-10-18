@@ -39,7 +39,7 @@ The twelfth frame, `handle` (tag 12), is the shared value foundation's one addit
 (`docs/research/2026-09-07-u0-value-foundation.md`): a *live* handle — a kind byte and an
 allocation index into a running machine's stores — as distinct from `ref`, a *content*
 address. A handle names nothing in a store and no shape accepts one
-(`Store/Shape.lean`); it exists so the runtime's value alphabets can share this tree without
+(`src/Effect4/Store/Domain/Shape.lean`); it exists so the runtime's value alphabets can share this tree without
 spelling a handle as a constructor index that a payload could collide with. The kind table is
 the Machine layer's (`src/Effect4/Machine/Value.lean`), not `Store.Kind`'s. Because a handle
 is not content, `handles` lists the ones a tree carries, and `encode?` is the checked encoder:

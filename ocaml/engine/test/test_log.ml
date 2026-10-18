@@ -18,7 +18,7 @@
    and a `Val.str` payload holding a comma and a paren inside quotes -- and the segment law
    (a decision's rows are contiguous, design-language §1.6).
 
-   The carrier's own checks (`Vec` is `Lcnf_array`) are ocaml/lcnf/test_lcnf.ml's.
+   The carrier's own checks are in ocaml/lcnf/test_lcnf.ml and test_array_conversion.ml.
 
    Everything here is pure: no engine, no machine, no tape.  The engine's own rows are the
    subject of test_query.ml.
@@ -173,7 +173,7 @@ let codec () =
     && e.E4_logindex.fiber = Some 2
     && e.E4_logindex.token = Some 9);
   let e = p "scopeLinked(forkIn,7,4,1)" in
-  check "codec: scopeLinked(mode,scope,key,fiber) -> scope 7, fiber 1 (Fibers.lean:369)"
+  check "codec: scopeLinked(mode,scope,key,fiber) -> scope 7, fiber 1 (RunEvent (src/Effect4/Machine/Fibers.lean))"
     (e.E4_logindex.kind = E4_logindex.kind_scope_linked
     && e.E4_logindex.scope = Some 7
     && e.E4_logindex.fiber = Some 1);

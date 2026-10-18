@@ -1,7 +1,7 @@
 (* e4_logindex.ml — the indexes over the log, built in the append and never by a rescan.
    The property list X1-X4, the carrier choices and the owed rows are in e4_logindex.mli.
 
-   THE COST PER ROW, stated so the bench cell can be read against it.  One `E4_log.Vec`
+   THE COST PER ROW, stated so the bench cell can be read against it.  One `Lcnf_array`
    append (a cons, and one array fill per 256 rows), one `Map` insertion for the kind, one
    for the fiber when the row names one, one for the token / scope / task owner when the row
    carries one -- and NOTHING for the decision, whose segment is one insertion per decision.
@@ -166,9 +166,9 @@ let parse_run_event_row ~(decision : int) (index : int) (row : E4_log.row) : ent
     { none with fiber = a 0; token = a 1 }
   else if kind = kind_interrupt_recorded then { none with fiber = a 1 }
     (* `interruptRecorded(who,target)`: `who` may be `-`; the row is ABOUT the target
-       (Fibers.lean:358). *)
+       (RunEvent (src/Effect4/Machine/Fibers.lean)). *)
   else if kind = kind_scope_linked then { none with scope = a 1; fiber = a 3 }
-    (* `scopeLinked(mode,scope,key,fiber)` -- Fibers.lean:369. *)
+    (* `scopeLinked(mode,scope,key,fiber)` -- RunEvent (src/Effect4/Machine/Fibers.lean). *)
   else if kind = kind_scope_closed_on_link then { none with scope = a 0; fiber = a 1 }
   else if kind = kind_race_started || kind = kind_race_launched then { none with fiber = a 1 }
   else if kind = kind_race_settled || kind = kind_callback then none
@@ -181,17 +181,17 @@ let parse_run_event_row ~(decision : int) (index : int) (row : E4_log.row) : ent
    decision key is dense and monotone like the row index, and at one decision per handful of
    rows a 1e6-row log has ~1.4e5 decisions, so a per-row `Im.add` walks a depth-17 tree a
    million times.  Segments arrive in ascending decision order, so they append to an
-   `E4_log.Vec` -- one append per DECISION, not per row -- and `segment` is a binary search
+   `Lcnf_array` -- one append per DECISION, not per row -- and `segment` is a binary search
    over it.  Measured: this alone took the 1e6-row build from 416 ms to the number in the
    lane receipt's bench table. *)
 type t = {
-  entries : entry E4_log.Vec.t;
+  entries : entry Lcnf_array.t;
   fib : int list Im.t;
   knd : int list Im.t;
   tok : int list Im.t;
   scp : int list Im.t;
   own : int list Im.t;
-  segs : (int * int * int) E4_log.Vec.t;  (** closed segments: (decision, from, upto) *)
+  segs : (int * int * int) Lcnf_array.t;  (** closed segments: (decision, from, upto) *)
   cur_dec : int;  (** the in-flight segment; [no_decision] when the index is empty *)
   cur_from : int;
   cur_upto : int;
@@ -201,8 +201,8 @@ type t = {
 let no_decision = min_int
 
 let empty =
-  { entries = E4_log.Vec.empty; fib = Im.empty; knd = Im.empty; tok = Im.empty;
-    scp = Im.empty; own = Im.empty; segs = E4_log.Vec.empty; cur_dec = no_decision;
+  { entries = Lcnf_array.empty; fib = Im.empty; knd = Im.empty; tok = Im.empty;
+    scp = Im.empty; own = Im.empty; segs = Lcnf_array.empty; cur_dec = no_decision;
     cur_from = 0; cur_upto = 0; last_index = -1 }
 
 let push m k v =
@@ -223,11 +223,11 @@ let add t e =
     if e.decision = t.cur_dec then (t.segs, t.cur_dec, t.cur_from)
     else
       ( (if t.cur_dec = no_decision then t.segs
-         else E4_log.Vec.push t.segs (t.cur_dec, t.cur_from, t.cur_upto)),
+         else Lcnf_array.push t.segs (t.cur_dec, t.cur_from, t.cur_upto)),
         e.decision,
         e.index )
   in
-  { entries = E4_log.Vec.push t.entries e;
+  { entries = Lcnf_array.push t.entries e;
     knd = push t.knd e.kind e.index;
     fib = push_opt t.fib e.fiber e.index;
     tok = push_opt t.tok e.token e.index;
@@ -242,8 +242,8 @@ let add t e =
 let of_log (l : E4_log.t) ~(parse : int -> E4_log.row -> entry) : t =
   E4_log.fold l ~init:empty ~f:(fun i row acc -> add acc (parse i row))
 
-let count t = E4_log.Vec.length t.entries
-let by_index t i = E4_log.Vec.get t.entries i
+let count t = Lcnf_array.length t.entries
+let by_index t i = Lcnf_array.get t.entries i
 let posting m k = match Im.find_opt k m with None -> [] | Some l -> List.rev l
 let by_fiber t f = posting t.fib f
 let by_kind t k = posting t.knd k
@@ -256,12 +256,12 @@ let by_task_owner t k = posting t.own k
 let segment t d =
   if t.cur_dec <> no_decision && d = t.cur_dec then Some (t.cur_from, t.cur_upto)
   else begin
-    let n = E4_log.Vec.length t.segs in
+    let n = Lcnf_array.length t.segs in
     let rec go lo hi =
       if lo > hi then None
       else
         let mid = (lo + hi) / 2 in
-        let dm, a, z = E4_log.Vec.get_exn t.segs mid in
+        let dm, a, z = Lcnf_array.get_exn t.segs mid in
         if dm = d then Some (a, z) else if dm < d then go (mid + 1) hi else go lo (mid - 1)
     in
     go 0 (n - 1)
@@ -280,11 +280,11 @@ let kinds t = keys t.knd
 let task_owners t = keys t.own
 
 let decisions t =
-  E4_log.Vec.length t.segs + if t.cur_dec = no_decision then 0 else 1
+  Lcnf_array.length t.segs + if t.cur_dec = no_decision then 0 else 1
 
 let decision_keys t =
   let closed =
-    List.rev (E4_log.Vec.fold t.segs ~init:[] ~f:(fun _ (d, _, _) acc -> d :: acc))
+    List.rev (Lcnf_array.fold t.segs ~init:[] ~f:(fun _ (d, _, _) acc -> d :: acc))
   in
   if t.cur_dec = no_decision then closed else closed @ [ t.cur_dec ]
 let decision_of t i = match by_index t i with None -> None | Some e -> Some e.decision

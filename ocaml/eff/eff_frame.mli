@@ -1,4 +1,4 @@
-(** The framing kernel of the canonical wire: the byte rule of src/Effect4/Store/Canonical.lean.
+(** The framing kernel of the canonical wire: the byte rule of src/Effect4/Store/Domain/Canonical.lean.
     [framed tag payload = tag :: be64 (length payload) ++ payload]. The properties F1 to F9 are
     eff_frame.ml's header. *)
 

@@ -32,7 +32,7 @@
 
    ============================================================================
    THE BYTE TABLE — a checkpoint node's payload (kind 21, `checkpoint`).  One `Val` frame tree
-   in the framing of src/Effect4/Store/Canonical.lean, written through `E4_be.framed` and
+   in the framing of src/Effect4/Store/Domain/Canonical.lean, written through `E4_be.framed` and
    nothing else; the tag alphabet is `Eff_frame`'s (bool 1, nat 2, string 3, list 4, pair 5,
    none 6, some 7, bytes 8, unit 9, ctor 10, ref 11, handle 12).
 
@@ -54,7 +54,7 @@
    `E4_node.refs` finds them and `E4_cas` checks them: a checkpoint whose job, tape prefix or
    predecessor is not stored is refused `Dangling` BY THE STORE, not by a check here (CP2,
    L-CP-1).  (2) `engine` is a `bytes` frame, which `Val.refs` treats as a leaf
-   (Node.lean:250), so it is a stamp and never an edge — and a byte scan cannot tell it from a
+   (Val.refs (src/Effect4/Store/Domain/Node.lean)), so it is a stamp and never an edge — and a byte scan cannot tell it from a
    `Cid`, which is why `E4_shape` exists (A2 §1.7, risk R1).  (3) The image is the LAST field,
    so every field before it sits at a fixed offset given the three optional refs.
 
@@ -165,7 +165,7 @@
        the test checks the two mint the same root.
    D7  This module mints its own schema node (`ensure_schema`) and uses its address as the
        spec of every node it files.  Edge 0 of a non-genesis node is checked
-       (`Node.checkedEdges`, Node.lean:297), so a checkpoint needs a resident schema; Lean's
+       (`Node.checkedEdges`, Node.checkedEdges (src/Effect4/Store/Domain/Node.lean)), so a checkpoint needs a resident schema; Lean's
        genesis is a 90 KB node this lane will not transcribe, and the blessed run-relative
        schema is CAS commit 7's.  The node minted is a genesis in the exact sense the store
        means — kind `schema`, the zero spec — so it is admitted with no edge of its own, and

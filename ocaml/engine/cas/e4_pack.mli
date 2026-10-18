@@ -13,7 +13,7 @@
      record     := 'R'                         1   0x52; a record always starts here
                    be64 node_len               8   length of node_bytes; < 2^62 (M9)
                    digest                     32   sha256 node_bytes — the address
-                   node_bytes          node_len   = Node.encode n (Node.lean:170-171)
+                   node_bytes          node_len   = Node.encode n (Node.encode (src/Effect4/Store/Domain/Node.lean))
                    be32 rec_crc                4   CRC-32 over the 41 header bytes ++ node_bytes
 
    Overhead is 45 bytes per node, the head is 27.  `be64` is written and read through

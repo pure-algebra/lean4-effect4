@@ -1,7 +1,7 @@
 (* test_val_frames — the two frames the shared value foundation adds (hand-written).
 
    What it is: Eff_frame's kernel grew tags 11 (`ref`) and 12 (`handle`), the last two
-   constructors of the Lean carrier `Effect4.Store.Val` (src/Effect4/Store/Val.lean:107-111).
+   constructors of the Lean carrier `Effect4.Store.Val` (src/Effect4/Store/Carrier/Val.lean:107-111).
    Their payloads are read off the Lean encoder itself (Val.lean:158-159, restated as
    `payload` at :203-204):
 

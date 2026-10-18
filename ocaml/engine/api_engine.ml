@@ -32,7 +32,7 @@ end
 
 (* The fiber table: an int-keyed persistent table that also MAINTAINS the completed view --
    the (id, exit) pairs of the fibers whose exit is set, ascending by id, kept as the table is
-   written, so `RunMachine.completedExits` (Fibers.lean:1543) is a field read and not the
+   written, so `RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean) is a field read and not the
    Theta(N) scan it was.  `('a, 'x) t` is a table of fibers `'a` whose exit is `'x`; the fiber
    record is declared INSIDE this functor, so every write takes the projection `~exit_of`
    rather than closing over it.  `set` REPLACES and never inserts (Lean's replace-by-key map
@@ -858,7 +858,7 @@ and external_store = string list
 
 (* -- carriers of a whole store ---------------------------------------------------------- *)
 
-(* Effect4.Machine.Stores.empty, src/Effect4/Machine/Stores.lean:1987 (`⟨[], ⟨[], []⟩, ⟨[]⟩, [], 0⟩`).
+(* Effect4.Machine.Stores.empty, Stores.empty (src/Effect4/Machine/Stores.lean) (`⟨[], ⟨[], []⟩, ⟨[]⟩, [], 0⟩`).
    `scope_store` is a trivial structure, so it IS the carrier; so is `external_store`, whose one
    field is the list of allocated targets (DI-23 deleted the preloaded answers). *)
 let sh_stores_empty : stores =
@@ -870,7 +870,7 @@ let sh_stores_empty : stores =
     next_name = 0;
     externals = [] }
 
-(* Effect4.Machine.RunMachine.empty, src/Effect4/Machine/Fibers.lean:681-692, including the empty fork ledger. *)
+(* Effect4.Machine.RunMachine.empty, RunMachine.empty (src/Effect4/Machine/Fibers.lean), including the empty fork ledger. *)
 let sh_machine_empty state =
   { fibers = F.empty; races = []; next_id = 0; next_token = 0; next_race = 0;
     middleware_installed = false; armed = []; state; trace = T.empty; stuck = None; forks = [] }
@@ -882,26 +882,26 @@ let sh_machine_empty state =
    `{ f with … }` that does not touch the exit. *)
 let sh_fiber_exit (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) = f.exit_
 
-(* Effect4.Machine.RunMachine.emit, src/Effect4/Machine/Fibers.lean:585-587.  The empty guard is
+(* Effect4.Machine.RunMachine.emit, RunMachine.emit (src/Effect4/Machine/Fibers.lean).  The empty guard is
    Lean's own (direction L4); `T.emit [] t == t` makes it redundant, and it is kept so the two
    read alike. *)
 let sh_machine_emit m events =
   match events with [] -> m | _ -> { m with trace = T.emit events m.trace }
 
-(* Effect4.Machine.RunMachine.fiber?, src/Effect4/Machine/Fibers.lean:573-575. *)
+(* Effect4.Machine.RunMachine.fiber?, RunMachine.fiber? (src/Effect4/Machine/Fibers.lean). *)
 let sh_machine_fiber m id = F.find_opt id m.fibers
 
-(* Effect4.Machine.RunMachine.update, src/Effect4/Machine/Fibers.lean:577-579.  Lean's
+(* Effect4.Machine.RunMachine.update, RunMachine.update (src/Effect4/Machine/Fibers.lean).  Lean's
    replace-by-key map is a NO-OP on an absent id, which is exactly `F.set` (FIBERS FV2). *)
 let sh_machine_update m (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) =
   { m with fibers = F.set ~exit_of:sh_fiber_exit f.id f m.fibers }
 
-(* Effect4.Machine.RunMachine.finished, src/Effect4/Machine/Fibers.lean:608-609. *)
+(* Effect4.Machine.RunMachine.finished, RunMachine.finished (src/Effect4/Machine/Fibers.lean). *)
 let sh_machine_finished m =
   F.for_all (fun _ (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) -> Option.is_some f.exit_)
     m.fibers
 
-(* Effect4.Machine.RunMachine.completedExits, src/Effect4/Machine/Fibers.lean:1543 --
+(* Effect4.Machine.RunMachine.completedExits, completedExits (src/Effect4/Machine/Fibers.lean) --
    the ascending filterMap over the fiber table, MAINTAINED (lane G3).
 
    It is a field read.  The carrier keeps the exited subset as the table is written (FIBERS
@@ -918,8 +918,8 @@ let sh_machine_finished m =
    which is at most once per fiber. *)
 let sh_machine_completed_exits m = F.completed m.fibers
 
-(* Effect4.Machine.RunFiber.make, src/Effect4/Machine/Fibers.lean:279-297, with
-   `core.start current interruptible` at the `frameCore` instance (:204) spelled out:
+(* Effect4.Machine.RunFiber.make, RunFiber.make (src/Effect4/Machine/Fibers.lean), with
+   `core.start current interruptible` at `frameCore` (src/Effect4/Machine/Fibers.lean), spelled out:
    `Effect4.FrameFiber.start` is `⟨current, [], true, none, false⟩` and `make` overrides
    `interruptible`.  Transcribed rather than called, because the two specialisations of
    `RunFiber.make` were callees of `Api.load` and of `spawn`, which this table deletes, and
@@ -934,7 +934,7 @@ let sh_run_fiber_make id current interruptible (budget : int * bool) context =
     max_ops_before_yield = fst budget; prevent_yield = snd budget; yield_override = None;
     observers = []; children = []; dispatcher = D.empty; context }
 
-(* Effect4.Api.load, src/Effect4/Api.lean:255-260:
+(* Effect4.Api.load, load (src/Effect4/Api.lean):
    `{ (RunMachine.empty Stores.empty) with fibers := [RunFiber.make root (compile …) true
       (stores.budgetOf emptyCtx) emptyCtx], nextId := 1 }`; the root has no fork record.
    `compile` (`Program.compile`), `ectx` (`emptyCtx`) and `interp` (`Machine.stores`) are
@@ -945,7 +945,7 @@ let sh_api_load compile ectx interp program fuel =
   let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx in
   { m with fibers = F.add ~exit_of:sh_fiber_exit 0 root F.empty; next_id = 1 }
 
-(* Effect4.Machine.spawn, src/Effect4/Machine/Fibers.lean:948-969: the child and its fork record
+(* Effect4.Machine.spawn, spawn (src/Effect4/Machine/Fibers.lean): the child and its fork record
    are appended in the same update. One row deletes both of
    its specialisations (`evaluatePrim.withFiber`'s and `launchEntrant`'s). *)
 let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options site =
@@ -955,7 +955,7 @@ let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) progra
     | MaskMode.Interruptible -> true
     | MaskMode.Uninterruptible -> false
     | MaskMode.Inherit ->
-      (* `core.interruptible parent.frame` (Fibers.lean:933), which the mono phase reads off
+      (* `core.interruptible parent.frame` (spawn (src/Effect4/Machine/Fibers.lean)), which the mono phase reads off
          the frame record; the annotation is needed because `interruptible` is also a field of
          `fiber_core`, where it is a function. *)
       (parent.frame : (_, _, _, _, _, _, _) frame_fiber).interruptible
@@ -997,8 +997,8 @@ let sh_spawn_generic mk_fiber (core : (_, _, _, _, _, _, _, _) fiber_core) inter
   (sh_machine_emit m [ RunEvent_forked (parent.id, child_id, options.daemon) ],
    (parent, child_id))
 
-(* Effect4.Machine.dropObservers, src/Effect4/Machine/Fibers.lean:1341-1349: the bulk,
-   id-preserving map over the fiber table.  The observer filter (:1345-1348) is transcribed
+(* Effect4.Machine.dropObservers, dropObservers (src/Effect4/Machine/Fibers.lean): the bulk,
+   id-preserving map over the fiber table.  The filter in `dropObservers` (src/Effect4/Machine/Fibers.lean) is transcribed
    here rather than called, because its own specialisation is a callee of the map's and is
    deleted with it.  The third argument is `List.mapTR.loop`'s accumulator, always `[]`. *)
 let sh_drop_observer_keep token = function
@@ -1017,10 +1017,10 @@ let sh_machine_drop_token m token =
 
 (* -- the ref heap ------------------------------------------------------------------------ *)
 
-(* Effect4.Machine.refStep, src/Effect4/Machine/Stores.lean:955-1007, arm for arm.
-   `refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,
-   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,
-   `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it
+(* Effect4.Machine.refStep, refStep (src/Effect4/Machine/Stores.lean), arm for arm.
+   `refPeek` (`heap[cell.index]?`) is `M.find_opt`; `refPoke` (`heap.set i v`) is `M.set`,
+   with an absent index unchanged. Both declarations live in src/Effect4/Machine/Stores.lean.
+   `refStep` at `SyncOp.refMake` there returns `(Val.cell ⟨heap.length⟩, heap ++ [initial])`; it
    applies `List.length` and `++` to the carrier inline.  `Val.cell k` is `Val.handle 2 k`.
    A read-modify-write row carries a binder term and its environment (decisions row 43) and
    runs the term at `env ++ [a]`: `eval_term` is `Effect4.Program.evalTerm`, generated below
@@ -1130,37 +1130,37 @@ let sh_ref_step eval_term op heap =
 
 (* -- the deferred cells ------------------------------------------------------------------ *)
 
-(* Effect4.Machine.DeferredStore.make, src/Effect4/Machine/Stores.lean:1365-1366. *)
+(* Effect4.Machine.DeferredStore.make, DeferredStore.make (src/Effect4/Machine/Stores.lean). *)
 let sh_deferred_make (self : _ deferred_store) =
   let k = M.cardinal self.cells in
   (k, { self with cells = M.add k { completion = None; wake = { waiters = []; batch = None; phase = 0 } } self.cells })
 
-(* Effect4.Machine.DeferredStore.cellAt, src/Effect4/Machine/Stores.lean:1369-1370. *)
+(* Effect4.Machine.DeferredStore.cellAt, DeferredStore.cellAt (src/Effect4/Machine/Stores.lean). *)
 let sh_deferred_cell_at (self : _ deferred_store) cell = M.find_opt cell self.cells
 
-(* Effect4.Machine.DeferredStore.setCell, src/Effect4/Machine/Stores.lean:1373-1374
+(* Effect4.Machine.DeferredStore.setCell, DeferredStore.setCell (src/Effect4/Machine/Stores.lean)
    (`cells.set i v`: a no-op out of range, which is `M.set`). *)
 let sh_deferred_set_cell (self : _ deferred_store) cell value =
   { self with cells = M.set cell value self.cells }
 
 (* -- the scope entries -------------------------------------------------------------------- *)
 
-(* Effect4.Machine.ScopeStore.entryAt, src/Effect4/Machine/Stores.lean:1567-1568 -- a `find?`
+(* Effect4.Machine.ScopeStore.entryAt, ScopeStore.entryAt (src/Effect4/Machine/Stores.lean) -- a `find?`
    BY KEY, so `M.find_opt` is exact.  The row names the specialised `List.find?` because
    `entryAt` itself is inlined away by the mono phase. *)
 let sh_scope_entry_at key store = M.find_opt key store
 
-(* Effect4.Machine.ScopeStore.setEntry, src/Effect4/Machine/Stores.lean:1571-1572 -- the
+(* Effect4.Machine.ScopeStore.setEntry, ScopeStore.setEntry (src/Effect4/Machine/Stores.lean) -- the
    replace-by-key map, a no-op on an absent key. *)
 let sh_scope_set_entry store (entry : scope_entry) = M.set entry.key entry store
 
-(* Effect4.Machine.ScopeStore.make, src/Effect4/Machine/Stores.lean:1575-1576.  Scope keys are
+(* Effect4.Machine.ScopeStore.make, ScopeStore.make (src/Effect4/Machine/Stores.lean).  Scope keys are
    SUPPLY-drawn (`Stores.nextName`), never dense, so this is `add` at a given key and never
    `cardinal` (E4-CHECK-CE-016).  `scope_make` is `Effect4.Scope.make`, an extra root. *)
 let sh_scope_store_make scope_make store key strategy =
   M.add key { key; scope = scope_make strategy } store
 
-(* Effect4.Machine.ScopeStore.forkChild, src/Effect4/Machine/Stores.lean:1597-1607.
+(* Effect4.Machine.ScopeStore.forkChild, ScopeStore.forkChild (src/Effect4/Machine/Stores.lean).
    `scope_fork` is `Effect4.Scope.fork`, an extra root (its specialisation was a callee of
    this row). *)
 let sh_int_eq (a : int) (b : int) = a = b
@@ -1170,7 +1170,7 @@ let sh_scope_fork_child scope_fork store parent_key child_key shared_key strateg
   | None -> store
   | Some (parent : scope_entry) ->
     (* the generic `Scope.fork` keeps the `[DecidableEq κ]` argument the specialisation this
-       row deletes had baked in; κ is the finalizer key, a `Nat` (Stores.lean:1542). *)
+       row deletes had baked in; κ is the finalizer key, a `Nat` (ScopeEntry (src/Effect4/Machine/Stores.lean)). *)
     let (parent_scope, child_scope) =
       scope_fork sh_int_eq parent.scope strategy shared_key
         (FinName_closeChildScope child_key)
@@ -1183,24 +1183,24 @@ let sh_scope_fork_child scope_fork store parent_key child_key shared_key strateg
 
 (* The world itself stays a list (engine-a1 §1.2: `syncOpStep`'s memoFork arm appends to it
    inline and `syncOpStep` must stay generated); only `MemoMap.entries` is tabled.
-   `mapAt` (Stores.lean:859-860) and `setMap` (:862-863) are transcribed here rather than
+   `MemoWorld.mapAt` and `MemoWorld.setMap` (src/Effect4/Machine/Stores.lean) are transcribed here rather than
    called, because both are list operations over the world and both would otherwise be
    orphaned by the four rows below. *)
 let sh_memo_map_at w id = List.find_opt (fun (m : memo_map) -> m.id = id) w
 let sh_memo_set_map w (m : memo_map) =
   List.map (fun (n : memo_map) -> if n.id = m.id then m else n) w
 
-(* Effect4.Machine.MemoWorld.entryAt, src/Effect4/Machine/Stores.lean:866-867. *)
+(* Effect4.Machine.MemoWorld.entryAt, MemoWorld.entryAt (src/Effect4/Machine/Stores.lean). *)
 let sh_memo_entry_at w id layer =
   match sh_memo_map_at w id with None -> None | Some m -> L.find_opt layer m.entries
 
-(* Effect4.Machine.MemoWorld.updateEntry, src/Effect4/Machine/Stores.lean:869-873. *)
+(* Effect4.Machine.MemoWorld.updateEntry, MemoWorld.updateEntry (src/Effect4/Machine/Stores.lean). *)
 let sh_memo_update_entry w id layer f =
   match sh_memo_map_at w id with
   | None -> w
   | Some m -> sh_memo_set_map w { m with entries = L.update layer f m.entries }
 
-(* Effect4.Machine.MemoWorld.insertEntry, src/Effect4/Machine/Stores.lean:876-880.  Lean
+(* Effect4.Machine.MemoWorld.insertEntry, MemoWorld.insertEntry (src/Effect4/Machine/Stores.lean).  Lean
    appends and `find?` answers the FIRST, so "insert keeps an existing binding" (LAYERS) is
    exact for every observation the machine can make (engine-a1 §4.6 MM2). *)
 let sh_memo_insert_entry w id layer entry =
@@ -1208,7 +1208,7 @@ let sh_memo_insert_entry w id layer entry =
   | None -> w
   | Some m -> sh_memo_set_map w { m with entries = L.insert layer entry m.entries }
 
-(* Effect4.Machine.MemoWorld.deleteEntry, src/Effect4/Machine/Stores.lean:883-886. *)
+(* Effect4.Machine.MemoWorld.deleteEntry, MemoWorld.deleteEntry (src/Effect4/Machine/Stores.lean). *)
 let sh_memo_delete_entry w id layer =
   match sh_memo_map_at w id with
   | None -> w
@@ -1216,7 +1216,7 @@ let sh_memo_delete_entry w id layer =
 
 (* -- the point's position and environment (lane G2) ---------------------------------------- *)
 
-(* Effect4.Program.Node.at_, src/Effect4/Program/Compile.lean:118-122, applied to a path that
+(* Effect4.Program.Node.at_, Node.at_ (src/Effect4/Program/Refs.lean), applied to a path that
    is now a carrier.  The spine already holds the node it addresses, computed one `Node.child`
    at a time as the path grew (`P.snoc`), so the walk is a field read -- PROVIDED the node the
    caller passes is the one the spine was rooted at.  Every one of the eleven call sites
@@ -1252,7 +1252,7 @@ let sh_point_redirect child (p : point) target : point =
 (* -- carrier constructors the mono phase inlines ------------------------------------------ *)
 
 (* `MemoMap.mk` with `entries := []`: `syncOpStep`'s memoFork arm builds one inline
-   (src/Effect4/Machine/Stores.lean:2238) and `syncOpStep` stays generated, so the
+   (syncOpStep (src/Effect4/Machine/Stores.lean)) and `syncOpStep` stays generated, so the
    construction — not a function — is what the row replaces.  Any other entry list is a hole
    in the table, and says so rather than answering. *)
 let sh_memo_map_mk id parent entries =

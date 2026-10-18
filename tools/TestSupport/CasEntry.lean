@@ -75,7 +75,7 @@ fields and `(shape F).defs` to the table, so `fits` lifts each field's own law w
 
 /-- One export of a pinned module: the shape of the census entry before it gained its
 `source : Ref Source` field (`StdLib/Entry.lean`, `Entry`). Its `toVal` is the facts
-note §6 payload, so its bytes are `Store/Val.lean`'s `sampleEntry`. -/
+note §6 payload, so its bytes are `src/Effect4/Store/Carrier/Val.lean`'s `sampleEntry`. -/
 structure Entry where
   module : String
   name : String

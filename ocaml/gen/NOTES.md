@@ -110,7 +110,7 @@ def Effect4.Machine.Dispatcher.insert._redArg priority task x.1 : lcAny :=
 | `LetValue.fvar f args` | `f args`, `◾` as `()` |
 | structure constructor `C.mk ◾… fields` | `({ f₁ = …; … } : (_,…) t)`, erased fields dropped |
 | inductive constructor `C.c ◾… args` | `C_c (args)` (constructor names are `<Type>_<ctor>`: `Task_start`, `Prim_failure`, so `Prim.failure` and `Exit.failure` cannot collide) |
-| `g args`, `g` in the builtin table | `Nat.decEq/beq` → `=`, `decLt` → `<`, `decLe` → `<=`, `Nat.sub` → `max 0 (a - b)`, `List.appendTR/append` → `@`, `List.reverse` → `List.rev`, `List.reverseAux` → `List.rev_append`, `List.instDecidableEqNil` → `= []`, `List.all l p` → `List.for_all p l`, `List.elem inst a l` → `List.exists (inst a) l`, `Array.mkEmpty` → `[]`, `Array.toList` → identity, `Array.push` → `@ [x]`, `List.foldl._at_.Array.appendList.spec_0` → `@`, `Option.isSome` → `Option.is_some`, `Option.getD` → `Option.value ~default`, `panic` → `failwith`, … (`builtin?`, 50 rows) |
+| `g args`, `g` in the builtin table | `Nat.decEq/beq` → `=`, `decLt` → `<`, `decLe` → `<=`, `Nat.sub` → `max 0 (a - b)`, `List.appendTR/append` → `@`, `List.reverse` → `List.rev`, `List.reverseAux` → `List.rev_append`, `List.instDecidableEqNil` → `= []`, `List.all l p` → `List.for_all p l`, `List.elem inst a l` → `List.exists (inst a) l`, `Array.mkEmpty` → `Lcnf_array.with_capacity`, `Array.toList` → `Lcnf_array.to_list`, `Array.push` → `Lcnf_array.push`, `Array.appendList` → `Lcnf_array.append_list`, `Option.isSome` → `Option.is_some`, `Option.getD` → `Option.value ~default`, `panic` → `failwith`, … (`builtin?`, 50 rows) |
 | `g args`, other | `g' args`, `g' = globalName g`; `g` is enqueued for translation (closure with a cap) |
 | `g._redArg` | translated under `g`'s name; the wrapper is skipped; a direct (partial) reference to the wrapper passes the twin exactly the parameters it kept, read off the wrapper's own body (`wrapperKeep?`) |
 | `Decl.value = extern` | a hole |
@@ -123,7 +123,7 @@ Types (`Lcnf/Types.lean`): `structure` → record, `inductive` → variant, a *t
 is neither a `Prop` nor a type (the compiler's `getRelevantCtorFields?` test); a type nothing
 destructs or constructs and nobody asked for becomes a *placeholder* variant
 `Placeholder_<type>`; everything goes into one `type … and …` group; `Nat` → `int`,
-`Except ε α` → `(α, ε) result`, `Array` → `list`.
+`Except ε α` → `(α, ε) result`, `Array` → `Lcnf_array.t`.
 
 ## 3. The generated dispatcher, verbatim (`machine_gen.ml`)
 
@@ -259,7 +259,6 @@ profile enforced on the hand kernel.
 | gap | reason / consequence |
 | --- | --- |
 | `Nat` → `int` | OCaml `int` is 63-bit; `Nat.sub` is emitted as `max 0 (a - b)`, and `Nat.pow` and literals ≥ 2^62 saturate at `max_int` (the rule above). Division by zero **is** guarded: the builtin table (`OCaml5.Lcnf.builtins`) emits `if b = 0 then 0 else a / b` for `Nat.div` and `if b = 0 then a else a mod b` for `Nat.mod`, which is what Lean answers, so no emitted expression can raise `Division_by_zero`. Not hit by `Fibers.lean` (counters, tokens, priorities) either way |
-| `Array` as `list` | `Array.mkEmpty/push/toList/appendList/size` are a list shim; `push` is O(n). Only the stdlib's `flatMapTR` accumulator uses it here |
 | `LetValue.proj` on a non-structure | a hole; never produced by 4.33.1's mono phase (`structProjCases`) |
 | `extern` / `implemented_by` / `noncomputable` callees | listed as `missing`; a `partial def` compiles to `f._unsafe_rec` and is reached through the wrapper. None in `Fibers.lean` (the only "missing" root, `Step`, is a `Prop`) |
 | an erased *value* passed to a relevant parameter | becomes `()`, which is a type error at the OCaml level if the parameter is used; not observed in 154 declarations |

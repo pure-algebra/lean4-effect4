@@ -156,8 +156,8 @@ let r_source =
       Shared
         [ "Effect4.StdLib.Source"; "Effect4.Store.Pin"; "Effect4.Char.Implementation" ];
     carriers =
-      [ "StdLib/Derived.lean:147"; "Store/PinDerived.lean:168";
-        "Char/Conformance/Receipt.lean:151" ];
+      [ "SourceC.instContent (git:9b887fdc8^:src/Effect4/StdLib/Derived.lean)"; "PinGen.PinC.instContent (src/Effect4/Store/Domain/PinDerived.lean)";
+        "Implementation (git:9b887fdc8^:src/Effect4/Char/Conformance/Receipt.lean)" ];
     fields = [];
     note =
       "three carriers of different arity (Source ctor 0 [String,String,Digest]; Pin ctor 0 with \
@@ -169,7 +169,7 @@ let r_export =
   {
     kind = E4_kind.Export;
     status = Frozen;
-    carriers = [ "Effect4.StdLib.Entry (StdLib/Derived.lean:227)" ];
+    carriers = [ "Effect4.StdLib.Entry (EntryC.instContent (git:9b887fdc8^:src/Effect4/StdLib/Derived.lean))" ];
     fields =
       [ Data_field (args [ 0 ]); Data_field (args [ 1 ]); Data_field (args [ 2 ]);
         Data_field (args [ 3 ]); Ref_field (args [ 4 ], Some E4_kind.Source) ];
@@ -182,18 +182,18 @@ let r_type =
     status = Unused;
     carriers = [];
     fields = [];
-    note = "reserved for the extractor lane (Kind.lean:29-30); no Content instance today";
+    note = "reserved for the extractor lane (Kind (src/Effect4/Store/Carrier/Kind.lean)); no Content instance today";
   }
 
 let r_schema =
   {
     kind = E4_kind.Schema;
     status = Frozen;
-    carriers = [ "Effect4.Schema.Document (Store/Genesis.lean:35)" ];
+    carriers = [ "Effect4.Schema.Document (instContentDocument (src/Effect4/Store/Domain/Genesis.lean))" ];
     fields = [ Data_field (args [ 0 ]); Data_field (args [ 1 ]) ];
     note =
       "ctor 0 [representation:Representation, references:List ReferenceEntry] \
-       (Schema/Document.lean:127-132): no Ref, no Cid, no Digest field. A schema's only edge is \
+       (Document (src/Effect4/Schema/Document.lean)): no Ref, no Cid, no Digest field. A schema's only edge is \
        the node's spec (edge 0), which lives in the envelope and not in the payload.";
   }
 
@@ -216,8 +216,8 @@ let r_annotation =
         [ "Effect4.Store.Annotation t"; "Effect4.Char.Evidence"; "Effect4.Char.Claim";
           "Effect4.Char.Target"; "Effect4.Char.Characterized"; "Effect4.Char.Receipt" ];
     carriers =
-      [ "Store/Traits.lean:149"; "Char/Derived.lean:272"; "Char/Derived.lean:373";
-        "Char/Derived.lean:877"; "Char/Derived.lean:1025"; "Char/Conformance/Receipt.lean:235" ];
+      [ "instContentAnnotation (src/Effect4/Store/Domain/Traits.lean)"; "EvidenceC.instContent (git:9b887fdc8^:src/Effect4/Char/Derived.lean)"; "ClaimC.instContent (git:9b887fdc8^:src/Effect4/Char/Derived.lean)";
+        "TargetC.instContent (git:9b887fdc8^:src/Effect4/Char/Derived.lean)"; "CharacterizedC.instContent (git:9b887fdc8^:src/Effect4/Char/Derived.lean)"; "Receipt (git:9b887fdc8^:src/Effect4/Char/Conformance/Receipt.lean)" ];
     fields = [];
     note =
       "`Annotation t` is ctor 0 [subject:AnyRef, value:t, prev:Option (Ref Annotation)], but \
@@ -232,7 +232,7 @@ let r_entry =
     status = Unused;
     carriers = [];
     fields = [];
-    note = "reserved for the journal (Kind.lean:37-38)";
+    note = "reserved for the journal (Kind (src/Effect4/Store/Carrier/Kind.lean))";
   }
 
 let r_query =
@@ -241,7 +241,7 @@ let r_query =
     status = Unused;
     carriers = [];
     fields = [];
-    note = "reserved (Kind.lean:39-40)";
+    note = "reserved (Kind (src/Effect4/Store/Carrier/Kind.lean))";
   }
 
 let r_result =
@@ -250,7 +250,7 @@ let r_result =
     status = Unused;
     carriers = [];
     fields = [];
-    note = "reserved (Kind.lean:41-42)";
+    note = "reserved (Kind (src/Effect4/Store/Carrier/Kind.lean))";
   }
 
 let r_chunk =
@@ -260,7 +260,7 @@ let r_chunk =
     carriers = [];
     fields = [];
     note =
-      "the blob kind (Kind.lean:43-44; A2 §1.9 e4_chunk). A chunk's payload is one `bytes` \
+      "the blob kind (Kind (src/Effect4/Store/Carrier/Kind.lean); A2 §1.9 e4_chunk). A chunk's payload is one `bytes` \
        leaf: it holds no address at any path, which is exactly why a chunk is an INTERIOR node \
        (E4_kind.is_interior).";
   }
@@ -269,7 +269,7 @@ let r_tree =
   {
     kind = E4_kind.Tree;
     status = Frozen;
-    carriers = [ "Effect4.Store.Tree (Store/PinDerived.lean:224)" ];
+    carriers = [ "Effect4.Store.Tree (PinGen.TreeC.instContent (src/Effect4/Store/Domain/PinDerived.lean))" ];
     fields = [ Ref_field ([ Arg 0; Each; Arg 1 ], None) ];
     note =
       "ctor 0 [bindings:List (String x AnyRef)]. The only row in the table that needs `Each` \
@@ -282,17 +282,17 @@ let r_manifest =
     status = Unused;
     carriers = [];
     fields = [];
-    note = "the second blob kind (Kind.lean:47-48); no Content instance today";
+    note = "the second blob kind (Kind (src/Effect4/Store/Carrier/Kind.lean)); no Content instance today";
   }
 
 let r_component =
   {
     kind = E4_kind.Component;
     status = Frozen;
-    carriers = [ "Effect4.Char.Manifest (Char/Derived.lean:734)" ];
+    carriers = [ "Effect4.Char.Manifest (ManifestC.instContent (git:9b887fdc8^:src/Effect4/Char/Derived.lean))" ];
     fields = List.map (fun i -> Data_field (args [ i ])) [ 0; 1; 2; 3; 4; 5; 6; 7; 8; 9 ];
     note =
-      "ctor 0 with ten fields (Char/Manifest.lean:76-90), all strings, lists of strings or \
+      "ctor 0 with ten fields (Manifest (git:9b887fdc8^:src/Effect4/Char/Manifest.lean)), all strings, lists of strings or \
        lists of records. The `Evidence` values nested under `grades` carry theorem-name Digests, \
        but they sit under sum constructors at unbounded list depth and name nothing in the \
        store: they are not rows, and cids_of is [] here.";
@@ -304,7 +304,7 @@ let r_vector =
     status =
       Shared [ "Effect4.Char.GSet a"; "Effect4.Char.Fact L C"; "Effect4.Char.Vector L C" ];
     carriers =
-      [ "Char/Canonical.lean:102"; "Char/Canonical.lean:299"; "Char/Canonical.lean:368" ];
+      [ "CharGSetC.instContent (git:9b887fdc8^:src/Effect4/Char/Canonical.lean)"; "CharFactC.instContent (git:9b887fdc8^:src/Effect4/Char/Canonical.lean)"; "CharVectorC.instContent (git:9b887fdc8^:src/Effect4/Char/Canonical.lean)" ];
     fields = [];
     note = "three carriers share the byte (finding R1')";
   }

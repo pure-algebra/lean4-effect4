@@ -2,7 +2,7 @@
    2026-09-08-engine-lane-g3-delivery.md; laws FV1-FV9 of e4_fibers_view.mli).
 
    What is under test: the fiber table that MAINTAINS the completed view, so that
-   `RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean:1543) is a field read instead
+   `RunMachine.completedExits` (completedExits (src/Effect4/Machine/Fibers.lean)) is a field read instead
    of a Θ(N) scan on every step.  The twin is the LEAN LIST ITSELF (`e4_fibers_view_list.ml`:
    allocation order, and `completed` is Lean's `filterMap` walked at read time), and the
    right-hand side of the law that matters — FV1 — is written out here from Fibers.lean and
@@ -63,25 +63,26 @@ let rand n = if n <= 0 then 0 else next () mod n
 
 (* ------------------------------------------------------- the smallest fiber record.
    This independent carrier fixture records the three fields these laws observe: the id
-   (Fibers.lean:573), the exit (:609, :1543) and the observers (:1256, :1344). *)
+   (RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)), `RunMachine.finished`, `RunMachine.completedExits`, and `dropObservers`
+   (src/Effect4/Machine/Fibers.lean). *)
 type fiber = { id : int; exit_ : int option; observers : int list }
 
 let exit_of f = f.exit_
 
 (* ------------------------------------------------------------- Lean, written out *)
 
-(* RunMachine.completedExits (Fibers.lean:1541-1543) over the machine's fiber list *)
+(* RunMachine.completedExits (completedExits (src/Effect4/Machine/Fibers.lean)) over the machine's fiber list *)
 let lean_completed (fs : fiber list) : (int * int) list =
   List.filter_map (fun f -> match f.exit_ with Some e -> Some (f.id, e) | None -> None) fs
 
-(* RunMachine.update (:577-579) — the replace-by-key map, a no-op on an absent id *)
+(* RunMachine.update (src/Effect4/Machine/Fibers.lean) — the replace-by-key map, a no-op on an absent id *)
 let lean_update (fs : fiber list) (f : fiber) : fiber list =
   List.map (fun g -> if g.id = f.id then f else g) fs
 
-(* spawn (:867, :877) *)
+(* spawn (src/Effect4/Machine/Fibers.lean) *)
 let lean_spawn (fs : fiber list) (child : fiber) : fiber list = fs @ [ child ]
 
-(* dropObservers (:1254-1260, :1344-1348) *)
+(* dropObservers (src/Effect4/Machine/Fibers.lean) *)
 let drop_step (token : int) (g : fiber) : fiber =
   { g with observers = List.filter (fun t -> t <> token) g.observers }
 
@@ -150,7 +151,7 @@ let fv1 () =
        if V.completed non <> [] then ok := false;
        if scan non <> [] then ok := false)
     sizes;
-  check "FV1 completed IS the ascending filterMap of Fibers.lean:1543, after every write" !ok
+  check "FV1 completed IS the ascending filterMap of completedExits (src/Effect4/Machine/Fibers.lean), after every write" !ok
 
 (* ------------------------------------------------------------------------ FV2 *)
 let fv2 () =
@@ -187,7 +188,7 @@ let fv3 () =
     if V.completed !t <> lean_completed !l then ok := false;
     if V.completed !t <> scan !t then ok := false
   done;
-  (* spawn's child has exit = none (Fibers.lean:867-877): the view does not move *)
+  (* spawn's child has exit = none (spawn (src/Effect4/Machine/Fibers.lean)): the view does not move *)
   let before = V.completed !t in
   let after = V.add ~exit_of 500 { id = 500; exit_ = None; observers = [] } !t in
   if not (V.completed after == before) then ok := false;

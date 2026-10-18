@@ -26,7 +26,7 @@
               | off  (bits  8..50, 43 bits, 8 TiB per segment)
               | kind (bits  0..7)
                 vals.(j) = 0 means EMPTY, and no occupied slot can be 0 because
-                `Kind.byte_pos` (Kind.lean:137) proves every kind byte is at least 1.
+                `Kind.byte_pos` (src/Effect4/Store/Carrier/Kind.lean) proves every kind byte is at least 1.
 
    A prefix collision is not a correctness problem: `find` CONFIRMS by reading the record's own
    recorded digest at the offset (41 bytes, which the reader touches anyway) and keeps probing
@@ -72,7 +72,7 @@
        that confirms.                                             by construction; tested (C3)
    IX8 `Deps` is NOT an edge (amendment M1): `E4_cas.reachable`, `closure` and admission never
        consult it, and there is no `propagate` (companion §7 and `exists_carrier_collision`,
-       Key.lean:383-386).  It is persistent: `add` returns a new value.        by construction
+       exists_carrier_collision (src/Effect4/Machine/Key.lean)).  It is persistent: `add` returns a new value.        by construction
    IX9 A written snapshot is read-only (0444): nothing writes it in place, and the next `save`
        replaces it by rename.  A tmp left read-only by a save that stopped is removed first.
                                                                          tested (F11, F12)
@@ -306,7 +306,7 @@ end
 module Deps : sig
   (** Identity: the pack read through `E4_shape.table`.  Rebuild: a full scan.  It is NOT an
       edge (IX8, amendment M1) and there is no `propagate`: a row-preserving edit is not a
-      meaning-preserving edit here, because `exists_carrier_collision` (Key.lean:383-386) says
+      meaning-preserving edit here, because `exists_carrier_collision` (exists_carrier_collision (src/Effect4/Machine/Key.lean)) says
       type identity never recovers code identity. *)
 
   type t

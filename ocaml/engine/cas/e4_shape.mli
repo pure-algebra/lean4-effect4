@@ -7,7 +7,7 @@
    because of a finding, not a preference:
 
      FINDING R1.  `Canonical Digest` frames a digest as `Val.bytes d.bytes`
-     (src/Effect4/Store/Canonical.lean:446-451), i.e. `08 ++ be64 32 ++ <32 bytes>`, and the CAS
+     (instCanonicalDigest (src/Effect4/Store/Domain/Canonical.lean)), i.e. `08 ++ be64 32 ++ <32 bytes>`, and the CAS
      design gives `Cid α` the same shape (2026-09-07-cas-design.md §1, §3).  So a `Cid` field is
      byte-for-byte indistinguishable from any other 32-byte `bytes` frame — a `Digest` stamp, a
      `spanDigest` on a `Pin`, an `engine` manifest digest, a hash literal inside a program.  A
@@ -17,13 +17,13 @@
      frozen payload shapes: the table is transcribed, never inferred from bytes.
 
      FINDING R1'.  A second finding of this lane, and the reason the table has a `status`
-     column.  **The kind byte is not injective on carriers** — `src/Effect4/Store/Kind.lean:10-11`
+     column.  **The kind byte is not injective on carriers** — `Kind (src/Effect4/Store/Carrier/Kind.lean)`
      says so in its own header, and the tree bears it out: `source` (1) carries
-     `StdLib.Source` (StdLib/Derived.lean:147), `Store.Pin` (Store/PinDerived.lean:168) and
-     `Char.Implementation` (Char/Conformance/Receipt.lean:151); `annotation` (6) carries
-     `Annotation τ` (Store/Traits.lean:149), `Char.{Evidence,Claim,Target,Characterized}`
-     (Char/Derived.lean:272,373,877,1025) and `Char.Receipt` (Char/Conformance/Receipt.lean:235);
-     `vector` (14) carries `Char.{GSet,Fact,Vector}` (Char/Canonical.lean:102,299,368).  Those
+     `StdLib.Source` (SourceC.instContent (git:9b887fdc8^:src/Effect4/StdLib/Derived.lean)), `Store.Pin` (PinGen.PinC.instContent (src/Effect4/Store/Domain/PinDerived.lean)) and
+     `Char.Implementation` (Implementation (git:9b887fdc8^:src/Effect4/Char/Conformance/Receipt.lean)); `annotation` (6) carries
+     `Annotation τ` (instContentAnnotation (src/Effect4/Store/Domain/Traits.lean)), `Char.{Evidence,Claim,Target,Characterized}`
+     (EvidenceC.instContent, ClaimC.instContent, TargetC.instContent, CharacterizedC.instContent (git:9b887fdc8^:src/Effect4/Char/Derived.lean)) and `Char.Receipt` (Receipt (git:9b887fdc8^:src/Effect4/Char/Conformance/Receipt.lean));
+     `vector` (14) carries `Char.{GSet,Fact,Vector}` (CharGSetC.instContent, CharFactC.instContent, CharVectorC.instContent (git:9b887fdc8^:src/Effect4/Char/Canonical.lean)).  Those
      carriers have different arities and different field orders, so for such a kind NO ValPath
      is decidable from the kind byte alone.  A2 §1.7's "the frozen payload shape per kind" is
      therefore true only where a kind has exactly one carrier.  This table says which, in the
@@ -63,11 +63,11 @@
        `Tree`'s bindings can be a row at all.                      by construction; tested
    SH6 The walk descends only into tags 4 (list), 5 (pair), 7 (some) and 10 (ctor), exactly as
        `E4_node`'s does, and never into tag 8: a `bytes` payload that happens to contain frames
-       has no children (`Val.refs (.bytes bs) = []`, Node.lean:250).            tested
+       has no children (`Val.refs (.bytes bs) = []`, Val.refs (src/Effect4/Store/Domain/Node.lean)).            tested
 
    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.7 (lane P2, 2026-09-08):
    D1  §1.7's paths are `int list`.  A `ValPath` into a LIST field cannot be written that way:
-       `Store.Tree`'s bindings are `List (String × AnyRef)` (Store/PinDerived.lean:224), so the
+       `Store.Tree`'s bindings are `List (String × AnyRef)` (PinGen.TreeC.instContent (src/Effect4/Store/Domain/PinDerived.lean)), so the
        refs sit at "every element, second component".  The path element is therefore
        `Arg of int | Each`, and `int list` is the special case `List.map (fun i -> Arg i)`
        (`args`, below).
@@ -82,7 +82,7 @@
        `cid_length`.
    D4  §1.7's SH3 says a shape mismatch is "a decode refusal".  A refusal of WHAT is not stated
        and cannot be `E4_node.decode`'s: a node whose payload is a well-formed frame tree of the
-       wrong shape is admitted by `Store.putNode` (Store.lean:262-276 tests `Val.WF`, the
+       wrong shape is admitted by `Store.putNode` (Store.putNode (src/Effect4/Store/Domain/Store.lean) tests `Val.WF`, the
        version, the refs and the edges — never a per-kind shape), so refusing it here would make
        this host narrower than Lean, which brief §2.1 forbids.  The refusal is therefore of the
        QUERY: `cids_of_checked` answers `Error`, `E4_node.decode` and admission are untouched. *)

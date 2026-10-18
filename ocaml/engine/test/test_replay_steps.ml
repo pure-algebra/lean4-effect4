@@ -4,7 +4,7 @@
    stops consuming the tape once the command residue is non-empty, so a 64-decision tape at
    low fuel yields ONE machine 64 times, and a caller that counted positions counted
    repetitions.  Lean is where that comes from: `replayEval`
-   (src/Effect4/Machine/Fibers.lean:2028-2040) answers `stuck why m` on a stuck machine
+   (replayEval (src/Effect4/Machine/Fibers.lean)) answers `stuck why m` on a stuck machine
    WITHOUT applying the decision, and `frontier r.1` after a step that did not settle, and in
    both cases reads no more of the tape.  Past that point Lean defines no machine at all.
 
@@ -54,7 +54,7 @@ let p_fork : E.NativeOp.t E.Eff.t =
       E.Eff.AwaitFiber (E.Term.Var 0, E.ObserverMode.AwaitValue) )
 
 (* A refusal, exhibited: `join` on a fiber the machine never minted halts it with
-   `Stuck.unknownFiber` (src/Effect4/Machine/Fibers.lean:1508-1512), and that is the only way
+   `Stuck.unknownFiber` (stepDecisionState (src/Effect4/Machine/Fibers.lean)), and that is the only way
    into `Refused` from a well-formed program -- no decision of the alphabet can do it (R0). *)
 let p_await_unknown : E.NativeOp.t E.Eff.t =
   E.Eff.AwaitFiber (E.Term.Lit (E.Lit.Nat 99), E.ObserverMode.AwaitValue)
@@ -245,12 +245,12 @@ let () =
   print_endline "";
   print_endline "== the refusal ==";
   (* WHERE A REFUSAL COMES FROM.  `Stuck` has three constructors -- unknownFiber,
-     unknownScope, unknownRace (Fibers.lean:382-385) -- and none of them is reachable from the
-     DECISION alphabet: `stepDecisionState` (:1962-1982) either drives a command loop or, for
+     unknownScope, unknownRace (Stuck (src/Effect4/Machine/Fibers.lean)) -- and none of them is reachable from the
+     DECISION alphabet: stepDecisionState (src/Effect4/Machine/Fibers.lean) either drives a command loop or, for
      `interruptFrom` on an id the machine never minted, answers `(m, true)` and changes
      nothing.  The six candidates below are measured and every one of them answers `finished`.
      A refusal comes from a COMMAND: `join` on a fiber that does not exist
-     (Fibers.lean:1508-1512) halts the machine with `unknownFiber`.  So the refusal is
+     (stepDecisionState (src/Effect4/Machine/Fibers.lean)) halts the machine with `unknownFiber`.  So the refusal is
      exhibited by a PROGRAM that awaits a fiber id nothing minted, and the tape that reaches
      it is the ordinary one. *)
   let unknown = 97 in
@@ -284,18 +284,18 @@ let () =
     (match En.root_exit m2 with None -> "<live>" | Some e -> e);
   check
     "R1 nor can a PROGRAM refuse on its own here: `join` on a fiber the machine never minted \
-     is Fibers.lean:1508-1512's `unknownFiber`, but no term of this alphabet builds a fiber \
+     is stepDecisionState (src/Effect4/Machine/Fibers.lean)'s `unknownFiber`, but no term of this alphabet builds a fiber \
      handle -- `Lit.Nat 99` dies with `badName` and the run FINISHES"
     ((not (L_fast.is_refused m2))
     && En.outcome m2 = "finished"
     && En.root_exit m2 = Some "failure [die(badName)]");
   Printf.printf
     "  NOTE the `Refused` arm has NO witness in this alphabet: every `Stuck` constructor \
-     (unknownFiber,\n       unknownScope, unknownRace -- Fibers.lean:382-385) names an \
+     (unknownFiber,\n       unknownScope, unknownRace -- Stuck (src/Effect4/Machine/Fibers.lean)) names an \
      identity the MACHINE mints, and neither\n       `Eff_types`' terms nor the decision \
      alphabet can spell one it did not.  Lane X's 74 306-position\n       differential found \
      no stuck machine either.  So the stuck half of the stop is `halted`'s first\n       \
-     disjunct, licensed by inspection against Fibers.lean:2036, and the half this file \
+     disjunct, licensed by inspection against replayEval (src/Effect4/Machine/Fibers.lean), and the half this file \
      MEASURES\n       is the fuel half -- which is the half lane P6 met.\n";
   (* the "not applied" law, on the half that has a witness: at the stop the machine is the
      replay of the decisions BEFORE it, so nothing in the residue has touched it *)

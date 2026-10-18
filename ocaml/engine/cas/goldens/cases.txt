@@ -39,7 +39,7 @@
 #   entriesVal   = list (pair (list (map nat layer)) (entryVal entry))
 #   layer path   = list (map nat path)
 #
-# rootKindIndex: stdlib=0 journal=1 daemon=2 schema=3 char=4 (Store/Store.lean:47-53).
+# rootKindIndex: stdlib=0 journal=1 daemon=2 schema=3 char=4 (RootKind (src/Effect4/Store/Domain/Store.lean)).
 # Not cut, and why: docs/research/2026-09-08-engine-lane-gld-delivery.md.
 digest-01	a1	a66c701845710c6cd6082b9789002c9bd6f626f14801c76e55cdc6b0298508ea
 digest-02	a1	7cc15f3ca164271165e1e9172ffa9c348f1c556045511a92896658cb11e20749

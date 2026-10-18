@@ -41,19 +41,20 @@ let rand n = if n <= 0 then 0 else next () mod n
 
 (* --------------------------------------------------- Lean's carriers, written out *)
 
-(* List.set (Lean core; refPoke Stores.lean:1119-1120, setCell :1374) *)
+(* List.set: refPoke and DeferredStore.setCell (src/Effect4/Machine/Stores.lean) *)
 let rec list_set (xs : 'a list) (i : int) (v : 'a) : 'a list =
   match xs with [] -> [] | x :: r -> if i = 0 then v :: r else x :: list_set r (i - 1) v
 
-(* xs[i]? (refPeek Stores.lean:1116) *)
+(* xs[i]?: refPeek (src/Effect4/Machine/Stores.lean) *)
 let list_get (xs : 'a list) (i : int) : 'a option = List.nth_opt xs i
 
-(* xs ++ [v] (refMake Stores.lean:1150, RunMachine.emit Fibers.lean:587, spawn :877) *)
+(* xs ++ [v]: refStep at SyncOp.refMake (src/Effect4/Machine/Stores.lean);
+   RunMachine.emit and spawn (src/Effect4/Machine/Fibers.lean) *)
 let list_append_one (xs : 'a list) (v : 'a) : 'a list = xs @ [ v ]
 
 type fiber = { id : int; w : int }
 
-(* RunMachine.fiber? then RunMachine.update (Fibers.lean:573-579) *)
+(* RunMachine.fiber? then RunMachine.update (RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)) *)
 let list_fiber_touch (fs : fiber list) (id : int) : fiber list =
   match List.find_opt (fun f -> f.id = id) fs with
   | None -> fs
@@ -196,7 +197,7 @@ let build_memo n =
 let build_memo_list n =
   List.fold_left (fun t i -> E4_memo_list.insert (path i) i t) E4_memo_list.empty (List.init n (fun i -> i))
 
-(* M1: insert, ACCUMULATING — Lean's `entries ++ [(layer, entry)]` (Stores.lean:880). *)
+(* M1: insert, ACCUMULATING — Lean's `entries ++ [(layer, entry)]` (MemoWorld.insertEntry (src/Effect4/Machine/Stores.lean)). *)
 let m1 n =
   let base_l = build_memo_list n and base_m = build_memo n in
   cell n
@@ -213,7 +214,7 @@ let m1 n =
       done;
       ignore (E4_memo.cardinal !acc))
 
-(* M2: find, at a FIXED size — Lean's `entries.find? (·.1 = layer)` (Stores.lean:867). *)
+(* M2: find, at a FIXED size — Lean's `entries.find? (·.1 = layer)` (MemoWorld.entryAt (src/Effect4/Machine/Stores.lean)). *)
 let m2 n =
   let l = build_memo_list n and m = build_memo n in
   cell n

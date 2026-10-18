@@ -296,7 +296,7 @@ let forged records roots =
 
 (* ============================================================ the probe nodes *)
 
-(* `probeSchema` / `probeEntry` (src/Effect4/Store/Store.lean:566-575) and the tree node of
+(* `probeSchema` / `probeEntry` (probeSchema (src/Effect4/Store/Domain/Store.lean)) and the tree node of
    golden G6, read out of the goldens when they are there and rebuilt from their Lean
    definitions when they are not, so this file runs with or without the cut. *)
 let sample_entry =

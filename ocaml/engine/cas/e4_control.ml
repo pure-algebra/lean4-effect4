@@ -60,7 +60,7 @@ let tmp_path ~path = path ^ ".tmp"
 
 (* The host limit, amendment M9: a be64 at or above 2^62 is refused, never misread.  On the
    READ side that is `E4_be.read_be64`, which refuses a top byte >= 0x40.  On the WRITE side
-   it is free: an OCaml int on this host holds -2^62 .. 2^62-1 (`E4_nat.max_nat`), so 2^62 is
+   it is free: an OCaml int on this host holds -2^62 .. 2^62-1 (`max_int`), so 2^62 is
    not representable and every non-negative int is already below the bound.  What the writer
    must still refuse is a negative one. *)
 let max_wire = max_int (* = 2^62 - 1 on a 64-bit host *)
@@ -420,7 +420,7 @@ let root_error_word = function
   | Fork { name; head; prev } ->
     Printf.sprintf "fork %s %s %s" name (E4_addr.Addr.hex head) (E4_addr.Addr.hex prev)
 
-(* CF5, in Store.putRoot's order (Store.lean:523-530): version, then resolution, then kind.
+(* CF5, in Store.putRoot's order (Store.putRoot (src/Effect4/Store/Domain/Store.lean)): version, then resolution, then kind.
    The M7 prev check sits with the version check — both ask "is this move against the head you
    think it is" — and is unreachable for any root kind but Registry (D2). *)
 let advance_root (p : payload) ~(resolve : E4_addr.Addr.t -> E4_kind.t option)
@@ -453,7 +453,7 @@ let advance_root (p : payload) ~(resolve : E4_addr.Addr.t -> E4_kind.t option)
         Error (Wrong_kind { at = r.digest; expected = r.kind; actual = k })
       | Some _ ->
         (* CF8: the moved root is the head and the resident of that name is filtered out —
-           `r :: s.roots.filter fun q => q.name ≠ r.name` (Store.lean:527). *)
+           `r :: s.roots.filter fun q => q.name ≠ r.name` (Store.putRoot (src/Effect4/Store/Domain/Store.lean)). *)
         Ok
           {
             p with

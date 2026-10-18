@@ -2,7 +2,7 @@
    (docs/research/2026-09-08-engine-prof-chain.md §5.1, finding P-6).
 
    What it is: the carrier behind `Effect4.Program.Point.env` and
-   `Effect4.Machine.Capture.env` (src/Effect4/Program/Compile.lean:127-165).  Lean's field is
+   `Effect4.Machine.Capture.env` (Capture (src/Effect4/Machine/Stores.lean)).  Lean's field is
    a `List Val` extended at the TAIL — `p.env ++ [v]` in `Point.childWith`, `Point.capture`
    and five inline sites — so every child copies its parent's environment: the second
    n(n-1)/2 of lane PROF's 98.5 % (P-2).  Reversed, the extension is a cons and every prefix

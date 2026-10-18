@@ -5,16 +5,16 @@
    proposal 16, or explicitly refuse the host numeric profile. Every accepted transition
    is the generated
    `stepDecisionState` (api_engine.ml:11424) and the answer is a projection of what that
-   function and the generated `settled` (:11330) already say.
+   function and the generated `settled` (ocaml/engine/api_engine.ml) already say.
 
    The four letters, and where each comes from:
-     Finished   every fiber has exited (`RunMachine.finished`, Fibers.lean:608-609), the
+     Finished   every fiber has exited (`RunMachine.finished`, RunMachine.finished (src/Effect4/Machine/Fibers.lean)), the
                 tape is spent, and the last step settled.
      Suspended  the TAPE ran out with the machine live and settled: a frontier whose
                 command residue is empty.
      Delay      the FUEL ran out: `driveState` returned a NON-EMPTY command residue
-                (Fibers.lean:1886), which is exactly `settled = false`.  `Api.Outcome`
-                conflates this with Suspended (Api.lean:144-148); the engine does not,
+                (replayEval (src/Effect4/Machine/Fibers.lean)), which is exactly `settled = false`.  `Api.Outcome`
+                conflates this with Suspended (Outcome (src/Effect4/Api.lean)); the engine does not,
                 because a caller that can give more fuel must be able to tell them apart.
      Refused    `ReplayResult.stuck` -- `Stuck.unknownFiber/unknownScope/unknownRace`.
 
@@ -64,7 +64,7 @@
        last equal to `replay m tape`.  It is TOTAL, and it is total because a viewer and a
        differential index by tape position and must have a machine at every one.
                                     tested (test_engine check 4, test_diff, test_replay_steps)
-   EN4b THE RUN AXIS, and lane P6's finding F1.  Lean's `replayEval` (Fibers.lean:2028-2040)
+   EN4b THE RUN AXIS, and lane P6's finding F1.  Lean's `replayEval` (replayEval (src/Effect4/Machine/Fibers.lean))
        STOPS: at a stuck machine it answers `stuck why m` WITHOUT applying the decision, and
        after a step that left a non-empty command residue — the fuel ran out — it answers
        `frontier r.1` and reads no further.  Past that point Lean defines no machine, and

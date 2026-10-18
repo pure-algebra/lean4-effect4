@@ -1,6 +1,5 @@
-(* Lcnf_array -- see lcnf_array.mli. The carrier and its `push`, `get`, `slice`, `fold` and
-   `to_list` are `E4_log.Vec`'s, moved here unchanged; `set_exn` and `replicate` are the ones slice
-   3.1 measured (ocaml/engine/bench/bench_array.ml).
+(* Lcnf_array -- the carrier and operations described in lcnf_array.mli.
+   The tests test_lcnf and test_array_conversion check its value and allocation observations.
 
    THE CARRIER, and why each half is what it is.
      `full`     a Map from CHUNK NUMBER (not from element index) to a frozen chunk of
@@ -117,9 +116,22 @@ let fold t ~init ~f =
 
 let fold_left f init t = fold t ~init ~f:(fun _ x acc -> f acc x)
 
-(* Index order through `fold`: the ascending walk conses the elements most recent first, and one
-   `List.rev` turns them. *)
-let to_list t = List.rev (fold t ~init:[] ~f:(fun _ x acc -> x :: acc))
+(* The temporary array stays within both generic and float-array host capacities.
+   The fallback keeps the vector's domain even when no flat array can hold its elements.
+   A smaller capacity is a testable allocation policy, with the same list observation. *)
+let to_list_with_capacity ~capacity t =
+  let bound = min capacity (min Sys.max_array_length Sys.max_floatarray_length) in
+  if t.len = 0 then []
+  else if t.len > bound then List.rev (fold t ~init:[] ~f:(fun _ x acc -> x :: acc))
+  else begin
+    let a = Array.make t.len (get_exn t 0) in
+    fold t ~init:() ~f:(fun i x () -> Array.unsafe_set a i x);
+    let acc = ref [] in
+    for i = t.len - 1 downto 0 do acc := Array.unsafe_get a i :: !acc done;
+    !acc
+  end
+
+let to_list t = to_list_with_capacity ~capacity:Sys.max_array_length t
 
 let append_list t xs = List.fold_left push t xs
 let of_list xs = append_list empty xs

@@ -1,9 +1,9 @@
 (* E4_hex — the one hexadecimal codec.  The property list is in e4_hex.mli. *)
 
-(* Digest.hexDigit (Digest.lean:63): 0-9 then a-f, lowercase. *)
+(* Digest.hexDigit (hexDigit (src/Effect4/Store/Carrier/Digest.lean)): 0-9 then a-f, lowercase. *)
 let hex_digit (n : int) : char = if n < 10 then Char.unsafe_chr (48 + n) else Char.unsafe_chr (87 + n)
 
-(* Digest.hexVal (Digest.lean:66-70): 0-9, a-f, A-F; -1 stands for `none`. *)
+(* Digest.hexVal (hexVal (src/Effect4/Store/Carrier/Digest.lean)): 0-9, a-f, A-F; -1 stands for `none`. *)
 let hex_val (c : int) : int =
   if c >= 48 && c <= 57 then c - 48
   else if c >= 97 && c <= 102 then c - 87

@@ -1,12 +1,12 @@
 (* e4_buckets.mli — the dispatcher: priority -> FIFO, persistent.
 
    What it is: the OCaml carrier of Effect4.Machine.Dispatcher
-   (src/Effect4/Machine/Fibers.lean:115-155, transcribing Scheduler.ts:105-131 and :225-233).
+   (Dispatcher (src/Effect4/Machine/Fibers.lean), transcribing Scheduler.ts:105-131 and Scheduler.ts:225-233).
    Buckets in strictly ascending priority; FIFO within a bucket; one drain empties the whole
    structure, so a task enqueued during a drain waits for the next one. Representation: an
    ascending assoc list of (priority, front/back list pair). The assoc list IS
-   OCaml5.Lib.Map's carrier (a strictly ascending association list, Lib/Map.lean:9-14) and
-   the pair IS OCaml5.Lib.Deque's carrier (its `toList`, Lib/Deque.lean:92-96) under
+   OCaml5.Lib.Map's carrier (a strictly ascending association list, Map (git:79752b3e6^:src/OCaml5/Lib/Map.lean)) and
+   the pair IS OCaml5.Lib.Deque's carrier (its `toList`, Deque (git:79752b3e6^:src/OCaml5/Lib/Deque.lean)) under
    to_list (f, b) = f @ List.rev b -- so every theorem in Lib/Deque.lean is a law of this
    module, not an analogy.
    Depends on: nothing (polymorphic in the task; Stdlib only).
@@ -33,8 +33,8 @@
      B6  `enqueue` arms; `drain` disarms; `arm` arms without enqueueing and `disarm` disarms
          without touching the buckets. This half has no Lean counterpart in Buckets -- the Deep
          dispatcher's `armed : Bool` is a host fact (refusal row W4-DEQ-ARMED,
-         Lib/Deque.lean:75-78) -- so it is stated here and proved nowhere. It is nevertheless
-         an OBSERVATION of Effect4.Machine.Dispatcher (Fibers.lean:127,147,153) and the
+         Dispatcher.Wf (git:79752b3e6^:src/OCaml5/Lib/Deque.lean)) -- so it is stated here and proved nowhere. It is nevertheless
+         an OBSERVATION of Effect4.Machine.Dispatcher (Dispatcher, Dispatcher.enqueue, Dispatcher.drain (src/Effect4/Machine/Fibers.lean)) and the
          differential in test_buckets.ml checks it after every operation.
          [by construction; tested: buckets-armed]
      B7  Persistence: every operation returns a fresh value and no earlier value is changed.
@@ -58,7 +58,7 @@ type 'a t
 
 val empty : 'a t
 (** The empty dispatcher, disarmed. `Effect4.Machine.Dispatcher.empty`
-    (Fibers.lean:134). *)
+    (Dispatcher.empty (src/Effect4/Machine/Fibers.lean)). *)
 
 val is_empty : 'a t -> bool
 (** No bucket holds a task. Note: an empty dispatcher may still be armed. *)
@@ -68,19 +68,19 @@ val armed : 'a t -> bool
 
 val arm : 'a t -> 'a t
 (** Set the armed flag without enqueueing anything: a task was scheduled on this owner's
-    dispatcher and the first one arms it (`RunMachine.arm`, Fibers.lean:627-629). B6. *)
+    dispatcher and the first one arms it (`RunMachine.arm`, RunMachine.arm (src/Effect4/Machine/Fibers.lean)). B6. *)
 
 val disarm : 'a t -> 'a t
 (** Clear the armed flag without touching the buckets: the host callback of this owner ran
-    (`RunMachine.disarm`, Fibers.lean:632-634). B6. *)
+    (`RunMachine.disarm`, RunMachine.disarm (src/Effect4/Machine/Fibers.lean)). B6. *)
 
 val enqueue : 'a t -> priority:int -> 'a -> 'a t
-(** `Dispatcher.enqueue` (Fibers.lean:145-147): append at the tail of `priority`'s queue,
+(** `Dispatcher.enqueue` (Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean)): append at the tail of `priority`'s queue,
     creating the bucket in ascending position if there is none, and arm. B1, B2, B5, B6.
     @raise Invalid_argument if [priority] is negative. *)
 
 val drain : 'a t -> 'a list * 'a t
-(** `Dispatcher.drain` / `runTasks` (Fibers.lean:151-153): the whole snapshot in ascending
+(** `Dispatcher.drain` / `runTasks` (Dispatcher.drain (src/Effect4/Machine/Fibers.lean)): the whole snapshot in ascending
     priority and FIFO within a priority, and the empty disarmed dispatcher. B3, B4. *)
 
 val length : 'a t -> int
@@ -91,7 +91,7 @@ val priorities : 'a t -> int list
 
 val to_list : 'a t -> (int * 'a list) list
 (** The canonical form: ascending priority, each bucket front-to-back. This is
-    `Dispatcher.bucketPairs` (Lib/Deque.lean:320-322) with each `Deque` read as its `toList`,
+    `Dispatcher.bucketPairs` (bucketPairs (git:79752b3e6^:src/OCaml5/Lib/Deque.lean)) with each `Deque` read as its `toList`,
     and it is what a snapshot serialises. Two dispatchers with the same `to_list` and the same
     `armed` are equal. *)
 

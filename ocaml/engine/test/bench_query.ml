@@ -124,7 +124,7 @@ let bench_log () =
   let entries =
     Array.mapi (fun i r -> E4_logindex.parse_run_event_row ~decision:(i / 7) i r) rs
   in
-  let ms = best 3 (fun () -> Array.fold_left E4_log.Vec.push E4_log.Vec.empty entries) in
+  let ms = best 3 (fun () -> Array.fold_left Lcnf_array.push Lcnf_array.empty entries) in
   note "B-Q3c" "breakdown: the entry vector alone" ~ms ~ops:n ~unit_:"rows/s";
   let ms =
     best 3 (fun () ->

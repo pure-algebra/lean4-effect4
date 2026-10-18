@@ -22,9 +22,9 @@ are the lines joined by a newline with a trailing newline, exactly what
 `sed -n 'a,bp' file` prints, so the digest here and the digest the census
 generator computes in shell (`scripts/generate-effect-runtime-census.sh:355`)
 are the same number. A line is taken as its UTF-8 bytes, a projection that
-costs no axiom (`Store/Canonical.lean`, the string instance).
+costs no axiom (`src/Effect4/Store/Domain/Canonical.lean`, the string instance).
 
-The pin is store content through its derived instance, `Store/PinDerived.lean`:
+The pin is store content through its derived instance, `src/Effect4/Store/Domain/PinDerived.lean`:
 `Canonical Pin` written by `Effect4Gen` from this structure (constructor 0, the
 fields in declaration order) and `Content Pin` at kind `source`
 (`docs/research/2026-09-04-cas-trait-plan.md` §3). Nothing here projects to JSON
@@ -34,9 +34,8 @@ the address is the store's `address` over the node bytes. The span digest is a
 resolved against the store (the facts note, Q4) — and frames as thirty-two bytes.
 
 Hash level 0 (`docs/research/2026-09-05-workshop-char/02-pins/01-pin-entity.md`, section 4): the pin
-theorem characterizes a collision and assumes nothing about `sha256`. The
-level-1 statement takes injectivity as a named premise that is never
-discharged in this tree. Level 2 is not stated.
+theorem characterizes a collision and assumes nothing about `sha256`.
+No theorem here assumes hash injectivity.
 -/
 
 @[expose] public section
@@ -124,14 +123,6 @@ theorem holds_or_collision (p : Pin) (upstream : Bytes) (hWF : p.WellFormed)
       (upstream ≠ p.spanBytes ∧ sha256 upstream = sha256 p.spanBytes) :=
   if hEq : upstream = p.spanBytes then Or.inl hEq
   else Or.inr ⟨hEq, h.trans (p.spanDigest_eq_of_wellFormed hWF).symm⟩
-
-/-- **Level 1, with its premise named.** Under injectivity of `sha256`, a
-matching digest is matching bytes. The premise is never an instance, never an
-axiom, and never discharged in this tree. -/
-theorem holds_of_injective (hInj : Function.Injective sha256) (p : Pin)
-    (upstream : Bytes) (hWF : p.WellFormed) (h : sha256 upstream = p.spanDigest) :
-    upstream = p.spanBytes :=
-  hInj (h.trans (p.spanDigest_eq_of_wellFormed hWF).symm)
 
 end Pin
 

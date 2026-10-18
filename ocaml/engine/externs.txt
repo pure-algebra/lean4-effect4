@@ -61,7 +61,7 @@ ops M.t to_list M.to_list
 # The point's position and environment (lane G2, D7).  `@node` replaces the chain's argument
 # with the generated `node` type: the path CARRIES the node it addresses, so `Point.child` is
 # a cons and `resolve` is a field read.  `Capture` is `Point` minus the completed view
-# (src/Effect4/Machine/Stores.lean:162), so it takes the same two carriers.
+# (Stores (src/Effect4/Machine/Stores.lean)), so it takes the same two carriers.
 field Effect4.Program.Point.path @NativeOp.t node P.t
 field Effect4.Machine.Capture.path @NativeOp.t node P.t
 field Effect4.Program.Point.env E.t
@@ -83,7 +83,7 @@ elem Effect4.Machine.ScopeEntry M.t
 # ---- E1: the trace ------------------------------------------------------------------------
 fn Effect4.Machine.RunMachine.emit 2 sh_machine_emit
 fn Effect4.Api.load 2 sh_api_load program_compile empty_ctx stores
-# `RunMachine.empty` (Fibers.lean:612) and `Stores.empty` (Stores.lean:1987) have no row:
+# `RunMachine.empty` (RunMachine.empty (src/Effect4/Machine/Fibers.lean)) and `Stores.empty` (Stores.empty (src/Effect4/Machine/Stores.lean)) have no row:
 # `Api.load` was their only caller in this closure, so externing it deletes them outright.
 # Their bodies are `sh_machine_empty` / `sh_stores_empty` in the prelude, called by
 # `sh_api_load` — the same two lines, one level down.

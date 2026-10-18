@@ -233,8 +233,8 @@ let rec forkn_then (n : int) (tail : Ty.NativeOp.t Ty.Eff.t) : Ty.NativeOp.t Ty.
           (Ty.ActionTerm.Fork (Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat 0)), fork_opts)),
         forkn_then (n - 1) tail )
 
-(* `git:14e6835:src/OCaml5/Bridge.lean:48-51`'s `pTwo` -- the program route 1's domain sweep ran --
-   transcribed so the sweep is like-for-like.  `git:14e6835:src/OCaml5/Bridge.lean:43`'s `forkOptions` is
+(* `pTwo, git:14e6835:src/OCaml5/Bridge.lean`'s `pTwo` -- the program route 1's domain sweep ran --
+   transcribed so the sweep is like-for-like.  `forkOptions, git:14e6835:src/OCaml5/Bridge.lean`'s `forkOptions` is
    `{startImmediately := false, daemon := false, maskMode := .inherit}`, i.e. {!fork_opts}.
    The BYTE GOLDEN of the same name is a different program: measured below, 41 trace rows
    against this one's 43, and 4 host decisions under the event-loop rule against 3. *)
@@ -420,7 +420,7 @@ let w3 () =
 
 (* WHICH BODY THE M AXIS USES, measured rather than assumed.  Probe §6.2 words W4 as
    "N fibers x M yields", and the M axis is supposed to move T (the trace length) at fixed
-   N.  `yieldNow` does not: `Prim.yieldNowWith` (Compile.lean:616) only arms a yield the
+   N.  `yieldNow` does not: `Prim.yieldNowWith` (compileEff (src/Effect4/Program/Compile.lean)) only arms a yield the
    scheduler may decline, so `forkN 1 1` and `forkN 1 256` leave the SAME 20 rows and take
    the same time (measured, printed below).  `sync` does move T.  Both grids are printed;
    the `sync` grid is the one the acceptance number AC5 is read from, and the `yieldNow`
@@ -654,7 +654,7 @@ let sweep () =
        let s = sweep_run ~program:label ~domains:1 ~machines:1 ~fuel:100 () in
        recordf ("sweep.dec." ^ label) (float_of_int s.s_steps);
        Printf.printf "| `%s` | %s | %d | %d | %d |\n%!" label src rows fibers s.s_steps)
-    [ ("pTwo", "`git:14e6835:src/OCaml5/Bridge.lean:48-51`, transcribed — route 1's program",
+    [ ("pTwo", "`pTwo, git:14e6835:src/OCaml5/Bridge.lean`, transcribed — route 1's program",
        p_two_bridge);
       ("pTwoGolden", "`ocaml/eff/goldens/pTwo.bin` — a DIFFERENT program of the same name",
        (match by_name goldens "pTwo" with

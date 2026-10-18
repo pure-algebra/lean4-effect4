@@ -8,15 +8,15 @@
    Depends on: the OCaml standard library only (List).
 
    The Lean operation each function reproduces:
-     find_opt   `List.find?`                    (Stores.lean:1568 ScopeStore.entryAt)
+     find_opt   `List.find?`                    (ScopeStore.entryAt (src/Effect4/Machine/Stores.lean) ScopeStore.entryAt)
      set        replace-by-key `List.map`, a NO-OP on an absent key
-                                                (Stores.lean:1572, Fibers.lean:579)
-     add        `xs ++ [(k, v)]` when fresh     (Stores.lean:1150, :1366, :1576,
-                                                 Fibers.lean:877)
-     remove     `List.filter`                   (Stores.lean:886's shape)
-     map        `List.map`                      (Fibers.lean:1256)
-     for_all    `List.all`                      (Fibers.lean:609)
-     filter_map `List.filterMap`                (Fibers.lean:1543)
+                                                (ScopeStore.setEntry (src/Effect4/Machine/Stores.lean), RunMachine.update (src/Effect4/Machine/Fibers.lean))
+     add        `xs ++ [(k, v)]` when fresh     (refStep, DeferredStore.make, ScopeStore.make (src/Effect4/Machine/Stores.lean),
+                                                 spawn (src/Effect4/Machine/Fibers.lean))
+     remove     `List.filter`                   (MemoWorld.deleteEntry (src/Effect4/Machine/Stores.lean)'s shape)
+     map        `List.map`                      (dropObservers (src/Effect4/Machine/Fibers.lean))
+     for_all    `List.all`                      (RunMachine.finished (src/Effect4/Machine/Fibers.lean))
+     filter_map `List.filterMap`                (completedExits (src/Effect4/Machine/Fibers.lean))
 
    Behaviours:
    TL1 the internal list is in ALLOCATION order, exactly Lean's carrier; `raw` and
@@ -24,7 +24,7 @@
    TL2 `bindings` and `to_list` are ASCENDING by key, so that the twin answers the same
        questions as E4_table.  For every table the machine can build the two orders
        COINCIDE — keys are allocated monotonically (A1 §4.2's licence, re-verified at
-       Fibers.lean:867, :877; Stores.lean:1150, :1366) — and the property test checks
+       spawn (src/Effect4/Machine/Fibers.lean); refStep (src/Effect4/Machine/Stores.lean)) — and the property test checks
        exactly that on monotone sequences.                             tested (prop_table)
    TL3 at most one binding per key: `add` replaces in place rather than appending a
        duplicate, which is what Lean's allocate-then-set discipline guarantees for these

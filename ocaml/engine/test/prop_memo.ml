@@ -2,8 +2,8 @@
    2026-09-08-engine-a1-state.md §4.6 MM1-MM7, and risk R5).
 
    MM2 is the reason this file exists.  Lean's `insertEntry` APPENDS a duplicate
-   (src/Effect4/Machine/Stores.lean:876-880) and `find?` answers the FIRST (:867), while
-   `updateEntry` (:873) and `deleteEntry` (:886) touch ALL matching entries.  The map carrier
+   (MemoWorld.insertEntry (src/Effect4/Machine/Stores.lean)) and `find?` answers the FIRST MemoWorld.entryAt (src/Effect4/Machine/Stores.lean), while
+   `updateEntry` MemoWorld.updateEntry (src/Effect4/Machine/Stores.lean) and `deleteEntry` MemoWorld.deleteEntry (src/Effect4/Machine/Stores.lean) touch ALL matching entries.  The map carrier
    keeps the existing binding instead of appending — a different VALUE, the same
    OBSERVATIONS.  The twin e4_memo_list.ml reproduces Lean's list, duplicates included, and
    the differential below asserts the observations agree at EVERY key after EVERY operation.
@@ -158,13 +158,13 @@ let mm5 () =
   if lk world (k [ 7 ]) 0 <> Some (0, 70) then ok := false;
   if lk world (k [ 8 ]) 2 <> None then ok := false;
   if lk world (k [ 7 ]) 99 <> None then ok := false;
-  (* the nearer map wins over the parent's (`own map first`, Stores.lean:893) *)
+  (* the nearer map wins over the parent's (`own map first`, MemoWorld.lookup (src/Effect4/Machine/Stores.lean)) *)
   let shadow =
     [ { mid = 0; parent = None; entries = M.insert (k [ 7 ]) 70 M.empty };
       { mid = 1; parent = Some 0; entries = M.insert (k [ 7 ]) 71 M.empty } ]
   in
   if lk shadow (k [ 7 ]) 1 <> Some (1, 71) then ok := false;
-  (* a FORGED cyclic chain (Stores.lean:906-910): the fuel is what makes lookup total *)
+  (* a FORGED cyclic chain (MemoWorld.get (src/Effect4/Machine/Stores.lean)): the fuel is what makes lookup total *)
   let cyclic =
     [ { mid = 0; parent = Some 1; entries = M.empty }; { mid = 1; parent = Some 0; entries = M.empty } ]
   in
@@ -247,6 +247,6 @@ let () =
   mm6 ();
   mm7 12000;
   argue "MM6 the order difference is unobservable"
-    "entryAt, updateEntry and deleteEntry are all BY KEY; no run-path reader iterates entries (Stores.lean:866-886)";
+    "entryAt, updateEntry and deleteEntry are all BY KEY; no run-path reader iterates entries (MemoWorld.entryAt (src/Effect4/Machine/Stores.lean))";
   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;
   exit (if !failures = 0 then 0 else 1)

@@ -2,9 +2,9 @@
    src/OCaml5/Lcnf/Externs.lean `carrierSignatures`), backed by the list Lean actually
    carries, in path order.
 
-   It reproduces `Effect4.Program.Point.child` (src/Effect4/Program/Compile.lean:149-150,
+   It reproduces `Effect4.Program.Point.child` (child (src/Effect4/Program/Compile.lean),
    `path := p.path ++ [i]`) and `Effect4.Program.resolve`'s
-   `Node.at_ (Node.eff root) p.path` (:169) operation for operation: `snoc` copies the whole
+   `Node.at_ (Node.eff root) p.path` Node.at_ (src/Effect4/Program/Refs.lean) operation for operation: `snoc` copies the whole
    spine and `node` WALKS from the root every time.  So `Ref` still means what Lean means, and
    the only difference from E4_ppath is the Θ(depth) per step that lane PROF measured — which
    is the point of the differential (test/test_diff.ml, `Ref` vs `Fast`).
