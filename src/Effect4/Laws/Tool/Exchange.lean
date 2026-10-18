@@ -15,8 +15,8 @@ stored carriers, R13.
 | `session-refuses` | `apply_refuses` | preservation | a query or a refused request returns the store it was given | IO rollback after arbitrary external writes |
 | `session-entry-exact` | `SessionEntry.ofVal_exact` (`Tool/Session.lean`) | compatibility | an entry's reader answers only its own tree | action acceptance, execution truth |
 
-Consumers: S6's native shell, which serves the same exchange (loop 5, row 4), and the lost
-acknowledgement check (`Exchange.applied`). The proofs read the store through
+Consumers: the lost acknowledgement check (`Exchange.applied`). The native exchange over the disk
+store (S6b) is not built, so no native shell serves this exchange yet. The proofs read the store through
 `Cas.commit_store`, `bytes_never_change` and `commit_reads`, and the tool through
 `serve_appends`.
 -/

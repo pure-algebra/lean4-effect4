@@ -15,8 +15,9 @@ Placement: `exact-codecs`, stored carriers, R13.
 - **Not established.** The result's truth, the host action's determinism, progress, and hash
   injectivity. Two distinct outputs for one query refuse (`poisoned`). The rule does not say which
   output is right; a wrong first result can satisfy it.
-- **Consumers.** ST4's session chains read results through `Cas.read`, and S6 serves them. The
-  gate cache keys a result by its command (seams plan §4.5, D1).
+- **Consumers.** None in production: no code outside tests writes a result node, and the gate
+  cache keeps its own action cache (`scripts/lib/gate_cache.py`). The envelope is prepared and is
+  not extended until a consumer needs a store (decision C of the 2026-10-18 review).
 
 The proof carries `Store.Sound` through every event: `stageNodes_sound`, `commit_sound`,
 `interrupted_sound`, `restore_sound`, then `Cas.sound`. The invariant's result field covers every

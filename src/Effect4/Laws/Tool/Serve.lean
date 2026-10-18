@@ -54,7 +54,9 @@ included, equals the uncached one. A memo changes cost, never an answer. -/
 theorem serve_transparent (o : Oracle) : serve o = serve Oracle.uncached :=
   Oracle.transparent serve o
 
-/-- **A state's transcript replays to it** (`tool-transcript-replays`). Consumer: ST4's load. -/
+/-- **A state's transcript replays to it** (`tool-transcript-replays`). It is the uncached fold
+`State.replayed` seals. `Exchange.load` replays through `serve` (`Exchange.stepped`) instead, and
+reaches the same raw state through `State.accept`'s proof field. -/
 @[semantics "host-session-protocol" (requirement := R13)]
 theorem transcript_replays (s : State) : replayAccepted {} s.transcript = .ok s.raw := by
   unfold replayAccepted
