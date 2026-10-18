@@ -13,7 +13,7 @@ The reach is annotated parts with signature support and a prefix extension.
 It does not establish positive-answer support or module decomposition.
 Check.extension consumes the resulting guarded agreement theorem.
 
-The production move replaces the CheckCache import with the extracted SigData owner.
+The production move replaces the suggestion import with the extracted SigData owner.
 Existing semantics attributes stay applied in the old Laws modules after they import this owner.
 -/
 

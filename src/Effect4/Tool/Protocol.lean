@@ -1,6 +1,6 @@
 import Effect4.Tool.Origin
 import Effect4.Program.Typing.FillSet
-import Effect4.Program.Typing.CheckCache
+import Effect4.Program.Typing.Suggest
 import Effect4.Run.LiveRecord
 import Effect4.Run.Preview
 
@@ -137,13 +137,6 @@ inductive ActionAnswer where
   | played (run : RunId) (verdicts : List Run.Verdict) (view : Live.View)
   | restored (run : RunId) (view : Live.View)
 
-/-- **A suggestion's candidate**: the program, where it came from, its check key and evidence. -/
-structure Candidate where
-  program : NativeEff
-  sourcePath : Option (List Nat)
-  key : Check.CheckInput
-  evidence : Program.CheckCache.Evidence
-
 /-- **A run query's answer**, in the requested form. -/
 inductive RunAnswer where
   | view (v : Live.View)
@@ -162,7 +155,7 @@ inductive Answer where
   | doc (view : DocView)
   | history (actions : List Program.DocAction)
   | fills (anchor : Option Program.Snap) (pending : List (List Nat × NativeEff))
-  | suggested (candidates : List Candidate) (nextCursor : Option Nat)
+  | suggested (candidates : List Suggest.Suggestion) (nextCursor : Option Nat)
   | run (id : RunId) (a : RunAnswer)
   | preview (result : PreviewAnswer)
   | dry (result : Except Refusal ActionAnswer)
@@ -201,10 +194,18 @@ def Request.method : Request → String
   | .ask .addresses => "addresses"
   | .ask (.slots ..) => "slots"
 
-/-- **The supported methods**, each at version 1. Selection is the connection's, outside the state. -/
+/-- **The supported methods**, each at version 1 (`method_supported`). Selection is the connection's,
+outside the state. -/
 def supportedMethods : List (String × List Nat) :=
   ["open","edit","fill","publish","reset","start","restore","play",
     "doc","history","fills","suggest","run","preview","dry","discover","table","addresses",
     "slots"].map
     fun name => (name,[1])
+
+/-- Every request's method is supported: a new request fails this proof until `supportedMethods`
+lists its method. -/
+theorem method_supported (r : Request) : (supportedMethods.lookup r.method).isSome = true := by
+  cases r with
+  | act a => cases a <;> rfl
+  | ask q => cases q <;> rfl
 end Effect4.Tool

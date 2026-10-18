@@ -2,16 +2,16 @@ import Effect4.Program.Check
 import Effect4.Program.Typing.SourceDocument
 
 /-!
-# Program.Typing.CheckCache — contextual suggestions at a focus
+# Program.Typing.Suggest — contextual suggestions at a focus
 
-The checker cache this module once held is gone: `Check.Memo` owns reuse (`Program/Check.lean`).
-What stays is the suggestion: candidate programs for an address, each with its evidence. A
-candidate is evaluated by the same `keepExact` feed that certifies a fill (`suggestOne`), so a
-suggestion and a fill never disagree. Every check goes through the oracle, so a memo learns it.
+Candidate programs for an address, each with its evidence. A candidate is evaluated by the same
+`keepExact` feed that certifies a fill (`suggestOne`), so a suggestion and a fill never disagree.
+Every check goes through the oracle, so a memo learns it. `page` is the one paging owner: the tool's
+`suggest` query answers it.
 -/
 
 set_option autoImplicit false
-namespace Effect4.Program.CheckCache
+namespace Effect4.Program.Suggest
 open Effect4 Effect4.Program Check
 /-- The contextual evidence for a candidate at a target address and focus. -/
 inductive Evidence where
@@ -27,8 +27,8 @@ inductive Evidence where
   | differentEnv (sourceEnv targetEnv : TyEnv)
 deriving DecidableEq
 
-/-- One candidate returned by `suggest`, with its source address (if local), its context key, and
-its contextual evidence. -/
+/-- **One suggestion**: the candidate program, its source address (if local), its check key, and its
+contextual evidence. -/
 structure Suggestion where
   program : NativeEff
   sourcePath : Option (List Nat)
@@ -105,35 +105,18 @@ def localCandidates (d : Doc) (targetPath : List Nat) (focus : Focus NativeOp)
         | _, _ => none
   (suppliedItems ++ varItems ++ rowItems ++ tableItems).eraseDups
 
-/-- Bounded search response from `suggest`, carrying its pagination bounds, next cursor, document
-revision, target context, and candidate suggestions. -/
-structure SuggestResult where
-  doc : DocId
-  revision : Nat
-  path : List Nat
-  cursor : Nat
-  limit : Nat
-  total : Nat
-  nextCursor : Option Nat
-  sig : SigData
-  env : TyEnv
-  expected : EffTy
-  suggestions : List Suggestion
-
-def suggest (o : Oracle) (d : Doc) (path : List Nat) (limit : Nat := 16)
-    (cursor : Nat := 0) (supplied : List NativeEff := []) : Checked (Option SuggestResult) := do
+/-- **A page of suggestions** at an address: the candidates `localCandidates` lists, from `cursor`, at
+most `limit`, each evaluated by `suggestOne`; and the next cursor, where candidates remain past a
+non-empty page. An address with no focus refuses before any check. -/
+def page (o : Oracle) (d : Doc) (path : List Nat) (supplied : List NativeEff) (cursor limit : Nat) :
+    Checked (Except FeedRefusal (List Suggestion × Option Nat)) := do
   match d.session.focusAt path with
-  | none => pure none
+  | none => pure (.error (.noFocus path))
   | some focus =>
-    let sig := sketchSigData d.session.sketch d.session.app path
     let all := localCandidates d path focus supplied
-    let total := all.length
-    let page := (all.drop cursor).take limit
-    let nextCursor := if cursor + limit < total then some (cursor + limit) else none
-    match ← suggestPage o d focus path page with
-    | .error _ => pure none
-    | .ok suggestions => pure (some {
-        doc := d.id, revision := d.revision, path := path,
-        cursor := cursor, limit := limit, total := total, nextCursor := nextCursor,
-        sig := sig, env := focus.env, expected := focus.ty, suggestions := suggestions })
-end Effect4.Program.CheckCache
+    match ← suggestPage o d focus path ((all.drop cursor).take limit) with
+    | .error why => pure (.error why)
+    | .ok items =>
+      let next := if 0 < limit ∧ cursor + limit < all.length then some (cursor + limit) else none
+      pure (.ok (items, next))
+end Effect4.Program.Suggest

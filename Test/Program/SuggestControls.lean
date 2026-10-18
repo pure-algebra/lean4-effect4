@@ -1,4 +1,4 @@
-import Effect4.Program.Typing.CheckCache
+import Effect4.Program.Typing.Suggest
 import Effect4.Laws.Program.CheckAgreement
 import Effect4.Tool.Serve
 import Effect4.Program.Scoped
@@ -59,15 +59,14 @@ def learned := Memo.empty.learn moduleTrace
 #guard (deps (.module {} [] checkedModule)).all fun d =>
   learned.entries.any (HitRule.exact.hit d.input)
 def suggestionDoc : Doc := (Doc.open_ ⟨⟨"suggestion",0⟩,{},⟨.bind n1 (Sketch.hole {} 0), [Row.hole "n" .nat]⟩⟩).value
-def suggestion := CheckCache.suggest Oracle.uncached suggestionDoc [1] 8 0 [n1]
-#guard suggestion.value.isSome
+def suggestion := Suggest.page Oracle.uncached suggestionDoc [1] [n1] 0 8
+#guard suggestion.value.toBool
 #guard suggestion.trace.length > 0
-#guard suggestion.value.map (fun s => decide (s.doc = suggestionDoc.id)) = some true
 #guard (Memo.empty.learn suggestion).entries.length = suggestion.trace.length
 #guard match suggestion.value with
-  | some result => result.suggestions.any fun item =>
+  | .ok (items, _) => items.any fun item =>
     match item.evidence with | .exactFit _ => true | _ => false
-  | none => false
+  | .error _ => false
 #guard (extension.hit (.part twoRows [] extCall)
   (.part oneRow [] extCall,run (.part oneRow [] extCall)))
 #guard !(extension.hit (.part twoRows [] nextCall)
@@ -99,24 +98,29 @@ def dataAt (app : SigApp) : SigData := ⟨app,[],.root⟩
 
 def catalogueSketch : Sketch := ⟨.bind n1 (Sketch.hole {} 0),[Row.hole "h" .nat]⟩
 def catalogueDoc : Doc := (Doc.open_ ⟨⟨"suggest-doc",0⟩,{},catalogueSketch⟩).value
-def catalogue := CheckCache.suggest Oracle.uncached catalogueDoc [1] 10 0 [nextCall]
-#guard catalogue.value.map (·.revision) = some 0
-#guard catalogue.value.map (·.cursor) = some 0
-#guard catalogue.value.map (·.limit) = some 10
-#guard catalogue.value.map (·.env) = some [.nat]
-#guard catalogue.value.map (·.expected) = some (.pure .nat)
-#guard catalogue.value.map (fun r => r.suggestions.any (fun s =>
-  decide (s.program = .succeed (.var 0)) && decide (s.evidence = .exactFit (.pure .nat)))) = some true
-#guard catalogue.value.map (fun r => r.suggestions.any (fun s =>
+def catalogue := Suggest.page Oracle.uncached catalogueDoc [1] [nextCall] 0 10
+def items (page : Checked (Except FeedRefusal (List Suggest.Suggestion × Option Nat))) :
+    List Suggest.Suggestion :=
+  match page.value with
+  | .ok (found, _) => found
+  | .error _ => []
+#guard (items catalogue).any (fun s =>
+  decide (s.program = .succeed (.var 0)) && decide (s.evidence = .exactFit (.pure .nat)))
+#guard (items catalogue).any (fun s =>
   decide (s.program = nextCall) && match s.evidence with
-    | .refused why => decide (why.path = [1]) | _ => false)) = some true
-#guard catalogue.value.map (fun r => r.suggestions.any (fun s =>
-  decide (s.sourcePath = some [0]) && decide (s.evidence = .differentEnv [] [.nat]))) = some true
+    | .refused why => decide (why.path = [1]) | _ => false)
+#guard (items catalogue).any (fun s =>
+  decide (s.sourcePath = some [0]) && decide (s.evidence = .differentEnv [] [.nat]))
+-- red (tested): a zero limit answered an empty page whose next cursor was its own cursor, so a
+-- client following cursors never ended; an empty page now has no next cursor.
+#guard match (Suggest.page Oracle.uncached catalogueDoc [1] [nextCall] 0 0).value with
+  | .ok ([], none) => true
+  | _ => false
 
 def catalogueMemo := Memo.empty.learn catalogue
-def catalogueCached := CheckCache.suggest (catalogueMemo.oracle (HitRule.exact.or extension))
-  catalogueDoc [1] 10 0 [nextCall]
-#guard catalogueCached.value.map (·.suggestions) = catalogue.value.map (·.suggestions)
+def catalogueCached := Suggest.page (catalogueMemo.oracle (HitRule.exact.or extension))
+  catalogueDoc [1] [nextCall] 0 10
+#guard items catalogueCached = items catalogue
 #guard catalogue.trace.all (fun e => catalogueMemo.entries.any (HitRule.exact.hit e.1))
 -- Through the tool: a suggestion at the hole answers candidates, keeps the state, and its checked
 -- trace is non-empty, so a driver's memo learns it.

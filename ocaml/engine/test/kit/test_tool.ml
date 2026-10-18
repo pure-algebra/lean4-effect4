@@ -9,7 +9,7 @@
 
    Properties:
    N1  Every reply equals Lean's, as JSON values (object keys in any order).        tested
-   N2  The cached and the uncached transcripts are equal: each request served through the memo
+   N2  The cached and the uncached transcripts are equal: each envelope served through the memo
        and through the uncached oracle answers the same value tree (`serve_transparent`). tested
    N3  Hostile lines refuse and change nothing: text that is not JSON, an unknown tag, an
        unselected version, and a method that disagrees with its request; the next line is
@@ -56,28 +56,26 @@ let () =
       if not same then Printf.printf "  native: %s\n  lean:   %s\n" n l)
     (List.combine native lean)
 
-(* N2: the requests inside the envelopes, served cached and uncached side by side. *)
+(* N2: every fixture envelope served cached and uncached, side by side. *)
 let () =
-  let payload line =
-    match Kit.Json.parse line with
-    | Ok (J.Object es) -> (
-      match List.assoc_opt "payload" es with
-      | Some p -> Option.bind (Kit_json.read G.tool_native_request_shape p) G.tool_native_request_of_val
-      | None -> None)
-    | _ -> None
+  let envelopes =
+    List.filter_map
+      (fun line -> match Kit.Json.parse line with
+        | Ok json -> Kit_json.read G.tool_native_envelope_shape json
+        | Error _ -> None)
+      requests
   in
-  let reqs = List.filter_map payload requests in
-  check "N2 every fixture line carries a request" (List.length reqs = List.length requests);
-  let cached = ref G.tool_native_start and uncached = ref (fst G.tool_native_start) in
+  check "N2 every fixture line reads as an envelope" (List.length envelopes = List.length requests);
+  let cached = ref G.tool_native_start and uncached = ref G.tool_native_start in
   List.iteri
-    (fun i r ->
-      let (s1, reply1), memo = G.tool_native_serve_val !cached r in
-      cached := (s1, memo);
-      let s2, reply2 = G.tool_native_serve_uncached !uncached r in
-      uncached := s2;
-      check (Printf.sprintf "N2 request %d: cached and uncached replies are equal" i)
-        (G.tool_native_reply_to_val reply1 = G.tool_native_reply_to_val reply2))
-    reqs
+    (fun i v ->
+      match G.tool_native_serve !cached v, G.tool_native_serve_uncached !uncached v with
+      | Ok (reply1, s1), Ok (reply2, s2) ->
+        cached := s1;
+        uncached := s2;
+        check (Printf.sprintf "N2 request %d: cached and uncached replies are equal" i) (reply1 = reply2)
+      | _ -> check (Printf.sprintf "N2 request %d is served" i) false)
+    envelopes
 
 (* N3: hostile lines before the first request leave the session where it was. *)
 let () =
@@ -85,13 +83,11 @@ let () =
   | [] -> check "N3 the fixture has a first request" false
   | first :: _ ->
     let replace sub by s =
-      match String.index_from_opt s 0 sub.[0] with
-      | _ ->
-        let n = String.length sub in
-        let rec go i = if i + n > String.length s then s
-          else if String.sub s i n = sub then String.sub s 0 i ^ by ^ String.sub s (i + n) (String.length s - i - n)
-          else go (i + 1) in
-        go 0
+      let n = String.length sub in
+      let rec go i = if i + n > String.length s then s
+        else if String.sub s i n = sub then String.sub s 0 i ^ by ^ String.sub s (i + n) (String.length s - i - n)
+        else go (i + 1) in
+      go 0
     in
     let hostile =
       [ ("not JSON", "{\"method\": ");

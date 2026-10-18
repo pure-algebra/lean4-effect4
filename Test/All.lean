@@ -274,7 +274,7 @@ import Test.Program.SketchAdmissionControls
 import Test.Program.SourceDocumentControls
 import Test.Program.LiveRecordControls
 import Test.Program.PreviewControls
-import Test.Program.CheckCacheControls
+import Test.Program.SuggestControls
 import Test.Program.SeamsS0
 import Test.Program.SeamsS4
 import Test.Program.SeamsS4Origin

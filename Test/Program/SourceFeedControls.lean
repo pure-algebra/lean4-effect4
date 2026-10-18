@@ -1,5 +1,5 @@
 import Effect4.Program.Typing.SourceDocument
-import Test.Program.CheckCacheControls
+import Test.Program.SuggestControls
 set_option autoImplicit false
 namespace Test.Program.SeamsS1
 open Effect4 Effect4.Program Check

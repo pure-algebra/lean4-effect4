@@ -25,7 +25,6 @@ inductive Refusal where
   | unselected (method : String)
   | version (method : String) (selected received : Nat)
   | method (declared actual : String)
-  | response
   | connection
 
 /-- **A connection**: the version it selected for each method. -/

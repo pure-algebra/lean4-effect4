@@ -89,8 +89,7 @@ def action (o : Oracle) (st : Raw) : Action → Checked (Except Refusal (Raw × 
     | .error why => pure (.error why)
     | .ok d =>
       let fs := fillsFor st d
-      if !fs.entries.isEmpty &&
-          (decide (fs.anchor.doc ≠ d.snap.doc) || fs.anchor.revision != d.snap.revision) then
+      if !fs.entries.isEmpty && fs.anchor != d.snap then
         pure (.error (.fillsStale fs.anchor d.snap))
       else
         let (next,outcomes) ← (if fs.entries.isEmpty then FillSet.open_ d else fs).add o batch
@@ -100,13 +99,11 @@ def action (o : Oracle) (st : Raw) : Action → Checked (Except Refusal (Raw × 
     | .error why => pure (.error why)
     | .ok d =>
       let fs := fillsFor st d
-      if fs.entries.isEmpty then pure (.error .fillsEmpty)
-      else if decide (fs.anchor.doc ≠ d.snap.doc) || fs.anchor.revision != d.snap.revision then
-        pure (.error (.fillsStale fs.anchor d.snap))
-      else match fs.publication with
-      | .error _ => pure (.error .fillsEmpty)
+      match fs.publication with
+      | .error .empty => pure (.error .fillsEmpty)
       | .ok a =>
-        match ← d.step o at_ a with
+        if fs.anchor != d.snap then pure (.error (.fillsStale fs.anchor d.snap))
+        else match ← d.step o at_ a with
         | .error why => pure (.error (.doc why))
         | .ok (next,receipt) => pure (.ok ({st with doc := some next, fills := none},
             .published (docView next) receipt))

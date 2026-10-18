@@ -168,18 +168,13 @@
         "Effect4.Machine.Stores.empty",
         "Effect4.Program.Check.extension",
         "Effect4.Program.Check.explain",
-        "Effect4.Tool.Native.requestShape",
-        "Effect4.Tool.Native.replyShape",
-        "Effect4.Tool.Native.requestOfVal",
-        "Effect4.Tool.Native.replyToVal",
         "Effect4.Tool.Native.start",
-        "Effect4.Tool.Native.serveVal",
+        "Effect4.Tool.Native.serve",
         "Effect4.Tool.Native.serveUncached",
         "Effect4.Tool.Native.envelopeShape",
         "Effect4.Tool.Native.replyEnvelopeShape",
         "Effect4.Tool.Native.refusalShape",
-        "Effect4.Tool.Native.refusalToVal",
-        "Effect4.Tool.Native.serveEnvelope"
+        "Effect4.Tool.Native.refusalToVal"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",
@@ -253,7 +248,9 @@
         "Effect4.Program.Check.Oracle",
         "Effect4.Program.Check.HitRule",
         "Effect4.Live",
-        "Effect4.Api.Built"
+        "Effect4.Api.Built",
+        "Effect4.Tool.Native.Session",
+        "Effect4.Tool.State"
       ]
     },
     {

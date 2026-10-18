@@ -1,4 +1,4 @@
-import Effect4.Program.Typing.CheckCache
+import Effect4.Program.Typing.Suggest
 import Effect4.Laws.Program.Typing.Rebase
 import Effect4.Laws.Program.Sketch
 import Effect4.Laws.Program.Definitions
@@ -66,7 +66,7 @@ Placement:
 2. Question: step C1 of the proposed claim `context-check-cache-agrees` (role compatibility).
 3. Reach: every `Sketch`, `SigApp` and `path` inside a part (`Eff.partAt`).
 4. What it does not establish: that two different `SigData` spell two different signatures.
-5. Consumer: `CheckCache.suggest` and `Test.Program.CheckCacheControls`. Requirement R14. -/
+5. Consumer: `Suggest.page` and `Test.Program.SuggestControls`. Requirement R14. -/
 theorem sketchSigData_signature (s : Sketch) (app : SigApp) (path : List Nat)
     (hpart : (s.program.partAt (app.withHoles s.holes).signature [] path).isSome = true) :
     (sketchSigData s app path).signature = s.sigAt app path := by

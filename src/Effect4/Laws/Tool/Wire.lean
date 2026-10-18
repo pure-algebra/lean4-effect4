@@ -7,11 +7,11 @@ import Effect4.Laws.Auto.Semantics
 Placement: concept `host-session-protocol`, the tool-transition property (seams S3b), R6.
 Question: `tool-serve-answers`, role compatibility; pointer `Tool.serve_answers`.
 Reach: every certified oracle, every sealed state and every request: `serve`'s reply pairs with
-the request (`Wire.responds`), so the adapter's `response` refusal never fires on a reply that
-`serve` produced.
+the request (`Wire.responds`), so no driver re-checks the pairing.
 Not established: JSON decoding exactness (`CodecProfile.write_read` owns the write half), native
 driver behaviour, or host progress.
-Consumer: `Wire.serveJson`'s pairing check, and the transcripts S6 compares across drivers.
+Consumer: the wire core (`Wire.serveEnvelope`), which frames every reply without re-checking it, and
+the transcripts the native shell compares with Lean's driver.
 -/
 
 set_option autoImplicit false
@@ -65,24 +65,23 @@ theorem action_pairs (o : Oracle) (st : Internal.Raw) (a : Action) (next : Inter
       cases h
     | ok d =>
       simp only [hd] at h
-      split at h
-      · cases h
-      · split at h
+      cases hp : (Internal.fillsFor st d).publication with
+      | error why =>
+        cases why
+        simp only [hp] at h
+        cases h
+      | ok act =>
+        simp only [hp] at h
+        split at h
         · cases h
-        · cases hp : (Internal.fillsFor st d).publication with
+        · cases hk : (d.step o at_ act).value with
           | error why =>
-            simp only [hp] at h
+            simp only [hk] at h
             cases h
-          | ok act =>
-            simp only [hp] at h
-            cases hk : (d.step o at_ act).value with
-            | error why =>
-              simp only [hk] at h
-              cases h
-            | ok p =>
-              simp only [hk] at h
-              cases h
-              rfl
+          | ok p =>
+            simp only [hk] at h
+            cases h
+            rfl
   | reset =>
     simp only [Internal.action, pure, Checked.pure'] at h
     cases hd : st.doc with
@@ -213,16 +212,10 @@ theorem query_pairs (o : Oracle) (st : Internal.Raw) (q : Query) (answer : Answe
         cases h
       | ok found =>
         simp only [hp] at h
-        cases hf : d.session.focusAt found.1 with
-        | none =>
-          simp only [hf] at h
-          cases h
-        | some focus =>
-          simp only [hf] at h
-          split at h
-          · cases h
-          · cases h
-            rfl
+        split at h
+        · cases h
+        · cases h
+          rfl
   | run id form =>
     simp only [Internal.query, pure, Checked.pure'] at h
     cases hr : st.runs[id.n]? with

@@ -2,19 +2,19 @@ import Effect4.Tool.ToolDerived
 import Effect4.Tool.Serve
 
 /-!
-# Tool.Wire — the JSON adapter around `Tool.serve`
+# Tool.Wire — the wire core around `Tool.serve`
 
-A driver hands the adapter one JSON value and gets back the next state and a JSON reply. The
-adapter decodes an `Envelope Request` through the JSON profile (`CodecProfile.read`), checks the
-connection's selected version for the method, calls `Tool.serve` once, checks that the answer
-pairs with the request (`responds`), and encodes the `Envelope Reply` (`CodecProfile.write`). It
+`serveEnvelope` is the one wire core every driver calls: it checks a read envelope against the
+connection (`check`), calls `Tool.serve` once, and frames the reply under the request's method and
+version. Each driver owns only its ends: the JSON driver reads and writes through the JSON profile
+(`serveJson`, `CodecProfile`), and the native shell through value trees (`Tool/Native.lean`). It
 holds no action interpreter: every state change is `serve`'s.
 
-A wire refusal is the transport's (`Wire.Refusal`): the adapter then returns the state it was
-given, so a request the tool never saw, or a reply the profile cannot print, records nothing.
+A wire refusal is the transport's (`Wire.Refusal`): the driver then keeps the state it was given,
+so a request the tool never saw, or a reply the profile cannot print, records nothing.
 
-The pairing is one exhaustive match: a new request or answer constructor fails to compile here
-until its pair is written, so the pairing cannot drift from the protocol.
+`responds` states how a reply pairs with its request. It is the statement of `serve_answers`
+(`Laws/Tool/Wire.lean`), which proves every reply `serve` gives pairs; no driver re-checks it.
 -/
 
 set_option autoImplicit false
@@ -74,8 +74,7 @@ def responds (request : Request) (reply : Reply) : Bool :=
   | .ok answer, .ask q => queryPairs q answer
 
 /-- **Check a read envelope** against the connection: a valid connection, the payload's own method,
-selected at a supported version, and that version. The JSON adapter (`decode`) and the native
-shell (`Tool/Native.lean`) both call it. -/
+selected at a supported version, and that version. The wire core (`serveEnvelope`) calls it. -/
 def check (connection : Connection) (envelope : Envelope Request) : Except Refusal (Envelope Request) := do
   if !connection.valid then throw .connection
   let actual := envelope.payload.method
@@ -87,23 +86,32 @@ def check (connection : Connection) (envelope : Envelope Request) : Except Refus
     if envelope.version != selected then throw (.version actual selected envelope.version)
     pure envelope
 
-/-- **Decode a request** at the connection's chosen method version, before calling the tool. -/
+/-- **Decode a request** through the JSON profile and check it against the connection. -/
 def decode (connection : Connection) (json : Effect4.Json) : Except Refusal (Envelope Request) := do
-  if !connection.valid then throw .connection
   let envelope ← (CodecProfile.read (α := Envelope Request) json).mapError Refusal.codec
   check connection envelope
 
-/-- **Serve one JSON request.** The adapter publishes its next pure state only after the reply
-pairs with the request and passes the JSON write guard. -/
+/-- **Serve one envelope**: check it against the connection, serve its request once, and frame the
+reply under the request's method and version. A refusal here runs no check and changes nothing. -/
+def serveEnvelope (oracle : Oracle) (connection : Connection) (state : State)
+    (envelope : Envelope Request) : Checked (Except Refusal (State × Envelope Reply)) :=
+  match check connection envelope with
+  | .error why => pure (.error why)
+  | .ok envelope => do
+    let (next, reply) ← serve oracle state envelope.payload
+    pure (.ok (next, ⟨envelope.method, envelope.version, reply⟩))
+
+/-- **Serve one JSON request** through the wire core. The driver publishes the next state only
+after the reply passes the JSON write guard. -/
 def serveJson (oracle : Oracle) (connection : Connection) (state : State) (json : Effect4.Json) :
-    Checked (State × Except Refusal Effect4.Json) := do
-  match decode connection json with
-  | .error why => pure (state, .error why)
-  | .ok envelope =>
-    let (next, answer) ← serve oracle state envelope.payload
-    if !responds envelope.payload answer then pure (state, .error .response)
-    else
-      match CodecProfile.write (⟨envelope.method, envelope.version, answer⟩ : Envelope Reply) with
+    Checked (State × Except Refusal Effect4.Json) :=
+  match CodecProfile.read (α := Envelope Request) json with
+  | .error why => pure (state, .error (.codec why))
+  | .ok envelope => do
+    match ← serveEnvelope oracle connection state envelope with
+    | .error why => pure (state, .error why)
+    | .ok (next, reply) =>
+      match CodecProfile.write reply with
       | .error why => pure (state, .error (.codec why))
       | .ok json => pure (next, .ok json)
 

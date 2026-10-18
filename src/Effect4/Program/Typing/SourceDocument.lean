@@ -114,6 +114,7 @@ def Place.resolve (app : SigApp) (s : Sketch) : Place → Except PlaceRefusal (L
 structure Snap where
   doc : DocId
   revision : Nat
+deriving DecidableEq
 
 /-- **A document action**: the unit of a document's history. -/
 inductive DocAction where

@@ -277,7 +277,7 @@ import Effect4.Tool.Exchange
 import Effect4.Tool.Native
 import Effect4.Tool.Wire
 import Effect4.Run.Preview
-import Effect4.Program.Typing.CheckCache
+import Effect4.Program.Typing.Suggest
 import Effect4.Program.Check
 import Effect4.Program.Typing.FillSet
 

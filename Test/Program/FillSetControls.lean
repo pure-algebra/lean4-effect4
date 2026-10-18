@@ -89,7 +89,7 @@ def rootProgram : NativeEff := .succeed (.lit (.nat 0))
 def rootCandidate : NativeEff := .succeed (.lit (.nat 1))
 def rootDoc : Doc := (Doc.open_ ⟨⟨"root-key",0⟩,{},⟨rootProgram,[]⟩⟩).value
 def rootFocus : Focus NativeOp := ⟨rootProgram,[],.pure .nat⟩
-def rootSuggestion := CheckCache.suggestOne Oracle.uncached rootDoc rootFocus [] none [] rootCandidate
+def rootSuggestion := Suggest.suggestOne Oracle.uncached rootDoc rootFocus [] none [] rootCandidate
 #guard rootDoc.session.partKey [] rootCandidate = none
 #guard match rootSuggestion.value with
   | .ok candidate => candidate.key == .module {} [] rootCandidate
@@ -111,13 +111,15 @@ def badDoc : Doc := (Doc.open_ ⟨⟨"missing-focus-key",0⟩,{},⟨badProgram,[
   | .error (.noFocus [0]) => true
   | _ => false
 #guard (badDoc.session.feed Oracle.uncached .keepExact (.fill [0] rootCandidate)).trace.isEmpty
-#guard (CheckCache.suggest Oracle.uncached badDoc [0]).value.isNone
-#guard (CheckCache.suggest Oracle.uncached badDoc [0]).trace.isEmpty
-#guard match (CheckCache.suggestOne Oracle.uncached badDoc
+#guard match (Suggest.page Oracle.uncached badDoc [0] [] 0 16).value with
+  | .error (.noFocus [0]) => true
+  | _ => false
+#guard (Suggest.page Oracle.uncached badDoc [0] [] 0 16).trace.isEmpty
+#guard match (Suggest.suggestOne Oracle.uncached badDoc
     ⟨badChild,[],.pure .nat⟩ [0] none [] rootCandidate).value with
   | .error (.noFocus [0]) => true
   | _ => false
-#guard (CheckCache.suggestOne Oracle.uncached badDoc
+#guard (Suggest.suggestOne Oracle.uncached badDoc
   ⟨badChild,[],.pure .nat⟩ [0] none [] rootCandidate).trace.isEmpty
 end SuggestionKeyControls
 

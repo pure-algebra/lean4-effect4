@@ -23,6 +23,9 @@ cases = {
     'hit-rule-callback': (2, "let forged : A.hit_rule = fun _ _ -> true\n"),
     'checked-update': (2, "let forge (c : int A.checked) = { c with value = 99 }\n"),
     'hidden-helper': (2, "let helper = A.program_check_typed_program\n"),
+    'session-literal': (2, "let forged : A.session = { state = A.tool_native_start; memo = [] }\n"),
+    'state-literal': (2, "let forged : A.state = { transcript = []; raw = Obj.magic 0 }\n"),
+    'memo-as-session': (2, "let forged = A.tool_native_serve ([] : (A.check_input * A.verdict) list)\n"),
 }
 with tempfile.TemporaryDirectory(prefix='effect4-sealing-') as directory:
     for name, (expected, source) in cases.items():
@@ -35,4 +38,4 @@ with tempfile.TemporaryDirectory(prefix='effect4-sealing-') as directory:
         assert result.returncode == expected, name
         if expected:
             assert 'Error:' in result.stdout, name
-print('PASS: lawful public alias and seven hostile sealed-package clients')
+print('PASS: lawful public alias and ten hostile sealed-package clients')

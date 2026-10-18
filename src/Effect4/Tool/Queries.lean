@@ -4,7 +4,7 @@ import Effect4.Tool.Actions
 # Tool.Queries — read-only answers
 
 `Internal.query` answers a query from the raw state and never changes it. A suggestion uses the
-same `keepExact` feed as a fill (`CheckCache.suggestPage`), a preview the admitted preview owner
+same `keepExact` feed as a fill (`Suggest.page`), a preview the admitted preview owner
 (`Run.Preview`), and a `dry` query the action interpreter, whose next state it discards. The
 address table is the session's own (`SourceSession.table`, the sketch's source table), and its
 addresses are the program's (`Node.addresses`). A node's term slots are read where the table reads
@@ -95,18 +95,9 @@ def query (o : Oracle) (st : Raw) : Query → Checked (Except Refusal Answer)
       match place.resolve d.session.app d.session.sketch with
       | .error why => pure (.error (.place why))
       | .ok (path,_) =>
-        match d.session.focusAt path with
-        | none => pure (.error (.suggest (.noFocus path)))
-        | some focus =>
-          let all := CheckCache.localCandidates d path focus supplied
-          let page := (all.drop cursor).take limit
-          match ← CheckCache.suggestPage o d focus path page with
-          | .error why => pure (.error (.suggest why))
-          | .ok items =>
-            let candidates := items.map fun item =>
-              Candidate.mk item.program item.sourcePath item.key item.evidence
-            let next := if cursor+limit < all.length then some (cursor+limit) else none
-            pure (.ok (.suggested candidates next))
+        match ← Suggest.page o d path supplied cursor limit with
+        | .error why => pure (.error (.suggest why))
+        | .ok (items,next) => pure (.ok (.suggested items next))
   | .run id form => pure (match st.runs[id.n]? with
       | none => .error (.noRun id)
       | some entry => .ok (.run id (match form with
