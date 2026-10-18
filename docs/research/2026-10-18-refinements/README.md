@@ -53,6 +53,7 @@ Everything left of `Kit_tool` and `Wire.serveJson` is text and IO. Everything fr
 | Store commit, late in a session | 3.96 ms, growing | 0.25 ms, flat | `dune exec engine/cas/test/bench_commit.exe -- 1500` |
 | Tool codec file | 10,908 lines | 8,335 lines | `wc -l src/Effect4/Tool/ToolDerived.lean` |
 | Native tool entry points | 12, state forgeable | 7, sealed | `ocaml/gen/api_gen.mli` |
+| Native edit, as the memo grows | — | 0.29 ms first 100, 0.46 ms last 100 of 1,000 | `ocaml/_build/default/engine/test/kit/bench_tool.exe 1000` |
 
 ## The review's plan, slice by slice
 
@@ -64,7 +65,7 @@ Everything left of `Kit_tool` and `Wire.serveJson` is text and IO. Everything fr
 | 4. Narrow leaked carriers | Done for previews and waits (`43e7cb7d5`). It did not speed the generator: compiling the generator did. |
 | 5. One JSON number domain | Done (`43e7cb7d5`). One owner of the JSON *text* (Lean versus `kit_json.ml`) stays open: lowering it waits on exact 64-bit numbers. |
 | 6. Precise, located refusals | Partly: the native unreadable line now prints Lean's refusal. Path-located decode refusals are not done. |
-| 7. Memo as a keyed map | Not done; its cost is still unmeasured. |
+| 7. Memo as a keyed map | Measured and not needed now: a native session's edit costs 0.29 ms at first and 0.46 ms after 1,000 accepted edits (`bench_tool.exe 1000`), growth that the transcript's and history's list appends share with the memo's scan. |
 | 8. `combine_deps` | A proof agent is working on it in its own worktree |
 | 9. Restore S1's proofs | The same proof agent: `feed_coherent`, `feed_undo`, `Doc.coherent` and the fill-set agreement |
 | 10. Exchange residency, then S6b | Not done. A session cache has no consumer until the native exchange exists. The native store's commit cost, its prerequisite, is fixed. |

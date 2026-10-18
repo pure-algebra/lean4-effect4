@@ -44,3 +44,10 @@
  (modules test_mcp)
  (deps tool-requests.jsonl)
  (libraries effect4_kit effect4_eff effect4_gen))
+
+; bench_tool: what one native tool edit costs as the session's checker memo grows (run by hand,
+; from the repository root).
+(executable
+ (name bench_tool)
+ (modules bench_tool)
+ (libraries effect4_kit unix))
