@@ -1,20 +1,20 @@
 # Seams implementation receipts
 
 K0 lands from `c752e565b4e1afac95d1258b0a4a570b81bcdf81` on `codex/seams`.
-The remaining slices are open. This receipt claims no completed goal.
+The table records landed slices. Every unlanded slice remains open. This receipt claims no completed goal.
 The coordinator merges; this branch is never pushed.
 
 | Slice | Implementation commit | Receipt | State |
 | --- | --- | --- | --- |
 | K0 | `66f292a095e57e7c94586434aab9c5c597f82d6e`; receipt `faa7d0122bd550186e4c622517509ac001763a35` | [K0](K0.md) | Required checks pass. |
-| S0 | `d46b1e6d6f184764a7ee1a00b01a800a45f35d33` | [S0](S0.md) | Required checks pass. |
+| S0 | `d46b1e6d6f184764a7ee1a00b01a800a45f35d33`; receipt `489e127a8b94f4796ff40ef4200080b5e83a94f2` | [S0](S0.md) | Required checks pass. |
 | V1 | Pending | Pending | Open |
 | S1 | Pending | Pending | Open |
 | S2 | Pending | Pending | Open |
 | S4 | Pending | Pending | Open |
 | S3a | Pending | Pending | Open |
 | S3b | Pending | Pending | Open |
-| ST1a | Pending | Pending | Open |
+| ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` | [ST1a](ST1a.md) | Required checks pass. |
 | ST1b | Pending | Pending | Open |
 | ST2 | Pending | Pending | Open |
 | ST3 | Pending | Pending | Open |
@@ -43,6 +43,15 @@ The coordinator merges; this branch is never pushed.
 | S0 | Output alias checks cover all generated extensions and cross-artifact aliases before publication or comparison. |
 | S0 | The report explicitly imports Check for its new claim. Its retained first attempt refuses the unloaded pointer. |
 
+| ST1a | Typed reads use the per-value genesis specification; the universal-spec comparison is retained as a rejecting control. |
+| ST1a | The reached-store interpreter stays explicit until ST1b; typed reading claims exact resident payloads only. |
+| ST1a | Checked construction uses no_expose because an exposed definition cannot call the private constructor; the compiler refusal is retained. |
+| ST1a | A store-only Rocq producer avoids the full route's compiler mismatch, compares unchanged Skeleton, and compiles every current store proof. |
+| ST1a | M2 uses list constructors because Gallina refuses the polymorphic emptiness call; the failed export is retained. |
+| ST1a | The native byte library is unwrapped; the fixture uses its actual module names. |
+| ST1a | Cross-artifact output aliases refuse before generation; the red control overwrites only a disposable victim, and the repaired control preserves it. |
+| ST1a | The old M2 mismatch tripwires fail after regeneration in both native fixtures. Both replacements require every admission row to agree with Lean. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -50,5 +59,9 @@ The coordinator merges; this branch is never pushed.
 | K0 | Update `E4-CAS-CE-006` to resident node identity. Keep both own-address lookup premises and equal addresses; retain the arbitrary-content collision alternative. |
 | S0 | Adopt typed-tree interface inference, explicit roots, source nominal ascriptions, and whole-package sealing for this generated family. |
 | S0 | Record the exact annotation connector and the stable closed step; retain interpreter recomputation as an unmeasured cost. |
+
+| ST1a | Adopt typed version, kind, per-value specification, and exact payload checks; preserve the genesis exception. |
+| ST1a | Keep the accepted-new-to-old connector when admission gains M2, and generate native kind and refusal facts from the Lean owners. |
+| ST1a | Keep semantic naturals exact and native capacity outside modeled admission. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

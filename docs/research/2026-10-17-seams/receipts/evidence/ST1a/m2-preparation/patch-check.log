@@ -1,0 +1,6 @@
+{"command": ["git", "apply", "--check", "/private/tmp/seams-st1a-m2/m2.patch"]}
+exit_status=0
+{"command": ["git", "apply", "--check", "/private/tmp/seams-st1a-m2/generator.patch"]}
+exit_status=0
+{"command": ["git", "apply", "--check", "/private/tmp/seams-st1a-m2/generated-storecode.patch"]}
+exit_status=0

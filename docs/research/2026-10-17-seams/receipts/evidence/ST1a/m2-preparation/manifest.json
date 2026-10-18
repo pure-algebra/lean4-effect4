@@ -1,0 +1,362 @@
+[
+  {
+    "file": "Makefile",
+    "bytes": 62366,
+    "sha256": "15fb8082c4c78ba3820ea942567186e5803b846d602ec170dab4d9db965bdedc"
+  },
+  {
+    "file": "PLACEMENT.md",
+    "bytes": 2089,
+    "sha256": "cabab6c1d355429a412831f9e6df125a546c0099f5580b4bd4ede77ffb716f10"
+  },
+  {
+    "file": "REPORT.md",
+    "bytes": 7477,
+    "sha256": "d4571aed9907ade9fe03de8200fa0556d2c2cf1549d8dde100420af94c28fffb"
+  },
+  {
+    "file": "audit-final.log",
+    "bytes": 110,
+    "sha256": "1803f9617ae8aec3f80a1c168f947c06e3d630b49f6a585000285e421e707272"
+  },
+  {
+    "file": "base-check.json",
+    "bytes": 3133,
+    "sha256": "8c3d8396b0e6e04f3043b0f57bb5dab0789e17887ef730bd06503e7b8f95f4a8"
+  },
+  {
+    "file": "before/Makefile",
+    "bytes": 62212,
+    "sha256": "983f6574fd7c865d5e391d90428685e8bb7764b6d08dbdef381a156e793575df"
+  },
+  {
+    "file": "before/rocq/Eff_types.v",
+    "bytes": 17665,
+    "sha256": "545eec67d5c29efbb9b77b5c3976f27a9a5c0f99bef166d0af993754df75e5d0"
+  },
+  {
+    "file": "before/rocq/StoreAssumptions.v",
+    "bytes": 1113,
+    "sha256": "bae4671668593050ae3bc81751c4b8c49ab382e5743c5b75c24eb234e967b828"
+  },
+  {
+    "file": "before/rocq/StoreCode.v",
+    "bytes": 44333,
+    "sha256": "c122d6609c45a884786c9235d7ce4e718d82bbb6e1782cc7514611d49903f9de"
+  },
+  {
+    "file": "before/rocq/StoreGrammar.v",
+    "bytes": 15322,
+    "sha256": "c301e42b5677282ea2df0d34223d2789c962f920c10c38e8656d282e95b65941"
+  },
+  {
+    "file": "before/rocq/StoreLaws.v",
+    "bytes": 25250,
+    "sha256": "b9bbf39f1bcb04bdcb6fc59030183d94cffcd3bdcdca9ad3a298725f6b36dd41"
+  },
+  {
+    "file": "before/scripts/generate.py",
+    "bytes": 17132,
+    "sha256": "f75e5c6f14382d47f4f32593325147bf66e3d03a446fdf7498ae5e4501b2dc73"
+  },
+  {
+    "file": "before/src/Effect4/Store/Carrier/Kind.lean",
+    "bytes": 6769,
+    "sha256": "243d6b9a342342efb9d4d9c247d1dc5b210e14ebe9f0f8154a3db6d6c2185495"
+  },
+  {
+    "file": "before/src/Effect4/Store/Domain/Node.lean",
+    "bytes": 21365,
+    "sha256": "620ec94be3c382b13bebfc35443f039e2dc29eff25425a4a1e3519baec3b0237"
+  },
+  {
+    "file": "before/src/Effect4/Store/Domain/Store.lean",
+    "bytes": 27357,
+    "sha256": "4a86253f01c146df4283ec127746db04836159e7d75f8f2077641b80fd7cf079"
+  },
+  {
+    "file": "before/src/Effect4/Store/Domain/Word.lean",
+    "bytes": 42747,
+    "sha256": "a335e0c69ba62a62a023a2ef612b845d6cfe0e52b6e2d3b41abb2f8a877aaccf"
+  },
+  {
+    "file": "before/src/OCaml5/Lcnf/Gallina.lean",
+    "bytes": 32485,
+    "sha256": "9f0c16d5bc9493a710e5134732dc19a7ee986c120af5e9dabbd67ba85c6a9e98"
+  },
+  {
+    "file": "before/src/OCaml5/Tools/CasGoldens.lean",
+    "bytes": 27079,
+    "sha256": "d503a94ce674713b9eca1b388aaff7b61f9da2c2efdfdc4e75793b01b8bb30d5"
+  },
+  {
+    "file": "before/src/OCaml5/Tools/GallinaGen.lean",
+    "bytes": 1887,
+    "sha256": "d6545952c2608fd74f0f21b2b60a580654756d0e0c4278b23909e2cd87cebb76"
+  },
+  {
+    "file": "build-overlay.log",
+    "bytes": 44669,
+    "sha256": "bb340b8551b33cbb486406634569fc5f3e19c7dc5107eb9fec8405fce672bd57"
+  },
+  {
+    "file": "build_overlay.py",
+    "bytes": 1331,
+    "sha256": "8ccb3fa0362237bdd7689d1784a1dfc2458e1856ec41a1408c88aa3393e6e102"
+  },
+  {
+    "file": "family-alias-controls.log",
+    "bytes": 549,
+    "sha256": "3507995161b2bc348a60df7b93b28bae83cfaffc23b4aeddc4fc1fda6f17f108"
+  },
+  {
+    "file": "family-check/rocq/Skeleton.v",
+    "bytes": 23291,
+    "sha256": "12a711f48a1ca4513adbf70396161ae89208bbb3e7cf2c4d29c9b0582faae5ac"
+  },
+  {
+    "file": "family-check/rocq/StoreCode.v",
+    "bytes": 48568,
+    "sha256": "dce818f6d2d06f6c9a18e853aee1e26d02434a8d42f4d0762239f7518fc14ed2"
+  },
+  {
+    "file": "family-controls.log",
+    "bytes": 4626,
+    "sha256": "2ce93994b2b6715436428da19bdf786545783f27b26f18dd3b6571b899a142fe"
+  },
+  {
+    "file": "family-root/rocq/Skeleton.v",
+    "bytes": 23291,
+    "sha256": "12a711f48a1ca4513adbf70396161ae89208bbb3e7cf2c4d29c9b0582faae5ac"
+  },
+  {
+    "file": "family-root/rocq/StoreCode.v",
+    "bytes": 48568,
+    "sha256": "dce818f6d2d06f6c9a18e853aee1e26d02434a8d42f4d0762239f7518fc14ed2"
+  },
+  {
+    "file": "family_alias_controls.py",
+    "bytes": 1485,
+    "sha256": "e7609587967c8a9e1d79951f18311ef0fc9e2dcd80a013462e79e9fc662e96d0"
+  },
+  {
+    "file": "family_controls.py",
+    "bytes": 3104,
+    "sha256": "a8f4216e2327665308957ed681ace12ffc13e126f6bf99825df01658526bbef0"
+  },
+  {
+    "file": "generated-storecode.patch",
+    "bytes": 13589,
+    "sha256": "a356b603cdbb97d0a1162a6a7494ca11f9d3808ccf047dca9e4ce2391600ea4b"
+  },
+  {
+    "file": "generator.patch",
+    "bytes": 4271,
+    "sha256": "9c7a86a8dff42dd83a10ba550f14d204cc0fe584a618e009369c710c4977b5c8"
+  },
+  {
+    "file": "m2.patch",
+    "bytes": 35549,
+    "sha256": "4bd4c682f1e0d3262d749bce0267e67fc9e176cc7ac7769e3adae6ea18b828a1"
+  },
+  {
+    "file": "package.py",
+    "bytes": 2599,
+    "sha256": "1eea189c1f61284cc56d061c555cf8a75fe356b0b2d6a0800f5cd4da9de40d27"
+  },
+  {
+    "file": "patch-check.log",
+    "bytes": 306,
+    "sha256": "4ae99d8645493b5dd8496a31e3009dc0955865b9acc18fed44c4844cb976554a"
+  },
+  {
+    "file": "prepare.py",
+    "bytes": 11840,
+    "sha256": "740cc42e60d6da3bc15f7beb052c07de93efefb341c3eba5056f422404a38c18"
+  },
+  {
+    "file": "prepare_generator.py",
+    "bytes": 2508,
+    "sha256": "6095981dcbd1fef19aadda1a4cb79fce3de7d88b311a2eb2d2df1ae5cec13fe3"
+  },
+  {
+    "file": "prepare_lib.py",
+    "bytes": 1449,
+    "sha256": "a4effe63980662a73f60f9f76bf373f2b62f1436c61f553cf9360d24222580ea"
+  },
+  {
+    "file": "retained-controls/StoreReadProbe.lean",
+    "bytes": 4656,
+    "sha256": "abc3ab3d01144f3da1faf4d8b1bc71639887f24e1bfbfa6851d11f76dbb09e2c"
+  },
+  {
+    "file": "retained-controls/generate-rocq-family.log",
+    "bytes": 317,
+    "sha256": "50877f62f7726d0da4d9733f86feb4d6bc288ea8b0bdde8daad5ea61bc903c57"
+  },
+  {
+    "file": "retained-controls/lean-read.log",
+    "bytes": 74,
+    "sha256": "f59b31dcc07d42963f36333f7adb6d5874e1c0152c34efa30d68ba3380f08b28"
+  },
+  {
+    "file": "retained-controls/rocq-route.log",
+    "bytes": 1024,
+    "sha256": "a6da4237fc20ea00f98055aed369f6228257d51bf26d038471cc4ad79a8ad938"
+  },
+  {
+    "file": "rocq/.Eff_types.aux",
+    "bytes": 113,
+    "sha256": "45d3fce8c9eabd7ac4dd9742160fd7ec93fa2e27acfd8295bee1abd800cb129b"
+  },
+  {
+    "file": "rocq/.StoreAssumptions.aux",
+    "bytes": 120,
+    "sha256": "2f8f1e92e2614d41ea2dc2f204f6a58ee103988c631b8d53ba482c21fb03cb13"
+  },
+  {
+    "file": "rocq/.StoreCode.aux",
+    "bytes": 113,
+    "sha256": "52937f4a3d2232ea04b4c9c0bf326067ca72f39a404ae68c0a9d404a7484334a"
+  },
+  {
+    "file": "rocq/.StoreGrammar.aux",
+    "bytes": 5421,
+    "sha256": "278e9b333cc4ce87c4d8d1bc598e4e9ae789bea04fb63b3ec0337c70d143ca83"
+  },
+  {
+    "file": "rocq/.StoreLaws.aux",
+    "bytes": 7867,
+    "sha256": "f2c4f4ef50a31153dc790008e756b0fdbd15ebfbffe891b07fa3ee7eb488285e"
+  },
+  {
+    "file": "rocq/.lia.cache",
+    "bytes": 1396,
+    "sha256": "4b1e46038ee986b37182bd74a0647f944d655befde62dedf2cdc0d66eefc9ab4"
+  },
+  {
+    "file": "rocq/Eff_types.v",
+    "bytes": 17665,
+    "sha256": "545eec67d5c29efbb9b77b5c3976f27a9a5c0f99bef166d0af993754df75e5d0"
+  },
+  {
+    "file": "rocq/Skeleton.v",
+    "bytes": 23291,
+    "sha256": "12a711f48a1ca4513adbf70396161ae89208bbb3e7cf2c4d29c9b0582faae5ac"
+  },
+  {
+    "file": "rocq/StoreAssumptions.v",
+    "bytes": 1248,
+    "sha256": "1102bba21c58f982cded39c3138673271e279fc942d21eb540c16bc4267e6f4b"
+  },
+  {
+    "file": "rocq/StoreCode.v",
+    "bytes": 48568,
+    "sha256": "dce818f6d2d06f6c9a18e853aee1e26d02434a8d42f4d0762239f7518fc14ed2"
+  },
+  {
+    "file": "rocq/StoreGrammar.v",
+    "bytes": 15322,
+    "sha256": "c301e42b5677282ea2df0d34223d2789c962f920c10c38e8656d282e95b65941"
+  },
+  {
+    "file": "rocq/StoreLaws.v",
+    "bytes": 27444,
+    "sha256": "721e82798bb0a290fd1c6932caa1f9fd393ce697415b59f944fed94904fa1063"
+  },
+  {
+    "file": "rocq-m2.log",
+    "bytes": 9372,
+    "sha256": "6a4ddcf81387efba81c2b7dfe0cb3633d7110427103b6821aa2c0b349fdc130a"
+  },
+  {
+    "file": "rocq_patch.py",
+    "bytes": 4537,
+    "sha256": "be04ea27e1c9f7501286b59b15db1c39c6485424d45abbe711e7edf0e942c318"
+  },
+  {
+    "file": "run_rocq.py",
+    "bytes": 823,
+    "sha256": "bc80370a48e9aed17b5d6fd01a074edd17ac1e18d2bc9b499912b789f9d8cd5b"
+  },
+  {
+    "file": "scripts/generate.py",
+    "bytes": 18284,
+    "sha256": "7b2da85d06790138ee0cd849227808511759c89dee640999d6a387dd7070baf1"
+  },
+  {
+    "file": "source-manifest.json",
+    "bytes": 1015,
+    "sha256": "dbd1ffdeb14f210cf0f2d34ff9ba5353e0223bbb4d54a831d08a6d8981cae47a"
+  },
+  {
+    "file": "src/Effect4/Store/Carrier/Kind.lean",
+    "bytes": 7288,
+    "sha256": "64341102c8099b13998ea1750c07a55e3ff51e89fdde79ac84dc471c4f4a237b"
+  },
+  {
+    "file": "src/Effect4/Store/Domain/Node.lean",
+    "bytes": 21580,
+    "sha256": "ce750a85912d57a4deeb39c3cf6f0290141c0291eb8599793ede57cfe8d9bba3"
+  },
+  {
+    "file": "src/Effect4/Store/Domain/NodeRead.lean",
+    "bytes": 3802,
+    "sha256": "a951ee8ad7fa0f7ccef5d11acc72459ec56e6b23dee4bd5677e650bf3ed132ef"
+  },
+  {
+    "file": "src/Effect4/Store/Domain/Store.lean",
+    "bytes": 30193,
+    "sha256": "87b9c7551fc5efa1d8aa1dbf7788868e2c62c142526a5e5af1e7444ed7d69ef3"
+  },
+  {
+    "file": "src/Effect4/Store/Domain/Word.lean",
+    "bytes": 44196,
+    "sha256": "680370c9b0a9d8d740fb14acf0e20f0f9f5f0496dbf819e8ac4986ffa62f6add"
+  },
+  {
+    "file": "src/OCaml5/Lcnf/Gallina.lean",
+    "bytes": 32658,
+    "sha256": "1b60787331e22ec425b812d494427768878073fccb889043f53ba064fc7b0706"
+  },
+  {
+    "file": "src/OCaml5/Tools/CasGoldens.lean",
+    "bytes": 27380,
+    "sha256": "e7641fda9add5519ec0a66e2fa3340876455a0a2004db3cdf90226f64fcc1dcd"
+  },
+  {
+    "file": "src/OCaml5/Tools/GallinaGen.lean",
+    "bytes": 1915,
+    "sha256": "fb3745cd6469cded622bb8a280d4282988a6d3fd644fb4f5580ec5610d9ab1ab"
+  },
+  {
+    "file": "src/Test/Store/SeamsAdmission.lean",
+    "bytes": 2861,
+    "sha256": "1afb48bd7985b333681b108188254dd3dc3a1942561650d8f77744418f05946a"
+  },
+  {
+    "file": "src/Test/Store/SeamsAdmissionAudit.lean",
+    "bytes": 238,
+    "sha256": "38321db8fab6bf94a4617f8880743db7fa1f915c017474f318a540317bb3a5b7"
+  },
+  {
+    "file": "touched-paths.txt",
+    "bytes": 355,
+    "sha256": "3dc48881a6389578bc83f4cb03223b22bcfe21b7f52b281857cc0233942f1344"
+  },
+  {
+    "file": "validate-isEmpty-refusal.log",
+    "bytes": 713,
+    "sha256": "7b97f625973a3f444abae9f3e06eae7be1716500513b8ce76a4b4d1d47f74552"
+  },
+  {
+    "file": "validate.log",
+    "bytes": 906,
+    "sha256": "7280171ad0b4cbd0afe89bbaf0e7668ab2fca4c66af1b464fffb8eb200052d22"
+  },
+  {
+    "file": "validate.py",
+    "bytes": 1159,
+    "sha256": "21a871d48f1f345c7bea396748bde0b8fa470755deaab57f1309b17cb34d233d"
+  }
+]

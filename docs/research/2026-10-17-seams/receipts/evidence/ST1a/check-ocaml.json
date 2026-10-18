@@ -1,0 +1,13 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "make",
+    "check-ocaml"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T04:33:55.830338+00:00",
+  "exit_status": 2,
+  "elapsed_seconds": 275.81,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/ST1a/check-ocaml.log"
+}

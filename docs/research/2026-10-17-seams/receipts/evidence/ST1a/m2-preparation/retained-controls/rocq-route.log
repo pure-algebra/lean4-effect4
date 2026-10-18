@@ -1,0 +1,13 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "ocamlc", "-version"], "exit_status": 0}
+5.1.1
+{"command": ["opam", "list", "--switch=rocq", "--installed", "--columns=name,version", "ocaml-base-compiler", "rocq-of-ocaml", "rocq-prover"], "exit_status": 0}
+# Packages matching: (name-match(ocaml-base-compiler) | name-match(rocq-of-ocaml) | name-match(rocq-prover)) & installed
+# Name              # Version
+ocaml-base-compiler 5.4.1
+rocq-of-ocaml       dev
+rocq-prover         9.0.0
+{"command": ["opam", "exec", "--switch=effect4", "--", "ocamlfind", "ocamlopt", "-package", "compiler-libs.common", "-linkpkg", "-c", "/private/tmp/seams-store-scout/split_types.ml"], "exit_status": 2}
+File "/private/tmp/seams-store-scout/split_types.ml", line 64, characters 22-54:
+64 |     | Longident.Ldot ({ txt = Longident.Lident m'; _ }, { txt = "t"; _ }) -> Longident.Lident (flat_name m')
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This pattern should not be a record, the expected type is Longident.t

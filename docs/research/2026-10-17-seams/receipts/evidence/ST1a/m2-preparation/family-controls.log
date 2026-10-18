@@ -1,0 +1,39 @@
+{"requested": ["lake", "build", "Effect4.Run.Tree", "Effect4.Store.Domain.Word", "OCaml5.Lcnf.Gallina"], "scope": "temporary module overlay and output root"}
+{"actual_under_outer_lean_launcher": ["python3", "/private/tmp/seams-st1a-m2/build_overlay.py", "Effect4.Store.Carrier.Kind", "Effect4.Store.Domain.Node", "Effect4.Store.Domain.NodeRead", "Effect4.Store.Domain.Store", "Effect4.Store.Domain.Word", "OCaml5.Lcnf.Gallina"]}
+Effect4.Store.Carrier.Kind: exit 0
+Effect4.Store.Domain.Node: exit 0
+Effect4.Store.Domain.NodeRead: exit 0
+Effect4.Store.Domain.Store: exit 0
+Effect4.Store.Domain.Word: exit 0
+OCaml5.Lcnf.Gallina: exit 0
+{"requested": ["lake", "env", "lean", "-M4096", "--run", "src/OCaml5/Tools/GallinaGen.lean", "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-b7f30r6k/rocq/Skeleton.v", "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-b7f30r6k/rocq/StoreCode.v"], "scope": "temporary module overlay and output root"}
+{"actual_under_outer_lean_launcher": ["lean", "-DwarningAsError=true", "-M4096", "--run", "/private/tmp/seams-st1a-m2/src/OCaml5/Tools/GallinaGen.lean", "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-b7f30r6k/rocq/Skeleton.v", "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-b7f30r6k/rocq/StoreCode.v"]}
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-b7f30r6k/rocq/Skeleton.v (23291 bytes)
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-b7f30r6k/rocq/StoreCode.v (48568 bytes)
+PASS: store-rocq CLI regenerates current StoreCode and leaves Skeleton unchanged
+{"requested": ["lake", "build", "Effect4.Run.Tree", "Effect4.Store.Domain.Word", "OCaml5.Lcnf.Gallina"], "scope": "temporary module overlay and output root"}
+{"actual_under_outer_lean_launcher": ["python3", "/private/tmp/seams-st1a-m2/build_overlay.py", "Effect4.Store.Carrier.Kind", "Effect4.Store.Domain.Node", "Effect4.Store.Domain.NodeRead", "Effect4.Store.Domain.Store", "Effect4.Store.Domain.Word", "OCaml5.Lcnf.Gallina"]}
+Effect4.Store.Carrier.Kind: exit 0
+Effect4.Store.Domain.Node: exit 0
+Effect4.Store.Domain.NodeRead: exit 0
+Effect4.Store.Domain.Store: exit 0
+Effect4.Store.Domain.Word: exit 0
+OCaml5.Lcnf.Gallina: exit 0
+{"requested": ["lake", "env", "lean", "-M4096", "--run", "src/OCaml5/Tools/GallinaGen.lean", "/private/tmp/seams-st1a-m2/family-check/rocq/Skeleton.v", "/private/tmp/seams-st1a-m2/family-check/rocq/StoreCode.v"], "scope": "temporary module overlay and output root"}
+{"actual_under_outer_lean_launcher": ["lean", "-DwarningAsError=true", "-M4096", "--run", "/private/tmp/seams-st1a-m2/src/OCaml5/Tools/GallinaGen.lean", "/private/tmp/seams-st1a-m2/family-check/rocq/Skeleton.v", "/private/tmp/seams-st1a-m2/family-check/rocq/StoreCode.v"]}
+wrote /private/tmp/seams-st1a-m2/family-check/rocq/Skeleton.v (23291 bytes)
+wrote /private/tmp/seams-st1a-m2/family-check/rocq/StoreCode.v (48568 bytes)
+PASS: output-dir checks the current StoreCode and writes the same output bytes
+{"requested": ["lake", "build", "Effect4.Run.Tree", "Effect4.Store.Domain.Word", "OCaml5.Lcnf.Gallina"], "scope": "temporary module overlay and output root"}
+{"actual_under_outer_lean_launcher": ["python3", "/private/tmp/seams-st1a-m2/build_overlay.py", "Effect4.Store.Carrier.Kind", "Effect4.Store.Domain.Node", "Effect4.Store.Domain.NodeRead", "Effect4.Store.Domain.Store", "Effect4.Store.Domain.Word", "OCaml5.Lcnf.Gallina"]}
+Effect4.Store.Carrier.Kind: exit 0
+Effect4.Store.Domain.Node: exit 0
+Effect4.Store.Domain.NodeRead: exit 0
+Effect4.Store.Domain.Store: exit 0
+Effect4.Store.Domain.Word: exit 0
+OCaml5.Lcnf.Gallina: exit 0
+{"requested": ["lake", "env", "lean", "-M4096", "--run", "src/OCaml5/Tools/GallinaGen.lean", "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-8swy5pyy/rocq/Skeleton.v", "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-8swy5pyy/rocq/StoreCode.v"], "scope": "temporary module overlay and output root"}
+{"actual_under_outer_lean_launcher": ["lean", "-DwarningAsError=true", "-M4096", "--run", "/private/tmp/seams-st1a-m2/src/OCaml5/Tools/GallinaGen.lean", "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-8swy5pyy/rocq/Skeleton.v", "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-8swy5pyy/rocq/StoreCode.v"]}
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-8swy5pyy/rocq/Skeleton.v (23291 bytes)
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-8swy5pyy/rocq/StoreCode.v (48568 bytes)
+PASS red control: changed Skeleton refuses before installing StoreCode

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-st1a-rocq-production.py"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T04:52:29.079081+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 5.378,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/ST1a/rocq-final.log"
+}

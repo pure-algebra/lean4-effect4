@@ -1,0 +1,10 @@
+{"command": ["python3", "/private/tmp/seams-st1a-m2/build_overlay.py", "Test.Store.SeamsAdmission", "Test.Store.SeamsAdmissionAudit", "OCaml5.Tools.CasGoldens"]}
+Test.Store.SeamsAdmission: exit 0
+Test.Store.SeamsAdmissionAudit: exit 0
+OCaml5.Tools.CasGoldens: exit 0
+exit_status=0
+{"command": ["lean", "-M4096", "-DwarningAsError=true", "--run", "/Users/pooks/.codex/worktrees/seams/lean4-effect4/src/OCaml5/Tools/GallinaGen.lean", "/private/tmp/seams-st1a-m2/rocq/Skeleton.v", "/private/tmp/seams-st1a-m2/rocq/StoreCode.v"]}
+wrote /private/tmp/seams-st1a-m2/rocq/Skeleton.v (23318 bytes)
+uncaught exception: Gallina: 1 refused:
+Effect4.Store.Node.handleInContent: List.isEmpty has no printing rule
+exit_status=1

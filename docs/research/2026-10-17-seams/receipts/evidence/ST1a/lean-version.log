@@ -1,0 +1,2 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "lake", "env", "lean", "--version"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T04:52:34.495459+00:00"}
+Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)
