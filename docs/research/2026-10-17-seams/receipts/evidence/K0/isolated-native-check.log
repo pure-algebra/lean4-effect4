@@ -1,0 +1,9 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "bash", "ocaml/engine/tools/gen-check.sh"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:10:41.265457+00:00"}
+ok   C1 no filter/erase/removeAll/dropWhile on RunMachine.fibers in the core sources
+ok   C2 ocaml/gen builds and @gen/runtest passes (api_gen.ml is the oracle)
+ok   C3a dune build engine
+ok   C3b api_engine.ml type-checks against E4_clock/Lcnf_* interfaces and Eff_types: the functor needs no instance, so the
+          extern table is closed (every unconverted carrier site would be a type error)
+ok   C4 the generated file carries the current prelude
+
+gen-check: PASS

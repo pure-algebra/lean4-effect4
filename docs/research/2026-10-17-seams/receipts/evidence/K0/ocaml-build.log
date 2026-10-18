@@ -1,0 +1,1 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "build", "--root", "ocaml", "engine/bytes/test/test_math.exe", "engine/test/prop_trace.exe", "engine/test/test_log.exe", "engine/bench/bench_frame.exe"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T02:33:45.882854+00:00"}

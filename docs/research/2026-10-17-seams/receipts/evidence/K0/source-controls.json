@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "docs/research/2026-10-17-seams/receipts/evidence/K0/controls.py"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T02:36:45.421687+00:00",
+  "exit_status": 1,
+  "elapsed_seconds": 0.068,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/K0/source-controls.log"
+}

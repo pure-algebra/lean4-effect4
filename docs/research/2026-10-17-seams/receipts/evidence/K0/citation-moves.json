@@ -1,0 +1,2708 @@
+[
+  {
+    "file": "ocaml/engine/bytes/e4_hex.ml",
+    "old": "Digest.lean:63",
+    "declaration": "hexDigit",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_hex.ml",
+    "old": "Digest.lean:66-70",
+    "declaration": "hexVal",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_hex.mli",
+    "old": "src/Effect4/Store/Digest.lean:62-93, :253-261",
+    "declaration": "hexOfBytes",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_sha256.mli",
+    "old": "src/Effect4/Store/Digest.lean:57",
+    "declaration": "sha256",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_sha256.mli",
+    "old": "src/Effect4/Store/Val.lean:1150-1155",
+    "declaration": "sampleEntry",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "src/Effect4/Store/Digest.lean:302-303",
+    "declaration": "sha256",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "src/Effect4/Store/Val.lean:1150",
+    "declaration": "sampleEntry",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "Digest.lean:306-314",
+    "declaration": "Digest.ofHex?",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "Digest.lean:62-93",
+    "declaration": "hexOfBytes",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "src/Effect4/Store/Val.lean:1150-1151",
+    "declaration": "sampleEntry",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "Digest.lean:303",
+    "declaration": "sha256",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "Val.lean:1153",
+    "declaration": "sampleEntry",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "Val.lean:1154",
+    "declaration": "sampleEntry",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "Val.lean:1155",
+    "declaration": "sampleEntry",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/test/test_math.ml",
+    "old": "Digest.lean:315",
+    "declaration": "sha256",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_addr.ml",
+    "old": "Digest.lean:252-259",
+    "declaration": "Digest.hex",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_addr.mli",
+    "old": "src/Effect4/Store/Digest.lean:35-37",
+    "declaration": "Digest",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_addr.mli",
+    "old": "src/Effect4/Store/Node.lean:71-74",
+    "declaration": "AnyRef",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_addr.mli",
+    "old": "Digest.lean:35-37",
+    "declaration": "Digest",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_addr.mli",
+    "old": "Digest.lean:252-259",
+    "declaration": "Digest.hex",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_addr.mli",
+    "old": "Node.lean:276",
+    "declaration": "zeroDigest",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_addr.mli",
+    "old": "Node.lean:276",
+    "declaration": "zeroDigest",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_addr.mli",
+    "old": "src/Effect4/Store/Node.lean:71-74",
+    "declaration": "AnyRef",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "Store.lean:73-75",
+    "declaration": "Store",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "Store.lean:262-276",
+    "declaration": "Store.putNode",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "Store.lean:263",
+    "declaration": "Store.putNode",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "Store.lean:192-198",
+    "declaration": "Store.checkAll",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "src/Effect4/Store/Word.lean:59-63",
+    "declaration": "Binding.admissibleAfter",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "Word.lean:334-346",
+    "declaration": "Store.closure",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "Word.lean:749-755",
+    "declaration": "Store.verifyNode",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Store.lean:262-276",
+    "declaration": "Store.putNode",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Word.lean:346",
+    "declaration": "Store.closure",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Word.lean:772",
+    "declaration": "Store.verify",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Node.lean:297",
+    "declaration": "Node.checkedEdges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Node.lean:354",
+    "declaration": "address",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Store.lean:19",
+    "declaration": "Store",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Word.lean:73-81",
+    "declaration": "Word.apply",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Store.lean:241",
+    "declaration": "Closed",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Store.lean:47-53",
+    "declaration": "RootKind",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Store.lean:153-169",
+    "declaration": "Admission",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Store.lean:87",
+    "declaration": "Store.find",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "src/Effect4/Store/Word.lean:44-48",
+    "declaration": "Binding",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Word.lean:772",
+    "declaration": "Store.verify",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Word.lean:749-755",
+    "declaration": "Store.verifyNode",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "Store.lean:241",
+    "declaration": "Closed",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_checkpoint.mli",
+    "old": "Node.lean:250",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_checkpoint.mli",
+    "old": "Node.lean:297",
+    "declaration": "Node.checkedEdges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_chunk.mli",
+    "old": "Node.lean:297",
+    "declaration": "Node.checkedEdges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.ml",
+    "old": "Store.lean:523-530",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.ml",
+    "old": "Store.lean:527",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "src/Effect4/Store/Store.lean:510-556",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "src/Effect4/Store/Store.lean:523-530",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "Store.lean:47-53",
+    "declaration": "RootKind",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "Store.lean:523-530",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "Store.lean:47-53",
+    "declaration": "RootKind",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "src/Effect4/Store/Store.lean:47-53",
+    "declaration": "RootKind",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "Store.lean:64-70",
+    "declaration": "Root",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "Store.lean:513",
+    "declaration": "Store.root?",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "Store.lean:516-519",
+    "declaration": "Store.nextVersion",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_deps.mli",
+    "old": "src/Effect4/Machine/Key.lean:383-386",
+    "declaration": "exists_carrier_collision",
+    "source": "src/Effect4/Machine/Key.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_index.mli",
+    "old": "Kind.lean:137",
+    "declaration": "Kind.byte_pos",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_index.mli",
+    "old": "Key.lean:383-386",
+    "declaration": "exists_carrier_collision",
+    "source": "src/Effect4/Machine/Key.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_index.mli",
+    "old": "Key.lean:383-386",
+    "declaration": "exists_carrier_collision",
+    "source": "src/Effect4/Machine/Key.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "src/Effect4/Store/Node.lean:276",
+    "declaration": "zeroDigest",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "src/Effect4/Store/Node.lean:170-171",
+    "declaration": "Node.encode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "src/Effect4/Store/Val.lean:147-159",
+    "declaration": "Val.encode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Node.lean:250",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Val.lean:584-622",
+    "declaration": "Val.decode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Val.lean:591",
+    "declaration": "Val.decode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Val.lean:592",
+    "declaration": "Val.decode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Utf8.lean:118-153",
+    "declaration": "utf8Chars",
+    "source": "src/Effect4/Store/Carrier/Utf8.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Val.lean:607-612",
+    "declaration": "Val.decode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Val.lean:614-617",
+    "declaration": "Val.decode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Val.lean:618-621",
+    "declaration": "Val.decode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Node.lean:241-255",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Node.lean:175-182",
+    "declaration": "Node.decode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Node.lean:354",
+    "declaration": "address",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Node.lean:291",
+    "declaration": "Node.IsGenesis",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Store.lean:262-276",
+    "declaration": "Store.putNode",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "src/Effect4/Store/Node.lean:170-182",
+    "declaration": "Node.encode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Node.lean:171",
+    "declaration": "Node.encode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Node.lean:287",
+    "declaration": "Node.edges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Node.lean:190",
+    "declaration": "Node.decode_encode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Node.lean:241-255",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Node.lean:260-266",
+    "declaration": "Val.malformedRef",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Node.lean:250",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Val.lean:279-292",
+    "declaration": "Val.wf",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Node.lean:354",
+    "declaration": "address",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Store.lean:262-276",
+    "declaration": "Store.putNode",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "Node.lean:276",
+    "declaration": "zeroDigest",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_pack.mli",
+    "old": "Node.lean:170-171",
+    "declaration": "Node.encode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "StdLib/Derived.lean:147",
+    "declaration": "SourceC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/StdLib/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Store/PinDerived.lean:168",
+    "declaration": "PinGen.PinC.instContent",
+    "source": "src/Effect4/Store/Domain/PinDerived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Conformance/Receipt.lean:151",
+    "declaration": "Implementation",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Conformance/Receipt.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "StdLib/Derived.lean:227",
+    "declaration": "EntryC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/StdLib/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Kind.lean:29-30",
+    "declaration": "Kind",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Store/Genesis.lean:35",
+    "declaration": "instContentDocument",
+    "source": "src/Effect4/Store/Domain/Genesis.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Schema/Document.lean:127-132",
+    "declaration": "Document",
+    "source": "src/Effect4/Schema/Document.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Store/Traits.lean:149",
+    "declaration": "instContentAnnotation",
+    "source": "src/Effect4/Store/Domain/Traits.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Derived.lean:272",
+    "declaration": "EvidenceC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Derived.lean:373",
+    "declaration": "ClaimC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Derived.lean:877",
+    "declaration": "TargetC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Derived.lean:1025",
+    "declaration": "CharacterizedC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Conformance/Receipt.lean:235",
+    "declaration": "Receipt",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Conformance/Receipt.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Kind.lean:37-38",
+    "declaration": "Kind",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Kind.lean:39-40",
+    "declaration": "Kind",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Kind.lean:41-42",
+    "declaration": "Kind",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Kind.lean:43-44",
+    "declaration": "Kind",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Store/PinDerived.lean:224",
+    "declaration": "PinGen.TreeC.instContent",
+    "source": "src/Effect4/Store/Domain/PinDerived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Kind.lean:47-48",
+    "declaration": "Kind",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Derived.lean:734",
+    "declaration": "ManifestC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Manifest.lean:76-90",
+    "declaration": "Manifest",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Manifest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Canonical.lean:102",
+    "declaration": "CharGSetC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Canonical.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Canonical.lean:299",
+    "declaration": "CharFactC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Canonical.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.ml",
+    "old": "Char/Canonical.lean:368",
+    "declaration": "CharVectorC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Canonical.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "src/Effect4/Store/Canonical.lean:446-451",
+    "declaration": "instCanonicalDigest",
+    "source": "src/Effect4/Store/Domain/Canonical.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "src/Effect4/Store/Kind.lean:10-11",
+    "declaration": "Kind",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "StdLib/Derived.lean:147",
+    "declaration": "SourceC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/StdLib/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Store/PinDerived.lean:168",
+    "declaration": "PinGen.PinC.instContent",
+    "source": "src/Effect4/Store/Domain/PinDerived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Char/Conformance/Receipt.lean:151",
+    "declaration": "Implementation",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Conformance/Receipt.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Store/Traits.lean:149",
+    "declaration": "instContentAnnotation",
+    "source": "src/Effect4/Store/Domain/Traits.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Char/Derived.lean:272,373,877,1025",
+    "declaration": "EvidenceC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Derived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Char/Conformance/Receipt.lean:235",
+    "declaration": "Receipt",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Conformance/Receipt.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Char/Canonical.lean:102,299,368",
+    "declaration": "CharGSetC.instContent",
+    "source": "git:9b887fdc8^:src/Effect4/Char/Canonical.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Node.lean:250",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Store/PinDerived.lean:224",
+    "declaration": "PinGen.TreeC.instContent",
+    "source": "src/Effect4/Store/Domain/PinDerived.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_shape.mli",
+    "old": "Store.lean:262-276",
+    "declaration": "Store.putNode",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_subterm.mli",
+    "old": "Compile.lean:51-59",
+    "declaration": "Node",
+    "source": "src/Effect4/Program/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_subterm.mli",
+    "old": "src/Effect4/Program/Compile.lean:51-115",
+    "declaration": "Node",
+    "source": "src/Effect4/Program/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_subterm.mli",
+    "old": "Compile.lean:118-120",
+    "declaration": "Node.at_",
+    "source": "src/Effect4/Program/Refs.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "src/Effect4/Store/Kind.lean:60-104",
+    "declaration": "Kind.byte",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "src/Effect4/Store/Node.lean:439-448",
+    "declaration": "sampleNode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Store.lean:262-276",
+    "declaration": "Store.putNode",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "src/Effect4/Store/Val.lean:147-159",
+    "declaration": "Val.encode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "src/Effect4/Store/Val.lean:147-159",
+    "declaration": "Val.encode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "src/Effect4/Store/Val.lean:1150",
+    "declaration": "sampleEntry",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Kind.lean:145-158",
+    "declaration": "Kind.name",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Kind.lean:155",
+    "declaration": "Kind.name",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "src/Effect4/Store/Node.lean:170-182",
+    "declaration": "Node.encode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Digest.lean:315",
+    "declaration": "sha256",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Digest.lean:315",
+    "declaration": "sha256",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Node.lean:439-441",
+    "declaration": "sampleNode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Node.lean:442-448",
+    "declaration": "Node.decode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Node.lean:445",
+    "declaration": "Node.decode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Node.lean:241-266",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Node.lean:449-453",
+    "declaration": "Node.refsOf",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Node.lean:454-460",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Node.lean:462-463",
+    "declaration": "instCanonicalAnyRef",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Val.lean:1136",
+    "declaration": "Val.encode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "Store.lean:262-276",
+    "declaration": "Store.putNode",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_cas.ml",
+    "old": "src/Effect4/Store/Store.lean:566-575",
+    "declaration": "probeSchema",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_control.ml",
+    "old": "src/Effect4/Store/Store.lean:523-530",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_control.ml",
+    "old": "Store.lean:523-530",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_control.ml",
+    "old": "Store.lean:527",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_control.ml",
+    "old": "Store.lean:527",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_control.ml",
+    "old": "src/Effect4/Store/Val.lean:147-159",
+    "declaration": "Val.encode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_control.ml",
+    "old": "Store.lean:527",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_control.ml",
+    "old": "Store.lean:47-53",
+    "declaration": "RootKind",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_index.ml",
+    "old": "Kind.lean:137",
+    "declaration": "Kind.byte",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.ml",
+    "old": "Lib/Deque.lean:92-96",
+    "declaration": "Deque",
+    "source": "git:79752b3e6^:src/OCaml5/Lib/Deque.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.ml",
+    "old": "Lib/Map.lean:9-14",
+    "declaration": "Map",
+    "source": "git:79752b3e6^:src/OCaml5/Lib/Map.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.ml",
+    "old": "Fibers.lean:140",
+    "declaration": "Dispatcher.insert",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.ml",
+    "old": "Fibers.lean:145",
+    "declaration": "Dispatcher.enqueue",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.ml",
+    "old": "Fibers.lean:136-142",
+    "declaration": "Dispatcher.insert",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "src/Effect4/Machine/Fibers.lean:115-155",
+    "declaration": "Dispatcher",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Lib/Map.lean:9-14",
+    "declaration": "Map",
+    "source": "git:79752b3e6^:src/OCaml5/Lib/Map.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Lib/Deque.lean:92-96",
+    "declaration": "Deque",
+    "source": "git:79752b3e6^:src/OCaml5/Lib/Deque.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Lib/Deque.lean:75-78",
+    "declaration": "Dispatcher.Wf",
+    "source": "git:79752b3e6^:src/OCaml5/Lib/Deque.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Fibers.lean:127,147,153",
+    "declaration": "Dispatcher",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Fibers.lean:134",
+    "declaration": "Dispatcher.empty",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Fibers.lean:627-629",
+    "declaration": "RunMachine.arm",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Fibers.lean:632-634",
+    "declaration": "RunMachine.disarm",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Fibers.lean:145-147",
+    "declaration": "Dispatcher.enqueue",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Fibers.lean:151-153",
+    "declaration": "Dispatcher.drain",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets.mli",
+    "old": "Lib/Deque.lean:320-322",
+    "declaration": "bucketPairs",
+    "source": "git:79752b3e6^:src/OCaml5/Lib/Deque.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:115-155",
+    "declaration": "Dispatcher",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "Fibers.lean:140",
+    "declaration": "Dispatcher.insert",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "Fibers.lean:141",
+    "declaration": "Dispatcher.insert",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "Fibers.lean:134",
+    "declaration": "Dispatcher.empty",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "Fibers.lean:136-142",
+    "declaration": "Dispatcher.insert",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "Fibers.lean:145-147",
+    "declaration": "Dispatcher.enqueue",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "Fibers.lean:151-153",
+    "declaration": "Dispatcher.drain",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "Fibers.lean:632-634",
+    "declaration": "RunMachine.disarm",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_diff.mli",
+    "old": "Api.lean:171-172",
+    "declaration": "run",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine.ml",
+    "old": "Fibers.lean:2028-2040",
+    "declaration": "replayEval",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine.ml",
+    "old": "Fibers.lean:2028-2040",
+    "declaration": "replayEval",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine.mli",
+    "old": "Fibers.lean:608-609",
+    "declaration": "RunMachine.finished",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine.mli",
+    "old": "Fibers.lean:1886",
+    "declaration": "replayEval",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine.mli",
+    "old": "Api.lean:144-148",
+    "declaration": "Outcome",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine.mli",
+    "old": "Fibers.lean:2028-2040",
+    "declaration": "replayEval",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "Api.lean:156-162",
+    "declaration": "replay",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "Api.lean:171-172",
+    "declaration": "run",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_env.mli",
+    "old": "src/Effect4/Program/Compile.lean:127-165",
+    "declaration": "Capture",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_env_list.ml",
+    "old": "src/Effect4/Program/Compile.lean:164-165",
+    "declaration": "childWith",
+    "source": "src/Effect4/Program/Compile.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:1543",
+    "declaration": "completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view.ml",
+    "old": "Fibers.lean:577-579",
+    "declaration": "RunMachine.update",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view.ml",
+    "old": "Fibers.lean:877",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view.ml",
+    "old": "Fibers.lean:1256, :1344",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view.mli",
+    "old": "Fibers.lean:577-579",
+    "declaration": "RunMachine.update",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view.mli",
+    "old": "Fibers.lean:867-877",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view.mli",
+    "old": "Fibers.lean:1256, :1344",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view_list.ml",
+    "old": "Fibers.lean:573-575",
+    "declaration": "RunMachine.fiber?",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_log.mli",
+    "old": "src/Effect4/Machine/Fibers.lean:585-587",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_log.mli",
+    "old": "src/Effect4/Machine/Fibers.lean:585-587",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_logindex.ml",
+    "old": "Fibers.lean:358",
+    "declaration": "RunEvent",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_logindex.ml",
+    "old": "Fibers.lean:369",
+    "declaration": "RunEvent",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_logindex.mli",
+    "old": "src/Effect4/Machine/Fibers.lean:355-374",
+    "declaration": "RunEvent",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.ml",
+    "old": "Stores.lean:890-904",
+    "declaration": "MemoWorld.lookup",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "Stores.lean:866-867",
+    "declaration": "MemoWorld.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "src/Effect4/Machine/Stores.lean:890-904",
+    "declaration": "MemoWorld.lookup",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "src/Effect4/Machine/Stores.lean:866-886",
+    "declaration": "MemoWorld.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "Stores.lean:890-904",
+    "declaration": "MemoWorld.lookup",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_ppath.mli",
+    "old": "src/Effect4/Program/Compile.lean:127-165",
+    "declaration": "Capture",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_ppath_list.ml",
+    "old": "src/Effect4/Program/Compile.lean:149-150",
+    "declaration": "child",
+    "source": "src/Effect4/Program/Compile.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_query.mli",
+    "old": "src/Effect4/Api.lean:156-162",
+    "declaration": "replay",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "src/Effect4/Machine/Stores.lean:1120",
+    "declaration": "refPoke",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Fibers.lean:579",
+    "declaration": "RunMachine.update",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Stores.lean:1150",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Fibers.lean:877",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Fibers.lean:609",
+    "declaration": "RunMachine.finished",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Fibers.lean:573",
+    "declaration": "RunMachine.fiber?",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Stores.lean:1369",
+    "declaration": "DeferredStore.cellAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Fibers.lean:1256, :1344",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Fibers.lean:1543",
+    "declaration": "completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "Fibers.lean:609",
+    "declaration": "RunMachine.finished",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Stores.lean:1568",
+    "declaration": "ScopeStore.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Stores.lean:1572",
+    "declaration": "ScopeStore.setEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Fibers.lean:579",
+    "declaration": "RunMachine.update",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Stores.lean:1150, :1366, :1576",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Fibers.lean:877",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Stores.lean:886",
+    "declaration": "MemoWorld.deleteEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Fibers.lean:1256",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Fibers.lean:609",
+    "declaration": "RunMachine.finished",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Fibers.lean:1543",
+    "declaration": "completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Fibers.lean:867, :877",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table_list.ml",
+    "old": "Stores.lean:1150, :1366",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_trace.ml",
+    "old": "Api.lean:185-186",
+    "declaration": "Inspection.trace",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_trace.ml",
+    "old": "Fibers.lean:585-587",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_trace.mli",
+    "old": "src/Effect4/Machine/Fibers.lean:585-587",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_trace.mli",
+    "old": "Api.lean:185-186",
+    "declaration": "Inspection.trace",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_trace_list.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:585-587",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/externs.txt",
+    "old": "src/Effect4/Machine/Stores.lean:162",
+    "declaration": "Stores",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/externs.txt",
+    "old": "Fibers.lean:612",
+    "declaration": "RunMachine.empty",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/externs.txt",
+    "old": "Stores.lean:1987",
+    "declaration": "Stores.empty",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "Stores.lean:1119-1120",
+    "declaration": "refPoke",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "Stores.lean:1116",
+    "declaration": "refPeek",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "Stores.lean:1150",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "Fibers.lean:587",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "Fibers.lean:573-579",
+    "declaration": "RunMachine.fiber?",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "Stores.lean:880",
+    "declaration": "MemoWorld.insertEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "Stores.lean:867",
+    "declaration": "MemoWorld.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_trace.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:1123",
+    "declaration": "finishFrame",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_trace.ml",
+    "old": "Api.lean:185-186",
+    "declaration": "Inspection.trace",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:115-155",
+    "declaration": "Dispatcher",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "Fibers.lean:140",
+    "declaration": "Dispatcher.insert",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "Fibers.lean:627-634",
+    "declaration": "RunMachine.arm",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "Fibers.lean:134",
+    "declaration": "Dispatcher.empty",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "Fibers.lean:136-142",
+    "declaration": "Dispatcher.insert",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "Fibers.lean:145-147",
+    "declaration": "Dispatcher.enqueue",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "Fibers.lean:151-153",
+    "declaration": "Dispatcher.drain",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "Fibers.lean:627-634",
+    "declaration": "RunMachine.arm",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/e4_engine_bench.ml",
+    "old": "Compile.lean:616",
+    "declaration": "compileEff",
+    "source": "src/Effect4/Program/Compile.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:1543",
+    "declaration": "completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "Fibers.lean:573",
+    "declaration": "RunMachine.fiber?",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "Fibers.lean:1541-1543",
+    "declaration": "completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "Fibers.lean:1543",
+    "declaration": "completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "Fibers.lean:867-877",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_memo.ml",
+    "old": "src/Effect4/Machine/Stores.lean:876-880",
+    "declaration": "MemoWorld.insertEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_memo.ml",
+    "old": "Stores.lean:893",
+    "declaration": "MemoWorld.lookup",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_memo.ml",
+    "old": "Stores.lean:906-910",
+    "declaration": "MemoWorld.get",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_memo.ml",
+    "old": "Stores.lean:866-886",
+    "declaration": "MemoWorld.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_point.ml",
+    "old": "src/Effect4/Program/Compile.lean:118-122",
+    "declaration": "Node.at_",
+    "source": "src/Effect4/Program/Refs.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_table.ml",
+    "old": "Stores.lean:1150",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_trace.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:585-587",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_trace.ml",
+    "old": "Fibers.lean:1123",
+    "declaration": "finishFrame",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_buckets.ml",
+    "old": "Fibers.lean:115-155",
+    "declaration": "Dispatcher",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_buckets.ml",
+    "old": "Fibers.lean:115-155",
+    "declaration": "Dispatcher",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_engine.ml",
+    "old": "src/Effect4/Program/Wire.lean:74-106",
+    "declaration": "p42",
+    "source": "src/Effect4/Store/Domain/ProgramWire.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_log.ml",
+    "old": "Fibers.lean:369",
+    "declaration": "RunEvent",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_replay_steps.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:2028-2040",
+    "declaration": "replayEval",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_replay_steps.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:1508-1512",
+    "declaration": "stepDecisionState",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_replay_steps.ml",
+    "old": "Fibers.lean:382-385",
+    "declaration": "Stuck",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_replay_steps.ml",
+    "old": "Fibers.lean:1508-1512",
+    "declaration": "stepDecisionState",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_replay_steps.ml",
+    "old": "Fibers.lean:1508-1512",
+    "declaration": "stepDecisionState",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_replay_steps.ml",
+    "old": "Fibers.lean:382-385",
+    "declaration": "Stuck",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_replay_steps.ml",
+    "old": "Fibers.lean:2036",
+    "declaration": "replayEval",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:1987",
+    "declaration": "Stores.empty",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:681-692",
+    "declaration": "RunMachine.empty",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:585-587",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:573-575",
+    "declaration": "RunMachine.fiber?",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:577-579",
+    "declaration": "RunMachine.update",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:608-609",
+    "declaration": "RunMachine.finished",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:1543",
+    "declaration": "completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:279-297",
+    "declaration": "RunFiber.make",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Api.lean:255-260",
+    "declaration": "load",
+    "source": "src/Effect4/Api.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:948-969",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "Fibers.lean:933",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Fibers.lean:1341-1349",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:955-1007",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:1365-1366",
+    "declaration": "DeferredStore.make",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:1369-1370",
+    "declaration": "DeferredStore.cellAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:1373-1374",
+    "declaration": "DeferredStore.setCell",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:1567-1568",
+    "declaration": "ScopeStore.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:1571-1572",
+    "declaration": "ScopeStore.setEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:1575-1576",
+    "declaration": "ScopeStore.make",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:1597-1607",
+    "declaration": "ScopeStore.forkChild",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "Stores.lean:1542",
+    "declaration": "ScopeEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "Stores.lean:859-860",
+    "declaration": "MemoWorld.mapAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:866-867",
+    "declaration": "MemoWorld.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:869-873",
+    "declaration": "MemoWorld.updateEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:876-880",
+    "declaration": "MemoWorld.insertEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:883-886",
+    "declaration": "MemoWorld.deleteEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Program/Compile.lean:118-122",
+    "declaration": "Node.at_",
+    "source": "src/Effect4/Program/Refs.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "src/Effect4/Machine/Stores.lean:2238",
+    "declaration": "syncOpStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_ppath_list.ml",
+    "old": "(:169)",
+    "declaration": "Node.at_",
+    "source": "src/Effect4/Program/Refs.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "`MemoWorld = List MemoMap`, :855",
+    "declaration": "MemoWorld",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "syncOpStep's memoFork arm (:2238)",
+    "declaration": "syncOpStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "(:876-880)",
+    "declaration": "MemoWorld.insertEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "(:869-873)",
+    "declaration": "MemoWorld.updateEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "(:883-886)",
+    "declaration": "MemoWorld.deleteEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "(Lean's map-by-key, :869-873)",
+    "declaration": "MemoWorld.updateEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "(:890-904)",
+    "declaration": "MemoWorld.lookup",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo.mli",
+    "old": "make the chain cyclic (:906-910: the model cannot stop a program from forging a\n       path), so the fuel MUST be kept: `lookup` answers None at exhaustion rather than",
+    "declaration": "MemoMap",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.",
+    "declaration": "MemoWorld.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.",
+    "declaration": "MemoWorld.insertEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.",
+    "declaration": "MemoWorld.updateEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.",
+    "declaration": "MemoWorld.deleteEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "(:880)",
+    "declaration": "MemoWorld.insertEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "(:867)",
+    "declaration": "MemoWorld.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "(:873)",
+    "declaration": "MemoWorld.updateEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "(:886)",
+    "declaration": "MemoWorld.deleteEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "(Lean :880)",
+    "declaration": "MemoWorld.insertEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "(Lean :873)",
+    "declaration": "MemoWorld.updateEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_memo_list.ml",
+    "old": "(Lean :886)",
+    "declaration": "MemoWorld.deleteEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view_list.ml",
+    "old": "(src/Effect4/Machine/Fibers.lean:\n   1543)",
+    "declaration": "RunMachine.completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view_list.ml",
+    "old": "(:577-579 update)",
+    "declaration": "RunMachine.update",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view_list.ml",
+    "old": "(:877 spawn)",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view_list.ml",
+    "old": "(:1256, :1344)",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view_list.ml",
+    "old": "(:608-609 finished)",
+    "declaration": "RunMachine.finished",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view_list.ml",
+    "old": "(:1541-1543)",
+    "declaration": "RunMachine.completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view_list.ml",
+    "old": "(ids are minted monotonically, Fibers.lean:\n        867, :877; lane C's licence, re-verified)",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine.mli",
+    "old": "`settled` (:11330)",
+    "declaration": "settled",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "exactly as :153 does",
+    "declaration": "Dispatcher.drain",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "exactly as :147 does",
+    "declaration": "Dispatcher.enqueue",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "(:140)",
+    "declaration": "Dispatcher.insert",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "(:153)",
+    "declaration": "Dispatcher.drain",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "(:147)",
+    "declaration": "Dispatcher.enqueue",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_buckets_list.ml",
+    "old": "(RunMachine.disarm, :632-634)",
+    "declaration": "RunMachine.disarm",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
+    "declaration": "refPoke",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
+    "declaration": "DeferredStore.setCell",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
+    "declaration": "ScopeStore.setEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
+    "declaration": "DeferredStore.make",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
+    "declaration": "ScopeStore.make",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
+    "declaration": "RunMachine.update",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_table.mli",
+    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :775 *)",
+    "declaration": "fiber_id",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :651 *)",
+    "declaration": "stuck",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :234 *)",
+    "declaration": "parked",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :353-359 *)",
+    "declaration": "observer",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :540 *)",
+    "declaration": "scope_mode",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :78 *)",
+    "declaration": "outcome",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :749 *)",
+    "declaration": "service",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :778 *)",
+    "declaration": "context",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :235 *)",
+    "declaration": "ctx",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :408-426 *)",
+    "declaration": "prim",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :765-772 *)",
+    "declaration": "frame_event",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :734 *)",
+    "declaration": "task",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :174-195 *)",
+    "declaration": "run_event",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(* :69-76 *)",
+    "declaration": "run_decision",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(** [Effect4.Program.EffName], api_engine.ml:279 *)",
+    "declaration": "eff_name",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/e4_engine_intf.ml",
+    "old": "(** [Effect4.Program.EffThunk], api_engine.ml:392 *)",
+    "declaration": "eff_thunk",
+    "source": "ocaml/engine/api_engine.ml"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "(:87)",
+    "declaration": "Store.find",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "(:523-530)",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "(:70)",
+    "declaration": "Word.wf",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "(:73)",
+    "declaration": "Word.apply",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "(:182)",
+    "declaration": "Store.Resolves",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "(:73-75)",
+    "declaration": "Store",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "(:346)",
+    "declaration": "Store.closure",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.mli",
+    "old": "(:73-81)",
+    "declaration": "Word.apply",
+    "source": "src/Effect4/Store/Domain/Word.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "(:241-255)",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "(:260-266)",
+    "declaration": "Val.malformedRef",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "(`Node.decode_exact`, :204)",
+    "declaration": "Node.decode_exact",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "(`Node.checkedEdges`, :297)",
+    "declaration": "Node.checkedEdges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "(Node.IsGenesis, :291)",
+    "declaration": "Node.IsGenesis",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "(Node.edges, :287)",
+    "declaration": "Node.edges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "(:297)",
+    "declaration": "Node.checkedEdges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "machine, and `Sys.max_string_length` bounds the host allocation.",
+    "declaration": "nat_of_digits",
+    "source": "ocaml/engine/bytes/e4_be.ml"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.mli",
+    "old": "machine, and `Sys.max_string_length` bounds the host allocation.",
+    "declaration": "decode_nat",
+    "source": "ocaml/eff/eff_frame.ml"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_control.mli",
+    "old": "(`:527`)",
+    "declaration": "Store.putRoot",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "elements, a ctor's arguments, Val.lean's `decodeSeq`), 2 for a pair (:595-601), 1 for a\n   `some` (:603-606) and for the payload of a node as a whole (`Val.decode` is one tree and\n   nothing else, :985).",
+    "declaration": "Val.decodeBody",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "elements, a ctor's arguments, Val.lean's `decodeSeq`), 2 for a pair (:595-601), 1 for a\n   `some` (:603-606) and for the payload of a node as a whole (`Val.decode` is one tree and\n   nothing else, :985).",
+    "declaration": "Val.decodeSeq",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "elements, a ctor's arguments, Val.lean's `decodeSeq`), 2 for a pair (:595-601), 1 for a\n   `some` (:603-606) and for the payload of a node as a whole (`Val.decode` is one tree and\n   nothing else, :985).",
+    "declaration": "Val.decode",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Val.refs (Val.refs (src/Effect4/Store/Domain/Node.lean)) and Val.malformedRef (:260-266)",
+    "declaration": "Val.refs",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Val.refs (Val.refs (src/Effect4/Store/Domain/Node.lean)) and Val.malformedRef (:260-266)",
+    "declaration": "Val.malformedRef",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Node.IsGenesis (src/Effect4/Store/Domain/Node.lean) IsGenesis, :287 edges, :297 checkedEdges.",
+    "declaration": "Node.IsGenesis",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Node.IsGenesis (src/Effect4/Store/Domain/Node.lean) IsGenesis, :287 edges, :297 checkedEdges.",
+    "declaration": "Node.edges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_node.ml",
+    "old": "Node.IsGenesis (src/Effect4/Store/Domain/Node.lean) IsGenesis, :287 edges, :297 checkedEdges.",
+    "declaration": "Node.checkedEdges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "`Store.checkAll` (Store.checkEdges (src/Effect4/Store/Domain/Store.lean)) over `Node.checkedEdges` (:297)",
+    "declaration": "Store.checkAll",
+    "source": "src/Effect4/Store/Domain/Store.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_cas.ml",
+    "old": "`Store.checkAll` (Store.checkEdges (src/Effect4/Store/Domain/Store.lean)) over `Node.checkedEdges` (:297)",
+    "declaration": "Node.checkedEdges",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "`frameCore` instance (:204)",
+    "declaration": "frameCore",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "observer filter (:1345-1348)",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "`refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,\n   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,\n   `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it",
+    "declaration": "refPeek",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "`refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,\n   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,\n   `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it",
+    "declaration": "refPoke",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "`refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,\n   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,\n   `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "`mapAt` (MemoWorld.mapAt (src/Effect4/Machine/Stores.lean)) and `setMap` (:862-863)",
+    "declaration": "MemoWorld.mapAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/tools/api_engine_prelude.ml",
+    "old": "`mapAt` (MemoWorld.mapAt (src/Effect4/Machine/Stores.lean)) and `setMap` (:862-863)",
+    "declaration": "MemoWorld.setMap",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "the exit (:609, :1543) and the observers (:1256, :1344).",
+    "declaration": "RunMachine.finished",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "the exit (:609, :1543) and the observers (:1256, :1344).",
+    "declaration": "RunMachine.completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "the exit (:609, :1543) and the observers (:1256, :1344).",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "RunMachine.update (:577-579)",
+    "declaration": "RunMachine.update",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "spawn (:867, :877)",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_fibers_view.ml",
+    "old": "dropObservers (:1254-1260, :1344-1348)",
+    "declaration": "dropObservers",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dune",
+    "old": "dispatcher_ref (the literal transcription of Fibers.lean:115-155)",
+    "declaration": "Dispatcher",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/test_replay_steps.ml",
+    "old": "`stepDecisionState` (:1962-1982)",
+    "declaration": "stepDecisionState",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_table.ml",
+    "old": "refStep (src/Effect4/Machine/Stores.lean)/:1366 state",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_table.ml",
+    "old": "refStep (src/Effect4/Machine/Stores.lean)/:1366 state",
+    "declaration": "DeferredStore.make",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_memo.ml",
+    "old": "(:867)",
+    "declaration": "MemoWorld.entryAt",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_memo.ml",
+    "old": "(:873)",
+    "declaration": "MemoWorld.updateEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/prop_memo.ml",
+    "old": "(:886)",
+    "declaration": "MemoWorld.deleteEntry",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "List.set (Lean core; refPoke refPeek (src/Effect4/Machine/Stores.lean), setCell :1374)",
+    "declaration": "refPoke",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "List.set (Lean core; refPoke refPeek (src/Effect4/Machine/Stores.lean), setCell :1374)",
+    "declaration": "DeferredStore.setCell",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "xs[i]? (refPeek RefHeap (src/Effect4/Machine/Stores.lean))",
+    "declaration": "refPeek",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "xs ++ [v] (refMake refStep (src/Effect4/Machine/Stores.lean), RunMachine.emit RunMachine.emit (src/Effect4/Machine/Fibers.lean), spawn :877)",
+    "declaration": "refStep",
+    "source": "src/Effect4/Machine/Stores.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "xs ++ [v] (refMake refStep (src/Effect4/Machine/Stores.lean), RunMachine.emit RunMachine.emit (src/Effect4/Machine/Fibers.lean), spawn :877)",
+    "declaration": "RunMachine.emit",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/bench_carriers.ml",
+    "old": "xs ++ [v] (refMake refStep (src/Effect4/Machine/Stores.lean), RunMachine.emit RunMachine.emit (src/Effect4/Machine/Fibers.lean), spawn :877)",
+    "declaration": "spawn",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "exactly as :153\n   does",
+    "declaration": "Dispatcher.drain",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/test/dispatcher_ref.ml",
+    "old": "exactly as :147 does",
+    "declaration": "Dispatcher.enqueue",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_hex.mli",
+    "old": "(Digest.hexDigit, :63)",
+    "declaration": "hexDigit",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_hex.mli",
+    "old": "(Digest.hexVal, :66-70)",
+    "declaration": "hexVal",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_hex.mli",
+    "old": "`Effect4.Store.Digest.ofHex?` (:257-261)",
+    "declaration": "Digest.ofHex?",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_hex.mli",
+    "old": "Pinned by Digest.lean's own #guards (:306-314), which are the tests:",
+    "declaration": "bytesOfHex",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_hex.mli",
+    "old": "Pinned by Digest.lean's own #guards (:306-314), which are the tests:",
+    "declaration": "hexOfBytes",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_hex.mli",
+    "old": "Pinned by Digest.lean's own #guards (:306-314), which are the tests:",
+    "declaration": "Digest.ofHex?",
+    "source": "src/Effect4/Store/Carrier/Digest.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "the table of Kind.byte (src/Effect4/Store/Carrier/Kind.lean) and its ten #guards\n         (:145-158), the reserved append 16..23, and the unregistered-byte refusal.",
+    "declaration": "Kind.byte",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "the table of Kind.byte (src/Effect4/Store/Carrier/Kind.lean) and its ten #guards\n         (:145-158), the reserved append 16..23, and the unregistered-byte refusal.",
+    "declaration": "Kind.ofByte?",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "the edge scan #guards (:449-460), the AnyRef frame shape (:462-463), the traversal",
+    "declaration": "Node.refsOf",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "the edge scan #guards (:449-460), the AnyRef frame shape (:462-463), the traversal",
+    "declaration": "AnyRef",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "note \"Kind.name (src/Effect4/Store/Carrier/Kind.lean)'s #guard `ofByte? 16 = none` does NOT transfer: byte 16 is `job` under\";\n  note \"CAS commit 1's append, and amendment M4 moved the unregistered-kind sentinel to 127.\";",
+    "declaration": "Kind.ofByte?",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "note \"Kind.name (src/Effect4/Store/Carrier/Kind.lean)'s #guard `ofByte? 16 = none` does NOT transfer: byte 16 is `job` under\";\n  note \"CAS commit 1's append, and amendment M4 moved the unregistered-kind sentinel to 127.\";",
+    "declaration": "Kind.sentinel",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/test/test_bytes.ml",
+    "old": "note \"Node.decode (src/Effect4/Store/Domain/Node.lean)'s #guard uses kind byte 16; under CAS commit 1 that is `job`, so this\";\n  note \"lane uses 127 (amendment M4's sentinel) as the unregistered-byte witness.\";",
+    "declaration": "Node.decode",
+    "source": "src/Effect4/Store/Domain/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_index.mli",
+    "old": "`Kind.byte_pos` (Kind.byte (src/Effect4/Store/Carrier/Kind.lean))",
+    "declaration": "Kind.byte_pos",
+    "source": "src/Effect4/Store/Carrier/Kind.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_subterm.mli",
+    "old": "a `ProgPath` addresses nodes of five mutually\n       recursive families (`Node` is `eff | stmts | stmt | action | effs`, EffName (src/Effect4/Program/Compile.lean))",
+    "declaration": "Node",
+    "source": "src/Effect4/Program/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/cas/e4_subterm.mli",
+    "old": "`Effect4.Program.Node` (EffName (src/Effect4/Program/Compile.lean))",
+    "declaration": "Node",
+    "source": "src/Effect4/Program/Node.lean"
+  },
+  {
+    "file": "ocaml/engine/e4_fibers_view.mli",
+    "old": "`RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean:\n   1541-1543)",
+    "declaration": "RunMachine.completedExits",
+    "source": "src/Effect4/Machine/Fibers.lean"
+  },
+  {
+    "file": "ocaml/engine/bytes/e4_be.mli",
+    "old": "the engine's name for the byte rule of src/Effect4/Store/Domain/Canonical.lean and\n   src/Effect4/Program/Wire.lean:",
+    "declaration": "framed",
+    "source": "src/Effect4/Store/Carrier/Val.lean"
+  },
+  {
+    "file": "src/Effect4/Store/Domain/Genesis.lean",
+    "old": "`Store/Derived/Schema.lean` derives `Canonical Document`",
+    "declaration": "SchemaGen.DocumentC.instCanonical",
+    "source": "src/Effect4/Store/Domain/Derived/Schema.lean"
+  },
+  {
+    "file": "src/Effect4/Api/RunnerBytes.lean",
+    "old": "itself (`Store/Derived/Value.lean`).",
+    "declaration": "ValueGen.ShapeDocC.instCanonical",
+    "source": "src/Effect4/Store/Domain/Derived/Value.lean"
+  },
+  {
+    "file": "Test/Store/Templates.lean",
+    "old": "(`Store/Derived/Json.lean`, the `JsonAcceptance` section).",
+    "declaration": "JsonAcceptance.samples",
+    "source": "src/Effect4/Store/Domain/Derived/Json.lean"
+  },
+  {
+    "file": "Test/Store/Templates.lean",
+    "old": "(`Store/Derived/Json.lean`, the `JsonAcceptance` section).",
+    "declaration": "JsonAcceptance.floats",
+    "source": "src/Effect4/Store/Domain/Derived/Json.lean"
+  },
+  {
+    "file": "Test/Store/Templates.lean",
+    "old": "round trip and refusal on `Store/Derived/Json.lean`'s generated instance.",
+    "declaration": "JsonGen.JsonC.instCanonicalJson",
+    "source": "src/Effect4/Store/Domain/Derived/Json.lean"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh",
+    "env",
+    "LEAN_NUM_THREADS=3",
+    "make",
+    "gen-semantics"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T02:39:01.159355+00:00",
+  "exit_status": 2,
+  "elapsed_seconds": 892.986,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/K0/gen-semantics-make.log"
+}

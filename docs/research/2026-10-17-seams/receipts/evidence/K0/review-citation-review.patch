@@ -1,0 +1,1834 @@
+--- a/ocaml/engine/e4_ppath_list.ml
++++ b/ocaml/engine/e4_ppath_list.ml
+@@ -4,7 +4,7 @@
+ 
+    It reproduces `Effect4.Program.Point.child` (child (src/Effect4/Program/Compile.lean),
+    `path := p.path ++ [i]`) and `Effect4.Program.resolve`'s
+-   `Node.at_ (Node.eff root) p.path` (:169) operation for operation: `snoc` copies the whole
++   `Node.at_ (Node.eff root) p.path` Node.at_ (src/Effect4/Program/Refs.lean) operation for operation: `snoc` copies the whole
+    spine and `node` WALKS from the root every time.  So `Ref` still means what Lean means, and
+    the only difference from E4_ppath is the Θ(depth) per step that lane PROF measured — which
+    is the point of the differential (test/test_diff.ml, `Ref` vs `Fast`).
+--- a/ocaml/engine/e4_memo.mli
++++ b/ocaml/engine/e4_memo.mli
+@@ -7,8 +7,8 @@
+    body (`LayerId := List Nat × CallId`, `CallId := List (List Nat)`,
+    src/Effect4/Machine/Alphabets.lean; decisions row 341, step 3).
+ 
+-   The world itself (`MemoWorld = List MemoMap`, :855) is NOT tabled: the append is inline in
+-   syncOpStep's memoFork arm (:2238) and syncOpStep must stay generated (A1 §1.2, owner
++   The world itself (`MemoWorld`, src/Effect4/Machine/Stores.lean) is NOT tabled.
++   Its append stays in `syncOpStep`'s `memoFork` arm in that file; `syncOpStep` stays generated (A1 §1.2, owner
+    decision Q3).  One map per `Layer.provide` site; measure before revisiting.  `lookup`
+    below is the world's parent walk, spelled here so that the engine and A2's cache share one
+    spelling.
+@@ -24,19 +24,20 @@
+    Behaviours (each is a named PASS/FAIL line in test/prop_memo.ml):
+    MM1 find_opt is entryAt: `(m.entries.find? fun e => e.1 = layer).map Prod.snd`
+        (MemoWorld.entryAt (src/Effect4/Machine/Stores.lean)) — the FIRST binding                              tested
+-   MM2 insert KEEPS an existing binding.  Lean appends unconditionally (:876-880) and
++   MM2 insert KEEPS an existing binding.  Lean appends unconditionally (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean) and
+        `find?` answers the FIRST, so a duplicate insert is invisible to entryAt;
+-       updateEntry (:869-873) and deleteEntry (:883-886) touch ALL matching entries, so
++       `MemoWorld.updateEntry` and `MemoWorld.deleteEntry` (src/Effect4/Machine/Stores.lean) touch
++       ALL matching entries, so
+        after either one the list and the map agree again.  Therefore "insert-if-absent" is
+        EXACT for every observation the machine can make.  This is the one carrier law that
+        is not an obvious equality; the property test against e4_memo_list.ml (which DOES
+        append the duplicate, as Lean does) is what carries it.                tested
+-   MM3 update is a no-op on an absent key (Lean's map-by-key, :869-873)       tested
+-   MM4 delete removes EVERY matching entry (:883-886), so after a delete no duplicate
++   MM3 update is a no-op on an absent key (`MemoWorld.updateEntry`, src/Effect4/Machine/Stores.lean)       tested
++   MM4 delete removes EVERY matching entry (`MemoWorld.deleteEntry`, src/Effect4/Machine/Stores.lean), so after a delete no duplicate
+        survives in the twin either                                            tested
+-   MM5 the parent chain's fuel is `world length + 1` (:890-904).  A forged parent id can
+-       make the chain cyclic (:906-910: the model cannot stop a program from forging a
+-       path), so the fuel MUST be kept: `lookup` answers None at exhaustion rather than
++   MM5 the parent chain's fuel is `world length + 1` (`MemoWorld.lookup`, src/Effect4/Machine/Stores.lean).  A forged parent id can
++       make the chain cyclic (`MemoMap.parent`, src/Effect4/Machine/Stores.lean), so the fuel
++       MUST be kept: `lookup` answers None at exhaustion rather than
+        looping.                                                               tested
+    MM6 bindings is in ASCENDING KEY ORDER (`compare_key`: the path lexicographic on int list,
+        shorter-first on a prefix, then the call, path by path), which is NOT Lean's insertion
+--- a/ocaml/engine/e4_memo_list.ml
++++ b/ocaml/engine/e4_memo_list.ml
+@@ -1,11 +1,13 @@
+ (* E4_memo_list — the LIST twin of E4_memo: the same signature (`LAYERS`, 2026-09-08-engine-
+    a1-state.md §1.5), backed by `List (LayerId × MemoEntry)` in INSERTION order, reproducing
+-   MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.
++   `MemoWorld.entryAt`, `MemoWorld.insertEntry`, `MemoWorld.updateEntry` and
++   `MemoWorld.deleteEntry` (src/Effect4/Machine/Stores.lean), including duplicate bindings.
+ 
+    This is the one twin whose raw carrier can differ from the map's: Lean's `insertEntry`
+-   appends unconditionally (:880), so a second insert under a bound key leaves TWO entries
+-   in the list where the map has one.  `find?` answers the FIRST (:867), `updateEntry` maps
+-   over ALL matching (:873) and `deleteEntry` filters ALL matching (:886) — so every
++   appends unconditionally (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean), so a second insert under a bound key leaves TWO entries
++   in the list where the map has one.  `find?` answers the FIRST (`MemoWorld.entryAt`, src/Effect4/Machine/Stores.lean); `updateEntry` maps
++   over ALL matches and `deleteEntry` filters ALL matches (`MemoWorld.updateEntry` and
++   `MemoWorld.deleteEntry`, src/Effect4/Machine/Stores.lean). Every
+    OBSERVATION the machine can make is the same on both sides.  That is law MM2, and the
+    differential in test/prop_memo.ml is what carries it.  `raw` exposes the duplicated list;
+    `bindings` is the observable projection (first binding per key, sorted by key) so that
+@@ -16,9 +18,9 @@
+    Behaviours:
+    ML1 the internal list is in INSERTION order with Lean's duplicates      by construction
+    ML2 find_opt is `List.find?`: the FIRST binding                         by construction
+-   ML3 insert APPENDS unconditionally (Lean :880)                          by construction
+-   ML4 update maps over ALL matching entries (Lean :873)                   by construction
+-   ML5 delete filters out ALL matching entries (Lean :886)                 by construction
++   ML3 insert APPENDS unconditionally (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean)                          by construction
++   ML4 update maps over ALL matching entries (`MemoWorld.updateEntry`, src/Effect4/Machine/Stores.lean)                   by construction
++   ML5 delete filters out ALL matching entries (`MemoWorld.deleteEntry`, src/Effect4/Machine/Stores.lean)                 by construction
+    ML6 bindings dedupes by key keeping the FIRST, then sorts by E4_memo.compare_key, so
+        it is exactly what the map's `bindings` answers (MM6)               tested *)
+ 
+@@ -39,15 +41,15 @@
+ let mem (p : E4_memo.key) (t : 'a t) : bool =
+   match find_opt p t with Some _ -> true | None -> false
+ 
+-(* Lean's insertEntry: `m.entries ++ [(layer, entry)]`, with no membership test (:880). *)
++(* Lean's insertEntry: `m.entries ++ [(layer, entry)]`, with no membership test (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean). *)
+ let insert (p : E4_memo.key) (v : 'a) (t : 'a t) : 'a t = t @ [ (p, v) ]
+ 
+ (* Lean's updateEntry: `m.entries.map fun e => if e.1 = layer then (e.1, f e.2) else e`
+-   (:873) — every matching entry, and a no-op when none matches. *)
++   MemoWorld.updateEntry (src/Effect4/Machine/Stores.lean) — every matching entry, and a no-op when none matches. *)
+ let update (p : E4_memo.key) (f : 'a -> 'a) (t : 'a t) : 'a t =
+   List.map (fun (q, v) -> if key_eq q p then (q, f v) else (q, v)) t
+ 
+-(* Lean's deleteEntry: `m.entries.filter fun e => !(e.1 = layer)` (:886). *)
++(* Lean's deleteEntry: `m.entries.filter fun e => !(e.1 = layer)` MemoWorld.deleteEntry (src/Effect4/Machine/Stores.lean). *)
+ let delete (p : E4_memo.key) (t : 'a t) : 'a t =
+   List.filter (fun (q, _) -> not (key_eq q p)) t
+ 
+--- a/ocaml/engine/e4_fibers_view_list.ml
++++ b/ocaml/engine/e4_fibers_view_list.ml
+@@ -4,8 +4,7 @@
+    `Ref` instance's fiber table (api_engine_ref.ml) and the differential's left-hand side.
+ 
+    The point of the twin: `completed` here MAINTAINS NOTHING.  It is Lean's
+-   `m.fibers.filterMap (fun f => f.exit.map ((f.id, ·)))` (src/Effect4/Machine/Fibers.lean:
+-   1543), walked at read time, exactly as the generated engine did before lane G3.  So
++   `m.fibers.filterMap (fun f => f.exit.map ((f.id, ·)))` RunMachine.completedExits (src/Effect4/Machine/Fibers.lean), walked at read time, exactly as the generated engine did before lane G3.  So
+    `Ref` vs `Fast` — 74 306 replay positions of lane X's differential — is precisely the
+    question "does the maintained view answer what the scan answers", at every step of every
+    tape of every corpus program.  If the twin maintained a view too, that question would not
+@@ -20,18 +19,17 @@
+    Depends on: the OCaml standard library only.
+ 
+    The Lean operation each function reproduces:
+-     find_opt   `List.find?`                     (RunMachine.fiber? (src/Effect4/Machine/Fibers.lean) fiber?)
+-     set        replace-by-key `List.map`, a NO-OP on an absent key   (:577-579 update)
+-     add        `xs ++ [(k, v)]` when fresh                           (:877 spawn)
+-     map        `List.map`                                           (:1256, :1344)
+-     for_all    `List.all`                                           (:608-609 finished)
+-     completed  `List.filterMap`                                     (:1541-1543)
++     find_opt   `List.find?`                     RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)
++     set        replace-by-key `List.map`, a NO-OP on an absent key   RunMachine.update (src/Effect4/Machine/Fibers.lean)
++     add        `xs ++ [(k, v)]` when fresh                           spawn (src/Effect4/Machine/Fibers.lean)
++     map        `List.map`                                           dropObservers (src/Effect4/Machine/Fibers.lean)
++     for_all    `List.all`                                           RunMachine.finished (src/Effect4/Machine/Fibers.lean)
++     completed  `List.filterMap`                                     RunMachine.completedExits (src/Effect4/Machine/Fibers.lean)
+ 
+    Behaviours:
+    TFV1 the internal list is in ALLOCATION order, exactly Lean's carrier   by construction
+    TFV2 `bindings`, `to_list` and `completed` are ASCENDING by key.  For every table the
+-        machine can build the two orders COINCIDE (ids are minted monotonically, Fibers.lean:
+-        867, :877; lane C's licence, re-verified)                          by construction
++        machine can build the two orders COINCIDE (ids are minted by spawn (src/Effect4/Machine/Fibers.lean); lane C's licence)                          by construction
+    TFV3 at most one binding per key                                        by construction
+    TFV4 no polymorphic comparison touches a value: every comparison is on an int key
+         (ocaml/STANDARDS.md §4)                                            by construction *)
+--- a/ocaml/engine/e4_engine.mli
++++ b/ocaml/engine/e4_engine.mli
+@@ -5,7 +5,7 @@
+    proposal 16, or explicitly refuse the host numeric profile. Every accepted transition
+    is the generated
+    `stepDecisionState` (api_engine.ml:11424) and the answer is a projection of what that
+-   function and the generated `settled` (:11330) already say.
++   function and the generated `settled` (ocaml/engine/api_engine.ml) already say.
+ 
+    The four letters, and where each comes from:
+      Finished   every fiber has exited (`RunMachine.finished`, RunMachine.finished (src/Effect4/Machine/Fibers.lean)), the
+--- a/ocaml/engine/e4_buckets_list.ml
++++ b/ocaml/engine/e4_buckets_list.ml
+@@ -5,8 +5,8 @@
+    (Dispatcher (src/Effect4/Machine/Fibers.lean)) into OCaml, behind the `DISPATCHER` module type
+    the generator emits (ocaml/engine/api_engine.ml:52-64).  It is the SLOW shape on purpose:
+    `insert` appends with `tasks ++ [task]` exactly as Dispatcher.insert (src/Effect4/Machine/Fibers.lean) does, `drain` is
+-   `(d.buckets.map Bucket.tasks).flatten` exactly as :153 does, and `enqueue` sets
+-   `armed := true` exactly as :147 does.  Nothing is optimised, so the reference instance can
++   `(d.buckets.map Bucket.tasks).flatten` exactly as Dispatcher.drain (src/Effect4/Machine/Fibers.lean) does, and `enqueue` sets
++   `armed := true` exactly as Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean) does.  Nothing is optimised, so the reference instance can
+    be read line by line against the Lean and seen to be the same function.
+ 
+    Why it exists beside test/dispatcher_ref.ml (lane Q1): that file is test-only -- it is
+@@ -21,10 +21,10 @@
+ 
+    Behaviours (the same B1-B7 as e4_buckets.mli; the Lean line is the licence):
+    BL1  Ascending priorities, each exactly once -- `insert` keeps the order (Dispatcher.insert (src/Effect4/Machine/Fibers.lean)).
+-   BL2  FIFO within a bucket -- `tasks ++ [task]` (:140).
+-   BL3  A drain is the flatten in ascending priority (:153).
+-   BL4  `drain` returns `<[], false>` (:153).
+-   BL5  `enqueue` arms (:147); `disarm` clears the flag (RunMachine.disarm, :632-634).
++   BL2  FIFO within a bucket -- `tasks ++ [task]` Dispatcher.insert (src/Effect4/Machine/Fibers.lean).
++   BL3  A drain is the flatten in ascending priority Dispatcher.drain (src/Effect4/Machine/Fibers.lean).
++   BL4  `drain` returns `<[], false>` Dispatcher.drain (src/Effect4/Machine/Fibers.lean).
++   BL5  `enqueue` arms Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean); `disarm` clears the flag RunMachine.disarm (src/Effect4/Machine/Fibers.lean).
+    BL6  Persistence: no mutable field anywhere.                        by construction
+    BL7  `of_list`/`to_list` are the canonical form E4_buckets uses, so a differential can
+         compare the two carriers' dispatchers without knowing either representation. *)
+--- a/ocaml/engine/e4_buckets.mli
++++ b/ocaml/engine/e4_buckets.mli
+@@ -1,7 +1,7 @@
+ (* e4_buckets.mli — the dispatcher: priority -> FIFO, persistent.
+ 
+    What it is: the OCaml carrier of Effect4.Machine.Dispatcher
+-   (Dispatcher (src/Effect4/Machine/Fibers.lean), transcribing Scheduler.ts:105-131 and :225-233).
++   (Dispatcher (src/Effect4/Machine/Fibers.lean), transcribing Scheduler.ts:105-131 and Scheduler.ts:225-233).
+    Buckets in strictly ascending priority; FIFO within a bucket; one drain empties the whole
+    structure, so a task enqueued during a drain waits for the next one. Representation: an
+    ascending assoc list of (priority, front/back list pair). The assoc list IS
+--- a/ocaml/engine/e4_table.mli
++++ b/ocaml/engine/e4_table.mli
+@@ -4,10 +4,11 @@
+ 
+    What it is: `Map.Make(Int)` with a Lean-shaped API and a small-size representation.
+    The `set` / `add` split is the whole point: Lean's `List.set` is a NO-OP out of range
+-   (refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's
+-   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,
+-   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)
+-   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).
++   (`refPoke` and `DeferredStore.setCell`, src/Effect4/Machine/Stores.lean).
++   Replace-by-key `List.map` leaves an absent key unchanged (`ScopeStore.setEntry` in
++   src/Effect4/Machine/Stores.lean; `RunMachine.update` in src/Effect4/Machine/Fibers.lean).
++   Allocation appends (`refStep` at `SyncOp.refMake`, `DeferredStore.make`, and `ScopeStore.make`
++   in src/Effect4/Machine/Stores.lean; `spawn` in src/Effect4/Machine/Fibers.lean).
+    A carrier with one `add` would silently create cells Lean never mints.
+ 
+    This module satisfies the generated functor's `TABLE` signature
+--- a/ocaml/engine/e4_engine_intf.ml
++++ b/ocaml/engine/e4_engine_intf.ml
+@@ -50,25 +50,25 @@
+ 
+   (** The two payloads the projection does not descend into. *)
+ 
+-  type nu  (** [Effect4.Program.EffName], api_engine.ml:279 *)
+-
+-  type s  (** [Effect4.Program.EffThunk], api_engine.ml:392 *)
++  type nu  (** [Effect4.Program.EffName]; [eff_name] in ocaml/engine/api_engine.ml. *)
++
++  type s  (** [Effect4.Program.EffThunk]; [eff_thunk] in ocaml/engine/api_engine.ml. *)
+ 
+   (** The machine-side alphabet, transcribed from api_engine.ml. The program alphabet is
+       `Eff_types`, opened here and by the generated engine. `ocamlopt` checks this transcription
+       against every instance: a constructor added, dropped, renamed or re-ordered in the generated file is
+       a compile error here. *)
+ 
+-  type fiber_id = int  (* :775 *)
+-
+-  type stuck =  (* :651 *)
++  type fiber_id = int  (* fiber_id (ocaml/engine/api_engine.ml) *)
++
++  type stuck =  (* stuck (ocaml/engine/api_engine.ml) *)
+     | Stuck_unknownFiber of fiber_id
+     | Stuck_unknownScope of int
+     | Stuck_unknownRace of int
+ 
+-  type parked = Parked_notParked | Parked_withGuard of int  (* :234 *)
+-
+-  type observer =  (* :353-359 *)
++  type parked = Parked_notParked | Parked_withGuard of int  (* parked (ocaml/engine/api_engine.ml) *)
++
++  type observer =  (* observer (ocaml/engine/api_engine.ml) *)
+     | Observer_resumeAwait of fiber_id * int * ObserverMode.t
+     | Observer_untrackChild of fiber_id
+     | Observer_dropScopeFinalizer of int * int
+@@ -76,18 +76,18 @@
+     | Observer_raceCallback of int
+     | Observer_callback of int
+ 
+-  type scope_mode = ScopeMode_forkIn | ScopeMode_fiberRunIn  (* :540 *)
+-  type outcome = Outcome_finished | Outcome_frontier | Outcome_stuck of stuck  (* :78 *)
+-  type 'u service = { key : ServiceKey.t; value : 'u }  (* :749 *)
+-  type 'u context = 'u service list  (* :778 *)
+-
+-  type ctx = {  (* :235 *)
++  type scope_mode = ScopeMode_forkIn | ScopeMode_fiberRunIn  (* scope_mode (ocaml/engine/api_engine.ml) *)
++  type outcome = Outcome_finished | Outcome_frontier | Outcome_stuck of stuck  (* outcome (ocaml/engine/api_engine.ml) *)
++  type 'u service = { key : ServiceKey.t; value : 'u }  (* service (ocaml/engine/api_engine.ml) *)
++  type 'u context = 'u service list  (* context (ocaml/engine/api_engine.ml) *)
++
++  type ctx = {  (* ctx (ocaml/engine/api_engine.ml) *)
+     services : Val.t context;
+     max_ops_before_yield : int;
+     prevent_yield : bool;
+   }
+ 
+-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =  (* :408-426 *)
++  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =  (* prim (ocaml/engine/api_engine.ml) *)
+     | Prim_success of 'b
+     | Prim_failure of ('e, 'd, 'i, 'a) Cause.t
+     | Prim_sync of 's
+@@ -108,7 +108,7 @@
+     | Prim_async of 'nu * bool * 'nu option
+     | Prim_asyncFinalizer of 'nu
+ 
+-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =  (* :765-772 *)
++  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =  (* frame_event (ocaml/engine/api_engine.ml) *)
+     | FrameEvent_popped of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
+     | FrameEvent_ranContAll of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
+     | FrameEvent_pushed of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
+@@ -127,12 +127,12 @@
+ 
+   type wake_key = { kind : handle_kind; index : int }
+ 
+-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =  (* :734 *)
++  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =  (* task (ocaml/engine/api_engine.ml) *)
+     | Task_start of fiber_id
+     | Task_resume of fiber_id * int * 'k
+     | Task_wake of wake_key * int
+ 
+-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =  (* :174-195 *)
++  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =  (* run_event (ocaml/engine/api_engine.ml) *)
+     | RunEvent_forked of fiber_id * fiber_id * bool
+     | RunEvent_started of fiber_id
+     | RunEvent_scheduledTask of fiber_id * int * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
+@@ -155,7 +155,7 @@
+     | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) Exit.t
+     | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) Exit.t
+ 
+-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =  (* :69-76 *)
++  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =  (* run_decision (ocaml/engine/api_engine.ml) *)
+     | RunDecision_fire of fiber_id
+     | RunDecision_flush
+     | RunDecision_evaluate of fiber_id
+--- a/ocaml/engine/cas/e4_cas.mli
++++ b/ocaml/engine/cas/e4_cas.mli
+@@ -3,9 +3,9 @@
+    recovery and verification.
+ 
+    What it is: `src/Effect4/Store/Domain/Store.lean` and `src/Effect4/Store/Domain/Word.lean` as a durable
+-   object.  `put` is `Store.putNode` (Store.putNode (src/Effect4/Store/Domain/Store.lean)); `get_node` is `Store.find` (:87);
+-   `advance_root` is `Store.putRoot` (:523-530); `closure` is `Store.closure` (Store.closure (src/Effect4/Store/Domain/Word.lean));
+-   `word_wf` is `Word.wf` (:70); `apply_word` is `Word.apply` (:73); `verify` is `Store.verify`
++   object.  `put` is `Store.putNode` (Store.putNode (src/Effect4/Store/Domain/Store.lean)); `get_node` is `Store.find` Store.find (src/Effect4/Store/Domain/Store.lean);
++   `advance_root` is `Store.putRoot` Store.putRoot (src/Effect4/Store/Domain/Store.lean); `closure` is `Store.closure` (Store.closure (src/Effect4/Store/Domain/Word.lean));
++   `word_wf` is `Word.wf` Word.wf (src/Effect4/Store/Domain/Word.lean); `apply_word` is `Word.apply` Word.apply (src/Effect4/Store/Domain/Word.lean); `verify` is `Store.verify`
+    (Store.verify (src/Effect4/Store/Domain/Word.lean)).  The pack holds the nodes, an index finds them, the control file holds the
+    roots and the durable end.
+ 
+@@ -297,10 +297,10 @@
+ val mem : ro -> E4_addr.Addr.t -> bool
+ 
+ val resolves : ro -> E4_addr.Ref.t -> bool
+-(** `Store.Resolves` (:182): a node is filed at that digest, at that kind. *)
++(** `Store.Resolves` Store.Resolves (src/Effect4/Store/Domain/Store.lean): a node is filed at that digest, at that kind. *)
+ 
+ val nodes : ro -> (E4_addr.Addr.t * E4_node.t) list
+-(** `Store.nodes` (:73-75): the bindings in INSERTION order, which is the pack's write order.
++(** `Store.nodes` Store (src/Effect4/Store/Domain/Store.lean): the bindings in INSERTION order, which is the pack's write order.
+     Order-dependent by construction — that is what L-CAS-7 is about. *)
+ 
+ val addresses : ro -> E4_addr.Addr.t list
+@@ -315,7 +315,7 @@
+ 
+ val advance_root :
+   t -> ?prev:E4_addr.Addr.t -> E4_control.root -> (unit, E4_control.root_error) result
+-(** `Store.putRoot` (:523-530) with the version, dangling and kind checks all real: the
++(** `Store.putRoot` Store.putRoot (src/Effect4/Store/Domain/Store.lean) with the version, dangling and kind checks all real: the
+     resolver is this store's own kind lookup.  Commits the pack first (D7) and the control
+     file after, so a root never names a node that is not durable. *)
+ 
+@@ -335,10 +335,10 @@
+ (** `Word.Binding` (Binding (src/Effect4/Store/Domain/Word.lean)). *)
+ 
+ val word_wf : binding list -> bool
+-(** `Word.wf` (:70): children first, digests exact, no digest twice. *)
++(** `Word.wf` Word.wf (src/Effect4/Store/Domain/Word.lean): children first, digests exact, no digest twice. *)
+ 
+ val closure : ro -> E4_addr.Ref.t -> binding list
+-(** `Store.closure` (:346): the reachable subgraph of a reference, children first, each digest
++(** `Store.closure` Store.closure (src/Effect4/Store/Domain/Word.lean): the reachable subgraph of a reference, children first, each digest
+     once, with `Word.emit`'s guard, at fuel `count`.  Order-independent (L-CAS-7). *)
+ 
+ type word_error =
+@@ -350,7 +350,7 @@
+       (** a binding whose address holds a record that does not hash to it (CS1) *)
+ 
+ val apply_word : t -> binding list -> (unit, word_error) result
+-(** `Word.apply` (:73-81): a fold of `put`; a `Duplicate` is fine, a `Conflict` or a `Corrupt`
++(** `Word.apply` Word.apply (src/Effect4/Store/Domain/Word.lean): a fold of `put`; a `Duplicate` is fine, a `Conflict` or a `Corrupt`
+     refuses. *)
+ 
+ val verify : ro -> (unit, verify_error) result
+--- a/ocaml/engine/cas/e4_node.mli
++++ b/ocaml/engine/cas/e4_node.mli
+@@ -1,7 +1,7 @@
+ (* E4_node — the node envelope: version, kind, spec, payload; the edge scan; the address.
+ 
+    What it is: `Node.encode` / `Node.decode` (Node.encode (src/Effect4/Store/Domain/Node.lean)) as OCaml,
+-   plus the edge scan `Val.refs` (:241-255), the malformed-ref test (:260-266) and the handle
++   plus the edge scan `Val.refs` Val.refs (src/Effect4/Store/Domain/Node.lean), the malformed-ref test Val.malformedRef (src/Effect4/Store/Domain/Node.lean) and the handle
+    scan, done as ONE flat frame walk over the payload bytes with no value tree allocated.
+    Knock-on O3 records that the OCaml estate had no node envelope at all: `encode_program`
+    (ocaml/eff/eff_wire.ml:1056-1058) writes *payload* bytes.  This is the envelope around them.
+@@ -24,7 +24,7 @@
+        every n with version 0 and a payload that is one well-formed frame tree
+        (`Node.decode_encode`, Node.decode_encode (src/Effect4/Store/Domain/Node.lean)).                    by construction; tested
+    ND2 Exact: `decode b = Ok n -> b = encode n`, so a trailing byte, a version other than 0, an
+-       unregistered kind byte and a short spec are all refusals (`Node.decode_exact`, :204).
++       unregistered kind byte and a short spec are all refusals Node.decode_exact (src/Effect4/Store/Domain/Node.lean).
+        The refusal reported is the first failing test in the order version -> kind -> spec ->
+        payload; Lean answers `none` for all of them alike, so the constructor is this side's
+        diagnosis and never a semantic difference.                            tested
+@@ -42,7 +42,7 @@
+        `handle_in_content` is `is_content kind && handles <> []` (amendment M2).      tested
+    ND7 `edges` is `{kind = Schema; addr = spec} :: refs`; `checked_edges` drops edge 0 exactly
+        for the genesis (kind Schema with the zero spec) and for nothing else
+-       (`Node.checkedEdges`, :297).                                          tested
++       Node.checkedEdges (src/Effect4/Store/Domain/Node.lean).                                          tested
+    ND8 A frame whose be64 length is >= 2^62 is `Host_limit`, never misread (amendment M9;
+        `E4_be.read_be64` refuses, e4_be.mli:58-59, transcribing eff_frame.ml:159-167).  The
+        OCaml byte language is therefore strictly contained in Lean's, whose `Val.WF` bound is
+@@ -72,7 +72,8 @@
+        Lean's Nat is unbounded and a stored node may legitimately carry a 20-digit natural, so
+        refusing it here would make this host narrower than Lean for no gain.  A `handle` key
+        IS bounded (Host_limit above 2^62-1): a handle is an allocation index of this host's
+-       machine, and `Sys.max_string_length` bounds the host allocation.
++       machine. `E4_be.nat_of_digits` (ocaml/engine/bytes/e4_be.ml) delegates to
++       `Eff_frame.decode_nat` (ocaml/eff/eff_frame.ml), which refuses values above max_int.
+    D2  Added beside §1.5's list: `make` (which enforces the 32-byte spec so `edges` is total),
+        `scan_payload` / `payload_ok` / `scan_malformed_ref` / `scan_handles` (one traversal for
+        lane P4 rather than three), `check_pure` with `pure_refusal`, and `oversize` /
+@@ -156,13 +157,13 @@
+ (** Thirty-two zero bytes (zeroDigest (src/Effect4/Store/Domain/Node.lean)). *)
+ 
+ val is_genesis : t -> bool
+-(** kind = Schema && spec = zero_digest (Node.IsGenesis, :291). *)
++(** kind = Schema && spec = zero_digest Node.IsGenesis (src/Effect4/Store/Domain/Node.lean). *)
+ 
+ val edges : t -> E4_addr.Ref.t list
+-(** {Schema; spec} :: refs (Node.edges, :287) (ND7). *)
++(** {Schema; spec} :: refs Node.edges (src/Effect4/Store/Domain/Node.lean) (ND7). *)
+ 
+ val checked_edges : t -> E4_addr.Ref.t list
+-(** Node.checkedEdges (:297): [edges], or [refs] alone for the genesis (ND7). *)
++(** Node.checkedEdges Node.checkedEdges (src/Effect4/Store/Domain/Node.lean): [edges], or [refs] alone for the genesis (ND7). *)
+ 
+ (* ---- the admission tests that are functions of the node alone (ND10) ---- *)
+ 
+--- a/ocaml/engine/cas/e4_control.mli
++++ b/ocaml/engine/cas/e4_control.mli
+@@ -4,8 +4,8 @@
+    lock; read by anyone.  It carries the roots plane (Store.putRoot (src/Effect4/Store/Domain/Store.lean))
+    verbatim, the pack's durable end (`pack_end`), the index's coverage, a monotone
+    `generation` and a reserved-tag `status` field.  The shape is irmin-pack's discipline as
+-   docs/research/2026-09-07-ocaml-ecosystem-survey.md row #4 transcribes it (`:243-278`,
+-   `version.ml` + `unix/control_file.ml`), and proposal 22: fixed-width ASCII version FIRST,
++   docs/research/2026-09-07-ocaml-ecosystem-survey.md row #4 transcribes it
++   (`version.ml` + `unix/control_file.ml`), and proposal 22: fixed-width ASCII version FIRST,
+    the checksum computed over the payload with its own field ZEROED, `status` LAST so that
+    everything before it sits at a fixed offset, reserved status tags a future writer may use
+    and an old reader may tag-decode and preserve, and tmp-write + atomic rename.
+@@ -61,7 +61,7 @@
+    The fixed part is therefore 6 + 8 + 56 = 70 bytes, plus 44 + name_len per root, plus 1 for
+    the status tag.
+ 
+-   One consequence the survey argues at `:273-278` and this file makes operational: the ASCII
++   One consequence the survey argues in row #4 and this file makes operational: the ASCII
+    version distinguishes a STALE BINARY (the version does not match) from CORRUPTION (the
+    version matches and the checksum fails).  They are two different operator actions, so they
+    are two different constructors of [open_error].
+@@ -98,7 +98,7 @@
+        `set_ledger_generation`, `bump` — increments it, and `commit` writes what it is given.
+        A reader that re-reads and sees the same generation saw the same roots.
+                                                                        by construction; tested
+-   CF8 Roots are head-first, as `Store.putRoot` conses (`:527`): the moved root is the head and
++   CF8 Roots are head-first, as `Store.putRoot` conses Store.putRoot (src/Effect4/Store/Domain/Store.lean): the moved root is the head and
+        the resident of that name is filtered out, so a name appears at most once and
+        `roots` has the same order the Lean plane does.                     tested: golden G3
+    CF9 Every be64 field is refused at or above 2^62 (amendment M9, the host limit): it is
+--- a/ocaml/engine/cas/e4_node.ml
++++ b/ocaml/engine/cas/e4_node.ml
+@@ -57,9 +57,9 @@
+    One frame is `tag :: be64 len :: payload` (Val.encode (src/Effect4/Store/Carrier/Val.lean), the
+    `framed` rule; E4_be.read_frame is the reader).  A region is a byte range that must hold a
+    given number of frames back to back: rem = -1 for "as many as fit exactly" (a list's
+-   elements, a ctor's arguments, Val.lean's `decodeSeq`), 2 for a pair (:595-601), 1 for a
+-   `some` (:603-606) and for the payload of a node as a whole (`Val.decode` is one tree and
+-   nothing else, :985).
++   elements and a ctor's arguments), 2 for a pair, and 1 for `some`.
++   `Val.decodeBody` and `Val.decodeSeq` (src/Effect4/Store/Carrier/Val.lean) own those cases.
++   `Val.decode` in that file reads exactly one tree, as the node payload requires.
+ 
+    Descend only into tags 4, 5, 7, 10.  Tag 8 (`bytes`) is a LEAF: `Val.refs (.bytes bs) = []`
+    (Val.refs (src/Effect4/Store/Domain/Node.lean)), so a bytes payload that happens to be a valid ref frame yields no ref
+@@ -208,7 +208,7 @@
+   | () -> Ok ()
+   | exception Refuse e -> Error e
+ 
+-(* Val.refs (Val.refs (src/Effect4/Store/Domain/Node.lean)) and Val.malformedRef (:260-266) in one pass: a ref frame
++(* `Val.refs` and `Val.malformedRef` (src/Effect4/Store/Domain/Node.lean) in one pass: a ref frame
+    contributes a Ref exactly when its kind byte is registered AND its digest is 32 bytes, and
+    is malformed in every other case. *)
+ let scan_payload (p : string) : (scan, decode_error) result =
+@@ -262,7 +262,7 @@
+ (* address (src/Effect4/Store/Domain/Node.lean) `address` -- sha256 of the node bytes and of nothing else. *)
+ let address (n : t) : E4_addr.Addr.t = E4_addr.Addr.of_digest (E4_sha256.digest (encode n))
+ 
+-(* Node.IsGenesis (src/Effect4/Store/Domain/Node.lean) IsGenesis, :287 edges, :297 checkedEdges. *)
++(* `Node.IsGenesis`, `Node.edges`, and `Node.checkedEdges` (src/Effect4/Store/Domain/Node.lean). *)
+ let is_genesis (n : t) : bool =
+   E4_kind.equal n.kind E4_kind.Schema && String.equal n.spec zero_digest
+ 
+--- a/ocaml/engine/cas/e4_cas.ml
++++ b/ocaml/engine/cas/e4_cas.ml
+@@ -386,7 +386,8 @@
+     in
+     go admission_stages
+ 
+-(* `Store.checkAll` (Store.checkEdges (src/Effect4/Store/Domain/Store.lean)) over `Node.checkedEdges` (:297): in order, spec edge
++(* `Store.checkAll` (src/Effect4/Store/Domain/Store.lean) over
++   `Node.checkedEdges` (src/Effect4/Store/Domain/Node.lean): in order, spec edge
+    first, the genesis exempt from it and nothing else. *)
+ let check_edges view (n : E4_node.t) =
+   let rec go = function
+--- a/ocaml/engine/tools/api_engine_prelude.ml
++++ b/ocaml/engine/tools/api_engine_prelude.ml
+@@ -91,7 +91,7 @@
+ let sh_machine_completed_exits m = F.completed m.fibers
+ 
+ (* Effect4.Machine.RunFiber.make, RunFiber.make (src/Effect4/Machine/Fibers.lean), with
+-   `core.start current interruptible` at the `frameCore` instance (:204) spelled out:
++   `core.start current interruptible` at `frameCore` (src/Effect4/Machine/Fibers.lean), spelled out:
+    `Effect4.FrameFiber.start` is `⟨current, [], true, none, false⟩` and `make` overrides
+    `interruptible`.  Transcribed rather than called, because the two specialisations of
+    `RunFiber.make` were callees of `Api.load` and of `spawn`, which this table deletes, and
+@@ -170,7 +170,7 @@
+    (parent, child_id))
+ 
+ (* Effect4.Machine.dropObservers, dropObservers (src/Effect4/Machine/Fibers.lean): the bulk,
+-   id-preserving map over the fiber table.  The observer filter (:1345-1348) is transcribed
++   id-preserving map over the fiber table.  The filter in `dropObservers` (src/Effect4/Machine/Fibers.lean) is transcribed
+    here rather than called, because its own specialisation is a callee of the map's and is
+    deleted with it.  The third argument is `List.mapTR.loop`'s accumulator, always `[]`. *)
+ let sh_drop_observer_keep token = function
+@@ -190,9 +190,9 @@
+ (* -- the ref heap ------------------------------------------------------------------------ *)
+ 
+ (* Effect4.Machine.refStep, refStep (src/Effect4/Machine/Stores.lean), arm for arm.
+-   `refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,
+-   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,
+-   `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it
++   `refPeek` (`heap[cell.index]?`) is `M.find_opt`; `refPoke` (`heap.set i v`) is `M.set`,
++   with an absent index unchanged. Both declarations live in src/Effect4/Machine/Stores.lean.
++   `refStep` at `SyncOp.refMake` there returns `(Val.cell ⟨heap.length⟩, heap ++ [initial])`; it
+    applies `List.length` and `++` to the carrier inline.  `Val.cell k` is `Val.handle 2 k`.
+    A read-modify-write row carries a binder term and its environment (decisions row 43) and
+    runs the term at `env ++ [a]`: `eval_term` is `Effect4.Program.evalTerm`, generated below
+@@ -355,7 +355,7 @@
+ 
+ (* The world itself stays a list (engine-a1 §1.2: `syncOpStep`'s memoFork arm appends to it
+    inline and `syncOpStep` must stay generated); only `MemoMap.entries` is tabled.
+-   `mapAt` (MemoWorld.mapAt (src/Effect4/Machine/Stores.lean)) and `setMap` (:862-863) are transcribed here rather than
++   `MemoWorld.mapAt` and `MemoWorld.setMap` (src/Effect4/Machine/Stores.lean) are transcribed here rather than
+    called, because both are list operations over the world and both would otherwise be
+    orphaned by the four rows below. *)
+ let sh_memo_map_at w id = List.find_opt (fun (m : memo_map) -> m.id = id) w
+--- a/ocaml/engine/test/prop_fibers_view.ml
++++ b/ocaml/engine/test/prop_fibers_view.ml
+@@ -63,7 +63,8 @@
+ 
+ (* ------------------------------------------------------- the smallest fiber record.
+    This independent carrier fixture records the three fields these laws observe: the id
+-   (RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)), the exit (:609, :1543) and the observers (:1256, :1344). *)
++   (RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)), `RunMachine.finished`, `RunMachine.completedExits`, and `dropObservers`
++   (src/Effect4/Machine/Fibers.lean). *)
+ type fiber = { id : int; exit_ : int option; observers : int list }
+ 
+ let exit_of f = f.exit_
+@@ -74,14 +75,14 @@
+ let lean_completed (fs : fiber list) : (int * int) list =
+   List.filter_map (fun f -> match f.exit_ with Some e -> Some (f.id, e) | None -> None) fs
+ 
+-(* RunMachine.update (:577-579) — the replace-by-key map, a no-op on an absent id *)
++(* RunMachine.update (src/Effect4/Machine/Fibers.lean) — the replace-by-key map, a no-op on an absent id *)
+ let lean_update (fs : fiber list) (f : fiber) : fiber list =
+   List.map (fun g -> if g.id = f.id then f else g) fs
+ 
+-(* spawn (:867, :877) *)
++(* spawn (src/Effect4/Machine/Fibers.lean) *)
+ let lean_spawn (fs : fiber list) (child : fiber) : fiber list = fs @ [ child ]
+ 
+-(* dropObservers (:1254-1260, :1344-1348) *)
++(* dropObservers (src/Effect4/Machine/Fibers.lean) *)
+ let drop_step (token : int) (g : fiber) : fiber =
+   { g with observers = List.filter (fun t -> t <> token) g.observers }
+ 
+--- a/ocaml/engine/test/dune
++++ b/ocaml/engine/test/dune
+@@ -13,7 +13,7 @@
+ 
+ ; lane Q1 — the dispatcher.
+ ;   test_buckets  E4_buckets over BOTH carriers, the 100 000-op differential against
+-;                 dispatcher_ref (the literal transcription of Fibers.lean:115-155), and the
++;                 dispatcher_ref (Dispatcher in src/Effect4/Machine/Fibers.lean), and the
+ ;                 B-Q1a/B-Q1b bench at p in {1,4,16,256}.
+ ; The due queue, the wake protocol and the timer store are the machine's own
+ ; (src/Effect4/Machine/Wake.lean, src/Effect4/Machine/Timer.lean), made from LCNF into
+--- a/ocaml/engine/test/test_replay_steps.ml
++++ b/ocaml/engine/test/test_replay_steps.ml
+@@ -246,7 +246,7 @@
+   print_endline "== the refusal ==";
+   (* WHERE A REFUSAL COMES FROM.  `Stuck` has three constructors -- unknownFiber,
+      unknownScope, unknownRace (Stuck (src/Effect4/Machine/Fibers.lean)) -- and none of them is reachable from the
+-     DECISION alphabet: `stepDecisionState` (:1962-1982) either drives a command loop or, for
++     DECISION alphabet: stepDecisionState (src/Effect4/Machine/Fibers.lean) either drives a command loop or, for
+      `interruptFrom` on an id the machine never minted, answers `(m, true)` and changes
+      nothing.  The six candidates below are measured and every one of them answers `finished`.
+      A refusal comes from a COMMAND: `join` on a fiber that does not exist
+--- a/ocaml/engine/test/prop_table.ml
++++ b/ocaml/engine/test/prop_table.ml
+@@ -302,7 +302,7 @@
+ let tl2 () =
+   (* TL2: for a monotone (machine-reachable) allocation sequence the twin's INSERTION order
+      and its ascending `bindings` coincide — the licence A1 §4.2 states for the fiber table
+-     and refStep (src/Effect4/Machine/Stores.lean)/:1366 state for the dense heaps. *)
++     and `refStep` and `DeferredStore.make` (src/Effect4/Machine/Stores.lean) state for the dense heaps. *)
+   let ok = ref true in
+   List.iter
+     (fun n ->
+--- a/ocaml/engine/test/prop_memo.ml
++++ b/ocaml/engine/test/prop_memo.ml
+@@ -2,8 +2,8 @@
+    2026-09-08-engine-a1-state.md §4.6 MM1-MM7, and risk R5).
+ 
+    MM2 is the reason this file exists.  Lean's `insertEntry` APPENDS a duplicate
+-   (MemoWorld.insertEntry (src/Effect4/Machine/Stores.lean)) and `find?` answers the FIRST (:867), while
+-   `updateEntry` (:873) and `deleteEntry` (:886) touch ALL matching entries.  The map carrier
++   (MemoWorld.insertEntry (src/Effect4/Machine/Stores.lean)) and `find?` answers the FIRST MemoWorld.entryAt (src/Effect4/Machine/Stores.lean), while
++   `updateEntry` MemoWorld.updateEntry (src/Effect4/Machine/Stores.lean) and `deleteEntry` MemoWorld.deleteEntry (src/Effect4/Machine/Stores.lean) touch ALL matching entries.  The map carrier
+    keeps the existing binding instead of appending — a different VALUE, the same
+    OBSERVATIONS.  The twin e4_memo_list.ml reproduces Lean's list, duplicates included, and
+    the differential below asserts the observations agree at EVERY key after EVERY operation.
+--- a/ocaml/engine/test/bench_carriers.ml
++++ b/ocaml/engine/test/bench_carriers.ml
+@@ -41,14 +41,15 @@
+ 
+ (* --------------------------------------------------- Lean's carriers, written out *)
+ 
+-(* List.set (Lean core; refPoke refPeek (src/Effect4/Machine/Stores.lean), setCell :1374) *)
++(* List.set: refPoke and DeferredStore.setCell (src/Effect4/Machine/Stores.lean) *)
+ let rec list_set (xs : 'a list) (i : int) (v : 'a) : 'a list =
+   match xs with [] -> [] | x :: r -> if i = 0 then v :: r else x :: list_set r (i - 1) v
+ 
+-(* xs[i]? (refPeek RefHeap (src/Effect4/Machine/Stores.lean)) *)
++(* xs[i]?: refPeek (src/Effect4/Machine/Stores.lean) *)
+ let list_get (xs : 'a list) (i : int) : 'a option = List.nth_opt xs i
+ 
+-(* xs ++ [v] (refMake refStep (src/Effect4/Machine/Stores.lean), RunMachine.emit RunMachine.emit (src/Effect4/Machine/Fibers.lean), spawn :877) *)
++(* xs ++ [v]: refStep at SyncOp.refMake (src/Effect4/Machine/Stores.lean);
++   RunMachine.emit and spawn (src/Effect4/Machine/Fibers.lean) *)
+ let list_append_one (xs : 'a list) (v : 'a) : 'a list = xs @ [ v ]
+ 
+ type fiber = { id : int; w : int }
+--- a/ocaml/engine/test/dispatcher_ref.ml
++++ b/ocaml/engine/test/dispatcher_ref.ml
+@@ -2,8 +2,8 @@
+    dispatcher, Dispatcher (src/Effect4/Machine/Fibers.lean), into OCaml.
+ 
+    It is deliberately the SLOW shape. `insert` appends with `tasks ++ [task]` exactly as
+-   Dispatcher.insert (src/Effect4/Machine/Fibers.lean) does, `drain` is `(d.buckets.map Bucket.tasks).flatten` exactly as :153
+-   does, and `enqueue` sets `armed := true` exactly as :147 does. Nothing is optimised: the
++   Dispatcher.insert (src/Effect4/Machine/Fibers.lean) does, `drain` is `(d.buckets.map Bucket.tasks).flatten` exactly as Dispatcher.drain (src/Effect4/Machine/Fibers.lean)
++   does, and `enqueue` sets `armed := true` exactly as Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean) does. Nothing is optimised: the
+    point of this file is that it can be read line by line against the Lean and seen to be the
+    same function, so that a differential against it is evidence about E4_buckets and not about
+    a second clever implementation.
+--- a/ocaml/engine/bytes/e4_sha256.mli
++++ b/ocaml/engine/bytes/e4_sha256.mli
+@@ -11,8 +11,8 @@
+    S1  FIPS 180-4 test vectors: "" , "abc", the 56-byte and 112-byte NIST messages, and
+        one million 'a' -- the last as a streamed feed.                            tested
+    S2  Lean agreement: the three digests src/Effect4/Store/Carrier/Digest.lean #guards
+-       (`sha256 [] = e3b0c442…` :302, `sha256 [0xb4,0x19,0x0e] = dff2e730…` :303,
+-       `sha256 (Val.encode sampleEntry) = 8fab1618…` :315) are reproduced byte for byte.
++       (`sha256 [] = e3b0c442…`, `sha256 [0xb4,0x19,0x0e] = dff2e730…`,
++       `sha256 (Val.encode sampleEntry) = 8fab1618…`) are reproduced byte for byte.
+        The third input is built in the test out of E4_be frames from
+        `sampleEntry = .ctor 0 [.str "Effect", .str "gen", .ctor 0 [], .nat 1947]`
+        (sampleEntry (src/Effect4/Store/Carrier/Val.lean)), so the vector also pins E4_be.      tested
+--- a/ocaml/engine/bytes/e4_hex.mli
++++ b/ocaml/engine/bytes/e4_hex.mli
+@@ -3,9 +3,9 @@
+    Depends on: the OCaml standard library only.
+ 
+    Behaviours:
+-   H1  Lowercase out: `of_bytes` writes 0-9 then a-f (Digest.hexDigit, :63).
++   H1  Lowercase out: `of_bytes` writes 0-9 then a-f hexDigit (src/Effect4/Store/Carrier/Digest.lean).
+                                                                         by construction
+-   H2  Either case in: `to_bytes` reads 0-9, a-f and A-F (Digest.hexVal, :66-70).
++   H2  Either case in: `to_bytes` reads 0-9, a-f and A-F hexVal (src/Effect4/Store/Carrier/Digest.lean).
+                                                                         by construction
+    H3  Round trip: `to_bytes (of_bytes b) = Some b`
+        (Digest.bytesOfHexCodes_hexCodes).                               tested (property)
+@@ -17,7 +17,8 @@
+        (Digest.utf8Bytes_map_ofNat) -- this module never touches String.get_utf_8_uchar.
+                                                                         by construction
+ 
+-   Pinned by Digest.lean's own #guards (:306-314), which are the tests:
++   Pinned by the `bytesOfHex`, `hexOfBytes`, and `Digest.ofHex?` guards in
++   src/Effect4/Store/Carrier/Digest.lean:
+    bytesOfHex ['f';'f';'0';'0'] = some [255,0], ['F';'F';'0';'a'] = some [255,10],
+    ['g';'0'] = none, ['0'] = none, hexOfBytes [255,10] = ['f';'f';'0';'a'],
+    Digest.ofHex? "E3B0…B855" = some (sha256 []), ofHex? "e3b0" = none, ofHex? "" = none.
+@@ -31,4 +32,4 @@
+ (** None on an odd length or a non-digit.  Accepts either case. *)
+ 
+ val digest_of_hex : string -> string option
+-(** to_bytes, then exactly 32 bytes or None -- `Effect4.Store.Digest.ofHex?` (:257-261). *)
++(** to_bytes, then exactly 32 bytes or None -- Digest.ofHex? (src/Effect4/Store/Carrier/Digest.lean). *)
+--- a/ocaml/engine/bytes/test/test_math.ml
++++ b/ocaml/engine/bytes/test/test_math.ml
+@@ -3,9 +3,9 @@
+    What it checks, and against what:
+      S*  E4_sha256: the FIPS 180-4 vectors ("", "abc", the 56- and 112-byte messages, one
+          million 'a'), the two byte-vector #guards of sha256 (src/Effect4/Store/Carrier/Digest.lean),
+-         the third #guard (:315) over `Val.encode sampleEntry` — whose input is BUILT here
++         the third `sha256` guard over `Val.encode sampleEntry` — whose input is BUILT here
+          out of E4_be frames from sampleEntry (src/Effect4/Store/Carrier/Val.lean) and checked against that
+-         file's own three shape #guards (:1153-1155) — the streaming law, and the throughput
++         file's `sampleEntry` encoding guards — the streaming law, and the throughput
+          of a 64 MiB buffer.
+      H*  E4_hex: the #guards of Digest.ofHex? (src/Effect4/Store/Carrier/Digest.lean) and the two round-trip laws as
+          properties over pseudo-random input (a fixed LCG, so the run is reproducible).
+@@ -40,7 +40,7 @@
+ (* ============================================================ E4_hex *)
+ 
+ let test_hex () =
+-  print_endline "-- E4_hex: hexOfBytes (src/Effect4/Store/Carrier/Digest.lean) and its #guards (:306-314)";
++  print_endline "-- E4_hex: hexOfBytes (src/Effect4/Store/Carrier/Digest.lean) and its byte and hex guards";
+   check "H1 of_bytes [255;10] = \"ff0a\"" (E4_hex.of_bytes "\xff\x0a" = "ff0a");
+   check "H1 of_bytes \"\" = \"\"" (E4_hex.of_bytes "" = "");
+   check "H2 to_bytes \"ff00\" = Some [255;0]" (E4_hex.to_bytes "ff00" = Some "\xff\x00");
+@@ -161,7 +161,7 @@
+     let n = n land max_int in
+     if E4_be.read_be64 (E4_be.be64 n) 0 <> Some n then be_ok := false
+   done;
+-  check "B2 read_be64 (be64 n) = Some n, 2000 random n in 0..max_nat" !be_ok;
++  check "B2 read_be64 (be64 n) = Some n, 2000 random n in 0..max_int" !be_ok;
+   check "B5 read_be64 refuses a top byte >= 0x40 (a length at or above 2^62)"
+     (E4_be.read_be64 "\x40\000\000\000\000\000\000\000" 0 = None
+      && E4_be.read_be64 "\xff\xff\xff\xff\xff\xff\xff\xff" 0 = None
+--- a/ocaml/engine/cas/test/test_bytes.ml
++++ b/ocaml/engine/cas/test/test_bytes.ml
+@@ -3,12 +3,12 @@
+    What it checks, and against what:
+      C*  E4_crc: the five standard CRC-32 vectors, composition over every split, the window
+          form, the 32-bit range, and the be32 field.
+-     K*  E4_kind: the table of Kind.byte (src/Effect4/Store/Carrier/Kind.lean) and its ten #guards
+-         (:145-158), the reserved append 16..23, and the unregistered-byte refusal.
++     K*  E4_kind: the table and guards of `Kind.byte` and `Kind.ofByte?`
++         (src/Effect4/Store/Carrier/Kind.lean), the append 16..23, and the unregistered-byte refusal.
+      A*  E4_addr: the 32-byte law, the hex delegation to E4_hex, prefix63's range, and the
+          presentation round trips of amendment M6.
+      N*  E4_node: the layout and the exactness refusals of sampleNode (src/Effect4/Store/Domain/Node.lean),
+-         the edge scan #guards (:449-460), the AnyRef frame shape (:462-463), the traversal
++         `Node.refsOf` and `AnyRef` frame guards in src/Effect4/Store/Domain/Node.lean, the traversal
+          order (L-SCAN-1), the bytes-is-a-leaf case (L-SCAN-2, which has no Lean #guard yet —
+          A2 §4.1 G5 says it must exist), the malformed verdicts (L-SCAN-3), the handle scan
+          (M2), the host limit (M9) and the pure admission order of Store.putNode (src/Effect4/Store/Domain/Store.lean).
+@@ -193,8 +193,8 @@
+   check "K1 #guard of_byte 2 = Some export" (E4_kind.of_byte 2 = Some E4_kind.Export);
+   check "K5 #guard of_name \"export\" = Some export, of_name \"Export\" = None"
+     (E4_kind.of_name "export" = Some E4_kind.Export && E4_kind.of_name "Export" = None);
+-  note "Kind.name (src/Effect4/Store/Carrier/Kind.lean)'s #guard `ofByte? 16 = none` does NOT transfer: byte 16 is `job` under";
+-  note "CAS commit 1's append, and amendment M4 moved the unregistered-kind sentinel to 127.";
++  note "Kind.ofByte? (src/Effect4/Store/Carrier/Kind.lean) maps byte 16 to job; the legacy unregistered-byte example no longer applies.";
++  note "Kind.sentinel in that owner is 127, the unregistered-kind witness from amendment M4.";
+ 
+   (* K2: the refusals, at the appended table. *)
+   check "K2 of_byte 127 = None (the sentinel, amendment M4)"
+@@ -370,8 +370,8 @@
+     (E4_node.decode "" = Error E4_node.Short_spec
+      && E4_node.decode "\000" = Error E4_node.Short_spec
+      && E4_node.decode "\000\002" = Error E4_node.Short_spec);
+-  note "Node.decode (src/Effect4/Store/Domain/Node.lean)'s #guard uses kind byte 16; under CAS commit 1 that is `job`, so this";
+-  note "lane uses 127 (amendment M4's sentinel) as the unregistered-byte witness.";
++  note "Node.decode (src/Effect4/Store/Domain/Node.lean) and this lane use byte 127";
++  note "as the unregistered-byte witness (amendment M4).";
+ 
+   (* ND1/ND2 as properties over a spread of kinds and payloads. *)
+   let rt_ok = ref true and exact_ok = ref true in
+--- a/ocaml/engine/cas/e4_index.mli
++++ b/ocaml/engine/cas/e4_index.mli
+@@ -26,7 +26,7 @@
+               | off  (bits  8..50, 43 bits, 8 TiB per segment)
+               | kind (bits  0..7)
+                 vals.(j) = 0 means EMPTY, and no occupied slot can be 0 because
+-                `Kind.byte_pos` (Kind.byte (src/Effect4/Store/Carrier/Kind.lean)) proves every kind byte is at least 1.
++                `Kind.byte_pos` (src/Effect4/Store/Carrier/Kind.lean) proves every kind byte is at least 1.
+ 
+    A prefix collision is not a correctness problem: `find` CONFIRMS by reading the record's own
+    recorded digest at the offset (41 bytes, which the reader touches anyway) and keeps probing
+--- a/ocaml/engine/cas/e4_subterm.mli
++++ b/ocaml/engine/cas/e4_subterm.mli
+@@ -69,8 +69,9 @@
+    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.6's `Subterm` (lane P7,
+    2026-09-08).  Nothing named there is missing or renamed.
+ 
+-   D1  §1.6's `entry` has no family, and it must: a `ProgPath` addresses nodes of five mutually
+-       recursive families (`Node` is `eff | stmts | stmt | action | effs`, EffName (src/Effect4/Program/Compile.lean))
++   D1  §1.6's `entry` has no family, and it must: a `ProgPath` addresses the mutually
++       recursive node sorts (`Node` in src/Effect4/Program/Node.lean):
++       `eff | stmts | stmt | action | effs | layer | layers`
+        and `at_prog_path` cannot say what it found without one.  `family` is added to `entry`.
+    D2  §1.6 says `of_program : string -> t` and does not say what a malformed program does.
+        `of_program` raises and `of_program_opt` is added (SB7); nothing in this estate should
+@@ -165,7 +166,7 @@
+ (* ============================================================ the value side (D3) *)
+ 
+ module Tree : sig
+-  (** `Effect4.Program.Node` (EffName (src/Effect4/Program/Compile.lean)) over `Eff_types`, and
++  (** `Effect4.Program.Node` (src/Effect4/Program/Node.lean) over `Eff_types`, and
+       the family encoders of `Eff_wire`.  This is the second computation SB1 is checked
+       against, and `effSig`'s `children`/`rebuild` half (amendment M18). *)
+ 
+--- a/ocaml/engine/e4_fibers_view.mli
++++ b/ocaml/engine/e4_fibers_view.mli
+@@ -3,8 +3,7 @@
+    parameter, `RunMachine.fibers`, field F2 of docs/research/2026-09-08-engine-a1-state.md
+    §1.2).
+ 
+-   What it is and why it exists.  `RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean:
+-   1541-1543) is `m.fibers.filterMap (fun f => f.exit.map ((f.id, ·)))` and it is called on
++   What it is and why it exists.  `RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean) is `m.fibers.filterMap (fun f => f.exit.map ((f.id, ·)))` and it is called on
+    essentially every step (`Program.evaluateNative`, `Program.exitScoped`, through
+    `interpAt`).  Over a `TABLE` that is a Θ(N) `Map.fold` per step — 62.7 % inclusive on
+    fan-out 512 after lane G2 (that receipt §6).  A cache does not fix it: lane G2 built the
+--- a/ocaml/engine/bytes/e4_be.mli
++++ b/ocaml/engine/bytes/e4_be.mli
+@@ -1,7 +1,6 @@
+ (* E4_be — the canonical framing.
+ 
+-   What it is: the engine's name for the byte rule of src/Effect4/Store/Domain/Canonical.lean and
+-   src/Effect4/Program/Wire.lean:
++   What it is: the engine's name for `framed` (src/Effect4/Store/Carrier/Val.lean):
+ 
+      framed tag payload = tag :: be64 (String.length payload) ++ payload,  be64 = 8 big-endian
+      bytes; a natural is base-256 big-endian with no leading zero and 0 is the empty digit
+--- a/ocaml/engine/test/test_log.ml
++++ b/ocaml/engine/test/test_log.ml
+@@ -18,7 +18,7 @@
+    and a `Val.str` payload holding a comma and a paren inside quotes -- and the segment law
+    (a decision's rows are contiguous, design-language §1.6).
+ 
+-   The carrier's own checks (`Vec` is `Lcnf_array`) are ocaml/lcnf/test_lcnf.ml's.
++   The carrier's own checks are in ocaml/lcnf/test_lcnf.ml and test_array_conversion.ml.
+ 
+    Everything here is pure: no engine, no machine, no tape.  The engine's own rows are the
+    subject of test_query.ml.
+--- a/ocaml/engine/test/prop_trace.ml
++++ b/ocaml/engine/test/prop_trace.ml
+@@ -196,6 +196,6 @@
+   tr7 st;
+   tr9 ();
+   argue "TR3 emit is O(length evs); to_list is O(length t), called once per run"
+-    "emit is one Lcnf_array.push per event onto the open chunk (a cons, plus one 256-element array and one Map insertion every 256 events) and never walks t; to_list is one Vec.fold and one List.rev; the numbers are in test/bench_carriers.ml";
++    "emit is one Lcnf_array.push per event onto the open chunk (a cons, plus one 256-element array and one Map insertion every 256 events) and never walks t; to_list delegates to Lcnf_array.to_list, which uses a bounded temporary array or its fold/reverse fallback; allocation observations are in ocaml/lcnf/test_array_conversion.ml";
+   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;
+   exit (if !failures = 0 then 0 else 1)
+--- a/ocaml/engine/e4_log.ml
++++ b/ocaml/engine/e4_log.ml
+@@ -2,7 +2,7 @@
+    The property list L1-L5 and the measurement are in e4_log.mli.
+ 
+    The carrier is `Lcnf_array` (ocaml/lcnf), the one owner of the chunked vector: this module's
+-   `Vec` was that structure until slice 3.2 of the OCaml estate refactor moved it there, where
++   The log held that structure until slice 3.2 moved it to that owner, where
+    generated code spells Lean's `Array` with it too. Its frozen chunks are what L5 rests on
+    (lcnf_array.mli V4). *)
+ 
+--- a/src/Effect4/Store/Domain/Genesis.lean
++++ b/src/Effect4/Store/Domain/Genesis.lean
+@@ -13,7 +13,7 @@
+ 
+ `src/Effect4/Store/Domain/Node.lean` writes everything that needs `Canonical Document` — the meta-schema, the
+ genesis node, `specOf`, `nodeOf`, `address` and the lattice — under `variable [Content
+-Document]`, and `Store/Derived/Schema.lean` derives `Canonical Document` from the carrier
++Document]`, and `SchemaGen.DocumentC.instCanonical` (`src/Effect4/Store/Domain/Derived/Schema.lean`) derives `Canonical Document` from the carrier
+ itself. This module supplies the kind, and with it every statement of that section is an
+ ordinary theorem: the meta-schema is the genesis node (`nodeOf_metaSchema'`), the spec of
+ `Document` is the genesis address (`specOf_document`), every other document's node is a schema
+--- a/src/Effect4/Api/RunnerBytes.lean
++++ b/src/Effect4/Api/RunnerBytes.lean
+@@ -18,7 +18,7 @@
+   concatenation (`replayBytes_append`), like `Runner.replay`.
+ * **Every boundary value carries its schema.** `schemas` lists the shape document of every
+   type that crosses, and `schemaBytes` writes one as content, by the instance of `ShapeDoc`
+-  itself (`Store/Derived/Value.lean`).
++  itself (`ValueGen.ShapeDocC.instCanonical`, `src/Effect4/Store/Domain/Derived/Value.lean`).
+ 
+ A value inside a row (a call's request, a reply's answer) is written as its description, the
+ generated sum `Val`. A live handle therefore never enters content as a handle: a shape accepts
+--- a/Test/Store/Templates.lean
++++ b/Test/Store/Templates.lean
+@@ -19,7 +19,7 @@
+ instance in the same environment is an ambiguity rather than a template. The nested-recursion
+ receipts that exercised them are kept below against the derived instance; the printer and
+ document receipts moved with the instance and are that module's own guards
+-(`Store/Derived/Json.lean`, the `JsonAcceptance` section).
++(`JsonAcceptance.samples` and `JsonAcceptance.floats` in `src/Effect4/Store/Domain/Derived/Json.lean`).
+ -/
+ 
+ import Effect4.Store.Domain.Canonical
+@@ -226,7 +226,7 @@
+ 
+ `Json` recurses through `List Json` and through `List (String × Json)`, two levels below its
+ constructor. The hand template that proved it retired with the landing; these are the same
+-round trip and refusal on `Store/Derived/Json.lean`'s generated instance. -/
++round trip and refusal on `JsonGen.JsonC.instCanonicalJson` (`src/Effect4/Store/Domain/Derived/Json.lean`). -/
+ 
+ /-- A JSON value touching every constructor. -/
+ def templateJson : Effect4.Json :=
+--- a/docs/research/2026-10-17-seams/receipts/evidence/K0/citation-moves.json
++++ b/docs/research/2026-10-17-seams/receipts/evidence/K0/citation-moves.json
+@@ -158,7 +158,7 @@
+   {
+     "file": "ocaml/engine/cas/e4_cas.ml",
+     "old": "Store.lean:192-198",
+-    "declaration": "Store.checkEdges",
++    "declaration": "Store.checkAll",
+     "source": "src/Effect4/Store/Domain/Store.lean"
+   },
+   {
+@@ -362,7 +362,7 @@
+   {
+     "file": "ocaml/engine/cas/e4_index.mli",
+     "old": "Kind.lean:137",
+-    "declaration": "Kind.byte",
++    "declaration": "Kind.byte_pos",
+     "source": "src/Effect4/Store/Carrier/Kind.lean"
+   },
+   {
+@@ -764,14 +764,14 @@
+   {
+     "file": "ocaml/engine/cas/e4_subterm.mli",
+     "old": "Compile.lean:51-59",
+-    "declaration": "EffName",
+-    "source": "src/Effect4/Program/Compile.lean"
++    "declaration": "Node",
++    "source": "src/Effect4/Program/Node.lean"
+   },
+   {
+     "file": "ocaml/engine/cas/e4_subterm.mli",
+     "old": "src/Effect4/Program/Compile.lean:51-115",
+-    "declaration": "EffName",
+-    "source": "src/Effect4/Program/Compile.lean"
++    "declaration": "Node",
++    "source": "src/Effect4/Program/Node.lean"
+   },
+   {
+     "file": "ocaml/engine/cas/e4_subterm.mli",
+@@ -1466,13 +1466,13 @@
+   {
+     "file": "ocaml/engine/test/bench_carriers.ml",
+     "old": "Stores.lean:1119-1120",
+-    "declaration": "refPeek",
++    "declaration": "refPoke",
+     "source": "src/Effect4/Machine/Stores.lean"
+   },
+   {
+     "file": "ocaml/engine/test/bench_carriers.ml",
+     "old": "Stores.lean:1116",
+-    "declaration": "RefHeap",
++    "declaration": "refPeek",
+     "source": "src/Effect4/Machine/Stores.lean"
+   },
+   {
+@@ -1882,5 +1882,827 @@
+     "old": "src/Effect4/Machine/Stores.lean:2238",
+     "declaration": "syncOpStep",
+     "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_ppath_list.ml",
++    "old": "(:169)",
++    "declaration": "Node.at_",
++    "source": "src/Effect4/Program/Refs.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo.mli",
++    "old": "`MemoWorld = List MemoMap`, :855",
++    "declaration": "MemoWorld",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo.mli",
++    "old": "syncOpStep's memoFork arm (:2238)",
++    "declaration": "syncOpStep",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo.mli",
++    "old": "(:876-880)",
++    "declaration": "MemoWorld.insertEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo.mli",
++    "old": "(:869-873)",
++    "declaration": "MemoWorld.updateEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo.mli",
++    "old": "(:883-886)",
++    "declaration": "MemoWorld.deleteEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo.mli",
++    "old": "(Lean's map-by-key, :869-873)",
++    "declaration": "MemoWorld.updateEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo.mli",
++    "old": "(:890-904)",
++    "declaration": "MemoWorld.lookup",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo.mli",
++    "old": "make the chain cyclic (:906-910: the model cannot stop a program from forging a\n       path), so the fuel MUST be kept: `lookup` answers None at exhaustion rather than",
++    "declaration": "MemoMap",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.",
++    "declaration": "MemoWorld.entryAt",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.",
++    "declaration": "MemoWorld.insertEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.",
++    "declaration": "MemoWorld.updateEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "MemoWorld.entryAt (src/Effect4/Machine/Stores.lean) operation for operation — DUPLICATES AND ALL.",
++    "declaration": "MemoWorld.deleteEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "(:880)",
++    "declaration": "MemoWorld.insertEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "(:867)",
++    "declaration": "MemoWorld.entryAt",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "(:873)",
++    "declaration": "MemoWorld.updateEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "(:886)",
++    "declaration": "MemoWorld.deleteEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "(Lean :880)",
++    "declaration": "MemoWorld.insertEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "(Lean :873)",
++    "declaration": "MemoWorld.updateEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_memo_list.ml",
++    "old": "(Lean :886)",
++    "declaration": "MemoWorld.deleteEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_fibers_view_list.ml",
++    "old": "(src/Effect4/Machine/Fibers.lean:\n   1543)",
++    "declaration": "RunMachine.completedExits",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_fibers_view_list.ml",
++    "old": "(:577-579 update)",
++    "declaration": "RunMachine.update",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_fibers_view_list.ml",
++    "old": "(:877 spawn)",
++    "declaration": "spawn",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_fibers_view_list.ml",
++    "old": "(:1256, :1344)",
++    "declaration": "dropObservers",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_fibers_view_list.ml",
++    "old": "(:608-609 finished)",
++    "declaration": "RunMachine.finished",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_fibers_view_list.ml",
++    "old": "(:1541-1543)",
++    "declaration": "RunMachine.completedExits",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_fibers_view_list.ml",
++    "old": "(ids are minted monotonically, Fibers.lean:\n        867, :877; lane C's licence, re-verified)",
++    "declaration": "spawn",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_engine.mli",
++    "old": "`settled` (:11330)",
++    "declaration": "settled",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_buckets_list.ml",
++    "old": "exactly as :153 does",
++    "declaration": "Dispatcher.drain",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_buckets_list.ml",
++    "old": "exactly as :147 does",
++    "declaration": "Dispatcher.enqueue",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_buckets_list.ml",
++    "old": "(:140)",
++    "declaration": "Dispatcher.insert",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_buckets_list.ml",
++    "old": "(:153)",
++    "declaration": "Dispatcher.drain",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_buckets_list.ml",
++    "old": "(:147)",
++    "declaration": "Dispatcher.enqueue",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_buckets_list.ml",
++    "old": "(RunMachine.disarm, :632-634)",
++    "declaration": "RunMachine.disarm",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_table.mli",
++    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
++    "declaration": "refPoke",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_table.mli",
++    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
++    "declaration": "DeferredStore.setCell",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_table.mli",
++    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
++    "declaration": "ScopeStore.setEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_table.mli",
++    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
++    "declaration": "refStep",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_table.mli",
++    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
++    "declaration": "DeferredStore.make",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_table.mli",
++    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
++    "declaration": "ScopeStore.make",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_table.mli",
++    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
++    "declaration": "RunMachine.update",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_table.mli",
++    "old": "(refPoke (src/Effect4/Machine/Stores.lean) refPoke, :1374 DeferredStore.setCell) and Lean's\n   replace-by-key `List.map` is a NO-OP on an absent key (:1572 ScopeStore.setEntry,\n   RunMachine.update (src/Effect4/Machine/Fibers.lean) RunMachine.update), whereas allocation is an APPEND (refStep (src/Effect4/Machine/Stores.lean)\n   refMake, :1366 DeferredStore.make, :1576 ScopeStore.make, spawn (src/Effect4/Machine/Fibers.lean) spawn).",
++    "declaration": "spawn",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :775 *)",
++    "declaration": "fiber_id",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :651 *)",
++    "declaration": "stuck",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :234 *)",
++    "declaration": "parked",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :353-359 *)",
++    "declaration": "observer",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :540 *)",
++    "declaration": "scope_mode",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :78 *)",
++    "declaration": "outcome",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :749 *)",
++    "declaration": "service",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :778 *)",
++    "declaration": "context",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :235 *)",
++    "declaration": "ctx",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :408-426 *)",
++    "declaration": "prim",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :765-772 *)",
++    "declaration": "frame_event",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :734 *)",
++    "declaration": "task",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :174-195 *)",
++    "declaration": "run_event",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(* :69-76 *)",
++    "declaration": "run_decision",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(** [Effect4.Program.EffName], api_engine.ml:279 *)",
++    "declaration": "eff_name",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/e4_engine_intf.ml",
++    "old": "(** [Effect4.Program.EffThunk], api_engine.ml:392 *)",
++    "declaration": "eff_thunk",
++    "source": "ocaml/engine/api_engine.ml"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.mli",
++    "old": "(:87)",
++    "declaration": "Store.find",
++    "source": "src/Effect4/Store/Domain/Store.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.mli",
++    "old": "(:523-530)",
++    "declaration": "Store.putRoot",
++    "source": "src/Effect4/Store/Domain/Store.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.mli",
++    "old": "(:70)",
++    "declaration": "Word.wf",
++    "source": "src/Effect4/Store/Domain/Word.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.mli",
++    "old": "(:73)",
++    "declaration": "Word.apply",
++    "source": "src/Effect4/Store/Domain/Word.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.mli",
++    "old": "(:182)",
++    "declaration": "Store.Resolves",
++    "source": "src/Effect4/Store/Domain/Store.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.mli",
++    "old": "(:73-75)",
++    "declaration": "Store",
++    "source": "src/Effect4/Store/Domain/Store.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.mli",
++    "old": "(:346)",
++    "declaration": "Store.closure",
++    "source": "src/Effect4/Store/Domain/Word.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.mli",
++    "old": "(:73-81)",
++    "declaration": "Word.apply",
++    "source": "src/Effect4/Store/Domain/Word.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "(:241-255)",
++    "declaration": "Val.refs",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "(:260-266)",
++    "declaration": "Val.malformedRef",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "(`Node.decode_exact`, :204)",
++    "declaration": "Node.decode_exact",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "(`Node.checkedEdges`, :297)",
++    "declaration": "Node.checkedEdges",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "(Node.IsGenesis, :291)",
++    "declaration": "Node.IsGenesis",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "(Node.edges, :287)",
++    "declaration": "Node.edges",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "(:297)",
++    "declaration": "Node.checkedEdges",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "machine, and `Sys.max_string_length` bounds the host allocation.",
++    "declaration": "nat_of_digits",
++    "source": "ocaml/engine/bytes/e4_be.ml"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.mli",
++    "old": "machine, and `Sys.max_string_length` bounds the host allocation.",
++    "declaration": "decode_nat",
++    "source": "ocaml/eff/eff_frame.ml"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_control.mli",
++    "old": "(`:527`)",
++    "declaration": "Store.putRoot",
++    "source": "src/Effect4/Store/Domain/Store.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.ml",
++    "old": "elements, a ctor's arguments, Val.lean's `decodeSeq`), 2 for a pair (:595-601), 1 for a\n   `some` (:603-606) and for the payload of a node as a whole (`Val.decode` is one tree and\n   nothing else, :985).",
++    "declaration": "Val.decodeBody",
++    "source": "src/Effect4/Store/Carrier/Val.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.ml",
++    "old": "elements, a ctor's arguments, Val.lean's `decodeSeq`), 2 for a pair (:595-601), 1 for a\n   `some` (:603-606) and for the payload of a node as a whole (`Val.decode` is one tree and\n   nothing else, :985).",
++    "declaration": "Val.decodeSeq",
++    "source": "src/Effect4/Store/Carrier/Val.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.ml",
++    "old": "elements, a ctor's arguments, Val.lean's `decodeSeq`), 2 for a pair (:595-601), 1 for a\n   `some` (:603-606) and for the payload of a node as a whole (`Val.decode` is one tree and\n   nothing else, :985).",
++    "declaration": "Val.decode",
++    "source": "src/Effect4/Store/Carrier/Val.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.ml",
++    "old": "Val.refs (Val.refs (src/Effect4/Store/Domain/Node.lean)) and Val.malformedRef (:260-266)",
++    "declaration": "Val.refs",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.ml",
++    "old": "Val.refs (Val.refs (src/Effect4/Store/Domain/Node.lean)) and Val.malformedRef (:260-266)",
++    "declaration": "Val.malformedRef",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.ml",
++    "old": "Node.IsGenesis (src/Effect4/Store/Domain/Node.lean) IsGenesis, :287 edges, :297 checkedEdges.",
++    "declaration": "Node.IsGenesis",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.ml",
++    "old": "Node.IsGenesis (src/Effect4/Store/Domain/Node.lean) IsGenesis, :287 edges, :297 checkedEdges.",
++    "declaration": "Node.edges",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_node.ml",
++    "old": "Node.IsGenesis (src/Effect4/Store/Domain/Node.lean) IsGenesis, :287 edges, :297 checkedEdges.",
++    "declaration": "Node.checkedEdges",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.ml",
++    "old": "`Store.checkAll` (Store.checkEdges (src/Effect4/Store/Domain/Store.lean)) over `Node.checkedEdges` (:297)",
++    "declaration": "Store.checkAll",
++    "source": "src/Effect4/Store/Domain/Store.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_cas.ml",
++    "old": "`Store.checkAll` (Store.checkEdges (src/Effect4/Store/Domain/Store.lean)) over `Node.checkedEdges` (:297)",
++    "declaration": "Node.checkedEdges",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/tools/api_engine_prelude.ml",
++    "old": "`frameCore` instance (:204)",
++    "declaration": "frameCore",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/tools/api_engine_prelude.ml",
++    "old": "observer filter (:1345-1348)",
++    "declaration": "dropObservers",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/tools/api_engine_prelude.ml",
++    "old": "`refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,\n   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,\n   `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it",
++    "declaration": "refPeek",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/tools/api_engine_prelude.ml",
++    "old": "`refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,\n   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,\n   `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it",
++    "declaration": "refPoke",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/tools/api_engine_prelude.ml",
++    "old": "`refPeek` (:853, `heap[cell.index]?`) is `M.find_opt` and `refPoke` (:856-857,\n   `heap.set i v`, a NO-OP out of range) is `M.set`; `refMake` (:956,\n   `(Val.cell ⟨heap.length⟩, heap ++ [initial])`) is the one arm that forced this row -- it",
++    "declaration": "refStep",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/tools/api_engine_prelude.ml",
++    "old": "`mapAt` (MemoWorld.mapAt (src/Effect4/Machine/Stores.lean)) and `setMap` (:862-863)",
++    "declaration": "MemoWorld.mapAt",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/tools/api_engine_prelude.ml",
++    "old": "`mapAt` (MemoWorld.mapAt (src/Effect4/Machine/Stores.lean)) and `setMap` (:862-863)",
++    "declaration": "MemoWorld.setMap",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_fibers_view.ml",
++    "old": "the exit (:609, :1543) and the observers (:1256, :1344).",
++    "declaration": "RunMachine.finished",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_fibers_view.ml",
++    "old": "the exit (:609, :1543) and the observers (:1256, :1344).",
++    "declaration": "RunMachine.completedExits",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_fibers_view.ml",
++    "old": "the exit (:609, :1543) and the observers (:1256, :1344).",
++    "declaration": "dropObservers",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_fibers_view.ml",
++    "old": "RunMachine.update (:577-579)",
++    "declaration": "RunMachine.update",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_fibers_view.ml",
++    "old": "spawn (:867, :877)",
++    "declaration": "spawn",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_fibers_view.ml",
++    "old": "dropObservers (:1254-1260, :1344-1348)",
++    "declaration": "dropObservers",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/dune",
++    "old": "dispatcher_ref (the literal transcription of Fibers.lean:115-155)",
++    "declaration": "Dispatcher",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/test_replay_steps.ml",
++    "old": "`stepDecisionState` (:1962-1982)",
++    "declaration": "stepDecisionState",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_table.ml",
++    "old": "refStep (src/Effect4/Machine/Stores.lean)/:1366 state",
++    "declaration": "refStep",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_table.ml",
++    "old": "refStep (src/Effect4/Machine/Stores.lean)/:1366 state",
++    "declaration": "DeferredStore.make",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_memo.ml",
++    "old": "(:867)",
++    "declaration": "MemoWorld.entryAt",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_memo.ml",
++    "old": "(:873)",
++    "declaration": "MemoWorld.updateEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/prop_memo.ml",
++    "old": "(:886)",
++    "declaration": "MemoWorld.deleteEntry",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/bench_carriers.ml",
++    "old": "List.set (Lean core; refPoke refPeek (src/Effect4/Machine/Stores.lean), setCell :1374)",
++    "declaration": "refPoke",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/bench_carriers.ml",
++    "old": "List.set (Lean core; refPoke refPeek (src/Effect4/Machine/Stores.lean), setCell :1374)",
++    "declaration": "DeferredStore.setCell",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/bench_carriers.ml",
++    "old": "xs[i]? (refPeek RefHeap (src/Effect4/Machine/Stores.lean))",
++    "declaration": "refPeek",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/bench_carriers.ml",
++    "old": "xs ++ [v] (refMake refStep (src/Effect4/Machine/Stores.lean), RunMachine.emit RunMachine.emit (src/Effect4/Machine/Fibers.lean), spawn :877)",
++    "declaration": "refStep",
++    "source": "src/Effect4/Machine/Stores.lean"
++  },
++  {
++    "file": "ocaml/engine/test/bench_carriers.ml",
++    "old": "xs ++ [v] (refMake refStep (src/Effect4/Machine/Stores.lean), RunMachine.emit RunMachine.emit (src/Effect4/Machine/Fibers.lean), spawn :877)",
++    "declaration": "RunMachine.emit",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/bench_carriers.ml",
++    "old": "xs ++ [v] (refMake refStep (src/Effect4/Machine/Stores.lean), RunMachine.emit RunMachine.emit (src/Effect4/Machine/Fibers.lean), spawn :877)",
++    "declaration": "spawn",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/dispatcher_ref.ml",
++    "old": "exactly as :153\n   does",
++    "declaration": "Dispatcher.drain",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/test/dispatcher_ref.ml",
++    "old": "exactly as :147 does",
++    "declaration": "Dispatcher.enqueue",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/bytes/e4_hex.mli",
++    "old": "(Digest.hexDigit, :63)",
++    "declaration": "hexDigit",
++    "source": "src/Effect4/Store/Carrier/Digest.lean"
++  },
++  {
++    "file": "ocaml/engine/bytes/e4_hex.mli",
++    "old": "(Digest.hexVal, :66-70)",
++    "declaration": "hexVal",
++    "source": "src/Effect4/Store/Carrier/Digest.lean"
++  },
++  {
++    "file": "ocaml/engine/bytes/e4_hex.mli",
++    "old": "`Effect4.Store.Digest.ofHex?` (:257-261)",
++    "declaration": "Digest.ofHex?",
++    "source": "src/Effect4/Store/Carrier/Digest.lean"
++  },
++  {
++    "file": "ocaml/engine/bytes/e4_hex.mli",
++    "old": "Pinned by Digest.lean's own #guards (:306-314), which are the tests:",
++    "declaration": "bytesOfHex",
++    "source": "src/Effect4/Store/Carrier/Digest.lean"
++  },
++  {
++    "file": "ocaml/engine/bytes/e4_hex.mli",
++    "old": "Pinned by Digest.lean's own #guards (:306-314), which are the tests:",
++    "declaration": "hexOfBytes",
++    "source": "src/Effect4/Store/Carrier/Digest.lean"
++  },
++  {
++    "file": "ocaml/engine/bytes/e4_hex.mli",
++    "old": "Pinned by Digest.lean's own #guards (:306-314), which are the tests:",
++    "declaration": "Digest.ofHex?",
++    "source": "src/Effect4/Store/Carrier/Digest.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/test/test_bytes.ml",
++    "old": "the table of Kind.byte (src/Effect4/Store/Carrier/Kind.lean) and its ten #guards\n         (:145-158), the reserved append 16..23, and the unregistered-byte refusal.",
++    "declaration": "Kind.byte",
++    "source": "src/Effect4/Store/Carrier/Kind.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/test/test_bytes.ml",
++    "old": "the table of Kind.byte (src/Effect4/Store/Carrier/Kind.lean) and its ten #guards\n         (:145-158), the reserved append 16..23, and the unregistered-byte refusal.",
++    "declaration": "Kind.ofByte?",
++    "source": "src/Effect4/Store/Carrier/Kind.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/test/test_bytes.ml",
++    "old": "the edge scan #guards (:449-460), the AnyRef frame shape (:462-463), the traversal",
++    "declaration": "Node.refsOf",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/test/test_bytes.ml",
++    "old": "the edge scan #guards (:449-460), the AnyRef frame shape (:462-463), the traversal",
++    "declaration": "AnyRef",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/test/test_bytes.ml",
++    "old": "note \"Kind.name (src/Effect4/Store/Carrier/Kind.lean)'s #guard `ofByte? 16 = none` does NOT transfer: byte 16 is `job` under\";\n  note \"CAS commit 1's append, and amendment M4 moved the unregistered-kind sentinel to 127.\";",
++    "declaration": "Kind.ofByte?",
++    "source": "src/Effect4/Store/Carrier/Kind.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/test/test_bytes.ml",
++    "old": "note \"Kind.name (src/Effect4/Store/Carrier/Kind.lean)'s #guard `ofByte? 16 = none` does NOT transfer: byte 16 is `job` under\";\n  note \"CAS commit 1's append, and amendment M4 moved the unregistered-kind sentinel to 127.\";",
++    "declaration": "Kind.sentinel",
++    "source": "src/Effect4/Store/Carrier/Kind.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/test/test_bytes.ml",
++    "old": "note \"Node.decode (src/Effect4/Store/Domain/Node.lean)'s #guard uses kind byte 16; under CAS commit 1 that is `job`, so this\";\n  note \"lane uses 127 (amendment M4's sentinel) as the unregistered-byte witness.\";",
++    "declaration": "Node.decode",
++    "source": "src/Effect4/Store/Domain/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_index.mli",
++    "old": "`Kind.byte_pos` (Kind.byte (src/Effect4/Store/Carrier/Kind.lean))",
++    "declaration": "Kind.byte_pos",
++    "source": "src/Effect4/Store/Carrier/Kind.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_subterm.mli",
++    "old": "a `ProgPath` addresses nodes of five mutually\n       recursive families (`Node` is `eff | stmts | stmt | action | effs`, EffName (src/Effect4/Program/Compile.lean))",
++    "declaration": "Node",
++    "source": "src/Effect4/Program/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/cas/e4_subterm.mli",
++    "old": "`Effect4.Program.Node` (EffName (src/Effect4/Program/Compile.lean))",
++    "declaration": "Node",
++    "source": "src/Effect4/Program/Node.lean"
++  },
++  {
++    "file": "ocaml/engine/e4_fibers_view.mli",
++    "old": "`RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean:\n   1541-1543)",
++    "declaration": "RunMachine.completedExits",
++    "source": "src/Effect4/Machine/Fibers.lean"
++  },
++  {
++    "file": "ocaml/engine/bytes/e4_be.mli",
++    "old": "the engine's name for the byte rule of src/Effect4/Store/Domain/Canonical.lean and\n   src/Effect4/Program/Wire.lean:",
++    "declaration": "framed",
++    "source": "src/Effect4/Store/Carrier/Val.lean"
++  },
++  {
++    "file": "src/Effect4/Store/Domain/Genesis.lean",
++    "old": "`Store/Derived/Schema.lean` derives `Canonical Document`",
++    "declaration": "SchemaGen.DocumentC.instCanonical",
++    "source": "src/Effect4/Store/Domain/Derived/Schema.lean"
++  },
++  {
++    "file": "src/Effect4/Api/RunnerBytes.lean",
++    "old": "itself (`Store/Derived/Value.lean`).",
++    "declaration": "ValueGen.ShapeDocC.instCanonical",
++    "source": "src/Effect4/Store/Domain/Derived/Value.lean"
++  },
++  {
++    "file": "Test/Store/Templates.lean",
++    "old": "(`Store/Derived/Json.lean`, the `JsonAcceptance` section).",
++    "declaration": "JsonAcceptance.samples",
++    "source": "src/Effect4/Store/Domain/Derived/Json.lean"
++  },
++  {
++    "file": "Test/Store/Templates.lean",
++    "old": "(`Store/Derived/Json.lean`, the `JsonAcceptance` section).",
++    "declaration": "JsonAcceptance.floats",
++    "source": "src/Effect4/Store/Domain/Derived/Json.lean"
++  },
++  {
++    "file": "Test/Store/Templates.lean",
++    "old": "round trip and refusal on `Store/Derived/Json.lean`'s generated instance.",
++    "declaration": "JsonGen.JsonC.instCanonicalJson",
++    "source": "src/Effect4/Store/Domain/Derived/Json.lean"
+   }
+ ]
+--- a/docs/research/2026-10-17-seams/receipts/evidence/K0/controls.py
++++ b/docs/research/2026-10-17-seams/receipts/evidence/K0/controls.py
+@@ -32,17 +32,35 @@
+ assert 'def build ' in current('src/Effect4/Api/Author.lean')
+ assert 'Api.Author.buildIn' not in current('src/Effect4/Program/Authoring.lean')
+ assert 'Api.Author.build' in current('src/Effect4/Program/Authoring.lean')
++# Full, wrapped, and abbreviated line citations are all unstable source anchors.
++def line_citations(text):
++ return re.search(r'\.lean:\s*\d|(?:^|[ \t(,`/])\s*:\d',text,re.M)
++def is_generated(text):
++ return re.match(r'\s*(?:\(\*|--|#)\s*GENERATED\b',text) is not None
++# Controls cover the forms missed by the earlier full-name-only search.
++for path in ['ocaml/engine/test/dune','ocaml/engine/e4_memo_list.ml',
++             'ocaml/engine/e4_fibers_view_list.ml']:
++ assert line_citations(old(path)),('citation red control absent',path)
++ assert not line_citations(current(path)),('citation remains',path)
++assert line_citations('Store.lean:\n  42')
++assert line_citations('(* :775 *)')
++assert not line_citations('Store.find (src/Effect4/Store/Domain/Store.lean)')
++# A hand file mentioning generated output is not itself generated.
++assert not is_generated('(* A hand component; its output is GENERATED elsewhere. *)')
++assert is_generated('(* GENERATED by a named producer. Do not edit. *)')
+ files=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','src','Test','tools','ocaml'],cwd=r,text=True).splitlines()
+ for path in files:
+  p=r/path
+- if not p.is_file() or p.suffix not in ['.lean','.ml','.mli','.json','.sh','.txt']:continue
++ if not p.is_file() or (p.suffix not in ['.lean','.ml','.mli','.json','.sh','.txt'] and p.name!='dune'):continue
+  text=p.read_text()
+- if 'GENERATED' in text[:1600]:continue
++ if is_generated(text):continue
+  assert 'E4_log.Vec' not in text,path
+  if p.suffix=='.lean':
+   assert 'import Effect4.Store.Domain.Cascade' not in text,path
+  if path.startswith('ocaml/engine/') and '/goldens/' not in path:
+-  assert not re.search(r'[A-Za-z/]+\.lean:\d',text),path
++  assert not re.search(r'[A-Za-z/]+\.lean:\s*\d',text),path
++  if p.suffix in ['.ml','.mli','.sh'] or p.name=='dune':
++   assert not line_citations(text),('abbreviated citation',path)
+ for path in ['ocaml/lcnf/lcnf_array.ml','ocaml/lcnf/lcnf_array.mli']:
+  assert 'to_list_with_capacity' in current(path),path
+ assert 'Lcnf_array.to_list t' in current('ocaml/engine/e4_trace.ml')
+@@ -71,3 +89,14 @@
+ assert 'e4_nat.mli' in old('ocaml/engine/tools/gen-check.sh')
+ assert 'e4_nat' not in current('ocaml/engine/tools/gen-check.sh')
+ print('PASS isolated compiler check has no deleted numeric interface')
++
++# Replaced documentation follows the current implementation, not a retired alias.
++assert 'Vec' not in current('ocaml/engine/test/prop_trace.ml')
++assert 'to_list delegates to Lcnf_array.to_list' in current('ocaml/engine/test/prop_trace.ml')
++assert 'max_nat' not in current('ocaml/engine/bytes/test/test_math.ml')
++assert 'Sys.max_string_length' not in current('ocaml/engine/cas/e4_node.mli')
++assert 'Eff_frame.decode_nat' in current('ocaml/engine/cas/e4_node.mli')
++for path in ['src/Effect4/Store/Domain/Genesis.lean','src/Effect4/Api/RunnerBytes.lean',
++             'Test/Store/Templates.lean']:
++ assert 'Store/Derived/' not in current(path),path
++print('PASS abbreviated, wrapped, dune, generated-marker, and current-description controls')

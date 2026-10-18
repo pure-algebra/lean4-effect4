@@ -1,0 +1,21 @@
+{"command": ["/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh", "env", "LEAN_NUM_THREADS=3", "python3", "scripts/generate.py", "--only", "cas"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T02:35:43.478022+00:00"}
++ lake build OCaml5.Tools.CasGoldens
+✔ [57/69] Built Effect4.Data.JsonNumber (451ms)
+✔ [67/69] Built Effect4.Store.Domain.Genesis (405ms)
+✔ [68/69] Built TestSupport.CasEntry (687ms)
+✔ [69/69] Built OCaml5.Tools.CasGoldens (747ms)
+Build completed successfully (69 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/CasGoldens.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-s6himsw0/ocaml/engine/cas/goldens
+wrote 142 cases to /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-s6himsw0/ocaml/engine/cas/goldens
+  a1	37
+  g1	32
+  g2	14
+  g3	7
+  g4	18
+  g4entries	4
+  g5	10
+  g6	13
+  g7	7
+val_ref	0a00000000000000420200000000000000000300000000000000064566666563740b0000000000000021020000000000000000000000000000000000000000000000000000000000000000
+val_handle	0a00000000000000320200000000000000000c000000000000000201030400000000000000150c0000000000000002020402000000000000000109
+PASS generate: requested producers ran in dependency order

@@ -1,0 +1,13 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "make",
+    "gen-semantics"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T02:56:05.579023+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 377.198,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/K0/gen-semantics-final.log"
+}

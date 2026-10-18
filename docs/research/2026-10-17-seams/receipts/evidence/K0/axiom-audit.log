@@ -1,0 +1,68 @@
+{"command": ["/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh", "env", "LEAN_NUM_THREADS=3", "lake", "env", "lean", "-DwarningAsError=true", "scratch/seams/K0Audit.lean"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T02:24:23.157409+00:00"}
+#axiom_audit: 1080 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+#axiom_audit: 662 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+#axiom_audit: 107 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+scratch/seams/K0Audit.lean:13:0: error: #axiom_audit: 21 of 135 declarations reach axioms outside [propext, Quot.sound]:
+  Conform.Manifest.ocamlMatchArms reaches [Classical.choice]
+  Conform.Manifest.quoted? reaches [Classical.choice]
+  Conform.Manifest.ocamlTypeBlock reaches [Classical.choice]
+  Conform.Manifest.splitTopLevel reaches [Classical.choice]
+  Conform.Manifest.lines reaches [Classical.choice]
+  _private.Conform.Manifest.Readers.0.Conform.Manifest.Rename.ocamlToCamel reaches [Classical.choice]
+  Conform.Manifest.readWith reaches [Classical.choice]
+  Conform.Manifest.tr reaches [Classical.choice]
+  Conform.Manifest.textManifest._proof_1 reaches [Classical.choice]
+  Conform.Manifest.Rename.apply reaches [Classical.choice]
+  Conform.Manifest.jsonInventory reaches [Classical.choice]
+  Conform.Manifest.tsSwitchCases reaches [Classical.choice]
+  Conform.Manifest.tsTaggedUnion reaches [Classical.choice]
+  Conform.Manifest.leadingConstructor? reaches [Classical.choice]
+  Conform.Manifest.ocamlCtorNames reaches [Classical.choice]
+  Conform.Manifest.dropS reaches [Classical.choice]
+  Conform.Manifest.tsTagUnion reaches [Classical.choice]
+  Conform.Manifest.leadingIdent reaches [Classical.choice]
+  Conform.Manifest.indentOf reaches [Classical.choice]
+  Conform.Manifest.tsLiterals reaches [Classical.choice]
+  Conform.Manifest.textManifest reaches [Classical.choice]
+10 of them stand under no other (the first 8 shown); each one's path to its axiom:
+  Conform.Manifest.quoted?  (Conform.Manifest.Readers)
+  → String.splitOn  (Init.Data.String.Legacy)
+  → ⋯ 10 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.splitTopLevel  (Conform.Manifest.Readers)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.lines  (Conform.Manifest.Readers)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep  (Init.Data.String.Pattern.String)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_28  (Init.Data.String.Pattern.String)
+  → _private.Init.Data.String.Pattern.String.0.String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_27  (Init.Data.String.Pattern.String)
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  _private.Conform.Manifest.Readers.0.Conform.Manifest.Rename.ocamlToCamel  (Conform.Manifest.Readers)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.tr  (Conform.Manifest.Readers)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.jsonInventory  (Conform.Manifest.Readers)
+  → Lean.Json.parse  (Lean.Data.Json.Parser)
+  → ⋯ 8 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.leadingConstructor?  (Conform.Manifest.Readers)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.dropS  (Conform.Manifest.Readers)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)

@@ -1,0 +1,154 @@
+[
+  {
+    "path": "ocaml/engine/e4_ppath_list.ml",
+    "sha256": "96d938718e635fe6d8230480ee534517fda38161b7a3a9bdd989a3285abde9a2"
+  },
+  {
+    "path": "ocaml/engine/e4_memo.mli",
+    "sha256": "da7039eaff79c21119b53c94957902ea6dd47d303aa570bb10e7300f0ef4e21e"
+  },
+  {
+    "path": "ocaml/engine/e4_memo_list.ml",
+    "sha256": "2e1bae21c7d4405d1e8c5986503f7bc9422eae44b40ce96a44ba598d037a501e"
+  },
+  {
+    "path": "ocaml/engine/e4_fibers_view_list.ml",
+    "sha256": "31ec30d3b21baba5f8b2aaae069dc3487129a2c9cb069502bf8a9c4c01e0a652"
+  },
+  {
+    "path": "ocaml/engine/e4_engine.mli",
+    "sha256": "0d4e3b45ceb81969f6ae2075494991c6530e48d17385598496df5d2f314af812"
+  },
+  {
+    "path": "ocaml/engine/e4_buckets_list.ml",
+    "sha256": "eb7f81aa293506c17b3c852ddb725703e6dd55ba7bc80b66ca5032f49a812ed3"
+  },
+  {
+    "path": "ocaml/engine/e4_buckets.mli",
+    "sha256": "a9c333431f3824ab2f164860a53425f8d5ed3559ad2c53e5aaf71828d5abdfc9"
+  },
+  {
+    "path": "ocaml/engine/e4_table.mli",
+    "sha256": "8231c16458a3808ffec812eb149274b563ee3a2d1c15bbf76e355681ef2c031b"
+  },
+  {
+    "path": "ocaml/engine/e4_engine_intf.ml",
+    "sha256": "912b99016b38d35075e9a10a36f68c8953c2dc116fe50b81e24359003aa4278c"
+  },
+  {
+    "path": "ocaml/engine/cas/e4_cas.mli",
+    "sha256": "03b862525fff140bef457d7b6f05049c421f86bc51afc7477a86c9d56132e935"
+  },
+  {
+    "path": "ocaml/engine/cas/e4_node.mli",
+    "sha256": "d2cbfcbcb557fa4276661149d80140f4eaaeea7196a95ad1eddd24fa15855c54"
+  },
+  {
+    "path": "ocaml/engine/cas/e4_control.mli",
+    "sha256": "5afde071d13c45455532c15631fa3116b30818cf22326ba2e07f7a99cff41cba"
+  },
+  {
+    "path": "ocaml/engine/cas/e4_node.ml",
+    "sha256": "2ec97f8a90f02f8a690a67d1ad421dd9399b93903bd01382202762b3cdfc5869"
+  },
+  {
+    "path": "ocaml/engine/cas/e4_cas.ml",
+    "sha256": "8711495b930a050e7d6443a1ed8ac24231e2953be7f094d45848f2022b1cc6ba"
+  },
+  {
+    "path": "ocaml/engine/tools/api_engine_prelude.ml",
+    "sha256": "7cbec01543470abd335e5daa4573da66410f94db9a9e39c03a3881e78d0df880"
+  },
+  {
+    "path": "ocaml/engine/test/prop_fibers_view.ml",
+    "sha256": "ea06b01c22add521730f3b98d38223125d14c7bddba53f1cc562e6efd93411ab"
+  },
+  {
+    "path": "ocaml/engine/test/dune",
+    "sha256": "1f49d6b8f43fe7bbc310bff9eb3174b0bc5c0d570eed487c2f5a63a10a03de95"
+  },
+  {
+    "path": "ocaml/engine/test/test_replay_steps.ml",
+    "sha256": "0f2df4ff78d7106cecf34c59f17a23c1417e86c3e08d3d3749dc1152b0e214b6"
+  },
+  {
+    "path": "ocaml/engine/test/prop_table.ml",
+    "sha256": "8916422d9b8067440a72fbcde9d53783fb15459a32bd375400b656f193eed93a"
+  },
+  {
+    "path": "ocaml/engine/test/prop_memo.ml",
+    "sha256": "f5281922bd5f7d61b3de957275f9dac6cb35cc4b90e52a0190ac49b3ed3353f6"
+  },
+  {
+    "path": "ocaml/engine/test/bench_carriers.ml",
+    "sha256": "839c86698e2608e42151406ac76e0c9e979261214dfc27c509fb13ad0e98fac1"
+  },
+  {
+    "path": "ocaml/engine/test/dispatcher_ref.ml",
+    "sha256": "3fa7ec6600b6fbf7d31400019f2b2a7448be20b7fd95a15db1db7155e74f9539"
+  },
+  {
+    "path": "ocaml/engine/bytes/e4_sha256.mli",
+    "sha256": "93fc212ad54a891e8e10313a8bd122e0821aa5a2e3f56be67c77fa7af691d468"
+  },
+  {
+    "path": "ocaml/engine/bytes/e4_hex.mli",
+    "sha256": "27739d8bab59d35414fab3c295f68b89764f9856f4f1841c7821572b321e8cdd"
+  },
+  {
+    "path": "ocaml/engine/bytes/test/test_math.ml",
+    "sha256": "9c713bc1294b141c8e2ef79df0af55a82d781c9748035b559b2801ee9066a43d"
+  },
+  {
+    "path": "ocaml/engine/cas/test/test_bytes.ml",
+    "sha256": "8b68b12f7878e595b2949c1dd16640bcb9e520163b90054ccf269795c00d2fe2"
+  },
+  {
+    "path": "ocaml/engine/cas/e4_index.mli",
+    "sha256": "e52e80724edab4780402730ac2b9efe2fee6efcc8474cdaf491fb981a76e0b08"
+  },
+  {
+    "path": "ocaml/engine/cas/e4_subterm.mli",
+    "sha256": "000bea5d1a4ce8cba37389e23446bbc34b8b0cef2510980ef123f3a71b4603c3"
+  },
+  {
+    "path": "ocaml/engine/e4_fibers_view.mli",
+    "sha256": "d44d28aeb6dd4ca7ab88aafb6732dd41f36eeacd48cfd0cba547f6aadd74cf78"
+  },
+  {
+    "path": "ocaml/engine/bytes/e4_be.mli",
+    "sha256": "8a8d4b02d0260aab4e63c3dd6011040d3722b7ce85e725140b6a0dd72d0d901f"
+  },
+  {
+    "path": "ocaml/engine/test/test_log.ml",
+    "sha256": "c6134cb865bd724caa5fb26c53d1f402cd2ad218bf6cca5187ec6de40ddd6d21"
+  },
+  {
+    "path": "ocaml/engine/test/prop_trace.ml",
+    "sha256": "85ed1363a55e7f615b5cd575a0b3b49db44b38e0644d51a01d7018815fccb70c"
+  },
+  {
+    "path": "ocaml/engine/e4_log.ml",
+    "sha256": "c76d310fb15d66cea8251905f87a4176312f20ad9046c8aa8c8ca8782b567633"
+  },
+  {
+    "path": "src/Effect4/Store/Domain/Genesis.lean",
+    "sha256": "94d7e61ca235ab4b4b7583cb6c0d8e17d589f61bb0b90f2957b2f112478c7c6f"
+  },
+  {
+    "path": "src/Effect4/Api/RunnerBytes.lean",
+    "sha256": "6c2c3196c5c6c2b02963fe2b980b997a27cf69387d278baa22d4f21010b155c5"
+  },
+  {
+    "path": "Test/Store/Templates.lean",
+    "sha256": "4fdaed42c8e1b587545c5ee8bff07b73cb48034e024498783bb3443c85bed4cf"
+  },
+  {
+    "path": "docs/research/2026-10-17-seams/receipts/evidence/K0/citation-moves.json",
+    "sha256": "2ed31ce2cb50389afde7473fb73deed0b9330029d0481b735be5828891d3932a"
+  },
+  {
+    "path": "docs/research/2026-10-17-seams/receipts/evidence/K0/controls.py",
+    "sha256": "0473d03b230ae25de3e23575d7312685cefa4d423a0366716a56da9a8b72d15e"
+  }
+]

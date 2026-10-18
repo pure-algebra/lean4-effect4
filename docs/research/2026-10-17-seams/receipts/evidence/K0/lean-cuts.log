@@ -1,0 +1,59 @@
+{"command": ["/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh", "env", "LEAN_NUM_THREADS=3", "lake", "build", "Effect4.Api", "Effect4.Store.Domain.Word", "Effect4.Store.Domain.Pin", "Test.Store.NodeContract", "Test.Store.WordContract", "Test.Store.ProgramContent", "Test.Codegen.SchemaGenerationContract"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T02:19:49.310390+00:00"}
+✔ [113/147] Built Effect4.Store.Domain.Pin (1.6s)
+✔ [325/366] Built Effect4.Store.Domain.Node (2.3s)
+✔ [326/366] Built Effect4.Program.Authoring (2.3s)
+✔ [332/366] Built Effect4.Store.Domain.Store (946ms)
+✔ [333/366] Built TestSupport.CasEntry (1.9s)
+✔ [334/366] Built Effect4.Store.Domain.Word (981ms)
+✔ [335/366] Built Test.Store.Templates (697ms)
+✖ [336/366] Building Test.Store.WordContract (719ms)
+trace: .> LEAN_PATH=/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/.codex/worktrees/seams/lean4-effect4/Test/Store/WordContract.lean -o /Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean/Test/Store/WordContract.olean -i /Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean/Test/Store/WordContract.ilean -c /Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/ir/Test/Store/WordContract.c --setup /Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/ir/Test/Store/WordContract.setup.json --json
+error: Test/Store/WordContract.lean:198:8: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Test/Store/WordContract.lean:198:74: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Test/Store/WordContract.lean:199:62: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Lean exited with code 1
+✔ [337/366] Built Effect4.Store.Domain.Traits (712ms)
+✔ [338/366] Built Effect4.Store.Domain.Genesis (335ms)
+✖ [339/366] Building Test.Store.NodeContract (6.5s)
+trace: .> LEAN_PATH=/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/.codex/worktrees/seams/lean4-effect4/Test/Store/NodeContract.lean -o /Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean/Test/Store/NodeContract.olean -i /Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean/Test/Store/NodeContract.ilean -c /Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/ir/Test/Store/NodeContract.c --setup /Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/ir/Test/Store/NodeContract.setup.json --json
+error: Test/Store/NodeContract.lean:180:30: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Lean exited with code 1
+✔ [340/366] Built Effect4.Store.Domain.Derived.Program (21s)
+✔ [341/366] Built Effect4.Store.Domain.ProgramWire (1.3s)
+✔ [342/366] Built Effect4.Codegen.Metadata (1.3s)
+✔ [343/366] Built Effect4.Api (982ms)
+✔ [344/366] Built Effect4.Codegen.Record (1.1s)
+✔ [345/366] Built Test.Store.ProgramContent (3.0s)
+✔ [346/366] Built Effect4.Api.HostProtocol (706ms)
+✔ [347/366] Built Effect4.Codegen.SchemaCode (623ms)
+✔ [348/366] Built Effect4.Codegen.Classes (728ms)
+✔ [349/366] Built Effect4.Api.HostSession (797ms)
+✔ [350/366] Built Effect4.Api.Built (487ms)
+✔ [351/366] Built Effect4.Codegen.PrintLeaf (760ms)
+✔ [352/366] Built Effect4.Codegen.ClassTable (558ms)
+✔ [353/366] Built Effect4.Codegen.CallbackRequirements (550ms)
+✔ [354/366] Built Effect4.Codegen.EraseTermTypes (788ms)
+✔ [355/366] Built Effect4.Codegen.Templates (747ms)
+✔ [356/366] Built Effect4.Codegen.Print (750ms)
+✔ [357/366] Built Effect4.Codegen.RowServices (662ms)
+✔ [358/366] Built Effect4.Codegen.PrintEliminators (846ms)
+✔ [359/366] Built Effect4.Codegen.Read (3.6s)
+✔ [360/366] Built Effect4.Codegen.EraseTypes (9.7s)
+✔ [361/366] Built Effect4.Codegen.PrintTyped (656ms)
+✔ [362/366] Built Effect4.Codegen.Checked (619ms)
+✔ [363/366] Built Effect4.Codegen.Admit (644ms)
+✔ [364/366] Built Effect4.Codegen.Surface (642ms)
+✔ [365/366] Built Effect4.Api.Codegen (602ms)
+✔ [366/366] Built Test.Codegen.SchemaGenerationContract (7.2s)
+Some required targets logged failures:
+- Test.Store.WordContract
+- Test.Store.NodeContract
+error: build failed

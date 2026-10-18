@@ -1,0 +1,64 @@
+{"command": ["/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh", "env", "LEAN_NUM_THREADS=3", "lake", "env", "lean", "scratch/seams/K0ReadersBaseAudit.lean"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T02:35:48.867162+00:00"}
+scratch/seams/K0ReadersBaseAudit.lean:3:0: error: #axiom_audit: 20 of 132 declarations reach axioms outside [propext, Quot.sound]:
+  Conform.Manifest.ocamlMatchArms reaches [Classical.choice]
+  Conform.Manifest.quoted? reaches [Classical.choice]
+  Conform.Manifest.ocamlTypeBlock reaches [Classical.choice]
+  Conform.Manifest.splitTopLevel reaches [Classical.choice]
+  Conform.Manifest.lines reaches [Classical.choice]
+  Conform.Manifest.tr reaches [Classical.choice]
+  Conform.Manifest.readWith reaches [Classical.choice]
+  Conform.Manifest.textManifest._proof_1 reaches [Classical.choice]
+  Conform.Manifest.Rename.apply reaches [Classical.choice]
+  Conform.Manifest.jsonInventory reaches [Classical.choice]
+  Conform.Manifest.tsSwitchCases reaches [Classical.choice]
+  Conform.Manifest.tsTaggedUnion reaches [Classical.choice]
+  _private.scratch.seams.K0ReadersBase.0.Conform.Manifest.Rename.ocamlToCamel reaches [Classical.choice]
+  Conform.Manifest.ocamlCtorNames reaches [Classical.choice]
+  Conform.Manifest.dropS reaches [Classical.choice]
+  Conform.Manifest.tsTagUnion reaches [Classical.choice]
+  Conform.Manifest.leadingIdent reaches [Classical.choice]
+  Conform.Manifest.indentOf reaches [Classical.choice]
+  Conform.Manifest.tsLiterals reaches [Classical.choice]
+  Conform.Manifest.textManifest reaches [Classical.choice]
+9 of them stand under no other (the first 8 shown); each one's path to its axiom:
+  Conform.Manifest.quoted?  (K0ReadersBase)
+  → String.splitOn  (Init.Data.String.Legacy)
+  → ⋯ 10 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.splitTopLevel  (K0ReadersBase)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.lines  (K0ReadersBase)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep  (Init.Data.String.Pattern.String)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_28  (Init.Data.String.Pattern.String)
+  → _private.Init.Data.String.Pattern.String.0.String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_27  (Init.Data.String.Pattern.String)
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.tr  (K0ReadersBase)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.jsonInventory  (K0ReadersBase)
+  → Lean.Json.parse  (Lean.Data.Json.Parser)
+  → ⋯ 8 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  _private.scratch.seams.K0ReadersBase.0.Conform.Manifest.Rename.ocamlToCamel  (K0ReadersBase)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.dropS  (K0ReadersBase)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Conform.Manifest.leadingIdent  (K0ReadersBase)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
