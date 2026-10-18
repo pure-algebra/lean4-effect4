@@ -700,6 +700,45 @@ theorem belowSite_at_eff {p old : NativeEff} {path : List Nat}
     rw [hold] at hnone
     cases hnone
 
+/-- The first entry at the root of a splice below the root is the old table's first entry. A step
+of `source-feed-keep-exact`. Its consumer is `SourceSession.feed_keepExact_of_faultFree`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.typedAt_splice_root {x : Table.Entry} {rest sub : List Table.Entry} {a : List Nat}
+    (hx : x.path = []) (ha : a ≠ []) :
+    Table.typedAt (Table.splice (x :: rest) a sub) [] = Table.typedAt (x :: rest) [] := by
+  have hxa : Table.under a x.path = false := by
+    rw [hx]
+    obtain ⟨i, r, rfl⟩ := List.exists_cons_of_ne_nil ha
+    rfl
+  have hsplit : Table.splice (x :: rest) a sub = x :: Table.splice rest a sub := by
+    have h := Table.splice_append_out_left (X := [x]) (Y := rest) (sub := sub) (a := a)
+      (fun e he => by
+        rw [List.mem_singleton.mp he]
+        exact hxa)
+    simpa only [List.singleton_append] using h
+  rw [hsplit]
+  unfold Table.typedAt
+  simp only [List.find?_cons, hx, decide_true]
+
+/-- In a splice whose new segment starts at the address, the first entry at the address is the
+segment's head. A step of `source-feed-keep-exact`. Its consumer is
+`SourceSession.feed_keepExact_of_faultFree`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.typedAt_splice_at {old sub : List Table.Entry} {x : Table.Entry} {a : List Nat}
+    (hx : x.path = a) :
+    Table.typedAt (Table.splice old a (x :: sub)) a = Table.typedAt [x] a := by
+  unfold Table.typedAt Table.splice
+  have hnone : (old.takeWhile fun e => !Table.under a e.path).find?
+      (fun e => decide (e.path = a)) = none := by
+    rw [List.find?_eq_none]
+    intro e he hea
+    have hu : (!Table.under a e.path) = true := List.all_eq_true.mp List.all_takeWhile e he
+    rw [decide_eq_true_eq] at hea
+    rw [hea, Table.under_self] at hu
+    cases hu
+  rw [List.append_assoc, List.find?_append, hnone, Option.none_or, List.cons_append,
+    List.find?_cons, List.find?_cons, hx, decide_eq_true (rfl : a = a)]
+
 /-- The candidate's program is the old program with the edited address replaced. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.edit_replaceAt {s c : Sketch} {app : SigApp} {e : Edit} (h : s.edit app e = some c) :
@@ -1354,12 +1393,139 @@ proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Ed
          next.table = Table.atSource candidate.sites candidate.program.firstRefFault reference.1.table ∧
            step.delta = reference.2.atSource candidate.sites)
 
+/-- **A kept-exact finish keeps the root's type and the edited address's entry.** A step of
+`source-feed-keep-exact`. Its consumer is `recheck_keepExact_ok`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem finish_keepExact_ok {s n : SourceSession} {e : Edit} {st : Edit.Step} {v : Verdict}
+    {r : SourceSession × Edit.Step} (h : finish .keepExact s n e st v = .ok r) :
+    ∃ ty, v.result = .ok ty ∧ s.view.type = some ty ∧
+      (e.path ≠ [] → Table.typedAt s.table e.path = Table.typedAt n.table e.path) := by
+  cases hv : v.result with
+  | error why =>
+    simp only [finish, hv] at h
+    cases h
+  | ok ty =>
+    simp only [finish, hv] at h
+    split at h
+    · cases h
+    · rename_i hty
+      split at h
+      · cases h
+      · rename_i hloc
+        refine ⟨ty, rfl, ?_, fun hne => ?_⟩
+        · simp only [bne_iff_ne, ne_eq, Decidable.not_not] at hty
+          exact hty
+        · simp only [bne_iff_ne, ne_eq, Bool.and_eq_true, not_and, Decidable.not_not] at hloc
+          exact hloc hne
+
+/-- **An accepted kept-exact recheck**: its session and step, a typed module check equal to the old
+root's type, and the edited address's entry kept. A step of `source-feed-keep-exact`. Its
+consumer is `feed_keepExact_of_faultFree`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem recheck_keepExact_ok {o : Oracle} {s : SourceSession} {c : Sketch} {e : Edit}
+    {old : NativeEff} {r : SourceSession × Edit.Step}
+    (h : (s.recheck o .keepExact c e old).value = .ok r) :
+    r = (⟨s.app, c, (run (.module s.app c.holes c.program)).table⟩, ⟨e, some old, .rechecked⟩) ∧
+    ∃ ty, (run (.module s.app c.holes c.program)).result = .ok ty ∧ s.view.type = some ty ∧
+      (e.path ≠ [] → Table.typedAt s.table e.path =
+        Table.typedAt (run (.module s.app c.holes c.program)).table e.path) := by
+  refine ⟨recheck_ok h, ?_⟩
+  unfold recheck at h
+  rw [Checked.bind_value, Checked.pure_value, Checked.ask_value] at h
+  exact finish_keepExact_ok h
+
+/-- **A kept-exact feed below the root, whose candidate holds no ill-formed reference, keeps the
+root's and the address's types, and splices exactly where the expanded edit agrees.** The splice
+keeps the root entry first, and its new segment starts with the part's own entry at the focus's
+type; a recheck is checked by `finish`. It is the true form of `feed_keepExact` at head, and the
+whole of its proof once the feed splices only such candidates. A step of
+`source-feed-keep-exact`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_keepExact_of_faultFree {o : Oracle} {s next : SourceSession} {e : Edit}
+    {step : Edit.Step} (hc : s.Coherent) (hne : e.path ≠ [])
+    (hcand : ∀ c, s.sketch.edit s.app e = some c → c.program.firstRefFault = none)
+    (h : (s.feed o .keepExact e).value = .ok (next,step)) :
+    next.view.type = s.view.type ∧
+      Table.typedAt next.table e.path = Table.typedAt s.table e.path ∧
+      (s.expandedEditAgrees next.sketch e = true → ∃ shown, step.delta = .spliced shown) ∧
+      (s.expandedEditAgrees next.sketch e = false → step.delta = .rechecked) := by
+  obtain ⟨old, c, key, focus, hat, hedit, hfocus, hkey, hres, hspl, hrec⟩ := feed_keepExact_ok hne h
+  have hsk : next.sketch = c := (feed_keeps h).2.2.2 c hedit
+  rw [hsk]
+  cases hagree : s.expandedEditAgrees c e with
+  | true =>
+    have hr := hspl hagree
+    obtain ⟨q', hq'at, rfl⟩ := candidatePartKey_some hfocus hkey
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hr
+    refine ⟨?_, ?_, fun _ => ⟨_, rfl⟩, fun hf => nomatch hf⟩
+    · show (Table.typedAt (Table.splice s.table e.path _) []).map (·.2) =
+        (Table.typedAt s.table []).map (·.2)
+      obtain ⟨rest, hhead⟩ := Sketch.sourceTable_head s.sketch s.app
+      rw [table_eq hc, hhead, Table.typedAt_splice_root rfl hne]
+    · have hold : Table.typedAt s.table e.path = some (focus.env, focus.ty) := by
+        unfold focusAt at hfocus
+        split at hfocus
+        · rename_i q0 env0 ty0 hat0 htyped
+          cases hfocus
+          exact htyped
+        · cases hfocus
+      have hcheck0 : Checker.check (sketchSigData c.expand s.app e.path).signature focus.env [] q' =
+          .ok focus.ty := by
+        have h1 : (run (.part (sketchSigData c.expand s.app e.path) focus.env q')).result =
+            Checker.check (sketchSigData c.expand s.app e.path).signature focus.env [] q' := by
+          show (Annotate.check _ _ [] q').2 = _
+          rw [Annotate.check_eq]
+        rw [← h1]
+        exact hres
+      have hcheck : Checker.check (sketchSigData c.expand s.app e.path).signature focus.env e.path
+          q' = .ok focus.ty := by
+        have hr := Checker.check_rebase (sketchSigData c.expand s.app e.path).signature e.path
+          focus.env [] q'
+        rw [List.append_nil, hcheck0] at hr
+        exact hr
+      have hP : (Internal.place e.path (run (.part (sketchSigData c.expand s.app e.path) focus.env
+          q'))).table = ⟨e.path, some (.env focus.env), some (.ok focus.ty)⟩ ::
+            ((childTableAt (sketchSigData c.expand s.app e.path).signature (some (.env focus.env))
+              (.eff q') e.path 0) ++ ((childTableAt (sketchSigData c.expand s.app e.path).signature
+              (some (.env focus.env)) (.eff q') e.path 1) ++ (childTableAt
+              (sketchSigData c.expand s.app e.path).signature (some (.env focus.env)) (.eff q')
+              e.path 2))) := by
+        rw [run_placed, Annotate.check_eq, tableAt_eq_cons]
+        simp only [nodeAnswer, hcheck]
+      obtain ⟨x, hrepc⟩ := Sketch.edit_replaceAt hedit
+      have hkept : (!Table.belowSite c.sites e.path) = true := by
+        unfold Sketch.sites
+        rw [belowSite_at_eff (Node.replaceAt_spec hrepc).1]
+        rfl
+      have hatoms : ∀ (sites : List (List Nat)) (t : List Table.Entry),
+          Table.atSource sites none t = t.filter (fun e => !Table.belowSite sites e.path) :=
+        fun _ _ => rfl
+      show Table.typedAt (Table.splice s.table e.path (Table.atSource c.sites
+        c.program.firstRefFault (Internal.place e.path (run (.part (sketchSigData c.expand s.app
+          e.path) focus.env q'))).table)) e.path = Table.typedAt s.table e.path
+      rw [hcand c hedit, hatoms, hP,
+        List.filter_cons_of_pos (p := fun (x : Table.Entry) => !Table.belowSite c.sites x.path)
+          hkept,
+        Table.typedAt_splice_at (x := ⟨e.path, some (.env focus.env), some (.ok focus.ty)⟩)
+          (a := e.path) rfl, hold]
+      unfold Table.typedAt
+      rw [List.find?_cons, decide_eq_true (rfl : e.path = e.path)]
+  | false =>
+    obtain ⟨hr1, ty, hres', hview, htyped⟩ := recheck_keepExact_ok (hrec hagree)
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hr1
+    refine ⟨?_, (htyped hne).symm, (fun ht => nomatch ht), fun _ => rfl⟩
+    rw [view_type (recheck_coherent s c), hview]
+    have hsc : c.sourceCheck s.app = .ok ty := hres'
+    rw [hsc]
+    rfl
+
 /-- **A kept-exact feed below the root keeps the root's and the address's types, and splices
 exactly where the expanded edit agrees.** The pointer of `source-feed-keep-exact`. The first
 form said a splice shows `[e.path]` alone; a splice shows every address of the new subtree
 (`FeedCounterexample.feed_keepExact_delta_refuted`), so the conjunct now names a splice. It is
 false at head where the candidate holds an ill-formed reference
-(`FeedCounterexample.feed_keepExact_refuted`), by the splice of `feed_coherent`. -/
+(`FeedCounterexample.feed_keepExact_refuted`), by the splice of `feed_coherent`.
+`feed_keepExact_of_faultFree` proves it for every other candidate. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 proof_goal feed_keepExact {o : Oracle} {s next : SourceSession} {e : Edit} {step : Edit.Step}
     (hc : s.Coherent) (hne : e.path ≠ [])
