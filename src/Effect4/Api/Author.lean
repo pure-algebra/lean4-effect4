@@ -110,7 +110,7 @@ def positionOf (b : Built) (spelling : String) : Option Nat :=
   (b.rowNames.find? (fun entry => entry.1 == spelling)).map Prod.snd
 
 /-- `Effect.runSyncExit` on a built program. (The ordinary run of a built program is a value a
-caller holds, `Run.runPure` in `src/Effect4/Run.lean`; it is not a projection of `Built`.) -/
+caller holds, `Run.open` followed by `Rows.start` and `Rows.flush`; it is not a projection of `Built`.) -/
 def runSync (b : Built) (budget : Budget := {}) : ExitV := b.typed.runSync budget
 
 /-- The canonical bytes of the built program. -/

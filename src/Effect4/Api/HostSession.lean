@@ -149,27 +149,11 @@ structure Result (program : Api.Program) (app : SigApp) where
 /-- **The program's checked call table**, at the signature that admits it (`app.signature`), on
 the program with its layer references expanded, as the module check types it
 (`Program.programCalls`): a call in a definition's body or in a block's main program has its
-instance at the block's signature (decisions rows 323 and 333). `start` and `Run.open` make it
+instance at the block's signature (decisions rows 323 and 333). `Run.open` makes it
 once (the session note's slice DM5). -/
 def callTable (program : Api.Program) (app : SigApp) :
     List (List Nat × CallInstance NativeOp) :=
   Program.programCalls app.signature [] program.expandRefs
-
-/-- Validate an explicit header and retain the indexed admission proof. Empty session IDs
-refuse. The expected binding is the one that the holder selected. The header carries the row
-table (decisions row 21), and the program is admitted at the application's signature. -/
-def start (program : Api.Program) (app : SigApp) (expectedBinding : String)
-    (header : Header) (compileFuel : Nat) :
-    Except Refusal (Session program app) :=
-  if header.version ≠ version then .error .version
-  else if header.session = "" then .error .session
-  else if header.binding ≠ expectedBinding then .error .profile
-  else if header.table ≠ app.rows then .error .table
-  else match admitProgram program app with
-    | .error why => .error (.program why)
-    | .ok admitted =>
-      .ok { admitted, header, machine := Api.load program compileFuel
-            calls := callTable program app }
 
 def outstanding {program : Api.Program} {app : SigApp} (s : Session program app) :
     List Await := awaits s.machine
@@ -195,12 +179,12 @@ def bindCall {program : Api.Program} {app : SigApp} (s : Session program app)
 the signature that admitted it (`app.signature`), on the program with its layer references
 expanded, as the module check types it. `none` where no call stands at the address; on an
 admitted program it answers at every call (`instanceAt_complete`). It is the specification of
-the session's table: a session that `start` made answers it (`start_callInstance`). -/
+the session's table: a canonical open reads it (`Run.reached_callInstance`). -/
 def instanceAt (program : Api.Program) (app : SigApp) :
     List Nat → Option (CallInstance NativeOp) :=
   programCallAt app.signature [] program.expandRefs
 
-/-- The session's checked instance at an address: a lookup in the table that `start` made. -/
+/-- The session's checked instance at an address: a lookup in the table that `Run.open` makes. -/
 def Session.callInstance {program : Api.Program} {app : SigApp} (s : Session program app)
     (origin : List Nat) : Option (CallInstance NativeOp) :=
   s.calls.lookup origin

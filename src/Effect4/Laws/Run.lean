@@ -12,9 +12,6 @@ import Effect4.Laws.Auto.Obligations
 The run API of scout A (`docs/research/2026-09-17-host-session-api-scout-A.md` §4.3, §4.5)
 and the obligations it names.
 
-* **Opening cannot refuse** (`open_total`): given a certificate, `HostSession.start` returns
-  the very session `Run.open` builds. Every one of its refusals is impossible, the admission
-  it re-derives included.
 * **A run is its own recording** (`journal_replays`): a run that was opened and played is
   reached again by opening it under the same name and playing its journal. This is what makes
   "replay this run" a statement about a run rather than a convention between drivers.
@@ -202,7 +199,7 @@ theorem drive_eq_play {σ : Type} (r : Reactor σ) (rounds : Nat) (s : Run) (st 
   | zero => rfl
   | succ rounds ih => aesop (add norm simp [driveFrom, play_append, ih])
 
-/-! ## Opening cannot refuse -/
+/-! ## Admission certificates -/
 
 /-- A program has at most one admission certificate against one signature: every field but the
 type is a proof, and the type is the one the checker computes, so two certificates agree. -/
@@ -215,27 +212,13 @@ theorem admitted_unique (program : Api.Program) (app : SigApp)
   rfl
 
 /-- Admission answers with the certificate it is given: every check `admitProgram` runs is a
-field of the certificate, so none of them can fail. This is the fact `HostSession.start`
+field of the certificate, so none of them can fail. This is the fact full admission
 needs and the tree did not have. -/
 theorem admitProgram_certificate (program : Api.Program) (app : SigApp)
     (c : AdmittedProgram program app) : admitProgram program app = .ok c := by
   have hformed := (Formation.checkInput_eq_none_iff program app.rows app.services).mpr c.formed
   aesop (add norm unfold [admitProgram, checkTypedProgram])
     (add norm simp [c.signature, c.typed, hformed, c.columnsType]) (add safe apply admitted_unique)
-
-/-- **O-1.** Opening cannot refuse. With a `Built` in hand the checked `start` of
-`HostSession` returns exactly the session `Run.open` builds: its five identity refusals are
-impossible because the header is built from the `Built` instead of being supplied beside it,
-and its admission refusal is impossible because the certificate is what admission produces.
-The one thing left to get wrong is an empty name, which is why `start` still has that
-refusal and `open` takes the name. -/
-theorem open_total (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String)
-    (hid : id ≠ "") :
-    Api.HostSession.start b.program b.app profile
-        ⟨Api.HostSession.version, id, profile, b.table⟩ budget.compileFuel
-      = .ok (Run.open b id budget profile).session := by
-  have hadmit := admitProgram_certificate b.program b.app b.admitted
-  aesop (add norm unfold [Api.HostSession.start]) (add norm simp [hid, hadmit])
 
 /-! ## Small facts the answer rows need -/
 
@@ -943,8 +926,8 @@ theorem play_controls_eq_replay (s : Run) (tape : List Api.Decision)
 `Api.run`'s machine when both rows progressed. This is the two-decision instance of
 `play_controls_eq_replay`; fuel frontiers and refusals remain outside its premise. -/
 theorem runPure_eq_run (b : Api.Built) (id : String) (budget : Api.Budget)
-    (h : (Run.runPure b id budget).phases = [.progressed, .progressed]) :
-    (Run.runPure b id budget).machine =
+    (h : ((Run.open b id budget).play (Rows.start ++ Rows.flush)).phases = [.progressed, .progressed]) :
+    ((Run.open b id budget).play (Rows.start ++ Rows.flush)).machine =
       (Api.run b.program budget.fuel b.table budget.compileFuel).machine := by
   have replay := play_controls_eq_replay (Run.open b id budget) [Api.evaluate, Api.flush] h
   rw [Api.run, replay_machine]

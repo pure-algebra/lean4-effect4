@@ -1,4 +1,5 @@
 import Effect4.Laws.Api.Runner
+import Effect4.Run.Basic
 import Effect4.Laws.Api.RunnerBytes
 import Test.Api.HostSessionContract
 
@@ -22,8 +23,9 @@ open Effect4.Api.Runner
 open Test.Api.HostSessionContract (table program header call0 reply0 call1 reply1)
 
 def runner : Option Runner :=
-  match load program table "serial-root-scalar-v1" header 100 100 with
-  | .ok p => some p
+  match Api.Built.ofSketch table { program } with
+  | .ok b => some (Run.open b header.session { fuel := 100, compileFuel := 100 }
+      "serial-root-scalar-v1").runner
   | .error _ => none
 
 /-- The whole run as rows: evaluate, then each call bound, answered and applied. -/
@@ -42,7 +44,7 @@ def exitAfter (rows : List Command) : Option (Option ExitV) :=
   runner.map fun p => exitOf (replay p rows).1
 
 #guard runner.isSome
-#guard (load program table "serial-root-scalar-v1" { header with version := 99 } 100 100 matches .error .version)
+#guard runner.map (·.session.header.version) = some Api.HostSession.version
 
 #guard phasesOf journal =
   some [.progressed, .bound, .preflight, .applied, .bound, .preflight, .applied]

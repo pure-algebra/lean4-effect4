@@ -10,7 +10,7 @@ program's interpreter, and at the entries of `src/Effect4/Api.lean`. This module
 entries above them, each of which returns a machine inside a session:
 
 * **The host session** (`src/Effect4/Api/HostSession.lean`). `start` loads the machine
-  (`HostSession.start_maskRuns`). `advance` and `applyReply` apply one decision under the native
+  (`Run.open_maskRuns`). `advance` and `applyReply` apply one decision under the native
   evaluator, or they refuse and change nothing (`advance_maskRuns`, `applyReply_maskRuns`,
   `applyPending_maskRuns`). `bindCall` and `submit` write the ledger alone (`bindCall_machine`,
   and `submit_machine` of `Laws/Api/HostSession.lean`). `inspect` reads the session's machine
@@ -53,30 +53,6 @@ set_option autoImplicit false
 namespace Effect4.Api.HostSession
 
 open Effect4 Effect4.Machine Effect4.Program
-
-/-- **The entry `HostSession.start` keeps the invariant**: a started session holds it at the
-table of its root. Each refusal returns no session.
-
-A step of the proposed registry claim `saved-mask-chain-runs`. Its consumer is
-`Runner.load_maskRuns`. -/
-@[semantics "scope-lifetime-finalization"]
-theorem start_maskRuns (program : Api.Program) (app : SigApp) (expectedProfile : String)
-    (header : Header) (compileFuel : Nat) (s : Session program app)
-    (started : start program app expectedProfile header compileFuel = .ok s) :
-    MaskRuns [true] s.machine := by
-  unfold start at started
-  split at started
-  · cases started
-  · split at started
-    · cases started
-    · split at started
-      · cases started
-      · split at started
-        · cases started
-        · split at started
-          · cases started
-          · cases started
-            exact Api.load_maskRuns program compileFuel
 
 /-- A binding writes the ledger alone: the machine is the same. A step of
 `Runner.step_maskRuns`. -/
@@ -173,24 +149,6 @@ end Effect4.Api.HostSession
 namespace Effect4.Api.Runner
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Store
-
-/-- **The entry `Runner.load` keeps the invariant**: a loaded runner holds it at the table of
-its root.
-
-A step of the proposed registry claim `saved-mask-chain-runs`. Its consumer is a law that reads
-the chain at a runner which a holder loads and plays. -/
-@[semantics "scope-lifetime-finalization"]
-theorem load_maskRuns (program : Api.Program) (table : RowTable) (expectedProfile : String)
-    (header : HostSession.Header) (compileFuel stepFuel : Nat) (p : Runner)
-    (loaded : load program table expectedProfile header compileFuel stepFuel = .ok p) :
-    MaskRuns [true] p.session.machine := by
-  unfold load at loaded
-  split at loaded
-  · cases loaded
-  · rename_i session started
-    cases loaded
-    exact HostSession.start_maskRuns program table expectedProfile header compileFuel session
-      started
 
 /-- **The entry `Runner.step` keeps the invariant**: one row is one of the session's four
 transitions. A binding and a receipt write the ledger alone. An application and a control are
@@ -323,7 +281,7 @@ theorem play_maskRuns (s : Run) (rows : List Command) (bases : List Bool)
 
 /-- **Each machine that a journal reaches from an opened run holds the invariant**, at a table
 that starts with the root's flag. So each of its live fibers holds the chain at its start flag.
-It takes no premise on the built program, the journal or the budget. `Run.runPure` and
+It takes no premise on the built program, the journal or the budget. Opening followed by control rows and
 `Run.runClock` are journals played from an opened run, so this statement covers them.
 
 A step of the proposed registry claim `saved-mask-chain-runs`. Its consumers read the law at a

@@ -65,7 +65,7 @@ Row 373 rules two parts of that promise for the first share (2026-10-13):
   again at the checker's instance at that address (`acceptAtInstance`,
   `src/Effect4/Program/Admit.lean`; `HostSession.instanceAt`). A success admitted there is a
   member of the instance's answer column with no handle, and it reaches the program unchanged
-  (`instance_prepared_success`). The checked replay takes this path: `Typed.replay` feeds a
+  (`instance_prepared_success`). The checked replay takes this path: `LiveRecord.restore` admits the program and feeds a
   journal through the session, so each applied reply was admitted at its call
   (`Live.replay_at_call_instance`, `src/Effect4/Laws/Api/Live.lean`).
 - **Preparation.** `prepareExternalAnswer` (`src/Effect4/Program/Compile.lean`) turns an accepted reply into the
@@ -75,8 +75,8 @@ Row 373 rules two parts of that promise for the first share (2026-10-13):
     budget.
   - `Api.replay` does not admit decisions; by its documentation the caller does. It is a named
     test entry (row 373 (8)).
-  - `Typed.replay` replays a session's journal through the checked session, and a session's own
-    journal replays to that run (`Live.replay_recorded`).
+  - `LiveRecord.restore` checks full admission, then replays the journal through the checked session.
+    A session's own record restores its exact run (`LiveRecord.restore_save`, `src/Effect4/Laws/Api/LiveRecord.lean`).
 - **The reference machine takes the row table** (decisions rows 313 and 314). The frame
   machine and the reference machine agree at every row table (`run_eq_ref_table`,
   `src/Effect4/Laws/Program/Table/Agreement.lean`). A host answer reaches either machine only as
@@ -111,7 +111,7 @@ The holes found on 2026-09-30 and 2026-10-03, by their state at HEAD. These stan
 
 | Hole | Evidence | Row |
 | --- | --- | --- |
-| The certificate-first `Typed.replay` runs unchecked answers: it is the raw `Api.replay` on the certified program (`src/Effect4/Api.lean`). Row 373 (8) rules the repair: it replays the session's journal, checked at each call's instance. | `origin-plan-review/RemediationProbe.lean` | 98 |
+| The historical certificate-first `Typed.replay` runs unchecked answers. The current `LiveRecord.restore` checks full admission and replays the journal at each call's instance. | `origin-plan-review/RemediationProbe.lean` | 98 |
 | `replayChecked` uses the execution budget for compilation (`load`, `src/Effect4/Api.lean`); swapping it in changes an unfinished run into a finished one. | `RemediationProbe.lean` | 98 |
 | An allocation reply is tied to the allocation count when it is applied; two replies checked against one snapshot need not both apply. | the contract's `Probe.lean` | 100 |
 
@@ -238,7 +238,7 @@ accepted.
 | Route | Disposition |
 | --- | --- |
 | `HostSession`, `Runner`, `Run` | the canonical checked keyed route |
-| `Typed.replay` | consumes a session header and a `Runner.Command` journal through the checked keyed session, with both budgets and phases that can refuse, checked at each call's instance (rows 98 and 373 (8)) |
+| `Built.ofSketch`, `Live.open`, `LiveRecord.restore` | Full admission precedes opening. Restore checks record versions and replays ordered commands with both budgets and each call's instance. |
 | `Api.replayChecked` | low-level evidence; budgets separated; no claim of host-envelope conformance |
 | raw `Api.replay` | a named test entry; the caller admits decisions (row 373 (8)) |
 | `replayAdmitted` | gone (row 373 (8)) |

@@ -1,6 +1,6 @@
 (* S0 finite generated-runtime controls.
    Depends on the sealed Effect4_gen.Api_gen interface.
-   Tested: lawful ask/learn/hit/bind, full start/save/restore, both budgets,
+   Tested: lawful ask/learn/hit/bind, full admission/open/save/restore, both budgets,
    repeated-field refusal, and record-version refusal. No native proof is claimed. *)
 open Eff_types
 module A = Effect4_gen.Api_gen
@@ -16,7 +16,6 @@ let malformed : NativeOp.t Eff.t =
     ["x"], Terms.Cons (Term.Lit (Lit.Nat 7), Terms.Nil)))
 let app : A.sig_app = { rows = []; services = []; types = [] }
 let budget : A.budget = { fuel = 37; compile_fuel = 53 }
-let header : A.header = { version = 3; session = "seams-s0"; binding = "test"; table = [] }
 type public_memo_alias = A.memo
 let lawful_alias : public_memo_alias = A.program_check_memo_empty
 let () =
@@ -27,11 +26,17 @@ let () =
   let answer = A.program_check_checked_ask (A.program_check_memo_oracle memo rule) input in
   let bound = A.program_check_checked_bind' answer A.program_check_checked_pure' in
   check "ask-learn-hit-bind-readVerdict" (Result.is_ok (A.program_check_checked_read_verdict bound).result);
-  let live = get (A.live_start program app "test" header budget) in
+  let built = get (A.api_built_of_sketch app { program; holes = [] }) in
+  let live = A.live_open_ built "seams-s0" budget "test" in
   let record = A.live_record_save live in
   let restored = A.live_record_save (get (A.live_record_restore record)) in
-  check "full-start-save-restore" (restored.session = "seams-s0" && restored.binding = "test");
+  check "full-admission-open-save-restore" (restored.session = "seams-s0" && restored.binding = "test");
   check "both-budgets" (restored.budget.fuel = 37 && restored.budget.compile_fuel = 53);
-  check "duplicate-field-start-refused" (refused (A.live_start malformed app "test" header budget));
+  check "duplicate-field-admission-refused" (refused (A.api_built_of_sketch app { program = malformed; holes = [] }));
   check "duplicate-field-restore-refused" (refused (A.live_record_restore { record with program = malformed }));
+  let unnamed = get (A.live_record_restore { record with session = ""; row_names = [("stored", 9)] }) in
+  let retained = A.live_record_save unnamed in
+  check "restore-stored-names-and-empty-session" (retained.session = "" && retained.row_names = [("stored", 9)]);
+  check "unadmitted-call-refused"
+    (refused (A.api_built_of_sketch app { program = Eff.Perform (NativeOp.External 0, Term.Lit Lit.Unit); holes = [] }));
   check "record-version-refused" (refused (A.live_record_restore { record with version = 2 }))

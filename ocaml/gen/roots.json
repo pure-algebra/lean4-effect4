@@ -143,7 +143,8 @@
         "Effect4.Program.Check.Memo.oracle",
         "Effect4.Program.Check.HitRule.exact",
         "Effect4.Program.Check.HitRule.or",
-        "Effect4.Live.start",
+        "Effect4.Api.Built.ofSketch",
+        "Effect4.Live.open",
         "Effect4.LiveRecord.restore",
         "Effect4.LiveRecord.save",
         "Effect4.Api.load",
@@ -226,7 +227,8 @@
         "Effect4.Program.Check.Memo.oracle",
         "Effect4.Program.Check.HitRule.exact",
         "Effect4.Program.Check.HitRule.or",
-        "Effect4.Live.start",
+        "Effect4.Api.Built.ofSketch",
+        "Effect4.Live.open",
         "Effect4.LiveRecord.restore",
         "Effect4.LiveRecord.save",
         "Effect4.Program.Check.extension",
@@ -237,7 +239,8 @@
         "Effect4.Program.Check.Memo",
         "Effect4.Program.Check.Oracle",
         "Effect4.Program.Check.HitRule",
-        "Effect4.Live"
+        "Effect4.Live",
+        "Effect4.Api.Built"
       ]
     },
     {

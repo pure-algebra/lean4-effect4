@@ -17,29 +17,8 @@ set_option autoImplicit false
 namespace Effect4.Api.HostSession
 open Effect4 Effect4.Program
 
-/-- **A session that `start` made reads the checker's instance at every address**: its table's
-lookup is `instanceAt` (the session note's slice DM5). -/
-theorem start_callInstance {program : Api.Program} {app : SigApp} {profile : String}
-    {header : Header} {compileFuel : Nat} {s : Session program app}
-    (h : start program app profile header compileFuel = .ok s) :
-    s.callInstance = instanceAt program app := by
-  unfold start at h
-  split at h
-  · cases h
-  · split at h
-    · cases h
-    · split at h
-      · cases h
-      · split at h
-        · cases h
-        · split at h
-          · cases h
-          · cases h
-            funext o
-            exact lookup_programCalls _ _ _ o
-
 /-- A session whose table is the program's reads the checker's instance at every address. The
-consumer is `Run.open`, which makes the table as `start` does. -/
+consumer is `Run.open`, which makes the table. -/
 theorem callInstance_callTable {program : Api.Program} {app : SigApp}
     (s : Session program app) (h : s.calls = callTable program app) :
     s.callInstance = instanceAt program app := by
@@ -64,17 +43,6 @@ theorem instanceAt_complete {program : Api.Program} {app : SigApp}
     | error _ => rw [hc] at ht; cases ht
     | ok T => exact checkModule_programCallAt hc hat
   · cases ht
-
-/-- **A session that `start` made has an instance at every call of its program**: the table's
-lookup is `instanceAt` (`start_callInstance`), which answers at every call of an admitted
-program (`instanceAt_complete`). -/
-theorem start_callInstance_complete {program : Api.Program} {app : SigApp} {profile : String}
-    {header : Header} {compileFuel : Nat} {s : Session program app}
-    (h : start program app profile header compileFuel = .ok s) {o : List Nat} {op : NativeOp}
-    {request : Term} (hat : (Node.eff program.expandRefs).at_ o = some (.eff (.perform op request))) :
-    ∃ c, s.callInstance o = some c ∧ c.op = op := by
-  rw [start_callInstance h]
-  exact instanceAt_complete s.admitted hat
 
 /-- Successful preflight proves the existing envelope for the association selected by key, or,
 where the row's own columns refuse the completion, the envelope at the call's checked instance

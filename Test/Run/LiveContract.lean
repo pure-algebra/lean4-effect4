@@ -1,30 +1,14 @@
+import Effect4.Laws.Api.LiveRecord
 import Effect4.Laws.Api.Live
 import Effect4.Api.Author
 import Test.Run.RunContract
 import Test.Api.TypedReplies
 
 /-!
-# The host session's face: `Live`, its events and its verdicts
-
-Seat LIVE's battery for the face of decisions row 326 (1): `src/Effect4/Run/Event.lean` (slice DM1)
-and `src/Effect4/Run/Live.lean` (slice DM2). Its fixtures are the run contract's
-(`Test/Run/RunContract.lean`): `twice`, two host calls in sequence, and `pairUp`, two children
-parked on one row.
-
-* **Readers.** The laws at `Live` (`src/Effect4/Laws/Api/Live.lean`), applied to a live run that
-  events reached.
-* **Controls.** A row selector that names two live calls is unresolved, and it plays nothing
-  (decisions row 326 (4)). Its green twins name the call by fiber, by exact key, or by row once one
-  live call is left. A header that the session refuses is refused by `Live.start`, with the
-  session's reason.
-* **Finite evaluations.** A script fed event by event reaches the exit that the run contract's drive
-  reaches. The view (`src/Effect4/Run/View.lean`, slice DM3) of each stage: the awaited calls with
-  their checked instance and the session's record, the internal waits, and `funded`.
-* **The typed replay** (`Api.Typed.replay`, decisions rows 98 and 373 (8)), on the template row of
-  decisions row 183 (`Test/Api/TypedReplies.lean`). A journal whose answer the call's checked
-  instance admits replays to the program's exit. The checked tape replay refuses the same answer
-  at the row's own columns. The red control: a journal whose answer misfits the call's instance is
-  refused at its receipt, and the raw `Api.replay` applies that answer unchecked.
+Finite controls for live commands and call-instance reply admission.
+Readers apply the existing Live laws to reached runs.
+Controls distinguish admitted replies from raw unchecked tape replay.
+Opening receives a fully admitted Built; restoration owns saved-record admission.
 -/
 
 set_option autoImplicit false
@@ -94,24 +78,12 @@ example : (Run.open finished.run.built finished.run.id finished.run.budget
 /-- The header that the session of `Test/Api/HostSessionContract.lean` admits. -/
 def header : Api.HostSession.Header := Test.Api.HostSessionContract.header
 
--- Green: the session admits the header and the program; the face opens the run under the header's
--- name, with nothing played.
-#guard match Live.start twice.program twice.table "serial-root-scalar-v1" header with
-  | .ok l => l.run.id == "session-A" && l.run.journal.isEmpty
+-- Full admission supplies the only package that opening needs.
+#guard match Api.Built.ofSketch twice.app { program := twice.program } with
+  | .ok b => (Live.open b header.session {} "serial-root-scalar-v1").run.journal.isEmpty
   | .error _ => false
--- Red controls of `start_error`: another binding, another version and an empty name are refused
--- with the session's reasons.
-#guard match Live.start twice.program twice.table "keyed-v3" header with
-  | .error .profile => true
-  | _ => false
-#guard match Live.start twice.program twice.table "serial-root-scalar-v1"
-    { header with version := 2 } with
-  | .error .version => true
-  | _ => false
-#guard match Live.start twice.program twice.table "serial-root-scalar-v1"
-    { header with session := "" } with
-  | .error .session => true
-  | _ => false
+-- An empty name is valid for opening and restoration.
+#guard (Live.open twice "").run.id = ""
 
 /-! ## The view
 
@@ -188,9 +160,9 @@ example : ∀ f ∈ parked.run.machine.fibers, f.exit = none →
 Seat REPLAY's lines. The fixture is row 183's template row, `List<A>` to `Option<A>`, called at
 `[1]`: the call's checked instance answers `Option<number>`, which the row's own columns refuse. -/
 
-/-- The program of row 183's battery, with its typing certificate. -/
-def typedFirst : Option (Api.Typed Test.Api.TypedReplies.table) :=
-  (Api.check Test.Api.TypedReplies.program Test.Api.TypedReplies.table).toOption
+/-- Full admission of row 183's program at its application. -/
+def builtFirst : Except AdmitRefusal Api.Built :=
+  Api.Built.ofSketch Test.Api.TypedReplies.table { program := Test.Api.TypedReplies.program }
 
 /-- A session's journal that answers the one call: the root started, the call bound at its guard,
 the reply received, then applied. -/
@@ -198,10 +170,11 @@ def answeredWith (completion : Api.HostSession.Answer) : List Api.Runner.Command
   [.control Api.evaluate, .bind Test.Api.TypedReplies.call0 0,
     .submit (Test.Api.TypedReplies.reply completion), .apply ⟨Api.root, 0⟩]
 
-/-- The typed replay of that journal, under the battery's header and its binding. -/
+/-- Open an admitted program and feed its journal in order. -/
 def replayed (completion : Api.HostSession.Answer) :
-    Option (Except Api.HostSession.Refusal Live) :=
-  typedFirst.map (·.replay "profile" Test.Api.TypedReplies.header (answeredWith completion))
+    Option (Except AdmitRefusal Live) :=
+  some (builtFirst.map fun b => (Live.open b "session-R" {} "profile").feedAll
+    ((answeredWith completion).map .wire))
 
 /-- `some 1` answered: the run that the typed replay answers, or the run contract's program
 opened, should the replay refuse (the line below shows it does not). -/
@@ -242,21 +215,7 @@ example (applied : (Run.rows admittedRun.run)[3]? = some (.apply ⟨Api.root, 0�
   | .ok l => l.run.phases == [.progressed, .bound, .preflight, .applied]
   | .error _ => false
 
--- `Live.replay_recorded`, read on the finished script: the typed replay of its own journal answers
--- its run, with the row spellings dropped.
-example (t : Api.Typed finished.run.built.table) (same : t.program = finished.run.built.program)
-    (named : finished.run.id ≠ "") :=
-  Live.replay_recorded finished t same named
-
--- Red controls of the start: another binding and another table are refused, with the session's
--- reasons.
-#guard typedFirst.any fun t =>
-  match t.replay "keyed-v3" Test.Api.TypedReplies.header [] with
-  | .error .profile => true
-  | _ => false
-#guard typedFirst.any fun t =>
-  match t.replay "profile" { Test.Api.TypedReplies.header with table := [] } [] with
-  | .error .table => true
-  | _ => false
+-- Restoration retains the whole run, including its row names.
+example := LiveRecord.restore_save finished
 
 end Test.Run.LiveContract

@@ -1,6 +1,7 @@
 import Effect4.Run.LiveRecord
 import Effect4.Laws.Api.Live
 import Effect4.Laws.Program.CheckedTyping
+import Effect4.Laws.Api.Built
 
 /-!
 # Laws.Api.LiveRecord — restoration and byte round-trip of a saved live session
@@ -41,7 +42,7 @@ theorem restore_save (l : Live) :
     (l.run.journal.map .wire), ?_, ?_⟩
   · unfold restore save
     dsimp only [ne_eq, not_true_eq_false, ↓reduceIte]
-    rw [admitProgram_eq_ok l.run.built.admitted]
+    rw [Api.Built.ofProgram_of_admitted _ _ l.run.built.admitted]
     rfl
   · rw [Live.feedAll_wire]
     exact Live.journal_replays l

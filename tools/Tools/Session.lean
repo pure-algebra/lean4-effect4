@@ -66,7 +66,7 @@ one.
 | `journal` | nothing | each edit, its address and its delta | none |
 | `sketch` | nothing | the sketch and the application as JSON, and as bytes with `hex` | `Sketch.decode_exact`, `Canonical.decode_exact` |
 | `catalogue` | nothing; open or not | the program's forms, the atoms with their typing schemes, the application's rows by index (`Tools.Catalogue`) | `Canonical.ofJsonAnyOrder_exact`, `NativeAtom.atom_table_wf` |
-| `start` | nothing | admits the sketch at `app.withHoles`, opens a `Live` session, feeds `.start`, and answers the live view | `Sketch.sourceCheck_of_admitted`, `Live.reached` |
+| `start` | nothing | admits the sketch at `app.withHoles` through `Built.ofSketch`, opens a `Live` session, feeds `.start`, and answers the live view | `Sketch.sourceCheck_of_admitted`, `Live.reached` |
 | `receive` | `fiber`, `token` or `rowName`; `answer` or `answerJson` | feeds `.receive` into the live session and answers the verdict and live view | `Live.reached` |
 | `apply` | `fiber`, `token` or `rowName` | feeds `.apply` and `.flush` into the live session and answers the verdict and live view | `Live.reached` |
 | `liveView` | nothing | the live session's outcome, exit, and waiting calls with keys and checked instances | `Live.reached`, `Live.view_awaits`, `Live.view_checked` |
@@ -96,7 +96,7 @@ fills were certified at. After any other edit it refuses new fills until `fills.
 **What it is not.** It is no MCP server: an MCP tool is a thin wrapper over `answerLine`. It
 holds one session. It does not admit the application's signature (`admitSig`) at `open`: it shows
 the checker's answers at that signature (the open part `sketch-admission` of R14), and `run`
-admits the sketch at the application extended by its holes (`admitProgram`).
+admits the sketch at the application extended by its holes (`Api.Built.ofSketch`).
 -/
 
 namespace Tools.Session
@@ -960,18 +960,16 @@ def answer (st : State) (req : Request) : State × Answer :=
         (st, Answer.mk op st.app [``Sketch.decode_exact, ``Canonical.decode_exact] true result
           none req.id)
       | "start" =>
-        let app := l.app.withHoles l.sketch.holes
+        let app := l.app
         let sourceType := match l.view.type with
           | some t => effTyJson t
           | none => .null
-        match Effect4.Program.admitProgram l.sketch.program app with
+        match Effect4.Api.Built.ofSketch app l.sketch with
         | .error why =>
           let result := Json.mkObj [("status", .str "refused"), ("sourceType", sourceType),
             ("refusal", printJson why)]
           (st, Answer.mk op st.app [``Sketch.sourceCheck_of_admitted] true result none req.id)
-        | .ok admitted =>
-          let rowNames := app.rows.zipIdx.map fun (r, i) => (r.spelling, i)
-          let b : Effect4.Api.Built := { app, program := l.sketch.program, admitted, rowNames }
+        | .ok b =>
           let (live', verdict) := (Effect4.Live.open b st.app).feed .start
           let st' := { st with live := some live' }
           let result := Json.mkObj [("status", .str "ok"), ("sourceType", sourceType),
@@ -986,17 +984,16 @@ def answer (st : State) (req : Request) : State × Answer :=
           (st, unreadable (α := List (String × Effect4.Api.HostSession.Answer)) req.op
             "the host answers do not read" req.answersJson req.id)
         | some answers =>
-          let app := l.app.withHoles l.sketch.holes
+          let app := l.app
           let sourceType := match l.view.type with
             | some t => effTyJson t
             | none => .null
-          match Effect4.Program.admitProgram l.sketch.program app with
+          match Effect4.Api.Built.ofSketch app l.sketch with
           | .error why =>
             let result := Json.mkObj [("status", .str "refused"), ("sourceType", sourceType),
               ("refusal", printJson why)]
             (st, Answer.mk op st.app answerLaws true result none req.id)
-          | .ok admitted =>
-            let b : Effect4.Api.Built := { app, program := l.sketch.program, admitted }
+          | .ok b =>
             let events : List Effect4.Run.Event :=
               [.start] ++
               answers.flatMap (fun (row, ans) => [.receive (.row row) ans, .apply (.row row)]) ++
@@ -1011,7 +1008,7 @@ def answer (st : State) (req : Request) : State × Answer :=
                   | some exit => printJson exit
                   | none => .null),
                 ("waiting", Json.arr waiting.toArray)] ++
-              (if answers.isEmpty && app.rows.isEmpty then [("syncExit", printJson b.runSync)] else [])
+              (if answers.isEmpty && b.app.rows.isEmpty then [("syncExit", printJson b.runSync)] else [])
             (st, Answer.mk op st.app (answerLaws ++ [``Effect4.Live.reached]) true result none
               req.id)
       | "settle" | "frames" | "explore" =>

@@ -10,9 +10,7 @@ import Effect4.Api.Supervision
 running: the checked session of `Api.HostSession`, the budget every row is played at, and the
 rows played so far with the verdict of each.
 
-* **Opening cannot refuse.** `Run.open` takes a `Built`, so the evidence `HostSession.start`
-  re-derives is already in hand; the only thing left to choose is the name of the run
-  (`Laws/Run.lean`, `open_total`).
+* **Opening cannot refuse.** `Run.open` takes a fully admitted `Built` and a run name.
 * **Everything a caller does is rows.** `Rows.start`, `Rows.flush`, `Rows.clock`,
   `Rows.receive` and `Rows.answer` are functions into `List Api.Runner.Command`. The alphabet
   on the wire does not change, so every law of `Laws/Api/Runner.lean` — a refused row changes
@@ -98,8 +96,8 @@ def rowOf (s : Run) : NativeOp → Option Program.Row
 /-! ## Opening and playing -/
 
 /-- Open a built program under a name. Nothing here can refuse: the certificate is the
-evidence `HostSession.start` re-derives, the header is built from the `Built` rather than
-supplied beside it, and the machine is loaded at the budget's compile fuel. -/
+admission evidence carried by `Built`. The header comes from the package and the selected name.
+The machine loads at the budget's compile fuel. -/
 def «open» (b : Api.Built) (id : String) (budget : Api.Budget := {})
     (binding : String := "") : Run :=
   { built := b
@@ -369,12 +367,7 @@ end Rows
 
 namespace Run
 
-/-! ## Three named runs -/
-
-/-- The ordinary run: the root evaluated, then the dispatcher flushed. The journal
-`Api.run` would have played, with the session checking every row. -/
-def runPure (b : Api.Built) (id : String := "run") (budget : Api.Budget := {}) : Run :=
-  (Run.open b id budget).play (Rows.tape [Api.evaluate, Api.flush])
+/-! ## Clock and host runs -/
 
 /-- The run under the test clock: the root evaluated, the clock adjusted in order, the
 dispatcher flushed (`Api/TestClock.lean`, `tape`). -/

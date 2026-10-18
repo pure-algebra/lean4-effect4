@@ -66,10 +66,10 @@ def restore (r : LiveRecord) : Except Refusal Live :=
   if r.version ≠ currentVersion then
     .error (.unsupportedVersion r.version)
   else
-    match admitProgram r.program r.app with
+    match Api.Built.ofProgram r.app r.program with
     | .error why => .error (.admission why)
-    | .ok admitted =>
-      .ok ((Live.open ⟨r.app, r.program, admitted, r.rowNames⟩ r.session r.budget
+    | .ok built =>
+      .ok ((Live.open { built with rowNames := r.rowNames } r.session r.budget
         r.binding).feedAll (r.journal.map .wire))
 
 /-- The canonical tuple of a `LiveRecord`'s first-order fields. -/

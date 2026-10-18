@@ -56,13 +56,6 @@ structure Runner where
 /-- The runner's row table. -/
 def Runner.table (p : Runner) : RowTable := p.app.rows
 
-/-- A runner from a program, its application and an explicit header, or the refusal. -/
-def load (program : Api.Program) (app : SigApp) (expectedBinding : String)
-    (header : Header) (compileFuel stepFuel : Nat) : Except HostSession.Refusal Runner :=
-  match HostSession.start program app expectedBinding header compileFuel with
-  | .error why => .error why
-  | .ok session => .ok { program, app, fuel := stepFuel, session }
-
 /-- The checked transition a command names. -/
 def result (p : Runner) : Command → Result p.program p.app
   | .bind call token => HostSession.bindCall p.session call token

@@ -245,7 +245,7 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
 
 The exit criterion of S1a: `runAdmitted` runs what `run` runs on every admitted fixture. The
 certificate is consumed as an argument, so a caller cannot reach these without building it. The
-typed replay (`Api.Typed.replay`, decisions row 373 (8)) takes the place of the retired
+admitted opening and journal feed (`Live.open`, `Live.feedAll`) takes the place of the retired
 `replayAdmitted`: it replays a session's journal, and the session admits each reply at its call. -/
 
 def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat) : Option ExitV :=
@@ -253,19 +253,13 @@ def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat) : Op
   | .ok certificate => (Api.runAdmitted certificate fuel).exit
   | .error _ => none
 
-/-- The session header of the typed replay over a table. -/
-def replayHeader (table : RowTable) : Api.HostSession.Header :=
-  ⟨Api.HostSession.version, "invocation", "keyed-v3", table⟩
-
-/-- The typed replay's exit: the program checked, then a session's journal replayed through the
-checked session, or `none` where the check or the session's start refuses. -/
+/-- The typed replay's exit: the program admitted at the table (`Api.Built.ofSketch`), opened
+under the session header `invocation`/`keyed-v3` (`Run.open`), and a session's journal played
+through the checked session; `none` where admission refuses. -/
 def typedReplayExit (program : Api.Program) (table : RowTable) (budget : Api.Budget)
     (journal : List Api.Runner.Command) : Option ExitV :=
-  match Api.check program table with
-  | .ok t =>
-    match t.replay "keyed-v3" (replayHeader table) journal budget with
-    | .ok l => l.run.exit
-    | .error _ => none
+  match Api.Built.ofSketch (.ofTable table) { program } with
+  | .ok b => ((Run.open b "invocation" budget "keyed-v3").play journal).exit
   | .error _ => none
 
 /-- The session's journal of `replyTape`: the root evaluated, the call bound at its guard, the

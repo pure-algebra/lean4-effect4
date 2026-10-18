@@ -248,6 +248,7 @@ def registry : Registry where
       title := "Host Session Protocol: Session automaton, external reply ingestion, and boundary capabilities"
       defaultModules := [
         `Effect4.Laws.Api.HostSession,
+        `Effect4.Laws.Api.Built,
         `Effect4.Laws.Api.Frontier,
         `Effect4.Laws.Api.Guard,
         `Effect4.Laws.Program.RowProtocol
@@ -960,8 +961,14 @@ def registry : Registry where
     { id := "reply-at-call-instance", concept := "host-session-protocol", role := .preservation
       title := "A reply admitted at its call's checked instance is a handle-free member of the instance's answer column, and the machine prepares it unchanged, at a row whose answer column allocates nothing; a failure admitted there holds no reserved defect; the registration keeps its call's address and the session reads programCallAt there, from a table made once at open (reached_callInstance); in a recorded, funded run that address holds a call of the operation in the program (origin_addresses_call); the expansion of layer references keeping it there is open (decisions rows 183, 323)"
       pointer := .witness `Effect4.Program.instance_prepared_success },
+    { id := "built-admission-exact", concept := "host-session-protocol", role := .compatibility
+      title := "Built.ofSketch returns exactly the full program-admission refusal at the application extended by the sketch's hole rows, and Built.ofProgram at the recorded application exactly; no native forgery, host execution, or progress claim (seams S4, R6 and R13)"
+      pointer := .witness `Effect4.Api.Built.ofSketch_error_iff },
+    { id := "live-session-persists", concept := "host-session-protocol", role := .compatibility
+      title := "Restoring a live session's own record returns its exact run after full admission and ordered journal replay, retaining recorded row spellings and empty session names; no repeated host effects or host reconnection claim (seams S4, R6 and R13)"
+      pointer := .witness `Effect4.LiveRecord.restore_save },
     { id := "block-call-instance", concept := "host-session-protocol", role := .preservation
-      title := "On a program that the module check admits, the call instance answers at every call, with the call's operation: in a definition's body at the block's signature and its declared request, in a block's main program at the block's signature, and in a program with no block (programCallAt over Eff.partAt); the session's call table is its lookup, so a session that start made has an instance at every call of its admitted program (start_callInstance_complete); it does not say that the expansion of layer references keeps a call at its address, nor anything of a run (decisions rows 323, 328, 333)"
+      title := "On a program that the module check admits, the call instance answers at every call, with the call's operation: in a definition's body at the block's signature and its declared request, in a block's main program at the block's signature, and in a program with no block (programCallAt over Eff.partAt); the session's call table is its lookup, and HostSession.instanceAt_complete supplies an instance at each call of an admitted program; Run.reached_callInstance reads that table in a reached run; it does not say that the expansion of layer references keeps a call at its address, nor anything of a run (decisions rows 323, 328, 333)"
       pointer := .witness `Effect4.Program.checkModule_programCallAt },
     { id := "session-failure-shape-free", concept := "host-session-protocol", role := .preservation
       title := "A session-accepted failing reply carries no reserved defect: the failure half of admit_sound (decisions row 191, E4-HOST-CE-008)"
@@ -1172,7 +1179,7 @@ def registry : Registry where
       pointer := .witness `Tools.View.Flow.checkReach_exact },
     -- the landings of 2026-10-13 (decisions rows 376 and 377)
     { id := "replay-at-call-instance", concept := "host-session-protocol", role := .preservation
-      title := "At a row of a live run that applied the reply stored at a key, the session held that reply at the run before the row and its preflight admitted it, and the session's instance lookup is the checker's instanceAt on the run's program: a success prepares a member of the row's shape-decided column or of the call's checked instance, and a failure holds no shape defect; Typed.replay answers a Live, so the law reads every replayed run; the converse half is Live.replay_recorded; nothing of membership in the instance from the row's columns (admitAnswer_instance), handle rows, AnswerOk or progress (decisions rows 98 and 373 (8))"
+      title := "At a row of a live run that applied the reply stored at a key, the session held that reply at the run before the row and its preflight admitted it, and the session's instance lookup is the checker's instanceAt on the run's program: a success prepares a member of the row's shape-decided column or of the call's checked instance, and a failure holds no shape defect; LiveRecord.restore answers a Live after full admission and journal replay, so the law reads every restored run; the converse half is Live.replay_recorded; nothing of membership in the instance from the row's columns (admitAnswer_instance), handle rows, AnswerOk or progress (decisions rows 98 and 373 (8))"
       pointer := .witness `Effect4.Live.replay_at_call_instance },
     { id := "run-conforms-postcondition", concept := "host-session-protocol", role := .adequacy
       title := "A reached run that conforms to the declared row protocols meets every postcondition its call tree meets under them (Effects.Program.Sat), through denoteRows_eq_session_host and the checked host's soundness; nothing of a run that does not conform, or of the protocols' demands, which conforms checks and no theorem reads yet (the claims packet, slice PROTOCOL)"

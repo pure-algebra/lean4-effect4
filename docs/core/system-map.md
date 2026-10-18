@@ -54,8 +54,10 @@ paragraph says what the words mean. Sources: the model probe
 - **Extension is conservative only under named obligations** (C1–C8, row 111): declared appends
   with fresh, unreserved names, never an insertion or an override. A published program and a
   session are pinned to their complete assembled table (row 115: no `Package.install` order
-  appends on the assembled table; `HostSession.start` refuses another table). The host-row
-  protocol entry carries the row's domain bit so that typing is monotone in the table (row 116).
+  appends on the assembled table).
+  `Built.ofSketch` admits the program at that table; `Run.open` constructs its header from the same application.
+  Message admission retains its header-table check.
+  The host-row protocol entry carries the row's domain bit so that typing is monotone in the table (row 116).
 - **`H` is the tree's own `HostSpec`,** lawful by `LawfulHostSpec` (`Program/Profile.lean`); the
   empty relation is "no host". The lane is parked (rows 95–101) except the interim handle rule
   (row 97). M6's premise is a predicate on tapes (row 95), not a host relation, so the lane brings

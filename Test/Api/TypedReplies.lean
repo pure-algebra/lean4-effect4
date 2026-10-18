@@ -30,8 +30,11 @@ def program : Api.Program :=
 def header : Header := ⟨version, "session-R", "profile", table⟩
 
 def initial : Option (Session program table) :=
-  match start program table "profile" header 100 with
-  | .ok s => some s
+  match admitProgram program table with
+  | .ok admitted =>
+    some
+      { admitted, header, machine := Api.load program 100
+        calls := callTable program table }
   | .error _ => none
 
 def parked : Option (Session program table) :=

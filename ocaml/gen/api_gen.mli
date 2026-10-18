@@ -176,44 +176,6 @@ and sketch = {
   holes : Eff_types.Row.t list;
 }
 and +!'a checked
-and budget = { fuel : int; compile_fuel : int; }
-and session = {
-  admitted : admitted_program;
-  header : header;
-  machine :
-    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-     Eff_types.Defect.t, fiber_id, unit, ctx, stores,
-     (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-      Eff_types.Defect.t, fiber_id, unit)
-     prim,
-     (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-      Eff_types.Defect.t, fiber_id, unit)
-     frame_fiber,
-     (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-      Eff_types.Defect.t, fiber_id, unit)
-     frame_event)
-    run_machine;
-  next_call : int;
-  applied : int;
-  active : bound_call list;
-  pending : reply_slot list;
-  consumed : int list;
-  retired : retired_call list;
-  calls : (int list * Eff_types.NativeOp.t call_instance) list;
-  funded : bool;
-}
-and header = {
-  version : int;
-  session : string;
-  binding : string;
-  table : Eff_types.Row.t list;
-}
-and built = {
-  app : sig_app;
-  program : Eff_types.NativeOp.t Eff_types.Eff.t;
-  admitted : admitted_program;
-  row_names : (string * int) list;
-}
 and live_record = {
   version : int;
   app : sig_app;
@@ -227,6 +189,7 @@ and live_record = {
 and effect4_live_record_refusal =
     Effect4_live_record_refusal_unsupportedVersion of int
   | Effect4_live_record_refusal_admission of admit_refusal
+and built
 and run = {
   built : built;
   budget : budget;
@@ -876,23 +839,38 @@ and layer_ty = {
 }
 and dep_role = DepRole_body of int | DepRole_main | DepRole_layers
 and dep = { role : dep_role; base : int list; input : check_input; }
-and effect4_api_host_session_refusal =
-    Effect4_api_host_session_refusal_version
-  | Effect4_api_host_session_refusal_session
-  | Effect4_api_host_session_refusal_profile
-  | Effect4_api_host_session_refusal_table
-  | Effect4_api_host_session_refusal_program of admit_refusal
-  | Effect4_api_host_session_refusal_duplicateCall
-  | Effect4_api_host_session_refusal_protocol
-  | Effect4_api_host_session_refusal_selectionRequired
-  | Effect4_api_host_session_refusal_pendingReply
-  | Effect4_api_host_session_refusal_callOrder
-  | Effect4_api_host_session_refusal_noCall
-  | Effect4_api_host_session_refusal_staleCall
-  | Effect4_api_host_session_refusal_envelope
-  | Effect4_api_host_session_refusal_directAnswer
-  | Effect4_api_host_session_refusal_pendingControl
-  | Effect4_api_host_session_refusal_stuck
+and budget = { fuel : int; compile_fuel : int; }
+and header = {
+  version : int;
+  session : string;
+  binding : string;
+  table : Eff_types.Row.t list;
+}
+and session = {
+  admitted : admitted_program;
+  header : header;
+  machine :
+    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+     Eff_types.Defect.t, fiber_id, unit, ctx, stores,
+     (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+      Eff_types.Defect.t, fiber_id, unit)
+     prim,
+     (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+      Eff_types.Defect.t, fiber_id, unit)
+     frame_fiber,
+     (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+      Eff_types.Defect.t, fiber_id, unit)
+     frame_event)
+    run_machine;
+  next_call : int;
+  applied : int;
+  active : bound_call list;
+  pending : reply_slot list;
+  consumed : int list;
+  retired : retired_call list;
+  calls : (int list * Eff_types.NativeOp.t call_instance) list;
+  funded : bool;
+}
 and event =
     Event_control of
       (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
@@ -1291,11 +1269,6 @@ and field_type =
   | FieldType_json
   | FieldType_clockMillis
 and record_shape = { kind : string; fields : (string * field_type) list; }
-and effect4_program_formation_site = {
-  path : string list;
-  template : bool;
-  ty : Eff_types.Ty.t;
-}
 and effect4_run_verdict =
     Effect4_run_verdict_played of phase list
   | Effect4_run_verdict_unresolved of sel
@@ -1430,6 +1403,11 @@ and leaf_head =
   | LeafHead_undefined
   | LeafHead_unit
 and variance = Variance_co | Variance_contra | Variance_inv
+and effect4_program_formation_site = {
+  path : string list;
+  template : bool;
+  ty : Eff_types.Ty.t;
+}
 and command =
     Command_bind of call * int
   | Command_submit of reply
@@ -1550,6 +1528,7 @@ and phase =
   | Phase_frontier
   | Phase_refused of effect4_api_host_session_refusal
 and result_ = { phase : phase; session : session; }
+and sel = Sel_key of key | Sel_fiber of fiber_id | Sel_row of string
 and ('op, 'a) arg_reader = {
   child : int -> eff_fam -> 'a;
   term : int -> Eff_types.Term.t -> 'a;
@@ -1576,7 +1555,23 @@ and eff_fam =
   | EffFam_action
   | EffFam_layer
   | EffFam_layers
-and sel = Sel_key of key | Sel_fiber of fiber_id | Sel_row of string
+and effect4_api_host_session_refusal =
+    Effect4_api_host_session_refusal_version
+  | Effect4_api_host_session_refusal_session
+  | Effect4_api_host_session_refusal_profile
+  | Effect4_api_host_session_refusal_table
+  | Effect4_api_host_session_refusal_program of admit_refusal
+  | Effect4_api_host_session_refusal_duplicateCall
+  | Effect4_api_host_session_refusal_protocol
+  | Effect4_api_host_session_refusal_selectionRequired
+  | Effect4_api_host_session_refusal_pendingReply
+  | Effect4_api_host_session_refusal_callOrder
+  | Effect4_api_host_session_refusal_noCall
+  | Effect4_api_host_session_refusal_staleCall
+  | Effect4_api_host_session_refusal_envelope
+  | Effect4_api_host_session_refusal_directAnswer
+  | Effect4_api_host_session_refusal_pendingControl
+  | Effect4_api_host_session_refusal_stuck
 and bound_call = { call : call; token : int; }
 and reply_slot = { key : key; reply : reply option; }
 and label =
@@ -2077,11 +2072,8 @@ val program_check_memo_learn : memo -> 'a0 checked -> memo
 val program_check_memo_oracle : memo -> hit_rule -> oracle
 val program_check_hit_rule_exact : hit_rule
 val program_check_hit_rule_or_ : hit_rule -> hit_rule -> hit_rule
-val live_start :
-  Eff_types.NativeOp.t Eff_types.Eff.t ->
-  sig_app ->
-  string ->
-  header -> budget -> (live, effect4_api_host_session_refusal) result
+val api_built_of_sketch : sig_app -> sketch -> (built, admit_refusal) result
+val live_open_ : built -> string -> budget -> string -> live
 val live_record_restore :
   live_record -> (live, effect4_live_record_refusal) result
 val live_record_save : live -> live_record

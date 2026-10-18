@@ -128,7 +128,7 @@ def exitOf (src : Src NativeOp) : Option ExitV :=
   | .error _ => none
   | .ok b =>
     ((List.range 3).foldl (fun (s : Run) _ => s.control Effect4.Api.flush)
-      (Run.runPure b "q" { fuel := fuel, compileFuel := fuel })).exit
+      ((Run.open b "q" { fuel := fuel, compileFuel := fuel }).play (Rows.start ++ Rows.flush))).exit
 
 /-- The root exit of the ordinary run at a fuel: the root evaluated, then one flush. The truth
 lane runs each program so, at the fuel 1000. -/

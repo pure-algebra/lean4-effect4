@@ -80,11 +80,11 @@ def driven : Run := (Run.runWith twice echo () (id := "session-A")).1
 #guard Rows.answer (Run.open twice "session-A") ⟨Api.root, 0⟩ (.ofExit (.success (.nat 2))) = []
 
 -- Without a host, the ordinary run parks on the first call and says so.
-#guard (Run.runPure twice).exit = none
-#guard (Run.runPure twice).phases = [.progressed, .progressed]
-#guard (Run.runPure twice).observe.state = .awaitingAsync
-#guard (Run.runPure twice).observe.awaiting = [⟨Api.root, 0, .external 0, .nat 2⟩]
-#guard (Run.runPure twice).observe.reasons = [.awaitHost ⟨Api.root, 0⟩]
+#guard ((Run.open twice "run").play (Rows.start ++ Rows.flush)).exit = none
+#guard ((Run.open twice "run").play (Rows.start ++ Rows.flush)).phases = [.progressed, .progressed]
+#guard ((Run.open twice "run").play (Rows.start ++ Rows.flush)).observe.state = .awaitingAsync
+#guard ((Run.open twice "run").play (Rows.start ++ Rows.flush)).observe.awaiting = [⟨Api.root, 0, .external 0, .nat 2⟩]
+#guard ((Run.open twice "run").play (Rows.start ++ Rows.flush)).observe.reasons = [.awaitHost ⟨Api.root, 0⟩]
 
 /-! ## A fork and an await -/
 
@@ -141,7 +141,7 @@ def byKey : Run :=
 #guard Rows.tape (Api.TestClock.tape [5, 7]) =
   Rows.start ++ Rows.clock 5 ++ Rows.clock 7 ++ Rows.flush
 #guard (Run.runClock twice [5]).journal = Rows.tape [Api.evaluate, .advance 5, Api.flush]
-#guard (Run.runClock twice []).journal = (Run.runPure twice).journal
+#guard (Run.runClock twice []).journal = ((Run.open twice "run").play (Rows.start ++ Rows.flush)).journal
 
 /-! ## Journaled controls agree with machine replay
 
@@ -157,7 +157,7 @@ example (s : Run) :
     List.append_nil]
 
 -- Ordinary and clock-driven runs on a nonempty table agree even while waiting for a host.
-example : (Run.runPure twice).machine =
+example : ((Run.open twice "run").play (Rows.start ++ Rows.flush)).machine =
     (Api.run twice.program 1000 twice.table 1000).machine := by
   exact Run.runPure_eq_run twice "run" {} (by decide +kernel)
 

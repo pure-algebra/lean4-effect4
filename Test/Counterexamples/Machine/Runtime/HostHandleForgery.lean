@@ -1,3 +1,4 @@
+import Effect4.Api.Built
 import Effect4.Api.HostSession
 import Effect4.Program.Profile
 import Effect4.Program.Stream
@@ -41,15 +42,14 @@ def program : Api.Program :=
   .bind (.withFiber (.fork (.succeed (.lit (.str "wrong"))) opts))
     (.bind (.perform (.external 0) (.lit .unit)) (.awaitFiber (.var 1) .joinEffect))
 
-def fiberHeader : Header := ⟨version, "forgery", "forgery-v1", fiberTable⟩
-
 #guard Api.typeOf program fiberTable = some (EffTy.pure .nat)
 #guard admitSig ⟨fiberTable, [], []⟩ = .error (.row 0 (.internalHandle "answer"))
 #guard match admitProgram program ⟨fiberTable, [], []⟩ with
   | .error (.signature (.row 0 (.internalHandle "answer"))) => true
   | _ => false
-#guard match start program fiberTable "forgery-v1" fiberHeader 1000 with
-  | .error (.program (.signature (.row 0 (.internalHandle "answer")))) => true
+-- The admitted opening refuses it too, before any session exists (`Api.Built.ofSketch`).
+#guard match Api.Built.ofSketch ⟨fiberTable, [], []⟩ { program } with
+  | .error (.signature (.row 0 (.internalHandle "answer"))) => true
   | _ => false
 
 /-- Pin every internal constructor and the reserved spellings at table admission. -/
@@ -96,9 +96,12 @@ def forged : Reply :=
 def honest : Reply := { forged with completion := .ofExit (.success (.nat 7)) }
 
 def unknownParked : Option (Session unknownProgram unknownTable) :=
-  match start unknownProgram unknownTable "unknown-v1" unknownHeader 1000 with
+  match admitProgram unknownProgram ⟨unknownTable, [], []⟩ with
   | .error _ => none
-  | .ok initial => some (advance initial 1000 Api.evaluate).session
+  | .ok admitted =>
+    let initial : Session unknownProgram unknownTable :=
+      { admitted, header := unknownHeader, machine := Api.load unknownProgram 1000 }
+    some (advance initial 1000 Api.evaluate).session
 
 def unknownBound : Option (Session unknownProgram unknownTable) :=
   unknownParked.map fun parked => (bindCall parked unknownCall 0).session
@@ -144,9 +147,11 @@ def allocationReply : Reply :=
   ⟨version, "allocation", 0, ⟨Api.root, 0⟩, .ofExit (.success (.nat 0))⟩
 
 def allocationBound : Option (Session allocationProgram allocationTable) :=
-  match start allocationProgram allocationTable "allocation-v1" allocationHeader 1000 with
+  match admitProgram allocationProgram ⟨allocationTable, [], []⟩ with
   | .error _ => none
-  | .ok initial =>
+  | .ok admitted =>
+    let initial : Session allocationProgram allocationTable :=
+      { admitted, header := allocationHeader, machine := Api.load allocationProgram 1000 }
     some (bindCall (advance initial 1000 Api.evaluate).session allocationCall 0).session
 
 #guard allocationBound.isSome

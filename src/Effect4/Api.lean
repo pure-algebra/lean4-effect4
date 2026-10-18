@@ -33,9 +33,8 @@ One module, the whole pipeline, small interface:
 * Certificate first (DI-85): `check` answers the typing certificate or the located, named
   refusal, `Typed` carries a program with its certificate into `Typed.run` and `Typed.runSync`
   under a `Budget` with defaults, and `author` takes a named source
-  (`Program.Authoring.Src`) to a `Typed` in one call. `Typed.replay` replays a session's journal
-  through the checked session, so it stands beside the session's face
-  (`src/Effect4/Run/Live.lean`, decisions row 373 (8)).
+  (`Program.Authoring.Src`) to a `Typed` in one call. Full admission through `Built.ofSketch`
+  supplies `Live.open`; `Live.feedAll` feeds a session journal through the checked session.
 * The codegen face is its own module, `Effect4.Api.Codegen` (`src/Effect4/Api/Codegen.lean`),
   in this namespace: `print` and `read`, the round trip and its certificate, `printDecl`, the
   module's emission and its checked reading, the printed `Typed`, `TypedLayer` and `Built`, and the
@@ -207,8 +206,8 @@ nothing. It does not type the program, does not check the supplied table's names
 written.
 
 **A named test entry** (decisions row 373 (8)), kept for fixtures, negative tests, the truth
-driver and the laws of the machine. The checked route is `Typed.replay`
-(`src/Effect4/Run/Live.lean`): it replays a session's journal, and the session admits each reply
+driver and the laws of the machine. Full admission supplies `Live.open`; `Live.feedAll`
+replays a session's journal, and the session admits each reply
 at its call. `replayChecked` is a different check again: it admits the incoming *decisions* at
 the rows' own columns, not the program. -/
 def replay (program : Program) (fuel : Nat) (tape : List Decision) (table : RowTable := [])

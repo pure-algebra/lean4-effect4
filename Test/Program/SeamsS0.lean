@@ -3,7 +3,7 @@ import Effect4.Run.LiveRecord
 
 /-!
 Finite controls for S0's checked OCaml boundary.
-The tests use the real oracle, annotation collector, start, and restore operations.
+The tests use the real oracle, annotation collector, admission, open, and restore operations.
 They establish these observations only. They claim no universal native translation theorem.
 -/
 
@@ -25,11 +25,12 @@ def checkRoundTrip : Bool :=
   let answer := Check.Checked.ask (memo.oracle Check.HitRule.exact) input
   (Check.Checked.readVerdict answer).result.isOk
 
-/-- Starting and restoring retain both budgets at this finite admitted program. -/
+/-- Admission, opening, and restoration retain both budgets at this finite admitted program. -/
 def startRestore : Bool :=
-  match Live.start program {} "test" header budget with
+  match Api.Built.ofSketch {} { program } with
   | .error _ => false
-  | .ok live =>
+  | .ok built =>
+    let live := Live.open built header.session budget "test"
     let record := LiveRecord.save live
     match record.restore with
     | .error _ => false
@@ -39,7 +40,7 @@ def startRestore : Bool :=
 
 /-- The full admission owner rejects a repeated field in raw program syntax. -/
 def startRefuses : Bool :=
-  !(Live.start malformed {} "test" header budget).isOk
+  !(Api.Built.ofSketch {} { program := malformed }).isOk
 
 /-- Restoration repeats program admission and checks its own record version. -/
 def restoreRefuses : Bool :=

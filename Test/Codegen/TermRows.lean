@@ -155,7 +155,7 @@ def exitOf (src : Src NativeOp) (fuel : Nat := 4000) : Option ExitV :=
   | .error _ => none
   | .ok b =>
     ((List.range 3).foldl (fun (s : Run) _ => s.control Effect4.Api.flush)
-      (Run.runPure b "q" { fuel := fuel, compileFuel := fuel })).exit
+      ((Run.open b "q" { fuel := fuel, compileFuel := fuel }).play (Rows.start ++ Rows.flush))).exit
 
 /-- A row's node elaborated under bound names, at the level they give: the program a step's
 `Ref.modify` is where it stands. -/

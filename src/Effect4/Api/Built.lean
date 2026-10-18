@@ -1,5 +1,6 @@
 import Effect4.Api
 import Effect4.Api.HostSession
+import Effect4.Program.Sketch
 
 /-!
 # Api.Built — a program with its table and its certificate, as one value
@@ -8,8 +9,7 @@ Everything a run needs of a program, packed once: the application (`SigApp`: the
 the named types), the program whose host calls are positions in that table, the admission
 certificate (typing and the execution checks, `Program/Admission.lean`) at that application, and
 the names the rows were declared under (for blame, printing and the reactor). `Author.build` produces one;
-`Run.open` consumes one and cannot refuse it, because the certificate is the evidence
-`HostSession.start` re-derives today. A built program at declared services is the Σ_app slice's
+`Run.open` consumes one and cannot refuse it, because the certificate already carries full admission. A built program at declared services is the Σ_app slice's
 step 3.
 -/
 
@@ -33,6 +33,23 @@ namespace Built
 
 /-- The built program's row table. -/
 abbrev table (b : Built) : RowTable := b.app.rows
+
+/-- **Admit a program at exactly this application**, and retain its row spellings. A saved run
+restores through it, at the application it recorded (`LiveRecord.restore`). -/
+def ofProgram (app : Program.SigApp) (program : Program) :
+    Except Program.AdmitRefusal Built :=
+  match Program.admitProgram program app with
+  | .error why => .error why
+  | .ok admitted => .ok {
+      app, program, admitted
+      rowNames := app.rows.zipIdx.map fun (row, index) => (row.spelling, index) }
+
+/-- **Admit a sketch** at the application extended by its hole table (`SigApp.withHoles`): each
+hole is a host row that the run's driver answers, so a program with holes still runs. A sketch
+with no holes admits at the application itself (`SigApp.withHoles_nil`). -/
+def ofSketch (app : Program.SigApp) (s : Program.Sketch) :
+    Except Program.AdmitRefusal Built :=
+  ofProgram (app.withHoles s.holes) s.program
 
 /-- The built program as a typed one: the admission certificate extends the typing
 certificate, so every reading `Typed` has is this one's, through this projection and not by

@@ -15,9 +15,6 @@ it.
 * **A live run replays from its own journal** (`journal_replays`): `Run.journal_replays` at `Live`.
 * **A live session's reading is the reference's replay of its tape** (`session_eq_ref`):
   `Run.session_eq_ref` at `Live`. Its one premise is that the run is funded.
-* **Starting is the session's start** (`start_error`, `start_ok`): `Live.start` refuses exactly
-  where `Api.HostSession.start` refuses, with its reason, and opens the admitted program
-  otherwise.
 * **The view projects the waits** (`view_awaits`, slice DM3): the view's calls are the machine's
   awaited calls, in the machine's order (HC-1's connector to `Await`).
 * **The view names each call's checked instance** (`view_checked`): the instance at the call's
@@ -29,10 +26,7 @@ it.
 * **A replayed run's applied answers were admitted at their call** (`replay_at_call_instance`,
   decisions rows 98 and 373 (8)). Each reply that a live run applied passed the session's reply
   admission at the run before its row. The session admitted it at the row's columns or at the
-  call's checked instance, and it fits there. `Api.Typed.replay` answers a `Live`, so the law reads
-  every run that it replays.
-* **A session's own journal replays through the typed replay** (`replay_recorded`): it answers the
-  session's run, its row spellings dropped, so it refuses no run command that the session accepted.
+  call's checked instance, and it fits there. The law reads every admitted live run.
 
 What they do not establish: that a run is funded (`embedded-budget-sufficient`, an open part of
 R12), that the row's columns admit only members of the call's instance, the session's ledger, a
@@ -90,50 +84,6 @@ theorem session_eq_ref (l : Live) (h : Run.funded l.run = true) :
         obsR (replayR l.run.built.program l.run.budget.fuel (Run.tapeOf l.run)
           l.run.budget.compileFuel l.run.built.table).machine :=
   Run.session_eq_ref l.run (reached l) h
-
-/-- **Starting refuses where the session refuses**, with the session's reason (decisions row 326
-(1)).
-
-Placement: concept `host-session-protocol`. Consumer: a holder that cannot carry a certificate,
-DM7's lowered session (row 326 (2)). Reach: every program, table, binding, header and budget. It
-does not establish which programs admission admits. -/
-theorem start_error (program : Api.Program) (table : RowTable) (binding : String)
-    (header : Header) (budget : Api.Budget) (why : Api.HostSession.Refusal) :
-    Live.start program table binding header budget = .error why ↔
-      Api.HostSession.start program table binding header budget.compileFuel = .error why := by
-  unfold Live.start
-  cases Api.HostSession.start program table binding header budget.compileFuel with
-  | error reason =>
-    dsimp only
-    constructor
-    · intro h
-      cases h
-      rfl
-    · intro h
-      cases h
-      rfl
-  | ok session =>
-    dsimp only
-    constructor
-    · intro h
-      cases h
-    · intro h
-      cases h
-
-/-- **Starting opens the admitted program.** Where the session's start answers a session, the
-face opens the program with that session's certificate, under the header's name and binding.
-
-Placement: concept `host-session-protocol`; the accepted half of `start_error`, with the same
-consumer. Reach: every accepted start. It does not establish that the opened session is the one
-that the start answered; `Run.open_total` gives that for a header built from the `Built`. -/
-theorem start_ok (program : Api.Program) (app : SigApp) (binding : String) (header : Header)
-    (budget : Api.Budget) (session : Api.HostSession.Session program app)
-    (h : Api.HostSession.start program app binding header budget.compileFuel = .ok session) :
-    Live.start program app binding header budget =
-      .ok (Live.open { app, program, admitted := session.admitted } header.session budget
-        binding) := by
-  unfold Live.start
-  rw [h]
 
 /-- **The view projects the waits.** The calls of a live run's view are the calls the machine
 waits on, in the machine's order: the view adds the checked source and the session's record to
@@ -384,7 +334,7 @@ theorem view_funded (l : Live) : l.view.funded = Run.funded l.run := by
 
 /-! ## The typed replay (decisions rows 98 and 373 (8))
 
-`Api.Typed.replay` (`src/Effect4/Run/Live.lean`) starts the certified program and feeds a journal
+`Live.open` opens the admitted program and `Live.feedAll` feeds a journal
 through `Live.feed`, so what it answers is a `Live`, and every law of this module reads it. The
 law below says what the session checked before each host answer reached the machine. -/
 
@@ -424,12 +374,12 @@ it. There the session's instance lookup is the checker's instance on the run's p
 (decisions row 407 (5)), a success prepares a member of the row's shape-decided answer column
 (`PreparedSuccess`). Where the row's columns refuse it, it is a
 handle-free member of the call's checked instance, prepared unchanged (`InstanceSuccess`). A
-failure holds no reserved defect, at every type. `Api.Typed.replay` answers a `Live`, so this holds
+failure holds no reserved defect, at every type. `Live.feedAll` answers a `Live`, so this holds
 of every run that it replays.
 
 Placement: concept `host-session-protocol`, property `typed-replay-session`. Question: the
 proposed claim `replay-at-call-instance` (role preservation), an open part of R6. Consumers:
-`Api.Typed.replay`, then the OCaml checked session (slice DM7), then row 99's typed answers on data
+`Live.feedAll`, then the OCaml checked session (slice DM7), then row 99's typed answers on data
 rows. Reach: every `Live` and every row whose verdict is `applied`. The instance path stands only
 where the row's answer column allocates nothing. It applies `application_payload`,
 `application_live`, `reached_callInstance`, `preflight_success_prepared_fits` and
@@ -463,12 +413,12 @@ theorem replay_at_call_instance (l : Live) (i : Nat) (key : Api.HostSession.Key)
   · exact Api.HostSession.preflight_failure_noShapeDefect _ reply _ cause failed accepted ty
 
 
-/-! ## A session's own journal replays through the typed replay
+/-! ## A wire journal plays the recorded commands
 
-The converse half of the claim: the typed replay refuses no run command that the session
-accepted. The open part of R6 that row 323 (8) names is this refusal at the checked tape replay. -/
+The restore law consumes this connector with full admission and all recorded metadata.
+-/
 
-/-- Step of `replay_recorded`: feeding a journal's run commands as remote run commands plays the
+/-- Step of `LiveRecord.restore_save`: feeding a journal's run commands as remote run commands plays the
 journal (`Run.feed_fst`). -/
 theorem feedAll_wire (l : Live) (journal : List Command) :
     (l.feedAll (journal.map .wire)).run = l.run.play journal := by
@@ -480,58 +430,5 @@ theorem feedAll_wire (l : Live) (journal : List Command) :
     show (l.run.feed (.wire c)).1.play rest = l.run.play (c :: rest)
     rw [Run.feed_fst]
     rfl
-
-/-- Step of `replay_recorded`: a run reads no row spelling, so the spellings of its built program
-ride along a play unchanged. -/
-theorem play_rowNames (r : Run) (names : List (String × Nat)) (journal : List Command) :
-    ({ r with built := { r.built with rowNames := names } }).play journal =
-      { r.play journal with built := { (r.play journal).built with rowNames := names } } := by
-  induction journal generalizing r with
-  | nil => rfl
-  | cons c rest ih =>
-    rw [Run.play_cons, Run.play_cons]
-    exact ih (r.step c)
-
-/-- **A session's own journal replays through the typed replay** (decisions rows 98 and 373 (8)).
-Take a live run with a nonempty name, and a typing certificate of its program. Replay the run's
-journal under the header that its open wrote, with its binding and its budgets. The typed replay
-answers the run itself, with one change: the row spellings of its built program are dropped,
-since a header carries the row table alone. So the typed replay refuses no run command that the
-session accepted, and it applies every answer that the session applied.
-
-Placement: concept `host-session-protocol`, property `typed-replay-session`. Question: the
-proposed claim `replay-at-call-instance`, its half that a recorded journal is not refused, beside
-`replay_at_call_instance`. Consumers: a holder that restores a session from its journal through
-the typed route, and the OCaml checked session (slice DM7). Reach: every `Live` with a nonempty
-name, and every typing certificate of its program at its table. It applies `Live.start_ok`,
-`Run.open_total` and `journal_replays`. It does not establish that another host's journal
-replays, since the session may refuse its commands. It says nothing of row spellings, or of a
-lowered session. Unlocks: R6, with `replay_at_call_instance`, and R13. -/
-@[semantics "host-session-protocol" (requirement := R6)]
-theorem replay_recorded (l : Live) (t : Api.Typed l.run.built.app)
-    (hprog : t.program = l.run.built.program) (named : l.run.id ≠ "") :
-    ∃ l', t.replay l.run.profile
-        ⟨Api.HostSession.version, l.run.id, l.run.profile, l.run.built.table⟩
-        l.run.journal l.run.budget = .ok l' ∧
-      l'.run = { l.run with built := { l.run.built with rowNames := [] } } := by
-  obtain ⟨program, certificate⟩ := t
-  dsimp only at hprog
-  subst hprog
-  have started := start_ok l.run.built.program l.run.built.app l.run.profile
-    ⟨Api.HostSession.version, l.run.id, l.run.profile, l.run.built.table⟩ l.run.budget _
-    (Run.open_total l.run.built l.run.id l.run.budget l.run.profile named)
-  refine ⟨(Live.open ⟨l.run.built.app, l.run.built.program, l.run.built.admitted, []⟩
-      l.run.id l.run.budget l.run.profile).feedAll (l.run.journal.map .wire), ?_, ?_⟩
-  · unfold Api.Typed.replay
-    rw [started]
-    rfl
-  · rw [feedAll_wire]
-    show (Run.open { l.run.built with rowNames := [] } l.run.id l.run.budget l.run.profile).play
-      l.run.journal = _
-    have opened : Run.open { l.run.built with rowNames := [] } l.run.id l.run.budget l.run.profile =
-        { Run.open l.run.built l.run.id l.run.budget l.run.profile with
-          built := { (Run.open l.run.built l.run.id l.run.budget l.run.profile).built with
-            rowNames := [] } } := rfl
-    rw [opened, play_rowNames, journal_replays l]
 
 end Effect4.Live

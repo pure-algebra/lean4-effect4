@@ -37,9 +37,8 @@ def pending1 : Session program table := (submit bound1 reply1).session
 def finished : Session program table := (applyPending pending1 100).session
 
 #guard version = 3
-#guard match start program table "serial-root-scalar-v1" header 100 with | .ok _ => true | _ => false
-#guard match start program table "serial-root-scalar-v1" { header with version := 2 } 100 with | .error .version => true | _ => false
-#guard match start program table "serial-root-scalar-v1" { header with version := 99 } 100 with | .error .version => true | _ => false
+-- Canonical headers use the current version; message-level version controls remain below.
+#guard initial.header.version = version
 #guard outstanding parked = [⟨Api.root, 0, .external 0, .nat 2⟩]
 #guard (bindCall parked call0 0).phase = .bound
 #guard (submit bound0 reply0).phase = .preflight

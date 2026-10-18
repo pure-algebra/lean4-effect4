@@ -1533,8 +1533,8 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   (`Run.origin_addresses_call`, `src/Effect4/Laws/Api/SessionRef.lean`).
   On a program that the module check admits, the call instance answers at every call, with the
   call's operation (`programCallAt`).
-  So a session that `start` made has an instance at every call of its admitted program
-  (`start_callInstance_complete`).
+  `HostSession.instanceAt_complete` supplies an instance at each call of an admitted program.
+  `Run.reached_callInstance` reads that table in a reached run.
   Neither law says that the expansion of layer references keeps a call at its address.
   The second says nothing of a run (decisions rows 183, 323, 328 and 333).
   (`instance_prepared_success` (`src/Effect4/Laws/Program/Admit.lean`);
@@ -1560,8 +1560,12 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 - **Frontier awaitHost inversion (`frontier-awaithost`)**: Machine awaitingAsync state matches frontier reason.
   characterization of frontier state matching `.awaitingAsync` (`observe_awaitingAsync_iff` (`src/Effect4/Laws/Api/Frontier.lean`)).
 - **External host progress (`host-progress`)**: External driver progress assumed under `docs/core/host-boundary.md`.
-- **Typed replay under session (`typed-replay-session`)**: Public typed replay route under keyed host session
-  (decisions row 98).
+- **Typed replay under session (`typed-replay-session`)**: Opening requires full admission at the application extended by the sketch's hole rows.
+  `Api.Built.ofSketch_error_iff` states the exact refusal in `src/Effect4/Laws/Api/Built.lean` (`built-admission-exact`, R6 and R13).
+  Each hole is a host row that the driver answers; a restore admits at the recorded application exactly (`Api.Built.ofProgram`).
+  Restore replays ordered commands and retains recorded names, including an empty session name.
+  `LiveRecord.restore_save` returns the exact saved run in `src/Effect4/Laws/Api/LiveRecord.lean` (`live-session-persists`, R6 and R13).
+  Neither property establishes native package integrity, host reconnection, repeated effects, or progress.
 
 ### 2.10 Concept 10: Translation & Simulation Metatheory (`translation-simulation`)
 

@@ -16,6 +16,7 @@ for directory in includes:
     compiler += ['-I', str(root / 'ocaml/_build/default' / directory)]
 cases = {
     'lawful-alias': (0, "type public_alias = A.memo\nlet value : public_alias = A.program_check_memo_empty\n"),
+    'built-literal': (2, "type public_built_alias = A.built\nlet forged : public_built_alias = { app = { rows = []; services = []; types = [] }; program = Eff_types.Eff.Perform (Eff_types.NativeOp.External 0, Eff_types.Term.Lit Eff_types.Lit.Unit); admitted = { answer = Eff_types.Ty.Nat; error = Eff_types.Ty.Never; requires = [] }; row_names = [] }\n"),
     'memo-public-alias': (2, "type public_alias = A.memo\nlet forged : public_alias = []\n"),
     'checked-literal': (2, "let forged : int A.checked = { value = 7; trace = [] }\n"),
     'oracle-callback': (2, "let forged : A.oracle = fun input -> A.program_check_run input\n"),
@@ -34,4 +35,4 @@ with tempfile.TemporaryDirectory(prefix='effect4-sealing-') as directory:
         assert result.returncode == expected, name
         if expected:
             assert 'Error:' in result.stdout, name
-print('PASS: lawful public alias and six hostile sealed-package clients')
+print('PASS: lawful public alias and seven hostile sealed-package clients')
