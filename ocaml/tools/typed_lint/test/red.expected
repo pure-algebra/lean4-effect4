@@ -1,0 +1,8 @@
+File "tools/typed_lint/test/red.ml", line 6, characters 27-28: rule 7: Stdlib.= at point
+File "tools/typed_lint/test/red.ml", line 7, characters 30-37: rule 7: Stdlib.compare at int * int
+File "tools/typed_lint/test/red.ml", line 8, characters 28-36: rule 7: Stdlib.List.mem at point
+File "tools/typed_lint/test/red.ml", line 9, characters 17-18: rule 7: Stdlib.< at 'a
+File "tools/typed_lint/test/red.ml", line 10, characters 38-40: rule 7: Stdlib.>= at float
+File "tools/typed_lint/test/red.ml", line 11, characters 31-32: rule 7: Stdlib.= at int list
+File "tools/typed_lint/test/red.ml", line 12, characters 56-72: rule 7: Stdlib.Hashtbl.find_opt at int * int
+7 rule-7 finding(s)

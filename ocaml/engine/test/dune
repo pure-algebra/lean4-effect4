@@ -120,6 +120,12 @@
  (modules api_gen_inst)
  (libraries effect4_engine effect4_eff effect4_gen))
 
+; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+(rule
+ (alias runtest)
+ (deps (sandbox none) (:cmt (glob_files .e4_gen_instance.objs/byte/*.cmt)))
+ (action (chdir %{workspace_root} (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
+
 (test
  (name test_diff)
  (modules test_diff)

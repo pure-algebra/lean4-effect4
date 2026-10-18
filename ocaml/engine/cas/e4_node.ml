@@ -4,6 +4,10 @@
 
 type t = { version : int; kind : E4_kind.t; spec : string; payload : string }
 
+let equal a b =
+  Int.equal a.version b.version && E4_kind.equal a.kind b.kind && String.equal a.spec b.spec
+  && String.equal a.payload b.payload
+
 type decode_error =
   | Trailing
   | Bad_version of int
@@ -278,7 +282,7 @@ let oversize (n : t) : bool =
 let bad_version (n : t) : bool = n.version <> 0
 
 let handle_in_content (n : t) : bool =
-  E4_kind.is_content n.kind && handles n <> []
+  E4_kind.is_content n.kind && not (List.is_empty (handles n))
 
 let check_pure (n : t) : (unit, pure_refusal) result =
   match payload_ok n.payload with

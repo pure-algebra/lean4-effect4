@@ -107,7 +107,7 @@ let group_cut g refs =
   let gmask = g.g_avg - 1 in
   let out = ref [] and cur = ref [] and k = ref 0 in
   let flush () =
-    if !cur <> [] then begin
+    if not (List.is_empty !cur) then begin
       out := List.rev !cur :: !out;
       cur := [];
       k := 0

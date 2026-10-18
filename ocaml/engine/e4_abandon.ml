@@ -93,7 +93,7 @@ let run driver m ~reason ~budget =
     } )
 
 let accounted r ~at_entry =
-  List.sort compare (r.closed @ r.unfinished) = List.sort compare at_entry
+  List.equal Int.equal (List.sort Int.compare (r.closed @ r.unfinished)) (List.sort Int.compare at_entry)
 
 let to_string r =
   let ints xs = String.concat "," (List.map string_of_int xs) in

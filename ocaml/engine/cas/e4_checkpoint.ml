@@ -412,7 +412,7 @@ let chain ro start =
   let prev_of a =
     match read ro a with
     | Error e ->
-      if !failed = None then failed := Some (a, e);
+      if Option.is_none !failed then failed := Some (a, e);
       None
     | Ok (cp, _) -> Option.map (fun (r : E4_addr.Ref.t) -> r.E4_addr.Ref.addr) cp.prev
   in

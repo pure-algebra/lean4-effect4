@@ -56,7 +56,7 @@ let drain d =
 (* RunMachine.disarm at one owner's dispatcher, RunMachine.disarm (src/Effect4/Machine/Fibers.lean). *)
 let disarm d = { d with armed = false }
 let armed d = d.armed
-let is_empty d = List.for_all (fun b -> b.tasks = []) d.buckets
+let is_empty d = List.for_all (fun b -> List.is_empty b.tasks) d.buckets
 let length d = List.fold_left (fun n b -> n + List.length b.tasks) 0 d.buckets
 let priorities d = List.map (fun b -> b.priority) d.buckets
 let to_list d = List.map (fun b -> (b.priority, b.tasks)) d.buckets

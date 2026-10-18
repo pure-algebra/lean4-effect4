@@ -45,9 +45,9 @@ refactor plan (`docs/research/2026-10-17-ocaml-estate-review/plan.md`, §2).
    wherever it carries meaning. A bounded `int` appears only with a stated domain and a checked
    conversion. Its name states the conversion's class: `_exn` refuses, `_trunc` truncates,
    `_wrap` wraps. Each type compares through its own `equal` and `compare`. Polymorphic
-   comparison serves `int`, `char`, `bool` and `string` only; the other sites move in the
-   plan's phase 6. A string length says whether it
-   counts bytes or scalars.
+   comparison serves `int`, `char`, `bool` and `string` only. `tools/typed_lint` checks this
+   on each hand library's typed tree under `dune test`; a generated unit is skipped. A string
+   length says whether it counts bytes or scalars.
 8. **Mutation behind pure interfaces.** Mutable state is a choice of implementation, never of
    meaning. An implementation may mutate where speed needs it, under three conditions. Its
    interface's meaning is a pure function in the Lean model. One owner holds the state at a

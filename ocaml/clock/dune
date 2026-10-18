@@ -5,6 +5,12 @@
  (modules e4_clock)
  (libraries zarith))
 
+; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+(rule
+ (alias runtest)
+ (deps (sandbox none) (:cmt (glob_files .effect4_clock.objs/byte/*.cmt)))
+ (action (chdir %{workspace_root} (run %{exe:../tools/typed_lint/main.exe} %{cmt}))))
+
 (test
  (name test_clock)
  (modules test_clock)

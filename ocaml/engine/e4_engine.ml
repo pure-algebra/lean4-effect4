@@ -235,7 +235,7 @@ module Make (I : INSTANCE) = struct
     | Eff_types.Defect.Error e -> "error(" ^ show_err e ^ ")"
 
   let show_anns (a : unit Eff_types.ReasonAnnotations.t) : string =
-    if a = [] then "" else "{" ^ String.concat "," (List.map fst a) ^ "}"
+    if List.is_empty a then "" else "{" ^ String.concat "," (List.map fst a) ^ "}"
 
   let show_reason (r : (Eff_types.Err.t, Eff_types.Defect.t, I.fiber_id, unit) Eff_types.Reason.t) : string =
     match r with
@@ -408,7 +408,7 @@ module Make (I : INSTANCE) = struct
        ^ String.concat ","
            (List.map (fun (p, n) -> Printf.sprintf "%d:%d" p n) (I.f_dispatcher f))
        ^ "]")
-      (I.f_dispatcher f <> [])
+      (not (List.is_empty (I.f_dispatcher f)))
       (show_ctx (I.f_context f))
 
   (* -- the free rows -------------------------------------------------------------- *)

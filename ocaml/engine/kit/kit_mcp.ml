@@ -34,7 +34,7 @@ let text = function
      | _ -> None
      | exception Yojson.Json_error _ -> None)
   | _ -> None
-let field key = function `Assoc fields -> List.assoc_opt key fields | _ -> None
+let field (key : string) = function `Assoc fields -> List.assoc_opt key fields | _ -> None
 let string_field key value = Option.bind (field key value) text
 let has_string key expected value =
   Option.fold ~none:false ~some:(String.equal expected) (string_field key value)

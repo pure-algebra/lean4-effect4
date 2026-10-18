@@ -22,6 +22,10 @@ let default_seg_max = 1 lsl 30
 type seg = int
 type off = int
 
+let equal_position (s1, o1) (s2, o2) = Int.equal s1 s2 && Int.equal o1 o2
+let compare_position (s1, o1) (s2, o2) =
+  match Int.compare s1 s2 with 0 -> Int.compare o1 o2 | c -> c
+
 exception Locked of string
 exception Bad_pack of string
 
@@ -637,7 +641,7 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
             when (match file_size (seg_path ~dir s) with
                   | Some n -> n < head_length
                   | None -> true)
-                 && rest <> [] ->
+                 && not (List.is_empty rest) ->
             if not (writable (seg_path ~dir s)) then
               refuse_open ~damage:(s, 0, Bad_head {seg = s}) "short sealed segment head";
             (try Sys.remove (seg_path ~dir s) with Sys_error _ -> ());
@@ -774,7 +778,7 @@ let append t ~digest ~node_bytes =
 
 let flush t =
   if t.w_closed then invalid_arg "E4_pack.flush: the writer is closed";
-  if t.w_pend <> [] then begin
+  if not (List.is_empty t.w_pend) then begin
     List.iter
       (fun p ->
         let n = Buffer.length p.p_buf in
@@ -793,7 +797,7 @@ let flush t =
 
 let sync t =
   flush t;
-  if t.w_dirty <> [] then begin
+  if not (List.is_empty t.w_dirty) then begin
     List.iter (fun s -> Unix.fsync (fd_for t s)) (List.sort compare t.w_dirty);
     t.w_dirty <- []
   end;
@@ -803,7 +807,7 @@ let sync t =
      closed and the file becomes 0444. *)
   let dseg = fst t.w_durable in
   let passed, kept = List.partition (fun (s, _) -> s < dseg) t.w_fds in
-  if passed <> [] then begin
+  if not (List.is_empty passed) then begin
     List.iter
       (fun (s, fd) ->
         (try Unix.close fd with Unix.Unix_error _ -> ());

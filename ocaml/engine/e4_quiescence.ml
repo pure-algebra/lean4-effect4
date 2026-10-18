@@ -58,7 +58,7 @@ let wait_zero_for t ~seconds =
   let deadline = Unix.gettimeofday () +. seconds in
   let rec poll () =
     if outstanding t = 0 then true
-    else if Unix.gettimeofday () >= deadline then false
+    else if Float.compare (Unix.gettimeofday ()) deadline >= 0 then false
     else begin
       Unix.sleepf 0.0002;
       poll ()

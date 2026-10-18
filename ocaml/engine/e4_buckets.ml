@@ -37,7 +37,7 @@ end
 let check_priority p =
   if p < 0 then invalid_arg "E4_buckets: negative priority"
 
-let rec check_ascending = function
+let rec check_ascending : (int * _) list -> unit = function
   | [] | [ _ ] -> ()
   | (p, _) :: ((q, _) :: _ as rest) ->
     if p >= q then invalid_arg "E4_buckets.of_list: priorities are not strictly ascending";

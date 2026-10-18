@@ -149,9 +149,9 @@ module Make (E : E4_engine.ENGINE) = struct
         | E4_engine.Outside_profile why -> served t st calls (Host (Outside_profile why))
         | E4_engine.Refused why -> served t' st' calls' (Machine (Stuck why))
         | E4_engine.Delay _ -> served t' st' calls' (Machine Delay)
-        | E4_engine.Finished when flushed && E.host_calls t' = [] ->
+        | E4_engine.Finished when flushed && List.is_empty (E.host_calls t') ->
           served t' st' calls' (Machine Finished)
-        | E4_engine.Suspended _ when flushed && E.host_calls t' = [] ->
+        | E4_engine.Suspended _ when flushed && List.is_empty (E.host_calls t') ->
           served t' st' calls' (Machine Waiting)
         | E4_engine.Finished | E4_engine.Suspended _ -> round n t' st' calls'
       in

@@ -29,10 +29,10 @@ let target digest : E4_control.target = {kind = E4_kind.Export; digest}
 let transaction nodes moves : E4_disk.transaction = {txn_nodes = List.map E4_node.encode nodes; txn_moves = moves}
 let initial = transaction [schema; a] [E4_control.Create ("docs/a", E4_control.Swap, target aa)]
 let root_equal (a : E4_control.root) (b : E4_control.root) =
-  String.equal a.name b.name && a.policy = b.policy && E4_kind.equal a.kind b.kind && E4_control.head_equal a.head b.head
+  String.equal a.name b.name && E4_control.root_policy_equal a.policy b.policy && E4_kind.equal a.kind b.kind && E4_control.head_equal a.head b.head
 let image_equal a b =
   List.equal (fun (at, x) (bt, y) -> E4_addr.Addr.equal at bt && String.equal x y) (E4_disk.nodes a) (E4_disk.nodes b)
-  && List.equal root_equal (E4_disk.roots a) (E4_disk.roots b) && E4_disk.boundary a = E4_disk.boundary b
+  && List.equal root_equal (E4_disk.roots a) (E4_disk.roots b) && E4_pack.equal_position (E4_disk.boundary a) (E4_disk.boundary b)
 let root image name = List.find_opt (fun (r : E4_control.root) -> String.equal r.name name) (E4_disk.roots image)
 let open_ directory = get (E4_disk.open_ ~dir:directory opts)
 let snapshot disk = get (E4_disk.image disk)

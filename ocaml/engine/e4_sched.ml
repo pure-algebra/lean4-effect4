@@ -162,6 +162,13 @@ type ('m, 'd) machine = {
   mutable fire_refused : bool; (* the rule was refused during this batch: retry after it *)
 }
 
+(* The park triggers' table, keyed by (machine, fiber, token) and compared by type (rule 7). *)
+module Triggers = Hashtbl.Make (struct
+  type t = int * int * int
+  let equal (m, f, k) (m', f', k') = Int.equal m m' && Int.equal f f' && Int.equal k k'
+  let hash (m, f, k) = Int.hash ((((m * 65599) + f) * 65599) + k)
+end)
+
 type ('m, 'd) t = {
   eng : ('m, 'd) engine;
   cfg : config;
@@ -180,7 +187,7 @@ type ('m, 'd) t = {
   mutable finished_subs : (machine_id -> unit) list;
   mutable workers : unit Domain.t array;
   trig_mu : Mutex.t;
-  triggers : (int * int * int, E4_trigger.t) Hashtbl.t;
+  triggers : E4_trigger.t Triggers.t;
   sd_mu : Mutex.t;
   mutable sd_report : E4_shutdown.report option;
 }
@@ -243,7 +250,7 @@ let apply t ~domain m { seq; decision; fire } =
   end;
   E4_quiescence.leave t.quiescence
 
-let runnable t ~domain table id =
+let runnable t ~domain (table : (int, _) Hashtbl.t) id =
   match Hashtbl.find_opt table id with
   | None -> () (* W5 says this cannot happen; a wake for an unknown machine is a no-op *)
   | Some m -> (
@@ -275,7 +282,7 @@ let status_of t ~domain ~want_snapshot m =
     : status)
 
 (* S3: the abandon pass runs HERE, on the machine's own domain, never in the caller's. *)
-let abandon_here t ~domain table id ~reason ~budget =
+let abandon_here t ~domain (table : (int, _) Hashtbl.t) id ~reason ~budget =
   match Hashtbl.find_opt table id with
   | None -> None
   | Some m -> (
@@ -371,7 +378,7 @@ let start eng cfg =
   if cfg.finalizer_fuel < 0 then invalid_arg "E4_sched.start: negative finalizer_fuel";
   if cfg.checkpoint_every < 0 then invalid_arg "E4_sched.start: negative checkpoint_every";
   if cfg.minor_heap_words > 0 then Gc.set { (Gc.get ()) with minor_heap_size = cfg.minor_heap_words };
-  if Sys.getenv_opt "E4_LOG_CONFIG" <> None then prerr_endline (describe_config cfg);
+  if Option.is_some (Sys.getenv_opt "E4_LOG_CONFIG") then prerr_endline (describe_config cfg);
   eng.init ();
   let t =
     {
@@ -392,7 +399,7 @@ let start eng cfg =
       finished_subs = [];
       workers = [||];
       trig_mu = Mutex.create ();
-      triggers = Hashtbl.create 64;
+      triggers = Triggers.create 64;
       sd_mu = Mutex.create ();
       sd_report = None;
     }
@@ -510,11 +517,11 @@ let events t =
 let trigger t id ~fiber ~token =
   let key = (id, fiber, token) in
   Mutex.protect t.trig_mu (fun () ->
-      match Hashtbl.find_opt t.triggers key with
+      match Triggers.find_opt t.triggers key with
       | Some tr -> tr
       | None ->
           let tr = E4_trigger.create () in
-          Hashtbl.replace t.triggers key tr;
+          Triggers.replace t.triggers key tr;
           tr)
 
 let signal_once t tr decision =
@@ -561,7 +568,7 @@ let shutdown ?(deadline = E4_shutdown.no_deadline) t =
       in
       let drain =
         E4_shutdown.Registry.register reg ~after:[ seal ] ~loc:__LOC__ ~name:"drain-machines" (fun () ->
-            if deadline = E4_shutdown.no_deadline then E4_quiescence.wait_zero t.quiescence
+            if Float.equal deadline E4_shutdown.no_deadline then E4_quiescence.wait_zero t.quiescence
             else
               ignore
                 (E4_quiescence.wait_zero_for t.quiescence

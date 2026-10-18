@@ -45,7 +45,7 @@ core `engine/` re-homed) and the spike probes (`probes/`).
 | `clock/` | `effect4_clock`: exact naturals over Zarith, the OCaml target of `Effect4.ClockMillis` and of the profile's checked arithmetic; `to_profile_nat` raises `Profile_refusal` outside the profile's bound (DI-56) | `dune build clock` | `dune test clock`, inside `make check-ocaml` | the `.mli` header |
 | `eff/` | the `Eff` IR as an OCaml library: generated `eff_types`/`eff_layout`/`eff_wire`/`eff_subterm`/`eff_json`/`eff_native` (`make gen-eff`, `src/OCaml5/Tools/EffGen.lean`) over a hand-written framing kernel (`eff_frame`, and `eff_val`, the lanes' one writer and reader of a value's frames), and the goldens Lean cut | `dune build eff` | `dune test eff`: goldens byte-identical and JSON equal, the wire property test, the differential against Lean's own encoder | `eff/README.md` |
 | `goldens/eff/` | the canonical bytes of the Lean program corpus, written by `src/OCaml5/Tools/EffWire.lean` through `Effect4.Program.Wire` | — | compared with `eff/goldens` | `eff/REPORT.md` |
-| `tools/` | `lib/toolchain.sh` | — | — | the script's header |
+| `tools/` | `lib/toolchain.sh`; `typed_lint/`, rule 7 of `STANDARDS.md` read off OCaml's typed tree: a library and its thin driver, run by a rule beside each hand library's stanza over that library's `.cmt` files (`--raises` adds rule 6's report) | `dune build tools` | `dune test tools` (the red control and the fixtures); each library's rule runs in that library's `dune test` | `typed_lint.mli` |
 
 The Lean half, `src/OCaml5/`:
 
@@ -68,7 +68,7 @@ modelled backend), the Jane Street v0.16 set. On the Mac every command runs thro
 ```bash
 cd ocaml
 opam exec --switch=effect4 -- dune build              # gen, eff, engine, clock
-opam exec --switch=effect4 -- dune test eff gen clock
+opam exec --switch=effect4 -- dune test eff gen clock lcnf tools
 opam exec --switch=effect4 -- dune test engine        # reads the printed corpus through E4_LEAN_CORPUS
 ```
 

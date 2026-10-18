@@ -27,7 +27,7 @@ let fill t v =
 
 let await t =
   Mutex.protect t.mu (fun () ->
-      while t.value = None do
+      while Option.is_none t.value do
         Condition.wait t.cv t.mu
       done;
       Option.get t.value)

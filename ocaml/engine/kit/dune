@@ -13,3 +13,9 @@
  (modules kit_json kit kit_author kit_machine kit_serve kit_view kit_tool kit_mcp)
  (flags (:standard -w -4-9-26-27-32-33-35-37-39-40-41-42-44-45-69-70))
  (libraries effect4_eff effect4_clock effect4_gen effect4_engine yojson))
+
+; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+(rule
+ (alias runtest)
+ (deps (sandbox none) (:cmt (glob_files .effect4_kit.objs/byte/*.cmt)))
+ (action (chdir %{workspace_root} (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))

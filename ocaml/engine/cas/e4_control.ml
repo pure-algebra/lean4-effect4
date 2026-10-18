@@ -76,6 +76,11 @@ let root_policy_index = E4_root_policy.byte
 let root_policy_of_index = E4_root_policy.of_byte
 let root_policy_name = E4_root_policy.name
 
+let root_policy_equal a b =
+  match a, b with
+  | Swap, Swap | Journal, Journal | Pin, Pin -> true
+  | (Swap | Journal | Pin), _ -> false
+
 let head_equal (a : head) (b : head) =
   Z.equal a.generation b.generation && E4_addr.Addr.equal a.digest b.digest
 
@@ -413,7 +418,7 @@ let advance_root (p : payload) ~(resolve : E4_addr.Addr.t -> E4_kind.t option)
      | Some old when not (head_equal old.head expected) ->
        Error (Stale_root {name; expected = Some expected; actual = Some old.head})
      | Some old when E4_kind.equal target.kind old.kind && E4_addr.Addr.equal target.digest old.head.digest -> Ok p
-     | Some old when old.policy = Pin -> Error (Pinned name)
+     | Some { policy = Pin; _ } -> Error (Pinned name)
      | Some old -> match check_target old.kind target with
        | Error e -> Error e
        | Ok () ->
@@ -421,7 +426,8 @@ let advance_root (p : payload) ~(resolve : E4_addr.Addr.t -> E4_kind.t option)
            E4_addr.Addr.equal address old.head.digest ||
            (not (List.exists (E4_addr.Addr.equal address) seen) &&
             match parent address with None -> false | Some previous -> reaches (address :: seen) previous) in
-         if old.policy = Journal && not (reaches [] target.digest) then
+         let journal = match old.policy with Journal -> true | Swap | Pin -> false in
+         if journal && not (reaches [] target.digest) then
            Error (Fork {name; head = old.head.digest; target = target.digest})
          else install {old with head = {digest = target.digest; generation = Z.succ old.head.generation}})
 

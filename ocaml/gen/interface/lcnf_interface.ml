@@ -68,8 +68,8 @@ let select ~roots ~abstract_types signature =
   let values, types = names signature in
   let missing_values = List.filter (fun name -> not (member name values)) roots in
   let missing_types = List.filter (fun name -> not (member name types)) abstract_types in
-  if missing_values <> [] then refuse (Missing_values missing_values)
-  else if missing_types <> [] then refuse (Missing_types missing_types)
+  if not (List.is_empty missing_values) then refuse (Missing_values missing_values)
+  else if not (List.is_empty missing_types) then refuse (Missing_types missing_types)
   else Ok (filter ~roots ~abstract_types signature)
 
 let prelude_values path =
