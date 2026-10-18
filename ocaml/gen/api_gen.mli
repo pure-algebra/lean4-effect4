@@ -198,6 +198,8 @@ and run = {
   journal : command list;
   phases : phase list;
 }
+and prepared
+and session
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   to_prim_interp : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp;
   park_of :
@@ -392,7 +394,6 @@ and eff_name =
       fiber_id list
   | EffName_external of Eff_types.NativeOp.t * Eff_types.Val.t * int list
   | EffName_caughtError of point
-and prepared
 and native_atom =
     NativeAtom_succ
   | NativeAtom_pred
@@ -540,7 +541,6 @@ and 'k deferred_store = {
   cells : 'k deferred_cell list;
   due : 'k owed list;
 }
-and session
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket = {
   priority : int;
   tasks : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task list;
@@ -885,6 +885,34 @@ and event =
       Eff_types.Completion.t
   | Event_apply of sel
   | Event_wire of command
+and explanation = {
+  refusal : type_refusal;
+  site : site;
+  part : check_input option;
+}
+and raw = {
+  doc : doc option;
+  fills : fill_set option;
+  runs : run_entry list;
+  generation : int;
+}
+and state
+and effect4_tool_codec_profile_refusal =
+    Effect4_tool_codec_profile_refusal_unsupportedProfile
+  | Effect4_tool_codec_profile_refusal_unreadable
+  | Effect4_tool_codec_profile_refusal_unprintable
+and effect4_tool_wire_refusal =
+    Effect4_tool_wire_refusal_codec of effect4_tool_codec_profile_refusal
+  | Effect4_tool_wire_refusal_unselected of string
+  | Effect4_tool_wire_refusal_version of string * int * int
+  | Effect4_tool_wire_refusal_method of string * string
+  | Effect4_tool_wire_refusal_connection
+and describe = {
+  name : string;
+  description : string;
+  schema : string;
+  answers : (string * string) list;
+}
 and ctx = {
   services : Eff_types.Val.t context;
   max_ops_before_yield : int;
@@ -1025,34 +1053,6 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope = {
   strategy : Eff_types.FinalizerStrategy.t;
   state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
 }
-and explanation = {
-  refusal : type_refusal;
-  site : site;
-  part : check_input option;
-}
-and raw = {
-  doc : doc option;
-  fills : fill_set option;
-  runs : run_entry list;
-  generation : int;
-}
-and state
-and effect4_tool_codec_profile_refusal =
-    Effect4_tool_codec_profile_refusal_unsupportedProfile
-  | Effect4_tool_codec_profile_refusal_unreadable
-  | Effect4_tool_codec_profile_refusal_unprintable
-and effect4_tool_wire_refusal =
-    Effect4_tool_wire_refusal_codec of effect4_tool_codec_profile_refusal
-  | Effect4_tool_wire_refusal_unselected of string
-  | Effect4_tool_wire_refusal_version of string * int * int
-  | Effect4_tool_wire_refusal_method of string * string
-  | Effect4_tool_wire_refusal_connection
-and describe = {
-  name : string;
-  description : string;
-  schema : string;
-  answers : (string * string) list;
-}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
   popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
@@ -1118,6 +1118,12 @@ and effect4_api_host_protocol_state =
   | Effect4_api_host_protocol_state_awaitingAsync
   | Effect4_api_host_protocol_state_parked
   | Effect4_api_host_protocol_state_terminated
+and site =
+    Site_address of int list
+  | Site_inCopy of int list * int list
+  | Site_column of int list
+  | Site_application
+and 'a envelope = { method_ : string; version : int; payload : 'a; }
 and prog_name =
     ProgName_value of Eff_types.Val.t
   | ProgName_failCause of
@@ -1169,12 +1175,6 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
   | ScopeState_openInline of 'k * 'f
   | ScopeState_openMap of ('k * 'f) list
   | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-and site =
-    Site_address of int list
-  | Site_inCopy of int list * int list
-  | Site_column of int list
-  | Site_application
-and 'a envelope = { method_ : string; version : int; payload : 'a; }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
     FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber
   | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
@@ -1303,14 +1303,6 @@ and record_shape = { kind : string; fields : (string * field_type) list; }
 and effect4_run_verdict =
     Effect4_run_verdict_played of phase list
   | Effect4_run_verdict_unresolved of sel
-and race_name =
-    RaceName_empty
-  | RaceName_successThenSecond
-  | RaceName_failThenSuccess
-  | RaceName_failThenFail
-  | RaceName_parkOnly
-  | RaceName_parkThenSuccess
-and 'u service = { key : Eff_types.ServiceKey.t; value : 'u; }
 and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
     eff_algebra = {
   eff_succeed : Eff_types.Term.t -> 'r_eff;
@@ -1401,6 +1393,14 @@ and effect4_tool_methods_entry = {
   case_name : string;
   schema : string;
 }
+and race_name =
+    RaceName_empty
+  | RaceName_successThenSecond
+  | RaceName_failThenSuccess
+  | RaceName_failThenFail
+  | RaceName_parkOnly
+  | RaceName_parkThenSuccess
+and 'u service = { key : Eff_types.ServiceKey.t; value : 'u; }
 and record_typing_reason =
     RecordTypingReason_duplicateDeclaration of string
   | RecordTypingReason_duplicateSupplied of string
@@ -1961,14 +1961,14 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher =
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket list
 and row_def = Eff_types.Row.t
 and admitted_program = Eff_types.NativeOp.t typed_program
-and deferred_key = int
-and memo_map_id = int
-and 'u context = 'u service list
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) fiber_evaluator =
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp ->
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine ->
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber ->
     bool -> ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) iter
+and deferred_key = int
+and memo_map_id = int
+and 'u context = 'u service list
 and scope_store = scope_entry list
 and external_store = string list
 and run_id = int

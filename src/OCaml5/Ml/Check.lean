@@ -31,6 +31,9 @@ properties of the *syntax*, and leaves typing to `ocamlc`. What it decides:
 | `private-abstract` | `private` on an abstract type, which has no body to make private |
 | `rec-module-value` | a member of a recursive module group that declares a value: only a type-only group is evaluated safely |
 
+A module alias (`module M = P`) binds `M`; its path must be a module path. The checker reads no
+member of the aliased module.
+
 A qualified constructor (`Eff.Succeed`) is checked when its module is one the checker reads in
 full: a module of this unit, or of a unit an `open` hands it (`Interface.modules`).
 
@@ -468,6 +471,14 @@ def checkDeclAlg (units : List Interface) : DeclAlgebra Checked where
          ++ items.filterMap fun
            | .value v _ => some { code := "rec-module-value", site := n, detail := "`" ++ v ++ "`" }
            | .type _ => none)
+  -- an alias is a module of this unit that names another unit's module: the checker reads none
+  -- of that module's members, so a name through the alias stays unchecked, as any qualified
+  -- name of another unit is
+  decl_moduleAliasD n path :=
+    (fun e => { e with types := n :: e.types, modules := n :: e.modules },
+     fun _ => badName n "module name" isUpperIdent n
+       ++ (if (path.splitOn ".").all isUpperIdent then []
+           else [{ code := "bad-name", site := n, detail := "module path `" ++ path ++ "`" }]))
 
 /-- Everything a module declares at its top level, under the interfaces of the units it opens. -/
 def Env.ofModule (m : Module) (units : List Interface := []) : Env :=
@@ -561,6 +572,10 @@ private def ownerUnit : Interface := { name := "Types", modules := [("Eff", [eff
     ("B", [.type { name := "t", body := .variant [{ name := "Leaf" }, { name := "Node", args := [.named "A.t"] }] }])],
     .letD false [{ name := "x", body := .ctor "B.Node" [.ctor "B.Leaf" []] }]] == []
 #guard one [.moduleRecD [("A", [.value "v" Ty.int])]] == ["rec-module-value"]
+-- A module alias names a module path; a lowercase path, or an alias declared twice, is refused.
+#guard one [.moduleAliasD "Eff" "Eff_types.Eff", .moduleAliasD "Ty" "Eff_types.Ty"] == []
+#guard one [.moduleAliasD "Eff" "eff_types.Eff"] == ["bad-name"]
+#guard one [.moduleAliasD "Eff" "Eff_types.Eff", .moduleD "Eff" [] []] == ["duplicate-type"]
 -- `C _` matches a constructor of every arity from one (the constructor tables' arms); on a
 -- constant constructor it is refused, as OCaml refuses it.
 #guard one [.types [{ name := "t", body := .variant [{ name := "A" }, { name := "B", args := [Ty.int, Ty.int] }] }],

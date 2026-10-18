@@ -1,6 +1,12 @@
 {
-  "format": "effect4-lcnf-roots-v2",
-  "claim": "Hand-written recipe for the LCNF outputs. Public values are roots or retained prelude values. Coverage roots contribute implementation code only. The producer stages every implementation, infers its interface from a fresh OCaml typed tree, and checks their agreement before publishing. The nominal list retains source package names with checked final ascriptions. The abstract list hides whole package representations. The first artifact owns the program types. Later artifacts open that owner. Regenerate with python3 scripts/generate.py --only lcnf.",
+  "format": "effect4-lcnf-roots-v3",
+  "claim": "Hand-written recipe for the LCNF outputs, read by OCaml5.Lcnf.Export as a typed export plan. Each root of an artefact is in exactly one export class. A public root is a public promise: the artefact's interface exports it and the public facade re-exports it at its Lean path. A linkage root is called by hand code outside the artefact (the engine, the kit, a lane's test): the interface exports it and no facade does. An internal root is called only by the artefact's own prelude, and a coverage root is translated so that the route keeps covering its closure; the interface hides both. The plan checker refuses a root in two classes of one artefact, a root public in two artefacts, public roots in two artefacts and an entry key that is neither an option nor a class. The same Lean name in two artefacts is two specialised nodes and may take two classes. The facade object names the public facade: its module, its file (GENERATED with its inferred interface), the committed manifest of every public name, and the manifest's version. The artefact that holds the public roots writes both. The manifest is append-only: at one version every committed path stays; a larger version declares a break. The producer stages every implementation, infers its interface from a fresh OCaml typed tree, and checks their agreement before publishing. The nominal list retains source package names with checked final ascriptions; each nominal root is exported. The abstract list hides whole package representations. The first artefact owns the program types. Later artefacts open that owner. Regenerate with python3 scripts/generate.py --only lcnf.",
+  "facade": {
+    "module": "Effect4",
+    "out": "ocaml/gen/facade/effect4.ml",
+    "manifest": "ocaml/gen/public-names.tsv",
+    "version": 0
+  },
   "artefacts": [
     {
       "out": "ocaml/eff/eff_types.ml",
@@ -47,8 +53,7 @@
         "Effect4.Reason",
         "Effect4.Exit",
         "Effect4.Machine.Completion"
-      ],
-      "roots": []
+      ]
     },
     {
       "out": "ocaml/gen/api_gen.ml",
@@ -68,7 +73,7 @@
         "Effect4.Machine.Task",
         "Effect4.Store.Kind"
       ],
-      "roots": [
+      "public": [
         "Effect4.Api.run",
         "Effect4.Api.replay",
         "Effect4.Program.admit",
@@ -148,26 +153,9 @@
         "Effect4.Live.open",
         "Effect4.LiveRecord.restore",
         "Effect4.LiveRecord.save",
-        "Effect4.Api.load",
-        "Effect4.Program.Decision.decide",
-        "Effect4.Program.errOf",
-        "Effect4.Program.evalTerm",
-        "Effect4.Program.interpOf",
-        "Effect4.Machine.reifyExitVal",
-        "Effect4.Machine.RunMachine.completedExits",
-        "Effect4.Machine.RunMachine.finished",
         "Effect4.Program.Prepared.make",
         "Effect4.Program.Prepared.step",
         "Effect4.Program.Prepared.admit",
-        "Effect4.Run.Tree.Eval.badShape",
-        "Effect4.Run.Tree.Eval.outside",
-        "Effect4.Program.NativeAtom.eval",
-        "Effect4.Machine.HandleKind.byte",
-        "Effect4.Api.evaluate",
-        "Effect4.Program.awaits",
-        "Effect4.Program.NativeOp.syncOpOf",
-        "Effect4.Machine.syncOpStep",
-        "Effect4.Machine.Stores.empty",
         "Effect4.Program.Check.extension",
         "Effect4.Program.Check.explain",
         "Effect4.Tool.Native.start",
@@ -179,6 +167,25 @@
         "Effect4.Tool.Native.refusalToVal",
         "Effect4.Tool.Native.methods",
         "Effect4.Tool.Native.describe"
+      ],
+      "linkage": [
+        "Effect4.Api.load",
+        "Effect4.Program.Decision.decide",
+        "Effect4.Program.errOf",
+        "Effect4.Program.evalTerm",
+        "Effect4.Program.interpOf",
+        "Effect4.Machine.reifyExitVal",
+        "Effect4.Machine.RunMachine.completedExits",
+        "Effect4.Machine.RunMachine.finished",
+        "Effect4.Run.Tree.Eval.badShape",
+        "Effect4.Run.Tree.Eval.outside",
+        "Effect4.Program.NativeAtom.eval",
+        "Effect4.Machine.HandleKind.byte",
+        "Effect4.Api.evaluate",
+        "Effect4.Program.awaits",
+        "Effect4.Program.NativeOp.syncOpOf",
+        "Effect4.Machine.syncOpStep",
+        "Effect4.Machine.Stores.empty"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",
@@ -272,20 +279,12 @@
         "Effect4.Program.DefRole",
         "Effect4.Program.ParamDecl"
       ],
-      "roots": [
+      "linkage": [
         "Effect4.Api.run",
         "Effect4.Api.replay",
-        "Effect4.Machine.stepDecisionState",
-        "Effect4.Machine.driveState",
-        "Effect4.Machine.settled",
-        "Effect4.Scope.make",
-        "Effect4.Scope.fork",
-        "Effect4.Machine.RunFiber.make",
         "Effect4.Machine.emptyCtx",
         "Effect4.Program.compile",
         "Effect4.Machine.stores",
-        "Effect4.Program.Node.child",
-        "Effect4.Program.admit",
         "Effect4.Program.interpOf",
         "Effect4.Program.Prepared.make",
         "Effect4.Program.Prepared.step",
@@ -293,6 +292,18 @@
         "Effect4.Api.evaluate",
         "Effect4.Program.awaits",
         "Effect4.Machine.reifyExitVal"
+      ],
+      "internal": [
+        "Effect4.Scope.make",
+        "Effect4.Scope.fork"
+      ],
+      "coverage": [
+        "Effect4.Machine.stepDecisionState",
+        "Effect4.Machine.driveState",
+        "Effect4.Machine.settled",
+        "Effect4.Machine.RunFiber.make",
+        "Effect4.Program.Node.child",
+        "Effect4.Program.admit"
       ],
       "externs": "ocaml/engine/externs.txt",
       "prelude": "ocaml/engine/tools/api_engine_prelude.ml",
@@ -311,7 +322,7 @@
       ],
       "cap": 4000,
       "types": [],
-      "roots": [
+      "linkage": [
         "Test.Dogfood.Scenario.Todo.Host.serveBuiltVal",
         "Test.Dogfood.Scenario.Todo.Host.serveBuiltForgetfulVal",
         "Test.Dogfood.Scenario.Todo.Host.serveBuiltTypedVal",
@@ -339,7 +350,7 @@
       ],
       "cap": 400,
       "types": [],
-      "roots": [
+      "linkage": [
         "Test.Codegen.ConstructorLane.intOfNat",
         "Test.Codegen.ConstructorLane.intNegSucc",
         "Test.Codegen.ConstructorLane.intMatch",
@@ -395,7 +406,7 @@
       ],
       "cap": 800,
       "types": [],
-      "roots": [
+      "linkage": [
         "Test.Codegen.ModeledLane.encodeItem",
         "Test.Codegen.ModeledLane.decodeItem",
         "Test.Codegen.ModeledLane.roundTrip",
@@ -413,7 +424,7 @@
       ],
       "cap": 200,
       "types": [],
-      "roots": [
+      "linkage": [
         "Effect4.Run.Tree.InRocq",
         "Effect4.Run.Tree.Plain"
       ],

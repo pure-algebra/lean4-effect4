@@ -187,7 +187,8 @@ LCNF_OUT := ocaml/eff/eff_types.ml ocaml/eff/eff_types.mli ocaml/gen/api_gen.ml 
   ocaml/engine/test/todo/todo_gen.mli ocaml/gen/closure-todo_gen.tsv ocaml/engine/test/ctors/ctors_gen.ml \
   ocaml/engine/test/ctors/ctors_gen.mli ocaml/gen/closure-ctors_gen.tsv ocaml/engine/test/modeled/modeled_gen.ml \
   ocaml/engine/test/modeled/modeled_gen.mli ocaml/gen/closure-modeled_gen.tsv ocaml/engine/test/rocq/rocq_gen.ml \
-  ocaml/engine/test/rocq/rocq_gen.mli ocaml/gen/closure-rocq_gen.tsv
+  ocaml/engine/test/rocq/rocq_gen.mli ocaml/gen/closure-rocq_gen.tsv ocaml/gen/facade/effect4.ml \
+  ocaml/gen/facade/effect4.mli ocaml/gen/public-names.tsv
 LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen --lean-recipe ocaml/gen/roots.json --outputs $(LCNF_OUT)
 $(CHK)/gen-lcnf.key: FORCE $(GEN)/derived
 	@$(LCNF_KEY)
@@ -667,7 +668,8 @@ gen-row-citations: ## promote a fresh rows/atoms report to generated/row-citatio
 # The lane reads no other core source: the key holds the scan's hits (`--c1-hits`), so an edit
 # elsewhere in the core reruns the lane only through the corpus, the fixtures or the LCNF group.
 OCAML_SOURCES := $(wildcard $(shell git ls-files --cached --others --exclude-standard -- ocaml)) \
-  scripts/check-lcnf-interfaces.py scripts/check-lcnf-sealing.py scripts/lib/lcnf_interfaces.py
+  scripts/check-lcnf-interfaces.py scripts/check-lcnf-sealing.py scripts/lib/lcnf_interfaces.py \
+  scripts/check-export-classes.py scripts/check-public-facade.py
 $(CHK)/fiber-writes: FORCE
 	@mkdir -p $(CHK) && bash ocaml/engine/tools/gen-check.sh --c1-hits > $@.new && \
 	  { if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi; }
@@ -678,6 +680,8 @@ _run-ocaml:
 	cd ocaml && $(OCAML) dune test engine
 	$(PY) scripts/check-lcnf-interfaces.py
 	$(PY) scripts/check-lcnf-sealing.py
+	$(PY) scripts/check-export-classes.py
+	$(PY) scripts/check-public-facade.py
 	$(OCAML) bash ocaml/engine/tools/gen-check.sh
 
 # The diagnostics lane (S0 of the printer/reader/positions redesign): every printed corpus

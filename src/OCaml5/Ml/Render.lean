@@ -290,14 +290,14 @@ def renderDeclAlg : DeclAlgebra (fun _ => Nat → String) where
     "let " ++ (if isRec then "rec " else "") ++ String.intercalate "\n\nand " (binds.map renderBind)
   decl_comment t := fun _ => "(* " ++ t ++ " *)"
   decl_rawD t := fun _ => t
-  -- a plain module's items move right as blocks; a functor body keeps the layout it always had
+  -- a plain module's items move right as blocks: each is rendered at the left margin and then
+  -- moved, so a module inside a module moves once; a functor body keeps the layout it always had
   decl_moduleD n params body := fun ind =>
     "module " ++ n
       ++ String.join (params.map fun p => " (" ++ p.1 ++ " : " ++ p.2 ++ ")")
       ++ " = struct\n"
       ++ String.join (body.map fun d =>
-          let s := d (ind + 1)
-          let s := if params.isEmpty then indentRest (ind + 1) s else s
+          let s := if params.isEmpty then indentRest (ind + 1) (d 0) else d (ind + 1)
           (if s.isEmpty then "" else indentOf (ind + 1)) ++ s ++ "\n")
       ++ indentOf ind ++ "end"
   decl_floatingAttrD t := fun _ => "[@@@" ++ t ++ "]"
@@ -317,6 +317,7 @@ def renderDeclAlg : DeclAlgebra (fun _ => Nat → String) where
     | [] => ""
     | m :: rest =>
       member "module rec " m ++ String.join (rest.map fun m => "\n\n" ++ indentOf ind ++ member "and " m)
+  decl_moduleAliasD n path := fun _ => "module " ++ n ++ " = " ++ path
 
 /-- One declaration, as a top-level structure item. -/
 def renderDecl (d : Decl) : String := cata_decl renderDeclAlg d 0
@@ -440,5 +441,12 @@ private def wideVariant : TypeDecl :=
   { name := "t", body := .variant [{ name := "A" }, { name := "B" }, { name := "C" }, { name := "D" }] }
 #guard renderDecl (.moduleRecD [("M", [.type wideVariant])])
   == "module rec M : sig\n  type t =\n    | A\n    | B\n    | C\n    | D\nend = M"
+-- A module alias, alone and inside a plain module.
+#guard renderDecl (.moduleAliasD "Eff" "Eff_types.Eff") == "module Eff = Eff_types.Eff"
+#guard renderDecl (.moduleD "Program" [] [.moduleAliasD "Eff" "Eff_types.Eff"])
+  == "module Program = struct\n  module Eff = Eff_types.Eff\nend"
+-- A module inside a module moves right once per level (the public facade's tree).
+#guard renderDecl (.moduleD "Run" [] [.moduleD "Tree" [] [.types [{ name := "t", body := .alias Ty.int }]]])
+  == "module Run = struct\n  module Tree = struct\n    type t = int\n  end\nend"
 
 end OCaml5.Ml

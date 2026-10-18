@@ -136,117 +136,6 @@ module Make :
           run_machine;
         reasons : frontier_reason list;
       }
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) cmd =
-          Cmd_evaluate of fiber_id
-        | Cmd_loop of fiber_id * bool
-        | Cmd_deliver of fiber_id * bool
-        | Cmd_finish of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-        | Cmd_resume of fiber_id * int * 'k
-        | Cmd_launch of int
-        | Cmd_enrollRace of int * fiber_id
-        | Cmd_registrationDone of int * bool
-        | Cmd_interruptTarget of fiber_id * fiber_id option *
-            'a Eff_types.ReasonAnnotations.t
-        | Cmd_afterInterrupt of fiber_id * bool * park_kind
-        | Cmd_raceCancel of int * fiber_id * bool * fiber_id list *
-            fiber_id list
-        | Cmd_trackChild of fiber_id * fiber_id
-        | Cmd_observe of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t *
-            observer
-        | Cmd_exitDone of fiber_id
-        | Cmd_closeParAwait of fiber_id * bool * fiber_id list
-        | Cmd_link of scope_mode * int * fiber_id * fiber_id option *
-            'a Eff_types.ReasonAnnotations.t
-        | Cmd_drainDue
-        | Cmd_wake of wake_key * int
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine = {
-        fibers :
-          (('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber,
-           ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t)
-          F.t;
-        races : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) race list;
-        next_id : int;
-        next_token : int;
-        next_race : int;
-        middleware_installed : bool;
-        armed : fiber_id list;
-        state : 'st;
-        trace : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event T.t;
-        stuck : stuck option;
-        forks : fork_record list;
-      }
-      and ('nu, 'b, 'e, 'd, 'i, 'a, 'k, 'f) fiber_core = {
-        current : 'f -> 'k;
-        answer_with : 'f -> 'k -> 'f;
-        start : 'k -> bool -> 'f;
-        interruptible : 'f -> bool;
-        interrupted_cause : 'f -> ('e, 'd, 'i, 'a) Eff_types.Cause.t option;
-        deferred_interrupt : 'f -> bool;
-        record_cause : 'f -> ('e, 'd, 'i, 'a) Eff_types.Cause.t -> 'f;
-        set_deferred : 'f -> bool -> 'f;
-        pending_failure : 'f -> 'f;
-        push_async_finalizer : 'nu -> 'f -> 'f;
-        push_iterator : 'nu -> 'b -> 'f -> 'f;
-        clear_stack : 'f -> 'f;
-        success : 'b -> 'k;
-        failure : ('e, 'd, 'i, 'a) Eff_types.Cause.t -> 'k;
-        on_success : 'k -> 'nu -> 'k;
-        yield_before : 'k -> 'k;
-        enter_uninterruptible : 'f -> 'f;
-      }
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber = {
-        id : fiber_id;
-        frame : 'f;
-        running : bool;
-        parked : parked;
-        pending : ('nu, 'b, 'e, 'd, 'i, 'a) pending list;
-        finalizing : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
-        exit_ : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
-        current_op_count : int;
-        max_ops_before_yield : int;
-        prevent_yield : bool;
-        yield_override : bool option;
-        observers : observer list;
-        children : fiber_id list;
-        dispatcher : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task D.t;
-        context : 'ch;
-      }
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =
-          RunEvent_forked of fiber_id * fiber_id * bool
-        | RunEvent_started of fiber_id
-        | RunEvent_scheduledTask of fiber_id * int *
-            ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
-        | RunEvent_ranTask of fiber_id *
-            ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
-        | RunEvent_yieldInjected of fiber_id * int
-        | RunEvent_parkedOn of fiber_id * int
-        | RunEvent_resumedWith of fiber_id * int * 'k
-        | RunEvent_interruptRecorded of fiber_id option * fiber_id
-        | RunEvent_interruptDeferred of fiber_id
-        | RunEvent_childrenInterrupted of fiber_id * fiber_id list
-        | RunEvent_observerFired of fiber_id * observer
-        | RunEvent_frame of fiber_id * 'h
-        | RunEvent_finalizerProgram of fiber_id * 'nu *
-            ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-        | RunEvent_scopeLinked of scope_mode * int * int * fiber_id
-        | RunEvent_scopeClosedOnLink of int * fiber_id
-        | RunEvent_raceStarted of int * fiber_id * int
-        | RunEvent_raceLaunched of int * fiber_id
-        | RunEvent_raceSettled of int * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-        | RunEvent_contextSet of fiber_id * 'ch
-        | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-        | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-      and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
-          ScopeState_empty
-        | ScopeState_openEmpty
-        | ScopeState_openInline of 'k * 'f
-        | ScopeState_openMap of ('k * 'f) list
-        | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-      and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope = {
-        strategy : Eff_types.FinalizerStrategy.t;
-        state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
-      }
-      and parked = Parked_notParked | Parked_withGuard of int
       and ctx = {
         services : Eff_types.Val.t context;
         max_ops_before_yield : int;
@@ -368,28 +257,6 @@ module Make :
           'k option ->
           ('b, 'e, 'd, 'i, 'a) Eff_types.Completion.t -> 'st -> 'st * 'k;
       }
-      and 'op node =
-          Node_eff of 'op Eff_types.Eff.t
-        | Node_stmts of 'op Eff_types.Stmts.t
-        | Node_stmt of 'op Eff_types.Stmt.t
-        | Node_action of 'op Eff_types.ActionTerm.t
-        | Node_effs of 'op Eff_types.Effs.t
-        | Node_layer of 'op Eff_types.LayerTerm.t
-        | Node_layers of 'op Eff_types.LayerTerms.t
-      and refusal =
-          Refusal_notParked of fiber_id
-        | Refusal_staleToken of fiber_id * int * int
-        | Refusal_notExternal of fiber_id * int
-        | Refusal_answerType of fiber_id * int * Eff_types.Ty.t
-        | Refusal_errorType of fiber_id * int * Eff_types.Ty.t
-        | Refusal_deadHandle of fiber_id * int
-        | Refusal_reservedDefect of fiber_id * int
-        | Refusal_unknownCell of Eff_types.RefKey.t
-      and sig_app = {
-        rows : Eff_types.Row.t list;
-        services : (Eff_types.ServiceKey.t * Eff_types.Ty.t) list;
-        types : (string * Eff_types.Ty.t) list;
-      }
       and eff_name =
           EffName_cont of point
         | EffName_caught of point
@@ -468,10 +335,143 @@ module Make :
             int list
         | EffName_caughtError of point
       and prepared
+      and sig_app = {
+        rows : Eff_types.Row.t list;
+        services : (Eff_types.ServiceKey.t * Eff_types.Ty.t) list;
+        types : (string * Eff_types.Ty.t) list;
+      }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine = {
+        fibers :
+          (('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber,
+           ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t)
+          F.t;
+        races : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) race list;
+        next_id : int;
+        next_token : int;
+        next_race : int;
+        middleware_installed : bool;
+        armed : fiber_id list;
+        state : 'st;
+        trace : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event T.t;
+        stuck : stuck option;
+        forks : fork_record list;
+      }
       and 'a image = {
         to_val : 'a -> Eff_types.Val.t;
         of_val : Eff_types.Val.t -> 'a option;
       }
+      and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
+          ScopeState_empty
+        | ScopeState_openEmpty
+        | ScopeState_openInline of 'k * 'f
+        | ScopeState_openMap of ('k * 'f) list
+        | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+      and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope = {
+        strategy : Eff_types.FinalizerStrategy.t;
+        state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
+      }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) cmd =
+          Cmd_evaluate of fiber_id
+        | Cmd_loop of fiber_id * bool
+        | Cmd_deliver of fiber_id * bool
+        | Cmd_finish of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+        | Cmd_resume of fiber_id * int * 'k
+        | Cmd_launch of int
+        | Cmd_enrollRace of int * fiber_id
+        | Cmd_registrationDone of int * bool
+        | Cmd_interruptTarget of fiber_id * fiber_id option *
+            'a Eff_types.ReasonAnnotations.t
+        | Cmd_afterInterrupt of fiber_id * bool * park_kind
+        | Cmd_raceCancel of int * fiber_id * bool * fiber_id list *
+            fiber_id list
+        | Cmd_trackChild of fiber_id * fiber_id
+        | Cmd_observe of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t *
+            observer
+        | Cmd_exitDone of fiber_id
+        | Cmd_closeParAwait of fiber_id * bool * fiber_id list
+        | Cmd_link of scope_mode * int * fiber_id * fiber_id option *
+            'a Eff_types.ReasonAnnotations.t
+        | Cmd_drainDue
+        | Cmd_wake of wake_key * int
+      and ('nu, 'b, 'e, 'd, 'i, 'a, 'k, 'f) fiber_core = {
+        current : 'f -> 'k;
+        answer_with : 'f -> 'k -> 'f;
+        start : 'k -> bool -> 'f;
+        interruptible : 'f -> bool;
+        interrupted_cause : 'f -> ('e, 'd, 'i, 'a) Eff_types.Cause.t option;
+        deferred_interrupt : 'f -> bool;
+        record_cause : 'f -> ('e, 'd, 'i, 'a) Eff_types.Cause.t -> 'f;
+        set_deferred : 'f -> bool -> 'f;
+        pending_failure : 'f -> 'f;
+        push_async_finalizer : 'nu -> 'f -> 'f;
+        push_iterator : 'nu -> 'b -> 'f -> 'f;
+        clear_stack : 'f -> 'f;
+        success : 'b -> 'k;
+        failure : ('e, 'd, 'i, 'a) Eff_types.Cause.t -> 'k;
+        on_success : 'k -> 'nu -> 'k;
+        yield_before : 'k -> 'k;
+        enter_uninterruptible : 'f -> 'f;
+      }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber = {
+        id : fiber_id;
+        frame : 'f;
+        running : bool;
+        parked : parked;
+        pending : ('nu, 'b, 'e, 'd, 'i, 'a) pending list;
+        finalizing : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
+        exit_ : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
+        current_op_count : int;
+        max_ops_before_yield : int;
+        prevent_yield : bool;
+        yield_override : bool option;
+        observers : observer list;
+        children : fiber_id list;
+        dispatcher : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task D.t;
+        context : 'ch;
+      }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =
+          RunEvent_forked of fiber_id * fiber_id * bool
+        | RunEvent_started of fiber_id
+        | RunEvent_scheduledTask of fiber_id * int *
+            ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
+        | RunEvent_ranTask of fiber_id *
+            ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
+        | RunEvent_yieldInjected of fiber_id * int
+        | RunEvent_parkedOn of fiber_id * int
+        | RunEvent_resumedWith of fiber_id * int * 'k
+        | RunEvent_interruptRecorded of fiber_id option * fiber_id
+        | RunEvent_interruptDeferred of fiber_id
+        | RunEvent_childrenInterrupted of fiber_id * fiber_id list
+        | RunEvent_observerFired of fiber_id * observer
+        | RunEvent_frame of fiber_id * 'h
+        | RunEvent_finalizerProgram of fiber_id * 'nu *
+            ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+        | RunEvent_scopeLinked of scope_mode * int * int * fiber_id
+        | RunEvent_scopeClosedOnLink of int * fiber_id
+        | RunEvent_raceStarted of int * fiber_id * int
+        | RunEvent_raceLaunched of int * fiber_id
+        | RunEvent_raceSettled of int * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+        | RunEvent_contextSet of fiber_id * 'ch
+        | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+        | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+      and parked = Parked_notParked | Parked_withGuard of int
+      and 'op node =
+          Node_eff of 'op Eff_types.Eff.t
+        | Node_stmts of 'op Eff_types.Stmts.t
+        | Node_stmt of 'op Eff_types.Stmt.t
+        | Node_action of 'op Eff_types.ActionTerm.t
+        | Node_effs of 'op Eff_types.Effs.t
+        | Node_layer of 'op Eff_types.LayerTerm.t
+        | Node_layers of 'op Eff_types.LayerTerms.t
+      and refusal =
+          Refusal_notParked of fiber_id
+        | Refusal_staleToken of fiber_id * int * int
+        | Refusal_notExternal of fiber_id * int
+        | Refusal_answerType of fiber_id * int * Eff_types.Ty.t
+        | Refusal_errorType of fiber_id * int * Eff_types.Ty.t
+        | Refusal_deadHandle of fiber_id * int
+        | Refusal_reservedDefect of fiber_id * int
+        | Refusal_unknownCell of Eff_types.RefKey.t
       and exhaustion = Exhaustion_fuel | Exhaustion_tape
       and frontier_reason =
           FrontierReason_commandFuel
@@ -479,71 +479,6 @@ module Make :
         | FrontierReason_awaitHost of key
         | FrontierReason_awaitTimer of fiber_id * E4_clock.t
         | FrontierReason_awaitDecision
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) race = {
-        id : int;
-        host : fiber_id;
-        token : int;
-        state : ('b, 'e, 'd, 'i, 'a) race_all_state;
-        settled : bool;
-        programs : 'k list;
-        registering : bool;
-        next_site : int list option;
-        mode : race_mode;
-        selected : fiber_id option;
-      }
-      and ('b, 'e, 'd, 'i, 'a) race_all_state = {
-        unstarted : fiber_id list;
-        starting : fiber_id option;
-        live : fiber_id list;
-        remaining : int;
-        failures : ('e, 'd, 'i, 'a) Eff_types.Reason.t list;
-        winner : (fiber_id * 'b) option;
-        accepted : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
-        cleanup_needed : bool;
-        requests : fiber_id list;
-        cleanup : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t wait_state option;
-        cleanup_requested : bool;
-      }
-      and observer =
-          Observer_resumeAwait of fiber_id * int * Eff_types.ObserverMode.t
-        | Observer_untrackChild of fiber_id
-        | Observer_dropScopeFinalizer of int * int
-        | Observer_countdown of fiber_id * int
-        | Observer_raceCallback of int
-        | Observer_callback of int
-      and 'nu resume =
-          Resume_exitsValue
-        | Resume_void
-        | Resume_continueWith of 'nu
-      and ('nu, 'b, 'e, 'd, 'i, 'a) pending = {
-        token : int;
-        waiting_on : fiber_id option;
-        remaining : fiber_id list;
-        collected : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t list;
-        resume_with : 'nu resume;
-        fail_fast : bool;
-      }
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) effect4_machine_outcome =
-          Effect4_machine_outcome_continue_
-        | Effect4_machine_outcome_parked
-        | Effect4_machine_outcome_finished of
-            ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-        | Effect4_machine_outcome_stuck of stuck
-        | Effect4_machine_outcome_answered
-        | Effect4_machine_outcome_commands
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) iter = {
-        machine :
-          ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine;
-        fiber : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber;
-        yielding : bool;
-        outcome : ('nu, 's, 'b, 'e, 'd, 'i, 'a) effect4_machine_outcome;
-        nested : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) cmd list;
-        edits : ('e, 'd, 'i, 'a) fiber_edit list;
-      }
-      and park_kind =
-          ParkKind_join of fiber_id * Eff_types.ObserverMode.t
-        | ParkKind_race of int
-        | ParkKind_awaitAll of fiber_id list
       and eff_thunk =
           EffThunk_pure of point
         | EffThunk_body of point
@@ -602,6 +537,10 @@ module Make :
         params : arg_site list list;
         call : int list list;
       }
+      and park_kind =
+          ParkKind_join of fiber_id * Eff_types.ObserverMode.t
+        | ParkKind_race of int
+        | ParkKind_awaitAll of fiber_id list
       and context_update =
           ContextUpdate_setTo of Eff_types.Val.t context
         | ContextUpdate_provide of Eff_types.Val.t context
@@ -777,13 +716,6 @@ module Make :
             (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id,
              unit)
             Eff_types.Exit.t
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber = {
-        current : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim;
-        stack : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
-        interruptible : bool;
-        interrupted_cause : ('e, 'd, 'i, 'a) Eff_types.Cause.t option;
-        deferred_interrupt : bool;
-      }
       and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k) with_fiber_action =
           WithFiberAction_fork of 'k * Eff_types.ForkOptions.t * int list
         | WithFiberAction_forkIn of 'k * Eff_types.ForkOptions.t * int *
@@ -824,11 +756,79 @@ module Make :
         params : arg_site list list;
         call : int list list;
       }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber = {
+        current : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim;
+        stack : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
+        interruptible : bool;
+        interrupted_cause : ('e, 'd, 'i, 'a) Eff_types.Cause.t option;
+        deferred_interrupt : bool;
+      }
       and await = {
         fiber : fiber_id;
         token : int;
         op : Eff_types.NativeOp.t;
         request : Eff_types.Val.t;
+      }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) race = {
+        id : int;
+        host : fiber_id;
+        token : int;
+        state : ('b, 'e, 'd, 'i, 'a) race_all_state;
+        settled : bool;
+        programs : 'k list;
+        registering : bool;
+        next_site : int list option;
+        mode : race_mode;
+        selected : fiber_id option;
+      }
+      and ('b, 'e, 'd, 'i, 'a) race_all_state = {
+        unstarted : fiber_id list;
+        starting : fiber_id option;
+        live : fiber_id list;
+        remaining : int;
+        failures : ('e, 'd, 'i, 'a) Eff_types.Reason.t list;
+        winner : (fiber_id * 'b) option;
+        accepted : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
+        cleanup_needed : bool;
+        requests : fiber_id list;
+        cleanup : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t wait_state option;
+        cleanup_requested : bool;
+      }
+      and observer =
+          Observer_resumeAwait of fiber_id * int * Eff_types.ObserverMode.t
+        | Observer_untrackChild of fiber_id
+        | Observer_dropScopeFinalizer of int * int
+        | Observer_countdown of fiber_id * int
+        | Observer_raceCallback of int
+        | Observer_callback of int
+      and 'nu resume =
+          Resume_exitsValue
+        | Resume_void
+        | Resume_continueWith of 'nu
+      and ('nu, 'b, 'e, 'd, 'i, 'a) pending = {
+        token : int;
+        waiting_on : fiber_id option;
+        remaining : fiber_id list;
+        collected : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t list;
+        resume_with : 'nu resume;
+        fail_fast : bool;
+      }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) effect4_machine_outcome =
+          Effect4_machine_outcome_continue_
+        | Effect4_machine_outcome_parked
+        | Effect4_machine_outcome_finished of
+            ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+        | Effect4_machine_outcome_stuck of stuck
+        | Effect4_machine_outcome_answered
+        | Effect4_machine_outcome_commands
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) iter = {
+        machine :
+          ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine;
+        fiber : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber;
+        yielding : bool;
+        outcome : ('nu, 's, 'b, 'e, 'd, 'i, 'a) effect4_machine_outcome;
+        nested : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) cmd list;
+        edits : ('e, 'd, 'i, 'a) fiber_edit list;
       }
       and timer_store = {
         now : E4_clock.t;
@@ -840,27 +840,6 @@ module Make :
         batch : 'p waiter list option;
         phase : int;
       }
-      and 'k owed = {
-        waiter : fiber_id;
-        token : int;
-        code : 'k;
-        mode : wake_mode;
-      }
-      and wake_mode = WakeMode_now | WakeMode_scheduled of fiber_id * int
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =
-          Task_start of fiber_id
-        | Task_resume of fiber_id * int * 'k
-        | Task_wake of wake_key * int
-      and stuck =
-          Stuck_unknownFiber of fiber_id
-        | Stuck_unknownScope of int
-        | Stuck_unknownRace of int
-      and ('e, 'd, 'i, 'a) fiber_edit =
-          FiberEdit_observe of fiber_id * observer
-        | FiberEdit_dropToken of int
-        | FiberEdit_interrupt of fiber_id *
-            ('e, 'd, 'i, 'a) Eff_types.Cause.t
-      and race_mode = RaceMode_firstSuccess | RaceMode_firstExit
       and 'k deferred_store = {
         cells : 'k deferred_cell M.t;
         due : 'k owed list;
@@ -882,8 +861,29 @@ module Make :
         completion : 'k option;
         wake : unit wake_list;
       }
+      and 'k owed = {
+        waiter : fiber_id;
+        token : int;
+        code : 'k;
+        mode : wake_mode;
+      }
       and combine_mode = CombineMode_provide | CombineMode_provideMerge
       and service_universe = unit
+      and wake_mode = WakeMode_now | WakeMode_scheduled of fiber_id * int
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =
+          Task_start of fiber_id
+        | Task_resume of fiber_id * int * 'k
+        | Task_wake of wake_key * int
+      and stuck =
+          Stuck_unknownFiber of fiber_id
+        | Stuck_unknownScope of int
+        | Stuck_unknownRace of int
+      and ('e, 'd, 'i, 'a) fiber_edit =
+          FiberEdit_observe of fiber_id * observer
+        | FiberEdit_dropToken of int
+        | FiberEdit_interrupt of fiber_id *
+            ('e, 'd, 'i, 'a) Eff_types.Cause.t
+      and race_mode = RaceMode_firstSuccess | RaceMode_firstExit
       and key = { fiber : fiber_id; token : int; }
       and 'p waiter = {
         fiber : fiber_id;
@@ -912,11 +912,6 @@ module Make :
         | ContAnswer_frame of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
         | ContAnswer_empty
       and arm = Arm_contA | Arm_contE | Arm_contAll
-      and 't wait_state = {
-        targets : fiber_id list;
-        published : fiber_id list;
-        result : 't;
-      }
       and native_atom =
           NativeAtom_succ
         | NativeAtom_pred
@@ -978,6 +973,11 @@ module Make :
         | FrameEvent_substituted of ('e, 'd, 'i, 'a) Eff_types.Cause.t
         | FrameEvent_deferred of ('e, 'd, 'i, 'a) Eff_types.Cause.t
         | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+      and 't wait_state = {
+        targets : fiber_id list;
+        published : fiber_id list;
+        result : 't;
+      }
       and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
       and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
           FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber
@@ -1163,21 +1163,9 @@ module Make :
         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
          Eff_types.Defect.t, int, unit)
         run_decision
-      val program_node_child : 'a node -> int -> 'a node option
       val reify_exit_val :
         (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
         Eff_types.Exit.t -> Eff_types.Val.t
-      val scope_make :
-        Eff_types.FinalizerStrategy.t -> ('a, 'b, 'c, 'd, 'e, 'f, 'g) scope
-      val scope_fork :
-        ('a -> 'a -> bool) ->
-        ('a, 'b, 'c, 'd, 'e, 'f, 'g) scope ->
-        Eff_types.FinalizerStrategy.t ->
-        'a ->
-        'b ->
-        'h ->
-        ('a, 'b, 'c, 'd, 'e, 'f, 'g) scope *
-        ('a, 'h, 'c, 'd, 'e, 'f, 'g) scope
       val empty_ctx : ctx
       val stores :
         (name, thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
@@ -1195,9 +1183,6 @@ module Make :
           Eff_types.Defect.t, int, unit)
          prim)
         run_interp
-      val settled :
-        ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l) run_machine *
-        ('m, 'n, 'o, 'p, 'q, 'r, 's, 't) cmd list -> bool
       val program_awaits :
         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
          Eff_types.Defect.t, int, unit, ctx, stores,
@@ -1227,61 +1212,6 @@ module Make :
       val api_run :
         Eff_types.NativeOp.t Eff_types.Eff.t ->
         int -> Eff_types.Row.t list -> int -> inspection
-      val run_fiber_make :
-        ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) fiber_core ->
-        int ->
-        'g ->
-        bool ->
-        int * bool ->
-        'i -> ('j, 'k, 'l, 'm, 'n, 'o, 'p, 'i, 'q, 'h) run_fiber
-      val drive_state :
-        ('a -> 'a -> bool) ->
-        ('b -> 'b -> bool) ->
-        ('c -> 'c -> bool) ->
-        ('d -> 'd -> bool) ->
-        ('e, 'f, 'a, 'b, 'c, 'd, 'g, 'h) fiber_core ->
-        (('e, 'i, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g) run_interp ->
-         ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g, 'h, 'm) run_machine ->
-         ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'g, 'h) run_fiber ->
-         bool -> ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g, 'h, 'm) iter) ->
-        ('e, 'i, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g) run_interp ->
-        int ->
-        ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g, 'h, 'm) run_machine ->
-        ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'g) cmd list ->
-        ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g, 'h, 'm) run_machine *
-        ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'g) cmd list
-      val step_decision_state :
-        ('a -> 'a -> bool) ->
-        ('b -> 'b -> bool) ->
-        ('c -> 'c -> bool) ->
-        ('d -> 'd -> bool) ->
-        ('e, 'f, 'a, 'b, 'c, 'd, 'g, 'h) fiber_core ->
-        (('e, 'i, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g) run_interp ->
-         ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g, 'h, 'm) run_machine ->
-         ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'g, 'h) run_fiber ->
-         bool -> ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g, 'h, 'm) iter) ->
-        ('e, 'i, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g) run_interp ->
-        int ->
-        ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g, 'h, 'm) run_machine ->
-        ('n, 'o, 'f, 'a, 'b, 'c, 'd) run_decision ->
-        ('e, 'l, 'f, 'a, 'b, 'c, 'd, 'j, 'k, 'g, 'h, 'm) run_machine * bool
-      val program_admit :
-        sig_app ->
-        (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-         Eff_types.Defect.t, int, unit, ctx, stores,
-         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-          Eff_types.Defect.t, int, unit)
-         prim,
-         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-          Eff_types.Defect.t, int, unit)
-         frame_fiber,
-         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-          Eff_types.Defect.t, int, unit)
-         frame_event)
-        run_machine ->
-        (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-         Eff_types.Defect.t, int, unit)
-        run_decision -> refusal option
       val program_prepared_make :
         Eff_types.NativeOp.t Eff_types.Eff.t ->
         Eff_types.Row.t list -> prepared
