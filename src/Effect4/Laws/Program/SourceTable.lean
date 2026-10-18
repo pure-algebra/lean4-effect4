@@ -21,9 +21,10 @@ checks a program, and shows the expansion's table at the source's addresses.
 | `Sketch.sourceTable_focus` | where the table holds a type below the root, it is the expansion's focus there | `Table.typedAt_table` |
 | `Sketch.sourceCheck_toOption` | the check at the root is admission's typing | `typeOfProgram`'s definition |
 | `Sketch.sourceRefusals_head`, `Sketch.sourceRefusals_nil_iff` | the refusals start with the check's, and are empty exactly when it succeeds | `Sketch.table_result_refusal_none` at the expansion |
-| `SourceSession.reached_view` | every sealed document shows its source table, refusals, and root type | the placed `Doc.coherent` goal |
-| `SourceSession.replay_drafts_view` | every old application, sketch, and edit list retains its exact observation through canonical draft replay | placed transport goal |
-| `SourceSession.feed_undo` | an edit, then the edit that puts back the old sub-program as written, restores the session | `EditSession.Coherent.ext` |
+| `SourceSession.feed_draft` | a draft whose sketch and candidate hold no ill-formed reference is the expansion's edit session at the source's addresses | `draft_conditions_of_reference`, `draft_reference_spliced` |
+| `SourceSession.reached_view` | every sealed document shows its source table, refusals, and root type | `Doc.coherent`, modulo the goal `feed_coherent` |
+| `SourceSession.replay_drafts_view` | every old application, sketch, and edit list retains its exact observation through canonical draft replay | the replay fold, modulo `feed_coherent` |
+| `SourceSession.feed_undo` | an edit, then the edit that puts back the old sub-program as written, restores the session | `EditSession.Coherent.ext`, modulo `feed_coherent` |
 
 ## Placement
 
@@ -41,9 +42,12 @@ the expansion's table at the source's addresses is a table of the source. Requir
   tool (`Effect4.Tool.serve`, `src/Effect4/Tool/Serve.lean`).
 - **`source-session-coherent`** (role preservation; pointer `SourceSession.reached_view`).
   Reach: every sealed document, without a separate coherence premise; exact source table, refusals, and root type.
-  The proof uses the placed `Doc.coherent` goal.
+  The proof rests on `Doc.coherent`, which rests on the planned goal `feed_coherent`.
+  That goal is false at head (`FeedCounterexample.feed_coherent_refuted`).
+  `feed_coherent_of_faultFree` proves it where the candidate holds no ill-formed reference and a
+  kept-exact splice stands at a typed root.
   `SourceSession.replay_drafts_view` retains every old application, initial sketch, and edit list through canonical replay.
-  Its exact observation remains a placed goal.
+  It rests on `feed_coherent` too.
   Neither claim establishes reference splicing, execution, progress, or cost.
   Consumer: the session tool.
 - Every other statement is a step of these two, and names its consumer.
@@ -52,7 +56,7 @@ the expansion's table at the source's addresses is a table of the source. Requir
 set_option autoImplicit false
 
 namespace Effect4.Program
-open Conform.Effect4.Typing (HasTy effTy_sound)
+open Conform.Effect4.Typing (HasTy effTy_sound check_complete)
 
 /-! ## The address list -/
 
@@ -751,6 +755,85 @@ theorem Sketch.edit_replaceAt {s c : Sketch} {app : SigApp} {e : Edit} (h : s.ed
     obtain ⟨p', hrep, rfl⟩ := Sketch.fillAt_some h
     exact ⟨_, hrep⟩
 
+/-- **An edit applies wherever a program stands**: the replacement at an address of a program
+exists (`Node.replaceAt_eff`). A step of `source-feed-draft`. Its consumer is
+`SourceSession.feed_draft`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.edit_of_at {s : Sketch} {app : SigApp} {e : Edit} {old : NativeEff}
+    (hat : (Node.eff s.program).at_ e.path = some (.eff old)) : ∃ c, s.edit app e = some c := by
+  cases e with
+  | fill a q =>
+    obtain ⟨p', hrep⟩ := Node.replaceAt_eff q hat
+    exact ⟨_, Sketch.fillAt_of_replaceAt hrep⟩
+  | omitAt a row =>
+    obtain ⟨p', hrep⟩ := Node.replaceAt_eff (Sketch.hole app s.holes.length) hat
+    exact ⟨_, Sketch.fillAt_of_replaceAt (s := { s with holes := s.holes ++ [row] }) hrep⟩
+
+/-- **A filling's part signature at a focus below the root is the base's signature there**: the
+filling keeps the part that holds the address (`partAt_sig_replaceAt`). A step of
+`source-feed-coherent` and of `source-feed-draft`. Its consumers are
+`SourceSession.splice_coherent` and `SourceSession.draft_conditions_of_reference`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.sigData_fillAt {s0 c : Sketch} {app : SigApp} {a : List Nat} {q' : NativeEff}
+    {f : Focus NativeOp} (hne : a ≠ []) (hfill : s0.fillAt a q' = some c)
+    (hf : s0.focusAt app a = some f) :
+    (sketchSigData c app a).signature = s0.sigAt app a := by
+  obtain ⟨i, rest, hpath⟩ := List.exists_cons_of_ne_nil hne
+  obtain ⟨p', hrep, hcx⟩ := Sketch.fillAt_some hfill
+  have hpart0 : (s0.program.partAt (app.withHoles s0.holes).signature [] a).isSome = true := by
+    have hfp : programFocusAt (app.withHoles s0.holes).signature [] s0.program a = some f := by
+      rw [hpath] at hf ⊢
+      exact hf
+    unfold programFocusAt at hfp
+    obtain ⟨pr, hpr, -⟩ := Option.bind_eq_some_iff.mp hfp
+    rw [hpr]
+    rfl
+  rw [sketchSigData_signature]
+  · exact sigAt_fillAt hne hfill a
+  · subst hcx
+    rw [hpath] at hrep hpart0 ⊢
+    have hpart' := partAt_sig_replaceAt (sig := (app.withHoles s0.holes).signature) hrep (i :: rest)
+    rw [← Option.isSome_map (f := fun pr : Part NativeOp × List Nat => pr.1.sig)]
+    show ((p'.partAt (app.withHoles s0.holes).signature [] (i :: rest)).map _).isSome = _
+    rw [hpart', Option.isSome_map]
+    exact hpart0
+
+/-- **The checker's type does not read the path**: a type at one path is the type at every path
+(`check_complete`). A step of `source-feed-draft`. Its consumers are
+`SourceSession.draft_conditions_of_reference` and `SourceSession.draft_reference_spliced`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem check_ok_path {sig : Signature NativeOp} {env : TyEnv} {p : List Nat} {q : NativeEff}
+    {t : EffTy} (h : Checker.check sig env p q = .ok t) (p' : List Nat) :
+    Checker.check sig env p' q = .ok t :=
+  check_complete _ _ _ _ (effTy_sound _ _ _ _ (effTy_of_check h)) p'
+
+/-- **The table at a node stands at the node's addresses**, below its own address. A step of
+`source-feed-draft`. Its consumer is `Check.placed_paths`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem tableAt_paths {Op : Type} (sig : Signature Op) (ctx : Option NodeEnv) (n : Node Op)
+    (a : List Nat) : (tableAt sig ctx n a).map (·.path) = (Node.addresses n).map (a ++ ·) := by
+  unfold tableAt
+  rw [List.map_map]
+  rfl
+
+/-- **A part check's answer is the checker's at the part's signature.** A step of
+`source-feed-coherent` and of `source-feed-draft`. Its consumers are
+`SourceSession.splice_coherent`, `SourceSession.feed_keepExact_of_faultFree` and
+`SourceSession.draft_conditions_of_reference`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Check.run_part_result (d : SigData) (env : TyEnv) (q : NativeEff) :
+    (run (.part d env q)).result = Checker.check d.signature env [] q := by
+  show (Annotate.check _ _ [] q).2 = _
+  rw [Annotate.check_eq]
+
+/-- **A placed part check's table stands at the sub-program's addresses**, below the edited
+address. A step of `source-feed-draft`. Its consumer is `SourceSession.draft_reference_spliced`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Check.placed_paths (d : SigData) (env : TyEnv) (q : NativeEff) (a : List Nat) :
+    (Internal.place a (run (.part d env q))).table.map (·.path) =
+      (Node.addresses (.eff q)).map (a ++ ·) := by
+  rw [run_placed, Annotate.check_eq]
+  exact tableAt_paths _ _ _ _
 
 /-!
 Placement: initial-algebras-folds; source-session-coherent and typed-replacement, R14.
@@ -1200,74 +1283,22 @@ theorem splice_base {s : SourceSession} {c : Sketch} {e e' : Edit} {q' q0 : Nati
     exact ⟨_, hX'', Sketch.check_more_holes _ _ _ hXcheck, Sketch.focusAt_more_holes hXcheck hf0 _,
       Sketch.table_more_holes hXcheck _⟩
 
-/-- **The splice gives the candidate's source table** at a typed root, where the candidate holds
-no ill-formed reference, the part keeps the focus's type and the expanded edit agrees. The
-expansion's table splices (`Sketch.table_fill`, at the base of `splice_base`), and dropping the
-copies' entries commutes with that splice (`Table.splice_filter`). A step of
-`source-feed-coherent`. Its consumer is `feed_coherent_of_faultFree`. -/
+/-- **Splicing the source table is splicing the expansion's table with the copies' entries
+dropped**, for any new segment, where the session's sketch holds no ill-formed reference: the
+expansion's table splits at the edited address into a contiguous block (`Node.addresses_split`),
+whose head is below no reference site, and the edit keeps the sites outside it. A step of
+`source-feed-coherent` and of `source-feed-draft`. Its consumers are `splice_coherent` and
+`feed_draft`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem splice_coherent {s : SourceSession} {c : Sketch} {e : Edit} {old : NativeEff}
-    {key : CheckInput} {focus : Focus NativeOp} {T : EffTy}
-    (hc : s.Coherent) (hroot : s.sketch.sourceCheck s.app = .ok T)
-    (hcf : c.program.firstRefFault = none) (hne : e.path ≠ [])
-    (hedit : s.sketch.edit s.app e = some c) (hfocus : s.focusAt e.path = some focus)
-    (hkey : s.candidatePartKey e.path c = some key) (hres : (run key).result = .ok focus.ty)
-    (hagree : s.expandedEditAgrees c e = true) :
-    (s.splice c e old (run key)).1.Coherent := by
-  obtain ⟨hsf, hXcheck⟩ := Sketch.sourceCheck_ok hroot
-  obtain ⟨q', hq'at, rfl⟩ := candidatePartKey_some hfocus hkey
-  obtain ⟨e', he', hX'⟩ := expandedEditAgrees_some hagree
-  obtain ⟨hatS, q0, hf0⟩ := focusAt_typed hc hfocus hne
-  obtain ⟨s0, hfill0, hcheck0, hfocus0, htable0⟩ := splice_base hXcheck hf0 hq'at he' hX'
-  obtain ⟨i, rest, hpath⟩ := List.exists_cons_of_ne_nil hne
-  -- the part check reads the base's signature at the address
-  obtain ⟨p', hrep, hcx⟩ := Sketch.fillAt_some hfill0
-  have hpart0 : (s0.program.partAt (s.app.withHoles s0.holes).signature [] e.path).isSome = true := by
-    have hfp : programFocusAt (s.app.withHoles s0.holes).signature [] s0.program e.path =
-        some ⟨q0, focus.env, focus.ty⟩ := by
-      rw [hpath] at hfocus0 ⊢
-      exact hfocus0
-    unfold programFocusAt at hfp
-    obtain ⟨pr, hpr, -⟩ := Option.bind_eq_some_iff.mp hfp
-    rw [hpr]
-    rfl
-  have hsig : (sketchSigData c.expand s.app e.path).signature = s0.sigAt s.app e.path := by
-    rw [sketchSigData_signature]
-    · exact sigAt_fillAt hne hfill0 e.path
-    · rw [hcx]
-      rw [hpath] at hrep hpart0 ⊢
-      have hpart' := partAt_sig_replaceAt (sig := (s.app.withHoles s0.holes).signature) hrep
-        (i :: rest)
-      rw [← Option.isSome_map (f := fun pr : Part NativeOp × List Nat => pr.1.sig)]
-      show ((p'.partAt (s.app.withHoles s0.holes).signature [] (i :: rest)).map _).isSome = _
-      rw [hpart', Option.isSome_map]
-      exact hpart0
-  have hcheckq : Checker.check (s0.sigAt s.app e.path) focus.env [] q' = .ok focus.ty := by
-    rw [← hsig]
-    have h1 : (run (.part (sketchSigData c.expand s.app e.path) focus.env q')).result =
-        Checker.check (sketchSigData c.expand s.app e.path).signature focus.env [] q' := by
-      show (Annotate.check _ _ [] q').2 = _
-      rw [Annotate.check_eq]
-    rw [← h1]
-    exact hres
-  have hq : HasTy (s0.sigAt s.app e.path) focus.env q' focus.ty :=
-    effTy_sound _ _ _ _ (effTy_of_check hcheckq)
-  have hfillT := Sketch.table_fill hcheck0 hne hfocus0 hq hfill0
-  rw [htable0] at hfillT
-  have hplaced : (Internal.place e.path (run (.part (sketchSigData c.expand s.app e.path) focus.env
-      q'))).table = tableAt (s0.sigAt s.app e.path) (some (.env focus.env)) (.eff q') e.path := by
-    rw [run_placed, Annotate.check_eq, hsig]
-  show Table.splice s.table e.path (Table.atSource c.sites c.program.firstRefFault
-    (Internal.place e.path (run (.part (sketchSigData c.expand s.app e.path) focus.env q'))).table) =
-    c.sourceTable s.app
-  dsimp only at hfillT
-  have hatoms : ∀ (sites : List (List Nat)) (t : List Table.Entry),
-      Table.atSource sites none t = t.filter (fun e => !Table.belowSite sites e.path) :=
-    fun _ _ => rfl
-  rw [hcf, hplaced, hatoms, table_eq hc, Sketch.sourceTable_eq_filter _ _ hsf,
-    Sketch.sourceTable_eq_filter _ _ hcf, hfillT]
-  -- the expansion's table, split at the edited address
-  have hatX := Sketch.focusAt_at hf0
+theorem source_splice_filter {s : SourceSession} {c : Sketch} {e : Edit} {old q0 : NativeEff}
+    (hc : s.Coherent) (hsf : s.sketch.program.firstRefFault = none)
+    (hedit : s.sketch.edit s.app e = some c)
+    (hatS : (Node.eff s.sketch.program).at_ e.path = some (.eff old))
+    (hatX : (Node.eff s.sketch.expand.program).at_ e.path = some (.eff q0)) (P : List Table.Entry) :
+    Table.splice s.table e.path (P.filter fun x => !Table.belowSite c.sites x.path) =
+      (Table.splice (s.sketch.expand.table s.app) e.path P).filter
+        fun x => !Table.belowSite c.sites x.path := by
+  rw [table_eq hc, Sketch.sourceTable_eq_filter _ _ hsf]
   obtain ⟨A, C, haddr, hA, hC⟩ := Node.addresses_split e.path (.eff s.sketch.expand.program)
     (.eff q0) hatX
   obtain ⟨restq, hq0head⟩ := addresses_eff_head q0
@@ -1313,15 +1344,53 @@ theorem splice_coherent {s : SourceSession} {c : Sketch} {e : Edit} {old : Nativ
     intro x' hx'
     unfold Sketch.sites
     rw [belowSite_replaceAt hrepc hatS hx']
-  have hspl : Table.splice (s.sketch.expand.table s.app) e.path
-      (tableAt (s0.sigAt s.app e.path) (some (NodeEnv.env focus.env)) (Node.eff q') e.path) =
-      A.map (s.sketch.expand.tableEntry s.app) ++
-        tableAt (s0.sigAt s.app e.path) (some (NodeEnv.env focus.env)) (Node.eff q') e.path ++
-        C.map (s.sketch.expand.tableEntry s.app) := by
+  have hspl : Table.splice (s.sketch.expand.table s.app) e.path P =
+      A.map (s.sketch.expand.tableEntry s.app) ++ P ++ C.map (s.sketch.expand.tableEntry s.app) := by
     rw [hT, List.append_assoc, Table.splice_three hAf ⟨_, hbmem, hBf _ hbmem⟩ hCf,
       Table.splice_all_under hBf, List.append_assoc]
   rw [hspl, hT]
   exact Table.splice_filter hAf hCf hBf hbmem hgb hagreeSites
+
+/-- **The splice gives the candidate's source table** at a typed root, where the candidate holds
+no ill-formed reference, the part keeps the focus's type and the expanded edit agrees. The
+expansion's table splices (`Sketch.table_fill`, at the base of `splice_base`), and dropping the
+copies' entries commutes with that splice (`Table.splice_filter`). A step of
+`source-feed-coherent`. Its consumer is `feed_coherent_of_faultFree`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem splice_coherent {s : SourceSession} {c : Sketch} {e : Edit} {old : NativeEff}
+    {key : CheckInput} {focus : Focus NativeOp} {T : EffTy}
+    (hc : s.Coherent) (hroot : s.sketch.sourceCheck s.app = .ok T)
+    (hcf : c.program.firstRefFault = none) (hne : e.path ≠ [])
+    (hedit : s.sketch.edit s.app e = some c) (hfocus : s.focusAt e.path = some focus)
+    (hkey : s.candidatePartKey e.path c = some key) (hres : (run key).result = .ok focus.ty)
+    (hagree : s.expandedEditAgrees c e = true) :
+    (s.splice c e old (run key)).1.Coherent := by
+  obtain ⟨hsf, hXcheck⟩ := Sketch.sourceCheck_ok hroot
+  obtain ⟨q', hq'at, rfl⟩ := candidatePartKey_some hfocus hkey
+  obtain ⟨e', he', hX'⟩ := expandedEditAgrees_some hagree
+  obtain ⟨hatS, q0, hf0⟩ := focusAt_typed hc hfocus hne
+  obtain ⟨s0, hfill0, hcheck0, hfocus0, htable0⟩ := splice_base hXcheck hf0 hq'at he' hX'
+  -- the part check reads the base's signature at the address
+  have hsig := Sketch.sigData_fillAt hne hfill0 hfocus0
+  have hcheckq : Checker.check (s0.sigAt s.app e.path) focus.env [] q' = .ok focus.ty := by
+    rw [← hsig, ← Check.run_part_result]
+    exact hres
+  have hq : HasTy (s0.sigAt s.app e.path) focus.env q' focus.ty :=
+    effTy_sound _ _ _ _ (effTy_of_check hcheckq)
+  have hfillT := Sketch.table_fill hcheck0 hne hfocus0 hq hfill0
+  rw [htable0] at hfillT
+  have hplaced : (Internal.place e.path (run (.part (sketchSigData c.expand s.app e.path) focus.env
+      q'))).table = tableAt (s0.sigAt s.app e.path) (some (.env focus.env)) (.eff q') e.path := by
+    rw [run_placed, Annotate.check_eq, hsig]
+  show Table.splice s.table e.path (Table.atSource c.sites c.program.firstRefFault
+    (Internal.place e.path (run (.part (sketchSigData c.expand s.app e.path) focus.env q'))).table) =
+    c.sourceTable s.app
+  dsimp only at hfillT
+  have hatoms : ∀ (sites : List (List Nat)) (t : List Table.Entry),
+      Table.atSource sites none t = t.filter (fun e => !Table.belowSite sites e.path) :=
+    fun _ _ => rfl
+  rw [hcf, hplaced, hatoms, Sketch.sourceTable_eq_filter _ _ hcf, hfillT]
+  exact source_splice_filter hc hsf hedit hatS (Sketch.focusAt_at hf0) _
 
 /-- **A recheck holds the candidate's source table**: the module check's table, part by part
 (`Sketch.sourceAnnotate_eq_sourceTable`). A step of `source-feed-coherent`. Its consumer is
@@ -1364,16 +1433,283 @@ theorem feed_coherent_of_faultFree {o : Oracle} {policy : FeedPolicy} {s next : 
     cases hr
     exact splice_coherent (old := old) hc hT (hcand c hedit) hne hedit hfocus hkey hres hagree
 
-/-- Exact old feedStep observations through the existing expansion edit engine.
-The expression uses EditSession.feed as its reference; it defines no second edit interpreter.
-Reach: coherent source sessions whose sketch and candidate hold no ill-formed reference, every
-edit, and certified oracles. The first form had no such premise and is false: on a sketch with
-an ill-formed reference the draft refuses to splice, since its root is refused, while the
-expansion's edit session splices (`FeedCounterexample.feed_draft_refuted`); and a candidate
-with one spliced wrongly (`FeedCounterexample.feed_coherent_refuted`).
-Consumer: replay_drafts_view and transport of source-session-coherent. R14. -/
+/-! ## A draft is the expansion's edit session at the source's addresses
+
+Where the sketch holds no ill-formed reference, the source table and the expansion's table hold
+the same root and the same entry at a source address (`typedAt_root_expand`, `typedAt_expand`).
+So the draft splices exactly where the expansion's edit session splices
+(`draft_conditions_of_reference`, `draft_reference_spliced`), and both tables are coherent.
+Each statement here is a step of `source-feed-draft`, and its consumer is `feed_draft`. -/
+
+/-- At the root, the source table holds the expansion's entry where the sketch holds no
+ill-formed reference. A step of `source-feed-draft`. Its consumer is `focusAt_of_expand`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit)
+theorem typedAt_root_expand {s : SourceSession} (hc : s.Coherent)
+    (hfault : s.sketch.program.firstRefFault = none) :
+    Table.typedAt s.table [] = Table.typedAt (s.sketch.expand.table s.app) [] := by
+  obtain ⟨rest, ht⟩ := Sketch.sourceTable_head s.sketch s.app
+  obtain ⟨rest', ht'⟩ := Sketch.table_head s.sketch.expand s.app
+  have hsc : s.sketch.sourceCheck s.app = s.sketch.expand.check s.app := by
+    unfold Sketch.sourceCheck
+    rw [hfault]
+  rw [table_eq hc, ht, ht', hsc]
+  unfold Table.typedAt
+  rw [List.find?_cons, List.find?_cons]
+  rfl
+
+/-- At an address of a program below the root, the source table holds the expansion's entry. A
+step of `source-feed-draft`. Its consumer is `focusAt_of_expand`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem typedAt_expand {s : SourceSession} (hc : s.Coherent) {a : List Nat} {old : NativeEff}
+    (hat : (Node.eff s.sketch.program).at_ a = some (.eff old)) (hne : a ≠ []) :
+    Table.typedAt s.table a = Table.typedAt (s.sketch.expand.table s.app) a := by
+  rw [table_eq hc]
+  exact Sketch.sourceTable_typedAt s.sketch s.app ((mem_addresses_iff _ _).mpr (by rw [hat]; rfl))
+    hne
+
+/-- Where the expansion's table types the root and an address of a program, the session has the
+focus there and the root's type. A step of `source-feed-draft`. Its consumer is
+`draft_conditions_of_reference`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem focusAt_of_expand {s : SourceSession} {a : List Nat} {old : NativeEff}
+    {root : TyEnv × EffTy} {tys : TyEnv} {ty : EffTy} (hc : s.Coherent)
+    (hfault : s.sketch.program.firstRefFault = none)
+    (hat : (Node.eff s.sketch.program).at_ a = some (.eff old)) (hne : a ≠ [])
+    (hroot : Table.typedAt (s.sketch.expand.table s.app) [] = some root)
+    (hatT : Table.typedAt (s.sketch.expand.table s.app) a = some (tys, ty)) :
+    s.focusAt a = some ⟨old, tys, ty⟩ ∧ s.view.type = some root.2 ∧
+      s.sketch.expand.check s.app = .ok root.2 := by
+  have hXc : s.sketch.expand.check s.app = .ok root.2 := by
+    have h0 := Table.typedAt_table_nil s.sketch.expand s.app
+    rw [hroot] at h0
+    cases hx : s.sketch.expand.check s.app with
+    | ok t =>
+      rw [hx] at h0
+      cases h0
+      rfl
+    | error r =>
+      rw [hx] at h0
+      cases h0
+  refine ⟨?_, ?_, hXc⟩
+  · unfold focusAt
+    rw [hat, typedAt_expand hc hat hne, hatT]
+  · show (Table.typedAt s.table []).map (·.2) = _
+    rw [typedAt_root_expand hc hfault, hroot]
+    rfl
+
+/-- **Where the expansion's edit session splices, the draft's splice conditions hold**: a focus
+below the root, a typed root, `draftOmitAllows`, and a part key whose check keeps the focus's
+type. The expansion's table holds the source's types (`focusAt_of_expand`), and the part check
+reads the expansion's signature at the address (`Sketch.sigData_fillAt`). An omission's hole has
+its row's type (`Sketch.hole_hasTy_focus`). A step of `source-feed-draft`. Its consumer is
+`feed_draft`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem draft_conditions_of_reference {s : SourceSession} {c : Sketch} {e e' : Edit}
+    {old : NativeEff} (hc : s.Coherent) (hfault : s.sketch.program.firstRefFault = none)
+    (hat : (Node.eff s.sketch.program).at_ e.path = some (.eff old))
+    (he' : Edit.expanded c.expand e = some e') (hX' : s.sketch.expand.edit s.app e' = some c.expand)
+    (hspl : ((EditSession.open s.app s.sketch.expand).feed e').2 ≠ .rechecked) :
+    ∃ focus ty0 key, e.path ≠ [] ∧ s.focusAt e.path = some focus ∧ s.view.type = some ty0 ∧
+      draftOmitAllows e focus.ty = true ∧ s.candidatePartKey e.path c = some key ∧
+      (run key).result = .ok focus.ty := by
+  cases e with
+  | fill a q =>
+    simp only [Edit.expanded] at he'
+    split at he'
+    · rename_i q' hq'at
+      cases he'
+      have hfillX : s.sketch.expand.fillAt a q' = some c.expand := hX'
+      simp only [EditSession.open, EditSession.feed, hfillX, Sketch.annotate_eq_table] at hspl
+      split at hspl
+      · rename_i i r root tys ty hroot hatT
+        split at hspl
+        · rename_i sub ty' hcheck
+          split at hspl
+          · rename_i hty
+            subst hty
+            simp only [Edit.path] at hat ⊢
+            have hne : i :: r ≠ [] := List.cons_ne_nil i r
+            obtain ⟨hfocus, hview, -⟩ := focusAt_of_expand hc hfault hat hne hroot hatT
+            obtain ⟨q0, hf0⟩ := Table.typedAt_table hatT hne
+            have hsig := Sketch.sigData_fillAt hne hfillX hf0
+            rw [Annotate.check_eq] at hcheck
+            have hchk := (Prod.mk.inj hcheck).2
+            refine ⟨⟨old, tys, ty'⟩, root.2, .part (sketchSigData c.expand s.app (i :: r)) tys q',
+              hne, hfocus, hview, rfl, ?_, ?_⟩
+            · unfold candidatePartKey
+              rw [hfocus, hq'at]
+            · rw [Check.run_part_result, hsig]
+              exact check_ok_path hchk []
+          · exact absurd rfl hspl
+        · exact absurd rfl hspl
+      · exact absurd rfl hspl
+    · cases he'
+  | omitAt a row =>
+    simp only [Edit.expanded] at he'
+    cases he'
+    have homitX : s.sketch.expand.omitAt s.app a row = some c.expand := hX'
+    have hX'' : ({ s.sketch.expand with holes := s.sketch.expand.holes ++ [row] } : Sketch).fillAt a
+        (Sketch.hole s.app s.sketch.expand.holes.length) = some c.expand := homitX
+    obtain ⟨p', hrep, hcx⟩ := Sketch.fillAt_some hX''
+    have hhole : (Node.eff c.expand.program).at_ a =
+        some (.eff (Sketch.hole s.app s.sketch.expand.holes.length)) := by
+      rw [hcx]
+      exact (Node.replaceAt_spec hrep).1
+    simp only [EditSession.open, EditSession.feed, homitX, Sketch.annotate_eq_table] at hspl
+    split at hspl
+    · rename_i i r root tys ty hroot hatT
+      split at hspl
+      · rename_i hcond
+        obtain ⟨hrow, hans, herr, hansN, herrN, hform⟩ := hcond
+        simp only [Edit.path] at hat ⊢
+        have hne : i :: r ≠ [] := List.cons_ne_nil i r
+        obtain ⟨hfocus, hview, hXc⟩ := focusAt_of_expand hc hfault hat hne hroot hatT
+        obtain ⟨q0, hf0⟩ := Table.typedAt_table hatT hne
+        have hf1 := Sketch.focusAt_more_holes hXc hf0 [row]
+        have hsig := Sketch.sigData_fillAt hne hX'' hf1
+        have hform' := hform
+        rw [hrow] at hform'
+        have formed := (Formation.check_eq_none_iff _).mp (Option.isNone_iff_eq_none.mp hform')
+        have hq := Sketch.hole_hasTy_focus (s := s.sketch.expand) (app := s.app) (path := i :: r)
+          (f := ⟨q0, tys, ty⟩) row.name hans herr hansN herrN formed
+        rw [← hrow] at hq
+        refine ⟨⟨old, tys, ty⟩, root.2,
+          .part (sketchSigData c.expand s.app (i :: r)) tys
+            (Sketch.hole s.app s.sketch.expand.holes.length),
+          hne, hfocus, hview, ?_, ?_, ?_⟩
+        · simp only [draftOmitAllows, decide_eq_true hrow, hans, herr, decide_eq_true hansN,
+            decide_eq_true herrN, hform, Bool.and_self]
+        · unfold candidatePartKey
+          rw [hfocus, hhole]
+        · rw [Check.run_part_result, hsig]
+          exact check_complete _ _ _ _ hq []
+      · exact absurd rfl hspl
+    · exact absurd rfl hspl
+
+/-- **A draft below the root splices** where the focus and the root are typed, the expanded edit
+agrees, `draftOmitAllows` holds and the part check keeps the focus's type: the converse of
+`feed_ok_cases`'s draft splice. A step of `source-feed-draft`. Its consumer is `feed_draft`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_draft_of {o : Oracle} {s : SourceSession} {e : Edit} {old : NativeEff} {c : Sketch}
+    {key : CheckInput} {focus : Focus NativeOp} {ty0 : EffTy} (hne : e.path ≠ [])
+    (hat : (Node.eff s.sketch.program).at_ e.path = some (.eff old))
+    (hedit : s.sketch.edit s.app e = some c) (hfocus : s.focusAt e.path = some focus)
+    (hview : s.view.type = some ty0) (hagree : s.expandedEditAgrees c e = true)
+    (hallow : draftOmitAllows e focus.ty = true)
+    (hkey : s.candidatePartKey e.path c = some key) (hres : (run key).result = .ok focus.ty) :
+    (s.feed o .draft e).value = .ok (s.splice c e old (run key)) := by
+  obtain ⟨i, rest, hpath⟩ := List.exists_cons_of_ne_nil hne
+  unfold feed
+  simp only [hat, hedit]
+  split
+  · rename_i h0
+    rw [hpath] at h0
+    cases h0
+  · simp only [hfocus, hview, hagree, hallow, Bool.not_true, Bool.or_self, Bool.false_eq_true,
+      ↓reduceIte, hkey, Checked.bind_value, Checked.ask_value, hres, Checked.pure_value]
+
+/-- **The expansion's edit session holds the candidate expansion's table**: it is coherent
+(`EditSession.feed_coherent`) and holds the candidate's expansion. A step of `source-feed-draft`.
+Its consumer is `feed_draft`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem reference_table {s : SourceSession} {c : Sketch} {e' : Edit}
+    (hX' : s.sketch.expand.edit s.app e' = some c.expand) :
+    ((EditSession.open s.app s.sketch.expand).feed e').1.table = c.expand.table s.app := by
+  have h1 := EditSession.feed_coherent (EditSession.open_coherent s.app s.sketch.expand) e'
+  have h2 : ((EditSession.open s.app s.sketch.expand).feed e').1.sketch = c.expand :=
+    EditSession.feed_edit hX'
+  have h3 := (EditSession.feed_keeps (EditSession.open s.app s.sketch.expand) e').1
+  rw [h1, h2, h3]
+  rfl
+
+/-- **Where the draft splices, the expansion's edit session splices**, and shows the addresses
+of the part's placed table: a filling's check at the expansion's signature keeps the focus's
+type, and an omission's row declares it. A step of `source-feed-draft`. Its consumer is
+`feed_draft`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem draft_reference_spliced {s : SourceSession} {c : Sketch} {e e' : Edit}
+    {focus : Focus NativeOp} {ty0 : EffTy} {key : CheckInput} (hc : s.Coherent) (hne : e.path ≠ [])
+    (hfocus : s.focusAt e.path = some focus) (hview : s.view.type = some ty0)
+    (hallow : draftOmitAllows e focus.ty = true)
+    (hkey : s.candidatePartKey e.path c = some key) (hres : (run key).result = .ok focus.ty)
+    (he' : Edit.expanded c.expand e = some e') (hX' : s.sketch.expand.edit s.app e' = some c.expand) :
+    ((EditSession.open s.app s.sketch.expand).feed e').2 =
+      .spliced ((Internal.place e.path (run key)).table.map (·.path)) := by
+  have hsc : s.sketch.sourceCheck s.app = .ok ty0 := by
+    rw [view_type hc] at hview
+    cases hx : s.sketch.sourceCheck s.app with
+    | ok t =>
+      rw [hx] at hview
+      cases hview
+      rfl
+    | error r =>
+      rw [hx] at hview
+      cases hview
+  obtain ⟨-, hXc⟩ := Sketch.sourceCheck_ok hsc
+  obtain ⟨-, q0, hf0⟩ := focusAt_typed hc hfocus hne
+  obtain ⟨q', hq'at, rfl⟩ := candidatePartKey_some hfocus hkey
+  obtain ⟨rest, hhead⟩ := Sketch.table_head s.sketch.expand s.app
+  have hroot : Table.typedAt (s.sketch.expand.table s.app) [] = some ([], ty0) := by
+    rw [hhead, hXc]
+    unfold Table.typedAt
+    rw [List.find?_cons]
+    rfl
+  have hatT := Table.typedAt_table_of_focusAt hf0 hne
+  obtain ⟨i, r, hpath⟩ := List.exists_cons_of_ne_nil hne
+  cases e with
+  | fill a q =>
+    rw [Check.placed_paths]
+    simp only [Edit.path] at hpath hq'at hatT hf0 hfocus hne hres ⊢
+    subst hpath
+    simp only [Edit.expanded, hq'at] at he'
+    cases he'
+    have hfillX : s.sketch.expand.fillAt (i :: r) q' = some c.expand := hX'
+    have hsig := Sketch.sigData_fillAt hne hfillX hf0
+    have hchk : Checker.check (s.sketch.expand.sigAt s.app (i :: r)) focus.env (i :: r) q' =
+        .ok focus.ty := by
+      rw [Check.run_part_result, hsig] at hres
+      exact check_ok_path hres (i :: r)
+    simp only [EditSession.open, EditSession.feed, hfillX, Sketch.annotate_eq_table, hroot, hatT,
+      Annotate.check_eq, hchk, ↓reduceIte, tableAt_paths]
+  | omitAt a row =>
+    simp only [Edit.path] at hpath hq'at hatT hf0 hfocus hne hallow ⊢
+    subst hpath
+    simp only [Edit.expanded] at he'
+    cases he'
+    have homitX : s.sketch.expand.omitAt s.app (i :: r) row = some c.expand := hX'
+    have hX'' : ({ s.sketch.expand with holes := s.sketch.expand.holes ++ [row] } : Sketch).fillAt
+        (i :: r) (Sketch.hole s.app s.sketch.expand.holes.length) = some c.expand := homitX
+    obtain ⟨p', hrep, hcx⟩ := Sketch.fillAt_some hX''
+    have hhole : (Node.eff c.expand.program).at_ (i :: r) =
+        some (.eff (Sketch.hole s.app s.sketch.expand.holes.length)) := by
+      rw [hcx]
+      exact (Node.replaceAt_spec hrep).1
+    rw [hhole, Option.some.injEq, Node.eff.injEq] at hq'at
+    subst hq'at
+    have hcond : row = Row.hole row.name focus.ty.answer focus.ty.error focus.ty.requires.elems ∧
+        focus.ty.answer.closed = true ∧ focus.ty.error.closed = true ∧
+        focus.ty.answer.normalize = focus.ty.answer ∧ focus.ty.error.normalize = focus.ty.error ∧
+        (Formation.check (Formation.instantiatedSites row.normalizeTypes [])).isNone = true := by
+      simp only [draftOmitAllows, Bool.and_eq_true, decide_eq_true_eq] at hallow
+      obtain ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩ := hallow
+      exact ⟨h1, h2, h3, h4, h5, h6⟩
+    simp only [EditSession.open, EditSession.feed, homitX, Sketch.annotate_eq_table, hroot, hatT]
+    rw [if_pos hcond, run_placed, Annotate.check_eq]
+    simp only [Sketch.hole, tableAt_perform, List.map_cons, List.map_nil]
+
+/-- **A draft from a coherent session whose sketch and candidate hold no ill-formed reference is
+the expansion's edit session, shown at the source's addresses.** `EditSession.feed` is the
+reference, and no second edit interpreter is defined. The draft splices exactly where the
+reference splices (`draft_conditions_of_reference`, `draft_reference_spliced`), and both tables
+are coherent (`feed_coherent_of_faultFree`, `reference_table`). The pointer of
+`source-feed-draft`. Reach: coherent sessions, every edit, certified oracles. The first form had
+no premise on ill-formed references and is false: on a sketch with one the draft refuses to
+splice, since its root is refused, while the expansion's edit session splices
+(`FeedCounterexample.feed_draft_refuted`); and a candidate with one splices wrongly
+(`FeedCounterexample.feed_coherent_refuted`). Not established: the cost. Consumers:
+`replay_drafts_view` and the transport of `source-session-coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit)
     (hfault : s.sketch.program.firstRefFault = none)
     (hcand : ∀ c, s.sketch.edit s.app e = some c → c.program.firstRefFault = none) :
     ∃ next step, (s.feed o .draft e).value = .ok (next,step) ∧
@@ -1391,7 +1727,103 @@ proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Ed
              else (EditSession.open s.app candidate.expand,Edit.Delta.rechecked)
            | none => (EditSession.open s.app candidate.expand,Edit.Delta.rechecked)
          next.table = Table.atSource candidate.sites candidate.program.firstRefFault reference.1.table ∧
-           step.delta = reference.2.atSource candidate.sites)
+           step.delta = reference.2.atSource candidate.sites) := by
+  obtain ⟨⟨next, step⟩, hv⟩ := feed_draft_ok o s e
+  have hcoh : next.Coherent := feed_coherent_of_faultFree hc hcand (by intro h; cases h) hv
+  refine ⟨next, step, hv, ?_⟩
+  rcases feed_ok_cases hv with ⟨hnone, -, hr⟩ |
+      ⟨old, c, hat, hedit, hr | ⟨key, focus, hne, hfocus, hkey, hres, hagree, hpol, hr⟩⟩
+  · -- the edit does not apply
+    obtain ⟨hn, hst⟩ := Prod.mk.inj hr
+    subst next step
+    refine ⟨rfl, ?_, ?_⟩
+    · split
+      · rename_i old hat
+        obtain ⟨c, hc'⟩ := Sketch.edit_of_at (app := s.app) (e := e) hat
+        rw [hnone] at hc'
+        cases hc'
+      · rfl
+    · rw [hnone]
+      exact ⟨rfl, rfl⟩
+  · -- a recheck
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hr
+    have hcf := hcand c hedit
+    have htab : (run (.module s.app c.holes c.program)).table =
+        Table.atSource c.sites c.program.firstRefFault (c.expand.table s.app) := by
+      rw [hcf]
+      exact (recheck_coherent s c).trans (Sketch.sourceTable_eq_filter c s.app hcf)
+    refine ⟨rfl, by rw [hat], ?_⟩
+    rw [hedit]
+    refine ⟨rfl, rfl, ?_⟩
+    dsimp only
+    cases hag : s.expandedEditAgrees c e with
+    | false =>
+      split
+      · simp only [Bool.false_eq_true, ↓reduceIte]
+        refine ⟨?_, rfl⟩
+        rw [htab]
+        exact congrArg _ (Sketch.annotate_eq_table c.expand s.app).symm
+      · refine ⟨?_, rfl⟩
+        rw [htab]
+        exact congrArg _ (Sketch.annotate_eq_table c.expand s.app).symm
+    | true =>
+      obtain ⟨e', he', hX'⟩ := expandedEditAgrees_some hag
+      rw [he']
+      simp only [↓reduceIte]
+      refine ⟨by rw [reference_table hX']; exact htab, ?_⟩
+      -- the reference rechecks too: a splice there gives the draft's splice conditions
+      have hrech : ((EditSession.open s.app s.sketch.expand).feed e').2 = .rechecked := by
+        cases hd : ((EditSession.open s.app s.sketch.expand).feed e').2 with
+        | rechecked => rfl
+        | spliced shown =>
+          obtain ⟨focus, ty0, key, hne, hfocus, hview, hallow, hkey, hres⟩ :=
+            draft_conditions_of_reference hc hfault hat he' hX' (by rw [hd]; exact nofun)
+          have hv' := feed_draft_of (o := o) hne hat hedit hfocus hview hag hallow hkey hres
+          rw [hv] at hv'
+          have hd' := congrArg (fun r : Except FeedRefusal (SourceSession × Edit.Step) =>
+            match r with
+            | .ok x => x.2.delta
+            | .error _ => .unchanged) hv'
+          cases hd'
+        | unchanged =>
+          obtain ⟨focus, ty0, key, hne, hfocus, hview, hallow, hkey, hres⟩ :=
+            draft_conditions_of_reference hc hfault hat he' hX' (by rw [hd]; exact nofun)
+          have hv' := feed_draft_of (o := o) hne hat hedit hfocus hview hag hallow hkey hres
+          rw [hv] at hv'
+          have hd' := congrArg (fun r : Except FeedRefusal (SourceSession × Edit.Step) =>
+            match r with
+            | .ok x => x.2.delta
+            | .error _ => .unchanged) hv'
+          cases hd'
+      rw [hrech]
+      rfl
+  · -- a splice
+    have hcf := hcand c hedit
+    have hnext : next = (s.splice c e old (run key)).1 := congrArg Prod.fst hr
+    have hstep : step = (s.splice c e old (run key)).2 := congrArg Prod.snd hr
+    subst hnext hstep
+    rcases hpol with hk | ⟨-, hallow, hviewS⟩
+    · cases hk
+    obtain ⟨ty0, hview⟩ := Option.isSome_iff_exists.mp hviewS
+    obtain ⟨e', he', hX'⟩ := expandedEditAgrees_some hagree
+    have hspl := draft_reference_spliced hc hne hfocus hview hallow hkey hres he' hX'
+    refine ⟨rfl, by rw [hat]; rfl, ?_⟩
+    rw [hedit]
+    refine ⟨rfl, rfl, ?_⟩
+    dsimp only
+    rw [he', hagree]
+    simp only [↓reduceIte]
+    refine ⟨?_, ?_⟩
+    · have h1 : (s.splice c e old (run key)).1.table = c.sourceTable s.app := hcoh
+      rw [h1, reference_table hX', hcf]
+      exact Sketch.sourceTable_eq_filter c s.app hcf
+    · rw [hspl]
+      show Edit.Delta.spliced ((Table.atSource c.sites c.program.firstRefFault
+          (Internal.place e.path (run key)).table).map (·.path)) =
+        Edit.Delta.spliced (((Internal.place e.path (run key)).table.map (·.path)).filter
+          fun a => !Table.belowSite c.sites a)
+      rw [hcf, List.filter_map]
+      rfl
 
 /-- **A kept-exact finish keeps the root's type and the edited address's entry.** A step of
 `source-feed-keep-exact`. Its consumer is `recheck_keepExact_ok`. -/
@@ -1471,11 +1903,7 @@ theorem feed_keepExact_of_faultFree {o : Oracle} {s next : SourceSession} {e : E
         · cases hfocus
       have hcheck0 : Checker.check (sketchSigData c.expand s.app e.path).signature focus.env [] q' =
           .ok focus.ty := by
-        have h1 : (run (.part (sketchSigData c.expand s.app e.path) focus.env q')).result =
-            Checker.check (sketchSigData c.expand s.app e.path).signature focus.env [] q' := by
-          show (Annotate.check _ _ [] q').2 = _
-          rw [Annotate.check_eq]
-        rw [← h1]
+        rw [← Check.run_part_result]
         exact hres
       have hcheck : Checker.check (sketchSigData c.expand s.app e.path).signature focus.env e.path
           q' = .ok focus.ty := by
