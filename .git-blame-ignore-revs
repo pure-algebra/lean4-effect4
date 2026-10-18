@@ -1,0 +1,5 @@
+# Commits that only reformat; `git blame` and GitHub skip them.
+# Locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# OCaml: ocamlformat, Jane Street profile (H1, 2026-10-18)
+94593523dba7931a985985e7f15c8f77e799161b
