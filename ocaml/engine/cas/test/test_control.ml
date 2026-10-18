@@ -1,6 +1,6 @@
 (* Root control bytes and policies.
    Depends on E4_control, node codecs, and generated G3 Move goldens.
-   Properties tested: v1 legacy mapping; v2 policy bytes; exact names; full-head staleness;
+   Properties tested: v1 refused as stale; v2 policy bytes; exact names; full-head staleness;
    duplicate generations; journal ancestry; pins; checksum and framing refusals; root goldens. *)
 
 open Effect4_engine_cas
@@ -278,7 +278,9 @@ let test_refusals () =
   check "E6 spaces retain their bytes" (match E4_control.read ~path with
     | Ok state -> (match E4_control.roots state with [root] -> root.name = "a b" | _ -> false) | _ -> false);
   write_bytes path (craft ~version:"00000001" (fixed ~roots:[a_root ~name:"Nope" ()] ~status:"\000"));
-  check "E6 legacy uppercase remains outside v1 domain" (is_corrupt (E4_control.read ~path));
+  check "E6 version-1 bytes refuse as a stale binary" (match E4_control.read ~path with
+    | Error (E4_control.Stale_binary v) -> String.equal v "00000001"
+    | _ -> false);
   write_bytes path (craft (fixed ~roots:[a_root ~name:"文档/α" ()] ~status:"\000"));
   check "E6 UTF-8 names retain exact bytes" (match E4_control.read ~path with
     | Ok state -> (match E4_control.roots state with [root] -> root.name = "文档/α" | _ -> false) | _ -> false);
@@ -296,7 +298,7 @@ let test_refusals () =
   write_bytes path (craft (fixed ~roots:[] ~status:""));
   check "E8 Corrupt: no status tag at all" (is_corrupt (E4_control.read ~path));
   write_bytes path (craft (fixed ~roots:[] ~status:"\000extra"));
-  check "E8 Corrupt: a body at status tag 0 under version 00000001"
+  check "E8 Corrupt: a body at status tag 0"
     (is_corrupt (E4_control.read ~path));
   write_bytes path (craft (fixed ~roots:[] ~status:"\016"));
   check "E8 Corrupt: a status tag above the reserved range" (is_corrupt (E4_control.read ~path));
@@ -441,41 +443,17 @@ let outcome_word = function
   | Ok _ -> "ok"
   | Error e -> E4_control.root_error_word e
 
-let test_legacy_policy () =
-  let root = mk_root "legacy" E4_control.Swap E4_kind.Export (dig 1) 1 in
+let test_policy_bytes () =
+  let root = mk_root "policy" E4_control.Swap E4_kind.Export (dig 1) 1 in
   let bytes = E4_control.encode {empty_payload with E4_control.roots = [root]} in
   let payload = Bytes.of_string (payload_of bytes) in
   let position = E4_control.fixed_payload_length + 2 + String.length root.name in
-  for tag = 0 to 6 do
-    Bytes.set payload position (Char.chr tag);
-    let legacy = craft ~version:"00000001" (Bytes.to_string payload) in
-    check (Printf.sprintf "D2 legacy policy byte %d" tag) (match E4_control.decode legacy with
-      | Ok state -> (match E4_control.roots state with
-        | [root] -> root.policy = (if tag = 6 then E4_control.Pin else E4_control.Swap)
-        | _ -> false)
-      | Error _ -> false)
-  done;
   Bytes.set payload position '\001';
-  check "D2 v2 byte one is journal" (match E4_control.decode (craft (Bytes.to_string payload)) with
+  check "D2 policy byte one is journal" (match E4_control.decode (craft (Bytes.to_string payload)) with
     | Ok state -> (match E4_control.roots state with [root] -> root.policy = E4_control.Journal | _ -> false)
     | _ -> false);
   Bytes.set payload position '\006';
-  check "D2 v2 refuses legacy pin byte" (is_corrupt (E4_control.decode (craft (Bytes.to_string payload))));
-  let old_root = {root with E4_control.head = {root.head with generation = Z.of_int 2}} in
-  let old_bytes = E4_control.encode {empty_payload with E4_control.roots = [old_root]} in
-  let legacy = E4_control.decode (craft ~version:"00000001" (payload_of old_bytes)) in
-  let target : E4_control.target = {kind = root.kind; digest = root.head.digest} in
-  let resolve _ = Some root.kind in
-  let fresh = E4_control.advance_root empty_payload ~resolve (E4_control.Create (root.name, E4_control.Swap, target)) in
-  let duplicate = match fresh with
-    | Error error -> Error error
-    | Ok state -> E4_control.advance_root state ~resolve (E4_control.Advance (root.name, root.head, target)) in
-  check "ST2 legacy generation two stays distinct from new create plus duplicate"
-    (match legacy, duplicate with
-     | Ok old, Ok fresh -> (match E4_control.root old root.name, E4_control.root fresh root.name with
-       | Some old, Some fresh -> Z.equal old.head.generation (Z.of_int 2) && Z.equal fresh.head.generation Z.one
-       | _ -> false)
-     | _ -> false)
+  check "D2 an unregistered policy byte is corrupt" (is_corrupt (E4_control.decode (craft (Bytes.to_string payload))))
 
 let test_cas () =
   print_endline "-- complete-head root moves";
@@ -729,7 +707,7 @@ let () =
   test_refusals ();
   test_crash ();
   test_reserved ();
-  test_legacy_policy ();
+  test_policy_bytes ();
   test_cas ();
   test_mutation ();
   test_goldens ();

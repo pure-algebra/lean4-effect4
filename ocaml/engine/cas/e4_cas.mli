@@ -132,8 +132,8 @@
        rebuilt from the pack whenever the watermark moves backwards.  `drop_index` drops the
        node index only; the by-Cid table has no public drop because nothing observes it.
    D6  An ADMISSION failure in the recovered tail does not truncate the pack.
-       `E4_pack.truncate_to` refuses any offset below the writer's own `pack_end`
-       (e4_pack.ml:766-768), which after `open_at` is the end of the last record that passed
+       `E4_pack.truncate_to` refuses any offset below the writer's own `pack_end`, which
+       after `open_at` is the end of the last record that passed
        CRC and digest — so a record that is physically intact but whose children are missing
        cannot be cut away through lane P1's interface.  Rather than truncate another lane's
        file behind its back, or silently drop the tail and let a later commit make those bytes
@@ -152,8 +152,9 @@
        names the roots after the job's parts (`runs/<job>/program`, `/tape`, `/profile`),
        which a bare `Cid` list cannot distinguish.  `pin` mints one root under a name the
        caller chooses and is what a publisher should use; `pin_all` is §1.8's signature kept
-       working.  `RootPolicy.pin` is not in Lean (`RootPolicy (src/Effect4/Store/Domain/Store.lean)`) and lane GLD reports M1 as
-       owed (2026-09-08-engine-lane-gld-delivery.md §4 O4), so no golden pins the names.
+       working.  `RootPolicy.pin` is Lean's (`src/Effect4/Store/Domain/Transaction.lean`), but no
+       golden pins the `runs/…` names: lane GLD reports M1 as owed
+       (2026-09-08-engine-lane-gld-delivery.md §4 O4).
    D9  `verify_node` re-hashes and re-decodes its one node and resolves its edges through the
        ordinary lookup; only whole-store `verify` refuses to consult the index (CS7).  A
        one-node verification that rebuilt the whole table would not be a query anybody could

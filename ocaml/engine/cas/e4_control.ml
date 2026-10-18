@@ -1,6 +1,6 @@
 (* Control-file bytes and root moves. Depends on E4_addr and the byte codecs.
    Properties by construction: exact names, fixed policy/kind, stale-first full-head comparison.
-   Properties tested by test_control: legacy/v2 bytes, generations, pins, journal parents,
+   Properties tested by test_control: v2 bytes (v1 refuses as stale), generations, pins, journal parents,
    framing damage, and generated root goldens. The interface states the wire capacity. *)
 
 
@@ -72,23 +72,9 @@ let normalise_name name = name
 (* Names retain their exact UTF-8 bytes. The control framing bounds their byte length. *)
 let valid_name s = String.length s <= 65535 && Eff_frame.utf8_valid s
 
-(* A v1 reader retains the old byte-format domain before applying D2. *)
-let legacy_valid_name s =
-  let length = String.length s in
-  length >= 1 && length <= 512 &&
-  String.for_all (fun character ->
-    let byte = Char.code character in
-    byte >= 0x21 && byte <= 0x7e && not (byte >= 0x41 && byte <= 0x5a)) s
-
 let root_policy_index = E4_root_policy.byte
 let root_policy_of_index = E4_root_policy.of_byte
 let root_policy_name = E4_root_policy.name
-
-(* D2: these are legacy bytes, never the new policy alphabet. *)
-let legacy_policy_of_index = function
-  | 0 | 1 | 2 | 3 | 4 | 5 -> Some Swap
-  | 6 -> Some Pin
-  | _ -> None
 
 let head_equal (a : head) (b : head) =
   Z.equal a.generation b.generation && E4_addr.Addr.equal a.digest b.digest
@@ -195,7 +181,7 @@ let decode (s : string) : (payload, open_error) result =
   else
     let v = String.sub s magic_length version_length in
     (* CF1: the version is matched as a string before any field is read. *)
-    if v <> version_string && v <> "00000001" then Error (Stale_binary v)
+    if v <> version_string then Error (Stale_binary v)
     else
       let plen = len - header_length in
       if plen < fixed_payload_length then
@@ -261,13 +247,13 @@ let decode (s : string) : (payload, open_error) result =
                 raise (Bad (Printf.sprintf "truncated root at offset %d" !pos));
               let name = String.sub s !pos name_len in
               pos := !pos + name_len;
-              if not ((if String.equal v "00000001" then legacy_valid_name else valid_name) name) then
+              if not (valid_name name) then
                 raise
                   (Bad
                      (Printf.sprintf "root name %S is outside its format domain (wire limit %d bytes)" name
                         max_name_length));
               let rk =
-                match (if String.equal v "00000001" then legacy_policy_of_index else root_policy_of_index) (Char.code s.[!pos]) with
+                match root_policy_of_index (Char.code s.[!pos]) with
                 | Some k -> k
                 | None ->
                   raise (Bad (Printf.sprintf "unregistered root policy byte %d" (Char.code s.[!pos])))
