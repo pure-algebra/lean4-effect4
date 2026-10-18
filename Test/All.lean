@@ -218,12 +218,10 @@ import Test.Program.SemaphoreWrapper
 import Test.Program.SemaphoreOps
 import Test.Program.SemaphoreTraces
 import Test.Program.SemaphoreFaces
-import Test.Program.PoolScenarios
 import Test.Program.PoolContract
 import Test.Program.PoolSteps
 import Test.Program.PoolRelation
 import Test.Program.PoolEngine
-import Test.Program.PoolPublic
 import Test.Program.PoolOps
 import Test.Program.PoolTraces
 import Test.Program.PoolFaces

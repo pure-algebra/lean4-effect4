@@ -9,7 +9,7 @@ falsifiers of the packet `Test/contracts/pool.contract.md`.
 
 - The probe's cases PP1 to PP5, PP7 and PP8 as traces of the model. The model has no fiber, so
   a trace writes the schedule: which transition runs after which. Each trace reads the cell's
-  lists that the machine gives on the same case (`Test/Program/PoolScenarios.lean`).
+  lists that the machine gives on the same case (`Test/Program/PoolScenariosData.lean`).
 - PP5 in its two forms: the low-level control at the count 2, and the public retry case.
 - PP7 with the close that waits: the close's first step, the closer's step, and the lease that
   the close waits for.

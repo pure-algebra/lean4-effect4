@@ -1,4 +1,4 @@
-import Test.Program.PoolPublic
+import Test.Program.PoolPublicData
 import Test.Program.SemaphoreOps
 import Effect4.Laws.Library.Pool.Ops
 
@@ -7,7 +7,7 @@ import Effect4.Laws.Library.Pool.Ops
 
 The module is `src/Effect4/Library/Pool/Ops.lean`, over the shared wrapper
 (`src/Effect4/Library/Waiting.lean`). Its laws are `src/Effect4/Laws/Library/Pool/Ops.lean`. The
-cases on the machine are `Test/Program/PoolPublic.lean`. This battery holds the controls of the
+cases on the machine are `Test/Program/PoolPublicData.lean`. This battery holds the controls of the
 laws.
 
 1. **The construction refuses a size of zero** where an author writes the pool.
@@ -603,5 +603,15 @@ def handoff : Src NativeOp := scope (eff do
     Pool.use .nat pool fun resource => succeed resource) with
   | .ok typed => decide (typed.ty ≠ EffTy.pure .nat)
   | .error _ => false
+
+/-! ## A pool made outside a scope
+
+`make_types` types the form with exactly the scope's key as its requirement. A run of it has no
+scope that takes the close, so the root dies with the missing service: the place where the
+statement's premise stops. -/
+
+#guard closedOf (library.make .nat 1 (succeed (nat 1))) = some false
+#guard exitOf (library.make .nat 1 (succeed (nat 1))) =
+  some (.failure (Cause.die Defect.missingService))
 
 end Test.Program.PoolOps

@@ -21,7 +21,7 @@ and what the typing theorems do not say by themselves.
 6. The connector to the store: `step_keeps_cell` on a step's typing.
 
 The relation to the abstract model is `Test/Program/PoolRelation.lean`. The runs on the
-machine are `Test/Program/PoolScenarios.lean`.
+machine are `Test/Program/PoolScenariosData.lean`.
 
 Placement. Concept `store-typing`, requirement R4. Every guard is a finite check, and every
 example is an instance of a theorem of `src/Effect4/Laws/Library/Pool/Typing.lean`. None states

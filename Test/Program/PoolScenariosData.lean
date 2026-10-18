@@ -675,7 +675,7 @@ def interruptedWaiter (use : Ctx → Nat → (TermSrc → Src NativeOp) → Src 
 The first two runs that cross to the generated engine (`ocaml/engine/test/pool/`): PP4, and the
 low-level control of PP5. The card's reading of the wake rests on these two: the selection is
 made when the helper runs, and a resumed borrower runs inside the helper's task. The public
-cases follow them in the fixture (`engineRuns`, in `Test/Program/PoolPublic.lean`). The writer
+cases follow them in the fixture (`engineRuns`, in `Test/Program/PoolPublicData.lean`). The writer
 beside the engine's test writes the whole text, `fixtureOf` of every run, and
 `Test/Program/PoolEngine.lean` binds the committed file to it. -/
 

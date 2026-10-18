@@ -11,7 +11,7 @@ It writes `pool.txt` beside this file, or into the folder that its one argument 
 text is `Test.Program.PoolPublic.fixtureText`: for each run of `engineRuns` there, the fuel,
 the program's canonical bytes (`Effect4.Program.Wire.hexOf`) and the root's exit of Lean's
 machine, in the spelling of the engine's `show_exit` (`ocaml/engine/e4_engine.ml`). The runs
-are the two of `Test/Program/PoolScenarios.lean`, and then the ten public cases. The battery
+are the two of `Test/Program/PoolScenariosData.lean`, and then the ten public cases. The battery
 `Test/Program/PoolEngine.lean` binds the committed file to that text, and `test_pool.ml`,
 beside this file, reads it.
 -/

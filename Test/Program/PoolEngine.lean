@@ -1,12 +1,12 @@
-import Test.Program.PoolPublic
+import Test.Program.PoolPublicData
 
 /-!
 # Twelve of Pool's runs on the generated engine: the fixture's binding (rows 267 to 269, 276 and 279)
 
 The engine's test `ocaml/engine/test/pool/test_pool.ml` runs twelve programs on the generated
-engine, on both carriers. Two are cases of `Test/Program/PoolScenarios.lean`, over that
+engine, on both carriers. Two are cases of `Test/Program/PoolScenariosData.lean`, over that
 battery's own test forms: PP4, and the low-level control of PP5. Ten are the public cases of
-`Test/Program/PoolPublic.lean`, over the library's `make` and `use`. Each program crosses as its
+`Test/Program/PoolPublicData.lean`, over the library's `make` and `use`. Each program crosses as its
 canonical bytes. The fixture `ocaml/engine/test/pool/pool.txt` holds them, with the fuel and the
 root's exit of Lean's machine. The writer is `write.lean`, in that folder.
 
@@ -78,8 +78,9 @@ reaches `Classical.choice` (AGENTS.md, Trust). -/
 #guard showExit (.success (.list
     [.bool false, snap [0] [] [] 2 false 1, snap [] [0] [2] 0 false 3, rows pp5controlRows])) =
   (exitOf (pp5control probed atOnce)).bind showExit
--- The ten public exit lines are the answers that `Test/Program/PoolPublic.lean` pins, each in
--- the engine's spelling: the exit of the checked session on the case.
+-- The ten public exit lines are the answers of the ten public cases
+-- (`Test/Program/PoolPublicData.lean`), each in the engine's spelling: the exit of the checked
+-- session on the case.
 #guard ((committed.splitOn "\n").filter fun line => line.startsWith "exit ").drop 2 =
   publicRuns.filterMap fun run => ((exitOf run.2).bind showExit).map ("exit " ++ ·)
 #guard publicRuns.all fun run => ((exitOf run.2).bind showExit).isSome

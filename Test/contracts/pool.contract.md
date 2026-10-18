@@ -13,7 +13,7 @@ whole run.
 | `profile_closed` in `src/Effect4/Laws/Library/Pool/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
 | `lease_enrols_iff`, `select_takes_first`, `giveBack_front`, `giveBack_once`, `close_refuses` and `drain_waits` in the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/PoolContract.lean` | tested: its guard checks hold, and a falsified copy fails each changed check |
-| `Test/Program/PoolScenarios.lean` | tested: seven cases and three more on the Lean machine, over the battery's own test forms, one schedule each; two red controls of the mask of `use` |
+| `git:d956fa2ce279af252604d84befa658661efb920a:Test/Program/PoolScenarios.lean` | tested: seven cases and three more on the Lean machine, over the battery's own test forms, one schedule each; two red controls of the mask of `use` |
 | `src/Effect4/Library/Pool/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
 | the seven typing statements of `src/Effect4/Laws/Library/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | `Test/Program/PoolSteps.lean` | tested: finite controls of the cell and of each step's type, size and hygiene |
@@ -25,7 +25,7 @@ whole run.
 | `use_types`, `close_answers` and `make_types` in the same file | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | the eleven attempt statements of the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | the shared rules that the slice added at the end of `src/Effect4/Laws/Step/Waiting.lean` and of `Reading.lean` beside it | proved; the axiom gate holds each to `[propext, Quot.sound]` |
-| `Test/Program/PoolPublic.lean` | tested: ten cases over the library's operations on the Lean machine, one schedule each. Four changed policies are red, each on its own case |
+| `git:d956fa2ce279af252604d84befa658661efb920a:Test/Program/PoolPublic.lean` | tested: ten cases over the library's operations on the Lean machine, one schedule each. Four changed policies are red, each on its own case |
 | `Test/Program/PoolOps.lean` | tested: the refusal of a size of zero, each operation's own binders, the hygiene controls and the typing examples, each with a red control |
 | `Test/Program/PoolTraces.lean` | tested: nine traces on the Lean machine, each with its positive control and a fault that fails the promised property |
 | `Test/Program/PoolFaces.lean` | tested: each case, one use of each operation and each step term print and read back |
@@ -102,7 +102,8 @@ three operations are library programs too.
 program requires that scope. `make_types` states it in the type. The answer is the handle, and
 the failure is the acquisition's. The requirement is the acquisition's with the scope's key. A
 pool that is made outside a scope builds, and its program requires the scope. Its run dies
-with the defect of a missing service. `Test/Program/PoolPublic.lean` holds the three facts.
+with the defect of a missing service. `make_types` states the first two, and
+`Test/Program/PoolOps.lean` holds the requirement and the run.
 
 **The finalizers run after the close.** `make` registers the close after the acquisitions. A
 scope runs its finalizers in the reverse order of their registration. So the close runs first
@@ -223,7 +224,7 @@ reads `(the idle stamps, the outstanding leases, the waiters, closing, next)`. A
 | PP8 | A withdraws; H returns and owes no wake; B leases | `([], [(0, 1)], [], false, 2)` |
 
 `Test/Program/PoolContract.lean` holds each trace with its replies. The cases but PP7 run as
-programs on the Lean machine in `Test/Program/PoolScenarios.lean`, over that battery's own
+programs on the Lean machine in `git:d956fa2ce279af252604d84befa658661efb920a:Test/Program/PoolScenarios.lean`, over that battery's own
 test forms. Each gives the model's lists, and the profile's answer of the card's section 9.
 
 **PP5 has two forms.** Its borrowers ask while the acquisition waits, and row 267's `make`
@@ -248,7 +249,7 @@ exists. The public `make` runs the case on the machine.
 
 ## The cases, over the public operations
 
-`Test/Program/PoolPublic.lean` runs ten cases over the library's `make` and `use`, on the Lean
+`git:d956fa2ce279af252604d84befa658661efb920a:Test/Program/PoolPublic.lean` runs ten cases over the library's `make` and `use`, on the Lean
 machine. Each pool is made inside a scope, so each case ends with the close. A borrower's mark
 is a number: H is 9, A is 1, B is 2 and L is 5.
 

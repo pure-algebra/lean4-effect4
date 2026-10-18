@@ -5,7 +5,7 @@ import Test.Program.BoundsControls
 import Tools.Code.Module
 import Test.Program.QueueMask
 import Test.Program.SemaphoreScenarios
-import Test.Program.PoolPublic
+import Test.Program.PoolPublicData
 import Test.Program.DefinitionsControls
 import Test.Program.InvokeControls
 import Test.Program.QueueDefs
@@ -909,7 +909,7 @@ def pSemaphoreHandoff : Api.Program :=
 /-! ### Pool's first operations (decisions rows 267 to 269, 276 and 279)
 
 Ten programs over the library's operations (`src/Effect4/Library/Pool/Ops.lean`): the first
-host runs of Pool's expansion. Each is a case of `Test/Program/PoolPublic.lean`, so the program
+host runs of Pool's expansion. Each is a case of `Test/Program/PoolPublicData.lean`, so the program
 that rc.112 runs is the program that the batteries run on the Lean machine. `make` prints as
 its acquisitions, one `Ref.make` of the cell and one `Effect.acquireRelease` whose release is
 the close. `use` prints as one mask over the lease's loop, the body at the restore site and the

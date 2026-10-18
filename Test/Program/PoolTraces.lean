@@ -1,4 +1,4 @@
-import Test.Program.PoolPublic
+import Test.Program.PoolPublicData
 import Test.Program.SemaphoreTraces
 import Effect4.Program.Authoring.Mask
 
@@ -29,8 +29,7 @@ close.
 `docs/research/2026-10-05-claude-lead/module-cards/pool.md`, section 8). Traces 4 and 5 are the
 two red controls of `protectedBy` at Pool (decisions row 276, point 1): a lease in its own mask
 is lost under an interruption, and a wait inside a mask of the form's making cannot be
-interrupted. The red control of the close is in `Test/Program/PoolPublic.lean`: a close that
-does not wait finalizes an item that a borrower still holds.
+interrupted.
 
 **The pool of a trace is its cell alone**, but in trace 9. A trace makes the cell by
 `Ref.make`, so no scope's close stands behind it. A fault that loses a lease then leaves a run
@@ -531,7 +530,7 @@ Decisions row 279, point 2: a borrow at a closed pool interrupts the borrower it
 body does not run. The answer is a failure whose cause is the interruption of the borrower's
 own fiber. It is no delivery of an interruption, so a mask does not hold it back.
 
-The first control is the closing pool of `Test/Program/PoolPublic.lean`, with the cell's own
+The first control is the closing pool of `Test/Program/PoolPublicData.lean`, with the cell's own
 fields read: the items' records and the idle list, before the close and after the late
 borrower's exit. The second is the closed pool with the late borrower under `uninterruptible`. -/
 
@@ -601,7 +600,7 @@ def heldItem : Val :=
 -- back. Its body did not run: the log holds the finalizer's row alone.
 #guard exitOf closedMasked = some (.success (.list
   [Val.exitErr (Cause.interrupt (some ⟨1⟩)), rows [[9, 1]]]))
--- The same exit as with no mask (`Test/Program/PoolPublic.lean`, the closed pool).
+-- The same exit as with no mask (`Test/Program/PoolPublicData.lean`, the closed pool).
 #guard (exitOf closedMasked).map (fun
     | .success (.list (e :: _)) => e == Val.exitErr (Cause.interrupt (some ⟨1⟩))
     | _ => false) = some true

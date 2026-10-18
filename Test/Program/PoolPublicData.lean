@@ -399,7 +399,7 @@ def withStamp (log : List (List Nat)) : List (List Nat) :=
 /-! ## The engine's fixture: the public cases
 
 The fixture of the generated engine's lane (`ocaml/engine/test/pool/pool.txt`) holds the two
-runs of `Test/Program/PoolScenarios.lean`, and then the ten cases of this battery, in order.
+runs of `Test/Program/PoolScenariosData.lean`, and then the ten cases of this battery, in order.
 Each program crosses as its canonical bytes. The engine's test runs each on both carriers, and
 it compares the root's exit with the exit of Lean's machine. The writer beside the engine's
 test writes `fixtureText`, and `Test/Program/PoolEngine.lean` binds the committed file to it.

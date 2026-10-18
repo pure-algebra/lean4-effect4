@@ -1,6 +1,6 @@
 ; lane POOL -- twelve of Pool's runs on the generated engine, through the wire
-; (decisions rows 267 to 269, 276 and 279; Test/Program/PoolScenarios.lean and
-; Test/Program/PoolPublic.lean).
+; (decisions rows 267 to 269, 276 and 279; Test/Program/PoolScenariosData.lean and
+; Test/Program/PoolPublicData.lean).
 ;   test_pool  the fixture beside this file (pool.txt, written by Lean from the programs that
 ;              `Api.Author.build` admits: write.lean) run on BOTH instances (Fast and Ref).
 ;              Two runs are over the first battery's test forms, and ten are the public cases

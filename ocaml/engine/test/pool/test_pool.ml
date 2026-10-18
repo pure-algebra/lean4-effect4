@@ -4,13 +4,13 @@
    of src/Effect4/Library/Pool/Ops.lean, over the step terms of Steps.lean beside it.  This test
    runs twelve programs on the generated engine.
 
-   The first two are cases of Test/Program/PoolScenarios.lean, over that battery's own test
+   The first two are cases of Test/Program/PoolScenariosData.lean, over that battery's own test
    forms: PP4, where a waiter is interrupted between a return and its posted helper, and the
    low-level control of PP5, where one helper at the count 2 selects two waiters.  The card's
    reading of the wake rests on these two: the selection is made when the helper runs, and a
    resumed borrower runs inside the helper's task.
 
-   The other ten are the public cases of Test/Program/PoolPublic.lean, over the library's
+   The other ten are the public cases of Test/Program/PoolPublicData.lean, over the library's
    `make` and `use`, each with the close that `make` registers: PP1 to PP8, a borrow at a
    closed pool, and a borrow at a closing pool.  Three of them hold the profile's own answers:
    in PP7 and at the closing pool the close waits for a borrowed item (row 268), and at a closed
@@ -141,9 +141,7 @@ let expected_names =
   [ "pp4"; "pp5control"; "public-pp1"; "public-pp2"; "public-pp3"; "public-pp4"; "public-pp5";
     "public-pp6"; "public-pp7"; "public-pp8"; "public-closed"; "public-closing" ]
 
-(* The fuel of the red control: no run of the fixture finishes at it
-   (Test/Program/PoolScenarios.lean and Test/Program/PoolPublic.lean guard the same on Lean's
-   machine). *)
+(* The fuel of the red control: no run of the fixture finishes at it. *)
 let small_fuel = 3
 
 (* Whether no text of a list stands twice. *)
