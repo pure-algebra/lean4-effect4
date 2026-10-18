@@ -3,6 +3,8 @@ import Effect4.Laws.Program.CheckAgreement
 import Effect4.Program.Typing.SourceSession
 import Effect4.Laws.Program.ExpansionAddresses
 import Effect4.Laws.Program.Edit
+import Effect4.Laws.Program.AddressMove
+import Effect4.Laws.Program.Typing.SigData
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -50,6 +52,7 @@ the expansion's table at the source's addresses is a table of the source. Requir
 set_option autoImplicit false
 
 namespace Effect4.Program
+open Conform.Effect4.Typing (HasTy effTy_sound)
 
 /-! ## The address list -/
 
@@ -365,6 +368,350 @@ theorem Sketch.edit_at {s c : Sketch} {app : SigApp} {e : Edit} (h : s.edit app 
     obtain ⟨p', hrep, -⟩ := Sketch.fillAt_some h
     exact Node.at_of_replaceAt_eff hrep
 
+/-! ## D3: a fill below the root keeps the signature of every address
+
+Moved here from `Laws/Program/FillSet.lean`, where D1–D9 are listed: the feed's splice law reads
+it too. -/
+
+/-- An edit inside a spine of bodies keeps each body's signature. -/
+theorem bodyAt_sig_replaceAt (sig : Signature NativeOp) (q : NativeEff) :
+    ∀ (r : List Nat) (decls : List DefDecl) (bodies bodies' : Effs NativeOp),
+      (Node.effs bodies).replaceAt r (.eff q) = some (.effs bodies') →
+      ∀ path, (Part.bodyAt sig decls bodies' path).map (·.1.sig) =
+        (Part.bodyAt sig decls bodies path).map (·.1.sig)
+  | [], _, _, _, h, _ => by
+    simp only [Node.replaceAt] at h
+    split at h <;> cases h
+  | 0 :: _, _, .nil, _, h, _ => by
+    simp only [Node.replaceAt, Node.child, Option.bind_none, reduceCtorEq] at h
+  | 0 :: _, decls, .cons b bs, _, h, path => by
+    obtain ⟨b', -, rfl⟩ := Node.replaceAt_effs_head h
+    match decls, path with
+    | [], _ => rfl
+    | _ :: _, [] => rfl
+    | _ :: _, 0 :: _ => rfl
+    | _ :: _, 1 :: _ => rfl
+    | _ :: _, (_ + 2) :: _ => rfl
+  | 1 :: _, _, .nil, _, h, _ => by
+    simp only [Node.replaceAt, Node.child, Option.bind_none, reduceCtorEq] at h
+  | 1 :: r, decls, .cons b bs, _, h, path => by
+    obtain ⟨bs', hr, rfl⟩ := Node.replaceAt_effs_tail h
+    match decls, path with
+    | [], _ => rfl
+    | _ :: _, [] => rfl
+    | _ :: _, 0 :: _ => rfl
+    | _ :: ds, 1 :: rest => exact bodyAt_sig_replaceAt sig q r ds bs bs' hr rest
+    | _ :: _, (_ + 2) :: _ => rfl
+  | (_ + 2) :: _, _, .nil, _, h, _ => by
+    simp only [Node.replaceAt, Node.child, Option.bind_none, reduceCtorEq] at h
+  | (_ + 2) :: _, _, .cons _ _, _, h, _ => by
+    simp only [Node.replaceAt, Node.child, Option.bind_none, reduceCtorEq] at h
+
+/-- A replacement below the root keeps the signature of every part. -/
+theorem partAt_sig_replaceAt {sig : Signature NativeOp} {p p' q : NativeEff} {i : Nat}
+    {rest : List Nat} (h : (Node.eff p).replaceAt (i :: rest) (.eff q) = some (.eff p'))
+    (path : List Nat) :
+    (p'.partAt sig [] path).map (·.1.sig) = (p.partAt sig [] path).map (·.1.sig) := by
+  cases hb : p.isBlock
+  · have hb' : p'.isBlock = false := by
+      have := Node.replaceAt_cons_isBlock h
+      simp only [Node.isBlock] at this
+      rw [this, hb]
+    rw [Eff.partAt_plain hb, Eff.partAt_plain hb']
+    rfl
+  · obtain ⟨decls, bodies, main, layers, rfl⟩ := Eff.eq_defs_of_isBlock hb
+    match i, h with
+    | 0, h =>
+      obtain ⟨bodies', hr, rfl⟩ := Node.replaceAt_defs_body h
+      unfold Eff.partAt
+      match path, layers with
+      | [], _ => rfl
+      | 0 :: r, _ => exact bodyAt_sig_replaceAt _ q rest decls bodies bodies' hr r
+      | 1 :: _, _ => rfl
+      | 2 :: _, .nil => rfl
+      | 2 :: _, .cons _ _ => rfl
+      | (_ + 3) :: _, _ => rfl
+    | 1, h =>
+      obtain ⟨main', -, rfl⟩ := Node.replaceAt_defs_main h
+      unfold Eff.partAt
+      match path, layers with
+      | [], _ => rfl
+      | 0 :: _, _ => rfl
+      | 1 :: _, _ => rfl
+      | 2 :: _, .nil => rfl
+      | 2 :: _, .cons _ _ => rfl
+      | (_ + 3) :: _, _ => rfl
+    | 2, h =>
+      rw [defs_replaceAt_layers] at h
+      cases hr : (Node.layers layers).replaceAt rest (.eff q) with
+      | none =>
+        rw [hr] at h
+        cases h
+      | some n =>
+        rw [hr, Option.bind_some] at h
+        match n, h with
+        | .layers ls', h =>
+          simp only [Option.some.injEq, Node.eff.injEq] at h
+          subst h
+          cases layers with
+          | nil =>
+            cases rest with
+            | nil =>
+              simp only [Node.replaceAt] at hr
+              split at hr <;> cases hr
+            | cons j t =>
+              simp only [Node.replaceAt, Node.child, Option.bind_none, reduceCtorEq] at hr
+          | cons hd tl =>
+            obtain ⟨h', t', rfl⟩ := Node.replaceAt_layers_cons hr
+            unfold Eff.partAt
+            match path with
+            | [] => rfl
+            | 0 :: _ => rfl
+            | 1 :: _ => rfl
+            | 2 :: _ => rfl
+            | (_ + 3) :: _ => rfl
+    | k + 3, h =>
+      simp only [Node.replaceAt, Node.child, Option.bind_none, reduceCtorEq] at h
+
+/-- **D3: a fill below the root keeps the signature of every address.**
+
+Placement:
+1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
+2. Question: step D3 of the proposed claim `workspace-fill-agreement` (role compatibility);
+   consumers: `fills_compose` (D5) and `SourceSession.splice_coherent`.
+3. Reach: any sketch `s`, application `app`, non-empty path `p ≠ []`, filling `q`, and target
+   address `path`.
+4. What it does not establish: root replacement (`p = []`), which can change `defs` declarations.
+5. Unlocks: R14 (`workspace-fill-agreement`). -/
+theorem sigAt_fillAt {s s' : Sketch} {app : SigApp} {p : List Nat} {q : NativeEff}
+    (hp : p ≠ []) (h : s.fillAt p q = some s') (path : List Nat) :
+    s'.sigAt app path = s.sigAt app path := by
+  obtain ⟨p', hrep, rfl⟩ := Sketch.fillAt_some h
+  obtain ⟨i, rest, rfl⟩ := List.exists_cons_of_ne_nil hp
+  unfold Sketch.sigAt
+  dsimp only
+  rw [partAt_sig_replaceAt hrep path]
+
+/-! ## A splice at the source's addresses
+
+Where neither the sketch nor the candidate holds an ill-formed reference, the source table is the
+expansion's table with the copies' entries dropped (`Sketch.sourceTable_eq_filter`). An edit's
+subtree is one contiguous block of the expansion's addresses (`Node.addresses_split`), the
+edited address is below no reference site (`belowSite_at_eff`), and the edit keeps the sites
+outside its subtree (`belowSite_replaceAt`). So the filter commutes with the splice
+(`Table.splice_filter`). Each statement here is a step of `source-feed-coherent`, and its
+consumer is `SourceSession.splice_coherent`. -/
+
+/-- An address below a child is below the child's address exactly where its rest is. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.under_cons_cons (i : Nat) (a b : List Nat) :
+    Table.under (i :: a) (i :: b) = Table.under a b := by
+  unfold Table.under
+  apply Bool.eq_iff_iff.mpr
+  rw [List.isPrefixOf_iff_prefix, List.isPrefixOf_iff_prefix, List.cons_prefix_cons]
+  exact ⟨fun h => h.2, fun h => ⟨rfl, h⟩⟩
+
+/-- A sibling's address is not below another child's. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.under_cons_ne (i j : Nat) (a b : List Nat) (h : j ≠ i) :
+    Table.under (i :: a) (j :: b) = false := by
+  have := Table.under_sibling_false [] a b h
+  simpa only [List.nil_append] using this
+
+/-- **The addresses below an address are one contiguous block**: a node's addresses are those
+before the subtree, the subtree's addresses below the address, and those after it. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.addresses_split {Op : Type} :
+    ∀ (path : List Nat) (n m : Node Op), n.at_ path = some m →
+      ∃ A C, Node.addresses n = A ++ (Node.addresses m).map (path ++ ·) ++ C ∧
+        (∀ a ∈ A, Table.under path a = false) ∧ (∀ a ∈ C, Table.under path a = false)
+  | [], n, m, h => by
+    cases h
+    refine ⟨[], [], ?_, (fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+    simp only [List.nil_append, List.append_nil, List.map_id']
+  | i :: rest, n, m, h => by
+    cases hc : n.child i with
+    | none =>
+      simp only [Node.at_, hc, Option.bind_none] at h
+      cases h
+    | some c =>
+      simp only [Node.at_, hc, Option.bind_some] at h
+      obtain ⟨A', C', hsplit, hA', hC'⟩ := Node.addresses_split rest c m h
+      have hlift : ∀ L : List (List Nat), (∀ a ∈ L, Table.under rest a = false) →
+          ∀ a ∈ L.map (i :: ·), Table.under (i :: rest) a = false := by
+        intro L hL a ha
+        obtain ⟨b, hb, rfl⟩ := List.mem_map.mp ha
+        rw [Table.under_cons_cons]
+        exact hL b hb
+      have hother : ∀ j, j ≠ i → ∀ a ∈ n.childAddresses j, Table.under (i :: rest) a = false := by
+        intro j hj a ha
+        unfold Node.childAddresses at ha
+        split at ha
+        · obtain ⟨b, -, rfl⟩ := List.mem_map.mp ha
+          exact Table.under_cons_ne i j rest b hj
+        · cases ha
+      have hci : n.childAddresses i =
+          A'.map (i :: ·) ++ (Node.addresses m).map ((i :: rest) ++ ·) ++ C'.map (i :: ·) := by
+        unfold Node.childAddresses
+        simp only [hc]
+        rw [hsplit]
+        simp only [List.map_append, List.map_map]
+        rfl
+      rw [Node.addresses_eq_cons]
+      match i, hci, hother with
+      | 0, hci, hother =>
+        refine ⟨[] :: A'.map (0 :: ·),
+          C'.map (0 :: ·) ++ (n.childAddresses 1 ++ n.childAddresses 2), ?_, ?_, ?_⟩
+        · rw [hci]
+          simp only [List.cons_append, List.append_assoc]
+        · intro a ha
+          rcases List.mem_cons.mp ha with rfl | ha
+          · rfl
+          · exact hlift A' hA' a ha
+        · intro a ha
+          rcases List.mem_append.mp ha with ha | ha
+          · exact hlift C' hC' a ha
+          · rcases List.mem_append.mp ha with ha | ha
+            · exact hother 1 (by decide) a ha
+            · exact hother 2 (by decide) a ha
+      | 1, hci, hother =>
+        refine ⟨[] :: (n.childAddresses 0 ++ A'.map (1 :: ·)),
+          C'.map (1 :: ·) ++ n.childAddresses 2, ?_, ?_, ?_⟩
+        · rw [hci]
+          simp only [List.cons_append, List.append_assoc]
+        · intro a ha
+          rcases List.mem_cons.mp ha with rfl | ha
+          · rfl
+          · rcases List.mem_append.mp ha with ha | ha
+            · exact hother 0 (by decide) a ha
+            · exact hlift A' hA' a ha
+        · intro a ha
+          rcases List.mem_append.mp ha with ha | ha
+          · exact hlift C' hC' a ha
+          · exact hother 2 (by decide) a ha
+      | 2, hci, hother =>
+        refine ⟨[] :: (n.childAddresses 0 ++ (n.childAddresses 1 ++ A'.map (2 :: ·))),
+          C'.map (2 :: ·), ?_, ?_, ?_⟩
+        · rw [hci]
+          simp only [List.cons_append, List.append_assoc]
+        · intro a ha
+          rcases List.mem_cons.mp ha with rfl | ha
+          · rfl
+          · rcases List.mem_append.mp ha with ha | ha
+            · exact hother 0 (by decide) a ha
+            · rcases List.mem_append.mp ha with ha | ha
+              · exact hother 1 (by decide) a ha
+              · exact hlift A' hA' a ha
+        · exact hlift C' hC'
+      | k + 3, _, _ =>
+        rw [Node.child_add_three] at hc
+        cases hc
+
+/-- **A filter commutes with a splice of a contiguous block**, where the block's head is kept
+and the two filters agree outside the block. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.splice_filter {a : List Nat} {A B C P : List Table.Entry}
+    {g g' : Table.Entry → Bool}
+    (hA : ∀ e ∈ A, Table.under a e.path = false) (hC : ∀ e ∈ C, Table.under a e.path = false)
+    (hB : ∀ e ∈ B, Table.under a e.path = true) {b : Table.Entry} (hb : b ∈ B) (hgb : g b = true)
+    (hagree : ∀ e, Table.under a e.path = false → g' e = g e) :
+    Table.splice ((A ++ B ++ C).filter g) a (P.filter g') = (A ++ P ++ C).filter g' := by
+  have hfA : A.filter g' = A.filter g := List.filter_congr fun e he => hagree e (hA e he)
+  have hfC : C.filter g' = C.filter g := List.filter_congr fun e he => hagree e (hC e he)
+  rw [List.filter_append, List.filter_append, List.filter_append, List.filter_append, hfA, hfC,
+    List.append_assoc, List.append_assoc]
+  rw [Table.splice_three (fun e he => hA e (List.mem_filter.mp he).1)
+    ⟨b, List.mem_filter.mpr ⟨hb, hgb⟩, hB b hb⟩ (fun e he => hC e (List.mem_filter.mp he).1),
+    Table.splice_all_under (fun e he => hB e (List.mem_filter.mp he).1)]
+
+/-- **With no ill-formed reference, the source table is the expansion's table with the copies'
+entries dropped.** -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.sourceTable_eq_filter (s : Sketch) (app : SigApp)
+    (h : s.program.firstRefFault = none) :
+    s.sourceTable app = (s.expand.table app).filter (fun e => !Table.belowSite s.sites e.path) := by
+  rw [← Sketch.sourceAnnotate_eq_sourceTable]
+  unfold Sketch.sourceAnnotate Table.atSource
+  rw [h, Sketch.annotate_eq_table]
+
+/-- A reference site is never strictly above a node: a reference is a leaf. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem at_below_ref_none {n : Node NativeOp} {site path : List Nat} {t : List Nat}
+    (hsite : n.at_ site = some (.layer (.ref t))) (hp : Path.properPrefix site path = true) :
+    n.at_ path = none := by
+  obtain ⟨r, hr, rfl⟩ := (Path.properPrefix_eq_true_iff site path).mp hp
+  obtain ⟨i, r', rfl⟩ := List.exists_cons_of_ne_nil hr
+  rw [Node.at_append, hsite, Option.bind_some, Node.at_ref_cons]
+
+/-- A replacement at a program node keeps a reference site that an address outside the edited
+subtree stands strictly below. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem at_site_replaceAt {n n' r : Node NativeOp} {path site b t : List Nat} {old : NativeEff}
+    (hrep : n.replaceAt path r = some n') (hold : n.at_ path = some (.eff old))
+    (hsite : n.at_ site = some (.layer (.ref t))) (hpre : Path.properPrefix site b = true)
+    (hb : Table.under path b = false) : n'.at_ site = some (.layer (.ref t)) := by
+  rcases Path.prefix_cases site path with ⟨r0, rfl⟩ | ⟨i, r0, rfl⟩ |
+      ⟨c, k, l, r1, r2, hkl, rfl, rfl⟩
+  · obtain ⟨r, -, rfl⟩ := (Path.properPrefix_eq_true_iff _ b).mp hpre
+    have hu := Table.under_append path (r0 ++ r)
+    rw [← List.append_assoc, hb] at hu
+    cases hu
+  · have hnone := at_below_ref_none hsite
+      ((Path.properPrefix_eq_true_iff site (site ++ i :: r0)).mpr ⟨i :: r0, List.cons_ne_nil _ _, rfl⟩)
+    rw [hold] at hnone
+    cases hnone
+  · rw [Node.at_replaceAt_disjoint c r2 r1 hrep hkl]
+    exact hsite
+
+/-- **An edit keeps whether an address outside its subtree is strictly below a reference site.** -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem belowSite_replaceAt {p p' x old : NativeEff} {path b : List Nat}
+    (hrep : (Node.eff p).replaceAt path (.eff x) = some (.eff p'))
+    (hold : (Node.eff p).at_ path = some (.eff old)) (hb : Table.under path b = false) :
+    Table.belowSite ((p'.refSites []).map (·.1)) b =
+      Table.belowSite ((p.refSites []).map (·.1)) b := by
+  have hback : (Node.eff p').replaceAt path (.eff old) = some (.eff p) :=
+    (Node.replaceAt_spec hrep).2.2 _ hold
+  have hnew : (Node.eff p').at_ path = some (.eff x) := (Node.replaceAt_spec hrep).1
+  unfold Table.belowSite
+  rw [List.any_map, List.any_map]
+  apply Bool.eq_iff_iff.mpr
+  simp only [List.any_eq_true, Function.comp_apply]
+  constructor
+  · rintro ⟨y, hy, hpre⟩
+    have hat' := at_site_replaceAt hback hnew (at_of_mem_refSites hy) hpre hb
+    exact ⟨(y.1, y.2), mem_refSites_of_at hat', hpre⟩
+  · rintro ⟨y, hy, hpre⟩
+    have hat' := at_site_replaceAt hrep hold (at_of_mem_refSites hy) hpre hb
+    exact ⟨(y.1, y.2), mem_refSites_of_at hat', hpre⟩
+
+/-- **A program node's address is strictly below no reference site.** -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem belowSite_at_eff {p old : NativeEff} {path : List Nat}
+    (hold : (Node.eff p).at_ path = some (.eff old)) :
+    Table.belowSite ((p.refSites []).map (·.1)) path = false := by
+  unfold Table.belowSite
+  rw [List.any_map]
+  cases hany : (p.refSites []).any (fun y => Path.properPrefix y.1 path) with
+  | false => exact hany
+  | true =>
+    obtain ⟨y, hy, hpre⟩ := List.any_eq_true.mp hany
+    have hnone := at_below_ref_none (at_of_mem_refSites hy) hpre
+    rw [hold] at hnone
+    cases hnone
+
+/-- The candidate's program is the old program with the edited address replaced. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.edit_replaceAt {s c : Sketch} {app : SigApp} {e : Edit} (h : s.edit app e = some c) :
+    ∃ x, (Node.eff s.program).replaceAt e.path (.eff x) = some (.eff c.program) := by
+  cases e with
+  | fill a q =>
+    obtain ⟨p', hrep, rfl⟩ := Sketch.fillAt_some h
+    exact ⟨q, hrep⟩
+  | omitAt a row =>
+    obtain ⟨p', hrep, rfl⟩ := Sketch.fillAt_some h
+    exact ⟨_, hrep⟩
+
 
 /-!
 Placement: initial-algebras-folds; source-session-coherent and typed-replacement, R14.
@@ -436,7 +783,8 @@ theorem feed_ok_cases {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {e 
        ∃ key focus, e.path ≠ [] ∧ s.focusAt e.path = some focus ∧
          s.candidatePartKey e.path c = some key ∧ (run key).result = .ok focus.ty ∧
          s.expandedEditAgrees c e = true ∧
-         (policy = .draft → draftOmitAllows e focus.ty = true ∧ s.view.type.isSome = true) ∧
+         (policy = .keepExact ∨
+           (policy = .draft ∧ draftOmitAllows e focus.ty = true ∧ s.view.type.isSome = true)) ∧
          r = s.splice c e old (run key)) := by
   unfold feed at h
   split at h
@@ -469,7 +817,7 @@ theorem feed_ok_cases {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {e 
                   rw [Checked.pure_value] at h
                   cases h
                   refine Or.inr ⟨key, focus, hne, hfocus, hkey, ?_, hcond.1,
-                    fun _ => ⟨hcond.2, ?_⟩, rfl⟩
+                    Or.inr ⟨rfl, hcond.2, ?_⟩, rfl⟩
                   · rw [hres, hty]
                   · rw [hview]
                     rfl
@@ -495,8 +843,7 @@ theorem feed_ok_cases {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {e 
                 · rename_i hagree
                   rw [Checked.pure_value] at h
                   cases h
-                  refine Or.inr ⟨key, focus, hne, hfocus, hkey, ?_, hagree, (fun hd => nomatch hd),
-                    rfl⟩
+                  refine Or.inr ⟨key, focus, hne, hfocus, hkey, ?_, hagree, Or.inl rfl, rfl⟩
                   rw [hres]
                   simp only [bne_iff_ne, ne_eq, Decidable.not_not] at hty
                   rw [hty]
@@ -634,12 +981,14 @@ theorem feed_draft_ok (o : Oracle) (s : SourceSession) (e : Edit) :
   · exact ⟨_, rfl⟩
 
 /-- **An accepted feed keeps a coherent session coherent.** The pointer of `source-feed-coherent`.
-It is false at head (`FeedCounterexample.feed_coherent_refuted`): `SourceSession.splice` places
-the part's table through `Table.atSource` with the candidate's ill-formed reference, which puts a
-second root entry in place of the entry at the edited address, and a splice keeps the old root
-entry where the edit adds or removes an ill-formed reference. The statement is the
-specification. It holds once the feed splices only where neither the session's sketch nor the
-candidate holds an ill-formed reference (the seat's receipt, option A). -/
+It is false at head in two ways. `SourceSession.splice` places the part's table through
+`Table.atSource` with the candidate's ill-formed reference, which puts a second root entry in
+place of the entry at the edited address (`FeedCounterexample.feed_coherent_refuted`). A
+kept-exact splice keeps a refused root entry that an omission's new hole row can make typed
+(`FeedCounterexample.keep_omit_refused`). The statement is the specification.
+`feed_coherent_of_faultFree` proves it on every other route, so it holds once the feed splices
+only where neither the sketch nor the candidate holds an ill-formed reference and the root is
+typed (the seat's receipt, option A2). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 proof_goal feed_coherent {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
     {e : Edit} {step : Edit.Step} (hc : s.Coherent)
@@ -734,6 +1083,247 @@ theorem Coherent.ext {a b : SourceSession} (ha : a.Coherent) (hb : b.Coherent)
   cases hsketch
   cases htable
   rfl
+
+/-! ## The splice's coherence where nothing is ill formed
+
+`splice_coherent` is the feed's splice route at a typed root where the candidate holds no
+ill-formed reference: the splice gives the candidate's source table. With the recheck route
+(`recheck_coherent`), it proves `feed_coherent_of_faultFree`. Each statement is a step of
+`source-feed-coherent` and names its consumer. -/
+
+/-- A part key of a candidate is its expansion's sub-program at the address, in the focus's
+environment. A step of `source-feed-coherent`. Its consumer is `splice_coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem candidatePartKey_some {s : SourceSession} {path : List Nat} {c : Sketch}
+    {key : CheckInput} {focus : Focus NativeOp} (hfocus : s.focusAt path = some focus)
+    (h : s.candidatePartKey path c = some key) :
+    ∃ q', (Node.eff c.expand.program).at_ path = some (.eff q') ∧
+      key = .part (sketchSigData c.expand s.app path) focus.env q' := by
+  unfold candidatePartKey at h
+  split at h
+  · rename_i old q' hf hat
+    rw [hfocus, Option.some.injEq] at hf
+    subst hf
+    cases h
+    exact ⟨q', hat, rfl⟩
+  · cases h
+
+/-- Where the expanded edit agrees, the old expansion's own edit gives the candidate's
+expansion. A step of `source-feed-coherent`. Its consumer is `splice_coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem expandedEditAgrees_some {s : SourceSession} {c : Sketch} {e : Edit}
+    (h : s.expandedEditAgrees c e = true) :
+    ∃ e', Edit.expanded c.expand e = some e' ∧ s.sketch.expand.edit s.app e' = some c.expand := by
+  unfold expandedEditAgrees at h
+  dsimp only at h
+  split at h
+  · rename_i e' he'
+    refine ⟨e', he', ?_⟩
+    obtain ⟨y, hy, hyeq⟩ := Option.map_eq_some_iff.mp (of_decide_eq_true h)
+    obtain ⟨yp, yh⟩ := y
+    simp only [Prod.mk.injEq] at hyeq
+    obtain ⟨rfl, rfl⟩ := hyeq
+    exact hy
+  · cases h
+
+/-- **The candidate's expansion is a filling of the old expansion**, grown by an omission's hole
+row: that base keeps the old expansion's check, focus and table (`Sketch.check_more_holes`,
+`Sketch.focusAt_more_holes`, `Sketch.table_more_holes`). A step of `source-feed-coherent`. Its
+consumer is `splice_coherent`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem splice_base {s : SourceSession} {c : Sketch} {e e' : Edit} {q' q0 : NativeEff}
+    {focus : Focus NativeOp} {T : EffTy}
+    (hXcheck : s.sketch.expand.check s.app = .ok T)
+    (hf0 : s.sketch.expand.focusAt s.app e.path = some ⟨q0, focus.env, focus.ty⟩)
+    (hq'at : (Node.eff c.expand.program).at_ e.path = some (.eff q'))
+    (he' : Edit.expanded c.expand e = some e') (hX' : s.sketch.expand.edit s.app e' = some c.expand) :
+    ∃ s0 : Sketch, s0.fillAt e.path q' = some c.expand ∧ s0.check s.app = .ok T ∧
+      s0.focusAt s.app e.path = some ⟨q0, focus.env, focus.ty⟩ ∧
+      s0.table s.app = s.sketch.expand.table s.app := by
+  cases e with
+  | fill a q =>
+    simp only [Edit.expanded, Edit.path] at he' hq'at hf0 ⊢
+    rw [hq'at] at he'
+    cases he'
+    exact ⟨s.sketch.expand, hX', hXcheck, hf0, rfl⟩
+  | omitAt a row =>
+    simp only [Edit.expanded, Edit.path] at he' hq'at hf0 ⊢
+    cases he'
+    have hX'' : ({ s.sketch.expand with holes := s.sketch.expand.holes ++ [row] } : Sketch).fillAt a
+        (Sketch.hole s.app s.sketch.expand.holes.length) = some c.expand := hX'
+    obtain ⟨p', hrep, hcx⟩ := Sketch.fillAt_some hX''
+    have hhole : (Node.eff c.expand.program).at_ a =
+        some (.eff (Sketch.hole s.app s.sketch.expand.holes.length)) := by
+      rw [hcx]
+      exact (Node.replaceAt_spec hrep).1
+    rw [hhole, Option.some.injEq, Node.eff.injEq] at hq'at
+    subst hq'at
+    exact ⟨_, hX'', Sketch.check_more_holes _ _ _ hXcheck, Sketch.focusAt_more_holes hXcheck hf0 _,
+      Sketch.table_more_holes hXcheck _⟩
+
+/-- **The splice gives the candidate's source table** at a typed root, where the candidate holds
+no ill-formed reference, the part keeps the focus's type and the expanded edit agrees. The
+expansion's table splices (`Sketch.table_fill`, at the base of `splice_base`), and dropping the
+copies' entries commutes with that splice (`Table.splice_filter`). A step of
+`source-feed-coherent`. Its consumer is `feed_coherent_of_faultFree`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem splice_coherent {s : SourceSession} {c : Sketch} {e : Edit} {old : NativeEff}
+    {key : CheckInput} {focus : Focus NativeOp} {T : EffTy}
+    (hc : s.Coherent) (hroot : s.sketch.sourceCheck s.app = .ok T)
+    (hcf : c.program.firstRefFault = none) (hne : e.path ≠ [])
+    (hedit : s.sketch.edit s.app e = some c) (hfocus : s.focusAt e.path = some focus)
+    (hkey : s.candidatePartKey e.path c = some key) (hres : (run key).result = .ok focus.ty)
+    (hagree : s.expandedEditAgrees c e = true) :
+    (s.splice c e old (run key)).1.Coherent := by
+  obtain ⟨hsf, hXcheck⟩ := Sketch.sourceCheck_ok hroot
+  obtain ⟨q', hq'at, rfl⟩ := candidatePartKey_some hfocus hkey
+  obtain ⟨e', he', hX'⟩ := expandedEditAgrees_some hagree
+  obtain ⟨hatS, q0, hf0⟩ := focusAt_typed hc hfocus hne
+  obtain ⟨s0, hfill0, hcheck0, hfocus0, htable0⟩ := splice_base hXcheck hf0 hq'at he' hX'
+  obtain ⟨i, rest, hpath⟩ := List.exists_cons_of_ne_nil hne
+  -- the part check reads the base's signature at the address
+  obtain ⟨p', hrep, hcx⟩ := Sketch.fillAt_some hfill0
+  have hpart0 : (s0.program.partAt (s.app.withHoles s0.holes).signature [] e.path).isSome = true := by
+    have hfp : programFocusAt (s.app.withHoles s0.holes).signature [] s0.program e.path =
+        some ⟨q0, focus.env, focus.ty⟩ := by
+      rw [hpath] at hfocus0 ⊢
+      exact hfocus0
+    unfold programFocusAt at hfp
+    obtain ⟨pr, hpr, -⟩ := Option.bind_eq_some_iff.mp hfp
+    rw [hpr]
+    rfl
+  have hsig : (sketchSigData c.expand s.app e.path).signature = s0.sigAt s.app e.path := by
+    rw [sketchSigData_signature]
+    · exact sigAt_fillAt hne hfill0 e.path
+    · rw [hcx]
+      rw [hpath] at hrep hpart0 ⊢
+      have hpart' := partAt_sig_replaceAt (sig := (s.app.withHoles s0.holes).signature) hrep
+        (i :: rest)
+      rw [← Option.isSome_map (f := fun pr : Part NativeOp × List Nat => pr.1.sig)]
+      show ((p'.partAt (s.app.withHoles s0.holes).signature [] (i :: rest)).map _).isSome = _
+      rw [hpart', Option.isSome_map]
+      exact hpart0
+  have hcheckq : Checker.check (s0.sigAt s.app e.path) focus.env [] q' = .ok focus.ty := by
+    rw [← hsig]
+    have h1 : (run (.part (sketchSigData c.expand s.app e.path) focus.env q')).result =
+        Checker.check (sketchSigData c.expand s.app e.path).signature focus.env [] q' := by
+      show (Annotate.check _ _ [] q').2 = _
+      rw [Annotate.check_eq]
+    rw [← h1]
+    exact hres
+  have hq : HasTy (s0.sigAt s.app e.path) focus.env q' focus.ty :=
+    effTy_sound _ _ _ _ (effTy_of_check hcheckq)
+  have hfillT := Sketch.table_fill hcheck0 hne hfocus0 hq hfill0
+  rw [htable0] at hfillT
+  have hplaced : (Internal.place e.path (run (.part (sketchSigData c.expand s.app e.path) focus.env
+      q'))).table = tableAt (s0.sigAt s.app e.path) (some (.env focus.env)) (.eff q') e.path := by
+    rw [run_placed, Annotate.check_eq, hsig]
+  show Table.splice s.table e.path (Table.atSource c.sites c.program.firstRefFault
+    (Internal.place e.path (run (.part (sketchSigData c.expand s.app e.path) focus.env q'))).table) =
+    c.sourceTable s.app
+  dsimp only at hfillT
+  have hatoms : ∀ (sites : List (List Nat)) (t : List Table.Entry),
+      Table.atSource sites none t = t.filter (fun e => !Table.belowSite sites e.path) :=
+    fun _ _ => rfl
+  rw [hcf, hplaced, hatoms, table_eq hc, Sketch.sourceTable_eq_filter _ _ hsf,
+    Sketch.sourceTable_eq_filter _ _ hcf, hfillT]
+  -- the expansion's table, split at the edited address
+  have hatX := Sketch.focusAt_at hf0
+  obtain ⟨A, C, haddr, hA, hC⟩ := Node.addresses_split e.path (.eff s.sketch.expand.program)
+    (.eff q0) hatX
+  obtain ⟨restq, hq0head⟩ := addresses_eff_head q0
+  have hT : s.sketch.expand.table s.app =
+      A.map (s.sketch.expand.tableEntry s.app) ++
+        ((Node.addresses (.eff q0)).map (e.path ++ ·)).map (s.sketch.expand.tableEntry s.app) ++
+        C.map (s.sketch.expand.tableEntry s.app) := by
+    unfold Sketch.table
+    rw [haddr, List.map_append, List.map_append]
+  have hpathE : ∀ a, (s.sketch.expand.tableEntry s.app a).path = a :=
+    Sketch.tableEntry_path s.sketch.expand s.app
+  have hAf : ∀ x ∈ A.map (s.sketch.expand.tableEntry s.app), Table.under e.path x.path = false := by
+    intro x hx
+    obtain ⟨a, ha, rfl⟩ := List.mem_map.mp hx
+    rw [hpathE]
+    exact hA a ha
+  have hCf : ∀ x ∈ C.map (s.sketch.expand.tableEntry s.app), Table.under e.path x.path = false := by
+    intro x hx
+    obtain ⟨a, ha, rfl⟩ := List.mem_map.mp hx
+    rw [hpathE]
+    exact hC a ha
+  have hBf : ∀ x ∈ ((Node.addresses (.eff q0)).map (e.path ++ ·)).map
+      (s.sketch.expand.tableEntry s.app), Table.under e.path x.path = true := by
+    intro x hx
+    obtain ⟨a, ha, rfl⟩ := List.mem_map.mp hx
+    obtain ⟨r, -, rfl⟩ := List.mem_map.mp ha
+    rw [hpathE]
+    exact Table.under_append e.path r
+  have hbmem : s.sketch.expand.tableEntry s.app e.path ∈
+      ((Node.addresses (.eff q0)).map (e.path ++ ·)).map (s.sketch.expand.tableEntry s.app) := by
+    refine List.mem_map.mpr ⟨e.path, List.mem_map.mpr ⟨[], ?_, List.append_nil _⟩, rfl⟩
+    rw [hq0head]
+    exact List.mem_cons_self
+  have hgb : (!Table.belowSite s.sketch.sites (s.sketch.expand.tableEntry s.app e.path).path) =
+      true := by
+    rw [hpathE]
+    unfold Sketch.sites
+    rw [belowSite_at_eff hatS]
+    rfl
+  obtain ⟨x, hrepc⟩ := Sketch.edit_replaceAt hedit
+  have hagreeSites : ∀ x' : Table.Entry, Table.under e.path x'.path = false →
+      (!Table.belowSite c.sites x'.path) = (!Table.belowSite s.sketch.sites x'.path) := by
+    intro x' hx'
+    unfold Sketch.sites
+    rw [belowSite_replaceAt hrepc hatS hx']
+  have hspl : Table.splice (s.sketch.expand.table s.app) e.path
+      (tableAt (s0.sigAt s.app e.path) (some (NodeEnv.env focus.env)) (Node.eff q') e.path) =
+      A.map (s.sketch.expand.tableEntry s.app) ++
+        tableAt (s0.sigAt s.app e.path) (some (NodeEnv.env focus.env)) (Node.eff q') e.path ++
+        C.map (s.sketch.expand.tableEntry s.app) := by
+    rw [hT, List.append_assoc, Table.splice_three hAf ⟨_, hbmem, hBf _ hbmem⟩ hCf,
+      Table.splice_all_under hBf, List.append_assoc]
+  rw [hspl, hT]
+  exact Table.splice_filter hAf hCf hBf hbmem hgb hagreeSites
+
+/-- **A recheck holds the candidate's source table**: the module check's table, part by part
+(`Sketch.sourceAnnotate_eq_sourceTable`). A step of `source-feed-coherent`. Its consumer is
+`feed_coherent_of_faultFree`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem recheck_coherent (s : SourceSession) (c : Sketch) :
+    (⟨s.app, c, (run (.module s.app c.holes c.program)).table⟩ : SourceSession).Coherent :=
+  Sketch.sourceAnnotate_eq_sourceTable c s.app
+
+/-- **An accepted feed keeps coherence where the candidate holds no ill-formed reference and a
+kept-exact splice stands at a typed root.** Every route but the two that `feed_coherent`'s
+counterexamples take: the splice of a candidate with an ill-formed reference, and a kept-exact
+splice at a refused root, where an omission's new hole row can change the root's check
+(`FeedCounterexample.keep_omit_refused`). It is the true form of `feed_coherent` at head, and
+the whole of its proof once the feed splices only there (the seat's receipt, option A2). A step
+of `source-feed-coherent`. Not established: the cost, or a splice at a refused root. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_coherent_of_faultFree {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
+    {e : Edit} {step : Edit.Step} (hc : s.Coherent)
+    (hcand : ∀ c, s.sketch.edit s.app e = some c → c.program.firstRefFault = none)
+    (hroot : policy = .keepExact → s.view.type.isSome = true)
+    (h : (s.feed o policy e).value = .ok (next,step)) : next.Coherent := by
+  rcases feed_ok_cases h with ⟨-, -, hr⟩ |
+      ⟨old, c, -, hedit, hr | ⟨key, focus, hne, hfocus, hkey, hres, hagree, hpol, hr⟩⟩
+  · cases hr
+    exact hc
+  · cases hr
+    exact recheck_coherent s c
+  · have hview : s.view.type.isSome = true := by
+      rcases hpol with hk | ⟨-, -, hv⟩
+      · exact hroot hk
+      · exact hv
+    rw [view_type hc] at hview
+    obtain ⟨T, hT⟩ : ∃ T, s.sketch.sourceCheck s.app = .ok T := by
+      cases hsc : s.sketch.sourceCheck s.app with
+      | ok T => exact ⟨T, rfl⟩
+      | error r =>
+        rw [hsc] at hview
+        cases hview
+    cases hr
+    exact splice_coherent (old := old) hc hT (hcand c hedit) hne hedit hfocus hkey hres hagree
 
 /-- Exact old feedStep observations through the existing expansion edit engine.
 The expression uses EditSession.feed as its reference; it defines no second edit interpreter.
@@ -1150,11 +1740,26 @@ def draftFaultyRechecks : Bool :=
   | .ok (_, step) => decide (step.delta = .rechecked)
   | .error _ => false
 
+/-- A base with no reference whose root is refused: its second step performs row `0`, which the
+hole table does not hold yet. -/
+def refusedRoot : Sketch := ⟨.bind seven (.perform (.external 0) (.lit .unit)), []⟩
+
+/-- The session the refused base opens. -/
+def refusedOpened : SourceSession := (SourceSession.open Oracle.uncached {} refusedRoot).value
+
+/-- The kept omission of `[0]` declares row `0`, which the second step names: the candidate's root
+checks, but the splice keeps the refused root entry. -/
+def keepOmitRefused : Bool :=
+  match (refusedOpened.feed Oracle.uncached .keepExact (.omitAt [0] (Row.hole "h" .nat))).value with
+  | .ok (next, _) => !decide (next.table = next.sketch.sourceTable next.app)
+  | .error _ => false
+
 set_option maxRecDepth 100000 in
-/-- The evaluation of the seven verdicts. -/
+/-- The evaluation of the eight verdicts. -/
 theorem verdicts : draftLate = true ∧ keepLate = true ∧ keepWide = true ∧ docLate = true ∧
-    replayLate = true ∧ undoFaulty = true ∧ draftFaultyRechecks = true := by
-  decide
+    replayLate = true ∧ undoFaulty = true ∧ draftFaultyRechecks = true ∧
+    keepOmitRefused = true := by
+  decide +kernel
 
 end FeedCounterexample
 
@@ -1169,6 +1774,25 @@ theorem FeedCounterexample.feed_coherent_refuted :
   intro h
   have hv := FeedCounterexample.verdicts.1
   unfold FeedCounterexample.draftLate at hv
+  split at hv
+  · rename_i next step heq
+    have hcoh := h _ _ _ _ _ _ (SourceSession.open_coherent _ _ _) heq
+    rw [Bool.not_eq_true', decide_eq_false_iff_not] at hv
+    exact hv hcoh
+  · cases hv
+
+open _root_.Effect4.Program.Check in
+/-- **`SourceSession.feed_coherent` is false at head with no layer reference too**: a kept
+omission at a refused root declares the row that the refusal names, so the candidate's root
+checks, while the splice keeps the refused root entry. A splice reads the root only where the
+root is typed (`Sketch.table_more_holes`). A control of the claim `source-feed-coherent`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.keep_omit_refused :
+    ¬ ∀ (o : Oracle) (policy : FeedPolicy) (s next : SourceSession) (e : Edit) (step : Edit.Step),
+      s.Coherent → (s.feed o policy e).value = .ok (next, step) → next.Coherent := by
+  intro h
+  have hv := FeedCounterexample.verdicts.2.2.2.2.2.2.2
+  unfold FeedCounterexample.keepOmitRefused at hv
   split at hv
   · rename_i next step heq
     have hcoh := h _ _ _ _ _ _ (SourceSession.open_coherent _ _ _) heq
@@ -1280,7 +1904,7 @@ theorem FeedCounterexample.feed_draft_refuted :
   rw [hedit] at hmatch
   dsimp only at hmatch
   obtain ⟨-, -, -, hdelta⟩ := hmatch
-  have hv := FeedCounterexample.verdicts.2.2.2.2.2.2
+  have hv := FeedCounterexample.verdicts.2.2.2.2.2.2.1
   unfold FeedCounterexample.draftFaultyRechecks at hv
   rw [hfeed] at hv
   rw [of_decide_eq_true hv] at hdelta
