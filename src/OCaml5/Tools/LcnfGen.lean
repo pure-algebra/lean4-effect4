@@ -21,7 +21,9 @@ works, interpreted and many times slower.
 An artifact's options: `--out <path>` (required), `--import M` (a module whose environment the
 roots are looked up in; required, repeatable), `--cap <n>` (default 60), `--types A,B,…` (types
 to emit in full even when no translated code destructs them), `--externs <file>` and
-`--prelude <file>`.
+`--prelude <file>`. Its roots come by export class (`OCaml5.Lcnf.Export`): every word that is no
+option is a `public` root, and `--linkage`, `--internal` and `--coverage` take the other three
+classes, comma-joined. The interface exports the public and linkage roots.
 
 ## The seam (`--externs`, `--prelude`)
 

@@ -7,6 +7,7 @@ import OCaml5.Ml.Check
 import OCaml5.Lcnf.Externs
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
+import OCaml5.Lcnf.Export
 
 /-!
 # OCaml5.Lcnf.Gen
@@ -14,12 +15,14 @@ import OCaml5.Lcnf.Translate
 **What it is.** One LCNF artifact made from its command's arguments: the closure translated
 (`translateClosureInferring`), the types generated (`generate`), the declarations emitted, the
 module checked (`Ml.checkModule`, `hygieneProblems`, the extern ledger), rendered and written, with
-its closure manifest. The recipe (`ocaml/gen/roots.json`) lists the artifacts, and
-`argvOf` turns each entry into the command its header carries. The driver
-`OCaml5.Tools.LcnfGen` runs one artifact, or every artifact of the recipe in one process.
+its closure manifest. The recipe (`ocaml/gen/roots.json`) lists the artifacts, the plan checker
+(`OCaml5.Lcnf.Export`) admits its export classes, and `argvOf` turns each entry into the command its
+header carries. The driver `OCaml5.Tools.LcnfGen` runs one artifact, or every artifact of the recipe
+in one process.
 
 **Depends on.** `OCaml5.Lcnf.Translate`, `OCaml5.Lcnf.Types`, `OCaml5.Lcnf.Externs`, `OCaml5.Ml`,
-`OCaml5.Lcnf.Index` and `OCaml5.Lcnf.Census` (the mono index and the construct census of the manifest).
+`OCaml5.Lcnf.Index` and `OCaml5.Lcnf.Census` (the mono index and the construct census of the manifest),
+`OCaml5.Lcnf.Export` (the typed recipe and its plan checker).
 
 **Properties.**
 * **The header is the command.** An artifact's header carries the command that makes it alone
@@ -32,6 +35,10 @@ its closure manifest. The recipe (`ocaml/gen/roots.json`) lists the artifacts, a
 * **Each artifact starts from the imported environment.** A recipe run imports each set of
   modules once and gives each artifact a fresh `MetaM` state over it, as a run of its own
   would — *by construction*.
+* **The interface follows the classes.** An artifact's interface exports its `public` and `linkage`
+  roots and hides its `internal` and `coverage` roots (`Export.ExportClass.exported`); a recipe whose
+  classes contradict each other makes no artifact (`Export.readChecked`) — *by construction*;
+  *tested* by `make check-ocaml`, whose hand code compiles only through the exported roots.
 -/
 
 namespace OCaml5.Lcnf.Gen
@@ -44,8 +51,13 @@ structure Args where
   out : String := ""
   types : Array Name := #[]
   cap : Nat := 60
+  /-- The `public` roots: every word of the command that is no option. -/
   roots : Array Name := #[]
-  /-- Translated for coverage, without entering the public interface. -/
+  /-- The `linkage` roots (`--linkage`): exported by the interface, for hand code to call. -/
+  linkage : Array Name := #[]
+  /-- The `internal` roots (`--internal`): translated for the artifact's own code, hidden. -/
+  internal : Array Name := #[]
+  /-- The `coverage` roots (`--coverage`): translated for coverage, hidden. -/
   coverage : Array Name := #[]
   /-- Whole packages made abstract by the inferred OCaml interface. -/
   abstractTypes : Array Name := #[]
@@ -77,6 +89,10 @@ def Args.parse : List String → Args → Args
     Args.parse rest { a with types := a.types ++ ((ts.splitOn ",").map String.toName).toArray }
   | "--coverage" :: ns :: rest, a =>
     Args.parse rest { a with coverage := a.coverage ++ ((ns.splitOn ",").map String.toName).toArray }
+  | "--internal" :: ns :: rest, a =>
+    Args.parse rest { a with internal := a.internal ++ ((ns.splitOn ",").map String.toName).toArray }
+  | "--linkage" :: ns :: rest, a =>
+    Args.parse rest { a with linkage := a.linkage ++ ((ns.splitOn ",").map String.toName).toArray }
   | "--abstract-types" :: ns :: rest, a =>
     Args.parse rest { a with abstractTypes := a.abstractTypes ++ ((ns.splitOn ",").map String.toName).toArray }
   | "--nominal-roots" :: ns :: rest, a =>
@@ -93,8 +109,12 @@ def Args.parse : List String → Args → Args
   | r :: rest, a => Args.parse rest { a with roots := a.roots.push r.toName }
   | [], a => a
 
-/-- The format of the recipe this module reads. -/
-def recipeFormat : String := "effect4-lcnf-roots-v2"
+/-- The roots an artifact's interface exports: the `public` roots, then the `linkage` roots. -/
+def Args.exported (a : Args) : Array Name := a.roots ++ a.linkage
+
+/-- Every root an artifact translates, in the order the closure walk starts from them: `public`,
+`linkage`, `internal`, then `coverage` (`Export.ExportClass.all`). -/
+def Args.translated (a : Args) : Array Name := a.roots ++ a.linkage ++ a.internal ++ a.coverage
 
 /-- The command an artifact's header carries: the driver run on this artifact alone. -/
 def commandOf (argv : List String) : String :=
@@ -103,10 +123,12 @@ def commandOf (argv : List String) : String :=
 /-- One recipe entry's argv, in the recipe's fixed order: `--out`, one `--import` per module,
 `--cap`, `--types` (comma-joined, when any), `--modules` (when the entry is the program types'
 owner, `"modules": true`), `--externs`, `--prelude`, `--open` and `--open-types` (when the entry
-opens another artifact's module), the roots in the order listed, then the coverage roots. It is
-the text of the artifact's header. `typesOf` gives an artifact's requested types by its `out`, so
-an `open` names the artifact once and its types are read from it. -/
-def argvOf (typesOf : String → Option (List String)) (entry : Json) :
+opens another artifact's module), the hidden roots (`--coverage`, `--internal`), the `--linkage`
+roots, then the `public` roots, each class in the order listed. The classes are the checked plan's
+(`Export.CheckedPlan.rootsOf`), so a contradictory recipe never reaches a command. It is the text of
+the artifact's header. `typesOf` gives an artifact's requested types by its `out`, so an `open`
+names the artifact once and its types are read from it. -/
+def argvOf (plan : Export.CheckedPlan) (typesOf : String → Option (List String)) (entry : Json) :
     Except String (List String) := do
   let out ← entry.getObjValAs? String "out"
   let imports := (entry.getObjValAs? (List String) "import").toOption.getD []
@@ -114,8 +136,12 @@ def argvOf (typesOf : String → Option (List String)) (entry : Json) :
   let types := (entry.getObjValAs? (List String) "types").toOption.getD []
   let nominalRoots := (entry.getObjValAs? (List String) "nominal").toOption.getD []
   let abstractTypes := (entry.getObjValAs? (List String) "abstract").toOption.getD []
-  let roots ← entry.getObjValAs? (List String) "roots"
-  let coverage := (entry.getObjValAs? (List String) "coverage").toOption.getD []
+  let unit := Export.unitOf out
+  -- the recipe's own spelling: no `«»` escape, so `Effect4.Live.open` stays as the recipe writes it
+  let classOf (cls : Export.ExportClass) : List String :=
+    (plan.rootsOf unit cls).map (·.toString (escape := false))
+  let listed (option : String) (cls : Export.ExportClass) : List String :=
+    if (classOf cls).isEmpty then [] else [option, ",".intercalate (classOf cls)]
   let flag (name : String) : List String :=
     match entry.getObjValAs? String name with
     | .ok value => if value.isEmpty then [] else ["--" ++ name, value]
@@ -135,20 +161,23 @@ def argvOf (typesOf : String → Option (List String)) (entry : Json) :
     ++ (if nominalRoots.isEmpty then [] else ["--nominal-roots", ",".intercalate nominalRoots])
     ++ (if abstractTypes.isEmpty then [] else ["--abstract-types", ",".intercalate abstractTypes])
     ++ flag "externs" ++ flag "prelude" ++ opens
-    ++ (if coverage.isEmpty then [] else ["--coverage", ",".intercalate coverage]) ++ roots
+    ++ listed "--coverage" .coverage ++ listed "--internal" .internal ++ listed "--linkage" .linkage
+    ++ classOf .«public»
 
-/-- The recipe's artifacts, each as its argv, in the recipe's order. Another format is refused. -/
+/-- The recipe's artifacts, each as its argv, in the recipe's order. A recipe the plan checker
+refuses (`Export.readChecked`: another format, a misspelt class, a root in two classes, a public
+root in two artifacts, a failed `facade_resolves` or `public_excludes_coverage`) makes none. -/
 def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
-  let format ← recipe.getObjValAs? String "format"
-  unless format == recipeFormat do
-    throw s!"unsupported LCNF recipe format {format}; this generator reads {recipeFormat}"
+  let plan ← match Export.readChecked recipe with
+    | .ok p => pure p
+    | .error r => throw r.message
   let entries ← recipe.getObjValAs? (Array Json) "artefacts"
   let typesOf (out : String) : Option (List String) :=
     entries.findSome? fun e =>
       if (e.getObjValAs? String "out").toOption == some out then
         some ((e.getObjValAs? (List String) "types").toOption.getD [])
       else none
-  entries.mapM (argvOf typesOf)
+  entries.mapM (argvOf plan typesOf)
 
 /-- The `--out` paths of the recipe's artifacts, whose closure manifests are data in
 `GENERATED_PATHS` at `ocaml/gen/closure-<stem>.tsv` (decisions row 70). -/
@@ -168,8 +197,9 @@ def manifestPathFor (out : String) (recipeOuts : List String) : String :=
 
 /-- One row of the closure manifest: the Lean constant, the OCaml name it became, whether the
 emitted binding is recursive, the twenty-six mono-LCNF construct counts of its body
-(`constructs`, in that order) and `DeclHash`'s hash of the whole `Decl`, the
-identity of the *code*, stable across runs of one build.
+(`constructs`, in that order), `DeclHash`'s hash of the whole `Decl` (the identity of the *code*,
+stable across runs of one build), its user-facing name and whether the artifact's interface
+exports it as a root (`exported`: a `public` or `linkage` root).
 
 The mono declaration is read the way `translateClosure` reads it, out of `monoExt`'s module
 entries (`persistedMonoIndex`), never through `getMonoDecl?`: the module system's
@@ -177,14 +207,14 @@ export filter makes the two disagree (`tools/Conform/Lcnf/Validity.lean`, the se
 `monoExt`'s local state). A declaration the closure translated and the index cannot find is
 fatal, not a blank row. -/
 private def manifestRow (env : Environment) (mono : MonoIndex)
-    (roots : Array Name) (t : Translated) : MetaM String := do
+    (exported : Array Name) (t : Translated) : MetaM String := do
   let some d := mono.findIn? env t.leanName
     | throwError s!"closure manifest: no mono declaration for {t.leanName}"
   let census := Census.ofDecl {} d
   return "\t".intercalate
     ([toString t.leanName, t.ocamlName, toString t.recursive]
       ++ constructs.map (fun k => toString (census.get k))
-      ++ [toString (hash d), toString t.userName, toString (roots.contains t.userName)])
+      ++ [toString (hash d), toString t.userName, toString (exported.contains t.userName)])
 
 /-- A public root's original type after proof and type parameters erase. Unlike mono types,
 this type keeps the package names that an OCaml interface makes abstract. An unspelled binder
@@ -277,8 +307,8 @@ def run (argv : List String) (recipeOuts : List String)
   if args.out.isEmpty || args.imports.isEmpty then
     throwError "LcnfGen: `--out <path>` and at least one `--import <module>` are required"
   for root in args.nominalRoots do
-    unless args.roots.contains root do
-      throwError s!"nominal root {root}: it is not a translation root"
+    unless args.exported.contains root do
+      throwError s!"nominal root {root}: it is not an exported root (public or linkage)"
   let handEx : Externs ← match args.externs with
     | none => pure {}
     | some path => do
@@ -307,9 +337,9 @@ def run (argv : List String) (recipeOuts : List String)
     tn := otn
     provided := (og.full ++ og.aliases).foldl (·.insert ·) {}
     openedModules := og.entries.toList.filterMap fun (n, d, _) => (otn.modules[n]?).map fun m => (m, [d])
-  if args.modules && !(args.roots.isEmpty && args.opens.isNone) then
+  if args.modules && !(args.translated.isEmpty && args.opens.isNone) then
     throwError "LcnfGen: `--modules` declares the program types alone: no roots and no `--open`"
-  let (closure0, ex, inferred) ← translateClosureInferring (args.roots ++ args.coverage) args.cap tn handEx
+  let (closure0, ex, inferred) ← translateClosureInferring args.translated args.cap tn handEx
   let t1 ← IO.monoNanosNow
   let mut closure := closure0
   let (_, nominalRefs) ← nominalRootTypes ex tn args.nominalRoots
@@ -373,7 +403,7 @@ def run (argv : List String) (recipeOuts : List String)
   let manifestPath := manifestPathFor args.out recipeOuts
   let manifestHeader := "\t".intercalate
     (["lean", "ocaml", "recursive"] ++ constructs ++ ["declHash", "user", "root"])
-  let manifestRows ← closure.decls.mapM (manifestRow env monoIndex args.roots)
+  let manifestRows ← closure.decls.mapM (manifestRow env monoIndex args.exported)
   let manifestText := String.intercalate "\n" (manifestHeader :: manifestRows.toList) ++ "\n"
   IO.println s!"closure: {closure.decls.size} of --cap {args.cap} \
     ({args.cap - closure.decls.size} of headroom); manifest {manifestPath}"
@@ -464,11 +494,12 @@ def run (argv : List String) (recipeOuts : List String)
       unless closure.usedCargs.contains n do stale := stale.push s!"carg {n}"
     unless stale.isEmpty do
       throwError "extern rows no declaration hit (a stale ledger): {stale}"
-  -- Public values are source roots. Coverage contributes code only.
+  -- The interface exports the public and linkage roots (`Export.ExportClass.exported`); the
+  -- internal and coverage roots contribute code only.
   let mut rootNames : Array String := #[]
-  for root in args.roots do
+  for root in args.exported do
     let some translated := closure.decls.find? (·.userName == root)
-      | throwError s!"public root {root}: no translated binding"
+      | throwError s!"exported root {root}: no translated binding"
     rootNames := rootNames.push translated.ocamlName
   let interfaceData := Json.mkObj [
     ("roots", toJson rootNames),
@@ -488,7 +519,7 @@ def run (argv : List String) (recipeOuts : List String)
     IO.FS.writeFile (output.toString ++ ".interface.json") (interfaceData.pretty ++ "\n")
   -- An artifact with no roots declares types only: it translates nothing, so it has no closure
   -- to record.
-  unless (args.roots ++ args.coverage).isEmpty do
+  unless args.translated.isEmpty do
     let manifest := destination manifestPath
     IO.FS.createDirAll (manifest.parent.getD ".")
     IO.FS.writeFile manifest manifestText

@@ -104,7 +104,9 @@ fresh run.
 * `eff/`: the two theorems its report states (erase ⇒ `wellTyped`; encode/decode exactness).
 
 The LCNF producer infers interfaces from fresh OCaml typed trees.
-It exports recipe roots and retained prelude values.
+Each recipe root has one export class (`OCaml5.Lcnf.Export`): public, linkage, internal or coverage.
+It exports the public and linkage roots and retained prelude values, and hides the internal and coverage roots.
+`scripts/check-export-classes.py` compiles clients against the result: a linkage root links, and a hidden root is unbound.
 It seals the packages the recipe lists (`abstract` in `gen/roots.json`) as whole abstract types: the checker's `Checked`, `Memo`, `Oracle` and `HitRule`, `Live`, `Built`, and the tool's native `Session` and `State`.
 It compiles every interface and implementation before publishing the generated family.
 `gen/interface/test_interface.ml` checks root selection, abstract packages, final ascriptions, and refusals.
