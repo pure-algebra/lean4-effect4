@@ -83,6 +83,8 @@ import Effect4.Laws.Program.HostBoundary
 import Effect4.Laws.Api.HostSession
 import Effect4.Laws.Api.Built
 import Effect4.Laws.Tool.Serve
+import Effect4.Laws.Tool.CodecProfile
+import Effect4.Laws.Tool.Wire
 import Effect4.Laws.Api.Runner
 import Effect4.Laws.Api.RunnerBytes
 import Effect4.Laws.Api.Frontier

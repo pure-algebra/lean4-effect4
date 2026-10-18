@@ -250,6 +250,7 @@ def registry : Registry where
         `Effect4.Laws.Api.HostSession,
         `Effect4.Laws.Api.Built,
         `Effect4.Laws.Tool.Serve,
+        `Effect4.Laws.Tool.Wire,
         `Effect4.Laws.Api.Frontier,
         `Effect4.Laws.Api.Guard,
         `Effect4.Laws.Program.RowProtocol
@@ -978,6 +979,12 @@ def registry : Registry where
     { id := "tool-transcript-replays", concept := "host-session-protocol", role := .compatibility
       title := "A tool state's transcript replays from the empty state to its raw state; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
       pointer := .witness `Effect4.Tool.transcript_replays },
+    { id := "tool-serve-answers", concept := "host-session-protocol", role := .compatibility
+      title := "Every reply that serve gives pairs with its request (Wire.responds); no JSON decoding exactness, native driver or host progress claim (seams S3b, R6)"
+      pointer := .witness `Effect4.Tool.serve_answers },
+    { id := "codec-profile-retains-value", concept := "exact-codecs", role := .compatibility
+      title := "A successful guarded JSON write reads back as the original canonical value; no total writing, raw JSON text identity or native parser claim (seams S3b, R12)"
+      pointer := .witness `Effect4.Tool.CodecProfile.write_read },
     { id := "built-admission-exact", concept := "host-session-protocol", role := .compatibility
       title := "Built.ofSketch returns exactly the full program-admission refusal at the application extended by the sketch's hole rows, and Built.ofProgram at the recorded application exactly; no native forgery, host execution, or progress claim (seams S4, R6 and R13)"
       pointer := .witness `Effect4.Api.Built.ofSketch_error_iff },

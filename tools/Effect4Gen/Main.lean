@@ -118,6 +118,9 @@ structure St where
   members : Array MemberInfo := #[]
   foreigns : Array ForeignInfo := #[]
   auxes : Array Aux := #[]
+  /-- `--qualified-names`: foreign identifiers are qualified too, so two foreign types with one
+  short head (`LiveRecord.Refusal`, `Run.Preview.Refusal`) get distinct `lift_` lemmas. -/
+  qualifiedNames : Bool := false
 deriving Inhabited
 
 abbrev GenM := StateRefT St MetaM
@@ -160,6 +163,11 @@ partial def identOf (e : Expr) : String :=
   match fn with
   | .const n _ => shortName n ++ String.join (args.toList.map identOf)
   | _ => "X"
+
+/-- A collision-free identifier for the complete printed type, used only by opted-in groups. -/
+def qualifiedIdentOf (e : Expr) : String :=
+  "T" ++ String.ofList ((tyText e).toList.flatMap fun c =>
+    if c.isAlphanum then [c] else ("_" ++ toString c.toNat ++ "_").toList)
 
 /-- Does `needle` occur in `e`? Structural, because every type here is first order. -/
 partial def occurs (needle : Expr) (e : Expr) : Bool :=
@@ -271,8 +279,9 @@ def addForeign (ty : Expr) : GenM Slot := do
   | none =>
     -- Parenthesised: a foreign type stands as one argument of `shape`, `Canonical.ofVal` and
     -- every binder the emitted file writes it into.
+    let ident := if st.qualifiedNames then qualifiedIdentOf ty else identOf ty
     modify fun s =>
-      { s with foreigns := s.foreigns.push { ty, tyText := tyTextP ty, ident := identOf ty } }
+      { s with foreigns := s.foreigns.push { ty, tyText := tyTextP ty, ident } }
     return .foreign st.foreigns.size
 
 partial def classify (t : Expr) : GenM Slot := do
@@ -299,19 +308,21 @@ partial def classify (t : Expr) : GenM Slot := do
 
 /-- Build the item: the members with their classified constructors, the foreign types, the
 container companions. -/
-def buildItem (tags : Tools.WireTags.Assignment) (seed : Expr) : MetaM (St × Bool) := do
+def buildItem (tags : Tools.WireTags.Assignment) (seed : Expr)
+    (qualifiedNames : Bool := false) : MetaM (St × Bool) := do
   let tys ← blockMembers seed
   let env ← getEnv
-  let mut st : St := {}
+  let mut st : St := { qualifiedNames }
   -- Reserve the member rows first, so that `classify` can see every member.
   let mut idents : Array String := #[]
   for t in tys do
     let .const n _ := t.getAppFn | throwError "not a constant head: {t}"
     let base := shortName n
-    let ident := if idents.contains base then identOf t else base
+    let ident := if qualifiedNames then qualifiedIdentOf t
+      else if idents.contains base then identOf t else base
     idents := idents.push ident
     let row : MemberInfo :=
-      { ty := t, tyText := tyText t, shapeName := ident, ident := ident,
+      { ty := t, tyText := tyText t, shapeName := (if qualifiedNames then tyText t else ident), ident := ident,
         isStruct := isStructure env n, ctors := #[] }
     st := { st with members := st.members.push row }
   let act : GenM Unit := do
@@ -518,6 +529,33 @@ def emitForeignDefs (st : St) (tail : String) : EmitM Unit :=
 def argBinders (c : CtorInfo) : String :=
   String.join (c.args.toList.mapIdx fun i _ => s!" a{i}")
 
+/-- The binders of an arm lemma: a `list` slot binds the destructured element list. -/
+def armBinders (st : St) (c : CtorInfo) : String :=
+  String.join (c.args.toList.mapIdx fun i (_, sl) =>
+    match sl with
+    | .aux j => match st.auxes[j]!.kind with
+      | .list => s!" (v{i} : List Val)"
+      | _ => s!" (v{i} : Val)"
+    | _ => s!" (v{i} : Val)")
+
+/-- One reader arm as its own equation, proved by `rfl` (`--arm-lemmas`). A round-trip proof
+rewrites with it instead of the reader's equation lemmas, which Lean builds by splitting the
+whole match: past fifty arms that splitting outruns any budget (`Program.EffName`, 57 arms,
+docs/research/2026-10-18-codec-generator-large-recursive-sums.md). Each arm unfolds by `rfl`. -/
+def emitArmLemma (st : St) (reader : String) (lemma : String) (c : CtorInfo)
+    (singleMap : Bool) : EmitM Unit := do
+  emit s!"theorem {lemma}{armBinders st c} :"
+  emitJoin s!"    {reader} (.ctor {c.tag} ["
+    (c.args.toList.mapIdx fun i (_, sl) => rawPat st sl s!"v{i}") ", " "]) =" "      "
+  if singleMap then
+    emit s!"      ({rawOf st c.args[0]!.2 "v0"}).map .{c.name} := rfl"
+  else
+    emitJoin "      (match "
+      (c.args.toList.mapIdx fun i (_, sl) => rawOf st sl s!"v{i}") ", " " with" "          "
+    emitJoin "      | " (c.args.toList.mapIdx fun i _ => s!"some a{i}") ", "
+      s!" => some (.{c.name}{argBinders c})" "        "
+    emitJoin "      | " (c.args.toList.map fun _ => "_") ", " " => none) := rfl" "        "
+
 def valBinders (st : St) (c : CtorInfo) : String :=
   "[" ++ String.intercalate ", "
     (c.args.toList.mapIdx fun i (_, sl) => rawPat st sl s!"v{i}") ++ "]"
@@ -535,7 +573,8 @@ def emitContent (name : String) (m : MemberInfo) (kind : String) : EmitM Unit :=
 
 /-! ### The recursive item -/
 
-def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
+def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) (armLemmas : Bool := false) :
+    EmitM Unit := do
   emit s!"namespace {ns}"
   emit ""
   emit "/-! The block's shapes: every member by name, every field through its own type. -/"
@@ -619,18 +658,29 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
       emit "  | _ => none"
   emit "end"
   emit ""
+  if armLemmas then
+    emit "/-! Each reader arm as its own `rfl` equation, for the round-trip proofs below. -/"
+    emit ""
+    for m in st.members do
+      for j in [0:m.ctors.size] do
+        let c := m.ctors[j]!
+        if !c.args.isEmpty then
+          emitArmLemma st s!"raw{m.ident}" s!"raw{m.ident}_arm{j}" c false
+    emit ""
   -- raw_toVal
   emit "mutual"
   for m in st.members do
     emitTwo "" s!"theorem raw{m.ident}_toVal{m.ident}" s!"(a : {m.tyText}) :"
     emit s!"    raw{m.ident} (toVal{m.ident} a) = some a := by"
     emit "  cases a with"
-    for c in m.ctors do
+    for j in [0:m.ctors.size] do
+      let c := m.ctors[j]!
+      let reader := if armLemmas then s!"raw{m.ident}_arm{j}" else s!"raw{m.ident}"
       if c.args.isEmpty then
         emit s!"  | «{c.name}»{argBinders c} => rfl"
       else
         emit s!"  | «{c.name}»{argBinders c} =>"
-        emitJoin s!"    simp only [toVal{m.ident}, raw{m.ident}, "
+        emitJoin s!"    simp only [toVal{m.ident}, {reader}, "
           (dedup (c.args.toList.mapIdx fun i (_, sl) => rawToValOf st sl s!"a{i}")) ", " "]"
           "      "
     emit "termination_by structural a"
@@ -755,7 +805,8 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
 
 /-! ### The non-recursive item -/
 
-def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
+def emitPlain (st : St) (ns : String) (kinds : Array KindReq) (armLemmas : Bool := false) :
+    EmitM Unit := do
   let m := st.members[0]!
   let nf := st.foreigns.size
   emit s!"namespace {ns}"
@@ -837,15 +888,31 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
     -- Each case is proved by its own script, chosen by its arity, so no case tries another's:
     -- `simp only` names the lemmas that `simp?` reports for that arity, and `ofVal_exact` takes
     -- the arms of `split` in the order of `ofVal`'s cases, then the wildcard's arms.
+    if armLemmas then
+      emit "/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/"
+      emit ""
+      for j in [0:m.ctors.size] do
+        let c := m.ctors[j]!
+        if !c.args.isEmpty then
+          emitArmLemma st "ofVal" s!"ofVal_arm{j}" c (c.args.size == 1)
+      emit ""
     emit s!"theorem ofVal_toVal (a : {m.tyText}) : ofVal (toVal a) = some a := by"
     emit "  cases a with"
-    for c in m.ctors do
+    for j in [0:m.ctors.size] do
+      let c := m.ctors[j]!
+      let reader := if armLemmas then s!"ofVal_arm{j}" else "ofVal"
       let lemmas :=
         if c.args.isEmpty then "toVal, ofVal"
-        else if c.args.size == 1 then "toVal, ofVal, Canonical.ofVal_toVal, Option.map_some"
-        else "toVal, ofVal, Canonical.ofVal_toVal"
-      emit s!"  | «{c.name}»{argBinders c} => simp only [{lemmas}]"
+        else if c.args.size == 1 then s!"toVal, {reader}, Canonical.ofVal_toVal, Option.map_some"
+        else s!"toVal, {reader}, Canonical.ofVal_toVal"
+      if armLemmas && c.args.isEmpty then
+        emit s!"  | «{c.name}»{argBinders c} => rfl"
+      else
+        emit s!"  | «{c.name}»{argBinders c} => simp only [{lemmas}]"
     emit ""
+  -- Under `--arm-lemmas` a sum takes the recursive item's exactness: the reader is guarded by
+  -- re-encoding (`guarded`), so no proof splits the whole match.
+  if !isStructLike && !armLemmas then
     emit ("theorem ofVal_exact {v : Val} {a : " ++ m.tyText ++ "} (h : ofVal v = some a) :")
     emit "    v = toVal a := by"
     emit "  unfold ofVal at h"
@@ -901,7 +968,11 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
       emitFitsChain "    " head (c.args.toList.mapIdx fun i (_, sl) => fitsOf st sl s!"a{i}")
   emit ""
   emit s!"instance instCanonical : Canonical ({m.tyText}) :="
-  emit "  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩"
+  if !isStructLike && armLemmas then
+    emit "  ⟨shapeDoc, toVal, guarded toVal ofVal,"
+    emit "    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩"
+  else
+    emit "  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩"
   emit ""
   if let some k := kindFor kinds m then
     emitContent "instContent" m k
@@ -965,6 +1036,11 @@ structure Args where
   /-- `--module`: write the header of Lean's module system
   (`Tools.GeneratedStamp.moduleText`). -/
   moduleHeader : Bool := false
+  /-- Qualified shape and declaration names for groups with repeated short type heads. -/
+  qualifiedNames : Bool := false
+  /-- `--arm-lemmas`: prove the round trip through one `rfl` equation per reader arm, not the
+  reader's own equation lemmas (`emitArmLemma`). Absent, the file keeps its bytes. -/
+  armLemmas : Bool := false
   /-- `--meta-imports A,B`: under `--module`, the modules whose code the appended guards run. -/
   metaImports : List String := []
   /-- `--kind <Type>=<kind>`, in the order given. -/
@@ -980,6 +1056,8 @@ partial def parseArgs : List String → Args → Except String Args
   | "--header-out" :: o :: rest, a => parseArgs rest { a with headerOut := some o }
   | "--append" :: p :: rest, a => parseArgs rest { a with append := some p }
   | "--module" :: rest, a => parseArgs rest { a with moduleHeader := true }
+  | "--qualified-names" :: rest, a => parseArgs rest { a with qualifiedNames := true }
+  | "--arm-lemmas" :: rest, a => parseArgs rest { a with armLemmas := true }
   | "--meta-imports" :: i :: rest, a =>
     parseArgs rest { a with metaImports := (i.splitOn ",").filter (· != "") }
   | "--kind" :: k :: rest, a =>
@@ -999,6 +1077,8 @@ def run (args : Args) : MetaM (Array String) := do
   -- The regenerating command, wrapped over `--`-comment lines so that no header line runs long.
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
   let head := "lake exe effect4gen Main --group " ++ args.group ++ Tools.GeneratedStamp.moduleFlags args.moduleHeader args.metaImports
+    ++ (if args.qualifiedNames then " --qualified-names" else "")
+    ++ (if args.armLemmas then " --arm-lemmas" else "")
     ++ " --imports " ++ String.intercalate "," args.imports
     ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
@@ -1055,12 +1135,13 @@ def run (args : Args) : MetaM (Array String) := do
   let mut done : Array Expr := #[]
   for s in seeds do
     if done.any (fun d => d == s) then continue
-    let (st, recursive) ← buildItem tags s
+    let (st, recursive) ← buildItem tags s args.qualifiedNames
     for m in st.members do
       done := done.push m.ty
     let ns := st.members[0]!.ident ++ "C"
     let emitAct : EmitM Unit :=
-      if recursive then emitRecursive st ns kinds else emitPlain st ns kinds
+      if recursive then emitRecursive st ns kinds args.armLemmas
+      else emitPlain st ns kinds args.armLemmas
     let (_, o) ← emitAct.run { lines := #[] }
     out := { out with lines := out.lines ++ o.lines }
   -- Every `--kind` must name a type this group emitted.

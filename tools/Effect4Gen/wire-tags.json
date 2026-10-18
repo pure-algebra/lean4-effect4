@@ -125,6 +125,46 @@
     "Effect4.Program.RowArg": {
       "active": {"name": 0, "str": 1},
       "retired": {}
+    },
+    "Effect4.Tool.RunForm": {
+      "active": {"view": 0, "record": 1, "journal": 2},
+      "retired": {}
+    },
+    "Effect4.Tool.PreviewQuery": {
+      "active": {"settle": 0, "frames": 1, "explore": 2},
+      "retired": {}
+    },
+    "Effect4.Tool.Action": {
+      "active": {"open_": 0, "edit": 1, "fill": 2, "publish": 3, "reset": 4, "start": 5, "restore": 6, "play": 7},
+      "retired": {}
+    },
+    "Effect4.Tool.Query": {
+      "active": {"doc": 0, "history": 1, "fills": 2, "suggest": 3, "run": 4, "preview": 5, "dry": 6, "discover": 7},
+      "retired": {}
+    },
+    "Effect4.Tool.Request": {
+      "active": {"act": 0, "ask": 1},
+      "retired": {}
+    },
+    "Effect4.Tool.Refusal": {
+      "active": {"noDocument": 0, "doc": 1, "fillsStale": 2, "fillsEmpty": 3, "admission": 4, "restore": 5, "preview": 6, "noRun": 7, "unresolved": 8, "suggest": 9, "place": 10, "noProgram": 11},
+      "retired": {}
+    },
+    "Effect4.Tool.ActionAnswer": {
+      "active": {"opened": 0, "edited": 1, "filled": 2, "published": 3, "reset": 4, "started": 5, "played": 6, "restored": 7},
+      "retired": {}
+    },
+    "Effect4.Tool.RunAnswer": {
+      "active": {"view": 0, "record": 1, "journal": 2},
+      "retired": {}
+    },
+    "Effect4.Tool.PreviewAnswer": {
+      "active": {"settled": 0, "frames": 1, "explored": 2},
+      "retired": {}
+    },
+    "Effect4.Tool.Answer": {
+      "active": {"acted": 0, "doc": 1, "history": 2, "fills": 3, "suggested": 4, "run": 5, "preview": 6, "dry": 7, "methods": 8},
+      "retired": {}
     }
   }
 }

@@ -810,6 +810,10 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 (`decode_iff`, `src/Effect4/Laws/Schema/Codec.lean`; `ofSchema_exact`, `src/Effect4/Schema/Bridge.lean`).
 
 #### 4. Required Properties and Obligations
+- **The tool wire's JSON profile (`codec-profile-retains-value`, seams S3b)**: a successful guarded JSON write
+  reads back as the original canonical value. `Tool.CodecProfile.write_read` states it in
+  `src/Effect4/Laws/Tool/CodecProfile.lean`. The profile refuses an option whose item can print null.
+  It serves R12 and establishes no total writing, raw JSON text identity or native parser correctness.
 - **Stored byte reading (`cas-node-read-exact`)**: every successful `Node.read` returns an exactly encoded node.
   The pointer is `Node.read_exact` (`src/Effect4/Store/Domain/NodeRead.lean`), with compatibility role.
   This law establishes no admission, hashing, capacity, or persistence property.
@@ -1565,6 +1569,9 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   (`tool-serve-refuses`, `tool-serve-query`). Any certified oracle serves the same answers and trace (`tool-serve-transparent`).
   A state's transcript replays to it (`tool-transcript-replays`). The theorems live in `src/Effect4/Laws/Tool/Serve.lean`.
   They serve R6 and R13 and establish no native execution, external-effect rollback or host progress.
+- **Tool replies pair with requests (seams S3b)**: every reply that `Tool.serve` gives pairs with its request
+  (`tool-serve-answers`, pointer `Tool.serve_answers` in `src/Effect4/Laws/Tool/Wire.lean`, a planned goal).
+  It serves R6 and establishes no JSON decoding exactness, native driver behaviour or host progress.
 - **Typed replay under session (`typed-replay-session`)**: Opening requires full admission at the application extended by the sketch's hole rows.
   `Api.Built.ofSketch_error_iff` states the exact refusal in `src/Effect4/Laws/Api/Built.lean` (`built-admission-exact`, R6 and R13).
   Each hole is a host row that the driver answers; a restore admits at the recorded application exactly (`Api.Built.ofProgram`).
