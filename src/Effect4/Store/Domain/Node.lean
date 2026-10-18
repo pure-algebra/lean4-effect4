@@ -450,7 +450,7 @@ private def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
 #guard Node.decode sampleNode.encode = some sampleNode
 #guard Node.decode (sampleNode.encode ++ [0]) = none
 #guard Node.decode (1 :: sampleNode.encode.drop 1) = none
-#guard Node.decode (0 :: 16 :: sampleNode.encode.drop 2) = none
+#guard Node.decode (0 :: 127 :: sampleNode.encode.drop 2) = none
 #guard Node.decode (0 :: 0 :: sampleNode.encode.drop 2) = none
 #guard Node.decode (sampleNode.encode.take 33) = none
 #guard Node.decode [] = none
@@ -460,8 +460,8 @@ private def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
 #guard sampleNode.checkedEdges = sampleNode.edges
 #guard (Node.mk 0 .schema zeroDigest sampleEntry).checkedEdges = []
 #guard (Val.ref 2 (List.replicate 32 1)).refs = [⟨.«export», ⟨List.replicate 32 1, by simp⟩⟩]
-#guard (Val.ref 16 (List.replicate 32 1)).refs = []
-#guard (Val.ref 16 (List.replicate 32 1)).malformedRef = true
+#guard (Val.ref 127 (List.replicate 32 1)).refs = []
+#guard (Val.ref 127 (List.replicate 32 1)).malformedRef = true
 #guard (Val.ref 2 (List.replicate 31 1)).malformedRef = true
 #guard (Val.ctor 0 [.ref 4 (List.replicate 32 7), .nat 3, .some (.ref 6 (List.replicate 32 9))]).refs =
   [⟨.schema, ⟨List.replicate 32 7, by simp⟩⟩, ⟨.annotation, ⟨List.replicate 32 9, by simp⟩⟩]
@@ -470,7 +470,7 @@ private def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
 #guard (Canonical.encode (AnyRef.mk .«export» zeroDigest)).length = 42
 #guard (Canonical.encode (AnyRef.mk .«export» zeroDigest)).take 10 = [0x0b, 0, 0, 0, 0, 0, 0, 0, 0x21, 0x02]
 #guard Canonical.decode (Canonical.encode (AnyRef.mk .program zeroDigest)) = some (AnyRef.mk .program zeroDigest)
-#guard Canonical.decode (α := AnyRef) (Val.encode (.ref 16 zeroDigest.bytes)) = none
+#guard Canonical.decode (α := AnyRef) (Val.encode (.ref 127 zeroDigest.bytes)) = none
 #guard Canonical.decode (α := AnyRef) (Val.encode (.ref 2 (List.replicate 31 0))) = none
 #guard (Canonical.shape AnyRef).accepts (Canonical.toVal (AnyRef.mk .tree zeroDigest)) = true
 

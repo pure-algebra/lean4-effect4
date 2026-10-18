@@ -11,6 +11,7 @@ type decode_error =
   | Short_spec
   | Bad_frame
   | Host_limit
+  | Unknown_tag of int
 
 type scan = {
   refs : E4_addr.Ref.t list;
@@ -20,6 +21,7 @@ type scan = {
 
 type pure_refusal =
   | Oversize of decode_error
+  | Unknown_tag of int
   | Bad_version_byte of int
   | Malformed_ref
   | Handle_in_content
@@ -61,9 +63,23 @@ let encode (n : t) : string =
 
    Descend only into tags 4, 5, 7, 10.  Tag 8 (`bytes`) is a LEAF: `Val.refs (.bytes bs) = []`
    (Node.lean:250), so a bytes payload that happens to be a valid ref frame yields no ref
-   (L-SCAN-2).  Tags 1, 2, 3, 6, 9, 11 and 12 are leaves too. *)
+   (L-SCAN-2).  Tags 1, 2, 3, 6, 9, 11, 12, 13 and 14 are leaves too. *)
 
 exception Refuse of decode_error
+
+(* `Val.floatFrame` (src/Effect4/Store/Carrier/Val.lean): the doubles the binary64 frame
+   holds, read off the exponent and fraction fields with no floating-point operation. A finite
+   integral double other than negative zero has an integer image instead, so its bits are not
+   a float frame. *)
+let float_frame (bits : Int64.t) : bool =
+  let exponent = Int64.to_int (Int64.logand (Int64.shift_right_logical bits 52) 0x7FFL) in
+  let fraction = Int64.logand bits 0xF_FFFF_FFFF_FFFFL in
+  if exponent = 2047 then true
+  else if exponent = 0 then
+    (not (Int64.equal fraction 0L)) || not (Int64.equal (Int64.shift_right_logical bits 63) 0L)
+  else if exponent < 1023 then true
+  else if exponent >= 1075 then false
+  else not (Int64.equal (Int64.logand fraction (Int64.pred (Int64.shift_left 1L (1075 - exponent)))) 0L)
 
 let walk (s : string) ~(pos : int) ~(limit : int) ~(rem : int)
     ~(on_ref : int -> int -> int -> unit) ~(on_handle : int -> int -> unit) : unit =
@@ -163,7 +179,20 @@ let walk (s : string) ~(pos : int) ~(limit : int) ~(rem : int)
             on_handle (Char.code (String.unsafe_get s st)) key;
             []
           end
-          else raise (Refuse Bad_frame)             (* tag 0, or 13..255: no such frame *)
+          else if tag = Eff_frame.tag_int then begin
+            (* `decodeBody`'s `Tag.int` arm: the digits of n in shortest form, for the negative
+               integer -(n+1); the value is unbounded, as a nat's is (D1). *)
+            if flen > 0 && String.unsafe_get s st = '\000' then raise (Refuse Bad_frame);
+            []
+          end
+          else if tag = Eff_frame.tag_float then begin
+            (* `decodeBody`'s `Tag.float` arm: exactly eight bytes, big-endian, whose bits are a
+               float frame (`float_frame` above). *)
+            if flen <> 8 then raise (Refuse Bad_frame);
+            if not (float_frame (String.get_int64_be s st)) then raise (Refuse Bad_frame);
+            []
+          end
+          else raise (Refuse (Unknown_tag tag : decode_error))  (* tag 0, or 15..255 *)
         in
         stack := children @ (cont :: rest);
         go ()
@@ -253,6 +282,7 @@ let handle_in_content (n : t) : bool =
 
 let check_pure (n : t) : (unit, pure_refusal) result =
   match payload_ok n.payload with
+  | Error (Unknown_tag tag : decode_error) -> Error (Unknown_tag tag : pure_refusal)
   | Error e -> Error (Oversize e)                        (* 1, 1' -- payload.WF / M9 *)
   | Ok () ->
     if n.version <> 0 then Error (Bad_version_byte n.version)   (* 2 *)

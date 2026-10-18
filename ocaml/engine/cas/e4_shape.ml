@@ -320,8 +320,9 @@ let r_fiber =
        reused";
   }
 
-(* ---- 16..23: reserved by CAS commit 1 and amendment M17; shapes from cas-design §4 and
-       A2 §1.9. Nothing in this estate mints one until the Lean side lands them (SH4). ---- *)
+(* ---- 16..23: the CAS append (DI-25), in Lean's `Kind` table; no Lean carrier files under
+       them yet, so the shapes are cas-design §4's and A2 §1.9's, except the checkpoint's, which
+       is the payload E4_checkpoint writes (SH4). ---- *)
 
 let r_job =
   {
@@ -384,16 +385,21 @@ let r_checkpoint =
   {
     kind = E4_kind.Checkpoint;
     status = Pending;
-    carriers = [ "cas-design §4 row `checkpoint`; A2 §1.9" ];
+    carriers =
+      [ "E4_checkpoint's byte table (ocaml/engine/cas/e4_checkpoint.mli)";
+        "cas-design §4 row `checkpoint`; A2 §1.9" ];
     fields =
-      [ Ref_field (args [ 0 ], Some E4_kind.Job); Data_field (args [ 1 ]);
-        Ref_field (args [ 2 ], Some E4_kind.Tape); Stamp (args [ 3 ]); Data_field (args [ 4 ]) ];
+      [ Ref_field (args [ 0 ], Some E4_kind.Job); Data_field (args [ 1 ]); Data_field (args [ 2 ]);
+        Data_field (args [ 3 ]); Stamp (args [ 4 ]); Data_field (args [ 5 ]);
+        Data_field (args [ 6 ]) ];
     note =
-      "ctor 0 [job:Ref Job, position:Nat, tapePrefix:Ref Tape, engine:Digest, image]. The image \
-       is either a `bytes` leaf or ctor 1 [list of Ref Chunk]; the chunk refs are tag-11 frames \
-       and E4_node.refs finds them without a row (SH1). `engine` is a stamp. The stable-cut \
-       rule is admission: tapePrefix is a Ref, so a checkpoint over an unstored tape is \
-       refused `Dangling` by the store (L-CP-1).";
+      "ctor 0 [job:Ref Job, position:Nat, tapePrefix:Option (Ref Tape), prev:Option (Ref \
+       Checkpoint), engine:Digest, imageLength:Nat, image], the payload E4_checkpoint writes. \
+       `engine` is a stamp. tapePrefix and prev are options (none, or some [ref]): a path into \
+       a none reaches no frame, so the row names each option frame as data, and the refs \
+       inside are tag-11 frames E4_node.refs finds exactly (SH1), as it finds the image's \
+       chunk and manifest refs. The stable-cut rule is admission: a present tapePrefix is a \
+       Ref, so a checkpoint over an unstored tape is refused `Dangling` by the store (L-CP-1).";
   }
 
 let r_profile =

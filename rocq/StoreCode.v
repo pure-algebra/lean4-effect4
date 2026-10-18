@@ -37,6 +37,14 @@ Inductive kind : Set :=
 | Kind_component : kind
 | Kind_vector : kind
 | Kind_fiber : kind
+| Kind_job : kind
+| Kind_tape : kind
+| Kind_log : kind
+| Kind_exits : kind
+| Kind_receipt : kind
+| Kind_checkpoint : kind
+| Kind_profile : kind
+| Kind_table : kind
 .
 
 Inductive digest : Set :=
@@ -615,6 +623,30 @@ Definition Kind_byte (v_x_1 : kind) : int :=
   | Kind_fiber =>
       let v__x_16 := 15%Z in
       v__x_16
+  | Kind_job =>
+      let v__x_17 := 16%Z in
+      v__x_17
+  | Kind_tape =>
+      let v__x_18 := 17%Z in
+      v__x_18
+  | Kind_log =>
+      let v__x_19 := 18%Z in
+      v__x_19
+  | Kind_exits =>
+      let v__x_20 := 19%Z in
+      v__x_20
+  | Kind_receipt =>
+      let v__x_21 := 20%Z in
+      v__x_21
+  | Kind_checkpoint =>
+      let v__x_22 := 21%Z in
+      v__x_22
+  | Kind_profile =>
+      let v__x_23 := 22%Z in
+      v__x_23
+  | Kind_table =>
+      let v__x_24 := 23%Z in
+      v__x_24
   end
 .
 
@@ -634,23 +666,39 @@ Definition Kind_all  : (list kind) :=
   let v__x_13 := Kind_component in
   let v__x_14 := Kind_vector in
   let v__x_15 := Kind_fiber in
-  let v__x_16 := nil in
-  let v__x_17 := (cons v__x_15 v__x_16) in
-  let v__x_18 := (cons v__x_14 v__x_17) in
-  let v__x_19 := (cons v__x_13 v__x_18) in
-  let v__x_20 := (cons v__x_12 v__x_19) in
-  let v__x_21 := (cons v__x_11 v__x_20) in
-  let v__x_22 := (cons v__x_10 v__x_21) in
-  let v__x_23 := (cons v__x_9 v__x_22) in
-  let v__x_24 := (cons v__x_8 v__x_23) in
-  let v__x_25 := (cons v__x_7 v__x_24) in
-  let v__x_26 := (cons v__x_6 v__x_25) in
-  let v__x_27 := (cons v__x_5 v__x_26) in
-  let v__x_28 := (cons v__x_4 v__x_27) in
-  let v__x_29 := (cons v__x_3 v__x_28) in
-  let v__x_30 := (cons v__x_2 v__x_29) in
-  let v__x_31 := (cons v__x_1 v__x_30) in
-  v__x_31
+  let v__x_16 := Kind_job in
+  let v__x_17 := Kind_tape in
+  let v__x_18 := Kind_log in
+  let v__x_19 := Kind_exits in
+  let v__x_20 := Kind_receipt in
+  let v__x_21 := Kind_checkpoint in
+  let v__x_22 := Kind_profile in
+  let v__x_23 := Kind_table in
+  let v__x_24 := nil in
+  let v__x_25 := (cons v__x_23 v__x_24) in
+  let v__x_26 := (cons v__x_22 v__x_25) in
+  let v__x_27 := (cons v__x_21 v__x_26) in
+  let v__x_28 := (cons v__x_20 v__x_27) in
+  let v__x_29 := (cons v__x_19 v__x_28) in
+  let v__x_30 := (cons v__x_18 v__x_29) in
+  let v__x_31 := (cons v__x_17 v__x_30) in
+  let v__x_32 := (cons v__x_16 v__x_31) in
+  let v__x_33 := (cons v__x_15 v__x_32) in
+  let v__x_34 := (cons v__x_14 v__x_33) in
+  let v__x_35 := (cons v__x_13 v__x_34) in
+  let v__x_36 := (cons v__x_12 v__x_35) in
+  let v__x_37 := (cons v__x_11 v__x_36) in
+  let v__x_38 := (cons v__x_10 v__x_37) in
+  let v__x_39 := (cons v__x_9 v__x_38) in
+  let v__x_40 := (cons v__x_8 v__x_39) in
+  let v__x_41 := (cons v__x_7 v__x_40) in
+  let v__x_42 := (cons v__x_6 v__x_41) in
+  let v__x_43 := (cons v__x_5 v__x_42) in
+  let v__x_44 := (cons v__x_4 v__x_43) in
+  let v__x_45 := (cons v__x_3 v__x_44) in
+  let v__x_46 := (cons v__x_2 v__x_45) in
+  let v__x_47 := (cons v__x_1 v__x_46) in
+  v__x_47
 .
 
 Fixpoint List_find_opt__at__Effect4_Store_Kind_ofByte_opt_spec_0 (v_b : int) (v_x_1 : (list kind)) {struct v_x_1} : (option kind) :=

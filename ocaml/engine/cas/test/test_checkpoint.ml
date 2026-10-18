@@ -14,8 +14,9 @@
      4  The store: write/read round trips whole and chunked, CP7's verification, CP2's
         `Dangling` for an unstored job, LAW LOG-REL (two jobs one content: the payloads differ
         in the job's 32 bytes and in nothing else; two positions: two addresses; two store
-        layouts: one address), the `prev` chain and CP3's `Fork`, the cycle refusal, and the
-        mutation check that a flipped byte inside a stored chunk makes `read` refuse.
+        layouts: one address), the `prev` chain and CP3's `Fork`, the cycle refusal, the
+        mutation check that a flipped byte inside a stored chunk makes `read` refuse, and an
+        occupied address (4d): `write` answers `Occupied` and commits nothing (CS1).
      5  CP9 / risk R8: `closure_streaming` visits exactly `E4_cas.closure`'s addresses,
         children first, without materialising the image.
      6  CP10: an ephemeral checkpoint files no node.
@@ -399,6 +400,28 @@ let node_bytes () =
      let refs = E4_node.scan_refs n.E4_node.payload in
      List.length refs = 3
      && not (List.exists (fun (r : E4_addr.Ref.t) -> E4_addr.Addr.equal r.E4_addr.Ref.addr cp.Ck.engine) refs));
+  (* E4_shape's row is this payload's shape: its seven fields at their paths, so the checked
+     queries read every form back exactly, with the optional refs present or absent.  The
+     row of five fields that stood before took the `prev` option for the stamp and refused. *)
+  let reads_back c =
+    let payload = Ck.payload_of c in
+    (match E4_shape.refs_of_checked E4_shape.table E4_kind.Checkpoint ~payload with
+     | Ok [ r ] -> E4_addr.Ref.equal r c.Ck.job
+     | Ok _ | Error _ -> false)
+    && (match E4_shape.stamps_of_checked E4_shape.table E4_kind.Checkpoint ~payload with
+        | Ok [ d ] -> String.equal d (E4_addr.Addr.bytes c.Ck.engine)
+        | Ok _ | Error _ -> false)
+    && (match E4_shape.cids_of_checked E4_shape.table E4_kind.Checkpoint ~payload with
+        | Ok [] -> true
+        | Ok _ | Error _ -> false)
+  in
+  check "E4_shape's checkpoint row reads the payload written, options present (every image form)"
+    (List.for_all (fun (_, image) -> reads_back (sample_cp image)) forms);
+  check "E4_shape's checkpoint row reads the payload written, options absent"
+    (reads_back bare);
+  check "E4_shape's checkpoint row has the payload's seven fields, the stamp at 4"
+    (List.length (E4_shape.fields_of E4_shape.table E4_kind.Checkpoint) = 7
+    && E4_shape.class_at E4_shape.table E4_kind.Checkpoint (E4_shape.args [ 4 ]) = E4_shape.Cls_stamp);
   check "the pending schema is a genesis: kind schema, the zero spec"
     (E4_kind.equal Ck.schema_node.E4_node.kind E4_kind.Schema
     && Ck.schema_node.E4_node.spec = E4_node.zero_digest
@@ -673,6 +696,88 @@ let mutation () =
     | Error e -> note "  refusal: %s\n" (Ck.read_error_word e)
     | Ok _ -> ());
     E4_cas.close_ro ro)
+
+(* ============================================================ 4d. an occupied address *)
+
+(* A store forged on disk record by record: a record filed under a key that is not its address
+   is not something `put` can make (test_cas.ml's `forge`). *)
+let forge dir records =
+  let p = E4_pack.open_ ~dir ~seg_max:(1 lsl 20) in
+  List.iter (fun (k, b) -> ignore (E4_pack.append p ~digest:k ~node_bytes:b)) records;
+  E4_pack.commit p;
+  let pe = E4_pack.pack_end p in
+  E4_pack.close p;
+  E4_control.commit ~path:(E4_control.control_path ~dir)
+    { E4_control.initial with pack_end = pe; generation = 1 }
+
+(* `write` used to drop the outcome of its puts: an address held by other bytes was taken for
+   the schema's or the checkpoint's, and the checkpoint was committed over it.  Now each put's
+   outcome is read: Conflict or Corrupt is `Occupied`, before any commit.  The forged
+   occupants do not hash to their addresses, so the outcome is Corrupt (CS1's re-hash). *)
+let occupied () =
+  print_endline "";
+  print_endline "== 4d. an occupied address: write answers Occupied and commits nothing ==";
+  let img = cell_image ~cells:8 ~cell:128 in
+  let squatter = E4_node.encode (job_node ~spec:(addr_of 90) "squatter") in
+  (* the control first: a clean store, and the address the write answers *)
+  let clean = fresh_dir () in
+  let st, spec, job = store_with_job clean in
+  let cp_addr =
+    match Ck.write st ~job ~position:0 ~machine_image:img ~prev:None () with
+    | Ok a -> a
+    | Error e -> failwith (Ck.write_error_word e)
+  in
+  let job_bytes = E4_node.encode (job_node ~spec "job-a") in
+  E4_cas.close st;
+  check "4d control: the clean store writes the checkpoint at its address"
+    (E4_addr.Addr.equal cp_addr
+       (E4_node.address
+          (Ck.node ~spec
+             { Ck.job = E4_addr.Ref.make E4_kind.Job job; position = 0; tape_prefix = None;
+               prev = None; engine = E4_addr.Addr.of_digest (E4_sha256.digest img);
+               image_length = String.length img; image = Ck.Whole img })));
+  (* (a) the schema's address holds other bytes *)
+  let d = fresh_dir () in
+  forge d [ (E4_addr.Addr.bytes Ck.schema_address, squatter) ];
+  let st = E4_cas.open_rw ~dir:d opts in
+  let ro = E4_cas.read_only st in
+  let before = E4_cas.count ro in
+  (match Ck.write st ~job ~position:0 ~machine_image:img ~prev:None () with
+   | Error (Ck.Occupied (E4_cas.Corrupt a)) ->
+     check "4d write answers Occupied (Corrupt) at the schema's address"
+       (E4_addr.Addr.equal a Ck.schema_address)
+   | Ok _ -> check "4d write answers Occupied when the schema's address is held" false
+   | Error e ->
+     check "4d write answers Occupied when the schema's address is held" false;
+     note "  got %s\n" (Ck.write_error_word e));
+  check "4d nothing was staged, committed or rooted"
+    (E4_cas.count ro = before && E4_cas.roots ro = []);
+  check "4d ensure_schema raises Store_error on the same store"
+    (match Ck.ensure_schema st with
+     | _ -> false
+     | exception E4_cas.Store_error _ -> true);
+  E4_cas.close st;
+  (* (b) the schema and the job are resident; the checkpoint's own address holds other bytes *)
+  let d = fresh_dir () in
+  forge d
+    [ (E4_addr.Addr.bytes Ck.schema_address, E4_node.encode Ck.schema_node);
+      (E4_addr.Addr.bytes job, job_bytes);
+      (E4_addr.Addr.bytes cp_addr, squatter) ];
+  let st = E4_cas.open_rw ~dir:d opts in
+  let ro = E4_cas.read_only st in
+  let before = E4_cas.count ro in
+  (match Ck.write st ~job ~position:0 ~machine_image:img ~prev:None () with
+   | Error (Ck.Occupied (E4_cas.Corrupt a)) ->
+     check "4d write answers Occupied (Corrupt) at the checkpoint's address"
+       (E4_addr.Addr.equal a cp_addr)
+   | Ok _ -> check "4d write answers Occupied when the checkpoint's address is held" false
+   | Error e ->
+     check "4d write answers Occupied when the checkpoint's address is held" false;
+     note "  got %s\n" (Ck.write_error_word e));
+  check "4d nothing was committed and no root moved, the squatter stays"
+    (E4_cas.count ro = before && E4_cas.roots ro = []
+     && E4_cas.get_bytes ro cp_addr = Some squatter);
+  E4_cas.close st
 
 (* ============================================================ 5. the streaming closure *)
 
@@ -965,6 +1070,7 @@ let () =
   run "round_trips" round_trips;
   run "chain" chain_and_head;
   run "mutation" mutation;
+  run "occupied" occupied;
   run "closure" closure;
   run "ephemeral" ephemeral;
   run "machine image" machine_image;

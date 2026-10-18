@@ -59,6 +59,14 @@
        segment, whose 27-byte head is part of the same staged batch.  A record larger than
        `seg_max - 27` gets a segment to itself and exceeds `seg_max`; the alternative is
        refusing a node the store admits.                 by construction; tested (Z1, Z2)
+   PK9 Sealing: a segment the durable end has passed is sealed, read-only (0444).  `sync`
+       seals the writer's segments below `pack_end` once its fsyncs are done, and `open_`
+       seals every segment below the writer's.  A sealed segment holds only fsynced bytes,
+       so a record that fails recovery inside one is damage, not a torn tail: `open_` with
+       [truncate] refuses with `Bad_pack` and cuts nothing.  A writer whose recovery ends
+       inside a sealed segment (an interior bad head, or [truncate:false] over damage) cannot
+       grow: the file system refuses its next write (EACCES; a superuser bypasses the bits).
+                                                        by construction; tested (Z10..Z13)
 
    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.2 (lane P1, 2026-09-08):
    D1  §1.2's `scan` both "reads the 41-byte header and seeks past node_bytes" (PK4) and can
@@ -103,7 +111,8 @@ exception Locked of string
 
 exception Bad_pack of string
 (** A segment head that is not this format at all: bad magic, an ASCII version this binary
-    does not know, a head CRC that fails, or a seg_index that is not the file's own. *)
+    does not know, a head CRC that fails, or a seg_index that is not the file's own; or a
+    recovery that would truncate a sealed segment (PK9). *)
 
 (* ---- the grammar, as constants ---- *)
 
@@ -131,7 +140,8 @@ val open_at :
     recovery check the CRC and re-hash every record from [from].  [truncate] (default true)
     discards the torn tail: the failing record's offset becomes the file's length and every
     later segment is unlinked (PK3, crash family X1).  With [truncate:false] the bytes stay
-    on disk and the next commit overwrites them. *)
+    on disk and the next commit overwrites them.  A failing record inside a sealed segment is
+    never truncated: [truncate] refuses it with `Bad_pack` (PK9). *)
 
 val open_reader : dir:string -> reader
 (** No lock.  Sees segments the writer creates later. *)
@@ -159,8 +169,9 @@ val flush : t -> unit
 
 val sync : t -> unit
 (** [flush] then ONE fsync(2) per segment written since the last sync, plus one directory
-    fsync if a segment file was created.  Advances [pack_end].  A no-op when nothing has
-    been staged or written since the last sync. *)
+    fsync if a segment file was created.  Advances [pack_end], then seals every segment the
+    new [pack_end] has passed (PK9).  A no-op when nothing has been staged or written since
+    the last sync. *)
 
 val commit : t -> unit
 (** §1.2's name for [sync]. *)

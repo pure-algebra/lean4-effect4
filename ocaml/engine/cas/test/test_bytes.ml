@@ -83,9 +83,11 @@ let decode_error_name = function
   | E4_node.Short_spec -> "Short_spec"
   | E4_node.Bad_frame -> "Bad_frame"
   | E4_node.Host_limit -> "Host_limit"
+  | (E4_node.Unknown_tag t : E4_node.decode_error) -> Printf.sprintf "Unknown_tag %d" t
 
 let refusal_name = function
   | E4_node.Oversize e -> "Oversize(" ^ decode_error_name e ^ ")"
+  | (E4_node.Unknown_tag t : E4_node.pure_refusal) -> Printf.sprintf "Unknown_tag %d" t
   | E4_node.Bad_version_byte b -> Printf.sprintf "Bad_version_byte %d" b
   | E4_node.Malformed_ref -> "Malformed_ref"
   | E4_node.Handle_in_content -> "Handle_in_content"
@@ -218,11 +220,6 @@ let test_kind () =
     (List.for_all (fun k -> E4_kind.is_content k <> E4_kind.is_run_relative k) E4_kind.all);
   check "K6 is_interior = {chunk}"
     (List.filter E4_kind.is_interior E4_kind.all = [ E4_kind.Chunk ]);
-  check "K1 in_lean is exactly bytes 1..15 (Kind.lean has 15 rows today)"
-    (List.filter E4_kind.in_lean E4_kind.all
-     = List.filter (fun k -> E4_kind.byte k <= 15) E4_kind.all
-     && List.length (List.filter E4_kind.in_lean E4_kind.all) = 15
-     && E4_kind.lean_max_byte = 15);
   check "K1 the reserved append is job 16 .. table 23"
     (E4_kind.byte E4_kind.Job = 16 && E4_kind.byte E4_kind.Tape = 17
      && E4_kind.byte E4_kind.Log = 18 && E4_kind.byte E4_kind.Exits = 19
@@ -536,6 +533,9 @@ let test_node_refusals () =
     (E4_be.framed 5 (v_unit ^ v_unit ^ v_unit)) E4_node.Trailing;
   refuses "a some of no frame" (E4_be.framed 7 "") E4_node.Bad_frame;
   refuses "a some of two frames" (E4_be.framed 7 (v_unit ^ v_unit)) E4_node.Trailing;
+  check "ND-frame a list of two frames back to back is accepted (the control)"
+    (E4_node.payload_ok (E4_be.framed 4 (v_unit ^ v_unit)) = Ok ());
+  refuses "a list with a byte left over" (E4_be.framed 4 (v_unit ^ "\000")) E4_node.Bad_frame;
   refuses "a ctor with no index frame" (E4_be.framed 10 "") E4_node.Bad_frame;
   refuses "a ctor whose index frame is not a nat"
     (E4_be.framed 10 (v_str "x")) E4_node.Bad_frame;
@@ -545,9 +545,29 @@ let test_node_refusals () =
   refuses "a handle with an empty payload" (E4_be.framed 12 "") E4_node.Bad_frame;
   refuses "a handle whose digits have a leading zero"
     (E4_be.framed 12 "\001\000\001") E4_node.Bad_frame;
-  refuses "tag 0" (E4_be.framed 0 "") E4_node.Bad_frame;
-  refuses "tag 13" (E4_be.framed 13 "") E4_node.Bad_frame;
-  refuses "tag 255" (E4_be.framed 255 "") E4_node.Bad_frame;
+  refuses "tag 0" (E4_be.framed 0 "") (E4_node.Unknown_tag 0);
+  refuses "tag 15, the first tag past Lean's" (E4_be.framed 15 "") (E4_node.Unknown_tag 15);
+  refuses "tag 255" (E4_be.framed 255 "") (E4_node.Unknown_tag 255);
+  refuses "tag 15 nested in a list" (E4_be.framed 4 (E4_be.framed 15 "")) (E4_node.Unknown_tag 15);
+  (* Tags 13 and 14 as `Val.decodeBody` reads them (src/Effect4/Store/Carrier/Val.lean). *)
+  let float_bits x =
+    let b = Bytes.create 8 in
+    Bytes.set_int64_be b 0 (Int64.bits_of_float x);
+    E4_be.framed 14 (Bytes.to_string b)
+  in
+  check "ND-frame tag 13 (negInt) is read as Lean reads it: no digits is -1, 256 is -257"
+    (E4_node.payload_ok (E4_be.framed 13 "") = Ok ()
+     && E4_node.payload_ok (E4_be.framed 13 "\001\000") = Ok ());
+  refuses "a negInt with a leading zero digit" (E4_be.framed 13 "\000\001") E4_node.Bad_frame;
+  check "ND-frame tag 14 (float) holds the doubles with no integer image: 0.5, 2.5, -0, inf, nan"
+    (List.for_all (fun x -> E4_node.payload_ok (float_bits x) = Ok ())
+       [ 0.5; 2.5; -0.0; Float.infinity; Float.neg_infinity; Float.nan; 1e-310 ]);
+  List.iter
+    (fun (label, x) -> refuses ("a float frame holding " ^ label) (float_bits x) E4_node.Bad_frame)
+    [ ("1.0, whose image is the nat 1", 1.0); ("+0, whose image is the nat 0", 0.0);
+      ("-3.0, whose image is negInt 2", -3.0); ("2^53, an integer", 9007199254740992.0) ];
+  refuses "a float frame of seven bytes" (E4_be.framed 14 "\063\224\000\000\000\000\000") E4_node.Bad_frame;
+  refuses "a float frame of nine bytes" (E4_be.framed 14 "\063\224\000\000\000\000\000\000\000") E4_node.Bad_frame;
   refuses "two frames where one is owed" (v_unit ^ v_unit) E4_node.Trailing;
   refuses "one frame and a trailing byte" (v_unit ^ "\000") E4_node.Trailing;
 
@@ -799,20 +819,12 @@ let check_cases dir goldens =
           ((if ok then o + 1 else o), t + 1, if ok then bad else name :: bad);
         if not ok then note "  %s %s: %s" group name detail
       in
-      let m2_pending = ref [] in
-      let k1_pending = ref [] in
-      (* The goldens were cut from TODAY's Lean, whose Kind table stops at 15
-         (src/Effect4/Store/Kind.lean:96-98).  This side carries CAS commit 1's append, so a
-         ref frame at kind byte 16..23 is registered here and unregistered there.  These two
-         projections are "what Lean's table would say", and a row that agrees under them is a
-         pending re-cut, not a disagreement. *)
-      let lean_refs s =
-        List.filter (fun r -> E4_kind.in_lean r.E4_addr.Ref.kind) s.E4_node.refs
-      in
-      let lean_malformed s =
-        s.E4_node.malformed
-        || List.exists (fun r -> not (E4_kind.in_lean r.E4_addr.Ref.kind)) s.E4_node.refs
-      in
+      (* Amendment M2 (a handle frame in a content payload) is an owner call
+         (docs/research/2026-09-08-cas-amendments.md §3): this side refuses it, Lean's putNode
+         admits it.  The one golden row that shows the difference is named here and reported
+         apart; any other difference is a failure. *)
+      let m2_row = "g2-handle-in-content" in
+      let owner_calls = ref [] in
       (* A row whose expected column is a 64-character digest: the bytes hash to it, and they
          are either a node envelope that re-encodes exactly and addresses to it, or one
          well-formed frame tree. *)
@@ -838,6 +850,11 @@ let check_cases dir goldens =
                if is_hex64 expected then
                  record "a1" (sha = expected) name
                    (Printf.sprintf "sha256 is %s, cases.txt says %s" sha expected)
+               else if String.equal expected "refused" then
+                 (* Lean's Val.decode refuses these bytes, so the walk must too. *)
+                 record "a1"
+                   (Result.is_error (E4_node.payload_ok bytes))
+                   name "the walk accepts bytes Lean's Val.decode refuses"
                else
                  record "a1"
                    (E4_node.payload_ok bytes = Ok ())
@@ -860,25 +877,12 @@ let check_cases dir goldens =
                      | "fresh" | "duplicate" | "conflict" | "dangling" | "wrongKind" -> true
                      | _ -> false
                    in
-                   let lean_says_malformed =
-                     match E4_node.scan_payload n.E4_node.payload with
-                     | Ok s -> lean_malformed s
-                     | Error _ -> false
-                   in
                    (match word, got with
                     | "badVersion", Error (E4_node.Bad_version_byte _) -> record "g2" true name ""
                     | "malformedRef", Error E4_node.Malformed_ref -> record "g2" true name ""
                     | "oversize", Error (E4_node.Oversize _) -> record "g2" true name ""
-                    | "malformedRef", Ok () when lean_says_malformed ->
-                      (* the ref's kind byte is 16..23: unregistered in today's Lean, a
-                         registered kind here.  CAS commit 1 is what closes this. *)
-                      k1_pending := name :: !k1_pending;
-                      record "g2" true name ""
-                    | _, Error E4_node.Handle_in_content when want_ok ->
-                      (* amendment M2 is not in Lean yet: Lean admits a handle in content and
-                         this side refuses it.  The divergence is exactly here, by design. *)
-                      m2_pending := name :: !m2_pending;
-                      record "g2" true name ""
+                    | "fresh", Error E4_node.Handle_in_content when String.equal name m2_row ->
+                      owner_calls := name :: !owner_calls
                     | _, Ok () when want_ok -> record "g2" true name ""
                     | _ ->
                       record "g2" false name
@@ -904,19 +908,7 @@ let check_cases dir goldens =
                      let ok =
                        got_refs = want_refs && s.E4_node.malformed = want_malformed
                      in
-                     let lean_got =
-                       List.map
-                         (fun r ->
-                           string_of_int (E4_kind.byte r.E4_addr.Ref.kind) ^ ":"
-                           ^ E4_addr.Addr.hex r.E4_addr.Ref.addr)
-                         (lean_refs s)
-                     in
-                     let ok_under_lean_table =
-                       lean_got = want_refs && lean_malformed s = want_malformed
-                     in
-                     if (not ok) && ok_under_lean_table then
-                       k1_pending := name :: !k1_pending;
-                     record "g5" (ok || ok_under_lean_table) name
+                     record "g5" ok name
                        (Printf.sprintf "refs [%s] vs [%s]; malformed %b vs %b"
                           (String.concat "," got_refs) (String.concat "," want_refs)
                           s.E4_node.malformed want_malformed)))
@@ -935,17 +927,19 @@ let check_cases dir goldens =
           check (Printf.sprintf "G-case family %s: %d/%d rows agree" group ok total)
             (ok = total))
         tally;
-      if !m2_pending <> [] then begin
-        note "amendment M2 is not in Lean yet: %s" (String.concat " " !m2_pending);
-        note "  Lean admits a handle frame in a content payload (`fresh`); check_pure refuses";
-        note "  it as Handle_in_content.  When CAS commit 7 lands, G2 must be re-cut."
-      end;
-      if !k1_pending <> [] then begin
-        note "CAS commit 1 is not in Lean yet: %s" (String.concat " " !k1_pending);
-        note "  these rows use kind byte 16 as `the unregistered byte`; 16 is `job` under the";
-        note "  append, and amendment M4 moved the sentinel to 127.  Each row agrees under";
-        note "  today's 15-row Lean table and must be re-cut at 127 with CAS commit 1."
-      end
+      (* The tripwire: the exception holds exactly its one row.  When the owner rules M2 and the
+         goldens are re-cut, the row agrees, this check fails, and the exception goes. *)
+      check
+        (Printf.sprintf "G2 the one row that differs is amendment M2's owner call (%s: Lean fresh, check_pure Handle_in_content)" m2_row)
+        (List.equal String.equal !owner_calls [ m2_row ]);
+      (* K1 against Lean's own table: every kind this side knows has its Lean-cut node. *)
+      check "K1 every kind of E4_kind has a Lean-cut node golden of that kind (g1-kind-<name>)"
+        (List.for_all
+           (fun k ->
+             match List.find_opt (fun g -> String.equal g.g_name ("g1-kind-" ^ E4_kind.name k)) goldens with
+             | Some { g_node = Some n; _ } -> E4_kind.equal n.E4_node.kind k
+             | _ -> false)
+           E4_kind.all)
     end
   end
 
@@ -985,13 +979,25 @@ let check_goldens () =
           in
           if ok then incr shaped else unshaped := g.g_name :: !unshaped)
         goldens;
+      (* The goldens that are neither, on purpose: g2-badVersion (a version byte of 1) and the
+         a1-decode rows whose bytes Lean's Val.decode refuses (cases.txt says `refused`). *)
+      let refused_rows =
+        let path = Filename.concat dir "cases.txt" in
+        if not (Sys.file_exists path) then []
+        else
+          In_channel.with_open_bin path In_channel.input_all
+          |> String.split_on_char '\n'
+          |> List.filter_map (fun l ->
+                 match String.split_on_char '\t' l with [ name; _; "refused" ] -> Some name | _ -> None)
+      in
+      let expected_unshaped = List.sort String.compare ("g2-badVersion" :: refused_rows) in
       check
         (Printf.sprintf
-           "G-bytes %d/%d goldens are a node that re-encodes exactly, or one frame tree"
-           !shaped (List.length goldens))
-        (List.length !unshaped <= 1);
-      if !unshaped <> [] then
-        note "  neither: %s (expected: g2-badVersion alone)" (String.concat " " !unshaped);
+           "G-bytes %d/%d goldens are a node that re-encodes exactly or one frame tree, and the %d others are exactly g2-badVersion and the rows Lean refuses"
+           !shaped (List.length goldens) (List.length !unshaped))
+        (List.equal String.equal (List.sort String.compare !unshaped) expected_unshaped);
+      if not (List.equal String.equal (List.sort String.compare !unshaped) expected_unshaped) then
+        note "  neither: %s; expected: %s" (String.concat " " !unshaped) (String.concat " " expected_unshaped);
 
       check_manifest dir goldens;
       check_cases dir goldens;

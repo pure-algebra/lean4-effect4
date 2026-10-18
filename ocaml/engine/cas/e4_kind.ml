@@ -6,7 +6,7 @@ type t =
   | Chunk | Tree | Manifest | Component | Vector | Fiber
   | Job | Tape | Log | Exits | Receipt | Checkpoint | Profile | Table
 
-(* src/Effect4/Store/Kind.lean:60-75 for 1..15; cas-design §4 for 16..22; M17 for 23. *)
+(* Lean's `Kind.byte` (src/Effect4/Store/Carrier/Kind.lean), all 23 rows. *)
 let byte = function
   | Source -> 1
   | Export -> 2
@@ -32,7 +32,7 @@ let byte = function
   | Profile -> 22
   | Table -> 23
 
-(* src/Effect4/Store/Kind.lean:78-93 for 1..15; the amendment's spellings for 16..23. *)
+(* Lean's `Kind.name`. *)
 let name = function
   | Source -> "source"
   | Export -> "export"
@@ -58,13 +58,13 @@ let name = function
   | Profile -> "profile"
   | Table -> "table"
 
-(* src/Effect4/Store/Kind.lean:96-98, extended: the census, in byte order. *)
+(* Lean's `Kind.all`: the census, in byte order. *)
 let all =
   [ Source; Export; Type; Schema; Program; Annotation; Entry; Query; Result;
     Chunk; Tree; Manifest; Component; Vector; Fiber;
     Job; Tape; Log; Exits; Receipt; Checkpoint; Profile; Table ]
 
-(* Kind.ofByte? (:101).  A match, so the compiler builds the jump table; every byte outside
+(* Lean's `Kind.ofByte?`.  A match, so the compiler builds the jump table; every byte outside
    1..23 is None -- the unregistered-byte refusal (K2). *)
 let of_byte = function
   | 1 -> Some Source
@@ -92,16 +92,14 @@ let of_byte = function
   | 23 -> Some Table
   | _ -> None
 
-(* Kind.ofName? (:104): a lookup in the census, case-sensitive (Kind.lean:158). *)
+(* Lean's `Kind.ofName?`: a lookup in the census, case-sensitive. *)
 let of_name (s : string) : t option =
   List.find_opt (fun k -> String.equal (name k) s) all
 
 let sentinel = 127
 let version_byte = 0
-let lean_max_byte = 15
 
 let is_registered (b : int) : bool = of_byte b <> None
-let in_lean (k : t) : bool = byte k <= lean_max_byte
 
 let tombstoned = function Fiber -> true | _ -> false
 

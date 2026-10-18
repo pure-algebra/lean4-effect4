@@ -63,10 +63,11 @@ type ro = view
 
 (* ============================================================ 2. the types *)
 
-type outcome = Fresh | Duplicate | Conflict of E4_node.t
+type outcome = Fresh | Duplicate | Conflict of E4_node.t | Corrupt of E4_addr.Addr.t
 
 type admission =
   | Oversize
+  | Unknown_tag of int
   | Host_limit of string
   | Bad_version of int
   | Malformed_ref
@@ -78,6 +79,7 @@ type verify_error =
   | Digest_mismatch of E4_addr.Addr.t
   | Undecodable of E4_addr.Addr.t
   | Verify_malformed_ref of E4_addr.Addr.t
+  | Verify_handle_in_content of E4_addr.Addr.t
   | Verify_dangling of { node : E4_addr.Addr.t; missing : E4_addr.Addr.t }
   | Verify_wrong_kind of {
       node : E4_addr.Addr.t;
@@ -122,6 +124,7 @@ type binding = { addr : E4_addr.Addr.t; node : E4_node.t }
 type word_error =
   | Refused_by of admission
   | Word_conflict of { at : E4_addr.Addr.t; occupant : E4_node.t }
+  | Word_corrupt of E4_addr.Addr.t
 
 type stats = {
   nodes : int;
@@ -137,9 +140,11 @@ let outcome_word = function
   | Fresh -> "fresh"
   | Duplicate -> "duplicate"
   | Conflict _ -> "conflict"
+  | Corrupt _ -> "corrupt"
 
 let admission_word = function
   | Oversize -> "oversize"
+  | Unknown_tag t -> "unknownTag " ^ string_of_int t
   | Host_limit why -> "hostLimit " ^ why
   | Bad_version _ -> "badVersion"
   | Malformed_ref -> "malformedRef"
@@ -151,6 +156,7 @@ let verify_error_word = function
   | Digest_mismatch _ -> "digestMismatch"
   | Undecodable _ -> "undecodable"
   | Verify_malformed_ref _ -> "malformedRef"
+  | Verify_handle_in_content _ -> "handleInContent"
   | Verify_dangling { missing; _ } -> "dangling " ^ E4_addr.Addr.hex missing
   | Verify_wrong_kind _ -> "wrongKind"
   | Root_unresolved name -> "rootUnresolved " ^ name
@@ -371,6 +377,7 @@ let check_pure (n : E4_node.t) =
      `handles` are the same walk, and the put path is hot. *)
   match E4_node.scan_payload n.E4_node.payload with
   | Error E4_node.Host_limit -> Error (Host_limit host_limit_why)
+  | Error (E4_node.Unknown_tag t) -> Error (Unknown_tag t)
   | Error _ -> Error Oversize
   | Ok sc ->
     let rec go = function
@@ -429,8 +436,13 @@ let put t (n : E4_node.t) =
     match resident_bytes view addr with
     | Some resident when String.equal resident bytes -> Ok (Duplicate, addr)
     | Some resident ->
-      view.v_counters.conflicts <- view.v_counters.conflicts + 1;
-      Ok (Conflict (occupant_node resident), addr)
+      (* The occupant is re-hashed: bytes that do not hash to their address are a corrupt
+         record, bytes that do are an exhibited collision. Either way nothing changes. *)
+      if String.equal (E4_sha256.digest resident) (E4_addr.Addr.bytes addr) then begin
+        view.v_counters.conflicts <- view.v_counters.conflicts + 1;
+        Ok (Conflict (occupant_node resident), addr)
+      end
+      else Ok (Corrupt addr, addr)
     | None ->
       let seg, off = E4_pack.stage t.w_pack ~addr ~node_bytes:bytes in
       let key = key_of addr in
@@ -444,6 +456,7 @@ let put_bytes t bytes =
   | Ok n -> put t n
   | Error (E4_node.Bad_version b) -> Error (Bad_version b)
   | Error E4_node.Host_limit -> Error (Host_limit host_limit_why)
+  | Error (E4_node.Unknown_tag t) -> Error (Unknown_tag t)
   | Error _ -> Error Oversize
 
 let promote_staged view =
@@ -577,6 +590,7 @@ let apply_word t w =
       match put t b.node with
       | Error a -> Error (Refused_by a)
       | Ok (Conflict m, at) -> Error (Word_conflict { at; occupant = m })
+      | Ok (Corrupt at, _) -> Error (Word_corrupt at)
       | Ok ((Fresh | Duplicate), _) -> go rest)
   in
   go w
@@ -641,7 +655,10 @@ let verify view =
       else (
         match E4_node.decode bytes with
         | Error _ -> Error (Undecodable a)
-        | Ok n -> if E4_node.malformed_ref n then Error (Verify_malformed_ref a) else edges_of a n)
+        | Ok n ->
+          if E4_node.malformed_ref n then Error (Verify_malformed_ref a)
+          else if E4_node.handle_in_content n then Error (Verify_handle_in_content a)
+          else edges_of a n)
   in
   let rec nodes_pass = function
     | [] -> Ok ()
@@ -666,6 +683,7 @@ let verify_node view a =
       | Error _ -> Error (Undecodable a)
       | Ok n ->
         if E4_node.malformed_ref n then Error (Verify_malformed_ref a)
+        else if E4_node.handle_in_content n then Error (Verify_handle_in_content a)
         else
           let rec go = function
             | [] -> Ok ()

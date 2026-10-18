@@ -77,10 +77,24 @@ let read_file path =
   close_in ic;
   s
 
+(* Damage bypasses the store's permissions, as a disk fault or an operator would: a sealed
+   file (0444; E4_pack PK9, E4_index IX9) is made writable for the write and sealed again
+   after it, so the store meets the damage in the state it left the file. *)
+let as_writable path f =
+  let sealed =
+    match Unix.stat path with
+    | st when st.Unix.st_perm land 0o200 = 0 -> Some st.Unix.st_perm
+    | _ -> None
+    | exception Unix.Unix_error _ -> None
+  in
+  (match sealed with Some p -> Unix.chmod path (p lor 0o200) | None -> ());
+  Fun.protect ~finally:(fun () -> match sealed with Some p -> Unix.chmod path p | None -> ()) f
+
 let write_file path s =
-  let oc = open_out_bin path in
-  output_string oc s;
-  close_out oc
+  as_writable path (fun () ->
+      let oc = open_out_bin path in
+      output_string oc s;
+      close_out oc)
 
 let file_size path = (Unix.stat path).Unix.st_size
 

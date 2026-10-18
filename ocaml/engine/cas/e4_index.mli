@@ -73,6 +73,9 @@
    IX8 `Deps` is NOT an edge (amendment M1): `E4_cas.reachable`, `closure` and admission never
        consult it, and there is no `propagate` (companion §7 and `exists_carrier_collision`,
        Key.lean:383-386).  It is persistent: `add` returns a new value.        by construction
+   IX9 A written snapshot is read-only (0444): nothing writes it in place, and the next `save`
+       replaces it by rename.  A tmp left read-only by a save that stopped is removed first.
+                                                                         tested (F11, F12)
    IX9 `Deps.rebuild` agrees with `Deps.of_node` applied to every node of the pack, and
        `Deps.of_node` is `E4_node.checked_edges` (the Ref edges, exactly, with no table) plus
        `E4_shape.cids_of` (the Cid fields, only through the table).  The two halves are named
@@ -244,7 +247,8 @@ val of_pack :
 (* ---- the file: save, load, and the discard-and-rebuild rule (IX6) ---- *)
 
 val save : path:string -> t -> covers:seg * off -> unit
-(** tmp + rename + fsync of the file and of its directory. *)
+(** tmp + rename + fsync of the file and of its directory; the file is published read-only
+    (IX9). *)
 
 type load_verdict =
   | Loaded

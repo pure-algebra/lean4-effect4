@@ -91,20 +91,35 @@ let read_file path =
   close_in ic;
   s
 
+(* Damage bypasses the store's permissions, as a disk fault or an operator would: a sealed
+   file (0444; E4_pack PK9, E4_index IX9) is made writable for the write and sealed again
+   after it, so the store meets the damage in the state it left the file. *)
+let as_writable path f =
+  let sealed =
+    match Unix.stat path with
+    | st when st.Unix.st_perm land 0o200 = 0 -> Some st.Unix.st_perm
+    | _ -> None
+    | exception Unix.Unix_error _ -> None
+  in
+  (match sealed with Some p -> Unix.chmod path (p lor 0o200) | None -> ());
+  Fun.protect ~finally:(fun () -> match sealed with Some p -> Unix.chmod path p | None -> ()) f
+
 let poke path pos byte =
-  let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
-  ignore (Unix.lseek fd pos Unix.SEEK_SET);
-  ignore (Unix.write fd (Bytes.make 1 (Char.chr byte)) 0 1);
-  Unix.close fd
+  as_writable path (fun () ->
+      let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
+      ignore (Unix.lseek fd pos Unix.SEEK_SET);
+      ignore (Unix.write fd (Bytes.make 1 (Char.chr byte)) 0 1);
+      Unix.close fd)
 
 let flip path pos =
   let s = read_file path in
   poke path pos (Char.code s.[pos] lxor 0x01)
 
 let truncate_file path n =
-  let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
-  Unix.ftruncate fd n;
-  Unix.close fd
+  as_writable path (fun () ->
+      let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
+      Unix.ftruncate fd n;
+      Unix.close fd)
 
 (* ============================================================ payload helpers *)
 
@@ -400,6 +415,27 @@ let test_file b =
     (match E4_index.load_at ~path ~pack_end:(9, 99) with
     | Error (E4_index.Stale _) -> true
     | _ -> false);
+  (* IX9: a snapshot is published read-only, and replaced by rename *)
+  let perm p = (Unix.stat p).Unix.st_perm land 0o777 in
+  check "F11 a saved snapshot is read-only (0444)" (perm path = 0o444);
+  E4_index.save ~path ix ~covers:b.b_end;
+  check "F11 a second save replaces the read-only snapshot, read-only again, and it loads"
+    (perm path = 0o444
+    && (match E4_index.load_at ~path ~pack_end:b.b_end with Ok j -> same j | Error _ -> false));
+  (* a tmp a stopped save left read-only does not block the next save *)
+  let tmp = path ^ ".tmp" in
+  (let oc = open_out_bin tmp in
+   output_string oc "a save that stopped after its chmod";
+   close_out oc);
+  Unix.chmod tmp 0o444;
+  let saved =
+    match E4_index.save ~path ix ~covers:b.b_end with () -> true | exception Sys_error _ -> false
+  in
+  check "F12 a read-only tmp left by a stopped save does not block the next save"
+    (saved
+    && perm path = 0o444
+    && (not (Sys.file_exists tmp))
+    && (match E4_index.load_at ~path ~pack_end:b.b_end with Ok j -> same j | Error _ -> false));
   let size = String.length (read_file path) in
   (* a flipped body byte *)
   let p2 = Filename.concat (Filename.dirname path) "body.idx" in
@@ -826,8 +862,10 @@ let test_shape () =
   check "S7 `class_at` is the four-way view, and Cls_unknown for a path no row mentions"
     (E4_shape.class_at E4_shape.table E4_kind.Job (E4_shape.args [ 0 ]) = E4_shape.Cls_cid
     && E4_shape.class_at E4_shape.table E4_kind.Job (E4_shape.args [ 2 ]) = E4_shape.Cls_data
-    && E4_shape.class_at E4_shape.table E4_kind.Checkpoint (E4_shape.args [ 3 ])
+    && E4_shape.class_at E4_shape.table E4_kind.Checkpoint (E4_shape.args [ 4 ])
        = E4_shape.Cls_stamp
+    && E4_shape.class_at E4_shape.table E4_kind.Checkpoint (E4_shape.args [ 3 ])
+       = E4_shape.Cls_data
     && E4_shape.class_at E4_shape.table E4_kind.Log (E4_shape.args [ 0 ])
        = E4_shape.Cls_ref (Some E4_kind.Job)
     && E4_shape.class_at E4_shape.table E4_kind.Annotation (E4_shape.args [ 0 ])
@@ -836,10 +874,13 @@ let test_shape () =
     (let cid_payload =
        f_ctor 0 [ f_bytes (d32 9); f_bytes (d32 9); f_nat 0; f_bytes (d32 9) ]
      in
+     (* a checkpoint payload in E4_checkpoint's seven fields: job, position, tape prefix,
+        prev, engine, image length, image *)
      let stamp_payload =
        f_ctor 0
          [ f_ref (E4_kind.byte E4_kind.Job) (d32 0); f_nat 0;
-           f_ref (E4_kind.byte E4_kind.Tape) (d32 0); f_bytes (d32 9); f_bytes "" ]
+           f_some (f_ref (E4_kind.byte E4_kind.Tape) (d32 0)); f_none; f_bytes (d32 9); f_nat 0;
+           f_ctor 0 [ f_bytes "" ] ]
      in
      List.length (E4_shape.cids_of E4_shape.table E4_kind.Job ~payload:cid_payload) = 3
      && E4_shape.cids_of E4_shape.table E4_kind.Checkpoint ~payload:stamp_payload = []

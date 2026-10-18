@@ -4,15 +4,16 @@
      L*  the eight laws of docs/research/2026-09-08-engine-a2-persistence.md §2.1, each as a
          named property: L-CAS-1 the address, L-CAS-2 exactness, L-CAS-3 injectivity,
          L-CAS-4 the admission order (a node that fails two tests answers the FIRST one Lean
-         would), L-CAS-5 grow-only and the three outcomes, L-CAS-6 the recorded digest is a
+         would), L-CAS-5 grow-only and the outcomes, L-CAS-6 the recorded digest is a
          cache and `verify` is the identity, L-CAS-7 closure is the transfer unit, L-CAS-8
          recovery replays a word (its crash half is in test_crash.ml).
      G2* golden G2 replayed through `put`: every case's store built as ../goldens/cases.txt's
-         header names it, and the answer compared to Lean's word.  Two cases are OWED and
-         pass with a named NOTE, exactly as lane P0's convention (test_bytes.ml:939-949):
-         `g2-handle-in-content` (Lean has no `handleInContent`; it answers `fresh` today) and
-         `g2-malformedRef-kind` (kind byte 16 is unregistered in today's Lean and is `job`
-         here — amendment M4 moved the sentinel to 127).
+         header names it, and the answer compared to Lean's word, with `corrupt` read as
+         Lean's `conflict` (CS1).  One row is reported apart, by name and with a tripwire:
+         `g2-handle-in-content`, amendment M2's owner call (Lean answers `fresh`, put
+         `handleInContent`).  `g2-conflict` is also checked raw: its occupant does not hash
+         to its address, so put answers `corrupt`.
+     CS7-h  `verify` and `verify_node` refuse a handle in a content payload, as `put` does.
      G3* golden G3 replayed through `advance_root`, with the kind and dangling checks now
          real: the resolver is this store's own kind lookup.
      G6* golden G6: three nodes in two insertion orders.  `nodes` differ, every `find`
@@ -318,6 +319,10 @@ let probe_entry =
 
 let entry_addr = address probe_entry
 
+(* golden G2's occupant (Lean's `occupantNode`, golden g2-occupant): another node, filed at the
+   entry's address in the hand-built occupant store *)
+let g2_occupant = node E4_kind.Export (E4_addr.Addr.bytes schema_addr) (v_nat 1)
+
 let tree_node =
   match golden "g6-treeNode" with
   | Some b -> ( match E4_node.decode b with Ok n -> n | Error _ ->
@@ -369,7 +374,10 @@ let test_admission_order () =
       ignore (E4_cas.put s probe_entry);
       E4_cas.commit s;
       let spec = E4_addr.Addr.bytes schema_addr in
-      let bad_frame = "\253\000\000\000\000\000\000\000\000" in
+      (* a string frame whose length runs one byte past its region: not a frame tree *)
+      let bad_frame = let f = v_str "abc" in String.sub f 0 (String.length f - 1) in
+      (* a frame of extent 0 whose tag, 253, no reader here knows (CS2 row 1b) *)
+      let unknown_frame = "\253\000\000\000\000\000\000\000\000" in
       let malformed = v_ref E4_kind.sentinel (String.make 32 '\001') in
       let handled = v_handle 2 7 in
       let dangling_ref = v_ref (E4_kind.byte E4_kind.Export) (String.make 32 '\009') in
@@ -382,6 +390,8 @@ let test_admission_order () =
       (* every one of these fails at least two tests at once; the answer is the FIRST *)
       says "oversize + badVersion (oversize is tested first)"
         (node ~version:1 E4_kind.Export spec (v_list [ bad_frame ])) "oversize";
+      says "unknownTag + badVersion (the tag is read in the payload test, first; never oversize)"
+        (node ~version:1 E4_kind.Export spec (v_list [ unknown_frame ])) "unknownTag 253";
       says "badVersion + malformedRef + handleInContent"
         (node ~version:3 E4_kind.Export spec (v_list [ malformed; handled ])) "badVersion";
       says "malformedRef + handleInContent + dangling"
@@ -410,7 +420,7 @@ let test_admission_order () =
 (* ============================================================ L-CAS-5: the outcomes *)
 
 let test_outcomes () =
-  print_endline "-- L-CAS-5: grow-only, and the three outcomes";
+  print_endline "-- L-CAS-5: grow-only, and the outcomes (CS1: an occupant is re-hashed)";
   with_store (fun _ s ->
       let ro = E4_cas.read_only s in
       check "L-CAS-5 a fresh put is Fresh" (word_word (E4_cas.put s probe_schema) = "fresh");
@@ -422,8 +432,13 @@ let test_outcomes () =
       check "L-CAS-5 a Duplicate after a commit is still Duplicate"
         (word_word (E4_cas.put s probe_schema) = "duplicate");
       check "L-CAS-5 the node is resident at its address" (E4_cas.mem ro (address probe_schema)));
-  (* the conflict: a hand-built occupant store, as golden G2's own case is *)
-  let occupant = node E4_kind.Export (E4_addr.Addr.bytes schema_addr) (v_nat 1) in
+  (* An occupied address: a hand-built occupant store, as golden G2's own case is.  The
+     occupant's bytes do not hash to the address they sit at, so CS1's re-hash answers Corrupt,
+     never Conflict; before the re-hash this case answered Conflict, so it is the re-hash's red
+     control.  A real collision (Conflict) cannot be built under SHA-256. *)
+  let occupant = g2_occupant in
+  check "L-CAS-5 the forged occupant's bytes do not hash to the address it is filed under"
+    (not (String.equal (E4_sha256.digest (E4_node.encode occupant)) (E4_addr.Addr.bytes entry_addr)));
   let d =
     forged
       [ (E4_addr.Addr.bytes schema_addr, E4_node.encode probe_schema);
@@ -434,16 +449,22 @@ let test_outcomes () =
   let ro = E4_cas.read_only s in
   let before = E4_cas.count ro in
   (match E4_cas.put s probe_entry with
-   | Ok (E4_cas.Conflict m, a) ->
-     check "L-CAS-5 an occupied address answers Conflict and exhibits the occupant"
-       (m = occupant && E4_addr.Addr.equal a entry_addr);
-     check "L-CAS-5 the occupant is NOT overwritten"
+   | Ok (E4_cas.Corrupt at, a) ->
+     check "L-CAS-5 an address held by bytes that do not hash to it answers Corrupt, not Conflict"
+       (E4_addr.Addr.equal at entry_addr && E4_addr.Addr.equal a entry_addr);
+     check "L-CAS-5 the corrupt record is NOT overwritten"
        (E4_cas.get_bytes ro entry_addr = Some (E4_node.encode occupant));
-     check "L-CAS-5 a Conflict changes nothing" (E4_cas.count ro = before)
+     check "L-CAS-5 a Corrupt answer changes nothing" (E4_cas.count ro = before)
    | other ->
-     check "L-CAS-5 an occupied address answers Conflict" false;
+     check "L-CAS-5 an address held by bytes that do not hash to it answers Corrupt" false;
      note "  got %s" (word_word other));
-  check "L-CAS-5 the conflict is counted" ((E4_cas.stats ro).E4_cas.conflicts = 1);
+  check "L-CAS-5 a corrupt record is not counted as a collision"
+    ((E4_cas.stats ro).E4_cas.conflicts = 0);
+  (* Word.apply stops at the same answer, under its own name *)
+  check "L-CAS-5 a word that meets the corrupt record stops with Word_corrupt at its address"
+    (match E4_cas.apply_word s [ { E4_cas.addr = entry_addr; node = probe_entry } ] with
+     | Error (E4_cas.Word_corrupt at) -> E4_addr.Addr.equal at entry_addr
+     | Ok () | Error _ -> false);
   E4_cas.close s
 
 (* ============================================================ L-CAS-6: verify is the identity *)
@@ -478,6 +499,45 @@ let test_verify_identity () =
       check "L-CAS-6 verify on a store this module wrote is ok" (E4_cas.verify ro = Ok ());
       check "L-CAS-6 verify_node agrees on every node"
         (List.for_all (fun (a, _) -> E4_cas.verify_node ro a = Ok ()) (E4_cas.nodes ro)))
+
+(* ============================================================ CS7-h: verify checks handles *)
+
+(* A record `put` would refuse as handleInContent can only be forged on disk.  verify and
+   verify_node refuse it as put does; the same payload at a run-relative kind is the control
+   that the check is about content kinds and nothing else. *)
+let test_verify_handles () =
+  print_endline "-- CS7-h: verify refuses a handle in content, as put does (amendment M2's default)";
+  let spec = E4_addr.Addr.bytes schema_addr in
+  let payload = v_list [ v_handle 2 7 ] in
+  let verdicts kind =
+    let n = node kind spec payload in
+    let a = address n in
+    let d =
+      forged
+        [ (E4_addr.Addr.bytes schema_addr, E4_node.encode probe_schema);
+          (E4_addr.Addr.bytes a, E4_node.encode n) ]
+        []
+    in
+    let ro = E4_cas.open_ro ~dir:d in
+    let w = function Ok () -> "ok" | Error e -> E4_cas.verify_error_word e in
+    let r = (w (E4_cas.verify ro), w (E4_cas.verify_node ro a)) in
+    let put_word =
+      let s = E4_cas.open_rw ~dir:(fresh_dir ()) opts in
+      ignore (E4_cas.put s probe_schema);
+      let pw = word_word (E4_cas.put s n) in
+      E4_cas.close s;
+      pw
+    in
+    E4_cas.close_ro ro;
+    (r, put_word)
+  in
+  let (v, vn), pw = verdicts E4_kind.Export in
+  check "CS7-h put refuses the handle at a content kind" (pw = "handleInContent");
+  check "CS7-h verify refuses the forged record as handleInContent" (v = "handleInContent");
+  check "CS7-h verify_node refuses it as handleInContent" (vn = "handleInContent");
+  let (v, vn), pw = verdicts E4_kind.Tape in
+  check "CS7-h control: at a run-relative kind put, verify and verify_node all admit it"
+    (pw = "fresh" && v = "ok" && vn = "ok")
 
 (* ============================================================ L-CAS-7 / G6: two orders *)
 
@@ -591,6 +651,7 @@ let test_word_goldens () =
         | Ok () -> "ok"
         | Error (E4_cas.Refused_by a) -> E4_cas.admission_word a
         | Error (E4_cas.Word_conflict { at; _ }) -> "conflict " ^ hex at
+        | Error (E4_cas.Word_corrupt at) -> "corrupt " ^ hex at
       in
       let want =
         List.fold_left
@@ -612,11 +673,16 @@ let g2_store_for name =
   | "g2-conflict" ->
     ( forged
         [ (E4_addr.Addr.bytes schema_addr, E4_node.encode probe_schema);
-          (E4_addr.Addr.bytes entry_addr,
-           E4_node.encode (node E4_kind.Export (E4_addr.Addr.bytes schema_addr) (v_nat 1))) ]
+          (E4_addr.Addr.bytes entry_addr, E4_node.encode g2_occupant) ]
         [],
       [] )
   | _ -> (fresh_dir (), [ probe_schema; probe_entry ])
+
+(* put's word as Lean spells it.  CS1 splits Lean's `conflict` in two: `conflict`, an occupant
+   that hashes to the address (a collision), and `corrupt`, one that does not.  Lean's three
+   outcomes cannot tell them apart (its stores are Sound), so `corrupt` reads as `conflict`;
+   the raw word of g2-conflict is checked on its own. *)
+let as_lean_word = function "corrupt" -> "conflict" | w -> w
 
 let test_g2 () =
   print_endline "-- golden G2: admission replayed through put, in Lean's order";
@@ -624,7 +690,11 @@ let test_g2 () =
   if rows = [] then skip "G2 the admission goldens" "no g2 rows in cases.txt"
   else begin
     let ok = ref 0 and total = ref 0 and bad = ref [] in
-    let m2_pending = ref [] and k1_pending = ref [] in
+    (* Amendment M2 (a handle frame in a content payload) is an owner call
+       (docs/research/2026-09-08-cas-amendments.md §3): put refuses it, Lean's putNode admits it.
+       The one row that shows the difference is named and reported apart. *)
+    let m2_row = "g2-handle-in-content" and owner_calls = ref [] in
+    let conflict_word = ref None in
     List.iter
       (fun (name, _, expected) ->
         match golden name with
@@ -647,39 +717,32 @@ let test_g2 () =
               E4_cas.commit s;
               let got = word_word (E4_cas.put s n) in
               E4_cas.close s;
-              let lean_would_call_it_malformed =
-                match E4_node.scan_payload n.E4_node.payload with
-                | Ok sc -> List.exists (fun r -> not (E4_kind.in_lean r.E4_addr.Ref.kind)) sc.E4_node.refs
-                | Error _ -> false
-              in
-              if got = expected then incr ok
-              else if expected = "malformedRef" && lean_would_call_it_malformed then begin
-                k1_pending := name :: !k1_pending;
-                incr ok
-              end
-              else if got = "handleInContent" then begin
-                m2_pending := name :: !m2_pending;
-                incr ok
-              end
+              if String.equal name "g2-conflict" then conflict_word := Some got;
+              if String.equal (as_lean_word got) expected then incr ok
+              else if String.equal name m2_row && String.equal expected "fresh"
+                      && String.equal got "handleInContent" then
+                owner_calls := name :: !owner_calls
               else begin
                 bad := name :: !bad;
                 note "  g2 %s: Lean says %s, put says %s" name expected got
               end))
       rows;
-    check (Printf.sprintf "G2 %d/%d admission rows agree with Lean" !ok !total) (!bad = []);
-    if !m2_pending <> [] then begin
-      note "amendment M2 is not in Lean yet: %s" (String.concat " " !m2_pending);
-      note "  Lean admits a handle frame in a content payload (`fresh`) — `handleInContent` does";
-      note "  not exist in src/ (lane GLD §4 O3).  This side refuses it, at OQ4's default";
-      note "  position (after malformedRef).  When CAS commit 7 lands, G2 must be re-cut and";
-      note "  this row's `expected` is the one that changes."
-    end;
-    if !k1_pending <> [] then begin
-      note "CAS commit 1 is not in Lean yet: %s" (String.concat " " !k1_pending);
-      note "  the row uses kind byte 16 as `the unregistered byte`; 16 is `job` under the append,";
-      note "  and amendment M4 moved the sentinel to 127.  The node is admissible here and the";
-      note "  refusal moves to the edge check; re-cut at 127 with CAS commit 1."
-    end
+    check (Printf.sprintf "G2 %d/%d admission rows agree with Lean through put" !ok !total)
+      (!bad = [] && !ok + List.length !owner_calls = !total);
+    (* The tripwire: when the owner rules M2 and G2 is re-cut, this row agrees, this check
+       fails, and the exception goes. *)
+    check
+      (Printf.sprintf "G2 the one row that differs is amendment M2's owner call (%s: Lean fresh, put handleInContent)" m2_row)
+      (List.equal String.equal !owner_calls [ m2_row ]);
+    (* CS1 on Lean's own case: the occupant is Lean's `occupantNode` (golden g2-occupant), whose
+       bytes do not hash to the entry's address, so put answers corrupt, never conflict. *)
+    check "G2 g2-conflict: Lean's occupant does not hash to its address, and put answers corrupt"
+      (match golden "g2-occupant" with
+       | Some b ->
+         String.equal b (E4_node.encode g2_occupant)
+         && (not (String.equal (E4_sha256.digest b) (E4_addr.Addr.bytes entry_addr)))
+         && !conflict_word = Some "corrupt"
+       | None -> false)
   end
 
 (* ============================================================ golden G3 *)
@@ -1049,7 +1112,29 @@ let test_reopen () =
   check "X5 reopening admits nothing new"
     ((E4_cas.recovery s2).E4_cas.admitted = 0
      && (E4_cas.recovery s2).E4_cas.stop = E4_cas.Clean);
-  E4_cas.close s2
+  E4_cas.close s2;
+  (* CF10 at open: a store whose control file names another scheme is refused by both opens,
+     and the refusal names the scheme.  The control: the same store at scheme 0 opens. *)
+  let d3 = fresh_dir () in
+  forge d3 [ (E4_addr.Addr.bytes schema_addr, E4_node.encode probe_schema) ] [];
+  check "CF10 control: the store opens at scheme 0"
+    (let ro = E4_cas.open_ro ~dir:d3 in
+     let ok = E4_cas.mem ro schema_addr in
+     E4_cas.close_ro ro;
+     ok);
+  let ctl = E4_control.control_path ~dir:d3 in
+  (match E4_control.read ~path:ctl with
+   | Ok p -> E4_control.commit ~path:ctl { p with E4_control.scheme_version = 1 }
+   | Error e -> note "  the control file did not read back: %s" (E4_control.open_error_word e));
+  let refused f =
+    match f () with
+    | exception E4_cas.Store_error why -> String.equal why "control: otherScheme 1"
+    | () -> false
+  in
+  check "CF10 open_ro refuses a store of scheme 1, naming the scheme"
+    (refused (fun () -> E4_cas.close_ro (E4_cas.open_ro ~dir:d3)));
+  check "CF10 open_rw refuses it too"
+    (refused (fun () -> E4_cas.close (E4_cas.open_rw ~dir:d3 opts)))
 
 (* ============================================================ *)
 
@@ -1062,6 +1147,7 @@ let () =
   test_admission_order ();
   test_outcomes ();
   test_verify_identity ();
+  test_verify_handles ();
   test_two_orders ();
   test_word_goldens ();
   test_g2 ();

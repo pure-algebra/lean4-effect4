@@ -209,7 +209,9 @@ let store_counted st ~spec p image =
         | E4_cas.Fresh -> incr fresh
         | E4_cas.Duplicate -> incr dup
         | E4_cas.Conflict _ ->
-          raise (E4_cas.Store_error "E4_chunk: a chunk address is occupied by another node"));
+          raise (E4_cas.Store_error "E4_chunk: a chunk address holds a colliding node")
+        | E4_cas.Corrupt _ ->
+          raise (E4_cas.Store_error "E4_chunk: a chunk address holds a corrupt record"));
         E4_addr.Ref.make E4_kind.Chunk addr)
       (cut p image)
   in
@@ -231,7 +233,9 @@ let store_manifest_counted st ~spec ?(groups = groups_default) ?(single_max = si
     | E4_cas.Fresh -> incr fresh
     | E4_cas.Duplicate -> incr dup
     | E4_cas.Conflict _ ->
-      raise (E4_cas.Store_error "E4_chunk: a manifest address is occupied by another node"));
+      raise (E4_cas.Store_error "E4_chunk: a manifest address holds a colliding node")
+    | E4_cas.Corrupt _ ->
+      raise (E4_cas.Store_error "E4_chunk: a manifest address holds a corrupt record"));
     E4_addr.Ref.make kind addr
   in
   (* level 0: the chunk refs.  One leaf while they fit; otherwise groups, and then the same

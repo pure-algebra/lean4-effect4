@@ -34,19 +34,23 @@ open Effect4.Store
 
 /-! ## The kinds -/
 
--- The table of `docs/research/2026-09-04-cas-trait-plan.md` §3. Bytes are identity: appended,
--- never renumbered, and the reserved rows are present so a later consumer cannot take a byte
--- that is already spoken for.
-#guard Kind.all.map Kind.byte = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+-- The table of `docs/research/2026-09-04-cas-trait-plan.md` §3 (1–15) and the CAS append ruled
+-- by DI-25 (16–23). Bytes are identity: appended, never renumbered, and the reserved rows are
+-- present so a later consumer cannot take a byte that is already spoken for.
+#guard Kind.all.map Kind.byte =
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 #guard Kind.all.map Kind.name =
   ["source", "export", "type", "schema", "program", "annotation", "entry", "query", "result",
-   "chunk", "tree", "manifest", "component", "vector", "fiber"]
+   "chunk", "tree", "manifest", "component", "vector", "fiber", "job", "tape", "log", "exits",
+   "receipt", "checkpoint", "profile", "table"]
 
--- The round trip both ways, and the two ends of the alphabet refused.
+-- The round trip both ways, and the ends of the alphabet refused: 0 (the version byte), 24 (past
+-- the table) and the sentinel 127 (reserved forever, never a kind).
 #guard Kind.all.all fun k => Kind.ofByte? k.byte = some k
 #guard Kind.all.all fun k => Kind.ofName? k.name = some k
 #guard Kind.ofByte? 0 = none
-#guard Kind.ofByte? 16 = none
+#guard Kind.ofByte? 24 = none
+#guard Kind.ofByte? 127 = none
 #guard Kind.ofName? "enum" = none
 
 example := @Effect4.Store.Kind.ofByte?_byte

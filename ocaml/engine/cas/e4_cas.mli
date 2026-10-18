@@ -23,13 +23,22 @@
    ============================================================================
    Behaviours (the laws of docs/research/2026-09-08-engine-a2-persistence.md §2.1):
 
-   CS1 / L-CAS-5  Grow-only, three outcomes.  `Fresh` appends; `Duplicate` changes nothing;
-       `Conflict occupant` changes nothing and exhibits the occupant, which is never
-       overwritten (`putNode_sub` Store.lean:350, `put_duplicate` :482, `put_conflict`).
-       No function of this module removes or replaces a node.       by construction; tested
+   CS1 / L-CAS-5  Grow-only.  `Fresh` appends; `Duplicate` changes nothing.  An address held
+       by other bytes changes nothing either, and the occupant is re-hashed first: bytes that
+       hash to the address are an exhibited collision, `Conflict occupant` (Lean's
+       `Outcome.conflict`), and bytes that do not are a corrupt record, `Corrupt address`,
+       which Lean's three outcomes cannot tell from a conflict (its stores are `Sound`, every
+       node at its own address).  The occupant is never overwritten (`putNode_sub`,
+       `put_conflict` in src/Effect4/Store/Domain/Store.lean).  No function of this module
+       removes or replaces a node.  A collision cannot be built under SHA-256, so the
+       `Conflict` branch is by construction; the `Corrupt` branch is tested with a forged
+       record.                                                      by construction; tested
    CS2 / L-CAS-4  Admission refuses in exactly Lean's order, first refusal wins:
          1  `Oversize`         the payload is not one well-formed frame tree (Lean: ¬ WF)
          1' `Host_limit`       a frame length >= 2^62 (amendment M9; OCaml only)
+         1b `Unknown_tag`      a frame tag no reader here knows (0, or 15 to 255), reported as
+                               itself and never as `Oversize` (OCaml only: a Lean payload is a
+                               `Val`, which has no such tag)
          2  `Bad_version`      a version byte other than 0
          3  `Malformed_ref`    a tag-11 frame with an unregistered kind byte or a digest that
                                is not 32 bytes
@@ -56,8 +65,10 @@
                                                                      tested (X1, X2, X7)
    CS7 / L-CAS-6  `verify` is `Store.verify`: it re-reads every record from the pack and
        re-hashes it, re-decodes it, re-resolves every checked edge at its kind and resolves
-       every root.  It NEVER consults the index and never trusts a record's recorded digest —
-       both are caches of it.                              by construction; tested (G7, X3)
+       every root.  It also refuses a handle in content as `put` does (amendment M2's
+       default; `Verify_handle_in_content`, OCaml only).  It NEVER consults the index and
+       never trusts a record's recorded digest — both are caches of it.
+                                                    by construction; tested (G7, X3, CS7-h)
    CS8  The store never collects (Store.lean:19, cas-design §8).  `reachable` and `by_cid` are
        queries, never edges (amendment M1: `Reachable` does not walk `Cid` fields), and
        `pin_all` mints the pin roots a publish owes.                          tested (G3)
@@ -146,10 +157,16 @@ type ro
 type outcome =
   | Fresh  (** appended *)
   | Duplicate  (** the resident IS this node; nothing changed *)
-  | Conflict of E4_node.t  (** another node is resident at this address; nothing changed *)
+  | Conflict of E4_node.t
+      (** another node, whose bytes hash to this address, is resident: an exhibited
+          collision; nothing changed (CS1) *)
+  | Corrupt of E4_addr.Addr.t
+      (** the resident record's bytes do not hash to its address: corruption; nothing
+          changed (CS1) *)
 
 type admission =
   | Oversize  (** the payload is not one well-formed frame tree (Lean: ¬ payload.WF) *)
+  | Unknown_tag of int  (** a frame tag no reader here knows (CS2 row 1b), never [Oversize] *)
   | Host_limit of string  (** a frame length >= 2^62 — amendment M9, not a Lean refusal *)
   | Bad_version of int  (** the version byte that was not 0 *)
   | Malformed_ref
@@ -161,6 +178,7 @@ type verify_error =
   | Digest_mismatch of E4_addr.Addr.t
   | Undecodable of E4_addr.Addr.t
   | Verify_malformed_ref of E4_addr.Addr.t
+  | Verify_handle_in_content of E4_addr.Addr.t  (** amendment M2's default, as [put] (CS7) *)
   | Verify_dangling of { node : E4_addr.Addr.t; missing : E4_addr.Addr.t }
   | Verify_wrong_kind of {
       node : E4_addr.Addr.t;
@@ -169,7 +187,8 @@ type verify_error =
       actual : E4_kind.t;
     }
   | Root_unresolved of string
-(** `Word.VerifyError` (src/Effect4/Store/Word.lean:724-737), constructor for constructor. *)
+(** `Word.VerifyError` (src/Effect4/Store/Domain/Word.lean), constructor for constructor, with
+    `Verify_handle_in_content` added for amendment M2. *)
 
 exception Locked of string
 (** Another writer holds <dir>/LOCK (CS4).  Carries the directory. *)
@@ -181,17 +200,20 @@ exception Store_error of string
 (* ---------------------------------------------------------------- the words *)
 
 val outcome_word : outcome -> string
-(** "fresh" | "duplicate" | "conflict" — `Store.Outcome`'s spelling, so golden G2's `expected`
-    column compares as a string. *)
+(** "fresh" | "duplicate" | "conflict" | "corrupt" — `Store.Outcome`'s spelling, so golden G2's
+    `expected` column compares as a string; "corrupt" is this side's refinement of Lean's
+    "conflict" (CS1). *)
 
 val admission_word : admission -> string
-(** "oversize" | "hostLimit <why>" | "badVersion" | "malformedRef" | "handleInContent" |
-    "dangling <hex>" | "wrongKind" — `Store.Admission`'s spelling (Store.lean:153-169), with
-    the two refusals Lean does not have named as the amendments name them. *)
+(** "oversize" | "unknownTag <n>" | "hostLimit <why>" | "badVersion" | "malformedRef" |
+    "handleInContent" | "dangling <hex>" | "wrongKind" — `Store.Admission`'s spelling
+    (Store.lean:153-169), with the refusals Lean does not have named as the amendments name
+    them, and `unknownTag` as CS2 row 1b names it. *)
 
 val verify_error_word : verify_error -> string
-(** "digestMismatch" | "undecodable" | "malformedRef" | "dangling <missing hex>" |
-    "wrongKind" | "rootUnresolved <name>" — golden G7's vocabulary. *)
+(** "digestMismatch" | "undecodable" | "malformedRef" | "handleInContent" |
+    "dangling <missing hex>" | "wrongKind" | "rootUnresolved <name>" — golden G7's vocabulary,
+    with "handleInContent" added for amendment M2 (CS7). *)
 
 (* ---------------------------------------------------------------- opening *)
 
@@ -320,10 +342,14 @@ val closure : ro -> E4_addr.Ref.t -> binding list
 type word_error =
   | Refused_by of admission
   | Word_conflict of { at : E4_addr.Addr.t; occupant : E4_node.t }
-      (** `Admission.conflict` (Store.lean:166-168), which `put` can never answer (D3) *)
+      (** `Admission.conflict` (src/Effect4/Store/Domain/Store.lean), which `put` can never
+          answer (D3): a binding whose address holds a colliding node *)
+  | Word_corrupt of E4_addr.Addr.t
+      (** a binding whose address holds a record that does not hash to it (CS1) *)
 
 val apply_word : t -> binding list -> (unit, word_error) result
-(** `Word.apply` (:73-81): a fold of `put`; a `Duplicate` is fine, a `Conflict` refuses. *)
+(** `Word.apply` (:73-81): a fold of `put`; a `Duplicate` is fine, a `Conflict` or a `Corrupt`
+    refuses. *)
 
 val verify : ro -> (unit, verify_error) result
 (** `Store.verify` (Word.lean:772).  CS7: its own scan of the pack, every record re-hashed and
@@ -368,4 +394,5 @@ type stats = {
 
 val stats : ro -> stats
 (** The writer's counters are visible through `read_only`; a view from `open_ro` reports zero
-    for `commits`, `fsyncs` and `conflicts` because it performs none. *)
+    for `commits`, `fsyncs` and `conflicts` because it performs none.  `conflicts` counts the
+    exhibited collisions (`Conflict`) only, never a `Corrupt` answer (CS1). *)

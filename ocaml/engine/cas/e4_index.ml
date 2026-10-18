@@ -381,6 +381,8 @@ let save ~path t ~covers =
   let dir = Filename.dirname path in
   (try Unix.mkdir dir 0o755 with Unix.Unix_error _ -> ());
   let tmp = path ^ ".tmp" in
+  (* a tmp left by a save that stopped after its chmod is read-only, so it goes first *)
+  (try Sys.remove tmp with Sys_error _ -> ());
   let oc = open_out_bin tmp in
   let head =
     magic ^ version ^ be64 cseg ^ be64 coff ^ be64 t.n_slots ^ be64 t.n
@@ -393,6 +395,8 @@ let save ~path t ~covers =
   flush oc;
   (try Unix.fsync (Unix.descr_of_out_channel oc) with Unix.Unix_error _ -> ());
   close_out oc;
+  (* IX9: the snapshot is published read-only; the next save replaces it by rename *)
+  Unix.chmod tmp 0o444;
   Sys.rename tmp path;
   fsync_dir dir
 

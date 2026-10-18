@@ -4,8 +4,10 @@
 # manifest.txt holds `<name> <sha256 of those bytes>`.
 #
 # families
-#   a1   the SHA-256 vectors over Val.encode (expected = the digest), and the two Store.Val
-#        frames ocaml/eff/goldens/{val_ref,val_handle}.hex hand-derived on 2026-09-07.
+#   a1   the SHA-256 vectors over Val.encode (expected = the digest); the two Store.Val
+#        frames ocaml/eff/goldens/{val_ref,val_handle}.hex hand-derived on 2026-09-07; the
+#        number frames val_negint, val_float and val_numbers; and a1-decode-*, byte strings
+#        at the edges of tags 13 to 15 (expected = Val.decode's verdict, ok or refused).
 #   g1   node encodings: bytes = Node.encode n, expected = its address.
 #   g2   admission: bytes = Node.encode n, expected = the outcome of putNode into that
 #        case's store (empty for g2-genesis-exempt and g2-dangling-spec; the store after
@@ -61,6 +63,21 @@ digest-19	a1	9f8126d340dd40d63a651a96578ccbac98db69f195c51b3b0f366ae037c0bad8
 digest-20	a1	9e17b3a4f487fd77fbbf42b529d2059073d80e5a3462b708375212cd9e8b7710
 val_ref	a1	ok
 val_handle	a1	ok
+val_negint	a1	ok
+val_float	a1	ok
+val_numbers	a1	ok
+a1-decode-negint-no-digits	a1	ok
+a1-decode-negint-two-digits	a1	ok
+a1-decode-negint-leading-zero	a1	refused
+a1-decode-float-half	a1	ok
+a1-decode-float-minus-zero	a1	ok
+a1-decode-float-nan	a1	ok
+a1-decode-float-one	a1	refused
+a1-decode-float-plus-zero	a1	refused
+a1-decode-float-two-pow-53	a1	refused
+a1-decode-float-seven-bytes	a1	refused
+a1-decode-tag-15	a1	refused
+a1-decode-tag-0	a1	refused
 g1-sampleNode	g1	8f74e5b415dae925b056d9dd922507c4015c6ee5e55753e962d2cf3cbbd5e2e8
 g1-probeSchema	g1	f8cbebc1e9c83f4f70fe015ac0b2c18fac5a7bd76aeb2acff15096a4587c5de4
 g1-probeEntry	g1	0014c107b3900a17bdd5905f4d9f8709f4ae01df9a8dc48fc6dbe39d9b9ab82a
@@ -85,6 +102,14 @@ g1-kind-manifest	g1	eb8ffa88c5863c7896dce931bd33312f0c099cd904b4d6efb60b1c98c890
 g1-kind-component	g1	692a8090f1195b63dca33b57993d686932f1d4fe7f5292104872d9205840c8e2
 g1-kind-vector	g1	0b9b8afb0af71fd7860e64fd2cc6a5326bb1b6ae21ec389bc9b05a00d4e40ccd
 g1-kind-fiber	g1	68a0914fd3c1cb66db8ebc596852af2fe34a803e097cf088643c69d9104c0e8e
+g1-kind-job	g1	d9ec8c4ed019a6f21224d28ae527f2218ce09f8c967614ff2da30df4f1ddc96d
+g1-kind-tape	g1	269dcdf9d5b06cc7d0bff31a45c1d1bfeb06d05db88c6194d6bd69fd61d4bc14
+g1-kind-log	g1	91dd0de6b682980bede0de2a89fe90601c395cb6c8d96b5f232d6e620b2bef0e
+g1-kind-exits	g1	79f3c67badd530232ce3d502e24a1a7af05073d3118fb9b661b7d04ef9626b75
+g1-kind-receipt	g1	efb83b9041b94ef3ba2dff75cce969232b587749653a60e07ee836e8b7c32bb1
+g1-kind-checkpoint	g1	8353b59f4effb1769e00a37f1713363e55224f96594c147d215f4f33f85ba703
+g1-kind-profile	g1	b3d4f8cfa2ef4bc1ad9a26d92b286598a0f8600b987ef5dba17295ed7c50a2de
+g1-kind-table	g1	e62916f9fdb020963b71385df90225b4cfc99a619c50eae68d129606ef8beaba
 g2-genesis-exempt	g2	fresh
 g2-entry-fresh	g2	fresh
 g2-entry-duplicate	g2	duplicate

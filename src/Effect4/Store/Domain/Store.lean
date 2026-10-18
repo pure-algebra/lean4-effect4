@@ -615,7 +615,7 @@ def probeStore : Store := afterPut (afterPut Store.empty probeSchema) probeEntry
   (.wrongKind probeSchemaAddress .«export» .schema)
 #guard outcomeIs (probeStore.putNode ⟨0, .tree, probeSchemaAddress, .ref 2 probeEntryAddress.bytes⟩) .fresh
 #guard refusedWith (probeStore.putNode ⟨1, .«export», probeSchemaAddress, sampleEntry⟩) .badVersion
-#guard refusedWith (probeStore.putNode ⟨0, .tree, probeSchemaAddress, .ref 16 probeEntryAddress.bytes⟩) .malformedRef
+#guard refusedWith (probeStore.putNode ⟨0, .tree, probeSchemaAddress, .ref 127 probeEntryAddress.bytes⟩) .malformedRef
 #guard refusedWith (probeStore.putNode ⟨0, .tree, probeSchemaAddress, .ref 2 (probeEntryAddress.bytes.drop 1)⟩) .malformedRef
 #guard outcomeIs ((Store.mk [(probeSchemaAddress, probeSchema), (probeEntryAddress, ⟨0, .«export», probeSchemaAddress, .nat 1⟩)] []).putNode probeEntry)
   (.conflict ⟨0, .«export», probeSchemaAddress, .nat 1⟩)
