@@ -66,8 +66,8 @@ Everything left of `Kit_tool` and `Wire.serveJson` is text and IO. Everything fr
 | 5. One JSON number domain | Done (`43e7cb7d5`). One owner of the JSON *text* (Lean versus `kit_json.ml`) stays open: lowering it waits on exact 64-bit numbers. |
 | 6. Precise, located refusals | Partly: the native unreadable line now prints Lean's refusal. Path-located decode refusals are not done. |
 | 7. Memo as a keyed map | Measured and not needed now: a native session's edit costs 0.29 ms at first and 0.46 ms after 1,000 accepted edits (`bench_tool.exe 1000`), growth that the transcript's and history's list appends share with the memo's scan. |
-| 8. `combine_deps` | A proof agent is working on it in its own worktree |
-| 9. Restore S1's proofs | The same proof agent: `feed_coherent`, `feed_undo`, `Doc.coherent` and the fill-set agreement |
+| 8. `combine_deps` | Done: proved in place (merge `48a0f8bbc`), so `Checked.ask_value` rests on no goal. Merged head: `lake build` of the four law modules, `Effect4.Laws` and four batteries, 1,819 jobs green; `#axiom_audit` over the four modules, 726 declarations within `[propext, Quot.sound]`, 15 of them modulo planned goals, 4 planned goals |
+| 9. Restore S1's proofs | Partly done. Proved: `feed_keeps`, `feed_root`, `feed_draft`, `kept_eq_certified`, `FillSet.add_wf` and `publish_eq_materialize`. `feed_draft` is restated with two premises: no ill-formed reference in the sketch or the candidate. `feed_coherent` and `feed_keepExact` are **false at head**, refuted by kernel-checked counterexamples. Fifteen document laws rest on those two goals |
 | 10. Exchange residency, then S6b | Not done. A session cache has no consumer until the native exchange exists. The native store's commit cost, its prerequisite, is fixed. |
 | 11. Suggestion owner and method table | Done (`fc4ed752d`); `method_supported` guards the method list |
 | 12. Cruft sweep | Mostly done: evidence logs, the legacy decoder, dead refusals, the tuple codec, stale docs |
@@ -79,6 +79,15 @@ The decisions:
 - **D (store laws):** not taken. It runs against the 2026-10-16 steer that hard proofs live in Rocq, so it is yours.
 
 ## For you
+
+- **The S1 feed has two bugs** (`SourceSession.feed`, `src/Effect4/Program/Typing/SourceSession.lean`). The proofs found them, and the counterexamples are kernel-checked:
+  1. A splice of a candidate holding an ill-formed layer reference writes a second root entry over the edited address's entry.
+  2. A kept-exact omission at a refused root keeps the old refused root entry, even where the new hole row types the root.
+
+  So the session tool shows wrong tables on these routes. The fault-free forms of both laws are proved (`feed_coherent_of_faultFree`, `feed_keepExact_of_faultFree`). The fix is yours:
+  - **A1** (the proof seat's recommendation). A draft rechecks when the candidate holds an ill-formed reference. A kept-exact feed splices only when nothing is ill formed and the edit is a fill or the root is typed. `feed_keepExact` is then proved. `feed_coherent` rests on one new goal: `splice_coherent` for a fill at a refused root, which holds on 10 probed instances.
+  - **A2**: A1, and kept fills only at typed roots. Both laws are then fully proved, in a scratch model. `brokenElsewhere` flips, and "a kept fill at an initially refused root" goes away.
+  - **C**: restate the claims with premises and leave the feed. Not recommended: the wrong tables stay.
 
 - **`AGENTS.md`:** a one-page draft that leads with the core abstractions is at
   [2026-10-18-agents-md-draft.md](../2026-10-18-agents-md-draft.md). The live file is unchanged.
