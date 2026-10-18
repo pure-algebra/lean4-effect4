@@ -60,21 +60,23 @@ def laidsOf (L : Look) (p : NativeEff) : List Laid :=
   | first :: _ => first :: (ls.zip (ls.drop 1)).flatMap fun (a, b) =>
       [250, 500, 750].map (sampleLaid L.motion.norm a b) ++ [b]
 
--- The session accepts every request of a build: each fill carries its whole target, which the
--- checked commit requires, so every frame after the opening shows an accepted fill.
+-- The tool accepts every request of a build: each fill is a kept-exact commit at the snapshot the
+-- reply before it named, so every frame after the opening shows an accepted fill.
 #guard programs.all fun p =>
   match requests p with
   | none => true
-  | some reqs => (reqs.foldl (fun (acc : Tools.Session.State × Bool) r =>
-      let (st', ans) := Tools.Session.answer acc.1 r
-      (st', acc.2 && ans.ok)) ({}, true)).2
+  | some reqs => (reqs.foldl (fun (acc : Effect4.Tool.State × Bool) r =>
+      let (st', ans) := (Effect4.Tool.serve Check.Oracle.uncached acc.1 r).value
+      (st', acc.2 && ans.result.isOk)) (Effect4.Tool.empty, true)).2
 
--- A control: the same build with its targets dropped is refused at its first fill.
+-- A control: the same build's first fill at a stale snapshot is refused, and the state stays.
 #guard programs.any fun p =>
   match requests p with
-  | some (opening :: fill :: _) =>
-    let (st, _) := Tools.Session.answer {} opening
-    !(Tools.Session.answer st { fill with revision := none }).2.ok
+  | some (opening :: .act (.edit at_ action) :: _) =>
+    let (st, _) := (Effect4.Tool.serve Check.Oracle.uncached Effect4.Tool.empty opening).value
+    let (st', ans) := (Effect4.Tool.serve Check.Oracle.uncached st
+      (.act (.edit ⟨at_.doc, at_.revision + 7⟩ action))).value
+    !ans.result.isOk && st'.transcript.length == st.transcript.length
   | _ => false
 
 /-! ## LV-2: the graph's calls on a key index and a stroke cache -/
@@ -194,9 +196,10 @@ def growingTarget : Placed :=
 def sketchesOf (p : NativeEff) : List NativeEff :=
   match requests p with
   | none => []
-  | some reqs => (reqs.foldl (fun (acc : Tools.Session.State × List NativeEff) r =>
-      let (st, _) := Tools.Session.answer acc.1 r
-      (st, acc.2 ++ (st.session.map (·.sketch.program)).toList)) ({}, [])).2
+  | some reqs => (reqs.foldl (fun (acc : Effect4.Tool.State × List NativeEff) r =>
+      let (st, _) := (Effect4.Tool.serve Check.Oracle.uncached acc.1 r).value
+      (st, acc.2 ++ (st.raw.doc.map (·.session.sketch.program)).toList))
+      (Effect4.Tool.empty, [])).2
 
 /-- Kahn's order by tables is Kahn's order on a flow's edges and accepted waits, as `orderFor`
 takes it. -/
@@ -246,17 +249,18 @@ def incAgrees (p : NativeEff) : Bool :=
   match requests p with
   | none => false
   | some reqs =>
-    (reqs.foldl (fun (acc : Bool × Tools.Session.State × Inc.Memo) r =>
+    (reqs.foldl (fun (acc : Bool × Effect4.Tool.State × Inc.Memo) r =>
       let (ok, st, memo) := acc
-      let (st', _) := Tools.Session.answer st r
-      match st'.session with
+      let (st', _) := (Effect4.Tool.serve Check.Oracle.uncached st r).value
+      match st'.raw.doc with
       | none => (ok, st', memo)
-      | some l =>
-        let prog := l.sketch.program
-        let edited := if r.op == "fill" || r.op == "omit" then some r.path else none
+      | some doc =>
+        let prog := doc.session.sketch.program
+        let edited := editPath st r
         let ls := Inc.lines memo edited prog
         (ok && ls.map lineView == (Program.lines prog).map lineView &&
-          Inc.flow memo edited prog == Flow.ofProgram prog, st', Inc.Memo.next ls)) (true, {}, {})).1
+          Inc.flow memo edited prog == Flow.ofProgram prog, st', Inc.Memo.next ls))
+      (true, Effect4.Tool.empty, {})).1
 
 -- The text law (`Inc.linesWith_eq`) and the memo's (`Inc.next_valid`), read at every step of every
 -- build, where `ownText` stands for the text: the lines along each edit are the fresh lines. The
@@ -336,15 +340,15 @@ def oneObject (o : Int × Int) (n : Nat) : Retained.Scene :=
 
 /-- The pages a live session draws over a build's requests, at the columns it holds, each with its
 retained scene and its retained scene's groups' origin for the graph. -/
-def livePages (reqs : List Tools.Session.Request) : List (Page × Retained.Scene) :=
+def livePages (reqs : List Effect4.Tool.Request) : List (Page × Retained.Scene) :=
   (reqs.foldl (fun (acc : Live.State × List (Page × Retained.Scene)) r =>
     let (st, out) := acc
     let (st', ans, rows) := Live.step {} "t" st r
     if rows.isEmpty then (st', out) else
-    match st'.tool.session with
+    match st'.tool.raw.doc with
     | none => (st', out)
-    | some l =>
-      let g := (Live.page "t" r st'.tool ans l st.memo).1
+    | some doc =>
+      let g := (Live.page "t" r st.tool ans doc.session.shown st.memo).1
       (st', out ++ [({ g with gutter := st'.gutter, codeAt := st'.codeAt }, st'.scene)])) ({}, [])).2
 
 -- After every step of every build, the retained scene flattened is the tree's picture of the page

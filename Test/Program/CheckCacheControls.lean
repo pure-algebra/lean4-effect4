@@ -1,6 +1,6 @@
 import Effect4.Program.Typing.CheckCache
 import Effect4.Laws.Program.CheckAgreement
-import Tools.Session
+import Effect4.Tool.Serve
 import Effect4.Program.Scoped
 import Effect4.Run.Kit
 set_option autoImplicit false
@@ -118,16 +118,17 @@ def catalogueCached := CheckCache.suggest (catalogueMemo.oracle (HitRule.exact.o
   catalogueDoc [1] 10 0 [nextCall]
 #guard catalogueCached.value.map (·.suggestions) = catalogue.value.map (·.suggestions)
 #guard catalogue.trace.all (fun e => catalogueMemo.entries.any (HitRule.exact.hit e.1))
+-- Through the tool: a suggestion at the hole answers candidates, keeps the state, and its checked
+-- trace is non-empty, so a driver's memo learns it.
 #guard
-  let opened := Tools.Session.answer {}
-    { op := "open", program := some (Tools.JsonBridge.toHex catalogueSketch.program),
-      holes := some (Tools.JsonBridge.toHex catalogueSketch.holes) }
-  let answered := Tools.Session.answer opened.1
-    { op := "suggest", path := [1], limit := 2, cursor := 0,
-      candidates := some (Tools.JsonBridge.toHex [nextCall]) }
-  answered.2.ok && decide (answered.2.result.getObjValAs? Nat "revision" = .ok 0) &&
-    decide ((answered.2.result.getObjValD "bounds").getObjValAs? Nat "limit" = .ok 2) &&
-    !answered.1.cache.entries.isEmpty
+  let (s0, _) := (Tool.serve Oracle.uncached Tool.empty
+    (.act (.open_ "suggest-doc" {} catalogueSketch))).value
+  let asked := Tool.serve Oracle.uncached s0
+    (.ask (.suggest ⟨⟨"suggest-doc", 0⟩, 0⟩ (.hole 0) [nextCall] 0 2))
+  !asked.trace.isEmpty && asked.value.1.transcript.length == s0.transcript.length &&
+    match asked.value.2.result with
+    | .ok (.suggested candidates _) => !candidates.isEmpty
+    | _ => false
 
 def badVar : NativeEff := .bind n1 (.succeed (.var 42))
 def badKey : CheckInput := .part oneRow [] badVar

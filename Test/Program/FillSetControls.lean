@@ -1,7 +1,7 @@
 import Effect4.Program.Typing.FillSet
 import Test.Program.SourceDocumentControls
 import Effect4.Laws.Program.FillSet
-import Tools.Session
+import Effect4.Tool.Serve
 set_option autoImplicit false
 namespace Test.Program.SeamsS2
 open Effect4 Effect4.Program Check
@@ -69,12 +69,18 @@ def otherDoc : Doc := (Doc.open_ ⟨doc.origin.id,{},otherBase⟩).value
 #guard otherDoc.snap.doc = pending.anchor.doc
 #guard otherDoc.snap.revision = pending.anchor.revision
 #guard (otherDoc.check pending.anchor).toOption.isSome
+-- In the tool that pairing cannot arise: every open allocates a fresh generation and clears the
+-- pending fills, so a fill at the earlier snapshot refuses as foreign and the state stays.
 #guard
-  let state := ({ } : Tools.Session.State).withDoc otherDoc
-  let state := { state with fills := some pending }
-  let result := Tools.Session.answer state
-    { op := "fills.add", path := [1,0], replacementJson := some (Tools.JsonBridge.printJson n1) }
-  !result.2.ok && result.1.revision = state.revision
+  let serve1 (st : Tool.State) (r : Tool.Request) := (Tool.serve Oracle.uncached st r).value
+  let (s0, _) := serve1 Tool.empty (.act (.open_ "fills" {} base))
+  let (s1, _) := serve1 s0 (.act (.fill ⟨⟨"fills", 0⟩, 0⟩ [([1,0], n1)]))
+  let (s2, _) := serve1 s1 (.act (.open_ "fills" {} otherBase))
+  let (s3, r3) := serve1 s2 (.act (.fill ⟨⟨"fills", 0⟩, 0⟩ [([1,0], n1)]))
+  s2.raw.fills.isNone && s3.transcript.length == s2.transcript.length &&
+    match r3.result with
+    | .error (.doc (.foreign _)) => true
+    | _ => false
 
 
 namespace SuggestionKeyControls

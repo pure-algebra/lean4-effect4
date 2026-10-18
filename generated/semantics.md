@@ -5300,7 +5300,7 @@ Restoring a live session's own record returns its exact run after full admission
 
 A saved live session restores to the same run (E1). Saving a `Live` session and restoring it through `LiveRecord.restore` succeeds and produces a `Live` whose `run` is `l.run`, including its journal, phases, waiting calls and row spellings.
 
-Placement: 1. Concept: `host-session-protocol`, property `typed-replay-session`. 2. Question: proposed claim `live-session-persists` (role compatibility), extending `Live.journal_replays` at R13; consumer: `Tools.Session`'s `save` and `load`. 3. Reach: every `Live`. Composes `admitProgram_eq_ok`, `Live.feedAll_wire` and `Live.journal_replays`. 4. What it does not establish: that another host's journal replays, host reconnection, external resources, or that side effects run at most once. 5. Unlocks: R13 and R6 for persistent authoring sessions.
+Placement: 1. Concept: `host-session-protocol`, property `typed-replay-session`. 2. Question: proposed claim `live-session-persists` (role compatibility), extending `Live.journal_replays` at R13; consumer: the tool's `restore` action and its run record query (`Tool.Internal.action`, `Tool.Internal.query`). 3. Reach: every `Live`. Composes `admitProgram_eq_ok`, `Live.feedAll_wire` and `Live.journal_replays`. 4. What it does not establish: that another host's journal replays, host reconnection, external resources, or that side effects run at most once. 5. Unlocks: R13 and R6 for persistent authoring sessions.
 
 Module: `Effect4.Laws.Api.LiveRecord`
 

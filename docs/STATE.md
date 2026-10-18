@@ -169,11 +169,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
 - **The edit session** (row 334). `EditSession` (`src/Effect4/Program/Edit.lean`) keeps a sketch
   and its table, with the face `open`, `feed` and `view`. Its edits fill an address and omit
   one into a hole. A fill that keeps its focus's type checks only the new subtree, and an
-  omission at the focus's type adds one entry (`omit-splices-table`). The session tool
-  (`tools/Tools/Session.lean`, driver `tools/Drivers/Session.lean`) holds a session and its
-  journal over JSON lines: open, fill, omit, view, undo, journal, sketch. Each answer names its
-  laws. A program travels as canonical bytes or as its JSON print, the schema form an agent writes
-  (`json-read-exact`). After any run of edits the view is the checker's answer on the
+  omission at the focus's type adds one entry (`omit-splices-table`). The tool
+  (`Effect4.Tool.serve`, `src/Effect4/Tool/`; driver `tools/Drivers/Session.lean`) holds a
+  document, pending fills and runs as its accepted actions, over JSON lines in the generated wire
+  (`Tool.Wire`, seams S3a and S3b). A program travels as its JSON print, the schema form an agent
+  writes (`json-read-exact`). After any run of edits the view is the checker's answer on the
   sketch (`edit-session-coherent`). An edit can be undone exactly (`edit-session-undo`), and a
   spliced edit repaints only its subtree (`edit-repaint-set`).
 - **Addresses** (seat ORG's [theory map](research/2026-10-08-seat-ORG-theory-map.md)). The laws
@@ -186,7 +186,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
   A picture is data in Lean: a page, its drawing calls and their device calls, each with the key
   of its object (`tools/Tools/View/`). A move by whole pixels commutes with the lowering
   (`lowerCall_move`), so the motion between two frames is exact. The frames of a program built
-  by edits replay any session request file through the session tool. `tools/view/v NAME` plays
+  by edits replay any request file through the tool. `tools/view/v NAME` plays
   them in a window; SVG and the console are two more outputs of the same calls. Each page shows
   the program's TypeScript beside its tree. A graph of any shape lays out by ranks
   (`ranks_forward`), with cycles as back edges and every edge a curve. A run draws its fibers as

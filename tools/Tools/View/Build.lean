@@ -2,7 +2,7 @@ import Tools.View.Program
 import Tools.View.Flow
 import Tools.Code.Module
 import Tools.View.Motion
-import Tools.Session
+import Effect4.Tool.Serve
 
 /-!
 # The frames of a program built by edits
@@ -16,7 +16,7 @@ Slice V1 of the visual pipeline (`docs/research/2026-10-09-visual-pipeline.md`; 
   Each filling has the type of the hole it fills, so every fill splices the table
   (`Sketch.table_fill`): its frame shows the session checking only the new node.
 - `frames`: the pages of any run of requests, one after each request that changes the session.
-  The requests run through the session tool itself (`Tools.Session.answer`), so a frame shows
+  The requests run through the tool itself (`Effect4.Tool.serve`), so a frame shows
   what an agent sees: the sketch, the type at each address, the edit's delta and the laws named.
 
 The construction order is one order, top-down and left to right. A request file in any order
@@ -55,22 +55,27 @@ def holeRows (p : NativeEff) (addrs : List (List Nat)) : Option RowTable :=
   addrs.zipIdx.mapM fun (a, i) =>
     (Table.typedAt table a).map fun (_, ty) => Row.hole s!"h{i}" ty.answer ty.error ty.requires.elems
 
-/-- **The requests that build a program top-down**: `open` with the root's hole and every hole
-row, then one `fill` for each sub-program, in address order. `none` when some sub-program of the
-program has no type. -/
-def requests (p : NativeEff) : Option (List Tools.Session.Request) := do
+/-- The existing top-down program plan, using hole indices instead of guessed snapshots. -/
+def plan (p : NativeEff) : Option (Sketch × List (Nat × NativeEff)) := do
   let addrs := effAddresses p
   let rows ← holeRows p addrs
-  -- each fill is a checked commit: its target is the opened document (generation 0), the
-  -- revision after the fills before it, and the hole that stands at its address
-  let fills ← addrs.zipIdx.mapM fun (a, i) =>
-    (filling p addrs a).map fun q =>
-      ({ op := "fill", path := a, replacement := some (hexOf q)
-         docName := some "default", docGeneration := some 0, revision := some i
-         expected := some (hexOf (holeOf addrs a)) } : Tools.Session.Request)
-  let opening : Tools.Session.Request :=
-    { op := "open", program := some (hexOf (holeOf addrs [])), holes := some (hexString (encodeHoles rows)) }
-  pure (opening :: fills)
+  let fills ← addrs.zipIdx.mapM fun (a, index) =>
+    (filling p addrs a).map fun q => (index,q)
+  pure (⟨holeOf addrs [],rows⟩,fills)
+
+/-- Materialize the plan's request transcript by consuming each actual reply's snapshot. -/
+def requests (p : NativeEff) : Option (List Effect4.Tool.Request) := do
+  let (sketch,fills) ← plan p
+  let opening : Effect4.Tool.Request := .act (.open_ "default" {} sketch)
+  let (first,reply) := (Effect4.Tool.serve Check.Oracle.uncached Effect4.Tool.empty opening).value
+  if !reply.result.isOk then none else do
+    let (_,_,requests) ← fills.foldlM (init := (first,reply,[opening])) fun (state,previous,requests) (index,q) => do
+      let now ← previous.now
+      let request : Effect4.Tool.Request :=
+        .act (.edit now (.commit [(.hole index,.fill q)] .keepExact))
+      let (next,answer) := (Effect4.Tool.serve Check.Oracle.uncached state request).value
+      if answer.result.isOk then some (next,answer,requests ++ [request]) else none
+    pure requests
 
 /-- A delta in words. -/
 def deltaText : Edit.Delta → String
@@ -89,9 +94,39 @@ def sessionText (l : EditSession) : String :=
 /-- A law's name without the namespace every law of the session shares. -/
 def lawText (n : Lean.Name) : String := n.toString.replace "Effect4.Program." ""
 
-/-- The request's operation and address. -/
-def requestText (r : Tools.Session.Request) : String :=
-  if r.op == "open" then "open" else s!"{r.op} {Program.bracket r.path}"
+/-- The request's declared method and any explicit edit place. -/
+def requestText (r : Effect4.Tool.Request) : String :=
+  match r with
+  | .act (.edit _ (.draft edit)) => "edit " ++ Program.bracket edit.path
+  | .act (.edit _ (.commit [(.hole index,_)] _)) => s!"edit hole {index}"
+  | .act (.edit _ (.commit [(.at_ path _,_)] _)) => "edit " ++ Program.bracket path
+  | _ => r.method
+
+def editPath (state : Effect4.Tool.State) (request : Effect4.Tool.Request) : Option (List Nat) :=
+  match request with
+  | .act (.edit _ (.draft edit)) => some edit.path
+  | .act (.edit _ (.commit [(place,_)] _)) => do
+      let doc ← state.raw.doc
+      (place.resolve doc.session.app doc.session.sketch).toOption.map Prod.fst
+  | _ => none
+
+def stepsOf (answer : Effect4.Tool.Reply) : List Edit.Step :=
+  match answer.result with
+  | .ok (.acted (.edited _ receipt)) | .ok (.acted (.published _ receipt)) => receipt.steps
+  | _ => []
+
+def redraws : Effect4.Tool.Request → Bool
+  | .act (.open_ ..) | .act (.edit ..) | .act (.publish ..) => true
+  | _ => false
+
+def deltaOf (answer : Effect4.Tool.Reply) : String × Bool :=
+  match answer.result with
+  | .error _ => ("request refused   ",false)
+  | .ok _ =>
+    match stepsOf answer with
+    | [step] => (deltaText step.delta ++ "   ",step.delta matches .spliced _)
+    | [] => ("",false)
+    | steps => (s!"{steps.length} edits   ",steps.all fun step => step.delta matches .spliced _)
 
 /-- One frame: its page, the address its edit names, and whether the edit spliced the table. -/
 structure Frame where
@@ -104,31 +139,26 @@ session, titled by the request. The line under the title gives the delta and the
 the foot gives the laws that the answer names. A refused request draws the session before it,
 with the refusal. Every frame has the widest gutter of the sequence, so a line stands at one
 column in every frame. -/
-def frames (title : String) (reqs : List Tools.Session.Request) : List Frame :=
-  let step (acc : Tools.Session.State × List Frame) (r : Tools.Session.Request) :
-      Tools.Session.State × List Frame :=
+def frames (title : String) (reqs : List Effect4.Tool.Request) : List Frame :=
+  let step (acc : Effect4.Tool.State × List Frame) (r : Effect4.Tool.Request) :
+      Effect4.Tool.State × List Frame :=
     let (st, out) := acc
-    let (st', ans) := Tools.Session.answer st r
-    match st'.session with
+    let (st', ans) := (Effect4.Tool.serve Check.Oracle.uncached st r).value
+    match st'.raw.doc with
     | none => (st', out)
-    | some l =>
-      if r.op == "view" || r.op == "journal" || r.op == "sketch" || r.op == "run" then (st', out)
-      else
-        let lit := if r.op == "open" then none else some r.path
-        let (delta, spliced) := match st'.journal, ans.ok, r.op with
-          | s :: _, true, "fill" => (deltaText s.delta ++ "   ", s.delta matches .spliced _)
-          | s :: _, true, "omit" => (deltaText s.delta ++ "   ", s.delta matches .spliced _)
-          | _, false, _ => ("refused: " ++ (ans.error.getD "") ++ "   ", false)
-          | _, _, _ => ("", false)
-        let laws := "laws: " ++ ", ".intercalate (ans.laws.map lawText)
+    | some doc =>
+      if !redraws r then (st', out) else
+        let l := doc.session.shown
+        let lit := editPath st r
+        let (delta, spliced) := deltaOf ans
         let page := Program.sessionPage l lit (title ++ " · " ++ requestText r)
-          (delta ++ sessionText l) "" laws
+          (delta ++ sessionText l) "" ""
         let holes := l.sketch.holes.map (·.name)
         let code := Program.codePanel l.sketch.program (l.app.withHoles l.sketch.holes).rows holes
         let page := { page with code }
         let page := { page with graph := some { title := "program", laid := Flow.ofPage l.sketch.program page } }
         (st', out ++ [{ page, edit := lit, spliced }])
-  let out := (reqs.foldl step ({}, [])).2
+  let out := (reqs.foldl step (Effect4.Tool.empty, [])).2
   let n := out.length
   let gutter := out.foldl (fun m f => max m (ownGutter f.page)) 0
   let out := out.map fun f => { f with page := { f.page with gutter } }

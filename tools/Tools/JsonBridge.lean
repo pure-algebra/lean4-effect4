@@ -44,7 +44,7 @@ number is a non-negative finite binary64 datum from which the reader takes back 
 natural (`natOfBinary64`, the step `readIn` takes at `.nat`), and that natural is below 2^1024
 (`natOfBinary64_finite`). A step of `json-read-exact` at the tool: with `Canonical.ofJson_exact`,
 the program a request admits holds the naturals the request wrote, as binary64 hosts read them.
-Its consumer is `Tools.Session.programFrom?`, whose answers name it. -/
+Its consumer is the tool's wire (`Tools.WireText.parseTree`), which reads every request line through it. -/
 theorem ofLeanJson_num {fuel : Nat} {n : Lean.JsonNumber} {j : Effect4.Json}
     (h : ofLeanJson (fuel + 1) (.num n) = some j) :
     ∃ x : Effect4.Float64, j = .number x ∧ n.exponent = 0 ∧ 0 ≤ n.mantissa ∧
@@ -106,15 +106,6 @@ def toHex {α : Type} [Canonical α] (a : α) : String := hexString (Canonical.e
 cases (`Canonical.ofJsonAnyOrder`). -/
 def read? {α : Type} [Canonical α] (j : Lean.Json) : Option α :=
   (ofLeanJson depth j).bind Canonical.ofJsonAnyOrder
-
-/-- **A value from its hex bytes or, where there are none, its JSON print**, with the laws its
-reading names; `none` where neither is given. -/
-def valueFrom? {α : Type} [Canonical α] (hex : Option String) (json : Option Lean.Json) :
-    Option (Option α × List Lean.Name) :=
-  match hex, json with
-  | some h, _ => some (ofHex? h, [])
-  | none, some j => some (read? j, [``ofLeanJson_num, ``Canonical.ofJsonAnyOrder_exact])
-  | none, none => none
 
 /-! ## Where a refused JSON value stops fitting its shape
 

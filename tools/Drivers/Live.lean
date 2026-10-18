@@ -1,4 +1,5 @@
 import Tools.View.Live
+import Tools.WireText
 import Tools.View.Tokens
 import Effect4.Store.Domain.ProgramWire
 
@@ -8,8 +9,8 @@ import Effect4.Store.Domain.ProgramWire
     lake env lean --run tools/Drivers/Live.lean [FLAGS] < requests.jsonl
     lake env lean --run tools/Drivers/Live.lean [FLAGS] build NAME
 
-It holds one edit session and its retained picture (`Tools.View.Live`). It reads one session
-request a line, as `tools/Drivers/Session.lean` reads them, from its standard input or from the
+It holds one tool state and its retained picture (`Tools.View.Live`). It reads one request
+envelope a line, as `tools/Drivers/Session.lean` reads them (`Tools.WireText`), from its standard input or from the
 build of a corpus program (`Build.requests`, with `build NAME`). For each request it writes the
 answer, one JSON object, to its standard error, and the patch rows to its standard output, ending
 with `E`. A blank line is skipped, and a line that does not read is answered with its refusal.
@@ -61,10 +62,10 @@ def lookOf : Option String → IO Look
 
 /-- Answer one request: write its answer to standard error and its patch rows to standard output,
 and, with a check folder, the patch and the whole stream of the page. -/
-def answer (s : Settings) (check : Option System.FilePath) (st : State) (r : Tools.Session.Request) :
+def answer (s : Settings) (check : Option System.FilePath) (st : State) (r : Effect4.Tool.Request) :
     IO State := do
   let (st', ans, rows) := step s "live" st r
-  (← IO.getStderr).putStrLn (Lean.toJson ans).compress
+  (← IO.getStderr).putStrLn (Tools.WireText.replyLine ans)
   if !rows.isEmpty then
     let out ← IO.getStdout
     for row in rows do out.putStrLn row
@@ -96,10 +97,10 @@ def main (args : List String) : IO UInt32 := do
       if line.isEmpty then break
       let text := line.trimAscii.toString
       if text.isEmpty then continue
-      match Lean.Json.parse text >>= Tools.Session.Request.fromJson? with
+      match Tools.WireText.readRequest text with
       | .ok r => st ← answer s flags.check st r
       | .error why =>
-        (← IO.getStderr).putStrLn (Lean.toJson (Tools.Query.refused "request" why)).compress
+        (← IO.getStderr).putStrLn (Lean.Json.mkObj [("refused", .str why)]).compress
     return 0
   | _ =>
     IO.eprintln "usage: live [--look FILE] [--check DIR] [build NAME]   (requests one a line on standard input)"

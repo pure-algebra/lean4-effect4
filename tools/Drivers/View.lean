@@ -7,6 +7,7 @@ import Tools.View.Tokens
 import Tools.View.Output
 import Tools.View.SvgOut
 import Effect4.Store.Domain.ProgramWire
+import Tools.WireText
 
 /-!
 # The view driver: frames of a program built by edits
@@ -24,7 +25,7 @@ The flags: `--motion N`, the pictures of motion between two frames (default 20; 
 one in `tools/view/looks/` (default: the dark look, the base of every other).
 
 `NAME` is a program of the wire corpus (`Effect4.Program.Wire.Corpus.all`). `FILE` holds one
-session request a line, as `tools/Drivers/Session.lean` reads them. For each frame the driver
+request envelope a line, as `tools/Drivers/Session.lean` reads them. For each frame the driver
 writes three outputs of one list of calls (`docs/research/2026-10-09-visual-pipeline.md`):
 
 - `NNN.draw`, the device calls at the ratio 2 in the look, which `tools/view/draw` replays to
@@ -426,13 +427,13 @@ def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (
   IO.println s!"C\tgraph-dims-valid\t{graphs.length} graphs\t{(graphs.filter Laid.dimsValid).length} valid"
 
 /-- Read a request file: one JSON object a line; a blank line is skipped. -/
-def readRequests (file : System.FilePath) : IO (List Tools.Session.Request) := do
+def readRequests (file : System.FilePath) : IO (List Effect4.Tool.Request) := do
   let lines ← IO.FS.lines file
-  let mut out : Array Tools.Session.Request := #[]
+  let mut out : Array Effect4.Tool.Request := #[]
   for line in lines do
     let line := line.trimAscii.toString
     if line.isEmpty then continue
-    match Lean.Json.parse line >>= Tools.Session.Request.fromJson? with
+    match Tools.WireText.readRequest line with
     | .ok r => out := out.push r
     | .error e => throw (IO.userError s!"view: a request does not read: {e}")
   return out.toList
@@ -569,7 +570,7 @@ def main (args : List String) : IO UInt32 := do
       | some reqs =>
         IO.FS.createDirAll out
         IO.FS.writeFile (System.FilePath.mk out / "requests.jsonl")
-          ("\n".intercalate (reqs.map fun r => r.toJson.compress) ++ "\n")
+          ("\n".intercalate (reqs.map Tools.WireText.requestLine) ++ "\n")
         keep st L out (withMarks st (Build.frames name reqs)) s!"{name}, built"
   | ["run", name, out] =>
     match List.lookup name Effect4.Program.Wire.Corpus.all with

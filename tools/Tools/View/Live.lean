@@ -6,7 +6,7 @@ import Tools.View.Output
 /-!
 # The live loop: one request in, one patch out
 
-A resident session (`Tools.Session`) answers one request at a time. After each request that
+A resident tool state (`Effect4.Tool.serve`) answers one request at a time. After each request that
 changes the session, `step` draws the session's page as `Build.frames` does, and answers the
 **patch** from the picture before to the picture after (`Retained.diff`), as rows that extend the
 stream `tools/view/replay.h` replays (`Tools.View.stream`). This is slice LV-6 of the live view
@@ -92,7 +92,7 @@ theorem ratchet_ge_before (step before own : Nat) : before ≤ ratchet step befo
 /-- The loop's state: the session tool's state, the retained picture, the stroke cache, the two
 columns, the frame's number and size, and the texts the last frame leaves. -/
 structure State where
-  tool : Tools.Session.State := {}
+  tool : Effect4.Tool.State := Effect4.Tool.empty
   scene : Scene := {}
   cache : Laid.StrokeCache := {}
   gutter : Nat := 0
@@ -120,16 +120,12 @@ def pageGroups (L : Look) (W : Int) (g : Page) (cache : Laid.StrokeCache) :
 /-- The page of a session after a request, as `Build.frames` titles and fills it, without the
 place in a sequence, which a live session does not know. Its lines and its flow are the folds
 along the edit (`Inc`); it answers the memo they leave. -/
-def page (title : String) (r : Tools.Session.Request) (st' : Tools.Session.State)
-    (ans : Tools.Query.Answer) (l : EditSession) (memo : Inc.Memo) : Page × Inc.Memo :=
-  let lit := if r.op == "open" then none else some r.path
-  let edited := if r.op == "fill" || r.op == "omit" then some r.path else none
-  let delta := match st'.journal, ans.ok, r.op with
-    | s :: _, true, "fill" => deltaText s.delta ++ "   "
-    | s :: _, true, "omit" => deltaText s.delta ++ "   "
-    | _, false, _ => "refused: " ++ (ans.error.getD "") ++ "   "
-    | _, _, _ => ""
-  let laws := "laws: " ++ ", ".intercalate (ans.laws.map lawText)
+def page (title : String) (r : Effect4.Tool.Request) (before : Effect4.Tool.State)
+    (ans : Effect4.Tool.Reply) (l : EditSession) (memo : Inc.Memo) : Page × Inc.Memo :=
+  let lit := editPath before r
+  let edited := if ans.result.isOk then lit else none
+  let delta := (deltaOf ans).1
+  let laws := ""
   let prog := l.sketch.program
   let ls := Inc.lines memo edited prog
   let pg := Program.sessionPageOf l ls lit (title ++ " · " ++ requestText r) (delta ++ sessionText l) "" laws
@@ -165,14 +161,15 @@ def targetRow (L : Look) (ratio : Nat) (size : Int × Int) : String :=
 
 /-- **One step of the live loop**: the session's answer, and the patch rows when the request
 changed the session. A view of the session, its journal or its sketch changes nothing. -/
-def step (s : Settings) (title : String) (st : State) (r : Tools.Session.Request) :
-    State × Tools.Query.Answer × List String :=
-  let (tool, ans) := Tools.Session.answer st.tool r
-  match tool.session with
+def step (s : Settings) (title : String) (st : State) (r : Effect4.Tool.Request) :
+    State × Effect4.Tool.Reply × List String :=
+  let (tool, ans) := (Effect4.Tool.serve Effect4.Program.Check.Oracle.uncached st.tool r).value
+  match tool.raw.doc with
   | none => ({ st with tool }, ans, [])
-  | some l =>
-    if r.op == "view" || r.op == "journal" || r.op == "sketch" || r.op == "run" then ({ st with tool }, ans, []) else
-    let (g, memo) := page title r tool ans l st.memo
+  | some doc =>
+    if !redraws r then ({ st with tool }, ans, []) else
+    let l := doc.session.shown
+    let (g, memo) := page title r st.tool ans l st.memo
     let gutter := ratchet s.columnStep st.gutter (ownGutter g)
     let codeAt := ratchet s.columnStep st.codeAt (ownCodeAt g)
     let g := { g with gutter, codeAt }

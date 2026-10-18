@@ -1,6 +1,6 @@
 import Effect4.Run.LiveRecord
 import Effect4.Laws.Api.LiveRecord
-import Tools.Session
+import Effect4.Tool.Serve
 
 /-!
 # Test.Program.LiveRecordControls — acceptance controls for slice E (persistent keyed live sessions)
@@ -12,8 +12,8 @@ Controls from `docs/research/2026-10-17-proof-scout/README.md` §7.5 and `probes
 2. Case 11: the half-answered session saves and restores to the same journal, phases and waiting
    calls; its record round-trips through canonical bytes.
 3. A record with an unknown format version is refused by `restore`.
-4. `load` replaces the tool's live session: `liveView` then shows the restored session's waiting
-   calls only, with their keys and checked instances.
+4. The tool restores a record as a new run (`Tool.Action.restore`): its view shows the restored
+   session's waiting call only, with its key and checked instance.
 -/
 
 set_option autoImplicit false
@@ -22,8 +22,6 @@ namespace Test.Program.LiveRecordControls
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Store
 open Effect4.Api.Runner (Command)
-open Tools.Session (State Request answer)
-open Tools.JsonBridge (toHex printJson)
 
 def opts : Supervision.ForkOptions :=
   { daemon := false, startImmediately := true, maskMode := .inherit }
@@ -82,32 +80,35 @@ def afterFirst : Option Live := started.bind fun l => firstKey.map fun k =>
   | .error why => why == .unsupportedVersion 99
   | .ok _ => false) = some true
 
--- Control 4: `Tools.Session` `start`, `receive` by row (unresolved) and by key, `save`, and `load` replacing the live session.
+-- Control 4: the tool's `start`, a play by row (unresolved) and by key, the run's record, and
+-- `restore` adding a run whose view waits on the one call left.
 #guard
-  let r0 := answer {}
-    { op := "open", program := some (toHex pairSketch.program),
-      holes := some (toHex pairSketch.holes) }
-  let rStart := answer r0.1 { op := "start" }
-  let wait2 := (rStart.1.live.map fun l => (Run.live l.run).length) == some 2
-  -- receiving by rowName is refused as unresolved
-  let rRow := answer rStart.1 { op := "receive", rowName := some "h", answer := some (toHex (okAns 5)) }
-  -- receiving and applying by the first call's key (fiber 1, token 0) succeeds and leaves 1 call waiting
-  let rRec1 := answer rStart.1
-    { op := "receive", fiber := some 1, token := some 0, answer := some (toHex (okAns 5)) }
-  let rApp1 := answer rRec1.1 { op := "apply", fiber := some 1, token := some 0 }
-  let wait1 := (rApp1.1.live.map fun l => (Run.live l.run).length) == some 1
-  -- save the half-answered session
-  let rSave := answer rApp1.1 { op := "save", hex := true }
-  let savedHex := (rSave.2.result.getObjValAs? String "record").toOption
-  -- start a fresh session with 2 waiting calls, then load the saved record: `load` replaces the live session so `liveView` shows 1 waiting call
-  let rStart2 := answer rApp1.1 { op := "start" }
-  let rLoad := answer rStart2.1 { op := "load", record := savedHex }
-  let rView := answer rLoad.1 { op := "liveView" }
-  let waitAfterLoad :=
-    (rLoad.1.live.map fun l =>
-      l.view.awaiting.map fun c => (c.await.fiber.value, c.checked.isSome)) == some [(2, true)] &&
-    rView.2.result.getObjValD "outcome" == printJson Api.Outcome.frontier
-  rStart.2.ok && wait2 && !rRow.2.ok && rRec1.2.ok && rApp1.2.ok && wait1 &&
-    rSave.2.ok && rLoad.2.ok && rView.2.ok && waitAfterLoad
+  let serve1 (st : Tool.State) (r : Tool.Request) := (Tool.serve Check.Oracle.uncached st r).value
+  let snap : Snap := ⟨⟨"multi", 0⟩, 0⟩
+  let (s0, _) := serve1 Tool.empty (.act (.open_ "multi" {} pairSketch))
+  let (s1, rStart) := serve1 s0 (.act (.start snap {}))
+  let waiting (r : Tool.Reply) : Option Nat := match r.result with
+    | .ok (.acted (.started _ _ view)) | .ok (.acted (.played _ _ view))
+    | .ok (.acted (.restored _ view)) => some view.awaiting.length
+    | _ => none
+  -- a reply by row names two live calls, so the whole play is refused and the run is unchanged
+  let (s2, rRow) := serve1 s1 (.act (.play ⟨0⟩ [.receive (.row "h") (okAns 5)]))
+  -- the first call's key (fiber 1, token 0) takes its reply; one call keeps waiting
+  let key : Api.HostSession.Key := ⟨⟨1⟩, 0⟩
+  let (s3, rKey) := serve1 s2 (.act (.play ⟨0⟩ [.receive (.key key) (okAns 5), .apply (.key key)]))
+  -- the half-answered run's record, a fresh start, then the record restored as a third run
+  let (_, rRec) := serve1 s3 (.ask (.run ⟨0⟩ .record))
+  let (s4, _) := serve1 s3 (.act (.start snap {}))
+  match rRec.result with
+  | .ok (.run _ (.record saved)) =>
+    let (s5, rLoad) := serve1 s4 (.act (.restore saved))
+    waiting rStart == some 2 && !rRow.result.isOk && s2.transcript.length == s1.transcript.length &&
+      waiting rKey == some 1 && waiting rLoad == some 1 && s5.raw.runs.length == 3 &&
+      (match rLoad.result with
+       | .ok (.acted (.restored _ view)) =>
+         view.awaiting.map (fun c => (c.await.fiber.value, c.checked.isSome)) == [(2, true)] &&
+           view.outcome == Api.Outcome.frontier
+       | _ => false)
+  | _ => false
 
 end Test.Program.LiveRecordControls

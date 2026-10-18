@@ -1,4 +1,4 @@
-import Tools.Session
+import Effect4.Tool.Serve
 import Effect4.Laws.Api.Preview
 
 /-!
@@ -26,8 +26,6 @@ set_option autoImplicit false
 namespace Test.Program.PreviewControls
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Store Effect4.Run
-open Tools.Session (answer)
-open Tools.JsonBridge (toHex printJson)
 
 /-! ## Control 1: Generic row refused by `Preview.admit`, accepted by `Live` -/
 
@@ -53,14 +51,15 @@ def liveFirst : Option Live :=
 
 #guard (liveFirst.bind fun l => l.run.exit) = some some1
 
--- The session tool refuses `settle` on the generic row with `genericRow`.
+-- The tool refuses a settling preview on the generic row with `genericRow`, and the state stays.
 #guard
-  let r0 := answer {}
-    { op := "open", program := some (toHex programFirst), rows := some (toHex [firstRow]) }
-  let rSettle := answer r0.1 { op := "settle" }
-  !rSettle.2.ok &&
-    rSettle.2.result.getObjValAs? String "reason" == .ok "genericRow" &&
-    rSettle.2.result.getObjValAs? Nat "row" == .ok 0
+  let (s0, _) := (Tool.serve Check.Oracle.uncached Tool.empty
+    (.act (.open_ "first" appFirst { program := programFirst }))).value
+  let (s1, rSettle) := (Tool.serve Check.Oracle.uncached s0 (.ask (.preview (.settle [] 64)))).value
+  s1.transcript.length == s0.transcript.length &&
+    match rSettle.result with
+    | .error (.preview (.genericRow _ 0)) => true
+    | _ => false
 
 /-! ## Control 2: Handle answer refused by `Preview.admit`; `Live` allocates `Value.external 0` -/
 

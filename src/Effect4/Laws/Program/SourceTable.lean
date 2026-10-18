@@ -36,7 +36,7 @@ the expansion's table at the source's addresses is a table of the source. Requir
   The check at the root is admission's typing (`Sketch.sourceCheck_toOption`). Not established:
   an address of a copy maps to no source address; a refusal located inside a copy keeps the
   expansion's address; a run; the cost. Consumers: `SourceSession.table_eq`, and the session
-  tool (`tools/Tools/Session.lean`).
+  tool (`Effect4.Tool.serve`, `src/Effect4/Tool/Serve.lean`).
 - **`source-session-coherent`** (role preservation; pointer `SourceSession.reached_view`).
   Reach: every sealed document, without a separate coherence premise; exact source table, refusals, and root type.
   The proof uses the placed `Doc.coherent` goal.

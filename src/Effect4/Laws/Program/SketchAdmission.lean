@@ -15,7 +15,8 @@ formation, the target profile, and closure.
 
 - **Concept**: `residual-program-typing` (`docs/core/semantics.md`); property: program admission.
 - **Question**: startup compatibility helper of `residual-program-typing` (consumer:
-  `Tools.Session`'s `run` and `start`, which report `sourceCheck` and `admitProgram` separately).
+  the tool's `open` and `start` (`Tool.Internal.action`): the document's view reports the source
+  check, and `start` reports admission's refusal separately).
 - **Reach**: every sketch `s`, application `app`, and admission certificate
   `a : AdmittedProgram s.program (app.withHoles s.holes)`.
 - **What it does not establish**: it does not establish the converse (`sourceCheck = .ok t` does
@@ -32,7 +33,7 @@ namespace Effect4.Program
 
 - **Concept**: `residual-program-typing`; property: program admission.
 - **Question**: startup compatibility helper of `residual-program-typing` (consumer:
-  `Tools.Session`).
+  the tool's `start`, `Tool.Internal.action`).
 - **Reach**: every `s : Sketch`, `app : SigApp`, and
   `a : AdmittedProgram s.program (app.withHoles s.holes)`.
 - **Exclusions**: does not establish the converse or any property of a run.

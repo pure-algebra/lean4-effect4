@@ -15,7 +15,7 @@ Slice P of `docs/research/2026-10-17-proof-scout/README.md` (§7.6).
 * **What it does not establish**: agreement of the call tree with the machine
   (`Tree.ofProgram_eq_denoteRowsB` is a planned goal), or reply admission at generic rows or handle
   answers (which `Preview.admit` refuses).
-* **Consumer**: `Tools.Session.answer` (`settle`, `frames`, `explore`) and
+* **Consumer**: the tool's preview query (`Tool.Internal.preview`: `settle`, `frames`, `explore`) and
   `Test.Program.PreviewControls`.
 * **Requirement**: R12.
 -/
@@ -33,7 +33,7 @@ Placement:
 2. Question: the preview interface's proposed obligation (role compatibility).
 3. Reach: `checkedTape` and `Kit.replyFault`.
 4. What it does not establish: agreement with the machine or checked instances at generic rows.
-5. Consumer: `checkedTape_success_externalValue` and `Tools.Session.answer` (`settle`, `frames`).
+5. Consumer: `checkedTape_success_externalValue` and the tool's preview query (`Tool.Internal.preview`: `settle`, `frames`).
    Requirement R12. -/
 theorem checkedTape_admits {app : SigApp} {row : Nat} {v : Store.Val} {tape rest : List ExitV}
     {ex : ExitV} (h : checkedTape app row v tape = some (ex, rest)) :
@@ -129,7 +129,7 @@ Placement:
 2. Question: the preview profile's value-agreement law of §7.6 (role compatibility).
 3. Reach: `checkedTape` and `externalValue` at a row with `hasHandle r.answer = false`.
 4. What it does not establish: generic rows or handle-allocating rows (refused by `Preview.admit`).
-5. Consumer: `Tools.Session.answer` (`settle`, `frames`) and `Test.Program.PreviewControls`.
+5. Consumer: the tool's preview query (`Tool.Internal.preview`: `settle`, `frames`) and `Test.Program.PreviewControls`.
    Requirement R12. -/
 theorem checkedTape_success_externalValue {app : SigApp} {row : Nat} {r : Program.Row}
     {req value : Store.Val} {tape rest : List ExitV}
@@ -173,7 +173,7 @@ Placement:
 2. Question: characterization of `Preview.rejected` (role compatibility).
 3. Reach: `Preview.rejected`, `Tree.Stop.waiting`, and `Kit.replyFault`.
 4. What it does not establish: whether subsequent tape entries fit.
-5. Consumer: `Tools.Session.answer` (`settle`, `frames`) and `Test.Program.PreviewControls`.
+5. Consumer: the tool's preview query (`Tool.Internal.preview`: `settle`, `frames`) and `Test.Program.PreviewControls`.
    Requirement R12. -/
 theorem rejected_iff {app : SigApp} {o : Tree.Outcome (List ExitV)} {r : Rejected} :
     rejected app o = some r ↔
