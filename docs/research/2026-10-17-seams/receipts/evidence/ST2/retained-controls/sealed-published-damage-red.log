@@ -1,9 +1,0 @@
-["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st2-sol/ocaml", "engine/cas/test/test_disk_damage.exe"]
-interior sealed bad head: accepted 1 nodes
-interior sealed bad head: pack evidence unchanged=true, control unchanged=false
-short sealed trailing head: accepted 2 nodes
-short sealed trailing head: pack evidence unchanged=false, control unchanged=false
-published boundary beyond truncated bytes: accepted 1 nodes
-published boundary beyond truncated bytes: pack evidence unchanged=false, control unchanged=false
-Fatal error: exception Failure("damage accepted or evidence changed")
-exit_status=2

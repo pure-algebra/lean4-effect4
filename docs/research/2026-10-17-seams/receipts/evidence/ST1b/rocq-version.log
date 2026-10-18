@@ -1,3 +1,0 @@
-{"command": ["opam", "exec", "--switch=rocq", "--", "rocq", "--version"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T05:07:22.305593+00:00"}
-The Rocq Prover, version 9.0.1
-compiled with OCaml 5.4.1

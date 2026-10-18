@@ -1,8 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-lean-one.py", "python3", "scripts/generate.py", "--only", "ts"], "cwd": "/Users/pooks/Dev/lean4-effect4/.claude/worktrees/gracious-shamir-5b34bd", "started_utc": "2026-10-18T09:04:07.691806+00:00"}
-+ lake build Drivers.TsGen
-✔ [148/148] Built Drivers.TsGen (6.2s)
-Build completed successfully (148 jobs).
-+ lake env lean -DwarningAsError=true -M4096 --run tools/Drivers/TsGen.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-c35am2it/ts/eff
-TsGen: 31 families (12 tagged, 7 literals, 8 struct, 4 array), 175 constructors; profile 63 heads, 45 atoms, 23 rows; packages 2 tables, 8 rows, address effect@4.0.0-rc.112 + lean4-typescript@f5878bf879bd5712db964c2cd12802748c707605
-wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, names.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts, test/type-projection.gen.json under /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-c35am2it/ts/eff
-PASS generate: requested producers ran in dependency order

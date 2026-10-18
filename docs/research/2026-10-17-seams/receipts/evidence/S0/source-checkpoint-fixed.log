@@ -1,2 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-lean-one.py", "lake", "build", "OCaml5.Tools.LcnfGen", "Effect4.Program.Check", "Effect4.Run.LiveRecord", "Effect4.Laws.Program.Typing/Closed", "Test.Program.SeamsS0"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:31:07.051661+00:00"}
-error: unknown package `Effect4.Laws.Program.Typing`

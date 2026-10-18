@@ -1,4 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-lean-one.py", "lake", "build", "Effect4.Laws.Author.Explain", "Effect4.Laws.Store.Recovery", "Effect4.Laws.Store.Results", "Effect4.Laws.Tool.Exchange", "Effect4.Store.Domain.Cas", "Effect4.Store.Domain.Traits", "Effect4.Tool.Exchange", "Effect4.Tool.Session", "OCaml5.Store.DiskOracle", "OCaml5.Tools.CasGoldens", "ProofGraph.Registry", "ProofGraph.Why", "Test.Audit.AxiomGate", "Test.Audit.ClosureAudit", "Test.Program.SeamsExchange", "Test.Store.ProgramContent", "Test.Store.SeamsRead", "Test.Store.SeamsRecovery", "Test.Store.SeamsResults", "Test.Store.SeamsTransactions", "Test.Store.WordContract", "Tools.LoadPaths", "Tools.Semantics", "Tools.View.Glyph"], "cwd": "/Users/pooks/Dev/lean4-effect4", "started_utc": "2026-10-18T09:57:48.637123+00:00"}
-✔ [1344/1345] Built Test.Store.SeamsTransactions (1.2s)
-✔ [1345/1345] Built Test.Store.SeamsRecovery (4.8s)
-Build completed successfully (1345 jobs).

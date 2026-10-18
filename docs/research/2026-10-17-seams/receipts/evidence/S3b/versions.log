@@ -1,5 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-lean-one.py", "python3", "/private/tmp/seams-runtime-versions.py"], "cwd": "/Users/pooks/Dev/lean4-effect4", "started_utc": "2026-10-18T07:55:10.378578+00:00"}
-{"command": ["lake", "env", "lean", "--version"], "exit_status": 0, "output": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)"}
-{"command": ["opam", "exec", "--switch=effect4", "--", "ocamlc", "-version"], "exit_status": 0, "output": "5.1.1"}
-{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "--version"], "exit_status": 0, "output": "3.24.2"}
-{"command": ["/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3", "--version"], "exit_status": 0, "output": "Python 3.13.14"}

@@ -1,9 +1,0 @@
-{"command": ["rg", "-n", "\\.step .*~fuel|I.interp_of|interp = I.interp_of|let step .*_i", "ocaml/engine/e4_engine.ml", "ocaml/engine/e4_instance.ml", "ocaml/engine/test/api_gen_inst.ml", "ocaml/engine/test/test_engine.ml"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:42:05.885133+00:00"}
-ocaml/engine/e4_instance.ml:90:  let step (table : Row.t list) (p : program) (_i : interp) ~(fuel : int) (m : machine) (d : api_decision)
-ocaml/engine/test/api_gen_inst.ml:55:let step (table : Row.t list) (p : program) (_i : interp) ~(fuel : int) (m : machine) (d : api_decision)
-ocaml/engine/e4_engine.ml:119:    { program = p; table; interp = I.interp_of table p; fuel_ = fuel;
-ocaml/engine/e4_engine.ml:135:      match I.step t.table t.program t.interp ~fuel:t.fuel_ t.m d with
-ocaml/engine/test/test_engine.ml:348:    let spawned, (_, child_id) = I.sh_spawn (I.interp_of [] program) machine parent
-ocaml/engine/test/test_engine.ml:365:    let spawned, (_, child_id) = I.sh_spawn (I.interp_of [] program) machine parent
-ocaml/engine/test/test_engine.ml:425:    let step m d = I.step [] p (I.interp_of [] p) ~fuel:100 m d in
-ocaml/engine/test/test_engine.ml:438:    let step m d = I.step [] p (I.interp_of [] p) ~fuel:100 m d in

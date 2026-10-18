@@ -1,4 +1,0 @@
-{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "runtest", "--root", "ocaml", "gen/interface"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:27:38.079478+00:00"}
-Entering directory '/Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml'
-Interface roots, sealing, final ascriptions, and refusals pass.
-Leaving directory '/Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml'

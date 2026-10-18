@@ -1,7 +1,0 @@
-{"command": ["opam", "exec", "--switch=rocq", "--", "rocq", "compile", "-Q", ".", "E4", "Eff_types.v"], "source_sha256": "545eec67d5c29efbb9b77b5c3976f27a9a5c0f99bef166d0af993754df75e5d0"}
-exit_status=0
-{"command": ["opam", "exec", "--switch=rocq", "--", "rocq", "compile", "-Q", ".", "E4", "StoreCode.v"], "source_sha256": "7ec6c84c8d84db7ef66d2800f1fbe85f1578685b98870ba26ae3658df31ddd52"}
-File "./StoreCode.v", line 85, characters 11-22:
-Error: root_policy already exists.
-
-exit_status=1

@@ -1,9 +1,0 @@
-Observed tool output, preserved from exec chunk 533397. The source getter at that run was:
-  def Checked.readValue {α : Type} (c : Checked α) : α := c.value
-
-nominal-build-SeamsS0Gen 0
-nominal-lower 1 imported #[SeamsS0Check] in 1394 ms
-== /private/tmp/seams-s0-scout/checker_nominal.ml
-uncaught exception: nominal root Effect4.Program.Check.Checked.readValue: source/mono arity mismatch (1 versus 2); Effect4.Program.Check.Checked.readValue (α : lcErased) (c : Effect4.Program.Check.Checked lcAny) : lcAny
-
-The successful Verdict-specialized rerun replaces nominal-lower.log. This transcript preserves the preceding refusal.

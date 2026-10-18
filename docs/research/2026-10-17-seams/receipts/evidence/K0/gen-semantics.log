@@ -1,5 +1,0 @@
-{"command": ["/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh", "env", "LEAN_NUM_THREADS=3", "python3", "scripts/generate.py", "--only", "semantics"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T02:38:45.367442+00:00"}
-usage: generate.py [-h]
-                   [--only {variances,derived,eff,wire,cas,ts,readme,lcnf,fixtures}]
-                   [--all] [--output-dir OUTPUT_DIR]
-generate.py: error: argument --only: invalid choice: 'semantics' (choose from 'variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme', 'lcnf', 'fixtures')

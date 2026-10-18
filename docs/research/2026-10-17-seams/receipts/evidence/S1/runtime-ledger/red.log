@@ -1,9 +1,0 @@
-/private/tmp/seams-s1-ledger/LedgerControl.lean:7:0: error: Expression
-  decide (List.length reverted.trace = 2)
-did not evaluate to `true`
-/private/tmp/seams-s1-ledger/LedgerControl.lean:9:0: error: Expression
-  List.isEmpty (Test.Program.SeamsS1.DocControls.run d0 (DocAction.revert 5)).trace
-did not evaluate to `true`
-/private/tmp/seams-s1-ledger/LedgerControl.lean:11:0: error: Expression
-  List.isEmpty (Test.Program.SeamsS1.DocControls.run noopDoc (DocAction.revert 0)).trace
-did not evaluate to `true`

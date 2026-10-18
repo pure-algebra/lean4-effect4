@@ -1,4 +1,0 @@
-{"command": ["lean", "-DwarningAsError=true", "--root=/private/tmp/seams-st1a-root/src", "--run", "/private/tmp/seams-st1a-root/src/OCaml5/Tools/CasFacts.lean", "/private/tmp/seams-st1a-root/native-facts"]}
-wrote e4_kind.ml and e4_kind.mli
-wrote e4_admission.ml and e4_admission.mli
-exit_status=0

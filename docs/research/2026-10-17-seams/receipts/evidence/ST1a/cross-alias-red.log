@@ -1,7 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-st1a-alias-control.py"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T04:21:15.886855+00:00"}
-{"producer_calls": 2, "error": null, "victim_unchanged": false}
-Traceback (most recent call last):
-  File "/private/tmp/seams-st1a-alias-control.py", line 26, in <module>
-    assert error and 'aliases' in error and not commands and (r/victim).read_bytes()==before
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError

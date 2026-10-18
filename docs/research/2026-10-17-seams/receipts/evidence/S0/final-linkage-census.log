@@ -1,6 +1,0 @@
-{"command": ["python3", "/private/tmp/s0-final-linkage-census.py"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:49:26.939047+00:00"}
-engine/e4_instance.ml required 43 missing []
-inherited ['api_evaluate', 'program_awaits', 'reify_exit_val']
-engine/test/api_gen_inst.ml required 43 missing []
-inherited ['api_evaluate', 'program_awaits', 'reify_exit_val']
-PASS complete instance value inventory against the fresh corrected native interfaces

@@ -1,7 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-st1a-rocq-alias.py"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T04:28:57.806719+00:00"}
-{"producer_calls": 2, "error": "drift", "published_unchanged": false}
-Traceback (most recent call last):
-  File "/private/tmp/seams-st1a-rocq-alias.py", line 25, in <module>
-    assert error and 'aliases' in error and not commands and unchanged
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError

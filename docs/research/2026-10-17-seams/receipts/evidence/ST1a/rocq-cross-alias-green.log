@@ -1,2 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-st1a-rocq-alias.py"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T04:29:09.685536+00:00"}
-{"producer_calls": 0, "error": "rocq/Skeleton.v: check output aliases repository destination", "published_unchanged": true}

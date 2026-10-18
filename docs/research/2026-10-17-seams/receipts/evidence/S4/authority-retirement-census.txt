@@ -1,8 +1,0 @@
-docs/core/host-boundary.md:68:  (`instance_prepared_success`). The checked replay takes this path: `Typed.replay` feeds a
-docs/core/host-boundary.md:78:  - `Typed.replay` replays a session's journal through the checked session, and a session's own
-docs/core/host-boundary.md:114:| The certificate-first `Typed.replay` runs unchecked answers: it is the raw `Api.replay` on the certified program (`src/Effect4/Api.lean`). Row 373 (8) rules the repair: it replays the session's journal, checked at each call's instance. | `origin-plan-review/RemediationProbe.lean` | 98 |
-docs/core/host-boundary.md:241:| `Typed.replay` | consumes a session header and a `Runner.Command` journal through the checked keyed session, with both budgets and phases that can refuse, checked at each call's instance (rows 98 and 373 (8)) |
-docs/core/system-map.md:57:  appends on the assembled table; `HostSession.start` refuses another table). The host-row
-docs/core/semantics.md:1494:- **Typed replay under session (`typed-replay-session`)**: Public typed replay route under keyed host session
-docs/core/api-surface.md:25:| `Run`, the live session (decisions row 373) | `src/Effect4/Run/Live.lean`, `src/Effect4/Run/View.lean` | `Live.open`, `Live.start`, `Live.feed`, `Live.feedAll`, `Live.view`; `Api.Typed.replay`: a session's journal replayed through the checked session, each reply admitted at its call. The raw `Api.replay` is a named test entry (row 373 (8)) | `Live.start_error`, `Live.view_classifies`, `Live.view_funded`, `Live.replay_at_call_instance` (`src/Effect4/Laws/Api/Live.lean`) |
-docs/core/api-surface.md:273:`Built`, `HostSession.start`, `Run.open` and the soundness statements); and confirm that `gen`

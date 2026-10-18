@@ -1,9 +1,0 @@
-{
-  "old_interface_ignored": true,
-  "positive_compiles": true,
-  "bad_stage_published": false,
-  "retained_sha256": {
-    "api_engine.ml": "91cfc84e5f3f9258592eb04f204587cb46bd9b0808757b7ccb7e0a909dbe60d5",
-    "api_engine.mli": "aff06b75a744158516ef645b54f86de13042b43b8079baee983a6509f57a08b1"
-  }
-}

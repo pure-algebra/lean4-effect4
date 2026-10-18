@@ -5,7 +5,7 @@ The table records landed slices. Every unlanded slice remains open. This receipt
 The coordinator merges; this branch is never pushed.
 
 The owner pauses work after V1.
-[The pause checkpoint](../preparation/paused-2026-10-18/README.md) retains prepared sources, evidence, and resume instructions.
+The pause checkpoint and the bulk evidence logs (822 files) were dropped on 2026-10-18 under the cleanup steer; they remain at commit `1b9c351b7`.
 
 | Slice | Implementation commit | Receipt | State |
 | --- | --- | --- | --- |

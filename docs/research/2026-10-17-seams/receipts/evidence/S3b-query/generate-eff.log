@@ -1,7 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-lean-one.py", "python3", "scripts/generate.py", "--only", "eff"], "cwd": "/Users/pooks/Dev/lean4-effect4/.claude/worktrees/gracious-shamir-5b34bd", "started_utc": "2026-10-18T09:03:59.682472+00:00"}
-+ lake build OCaml5.Tools.EffGen
-✔ [117/117] Built OCaml5.Tools.EffGen (2.5s)
-Build completed successfully (117 jobs).
-+ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/EffGen.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-4x7bq8ao/ocaml/eff
-EffGen: 31 families, 89 corpus programs, written to /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-4x7bq8ao/ocaml/eff
-PASS generate: requested producers ran in dependency order

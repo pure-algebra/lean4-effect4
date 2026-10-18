@@ -1,2 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-st1a-alias-control.py"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T04:21:35.009437+00:00"}
-{"producer_calls": 0, "error": "ocaml/engine/cas/e4_kind.ml: output aliases repository destination", "victim_unchanged": true}

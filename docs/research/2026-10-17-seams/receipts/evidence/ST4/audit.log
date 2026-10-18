@@ -1,2 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-lean-one.py", "lake", "env", "lean", "-DwarningAsError=true", "/private/tmp/seams-st4-audit.lean"], "cwd": "/Users/pooks/Dev/lean4-effect4", "started_utc": "2026-10-18T09:57:55.389191+00:00"}
-#axiom_audit: 1051 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

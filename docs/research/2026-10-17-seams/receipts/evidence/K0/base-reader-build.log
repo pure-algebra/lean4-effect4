@@ -1,1 +1,0 @@
-{"command": ["/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh", "env", "LEAN_NUM_THREADS=3", "lake", "env", "lean", "-o", ".lake/build/lib/lean/K0ReadersBase.olean", "scratch/seams/K0ReadersBase.lean"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T02:35:47.945421+00:00"}

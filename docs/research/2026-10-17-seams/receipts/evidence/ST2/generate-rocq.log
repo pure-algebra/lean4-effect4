@@ -1,4 +1,0 @@
-["lean", "-M4096", "-DwarningAsError=true", "--run", "/private/tmp/seams-st2-sol/src/OCaml5/Tools/GallinaGen.lean", "/private/tmp/seams-st2-sol/rocq/Skeleton.v", "/private/tmp/seams-st2-sol/rocq/StoreCode.v"]
-wrote /private/tmp/seams-st2-sol/rocq/Skeleton.v (23291 bytes)
-wrote /private/tmp/seams-st2-sol/rocq/StoreCode.v (48712 bytes)
-exit_status=0

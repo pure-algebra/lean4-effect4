@@ -1,3 +1,0 @@
-{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st2-sol/writer-red-native", "engine/cas/test/test_disk_kill.exe"]}
-Fatal error: exception Failure("accepted cut before-write0 reopen fault: root docs/a target absent from durable image")
-exit_status=2

@@ -1,9 +1,0 @@
-Test/Program/FillSetControls.lean
-docs/core/semantics.md
-generated/semantics.md
-src/Effect4/Laws/Program/FillReference.lean
-src/Effect4/Laws/Program/FillSet.lean
-src/Effect4/Program/Typing/CheckCache.lean
-src/Effect4/Program/Typing/FillSet.lean
-tools/ProofGraph/Registry.lean
-tools/Tools/Session.lean

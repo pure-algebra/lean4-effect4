@@ -1,8 +1,0 @@
-{"command": ["python3", "scripts/check-lcnf-interfaces.py"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:37:50.015208+00:00"}
-File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-nyhstavq/compile/second.ml", line 2, characters 22-30:
-2 | let malformed : int = "refuse"
-                          ^^^^^^^^
-Error: This expression has type string but an expression was expected of type
-         int
-
-PASS: stale interface replacement and whole-family retention after native refusal

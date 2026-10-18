@@ -1,4 +1,0 @@
-{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-s0-linkage-overlay", "engine/test/test_seams_step.exe"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:47:22.853998+00:00"}
-PASS Fast stable step uses its program with a mismatched obsolete interpreter
-PASS Ref stable step uses its program with a mismatched obsolete interpreter
-PASS Gen stable step uses its program with a mismatched obsolete interpreter

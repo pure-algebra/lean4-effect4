@@ -1,4 +1,0 @@
-{"command": ["python3", "/private/tmp/seams-lean-one.py", "make", "batteries-touched", "BASE=d2994ed0144977d5c65a04aa1f1659b0f6483ff1"], "cwd": "/Users/pooks/Dev/lean4-effect4", "started_utc": "2026-10-18T07:43:00.697950+00:00"}
-lean-imports: Effect4.Laws is newer than its .ilean; its edits are read by name
-lean-imports: 4 batteries have no .ilean; each is read by its imports
-batteries-touched: no battery reached

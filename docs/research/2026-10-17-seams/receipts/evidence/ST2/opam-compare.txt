@@ -1,2 +1,0 @@
-Added: ['qcheck-core.0.91', 'qcheck-multicoretests-util.0.10', 'qcheck-stm.0.10']
-Removed: []

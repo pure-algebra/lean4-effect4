@@ -1,4 +1,0 @@
-usage: generate.py [-h]
-                   [--only {variances,derived,eff,wire,cas,ts,readme,lcnf,fixtures}]
-                   [--all] [--output-dir OUTPUT_DIR]
-generate.py: error: argument --only: invalid choice: 'rocq' (choose from 'variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme', 'lcnf', 'fixtures')

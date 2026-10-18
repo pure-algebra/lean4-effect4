@@ -1,5 +1,0 @@
-{
-  "original_sha256": "877b52e731e2dea6f7e8d98569683eadd5a79df51a376957a241ecec2535fd0e",
-  "mutated_sha256": "31180b77a0599b5ecb419cf1992b4a59661b1a2a0b6aa835acd820d0d182abea",
-  "mutation": "publish prepared roots before writing fresh nodes"
-}
