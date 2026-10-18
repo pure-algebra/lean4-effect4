@@ -60,6 +60,23 @@ def laidsOf (L : Look) (p : NativeEff) : List Laid :=
   | first :: _ => first :: (ls.zip (ls.drop 1)).flatMap fun (a, b) =>
       [250, 500, 750].map (sampleLaid L.motion.norm a b) ++ [b]
 
+-- The session accepts every request of a build: each fill carries its whole target, which the
+-- checked commit requires, so every frame after the opening shows an accepted fill.
+#guard programs.all fun p =>
+  match requests p with
+  | none => true
+  | some reqs => (reqs.foldl (fun (acc : Tools.Session.State × Bool) r =>
+      let (st', ans) := Tools.Session.answer acc.1 r
+      (st', acc.2 && ans.ok)) ({}, true)).2
+
+-- A control: the same build with its targets dropped is refused at its first fill.
+#guard programs.any fun p =>
+  match requests p with
+  | some (opening :: fill :: _) =>
+    let (st, _) := Tools.Session.answer {} opening
+    !(Tools.Session.answer st { fill with revision := none }).2.ok
+  | _ => false
+
 /-! ## LV-2: the graph's calls on a key index and a stroke cache -/
 
 -- One stroke cache carried along every frame and every moment of motion of a build answers each
