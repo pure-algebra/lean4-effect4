@@ -2356,7 +2356,7 @@ List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_A
 Effect4.Program.SourceSession.open._lam_0	program_source_session_open___lam_0	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	1	0	1	0	12912128382025085876	Effect4.Program.SourceSession.open._lam_0	false
 Effect4.Program.DocInternal.batch	program_doc_internal_batch	false	15	0	0	0	6	4	0	0	0	0	15	0	0	0	0	0	0	0	0	5	31	0	9	0	1	0	1924281165896014572	Effect4.Program.DocInternal.batch	false
 Effect4.Program.DocInternal.apply._lam_0	program_doc_internal_apply__lam_0	false	11	0	0	0	2	2	0	1	0	0	10	0	1	0	0	0	0	0	0	6	15	0	3	0	1	0	3655654732281871521	Effect4.Program.DocInternal.apply._lam_0	false
-Effect4.Program.SourceSession.feed	program_source_session_feed	false	35	0	10	21	25	12	0	0	0	0	35	0	0	0	0	0	0	0	0	10	145	0	41	6	1	0	2488125744407977048	Effect4.Program.SourceSession.feed	false
+Effect4.Program.SourceSession.feed	program_source_session_feed	false	35	0	10	21	25	12	0	0	0	0	35	0	0	0	0	0	0	0	0	10	145	0	41	6	1	0	17620613846774655700	Effect4.Program.SourceSession.feed	false
 Effect4.Program.DocInternal.undoItems	program_doc_internal_undo_items	false	14	0	0	0	4	3	0	0	0	0	14	0	0	0	0	0	0	0	0	5	28	0	6	0	1	0	12048014005737164635	Effect4.Program.DocInternal.undoItems	false
 Effect4.Program.FillSet.add._lam_0	program_fill_set_add__lam_0	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	3	5	0	1	0	1	0	10775980723138940091	Effect4.Program.FillSet.add._lam_0	false
 Effect4.Program.FillSetInternal.addEntry	program_fill_set_internal_add_entry	false	30	0	1	2	9	6	0	0	0	0	30	0	0	0	0	0	0	0	0	10	48	0	15	0	1	0	729838191782925413	Effect4.Program.FillSetInternal.addEntry	false
@@ -2582,7 +2582,7 @@ Effect4.Program.DocInternal.editOf	program_doc_internal_edit_of	false	8	0	0	0	4	
 Effect4.Program.DocInternal.batch._lam_2	program_doc_internal_batch__lam_2	false	6	0	0	0	2	2	0	1	0	0	4	1	1	0	0	0	0	0	0	0	13	0	3	0	1	0	672947478748778712	Effect4.Program.DocInternal.batch._lam_2	false
 Effect4.Program.DocInternal.record	program_doc_internal_record	false	8	0	2	4	8	4	0	0	0	0	8	0	0	0	0	0	0	0	0	6	14	0	10	3	1	0	2467487095299504634	Effect4.Program.DocInternal.record	false
 Effect4.Program.SourceSession.candidatePartKey	program_source_session_candidate_part_key	false	11	0	0	0	7	5	0	0	0	0	11	0	0	0	0	0	0	0	0	6	13	0	7	4	1	0	2558653462814249436	Effect4.Program.SourceSession.candidatePartKey	false
-Effect4.Program.SourceSession.feed._lam_1	program_source_session_feed__lam_1	false	14	0	0	0	6	4	0	0	0	0	14	0	0	0	0	0	0	0	0	10	30	0	9	0	1	0	1369134082253751570	Effect4.Program.SourceSession.feed._lam_1	false
+Effect4.Program.SourceSession.feed._lam_1	program_source_session_feed__lam_1	false	16	0	1	2	9	5	0	0	0	0	16	0	0	0	0	0	0	0	0	10	39	0	14	0	1	0	6102290312160374949	Effect4.Program.SourceSession.feed._lam_1	false
 Effect4.Program.SourceSession.recheck	program_source_session_recheck	false	4	0	0	0	2	1	0	0	0	0	4	0	0	0	0	0	0	0	0	0	13	0	2	0	1	0	17179197775085742204	Effect4.Program.SourceSession.recheck	false
 Effect4.Program.SourceSession.canSplice	program_source_session_can_splice	false	5	0	1	2	7	4	0	0	0	0	5	0	0	0	0	0	0	0	0	0	7	0	11	0	1	0	14642134654139872111	Effect4.Program.SourceSession.canSplice	false
 Effect4.Program.SourceSession.draftOmitAllows	program_source_session_draft_omit_allows	false	14	0	1	2	9	7	0	0	0	0	14	0	0	0	0	0	0	0	0	1	20	0	16	0	1	0	13566646533171089391	Effect4.Program.SourceSession.draftOmitAllows	false

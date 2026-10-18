@@ -22,9 +22,9 @@ checks a program, and shows the expansion's table at the source's addresses.
 | `Sketch.sourceCheck_toOption` | the check at the root is admission's typing | `typeOfProgram`'s definition |
 | `Sketch.sourceRefusals_head`, `Sketch.sourceRefusals_nil_iff` | the refusals start with the check's, and are empty exactly when it succeeds | `Sketch.table_result_refusal_none` at the expansion |
 | `SourceSession.feed_draft` | a draft whose sketch and candidate hold no ill-formed reference is the expansion's edit session at the source's addresses | `draft_conditions_of_reference`, `draft_reference_spliced` |
-| `SourceSession.reached_view` | every sealed document shows its source table, refusals, and root type | `Doc.coherent`, modulo the goal `feed_coherent` |
-| `SourceSession.replay_drafts_view` | every old application, sketch, and edit list retains its exact observation through canonical draft replay | the replay fold, modulo `feed_coherent` |
-| `SourceSession.feed_undo` | an edit, then the edit that puts back the old sub-program as written, restores the session | `EditSession.Coherent.ext`, modulo `feed_coherent` |
+| `SourceSession.reached_view` | every sealed document shows its source table, refusals, and root type | `Doc.coherent`, from `feed_coherent` |
+| `SourceSession.replay_drafts_view` | every old application, sketch, and edit list retains its exact observation through canonical draft replay | the replay fold and `feed_coherent` |
+| `SourceSession.feed_undo` | an edit, then the edit that puts back the old sub-program as written, restores the session | `EditSession.Coherent.ext` and `feed_coherent` |
 
 ## Placement
 
@@ -42,10 +42,8 @@ the expansion's table at the source's addresses is a table of the source. Requir
   tool (`Effect4.Tool.serve`, `src/Effect4/Tool/Serve.lean`).
 - **`source-session-coherent`** (role preservation; pointer `SourceSession.reached_view`).
   Reach: every sealed document, without a separate coherence premise; exact source table, refusals, and root type.
-  The proof rests on `Doc.coherent`, which rests on the planned goal `feed_coherent`.
-  That goal is false at head: a kept-exact omission at a refused root keeps the refused root
-  entry (`FeedCounterexample.keep_omit_refused`). `feed_coherent_of_faultFree` proves it where
-  the candidate holds no ill-formed reference and a kept-exact splice stands at a typed root.
+  The proof rests on `Doc.coherent`, which rests on `feed_coherent`: every accepted feed keeps a
+  coherent session coherent, since a splice stands only where `canSplice` holds at a typed root.
   `SourceSession.replay_drafts_view` retains every old application, initial sketch, and edit list through canonical replay.
   It rests on `feed_coherent` too.
   Neither claim establishes reference splicing, execution, progress, or cost.
@@ -705,7 +703,7 @@ theorem belowSite_at_eff {p old : NativeEff} {path : List Nat}
     cases hnone
 
 /-- The first entry at the root of a splice below the root is the old table's first entry. A step
-of `source-feed-keep-exact`. Its consumer is `SourceSession.feed_keepExact_of_faultFree`. -/
+of `source-feed-keep-exact`. Its consumer is `SourceSession.feed_keepExact`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Table.typedAt_splice_root {x : Table.Entry} {rest sub : List Table.Entry} {a : List Nat}
     (hx : x.path = []) (ha : a ≠ []) :
@@ -726,7 +724,7 @@ theorem Table.typedAt_splice_root {x : Table.Entry} {rest sub : List Table.Entry
 
 /-- In a splice whose new segment starts at the address, the first entry at the address is the
 segment's head. A step of `source-feed-keep-exact`. Its consumer is
-`SourceSession.feed_keepExact_of_faultFree`. -/
+`SourceSession.feed_keepExact`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Table.typedAt_splice_at {old sub : List Table.Entry} {x : Table.Entry} {a : List Nat}
     (hx : x.path = a) :
@@ -818,7 +816,7 @@ theorem tableAt_paths {Op : Type} (sig : Signature Op) (ctx : Option NodeEnv) (n
 
 /-- **A part check's answer is the checker's at the part's signature.** A step of
 `source-feed-coherent` and of `source-feed-draft`. Its consumers are
-`SourceSession.splice_coherent`, `SourceSession.feed_keepExact_of_faultFree` and
+`SourceSession.splice_coherent`, `SourceSession.feed_keepExact` and
 `SourceSession.draft_conditions_of_reference`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Check.run_part_result (d : SigData) (env : TyEnv) (q : NativeEff) :
@@ -900,6 +898,15 @@ theorem canSplice_agrees {s : SourceSession} {c : Sketch} {e : Edit}
   simp only [Bool.and_eq_true] at h
   exact h.1.1
 
+/-- **A splice's candidate holds no ill-formed reference** (`SourceSession.canSplice`). A step
+of `source-feed-coherent`. Its consumers are `feed_coherent` and `feed_keepExact`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem canSplice_candidate {s : SourceSession} {c : Sketch} {e : Edit}
+    (h : s.canSplice c e = true) : c.program.firstRefFault = none := by
+  unfold canSplice at h
+  simp only [Bool.and_eq_true, Option.isNone_iff_eq_none] at h
+  exact h.2
+
 /-- **Where neither sketch holds an ill-formed reference, a splice needs only expansion
 agreement.** A step of `source-feed-draft`. Its consumer is `feed_draft`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -914,7 +921,7 @@ theorem canSplice_of_faultFree {s : SourceSession} {c : Sketch} {e : Edit}
 `draft`, which leaves the session. An edit that applies either rechecks the module, or splices
 the part check's table below the root at a typed focus, where the part keeps the focus's type and
 `canSplice` holds: the expansion moved only at the address, and neither sketch holds an ill-formed
-reference. A draft splice also needs `draftOmitAllows` and a typed root. A step of `source-feed-edit`. Its consumers are `feed_keeps` and the feed's coherence. -/
+reference. Every splice stands at a typed root, and a draft splice also needs `draftOmitAllows`. A step of `source-feed-edit`. Its consumers are `feed_keeps` and the feed's coherence. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem feed_ok_cases {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {e : Edit}
     {r : SourceSession × Edit.Step} (h : (s.feed o policy e).value = .ok r) :
@@ -925,7 +932,7 @@ theorem feed_ok_cases {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {e 
        ∃ key focus, e.path ≠ [] ∧ s.focusAt e.path = some focus ∧
          s.candidatePartKey e.path c = some key ∧ (run key).result = .ok focus.ty ∧
          s.canSplice c e = true ∧
-         (policy = .keepExact ∨
+         ((policy = .keepExact ∧ s.view.type.isSome = true) ∨
            (policy = .draft ∧ draftOmitAllows e focus.ty = true ∧ s.view.type.isSome = true)) ∧
          r = s.splice c e old (run key)) := by
   unfold feed at h
@@ -982,10 +989,12 @@ theorem feed_ok_cases {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {e 
               · cases h
               · rename_i hty
                 split at h
-                · rename_i hagree
+                · rename_i hguard
+                  simp only [Bool.and_eq_true] at hguard
                   rw [Checked.pure_value] at h
                   cases h
-                  refine Or.inr ⟨key, focus, hne, hfocus, hkey, ?_, hagree, Or.inl rfl, rfl⟩
+                  refine Or.inr ⟨key, focus, hne, hfocus, hkey, ?_, hguard.1, Or.inl ⟨rfl, hguard.2⟩,
+                    rfl⟩
                   rw [hres]
                   simp only [bne_iff_ne, ne_eq, Decidable.not_not] at hty
                   rw [hty]
@@ -1007,7 +1016,7 @@ theorem feed_ok_cases {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {e 
     | recheck => cases h
 
 /-- **An accepted `keepExact` feed below the root passed the focus and the part check**, and it
-spliced exactly where `canSplice` holds. A step of `kept-fill-reference`. Its consumer is
+spliced exactly where `canSplice` holds at a typed root. A step of `kept-fill-reference`. Its consumer is
 `kept_eq_certified` (`Laws/Program/FillSet.lean`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem feed_keepExact_ok {o : Oracle} {s : SourceSession} {e : Edit}
@@ -1016,8 +1025,9 @@ theorem feed_keepExact_ok {o : Oracle} {s : SourceSession} {e : Edit}
     ∃ old c key focus, (Node.eff s.sketch.program).at_ e.path = some (.eff old) ∧
       s.sketch.edit s.app e = some c ∧ s.focusAt e.path = some focus ∧
       s.candidatePartKey e.path c = some key ∧ (run key).result = .ok focus.ty ∧
-      (s.canSplice c e = true → r = s.splice c e old (run key)) ∧
-      (s.canSplice c e = false → (s.recheck o .keepExact c e old).value = .ok r) := by
+      ((s.canSplice c e && s.view.type.isSome) = true → r = s.splice c e old (run key)) ∧
+      ((s.canSplice c e && s.view.type.isSome) = false →
+        (s.recheck o .keepExact c e old).value = .ok r) := by
   unfold feed at h
   split at h
   · rename_i old c hat hedit
@@ -1052,7 +1062,7 @@ theorem feed_keepExact_ok {o : Oracle} {s : SourceSession} {e : Edit}
   · cases h
 
 /-- **A `keepExact` feed below the root splices** where the focus is typed, the part keeps the
-focus's type and `canSplice` holds. A step of `kept-fill-reference`. Its consumer is
+focus's type, `canSplice` holds and the root is typed. A step of `kept-fill-reference`. Its consumer is
 `kept_eq_certified`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem feed_keepExact_of {o : Oracle} {s : SourceSession} {e : Edit} {old : NativeEff}
@@ -1060,7 +1070,7 @@ theorem feed_keepExact_of {o : Oracle} {s : SourceSession} {e : Edit} {old : Nat
     (hat : (Node.eff s.sketch.program).at_ e.path = some (.eff old))
     (hedit : s.sketch.edit s.app e = some c) (hfocus : s.focusAt e.path = some focus)
     (hkey : s.candidatePartKey e.path c = some key) (hres : (run key).result = .ok focus.ty)
-    (hagree : s.canSplice c e = true) :
+    (hagree : s.canSplice c e = true) (hview : s.view.type.isSome = true) :
     (s.feed o .keepExact e).value = .ok (s.splice c e old (run key)) := by
   obtain ⟨i, rest, hpath⟩ := List.exists_cons_of_ne_nil hne
   unfold feed
@@ -1070,7 +1080,7 @@ theorem feed_keepExact_of {o : Oracle} {s : SourceSession} {e : Edit} {old : Nat
     rw [hpath] at h0
     cases h0
   · simp only [hfocus, hkey, Checked.bind_value, Checked.ask_value, hres, bne_self_eq_false,
-      Bool.false_eq_true, ↓reduceIte, hagree, Checked.pure_value]
+      Bool.false_eq_true, ↓reduceIte, hagree, hview, Bool.and_self, Checked.pure_value]
 
 /-- **An accepted `keepExact` feed applies its edit**: the next sketch is the edited one. A step
 of `pending-fill-publication`. Its consumer is `batch_keepExact_fills`
@@ -1121,21 +1131,6 @@ theorem feed_draft_ok (o : Oracle) (s : SourceSession) (e : Edit) :
             · exact recheck_draft_ok _ _ _ _ _
       · exact recheck_draft_ok _ _ _ _ _
   · exact ⟨_, rfl⟩
-
-/-- **An accepted feed keeps a coherent session coherent.** The pointer of `source-feed-coherent`.
-It is false at head in one way: a kept-exact splice keeps a refused root entry that an
-omission's new hole row can make typed (`FeedCounterexample.keep_omit_refused`). The splice of a
-candidate holding an ill-formed reference once put a second root entry in place of the entry at
-the edited address (`git:d048b9a1b`, `feed_coherent_refuted`); `canSplice` now refuses it. The statement is the specification.
-`feed_coherent_of_faultFree` proves it on every route but a kept splice at a refused root. So a
-feed that splices only where neither the sketch nor the candidate holds an ill-formed reference,
-and keeps an omission only at a typed root, needs one more step: `splice_coherent` for a fill at
-a refused root, which the battery `brokenElsewhere` accepts. A feed that also keeps fills only at
-a typed root needs none. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal feed_coherent {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
-    {e : Edit} {step : Edit.Step} (hc : s.Coherent)
-    (h : (s.feed o policy e).value = .ok (next,step)) : next.Coherent
 
 /-- **An accepted feed keeps the application and the edit, leaves the session where the edit does
 not apply, and holds the edited sketch where it does.** Read off `feed_ok_cases`. The pointer of
@@ -1231,7 +1226,7 @@ theorem Coherent.ext {a b : SourceSession} (ha : a.Coherent) (hb : b.Coherent)
 
 `splice_coherent` is the feed's splice route at a typed root where the candidate holds no
 ill-formed reference: the splice gives the candidate's source table. With the recheck route
-(`recheck_coherent`), it proves `feed_coherent_of_faultFree`. Each statement is a step of
+(`recheck_coherent`), it proves `feed_coherent`. Each statement is a step of
 `source-feed-coherent` and names its consumer. -/
 
 /-- A part key of a candidate is its expansion's sub-program at the address, in the focus's
@@ -1376,7 +1371,7 @@ theorem source_splice_filter {s : SourceSession} {c : Sketch} {e : Edit} {old q0
 no ill-formed reference, the part keeps the focus's type and the expanded edit agrees. The
 expansion's table splices (`Sketch.table_fill`, at the base of `splice_base`), and dropping the
 copies' entries commutes with that splice (`Table.splice_filter`). A step of
-`source-feed-coherent`. Its consumer is `feed_coherent_of_faultFree`. -/
+`source-feed-coherent`. Its consumer is `feed_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem splice_coherent {s : SourceSession} {c : Sketch} {e : Edit} {old : NativeEff}
     {key : CheckInput} {focus : Focus NativeOp} {T : EffTy}
@@ -1415,25 +1410,24 @@ theorem splice_coherent {s : SourceSession} {c : Sketch} {e : Edit} {old : Nativ
 
 /-- **A recheck holds the candidate's source table**: the module check's table, part by part
 (`Sketch.sourceAnnotate_eq_sourceTable`). A step of `source-feed-coherent`. Its consumer is
-`feed_coherent_of_faultFree`. -/
+`feed_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem recheck_coherent (s : SourceSession) (c : Sketch) :
     (⟨s.app, c, (run (.module s.app c.holes c.program)).table⟩ : SourceSession).Coherent :=
   Sketch.sourceAnnotate_eq_sourceTable c s.app
 
-/-- **An accepted feed keeps coherence where the candidate holds no ill-formed reference and a
-kept-exact splice stands at a typed root.** Every route but the two that `feed_coherent`'s
-counterexamples take: the splice of a candidate with an ill-formed reference, and a kept-exact
-splice at a refused root, where an omission's new hole row can change the root's check
-(`FeedCounterexample.keep_omit_refused`). It is the true form of `feed_coherent` at head, and
-the whole of its proof once the feed splices only there. A step of `source-feed-coherent`. Its
-consumers are `feed_draft` and the feed's coherence. Not established: the cost, or a splice at a
-refused root. -/
+/-- **An accepted feed keeps a coherent session coherent.** The pointer of `source-feed-coherent`.
+A recheck holds the module check's table, which is the candidate's source table
+(`recheck_coherent`). A splice stands where `canSplice` holds at a typed root, so the candidate
+holds no ill-formed reference and the expansion moved only at the address, and there the splice
+gives the candidate's source table (`splice_coherent`). Two earlier feeds refuted it: the splice
+of a candidate holding an ill-formed reference, and a kept-exact splice at a refused root that an
+omission's hole row makes typed (`git:d048b9a1b`, `feed_coherent_refuted`; `git:76a71a03e`,
+`keep_omit_refused`). Not established: the cost. Consumers: `Doc.coherent`, `feed_draft` and
+`feed_undo`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_coherent_of_faultFree {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
+theorem feed_coherent {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
     {e : Edit} {step : Edit.Step} (hc : s.Coherent)
-    (hcand : ∀ c, s.sketch.edit s.app e = some c → c.program.firstRefFault = none)
-    (hroot : policy = .keepExact → s.view.type.isSome = true)
     (h : (s.feed o policy e).value = .ok (next,step)) : next.Coherent := by
   rcases feed_ok_cases h with ⟨-, -, hr⟩ |
       ⟨old, c, -, hedit, hr | ⟨key, focus, hne, hfocus, hkey, hres, hagree, hpol, hr⟩⟩
@@ -1442,8 +1436,8 @@ theorem feed_coherent_of_faultFree {o : Oracle} {policy : FeedPolicy} {s next : 
   · cases hr
     exact recheck_coherent s c
   · have hview : s.view.type.isSome = true := by
-      rcases hpol with hk | ⟨-, -, hv⟩
-      · exact hroot hk
+      rcases hpol with ⟨-, hv⟩ | ⟨-, -, hv⟩
+      · exact hv
       · exact hv
     rw [view_type hc] at hview
     obtain ⟨T, hT⟩ : ∃ T, s.sketch.sourceCheck s.app = .ok T := by
@@ -1453,8 +1447,8 @@ theorem feed_coherent_of_faultFree {o : Oracle} {policy : FeedPolicy} {s next : 
         rw [hsc] at hview
         cases hview
     cases hr
-    exact splice_coherent (old := old) hc hT (hcand c hedit) hne hedit hfocus hkey hres
-      (canSplice_agrees hagree)
+    exact splice_coherent (old := old) hc hT (canSplice_candidate hagree) hne hedit hfocus hkey
+      hres (canSplice_agrees hagree)
 
 /-! ## A draft is the expansion's edit session at the source's addresses
 
@@ -1724,7 +1718,7 @@ theorem draft_reference_spliced {s : SourceSession} {c : Sketch} {e e' : Edit}
 the expansion's edit session, shown at the source's addresses.** `EditSession.feed` is the
 reference, and no second edit interpreter is defined. The draft splices exactly where the
 reference splices (`draft_conditions_of_reference`, `draft_reference_spliced`), and both tables
-are coherent (`feed_coherent_of_faultFree`, `reference_table`). The pointer of
+are coherent (`feed_coherent`, `reference_table`). The pointer of
 `source-feed-draft`. Reach: coherent sessions, every edit, certified oracles. The first form had
 no premise on ill-formed references and is false: on a sketch with one the draft refuses to
 splice, since its root is refused, while the expansion's edit session splices
@@ -1751,7 +1745,7 @@ theorem feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit)
          next.table = Table.atSource candidate.sites candidate.program.firstRefFault reference.1.table ∧
            step.delta = reference.2.atSource candidate.sites) := by
   obtain ⟨⟨next, step⟩, hv⟩ := feed_draft_ok o s e
-  have hcoh : next.Coherent := feed_coherent_of_faultFree hc hcand (by intro h; cases h) hv
+  have hcoh : next.Coherent := feed_coherent hc hv
   refine ⟨next, step, hv, ?_⟩
   rcases feed_ok_cases hv with ⟨hnone, -, hr⟩ |
       ⟨old, c, hat, hedit, hr | ⟨key, focus, hne, hfocus, hkey, hres, hagree, hpol, hr⟩⟩
@@ -1826,7 +1820,7 @@ theorem feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit)
     have hnext : next = (s.splice c e old (run key)).1 := congrArg Prod.fst hr
     have hstep : step = (s.splice c e old (run key)).2 := congrArg Prod.snd hr
     subst hnext hstep
-    rcases hpol with hk | ⟨-, hallow, hviewS⟩
+    rcases hpol with ⟨hk, -⟩ | ⟨-, hallow, hviewS⟩
     · cases hk
     obtain ⟨ty0, hview⟩ := Option.isSome_iff_exists.mp hviewS
     obtain ⟨e', he', hX'⟩ := expandedEditAgrees_some (canSplice_agrees hagree)
@@ -1876,7 +1870,7 @@ theorem finish_keepExact_ok {s n : SourceSession} {e : Edit} {st : Edit.Step} {v
 
 /-- **An accepted kept-exact recheck**: its session and step, a typed module check equal to the old
 root's type, and the edited address's entry kept. A step of `source-feed-keep-exact`. Its
-consumer is `feed_keepExact_of_faultFree`. -/
+consumer is `feed_keepExact`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem recheck_keepExact_ok {o : Oracle} {s : SourceSession} {c : Sketch} {e : Edit}
     {old : NativeEff} {r : SourceSession × Edit.Step}
@@ -1890,16 +1884,19 @@ theorem recheck_keepExact_ok {o : Oracle} {s : SourceSession} {c : Sketch} {e : 
   rw [Checked.bind_value, Checked.pure_value, Checked.ask_value] at h
   exact finish_keepExact_ok h
 
-/-- **A kept-exact feed below the root, whose candidate holds no ill-formed reference, keeps the
-root's and the address's types, and splices exactly where `canSplice` holds.** The splice
-keeps the root entry first, and its new segment starts with the part's own entry at the focus's
-type; a recheck is checked by `finish`. It is the true form of `feed_keepExact` at head, and the
-whole of its proof once the feed splices only such candidates. A step of
-`source-feed-keep-exact`. -/
+/-- **A kept-exact feed below the root keeps the root's and the address's types, and splices
+exactly where `canSplice` holds.** The pointer of `source-feed-keep-exact`. A splice stands at a
+typed root: it keeps the root entry first, and its new segment starts with the part's own entry
+at the focus's type. A recheck is checked by `finish`, which refuses at a refused root. Two
+earlier forms were false: a splice shows every address of the new subtree, not `[e.path]` alone
+(`FeedCounterexample.feed_keepExact_delta_refuted`), and the splice of a candidate holding an
+ill-formed reference lost the edited address's entry (`git:d048b9a1b`, `feed_keepExact_refuted`).
+Which addresses a splice shows, the next source program's addresses below the path, is a finite
+evaluation (`Test/Program/SourceFeedControls.lean`), not part of this law. Consumers: the
+document's commit laws and fill certification. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_keepExact_of_faultFree {o : Oracle} {s next : SourceSession} {e : Edit}
-    {step : Edit.Step} (hc : s.Coherent) (hne : e.path ≠ [])
-    (hcand : ∀ c, s.sketch.edit s.app e = some c → c.program.firstRefFault = none)
+theorem feed_keepExact {o : Oracle} {s next : SourceSession} {e : Edit} {step : Edit.Step}
+    (hc : s.Coherent) (hne : e.path ≠ [])
     (h : (s.feed o .keepExact e).value = .ok (next,step)) :
     next.view.type = s.view.type ∧
       Table.typedAt next.table e.path = Table.typedAt s.table e.path ∧
@@ -1908,9 +1905,11 @@ theorem feed_keepExact_of_faultFree {o : Oracle} {s next : SourceSession} {e : E
   obtain ⟨old, c, key, focus, hat, hedit, hfocus, hkey, hres, hspl, hrec⟩ := feed_keepExact_ok hne h
   have hsk : next.sketch = c := (feed_keeps h).2.2.2 c hedit
   rw [hsk]
-  cases hagree : s.canSplice c e with
+  cases hg : (s.canSplice c e && s.view.type.isSome) with
   | true =>
-    have hr := hspl hagree
+    have hr := hspl hg
+    have hagree : s.canSplice c e = true := (Bool.and_eq_true _ _).mp hg |>.1
+    rw [hagree]
     obtain ⟨q', hq'at, rfl⟩ := candidatePartKey_some hfocus hkey
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj hr
     refine ⟨?_, ?_, fun _ => ⟨_, rfl⟩, fun hf => nomatch hf⟩
@@ -1955,7 +1954,7 @@ theorem feed_keepExact_of_faultFree {o : Oracle} {s next : SourceSession} {e : E
       show Table.typedAt (Table.splice s.table e.path (Table.atSource c.sites
         c.program.firstRefFault (Internal.place e.path (run (.part (sketchSigData c.expand s.app
           e.path) focus.env q'))).table)) e.path = Table.typedAt s.table e.path
-      rw [hcand c hedit, hatoms, hP,
+      rw [canSplice_candidate hagree, hatoms, hP,
         List.filter_cons_of_pos (p := fun (x : Table.Entry) => !Table.belowSite c.sites x.path)
           hkept,
         Table.typedAt_splice_at (x := ⟨e.path, some (.env focus.env), some (.ok focus.ty)⟩)
@@ -1963,31 +1962,17 @@ theorem feed_keepExact_of_faultFree {o : Oracle} {s next : SourceSession} {e : E
       unfold Table.typedAt
       rw [List.find?_cons, decide_eq_true (rfl : e.path = e.path)]
   | false =>
-    obtain ⟨hr1, ty, hres', hview, htyped⟩ := recheck_keepExact_ok (hrec hagree)
+    obtain ⟨hr1, ty, hres', hview, htyped⟩ := recheck_keepExact_ok (hrec hg)
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj hr1
-    refine ⟨?_, (htyped hne).symm, (fun ht => nomatch ht), fun _ => rfl⟩
-    rw [view_type (recheck_coherent s c), hview]
-    have hsc : c.sourceCheck s.app = .ok ty := hres'
-    rw [hsc]
-    rfl
-
-/-- **A kept-exact feed below the root keeps the root's and the address's types, and splices
-exactly where `canSplice` holds**, showing the next source program's addresses below the edited
-path, in source order (copies inside an expanded reference are not source addresses). The
-pointer of `source-feed-keep-exact`. The first form said a splice shows `[e.path]` alone; a
-splice shows every address of the new subtree (`FeedCounterexample.feed_keepExact_delta_refuted`).
-The feed's earlier splice of a candidate holding an ill-formed reference refuted the statement
-(`git:84f88cf6f`, `feed_keepExact_refuted`); `canSplice` now refuses that splice.
-`feed_keepExact_of_faultFree` proves its fault-free form. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal feed_keepExact {o : Oracle} {s next : SourceSession} {e : Edit} {step : Edit.Step}
-    (hc : s.Coherent) (hne : e.path ≠ [])
-    (h : (s.feed o .keepExact e).value = .ok (next,step)) :
-    next.view.type = s.view.type ∧
-      Table.typedAt next.table e.path = Table.typedAt s.table e.path ∧
-      (s.canSplice next.sketch e = true → step.delta =
-        .spliced ((Node.addresses (.eff next.sketch.program)).filter (Table.under e.path))) ∧
-      (s.canSplice next.sketch e = false → step.delta = .rechecked)
+    refine ⟨?_, (htyped hne).symm, fun hagree => ?_, fun _ => rfl⟩
+    · rw [view_type (recheck_coherent s c), hview]
+      have hsc : c.sourceCheck s.app = .ok ty := hres'
+      rw [hsc]
+      rfl
+    · -- the guard failed with `canSplice` holding, so the root was refused; `finish` refutes it
+      exfalso
+      rw [hagree, hview] at hg
+      simp only [Option.isSome_some, Bool.and_self, Bool.true_eq_false] at hg
 
 /-- **The root feed is exactly the module recheck route**, including its actual part trace: the
 root holds the whole program, and every policy asks the module key there. The pointer of
@@ -2003,7 +1988,7 @@ theorem feed_root (o : Oracle) (policy : FeedPolicy) (s : SourceSession)
 /-- **Undo**: an edit that applies, then the draft that puts back the old sub-program as written,
 restores a coherent session exactly. The path lens's get-put (`replaceAt_spec`) restores the
 sketch, a draft is never refused, and coherence fixes the table (`Coherent.ext`). The pointer of
-`source-session-undo`. It is proved modulo `feed_coherent`. Its counterexample at the earlier
+`source-session-undo`. It rests on `feed_coherent`. Its counterexample at the earlier
 feed, a candidate holding an ill-formed reference (`git:d048b9a1b`, `feed_undo_refuted`), no
 longer holds: `canSplice` refuses that splice. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -2054,7 +2039,7 @@ theorem Doc.step_ok {o : Check.Oracle} {d next : Doc} {at_ : Snap} {action : Doc
 /-! ## The document's replay keeps coherence
 
 Each action runs feeds in order (`DocInternal.apply`): a commit's batch, a draft, or a revert's
-inverses. Each statement below is a step of `source-document-coherent`, proved modulo
+inverses. Each statement below is a step of `source-document-coherent`, proved from
 `SourceSession.feed_coherent`, and names its consumer. -/
 
 namespace DocInternal
@@ -2118,7 +2103,7 @@ theorem undoItems_coherent {o : Oracle} {policy : FeedPolicy}
           cases h
           exact undoItems_coherent hfeed rest next (idx + 1) later (hfeed hc hf) hlater
 
-/-- **The sole interpreter keeps coherence**, modulo `SourceSession.feed_coherent`. A step of
+/-- **The sole interpreter keeps coherence**, from `SourceSession.feed_coherent`. A step of
 `source-document-coherent`. Its consumer is `replayStep_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem apply_coherent {o : Oracle} {st : State} {a : DocAction} {fresh : Fresh}
@@ -2184,7 +2169,7 @@ theorem replayState_coherent (origin : DocOrigin) (history : List DocAction) (st
   exact SourceSession.open_coherent _ _ _
 
 /-- **A replay of drafts keeps the application, folds the edited sketch, and keeps coherence**,
-modulo `SourceSession.feed_coherent`. A step of `source-session-draft-transport`. Its consumer is
+from `SourceSession.feed_coherent`. A step of `source-session-draft-transport`. Its consumer is
 `SourceSession.replay_drafts_view`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem replay_drafts_fold (app : SigApp) :
@@ -2226,8 +2211,7 @@ end DocInternal
 
 /-- **Every sealed document's session is coherent**: its runtime state is a replay of its
 history (`Doc.replayedState`), and every replayed state is coherent. The pointer of
-`source-document-coherent`. It is proved modulo `SourceSession.feed_coherent`, which is false
-at head (`FeedCounterexample.keep_omit_refused`). Placement: initial-algebras-folds;
+`source-document-coherent`. It rests on `SourceSession.feed_coherent`. Placement: initial-algebras-folds;
 source-session-coherent's reachable-state obligation, R14. Consumer:
 `SourceSession.reached_view`. This establishes no admission or progress claim. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -2240,8 +2224,8 @@ open _root_.Effect4.Program.Check in
 Placement: source-session-coherent, initial-algebras-folds, R14.
 This retains every old application, initial sketch, and edit list without a coherence premise.
 Consumer: the draft case of Doc.coherent and transport of the old reached_view observation.
-It establishes no admission, progress, or native behavior. It is proved modulo
-`feed_coherent`. Its counterexample at the earlier feed (`git:d048b9a1b`,
+It establishes no admission, progress, or native behavior. It rests on `feed_coherent`. Its
+counterexample at the earlier feed (`git:d048b9a1b`,
 `replay_drafts_view_refuted`) no longer holds: `canSplice` refuses that splice. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem replay_drafts_view (app : SigApp) (initial : Sketch) (edits : List Edit) (id : DocId) :
@@ -2286,16 +2270,17 @@ the site `[0, 0]` in program order (`RefFault.notBefore`). The expansion still e
 reference, so the part check keeps the focus's type and both `draft` and `keepExact` splice.
 
 Each statement below is a control, kernel-checked by evaluation (`decide`). Its placement names
-the concept and no requirement. One verdict shows where a law stops at head: `keepOmitRefused`.
-It fails to elaborate once the feed keeps an omission only at a typed root, and then it goes.
-Two show why a first statement was restated, and they stay: `keepWide` and
+the concept and no requirement. Two show why a first statement was restated: `keepWide` and
 `draftFaultyRechecks`.
 
 Five more verdicts showed the splice of a candidate holding an ill-formed reference: `draftLate`,
 `keepLate`, `docLate`, `replayLate` and `undoFaulty`, with the refutations of `feed_coherent`,
 `feed_keepExact`, `Doc.coherent`, `replay_drafts_view` and `feed_undo` built on them
 (`git:d048b9a1b:src/Effect4/Laws/Program/SourceTable.lean`). The feed now splices only where
-`SourceSession.canSplice` holds, so each evaluates false and they are gone. -/
+`SourceSession.canSplice` holds, so each evaluates false and they are gone. So did
+`keepOmitRefused`, a kept-exact omission at a refused root that kept the refused root entry, and
+its refutation `keep_omit_refused` (`git:76a71a03e`): a kept-exact feed now splices only at a
+typed root. -/
 
 namespace FeedCounterexample
 open _root_.Effect4.Program.Check
@@ -2333,45 +2318,12 @@ def draftFaultyRechecks : Bool :=
   | .ok (_, step) => decide (step.delta = .rechecked)
   | .error _ => false
 
-/-- A base with no reference whose root is refused: its second step performs row `0`, which the
-hole table does not hold yet. -/
-def refusedRoot : Sketch := ⟨.bind seven (.perform (.external 0) (.lit .unit)), []⟩
-
-/-- The session the refused base opens. -/
-def refusedOpened : SourceSession := (SourceSession.open Oracle.uncached {} refusedRoot).value
-
-/-- The kept omission of `[0]` declares row `0`, which the second step names: the candidate's root
-checks, but the splice keeps the refused root entry. -/
-def keepOmitRefused : Bool :=
-  match (refusedOpened.feed Oracle.uncached .keepExact (.omitAt [0] (Row.hole "h" .nat))).value with
-  | .ok (next, _) => !decide (next.table = next.sketch.sourceTable next.app)
-  | .error _ => false
-
 set_option maxRecDepth 100000 in
-/-- The evaluation of the three verdicts. -/
-theorem verdicts : keepWide = true ∧ draftFaultyRechecks = true ∧ keepOmitRefused = true := by
+/-- The evaluation of the two verdicts. -/
+theorem verdicts : keepWide = true ∧ draftFaultyRechecks = true := by
   decide +kernel
 
 end FeedCounterexample
-
-open _root_.Effect4.Program.Check in
-/-- **`SourceSession.feed_coherent` is false at head**: a kept
-omission at a refused root declares the row that the refusal names, so the candidate's root
-checks, while the splice keeps the refused root entry. A splice reads the root only where the
-root is typed (`Sketch.table_more_holes`). A control of the claim `source-feed-coherent`. -/
-@[semantics "initial-algebras-folds"]
-theorem FeedCounterexample.keep_omit_refused :
-    ¬ ∀ (o : Oracle) (policy : FeedPolicy) (s next : SourceSession) (e : Edit) (step : Edit.Step),
-      s.Coherent → (s.feed o policy e).value = .ok (next, step) → next.Coherent := by
-  intro h
-  have hv := FeedCounterexample.verdicts.2.2
-  unfold FeedCounterexample.keepOmitRefused at hv
-  split at hv
-  · rename_i next step heq
-    have hcoh := h _ _ _ _ _ _ (SourceSession.open_coherent _ _ _) heq
-    rw [Bool.not_eq_true', decide_eq_false_iff_not] at hv
-    exact hv hcoh
-  · cases hv
 
 open _root_.Effect4.Program.Check in
 /-- **The first form of `SourceSession.feed_draft`, with no premise on ill-formed references, is
@@ -2406,7 +2358,7 @@ theorem FeedCounterexample.feed_draft_refuted :
   rw [hedit] at hmatch
   dsimp only at hmatch
   obtain ⟨-, -, -, hdelta⟩ := hmatch
-  have hv := FeedCounterexample.verdicts.2.1
+  have hv := FeedCounterexample.verdicts.2
   unfold FeedCounterexample.draftFaultyRechecks at hv
   rw [hfeed] at hv
   rw [of_decide_eq_true hv] at hdelta

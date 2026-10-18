@@ -7,16 +7,15 @@ Question: checked-edit-atomic and validating document replay.
 Reach: sealed documents, exact snapshots, accepted action histories, and the stated policy premises.
 Exclusions: admission, progress, native execution, and positive-root conclusions for draft.
 Consumers: the tool's atomic wrapper, ordered fill publication, and document replay.
-A keepExact edit retains an initially refused root; positivity therefore requires the old positive-root premise.
+A keepExact edit at a refused root is refused (`SourceSession.feed`), so an accepted one starts from a typed root.
 
 `Doc.step_coherent`, `Doc.commit_sound`, `Doc.commit_one_keepExact` and `Doc.commit_single_sound`
-are proved modulo the feed's planned goals `SourceSession.feed_coherent` and
-`SourceSession.feed_keepExact`. `feed_coherent` is false at head: a kept-exact omission at a
-refused root keeps the refused root entry (`FeedCounterexample.keep_omit_refused`,
-`Laws/Program/SourceTable.lean`). The commit counterexamples of the earlier feed, a kept-exact
-commit of a filling holding an ill-formed reference (`git:d048b9a1b`, `commit_sound_refuted`,
-`commit_single_sound_refuted`, `commit_one_keepExact_refuted`), no longer hold: the feed splices
-only where `SourceSession.canSplice` holds.
+rest on the feed's laws `SourceSession.feed_coherent` and `SourceSession.feed_keepExact`
+(`Laws/Program/SourceTable.lean`). Two earlier feeds refuted them: the splice of a filling holding
+an ill-formed reference (`git:d048b9a1b`, `commit_sound_refuted`, `commit_single_sound_refuted`,
+`commit_one_keepExact_refuted`), and a kept-exact splice at a refused root (`git:76a71a03e`,
+`keep_omit_refused`). The feed now splices only where `SourceSession.canSplice` holds at a typed
+root.
 -/
 set_option autoImplicit false
 namespace Effect4.Program
@@ -137,8 +136,8 @@ theorem apply_app {o : Oracle} {st : State} {a : DocAction} {fresh : Fresh}
 end DocInternal
 
 /-- **A successful step from a coherent document keeps its origin and application, appends one
-action, and stays coherent.** The pointer of `source-document-step`. It is proved modulo
-`SourceSession.feed_coherent`, which is false at head (`FeedCounterexample.keep_omit_refused`). -/
+action, and stays coherent.** The pointer of `source-document-step`. It rests on
+`SourceSession.feed_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Doc.step_coherent {o : Oracle} {d next : Doc} {snap : Snap} {action : DocAction}
     {receipt : Receipt} (hc : d.session.Coherent)
@@ -214,7 +213,7 @@ theorem feed_keepExact_viewType {o : Oracle} {s next : SourceSession} {e : Edit}
       exact List.cons_ne_nil i r
     obtain ⟨old, c, key, focus, hat, hedit, hfocus, hkey, hres, hspl, hrec⟩ :=
       feed_keepExact_ok hne h
-    cases hagree : s.canSplice c e with
+    cases hagree : (s.canSplice c e && s.view.type.isSome) with
     | true =>
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (hspl hagree)
       show (Table.typedAt (Table.splice s.table e.path _) []).map (·.2) =
@@ -360,8 +359,7 @@ end DocInternal
 
 /-- **A successful keepExact or recheck commit is positive**, with initial positivity required
 for keepExact: a kept-exact batch keeps the root's type, and a recheck batch ends in a typed
-recheck. The pointer of `source-document-commit`. It is proved modulo
-`SourceSession.feed_coherent`, which is false at head (`FeedCounterexample.keep_omit_refused`). -/
+recheck. The pointer of `source-document-commit`. It rests on `SourceSession.feed_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Doc.commit_sound {o : Oracle} {d next : Doc} {snap : Snap}
     {items : List (Place × Change)} {policy : FeedPolicy} {receipt : Receipt}
@@ -401,8 +399,9 @@ theorem Doc.commit_sound {o : Oracle} {d next : Doc} {snap : Snap}
       · obtain ⟨-, ty, hty⟩ := DocInternal.batch_recheck_final _ _ _ _ (List.cons_ne_nil _ _) happly
         exact ⟨ty, by rw [hsess]; exact hty, fun hk => nomatch hk⟩
 
-/-- **A single kept edit retains both exact observations, including an initially refused root.**
-The pointer of `source-document-local-keep`. It is proved modulo `SourceSession.feed_keepExact`. -/
+/-- **A single kept edit retains both exact observations.** The pointer of
+`source-document-local-keep`. It rests on `SourceSession.feed_keepExact`. A kept edit at a refused
+root is refused, so the root it keeps is typed. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Doc.commit_one_keepExact {o : Oracle} {d next : Doc} {snap : Snap}
     {place : Place} {change : Change} {receipt : Receipt} {path : List Nat} {expected : NativeEff}
@@ -423,8 +422,8 @@ theorem Doc.commit_one_keepExact {o : Oracle} {d next : Doc} {snap : Snap}
   exact ⟨hk.1, hk.2.1⟩
 
 /-- **The old single-edit observations, with the required initial positive-root premise.** The
-pointer of `source-document-single-transport`. It is proved modulo
-`SourceSession.feed_coherent` and `SourceSession.feed_keepExact`. -/
+pointer of `source-document-single-transport`. It rests on `SourceSession.feed_coherent` and
+`SourceSession.feed_keepExact`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Doc.commit_single_sound {o : Oracle} {d next : Doc} {snap : Snap}
     {path : List Nat} {expected : NativeEff} {change : Change} {policy : FeedPolicy}

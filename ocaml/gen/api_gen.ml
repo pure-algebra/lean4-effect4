@@ -55361,140 +55361,6 @@ let program_source_session_candidate_part_key (s : source_session) (path : int l
 
 
 
-(* LCNF mono: Effect4.Program.Edit.expanded (x : Effect4.Program.Sketch) (x.1 : Effect4.Program.Edit) : Option Effect4.Program.Edit *)
-
-let program_edit_expanded (x : sketch) (x_1 : edit) : edit option =
-  match (x_1 : edit) with
-    | Edit_fill (path_2, _) -> (match (x : sketch) with
-        | { program = program; _ } -> (let _x_4 = Node_eff program in
-          let _x_5 = program_node_at_ _x_4 path_2 in
-          match _x_5 with
-            | Some val__6 -> (match (val__6 : _ node) with
-                | Node_eff e_7 -> (let _x_8 = Edit_fill (path_2, e_7) in
-                  Some _x_8)
-                | _ -> None)
-            | _ -> None))
-    | Edit_omitAt (_, _) -> Some x_1
-
-
-
-(* LCNF mono: Effect4.Program.SourceSession.expandedEditAgrees._lam_0 (a : Effect4.Program.Eff Effect4.Program.NativeOp) (b : Effect4.Program.Eff Effect4.Program.NativeOp) : Bool *)
-
-let program_source_session_expanded_edit_agrees__lam_0 (a : NativeOp.t Eff.t) (b : NativeOp.t Eff.t) : bool =
-  let _x_1 = program_inst_decidable_eq_native_op in
-  program_inst_decidable_eq_eff_dec_eq_1 _x_1 a b
-
-
-
-(* LCNF mono: Effect4.Program.SourceSession.expandedEditAgrees._lam_1 (a : List Effect4.Program.Row) (b : List Effect4.Program.Row) : Bool *)
-
-let program_source_session_expanded_edit_agrees__lam_1 (a : Row.t list) (b : Row.t list) : bool =
-  let _x_1 = program_inst_decidable_eq_row in
-  inst_decidable_eq_list _x_1 a b
-
-
-
-(* LCNF mono: Effect4.Program.SourceSession.expandedEditAgrees._lam_2 (_f.1 : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (Effect4.Program.Eff Effect4.Program.NativeOp) -> Bool) (_f.2 : (List Effect4.Program.Row) -> (List Effect4.Program.Row) -> Bool) (a : Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List Effect4.Program.Row)) (b : Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List Effect4.Program.Row)) : Bool *)
-
-let program_source_session_expanded_edit_agrees__lam_2 (_f_1 : NativeOp.t Eff.t -> NativeOp.t Eff.t -> bool) (_f_2 : Row.t list -> Row.t list -> bool) (a : NativeOp.t Eff.t * Row.t list) (b : NativeOp.t Eff.t * Row.t list) : bool =
-  inst_decidable_eq_prod _f_1 _f_2 a b
-
-
-
-(* LCNF mono: Effect4.Program.Node.eff?._redArg (x.1 : Effect4.Program.Node lcAny) : Option (Effect4.Program.Eff lcAny) *)
-
-let program_node_eff_opt (x_1 : _ node) : _ Eff.t option =
-  match (x_1 : _ node) with
-    | Node_eff e_2 -> Some e_2
-    | _ -> None
-
-
-
-(* LCNF mono: Effect4.Program.Sketch.fillAt (s : Effect4.Program.Sketch) (path : List Nat) (q : Effect4.Program.Eff Effect4.Program.NativeOp) : Option Effect4.Program.Sketch *)
-
-let program_sketch_fill_at (s : sketch) (path : int list) (q : NativeOp.t Eff.t) : sketch option =
-  match (s : sketch) with
-    | { program = program; holes = holes } -> (let _x_1 = Node_eff program in
-      let _x_2 = Node_eff q in
-      let _x_3 = program_node_replace_at _x_1 path _x_2 in
-      match _x_3 with
-        | None -> None
-        | Some val__5 -> (let _x_6 = program_node_eff_opt val__5 in
-          match _x_6 with
-            | None -> None
-            | Some val__8 -> (let _x_9 = ({ program = val__8; holes = holes } : sketch) in
-              Some _x_9)))
-
-
-
-(* LCNF mono: Effect4.Program.Sketch.omitAt (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp) (path : List Nat) (row : Effect4.Program.Row) : Option Effect4.Program.Sketch *)
-
-let program_sketch_omit_at (s : sketch) (app : sig_app) (path : int list) (row : Row.t) : sketch option =
-  match (s : sketch) with
-    | { program = program; holes = holes } -> (let _x_1 = [] in
-      let _x_2 = row :: _x_1 in
-      let _x_3 = holes @ _x_2 in
-      let _x_4 = ({ program = program; holes = _x_3 } : sketch) in
-      let _x_5 = List.length holes in
-      let _x_6 = program_sketch_hole app _x_5 in
-      program_sketch_fill_at _x_4 path _x_6)
-
-
-
-(* LCNF mono: Effect4.Program.Sketch.edit (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp) (x.1 : Effect4.Program.Edit) : Option Effect4.Program.Sketch *)
-
-let program_sketch_edit (s : sketch) (app : sig_app) (x_1 : edit) : sketch option =
-  match (x_1 : edit) with
-    | Edit_fill (path_2, program_3) -> program_sketch_fill_at s path_2 program_3
-    | Edit_omitAt (path_5, row_6) -> program_sketch_omit_at s app path_5 row_6
-
-
-
-(* LCNF mono: Effect4.Program.SourceSession.expandedEditAgrees (s : Effect4.Program.SourceSession) (candidate : Effect4.Program.Sketch) (edit : Effect4.Program.Edit) : Bool *)
-
-let program_source_session_expanded_edit_agrees (s : source_session) (candidate : sketch) (edit : edit) : bool =
-  let expanded = program_sketch_expand candidate in
-  let _x_1 = program_edit_expanded expanded edit in
-  match _x_1 with
-    | None -> false
-    | Some val__3 -> (match (s : source_session) with
-        | { app = app; sketch = sketch; _ } -> (let _f_4 = program_source_session_expanded_edit_agrees__lam_0 in
-          let _f_5 = program_source_session_expanded_edit_agrees__lam_1 in
-          let _f_6 = program_source_session_expanded_edit_agrees__lam_2 _f_4 _f_5 in
-          let[@local always] _jp_7 = fun _y_8 -> match (expanded : sketch) with
-            | { program = program; holes = holes } -> (let _x_9 = program, holes in
-              let _x_10 = Some _x_9 in
-              option_inst_decidable_eq _f_6 _y_8 _x_10) in
-          let _x_12 = program_sketch_expand sketch in
-          let _x_13 = program_sketch_edit _x_12 app val__3 in
-          match _x_13 with
-            | None -> (let _x_14 = None in
-              _jp_7 _x_14)
-            | Some val__15 -> (match (val__15 : sketch) with
-                | { program = program_1; holes = holes_1 } -> (let _x_16 = program_1, holes_1 in
-                  let _x_17 = Some _x_16 in
-                  _jp_7 _x_17))))
-
-
-
-(* LCNF mono: Effect4.Program.SourceSession.canSplice (s : Effect4.Program.SourceSession) (candidate : Effect4.Program.Sketch) (edit : Effect4.Program.Edit) : Bool *)
-
-let program_source_session_can_splice (s : source_session) (candidate : sketch) (edit : edit) : bool =
-  let[@local always] _jp_1 = fun _y_2 -> if _y_2 then (match (candidate : sketch) with
-      | { program = program; _ } -> (let _x_3 = program_eff_first_ref_fault program in
-        match _x_3 with
-          | None -> _y_2
-          | Some _ -> false)) else _y_2 in
-  let _x_6 = program_source_session_expanded_edit_agrees s candidate edit in
-  if _x_6 then (match (s : source_session) with
-      | { sketch = sketch; _ } -> (match (sketch : sketch) with
-          | { program = program_1; _ } -> (let _x_7 = program_eff_first_ref_fault program_1 in
-            match _x_7 with
-              | None -> _jp_1 _x_6
-              | Some _ -> false))) else _jp_1 _x_6
-
-
-
 (* LCNF mono: List.beq._at_.Option.instBEq.beq._at_.Effect4.Program.SourceSession.finish.spec_1.spec_1 (x.1 : List Effect4.Program.Ty) (x.2 : List Effect4.Program.Ty) : Bool *)
 
 let rec list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_1_spec_1 (x_1 : Ty.t list) (x_2 : Ty.t list) : bool =
@@ -55716,25 +55582,164 @@ let program_source_session_splice (s : source_session) (candidate : sketch) (edi
 
 
 
-(* LCNF mono: Effect4.Program.SourceSession.feed._lam_1 (val.1 : Effect4.Program.Focus Effect4.Program.NativeOp) (s : Effect4.Program.SourceSession) (val.2 : Effect4.Program.Sketch) (edit : Effect4.Program.Edit) (o : Effect4.Program.Check.CheckInput -> Effect4.Program.Check.Verdict) (policy : Effect4.Program.FeedPolicy) (e.3 : Effect4.Program.Eff Effect4.Program.NativeOp) (part : Effect4.Program.Check.Verdict) : Effect4.Program.Check.Checked (Except Effect4.Program.FeedRefusal (Prod Effect4.Program.SourceSession Effect4.Program.Edit.Step)) *)
+(* LCNF mono: Effect4.Program.Edit.expanded (x : Effect4.Program.Sketch) (x.1 : Effect4.Program.Edit) : Option Effect4.Program.Edit *)
 
-let program_source_session_feed__lam_1 (val__1 : NativeOp.t focus) (s : source_session) (val__2 : sketch) (edit : edit) (o : check_input -> verdict) (policy : feed_policy) (e_3 : NativeOp.t Eff.t) (part : verdict) : (source_session * effect4_program_edit_step, feed_refusal) result checked =
+let program_edit_expanded (x : sketch) (x_1 : edit) : edit option =
+  match (x_1 : edit) with
+    | Edit_fill (path_2, _) -> (match (x : sketch) with
+        | { program = program; _ } -> (let _x_4 = Node_eff program in
+          let _x_5 = program_node_at_ _x_4 path_2 in
+          match _x_5 with
+            | Some val__6 -> (match (val__6 : _ node) with
+                | Node_eff e_7 -> (let _x_8 = Edit_fill (path_2, e_7) in
+                  Some _x_8)
+                | _ -> None)
+            | _ -> None))
+    | Edit_omitAt (_, _) -> Some x_1
+
+
+
+(* LCNF mono: Effect4.Program.SourceSession.expandedEditAgrees._lam_0 (a : Effect4.Program.Eff Effect4.Program.NativeOp) (b : Effect4.Program.Eff Effect4.Program.NativeOp) : Bool *)
+
+let program_source_session_expanded_edit_agrees__lam_0 (a : NativeOp.t Eff.t) (b : NativeOp.t Eff.t) : bool =
+  let _x_1 = program_inst_decidable_eq_native_op in
+  program_inst_decidable_eq_eff_dec_eq_1 _x_1 a b
+
+
+
+(* LCNF mono: Effect4.Program.SourceSession.expandedEditAgrees._lam_1 (a : List Effect4.Program.Row) (b : List Effect4.Program.Row) : Bool *)
+
+let program_source_session_expanded_edit_agrees__lam_1 (a : Row.t list) (b : Row.t list) : bool =
+  let _x_1 = program_inst_decidable_eq_row in
+  inst_decidable_eq_list _x_1 a b
+
+
+
+(* LCNF mono: Effect4.Program.SourceSession.expandedEditAgrees._lam_2 (_f.1 : (Effect4.Program.Eff Effect4.Program.NativeOp) -> (Effect4.Program.Eff Effect4.Program.NativeOp) -> Bool) (_f.2 : (List Effect4.Program.Row) -> (List Effect4.Program.Row) -> Bool) (a : Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List Effect4.Program.Row)) (b : Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List Effect4.Program.Row)) : Bool *)
+
+let program_source_session_expanded_edit_agrees__lam_2 (_f_1 : NativeOp.t Eff.t -> NativeOp.t Eff.t -> bool) (_f_2 : Row.t list -> Row.t list -> bool) (a : NativeOp.t Eff.t * Row.t list) (b : NativeOp.t Eff.t * Row.t list) : bool =
+  inst_decidable_eq_prod _f_1 _f_2 a b
+
+
+
+(* LCNF mono: Effect4.Program.Node.eff?._redArg (x.1 : Effect4.Program.Node lcAny) : Option (Effect4.Program.Eff lcAny) *)
+
+let program_node_eff_opt (x_1 : _ node) : _ Eff.t option =
+  match (x_1 : _ node) with
+    | Node_eff e_2 -> Some e_2
+    | _ -> None
+
+
+
+(* LCNF mono: Effect4.Program.Sketch.fillAt (s : Effect4.Program.Sketch) (path : List Nat) (q : Effect4.Program.Eff Effect4.Program.NativeOp) : Option Effect4.Program.Sketch *)
+
+let program_sketch_fill_at (s : sketch) (path : int list) (q : NativeOp.t Eff.t) : sketch option =
+  match (s : sketch) with
+    | { program = program; holes = holes } -> (let _x_1 = Node_eff program in
+      let _x_2 = Node_eff q in
+      let _x_3 = program_node_replace_at _x_1 path _x_2 in
+      match _x_3 with
+        | None -> None
+        | Some val__5 -> (let _x_6 = program_node_eff_opt val__5 in
+          match _x_6 with
+            | None -> None
+            | Some val__8 -> (let _x_9 = ({ program = val__8; holes = holes } : sketch) in
+              Some _x_9)))
+
+
+
+(* LCNF mono: Effect4.Program.Sketch.omitAt (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp) (path : List Nat) (row : Effect4.Program.Row) : Option Effect4.Program.Sketch *)
+
+let program_sketch_omit_at (s : sketch) (app : sig_app) (path : int list) (row : Row.t) : sketch option =
+  match (s : sketch) with
+    | { program = program; holes = holes } -> (let _x_1 = [] in
+      let _x_2 = row :: _x_1 in
+      let _x_3 = holes @ _x_2 in
+      let _x_4 = ({ program = program; holes = _x_3 } : sketch) in
+      let _x_5 = List.length holes in
+      let _x_6 = program_sketch_hole app _x_5 in
+      program_sketch_fill_at _x_4 path _x_6)
+
+
+
+(* LCNF mono: Effect4.Program.Sketch.edit (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp) (x.1 : Effect4.Program.Edit) : Option Effect4.Program.Sketch *)
+
+let program_sketch_edit (s : sketch) (app : sig_app) (x_1 : edit) : sketch option =
+  match (x_1 : edit) with
+    | Edit_fill (path_2, program_3) -> program_sketch_fill_at s path_2 program_3
+    | Edit_omitAt (path_5, row_6) -> program_sketch_omit_at s app path_5 row_6
+
+
+
+(* LCNF mono: Effect4.Program.SourceSession.expandedEditAgrees (s : Effect4.Program.SourceSession) (candidate : Effect4.Program.Sketch) (edit : Effect4.Program.Edit) : Bool *)
+
+let program_source_session_expanded_edit_agrees (s : source_session) (candidate : sketch) (edit : edit) : bool =
+  let expanded = program_sketch_expand candidate in
+  let _x_1 = program_edit_expanded expanded edit in
+  match _x_1 with
+    | None -> false
+    | Some val__3 -> (match (s : source_session) with
+        | { app = app; sketch = sketch; _ } -> (let _f_4 = program_source_session_expanded_edit_agrees__lam_0 in
+          let _f_5 = program_source_session_expanded_edit_agrees__lam_1 in
+          let _f_6 = program_source_session_expanded_edit_agrees__lam_2 _f_4 _f_5 in
+          let[@local always] _jp_7 = fun _y_8 -> match (expanded : sketch) with
+            | { program = program; holes = holes } -> (let _x_9 = program, holes in
+              let _x_10 = Some _x_9 in
+              option_inst_decidable_eq _f_6 _y_8 _x_10) in
+          let _x_12 = program_sketch_expand sketch in
+          let _x_13 = program_sketch_edit _x_12 app val__3 in
+          match _x_13 with
+            | None -> (let _x_14 = None in
+              _jp_7 _x_14)
+            | Some val__15 -> (match (val__15 : sketch) with
+                | { program = program_1; holes = holes_1 } -> (let _x_16 = program_1, holes_1 in
+                  let _x_17 = Some _x_16 in
+                  _jp_7 _x_17))))
+
+
+
+(* LCNF mono: Effect4.Program.SourceSession.canSplice (s : Effect4.Program.SourceSession) (candidate : Effect4.Program.Sketch) (edit : Effect4.Program.Edit) : Bool *)
+
+let program_source_session_can_splice (s : source_session) (candidate : sketch) (edit : edit) : bool =
+  let[@local always] _jp_1 = fun _y_2 -> if _y_2 then (match (candidate : sketch) with
+      | { program = program; _ } -> (let _x_3 = program_eff_first_ref_fault program in
+        match _x_3 with
+          | None -> _y_2
+          | Some _ -> false)) else _y_2 in
+  let _x_6 = program_source_session_expanded_edit_agrees s candidate edit in
+  if _x_6 then (match (s : source_session) with
+      | { sketch = sketch; _ } -> (match (sketch : sketch) with
+          | { program = program_1; _ } -> (let _x_7 = program_eff_first_ref_fault program_1 in
+            match _x_7 with
+              | None -> _jp_1 _x_6
+              | Some _ -> false))) else _jp_1 _x_6
+
+
+
+(* LCNF mono: Effect4.Program.SourceSession.feed._lam_1 (val.1 : Effect4.Program.Focus Effect4.Program.NativeOp) (o : Effect4.Program.Check.CheckInput -> Effect4.Program.Check.Verdict) (policy : Effect4.Program.FeedPolicy) (s : Effect4.Program.SourceSession) (val.2 : Effect4.Program.Sketch) (edit : Effect4.Program.Edit) (e.3 : Effect4.Program.Eff Effect4.Program.NativeOp) (part : Effect4.Program.Check.Verdict) : Effect4.Program.Check.Checked (Except Effect4.Program.FeedRefusal (Prod Effect4.Program.SourceSession Effect4.Program.Edit.Step)) *)
+
+let program_source_session_feed__lam_1 (val__1 : NativeOp.t focus) (o : check_input -> verdict) (policy : feed_policy) (s : source_session) (val__2 : sketch) (edit : edit) (e_3 : NativeOp.t Eff.t) (part : verdict) : (source_session * effect4_program_edit_step, feed_refusal) result checked =
+  let[@local always] _jp_4 = fun _y_5 -> if _y_5 then (let _x_7 = program_source_session_splice s val__2 edit e_3 part in
+    let _x_8 = Ok _x_7 in
+    program_check_checked_pure' _x_8) else program_source_session_recheck o policy s val__2 edit e_3 in
   match (part : verdict) with
     | { result = result; _ } -> (match result with
         | Error _ -> (match (val__1 : _ focus) with
-            | { env = env; ty = ty; _ } -> (let _x_5 = env, ty in
-              let _x_6 = FeedRefusal_notKept (_x_5, result) in
-              let _x_7 = Error _x_6 in
-              program_check_checked_pure' _x_7))
-        | Ok a_9 -> (match (val__1 : _ focus) with
-            | { env = env_1; ty = ty_1; _ } -> (let _x_10 = program_inst_decidable_eq_eff_ty_dec_eq a_9 ty_1 in
-              if _x_10 then (let _x_15 = program_source_session_can_splice s val__2 edit in
-                if _x_15 then (let _x_17 = program_source_session_splice s val__2 edit e_3 part in
-                  let _x_18 = Ok _x_17 in
-                  program_check_checked_pure' _x_18) else program_source_session_recheck o policy s val__2 edit e_3) else (let _x_11 = env_1, ty_1 in
-                let _x_12 = FeedRefusal_notKept (_x_11, result) in
-                let _x_13 = Error _x_12 in
-                program_check_checked_pure' _x_13))))
+            | { env = env; ty = ty; _ } -> (let _x_11 = env, ty in
+              let _x_12 = FeedRefusal_notKept (_x_11, result) in
+              let _x_13 = Error _x_12 in
+              program_check_checked_pure' _x_13))
+        | Ok a_15 -> (match (val__1 : _ focus) with
+            | { env = env_1; ty = ty_1; _ } -> (let _x_16 = program_inst_decidable_eq_eff_ty_dec_eq a_15 ty_1 in
+              if _x_16 then (let _x_21 = program_source_session_can_splice s val__2 edit in
+                if _x_21 then (let _x_22 = program_source_session_view s in
+                  match (_x_22 : effect4_program_edit_session_view) with
+                    | { type_ = type_; _ } -> (match type_ with
+                        | None -> program_source_session_recheck o policy s val__2 edit e_3
+                        | Some _ -> _jp_4 _x_21)) else _jp_4 _x_21) else (let _x_17 = env_1, ty_1 in
+                let _x_18 = FeedRefusal_notKept (_x_17, result) in
+                let _x_19 = Error _x_18 in
+                program_check_checked_pure' _x_19))))
 
 
 
@@ -55794,7 +55799,7 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
   let[@local always] _jp_19 = fun _y_20 _y_21 _y_22 _y_23 -> let _x_24 = program_source_session_focus_at s _y_23 in
   match _x_24 with
     | None -> _jp_6 ()
-    | Some val__25 -> (let _f_26 = program_source_session_feed__lam_1 val__25 s _y_20 edit o policy _y_21 in
+    | Some val__25 -> (let _f_26 = program_source_session_feed__lam_1 val__25 o policy s _y_21 edit _y_20 in
       match (edit : edit) with
         | Edit_fill (path_27, _) -> _jp_11 _f_26 _y_22 path_27
         | Edit_omitAt (path_29, _) -> _jp_11 _f_26 _y_22 path_29) in
@@ -55811,9 +55816,9 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
     | _ -> (match (edit : edit) with
         | Edit_fill (path_43, _) -> _jp_31 path_43
         | Edit_omitAt (path_45, _) -> _jp_31 path_45) in
-  let[@local always] _jp_47 = fun _y_48 _y_49 _y_50 _y_51 -> let _x_52 = program_source_session_candidate_part_key s _y_51 _y_49 in
+  let[@local always] _jp_47 = fun _y_48 _y_49 _y_50 _y_51 -> let _x_52 = program_source_session_candidate_part_key s _y_51 _y_50 in
   match _x_52 with
-    | None -> program_source_session_recheck o policy s _y_49 edit _y_50
+    | None -> program_source_session_recheck o policy s _y_50 edit _y_49
     | Some val__54 -> (let _x_55 = program_check_checked_ask o val__54 in
       program_check_checked_bind' _x_55 _y_48) in
   let[@local always] _jp_57 = fun _y_58 _y_59 _y_60 _y_61 _y_62 -> let _x_63 = program_source_session_focus_at s _y_62 in
@@ -55821,25 +55826,25 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
     | Some val__64 -> (let _x_65 = program_source_session_view s in
       match (_x_65 : effect4_program_edit_session_view) with
         | { type_ = type_; _ } -> (match type_ with
-            | Some _ -> (let _x_67 = program_source_session_can_splice s _y_60 edit in
+            | Some _ -> (let _x_67 = program_source_session_can_splice s _y_61 edit in
               if _x_67 then (match (val__64 : _ focus) with
                   | { ty = ty; _ } -> (let _x_69 = program_source_session_draft_omit_allows edit ty in
-                    if _x_69 then (let _f_71 = program_source_session_feed__lam_0 o policy s _y_58 edit _y_59 ty in
+                    if _x_69 then (let _f_71 = program_source_session_feed__lam_0 o policy s _y_59 edit _y_58 ty in
                       match (edit : edit) with
                         | Edit_fill (path_72, _) -> _jp_47 _f_71 _y_60 _y_61 path_72
-                        | Edit_omitAt (path_74, _) -> _jp_47 _f_71 _y_60 _y_61 path_74) else program_source_session_recheck o policy s _y_60 edit _y_61)) else program_source_session_recheck o policy s _y_60 edit _y_61)
-            | _ -> program_source_session_recheck o policy s _y_60 edit _y_61))
-    | _ -> program_source_session_recheck o policy s _y_60 edit _y_61 in
+                        | Edit_omitAt (path_74, _) -> _jp_47 _f_71 _y_60 _y_61 path_74) else program_source_session_recheck o policy s _y_61 edit _y_60)) else program_source_session_recheck o policy s _y_61 edit _y_60)
+            | _ -> program_source_session_recheck o policy s _y_61 edit _y_60))
+    | _ -> program_source_session_recheck o policy s _y_61 edit _y_60 in
   let[@local always] _jp_78 = fun _y_79 _y_80 _y_81 _y_82 -> match _y_82 with
-    | [] -> program_source_session_recheck o policy s _y_79 edit _y_81
+    | [] -> program_source_session_recheck o policy s _y_80 edit _y_81
     | _ :: _ -> (match (policy : feed_policy) with
         | FeedPolicy_draft -> (match (edit : edit) with
-            | Edit_fill (path_86, _) -> _jp_57 _y_79 _y_80 _y_79 _y_81 path_86
-            | Edit_omitAt (path_88, _) -> _jp_57 _y_79 _y_80 _y_79 _y_81 path_88)
+            | Edit_fill (path_86, _) -> _jp_57 _y_79 _y_80 _y_81 _y_80 path_86
+            | Edit_omitAt (path_88, _) -> _jp_57 _y_79 _y_80 _y_81 _y_80 path_88)
         | FeedPolicy_keepExact -> (match (edit : edit) with
-            | Edit_fill (path_90, _) -> _jp_19 _y_79 _y_80 _y_79 path_90
-            | Edit_omitAt (path_92, _) -> _jp_19 _y_79 _y_80 _y_79 path_92)
-        | FeedPolicy_recheck -> program_source_session_recheck o policy s _y_79 edit _y_81) in
+            | Edit_fill (path_90, _) -> _jp_19 _y_79 _y_80 _y_80 path_90
+            | Edit_omitAt (path_92, _) -> _jp_19 _y_79 _y_80 _y_80 path_92)
+        | FeedPolicy_recheck -> program_source_session_recheck o policy s _y_80 edit _y_81) in
   match (s : source_session) with
     | { app = app; sketch = sketch; _ } -> (match (sketch : sketch) with
         | { program = program; _ } -> (let _x_95 = Node_eff program in
@@ -55849,8 +55854,8 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
                 | Node_eff e_100 -> (let _x_101 = program_sketch_edit sketch app edit in
                   match _x_101 with
                     | Some val__102 -> (match (edit : edit) with
-                        | Edit_fill (path_103, _) -> _jp_78 val__102 e_100 e_100 path_103
-                        | Edit_omitAt (path_105, _) -> _jp_78 val__102 e_100 e_100 path_105)
+                        | Edit_fill (path_103, _) -> _jp_78 e_100 val__102 e_100 path_103
+                        | Edit_omitAt (path_105, _) -> _jp_78 e_100 val__102 e_100 path_105)
                     | _ -> _jp_36 ())
                 | _ -> _jp_36 ())
             | _ -> _jp_36 () in

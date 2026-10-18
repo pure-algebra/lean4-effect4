@@ -34,14 +34,16 @@ def exactFill := old.feed Oracle.uncached .keepExact (.fill [1] (.succeed (.var 
   | .error (.refused _) => true
   | _ => false
 
-/-! Exact local typing can stand beside an unrelated whole-program error. -/
+/-! A kept-exact feed keeps a typed document's exact observations. Beside an unrelated
+whole-program error the root has no type to keep, so a kept fill refuses with the root's
+refusals; the draft of the same fill is accepted and stays coherent. -/
 def brokenElsewhere := opened ⟨.bind n1 (.succeed (.var 2)), []⟩
 #guard brokenElsewhere.table = brokenElsewhere.sketch.sourceTable {}
-#guard (brokenElsewhere.feed Oracle.uncached .keepExact (.fill [0] n7)).value.toOption.map
-  (fun r => decide (Table.typedAt r.1.table [0] = Table.typedAt brokenElsewhere.table [0])) = some true
-#guard (brokenElsewhere.feed Oracle.uncached .keepExact (.fill [0] n7)).value.toOption.map
-  (fun r => (r.1.view.type, r.2.delta, decide (r.1.table = r.1.sketch.sourceAnnotate {}))) =
-    some (none, .spliced [[0]], true)
+#guard match (brokenElsewhere.feed Oracle.uncached .keepExact (.fill [0] n7)).value with
+  | .error (.refused _) => true
+  | _ => false
+#guard (brokenElsewhere.feed Oracle.uncached .draft (.fill [0] n7)).value.toOption.map
+  (fun r => (r.1.view.type, decide (r.1.table = r.1.sketch.sourceTable {}))) = some (none, true)
 
 /-! The root control accepts a module block that refuses as a part. -/
 def rootEdit := (opened ⟨n1, []⟩).feed Oracle.uncached .keepExact (.fill [] checkedModule)

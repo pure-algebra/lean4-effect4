@@ -653,10 +653,11 @@ reference-free filling below the root exactly where the retired certification do
 reads the focus off the table, which is the sketch's (coherence), and checks the filling as a
 part, which is the check at the address moved to its own root (`Checker.check_rebase`); the
 expansion moves only at the address, so the feed splices. The pointer of
-`kept-fill-reference`. Not established: fillings or bases with layer references, omissions, or
-the root. -/
+`kept-fill-reference`. It needs a typed root: a kept-exact feed at a refused root refuses, while
+the retired certification reads only the focus. Not established: fillings or bases with layer
+references, omissions, or the root. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem kept_eq_certified (s : SourceSession) (hc : s.Coherent)
+theorem kept_eq_certified (s : SourceSession) (hc : s.Coherent) (hroot : s.view.type.isSome = true)
     (p : List Nat) (q : NativeEff) (hp : p ≠ [])
     (hb : s.sketch.program.refSites [] = []) (hq : q.refSites [] = []) :
     FeedCertified s (p,q) ↔ FillReference.certifiedB s.sketch s.app p q = true := by
@@ -757,7 +758,7 @@ theorem kept_eq_certified (s : SourceSession) (hc : s.Coherent)
         exact hchk
       exact ⟨hp, _, _, SourceSession.feed_keepExact_of (o := Oracle.uncached) hp hat
         (Sketch.fillAt_of_replaceAt hrep) hfocus (SourceSession.partKey_refFree hc' hrep hfocus)
-        hres (SourceSession.canSplice_refFree hb hc' hrep)⟩
+        hres (SourceSession.canSplice_refFree hb hc' hrep) hroot⟩
 
 /-! ## The construction invariant -/
 
@@ -1009,11 +1010,16 @@ theorem publish_eq_materialize {o : Oracle} {fs : FillSet} {d next : Doc} {actio
   have hcoh : fs.source.Coherent := by
     rw [hs]
     exact hc
+  have hroot : fs.source.view.type.isSome = true := by
+    rw [SourceSession.view_type hcoh]
+    show (fs.base.sourceCheck fs.app).toOption.isSome = true
+    rw [hpositive]
+    rfl
   have hcert : ∀ x ∈ fs.entries, FillReference.Certified fs.base fs.app x := by
     intro x hx
     have hfc := wf.certified x hx
     exact certified_of_certifiedB
-      ((kept_eq_certified fs.source hcoh x.1 x.2 hfc.1 hb (hq x hx)).mp hfc)
+      ((kept_eq_certified fs.source hcoh hroot x.1 x.2 hfc.1 hb (hq x hx)).mp hfc)
   have hhold : ∀ x ∈ fs.entries, holdsProgram fs.base x.1 = true :=
     fun x hx => (holdsProgram_of_certified (hcert x hx)).2
   have hfault : fs.base.program.firstRefFault = none := by

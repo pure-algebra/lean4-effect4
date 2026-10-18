@@ -31,8 +31,10 @@ refuses `noProgram`, except under `draft`, which records an unchanged step.
   the focus's type. Both sketches must have no ill-formed reference. Any other draft asks the
   module key. A draft never refuses.
 - **`keepExact`** asks the filling's part key inside the candidate's expansion. A changed or
-  refused part type refuses `notKept`. A kept part splices where the expanded edit agrees.
-  Both sketches must have no ill-formed reference. Otherwise it rechecks and compares root and local types.
+  refused part type refuses `notKept`. A kept part splices where `canSplice` holds and the root is
+  typed. Otherwise it rechecks, and `finish` refuses unless the root and the local types are kept.
+  So a kept-exact feed keeps a typed document's exact observations, and at a refused root it
+  refuses: there is no root type to keep. A refused document is edited under `draft`.
 
 The session's invariant is `SourceSession.Coherent`: its table is the sketch's source table.
 The laws live in `Laws/Program/SourceTable.lean`. `EditSession.feed` (`Program/Edit.lean`) stays as
@@ -243,7 +245,7 @@ def feed (o : Oracle) (policy : FeedPolicy) (s : SourceSession) (edit : Edit) :
                       | .error _ => pure (.error (.notKept (focus.env, focus.ty) part.result))
                       | .ok ty =>
                           if ty != focus.ty then pure (.error (.notKept (focus.env, focus.ty) part.result))
-                          else if s.canSplice candidate edit then
+                          else if s.canSplice candidate edit && s.view.type.isSome then
                             pure (.ok (s.splice candidate edit old part))
                           else s.recheck o policy candidate edit old
   | _, _ =>

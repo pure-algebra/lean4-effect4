@@ -59,7 +59,12 @@ def refAction := refSet.value.1.publication.toOption.getD (.commit [] .keepExact
 def broken : Sketch := ⟨.bind n1 (.succeed (.var 2)),[]⟩
 def brokenDoc : Doc := (Doc.open_ ⟨⟨"broken",0⟩,{},broken⟩).value
 #guard FillReference.certifiedB broken {} [0] n7
-#guard ((FillSet.open_ brokenDoc).add Oracle.uncached [([0],n7)]).value.2 = [.applied [0]]
+-- A fill is certified through the kept-exact feed, which keeps only a typed root's observations:
+-- beside the unrelated error the fill set refuses it, while the retired certification, which reads
+-- only the focus, accepts it. This is `kept_eq_certified`'s typed-root premise.
+#guard match ((FillSet.open_ brokenDoc).add Oracle.uncached [([0],n7)]).value.2 with
+  | [.refused [0] _] => true
+  | _ => false
 #guard match FillReference.materialize {} broken [([0],n7)] with
   | .error (.refused _) => true | _ => false
 
