@@ -563,6 +563,14 @@ let writer_source dir =
   in
   ({ src_size = size; src_refresh = size; src_read = read }, close)
 
+(* PK9: a sealed segment is read-only. *)
+let sealed_perm = 0o444
+
+let writable path =
+  match Unix.stat path with
+  | st -> st.Unix.st_perm land 0o200 <> 0
+  | exception Unix.Unix_error _ -> false
+
 let create_segment ~dir s =
   let path = seg_path ~dir s in
   let fd = Unix.openfile path [ Unix.O_RDWR; Unix.O_CREAT; Unix.O_TRUNC ] 0o600 in
@@ -577,6 +585,12 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
   mkdir_p dir;
   mkdir_p (pack_subdir dir);
   let lock_fd, lock_key = acquire_lock dir in
+  let refuse_open msg =
+    (try Unix.lockf lock_fd Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
+    (try Unix.close lock_fd with Unix.Unix_error _ -> ());
+    Hashtbl.remove held lock_key;
+    raise (Bad_pack msg)
+  in
   let finish_with r cur_seg cur_end fds =
     { w_dir = dir;
       w_seg_max = seg_max;
@@ -630,10 +644,7 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
     (match check_head src last with
      | Error why ->
        close_src ();
-       (try Unix.lockf lock_fd Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
-       (try Unix.close lock_fd with Unix.Unix_error _ -> ());
-       Hashtbl.remove held lock_key;
-       raise (Bad_pack (Printf.sprintf "%s: %s" (seg_path ~dir last) why))
+       refuse_open (Printf.sprintf "%s: %s" (seg_path ~dir last) why)
      | Ok () -> ());
     let start = match from with Some p -> p | None -> (last, head_length) in
     let n = ref 0 in
@@ -646,6 +657,13 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
     let cut = match stop with Eof | Bad_head _ -> false | _ -> true in
     let did_truncate = ref false in
     let cseg, coff = ends_at in
+    (* PK9: a sealed segment holds only bytes a sync had fsynced, so a record that fails
+       inside one is damage, not a torn tail.  Recovery never truncates it: the open is
+       refused and nothing is cut. *)
+    if truncate && cut && not (writable (seg_path ~dir cseg)) then
+      refuse_open
+        (Printf.sprintf "%s is sealed and recovery fails inside it (%s): damage, not a torn tail"
+           (seg_path ~dir cseg) (scan_stop_to_string stop));
     let fds = ref [] in
     if truncate && cut then begin
       (* PK3: the torn tail becomes the file's end, and every later segment goes. *)
@@ -666,6 +684,12 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
         segs;
       if !did_truncate then fsync_dir (pack_subdir dir)
     end;
+    (* PK9: every segment below the writer's is sealed; the durable end has passed it. *)
+    List.iter
+      (fun s ->
+        let path = seg_path ~dir s in
+        if s < cseg && writable path then Unix.chmod path sealed_perm)
+      segs;
     finish_with
       { from = start;
         stop;
@@ -755,7 +779,20 @@ let sync t =
     List.iter (fun s -> Unix.fsync (fd_for t s)) (List.sort compare t.w_dirty);
     t.w_dirty <- []
   end;
-  t.w_durable <- t.w_written
+  t.w_durable <- t.w_written;
+  (* PK9: a segment the durable end has passed is sealed.  Every byte of it was fsynced,
+     here or at an earlier sync, and nothing writes it again: the writer's descriptor is
+     closed and the file becomes 0444. *)
+  let dseg = fst t.w_durable in
+  let passed, kept = List.partition (fun (s, _) -> s < dseg) t.w_fds in
+  if passed <> [] then begin
+    List.iter
+      (fun (s, fd) ->
+        (try Unix.close fd with Unix.Unix_error _ -> ());
+        Unix.chmod (seg_path ~dir:t.w_dir s) sealed_perm)
+      passed;
+    t.w_fds <- kept
+  end
 
 let commit = sync
 

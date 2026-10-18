@@ -23,7 +23,9 @@
      W*  the single-writer discipline (PK6): a second `open_` in this process and a second
          PROCESS (fork) are both refused with `Locked`.
      Z*  segment rotation (PK8): records land in successive segments, the scan crosses
-         them in write order, and reads work in a segment that is not the last.
+         them in write order, and reads work in a segment that is not the last; sealing
+         (PK9): a segment the durable end has passed is 0444, and recovery never truncates
+         one.
      T*  `truncate_to` refuses below `pack_end`, and the host-limit refusal (PK5).
 
    Everything runs in a fresh directory under $E4_PACK_TMP (default: the system temp dir),
@@ -83,26 +85,44 @@ let read_file path =
   close_in ic;
   s
 
+(* Damage bypasses the store's permissions, as a disk fault or an operator would: a sealed
+   file (0444; E4_pack PK9, E4_index IX9) is made writable for the write and sealed again
+   after it, so the store meets the damage in the state it left the file. *)
+let as_writable path f =
+  let sealed =
+    match Unix.stat path with
+    | st when st.Unix.st_perm land 0o200 = 0 -> Some st.Unix.st_perm
+    | _ -> None
+    | exception Unix.Unix_error _ -> None
+  in
+  (match sealed with Some p -> Unix.chmod path (p lor 0o200) | None -> ());
+  Fun.protect ~finally:(fun () -> match sealed with Some p -> Unix.chmod path p | None -> ()) f
+
 let write_file path s =
-  let oc = open_out_bin path in
-  output_string oc s;
-  close_out oc
+  as_writable path (fun () ->
+      let oc = open_out_bin path in
+      output_string oc s;
+      close_out oc)
 
 (* Overwrite one byte of a file in place. *)
 let poke path pos byte =
-  let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
-  ignore (Unix.lseek fd pos Unix.SEEK_SET);
-  ignore (Unix.write fd (Bytes.make 1 (Char.chr byte)) 0 1);
-  Unix.close fd
+  as_writable path (fun () ->
+      let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
+      ignore (Unix.lseek fd pos Unix.SEEK_SET);
+      ignore (Unix.write fd (Bytes.make 1 (Char.chr byte)) 0 1);
+      Unix.close fd)
 
 let flip path pos =
   let s = read_file path in
   poke path pos (Char.code s.[pos] lxor 0x01)
 
 let truncate_file path n =
-  let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
-  Unix.ftruncate fd n;
-  Unix.close fd
+  as_writable path (fun () ->
+      let fd = Unix.openfile path [ Unix.O_WRONLY ] 0o600 in
+      Unix.ftruncate fd n;
+      Unix.close fd)
+
+let perm path = (Unix.stat path).Unix.st_perm land 0o777
 
 (* ============================================================ a populated store *)
 
@@ -651,6 +671,88 @@ let test_rotation () =
   check "Z9 open_at ~from:(0,27) verifies and re-admits every record in the store"
     (r.E4_pack.records = 60 && r.E4_pack.stop = E4_pack.Eof && E4_pack.pack_end t = pe);
   E4_pack.close t;
+  (* PK9: sealing *)
+  let last = List.nth segs (List.length segs - 1) in
+  check "Z10 every segment below the last is sealed 0444, and the last is writable"
+    (List.for_all (fun s -> perm (E4_pack.seg_path ~dir:d s) = 0o444)
+       (List.filter (fun s -> s < last) segs)
+    && perm (E4_pack.seg_path ~dir:d last) land 0o200 <> 0);
+  (* a segment an older writer left writable (a stop between the fsync and the chmod) is
+     sealed at the next open *)
+  Unix.chmod (E4_pack.seg_path ~dir:d 0) 0o600;
+  let t = E4_pack.open_ ~dir:d ~seg_max in
+  check "Z12 open_ seals a segment below the writer's that an older writer left writable"
+    (perm (E4_pack.seg_path ~dir:d 0) = 0o444
+    && perm (E4_pack.seg_path ~dir:d last) land 0o200 <> 0);
+  E4_pack.close t;
+  rm_rf d;
+  (* Z11: the seal waits for the fsync: a flush that crossed a rotation leaves the old
+     segment writable, and the sync seals it *)
+  let d = fresh_dir () in
+  let t = E4_pack.open_ ~dir:d ~seg_max in
+  let rec fill () =
+    let body = rand_bytes 200 in
+    let s, _ = E4_pack.append t ~digest:(digest_of body) ~node_bytes:body in
+    if s = 0 then fill ()
+  in
+  fill ();
+  E4_pack.flush t;
+  let before = perm (E4_pack.seg_path ~dir:d 0) in
+  E4_pack.sync t;
+  let after = perm (E4_pack.seg_path ~dir:d 0) in
+  check "Z11 the seal waits for the fsync: writable after the flush, 0444 after the sync"
+    (before land 0o200 <> 0 && after = 0o444);
+  E4_pack.close t;
+  rm_rf d;
+  (* Z13: recovery never truncates a sealed segment.  Two rotated stores, one record's CRC
+     flipped in each: in a sealed segment the open refuses and cuts nothing; in the last
+     segment, the control, the tail is cut as PK3 says. *)
+  let rotated () =
+    let d = fresh_dir () in
+    let t = E4_pack.open_ ~dir:d ~seg_max in
+    let offs = List.init 30 (fun _ ->
+        let body = rand_bytes 200 in
+        E4_pack.append t ~digest:(digest_of body) ~node_bytes:body)
+    in
+    E4_pack.sync t;
+    E4_pack.close t;
+    (d, offs)
+  in
+  let sizes d = List.map (fun s -> (s, String.length (read_file (E4_pack.seg_path ~dir:d s))))
+      (let rd = E4_pack.open_reader ~dir:d in
+       let l = E4_pack.segments rd in
+       E4_pack.close_reader rd;
+       l)
+  in
+  let d, offs = rotated () in
+  let s0, o0 = List.hd offs in
+  flip (E4_pack.seg_path ~dir:d s0) (o0 + E4_pack.record_header_length);
+  let before = sizes d in
+  let refused () =
+    match E4_pack.open_at ~from:(s0, E4_pack.head_length) ~dir:d ~seg_max () with
+    | exception E4_pack.Bad_pack _ -> true
+    | exception (E4_pack.Locked _ | Unix.Unix_error _) -> false
+    | t ->
+      E4_pack.close t;
+      false
+  in
+  let first = refused () in
+  let again = refused () in
+  check "Z13 a record that fails inside a sealed segment: open_ refuses with Bad_pack, cuts nothing, and frees the lock"
+    (s0 = 0 && first && again && sizes d = before);
+  rm_rf d;
+  let d, offs = rotated () in
+  let sl, ol = List.nth offs (List.length offs - 1) in
+  flip (E4_pack.seg_path ~dir:d sl) (ol + E4_pack.record_header_length);
+  check "Z13 control: the same flip in the last segment is a torn tail, cut at the record"
+    (sl > 0
+    && (match E4_pack.open_at ~from:(sl, E4_pack.head_length) ~dir:d ~seg_max () with
+        | exception _ -> false
+        | t ->
+          let r = E4_pack.recovery t in
+          let ok = r.E4_pack.truncated && E4_pack.pack_end t = (sl, ol) in
+          E4_pack.close t;
+          ok));
   rm_rf d
 
 (* ============================================================ T: truncate_to, PK5 *)
