@@ -1,0 +1,12 @@
+/private/tmp/seams-s4-sol/overlay/Test/Api/TypedReplies.lean:34:77: error: unexpected identifier; expected '}'
+/private/tmp/seams-s4-sol/overlay/Test/Api/TypedReplies.lean:62:0: error: Expression
+  decide (Option.map (fun s => Option.map (fun x => x.answer) (s.callInstance [1])) initial = some (some Ty.nat.option))
+did not evaluate to `true`
+/private/tmp/seams-s4-sol/overlay/Test/Api/TypedReplies.lean:68:0: error: Expression
+  decide (Option.map (fun s => (submit s some1).phase) bound = some Phase.preflight)
+did not evaluate to `true`
+/private/tmp/seams-s4-sol/overlay/Test/Api/TypedReplies.lean:69:0: error: Expression
+  decide
+    (Option.map (fun s => (inspect (applyPending (submit s some1).session 100).session).exit) bound =
+      some (some (Exit.success (Val.nat 1).some)))
+did not evaluate to `true`

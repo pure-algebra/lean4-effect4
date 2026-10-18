@@ -1,0 +1,34 @@
+/private/tmp/seams-s4-sol/overlay/src/Effect4/Laws/Api/Built.lean:19:21: error: Tactic `rfl` failed: The left-hand side
+  (match Except.error refusal with
+    | Except.error why => Except.error why
+    | Except.ok admitted =>
+      Except.ok
+        { app := app, program := s.program, admitted := admitted,
+          rowNames :=
+            List.map
+              (fun x =>
+                match x with
+                | (row, index) => (row.spelling, index))
+              (List.zipIdx app.rows) }) =
+    Except.error why
+is not definitionally equal to the right-hand side
+  Except.error refusal = Except.error why
+
+case error
+app : SigApp
+s : Sketch
+why refusal : AdmitRefusal
+admitted : admitProgram s.program app = Except.error refusal
+⊢ (match Except.error refusal with
+      | Except.error why => Except.error why
+      | Except.ok admitted =>
+        Except.ok
+          { app := app, program := s.program, admitted := admitted,
+            rowNames :=
+              List.map
+                (fun x =>
+                  match x with
+                  | (row, index) => (row.spelling, index))
+                (List.zipIdx app.rows) }) =
+      Except.error why ↔
+    Except.error refusal = Except.error why

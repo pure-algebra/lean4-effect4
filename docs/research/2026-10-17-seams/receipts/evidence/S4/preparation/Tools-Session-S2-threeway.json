@@ -1,0 +1,12 @@
+{
+  "command": [
+    "git",
+    "merge-file",
+    "-p",
+    "/private/tmp/seams-s4-sol/overlay/tools/Tools/Session.lean",
+    "/private/tmp/seams-s4-sol/evidence/Tools-Session-current-V1.lean",
+    "/private/tmp/seams-s4-sol/evidence/Tools-Session-frozen-S2.lean"
+  ],
+  "exit": 0,
+  "s2_sha256": "2b336ccf05c3ed4324f7fe5fe9c4d265649479a6341730d8a06c23e4a13cb49e"
+}

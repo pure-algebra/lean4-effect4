@@ -14,7 +14,7 @@ The owner pauses work after V1.
 | V1 | `d6ad9482303a1998bfbcc826bf0d12ab4f6aa3c9`; receipt `6406fa8d47b99e1b6224dffac5025f622235893c` ; receipt `6406fa8d47b99e1b6224dffac5025f622235893c` | [V1](V1.md) | Required checks pass; two placed goals remain. |
 | S1 | `2e71c9dc69b1d06e2b2241f8374e0600daa90a0f` ; receipt `4de971df3ecce776ec1cc914aa326adcf88ec333` | [S1](S1.md) | Required checks pass; thirteen placed goals remain. |
 | S2 | `e15394b0934f14158970b21abf65d6b391c61fe4` | [S2](S2.md) | Required checks pass; three new placed goals remain. |
-| S4 | Pending | Pending | Open |
+| S4 | `6d403efeda4d3e366cfc2d4fa2b5edcbd717d649` | [S4](S4.md) | Required checks pass; two claims proved, no planned goals. |
 | S3a | Pending | Pending | Open |
 | S3b | Pending | Pending | Open |
 | ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` ; receipt `0bb42e37d4fa99fd84979df03beb3dd0391a4e98` | [ST1a](ST1a.md) | Required checks pass. |
@@ -79,6 +79,10 @@ The owner pauses work after V1.
 | S2 | Missing nonroot focus refuses before candidate construction, without an invented key or item index. |
 | S2 | Original certification and materialization algorithms move to Laws-only observations; D1–D9 retain their exact premises. |
 
+| S4 | The preparation admitted at the application alone and refused live holes; `Built.ofSketch` admits at `app.withHoles s.holes`, as the plan's row 4 does. |
+| S4 | `Built.ofProgram` admits at an exact application; `LiveRecord.restore` uses it, so `restore_save` keeps its statement. |
+| S4 | Two callers outside the prepared train moved: `typedReplayExit` and the host-handle forgery counterexample. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -108,5 +112,8 @@ The owner pauses work after V1.
 | S2 | Adopt witnessed pending fills, keepExact certification, and one address-ordered publication commit. |
 | S2 | Reset only after successful publication; retain full-anchor checks and precise feed refusals. |
 | S2 | Keep three placed connections and the original D1–D9 observations on their explicit fragments. |
+
+| S4 | Adopt `Built.ofSketch` at the application extended by hole rows, and `Built.ofProgram` at an exact application for restore. |
+| S4 | Retire the five raw entry points; seal `Built` in the generated interface; record a run's origin as data. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

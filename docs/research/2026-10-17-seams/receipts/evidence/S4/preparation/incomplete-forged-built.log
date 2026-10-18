@@ -1,0 +1,6 @@
+File "/private/tmp/seams-s4-sol/evidence/incomplete_forged_built.ml", lines 2-5, characters 23-18:
+2 | .......................{
+3 |   app = { rows = []; services = []; types = [] };
+4 |   program = Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat 7));
+5 |   row_names = [] }
+Error: Some record fields are undefined: admitted

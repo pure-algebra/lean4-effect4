@@ -1,0 +1,19 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "lake",
+    "env",
+    "env",
+    "LEAN_PATH=/private/tmp/seams-s4-sol/overlay/src:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean",
+    "lean",
+    "--root=/private/tmp/seams-s4-sol/overlay/src",
+    "-DwarningAsError=true",
+    "-o",
+    "/private/tmp/seams-s4-sol/overlay/src/Effect4/Api/Runner.olean",
+    "/private/tmp/seams-s4-sol/overlay/src/Effect4/Api/Runner.lean"
+  ],
+  "exit": 0,
+  "seconds": 2.5497281551361084,
+  "source_sha256": "cf6eee1fa12b6984be6f41226e7e9a9461d6c206fcdeb88236d9f62474682fdf"
+}

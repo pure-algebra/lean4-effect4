@@ -1,0 +1,290 @@
+import Effect4.Api.Codegen
+import Effect4.Run.Live
+import Effect4.Laws.Program.Invocation
+
+/-!
+# Invocation contract — shared asynchronous routing and admitted tables
+
+DI-54 and DI-61. The production compiler routes asynchronous built-ins and
+external rows through `asyncRoute` under `perform`. The universal compiler theorem
+is ascribed below; the 23-operation route matrix is an independently written finite table.
+
+The domain counterexample remains independent of the generated corpus and is now also an
+actual `.ty` golden (`OCaml5.Eff.Corpus.pIllExternalDomain`). Existing historical corpus
+verdicts did not change at DI-54; this new fixture closes the cross-language regression gap.
+
+The execution checks name their concrete fuel, tape and table. Timed sleep requires an
+advance; unanswered calls and exhausted fuel remain frontiers. The external replay theorem
+compares the two forms on the admitted scalar fixture and checks that the reply is consumed.
+None of these finite executions claims host conformance, resource liveness, or DI-57's
+nonempty-table reference theorem. Admission and the optional print-image certificate stay
+separate, and the decision-tape check remains a separate operation.
+-/
+
+set_option autoImplicit false
+set_option maxRecDepth 8192
+set_option maxHeartbeats 4000000
+
+namespace Test.Program.InvocationContract
+
+open Effect4
+open Effect4.Machine
+open Effect4.Program
+
+/-! ## The 23 × 2 route matrix
+
+`NativeOp.spelled` holds one built-in operation per spelling key: 22 constructors, the two scope
+strategies expanded, each read-modify-write row at its face (the unit literal for its term, since
+the state plan's T5), `Deferred.make` at its face, the instance `(nat, nat)`, external indices
+excluded (`Native.lean`). The request representatives satisfy each row's request at the
+`nat` instance (the rows are templates since the state plan's T3a); that is not a claim that their
+synthetic handles are live in a running store. -/
+
+/-- A row's request at the `nat` instance, the one today's battery programs use. -/
+def requestTyFor (op : NativeOp) : Ty := op.row.request.instantiate [(0, .nat), (1, .nat)]
+
+def requestFor (op : NativeOp) : Val :=
+  match requestTyFor op with
+  | .nat => .nat 1
+  | .refOf _ => Val.cell ⟨0⟩
+  | .deferredOf _ _ => Val.promise ⟨0⟩
+  | .prod (.refOf _) .nat => .list [Val.cell ⟨0⟩, .nat 1]
+  | .prod (.deferredOf _ _) .nat => .list [Val.promise ⟨0⟩, .nat 1]
+  | _ => .unit
+
+/-- The four compiled shapes this matrix distinguishes: the synchronous thunk, an async
+registration, the `badName` defect a wrong shape reaches, and everything else (the live
+frontier and the immediate yield). -/
+inductive Route | sync | async | defect | other
+deriving DecidableEq, Repr
+
+def route : NCode → Route
+  | .sync _ => .sync
+  | .async _ _ _ => .async
+  | .failure _ => .defect
+  | _ => .other
+
+def observed (op : NativeOp) : Route :=
+  let p := { rootPoint 100 with env := [requestFor op] }
+  route (compileEff (.perform op (.var 0)) p)
+
+/-- Written from the row declarations: synchronous rows compile to `.sync`;
+`Deferred.await`, sleep and external rows compile to `.async`. -/
+def expected : NativeOp → Route
+  | .deferredAwait => .async
+  | .sleep => .async
+  | .external _ => .async
+  | _ => .sync
+
+#guard NativeOp.spelled.length = 23
+#guard NativeOp.spelled.all (fun op => Val.hasTy (requestFor op) (requestTyFor op))
+#guard NativeOp.spelled.all (fun op => observed op == expected op)
+#guard (NativeOp.spelled.filter (fun op => observed op == .sync)).length = 21
+-- Both asynchronous built-ins compile to .async.
+#guard (NativeOp.spelled.filter (fun op => (NativeOp.row op).kind == .async)).length = 2
+#guard (NativeOp.spelled.filter (fun op => observed op == .async)).length = 2
+#guard observed .sleep == .async
+#guard observed (.external 0) == .async
+#guard observed .deferredAwait == .async
+-- No built-in reaches an unclassified shape.
+#guard (NativeOp.spelled.filter (fun op => observed op == .other)).length = 0
+
+/-! ## The timed sleep: raw `run` parks, `replay` with an advance finishes
+
+`Api.run` takes no decision tape (`Api.lean`), so a positive sleep leaves a live timer
+frontier there — a frontier, never a failure. The decision that finishes it is `.advance`. -/
+
+def performSleep : Api.Program := .perform .sleep (.lit (.nat 1))
+
+def sleepTape : List Api.Decision := [Api.evaluate, .advance 1, Api.flush]
+
+#guard (Api.typeOf performSleep).isSome
+#guard (Api.run performSleep 100).exit = none
+#guard (Api.replay performSleep 100 sleepTape).exit = some (.success .unit)
+-- Zero millis is the immediate yield.
+#guard (Api.run (.perform .sleep (.lit (.nat 0))) 100).exit = some (.success .unit)
+#guard (Api.run performSleep 100).outcome = .frontier
+
+/-! ## An external call consumes its reply
+
+The row and the reply are `docs/research/foundation-probes/Admission.lean:9-13`. -/
+
+def goodRow : Row :=
+  { name := "wait", spelling := "Host.wait", kind := .async, registration := .external,
+    request := .nat, answer := .nat, error := .nat, cite := "scratch" }
+
+/-- Lawful by name, typed, printable — and not registrable: the checked replay admits no answer
+at a `.deferred` row. -/
+def malformedRow : Row := { goodRow with registration := .deferred }
+
+/-- Registered externally, but not an asynchronous row. -/
+def syncRow : Row := { goodRow with kind := .sync }
+
+def reply : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 9))
+
+def performExternal : Api.Program := .perform (.external 0) (.lit (.nat 7))
+
+#guard LawfulTable [goodRow]
+#guard LawfulTable [malformedRow]
+/-- The tape that answers the root's one call: the root evaluated, the call at its first guard
+token answered, the dispatcher flushed. A host answer is a decision (DI-23). -/
+def replyTape : List Api.Decision := [Api.evaluate, .answerAsync Api.root 0 reply, Api.flush]
+
+#guard (Api.typeOf performExternal [goodRow]).isSome
+#guard (Api.replay performExternal 100 replyTape [goodRow]).exit = some (.success (.nat 9))
+-- The wrong registration parks, a frontier and not a refusal; `checkTable` is what refuses the
+-- table, and the checked replay refuses the answer at the parked call.
+#guard (Api.run performExternal 100 [malformedRow]).outcome = .frontier
+#guard match Api.replayChecked performExternal 100 replyTape [malformedRow] with
+  | .inr (.decision 1 _ (.notExternal _ 0) _) => true
+  | _ => false
+-- The reply is consumed: no call waits after it. Removing it leaves a live frontier.
+#guard Program.awaits (Api.replay performExternal 100 replyTape [goodRow]).machine = []
+#guard (Api.run performExternal 100 [goodRow]).exit = none
+#guard (Api.run performExternal 100 [goodRow]).outcome = .frontier
+#guard externalRow [goodRow] 0 = some goodRow
+
+-- DI-61's two-spelling receipts (`sleep_print_same`, `replay_perform_external_eq_callback`)
+-- retired with `callback`: there is one invocation form, so they had become `x = x`. The
+-- compile-side twin is recorded the same way in `src/Effect4/Laws/Program/Invocation.lean`.
+
+/-! ## `checkTable`: the table decision `LawfulTable` does not make -/
+
+#guard checkTable [] = none
+#guard checkTable [goodRow] = none
+#guard checkTable [malformedRow] = some (.notExternal 0)
+#guard checkTable [syncRow] = some (.notAsync 0)
+#guard checkTable [goodRow, malformedRow] = some (.notExternal 1)
+#guard checkTable [goodRow, goodRow] = none
+#guard Api.checkTable [malformedRow] = some (.notExternal 0)
+
+/-! ## The external registration lookup (`Admission.lean:62-74`, the six negatives)
+
+`externalRow` is what the registration hook consults. One table and index it accepts, five it
+refuses — out of range, empty, wrong registration, sync row, program row — and, as the sixth
+negative, the reminder that a valid row is not a certificate for the request term. -/
+
+#guard externalRow [goodRow] 1 = none
+#guard externalRow [] 0 = none
+#guard externalRow [malformedRow] 0 = none
+#guard externalRow [syncRow] 0 = none
+#guard externalRow [{ goodRow with kind := .program }] 0 = none
+#guard (Api.typeOf performExternal [goodRow]) = some ⟨.nat, .nat, .empty⟩
+-- A good row does not make a wrong request term typed.
+#guard (Api.typeOf (.perform (.external 0) (.lit .unit)) [goodRow]).isNone
+
+/-! ## DI-54: the domain counterexample and the two arms
+
+The witness of `docs/research/2026-09-09-scout-proof-statements.md` §2: the bound variable has
+type `never` (the answer of `fail`), and `never` is exactly the external placeholder's
+declared request, so the request check passed and the program typed at the empty table. It is
+refused now, and this is the only class of program whose verdict the guards changed.
+
+Part 4 (2026-09-12, DI-15 subsumption at the row request): at a table that *does* supply the
+row the same program is in the domain, and a `never` request is a subtype of every request
+(TypeScript assignability), so it types there — the domain check, not the request check, is
+what refuses it at the empty table. The verdict change is reported under DI-60 in the part-4
+receipt. -/
+
+def counterexample : Api.Program :=
+  .bind (.fail (.lit (.nat 1))) (.perform (.external 0) (.var 0))
+
+#guard Api.typeOf counterexample = none
+#guard (Api.typeOf counterexample [goodRow]).isSome
+-- In domain and typed, once the table supplies the row.
+#guard (Api.typeOf (.bind (.fail (.lit (.nat 1))) (.perform (.external 0) (.lit (.nat 7))))
+  [goodRow]).isSome
+-- Out of domain at the empty table, whatever the request term.
+#guard (Api.typeOf (.perform (.external 0) (.lit (.nat 7)))).isNone
+#guard (Api.typeOf (.perform (.external 1) (.lit (.nat 7))) [goodRow]).isNone
+-- Built-ins are always in domain; the guards changed nothing for them.
+#guard (Api.typeOf (.perform (.deferredMakeOf .nat .nat) (.lit .unit))).isSome
+#guard (Api.typeOf Wire.Corpus.pAwait).isSome
+
+/-! ## Admission and the print-image certificate
+
+`Wire.Corpus.pAwait` is the historical wire program: it spells `perform` on an async row.
+With `perform` unified as the one invocation form, it is admitted and readable. -/
+
+def admitted (program : Api.Program) (table : RowTable := []) : Bool :=
+  match Api.admitProgram program (.ofTable table) with
+  | .ok _ => true
+  | .error _ => false
+
+def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitRefusal :=
+  match Api.admitProgram program (.ofTable table) with
+  | .ok _ => none
+  | .error why => some why
+
+#guard admitted Wire.Corpus.pAwait
+#guard Api.readable Wire.Corpus.pAwait
+#guard (Api.imageCertificate Wire.Corpus.pAwait []).isSome
+#guard (Api.imageCertificate performSleep []).isSome
+#guard Api.readable performSleep
+-- The refusals, one fixture each.
+#guard refusal counterexample = some .illTyped
+#guard refusal performExternal [malformedRow] = some (.signature (.row 0 .notExternal))
+-- A sync row is refused by the table's signature under perform, which types against it.
+#guard refusal performExternal [syncRow] = some (.signature (.row 0 .notAsync))
+#guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with spelling := "Ref.get" }]
+  = some (.signature (.row 0 .builtinCollision))
+#guard refusal (.succeed (.lit (.nat 1))) [goodRow, goodRow]
+  = some (.signature (.duplicateRow ("Host.wait", [])))
+#guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with shape := .value, trailing := [.name "x"] }]
+  = some (.signature (.row 0 .valueRowTrailing))
+#guard match Program.printEntry [{ goodRow with spelling := "a1" }] (nativeSignature [{ goodRow with spelling := "a1" }]) "main" (EffTy.pure .unit) (.succeed (.lit .unit)) with
+  | .error (.unsafeName "a1") => true
+  | _ => false
+#guard match Program.printEntry [{ goodRow with spelling := "Effect.succeed" }] (nativeSignature [{ goodRow with spelling := "Effect.succeed" }]) "main" (EffTy.pure .unit) (.succeed (.lit .unit)) with
+  | .error (.unsafeName "Effect.succeed") => true
+  | _ => false
+#guard (Api.printModule "main" (.succeed (.lit .unit)) [{ goodRow with spelling := "a1" }]).isNone
+#guard admitted performExternal [goodRow]
+
+/-! ## The checked entry points run what the raw ones run
+
+The exit criterion of S1a: `runAdmitted` runs what `run` runs on every admitted fixture. The
+certificate is consumed as an argument, so a caller cannot reach these without building it. The
+admitted opening and journal feed (`Live.open`, `Live.feedAll`) takes the place of the retired
+`replayAdmitted`: it replays a session's journal, and the session admits each reply at its call. -/
+
+def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat) : Option ExitV :=
+  match Api.admitProgram program (.ofTable table) with
+  | .ok certificate => (Api.runAdmitted certificate fuel).exit
+  | .error _ => none
+
+/-- The session header of the typed replay over a table. -/
+def replayHeader (table : RowTable) : Api.HostSession.Header :=
+  ⟨Api.HostSession.version, "invocation", "keyed-v3", table⟩
+
+/-- The typed replay's exit: the program checked, then a session's journal replayed through the
+checked session, or `none` where the check or the session's start refuses. -/
+def typedReplayExit (program : Api.Program) (table : RowTable) (budget : Api.Budget)
+    (journal : List Api.Runner.Command) : Option ExitV :=
+  match Api.check program table with
+  | .ok t =>
+    match t.replay "keyed-v3" (replayHeader table) journal budget with
+    | .ok l => l.run.exit
+    | .error _ => none
+  | .error _ => none
+
+/-- The session's journal of `replyTape`: the root evaluated, the call bound at its guard, the
+reply received and applied, the dispatcher flushed. -/
+def replyJournal : List Api.Runner.Command :=
+  [.control Api.evaluate,
+    .bind ⟨Api.HostSession.version, "invocation", [goodRow], 0, Api.root, .external 0, .nat 7⟩ 0,
+    .submit ⟨Api.HostSession.version, "invocation", 0, ⟨Api.root, 0⟩, reply⟩,
+    .apply ⟨Api.root, 0⟩, .control Api.flush]
+
+#guard runAdmittedExit Wire.Corpus.pAwait [] 100 = (Api.run Wire.Corpus.pAwait 100).exit
+#guard typedReplayExit performExternal [goodRow] ⟨100, 100⟩ replyJournal
+  = (Api.replay performExternal 100 replyTape [goodRow]).exit
+#guard runAdmittedExit performSleep [] 100 = (Api.run performSleep 100).exit
+#guard typedReplayExit performSleep [] ⟨100, 100⟩ (Rows.tape sleepTape) = some (.success .unit)
+#guard typedReplayExit performExternal [goodRow] ⟨100, 100⟩ replyJournal = some (.success (.nat 9))
+-- The typed replay exercises the same positive routing behavior. With no command fuel the start
+-- stops at a frontier, so no reply is applied and the root has no exit.
+#guard typedReplayExit performExternal [goodRow] ⟨0, 100⟩ replyJournal = none
+#guard (Api.replay performExternal 0 replyTape [goodRow]).outcome = .frontier
+
+end Test.Program.InvocationContract

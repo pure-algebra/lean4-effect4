@@ -1,0 +1,16 @@
+/private/tmp/seams-s4-sol/overlay/Test/Program/InvocationContract.lean:266:12: error(lean.invalidField): Invalid field `replay`: The environment does not contain `Effect4.Api.Typed.replay`, so it is not possible to project the field `replay` from an expression
+  t
+of type `Api.Typed { rows := table }`
+/private/tmp/seams-s4-sol/overlay/Test/Program/InvocationContract.lean:267:6: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Api.TypedLayer.ok`
+  [apply] `Std.Http.Response.ok`
+  [apply] `Std.Http.Status.ok`
+/private/tmp/seams-s4-sol/overlay/Test/Program/InvocationContract.lean:280:0: error: cannot evaluate code because 'Test.Program.InvocationContract.typedReplayExit._redArg' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/InvocationContract.lean:283:0: error: cannot evaluate code because 'Test.Program.InvocationContract.typedReplayExit._redArg' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/InvocationContract.lean:284:0: error: cannot evaluate code because 'Test.Program.InvocationContract.typedReplayExit._redArg' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/InvocationContract.lean:287:0: error: cannot evaluate code because 'Test.Program.InvocationContract.typedReplayExit._redArg' uses 'sorry' and/or contains errors

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "lake",
+    "env",
+    "lean",
+    "-DwarningAsError=true",
+    "/private/tmp/seams-s4-audit.lean"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4",
+  "started_utc": "2026-10-18T06:28:49.253747+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 10.588,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S4/audit.log"
+}

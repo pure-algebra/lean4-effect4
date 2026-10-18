@@ -1,0 +1,20 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "lake",
+    "env",
+    "env",
+    "LEAN_PATH=/private/tmp/seams-s4-sol/fresh-s1-lib:/private/tmp/seams-check-sol/s1-full/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean",
+    "lean",
+    "--root=/private/tmp/seams-s4-sol",
+    "-DwarningAsError=true",
+    "-o",
+    "/private/tmp/seams-s4-sol/fresh-s1-lib/Test/SeamsS4Audit.olean",
+    "/private/tmp/seams-s4-sol/Audit.lean"
+  ],
+  "exit": 0,
+  "seconds": 166.84872484207153,
+  "source_sha256": "5439eac866fef9831246228fc023753248635a7af64ad51792a05099cdf8f5f9",
+  "scope": "actual fresh S1 core imports"
+}

@@ -1,0 +1,14 @@
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:11:68: error: unexpected identifier; expected '}'
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:24:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:25:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:26:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:27:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:31:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:32:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:38:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:39:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:44:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:46:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:53:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:54:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors
+/private/tmp/seams-s4-sol/overlay/Test/Program/SeamsS4.lean:55:0: error: cannot evaluate code because 'Test.Program.SeamsS4.ask' uses 'sorry' and/or contains errors

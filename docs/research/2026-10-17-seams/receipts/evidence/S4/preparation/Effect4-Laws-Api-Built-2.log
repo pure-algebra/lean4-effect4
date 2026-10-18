@@ -1,0 +1,11 @@
+/private/tmp/seams-s4-sol/overlay/src/Effect4/Laws/Api/Built.lean:21:4: error: Tactic `rfl` failed: The left-hand side
+  @Except.error AdmitRefusal Built refusal = Except.error why
+is not definitionally equal to the right-hand side
+  @Except.error AdmitRefusal (AdmittedProgram s.program app) refusal = Except.error why
+
+case error
+app : SigApp
+s : Sketch
+why refusal : AdmitRefusal
+admitted : admitProgram s.program app = Except.error refusal
+⊢ Except.error refusal = Except.error why ↔ Except.error refusal = Except.error why
