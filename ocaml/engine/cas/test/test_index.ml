@@ -826,8 +826,10 @@ let test_shape () =
   check "S7 `class_at` is the four-way view, and Cls_unknown for a path no row mentions"
     (E4_shape.class_at E4_shape.table E4_kind.Job (E4_shape.args [ 0 ]) = E4_shape.Cls_cid
     && E4_shape.class_at E4_shape.table E4_kind.Job (E4_shape.args [ 2 ]) = E4_shape.Cls_data
-    && E4_shape.class_at E4_shape.table E4_kind.Checkpoint (E4_shape.args [ 3 ])
+    && E4_shape.class_at E4_shape.table E4_kind.Checkpoint (E4_shape.args [ 4 ])
        = E4_shape.Cls_stamp
+    && E4_shape.class_at E4_shape.table E4_kind.Checkpoint (E4_shape.args [ 3 ])
+       = E4_shape.Cls_data
     && E4_shape.class_at E4_shape.table E4_kind.Log (E4_shape.args [ 0 ])
        = E4_shape.Cls_ref (Some E4_kind.Job)
     && E4_shape.class_at E4_shape.table E4_kind.Annotation (E4_shape.args [ 0 ])
@@ -836,10 +838,13 @@ let test_shape () =
     (let cid_payload =
        f_ctor 0 [ f_bytes (d32 9); f_bytes (d32 9); f_nat 0; f_bytes (d32 9) ]
      in
+     (* a checkpoint payload in E4_checkpoint's seven fields: job, position, tape prefix,
+        prev, engine, image length, image *)
      let stamp_payload =
        f_ctor 0
          [ f_ref (E4_kind.byte E4_kind.Job) (d32 0); f_nat 0;
-           f_ref (E4_kind.byte E4_kind.Tape) (d32 0); f_bytes (d32 9); f_bytes "" ]
+           f_some (f_ref (E4_kind.byte E4_kind.Tape) (d32 0)); f_none; f_bytes (d32 9); f_nat 0;
+           f_ctor 0 [ f_bytes "" ] ]
      in
      List.length (E4_shape.cids_of E4_shape.table E4_kind.Job ~payload:cid_payload) = 3
      && E4_shape.cids_of E4_shape.table E4_kind.Checkpoint ~payload:stamp_payload = []

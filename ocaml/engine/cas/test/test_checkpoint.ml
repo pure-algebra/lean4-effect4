@@ -400,6 +400,28 @@ let node_bytes () =
      let refs = E4_node.scan_refs n.E4_node.payload in
      List.length refs = 3
      && not (List.exists (fun (r : E4_addr.Ref.t) -> E4_addr.Addr.equal r.E4_addr.Ref.addr cp.Ck.engine) refs));
+  (* E4_shape's row is this payload's shape: its seven fields at their paths, so the checked
+     queries read every form back exactly, with the optional refs present or absent.  The
+     row of five fields that stood before took the `prev` option for the stamp and refused. *)
+  let reads_back c =
+    let payload = Ck.payload_of c in
+    (match E4_shape.refs_of_checked E4_shape.table E4_kind.Checkpoint ~payload with
+     | Ok [ r ] -> E4_addr.Ref.equal r c.Ck.job
+     | Ok _ | Error _ -> false)
+    && (match E4_shape.stamps_of_checked E4_shape.table E4_kind.Checkpoint ~payload with
+        | Ok [ d ] -> String.equal d (E4_addr.Addr.bytes c.Ck.engine)
+        | Ok _ | Error _ -> false)
+    && (match E4_shape.cids_of_checked E4_shape.table E4_kind.Checkpoint ~payload with
+        | Ok [] -> true
+        | Ok _ | Error _ -> false)
+  in
+  check "E4_shape's checkpoint row reads the payload written, options present (every image form)"
+    (List.for_all (fun (_, image) -> reads_back (sample_cp image)) forms);
+  check "E4_shape's checkpoint row reads the payload written, options absent"
+    (reads_back bare);
+  check "E4_shape's checkpoint row has the payload's seven fields, the stamp at 4"
+    (List.length (E4_shape.fields_of E4_shape.table E4_kind.Checkpoint) = 7
+    && E4_shape.class_at E4_shape.table E4_kind.Checkpoint (E4_shape.args [ 4 ]) = E4_shape.Cls_stamp);
   check "the pending schema is a genesis: kind schema, the zero spec"
     (E4_kind.equal Ck.schema_node.E4_node.kind E4_kind.Schema
     && Ck.schema_node.E4_node.spec = E4_node.zero_digest

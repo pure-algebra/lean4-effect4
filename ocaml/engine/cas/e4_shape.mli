@@ -54,7 +54,8 @@
          Tombstoned  `fiber` (15)
          Pending     bytes 16..23, the CAS append (DI-25): Lean's `Kind` table holds them, but
                      no Lean carrier files under them yet, so the shape is
-                     2026-09-07-cas-design.md §4's and A2 §1.9's
+                     2026-09-07-cas-design.md §4's and A2 §1.9's, and the checkpoint's is the
+                     payload `E4_checkpoint` writes (its byte table)
        `status` is about carriers, never about the table: every byte 1..23 is Lean's.
                                                                            by construction
    SH5 The path language is `Arg i` (the i-th child of a ctor/pair/some/list frame) and `Each`
@@ -126,7 +127,9 @@ type status =
   | Shared of string list  (** finding R1': several carriers share the byte *)
   | Unused  (** registered, no carrier today *)
   | Tombstoned  (** fiber (15) *)
-  | Pending  (** 16..23: reserved, the shape is cas-design §4's / A2 §1.9's, none minted yet *)
+  | Pending
+      (** 16..23: no Lean carrier yet; the shape is cas-design §4's / A2 §1.9's, or, for a
+          checkpoint, the payload `E4_checkpoint` writes *)
 
 type row = {
   kind : E4_kind.t;
