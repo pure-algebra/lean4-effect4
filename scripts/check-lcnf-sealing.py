@@ -16,6 +16,9 @@ for directory in includes:
     compiler += ['-I', str(root / 'ocaml/_build/default' / directory)]
 cases = {
     'lawful-alias': (0, "type public_alias = A.memo\nlet value : public_alias = A.program_check_memo_empty\n"),
+    'prepared-alias': (0, "type execution = A.prepared\nlet value : execution = A.program_prepared_make (Eff_types.Eff.Succeed (Eff_types.Term.Lit Eff_types.Lit.Unit)) []\n"),
+    'prepared-table-update': (2, "let forge (p : A.prepared) = { p with table = [] }\n"),
+    'prepared-interpreter-read': (2, "let interpreter (p : A.prepared) = p.interp\n"),
     'built-literal': (2, "type public_built_alias = A.built\nlet forged : public_built_alias = { app = { rows = []; services = []; types = [] }; program = Eff_types.Eff.Perform (Eff_types.NativeOp.External 0, Eff_types.Term.Lit Eff_types.Lit.Unit); admitted = { answer = Eff_types.Ty.Nat; error = Eff_types.Ty.Never; requires = [] }; row_names = [] }\n"),
     'memo-public-alias': (2, "type public_alias = A.memo\nlet forged : public_alias = []\n"),
     'checked-literal': (2, "let forged : int A.checked = { value = 7; trace = [] }\n"),
@@ -38,4 +41,5 @@ with tempfile.TemporaryDirectory(prefix='effect4-sealing-') as directory:
         assert result.returncode == expected, name
         if expected:
             assert 'Error:' in result.stdout, name
-print('PASS: lawful public alias and ten hostile sealed-package clients')
+accepted = sum(expected == 0 for expected, _ in cases.values())
+print(f'PASS: {accepted} lawful aliases and {len(cases) - accepted} hostile sealed-package clients')

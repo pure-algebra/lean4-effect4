@@ -427,10 +427,14 @@ theorem Coherent.ext {a b : SourceSession} (ha : a.Coherent) (hb : b.Coherent)
 
 /-- Exact old feedStep observations through the existing expansion edit engine.
 The expression uses EditSession.feed as its reference; it defines no second edit interpreter.
-Reach: coherent source sessions, every edit, and certified oracles.
+Reach: coherent source sessions with no reference fault in the source or candidate, every edit,
+and certified oracles. The unrestricted statement fails on malformed references
+(`git:84f88cf6f:src/Effect4/Laws/Program/SourceTable.lean`, `feed_draft_refuted`).
 Consumer: replay_drafts_view and transport of source-session-coherent. R14. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit) :
+proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit)
+    (hfault : s.sketch.program.firstRefFault = none)
+    (hcand : ∀ c, s.sketch.edit s.app e = some c → c.program.firstRefFault = none) :
     ∃ next step, (s.feed o .draft e).value = .ok (next,step) ∧
       step.edit = e ∧
       step.replaced = (match (Node.eff s.sketch.program).at_ e.path with
@@ -448,14 +452,22 @@ proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Ed
          next.table = Table.atSource candidate.sites candidate.program.firstRefFault reference.1.table ∧
            step.delta = reference.2.atSource candidate.sites)
 
+/-- A kept edit retains root and local types. A splice lists its whole source subtree.
+Its list is the next source program's addresses below the edited path, in source order.
+This excludes addresses that exist only in expanded reference copies.
+The earlier singleton delta fails for a filling with children (`feed_keepExact_delta_refuted`,
+`git:84f88cf6f:src/Effect4/Laws/Program/SourceTable.lean`). Expansion agreement alone does not
+permit a partial update of a whole-document reference refusal. `canSplice` owns that condition.
+Placement: `initial-algebras-folds`, `source-feed-keep-exact`, R14. Consumers: document commits and fill certification. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 proof_goal feed_keepExact {o : Oracle} {s next : SourceSession} {e : Edit} {step : Edit.Step}
     (hc : s.Coherent) (hne : e.path ≠ [])
     (h : (s.feed o .keepExact e).value = .ok (next,step)) :
     next.view.type = s.view.type ∧
       Table.typedAt next.table e.path = Table.typedAt s.table e.path ∧
-      (s.expandedEditAgrees next.sketch e = true → step.delta = .spliced [e.path]) ∧
-      (s.expandedEditAgrees next.sketch e = false → step.delta = .rechecked)
+      (s.canSplice next.sketch e = true → step.delta =
+        .spliced ((Node.addresses (.eff next.sketch.program)).filter (Table.under e.path))) ∧
+      (s.canSplice next.sketch e = false → step.delta = .rechecked)
 
 /-- The root feed is exactly the module recheck route, including its actual part trace. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]

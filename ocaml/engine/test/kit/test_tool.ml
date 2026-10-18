@@ -22,6 +22,9 @@
        binary64 rounds, 2^53 + 1; OCaml's past its int range), the other refuses too: the reason
        is each parser's own words.                                              tested
 
+   N5  Drafts with invalid references recheck, kept edits refuse them, and the source entry
+       stays at its address. Undo and wider subtree observations agree with Lean controls. tested
+
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/kit *)
 
 open Effect4_kit
@@ -131,6 +134,57 @@ let () =
     let fresh = Kit_tool.create () in
     check "N3 after them, the first request answers as on a fresh session"
       (parse (Kit_tool.serve_line t first) = parse (Kit_tool.serve_line fresh first))
+
+(* N5: the preserved reference-fault cases exercise the generated source feed. *)
+let () =
+  let t = Kit_tool.create () in
+  let requests = [
+    "{\"method\":\"open\",\"payload\":{\"_tag\":\"act\",\"a\":{\"_tag\":\"open_\",\"app\":{\"rows\":[],\"services\":[],\"types\":[]},\"name\":\"fault\",\"sketch\":{\"holes\":[],\"program\":{\"_tag\":\"bind\",\"first\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}},\"rest\":{\"_tag\":\"provideLayer\",\"layer\":{\"_tag\":\"effectDiscard\",\"body\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":1}}}},\"isLocal\":false,\"body\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":1}}}}}}}},\"version\":1}";
+    "{\"method\":\"edit\",\"payload\":{\"_tag\":\"act\",\"a\":{\"_tag\":\"edit\",\"a\":{\"_tag\":\"commit\",\"items\":[[{\"_tag\":\"at_\",\"path\":[0],\"expected\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}}},{\"_tag\":\"fill\",\"q\":{\"_tag\":\"provideLayer\",\"layer\":{\"_tag\":\"ref\",\"target\":[1,0]},\"isLocal\":false,\"body\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}}}}]],\"policy\":\"keepExact\"},\"at_\":{\"doc\":{\"generation\":0,\"name\":\"fault\"},\"revision\":0}}},\"version\":1}";
+    "{\"method\":\"edit\",\"payload\":{\"_tag\":\"act\",\"a\":{\"_tag\":\"edit\",\"a\":{\"_tag\":\"draft\",\"e\":{\"_tag\":\"fill\",\"path\":[0],\"program\":{\"_tag\":\"provideLayer\",\"layer\":{\"_tag\":\"ref\",\"target\":[1,0]},\"isLocal\":false,\"body\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}}}}},\"at_\":{\"doc\":{\"generation\":0,\"name\":\"fault\"},\"revision\":0}}},\"version\":1}";
+    "{\"method\":\"edit\",\"payload\":{\"_tag\":\"act\",\"a\":{\"_tag\":\"edit\",\"a\":{\"_tag\":\"draft\",\"e\":{\"_tag\":\"fill\",\"path\":[0],\"program\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}}}},\"at_\":{\"doc\":{\"generation\":0,\"name\":\"fault\"},\"revision\":1}}},\"version\":1}";
+    "{\"method\":\"edit\",\"payload\":{\"_tag\":\"act\",\"a\":{\"_tag\":\"edit\",\"a\":{\"_tag\":\"draft\",\"e\":{\"_tag\":\"fill\",\"path\":[0],\"program\":{\"_tag\":\"provideLayer\",\"layer\":{\"_tag\":\"ref\",\"target\":[1,0]},\"isLocal\":false,\"body\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}}}}},\"at_\":{\"doc\":{\"generation\":0,\"name\":\"fault\"},\"revision\":2}}},\"version\":1}";
+    "{\"method\":\"doc\",\"payload\":{\"_tag\":\"ask\",\"q\":{\"_tag\":\"doc\",\"at_\":[0]}},\"version\":1}";
+    "{\"method\":\"open\",\"payload\":{\"_tag\":\"act\",\"a\":{\"_tag\":\"open_\",\"app\":{\"rows\":[],\"services\":[],\"types\":[]},\"name\":\"fault\",\"sketch\":{\"holes\":[],\"program\":{\"_tag\":\"bind\",\"first\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}},\"rest\":{\"_tag\":\"provideLayer\",\"layer\":{\"_tag\":\"effectDiscard\",\"body\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":1}}}},\"isLocal\":false,\"body\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":1}}}}}}}},\"version\":1}";
+    "{\"method\":\"edit\",\"payload\":{\"_tag\":\"act\",\"a\":{\"_tag\":\"edit\",\"a\":{\"_tag\":\"commit\",\"items\":[[{\"_tag\":\"at_\",\"path\":[0],\"expected\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}}},{\"_tag\":\"fill\",\"q\":{\"_tag\":\"bind\",\"first\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":1}}},\"rest\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":7}}}}}]],\"policy\":\"keepExact\"},\"at_\":{\"doc\":{\"generation\":1,\"name\":\"fault\"},\"revision\":0}}},\"version\":1}"
+  ] in
+  let replies = List.map (fun r -> parse (Kit_tool.serve_line t r)) requests in
+  let rec at keys value = match keys, value with
+    | [], value -> value
+    | key :: rest, Some (J.Object fields) -> at rest (List.assoc_opt key fields)
+    | _ -> None in
+  let get i keys = at keys (List.nth replies i) in
+  let result = ["payload"; "result"] in
+  let action = result @ ["arg0"; "a"] in
+  let view = action @ ["view"] in
+  let delta = action @ ["receipt"; "steps"] in
+  check "N5 opening the reference-fault control succeeds"
+    (get 0 (result @ ["_tag"]) = Some (J.String "ok"));
+  check "N5 kept edit adding an invalid reference refuses"
+    (get 1 (result @ ["_tag"]) = Some (J.String "error"));
+  List.iter (fun i ->
+    check (Printf.sprintf "N5 draft %d has the refused root type" i)
+      (get i (view @ ["type"]) = Some J.Null);
+    check (Printf.sprintf "N5 draft %d rechecks" i)
+      (match get i delta with
+       | Some (J.Array [J.Object fields]) ->
+         at ["delta"; "_tag"] (Some (J.Object fields)) = Some (J.String "rechecked")
+       | _ -> false)) [2; 4];
+  check "N5 the edited source address retains its own table entry"
+    (match get 5 (result @ ["arg0"; "view"; "inspection"; "entry"; "path"]) with
+     | Some (J.Array [_]) -> true | _ -> false);
+  check "N5 removing the invalid reference restores a typed root"
+    (match get 3 (view @ ["type"]) with Some (J.Object _) -> true | _ -> false);
+  check "N5 the wide filling reports all three source addresses"
+    (match get 7 delta with
+     | Some (J.Array [J.Object fields]) ->
+       at ["delta"; "_tag"] (Some (J.Object fields)) = Some (J.String "spliced") &&
+       (match at ["delta"; "shown"] (Some (J.Object fields)) with
+        | Some (J.Array paths) -> List.length paths = 3 | _ -> false)
+     | _ -> false);
+  List.iteri (fun i _reply ->
+    if get i (result @ ["_tag"]) = None then
+      Printf.printf "N5 unreadable reply %d: %s\n" i (Kit_tool.serve_line (Kit_tool.create ()) (List.nth requests i))) replies
 
 let () =
   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;

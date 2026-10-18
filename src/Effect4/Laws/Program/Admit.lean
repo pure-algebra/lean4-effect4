@@ -32,6 +32,21 @@ parked call, and `hasTyCause` reads a *reified* cause, never a live fiber's.
 namespace Effect4.Program
 open Effect4 Effect4.Machine
 
+/-- Prepared evaluation is the existing native decision step.
+
+Placement: concept `translation-simulation`, proposed claim `native-prepared-step` (compatibility).
+Consumer: the native engine's prepared step. Reach: every source, machine, decision and fuel.
+The observation includes the full machine and command-sufficiency flag.
+It establishes no admission, progress, lowering relation or machine/tree relation.
+It serves R6 at the native execution interface (decisions row 391). -/
+theorem Prepared.step_eq (prepared : Prepared) (fuel : Nat) (machine : NativeMachine)
+    (decision : NativeDecision) :
+    prepared.step fuel machine decision =
+      (letI := evaluatorFor prepared.program prepared.table
+       stepDecisionState (interpOf prepared.program prepared.table) fuel machine decision) := by
+  unfold Prepared.step
+  rw [prepared.interp_eq, prepared.evaluator_eq]
+
 /-- The executable lookup reads exactly the handle kinds counted by `MintedIn`. -/
 theorem handleLive_eq (m : NativeMachine) (code : UInt8 × Nat) :
     handleLive m code =
