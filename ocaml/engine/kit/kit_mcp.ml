@@ -5,8 +5,11 @@
    `tool_native_methods`): one tool per method of the protocol, with what it does and the JSON
    Schema of its arguments, derived from the request's shape document. A `tools/call` builds the
    method's request envelope from its arguments and serves it through one Kit_tool session, which
-   holds the document, the fills, the runs and the checker memo from call to call. Nothing here
-   names a method or a field by hand.
+   holds the document, the fills, the runs and the checker memo from call to call. Beside the
+   methods is Lean's `describe` tool (`Tool.Methods.describe`, `tool_native_describe`): the
+   schemas name the program's grammar and leave it to `describe`, which answers each definition's
+   schema from Lean's table, so an agent pays for the grammar when it writes a program, not on
+   every connection. Nothing here names a method, a field or a definition by hand.
    Depends on: Effect4_gen.Api_gen, Kit, Kit_tool.
 
    Behaviours:
@@ -19,7 +22,10 @@
       reply is a refusal of the wire or the tool. A name that is no method is a tool error.
                                                                        tested (test_mcp)
    M4 Calls share one session: an `open` then a `doc` reads the opened document, as the same two
-      lines through Kit_tool do.                                         tested (test_mcp) *)
+      lines through Kit_tool do.                                         tested (test_mcp)
+   M5 `tools/list` lists `describe` after the methods; `tools/call describe` of a definition's
+      name answers its schema document as text; any other name is a tool error.
+                                                                       tested (test_mcp) *)
 
 module G = Effect4_gen.Api_gen
 module J = Eff_json_text
@@ -30,7 +36,15 @@ let tool_of (e : G.effect4_tool_methods_entry) : J.t =
   let schema = match Kit.Json.parse e.schema with Ok j -> j | Error _ -> J.Object [] in
   J.Object [ ("name", J.String e.name); ("description", J.String e.description); ("inputSchema", schema) ]
 
-let create () = { session = Kit_tool.create (); tools = List.map tool_of G.tool_native_methods }
+let describe : G.describe = G.tool_native_describe
+
+let describe_tool : J.t =
+  let schema = match Kit.Json.parse describe.schema with Ok j -> j | Error _ -> J.Object [] in
+  J.Object [ ("name", J.String describe.name); ("description", J.String describe.description);
+             ("inputSchema", schema) ]
+
+let create () =
+  { session = Kit_tool.create (); tools = List.map tool_of G.tool_native_methods @ [ describe_tool ] }
 
 (* The request envelope a method's arguments make: the Request case the method builds, holding its
    Action or Query case with the arguments as fields. *)
@@ -54,8 +68,18 @@ let text_result (text : string) (is_error : bool) : J.t =
   J.Object [ ("content", J.Array [ J.Object [ ("type", J.String "text"); ("text", J.String text) ] ]);
              ("isError", J.Bool is_error) ]
 
+(* A definition's schema document, from Lean's answers. *)
+let definition (args : (string * J.t) list) : J.t =
+  match List.assoc_opt "name" args with
+  | Some (J.String n) -> (
+    match List.assoc_opt n describe.answers with
+    | Some schema -> text_result schema false
+    | None -> text_result ("no definition " ^ n) true)
+  | _ -> text_result "describe takes a definition's name" true
+
 let call (t : t) (name : string) (args : (string * J.t) list) : J.t =
   match List.find_opt (fun (e : G.effect4_tool_methods_entry) -> String.equal e.name name) G.tool_native_methods with
+  | None when String.equal name describe.name -> definition args
   | None -> text_result ("no tool " ^ name) true
   | Some e ->
     let reply = Kit_tool.serve_line t.session (J.render (envelope e args)) in

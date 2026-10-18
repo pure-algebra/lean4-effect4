@@ -175,7 +175,8 @@
         "Effect4.Tool.Native.replyEnvelopeShape",
         "Effect4.Tool.Native.refusalShape",
         "Effect4.Tool.Native.refusalToVal",
-        "Effect4.Tool.Native.methods"
+        "Effect4.Tool.Native.methods",
+        "Effect4.Tool.Native.describe"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",
