@@ -1253,6 +1253,37 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
 - **`checker-explanation-replays`**: A selected local explanation names an actual dependency with its exact placed refusal. Aggregate failures need no invented part.
   The pointer is `Check.explain_replays` in `src/Effect4/Laws/Program/CheckAgreement.lean`.
   These compatibility properties serve R14 and establish no program admission, progress, or native execution.
+- **Source sessions and accepted document actions (seams S1)**: The following properties serve R14.
+  Every conditional property retains its stated premises.
+  They establish no admission, progress, liveness, or native execution.
+- **`source-feed-coherent`**: A successful feed preserves the source table under initial coherence and the selected policy.
+  The pointer is `SourceSession.feed_coherent` in `src/Effect4/Laws/Program/SourceTable.lean`.
+- **`source-feed-edit`**: A successful feed retains the application and exact edit; an invalid edit retains the source, and a valid edit returns its candidate.
+  The pointer is `SourceSession.feed_keeps` in `src/Effect4/Laws/Program/SourceTable.lean`.
+- **`source-feed-draft`**: Every draft from a coherent source agrees with the existing expanded edit observation and exact source projection.
+  The pointer is `SourceSession.feed_draft` in `src/Effect4/Laws/Program/SourceTable.lean`.
+- **`source-feed-keep-exact`**: A successful nonroot keepExact feed retains root and local types, using the exact whole-expansion guard for splice or recheck.
+  The pointer is `SourceSession.feed_keepExact` in `src/Effect4/Laws/Program/SourceTable.lean`.
+- **`source-feed-root`**: Every root edit with a candidate equals the entire checked module recheck, including actual dependency answers.
+  The pointer is `SourceSession.feed_root` in `src/Effect4/Laws/Program/SourceTable.lean`.
+- **`source-document-coherent`**: Every sealed document has its exact source table, without a separate coherence premise.
+  The pointer is `Doc.coherent` in `src/Effect4/Laws/Program/SourceTable.lean`.
+- **`source-session-draft-transport`**: Every old application, sketch, and edit list has canonical draft replay with the exact edited sketch, source table, refusals, and root observation.
+  The pointer is `SourceSession.replay_drafts_view` in `src/Effect4/Laws/Program/SourceTable.lean`.
+- **`source-document-replay`**: Appending an action replays through the same interpreter and exact history ledger.
+  The pointer is `Doc.step_replay` in `src/Effect4/Laws/Program/SourceDocument.lean`.
+- **`source-document-atomic`**: A refused step offers no replacement document, so the caller retains the original document.
+  The pointer is `Doc.step_refuses` in `src/Effect4/Laws/Program/SourceDocument.lean`.
+- **`source-document-step`**: A successful step from a coherent document retains its origin and application, appends one action, and remains coherent.
+  The pointer is `Doc.step_coherent` in `src/Effect4/Laws/Program/SourceDocument.lean`.
+- **`source-document-commit`**: A successful keepExact or recheck commit is positive, with initial positivity required for keepExact.
+  The pointer is `Doc.commit_sound` in `src/Effect4/Laws/Program/SourceDocument.lean`.
+- **`source-document-local-keep`**: A successful single nonroot kept change retains the exact root and local observations, including an initially refused root.
+  The pointer is `Doc.commit_one_keepExact` in `src/Effect4/Laws/Program/SourceDocument.lean`.
+- **`source-document-single-transport`**: The old single-edit observation holds under its exact replacement and initial positive-root premise for keepExact.
+  The pointer is `Doc.commit_single_sound` in `src/Effect4/Laws/Program/SourceDocument.lean`.
+- **`source-document-revert`**: An accepted action and its immediate selected-entry revert restore the prior program and retain appended hole rows.
+  The pointer is `Doc.revert_program` in `src/Effect4/Laws/Program/SourceDocument.lean`.
 - **The replacement law (`typed-replacement`)**: a typed node splits at an address of a program
   into an environment and a type of the focus. Every program of that type in that environment
   stands in the focus's place, under every extension of the typing signature

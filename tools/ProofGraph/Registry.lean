@@ -1231,8 +1231,50 @@ def registry : Registry where
     { id := "source-annotation-agrees", concept := "initial-algebras-folds", role := .compatibility
       title := "A sketch's one-pass table read through its layer references is the specification: each address of the program as written holds the expansion's entry there, and the root holds the check through the references, which succeeds exactly as admission's typeOfProgram does at the application and the hole table; nothing of sketch admission (admitSig) or of a refusal inside a copy, which keeps the expansion's address (decisions row 373 (7))"
       pointer := .witness `Effect4.Program.Sketch.sourceAnnotate_eq_sourceTable },
+    { id := "source-feed-coherent", concept := "initial-algebras-folds", role := .preservation
+      title := "A successful feed preserves the source table under initial coherence and the selected policy; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.SourceSession.feed_coherent },
+    { id := "source-feed-edit", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful feed retains the application and exact edit; an invalid edit retains the source, and a valid edit returns its candidate; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.SourceSession.feed_keeps },
+    { id := "source-feed-draft", concept := "initial-algebras-folds", role := .compatibility
+      title := "Every draft from a coherent source agrees with the existing expanded edit observation and exact source projection; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.SourceSession.feed_draft },
+    { id := "source-feed-keep-exact", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful nonroot keepExact feed retains root and local types, using the exact whole-expansion guard for splice or recheck; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.SourceSession.feed_keepExact },
+    { id := "source-feed-root", concept := "initial-algebras-folds", role := .compatibility
+      title := "Every root edit with a candidate equals the entire checked module recheck, including actual dependency answers; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.SourceSession.feed_root },
+    { id := "source-document-coherent", concept := "initial-algebras-folds", role := .preservation
+      title := "Every sealed document has its exact source table, without a separate coherence premise; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.Doc.coherent },
+    { id := "source-session-draft-transport", concept := "initial-algebras-folds", role := .compatibility
+      title := "Every old application, sketch, and edit list has canonical draft replay with the exact edited sketch, source table, refusals, and root observation; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.SourceSession.replay_drafts_view },
+    { id := "source-document-replay", concept := "initial-algebras-folds", role := .compatibility
+      title := "Appending an action replays through the same interpreter and exact history ledger; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.Doc.step_replay },
+    { id := "source-document-atomic", concept := "initial-algebras-folds", role := .compatibility
+      title := "A refused step offers no replacement document, so the caller retains the original document; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.Doc.step_refuses },
+    { id := "source-document-step", concept := "initial-algebras-folds", role := .preservation
+      title := "A successful step from a coherent document retains its origin and application, appends one action, and remains coherent; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.Doc.step_coherent },
+    { id := "source-document-commit", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful keepExact or recheck commit is positive, with initial positivity required for keepExact; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.Doc.commit_sound },
+    { id := "source-document-local-keep", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful single nonroot kept change retains the exact root and local observations, including an initially refused root; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.Doc.commit_one_keepExact },
+    { id := "source-document-single-transport", concept := "initial-algebras-folds", role := .compatibility
+      title := "The old single-edit observation holds under its exact replacement and initial positive-root premise for keepExact; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.Doc.commit_single_sound },
+    { id := "source-document-revert", concept := "initial-algebras-folds", role := .compatibility
+      title := "An accepted action and its immediate selected-entry revert restore the prior program and retain appended hole rows; no admission, progress, or native execution claim (seams S1, R14)"
+      pointer := .witness `Effect4.Program.Doc.revert_program },
     { id := "source-session-coherent", concept := "initial-algebras-folds", role := .preservation
-      title := "The edit session of a sketch as written shows, after an open and any run of edits, the source table of its sketch: an edit that moves the expansion at its address alone splices in the expansion's session, and any other is checked again; on a program with no reference it shows the edit session's view; nothing of the repaint set at the source's addresses (decisions row 373 (7))"
+      title := "Every sealed document shows its exact source table, refusals, and root type without a separate coherence premise; source-session-draft-transport retains the old application, sketch, and edit-list scope; no native execution, progress, or cost claim (seams S1, R14)"
       pointer := .witness `Effect4.Program.SourceSession.reached_view },
     { id := "source-session-undo", concept := "initial-algebras-folds", role := .compatibility
       title := "An edit of a sketch as written, then the edit that puts back the old sub-program, restores a coherent source session exactly; nothing of undoing a run (decisions row 373 (7))"

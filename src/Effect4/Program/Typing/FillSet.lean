@@ -217,8 +217,14 @@ def materializeDoc (fs : FillSet) (d : Doc) : Except MaterializeRefusal Doc :=
   else if d.session.sketch != fs.base || d.session.app != fs.app then
     .error .foreignBase
   else do
-    let s' ← fs.materializeSketch
-    .ok ⟨d.id, SourceSession.open fs.app s', d.revision + 1⟩
+    let _ ← fs.materializeSketch
+    let items := (ordered fs.base fs.entries).filterMap fun (path,q) =>
+      match (Node.eff fs.base.program).at_ path with
+      | some (.eff expected) => some (Place.at_ path expected,Change.fill q)
+      | _ => none
+    match (d.step Check.Oracle.uncached d.snap (.commit items .keepExact)).value with
+    | .ok (next,_) => .ok next
+    | .error _ => .error .notApplicable
 
 end FillSet
 

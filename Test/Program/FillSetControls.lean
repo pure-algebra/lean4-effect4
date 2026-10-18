@@ -169,7 +169,7 @@ def fsNested : FillSet := FillSet.empty {} nested
 
 -- Control 10 (red): a set built at `baseD` and tagged with `d`'s identity and revision.
 #guard
-  let d : Doc := Doc.open {} base2 ⟨"d", 0⟩
+  let d : Doc := (Doc.open_ ⟨⟨"d",0⟩,{},base2⟩).value
   let forged := (FillSet.empty {} baseD d.id d.revision).add [([0], nat7)]
   forged.2 = [.applied [0]] &&
     (match forged.1.materializeDoc d with

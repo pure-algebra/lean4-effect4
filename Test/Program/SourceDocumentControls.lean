@@ -1,226 +1,169 @@
-import Tools.Session
+import Effect4.Program.Typing.FillSet
+import Test.Program.SourceFeedControls
 import Effect4.Laws.Program.SourceDocument
 
 /-!
-# Document identity, context inspection and atomic checked edits: controls (slice B)
-
-1. **Case 2 (`inspect`)**: a hole beneath a `bind` reports `[nat]` in its focus environment and
-   hands out an `EditTarget`.
-2. **Case 4 (`Doc.commit`, `replace`)**: an exact fill is accepted at revision 1 with root type
-   `nat`.
-3. **Case 5 (`stale`)**: a stale target refuses after an ancestor edit and after a preceding-binder
-   edit that keeps the target's bytes while moving its environment from `[nat]` to `[string]`.
-4. **Case 6 (`refused` vs `draft`)**: an ill-typed fill returns no document under `Doc.commit` /
-   `replace`, while `Doc.draft` / `draft` keeps it as a draft.
-5. **Case 7 (`keepExactType` vs `recheckSource`)**: a root type change refuses under
-   `keepExactType` and passes under `recheckSource`.
-6. **Control C4 (`localChanged`)**: a local change at `[0]` that keeps the root type refuses under
-   `keepExactType`.
-7. **Case 8 (layer references)**: a forward reference refuses with its refusals; an edit inside a
-   referenced layer is accepted under `keepExactType` although the session checks again.
-8. **Case 13 (C9)**: a reference-valued hole edits and checks, while `admitProgram` refuses it.
-9. **Checked omission (`omitHole`)**: declares one hole row and keeps the type.
-10. **F3 (`foreign`)**: `docText` refuses `docNat`'s target with `Refusal.foreign` under both
-    `recheckSource` and `keepExactType`.
-11. **Distinct opening generations and `fork`**: two documents opened from equal sketches (or forked
-    from one document) receive distinct identities and refuse each other's targets as `foreign`.
-12. **Monotonic revision across `undo`**: after `undo`, a target taken before the undone edit
-    refuses as `stale` because the revision moved on.
-13. **Only `draft` edits unchecked** (the review of 2026-10-17): `fill` and `omit` without a target
-    change nothing, even for an ill-typed filling.
-14. **The whole target is required**: a target without its document's name and generation is
-    refused, not completed from the current document.
-15. **A replacement is required**: `replace` with no replacement changes nothing.
-16. **Controls**: the whole target edits, and `draft` still makes the unchecked edit.
+Finite acceptance controls for S1. These controls exercise the proposed document interface.
+They do not prove feed coherence, revert_program, or a native execution claim.
 -/
-
 set_option autoImplicit false
+set_option maxRecDepth 20000
+set_option maxHeartbeats 2400000
+namespace Test.Program.SeamsS1.DocControls
+open Effect4 Effect4.Program Check
+open Test.Program.SeamsV1 (n1 bad checkedModule)
+open FeedControls (n7 str)
 
-namespace Test.Program.SourceDocumentControls
+def n2 : NativeEff := .succeed (.lit (.nat 2))
+def app : SigApp := { rows := [Row.hole "ask" .nat] }
+def h0 : Row := Row.hole "h0" .nat
+def initial : Sketch := ⟨.bind (.perform (.external 0) (.lit .unit)) (Sketch.hole app 0), [h0]⟩
+def d0 : Effect4.Program.Doc := (Doc.open_ ⟨⟨"demo", 0⟩, app, initial⟩).value
+def run (d : Effect4.Program.Doc) (a : DocAction) := d.step Oracle.uncached d.snap a
 
-open Effect4 Effect4.Program Tools.Session Tools.JsonBridge
+def badFill := run d0 (.commit [(.hole 0, .fill (.succeed (.var 1)))] .keepExact)
+def goodFill := run d0 (.commit [(.hole 0, .fill (.succeed (.var 0)))] .keepExact)
+def d1 : Effect4.Program.Doc := (goodFill.value.toOption.map Prod.fst).getD d0
 
-def nat7 : NativeEff := .succeed (.lit (.nat 7))
-def strX : NativeEff := .succeed (.lit (.str "x"))
-def natTy : EffTy := .pure .nat
-def strTy : EffTy := .pure .string
+-- Loop 1, row 1: the source table exposes the actual binder environment.
+#guard d0.snap.revision = 0
+#guard d0.session.view.type = some (.pure .nat)
+#guard (d0.session.focusAt [1]).map (fun f => (f.env, f.ty)) = some ([.nat], .pure .nat)
+#guard ((Place.hole 0).resolve app initial).toOption = some ([1], Sketch.hole app 0)
+-- Row 2 is one refused part check, with no whole recheck and no replacement document.
+#guard match badFill.value with
+  | .error (.feed 0 (.notKept ([.nat], ty) (.error ⟨[], .term _⟩))) => decide (ty = .pure .nat)
+  | _ => false
+#guard badFill.trace.length = 1
+#guard d0.snap.revision = 0
+-- Row 3 keeps the exact type and adds one history entry.
+#guard goodFill.value.toOption.map (fun p => (p.1.snap.revision, p.2.steps.map (·.delta))) =
+  some (1, [.spliced [[1]]])
+#guard (Place.hole 0).resolve app d1.session.sketch |>.toOption.isNone
+#guard d1.session.view.type = some (.pure .nat)
+-- Row 4 rejects the old snapshot before inspecting the new action.
+#guard match (d1.step Oracle.uncached d0.snap (.commit [] .keepExact)).value with
+  | .error (.stale now) => now.revision == 1
+  | _ => false
+#guard (d1.step Oracle.uncached d0.snap (.commit [] .keepExact)).trace.isEmpty
+#guard match (d1.step Oracle.uncached ⟨⟨"foreign", 0⟩, 999⟩ (.commit [] .keepExact)).value with
+  | .error (.foreign wanted) => wanted == d1.origin.id
+  | _ => false
 
-def isOk {α : Type} : Except Doc.Refusal α → Bool
-  | .ok _ => true
-  | .error _ => false
+-- Place refusal distinguishes a missing row, a missing occurrence, and repeated occurrences.
+#guard match (Place.hole 0).resolve {} ⟨n1, []⟩ with
+  | .error (.outOfRange 0) => true
+  | _ => false
+#guard match (Place.hole 0).resolve app ⟨n1, [h0]⟩ with
+  | .error (.absent 0) => true
+  | _ => false
+#guard match (Place.hole 0).resolve app ⟨.bind (Sketch.hole app 0) (Sketch.hole app 0), [h0]⟩ with
+  | .error (.repeated 0 paths) => paths == [[0], [1]]
+  | _ => false
+#guard match (run d0 (.commit [] .keepExact)).value with
+  | .error .empty => true
+  | _ => false
 
-def refusalOf {α : Type} : Except Doc.Refusal α → Option Doc.Refusal
-  | .ok _ => none
-  | .error r => some r
+-- The first item succeeds, then the second refuses. The batch publishes no replacement Doc.
+def late := run d0 (.commit [(.hole 0, .fill n7),
+  (.at_ [0] (.perform (.external 0) (.lit .unit)), .fill str)] .keepExact)
+#guard match late.value with
+  | .error (.feed 1 (.notKept _ _)) => true
+  | _ => false
+#guard late.trace.length = 2
+#guard (Place.hole 0).resolve app d0.session.sketch |>.toOption.isSome
+#guard d0.history.isEmpty
 
-/-- Reader: `Doc.commit_sound` applied to a coherent document. -/
-example {d d' : Doc} {t : EditTarget} {c : Change} {policy : Policy}
-    (hc : d.session.Coherent) (h : d.commit t c policy = .ok d') :
-    t.doc = d.id ∧ t.revision = d.revision ∧ d'.id = d.id ∧ d'.revision = d.revision + 1 ∧
-      d'.session.Coherent := by
-  obtain ⟨hdoc, hrev, hid, hrev', hcoh, -⟩ := Doc.commit_sound hc h
-  exact ⟨hdoc, hrev, hid, hrev', hcoh⟩
+-- Reverse-order revert meets each immediate product in a nested batch.
+def nested := run d0 (.commit [(.hole 0, .fill (.bind n1 n2)),
+  (.at_ [1, 1] n2, .fill n7)] .keepExact)
+def nestedDoc : Effect4.Program.Doc := (nested.value.toOption.map Prod.fst).getD d0
+#guard nestedDoc.snap.revision = 1
+#guard (Place.at_ [1] (.bind n1 n2)).resolve app nestedDoc.session.sketch |>.toOption.isNone
+#guard (Place.at_ [1, 1] n7).resolve app nestedDoc.session.sketch |>.toOption.isSome
+def reverted := run nestedDoc (.revert 0)
+#guard reverted.value.toOption.map (fun p => (p.1.snap.revision,
+    decide (p.1.session.sketch.program = initial.program), p.2.steps.map (·.edit.path))) =
+  some (2, true, [[1, 1], [1]])
 
--- Controls 1 & 2 (Cases 2 and 4): `inspect` beneath `bind` shows `[.nat]`, and `commit` accepts an
--- exact fill at revision 1.
-#guard
-  let draft : Sketch := { program := .bind nat7 (Sketch.hole {} 0), holes := [Row.hole "h" .nat] }
-  let d0 : Doc := Doc.open {} draft ⟨"d", 0⟩
-  let ins := d0.inspect [1]
-  let exactFill := (d0.target [1]).map fun t =>
-    d0.commit t (.fill (.succeed (.var 0))) .keepExactType
-  (ins.bind (·.focus)).map (·.env) == some [.nat] &&
-    (ins.map (·.target.expected)) == some (Sketch.hole {} 0) &&
-    (exactFill.map isOk) == some true &&
-    (exactFill.bind fun r => r.toOption.map (·.session.view.type)) == some (some natTy) &&
-    (exactFill.bind fun r => r.toOption.map (·.revision)) == some 1
+-- The root is a module check. The same replacement refuses as a part.
+def rootDoc : Effect4.Program.Doc := (Doc.open_ ⟨⟨"root", 0⟩, {}, ⟨n1, []⟩⟩).value
+#guard (run rootDoc (.commit [(.at_ [] n1, .fill checkedModule)] .keepExact)).value.toOption.map
+  (fun p => (p.1.snap.revision, p.1.session.view.type, p.2.steps.map (·.delta))) =
+    some (1, some (.pure .nat), [.rechecked])
+#guard !(Check.run (.part ⟨{}, [], .root⟩ [] checkedModule)).result.toBool
 
--- Control 4 (Case 6): an ill-typed fill is refused by `Doc.commit` and kept by `Doc.draft`.
-#guard
-  let draft : Sketch := { program := .bind nat7 (Sketch.hole {} 0), holes := [Row.hole "h" .nat] }
-  let d0 : Doc := Doc.open {} draft ⟨"d", 0⟩
-  let badFill := (d0.target [1]).map fun t =>
-    d0.commit t (.fill (.succeed (.var 42))) .recheckSource
-  let drafted := (d0.draft (.fill [1] (.succeed (.var 42)))).1
-  (badFill.map isOk) == some false &&
-    drafted.session.view.type == none &&
-    drafted.revision == 1
+-- A place can resolve although an earlier refusal prevents a typed focus.
+def unfocused : Effect4.Program.Doc :=
+  (Doc.open_ ⟨⟨"unfocused", 0⟩, {}, ⟨.bind bad n1, []⟩⟩).value
+#guard match (run unfocused (.commit [(.at_ [1] n1, .fill n7)] .keepExact)).value with
+  | .error (.feed 0 (.noFocus [1])) => true
+  | _ => false
 
--- Control 3 (Case 5): a stale target is refused after an ancestor edit and after a preceding
--- binder edit that keeps the target's bytes while moving the environment from `[.nat]` to
--- `[.string]`.
-#guard
-  let draft : Sketch := { program := .bind nat7 (Sketch.hole {} 0), holes := [Row.hole "h" .nat] }
-  let d0 : Doc := Doc.open {} draft ⟨"d", 0⟩
-  let d1 : Doc :=
-    match (d0.target []).map fun t => d0.commit t (.fill (.bind nat7 nat7)) .recheckSource with
-    | some (.ok d) => d
-    | _ => d0
-  let binder : Sketch := { program := .bind nat7 (.succeed (.var 0)) }
-  let b0 : Doc := Doc.open {} binder ⟨"b", 0⟩
-  let b1 : Doc :=
-    match (b0.target [0]).map fun t => b0.commit t (.fill strX) .recheckSource with
-    | some (.ok d) => d
-    | _ => b0
-  d1.revision == 1 &&
-    (((d0.target [1]).map fun t => d1.commit t (.fill nat7) .recheckSource).map refusalOf) ==
-      some (some (.stale 1)) &&
-    (b1.target [1]).map (·.expected) == (b0.target [1]).map (·.expected) &&
-    (b0.session.focusAt [1]).map (·.env) == some [.nat] &&
-    (b1.session.focusAt [1]).map (·.env) == some [.string] &&
-    (((b0.target [1]).map fun t => b1.commit t (.fill (.succeed (.var 0))) .keepExactType).map
-      refusalOf) == some (some (.stale 1))
+-- Draft revert uses the entry's draft policy, so it may change the root type back.
+def changed := run rootDoc (.draft (.fill [] str))
+def changedDoc : Effect4.Program.Doc := (changed.value.toOption.map Prod.fst).getD rootDoc
+#guard (run changedDoc (.revert 0)).value.toOption.map
+  (fun p => (p.1.snap.revision, p.1.session.view.type)) = some (2, some (.pure .nat))
+#guard match (run changedDoc (.commit [(.at_ [] str, .fill n1)] .keepExact)).value with
+  | .error (.feed 0 (.typeChanged _ _)) => true
+  | _ => false
 
--- Controls 5 & 6 (Case 7 and C4): `keepExactType` refuses a root type change and a local type
--- change at `[0]` that keeps the root type, while `recheckSource` accepts both.
-#guard
-  let root : Doc := Doc.open {} { program := nat7 } ⟨"r", 0⟩
-  let pair : Doc := Doc.open {} { program := .bind nat7 nat7 } ⟨"p", 0⟩
-  (((root.target []).map fun t => root.commit t (.fill strX) .keepExactType).map isOk) ==
-      some false &&
-    (((root.target []).map fun t => root.commit t (.fill strX) .recheckSource).bind fun r =>
-      r.toOption.map (·.session.view.type)) == some (some strTy) &&
-    (((pair.target [0]).map fun t => pair.commit t (.fill strX) .keepExactType).map refusalOf) ==
-      some (some (.localChanged (some ([], natTy)) (some ([], strTy)))) &&
-    (((pair.target [0]).map fun t => pair.commit t (.fill strX) .recheckSource).map isOk) ==
-      some true
+-- An omission's row stays after reverting the entry.
+def pairDoc : Effect4.Program.Doc :=
+  (Doc.open_ ⟨⟨"omit", 0⟩, {}, ⟨.bind n1 n1, []⟩⟩).value
 
--- Control 7 (Case 8): a forward layer reference is refused, while an edit inside a referenced
--- layer is accepted under `keepExactType` although the session checks again.
-#guard
-  let keyA : ServiceKey := ⟨⟨127⟩, ⟨127⟩⟩
-  let appA : SigApp := { services := [(keyA, .string)] }
-  let strA : NativeEff := .succeed (.lit (.str "a"))
-  let nat2 : NativeEff := .succeed (.lit (.nat 2))
-  let laterLayer : Sketch :=
-    { program := .bind (.succeed (.lit (.nat 1))) (.provideLayer (.effect keyA strA) false nat2) }
-  let forward : Doc := Doc.open appA laterLayer ⟨"f", 0⟩
-  let forwardUse : NativeEff := .provideLayer (.ref [1, 0]) false nat7
-  let refs : Sketch :=
-    { program := .provideLayer (.effect keyA strA) false
-        (.bind (Sketch.hole appA 0) (.provideLayer (.ref [0]) false nat2))
-      holes := [Row.hole "hole" .nat] }
-  let refDoc : Doc := Doc.open appA refs ⟨"ref", 0⟩
-  (((forward.target [0]).map fun t => forward.commit t (.fill forwardUse) .recheckSource).map
-    (fun r => match r with
-      | .error (.refused (_ :: _)) => true
-      | _ => false)) == some true &&
-    (refDoc.session.feed (.fill [0, 0] (.succeed (.lit (.str "b"))))).2 == .rechecked &&
-    (((refDoc.target [0, 0]).map fun t =>
-      refDoc.commit t (.fill (.succeed (.lit (.str "b")))) .keepExactType).map isOk) == some true
+def omitted := run pairDoc (.commit [(.at_ [1] n1, .omitHole "saved")] .keepExact)
+def omittedDoc : Effect4.Program.Doc := (omitted.value.toOption.map Prod.fst).getD pairDoc
+#guard omittedDoc.session.sketch.holes.length = 1
+#guard (run omittedDoc (.revert 0)).value.toOption.map
+  (fun p => (decide (p.1.session.sketch.program = pairDoc.session.sketch.program),
+      p.1.session.sketch.holes.length)) = some (true, 1)
 
--- Controls 8 & 9 (Case 13 and checked omission): a checked omission declares one hole row and
--- keeps the type; a reference-valued hole edits and checks while `admitProgram` refuses it.
-#guard
-  let pair : Doc := Doc.open {} { program := .bind nat7 nat7 } ⟨"p", 0⟩
-  let omitted := (pair.target [0]).map fun t => pair.commit t (.omitHole "left") .keepExactType
-  let handleHole : Sketch :=
-    { program := .bind nat7 (Sketch.hole {} 0), holes := [Row.hole "h" (.refOf .nat)] }
-  let hd : Doc := Doc.open {} handleHole ⟨"h", 0⟩
-  (omitted.map isOk) == some true &&
-    (omitted.bind fun r => r.toOption.map (·.session.sketch.holes.length)) == some 1 &&
-    (omitted.bind fun r => r.toOption.map (·.session.view.type)) == some (some natTy) &&
-    (((hd.target [0]).map fun t =>
-      hd.commit t (.fill (.succeed (.lit (.nat 8)))) .keepExactType).map isOk) == some true &&
-    (admitProgram handleHole.program (({} : SigApp).withHoles handleHole.holes)).toOption.isNone
+-- A later action that moves a product makes the older entry refuse its current-target check.
+def moved := run changedDoc (.draft (.fill [] n7))
+def movedDoc : Effect4.Program.Doc := (moved.value.toOption.map Prod.fst).getD changedDoc
+#guard match (run movedDoc (.revert 0)).value with
+  | .error (.place 0 (.moved [])) => true
+  | _ => false
+#guard match (run d0 (.revert 5)).value with
+  | .error (.noEntry 5) => true
+  | _ => false
 
--- Controls 10, 11 & 12 (F3 `foreign`, distinct opening generations, `fork`, and `undo` revision):
--- `docText` refuses `docNat`'s target with `.foreign` under both policies; two `open` calls on
--- equal sketches and `fork` produce distinct generations; and after `undo`, a target taken before
--- the undone edit refuses as `stale`.
-#guard
-  let docNat : Doc := Doc.open {} { program := .bind nat7 nat7 } ⟨"docNat", 0⟩
-  let docText : Doc := Doc.open {} { program := .bind nat7 strX } ⟨"docText", 0⟩
-  let foreignRecheck := (docNat.target [0]).map fun t =>
-    docText.commit t (.fill strX) .recheckSource
-  let foreignExact := (docNat.target [0]).map fun t =>
-    docText.commit t (.fill nat7) .keepExactType
-  let r0 := answer {} { op := "open", program := some (toHex (Eff.bind nat7 nat7 : NativeEff)) }
-  let r1 := answer r0.1 { op := "open", program := some (toHex (Eff.bind nat7 nat7 : NativeEff)) }
-  let rFork := answer r1.1 { op := "fork", docName := some "branch" }
-  let rEdit := answer r1.1
-    { op := "replace", path := [0], docName := some "default", docGeneration := some 1,
-      revision := some 0,
-      expected := some (toHex nat7),
-      replacement := some (toHex (Eff.succeed (.lit (.nat 8)) : NativeEff)) }
-  let rUndo := answer rEdit.1 { op := "undo" }
-  let rStaleAfterUndo := answer rUndo.1
-    { op := "replace", path := [0], docName := some "default", docGeneration := some 1,
-      revision := some 1,
-      expected := some (toHex (Eff.succeed (.lit (.nat 8)) : NativeEff)),
-      replacement := some (toHex nat7) }
-  (foreignRecheck.map refusalOf) == some (some (.foreign ⟨"docText", 0⟩)) &&
-    (foreignExact.map refusalOf) == some (some (.foreign ⟨"docText", 0⟩)) &&
-    r0.1.docId != r1.1.docId &&
-    r1.1.docId != rFork.1.docId &&
-    rEdit.2.ok && rEdit.1.revision == 1 &&
-    rUndo.2.ok && rUndo.1.revision == 2 &&
-    !rStaleAfterUndo.2.ok &&
-    rStaleAfterUndo.2.result.getObjValD "reason" == Lean.Json.str "stale"
+-- A draft no-op has no inverse item, and its revert still advances the history.
+def noop := run rootDoc (.draft (.fill [99] n7))
+def noopDoc : Effect4.Program.Doc := (noop.value.toOption.map Prod.fst).getD rootDoc
+#guard (run noopDoc (.revert 0)).value.toOption.map
+  (fun p => (p.1.snap.revision, decide (p.1.session.sketch = rootDoc.session.sketch),
+    p.2.steps.length)) = some (2, true, 0)
 
--- Controls 13 to 16: every checked edit of the tool needs its whole target and its replacement,
--- and `draft` is the one unchecked edit. A refused request leaves the document as it was.
-#guard
-  let r0 := answer {} { op := "open", program := some (toHex (Eff.bind nat7 nat7 : NativeEff)) }
-  let unchanged (r : State × Tools.Query.Answer) : Bool :=
-    !r.2.ok && r.1.revision == 0 &&
-      (r.1.source.map (·.sketch.program)) == some (Eff.bind nat7 nat7)
-  let rFill := answer r0.1
-    { op := "fill", path := [0],
-      replacement := some (toHex (Eff.succeed (.var 99) : NativeEff)) }
-  let rOmit := answer r0.1 { op := "omit", path := [0] }
-  let rBare := answer r0.1 { op := "replace" }
-  let rPartial := answer r0.1
-    { op := "replace", path := [0], revision := some 0,
-      expected := some (toHex nat7), replacement := some (toHex nat7) }
-  let rWhole := answer r0.1
-    { op := "replace", path := [0], docName := some "default",
-      docGeneration := some 0, revision := some 0, expected := some (toHex nat7),
-      replacement := some (toHex (Eff.succeed (.lit (.nat 8)) : NativeEff)) }
-  let rDraft := answer r0.1
-    { op := "draft", path := [0],
-      replacement := some (toHex (Eff.succeed (.var 99) : NativeEff)) }
-  unchanged rFill && unchanged rOmit && unchanged rBare && unchanged rPartial &&
-    rWhole.2.ok && rWhole.1.revision == 1 && rDraft.2.ok && rDraft.1.revision == 1
+-- Reverting a revert acts as redo, with the selected entry's own policy.
+def back := run changedDoc (.revert 0)
+def backDoc : Effect4.Program.Doc := (back.value.toOption.map Prod.fst).getD changedDoc
+#guard (run backDoc (.revert 1)).value.toOption.map
+  (fun p => (p.1.snap.revision, decide (p.1.session.sketch.program = str))) = some (3, true)
 
-end Test.Program.SourceDocumentControls
+-- Bare source state cannot interpret revert: equal sessions can have different entry products.
+def viaNat7 := run rootDoc (.draft (.fill [] n7))
+def viaNat7Doc : Effect4.Program.Doc := (viaNat7.value.toOption.map Prod.fst).getD rootDoc
+def viaNat7Back := run viaNat7Doc (.draft (.fill [] n1))
+def viaNat7BackDoc : Effect4.Program.Doc := (viaNat7Back.value.toOption.map Prod.fst).getD rootDoc
+def viaStrBack := run changedDoc (.draft (.fill [] n1))
+def viaStrBackDoc : Effect4.Program.Doc := (viaStrBack.value.toOption.map Prod.fst).getD rootDoc
+#guard viaNat7BackDoc.origin.id = viaStrBackDoc.origin.id
+#guard viaNat7BackDoc.snap.revision = viaStrBackDoc.snap.revision
+#guard viaNat7BackDoc.session.sketch = viaStrBackDoc.session.sketch
+#guard viaNat7BackDoc.session.table = viaStrBackDoc.session.table
+#guard (run viaNat7BackDoc (.revert 1)).value.toOption.map
+  (fun p => decide (p.1.session.sketch.program = n7)) = some true
+#guard (run viaStrBackDoc (.revert 1)).value.toOption.map
+  (fun p => decide (p.1.session.sketch.program = str)) = some true
+
+-- Revert checks each inverse once, without replaying earlier accepted actions.
+#guard reverted.trace.length = 2
+-- Missing entries and empty inverses perform no earlier checker asks.
+#guard (run d0 (.revert 5)).trace.isEmpty
+#guard (run noopDoc (.revert 0)).trace.isEmpty
+
+end Test.Program.SeamsS1.DocControls
+#eval IO.println "S1 Doc controls: acceptance, rollback, nested revert, root, policy, and hole-row controls pass"

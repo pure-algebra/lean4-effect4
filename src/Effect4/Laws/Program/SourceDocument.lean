@@ -1,130 +1,88 @@
 import Effect4.Program.Typing.SourceDocument
 import Effect4.Laws.Program.SourceTable
-
+import Effect4.Laws.Auto.Obligations
 /-!
-# Laws.Program.SourceDocument — soundness of atomic checked edits (`Doc.commit_sound`)
-
-* `edit_exists`: the edit a `Change` makes exists (`Sketch.edit`) whenever the target address holds
-  the expected sub-program.
-* `Doc.commit_sound`: an accepted edit (`d.commit t c policy = .ok d'`) matches the document
-  identity (`t.doc = d.id`) and revision (`t.revision = d.revision`), keeps the document identity
-  (`d'.id = d.id`), advances the revision (`d'.revision = d.revision + 1`), keeps the session
-  coherent (`d'.session.Coherent`), preserves the application (`d'.session.app = d.session.app`),
-  holds the edited sketch, and types the new sketch under `Sketch.sourceCheck`. Under
-  `Policy.keepExactType`, the old root type and the focus's environment and type at `t.path` are
-  preserved.
-
-## Placement
-
-- **Concept**: `initial-algebras-folds` (`docs/core/semantics.md`); property:
-  `source-session-coherent`.
-- **Question**: serves the proposed compatibility claim `checked-edit-atomic` (consumers:
-  `Tools.Session`'s `replace` and checked `omit`).
-- **Reach**: every coherent document `d`, target `t`, change `c`, and policy `policy`.
-- **What it does not establish**: it does not establish program admission (`admitProgram`), runtime
-  behaviour, or that an exact fill is always accepted.
-- **What it unlocks**: R14 (`docs/core/system-map.md`).
+Placement: initial-algebras-folds; source-session-coherent and typed-replacement, R14.
+Question: checked-edit-atomic and validating document replay.
+Reach: sealed documents, exact snapshots, accepted action histories, and the stated policy premises.
+Exclusions: admission, progress, native execution, and positive-root conclusions for draft.
+Consumers: the tool's atomic wrapper, ordered fill publication, and document replay.
+A keepExact edit retains an initially refused root; positivity therefore requires the old positive-root premise.
 -/
-
 set_option autoImplicit false
-
 namespace Effect4.Program
+open _root_.Effect4.Program.Check
 
-/-- **The edit a change makes exists where the address holds a program.**
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Doc.step_replay (origin : DocOrigin) (history : List DocAction) (action : DocAction) :
+    replayDoc origin (history ++ [action]) =
+      ((DocInternal.replayStep Oracle.uncached
+        (DocInternal.replayState origin history) action).value).map (·.session) := by
+  unfold replayDoc
+  rw [DocInternal.replayState_snoc]
 
-- **Concept**: `initial-algebras-folds` (`docs/core/semantics.md`); property:
-  `source-session-coherent`.
-- **Question**: step of `Doc.commit_sound` (consumer: `Doc.commit_sound`).
-- **Reach**: every `d : Doc`, `t : EditTarget`, `c : Change`, and `e : Edit` with
-  `(Node.eff d.session.sketch.program).at_ t.path = some (.eff t.expected)` and
-  `d.editOf t c = some e`.
-- **Exclusions**: does not establish typing or session coherence by itself.
-- **Unlocks**: R14 (`docs/core/system-map.md`). -/
-theorem edit_exists {d : Doc} {t : EditTarget} {c : Change} {e : Edit}
-    (hat : (Node.eff d.session.sketch.program).at_ t.path = some (.eff t.expected))
-    (he : d.editOf t c = some e) : ∃ s', d.session.sketch.edit d.session.app e = some s' := by
-  cases c with
-  | fill q =>
-    cases he
-    obtain ⟨p', hrep⟩ := Node.replaceAt_eff q hat
-    exact ⟨_, Sketch.fillAt_of_replaceAt hrep⟩
-  | omitHole name =>
-    unfold Doc.editOf at he
-    obtain ⟨f, -, rfl⟩ := Option.map_eq_some_iff.mp he
-    obtain ⟨p', hrep⟩ := Node.replaceAt_eff (Sketch.hole d.session.app d.session.sketch.holes.length) hat
-    exact ⟨_, Sketch.fillAt_of_replaceAt (s := { d.session.sketch with
-      holes := d.session.sketch.holes ++ [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems] })
-      hrep⟩
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Doc.step_refuses {o : Oracle} {d : Doc} {snap : Snap} {action : DocAction}
+    {why : DocRefusal} (h : (d.step o snap action).value = .error why) :
+    (((d.step o snap action).value.map Prod.fst).toOption.getD d) = d := by
+  rw [h]
+  rfl
 
-/-- **An accepted edit is the checked edit.**
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Doc.step_coherent {o : Oracle} {d next : Doc} {snap : Snap} {action : DocAction}
+    {receipt : Receipt} (hc : d.session.Coherent)
+    (h : (d.step o snap action).value = .ok (next,receipt)) :
+    snap = d.snap ∧ next.origin = d.origin ∧ next.history = d.history ++ [action] ∧
+      next.session.Coherent ∧ next.session.app = d.session.app
 
-- **Concept**: `initial-algebras-folds` (`docs/core/semantics.md`); property:
-  `source-session-coherent`.
-- **Question**: serves `checked-edit-atomic` (consumers: `Tools.Session`'s `replace` and checked
-  `omit`).
-- **Reach**: every `d d' : Doc`, `t : EditTarget`, `c : Change`, and `policy : Policy` with
-  `d.session.Coherent` and `d.commit t c policy = .ok d'`.
-- **Exclusions**: does not establish `admitProgram`, runtime behaviour, or completeness of
-  acceptance.
-- **Unlocks**: R14 (`docs/core/system-map.md`). -/
-theorem Doc.commit_sound {d d' : Doc} {t : EditTarget} {c : Change} {policy : Policy}
-    (hc : d.session.Coherent) (h : d.commit t c policy = .ok d') :
-    t.doc = d.id ∧ t.revision = d.revision ∧ d'.id = d.id ∧ d'.revision = d.revision + 1 ∧
-      d'.session.Coherent ∧ d'.session.app = d.session.app ∧
-      (∃ e, d.editOf t c = some e ∧ d.session.sketch.edit d.session.app e = some d'.session.sketch) ∧
-      ∃ T', d'.session.sketch.sourceCheck d.session.app = .ok T' ∧
-        (policy = .keepExactType →
-          d.session.sketch.sourceCheck d.session.app = .ok T' ∧
-          Table.typedAt d'.session.table t.path = Table.typedAt d.session.table t.path) := by
-  unfold Doc.commit at h
-  split at h
-  · cases h
-  · rename_i hdoc'
-    have hdoc : t.doc = d.id := Decidable.of_not_not hdoc'
-    split at h
-    · cases h
-    · rename_i hrev'
-      have hrev : t.revision = d.revision := Decidable.of_not_not hrev'
-      split at h
-      · cases h
-      · rename_i hat'
-        have hat : (Node.eff d.session.sketch.program).at_ t.path = some (.eff t.expected) :=
-          Decidable.of_not_not hat'
-        split at h
-        · cases h
-        · rename_i e he
-          dsimp only at h
-          obtain ⟨s', hedit⟩ := edit_exists hat he
-          have hcoh : (d.after e).Coherent := SourceSession.feed_coherent hc _
-          have hkeep := SourceSession.feed_keeps d.session e
-          have hsk : (d.after e).sketch = s' := hkeep.2 _ hedit
-          have happ : (d.after e).app = d.session.app := hkeep.1
-          have hview := SourceSession.view_type hcoh
-          rw [happ] at hview
-          have hed : d.session.sketch.edit d.session.app e = some (d.after e).sketch := by
-            rw [hsk]
-            exact hedit
-          split at h
-          · cases h
-          · rename_i T' hT
-            have hsrc : (d.after e).sketch.sourceCheck d.session.app = .ok T' :=
-              Effect4.Laws.Auto.toOption_eq_some.mp (hview ▸ hT)
-            split at h
-            · cases h
-              exact ⟨hdoc, hrev, rfl, rfl, hcoh, happ, ⟨e, he, hed⟩, T', hsrc, fun hp => nomatch hp⟩
-            · split at h
-              · cases h
-              · rename_i hold'
-                have hold : d.session.view.type = some T' := Decidable.of_not_not hold'
-                split at h
-                · cases h
-                · rename_i hloc'
-                  have hloc : Table.typedAt (d.after e).table t.path =
-                      Table.typedAt d.session.table t.path := Decidable.of_not_not hloc'
-                  cases h
-                  have hold2 := SourceSession.view_type hc
-                  rw [hold] at hold2
-                  exact ⟨hdoc, hrev, rfl, rfl, hcoh, happ, ⟨e, he, hed⟩, T', hsrc,
-                    fun _ => ⟨Effect4.Laws.Auto.toOption_eq_some.mp hold2.symm, hloc⟩⟩
+/-- Corrected old commit observation: keepExact needs an initially positive root. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Doc.commit_sound {o : Oracle} {d next : Doc} {snap : Snap}
+    {items : List (Place × Change)} {policy : FeedPolicy} {receipt : Receipt}
+    (hc : d.session.Coherent)
+    (hpolicy : policy = .keepExact ∨ policy = .recheck)
+    (hpositive : policy = .keepExact → ∃ T, d.session.sketch.sourceCheck d.session.app = .ok T)
+    (h : (d.step o snap (.commit items policy)).value = .ok (next,receipt)) :
+    snap = d.snap ∧ next.origin = d.origin ∧ next.snap.revision = d.snap.revision + 1 ∧
+      next.session.Coherent ∧ next.session.app = d.session.app ∧
+      ∃ T', next.session.sketch.sourceCheck next.session.app = .ok T' ∧
+        (policy = .keepExact → d.session.sketch.sourceCheck d.session.app = .ok T')
 
+
+/-- A single kept edit retains both exact observations, including an initially refused root. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Doc.commit_one_keepExact {o : Oracle} {d next : Doc} {snap : Snap}
+    {place : Place} {change : Change} {receipt : Receipt} {path : List Nat} {expected : NativeEff}
+    (hc : d.session.Coherent) (hp : path ≠ [])
+    (hplace : place.resolve d.session.app d.session.sketch = .ok (path,expected))
+    (h : (d.step o snap (.commit [(place,change)] .keepExact)).value = .ok (next,receipt)) :
+    next.session.view.type = d.session.view.type ∧
+      Table.typedAt next.session.table path = Table.typedAt d.session.table path
+
+
+/-- The old single-edit observations, with the required initial positive-root premise. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Doc.commit_single_sound {o : Oracle} {d next : Doc} {snap : Snap}
+    {path : List Nat} {expected : NativeEff} {change : Change} {policy : FeedPolicy}
+    {receipt : Receipt} (hc : d.session.Coherent)
+    (hpolicy : policy = .keepExact ∨ policy = .recheck)
+    (hpositive : policy = .keepExact → ∃ T, d.session.sketch.sourceCheck d.session.app = .ok T)
+    (h : (d.step o snap (.commit [(.at_ path expected,change)] policy)).value = .ok (next,receipt)) :
+    snap = d.snap ∧ next.id = d.id ∧ next.revision = d.revision + 1 ∧
+      next.session.Coherent ∧ next.session.app = d.session.app ∧
+      (∃ e, DocInternal.editOf d.session path change = .ok e ∧
+        d.session.sketch.edit d.session.app e = some next.session.sketch) ∧
+      ∃ T', next.session.sketch.sourceCheck d.session.app = .ok T' ∧
+        (policy = .keepExact → d.session.sketch.sourceCheck d.session.app = .ok T' ∧
+          Table.typedAt next.session.table path = Table.typedAt d.session.table path)
+
+/-- An entry's immediate revert restores its prior program and retains appended hole rows. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Doc.revert_program {o : Oracle} {before after back : Doc} {snap : Snap}
+    {action : DocAction} {receipt inverse : Receipt}
+    (hc : before.session.Coherent)
+    (ha : (before.step o snap action).value = .ok (after,receipt))
+    (hr : (after.step o after.snap (.revert before.history.length)).value = .ok (back,inverse)) :
+    back.session.sketch.program = before.session.sketch.program ∧
+      back.session.sketch.holes = after.session.sketch.holes
 end Effect4.Program

@@ -58,7 +58,7 @@ def learned := Memo.empty.learn moduleTrace
 #guard learned.entries.length = (deps (.module {} [] checkedModule)).length
 #guard (deps (.module {} [] checkedModule)).all fun d =>
   learned.entries.any (HitRule.exact.hit d.input)
-def suggestionDoc : Doc := Doc.open {} ⟨.bind n1 (Sketch.hole {} 0), [Row.hole "n" .nat]⟩
+def suggestionDoc : Doc := (Doc.open_ ⟨⟨"suggestion",0⟩,{},⟨.bind n1 (Sketch.hole {} 0), [Row.hole "n" .nat]⟩⟩).value
 def suggestion := CheckCache.suggest Oracle.uncached suggestionDoc [1] 8 0 [n1]
 #guard suggestion.value.isSome
 #guard suggestion.trace.length > 0
@@ -98,7 +98,7 @@ def dataAt (app : SigApp) : SigData := ⟨app,[],.root⟩
 #guard (.part (dataAt natApp) [] extCall : CheckInput) != .part (dataAt strApp) [] extCall
 
 def catalogueSketch : Sketch := ⟨.bind n1 (Sketch.hole {} 0),[Row.hole "h" .nat]⟩
-def catalogueDoc : Doc := Doc.open {} catalogueSketch ⟨"suggest-doc",0⟩
+def catalogueDoc : Doc := (Doc.open_ ⟨⟨"suggest-doc",0⟩,{},catalogueSketch⟩).value
 def catalogue := CheckCache.suggest Oracle.uncached catalogueDoc [1] 10 0 [nextCall]
 #guard catalogue.value.map (·.revision) = some 0
 #guard catalogue.value.map (·.cursor) = some 0

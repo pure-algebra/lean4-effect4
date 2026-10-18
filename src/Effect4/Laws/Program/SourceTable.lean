@@ -1,3 +1,5 @@
+import Effect4.Program.Typing.SourceDocument
+import Effect4.Laws.Program.CheckAgreement
 import Effect4.Program.Typing.SourceSession
 import Effect4.Laws.Program.ExpansionAddresses
 import Effect4.Laws.Program.Edit
@@ -17,9 +19,9 @@ checks a program, and shows the expansion's table at the source's addresses.
 | `Sketch.sourceTable_focus` | where the table holds a type below the root, it is the expansion's focus there | `Table.typedAt_table` |
 | `Sketch.sourceCheck_toOption` | the check at the root is admission's typing | `typeOfProgram`'s definition |
 | `Sketch.sourceRefusals_head`, `Sketch.sourceRefusals_nil_iff` | the refusals start with the check's, and are empty exactly when it succeeds | `Sketch.table_result_refusal_none` at the expansion |
-| `SourceSession.reached_view` | after an open and any edits, a session shows the table at the source's addresses, its refusals and the type through the references | `EditSession.feed_coherent` at the expansion |
+| `SourceSession.reached_view` | every sealed document shows its source table, refusals, and root type | the placed `Doc.coherent` goal |
+| `SourceSession.replay_drafts_view` | every old application, sketch, and edit list retains its exact observation through canonical draft replay | placed transport goal |
 | `SourceSession.feed_undo` | an edit, then the edit that puts back the old sub-program as written, restores the session | `EditSession.Coherent.ext` |
-| `SourceSession.open_shown_of_refSites_nil` | on a sketch with no reference, an open shows the edit session's own open | `expandRefs_eq_self_of_refSites_nil` |
 
 ## Placement
 
@@ -35,11 +37,13 @@ the expansion's table at the source's addresses is a table of the source. Requir
   an address of a copy maps to no source address; a refusal located inside a copy keeps the
   expansion's address; a run; the cost. Consumers: `SourceSession.table_eq`, and the session
   tool (`tools/Tools/Session.lean`).
-- **`source-session-coherent`** (proposed claim, role preservation; pointer
-  `SourceSession.reached_view`). Reach: one application; every sketch; every list of edits. An
-  edit splices where the expansion of the edited sketch is the expansion's own edit at the same
-  address; any other edit opens the expansion's edit session again. Not established: that an
-  edit inside a referenced layer splices; a run; the cost. Consumer: the session tool.
+- **`source-session-coherent`** (role preservation; pointer `SourceSession.reached_view`).
+  Reach: every sealed document, without a separate coherence premise; exact source table, refusals, and root type.
+  The proof uses the placed `Doc.coherent` goal.
+  `SourceSession.replay_drafts_view` retains every old application, initial sketch, and edit list through canonical replay.
+  Its exact observation remains a placed goal.
+  Neither claim establishes reference splicing, execution, progress, or cost.
+  Consumer: the session tool.
 - Every other statement is a step of these two, and names its consumer.
 -/
 
@@ -331,104 +335,39 @@ theorem EditSession.feed_edit {l : EditSession} {e : Edit} {s' : Sketch}
   | fill a q => exact (EditSession.feed_keeps l (.fill a q)).2 a q s' rfl h
   | omitAt a row => exact EditSession.feed_omit_sketch h
 
+
+/-!
+Placement: initial-algebras-folds; source-session-coherent and typed-replacement, R14.
+Question: source-session-coherent names reached_view; feed_coherent serves that claim.
+Reach: coherent source tables and the exact feed policy; the root and local observations remain distinct.
+Exclusions: admission, progress, arbitrary reference splicing, and native execution.
+Consumers: Doc.step, FillSet.add, and the tool's edit and observation wrappers.
+-/
 namespace SourceSession
+open _root_.Effect4.Program.Check
 
-/-! ## Coherence -/
-
-/-- **An open session is coherent**: it holds the edit session of the sketch's expansion. A step
-of `source-session-coherent`. Its consumer is `reached_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem open_coherent (app : SigApp) (s : Sketch) : (SourceSession.open app s).Coherent :=
-  ⟨rfl, EditSession.open_coherent app s.expand⟩
+theorem open_coherent (o : Oracle) (app : SigApp) (s : Sketch) :
+    (SourceSession.«open» o app s).value.Coherent := by
+  change (Checked.ask o (.module app s.holes s.program)).value.table = s.sourceTable app
+  rw [Checked.ask_value]
+  exact Sketch.sourceAnnotate_eq_sourceTable s app
 
-/-- **An edit keeps the application, and one that applies holds the edited sketch.** A step of
-`source-session-coherent` and of `source-session-undo`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_keeps (l : SourceSession) (e : Edit) :
-    (l.feed e).1.app = l.app ∧ ∀ s', l.sketch.edit l.app e = some s' → (l.feed e).1.sketch = s' := by
-  unfold feed
-  cases hs : l.sketch.edit l.app e with
-  | none =>
-    refine ⟨rfl, fun s' h => ?_⟩
-    cases h
-  | some s' =>
-    refine ⟨?_, fun s'' h => ?_⟩
-    · dsimp only
-      split
-      next =>
-        split
-        next => exact (EditSession.feed_keeps _ _).1
-        next => rfl
-      next => rfl
-    · cases h
-      dsimp only
-      split
-      next =>
-        split
-        next => rfl
-        next => rfl
-      next => rfl
+proof_goal feed_coherent {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
+    {e : Edit} {step : Edit.Step} (hc : s.Coherent)
+    (h : (s.feed o policy e).value = .ok (next,step)) : next.Coherent
 
-/-- **An edit keeps a session coherent.** Where the expansion's own edit gives the new
-expansion, the edit session of the expansion takes it (`EditSession.feed_coherent`); every other
-edit opens that edit session again. A step of `source-session-coherent`. Its consumers are
-`run_coherent` and `feed_undo`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_coherent {l : SourceSession} (h : l.Coherent) (e : Edit) : (l.feed e).1.Coherent := by
-  unfold feed
-  cases hs : l.sketch.edit l.app e with
-  | none => exact h
-  | some s' =>
-    dsimp only
-    split
-    next e' he =>
-      split
-      next hcond =>
-        obtain ⟨y, hy, hpair⟩ := Option.map_eq_some_iff.mp hcond
-        have hyx : y = s'.expand := by
-          obtain ⟨yp, yh⟩ := y
-          simp only [Prod.mk.injEq] at hpair
-          obtain ⟨rfl, rfl⟩ := hpair
-          rfl
-        subst hyx
-        exact ⟨EditSession.feed_edit hy, EditSession.feed_coherent h.2 e'⟩
-      next => exact open_coherent _ _
-    next => exact open_coherent _ _
+proof_goal feed_keeps {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
+    {e : Edit} {step : Edit.Step}
+    (h : (s.feed o policy e).value = .ok (next,step)) :
+    next.app = s.app ∧ step.edit = e ∧
+      (s.sketch.edit s.app e = none → next = s) ∧
+      (∀ candidate, s.sketch.edit s.app e = some candidate → next.sketch = candidate)
 
-/-- **A run of edits keeps a session coherent.** A step of `source-session-coherent`. Its
-consumer is `reached_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem run_coherent {l : SourceSession} (h : l.Coherent) (edits : List Edit) :
-    (l.run edits).Coherent := by
-  induction edits generalizing l with
-  | nil => exact h
-  | cons e edits ih => exact ih (feed_coherent h e)
-
-/-- **A run of edits keeps the application.** A step of `source-session-coherent`. Its consumer
-is `reached_view`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem run_keeps (l : SourceSession) (edits : List Edit) : (l.run edits).app = l.app := by
-  induction edits generalizing l with
-  | nil => rfl
-  | cons e edits ih => exact (ih (l.feed e).1).trans (feed_keeps l e).1
-
-/-- **Every session reached by an open and edits is coherent.** A step of
-`source-session-coherent`. Its consumer is `reached_view`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem reached_coherent (app : SigApp) (s : Sketch) (edits : List Edit) :
-    ((SourceSession.open app s).run edits).Coherent :=
-  run_coherent (open_coherent app s) edits
-
-/-! ## The view -/
-
-/-- **A coherent session's table is its sketch's table at the source's addresses**
-(`source-annotation-agrees`). A step of `source-session-coherent`. Its consumers are the view's
-laws. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem table_eq {l : SourceSession} (h : l.Coherent) : l.table = l.sketch.sourceTable l.app := by
-  unfold table
-  rw [h.2, h.1, ← Sketch.annotate_eq_table]
-  exact Sketch.sourceAnnotate_eq_sourceTable l.sketch l.app
+theorem table_eq {s : SourceSession} (hc : s.Coherent) : s.table = s.sketch.sourceTable s.app := hc
 
 /-- **A coherent session shows its sketch's refusals through the references.** A step of
 `source-session-coherent`. Its consumer is `reached_view`. -/
@@ -450,26 +389,6 @@ theorem view_type {l : SourceSession} (h : l.Coherent) :
   rw [ht]
   cases l.sketch.sourceCheck l.app <;> rfl
 
-/-- **What a session shows, after an open and any run of edits**: the table at the source's
-addresses, its refusals, whose head is the check's and which are empty exactly when it succeeds,
-and the type through the references, which is admission's typing. The pointer of the proposed
-claim `source-session-coherent`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem reached_view (app : SigApp) (s : Sketch) (edits : List Edit) :
-    ((SourceSession.open app s).run edits).view.table =
-        ((SourceSession.open app s).run edits).sketch.sourceTable app ∧
-      ((SourceSession.open app s).run edits).view.refusals =
-        ((SourceSession.open app s).run edits).sketch.sourceRefusals app ∧
-      ((SourceSession.open app s).run edits).view.type =
-        (((SourceSession.open app s).run edits).sketch.sourceCheck app).toOption := by
-  have happ : ((SourceSession.open app s).run edits).app = app := run_keeps _ edits
-  have h := reached_coherent app s edits
-  have h₀ := table_eq h
-  have h₁ := view_refusals h
-  have h₂ := view_type h
-  rw [happ] at h₀ h₁ h₂
-  exact ⟨h₀, h₁, h₂⟩
-
 /-- **The focus at a source address is the sub-program as written, at the expansion's focus.**
 On a coherent session, below the root, the environment and the type that `focusAt` answers are
 the expansion's focus there. A step of `source-session-coherent`. Its consumer is the session
@@ -487,65 +406,101 @@ theorem focusAt_typed {l : SourceSession} (h : l.Coherent) {a : List Nat} {f : F
     exact ⟨hat, Sketch.sourceTable_focus htyped hne⟩
   next => cases hf
 
-/-! ## Undo -/
 
-/-- **Two coherent sessions of one application and one sketch are one session.** A step of
-`source-session-undo`. Its consumer is `feed_undo`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Coherent.ext {l₁ l₂ : SourceSession} (h₁ : l₁.Coherent) (h₂ : l₂.Coherent)
-    (ha : l₁.app = l₂.app) (hs : l₁.sketch = l₂.sketch) : l₁ = l₂ := by
-  obtain ⟨s₁, x₁⟩ := l₁
-  obtain ⟨s₂, x₂⟩ := l₂
-  simp only at hs
-  subst hs
-  have hx : x₁ = x₂ := EditSession.Coherent.ext h₁.2 h₂.2 ha (h₁.1.trans h₂.1.symm)
-  subst hx
+theorem view_eq {s : SourceSession} (hc : s.Coherent) :
+    s.view.table = s.sketch.sourceTable s.app ∧
+    s.view.refusals = s.sketch.sourceRefusals s.app ∧
+    s.view.type = (s.sketch.sourceCheck s.app).toOption :=
+  ⟨table_eq hc,view_refusals hc,view_type hc⟩
+
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Coherent.ext {a b : SourceSession} (ha : a.Coherent) (hb : b.Coherent)
+    (happ : a.app = b.app) (hsketch : a.sketch = b.sketch) : a = b := by
+  have htable : a.table = b.table := by rw [ha,hb,happ,hsketch]
+  cases a
+  cases b
+  cases happ
+  cases hsketch
+  cases htable
   rfl
 
-/-- **Undo**: an edit that applies, then the edit that puts back the old sub-program as
-written, restores a coherent session exactly. The path lens's get-put (`replaceAt_spec`)
-restores the sketch, and coherence the edit session of its expansion. The pointer of the
-proposed claim `source-session-undo`. -/
+/-- Exact old feedStep observations through the existing expansion edit engine.
+The expression uses EditSession.feed as its reference; it defines no second edit interpreter.
+Reach: coherent source sessions, every edit, and certified oracles.
+Consumer: replay_drafts_view and transport of source-session-coherent. R14. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_undo {l : SourceSession} (h : l.Coherent) {a : List Nat} {q old : NativeEff}
-    {s' : Sketch} (hat : (Node.eff l.sketch.program).at_ a = some (.eff old))
-    (hfill : l.sketch.fillAt a q = some s') :
-    ((l.feed (.fill a q)).1.feed (.fill a old)).1 = l := by
-  obtain ⟨p', hrep, rfl⟩ := Sketch.fillAt_some hfill
-  have hs1 := (feed_keeps l (.fill a q)).2 _ hfill
-  have hback : ((l.feed (.fill a q)).1.sketch).fillAt a old = some l.sketch := by
-    rw [hs1, Sketch.fillAt_of_replaceAt ((Node.replaceAt_spec hrep).2.2 _ hat)]
-  have hs2 := (feed_keeps _ (.fill a old)).2 _ hback
-  exact Coherent.ext (feed_coherent (feed_coherent h _) _) h
-    (((feed_keeps _ _).1).trans (feed_keeps _ _).1) hs2
+proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit) :
+    ∃ next step, (s.feed o .draft e).value = .ok (next,step) ∧
+      step.edit = e ∧
+      step.replaced = (match (Node.eff s.sketch.program).at_ e.path with
+        | some (.eff old) => some old | _ => none) ∧
+      (match s.sketch.edit s.app e with
+       | none => next = s ∧ step.delta = .unchanged
+       | some candidate =>
+         next.app = s.app ∧ next.sketch = candidate ∧
+         let expanded := EditSession.open s.app s.sketch.expand
+         let reference := match Edit.expanded candidate.expand e with
+           | some edit =>
+             if s.expandedEditAgrees candidate e then expanded.feed edit
+             else (EditSession.open s.app candidate.expand,Edit.Delta.rechecked)
+           | none => (EditSession.open s.app candidate.expand,Edit.Delta.rechecked)
+         next.table = Table.atSource candidate.sites candidate.program.firstRefFault reference.1.table ∧
+           step.delta = reference.2.atSource candidate.sites)
 
-/-! ## The connector to the edit session -/
-
-/-- **On a sketch with no layer reference, an open shows the edit session's own open**: the
-expansion is the sketch (`expandRefs_eq_self_of_refSites_nil`), no address is dropped, and no
-reference is ill formed. The connector of the session through references to the edit session
-(`AGENTS.md`, a second representation beside the old one). Its consumer is the session tool. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem open_shown_of_refSites_nil (app : SigApp) {s : Sketch} (h : s.program.refSites [] = []) :
-    (SourceSession.open app s).shown = EditSession.open app s := by
-  have hx : s.expand = s := by
-    unfold Sketch.expand
-    rw [expandRefs_eq_self_of_refSites_nil s.program h]
-  have hf : s.program.firstRefFault = none := by
-    unfold Eff.firstRefFault
-    rw [h]
-    rfl
-  have hsites : s.sites = [] := by
-    unfold Sketch.sites
-    rw [h]
-    rfl
-  unfold shown table SourceSession.open SourceSession.app Table.atSource
-  rw [hf, hsites, hx]
-  dsimp only
-  rw [(List.filter_eq_self (p := fun e : Table.Entry => !Table.belowSite [] e.path)).mpr
-    fun _ _ => rfl]
-  rfl
+proof_goal feed_keepExact {o : Oracle} {s next : SourceSession} {e : Edit} {step : Edit.Step}
+    (hc : s.Coherent) (hne : e.path ≠ [])
+    (h : (s.feed o .keepExact e).value = .ok (next,step)) :
+    next.view.type = s.view.type ∧
+      Table.typedAt next.table e.path = Table.typedAt s.table e.path ∧
+      (s.expandedEditAgrees next.sketch e = true → step.delta = .spliced [e.path]) ∧
+      (s.expandedEditAgrees next.sketch e = false → step.delta = .rechecked)
+
+/-- The root feed is exactly the module recheck route, including its actual part trace. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal feed_root (o : Oracle) (policy : FeedPolicy) (s : SourceSession)
+    (e : Edit) (candidate : Sketch) (hp : e.path = [])
+    (hedit : s.sketch.edit s.app e = some candidate) :
+    s.feed o policy e = s.recheck o policy candidate e s.sketch.program
+
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal feed_undo {o : Oracle} {s next : SourceSession} {a : List Nat} {q old : NativeEff}
+    {candidate : Sketch} {step : Edit.Step} (hc : s.Coherent)
+    (hat : (Node.eff s.sketch.program).at_ a = some (.eff old))
+    (hfill : s.sketch.fillAt a q = some candidate)
+    (hnext : (s.feed o .draft (.fill a q)).value = .ok (next,step)) :
+    ∃ back, (next.feed o .draft (.fill a old)).value = .ok (s,back)
 
 end SourceSession
 
+/-- Placement: initial-algebras-folds; source-session-coherent's reachable-state obligation, R14.
+The sealed replay witnesses every accepted action history, including revert.
+Consumer: SourceSession.reached_view. This establishes no admission or progress claim. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Doc.coherent (d : Doc) : d.session.Coherent
+
+namespace SourceSession
+/-- The old draft-list reach, stated through the sole document replay.
+Placement: source-session-coherent, initial-algebras-folds, R14.
+This retains every old application, initial sketch, and edit list without a coherence premise.
+Consumer: the draft case of Doc.coherent and transport of the old reached_view observation.
+It establishes no admission, progress, or native behavior. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal replay_drafts_view (app : SigApp) (initial : Sketch) (edits : List Edit) (id : DocId) :
+    ∃ session, replayDoc ⟨id,app,initial⟩ (edits.map DocAction.draft) = .ok session ∧
+      session.app = app ∧
+      session.sketch = edits.foldl (fun s e => (s.edit app e).getD s) initial ∧
+      session.view.table = session.sketch.sourceTable app ∧
+      session.view.refusals = session.sketch.sourceRefusals app ∧
+      session.view.type = (session.sketch.sourceCheck app).toOption
+
+/-- Every sealed document exposes the exact source table, refusals, and root observation. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem reached_view (d : Doc) :
+    d.session.view.table = d.session.sketch.sourceTable d.session.app ∧
+    d.session.view.refusals = d.session.sketch.sourceRefusals d.session.app ∧
+    d.session.view.type = (d.session.sketch.sourceCheck d.session.app).toOption :=
+  view_eq (Doc.coherent d)
+end SourceSession
 end Effect4.Program

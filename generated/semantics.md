@@ -5,7 +5,7 @@ inputs: tools/ProofGraph/Registry.lean, tools/Tools/Semantics.lean, tools/Driver
 -->
 # Semantics evidence
 
-Effect4 makes 260 claims about Effect's runtime: 250 proved, 3 modulo, 2 goal, 1 refuted, 3 absent, 1 assumed.
+Effect4 makes 274 claims about Effect's runtime: 250 proved, 4 modulo, 15 goal, 1 refuted, 3 absent, 1 assumed.
 
 A claim's evidence comes from its Lean declaration and is never written by hand (decisions row 203). `The open work` lists the planned goals that the remaining claims rest on, and why each waits.
 
@@ -26,7 +26,7 @@ A register record links a claim to a historical attack. Read the whole row: an e
 
 ## Open work
 
-The open part of the plan: 7 planned goals, and 3 theorems proved modulo them. A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem reaches a goal. Each step is an edge of the plan, from a node to a node its proof reaches first.
+The open part of the plan: 20 planned goals, and 5 theorems proved modulo them. A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem reaches a goal. Each step is an edge of the plan, from a node to a node its proof reaches first.
 
 ### combine_deps
 
@@ -43,9 +43,10 @@ Module: `Effect4.Laws.Program.CheckAgreement` · Claims: `checker-combine-deps`,
     (Effect4.Program.Check.run i)
 ```
 
-Proved modulo this goal (1), each by its shortest chain of nearest nodes:
+Proved modulo this goal (2), each by its shortest chain of nearest nodes:
 
 - `ask_value` → `combine_deps`
+- `open_coherent` → `ask_value` → `combine_deps`
 
 ### explain_replays
 
@@ -59,6 +60,154 @@ Module: `Effect4.Laws.Program.CheckAgreement` · Claims: `checker-explanation-re
   Eq (Effect4.Program.Check.explain o input).value (Option.some explanation) →
     Eq explanation.part (Option.some key) →
       Effect4.Program.Check.ExplanationReplays input key explanation.refusal
+```
+
+### coherent
+
+Placement: initial-algebras-folds; source-session-coherent's reachable-state obligation, R14. The sealed replay witnesses every accepted action history, including revert. Consumer: SourceSession.reached_view. This establishes no admission or progress claim.
+
+Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-document-coherent`, `source-session-coherent` · Requirements: `R14`
+
+```lean
+∀ (d : Effect4.Program.Doc), d.session.Coherent
+```
+
+Proved modulo this goal (1), each by its shortest chain of nearest nodes:
+
+- `reached_view` → `coherent`
+
+### commit_one_keepExact
+
+A single kept edit retains both exact observations, including an initially refused root.
+
+Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-local-keep` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {place : Effect4.Program.Place} {change : Effect4.Program.Change}
+  {receipt : Effect4.Program.Receipt} {path : List Nat} {expected : Effect4.Program.NativeEff},
+  d.session.Coherent →
+    Ne path List.nil →
+      Eq (Effect4.Program.Place.resolve d.session.app d.session.sketch place)
+          (Except.ok { fst := path, snd := expected }) →
+        Eq
+            (Effect4.Program.Doc.step o d snap
+                (Effect4.Program.DocAction.commit
+                  (List.cons { fst := place, snd := change } List.nil)
+                  Effect4.Program.FeedPolicy.keepExact)).value
+            (Except.ok { fst := next, snd := receipt }) →
+          And (Eq next.session.view.type d.session.view.type)
+            (Eq (Effect4.Program.Table.typedAt next.session.table path)
+              (Effect4.Program.Table.typedAt d.session.table path))
+```
+
+### commit_single_sound
+
+The old single-edit observations, with the required initial positive-root premise.
+
+Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-single-transport` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {path : List Nat} {expected : Effect4.Program.NativeEff} {change : Effect4.Program.Change}
+  {policy : Effect4.Program.FeedPolicy} {receipt : Effect4.Program.Receipt},
+  d.session.Coherent →
+    Or (Eq policy Effect4.Program.FeedPolicy.keepExact)
+        (Eq policy Effect4.Program.FeedPolicy.recheck) →
+      (Eq policy Effect4.Program.FeedPolicy.keepExact →
+          Exists fun T => Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T)) →
+        Eq
+            (Effect4.Program.Doc.step o d snap
+                (Effect4.Program.DocAction.commit
+                  (List.cons { fst := Effect4.Program.Place.at_ path expected, snd := change }
+                    List.nil)
+                  policy)).value
+            (Except.ok { fst := next, snd := receipt }) →
+          And (Eq snap d.snap)
+            (And (Eq next.id d.id)
+              (And (Eq next.revision (instHAdd.hAdd d.revision 1))
+                (And next.session.Coherent
+                  (And (Eq next.session.app d.session.app)
+                    (And
+                      (Exists fun e =>
+                        And
+                          (Eq (Effect4.Program.DocInternal.editOf d.session path change)
+                            (Except.ok e))
+                          (Eq (d.session.sketch.edit d.session.app e)
+                            (Option.some next.session.sketch)))
+                      (Exists fun T' =>
+                        And (Eq (next.session.sketch.sourceCheck d.session.app) (Except.ok T'))
+                          (Eq policy Effect4.Program.FeedPolicy.keepExact →
+                            And (Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T'))
+                              (Eq (Effect4.Program.Table.typedAt next.session.table path)
+                                (Effect4.Program.Table.typedAt d.session.table path)))))))))
+```
+
+### commit_sound
+
+Corrected old commit observation: keepExact needs an initially positive root.
+
+Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-commit` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {items : List (Prod Effect4.Program.Place Effect4.Program.Change)}
+  {policy : Effect4.Program.FeedPolicy} {receipt : Effect4.Program.Receipt},
+  d.session.Coherent →
+    Or (Eq policy Effect4.Program.FeedPolicy.keepExact)
+        (Eq policy Effect4.Program.FeedPolicy.recheck) →
+      (Eq policy Effect4.Program.FeedPolicy.keepExact →
+          Exists fun T => Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T)) →
+        Eq (Effect4.Program.Doc.step o d snap (Effect4.Program.DocAction.commit items policy)).value
+            (Except.ok { fst := next, snd := receipt }) →
+          And (Eq snap d.snap)
+            (And (Eq next.origin d.origin)
+              (And (Eq next.snap.revision (instHAdd.hAdd d.snap.revision 1))
+                (And next.session.Coherent
+                  (And (Eq next.session.app d.session.app)
+                    (Exists fun T' =>
+                      And (Eq (next.session.sketch.sourceCheck next.session.app) (Except.ok T'))
+                        (Eq policy Effect4.Program.FeedPolicy.keepExact →
+                          Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T')))))))
+```
+
+### revert_program
+
+An entry's immediate revert restores its prior program and retains appended hole rows.
+
+Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-revert` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {before after back : Effect4.Program.Doc}
+  {snap : Effect4.Program.Snap} {action : Effect4.Program.DocAction}
+  {receipt inverse : Effect4.Program.Receipt},
+  before.session.Coherent →
+    Eq (Effect4.Program.Doc.step o before snap action).value
+        (Except.ok { fst := after, snd := receipt }) →
+      Eq
+          (Effect4.Program.Doc.step o after after.snap
+              (Effect4.Program.DocAction.revert before.history.length)).value
+          (Except.ok { fst := back, snd := inverse }) →
+        And (Eq back.session.sketch.program before.session.sketch.program)
+          (Eq back.session.sketch.holes after.session.sketch.holes)
+```
+
+### step_coherent
+
+No docstring says why this goal waits.
+
+Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-step` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {action : Effect4.Program.DocAction} {receipt : Effect4.Program.Receipt},
+  d.session.Coherent →
+    Eq (Effect4.Program.Doc.step o d snap action).value
+        (Except.ok { fst := next, snd := receipt }) →
+      And (Eq snap d.snap)
+        (And (Eq next.origin d.origin)
+          (And (Eq next.history (instHAppendOfAppend.hAppend d.history (List.cons action List.nil)))
+            (And next.session.Coherent (Eq next.session.app d.session.app))))
 ```
 
 ### once_placed_outside_census
@@ -90,6 +239,178 @@ Module: `Effect4.Laws.Program.FinalizerRun` · Claims: `once-placed-finalizer` �
 Proved modulo this goal (1), each by its shortest chain of nearest nodes:
 
 - `once_placed_pushes_once` → `once_placed_outside_census`
+
+### feed_coherent
+
+No docstring says why this goal waits.
+
+Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-coherent` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {policy : Effect4.Program.FeedPolicy}
+  {s next : Effect4.Program.SourceSession} {e : Effect4.Program.Edit}
+  {step : Effect4.Program.Edit.Step},
+  s.Coherent →
+    Eq (Effect4.Program.SourceSession.feed o policy s e).value
+        (Except.ok { fst := next, snd := step }) →
+      next.Coherent
+```
+
+### feed_draft
+
+Exact old feedStep observations through the existing expansion edit engine. The expression uses EditSession.feed as its reference; it defines no second edit interpreter. Reach: coherent source sessions, every edit, and certified oracles. Consumer: replay_drafts_view and transport of source-session-coherent. R14.
+
+Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-draft` · Requirements: `R14`
+
+```lean
+∀ (o : Effect4.Program.Check.Oracle) (s : Effect4.Program.SourceSession),
+  s.Coherent →
+    ∀ (e : Effect4.Program.Edit),
+      Exists fun next =>
+        Exists fun step =>
+          And
+            (Eq (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft s e).value
+              (Except.ok { fst := next, snd := step }))
+            (And (Eq step.edit e)
+              (And
+                (Eq step.replaced
+                  (Effect4.Program.SourceSession.feed_draft.match_1
+                    (fun x => Option Effect4.Program.NativeEff)
+                    ((Effect4.Program.Node.eff s.sketch.program).at_ e.path)
+                    (fun old => Option.some old) fun x => Option.none))
+                (Effect4.Program.SourceSession.feed_draft.match_5 (fun x => Prop)
+                  (s.sketch.edit s.app e)
+                  (fun _ => And (Eq next s) (Eq step.delta Effect4.Program.Edit.Delta.unchanged))
+                  fun candidate =>
+                  And (Eq next.app s.app)
+                    (And (Eq next.sketch candidate)
+                      (have expanded := Effect4.Program.EditSession.open s.app s.sketch.expand;
+                      have reference :=
+                        Effect4.Program.SourceSession.feed_draft.match_7
+                          (fun x => Prod Effect4.Program.EditSession Effect4.Program.Edit.Delta)
+                          (Effect4.Program.Edit.expanded candidate.expand e)
+                          (fun edit =>
+                            ite (Eq (s.expandedEditAgrees candidate e) Bool.true)
+                              (expanded.feed edit)
+                              { fst := Effect4.Program.EditSession.open s.app candidate.expand,
+                                snd := Effect4.Program.Edit.Delta.rechecked })
+                          fun _ =>
+                          { fst := Effect4.Program.EditSession.open s.app candidate.expand,
+                            snd := Effect4.Program.Edit.Delta.rechecked };
+                      And
+                        (Eq next.table
+                          (Effect4.Program.Table.atSource candidate.sites
+                            (Effect4.Program.Eff.firstRefFault candidate.program)
+                            reference.fst.table))
+                        (Eq step.delta
+                          (Effect4.Program.Edit.Delta.atSource candidate.sites reference.snd)))))))
+```
+
+### feed_keepExact
+
+No docstring says why this goal waits.
+
+Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-keep-exact` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {s next : Effect4.Program.SourceSession}
+  {e : Effect4.Program.Edit} {step : Effect4.Program.Edit.Step},
+  s.Coherent →
+    Ne e.path List.nil →
+      Eq (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.keepExact s e).value
+          (Except.ok { fst := next, snd := step }) →
+        And (Eq next.view.type s.view.type)
+          (And
+            (Eq (Effect4.Program.Table.typedAt next.table e.path)
+              (Effect4.Program.Table.typedAt s.table e.path))
+            (And
+              (Eq (s.expandedEditAgrees next.sketch e) Bool.true →
+                Eq step.delta (Effect4.Program.Edit.Delta.spliced (List.cons e.path List.nil)))
+              (Eq (s.expandedEditAgrees next.sketch e) Bool.false →
+                Eq step.delta Effect4.Program.Edit.Delta.rechecked)))
+```
+
+### feed_keeps
+
+No docstring says why this goal waits.
+
+Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-edit` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {policy : Effect4.Program.FeedPolicy}
+  {s next : Effect4.Program.SourceSession} {e : Effect4.Program.Edit}
+  {step : Effect4.Program.Edit.Step},
+  Eq (Effect4.Program.SourceSession.feed o policy s e).value
+      (Except.ok { fst := next, snd := step }) →
+    And (Eq next.app s.app)
+      (And (Eq step.edit e)
+        (And (Eq (s.sketch.edit s.app e) Option.none → Eq next s)
+          (∀ (candidate : Effect4.Program.Sketch),
+            Eq (s.sketch.edit s.app e) (Option.some candidate) → Eq next.sketch candidate)))
+```
+
+### feed_root
+
+The root feed is exactly the module recheck route, including its actual part trace.
+
+Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-root` · Requirements: `R14`
+
+```lean
+∀ (o : Effect4.Program.Check.Oracle) (policy : Effect4.Program.FeedPolicy)
+  (s : Effect4.Program.SourceSession) (e : Effect4.Program.Edit)
+  (candidate : Effect4.Program.Sketch),
+  Eq e.path List.nil →
+    Eq (s.sketch.edit s.app e) (Option.some candidate) →
+      Eq (Effect4.Program.SourceSession.feed o policy s e)
+        (Effect4.Program.SourceSession.recheck o policy s candidate e s.sketch.program)
+```
+
+### feed_undo
+
+No docstring says why this goal waits.
+
+Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-session-undo` · Requirements: `R14`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {s next : Effect4.Program.SourceSession} {a : List Nat}
+  {q old : Effect4.Program.NativeEff} {candidate : Effect4.Program.Sketch}
+  {step : Effect4.Program.Edit.Step},
+  s.Coherent →
+    Eq ((Effect4.Program.Node.eff s.sketch.program).at_ a)
+        (Option.some (Effect4.Program.Node.eff old)) →
+      Eq (s.sketch.fillAt a q) (Option.some candidate) →
+        Eq
+            (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft s
+                (Effect4.Program.Edit.fill a q)).value
+            (Except.ok { fst := next, snd := step }) →
+          Exists fun back =>
+            Eq
+              (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft next
+                  (Effect4.Program.Edit.fill a old)).value
+              (Except.ok { fst := s, snd := back })
+```
+
+### replay_drafts_view
+
+The old draft-list reach, stated through the sole document replay. Placement: source-session-coherent, initial-algebras-folds, R14. This retains every old application, initial sketch, and edit list without a coherence premise. Consumer: the draft case of Doc.coherent and transport of the old reached_view observation. It establishes no admission, progress, or native behavior.
+
+Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-session-draft-transport` · Requirements: `R14`
+
+```lean
+∀ (app : Effect4.Program.SigApp) (initial : Effect4.Program.Sketch)
+  (edits : List Effect4.Program.Edit) (id : Effect4.Program.DocId),
+  Exists fun session =>
+    And
+      (Eq
+        (Effect4.Program.replayDoc { id := id, app := app, sketch := initial }
+          (List.map Effect4.Program.DocAction.draft edits))
+        (Except.ok session))
+      (And (Eq session.app app)
+        (And (Eq session.sketch (List.foldl (fun s e => (s.edit app e).getD s) initial edits))
+          (And (Eq session.view.table (session.sketch.sourceTable app))
+            (And (Eq session.view.refusals (session.sketch.sourceRefusals app))
+              (Eq session.view.type (session.sketch.sourceCheck app).toOption)))))
+```
 
 ### ofProgram_approx
 
@@ -3184,7 +3505,7 @@ Module: `Effect4.Laws.Program.Typing.Closed`
 
 ## Initial Algebras & Folds
 
-Free syntax objects, catamorphisms, and fold uniqueness. 41 claims: 39 proved, 2 goal.
+Free syntax objects, catamorphisms, and fold uniqueness. 55 claims: 39 proved, 1 modulo, 15 goal.
 
 | Claim | Role | Status | Evidence |
 | --- | --- | --- | --- |
@@ -3227,8 +3548,22 @@ Free syntax objects, catamorphisms, and fold uniqueness. 41 claims: 39 proved, 2
 | `view-reachability-summary-exact` | decidability | proved | `Tools.View.Flow.checkReach_exact` |
 | `references-move` | preservation | proved | `Effect4.Program.references_move` |
 | `source-annotation-agrees` | compatibility | proved | `Effect4.Program.Sketch.sourceAnnotate_eq_sourceTable` |
-| `source-session-coherent` | preservation | proved | `Effect4.Program.SourceSession.reached_view` |
-| `source-session-undo` | compatibility | proved | `Effect4.Program.SourceSession.feed_undo` |
+| `source-feed-coherent` | preservation | goal | `Effect4.Program.SourceSession.feed_coherent` |
+| `source-feed-edit` | compatibility | goal | `Effect4.Program.SourceSession.feed_keeps` |
+| `source-feed-draft` | compatibility | goal | `Effect4.Program.SourceSession.feed_draft` |
+| `source-feed-keep-exact` | compatibility | goal | `Effect4.Program.SourceSession.feed_keepExact` |
+| `source-feed-root` | compatibility | goal | `Effect4.Program.SourceSession.feed_root` |
+| `source-document-coherent` | preservation | goal | `Effect4.Program.Doc.coherent` |
+| `source-session-draft-transport` | compatibility | goal | `Effect4.Program.SourceSession.replay_drafts_view` |
+| `source-document-replay` | compatibility | proved | `Effect4.Program.Doc.step_replay` |
+| `source-document-atomic` | compatibility | proved | `Effect4.Program.Doc.step_refuses` |
+| `source-document-step` | preservation | goal | `Effect4.Program.Doc.step_coherent` |
+| `source-document-commit` | compatibility | goal | `Effect4.Program.Doc.commit_sound` |
+| `source-document-local-keep` | compatibility | goal | `Effect4.Program.Doc.commit_one_keepExact` |
+| `source-document-single-transport` | compatibility | goal | `Effect4.Program.Doc.commit_single_sound` |
+| `source-document-revert` | compatibility | goal | `Effect4.Program.Doc.revert_program` |
+| `source-session-coherent` | preservation | modulo | `Effect4.Program.SourceSession.reached_view`, modulo `coherent` |
+| `source-session-undo` | compatibility | goal | `Effect4.Program.SourceSession.feed_undo` |
 
 ### checker-combine-deps
 
@@ -3985,45 +4320,381 @@ Module: `Effect4.Laws.Program.SourceTable`
   Eq (s.sourceAnnotate app) (s.sourceTable app)
 ```
 
-### source-session-coherent
+### source-feed-coherent
 
-The edit session of a sketch as written shows, after an open and any run of edits, the source table of its sketch: an edit that moves the expansion at its address alone splices in the expansion's session, and any other is checked again; on a program with no reference it shows the edit session's view; nothing of the repaint set at the source's addresses (decisions row 373 (7))
-
-What a session shows, after an open and any run of edits: the table at the source's addresses, its refusals, whose head is the check's and which are empty exactly when it succeeds, and the type through the references, which is admission's typing. The pointer of the proposed claim `source-session-coherent`.
+A successful feed preserves the source table under initial coherence and the selected policy; no admission, progress, or native execution claim (seams S1, R14)
 
 Module: `Effect4.Laws.Program.SourceTable`
 
 ```lean
-∀ (app : Effect4.Program.SigApp) (s : Effect4.Program.Sketch) (edits : List Effect4.Program.Edit),
-  And
-    (Eq ((Effect4.Program.SourceSession.open app s).run edits).view.table
-      (((Effect4.Program.SourceSession.open app s).run edits).sketch.sourceTable app))
-    (And
-      (Eq ((Effect4.Program.SourceSession.open app s).run edits).view.refusals
-        (((Effect4.Program.SourceSession.open app s).run edits).sketch.sourceRefusals app))
-      (Eq ((Effect4.Program.SourceSession.open app s).run edits).view.type
-        (((Effect4.Program.SourceSession.open app s).run edits).sketch.sourceCheck app).toOption))
+∀ {o : Effect4.Program.Check.Oracle} {policy : Effect4.Program.FeedPolicy}
+  {s next : Effect4.Program.SourceSession} {e : Effect4.Program.Edit}
+  {step : Effect4.Program.Edit.Step},
+  s.Coherent →
+    Eq (Effect4.Program.SourceSession.feed o policy s e).value
+        (Except.ok { fst := next, snd := step }) →
+      next.Coherent
+```
+
+### source-feed-edit
+
+A successful feed retains the application and exact edit; an invalid edit retains the source, and a valid edit returns its candidate; no admission, progress, or native execution claim (seams S1, R14)
+
+Module: `Effect4.Laws.Program.SourceTable`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {policy : Effect4.Program.FeedPolicy}
+  {s next : Effect4.Program.SourceSession} {e : Effect4.Program.Edit}
+  {step : Effect4.Program.Edit.Step},
+  Eq (Effect4.Program.SourceSession.feed o policy s e).value
+      (Except.ok { fst := next, snd := step }) →
+    And (Eq next.app s.app)
+      (And (Eq step.edit e)
+        (And (Eq (s.sketch.edit s.app e) Option.none → Eq next s)
+          (∀ (candidate : Effect4.Program.Sketch),
+            Eq (s.sketch.edit s.app e) (Option.some candidate) → Eq next.sketch candidate)))
+```
+
+### source-feed-draft
+
+Every draft from a coherent source agrees with the existing expanded edit observation and exact source projection; no admission, progress, or native execution claim (seams S1, R14)
+
+Exact old feedStep observations through the existing expansion edit engine. The expression uses EditSession.feed as its reference; it defines no second edit interpreter. Reach: coherent source sessions, every edit, and certified oracles. Consumer: replay_drafts_view and transport of source-session-coherent. R14.
+
+Module: `Effect4.Laws.Program.SourceTable`
+
+```lean
+∀ (o : Effect4.Program.Check.Oracle) (s : Effect4.Program.SourceSession),
+  s.Coherent →
+    ∀ (e : Effect4.Program.Edit),
+      Exists fun next =>
+        Exists fun step =>
+          And
+            (Eq (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft s e).value
+              (Except.ok { fst := next, snd := step }))
+            (And (Eq step.edit e)
+              (And
+                (Eq step.replaced
+                  (Effect4.Program.SourceSession.feed_draft.match_1
+                    (fun x => Option Effect4.Program.NativeEff)
+                    ((Effect4.Program.Node.eff s.sketch.program).at_ e.path)
+                    (fun old => Option.some old) fun x => Option.none))
+                (Effect4.Program.SourceSession.feed_draft.match_5 (fun x => Prop)
+                  (s.sketch.edit s.app e)
+                  (fun _ => And (Eq next s) (Eq step.delta Effect4.Program.Edit.Delta.unchanged))
+                  fun candidate =>
+                  And (Eq next.app s.app)
+                    (And (Eq next.sketch candidate)
+                      (have expanded := Effect4.Program.EditSession.open s.app s.sketch.expand;
+                      have reference :=
+                        Effect4.Program.SourceSession.feed_draft.match_7
+                          (fun x => Prod Effect4.Program.EditSession Effect4.Program.Edit.Delta)
+                          (Effect4.Program.Edit.expanded candidate.expand e)
+                          (fun edit =>
+                            ite (Eq (s.expandedEditAgrees candidate e) Bool.true)
+                              (expanded.feed edit)
+                              { fst := Effect4.Program.EditSession.open s.app candidate.expand,
+                                snd := Effect4.Program.Edit.Delta.rechecked })
+                          fun _ =>
+                          { fst := Effect4.Program.EditSession.open s.app candidate.expand,
+                            snd := Effect4.Program.Edit.Delta.rechecked };
+                      And
+                        (Eq next.table
+                          (Effect4.Program.Table.atSource candidate.sites
+                            (Effect4.Program.Eff.firstRefFault candidate.program)
+                            reference.fst.table))
+                        (Eq step.delta
+                          (Effect4.Program.Edit.Delta.atSource candidate.sites reference.snd)))))))
+```
+
+### source-feed-keep-exact
+
+A successful nonroot keepExact feed retains root and local types, using the exact whole-expansion guard for splice or recheck; no admission, progress, or native execution claim (seams S1, R14)
+
+Module: `Effect4.Laws.Program.SourceTable`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {s next : Effect4.Program.SourceSession}
+  {e : Effect4.Program.Edit} {step : Effect4.Program.Edit.Step},
+  s.Coherent →
+    Ne e.path List.nil →
+      Eq (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.keepExact s e).value
+          (Except.ok { fst := next, snd := step }) →
+        And (Eq next.view.type s.view.type)
+          (And
+            (Eq (Effect4.Program.Table.typedAt next.table e.path)
+              (Effect4.Program.Table.typedAt s.table e.path))
+            (And
+              (Eq (s.expandedEditAgrees next.sketch e) Bool.true →
+                Eq step.delta (Effect4.Program.Edit.Delta.spliced (List.cons e.path List.nil)))
+              (Eq (s.expandedEditAgrees next.sketch e) Bool.false →
+                Eq step.delta Effect4.Program.Edit.Delta.rechecked)))
+```
+
+### source-feed-root
+
+Every root edit with a candidate equals the entire checked module recheck, including actual dependency answers; no admission, progress, or native execution claim (seams S1, R14)
+
+The root feed is exactly the module recheck route, including its actual part trace.
+
+Module: `Effect4.Laws.Program.SourceTable`
+
+```lean
+∀ (o : Effect4.Program.Check.Oracle) (policy : Effect4.Program.FeedPolicy)
+  (s : Effect4.Program.SourceSession) (e : Effect4.Program.Edit)
+  (candidate : Effect4.Program.Sketch),
+  Eq e.path List.nil →
+    Eq (s.sketch.edit s.app e) (Option.some candidate) →
+      Eq (Effect4.Program.SourceSession.feed o policy s e)
+        (Effect4.Program.SourceSession.recheck o policy s candidate e s.sketch.program)
+```
+
+### source-document-coherent
+
+Every sealed document has its exact source table, without a separate coherence premise; no admission, progress, or native execution claim (seams S1, R14)
+
+Placement: initial-algebras-folds; source-session-coherent's reachable-state obligation, R14. The sealed replay witnesses every accepted action history, including revert. Consumer: SourceSession.reached_view. This establishes no admission or progress claim.
+
+Module: `Effect4.Laws.Program.SourceTable`
+
+```lean
+∀ (d : Effect4.Program.Doc), d.session.Coherent
+```
+
+### source-session-draft-transport
+
+Every old application, sketch, and edit list has canonical draft replay with the exact edited sketch, source table, refusals, and root observation; no admission, progress, or native execution claim (seams S1, R14)
+
+The old draft-list reach, stated through the sole document replay. Placement: source-session-coherent, initial-algebras-folds, R14. This retains every old application, initial sketch, and edit list without a coherence premise. Consumer: the draft case of Doc.coherent and transport of the old reached_view observation. It establishes no admission, progress, or native behavior.
+
+Module: `Effect4.Laws.Program.SourceTable`
+
+```lean
+∀ (app : Effect4.Program.SigApp) (initial : Effect4.Program.Sketch)
+  (edits : List Effect4.Program.Edit) (id : Effect4.Program.DocId),
+  Exists fun session =>
+    And
+      (Eq
+        (Effect4.Program.replayDoc { id := id, app := app, sketch := initial }
+          (List.map Effect4.Program.DocAction.draft edits))
+        (Except.ok session))
+      (And (Eq session.app app)
+        (And (Eq session.sketch (List.foldl (fun s e => (s.edit app e).getD s) initial edits))
+          (And (Eq session.view.table (session.sketch.sourceTable app))
+            (And (Eq session.view.refusals (session.sketch.sourceRefusals app))
+              (Eq session.view.type (session.sketch.sourceCheck app).toOption)))))
+```
+
+### source-document-replay
+
+Appending an action replays through the same interpreter and exact history ledger; no admission, progress, or native execution claim (seams S1, R14)
+
+Module: `Effect4.Laws.Program.SourceDocument`
+
+```lean
+∀ (origin : Effect4.Program.DocOrigin) (history : List Effect4.Program.DocAction)
+  (action : Effect4.Program.DocAction),
+  Eq
+    (Effect4.Program.replayDoc origin
+      (instHAppendOfAppend.hAppend history (List.cons action List.nil)))
+    (Except.map (fun x => x.session)
+      (Effect4.Program.DocInternal.replayStep Effect4.Program.Check.Oracle.uncached
+          (Effect4.Program.DocInternal.replayState origin history) action).value)
+```
+
+### source-document-atomic
+
+A refused step offers no replacement document, so the caller retains the original document; no admission, progress, or native execution claim (seams S1, R14)
+
+Module: `Effect4.Laws.Program.SourceDocument`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {action : Effect4.Program.DocAction} {why : Effect4.Program.DocRefusal},
+  Eq (Effect4.Program.Doc.step o d snap action).value (Except.error why) →
+    Eq ((Except.map Prod.fst (Effect4.Program.Doc.step o d snap action).value).toOption.getD d) d
+```
+
+### source-document-step
+
+A successful step from a coherent document retains its origin and application, appends one action, and remains coherent; no admission, progress, or native execution claim (seams S1, R14)
+
+Module: `Effect4.Laws.Program.SourceDocument`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {action : Effect4.Program.DocAction} {receipt : Effect4.Program.Receipt},
+  d.session.Coherent →
+    Eq (Effect4.Program.Doc.step o d snap action).value
+        (Except.ok { fst := next, snd := receipt }) →
+      And (Eq snap d.snap)
+        (And (Eq next.origin d.origin)
+          (And (Eq next.history (instHAppendOfAppend.hAppend d.history (List.cons action List.nil)))
+            (And next.session.Coherent (Eq next.session.app d.session.app))))
+```
+
+### source-document-commit
+
+A successful keepExact or recheck commit is positive, with initial positivity required for keepExact; no admission, progress, or native execution claim (seams S1, R14)
+
+Corrected old commit observation: keepExact needs an initially positive root.
+
+Module: `Effect4.Laws.Program.SourceDocument`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {items : List (Prod Effect4.Program.Place Effect4.Program.Change)}
+  {policy : Effect4.Program.FeedPolicy} {receipt : Effect4.Program.Receipt},
+  d.session.Coherent →
+    Or (Eq policy Effect4.Program.FeedPolicy.keepExact)
+        (Eq policy Effect4.Program.FeedPolicy.recheck) →
+      (Eq policy Effect4.Program.FeedPolicy.keepExact →
+          Exists fun T => Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T)) →
+        Eq (Effect4.Program.Doc.step o d snap (Effect4.Program.DocAction.commit items policy)).value
+            (Except.ok { fst := next, snd := receipt }) →
+          And (Eq snap d.snap)
+            (And (Eq next.origin d.origin)
+              (And (Eq next.snap.revision (instHAdd.hAdd d.snap.revision 1))
+                (And next.session.Coherent
+                  (And (Eq next.session.app d.session.app)
+                    (Exists fun T' =>
+                      And (Eq (next.session.sketch.sourceCheck next.session.app) (Except.ok T'))
+                        (Eq policy Effect4.Program.FeedPolicy.keepExact →
+                          Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T')))))))
+```
+
+### source-document-local-keep
+
+A successful single nonroot kept change retains the exact root and local observations, including an initially refused root; no admission, progress, or native execution claim (seams S1, R14)
+
+A single kept edit retains both exact observations, including an initially refused root.
+
+Module: `Effect4.Laws.Program.SourceDocument`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {place : Effect4.Program.Place} {change : Effect4.Program.Change}
+  {receipt : Effect4.Program.Receipt} {path : List Nat} {expected : Effect4.Program.NativeEff},
+  d.session.Coherent →
+    Ne path List.nil →
+      Eq (Effect4.Program.Place.resolve d.session.app d.session.sketch place)
+          (Except.ok { fst := path, snd := expected }) →
+        Eq
+            (Effect4.Program.Doc.step o d snap
+                (Effect4.Program.DocAction.commit
+                  (List.cons { fst := place, snd := change } List.nil)
+                  Effect4.Program.FeedPolicy.keepExact)).value
+            (Except.ok { fst := next, snd := receipt }) →
+          And (Eq next.session.view.type d.session.view.type)
+            (Eq (Effect4.Program.Table.typedAt next.session.table path)
+              (Effect4.Program.Table.typedAt d.session.table path))
+```
+
+### source-document-single-transport
+
+The old single-edit observation holds under its exact replacement and initial positive-root premise for keepExact; no admission, progress, or native execution claim (seams S1, R14)
+
+The old single-edit observations, with the required initial positive-root premise.
+
+Module: `Effect4.Laws.Program.SourceDocument`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
+  {path : List Nat} {expected : Effect4.Program.NativeEff} {change : Effect4.Program.Change}
+  {policy : Effect4.Program.FeedPolicy} {receipt : Effect4.Program.Receipt},
+  d.session.Coherent →
+    Or (Eq policy Effect4.Program.FeedPolicy.keepExact)
+        (Eq policy Effect4.Program.FeedPolicy.recheck) →
+      (Eq policy Effect4.Program.FeedPolicy.keepExact →
+          Exists fun T => Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T)) →
+        Eq
+            (Effect4.Program.Doc.step o d snap
+                (Effect4.Program.DocAction.commit
+                  (List.cons { fst := Effect4.Program.Place.at_ path expected, snd := change }
+                    List.nil)
+                  policy)).value
+            (Except.ok { fst := next, snd := receipt }) →
+          And (Eq snap d.snap)
+            (And (Eq next.id d.id)
+              (And (Eq next.revision (instHAdd.hAdd d.revision 1))
+                (And next.session.Coherent
+                  (And (Eq next.session.app d.session.app)
+                    (And
+                      (Exists fun e =>
+                        And
+                          (Eq (Effect4.Program.DocInternal.editOf d.session path change)
+                            (Except.ok e))
+                          (Eq (d.session.sketch.edit d.session.app e)
+                            (Option.some next.session.sketch)))
+                      (Exists fun T' =>
+                        And (Eq (next.session.sketch.sourceCheck d.session.app) (Except.ok T'))
+                          (Eq policy Effect4.Program.FeedPolicy.keepExact →
+                            And (Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T'))
+                              (Eq (Effect4.Program.Table.typedAt next.session.table path)
+                                (Effect4.Program.Table.typedAt d.session.table path)))))))))
+```
+
+### source-document-revert
+
+An accepted action and its immediate selected-entry revert restore the prior program and retain appended hole rows; no admission, progress, or native execution claim (seams S1, R14)
+
+An entry's immediate revert restores its prior program and retains appended hole rows.
+
+Module: `Effect4.Laws.Program.SourceDocument`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {before after back : Effect4.Program.Doc}
+  {snap : Effect4.Program.Snap} {action : Effect4.Program.DocAction}
+  {receipt inverse : Effect4.Program.Receipt},
+  before.session.Coherent →
+    Eq (Effect4.Program.Doc.step o before snap action).value
+        (Except.ok { fst := after, snd := receipt }) →
+      Eq
+          (Effect4.Program.Doc.step o after after.snap
+              (Effect4.Program.DocAction.revert before.history.length)).value
+          (Except.ok { fst := back, snd := inverse }) →
+        And (Eq back.session.sketch.program before.session.sketch.program)
+          (Eq back.session.sketch.holes after.session.sketch.holes)
+```
+
+### source-session-coherent
+
+Every sealed document shows its exact source table, refusals, and root type without a separate coherence premise; source-session-draft-transport retains the old application, sketch, and edit-list scope; no native execution, progress, or cost claim (seams S1, R14)
+
+Every sealed document exposes the exact source table, refusals, and root observation.
+
+Module: `Effect4.Laws.Program.SourceTable`
+
+```lean
+∀ (d : Effect4.Program.Doc),
+  And (Eq d.session.view.table (d.session.sketch.sourceTable d.session.app))
+    (And (Eq d.session.view.refusals (d.session.sketch.sourceRefusals d.session.app))
+      (Eq d.session.view.type (d.session.sketch.sourceCheck d.session.app).toOption))
 ```
 
 ### source-session-undo
 
 An edit of a sketch as written, then the edit that puts back the old sub-program, restores a coherent source session exactly; nothing of undoing a run (decisions row 373 (7))
 
-Undo: an edit that applies, then the edit that puts back the old sub-program as written, restores a coherent session exactly. The path lens's get-put (`replaceAt_spec`) restores the sketch, and coherence the edit session of its expansion. The pointer of the proposed claim `source-session-undo`.
-
 Module: `Effect4.Laws.Program.SourceTable`
 
 ```lean
-∀ {l : Effect4.Program.SourceSession},
-  l.Coherent →
-    ∀ {a : List Nat} {q old : Effect4.Program.NativeEff} {s' : Effect4.Program.Sketch},
-      Eq ((Effect4.Program.Node.eff l.sketch.program).at_ a)
-          (Option.some (Effect4.Program.Node.eff old)) →
-        Eq (l.sketch.fillAt a q) (Option.some s') →
-          Eq
-            ((l.feed (Effect4.Program.Edit.fill a q)).fst.feed
-                (Effect4.Program.Edit.fill a old)).fst
-            l
+∀ {o : Effect4.Program.Check.Oracle} {s next : Effect4.Program.SourceSession} {a : List Nat}
+  {q old : Effect4.Program.NativeEff} {candidate : Effect4.Program.Sketch}
+  {step : Effect4.Program.Edit.Step},
+  s.Coherent →
+    Eq ((Effect4.Program.Node.eff s.sketch.program).at_ a)
+        (Option.some (Effect4.Program.Node.eff old)) →
+      Eq (s.sketch.fillAt a q) (Option.some candidate) →
+        Eq
+            (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft s
+                (Effect4.Program.Edit.fill a q)).value
+            (Except.ok { fst := next, snd := step }) →
+          Exists fun back =>
+            Eq
+              (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft next
+                  (Effect4.Program.Edit.fill a old)).value
+              (Except.ok { fst := s, snd := back })
 ```
 
 ## Context Requirements
@@ -6058,9 +6729,9 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | `R11` | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `replace_sum` (proved), `replace_sum_le_omitted` (proved), `finalizerOr_debit` (proved), `getCont_le` (proved), `step_debit` (proved), `getCont_spec` (proved), `StackLedger.funded_reachable` (proved), `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `census_pushes_once` (proved), `FinalizerRun.funded_reachable` (proved), `once_placed_direct_pushes_once` (proved), `once_placed_outside_census` (goal), `once_placed_pushes_once` (modulo), `starts_le_pushes` (proved), `evaluateNative_maskChain` (proved), `evaluateNative_under` (proved), `evaluatePrim_producer` (proved), `evaluatePrim_under` (proved), `iteration_currentOpCount` (proved), `iteration_under` (proved), `Local.history_funded` (proved), `LocalOn.history_funded` (proved), `AdministrativeKept.non_evaluator` (proved), `AdministrativeQueue.non_evaluator` (proved), `armE` (proved), `failure_stack_eq` (proved), `getCont_cause` (proved), `popFrom_cause` (proved), `resumeCause` (proved), `CommandClosure.command` (proved), `joined` (proved), `read` (proved), `after_add_code_credits` (proved), `async_route_credits` (proved), `close_program_credits` (proved), `compile_credits` (proved), `emit_credits` (proved), `fin_program_credits` (proved), `load_credits` (proved), `load_funded` (proved), `prog_of_credits` (proved), `registration_template` (proved), `response_credits_bounded` (proved), `source_op_credits` (proved), `stack_before_action` (proved), `stack_before_iterator` (proved), `stack_before_push` (proved), `stack_before_suspend` (proved), `stack_credits_bounded` (proved), `update_credits` (proved), `add_memo_credits` (proved), `bind_service_credits` (proved), `build_scope_credits` (proved), `combine_credits` (proved), `constant_push_credits` (proved), `constant_stack_credits` (proved), `constant_start` (proved), `contA_credits` (proved), `contE_credits` (proved), `context_credits` (proved), `exit_credits` (proved), `failure_fiber_le` (proved), `failure_stack_le` (proved), `forced_yield_iteration` (proved), `forced_yield_loop_funded` (proved), `layer_compile_credits` (proved), `layer_construction_credits` (proved), `layer_inner_credits` (proved), `layer_resolve_credits` (proved), `layer_with_credits` (proved), `layer_zero_credits` (proved), `loop_top_credits` (proved), `merge_context_credits` (proved), `provide_body_credits` (proved), `provide_layer_credits` (proved), `provide_then_credits` (proved), `region_credits` (proved), `resolve_credits` (proved), `service_lookup_credits` (proved), `store_contA_credits` (proved), `store_contE_credits` (proved), `store_exit_credits` (proved), `suspend_credits` (proved), `update_body_credits` (proved), `yield_wrapper_credits` (proved), `history` (proved), `Execution.load` (proved), `outer_custody` (proved), `ready_emit` (proved), `ready_update` (proved), `armA_counts` (proved), `armE_counts` (proved), `finalizerEvents_no_push` (proved), `frame_failure_le` (proved), `getCont_no_push` (proved), `interp_loopEnter` (proved), `interp_suspend` (proved), `joinPushed_no_push` (proved), `noPush_append` (proved), `noPush_counts` (proved), `passEvents_no_push` (proved), `passPushed_no_push` (proved), `popFrom_no_push` (proved), `push_onSuccess` (proved), `registrations_append` (proved), `resumeCause_counts` (proved), `resumeValue_counts` (proved), `stack_full` (proved), `starts_append` (proved), `FrameDebit.step` (proved), `sync_stack_le` (proved), `withFiber_suspend_le` (proved), `FrameSequencing.step` (proved), `decision` (proved), `fold_lift` (proved), `deliver` (proved), `loop` (proved), `sync_op` (proved), `NativeIterationDebit.iteration` (proved), `NativeMachineShape.iteration` (proved), `NativeMachineShape.native` (proved), `primitive` (proved), `NativeScopeDebit.native` (proved), `action_noAdd` (proved), `action_not_finished` (proved), `action_returned` (proved), `countdown_noAdd` (proved), `exit_pop_noAdd` (proved), `finalizer_returned_template` (proved), `frame_step_template` (proved), `iteration_returned_template` (proved), `loop_top` (proved), `loop_top_source` (proved), `native_returned_template` (proved), `primitive_returned_template` (proved), `returned_clean` (proved), `scoped_exit_returned` (proved), `step_frame_template` (proved), `armA` (proved), `getCont_value` (proved), `resumeValue` (proved), `value_cap` (proved), `answerOf_clean` (proved), `armA_noAdd` (proved), `armE_noAdd` (proved), `constant_push_kept` (proved), `ensure_noAdd` (proved), `forced_unwrap` (proved), `getCont_cause_kept` (proved), `getCont_noAdd` (proved), `getCont_value_finalizer` (proved), `noAdd_append` (proved), `noAdd_cons` (proved), `noAdd_tail` (proved), `passPushed_noAdd` (proved), `popFrom_cause_kept` (proved), `popFrom_noAdd` (proved), `popFrom_value_finalizer` (proved), `resumeCause_clean` (proved), `resumeCause_kept` (proved), `resumeValue_clean` (proved), `resumeValue_kept` (proved), `resumeValue_kept_clear` (proved), `cancel` (proved), `closeSeq_credits` (proved), `interp_contA` (proved), `interp_contE` (proved), `interp_iter` (proved), `interp_loopResume` (proved), `iterator_future` (proved), `loopFinish_credits` (proved), `loopNext_credits` (proved), `loopResume_credits` (proved), `runStmts_credits` (proved), `store_cancel` (proved), `yieldOf_credits` (proved), `terminal` (proved), `RuntimeShape.load` (proved), `close` (proved), `link` (proved), `syncOp` (proved), `acquired_registration` (proved), `async_noAdd` (proved), `async_producer` (proved), `forced_push` (proved), `forced_wrapper` (proved), `interrupt` (proved), `Sequencing.load` (proved), `noAdd_asyncFinalizer` (proved), `noAdd_empty` (proved), `noAdd_full` (proved), `noAdd_mask` (proved), `opaque_noAdd` (proved), `raw_yield_excluded` (proved), `registration_step` (proved), `resume_command` (proved), `resume_frame_debit` (proved), `saved_resume` (proved), `stable_cause` (proved), `stable_full` (proved), `stable_refGet` (proved), `stable_value` (proved), `value_response` (proved), `yield_producer` (proved), `yield_response_full` (proved), `yield_stable` (proved), `add_open` (proved), `after_add_exit` (proved), `after_add_exit_credit` (proved), `after_add_unit` (proved), `after_add_unit_credit` (proved), `close_chain_transfer` (proved), `close_scope` (proved), `close_seq_command` (proved), `close_seq_start` (proved), `foreign_suspension` (proved), `release_loop_debit` (proved), `release_start` (proved), `release_start_count` (proved), `release_start_debit` (proved), `release_start_registered` (proved), `scope_add_closed` (proved), `scope_add_open` (proved), `StackRegion.command` (proved), `compiled_region_bracket_of_prefix` (proved), `drive` (proved), `settle_callback` (proved), `clause_closeScope` (proved), `clause_scoped` (proved), `foreignFinalizer_ambient` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `guarded_driveStep_liveTransports` (proved), `stepped_live` (proved) | `once_placed_outside_census` |
 | `R12` | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved) | `driveState_loop` (proved), `iteration_below_budget` (proved), `loop_of_iteration` (proved), `bounded` (proved), `complete_unique` (proved), `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `ofProgram_approx` (goal), `frontier_of_diverges` (proved), `frontier_waits` (proved), `rows_divergence_adequate` (goal), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved), `runWith_exit_of_diverges` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | `ofProgram_approx`, `rows_divergence_adequate` |
 | `R13` | open | `Run.journal_replays` (proved) | `Live.journal_replays` (proved), `restore_save` (proved), `reached` (proved), `reached_history` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
-| `R14` | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `Program.refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved), `callAt_rowTy` (proved), `Program.annotate_eq_table` (proved), `Sketch.annotate_eq_table` (proved), `table_fill` (proved), `EditSession.reached_view` (proved), `check_filled_module` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `checkAction_eq` (proved), `checkEffs_eq` (proved), `checkLayer_eq` (proved), `checkLayers_eq` (proved), `checkStmt_eq` (proved), `checkStmts_eq` (proved), `check_alg_agreeOn` (proved), `check_eq` (proved), `Annotate.check_restrict` (proved), `bodyAt_typed` (proved), `BodiesHasTy.replace` (proved), `matchArgsB_monotone` (proved), `ask_value` (modulo), `combine_deps` (goal), `explain_replays` (goal), `run_module` (proved), `run_part` (proved), `checkAction_rebase` (proved), `checkEffs_rebase` (proved), `checkLayer_rebase` (proved), `checkLayers_rebase` (proved), `checkStmt_rebase` (proved), `checkStmt_step_binds` (proved), `checkStmts_rebase` (proved), `check_rebase` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `EditSession.Coherent.ext` (proved), `EditSession.feed_coherent` (proved), `feed_edit` (proved), `EditSession.feed_keeps` (proved), `feed_omit_sketch` (proved), `feed_repaint` (proved), `feed_shown` (proved), `feed_spliced` (proved), `EditSession.feed_undo` (proved), `EditSession.open_coherent` (proved), `EditSession.reached_coherent` (proved), `EditSession.reached_view` (proved), `EditSession.run_coherent` (proved), `EditSession.run_keeps` (proved), `EditSession.view_refusals` (proved), `EditSession.view_type` (proved), `addresses_expandRefs` (proved), `addresses_rounds_filter` (proved), `eq_defs_of_isBlock` (proved), `mem_addresses_expandRefs` (proved), `ne_defs_of_isBlock` (proved), `partAt_plain` (proved), `partAt_resig` (proved), `scopeOf_append` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `declAnnotations_all` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `isBlock` (proved), `all_of_dropWhile_nil` (proved), `all_of_takeWhile_length` (proved), `dropWhile_eq_nil_of_all` (proved), `filter_eq_nil_of_all_false` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `addresses_eq_cons` (proved), `addresses_expandRound_filter` (proved), `addresses_root` (proved), `at_append` (proved), `at_child` (proved), `at_layers_nil` (proved), `at_mapRefs` (proved), `at_replaceAt_above` (proved), `at_replaceAt_below` (proved), `at_snoc` (proved), `at_stmts_nil` (proved), `belowRef_cons` (proved), `belowRef_of_expandRound` (proved), `belowRef_ref` (proved), `childEnv_replace_kept` (proved), `child_add_three` (proved), `child_expandRound` (proved), `child_mapRefs` (proved), `child_ref` (proved), `envAt_append` (proved), `envAt_child` (proved), `eq_of_refTarget?` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `layerAt_mapRefs` (proved), `mem_childAddresses` (proved), `mem_foldList_iff` (proved), `ne_ref_of_refTarget?` (proved), `not_belowRef_nil` (proved), `not_belowRef_of_mem` (proved), `refTarget?_expandRound` (proved), `ref_expandRound` (proved), `replaceAt_append` (proved), `replaceAt_cons_isBlock` (proved), `replaceAt_defs_body` (proved), `replaceAt_defs_main` (proved), `replaceAt_eff` (proved), `replaceAt_effs_head` (proved), `replaceAt_effs_tail` (proved), `setChild_isBlock` (proved), `sizeOf_child_lt` (proved), `stmtsHead_replace_kept` (proved), `child_step` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `bodyAt_resig` (proved), `bodyAt_sig` (proved), `lt_append_left` (proved), `prefix_cases` (proved), `properPrefix_append_left` (proved), `properPrefix_eq_true_iff` (proved), `rebase_append` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `extends_withDefs` (proved), `Sketch.annotate_eq_table` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_fill_kept` (proved), `check_filled` (proved), `check_filled_module` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `decode_encode` (proved), `decode_exact` (proved), `expand_table_filter` (proved), `fillAt_of_replaceAt` (proved), `fillAt_some` (proved), `focusAt_at` (proved), `focusAt_more_holes` (proved), `Sketch.focusAt_nil` (proved), `hole_hasTy` (proved), `hole_hasTy_focus` (proved), `mem_sourceTable` (proved), `Sketch.refusals_head` (proved), `Sketch.refusals_nil_iff` (proved), `refusals_of_check` (proved), `sigAt_extends` (proved), `sigAt_nil` (proved), `sigAt_part` (proved), `sourceAnnotate_eq_sourceTable` (proved), `sourceCheck_ok` (proved), `sourceCheck_toOption` (proved), `sourceEntry_path` (proved), `sourceRefusals_head` (proved), `sourceRefusals_nil_iff` (proved), `sourceRefusals_of_ok` (proved), `sourceTable_find` (proved), `sourceTable_focus` (proved), `sourceTable_head` (proved), `sourceTable_result_refusal_none` (proved), `sourceTable_typedAt` (proved), `tableEntry_path` (proved), `table_fill` (proved), `Sketch.table_head` (proved), `table_more_holes` (proved), `table_omit` (proved), `table_result_refusal_none` (proved), `SourceSession.Coherent.ext` (proved), `SourceSession.feed_coherent` (proved), `SourceSession.feed_keeps` (proved), `SourceSession.feed_undo` (proved), `SourceSession.focusAt_typed` (proved), `SourceSession.open_coherent` (proved), `open_shown_of_refSites_nil` (proved), `SourceSession.reached_coherent` (proved), `SourceSession.reached_view` (proved), `SourceSession.run_coherent` (proved), `SourceSession.run_keeps` (proved), `table_eq` (proved), `SourceSession.view_refusals` (proved), `SourceSession.view_type` (proved), `bodies_eq` (proved), `bodies_mem_under` (proved), `bodies_restrict` (proved), `bodies_splice` (proved), `bodies_under` (proved), `bodyEntry_head` (proved), `bodyEntry_nil` (proved), `bodyEntry_nodecl` (proved), `bodyEntry_tail` (proved), `find?_map_at` (proved), `mem_splice` (proved), `moduleLayers_restrict` (proved), `splice_all_under` (proved), `splice_append_out_left` (proved), `splice_append_out_right` (proved), `splice_three` (proved), `typedAt_table` (proved), `typedAt_table_nil` (proved), `typedAt_table_of_focusAt` (proved), `under_append` (proved), `under_prefix_false` (proved), `under_self` (proved), `under_sibling_false` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extendAll_adjoint` (proved), `extendAll_bot` (proved), `extendAll_isSome_iff` (proved), `extendAll_laws` (proved), `extendAll_least` (proved), `extendAll_lift` (proved), `extendAll_mono` (proved), `extendAll_upper` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extendAll_agrees` (proved), `extendAll_closed` (proved), `extendAll_closed_pair` (proved), `extendAll_eq_some_iff` (proved), `extendAll_never` (proved), `extendAll_of_extend` (proved), `extendAll_refused` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `actionHasTy_sigProgram` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `annotateModule_fill` (proved), `annotateModule_fill_body` (proved), `annotateModule_fill_layers` (proved), `annotateModule_fill_main` (proved), `annotateModule_fill_plain` (proved), `annotateModule_plain` (proved), `annotateModule_restrict` (proved), `Program.annotate_eq_table` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `at_of_mem_refSites` (proved), `belowSite_refSites_iff` (proved), `bodiesHasTy_sigProgram` (proved), `callAt_rowTy` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `checkBodies_restrict` (proved), `checkModule_ext` (proved), `checkModule_programFocusAt` (proved), `checkModule_replace_programFocusAt` (proved), `checkModule_restrict` (proved), `checkRow_rowBindings` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `childAddresses_map_tableEntryAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effTy_of_check` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `effsHasTy_sigProgram` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `Program.focusAt_nil` (proved), `Program.focusAt_typed` (proved), `foldMapAt_action_base` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_action_hom` (proved), `foldMapAt_action_paths_cons` (proved), `foldMapAt_action_paths_shift` (proved), `foldMapAt_eff_base` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_eff_hom` (proved), `foldMapAt_eff_paths_cons` (proved), `foldMapAt_eff_paths_shift` (proved), `foldMapAt_effs_base` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_effs_hom` (proved), `foldMapAt_effs_paths_cons` (proved), `foldMapAt_effs_paths_shift` (proved), `foldMapAt_layer_base` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layer_hom` (proved), `foldMapAt_layer_paths_cons` (proved), `foldMapAt_layer_paths_shift` (proved), `foldMapAt_layers_base` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_layers_hom` (proved), `foldMapAt_layers_paths_cons` (proved), `foldMapAt_layers_paths_shift` (proved), `foldMapAt_stmt_base` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmt_hom` (proved), `foldMapAt_stmt_paths_cons` (proved), `foldMapAt_stmt_paths_shift` (proved), `foldMapAt_stmts_base` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_stmts_hom` (proved), `foldMapAt_stmts_paths_cons` (proved), `foldMapAt_stmts_paths_shift` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `hasTy_sigProgram` (proved), `holes_conservative` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layerHasTy_sigProgram` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `layersHasTy_sigProgram` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `moduleHasTy_partAt_typed` (proved), `moduleHasTy_programFocusAt` (proved), `moduleHasTy_replace_programFocusAt` (proved), `moduleHasTy_sigProgram` (proved), `nodeAnswer_replace_kept` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `references_move` (proved), `Program.refusals_head` (proved), `Program.refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sigOkKey_of_serviceTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `stmtsHasTy_sigProgram` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `tableAt_eq_cons` (proved), `tableAt_mem_path` (proved), `tableAt_none` (proved), `tableAt_path` (proved), `tableAt_perform` (proved), `tableAt_rebase` (proved), `tableAt_splice` (proved), `tableEntryAt_nil` (proved), `table_eq_tableAt` (proved), `Program.table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `table_splice` (proved), `termTy_closed` (proved), `termTy_of_term?` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved), `ofJsonAnyOrder_exact` (proved), `ofJson_exact` (proved), `read_exact` (proved), `canonicalHex?_exact` (proved), `natOfBinary64_exact` (proved), `natOfBinary64_finite` (proved), `readFields_exact` (proved), `readIn_exact` (proved), `readList_exact` (proved), `tagOfName_exact` (proved), `except_error_bind` (proved), `except_ok_bind` (proved), `except_pure` (proved) | `combine_deps`, `explain_replays` |
+| `R14` | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `Program.refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved), `callAt_rowTy` (proved), `Program.annotate_eq_table` (proved), `Sketch.annotate_eq_table` (proved), `table_fill` (proved), `EditSession.reached_view` (proved), `check_filled_module` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `checkAction_eq` (proved), `checkEffs_eq` (proved), `checkLayer_eq` (proved), `checkLayers_eq` (proved), `checkStmt_eq` (proved), `checkStmts_eq` (proved), `check_alg_agreeOn` (proved), `check_eq` (proved), `Annotate.check_restrict` (proved), `bodyAt_typed` (proved), `BodiesHasTy.replace` (proved), `matchArgsB_monotone` (proved), `ask_value` (modulo), `combine_deps` (goal), `explain_replays` (goal), `run_module` (proved), `run_part` (proved), `checkAction_rebase` (proved), `checkEffs_rebase` (proved), `checkLayer_rebase` (proved), `checkLayers_rebase` (proved), `checkStmt_rebase` (proved), `checkStmt_step_binds` (proved), `checkStmts_rebase` (proved), `check_rebase` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `coherent` (goal), `commit_one_keepExact` (goal), `commit_single_sound` (goal), `commit_sound` (goal), `revert_program` (goal), `step_coherent` (goal), `step_refuses` (proved), `step_replay` (proved), `EditSession.Coherent.ext` (proved), `EditSession.feed_coherent` (proved), `feed_edit` (proved), `EditSession.feed_keeps` (proved), `feed_omit_sketch` (proved), `feed_repaint` (proved), `feed_shown` (proved), `feed_spliced` (proved), `EditSession.feed_undo` (proved), `EditSession.open_coherent` (proved), `reached_coherent` (proved), `EditSession.reached_view` (proved), `run_coherent` (proved), `run_keeps` (proved), `EditSession.view_refusals` (proved), `EditSession.view_type` (proved), `addresses_expandRefs` (proved), `addresses_rounds_filter` (proved), `eq_defs_of_isBlock` (proved), `mem_addresses_expandRefs` (proved), `ne_defs_of_isBlock` (proved), `partAt_plain` (proved), `partAt_resig` (proved), `scopeOf_append` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `declAnnotations_all` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `isBlock` (proved), `all_of_dropWhile_nil` (proved), `all_of_takeWhile_length` (proved), `dropWhile_eq_nil_of_all` (proved), `filter_eq_nil_of_all_false` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `addresses_eq_cons` (proved), `addresses_expandRound_filter` (proved), `addresses_root` (proved), `at_append` (proved), `at_child` (proved), `at_layers_nil` (proved), `at_mapRefs` (proved), `at_replaceAt_above` (proved), `at_replaceAt_below` (proved), `at_snoc` (proved), `at_stmts_nil` (proved), `belowRef_cons` (proved), `belowRef_of_expandRound` (proved), `belowRef_ref` (proved), `childEnv_replace_kept` (proved), `child_add_three` (proved), `child_expandRound` (proved), `child_mapRefs` (proved), `child_ref` (proved), `envAt_append` (proved), `envAt_child` (proved), `eq_of_refTarget?` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `layerAt_mapRefs` (proved), `mem_childAddresses` (proved), `mem_foldList_iff` (proved), `ne_ref_of_refTarget?` (proved), `not_belowRef_nil` (proved), `not_belowRef_of_mem` (proved), `refTarget?_expandRound` (proved), `ref_expandRound` (proved), `replaceAt_append` (proved), `replaceAt_cons_isBlock` (proved), `replaceAt_defs_body` (proved), `replaceAt_defs_main` (proved), `replaceAt_eff` (proved), `replaceAt_effs_head` (proved), `replaceAt_effs_tail` (proved), `setChild_isBlock` (proved), `sizeOf_child_lt` (proved), `stmtsHead_replace_kept` (proved), `child_step` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `bodyAt_resig` (proved), `bodyAt_sig` (proved), `lt_append_left` (proved), `prefix_cases` (proved), `properPrefix_append_left` (proved), `properPrefix_eq_true_iff` (proved), `rebase_append` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `extends_withDefs` (proved), `Sketch.annotate_eq_table` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_fill_kept` (proved), `check_filled` (proved), `check_filled_module` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `decode_encode` (proved), `decode_exact` (proved), `expand_table_filter` (proved), `fillAt_of_replaceAt` (proved), `fillAt_some` (proved), `focusAt_at` (proved), `focusAt_more_holes` (proved), `Sketch.focusAt_nil` (proved), `hole_hasTy` (proved), `hole_hasTy_focus` (proved), `mem_sourceTable` (proved), `Sketch.refusals_head` (proved), `Sketch.refusals_nil_iff` (proved), `refusals_of_check` (proved), `sigAt_extends` (proved), `sigAt_nil` (proved), `sigAt_part` (proved), `sourceAnnotate_eq_sourceTable` (proved), `sourceCheck_ok` (proved), `sourceCheck_toOption` (proved), `sourceEntry_path` (proved), `sourceRefusals_head` (proved), `sourceRefusals_nil_iff` (proved), `sourceRefusals_of_ok` (proved), `sourceTable_find` (proved), `sourceTable_focus` (proved), `sourceTable_head` (proved), `sourceTable_result_refusal_none` (proved), `sourceTable_typedAt` (proved), `tableEntry_path` (proved), `table_fill` (proved), `Sketch.table_head` (proved), `table_more_holes` (proved), `table_omit` (proved), `table_result_refusal_none` (proved), `SourceSession.Coherent.ext` (proved), `SourceSession.feed_coherent` (goal), `feed_draft` (goal), `feed_keepExact` (goal), `SourceSession.feed_keeps` (goal), `feed_root` (goal), `SourceSession.feed_undo` (goal), `SourceSession.focusAt_typed` (proved), `SourceSession.open_coherent` (modulo), `SourceSession.reached_view` (modulo), `replay_drafts_view` (goal), `table_eq` (proved), `view_eq` (proved), `SourceSession.view_refusals` (proved), `SourceSession.view_type` (proved), `bodies_eq` (proved), `bodies_mem_under` (proved), `bodies_restrict` (proved), `bodies_splice` (proved), `bodies_under` (proved), `bodyEntry_head` (proved), `bodyEntry_nil` (proved), `bodyEntry_nodecl` (proved), `bodyEntry_tail` (proved), `find?_map_at` (proved), `mem_splice` (proved), `moduleLayers_restrict` (proved), `splice_all_under` (proved), `splice_append_out_left` (proved), `splice_append_out_right` (proved), `splice_three` (proved), `typedAt_table` (proved), `typedAt_table_nil` (proved), `typedAt_table_of_focusAt` (proved), `under_append` (proved), `under_prefix_false` (proved), `under_self` (proved), `under_sibling_false` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extendAll_adjoint` (proved), `extendAll_bot` (proved), `extendAll_isSome_iff` (proved), `extendAll_laws` (proved), `extendAll_least` (proved), `extendAll_lift` (proved), `extendAll_mono` (proved), `extendAll_upper` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extendAll_agrees` (proved), `extendAll_closed` (proved), `extendAll_closed_pair` (proved), `extendAll_eq_some_iff` (proved), `extendAll_never` (proved), `extendAll_of_extend` (proved), `extendAll_refused` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `actionHasTy_sigProgram` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `annotateModule_fill` (proved), `annotateModule_fill_body` (proved), `annotateModule_fill_layers` (proved), `annotateModule_fill_main` (proved), `annotateModule_fill_plain` (proved), `annotateModule_plain` (proved), `annotateModule_restrict` (proved), `Program.annotate_eq_table` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `at_of_mem_refSites` (proved), `belowSite_refSites_iff` (proved), `bodiesHasTy_sigProgram` (proved), `callAt_rowTy` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `checkBodies_restrict` (proved), `checkModule_ext` (proved), `checkModule_programFocusAt` (proved), `checkModule_replace_programFocusAt` (proved), `checkModule_restrict` (proved), `checkRow_rowBindings` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `childAddresses_map_tableEntryAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effTy_of_check` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `effsHasTy_sigProgram` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `Program.focusAt_nil` (proved), `Program.focusAt_typed` (proved), `foldMapAt_action_base` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_action_hom` (proved), `foldMapAt_action_paths_cons` (proved), `foldMapAt_action_paths_shift` (proved), `foldMapAt_eff_base` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_eff_hom` (proved), `foldMapAt_eff_paths_cons` (proved), `foldMapAt_eff_paths_shift` (proved), `foldMapAt_effs_base` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_effs_hom` (proved), `foldMapAt_effs_paths_cons` (proved), `foldMapAt_effs_paths_shift` (proved), `foldMapAt_layer_base` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layer_hom` (proved), `foldMapAt_layer_paths_cons` (proved), `foldMapAt_layer_paths_shift` (proved), `foldMapAt_layers_base` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_layers_hom` (proved), `foldMapAt_layers_paths_cons` (proved), `foldMapAt_layers_paths_shift` (proved), `foldMapAt_stmt_base` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmt_hom` (proved), `foldMapAt_stmt_paths_cons` (proved), `foldMapAt_stmt_paths_shift` (proved), `foldMapAt_stmts_base` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_stmts_hom` (proved), `foldMapAt_stmts_paths_cons` (proved), `foldMapAt_stmts_paths_shift` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `hasTy_sigProgram` (proved), `holes_conservative` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layerHasTy_sigProgram` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `layersHasTy_sigProgram` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `moduleHasTy_partAt_typed` (proved), `moduleHasTy_programFocusAt` (proved), `moduleHasTy_replace_programFocusAt` (proved), `moduleHasTy_sigProgram` (proved), `nodeAnswer_replace_kept` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `references_move` (proved), `Program.refusals_head` (proved), `Program.refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sigOkKey_of_serviceTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `stmtsHasTy_sigProgram` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `tableAt_eq_cons` (proved), `tableAt_mem_path` (proved), `tableAt_none` (proved), `tableAt_path` (proved), `tableAt_perform` (proved), `tableAt_rebase` (proved), `tableAt_splice` (proved), `tableEntryAt_nil` (proved), `table_eq_tableAt` (proved), `Program.table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `table_splice` (proved), `termTy_closed` (proved), `termTy_of_term?` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved), `ofJsonAnyOrder_exact` (proved), `ofJson_exact` (proved), `read_exact` (proved), `canonicalHex?_exact` (proved), `natOfBinary64_exact` (proved), `natOfBinary64_finite` (proved), `readFields_exact` (proved), `readIn_exact` (proved), `readList_exact` (proved), `tagOfName_exact` (proved), `except_error_bind` (proved), `except_ok_bind` (proved), `except_pure` (proved) | `combine_deps`, `explain_replays`, `coherent`, `commit_one_keepExact`, `commit_single_sound`, `commit_sound`, `revert_program`, `step_coherent`, `SourceSession.feed_coherent`, `feed_draft`, `feed_keepExact`, `SourceSession.feed_keeps`, `feed_root`, `SourceSession.feed_undo`, `replay_drafts_view` |
 
-Next goals (7): `ofJson_image`, `ofProgram_eq_denoteRowsB`, `once_placed_outside_census`, `ofProgram_approx`, `rows_divergence_adequate`, `combine_deps`, `explain_replays`
+Next goals (20): `ofJson_image`, `ofProgram_eq_denoteRowsB`, `once_placed_outside_census`, `ofProgram_approx`, `rows_divergence_adequate`, `combine_deps`, `explain_replays`, `coherent`, `commit_one_keepExact`, `commit_single_sound`, `commit_sound`, `revert_program`, `step_coherent`, `feed_coherent`, `feed_draft`, `feed_keepExact`, `feed_keeps`, `feed_root`, `feed_undo`, `replay_drafts_view`
 
 Open parts, with no planned goal (87), by state:
 
@@ -8363,10 +9034,27 @@ The open part of R14: its planned goals and the theorems proved modulo them. An 
 
 ```mermaid
 flowchart TB
-  n0["ask_value<br/>modulo"]
-  n1["combine_deps<br/>goal"]
-  n2["explain_replays<br/>goal"]
-  n0 --> n1
+  n0["explain_replays<br/>goal"]
+  n1["commit_one_keepExact<br/>goal"]
+  n2["commit_single_sound<br/>goal"]
+  n3["commit_sound<br/>goal"]
+  n4["revert_program<br/>goal"]
+  n5["step_coherent<br/>goal"]
+  n6["SourceSession.feed_coherent<br/>goal"]
+  n7["feed_draft<br/>goal"]
+  n8["feed_keepExact<br/>goal"]
+  n9["SourceSession.feed_keeps<br/>goal"]
+  n10["feed_root<br/>goal"]
+  n11["SourceSession.feed_undo<br/>goal"]
+  n12["SourceSession.open_coherent<br/>modulo"]
+  n13["ask_value<br/>modulo"]
+  n14["combine_deps<br/>goal"]
+  n15["SourceSession.reached_view<br/>modulo"]
+  n16["coherent<br/>goal"]
+  n17["replay_drafts_view<br/>goal"]
+  n12 --> n13
+  n13 --> n14
+  n15 --> n16
 ```
 
 R14 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
@@ -8375,7 +9063,7 @@ R14 by concept: each concept its nodes are placed at, by tag or by module. An ar
 flowchart TB
   n0["Subtyping Algebra<br/>proved · 334 nodes"]
   n1["Exact Codecs<br/>proved · 12 nodes"]
-  n2["Initial Algebras & Folds<br/>open · 308 nodes, 2 open"]
+  n2["Initial Algebras & Folds<br/>open · 317 nodes, 17 open"]
   n3["Host Session Protocol<br/>open · 5 nodes, 1 open"]
   n4["No concept<br/>proved · 10 nodes"]
   n2 --> n4
@@ -8401,7 +9089,7 @@ flowchart TB
 | `Program.annotate_eq_table` | proved | — | `check_eq`, `table_eq_tableAt` |
 | `Sketch.annotate_eq_table` | proved | — | `checkLayers_eq`, `check_eq`, `bodies_eq`, `addresses_eq_cons`, `eq_defs_of_isBlock`, `partAt_plain`, `ne_defs_of_isBlock`, `checkModule_eq_check`, `Program.annotate_eq_table`, `annotateModule_plain` |
 | `table_fill` | proved | — | `annotateModule_fill`, `Sketch.annotate_eq_table`, `sigAt_part`, `check_fill_kept`, `fillAt_some` |
-| `EditSession.reached_view` | proved | — | `EditSession.view_type`, `EditSession.reached_coherent`, `EditSession.view_refusals`, `EditSession.run_keeps` |
+| `EditSession.reached_view` | proved | — | `EditSession.view_type`, `reached_coherent`, `EditSession.view_refusals`, `run_keeps` |
 | `check_filled_module` | proved | — | `withHoles_extends`, `checkModule_restrict` |
 | `max_assoc` | proved | — | `max_le` |
 | `max_comm` | proved | — | `max_le` |
@@ -8438,6 +9126,14 @@ flowchart TB
 | `nil` | proved | — | — |
 | `push` | proved | — | `append` |
 | `closed_arms` | proved | — | `closed_tagArms`, `closed_diffTag`, `closed_payloadTy`, `closed_optionTy` |
+| `coherent` | goal | `coherent` | — |
+| `commit_one_keepExact` | goal | `commit_one_keepExact` | `eq_uncached` |
+| `commit_single_sound` | goal | `commit_single_sound` | `eq_uncached` |
+| `commit_sound` | goal | `commit_sound` | `eq_uncached` |
+| `revert_program` | goal | `revert_program` | `eq_uncached` |
+| `step_coherent` | goal | `step_coherent` | `eq_uncached` |
+| `step_refuses` | proved | — | `eq_uncached` |
+| `step_replay` | proved | — | — |
 | `EditSession.Coherent.ext` | proved | — | — |
 | `EditSession.feed_coherent` | proved | — | `table_omit`, `table_fill`, `effTy_of_check`, `check_sound`, `check_eq`, `typedAt_table`, `typedAt_table_nil`, `Sketch.annotate_eq_table` |
 | `feed_edit` | proved | — | `feed_omit_sketch`, `EditSession.feed_keeps` |
@@ -8448,9 +9144,9 @@ flowchart TB
 | `feed_spliced` | proved | — | — |
 | `EditSession.feed_undo` | proved | — | `EditSession.feed_coherent`, `EditSession.Coherent.ext`, `replaceAt_spec`, `fillAt_of_replaceAt`, `EditSession.feed_keeps`, `fillAt_some` |
 | `EditSession.open_coherent` | proved | — | `Sketch.annotate_eq_table` |
-| `EditSession.reached_coherent` | proved | — | `EditSession.open_coherent`, `EditSession.run_coherent` |
-| `EditSession.run_coherent` | proved | — | `EditSession.feed_coherent` |
-| `EditSession.run_keeps` | proved | — | `EditSession.feed_keeps` |
+| `reached_coherent` | proved | — | `EditSession.open_coherent`, `run_coherent` |
+| `run_coherent` | proved | — | `EditSession.feed_coherent` |
+| `run_keeps` | proved | — | `EditSession.feed_keeps` |
 | `EditSession.view_refusals` | proved | — | — |
 | `EditSession.view_type` | proved | — | `typedAt_table_nil` |
 | `addresses_expandRefs` | proved | — | `not_belowRef_of_mem`, `addresses_rounds_filter`, `belowSite_refSites_iff` |
@@ -8629,18 +9325,19 @@ flowchart TB
 | `table_more_holes` | proved | — | `annotateModule_restrict`, `check_more_holes`, `withHoles_extends`, `withHoles_withHoles`, `checkModule_sound`, `moduleHasTy_sigProgram`, `Sketch.annotate_eq_table` |
 | `table_omit` | proved | — | `tableAt_perform`, `check_complete`, `table_more_holes`, `table_fill`, `hole_hasTy_focus`, `focusAt_more_holes`, `check_more_holes` |
 | `table_result_refusal_none` | proved | — | `check_sound`, `check_complete`, `focusAt_eq_some`, `hasTy_focusAt`, `checkModule_sound`, `moduleHasTy_partAt_typed` |
-| `SourceSession.Coherent.ext` | proved | — | `EditSession.Coherent.ext` |
-| `SourceSession.feed_coherent` | proved | — | `EditSession.feed_coherent`, `feed_edit`, `SourceSession.open_coherent` |
-| `SourceSession.feed_keeps` | proved | — | `EditSession.feed_keeps` |
-| `SourceSession.feed_undo` | proved | — | `SourceSession.feed_coherent`, `SourceSession.Coherent.ext`, `replaceAt_spec`, `fillAt_of_replaceAt`, `SourceSession.feed_keeps`, `fillAt_some` |
+| `SourceSession.Coherent.ext` | proved | — | — |
+| `SourceSession.feed_coherent` | goal | `SourceSession.feed_coherent` | — |
+| `feed_draft` | goal | `feed_draft` | — |
+| `feed_keepExact` | goal | `feed_keepExact` | — |
+| `SourceSession.feed_keeps` | goal | `SourceSession.feed_keeps` | — |
+| `feed_root` | goal | `feed_root` | — |
+| `SourceSession.feed_undo` | goal | `SourceSession.feed_undo` | — |
 | `SourceSession.focusAt_typed` | proved | — | `table_eq`, `sourceTable_focus` |
-| `SourceSession.open_coherent` | proved | — | `EditSession.open_coherent` |
-| `open_shown_of_refSites_nil` | proved | — | — |
-| `SourceSession.reached_coherent` | proved | — | `SourceSession.open_coherent`, `SourceSession.run_coherent` |
-| `SourceSession.reached_view` | proved | — | `SourceSession.view_type`, `SourceSession.view_refusals`, `table_eq`, `SourceSession.reached_coherent`, `SourceSession.run_keeps` |
-| `SourceSession.run_coherent` | proved | — | `SourceSession.feed_coherent` |
-| `SourceSession.run_keeps` | proved | — | `SourceSession.feed_keeps` |
-| `table_eq` | proved | — | `sourceAnnotate_eq_sourceTable`, `Sketch.annotate_eq_table` |
+| `SourceSession.open_coherent` | modulo | `combine_deps` | `sourceAnnotate_eq_sourceTable`, `ask_value` |
+| `SourceSession.reached_view` | modulo | `coherent` | `coherent`, `view_eq` |
+| `replay_drafts_view` | goal | `replay_drafts_view` | — |
+| `table_eq` | proved | — | — |
+| `view_eq` | proved | — | `SourceSession.view_type`, `SourceSession.view_refusals`, `table_eq` |
 | `SourceSession.view_refusals` | proved | — | `table_eq` |
 | `SourceSession.view_type` | proved | — | `sourceTable_head`, `table_eq` |
 | `bodies_eq` | proved | — | `check_eq`, `bodyEntry_tail`, `bodyEntry_head`, `bodyEntry_nil`, `addresses_eq_cons` |

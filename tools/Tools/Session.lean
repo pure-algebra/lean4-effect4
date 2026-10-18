@@ -52,8 +52,8 @@ one.
 | --- | --- | --- | --- |
 | `open` | `program` (hex) or `programJson`, and the hole table, the rows, the services and the types if any, each as hex or JSON | the view | `SourceSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJsonAnyOrder_exact` for JSON |
 | `inspect` | `path` | the target (`doc`, `revision`, `path`, `expected`), the typed focus, the entry, and any refusal | `SourceSession.reached_view`, `SourceSession.focusAt_typed` |
-| `replace` (also `fill`, `commit`) | `path`, `replacement` (hex) or `replacementJson`, the whole target (`docName`, `docGeneration`, `revision`, and `expected` or `expectedJson`), `policy` | atomic checked replacement (`Doc.commit`): the new revision, the delta and the view, or a located refusal; a request without its replacement or any part of its target is refused | `Doc.commit_sound`, `SourceSession.reached_view` |
-| `omit` | `path`, `holeName`, the whole target, `policy` | atomic checked omission (`Doc.commit`): a hole row of the focus's type in the program's place | the same |
+| `replace` (also `fill`, `commit`) | `path`, `replacement` (hex) or `replacementJson`, the whole target (`docName`, `docGeneration`, `revision`, and `expected` or `expectedJson`), `policy` | atomic checked replacement (`Doc.step`): the new revision, the delta and the view, or a located refusal; a request without its replacement or any part of its target is refused | `Doc.commit_sound`, `SourceSession.reached_view` |
+| `omit` | `path`, `holeName`, the whole target, `policy` | atomic checked omission (`Doc.step`): a hole row of the focus's type in the program's place | the same |
 | `draft` | `path`, and `replacement` / `replacementJson` or `holeName` | the one unchecked edit (`Doc.draft`) | the law the delta took, `SourceSession.feed_coherent`, `SourceSession.reached_view` |
 | `suggest` | `path`, `candidates` or `candidatesJson`, `limit`, `cursor` | candidate fillings at the focus, each with its cached or computed verdict (`CheckCache.suggest`) | `sketchSigData_signature`, `Check.Oracle.eq_uncached`, `Check.run_part_extends` |
 | `fills.add` | `fills` or `fillsJson`, or `path` with `replacement` / `replacementJson` | each fill's outcome at the set's base (`FillSet.add`): applied, collapsed or refused at its address; a set opened at an earlier revision refuses | `FillSet.add_wf` |
@@ -62,7 +62,7 @@ one.
 | `fills.materialize` | nothing | the set published as one new revision (`FillSet.materializeDoc`), journaled as one edit at the root, or a refusal | `FillSet.add_wf`, `materialize_congr`, `ordered_compose`, `materialize_refFree` |
 | `fork` | `docName` (optional) | forks the open document with a fresh generation | none |
 | `view` | `path`, or none | at an address, its entry and its focus; with none, the whole table | `SourceSession.reached_view`; `SourceSession.focusAt_typed` at an address |
-| `undo` | nothing | the last journaled edit taken back at a new revision (`Doc.undo`): a checked or draft edit, or a published fill set; the delta and the view | `SourceSession.feed_undo` |
+| `undo` | nothing | the last journaled edit taken back at a new revision (`Doc.step`): a checked or draft edit, or a published fill set; the delta and the view | `SourceSession.feed_undo` |
 | `journal` | nothing | each edit, its address and its delta | none |
 | `sketch` | nothing | the sketch and the application as JSON, and as bytes with `hex` | `Sketch.decode_exact`, `Canonical.decode_exact` |
 | `catalogue` | nothing; open or not | the program's forms, the atoms with their typing schemes, the application's rows by index (`Tools.Catalogue`) | `Canonical.ofJsonAnyOrder_exact`, `NativeAtom.atom_table_wf` |
@@ -111,6 +111,7 @@ open Tools.JsonBridge (printJson valueFrom? toHex locate)
 journal, the latest step first, the next opening generation, its persistent live session, and the
 name of its application. -/
 structure State where
+  document : Option Doc := none
   /-- the edit session of the sketch as written, once opened -/
   source : Option SourceSession := none
   /-- the journal, the latest step first -/
@@ -136,11 +137,11 @@ def State.session (st : State) : Option EditSession := st.source.map SourceSessi
 
 /-- The open document (`Doc`), when a session is open. -/
 def State.doc (st : State) : Option Doc :=
-  st.source.map fun s => ⟨st.docId, s, st.revision⟩
+  st.document
 
 /-- Store an updated document (`Doc`) in the tool state. -/
 def State.withDoc (st : State) (d : Doc) : State :=
-  { st with source := some d.session, docId := d.id, revision := d.revision }
+  { st with document := some d, source := some d.session, docId := d.id, revision := d.revision }
 
 /-- The fill set the fill operations read: the stored one while it holds a fill, and otherwise a
 new one at the open document's current revision. So an empty set follows the document, and a set
@@ -206,7 +207,7 @@ structure Request where
   expected : Option String := none
   /-- the expected sub-program at an edit target, as its JSON print -/
   expectedJson : Option Json := none
-  /-- the validation policy for `Doc.commit`: `"keepExactType"` (default) or `"recheckSource"` -/
+  /-- the validation policy for `Doc.step`: `"keepExactType"` (default) or `"recheckSource"` -/
   policy : Option String := none
   /-- the fiber id of a call key or fiber selector for `receive` and `apply` -/
   fiber : Option Nat := none
@@ -347,39 +348,47 @@ def docIdJson (id : DocId) : Json :=
   Json.mkObj [("name", .str id.name), ("generation", toJson id.generation)]
 
 /-- An edit target as JSON. -/
-def targetJson (t : EditTarget) (hex : Bool := false) : Json :=
-  Json.mkObj <|
-    [("doc", docIdJson t.doc), ("revision", toJson t.revision), ("path", toJson t.path),
-      ("expectedJson", printJson t.expected)] ++
-    if hex then [("expected", .str (toHex t.expected))] else []
+def targetJson (snap : Snap) (path : List Nat) (expected : NativeEff) (hex : Bool := false) : Json :=
+  Json.mkObj <| [("doc", docIdJson snap.doc), ("revision", toJson snap.revision),
+    ("path", toJson path), ("expectedJson", printJson expected)] ++
+    if hex then [("expected", .str (toHex expected))] else []
 
-/-- An atomic edit refusal (`Doc.Refusal`) as JSON. -/
-def editRefusalJson (sig : Signature NativeOp) (prog : Option NativeEff) :
-    Doc.Refusal → Json
-  | .foreign expected =>
-    Json.mkObj [("reason", .str "foreign"), ("expectedDoc", docIdJson expected)]
-  | .stale current =>
-    Json.mkObj [("reason", .str "stale"), ("currentRevision", toJson current)]
-  | .moved =>
-    Json.mkObj [("reason", .str "moved")]
-  | .noFocus =>
-    Json.mkObj [("reason", .str "noFocus")]
-  | .refused why =>
-    Json.mkObj [("reason", .str "refused"),
-      ("refusals", Json.arr (why.map fun r => refusalJson r prog sig).toArray)]
-  | .typeChanged old new =>
-    Json.mkObj [("reason", .str "typeChanged"),
-      ("old", match old with | some t => effTyJson t | none => .null),
-      ("new", effTyJson new)]
-  | .localChanged old new =>
-    Json.mkObj [("reason", .str "localChanged"),
-      ("old", match old with | some (_, t) => effTyJson t | none => .null),
-      ("new", match new with | some (_, t) => effTyJson t | none => .null)]
+def localContextJson : Option (TyEnv × EffTy) → Json
+  | none => .null
+  | some (env,ty) => Json.mkObj [("env",printJson env),("type",effTyJson ty)]
 
-/-- Parse the validation policy of `Doc.commit`. -/
-def policyFrom? : Option String → Option Policy
-  | none | some "keepExactType" => some .keepExactType
-  | some "recheckSource" => some .recheckSource
+def feedRefusalFields (sig : Signature NativeOp) (prog : Option NativeEff) :
+    FeedRefusal → List (String × Json)
+  | .noProgram path => [("reason",.str "noProgram"),("path",toJson path)]
+  | .noFocus path => [("reason",.str "noFocus"),("path",toJson path)]
+  | .notKept (env,expected) verdict => [("reason",.str "notKept"),
+      ("env",printJson env),("expected",effTyJson expected),
+      ("verdict",Tools.Query.checkJson verdict none sig)]
+  | .refused why => [("reason",.str "refused"),
+      ("refusals",Json.arr (why.map (fun r => refusalJson r prog sig)).toArray)]
+  | .typeChanged old new => [("reason",.str "typeChanged"),
+      ("old",match old with | none => .null | some ty => effTyJson ty),("new",effTyJson new)]
+  | .localChanged old new => [("reason",.str "localChanged"),
+      ("old",localContextJson old),("new",localContextJson new)]
+
+def placeRefusalFields : PlaceRefusal → List (String × Json)
+  | .outOfRange index => [("reason",.str "outOfRange"),("index",toJson index)]
+  | .absent index => [("reason",.str "absent"),("index",toJson index)]
+  | .repeated index paths => [("reason",.str "repeated"),("index",toJson index),("paths",toJson paths)]
+  | .moved path => [("reason",.str "moved"),("path",toJson path)]
+
+def editRefusalJson (sig : Signature NativeOp) (prog : Option NativeEff) : DocRefusal → Json
+  | .foreign expected => Json.mkObj [("reason",.str "foreign"),("expectedDoc",docIdJson expected)]
+  | .stale now => Json.mkObj [("reason",.str "stale"),("currentRevision",toJson now.revision),
+      ("doc",docIdJson now.doc)]
+  | .empty => Json.mkObj [("reason",.str "empty")]
+  | .noEntry entry => Json.mkObj [("reason",.str "noEntry"),("entry",toJson entry)]
+  | .place item why => Json.mkObj (("item",toJson item) :: placeRefusalFields why)
+  | .feed item why => Json.mkObj (("item",toJson item) :: feedRefusalFields sig prog why)
+
+def policyFrom? : Option String → Option FeedPolicy
+  | none | some "keepExactType" => some .keepExact
+  | some "recheckSource" => some .recheck
   | _ => none
 
 /-- What a delta says. -/
@@ -605,52 +614,46 @@ def verdictJson : Effect4.Run.Verdict → Json
 /-- Feed one draft edit (`Doc.draft`), record it, and answer its delta and the view. -/
 def feedAnswer (st : State) (d : Doc) (req : Request) (e : Edit)
     (readLaws : List Lean.Name := []) : State × Answer :=
-  let (d', step) := d.draft e
-  ({ (st.withDoc d') with journal := step :: st.journal },
-    { op := req.op, app := st.app,
-      laws := readLaws ++ deltaLaws e step.delta ++ [``SourceSession.reached_view],
-      ok := true,
-      result := Json.mkObj [("doc", docIdJson d'.id), ("revision", toJson d'.revision),
-        ("delta", deltaJson step.delta), ("view", viewJson d'.session)],
-      id := req.id })
+  let checked := d.step (st.cache.oracle (Check.HitRule.exact.or Check.extension)) d.snap (.draft e)
+  let learned := { st with cache := st.cache.learn checked }
+  match checked.value with
+  | .error why => (learned, {
+      op := req.op, app := st.app, ok := false,
+      result := editRefusalJson (d.session.app.withHoles d.session.sketch.holes).signature (some d.session.sketch.program) why,
+      error := some "the draft is refused", id := req.id })
+  | .ok (next,receipt) =>
+    let step := receipt.steps.headD ⟨e,none,.unchanged⟩
+    ({ (learned.withDoc next) with journal := step :: st.journal },
+      { op := req.op, app := st.app, laws := readLaws ++ [``SourceSession.reached_view], ok := true,
+        result := Json.mkObj [("doc",docIdJson next.id),("revision",toJson next.revision),
+          ("delta",deltaJson step.delta),("view",viewJson next.session)], id := req.id })
 
-/-- Run an atomic checked edit (`Doc.commit`) from `req`'s target and policy. -/
-def commitAnswer (st : State) (d : Doc) (req : Request) (c : Change)
+def commitAnswer (st : State) (d : Doc) (req : Request) (change : Change)
     (readLaws : List Lean.Name := []) : State × Answer :=
-  let noTarget : State × Answer := (st, refused req.op ("a checked edit needs its whole target, " ++
-    "as `inspect` answers it: `docName`, `docGeneration`, `revision`, and `expected` or " ++
-    "`expectedJson`; `draft` makes an unchecked edit") req.id)
+  let noTarget : State × Answer := (st,refused req.op "a checked edit needs its snapshot and expected program" req.id)
   match policyFrom? req.policy, req.docName, req.docGeneration, req.revision with
-  | none, _, _, _ => (st, refused req.op "unknown policy" req.id)
-  | some _, none, _, _ | some _, _, none, _ | some _, _, _, none => noTarget
-  | some policy, some docName, some docGeneration, some targetRev =>
+  | none,_,_,_ => (st,refused req.op "unknown policy" req.id)
+  | some _,none,_,_ | some _,_,none,_ | some _,_,_,none => noTarget
+  | some policy,some name,some generation,some revision =>
     match valueFrom? (α := NativeEff) req.expected req.expectedJson with
     | none => noTarget
-    | some (none, _) =>
-      (st, unreadable (α := NativeEff) req.op "the expected sub-program does not read"
-        req.expectedJson req.id)
-    | some (some exp, expLaws) =>
-      let target : EditTarget := ⟨⟨docName, docGeneration⟩, targetRev, req.path, exp⟩
-      let sig := (d.session.app.withHoles d.session.sketch.holes).signature
-      match d.commit target c policy with
-      | .error why =>
-        (st,
-          { op := req.op, app := st.app, laws := readLaws ++ expLaws, ok := false,
-            result := editRefusalJson sig (some d.session.sketch.program) why,
-            error := some ("the atomic edit is refused: " ++ why.reason), id := req.id })
-      | .ok d' =>
-        let step : Edit.Step :=
-          match d.editOf target c with
-          | some e => (d.session.feedStep e).2
-          | none => ⟨.fill req.path exp, some exp, .unchanged⟩
-        ({ (st.withDoc d') with journal := step :: st.journal },
-          { op := req.op, app := st.app,
-            laws := (readLaws ++ expLaws ++ deltaLaws step.edit step.delta ++
-              [``Doc.commit_sound, ``SourceSession.reached_view]).eraseDups,
-            ok := true,
-            result := Json.mkObj [("doc", docIdJson d'.id), ("revision", toJson d'.revision),
-              ("delta", deltaJson step.delta), ("view", viewJson d'.session)],
-            id := req.id })
+    | some (none,_) => (st,unreadable (α := NativeEff) req.op "the expected program does not read" req.expectedJson req.id)
+    | some (some expected,expLaws) =>
+      let snap : Snap := ⟨⟨name,generation⟩,revision⟩
+      let checked := d.step (st.cache.oracle (Check.HitRule.exact.or Check.extension)) snap
+        (.commit [(.at_ req.path expected,change)] policy)
+      let learned := { st with cache := st.cache.learn checked }
+      match checked.value with
+      | .error why => (learned,{
+          op := req.op, app := st.app, laws := readLaws ++ expLaws, ok := false,
+          result := editRefusalJson (d.session.app.withHoles d.session.sketch.holes).signature (some d.session.sketch.program) why,
+          error := some "the atomic edit is refused", id := req.id })
+      | .ok (next,receipt) =>
+        let step := receipt.steps.headD ⟨.fill req.path expected,some expected,.unchanged⟩
+        ({ (learned.withDoc next) with journal := step :: st.journal },
+          { op := req.op, app := st.app, laws := readLaws ++ expLaws ++ [``Doc.commit_sound], ok := true,
+            result := Json.mkObj [("doc",docIdJson next.id),("revision",toJson next.revision),
+              ("delta",deltaJson step.delta),("view",viewJson next.session)], id := req.id })
 
 /-- **Answer one request**, from the state before it, with the state after it. -/
 def answer (st : State) (req : Request) : State × Answer :=
@@ -681,10 +684,11 @@ def answer (st : State) (req : Request) : State × Answer :=
       let app : SigApp := ⟨rows, services, types⟩
       let name := appName app
       let docId : DocId := ⟨req.docName.getD "default", st.generation⟩
-      let d := Doc.open app { program, holes } docId
-      ({ source := some d.session, journal := [], app := name,
+      let opened := Doc.open_ ⟨docId,app,{ program,holes }⟩
+      let d := opened.value
+      ({ document := some d, source := some d.session, journal := [], app := name,
           docId := d.id, revision := d.revision, generation := st.generation + 1,
-          live := st.live, cache := st.cache, fills := some (FillSet.ofDoc d) },
+          live := st.live, cache := st.cache.learn opened, fills := some (FillSet.ofDoc d) },
         Answer.mk req.op name (readLaws ++ [``SourceSession.reached_view]) true
           (viewJson d.session) none req.id)
   | "catalogue" =>
@@ -781,17 +785,20 @@ def answer (st : State) (req : Request) : State × Answer :=
       let sig := (l.app.withHoles l.sketch.holes).signature
       match op with
       | "inspect" =>
-        match d.inspect req.path with
+        match (Node.eff l.sketch.program).at_ req.path with
         | none => none' "no part of the sketch at the address"
-        | some ins =>
+        | some (.stmt _) | some (.stmts _) | some (.effs _) | some (.action _) | some (.layer _) | some (.layers _) => none' "no program at the address"
+        | some (.eff expected) =>
+          let entry := l.table.find? fun e => decide (e.path = req.path)
+          let refusal := entry.bind fun e => e.result.bind Checker.refusal
           let result := Json.mkObj
-            [("target", targetJson ins.target req.hex),
+            [("target", targetJson d.snap req.path expected req.hex),
               ("context", sigDataJson (sketchSigData l.sketch l.app req.path)),
-              ("focus", focusJson ins.focus req.hex),
-              ("entry", match ins.entry with
+              ("focus", focusJson (l.focusAt req.path) req.hex),
+              ("entry", match entry with
                 | some e => entryJson e (some l.sketch.program) sig
                 | none => .null),
-              ("refusal", match ins.refusal with
+              ("refusal", match refusal with
                 | some r => refusalJson r (some l.sketch.program) sig
                 | none => .null)]
           (st, Answer.mk op st.app
@@ -883,7 +890,7 @@ def answer (st : State) (req : Request) : State × Answer :=
               id := req.id })
         | .ok d' =>
           -- the journal holds the publication as one edit at the root, so `undo` takes it back
-          let step := (d.session.feedStep (.fill [] d'.session.sketch.program)).2
+          let step : Edit.Step := ⟨.fill [] d'.session.sketch.program, some d.session.sketch.program, .rechecked⟩
           let st' := { (st.withDoc d') with journal := step :: st.journal,
                                              fills := some (FillSet.ofDoc d') }
           let result := Json.mkObj
@@ -915,8 +922,9 @@ def answer (st : State) (req : Request) : State × Answer :=
           (st, unreadable (α := NativeEff) req.op "the filling does not read" req.replacementJson req.id)
       | "fork" =>
         let newId : DocId := ⟨req.docName.getD d.id.name, st.generation⟩
-        let d' := d.fork newId
-        let st' := { (st.withDoc d') with generation := st.generation + 1, fills := some (FillSet.ofDoc d') }
+        let opened := Doc.open_ ⟨newId,d.session.app,d.session.sketch⟩
+        let d' := opened.value
+        let st' := { (st.withDoc d') with generation := st.generation + 1, cache := st.cache.learn opened, fills := some (FillSet.ofDoc d') }
         let result := Json.mkObj [("doc", docIdJson d'.id), ("revision", toJson d'.revision),
           ("view", viewJson d'.session)]
         (st', Answer.mk op st.app [``SourceSession.reached_view] true result none req.id)
@@ -936,19 +944,21 @@ def answer (st : State) (req : Request) : State × Answer :=
           (st, Answer.mk op st.app [``SourceSession.reached_view, ``SourceSession.focusAt_typed]
             true result none req.id)
       | "undo" =>
-        match st.journal with
-        | step :: rest =>
-          match step.replaced with
-          | some old =>
-            let (d', back) := d.undo step.edit.path old
-            ({ (st.withDoc d') with journal := rest },
-              { op := op, app := st.app,
-                laws := [``SourceSession.feed_undo, ``SourceSession.reached_view], ok := true,
-                result := Json.mkObj [("doc", docIdJson d'.id), ("revision", toJson d'.revision),
-                  ("delta", deltaJson back.delta), ("view", viewJson d'.session)],
-                id := req.id })
-          | none => none' "the last edit replaced no program"
-        | [] => none' "the journal is empty"
+        if d.history.isEmpty then none' "the history is empty"
+        else
+          let checked := d.step (st.cache.oracle (Check.HitRule.exact.or Check.extension)) d.snap
+            (.revert (d.history.length - 1))
+          let learned := { st with cache := st.cache.learn checked }
+          match checked.value with
+          | .error why => (learned, {
+              op := op, app := st.app, ok := false,
+              result := editRefusalJson sig (some l.sketch.program) why,
+              error := some "the revert is refused", id := req.id })
+          | .ok (next,receipt) =>
+            ({ (learned.withDoc next) with journal := receipt.steps.reverse ++ st.journal },
+              Answer.mk op st.app [``Doc.revert_program] true
+                (Json.mkObj [("doc",docIdJson next.id),("revision",toJson next.revision),
+                  ("view",viewJson next.session)]) none req.id)
       | "journal" =>
         let result := Json.arr (st.journal.reverse.map stepJson).toArray
         (st, Answer.mk op st.app [] true result none req.id)
