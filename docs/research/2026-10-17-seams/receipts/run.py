@@ -8,7 +8,7 @@ import subprocess
 import sys
 import time
 
-root = Path('/Users/pooks/.codex/worktrees/seams/lean4-effect4')
+root = Path(__file__).resolve().parents[4]
 slice_name, label, *command = sys.argv[1:]
 directory = root / 'docs/research/2026-10-17-seams/receipts/evidence' / slice_name
 directory.mkdir(parents=True, exist_ok=True)
