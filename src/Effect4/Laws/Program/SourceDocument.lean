@@ -13,9 +13,11 @@ A keepExact edit retains an initially refused root; positivity therefore require
 are proved modulo the feed's planned goals `SourceSession.feed_coherent` and
 `SourceSession.feed_keepExact`. Those are false at head
 (`FeedCounterexample.feed_coherent_refuted`, `Laws/Program/SourceTable.lean`), and so are these:
-a kept-exact commit of the filling `late` at a typed root is accepted, its session is incoherent,
-its root is refused and the edited address loses its typed entry (reproduced by evaluation in the
-seat's receipt). They hold once the feed splices only where nothing is ill formed.
+a kept-exact commit of the filling `late` at a typed root is accepted, its root is refused and the
+edited address loses its typed entry (`FeedCounterexample.commit_sound_refuted`,
+`FeedCounterexample.commit_single_sound_refuted`,
+`FeedCounterexample.commit_one_keepExact_refuted`). They hold once the feed splices only where
+nothing is ill formed.
 -/
 set_option autoImplicit false
 namespace Effect4.Program
@@ -361,7 +363,8 @@ end DocInternal
 /-- **A successful keepExact or recheck commit is positive**, with initial positivity required
 for keepExact: a kept-exact batch keeps the root's type, and a recheck batch ends in a typed
 recheck. The pointer of `source-document-commit`. It is proved modulo
-`SourceSession.feed_coherent`, and it is false at head with it. -/
+`SourceSession.feed_coherent`, and it is false at head with it
+(`FeedCounterexample.commit_sound_refuted`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Doc.commit_sound {o : Oracle} {d next : Doc} {snap : Snap}
     {items : List (Place × Change)} {policy : FeedPolicy} {receipt : Receipt}
@@ -403,7 +406,7 @@ theorem Doc.commit_sound {o : Oracle} {d next : Doc} {snap : Snap}
 
 /-- **A single kept edit retains both exact observations, including an initially refused root.**
 The pointer of `source-document-local-keep`. It is proved modulo `SourceSession.feed_keepExact`,
-and it is false at head with it. -/
+and it is false at head with it (`FeedCounterexample.commit_one_keepExact_refuted`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Doc.commit_one_keepExact {o : Oracle} {d next : Doc} {snap : Snap}
     {place : Place} {change : Change} {receipt : Receipt} {path : List Nat} {expected : NativeEff}
@@ -426,7 +429,7 @@ theorem Doc.commit_one_keepExact {o : Oracle} {d next : Doc} {snap : Snap}
 /-- **The old single-edit observations, with the required initial positive-root premise.** The
 pointer of `source-document-single-transport`. It is proved modulo
 `SourceSession.feed_coherent` and `SourceSession.feed_keepExact`, and it is false at head with
-them. -/
+them (`FeedCounterexample.commit_single_sound_refuted`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Doc.commit_single_sound {o : Oracle} {d next : Doc} {snap : Snap}
     {path : List Nat} {expected : NativeEff} {change : Change} {policy : FeedPolicy}
@@ -490,4 +493,140 @@ proof_goal Doc.revert_program {o : Oracle} {before after back : Doc} {snap : Sna
     (hr : (after.step o after.snap (.revert before.history.length)).value = .ok (back,inverse)) :
     back.session.sketch.program = before.session.sketch.program ∧
       back.session.sketch.holes = after.session.sketch.holes
+
+/-! ## A commit's counterexample at head
+
+A kept-exact commit of the filling `FeedCounterexample.late` at `[0]` of the typed base
+`FeedCounterexample.base` (`Laws/Program/SourceTable.lean`) is accepted. Its root is refused, and
+the edited address loses its typed entry. Each statement below is a control, kernel-checked by
+evaluation (`decide`): it shows where a law proved modulo `SourceSession.feed_coherent` or
+`SourceSession.feed_keepExact` stops at head. Its placement names the concept and no
+requirement. They go once the feed splices only where nothing is ill formed. -/
+
+namespace FeedCounterexample
+
+/-- The document the base opens. -/
+def baseDoc : Doc := (Doc.open_ ⟨{}, {}, base⟩).value
+
+/-- The kept-exact commit of `late` at `[0]`, from the opened base. -/
+def commitLate : Except DocRefusal (Doc × Receipt) :=
+  (baseDoc.step Oracle.uncached baseDoc.snap
+    (.commit [(.at_ [0] seven, .fill late)] .keepExact)).value
+
+/-- The opened base is coherent. -/
+def baseCoherent : Bool :=
+  decide (baseDoc.session.table = baseDoc.session.sketch.sourceTable baseDoc.session.app)
+
+/-- The opened base's root is typed. -/
+def baseTyped : Bool := (baseDoc.session.sketch.sourceCheck baseDoc.session.app).toOption.isSome
+
+/-- The commit is accepted, and its root is refused. -/
+def commitRootRefused : Bool :=
+  match commitLate with
+  | .ok (next, _) => (next.session.sketch.sourceCheck next.session.app).toOption.isNone
+  | .error _ => false
+
+/-- The commit is accepted, and the entry at `[0]` changes. -/
+def commitEntryLost : Bool :=
+  match commitLate with
+  | .ok (next, _) =>
+    !decide (Table.typedAt next.session.table [0] = Table.typedAt baseDoc.session.table [0])
+  | .error _ => false
+
+set_option maxRecDepth 100000 in
+/-- The evaluation of the four verdicts. -/
+theorem commitVerdicts : baseCoherent = true ∧ baseTyped = true ∧ commitRootRefused = true ∧
+    commitEntryLost = true := by
+  decide +kernel
+
+/-- The base's session is coherent. A step of the controls below. -/
+theorem baseDoc_coherent : baseDoc.session.Coherent := by
+  have h0 := commitVerdicts.1
+  unfold baseCoherent at h0
+  have h1 := of_decide_eq_true h0
+  exact h1
+
+/-- The base's root has a type. A step of the controls below. -/
+theorem baseDoc_typed : ∃ T, baseDoc.session.sketch.sourceCheck baseDoc.session.app = .ok T := by
+  have hpos := commitVerdicts.2.1
+  unfold baseTyped at hpos
+  cases hx : baseDoc.session.sketch.sourceCheck baseDoc.session.app with
+  | ok T => exact ⟨T, rfl⟩
+  | error r =>
+    rw [hx] at hpos
+    cases hpos
+
+end FeedCounterexample
+
+/-- **`Doc.commit_sound` is false at head**: from the coherent, typed base, the kept-exact commit
+of `late` is accepted and its root is refused, where the law concludes a typed root. A control of
+the claim `source-document-commit`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.commit_sound_refuted :
+    ¬ ∀ (o : Oracle) (d next : Doc) (snap : Snap) (items : List (Place × Change))
+      (policy : FeedPolicy) (receipt : Receipt), d.session.Coherent →
+      (policy = .keepExact ∨ policy = .recheck) →
+      (policy = .keepExact → ∃ T, d.session.sketch.sourceCheck d.session.app = .ok T) →
+      (d.step o snap (.commit items policy)).value = .ok (next,receipt) →
+      ∃ T', next.session.sketch.sourceCheck next.session.app = .ok T' := by
+  intro h
+  have hcoh := FeedCounterexample.baseDoc_coherent
+  have hroot := FeedCounterexample.commitVerdicts.2.2.1
+  unfold FeedCounterexample.commitRootRefused FeedCounterexample.commitLate at hroot
+  split at hroot
+  · rename_i next receipt heq
+    obtain ⟨T', hT'⟩ := h _ _ _ _ _ _ _ hcoh (Or.inl rfl)
+      (fun _ => FeedCounterexample.baseDoc_typed) heq
+    rw [hT'] at hroot
+    cases hroot
+  · cases hroot
+
+/-- **`Doc.commit_single_sound` is false at head**: the same commit is a single item at an
+address, and its root is refused. A control of the claim `source-document-single-transport`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.commit_single_sound_refuted :
+    ¬ ∀ (o : Oracle) (d next : Doc) (snap : Snap) (path : List Nat) (expected : NativeEff)
+      (change : Change) (policy : FeedPolicy) (receipt : Receipt), d.session.Coherent →
+      (policy = .keepExact ∨ policy = .recheck) →
+      (policy = .keepExact → ∃ T, d.session.sketch.sourceCheck d.session.app = .ok T) →
+      (d.step o snap (.commit [(.at_ path expected,change)] policy)).value = .ok (next,receipt) →
+      ∃ T', next.session.sketch.sourceCheck d.session.app = .ok T' := by
+  intro h
+  have hcoh := FeedCounterexample.baseDoc_coherent
+  have hroot := FeedCounterexample.commitVerdicts.2.2.1
+  unfold FeedCounterexample.commitRootRefused FeedCounterexample.commitLate at hroot
+  split at hroot
+  · rename_i next receipt heq
+    obtain ⟨T', hT'⟩ := h _ _ _ _ _ _ _ _ _ hcoh (Or.inl rfl)
+      (fun _ => FeedCounterexample.baseDoc_typed) heq
+    obtain ⟨-, fresh, happly, -, -, hsess, -⟩ := Doc.step_ok heq
+    have happ : next.session.app = FeedCounterexample.baseDoc.session.app := by
+      rw [hsess]
+      exact DocInternal.apply_app happly
+    rw [happ, hT'] at hroot
+    cases hroot
+  · cases hroot
+
+/-- **`Doc.commit_one_keepExact` is false at head**: the same commit changes the entry at `[0]`.
+A control of the claim `source-document-local-keep`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.commit_one_keepExact_refuted :
+    ¬ ∀ (o : Oracle) (d next : Doc) (snap : Snap) (place : Place) (change : Change)
+      (receipt : Receipt) (path : List Nat) (expected : NativeEff), d.session.Coherent →
+      path ≠ [] → place.resolve d.session.app d.session.sketch = .ok (path,expected) →
+      (d.step o snap (.commit [(place,change)] .keepExact)).value = .ok (next,receipt) →
+      Table.typedAt next.session.table path = Table.typedAt d.session.table path := by
+  intro h
+  have hcoh := FeedCounterexample.baseDoc_coherent
+  have hplace : (Place.at_ [0] FeedCounterexample.seven).resolve
+      FeedCounterexample.baseDoc.session.app FeedCounterexample.baseDoc.session.sketch =
+      .ok ([0], FeedCounterexample.seven) := rfl
+  have hlost := FeedCounterexample.commitVerdicts.2.2.2
+  unfold FeedCounterexample.commitEntryLost FeedCounterexample.commitLate at hlost
+  split at hlost
+  · rename_i next receipt heq
+    have hk := h _ _ _ _ _ _ _ _ _ hcoh (List.cons_ne_nil 0 []) hplace heq
+    rw [Bool.not_eq_true', decide_eq_false_iff_not] at hlost
+    exact hlost hk
+  · cases hlost
 end Effect4.Program
