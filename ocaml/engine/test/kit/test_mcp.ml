@@ -8,9 +8,9 @@
    C1  `initialize` names the server; `ping` answers; a notification gets no reply; an unknown
        method is error -32601; a line that is not JSON is error -32700.           tested
    C2  `tools/list` lists one tool per supported method, in `Tool.supportedMethods`' order (the
-       `discover` reply's), then `describe`, each with a description, an object `inputSchema`,
-       an object `outputSchema` and its four hints; a query and `describe` are read-only, an
-       action is not; every method's output schema is one, and `describe`'s is another. tested
+       `discover` reply's), then `describe`, each with a description, an object `inputSchema`
+       and its four hints; a query and `describe` are read-only, an action is not; no method
+       carries an `outputSchema`, and `describe` carries an object one.            tested
    C3  `tools/call open` then `tools/call doc` answer the replies Kit_tool gives the same two
        envelopes, as text and structured data, with `isError` false; a stale snapshot is a
        tool error. Unknown tools and malformed calls are protocol errors.         tested
@@ -151,16 +151,15 @@ let () =
           && field "type" (field "inputSchema" (Some t)) = Some (J.String "object"))
        tools);
   check
-    "C2 every tool has an object output schema and its four hints"
+    "C2 every tool has its four hints"
     (List.for_all
        (fun t ->
-          field "type" (field "outputSchema" (Some t)) = Some (J.String "object")
-          && List.for_all
-               (fun hint ->
-                  match field hint (field "annotations" (Some t)) with
-                  | Some (J.Bool _) -> true
-                  | _ -> false)
-               [ "readOnlyHint"; "destructiveHint"; "idempotentHint"; "openWorldHint" ])
+          List.for_all
+            (fun hint ->
+               match field hint (field "annotations" (Some t)) with
+               | Some (J.Bool _) -> true
+               | _ -> false)
+            [ "readOnlyHint"; "destructiveHint"; "idempotentHint"; "openWorldHint" ])
        tools);
   let tool name =
     List.find_opt (fun t -> field "name" (Some t) = Some (J.String name)) tools
@@ -179,9 +178,9 @@ let () =
      && hint "start" "idempotentHint" = Some (J.Bool false));
   let output name = Option.bind (tool name) (fun t -> field "outputSchema" (Some t)) in
   check
-    "C2 every method answers one output schema, and describe another"
-    (List.for_all (fun n -> n = "describe" || output n = output "open") names
-     && output "describe" <> output "open")
+    "C2 no method carries an output schema, and describe carries an object one"
+    (List.for_all (fun n -> n = "describe" || Option.is_none (output n)) names
+     && field "type" (output "describe") = Some (J.String "object"))
 ;;
 
 (* C3 *)

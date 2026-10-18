@@ -52,14 +52,18 @@ open Effect4.Tool Effect4.Tool.Methods
 #guard entries.all fun e => !e.listing.openWorld
 #guard describe.listing.readOnly && !describe.listing.destructive && describe.listing.idempotent &&
   !describe.listing.openWorld
--- every method answers the reply in its envelope, closed: no definition is left to `describe`
-#guard entries.all fun e => e.listing.outputSchema == replySchema
+-- every method answers the reply in its envelope; its closed schema is `describe`'s `Result`, so
+-- the listings carry none, and no table definition is named `Result`
+#guard entries.all fun e => e.listing.outputSchema.isNone
+#guard describe.answers.lookup resultName == some replySchema
+#guard (describe.answers.filter (·.1 == resultName)).length == 1
 #guard (replySchema.splitOn onDemandText).length == 1
 #guard (replySchema.splitOn "\"required\":[\"method\",\"version\",\"payload\"]").length == 2
 #guard (replySchema.splitOn "\"required\":[\"result\",\"now\"]").length == 2
 #guard (replySchema.splitOn "withFiber").length ≥ 2
 -- `describe` answers a schema document: a pointer and its definitions
-#guard (describe.listing.outputSchema.splitOn "\"required\":[\"$ref\",\"$defs\"]").length == 2
+#guard ((describe.listing.outputSchema.getD "").splitOn "\"required\":[\"$ref\",\"$defs\"]").length == 2
+#guard (replySchema.splitOn "\"$ref\":\"#/$defs/Result\"").length == 2
 -- a document whose root is no structure is an object only under `allOf`
 #guard docSchema [] false ⟨.nat, []⟩ =
   "{\"type\":\"object\",\"allOf\":[{\"type\":\"integer\",\"minimum\":0,\"maximum\":9007199254740991}]}"
@@ -101,8 +105,8 @@ open Effect4.Tool Effect4.Tool.Methods
 [{\"type\":\"null\"},{\"$ref\":\"#/$defs/T\"}]}},\"required\":[\"v\"],\"additionalProperties\":false}}}"
 -- a list family is spelled where it is named
 #guard !onDemand (.sum "L" [("nil", 0, []), ("cons", 1, [("head", .nat), ("tail", .named "L")])])
--- at the real table: the grammar is `describe`'s, and no method's schema spells it
-#guard describe.answers.map (·.1) = ["Ty", "Eff", "Stmt", "ActionTerm", "LayerTerm", "Term", "CauseTerm", "Val"]
+-- at the real table: the result and the grammar are `describe`'s, and no method's schema spells them
+#guard describe.answers.map (·.1) = ["Result", "Ty", "Eff", "Stmt", "ActionTerm", "LayerTerm", "Term", "CauseTerm", "Val"]
 #guard entries.all fun e => (e.listing.inputSchema.splitOn "withFiber").length == 1
 #guard (describe.answers.lookup "Eff").any fun s => (s.splitOn "withFiber").length == 2
 #guard describe.answers.all fun a => (a.2.splitOn onDemandText).length == 1

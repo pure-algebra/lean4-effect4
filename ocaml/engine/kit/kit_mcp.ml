@@ -1,9 +1,10 @@
 (* Kit_mcp — MCP 2025-06-18 over stdio, using the generated authoring tool.
 
    The MCP transport owns JSON-RPC, initialization and framing. Tool.Methods owns the method
-   table and the `describe` tool beside it: each tool's listing (its argument and result schemas
-   and its hints, from Lean's method descriptors), where the argument schemas name the program's
-   grammar and leave it to `describe`, which answers each definition's schema from Lean's table;
+   table and the `describe` tool beside it: each tool's listing (its argument schema and its
+   hints, from Lean's method descriptors), where the argument schemas name the program's grammar
+   and leave it to `describe`, which answers each definition's schema from Lean's table, and the
+   schema of every method's result under `Result`;
    Tool.serve owns actions, queries and refusals. Yojson.Raw keeps transport numbers
    exact, including request IDs outside OCaml int. Kit_tool admits tool arguments separately.
    Depends on: Effect4_gen.Api_gen, Kit_tool, Yojson.
@@ -12,8 +13,9 @@
    M1 Select the supported version; require initialization before tools; never answer a
       notification or execute it as a tool call. Pings can run during initialization.
    M2 List the generated method table, without a hand method list: each tool's listing, rendered
-      by one function, with its argument schema, its output schema (the closed schema of the
-      envelope every call answers) and its four behaviour hints (`annotations`).
+      by one function, with its argument schema and its four behaviour hints (`annotations`). A
+      method carries no output schema: every call answers one envelope, whose closed schema is
+      `describe`'s `Result`, so `tools/list` holds it once, on request.
    M3 Return the generated reply as structuredContent and identical JSON text. Domain refusals
       set isError. Unknown tools and invalid arguments are JSON-RPC -32602 errors.
    M4 Retain request IDs, validate message envelopes, and keep protocol errors outside Tool.serve.
@@ -87,21 +89,27 @@ type t =
   }
 
 (* One tool's listing as `tools/list` shows it, with every 2025-06-18 `ToolAnnotations` hint set,
-   so no client falls back to a default. *)
+   so no client falls back to a default, and its output schema where the listing carries one. *)
 let tool_of (l : G.listing) : J.t =
+  let output =
+    match l.output_schema with
+    | Some schema -> [ "outputSchema", J.from_string schema ]
+    | None -> []
+  in
   `Assoc
-    [ "name", string l.name
-    ; "description", string l.description
-    ; "inputSchema", J.from_string l.input_schema
-    ; "outputSchema", J.from_string l.output_schema
-    ; ( "annotations"
-      , `Assoc
-          [ "readOnlyHint", `Bool l.read_only
-          ; "destructiveHint", `Bool l.destructive
-          ; "idempotentHint", `Bool l.idempotent
-          ; "openWorldHint", `Bool l.open_world
-          ] )
-    ]
+    ([ "name", string l.name
+     ; "description", string l.description
+     ; "inputSchema", J.from_string l.input_schema
+     ]
+     @ output
+     @ [ ( "annotations"
+         , `Assoc
+             [ "readOnlyHint", `Bool l.read_only
+             ; "destructiveHint", `Bool l.destructive
+             ; "idempotentHint", `Bool l.idempotent
+             ; "openWorldHint", `Bool l.open_world
+             ] )
+       ])
 ;;
 
 let describe : G.describe = G.tool_native_describe

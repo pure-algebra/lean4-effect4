@@ -5,11 +5,12 @@ Run with jsonschema 4.25.1. The native test_mcp suite remains part of check-ocam
 This probe exercises the actual executable, including initialization and framing.
 It does not certify HTTP, cancellation during computation, or later protocol versions.
 
-Every listed tool carries its four behaviour hints (`annotations`) and an `outputSchema`. Each
-structured result validates against its tool's emitted output schema: the method tools answer a
-`Wire.Envelope Reply`, and `describe` a schema document. Red control: the bare `Reply` schema
-(the envelope's payload, with the same definitions) refuses the enveloped result it does not
-describe, and accepts its payload.
+Every listed tool carries its four behaviour hints (`annotations`). No method tool carries an
+`outputSchema`: every method answers a `Wire.Envelope Reply`, whose closed schema is `describe`'s
+answer for `Result`, and only `describe` lists one, for its schema documents. Each method's
+structured result validates against `Result`, and each `describe` answer against `describe`'s own
+output schema. Red control: the bare `Reply` schema (the envelope's payload, with the same
+definitions) refuses the enveloped result it does not describe, and accepts its payload.
 """
 
 import argparse
@@ -58,6 +59,7 @@ def main():
         {"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "doc", "arguments": {"at_": 0.5}}},
         {"jsonrpc": "2.0", "id": 12, "method": "tools/call", "params": {"name": "describe", "arguments": {"name": "Eff"}}},
         {"jsonrpc": "2.0", "id": 13, "method": "tools/call", "params": {"name": "describe", "arguments": {"name": "Nope"}}},
+        {"jsonrpc": "2.0", "id": 14, "method": "tools/call", "params": {"name": "describe", "arguments": {"name": "Result"}}},
     ]
     for request in requests:
         validate("JSONRPCRequest" if "id" in request else "JSONRPCNotification", request)
@@ -85,9 +87,11 @@ def main():
         annotations = tool.get("annotations")
         assert isinstance(annotations, dict), tool["name"] + " has no annotations"
         assert all(isinstance(annotations.get(h), bool) for h in hints), tool["name"] + " lacks a hint"
-        assert "outputSchema" in tool, tool["name"] + " has no outputSchema"
-        Draft202012Validator.check_schema(tool["outputSchema"])
-        checks += 1
+        if tool["name"] == "describe":
+            Draft202012Validator.check_schema(tool["outputSchema"])
+            checks += 1
+        else:
+            assert "outputSchema" not in tool, tool["name"] + " carries an outputSchema"
     # the classification: a query, `describe` included, is read-only, and an action is not
     assert tools["doc"]["annotations"]["readOnlyHint"] is True
     assert tools["describe"]["annotations"]["readOnlyHint"] is True
@@ -98,15 +102,19 @@ def main():
             Draft202012Validator(tools[params["name"]]["inputSchema"]).validate(params["arguments"])
             checks += 1
     names = {r["id"]: r["params"]["name"] for r in requests if "id" in r and r["method"] == "tools/call"}
-    for request_id in (2, 3, 4, 8, 9, 12):
+    result_schema = by_id[14]["result"]["structuredContent"]
+    Draft202012Validator.check_schema(result_schema)
+    checks += 1
+    for request_id in (2, 3, 4, 8, 9, 12, 14):
         result = by_id[request_id]["result"]
         validate("CallToolResult", result)
         assert json.loads(result["content"][0]["text"]) == result["structuredContent"]
-        Draft202012Validator(tools[names[request_id]]["outputSchema"]).validate(result["structuredContent"])
+        schema = tools["describe"]["outputSchema"] if names[request_id] == "describe" else result_schema
+        Draft202012Validator(schema).validate(result["structuredContent"])
         checks += 1
     # red control: the bare Reply schema refuses the enveloped result, and accepts its payload
-    envelope_schema = tools["open"]["outputSchema"]
-    bare = {**envelope_schema["properties"]["payload"], "$defs": envelope_schema.get("$defs", {})}
+    defs = result_schema["$defs"]
+    bare = {**defs["Result"]["properties"]["payload"], "$defs": defs}
     Draft202012Validator.check_schema(bare)
     for request_id in (2, 3, 4):
         enveloped = by_id[request_id]["result"]["structuredContent"]
@@ -127,9 +135,10 @@ def main():
         "output_schema_tools": sum(1 for t in tools.values() if "outputSchema" in t),
         "tools_list_bytes": len(lines[[r["id"] for r in replies].index(1)].encode()),
         "input_schema_bytes": sum(len(json.dumps(t["inputSchema"])) for t in tools.values()),
-        "output_schema_bytes": sum(len(json.dumps(t["outputSchema"])) for t in tools.values()),
+        "output_schema_bytes": sum(len(json.dumps(t["outputSchema"])) for t in tools.values() if "outputSchema" in t),
+        "result_schema_bytes": len(json.dumps(result_schema)),
         "exact_large_id": str(2**64),
-        "scope": "finite stdio trace; official schemas, generated argument and output schemas"}))
+        "scope": "finite stdio trace; official schemas, generated argument schemas and describe's answers"}))
 
 
 if __name__ == "__main__":

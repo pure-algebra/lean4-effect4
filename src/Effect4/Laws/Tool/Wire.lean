@@ -345,13 +345,22 @@ theorem supportedMethods_descriptors :
     supportedMethods =
       MethodKey.all.map fun k => ((methodDescriptor k).name, (methodDescriptor k).versions) := rfl
 
-/-- **A method's output schema is its descriptor's result, closed** (proposed claim
-`tool-method-descriptor`): the table renders the reply's schema once (`Methods.replySchema`), and
-that is the closed schema of each descriptor's result. Its consumer is the MCP table
-(`Methods.entries`), which gives every method that one schema. -/
+/-- **A method's listing carries no output schema** (proposed claim `tool-method-descriptor`):
+every method answers one envelope, so `tools/list` leaves its schema to `describe`
+(`describe_result`). Its consumer is the MCP table (`Methods.entries`, `eff mcp`'s `tools/list`). -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem listing_outputSchema (tools : List String) (k : MethodKey) :
-    (Methods.listingOf tools Methods.replySchema (methodDescriptor k)).outputSchema =
-      Methods.docSchema [] false (methodDescriptor k).result := rfl
+    (Methods.listingOf tools (methodDescriptor k)).outputSchema = none := rfl
+
+/-- **`describe` answers each descriptor's result, closed** (proposed claim
+`tool-method-descriptor`): its first answer, at `Methods.resultName`, is the schema document of
+every method's result, the reply in its envelope, with each definition it reaches. Its consumer is
+the agent that reads a method's result, and `scripts/check-mcp-protocol.py`. -/
+@[semantics "exact-codecs" (requirement := R8)]
+theorem describe_result (k : MethodKey) :
+    Methods.describe.answers.head? = some (Methods.resultName,
+      Methods.definitionSchema
+        ((Methods.resultName, (methodDescriptor k).result.root) :: (methodDescriptor k).result.defs)
+        Methods.resultName) := rfl
 
 end Effect4.Tool

@@ -153,7 +153,8 @@ namespace Methods
 def describeText : String :=
   "Answer the JSON Schema of one definition that the tools' schemas name under `$defs` and leave \
 to this tool: the program's grammar (programs, types, terms, values). The answer is a schema \
-document of its own, with every definition it reaches. Ask for a definition before you write one."
+document of its own, with every definition it reaches. Ask for a definition before you write one. \
+`Result` answers the schema of every method's result: the reply in its envelope."
 
 /-- What a schema says where it leaves a definition to `describe`. -/
 def onDemandText : String := "Its schema is the answer of `describe` for this definition's name."
@@ -465,13 +466,13 @@ def methodDescriptor (k : MethodKey) : MethodDescriptor :=
 
 namespace Methods
 
-/-- **One tool as `tools/list` shows it**: its name, what it does, the JSON Schema of its arguments
-and of its result, as JSON text, and its four behaviour hints. -/
+/-- **One tool as `tools/list` shows it**: its name, what it does, the JSON Schema of its arguments,
+and of its result where the listing carries one, as JSON text, and its four behaviour hints. -/
 structure Listing where
   name : String
   description : String
   inputSchema : String
-  outputSchema : String
+  outputSchema : Option String
   readOnly : Bool
   destructive : Bool
   idempotent : Bool
@@ -486,35 +487,42 @@ structure Entry where
   field : String
   caseName : String
 
+/-- The name under which `describe` answers every method's result. No table definition has it
+(`Test/Program/ToolMethodsControls.lean`). -/
+def resultName : String := "Result"
+
 /-- **What every method answers**: the closed schema of the reply in its envelope, the structured
-content of a call (`eff mcp`), rendered once for the table. -/
-def replySchema : String := docSchema [] false (shape (Wire.Envelope Reply))
+content of a call (`eff mcp`). It is `describe`'s answer for `resultName`, a schema document like
+its others, so `tools/list` carries it once, on request, and not once per method. -/
+def replySchema : String :=
+  let doc := shape (Wire.Envelope Reply)
+  definitionSchema ((resultName, doc.root) :: doc.defs) resultName
 
 /-- **The listing of a descriptor**: its arguments' schema leaves the table's object definitions
-to `describe` and each sum of `tools` to its tools' own schemas. Its result's closed schema is
-`output`, which the table renders once: every method answers one envelope
-(`listing_outputSchema`, `Laws/Tool/Wire.lean`). -/
-def listingOf (tools : List String) (output : String) (d : MethodDescriptor) : Listing :=
+to `describe` and each sum of `tools` to its tools' own schemas. It carries no result schema:
+every method answers one envelope, whose closed schema is `describe`'s answer for `resultName`
+(`listing_outputSchema`, `describe_result`, `Laws/Tool/Wire.lean`). -/
+def listingOf (tools : List String) (d : MethodDescriptor) : Listing :=
   { name := d.name, description := d.description,
-    inputSchema := docSchema tools true d.arguments, outputSchema := output,
+    inputSchema := docSchema tools true d.arguments, outputSchema := none,
     readOnly := d.readOnly, destructive := d.hints.destructive,
     idempotent := d.hints.idempotent, openWorld := d.hints.openWorld }
 
-/-- The tool table at the sums whose cases are tools and the reply's schema, each read once. -/
-def entriesAt (tools : List String) (output : String) : List Entry :=
+/-- The tool table at the sums whose cases are tools. -/
+def entriesAt (tools : List String) : List Entry :=
   MethodKey.all.map fun k =>
     let (kind, field, _) := caseFor k
-    ⟨listingOf tools output (methodDescriptor k), kind, field, k.caseName⟩
+    ⟨listingOf tools (methodDescriptor k), kind, field, k.caseName⟩
 
 /-- **The tool table**: one entry per method key, in the keys' order, each its descriptor's
 listing, with the request it builds. A sum a group holds is a call of one of its methods wherever
 an argument holds it (`dry`'s action). -/
 def entries : List Entry :=
-  entriesAt (groups.map fun (_, _, name, _) => name) replySchema
+  entriesAt (groups.map fun (_, _, name, _) => name)
 
-/-- **The `describe` tool**: the schema of each table definition the methods' schemas leave to it
-(`onDemand`). It is no method of the protocol: the server answers a call from `answers`, one schema
-document per definition, in the table's order. -/
+/-- **The `describe` tool**: the schema of every method's result (`resultName`), then of each table
+definition the methods' schemas leave to it (`onDemand`). It is no method of the protocol: the
+server answers a call from `answers`, one schema document per name, in that order. -/
 structure Describe where
   listing : Listing
   answers : List (String × String)
@@ -527,11 +535,12 @@ def describe : Describe :=
   let names := (defs.map (·.1)).eraseDups.filter fun n => ((defs.lookup n).map onDemand).getD false
   { listing :=
       { name := "describe", description := describeText,
-        inputSchema := objectSchema [("name", object [("enum", array (names.map quote))])],
-        outputSchema := objectSchema [("$ref", object [("type", quote "string")]),
-          ("$defs", object [("type", quote "object")])],
+        inputSchema :=
+          objectSchema [("name", object [("enum", array ((resultName :: names).map quote))])],
+        outputSchema := some (objectSchema [("$ref", object [("type", quote "string")]),
+          ("$defs", object [("type", quote "object")])]),
         readOnly := true, destructive := false, idempotent := true, openWorld := false }
-    answers := names.map fun n => (n, definitionSchema defs n) }
+    answers := (resultName, replySchema) :: names.map fun n => (n, definitionSchema defs n) }
 
 end Methods
 

@@ -915,7 +915,7 @@ and listing = {
   name : string;
   description : string;
   input_schema : string;
-  output_schema : string;
+  output_schema : string option;
   read_only : bool;
   destructive : bool;
   idempotent : bool;
@@ -1580,7 +1580,6 @@ and run_answer =
     RunAnswer_view of view
   | RunAnswer_record of live_record
   | RunAnswer_journal of command list
-and plan = { shared : string list; tools : string list; }
 and method_kind = MethodKind_action | MethodKind_query
 and method_descriptor = {
   name : string;
@@ -1597,6 +1596,7 @@ and method_hints = {
   idempotent : bool;
   open_world : bool;
 }
+and plan = { shared : string list; tools : string list; }
 and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
 and fn_shape =
     FnShape_update
