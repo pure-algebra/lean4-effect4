@@ -215,6 +215,12 @@
  (modules disk_test_support)
  (libraries effect4_engine_cas effect4_bytes effect4_eff unix zarith))
 
+; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+(rule
+ (alias runtest)
+ (deps (sandbox none) (:cmt (glob_files .effect4_disk_test_support.objs/byte/*.cmt)))
+ (action (chdir %{workspace_root} (run %{exe:../../../tools/typed_lint/main.exe} %{cmt}))))
+
 (test
  (name test_disk_kill)
  (modules test_disk_kill)

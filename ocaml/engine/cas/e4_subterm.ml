@@ -20,7 +20,7 @@ let children = Eff_subterm.children
 let arity f = List.length (family_ctor_names f)
 
 let path_to_string (p : int list) : string =
-  if p = [] then "." else String.concat "." (List.map string_of_int p)
+  if List.is_empty p then "." else String.concat "." (List.map string_of_int p)
 
 let val_of_prog (f : family) (c : int) (k : int) : int option =
   match List.nth_opt (children f c) k with Some (v, _) -> Some v | None -> None
@@ -185,7 +185,11 @@ let at_prog_path (t : t) (p : int list) : entry option =
 let at_val_path (t : t) (p : int list) : entry option =
   find_entry t (fun e -> path_eq e.val_path p)
 
-let family_eq (a : family) (b : family) : bool = a = b
+let family_eq (a : family) (b : family) : bool =
+  match a, b with
+  | Eff, Eff | Stmts, Stmts | Stmt, Stmt | Action, Action | Effs, Effs | Layer, Layer
+  | Layers, Layers -> true
+  | (Eff | Stmts | Stmt | Action | Effs | Layer | Layers), _ -> false
 
 let entries_at_family (t : t) (f : family) : entry list =
   List.filter (fun e -> family_eq e.family f) (Array.to_list t.t_entries)

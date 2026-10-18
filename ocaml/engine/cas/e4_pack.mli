@@ -106,6 +106,11 @@ type reader
 type seg = int
 type off = int  (* byte offset inside a segment *)
 
+val equal_position : seg * off -> seg * off -> bool
+val compare_position : seg * off -> seg * off -> int
+(** A place in the store, ordered by segment and then by offset: the order every watermark
+    and every record position follows (ocaml/STANDARDS.md rule 7). *)
+
 exception Locked of string
 (** `open_` while another writer holds <dir>/LOCK (PK6).  Carries the directory. *)
 

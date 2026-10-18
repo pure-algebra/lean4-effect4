@@ -163,7 +163,8 @@ let render = J.render
 
 open Effect4_gen.Api_gen
 
-let lookup_all name defs = List.filter_map (fun (n, s) -> if n = name then Some s else None) defs
+let lookup_all (name : string) defs =
+  List.filter_map (fun (n, s) -> if String.equal n name then Some s else None) defs
 
 (** The first candidate of a shape, or the shape itself (`headShape`). *)
 let head_shape defs s =
@@ -171,10 +172,10 @@ let head_shape defs s =
   | Shape_named n -> (match lookup_all n defs with s' :: _ -> s' | [] -> s)
   | _ -> s
 
-let all_nullary cases = List.for_all (fun (_, (_, fields)) -> fields = []) cases
+let all_nullary cases = List.for_all (fun (_, (_, fields)) -> List.is_empty fields) cases
 
-let case_at tag cases =
-  List.find_map (fun (n, (t, fields)) -> if t = tag then Some (n, fields) else None) cases
+let case_at (tag : int) cases =
+  List.find_map (fun (n, (t, fields)) -> if Int.equal t tag then Some (n, fields) else None) cases
 
 let hex_string (bytes : int list) : string =
   String.concat "" (List.map (Printf.sprintf "%02x") bytes)
@@ -233,17 +234,17 @@ and print_fields defs fields args =
 (** The list rule (`listItem?`): a sum of `nil` and `cons` with `head` and `tail`. *)
 let list_item cases =
   match cases with
-  | [ (n0, (t0, [])); (n1, (t1, [ (k0, head); (k1, _) ])) ]
-    when n0 = "nil" && n1 = "cons" && k0 = "head" && k1 = "tail" && t0 <> t1 -> Some head
+  | [ ("nil", (t0, [])); ("cons", (t1, [ ("head", head); ("tail", _) ])) ] when not (Int.equal t0 t1) ->
+    Some head
   | _ -> None
 
-let entry_of name entries = List.assoc_opt name entries
+let entry_of (name : string) entries = List.assoc_opt name entries
 
 let tag_of_name name cases =
-  match List.find_opt (fun (n, _) -> n = name) cases with
+  match List.find_opt (fun (n, _) -> String.equal n name) cases with
   | Some (_, (tag, _)) ->
     (match case_at tag cases with
-     | Some (name', fields) when name' = name -> Some (tag, fields)
+     | Some (name', fields) when String.equal name' name -> Some (tag, fields)
      | _ -> None)
   | None -> None
 
@@ -382,7 +383,7 @@ let rec read_in defs budget s (j : J.t) : Val.t option =
     | Shape_sum (_, cases), J.String name ->
       if all_nullary cases then
         Option.bind (tag_of_name name cases) (fun (tag, fields) ->
-            if fields = [] then Some (Val.Ctor (tag, [])) else None)
+            if List.is_empty fields then Some (Val.Ctor (tag, [])) else None)
       else None
     | Shape_sum (_, cases), J.Object (("_tag", J.String name) :: entries) ->
       if all_nullary cases then None

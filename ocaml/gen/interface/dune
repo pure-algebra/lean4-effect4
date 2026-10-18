@@ -4,6 +4,12 @@
  (modules lcnf_interface)
  (libraries compiler-libs.common))
 
+; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+(rule
+ (alias runtest)
+ (deps (sandbox none) (:cmt (glob_files .lcnf_interface.objs/byte/*.cmt)))
+ (action (chdir %{workspace_root} (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
+
 (executable
  (name main)
  (modules main)

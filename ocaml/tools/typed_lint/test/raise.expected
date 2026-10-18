@@ -1,0 +1,4 @@
+File "tools/typed_lint/test/raise.ml", line 3, characters 40-48: rule 6: Stdlib.failwith in parse
+File "tools/typed_lint/test/raise.ml", line 8, characters 35-40: rule 6: Stdlib.raise in rethrow
+File "tools/typed_lint/test/raise.ml", line 9, characters 35-48: rule 6: Stdlib.raise_notrace Exit in the top level
+3 rule-6 finding(s), a report

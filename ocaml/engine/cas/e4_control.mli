@@ -61,3 +61,4 @@ val valid_name : string -> bool
 val open_error_word : open_error -> string
 val root_error_word : root_error -> string
 val head_equal : head -> head -> bool
+val root_policy_equal : root_policy -> root_policy -> bool

@@ -292,7 +292,7 @@ let close_reader (_ : reader) = ()
 let segments r = segment_files r.r_dir
 
 (* LG6: the last segment whose first index is at or below [from]. *)
-let start_of arr from =
+let start_of (arr : (seq * _) array) (from : seq) =
   let lo = ref 0 and hi = ref (Array.length arr - 1) and start = ref 0 in
   while !lo <= !hi do
     let mid = (!lo + !hi) / 2 in

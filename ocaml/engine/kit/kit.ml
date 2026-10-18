@@ -115,15 +115,20 @@ let machine_trace a r (m : 's Kit_machine.run) =
        | Kit_machine.Out_of_fuel | Kit_machine.Out_of_rounds -> Unsettled
        | Kit_machine.Stopped why -> Stopped why) }
 
+(* An exit compares through its value tree, which Lean's `Canonical.ofVal_toVal` makes injective. *)
+let equal_exit (a : exit) (b : exit) = Eff_val.equal (G.run_kit_exit_to_val a) (G.run_kit_exit_to_val b)
+
+let equal_call (i, v, a) (j, w, b) = Int.equal i j && Eff_val.equal v w && equal_exit a b
+
 (* Two traces agree when they make the same host calls and stop the same way; a refusal agrees
    with a refusal of the same call, whoever named its fault. *)
 let agree (x : trace) (y : trace) =
-  calls x = calls y
+  List.equal equal_call (calls x) (calls y)
   &&
   match x.stop, y.stop with
-  | Finished a, Finished b -> a = b
-  | Waiting (i, v), Waiting (j, w) -> i = j && v = w
-  | Refused (i, v, _, _), Refused (j, w, _, _) -> i = j && v = w
+  | Finished a, Finished b -> equal_exit a b
+  | Waiting (i, v), Waiting (j, w) -> Int.equal i j && Eff_val.equal v w
+  | Refused (i, v, _, _), Refused (j, w, _, _) -> Int.equal i j && Eff_val.equal v w
   | _ -> false
 
 let run ?(limit = 1024) ?(frames = false) ?(check = true) (a : app) (r : 's reactor) (st : 's) (p : program) : 's report =
@@ -250,7 +255,7 @@ module Json = struct
       @ [ ("via", J.String (if r.by_tree then "tree" else "machine"));
           ("calls", J.Array (List.map (call_json a) (calls r.trace))) ]
       @ (match r.agrees with Some b -> [ ("machine", J.String (if b then "agrees" else "disagrees")) ] | None -> [])
-      @ (if r.frames = [] then []
+      @ (if List.is_empty r.frames then []
          else [ ("frames", J.Array (List.mapi (fun k t ->
              match trace_json a t with J.Object fields -> J.Object (("budget", J.Int k) :: fields) | j -> j) r.frames)) ]))
 end

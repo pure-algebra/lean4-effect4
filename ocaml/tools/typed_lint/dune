@@ -1,0 +1,22 @@
+; typed_lint -- rules 7 and 6 of ocaml/STANDARDS.md on OCaml's typed tree (typed_lint.mli).
+;   The library reads one .cmt at a time; `main` is its thin driver. Each hand library's dune
+;   file runs the driver over that library's .cmt files under the runtest alias, from the build
+;   context's root, where the load paths a .cmt records resolve. The fixtures and the red
+;   control are in test/.
+
+(library
+ (name typed_lint)
+ (wrapped false)
+ (modules typed_lint)
+ (libraries compiler-libs.common)
+ (flags (:standard -w +a-4-9-40-41-42-44-45-70)))
+
+(executable
+ (name main)
+ (modules main)
+ (libraries typed_lint))
+
+(rule
+ (alias runtest)
+ (deps (sandbox none) (:cmt (glob_files .typed_lint.objs/byte/*.cmt)))
+ (action (chdir %{workspace_root} (run %{exe:main.exe} %{cmt}))))

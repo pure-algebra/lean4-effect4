@@ -73,7 +73,7 @@ module Registry = struct
 
   let register t ?(after = []) ~loc ~name fn =
     Mutex.protect t.mu (fun () ->
-        if t.final <> None then
+        if Option.is_some t.final then
           invalid_arg ("E4_shutdown.register: the pass is over (" ^ name ^ " at " ^ loc ^ ")");
         List.iter
           (fun (d : id) ->
@@ -107,7 +107,7 @@ module Registry = struct
           else acc)
         None !remaining
     in
-    while !remaining <> [] do
+    while not (List.is_empty !remaining) do
       let ready h =
         List.for_all
           (fun (d : id) -> Hashtbl.mem attempted d.index || Hashtbl.mem emitted d.index)
@@ -130,7 +130,7 @@ module Registry = struct
   (* One hook, bounded by the deadline. See the head of this file for why the finite case
      uses a thread and what happens to a hook that overruns. *)
   let run_hook h ~deadline =
-    if deadline = no_deadline then (try h.fn (); `Ok with e -> `Failed e)
+    if Float.equal deadline no_deadline then (try h.fn (); `Ok with e -> `Failed e)
     else begin
       let outcome : [ `Ok | `Failed of exn | `Timeout ] ref = ref `Ok in
       let finished = Atomic.make false in
@@ -143,7 +143,7 @@ module Registry = struct
       in
       let rec wait () =
         if Atomic.get finished then !outcome
-        else if Unix.gettimeofday () >= deadline then `Timeout
+        else if Float.compare (Unix.gettimeofday ()) deadline >= 0 then `Timeout
         else begin
           Thread.delay poll_seconds;
           wait ()
@@ -154,8 +154,8 @@ module Registry = struct
 
   let exit_code_of ~forced ~failed ~unfinished =
     if forced then exit_forced
-    else if unfinished <> [] then exit_cleanup_unfinished
-    else if failed <> [] then exit_cleanup_failed
+    else if not (List.is_empty unfinished) then exit_cleanup_unfinished
+    else if not (List.is_empty failed) then exit_cleanup_failed
     else exit_clean
 
   let report t = Mutex.protect t.mu (fun () -> t.final)
@@ -187,7 +187,7 @@ module Registry = struct
         in
         w ()
     | `Run ->
-        let forced = Unix.gettimeofday () >= deadline in
+        let forced = Float.compare (Unix.gettimeofday ()) deadline >= 0 in
         let attempted = Hashtbl.create 16 in
         let ran = ref [] and failed = ref [] and passes = ref 0 and expired = ref forced in
         let snapshot () =
@@ -205,7 +205,7 @@ module Registry = struct
                 List.iter
                   (fun h ->
                     if not !expired then
-                      if Unix.gettimeofday () >= deadline then expired := true
+                      if Float.compare (Unix.gettimeofday ()) deadline >= 0 then expired := true
                       else begin
                         Hashtbl.replace attempted h.hid.index ();
                         let t0 = Unix.gettimeofday () in

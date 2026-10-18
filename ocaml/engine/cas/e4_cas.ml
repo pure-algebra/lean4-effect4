@@ -192,7 +192,7 @@ let recovery_stop_word = function
 
 (* ---- positions ---- *)
 
-let pos_lt (s1, o1) (s2, o2) = s1 < s2 || (s1 = s2 && o1 < o2)
+let pos_lt a b = E4_pack.compare_position a b < 0
 let record_end (seg, off) len = (seg, off + E4_pack.record_overhead + len)
 let index_path ~dir = Filename.concat (Filename.concat dir "index") "000000.idx"
 
@@ -247,12 +247,13 @@ let drop_index view = view.v_index <- None
 
 (* ---- the by-Cid index: the two halves, and the one function that brings them up to date ---- *)
 
-let cid_add tbl key entry =
+let cid_add (tbl : (string, _ list ref) Hashtbl.t) key entry =
   match Hashtbl.find_opt tbl key with
   | Some l -> l := entry :: !l
   | None -> Hashtbl.replace tbl key (ref [ entry ])
 
-let cid_find tbl key = match Hashtbl.find_opt tbl key with Some l -> List.rev !l | None -> []
+let cid_find (tbl : (string, _ list ref) Hashtbl.t) key =
+  match Hashtbl.find_opt tbl key with Some l -> List.rev !l | None -> []
 
 let new_cidmap () =
   { c_tbl = Hashtbl.create 1024;
@@ -468,7 +469,7 @@ let stage_refusal (n : E4_node.t) (sc : E4_node.scan) = function
   | St_bad_version -> if n.E4_node.version <> 0 then Some (Model E4_admission.Bad_version) else None
   | St_malformed_ref -> if sc.E4_node.malformed then Some (Model E4_admission.Malformed_ref) else None
   | St_handle_in_content ->
-    if E4_kind.is_content n.E4_node.kind && sc.E4_node.handles <> [] then Some (Model E4_admission.Handle_in_content)
+    if E4_kind.is_content n.E4_node.kind && not (List.is_empty sc.E4_node.handles) then Some (Model E4_admission.Handle_in_content)
     else None
 
 let check_pure (n : E4_node.t) =
@@ -550,7 +551,7 @@ let checked_image view =
         bytes := (address, String.sub raw 0 (String.length raw)) :: !bytes;
         ending := record_end position record.E4_pack.r_len)
     in
-    if !ending <> view.v_end then
+    if not (E4_pack.equal_position !ending view.v_end) then
       refuse (record_fault !ending ("durable boundary: " ^ E4_pack.scan_stop_to_string stop));
     let rec roots names = function
       | [] -> ()
@@ -674,9 +675,9 @@ let commit t =
   if staged > 0 then view.v_counters.fsyncs <- view.v_counters.fsyncs + 1;
   promote_staged view;
   let pe = E4_pack.pack_end t.w_pack in
-  if pe <> view.v_end then refresh_reader view;
+  if not (E4_pack.equal_position pe view.v_end) then refresh_reader view;
   view.v_end <- pe;
-  if E4_control.pack_end view.v_control <> pe then begin
+  if not (E4_pack.equal_position (E4_control.pack_end view.v_control) pe) then begin
     view.v_control <- E4_control.set_pack_end view.v_control pe;
     write_control view
   end
@@ -839,7 +840,7 @@ let commit_transaction ?hook writer transaction =
       call After_sync;
       promote_staged view;
       let ending = E4_pack.pack_end writer.w_pack in
-      if ending <> view.v_end then refresh_reader view;
+      if not (E4_pack.equal_position ending view.v_end) then refresh_reader view;
       view.v_end <- ending;
       call Before_publish;
       view.v_control <- E4_control.set_pack_end prepared.prepared_control ending;
@@ -857,7 +858,7 @@ let admissible_after (seen : (string, E4_kind.t) Hashtbl.t)
   let n = b.node in
   let key = key_of b.addr in
   n.E4_node.version = 0
-  && E4_node.payload_ok n.E4_node.payload = Ok ()
+  && Result.is_ok (E4_node.payload_ok n.E4_node.payload)
   && (not (E4_node.malformed_ref n))
   && (not (E4_node.handle_in_content n))
   && String.equal (E4_sha256.digest (E4_node.encode n)) key
@@ -873,7 +874,7 @@ let admissible_after (seen : (string, E4_kind.t) Hashtbl.t)
          | None -> false
          | Some query -> (
            match Hashtbl.find_opt results (key_of query) with
-           | Some earlier -> earlier = n
+           | Some earlier -> E4_node.equal earlier n
            | None -> true))
 
 let admit_binding seen results (b : binding) =
@@ -1129,7 +1130,7 @@ let pin_all t ~job cids =
   let job_hex = E4_addr.Addr.hex job in
   let plans = List.map (fun c -> (c, by_cid_any view c)) cids in
   (* M1: refuse the whole publish before minting anything when some Cid has no filing. *)
-  match List.find_opt (fun (_, filings) -> filings = []) plans with
+  match List.find_opt (fun (_, filings) -> List.is_empty filings) plans with
   | Some (c, _) -> Error (E4_control.Dangling c)
   | None ->
     let rec mint = function
@@ -1223,7 +1224,7 @@ let reopen_ro view =
   let control = match read_control ~dir:view.v_dir with Some p -> p | None -> E4_control.initial in
   let upto = clamp_watermark ~dir:view.v_dir (E4_control.pack_end control) in
   view.v_control <- control;
-  if view.v_end <> upto then refresh_reader view;
+  if not (E4_pack.equal_position view.v_end upto) then refresh_reader view;
   if pos_lt view.v_end upto then begin
     (match view.v_index with
      | None -> ()
@@ -1257,7 +1258,7 @@ let close t =
     (* The index snapshot is a cache: saving it is best-effort and losing it costs a rebuild
        (L-IDX-0, crash family X3). *)
     (match t.w_view.v_index with
-     | Some idx when t.w_blocked = None -> (
+     | Some idx when Option.is_none t.w_blocked -> (
        try E4_index.save ~path:(index_path ~dir:t.w_view.v_dir) idx ~covers:t.w_view.v_end
        with Sys_error _ | Unix.Unix_error _ -> ())
      | _ -> ());
@@ -1323,8 +1324,9 @@ let open_rw_exn ~dir opts =
   let control = match read_control ~dir with Some p -> p | None -> E4_control.initial in
   let published = E4_control.pack_end control in
   let want = clamp_watermark ~dir published in
-  let empty_sentinel = published = (0, 0) && E4_control.roots control = [] in
-  if want <> published && not empty_sentinel then
+  let empty_sentinel =
+    E4_pack.equal_position published (0, 0) && List.is_empty (E4_control.roots control) in
+  if not (E4_pack.equal_position want published) && not empty_sentinel then
     raise (Store_error "published durable boundary is outside the pack");
   let pack =
     try E4_pack.open_at ~from:want ~verify:true ~truncate:true ~dir ~seg_max:opts.seg_max ()
@@ -1356,7 +1358,7 @@ let open_rw_exn ~dir opts =
            seg off (E4_addr.Addr.hex addr) (admission_word why))
     | Clean | Torn _ -> None
   in
-  if E4_control.pack_end view.v_control <> rec_.ends_at then begin
+  if not (E4_pack.equal_position (E4_control.pack_end view.v_control) rec_.ends_at) then begin
     view.v_control <- E4_control.set_pack_end view.v_control rec_.ends_at;
     write_control view
   end;

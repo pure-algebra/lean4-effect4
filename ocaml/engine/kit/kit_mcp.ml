@@ -45,7 +45,8 @@ let is_refusal (reply : string) =
     match List.assoc_opt "payload" fields with
     | Some (J.Object p) -> (
       match List.assoc_opt "result" p with
-      | Some (J.Object r) -> List.assoc_opt "_tag" r = Some (J.String "error")
+      | Some (J.Object r) -> (
+        match List.assoc_opt "_tag" r with Some (J.String "error") -> true | _ -> false)
       | _ -> false)
     | _ -> false)
   | _ -> false

@@ -70,11 +70,12 @@ let cmp_bool field (a : bool) (b : bool) : divergence list =
 
 let cmp_opt field (a : string option) (b : string option) : divergence list =
   let s = function None -> "<none>" | Some x -> x in
-  if a = b then [] else one field (s a) (s b)
+  if Option.equal String.equal a b then [] else one field (s a) (s b)
 
 (* A list field: the first index at which the two disagree, or the lengths when one side
    runs out first.  This is the position D2 promises. *)
-let cmp_list field (show : 'a -> string) (a : 'a list) (b : 'a list) : divergence list =
+let cmp_list field (equal : 'a -> 'a -> bool) (show : 'a -> string) (a : 'a list) (b : 'a list) :
+    divergence list =
   let rec go i xs ys =
     match xs, ys with
     | [], [] -> []
@@ -83,17 +84,18 @@ let cmp_list field (show : 'a -> string) (a : 'a list) (b : 'a list) : divergenc
     | _, [] ->
       [ { d_field = field; d_index = Some i; d_left = show (List.hd xs); d_right = "<end of list>" } ]
     | x :: xs', y :: ys' ->
-      if x = y then go (i + 1) xs' ys'
+      if equal x y then go (i + 1) xs' ys'
       else [ { d_field = field; d_index = Some i; d_left = show x; d_right = show y } ]
   in
   let d = go 0 a b in
-  if d = [] && List.length a <> List.length b then
+  if List.is_empty d && List.length a <> List.length b then
     one field
       (Printf.sprintf "<length %d>" (List.length a))
       (Printf.sprintf "<length %d>" (List.length b))
   else d
 
 let show_id_row (i, s) = Printf.sprintf "%d: %s" i s
+let equal_id_row (i, s) (j, t) = Int.equal i j && String.equal s t
 
 let compare (a : projection) (b : projection) : divergence list =
   List.concat
@@ -102,13 +104,13 @@ let compare (a : projection) (b : projection) : divergence list =
       cmp_bool "p3_settled" a.p3_settled b.p3_settled;
       cmp_str "p4_answer" a.p4_answer b.p4_answer;
       cmp_int "p5_fiber_count" a.p5_fiber_count b.p5_fiber_count;
-      cmp_list "p6_fiber_ids" string_of_int a.p6_fiber_ids b.p6_fiber_ids;
-      cmp_list "p7_exits" show_id_row a.p7_exits b.p7_exits;
+      cmp_list "p6_fiber_ids" Int.equal string_of_int a.p6_fiber_ids b.p6_fiber_ids;
+      cmp_list "p7_exits" equal_id_row show_id_row a.p7_exits b.p7_exits;
       cmp_opt "p8_root_exit" a.p8_root_exit b.p8_root_exit;
-      cmp_list "p9_fiber_rows" show_id_row a.p9_fiber_rows b.p9_fiber_rows;
+      cmp_list "p9_fiber_rows" equal_id_row show_id_row a.p9_fiber_rows b.p9_fiber_rows;
       cmp_str "p10_armed" a.p10_armed b.p10_armed;
       cmp_int "p11_trace_length" a.p11_trace_length b.p11_trace_length;
-      cmp_list "p12_trace_rows" (fun s -> s) a.p12_trace_rows b.p12_trace_rows;
+      cmp_list "p12_trace_rows" String.equal (fun s -> s) a.p12_trace_rows b.p12_trace_rows;
       cmp_str "p13_store_row" a.p13_store_row b.p13_store_row ]
 
 (* ==================================================================== one engine's side *)
@@ -231,7 +233,7 @@ module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t = struct
         let cands =
           [ Flush ]
           @ List.map (fun k -> Evaluate k) ids
-          @ List.map (fun k -> Fire k) (if armed = [] then ids else armed)
+          @ List.map (fun k -> Fire k) (if List.is_empty armed then ids else armed)
           @ List.concat_map (fun k -> [ Yield_verdict (k, true); Yield_verdict (k, false) ]) ids
           @ List.map (fun (f, tok) -> Answer_async (f, tok, 1 + (!i mod 7))) parked
           @ List.map (fun k -> Interrupt_from (None, k)) ids

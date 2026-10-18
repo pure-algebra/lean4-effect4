@@ -134,7 +134,7 @@ let add_at t addr ~seg ~off ~kind =
     else j := (!j + 1) land t.mask
   done;
   if not !dup then begin
-    if float_of_int (t.n + 1) > max_load *. float_of_int t.n_slots then grow t;
+    if Float.compare (float_of_int (t.n + 1)) (max_load *. float_of_int t.n_slots) > 0 then grow t;
     let steps = raw_put t.keys t.vals t.mask key v in
     if steps > t.max_probe then t.max_probe <- steps;
     t.n <- t.n + 1
@@ -203,8 +203,8 @@ let find_with t addr (confirm : seg:seg -> off:off -> E4_addr.Addr.t option) =
 
 let find ~confirm t addr = find_with t addr confirm
 let find_in rd t addr = find_with t addr (confirm_of_reader rd)
-let mem ~confirm t addr = find ~confirm t addr <> None
-let mem_in rd t addr = find_in rd t addr <> None
+let mem ~confirm t addr = Option.is_some (find ~confirm t addr)
+let mem_in rd t addr = Option.is_some (find_in rd t addr)
 
 let find_full rd t addr =
   let len = ref (-1) in
@@ -434,7 +434,8 @@ let load_result ~path : (t * (seg * off), load_verdict) result =
            if String.sub head 0 6 <> magic then fail "magic"
            else if String.sub head 6 8 <> version then
              fail (Printf.sprintf "version %S" (String.sub head 6 8))
-           else if E4_crc.read_be32 head (head_length - 4) <> Some (E4_crc.string (String.sub head 0 (head_length - 4)))
+           else if not (Option.equal Int.equal (E4_crc.read_be32 head (head_length - 4))
+                          (Some (E4_crc.string (String.sub head 0 (head_length - 4)))))
            then fail "head crc"
            else begin
              let cseg = read_be64_exn head 14 in
@@ -450,7 +451,7 @@ let load_result ~path : (t * (seg * off), load_verdict) result =
                let crc = read_array ic keys n_slots E4_crc.init in
                let crc = read_array ic vals n_slots crc in
                let tail = really_input_string ic 4 in
-               if E4_crc.read_be32 tail 0 <> Some crc then fail "body crc"
+               if not (Option.equal Int.equal (E4_crc.read_be32 tail 0) (Some crc)) then fail "body crc"
                else begin
                  close_in_noerr ic;
                  (* the count in the head must be the count in the body *)
@@ -487,7 +488,7 @@ let load ~path = match load_result ~path with Ok r -> Some r | Error _ -> None
 let load_at ~path ~pack_end =
   match load_result ~path with
   | Error v -> Error v
-  | Ok (t, covers) -> if covers = pack_end then Ok t else Error (Stale { covers; pack_end })
+  | Ok (t, covers) -> if E4_pack.equal_position covers pack_end then Ok t else Error (Stale { covers; pack_end })
 
 let open_index ?kind_at ?dir ~path rd ~pack_end =
   match load_at ~path ~pack_end with

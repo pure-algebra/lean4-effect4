@@ -91,6 +91,9 @@ type t = {
   payload : string;              (* one Val frame tree *)
 }
 
+val equal : t -> t -> bool
+(** Field by field: the version, the kind, the spec bytes and the payload bytes. *)
+
 type decode_error =
   | Trailing                     (** bytes after the payload's one frame *)
   | Bad_version of int           (** the byte that was not 0 *)

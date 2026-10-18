@@ -8,10 +8,14 @@ type step = Arg of int | Each
 
 type path = step list
 
+let equal_step a b =
+  match a, b with Arg i, Arg j -> Int.equal i j | Each, Each -> true | (Arg _ | Each), _ -> false
+let equal_path = List.equal equal_step
+
 let args (is : int list) : path = List.map (fun i -> Arg i) is
 
 let path_to_string (p : path) : string =
-  if p = [] then "."
+  if List.is_empty p then "."
   else String.concat "." (List.map (function Arg i -> string_of_int i | Each -> "*") p)
 
 (* ============================================================ 2. the frame walk *)
@@ -439,7 +443,7 @@ let fields_of t k = (row t k).fields
 
 let class_at t k p =
   let r = row t k in
-  match List.find_opt (fun f -> field_path f = p) r.fields with
+  match List.find_opt (fun f -> equal_path (field_path f) p) r.fields with
   | Some (Cid_field _) -> Cls_cid
   | Some (Ref_field (_, kk)) -> Cls_ref kk
   | Some (Stamp _) -> Cls_stamp

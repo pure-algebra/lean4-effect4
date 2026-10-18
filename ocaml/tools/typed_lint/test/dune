@@ -1,0 +1,59 @@
+; Typed_lint's controls. Each fixture is compiled with -bin-annot as a plain unit from the build
+; context's root, as dune compiles a library's modules, so its .cmt records only the standard
+; library on its load path. Each run of the driver is held to its
+; expected output and its exit status:
+;   red        rule 7's red control: the red lines are found, the green lines and the GENERATED
+;              unit are not, and the driver exits 1 (T1, T2).
+;   raise      rule 6's report (--raises): three findings, and exit 0 (T3).
+;   missing    an absent .cmt is a refusal, exit 2 (T4).
+
+(rule
+ (targets red.cmo red.cmi red.cmt)
+ (deps red.ml)
+ (action (chdir %{workspace_root} (run %{ocamlc} -bin-annot -w -a -c %{dep:red.ml}))))
+
+(rule
+ (targets generated.cmo generated.cmi generated.cmt)
+ (deps generated.ml)
+ (action (chdir %{workspace_root} (run %{ocamlc} -bin-annot -w -a -c %{dep:generated.ml}))))
+
+(rule
+ (targets raise.cmo raise.cmi raise.cmt)
+ (deps raise.ml)
+ (action (chdir %{workspace_root} (run %{ocamlc} -bin-annot -w -a -c %{dep:raise.ml}))))
+
+(rule
+ (targets red.out)
+ (deps (sandbox none) red.cmt red.ml generated.cmt generated.ml)
+ (action
+  (with-stdout-to %{targets}
+   (chdir %{workspace_root}
+    (with-accepted-exit-codes 1
+     (run %{exe:../main.exe} %{dep:red.cmt} %{dep:generated.cmt}))))))
+
+(rule
+ (alias runtest)
+ (action (diff red.expected red.out)))
+
+(rule
+ (targets raise.out)
+ (deps (sandbox none) raise.cmt raise.ml)
+ (action
+  (with-stdout-to %{targets}
+   (chdir %{workspace_root}
+    (run %{exe:../main.exe} --raises %{dep:raise.cmt})))))
+
+(rule
+ (alias runtest)
+ (action (diff raise.expected raise.out)))
+
+(rule
+ (targets missing.out)
+ (action
+  (with-stderr-to %{targets}
+   (with-accepted-exit-codes 2
+    (run %{exe:../main.exe} missing.cmt)))))
+
+(rule
+ (alias runtest)
+ (action (diff missing.expected missing.out)))

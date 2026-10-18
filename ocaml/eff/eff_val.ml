@@ -17,7 +17,10 @@
        fixture carries them (engine/test/modeled).                     by construction; tested
    V3  Round trip: for every value a fixture carries, `emit (decode bytes) = bytes`.
                                                                 tested (test_scenarios S3)
-   V4  A byte string or a digest is written in time linear in its length.  by construction *)
+   V4  A byte string or a digest is written in time linear in its length.  by construction
+   V5  `equal` is structural equality, the relation of Lean's derived `DecidableEq Store.Val`,
+       and compares each field by its own type's equality (ocaml/STANDARDS.md rule 7).
+                                                                       by construction *)
 
 (* The bytes whose codes are listed, in one pass; a code outside 0..255 raises Invalid_argument,
    as `Char.chr` does (V4). *)
@@ -87,3 +90,23 @@ let rec decode : Eff_types.Val.t Eff_frame.decoder =
 
 (* Exactly one value: trailing bytes are a refusal. *)
 let decode_exact (s : string) : Eff_types.Val.t option = Eff_frame.exact decode s
+
+(* Structural equality (V5). The last case names every constructor, so a new one is a
+   non-exhaustive match until it has its own case. *)
+let rec equal (a : Eff_types.Val.t) (b : Eff_types.Val.t) : bool =
+  let module V = Eff_types.Val in
+  match a, b with
+  | V.Unit, V.Unit | V.None, V.None -> true
+  | V.Bool x, V.Bool y -> Bool.equal x y
+  | V.Nat x, V.Nat y | V.NegInt x, V.NegInt y | V.Float x, V.Float y -> Int.equal x y
+  | V.Str x, V.Str y -> String.equal x y
+  | V.Bytes x, V.Bytes y -> List.equal Int.equal x y
+  | V.List xs, V.List ys -> List.equal equal xs ys
+  | V.Pair (x, x'), V.Pair (y, y') -> equal x y && equal x' y'
+  | V.Some x, V.Some y -> equal x y
+  | V.Ctor (i, xs), V.Ctor (j, ys) -> Int.equal i j && List.equal equal xs ys
+  | V.Ref (k, d), V.Ref (k', d') -> Int.equal k k' && List.equal Int.equal d d'
+  | V.Handle (k, x), V.Handle (k', y) -> Int.equal k k' && Int.equal x y
+  | ( ( V.Unit | V.Bool _ | V.Nat _ | V.Str _ | V.Bytes _ | V.List _ | V.Pair _ | V.None
+      | V.Some _ | V.Ctor _ | V.Ref _ | V.Handle _ | V.NegInt _ | V.Float _ ),
+      _ ) -> false
