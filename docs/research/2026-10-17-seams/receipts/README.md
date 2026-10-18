@@ -12,8 +12,8 @@ The owner pauses work after V1.
 | K0 | `66f292a095e57e7c94586434aab9c5c597f82d6e`; receipt `faa7d0122bd550186e4c622517509ac001763a35` | [K0](K0.md) | Required checks pass. |
 | S0 | `d46b1e6d6f184764a7ee1a00b01a800a45f35d33`; receipt `489e127a8b94f4796ff40ef4200080b5e83a94f2` | [S0](S0.md) | Required checks pass. |
 | V1 | `d6ad9482303a1998bfbcc826bf0d12ab4f6aa3c9`; receipt `6406fa8d47b99e1b6224dffac5025f622235893c` ; receipt `6406fa8d47b99e1b6224dffac5025f622235893c` | [V1](V1.md) | Required checks pass; two placed goals remain. |
-| S1 | `2e71c9dc69b1d06e2b2241f8374e0600daa90a0f` | [S1](S1.md) | Required checks pass; thirteen placed goals remain. |
-| S2 | Pending | Pending | Open |
+| S1 | `2e71c9dc69b1d06e2b2241f8374e0600daa90a0f` ; receipt `4de971df3ecce776ec1cc914aa326adcf88ec333` | [S1](S1.md) | Required checks pass; thirteen placed goals remain. |
+| S2 | `e15394b0934f14158970b21abf65d6b391c61fe4` | [S2](S2.md) | Required checks pass; three new placed goals remain. |
 | S4 | Pending | Pending | Open |
 | S3a | Pending | Pending | Open |
 | S3b | Pending | Pending | Open |
@@ -74,6 +74,11 @@ The owner pauses work after V1.
 | S1 | Reached-state observations retain their exact scope through placed goals and explicit proof-status changes. |
 | S1 | Module asks retain actual dependency traces; native Doc sealing waits for the actual exported protocol closure. |
 
+| S2 | Certification and publication agreement retain reference-free premises; publication also requires a positive base. |
+| S2 | The complete anchor includes source and application; equal identity/revision alone does not authorize publication. |
+| S2 | Missing nonroot focus refuses before candidate construction, without an invented key or item index. |
+| S2 | Original certification and materialization algorithms move to Laws-only observations; D1–D9 retain their exact premises. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -99,5 +104,9 @@ The owner pauses work after V1.
 | S1 | Derive revision from history; preserve atomic refusal and exact snapshot checks. |
 | S1 | Retain derived undo entries only in sealed memory; reconstruct them from accepted actions on load. |
 | S1 | Retain initial-positive premises and full reached-state goals, with proof status measured by the report. |
+
+| S2 | Adopt witnessed pending fills, keepExact certification, and one address-ordered publication commit. |
+| S2 | Reset only after successful publication; retain full-anchor checks and precise feed refusals. |
+| S2 | Keep three placed connections and the original D1–D9 observations on their explicit fragments. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.
