@@ -1,0 +1,5 @@
+; The seat-2 race probes of 2026-10-18 (receipt-estate.md): copy this folder into ocaml/engine/test/
+; and build it there; it names the engine's private test library.
+(executables
+ (names race_open race_disk race_commit race_process)
+ (libraries effect4_engine_cas effect4_disk_test_support unix zarith))
