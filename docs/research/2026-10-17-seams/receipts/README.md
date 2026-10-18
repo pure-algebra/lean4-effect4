@@ -23,7 +23,7 @@ The owner pauses work after V1.
 | ST2 | `e163b1ac64aa9c4c8ce91f2b7d54bd4d3aa3d061` | [ST2](ST2.md) | Required checks pass; all three recovery claims are proved. |
 | ST3 | `2062a13aafd8afbe8d6017e77be426ee6c64090b` | [ST3](ST3.md) | Required checks pass; `cas-result-envelope` and `cas-result-once` proved, no planned goals. |
 | ST4 | `6bb098a245591c0e2f69ca1807f8bb4f16387cb6` | [ST4](ST4.md) | Narrow build, audit and check-ocaml pass; four claims proved, no planned goals. |
-| S6 | Pending | Pending | Open |
+| S6 | `8703ab832cc61f5694d0a7247e33fc22306f5dd5` | [S6](S6.md) | Native serve landed; replies equal the Lean driver. The native exchange over the disk store is open. |
 
 ## Departures from the plan
 
@@ -108,6 +108,9 @@ The owner pauses work after V1.
 | ST4 | The exchange's decisions sit outside the checked writer (`finish`, `stepped`), so the laws read plain values. |
 | ST4 | No Job or Tape carrier exists to retain; the semantics report was not regenerated. |
 
+| S6 | The generator budgets heartbeats per type and per root; `Wire.check` is one owner for the envelope check. |
+| S6 | The native exchange over E4_cas, the kit commands' move, and the JSON number profile remain open. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -155,5 +158,7 @@ The owner pauses work after V1.
 | ST3 | Key a shared gate result by its input snapshot and its complete command. |
 
 | ST4 | Persist sessions as entry chains under journal roots; load by replay through serve, comparing each stored program. |
+
+| S6 | Serve the authoring tool natively through generated Tool.serve, with requests as canonical value trees at the boundary. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

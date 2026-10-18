@@ -1,0 +1,16 @@
+{
+  "command": [
+    "opam",
+    "exec",
+    "--switch=effect4",
+    "--",
+    "sh",
+    "-c",
+    "cd ocaml && dune build --root . engine/test/kit/test_tool.exe && cd engine/test/kit && ../../../_build/default/engine/test/kit/test_tool.exe"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4",
+  "started_utc": "2026-10-18T10:39:49.830821+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 0.191,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S6/native-tool.log"
+}

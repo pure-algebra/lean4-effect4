@@ -1,0 +1,29 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "sh", "-c", "cd ocaml && dune build --root . engine/test/kit/test_tool.exe && cd engine/test/kit && ../../../_build/default/engine/test/kit/test_tool.exe"], "cwd": "/Users/pooks/Dev/lean4-effect4", "started_utc": "2026-10-18T10:39:49.830821+00:00"}
+PASS  N1 the fixture has 10 requests and Lean 10 replies
+PASS  N1 reply 0 equals Lean's
+PASS  N1 reply 1 equals Lean's
+PASS  N1 reply 2 equals Lean's
+PASS  N1 reply 3 equals Lean's
+PASS  N1 reply 4 equals Lean's
+PASS  N1 reply 5 equals Lean's
+PASS  N1 reply 6 equals Lean's
+PASS  N1 reply 7 equals Lean's
+PASS  N1 reply 8 equals Lean's
+PASS  N1 reply 9 equals Lean's
+PASS  N2 every fixture line carries a request
+PASS  N2 request 0: cached and uncached replies are equal
+PASS  N2 request 1: cached and uncached replies are equal
+PASS  N2 request 2: cached and uncached replies are equal
+PASS  N2 request 3: cached and uncached replies are equal
+PASS  N2 request 4: cached and uncached replies are equal
+PASS  N2 request 5: cached and uncached replies are equal
+PASS  N2 request 6: cached and uncached replies are equal
+PASS  N2 request 7: cached and uncached replies are equal
+PASS  N2 request 8: cached and uncached replies are equal
+PASS  N2 request 9: cached and uncached replies are equal
+PASS  N3 not JSON refuses
+PASS  N3 an unknown tag refuses
+PASS  N3 an unselected version refuses
+PASS  N3 a method that disagrees with its request refuses
+PASS  N3 after them, the first request answers as on a fresh session
+== ALL PASS: 0 failure(s) ==
