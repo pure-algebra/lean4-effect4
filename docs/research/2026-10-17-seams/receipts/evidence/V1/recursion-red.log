@@ -1,0 +1,2 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "lake", "env", "lean", "-DwarningAsError=true", "/private/tmp/seams-v1-recursion-control.lean"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T05:18:14.600722+00:00"}
+/private/tmp/seams-v1-recursion-control.lean:10:0: error: recursion control: List.mapTR.loop._at_.Effect4.Program.Check.Internal.place.spec_0: emitted recursive=true, expected=false

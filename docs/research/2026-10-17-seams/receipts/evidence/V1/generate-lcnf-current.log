@@ -1,0 +1,234 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "python3", "scripts/generate.py", "--only", "lcnf"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T05:29:15.596738+00:00"}
++ lake build Effect4.Api Effect4.Laws.Run.Tree Effect4.Program.Check Effect4.Run.Kit Effect4.Run.LiveRecord Test.Codegen.ConstructorLane Test.Codegen.ModeledLane Test.Dogfood.Scenario.Todo.HostRun OCaml5.Tools.LcnfGen
+Build completed successfully (933 jobs).
++ opam exec --switch=effect4 -- dune build --root ocaml gen/interface/main.exe clock/effect4_clock.cma lcnf/effect4_lcnf.cma
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/stage --recipe ocaml/gen/roots.json --one 0
+imported #[Effect4.Api] in 1883 ms
+== ocaml/eff/eff_types.ml
+closure: 0 of --cap 0 (0 of headroom); manifest ocaml/gen/closure-eff_types.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[]
+todos (0):
+clock refusals (0):
+types in full: #[Effect4.ServiceKey, Effect4.Program.Ty, Effect4.Program.Lit, Effect4.Program.FieldReadMode, Effect4.Program.Term, Effect4.Program.Terms, Effect4.Program.CauseTerm, Effect4.Supervision.MaskMode, Effect4.Supervision.ForkOptions, Effect4.Supervision.ObserverMode, Effect4.FinalizerStrategy, Effect4.Program.NativeOp, Effect4.Program.Decision, Effect4.Program.DefRole, Effect4.Program.ParamDecl, Effect4.Program.DefDecl, Effect4.Program.Eff, Effect4.Program.Stmt, Effect4.Program.Stmts, Effect4.Program.Effs, Effect4.Program.ActionTerm, Effect4.Program.LayerTerm, Effect4.Program.LayerTerms, Effect4.Program.RowKind, Effect4.Program.RowShape, Effect4.Program.Registration, Effect4.Program.RowArg, Effect4.Program.Row, Effect4.Program.EffTy, Effect4.Store.Val, Effect4.Machine.Err, Effect4.Machine.Defect, Effect4.Reason, Effect4.Exit, Effect4.Machine.Completion]
+types as abbreviations: #[Effect4.ServiceName, Effect4.ServiceTypeCode, Effect4.Row, Effect4.Machine.Payload, Effect4.ReasonAnnotations, Effect4.Cause, Effect4.Machine.RefKey]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(row, (Effect4.Program.Row, Effect4.Row))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/eff/eff_types.ml and ocaml/gen/closure-eff_types.tsv
+time (ms): closure 125, types 32, renaming 52, emission 4, manifest 26, checks 7, rendering 8
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/stage --recipe ocaml/gen/roots.json --one 1
+imported #[Effect4.Api, Effect4.Run.Kit, Effect4.Program.Check, Effect4.Run.LiveRecord] in 3872 ms
+== ocaml/gen/api_gen.ml
+closure: 2300 of --cap 4000 (1700 of headroom); manifest ocaml/gen/closure-api_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Run.Tree.cutAt, Effect4.Machine.Stores.wakeList, _private.Init.Data.List.Impl.0.List.takeTR.go, Effect4.Exit.isSuccess, Effect4.Row.union._at_.Effect4.Machine.Env.Requirement.union.spec_0, Effect4.FrameFiber.uninterruptible, List.zipWith._at_.List.zip.spec_0, Effect4.Store.Image.toList, Effect4.Store.Image.ofList, _private.Init.Data.List.Impl.0.List.setTR.go, Effect4.Store.Image.toOption, Effect4.Machine.fireStep, Effect4.Program.LayerTerm.refSite, Effect4.Program.argTy, Effect4.Program.argsTy, Effect4.Store.Image.ofCtor1, Effect4.Machine.Value.toReason, Effect4.Machine.Value.ofReason, Effect4.Machine.Value.toExit, Effect4.Machine.Value.ofExit, Effect4.Store.Image.toPair, Effect4.Store.Image.ofPair, Effect4.Store.Image.ofCtor2, Effect4.Api.HostSession.Session.callInstance]
+todos (0):
+clock refusals (0):
+types in full: #[Effect4.Machine.RunDecision, Effect4.Machine.ReplayResult, Effect4.Api.Outcome, Effect4.Api.Inspection, Effect4.Program.Refusal, Effect4.Machine.RunFiber, Effect4.Machine.Parked, Effect4.Program.SigApp, Effect4.Run.Tree.Outcome, Effect4.Program.Check.CheckInput, Effect4.Program.Check.Verdict, Effect4.Program.AdmitRefusal, Effect4.Run.Kit.ReplyFault, Effect4.Store.Shape, Effect4.Store.ShapeDoc, Effect4.Program.Authoring.Reason, Effect4.Program.Authoring.Refusal, Effect4.Program.Authoring.LoopSpec, Effect4.Program.Authoring.Env, Effect4.Program.Authoring.Module, Effect4.Program.Sketch, Effect4.Program.Check.Checked, Effect4.Api.Budget, Effect4.Api.HostSession.Session, Effect4.Api.HostSession.Header, Effect4.Api.Built, Effect4.LiveRecord, Effect4.LiveRecord.Refusal, Effect4.Run, Effect4.Machine.RunInterp, Effect4.Machine.Name, Effect4.Machine.RunMachine, Effect4.Store.Image, Effect4.PrimInterp, Effect4.Program.EffName, Effect4.Program.NativeAtom, Effect4.ReasonTag, Effect4.Machine.HandleKind, Effect4.Machine.SyncOp, Effect4.Machine.Stores, Effect4.Machine.TimerStore, Effect4.Machine.ScopeEntry, Effect4.Machine.MemoMap, Effect4.Machine.MemoEntry, Effect4.Machine.FinName, Effect4.Machine.DeferredStore, Effect4.Machine.Bucket, Effect4.Machine.FiberCore, Effect4.Machine.Pending, Effect4.Machine.ForkRecord, Effect4.Machine.RunEvent, Effect4.Machine.Task, Effect4.Machine.Cmd, Effect4.Machine.Outcome, Effect4.Machine.Iter, Effect4.FrameFiber, Effect4.Prim, Effect4.Machine.Resume, Effect4.Machine.ParkKind, Effect4.Machine.Stuck, Effect4.Machine.Observer, Effect4.Machine.FiberEdit, Effect4.Machine.Race, Effect4.Supervision.RaceAllState, Effect4.Supervision.RaceMode, Effect4.Machine.Exhaustion, Effect4.Api.FrontierReason, Effect4.Run.Tree, Effect4.Run.Tree.Frame, Effect4.Run.Tree.Stop, Effect4.Run.Tree.Step, Effect4.Program.TypeRefusal, Effect4.Program.TypeReason, Effect4.Program.SigData, Effect4.Program.PartSig, Effect4.Program.Node, Effect4.Program.GenTy, Effect4.Program.Signature, Effect4.Program.LayerTy, Effect4.Program.Check.Internal.DepRole, Effect4.Program.Check.Internal.Dep, Effect4.Api.HostSession.Refusal, Effect4.Run.Event, Effect4.Machine.Ctx, Effect4.Program.Point, Effect4.IterStep, Effect4.LoopNext, Effect4.Program.EffThunk, Effect4.Machine.Thunk, Effect4.Machine.ActionName, Effect4.Machine.WithFiberAction, Effect4.Supervision.ScopeMode, Effect4.Machine.Env.ContextUpdate, Effect4.Program.Region, Effect4.Machine.ArgSite, Effect4.Machine.Capture, Effect4.Machine.WakeKey, Effect4.Program.Await, Effect4.Machine.DeferredCell, Effect4.Scope, Effect4.Program.Check.Explanation, Effect4.FramePop, Effect4.ContAnswer, Effect4.Arm, Effect4.Machine.WakeList, Effect4.Program.SigRefusal, Effect4.Program.FormationRefusal, Effect4.Run.Tree.Path, Effect4.Program.NodeEnv, Effect4.Program.Table.Entry, Effect4.Program.TermTypingRefusal, Effect4.Program.RowTypingRefusal, Effect4.Api.HostProtocol.Protocol, Effect4.Api.HostProtocol.State, Effect4.Machine.ProgName, Effect4.Machine.Owed, Effect4.Program.CombineMode, Effect4.Machine.Waiter, Effect4.Machine.WakeMode, Effect4.ScopeState, Effect4.Program.Check.Site, Effect4.FrameStep, Effect4.FrameEvent, Effect4.Supervision.WaitState, Effect4.Squashed, Effect4.Api.HostProtocol.Key, Effect4.Program.RowReason, Effect4.Program.ServiceReason, Effect4.Program.DeclReason, Effect4.Program.FormationReason, Effect4.Program.RefFault, Effect4.Program.RecordTermRefusal, Effect4.Program.RecordCauseRefusal, Effect4.Program.TupleTermRefusal, Effect4.Program.TupleCauseRefusal, Effect4.Program.FoldTermRefusal, Effect4.Program.FoldCauseRefusal, Effect4.Program.Authoring.ServiceDef, Effect4.Program.Authoring.DefSrc, Effect4.Program.StmtTy, Effect4.Program.CauseTypingRefusal, Effect4.Program.BinderTerm, Effect4.Program.TermUse, Effect4.Api.HostProtocol.Tag, Effect4.Api.HostProtocol.Edge, Effect4.Api.HostProtocol.FieldType, Effect4.Api.HostProtocol.RecordShape, Effect4.Program.Formation.Site, Effect4.Run.Verdict, Effect4.Machine.RaceName, Effect4.Machine.Env.Service, Effect4.Program.EffAlgebra, Effect4.Program.RecordTypingReason, Effect4.Program.TupleTypingReason, Effect4.Program.FoldTypingReason, Effect4.Program.TermAlgebra, Effect4.Program.Ty.LeafHead, Effect4.Program.Ty.Variance, Effect4.Api.Runner.Command, Effect4.Run.Seen, Effect4.Machine.Env.Context.Reference, Effect4.Program.FnShape, Effect4.Program.NativeAtom.Spec, Effect4.Program.NativeAtom.AtomRow, Effect4.Program.TyAlgebra, Effect4.Program.CauseTermAlgebra, Effect4.Program.Part, Effect4.Api.HostSession.Call, Effect4.Api.HostSession.Reply, Effect4.Api.Runner.Runner, Effect4.Program.NativeAtom.Scheme, Effect4.Program.NativeAtom.CustomScheme, Effect4.Program.Focus, Effect4.Program.CallInstance, Effect4.Api.HostSession.Phase, Effect4.Api.HostSession.Result, Effect4.Program.ArgReader, Effect4.Program.EffFam, Effect4.Run.Sel, Effect4.Api.HostSession.BoundCall, Effect4.Api.HostSession.ReplySlot, Effect4.Api.HostProtocol.Label, Effect4.Program.RecordedReply, Effect4.Api.HostSession.RetiredCall, Effect4.Store.Kind]
+types as abbreviations: #[Effect4.ServiceUniverse, Effect4.Program.Check.Memo, Effect4.Program.Check.Oracle, Effect4.Program.Check.HitRule, Effect4.Live, Effect4.FiberId, Effect4.Machine.Dispatcher, Effect4.Program.Authoring.RowDef, Effect4.Program.AdmittedProgram, Effect4.Machine.DeferredKey, Effect4.Machine.MemoMapId, Effect4.Machine.Env.Context, Effect4.Machine.ScopeStore, Effect4.Machine.ExternalStore, Effect4.Program.TypedProgram]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(outcome, (Effect4.Api.Outcome, Effect4.Run.Tree.Outcome)), (refusal, (Effect4.Program.Refusal, Effect4.Program.Authoring.Refusal)), (refusal, (Effect4.Program.Authoring.Refusal, Effect4.LiveRecord.Refusal)), (outcome, (Effect4.Run.Tree.Outcome, Effect4.Machine.Outcome)), (refusal, (Effect4.LiveRecord.Refusal, Effect4.Api.HostSession.Refusal)), (site, (Effect4.Program.Check.Site, Effect4.Program.Formation.Site)), (verdict, (Effect4.Program.Check.Verdict, Effect4.Run.Verdict))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/gen/api_gen.ml and ocaml/gen/closure-api_gen.tsv
+time (ms): closure 26519, types 59, renaming 2263, emission 203, manifest 299, checks 2813, rendering 240
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/stage --recipe ocaml/gen/roots.json --one 2
+imported #[Effect4.Api] in 1425 ms
+== ocaml/engine/api_engine.ml
+closure: 810 of --cap 2000 (1190 of headroom); manifest ocaml/gen/closure-api_engine.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Machine.Stores.wakeList, Effect4.Machine.fireStep, Effect4.Exit.isSuccess, Effect4.Store.Image.toList, Effect4.Store.Image.ofList, Effect4.Store.Image.ofCtor1, Effect4.Machine.Value.toReason, Effect4.Machine.Value.ofReason, _private.Init.Data.List.Impl.0.List.takeTR.go, Effect4.Machine.Value.toExit, Effect4.Machine.Value.ofExit, List.zipWith._at_.List.zip.spec_0, Effect4.Store.Image.toOption, Effect4.Store.Image.ofOption, Effect4.Store.Image.toPair, Effect4.Store.Image.ofPair, Effect4.Store.Image.ofCtor2]
+todos (0):
+clock refusals (0):
+types in full: #[Effect4.Machine.RunDecision, Effect4.Machine.ReplayResult, Effect4.Api.Outcome, Effect4.Api.Inspection, Effect4.Machine.Cmd, Effect4.Machine.RunMachine, Effect4.Machine.FiberCore, Effect4.Machine.RunFiber, Effect4.Machine.RunEvent, Effect4.ScopeState, Effect4.Scope, Effect4.Machine.Parked, Effect4.Machine.Ctx, Effect4.PrimInterp, Effect4.Machine.Name, Effect4.Machine.RunInterp, Effect4.Program.Node, Effect4.Program.Refusal, Effect4.Program.SigApp, Effect4.Program.EffName, Effect4.Store.Image, Effect4.Machine.Exhaustion, Effect4.Api.FrontierReason, Effect4.Machine.Race, Effect4.Supervision.RaceAllState, Effect4.Machine.Observer, Effect4.Machine.Resume, Effect4.Machine.Pending, Effect4.Machine.Outcome, Effect4.Machine.Iter, Effect4.Machine.ParkKind, Effect4.Program.EffThunk, Effect4.Prim, Effect4.Program.Point, Effect4.Machine.Env.ContextUpdate, Effect4.Program.Region, Effect4.Machine.Stores, Effect4.Machine.Thunk, Effect4.IterStep, Effect4.LoopNext, Effect4.Machine.ActionName, Effect4.Machine.FinName, Effect4.Supervision.ScopeMode, Effect4.Machine.SyncOp, Effect4.Machine.WakeKey, Effect4.Machine.HandleKind, Effect4.Machine.ProgName, Effect4.FrameFiber, Effect4.Machine.WithFiberAction, Effect4.Machine.ArgSite, Effect4.Machine.Capture, Effect4.Program.Await, Effect4.Machine.TimerStore, Effect4.Machine.WakeList, Effect4.Machine.Owed, Effect4.Machine.WakeMode, Effect4.Machine.Task, Effect4.Machine.Stuck, Effect4.Machine.FiberEdit, Effect4.Supervision.RaceMode, Effect4.Machine.DeferredStore, Effect4.Machine.ScopeEntry, Effect4.Machine.MemoEntry, Effect4.Machine.DeferredCell, Effect4.Program.CombineMode, Effect4.Api.HostProtocol.Key, Effect4.Machine.Waiter, Effect4.Machine.RaceName, Effect4.Machine.Env.Service, Effect4.Supervision.WaitState, Effect4.Program.NativeAtom, Effect4.ReasonTag, Effect4.Machine.MemoMap, Effect4.Machine.Env.Context.Reference, Effect4.FramePop, Effect4.ContAnswer, Effect4.Arm, Effect4.FrameEvent, Effect4.Program.Ty.LeafHead, Effect4.Program.Ty.Variance, Effect4.FrameStep, Effect4.Machine.Origin, Effect4.Machine.ForkRecord]
+types as abbreviations: #[Effect4.ServiceUniverse, Effect4.FiberId, Effect4.Machine.Env.Context, Effect4.Machine.DeferredKey, Effect4.Machine.MemoMapId, Effect4.Machine.ScopeStore, Effect4.Machine.ExternalStore]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(outcome, (Effect4.Api.Outcome, Effect4.Machine.Outcome))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+extern rows: 28 fn, 1 type, 11 field, 1 elem
+fn rows used (28):
+  Effect4.Api.load -> sh_api_load
+  Effect4.Machine.RunMachine.fiber? -> sh_machine_fiber
+  Effect4.Machine.RunMachine.update -> sh_machine_update
+  Effect4.Machine.RunMachine.emit -> sh_machine_emit
+  Effect4.Program.rootPoint -> sh_root_point
+  Effect4.Machine.RunMachine.finished -> sh_machine_finished
+  Effect4.Machine.Dispatcher.drain -> D.drain
+  List.find?@Effect4.Machine.ScopeStore.entryAt -> sh_scope_entry_at
+  Effect4.Program.Node.at_ -> sh_node_at
+  Effect4.Program.Point.redirect -> sh_point_redirect
+  Effect4.Machine.spawn -> sh_spawn_generic
+  Effect4.Machine.DeferredStore.make -> sh_deferred_make
+  Effect4.Machine.ScopeStore.make -> sh_scope_store_make
+  Effect4.Machine.ScopeStore.setEntry -> sh_scope_set_entry
+  Effect4.Machine.ScopeStore.forkChild -> sh_scope_fork_child
+  Effect4.Machine.MemoMap.mk -> sh_memo_map_mk
+  Effect4.Machine.MemoWorld.updateEntry -> sh_memo_update_entry
+  Effect4.Machine.MemoWorld.insertEntry -> sh_memo_insert_entry
+  Effect4.Machine.MemoWorld.entryAt -> sh_memo_entry_at
+  Effect4.Machine.MemoWorld.deleteEntry -> sh_memo_delete_entry
+  Effect4.Machine.refStep -> sh_ref_step
+  Effect4.Machine.DeferredStore.cellAt -> sh_deferred_cell_at
+  Effect4.Machine.DeferredStore.setCell -> sh_deferred_set_cell
+  Effect4.Machine.Dispatcher.insert -> sh_dispatcher_insert
+  Effect4.Machine.RunMachine.dropToken -> sh_machine_drop_token
+  Effect4.Machine.RunMachine.completedExits -> sh_machine_completed_exits
+  Effect4.Machine.spawn@Effect4.Machine.launchEntrant -> sh_spawn
+  Effect4.Machine.spawn@Effect4.Machine.evaluatePrim.withFiber -> sh_spawn
+type rows used (1): #[Effect4.Machine.Dispatcher]
+field rows used (11): #[Effect4.Machine.RunMachine.fibers, Effect4.Machine.RunMachine.trace, Effect4.Program.Point.path, Effect4.Program.Point.env, Effect4.Machine.Stores.refs, Effect4.Machine.SyncOp.env, Effect4.Machine.ArgSite.env, Effect4.Machine.Capture.path, Effect4.Machine.Capture.env, Effect4.Machine.DeferredStore.cells, Effect4.Machine.MemoMap.entries]
+elem rows used (1): #[Effect4.Machine.ScopeEntry]
+ops rows: 11, used (11): #[D.t#empty, F.t#to_list, M.t#to_list, E.t#snoc, P.t#to_list, E.t#take, P.t#snoc, E.t#get, P.t#append, E.t#append, E.t#length]
+carg rows: 0 stated, used (12): #[Effect4.Program.evalTerm, Effect4.Program.causeOf, Effect4.Program.NativeOp.syncOpOf, Effect4.Program.runStmts, Effect4.Program.caughtErrorValue?, Effect4.Program.argSitesAt, Effect4.Program.evalTerms, List.foldlM._at_.Effect4.Program.evalTerm.spec_0, Effect4.Program.blockExit, Effect4.Program.runStmts.yieldOf, Effect4.Program.loopExit, Effect4.Program.blockEnv]
+carg rows inferred from the call sites (12):
+  carg Effect4.Program.evalTerm 0 E.t
+  carg Effect4.Program.causeOf 0 E.t
+  carg Effect4.Program.NativeOp.syncOpOf 1 E.t
+  carg Effect4.Program.runStmts 4 E.t
+  carg Effect4.Program.caughtErrorValue? 0 E.t
+  carg Effect4.Program.argSitesAt 1 E.t
+  carg Effect4.Program.evalTerms 0 E.t
+  carg List.foldlM._at_.Effect4.Program.evalTerm.spec_0 0 E.t
+  carg Effect4.Program.blockExit 3 E.t
+  carg Effect4.Program.runStmts.yieldOf 6 E.t
+  carg Effect4.Program.loopExit 4 E.t
+  carg Effect4.Program.blockEnv 4 E.t
+carrier to_list sites (19):
+  List.filterMapTR.go._at_.Effect4.Program.awaits.spec_0 #1 [F.t]
+  List.get?Internal._redArg #0 [M.t]
+  Effect4.Machine.WithFiberAction.fork.site [P.t]
+  List.cons.head [P.t]
+  Effect4.Program.argSitesAt #0 [P.t]
+  List.cons.head [P.t]
+  List.filterMapTR.go._at_.Effect4.Api.compileReasons.spec_0 #0 [F.t]
+  List.any._at_.Effect4.Api.hasRunnable.spec_0 #0 [F.t]
+  Effect4.Program.EffName.external.origin [P.t]
+  Effect4.Machine.WithFiberAction.fork.site [P.t]
+  Effect4.Machine.WithFiberAction.forkIn.site [P.t]
+  Option.some.val [P.t]
+  Option.some.val [P.t]
+  Effect4.Machine.WithFiberAction.forkIn.site [P.t]
+  Prod.mk.fst [P.t]
+  Effect4.Program.pathInBodies #0 [P.t]
+  List.mapTR.loop._at_.Effect4.Program.handleLive.spec_0 #0 [F.t]
+  Effect4.Program.handleLive: builtin List.lengthTR._redArg [M.t]
+  Effect4.Program.handleLive: builtin List.lengthTR._redArg [M.t]
+wrote ocaml/engine/api_engine.ml and ocaml/gen/closure-api_engine.tsv
+time (ms): closure 5845, types 28, renaming 874, emission 71, manifest 89, checks 676, rendering 94
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/stage --recipe ocaml/gen/roots.json --one 3
+imported #[Test.Dogfood.Scenario.Todo.HostRun] in 3963 ms
+== ocaml/engine/test/todo/todo_gen.ml
+closure: 1430 of --cap 4000 (2570 of headroom); manifest ocaml/gen/closure-todo_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Store.Image.toList, Effect4.Store.Image.ofList, Test.Dogfood.Scenario.Todo.Host.recording, Effect4.Machine.Value.toExit, Effect4.Machine.Value.ofExit, Effect4.Store.Image.ofTuple2, Effect4.Store.Image.toOption, Effect4.Store.Image.ofOption, Effect4.Store.Image.ofCtor1, Effect4.Machine.Value.toReason, Effect4.Machine.Value.ofReason, Effect4.Machine.Stores.wakeList, Effect4.Program.LayerTerm.refSite, Effect4.Store.Image.toPair, Effect4.Store.Image.ofPair, _private.Init.Data.List.Impl.0.List.setTR.go, Effect4.Api.HostSession.Session.callInstance, List.zipWith._at_.List.zip.spec_0, Effect4.Row.union._at_.Effect4.Machine.Env.Requirement.union.spec_0, Effect4.Store.Image.ofCtor2, Effect4.Row.normalize._at_.Effect4.Row.union._at_.Effect4.Machine.Env.Requirement.union.spec_0.spec_0]
+todos (0):
+clock refusals (0):
+types in full: #[Test.Dogfood.Scenario.Todo.Typed.Host, Effect4.Store.Image, Test.Dogfood.Scenario.Todo.Typed.Todo, Effect4.Api.Built, Effect4.Program.SigApp, Effect4.Api.Budget, Test.Dogfood.Scenario.Todo.Typed.SqlTag, Tools.RunChecks.Call, Effect4.Store.Columns, Effect4.Api.HostSession.Header, Effect4.Api.HostSession.Session, Effect4.Run, Effect4.Api.Inspection, Effect4.Machine.RunFiber, Effect4.Api.HostProtocol.Protocol, Effect4.Api.HostProtocol.State, Effect4.Machine.RunInterp, Effect4.Machine.Name, Effect4.Machine.RunMachine, Effect4.Machine.RunDecision, Effect4.Api.Runner.Runner, Effect4.Program.Await, Effect4.Api.HostProtocol.Key, Effect4.Machine.ReplayResult, Effect4.Api.Outcome, Effect4.Api.HostProtocol.Tag, Effect4.Api.HostProtocol.Edge, Effect4.Api.HostProtocol.FieldType, Effect4.Api.HostProtocol.RecordShape, Effect4.PrimInterp, Effect4.Machine.DeferredStore, Effect4.Machine.Stores, Effect4.Machine.Ctx, Effect4.FrameFiber, Effect4.Machine.Parked, Effect4.Program.Signature, Effect4.Program.Node, Effect4.Api.HostSession.Result, Effect4.Api.Runner.Command, Effect4.Program.EffName, Effect4.Machine.Exhaustion, Effect4.Api.FrontierReason, Effect4.Machine.Thunk, Effect4.Prim, Effect4.IterStep, Effect4.LoopNext, Effect4.Machine.ActionName, Effect4.Machine.FinName, Effect4.Supervision.ScopeMode, Effect4.Machine.ParkKind, Effect4.Machine.SyncOp, Effect4.Machine.WakeKey, Effect4.Machine.HandleKind, Effect4.Machine.ProgName, Effect4.Machine.TimerStore, Effect4.Api.HostSession.Call, Effect4.Api.HostSession.Reply, Effect4.Program.Point, Effect4.Program.EffThunk, Effect4.Machine.WithFiberAction, Effect4.Machine.Env.ContextUpdate, Effect4.Program.Region, Effect4.Machine.ArgSite, Effect4.Machine.Capture, Effect4.Machine.Cmd, Effect4.Machine.RunEvent, Effect4.Machine.WakeList, Effect4.Machine.ScopeEntry, Effect4.Machine.MemoMap, Effect4.Machine.MemoEntry, Effect4.Machine.DeferredCell, Effect4.Machine.Owed, Effect4.Program.BinderTerm, Effect4.Program.Part, Effect4.Api.HostSession.Phase, Effect4.Api.HostSession.Refusal, Effect4.Api.HostSession.BoundCall, Effect4.Api.HostSession.ReplySlot, Effect4.Api.HostProtocol.Label, Effect4.Program.CombineMode, Effect4.Machine.Waiter, Effect4.Machine.RaceName, Effect4.Scope, Effect4.Machine.WakeMode, Effect4.Machine.Env.Service, Effect4.Program.FnShape, Effect4.Program.NativeAtom, Effect4.Program.NativeAtom.Spec, Effect4.Program.NativeAtom.AtomRow, Effect4.Program.EffAlgebra, Effect4.Program.Focus, Effect4.Program.CallInstance, Effect4.Machine.Race, Effect4.Supervision.RaceAllState, Effect4.Machine.Observer, Effect4.Machine.Resume, Effect4.Machine.Pending, Effect4.Machine.Outcome, Effect4.Machine.Iter, Effect4.Machine.Task, Effect4.ScopeState, Effect4.Program.NativeAtom.Scheme, Effect4.Program.NativeAtom.CustomScheme, Effect4.Program.NodeEnv, Effect4.Program.TermUse, Effect4.Program.RecordedReply, Effect4.Api.HostSession.RetiredCall, Effect4.ReasonTag, Effect4.Machine.Bucket, Effect4.Machine.Stuck, Effect4.Machine.FiberEdit, Effect4.Supervision.RaceMode, Effect4.Program.Ty.Variance, Effect4.Program.RowTypingRefusal, Effect4.Program.Refusal, Effect4.Machine.Env.Context.Reference, Effect4.FramePop, Effect4.ContAnswer, Effect4.Arm, Effect4.Machine.ForkRecord, Effect4.Program.Ty.LeafHead, Effect4.Program.TypeRefusal, Effect4.Program.TypeReason, Effect4.Program.GenTy, Effect4.Program.LayerTy, Effect4.Program.Formation.Site, Effect4.Program.FormationRefusal, Effect4.FrameEvent, Effect4.Supervision.WaitState, Effect4.Program.TermTypingRefusal, Effect4.Program.CauseTypingRefusal, Effect4.Program.FormationReason, Effect4.FrameStep, Effect4.Program.StmtTy, Effect4.Program.TermAlgebra, Effect4.Program.CauseTermAlgebra, Effect4.Program.RecordTermRefusal, Effect4.Program.TupleTermRefusal, Effect4.Program.FoldTypingReason, Effect4.Program.FoldTermRefusal, Effect4.Program.RecordTypingReason, Effect4.Program.RecordCauseRefusal, Effect4.Program.TupleCauseRefusal, Effect4.Program.FoldCauseRefusal, Effect4.Program.TupleTypingReason]
+types as abbreviations: #[Effect4.ServiceUniverse, Effect4.Program.AdmittedProgram, Effect4.FiberId, Effect4.Machine.Dispatcher, Effect4.Machine.DeferredKey, Effect4.Machine.ScopeStore, Effect4.Machine.ExternalStore, Effect4.Machine.Env.Context, Effect4.Machine.MemoMapId, Effect4.Program.TypedProgram]
+types as placeholders: #[Effect4.Program.AdmitRefusal, Effect4.Program.RefFault]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(call, (Tools.RunChecks.Call, Effect4.Api.HostSession.Call)), (outcome, (Effect4.Api.Outcome, Effect4.Machine.Outcome)), (refusal, (Effect4.Api.HostSession.Refusal, Effect4.Program.Refusal))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/test/todo/todo_gen.ml and ocaml/gen/closure-todo_gen.tsv
+time (ms): closure 20938, types 44, renaming 1789, emission 147, manifest 289, checks 1283, rendering 139
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/stage --recipe ocaml/gen/roots.json --one 4
+imported #[Test.Codegen.ConstructorLane] in 609 ms
+== ocaml/engine/test/ctors/ctors_gen.ml
+closure: 55 of --cap 400 (345 of headroom); manifest ocaml/gen/closure-ctors_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[]
+todos (0):
+clock refusals (0):
+types in full: #[Test.Codegen.ConstructorLane.Shade, Test.Codegen.ConstructorLane.Pt]
+types as abbreviations: #[]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/test/ctors/ctors_gen.ml and ocaml/gen/closure-ctors_gen.tsv
+time (ms): closure 57, types 1, renaming 0, emission 2, manifest 11, checks 8, rendering 4
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/stage --recipe ocaml/gen/roots.json --one 5
+imported #[Test.Codegen.ModeledLane] in 3290 ms
+== ocaml/engine/test/modeled/modeled_gen.ml
+closure: 68 of --cap 800 (732 of headroom); manifest ocaml/gen/closure-modeled_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Store.Image.toOption, Effect4.Store.Image.ofOption, Effect4.Store.Image.toList, Effect4.Store.Image.ofList]
+todos (0):
+clock refusals (0):
+types in full: #[Effect4.Store.Image, Test.Codegen.ModeledLane.Status, Test.Codegen.ModeledLane.Todo, Test.Codegen.ModeledLane.Color, Test.Codegen.ModeledLane.Item, Effect4.Store.Columns, Sum]
+types as abbreviations: #[]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/test/modeled/modeled_gen.ml and ocaml/gen/closure-modeled_gen.tsv
+time (ms): closure 486, types 1, renaming 0, emission 6, manifest 159, checks 21, rendering 10
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/stage --recipe ocaml/gen/roots.json --one 6
+imported #[Effect4.Laws.Run.Tree] in 4415 ms
+== ocaml/engine/test/rocq/rocq_gen.ml
+closure: 18 of --cap 200 (182 of headroom); manifest ocaml/gen/closure-rocq_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[]
+todos (0):
+clock refusals (0):
+types in full: #[]
+types as abbreviations: #[]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/test/rocq/rocq_gen.ml and ocaml/gen/closure-rocq_gen.tsv
+time (ms): closure 787, types 0, renaming 0, emission 2, manifest 158, checks 17, rendering 6
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/eff_types.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/eff_types.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/eff_types.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/eff_types.mli '' '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/eff_types.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/eff_types.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/eff_types.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/eff_types.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_gen.mli 'api_run,api_replay,program_admit,run_tree_of_program,run_tree_run,run_tree_outside_at,run_tree_host_tape,run_tree_host_silent,run_tree_host_of_reactor,run_tree_probe,run_tree_settle,run_tree_frames,run_kit_check,run_kit_admit,run_kit_admit_shape,run_kit_admit_to_val,run_kit_reply_fault,run_kit_samples,run_kit_replies,run_kit_explore,run_kit_program_shape,run_kit_program_to_val,run_kit_program_of_val,run_kit_rows_shape,run_kit_rows_to_val,run_kit_rows_of_val,run_kit_services_shape,run_kit_services_of_val,run_kit_ty_shape,run_kit_ty_to_val,run_kit_eff_ty_shape,run_kit_eff_ty_to_val,run_kit_refusal_shape,run_kit_refusal_to_val,run_kit_exit_shape,run_kit_exit_to_val,run_kit_exit_of_val,run_kit_val_shape,run_kit_ty_text,program_authoring_var,program_authoring_nat,program_authoring_str,program_authoring_bool,program_authoring_unit,program_authoring_app,program_authoring_succeed,program_authoring_fail,program_authoring_sync,program_authoring_suspend,program_authoring_bind_with,program_authoring_and_then,program_authoring_if_else,program_authoring_select_option_with,program_authoring_loop_with,program_authoring_catch_with,program_authoring_on_exit_with,program_authoring_exit_,program_authoring_ref_make,program_authoring_ref_get,program_authoring_ref_set,program_authoring_row_host,program_authoring_row_call_named,program_authoring_def_invoke,program_authoring_elaborate_at,program_check_run,program_check_oracle_uncached,program_check_checked_pure'"'"',program_check_checked_bind'"'"',program_check_checked_ask,program_check_checked_read_verdict,program_check_memo_empty,program_check_memo_learn,program_check_memo_oracle,program_check_hit_rule_exact,program_check_hit_rule_or_,live_start,live_record_restore,live_record_save,api_load,program_decision_decide,program_err_of,program_eval_term,program_interp_of,reify_exit_val,run_machine_completed_exits,run_machine_finished,program_step_checked,run_tree_eval_bad_shape,run_tree_eval_outside,program_native_atom_eval,handle_kind_byte,api_evaluate,program_awaits,program_native_op_sync_op_of,sync_op_step,stores_empty,program_check_extension,program_check_explain' checked,memo,oracle,hit_rule,live ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_gen.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_engine.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_engine.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_engine.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_engine.mli api_run,api_replay,step_decision_state,drive_state,settled,scope_make,scope_fork,run_fiber_make,empty_ctx,program_compile,stores,program_node_child,program_admit,program_interp_of,program_step_checked,api_evaluate,program_awaits,reify_exit_val '' /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/engine/tools/api_engine_prelude.ml
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_engine.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_engine.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_engine.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/api_engine.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/todo_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/todo_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/todo_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/todo_gen.mli test_dogfood_scenario_todo_host_serve_built_val,test_dogfood_scenario_todo_host_serve_built_forgetful_val,test_dogfood_scenario_todo_host_serve_built_typed_val,test_dogfood_scenario_todo_typed_model,test_dogfood_scenario_todo_typed_broken,test_dogfood_scenario_todo_typed_host_reactor,test_dogfood_scenario_todo_host_result_val,test_dogfood_scenario_todo_repository,test_dogfood_scenario_todo_forgetful,store_image_equiv,store_image_list,test_dogfood_scenario_todo_typed_todo_modeled_staged,test_dogfood_scenario_todo_typed_todo_modeled_of_c,test_dogfood_scenario_todo_typed_todo_modeled_to_c '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/todo_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/todo_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/todo_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/todo_gen.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/ctors_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/ctors_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/ctors_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/ctors_gen.mli test_codegen_constructor_lane_int_of_nat,test_codegen_constructor_lane_int_neg_succ,test_codegen_constructor_lane_int_match,test_codegen_constructor_lane_int_match_zero,test_codegen_constructor_lane_nat_succ,test_codegen_constructor_lane_nat_zero,test_codegen_constructor_lane_nat_match,test_codegen_constructor_lane_arr_mk,test_codegen_constructor_lane_arr_to_list,test_codegen_constructor_lane_arr_match,test_codegen_constructor_lane_ba_mk,test_codegen_constructor_lane_ba_data,test_codegen_constructor_lane_ba_match,test_codegen_constructor_lane_str_bytes,test_codegen_constructor_lane_str_match,test_codegen_constructor_lane_str_of_bytes,test_codegen_constructor_lane_char_of_nat,test_codegen_constructor_lane_char_val,test_codegen_constructor_lane_char_match,test_codegen_constructor_lane_u8_of_bit_vec,test_codegen_constructor_lane_u8_match,test_codegen_constructor_lane_u16_of_bit_vec,test_codegen_constructor_lane_u16_match,test_codegen_constructor_lane_u32_of_bit_vec,test_codegen_constructor_lane_u32_match,test_codegen_constructor_lane_u64_of_bit_vec,test_codegen_constructor_lane_u64_match,test_codegen_constructor_lane_bv_match,test_codegen_constructor_lane_fin_mk,test_codegen_constructor_lane_fin_match,test_codegen_constructor_lane_sub_mk,test_codegen_constructor_lane_sub_match,test_codegen_constructor_lane_sub_val,test_codegen_constructor_lane_opt_match,test_codegen_constructor_lane_list_match,test_codegen_constructor_lane_prod_match,test_codegen_constructor_lane_except_match,test_codegen_constructor_lane_except_mk,test_codegen_constructor_lane_unit_match,test_codegen_constructor_lane_shade_match,test_codegen_constructor_lane_pt_mk,test_codegen_constructor_lane_pt_y,test_codegen_constructor_lane_map_find,test_codegen_constructor_lane_map_buckets,test_codegen_constructor_lane_map_retained,test_codegen_constructor_lane_map_siblings '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/ctors_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/ctors_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/ctors_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/ctors_gen.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/modeled_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/modeled_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/modeled_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/modeled_gen.mli test_codegen_modeled_lane_encode_item,test_codegen_modeled_lane_decode_item,test_codegen_modeled_lane_round_trip,test_codegen_modeled_lane_sample_vals '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/modeled_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/modeled_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/modeled_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/modeled_gen.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/rocq_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/rocq_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/rocq_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/rocq_gen.mli run_tree_in_rocq,run_tree_plain '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/rocq_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/rocq_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/rocq_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dene0ow/compile/rocq_gen.cmx
+PASS generate: requested producers ran in dependency order

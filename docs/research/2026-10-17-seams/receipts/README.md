@@ -8,14 +8,14 @@ The coordinator merges; this branch is never pushed.
 | --- | --- | --- | --- |
 | K0 | `66f292a095e57e7c94586434aab9c5c597f82d6e`; receipt `faa7d0122bd550186e4c622517509ac001763a35` | [K0](K0.md) | Required checks pass. |
 | S0 | `d46b1e6d6f184764a7ee1a00b01a800a45f35d33`; receipt `489e127a8b94f4796ff40ef4200080b5e83a94f2` | [S0](S0.md) | Required checks pass. |
-| V1 | Pending | Pending | Open |
+| V1 | `d6ad9482303a1998bfbcc826bf0d12ab4f6aa3c9` | [V1](V1.md) | Required checks pass; two placed goals remain. |
 | S1 | Pending | Pending | Open |
 | S2 | Pending | Pending | Open |
 | S4 | Pending | Pending | Open |
 | S3a | Pending | Pending | Open |
 | S3b | Pending | Pending | Open |
 | ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` ; receipt `0bb42e37d4fa99fd84979df03beb3dd0391a4e98` | [ST1a](ST1a.md) | Required checks pass. |
-| ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` | [ST1b](ST1b.md) | Required checks pass. |
+| ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` ; receipt `709f9f10a9401150af66870a8665860e45cc63d3` | [ST1b](ST1b.md) | Required checks pass. |
 | ST2 | Pending | Pending | Open |
 | ST3 | Pending | Pending | Open |
 | ST4 | Pending | Pending | Open |
@@ -58,6 +58,13 @@ The coordinator merges; this branch is never pushed.
 | ST1b | Gallina prints generic Head through explicit type parameters; value parameters refuse and the type name avoids a projection collision. |
 | ST1b | The audit input remains receipt evidence; acceptance fixtures stay under Test. |
 
+| V1 | Actual dependency asks enter traces; the unchanged ask-value law now depends on the exact decomposition goal. |
+| V1 | Pure signature support moves into core; exact attributed Laws wrappers retain their existing names and statements. |
+| V1 | Semantic traces remain equal under certified oracle substitution. Cache cost is outside that trace observation. |
+| V1 | The ask-value placement attribute follows its host-session obligation table; moved owners receive current source citations. |
+| V1 | Extension and explanation exports use explicit roots and nominal ascriptions; S0 package abstraction remains checked. |
+| V1 | A specialized wrapper retains a stale source recursion flag; emitted self-reference now determines recursive singleton bindings. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -73,5 +80,10 @@ The coordinator merges; this branch is never pushed.
 | ST1b | Adopt full expected heads, unchanged duplicate generations, generated policy data, and stale-first root checks. |
 | ST1b | Retain explicit legacy root-byte mapping and exact version-2 names. |
 | ST1b | Count fresh durable nodes only after full transaction validation; keep model cuts distinct from host crash observations. |
+
+| V1 | Adopt the common checker, certified exact and extension reuse, and actual dependency traces. |
+| V1 | Keep full verdict equality, including tables; retain placed decomposition and explanation goals and the exact ask-value dependency. |
+| V1 | Keep pure support connectors in core, existing attributed wrappers in Laws, and host cost outside semantic traces. |
+| V1 | Derive singleton recursion from actual emitted references; keep mutual dependency components unchanged. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

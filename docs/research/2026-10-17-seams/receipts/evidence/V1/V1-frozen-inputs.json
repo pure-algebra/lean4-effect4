@@ -1,0 +1,19 @@
+{
+  "overlay/Effect4/Program/Check.lean": "ec2ffba9b4d38fe48da7c7c607310b26d4f5bf612697be98041412ef45a29c01",
+  "overlay/Effect4/Program/Typing/Support.lean": "3c6913c6d08993dfc488b84d23e10a3ade3bb1261b03f6722bae28942f4a84c2",
+  "overlay/Effect4/Program/Typing/SigData.lean": "adb8d9286540f8d4e949b26aef4f374776a4d7d5953d3652dcaaf8bac2ebfbf5",
+  "overlay/Effect4/Program/Typing/AnnotateFold.lean": "620968274504981c9c363078183251568e63d3888b7fb263fd1678a6ef0daf45",
+  "overlay/Effect4/Program/Typing/SignatureSupport.lean": "59abd176a6c12af1bbf7f088ed7cc3fdc278365989f27faec4b20ce3557cd163",
+  "v1-laws/Effect4/Laws/Program/Definitions.lean": "ac2cbfd2d0c031c6eeec5be6f208558119cb93f5d055cfee7f453863b346c068",
+  "v1-laws/Effect4/Laws/Program/Signature.lean": "c1f7688d3c66be8e2a73aa6d425863b947c8661e2d6a8f34c08ecf099aa22fb8",
+  "v1-laws/Effect4/Laws/Program/CheckAgreement.lean": "077ad8e7a661aaa4f888b70affbd41d85a2bc0c058b415eb1ca3459b36a14500",
+  "v1-laws/Effect4/Laws/Program/Sketch.lean": "2cdcac5cf7f5a8f545259e7b98087582f798477c105ff4c753054907f300a85a",
+  "v1-laws/Effect4/Laws/Program/Typing/Annotate.lean": "b15bc7fe695fc4052c02b286a2cd1ebee5eb387b6c21a1ab3c9b62b71b89c67c",
+  "v1-laws/Effect4/Laws/Program/Typing/Restrict.lean": "cae46c0367b24d1fe8cf84b0c82969db761093cb7a2b675988b432a9c2987758",
+  "v1-laws/Effect4/Laws/Program/Typing/CheckCache.lean": "93ab1a24d9a4fd40fe5503c6d0ce99ede5a936d9d9a3d64b216967d34f1b8a47",
+  "v1-tests/Test/Program/CheckCacheControls.lean": "a3b7837a0b07ed013c7615858f41b618d7d8520aa04847a4ff659fc069394b5a",
+  "caller-overlay/src/Effect4/Run/Kit.lean": "ee96a9443749dc0f881107231ab34ebdb7e6f4a2c07622c0fc140dbb3653f7fd",
+  "caller-overlay/src/Effect4/Program/Typing/CheckCache.lean": "0cfbfb422203be8e78c8282630dfab80cb2fef72e1899cecb0c5a81fadc20235",
+  "caller-overlay/tools/Tools/Session.lean": "09678f04b6e78c13b85e1024f6e94e49b3d7865ecd2c5e3114c47d722eef749b",
+  "caller-overlay/tools/Tools/Query.lean": "3034d4c9669fd3ab4e44a353b37204e16548eadf64edc5baf87cea06171cc90f"
+}

@@ -1,0 +1,7 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "ocaml", "gen/test_seams_v1.exe"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T05:16:54.042979+00:00"}
+Entering directory '/Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml'
+File "gen/api_gen.ml", line 41749, characters 8-63:
+41749 | let rec list_map_tr_loop_at_program_check_internal_place_spec_0 (base : int list) (a_1 : entry list) (a_2 : entry list) : entry list =
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 39 [unused-rec-flag]): unused rec flag.
+Leaving directory '/Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml'
