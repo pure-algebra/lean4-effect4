@@ -28,6 +28,16 @@ open Effect4.Tool.Wire (Envelope Connection decode serveJson)
   | .error .unprintable => true | _ => false
 #guard match CodecProfile.write (7 : Nat) with
   | .ok j => (CodecProfile.read (α := Nat) j).toOption = some 7 | _ => false
+-- The profile carries naturals up to 2^53 - 1: 2^53 is exact in binary64, yet refuses on write,
+-- and a JSON that spells it refuses on read; the native shell refuses the same trees.
+#guard match CodecProfile.write (9007199254740991 : Nat) with
+  | .ok j => (CodecProfile.read (α := Nat) j).toOption = some 9007199254740991 | _ => false
+#guard match CodecProfile.write (9007199254740992 : Nat) with
+  | .error .unprintable => true | _ => false
+#guard match CodecProfile.read (α := Nat) (Canonical.print (9007199254740992 : Nat)) with
+  | .error .unreadable => true | _ => false
+#guard !CodecProfile.carries (.list [.nat 1, .pair .unit (.nat 9007199254740992)])
+#guard CodecProfile.carries (.ctor 0 [.nat 9007199254740991, .negInt 9007199254740992])
 
 /-! ## The Check codecs -/
 

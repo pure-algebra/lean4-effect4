@@ -12,8 +12,8 @@ Slice E of the authoring plan (`docs/research/2026-10-17-proof-scout/README.md` 
   `LiveRecord.save l` and replays its journal to `l.run`.
 * **An unknown format version is refused** (`restore_unsupportedVersion`): `LiveRecord.restore`
   returns `.error (.unsupportedVersion r.version)` when `r.version ≠ LiveRecord.currentVersion`.
-* **Canonical byte round-trip** (`ofTuple_toTuple`, `decode_encode`): `LiveRecord.decode` recovers
-  `r` from `LiveRecord.encode r`.
+
+The record's bytes are its generated `Canonical` instance's, whose round trip is the codec laws'.
 -/
 
 set_option autoImplicit false
@@ -59,31 +59,5 @@ theorem restore_unsupportedVersion (r : LiveRecord) (h : r.version ≠ currentVe
     restore r = .error (.unsupportedVersion r.version) := by
   unfold restore
   simp only [ne_eq, h, not_false_eq_true, ↓reduceIte]
-
-/-- Rebuilding a `LiveRecord` from its canonical tuple returns the record.
-
-Placement:
-1. Concept: `host-session-protocol`, property `typed-replay-session`.
-2. Question: helper step of `decode_encode`; consumer: `decode_encode`.
-3. Reach: every `LiveRecord`.
-4. What it does not establish: admission of the decoded record.
-5. Unlocks: R13. -/
-theorem ofTuple_toTuple (r : LiveRecord) : ofTuple r.toTuple = r := by
-  obtain ⟨version, ⟨rows, services, types⟩, program, session, binding, ⟨fuel, compileFuel⟩,
-    journal, rowNames⟩ := r
-  rfl
-
-/-- **Decoding the canonical bytes of a well-formed `LiveRecord` recovers the record.**
-
-Placement:
-1. Concept: `host-session-protocol`, property `typed-replay-session`.
-2. Question: helper of `live-session-persists`; consumer: the tool's `restore` action and its run record query (`Tool.Internal.action`, `Tool.Internal.query`).
-3. Reach: every `LiveRecord` whose canonical value tree is well-formed.
-4. What it does not establish: admission of the decoded record (`restore` checks admission).
-5. Unlocks: R13. -/
-theorem decode_encode (r : LiveRecord) (h : (toVal r.toTuple).WF) :
-    decode (encode r) = some r := by
-  unfold decode encode
-  rw [Canonical.decode_encode _ h, Option.map_some, ofTuple_toTuple]
 
 end Effect4.LiveRecord

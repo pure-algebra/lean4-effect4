@@ -12,7 +12,9 @@
    Behaviours it holds itself to:
    K1  A number is a natural. The tree's own JSON keeps a number as a binary64 bit pattern, which
        the lowered UInt64 does not hold exactly; here a number is an OCaml int, read and printed
-       in decimal. A natural above 2^53 prints exactly here and inexactly in Lean.
+       in decimal. The tool's profile carries naturals up to 2^53 - 1 (`CodecProfile.carries`,
+       checked in Lean for both drivers), where the two spellings agree. Text this parser cannot
+       hold (a fraction, an integer past the int range) refuses here as a parse failure.
                                                                        by construction
    K2  Printing follows `printIn`: the shape names fields and cases, the value gives structure,
        a value that fits no shape prints by structure under "_ctor"/"args".  tested (T3, corpus)

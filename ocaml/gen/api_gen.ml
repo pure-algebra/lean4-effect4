@@ -1319,7 +1319,7 @@ and feed_refusal =
   | FeedRefusal_refused of type_refusal list
   | FeedRefusal_typeChanged of EffTy.t option * EffTy.t
   | FeedRefusal_localChanged of (Ty.t list * EffTy.t) option * (Ty.t list * EffTy.t) option
-and preview_answer = PreviewAnswer_settled of (int * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t list effect4_run_tree_outcome) option | PreviewAnswer_frames of (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t list effect4_run_tree_outcome list | PreviewAnswer_explored of path list
+and preview_answer = PreviewAnswer_settled of (int * preview_run) option | PreviewAnswer_frames of preview_run list | PreviewAnswer_explored of path list
 and scheme =
   | Scheme_mono of Ty.t list * Ty.t
   | Scheme_variadic of Ty.t * Ty.t
@@ -1371,6 +1371,7 @@ and effect4_run_preview_refusal =
   | Effect4_run_preview_refusal_outsideTree of int list
   | Effect4_run_preview_refusal_genericRow of int list * int
   | Effect4_run_preview_refusal_handleAnswer of int list * int
+and preview_run = { steps : step list; stop : stop; unread : (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t list }
 and slot_view = {
   slot : ext_slot;
   term : Term.t option;
@@ -1396,7 +1397,7 @@ and call_view = {
 }
 and bound_call = { call : call; token : int }
 and held_call = { call_id : int; received : (Val.t, Err.t, Defect.t, fiber_id, unit) Completion.t option }
-and wait_view = { fiber : fiber_id; token : int; registration : eff_name option }
+and wait_view = { fiber : fiber_id; token : int; site : wait_site option }
 and edit_session = { app : sig_app; sketch : sketch; table : entry list }
 and hole_view = {
   index : int;
@@ -1473,6 +1474,7 @@ and evidence =
   | Evidence_refused of type_refusal
   | Evidence_feedRefused of feed_refusal
   | Evidence_differentEnv of Ty.t list * Ty.t list
+and wait_site = WaitSite_deferred of deferred_key | WaitSite_other
 and recorded_reply = {
   table : Row.t list;
   fiber : fiber_id;
@@ -47806,20 +47808,20 @@ let store_runner_gen_command_c_to_val (x_1 : command) : Val.t =
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.Canonical.encode._at_.Effect4.LiveRecord.encode.spec_0.spec_2 (a.1 : List Effect4.Api.Runner.Command) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.toVal.spec_0 (a.1 : List Effect4.Api.Runner.Command) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_canonical_encode_at_live_record_encode_spec_0_spec_2 (a_1 : command list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_0 (a_1 : command list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = store_runner_gen_command_c_to_val head_4 in
       let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_canonical_encode_at_live_record_encode_spec_0_spec_2 tail_5 _x_7)
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_0 tail_5 _x_7)
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.Canonical.encode._at_.Effect4.LiveRecord.encode.spec_0.spec_3 (a.1 : List (Prod String Nat)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.toVal.spec_1 (a.1 : List (Prod String Nat)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_canonical_encode_at_live_record_encode_spec_0_spec_3 (a_1 : (string * int) list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_1 (a_1 : (string * int) list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
@@ -47827,7 +47829,7 @@ let rec list_map_tr_loop_at_store_canonical_encode_at_live_record_encode_spec_0_
           let _x_7 = Val.Nat snd_1 in
           let _x_8 = Val.Pair (_x_6, _x_7) in
           let _x_9 = _x_8 :: a_2 in
-          list_map_tr_loop_at_store_canonical_encode_at_live_record_encode_spec_0_spec_3 tail_5 _x_9))
+          list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_1 tail_5 _x_9))
 
 
 
@@ -47843,9 +47845,9 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val (x_1 : live_
       let _x_15 = Val.Str binding_6 in
       let _x_16 = store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_to_val budget_7 in
       let _x_17 = [] in
-      let _x_18 = list_map_tr_loop_at_store_canonical_encode_at_live_record_encode_spec_0_spec_2 journal_8 _x_17 in
+      let _x_18 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_0 journal_8 _x_17 in
       let _x_19 = Val.List _x_18 in
-      let _x_20 = list_map_tr_loop_at_store_canonical_encode_at_live_record_encode_spec_0_spec_3 row_names_9 _x_17 in
+      let _x_20 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_1 row_names_9 _x_17 in
       let _x_21 = Val.List _x_20 in
       let _x_22 = _x_21 :: _x_17 in
       let _x_23 = _x_19 :: _x_22 in
@@ -48023,14 +48025,14 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_run_form_c_to_val (x_1 : 
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Run_46_Tree_46_Outcome_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Machine_46_ExitV_41__41_C.toVal.spec_0 (a.1 : List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_PreviewQueryC.toVal.spec_0 (a.1 : List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_to_val_spec_0 (a_1 : (Val.t, Err.t, Defect.t, int, unit) Exit.t list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_to_val_spec_0 (a_1 : (Val.t, Err.t, Defect.t, int, unit) Exit.t list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = store_runner_gen_exit_c_to_val head_4 in
       let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_to_val_spec_0 tail_5 _x_7)
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_to_val_spec_0 tail_5 _x_7)
 
 
 
@@ -48040,7 +48042,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_to_val (x
   match (x_1 : preview_query) with
     | PreviewQuery_settle (tape_2, limit_3) -> (let _x_4 = 0 in
       let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_to_val_spec_0 tape_2 _x_5 in
+      let _x_6 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_to_val_spec_0 tape_2 _x_5 in
       let _x_7 = Val.List _x_6 in
       let _x_8 = Val.Nat limit_3 in
       let _x_9 = _x_8 :: _x_5 in
@@ -48048,7 +48050,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_to_val (x
       Val.Ctor (_x_4, _x_10))
     | PreviewQuery_frames (tape_12, limit_13) -> (let _x_14 = 1 in
       let _x_15 = [] in
-      let _x_16 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_to_val_spec_0 tape_12 _x_15 in
+      let _x_16 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_to_val_spec_0 tape_12 _x_15 in
       let _x_17 = Val.List _x_16 in
       let _x_18 = Val.Nat limit_13 in
       let _x_19 = _x_18 :: _x_15 in
@@ -48856,9 +48858,9 @@ let store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_of_val (x_1 : Val
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Store.Canonical.decode._at_.Effect4.LiveRecord.decode.spec_0.spec_2 (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Api.Runner.Command) : Option (List Effect4.Api.Runner.Command) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.ofVal.spec_0 (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Api.Runner.Command) : Option (List Effect4.Api.Runner.Command) *)
 
-let rec list_map_m_loop_at_store_canonical_decode_at_live_record_decode_spec_0_spec_2 (x_1 : Val.t list) (x_2 : command list) : command list option =
+let rec list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_0 (x_1 : Val.t list) (x_2 : command list) : command list option =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
@@ -48868,13 +48870,13 @@ let rec list_map_m_loop_at_store_canonical_decode_at_live_record_decode_spec_0_s
       match _x_9 with
         | None -> None
         | Some val__11 -> (let _x_12 = val__11 :: x_2 in
-          list_map_m_loop_at_store_canonical_decode_at_live_record_decode_spec_0_spec_2 tail_6 _x_12))
+          list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_0 tail_6 _x_12))
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Store.Canonical.decode._at_.Effect4.LiveRecord.decode.spec_0.spec_3 (x.1 : List Effect4.Store.Val) (x.2 : List (Prod String Nat)) : Option (List (Prod String Nat)) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.ofVal.spec_1 (x.1 : List Effect4.Store.Val) (x.2 : List (Prod String Nat)) : Option (List (Prod String Nat)) *)
 
-let rec list_map_m_loop_at_store_canonical_decode_at_live_record_decode_spec_0_spec_3 (x_1 : Val.t list) (x_2 : (string * int) list) : (string * int) list option =
+let rec list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_1 (x_1 : Val.t list) (x_2 : (string * int) list) : (string * int) list option =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
@@ -48883,7 +48885,7 @@ let rec list_map_m_loop_at_store_canonical_decode_at_live_record_decode_spec_0_s
             | Val.Str s_9 -> (match (b_8 : Val.t) with
                 | Val.Nat n_10 -> (let _x_11 = s_9, n_10 in
                   let _x_12 = _x_11 :: x_2 in
-                  list_map_m_loop_at_store_canonical_decode_at_live_record_decode_spec_0_spec_3 tail_6 _x_12)
+                  list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_1 tail_6 _x_12)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
@@ -48960,10 +48962,10 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val (x_1 : Val.t
                                                                 match _x_74 with
                                                                   | Some val__75 -> (match (head_19 : Val.t) with
                                                                       | Val.List xs_76 -> (let _x_77 = [] in
-                                                                        let _x_78 = list_map_m_loop_at_store_canonical_decode_at_live_record_decode_spec_0_spec_2 xs_76 _x_77 in
+                                                                        let _x_78 = list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_0 xs_76 _x_77 in
                                                                         match _x_78 with
                                                                           | Some val__79 -> (match (head_21 : Val.t) with
-                                                                              | Val.List xs_80 -> (let _x_81 = list_map_m_loop_at_store_canonical_decode_at_live_record_decode_spec_0_spec_3 xs_80 _x_77 in
+                                                                              | Val.List xs_80 -> (let _x_81 = list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_1 xs_80 _x_77 in
                                                                                 match _x_81 with
                                                                                   | Some val__82 -> (let _x_83 = ({ version = n_65; app = val__67; program = val__71; session = s_72; binding = s_73; budget = val__75; journal = val__79; row_names = val__82 } : live_record) in
                                                                                     Some _x_83)
@@ -49445,9 +49447,9 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_c_of_val (x_1 : Va
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Run_46_Tree_46_Outcome_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Machine_46_ExitV_41__41_C.ofVal.spec_0 (x.1 : List Effect4.Store.Val) (x.2 : List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Option (List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_PreviewQueryC.ofVal.spec_0 (x.1 : List Effect4.Store.Val) (x.2 : List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Option (List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) *)
 
-let rec list_map_m_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_of_val_spec_0 (x_1 : Val.t list) (x_2 : (Val.t, Err.t, Defect.t, int, unit) Exit.t list) : (Val.t, Err.t, Defect.t, int, unit) Exit.t list option =
+let rec list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_of_val_spec_0 (x_1 : Val.t list) (x_2 : (Val.t, Err.t, Defect.t, int, unit) Exit.t list) : (Val.t, Err.t, Defect.t, int, unit) Exit.t list option =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
@@ -49457,7 +49459,7 @@ let rec list_map_m_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46
       match _x_9 with
         | None -> None
         | Some val__11 -> (let _x_12 = val__11 :: x_2 in
-          list_map_m_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_of_val_spec_0 tail_6 _x_12))
+          list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_of_val_spec_0 tail_6 _x_12))
 
 
 
@@ -49475,7 +49477,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_of_val (x
                 match tail_48 with
                   | [] -> (match (head_45 : Val.t) with
                       | Val.List xs_53 -> (let _x_54 = [] in
-                        let _x_55 = list_map_m_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_of_val_spec_0 xs_53 _x_54 in
+                        let _x_55 = list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_of_val_spec_0 xs_53 _x_54 in
                         match _x_55 with
                           | Some val__56 -> (match (head_47 : Val.t) with
                               | Val.Nat n_57 -> (let _x_58 = PreviewQuery_settle (val__56, n_57) in
@@ -49495,7 +49497,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_of_val (x
                   match tail_29 with
                     | [] -> (match (head_26 : Val.t) with
                         | Val.List xs_34 -> (let _x_35 = [] in
-                          let _x_36 = list_map_m_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_of_val_spec_0 xs_34 _x_35 in
+                          let _x_36 = list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_of_val_spec_0 xs_34 _x_35 in
                           match _x_36 with
                             | Some val__37 -> (match (head_28 : Val.t) with
                                 | Val.Nat n_38 -> (let _x_39 = PreviewQuery_frames (val__37, n_38) in
@@ -49805,6 +49807,32 @@ let store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__
               | _ -> None)
           | _ -> None) else None)
     | _ -> None
+
+
+
+(* LCNF mono: Effect4.Tool.CodecProfile.carries (x.1 : Effect4.Store.Val) : Bool
+   Effect4.Tool.CodecProfile.carriesList (x.1 : List Effect4.Store.Val) : Bool *)
+
+let rec tool_codec_profile_carries (x_1 : Val.t) : bool =
+  match (x_1 : Val.t) with
+    | Val.Unit -> true
+    | Val.Nat n_3 -> (let _x_4 = 9007199254740991 in
+      n_3 <= _x_4)
+    | Val.List xs_6 -> tool_codec_profile_carries_list xs_6
+    | Val.Pair (a_8, b_9) -> (let _x_10 = tool_codec_profile_carries a_8 in
+      if _x_10 then tool_codec_profile_carries b_9 else _x_10)
+    | Val.None -> true
+    | Val.Some a_13 -> tool_codec_profile_carries a_13
+    | Val.Ctor (_, args_16) -> tool_codec_profile_carries_list args_16
+    | Val.Handle (_, key_19) -> (let _x_20 = 9007199254740991 in
+      key_19 <= _x_20)
+    | _ -> true
+
+and tool_codec_profile_carries_list (x_1 : Val.t list) : bool =
+  match x_1 with
+    | [] -> true
+    | head_3 :: tail_4 -> (let _x_5 = tool_codec_profile_carries head_3 in
+      if _x_5 then tool_codec_profile_carries_list tail_4 else _x_5)
 
 
 
@@ -50295,18 +50323,18 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val (x_1 
       let _x_12 = store_program_gen_eff_c_to_val_eff expected_3 in
       let _x_13 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_to_val context_4 in
       let[@local always] _jp_14 = fun _y_15 _y_16 _y_17 -> let _x_18 = _y_17 :: _x_9 in
-      let _x_19 = _y_16 :: _x_18 in
-      let _x_20 = _y_15 :: _x_19 in
+      let _x_19 = _y_15 :: _x_18 in
+      let _x_20 = _y_16 :: _x_19 in
       let _x_21 = _x_13 :: _x_20 in
       let _x_22 = _x_12 :: _x_21 in
       let _x_23 = _x_11 :: _x_22 in
       Val.Ctor (_x_8, _x_23) in
       let[@local always] _jp_25 = fun _y_26 _y_27 -> match refusal_7 with
         | None -> (let _x_28 = Val.None in
-          _jp_14 _y_26 _y_27 _x_28)
+          _jp_14 _y_27 _y_26 _x_28)
         | Some val__29 -> (let _x_30 = store_refusals_gen_type_refusal_c_to_val val__29 in
           let _x_31 = Val.Some _x_30 in
-          _jp_14 _y_26 _y_27 _x_31) in
+          _jp_14 _y_27 _y_26 _x_31) in
       let[@local always] _jp_32 = fun _y_33 -> match entry_6 with
         | None -> (let _x_34 = Val.None in
           _jp_25 _y_33 _x_34)
@@ -50328,9 +50356,9 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val (x_1 : 
   match (x_1 : doc_view) with
     | { snap = snap_2; type_ = type__3; refusals = refusals_4; holes = holes_5; inspection = inspection_6 } -> (let _x_7 = 0 in
       let _x_8 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_to_val snap_2 in
-      let[@local always] _jp_9 = fun _y_10 _y_11 _y_12 _y_13 _y_14 -> let _x_15 = _y_14 :: _y_12 in
+      let[@local always] _jp_9 = fun _y_10 _y_11 _y_12 _y_13 _y_14 -> let _x_15 = _y_14 :: _y_13 in
       let _x_16 = _y_11 :: _x_15 in
-      let _x_17 = _y_13 :: _x_16 in
+      let _x_17 = _y_12 :: _x_16 in
       let _x_18 = _y_10 :: _x_17 in
       let _x_19 = _x_8 :: _x_18 in
       Val.Ctor (_x_7, _x_19) in
@@ -50341,10 +50369,10 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val (x_1 : 
       let _x_27 = Val.List _x_26 in
       match inspection_6 with
         | None -> (let _x_28 = Val.None in
-          _jp_9 _y_22 _x_27 _x_23 _x_25 _x_28)
+          _jp_9 _y_22 _x_27 _x_25 _x_23 _x_28)
         | Some val__29 -> (let _x_30 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val val__29 in
           let _x_31 = Val.Some _x_30 in
-          _jp_9 _y_22 _x_27 _x_23 _x_25 _x_31) in
+          _jp_9 _y_22 _x_27 _x_25 _x_23 _x_31) in
       match type__3 with
         | None -> (let _x_32 = Val.None in
           _jp_21 _x_32)
@@ -50679,16 +50707,16 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_call_view_c_to_val (x_1 :
       let _x_7 = store_runner_gen_await_c_to_val await_2 in
       let[@local always] _jp_8 = fun _y_9 _y_10 _y_11 -> let _x_12 = [] in
       let _x_13 = _y_11 :: _x_12 in
-      let _x_14 = _y_10 :: _x_13 in
-      let _x_15 = _y_9 :: _x_14 in
+      let _x_14 = _y_9 :: _x_13 in
+      let _x_15 = _y_10 :: _x_14 in
       let _x_16 = _x_7 :: _x_15 in
       Val.Ctor (_x_6, _x_16) in
       let[@local always] _jp_18 = fun _y_19 _y_20 -> match held_5 with
         | None -> (let _x_21 = Val.None in
-          _jp_8 _y_19 _y_20 _x_21)
+          _jp_8 _y_20 _y_19 _x_21)
         | Some val__22 -> (let _x_23 = store_tool_gen_t_95_root_95__46_effect4_46_live_46_held_call_c_to_val val__22 in
           let _x_24 = Val.Some _x_23 in
-          _jp_8 _y_19 _y_20 _x_24) in
+          _jp_8 _y_20 _y_19 _x_24) in
       let[@local always] _jp_25 = fun _y_26 -> match checked_4 with
         | None -> (let _x_27 = Val.None in
           _jp_18 _y_26 _x_27)
@@ -50717,114 +50745,6 @@ let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_46_v
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC.toVal.spec_0 (a.1 : List Effect4.Store.Val) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 (a_1 : Val.t list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_value_gen_val_c_to_val_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.toVal.spec_1 (a.1 : List Bool) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_1 (a_1 : bool list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = Val.Bool head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_1 tail_5 _x_7)
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.toVal.spec_2 (a.1 : List (Prod Nat (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_2 (a_1 : (int * (Val.t, Err.t, Defect.t, int, unit) Exit.t) list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, snd_1 -> (let _x_6 = store_api_gen_fiber_id_c_to_val fst_1 in
-          let _x_7 = store_runner_gen_exit_c_to_val snd_1 in
-          let _x_8 = Val.Pair (_x_6, _x_7) in
-          let _x_9 = _x_8 :: a_2 in
-          list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_2 tail_5 _x_9))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC.toVal (x.1 : Effect4.Machine.ArgSite) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val (x_1 : arg_site) : Val.t =
-  match (x_1 : arg_site) with
-    | { path = path_2; env = env_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
-      let _x_7 = Val.List _x_6 in
-      let _x_8 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_3 _x_5 in
-      let _x_9 = Val.List _x_8 in
-      let _x_10 = _x_9 :: _x_5 in
-      let _x_11 = _x_7 :: _x_10 in
-      Val.Ctor (_x_4, _x_11))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.toVal.spec_0 (a.1 : List Effect4.Machine.ArgSite) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_0 (a_1 : arg_site list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.toVal.spec_3 (a.1 : List (List Effect4.Machine.ArgSite)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_3 (a_1 : arg_site list list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = [] in
-      let _x_7 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_0 head_4 _x_6 in
-      let _x_8 = Val.List _x_7 in
-      let _x_9 = _x_8 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_3 tail_5 _x_9)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.toVal (x.1 : Effect4.Program.Point) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val (x_1 : point) : Val.t =
-  match (x_1 : point) with
-    | { path = path_2; env = env_3; fuel = fuel_4; tape = tape_5; completed = completed_6; root = root_7; params = params_8; call = call_9 } -> (let _x_10 = 0 in
-      let _x_11 = [] in
-      let _x_12 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_11 in
-      let _x_13 = Val.List _x_12 in
-      let _x_14 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_3 _x_11 in
-      let _x_15 = Val.List _x_14 in
-      let _x_16 = Val.Nat fuel_4 in
-      let _x_17 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_1 tape_5 _x_11 in
-      let _x_18 = Val.List _x_17 in
-      let _x_19 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_2 completed_6 _x_11 in
-      let _x_20 = Val.List _x_19 in
-      let _x_21 = Val.Nat root_7 in
-      let _x_22 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_3 params_8 _x_11 in
-      let _x_23 = Val.List _x_22 in
-      let _x_24 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 call_9 _x_11 in
-      let _x_25 = Val.List _x_24 in
-      let _x_26 = _x_25 :: _x_11 in
-      let _x_27 = _x_23 :: _x_26 in
-      let _x_28 = _x_21 :: _x_27 in
-      let _x_29 = _x_20 :: _x_28 in
-      let _x_30 = _x_18 :: _x_29 in
-      let _x_31 = _x_16 :: _x_30 in
-      let _x_32 = _x_15 :: _x_31 in
-      let _x_33 = _x_13 :: _x_32 in
-      Val.Ctor (_x_10, _x_33))
-
-
-
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_DeferredKeyC.toVal (x.1 : Nat) : Effect4.Store.Val *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val (x_1 : int) : Val.t =
@@ -50836,1258 +50756,18 @@ let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val 
 
 
 
-(* LCNF mono: Effect4.Store.ServiceC.toVal (x.1 : Effect4.Machine.Env.Service lcAny) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Live_46_WaitSiteC.toVal (x.1 : Effect4.Live.WaitSite) : Effect4.Store.Val *)
 
-let store_service_c_to_val (x_1 : _ service) : Val.t =
-  match (x_1 : _ service) with
-    | { key = key_2; value = value_3 } -> (let _x_4 = 0 in
-      let _x_5 = store_program_gen_service_key_c_to_val key_2 in
-      let _x_6 = store_value_gen_val_c_to_val_val value_3 in
-      let _x_7 = [] in
-      let _x_8 = _x_6 :: _x_7 in
-      let _x_9 = _x_5 :: _x_8 in
-      Val.Ctor (_x_4, _x_9))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ContextC.toVal.spec_0 (a.1 : List (Effect4.Machine.Env.Service lcAny)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_context_c_to_val_spec_0 (a_1 : _ service list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_service_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_context_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ContextC.toVal (x.1 : List (Effect4.Machine.Env.Service lcAny)) : Effect4.Store.Val *)
-
-let store_context_c_to_val (x_1 : _ service list) : Val.t =
-  let _x_2 = 0 in
-  let _x_3 = [] in
-  let _x_4 = list_map_tr_loop_at_store_context_c_to_val_spec_0 x_1 _x_3 in
-  let _x_5 = Val.List _x_4 in
-  let _x_6 = _x_5 :: _x_3 in
-  Val.Ctor (_x_2, _x_6)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_CtxC.toVal (x.1 : Effect4.Machine.Ctx) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val (x_1 : ctx) : Val.t =
-  match (x_1 : ctx) with
-    | { services = services_2; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_4 } -> (let _x_5 = 0 in
-      let _x_6 = store_context_c_to_val services_2 in
-      let _x_7 = Val.Nat max_ops_before_yield_3 in
-      let _x_8 = Val.Bool prevent_yield_4 in
-      let _x_9 = [] in
-      let _x_10 = _x_8 :: _x_9 in
-      let _x_11 = _x_7 :: _x_10 in
-      let _x_12 = _x_6 :: _x_11 in
-      Val.Ctor (_x_5, _x_12))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_FinNameC.toVal.spec_0 (a.1 : List Nat) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 (a_1 : int list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_api_gen_fiber_id_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_CaptureC.toVal (x.1 : Effect4.Machine.Capture) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_to_val (x_1 : capture) : Val.t =
-  match (x_1 : capture) with
-    | { path = path_2; env = env_3; fuel = fuel_4; tape = tape_5; ctx = ctx_6; root = root_7; params = params_8; call = call_9 } -> (let _x_10 = 0 in
-      let _x_11 = [] in
-      let _x_12 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_11 in
-      let _x_13 = Val.List _x_12 in
-      let _x_14 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_3 _x_11 in
-      let _x_15 = Val.List _x_14 in
-      let _x_16 = Val.Nat fuel_4 in
-      let _x_17 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_1 tape_5 _x_11 in
-      let _x_18 = Val.List _x_17 in
-      let _x_19 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val ctx_6 in
-      let _x_20 = Val.Nat root_7 in
-      let _x_21 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_3 params_8 _x_11 in
-      let _x_22 = Val.List _x_21 in
-      let _x_23 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 call_9 _x_11 in
-      let _x_24 = Val.List _x_23 in
-      let _x_25 = _x_24 :: _x_11 in
-      let _x_26 = _x_22 :: _x_25 in
-      let _x_27 = _x_20 :: _x_26 in
-      let _x_28 = _x_19 :: _x_27 in
-      let _x_29 = _x_18 :: _x_28 in
-      let _x_30 = _x_16 :: _x_29 in
-      let _x_31 = _x_15 :: _x_30 in
-      let _x_32 = _x_13 :: _x_31 in
-      Val.Ctor (_x_10, _x_32))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoMapIdC.toVal (x.1 : Nat) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val (x_1 : int) : Val.t =
-  let _x_2 = 0 in
-  let _x_3 = Val.Nat x_1 in
-  let _x_4 = [] in
-  let _x_5 = _x_3 :: _x_4 in
-  Val.Ctor (_x_2, _x_5)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_FinNameC.toVal (x.1 : Effect4.Machine.FinName) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val (x_1 : fin_name) : Val.t =
-  match (x_1 : fin_name) with
-    | FinName_interruptFiber (fiber_2, skip_self_3) -> (let _x_4 = 0 in
-      let _x_5 = store_api_gen_fiber_id_c_to_val fiber_2 in
-      let _x_6 = Val.Bool skip_self_3 in
-      let _x_7 = [] in
-      let _x_8 = _x_6 :: _x_7 in
-      let _x_9 = _x_5 :: _x_8 in
-      Val.Ctor (_x_4, _x_9))
-    | FinName_closeChildScope scope_11 -> (let _x_12 = 1 in
-      let _x_13 = Val.Nat scope_11 in
-      let _x_14 = [] in
-      let _x_15 = _x_13 :: _x_14 in
-      Val.Ctor (_x_12, _x_15))
-    | FinName_detachFromParent (parent_17, key_18) -> (let _x_19 = 2 in
-      let _x_20 = Val.Nat parent_17 in
-      let _x_21 = Val.Nat key_18 in
-      let _x_22 = [] in
-      let _x_23 = _x_21 :: _x_22 in
-      let _x_24 = _x_20 :: _x_23 in
-      Val.Ctor (_x_19, _x_24))
-    | FinName_release (label_26, fails_27) -> (let _x_28 = 3 in
-      let _x_29 = Val.Nat label_26 in
-      let _x_30 = Val.Bool fails_27 in
-      let _x_31 = [] in
-      let _x_32 = _x_30 :: _x_31 in
-      let _x_33 = _x_29 :: _x_32 in
-      Val.Ctor (_x_28, _x_33))
-    | FinName_awaitNewChildren snapshot_35 -> (let _x_36 = 4 in
-      let _x_37 = [] in
-      let _x_38 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 snapshot_35 _x_37 in
-      let _x_39 = Val.List _x_38 in
-      let _x_40 = _x_39 :: _x_37 in
-      Val.Ctor (_x_36, _x_40))
-    | FinName_parkThen slot_42 -> (let _x_43 = 5 in
-      let _x_44 = Val.Nat slot_42 in
-      let _x_45 = [] in
-      let _x_46 = _x_44 :: _x_45 in
-      Val.Ctor (_x_43, _x_46))
-    | FinName_foreign capture_48 -> (let _x_49 = 6 in
-      let _x_50 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_to_val capture_48 in
-      let _x_51 = [] in
-      let _x_52 = _x_50 :: _x_51 in
-      Val.Ctor (_x_49, _x_52))
-    | FinName_closeChildOnFailure scope_54 -> (let _x_55 = 7 in
-      let _x_56 = Val.Nat scope_54 in
-      let _x_57 = [] in
-      let _x_58 = _x_56 :: _x_57 in
-      Val.Ctor (_x_55, _x_58))
-    | FinName_memoEntry (layer_60, memo_map_61) -> (match layer_60 with
-        | fst_1, snd_1 -> (let _x_62 = 8 in
-          let _x_63 = [] in
-          let _x_64 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_1 _x_63 in
-          let _x_65 = Val.List _x_64 in
-          let _x_66 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_1 _x_63 in
-          let _x_67 = Val.List _x_66 in
-          let _x_68 = Val.Pair (_x_65, _x_67) in
-          let _x_69 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_61 in
-          let _x_70 = _x_69 :: _x_63 in
-          let _x_71 = _x_68 :: _x_70 in
-          Val.Ctor (_x_62, _x_71)))
-    | FinName_memoDone (layer_73, memo_map_74) -> (match layer_73 with
-        | fst_2, snd_2 -> (let _x_75 = 9 in
-          let _x_76 = [] in
-          let _x_77 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_2 _x_76 in
-          let _x_78 = Val.List _x_77 in
-          let _x_79 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_2 _x_76 in
-          let _x_80 = Val.List _x_79 in
-          let _x_81 = Val.Pair (_x_78, _x_80) in
-          let _x_82 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_74 in
-          let _x_83 = _x_82 :: _x_76 in
-          let _x_84 = _x_81 :: _x_83 in
-          Val.Ctor (_x_75, _x_84)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_SyncOpC.toVal (x.1 : Effect4.Machine.SyncOp) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_to_val (x_1 : sync_op) : Val.t =
-  match (x_1 : sync_op) with
-    | SyncOp_refMake initial_2 -> (let _x_3 = 0 in
-      let _x_4 = store_value_gen_val_c_to_val_val initial_2 in
+let store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_site_c_to_val (x_1 : wait_site) : Val.t =
+  match (x_1 : wait_site) with
+    | WaitSite_deferred cell_2 -> (let _x_3 = 0 in
+      let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_2 in
       let _x_5 = [] in
       let _x_6 = _x_4 :: _x_5 in
       Val.Ctor (_x_3, _x_6))
-    | SyncOp_refGet cell_8 -> (let _x_9 = 1 in
-      let _x_10 = store_runner_gen_ref_key_c_to_val cell_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | SyncOp_refSet (cell_14, value_15) -> (let _x_16 = 2 in
-      let _x_17 = store_runner_gen_ref_key_c_to_val cell_14 in
-      let _x_18 = store_value_gen_val_c_to_val_val value_15 in
-      let _x_19 = [] in
-      let _x_20 = _x_18 :: _x_19 in
-      let _x_21 = _x_17 :: _x_20 in
-      Val.Ctor (_x_16, _x_21))
-    | SyncOp_refGetAndSet (cell_23, value_24) -> (let _x_25 = 3 in
-      let _x_26 = store_runner_gen_ref_key_c_to_val cell_23 in
-      let _x_27 = store_value_gen_val_c_to_val_val value_24 in
-      let _x_28 = [] in
-      let _x_29 = _x_27 :: _x_28 in
-      let _x_30 = _x_26 :: _x_29 in
-      Val.Ctor (_x_25, _x_30))
-    | SyncOp_refSetAndGet (cell_32, value_33) -> (let _x_34 = 4 in
-      let _x_35 = store_runner_gen_ref_key_c_to_val cell_32 in
-      let _x_36 = store_value_gen_val_c_to_val_val value_33 in
-      let _x_37 = [] in
-      let _x_38 = _x_36 :: _x_37 in
-      let _x_39 = _x_35 :: _x_38 in
-      Val.Ctor (_x_34, _x_39))
-    | SyncOp_refUpdate (cell_41, f_42, env_43) -> (let _x_44 = 5 in
-      let _x_45 = store_runner_gen_ref_key_c_to_val cell_41 in
-      let _x_46 = store_program_gen_term_c_to_val_term f_42 in
-      let _x_47 = [] in
-      let _x_48 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_43 _x_47 in
-      let _x_49 = Val.List _x_48 in
-      let _x_50 = _x_49 :: _x_47 in
-      let _x_51 = _x_46 :: _x_50 in
-      let _x_52 = _x_45 :: _x_51 in
-      Val.Ctor (_x_44, _x_52))
-    | SyncOp_refGetAndUpdate (cell_54, f_55, env_56) -> (let _x_57 = 6 in
-      let _x_58 = store_runner_gen_ref_key_c_to_val cell_54 in
-      let _x_59 = store_program_gen_term_c_to_val_term f_55 in
-      let _x_60 = [] in
-      let _x_61 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_56 _x_60 in
-      let _x_62 = Val.List _x_61 in
-      let _x_63 = _x_62 :: _x_60 in
-      let _x_64 = _x_59 :: _x_63 in
-      let _x_65 = _x_58 :: _x_64 in
-      Val.Ctor (_x_57, _x_65))
-    | SyncOp_refUpdateAndGet (cell_67, f_68, env_69) -> (let _x_70 = 7 in
-      let _x_71 = store_runner_gen_ref_key_c_to_val cell_67 in
-      let _x_72 = store_program_gen_term_c_to_val_term f_68 in
-      let _x_73 = [] in
-      let _x_74 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_69 _x_73 in
-      let _x_75 = Val.List _x_74 in
-      let _x_76 = _x_75 :: _x_73 in
-      let _x_77 = _x_72 :: _x_76 in
-      let _x_78 = _x_71 :: _x_77 in
-      Val.Ctor (_x_70, _x_78))
-    | SyncOp_refUpdateSome (cell_80, f_81, env_82) -> (let _x_83 = 8 in
-      let _x_84 = store_runner_gen_ref_key_c_to_val cell_80 in
-      let _x_85 = store_program_gen_term_c_to_val_term f_81 in
-      let _x_86 = [] in
-      let _x_87 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_82 _x_86 in
-      let _x_88 = Val.List _x_87 in
-      let _x_89 = _x_88 :: _x_86 in
-      let _x_90 = _x_85 :: _x_89 in
-      let _x_91 = _x_84 :: _x_90 in
-      Val.Ctor (_x_83, _x_91))
-    | SyncOp_refGetAndUpdateSome (cell_93, f_94, env_95) -> (let _x_96 = 9 in
-      let _x_97 = store_runner_gen_ref_key_c_to_val cell_93 in
-      let _x_98 = store_program_gen_term_c_to_val_term f_94 in
-      let _x_99 = [] in
-      let _x_100 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_95 _x_99 in
-      let _x_101 = Val.List _x_100 in
-      let _x_102 = _x_101 :: _x_99 in
-      let _x_103 = _x_98 :: _x_102 in
-      let _x_104 = _x_97 :: _x_103 in
-      Val.Ctor (_x_96, _x_104))
-    | SyncOp_refUpdateSomeAndGet (cell_106, f_107, env_108) -> (let _x_109 = 10 in
-      let _x_110 = store_runner_gen_ref_key_c_to_val cell_106 in
-      let _x_111 = store_program_gen_term_c_to_val_term f_107 in
-      let _x_112 = [] in
-      let _x_113 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_108 _x_112 in
-      let _x_114 = Val.List _x_113 in
-      let _x_115 = _x_114 :: _x_112 in
-      let _x_116 = _x_111 :: _x_115 in
-      let _x_117 = _x_110 :: _x_116 in
-      Val.Ctor (_x_109, _x_117))
-    | SyncOp_refModify (cell_119, f_120, env_121) -> (let _x_122 = 11 in
-      let _x_123 = store_runner_gen_ref_key_c_to_val cell_119 in
-      let _x_124 = store_program_gen_term_c_to_val_term f_120 in
-      let _x_125 = [] in
-      let _x_126 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_121 _x_125 in
-      let _x_127 = Val.List _x_126 in
-      let _x_128 = _x_127 :: _x_125 in
-      let _x_129 = _x_124 :: _x_128 in
-      let _x_130 = _x_123 :: _x_129 in
-      Val.Ctor (_x_122, _x_130))
-    | SyncOp_refModifySome (cell_132, f_133, env_134) -> (let _x_135 = 12 in
-      let _x_136 = store_runner_gen_ref_key_c_to_val cell_132 in
-      let _x_137 = store_program_gen_term_c_to_val_term f_133 in
-      let _x_138 = [] in
-      let _x_139 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_134 _x_138 in
-      let _x_140 = Val.List _x_139 in
-      let _x_141 = _x_140 :: _x_138 in
-      let _x_142 = _x_137 :: _x_141 in
-      let _x_143 = _x_136 :: _x_142 in
-      Val.Ctor (_x_135, _x_143))
-    | SyncOp_deferredMake -> (let _x_145 = 13 in
-      let _x_146 = [] in
-      Val.Ctor (_x_145, _x_146))
-    | SyncOp_deferredIsDone cell_148 -> (let _x_149 = 14 in
-      let _x_150 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_148 in
-      let _x_151 = [] in
-      let _x_152 = _x_150 :: _x_151 in
-      Val.Ctor (_x_149, _x_152))
-    | SyncOp_deferredPoll cell_154 -> (let _x_155 = 15 in
-      let _x_156 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_154 in
-      let _x_157 = [] in
-      let _x_158 = _x_156 :: _x_157 in
-      Val.Ctor (_x_155, _x_158))
-    | SyncOp_deferredCompleteWith (cell_160, completion_161) -> (let _x_162 = 16 in
-      let _x_163 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_160 in
-      let _x_164 = store_runner_gen_completion_c_to_val completion_161 in
-      let _x_165 = [] in
-      let _x_166 = _x_164 :: _x_165 in
-      let _x_167 = _x_163 :: _x_166 in
-      Val.Ctor (_x_162, _x_167))
-    | SyncOp_deferredInterruptWith (cell_169, interruptor_170) -> (let _x_171 = 17 in
-      let _x_172 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_169 in
-      let _x_173 = store_api_gen_fiber_id_c_to_val interruptor_170 in
-      let _x_174 = [] in
-      let _x_175 = _x_173 :: _x_174 in
-      let _x_176 = _x_172 :: _x_175 in
-      Val.Ctor (_x_171, _x_176))
-    | SyncOp_deferredAwaitCleanup (cell_178, waiter_179, token_180) -> (let _x_181 = 18 in
-      let _x_182 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_178 in
-      let _x_183 = store_api_gen_fiber_id_c_to_val waiter_179 in
-      let _x_184 = Val.Nat token_180 in
-      let _x_185 = [] in
-      let _x_186 = _x_184 :: _x_185 in
-      let _x_187 = _x_183 :: _x_186 in
-      let _x_188 = _x_182 :: _x_187 in
-      Val.Ctor (_x_181, _x_188))
-    | SyncOp_clockNow -> (let _x_190 = 19 in
-      let _x_191 = [] in
-      Val.Ctor (_x_190, _x_191))
-    | SyncOp_sleepCancel (waiter_193, token_194) -> (let _x_195 = 20 in
-      let _x_196 = store_api_gen_fiber_id_c_to_val waiter_193 in
-      let _x_197 = Val.Nat token_194 in
-      let _x_198 = [] in
-      let _x_199 = _x_197 :: _x_198 in
-      let _x_200 = _x_196 :: _x_199 in
-      Val.Ctor (_x_195, _x_200))
-    | SyncOp_scopeMake strategy_202 -> (let _x_203 = 21 in
-      let _x_204 = store_program_gen_finalizer_strategy_c_to_val strategy_202 in
-      let _x_205 = [] in
-      let _x_206 = _x_204 :: _x_205 in
-      Val.Ctor (_x_203, _x_206))
-    | SyncOp_scopeAdd (scope_208, finalizer_209) -> (let _x_210 = 22 in
-      let _x_211 = Val.Nat scope_208 in
-      let _x_212 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val finalizer_209 in
-      let _x_213 = [] in
-      let _x_214 = _x_212 :: _x_213 in
-      let _x_215 = _x_211 :: _x_214 in
-      Val.Ctor (_x_210, _x_215))
-    | SyncOp_scopeRemove (scope_217, key_218) -> (let _x_219 = 23 in
-      let _x_220 = Val.Nat scope_217 in
-      let _x_221 = Val.Nat key_218 in
-      let _x_222 = [] in
-      let _x_223 = _x_221 :: _x_222 in
-      let _x_224 = _x_220 :: _x_223 in
-      Val.Ctor (_x_219, _x_224))
-    | SyncOp_scopeIsClosed scope_226 -> (let _x_227 = 24 in
-      let _x_228 = Val.Nat scope_226 in
-      let _x_229 = [] in
-      let _x_230 = _x_228 :: _x_229 in
-      Val.Ctor (_x_227, _x_230))
-    | SyncOp_scopeFork (parent_232, strategy_233) -> (let _x_234 = 25 in
-      let _x_235 = Val.Nat parent_232 in
-      let _x_236 = store_program_gen_finalizer_strategy_c_to_val strategy_233 in
-      let _x_237 = [] in
-      let _x_238 = _x_236 :: _x_237 in
-      let _x_239 = _x_235 :: _x_238 in
-      Val.Ctor (_x_234, _x_239))
-    | SyncOp_memoFork parent_241 -> (let _x_242 = 26 in
-      let[@local always] _jp_243 = fun _y_244 -> let _x_245 = [] in
-      let _x_246 = _y_244 :: _x_245 in
-      Val.Ctor (_x_242, _x_246) in
-      match parent_241 with
-        | None -> (let _x_248 = Val.None in
-          _jp_243 _x_248)
-        | Some val__249 -> (let _x_250 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val val__249 in
-          let _x_251 = Val.Some _x_250 in
-          _jp_243 _x_251))
-    | SyncOp_memoGet (layer_252, memo_map_253) -> (match layer_252 with
-        | fst_1, snd_1 -> (let _x_254 = 27 in
-          let _x_255 = [] in
-          let _x_256 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_1 _x_255 in
-          let _x_257 = Val.List _x_256 in
-          let _x_258 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_1 _x_255 in
-          let _x_259 = Val.List _x_258 in
-          let _x_260 = Val.Pair (_x_257, _x_259) in
-          let _x_261 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_253 in
-          let _x_262 = _x_261 :: _x_255 in
-          let _x_263 = _x_260 :: _x_262 in
-          Val.Ctor (_x_254, _x_263)))
-    | SyncOp_memoBuild (layer_265, memo_map_266) -> (match layer_265 with
-        | fst_2, snd_2 -> (let _x_267 = 28 in
-          let _x_268 = [] in
-          let _x_269 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_2 _x_268 in
-          let _x_270 = Val.List _x_269 in
-          let _x_271 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_2 _x_268 in
-          let _x_272 = Val.List _x_271 in
-          let _x_273 = Val.Pair (_x_270, _x_272) in
-          let _x_274 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_266 in
-          let _x_275 = _x_274 :: _x_268 in
-          let _x_276 = _x_273 :: _x_275 in
-          Val.Ctor (_x_267, _x_276)))
-    | SyncOp_memoComplete (layer_278, memo_map_279, exit__280) -> (match layer_278 with
-        | fst_3, snd_3 -> (let _x_281 = 29 in
-          let _x_282 = [] in
-          let _x_283 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_3 _x_282 in
-          let _x_284 = Val.List _x_283 in
-          let _x_285 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_3 _x_282 in
-          let _x_286 = Val.List _x_285 in
-          let _x_287 = Val.Pair (_x_284, _x_286) in
-          let _x_288 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_279 in
-          let _x_289 = store_runner_gen_exit_c_to_val exit__280 in
-          let _x_290 = _x_289 :: _x_282 in
-          let _x_291 = _x_288 :: _x_290 in
-          let _x_292 = _x_287 :: _x_291 in
-          Val.Ctor (_x_281, _x_292)))
-    | SyncOp_memoRelease (layer_294, memo_map_295) -> (match layer_294 with
-        | fst_4, snd_4 -> (let _x_296 = 30 in
-          let _x_297 = [] in
-          let _x_298 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_4 _x_297 in
-          let _x_299 = Val.List _x_298 in
-          let _x_300 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_4 _x_297 in
-          let _x_301 = Val.List _x_300 in
-          let _x_302 = Val.Pair (_x_299, _x_301) in
-          let _x_303 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_295 in
-          let _x_304 = _x_303 :: _x_297 in
-          let _x_305 = _x_302 :: _x_304 in
-          Val.Ctor (_x_296, _x_305)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_RaceNameC.toVal (x.1 : Effect4.Machine.RaceName) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_race_name_c_to_val (x_1 : race_name) : Val.t =
-  match (x_1 : race_name) with
-    | RaceName_empty -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | RaceName_successThenSecond -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-    | RaceName_failThenSuccess -> (let _x_8 = 2 in
+    | WaitSite_other -> (let _x_8 = 1 in
       let _x_9 = [] in
       Val.Ctor (_x_8, _x_9))
-    | RaceName_failThenFail -> (let _x_11 = 3 in
-      let _x_12 = [] in
-      Val.Ctor (_x_11, _x_12))
-    | RaceName_parkOnly -> (let _x_14 = 4 in
-      let _x_15 = [] in
-      Val.Ctor (_x_14, _x_15))
-    | RaceName_parkThenSuccess -> (let _x_17 = 5 in
-      let _x_18 = [] in
-      Val.Ctor (_x_17, _x_18))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ProgNameC.toValT_95_root_95__46_Effect4_46_Machine_46_ProgName.spec_0 (a.1 : List Effect4.Machine.FinName) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name_spec_0 (a_1 : fin_name list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ProgNameC.toValT_95_root_95__46_Effect4_46_Machine_46_ProgName (x.1 : Effect4.Machine.ProgName) : Effect4.Store.Val *)
-
-let rec store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name (x_1 : prog_name) : Val.t =
-  match (x_1 : prog_name) with
-    | ProgName_value v_2 -> (let _x_3 = 0 in
-      let _x_4 = store_value_gen_val_c_to_val_val v_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | ProgName_failCause cause_8 -> (let _x_9 = 1 in
-      let _x_10 = store_runner_gen_cause_c_to_val cause_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | ProgName_syncOp op_14 -> (let _x_15 = 2 in
-      let _x_16 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_to_val op_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
-    | ProgName_yieldNow priority_20 -> (let _x_21 = 3 in
-      let _x_22 = Val.Nat priority_20 in
-      let _x_23 = [] in
-      let _x_24 = _x_22 :: _x_23 in
-      Val.Ctor (_x_21, _x_24))
-    | ProgName_park slot_26 -> (let _x_27 = 4 in
-      let _x_28 = Val.Nat slot_26 in
-      let _x_29 = [] in
-      let _x_30 = _x_28 :: _x_29 in
-      Val.Ctor (_x_27, _x_30))
-    | ProgName_awaitDeferred cell_32 -> (let _x_33 = 5 in
-      let _x_34 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_32 in
-      let _x_35 = [] in
-      let _x_36 = _x_34 :: _x_35 in
-      Val.Ctor (_x_33, _x_36))
-    | ProgName_intoDeferred (body_38, cell_39) -> (let _x_40 = 6 in
-      let _x_41 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name body_38 in
-      let _x_42 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_39 in
-      let _x_43 = [] in
-      let _x_44 = _x_42 :: _x_43 in
-      let _x_45 = _x_41 :: _x_44 in
-      Val.Ctor (_x_40, _x_45))
-    | ProgName_intoBody (body_47, cell_48) -> (let _x_49 = 7 in
-      let _x_50 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name body_47 in
-      let _x_51 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_48 in
-      let _x_52 = [] in
-      let _x_53 = _x_51 :: _x_52 in
-      let _x_54 = _x_50 :: _x_53 in
-      Val.Ctor (_x_49, _x_54))
-    | ProgName_maskedPark slot_56 -> (let _x_57 = 8 in
-      let _x_58 = Val.Nat slot_56 in
-      let _x_59 = [] in
-      let _x_60 = _x_58 :: _x_59 in
-      Val.Ctor (_x_57, _x_60))
-    | ProgName_awaitFibers targets_62 -> (let _x_63 = 9 in
-      let _x_64 = [] in
-      let _x_65 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 targets_62 _x_64 in
-      let _x_66 = Val.List _x_65 in
-      let _x_67 = _x_66 :: _x_64 in
-      Val.Ctor (_x_63, _x_67))
-    | ProgName_finalizerOf (fin_69, exit__70) -> (let _x_71 = 10 in
-      let _x_72 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val fin_69 in
-      let _x_73 = store_runner_gen_exit_c_to_val exit__70 in
-      let _x_74 = [] in
-      let _x_75 = _x_73 :: _x_74 in
-      let _x_76 = _x_72 :: _x_75 in
-      Val.Ctor (_x_71, _x_76))
-    | ProgName_interruptDeferred cell_78 -> (let _x_79 = 11 in
-      let _x_80 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_78 in
-      let _x_81 = [] in
-      let _x_82 = _x_80 :: _x_81 in
-      Val.Ctor (_x_79, _x_82))
-    | ProgName_onExitOf (body_84, fin_85, finalizer_interruptible_86) -> (let _x_87 = 12 in
-      let _x_88 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name body_84 in
-      let _x_89 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val fin_85 in
-      let _x_90 = Val.Bool finalizer_interruptible_86 in
-      let _x_91 = [] in
-      let _x_92 = _x_90 :: _x_91 in
-      let _x_93 = _x_89 :: _x_92 in
-      let _x_94 = _x_88 :: _x_93 in
-      Val.Ctor (_x_87, _x_94))
-    | ProgName_seqOf (first_96, second_97) -> (let _x_98 = 13 in
-      let _x_99 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name first_96 in
-      let _x_100 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name second_97 in
-      let _x_101 = [] in
-      let _x_102 = _x_100 :: _x_101 in
-      let _x_103 = _x_99 :: _x_102 in
-      Val.Ctor (_x_98, _x_103))
-    | ProgName_forkThen (child_105, options_106, mode_107) -> (let _x_108 = 14 in
-      let _x_109 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name child_105 in
-      let _x_110 = store_program_gen_fork_options_c_to_val options_106 in
-      let _x_111 = store_program_gen_observer_mode_c_to_val mode_107 in
-      let _x_112 = [] in
-      let _x_113 = _x_111 :: _x_112 in
-      let _x_114 = _x_110 :: _x_113 in
-      let _x_115 = _x_109 :: _x_114 in
-      Val.Ctor (_x_108, _x_115))
-    | ProgName_forkOnly (child_117, options_118) -> (let _x_119 = 15 in
-      let _x_120 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name child_117 in
-      let _x_121 = store_program_gen_fork_options_c_to_val options_118 in
-      let _x_122 = [] in
-      let _x_123 = _x_121 :: _x_122 in
-      let _x_124 = _x_120 :: _x_123 in
-      Val.Ctor (_x_119, _x_124))
-    | ProgName_forkInScope (child_126, options_127, scope_128) -> (let _x_129 = 16 in
-      let _x_130 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name child_126 in
-      let _x_131 = store_program_gen_fork_options_c_to_val options_127 in
-      let _x_132 = Val.Nat scope_128 in
-      let _x_133 = [] in
-      let _x_134 = _x_132 :: _x_133 in
-      let _x_135 = _x_131 :: _x_134 in
-      let _x_136 = _x_130 :: _x_135 in
-      Val.Ctor (_x_129, _x_136))
-    | ProgName_runInScope (target_138, scope_139) -> (let _x_140 = 17 in
-      let _x_141 = store_api_gen_fiber_id_c_to_val target_138 in
-      let _x_142 = Val.Nat scope_139 in
-      let _x_143 = [] in
-      let _x_144 = _x_142 :: _x_143 in
-      let _x_145 = _x_141 :: _x_144 in
-      Val.Ctor (_x_140, _x_145))
-    | ProgName_forkScopedOf (child_147, options_148) -> (let _x_149 = 18 in
-      let _x_150 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name child_147 in
-      let _x_151 = store_program_gen_fork_options_c_to_val options_148 in
-      let _x_152 = [] in
-      let _x_153 = _x_151 :: _x_152 in
-      let _x_154 = _x_150 :: _x_153 in
-      Val.Ctor (_x_149, _x_154))
-    | ProgName_raceOf race_156 -> (let _x_157 = 19 in
-      let _x_158 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_race_name_c_to_val race_156 in
-      let _x_159 = [] in
-      let _x_160 = _x_158 :: _x_159 in
-      Val.Ctor (_x_157, _x_160))
-    | ProgName_closeScopeOf (scope_162, exit__163) -> (let _x_164 = 20 in
-      let _x_165 = Val.Nat scope_162 in
-      let _x_166 = store_runner_gen_exit_c_to_val exit__163 in
-      let _x_167 = [] in
-      let _x_168 = _x_166 :: _x_167 in
-      let _x_169 = _x_165 :: _x_168 in
-      Val.Ctor (_x_164, _x_169))
-    | ProgName_awaitAllNew body_171 -> (let _x_172 = 21 in
-      let _x_173 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name body_171 in
-      let _x_174 = [] in
-      let _x_175 = _x_173 :: _x_174 in
-      Val.Ctor (_x_172, _x_175))
-    | ProgName_interruptFibers targets_177 -> (let _x_178 = 22 in
-      let _x_179 = [] in
-      let _x_180 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 targets_177 _x_179 in
-      let _x_181 = Val.List _x_180 in
-      let _x_182 = _x_181 :: _x_179 in
-      Val.Ctor (_x_178, _x_182))
-    | ProgName_cancelRace race_184 -> (let _x_185 = 23 in
-      let _x_186 = Val.Nat race_184 in
-      let _x_187 = [] in
-      let _x_188 = _x_186 :: _x_187 in
-      Val.Ctor (_x_185, _x_188))
-    | ProgName_joinFiber (target_190, mode_191) -> (let _x_192 = 24 in
-      let _x_193 = store_api_gen_fiber_id_c_to_val target_190 in
-      let _x_194 = store_program_gen_observer_mode_c_to_val mode_191 in
-      let _x_195 = [] in
-      let _x_196 = _x_194 :: _x_195 in
-      let _x_197 = _x_193 :: _x_196 in
-      Val.Ctor (_x_192, _x_197))
-    | ProgName_closeWalk (strategy_199, order_200, exit__201) -> (let _x_202 = 25 in
-      let _x_203 = store_program_gen_finalizer_strategy_c_to_val strategy_199 in
-      let _x_204 = [] in
-      let _x_205 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name_spec_0 order_200 _x_204 in
-      let _x_206 = Val.List _x_205 in
-      let _x_207 = store_runner_gen_exit_c_to_val exit__201 in
-      let _x_208 = _x_207 :: _x_204 in
-      let _x_209 = _x_206 :: _x_208 in
-      let _x_210 = _x_203 :: _x_209 in
-      Val.Ctor (_x_202, _x_210))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_NameC.toValT_95_root_95__46_Effect4_46_Machine_46_Name (x.1 : Effect4.Machine.Name) : Effect4.Store.Val *)
-
-let rec store_tool_gen_t_95_root_95__46_effect4_46_machine_46_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_name (x_1 : name) : Val.t =
-  match (x_1 : name) with
-    | Name_restore exit__2 -> (let _x_3 = 0 in
-      let _x_4 = store_runner_gen_exit_c_to_val exit__2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | Name_merge exit__8 -> (let _x_9 = 1 in
-      let _x_10 = store_runner_gen_exit_c_to_val exit__8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | Name_seq next_14 -> (let _x_15 = 2 in
-      let _x_16 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name next_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
-    | Name_joinOn mode_20 -> (let _x_21 = 3 in
-      let _x_22 = store_program_gen_observer_mode_c_to_val mode_20 in
-      let _x_23 = [] in
-      let _x_24 = _x_22 :: _x_23 in
-      Val.Ctor (_x_21, _x_24))
-    | Name_interruptWith cell_26 -> (let _x_27 = 4 in
-      let _x_28 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_26 in
-      let _x_29 = [] in
-      let _x_30 = _x_28 :: _x_29 in
-      Val.Ctor (_x_27, _x_30))
-    | Name_doneInto cell_32 -> (let _x_33 = 5 in
-      let _x_34 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_32 in
-      let _x_35 = [] in
-      let _x_36 = _x_34 :: _x_35 in
-      Val.Ctor (_x_33, _x_36))
-    | Name_constant value_38 -> (let _x_39 = 6 in
-      let _x_40 = store_value_gen_val_c_to_val_val value_38 in
-      let _x_41 = [] in
-      let _x_42 = _x_40 :: _x_41 in
-      Val.Ctor (_x_39, _x_42))
-    | Name_exitOfValue -> (let _x_44 = 7 in
-      let _x_45 = [] in
-      Val.Ctor (_x_44, _x_45))
-    | Name_snapshotThen body_47 -> (let _x_48 = 8 in
-      let _x_49 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name body_47 in
-      let _x_50 = [] in
-      let _x_51 = _x_49 :: _x_50 in
-      Val.Ctor (_x_48, _x_51))
-    | Name_registerAwait cell_53 -> (let _x_54 = 9 in
-      let _x_55 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_53 in
-      let _x_56 = [] in
-      let _x_57 = _x_55 :: _x_56 in
-      Val.Ctor (_x_54, _x_57))
-    | Name_cancelAwait cell_59 -> (let _x_60 = 10 in
-      let _x_61 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_59 in
-      let _x_62 = [] in
-      let _x_63 = _x_61 :: _x_62 in
-      Val.Ctor (_x_60, _x_63))
-    | Name_registerSleep millis_65 -> (let _x_66 = 11 in
-      let _x_67 = store_clock_canonical_to_val millis_65 in
-      let _x_68 = [] in
-      let _x_69 = _x_67 :: _x_68 in
-      Val.Ctor (_x_66, _x_69))
-    | Name_cancelSleep -> (let _x_71 = 12 in
-      let _x_72 = [] in
-      Val.Ctor (_x_71, _x_72))
-    | Name_externalRegister slot_74 -> (let _x_75 = 13 in
-      let _x_76 = Val.Nat slot_74 in
-      let _x_77 = [] in
-      let _x_78 = _x_76 :: _x_77 in
-      Val.Ctor (_x_75, _x_78))
-    | Name_abortController -> (let _x_80 = 14 in
-      let _x_81 = [] in
-      Val.Ctor (_x_80, _x_81))
-    | Name_cancelPark -> (let _x_83 = 15 in
-      let _x_84 = [] in
-      Val.Ctor (_x_83, _x_84))
-    | Name_cancelRace race_86 -> (let _x_87 = 16 in
-      let _x_88 = Val.Nat race_86 in
-      let _x_89 = [] in
-      let _x_90 = _x_88 :: _x_89 in
-      Val.Ctor (_x_87, _x_90))
-    | Name_withWaiter (base_92, waiter_93, token_94) -> (let _x_95 = 17 in
-      let _x_96 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_name base_92 in
-      let _x_97 = store_api_gen_fiber_id_c_to_val waiter_93 in
-      let _x_98 = Val.Nat token_94 in
-      let _x_99 = [] in
-      let _x_100 = _x_98 :: _x_99 in
-      let _x_101 = _x_97 :: _x_100 in
-      let _x_102 = _x_96 :: _x_101 in
-      Val.Ctor (_x_95, _x_102))
-    | Name_reFail cause_104 -> (let _x_105 = 18 in
-      let _x_106 = store_runner_gen_cause_c_to_val cause_104 in
-      let _x_107 = [] in
-      let _x_108 = _x_106 :: _x_107 in
-      Val.Ctor (_x_105, _x_108))
-    | Name_finalizerName fin_110 -> (let _x_111 = 19 in
-      let _x_112 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val fin_110 in
-      let _x_113 = [] in
-      let _x_114 = _x_112 :: _x_113 in
-      Val.Ctor (_x_111, _x_114))
-    | Name_closeSeq (remaining_116, exit__117, captured_118) -> (let _x_119 = 20 in
-      let _x_120 = [] in
-      let _x_121 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_prog_name_spec_0 remaining_116 _x_120 in
-      let _x_122 = Val.List _x_121 in
-      let _x_123 = store_runner_gen_exit_c_to_val exit__117 in
-      let _x_124 = list_map_tr_loop_at_store_runner_gen_cause_c_to_val_spec_0 captured_118 _x_120 in
-      let _x_125 = Val.List _x_124 in
-      let _x_126 = _x_125 :: _x_120 in
-      let _x_127 = _x_123 :: _x_126 in
-      let _x_128 = _x_122 :: _x_127 in
-      Val.Ctor (_x_119, _x_128))
-    | Name_closeParDone -> (let _x_130 = 21 in
-      let _x_131 = [] in
-      Val.Ctor (_x_130, _x_131))
-    | Name_closeIfLast exit__133 -> (let _x_134 = 22 in
-      let _x_135 = store_runner_gen_exit_c_to_val exit__133 in
-      let _x_136 = [] in
-      let _x_137 = _x_135 :: _x_136 in
-      Val.Ctor (_x_134, _x_137))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_Env_46_ContextUpdateC.toVal (x.1 : Effect4.Machine.Env.ContextUpdate) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_env_46_context_update_c_to_val (x_1 : context_update) : Val.t =
-  match (x_1 : context_update) with
-    | ContextUpdate_setTo context_2 -> (let _x_3 = 0 in
-      let _x_4 = store_context_c_to_val context_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | ContextUpdate_provide that_8 -> (let _x_9 = 1 in
-      let _x_10 = store_context_c_to_val that_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | ContextUpdate_provideService (key_14, value_15) -> (let _x_16 = 2 in
-      let _x_17 = store_program_gen_service_key_c_to_val key_14 in
-      let _x_18 = store_value_gen_val_c_to_val_val value_15 in
-      let _x_19 = [] in
-      let _x_20 = _x_18 :: _x_19 in
-      let _x_21 = _x_17 :: _x_20 in
-      Val.Ctor (_x_16, _x_21))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_RegionC.toVal (x.1 : Effect4.Program.Region) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_program_46_region_c_to_val (x_1 : region) : Val.t =
-  match (x_1 : region) with
-    | Region_program q_2 -> (let _x_3 = 0 in
-      let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | Region_build (q_8, memo_map_9, scope_10) -> (let _x_11 = 1 in
-      let _x_12 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_8 in
-      let _x_13 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_9 in
-      let _x_14 = Val.Nat scope_10 in
-      let _x_15 = [] in
-      let _x_16 = _x_14 :: _x_15 in
-      let _x_17 = _x_13 :: _x_16 in
-      let _x_18 = _x_12 :: _x_17 in
-      Val.Ctor (_x_11, _x_18))
-    | Region_buildAdding (q_20, memo_map_21, scope_22) -> (let _x_23 = 2 in
-      let _x_24 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_20 in
-      let _x_25 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_21 in
-      let _x_26 = Val.Nat scope_22 in
-      let _x_27 = [] in
-      let _x_28 = _x_26 :: _x_27 in
-      let _x_29 = _x_25 :: _x_28 in
-      let _x_30 = _x_24 :: _x_29 in
-      Val.Ctor (_x_23, _x_30))
-    | Region_construct (q_32, key_33) -> (let _x_34 = 3 in
-      let _x_35 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_32 in
-      let[@local always] _jp_36 = fun _y_37 -> let _x_38 = [] in
-      let _x_39 = _y_37 :: _x_38 in
-      let _x_40 = _x_35 :: _x_39 in
-      Val.Ctor (_x_34, _x_40) in
-      match key_33 with
-        | None -> (let _x_42 = Val.None in
-          _jp_36 _x_42)
-        | Some val__43 -> (let _x_44 = store_program_gen_service_key_c_to_val val__43 in
-          let _x_45 = Val.Some _x_44 in
-          _jp_36 _x_45))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_CombineModeC.toVal (x.1 : Effect4.Program.CombineMode) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_program_46_combine_mode_c_to_val (x_1 : combine_mode) : Val.t =
-  match (x_1 : combine_mode) with
-    | CombineMode_provide -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | CombineMode_provideMerge -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_EffNameC.toValT_95_root_95__46_Effect4_46_Program_46_EffName (x.1 : Effect4.Program.EffName) : Effect4.Store.Val *)
-
-let rec store_tool_gen_t_95_root_95__46_effect4_46_program_46_eff_name_c_to_val_t_95_root_95__46_effect4_46_program_46_eff_name (x_1 : eff_name) : Val.t =
-  match (x_1 : eff_name) with
-    | EffName_cont p_2 -> (let _x_3 = 0 in
-      let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | EffName_caught p_8 -> (let _x_9 = 1 in
-      let _x_10 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | EffName_onValue p_14 -> (let _x_15 = 2 in
-      let _x_16 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
-    | EffName_onCause p_20 -> (let _x_21 = 3 in
-      let _x_22 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_20 in
-      let _x_23 = [] in
-      let _x_24 = _x_22 :: _x_23 in
-      Val.Ctor (_x_21, _x_24))
-    | EffName_fin p_26 -> (let _x_27 = 4 in
-      let _x_28 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_26 in
-      let _x_29 = [] in
-      let _x_30 = _x_28 :: _x_29 in
-      Val.Ctor (_x_27, _x_30))
-    | EffName_restore exit__32 -> (let _x_33 = 5 in
-      let _x_34 = store_runner_gen_exit_c_to_val exit__32 in
-      let _x_35 = [] in
-      let _x_36 = _x_34 :: _x_35 in
-      Val.Ctor (_x_33, _x_36))
-    | EffName_merge exit__38 -> (let _x_39 = 6 in
-      let _x_40 = store_runner_gen_exit_c_to_val exit__38 in
-      let _x_41 = [] in
-      let _x_42 = _x_40 :: _x_41 in
-      Val.Ctor (_x_39, _x_42))
-    | EffName_gen (p_44, pc_45, bind_46) -> (let _x_47 = 7 in
-      let _x_48 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_44 in
-      let _x_49 = [] in
-      let _x_50 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 pc_45 _x_49 in
-      let _x_51 = Val.List _x_50 in
-      let _x_52 = Val.Bool bind_46 in
-      let _x_53 = _x_52 :: _x_49 in
-      let _x_54 = _x_51 :: _x_53 in
-      let _x_55 = _x_48 :: _x_54 in
-      Val.Ctor (_x_47, _x_55))
-    | EffName_loop p_57 -> (let _x_58 = 8 in
-      let _x_59 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_57 in
-      let _x_60 = [] in
-      let _x_61 = _x_59 :: _x_60 in
-      Val.Ctor (_x_58, _x_61))
-    | EffName_registerAwait cell_63 -> (let _x_64 = 9 in
-      let _x_65 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_63 in
-      let _x_66 = [] in
-      let _x_67 = _x_65 :: _x_66 in
-      Val.Ctor (_x_64, _x_67))
-    | EffName_cancelAwait cell_69 -> (let _x_70 = 10 in
-      let _x_71 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_69 in
-      let _x_72 = [] in
-      let _x_73 = _x_71 :: _x_72 in
-      Val.Ctor (_x_70, _x_73))
-    | EffName_withWaiter (base_75, waiter_76, token_77) -> (let _x_78 = 11 in
-      let _x_79 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_eff_name_c_to_val_t_95_root_95__46_effect4_46_program_46_eff_name base_75 in
-      let _x_80 = store_api_gen_fiber_id_c_to_val waiter_76 in
-      let _x_81 = Val.Nat token_77 in
-      let _x_82 = [] in
-      let _x_83 = _x_81 :: _x_82 in
-      let _x_84 = _x_80 :: _x_83 in
-      let _x_85 = _x_79 :: _x_84 in
-      Val.Ctor (_x_78, _x_85))
-    | EffName_abort -> (let _x_87 = 12 in
-      let _x_88 = [] in
-      Val.Ctor (_x_87, _x_88))
-    | EffName_reFail cause_90 -> (let _x_91 = 13 in
-      let _x_92 = store_runner_gen_cause_c_to_val cause_90 in
-      let _x_93 = [] in
-      let _x_94 = _x_92 :: _x_93 in
-      Val.Ctor (_x_91, _x_94))
-    | EffName_scopeOpen p_96 -> (let _x_97 = 14 in
-      let _x_98 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_96 in
-      let _x_99 = [] in
-      let _x_100 = _x_98 :: _x_99 in
-      Val.Ctor (_x_97, _x_100))
-    | EffName_scopeProvide (p_102, scope_103) -> (let _x_104 = 15 in
-      let _x_105 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_102 in
-      let _x_106 = Val.Nat scope_103 in
-      let _x_107 = [] in
-      let _x_108 = _x_106 :: _x_107 in
-      let _x_109 = _x_105 :: _x_108 in
-      Val.Ctor (_x_104, _x_109))
-    | EffName_scopeBody (p_111, previous_112) -> (let _x_113 = 16 in
-      let _x_114 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_111 in
-      let _x_115 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val previous_112 in
-      let _x_116 = [] in
-      let _x_117 = _x_115 :: _x_116 in
-      let _x_118 = _x_114 :: _x_117 in
-      Val.Ctor (_x_113, _x_118))
-    | EffName_scopedExit (previous_120, scope_121) -> (let _x_122 = 17 in
-      let _x_123 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val previous_120 in
-      let _x_124 = Val.Nat scope_121 in
-      let _x_125 = [] in
-      let _x_126 = _x_124 :: _x_125 in
-      let _x_127 = _x_123 :: _x_126 in
-      Val.Ctor (_x_122, _x_127))
-    | EffName_scopeClose scope_129 -> (let _x_130 = 18 in
-      let _x_131 = Val.Nat scope_129 in
-      let _x_132 = [] in
-      let _x_133 = _x_131 :: _x_132 in
-      Val.Ctor (_x_130, _x_133))
-    | EffName_restoreCtx previous_135 -> (let _x_136 = 19 in
-      let _x_137 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val previous_135 in
-      let _x_138 = [] in
-      let _x_139 = _x_137 :: _x_138 in
-      Val.Ctor (_x_136, _x_139))
-    | EffName_forkScopedIn p_141 -> (let _x_142 = 20 in
-      let _x_143 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_141 in
-      let _x_144 = [] in
-      let _x_145 = _x_143 :: _x_144 in
-      Val.Ctor (_x_142, _x_145))
-    | EffName_constant v_147 -> (let _x_148 = 21 in
-      let _x_149 = store_value_gen_val_c_to_val_val v_147 in
-      let _x_150 = [] in
-      let _x_151 = _x_149 :: _x_150 in
-      Val.Ctor (_x_148, _x_151))
-    | EffName_store name_153 -> (let _x_154 = 22 in
-      let _x_155 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_name_c_to_val_t_95_root_95__46_effect4_46_machine_46_name name_153 in
-      let _x_156 = [] in
-      let _x_157 = _x_155 :: _x_156 in
-      Val.Ctor (_x_154, _x_157))
-    | EffName_acquireCtx p_159 -> (let _x_160 = 23 in
-      let _x_161 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_159 in
-      let _x_162 = [] in
-      let _x_163 = _x_161 :: _x_162 in
-      Val.Ctor (_x_160, _x_163))
-    | EffName_acquireIn (p_165, ctx_166) -> (let _x_167 = 24 in
-      let _x_168 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_165 in
-      let _x_169 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val ctx_166 in
-      let _x_170 = [] in
-      let _x_171 = _x_169 :: _x_170 in
-      let _x_172 = _x_168 :: _x_171 in
-      Val.Ctor (_x_167, _x_172))
-    | EffName_acquired (p_174, ctx_175, scope_176) -> (let _x_177 = 25 in
-      let _x_178 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_174 in
-      let _x_179 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val ctx_175 in
-      let _x_180 = Val.Nat scope_176 in
-      let _x_181 = [] in
-      let _x_182 = _x_180 :: _x_181 in
-      let _x_183 = _x_179 :: _x_182 in
-      let _x_184 = _x_178 :: _x_183 in
-      Val.Ctor (_x_177, _x_184))
-    | EffName_afterScopeAdd (a_186, fin_187) -> (let _x_188 = 26 in
-      let _x_189 = store_value_gen_val_c_to_val_val a_186 in
-      let _x_190 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val fin_187 in
-      let _x_191 = [] in
-      let _x_192 = _x_190 :: _x_191 in
-      let _x_193 = _x_189 :: _x_192 in
-      Val.Ctor (_x_188, _x_193))
-    | EffName_releaseUnder (p_195, ctx_196, exit__197) -> (let _x_198 = 27 in
-      let _x_199 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_195 in
-      let _x_200 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val ctx_196 in
-      let _x_201 = store_runner_gen_exit_c_to_val exit__197 in
-      let _x_202 = [] in
-      let _x_203 = _x_201 :: _x_202 in
-      let _x_204 = _x_200 :: _x_203 in
-      let _x_205 = _x_199 :: _x_204 in
-      Val.Ctor (_x_198, _x_205))
-    | EffName_releaseBody (p_207, exit__208, previous_209) -> (let _x_210 = 28 in
-      let _x_211 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_207 in
-      let _x_212 = store_runner_gen_exit_c_to_val exit__208 in
-      let _x_213 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val previous_209 in
-      let _x_214 = [] in
-      let _x_215 = _x_213 :: _x_214 in
-      let _x_216 = _x_212 :: _x_215 in
-      let _x_217 = _x_211 :: _x_216 in
-      Val.Ctor (_x_210, _x_217))
-    | EffName_provideLayerWith p_219 -> (let _x_220 = 29 in
-      let _x_221 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_219 in
-      let _x_222 = [] in
-      let _x_223 = _x_221 :: _x_222 in
-      Val.Ctor (_x_220, _x_223))
-    | EffName_provideLayerBody p_225 -> (let _x_226 = 30 in
-      let _x_227 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_225 in
-      let _x_228 = [] in
-      let _x_229 = _x_227 :: _x_228 in
-      Val.Ctor (_x_226, _x_229))
-    | EffName_provideMask (update_231, body_232) -> (let _x_233 = 31 in
-      let _x_234 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_env_46_context_update_c_to_val update_231 in
-      let _x_235 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_region_c_to_val body_232 in
-      let _x_236 = [] in
-      let _x_237 = _x_235 :: _x_236 in
-      let _x_238 = _x_234 :: _x_237 in
-      Val.Ctor (_x_233, _x_238))
-    | EffName_updateThen (update_240, body_241, previous_flag_242) -> (let _x_243 = 32 in
-      let _x_244 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_env_46_context_update_c_to_val update_240 in
-      let _x_245 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_region_c_to_val body_241 in
-      let _x_246 = Val.Bool previous_flag_242 in
-      let _x_247 = [] in
-      let _x_248 = _x_246 :: _x_247 in
-      let _x_249 = _x_245 :: _x_248 in
-      let _x_250 = _x_244 :: _x_249 in
-      Val.Ctor (_x_243, _x_250))
-    | EffName_bodyThen (body_252, previous_253, previous_flag_254) -> (let _x_255 = 33 in
-      let _x_256 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_region_c_to_val body_252 in
-      let _x_257 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val previous_253 in
-      let _x_258 = Val.Bool previous_flag_254 in
-      let _x_259 = [] in
-      let _x_260 = _x_258 :: _x_259 in
-      let _x_261 = _x_257 :: _x_260 in
-      let _x_262 = _x_256 :: _x_261 in
-      Val.Ctor (_x_255, _x_262))
-    | EffName_buildWithScopeFromContext (q_264, scope_265) -> (let _x_266 = 34 in
-      let _x_267 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_264 in
-      let _x_268 = Val.Nat scope_265 in
-      let _x_269 = [] in
-      let _x_270 = _x_268 :: _x_269 in
-      let _x_271 = _x_267 :: _x_270 in
-      Val.Ctor (_x_266, _x_271))
-    | EffName_withMemoMapThen (q_273, scope_274) -> (let _x_275 = 35 in
-      let _x_276 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_273 in
-      let _x_277 = Val.Nat scope_274 in
-      let _x_278 = [] in
-      let _x_279 = _x_277 :: _x_278 in
-      let _x_280 = _x_276 :: _x_279 in
-      Val.Ctor (_x_275, _x_280))
-    | EffName_addCurrentMemoMap memo_map_282 -> (let _x_283 = 36 in
-      let _x_284 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_282 in
-      let _x_285 = [] in
-      let _x_286 = _x_284 :: _x_285 in
-      Val.Ctor (_x_283, _x_286))
-    | EffName_fromBuildThen (q_288, memo_map_289) -> (let _x_290 = 37 in
-      let _x_291 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_288 in
-      let _x_292 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_289 in
-      let _x_293 = [] in
-      let _x_294 = _x_292 :: _x_293 in
-      let _x_295 = _x_291 :: _x_294 in
-      Val.Ctor (_x_290, _x_295))
-    | EffName_memoize (q_297, memo_map_298, scope_299) -> (let _x_300 = 38 in
-      let _x_301 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_297 in
-      let _x_302 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_298 in
-      let _x_303 = Val.Nat scope_299 in
-      let _x_304 = [] in
-      let _x_305 = _x_303 :: _x_304 in
-      let _x_306 = _x_302 :: _x_305 in
-      let _x_307 = _x_301 :: _x_306 in
-      Val.Ctor (_x_300, _x_307))
-    | EffName_awaitPromise cell_309 -> (let _x_310 = 39 in
-      let _x_311 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_309 in
-      let _x_312 = [] in
-      let _x_313 = _x_311 :: _x_312 in
-      Val.Ctor (_x_310, _x_313))
-    | EffName_buildIntoLayerScope (q_315, memo_map_316, scope_317) -> (let _x_318 = 40 in
-      let _x_319 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_315 in
-      let _x_320 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_316 in
-      let _x_321 = Val.Nat scope_317 in
-      let _x_322 = [] in
-      let _x_323 = _x_321 :: _x_322 in
-      let _x_324 = _x_320 :: _x_323 in
-      let _x_325 = _x_319 :: _x_324 in
-      Val.Ctor (_x_318, _x_325))
-    | EffName_thenBuildInto (q_327, memo_map_328, layer_scope_329) -> (let _x_330 = 41 in
-      let _x_331 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_327 in
-      let _x_332 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_328 in
-      let _x_333 = Val.Nat layer_scope_329 in
-      let _x_334 = [] in
-      let _x_335 = _x_333 :: _x_334 in
-      let _x_336 = _x_332 :: _x_335 in
-      let _x_337 = _x_331 :: _x_336 in
-      Val.Ctor (_x_330, _x_337))
-    | EffName_freshThen (q_339, scope_340) -> (let _x_341 = 42 in
-      let _x_342 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_339 in
-      let _x_343 = Val.Nat scope_340 in
-      let _x_344 = [] in
-      let _x_345 = _x_343 :: _x_344 in
-      let _x_346 = _x_342 :: _x_345 in
-      Val.Ctor (_x_341, _x_346))
-    | EffName_provideThen (q_348, memo_map_349, scope_350, mode_351) -> (let _x_352 = 43 in
-      let _x_353 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_348 in
-      let _x_354 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_349 in
-      let _x_355 = Val.Nat scope_350 in
-      let _x_356 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_combine_mode_c_to_val mode_351 in
-      let _x_357 = [] in
-      let _x_358 = _x_356 :: _x_357 in
-      let _x_359 = _x_355 :: _x_358 in
-      let _x_360 = _x_354 :: _x_359 in
-      let _x_361 = _x_353 :: _x_360 in
-      Val.Ctor (_x_352, _x_361))
-    | EffName_combineWith (mode_363, that_364) -> (let _x_365 = 44 in
-      let _x_366 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_combine_mode_c_to_val mode_363 in
-      let _x_367 = store_context_c_to_val that_364 in
-      let _x_368 = [] in
-      let _x_369 = _x_367 :: _x_368 in
-      let _x_370 = _x_366 :: _x_369 in
-      Val.Ctor (_x_365, _x_370))
-    | EffName_mergeChildren (q_372, memo_map_373) -> (let _x_374 = 45 in
-      let _x_375 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_372 in
-      let _x_376 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_373 in
-      let _x_377 = [] in
-      let _x_378 = _x_376 :: _x_377 in
-      let _x_379 = _x_375 :: _x_378 in
-      Val.Ctor (_x_374, _x_379))
-    | EffName_mergeForkOne (q_381, i_382, memo_map_383, parent_384, forked_385) -> (let _x_386 = 46 in
-      let _x_387 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_381 in
-      let _x_388 = Val.Nat i_382 in
-      let _x_389 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_383 in
-      let _x_390 = Val.Nat parent_384 in
-      let _x_391 = [] in
-      let _x_392 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 forked_385 _x_391 in
-      let _x_393 = Val.List _x_392 in
-      let _x_394 = _x_393 :: _x_391 in
-      let _x_395 = _x_390 :: _x_394 in
-      let _x_396 = _x_389 :: _x_395 in
-      let _x_397 = _x_388 :: _x_396 in
-      let _x_398 = _x_387 :: _x_397 in
-      Val.Ctor (_x_386, _x_398))
-    | EffName_mergeForkNext (q_400, i_401, memo_map_402, parent_403, forked_404) -> (let _x_405 = 47 in
-      let _x_406 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_400 in
-      let _x_407 = Val.Nat i_401 in
-      let _x_408 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_402 in
-      let _x_409 = Val.Nat parent_403 in
-      let _x_410 = [] in
-      let _x_411 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 forked_404 _x_410 in
-      let _x_412 = Val.List _x_411 in
-      let _x_413 = _x_412 :: _x_410 in
-      let _x_414 = _x_409 :: _x_413 in
-      let _x_415 = _x_408 :: _x_414 in
-      let _x_416 = _x_407 :: _x_415 in
-      let _x_417 = _x_406 :: _x_416 in
-      Val.Ctor (_x_405, _x_417))
-    | EffName_mergeContexts -> (let _x_419 = 48 in
-      let _x_420 = [] in
-      Val.Ctor (_x_419, _x_420))
-    | EffName_serviceLookup key_422 -> (let _x_423 = 49 in
-      let _x_424 = store_program_gen_service_key_c_to_val key_422 in
-      let _x_425 = [] in
-      let _x_426 = _x_424 :: _x_425 in
-      Val.Ctor (_x_423, _x_426))
-    | EffName_bindService key_428 -> (let _x_429 = 50 in
-      let[@local always] _jp_430 = fun _y_431 -> let _x_432 = [] in
-      let _x_433 = _y_431 :: _x_432 in
-      Val.Ctor (_x_429, _x_433) in
-      match key_428 with
-        | None -> (let _x_435 = Val.None in
-          _jp_430 _x_435)
-        | Some val__436 -> (let _x_437 = store_program_gen_service_key_c_to_val val__436 in
-          let _x_438 = Val.Some _x_437 in
-          _jp_430 _x_438))
-    | EffName_orDie -> (let _x_439 = 51 in
-      let _x_440 = [] in
-      Val.Ctor (_x_439, _x_440))
-    | EffName_mergeAllChildren (q_442, memo_map_443) -> (let _x_444 = 52 in
-      let _x_445 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_442 in
-      let _x_446 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_443 in
-      let _x_447 = [] in
-      let _x_448 = _x_446 :: _x_447 in
-      let _x_449 = _x_445 :: _x_448 in
-      Val.Ctor (_x_444, _x_449))
-    | EffName_mergeAllForkOne (q_451, i_452, memo_map_453, parent_454, forked_455) -> (let _x_456 = 53 in
-      let _x_457 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_451 in
-      let _x_458 = Val.Nat i_452 in
-      let _x_459 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_453 in
-      let _x_460 = Val.Nat parent_454 in
-      let _x_461 = [] in
-      let _x_462 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 forked_455 _x_461 in
-      let _x_463 = Val.List _x_462 in
-      let _x_464 = _x_463 :: _x_461 in
-      let _x_465 = _x_460 :: _x_464 in
-      let _x_466 = _x_459 :: _x_465 in
-      let _x_467 = _x_458 :: _x_466 in
-      let _x_468 = _x_457 :: _x_467 in
-      Val.Ctor (_x_456, _x_468))
-    | EffName_mergeAllForkNext (q_470, i_471, memo_map_472, parent_473, forked_474) -> (let _x_475 = 54 in
-      let _x_476 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val q_470 in
-      let _x_477 = Val.Nat i_471 in
-      let _x_478 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_472 in
-      let _x_479 = Val.Nat parent_473 in
-      let _x_480 = [] in
-      let _x_481 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 forked_474 _x_480 in
-      let _x_482 = Val.List _x_481 in
-      let _x_483 = _x_482 :: _x_480 in
-      let _x_484 = _x_479 :: _x_483 in
-      let _x_485 = _x_478 :: _x_484 in
-      let _x_486 = _x_477 :: _x_485 in
-      let _x_487 = _x_476 :: _x_486 in
-      Val.Ctor (_x_475, _x_487))
-    | EffName_external (op_489, request_490, origin_491) -> (let _x_492 = 55 in
-      let _x_493 = store_program_gen_native_op_c_to_val op_489 in
-      let _x_494 = store_value_gen_val_c_to_val_val request_490 in
-      let _x_495 = [] in
-      let _x_496 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 origin_491 _x_495 in
-      let _x_497 = Val.List _x_496 in
-      let _x_498 = _x_497 :: _x_495 in
-      let _x_499 = _x_494 :: _x_498 in
-      let _x_500 = _x_493 :: _x_499 in
-      Val.Ctor (_x_492, _x_500))
-    | EffName_caughtError p_502 -> (let _x_503 = 56 in
-      let _x_504 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val p_502 in
-      let _x_505 = [] in
-      let _x_506 = _x_504 :: _x_505 in
-      Val.Ctor (_x_503, _x_506))
 
 
 
@@ -52095,7 +50775,7 @@ let rec store_tool_gen_t_95_root_95__46_effect4_46_program_46_eff_name_c_to_val_
 
 let store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_view_c_to_val (x_1 : wait_view) : Val.t =
   match (x_1 : wait_view) with
-    | { fiber = fiber_2; token = token_3; registration = registration_4 } -> (let _x_5 = 0 in
+    | { fiber = fiber_2; token = token_3; site = site_4 } -> (let _x_5 = 0 in
       let _x_6 = store_api_gen_fiber_id_c_to_val fiber_2 in
       let _x_7 = Val.Nat token_3 in
       let[@local always] _jp_8 = fun _y_9 -> let _x_10 = [] in
@@ -52103,10 +50783,10 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_view_c_to_val (x_1 :
       let _x_12 = _x_7 :: _x_11 in
       let _x_13 = _x_6 :: _x_12 in
       Val.Ctor (_x_5, _x_13) in
-      match registration_4 with
+      match site_4 with
         | None -> (let _x_15 = Val.None in
           _jp_8 _x_15)
-        | Some val__16 -> (let _x_17 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_eff_name_c_to_val_t_95_root_95__46_effect4_46_program_46_eff_name val__16 in
+        | Some val__16 -> (let _x_17 = store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_site_c_to_val val__16 in
           let _x_18 = Val.Some _x_17 in
           _jp_8 _x_18))
 
@@ -52134,6 +50814,17 @@ let rec list_map_tr_loop_at_store_runner_gen_observation_c_to_val_spec_1 (a_1 : 
 
 
 
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_FinNameC.toVal.spec_0 (a.1 : List Nat) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 (a_1 : int list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = store_api_gen_fiber_id_c_to_val head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 tail_5 _x_7)
+
+
+
 (* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Live_46_ViewC.toVal.spec_2 (a.1 : List (Prod Nat Effect4.ClockMillis)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
 let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_46_view_c_to_val_spec_2 (a_1 : (int * E4_clock.t) list) (a_2 : Val.t list) : Val.t list =
@@ -52145,6 +50836,17 @@ let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_46_v
           let _x_8 = Val.Pair (_x_6, _x_7) in
           let _x_9 = _x_8 :: a_2 in
           list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_46_view_c_to_val_spec_2 tail_5 _x_9))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC.toVal.spec_0 (a.1 : List Effect4.Store.Val) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 (a_1 : Val.t list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = store_value_gen_val_c_to_val_val head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 tail_5 _x_7)
 
 
 
@@ -52566,10 +51268,489 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_run_answer_c_to_val (x_1 
       Val.Ctor (_x_9, _x_12))
     | RunAnswer_journal commands_14 -> (let _x_15 = 2 in
       let _x_16 = [] in
-      let _x_17 = list_map_tr_loop_at_store_canonical_encode_at_live_record_encode_spec_0_spec_2 commands_14 _x_16 in
+      let _x_17 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_0 commands_14 _x_16 in
       let _x_18 = Val.List _x_17 in
       let _x_19 = _x_18 :: _x_16 in
       Val.Ctor (_x_15, _x_19))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.toVal.spec_1 (a.1 : List Bool) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_1 (a_1 : bool list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = Val.Bool head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_1 tail_5 _x_7)
+
+
+
+(* LCNF mono: Effect4.Store.ServiceC.toVal (x.1 : Effect4.Machine.Env.Service lcAny) : Effect4.Store.Val *)
+
+let store_service_c_to_val (x_1 : _ service) : Val.t =
+  match (x_1 : _ service) with
+    | { key = key_2; value = value_3 } -> (let _x_4 = 0 in
+      let _x_5 = store_program_gen_service_key_c_to_val key_2 in
+      let _x_6 = store_value_gen_val_c_to_val_val value_3 in
+      let _x_7 = [] in
+      let _x_8 = _x_6 :: _x_7 in
+      let _x_9 = _x_5 :: _x_8 in
+      Val.Ctor (_x_4, _x_9))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ContextC.toVal.spec_0 (a.1 : List (Effect4.Machine.Env.Service lcAny)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_context_c_to_val_spec_0 (a_1 : _ service list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = store_service_c_to_val head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_context_c_to_val_spec_0 tail_5 _x_7)
+
+
+
+(* LCNF mono: Effect4.Store.ContextC.toVal (x.1 : List (Effect4.Machine.Env.Service lcAny)) : Effect4.Store.Val *)
+
+let store_context_c_to_val (x_1 : _ service list) : Val.t =
+  let _x_2 = 0 in
+  let _x_3 = [] in
+  let _x_4 = list_map_tr_loop_at_store_context_c_to_val_spec_0 x_1 _x_3 in
+  let _x_5 = Val.List _x_4 in
+  let _x_6 = _x_5 :: _x_3 in
+  Val.Ctor (_x_2, _x_6)
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_CtxC.toVal (x.1 : Effect4.Machine.Ctx) : Effect4.Store.Val *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val (x_1 : ctx) : Val.t =
+  match (x_1 : ctx) with
+    | { services = services_2; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_4 } -> (let _x_5 = 0 in
+      let _x_6 = store_context_c_to_val services_2 in
+      let _x_7 = Val.Nat max_ops_before_yield_3 in
+      let _x_8 = Val.Bool prevent_yield_4 in
+      let _x_9 = [] in
+      let _x_10 = _x_8 :: _x_9 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = _x_6 :: _x_11 in
+      Val.Ctor (_x_5, _x_12))
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC.toVal (x.1 : Effect4.Machine.ArgSite) : Effect4.Store.Val *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val (x_1 : arg_site) : Val.t =
+  match (x_1 : arg_site) with
+    | { path = path_2; env = env_3 } -> (let _x_4 = 0 in
+      let _x_5 = [] in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_3 _x_5 in
+      let _x_9 = Val.List _x_8 in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      Val.Ctor (_x_4, _x_11))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.toVal.spec_0 (a.1 : List Effect4.Machine.ArgSite) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_0 (a_1 : arg_site list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_0 tail_5 _x_7)
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.toVal.spec_3 (a.1 : List (List Effect4.Machine.ArgSite)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_3 (a_1 : arg_site list list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = [] in
+      let _x_7 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_0 head_4 _x_6 in
+      let _x_8 = Val.List _x_7 in
+      let _x_9 = _x_8 :: a_2 in
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_3 tail_5 _x_9)
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_CaptureC.toVal (x.1 : Effect4.Machine.Capture) : Effect4.Store.Val *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_to_val (x_1 : capture) : Val.t =
+  match (x_1 : capture) with
+    | { path = path_2; env = env_3; fuel = fuel_4; tape = tape_5; ctx = ctx_6; root = root_7; params = params_8; call = call_9 } -> (let _x_10 = 0 in
+      let _x_11 = [] in
+      let _x_12 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_11 in
+      let _x_13 = Val.List _x_12 in
+      let _x_14 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_3 _x_11 in
+      let _x_15 = Val.List _x_14 in
+      let _x_16 = Val.Nat fuel_4 in
+      let _x_17 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_1 tape_5 _x_11 in
+      let _x_18 = Val.List _x_17 in
+      let _x_19 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_to_val ctx_6 in
+      let _x_20 = Val.Nat root_7 in
+      let _x_21 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_to_val_spec_3 params_8 _x_11 in
+      let _x_22 = Val.List _x_21 in
+      let _x_23 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 call_9 _x_11 in
+      let _x_24 = Val.List _x_23 in
+      let _x_25 = _x_24 :: _x_11 in
+      let _x_26 = _x_22 :: _x_25 in
+      let _x_27 = _x_20 :: _x_26 in
+      let _x_28 = _x_19 :: _x_27 in
+      let _x_29 = _x_18 :: _x_28 in
+      let _x_30 = _x_16 :: _x_29 in
+      let _x_31 = _x_15 :: _x_30 in
+      let _x_32 = _x_13 :: _x_31 in
+      Val.Ctor (_x_10, _x_32))
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoMapIdC.toVal (x.1 : Nat) : Effect4.Store.Val *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val (x_1 : int) : Val.t =
+  let _x_2 = 0 in
+  let _x_3 = Val.Nat x_1 in
+  let _x_4 = [] in
+  let _x_5 = _x_3 :: _x_4 in
+  Val.Ctor (_x_2, _x_5)
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_FinNameC.toVal (x.1 : Effect4.Machine.FinName) : Effect4.Store.Val *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val (x_1 : fin_name) : Val.t =
+  match (x_1 : fin_name) with
+    | FinName_interruptFiber (fiber_2, skip_self_3) -> (let _x_4 = 0 in
+      let _x_5 = store_api_gen_fiber_id_c_to_val fiber_2 in
+      let _x_6 = Val.Bool skip_self_3 in
+      let _x_7 = [] in
+      let _x_8 = _x_6 :: _x_7 in
+      let _x_9 = _x_5 :: _x_8 in
+      Val.Ctor (_x_4, _x_9))
+    | FinName_closeChildScope scope_11 -> (let _x_12 = 1 in
+      let _x_13 = Val.Nat scope_11 in
+      let _x_14 = [] in
+      let _x_15 = _x_13 :: _x_14 in
+      Val.Ctor (_x_12, _x_15))
+    | FinName_detachFromParent (parent_17, key_18) -> (let _x_19 = 2 in
+      let _x_20 = Val.Nat parent_17 in
+      let _x_21 = Val.Nat key_18 in
+      let _x_22 = [] in
+      let _x_23 = _x_21 :: _x_22 in
+      let _x_24 = _x_20 :: _x_23 in
+      Val.Ctor (_x_19, _x_24))
+    | FinName_release (label_26, fails_27) -> (let _x_28 = 3 in
+      let _x_29 = Val.Nat label_26 in
+      let _x_30 = Val.Bool fails_27 in
+      let _x_31 = [] in
+      let _x_32 = _x_30 :: _x_31 in
+      let _x_33 = _x_29 :: _x_32 in
+      Val.Ctor (_x_28, _x_33))
+    | FinName_awaitNewChildren snapshot_35 -> (let _x_36 = 4 in
+      let _x_37 = [] in
+      let _x_38 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val_spec_0 snapshot_35 _x_37 in
+      let _x_39 = Val.List _x_38 in
+      let _x_40 = _x_39 :: _x_37 in
+      Val.Ctor (_x_36, _x_40))
+    | FinName_parkThen slot_42 -> (let _x_43 = 5 in
+      let _x_44 = Val.Nat slot_42 in
+      let _x_45 = [] in
+      let _x_46 = _x_44 :: _x_45 in
+      Val.Ctor (_x_43, _x_46))
+    | FinName_foreign capture_48 -> (let _x_49 = 6 in
+      let _x_50 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_to_val capture_48 in
+      let _x_51 = [] in
+      let _x_52 = _x_50 :: _x_51 in
+      Val.Ctor (_x_49, _x_52))
+    | FinName_closeChildOnFailure scope_54 -> (let _x_55 = 7 in
+      let _x_56 = Val.Nat scope_54 in
+      let _x_57 = [] in
+      let _x_58 = _x_56 :: _x_57 in
+      Val.Ctor (_x_55, _x_58))
+    | FinName_memoEntry (layer_60, memo_map_61) -> (match layer_60 with
+        | fst_1, snd_1 -> (let _x_62 = 8 in
+          let _x_63 = [] in
+          let _x_64 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_1 _x_63 in
+          let _x_65 = Val.List _x_64 in
+          let _x_66 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_1 _x_63 in
+          let _x_67 = Val.List _x_66 in
+          let _x_68 = Val.Pair (_x_65, _x_67) in
+          let _x_69 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_61 in
+          let _x_70 = _x_69 :: _x_63 in
+          let _x_71 = _x_68 :: _x_70 in
+          Val.Ctor (_x_62, _x_71)))
+    | FinName_memoDone (layer_73, memo_map_74) -> (match layer_73 with
+        | fst_2, snd_2 -> (let _x_75 = 9 in
+          let _x_76 = [] in
+          let _x_77 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_2 _x_76 in
+          let _x_78 = Val.List _x_77 in
+          let _x_79 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_2 _x_76 in
+          let _x_80 = Val.List _x_79 in
+          let _x_81 = Val.Pair (_x_78, _x_80) in
+          let _x_82 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_74 in
+          let _x_83 = _x_82 :: _x_76 in
+          let _x_84 = _x_81 :: _x_83 in
+          Val.Ctor (_x_75, _x_84)))
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_SyncOpC.toVal (x.1 : Effect4.Machine.SyncOp) : Effect4.Store.Val *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_to_val (x_1 : sync_op) : Val.t =
+  match (x_1 : sync_op) with
+    | SyncOp_refMake initial_2 -> (let _x_3 = 0 in
+      let _x_4 = store_value_gen_val_c_to_val_val initial_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | SyncOp_refGet cell_8 -> (let _x_9 = 1 in
+      let _x_10 = store_runner_gen_ref_key_c_to_val cell_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+    | SyncOp_refSet (cell_14, value_15) -> (let _x_16 = 2 in
+      let _x_17 = store_runner_gen_ref_key_c_to_val cell_14 in
+      let _x_18 = store_value_gen_val_c_to_val_val value_15 in
+      let _x_19 = [] in
+      let _x_20 = _x_18 :: _x_19 in
+      let _x_21 = _x_17 :: _x_20 in
+      Val.Ctor (_x_16, _x_21))
+    | SyncOp_refGetAndSet (cell_23, value_24) -> (let _x_25 = 3 in
+      let _x_26 = store_runner_gen_ref_key_c_to_val cell_23 in
+      let _x_27 = store_value_gen_val_c_to_val_val value_24 in
+      let _x_28 = [] in
+      let _x_29 = _x_27 :: _x_28 in
+      let _x_30 = _x_26 :: _x_29 in
+      Val.Ctor (_x_25, _x_30))
+    | SyncOp_refSetAndGet (cell_32, value_33) -> (let _x_34 = 4 in
+      let _x_35 = store_runner_gen_ref_key_c_to_val cell_32 in
+      let _x_36 = store_value_gen_val_c_to_val_val value_33 in
+      let _x_37 = [] in
+      let _x_38 = _x_36 :: _x_37 in
+      let _x_39 = _x_35 :: _x_38 in
+      Val.Ctor (_x_34, _x_39))
+    | SyncOp_refUpdate (cell_41, f_42, env_43) -> (let _x_44 = 5 in
+      let _x_45 = store_runner_gen_ref_key_c_to_val cell_41 in
+      let _x_46 = store_program_gen_term_c_to_val_term f_42 in
+      let _x_47 = [] in
+      let _x_48 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_43 _x_47 in
+      let _x_49 = Val.List _x_48 in
+      let _x_50 = _x_49 :: _x_47 in
+      let _x_51 = _x_46 :: _x_50 in
+      let _x_52 = _x_45 :: _x_51 in
+      Val.Ctor (_x_44, _x_52))
+    | SyncOp_refGetAndUpdate (cell_54, f_55, env_56) -> (let _x_57 = 6 in
+      let _x_58 = store_runner_gen_ref_key_c_to_val cell_54 in
+      let _x_59 = store_program_gen_term_c_to_val_term f_55 in
+      let _x_60 = [] in
+      let _x_61 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_56 _x_60 in
+      let _x_62 = Val.List _x_61 in
+      let _x_63 = _x_62 :: _x_60 in
+      let _x_64 = _x_59 :: _x_63 in
+      let _x_65 = _x_58 :: _x_64 in
+      Val.Ctor (_x_57, _x_65))
+    | SyncOp_refUpdateAndGet (cell_67, f_68, env_69) -> (let _x_70 = 7 in
+      let _x_71 = store_runner_gen_ref_key_c_to_val cell_67 in
+      let _x_72 = store_program_gen_term_c_to_val_term f_68 in
+      let _x_73 = [] in
+      let _x_74 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_69 _x_73 in
+      let _x_75 = Val.List _x_74 in
+      let _x_76 = _x_75 :: _x_73 in
+      let _x_77 = _x_72 :: _x_76 in
+      let _x_78 = _x_71 :: _x_77 in
+      Val.Ctor (_x_70, _x_78))
+    | SyncOp_refUpdateSome (cell_80, f_81, env_82) -> (let _x_83 = 8 in
+      let _x_84 = store_runner_gen_ref_key_c_to_val cell_80 in
+      let _x_85 = store_program_gen_term_c_to_val_term f_81 in
+      let _x_86 = [] in
+      let _x_87 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_82 _x_86 in
+      let _x_88 = Val.List _x_87 in
+      let _x_89 = _x_88 :: _x_86 in
+      let _x_90 = _x_85 :: _x_89 in
+      let _x_91 = _x_84 :: _x_90 in
+      Val.Ctor (_x_83, _x_91))
+    | SyncOp_refGetAndUpdateSome (cell_93, f_94, env_95) -> (let _x_96 = 9 in
+      let _x_97 = store_runner_gen_ref_key_c_to_val cell_93 in
+      let _x_98 = store_program_gen_term_c_to_val_term f_94 in
+      let _x_99 = [] in
+      let _x_100 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_95 _x_99 in
+      let _x_101 = Val.List _x_100 in
+      let _x_102 = _x_101 :: _x_99 in
+      let _x_103 = _x_98 :: _x_102 in
+      let _x_104 = _x_97 :: _x_103 in
+      Val.Ctor (_x_96, _x_104))
+    | SyncOp_refUpdateSomeAndGet (cell_106, f_107, env_108) -> (let _x_109 = 10 in
+      let _x_110 = store_runner_gen_ref_key_c_to_val cell_106 in
+      let _x_111 = store_program_gen_term_c_to_val_term f_107 in
+      let _x_112 = [] in
+      let _x_113 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_108 _x_112 in
+      let _x_114 = Val.List _x_113 in
+      let _x_115 = _x_114 :: _x_112 in
+      let _x_116 = _x_111 :: _x_115 in
+      let _x_117 = _x_110 :: _x_116 in
+      Val.Ctor (_x_109, _x_117))
+    | SyncOp_refModify (cell_119, f_120, env_121) -> (let _x_122 = 11 in
+      let _x_123 = store_runner_gen_ref_key_c_to_val cell_119 in
+      let _x_124 = store_program_gen_term_c_to_val_term f_120 in
+      let _x_125 = [] in
+      let _x_126 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_121 _x_125 in
+      let _x_127 = Val.List _x_126 in
+      let _x_128 = _x_127 :: _x_125 in
+      let _x_129 = _x_124 :: _x_128 in
+      let _x_130 = _x_123 :: _x_129 in
+      Val.Ctor (_x_122, _x_130))
+    | SyncOp_refModifySome (cell_132, f_133, env_134) -> (let _x_135 = 12 in
+      let _x_136 = store_runner_gen_ref_key_c_to_val cell_132 in
+      let _x_137 = store_program_gen_term_c_to_val_term f_133 in
+      let _x_138 = [] in
+      let _x_139 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 env_134 _x_138 in
+      let _x_140 = Val.List _x_139 in
+      let _x_141 = _x_140 :: _x_138 in
+      let _x_142 = _x_137 :: _x_141 in
+      let _x_143 = _x_136 :: _x_142 in
+      Val.Ctor (_x_135, _x_143))
+    | SyncOp_deferredMake -> (let _x_145 = 13 in
+      let _x_146 = [] in
+      Val.Ctor (_x_145, _x_146))
+    | SyncOp_deferredIsDone cell_148 -> (let _x_149 = 14 in
+      let _x_150 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_148 in
+      let _x_151 = [] in
+      let _x_152 = _x_150 :: _x_151 in
+      Val.Ctor (_x_149, _x_152))
+    | SyncOp_deferredPoll cell_154 -> (let _x_155 = 15 in
+      let _x_156 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_154 in
+      let _x_157 = [] in
+      let _x_158 = _x_156 :: _x_157 in
+      Val.Ctor (_x_155, _x_158))
+    | SyncOp_deferredCompleteWith (cell_160, completion_161) -> (let _x_162 = 16 in
+      let _x_163 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_160 in
+      let _x_164 = store_runner_gen_completion_c_to_val completion_161 in
+      let _x_165 = [] in
+      let _x_166 = _x_164 :: _x_165 in
+      let _x_167 = _x_163 :: _x_166 in
+      Val.Ctor (_x_162, _x_167))
+    | SyncOp_deferredInterruptWith (cell_169, interruptor_170) -> (let _x_171 = 17 in
+      let _x_172 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_169 in
+      let _x_173 = store_api_gen_fiber_id_c_to_val interruptor_170 in
+      let _x_174 = [] in
+      let _x_175 = _x_173 :: _x_174 in
+      let _x_176 = _x_172 :: _x_175 in
+      Val.Ctor (_x_171, _x_176))
+    | SyncOp_deferredAwaitCleanup (cell_178, waiter_179, token_180) -> (let _x_181 = 18 in
+      let _x_182 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val cell_178 in
+      let _x_183 = store_api_gen_fiber_id_c_to_val waiter_179 in
+      let _x_184 = Val.Nat token_180 in
+      let _x_185 = [] in
+      let _x_186 = _x_184 :: _x_185 in
+      let _x_187 = _x_183 :: _x_186 in
+      let _x_188 = _x_182 :: _x_187 in
+      Val.Ctor (_x_181, _x_188))
+    | SyncOp_clockNow -> (let _x_190 = 19 in
+      let _x_191 = [] in
+      Val.Ctor (_x_190, _x_191))
+    | SyncOp_sleepCancel (waiter_193, token_194) -> (let _x_195 = 20 in
+      let _x_196 = store_api_gen_fiber_id_c_to_val waiter_193 in
+      let _x_197 = Val.Nat token_194 in
+      let _x_198 = [] in
+      let _x_199 = _x_197 :: _x_198 in
+      let _x_200 = _x_196 :: _x_199 in
+      Val.Ctor (_x_195, _x_200))
+    | SyncOp_scopeMake strategy_202 -> (let _x_203 = 21 in
+      let _x_204 = store_program_gen_finalizer_strategy_c_to_val strategy_202 in
+      let _x_205 = [] in
+      let _x_206 = _x_204 :: _x_205 in
+      Val.Ctor (_x_203, _x_206))
+    | SyncOp_scopeAdd (scope_208, finalizer_209) -> (let _x_210 = 22 in
+      let _x_211 = Val.Nat scope_208 in
+      let _x_212 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val finalizer_209 in
+      let _x_213 = [] in
+      let _x_214 = _x_212 :: _x_213 in
+      let _x_215 = _x_211 :: _x_214 in
+      Val.Ctor (_x_210, _x_215))
+    | SyncOp_scopeRemove (scope_217, key_218) -> (let _x_219 = 23 in
+      let _x_220 = Val.Nat scope_217 in
+      let _x_221 = Val.Nat key_218 in
+      let _x_222 = [] in
+      let _x_223 = _x_221 :: _x_222 in
+      let _x_224 = _x_220 :: _x_223 in
+      Val.Ctor (_x_219, _x_224))
+    | SyncOp_scopeIsClosed scope_226 -> (let _x_227 = 24 in
+      let _x_228 = Val.Nat scope_226 in
+      let _x_229 = [] in
+      let _x_230 = _x_228 :: _x_229 in
+      Val.Ctor (_x_227, _x_230))
+    | SyncOp_scopeFork (parent_232, strategy_233) -> (let _x_234 = 25 in
+      let _x_235 = Val.Nat parent_232 in
+      let _x_236 = store_program_gen_finalizer_strategy_c_to_val strategy_233 in
+      let _x_237 = [] in
+      let _x_238 = _x_236 :: _x_237 in
+      let _x_239 = _x_235 :: _x_238 in
+      Val.Ctor (_x_234, _x_239))
+    | SyncOp_memoFork parent_241 -> (let _x_242 = 26 in
+      let[@local always] _jp_243 = fun _y_244 -> let _x_245 = [] in
+      let _x_246 = _y_244 :: _x_245 in
+      Val.Ctor (_x_242, _x_246) in
+      match parent_241 with
+        | None -> (let _x_248 = Val.None in
+          _jp_243 _x_248)
+        | Some val__249 -> (let _x_250 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val val__249 in
+          let _x_251 = Val.Some _x_250 in
+          _jp_243 _x_251))
+    | SyncOp_memoGet (layer_252, memo_map_253) -> (match layer_252 with
+        | fst_1, snd_1 -> (let _x_254 = 27 in
+          let _x_255 = [] in
+          let _x_256 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_1 _x_255 in
+          let _x_257 = Val.List _x_256 in
+          let _x_258 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_1 _x_255 in
+          let _x_259 = Val.List _x_258 in
+          let _x_260 = Val.Pair (_x_257, _x_259) in
+          let _x_261 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_253 in
+          let _x_262 = _x_261 :: _x_255 in
+          let _x_263 = _x_260 :: _x_262 in
+          Val.Ctor (_x_254, _x_263)))
+    | SyncOp_memoBuild (layer_265, memo_map_266) -> (match layer_265 with
+        | fst_2, snd_2 -> (let _x_267 = 28 in
+          let _x_268 = [] in
+          let _x_269 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_2 _x_268 in
+          let _x_270 = Val.List _x_269 in
+          let _x_271 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_2 _x_268 in
+          let _x_272 = Val.List _x_271 in
+          let _x_273 = Val.Pair (_x_270, _x_272) in
+          let _x_274 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_266 in
+          let _x_275 = _x_274 :: _x_268 in
+          let _x_276 = _x_273 :: _x_275 in
+          Val.Ctor (_x_267, _x_276)))
+    | SyncOp_memoComplete (layer_278, memo_map_279, exit__280) -> (match layer_278 with
+        | fst_3, snd_3 -> (let _x_281 = 29 in
+          let _x_282 = [] in
+          let _x_283 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_3 _x_282 in
+          let _x_284 = Val.List _x_283 in
+          let _x_285 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_3 _x_282 in
+          let _x_286 = Val.List _x_285 in
+          let _x_287 = Val.Pair (_x_284, _x_286) in
+          let _x_288 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_279 in
+          let _x_289 = store_runner_gen_exit_c_to_val exit__280 in
+          let _x_290 = _x_289 :: _x_282 in
+          let _x_291 = _x_288 :: _x_290 in
+          let _x_292 = _x_287 :: _x_291 in
+          Val.Ctor (_x_281, _x_292)))
+    | SyncOp_memoRelease (layer_294, memo_map_295) -> (match layer_294 with
+        | fst_4, snd_4 -> (let _x_296 = 30 in
+          let _x_297 = [] in
+          let _x_298 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_4 _x_297 in
+          let _x_299 = Val.List _x_298 in
+          let _x_300 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_4 _x_297 in
+          let _x_301 = Val.List _x_300 in
+          let _x_302 = Val.Pair (_x_299, _x_301) in
+          let _x_303 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val memo_map_295 in
+          let _x_304 = _x_303 :: _x_297 in
+          let _x_305 = _x_302 :: _x_304 in
+          Val.Ctor (_x_296, _x_305)))
 
 
 
@@ -52629,454 +51810,30 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_stop_c_to_val (x_1
 
 
 
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_Waiter_32__40__95_root_95__46_Unit_41_C.toVal (x.1 : Effect4.Machine.Waiter PUnit) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_PreviewRunC.toVal (x.1 : Effect4.Tool.PreviewRun) : Effect4.Store.Val *)
 
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_waiter_32__40__95_root_95__46_unit_41_c_to_val (x_1 : unit waiter) : Val.t =
-  match (x_1 : _ waiter) with
-    | { fiber = fiber_2; token = token_3; phase = phase_4; _ } -> (let _x_6 = 0 in
-      let _x_7 = store_api_gen_fiber_id_c_to_val fiber_2 in
-      let _x_8 = Val.Nat token_3 in
-      let _x_9 = Val.Nat phase_4 in
-      let _x_10 = Val.Unit in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      let _x_13 = _x_9 :: _x_12 in
-      let _x_14 = _x_8 :: _x_13 in
-      let _x_15 = _x_7 :: _x_14 in
-      Val.Ctor (_x_6, _x_15))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_WakeList_32__40__95_root_95__46_Unit_41_C.toVal.spec_0 (a.1 : List (Effect4.Machine.Waiter PUnit)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_unit_41_c_to_val_spec_0 (a_1 : unit waiter list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_waiter_32__40__95_root_95__46_unit_41_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_unit_41_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_WakeList_32__40__95_root_95__46_Unit_41_C.toVal (x.1 : Effect4.Machine.WakeList PUnit) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_unit_41_c_to_val (x_1 : unit wake_list) : Val.t =
-  match (x_1 : _ wake_list) with
-    | { waiters = waiters_2; batch = batch_3; phase = phase_4 } -> (let _x_5 = 0 in
+let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_run_c_to_val (x_1 : preview_run) : Val.t =
+  match (x_1 : preview_run) with
+    | { steps = steps_2; stop = stop_3; unread = unread_4 } -> (let _x_5 = 0 in
       let _x_6 = [] in
-      let _x_7 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_unit_41_c_to_val_spec_0 waiters_2 _x_6 in
+      let _x_7 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_path_c_to_val_spec_0 steps_2 _x_6 in
       let _x_8 = Val.List _x_7 in
-      let[@local always] _jp_9 = fun _y_10 -> let _x_11 = Val.Nat phase_4 in
-      let _x_12 = _x_11 :: _x_6 in
-      let _x_13 = _y_10 :: _x_12 in
-      let _x_14 = _x_8 :: _x_13 in
-      Val.Ctor (_x_5, _x_14) in
-      match batch_3 with
-        | None -> (let _x_16 = Val.None in
-          _jp_9 _x_16)
-        | Some val__17 -> (let _x_18 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_unit_41_c_to_val_spec_0 val__17 _x_6 in
-          let _x_19 = Val.List _x_18 in
-          let _x_20 = Val.Some _x_19 in
-          _jp_9 _x_20))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_DeferredCell_32__40__64__95_root_95__46_Effect4_46_Machine_46_Completion_32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41__41_C.toVal (x.1 : Effect4.Machine.DeferredCell (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_cell_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val (x_1 : (Val.t, Err.t, Defect.t, int, unit) Completion.t deferred_cell) : Val.t =
-  match (x_1 : _ deferred_cell) with
-    | { completion = completion_2; wake = wake_3 } -> (let _x_4 = 0 in
-      let[@local always] _jp_5 = fun _y_6 -> let _x_7 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_unit_41_c_to_val wake_3 in
-      let _x_8 = [] in
-      let _x_9 = _x_7 :: _x_8 in
-      let _x_10 = _y_6 :: _x_9 in
-      Val.Ctor (_x_4, _x_10) in
-      match completion_2 with
-        | None -> (let _x_12 = Val.None in
-          _jp_5 _x_12)
-        | Some val__13 -> (let _x_14 = store_runner_gen_completion_c_to_val val__13 in
-          let _x_15 = Val.Some _x_14 in
-          _jp_5 _x_15))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_DeferredStore_32__40__64__95_root_95__46_Effect4_46_Machine_46_Completion_32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41__41_C.toVal.spec_0 (a.1 : List (Effect4.Machine.DeferredCell (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val_spec_0 (a_1 : (Val.t, Err.t, Defect.t, int, unit) Completion.t deferred_cell list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_cell_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_WakeModeC.toVal (x.1 : Effect4.Machine.WakeMode) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_wake_mode_c_to_val (x_1 : wake_mode) : Val.t =
-  match (x_1 : wake_mode) with
-    | WakeMode_now -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | WakeMode_scheduled (owner_5, priority_6) -> (let _x_7 = 1 in
-      let _x_8 = store_api_gen_fiber_id_c_to_val owner_5 in
-      let _x_9 = Val.Nat priority_6 in
-      let _x_10 = [] in
-      let _x_11 = _x_9 :: _x_10 in
-      let _x_12 = _x_8 :: _x_11 in
-      Val.Ctor (_x_7, _x_12))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_Owed_32__40__64__95_root_95__46_Effect4_46_Machine_46_Completion_32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41__41_C.toVal (x.1 : Effect4.Machine.Owed (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_owed_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val (x_1 : (Val.t, Err.t, Defect.t, int, unit) Completion.t owed) : Val.t =
-  match (x_1 : _ owed) with
-    | { waiter = waiter_2; token = token_3; code = code_4; mode = mode_5 } -> (let _x_6 = 0 in
-      let _x_7 = store_api_gen_fiber_id_c_to_val waiter_2 in
-      let _x_8 = Val.Nat token_3 in
-      let _x_9 = store_runner_gen_completion_c_to_val code_4 in
-      let _x_10 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_wake_mode_c_to_val mode_5 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      let _x_13 = _x_9 :: _x_12 in
-      let _x_14 = _x_8 :: _x_13 in
-      let _x_15 = _x_7 :: _x_14 in
-      Val.Ctor (_x_6, _x_15))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_DeferredStore_32__40__64__95_root_95__46_Effect4_46_Machine_46_Completion_32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41__41_C.toVal.spec_1 (a.1 : List (Effect4.Machine.Owed (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val_spec_1 (a_1 : (Val.t, Err.t, Defect.t, int, unit) Completion.t owed list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_owed_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val_spec_1 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_DeferredStore_32__40__64__95_root_95__46_Effect4_46_Machine_46_Completion_32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41__41_C.toVal (x.1 : Effect4.Machine.DeferredStore (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val (x_1 : (Val.t, Err.t, Defect.t, int, unit) Completion.t deferred_store) : Val.t =
-  match (x_1 : _ deferred_store) with
-    | { cells = cells_2; due = due_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val_spec_0 cells_2 _x_5 in
-      let _x_7 = Val.List _x_6 in
-      let _x_8 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val_spec_1 due_3 _x_5 in
-      let _x_9 = Val.List _x_8 in
-      let _x_10 = _x_9 :: _x_5 in
-      let _x_11 = _x_7 :: _x_10 in
-      Val.Ctor (_x_4, _x_11))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_ScopeState_32__40__95_root_95__46_Nat_41__32__40__95_root_95__46_Effect4_46_Machine_46_FinName_41__32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41_C.toVal.spec_0 (a.1 : List (Prod Nat Effect4.Machine.FinName)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_scope_state_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_to_val_spec_0 (a_1 : (int * fin_name) list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, snd_1 -> (let _x_6 = Val.Nat fst_1 in
-          let _x_7 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val snd_1 in
-          let _x_8 = Val.Pair (_x_6, _x_7) in
-          let _x_9 = _x_8 :: a_2 in
-          list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_scope_state_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_to_val_spec_0 tail_5 _x_9))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_ScopeState_32__40__95_root_95__46_Nat_41__32__40__95_root_95__46_Effect4_46_Machine_46_FinName_41__32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41_C.toVal (x.1 : Effect4.ScopeState Nat Effect4.Machine.FinName Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_scope_state_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_to_val (x_1 : (int, fin_name, Val.t, Err.t, Defect.t, int, unit) scope_state) : Val.t =
-  match (x_1 : (_, _, _, _, _, _, _) scope_state) with
-    | ScopeState_empty -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | ScopeState_openEmpty -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-    | ScopeState_openInline (key_8, finalizer_9) -> (let _x_10 = 2 in
-      let _x_11 = Val.Nat key_8 in
-      let _x_12 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val finalizer_9 in
-      let _x_13 = [] in
-      let _x_14 = _x_12 :: _x_13 in
-      let _x_15 = _x_11 :: _x_14 in
-      Val.Ctor (_x_10, _x_15))
-    | ScopeState_openMap entries_17 -> (let _x_18 = 3 in
-      let _x_19 = [] in
-      let _x_20 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_scope_state_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_to_val_spec_0 entries_17 _x_19 in
-      let _x_21 = Val.List _x_20 in
-      let _x_22 = _x_21 :: _x_19 in
-      Val.Ctor (_x_18, _x_22))
-    | ScopeState_closed exit__24 -> (let _x_25 = 4 in
-      let _x_26 = store_runner_gen_exit_c_to_val exit__24 in
-      let _x_27 = [] in
-      let _x_28 = _x_26 :: _x_27 in
-      Val.Ctor (_x_25, _x_28))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Scope_32__40__95_root_95__46_Nat_41__32__40__95_root_95__46_Effect4_46_Machine_46_FinName_41__32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41_C.toVal (x.1 : Effect4.Scope Nat Effect4.Machine.FinName Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_scope_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_to_val (x_1 : (int, fin_name, Val.t, Err.t, Defect.t, int, unit) scope) : Val.t =
-  match (x_1 : (_, _, _, _, _, _, _) scope) with
-    | { strategy = strategy_2; state = state_3 } -> (let _x_4 = 0 in
-      let _x_5 = store_program_gen_finalizer_strategy_c_to_val strategy_2 in
-      let _x_6 = store_tool_gen_t_64__95_root_95__46_effect4_46_scope_state_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_to_val state_3 in
-      let _x_7 = [] in
-      let _x_8 = _x_6 :: _x_7 in
-      let _x_9 = _x_5 :: _x_8 in
-      Val.Ctor (_x_4, _x_9))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ScopeEntryC.toVal (x.1 : Effect4.Machine.ScopeEntry) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_entry_c_to_val (x_1 : scope_entry) : Val.t =
-  match (x_1 : scope_entry) with
-    | { key = key_2; scope = scope_3 } -> (let _x_4 = 0 in
-      let _x_5 = Val.Nat key_2 in
-      let _x_6 = store_tool_gen_t_64__95_root_95__46_effect4_46_scope_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_to_val scope_3 in
-      let _x_7 = [] in
-      let _x_8 = _x_6 :: _x_7 in
-      let _x_9 = _x_5 :: _x_8 in
-      Val.Ctor (_x_4, _x_9))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ScopeStoreC.toVal.spec_0 (a.1 : List Effect4.Machine.ScopeEntry) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_store_c_to_val_spec_0 (a_1 : scope_entry list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_entry_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_store_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ScopeStoreC.toVal (x.1 : List Effect4.Machine.ScopeEntry) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_store_c_to_val (x_1 : scope_entry list) : Val.t =
-  let _x_2 = 0 in
-  let _x_3 = [] in
-  let _x_4 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_store_c_to_val_spec_0 x_1 _x_3 in
-  let _x_5 = Val.List _x_4 in
-  let _x_6 = _x_5 :: _x_3 in
-  Val.Ctor (_x_2, _x_6)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoEntryC.toVal (x.1 : Effect4.Machine.MemoEntry) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_entry_c_to_val (x_1 : memo_entry) : Val.t =
-  match (x_1 : memo_entry) with
-    | { observers = observers_2; layer_scope = layer_scope_3; deferred = deferred_4; finalizer = finalizer_5 } -> (let _x_6 = 0 in
-      let _x_7 = Val.Nat observers_2 in
-      let _x_8 = Val.Nat layer_scope_3 in
-      let _x_9 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_to_val deferred_4 in
-      let _x_10 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_to_val finalizer_5 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      let _x_13 = _x_9 :: _x_12 in
-      let _x_14 = _x_8 :: _x_13 in
-      let _x_15 = _x_7 :: _x_14 in
-      Val.Ctor (_x_6, _x_15))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoMapC.toVal.spec_0 (a.1 : List (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_c_to_val_spec_0 (a_1 : ((int list * int list list) * memo_entry) list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, snd_1 -> (match fst_1 with
-            | fst_2, snd_2 -> (let _x_6 = [] in
-              let _x_7 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 fst_2 _x_6 in
-              let _x_8 = Val.List _x_7 in
-              let _x_9 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_to_val_spec_0 snd_2 _x_6 in
-              let _x_10 = Val.List _x_9 in
-              let _x_11 = Val.Pair (_x_8, _x_10) in
-              let _x_12 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_entry_c_to_val snd_1 in
-              let _x_13 = Val.Pair (_x_11, _x_12) in
-              let _x_14 = _x_13 :: a_2 in
-              list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_c_to_val_spec_0 tail_5 _x_14)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoMapC.toVal (x.1 : Effect4.Machine.MemoMap) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_c_to_val (x_1 : memo_map) : Val.t =
-  match (x_1 : memo_map) with
-    | { id = id_2; parent = parent_3; entries = entries_4 } -> (let _x_5 = 0 in
-      let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val id_2 in
-      let[@local always] _jp_7 = fun _y_8 -> let _x_9 = [] in
-      let _x_10 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_c_to_val_spec_0 entries_4 _x_9 in
+      let _x_9 = store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_stop_c_to_val stop_3 in
+      let _x_10 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_to_val_spec_0 unread_4 _x_6 in
       let _x_11 = Val.List _x_10 in
-      let _x_12 = _x_11 :: _x_9 in
-      let _x_13 = _y_8 :: _x_12 in
-      let _x_14 = _x_6 :: _x_13 in
-      Val.Ctor (_x_5, _x_14) in
-      match parent_3 with
-        | None -> (let _x_16 = Val.None in
-          _jp_7 _x_16)
-        | Some val__17 -> (let _x_18 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_to_val val__17 in
-          let _x_19 = Val.Some _x_18 in
-          _jp_7 _x_19))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_StoresC.toVal.spec_0 (a.1 : List Effect4.Machine.MemoMap) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_stores_c_to_val_spec_0 (a_1 : memo_map list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_stores_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_Waiter_32__40__95_root_95__46_Effect4_46_ClockMillis_41_C.toVal (x.1 : Effect4.Machine.Waiter Effect4.ClockMillis) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_waiter_32__40__95_root_95__46_effect4_46_clock_millis_41_c_to_val (x_1 : E4_clock.t waiter) : Val.t =
-  match (x_1 : _ waiter) with
-    | { fiber = fiber_2; token = token_3; phase = phase_4; payload = payload_5 } -> (let _x_6 = 0 in
-      let _x_7 = store_api_gen_fiber_id_c_to_val fiber_2 in
-      let _x_8 = Val.Nat token_3 in
-      let _x_9 = Val.Nat phase_4 in
-      let _x_10 = store_clock_canonical_to_val payload_5 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
+      let _x_12 = _x_11 :: _x_6 in
       let _x_13 = _x_9 :: _x_12 in
       let _x_14 = _x_8 :: _x_13 in
-      let _x_15 = _x_7 :: _x_14 in
-      Val.Ctor (_x_6, _x_15))
+      Val.Ctor (_x_5, _x_14))
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_WakeList_32__40__95_root_95__46_Effect4_46_ClockMillis_41_C.toVal.spec_0 (a.1 : List (Effect4.Machine.Waiter Effect4.ClockMillis)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_PreviewAnswerC.toVal.spec_0 (a.1 : List Effect4.Tool.PreviewRun) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_effect4_46_clock_millis_41_c_to_val_spec_0 (a_1 : E4_clock.t waiter list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_answer_c_to_val_spec_0 (a_1 : preview_run list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_waiter_32__40__95_root_95__46_effect4_46_clock_millis_41_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_effect4_46_clock_millis_41_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_WakeList_32__40__95_root_95__46_Effect4_46_ClockMillis_41_C.toVal (x.1 : Effect4.Machine.WakeList Effect4.ClockMillis) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_effect4_46_clock_millis_41_c_to_val (x_1 : E4_clock.t wake_list) : Val.t =
-  match (x_1 : _ wake_list) with
-    | { waiters = waiters_2; batch = batch_3; phase = phase_4 } -> (let _x_5 = 0 in
-      let _x_6 = [] in
-      let _x_7 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_effect4_46_clock_millis_41_c_to_val_spec_0 waiters_2 _x_6 in
-      let _x_8 = Val.List _x_7 in
-      let[@local always] _jp_9 = fun _y_10 -> let _x_11 = Val.Nat phase_4 in
-      let _x_12 = _x_11 :: _x_6 in
-      let _x_13 = _y_10 :: _x_12 in
-      let _x_14 = _x_8 :: _x_13 in
-      Val.Ctor (_x_5, _x_14) in
-      match batch_3 with
-        | None -> (let _x_16 = Val.None in
-          _jp_9 _x_16)
-        | Some val__17 -> (let _x_18 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_effect4_46_clock_millis_41_c_to_val_spec_0 val__17 _x_6 in
-          let _x_19 = Val.List _x_18 in
-          let _x_20 = Val.Some _x_19 in
-          _jp_9 _x_20))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_TimerStoreC.toVal (x.1 : Effect4.Machine.TimerStore) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_timer_store_c_to_val (x_1 : timer_store) : Val.t =
-  match (x_1 : timer_store) with
-    | { now = now_2; wake = wake_3; target = target_4 } -> (let _x_5 = 0 in
-      let _x_6 = store_clock_canonical_to_val now_2 in
-      let _x_7 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_effect4_46_clock_millis_41_c_to_val wake_3 in
-      let[@local always] _jp_8 = fun _y_9 -> let _x_10 = [] in
-      let _x_11 = _y_9 :: _x_10 in
-      let _x_12 = _x_7 :: _x_11 in
-      let _x_13 = _x_6 :: _x_12 in
-      Val.Ctor (_x_5, _x_13) in
-      match target_4 with
-        | None -> (let _x_15 = Val.None in
-          _jp_8 _x_15)
-        | Some val__16 -> (let _x_17 = store_clock_canonical_to_val val__16 in
-          let _x_18 = Val.Some _x_17 in
-          _jp_8 _x_18))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ExternalStoreC.toVal (x.1 : List String) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_external_store_c_to_val (x_1 : string list) : Val.t =
-  let _x_2 = 0 in
-  let _x_3 = [] in
-  let _x_4 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 x_1 _x_3 in
-  let _x_5 = Val.List _x_4 in
-  let _x_6 = _x_5 :: _x_3 in
-  Val.Ctor (_x_2, _x_6)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_StoresC.toVal (x.1 : Effect4.Machine.Stores) : Effect4.Store.Val *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_stores_c_to_val (x_1 : stores) : Val.t =
-  match (x_1 : stores) with
-    | { refs = refs_2; deferreds = deferreds_3; scopes = scopes_4; memo = memo_5; timers = timers_6; next_name = next_name_7; externals = externals_8 } -> (let _x_9 = 0 in
-      let _x_10 = [] in
-      let _x_11 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_to_val_spec_0 refs_2 _x_10 in
-      let _x_12 = Val.List _x_11 in
-      let _x_13 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_to_val deferreds_3 in
-      let _x_14 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_store_c_to_val scopes_4 in
-      let _x_15 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_machine_46_stores_c_to_val_spec_0 memo_5 _x_10 in
-      let _x_16 = Val.List _x_15 in
-      let _x_17 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_timer_store_c_to_val timers_6 in
-      let _x_18 = Val.Nat next_name_7 in
-      let _x_19 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_external_store_c_to_val externals_8 in
-      let _x_20 = _x_19 :: _x_10 in
-      let _x_21 = _x_18 :: _x_20 in
-      let _x_22 = _x_17 :: _x_21 in
-      let _x_23 = _x_16 :: _x_22 in
-      let _x_24 = _x_14 :: _x_23 in
-      let _x_25 = _x_13 :: _x_24 in
-      let _x_26 = _x_12 :: _x_25 in
-      Val.Ctor (_x_9, _x_26))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Run_46_Tree_46_Outcome_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Machine_46_ExitV_41__41_C.toVal (x.1 : Effect4.Run.Tree.Outcome (List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) : Effect4.Store.Val *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_to_val (x_1 : (Val.t, Err.t, Defect.t, int, unit) Exit.t list effect4_run_tree_outcome) : Val.t =
-  match (x_1 : _ effect4_run_tree_outcome) with
-    | { steps = steps_2; stop = stop_3; stores = stores_4; state = state_5 } -> (let _x_6 = 0 in
-      let _x_7 = [] in
-      let _x_8 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_path_c_to_val_spec_0 steps_2 _x_7 in
-      let _x_9 = Val.List _x_8 in
-      let _x_10 = store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_stop_c_to_val stop_3 in
-      let _x_11 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_stores_c_to_val stores_4 in
-      let _x_12 = list_map_tr_loop_at_store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_to_val_spec_0 state_5 _x_7 in
-      let _x_13 = Val.List _x_12 in
-      let _x_14 = _x_13 :: _x_7 in
-      let _x_15 = _x_11 :: _x_14 in
-      let _x_16 = _x_10 :: _x_15 in
-      let _x_17 = _x_9 :: _x_16 in
-      Val.Ctor (_x_6, _x_17))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_PreviewAnswerC.toVal.spec_0 (a.1 : List (Effect4.Run.Tree.Outcome (List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)))) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_answer_c_to_val_spec_0 (a_1 : (Val.t, Err.t, Defect.t, int, unit) Exit.t list effect4_run_tree_outcome list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_to_val head_4 in
+    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_run_c_to_val head_4 in
       let _x_7 = _x_6 :: a_2 in
       list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_answer_c_to_val_spec_0 tail_5 _x_7)
 
@@ -53121,7 +51878,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_answer_c_to_val (
           _jp_4 _x_9)
         | Some val__10 -> (match val__10 with
             | fst_1, snd_1 -> (let _x_11 = Val.Nat fst_1 in
-              let _x_12 = store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_to_val snd_1 in
+              let _x_12 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_run_c_to_val snd_1 in
               let _x_13 = Val.Pair (_x_11, _x_12) in
               let _x_14 = Val.Some _x_13 in
               _jp_4 _x_14)))
@@ -53384,10 +52141,14 @@ let tool_native_answer__lam_0 (__do_lift_1 : (state * reply envelope, effect4_to
     | Error a_2 -> (let _x_3 = Error a_2 in
       program_check_checked_pure' _x_3)
     | Ok a_5 -> (match a_5 with
-        | fst_6, snd_7 -> (let _x_8 = store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__40__95_root_95__46_effect4_46_tool_46_reply_41_c_to_val snd_7 in
-          let _x_9 = _x_8, fst_6 in
-          let _x_10 = Ok _x_9 in
-          program_check_checked_pure' _x_10))
+        | fst_6, snd_7 -> (let out = store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__40__95_root_95__46_effect4_46_tool_46_reply_41_c_to_val snd_7 in
+          let _x_8 = tool_codec_profile_carries out in
+          if _x_8 then (let _x_13 = out, fst_6 in
+            let _x_14 = Ok _x_13 in
+            program_check_checked_pure' _x_14) else (let _x_9 = Effect4_tool_codec_profile_refusal_unprintable in
+            let _x_10 = Effect4_tool_wire_refusal_codec _x_9 in
+            let _x_11 = Error _x_10 in
+            program_check_checked_pure' _x_11)))
 
 
 
@@ -57159,13 +55920,25 @@ let rec list_any_at_run_internal_waits_spec_0 (_x_1 : int) (x_2 : E4_clock.t wai
 
 
 
-(* LCNF mono: Effect4.Run.registrationOf (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Option Effect4.Program.EffName *)
+(* LCNF mono: Effect4.Run.siteOf (x.1 : Effect4.Program.EffName) : Effect4.Live.WaitSite *)
 
-let run_registration_of (f : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit, ctx, (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) prim, (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) frame_fiber) run_fiber) : eff_name option =
+let rec run_site_of (x_1 : eff_name) : wait_site =
+  match (x_1 : eff_name) with
+    | EffName_registerAwait cell_2 -> WaitSite_deferred cell_2
+    | EffName_awaitPromise cell_4 -> WaitSite_deferred cell_4
+    | EffName_withWaiter (base_6, _, _) -> run_site_of base_6
+    | _ -> WaitSite_other
+
+
+
+(* LCNF mono: Effect4.Run.waitSiteOf (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Option Effect4.Live.WaitSite *)
+
+let run_wait_site_of (f : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit, ctx, (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) prim, (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) frame_fiber) run_fiber) : wait_site option =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
     | { frame = frame; _ } -> (match (frame : (_, _, _, _, _, _, _) frame_fiber) with
         | { current = current; _ } -> (match (current : (_, _, _, _, _, _, _) prim) with
-            | Prim_async (register_1, _, _) -> Some register_1
+            | Prim_async (register_1, _, _) -> (let _x_4 = run_site_of register_1 in
+              Some _x_4)
             | _ -> None))
 
 
@@ -57185,8 +55958,8 @@ let rec list_filter_map_tr_go_at_run_internal_waits_spec_1 (m : (eff_name, eff_t
                             | { timers = timers; _ } -> (match (timers : timer_store) with
                                 | { wake = wake; _ } -> (match (wake : _ wake_list) with
                                     | { waiters = waiters; _ } -> (let _x_8 = list_any_at_run_internal_waits_spec_0 id waiters in
-                                      if _x_8 then list_filter_map_tr_go_at_run_internal_waits_spec_1 m tail_5 a_2 else (let _x_9 = run_registration_of head_4 in
-                                        let _x_10 = ({ fiber = id; token = token_6; registration = _x_9 } : wait_view) in
+                                      if _x_8 then list_filter_map_tr_go_at_run_internal_waits_spec_1 m tail_5 a_2 else (let _x_9 = run_wait_site_of head_4 in
+                                        let _x_10 = ({ fiber = id; token = token_6; site = _x_9 } : wait_view) in
                                         let _x_11 = Lcnf_array.push a_2 _x_10 in
                                         list_filter_map_tr_go_at_run_internal_waits_spec_1 m tail_5 _x_11))))))
                     | Some _ -> list_filter_map_tr_go_at_run_internal_waits_spec_1 m tail_5 a_2)
@@ -57739,7 +56512,7 @@ let run_view (s : run) : view =
       let _x_6 = list_map_tr_loop_at_run_view_spec_0 s _x_4 _x_5 in
       let _x_7 = run_internal_waits _x_1 in
       let[@local always] _jp_8 = fun _y_9 _y_10 _y_11 _y_12 _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = run_at_rest s in
-      ({ state = _x_2; outcome = outcome; exit_ = _x_3; reasons = reasons; awaiting = _x_6; waits = _x_7; empty_frontier = _y_15; retired = _y_14; applied = _y_13; runnable = _y_17; queued = _y_12; timers = _y_9; cells = _y_10; fibers = _y_16; steps = _y_11; funded = _y_18; at_rest = _x_19 } : view) in
+      ({ state = _x_2; outcome = outcome; exit_ = _x_3; reasons = reasons; awaiting = _x_6; waits = _x_7; empty_frontier = _y_17; retired = _y_14; applied = _y_16; runnable = _y_12; queued = _y_9; timers = _y_13; cells = _y_11; fibers = _y_15; steps = _y_10; funded = _y_18; at_rest = _x_19 } : view) in
       let[@local always] _jp_21 = fun _y_22 -> match (s : run) with
         | { session = session; journal = journal; phases = phases; _ } -> (match (session : effect4_api_host_session_session) with
             | { applied = applied; retired = retired; funded = funded; _ } -> (match (_x_1 : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
@@ -57753,7 +56526,7 @@ let run_view (s : run) : view =
                               let _x_27 = List.length journal in
                               if funded then (let _x_28 = list_any_at_run_view_spec_1 phases in
                                 if _x_28 then (let _x_29 = false in
-                                  _jp_8 _x_25 refs _x_27 armed applied _x_23 _y_22 _x_26 _x_24 _x_29) else _jp_8 _x_25 refs _x_27 armed applied _x_23 _y_22 _x_26 _x_24 funded) else _jp_8 _x_25 refs _x_27 armed applied _x_23 _y_22 _x_26 _x_24 funded)))))) in
+                                  _jp_8 armed _x_27 refs _x_24 _x_25 _x_23 _x_26 applied _y_22 _x_29) else _jp_8 armed _x_27 refs _x_24 _x_25 _x_23 _x_26 applied _y_22 funded) else _jp_8 armed _x_27 refs _x_24 _x_25 _x_23 _x_26 applied _y_22 funded)))))) in
       let _x_30 = Outcome_frontier in
       let _x_31 = api_inst_decidable_eq_outcome_dec_eq outcome _x_30 in
       if _x_31 then (let _x_32 = reasons = [] in
@@ -58513,30 +57286,59 @@ let run_preview_checked_tape (app : sig_app) (row : int) (tape : (Val.t, Err.t, 
 
 
 
+(* LCNF mono: Effect4.Tool.PreviewRun.of (o : Effect4.Run.Tree.Outcome (List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) : Effect4.Tool.PreviewRun *)
+
+let tool_preview_run_of_ (o : (Val.t, Err.t, Defect.t, int, unit) Exit.t list effect4_run_tree_outcome) : preview_run =
+  match (o : _ effect4_run_tree_outcome) with
+    | { steps = steps; stop = stop; state = state; _ } -> ({ steps = steps; stop = stop; unread = state } : preview_run)
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.preview.spec_0 (a.1 : List (Effect4.Run.Tree.Outcome (List (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)))) (a.2 : List Effect4.Tool.PreviewRun) : List Effect4.Tool.PreviewRun *)
+
+let rec list_map_tr_loop_at_tool_internal_preview_spec_0 (a_1 : (Val.t, Err.t, Defect.t, int, unit) Exit.t list effect4_run_tree_outcome list) (a_2 : preview_run list) : preview_run list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = tool_preview_run_of_ head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_tool_internal_preview_spec_0 tail_5 _x_7)
+
+
+
 (* LCNF mono: Effect4.Tool.Internal.preview (d : Effect4.Program.Doc) (q : Effect4.Tool.PreviewQuery) : Except Effect4.Tool.Refusal Effect4.Tool.PreviewAnswer *)
 
 let tool_internal_preview (d : doc) (q : preview_query) : (preview_answer, effect4_tool_refusal) result =
-  let _x_1 = program_doc_session d in
-  match (_x_1 : source_session) with
+  let[@local always] _jp_1 = fun _y_2 -> let _x_3 = PreviewAnswer_settled _y_2 in
+  Ok _x_3 in
+  let _x_5 = program_doc_session d in
+  match (_x_5 : source_session) with
     | { app = app; sketch = sketch; _ } -> (match (sketch : sketch) with
         | { program = program; holes = holes } -> (let app_1 = program_sig_app_with_holes app holes in
-          let _x_2 = run_preview_admit app_1 program in
-          match _x_2 with
-            | Error a_3 -> (let _x_4 = Effect4_tool_refusal_preview a_3 in
-              Error _x_4)
+          let _x_6 = run_preview_admit app_1 program in
+          match _x_6 with
+            | Error a_7 -> (let _x_8 = Effect4_tool_refusal_preview a_7 in
+              Error _x_8)
             | Ok _ -> (let host = fun _eta _eta_1 _eta_2 -> run_preview_checked_tape app_1 _eta _eta_2 in
               match (q : preview_query) with
-                | PreviewQuery_settle (tape_7, limit_8) -> (match (app_1 : sig_app) with
-                    | { rows = rows; _ } -> (let _x_9 = run_tree_settle rows limit_8 host tape_7 program in
-                      let _x_10 = PreviewAnswer_settled _x_9 in
-                      Ok _x_10))
-                | PreviewQuery_frames (tape_12, limit_13) -> (match (app_1 : sig_app) with
-                    | { rows = rows_1; _ } -> (let _x_14 = run_tree_frames rows_1 limit_13 host tape_12 program in
-                      let _x_15 = PreviewAnswer_frames _x_14 in
-                      Ok _x_15))
-                | PreviewQuery_explore (budget_17, width_18) -> (let _x_19 = run_kit_explore app_1 budget_17 width_18 program in
-                  let _x_20 = PreviewAnswer_explored _x_19 in
-                  Ok _x_20))))
+                | PreviewQuery_settle (tape_11, limit_12) -> (match (app_1 : sig_app) with
+                    | { rows = rows; _ } -> (let _x_13 = run_tree_settle rows limit_12 host tape_11 program in
+                      match _x_13 with
+                        | None -> (let _x_14 = None in
+                          _jp_1 _x_14)
+                        | Some val__15 -> (match val__15 with
+                            | fst_16, snd_17 -> (let _x_18 = tool_preview_run_of_ snd_17 in
+                              let _x_19 = fst_16, _x_18 in
+                              let _x_20 = Some _x_19 in
+                              _jp_1 _x_20))))
+                | PreviewQuery_frames (tape_21, limit_22) -> (match (app_1 : sig_app) with
+                    | { rows = rows_1; _ } -> (let _x_23 = run_tree_frames rows_1 limit_22 host tape_21 program in
+                      let _x_24 = [] in
+                      let _x_25 = list_map_tr_loop_at_tool_internal_preview_spec_0 _x_23 _x_24 in
+                      let _x_26 = PreviewAnswer_frames _x_25 in
+                      Ok _x_26))
+                | PreviewQuery_explore (budget_28, width_29) -> (let _x_30 = run_kit_explore app_1 budget_28 width_29 program in
+                  let _x_31 = PreviewAnswer_explored _x_30 in
+                  Ok _x_31))))
 
 
 
@@ -58950,10 +57752,14 @@ let tool_native_answer (o : check_input -> verdict) (state : state) (v : Val.t) 
       let _x_3 = Effect4_tool_wire_refusal_codec _x_2 in
       let _x_4 = Error _x_3 in
       program_check_checked_pure' _x_4)
-    | Some val__6 -> (let _f_7 = tool_native_answer__lam_0 in
-      let _x_8 = tool_wire_connection_v1 in
-      let _x_9 = tool_wire_serve_envelope o _x_8 state val__6 in
-      program_check_checked_bind' _x_9 _f_7)
+    | Some val__6 -> (let _x_7 = tool_codec_profile_carries v in
+      if _x_7 then (let _f_12 = tool_native_answer__lam_0 in
+        let _x_13 = tool_wire_connection_v1 in
+        let _x_14 = tool_wire_serve_envelope o _x_13 state val__6 in
+        program_check_checked_bind' _x_14 _f_12) else (let _x_8 = Effect4_tool_codec_profile_refusal_unreadable in
+        let _x_9 = Effect4_tool_wire_refusal_codec _x_8 in
+        let _x_10 = Error _x_9 in
+        program_check_checked_pure' _x_10))
 
 
 
@@ -61404,89 +60210,6 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_call_view_c_shape_doc : s
 
 
 
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Machine.ArgSite" in
-  let _x_2 = "path" in
-  let _x_3 = Shape_nat in
-  let _x_4 = [] in
-  let _x_5 = Shape_list _x_3 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "env" in
-  let _x_8 = "Val" in
-  let _x_9 = Shape_named _x_8 in
-  let _x_10 = store_value_gen_val_c_defs in
-  let _x_11 = Shape_list _x_9 in
-  let _x_12 = _x_7, _x_11 in
-  let _x_13 = _x_12 :: _x_4 in
-  let _x_14 = _x_6 :: _x_13 in
-  let _x_15 = Shape_struct (_x_1, _x_14) in
-  let _x_16 = _x_4 @ _x_10 in
-  ({ root = _x_15; defs = _x_16 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PointC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_shape_doc : shape_doc =
-  let _x_1 = store_api_gen_fiber_id_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = store_runner_gen_exit_c_shape_doc in
-      match (_x_3 : shape_doc) with
-        | { root = root_1; defs = defs } -> (let _x_4 = Shape_nat in
-          let _x_5 = Shape_list _x_4 in
-          let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_shape_doc in
-          match (_x_6 : shape_doc) with
-            | { root = root_2; defs = defs_1 } -> (let _x_7 = "fuel" in
-              let _x_8 = _x_7, _x_4 in
-              let _x_9 = "_root_.Effect4.Program.Point" in
-              let _x_10 = "path" in
-              let _x_11 = _x_10, _x_5 in
-              let _x_12 = "env" in
-              let _x_13 = "Val" in
-              let _x_14 = Shape_named _x_13 in
-              let _x_15 = store_value_gen_val_c_defs in
-              let _x_16 = Shape_list _x_14 in
-              let _x_17 = _x_12, _x_16 in
-              let _x_18 = "tape" in
-              let _x_19 = Shape_bool in
-              let _x_20 = Shape_list _x_19 in
-              let _x_21 = _x_18, _x_20 in
-              let _x_22 = "completed" in
-              let _x_23 = Shape_pair (root, root_1) in
-              let _x_24 = _x_2 @ defs in
-              let _x_25 = Shape_list _x_23 in
-              let _x_26 = _x_22, _x_25 in
-              let _x_27 = "root" in
-              let _x_28 = _x_27, _x_4 in
-              let _x_29 = "params" in
-              let _x_30 = Shape_list root_2 in
-              let _x_31 = Shape_list _x_30 in
-              let _x_32 = _x_29, _x_31 in
-              let _x_33 = "call" in
-              let _x_34 = Shape_list _x_5 in
-              let _x_35 = _x_33, _x_34 in
-              let _x_36 = _x_35 :: _x_2 in
-              let _x_37 = _x_32 :: _x_36 in
-              let _x_38 = _x_28 :: _x_37 in
-              let _x_39 = _x_26 :: _x_38 in
-              let _x_40 = _x_21 :: _x_39 in
-              let _x_41 = _x_8 :: _x_40 in
-              let _x_42 = _x_17 :: _x_41 in
-              let _x_43 = _x_11 :: _x_42 in
-              let _x_44 = Shape_struct (_x_9, _x_43) in
-              let _x_45 = _x_2 @ _x_15 in
-              let _x_46 = _x_45 @ _x_2 in
-              let _x_47 = _x_46 @ _x_2 in
-              let _x_48 = _x_47 @ _x_24 in
-              let _x_49 = _x_48 @ defs_1 in
-              let _x_50 = _x_49 @ _x_2 in
-              ({ root = _x_44; defs = _x_50 } : shape_doc))))
-
-
-
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_DeferredKeyC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc : shape_doc =
@@ -61501,1717 +60224,28 @@ let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_d
 
 
 
-(* LCNF mono: Effect4.Store.ServiceC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Live_46_WaitSiteC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_service_c_shape_doc : shape_doc =
-  let _x_1 = store_program_gen_service_key_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.Env.Service" in
-      let _x_3 = "key" in
-      let _x_4 = _x_3, root in
-      let _x_5 = "value" in
-      let _x_6 = "Val" in
-      let _x_7 = Shape_named _x_6 in
-      let _x_8 = store_value_gen_val_c_defs in
-      let _x_9 = _x_5, _x_7 in
-      let _x_10 = [] in
-      let _x_11 = _x_9 :: _x_10 in
-      let _x_12 = _x_4 :: _x_11 in
-      let _x_13 = Shape_struct (_x_2, _x_12) in
-      let _x_14 = defs @ _x_8 in
-      ({ root = _x_13; defs = _x_14 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ContextC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_context_c_shape_doc : shape_doc =
-  let _x_1 = store_service_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.Env.Context" in
-      let _x_3 = "entries" in
-      let _x_4 = Shape_list root in
-      let _x_5 = _x_3, _x_4 in
-      let _x_6 = [] in
-      let _x_7 = _x_5 :: _x_6 in
-      let _x_8 = Shape_struct (_x_2, _x_7) in
-      ({ root = _x_8; defs = defs } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_CtxC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_shape_doc : shape_doc =
-  let _x_1 = store_context_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.Ctx" in
-      let _x_3 = "services" in
-      let _x_4 = _x_3, root in
-      let _x_5 = "maxOpsBeforeYield" in
-      let _x_6 = Shape_nat in
-      let _x_7 = [] in
-      let _x_8 = _x_5, _x_6 in
-      let _x_9 = "preventYield" in
-      let _x_10 = Shape_bool in
-      let _x_11 = _x_9, _x_10 in
-      let _x_12 = _x_11 :: _x_7 in
-      let _x_13 = _x_8 :: _x_12 in
-      let _x_14 = _x_4 :: _x_13 in
-      let _x_15 = Shape_struct (_x_2, _x_14) in
-      let _x_16 = defs @ _x_7 in
-      let _x_17 = _x_16 @ _x_7 in
-      ({ root = _x_15; defs = _x_17 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_CaptureC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = Shape_nat in
-      let _x_3 = Shape_list _x_2 in
-      let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_shape_doc in
-      match (_x_4 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_5 = "fuel" in
-          let _x_6 = _x_5, _x_2 in
-          let _x_7 = "_root_.Effect4.Machine.Capture" in
-          let _x_8 = "path" in
-          let _x_9 = [] in
-          let _x_10 = _x_8, _x_3 in
-          let _x_11 = "env" in
-          let _x_12 = "Val" in
-          let _x_13 = Shape_named _x_12 in
-          let _x_14 = store_value_gen_val_c_defs in
-          let _x_15 = Shape_list _x_13 in
-          let _x_16 = _x_11, _x_15 in
-          let _x_17 = "tape" in
-          let _x_18 = Shape_bool in
-          let _x_19 = Shape_list _x_18 in
-          let _x_20 = _x_17, _x_19 in
-          let _x_21 = "ctx" in
-          let _x_22 = _x_21, root in
-          let _x_23 = "root" in
-          let _x_24 = _x_23, _x_2 in
-          let _x_25 = "params" in
-          let _x_26 = Shape_list root_1 in
-          let _x_27 = Shape_list _x_26 in
-          let _x_28 = _x_25, _x_27 in
-          let _x_29 = "call" in
-          let _x_30 = Shape_list _x_3 in
-          let _x_31 = _x_29, _x_30 in
-          let _x_32 = _x_31 :: _x_9 in
-          let _x_33 = _x_28 :: _x_32 in
-          let _x_34 = _x_24 :: _x_33 in
-          let _x_35 = _x_22 :: _x_34 in
-          let _x_36 = _x_20 :: _x_35 in
-          let _x_37 = _x_6 :: _x_36 in
-          let _x_38 = _x_16 :: _x_37 in
-          let _x_39 = _x_10 :: _x_38 in
-          let _x_40 = Shape_struct (_x_7, _x_39) in
-          let _x_41 = _x_9 @ _x_14 in
-          let _x_42 = _x_41 @ _x_9 in
-          let _x_43 = _x_42 @ _x_9 in
-          let _x_44 = _x_43 @ defs in
-          let _x_45 = _x_44 @ defs_1 in
-          let _x_46 = _x_45 @ _x_9 in
-          ({ root = _x_40; defs = _x_46 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoMapIdC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Machine.MemoMapId" in
-  let _x_2 = "index" in
-  let _x_3 = Shape_nat in
-  let _x_4 = [] in
-  let _x_5 = _x_2, _x_3 in
-  let _x_6 = _x_5 :: _x_4 in
-  let _x_7 = Shape_struct (_x_1, _x_6) in
-  ({ root = _x_7; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_FinNameC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc : shape_doc =
-  let _x_1 = store_api_gen_fiber_id_c_shape_doc in
+let store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_site_c_shape_doc : shape_doc =
+  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "fiber" in
-      let _x_4 = _x_3, root in
-      let _x_5 = "skipSelf" in
-      let _x_6 = Shape_bool in
-      let _x_7 = _x_5, _x_6 in
+      let _x_3 = "_root_.Effect4.Live.WaitSite" in
+      let _x_4 = "deferred" in
+      let _x_5 = 0 in
+      let _x_6 = "cell" in
+      let _x_7 = _x_6, root in
       let _x_8 = _x_7 :: _x_2 in
-      let _x_9 = "scope" in
-      let _x_10 = Shape_nat in
-      let _x_11 = _x_9, _x_10 in
-      let _x_12 = _x_11 :: _x_2 in
-      let _x_13 = "parent" in
-      let _x_14 = _x_13, _x_10 in
-      let _x_15 = "key" in
-      let _x_16 = _x_15, _x_10 in
-      let _x_17 = _x_16 :: _x_2 in
-      let _x_18 = "fails" in
-      let _x_19 = _x_18, _x_6 in
-      let _x_20 = _x_19 :: _x_2 in
-      let _x_21 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_shape_doc in
-      match (_x_21 : shape_doc) with
-        | { root = root_1; defs = defs } -> (let _x_22 = "label" in
-          let _x_23 = _x_22, _x_10 in
-          let _x_24 = "snapshot" in
-          let _x_25 = Shape_list root in
-          let _x_26 = _x_24, _x_25 in
-          let _x_27 = _x_26 :: _x_2 in
-          let _x_28 = "slot" in
-          let _x_29 = _x_28, _x_10 in
-          let _x_30 = _x_29 :: _x_2 in
-          let _x_31 = "capture" in
-          let _x_32 = _x_31, root_1 in
-          let _x_33 = _x_32 :: _x_2 in
-          let _x_34 = _x_2 @ _x_2 in
-          let _x_35 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc in
-          match (_x_35 : shape_doc) with
-            | { root = root_2; _ } -> (let _x_36 = 1 in
-              let _x_37 = _x_36, _x_12 in
-              let _x_38 = Shape_list _x_10 in
-              let _x_39 = Shape_list _x_38 in
-              let _x_40 = "_root_.Effect4.Machine.FinName" in
-              let _x_41 = "interruptFiber" in
-              let _x_42 = 0 in
-              let _x_43 = _x_4 :: _x_8 in
-              let _x_44 = _x_42, _x_43 in
-              let _x_45 = _x_41, _x_44 in
-              let _x_46 = "closeChildScope" in
-              let _x_47 = _x_46, _x_37 in
-              let _x_48 = "detachFromParent" in
-              let _x_49 = 2 in
-              let _x_50 = _x_14 :: _x_17 in
-              let _x_51 = _x_49, _x_50 in
-              let _x_52 = _x_48, _x_51 in
-              let _x_53 = "release" in
-              let _x_54 = 3 in
-              let _x_55 = _x_23 :: _x_20 in
-              let _x_56 = _x_54, _x_55 in
-              let _x_57 = _x_53, _x_56 in
-              let _x_58 = "awaitNewChildren" in
-              let _x_59 = 4 in
-              let _x_60 = _x_59, _x_27 in
-              let _x_61 = _x_58, _x_60 in
-              let _x_62 = "parkThen" in
-              let _x_63 = 5 in
-              let _x_64 = _x_63, _x_30 in
-              let _x_65 = _x_62, _x_64 in
-              let _x_66 = "foreign" in
-              let _x_67 = 6 in
-              let _x_68 = _x_67, _x_33 in
-              let _x_69 = _x_66, _x_68 in
-              let _x_70 = "closeChildOnFailure" in
-              let _x_71 = 7 in
-              let _x_72 = _x_71, _x_12 in
-              let _x_73 = _x_70, _x_72 in
-              let _x_74 = "memoEntry" in
-              let _x_75 = 8 in
-              let _x_76 = "layer" in
-              let _x_77 = Shape_pair (_x_38, _x_39) in
-              let _x_78 = _x_76, _x_77 in
-              let _x_79 = "memoMap" in
-              let _x_80 = _x_79, root_2 in
-              let _x_81 = _x_80 :: _x_2 in
-              let _x_82 = _x_78 :: _x_81 in
-              let _x_83 = _x_75, _x_82 in
-              let _x_84 = _x_74, _x_83 in
-              let _x_85 = "memoDone" in
-              let _x_86 = 9 in
-              let _x_87 = _x_86, _x_82 in
-              let _x_88 = _x_85, _x_87 in
-              let _x_89 = _x_88 :: _x_2 in
-              let _x_90 = _x_84 :: _x_89 in
-              let _x_91 = _x_73 :: _x_90 in
-              let _x_92 = _x_69 :: _x_91 in
-              let _x_93 = _x_65 :: _x_92 in
-              let _x_94 = _x_61 :: _x_93 in
-              let _x_95 = _x_57 :: _x_94 in
-              let _x_96 = _x_52 :: _x_95 in
-              let _x_97 = _x_47 :: _x_96 in
-              let _x_98 = _x_45 :: _x_97 in
-              let _x_99 = Shape_sum (_x_40, _x_98) in
-              let _x_100 = _x_34 @ _x_2 in
-              let _x_101 = _x_100 @ _x_2 in
-              let _x_102 = _x_101 @ defs in
-              let _x_103 = _x_102 @ _x_34 in
-              let _x_104 = _x_103 @ _x_2 in
-              ({ root = _x_99; defs = _x_104 } : shape_doc))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_Env_46_ContextUpdateC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_env_46_context_update_c_shape_doc : shape_doc =
-  let _x_1 = store_context_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = store_program_gen_service_key_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "context" in
-          let _x_4 = _x_3, root in
-          let _x_5 = [] in
-          let _x_6 = _x_4 :: _x_5 in
-          let _x_7 = "_root_.Effect4.Machine.Env.ContextUpdate" in
-          let _x_8 = "setTo" in
-          let _x_9 = 0 in
-          let _x_10 = _x_9, _x_6 in
-          let _x_11 = _x_8, _x_10 in
-          let _x_12 = "provide" in
-          let _x_13 = 1 in
-          let _x_14 = "that" in
-          let _x_15 = _x_14, root in
-          let _x_16 = _x_15 :: _x_5 in
-          let _x_17 = _x_13, _x_16 in
-          let _x_18 = _x_12, _x_17 in
-          let _x_19 = "provideService" in
-          let _x_20 = 2 in
-          let _x_21 = "key" in
-          let _x_22 = _x_21, root_1 in
-          let _x_23 = "value" in
-          let _x_24 = "Val" in
-          let _x_25 = Shape_named _x_24 in
-          let _x_26 = store_value_gen_val_c_defs in
-          let _x_27 = _x_23, _x_25 in
-          let _x_28 = _x_27 :: _x_5 in
-          let _x_29 = _x_22 :: _x_28 in
-          let _x_30 = _x_20, _x_29 in
-          let _x_31 = _x_19, _x_30 in
-          let _x_32 = _x_31 :: _x_5 in
-          let _x_33 = _x_18 :: _x_32 in
-          let _x_34 = _x_11 :: _x_33 in
-          let _x_35 = Shape_sum (_x_7, _x_34) in
-          let _x_36 = defs @ defs_1 in
-          let _x_37 = _x_36 @ _x_26 in
-          ({ root = _x_35; defs = _x_37 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_RegionC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_program_46_region_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; _ } -> (let _x_3 = [] in
-          let _x_4 = "q" in
-          let _x_5 = _x_4, root in
-          let _x_6 = _x_5 :: _x_3 in
-          let _x_7 = store_program_gen_service_key_c_shape_doc in
-          match (_x_7 : shape_doc) with
-            | { root = root_2; defs = defs_1 } -> (let _x_8 = 1 in
-              let _x_9 = "memoMap" in
-              let _x_10 = _x_9, root_1 in
-              let _x_11 = "scope" in
-              let _x_12 = Shape_nat in
-              let _x_13 = _x_11, _x_12 in
-              let _x_14 = _x_13 :: _x_3 in
-              let _x_15 = _x_10 :: _x_14 in
-              let _x_16 = _x_5 :: _x_15 in
-              let _x_17 = _x_8, _x_16 in
-              let _x_18 = "_root_.Effect4.Program.Region" in
-              let _x_19 = "program" in
-              let _x_20 = 0 in
-              let _x_21 = _x_20, _x_6 in
-              let _x_22 = _x_19, _x_21 in
-              let _x_23 = "build" in
-              let _x_24 = _x_23, _x_17 in
-              let _x_25 = "buildAdding" in
-              let _x_26 = 2 in
-              let _x_27 = _x_26, _x_16 in
-              let _x_28 = _x_25, _x_27 in
-              let _x_29 = "construct" in
-              let _x_30 = 3 in
-              let _x_31 = "key" in
-              let _x_32 = Shape_option root_2 in
-              let _x_33 = _x_31, _x_32 in
-              let _x_34 = _x_33 :: _x_3 in
-              let _x_35 = _x_5 :: _x_34 in
-              let _x_36 = _x_30, _x_35 in
-              let _x_37 = _x_29, _x_36 in
-              let _x_38 = _x_37 :: _x_3 in
-              let _x_39 = _x_28 :: _x_38 in
-              let _x_40 = _x_24 :: _x_39 in
-              let _x_41 = _x_22 :: _x_40 in
-              let _x_42 = Shape_sum (_x_18, _x_41) in
-              let _x_43 = defs @ _x_3 in
-              let _x_44 = _x_43 @ _x_3 in
-              let _x_45 = _x_44 @ defs_1 in
-              ({ root = _x_42; defs = _x_45 } : shape_doc))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_CombineModeC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_program_46_combine_mode_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.CombineMode" in
-  let _x_2 = "provide" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "provideMerge" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = _x_10 :: _x_4 in
-  let _x_12 = _x_6 :: _x_11 in
-  let _x_13 = Shape_sum (_x_1, _x_12) in
-  ({ root = _x_13; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_SyncOpC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_shape_doc : shape_doc =
-  let _x_1 = store_runner_gen_ref_key_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "initial" in
-      let _x_4 = "Val" in
-      let _x_5 = Shape_named _x_4 in
-      let _x_6 = _x_3, _x_5 in
-      let _x_7 = _x_6 :: _x_2 in
-      let _x_8 = "cell" in
-      let _x_9 = _x_8, root in
-      let _x_10 = _x_9 :: _x_2 in
-      let _x_11 = 2 in
-      let _x_12 = "value" in
-      let _x_13 = _x_12, _x_5 in
-      let _x_14 = _x_13 :: _x_2 in
-      let _x_15 = _x_9 :: _x_14 in
-      let _x_16 = _x_11, _x_15 in
-      let _x_17 = 5 in
-      let _x_18 = "f" in
-      let _x_19 = "Term" in
-      let _x_20 = Shape_named _x_19 in
-      let _x_21 = _x_18, _x_20 in
-      let _x_22 = "env" in
-      let _x_23 = Shape_list _x_5 in
-      let _x_24 = _x_22, _x_23 in
-      let _x_25 = _x_24 :: _x_2 in
-      let _x_26 = _x_21 :: _x_25 in
-      let _x_27 = _x_9 :: _x_26 in
-      let _x_28 = _x_17, _x_27 in
-      let _x_29 = 6 in
-      let _x_30 = _x_29, _x_27 in
-      let _x_31 = 7 in
-      let _x_32 = _x_31, _x_27 in
-      let _x_33 = 8 in
-      let _x_34 = _x_33, _x_27 in
-      let _x_35 = 9 in
-      let _x_36 = _x_35, _x_27 in
-      let _x_37 = 10 in
-      let _x_38 = _x_37, _x_27 in
-      let _x_39 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
-      match (_x_39 : shape_doc) with
-        | { root = root_1; _ } -> (let _x_40 = 13 in
-          let _x_41 = _x_40, _x_2 in
-          let _x_42 = store_runner_gen_completion_c_shape_doc in
-          match (_x_42 : shape_doc) with
-            | { root = root_2; defs = defs } -> (let _x_43 = store_api_gen_fiber_id_c_shape_doc in
-              match (_x_43 : shape_doc) with
-                | { root = root_3; _ } -> (let _x_44 = _x_8, root_1 in
-                  let _x_45 = _x_44 :: _x_2 in
-                  let _x_46 = "completion" in
-                  let _x_47 = _x_46, root_2 in
-                  let _x_48 = _x_47 :: _x_2 in
-                  let _x_49 = _x_44 :: _x_48 in
-                  let _x_50 = "interruptor" in
-                  let _x_51 = _x_50, root_3 in
-                  let _x_52 = _x_51 :: _x_2 in
-                  let _x_53 = _x_44 :: _x_52 in
-                  let _x_54 = store_program_gen_finalizer_strategy_c_shape_doc in
-                  match (_x_54 : shape_doc) with
-                    | { root = root_4; _ } -> (let _x_55 = "token" in
-                      let _x_56 = Shape_nat in
-                      let _x_57 = _x_55, _x_56 in
-                      let _x_58 = _x_57 :: _x_2 in
-                      let _x_59 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-                      match (_x_59 : shape_doc) with
-                        | { root = root_5; defs = defs_1 } -> (let _x_60 = 19 in
-                          let _x_61 = _x_60, _x_2 in
-                          let _x_62 = "strategy" in
-                          let _x_63 = _x_62, root_4 in
-                          let _x_64 = _x_63 :: _x_2 in
-                          let _x_65 = "scope" in
-                          let _x_66 = _x_65, _x_56 in
-                          let _x_67 = "finalizer" in
-                          let _x_68 = _x_67, root_5 in
-                          let _x_69 = _x_68 :: _x_2 in
-                          let _x_70 = _x_66 :: _x_69 in
-                          let _x_71 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc in
-                          match (_x_71 : shape_doc) with
-                            | { root = root_6; _ } -> (let _x_72 = "key" in
-                              let _x_73 = _x_72, _x_56 in
-                              let _x_74 = _x_73 :: _x_2 in
-                              let _x_75 = _x_66 :: _x_74 in
-                              let _x_76 = _x_66 :: _x_2 in
-                              let _x_77 = "parent" in
-                              let _x_78 = _x_77, _x_56 in
-                              let _x_79 = Shape_option root_6 in
-                              let _x_80 = _x_77, _x_79 in
-                              let _x_81 = _x_80 :: _x_2 in
-                              let _x_82 = Shape_list _x_56 in
-                              let _x_83 = Shape_list _x_82 in
-                              let _x_84 = _x_2 @ _x_2 in
-                              let _x_85 = store_runner_gen_exit_c_shape_doc in
-                              match (_x_85 : shape_doc) with
-                                | { root = root_7; defs = defs_2 } -> (let _x_86 = 3 in
-                                  let _x_87 = _x_86, _x_15 in
-                                  let _x_88 = 11 in
-                                  let _x_89 = _x_88, _x_27 in
-                                  let _x_90 = 14 in
-                                  let _x_91 = _x_90, _x_45 in
-                                  let _x_92 = "waiter" in
-                                  let _x_93 = _x_92, root_3 in
-                                  let _x_94 = _x_93 :: _x_58 in
-                                  let _x_95 = _x_44 :: _x_94 in
-                                  let _x_96 = 21 in
-                                  let _x_97 = _x_96, _x_64 in
-                                  let _x_98 = 27 in
-                                  let _x_99 = "layer" in
-                                  let _x_100 = Shape_pair (_x_82, _x_83) in
-                                  let _x_101 = _x_99, _x_100 in
-                                  let _x_102 = "memoMap" in
-                                  let _x_103 = _x_102, root_6 in
-                                  let _x_104 = _x_103 :: _x_2 in
-                                  let _x_105 = _x_101 :: _x_104 in
-                                  let _x_106 = _x_98, _x_105 in
-                                  let _x_107 = "_root_.Effect4.Machine.SyncOp" in
-                                  let _x_108 = "refMake" in
-                                  let _x_109 = 0 in
-                                  let _x_110 = store_value_gen_val_c_defs in
-                                  let _x_111 = _x_109, _x_7 in
-                                  let _x_112 = _x_108, _x_111 in
-                                  let _x_113 = "refGet" in
-                                  let _x_114 = 1 in
-                                  let _x_115 = _x_114, _x_10 in
-                                  let _x_116 = _x_113, _x_115 in
-                                  let _x_117 = "refSet" in
-                                  let _x_118 = _x_117, _x_16 in
-                                  let _x_119 = "refGetAndSet" in
-                                  let _x_120 = _x_119, _x_87 in
-                                  let _x_121 = "refSetAndGet" in
-                                  let _x_122 = 4 in
-                                  let _x_123 = _x_122, _x_15 in
-                                  let _x_124 = _x_121, _x_123 in
-                                  let _x_125 = "refUpdate" in
-                                  let _x_126 = store_program_gen_term_c_defs in
-                                  let _x_127 = _x_125, _x_28 in
-                                  let _x_128 = "refGetAndUpdate" in
-                                  let _x_129 = _x_128, _x_30 in
-                                  let _x_130 = "refUpdateAndGet" in
-                                  let _x_131 = _x_130, _x_32 in
-                                  let _x_132 = "refUpdateSome" in
-                                  let _x_133 = _x_132, _x_34 in
-                                  let _x_134 = "refGetAndUpdateSome" in
-                                  let _x_135 = _x_134, _x_36 in
-                                  let _x_136 = "refUpdateSomeAndGet" in
-                                  let _x_137 = _x_136, _x_38 in
-                                  let _x_138 = "refModify" in
-                                  let _x_139 = _x_138, _x_89 in
-                                  let _x_140 = "refModifySome" in
-                                  let _x_141 = 12 in
-                                  let _x_142 = _x_141, _x_27 in
-                                  let _x_143 = _x_140, _x_142 in
-                                  let _x_144 = "deferredMake" in
-                                  let _x_145 = _x_144, _x_41 in
-                                  let _x_146 = "deferredIsDone" in
-                                  let _x_147 = _x_146, _x_91 in
-                                  let _x_148 = "deferredPoll" in
-                                  let _x_149 = 15 in
-                                  let _x_150 = _x_149, _x_45 in
-                                  let _x_151 = _x_148, _x_150 in
-                                  let _x_152 = "deferredCompleteWith" in
-                                  let _x_153 = 16 in
-                                  let _x_154 = _x_153, _x_49 in
-                                  let _x_155 = _x_152, _x_154 in
-                                  let _x_156 = "deferredInterruptWith" in
-                                  let _x_157 = 17 in
-                                  let _x_158 = _x_157, _x_53 in
-                                  let _x_159 = _x_156, _x_158 in
-                                  let _x_160 = "deferredAwaitCleanup" in
-                                  let _x_161 = 18 in
-                                  let _x_162 = _x_161, _x_95 in
-                                  let _x_163 = _x_160, _x_162 in
-                                  let _x_164 = "clockNow" in
-                                  let _x_165 = _x_164, _x_61 in
-                                  let _x_166 = "sleepCancel" in
-                                  let _x_167 = 20 in
-                                  let _x_168 = _x_167, _x_94 in
-                                  let _x_169 = _x_166, _x_168 in
-                                  let _x_170 = "scopeMake" in
-                                  let _x_171 = _x_170, _x_97 in
-                                  let _x_172 = "scopeAdd" in
-                                  let _x_173 = 22 in
-                                  let _x_174 = _x_173, _x_70 in
-                                  let _x_175 = _x_172, _x_174 in
-                                  let _x_176 = "scopeRemove" in
-                                  let _x_177 = 23 in
-                                  let _x_178 = _x_177, _x_75 in
-                                  let _x_179 = _x_176, _x_178 in
-                                  let _x_180 = "scopeIsClosed" in
-                                  let _x_181 = 24 in
-                                  let _x_182 = _x_181, _x_76 in
-                                  let _x_183 = _x_180, _x_182 in
-                                  let _x_184 = "scopeFork" in
-                                  let _x_185 = 25 in
-                                  let _x_186 = _x_78 :: _x_64 in
-                                  let _x_187 = _x_185, _x_186 in
-                                  let _x_188 = _x_184, _x_187 in
-                                  let _x_189 = "memoFork" in
-                                  let _x_190 = 26 in
-                                  let _x_191 = _x_190, _x_81 in
-                                  let _x_192 = _x_189, _x_191 in
-                                  let _x_193 = "memoGet" in
-                                  let _x_194 = _x_193, _x_106 in
-                                  let _x_195 = "memoBuild" in
-                                  let _x_196 = 28 in
-                                  let _x_197 = _x_196, _x_105 in
-                                  let _x_198 = _x_195, _x_197 in
-                                  let _x_199 = "memoComplete" in
-                                  let _x_200 = 29 in
-                                  let _x_201 = "exit" in
-                                  let _x_202 = _x_201, root_7 in
-                                  let _x_203 = _x_202 :: _x_2 in
-                                  let _x_204 = _x_103 :: _x_203 in
-                                  let _x_205 = _x_101 :: _x_204 in
-                                  let _x_206 = _x_200, _x_205 in
-                                  let _x_207 = _x_199, _x_206 in
-                                  let _x_208 = "memoRelease" in
-                                  let _x_209 = 30 in
-                                  let _x_210 = _x_209, _x_105 in
-                                  let _x_211 = _x_208, _x_210 in
-                                  let _x_212 = _x_211 :: _x_2 in
-                                  let _x_213 = _x_207 :: _x_212 in
-                                  let _x_214 = _x_198 :: _x_213 in
-                                  let _x_215 = _x_194 :: _x_214 in
-                                  let _x_216 = _x_192 :: _x_215 in
-                                  let _x_217 = _x_188 :: _x_216 in
-                                  let _x_218 = _x_183 :: _x_217 in
-                                  let _x_219 = _x_179 :: _x_218 in
-                                  let _x_220 = _x_175 :: _x_219 in
-                                  let _x_221 = _x_171 :: _x_220 in
-                                  let _x_222 = _x_169 :: _x_221 in
-                                  let _x_223 = _x_165 :: _x_222 in
-                                  let _x_224 = _x_163 :: _x_223 in
-                                  let _x_225 = _x_159 :: _x_224 in
-                                  let _x_226 = _x_155 :: _x_225 in
-                                  let _x_227 = _x_151 :: _x_226 in
-                                  let _x_228 = _x_147 :: _x_227 in
-                                  let _x_229 = _x_145 :: _x_228 in
-                                  let _x_230 = _x_143 :: _x_229 in
-                                  let _x_231 = _x_139 :: _x_230 in
-                                  let _x_232 = _x_137 :: _x_231 in
-                                  let _x_233 = _x_135 :: _x_232 in
-                                  let _x_234 = _x_133 :: _x_233 in
-                                  let _x_235 = _x_131 :: _x_234 in
-                                  let _x_236 = _x_129 :: _x_235 in
-                                  let _x_237 = _x_127 :: _x_236 in
-                                  let _x_238 = _x_124 :: _x_237 in
-                                  let _x_239 = _x_120 :: _x_238 in
-                                  let _x_240 = _x_118 :: _x_239 in
-                                  let _x_241 = _x_116 :: _x_240 in
-                                  let _x_242 = _x_112 :: _x_241 in
-                                  let _x_243 = Shape_sum (_x_107, _x_242) in
-                                  let _x_244 = _x_110 @ _x_2 in
-                                  let _x_245 = _x_244 @ _x_126 in
-                                  let _x_246 = _x_245 @ _x_110 in
-                                  let _x_247 = _x_246 @ _x_2 in
-                                  let _x_248 = _x_247 @ defs in
-                                  let _x_249 = _x_248 @ _x_2 in
-                                  let _x_250 = _x_249 @ _x_2 in
-                                  let _x_251 = _x_250 @ _x_2 in
-                                  let _x_252 = _x_251 @ defs_1 in
-                                  let _x_253 = _x_252 @ _x_2 in
-                                  let _x_254 = _x_253 @ _x_84 in
-                                  let _x_255 = _x_254 @ _x_2 in
-                                  let _x_256 = _x_255 @ defs_2 in
-                                  ({ root = _x_243; defs = _x_256 } : shape_doc)))))))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_RaceNameC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_race_name_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Machine.RaceName" in
-  let _x_2 = "empty" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "successThenSecond" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = "failThenSuccess" in
-  let _x_12 = 2 in
-  let _x_13 = _x_12, _x_4 in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = "failThenFail" in
-  let _x_16 = 3 in
-  let _x_17 = _x_16, _x_4 in
-  let _x_18 = _x_15, _x_17 in
-  let _x_19 = "parkOnly" in
-  let _x_20 = 4 in
-  let _x_21 = _x_20, _x_4 in
-  let _x_22 = _x_19, _x_21 in
-  let _x_23 = "parkThenSuccess" in
-  let _x_24 = 5 in
-  let _x_25 = _x_24, _x_4 in
-  let _x_26 = _x_23, _x_25 in
-  let _x_27 = _x_26 :: _x_4 in
-  let _x_28 = _x_22 :: _x_27 in
-  let _x_29 = _x_18 :: _x_28 in
-  let _x_30 = _x_14 :: _x_29 in
-  let _x_31 = _x_10 :: _x_30 in
-  let _x_32 = _x_6 :: _x_31 in
-  let _x_33 = Shape_sum (_x_1, _x_32) in
-  ({ root = _x_33; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ProgNameC.T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape : Effect4.Store.Shape *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_t_95_root_95__46_effect4_46_machine_46_prog_name_shape : shape =
-  let _x_1 = store_runner_gen_cause_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; _ } -> (let _x_3 = "v" in
-          let _x_4 = "Val" in
-          let _x_5 = Shape_named _x_4 in
-          let _x_6 = _x_3, _x_5 in
-          let _x_7 = [] in
-          let _x_8 = _x_6 :: _x_7 in
-          let _x_9 = "cause" in
-          let _x_10 = _x_9, root in
-          let _x_11 = _x_10 :: _x_7 in
-          let _x_12 = "op" in
-          let _x_13 = _x_12, root_1 in
-          let _x_14 = _x_13 :: _x_7 in
-          let _x_15 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
-          match (_x_15 : shape_doc) with
-            | { root = root_2; _ } -> (let _x_16 = "priority" in
-              let _x_17 = Shape_nat in
-              let _x_18 = _x_16, _x_17 in
-              let _x_19 = _x_18 :: _x_7 in
-              let _x_20 = "slot" in
-              let _x_21 = _x_20, _x_17 in
-              let _x_22 = _x_21 :: _x_7 in
-              let _x_23 = 5 in
-              let _x_24 = "cell" in
-              let _x_25 = _x_24, root_2 in
-              let _x_26 = _x_25 :: _x_7 in
-              let _x_27 = _x_23, _x_26 in
-              let _x_28 = store_api_gen_fiber_id_c_shape_doc in
-              match (_x_28 : shape_doc) with
-                | { root = root_3; _ } -> (let _x_29 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-                  match (_x_29 : shape_doc) with
-                    | { root = root_4; _ } -> (let _x_30 = store_runner_gen_exit_c_shape_doc in
-                      match (_x_30 : shape_doc) with
-                        | { root = root_5; _ } -> (let _x_31 = "_root_.Effect4.Machine.ProgName" in
-                          let _x_32 = "body" in
-                          let _x_33 = Shape_named _x_31 in
-                          let _x_34 = _x_32, _x_33 in
-                          let _x_35 = "targets" in
-                          let _x_36 = Shape_list root_3 in
-                          let _x_37 = _x_35, _x_36 in
-                          let _x_38 = _x_37 :: _x_7 in
-                          let _x_39 = "exit" in
-                          let _x_40 = _x_39, root_5 in
-                          let _x_41 = _x_40 :: _x_7 in
-                          let _x_42 = "first" in
-                          let _x_43 = _x_42, _x_33 in
-                          let _x_44 = store_program_gen_fork_options_c_shape_doc in
-                          match (_x_44 : shape_doc) with
-                            | { root = root_6; _ } -> (let _x_45 = store_program_gen_observer_mode_c_shape_doc in
-                              match (_x_45 : shape_doc) with
-                                | { root = root_7; _ } -> (let _x_46 = "finalizerInterruptible" in
-                                  let _x_47 = Shape_bool in
-                                  let _x_48 = _x_46, _x_47 in
-                                  let _x_49 = _x_48 :: _x_7 in
-                                  let _x_50 = "second" in
-                                  let _x_51 = _x_50, _x_33 in
-                                  let _x_52 = _x_51 :: _x_7 in
-                                  let _x_53 = "child" in
-                                  let _x_54 = _x_53, _x_33 in
-                                  let _x_55 = "options" in
-                                  let _x_56 = _x_55, root_6 in
-                                  let _x_57 = "mode" in
-                                  let _x_58 = _x_57, root_7 in
-                                  let _x_59 = _x_58 :: _x_7 in
-                                  let _x_60 = _x_56 :: _x_59 in
-                                  let _x_61 = _x_54 :: _x_60 in
-                                  let _x_62 = _x_56 :: _x_7 in
-                                  let _x_63 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_race_name_c_shape_doc in
-                                  match (_x_63 : shape_doc) with
-                                    | { root = root_8; _ } -> (let _x_64 = _x_34 :: _x_26 in
-                                      let _x_65 = "fin" in
-                                      let _x_66 = _x_65, root_4 in
-                                      let _x_67 = _x_66 :: _x_41 in
-                                      let _x_68 = "scope" in
-                                      let _x_69 = _x_68, _x_17 in
-                                      let _x_70 = _x_69 :: _x_7 in
-                                      let _x_71 = _x_56 :: _x_70 in
-                                      let _x_72 = _x_66 :: _x_49 in
-                                      let _x_73 = _x_34 :: _x_72 in
-                                      let _x_74 = "race" in
-                                      let _x_75 = _x_74, root_8 in
-                                      let _x_76 = _x_75 :: _x_7 in
-                                      let _x_77 = store_program_gen_finalizer_strategy_c_shape_doc in
-                                      match (_x_77 : shape_doc) with
-                                        | { root = root_9; _ } -> (let _x_78 = 4 in
-                                          let _x_79 = _x_78, _x_22 in
-                                          let _x_80 = 6 in
-                                          let _x_81 = _x_80, _x_64 in
-                                          let _x_82 = 15 in
-                                          let _x_83 = _x_54 :: _x_62 in
-                                          let _x_84 = _x_82, _x_83 in
-                                          let _x_85 = 9 in
-                                          let _x_86 = _x_85, _x_38 in
-                                          let _x_87 = "target" in
-                                          let _x_88 = _x_87, root_3 in
-                                          let _x_89 = _x_88 :: _x_70 in
-                                          let _x_90 = _x_34 :: _x_7 in
-                                          let _x_91 = "value" in
-                                          let _x_92 = 0 in
-                                          let _x_93 = _x_92, _x_8 in
-                                          let _x_94 = _x_91, _x_93 in
-                                          let _x_95 = "failCause" in
-                                          let _x_96 = 1 in
-                                          let _x_97 = _x_96, _x_11 in
-                                          let _x_98 = _x_95, _x_97 in
-                                          let _x_99 = "syncOp" in
-                                          let _x_100 = 2 in
-                                          let _x_101 = _x_100, _x_14 in
-                                          let _x_102 = _x_99, _x_101 in
-                                          let _x_103 = "yieldNow" in
-                                          let _x_104 = 3 in
-                                          let _x_105 = _x_104, _x_19 in
-                                          let _x_106 = _x_103, _x_105 in
-                                          let _x_107 = "park" in
-                                          let _x_108 = _x_107, _x_79 in
-                                          let _x_109 = "awaitDeferred" in
-                                          let _x_110 = _x_109, _x_27 in
-                                          let _x_111 = "intoDeferred" in
-                                          let _x_112 = _x_111, _x_81 in
-                                          let _x_113 = "intoBody" in
-                                          let _x_114 = 7 in
-                                          let _x_115 = _x_114, _x_64 in
-                                          let _x_116 = _x_113, _x_115 in
-                                          let _x_117 = "maskedPark" in
-                                          let _x_118 = 8 in
-                                          let _x_119 = _x_118, _x_22 in
-                                          let _x_120 = _x_117, _x_119 in
-                                          let _x_121 = "awaitFibers" in
-                                          let _x_122 = _x_121, _x_86 in
-                                          let _x_123 = "finalizerOf" in
-                                          let _x_124 = 10 in
-                                          let _x_125 = _x_124, _x_67 in
-                                          let _x_126 = _x_123, _x_125 in
-                                          let _x_127 = "interruptDeferred" in
-                                          let _x_128 = 11 in
-                                          let _x_129 = _x_128, _x_26 in
-                                          let _x_130 = _x_127, _x_129 in
-                                          let _x_131 = "onExitOf" in
-                                          let _x_132 = 12 in
-                                          let _x_133 = _x_132, _x_73 in
-                                          let _x_134 = _x_131, _x_133 in
-                                          let _x_135 = "seqOf" in
-                                          let _x_136 = 13 in
-                                          let _x_137 = _x_43 :: _x_52 in
-                                          let _x_138 = _x_136, _x_137 in
-                                          let _x_139 = _x_135, _x_138 in
-                                          let _x_140 = "forkThen" in
-                                          let _x_141 = 14 in
-                                          let _x_142 = _x_141, _x_61 in
-                                          let _x_143 = _x_140, _x_142 in
-                                          let _x_144 = "forkOnly" in
-                                          let _x_145 = _x_144, _x_84 in
-                                          let _x_146 = "forkInScope" in
-                                          let _x_147 = 16 in
-                                          let _x_148 = _x_54 :: _x_71 in
-                                          let _x_149 = _x_147, _x_148 in
-                                          let _x_150 = _x_146, _x_149 in
-                                          let _x_151 = "runInScope" in
-                                          let _x_152 = 17 in
-                                          let _x_153 = _x_152, _x_89 in
-                                          let _x_154 = _x_151, _x_153 in
-                                          let _x_155 = "forkScopedOf" in
-                                          let _x_156 = 18 in
-                                          let _x_157 = _x_156, _x_83 in
-                                          let _x_158 = _x_155, _x_157 in
-                                          let _x_159 = "raceOf" in
-                                          let _x_160 = 19 in
-                                          let _x_161 = _x_160, _x_76 in
-                                          let _x_162 = _x_159, _x_161 in
-                                          let _x_163 = "closeScopeOf" in
-                                          let _x_164 = 20 in
-                                          let _x_165 = _x_69 :: _x_41 in
-                                          let _x_166 = _x_164, _x_165 in
-                                          let _x_167 = _x_163, _x_166 in
-                                          let _x_168 = "awaitAllNew" in
-                                          let _x_169 = 21 in
-                                          let _x_170 = _x_169, _x_90 in
-                                          let _x_171 = _x_168, _x_170 in
-                                          let _x_172 = "interruptFibers" in
-                                          let _x_173 = 22 in
-                                          let _x_174 = _x_173, _x_38 in
-                                          let _x_175 = _x_172, _x_174 in
-                                          let _x_176 = "cancelRace" in
-                                          let _x_177 = 23 in
-                                          let _x_178 = _x_74, _x_17 in
-                                          let _x_179 = _x_178 :: _x_7 in
-                                          let _x_180 = _x_177, _x_179 in
-                                          let _x_181 = _x_176, _x_180 in
-                                          let _x_182 = "joinFiber" in
-                                          let _x_183 = 24 in
-                                          let _x_184 = _x_88 :: _x_59 in
-                                          let _x_185 = _x_183, _x_184 in
-                                          let _x_186 = _x_182, _x_185 in
-                                          let _x_187 = "closeWalk" in
-                                          let _x_188 = 25 in
-                                          let _x_189 = "strategy" in
-                                          let _x_190 = _x_189, root_9 in
-                                          let _x_191 = "order" in
-                                          let _x_192 = Shape_list root_4 in
-                                          let _x_193 = _x_191, _x_192 in
-                                          let _x_194 = _x_193 :: _x_41 in
-                                          let _x_195 = _x_190 :: _x_194 in
-                                          let _x_196 = _x_188, _x_195 in
-                                          let _x_197 = _x_187, _x_196 in
-                                          let _x_198 = _x_197 :: _x_7 in
-                                          let _x_199 = _x_186 :: _x_198 in
-                                          let _x_200 = _x_181 :: _x_199 in
-                                          let _x_201 = _x_175 :: _x_200 in
-                                          let _x_202 = _x_171 :: _x_201 in
-                                          let _x_203 = _x_167 :: _x_202 in
-                                          let _x_204 = _x_162 :: _x_203 in
-                                          let _x_205 = _x_158 :: _x_204 in
-                                          let _x_206 = _x_154 :: _x_205 in
-                                          let _x_207 = _x_150 :: _x_206 in
-                                          let _x_208 = _x_145 :: _x_207 in
-                                          let _x_209 = _x_143 :: _x_208 in
-                                          let _x_210 = _x_139 :: _x_209 in
-                                          let _x_211 = _x_134 :: _x_210 in
-                                          let _x_212 = _x_130 :: _x_211 in
-                                          let _x_213 = _x_126 :: _x_212 in
-                                          let _x_214 = _x_122 :: _x_213 in
-                                          let _x_215 = _x_120 :: _x_214 in
-                                          let _x_216 = _x_116 :: _x_215 in
-                                          let _x_217 = _x_112 :: _x_216 in
-                                          let _x_218 = _x_110 :: _x_217 in
-                                          let _x_219 = _x_108 :: _x_218 in
-                                          let _x_220 = _x_106 :: _x_219 in
-                                          let _x_221 = _x_102 :: _x_220 in
-                                          let _x_222 = _x_98 :: _x_221 in
-                                          let _x_223 = _x_94 :: _x_222 in
-                                          Shape_sum (_x_31, _x_223)))))))))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ProgNameC.defs : List (Prod String Effect4.Store.Shape) *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_defs : (string * shape) list =
-  let _x_1 = store_runner_gen_cause_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { defs = defs; _ } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { defs = defs_1; _ } -> (let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
-          match (_x_3 : shape_doc) with
-            | _ -> (let _x_4 = [] in
-              let _x_5 = store_api_gen_fiber_id_c_shape_doc in
-              match (_x_5 : shape_doc) with
-                | _ -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-                  match (_x_6 : shape_doc) with
-                    | { defs = defs_2; _ } -> (let _x_7 = store_runner_gen_exit_c_shape_doc in
-                      match (_x_7 : shape_doc) with
-                        | { defs = defs_3; _ } -> (let _x_8 = store_program_gen_fork_options_c_shape_doc in
-                          match (_x_8 : shape_doc) with
-                            | { defs = defs_4; _ } -> (let _x_9 = store_program_gen_observer_mode_c_shape_doc in
-                              match (_x_9 : shape_doc) with
-                                | _ -> (let _x_10 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_race_name_c_shape_doc in
-                                  match (_x_10 : shape_doc) with
-                                    | _ -> (let _x_11 = store_program_gen_finalizer_strategy_c_shape_doc in
-                                      match (_x_11 : shape_doc) with
-                                        | _ -> (let _x_12 = store_value_gen_val_c_defs in
-                                          let _x_13 = _x_12 @ defs in
-                                          let _x_14 = _x_13 @ defs_1 in
-                                          let _x_15 = _x_14 @ _x_4 in
-                                          let _x_16 = _x_15 @ _x_4 in
-                                          let _x_17 = _x_16 @ _x_4 in
-                                          let _x_18 = "_root_.Effect4.Machine.ProgName" in
-                                          let _x_19 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_t_95_root_95__46_effect4_46_machine_46_prog_name_shape in
-                                          let _x_20 = _x_18, _x_19 in
-                                          let _x_21 = _x_17 @ defs_2 in
-                                          let _x_22 = _x_21 @ defs_3 in
-                                          let _x_23 = _x_22 @ _x_4 in
-                                          let _x_24 = _x_23 @ defs_4 in
-                                          let _x_25 = _x_24 @ _x_4 in
-                                          let _x_26 = _x_25 @ _x_4 in
-                                          let _x_27 = _x_26 @ _x_4 in
-                                          let _x_28 = _x_27 @ _x_4 in
-                                          let _x_29 = _x_28 @ defs_2 in
-                                          _x_20 :: _x_29))))))))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_NameC.T_95_root_95__46_Effect4_46_Machine_46_NameShape : Effect4.Store.Shape *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_name_c_t_95_root_95__46_effect4_46_machine_46_name_shape : shape =
-  let _x_1 = store_runner_gen_exit_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = store_program_gen_observer_mode_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; _ } -> (let _x_3 = [] in
-          let _x_4 = "exit" in
-          let _x_5 = _x_4, root in
-          let _x_6 = _x_5 :: _x_3 in
-          let _x_7 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
-          match (_x_7 : shape_doc) with
-            | { root = root_2; _ } -> (let _x_8 = "next" in
-              let _x_9 = "_root_.Effect4.Machine.ProgName" in
-              let _x_10 = Shape_named _x_9 in
-              let _x_11 = _x_8, _x_10 in
-              let _x_12 = _x_11 :: _x_3 in
-              let _x_13 = "mode" in
-              let _x_14 = _x_13, root_1 in
-              let _x_15 = _x_14 :: _x_3 in
-              let _x_16 = 4 in
-              let _x_17 = "cell" in
-              let _x_18 = _x_17, root_2 in
-              let _x_19 = _x_18 :: _x_3 in
-              let _x_20 = _x_16, _x_19 in
-              let _x_21 = 5 in
-              let _x_22 = _x_21, _x_19 in
-              let _x_23 = "value" in
-              let _x_24 = "Val" in
-              let _x_25 = Shape_named _x_24 in
-              let _x_26 = _x_23, _x_25 in
-              let _x_27 = _x_26 :: _x_3 in
-              let _x_28 = store_clock_canonical_shape_doc in
-              match (_x_28 : shape_doc) with
-                | { root = root_3; _ } -> (let _x_29 = 7 in
-                  let _x_30 = _x_29, _x_3 in
-                  let _x_31 = "body" in
-                  let _x_32 = _x_31, _x_10 in
-                  let _x_33 = _x_32 :: _x_3 in
-                  let _x_34 = "millis" in
-                  let _x_35 = _x_34, root_3 in
-                  let _x_36 = _x_35 :: _x_3 in
-                  let _x_37 = 12 in
-                  let _x_38 = _x_37, _x_3 in
-                  let _x_39 = "slot" in
-                  let _x_40 = Shape_nat in
-                  let _x_41 = _x_39, _x_40 in
-                  let _x_42 = _x_41 :: _x_3 in
-                  let _x_43 = 14 in
-                  let _x_44 = _x_43, _x_3 in
-                  let _x_45 = store_api_gen_fiber_id_c_shape_doc in
-                  match (_x_45 : shape_doc) with
-                    | { root = root_4; _ } -> (let _x_46 = 15 in
-                      let _x_47 = _x_46, _x_3 in
-                      let _x_48 = store_runner_gen_cause_c_shape_doc in
-                      match (_x_48 : shape_doc) with
-                        | { root = root_5; _ } -> (let _x_49 = "race" in
-                          let _x_50 = _x_49, _x_40 in
-                          let _x_51 = _x_50 :: _x_3 in
-                          let _x_52 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-                          match (_x_52 : shape_doc) with
-                            | { root = root_6; _ } -> (let _x_53 = "token" in
-                              let _x_54 = _x_53, _x_40 in
-                              let _x_55 = _x_54 :: _x_3 in
-                              let _x_56 = store_runner_gen_reason_c_shape_doc in
-                              match (_x_56 : shape_doc) with
-                                | { root = root_7; _ } -> (let _x_57 = 0 in
-                                  let _x_58 = _x_57, _x_6 in
-                                  let _x_59 = 9 in
-                                  let _x_60 = _x_59, _x_19 in
-                                  let _x_61 = "cause" in
-                                  let _x_62 = _x_61, root_5 in
-                                  let _x_63 = _x_62 :: _x_3 in
-                                  let _x_64 = "fin" in
-                                  let _x_65 = _x_64, root_6 in
-                                  let _x_66 = "_root_.Effect4.Machine.Name" in
-                                  let _x_67 = "restore" in
-                                  let _x_68 = _x_67, _x_58 in
-                                  let _x_69 = "merge" in
-                                  let _x_70 = 1 in
-                                  let _x_71 = _x_70, _x_6 in
-                                  let _x_72 = _x_69, _x_71 in
-                                  let _x_73 = "seq" in
-                                  let _x_74 = 2 in
-                                  let _x_75 = _x_74, _x_12 in
-                                  let _x_76 = _x_73, _x_75 in
-                                  let _x_77 = "joinOn" in
-                                  let _x_78 = 3 in
-                                  let _x_79 = _x_78, _x_15 in
-                                  let _x_80 = _x_77, _x_79 in
-                                  let _x_81 = "interruptWith" in
-                                  let _x_82 = _x_81, _x_20 in
-                                  let _x_83 = "doneInto" in
-                                  let _x_84 = _x_83, _x_22 in
-                                  let _x_85 = "constant" in
-                                  let _x_86 = 6 in
-                                  let _x_87 = _x_86, _x_27 in
-                                  let _x_88 = _x_85, _x_87 in
-                                  let _x_89 = "exitOfValue" in
-                                  let _x_90 = _x_89, _x_30 in
-                                  let _x_91 = "snapshotThen" in
-                                  let _x_92 = 8 in
-                                  let _x_93 = _x_92, _x_33 in
-                                  let _x_94 = _x_91, _x_93 in
-                                  let _x_95 = "registerAwait" in
-                                  let _x_96 = _x_95, _x_60 in
-                                  let _x_97 = "cancelAwait" in
-                                  let _x_98 = 10 in
-                                  let _x_99 = _x_98, _x_19 in
-                                  let _x_100 = _x_97, _x_99 in
-                                  let _x_101 = "registerSleep" in
-                                  let _x_102 = 11 in
-                                  let _x_103 = _x_102, _x_36 in
-                                  let _x_104 = _x_101, _x_103 in
-                                  let _x_105 = "cancelSleep" in
-                                  let _x_106 = _x_105, _x_38 in
-                                  let _x_107 = "externalRegister" in
-                                  let _x_108 = 13 in
-                                  let _x_109 = _x_108, _x_42 in
-                                  let _x_110 = _x_107, _x_109 in
-                                  let _x_111 = "abortController" in
-                                  let _x_112 = _x_111, _x_44 in
-                                  let _x_113 = "cancelPark" in
-                                  let _x_114 = _x_113, _x_47 in
-                                  let _x_115 = "cancelRace" in
-                                  let _x_116 = 16 in
-                                  let _x_117 = _x_116, _x_51 in
-                                  let _x_118 = _x_115, _x_117 in
-                                  let _x_119 = "withWaiter" in
-                                  let _x_120 = 17 in
-                                  let _x_121 = "base" in
-                                  let _x_122 = Shape_named _x_66 in
-                                  let _x_123 = _x_121, _x_122 in
-                                  let _x_124 = "waiter" in
-                                  let _x_125 = _x_124, root_4 in
-                                  let _x_126 = _x_125 :: _x_55 in
-                                  let _x_127 = _x_123 :: _x_126 in
-                                  let _x_128 = _x_120, _x_127 in
-                                  let _x_129 = _x_119, _x_128 in
-                                  let _x_130 = "reFail" in
-                                  let _x_131 = 18 in
-                                  let _x_132 = _x_131, _x_63 in
-                                  let _x_133 = _x_130, _x_132 in
-                                  let _x_134 = "finalizerName" in
-                                  let _x_135 = 19 in
-                                  let _x_136 = _x_65 :: _x_3 in
-                                  let _x_137 = _x_135, _x_136 in
-                                  let _x_138 = _x_134, _x_137 in
-                                  let _x_139 = "closeSeq" in
-                                  let _x_140 = 20 in
-                                  let _x_141 = "remaining" in
-                                  let _x_142 = Shape_list root_6 in
-                                  let _x_143 = _x_141, _x_142 in
-                                  let _x_144 = "captured" in
-                                  let _x_145 = Shape_list root_7 in
-                                  let _x_146 = _x_144, _x_145 in
-                                  let _x_147 = _x_146 :: _x_3 in
-                                  let _x_148 = _x_5 :: _x_147 in
-                                  let _x_149 = _x_143 :: _x_148 in
-                                  let _x_150 = _x_140, _x_149 in
-                                  let _x_151 = _x_139, _x_150 in
-                                  let _x_152 = "closeParDone" in
-                                  let _x_153 = 21 in
-                                  let _x_154 = _x_153, _x_3 in
-                                  let _x_155 = _x_152, _x_154 in
-                                  let _x_156 = "closeIfLast" in
-                                  let _x_157 = 22 in
-                                  let _x_158 = _x_157, _x_6 in
-                                  let _x_159 = _x_156, _x_158 in
-                                  let _x_160 = _x_159 :: _x_3 in
-                                  let _x_161 = _x_155 :: _x_160 in
-                                  let _x_162 = _x_151 :: _x_161 in
-                                  let _x_163 = _x_138 :: _x_162 in
-                                  let _x_164 = _x_133 :: _x_163 in
-                                  let _x_165 = _x_129 :: _x_164 in
-                                  let _x_166 = _x_118 :: _x_165 in
-                                  let _x_167 = _x_114 :: _x_166 in
-                                  let _x_168 = _x_112 :: _x_167 in
-                                  let _x_169 = _x_110 :: _x_168 in
-                                  let _x_170 = _x_106 :: _x_169 in
-                                  let _x_171 = _x_104 :: _x_170 in
-                                  let _x_172 = _x_100 :: _x_171 in
-                                  let _x_173 = _x_96 :: _x_172 in
-                                  let _x_174 = _x_94 :: _x_173 in
-                                  let _x_175 = _x_90 :: _x_174 in
-                                  let _x_176 = _x_88 :: _x_175 in
-                                  let _x_177 = _x_84 :: _x_176 in
-                                  let _x_178 = _x_82 :: _x_177 in
-                                  let _x_179 = _x_80 :: _x_178 in
-                                  let _x_180 = _x_76 :: _x_179 in
-                                  let _x_181 = _x_72 :: _x_180 in
-                                  let _x_182 = _x_68 :: _x_181 in
-                                  Shape_sum (_x_66, _x_182)))))))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_NameC.defs : List (Prod String Effect4.Store.Shape) *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_name_c_defs : (string * shape) list =
-  let _x_1 = store_runner_gen_exit_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { defs = defs; _ } -> (let _x_2 = store_program_gen_observer_mode_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | _ -> (let _x_3 = [] in
-          let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
-          match (_x_4 : shape_doc) with
-            | _ -> (let _x_5 = store_clock_canonical_shape_doc in
-              match (_x_5 : shape_doc) with
-                | { defs = defs_1; _ } -> (let _x_6 = store_api_gen_fiber_id_c_shape_doc in
-                  match (_x_6 : shape_doc) with
-                    | _ -> (let _x_7 = store_runner_gen_cause_c_shape_doc in
-                      match (_x_7 : shape_doc) with
-                        | { defs = defs_2; _ } -> (let _x_8 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-                          match (_x_8 : shape_doc) with
-                            | { defs = defs_3; _ } -> (let _x_9 = store_runner_gen_reason_c_shape_doc in
-                              match (_x_9 : shape_doc) with
-                                | { defs = defs_4; _ } -> (let _x_10 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_prog_name_c_defs in
-                                  let _x_11 = defs @ _x_10 in
-                                  let _x_12 = _x_11 @ _x_3 in
-                                  let _x_13 = _x_12 @ _x_3 in
-                                  let _x_14 = store_value_gen_val_c_defs in
-                                  let _x_15 = _x_13 @ _x_14 in
-                                  let _x_16 = _x_15 @ defs_1 in
-                                  let _x_17 = _x_16 @ _x_3 in
-                                  let _x_18 = _x_17 @ _x_3 in
-                                  let _x_19 = _x_18 @ defs_2 in
-                                  let _x_20 = _x_19 @ defs_3 in
-                                  let _x_21 = "_root_.Effect4.Machine.Name" in
-                                  let _x_22 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_name_c_t_95_root_95__46_effect4_46_machine_46_name_shape in
-                                  let _x_23 = _x_21, _x_22 in
-                                  let _x_24 = _x_20 @ defs_3 in
-                                  let _x_25 = _x_24 @ defs_4 in
-                                  _x_23 :: _x_25))))))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_EffNameC.T_95_root_95__46_Effect4_46_Program_46_EffNameShape : Effect4.Store.Shape *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_program_46_eff_name_c_t_95_root_95__46_effect4_46_program_46_eff_name_shape : shape =
-  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; _ } -> (let _x_3 = [] in
-          let _x_4 = store_api_gen_fiber_id_c_shape_doc in
-          match (_x_4 : shape_doc) with
-            | { root = root_2; _ } -> (let _x_5 = "i" in
-              let _x_6 = Shape_nat in
-              let _x_7 = _x_5, _x_6 in
-              let _x_8 = store_program_gen_native_op_c_shape_doc in
-              match (_x_8 : shape_doc) with
-                | { root = root_3; _ } -> (let _x_9 = "parent" in
-                  let _x_10 = _x_9, _x_6 in
-                  let _x_11 = "forked" in
-                  let _x_12 = Shape_list root_2 in
-                  let _x_13 = _x_11, _x_12 in
-                  let _x_14 = _x_13 :: _x_3 in
-                  let _x_15 = store_program_gen_service_key_c_shape_doc in
-                  match (_x_15 : shape_doc) with
-                    | { root = root_4; _ } -> (let _x_16 = "q" in
-                      let _x_17 = _x_16, root in
-                      let _x_18 = "memoMap" in
-                      let _x_19 = _x_18, root_1 in
-                      let _x_20 = _x_10 :: _x_14 in
-                      let _x_21 = _x_19 :: _x_20 in
-                      let _x_22 = _x_7 :: _x_21 in
-                      let _x_23 = _x_17 :: _x_22 in
-                      let _x_24 = "origin" in
-                      let _x_25 = Shape_list _x_6 in
-                      let _x_26 = _x_24, _x_25 in
-                      let _x_27 = _x_26 :: _x_3 in
-                      let _x_28 = "p" in
-                      let _x_29 = _x_28, root in
-                      let _x_30 = _x_29 :: _x_3 in
-                      let _x_31 = "key" in
-                      let _x_32 = _x_31, root_4 in
-                      let _x_33 = _x_32 :: _x_3 in
-                      let _x_34 = Shape_option root_4 in
-                      let _x_35 = _x_31, _x_34 in
-                      let _x_36 = _x_35 :: _x_3 in
-                      let _x_37 = 51 in
-                      let _x_38 = _x_37, _x_3 in
-                      let _x_39 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_combine_mode_c_shape_doc in
-                      match (_x_39 : shape_doc) with
-                        | { root = root_5; _ } -> (let _x_40 = _x_19 :: _x_3 in
-                          let _x_41 = _x_17 :: _x_40 in
-                          let _x_42 = store_context_c_shape_doc in
-                          match (_x_42 : shape_doc) with
-                            | { root = root_6; _ } -> (let _x_43 = 53 in
-                              let _x_44 = _x_43, _x_23 in
-                              let _x_45 = "scope" in
-                              let _x_46 = _x_45, _x_6 in
-                              let _x_47 = _x_46 :: _x_3 in
-                              let _x_48 = _x_17 :: _x_47 in
-                              let _x_49 = 54 in
-                              let _x_50 = _x_49, _x_23 in
-                              let _x_51 = 52 in
-                              let _x_52 = _x_51, _x_41 in
-                              let _x_53 = "mode" in
-                              let _x_54 = _x_53, root_5 in
-                              let _x_55 = _x_54 :: _x_3 in
-                              let _x_56 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
-                              match (_x_56 : shape_doc) with
-                                | { root = root_7; _ } -> (let _x_57 = _x_46 :: _x_55 in
-                                  let _x_58 = _x_19 :: _x_57 in
-                                  let _x_59 = _x_17 :: _x_58 in
-                                  let _x_60 = "that" in
-                                  let _x_61 = _x_60, root_6 in
-                                  let _x_62 = _x_61 :: _x_3 in
-                                  let _x_63 = 48 in
-                                  let _x_64 = _x_63, _x_3 in
-                                  let _x_65 = store_runner_gen_exit_c_shape_doc in
-                                  match (_x_65 : shape_doc) with
-                                    | { root = root_8; _ } -> (let _x_66 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_shape_doc in
-                                      match (_x_66 : shape_doc) with
-                                        | { root = root_9; _ } -> (let _x_67 = "cell" in
-                                          let _x_68 = _x_67, root_7 in
-                                          let _x_69 = _x_68 :: _x_3 in
-                                          let _x_70 = 56 in
-                                          let _x_71 = _x_70, _x_30 in
-                                          let _x_72 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_env_46_context_update_c_shape_doc in
-                                          match (_x_72 : shape_doc) with
-                                            | { root = root_10; _ } -> (let _x_73 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_region_c_shape_doc in
-                                              match (_x_73 : shape_doc) with
-                                                | { root = root_11; _ } -> (let _x_74 = 42 in
-                                                  let _x_75 = _x_74, _x_48 in
-                                                  let _x_76 = "layerScope" in
-                                                  let _x_77 = _x_76, _x_6 in
-                                                  let _x_78 = _x_77 :: _x_3 in
-                                                  let _x_79 = 29 in
-                                                  let _x_80 = _x_79, _x_30 in
-                                                  let _x_81 = "request" in
-                                                  let _x_82 = "Val" in
-                                                  let _x_83 = Shape_named _x_82 in
-                                                  let _x_84 = _x_81, _x_83 in
-                                                  let _x_85 = "exit" in
-                                                  let _x_86 = _x_85, root_8 in
-                                                  let _x_87 = "previous" in
-                                                  let _x_88 = _x_87, root_9 in
-                                                  let _x_89 = _x_88 :: _x_3 in
-                                                  let _x_90 = _x_86 :: _x_89 in
-                                                  let _x_91 = _x_29 :: _x_90 in
-                                                  let _x_92 = "body" in
-                                                  let _x_93 = _x_92, root_11 in
-                                                  let _x_94 = _x_93 :: _x_3 in
-                                                  let _x_95 = "previousFlag" in
-                                                  let _x_96 = Shape_bool in
-                                                  let _x_97 = _x_95, _x_96 in
-                                                  let _x_98 = _x_97 :: _x_3 in
-                                                  let _x_99 = "v" in
-                                                  let _x_100 = _x_99, _x_83 in
-                                                  let _x_101 = _x_100 :: _x_3 in
-                                                  let _x_102 = "name" in
-                                                  let _x_103 = "_root_.Effect4.Machine.Name" in
-                                                  let _x_104 = Shape_named _x_103 in
-                                                  let _x_105 = _x_102, _x_104 in
-                                                  let _x_106 = _x_105 :: _x_3 in
-                                                  let _x_107 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-                                                  match (_x_107 : shape_doc) with
-                                                    | { root = root_12; _ } -> (let _x_108 = _x_19 :: _x_47 in
-                                                      let _x_109 = 30 in
-                                                      let _x_110 = _x_109, _x_30 in
-                                                      let _x_111 = _x_93 :: _x_98 in
-                                                      let _x_112 = "ctx" in
-                                                      let _x_113 = _x_112, root_9 in
-                                                      let _x_114 = _x_113 :: _x_3 in
-                                                      let _x_115 = _x_29 :: _x_114 in
-                                                      let _x_116 = 39 in
-                                                      let _x_117 = _x_116, _x_69 in
-                                                      let _x_118 = _x_88 :: _x_98 in
-                                                      let _x_119 = 23 in
-                                                      let _x_120 = _x_119, _x_30 in
-                                                      let _x_121 = _x_113 :: _x_47 in
-                                                      let _x_122 = _x_29 :: _x_121 in
-                                                      let _x_123 = "fin" in
-                                                      let _x_124 = _x_123, root_12 in
-                                                      let _x_125 = _x_124 :: _x_3 in
-                                                      let _x_126 = _x_86 :: _x_3 in
-                                                      let _x_127 = _x_113 :: _x_126 in
-                                                      let _x_128 = _x_29 :: _x_127 in
-                                                      let _x_129 = 14 in
-                                                      let _x_130 = _x_129, _x_30 in
-                                                      let _x_131 = _x_29 :: _x_47 in
-                                                      let _x_132 = "bind" in
-                                                      let _x_133 = _x_132, _x_96 in
-                                                      let _x_134 = _x_133 :: _x_3 in
-                                                      let _x_135 = store_runner_gen_cause_c_shape_doc in
-                                                      match (_x_135 : shape_doc) with
-                                                        | { root = root_13; _ } -> (let _x_136 = 45 in
-                                                          let _x_137 = _x_136, _x_41 in
-                                                          let _x_138 = 46 in
-                                                          let _x_139 = _x_138, _x_23 in
-                                                          let _x_140 = 38 in
-                                                          let _x_141 = _x_17 :: _x_108 in
-                                                          let _x_142 = _x_140, _x_141 in
-                                                          let _x_143 = 35 in
-                                                          let _x_144 = _x_143, _x_48 in
-                                                          let _x_145 = "update" in
-                                                          let _x_146 = _x_145, root_10 in
-                                                          let _x_147 = _x_146 :: _x_94 in
-                                                          let _x_148 = _x_29 :: _x_89 in
-                                                          let _x_149 = _x_88 :: _x_47 in
-                                                          let _x_150 = 20 in
-                                                          let _x_151 = _x_150, _x_30 in
-                                                          let _x_152 = 9 in
-                                                          let _x_153 = _x_152, _x_69 in
-                                                          let _x_154 = "token" in
-                                                          let _x_155 = _x_154, _x_6 in
-                                                          let _x_156 = _x_155 :: _x_3 in
-                                                          let _x_157 = "_root_.Effect4.Program.EffName" in
-                                                          let _x_158 = "mergeAllForkOne" in
-                                                          let _x_159 = _x_158, _x_44 in
-                                                          let _x_160 = "mergeAllForkNext" in
-                                                          let _x_161 = _x_160, _x_50 in
-                                                          let _x_162 = "external" in
-                                                          let _x_163 = 55 in
-                                                          let _x_164 = "op" in
-                                                          let _x_165 = _x_164, root_3 in
-                                                          let _x_166 = _x_84 :: _x_27 in
-                                                          let _x_167 = _x_165 :: _x_166 in
-                                                          let _x_168 = _x_163, _x_167 in
-                                                          let _x_169 = _x_162, _x_168 in
-                                                          let _x_170 = "caughtError" in
-                                                          let _x_171 = _x_170, _x_71 in
-                                                          let _x_172 = _x_171 :: _x_3 in
-                                                          let _x_173 = _x_169 :: _x_172 in
-                                                          let _x_174 = _x_161 :: _x_173 in
-                                                          let y_175 = _x_159 :: _x_174 in
-                                                          let _x_176 = "serviceLookup" in
-                                                          let _x_177 = 49 in
-                                                          let _x_178 = _x_177, _x_33 in
-                                                          let _x_179 = _x_176, _x_178 in
-                                                          let _x_180 = "bindService" in
-                                                          let _x_181 = 50 in
-                                                          let _x_182 = _x_181, _x_36 in
-                                                          let _x_183 = _x_180, _x_182 in
-                                                          let _x_184 = "orDie" in
-                                                          let _x_185 = _x_184, _x_38 in
-                                                          let _x_186 = "mergeAllChildren" in
-                                                          let _x_187 = _x_186, _x_52 in
-                                                          let _x_188 = _x_187 :: y_175 in
-                                                          let _x_189 = _x_185 :: _x_188 in
-                                                          let _x_190 = _x_183 :: _x_189 in
-                                                          let y_191 = _x_179 :: _x_190 in
-                                                          let _x_192 = "freshThen" in
-                                                          let _x_193 = _x_192, _x_75 in
-                                                          let _x_194 = "provideThen" in
-                                                          let _x_195 = 43 in
-                                                          let _x_196 = _x_195, _x_59 in
-                                                          let _x_197 = _x_194, _x_196 in
-                                                          let _x_198 = "combineWith" in
-                                                          let _x_199 = 44 in
-                                                          let _x_200 = _x_54 :: _x_62 in
-                                                          let _x_201 = _x_199, _x_200 in
-                                                          let _x_202 = _x_198, _x_201 in
-                                                          let _x_203 = "mergeChildren" in
-                                                          let _x_204 = _x_203, _x_137 in
-                                                          let _x_205 = "mergeForkOne" in
-                                                          let _x_206 = _x_205, _x_139 in
-                                                          let _x_207 = "mergeForkNext" in
-                                                          let _x_208 = 47 in
-                                                          let _x_209 = _x_208, _x_23 in
-                                                          let _x_210 = _x_207, _x_209 in
-                                                          let _x_211 = "mergeContexts" in
-                                                          let _x_212 = _x_211, _x_64 in
-                                                          let _x_213 = _x_212 :: y_191 in
-                                                          let _x_214 = _x_210 :: _x_213 in
-                                                          let _x_215 = _x_206 :: _x_214 in
-                                                          let _x_216 = _x_204 :: _x_215 in
-                                                          let _x_217 = _x_202 :: _x_216 in
-                                                          let _x_218 = _x_197 :: _x_217 in
-                                                          let y_219 = _x_193 :: _x_218 in
-                                                          let _x_220 = "withMemoMapThen" in
-                                                          let _x_221 = _x_220, _x_144 in
-                                                          let _x_222 = "addCurrentMemoMap" in
-                                                          let _x_223 = 36 in
-                                                          let _x_224 = _x_223, _x_40 in
-                                                          let _x_225 = _x_222, _x_224 in
-                                                          let _x_226 = "fromBuildThen" in
-                                                          let _x_227 = 37 in
-                                                          let _x_228 = _x_227, _x_41 in
-                                                          let _x_229 = _x_226, _x_228 in
-                                                          let _x_230 = "memoize" in
-                                                          let _x_231 = _x_230, _x_142 in
-                                                          let _x_232 = "awaitPromise" in
-                                                          let _x_233 = _x_232, _x_117 in
-                                                          let _x_234 = "buildIntoLayerScope" in
-                                                          let _x_235 = 40 in
-                                                          let _x_236 = _x_235, _x_141 in
-                                                          let _x_237 = _x_234, _x_236 in
-                                                          let _x_238 = "thenBuildInto" in
-                                                          let _x_239 = 41 in
-                                                          let _x_240 = _x_19 :: _x_78 in
-                                                          let _x_241 = _x_17 :: _x_240 in
-                                                          let _x_242 = _x_239, _x_241 in
-                                                          let _x_243 = _x_238, _x_242 in
-                                                          let _x_244 = _x_243 :: y_219 in
-                                                          let _x_245 = _x_237 :: _x_244 in
-                                                          let _x_246 = _x_233 :: _x_245 in
-                                                          let _x_247 = _x_231 :: _x_246 in
-                                                          let _x_248 = _x_229 :: _x_247 in
-                                                          let _x_249 = _x_225 :: _x_248 in
-                                                          let y_250 = _x_221 :: _x_249 in
-                                                          let _x_251 = "releaseBody" in
-                                                          let _x_252 = 28 in
-                                                          let _x_253 = _x_252, _x_91 in
-                                                          let _x_254 = _x_251, _x_253 in
-                                                          let _x_255 = "provideLayerWith" in
-                                                          let _x_256 = _x_255, _x_80 in
-                                                          let _x_257 = "provideLayerBody" in
-                                                          let _x_258 = _x_257, _x_110 in
-                                                          let _x_259 = "provideMask" in
-                                                          let _x_260 = 31 in
-                                                          let _x_261 = _x_260, _x_147 in
-                                                          let _x_262 = _x_259, _x_261 in
-                                                          let _x_263 = "updateThen" in
-                                                          let _x_264 = 32 in
-                                                          let _x_265 = _x_146 :: _x_111 in
-                                                          let _x_266 = _x_264, _x_265 in
-                                                          let _x_267 = _x_263, _x_266 in
-                                                          let _x_268 = "bodyThen" in
-                                                          let _x_269 = 33 in
-                                                          let _x_270 = _x_93 :: _x_118 in
-                                                          let _x_271 = _x_269, _x_270 in
-                                                          let _x_272 = _x_268, _x_271 in
-                                                          let _x_273 = "buildWithScopeFromContext" in
-                                                          let _x_274 = 34 in
-                                                          let _x_275 = _x_274, _x_48 in
-                                                          let _x_276 = _x_273, _x_275 in
-                                                          let _x_277 = _x_276 :: y_250 in
-                                                          let _x_278 = _x_272 :: _x_277 in
-                                                          let _x_279 = _x_267 :: _x_278 in
-                                                          let _x_280 = _x_262 :: _x_279 in
-                                                          let _x_281 = _x_258 :: _x_280 in
-                                                          let _x_282 = _x_256 :: _x_281 in
-                                                          let y_283 = _x_254 :: _x_282 in
-                                                          let _x_284 = "constant" in
-                                                          let _x_285 = 21 in
-                                                          let _x_286 = _x_285, _x_101 in
-                                                          let _x_287 = _x_284, _x_286 in
-                                                          let _x_288 = "store" in
-                                                          let _x_289 = 22 in
-                                                          let _x_290 = _x_289, _x_106 in
-                                                          let _x_291 = _x_288, _x_290 in
-                                                          let _x_292 = "acquireCtx" in
-                                                          let _x_293 = _x_292, _x_120 in
-                                                          let _x_294 = "acquireIn" in
-                                                          let _x_295 = 24 in
-                                                          let _x_296 = _x_295, _x_115 in
-                                                          let _x_297 = _x_294, _x_296 in
-                                                          let _x_298 = "acquired" in
-                                                          let _x_299 = 25 in
-                                                          let _x_300 = _x_299, _x_122 in
-                                                          let _x_301 = _x_298, _x_300 in
-                                                          let _x_302 = "afterScopeAdd" in
-                                                          let _x_303 = 26 in
-                                                          let _x_304 = "a" in
-                                                          let _x_305 = _x_304, _x_83 in
-                                                          let _x_306 = _x_305 :: _x_125 in
-                                                          let _x_307 = _x_303, _x_306 in
-                                                          let _x_308 = _x_302, _x_307 in
-                                                          let _x_309 = "releaseUnder" in
-                                                          let _x_310 = 27 in
-                                                          let _x_311 = _x_310, _x_128 in
-                                                          let _x_312 = _x_309, _x_311 in
-                                                          let _x_313 = _x_312 :: y_283 in
-                                                          let _x_314 = _x_308 :: _x_313 in
-                                                          let _x_315 = _x_301 :: _x_314 in
-                                                          let _x_316 = _x_297 :: _x_315 in
-                                                          let _x_317 = _x_293 :: _x_316 in
-                                                          let _x_318 = _x_291 :: _x_317 in
-                                                          let y_319 = _x_287 :: _x_318 in
-                                                          let _x_320 = "scopeOpen" in
-                                                          let _x_321 = _x_320, _x_130 in
-                                                          let _x_322 = "scopeProvide" in
-                                                          let _x_323 = 15 in
-                                                          let _x_324 = _x_323, _x_131 in
-                                                          let _x_325 = _x_322, _x_324 in
-                                                          let _x_326 = "scopeBody" in
-                                                          let _x_327 = 16 in
-                                                          let _x_328 = _x_327, _x_148 in
-                                                          let _x_329 = _x_326, _x_328 in
-                                                          let _x_330 = "scopedExit" in
-                                                          let _x_331 = 17 in
-                                                          let _x_332 = _x_331, _x_149 in
-                                                          let _x_333 = _x_330, _x_332 in
-                                                          let _x_334 = "scopeClose" in
-                                                          let _x_335 = 18 in
-                                                          let _x_336 = _x_335, _x_47 in
-                                                          let _x_337 = _x_334, _x_336 in
-                                                          let _x_338 = "restoreCtx" in
-                                                          let _x_339 = 19 in
-                                                          let _x_340 = _x_339, _x_89 in
-                                                          let _x_341 = _x_338, _x_340 in
-                                                          let _x_342 = "forkScopedIn" in
-                                                          let _x_343 = _x_342, _x_151 in
-                                                          let _x_344 = _x_343 :: y_319 in
-                                                          let _x_345 = _x_341 :: _x_344 in
-                                                          let _x_346 = _x_337 :: _x_345 in
-                                                          let _x_347 = _x_333 :: _x_346 in
-                                                          let _x_348 = _x_329 :: _x_347 in
-                                                          let _x_349 = _x_325 :: _x_348 in
-                                                          let y_350 = _x_321 :: _x_349 in
-                                                          let _x_351 = "gen" in
-                                                          let _x_352 = 7 in
-                                                          let _x_353 = "pc" in
-                                                          let _x_354 = _x_353, _x_25 in
-                                                          let _x_355 = _x_354 :: _x_134 in
-                                                          let _x_356 = _x_29 :: _x_355 in
-                                                          let _x_357 = _x_352, _x_356 in
-                                                          let _x_358 = _x_351, _x_357 in
-                                                          let _x_359 = "loop" in
-                                                          let _x_360 = 8 in
-                                                          let _x_361 = _x_360, _x_30 in
-                                                          let _x_362 = _x_359, _x_361 in
-                                                          let _x_363 = "registerAwait" in
-                                                          let _x_364 = _x_363, _x_153 in
-                                                          let _x_365 = "cancelAwait" in
-                                                          let _x_366 = 10 in
-                                                          let _x_367 = _x_366, _x_69 in
-                                                          let _x_368 = _x_365, _x_367 in
-                                                          let _x_369 = "withWaiter" in
-                                                          let _x_370 = 11 in
-                                                          let _x_371 = "base" in
-                                                          let _x_372 = Shape_named _x_157 in
-                                                          let _x_373 = _x_371, _x_372 in
-                                                          let _x_374 = "waiter" in
-                                                          let _x_375 = _x_374, root_2 in
-                                                          let _x_376 = _x_375 :: _x_156 in
-                                                          let _x_377 = _x_373 :: _x_376 in
-                                                          let _x_378 = _x_370, _x_377 in
-                                                          let _x_379 = _x_369, _x_378 in
-                                                          let _x_380 = "abort" in
-                                                          let _x_381 = 12 in
-                                                          let _x_382 = _x_381, _x_3 in
-                                                          let _x_383 = _x_380, _x_382 in
-                                                          let _x_384 = "reFail" in
-                                                          let _x_385 = 13 in
-                                                          let _x_386 = "cause" in
-                                                          let _x_387 = _x_386, root_13 in
-                                                          let _x_388 = _x_387 :: _x_3 in
-                                                          let _x_389 = _x_385, _x_388 in
-                                                          let _x_390 = _x_384, _x_389 in
-                                                          let _x_391 = _x_390 :: y_350 in
-                                                          let _x_392 = _x_383 :: _x_391 in
-                                                          let _x_393 = _x_379 :: _x_392 in
-                                                          let _x_394 = _x_368 :: _x_393 in
-                                                          let _x_395 = _x_364 :: _x_394 in
-                                                          let _x_396 = _x_362 :: _x_395 in
-                                                          let y_397 = _x_358 :: _x_396 in
-                                                          let _x_398 = "cont" in
-                                                          let _x_399 = 0 in
-                                                          let _x_400 = _x_399, _x_30 in
-                                                          let _x_401 = _x_398, _x_400 in
-                                                          let _x_402 = "caught" in
-                                                          let _x_403 = 1 in
-                                                          let _x_404 = _x_403, _x_30 in
-                                                          let _x_405 = _x_402, _x_404 in
-                                                          let _x_406 = "onValue" in
-                                                          let _x_407 = 2 in
-                                                          let _x_408 = _x_407, _x_30 in
-                                                          let _x_409 = _x_406, _x_408 in
-                                                          let _x_410 = "onCause" in
-                                                          let _x_411 = 3 in
-                                                          let _x_412 = _x_411, _x_30 in
-                                                          let _x_413 = _x_410, _x_412 in
-                                                          let _x_414 = 4 in
-                                                          let _x_415 = _x_414, _x_30 in
-                                                          let _x_416 = _x_123, _x_415 in
-                                                          let _x_417 = "restore" in
-                                                          let _x_418 = 5 in
-                                                          let _x_419 = _x_418, _x_126 in
-                                                          let _x_420 = _x_417, _x_419 in
-                                                          let _x_421 = "merge" in
-                                                          let _x_422 = 6 in
-                                                          let _x_423 = _x_422, _x_126 in
-                                                          let _x_424 = _x_421, _x_423 in
-                                                          let _x_425 = _x_424 :: y_397 in
-                                                          let _x_426 = _x_420 :: _x_425 in
-                                                          let _x_427 = _x_416 :: _x_426 in
-                                                          let _x_428 = _x_413 :: _x_427 in
-                                                          let _x_429 = _x_409 :: _x_428 in
-                                                          let _x_430 = _x_405 :: _x_429 in
-                                                          let _x_431 = _x_401 :: _x_430 in
-                                                          Shape_sum (_x_157, _x_431)))))))))))))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_EffNameC.defs : List (Prod String Effect4.Store.Shape) *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_program_46_eff_name_c_defs : (string * shape) list =
-  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_point_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { defs = defs; _ } -> (let _x_2 = store_runner_gen_exit_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { defs = defs_1; _ } -> (let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
-          match (_x_3 : shape_doc) with
-            | _ -> (let _x_4 = [] in
-              let _x_5 = store_api_gen_fiber_id_c_shape_doc in
-              match (_x_5 : shape_doc) with
-                | _ -> (let _x_6 = defs @ defs_1 in
-                  let _x_7 = _x_6 @ _x_4 in
-                  let _x_8 = store_runner_gen_cause_c_shape_doc in
-                  match (_x_8 : shape_doc) with
-                    | { defs = defs_2; _ } -> (let _x_9 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_shape_doc in
-                      match (_x_9 : shape_doc) with
-                        | { defs = defs_3; _ } -> (let _x_10 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-                          match (_x_10 : shape_doc) with
-                            | { defs = defs_4; _ } -> (let _x_11 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_env_46_context_update_c_shape_doc in
-                              match (_x_11 : shape_doc) with
-                                | { defs = defs_5; _ } -> (let _x_12 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_region_c_shape_doc in
-                                  match (_x_12 : shape_doc) with
-                                    | { defs = defs_6; _ } -> (let _x_13 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc in
-                                      match (_x_13 : shape_doc) with
-                                        | _ -> (let _x_14 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_combine_mode_c_shape_doc in
-                                          match (_x_14 : shape_doc) with
-                                            | _ -> (let _x_15 = store_context_c_shape_doc in
-                                              match (_x_15 : shape_doc) with
-                                                | { defs = defs_7; _ } -> (let _x_16 = store_program_gen_service_key_c_shape_doc in
-                                                  match (_x_16 : shape_doc) with
-                                                    | { defs = defs_8; _ } -> (let _x_17 = _x_7 @ _x_4 in
-                                                      let _x_18 = _x_17 @ _x_4 in
-                                                      let _x_19 = _x_18 @ _x_4 in
-                                                      let _x_20 = store_program_gen_native_op_c_shape_doc in
-                                                      match (_x_20 : shape_doc) with
-                                                        | { defs = defs_9; _ } -> (let _x_21 = _x_19 @ _x_4 in
-                                                          let _x_22 = _x_21 @ defs_2 in
-                                                          let _x_23 = _x_22 @ defs_3 in
-                                                          let _x_24 = store_value_gen_val_c_defs in
-                                                          let _x_25 = _x_23 @ _x_24 in
-                                                          let _x_26 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_name_c_defs in
-                                                          let _x_27 = _x_25 @ _x_26 in
-                                                          let _x_28 = _x_27 @ defs_4 in
-                                                          let _x_29 = _x_28 @ defs_5 in
-                                                          let _x_30 = _x_29 @ defs_6 in
-                                                          let _x_31 = _x_30 @ _x_4 in
-                                                          let _x_32 = _x_31 @ _x_4 in
-                                                          let _x_33 = _x_32 @ defs_7 in
-                                                          let _x_34 = _x_33 @ _x_4 in
-                                                          let _x_35 = _x_34 @ defs_8 in
-                                                          let _x_36 = "_root_.Effect4.Program.EffName" in
-                                                          let _x_37 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_eff_name_c_t_95_root_95__46_effect4_46_program_46_eff_name_shape in
-                                                          let _x_38 = _x_36, _x_37 in
-                                                          let _x_39 = _x_35 @ defs_8 in
-                                                          let _x_40 = _x_39 @ defs_9 in
-                                                          _x_38 :: _x_40))))))))))))))
+      let _x_9 = _x_5, _x_8 in
+      let _x_10 = _x_4, _x_9 in
+      let _x_11 = "other" in
+      let _x_12 = 1 in
+      let _x_13 = _x_12, _x_2 in
+      let _x_14 = _x_11, _x_13 in
+      let _x_15 = _x_14 :: _x_2 in
+      let _x_16 = _x_10 :: _x_15 in
+      let _x_17 = Shape_sum (_x_3, _x_16) in
+      ({ root = _x_17; defs = _x_2 } : shape_doc))
 
 
 
@@ -63221,25 +60255,24 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_view_c_shape_doc : s
   let _x_1 = store_api_gen_fiber_id_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "_root_.Effect4.Live.WaitView" in
-      let _x_4 = "fiber" in
-      let _x_5 = _x_4, root in
-      let _x_6 = "token" in
-      let _x_7 = Shape_nat in
-      let _x_8 = _x_6, _x_7 in
-      let _x_9 = "registration" in
-      let _x_10 = "_root_.Effect4.Program.EffName" in
-      let _x_11 = Shape_named _x_10 in
-      let _x_12 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_eff_name_c_defs in
-      let _x_13 = Shape_option _x_11 in
-      let _x_14 = _x_9, _x_13 in
-      let _x_15 = _x_14 :: _x_2 in
-      let _x_16 = _x_8 :: _x_15 in
-      let _x_17 = _x_5 :: _x_16 in
-      let _x_18 = Shape_struct (_x_3, _x_17) in
-      let _x_19 = _x_2 @ _x_2 in
-      let _x_20 = _x_19 @ _x_12 in
-      ({ root = _x_18; defs = _x_20 } : shape_doc))
+      let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_site_c_shape_doc in
+      match (_x_3 : shape_doc) with
+        | { root = root_1; _ } -> (let _x_4 = "_root_.Effect4.Live.WaitView" in
+          let _x_5 = "fiber" in
+          let _x_6 = _x_5, root in
+          let _x_7 = "token" in
+          let _x_8 = Shape_nat in
+          let _x_9 = _x_7, _x_8 in
+          let _x_10 = "site" in
+          let _x_11 = Shape_option root_1 in
+          let _x_12 = _x_10, _x_11 in
+          let _x_13 = _x_12 :: _x_2 in
+          let _x_14 = _x_9 :: _x_13 in
+          let _x_15 = _x_6 :: _x_14 in
+          let _x_16 = Shape_struct (_x_4, _x_15) in
+          let _x_17 = _x_2 @ _x_2 in
+          let _x_18 = _x_17 @ _x_2 in
+          ({ root = _x_16; defs = _x_18 } : shape_doc)))
 
 
 
@@ -63886,6 +60919,546 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_run_answer_c_shape_doc : 
 
 
 
+(* LCNF mono: Effect4.Store.ServiceC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_service_c_shape_doc : shape_doc =
+  let _x_1 = store_program_gen_service_key_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.Env.Service" in
+      let _x_3 = "key" in
+      let _x_4 = _x_3, root in
+      let _x_5 = "value" in
+      let _x_6 = "Val" in
+      let _x_7 = Shape_named _x_6 in
+      let _x_8 = store_value_gen_val_c_defs in
+      let _x_9 = _x_5, _x_7 in
+      let _x_10 = [] in
+      let _x_11 = _x_9 :: _x_10 in
+      let _x_12 = _x_4 :: _x_11 in
+      let _x_13 = Shape_struct (_x_2, _x_12) in
+      let _x_14 = defs @ _x_8 in
+      ({ root = _x_13; defs = _x_14 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.ContextC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_context_c_shape_doc : shape_doc =
+  let _x_1 = store_service_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.Env.Context" in
+      let _x_3 = "entries" in
+      let _x_4 = Shape_list root in
+      let _x_5 = _x_3, _x_4 in
+      let _x_6 = [] in
+      let _x_7 = _x_5 :: _x_6 in
+      let _x_8 = Shape_struct (_x_2, _x_7) in
+      ({ root = _x_8; defs = defs } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_CtxC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_shape_doc : shape_doc =
+  let _x_1 = store_context_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.Ctx" in
+      let _x_3 = "services" in
+      let _x_4 = _x_3, root in
+      let _x_5 = "maxOpsBeforeYield" in
+      let _x_6 = Shape_nat in
+      let _x_7 = [] in
+      let _x_8 = _x_5, _x_6 in
+      let _x_9 = "preventYield" in
+      let _x_10 = Shape_bool in
+      let _x_11 = _x_9, _x_10 in
+      let _x_12 = _x_11 :: _x_7 in
+      let _x_13 = _x_8 :: _x_12 in
+      let _x_14 = _x_4 :: _x_13 in
+      let _x_15 = Shape_struct (_x_2, _x_14) in
+      let _x_16 = defs @ _x_7 in
+      let _x_17 = _x_16 @ _x_7 in
+      ({ root = _x_15; defs = _x_17 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_shape_doc : shape_doc =
+  let _x_1 = "_root_.Effect4.Machine.ArgSite" in
+  let _x_2 = "path" in
+  let _x_3 = Shape_nat in
+  let _x_4 = [] in
+  let _x_5 = Shape_list _x_3 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "env" in
+  let _x_8 = "Val" in
+  let _x_9 = Shape_named _x_8 in
+  let _x_10 = store_value_gen_val_c_defs in
+  let _x_11 = Shape_list _x_9 in
+  let _x_12 = _x_7, _x_11 in
+  let _x_13 = _x_12 :: _x_4 in
+  let _x_14 = _x_6 :: _x_13 in
+  let _x_15 = Shape_struct (_x_1, _x_14) in
+  let _x_16 = _x_4 @ _x_10 in
+  ({ root = _x_15; defs = _x_16 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_CaptureC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_shape_doc : shape_doc =
+  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = Shape_nat in
+      let _x_3 = Shape_list _x_2 in
+      let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_shape_doc in
+      match (_x_4 : shape_doc) with
+        | { root = root_1; defs = defs_1 } -> (let _x_5 = "fuel" in
+          let _x_6 = _x_5, _x_2 in
+          let _x_7 = "_root_.Effect4.Machine.Capture" in
+          let _x_8 = "path" in
+          let _x_9 = [] in
+          let _x_10 = _x_8, _x_3 in
+          let _x_11 = "env" in
+          let _x_12 = "Val" in
+          let _x_13 = Shape_named _x_12 in
+          let _x_14 = store_value_gen_val_c_defs in
+          let _x_15 = Shape_list _x_13 in
+          let _x_16 = _x_11, _x_15 in
+          let _x_17 = "tape" in
+          let _x_18 = Shape_bool in
+          let _x_19 = Shape_list _x_18 in
+          let _x_20 = _x_17, _x_19 in
+          let _x_21 = "ctx" in
+          let _x_22 = _x_21, root in
+          let _x_23 = "root" in
+          let _x_24 = _x_23, _x_2 in
+          let _x_25 = "params" in
+          let _x_26 = Shape_list root_1 in
+          let _x_27 = Shape_list _x_26 in
+          let _x_28 = _x_25, _x_27 in
+          let _x_29 = "call" in
+          let _x_30 = Shape_list _x_3 in
+          let _x_31 = _x_29, _x_30 in
+          let _x_32 = _x_31 :: _x_9 in
+          let _x_33 = _x_28 :: _x_32 in
+          let _x_34 = _x_24 :: _x_33 in
+          let _x_35 = _x_22 :: _x_34 in
+          let _x_36 = _x_20 :: _x_35 in
+          let _x_37 = _x_6 :: _x_36 in
+          let _x_38 = _x_16 :: _x_37 in
+          let _x_39 = _x_10 :: _x_38 in
+          let _x_40 = Shape_struct (_x_7, _x_39) in
+          let _x_41 = _x_9 @ _x_14 in
+          let _x_42 = _x_41 @ _x_9 in
+          let _x_43 = _x_42 @ _x_9 in
+          let _x_44 = _x_43 @ defs in
+          let _x_45 = _x_44 @ defs_1 in
+          let _x_46 = _x_45 @ _x_9 in
+          ({ root = _x_40; defs = _x_46 } : shape_doc)))
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoMapIdC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc : shape_doc =
+  let _x_1 = "_root_.Effect4.Machine.MemoMapId" in
+  let _x_2 = "index" in
+  let _x_3 = Shape_nat in
+  let _x_4 = [] in
+  let _x_5 = _x_2, _x_3 in
+  let _x_6 = _x_5 :: _x_4 in
+  let _x_7 = Shape_struct (_x_1, _x_6) in
+  ({ root = _x_7; defs = _x_4 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_FinNameC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc : shape_doc =
+  let _x_1 = store_api_gen_fiber_id_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; _ } -> (let _x_2 = [] in
+      let _x_3 = "fiber" in
+      let _x_4 = _x_3, root in
+      let _x_5 = "skipSelf" in
+      let _x_6 = Shape_bool in
+      let _x_7 = _x_5, _x_6 in
+      let _x_8 = _x_7 :: _x_2 in
+      let _x_9 = "scope" in
+      let _x_10 = Shape_nat in
+      let _x_11 = _x_9, _x_10 in
+      let _x_12 = _x_11 :: _x_2 in
+      let _x_13 = "parent" in
+      let _x_14 = _x_13, _x_10 in
+      let _x_15 = "key" in
+      let _x_16 = _x_15, _x_10 in
+      let _x_17 = _x_16 :: _x_2 in
+      let _x_18 = "fails" in
+      let _x_19 = _x_18, _x_6 in
+      let _x_20 = _x_19 :: _x_2 in
+      let _x_21 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_shape_doc in
+      match (_x_21 : shape_doc) with
+        | { root = root_1; defs = defs } -> (let _x_22 = "label" in
+          let _x_23 = _x_22, _x_10 in
+          let _x_24 = "snapshot" in
+          let _x_25 = Shape_list root in
+          let _x_26 = _x_24, _x_25 in
+          let _x_27 = _x_26 :: _x_2 in
+          let _x_28 = "slot" in
+          let _x_29 = _x_28, _x_10 in
+          let _x_30 = _x_29 :: _x_2 in
+          let _x_31 = "capture" in
+          let _x_32 = _x_31, root_1 in
+          let _x_33 = _x_32 :: _x_2 in
+          let _x_34 = _x_2 @ _x_2 in
+          let _x_35 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc in
+          match (_x_35 : shape_doc) with
+            | { root = root_2; _ } -> (let _x_36 = 1 in
+              let _x_37 = _x_36, _x_12 in
+              let _x_38 = Shape_list _x_10 in
+              let _x_39 = Shape_list _x_38 in
+              let _x_40 = "_root_.Effect4.Machine.FinName" in
+              let _x_41 = "interruptFiber" in
+              let _x_42 = 0 in
+              let _x_43 = _x_4 :: _x_8 in
+              let _x_44 = _x_42, _x_43 in
+              let _x_45 = _x_41, _x_44 in
+              let _x_46 = "closeChildScope" in
+              let _x_47 = _x_46, _x_37 in
+              let _x_48 = "detachFromParent" in
+              let _x_49 = 2 in
+              let _x_50 = _x_14 :: _x_17 in
+              let _x_51 = _x_49, _x_50 in
+              let _x_52 = _x_48, _x_51 in
+              let _x_53 = "release" in
+              let _x_54 = 3 in
+              let _x_55 = _x_23 :: _x_20 in
+              let _x_56 = _x_54, _x_55 in
+              let _x_57 = _x_53, _x_56 in
+              let _x_58 = "awaitNewChildren" in
+              let _x_59 = 4 in
+              let _x_60 = _x_59, _x_27 in
+              let _x_61 = _x_58, _x_60 in
+              let _x_62 = "parkThen" in
+              let _x_63 = 5 in
+              let _x_64 = _x_63, _x_30 in
+              let _x_65 = _x_62, _x_64 in
+              let _x_66 = "foreign" in
+              let _x_67 = 6 in
+              let _x_68 = _x_67, _x_33 in
+              let _x_69 = _x_66, _x_68 in
+              let _x_70 = "closeChildOnFailure" in
+              let _x_71 = 7 in
+              let _x_72 = _x_71, _x_12 in
+              let _x_73 = _x_70, _x_72 in
+              let _x_74 = "memoEntry" in
+              let _x_75 = 8 in
+              let _x_76 = "layer" in
+              let _x_77 = Shape_pair (_x_38, _x_39) in
+              let _x_78 = _x_76, _x_77 in
+              let _x_79 = "memoMap" in
+              let _x_80 = _x_79, root_2 in
+              let _x_81 = _x_80 :: _x_2 in
+              let _x_82 = _x_78 :: _x_81 in
+              let _x_83 = _x_75, _x_82 in
+              let _x_84 = _x_74, _x_83 in
+              let _x_85 = "memoDone" in
+              let _x_86 = 9 in
+              let _x_87 = _x_86, _x_82 in
+              let _x_88 = _x_85, _x_87 in
+              let _x_89 = _x_88 :: _x_2 in
+              let _x_90 = _x_84 :: _x_89 in
+              let _x_91 = _x_73 :: _x_90 in
+              let _x_92 = _x_69 :: _x_91 in
+              let _x_93 = _x_65 :: _x_92 in
+              let _x_94 = _x_61 :: _x_93 in
+              let _x_95 = _x_57 :: _x_94 in
+              let _x_96 = _x_52 :: _x_95 in
+              let _x_97 = _x_47 :: _x_96 in
+              let _x_98 = _x_45 :: _x_97 in
+              let _x_99 = Shape_sum (_x_40, _x_98) in
+              let _x_100 = _x_34 @ _x_2 in
+              let _x_101 = _x_100 @ _x_2 in
+              let _x_102 = _x_101 @ defs in
+              let _x_103 = _x_102 @ _x_34 in
+              let _x_104 = _x_103 @ _x_2 in
+              ({ root = _x_99; defs = _x_104 } : shape_doc))))
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_SyncOpC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_shape_doc : shape_doc =
+  let _x_1 = store_runner_gen_ref_key_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; _ } -> (let _x_2 = [] in
+      let _x_3 = "initial" in
+      let _x_4 = "Val" in
+      let _x_5 = Shape_named _x_4 in
+      let _x_6 = _x_3, _x_5 in
+      let _x_7 = _x_6 :: _x_2 in
+      let _x_8 = "cell" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_2 in
+      let _x_11 = 2 in
+      let _x_12 = "value" in
+      let _x_13 = _x_12, _x_5 in
+      let _x_14 = _x_13 :: _x_2 in
+      let _x_15 = _x_9 :: _x_14 in
+      let _x_16 = _x_11, _x_15 in
+      let _x_17 = 5 in
+      let _x_18 = "f" in
+      let _x_19 = "Term" in
+      let _x_20 = Shape_named _x_19 in
+      let _x_21 = _x_18, _x_20 in
+      let _x_22 = "env" in
+      let _x_23 = Shape_list _x_5 in
+      let _x_24 = _x_22, _x_23 in
+      let _x_25 = _x_24 :: _x_2 in
+      let _x_26 = _x_21 :: _x_25 in
+      let _x_27 = _x_9 :: _x_26 in
+      let _x_28 = _x_17, _x_27 in
+      let _x_29 = 6 in
+      let _x_30 = _x_29, _x_27 in
+      let _x_31 = 7 in
+      let _x_32 = _x_31, _x_27 in
+      let _x_33 = 8 in
+      let _x_34 = _x_33, _x_27 in
+      let _x_35 = 9 in
+      let _x_36 = _x_35, _x_27 in
+      let _x_37 = 10 in
+      let _x_38 = _x_37, _x_27 in
+      let _x_39 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
+      match (_x_39 : shape_doc) with
+        | { root = root_1; _ } -> (let _x_40 = 13 in
+          let _x_41 = _x_40, _x_2 in
+          let _x_42 = store_runner_gen_completion_c_shape_doc in
+          match (_x_42 : shape_doc) with
+            | { root = root_2; defs = defs } -> (let _x_43 = store_api_gen_fiber_id_c_shape_doc in
+              match (_x_43 : shape_doc) with
+                | { root = root_3; _ } -> (let _x_44 = _x_8, root_1 in
+                  let _x_45 = _x_44 :: _x_2 in
+                  let _x_46 = "completion" in
+                  let _x_47 = _x_46, root_2 in
+                  let _x_48 = _x_47 :: _x_2 in
+                  let _x_49 = _x_44 :: _x_48 in
+                  let _x_50 = "interruptor" in
+                  let _x_51 = _x_50, root_3 in
+                  let _x_52 = _x_51 :: _x_2 in
+                  let _x_53 = _x_44 :: _x_52 in
+                  let _x_54 = store_program_gen_finalizer_strategy_c_shape_doc in
+                  match (_x_54 : shape_doc) with
+                    | { root = root_4; _ } -> (let _x_55 = "token" in
+                      let _x_56 = Shape_nat in
+                      let _x_57 = _x_55, _x_56 in
+                      let _x_58 = _x_57 :: _x_2 in
+                      let _x_59 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
+                      match (_x_59 : shape_doc) with
+                        | { root = root_5; defs = defs_1 } -> (let _x_60 = 19 in
+                          let _x_61 = _x_60, _x_2 in
+                          let _x_62 = "strategy" in
+                          let _x_63 = _x_62, root_4 in
+                          let _x_64 = _x_63 :: _x_2 in
+                          let _x_65 = "scope" in
+                          let _x_66 = _x_65, _x_56 in
+                          let _x_67 = "finalizer" in
+                          let _x_68 = _x_67, root_5 in
+                          let _x_69 = _x_68 :: _x_2 in
+                          let _x_70 = _x_66 :: _x_69 in
+                          let _x_71 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc in
+                          match (_x_71 : shape_doc) with
+                            | { root = root_6; _ } -> (let _x_72 = "key" in
+                              let _x_73 = _x_72, _x_56 in
+                              let _x_74 = _x_73 :: _x_2 in
+                              let _x_75 = _x_66 :: _x_74 in
+                              let _x_76 = _x_66 :: _x_2 in
+                              let _x_77 = "parent" in
+                              let _x_78 = _x_77, _x_56 in
+                              let _x_79 = Shape_option root_6 in
+                              let _x_80 = _x_77, _x_79 in
+                              let _x_81 = _x_80 :: _x_2 in
+                              let _x_82 = Shape_list _x_56 in
+                              let _x_83 = Shape_list _x_82 in
+                              let _x_84 = _x_2 @ _x_2 in
+                              let _x_85 = store_runner_gen_exit_c_shape_doc in
+                              match (_x_85 : shape_doc) with
+                                | { root = root_7; defs = defs_2 } -> (let _x_86 = 3 in
+                                  let _x_87 = _x_86, _x_15 in
+                                  let _x_88 = 11 in
+                                  let _x_89 = _x_88, _x_27 in
+                                  let _x_90 = 14 in
+                                  let _x_91 = _x_90, _x_45 in
+                                  let _x_92 = "waiter" in
+                                  let _x_93 = _x_92, root_3 in
+                                  let _x_94 = _x_93 :: _x_58 in
+                                  let _x_95 = _x_44 :: _x_94 in
+                                  let _x_96 = 21 in
+                                  let _x_97 = _x_96, _x_64 in
+                                  let _x_98 = 27 in
+                                  let _x_99 = "layer" in
+                                  let _x_100 = Shape_pair (_x_82, _x_83) in
+                                  let _x_101 = _x_99, _x_100 in
+                                  let _x_102 = "memoMap" in
+                                  let _x_103 = _x_102, root_6 in
+                                  let _x_104 = _x_103 :: _x_2 in
+                                  let _x_105 = _x_101 :: _x_104 in
+                                  let _x_106 = _x_98, _x_105 in
+                                  let _x_107 = "_root_.Effect4.Machine.SyncOp" in
+                                  let _x_108 = "refMake" in
+                                  let _x_109 = 0 in
+                                  let _x_110 = store_value_gen_val_c_defs in
+                                  let _x_111 = _x_109, _x_7 in
+                                  let _x_112 = _x_108, _x_111 in
+                                  let _x_113 = "refGet" in
+                                  let _x_114 = 1 in
+                                  let _x_115 = _x_114, _x_10 in
+                                  let _x_116 = _x_113, _x_115 in
+                                  let _x_117 = "refSet" in
+                                  let _x_118 = _x_117, _x_16 in
+                                  let _x_119 = "refGetAndSet" in
+                                  let _x_120 = _x_119, _x_87 in
+                                  let _x_121 = "refSetAndGet" in
+                                  let _x_122 = 4 in
+                                  let _x_123 = _x_122, _x_15 in
+                                  let _x_124 = _x_121, _x_123 in
+                                  let _x_125 = "refUpdate" in
+                                  let _x_126 = store_program_gen_term_c_defs in
+                                  let _x_127 = _x_125, _x_28 in
+                                  let _x_128 = "refGetAndUpdate" in
+                                  let _x_129 = _x_128, _x_30 in
+                                  let _x_130 = "refUpdateAndGet" in
+                                  let _x_131 = _x_130, _x_32 in
+                                  let _x_132 = "refUpdateSome" in
+                                  let _x_133 = _x_132, _x_34 in
+                                  let _x_134 = "refGetAndUpdateSome" in
+                                  let _x_135 = _x_134, _x_36 in
+                                  let _x_136 = "refUpdateSomeAndGet" in
+                                  let _x_137 = _x_136, _x_38 in
+                                  let _x_138 = "refModify" in
+                                  let _x_139 = _x_138, _x_89 in
+                                  let _x_140 = "refModifySome" in
+                                  let _x_141 = 12 in
+                                  let _x_142 = _x_141, _x_27 in
+                                  let _x_143 = _x_140, _x_142 in
+                                  let _x_144 = "deferredMake" in
+                                  let _x_145 = _x_144, _x_41 in
+                                  let _x_146 = "deferredIsDone" in
+                                  let _x_147 = _x_146, _x_91 in
+                                  let _x_148 = "deferredPoll" in
+                                  let _x_149 = 15 in
+                                  let _x_150 = _x_149, _x_45 in
+                                  let _x_151 = _x_148, _x_150 in
+                                  let _x_152 = "deferredCompleteWith" in
+                                  let _x_153 = 16 in
+                                  let _x_154 = _x_153, _x_49 in
+                                  let _x_155 = _x_152, _x_154 in
+                                  let _x_156 = "deferredInterruptWith" in
+                                  let _x_157 = 17 in
+                                  let _x_158 = _x_157, _x_53 in
+                                  let _x_159 = _x_156, _x_158 in
+                                  let _x_160 = "deferredAwaitCleanup" in
+                                  let _x_161 = 18 in
+                                  let _x_162 = _x_161, _x_95 in
+                                  let _x_163 = _x_160, _x_162 in
+                                  let _x_164 = "clockNow" in
+                                  let _x_165 = _x_164, _x_61 in
+                                  let _x_166 = "sleepCancel" in
+                                  let _x_167 = 20 in
+                                  let _x_168 = _x_167, _x_94 in
+                                  let _x_169 = _x_166, _x_168 in
+                                  let _x_170 = "scopeMake" in
+                                  let _x_171 = _x_170, _x_97 in
+                                  let _x_172 = "scopeAdd" in
+                                  let _x_173 = 22 in
+                                  let _x_174 = _x_173, _x_70 in
+                                  let _x_175 = _x_172, _x_174 in
+                                  let _x_176 = "scopeRemove" in
+                                  let _x_177 = 23 in
+                                  let _x_178 = _x_177, _x_75 in
+                                  let _x_179 = _x_176, _x_178 in
+                                  let _x_180 = "scopeIsClosed" in
+                                  let _x_181 = 24 in
+                                  let _x_182 = _x_181, _x_76 in
+                                  let _x_183 = _x_180, _x_182 in
+                                  let _x_184 = "scopeFork" in
+                                  let _x_185 = 25 in
+                                  let _x_186 = _x_78 :: _x_64 in
+                                  let _x_187 = _x_185, _x_186 in
+                                  let _x_188 = _x_184, _x_187 in
+                                  let _x_189 = "memoFork" in
+                                  let _x_190 = 26 in
+                                  let _x_191 = _x_190, _x_81 in
+                                  let _x_192 = _x_189, _x_191 in
+                                  let _x_193 = "memoGet" in
+                                  let _x_194 = _x_193, _x_106 in
+                                  let _x_195 = "memoBuild" in
+                                  let _x_196 = 28 in
+                                  let _x_197 = _x_196, _x_105 in
+                                  let _x_198 = _x_195, _x_197 in
+                                  let _x_199 = "memoComplete" in
+                                  let _x_200 = 29 in
+                                  let _x_201 = "exit" in
+                                  let _x_202 = _x_201, root_7 in
+                                  let _x_203 = _x_202 :: _x_2 in
+                                  let _x_204 = _x_103 :: _x_203 in
+                                  let _x_205 = _x_101 :: _x_204 in
+                                  let _x_206 = _x_200, _x_205 in
+                                  let _x_207 = _x_199, _x_206 in
+                                  let _x_208 = "memoRelease" in
+                                  let _x_209 = 30 in
+                                  let _x_210 = _x_209, _x_105 in
+                                  let _x_211 = _x_208, _x_210 in
+                                  let _x_212 = _x_211 :: _x_2 in
+                                  let _x_213 = _x_207 :: _x_212 in
+                                  let _x_214 = _x_198 :: _x_213 in
+                                  let _x_215 = _x_194 :: _x_214 in
+                                  let _x_216 = _x_192 :: _x_215 in
+                                  let _x_217 = _x_188 :: _x_216 in
+                                  let _x_218 = _x_183 :: _x_217 in
+                                  let _x_219 = _x_179 :: _x_218 in
+                                  let _x_220 = _x_175 :: _x_219 in
+                                  let _x_221 = _x_171 :: _x_220 in
+                                  let _x_222 = _x_169 :: _x_221 in
+                                  let _x_223 = _x_165 :: _x_222 in
+                                  let _x_224 = _x_163 :: _x_223 in
+                                  let _x_225 = _x_159 :: _x_224 in
+                                  let _x_226 = _x_155 :: _x_225 in
+                                  let _x_227 = _x_151 :: _x_226 in
+                                  let _x_228 = _x_147 :: _x_227 in
+                                  let _x_229 = _x_145 :: _x_228 in
+                                  let _x_230 = _x_143 :: _x_229 in
+                                  let _x_231 = _x_139 :: _x_230 in
+                                  let _x_232 = _x_137 :: _x_231 in
+                                  let _x_233 = _x_135 :: _x_232 in
+                                  let _x_234 = _x_133 :: _x_233 in
+                                  let _x_235 = _x_131 :: _x_234 in
+                                  let _x_236 = _x_129 :: _x_235 in
+                                  let _x_237 = _x_127 :: _x_236 in
+                                  let _x_238 = _x_124 :: _x_237 in
+                                  let _x_239 = _x_120 :: _x_238 in
+                                  let _x_240 = _x_118 :: _x_239 in
+                                  let _x_241 = _x_116 :: _x_240 in
+                                  let _x_242 = _x_112 :: _x_241 in
+                                  let _x_243 = Shape_sum (_x_107, _x_242) in
+                                  let _x_244 = _x_110 @ _x_2 in
+                                  let _x_245 = _x_244 @ _x_126 in
+                                  let _x_246 = _x_245 @ _x_110 in
+                                  let _x_247 = _x_246 @ _x_2 in
+                                  let _x_248 = _x_247 @ defs in
+                                  let _x_249 = _x_248 @ _x_2 in
+                                  let _x_250 = _x_249 @ _x_2 in
+                                  let _x_251 = _x_250 @ _x_2 in
+                                  let _x_252 = _x_251 @ defs_1 in
+                                  let _x_253 = _x_252 @ _x_2 in
+                                  let _x_254 = _x_253 @ _x_84 in
+                                  let _x_255 = _x_254 @ _x_2 in
+                                  let _x_256 = _x_255 @ defs_2 in
+                                  ({ root = _x_243; defs = _x_256 } : shape_doc)))))))))
+
+
+
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Run_46_Tree_46_StepC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_step_c_shape_doc : shape_doc =
@@ -63973,524 +61546,32 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_stop_c_shape_doc :
 
 
 
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_Waiter_32__40__95_root_95__46_Unit_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_PreviewRunC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_waiter_32__40__95_root_95__46_unit_41_c_shape_doc : shape_doc =
-  let _x_1 = store_api_gen_fiber_id_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "@_root_.Effect4.Machine.Waiter (_root_.Unit)" in
-      let _x_4 = "fiber" in
-      let _x_5 = _x_4, root in
-      let _x_6 = "token" in
-      let _x_7 = Shape_nat in
-      let _x_8 = _x_6, _x_7 in
-      let _x_9 = "phase" in
-      let _x_10 = _x_9, _x_7 in
-      let _x_11 = "payload" in
-      let _x_12 = Shape_unit in
-      let _x_13 = _x_11, _x_12 in
-      let _x_14 = _x_13 :: _x_2 in
-      let _x_15 = _x_10 :: _x_14 in
-      let _x_16 = _x_8 :: _x_15 in
-      let _x_17 = _x_5 :: _x_16 in
-      let _x_18 = Shape_struct (_x_3, _x_17) in
-      let _x_19 = _x_2 @ _x_2 in
-      let _x_20 = _x_19 @ _x_2 in
-      ({ root = _x_18; defs = _x_20 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_WakeList_32__40__95_root_95__46_Unit_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_unit_41_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_waiter_32__40__95_root_95__46_unit_41_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "@_root_.Effect4.Machine.WakeList (_root_.Unit)" in
-      let _x_3 = "waiters" in
-      let _x_4 = Shape_list root in
-      let _x_5 = _x_3, _x_4 in
-      let _x_6 = "batch" in
-      let _x_7 = Shape_option _x_4 in
-      let _x_8 = _x_6, _x_7 in
-      let _x_9 = "phase" in
-      let _x_10 = Shape_nat in
-      let _x_11 = [] in
-      let _x_12 = _x_9, _x_10 in
-      let _x_13 = _x_12 :: _x_11 in
-      let _x_14 = _x_8 :: _x_13 in
-      let _x_15 = _x_5 :: _x_14 in
-      let _x_16 = Shape_struct (_x_2, _x_15) in
-      let _x_17 = defs @ defs in
-      let _x_18 = _x_17 @ _x_11 in
-      ({ root = _x_16; defs = _x_18 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_DeferredCell_32__40__64__95_root_95__46_Effect4_46_Machine_46_Completion_32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41__41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_cell_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_shape_doc : shape_doc =
-  let _x_1 = store_runner_gen_completion_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_unit_41_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "@_root_.Effect4.Machine.DeferredCell (@_root_.Effect4.Machine.Completion (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))" in
-          let _x_4 = "completion" in
-          let _x_5 = Shape_option root in
-          let _x_6 = _x_4, _x_5 in
-          let _x_7 = "wake" in
-          let _x_8 = _x_7, root_1 in
-          let _x_9 = [] in
-          let _x_10 = _x_8 :: _x_9 in
-          let _x_11 = _x_6 :: _x_10 in
-          let _x_12 = Shape_struct (_x_3, _x_11) in
-          let _x_13 = defs @ defs_1 in
-          ({ root = _x_12; defs = _x_13 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_WakeModeC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_wake_mode_c_shape_doc : shape_doc =
-  let _x_1 = store_api_gen_fiber_id_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "_root_.Effect4.Machine.WakeMode" in
-      let _x_4 = "now" in
-      let _x_5 = 0 in
-      let _x_6 = _x_5, _x_2 in
-      let _x_7 = _x_4, _x_6 in
-      let _x_8 = "scheduled" in
-      let _x_9 = 1 in
-      let _x_10 = "owner" in
-      let _x_11 = _x_10, root in
-      let _x_12 = "priority" in
-      let _x_13 = Shape_nat in
-      let _x_14 = _x_12, _x_13 in
-      let _x_15 = _x_14 :: _x_2 in
-      let _x_16 = _x_11 :: _x_15 in
-      let _x_17 = _x_9, _x_16 in
-      let _x_18 = _x_8, _x_17 in
-      let _x_19 = _x_18 :: _x_2 in
-      let _x_20 = _x_7 :: _x_19 in
-      let _x_21 = Shape_sum (_x_3, _x_20) in
-      let _x_22 = _x_2 @ _x_2 in
-      ({ root = _x_21; defs = _x_22 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_Owed_32__40__64__95_root_95__46_Effect4_46_Machine_46_Completion_32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41__41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_owed_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_shape_doc : shape_doc =
-  let _x_1 = store_api_gen_fiber_id_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = store_runner_gen_completion_c_shape_doc in
-      match (_x_3 : shape_doc) with
-        | { root = root_1; defs = defs } -> (let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_wake_mode_c_shape_doc in
-          match (_x_4 : shape_doc) with
-            | { root = root_2; defs = defs_1 } -> (let _x_5 = "@_root_.Effect4.Machine.Owed (@_root_.Effect4.Machine.Completion (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))" in
-              let _x_6 = "waiter" in
-              let _x_7 = _x_6, root in
-              let _x_8 = "token" in
-              let _x_9 = Shape_nat in
-              let _x_10 = _x_8, _x_9 in
-              let _x_11 = "code" in
-              let _x_12 = _x_11, root_1 in
-              let _x_13 = "mode" in
-              let _x_14 = _x_13, root_2 in
-              let _x_15 = _x_14 :: _x_2 in
-              let _x_16 = _x_12 :: _x_15 in
-              let _x_17 = _x_10 :: _x_16 in
-              let _x_18 = _x_7 :: _x_17 in
-              let _x_19 = Shape_struct (_x_5, _x_18) in
-              let _x_20 = _x_2 @ _x_2 in
-              let _x_21 = _x_20 @ defs in
-              let _x_22 = _x_21 @ defs_1 in
-              ({ root = _x_19; defs = _x_22 } : shape_doc))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_DeferredStore_32__40__64__95_root_95__46_Effect4_46_Machine_46_Completion_32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41__41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_cell_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_owed_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "@_root_.Effect4.Machine.DeferredStore (@_root_.Effect4.Machine.Completion (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))" in
-          let _x_4 = "cells" in
-          let _x_5 = Shape_list root in
-          let _x_6 = _x_4, _x_5 in
-          let _x_7 = "due" in
-          let _x_8 = Shape_list root_1 in
-          let _x_9 = _x_7, _x_8 in
-          let _x_10 = [] in
-          let _x_11 = _x_9 :: _x_10 in
-          let _x_12 = _x_6 :: _x_11 in
-          let _x_13 = Shape_struct (_x_3, _x_12) in
-          let _x_14 = defs @ defs_1 in
-          ({ root = _x_13; defs = _x_14 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_ScopeState_32__40__95_root_95__46_Nat_41__32__40__95_root_95__46_Effect4_46_Machine_46_FinName_41__32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_scope_state_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      let _x_4 = _x_2, _x_3 in
-      let _x_5 = 1 in
-      let _x_6 = _x_5, _x_3 in
-      let _x_7 = "finalizer" in
-      let _x_8 = _x_7, root in
-      let _x_9 = _x_8 :: _x_3 in
-      let _x_10 = store_runner_gen_exit_c_shape_doc in
-      match (_x_10 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_11 = "key" in
-          let _x_12 = Shape_nat in
-          let _x_13 = _x_11, _x_12 in
-          let _x_14 = _x_3 @ defs in
-          let _x_15 = "@_root_.Effect4.ScopeState (_root_.Nat) (_root_.Effect4.Machine.FinName) (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann)" in
-          let _x_16 = "empty" in
-          let _x_17 = _x_16, _x_4 in
-          let _x_18 = "openEmpty" in
-          let _x_19 = _x_18, _x_6 in
-          let _x_20 = "openInline" in
-          let _x_21 = 2 in
-          let _x_22 = _x_13 :: _x_9 in
-          let _x_23 = _x_21, _x_22 in
-          let _x_24 = _x_20, _x_23 in
-          let _x_25 = "openMap" in
-          let _x_26 = 3 in
-          let _x_27 = "entries" in
-          let _x_28 = Shape_pair (_x_12, root) in
-          let _x_29 = Shape_list _x_28 in
-          let _x_30 = _x_27, _x_29 in
-          let _x_31 = _x_30 :: _x_3 in
-          let _x_32 = _x_26, _x_31 in
-          let _x_33 = _x_25, _x_32 in
-          let _x_34 = "closed" in
-          let _x_35 = 4 in
-          let _x_36 = "exit" in
-          let _x_37 = _x_36, root_1 in
-          let _x_38 = _x_37 :: _x_3 in
-          let _x_39 = _x_35, _x_38 in
-          let _x_40 = _x_34, _x_39 in
-          let _x_41 = _x_40 :: _x_3 in
-          let _x_42 = _x_33 :: _x_41 in
-          let _x_43 = _x_24 :: _x_42 in
-          let _x_44 = _x_19 :: _x_43 in
-          let _x_45 = _x_17 :: _x_44 in
-          let _x_46 = Shape_sum (_x_15, _x_45) in
-          let _x_47 = _x_14 @ _x_14 in
-          let _x_48 = _x_47 @ defs_1 in
-          ({ root = _x_46; defs = _x_48 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Scope_32__40__95_root_95__46_Nat_41__32__40__95_root_95__46_Effect4_46_Machine_46_FinName_41__32__40__95_root_95__46_Effect4_46_Store_46_Val_41__32__40__95_root_95__46_Effect4_46_Machine_46_Err_41__32__40__95_root_95__46_Effect4_46_Machine_46_Defect_41__32__40__95_root_95__46_Effect4_46_FiberId_41__32__40__95_root_95__46_Effect4_46_Machine_46_Ann_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_scope_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_shape_doc : shape_doc =
-  let _x_1 = store_program_gen_finalizer_strategy_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = store_tool_gen_t_64__95_root_95__46_effect4_46_scope_state_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_shape_doc in
-      match (_x_3 : shape_doc) with
-        | { root = root_1; defs = defs } -> (let _x_4 = "@_root_.Effect4.Scope (_root_.Nat) (_root_.Effect4.Machine.FinName) (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann)" in
-          let _x_5 = "strategy" in
-          let _x_6 = _x_5, root in
-          let _x_7 = "state" in
-          let _x_8 = _x_7, root_1 in
-          let _x_9 = _x_8 :: _x_2 in
-          let _x_10 = _x_6 :: _x_9 in
-          let _x_11 = Shape_struct (_x_4, _x_10) in
-          let _x_12 = _x_2 @ defs in
-          ({ root = _x_11; defs = _x_12 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ScopeEntryC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_entry_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_64__95_root_95__46_effect4_46_scope_32__40__95_root_95__46_nat_41__32__40__95_root_95__46_effect4_46_machine_46_fin_name_41__32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.ScopeEntry" in
-      let _x_3 = "key" in
-      let _x_4 = Shape_nat in
-      let _x_5 = [] in
-      let _x_6 = _x_3, _x_4 in
-      let _x_7 = "scope" in
-      let _x_8 = _x_7, root in
-      let _x_9 = _x_8 :: _x_5 in
-      let _x_10 = _x_6 :: _x_9 in
-      let _x_11 = Shape_struct (_x_2, _x_10) in
-      let _x_12 = _x_5 @ defs in
-      ({ root = _x_11; defs = _x_12 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ScopeStoreC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_store_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_entry_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.ScopeStore" in
-      let _x_3 = "entries" in
-      let _x_4 = Shape_list root in
-      let _x_5 = _x_3, _x_4 in
-      let _x_6 = [] in
-      let _x_7 = _x_5 :: _x_6 in
-      let _x_8 = Shape_struct (_x_2, _x_7) in
-      ({ root = _x_8; defs = defs } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoEntryC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_entry_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc in
-      match (_x_3 : shape_doc) with
-        | { root = root_1; defs = defs } -> (let _x_4 = "observers" in
-          let _x_5 = Shape_nat in
-          let _x_6 = _x_4, _x_5 in
-          let _x_7 = "_root_.Effect4.Machine.MemoEntry" in
-          let _x_8 = "layerScope" in
-          let _x_9 = _x_8, _x_5 in
-          let _x_10 = "deferred" in
-          let _x_11 = _x_10, root in
-          let _x_12 = "finalizer" in
-          let _x_13 = _x_12, root_1 in
-          let _x_14 = _x_13 :: _x_2 in
-          let _x_15 = _x_11 :: _x_14 in
-          let _x_16 = _x_9 :: _x_15 in
-          let _x_17 = _x_6 :: _x_16 in
-          let _x_18 = Shape_struct (_x_7, _x_17) in
-          let _x_19 = _x_2 @ _x_2 in
-          let _x_20 = _x_19 @ defs in
-          ({ root = _x_18; defs = _x_20 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoMapC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = _x_2 @ _x_2 in
-      let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_entry_c_shape_doc in
-      match (_x_4 : shape_doc) with
-        | { root = root_1; defs = defs } -> (let _x_5 = "id" in
-          let _x_6 = _x_5, root in
-          let _x_7 = Shape_nat in
-          let _x_8 = Shape_list _x_7 in
-          let _x_9 = Shape_list _x_8 in
-          let _x_10 = "_root_.Effect4.Machine.MemoMap" in
-          let _x_11 = "parent" in
-          let _x_12 = Shape_option root in
-          let _x_13 = _x_11, _x_12 in
-          let _x_14 = "entries" in
-          let _x_15 = Shape_pair (_x_8, _x_9) in
-          let _x_16 = Shape_pair (_x_15, root_1) in
-          let _x_17 = _x_3 @ defs in
-          let _x_18 = Shape_list _x_16 in
-          let _x_19 = _x_14, _x_18 in
-          let _x_20 = _x_19 :: _x_2 in
-          let _x_21 = _x_13 :: _x_20 in
-          let _x_22 = _x_6 :: _x_21 in
-          let _x_23 = Shape_struct (_x_10, _x_22) in
-          let _x_24 = _x_3 @ _x_17 in
-          ({ root = _x_23; defs = _x_24 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_Waiter_32__40__95_root_95__46_Effect4_46_ClockMillis_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_waiter_32__40__95_root_95__46_effect4_46_clock_millis_41_c_shape_doc : shape_doc =
-  let _x_1 = store_api_gen_fiber_id_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = store_clock_canonical_shape_doc in
-      match (_x_3 : shape_doc) with
-        | { root = root_1; defs = defs } -> (let _x_4 = "token" in
-          let _x_5 = Shape_nat in
-          let _x_6 = _x_4, _x_5 in
-          let _x_7 = "@_root_.Effect4.Machine.Waiter (_root_.Effect4.ClockMillis)" in
-          let _x_8 = "fiber" in
-          let _x_9 = _x_8, root in
-          let _x_10 = "phase" in
-          let _x_11 = _x_10, _x_5 in
-          let _x_12 = "payload" in
-          let _x_13 = _x_12, root_1 in
-          let _x_14 = _x_13 :: _x_2 in
-          let _x_15 = _x_11 :: _x_14 in
-          let _x_16 = _x_6 :: _x_15 in
-          let _x_17 = _x_9 :: _x_16 in
-          let _x_18 = Shape_struct (_x_7, _x_17) in
-          let _x_19 = _x_2 @ _x_2 in
-          let _x_20 = _x_19 @ defs in
-          ({ root = _x_18; defs = _x_20 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Machine_46_WakeList_32__40__95_root_95__46_Effect4_46_ClockMillis_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_effect4_46_clock_millis_41_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_waiter_32__40__95_root_95__46_effect4_46_clock_millis_41_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "@_root_.Effect4.Machine.WakeList (_root_.Effect4.ClockMillis)" in
-      let _x_3 = "waiters" in
-      let _x_4 = Shape_list root in
-      let _x_5 = _x_3, _x_4 in
-      let _x_6 = "batch" in
-      let _x_7 = Shape_option _x_4 in
-      let _x_8 = _x_6, _x_7 in
-      let _x_9 = "phase" in
-      let _x_10 = Shape_nat in
-      let _x_11 = [] in
-      let _x_12 = _x_9, _x_10 in
-      let _x_13 = _x_12 :: _x_11 in
-      let _x_14 = _x_8 :: _x_13 in
-      let _x_15 = _x_5 :: _x_14 in
-      let _x_16 = Shape_struct (_x_2, _x_15) in
-      let _x_17 = defs @ defs in
-      let _x_18 = _x_17 @ _x_11 in
-      ({ root = _x_16; defs = _x_18 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_TimerStoreC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_timer_store_c_shape_doc : shape_doc =
-  let _x_1 = store_clock_canonical_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_wake_list_32__40__95_root_95__46_effect4_46_clock_millis_41_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Machine.TimerStore" in
-          let _x_4 = "now" in
-          let _x_5 = _x_4, root in
-          let _x_6 = "wake" in
-          let _x_7 = _x_6, root_1 in
-          let _x_8 = "target" in
-          let _x_9 = Shape_option root in
-          let _x_10 = _x_8, _x_9 in
-          let _x_11 = [] in
-          let _x_12 = _x_10 :: _x_11 in
-          let _x_13 = _x_7 :: _x_12 in
-          let _x_14 = _x_5 :: _x_13 in
-          let _x_15 = Shape_struct (_x_3, _x_14) in
-          let _x_16 = defs @ defs_1 in
-          let _x_17 = _x_16 @ defs in
-          ({ root = _x_15; defs = _x_17 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ExternalStoreC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_external_store_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Machine.ExternalStore" in
-  let _x_2 = "allocated" in
-  let _x_3 = Shape_string in
-  let _x_4 = [] in
-  let _x_5 = Shape_list _x_3 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = _x_6 :: _x_4 in
-  let _x_8 = Shape_struct (_x_1, _x_7) in
-  ({ root = _x_8; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_StoresC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_stores_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_64__95_root_95__46_effect4_46_machine_46_deferred_store_32__40__64__95_root_95__46_effect4_46_machine_46_completion_32__40__95_root_95__46_effect4_46_store_46_val_41__32__40__95_root_95__46_effect4_46_machine_46_err_41__32__40__95_root_95__46_effect4_46_machine_46_defect_41__32__40__95_root_95__46_effect4_46_fiber_id_41__32__40__95_root_95__46_effect4_46_machine_46_ann_41__41_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_scope_store_c_shape_doc in
-      match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_c_shape_doc in
-          match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_timer_store_c_shape_doc in
-              match (_x_4 : shape_doc) with
-                | { root = root_3; defs = defs_3 } -> (let _x_5 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_external_store_c_shape_doc in
-                  match (_x_5 : shape_doc) with
-                    | { root = root_4; _ } -> (let _x_6 = [] in
-                      let _x_7 = "_root_.Effect4.Machine.Stores" in
-                      let _x_8 = "refs" in
-                      let _x_9 = "Val" in
-                      let _x_10 = Shape_named _x_9 in
-                      let _x_11 = store_value_gen_val_c_defs in
-                      let _x_12 = Shape_list _x_10 in
-                      let _x_13 = _x_8, _x_12 in
-                      let _x_14 = "deferreds" in
-                      let _x_15 = _x_14, root in
-                      let _x_16 = "scopes" in
-                      let _x_17 = _x_16, root_1 in
-                      let _x_18 = "memo" in
-                      let _x_19 = Shape_list root_2 in
-                      let _x_20 = _x_18, _x_19 in
-                      let _x_21 = "timers" in
-                      let _x_22 = _x_21, root_3 in
-                      let _x_23 = "nextName" in
-                      let _x_24 = Shape_nat in
-                      let _x_25 = _x_23, _x_24 in
-                      let _x_26 = "externals" in
-                      let _x_27 = _x_26, root_4 in
-                      let _x_28 = _x_27 :: _x_6 in
-                      let _x_29 = _x_25 :: _x_28 in
-                      let _x_30 = _x_22 :: _x_29 in
-                      let _x_31 = _x_20 :: _x_30 in
-                      let _x_32 = _x_17 :: _x_31 in
-                      let _x_33 = _x_15 :: _x_32 in
-                      let _x_34 = _x_13 :: _x_33 in
-                      let _x_35 = Shape_struct (_x_7, _x_34) in
-                      let _x_36 = _x_11 @ defs in
-                      let _x_37 = _x_36 @ defs_1 in
-                      let _x_38 = _x_37 @ defs_2 in
-                      let _x_39 = _x_38 @ defs_3 in
-                      let _x_40 = _x_39 @ _x_6 in
-                      let _x_41 = _x_40 @ _x_6 in
-                      ({ root = _x_35; defs = _x_41 } : shape_doc))))))
-
-
-
-(* LCNF mono: Effect4.Store.ToolGen.T_64__95_root_95__46_Effect4_46_Run_46_Tree_46_Outcome_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Machine_46_ExitV_41__41_C.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_shape_doc : shape_doc =
+let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_run_c_shape_doc : shape_doc =
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_step_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_stop_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_stores_c_shape_doc in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_runner_gen_exit_c_shape_doc in
           match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = store_runner_gen_exit_c_shape_doc in
-              match (_x_4 : shape_doc) with
-                | { root = root_3; defs = defs_3 } -> (let _x_5 = "@_root_.Effect4.Run.Tree.Outcome (@_root_.List (_root_.Effect4.Machine.ExitV))" in
-                  let _x_6 = "steps" in
-                  let _x_7 = Shape_list root in
-                  let _x_8 = _x_6, _x_7 in
-                  let _x_9 = "stop" in
-                  let _x_10 = _x_9, root_1 in
-                  let _x_11 = "stores" in
-                  let _x_12 = _x_11, root_2 in
-                  let _x_13 = "state" in
-                  let _x_14 = Shape_list root_3 in
-                  let _x_15 = _x_13, _x_14 in
-                  let _x_16 = [] in
-                  let _x_17 = _x_15 :: _x_16 in
-                  let _x_18 = _x_12 :: _x_17 in
-                  let _x_19 = _x_10 :: _x_18 in
-                  let _x_20 = _x_8 :: _x_19 in
-                  let _x_21 = Shape_struct (_x_5, _x_20) in
-                  let _x_22 = defs @ defs_1 in
-                  let _x_23 = _x_22 @ defs_2 in
-                  let _x_24 = _x_23 @ defs_3 in
-                  ({ root = _x_21; defs = _x_24 } : shape_doc)))))
+            | { root = root_2; defs = defs_2 } -> (let _x_4 = "_root_.Effect4.Tool.PreviewRun" in
+              let _x_5 = "steps" in
+              let _x_6 = Shape_list root in
+              let _x_7 = _x_5, _x_6 in
+              let _x_8 = "stop" in
+              let _x_9 = _x_8, root_1 in
+              let _x_10 = "unread" in
+              let _x_11 = Shape_list root_2 in
+              let _x_12 = _x_10, _x_11 in
+              let _x_13 = [] in
+              let _x_14 = _x_12 :: _x_13 in
+              let _x_15 = _x_9 :: _x_14 in
+              let _x_16 = _x_7 :: _x_15 in
+              let _x_17 = Shape_struct (_x_4, _x_16) in
+              let _x_18 = defs @ defs_1 in
+              let _x_19 = _x_18 @ defs_2 in
+              ({ root = _x_17; defs = _x_19 } : shape_doc))))
 
 
 
@@ -64519,7 +61600,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_path_c_shape_doc :
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_PreviewAnswerC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_answer_c_shape_doc : shape_doc =
-  let _x_1 = store_tool_gen_t_64__95_root_95__46_effect4_46_run_46_tree_46_outcome_32__40__64__95_root_95__46_list_32__40__95_root_95__46_effect4_46_machine_46_exit_v_41__41_c_shape_doc in
+  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_run_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = [] in
       let _x_3 = _x_2 @ defs in

@@ -165,7 +165,7 @@ theorem view_classifies (l : Live) :
         right
         right
         show f.id ∈ (Run.internalWaits l.run.machine).map (·.fiber)
-        refine List.mem_map.mpr ⟨⟨f.id, token, Run.registrationOf f⟩,
+        refine List.mem_map.mpr ⟨⟨f.id, token, Run.waitSiteOf f⟩,
           List.mem_filterMap.mpr ⟨f, hf, ?_⟩, rfl⟩
         simp only [live, hp, hreq, hw, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
 

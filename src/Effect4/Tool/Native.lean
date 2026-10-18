@@ -36,14 +36,21 @@ def rule : HitRule := HitRule.exact.or extension
 def start : Session := ⟨empty, Memo.empty⟩
 
 /-- **One envelope's value tree through the wire core**, at an oracle: read it through the exact
-codec, serve it at the version-1 connection, and write the reply envelope's tree. -/
+codec within the JSON profile's naturals (`CodecProfile.carries`), serve it at the version-1
+connection, and write the reply envelope's tree, refusing one the profile cannot carry. These are
+the JSON driver's refusals (`CodecProfile.read`, `CodecProfile.write`), so both drivers keep the
+same state. -/
 def answer (o : Oracle) (state : State) (v : Val) : Checked (Except Wire.Refusal (Val × State)) :=
   match Canonical.ofVal (α := Wire.Envelope Request) v with
   | none => pure (.error (.codec .unreadable))
-  | some envelope => do
+  | some envelope =>
+    if !CodecProfile.carries v then pure (.error (.codec .unreadable)) else do
     match ← Wire.serveEnvelope o Wire.Connection.v1 state envelope with
     | .error why => pure (.error why)
-    | .ok (next, reply) => pure (.ok (Canonical.toVal reply, next))
+    | .ok (next, reply) =>
+      let out := Canonical.toVal reply
+      if CodecProfile.carries out then pure (.ok (out, next))
+      else pure (.error (.codec .unprintable))
 
 /-- **Serve one envelope** through the memo, and learn the reply's trace. A refusal leaves the
 session as it was. -/

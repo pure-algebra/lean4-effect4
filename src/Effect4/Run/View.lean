@@ -16,7 +16,8 @@ its journal.
   the type a reply must meet, or `none` where the lookup fails. The binding is the ledger's: the
   call id, and the completion received and not applied.
 * **The internal waits** (`waits`). A fiber parked on a guard, on no host call and on no timer,
-  with the registration that it parked through. `emptyFrontier` flags a live machine whose frontier
+  with what it parked through, as data (`WaitSite`): the deferred cell it awaits, or another
+  registration. The compiler's continuation name stays inside the machine. `emptyFrontier` flags a live machine whose frontier
   names nothing: at a live, unfinished machine that is a deadlock (`frontier_empty_iff_deadlocked`,
   `src/Effect4/Laws/Api/Frontier.lean`). No frontier reason is added.
 * **The run's own readings.** The protocol state, the outcome, the root's exit and the frontier
@@ -66,14 +67,21 @@ structure CallView where
   held : Option HeldCall
 deriving DecidableEq
 
+/-- **What a fiber in an internal wait parked through**, as first-order data: the deferred cell it
+awaits, or a registration the view does not name (a race's count, a layer's build). -/
+inductive WaitSite where
+  | deferred (cell : DeferredKey)
+  | other
+deriving DecidableEq
+
 /-- **A fiber in an internal wait** (decisions row 333 (3)): parked on a guard, on no host call and
 on no timer. -/
 structure WaitView where
   fiber : FiberId
   token : Nat
-  /-- The registration it parked through, when its code is an `Async`: a deferred's await, a
-  race's counted registration. `none` for a park that the frame alphabet does not spell: a join. -/
-  registration : Option EffName
+  /-- What it parked through, when its code is an `Async` (`WaitSite`). `none` for a park that the
+  frame alphabet does not spell: a join. -/
+  site : Option WaitSite
 deriving DecidableEq
 
 /-- **The session's view**: what a holder reads off a live run, as first-order content. -/
@@ -119,7 +127,7 @@ end Live
 
 namespace Run
 
-open Live (CallView WaitView View)
+open Live (CallView WaitSite WaitView View)
 
 /-- The live call view of one call that the machine waits on: its request, its checked source and
 the session's record of it. -/
@@ -133,11 +141,17 @@ def callView (s : Run) (call : Await) : CallView :=
       ⟨bound.call.callId,
         (Api.HostSession.readReply s.session.pending key).map (·.completion)⟩ }
 
-/-- The registration a fiber parked through, when its code is an `Async`. -/
-def registrationOf (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) :
-    Option EffName :=
+/-- The wait site a registration names: a deferred's await is its cell. -/
+def siteOf : EffName → WaitSite
+  | .registerAwait cell | .awaitPromise cell => .deferred cell
+  | .withWaiter base _ _ => siteOf base
+  | _ => .other
+
+/-- What a fiber parked through, when its code is an `Async`. -/
+def waitSiteOf (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) :
+    Option WaitSite :=
   match f.frame.current with
-  | .async register _ _ => some register
+  | .async register _ _ => some (siteOf register)
   | _ => none
 
 /-- The fibers in an internal wait: each live fiber parked on a guard, on no host call
@@ -148,7 +162,7 @@ def internalWaits (m : Api.Machine) : List WaitView :=
     | none, .withGuard token =>
       if (requestOf m f.id token).isSome then none
       else if m.state.timers.wake.waiters.any (·.fiber == f.id) then none
-      else some ⟨f.id, token, registrationOf f⟩
+      else some ⟨f.id, token, waitSiteOf f⟩
     | _, _ => none
 
 /-- **The session's view of a run.** -/

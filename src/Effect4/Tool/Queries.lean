@@ -25,8 +25,10 @@ def preview (d : Doc) (q : PreviewQuery) : Except Refusal PreviewAnswer := do
   | .ok _ =>
     let host := Run.Preview.checkedTape app
     match q with
-    | .settle tape limit => pure (.settled (Run.Tree.settle app.rows limit host tape program))
-    | .frames tape limit => pure (.frames (Run.Tree.frames app.rows limit host tape program))
+    | .settle tape limit => pure (.settled ((Run.Tree.settle app.rows limit host tape program).map
+        fun (n, o) => (n, PreviewRun.of o)))
+    | .frames tape limit => pure (.frames ((Run.Tree.frames app.rows limit host tape program).map
+        PreviewRun.of))
     | .explore budget width => pure (.explored (Run.Kit.explore app budget width program))
 
 /-- **Inspect an address**: every field the table holds there; an address with no program refuses. -/

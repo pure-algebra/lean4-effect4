@@ -50,15 +50,20 @@ def opened (program : NativeEff) (app : SigApp := {}) : State × Reply :=
   "\"a\":{\"_tag\":\"open_\",\"name\":\"n\",\"app\":{\"rows\":[],\"services\":[],\"types\":[]}," ++
   "\"sketch\":{\"holes\":[],\"program\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\"," ++
   "\"value\":{\"_tag\":\"nat\",\"value\":9007199254740993}}}}}}}")).toOption.isNone
--- control: 2^53 itself reads, and so does 2^53 + 2, which binary64 holds
+-- red (tested): 2^53 and 2^53 + 2 are exact in binary64 but past the profile's bound
+-- (`CodecProfile.natLimit`, 2^53 - 1), so they do not read either; 2^53 - 1 reads
 #guard (Tools.WireText.readRequest ("{\"method\":\"open\",\"version\":1,\"payload\":{\"_tag\":\"act\"," ++
   "\"a\":{\"_tag\":\"open_\",\"name\":\"n\",\"app\":{\"rows\":[],\"services\":[],\"types\":[]}," ++
   "\"sketch\":{\"holes\":[],\"program\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\"," ++
-  "\"value\":{\"_tag\":\"nat\",\"value\":9007199254740992}}}}}}}")).toOption.isSome
+  "\"value\":{\"_tag\":\"nat\",\"value\":9007199254740992}}}}}}}")).toOption.isNone
 #guard (Tools.WireText.readRequest ("{\"method\":\"open\",\"version\":1,\"payload\":{\"_tag\":\"act\"," ++
   "\"a\":{\"_tag\":\"open_\",\"name\":\"n\",\"app\":{\"rows\":[],\"services\":[],\"types\":[]}," ++
   "\"sketch\":{\"holes\":[],\"program\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\"," ++
-  "\"value\":{\"_tag\":\"nat\",\"value\":9007199254740994}}}}}}}")).toOption.isSome
+  "\"value\":{\"_tag\":\"nat\",\"value\":9007199254740994}}}}}}}")).toOption.isNone
+#guard (Tools.WireText.readRequest ("{\"method\":\"open\",\"version\":1,\"payload\":{\"_tag\":\"act\"," ++
+  "\"a\":{\"_tag\":\"open_\",\"name\":\"n\",\"app\":{\"rows\":[],\"services\":[],\"types\":[]}," ++
+  "\"sketch\":{\"holes\":[],\"program\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\"," ++
+  "\"value\":{\"_tag\":\"nat\",\"value\":9007199254740991}}}}}}}")).toOption.isSome
 
 -- tested: a closed program starts and finishes with its exit
 #guard

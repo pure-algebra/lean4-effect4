@@ -143,10 +143,21 @@ inductive RunAnswer where
   | record (r : LiveRecord)
   | journal (commands : List Api.Runner.Command)
 
+/-- **A preview run, as the tool answers it**: its steps, how it stopped, and the tape it left
+unread. The machine's stores stay inside the run (`Run.Tree.Outcome.stores`). -/
+structure PreviewRun where
+  steps : List Run.Tree.Step
+  stop : Run.Tree.Stop
+  unread : List Machine.ExitV
+
+/-- The answer of a tree run, without its stores. -/
+def PreviewRun.of (o : Run.Tree.Outcome (List Machine.ExitV)) : PreviewRun :=
+  ⟨o.steps, o.stop, o.state⟩
+
 /-- **A preview's answer**: settled outcomes, frames, or explored paths. -/
 inductive PreviewAnswer where
-  | settled (result : Option (Nat × Run.Tree.Outcome (List Machine.ExitV)))
-  | frames (results : List (Run.Tree.Outcome (List Machine.ExitV)))
+  | settled (result : Option (Nat × PreviewRun))
+  | frames (results : List PreviewRun)
   | explored (paths : List Run.Tree.Path)
 
 /-- **A request's answer.** -/

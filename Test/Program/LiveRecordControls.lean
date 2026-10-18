@@ -1,6 +1,7 @@
 import Effect4.Run.LiveRecord
 import Effect4.Laws.Api.LiveRecord
 import Effect4.Tool.Serve
+import Effect4.Tool.ToolDerived
 
 /-!
 # Test.Program.LiveRecordControls — acceptance controls for slice E (persistent keyed live sessions)
@@ -65,10 +66,10 @@ def afterFirst : Option Live := started.bind fun l => firstKey.map fun k =>
       (Run.live l'.run).length == 1
   | .error _ => false) = some true
 
--- Control 2b (Case 11): the record round-trips through canonical bytes (`LiveRecord.encode` / `LiveRecord.decode`).
+-- Control 2b (Case 11): the record round-trips through its generated canonical bytes.
 #guard (afterFirst.map fun l =>
   let r := LiveRecord.save l
-  match LiveRecord.decode (LiveRecord.encode r) with
+  match Store.Canonical.decode (α := LiveRecord) (Store.Canonical.encode r) with
   | some r' => r'.version == r.version && r'.session == r.session && r'.journal == r.journal &&
       r'.rowNames == r.rowNames
   | none => false) = some true

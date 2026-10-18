@@ -4,7 +4,8 @@
    Test/fixtures/session/requests.jsonl) served by Kit_tool, the native shell over the generated
    Tool.serve, and compared with tool-replies.jsonl: the replies tools/Drivers/Session.lean printed
    for the same lines (Lean's own driver; regenerate with
-   `lake env lean --run tools/Drivers/Session.lean < tool-requests.jsonl > tool-replies.jsonl`).
+   `lake env lean --run tools/Drivers/Session.lean < tool-requests.jsonl > tool-replies.jsonl`, and
+   the same for tool-numbers.jsonl into tool-numbers-replies.jsonl).
    Depends on: Effect4_kit (Kit, Kit_json, Kit_tool), Effect4_gen.Api_gen, Eff_json_text.
 
    Properties:
@@ -14,6 +15,12 @@
    N3  Hostile lines refuse and change nothing: text that is not JSON, an unknown tag, an
        unselected version, and a method that disagrees with its request; the next line is
        served as if they had not come.                                          tested
+   N4  Both drivers carry the same naturals (`CodecProfile.carries`, up to 2^53 - 1): on
+       tool-numbers.jsonl (2^53 - 1 answers; 2^53 and a line that parses but does not read refuse
+       as `codec unreadable`) every reply equals Lean's (tool-numbers-replies.jsonl, printed by
+       tools/Drivers/Session.lean). Where one driver's text parser refuses (Lean's at a number
+       binary64 rounds, 2^53 + 1; OCaml's past its int range), the other refuses too: the reason
+       is each parser's own words.                                              tested
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/kit *)
 
@@ -41,20 +48,39 @@ let rec norm (j : J.t) : J.t =
 let parse s = match Kit.Json.parse s with Ok j -> Some (norm j) | Error _ -> None
 
 let requests = lines "tool-requests.jsonl"
-let lean = lines "tool-replies.jsonl"
 
-(* N1 *)
-let () =
+(* Whether a reply is a refusal, and whether it is the text parser's own (a string reason). *)
+let refusal j = match j with Some (J.Object [ ("refused", why) ]) -> Some why | _ -> None
+
+(* Serve a fixture through one native session and compare every reply with Lean's. A text-parser
+   refusal is each driver's own words, so there both must refuse; every other reply, refusals of the
+   wire included, must be equal. *)
+let compare_with_lean label requests replies =
+  let lean = lines replies in
   let t = Kit_tool.create () in
   let native = List.map (Kit_tool.serve_line t) requests in
-  check (Printf.sprintf "N1 the fixture has %d requests and Lean %d replies" (List.length requests) (List.length lean))
+  check (Printf.sprintf "%s the fixture has %d requests and Lean %d replies" label (List.length requests) (List.length lean))
     (List.length requests = List.length lean && requests <> []);
   List.iteri
     (fun i (n, l) ->
-      let same = parse n = parse l && parse n <> None in
-      check (Printf.sprintf "N1 reply %d equals Lean's" i) same;
+      let same = match refusal (parse l) with
+        | Some (J.String _) -> refusal (parse n) <> None
+        | _ -> parse n = parse l && parse n <> None in
+      check (Printf.sprintf "%s reply %d equals Lean's" label i) same;
       if not same then Printf.printf "  native: %s\n  lean:   %s\n" n l)
     (List.combine native lean)
+
+(* N1 *)
+let () = compare_with_lean "N1" requests "tool-replies.jsonl"
+
+(* N4 *)
+let () =
+  compare_with_lean "N4" (lines "tool-numbers.jsonl") "tool-numbers-replies.jsonl";
+  let past_int = "{\"method\":\"run\",\"payload\":{\"_tag\":\"ask\",\"q\":{\"_tag\":\"run\",\"id\":{\"n\":4611686018427387904},\"form\":{\"_tag\":\"view\"}}},\"version\":1}" in
+  check "N4 an integer past the int range refuses"
+    (match parse (Kit_tool.serve_line (Kit_tool.create ()) past_int) with
+     | Some (J.Object [ ("refused", _) ]) -> true
+     | _ -> false)
 
 (* N2: every fixture envelope served cached and uncached, side by side. *)
 let () =

@@ -16,20 +16,24 @@ theorem write_read {α : Type} [Canonical α] (value : α) (json : Effect4.Json)
   unfold write at h
   split at h
   · rename_i hs
-    dsimp only at h
-    cases hr : Canonical.ofJsonAnyOrder (α := α) (Canonical.printArrays value) with
-    | none => rw [hr] at h; cases h
-    | some decoded =>
-      rw [hr] at h
-      dsimp only at h
-      split at h
-      · rename_i he
-        have hd : decoded = value := Canonical.toVal_injective he
-        subst decoded
-        have hj := Except.ok.inj h
-        subst json
-        unfold read
-        rw [if_pos hs, hr]
-      · cases h
+    cases hc : carries (Canonical.toVal value) with
+    | false => simp only [hc, Bool.not_false, ↓reduceIte] at h; cases h
+    | true =>
+      simp only [hc, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
+      cases hr : Canonical.ofJsonAnyOrder (α := α) (Canonical.printArrays value) with
+      | none => rw [hr] at h; cases h
+      | some decoded =>
+        rw [hr] at h
+        dsimp only at h
+        split at h
+        · rename_i he
+          have hd : decoded = value := Canonical.toVal_injective he
+          subst decoded
+          have hj := Except.ok.inj h
+          subst json
+          unfold read
+          rw [if_pos hs, hr]
+          simp only [hc, ↓reduceIte]
+        · cases h
   · cases h
 end Effect4.Tool.CodecProfile

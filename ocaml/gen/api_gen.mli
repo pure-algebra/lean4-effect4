@@ -1698,14 +1698,8 @@ and feed_refusal =
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option *
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option
 and preview_answer =
-    PreviewAnswer_settled of
-      (int *
-       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
-       Eff_types.Exit.t list effect4_run_tree_outcome)
-      option
-  | PreviewAnswer_frames of
-      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
-      Eff_types.Exit.t list effect4_run_tree_outcome list
+    PreviewAnswer_settled of (int * preview_run) option
+  | PreviewAnswer_frames of preview_run list
   | PreviewAnswer_explored of path list
 and scheme =
     Scheme_mono of Eff_types.Ty.t list * Eff_types.Ty.t
@@ -1772,6 +1766,13 @@ and effect4_run_preview_refusal =
   | Effect4_run_preview_refusal_outsideTree of int list
   | Effect4_run_preview_refusal_genericRow of int list * int
   | Effect4_run_preview_refusal_handleAnswer of int list * int
+and preview_run = {
+  steps : step list;
+  stop : stop;
+  unread :
+    (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+    Eff_types.Exit.t list;
+}
 and slot_view = {
   slot : ext_slot;
   term : Eff_types.Term.t option;
@@ -1816,11 +1817,7 @@ and held_call = {
     (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
     Eff_types.Completion.t option;
 }
-and wait_view = {
-  fiber : fiber_id;
-  token : int;
-  registration : eff_name option;
-}
+and wait_view = { fiber : fiber_id; token : int; site : wait_site option; }
 and edit_session = { app : sig_app; sketch : sketch; table : entry list; }
 and hole_view = {
   index : int;
@@ -1904,6 +1901,7 @@ and evidence =
   | Evidence_refused of type_refusal
   | Evidence_feedRefused of feed_refusal
   | Evidence_differentEnv of Eff_types.Ty.t list * Eff_types.Ty.t list
+and wait_site = WaitSite_deferred of deferred_key | WaitSite_other
 and recorded_reply = {
   table : Eff_types.Row.t list;
   fiber : fiber_id;

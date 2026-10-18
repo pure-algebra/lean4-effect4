@@ -1,0 +1,6 @@
+{"method":"open","payload":{"_tag":"act","a":{"_tag":"open_","app":{"rows":[],"services":[],"types":[]},"name":"default","sketch":{"holes":[],"program":{"_tag":"bind","first":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":5}}},"rest":{"_tag":"bind","first":{"_tag":"perform","op":{"_tag":"refMake"},"request":{"_tag":"var","index":0}},"rest":{"_tag":"bind","first":{"_tag":"perform","op":{"_tag":"refSet"},"request":{"_tag":"app","args":[{"_tag":"var","index":1},{"_tag":"lit","value":{"_tag":"nat","value":7}}],"atom":"pair"}},"rest":{"_tag":"perform","op":{"_tag":"refGet"},"request":{"_tag":"var","index":1}}}}}}}},"version":1}
+{"method":"run","payload":{"_tag":"ask","q":{"_tag":"run","id":{"n":9007199254740991},"form":"view"}},"version":1}
+{"method":"run","payload":{"_tag":"ask","q":{"_tag":"run","id":{"n":9007199254740992},"form":"view"}},"version":1}
+{"method":"run","payload":{"_tag":"ask","q":{"_tag":"run","id":{"n":9007199254740993},"form":"view"}},"version":1}
+{"method":"run","payload":{"_tag":"nope"},"version":1}
+{"method":"history","payload":{"_tag":"ask","q":{"_tag":"history"}},"version":1}

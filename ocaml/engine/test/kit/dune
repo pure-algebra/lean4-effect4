@@ -34,5 +34,5 @@
 (test
  (name test_tool)
  (modules test_tool)
- (deps tool-requests.jsonl tool-replies.jsonl)
+ (deps tool-requests.jsonl tool-replies.jsonl tool-numbers.jsonl tool-numbers-replies.jsonl)
  (libraries effect4_kit effect4_eff effect4_gen))

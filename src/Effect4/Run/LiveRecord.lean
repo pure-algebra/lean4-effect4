@@ -15,8 +15,8 @@ application, opens the admitted program with its row spellings, and replays the 
   format version is refused before admission.
 * **Exact restoration** (`LiveRecord.restore_save`, `src/Effect4/Laws/Api/LiveRecord.lean`):
   keeping the row spellings beside the application and journal restores the exact `Run`.
-* **Canonical bytes** (`toTuple`, `ofTuple`, `encode`, `decode`): every field is first-order and
-  travels through the store's generated `Canonical` instances.
+* **Canonical bytes**: every field is first-order, so the record's codec is the generator's
+  (`Canonical LiveRecord`, the Tool group, `src/Effect4/Tool/ToolDerived.lean`).
 
 This file is no `module` file: it imports `Effect4.Run.Live`, an importer of the specialization
 sites of decisions row 202.
@@ -71,31 +71,6 @@ def restore (r : LiveRecord) : Except Refusal Live :=
     | .ok built =>
       .ok ((Live.open { built with rowNames := r.rowNames } r.session r.budget
         r.binding).feedAll (r.journal.map .wire))
-
-/-- The canonical tuple of a `LiveRecord`'s first-order fields. -/
-abbrev Tuple :=
-  Nat × RowTable × List (ServiceKey × Ty) × TyDecls × NativeEff × String × String × Nat ×
-    Nat × List Command × List (String × Nat)
-
-/-- Project a `LiveRecord` to its canonical tuple. -/
-def toTuple (r : LiveRecord) : Tuple :=
-  (r.version, r.app.rows, r.app.services, r.app.types, r.program, r.session, r.binding,
-    r.budget.fuel, r.budget.compileFuel, r.journal, r.rowNames)
-
-/-- Rebuild a `LiveRecord` from its canonical tuple. -/
-def ofTuple (t : Tuple) : LiveRecord :=
-  let (version, rows, services, types, program, session, binding, fuel, compileFuel, journal,
-    rowNames) := t
-  ⟨version, ⟨rows, services, types⟩, program, session, binding, ⟨fuel, compileFuel⟩, journal,
-    rowNames⟩
-
-/-- Encode a `LiveRecord` to canonical bytes. -/
-def encode (r : LiveRecord) : Bytes :=
-  Canonical.encode r.toTuple
-
-/-- Decode a `LiveRecord` from canonical bytes. -/
-def decode (b : Bytes) : Option LiveRecord :=
-  (Canonical.decode (α := Tuple) b).map ofTuple
 
 end LiveRecord
 
