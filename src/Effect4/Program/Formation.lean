@@ -186,14 +186,62 @@ def nodeAnnotations {Op : Type} [ScopedOp Op] (fam : EffFam) (node : EffSelfCarr
   ((view fam node).2.zipIdx).flatMap fun (argument, index) =>
     argumentAnnotations ("program" :: path.map toString) index argument
 
+/-- The existing annotation reader, with child payloads discarded before lowering. -/
+def argumentReader {Op : Type} [ScopedOp Op] (path : List String) :
+    ArgReader Op (List (List String × Ty)) where
+  child := fun _ _ => []
+  term := fun index term => termAnnotations (path ++ ["argument", toString index]) term
+  cause := fun index cause => causeAnnotations (path ++ ["argument", toString index]) cause
+  optTerm := fun index term => term.toList.flatMap (termAnnotations (path ++ ["argument", toString index]))
+  optTy := fun _ ty => ty.toList.map fun t => (path ++ ["cursorTy"], t)
+  decls := fun index decls => declAnnotations (path ++ ["argument", toString index]) decls
+  op := fun index op => (ScopedOp.term? op).toList.flatMap
+      (termAnnotations (path ++ ["argument", toString index, "op"])) ++
+    (ScopedOp.typeArgs op).zipIdx.map fun (ty, position) =>
+      (path ++ ["argument", toString index, "op", "typeArgs", toString position], ty)
+  nat := fun _ _ => []
+  mode := fun _ _ => []
+  bool := fun _ _ => []
+  key := fun _ _ => []
+  decision := fun _ _ => []
+  forkOptions := fun _ _ => []
+  keys := fun _ _ => []
+  lit := fun _ _ => []
+  path := fun _ _ => []
+
+/-- The reader keeps the exact annotation sequence. This helper serves raw-formation
+and readArgs-based programAnnotations. It asserts no type or host admission. -/
+theorem argumentReader_read {Op : Type} [ScopedOp Op] (path : List String) (index : Nat)
+    (arg : ArgF Op (EffSelfCarrier Op)) :
+    arg.read (argumentReader path) index = argumentAnnotations path index arg := by
+  cases arg <;> rfl
+
 /-- Every raw program annotation. Formation and the integer profile share this collector.
 The existing iteration annotation retains its `cursorTy` path. -/
 def programAnnotations {Op : Type} [ScopedOp Op] (program : Eff Op) : List (List String × Ty) :=
   foldMapAt_eff [] (· ++ ·) [] program
+    (f_eff := fun node path => (readArgs_eff (argumentReader ("program" :: path.map toString)) node).flatten)
+    (f_stmt := fun node path => (readArgs_stmt (argumentReader ("program" :: path.map toString)) node).flatten)
+    (f_stmts := fun node path => (readArgs_stmts (argumentReader ("program" :: path.map toString)) node).flatten)
+    (f_effs := fun node path => (readArgs_effs (argumentReader ("program" :: path.map toString)) node).flatten)
+    (f_action := fun node path => (readArgs_action (argumentReader ("program" :: path.map toString)) node).flatten)
+    (f_layer := fun node path => (readArgs_layer (argumentReader ("program" :: path.map toString)) node).flatten)
+    (f_layers := fun node path => (readArgs_layers (argumentReader ("program" :: path.map toString)) node).flatten)
+
+/-- The annotation sequence equals the existing view reader for every program and alphabet.
+Placement: subtyping-algebra, raw-formation; consumed by programAnnotations_all and full admission.
+This states no runtime, progress, or native execution claim. -/
+theorem programAnnotations_eq_view {Op : Type} [ScopedOp Op] (program : Eff Op) :
+    programAnnotations program =
+      foldMapAt_eff [] (· ++ ·) [] program
     (f_eff := nodeAnnotations .eff) (f_stmt := nodeAnnotations .stmt)
     (f_stmts := nodeAnnotations .stmts) (f_effs := nodeAnnotations .effs)
     (f_action := nodeAnnotations .action) (f_layer := nodeAnnotations .layer)
-    (f_layers := nodeAnnotations .layers)
+    (f_layers := nodeAnnotations .layers) := by
+  simp only [programAnnotations,
+    readArgs_eff_eq, readArgs_stmt_eq, readArgs_stmts_eq, readArgs_effs_eq, readArgs_action_eq, readArgs_layer_eq, readArgs_layers_eq,
+    argumentReader_read]
+  rfl
 
 /-- Strict raw formation reaches every program annotation, including nested record terms. -/
 def programSites {Op : Type} [ScopedOp Op] (program : Eff Op) : List Site :=

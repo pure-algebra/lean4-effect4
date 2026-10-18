@@ -43,3 +43,8 @@
  (alias runtest)
  (action
   (diff join_escape.expected join_escape.stderr)))
+
+(test
+ (name test_seams_s0)
+ (modules test_seams_s0)
+ (libraries effect4_gen effect4_eff))

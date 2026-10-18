@@ -668,6 +668,187 @@ theorem build_view {Op : Type} : (fam : EffFam) → (e : EffSelfCarrier Op fam) 
   | .layer, e => build_view_layer e
   | .layers, e => build_view_layers e
 
+universe v
+
+/-- A reader of argument positions and leaves. Children keep their family and position.
+This carrier stores no program syntax. Generated from the program signature. -/
+structure ArgReader (Op : Type) (α : Type v) where
+  child : Nat → EffFam → α
+  term : Nat → Effect4.Program.Term → α
+  cause : Nat → Effect4.Program.CauseTerm → α
+  op : Nat → Op → α
+  nat : Nat → Nat → α
+  mode : Nat → Effect4.Supervision.ObserverMode → α
+  bool : Nat → Bool → α
+  key : Nat → Effect4.ServiceKey → α
+  decision : Nat → Effect4.Program.Decision → α
+  optTy : Nat → Option Effect4.Program.Ty → α
+  decls : Nat → List Effect4.Program.DefDecl → α
+  forkOptions : Nat → Effect4.Supervision.ForkOptions → α
+  optTerm : Nat → Option Effect4.Program.Term → α
+  keys : Nat → Effect4.Row Effect4.ServiceKey → α
+  lit : Nat → Effect4.Program.Lit → α
+  path : Nat → List Nat → α
+
+/-- Read one argument, discarding only a child's recursive payload.
+Placement: subtyping-algebra, raw-formation. The generated readArgs connectors consume it. -/
+def ArgF.read {Op : Type} {R : EffFam → Type u} {α : Type v}
+    (reader : ArgReader Op α) (index : Nat) : ArgF Op R → α
+  | .child fam _ => reader.child index fam
+  | .term value => reader.term index value
+  | .cause value => reader.cause index value
+  | .op value => reader.op index value
+  | .nat value => reader.nat index value
+  | .mode value => reader.mode index value
+  | .bool value => reader.bool index value
+  | .key value => reader.key index value
+  | .decision value => reader.decision index value
+  | .optTy value => reader.optTy index value
+  | .decls value => reader.decls index value
+  | .forkOptions value => reader.forkOptions index value
+  | .optTerm value => reader.optTerm index value
+  | .keys value => reader.keys index value
+  | .lit value => reader.lit index value
+  | .path value => reader.path index value
+
+/-- Read the eff constructor arguments in declaration order. Generated from its signature. -/
+def readArgs_eff {Op : Type} {α : Type v} (reader : ArgReader Op α) : Effect4.Program.Eff Op → List α
+  | .succeed a0 => [reader.term 0 a0]
+  | .fail a0 => [reader.term 0 a0]
+  | .failCause a0 => [reader.cause 0 a0]
+  | .sync a0 => [reader.term 0 a0]
+  | .suspend _ => [reader.child 0 .eff]
+  | .perform a0 a1 => [reader.op 0 a0, reader.term 1 a1]
+  | .bind _ _ => [reader.child 0 .eff, reader.child 1 .eff]
+  | .gen _ => [reader.child 0 .stmts]
+  | .catchCause _ _ => [reader.child 0 .eff, reader.child 1 .eff]
+  | .matchCause _ _ _ => [reader.child 0 .eff, reader.child 1 .eff, reader.child 2 .eff]
+  | .onExit _ _ => [reader.child 0 .eff, reader.child 1 .eff]
+  | .exit _ => [reader.child 0 .eff]
+  | .uninterruptible _ => [reader.child 0 .eff]
+  | .interruptible _ => [reader.child 0 .eff]
+  | .yieldNow a0 => [reader.nat 0 a0]
+  | .awaitFiber a0 a1 => [reader.term 0 a0, reader.mode 1 a1]
+  | .withFiber _ => [reader.child 0 .action]
+  | .scoped _ => [reader.child 0 .eff]
+  | .acquireRelease _ _ => [reader.child 0 .eff, reader.child 1 .eff]
+  | .provideLayer _ a1 _ => [reader.child 0 .layer, reader.bool 1 a1, reader.child 2 .eff]
+  | .service a0 => [reader.key 0 a0]
+  | .provideService a0 a1 _ => [reader.key 0 a0, reader.term 1 a1, reader.child 2 .eff]
+  | .catchIf a0 _ _ => [reader.term 0 a0, reader.child 1 .eff, reader.child 2 .eff]
+  | .select a0 a1 _ _ => [reader.term 0 a0, reader.decision 1 a1, reader.child 2 .eff, reader.child 3 .eff]
+  | .iterate a0 a1 a2 a3 a4 _ => [reader.optTy 0 a0, reader.term 1 a1, reader.term 2 a2, reader.term 3 a3, reader.term 4 a4, reader.child 5 .eff]
+  | .restore a0 _ => [reader.term 0 a0, reader.child 1 .eff]
+  | .defs a0 _ _ _ => [reader.decls 0 a0, reader.child 1 .effs, reader.child 2 .eff, reader.child 3 .layers]
+  | .invoke a0 a1 _ => [reader.nat 0 a0, reader.term 1 a1, reader.child 2 .effs]
+  | .provideContext a0 _ => [reader.term 0 a0, reader.child 1 .eff]
+
+/-- Exact argument-reader connector for raw-formation, consumed by Formation.programAnnotations.
+The observation is the ordered argument list at every node; it assumes no admission or host fact. -/
+theorem readArgs_eff_eq {Op : Type} {α : Type v} (reader : ArgReader Op α) (node : Effect4.Program.Eff Op) :
+    readArgs_eff reader node =
+      ((view_eff node).2.zipIdx).map (fun (arg, index) => arg.read reader index) := by
+  cases node <;> rfl
+
+/-- Read the stmt constructor arguments in declaration order. Generated from its signature. -/
+def readArgs_stmt {Op : Type} {α : Type v} (reader : ArgReader Op α) : Effect4.Program.Stmt Op → List α
+  | .bindYield _ => [reader.child 0 .eff]
+  | .yieldDiscard _ => [reader.child 0 .eff]
+  | .ret a0 => [reader.term 0 a0]
+  | .ifElse a0 _ _ => [reader.term 0 a0, reader.child 1 .stmts, reader.child 2 .stmts]
+  | .whileTrue _ => [reader.child 0 .stmts]
+  | .breakLoop => []
+
+/-- Exact argument-reader connector for raw-formation, consumed by Formation.programAnnotations.
+The observation is the ordered argument list at every node; it assumes no admission or host fact. -/
+theorem readArgs_stmt_eq {Op : Type} {α : Type v} (reader : ArgReader Op α) (node : Effect4.Program.Stmt Op) :
+    readArgs_stmt reader node =
+      ((view_stmt node).2.zipIdx).map (fun (arg, index) => arg.read reader index) := by
+  cases node <;> rfl
+
+/-- Read the stmts constructor arguments in declaration order. Generated from its signature. -/
+def readArgs_stmts {Op : Type} {α : Type v} (reader : ArgReader Op α) : Effect4.Program.Stmts Op → List α
+  | .nil => []
+  | .cons _ _ => [reader.child 0 .stmt, reader.child 1 .stmts]
+
+/-- Exact argument-reader connector for raw-formation, consumed by Formation.programAnnotations.
+The observation is the ordered argument list at every node; it assumes no admission or host fact. -/
+theorem readArgs_stmts_eq {Op : Type} {α : Type v} (reader : ArgReader Op α) (node : Effect4.Program.Stmts Op) :
+    readArgs_stmts reader node =
+      ((view_stmts node).2.zipIdx).map (fun (arg, index) => arg.read reader index) := by
+  cases node <;> rfl
+
+/-- Read the effs constructor arguments in declaration order. Generated from its signature. -/
+def readArgs_effs {Op : Type} {α : Type v} (reader : ArgReader Op α) : Effect4.Program.Effs Op → List α
+  | .nil => []
+  | .cons _ _ => [reader.child 0 .eff, reader.child 1 .effs]
+
+/-- Exact argument-reader connector for raw-formation, consumed by Formation.programAnnotations.
+The observation is the ordered argument list at every node; it assumes no admission or host fact. -/
+theorem readArgs_effs_eq {Op : Type} {α : Type v} (reader : ArgReader Op α) (node : Effect4.Program.Effs Op) :
+    readArgs_effs reader node =
+      ((view_effs node).2.zipIdx).map (fun (arg, index) => arg.read reader index) := by
+  cases node <;> rfl
+
+/-- Read the action constructor arguments in declaration order. Generated from its signature. -/
+def readArgs_action {Op : Type} {α : Type v} (reader : ArgReader Op α) : Effect4.Program.ActionTerm Op → List α
+  | .fork _ a1 => [reader.child 0 .eff, reader.forkOptions 1 a1]
+  | .forkIn _ a1 a2 => [reader.child 0 .eff, reader.forkOptions 1 a1, reader.term 2 a2]
+  | .forkScoped _ a1 => [reader.child 0 .eff, reader.forkOptions 1 a1]
+  | .runIn a0 a1 => [reader.term 0 a0, reader.term 1 a1]
+  | .interrupt a0 => [reader.term 0 a0]
+  | .interruptScoped a0 => [reader.term 0 a0]
+  | .interruptAll a0 a1 => [reader.term 0 a0, reader.optTerm 1 a1]
+  | .awaitAll a0 => [reader.term 0 a0]
+  | .awaitAllFailFast a0 => [reader.term 0 a0]
+  | .snapshotChildren => []
+  | .awaitNewChildren a0 => [reader.term 0 a0]
+  | .raceAll _ => [reader.child 0 .effs]
+  | .getId => []
+  | .closeScope a0 a1 => [reader.term 0 a0, reader.term 1 a1]
+  | .getInterruptible => []
+  | .raceAllFirst _ => [reader.child 0 .effs]
+  | .context a0 => [reader.keys 0 a0]
+
+/-- Exact argument-reader connector for raw-formation, consumed by Formation.programAnnotations.
+The observation is the ordered argument list at every node; it assumes no admission or host fact. -/
+theorem readArgs_action_eq {Op : Type} {α : Type v} (reader : ArgReader Op α) (node : Effect4.Program.ActionTerm Op) :
+    readArgs_action reader node =
+      ((view_action node).2.zipIdx).map (fun (arg, index) => arg.read reader index) := by
+  cases node <;> rfl
+
+/-- Read the layer constructor arguments in declaration order. Generated from its signature. -/
+def readArgs_layer {Op : Type} {α : Type v} (reader : ArgReader Op α) : Effect4.Program.LayerTerm Op → List α
+  | .succeed a0 a1 => [reader.key 0 a0, reader.lit 1 a1]
+  | .effect a0 _ => [reader.key 0 a0, reader.child 1 .eff]
+  | .effectDiscard _ => [reader.child 0 .eff]
+  | .provide _ _ => [reader.child 0 .layer, reader.child 1 .layer]
+  | .provideMerge _ _ => [reader.child 0 .layer, reader.child 1 .layer]
+  | .merge _ _ => [reader.child 0 .layer, reader.child 1 .layer]
+  | .fresh _ => [reader.child 0 .layer]
+  | .orDie _ => [reader.child 0 .layer]
+  | .ref a0 => [reader.path 0 a0]
+  | .mergeAll _ => [reader.child 0 .layers]
+
+/-- Exact argument-reader connector for raw-formation, consumed by Formation.programAnnotations.
+The observation is the ordered argument list at every node; it assumes no admission or host fact. -/
+theorem readArgs_layer_eq {Op : Type} {α : Type v} (reader : ArgReader Op α) (node : Effect4.Program.LayerTerm Op) :
+    readArgs_layer reader node =
+      ((view_layer node).2.zipIdx).map (fun (arg, index) => arg.read reader index) := by
+  cases node <;> rfl
+
+/-- Read the layers constructor arguments in declaration order. Generated from its signature. -/
+def readArgs_layers {Op : Type} {α : Type v} (reader : ArgReader Op α) : Effect4.Program.LayerTerms Op → List α
+  | .nil => []
+  | .cons _ _ => [reader.child 0 .layer, reader.child 1 .layers]
+
+/-- Exact argument-reader connector for raw-formation, consumed by Formation.programAnnotations.
+The observation is the ordered argument list at every node; it assumes no admission or host fact. -/
+theorem readArgs_layers_eq {Op : Type} {α : Type v} (reader : ArgReader Op α) (node : Effect4.Program.LayerTerms Op) :
+    readArgs_layers reader node =
+      ((view_layers node).2.zipIdx).map (fun (arg, index) => arg.read reader index) := by
+  cases node <;> rfl
+
 
 end Effect4.Program
 

@@ -45,6 +45,12 @@ structure Args where
   types : Array Name := #[]
   cap : Nat := 60
   roots : Array Name := #[]
+  /-- Translated for coverage, without entering the public interface. -/
+  coverage : Array Name := #[]
+  /-- Whole packages made abstract by the inferred OCaml interface. -/
+  abstractTypes : Array Name := #[]
+  /-- Roots whose public values keep their original nominal types (`--nominal-roots`). -/
+  nominalRoots : Array Name := #[]
   /-- Modules to import before looking the roots up; a run without one is refused. -/
   imports : Array Name := #[]
   /-- The `Extract Constant` table (`--externs <file>`). None means the flat, unseamed output. -/
@@ -69,6 +75,12 @@ def Args.parse : List String → Args → Args
   | "--out" :: p :: rest, a => Args.parse rest { a with out := p }
   | "--types" :: ts :: rest, a =>
     Args.parse rest { a with types := a.types ++ ((ts.splitOn ",").map String.toName).toArray }
+  | "--coverage" :: ns :: rest, a =>
+    Args.parse rest { a with coverage := a.coverage ++ ((ns.splitOn ",").map String.toName).toArray }
+  | "--abstract-types" :: ns :: rest, a =>
+    Args.parse rest { a with abstractTypes := a.abstractTypes ++ ((ns.splitOn ",").map String.toName).toArray }
+  | "--nominal-roots" :: ns :: rest, a =>
+    Args.parse rest { a with nominalRoots := a.nominalRoots ++ ((ns.splitOn ",").map String.toName).toArray }
   | "--cap" :: n :: rest, a => Args.parse rest { a with cap := n.toNat! }
   | "--import" :: m :: rest, a =>
     Args.parse rest { a with imports := a.imports ++ ((m.splitOn ",").map String.toName).toArray }
@@ -100,6 +112,8 @@ def argvOf (typesOf : String → Option (List String)) (entry : Json) :
   let imports := (entry.getObjValAs? (List String) "import").toOption.getD []
   let cap ← entry.getObjValAs? Nat "cap"
   let types := (entry.getObjValAs? (List String) "types").toOption.getD []
+  let nominalRoots := (entry.getObjValAs? (List String) "nominal").toOption.getD []
+  let abstractTypes := (entry.getObjValAs? (List String) "abstract").toOption.getD []
   let roots ← entry.getObjValAs? (List String) "roots"
   let coverage := (entry.getObjValAs? (List String) "coverage").toOption.getD []
   let flag (name : String) : List String :=
@@ -118,7 +132,10 @@ def argvOf (typesOf : String → Option (List String)) (entry : Json) :
   return ["--out", out] ++ imports.flatMap (fun m => ["--import", m]) ++ ["--cap", toString cap]
     ++ (if types.isEmpty then [] else ["--types", ",".intercalate types])
     ++ (if modules then ["--modules"] else [])
-    ++ flag "externs" ++ flag "prelude" ++ opens ++ roots ++ coverage
+    ++ (if nominalRoots.isEmpty then [] else ["--nominal-roots", ",".intercalate nominalRoots])
+    ++ (if abstractTypes.isEmpty then [] else ["--abstract-types", ",".intercalate abstractTypes])
+    ++ flag "externs" ++ flag "prelude" ++ opens
+    ++ (if coverage.isEmpty then [] else ["--coverage", ",".intercalate coverage]) ++ roots
 
 /-- The recipe's artifacts, each as its argv, in the recipe's order. Another format is refused. -/
 def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
@@ -160,14 +177,93 @@ export filter makes the two disagree (`tools/Conform/Lcnf/Validity.lean`, the se
 `monoExt`'s local state). A declaration the closure translated and the index cannot find is
 fatal, not a blank row. -/
 private def manifestRow (env : Environment) (mono : MonoIndex)
-    (t : Translated) : MetaM String := do
+    (roots : Array Name) (t : Translated) : MetaM String := do
   let some d := mono.findIn? env t.leanName
     | throwError s!"closure manifest: no mono declaration for {t.leanName}"
   let census := Census.ofDecl {} d
   return "\t".intercalate
     ([toString t.leanName, t.ocamlName, toString t.recursive]
       ++ constructs.map (fun k => toString (census.get k))
-      ++ [toString (hash d)])
+      ++ [toString (hash d), toString t.userName, toString (roots.contains t.userName)])
+
+/-- A public root's original type after proof and type parameters erase. Unlike mono types,
+this type keeps the package names that an OCaml interface makes abstract. An unspelled binder
+or result refuses the root; the generator never falls back to its erased representation. -/
+private def nominalRootType (ex : Externs) (tn : TypeNames) (root : Name) :
+    MetaM (Ml.Ty × Array Name) := do
+  let info ← getConstInfo root
+  Meta.forallTelescope info.type fun xs result => do
+    let mut params : ParamVars := {}
+    let mut domains : List Ml.Ty := []
+    let mut refs : Array Name := #[]
+    for x in xs do
+      let domain ← Meta.inferType x
+      if isTypeParameter domain then
+        params := { params with vars := params.vars.insert x.fvarId! s!"a{params.vars.size}" }
+      else if !(← Meta.isProp domain) then
+        let (some ty, used) ← kernelTy ex tn params domain
+          | throwError s!"nominal root {root}: cannot spell source parameter {← Meta.ppExpr domain}"
+        domains := domains ++ [ty]
+        refs := refs ++ used
+    let (some resultTy, used) ← kernelTy ex tn params result
+      | throwError s!"nominal root {root}: cannot spell source result {← Meta.ppExpr result}"
+    return (domains.foldr Ml.Ty.arrow resultTy, refs ++ used)
+
+/-- The requested source signatures and every type they need. -/
+private def nominalRootTypes (ex : Externs) (tn : TypeNames) (roots : Array Name) :
+    MetaM (Array (Name × Ml.Ty) × Array Name) := do
+  let mut types : Array (Name × Ml.Ty) := #[]
+  let mut refs : Array Name := #[]
+  for root in roots do
+    let (ty, used) ← nominalRootType ex tn root
+    types := types.push (root, ty)
+    refs := refs ++ used
+  return (types, refs)
+
+/-- Instantiate an alias before reading its runtime function arity. -/
+private def substituteTy (vars : List (String × Ml.Ty)) : Ml.Ty → Ml.Ty
+  | .var name => (vars.lookup name).getD (.var name)
+  | .con name args => .con name (args.map (substituteTy vars))
+  | .arrow dom cod => .arrow (substituteTy vars dom) (substituteTy vars cod)
+  | .tuple parts => .tuple (parts.map (substituteTy vars))
+  | .anon => .anon
+  | .labelled name dom cod => .labelled name (substituteTy vars dom) (substituteTy vars cod)
+
+/-- Read arrows through generated aliases. A bounded alias cycle refuses a root signature. -/
+private def runtimeArity (types : List Ml.TypeDecl) : Nat → Ml.Ty → Except String Nat
+  | 0, _ => .error "nominal root type alias expansion exhausted its bound"
+  | fuel + 1, .arrow _ cod | fuel + 1, .labelled _ _ cod =>
+    (· + 1) <$> runtimeArity types fuel cod
+  | fuel + 1, .con name args =>
+    match types.find? (·.name == name) with
+    | some { params, body := .alias ty, .. } =>
+      if params.length == args.length then
+        runtimeArity types fuel (substituteTy (params.zip args) ty)
+      else .error s!"nominal root alias {name}: parameter arity mismatch"
+    | _ => .ok 0
+  | _ + 1, _ => .ok 0
+
+/-- Rebind each selected public root with its entire source type. The right-hand side reads
+the preceding binding, so no argument, wrapper or cast changes its implementation. The OCaml
+compiler checks the complete ascription before the producer publishes either file. -/
+private def nominalRootBindings (decls : Array Translated) (types : List Ml.TypeDecl)
+    (roots : Array (Name × Ml.Ty)) : MetaM (List Ml.Decl) := do
+  let mut items : List Ml.Decl := []
+  for (root, ty) in roots do
+    let some found := decls.find? (·.userName == root)
+      | throwError s!"nominal root {root}: no translated public binding"
+    let sourceArity ← match runtimeArity types 128 ty with
+      | .ok n => pure n
+      | .error message => throwError s!"nominal root {root}: {message}"
+    let resultArity ← match runtimeArity types 128 (found.bind.result.getD .anon) with
+      | .ok n => pure n
+      | .error message => throwError s!"nominal root {root}: {message}"
+    let monoArity := found.bind.params.length + resultArity
+    unless sourceArity == monoArity do
+      throwError s!"nominal root {root}: source/mono arity mismatch ({sourceArity} versus {monoArity})"
+    let binding : Ml.Bind := { name := found.ocamlName, result := some ty, body := .var found.ocamlName }
+    items := items ++ [.letD false [binding], .blank]
+  return items
 
 /-- Milliseconds between two readings of `IO.monoNanosNow`. -/
 private def millis (a b : Nat) : Nat := (b - a) / 1000000
@@ -175,10 +271,14 @@ private def millis (a b : Nat) : Nat := (b - a) / 1000000
 /-- One artifact, made from its argv and written with its closure manifest; the report goes to
 standard output, the last line its phases' times. `recipeOuts` places the manifest
 (`manifestPathFor`). -/
-def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
+def run (argv : List String) (recipeOuts : List String)
+    (stage : Option System.FilePath := none) : MetaM Unit := do
   let args := Args.parse argv {}
   if args.out.isEmpty || args.imports.isEmpty then
     throwError "LcnfGen: `--out <path>` and at least one `--import <module>` are required"
+  for root in args.nominalRoots do
+    unless args.roots.contains root do
+      throwError s!"nominal root {root}: it is not a translation root"
   let handEx : Externs ← match args.externs with
     | none => pure {}
     | some path => do
@@ -209,10 +309,11 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
     openedModules := og.entries.toList.filterMap fun (n, d, _) => (otn.modules[n]?).map fun m => (m, [d])
   if args.modules && !(args.roots.isEmpty && args.opens.isNone) then
     throwError "LcnfGen: `--modules` declares the program types alone: no roots and no `--open`"
-  let (closure0, ex, inferred) ← translateClosureInferring args.roots args.cap tn handEx
+  let (closure0, ex, inferred) ← translateClosureInferring (args.roots ++ args.coverage) args.cap tn handEx
   let t1 ← IO.monoNanosNow
   let mut closure := closure0
-  let mut gen ← generate (closure.realTypes ++ args.types) closure.mentioned tn ex provided
+  let (_, nominalRefs) ← nominalRootTypes ex tn args.nominalRoots
+  let mut gen ← generate (closure.realTypes ++ args.types ++ args.abstractTypes ++ nominalRefs) closure.mentioned tn ex provided
   let t2 ← IO.monoNanosNow
   let mut renamed : Array (String × Name × Name) := #[]
   for _ in [:4] do
@@ -220,7 +321,7 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
     renamed := renamed ++ gen.collisions
     for (_, _, n) in gen.collisions do tn := { tn with renamed := tn.renamed.insert n (fullTypeName n) }
     closure ← retranslate closure tn ex
-    gen ← generate (closure.realTypes ++ args.types) closure.mentioned tn ex provided
+    gen ← generate (closure.realTypes ++ args.types ++ args.abstractTypes ++ nominalRefs) closure.mentioned tn ex provided
   -- the owner: every type of its closure at its owner, one module each, as an opening artifact
   -- reads them (`generateInFull`)
   if args.modules then
@@ -237,24 +338,27 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   -- An artifact whose closure needs no type of its own (every type is the opened module's)
   -- declares no group: an empty `type` item is no OCaml. The owner declares one module per type.
   let typeItems : List Ml.Decl := if args.modules then gen.items tn else [gen.item, .blank]
+  let (nominalTypes, _) ← nominalRootTypes ex tn args.nominalRoots
+  let nominalBindings ← nominalRootBindings closure.decls gen.decls.toList nominalTypes
   let body : List Ml.Decl :=
     (if gen.decls.isEmpty then [] else typeItems)
       ++ (match preludeText with | none => [] | some t => [.rawD t, .blank])
-      ++ emitted
+      ++ emitted ++ nominalBindings
   -- Without a table the file is what it always was; with one, the type group mentions the
   -- carrier parameters, so the whole body moves inside the functor (A1 §1.5).
-  -- The two warnings the generated code is allowed, measured on every artifact of the recipe:
+  -- The three warnings the generated code is allowed, measured on every artifact of the recipe:
   -- 27, a parameter a body does not read (LCNF keeps erased and unused parameters, so the
   -- arity is Lean's), and 30, a record label claimed by two of the generated record types of
-  -- one group (each use is annotated with its type). Every other warning is on, and the
+  -- one group (each use is annotated with its type); 32, coverage values intentionally
+  -- hidden by the inferred root-only interface. Every other warning is on, and the
   -- estate builds with warnings as errors, so a new kind fails the build where it appears.
   let opened : List Ml.Decl :=
     match args.opens with | none => [] | some m => [.openD m, .blank]
   let items : List Ml.Decl :=
     if args.externs.isNone then
-      [.floatingAttrD "warning \"-27-30\"", .blank] ++ opened ++ body
+      [.floatingAttrD "warning \"-27-30-32\"", .blank] ++ opened ++ body
     else
-      [.floatingAttrD "warning \"-27-30\"", .blank] ++ opened ++
+      [.floatingAttrD "warning \"-27-30-32\"", .blank] ++ opened ++
       carrierSignatures ++ [.blank, .moduleD "Make" carrierParams body]
   let modName := (System.FilePath.mk args.out).fileStem.getD "lcnf_gen"
   let m : Ml.Module := { name := modName, header := some header, items := items }
@@ -268,8 +372,8 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   let monoIndex := persistedMonoIndex env
   let manifestPath := manifestPathFor args.out recipeOuts
   let manifestHeader := "\t".intercalate
-    (["lean", "ocaml", "recursive"] ++ constructs ++ ["declHash"])
-  let manifestRows ← closure.decls.mapM (manifestRow env monoIndex)
+    (["lean", "ocaml", "recursive"] ++ constructs ++ ["declHash", "user", "root"])
+  let manifestRows ← closure.decls.mapM (manifestRow env monoIndex args.roots)
   let manifestText := String.intercalate "\n" (manifestHeader :: manifestRows.toList) ++ "\n"
   IO.println s!"closure: {closure.decls.size} of --cap {args.cap} \
     ({args.cap - closure.decls.size} of headroom); manifest {manifestPath}"
@@ -299,6 +403,8 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
     throwError s!"todos remaining in closure (fatal): {closure.problems}"
   unless gen.collisions.isEmpty do
     throwError s!"unresolved type-name collisions (fatal): {gen.collisions}"
+  unless gen.unknown.isEmpty do
+    throwError s!"unspelled field types (fatal): {gen.unknown}"
   -- The module's own well-formedness, FATAL (tooling plan 4.3), for every artifact. The opened
   -- unit's interface is its types, as its own artifact declares them: the `open` reads as a
   -- scope, and the value names past it are checked.
@@ -358,12 +464,34 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
       unless closure.usedCargs.contains n do stale := stale.push s!"carg {n}"
     unless stale.isEmpty do
       throwError "extern rows no declaration hit (a stale ledger): {stale}"
+  -- Public values are source roots. Coverage contributes code only.
+  let mut rootNames : Array String := #[]
+  for root in args.roots do
+    let some translated := closure.decls.find? (·.userName == root)
+      | throwError s!"public root {root}: no translated binding"
+    rootNames := rootNames.push translated.ocamlName
+  let interfaceData := Json.mkObj [
+    ("roots", toJson rootNames),
+    ("abstract", toJson (args.abstractTypes.map (typeNameIn tn)))]
   let t6 ← IO.monoNanosNow
   let text := Ml.render m
-  IO.FS.writeFile args.out text
+  -- Staging changes destinations only. Commands and manifests retain their canonical paths.
+  let destination (path : String) : System.FilePath :=
+    match stage with | none => path | some directory => directory / path
+  if stage.isSome && (System.FilePath.mk args.out).isAbsolute then
+    throwError "LcnfGen: a staged artifact requires a relative output path"
+  let output := destination args.out
+  IO.FS.createDirAll (output.parent.getD ".")
+  IO.FS.writeFile output text
+  -- The staged producer reads this build artifact. It is never a committed interface snapshot.
+  if stage.isSome then
+    IO.FS.writeFile (output.toString ++ ".interface.json") (interfaceData.pretty ++ "\n")
   -- An artifact with no roots declares types only: it translates nothing, so it has no closure
   -- to record.
-  unless args.roots.isEmpty do IO.FS.writeFile manifestPath manifestText
+  unless (args.roots ++ args.coverage).isEmpty do
+    let manifest := destination manifestPath
+    IO.FS.createDirAll (manifest.parent.getD ".")
+    IO.FS.writeFile manifest manifestText
   let t7 ← IO.monoNanosNow
   IO.println s!"wrote {args.out} and {manifestPath}"
   IO.println s!"time (ms): closure {millis t0 t1}, types {millis t1 t2}, renaming {millis t2 t3}, \

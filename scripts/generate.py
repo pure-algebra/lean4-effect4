@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 
 from lib.derived_plan import imports_of, stages
+from lib.lcnf_interfaces import generate as lcnf_interfaces
 from lib.lean_imports import imports_of as lean_imports_of, workspace_source
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -288,18 +289,7 @@ def generate(families, output):
             # so the temporary-output route does not apply to it.
             run(['bun', 'ts/eff/ingest/render-readme.ts', *(['--check'] if checking else [])])
         if 'lcnf' in families:
-            if checking:
-                raise ValueError('LCNF regenerates in place only; the drift check is `git diff`')
-            # Each artefact's imports, read from the recipe, so a lane's Lean roots are built too.
-            recipe = json.loads((ROOT / LCNF_ROOTS).read_text())
-            imports = sorted({m for artefact in recipe['artefacts'] for m in artefact.get('import', [])})
-            run(['lake', 'build', *imports])
-            run(['lake', 'build', 'OCaml5.Tools.LcnfGen'])
-            # One process per artifact, so a process holds one artifact's imports: the recipe in
-            # one process peaked at 6.3 GB on 2026-10-16, past the cap. The bytes are the same.
-            for index in range(len(recipe['artefacts'])):
-                run(['lake', 'env', 'lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean',
-                     '--recipe', LCNF_ROOTS, '--one', str(index)])
+            lcnf_interfaces(ROOT, LCNF_ROOTS, out, checking, run, install)
 
 
 def main():

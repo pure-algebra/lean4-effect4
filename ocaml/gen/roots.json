@@ -1,6 +1,6 @@
 {
   "format": "effect4-lcnf-roots-v2",
-  "claim": "Hand-written, not generated. The LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. The first artefact declares the program types alone (no roots): `ocaml/eff/eff_types.ml`, the one OCaml spelling of the program, whose families are `Tools.ProgramStructure.blocks`, each type its own module at this owner (its entry's `modules` flag, the argument `--modules`: `Eff.Succeed`, `Ty.Never`). The others open it (`open`), so they declare none of its types. `ocaml/engine/test/todo/todo_gen.ml` is the to-do host lane's (LC-6): the host run of one request, whose result the lane compares with Lean's. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots. `ocaml/engine/test/ctors/ctors_gen.ml` is the constructor lane's: every constructor and projection of a natively spelled type, built, matched and projected (`Test.Codegen.ConstructorLane`), whose answers the lane compares with Lean's. `ocaml/engine/test/modeled/modeled_gen.ml` is the Modeled lane's: a derived codec's staged image (`Test.Codegen.ModeledLane`), whose bytes the lane compares with Lean's. The last, `ocaml/engine/test/rocq/rocq_gen.ml`, is the comparison lane's: the premises of the declared facts of `Effect4.Laws.Run.Tree` (`InRocq`, `Plain`), by which the lane picks the programs whose Rocq tree it compares with Lean's.",
+  "claim": "Hand-written recipe for the LCNF outputs. Public values are roots or retained prelude values. Coverage roots contribute implementation code only. The producer stages every implementation, infers its interface from a fresh OCaml typed tree, and checks their agreement before publishing. The nominal list retains source package names with checked final ascriptions. The abstract list hides whole package representations. The first artifact owns the program types. Later artifacts open that owner. Regenerate with python3 scripts/generate.py --only lcnf.",
   "artefacts": [
     {
       "out": "ocaml/eff/eff_types.ml",
@@ -54,15 +54,18 @@
       "out": "ocaml/gen/api_gen.ml",
       "import": [
         "Effect4.Api",
-        "Effect4.Run.Kit"
+        "Effect4.Run.Kit",
+        "Effect4.Program.Check",
+        "Effect4.Run.LiveRecord"
       ],
-      "cap": 2400,
+      "cap": 4000,
       "types": [
         "Effect4.Program.RowShape",
         "Effect4.Program.DefDecl",
         "Effect4.Program.DefRole",
         "Effect4.Program.ParamDecl",
-        "Effect4.Machine.Task"
+        "Effect4.Machine.Task",
+        "Effect4.Store.Kind"
       ],
       "roots": [
         "Effect4.Api.run",
@@ -128,7 +131,39 @@
         "Effect4.Program.Authoring.Row.host",
         "Effect4.Program.Authoring.Row.callNamed",
         "Effect4.Program.Authoring.Def.invoke",
-        "Effect4.Program.Authoring.elaborateAt"
+        "Effect4.Program.Authoring.elaborateAt",
+        "Effect4.Program.Check.run",
+        "Effect4.Program.Check.Oracle.uncached",
+        "Effect4.Program.Check.Checked.pure'",
+        "Effect4.Program.Check.Checked.bind'",
+        "Effect4.Program.Check.Checked.ask",
+        "Effect4.Program.Check.Checked.readVerdict",
+        "Effect4.Program.Check.Memo.empty",
+        "Effect4.Program.Check.Memo.learn",
+        "Effect4.Program.Check.Memo.oracle",
+        "Effect4.Program.Check.HitRule.exact",
+        "Effect4.Program.Check.HitRule.or",
+        "Effect4.Live.start",
+        "Effect4.LiveRecord.restore",
+        "Effect4.LiveRecord.save",
+        "Effect4.Api.load",
+        "Effect4.Program.Decision.decide",
+        "Effect4.Program.errOf",
+        "Effect4.Program.evalTerm",
+        "Effect4.Program.interpOf",
+        "Effect4.Machine.reifyExitVal",
+        "Effect4.Machine.RunMachine.completedExits",
+        "Effect4.Machine.RunMachine.finished",
+        "Effect4.Program.stepChecked",
+        "Effect4.Run.Tree.Eval.badShape",
+        "Effect4.Run.Tree.Eval.outside",
+        "Effect4.Program.NativeAtom.eval",
+        "Effect4.Machine.HandleKind.byte",
+        "Effect4.Api.evaluate",
+        "Effect4.Program.awaits",
+        "Effect4.Program.NativeOp.syncOpOf",
+        "Effect4.Machine.syncOpStep",
+        "Effect4.Machine.Stores.empty"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",
@@ -145,7 +180,6 @@
         "Effect4.Machine.RunMachine.halt",
         "Effect4.Machine.RunMachine.race?",
         "Effect4.Machine.RunMachine.updateRace",
-        "Effect4.Machine.RunMachine.finished",
         "Effect4.Machine.RunMachine.empty",
         "Effect4.Machine.RunMachine.arm",
         "Effect4.Machine.RunMachine.disarm",
@@ -177,7 +211,30 @@
       "open": {
         "module": "Eff_types",
         "artefact": "ocaml/eff/eff_types.ml"
-      }
+      },
+      "nominal": [
+        "Effect4.Program.Check.run",
+        "Effect4.Program.Check.Oracle.uncached",
+        "Effect4.Program.Check.Checked.pure'",
+        "Effect4.Program.Check.Checked.bind'",
+        "Effect4.Program.Check.Checked.ask",
+        "Effect4.Program.Check.Checked.readVerdict",
+        "Effect4.Program.Check.Memo.empty",
+        "Effect4.Program.Check.Memo.learn",
+        "Effect4.Program.Check.Memo.oracle",
+        "Effect4.Program.Check.HitRule.exact",
+        "Effect4.Program.Check.HitRule.or",
+        "Effect4.Live.start",
+        "Effect4.LiveRecord.restore",
+        "Effect4.LiveRecord.save"
+      ],
+      "abstract": [
+        "Effect4.Program.Check.Checked",
+        "Effect4.Program.Check.Memo",
+        "Effect4.Program.Check.Oracle",
+        "Effect4.Program.Check.HitRule",
+        "Effect4.Live"
+      ]
     },
     {
       "out": "ocaml/engine/api_engine.ml",
@@ -206,7 +263,12 @@
         "Effect4.Program.compile",
         "Effect4.Machine.stores",
         "Effect4.Program.Node.child",
-        "Effect4.Program.admit"
+        "Effect4.Program.admit",
+        "Effect4.Program.interpOf",
+        "Effect4.Program.stepChecked",
+        "Effect4.Api.evaluate",
+        "Effect4.Program.awaits",
+        "Effect4.Machine.reifyExitVal"
       ],
       "externs": "ocaml/engine/externs.txt",
       "prelude": "ocaml/engine/tools/api_engine_prelude.ml",
@@ -227,7 +289,16 @@
         "Test.Dogfood.Scenario.Todo.Host.serveBuiltForgetfulVal",
         "Test.Dogfood.Scenario.Todo.Host.serveBuiltTypedVal",
         "Test.Dogfood.Scenario.Todo.Typed.model",
-        "Test.Dogfood.Scenario.Todo.Typed.broken"
+        "Test.Dogfood.Scenario.Todo.Typed.broken",
+        "Test.Dogfood.Scenario.Todo.Typed.Host.reactor",
+        "Test.Dogfood.Scenario.Todo.Host.resultVal",
+        "Test.Dogfood.Scenario.Todo.repository",
+        "Test.Dogfood.Scenario.Todo.forgetful",
+        "Effect4.Store.Image.equiv",
+        "Effect4.Store.Image.list",
+        "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledStaged",
+        "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledOfC",
+        "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledToC"
       ],
       "open": {
         "module": "Eff_types",

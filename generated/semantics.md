@@ -5,7 +5,7 @@ inputs: tools/ProofGraph/Registry.lean, tools/Tools/Semantics.lean, tools/Driver
 -->
 # Semantics evidence
 
-Effect4 makes 242 claims about Effect's runtime: 235 proved, 2 modulo, 1 refuted, 3 absent, 1 assumed.
+Effect4 makes 243 claims about Effect's runtime: 236 proved, 2 modulo, 1 refuted, 3 absent, 1 assumed.
 
 A claim's evidence comes from its Lean declaration and is never written by hand (decisions row 203). `The open work` lists the planned goals that the remaining claims rest on, and why each waits.
 
@@ -3873,10 +3873,11 @@ Module: `Effect4.Laws.Program.BuildTotal`
 
 ## Host Session Protocol
 
-Session automaton, external reply ingestion, and boundary capabilities. 14 claims: 13 proved, 1 assumed.
+Session automaton, external reply ingestion, and boundary capabilities. 15 claims: 14 proved, 1 assumed.
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
+| `checker-oracle-agrees` | compatibility | proved | `Effect4.Program.Check.Oracle.eq_uncached` | — |
 | `run-admitted-history` | compatibility | proved | `Effect4.Run.reached_history` | — |
 | `keys-once` | preservation | proved | `Effect4.Run.session_keys_once` | — |
 | `allows-answer` | preservation | proved | `Effect4.Run.allows_answer` | — |
@@ -3891,6 +3892,18 @@ Session automaton, external reply ingestion, and boundary capabilities. 14 claim
 | `rows-loop-frontier-host` | simulation | proved | `Effect4.Run.rows_loop_frontier_host` | — |
 | `replay-at-call-instance` | preservation | proved | `Effect4.Live.replay_at_call_instance` | — |
 | `run-conforms-postcondition` | adequacy | proved | `Effect4.Run.conforms_sat` | — |
+
+### checker-oracle-agrees
+
+Every certified checker oracle equals the uncached checker on the complete verdict; no arbitrary native callback or forged package is admitted (seams S0, R6 and R14)
+
+The oracle has one value up to equality. So a memo or Incremental behind an oracle can change cost and never an answer, for every consumer at once.
+
+Module: `Effect4.Program.Check`
+
+```lean
+∀ (o : Effect4.Program.Check.Oracle), Eq o Effect4.Program.Check.Oracle.uncached
+```
 
 ### run-admitted-history
 

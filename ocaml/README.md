@@ -87,7 +87,7 @@ fresh run.
 
 | generated | generator | command |
 | --- | --- | --- |
-| `eff/eff_types.ml`, `gen/api_gen.ml`, `engine/api_engine.ml`, `gen/closure-*.tsv` | `src/OCaml5/Tools/LcnfGen.lean` | `make gen-lcnf` (the recipe `gen/roots.json`; each file's header carries its command) |
+| `eff/eff_types.ml`, `gen/api_gen.ml`, `engine/api_engine.ml`, their `.mli` interfaces, `gen/closure-*.tsv` | `src/OCaml5/Tools/LcnfGen.lean` and `gen/interface/lcnf_interface.ml` | `make gen-lcnf` (the recipe `gen/roots.json`; each file's header carries its command) |
 | `engine/test/rocq/rocq_run.ml`, `engine/test/rocq/rocq_run.mli` | Rocq's extraction of `docs/research/2026-10-16-itrees/rocq/LaneExtract.v` (the opam switch `rocq`) | `bash docs/research/2026-10-16-itrees/reproduce.sh OUTDIR`: step 13 writes them and refuses a difference from the committed files below their header |
 | `eff/eff_{ctors,wire,subterm,json,native,layout}.ml`, `eff/eff_manifest.txt`, `eff/goldens/*` | `src/OCaml5/Tools/EffGen.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` |
 | `goldens/eff/*` | `src/OCaml5/Tools/EffWire.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` |
@@ -101,3 +101,9 @@ fresh run.
 * `gen/`: the session made from LCNF, with its byte entries (LC-7). It takes `api_gen.ml`'s place
   as the list oracle;
 * `eff/`: the two theorems its report states (erase ⇒ `wellTyped`; encode/decode exactness).
+
+The LCNF producer infers interfaces from fresh OCaml typed trees.
+It exports recipe roots and retained prelude values.
+It seals checked packages as whole abstract types.
+It compiles every interface and implementation before publishing the generated family.
+`gen/interface/test_interface.ml` checks root selection, abstract packages, final ascriptions, and refusals.

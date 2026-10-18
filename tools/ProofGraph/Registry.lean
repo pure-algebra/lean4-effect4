@@ -151,7 +151,7 @@ structure Registry where
 deriving Repr, Inhabited
 
 def registry : Registry where
-  roots := [`Effect4.Laws, `Test.Program.TypedProgBindRed,
+  roots := [`Effect4.Laws, `Effect4.Program.Check, `Test.Program.TypedProgBindRed,
     `Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers, `Test.Dogfood.P3WorkerQueue,
     `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService,
     -- the to-do application's banked Ref cache (decisions row 378); the scenarios' claims retired
@@ -289,6 +289,9 @@ def registry : Registry where
     { id := "type-metadata-exact", concept := "exact-codecs", role := .compatibility
       title := "Structural TypeScript metadata retains the exact stored Ty declaration"
       pointer := .witness `Effect4.Codegen.Metadata.type_metadata_exact },
+    { id := "checker-oracle-agrees", concept := "host-session-protocol", role := .compatibility
+      title := "Every certified checker oracle equals the uncached checker on the complete verdict; no arbitrary native callback or forged package is admitted (seams S0, R6 and R14)"
+      pointer := .witness `Effect4.Program.Check.Oracle.eq_uncached },
     { id := "raw-formation", concept := "subtyping-algebra", role := .decidability
       title := "Raw formation checking agrees with distinct record names, admitted map keys, a deferred's admitted error column, and no type variable outside a template; a declared service carrier is a strict formation site (decisions rows 288, 297)"
       pointer := .witness `Effect4.Program.Formation.checkInput_eq_none_iff },

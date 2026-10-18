@@ -1,0 +1,22 @@
+(library
+ (name lcnf_interface)
+ (wrapped false)
+ (modules lcnf_interface)
+ (libraries compiler-libs.common))
+
+(executable
+ (name main)
+ (modules main)
+ (libraries lcnf_interface))
+
+(rule
+ (targets fixture.cmo fixture.cmi fixture.cmt)
+ (deps fixture.ml)
+ (action (run %{ocamlc} -bin-annot -w -32 -c %{dep:fixture.ml})))
+
+(test
+ (name test_interface)
+ (modules test_interface)
+ (libraries lcnf_interface)
+ (deps fixture.cmt fixture_prelude.ml)
+ (action (run %{test} %{dep:fixture.cmt} %{dep:fixture_prelude.ml})))

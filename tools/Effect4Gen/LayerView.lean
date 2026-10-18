@@ -280,6 +280,42 @@ def emit (root : Name) : MetaM String := do
   for (label, _) in fams do
     s := s ++ s!"  | .{label}, e => build_view_{label} e\n"
   s := s ++ "\n"
+  -- The source view carries a dependent child. Native readers of leaves need no child payload.
+  -- Emit their nondependent callbacks from the same constructor signature.
+  s := s ++ "universe v\n\n"
+  s := s ++ "/-- A reader of argument positions and leaves. Children keep their family and position.\n"
+  s := s ++ "This carrier stores no program syntax. Generated from the program signature. -/\n"
+  s := s ++ "structure ArgReader (Op : Type) (α : Type v) where\n"
+  s := s ++ "  child : Nat → EffFam → α\n"
+  for (sort, ty) in leaves do
+    s := s ++ s!"  {sort} : Nat → {ty} → α\n"
+  s := s ++ "\n/-- Read one argument, discarding only a child's recursive payload.\n"
+  s := s ++ "Placement: subtyping-algebra, raw-formation. The generated readArgs connectors consume it. -/\n"
+  s := s ++ "def ArgF.read {Op : Type} {R : EffFam → Type u} {α : Type v}\n"
+  s := s ++ "    (reader : ArgReader Op α) (index : Nat) : ArgF Op R → α\n"
+  s := s ++ "  | .child fam _ => reader.child index fam\n"
+  for (sort, _) in leaves do
+    s := s ++ s!"  | .{sort} value => reader.{sort} index value\n"
+  for (label, fam) in fams do
+    let famTy := s!"{fam} Op"
+    s := s ++ s!"\n/-- Read the {label} constructor arguments in declaration order. Generated from its signature. -/\n"
+    s := s ++ s!"def readArgs_{label} \{Op : Type} \{α : Type v} (reader : ArgReader Op α) : {famTy} → List α\n"
+    for c in ctors.filter (·.fam == label) do
+      let binders := String.intercalate " " (c.args.map fun a =>
+        if a.recFam.isSome then "_" else a.name)
+      let lhs := if c.args.isEmpty then s!".{c.short}" else s!".{c.short} {binders}"
+      let packed := String.intercalate ", " (c.args.zipIdx.map fun (a, i) =>
+        match a.recFam with
+        | some f => s!"reader.child {i} .{f}"
+        | none => s!"reader.{a.sort} {i} {a.name}")
+      s := s ++ s!"  | {lhs} => [{packed}]\n"
+    s := s ++ "\n/-- Exact argument-reader connector for raw-formation, consumed by Formation.programAnnotations.\n"
+    s := s ++ "The observation is the ordered argument list at every node; it assumes no admission or host fact. -/\n"
+    s := s ++ s!"theorem readArgs_{label}_eq \{Op : Type} \{α : Type v} (reader : ArgReader Op α) (node : {famTy}) :\n"
+    s := s ++ s!"    readArgs_{label} reader node =\n"
+    s := s ++ s!"      ((view_{label} node).2.zipIdx).map (fun (arg, index) => arg.read reader index) := by\n"
+    s := s ++ "  cases node <;> rfl\n"
+  s := s ++ "\n"
   return s
 
 structure Args where

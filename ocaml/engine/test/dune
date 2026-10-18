@@ -216,3 +216,8 @@
  (name prop_fibers_view)
  (modules prop_fibers_view)
  (libraries effect4_engine))
+
+(test
+ (name test_seams_step)
+ (modules test_seams_step)
+ (libraries effect4_engine effect4_eff e4_gen_instance))

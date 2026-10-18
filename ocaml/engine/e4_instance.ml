@@ -16,9 +16,9 @@
      api_engine_ref.ml   Ref   the seven list twins, Lean's own carriers
 
    Everything else -- the drive loop, the answer alphabet, every renderer -- is written ONCE in
-   `E4_engine.Make`, which ascribes `E4_engine.INSTANCE` to each instance.  The result has no
-   signature of its own: it is the generated engine itself plus the adapter, and the tests read
-   generated declarations through an instance (`sh_spawn`, `fork_record`, the timer store).
+   `E4_engine.Make`, which ascribes `E4_engine.INSTANCE` to each instance.  The result exposes the generated roots and the adapter projections through e4_instance.mli.
+   Tests also read retained prelude declarations through an instance (`sh_spawn`, `fork_record`,
+   the timer store).
 
    The third instance, `test/api_gen_inst.ml`, is not an application of this functor.  Its
    oracle `Effect4_gen.Api_gen` is a second generated file, not `Api_engine.Make` over carriers,
@@ -85,12 +85,13 @@ struct
   let load (p : program) ~(fuel : int) : machine =
     sh_api_load program_compile empty_ctx stores p fuel
 
-  (* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation (the generated
-     `step_decision_state_at_program_replay_checked_from_spec_1`); the bool is
-     `Effect4.Machine.settled`, which `Api.replay` reads. *)
-  let step (table : Row.t list) (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
+  (* The stable `Effect4.Program.stepChecked` root. The bool is the machine's
+     stopping flag, as used by `Effect4.Program.replayCheckedFrom`. *)
+  (* stepChecked rebuilds interpOf p table. The old interpreter argument remains
+     for INSTANCE compatibility; test_seams_step also supplies a mismatched interpreter. *)
+  let step (table : Row.t list) (p : program) (_i : interp) ~(fuel : int) (m : machine) (d : api_decision)
     : machine * bool =
-    step_decision_state_at_program_replay_checked_from_spec_1 p table i fuel m d
+    program_step_checked p table fuel m d
 
   let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine =
     let r = api_run p fuel table fuel in

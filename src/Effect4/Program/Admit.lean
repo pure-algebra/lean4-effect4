@@ -110,6 +110,14 @@ def admit (app : SigApp) (m : NativeMachine) : NativeDecision → Option Refusal
           | _ => some (.notExternal fiber token)
   | _ => none
 
+/-- The native evaluator at a stable linkage root. The caller still owns reply admission.
+Both OCaml instances use this declaration, rather than a compiler-created specialization name. -/
+def stepChecked (program : NativeEff) (table : RowTable)
+    (fuel : Nat) (machine : NativeMachine) (decision : NativeDecision) :
+    NativeMachine × Bool :=
+  letI := evaluatorFor program table
+  stepDecisionState (interpOf program table) fuel machine decision
+
 /-- The same stopping rules as `replayEval` and `answersValid`: no decision
 beyond a stuck state or exhausted driver fuel is inspected. -/
 def replayCheckedFrom (program : NativeEff) (fuel : Nat) (app : SigApp)

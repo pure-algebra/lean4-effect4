@@ -1059,8 +1059,9 @@ when the program's fold does. The collector reads each node through the generate
 does `NodeAll`: no constructor of the program's family is named. A step of `check_closed`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem programAnnotations_all (P : Ty → Prop) (e : Eff Op) :
-    allTypes P (programAnnotations e) ↔ AnnotationsAll P .eff e :=
-  Iff.of_eq (foldMapAt_eff_fuse (allTypes P) (allTypes_append P) (nodeAnnotations_all P) e [])
+    allTypes P (programAnnotations e) ↔ AnnotationsAll P .eff e := by
+  rw [programAnnotations_eq_view]
+  exact Iff.of_eq (foldMapAt_eff_fuse (allTypes P) (allTypes_append P) (nodeAnnotations_all P) e [])
 
 /-- Every annotation under a node has a closed type. -/
 abbrev AnnotationsClosed (fam : EffFam) (node : EffSelfCarrier Op fam) : Prop :=
@@ -1163,6 +1164,7 @@ is its fold with no path (`foldMapAt_layer_fuse`). A step of `annotationsAll_exp
 theorem layerAll_of_layerAt (P : Ty → Prop) {root : Eff Op} {target : List Nat}
     {layer : LayerTerm Op} (h : (Node.eff root).layerAt target = some layer)
     (hroot : allTypes P (programAnnotations root)) : layerAll P layer := by
+  rw [programAnnotations_eq_view] at hroot
   have hat := (Node.layerAt_eq_some_iff _ _ _).mp h
   have hsub := Node.foldList_subset_of_at annotationYield target (.eff root) (.layer layer) [] hat
   rw [List.nil_append] at hsub

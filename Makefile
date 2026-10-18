@@ -183,13 +183,16 @@ $(GEN)/derived: $(CHK)/gen-derived.key
 # (`Test.Codegen.ModeledLane`), none of which reaches a law module.
 LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean src/OCaml5/Ml/*.lean) \
   $(wildcard tools/Conform/Lcnf/*.lean tools/Conform/Core/*.lean tools/Conform/Source/*.lean) \
-  ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml $(PRODUCER_COMMON)
-LCNF_OUT := ocaml/eff/eff_types.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
-  ocaml/engine/test/todo/todo_gen.ml ocaml/gen/closure-todo_gen.tsv \
-  ocaml/engine/test/ctors/ctors_gen.ml ocaml/gen/closure-ctors_gen.tsv \
-  ocaml/engine/test/modeled/modeled_gen.ml ocaml/gen/closure-modeled_gen.tsv \
-  ocaml/engine/test/rocq/rocq_gen.ml ocaml/gen/closure-rocq_gen.tsv
-LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen Effect4.Api Effect4.Run.Kit Test.Dogfood.Scenario.Todo.HostRun Test.Codegen.ConstructorLane Test.Codegen.ModeledLane Effect4.Laws.Run.Tree --outputs $(LCNF_OUT)
+  ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml \
+  scripts/lib/lcnf_interfaces.py $(wildcard ocaml/gen/interface/*.ml ocaml/gen/interface/*.mli) ocaml/gen/interface/dune $(PRODUCER_COMMON)
+LCNF_OUT := ocaml/eff/eff_types.ml ocaml/eff/eff_types.mli ocaml/gen/api_gen.ml \
+  ocaml/gen/api_gen.mli ocaml/gen/closure-api_gen.tsv ocaml/engine/api_engine.ml \
+  ocaml/engine/api_engine.mli ocaml/gen/closure-api_engine.tsv ocaml/engine/test/todo/todo_gen.ml \
+  ocaml/engine/test/todo/todo_gen.mli ocaml/gen/closure-todo_gen.tsv ocaml/engine/test/ctors/ctors_gen.ml \
+  ocaml/engine/test/ctors/ctors_gen.mli ocaml/gen/closure-ctors_gen.tsv ocaml/engine/test/modeled/modeled_gen.ml \
+  ocaml/engine/test/modeled/modeled_gen.mli ocaml/gen/closure-modeled_gen.tsv ocaml/engine/test/rocq/rocq_gen.ml \
+  ocaml/engine/test/rocq/rocq_gen.mli ocaml/gen/closure-rocq_gen.tsv
+LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen Effect4.Api Effect4.Run.Kit Effect4.Program.Check Effect4.Run.LiveRecord Test.Dogfood.Scenario.Todo.HostRun Test.Codegen.ConstructorLane Test.Codegen.ModeledLane Effect4.Laws.Run.Tree --outputs $(LCNF_OUT)
 $(CHK)/gen-lcnf.key: FORCE $(GEN)/derived
 	@$(LCNF_KEY)
 $(GEN)/lcnf: $(CHK)/gen-lcnf.key
@@ -370,10 +373,7 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 # Every committed path a generator writes. The drift check diffs exactly these.
 GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.lean \
   ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens \
-  ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
-  ocaml/engine/test/todo/todo_gen.ml ocaml/gen/closure-todo_gen.tsv \
-  ocaml/engine/test/ctors/ctors_gen.ml ocaml/gen/closure-ctors_gen.tsv \
-  ocaml/engine/test/modeled/modeled_gen.ml ocaml/gen/closure-modeled_gen.tsv \
+  $(LCNF_OUT) \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \
   harness/truth/prelude-atoms.gen.ts \
@@ -749,7 +749,8 @@ _run-schema-codec:
 # The seam check also scans core sources for writes that remove fibers. Laws cannot enter the core.
 # The lane reads no other core source: the key holds the scan's hits (`--c1-hits`), so an edit
 # elsewhere in the core reruns the lane only through the corpus, the fixtures or the LCNF group.
-OCAML_SOURCES := $(wildcard $(shell git ls-files --cached --others --exclude-standard -- ocaml))
+OCAML_SOURCES := $(wildcard $(shell git ls-files --cached --others --exclude-standard -- ocaml)) \
+  scripts/check-lcnf-interfaces.py scripts/check-lcnf-sealing.py scripts/lib/lcnf_interfaces.py
 $(CHK)/fiber-writes: FORCE
 	@mkdir -p $(CHK) && bash ocaml/engine/tools/gen-check.sh --c1-hits > $@.new && \
 	  { if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi; }
@@ -758,6 +759,8 @@ $(CHK)/ocaml.key: $(CORPUS)/index.tsv $(GEN)/fixtures $(GEN)/lcnf $(CHK)/fiber-w
 _run-ocaml:
 	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock
 	cd ocaml && $(OCAML) dune test engine
+	$(PY) scripts/check-lcnf-interfaces.py
+	$(PY) scripts/check-lcnf-sealing.py
 	$(OCAML) bash ocaml/engine/tools/gen-check.sh
 
 # The diagnostics lane (S0 of the printer/reader/positions redesign): every printed corpus

@@ -51,11 +51,12 @@ let interp_of (table : Row.t list) (p : program) : interp = program_interp_of p 
 let load (p : program) ~(fuel : int) : machine =
   api_load p fuel
 
-(* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation
-   (api_gen.ml); the bool is `Effect4.Machine.settled`. *)
-let step (table : Row.t list) (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
+(* The stable `Effect4.Program.stepChecked` root and its machine stopping flag. *)
+(* stepChecked rebuilds interpOf p table. The old interpreter argument remains
+   for INSTANCE compatibility; test_seams_step also supplies a mismatched interpreter. *)
+let step (table : Row.t list) (p : program) (_i : interp) ~(fuel : int) (m : machine) (d : api_decision)
   : machine * bool =
-  step_decision_state_at_program_replay_checked_from_spec_1 p table i fuel m d
+  program_step_checked p table fuel m d
 
 let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine =
   let r = api_run p fuel table fuel in

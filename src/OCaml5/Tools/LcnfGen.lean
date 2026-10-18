@@ -57,6 +57,10 @@ def readRecipe (path : System.FilePath) : IO Json := do
 
 def main (argv : List String) : IO Unit := do
   initSearchPath (← findSysroot)
+  let (stage, argv) : Option System.FilePath × List String :=
+    match argv with
+    | "--stage" :: directory :: rest => (some directory, rest)
+    | _ => (none, argv)
   -- The committed recipe's outputs place the manifests: theirs are data in `ocaml/gen/` (row 70),
   -- and any other output keeps its manifest beside it, whatever recipe runs (row 174 (i)).
   let committed : System.FilePath := "ocaml/gen/roots.json"
@@ -92,4 +96,4 @@ def main (argv : List String) : IO Unit := do
     -- so a runaway cut stops deterministically.
     let ctx : Core.Context :=
       { fileName := "<lcnf-gen>", fileMap := default, maxHeartbeats := 1000000 * 1000 }
-    let _ ← ((Gen.run run recipeOuts).run' {}).toIO ctx { env := env }
+    let _ ← ((Gen.run run recipeOuts stage).run' {}).toIO ctx { env := env }

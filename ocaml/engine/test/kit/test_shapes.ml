@@ -68,7 +68,7 @@ let rec render (s : G.shape) : string =
   | G.Shape_sum (name, cases) ->
     Printf.sprintf "(sum %S (%s))" name
       (String.concat " " (List.map (fun (n, (i, fs)) -> Printf.sprintf "(%S %d (%s))" n i (fields fs)) cases))
-  | G.Shape_ref G.Placeholder_kind -> "(ref)"
+  | G.Shape_ref _ -> "(ref)"
   | G.Shape_anyRef -> "anyRef"
   | G.Shape_named n -> Printf.sprintf "(named %S)" n
 

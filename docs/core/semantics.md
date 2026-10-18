@@ -1003,6 +1003,9 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   A row's column is a template site, and a program's annotation is not.
   A declared service carrier is a strict formation site, and no template (row 297).
   Formation establishes no inhabitance, codec admission or execution property.
+  The generated argument reader retains the exact ordered annotation sequence, including each argument position.
+  `Formation.programAnnotations_eq_view` connects it to the existing view in `src/Effect4/Program/Formation.lean`.
+  This connector serves raw formation and the closed-type proofs; it establishes no native translation theorem.
 - **Closed types of the checker (`checked-types-closed`)**: A formed program that the checker admits has closed
   types (`check_closed`, `src/Effect4/Laws/Program/Typing/Closed.lean`; seat FORM).
   The statement fixes a closed environment and a typing signature with closed atoms and closed service carriers.
@@ -1410,6 +1413,13 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 (`src/Effect4/Api/HostProtocol.lean:48`). External answers are submitted through `HostSession.submit` and applied via `HostSession.applyReply`.
 
 #### 4. Required Properties and Obligations
+- **Checker substitution (`checker-oracle-agrees`)**: Every certified checker oracle equals the uncached checker.
+  `Check.Oracle.eq_uncached` states this equality in `src/Effect4/Program/Check.lean`.
+  Its agreement premise fixes the entire verdict, including the annotation table.
+  Checked traces and learned memos contain only those answers; a hit rule carries its agreement law.
+  This property serves R6 and R14 and excludes arbitrary native callbacks or forged checked packages.
+  Generated interface tests check that host callers cannot construct those packages.
+  Those finite tests establish no general native translation theorem.
 - **Recorded runs have admitted histories (`run-admitted-history`)**: Every reached run holds its built program's call table and an admitted native history.
   `Run.reached_history` states the connection in `src/Effect4/Laws/Run/Frame.lean`.
   The history keeps the run's compile budget and records each accepted decision with its command budget.
