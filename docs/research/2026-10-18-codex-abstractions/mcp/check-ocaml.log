@@ -1,0 +1,148 @@
+PASS native: shared result eae05ee17bd3
+PASS compiler: shared result 623ea144ee19
+cd ocaml && opam exec --switch=effect4 -- dune build && opam exec --switch=effect4 -- dune test eff gen clock
+cd ocaml && opam exec --switch=effect4 -- dune test engine
+PASS  C1 initialize names the server
+PASS  C1 ping answers
+PASS  C1 a notification gets no reply
+PASS  C1 an unknown method is -32601
+PASS  C1 a line that is not JSON is -32700
+PASS  C2 tools/list lists 19 tools
+PASS  C2 the tools are the supported methods, in order
+PASS  C2 every tool has a description and an object schema
+PASS  C3 open answers Kit_tool's reply
+PASS  C3 open is no error
+PASS  C3 structured open equals text
+PASS  C3 doc reads the opened document, as Kit_tool does
+PASS  C3 a call at a stale snapshot is a tool error
+PASS  C3 structured refusal equals text
+PASS  C3 an unknown tool is -32602
+PASS  C3 a valid open notification gets no reply
+PASS  C3 a valid open notification leaves the document unchanged
+PASS  C4 tools require initialization
+PASS  C4 initialization requires its fields
+PASS  C4 unsupported version selects 2025-06-18
+PASS  C4 tools wait for initialized notification
+PASS  C4 malformed initialized notification stays silent
+PASS  C4 malformed notification does not initialize
+PASS  C4 malformed notification metadata does not initialize
+PASS  C4 notification metadata permits arbitrary JSON values
+PASS  C4 duplicate initialize is -32600
+PASS  C4 wrong JSON-RPC version is -32600
+PASS  C4 null request id is -32600
+PASS  C4 string request id is retained
+PASS  C4 non-object params are -32602
+PASS  C4 non-object arguments are -32602
+PASS  C4 unreadable arguments are -32602
+PASS  C4 unknown notification gets no reply
+PASS  C4 tool notification does not execute
+PASS  C4 valid fractional metadata is JSON
+PASS  C4 metadata must be an object
+PASS  C4 invalid leading-zero number is a parse error
+PASS  C4 invalid UTF-8 is a parse error
+PASS  C4 lone high surrogate is refused without throwing
+PASS  C4 lone low surrogate is refused without emitting invalid UTF-8
+PASS  C4 exact integral ID 1.0
+PASS  C4 exact integral ID 1e2
+PASS  C4 exact integral ID 1200e-2
+PASS  C4 exact integral ID -0.000e-999999999999999999999
+PASS  C4 exact integral ID 1e999999999999999999999
+PASS  C4 fractional ID refused 1.1
+PASS  C4 fractional ID refused 1e-2
+PASS  C4 fractional ID refused 1201e-2
+PASS  C4 fractional ID refused 1e-999999999999999999999
+PASS  C4 integral progress token is accepted
+PASS  C4 a batch is not an MCP request
+== ALL PASS: 0 failure(s) ==
+python3 scripts/check-lcnf-interfaces.py
+PASS comparison-output alias refused: implementation
+PASS comparison-output alias refused: interface
+PASS comparison-output alias refused: manifest
+PASS comparison-output alias refused: cross-artifact
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-mxro39s7/compile/second.ml", line 2, characters 22-30:
+2 | let malformed : int = "refuse"
+                          ^^^^^^^^
+Error: This expression has type string but an expression was expected of type
+         int
+
+PASS: stale interface replacement and whole-family retention after native refusal
+python3 scripts/check-lcnf-sealing.py
+lawful-alias: exit 0, expected 0
+
+built-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 3, characters 36-39:
+3 | let forged : public_built_alias = { app = { rows = []; services = []; types = [] }; program = Eff_types.Eff.Perform (Eff_types.NativeOp.External 0, Eff_types.Term.Lit Eff_types.Lit.Unit); admitted = { answer = Eff_types.Ty.Nat; error = Eff_types.Ty.Never; requires = [] }; row_names = [] }
+                                        ^^^
+Error: Unbound record field app
+
+memo-public-alias: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 3, characters 28-30:
+3 | let forged : public_alias = []
+                                ^^
+Error: This expression has type 'a list
+       but an expression was expected of type
+         public_alias = Effect4_gen.Api_gen.memo
+
+checked-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 2, characters 31-36:
+2 | let forged : int A.checked = { value = 7; trace = [] }
+                                   ^^^^^
+Error: Unbound record field value
+
+oracle-callback: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 2, characters 24-62:
+2 | let forged : A.oracle = fun input -> A.program_check_run input
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This expression should not be a function, the expected type is
+       A.oracle
+
+hit-rule-callback: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 2, characters 26-41:
+2 | let forged : A.hit_rule = fun _ _ -> true
+                              ^^^^^^^^^^^^^^^
+Error: This expression should not be a function, the expected type is
+       A.hit_rule
+
+checked-update: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 2, characters 41-46:
+2 | let forge (c : int A.checked) = { c with value = 99 }
+                                             ^^^^^
+Error: Unbound record field value
+
+hidden-helper: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 2, characters 13-42:
+2 | let helper = A.program_check_typed_program
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Unbound value A.program_check_typed_program
+
+session-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 2, characters 27-32:
+2 | let forged : A.session = { state = A.tool_native_start; memo = [] }
+                               ^^^^^
+Error: Unbound record field state
+
+state-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 2, characters 25-35:
+2 | let forged : A.state = { transcript = []; raw = Obj.magic 0 }
+                             ^^^^^^^^^^
+Error: Unbound record field transcript
+
+memo-as-session: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-2svb647w/client.ml", line 2, characters 33-72:
+2 | let forged = A.tool_native_serve ([] : (A.check_input * A.verdict) list)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This expression has type (A.check_input * A.verdict) list
+       but an expression was expected of type
+         A.session = Effect4_gen.Api_gen.session
+
+PASS: lawful public alias and ten hostile sealed-package clients
+opam exec --switch=effect4 -- bash ocaml/engine/tools/gen-check.sh
+ok   C1 no filter/erase/removeAll/dropWhile on RunMachine.fibers in the core sources
+ok   C2 ocaml/gen builds and @gen/runtest passes (api_gen.ml is the oracle)
+ok   C3a dune build engine
+ok   C3b api_engine.ml type-checks against E4_clock/Lcnf_* interfaces and Eff_types: the functor needs no instance, so the
+          extern table is closed (every unconverted carrier site would be a type error)
+ok   C4 the generated file carries the current prelude
+
+gen-check: PASS
+PASS ocaml: recorded 48dfd916555e (15.904s)

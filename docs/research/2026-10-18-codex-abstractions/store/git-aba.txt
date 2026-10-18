@@ -1,0 +1,1 @@
+digest-only A->B->A: stale compare-and-set from A is accepted
