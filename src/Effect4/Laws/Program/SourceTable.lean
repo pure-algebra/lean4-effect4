@@ -1108,9 +1108,11 @@ It is false at head in two ways. `SourceSession.splice` places the part's table 
 place of the entry at the edited address (`FeedCounterexample.feed_coherent_refuted`). A
 kept-exact splice keeps a refused root entry that an omission's new hole row can make typed
 (`FeedCounterexample.keep_omit_refused`). The statement is the specification.
-`feed_coherent_of_faultFree` proves it on every other route, so it holds once the feed splices
-only where neither the sketch nor the candidate holds an ill-formed reference and the root is
-typed (the seat's receipt, option A2). -/
+`feed_coherent_of_faultFree` proves it on every route but a kept splice at a refused root. So a
+feed that splices only where neither the sketch nor the candidate holds an ill-formed reference,
+and keeps an omission only at a typed root, needs one more step: `splice_coherent` for a fill at
+a refused root, which the battery `brokenElsewhere` accepts. A feed that also keeps fills only at
+a typed root needs none. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 proof_goal feed_coherent {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
     {e : Edit} {step : Edit.Step} (hc : s.Coherent)
@@ -1405,8 +1407,9 @@ kept-exact splice stands at a typed root.** Every route but the two that `feed_c
 counterexamples take: the splice of a candidate with an ill-formed reference, and a kept-exact
 splice at a refused root, where an omission's new hole row can change the root's check
 (`FeedCounterexample.keep_omit_refused`). It is the true form of `feed_coherent` at head, and
-the whole of its proof once the feed splices only there (the seat's receipt, option A2). A step
-of `source-feed-coherent`. Not established: the cost, or a splice at a refused root. -/
+the whole of its proof once the feed splices only there. A step of `source-feed-coherent`. Its
+consumers are `feed_draft` and the feed's coherence. Not established: the cost, or a splice at a
+refused root. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem feed_coherent_of_faultFree {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
     {e : Edit} {step : Edit.Step} (hc : s.Coherent)
@@ -2258,10 +2261,12 @@ The base below has no reference. Its filling `late` names the layer at `[1, 0]`,
 the site `[0, 0]` in program order (`RefFault.notBefore`). The expansion still expands the
 reference, so the part check keeps the focus's type and both `draft` and `keepExact` splice.
 
-Each statement below is a control, kernel-checked by evaluation (`decide`): it shows where a
-planned goal stops at head. Its placement names the concept and no requirement. They will
-fail to elaborate once the feed splices only inputs with no ill-formed reference, and then they
-go. -/
+Each statement below is a control, kernel-checked by evaluation (`decide`). Its placement names
+the concept and no requirement. Six verdicts show where a law stops at head: `draftLate`,
+`keepLate`, `docLate`, `replayLate`, `undoFaulty` and `keepOmitRefused`. They fail to elaborate
+once the feed splices only where nothing is ill formed and keeps an omission only at a typed
+root, and then they go. Two show why a first statement was restated, and they stay:
+`keepWide` and `draftFaultyRechecks`. -/
 
 namespace FeedCounterexample
 open _root_.Effect4.Program.Check
@@ -2360,7 +2365,8 @@ end FeedCounterexample
 open _root_.Effect4.Program.Check in
 /-- **`SourceSession.feed_coherent` is false at head**: the draft of `late` from the coherent
 session of `FeedCounterexample.base` answers an incoherent session. A control of the claim
-`source-feed-coherent`; its register entry is proposed in the seat's receipt. -/
+`source-feed-coherent`; its entry in `Test/Counterexamples/REGISTER.md` is proposed, not
+written. -/
 @[semantics "initial-algebras-folds"]
 theorem FeedCounterexample.feed_coherent_refuted :
     ¬ ∀ (o : Oracle) (policy : FeedPolicy) (s next : SourceSession) (e : Edit) (step : Edit.Step),
