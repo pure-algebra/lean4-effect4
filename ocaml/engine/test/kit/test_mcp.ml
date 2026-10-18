@@ -8,12 +8,16 @@
    C1  `initialize` names the server; `ping` answers; a notification gets no reply; an unknown
        method is error -32601; a line that is not JSON is error -32700.           tested
    C2  `tools/list` lists one tool per supported method, in `Tool.supportedMethods`' order (the
-       `discover` reply's), each with a description and an object `inputSchema`.   tested
+       `discover` reply's), then `describe`, each with a description and an object
+       `inputSchema`.                                                              tested
    C3  `tools/call open` then `tools/call doc` answer the replies Kit_tool gives the same two
        envelopes, as text and structured data, with `isError` false; a stale snapshot is a
        tool error. Unknown tools and malformed calls are protocol errors.         tested
    C4  Initialization selects a supported version. Requests validate their JSON-RPC envelope,
        parameters and lifecycle. Notifications never execute tools or answer.     tested
+   C5  `describe` answers, for each definition it names, a schema document pointing at that
+       definition under its own `$defs`, as structured data and identical text; every definition
+       a tool's schema leaves to it is one it answers; other arguments are -32602.  tested
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/kit *)
 
@@ -73,8 +77,9 @@ let () =
       | J.Array xs -> List.find_map find xs
       | _ -> None in
     Option.bind (parse discover) find in
-  check (Printf.sprintf "C2 tools/list lists %d tools" (List.length names)) (List.length names = 19);
-  check "C2 the tools are the supported methods, in order" (supported = Some names);
+  check (Printf.sprintf "C2 tools/list lists %d tools" (List.length names)) (List.length names = 20);
+  check "C2 the tools are the supported methods, in order, then describe"
+    (Option.map (fun ms -> ms @ [ "describe" ]) supported = Some names);
   check "C2 every tool has a description and an object schema"
     (List.for_all (fun t ->
        (match field "description" (Some t) with Some (J.String d) -> d <> "" | _ -> false)
@@ -188,6 +193,40 @@ let () =
      = Some (J.Object []));
   check "C4 a batch is not an MCP request"
     (code (call "[]") = Some (J.Int (-32600)))
+
+(* C5 *)
+let () =
+  let s = ready () in
+  let tools = match field "tools" (field "result" (Option.bind (Kit_mcp.line s (rpc ~id:1 "tools/list" [])) parse)) with
+    | Some (J.Array ts) -> ts | _ -> [] in
+  let describe = List.find_opt (fun t -> field "name" (Some t) = Some (J.String "describe")) tools in
+  let names = match field "enum" (field "name" (field "properties" (Option.bind describe (fun t -> field "inputSchema" (Some t))))) with
+    | Some (J.Array ns) -> List.filter_map (function J.String n -> Some n | _ -> None) ns
+    | _ -> [] in
+  let call id args = Option.bind (Kit_mcp.line s (rpc ~id "tools/call" [ ("name", J.String "describe"); ("arguments", J.Object args) ])) parse in
+  let text r = match field "content" (field "result" r) with
+    | Some (J.Array [ c ]) -> (match field "text" (Some c) with Some (J.String x) -> parse x | _ -> None)
+    | _ -> None in
+  let code r = field "code" (field "error" r) in
+  check "C5 describe names the definitions it answers" (List.mem "Eff" names);
+  check "C5 each answer points at its definition under its own $defs, structured as its text"
+    (List.for_all (fun n ->
+       let r = call 2 [ ("name", J.String n) ] in
+       let a = text r in
+       field "$ref" a = Some (J.String ("#/$defs/" ^ n)) && field n (field "$defs" a) <> None
+       && field "structuredContent" (field "result" r) = a
+       && field "isError" (field "result" r) = Some (J.Bool false)) names);
+  (* a definition a schema leaves to describe is a $defs entry that only says so *)
+  let left = List.concat_map (fun t -> match field "$defs" (field "inputSchema" (Some t)) with
+      | Some (J.Object ds) -> List.filter_map (fun (k, d) ->
+          match field "properties" (Some d), field "oneOf" (Some d), field "description" (Some d) with
+          | None, None, Some _ -> Some k | _ -> None) ds
+      | _ -> []) tools in
+  check "C5 every definition a schema leaves to describe is one it answers"
+    (left <> [] && List.for_all (fun k -> List.mem k names) left);
+  check "C5 another name is -32602" (code (call 3 [ ("name", J.String "Nope") ]) = Some (J.Int (-32602)));
+  check "C5 another argument is -32602"
+    (code (call 4 [ ("name", J.String "Eff"); ("x", J.Int 1) ]) = Some (J.Int (-32602)))
 
 let () =
   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;

@@ -1047,6 +1047,12 @@ and effect4_tool_wire_refusal =
   | Effect4_tool_wire_refusal_version of string * int * int
   | Effect4_tool_wire_refusal_method of string * string
   | Effect4_tool_wire_refusal_connection
+and describe = {
+  name : string;
+  description : string;
+  schema : string;
+  answers : (string * string) list;
+}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
   popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
@@ -1542,6 +1548,7 @@ and run_answer =
     RunAnswer_view of view
   | RunAnswer_record of live_record
   | RunAnswer_journal of command list
+and plan = { shared : string list; tools : string list; }
 and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
 and fn_shape =
     FnShape_update
@@ -2429,6 +2436,7 @@ val tool_native_reply_envelope_shape : shape_doc
 val tool_native_refusal_shape : shape_doc
 val tool_native_refusal_to_val : effect4_tool_wire_refusal -> Eff_types.Val.t
 val tool_native_methods : effect4_tool_methods_entry list
+val tool_native_describe : describe
 val program_check_run : check_input -> verdict
 val program_check_oracle_uncached : oracle
 val program_check_checked_pure' : 'a0 -> 'a0 checked

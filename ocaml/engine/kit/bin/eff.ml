@@ -16,8 +16,8 @@
        (Kit_serve S2, S3).                                            by construction
    E3  The exit code is 0 for an answer, 2 for an "error" (an unreadable input).  by construction
    E4  `eff mcp` is a Model Context Protocol server over stdio (JSON-RPC 2.0, one message a
-       line) for the authoring tool: one tool per method, one session for the server's life
-       (Kit_mcp M1-M4).                                               tested (test_mcp)
+       line) for the authoring tool: one tool per method and `describe`, one session for the
+       server's life (Kit_mcp M1-M5).                                 tested (test_mcp)
 
    Usage:
      eff check   PROGRAM [--rows ROWS]

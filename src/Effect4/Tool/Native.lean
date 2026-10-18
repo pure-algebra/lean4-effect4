@@ -79,4 +79,8 @@ def refusalToVal (why : Wire.Refusal) : Val := Canonical.toVal why
 /-- The tool table an MCP server lists (`Tool/Methods.lean`). -/
 def methods : List Methods.Entry := Methods.entries
 
+/-- The `describe` tool an MCP server lists beside the methods, and its answers: the schemas the
+methods' schemas leave to it (`Tool/Methods.lean`). -/
+def describe : Methods.Describe := Methods.describe
+
 end Effect4.Tool.Native

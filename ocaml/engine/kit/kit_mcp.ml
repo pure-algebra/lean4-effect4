@@ -1,7 +1,9 @@
 (* Kit_mcp — MCP 2025-06-18 over stdio, using the generated authoring tool.
 
    The MCP transport owns JSON-RPC, initialization and framing. Tool.Methods owns the method
-   table; Tool.serve owns actions, queries and refusals. Yojson.Raw keeps transport numbers
+   table and the `describe` tool beside it (the schemas name the program's grammar and leave it to
+   `describe`, which answers each definition's schema from Lean's table); Tool.serve owns actions,
+   queries and refusals. Yojson.Raw keeps transport numbers
    exact, including request IDs outside OCaml int. Kit_tool admits tool arguments separately.
    Depends on: Effect4_gen.Api_gen, Kit_tool, Yojson.
 
@@ -13,6 +15,9 @@
       set isError. Unknown tools and invalid arguments are JSON-RPC -32602 errors.
    M4 Retain request IDs, validate message envelopes, and keep protocol errors outside Tool.serve.
       Transport JSON accepts fractional metadata; tool numbers keep CodecProfile's domain.
+   M5 List the generated `describe` tool after the methods. A call of it with a definition's name
+      returns that definition's schema document, as structuredContent and identical JSON text;
+      any other arguments are a -32602 error.
 
    Scope: stdio, tools, ping and initialization. No HTTP transport or later MCP version is claimed.
    Sources: mcp-spec/docs/specification/2025-06-18/basic/{index,lifecycle,transports}.mdx and
@@ -58,8 +63,15 @@ let tool_of (entry : G.effect4_tool_methods_entry) : J.t =
   `Assoc [ ("name", string entry.name); ("description", string entry.description);
            ("inputSchema", J.from_string entry.schema) ]
 
+let describe : G.describe = G.tool_native_describe
+
+let describe_tool : J.t =
+  `Assoc [ ("name", string describe.name); ("description", string describe.description);
+           ("inputSchema", J.from_string describe.schema) ]
+
 let create () =
-  { session = Kit_tool.create (); tools = List.map tool_of G.tool_native_methods; phase = Initial }
+  { session = Kit_tool.create (); tools = List.map tool_of G.tool_native_methods @ [ describe_tool ];
+    phase = Initial }
 
 let envelope (entry : G.effect4_tool_methods_entry) args : J.t =
   let payload = `Assoc [ ("_tag", string entry.kind);
@@ -77,9 +89,21 @@ let is_refusal value =
   | Some result -> has_string "_tag" "error" result
   | None -> false
 
+(* A definition's schema document, from Lean's answers. *)
+let definition id args =
+  match args with
+  | [ ("name", name) ] ->
+    (match Option.bind (text name) (fun n -> List.assoc_opt n describe.answers) with
+     | Some schema -> reply id (`Assoc [
+         ("content", `List [`Assoc [("type", string "text"); ("text", string schema)]]);
+         ("structuredContent", J.from_string schema); ("isError", `Bool false) ])
+     | None -> failure id (-32602) "Arguments do not match the tool schema")
+  | _ -> failure id (-32602) "Arguments do not match the tool schema"
+
 let call server id name args =
   match List.find_opt (fun (entry : G.effect4_tool_methods_entry) -> String.equal entry.name name)
       G.tool_native_methods with
+  | None when String.equal name describe.name -> definition id args
   | None -> failure id (-32602) ("Unknown tool: " ^ name)
   | Some entry ->
     let line = Kit_tool.serve_line server.session (J.to_string (envelope entry args)) in

@@ -50,6 +50,8 @@ def main():
         {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "doc", "arguments": {"at_": None}}},
         {"jsonrpc": "2.0", "id": 10.0, "method": "ping", "params": {"_meta": {"progressToken": 100.0}}},
         {"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "doc", "arguments": {"at_": 0.5}}},
+        {"jsonrpc": "2.0", "id": 12, "method": "tools/call", "params": {"name": "describe", "arguments": {"name": "Eff"}}},
+        {"jsonrpc": "2.0", "id": 13, "method": "tools/call", "params": {"name": "describe", "arguments": {"name": "Nope"}}},
     ]
     for request in requests:
         validate("JSONRPCRequest" if "id" in request else "JSONRPCNotification", request)
@@ -73,17 +75,20 @@ def main():
         Draft202012Validator.check_schema(tool["inputSchema"])
         checks += 1
     for request in requests:
-        if request.get("id") in (2, 3, 4, 8, 9):
+        if request.get("id") in (2, 3, 4, 8, 9, 12):
             params = request["params"]
             Draft202012Validator(tools[params["name"]]["inputSchema"]).validate(params["arguments"])
             checks += 1
-    for request_id in (2, 3, 4, 8, 9):
+    for request_id in (2, 3, 4, 8, 9, 12):
         result = by_id[request_id]["result"]
         validate("CallToolResult", result)
         assert json.loads(result["content"][0]["text"]) == result["structuredContent"]
     assert by_id[2]["result"]["isError"] is False
     assert by_id[4]["result"]["isError"] is True
-    for request_id in (5, 6, 7, 11):
+    assert by_id[12]["result"]["isError"] is False
+    Draft202012Validator.check_schema(by_id[12]["result"]["structuredContent"])
+    checks += 1
+    for request_id in (5, 6, 7, 11, 13):
         assert by_id[request_id]["error"]["code"] == -32602
     assert by_id[3]["result"] == by_id[8]["result"] == by_id[9]["result"], "refusals or notifications changed the document"
     print(json.dumps({"status": "PASS", "protocol": "2025-06-18", "schema_checks": checks,
