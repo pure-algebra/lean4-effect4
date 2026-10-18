@@ -1,0 +1,71 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "make", "check-ocaml"], "cwd": "/Users/pooks/Dev/lean4-effect4", "started_utc": "2026-10-18T07:55:41.129715+00:00"}
+python3 scripts/generate.py --only fixtures
++ lake build Test.Codegen.ConstructorLane
+Build completed successfully (2 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/ctors/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/ctors
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/ctors/ctors.txt
++ lake build Test.Program.Gen Effect4.Store.Domain.ProgramWire Effect4.Run.Kit Tools.JsonBridge
+✔ [726/726] Built Test.Program.Gen (1.5s)
+Build completed successfully (726 jobs).
++ lake env lean -DwarningAsError=true -M4096 --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/libtypescript_TypeScript.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/libhash_Hash.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/build/lib/libeffect4_Effect4.dylib --run ocaml/engine/test/kit/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/kit
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/kit/verdicts.txt
++ lake build Test.Program.MaskData
+✔ [721/721] Built Test.Program.MaskData (688ms)
+Build completed successfully (721 jobs).
++ lake env lean -DwarningAsError=true -M4096 --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/libtypescript_TypeScript.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/libhash_Hash.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/build/lib/libeffect4_Effect4.dylib --run ocaml/engine/test/mask/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/mask
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/mask/mask.txt
++ lake build Test.Codegen.ModeledLane
+Build completed successfully (54 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/modeled/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/modeled
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/modeled/modeled.txt
++ lake build Test.Program.PoolPublicData
+✔ [721/722] Built Test.Program.PoolScenariosData (1.7s)
+✔ [722/722] Built Test.Program.PoolPublicData (1.4s)
+Build completed successfully (722 jobs).
++ lake env lean -DwarningAsError=true -M4096 --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/libtypescript_TypeScript.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/libhash_Hash.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/build/lib/libeffect4_Effect4.dylib --run ocaml/engine/test/pool/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/pool
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/pool/pool.txt
++ lake build Test.Program.QueueMaskData Test.Program.QueueDefsData Effect4.Store.Domain.ProgramWire
+✔ [721/723] Built Test.Program.QueueScenariosData (1.3s)
+✔ [722/723] Built Test.Program.QueueMaskData (1.4s)
+✔ [723/723] Built Test.Program.QueueDefsData (1.6s)
+Build completed successfully (723 jobs).
++ lake env lean -DwarningAsError=true -M4096 --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/libtypescript_TypeScript.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/libhash_Hash.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/build/lib/libeffect4_Effect4.dylib --run ocaml/engine/test/queue/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/queue
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/queue/queue.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/queue/queue-defs.txt
++ lake build Test.Dogfood.Scenario.TapeData
+✔ [723/731] Built Test.Program.QueueTracesData (1.4s)
+✔ [724/736] Built Test.Dogfood.Scenario.Workers.Program (1.7s)
+✔ [725/736] Built Test.Dogfood.Scenario.Routing.Model (1.7s)
+✔ [727/739] Built Test.Dogfood.Scenario.QueueWorkers.Program (1.5s)
+✔ [731/742] Built Test.Dogfood.Scenario.Workers.Runs (1.5s)
+✔ [732/742] Built Test.Dogfood.Scenario.Routing.Runs (1.5s)
+✔ [734/742] Built Test.Dogfood.Scenario.QueueWorkers.Model (1.6s)
+✔ [735/742] Built Test.Dogfood.Scenario.Atomic.Model (1.6s)
+✔ [736/742] Built Test.Dogfood.Scenario.Timeout.Model (1.7s)
+✔ [738/742] Built Test.Dogfood.Scenario.QueueWorkers.Runs (1.5s)
+✔ [739/742] Built Test.Dogfood.Scenario.Atomic.Runs (1.4s)
+✔ [740/742] Built Test.Dogfood.Scenario.Todo.Runs (1.4s)
+✔ [741/742] Built Test.Dogfood.Scenario.Timeout.Runs (1.2s)
+✔ [742/742] Built Test.Dogfood.Scenario.TapeData (1.4s)
+Build completed successfully (742 jobs).
++ lake env lean -DwarningAsError=true -M4096 --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/libtypescript_TypeScript.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/libhash_Hash.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/build/lib/libeffect4_Effect4.dylib --run ocaml/engine/test/scenarios/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/scenarios
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/scenarios/workers.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/scenarios/queue-workers.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/scenarios/routing.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/scenarios/atomic.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/scenarios/timeout.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/scenarios/todo.txt
++ lake build Test.Program.SemaphoreScenariosData
+✔ [721/721] Built Test.Program.SemaphoreScenariosData (1.6s)
+Build completed successfully (721 jobs).
++ lake env lean -DwarningAsError=true -M4096 --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/libtypescript_TypeScript.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/libhash_Hash.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/build/lib/libeffect4_Effect4.dylib --run ocaml/engine/test/semaphore/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/semaphore
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/semaphore/semaphore.txt
++ lake build Test.Dogfood.Scenario.Todo.HostLane
+✔ [726/729] Built Test.Dogfood.Scenario.Todo.CachedProgram (1.3s)
+✔ [727/729] Built Test.Dogfood.Scenario.Todo.Typed (1.5s)
+✔ [728/729] Built Test.Dogfood.Scenario.Todo.HostRun (1.3s)
+✔ [729/729] Built Test.Dogfood.Scenario.Todo.HostLane (1.4s)
+Build completed successfully (729 jobs).
++ lake env lean -DwarningAsError=true -M4096 --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/libtypescript_TypeScript.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/libhash_Hash.dylib --load-dynlib=/Users/pooks/Dev/lean4-effect4/.lake/build/lib/libeffect4_Effect4.dylib --run ocaml/engine/test/todo/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/todo
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-yc2hnks_/ocaml/engine/test/todo/todo-host.txt
+PASS generate: requested producers ran in dependency order

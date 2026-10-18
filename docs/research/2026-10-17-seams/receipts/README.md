@@ -16,7 +16,7 @@ The owner pauses work after V1.
 | S2 | `e15394b0934f14158970b21abf65d6b391c61fe4` | [S2](S2.md) | Required checks pass; three new placed goals remain. |
 | S4 | `6d403efeda4d3e366cfc2d4fa2b5edcbd717d649` | [S4](S4.md) | Required checks pass; two claims proved, no planned goals. |
 | S3a | `23f710f2873083ba762c3b9bd03df499b7a35814` | [S3a](S3a.md) | Required checks pass; five claims proved, no planned goals. |
-| S3b | Pending | Pending | Open |
+| S3b | `bc40095bbdaa6cc21e2df281250373bced2fef98` | [S3b](S3b.md) | Required checks pass; one claim proved, serve_answers a placed goal. |
 | ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` ; receipt `0bb42e37d4fa99fd84979df03beb3dd0391a4e98` | [ST1a](ST1a.md) | Required checks pass. |
 | ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` ; receipt `709f9f10a9401150af66870a8665860e45cc63d3` | [ST1b](ST1b.md) | Required checks pass. |
 | ST2 | `e163b1ac64aa9c4c8ce91f2b7d54bd4d3aa3d061` | [ST2](ST2.md) | Required checks pass; all three recovery claims are proved. |
@@ -93,6 +93,10 @@ The owner pauses work after V1.
 | ST2 | The empty boundary sentinel normalizes without changing root generations; the vacuous R4 control is removed. |
 | ST2 | The golden printer handles the two recovery refusals; native CI installs the tested STM dependencies. |
 
+| S3b | The generator gains `--arm-lemmas`: one `rfl` equation per reader arm; `EffName`'s 57 arms timed out under the old template at any budget tried. |
+| S3b | `--qualified-names` qualifies foreign identifiers too; the service context has a hand-written exact codec. |
+| S3b | `Tools.Query` stays until its `slots`, `table` and `addresses` reads join the tool's queries. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -132,5 +136,8 @@ The owner pauses work after V1.
 | ST2 | Admit empty-store checked images, retaining exact roots and shared node admission without historical ancestry claims. |
 | ST2 | Keep Capacity and Fault separate; expose frozen images through one owned writer. |
 | ST2 | Preserve published and sealed damage; retain actual-model tables, command comparisons, and real interruption controls. |
+
+| S3b | Adopt the generated Tool and Check wire codecs, the JSON profile, and one JSON-lines driver over `Tool.Wire.serveJson`. |
+| S3b | Retire the string dispatcher, its snapshot cache and `JsonBridge.valueFrom?`; keep `Tools.Query` until its reads move. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

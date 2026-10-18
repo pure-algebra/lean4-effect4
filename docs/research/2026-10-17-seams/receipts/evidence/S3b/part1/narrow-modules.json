@@ -1,0 +1,39 @@
+{
+ "changed": [
+  "Effect4",
+  "Effect4.Laws",
+  "Effect4.Laws.Tool.CodecProfile",
+  "Effect4.Laws.Tool.Wire",
+  "Effect4.Store.Domain.ContextCanonical",
+  "Effect4.Tool.CheckDerived",
+  "Effect4.Tool.CodecProfile",
+  "Effect4.Tool.ToolDerived",
+  "Effect4.Tool.Wire",
+  "Effect4.Tool.WireTypes",
+  "Effect4Gen.Main",
+  "ProofGraph.Registry",
+  "Test.All",
+  "Test.Program.SeamsS3bWire"
+ ],
+ "build": [
+  "Effect4.Laws.Author.Explain",
+  "Effect4.Laws.Tool.CodecProfile",
+  "Effect4.Laws.Tool.Wire",
+  "Effect4.Store.Domain.ContextCanonical",
+  "Effect4.Tool.CheckDerived",
+  "Effect4.Tool.CodecProfile",
+  "Effect4.Tool.ToolDerived",
+  "Effect4.Tool.Wire",
+  "Effect4.Tool.WireTypes",
+  "Effect4Gen.Exe",
+  "Effect4Gen.Main",
+  "ProofGraph.Registry",
+  "ProofGraph.Why",
+  "Test.Audit.AxiomGate",
+  "Test.Audit.ClosureAudit",
+  "Test.Program.SeamsS3bWire",
+  "Tools.LoadPaths",
+  "Tools.Semantics",
+  "Tools.View.Glyph"
+ ]
+}
