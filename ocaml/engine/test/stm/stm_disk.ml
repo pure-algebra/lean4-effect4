@@ -12,18 +12,15 @@
      P1 parallel (STM_domain): two stores, one per slot, each writer opened in the prefix; then
         each domain advances and reads its own store. Writers of different stores commit at once
         without interfering.
-     K1 known bug, a negative test until it is fixed: one store, and two domains open it at
-        once. Both pass the writer lock: E4_pack's in-process registry (`held`, PK6) is a Hashtbl
-        that `acquire_lock` checks and fills without a lock, and Unix.lockf does not refuse a
-        second descriptor of one process. The second writer then fails on the control file, or
-        both stay open.
-     K2 known bug, a negative test until it is fixed: one store whose writer slot 0 holds;
-        domain 0 advances while domain 1 tries to open. The open is refused with Locked, as CS4
-        says, but E4_cas.open_rw_exn runs E4_control.cleanup, which removes control.tmp, before it
-        takes the lock: the live writer's commit fails on its rename, and E4_disk closes the live
-        writer. A second process does the same (receipt-estate.md, 2026-10-18).
-   When a fix lands, its test changes from `~neg:true` to `~neg:false` in the same commit.
-   Depends on: Effect4_engine_cas (E4_disk, E4_cas, E4_control, E4_admission, E4_fault),
+     K1 one store, and two domains open it at once: exactly one passes the writer lock. Until
+        E4_lock, the in-process registry was a Hashtbl checked and filled with no mutex, and
+        Unix.lockf does not refuse a second descriptor of one process, so both passed
+        (receipt-estate.md, 2026-10-18).
+     K2 one store whose writer slot 0 holds; domain 0 advances while domain 1 tries to open. The
+        open is refused with Locked and the holder's commits succeed. Until E4_cas.open_rw_exn
+        took the lock first, the refused opener removed the live writer's control.tmp, and the
+        holder's commit failed on its rename.
+   Depends on: Effect4_engine_cas (E4_disk, E4_cas, E4_control, E4_admission, E4_fault, E4_lock),
    Disk_test_support (the nodes, a temporary directory), qcheck-stm, Stm_support.
    The model is hand OCaml: the writer's ownership is host code, whose meaning no Lean definition
    owns; test_disk_stm.ml compares the writer's commands with Lean's Cas transitions. The evidence
@@ -192,7 +189,7 @@ let () =
       Seq_leaky.neg_agree_test ~count:300 ~name:"S2 red: a close that leaves the writer open, sequential";
       par_test ~neg:false ~name:"P1 E4_disk, two stores, each advanced by its own domain" ~count:30 ~repeats:4
         ~ok:Par_two.all_interleavings_ok two_stores Par_two.agree_prop_par;
-      par_test ~retries:2 ~neg:true ~name:"K1 known bug: two domains open one store, and both pass the lock"
-        ~count:60 ~repeats:10 ~ok:Par_one.all_interleavings_ok racing_opens Par_one.agree_prop_par;
-      par_test ~retries:2 ~neg:true ~name:"K2 known bug: a refused open breaks the holder's commit" ~count:60
-        ~repeats:10 ~ok:Par_held.all_interleavings_ok refused_opener Par_held.agree_prop_par ]
+      par_test ~neg:false ~name:"K1 two domains open one store, and one passes the lock" ~count:60 ~repeats:10
+        ~ok:Par_one.all_interleavings_ok racing_opens Par_one.agree_prop_par;
+      par_test ~neg:false ~name:"K2 a refused open leaves the holder's commits intact" ~count:60 ~repeats:10
+        ~ok:Par_held.all_interleavings_ok refused_opener Par_held.agree_prop_par ]

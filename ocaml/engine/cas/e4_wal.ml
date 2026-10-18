@@ -405,14 +405,12 @@ type t = {
   mutable w_next : seq;
   mutable w_durable : seq;
   w_buf : Buffer.t;
-  w_lock : Unix.file_descr;
+  w_lock : E4_lock.t;
   mutable w_closed : bool;
 }
 
-(* LG7: the in-process half of the single-writer discipline.  lockf(F_TLOCK) is a POSIX
-   fcntl lock and does NOT conflict with another descriptor of the same process, so the
-   claim table is what makes a second `open_` in one process raise. *)
-let claims : (string, unit) Hashtbl.t = Hashtbl.create 8
+(* LG7: the single-writer lock is E4_lock's: an in-process table beside the fcntl lock, under
+   one mutex, so a second `open_` in this process, from any domain, raises. *)
 
 let create_segment ~path ~job ~first =
   let fd = Unix.openfile path [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_APPEND ] 0o644 in
@@ -420,10 +418,7 @@ let create_segment ~path ~job ~first =
   Unix.fsync fd;
   fd
 
-let release_claim t =
-  (try Unix.lockf t.w_lock Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
-  (try Unix.close t.w_lock with Unix.Unix_error _ -> ());
-  Hashtbl.remove claims t.w_dir
+let release_claim t = E4_lock.release t.w_lock
 
 let open_ ~dir ~job ~seg_max =
   if seg_max < min_seg_max then
@@ -431,13 +426,7 @@ let open_ ~dir ~job ~seg_max =
       (Printf.sprintf "E4_wal.open_: seg_max %d is below min_seg_max %d" seg_max min_seg_max);
   let jd = job_dir ~dir ~job in
   mkdir_p jd;
-  if Hashtbl.mem claims jd then raise (Locked jd);
-  let lock = Unix.openfile (Filename.concat jd "LOCK") [ Unix.O_RDWR; Unix.O_CREAT ] 0o644 in
-  (try Unix.lockf lock Unix.F_TLOCK 0
-   with Unix.Unix_error _ ->
-     Unix.close lock;
-     raise (Locked jd));
-  Hashtbl.replace claims jd ();
+  let lock = match E4_lock.acquire ~dir:jd with Ok lock -> lock | Error _ -> raise (Locked jd) in
   let fresh ~first =
     let path = Filename.concat jd (segment_name first) in
     let fd = create_segment ~path ~job ~first in
@@ -452,9 +441,7 @@ let open_ ~dir ~job ~seg_max =
       let w = walk_segment ~bytes ~path ~job ~from:max_int ~f:(fun _ _ -> ()) in
       match w.w_stop with
       | Bad_header _ | Wrong_job _ | Gap _ ->
-        (try Unix.lockf lock Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
-        Unix.close lock;
-        Hashtbl.remove claims jd;
+        E4_lock.release lock;
         failwith ("E4_wal.open_: " ^ stop_to_string w.w_stop)
       | Eof | Short _ | Bad_crc _ | Bad_row _ | Oversize _ -> (
         match w.w_sealed with

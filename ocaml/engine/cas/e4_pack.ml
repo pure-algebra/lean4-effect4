@@ -487,8 +487,7 @@ type recovery = {
 type t = {
   w_dir : string;
   w_seg_max : int;
-  w_lock_fd : Unix.file_descr;
-  w_lock_key : string;
+  w_lock : E4_lock.t;
   mutable w_fds : (seg * Unix.file_descr) list;
   mutable w_pend : pending list;          (* newest first *)
   mutable w_cur_seg : seg;
@@ -502,26 +501,9 @@ type t = {
   w_recovery : recovery;
 }
 
-(* PK6: an in-process registry beside the fcntl lock.  Unix.lockf is per-PROCESS, so it does
-   not refuse a second open_ in this one; the table does. *)
-let held : (string, unit) Hashtbl.t = Hashtbl.create 8
-
-let acquire_lock dir =
-  let key = try Unix.realpath dir with Unix.Unix_error _ | Sys_error _ -> dir in
-  if Hashtbl.mem held key then raise (Locked key);
-  let path = Filename.concat dir "LOCK" in
-  let fd = Unix.openfile path [ Unix.O_RDWR; Unix.O_CREAT ] 0o600 in
-  (try Unix.lockf fd Unix.F_TLOCK 0
-   with Unix.Unix_error _ ->
-     (try Unix.close fd with Unix.Unix_error _ -> ());
-     raise (Locked key));
-  Hashtbl.replace held key ();
-  (fd, key)
-
-let release_lock t =
-  (try Unix.lockf t.w_lock_fd Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
-  (try Unix.close t.w_lock_fd with Unix.Unix_error _ -> ());
-  Hashtbl.remove held t.w_lock_key
+(* PK6: the single-writer lock is E4_lock's: an in-process table beside the fcntl lock, under
+   one mutex. *)
+let release_lock t = E4_lock.release t.w_lock
 
 let fd_for t s =
   match List.assoc_opt s t.w_fds with
@@ -585,16 +567,23 @@ let create_segment ~dir s =
   fsync_dir (pack_subdir dir);
   fd
 
-let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
-  if seg_max <= head_length + record_overhead then
-    invalid_arg "E4_pack.open_: seg_max is smaller than one record";
-  mkdir_p dir;
-  mkdir_p (pack_subdir dir);
-  let lock_fd, lock_key = acquire_lock dir in
+let open_at ?lock ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
+  (* A given lock is owned from here: every refusal releases it, as it releases one taken here. *)
+  let lock =
+    try
+      if seg_max <= head_length + record_overhead then
+        invalid_arg "E4_pack.open_: seg_max is smaller than one record";
+      mkdir_p dir;
+      mkdir_p (pack_subdir dir);
+      match lock with
+      | Some lock -> lock
+      | None -> ( match E4_lock.acquire ~dir with Ok lock -> lock | Error key -> raise (Locked key))
+    with failure ->
+      Option.iter E4_lock.release lock;
+      raise failure
+  in
   let refuse_open ?damage msg =
-    (try Unix.lockf lock_fd Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
-    (try Unix.close lock_fd with Unix.Unix_error _ -> ());
-    Hashtbl.remove held lock_key;
+    E4_lock.release lock;
     match damage with
     | None -> raise (Bad_pack msg)
     | Some (seg, off, reason) -> raise (Damaged_sealed {seg; off; reason})
@@ -602,8 +591,7 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
   let finish_with r cur_seg cur_end fds =
     { w_dir = dir;
       w_seg_max = seg_max;
-      w_lock_fd = lock_fd;
-      w_lock_key = lock_key;
+      w_lock = lock;
       w_fds = fds;
       w_pend = [];
       w_cur_seg = cur_seg;
@@ -716,9 +704,7 @@ let open_at ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
         verified = verify }
       cseg coff !fds
 ) with failure ->
-    (try Unix.lockf lock_fd Unix.F_ULOCK 0 with Unix.Unix_error _ -> ());
-    (try Unix.close lock_fd with Unix.Unix_error _ -> ());
-    Hashtbl.remove held lock_key;
+    E4_lock.release lock;
     raise failure
 
 let open_ ~dir ~seg_max = open_at ~dir ~seg_max ()

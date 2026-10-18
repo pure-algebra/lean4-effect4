@@ -65,8 +65,9 @@
    LG6 `replay ~from` opens the segment whose `[first_index, next first_index)` contains
        `from` by a binary search over the directory listing — O(log segments), never a full
        scan of the earlier ones.                          by construction; tested
-   LG7 Single writer: one `t` per job directory, held by an in-process claim and by
-       `lockf(F_TLOCK)` on `<job-dir>/LOCK`.  A second `open_` raises `Locked`.  A reader
+   LG7 Single writer: one `t` per job directory, held by E4_lock: an in-process claim and
+       `lockf(F_TLOCK)` on `<job-dir>/LOCK`, under one mutex.  A second `open_`, from any
+       domain, raises `Locked`.  A reader
        takes no lock and needs none: a row is only ever appended, never rewritten.  tested
    LG8 The row body is opaque and exact: `replay` returns the bytes `stage` was given, byte
        for byte, for every string including the empty one and one full of NULs.  tested

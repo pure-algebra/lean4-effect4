@@ -46,9 +46,10 @@
                                                         by construction; tested (S1, S2)
    PK5 A node_len >= 2^62 is refused as `Host_limit`, never misread (amendment M9; the Lean
        byte language strictly contains this one).        by construction; tested (X5)
-   PK6 Single writer: `open_` takes an exclusive lock on <dir>/LOCK — an in-process registry
-       AND `Unix.lockf`, so a second `open_` in this process and a second process are both
-       refused with `Locked`.  Readers take no lock.               tested (W1, W2)
+   PK6 Single writer: `open_` takes an exclusive lock on <dir>/LOCK — E4_lock: an in-process
+       registry AND `Unix.lockf`, under one mutex — so a second `open_` in this process, from
+       any domain, and a second process are all refused with `Locked`.  Readers take no lock.
+                                            tested (W1, W2; stm_disk K1)
    PK7 Recovery: `open_` scans from `?from` (default: the head of the last segment) with
        `~verify`, admits every record that passes the CRC and whose bytes re-hash to the
        recorded digest, in write order, and stops at the FIRST failure.  `pack_end` is the
@@ -139,8 +140,10 @@ val open_ : dir:string -> seg_max:int -> t
     the tail of the last segment (PK6, PK7).  `open_at ~dir ~seg_max ()`. *)
 
 val open_at :
+  ?lock:E4_lock.t ->
   ?from:seg * off -> ?verify:bool -> ?truncate:bool -> dir:string -> seg_max:int -> unit -> t
-(** [from] is where the durable end was believed to be — lane P4 passes the control file's
+(** [lock] is the writer lock on [dir], taken by a caller that must hold it before it reads the
+    store (E4_cas, K2); the writer then owns it, and every refusal releases it.  [from] is where the durable end was believed to be — lane P4 passes the control file's
     `pack_end` (default: the head of the last segment, D4).  [verify] (default true) makes
     recovery check the CRC and re-hash every record from [from].  [truncate] (default true)
     discards the torn tail: the failing record's offset becomes the file's length and every

@@ -59,8 +59,10 @@
        The Lean Val-data oversize-before-version law keeps its original scope.
    CS3  The address is `sha256 (E4_node.encode n)` and nothing else is ever hashed
        (`Store.address`, address (src/Effect4/Store/Domain/Node.lean); L-CAS-1).                    by construction; tested
-   CS4  Single writer, checked: `open_rw` takes the pack's exclusive lock on <store>/LOCK and
-       returns `Fault (Locked _)` when another writer holds it. Readers take no lock.       tested (X5)
+   CS4  Single writer, checked: `open_rw` takes the exclusive lock on <store>/LOCK (E4_lock)
+       before it reads or writes the store, and returns `Fault (Locked _)` when another writer
+       holds it; a refused opener changes nothing. Readers take no lock.
+                                                         tested (X5; stm_disk K1, K2)
    CS5  Durability is per COMMIT, not per put: `put` stages, `commit` performs ONE write(2)
        and ONE fsync(2) per touched pack segment and then one tmp+rename+fsync of the control
        file — the group commit and the watermark advance are one durable step.

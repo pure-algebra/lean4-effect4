@@ -1319,20 +1319,26 @@ let readmit_tail view ~from ~pack_recovery =
 
 let open_rw_exn ~dir opts =
   mkdir_p dir;
-  mkdir_p (Filename.concat dir "index");
-  E4_control.cleanup ~dir;
-  let control = match read_control ~dir with Some p -> p | None -> E4_control.initial in
-  let published = E4_control.pack_end control in
-  let want = clamp_watermark ~dir published in
-  let empty_sentinel =
-    E4_pack.equal_position published (0, 0) && List.is_empty (E4_control.roots control) in
-  if not (E4_pack.equal_position want published) && not empty_sentinel then
-    raise (Store_error "published durable boundary is outside the pack");
-  let pack =
-    try E4_pack.open_at ~from:want ~verify:true ~truncate:true ~dir ~seg_max:opts.seg_max ()
-    with
-    | E4_pack.Locked d -> raise (Locked d)
+  (* The writer lock comes before any read or write of the store: a refused opener removes no
+     live writer's control.tmp (K2) and reads no control file that a live writer may replace. *)
+  let lock = match E4_lock.acquire ~dir with Ok lock -> lock | Error d -> raise (Locked d) in
+  let control, want =
+    try
+      mkdir_p (Filename.concat dir "index");
+      E4_control.cleanup ~dir;
+      let control = match read_control ~dir with Some p -> p | None -> E4_control.initial in
+      let published = E4_control.pack_end control in
+      let want = clamp_watermark ~dir published in
+      let empty_sentinel =
+        E4_pack.equal_position published (0, 0) && List.is_empty (E4_control.roots control) in
+      if not (E4_pack.equal_position want published) && not empty_sentinel then
+        raise (Store_error "published durable boundary is outside the pack");
+      (control, want)
+    with failure ->
+      E4_lock.release lock;
+      raise failure
   in
+  let pack = E4_pack.open_at ~lock ~from:want ~verify:true ~truncate:true ~dir ~seg_max:opts.seg_max () in
   let acquired_view = ref None in
   try (
   let view = make_view ~dir ~slots:opts.index_slots ~control ~upto:want in
