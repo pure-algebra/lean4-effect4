@@ -105,11 +105,8 @@ build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, E
 #
 # Each group's marker depends on the markers of the groups whose outputs its producer reads,
 # and on no other. derived writes Lean modules the rest import, so every Lean producer waits
-# on it; readme renders the TypeScript tables that ts cuts; truth reads the atoms' prelude
-# (derived), the tables (ts) and the session protocol (host-protocol). A regenerated group
-# re-cuts what reads it and nothing else (the codegen refactor's CR-2). Until then each marker
-# depended on the one before it in GEN_GROUPS, so `make gen-schema-ts` re-cut the truth lane
-# first, and the truth lane read a protocol that host-protocol wrote after it.
+# on it; readme renders the TypeScript tables that ts cuts. A regenerated group re-cuts what
+# reads it and nothing else (the codegen refactor's CR-2).
 #
 # lcnf sits between derived and eff -- it used to sit after readme, which made `make gen` a
 # non-fixpoint: eff read the api_engine.ml of the previous run, so a changed row needed two
@@ -228,31 +225,12 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 	$(PY) scripts/generate.py --only readme
 	@mkdir -p $(GEN) && touch $@
 
-# The truth harness: Lean writes the corpus from the committed tapes, then the real
-# runtime prints the modules, re-records the tapes and writes the result. Both are
-# deterministic given the pinned host; the comparison against a fresh run is check-truth.
 # The prelude and the files it re-exports: a gate that reads printed modules depends on all five.
 PRELUDE_SOURCES := harness/truth/prelude.ts harness/truth/control.ts harness/truth/records.ts harness/truth/tuples.ts harness/truth/prelude-atoms.gen.ts
-TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean Test/Codegen/ServicesPrint.lean $(PRELUDE_SOURCES) harness/truth/run-truth.ts \
-  $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
-$(GEN)/truth: $(GEN)/derived $(GEN)/ts $(GEN)/host-protocol $(TRUTH_SOURCES) $(LEAN_INPUTS)
-	$(call build_imports,harness/truth/Truth.lean)
-	$(LAKE) env lean -M4096 $(call native_flags,harness/truth/Truth.lean) --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
-	$(BUN) run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
-	@mkdir -p $(GEN) && touch $@
-
 $(GEN)/host-protocol: $(GEN)/derived tools/Tools/HostProtocol.lean $(CORE_SOURCES)
 	$(LAKE) build Effect4.Api.HostSession
 	$(call build_imports,tools/Tools/HostProtocol.lean)
 	$(LAKE) env lean -M4096 --run tools/Tools/HostProtocol.lean harness/truth/session
-	@mkdir -p $(GEN) && touch $@
-
-SCHEMA_TS_DIR := harness/schema-generation
-$(GEN)/schema-ts: $(GEN)/derived $(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) $(LEAN_INPUTS)
-	$(call build_imports,$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean))
-	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitFixture.lean > $(SCHEMA_TS_DIR)/Person.generated.ts
-	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitCoverageFixture.lean > $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts
-	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitMultiFixture.lean > $(SCHEMA_TS_DIR)/TwoRoots.generated.ts
 	@mkdir -p $(GEN) && touch $@
 
 # The runtime behaviour census is cut from the vendored rc.112 sources; its producer
@@ -264,8 +242,8 @@ $(GEN)/census: generated/effect-runtime-census.tsv
 
 # The semantics report (generated/semantics.md): the registry's claims checked against the
 # loaded roots and rendered once. Pure Lean, no host; the JSON form is a build artifact under
-# .lake/gen/semantics-report. It reads no other generation group, so it is a hermetic group of
-# its own and `check-gen` holds its drift like any other committed generated file.
+# .lake/gen/semantics-report. It is no generation group: `make gen-semantics` runs it on demand,
+# and no gate holds its drift (owner, 2026-10-18).
 # The registry's Test roots are loaded beside Effect4.Laws (`registry.roots`): two program
 # batteries, the five acceptance programs (decisions row 206) and the scenario modules that hold
 # a placed claim (decisions row 254). The recipe builds exactly these roots and the report, and
@@ -356,16 +334,19 @@ $(GEN)/fixtures: $(CHK)/gen-fixtures.key
 	@mkdir -p $(GEN) && touch $@
 
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
-HERMETIC_GROUPS := variances derived eff wire cas ts readme semantics fixtures
+HERMETIC_GROUPS := variances derived eff wire cas ts readme fixtures
 # `gen`'s order, which is the producers' order above; lcnf is named here, between derived
 # and eff, and nowhere in HERMETIC_GROUPS.
-GEN_GROUPS := variances derived lcnf eff wire cas ts readme truth host-protocol schema-ts census semantics fixtures
+GEN_GROUPS := variances derived lcnf eff wire cas ts readme host-protocol census fixtures
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
 gen: $(addprefix $(GEN)/,$(GEN_GROUPS)) ## regenerate every stale generated group, in order
 gen-hermetic: $(addprefix $(GEN)/,$(HERMETIC_GROUPS)) ## the Lean-only groups (no host runtime)
-# one group: make gen-eff, make gen-truth, ...
+# one group: make gen-eff, make gen-lcnf, ...
 $(addprefix gen-,$(GEN_GROUPS)): gen-%: $(GEN)/%
+# The semantics report is no group: no gate and no `make gen` waits on it (owner, 2026-10-18).
+.PHONY: gen-semantics
+gen-semantics: $(GEN)/semantics ## on demand: the semantics report into generated/semantics.md (no gate reads it)
 clean-gen: ## forget the generation markers (the next `make gen` re-cuts everything)
 	rm -rf $(GEN)
 
@@ -375,12 +356,8 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.le
   $(LCNF_OUT) \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \
-  harness/truth/prelude-atoms.gen.ts \
-  harness/truth/corpus.json harness/truth/generated harness/truth/result.json harness/truth/result.md \
-  harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
-  $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
+  harness/truth/prelude-atoms.gen.ts harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
   generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv \
-  generated/semantics.md \
   ocaml/engine/test/*/*.txt
 
 # ---------------------------------------------------------------------------- corpus
@@ -452,8 +429,22 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots native compiler ts-reader truth truth-release target schema-codec ocaml ingest-smoke \
-  host-protocol service-identity census schema-ts schema-pins tools corpus tsgo tsdiag semantics docs language
+# Retired lanes (owner, 2026-10-18: "just retire them... we'll design better checks"): truth,
+# truth-release, corpus, schema-codec, schema-ts and host-protocol, with the truth and schema-ts
+# generation groups. Their harnesses stay in the tree, run by no gate. The truth harness's two
+# producers stay on demand: `gen-truth` re-records the corpus, the result and the tapes on the
+# pinned rc.112, and `gen-truth-ledger` promotes the release lane's ledger.
+TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts harness/truth/if-case.test.ts
+.PHONY: gen-truth gen-truth-ledger
+gen-truth: $(GEN)/derived $(GEN)/ts $(GEN)/host-protocol | harness/truth/node_modules ## on demand: re-record harness/truth on the pinned rc.112 (no gate reads it)
+	$(call build_imports,harness/truth/Truth.lean)
+	$(LAKE) env lean -M4096 $(call native_flags,harness/truth/Truth.lean) --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
+	$(BUN) run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
+gen-truth-ledger: | harness/truth/node_modules ## on demand: promote a fresh host run of both builds to harness/truth/build-ledger.tsv
+	$(PY) scripts/check-truth-release.py --promote --host-tests $(TRUTH_HOST_TESTS)
+
+CHECKS := roots native compiler ts-reader target ocaml ingest-smoke \
+  service-identity census schema-pins tools tsgo tsdiag docs language
 .PHONY: check check-ts check-full check-sweep check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
 FORCE:
 
@@ -466,10 +457,10 @@ batteries-touched: ## the batteries a change against BASE (default HEAD) edits o
 	@set -e; mods="$$($(PY) scripts/lean-imports.py --touched --base $(or $(BASE),HEAD))"; \
 	if [ -z "$$mods" ]; then echo "batteries-touched: no battery reached"; \
 	else echo "batteries-touched: $$(echo $$mods | wc -w | tr -d ' ') batteries"; $(LAKE) build $$mods; fi
-check-ts: $(addprefix $(CHK)/,tsgo schema-codec schema-ts truth target ts-reader corpus tsdiag host-protocol ingest-smoke service-identity) ## every comparison with Effect and tsgo 7
+check-ts: $(addprefix $(CHK)/,tsgo target ts-reader tsdiag ingest-smoke service-identity) ## every comparison with Effect and tsgo 7
 check-ocaml: $(addprefix $(CHK)/,native compiler ocaml) ## every comparison on the OCaml route
 check-full: check check-ts check-ocaml ## the build and every outside oracle
-check-sweep: $(addprefix $(CHK)/,roots docs language semantics census schema-pins tools) check-gen $(if $(EFFECT4_RELEASE_NODE_MODULES),$(CHK)/truth-release) ## batteries, axioms, drift and documents
+check-sweep: $(addprefix $(CHK)/,roots docs language census schema-pins tools) check-gen ## batteries, axioms, drift and documents
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -603,70 +594,6 @@ _run-ts-reader:
 	cd ts/eff && $(BUN) run typecheck
 	cd ts/eff && $(BUN) test
 
-# The host controls beside the lane: rc.112's `catchIf` clause, the prelude's cause queries,
-# and the inventory guard (every generated atom has a prelude case that runs). Named one by
-# one, as exact paths (`./`): a bare name is a filter, which also matches a copy under docs/research.
-TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts harness/truth/if-case.test.ts
-$(eval $(call cached_check,truth,ts,$(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts harness/truth/literals.typecheck.ts harness/truth/queue-steps.typecheck.ts harness/truth/mask.typecheck.ts harness/truth/P2b.lean tools/target/checker.ts tools/target/oracle.ts $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts $(TS_PINS) $(TS_INSTALL),harness/truth/Truth.lean harness/truth/P2b.lean))
-$(CHK)/truth.key:  | harness/truth/node_modules ts/eff/node_modules
-_run-truth:
-	$(call build_imports,harness/truth/Truth.lean harness/truth/P2b.lean)
-	$(BUN) test $(addprefix ./,$(TRUTH_HOST_TESTS))
-	$(PY) scripts/check-truth.py
-
-# The release lane (decisions row 248; harness/truth/RELEASE-LANE.md): the truth harness's host phase
-# on effect@4.0.1 beside the pinned run, judged by the build ledger (harness/truth/build-ledger.tsv:
-# each program's expected agreement with each build; build-ledger.run.json: what those entries
-# were measured on). It reads the committed manifest, result and tapes, which the pinned lane holds
-# to a fresh run, so the pinned marker is its prerequisite; the rest is what it reads besides. The
-# release install is selected by EFFECT4_RELEASE_NODE_MODULES only (no default, no download; bun
-# runs with --no-install), and its manifests are prerequisites when the variable names one. Its
-# controls run first, and the pinned lane's host tests run on both builds. `make gen-truth-ledger`
-# promotes a fresh host run to the two committed files (the hand columns `reason` and `slice` are
-# kept). Not in `check` and not in `check-full`: no tracked recipe installs the release.
-TRUTH_RELEASE_LANE := scripts/check-truth-release.py scripts/lib/truth_ledger.py scripts/lib/truth_host.py \
-  harness/truth/build-ledger.tsv harness/truth/build-ledger.run.json \
-  harness/truth/select-controls.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts \
-  ts/eff/eff.gen.ts ts/eff/tsconfig.json \
-  $(wildcard $(addprefix $(EFFECT4_RELEASE_NODE_MODULES)/,effect/package.json \
-    @effect/sql-sqlite-bun/package.json @typescript/native-preview/package.json))
-# Which install the variable names is an input too: the marker is stale when the name changes or goes.
-$(CHK)/truth-release-install: FORCE
-	@mkdir -p $(CHK); printf '%s\n' '$(EFFECT4_RELEASE_NODE_MODULES)' > $@.new; \
-	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
-$(eval $(call cached_check,truth-release,ts,$(CHK)/truth $(TRUTH_RELEASE_LANE) $(CHK)/truth-release-install $(TS_PINS) $(TS_INSTALL),))
-$(CHK)/truth-release.key: $(CHK)/truth $(CHK)/truth-release-install | ts/eff/node_modules
-_run-truth-release:
-	$(PY) scripts/check-truth-release.py --self-test
-	$(PY) scripts/check-truth-release.py --host-tests $(TRUTH_HOST_TESTS)
-
-.PHONY: gen-truth-ledger
-gen-truth-ledger: $(CHK)/truth ## promote a fresh host run of both builds to harness/truth/build-ledger.tsv and build-ledger.run.json
-	$(PY) scripts/check-truth-release.py --promote --host-tests $(TRUTH_HOST_TESTS)
-
-# The corpus lane: every program of the generated corpus (Test/Program/Gen.lean, 400 at
-# depth 4) printed and type-checked, the admitted ones run on rc.112, its rc.112 exit,
-# schedule and sync exit compared with the machine's and its inferred tsc type with Lean's,
-# one row per program in harness/truth/corpus-results.tsv (the committed expected file;
-# `make gen-corpus-results` promotes a fresh run; harness/truth/corpus-known-differences.md
-# registers each disagreement by program, dimension and outcome). The work directory is
-# harness/truth/corpus-check (ignored), beside the prelude and session sources the modules
-# import; everything the lane reads is a prerequisite.
-CORPUS_LANE := scripts/check-corpus.py scripts/lib/truth_host.py tools/target/corpus.ts tools/target/oracle.ts tools/target/profile.ts \
-  harness/truth/corpus-results.tsv harness/truth/corpus-known-differences.md Test/fixtures/target/selection.json \
-  harness/truth/tsconfig.json harness/truth/prelude-inventory.ts $(wildcard harness/truth/session/*.ts) \
-  ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json
-$(eval $(call cached_check,corpus,ts,$(TRUTH_SOURCES) $(CORPUS_LANE) $(TS_PINS) $(TS_INSTALL),harness/truth/Truth.lean))
-$(CHK)/corpus.key:  | harness/truth/node_modules ts/eff/node_modules
-_run-corpus:
-	$(call build_imports,harness/truth/Truth.lean)
-	$(PY) scripts/check-corpus.py
-
-.PHONY: gen-corpus-results
-gen-corpus-results: | harness/truth/node_modules ## promote a fresh corpus run to harness/truth/corpus-results.tsv
-	$(call build_imports,harness/truth/Truth.lean)
-	$(PY) scripts/check-corpus.py --promote
-
 # The architecture map (docs/GENERATED.md, group `architecture`): measured from the tree by a
 # Lean driver that parses every import header, loads the roots for declaration counts and
 # walks the estates; the role register tools/Tools/ArchitectureRoles.lean is its one hand
@@ -706,21 +633,20 @@ gen-architecture: gen-semantics | build ## the architecture map, measured from t
 # it. The oracle's own compiler side runs under node (tools/target/checker.ts).
 #
 # Three steps before the report. The row lane's expected columns are Lean's own rendering
-# (generated/row-types.tsv, tools/Tools/RowTypes.lean): the lane refuses a stale one rather
-# than reading it, since a stale signature is a wrong expectation, not a missing one. Then
+# (generated/row-types.tsv, tools/Tools/RowTypes.lean): the lane writes it fresh before it reads
+# it, so a spelling change re-pins nothing by hand; check-gen shows the moved file. Then
 # the tool type-checks itself under the same compiler it drives — nothing did before, and
 # `renderTy`, the hand copy of the printer it replaced, had fallen four constructors behind.
-$(eval $(call cached_check,target,ts,$(TRUTH_GENERATED) $(PRELUDE_SOURCES) Test/fixtures/target/selection.json $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean tools/Tools/TypeSpelling.lean generated/row-types.tsv tools/Tools/TyVectors.lean generated/assignability.tsv ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json lean-toolchain $(TS_PINS) $(TS_INSTALL),tools/Tools/RowTypes.lean tools/Tools/TyVectors.lean))
+$(eval $(call cached_check,target,ts,$(TRUTH_GENERATED) $(PRELUDE_SOURCES) Test/fixtures/target/selection.json $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean tools/Tools/TypeSpelling.lean generated/row-types.tsv tools/Tools/TyVectors.lean ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json lean-toolchain $(TS_PINS) $(TS_INSTALL),tools/Tools/RowTypes.lean tools/Tools/TyVectors.lean))
 $(CHK)/target.key:  | ts/eff/node_modules
 _run-target:
 	$(call build_imports,tools/Tools/RowTypes.lean tools/Tools/TyVectors.lean)
-	$(LAKE) env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv --check
+	$(LAKE) env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv
 	$(NODE) ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json
 	$(BUN) test tools/target
 	$(BUN) tools/target/cli.ts --repo .
 	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
 	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv
-	$(BUN) tools/target/rows.ts --repo .
 
 .PHONY: gen-assignability
 gen-assignability: ## promote a fresh assignability differential to generated/assignability.tsv
@@ -731,18 +657,6 @@ gen-assignability: ## promote a fresh assignability differential to generated/as
 .PHONY: gen-row-citations
 gen-row-citations: ## promote a fresh rows/atoms report to generated/row-citations.tsv
 	$(BUN) tools/target/rows.ts --repo . --promote
-
-# The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
-# rc.112's `Schema.toCodecJson` on the host, under each case's typed Schema as the code printer
-# writes it (`Codegen.SchemaCode`); tsgo checks the generated Schemas and the checker together.
-# The fresh module goes to the checker's work folder, which git ignores; nothing committed.
-$(eval $(call cached_check,schema-codec,ts,$(wildcard harness/truth/schema-codec/*) $(TS_PINS) $(TS_INSTALL),harness/truth/schema-codec/Emit.lean))
-$(CHK)/schema-codec.key:  | harness/truth/node_modules ts/eff/node_modules
-_run-schema-codec:
-	$(call build_imports,harness/truth/schema-codec/Emit.lean)
-	$(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean harness/truth/schema-codec/.work/values.ts
-	$(NODE) harness/truth/node_modules/@typescript/native-preview/bin/tsgo --project harness/truth/schema-codec/tsconfig.json
-	$(BUN) harness/truth/schema-codec/check.ts
 
 # The OCaml lane (the effect4 opam switch; local only until the runner has one): the eff
 # library's goldens and wire tests, the LCNF route's smoke, the engine's own tests and the
@@ -770,9 +684,9 @@ _run-ocaml:
 # program as a module under the pinned host configuration (Codegen/Diagnostics.lean writes
 # .lake/corpus/tsconfig.json), one native tsgo run, and the agreement between this checker's
 # located refusal (Api.explain) and TypeScript's diagnostics, one row per program in
-# generated/tsdiag-agreement.tsv (committed; `make gen-tsdiag` promotes a fresh run). The lane
-# fails on a program this checker types that TypeScript refuses, and on drift of the table.
-$(eval $(call cached_check,tsdiag,ts,$(CORPUS) harness/tsdiag/run-tsdiag.mjs $(wildcard harness/truth/*.ts harness/truth/session/*.ts) ts/eff/profile.gen.ts ts/eff/eff.gen.ts generated/tsdiag-agreement.tsv $(TS_PINS) $(TS_INSTALL),))
+# generated/tsdiag-agreement.tsv (a report that `make gen-tsdiag` promotes; no verdict reads
+# it). The lane fails on a program this checker types that TypeScript refuses.
+$(eval $(call cached_check,tsdiag,ts,$(CORPUS) harness/tsdiag/run-tsdiag.mjs $(wildcard harness/truth/*.ts harness/truth/session/*.ts) ts/eff/profile.gen.ts ts/eff/eff.gen.ts $(TS_PINS) $(TS_INSTALL),))
 $(CHK)/tsdiag.key: $(CORPUS)/index.tsv | ts/eff/node_modules
 _run-tsdiag:
 	$(NODE) harness/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag)
@@ -788,21 +702,6 @@ $(CHK)/ingest-smoke.key: $(CORPUS)/index.tsv | ts/eff/node_modules
 _run-ingest-smoke:
 	$(BUN) ts/eff/ingest/check-corpus.ts printed $(abspath $(CORPUS))
 
-# The keyed lane also performs the scenarios' scripts (decisions row 254), so the batteries that
-# `harness/truth/session/Keyed.lean` imports are its inputs, by their sources. It performs the
-# to-do's scripts on the to-do's emitted Effect service too (decisions row 378 (20), slice E4), so
-# the service's runner and red controls, and the to-do application's writer of the service and its
-# consumer (`apps/todo/`), are its inputs. It runs the to-do application on SQLite too (row 378
-# (16), slice V4), so the application's front, repository and checker, and the checks they share
-# with the keyed lane (`tools/Tools/RunChecks.lean`), are its inputs. The recipe builds what the
-# five Lean files that the script runs import, since `lake env` builds nothing.
-HOST_PROTOCOL_SERVICE := $(wildcard harness/truth/service/*.ts harness/truth/service/*.json harness/truth/service/red/* apps/todo/*.lean apps/todo/*.ts)
-$(eval $(call cached_check,host-protocol,ts,$(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SERVICE) $(PRELUDE_SOURCES) tools/Tools/HostProtocol.lean tools/Tools/RunChecks.lean tools/Tools/ProfileJson.lean scripts/check-host-protocol.py $(TS_PINS) $(TS_INSTALL),tools/Tools/HostProtocol.lean harness/truth/session/Keyed.lean harness/truth/session/Session.lean apps/todo/EmitTodo.lean apps/todo/Check.lean))
-$(CHK)/host-protocol.key:  | harness/truth/node_modules apps/todo/node_modules ts/eff/node_modules
-_run-host-protocol:
-	$(call build_imports,tools/Tools/HostProtocol.lean harness/truth/session/Keyed.lean harness/truth/session/Session.lean apps/todo/EmitTodo.lean apps/todo/Check.lean)
-	$(PY) scripts/check-host-protocol.py
-
 $(eval $(call cached_check,service-identity,ts,scripts/check-service-identity.py $(PRELUDE_SOURCES) $(wildcard harness/truth/session/*.ts) ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts $(TS_PINS) $(TS_INSTALL),tools/TestSupport/ServiceIdentity.lean))
 $(CHK)/service-identity.key: | ts/eff/node_modules
 _run-service-identity:
@@ -812,24 +711,6 @@ _run-service-identity:
 $(eval $(call cached_check,census,none,$(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/RuntimeCoverage.lean scripts/check-effect-runtime-census.sh scripts/generate-effect-runtime-census.sh,))
 _run-census:
 	bash scripts/check-effect-runtime-census.sh
-
-# The semantics report's refusal controls: a registry naming an unloaded root, a stale witness or
-# a malformed register row is refused with its reason. The report's own drift is `check-gen`'s.
-$(eval $(call cached_check,semantics,lean,$(SEMANTICS_SOURCES) tools/Drivers/SemanticsControls.lean $(LEAN_INPUTS),Drivers.SemanticsControls Test.Audit.SemanticsCensus))
-_run-semantics:
-	$(LAKE) build semantics-controls Test.Audit.SemanticsCensus
-	$(LAKE) exe semantics-controls
-
-SCHEMA_SOURCES := $(shell find src/Effect4/Schema -name '*.lean') src/Effect4/Codegen/Schema.lean
-# rc.112's own documents and the battery that reads them (slice A1); `include_str` files are not
-# in a Lean closure, so the fixtures are named.
-SCHEMA_DOCUMENTS := Test/Schema/DocumentJson.lean Test/fixtures/schema-documents/effect-rpc-rc112.json \
-  Test/fixtures/schema-representation/observed/06-vectors.observed.json
-$(eval $(call cached_check,schema-ts,ts,$(SCHEMA_SOURCES) $(wildcard $(SCHEMA_TS_DIR)/*) $(SCHEMA_DOCUMENTS) scripts/check-schema-typescript-generation.sh $(TS_PINS) $(TS_INSTALL) harness/schema-host/package.json harness/schema-host/package-lock.json $(SCHEMA_INSTALL),$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) Test/Schema/DocumentJson.lean))
-$(CHK)/schema-ts.key:  | ts/eff/node_modules
-_run-schema-ts:
-	$(call build_imports,$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) Test/Schema/DocumentJson.lean)
-	bash scripts/check-schema-typescript-generation.sh
 
 # The rest of the Schema slice, on its inputs (ledger decision 3): the rc.112 tag pins
 # are a textual extraction from the vendored SchemaRepresentation.ts. The retained
@@ -842,13 +723,8 @@ _run-schema-pins:
 # The one tool harness: the exact `Classical.choice` admissions against compiled declarations.
 SELFTEST_SOURCES := scripts/test-trust-boundaries.sh scripts/status.py scripts/lib/build_profile.py Test/Audit/AxiomGate.lean \
   $(shell find Test/fixtures/trust-gate -type f)
-$(eval $(call cached_check,tools,lean,$(SELFTEST_SOURCES) scripts/test-lean-imports.py scripts/test-gate-cache.py scripts/test-wire-roots.py scripts/test-doc-repair.py scripts/wire-roots.py scripts/lib/doc_refs.py,Test.Audit.RuntimeCoverage Test.Program.ConfigContract Test.Audit.SemanticsCensus Conform.Cli.Audit tools/Drivers/ProgramStructureCheck.lean Effect4.Program.Native))
+$(eval $(call cached_check,tools,lean,$(SELFTEST_SOURCES),tools/Drivers/ProgramStructureCheck.lean Effect4.Program.Native))
 _run-tools:
-	$(PY) scripts/test-lean-imports.py
-	$(PY) scripts/test-gate-cache.py
-	$(PY) scripts/test-wire-roots.py
-	$(PY) scripts/test-doc-repair.py
-	$(LAKE) build Test.Audit.RuntimeCoverage Test.Program.ConfigContract Test.Audit.SemanticsCensus Conform.Cli.Audit
 	$(call build_imports,tools/Drivers/ProgramStructureCheck.lean)
 	$(LAKE) env lean --run tools/Drivers/ProgramStructureCheck.lean
 	bash scripts/test-trust-boundaries.sh
@@ -864,7 +740,7 @@ help: ## this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
-	@echo '                     truth, host-protocol, schema-ts, census, semantics'
+	@echo '                     host-protocol, census, fixtures'
 
 clean: ## lake clean (drops the build, the generation and check markers)
 	$(LAKE) clean

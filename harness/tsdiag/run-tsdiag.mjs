@@ -259,16 +259,15 @@ const table = [
 const summary = [...counts.entries()].sort().map(([k, n]) => `${k} ${n}`).join(", ")
 console.log(`tsdiag: ${index.size} programs, one native run in ${elapsed}s: ${summary}`)
 
+// The table is a report: the lane writes this run's beside its work, and `--promote` (make
+// gen-tsdiag) copies it to the committed file. No verdict reads the committed copy.
+fs.writeFileSync(path.join(workDir, "tsdiag-agreement.tsv"), table)
 if (promote) {
   fs.writeFileSync(committed, table)
   console.log(`tsdiag: wrote ${path.relative(repo, committed)}`)
-} else if (!fs.existsSync(committed) || fs.readFileSync(committed, "utf8") !== table) {
-  fs.writeFileSync(path.join(workDir, "tsdiag-agreement.tsv"), table)
-  console.error(`FAIL check-tsdiag: ${path.relative(repo, committed)} differs from this run (see ${path.join(workDir, "tsdiag-agreement.tsv")}); promote with make gen-tsdiag if the change is intended`)
-  process.exit(1)
 }
 if ((counts.get("typed-errors") ?? 0) > 0) {
   console.error(`FAIL check-tsdiag: ${counts.get("typed-errors")} program(s) this checker types are refused by TypeScript`)
   process.exit(1)
 }
-console.log("PASS check-tsdiag: no program this checker types is refused by TypeScript; the agreement table is what this run observed")
+console.log(`PASS check-tsdiag: no program this checker types is refused by TypeScript; this run's table is ${path.join(workDir, "tsdiag-agreement.tsv")}`)

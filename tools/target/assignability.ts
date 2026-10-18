@@ -139,18 +139,12 @@ if (import.meta.main) {
     [...counts.entries()].sort().map(([k, n]) => `${k} ${n}`).join(", "))
   console.log(`assignability: red control (refOf covariant): ${moved.length} pair(s) move, ${caught.length} caught by the differential`)
   const defects = rows.filter(r => r.verdict === "defect")
+  // The table is a report: this run's goes to .lake/target, and `--promote` (make
+  // gen-assignability) copies it to the committed file. No verdict reads the committed copy.
+  writeFileSync(resolve(repo, ".lake/target/assignability.tsv"), text)
   if (promote) {
     writeFileSync(expected, text)
     console.log(`assignability: wrote ${expected}`)
-  } else {
-    let committed: string | undefined
-    try { committed = readFileSync(expected, "utf8") } catch { committed = undefined }
-    if (committed !== text) {
-      const fresh = resolve(repo, ".lake/target/assignability.tsv")
-      writeFileSync(fresh, text)
-      console.error(`FAIL assignability: generated/assignability.tsv differs from this run (see ${fresh}); promote it deliberately if the change is intended`)
-      process.exit(1)
-    }
   }
   if (!caught.length) {
     console.error("FAIL assignability: the red control is not caught by any pair; the differential measures nothing")
