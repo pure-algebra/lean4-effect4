@@ -11,5 +11,5 @@
 ; effect4_engine for E4_checkpoint alone, which images the engine's machine.
 (library
  (name effect4_engine_cas)
- (libraries unix effect4_bytes effect4_engine effect4_eff)
+ (libraries unix zarith effect4_bytes effect4_engine effect4_eff)
  (flags (:standard -w +a-4-9-40-41-42-44-45-70)))

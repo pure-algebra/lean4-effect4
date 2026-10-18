@@ -17,6 +17,7 @@ import tempfile
 
 from lib.derived_plan import imports_of, stages
 from lib.lcnf_interfaces import generate as lcnf_interfaces
+from lib.store_facts import generate as store_facts
 from lib.lean_imports import imports_of as lean_imports_of, workspace_source
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -241,6 +242,29 @@ def derived(out, checking, scratch):
     run(['lake', 'build', *modules])
 
 
+def store_rocq(out, checking):
+    """Regenerate store code and refuse any change to the independent tree skeleton.
+
+    Eff_types remains the unchanged output of the separate OCaml type producer.
+    Run the family under the same outer Lean launcher as every other family.
+    """
+    temp = out / 'rocq'
+    if checking:
+        names = ['Skeleton.v', 'StoreCode.v']
+        published = {(ROOT / 'rocq' / name).resolve() for name in names}
+        for name in names:
+            if (temp / name).resolve() in published:
+                raise ValueError(f'rocq/{name}: check output aliases repository destination')
+    run(['lake', 'build', 'Effect4.Run.Tree', 'Effect4.Store.Domain.Word',
+         'OCaml5.Lcnf.Gallina'])
+    temp.mkdir(parents=True, exist_ok=True)
+    run(['lake', 'env', 'lean', '-M4096', '--run', 'src/OCaml5/Tools/GallinaGen.lean',
+         str(temp / 'Skeleton.v'), str(temp / 'StoreCode.v')])
+    # Check the independent output before installing the changed store output.
+    install(temp / 'Skeleton.v', ROOT / 'rocq/Skeleton.v', True)
+    install(temp / 'StoreCode.v', ROOT / 'rocq/StoreCode.v', checking)
+
+
 def generate(families, output):
     checking = output is not None
     with tempfile.TemporaryDirectory(prefix='effect4-generate-') as scratch:
@@ -281,6 +305,10 @@ def generate(families, output):
                 for source in sorted(temp.rglob('*')):
                     if source.is_file():
                         install(source, ROOT / target / source.relative_to(temp), False)
+        if 'cas' in families:
+            store_facts(ROOT, out, checking, run, install)
+        if 'store-rocq' in families:
+            store_rocq(out, checking)
         if 'fixtures' in families:
             fixtures(out, checking)
         if 'readme' in families:
@@ -294,7 +322,7 @@ def generate(families, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--only', choices=ALL + ['lcnf', 'fixtures'])
+    parser.add_argument('--only', choices=ALL + ['lcnf', 'fixtures', 'store-rocq'])
     parser.add_argument('--all', action='store_true',
                         help='every family of the named order: ' + ', '.join(ALL))
     parser.add_argument('--output-dir')

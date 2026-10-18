@@ -174,6 +174,12 @@ deriving DecidableEq, Repr
 
 namespace Node
 
+/-- M2 refuses run handles in content nodes; run-relative nodes may carry them. -/
+def handleInContent (n : Node) : Bool :=
+  n.kind.isContent && match n.payload.handles with
+    | [] => false
+    | _ :: _ => true
+
 /-- The node bytes of the facts note's Q3: `version ∷ kind ∷ spec ∷ payload`. -/
 def encode (n : Node) : Bytes :=
   n.version :: n.kind.byte :: (n.spec.bytes ++ Val.encode n.payload)

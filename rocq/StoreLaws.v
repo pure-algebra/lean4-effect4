@@ -54,6 +54,7 @@ Record Sound (s : store) : Prop := {
   sound_version : forall d n, find s d = Some n -> node_version n = 0;
   sound_wf : forall d n, find s d = Some n -> Val_wf (node_payload n) = true;
   sound_refs : forall d n, find s d = Some n -> Node_malformedRef n = false;
+  sound_handles : forall d n, find s d = Some n -> Node_handleInContent n = false;
   sound_addressed : Addressed s;
   sound_closed : Closed s }.
 
@@ -202,7 +203,7 @@ Qed.
 Definition Fresh (s : store) (d : digest) (n : node) (s' : store) : Prop :=
   find s d = None /\ s' = Store_mk (store_nodes s ++ [(d, n)]) (store_roots s).
 
-Theorem putNode_ok : forall s n o d s',
+Theorem putNode_accepted_new_to_old : forall s n o d s',
   Store_putNode s n = Except_ok (o, (d, s')) ->
   Val_wf (node_payload n) = true /\ node_version n = 0 /\ Node_malformedRef n = false /\
   (forall e, In e (Node_checkedEdges n) -> Resolves s e) /\ d = sha256 (Node_encode n) /\
@@ -214,6 +215,7 @@ Proof.
   destruct (Val_wf (node_payload n)) eqn:hwf; [|discriminate].
   destruct (Z.eqb (node_version n) 0) eqn:hv; [|discriminate]. apply Z.eqb_eq in hv.
   destruct (Node_malformedRef n) eqn:hm; [discriminate|].
+  destruct (Node_handleInContent n) eqn:hm2; [discriminate|].
   destruct (Store_checkEdges s n) as [a|u] eqn:hce; [discriminate|].
   assert (hres : forall e, In e (Node_checkedEdges n) -> Resolves s e)
     by (intros e he; eapply checkAll_ok; [exact hce | exact he]).
@@ -224,6 +226,26 @@ Proof.
     + split; [reflexivity|]. right. right. exists m. repeat split; auto.
       intro e. subst m. rewrite (proj2 (node_eqb_spec n n) eq_refl) in he. discriminate.
   - injection h as <- <- <-. split; [reflexivity|]. left. split; [reflexivity|]. split; auto.
+Qed.
+
+Theorem putNode_ok : forall s n o d s',
+  Store_putNode s n = Except_ok (o, (d, s')) ->
+  Val_wf (node_payload n) = true /\ node_version n = 0 /\ Node_malformedRef n = false /\
+  (forall e, In e (Node_checkedEdges n) -> Resolves s e) /\ d = sha256 (Node_encode n) /\
+  ((o = Outcome_fresh /\ Fresh s d n s') \/
+   (o = Outcome_duplicate /\ find s d = Some n /\ s' = s) \/
+   (exists m, o = Outcome_conflict m /\ find s d = Some m /\ m <> n /\ s' = s)).
+Proof. exact putNode_accepted_new_to_old. Qed.
+
+(** `putNode_ok_handleFree`: successful admission passes M2 before edges or resident lookup. *)
+Theorem putNode_ok_handleFree : forall s n o d s',
+  Store_putNode s n = Except_ok (o, (d, s')) -> Node_handleInContent n = false.
+Proof.
+  intros s n o d s' h. unfold Store_putNode in h. cbv beta zeta in h. rewrite decWF_eq in h.
+  destruct (Val_wf (node_payload n)); [|discriminate].
+  destruct (Z.eqb (node_version n) 0); [|discriminate].
+  destruct (Node_malformedRef n); [discriminate|].
+  destruct (Node_handleInContent n) eqn:hm2; [discriminate|reflexivity].
 Qed.
 
 (** ** Property 4: the store as a growing map from digest to bytes
@@ -396,6 +418,7 @@ Proof. intros s d n h. apply rank_of_found. unfold find, Store_find in h. rewrit
 Theorem put_sound : forall s n o d s', Sound s -> Store_putNode s n = Except_ok (o, (d, s')) -> Sound s'.
 Proof.
   intros s n o d s' hs h. pose proof (put_grows _ _ _ _ _ h) as hsub.
+  pose proof (putNode_ok_handleFree _ _ _ _ _ h) as hm2.
   destruct (putNode_ok _ _ _ _ _ h) as (hwf & hv & hmr & hres & hd & hc).
   destruct hc as [(_ & hf & ->) | [(_ & _ & ->) | (k & _ & _ & _ & ->)]]; [|exact hs|exact hs].
   assert (hcase : forall d' m, find (Store_mk (store_nodes s ++ [(d, n)]) (store_roots s)) d' = Some m ->
@@ -408,6 +431,7 @@ Proof.
   - intros d' m hm. destruct (hcase _ _ hm) as [x | (_ & ->)]; [eapply sound_version; eauto | exact hv].
   - intros d' m hm. destruct (hcase _ _ hm) as [x | (_ & ->)]; [eapply sound_wf; eauto | exact hwf].
   - intros d' m hm. destruct (hcase _ _ hm) as [x | (_ & ->)]; [eapply sound_refs; eauto | exact hmr].
+  - intros d' m hm. destruct (hcase _ _ hm) as [x | (_ & ->)]; [eapply sound_handles; eauto | exact hm2].
   - intros d' m hm. destruct (hcase _ _ hm) as [x | (-> & ->)]; [eapply sound_addressed; eauto | exact hd].
   - intros d' m hm e he. apply mono. destruct (hcase _ _ hm) as [x | (_ & ->)];
       [eapply sound_closed; eauto | apply hres; exact he].
@@ -418,8 +442,8 @@ Proof.
   intros s hb. induction hb as [r | s n o d s' hb IH hp | s r hb IH].
   - constructor; intros d n h; discriminate.
   - eapply put_sound; eauto.
-  - destruct IH as [h1 h2 h3 h4 h5]. constructor; try exact h1; try exact h2; try exact h3; try exact h4.
-    intros d n hn e he. destruct (h5 d n hn e he) as [m hm]. exists m. exact hm.
+  - destruct IH as [h1 h2 h3 h4 h5 h6]. constructor; try exact h1; try exact h2; try exact h3; try exact h4; try exact h5.
+    intros d n hn e he. destruct (h6 d n hn e he) as [m hm]. exists m. exact hm.
 Qed.
 
 (** Everything `closure_closed` takes of a store, for a built one, with no premise about the hash. *)
@@ -457,10 +481,22 @@ Proof.
   destruct (Digest_instDecidableEq (sha256 (Node_encode n)) d) eqn:hd; [|discriminate].
   destruct (option_eqb instDecidableEqNode (Node_decode (Node_encode n)) (Some n)) eqn:hdec; [|discriminate].
   destruct (Node_malformedRef n) eqn:hm; [discriminate|].
+  destruct (Node_handleInContent n) eqn:hm2; [discriminate|].
   repeat split.
   - apply digest_eqb_spec. exact hd.
   - apply option_eqb_some. exact hdec.
   - intros e he. eapply verifyEdges_ok; eauto.
+Qed.
+
+(** `verifyNode_handleFree`: every verified resident passes M2. *)
+Lemma verifyNode_handleFree : forall s d n u, Store_verifyNode s d n = Except_ok u ->
+  Node_handleInContent n = false.
+Proof.
+  intros s d n u h. unfold Store_verifyNode in h. cbv beta zeta in h.
+  destruct (Digest_instDecidableEq (sha256 (Node_encode n)) d); [|discriminate].
+  destruct (option_eqb instDecidableEqNode (Node_decode (Node_encode n)) (Some n)); [|discriminate].
+  destruct (Node_malformedRef n); [discriminate|].
+  destruct (Node_handleInContent n) eqn:hm2; [discriminate|reflexivity].
 Qed.
 
 Lemma verifyNodes_ok : forall s l u, verifyNodes s l = Except_ok u ->
@@ -484,6 +520,9 @@ Proof.
   - intros d n hf. destruct (each _ _ hf) as (_ & hd & _). apply hdec in hd. tauto.
   - intros d n hf. destruct (each _ _ hf) as (_ & hd & _). apply hdec in hd. tauto.
   - intros d n hf. apply each in hf. tauto.
+  - intros d n hf. apply findIn_mem in hf.
+    destruct (verifyNodes_ok _ _ _ hn _ _ hf) as [u' hv].
+    eapply verifyNode_handleFree. exact hv.
   - intros d n hf. symmetry. apply each in hf. tauto.
   - intros d n hf. apply each in hf. tauto.
 Qed.

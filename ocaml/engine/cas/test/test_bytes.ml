@@ -819,12 +819,6 @@ let check_cases dir goldens =
           ((if ok then o + 1 else o), t + 1, if ok then bad else name :: bad);
         if not ok then note "  %s %s: %s" group name detail
       in
-      (* Amendment M2 (a handle frame in a content payload) is an owner call
-         (docs/research/2026-09-08-cas-amendments.md §3): this side refuses it, Lean's putNode
-         admits it.  The one golden row that shows the difference is named here and reported
-         apart; any other difference is a failure. *)
-      let m2_row = "g2-handle-in-content" in
-      let owner_calls = ref [] in
       (* A row whose expected column is a 64-character digest: the bytes hash to it, and they
          are either a node envelope that re-encodes exactly and addresses to it, or one
          well-formed frame tree. *)
@@ -881,8 +875,7 @@ let check_cases dir goldens =
                     | "badVersion", Error (E4_node.Bad_version_byte _) -> record "g2" true name ""
                     | "malformedRef", Error E4_node.Malformed_ref -> record "g2" true name ""
                     | "oversize", Error (E4_node.Oversize _) -> record "g2" true name ""
-                    | "fresh", Error E4_node.Handle_in_content when String.equal name m2_row ->
-                      owner_calls := name :: !owner_calls
+                    | "handleInContent", Error E4_node.Handle_in_content -> record "g2" true name ""
                     | _, Ok () when want_ok -> record "g2" true name ""
                     | _ ->
                       record "g2" false name
@@ -927,11 +920,6 @@ let check_cases dir goldens =
           check (Printf.sprintf "G-case family %s: %d/%d rows agree" group ok total)
             (ok = total))
         tally;
-      (* The tripwire: the exception holds exactly its one row.  When the owner rules M2 and the
-         goldens are re-cut, the row agrees, this check fails, and the exception goes. *)
-      check
-        (Printf.sprintf "G2 the one row that differs is amendment M2's owner call (%s: Lean fresh, check_pure Handle_in_content)" m2_row)
-        (List.equal String.equal !owner_calls [ m2_row ]);
       (* K1 against Lean's own table: every kind this side knows has its Lean-cut node. *)
       check "K1 every kind of E4_kind has a Lean-cut node golden of that kind (g1-kind-<name>)"
         (List.for_all

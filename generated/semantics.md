@@ -5,7 +5,7 @@ inputs: tools/ProofGraph/Registry.lean, tools/Tools/Semantics.lean, tools/Driver
 -->
 # Semantics evidence
 
-Effect4 makes 243 claims about Effect's runtime: 236 proved, 2 modulo, 1 refuted, 3 absent, 1 assumed.
+Effect4 makes 246 claims about Effect's runtime: 239 proved, 2 modulo, 1 refuted, 3 absent, 1 assumed.
 
 A claim's evidence comes from its Lean declaration and is never written by hand (decisions row 203). `The open work` lists the planned goals that the remaining claims rest on, and why each waits.
 
@@ -2225,7 +2225,7 @@ Module: `Effect4.Laws.Library.Pool.Profile`
 
 ## Exact Codecs
 
-Invertible embeddings for JSON and Schema representations. 23 claims: 22 proved, 1 modulo.
+Invertible embeddings for JSON and Schema representations. 26 claims: 25 proved, 1 modulo.
 
 | Claim | Role | Status | Evidence |
 | --- | --- | --- | --- |
@@ -2250,6 +2250,9 @@ Invertible embeddings for JSON and Schema representations. 23 claims: 22 proved,
 | `module-defs-round-trip` | compatibility | proved | `Effect4.Api.printModule_roundTrip` |
 | `modeled-codec` | compatibility | proved | `Effect4.Schema.Modeled.codec_roundtrip` |
 | `record-field-laws` | compatibility | proved | `Effect4.Schema.FieldRef.frame_laws` |
+| `cas-node-read-exact` | compatibility | proved | `Effect4.Store.Node.read_exact` |
+| `cas-get-exact` | compatibility | proved | `Effect4.Store.Cas.get_exact` |
+| `cas-admission-handles` | preservation | proved | `Effect4.Store.putNode_ok_handleFree` |
 | `cas-resident-injective` | compatibility | proved | `Effect4.Store.address_inj_resident` |
 | `program-digest-exact` | compatibility | proved | `Effect4.Store.address_eq_or_collision` |
 
@@ -2611,6 +2614,52 @@ Module: `Effect4.Laws.Schema.FieldRef`
             ((Effect4.Schema.Model.imageAt L t).toVal v))
           (Option.some
             ((Effect4.Schema.Model.imageAt L (Effect4.Program.Ty.record fs)).toVal (f.set x v))))
+```
+
+### cas-node-read-exact
+
+Successful node byte reading returns its exact encoded node; no admission, hashing, capacity, or persistence claim (seams ST1a, R13)
+
+`cas-node-read-exact`, exact-codecs, R13: bytes, payload formation, and node version. This establishes neither graph admission nor disk integrity.
+
+Module: `Effect4.Store.Domain.NodeRead`
+
+```lean
+∀ {bytes : Effect4.Store.Bytes} {n : Effect4.Store.Node},
+  Eq (Effect4.Store.Node.read bytes) (Except.ok n) →
+    And (Eq bytes n.encode) (And n.payload.WF (Eq n.version 0))
+```
+
+### cas-get-exact
+
+A successful typed read names the carrier's exact resident node after version, kind, per-value specification, and canonical payload checks; replay stays explicit, with no atomicity or admission claim for an arbitrary interpreter (seams ST1a, R13)
+
+`cas-get-exact`: a successful read gives the resident carrier's exact node. The replay parameter remains explicit; this law assumes no hash injectivity or host persistence.
+
+Module: `Effect4.Store.Domain.Cas`
+
+```lean
+∀ [inst : Effect4.Store.Content Effect4.Document]
+  {replay : List Effect4.Store.Event → Except Effect4.Store.TxnRefusal Effect4.Store.Store}
+  {α : Type} [inst_1 : Effect4.Store.Content α] {cas : Effect4.Store.CasOf replay}
+  {ref : Effect4.Store.Ref α} {value : α},
+  Eq (Effect4.Store.Cas.get cas ref) (Except.ok value) →
+    Eq (cas.store.find ref.digest) (Option.some (Effect4.Store.nodeOf value))
+```
+
+### cas-admission-handles
+
+Every successful node insertion passes the kind's handle rule before edge and resident checks; no progress or host persistence claim (seams ST1a, R13)
+
+Every accepted node passes M2 before edge or resident checks. Placement: exact-codecs, stored node admission, preservation, R13. Consumers: `putNode_sound`, word admission, and replay.
+
+Module: `Effect4.Store.Domain.Store`
+
+```lean
+∀ {s : Effect4.Store.Store} {n : Effect4.Store.Node} {o : Effect4.Store.Outcome}
+  {d : Effect4.Store.Digest} {s' : Effect4.Store.Store},
+  Eq (s.putNode n) (Except.ok { fst := o, snd := { fst := d, snd := s' } }) →
+    Eq n.handleInContent Bool.false
 ```
 
 ### cas-resident-injective

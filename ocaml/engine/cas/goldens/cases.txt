@@ -123,7 +123,7 @@ g2-malformedRef-kind	g2	malformedRef
 g2-malformedRef-length	g2	malformedRef
 g2-conflict	g2	conflict
 g2-occupant	g2	d2ea438f7891712cd29444f5c0fb6485acae0af226b0f9cbade84e873bade6ae
-g2-handle-in-content	g2	fresh
+g2-handle-in-content	g2	handleInContent
 g3-v1	g3	ok
 g3-stale	g3	staleRoot stdlib/rc112 1 2
 g3-wrongKind	g3	wrongKind

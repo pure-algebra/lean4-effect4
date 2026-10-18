@@ -151,7 +151,7 @@ structure Registry where
 deriving Repr, Inhabited
 
 def registry : Registry where
-  roots := [`Effect4.Laws, `Effect4.Program.Check, `Test.Program.TypedProgBindRed,
+  roots := [`Effect4.Laws, `Effect4.Program.Check, `Effect4.Store.Domain.Cas, `Test.Program.TypedProgBindRed,
     `Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers, `Test.Dogfood.P3WorkerQueue,
     `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService,
     -- the to-do application's banked Ref cache (decisions row 378); the scenarios' claims retired
@@ -1168,6 +1168,15 @@ def registry : Registry where
     { id := "references-move", concept := "initial-algebras-folds", role := .preservation
       title := "A subtree whose layer references stay inside it keeps every reference well formed when it is pasted with Node.rebaseRefs, at an address below the root, outside the module's layers and in one scope; nothing of typing, of references that leave the subtree, of variable levels or row positions, or of any run (decisions row 336 (6); seat ORG's L9)"
       pointer := .witness `Effect4.Program.references_move },
+    { id := "cas-node-read-exact", concept := "exact-codecs", role := .compatibility
+      title := "Successful node byte reading returns its exact encoded node; no admission, hashing, capacity, or persistence claim (seams ST1a, R13)"
+      pointer := .witness `Effect4.Store.Node.read_exact },
+    { id := "cas-get-exact", concept := "exact-codecs", role := .compatibility
+      title := "A successful typed read names the carrier's exact resident node after version, kind, per-value specification, and canonical payload checks; replay stays explicit, with no atomicity or admission claim for an arbitrary interpreter (seams ST1a, R13)"
+      pointer := .witness `Effect4.Store.Cas.get_exact },
+    { id := "cas-admission-handles", concept := "exact-codecs", role := .preservation
+      title := "Every successful node insertion passes the kind's handle rule before edge and resident checks; no progress or host persistence claim (seams ST1a, R13)"
+      pointer := .witness `Effect4.Store.putNode_ok_handleFree },
     { id := "cas-resident-injective", concept := "exact-codecs", role := .compatibility
       title := "Two nodes resident at their own equal addresses in one store are equal; both lookup premises remain; no hash injectivity or host persistence claim (seams K0, R13)"
       pointer := .witness `Effect4.Store.address_inj_resident },

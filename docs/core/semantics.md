@@ -810,6 +810,16 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 (`decode_iff`, `src/Effect4/Laws/Schema/Codec.lean`; `ofSchema_exact`, `src/Effect4/Schema/Bridge.lean`).
 
 #### 4. Required Properties and Obligations
+- **Stored byte reading (`cas-node-read-exact`)**: every successful `Node.read` returns an exactly encoded node.
+  The pointer is `Node.read_exact` (`src/Effect4/Store/Domain/NodeRead.lean`), with compatibility role.
+  This law establishes no admission, hashing, capacity, or persistence property.
+- **Typed stored reading (`cas-get-exact`)**: a successful `Cas.get` names the carrier's exact resident node.
+  The pointer is `Cas.get_exact` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
+  Version, kind, per-value specification, and canonical payload checks retain the genesis exception.
+  The replay parameter stays explicit; this law establishes no atomicity or admission property for an arbitrary interpreter.
+- **Content handles (`cas-admission-handles`)**: every successful node insertion passes the kind's handle rule before edges and residency.
+  The pointer is `putNode_ok_handleFree` (`src/Effect4/Store/Domain/Store.lean`), with preservation role.
+  `Store.Sound.handles` and accepted words carry this rule; no host persistence or progress claim follows.
 - **Resident node identity (`cas-resident-injective`)**: two nodes resident at their own equal addresses in one store are equal.
   `address_inj_resident` (`src/Effect4/Store/Domain/Store.lean`) keeps both lookup premises.
   It assumes no hash injectivity and establishes no cross-store equality or host persistence property.

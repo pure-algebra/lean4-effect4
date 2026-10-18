@@ -1,21 +1,21 @@
 module
 
-public import Effect4.Store.Domain.Node
+public import Effect4.Store.Domain.NodeRead
 meta import Effect4.Store.Carrier.Kind
 meta import Effect4.Store.Domain.Node
 
 /-!
 # Store.Store
 
-Owner: the heterogeneous node store, admission, the three put outcomes, the typed `put`/`get`
+Owner: the heterogeneous node store, admission, the three put outcomes, the typed `put`
 face over `Content`, closure as a theorem, and the roots plane.
 
 The store is a list of nodes keyed by digest and a list of roots (Q3): ids are gone, names live
 in the roots plane, and a node is found by its digest (`find`, the first binding). Admission
 (`putNode`) refuses, in this order, a payload some frame of which is `2^64` bytes or longer
 (`oversize`: the length prefix would lie), a version byte other than `0` (`badVersion`), a `ref`
-frame with an unregistered kind byte or a wrong length (`malformedRef`), then an edge that names
-no node (`dangling`) or a node of another kind (`wrongKind`). The spec edge is exempt exactly
+frame with an unregistered kind byte or a wrong length (`malformedRef`), a handle in a content
+node (`handleInContent`, M2), then an edge that names no node (`dangling`) or a node of another kind (`wrongKind`). The spec edge is exempt exactly
 for the genesis — kind `schema` with the zero spec — and for nothing else (Q6), so a zero spec
 anywhere else is `dangling zeroDigest`. After admission the address is `sha256 (Node.encode n)`
 and the outcome is `fresh` (appended), `duplicate` (the resident is `n`; nothing changes), or
@@ -25,16 +25,16 @@ overwritten — the store is grow-only).
 `Closed` says every resident node's checked edges resolve at their kinds. It is a theorem about
 stores, not a subtype: `empty_closed`, and `putNode_closed` for every outcome. `Sound` is the
 full invariant a store built by `putNode` keeps — every resident node is version `0`, has a
-well-formed payload and no malformed reference, sits at its own address, and the store is
-`Closed`; `Word.verify` re-establishes it from bytes. `putNode_ok` is the one characterization
-of a successful put; every other law of this module and of `Store.Word` is a corollary.
+well-formed payload, no malformed reference, and no handle in content. Each node sits at its own
+address, and the store is `Closed`. `Store.verify` re-establishes these properties from bytes.
+`putNode_ok` retains the existing admission and outcome conclusions. `putNode_ok_handleFree`
+establishes M2 for every successful insertion.
 
-The typed face, under `variable [Content Document]`: `put a` is `putNode (nodeOf a)` with the
-digest typed as `Ref α`, `get r` finds the node, checks its kind and reads the payload with
-`ofVal`. `get_put` holds for `fresh` and `duplicate`; a `conflict` is the case where the
-address is occupied by another node, and `put_conflict` says exactly that. `put_duplicate`
-takes what the resident's own admission established (a well-formed payload, no malformed
-reference, a closed store), because `putNode` checks admission before it looks the digest up.
+The typed `put` applies `putNode` to `nodeOf`, with its digest typed as `Ref α`.
+`Cas.get` owns typed reading in `src/Effect4/Store/Domain/Cas.lean`.
+It checks version, kind, spec, and canonical payload before returning a value.
+`put_conflict` identifies an occupied address with a different node.
+`put_duplicate` requires the resident node's admission premises because admission precedes lookup.
 Roots (Q7): the one mutable plane, moved by compare-and-set on an optimistic version
 (`putRoot`), each root's target resolving at its kind.
 -/
@@ -173,6 +173,18 @@ inductive Admission where
   | wrongKind (ref : Digest) (expected actual : Kind)
   /-- A `ref` frame with an unregistered kind byte or a digest that is not thirty-two bytes. -/
   | malformedRef
+  /-- A content node contains a run handle (M2). -/
+  | handleInContent
+  /-- A node header does not contain all thirty-two spec bytes. -/
+  | shortSpec
+  /-- A node's kind byte is not registered. -/
+  | unregisteredKind (found : UInt8)
+  /-- A payload frame is malformed. -/
+  | badFrame
+  /-- Bytes follow the one complete payload value. -/
+  | trailing
+  /-- A payload frame uses an unregistered tag. -/
+  | unknownTag (found : UInt8)
   /-- Some frame's payload is `2^64` bytes or longer: the length prefix would lie. -/
   | oversize
   /-- A version byte other than `0`. -/
@@ -183,6 +195,15 @@ inductive Admission where
   `Word.apply`, never overwritten. -/
   | conflict (address : Digest) (occupant : Node)
 deriving DecidableEq, Repr
+
+/-- Preserve byte-reading refusals before semantic node admission. -/
+def Admission.ofRead : Node.ReadRefusal → Admission
+  | .shortSpec => .shortSpec
+  | .badVersion _ => .badVersion
+  | .unregisteredKind found => .unregisteredKind found
+  | .badFrame => .badFrame
+  | .trailing => .trailing
+  | .unknownTag found => .unknownTag found
 
 /-- What a put did. -/
 inductive Outcome where
@@ -279,6 +300,7 @@ def Store.putNode (s : Store) (n : Node) : Except Admission (Outcome × Digest �
   if n.payload.WF then
     if n.version = 0 then
       if n.malformedRef then .error .malformedRef
+      else if n.handleInContent then .error .handleInContent
       else
         match s.checkEdges n with
         | .error a => .error a
@@ -296,9 +318,9 @@ theorem bool_eq_false_of_not {b : Bool} (h : ¬ b = true) : b = false := by
   · rfl
   · exact absurd rfl h
 
-/-- The one characterization of a successful put: what admission established, the address, and
-the outcome with the store it left. -/
-theorem putNode_ok {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
+/-- M2 acceptance implies the existing admission and outcome conclusions.
+Helper for `putNode_ok`. -/
+theorem putNode_accepted_new_to_old {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
     (h : s.putNode n = .ok (o, d, s')) :
     n.payload.WF ∧ n.version = 0 ∧ n.malformedRef = false ∧
       (∀ e ∈ n.checkedEdges, s.Resolves e) ∧ d = sha256 n.encode ∧
@@ -315,51 +337,85 @@ theorem putNode_ok {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store
       · next hm =>
         split at h
         · exact nomatch h
-        · next hce =>
-          have hres := (checkEdges_ok_iff s n).mp hce
-          have hm' := bool_eq_false_of_not hm
+        · next hm2 =>
           split at h
-          · next m hfind =>
+          · exact nomatch h
+          · next hce =>
+            have hres := (checkEdges_ok_iff s n).mp hce
+            have hm' := bool_eq_false_of_not hm
             split at h
-            · next heq =>
+            · next m hfind =>
+              split at h
+              · next heq =>
+                simp only [Except.ok.injEq, Prod.mk.injEq] at h
+                obtain ⟨ho, hd, hs⟩ := h
+                subst heq
+                refine ⟨hwf, hv, hm', hres, hd.symm, Or.inr (Or.inl ⟨ho.symm, ?_, hs.symm⟩)⟩
+                rw [← hd]
+                exact hfind
+              · next hne =>
+                simp only [Except.ok.injEq, Prod.mk.injEq] at h
+                obtain ⟨ho, hd, hs⟩ := h
+                refine ⟨hwf, hv, hm', hres, hd.symm, Or.inr (Or.inr ⟨m, ho.symm, ?_, hne, hs.symm⟩)⟩
+                rw [← hd]
+                exact hfind
+            · next hfind =>
               simp only [Except.ok.injEq, Prod.mk.injEq] at h
               obtain ⟨ho, hd, hs⟩ := h
-              subst heq
-              refine ⟨hwf, hv, hm', hres, hd.symm, Or.inr (Or.inl ⟨ho.symm, ?_, hs.symm⟩)⟩
-              rw [← hd]
-              exact hfind
-            · next hne =>
-              simp only [Except.ok.injEq, Prod.mk.injEq] at h
-              obtain ⟨ho, hd, hs⟩ := h
-              refine ⟨hwf, hv, hm', hres, hd.symm, Or.inr (Or.inr ⟨m, ho.symm, ?_, hne, hs.symm⟩)⟩
-              rw [← hd]
-              exact hfind
-          · next hfind =>
-            simp only [Except.ok.injEq, Prod.mk.injEq] at h
-            obtain ⟨ho, hd, hs⟩ := h
-            refine ⟨hwf, hv, hm', hres, hd.symm, Or.inl ⟨ho.symm, ?_, ?_⟩⟩
-            · rw [← hd]
-              exact hfind
-            · rw [← hs, hd]
+              refine ⟨hwf, hv, hm', hres, hd.symm, Or.inl ⟨ho.symm, ?_, ?_⟩⟩
+              · rw [← hd]
+                exact hfind
+              · rw [← hs, hd]
+    · exact nomatch h
+  · exact nomatch h
+
+/-- The existing admission and outcome conclusions of a successful put.
+The M2 conclusion is `putNode_ok_handleFree`. -/
+theorem putNode_ok {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
+    (h : s.putNode n = .ok (o, d, s')) :
+    n.payload.WF ∧ n.version = 0 ∧ n.malformedRef = false ∧
+      (∀ e ∈ n.checkedEdges, s.Resolves e) ∧ d = sha256 n.encode ∧
+      ((o = .fresh ∧ s.find d = none ∧ s' = { s with nodes := s.nodes ++ [(d, n)] }) ∨
+       (o = .duplicate ∧ s.find d = some n ∧ s' = s) ∨
+       (∃ m, o = .conflict m ∧ s.find d = some m ∧ m ≠ n ∧ s' = s)) :=
+  putNode_accepted_new_to_old h
+
+/-- Every accepted node passes M2 before edge or resident checks.
+Placement: exact-codecs, stored node admission, preservation, R13.
+Consumers: `putNode_sound`, word admission, and replay. -/
+theorem putNode_ok_handleFree {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
+    (h : s.putNode n = .ok (o, d, s')) : n.handleInContent = false := by
+  unfold Store.putNode at h
+  split at h
+  · split at h
+    · split at h
+      · exact nomatch h
+      · split at h
+        · exact nomatch h
+        · next hm2 => exact bool_eq_false_of_not hm2
     · exact nomatch h
   · exact nomatch h
 
 /-- The put of an admissible node whose address is free: `fresh`, appended. -/
 theorem putNode_fresh {s : Store} {n : Node} (hwf : n.payload.WF) (hv : n.version = 0)
-    (hm : n.malformedRef = false) (he : ∀ e ∈ n.checkedEdges, s.Resolves e)
+    (hm : n.malformedRef = false) (hm2 : n.handleInContent = false)
+    (he : ∀ e ∈ n.checkedEdges, s.Resolves e)
     (hf : s.find (sha256 n.encode) = none) :
     s.putNode n = .ok (.fresh, sha256 n.encode, { s with nodes := s.nodes ++ [(sha256 n.encode, n)] }) := by
   unfold Store.putNode
-  rw [if_pos hwf, if_pos hv, hm, if_neg Bool.false_ne_true, (checkEdges_ok_iff s n).mpr he]
+  rw [if_pos hwf, if_pos hv, hm, if_neg Bool.false_ne_true, hm2,
+    if_neg Bool.false_ne_true, (checkEdges_ok_iff s n).mpr he]
   simp only [hf]
 
 /-- The put of an admissible node already resident at its address: `duplicate`, unchanged. -/
 theorem putNode_duplicate {s : Store} {n : Node} (hwf : n.payload.WF) (hv : n.version = 0)
-    (hm : n.malformedRef = false) (he : ∀ e ∈ n.checkedEdges, s.Resolves e)
+    (hm : n.malformedRef = false) (hm2 : n.handleInContent = false)
+    (he : ∀ e ∈ n.checkedEdges, s.Resolves e)
     (hf : s.find (sha256 n.encode) = some n) :
     s.putNode n = .ok (.duplicate, sha256 n.encode, s) := by
   unfold Store.putNode
-  rw [if_pos hwf, if_pos hv, hm, if_neg Bool.false_ne_true, (checkEdges_ok_iff s n).mpr he]
+  rw [if_pos hwf, if_pos hv, hm, if_neg Bool.false_ne_true, hm2,
+    if_neg Bool.false_ne_true, (checkEdges_ok_iff s n).mpr he]
   simp only [hf, if_true]
 
 /-- A put never removes or replaces a node: the store is grow-only. -/
@@ -404,19 +460,21 @@ structure Store.Sound (s : Store) : Prop where
   version : ∀ d n, s.find d = some n → n.version = 0
   wf : ∀ d n, s.find d = some n → n.payload.WF
   refs : ∀ d n, s.find d = some n → n.malformedRef = false
+  handles : ∀ d n, s.find d = some n → n.handleInContent = false
   addressed : ∀ d n, s.find d = some n → d = sha256 n.encode
   closed : Closed s
 
 theorem empty_sound : Store.empty.Sound :=
   ⟨(fun _ _ h => nomatch h), (fun _ _ h => nomatch h), (fun _ _ h => nomatch h),
-    (fun _ _ h => nomatch h), empty_closed⟩
+    (fun _ _ h => nomatch h), (fun _ _ h => nomatch h), empty_closed⟩
 
 theorem putNode_sound {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
     (hs : s.Sound) (h : s.putNode n = .ok (o, d, s')) : s'.Sound := by
   obtain ⟨hwf, hv, hm, _, hd, hcase⟩ := putNode_ok h
   have hcl := putNode_closed hs.closed h
+  have hm2 := putNode_ok_handleFree h
   rcases hcase with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨k, _, _, _, rfl⟩
-  · refine ⟨?_, ?_, ?_, ?_, hcl⟩
+  · refine ⟨?_, ?_, ?_, ?_, ?_, hcl⟩
     · intro d' m hm'
       rcases findIn_append_single (l := s.nodes) hm' with hold | ⟨_, _, rfl⟩
       · exact hs.version d' m hold
@@ -429,6 +487,10 @@ theorem putNode_sound {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : St
       rcases findIn_append_single (l := s.nodes) hm' with hold | ⟨_, _, rfl⟩
       · exact hs.refs d' m hold
       · exact hm
+    · intro d' m hm'
+      rcases findIn_append_single (l := s.nodes) hm' with hold | ⟨_, _, rfl⟩
+      · exact hs.handles d' m hold
+      · exact hm2
     · intro d' m hm'
       rcases findIn_append_single (l := s.nodes) hm' with hold | ⟨_, rfl, rfl⟩
       · exact hs.addressed d' m hold
@@ -448,12 +510,6 @@ def Store.put {α : Type} [Content α] (a : α) (s : Store) : Except Admission (
   | .ok (o, d, s') => .ok (o, ⟨d⟩, s')
   | .error e => .error e
 
-/-- The typed get: find, check the kind, read the payload. -/
-def Store.get {α : Type} [Content α] (r : Ref α) (s : Store) : Option α :=
-  match s.find r.digest with
-  | some n => if n.kind = Content.kind α then ofVal n.payload else none
-  | none => none
-
 theorem put_ok {α : Type} [Content α] {a : α} {s : Store} {o : Outcome} {r : Ref α} {s' : Store}
     (h : s.put a = .ok (o, r, s')) :
     s.putNode (nodeOf a) = .ok (o, r.digest, s') ∧ r = address a := by
@@ -466,14 +522,6 @@ theorem put_ok {α : Type} [Content α] {a : α} {s : Store} {o : Outcome} {r : 
     obtain ⟨_, _, _, _, hd, _⟩ := putNode_ok hp
     exact Ref.ext hd
   · exact nomatch h
-
-/-- What was put reads back, unless the address was occupied by another node. -/
-theorem get_put {α : Type} [Content α] {a : α} {s : Store} {o : Outcome} {r : Ref α} {s' : Store}
-    (h : s.put a = .ok (o, r, s')) (hc : ∀ m, o ≠ .conflict m) : s'.get r = some a := by
-  obtain ⟨hp, _⟩ := put_ok h
-  have hf := putNode_find hp hc
-  unfold Store.get
-  simp only [hf, nodeOf_kind, nodeOf_payload, ofVal_toVal, if_true]
 
 /-- A conflict: the store is unchanged and another node sits at the carrier's address. -/
 theorem put_conflict {α : Type} [Content α] {a : α} {s : Store} {m : Node} {r : Ref α} {s' : Store}
@@ -492,9 +540,10 @@ theorem put_conflict {α : Type} [Content α] {a : α} {s : Store} {m : Node} {r
 are what the resident's own admission established. -/
 theorem put_duplicate {α : Type} [Content α] {a : α} {s : Store}
     (hres : s.find (address a).digest = some (nodeOf a)) (hwf : (toVal a).WF)
-    (hm : (nodeOf a).malformedRef = false) (hc : Closed s) :
+    (hm : (nodeOf a).malformedRef = false) (hm2 : (nodeOf a).handleInContent = false)
+    (hc : Closed s) :
     s.put a = .ok (.duplicate, address a, s) := by
-  have hp := putNode_duplicate (s := s) (n := nodeOf a) hwf rfl hm (hc _ _ hres) hres
+  have hp := putNode_duplicate (s := s) (n := nodeOf a) hwf rfl hm hm2 (hc _ _ hres) hres
   unfold Store.put
   rw [hp]
   rfl
@@ -504,17 +553,6 @@ theorem put_preserves {α : Type} [Content α] {a : α} {s : Store} {d : Digest}
     {o : Outcome} {r : Ref α} {s' : Store} (hd : s.find d = some n) (h : s.put a = .ok (o, r, s')) :
     s'.find d = some n :=
   putNode_sub (put_ok h).1 d n hd
-
-/-- A put leaves every typed read as it was. -/
-theorem get_preserves {α β : Type} [Content α] [Content β] {a : α} {s : Store} {o : Outcome}
-    {r : Ref α} {s' : Store} {q : Ref β} {b : β} (hg : s.get q = some b) (h : s.put a = .ok (o, r, s')) :
-    s'.get q = some b := by
-  unfold Store.get at hg ⊢
-  split at hg
-  · next n hn =>
-    simp only [put_preserves hn h]
-    exact hg
-  · exact nomatch hg
 
 end Content
 

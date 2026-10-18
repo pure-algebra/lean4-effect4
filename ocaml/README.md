@@ -91,6 +91,7 @@ fresh run.
 | `engine/test/rocq/rocq_run.ml`, `engine/test/rocq/rocq_run.mli` | Rocq's extraction of `docs/research/2026-10-16-itrees/rocq/LaneExtract.v` (the opam switch `rocq`) | `bash docs/research/2026-10-16-itrees/reproduce.sh OUTDIR`: step 13 writes them and refuses a difference from the committed files below their header |
 | `eff/eff_{ctors,wire,subterm,json,native,layout}.ml`, `eff/eff_manifest.txt`, `eff/goldens/*` | `src/OCaml5/Tools/EffGen.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` |
 | `goldens/eff/*` | `src/OCaml5/Tools/EffWire.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` |
+| `engine/cas/e4_kind.ml` and `.mli`; `e4_admission.ml` and `.mli` | `src/OCaml5/Store/Facts.lean`, through `Tools/CasFacts.lean` | `python3 scripts/generate.py --only cas` |
 | `engine/cas/goldens/*` | `src/OCaml5/Tools/CasGoldens.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` |
 
 ## Owed

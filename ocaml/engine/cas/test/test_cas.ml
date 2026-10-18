@@ -9,9 +9,9 @@
          recovery replays a word (its crash half is in test_crash.ml).
      G2* golden G2 replayed through `put`: every case's store built as ../goldens/cases.txt's
          header names it, and the answer compared to Lean's word, with `corrupt` read as
-         Lean's `conflict` (CS1).  One row is reported apart, by name and with a tripwire:
-         `g2-handle-in-content`, amendment M2's owner call (Lean answers `fresh`, put
-         `handleInContent`).  `g2-conflict` is also checked raw: its occupant does not hash
+         Lean's `conflict` (CS1). M2 now agrees: both reject handles in content.
+         Every row must agree; no admission exception remains.
+         `g2-conflict` is also checked raw: its occupant does not hash
          to its address, so put answers `corrupt`.
      CS7-h  `verify` and `verify_node` refuse a handle in a content payload, as `put` does.
      G3* golden G3 replayed through `advance_root`, with the kind and dangling checks now
@@ -690,10 +690,6 @@ let test_g2 () =
   if rows = [] then skip "G2 the admission goldens" "no g2 rows in cases.txt"
   else begin
     let ok = ref 0 and total = ref 0 and bad = ref [] in
-    (* Amendment M2 (a handle frame in a content payload) is an owner call
-       (docs/research/2026-09-08-cas-amendments.md §3): put refuses it, Lean's putNode admits it.
-       The one row that shows the difference is named and reported apart. *)
-    let m2_row = "g2-handle-in-content" and owner_calls = ref [] in
     let conflict_word = ref None in
     List.iter
       (fun (name, _, expected) ->
@@ -719,21 +715,13 @@ let test_g2 () =
               E4_cas.close s;
               if String.equal name "g2-conflict" then conflict_word := Some got;
               if String.equal (as_lean_word got) expected then incr ok
-              else if String.equal name m2_row && String.equal expected "fresh"
-                      && String.equal got "handleInContent" then
-                owner_calls := name :: !owner_calls
               else begin
                 bad := name :: !bad;
                 note "  g2 %s: Lean says %s, put says %s" name expected got
               end))
       rows;
     check (Printf.sprintf "G2 %d/%d admission rows agree with Lean through put" !ok !total)
-      (!bad = [] && !ok + List.length !owner_calls = !total);
-    (* The tripwire: when the owner rules M2 and G2 is re-cut, this row agrees, this check
-       fails, and the exception goes. *)
-    check
-      (Printf.sprintf "G2 the one row that differs is amendment M2's owner call (%s: Lean fresh, put handleInContent)" m2_row)
-      (List.equal String.equal !owner_calls [ m2_row ]);
+      (!bad = [] && !ok = !total);
     (* CS1 on Lean's own case: the occupant is Lean's `occupantNode` (golden g2-occupant), whose
        bytes do not hash to the entry's address, so put answers corrupt, never conflict. *)
     check "G2 g2-conflict: Lean's occupant does not hash to its address, and put answers corrupt"

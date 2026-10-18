@@ -31,6 +31,7 @@ import Effect4.Store.Domain.Clock
 import Effect4.Store.Domain.RowCanonical
 import Effect4.Store.Domain.Node
 import Effect4.Store.Domain.Store
+import Effect4.Store.Domain.Cas
 import Effect4.Store.Domain.Word
 import Effect4.Store.Domain.Traits
 import Effect4.Store.Domain.Derived.Json

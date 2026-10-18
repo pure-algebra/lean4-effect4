@@ -329,7 +329,7 @@ def children : Val → List Val
 mutual
 /-- The live handles a tree carries, in payload order: every `handle` frame's kind byte and
 index. A tree with none is content; a tree with one names a running machine's store and is
-admitted nowhere in the CAS. -/
+admitted only by the run-relative kinds named by `Kind.runRelative`. -/
 def handles : Val → List (UInt8 × Nat)
   | .handle k n => [(k, n)]
   | .list xs => handlesList xs

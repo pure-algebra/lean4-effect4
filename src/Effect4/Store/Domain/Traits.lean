@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Store.Domain.Word
+public import Effect4.Store.Domain.Cas
 meta import Effect4.Store.Carrier.Digest
 meta import Effect4.Store.Carrier.Kind
 meta import Effect4.Store.Carrier.Val
@@ -227,11 +228,14 @@ theorem trait_put_preserves {τ : Type} [Canonical τ] {t : Annotation τ} {s s'
     ∀ d n, s.find d = some n → s'.find d = some n :=
   fun _ _ hd => put_preserves hd h
 
-/-- Putting a trait leaves every typed read as it was. -/
-theorem trait_get_preserves {τ β : Type} [Canonical τ] [Content β] {t : Annotation τ} {s s' : Store}
-    {o : Outcome} {r : Ref (Annotation τ)} {q : Ref β} {b : β} (hg : s.get q = some b)
-    (h : s.put t = .ok (o, r, s')) : s'.get q = some b :=
-  get_preserves hg h
+/-- Putting a trait leaves every successful typed read as it was.
+This is the annotation-carrier reader of `Cas.get_preserves`, under `cas-get-exact`. -/
+theorem trait_get_preserves {replay : List Event → Except TxnRefusal Store}
+    {τ β : Type} [Canonical τ] [Content β] {t : Annotation τ}
+    {before after : CasOf replay} {o : Outcome} {r : Ref (Annotation τ)} {q : Ref β} {b : β}
+    (hg : Cas.get before q = .ok b)
+    (h : before.store.put t = .ok (o, r, after.store)) : Cas.get after q = .ok b :=
+  Cas.get_preserves hg h
 
 end Content
 

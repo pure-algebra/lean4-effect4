@@ -197,3 +197,9 @@
  (name bench_bycid)
  (modules bench_bycid)
  (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
+
+; Generated kind and admission facts, read at real native byte refusals.
+(test
+ (name test_shared_facts)
+ (modules test_shared_facts)
+ (libraries effect4_engine_cas effect4_bytes zarith))

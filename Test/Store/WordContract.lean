@@ -184,7 +184,6 @@ open Effect4.Store
 
 /-! ## The laws, stated -/
 
-example := @Effect4.Store.get_put
 example := @Effect4.Store.put_duplicate
 example := @Effect4.Store.put_conflict
 example := @Effect4.Store.put_preserves

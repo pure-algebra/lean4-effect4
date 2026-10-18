@@ -12,6 +12,9 @@ Print Assumptions S.address_inj_resident.
 Print Assumptions S.domain_separation.
 Print Assumptions S.kind_separation.
 Print Assumptions S.address_cid_collision.
+Print Assumptions S.putNode_accepted_new_to_old.
+Print Assumptions S.putNode_ok_handleFree.
+Print Assumptions S.verifyNode_handleFree.
 Print Assumptions S.put_get.
 Print Assumptions S.put_bytes_never_change.
 Print Assumptions S.put_conflict.

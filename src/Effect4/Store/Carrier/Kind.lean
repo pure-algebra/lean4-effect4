@@ -145,6 +145,24 @@ def sentinel : UInt8 := 127
 /-- The kind filed under a byte, if any. -/
 def ofByte? (b : UInt8) : Option Kind := all.find? fun k => decide (k.byte = b)
 
+/-- Kinds whose handles name a run. Content kinds refuse every handle (M2). -/
+def runRelative : Kind → Bool
+  | .tape | .log | .exits | .checkpoint => true
+  | _ => false
+
+/-- A kind whose node content must contain no run handle. -/
+def isContent (k : Kind) : Bool := !k.runRelative
+
+/-- A reserved kind that no current admission uses. -/
+def tombstoned : Kind → Bool
+  | .fiber => true
+  | _ => false
+
+/-- A kind stored inside a chunked value. -/
+def isInterior : Kind → Bool
+  | .chunk => true
+  | _ => false
+
 /-- The kind with a spelling, if any. -/
 def ofName? (s : String) : Option Kind := all.find? fun k => decide (k.name = s)
 

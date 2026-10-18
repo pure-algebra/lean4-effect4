@@ -158,6 +158,8 @@ import Test.Machine.Runtime.ScheduleIndependence
 import Test.Store.Templates
 import Test.Store.StoreContract
 import Test.Store.NodeContract
+import Test.Store.SeamsAdmission
+import Test.Store.SeamsRead
 import Test.Store.WordContract
 import Test.Store.TraitContract
 import Test.Store.ProbeContract

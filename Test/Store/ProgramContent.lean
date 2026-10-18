@@ -1,4 +1,5 @@
 import Effect4.Store.Domain.Genesis
+import Effect4.Store.Domain.Cas
 import Effect4.Store.Domain.Derived.Program
 
 /-!
@@ -13,7 +14,7 @@ rank 5, `docs/research/2026-10-08-seat-ORG-theory-map.md` §7).
 
 - **The kind**: a program's node files under `program` (a finite evaluation of the instance).
 - **Two readers**: the address lattice's level 0 (`address_eq_or_collision`) and the round trip
-  (`get_put`), applied at programs. Neither typechecks without the instance.
+  (`Cas.get_put`), applied at programs. Neither typechecks without the instance.
 - **The control behind a piece's key**: one program, and the same program one slot deeper
   (`Eff.weaken 0`), have two addresses, since a variable is a level and its bytes move. So a stored
   subtree's key must fix its environment, which is the MCP note's ruling 3
@@ -49,9 +50,11 @@ example {p q : Eff NativeOp} (hp : (Canonical.toVal p).WF) (hq : (Canonical.toVa
       sha256 (nodeOf p).encode = sha256 (nodeOf q).encode) :=
   address_eq_or_collision hp hq h
 
-/-- The reader of the round trip at programs: a program put without a conflict reads back. -/
-example {p : Eff NativeOp} {s s' : Store} {o : Outcome} {r : Ref (Eff NativeOp)}
-    (h : s.put p = .ok (o, r, s')) (hc : ∀ m, o ≠ .conflict m) : s'.get r = some p :=
-  get_put h hc
+/-- A non-conflicting program insertion reads back through the checked store interface. -/
+example {replay : List Event → Except TxnRefusal Store} {p : Eff NativeOp}
+    {before : Store} {after : CasOf replay} {o : Outcome} {r : Ref (Eff NativeOp)}
+    (h : before.put p = .ok (o, r, after.store)) (hc : ∀ m, o ≠ .conflict m) :
+    Cas.get after r = .ok p :=
+  Cas.get_put h hc
 
 end Test.Store.ProgramContent
