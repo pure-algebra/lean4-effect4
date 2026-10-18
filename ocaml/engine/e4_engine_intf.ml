@@ -171,6 +171,7 @@ module type INSTANCE = sig
   type machine
   type fiber
   type interp
+  type prepared
   type program = NativeOp.t Eff.t
 
   type event =
@@ -194,13 +195,14 @@ module type INSTANCE = sig
   (** The row table: the program's host rows, as `Api.Built` carries them; `[]` for a program
       with none. *)
   val interp_of : Row.t list -> program -> interp
+  val prepare : Row.t list -> program -> prepared
   val load : program -> fuel:int -> machine
-  val step : Row.t list -> program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
+  val step : prepared -> fuel:int -> machine -> api_decision -> machine * bool
   val run_api : Row.t list -> program -> fuel:int -> outcome * machine
   (* Lean's checked replay asks this before each decision (`Effect4.Program.admit`): a stale
      token, a call that is not a host row's, a wrong answer type, a dead handle or a reserved
      defect is refused. `true` when the decision is admitted. *)
-  val admit : Row.t list -> machine -> api_decision -> bool
+  val admit : prepared -> machine -> api_decision -> bool
   (* The calls the machine waits on (`Effect4.Program.awaits`): each parked fiber's token, its
      operation and its request. A host driver answers the host rows among them. *)
   type await = { fiber : fiber_id; token : int; op : NativeOp.t; request : Val.t }

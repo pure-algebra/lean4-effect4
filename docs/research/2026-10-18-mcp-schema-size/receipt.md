@@ -1,22 +1,25 @@
 # `eff mcp` tool list: 353,485 → 40,069 bytes of schema
 
-2026-10-18. Measured and built on `8a08e0415` (`refactor/phase1-phase3`), then rebased onto
-`7c65506b2`, whose new commits touch only `Effect4.Laws` modules and research notes, none of which
-the tool table or the OCaml route reads. Branch `claude/mcp-schema-size`, one commit. Not pushed.
+2026-10-18. Measured and built on `8a08e0415` (`refactor/phase1-phase3`), rebased onto `7c65506b2`
+(Laws and research only), then merged with `3997e571c`. That merge brings in Codex's MCP repair
+(`bb95dbacb`): `kit_mcp` rewritten on Yojson.Raw with the 2025-06-18 lifecycle, `test_mcp` at 52
+controls, and `scripts/check-mcp-protocol.py`. Branch `claude/mcp-schema-size`. Not pushed.
 
 ## The measure
 
-From `ocaml/`, after `opam exec --switch=effect4 -- dune build`:
+From `ocaml/`, after `opam exec --switch=effect4 -- dune build`. Since `bb95dbacb` the server
+answers `tools/list` only after the MCP handshake. At `8a08e0415` the `tools/list` line alone
+was enough.
 
 ```bash
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | _build/default/engine/kit/bin/eff.exe mcp > tools.json
+printf '%s\n' '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"measure","version":"1"}}}' '{"jsonrpc":"2.0","method":"notifications/initialized"}' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | _build/default/engine/kit/bin/eff.exe mcp | tail -1 > tools.json
 python3 -c 'import json; print(sum(len(json.dumps(t["inputSchema"])) for t in json.load(open("tools.json"))["result"]["tools"]))'
 ```
 
 | | tools | sum of `len(json.dumps(inputSchema))` | reply line |
 | --- | --- | --- | --- |
 | before (`8a08e0415`) | 19 | 353,485 | 326,793 bytes |
-| after | 20 (19 methods + `describe`) | 40,069 | 41,251 bytes |
+| after (merged with `3997e571c`) | 20 (19 methods + `describe`) | 40,069 | 41,251 bytes |
 
 Per tool, before → after: `dry` 102,714 → 398; `restore` 56,442 → 12,143; `play` 46,520 → 12,172;
 `open` 34,862 → 2,567; `edit` 34,658 → 4,053; `suggest` 31,960 → 1,334; `fill` 31,445 → 837;
@@ -78,13 +81,17 @@ Prototype transforms of the before reply, measured the same way (scripts kept lo
 - a sum whose cases are tools (`dry`'s `Action`) is its `_tag` enum, with a pointer to the action
   tools' schemas.
 
-`ocaml/engine/kit/kit_mcp.ml` lists `describe` after the methods and answers it from Lean's table
-(M5). `test_mcp.ml` C2 and C4 check this.
+`ocaml/engine/kit/kit_mcp.ml` (Codex's rewrite) lists `describe` after the methods and answers
+it from Lean's table (M5). The answer is `structuredContent` plus identical JSON text, as for
+every tool. Any other arguments get -32602. `test_mcp.ml` C2 and C5 check this (57 controls).
+`scripts/check-mcp-protocol.py` now also calls `describe`: it checks one valid call against the
+official `CallToolResult` schema, and one unknown name against -32602.
 
 **Exactness, as claimed.** A method's schema is exact except at the `describe` pointers and at
 `dry`'s action. Put each `describe` answer in place of its pointer, and the action tools' schemas
 in place of `dry`'s action: the result agrees with the old exact schema. This is a finite probe,
-not a proof (`validate.py`, Draft 2020-12, `jsonschema` 4.26.0):
+not a proof (`validate.py`, Draft 2020-12, `jsonschema` 4.26.0). The output was the same before and
+after the merge:
 
 ```text
 V1 20 tool schemas, 8 describe answers, 19 resolved: valid 2020-12
@@ -115,14 +122,17 @@ so the problem is not hit here. The route itself is not fixed.
 - `python3 /private/tmp/seams-lean-one.py python3 scripts/generate.py --only lcnf`: PASS;
   `api_gen.ml`, `api_gen.mli` and `closure-api_gen.tsv` regenerated.
 - `#axiom_audit Effect4.Tool.Methods Effect4.Tool.Native Test.Program.ToolMethodsControls`:
-  234 declarations within `[propext, Quot.sound]`, 0 planned goals.
-- `cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/kit`: all pass (test_mcp
-  C1–C4).
+  234 declarations within `[propext, Quot.sound]`, 0 planned goals, before and after the merge.
+- `cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/kit`: all pass; test_mcp
+  57 of 57 at the merged tree.
+- `uv run --with jsonschema==4.25.1 python scripts/check-mcp-protocol.py --binary ocaml/_build/default/engine/kit/bin/eff.exe --schema ~/Dev/refs/ocaml-tooling/mcp-spec/schema/2025-06-18/schema.json`:
+  PASS, 69 schema checks, 20 tools.
 - `python3 /private/tmp/seams-lean-one.py make check-ocaml`: exit 0. Its `gen-lcnf` step regenerated
   the same three files. The `ocaml` lane ran (`PASS ocaml: recorded b1a459382d51`: dune tests,
   interface and sealing checks, gen-check C1–C4). `native` and `compiler` came from shared results,
   because their inputs did not change. The `Error:` lines in the log are the sealing check's
-  planted hostile clients, each refused as expected.
+  planted hostile clients, each refused as expected. At the merged tree the gate ran again: exit 0,
+  `PASS ocaml: recorded fd5399a5c83b`, with `native` and `compiler` from shared results.
 - After the gate, two pairs of redundant parentheses came out of `Methods.lean`. Then: narrow build
   again, and `lake exe lcnfgen --one 1` gives an `api_gen.ml` and `closure-api_gen.tsv`
   byte-identical to the committed ones.

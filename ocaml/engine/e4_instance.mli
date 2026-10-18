@@ -33,10 +33,11 @@ module Make
   type program = NativeOp.t Eff.t
 
   val interp_of : Row.t list -> program -> interp
+  val prepare : Row.t list -> program -> prepared
   val load : program -> fuel:int -> machine
-  val step : Row.t list -> program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
+  val step : prepared -> fuel:int -> machine -> api_decision -> machine * bool
   val run_api : Row.t list -> program -> fuel:int -> outcome * machine
-  val admit : Row.t list -> machine -> api_decision -> bool
+  val admit : prepared -> machine -> api_decision -> bool
   val fibers : machine -> (fiber_id * fiber) list
   val fiber_count : machine -> int
   val trace : machine -> event list

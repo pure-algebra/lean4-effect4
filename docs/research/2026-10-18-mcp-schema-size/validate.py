@@ -29,10 +29,17 @@ FIXTURES = ['ocaml/engine/test/kit/tool-requests.jsonl', 'ocaml/engine/test/kit/
             'Test/fixtures/session/requests.jsonl']
 
 
+HANDSHAKE = [{'jsonrpc': '2.0', 'id': 'init', 'method': 'initialize',
+              'params': {'protocolVersion': '2025-06-18', 'capabilities': {},
+                         'clientInfo': {'name': 'validate', 'version': '1'}}},
+             {'jsonrpc': '2.0', 'method': 'notifications/initialized'}]
+
+
 def mcp(exe, messages):
-    text = ''.join(json.dumps(m) + '\n' for m in messages)
+    """The replies of one `eff mcp` session to some messages, after the MCP handshake."""
+    text = ''.join(json.dumps(m) + '\n' for m in HANDSHAKE + messages)
     out = subprocess.run([exe, 'mcp'], input=text, capture_output=True, text=True, check=True).stdout
-    return [json.loads(line) for line in out.splitlines()]
+    return [json.loads(line) for line in out.splitlines()][1:]
 
 
 def call(i, name, args):

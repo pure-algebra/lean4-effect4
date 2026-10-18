@@ -110,13 +110,38 @@ def admit (app : SigApp) (m : NativeMachine) : NativeDecision → Option Refusal
           | _ => some (.notExternal fiber token)
   | _ => none
 
-/-- The native evaluator at a stable linkage root. The caller still owns reply admission.
-Both OCaml instances use this declaration, rather than a compiler-created specialization name. -/
-def stepChecked (program : NativeEff) (table : RowTable)
-    (fuel : Nat) (machine : NativeMachine) (decision : NativeDecision) :
-    NativeMachine × Bool :=
-  letI := evaluatorFor program table
-  stepDecisionState (interpOf program table) fuel machine decision
+/-- A native execution package binds its interpreter and evaluator to one source.
+The constructor stays private. The OCaml interface seals the whole package. -/
+structure Prepared where
+  private mk ::
+  program : NativeEff
+  table : RowTable
+  interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
+  evaluator : FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+    (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)
+  interp_eq : interp = interpOf program table
+  evaluator_eq : evaluator = evaluatorFor program table
+
+namespace Prepared
+
+/-- Build the interpreter and evaluator once for this source. -/
+def make (program : NativeEff) (table : RowTable) : Prepared :=
+  ⟨program, table, interpOf program table, evaluatorFor program table, rfl, rfl⟩
+
+/-- Apply one decision with the package's interpreter and evaluator.
+The caller still owns reply admission. -/
+def step (prepared : Prepared) (fuel : Nat) (machine : NativeMachine)
+    (decision : NativeDecision) : NativeMachine × Bool :=
+  letI := prepared.evaluator
+  stepDecisionState prepared.interp fuel machine decision
+
+/-- Reply admission reads the same row table as evaluation. -/
+def admit (prepared : Prepared) (machine : NativeMachine) (decision : NativeDecision) :
+    Option Refusal :=
+  Program.admit { rows := prepared.table } machine decision
+
+end Prepared
 
 /-- The same stopping rules as `replayEval` and `answersValid`: no decision
 beyond a stuck state or exhausted driver fuel is inspected. -/

@@ -392,6 +392,7 @@ and eff_name =
       fiber_id list
   | EffName_external of Eff_types.NativeOp.t * Eff_types.Val.t * int list
   | EffName_caughtError of point
+and prepared
 and native_atom =
     NativeAtom_succ
   | NativeAtom_pred
@@ -1963,6 +1964,11 @@ and admitted_program = Eff_types.NativeOp.t typed_program
 and deferred_key = int
 and memo_map_id = int
 and 'u context = 'u service list
+and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) fiber_evaluator =
+    ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp ->
+    ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine ->
+    ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber ->
+    bool -> ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) iter
 and scope_store = scope_entry list
 and external_store = string list
 and run_id = int
@@ -2367,9 +2373,10 @@ val program_authoring_elaborate_at :
    result) ->
   (Eff_types.NativeOp.t Eff_types.Eff.t, effect4_program_authoring_refusal)
   result
-val program_step_checked :
-  Eff_types.NativeOp.t Eff_types.Eff.t ->
-  Eff_types.Row.t list ->
+val program_prepared_make :
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Row.t list -> prepared
+val program_prepared_step :
+  prepared ->
   int ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
    int, unit, ctx, stores,
@@ -2398,6 +2405,23 @@ val program_step_checked :
     Eff_types.Defect.t, int, unit)
    frame_event)
   run_machine * bool
+val program_prepared_admit :
+  prepared ->
+  (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
+   int, unit, ctx, stores,
+   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+    Eff_types.Defect.t, int, unit)
+   prim,
+   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+    Eff_types.Defect.t, int, unit)
+   frame_fiber,
+   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+    Eff_types.Defect.t, int, unit)
+   frame_event)
+  run_machine ->
+  (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
+   int, unit)
+  run_decision -> refusal option
 val tool_native_start : session
 val tool_native_serve :
   session ->

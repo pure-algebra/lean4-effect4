@@ -28,10 +28,11 @@ refuses `noProgram`, except under `draft`, which records an unchanged step.
 - **At the root**, every policy asks the module key and never splices.
 - **`recheck`** asks the module key and refuses a candidate that does not check.
 - **`draft`** splices where the expanded edit agrees, the focus is typed and the part check keeps
-  the focus's type. Any other draft asks the module key. A draft never refuses.
+  the focus's type. Both sketches must have no ill-formed reference. Any other draft asks the
+  module key. A draft never refuses.
 - **`keepExact`** asks the filling's part key inside the candidate's expansion. A changed or
-  refused part type refuses `notKept`. A kept part splices where the expanded edit agrees, and
-  otherwise rechecks and compares the root and local types.
+  refused part type refuses `notKept`. A kept part splices where the expanded edit agrees.
+  Both sketches must have no ill-formed reference. Otherwise it rechecks and compares root and local types.
 
 The session's invariant is `SourceSession.Coherent`: its table is the sketch's source table.
 The laws live in `Laws/Program/SourceTable.lean`. `EditSession.feed` (`Program/Edit.lean`) stays as
@@ -127,6 +128,11 @@ def expandedEditAgrees (s : SourceSession) (candidate : Sketch) (edit : Edit) : 
         some (expanded.program, expanded.holes))
   | none => false
 
+/-- A splice needs expansion agreement and no whole-document reference refusal on either side. -/
+def canSplice (s : SourceSession) (candidate : Sketch) (edit : Edit) : Bool :=
+  s.expandedEditAgrees candidate edit && s.sketch.program.firstRefFault.isNone &&
+    candidate.program.firstRefFault.isNone
+
 end SourceSession
 
 /-- **How a feed decides an edit.** -/
@@ -212,7 +218,7 @@ def feed (o : Oracle) (policy : FeedPolicy) (s : SourceSession) (edit : Edit) :
           | .draft =>
               match s.focusAt edit.path, s.view.type with
               | some focus, some _ =>
-                  if !s.expandedEditAgrees candidate edit || !draftOmitAllows edit focus.ty then
+                  if !s.canSplice candidate edit || !draftOmitAllows edit focus.ty then
                     s.recheck o policy candidate edit old
                   else
                     match s.candidatePartKey edit.path candidate with
@@ -237,7 +243,7 @@ def feed (o : Oracle) (policy : FeedPolicy) (s : SourceSession) (edit : Edit) :
                       | .error _ => pure (.error (.notKept (focus.env, focus.ty) part.result))
                       | .ok ty =>
                           if ty != focus.ty then pure (.error (.notKept (focus.env, focus.ty) part.result))
-                          else if s.expandedEditAgrees candidate edit then
+                          else if s.canSplice candidate edit then
                             pure (.ok (s.splice candidate edit old part))
                           else s.recheck o policy candidate edit old
   | _, _ =>
