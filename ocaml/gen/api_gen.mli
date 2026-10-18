@@ -108,6 +108,7 @@ and shape =
   | Shape_ref of kind
   | Shape_anyRef
   | Shape_named of string
+  | Shape_value
 and shape_doc = { root : shape; defs : (string * shape) list; }
 and reason =
     Reason_unbound of string

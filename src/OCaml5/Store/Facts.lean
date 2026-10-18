@@ -123,6 +123,18 @@ def kindFiles : String × String := Id.run do
      "val equal : t -> t -> bool", "val compare : t -> t -> int"] ++ "\n"
   return (implementation, interface)
 
+/-- The result envelope's fixed facts (seams ST3): the common specification's 32 bytes and the
+one supported envelope version, which `Node.resultQuery?` checks. The native reader in
+`ocaml/engine/cas/e4_cas.ml` reads the envelope's grammar; these are its only constants. -/
+def resultFiles : String × String := Id.run do
+  let escaped := String.join ((specOf (Answered Unit)).bytes.map fun b =>
+    "\\x" ++ String.ofList (Nat.toDigits 16 (b.toNat / 16) ++ Nat.toDigits 16 (b.toNat % 16)))
+  let shared := header "The result envelope's specification and version from Effect4.Store.Answered."
+  let implementation := shared ++ "let spec = \"" ++ escaped ++ "\"\n" ++ "let envelope_version = 0\n"
+  let interface := shared ++ "val spec : string\n(** The 32 bytes of `specOf (Answered Unit)`. *)\n\n" ++
+    "val envelope_version : int\n"
+  return (implementation, interface)
+
 /-- The canonical root policy alphabet, rendered once for native consumers. -/
 def rootPolicyFiles : MetaM (String × String) := do
   let constructors ← inductiveCtors ``RootPolicy

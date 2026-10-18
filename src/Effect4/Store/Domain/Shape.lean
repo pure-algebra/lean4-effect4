@@ -69,6 +69,8 @@ inductive Shape where
   | anyRef
   /-- A shape defined in the document's table. -/
   | named (name : String)
+  /-- The existing value-tree sort, embedded without changing its references. -/
+  | value
 deriving Inhabited
 
 namespace Shape
@@ -93,6 +95,7 @@ def render : Shape → String
   | .ref k => s!"(Shape.ref .{k.name})"
   | .anyRef => "Shape.anyRef"
   | .named name => s!"(Shape.named {name.quote})"
+  | .value => "Shape.value"
 def renderFields : List (String × Shape) → List String
   | [] => []
   | (n, s) :: rest => s!"({n.quote}, {render s})" :: renderFields rest
@@ -148,6 +151,7 @@ mutual
 /-- A value fits a resolved shape. Children are checked against the candidates of their own
 shapes, so a `named` child resolves in the same table. -/
 def acceptsAt (defs : List (String × Shape)) : Val → Shape → Bool
+  | _, .value => true
   | .unit, .unit => true
   | .bool _, .bool => true
   | .nat _, .nat => true
@@ -259,67 +263,87 @@ theorem acceptsAt_mono {defs defs' : List (String × Shape)}
     ∀ (v : Val) (s' : Shape), acceptsAt defs v s' = true → acceptsAt defs' v s' = true
   | .unit, s', h => by
     cases s'
+    case value => rfl
     case unit => rfl
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .bool b, s', h => by
     cases s'
+    case value => rfl
     case bool => rfl
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .nat n, s', h => by
     cases s'
+    case value => rfl
     case nat => rfl
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .str s, s', h => by
     cases s'
+    case value => rfl
     case string => rfl
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .bytes d, s', h => by
     cases s'
+    case value => rfl
     case bytes => rfl
     case digest => exact h
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .list xs, s', h => by
     cases s'
+    case value => rfl
     case list item =>
       simp only [acceptsAt] at h ⊢
       exact acceptsList_mono hsub item xs h
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .pair a b, s', h => by
     cases s'
+    case value => rfl
     case pair f g =>
       simp only [acceptsAt, Bool.and_eq_true] at h ⊢
       exact ⟨any_mono hsub (acceptsAt_mono hsub a) h.1, any_mono hsub (acceptsAt_mono hsub b) h.2⟩
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .none, s', h => by
     cases s'
+    case value => rfl
     case option item => rfl
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .some a, s', h => by
     cases s'
+    case value => rfl
     case option item =>
       simp only [acceptsAt] at h ⊢
       exact any_mono hsub (acceptsAt_mono hsub a) h
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .ctor i args, s', h => by
     cases s'
+    case value => rfl
     case struct name fields =>
       simp only [acceptsAt, Bool.and_eq_true] at h ⊢
       exact ⟨h.1, acceptsFields_mono hsub fields args h.2⟩
     case sum name cases =>
       simp only [acceptsAt] at h ⊢
       split at h
-      · next _ fields hf =>
-        try rw [hf]
+      · next _ fields _ =>
         exact acceptsFields_mono hsub fields args h
       · exact nomatch h
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .ref b d, s', h => by
     cases s'
+    case value => rfl
     case ref k => exact h
     case anyRef => exact h
-    all_goals simp [acceptsAt] at h
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
   | .handle k n, s', h => by
-    cases s' <;> simp [acceptsAt] at h
+    cases s'
+    case value => rfl
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
+  | .negInt n, s', h => by
+    cases s'
+    case value => rfl
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
+  | .float bits, s', h => by
+    cases s'
+    case value => rfl
+    all_goals simp only [acceptsAt, Bool.false_eq_true] at h
 theorem acceptsList_mono {defs defs' : List (String × Shape)}
     (hsub : ∀ s s', s' ∈ candidates defs s → s' ∈ candidates defs' s) :
     ∀ (item : Shape) (xs : List Val), acceptsList defs item xs = true → acceptsList defs' item xs = true
@@ -335,8 +359,8 @@ theorem acceptsFields_mono {defs defs' : List (String × Shape)}
   | (_, s) :: fields, a :: args, h => by
     simp only [acceptsFields, Bool.and_eq_true] at h ⊢
     exact ⟨any_mono hsub (acceptsAt_mono hsub a) h.1, acceptsFields_mono hsub fields args h.2⟩
-  | [], _ :: _, h => by simp [acceptsFields] at h
-  | _ :: _, [], h => by simp [acceptsFields] at h
+  | [], _ :: _, h => by simp only [acceptsFields, Bool.false_eq_true] at h
+  | _ :: _, [], h => by simp only [acceptsFields, Bool.false_eq_true] at h
 end
 
 theorem acceptsIn_mono {defs defs' : List (String × Shape)}
@@ -422,7 +446,7 @@ def printIn (defs : List (String × Shape)) : Shape → Val → Json
     match headShape defs s with
     | .anyRef => .obj [("kind", kindJson k), ("address", .str (hexString d))]
     | _ => .str (hexString d)
-  -- A live handle fits no shape; it prints by structure, as an unfitting `ctor` does.
+  -- Raw values print structurally. Their JSON profile has no generic inverse.
   | _, .handle k n => .obj [("handle", Json.ofNat k.toNat), ("key", Json.ofNat n)]
   -- The numeric frames (decisions row 121) print exactly, with no floating-point conversion: a
   -- negative integer as its decimal text, a binary64 datum as its bit pattern in hex.

@@ -843,6 +843,15 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 - **`cas-interrupted-roots`**: An accepted cut retains the exact old root table or returns the exact committed store.
   The pointer is `interrupted_roots` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
   These transaction laws establish no host persistence, crash, or progress property.
+- **The result envelope (`cas-result-envelope`, seams ST3)**: a node answers a designated query exactly when it is
+  the node of a version-0 `Answered` envelope of that query at the common specification.
+  The pointer is `Node.resultQuery?_eq_some_iff` (`src/Effect4/Store/Domain/Action.lean`), with compatibility role.
+  The designated query is the envelope's query field, never a reference inside the output.
+  It establishes no result truth, host determinism, or hash injectivity.
+- **One result per query (`cas-result-once`, seams ST3)**: two bindings of a reached store that answer one designated
+  query hold the same node. The pointer is `Cas.result_once` (`src/Effect4/Laws/Store/Results.lean`), with preservation role.
+  Insertion, word admission and verification apply one result rule, `resultFault`, which scans every binding.
+  A wrong first result can satisfy the rule; it establishes no result truth, host determinism, progress, or hash injectivity.
 - **Resident node identity (`cas-resident-injective`)**: two nodes resident at their own equal addresses in one store are equal.
   `address_inj_resident` (`src/Effect4/Store/Domain/Store.lean`) keeps both lookup premises.
   It assumes no hash injectivity and establishes no cross-store equality or host persistence property.

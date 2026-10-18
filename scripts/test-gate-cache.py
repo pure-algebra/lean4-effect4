@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from lib.gate_cache import prepare, run, snapshot
+from lib.gate_cache import prepare, run, snapshot, query_key
 import status as status_reader
 
 REPO = Path(__file__).resolve().parents[1]
@@ -83,6 +83,37 @@ class GateCache(unittest.TestCase):
         self.assertEqual(0, self.execute("from pathlib import Path; Path('different').touch()"))
         self.assertTrue((self.root / 'different').exists())
 
+    def test_commands_keep_distinct_result_records(self):
+        input_key = self.key()
+        scripts = ["from pathlib import Path; p=Path('first'); p.write_text(p.read_text()+'x' if p.exists() else 'x')",
+                   "from pathlib import Path; p=Path('second'); p.write_text(p.read_text()+'y' if p.exists() else 'y')"]
+        commands = [[sys.executable, '-c', script] for script in scripts]
+        self.assertNotEqual(query_key(input_key, commands[0]), query_key(input_key, commands[1]))
+        for script in scripts + scripts:
+            self.assertEqual(0, self.execute(script))
+        self.assertEqual('x', (self.root / 'first').read_text())
+        self.assertEqual('y', (self.root / 'second').read_text())
+        records = list((self.store / 'probe').iterdir())
+        self.assertEqual(2, len(records))
+        self.assertEqual({query_key(input_key, command) for command in commands},
+                         {record.name for record in records})
+        for record in records:
+            data = json.loads(record.read_text())
+            self.assertEqual(input_key, data['input'])
+            self.assertEqual(record.name, query_key(input_key, data['command']))
+
+    def test_command_comparison_refuses_a_forged_record(self):
+        input_key = self.key()
+        script = "from pathlib import Path; p=Path('runs'); p.write_text(p.read_text()+'x' if p.exists() else 'x')"
+        command = [sys.executable, '-c', script]
+        self.assertEqual(0, self.execute(script))
+        path = self.store / 'probe' / query_key(input_key, command)
+        data = json.loads(path.read_text())
+        data['command'] = [sys.executable, '-c', 'pass']
+        path.write_text(json.dumps(data))
+        self.assertEqual(0, self.execute(script))
+        self.assertEqual('xx', (self.root / 'runs').read_text())
+
     def test_missing_input_cannot_be_an_empty_key(self):
         self.key()
         (self.root / 'source').unlink()
@@ -116,7 +147,7 @@ class GateCache(unittest.TestCase):
 
     def test_nonexecuting_make_modes_never_publish_a_pass(self):
         self.key()
-        for flags in ['n --no-print-directory', 'nt', 'q', '--dry-run']:
+        for flags in ['n --no-print-directory', 'nt', 'q', '--dry-run', '--no-print-directory -n', '--no-print-directory -t', '--no-print-directory -q', '--no-print-directory -nB']:
             with self.subTest(flags=flags), patch.dict(os.environ, {'MAKEFLAGS': flags}):
                 self.assertEqual(0, self.execute("raise RuntimeError('must not run')"))
                 self.assertFalse((self.root / '.lake/check/probe').exists())
@@ -176,7 +207,7 @@ class MakeIntegration(unittest.TestCase):
                 shutil.copyfile(REPO / name, root / name)
             (root / 'source').write_text('one')
             (root / 'Makefile').write_text('''PY := python3
-.PHONY: all FORCE _run
+.PHONY: all FORCE _run .lake/check/probe
 all: .lake/check/probe
 .lake/check/probe.key: FORCE
 \t@$(PY) scripts/gate-cache.py key probe --inputs source Makefile scripts/gate-cache.py scripts/lib/gate_cache.py

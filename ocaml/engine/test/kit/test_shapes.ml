@@ -71,6 +71,7 @@ let rec render (s : G.shape) : string =
   | G.Shape_ref _ -> "(ref)"
   | G.Shape_anyRef -> "anyRef"
   | G.Shape_named n -> Printf.sprintf "(named %S)" n
+  | G.Shape_value -> "value"
 
 let render_doc (d : G.shape_doc) : string =
   Printf.sprintf "(doc %s (%s))" (render d.root)
@@ -109,7 +110,7 @@ let rec rename_first_field (s : G.shape) : G.shape option =
     | Some a -> Some (G.Shape_pair (a, b))
     | None -> Option.map (fun b -> G.Shape_pair (a, b)) (rename_first_field b))
   | G.Shape_unit | G.Shape_bool | G.Shape_nat | G.Shape_string | G.Shape_bytes | G.Shape_digest
-  | G.Shape_ref _ | G.Shape_anyRef | G.Shape_named _ -> None
+  | G.Shape_ref _ | G.Shape_anyRef | G.Shape_named _ | G.Shape_value -> None
 
 let field_renamed (d : G.shape_doc) : G.shape_doc option =
   match rename_first_field d.root with

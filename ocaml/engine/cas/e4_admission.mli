@@ -17,6 +17,8 @@ type model =
   | Oversize
   | Bad_version
   | Conflict of E4_addr.Addr.t * E4_node.t
+  | Bad_envelope
+  | Poisoned of E4_addr.Addr.t * E4_addr.Addr.t * E4_addr.Addr.t
 
 type t = Model of model | Capacity of string | Fault of E4_fault.t
 

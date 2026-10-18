@@ -130,6 +130,8 @@ def admissionWord : Admission → String
   | .oversize => "oversize"
   | .badVersion => "badVersion"
   | .conflict _ _ => "conflict"
+  | .badEnvelope => "badEnvelope"
+  | .poisoned query first second => s!"poisoned {query.hex} {first.hex} {second.hex}"
 
 def putWord (r : Except Admission (Outcome × Digest × Store)) : String :=
   match r with
@@ -163,6 +165,8 @@ def verifyWord (r : Except VerifyError Unit) : String :=
   | .error (.dangling _ missing) => s!"dangling {missing.hex}"
   | .error (.wrongKind _ _ _ _) => "wrongKind"
   | .error (.rootUnresolved name) => s!"rootUnresolved {name}"
+  | .error (.badEnvelope _) => "badEnvelope"
+  | .error (.poisoned _ query first) => s!"poisoned {query.hex} {first.hex}"
 
 /-- The edge scan's answer: the ordered refs as `<kind byte>:<hex>`, then the malformed verdict. -/
 def refsWord (v : Val) : String :=
@@ -527,10 +531,68 @@ def g7Cases : List Case :=
   , g7 "g7-root-wrong-kind" storeRootWrongKind
   , g7 "g7-root-ok" storeRootOk ]
 
+/-! ## G8 — results: the envelope and one result per query (seams ST3) -/
+
+def resultGate : ActionId := ⟨"check-ocaml", 1, zeroDigest⟩
+def resultQueryA : Query Nat := ⟨resultGate, 41⟩
+def resultQueryB : Query Nat := ⟨resultGate, 42⟩
+def answeredA : Answered Nat := ⟨0, address resultQueryA, .nat 7⟩
+def answeredA' : Answered Nat := ⟨0, address resultQueryA, .nat 8⟩
+/-- Answers `resultQueryB`, and mentions `resultQueryA` inside its output. -/
+def answeredB : Answered Nat :=
+  ⟨0, address resultQueryB, .ref Kind.query.byte (address resultQueryA).digest.bytes⟩
+def answeredSchema : Node := nodeOf (shape (Answered Nat)).document
+def querySchema : Node := nodeOf (shape (Query Nat)).document
+
+def bound (n : Node) : Binding := ⟨sha256 n.encode, n⟩
+
+/-- A forged preload (no admission), then one put: admission reads only the edges it checks. -/
+def g8 (name : String) (preload : List Node) (n : Node) : Case :=
+  caseOfVal name "g8" (wordVal ((preload ++ [n]).map bound))
+    (putWord ((Store.mk (preload.map fun m => (sha256 m.encode, m)) []).putNode n))
+
+def queriesAB : List Node := [answeredSchema, nodeOf resultQueryA, nodeOf resultQueryB]
+
+def g8Cases : List Case :=
+  [ g8 "g8-result-fresh" queriesAB (nodeOf answeredA)
+  , g8 "g8-result-duplicate" (queriesAB ++ [nodeOf answeredA]) (nodeOf answeredA)
+  , g8 "g8-result-poisoned" (queriesAB ++ [nodeOf answeredA]) (nodeOf answeredA')
+  , g8 "g8-result-incidental" (queriesAB ++ [nodeOf answeredA]) (nodeOf answeredB)
+  , g8 "g8-result-not-envelope" queriesAB ⟨0, .result, specOf (Answered Unit), .nat 0⟩
+  , g8 "g8-result-version" queriesAB (nodeOf ({ answeredA with version := 1 } : Answered Nat))
+  , g8 "g8-result-spec" (queriesAB ++ [querySchema]) { nodeOf answeredA with spec := specOf (Query Nat) }
+  , g8 "g8-result-query-kind" (queriesAB ++ [querySchema])
+      { nodeOf answeredA with payload := .ctor 0 [.nat 0, .ref Kind.query.byte (specOf (Query Nat)).bytes, .nat 7] }
+  , g8 "g8-result-dangling" [answeredSchema] (nodeOf answeredA) ]
+
+/-- A word from nothing; its genesis binding is left out of the bytes, because the reader takes
+it from `g1-genesisNode`. -/
+def g8word (name : String) (rest : List Node) : Case :=
+  caseOfVal name "g8word" (wordVal (rest.map bound))
+    (match Word.apply ((genesisNode :: rest).map bound) Store.empty with
+     | .ok _ => if Word.wf ((genesisNode :: rest).map bound) then "ok" else "notWf"
+     | .error a => admissionWord a)
+
+def closedRest : List Node := [answeredSchema, querySchema, nodeOf resultQueryA, nodeOf answeredA]
+
+def g8wordCases : List Case :=
+  [ g8word "g8word-one-result" closedRest
+  , g8word "g8word-two-results" (closedRest ++ [nodeOf answeredA']) ]
+
+/-- Verification applies the result rule at the first result, before later nodes' edges. -/
+def g7ResultCases : List Case :=
+  [ g7 "g7-result-poisoned"
+      (Store.mk ([nodeOf answeredA, nodeOf answeredA', answeredSchema, nodeOf resultQueryA].map
+        fun m => (sha256 m.encode, m)) [])
+  , g7 "g7-result-not-envelope"
+      (Store.mk ([⟨0, .result, specOf (Answered Unit), .nat 0⟩, answeredSchema].map
+        fun m => (sha256 m.encode, m)) []) ]
+
 /-! ## The run -/
 
 def allCases : List Case :=
-  a1Cases ++ g1Cases ++ g2Cases ++ g3Cases ++ g4Cases ++ g5Cases ++ g6Cases ++ g7Cases
+  a1Cases ++ g1Cases ++ g2Cases ++ g3Cases ++ g4Cases ++ g5Cases ++ g6Cases ++ g7Cases ++
+    g7ResultCases ++ g8Cases ++ g8wordCases
 
 def header : List String :=
   [ "# CasGoldens — the byte goldens of the Lean CAS."
@@ -557,6 +619,10 @@ def header : List String :=
   , "#   g6   words and closures: bytes = wordVal w or nodesVal ns; expected ok unless a replay"
   , "#        refused."
   , "#   g7   verify: bytes = storeVal s, expected = the VerifyError word."
+  , "#   g8   results (seams ST3): bytes = wordVal (preload ++ [n]); expected = the outcome of"
+  , "#        putNode n into the store whose nodes are the preload, forged without admission."
+  , "#   g8word  bytes = wordVal w without its first binding, the genesis (g1-genesisNode);"
+  , "#        expected = ok, notWf, or the word of Word.apply's refusal."
   , "#"
   , "# tool-side projections (the Lean tree has no Canonical instance for Root, Binding, Store,"
   , "# MemoEntry or MemoMap, so these five shapes are this tool's; every other byte is a Lean"
@@ -593,7 +659,7 @@ def main (args : List String) : IO Unit := do
       (String.join ((header.map fun l => l ++ "\n") ++
         allCases.map fun c => s!"{c.name}\t{c.family}\t{c.expected}\n"))
     IO.println s!"wrote {allCases.length} cases to {dir}"
-    for f in ["a1", "g1", "g2", "g3", "g4", "g4entries", "g5", "g6", "g7"] do
+    for f in ["a1", "g1", "g2", "g3", "g4", "g4entries", "g5", "g6", "g7", "g8", "g8word"] do
       IO.println s!"  {f}\t{familyCount allCases f}"
     -- The two hand-derived frames of `ocaml/eff/goldens/`, re-cut here (A1 §3.5).
     IO.println s!"val_ref\t{hex (Val.encode valRefTree)}"

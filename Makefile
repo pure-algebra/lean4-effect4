@@ -525,8 +525,8 @@ define cached_check
 $(CHK)/$(1).key: FORCE
 	@$$(PY) scripts/gate-cache.py key $(1) --runtime $(2) --environment $$(CHECK_ENVIRONMENT) --inputs $$(CHECK_CACHE_SOURCES) $(3) --lean $(4)
 $(CHK)/$(1): $(CHK)/$(1).key
-	@$$(PY) scripts/gate-cache.py run $$(if $$(findstring B,$$(firstword $$(MAKEFLAGS))),--force,) $(1) -- $$(MAKE) --no-print-directory _run-$(1)
-.PHONY: _run-$(1)
+	@$$(PY) scripts/gate-cache.py run $(1) -- $$(MAKE) --no-print-directory _run-$(1)
+.PHONY: _run-$(1) $(CHK)/$(1)
 endef
 
 # A fresh elaboration of Test/All.lean sees a new orphan source file even when Lake's

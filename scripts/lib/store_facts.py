@@ -1,4 +1,4 @@
-"""Generate native kind facts and the semantic node-read refusal mapping.
+"""Generate native kind facts, the semantic node-read refusal mapping and the result envelope facts.
 
 Properties:
 F1 The Lean producer owns every emitted constructor and field.
@@ -13,7 +13,7 @@ import tempfile
 
 FILES = tuple(Path('ocaml/engine/cas') / name for name in
               ('e4_kind.ml', 'e4_kind.mli', 'e4_admission.ml', 'e4_admission.mli',
-               'e4_root_policy.ml', 'e4_root_policy.mli'))
+               'e4_root_policy.ml', 'e4_root_policy.mli', 'e4_result.ml', 'e4_result.mli'))
 
 
 def generate(root, out, checking, run, install):

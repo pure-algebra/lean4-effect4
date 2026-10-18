@@ -109,6 +109,7 @@ def render : Shape → Representation
       [ Schema.property "kind" Schema.string
       , Schema.property "address" (.string none [Schema.Check.pattern digestPattern]) ]
   | .named n => Schema.reference n
+  | .value => .unknown (identifierKey.singleton "Effect4.Store.Val") []
 /-- The properties of a struct, in declaration order. -/
 def renderFields : List (String × Shape) → List PropertySignature
   | [] => []

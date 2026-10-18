@@ -133,6 +133,7 @@ def shapeText : Shape → String
   | .ref kind => s!"ref {kind.name}"
   | .anyRef => "anyRef"
   | .named name => name
+  | .value => "raw value tree"
 
 /-- **A miss**: the path of keys and indices to the place, what the shape wants there, and what
 stands there. -/

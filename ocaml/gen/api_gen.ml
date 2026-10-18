@@ -78,6 +78,7 @@ and shape =
   | Shape_ref of kind
   | Shape_anyRef
   | Shape_named of string
+  | Shape_value
 and shape_doc = { root : shape; defs : (string * shape) list }
 and reason =
   | Reason_unbound of string
@@ -34583,32 +34584,34 @@ let rec store_program_gen_term_c_raw_term (x_1 : Val.t) : Term.t option =
     | Val.Ctor (index_2, args_3) -> (let _x_4 = 0 in
       let _x_5 = index_2 = _x_4 in
       if _x_5 then (match args_3 with
-          | head_168 :: tail_169 -> (match tail_169 with
-              | [] -> (match (head_168 : Val.t) with
-                  | Val.Nat n_170 -> (let _x_171 = Term.Var n_170 in
-                    Some _x_171)
+          | head_172 :: tail_173 -> (match tail_173 with
+              | [] -> (match (head_172 : Val.t) with
+                  | Val.Nat n_174 -> (let _x_175 = Term.Var n_174 in
+                    Some _x_175)
                   | _ -> None)
               | _ -> None)
           | _ -> None) else (let _x_6 = 1 in
         let _x_7 = index_2 = _x_6 in
         if _x_7 then (match args_3 with
-            | head_159 :: tail_160 -> (match tail_160 with
-                | [] -> (let _x_161 = store_program_gen_lit_c_of_val head_159 in
-                  match _x_161 with
-                    | Some val__162 -> (let _x_163 = Term.Lit val__162 in
-                      Some _x_163)
+            | head_161 :: tail_162 -> (match tail_162 with
+                | [] -> (let _x_163 = store_program_gen_lit_c_to_val in
+                  let _x_164 = store_program_gen_lit_c_of_val in
+                  let _x_165 = store_guarded _x_163 _x_164 head_161 in
+                  match _x_165 with
+                    | Some val__166 -> (let _x_167 = Term.Lit val__166 in
+                      Some _x_167)
                     | _ -> None)
                 | _ -> None)
             | _ -> None) else (let _x_8 = 2 in
           let _x_9 = index_2 = _x_8 in
           if _x_9 then (match args_3 with
-              | head_145 :: tail_146 -> (match tail_146 with
-                  | head_147 :: tail_148 -> (match tail_148 with
-                      | [] -> (match (head_145 : Val.t) with
-                          | Val.Str s_149 -> (let _x_150 = store_program_gen_term_c_raw_terms head_147 in
-                            match _x_150 with
-                              | Some val__151 -> (let _x_152 = Term.App (s_149, val__151) in
-                                Some _x_152)
+              | head_147 :: tail_148 -> (match tail_148 with
+                  | head_149 :: tail_150 -> (match tail_150 with
+                      | [] -> (match (head_147 : Val.t) with
+                          | Val.Str s_151 -> (let _x_152 = store_program_gen_term_c_raw_terms head_149 in
+                            match _x_152 with
+                              | Some val__153 -> (let _x_154 = Term.App (s_151, val__153) in
+                                Some _x_154)
                               | _ -> None)
                           | _ -> None)
                       | _ -> None)
@@ -34616,28 +34619,28 @@ let rec store_program_gen_term_c_raw_term (x_1 : Val.t) : Term.t option =
               | _ -> None) else (let _x_10 = 3 in
             let _x_11 = index_2 = _x_10 in
             if _x_11 then (match args_3 with
-                | head_117 :: tail_118 -> (match tail_118 with
-                    | head_119 :: tail_120 -> (let[@local always] _jp_121 = fun () -> match (head_119 : Val.t) with
+                | head_119 :: tail_120 -> (match tail_120 with
+                    | head_121 :: tail_122 -> (let[@local always] _jp_123 = fun () -> match (head_121 : Val.t) with
                         | Val.List _ -> None
                         | _ -> None in
-                      match tail_120 with
-                        | head_125 :: tail_126 -> (match tail_126 with
-                            | [] -> (match (head_117 : Val.t) with
-                                | Val.List xs_127 -> (let _x_128 = [] in
-                                  let _x_129 = list_map_m_loop_at_store_program_gen_term_c_raw_term_spec_0 xs_127 _x_128 in
-                                  match _x_129 with
-                                    | Some val__130 -> (match (head_119 : Val.t) with
-                                        | Val.List xs_131 -> (let _x_132 = list_map_m_loop_at_store_program_gen_term_c_raw_term_spec_1 xs_131 _x_128 in
-                                          match _x_132 with
-                                            | Some val__133 -> (let _x_134 = store_program_gen_term_c_raw_terms head_125 in
-                                              match _x_134 with
-                                                | Some val__135 -> (let _x_136 = Term.Record (val__130, val__133, val__135) in
-                                                  Some _x_136)
+                      match tail_122 with
+                        | head_127 :: tail_128 -> (match tail_128 with
+                            | [] -> (match (head_119 : Val.t) with
+                                | Val.List xs_129 -> (let _x_130 = [] in
+                                  let _x_131 = list_map_m_loop_at_store_program_gen_term_c_raw_term_spec_0 xs_129 _x_130 in
+                                  match _x_131 with
+                                    | Some val__132 -> (match (head_121 : Val.t) with
+                                        | Val.List xs_133 -> (let _x_134 = list_map_m_loop_at_store_program_gen_term_c_raw_term_spec_1 xs_133 _x_130 in
+                                          match _x_134 with
+                                            | Some val__135 -> (let _x_136 = store_program_gen_term_c_raw_terms head_127 in
+                                              match _x_136 with
+                                                | Some val__137 -> (let _x_138 = Term.Record (val__132, val__135, val__137) in
+                                                  Some _x_138)
                                                 | _ -> None)
                                             | _ -> None)
                                         | _ -> None)
-                                    | _ -> _jp_121 ())
-                                | _ -> _jp_121 ())
+                                    | _ -> _jp_123 ())
+                                | _ -> _jp_123 ())
                             | _ -> None)
                         | _ -> None)
                     | _ -> None)
@@ -34647,13 +34650,15 @@ let rec store_program_gen_term_c_raw_term (x_1 : Val.t) : Term.t option =
                   | head_93 :: tail_94 -> (match tail_94 with
                       | head_95 :: tail_96 -> (match tail_96 with
                           | head_97 :: tail_98 -> (match tail_98 with
-                              | [] -> (let _x_99 = store_program_gen_field_read_mode_c_of_val head_93 in
-                                match _x_99 with
-                                  | Some val__100 -> (let _x_101 = store_program_gen_term_c_raw_term head_95 in
-                                    match _x_101 with
-                                      | Some val__102 -> (match (head_97 : Val.t) with
-                                          | Val.Str s_103 -> (let _x_104 = Term.Field (val__100, val__102, s_103) in
-                                            Some _x_104)
+                              | [] -> (let _x_99 = store_program_gen_field_read_mode_c_to_val in
+                                let _x_100 = store_program_gen_field_read_mode_c_of_val in
+                                let _x_101 = store_guarded _x_99 _x_100 head_93 in
+                                match _x_101 with
+                                  | Some val__102 -> (let _x_103 = store_program_gen_term_c_raw_term head_95 in
+                                    match _x_103 with
+                                      | Some val__104 -> (match (head_97 : Val.t) with
+                                          | Val.Str s_105 -> (let _x_106 = Term.Field (val__102, val__104, s_105) in
+                                            Some _x_106)
                                           | _ -> None)
                                       | _ -> (match (head_97 : Val.t) with
                                           | Val.Str _ -> None
@@ -34901,13 +34906,15 @@ let store_program_gen_def_decl_c_of_val (x_1 : Val.t) : DefDecl.t option =
                                                           | Val.List xs_50 -> (let _x_51 = [] in
                                                             let _x_52 = list_map_m_loop_at_store_canonical_image_at_store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0_spec_4_spec_6 xs_50 _x_51 in
                                                             match _x_52 with
-                                                              | Some val__53 -> (let _x_54 = store_program_gen_def_role_c_of_val head_17 in
-                                                                match _x_54 with
-                                                                  | Some val__55 -> (match (head_19 : Val.t) with
-                                                                      | Val.List xs_56 -> (let _x_57 = list_map_m_loop_at_store_program_gen_def_decl_c_of_val_spec_0 xs_56 _x_51 in
-                                                                        match _x_57 with
-                                                                          | Some val__58 -> (let _x_59 = ({ DefDecl.name = s_41; DefDecl.request = val__45; DefDecl.answer = val__47; DefDecl.error = val__49; DefDecl.requires = val__53; DefDecl.role = val__55; DefDecl.params = val__58 } : DefDecl.t) in
-                                                                            Some _x_59)
+                                                              | Some val__53 -> (let _x_54 = store_program_gen_def_role_c_to_val in
+                                                                let _x_55 = store_program_gen_def_role_c_of_val in
+                                                                let _x_56 = store_guarded _x_54 _x_55 head_17 in
+                                                                match _x_56 with
+                                                                  | Some val__57 -> (match (head_19 : Val.t) with
+                                                                      | Val.List xs_58 -> (let _x_59 = list_map_m_loop_at_store_program_gen_def_decl_c_of_val_spec_0 xs_58 _x_51 in
+                                                                        match _x_59 with
+                                                                          | Some val__60 -> (let _x_61 = ({ DefDecl.name = s_41; DefDecl.request = val__45; DefDecl.answer = val__47; DefDecl.error = val__49; DefDecl.requires = val__53; DefDecl.role = val__57; DefDecl.params = val__60 } : DefDecl.t) in
+                                                                            Some _x_61)
                                                                           | _ -> None)
                                                                       | _ -> None)
                                                                   | _ -> (match (head_19 : Val.t) with
@@ -35039,10 +35046,12 @@ let store_program_gen_fork_options_c_of_val (x_1 : Val.t) : ForkOptions.t option
                   | head_11 :: tail_12 -> (match tail_12 with
                       | [] -> (match (head_7 : Val.t) with
                           | Val.Bool b_13 -> (match (head_9 : Val.t) with
-                              | Val.Bool b_14 -> (let _x_15 = store_program_gen_mask_mode_c_of_val head_11 in
-                                match _x_15 with
-                                  | Some val__16 -> (let _x_17 = ({ ForkOptions.start_immediately = b_13; ForkOptions.daemon = b_14; ForkOptions.mask_mode = val__16 } : ForkOptions.t) in
-                                    Some _x_17)
+                              | Val.Bool b_14 -> (let _x_15 = store_program_gen_mask_mode_c_to_val in
+                                let _x_16 = store_program_gen_mask_mode_c_of_val in
+                                let _x_17 = store_guarded _x_15 _x_16 head_11 in
+                                match _x_17 with
+                                  | Some val__18 -> (let _x_19 = ({ ForkOptions.start_immediately = b_13; ForkOptions.daemon = b_14; ForkOptions.mask_mode = val__18 } : ForkOptions.t) in
+                                    Some _x_19)
                                   | _ -> None)
                               | _ -> None)
                           | _ -> (match (head_9 : Val.t) with
@@ -35101,62 +35110,64 @@ let store_program_gen_native_op_c_of_val (x_1 : Val.t) : NativeOp.t option =
     | Val.Ctor (index_2, args_3) -> (let _x_4 = 0 in
       let _x_5 = index_2 = _x_4 in
       if _x_5 then (match args_3 with
-          | [] -> (let _x_226 = NativeOp.RefMake in
-            Some _x_226)
+          | [] -> (let _x_228 = NativeOp.RefMake in
+            Some _x_228)
           | _ -> None) else (let _x_6 = 1 in
         let _x_7 = index_2 = _x_6 in
         if _x_7 then (match args_3 with
-            | [] -> (let _x_223 = NativeOp.RefGet in
-              Some _x_223)
+            | [] -> (let _x_225 = NativeOp.RefGet in
+              Some _x_225)
             | _ -> None) else (let _x_8 = 2 in
           let _x_9 = index_2 = _x_8 in
           if _x_9 then (match args_3 with
-              | [] -> (let _x_220 = NativeOp.RefSet in
-                Some _x_220)
+              | [] -> (let _x_222 = NativeOp.RefSet in
+                Some _x_222)
               | _ -> None) else (let _x_10 = 3 in
             let _x_11 = index_2 = _x_10 in
             if _x_11 then (match args_3 with
-                | [] -> (let _x_217 = NativeOp.RefGetAndSet in
-                  Some _x_217)
+                | [] -> (let _x_219 = NativeOp.RefGetAndSet in
+                  Some _x_219)
                 | _ -> None) else (let _x_12 = 4 in
               let _x_13 = index_2 = _x_12 in
               if _x_13 then (match args_3 with
-                  | [] -> (let _x_214 = NativeOp.RefSetAndGet in
-                    Some _x_214)
+                  | [] -> (let _x_216 = NativeOp.RefSetAndGet in
+                    Some _x_216)
                   | _ -> None) else (let _x_14 = 14 in
                 let _x_15 = index_2 = _x_14 in
                 if _x_15 then (match args_3 with
-                    | [] -> (let _x_211 = NativeOp.DeferredIsDone in
-                      Some _x_211)
+                    | [] -> (let _x_213 = NativeOp.DeferredIsDone in
+                      Some _x_213)
                     | _ -> None) else (let _x_16 = 15 in
                   let _x_17 = index_2 = _x_16 in
                   if _x_17 then (match args_3 with
-                      | [] -> (let _x_208 = NativeOp.DeferredPoll in
-                        Some _x_208)
+                      | [] -> (let _x_210 = NativeOp.DeferredPoll in
+                        Some _x_210)
                       | _ -> None) else (let _x_18 = 16 in
                     let _x_19 = index_2 = _x_18 in
                     if _x_19 then (match args_3 with
-                        | [] -> (let _x_205 = NativeOp.DeferredSucceed in
-                          Some _x_205)
+                        | [] -> (let _x_207 = NativeOp.DeferredSucceed in
+                          Some _x_207)
                         | _ -> None) else (let _x_20 = 17 in
                       let _x_21 = index_2 = _x_20 in
                       if _x_21 then (match args_3 with
-                          | [] -> (let _x_202 = NativeOp.DeferredFail in
-                            Some _x_202)
+                          | [] -> (let _x_204 = NativeOp.DeferredFail in
+                            Some _x_204)
                           | _ -> None) else (let _x_22 = 18 in
                         let _x_23 = index_2 = _x_22 in
                         if _x_23 then (match args_3 with
-                            | [] -> (let _x_199 = NativeOp.DeferredAwait in
-                              Some _x_199)
+                            | [] -> (let _x_201 = NativeOp.DeferredAwait in
+                              Some _x_201)
                             | _ -> None) else (let _x_24 = 19 in
                           let _x_25 = index_2 = _x_24 in
                           if _x_25 then (match args_3 with
                               | head_190 :: tail_191 -> (match tail_191 with
-                                  | [] -> (let _x_192 = store_program_gen_finalizer_strategy_c_of_val head_190 in
-                                    match _x_192 with
+                                  | [] -> (let _x_192 = store_program_gen_finalizer_strategy_c_to_val in
+                                    let _x_193 = store_program_gen_finalizer_strategy_c_of_val in
+                                    let _x_194 = store_guarded _x_192 _x_193 head_190 in
+                                    match _x_194 with
                                       | None -> None
-                                      | Some val__194 -> (let _x_195 = NativeOp.ScopeMake val__194 in
-                                        Some _x_195))
+                                      | Some val__196 -> (let _x_197 = NativeOp.ScopeMake val__196 in
+                                        Some _x_197))
                                   | _ -> None)
                               | _ -> None) else (let _x_26 = 20 in
                             let _x_27 = index_2 = _x_26 in
@@ -35391,74 +35402,76 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
     | Val.Ctor (index_2, args_3) -> (let _x_4 = 0 in
       let _x_5 = index_2 = _x_4 in
       if _x_5 then (match args_3 with
-          | head_522 :: tail_523 -> (match tail_523 with
-              | [] -> (let _x_524 = store_program_gen_term_c_to_val_term in
-                let _x_525 = store_program_gen_term_c_raw_term in
-                let _x_526 = store_guarded _x_524 _x_525 head_522 in
-                match _x_526 with
-                  | Some val__527 -> (let _x_528 = Eff.Succeed val__527 in
-                    Some _x_528)
+          | head_528 :: tail_529 -> (match tail_529 with
+              | [] -> (let _x_530 = store_program_gen_term_c_to_val_term in
+                let _x_531 = store_program_gen_term_c_raw_term in
+                let _x_532 = store_guarded _x_530 _x_531 head_528 in
+                match _x_532 with
+                  | Some val__533 -> (let _x_534 = Eff.Succeed val__533 in
+                    Some _x_534)
                   | _ -> None)
               | _ -> None)
           | _ -> None) else (let _x_6 = 1 in
         let _x_7 = index_2 = _x_6 in
         if _x_7 then (match args_3 with
-            | head_511 :: tail_512 -> (match tail_512 with
-                | [] -> (let _x_513 = store_program_gen_term_c_to_val_term in
-                  let _x_514 = store_program_gen_term_c_raw_term in
-                  let _x_515 = store_guarded _x_513 _x_514 head_511 in
-                  match _x_515 with
-                    | Some val__516 -> (let _x_517 = Eff.Fail val__516 in
-                      Some _x_517)
+            | head_517 :: tail_518 -> (match tail_518 with
+                | [] -> (let _x_519 = store_program_gen_term_c_to_val_term in
+                  let _x_520 = store_program_gen_term_c_raw_term in
+                  let _x_521 = store_guarded _x_519 _x_520 head_517 in
+                  match _x_521 with
+                    | Some val__522 -> (let _x_523 = Eff.Fail val__522 in
+                      Some _x_523)
                     | _ -> None)
                 | _ -> None)
             | _ -> None) else (let _x_8 = 2 in
           let _x_9 = index_2 = _x_8 in
           if _x_9 then (match args_3 with
-              | head_500 :: tail_501 -> (match tail_501 with
-                  | [] -> (let _x_502 = store_program_gen_cause_term_c_to_val_cause_term in
-                    let _x_503 = store_program_gen_cause_term_c_raw_cause_term in
-                    let _x_504 = store_guarded _x_502 _x_503 head_500 in
-                    match _x_504 with
-                      | Some val__505 -> (let _x_506 = Eff.FailCause val__505 in
-                        Some _x_506)
+              | head_506 :: tail_507 -> (match tail_507 with
+                  | [] -> (let _x_508 = store_program_gen_cause_term_c_to_val_cause_term in
+                    let _x_509 = store_program_gen_cause_term_c_raw_cause_term in
+                    let _x_510 = store_guarded _x_508 _x_509 head_506 in
+                    match _x_510 with
+                      | Some val__511 -> (let _x_512 = Eff.FailCause val__511 in
+                        Some _x_512)
                       | _ -> None)
                   | _ -> None)
               | _ -> None) else (let _x_10 = 4 in
             let _x_11 = index_2 = _x_10 in
             if _x_11 then (match args_3 with
-                | head_489 :: tail_490 -> (match tail_490 with
-                    | [] -> (let _x_491 = store_program_gen_term_c_to_val_term in
-                      let _x_492 = store_program_gen_term_c_raw_term in
-                      let _x_493 = store_guarded _x_491 _x_492 head_489 in
-                      match _x_493 with
-                        | Some val__494 -> (let _x_495 = Eff.Sync val__494 in
-                          Some _x_495)
+                | head_495 :: tail_496 -> (match tail_496 with
+                    | [] -> (let _x_497 = store_program_gen_term_c_to_val_term in
+                      let _x_498 = store_program_gen_term_c_raw_term in
+                      let _x_499 = store_guarded _x_497 _x_498 head_495 in
+                      match _x_499 with
+                        | Some val__500 -> (let _x_501 = Eff.Sync val__500 in
+                          Some _x_501)
                         | _ -> None)
                     | _ -> None)
                 | _ -> None) else (let _x_12 = 5 in
               let _x_13 = index_2 = _x_12 in
               if _x_13 then (match args_3 with
-                  | head_480 :: tail_481 -> (match tail_481 with
-                      | [] -> (let _x_482 = store_program_gen_eff_c_raw_eff head_480 in
-                        match _x_482 with
-                          | Some val__483 -> (let _x_484 = Eff.Suspend val__483 in
-                            Some _x_484)
+                  | head_486 :: tail_487 -> (match tail_487 with
+                      | [] -> (let _x_488 = store_program_gen_eff_c_raw_eff head_486 in
+                        match _x_488 with
+                          | Some val__489 -> (let _x_490 = Eff.Suspend val__489 in
+                            Some _x_490)
                           | _ -> None)
                       | _ -> None)
                   | _ -> None) else (let _x_14 = 6 in
                 let _x_15 = index_2 = _x_14 in
                 if _x_15 then (match args_3 with
-                    | head_463 :: tail_464 -> (match tail_464 with
-                        | head_465 :: tail_466 -> (match tail_466 with
-                            | [] -> (let _x_467 = store_program_gen_native_op_c_of_val head_463 in
-                              match _x_467 with
-                                | Some val__468 -> (let _x_469 = store_program_gen_term_c_to_val_term in
-                                  let _x_470 = store_program_gen_term_c_raw_term in
-                                  let _x_471 = store_guarded _x_469 _x_470 head_465 in
-                                  match _x_471 with
-                                    | Some val__472 -> (let _x_473 = Eff.Perform (val__468, val__472) in
-                                      Some _x_473)
+                    | head_467 :: tail_468 -> (match tail_468 with
+                        | head_469 :: tail_470 -> (match tail_470 with
+                            | [] -> (let _x_471 = store_program_gen_native_op_c_to_val in
+                              let _x_472 = store_program_gen_native_op_c_of_val in
+                              let _x_473 = store_guarded _x_471 _x_472 head_467 in
+                              match _x_473 with
+                                | Some val__474 -> (let _x_475 = store_program_gen_term_c_to_val_term in
+                                  let _x_476 = store_program_gen_term_c_raw_term in
+                                  let _x_477 = store_guarded _x_475 _x_476 head_469 in
+                                  match _x_477 with
+                                    | Some val__478 -> (let _x_479 = Eff.Perform (val__474, val__478) in
+                                      Some _x_479)
                                     | _ -> None)
                                 | _ -> None)
                             | _ -> None)
@@ -35466,14 +35479,14 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                     | _ -> None) else (let _x_16 = 7 in
                   let _x_17 = index_2 = _x_16 in
                   if _x_17 then (match args_3 with
-                      | head_448 :: tail_449 -> (match tail_449 with
-                          | head_450 :: tail_451 -> (match tail_451 with
-                              | [] -> (let _x_452 = store_program_gen_eff_c_raw_eff head_448 in
-                                match _x_452 with
-                                  | Some val__453 -> (let _x_454 = store_program_gen_eff_c_raw_eff head_450 in
-                                    match _x_454 with
-                                      | Some val__455 -> (let _x_456 = Eff.Bind (val__453, val__455) in
-                                        Some _x_456)
+                      | head_452 :: tail_453 -> (match tail_453 with
+                          | head_454 :: tail_455 -> (match tail_455 with
+                              | [] -> (let _x_456 = store_program_gen_eff_c_raw_eff head_452 in
+                                match _x_456 with
+                                  | Some val__457 -> (let _x_458 = store_program_gen_eff_c_raw_eff head_454 in
+                                    match _x_458 with
+                                      | Some val__459 -> (let _x_460 = Eff.Bind (val__457, val__459) in
+                                        Some _x_460)
                                       | _ -> None)
                                   | _ -> None)
                               | _ -> None)
@@ -35481,24 +35494,24 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                       | _ -> None) else (let _x_18 = 8 in
                     let _x_19 = index_2 = _x_18 in
                     if _x_19 then (match args_3 with
-                        | head_439 :: tail_440 -> (match tail_440 with
-                            | [] -> (let _x_441 = store_program_gen_eff_c_raw_stmts head_439 in
-                              match _x_441 with
-                                | Some val__442 -> (let _x_443 = Eff.Gen val__442 in
-                                  Some _x_443)
+                        | head_443 :: tail_444 -> (match tail_444 with
+                            | [] -> (let _x_445 = store_program_gen_eff_c_raw_stmts head_443 in
+                              match _x_445 with
+                                | Some val__446 -> (let _x_447 = Eff.Gen val__446 in
+                                  Some _x_447)
                                 | _ -> None)
                             | _ -> None)
                         | _ -> None) else (let _x_20 = 9 in
                       let _x_21 = index_2 = _x_20 in
                       if _x_21 then (match args_3 with
-                          | head_424 :: tail_425 -> (match tail_425 with
-                              | head_426 :: tail_427 -> (match tail_427 with
-                                  | [] -> (let _x_428 = store_program_gen_eff_c_raw_eff head_424 in
-                                    match _x_428 with
-                                      | Some val__429 -> (let _x_430 = store_program_gen_eff_c_raw_eff head_426 in
-                                        match _x_430 with
-                                          | Some val__431 -> (let _x_432 = Eff.CatchCause (val__429, val__431) in
-                                            Some _x_432)
+                          | head_428 :: tail_429 -> (match tail_429 with
+                              | head_430 :: tail_431 -> (match tail_431 with
+                                  | [] -> (let _x_432 = store_program_gen_eff_c_raw_eff head_428 in
+                                    match _x_432 with
+                                      | Some val__433 -> (let _x_434 = store_program_gen_eff_c_raw_eff head_430 in
+                                        match _x_434 with
+                                          | Some val__435 -> (let _x_436 = Eff.CatchCause (val__433, val__435) in
+                                            Some _x_436)
                                           | _ -> None)
                                       | _ -> None)
                                   | _ -> None)
@@ -35506,17 +35519,17 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                           | _ -> None) else (let _x_22 = 10 in
                         let _x_23 = index_2 = _x_22 in
                         if _x_23 then (match args_3 with
-                            | head_403 :: tail_404 -> (match tail_404 with
-                                | head_405 :: tail_406 -> (match tail_406 with
-                                    | head_407 :: tail_408 -> (match tail_408 with
-                                        | [] -> (let _x_409 = store_program_gen_eff_c_raw_eff head_403 in
-                                          match _x_409 with
-                                            | Some val__410 -> (let _x_411 = store_program_gen_eff_c_raw_eff head_405 in
-                                              match _x_411 with
-                                                | Some val__412 -> (let _x_413 = store_program_gen_eff_c_raw_eff head_407 in
-                                                  match _x_413 with
-                                                    | Some val__414 -> (let _x_415 = Eff.MatchCause (val__410, val__412, val__414) in
-                                                      Some _x_415)
+                            | head_407 :: tail_408 -> (match tail_408 with
+                                | head_409 :: tail_410 -> (match tail_410 with
+                                    | head_411 :: tail_412 -> (match tail_412 with
+                                        | [] -> (let _x_413 = store_program_gen_eff_c_raw_eff head_407 in
+                                          match _x_413 with
+                                            | Some val__414 -> (let _x_415 = store_program_gen_eff_c_raw_eff head_409 in
+                                              match _x_415 with
+                                                | Some val__416 -> (let _x_417 = store_program_gen_eff_c_raw_eff head_411 in
+                                                  match _x_417 with
+                                                    | Some val__418 -> (let _x_419 = Eff.MatchCause (val__414, val__416, val__418) in
+                                                      Some _x_419)
                                                     | _ -> None)
                                                 | _ -> None)
                                             | _ -> None)
@@ -35526,14 +35539,14 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                             | _ -> None) else (let _x_24 = 11 in
                           let _x_25 = index_2 = _x_24 in
                           if _x_25 then (match args_3 with
-                              | head_388 :: tail_389 -> (match tail_389 with
-                                  | head_390 :: tail_391 -> (match tail_391 with
-                                      | [] -> (let _x_392 = store_program_gen_eff_c_raw_eff head_388 in
-                                        match _x_392 with
-                                          | Some val__393 -> (let _x_394 = store_program_gen_eff_c_raw_eff head_390 in
-                                            match _x_394 with
-                                              | Some val__395 -> (let _x_396 = Eff.OnExit (val__393, val__395) in
-                                                Some _x_396)
+                              | head_392 :: tail_393 -> (match tail_393 with
+                                  | head_394 :: tail_395 -> (match tail_395 with
+                                      | [] -> (let _x_396 = store_program_gen_eff_c_raw_eff head_392 in
+                                        match _x_396 with
+                                          | Some val__397 -> (let _x_398 = store_program_gen_eff_c_raw_eff head_394 in
+                                            match _x_398 with
+                                              | Some val__399 -> (let _x_400 = Eff.OnExit (val__397, val__399) in
+                                                Some _x_400)
                                               | _ -> None)
                                           | _ -> None)
                                       | _ -> None)
@@ -35541,55 +35554,57 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                               | _ -> None) else (let _x_26 = 12 in
                             let _x_27 = index_2 = _x_26 in
                             if _x_27 then (match args_3 with
-                                | head_379 :: tail_380 -> (match tail_380 with
-                                    | [] -> (let _x_381 = store_program_gen_eff_c_raw_eff head_379 in
-                                      match _x_381 with
-                                        | Some val__382 -> (let _x_383 = Eff.Exit val__382 in
-                                          Some _x_383)
+                                | head_383 :: tail_384 -> (match tail_384 with
+                                    | [] -> (let _x_385 = store_program_gen_eff_c_raw_eff head_383 in
+                                      match _x_385 with
+                                        | Some val__386 -> (let _x_387 = Eff.Exit val__386 in
+                                          Some _x_387)
                                         | _ -> None)
                                     | _ -> None)
                                 | _ -> None) else (let _x_28 = 13 in
                               let _x_29 = index_2 = _x_28 in
                               if _x_29 then (match args_3 with
-                                  | head_370 :: tail_371 -> (match tail_371 with
-                                      | [] -> (let _x_372 = store_program_gen_eff_c_raw_eff head_370 in
-                                        match _x_372 with
-                                          | Some val__373 -> (let _x_374 = Eff.Uninterruptible val__373 in
-                                            Some _x_374)
+                                  | head_374 :: tail_375 -> (match tail_375 with
+                                      | [] -> (let _x_376 = store_program_gen_eff_c_raw_eff head_374 in
+                                        match _x_376 with
+                                          | Some val__377 -> (let _x_378 = Eff.Uninterruptible val__377 in
+                                            Some _x_378)
                                           | _ -> None)
                                       | _ -> None)
                                   | _ -> None) else (let _x_30 = 14 in
                                 let _x_31 = index_2 = _x_30 in
                                 if _x_31 then (match args_3 with
-                                    | head_361 :: tail_362 -> (match tail_362 with
-                                        | [] -> (let _x_363 = store_program_gen_eff_c_raw_eff head_361 in
-                                          match _x_363 with
-                                            | Some val__364 -> (let _x_365 = Eff.Interruptible val__364 in
-                                              Some _x_365)
+                                    | head_365 :: tail_366 -> (match tail_366 with
+                                        | [] -> (let _x_367 = store_program_gen_eff_c_raw_eff head_365 in
+                                          match _x_367 with
+                                            | Some val__368 -> (let _x_369 = Eff.Interruptible val__368 in
+                                              Some _x_369)
                                             | _ -> None)
                                         | _ -> None)
                                     | _ -> None) else (let _x_32 = 17 in
                                   let _x_33 = index_2 = _x_32 in
                                   if _x_33 then (match args_3 with
-                                      | head_353 :: tail_354 -> (match tail_354 with
-                                          | [] -> (match (head_353 : Val.t) with
-                                              | Val.Nat n_355 -> (let _x_356 = Eff.YieldNow n_355 in
-                                                Some _x_356)
+                                      | head_357 :: tail_358 -> (match tail_358 with
+                                          | [] -> (match (head_357 : Val.t) with
+                                              | Val.Nat n_359 -> (let _x_360 = Eff.YieldNow n_359 in
+                                                Some _x_360)
                                               | _ -> None)
                                           | _ -> None)
                                       | _ -> None) else (let _x_34 = 19 in
                                     let _x_35 = index_2 = _x_34 in
                                     if _x_35 then (match args_3 with
-                                        | head_336 :: tail_337 -> (match tail_337 with
-                                            | head_338 :: tail_339 -> (match tail_339 with
-                                                | [] -> (let _x_340 = store_program_gen_term_c_to_val_term in
-                                                  let _x_341 = store_program_gen_term_c_raw_term in
-                                                  let _x_342 = store_guarded _x_340 _x_341 head_336 in
-                                                  match _x_342 with
-                                                    | Some val__343 -> (let _x_344 = store_program_gen_observer_mode_c_of_val head_338 in
-                                                      match _x_344 with
-                                                        | Some val__345 -> (let _x_346 = Eff.AwaitFiber (val__343, val__345) in
-                                                          Some _x_346)
+                                        | head_338 :: tail_339 -> (match tail_339 with
+                                            | head_340 :: tail_341 -> (match tail_341 with
+                                                | [] -> (let _x_342 = store_program_gen_term_c_to_val_term in
+                                                  let _x_343 = store_program_gen_term_c_raw_term in
+                                                  let _x_344 = store_guarded _x_342 _x_343 head_338 in
+                                                  match _x_344 with
+                                                    | Some val__345 -> (let _x_346 = store_program_gen_observer_mode_c_to_val in
+                                                      let _x_347 = store_program_gen_observer_mode_c_of_val in
+                                                      let _x_348 = store_guarded _x_346 _x_347 head_340 in
+                                                      match _x_348 with
+                                                        | Some val__349 -> (let _x_350 = Eff.AwaitFiber (val__345, val__349) in
+                                                          Some _x_350)
                                                         | _ -> None)
                                                     | _ -> None)
                                                 | _ -> None)
@@ -35597,34 +35612,34 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                                         | _ -> None) else (let _x_36 = 20 in
                                       let _x_37 = index_2 = _x_36 in
                                       if _x_37 then (match args_3 with
-                                          | head_327 :: tail_328 -> (match tail_328 with
-                                              | [] -> (let _x_329 = store_program_gen_eff_c_raw_action_term head_327 in
-                                                match _x_329 with
-                                                  | Some val__330 -> (let _x_331 = Eff.WithFiber val__330 in
-                                                    Some _x_331)
+                                          | head_329 :: tail_330 -> (match tail_330 with
+                                              | [] -> (let _x_331 = store_program_gen_eff_c_raw_action_term head_329 in
+                                                match _x_331 with
+                                                  | Some val__332 -> (let _x_333 = Eff.WithFiber val__332 in
+                                                    Some _x_333)
                                                   | _ -> None)
                                               | _ -> None)
                                           | _ -> None) else (let _x_38 = 21 in
                                         let _x_39 = index_2 = _x_38 in
                                         if _x_39 then (match args_3 with
-                                            | head_318 :: tail_319 -> (match tail_319 with
-                                                | [] -> (let _x_320 = store_program_gen_eff_c_raw_eff head_318 in
-                                                  match _x_320 with
-                                                    | Some val__321 -> (let _x_322 = Eff.Scoped val__321 in
-                                                      Some _x_322)
+                                            | head_320 :: tail_321 -> (match tail_321 with
+                                                | [] -> (let _x_322 = store_program_gen_eff_c_raw_eff head_320 in
+                                                  match _x_322 with
+                                                    | Some val__323 -> (let _x_324 = Eff.Scoped val__323 in
+                                                      Some _x_324)
                                                     | _ -> None)
                                                 | _ -> None)
                                             | _ -> None) else (let _x_40 = 22 in
                                           let _x_41 = index_2 = _x_40 in
                                           if _x_41 then (match args_3 with
-                                              | head_303 :: tail_304 -> (match tail_304 with
-                                                  | head_305 :: tail_306 -> (match tail_306 with
-                                                      | [] -> (let _x_307 = store_program_gen_eff_c_raw_eff head_303 in
-                                                        match _x_307 with
-                                                          | Some val__308 -> (let _x_309 = store_program_gen_eff_c_raw_eff head_305 in
-                                                            match _x_309 with
-                                                              | Some val__310 -> (let _x_311 = Eff.AcquireRelease (val__308, val__310) in
-                                                                Some _x_311)
+                                              | head_305 :: tail_306 -> (match tail_306 with
+                                                  | head_307 :: tail_308 -> (match tail_308 with
+                                                      | [] -> (let _x_309 = store_program_gen_eff_c_raw_eff head_305 in
+                                                        match _x_309 with
+                                                          | Some val__310 -> (let _x_311 = store_program_gen_eff_c_raw_eff head_307 in
+                                                            match _x_311 with
+                                                              | Some val__312 -> (let _x_313 = Eff.AcquireRelease (val__310, val__312) in
+                                                                Some _x_313)
                                                               | _ -> None)
                                                           | _ -> None)
                                                       | _ -> None)
@@ -35632,19 +35647,19 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                                               | _ -> None) else (let _x_42 = 23 in
                                             let _x_43 = index_2 = _x_42 in
                                             if _x_43 then (match args_3 with
-                                                | head_281 :: tail_282 -> (match tail_282 with
-                                                    | head_283 :: tail_284 -> (match tail_284 with
-                                                        | head_285 :: tail_286 -> (match tail_286 with
-                                                            | [] -> (let _x_287 = store_program_gen_eff_c_raw_layer_term head_281 in
-                                                              match _x_287 with
-                                                                | Some val__288 -> (match (head_283 : Val.t) with
-                                                                    | Val.Bool b_289 -> (let _x_290 = store_program_gen_eff_c_raw_eff head_285 in
-                                                                      match _x_290 with
-                                                                        | Some val__291 -> (let _x_292 = Eff.ProvideLayer (val__288, b_289, val__291) in
-                                                                          Some _x_292)
+                                                | head_283 :: tail_284 -> (match tail_284 with
+                                                    | head_285 :: tail_286 -> (match tail_286 with
+                                                        | head_287 :: tail_288 -> (match tail_288 with
+                                                            | [] -> (let _x_289 = store_program_gen_eff_c_raw_layer_term head_283 in
+                                                              match _x_289 with
+                                                                | Some val__290 -> (match (head_285 : Val.t) with
+                                                                    | Val.Bool b_291 -> (let _x_292 = store_program_gen_eff_c_raw_eff head_287 in
+                                                                      match _x_292 with
+                                                                        | Some val__293 -> (let _x_294 = Eff.ProvideLayer (val__290, b_291, val__293) in
+                                                                          Some _x_294)
                                                                         | _ -> None)
                                                                     | _ -> None)
-                                                                | _ -> (match (head_283 : Val.t) with
+                                                                | _ -> (match (head_285 : Val.t) with
                                                                     | Val.Bool _ -> None
                                                                     | _ -> None))
                                                             | _ -> None)
@@ -35653,29 +35668,29 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                                                 | _ -> None) else (let _x_44 = 24 in
                                               let _x_45 = index_2 = _x_44 in
                                               if _x_45 then (match args_3 with
-                                                  | head_272 :: tail_273 -> (match tail_273 with
-                                                      | [] -> (let _x_274 = store_program_gen_service_key_c_of_val head_272 in
-                                                        match _x_274 with
-                                                          | Some val__275 -> (let _x_276 = Eff.Service val__275 in
-                                                            Some _x_276)
+                                                  | head_274 :: tail_275 -> (match tail_275 with
+                                                      | [] -> (let _x_276 = store_program_gen_service_key_c_of_val head_274 in
+                                                        match _x_276 with
+                                                          | Some val__277 -> (let _x_278 = Eff.Service val__277 in
+                                                            Some _x_278)
                                                           | _ -> None)
                                                       | _ -> None)
                                                   | _ -> None) else (let _x_46 = 25 in
                                                 let _x_47 = index_2 = _x_46 in
                                                 if _x_47 then (match args_3 with
-                                                    | head_249 :: tail_250 -> (match tail_250 with
-                                                        | head_251 :: tail_252 -> (match tail_252 with
-                                                            | head_253 :: tail_254 -> (match tail_254 with
-                                                                | [] -> (let _x_255 = store_program_gen_service_key_c_of_val head_249 in
-                                                                  match _x_255 with
-                                                                    | Some val__256 -> (let _x_257 = store_program_gen_term_c_to_val_term in
-                                                                      let _x_258 = store_program_gen_term_c_raw_term in
-                                                                      let _x_259 = store_guarded _x_257 _x_258 head_251 in
-                                                                      match _x_259 with
-                                                                        | Some val__260 -> (let _x_261 = store_program_gen_eff_c_raw_eff head_253 in
-                                                                          match _x_261 with
-                                                                            | Some val__262 -> (let _x_263 = Eff.ProvideService (val__256, val__260, val__262) in
-                                                                              Some _x_263)
+                                                    | head_251 :: tail_252 -> (match tail_252 with
+                                                        | head_253 :: tail_254 -> (match tail_254 with
+                                                            | head_255 :: tail_256 -> (match tail_256 with
+                                                                | [] -> (let _x_257 = store_program_gen_service_key_c_of_val head_251 in
+                                                                  match _x_257 with
+                                                                    | Some val__258 -> (let _x_259 = store_program_gen_term_c_to_val_term in
+                                                                      let _x_260 = store_program_gen_term_c_raw_term in
+                                                                      let _x_261 = store_guarded _x_259 _x_260 head_253 in
+                                                                      match _x_261 with
+                                                                        | Some val__262 -> (let _x_263 = store_program_gen_eff_c_raw_eff head_255 in
+                                                                          match _x_263 with
+                                                                            | Some val__264 -> (let _x_265 = Eff.ProvideService (val__258, val__262, val__264) in
+                                                                              Some _x_265)
                                                                             | _ -> None)
                                                                         | _ -> None)
                                                                     | _ -> None)
@@ -35685,19 +35700,19 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                                                     | _ -> None) else (let _x_48 = 26 in
                                                   let _x_49 = index_2 = _x_48 in
                                                   if _x_49 then (match args_3 with
-                                                      | head_226 :: tail_227 -> (match tail_227 with
-                                                          | head_228 :: tail_229 -> (match tail_229 with
-                                                              | head_230 :: tail_231 -> (match tail_231 with
-                                                                  | [] -> (let _x_232 = store_program_gen_term_c_to_val_term in
-                                                                    let _x_233 = store_program_gen_term_c_raw_term in
-                                                                    let _x_234 = store_guarded _x_232 _x_233 head_226 in
-                                                                    match _x_234 with
-                                                                      | Some val__235 -> (let _x_236 = store_program_gen_eff_c_raw_eff head_228 in
-                                                                        match _x_236 with
-                                                                          | Some val__237 -> (let _x_238 = store_program_gen_eff_c_raw_eff head_230 in
-                                                                            match _x_238 with
-                                                                              | Some val__239 -> (let _x_240 = Eff.CatchIf (val__235, val__237, val__239) in
-                                                                                Some _x_240)
+                                                      | head_228 :: tail_229 -> (match tail_229 with
+                                                          | head_230 :: tail_231 -> (match tail_231 with
+                                                              | head_232 :: tail_233 -> (match tail_233 with
+                                                                  | [] -> (let _x_234 = store_program_gen_term_c_to_val_term in
+                                                                    let _x_235 = store_program_gen_term_c_raw_term in
+                                                                    let _x_236 = store_guarded _x_234 _x_235 head_228 in
+                                                                    match _x_236 with
+                                                                      | Some val__237 -> (let _x_238 = store_program_gen_eff_c_raw_eff head_230 in
+                                                                        match _x_238 with
+                                                                          | Some val__239 -> (let _x_240 = store_program_gen_eff_c_raw_eff head_232 in
+                                                                            match _x_240 with
+                                                                              | Some val__241 -> (let _x_242 = Eff.CatchIf (val__237, val__239, val__241) in
+                                                                                Some _x_242)
                                                                               | _ -> None)
                                                                           | _ -> None)
                                                                       | _ -> None)
@@ -35715,14 +35730,16 @@ let rec store_program_gen_eff_c_raw_eff (x_1 : Val.t) : NativeOp.t Eff.t option 
                                                                           let _x_206 = store_program_gen_term_c_raw_term in
                                                                           let _x_207 = store_guarded _x_205 _x_206 head_197 in
                                                                           match _x_207 with
-                                                                            | Some val__208 -> (let _x_209 = store_program_gen_decision_c_of_val head_199 in
-                                                                              match _x_209 with
-                                                                                | Some val__210 -> (let _x_211 = store_program_gen_eff_c_raw_eff head_201 in
-                                                                                  match _x_211 with
-                                                                                    | Some val__212 -> (let _x_213 = store_program_gen_eff_c_raw_eff head_203 in
-                                                                                      match _x_213 with
-                                                                                        | Some val__214 -> (let _x_215 = Eff.Select (val__208, val__210, val__212, val__214) in
-                                                                                          Some _x_215)
+                                                                            | Some val__208 -> (let _x_209 = store_program_gen_decision_c_to_val in
+                                                                              let _x_210 = store_program_gen_decision_c_of_val in
+                                                                              let _x_211 = store_guarded _x_209 _x_210 head_199 in
+                                                                              match _x_211 with
+                                                                                | Some val__212 -> (let _x_213 = store_program_gen_eff_c_raw_eff head_201 in
+                                                                                  match _x_213 with
+                                                                                    | Some val__214 -> (let _x_215 = store_program_gen_eff_c_raw_eff head_203 in
+                                                                                      match _x_215 with
+                                                                                        | Some val__216 -> (let _x_217 = Eff.Select (val__208, val__212, val__214, val__216) in
+                                                                                          Some _x_217)
                                                                                         | _ -> None)
                                                                                     | _ -> None)
                                                                                 | _ -> None)
@@ -35920,10 +35937,12 @@ and store_program_gen_eff_c_raw_layer_term (x_1 : Val.t) : NativeOp.t LayerTerm.
               | head_135 :: tail_136 -> (match tail_136 with
                   | [] -> (let _x_137 = store_program_gen_service_key_c_of_val head_133 in
                     match _x_137 with
-                      | Some val__138 -> (let _x_139 = store_program_gen_lit_c_of_val head_135 in
-                        match _x_139 with
-                          | Some val__140 -> (let _x_141 = LayerTerm.Succeed (val__138, val__140) in
-                            Some _x_141)
+                      | Some val__138 -> (let _x_139 = store_program_gen_lit_c_to_val in
+                        let _x_140 = store_program_gen_lit_c_of_val in
+                        let _x_141 = store_guarded _x_139 _x_140 head_135 in
+                        match _x_141 with
+                          | Some val__142 -> (let _x_143 = LayerTerm.Succeed (val__138, val__142) in
+                            Some _x_143)
                           | _ -> None)
                       | _ -> None)
                   | _ -> None)
@@ -36699,11 +36718,13 @@ let rec list_map_m_loop_at_store_program_gen_row_c_of_val_spec_0 (x_1 : Val.t li
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
-    | head_5 :: tail_6 -> (let _x_7 = store_program_gen_row_arg_c_of_val head_5 in
-      match _x_7 with
+    | head_5 :: tail_6 -> (let _x_7 = store_program_gen_row_arg_c_to_val in
+      let _x_8 = store_program_gen_row_arg_c_of_val in
+      let _x_9 = store_guarded _x_7 _x_8 head_5 in
+      match _x_9 with
         | None -> None
-        | Some val__9 -> (let _x_10 = val__9 :: x_2 in
-          list_map_m_loop_at_store_program_gen_row_c_of_val_spec_0 tail_6 _x_10))
+        | Some val__11 -> (let _x_12 = val__11 :: x_2 in
+          list_map_m_loop_at_store_program_gen_row_c_of_val_spec_0 tail_6 _x_12))
 
 
 
@@ -36840,33 +36861,39 @@ let store_program_gen_row_c_of_val (x_1 : Val.t) : Row.t option =
                                                       | head_93 :: tail_94 -> (match tail_94 with
                                                           | [] -> (match (head_7 : Val.t) with
                                                               | Val.Str s_95 -> (match (head_9 : Val.t) with
-                                                                  | Val.Str s_96 -> (let _x_97 = store_program_gen_row_shape_c_of_val head_11 in
-                                                                    match _x_97 with
-                                                                      | Some val__98 -> (match (head_13 : Val.t) with
-                                                                          | Val.List xs_99 -> (let _x_100 = [] in
-                                                                            let _x_101 = list_map_m_loop_at_store_program_gen_row_c_of_val_spec_0 xs_99 _x_100 in
-                                                                            match _x_101 with
-                                                                              | Some val__102 -> (let _x_103 = store_program_gen_row_kind_c_of_val head_15 in
-                                                                                match _x_103 with
-                                                                                  | Some val__104 -> (let _x_105 = store_program_gen_ty_c_to_val_ty in
-                                                                                    let _x_106 = store_program_gen_ty_c_raw_ty in
-                                                                                    let _x_107 = store_guarded _x_105 _x_106 head_17 in
-                                                                                    match _x_107 with
-                                                                                      | Some val__108 -> (let _x_109 = store_guarded _x_105 _x_106 head_19 in
-                                                                                        match _x_109 with
-                                                                                          | Some val__110 -> (let _x_111 = store_guarded _x_105 _x_106 head_21 in
-                                                                                            match _x_111 with
-                                                                                              | Some val__112 -> (match (head_23 : Val.t) with
-                                                                                                  | Val.List xs_113 -> (let _x_114 = list_map_m_loop_at_store_canonical_image_at_store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0_spec_4_spec_6 xs_113 _x_100 in
-                                                                                                    match _x_114 with
-                                                                                                      | Some val__115 -> (match (head_25 : Val.t) with
-                                                                                                          | Val.Str s_116 -> (match (head_27 : Val.t) with
-                                                                                                              | Val.List xs_117 -> (let _x_118 = list_map_m_loop_at_store_program_gen_term_c_raw_term_spec_1 xs_117 _x_100 in
-                                                                                                                match _x_118 with
-                                                                                                                  | Some val__119 -> (let _x_120 = store_program_gen_registration_c_of_val head_93 in
-                                                                                                                    match _x_120 with
-                                                                                                                      | Some val__121 -> (let _x_122 = ({ Row.name = s_95; Row.spelling = s_96; Row.shape = val__98; Row.trailing = val__102; Row.kind = val__104; Row.request = val__108; Row.answer = val__110; Row.error = val__112; Row.requires = val__115; Row.cite = s_116; Row.type_args = val__119; Row.registration = val__121 } : Row.t) in
-                                                                                                                        Some _x_122)
+                                                                  | Val.Str s_96 -> (let _x_97 = store_program_gen_row_shape_c_to_val in
+                                                                    let _x_98 = store_program_gen_row_shape_c_of_val in
+                                                                    let _x_99 = store_guarded _x_97 _x_98 head_11 in
+                                                                    match _x_99 with
+                                                                      | Some val__100 -> (match (head_13 : Val.t) with
+                                                                          | Val.List xs_101 -> (let _x_102 = [] in
+                                                                            let _x_103 = list_map_m_loop_at_store_program_gen_row_c_of_val_spec_0 xs_101 _x_102 in
+                                                                            match _x_103 with
+                                                                              | Some val__104 -> (let _x_105 = store_program_gen_row_kind_c_to_val in
+                                                                                let _x_106 = store_program_gen_row_kind_c_of_val in
+                                                                                let _x_107 = store_guarded _x_105 _x_106 head_15 in
+                                                                                match _x_107 with
+                                                                                  | Some val__108 -> (let _x_109 = store_program_gen_ty_c_to_val_ty in
+                                                                                    let _x_110 = store_program_gen_ty_c_raw_ty in
+                                                                                    let _x_111 = store_guarded _x_109 _x_110 head_17 in
+                                                                                    match _x_111 with
+                                                                                      | Some val__112 -> (let _x_113 = store_guarded _x_109 _x_110 head_19 in
+                                                                                        match _x_113 with
+                                                                                          | Some val__114 -> (let _x_115 = store_guarded _x_109 _x_110 head_21 in
+                                                                                            match _x_115 with
+                                                                                              | Some val__116 -> (match (head_23 : Val.t) with
+                                                                                                  | Val.List xs_117 -> (let _x_118 = list_map_m_loop_at_store_canonical_image_at_store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0_spec_4_spec_6 xs_117 _x_102 in
+                                                                                                    match _x_118 with
+                                                                                                      | Some val__119 -> (match (head_25 : Val.t) with
+                                                                                                          | Val.Str s_120 -> (match (head_27 : Val.t) with
+                                                                                                              | Val.List xs_121 -> (let _x_122 = list_map_m_loop_at_store_program_gen_term_c_raw_term_spec_1 xs_121 _x_102 in
+                                                                                                                match _x_122 with
+                                                                                                                  | Some val__123 -> (let _x_124 = store_program_gen_registration_c_to_val in
+                                                                                                                    let _x_125 = store_program_gen_registration_c_of_val in
+                                                                                                                    let _x_126 = store_guarded _x_124 _x_125 head_93 in
+                                                                                                                    match _x_126 with
+                                                                                                                      | Some val__127 -> (let _x_128 = ({ Row.name = s_95; Row.spelling = s_96; Row.shape = val__100; Row.trailing = val__104; Row.kind = val__108; Row.request = val__112; Row.answer = val__114; Row.error = val__116; Row.requires = val__119; Row.cite = s_120; Row.type_args = val__123; Row.registration = val__127 } : Row.t) in
+                                                                                                                        Some _x_128)
                                                                                                                       | _ -> None)
                                                                                                                   | _ -> None)
                                                                                                               | _ -> None)
@@ -39275,41 +39302,43 @@ let store_runner_gen_defect_c_of_val (x_1 : Val.t) : Defect.t option =
     | Val.Ctor (index_2, args_3) -> (let _x_4 = 0 in
       let _x_5 = index_2 = _x_4 in
       if _x_5 then (match args_3 with
-          | [] -> (let _x_43 = Defect.NotImplemented in
-            Some _x_43)
+          | [] -> (let _x_45 = Defect.NotImplemented in
+            Some _x_45)
           | _ -> None) else (let _x_6 = 1 in
         let _x_7 = index_2 = _x_6 in
         if _x_7 then (match args_3 with
-            | [] -> (let _x_40 = Defect.AsyncFiber in
-              Some _x_40)
+            | [] -> (let _x_42 = Defect.AsyncFiber in
+              Some _x_42)
             | _ -> None) else (let _x_8 = 2 in
           let _x_9 = index_2 = _x_8 in
           if _x_9 then (match args_3 with
-              | [] -> (let _x_37 = Defect.BadName in
-                Some _x_37)
+              | [] -> (let _x_39 = Defect.BadName in
+                Some _x_39)
               | _ -> None) else (let _x_10 = 3 in
             let _x_11 = index_2 = _x_10 in
             if _x_11 then (match args_3 with
-                | [] -> (let _x_34 = Defect.MissingService in
-                  Some _x_34)
+                | [] -> (let _x_36 = Defect.MissingService in
+                  Some _x_36)
                 | _ -> None) else (let _x_12 = 4 in
               let _x_13 = index_2 = _x_12 in
               if _x_13 then (match args_3 with
-                  | head_26 :: tail_27 -> (match tail_27 with
-                      | [] -> (match (head_26 : Val.t) with
-                          | Val.Nat n_28 -> (let _x_29 = Defect.User n_28 in
-                            Some _x_29)
+                  | head_28 :: tail_29 -> (match tail_29 with
+                      | [] -> (match (head_28 : Val.t) with
+                          | Val.Nat n_30 -> (let _x_31 = Defect.User n_30 in
+                            Some _x_31)
                           | _ -> None)
                       | _ -> None)
                   | _ -> None) else (let _x_14 = 5 in
                 let _x_15 = index_2 = _x_14 in
                 if _x_15 then (match args_3 with
                     | head_17 :: tail_18 -> (match tail_18 with
-                        | [] -> (let _x_19 = store_runner_gen_err_c_of_val head_17 in
-                          match _x_19 with
+                        | [] -> (let _x_19 = store_runner_gen_err_c_to_val in
+                          let _x_20 = store_runner_gen_err_c_of_val in
+                          let _x_21 = store_guarded _x_19 _x_20 head_17 in
+                          match _x_21 with
                             | None -> None
-                            | Some val__21 -> (let _x_22 = Defect.Error val__21 in
-                              Some _x_22))
+                            | Some val__23 -> (let _x_24 = Defect.Error val__23 in
+                              Some _x_24))
                         | _ -> None)
                     | _ -> None) else None))))))
     | _ -> None
@@ -39323,16 +39352,18 @@ let store_runner_gen_reason_c_of_val (x_1 : Val.t) : (Err.t, Defect.t, int, unit
     | Val.Ctor (index_2, args_3) -> (let _x_4 = 0 in
       let _x_5 = index_2 = _x_4 in
       if _x_5 then (match args_3 with
-          | head_48 :: tail_49 -> (match tail_49 with
-              | head_50 :: tail_51 -> (match tail_51 with
-                  | [] -> (let _x_52 = store_runner_gen_err_c_of_val head_48 in
-                    match _x_52 with
-                      | Some val__53 -> (let _x_54 = store_annotations_image_at_store_runner_gen_reason_c_to_val_spec_0 in
-                        match (_x_54 : _ image) with
-                          | { of_val = of_val_2; _ } -> (let _x_55 = of_val_2 head_50 in
-                            match _x_55 with
-                              | Some val__56 -> (let _x_57 = Reason.Fail (val__53, val__56) in
-                                Some _x_57)
+          | head_50 :: tail_51 -> (match tail_51 with
+              | head_52 :: tail_53 -> (match tail_53 with
+                  | [] -> (let _x_54 = store_runner_gen_err_c_to_val in
+                    let _x_55 = store_runner_gen_err_c_of_val in
+                    let _x_56 = store_guarded _x_54 _x_55 head_50 in
+                    match _x_56 with
+                      | Some val__57 -> (let _x_58 = store_annotations_image_at_store_runner_gen_reason_c_to_val_spec_0 in
+                        match (_x_58 : _ image) with
+                          | { of_val = of_val_2; _ } -> (let _x_59 = of_val_2 head_52 in
+                            match _x_59 with
+                              | Some val__60 -> (let _x_61 = Reason.Fail (val__57, val__60) in
+                                Some _x_61)
                               | _ -> None))
                       | _ -> None)
                   | _ -> None)
@@ -39342,14 +39373,16 @@ let store_runner_gen_reason_c_of_val (x_1 : Val.t) : (Err.t, Defect.t, int, unit
         if _x_7 then (match args_3 with
             | head_32 :: tail_33 -> (match tail_33 with
                 | head_34 :: tail_35 -> (match tail_35 with
-                    | [] -> (let _x_36 = store_runner_gen_defect_c_of_val head_32 in
-                      match _x_36 with
-                        | Some val__37 -> (let _x_38 = store_annotations_image_at_store_runner_gen_reason_c_to_val_spec_0 in
-                          match (_x_38 : _ image) with
-                            | { of_val = of_val_1; _ } -> (let _x_39 = of_val_1 head_34 in
-                              match _x_39 with
-                                | Some val__40 -> (let _x_41 = Reason.Die (val__37, val__40) in
-                                  Some _x_41)
+                    | [] -> (let _x_36 = store_runner_gen_defect_c_to_val in
+                      let _x_37 = store_runner_gen_defect_c_of_val in
+                      let _x_38 = store_guarded _x_36 _x_37 head_32 in
+                      match _x_38 with
+                        | Some val__39 -> (let _x_40 = store_annotations_image_at_store_runner_gen_reason_c_to_val_spec_0 in
+                          match (_x_40 : _ image) with
+                            | { of_val = of_val_1; _ } -> (let _x_41 = of_val_1 head_34 in
+                              match _x_41 with
+                                | Some val__42 -> (let _x_43 = Reason.Die (val__39, val__42) in
+                                  Some _x_43)
                                 | _ -> None))
                         | _ -> None)
                     | _ -> None)
@@ -39387,11 +39420,13 @@ let rec list_map_m_loop_at_store_runner_gen_cause_c_of_val_spec_0 (x_1 : Val.t l
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
-    | head_5 :: tail_6 -> (let _x_7 = store_runner_gen_reason_c_of_val head_5 in
-      match _x_7 with
+    | head_5 :: tail_6 -> (let _x_7 = store_runner_gen_reason_c_to_val in
+      let _x_8 = store_runner_gen_reason_c_of_val in
+      let _x_9 = store_guarded _x_7 _x_8 head_5 in
+      match _x_9 with
         | None -> None
-        | Some val__9 -> (let _x_10 = val__9 :: x_2 in
-          list_map_m_loop_at_store_runner_gen_cause_c_of_val_spec_0 tail_6 _x_10))
+        | Some val__11 -> (let _x_12 = val__11 :: x_2 in
+          list_map_m_loop_at_store_runner_gen_cause_c_of_val_spec_0 tail_6 _x_12))
 
 
 
@@ -39450,7 +39485,9 @@ let store_runner_gen_exit_c_of_val (x_1 : Val.t) : (Val.t, Err.t, Defect.t, int,
 (* LCNF mono: Effect4.Run.Kit.exitOfVal (v : Effect4.Store.Val) : Option (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
 
 let run_kit_exit_of_val (v : Val.t) : (Val.t, Err.t, Defect.t, int, unit) Exit.t option =
-  store_runner_gen_exit_c_of_val v
+  let _x_1 = store_runner_gen_exit_c_to_val in
+  let _x_2 = store_runner_gen_exit_c_of_val in
+  store_guarded _x_1 _x_2 v
 
 
 

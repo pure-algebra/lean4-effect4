@@ -3,6 +3,7 @@ module
 public import Effect4.Store.Domain.Store
 public import Effect4.Store.Domain.Read
 public import Effect4.Store.Domain.Transaction
+public import Effect4.Store.Domain.Word
 
 /-!
 # Reached stores and typed reads
@@ -16,6 +17,12 @@ Question: `cas-get-exact`, compatibility; `Cas.get_exact` is the claim pointer.
 Reach: successful typed reading names the exact resident node, including the genesis spec.
 Exclusions: collision resistance, disk integrity, and properties of an arbitrary replay parameter.
 Consumer: session-chain loading in ST4.
+
+The read face (`Read`, `Cas.read`, seams ST3) answers resident bindings for one node, a root's
+head, the results of one query, or the closure of a reference. A results read selects by the
+designated query (`Node.resultQuery?`), never by a reference inside an output. Node and root reads
+use the resident lookup, and a closure read is `Store.closure`. A reached store holds at most one
+result node per query (`Cas.result_once`, `src/Effect4/Laws/Store/Results.lean`).
 -/
 
 @[expose] public section
@@ -586,6 +593,31 @@ structure CasOf (replay : List Event → Except TxnRefusal Store) where
 
 abbrev Cas := CasOf replayEvents
 
+/-- What a read asks for: one node, a root's head, the results of one query, or the closure of a
+reference. -/
+inductive Read where
+  | node (digest : Digest)
+  | root (name : String)
+  | results (query : Digest)
+  | closure (ref : AnyRef)
+deriving DecidableEq, Repr
+
+/-- The resident bindings a read answers. A missing node or root answers nothing. -/
+def Store.read (store : Store) : Read → List (Digest × Node)
+  | .node digest =>
+    match store.find digest with
+    | some node => [(digest, node)]
+    | none => []
+  | .root name =>
+    match store.root? name with
+    | some root =>
+      match store.find root.head.digest with
+      | some node => [(root.head.digest, node)]
+      | none => []
+    | none => []
+  | .results query => store.nodes.filter fun binding => decide (binding.2.resultQuery? = some query)
+  | .closure ref => (store.closure ref).map fun binding => (binding.digest, binding.node)
+
 namespace Cas
 /-- The empty reached store uses the empty event journal. -/
 @[no_expose] def empty : Cas := CasOf.mk Store.empty ⟨[], rfl⟩
@@ -627,6 +659,11 @@ namespace Cas
       refine ⟨events ++ [.interrupt transaction cut], ?_⟩
       rw [replay_append, reached]
       exact accepted))
+
+/-- The read face of a reached store. -/
+def read {replay : List Event → Except TxnRefusal Store} (cas : CasOf replay) (r : Read) :
+    List (Digest × Node) :=
+  cas.store.read r
 
 variable [Content Document]
 

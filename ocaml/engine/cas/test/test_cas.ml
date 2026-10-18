@@ -21,6 +21,11 @@
      G7* golden G7: `verify` on Lean's good store and its four mutations, over stores forged
          on disk record by record (a node filed under a wrong key is not something `put` can
          make — that is the point of the case).
+     G8* golden G8 (seams ST3): results replayed through `put` over forged preloads, and two
+         words from nothing (the genesis read from g1-genesisNode) through `word_wf` and
+         `apply_word`.  Every row must agree with Lean: the envelope refusals, the query edge
+         before the envelope, `poisoned` naming the query and both results, a duplicate result
+         admitted, and a mention of a query inside an output left undesignated.
      D5* the differential of §4.2 D5 on generated DAGs: the same nodes in two topological
          orders give different `nodes` and byte-identical closures.
      M*  the mutation check of §4.1: one byte of a golden flipped and the comparison goes red.
@@ -858,6 +863,83 @@ let test_g7 () =
     check (Printf.sprintf "G7 %d/%d verify rows agree with Lean" !ok !total) (!bad = [])
   end
 
+(* ============================================================ golden G8: results *)
+
+let decoded_bindings bytes =
+  match parse_exact bytes with
+  | None -> None
+  | Some v -> (
+    match bindings_of_v v with
+    | None -> None
+    | Some ps ->
+      let bs =
+        List.filter_map
+          (fun (d, b) ->
+            match E4_node.decode b with
+            | Ok n -> Some ({ E4_cas.addr = addr_of d; node = n }, b)
+            | Error _ -> None)
+          ps
+      in
+      if List.length bs = List.length ps then Some bs else None)
+
+let test_g8 () =
+  print_endline "-- golden G8: results, the envelope and one result per query";
+  let rows family = List.filter (fun (_, f, _) -> f = family) (cases ()) in
+  let puts = rows "g8" and words = rows "g8word" in
+  if puts = [] || words = [] then skip "G8 the result goldens" "no g8 rows in cases.txt"
+  else begin
+    let ok = ref 0 and bad = ref [] in
+    List.iter
+      (fun (name, _, expected) ->
+        match Option.bind (golden name) decoded_bindings with
+        | None -> bad := (name ^ " (not a wordVal)") :: !bad
+        | Some bindings -> (
+          match List.rev bindings with
+          | [] -> bad := (name ^ " (empty)") :: !bad
+          | (_, last) :: rest ->
+            let preload = List.rev_map (fun ((b : E4_cas.binding), raw) -> (E4_addr.Addr.bytes b.addr, raw)) rest in
+            let s = open_writer ~dir:(forged preload []) opts in
+            let got = word_word (E4_cas.put_bytes s last) in
+            E4_cas.close s;
+            if String.equal got expected then incr ok
+            else begin
+              bad := name :: !bad;
+              note "  g8 %s: Lean says %s, put says %s" name expected got
+            end))
+      puts;
+    check (Printf.sprintf "G8 %d/%d result admission rows agree with Lean through put" !ok
+             (List.length puts)) (!bad = []);
+    match golden "g1-genesisNode" with
+    | None -> skip "G8 the result words" "no g1-genesisNode golden"
+    | Some genesis_bytes ->
+      let genesis =
+        match E4_node.decode genesis_bytes with
+        | Ok n -> { E4_cas.addr = E4_node.address n; node = n }
+        | Error _ -> failwith "g1-genesisNode does not decode"
+      in
+      List.iter
+        (fun (name, _, expected) ->
+          match Option.bind (golden name) decoded_bindings with
+          | None -> check ("G8 " ^ name ^ " is a wordVal") false
+          | Some bindings ->
+            let w = genesis :: List.map fst bindings in
+            let d = fresh_dir () in
+            let s = open_writer ~dir:d opts in
+            let applied =
+              match E4_cas.apply_word s w with
+              | Ok () -> if E4_cas.word_wf w then "ok" else "notWf"
+              | Error (E4_cas.Refused_by a) -> E4_cas.admission_word a
+              | Error (E4_cas.Word_conflict { at; _ }) -> "conflict " ^ hex at
+              | Error (E4_cas.Word_corrupt at) -> "corrupt " ^ hex at
+            in
+            E4_cas.close s;
+            check (Printf.sprintf "G8 %s: Word.apply answers %s" name expected) (applied = expected);
+            if applied <> expected then note "  got %s" applied;
+            check (Printf.sprintf "G8 %s: word_wf agrees" name)
+              (E4_cas.word_wf w = (expected = "ok")))
+        words
+  end
+
 (* ============================================================ D5: two topological orders *)
 
 let seed = ref 20260908
@@ -1104,6 +1186,7 @@ let () =
   test_g2 ();
   test_g3 ();
   test_g7 ();
+  test_g8 ();
   test_d5 ();
   test_mutation ();
   test_queries ();

@@ -219,6 +219,7 @@ Proof.
   destruct (Store_checkEdges s n) as [a|u] eqn:hce; [discriminate|].
   assert (hres : forall e, In e (Node_checkedEdges n) -> Resolves s e)
     by (intros e he; eapply checkAll_ok; [exact hce | exact he]).
+  destruct (resultFault (store_nodes s) n) as [[|q f]|] eqn:hr; [discriminate|discriminate|].
   do 4 (split; [first [assumption | reflexivity]|]).
   destruct (Store_find s (sha256 (Node_encode n))) as [m|] eqn:hf.
   - destruct (instDecidableEqNode m n) eqn:he; injection h as <- <- <-.
@@ -482,6 +483,7 @@ Proof.
   destruct (option_eqb instDecidableEqNode (Node_decode (Node_encode n)) (Some n)) eqn:hdec; [|discriminate].
   destruct (Node_malformedRef n) eqn:hm; [discriminate|].
   destruct (Node_handleInContent n) eqn:hm2; [discriminate|].
+  destruct (verifyEdges s d (Node_checkedEdges n)) as [a|u'] eqn:hv; [discriminate|].
   repeat split.
   - apply digest_eqb_spec. exact hd.
   - apply option_eqb_some. exact hdec.

@@ -63,7 +63,10 @@ let admission_observation = function
     | E4_admission.Unknown_tag byte -> "unknownTag:" ^ string_of_int byte
     | E4_admission.Oversize -> "oversize"
     | E4_admission.Bad_version -> "badVersion"
-    | E4_admission.Conflict (address, node) -> "conflict:" ^ E4_addr.Addr.hex address ^ ":" ^ E4_hex.of_bytes (E4_node.encode node))
+    | E4_admission.Conflict (address, node) -> "conflict:" ^ E4_addr.Addr.hex address ^ ":" ^ E4_hex.of_bytes (E4_node.encode node)
+    | E4_admission.Bad_envelope -> "badEnvelope"
+    | E4_admission.Poisoned (query, first, second) ->
+      "poisoned:" ^ E4_addr.Addr.hex query ^ ":" ^ E4_addr.Addr.hex first ^ ":" ^ E4_addr.Addr.hex second)
   | E4_admission.Capacity reason -> "capacity:" ^ reason
   | E4_admission.Fault why -> "fault:" ^ E4_fault.word why
 let transaction_observation = function

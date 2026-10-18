@@ -523,7 +523,8 @@ def treeSpec : Spec where
 /-- **The content-addressed store's code** (`Effect4.Store`): the value and node codecs, the edge
 scan, the find, the put with its admission, the word's replay and `verify`, printed over an
 abstract hash. The hash, the number and string byte codecs, the float test, `Node.decode`, the
-zero digest and the equality deciders are the parameters of `Prim`: a theorem over `Code` holds
+result envelope's reader (`Node.resultQuery?`, seams ST3), the zero digest and the equality
+deciders are the parameters of `Prim`: a theorem over `Code` holds
 for every hash, and a law it needs of a parameter is a hypothesis of the proof file, never a
 field here. The closure walk is not printed: specialization turns its nested `foldl` into a
 mutual recursion on two different arguments, which Rocq's guard checker refuses. -/
@@ -541,21 +542,25 @@ def storeSpec : Spec where
     `Effect4.Store.Node.instDecidableIsGenesis._aux_1,
     `Effect4.Store.Node.instDecidableIsGenesis, `Effect4.Store.Node.checkedEdges,
     `Effect4.Store.findIn, `Effect4.Store.Store.find, `Effect4.Store.Store.checkEdge,
-    `Effect4.Store.Store.checkAll, `Effect4.Store.Store.checkEdges, `Effect4.Store.Store.putNode,
-    `Effect4.Store.Word.apply, `List.any._at_.Effect4.Store.resolvesAmong.spec_0,
+    `Effect4.Store.Store.checkAll, `Effect4.Store.Store.checkEdges, `Effect4.Store.resultConflict,
+    `Effect4.Store.resultFault, `Effect4.Store.Store.putNode,
+    `Effect4.Store.Word.apply, `List.mapTR.loop._at_.Effect4.Store.Word.toStore.spec_0,
+    `Effect4.Store.Word.toStore, `List.any._at_.Effect4.Store.resolvesAmong.spec_0,
     `Effect4.Store.resolvesAmong, `List.any._at_.Effect4.Store.Binding.admissibleAfter.spec_0,
     `List.all._at_.Effect4.Store.Binding.admissibleAfter.spec_1,
     `Effect4.Store.Binding.admissibleAfter, `Effect4.Store.Word.wfFrom, `Effect4.Store.Word.wf,
-    `Effect4.Store.verifyEdges, `Effect4.Store.Store.verifyNode, `Effect4.Store.verifyNodes,
+    `Effect4.Store.verifyEdges, `Effect4.Store.Store.verifyResult, `Effect4.Store.Store.verifyNode, `Effect4.Store.verifyNodes,
     `Effect4.Store.verifyRoots, `Effect4.Store.Store.verify]
   types := [`Effect4.Store.Kind, `Effect4.Store.Digest, `Effect4.Store.AnyRef, `Effect4.Store.Node,
     `Effect4.Store.RootPolicy, `Effect4.Store.Head, `Effect4.Store.Root, `Effect4.Store.Store, `Effect4.Store.Admission,
-    `Effect4.Store.Outcome, `Effect4.Store.Binding, `Effect4.Store.VerifyError]
+    `Effect4.Store.ResultFault, `Effect4.Store.Outcome, `Effect4.Store.Binding,
+    `Effect4.Store.VerifyError]
   knownTypes := [
     (`Effect4.Store.Val, "val_"), (`Effect4.Store.Kind, "kind"), (`Effect4.Store.Digest, "digest"),
     (`Effect4.Store.AnyRef, "any_ref"), (`Effect4.Store.Node, "node"),
     (`Effect4.Store.RootPolicy, "root_policy_kind"), (`Effect4.Store.Head, "head"), (`Effect4.Store.Root, "root"),
     (`Effect4.Store.Store, "store"), (`Effect4.Store.Admission, "admission"),
+    (`Effect4.Store.ResultFault, "result_fault"),
     (`Effect4.Store.Outcome, "outcome"), (`Effect4.Store.Binding, "binding"),
     (`Effect4.Store.VerifyError, "verify_error"), (`Effect4.Store.Bytes, "(list int)"),
     (`Effect4.Store.Word, "(list binding)"),
@@ -568,9 +573,11 @@ def storeSpec : Spec where
   variableNames := [`Effect4.Store.sha256, `Effect4.Store.be64, `Effect4.Store.natBytes,
     ``String.toUTF8, `Effect4.Store.Val.floatFrame, `Effect4.Store.zeroDigest,
     `Effect4.Store.Digest.instDecidableEq, `Effect4.Store.instDecidableEqKind,
-    `Effect4.Store.instDecidableEqNode, `Effect4.Store.Node.decode]
+    `Effect4.Store.instDecidableEqNode, `Effect4.Store.Node.decode,
+    `Effect4.Store.Node.resultQuery?]
   prims := [
-    (``List.appendTR, "app", "app"), (``List.lengthTR, "lengthZ", "Stdlib.Lists.List.length"),
+    (``List.appendTR, "app", "app"), (``List.reverse, "rev", "rev"),
+    (``List.lengthTR, "lengthZ", "Stdlib.Lists.List.length"),
     (``Decidable.decide, "id", ""), (``instDecidableEqUInt8, "Z.eqb", ""),
     (``instDecidableEqNat, "Z.eqb", "Nat.eqb"), (``Nat.decLt, "Z.ltb", "Nat.ltb"),
     (``Nat.decLe, "Z.leb", "Nat.leb"), (``Option.instDecidableEq, "option_eqb", ""),

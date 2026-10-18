@@ -62,13 +62,18 @@ abbrev Word := List Binding
 def resolvesAmong (bs : Word) (e : AnyRef) : Bool :=
   bs.any fun b => b.digest = e.digest && b.node.kind = e.kind
 
+/-- The store a word projects to: its bindings as the node list, no roots. -/
+def Word.toStore (w : Word) : Store := ⟨w.map fun b => (b.digest, b.node), []⟩
+
 /-- A binding is admissible after the bindings before it: version `0`, a well-formed payload, no
 malformed reference or handle in content. The digest is its node's hash and is new.
-Every checked edge resolves among the earlier bindings. -/
+Every checked edge resolves among the earlier bindings, and the node passes the result rule among
+them (`resultFault`, the operation insertion applies). -/
 def Binding.admissibleAfter (earlier : Word) (b : Binding) : Bool :=
   b.node.version = 0 && b.node.payload.wf && !b.node.malformedRef && !b.node.handleInContent &&
     b.digest = sha256 b.node.encode && !(earlier.any fun c => c.digest = b.digest) &&
-    b.node.checkedEdges.all (resolvesAmong earlier)
+    b.node.checkedEdges.all (resolvesAmong earlier) &&
+    (resultFault (Word.toStore earlier).nodes b.node).isNone
 
 /-- Well-formed after a prefix: each binding admissible after the prefix and the bindings before it. -/
 def Word.wfFrom (earlier : Word) : Word → Bool
@@ -88,9 +93,6 @@ def Word.apply : Word → Store → Except Admission Store
       | .conflict m => .error (.conflict d m)
       | _ => apply rest s'
     | .error e => .error e
-
-/-- The store a word projects to: its bindings as the node list, no roots. -/
-def Word.toStore (w : Word) : Store := ⟨w.map fun b => (b.digest, b.node), []⟩
 
 /-- Every binding is found at its digest: no digest is bound twice to different nodes. -/
 def Word.Faithful (w : Word) : Prop :=
@@ -150,6 +152,65 @@ theorem apply_mem {w : Word} : ∀ {s s' : Store}, Word.apply w s = .ok s' →
       exact apply_sub hrest _ _ (putNode_find hp ho)
     · exact ih hrest b hb
 
+/-- A replay only appends, and every appended binding passed the result rule among the bindings
+before the replay. Helper of `cas-result-once`, consumed by `apply_resultOnce`. -/
+theorem apply_added {w : Word} : ∀ {s s' : Store}, Word.apply w s = .ok s' →
+    ∃ added, s'.nodes = s.nodes ++ added ∧ ∀ g ∈ added, ResultOnce s.nodes g.2 := by
+  induction w with
+  | nil =>
+    intro s s' h
+    injection h with h
+    subst h
+    exact ⟨[], (List.append_nil _).symm, fun _ member => nomatch member⟩
+  | cons b rest ih =>
+    intro s s'' h
+    obtain ⟨o, d, s', hp, hno, hrest⟩ := apply_cons_ok h
+    obtain ⟨added, hnodes, hadded⟩ := ih hrest
+    obtain ⟨_, _, _, _, _, hcase⟩ := putNode_ok hp
+    have hr := putNode_ok_result hp
+    rcases hcase with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨k, ho, _, _, rfl⟩
+    · refine ⟨(d, b.node) :: added, ?_, fun g member => ?_⟩
+      · rw [hnodes]
+        exact List.append_assoc s.nodes [(d, b.node)] added
+      · rcases List.mem_cons.mp member with rfl | member
+        · exact hr
+        · exact resultOnce_subset (fun x hx => List.mem_append_left _ hx) (hadded g member)
+    · exact ⟨added, hnodes, hadded⟩
+    · exact absurd ho (hno k)
+
+/-- After a replay, every binding of the word passes the result rule in the store it produced.
+Helper of `cas-result-once`, consumed by `apply_idempotent`. -/
+theorem apply_resultOnce {w : Word} : ∀ {s s' : Store}, Word.apply w s = .ok s' →
+    ∀ b ∈ w, ResultOnce s'.nodes b.node := by
+  induction w with
+  | nil =>
+    intro s s' _ b member
+    exact nomatch member
+  | cons b rest ih =>
+    intro s s'' h c member
+    obtain ⟨o, d, s', hp, ho, hrest⟩ := apply_cons_ok h
+    rcases List.mem_cons.mp member with rfl | member
+    · have resident : (d, c.node) ∈ s'.nodes := findIn_mem (putNode_find hp ho)
+      have here : ResultOnce s'.nodes c.node := by
+        obtain ⟨_, _, _, _, _, hcase⟩ := putNode_ok hp
+        have hr := putNode_ok_result hp
+        rcases hcase with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨k, hk, _, _, _⟩
+        · exact resultOnce_append_of hr fun g gm _ _ _ => by
+            rw [List.mem_singleton] at gm
+            subst gm
+            rfl
+        · exact hr
+        · exact absurd hk (ho k)
+      obtain ⟨added, hnodes, hadded⟩ := apply_added hrest
+      rw [hnodes]
+      refine resultOnce_append_of here fun g gm query qc qg => ?_
+      obtain ⟨query', answers, absent⟩ := hadded g gm (Node.resultQuery?_kind qg)
+      rw [qg] at answers
+      injection answers with same
+      subst same
+      exact ((resultConflict_none_iff s'.nodes query g.2).mp absent (d, c.node) resident qc).symm
+    · exact ih hrest c member
+
 /-- Replaying a word into the store it produced changes nothing: every binding is a duplicate. -/
 theorem apply_idempotent {w : Word} : ∀ {s s' : Store}, Word.apply w s = .ok s' →
     Word.apply w s' = .ok s' := by
@@ -165,7 +226,7 @@ theorem apply_idempotent {w : Word} : ∀ {s s' : Store}, Word.apply w s = .ok s
     have hfind : s''.find d = some b.node := apply_sub hrest d b.node (putNode_find hp ho)
     subst hd
     have hp' := putNode_duplicate (s := s'') hwf hv hm (putNode_ok_handleFree hp)
-      (fun e he => resolves_mono hsub (hres e he)) hfind
+      (fun e he => resolves_mono hsub (hres e he)) (apply_resultOnce h b List.mem_cons_self) hfind
     exact apply_cons_of hp' (fun _ h => nomatch h) (ih hrest)
 
 /-! ## Well-formed words replay into closed stores -/
@@ -176,7 +237,7 @@ theorem admissibleAfter_spec {earlier : Word} {b : Binding} (h : b.admissibleAft
       ∀ e ∈ b.node.checkedEdges, resolvesAmong earlier e = true := by
   unfold Binding.admissibleAfter at h
   simp only [Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, _⟩, h4⟩, h5⟩, h6⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, _⟩, h4⟩, h5⟩, h6⟩, _⟩ := h
   refine ⟨of_decide_eq_true h1, (Val.wf_iff _).mp h2, ?_, of_decide_eq_true h4, ?_,
     List.all_eq_true.mp h6⟩
   · cases hm : b.node.malformedRef
@@ -193,22 +254,30 @@ theorem admissibleAfter_handleFree {earlier : Word} {b : Binding}
     (h : b.admissibleAfter earlier = true) : b.node.handleInContent = false := by
   unfold Binding.admissibleAfter at h
   simp only [Bool.and_eq_true] at h
-  have hm2 := h.1.1.1.2
+  have hm2 := h.1.1.1.1.2
   cases he : b.node.handleInContent
   · rfl
   · rw [he] at hm2
     exact absurd hm2 (by decide)
 
+/-- Helper of `cas-result-once`: word admission applies the result rule that insertion applies. -/
+theorem admissibleAfter_result {earlier : Word} {b : Binding}
+    (h : b.admissibleAfter earlier = true) : ResultOnce (Word.toStore earlier).nodes b.node := by
+  unfold Binding.admissibleAfter at h
+  simp only [Bool.and_eq_true] at h
+  exact (resultFault_none_iff _ _).mp (Option.isNone_iff_eq_none.mp h.2)
+
 theorem admissibleAfter_of {earlier : Word} {b : Binding} (h1 : b.node.version = 0)
     (h2 : b.node.payload.WF) (h3 : b.node.malformedRef = false)
     (hm2 : b.node.handleInContent = false) (h4 : b.digest = sha256 b.node.encode)
     (h5 : (earlier.any fun c => c.digest = b.digest) = false)
-    (h6 : ∀ e ∈ b.node.checkedEdges, resolvesAmong earlier e = true) :
+    (h6 : ∀ e ∈ b.node.checkedEdges, resolvesAmong earlier e = true)
+    (h7 : ResultOnce (Word.toStore earlier).nodes b.node) :
     b.admissibleAfter earlier = true := by
   unfold Binding.admissibleAfter
   simp only [Bool.and_eq_true]
-  refine ⟨⟨⟨⟨⟨⟨decide_eq_true h1, (Val.wf_iff _).mpr h2⟩, ?_⟩, ?_⟩, decide_eq_true h4⟩, ?_⟩,
-    List.all_eq_true.mpr h6⟩
+  refine ⟨⟨⟨⟨⟨⟨⟨decide_eq_true h1, (Val.wf_iff _).mpr h2⟩, ?_⟩, ?_⟩, decide_eq_true h4⟩, ?_⟩,
+    List.all_eq_true.mpr h6⟩, Option.isNone_iff_eq_none.mpr ((resultFault_none_iff _ _).mpr h7)⟩
   · rw [h3]
     rfl
   · rw [hm2]
@@ -321,7 +390,8 @@ theorem wfFrom_apply : ∀ (w earlier : Word), Word.wfFrom earlier w = true →
       show findIn (earlier.map fun c => (c.digest, c.node)) (sha256 b.node.encode) = none
       rw [← hd]
       exact hnone
-    have hp := putNode_fresh hpwf hv hm (admissibleAfter_handleFree hadm) hres hfind
+    have hp := putNode_fresh hpwf hv hm (admissibleAfter_handleFree hadm) hres
+      (admissibleAfter_result hadm) hfind
     have hstore : ({ Word.toStore earlier with
         nodes := (Word.toStore earlier).nodes ++ [(sha256 b.node.encode, b.node)] } : Store) =
         Word.toStore (earlier ++ [b]) := by
@@ -591,7 +661,11 @@ theorem closureGo_complete (s : Store) (hs : s.Sound) {rank : Digest → Nat} (h
       have hadm : Binding.admissibleAfter
           (n.checkedEdges.foldl (fun acc e => closureGo s fuel e.digest acc) acc) ⟨d, n⟩ = true := by
         refine admissibleAfter_of (hs.version d n hn) (hs.wf d n hn) (hs.refs d n hn) (hs.handles d n hn)
-          (hs.addressed d n hn) hnot ?_
+          (hs.addressed d n hn) hnot ?_ ?_
+        rotate_left
+        · refine resultOnce_subset (fun x hx => ?_) (hs.results (d, n) (findIn_mem hn))
+          obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hx
+          exact findIn_mem (hfs' c hc)
         intro e he
         obtain ⟨b, hb, hbd⟩ := hchildren e he
         obtain ⟨m, hm, hk⟩ := hres e he
@@ -696,7 +770,7 @@ theorem built_invariant {l : LocalFirst} (h : l.Built) :
           simp only [Word.toStore, List.map_append, List.map_cons, List.map_nil]
         · unfold Word.wf at hwf ⊢
           rw [wfFrom_append, List.nil_append, Bool.and_eq_true]
-          refine ⟨hwf, admissibleAfter_of hv hnwf hm hm2 hd ?_ ?_⟩
+          refine ⟨hwf, admissibleAfter_of hv hnwf hm hm2 hd ?_ ?_ ?_⟩
           · apply bool_eq_false_of_not
             intro hany
             obtain ⟨c, hc, hcd⟩ := List.any_eq_true.mp hany
@@ -709,6 +783,9 @@ theorem built_invariant {l : LocalFirst} (h : l.Built) :
           · intro e he
             rw [hloc] at hres
             exact resolvesAmong_of_resolves (hres e he)
+          · have hr := putNode_ok_result hps
+            rw [hloc] at hr
+            exact hr
       · rw [if_neg (fun h => nomatch h)]
         exact ⟨hloc, hwf⟩
       · rw [if_neg (fun h => nomatch h)]
@@ -755,6 +832,10 @@ inductive VerifyError where
   | wrongKind (node ref : Digest) (expected actual : Kind)
   /-- A root's target is missing or of another kind. -/
   | rootUnresolved (name : String)
+  /-- A result node does not read as the common envelope. -/
+  | badEnvelope (d : Digest)
+  /-- Another binding answers the result's query with another node. -/
+  | poisoned (d query first : Digest)
 deriving DecidableEq, Repr
 
 /-- The edges of the node at `at_`, each resolved at its kind. -/
@@ -765,13 +846,21 @@ def verifyEdges (s : Store) (at_ : Digest) : List AnyRef → Except VerifyError 
     | some m => if m.kind = e.kind then verifyEdges s at_ es else .error (.wrongKind at_ e.digest e.kind m.kind)
     | none => .error (.dangling at_ e.digest)
 
-/-- One node: re-addressed, re-read, checked for malformed references and M2, then checked for resolved edges. -/
+/-- The result rule (`resultFault`) among every binding of the store, the node at `d`. -/
+def Store.verifyResult (s : Store) (d : Digest) (n : Node) : Except VerifyError Unit :=
+  match resultFault s.nodes n with
+  | some .badEnvelope => .error (.badEnvelope d)
+  | some (.poisoned query first) => .error (.poisoned d query first)
+  | none => .ok ()
+
+/-- One node: re-addressed, re-read, checked for malformed references and M2, then checked for
+resolved edges, then for the result rule. -/
 def Store.verifyNode (s : Store) (d : Digest) (n : Node) : Except VerifyError Unit :=
   if sha256 n.encode = d then
     if Node.decode n.encode = some n then
       if n.malformedRef then .error (.malformedRef d)
       else if n.handleInContent then .error (.handleInContent d)
-      else verifyEdges s d n.checkedEdges
+      else (verifyEdges s d n.checkedEdges).bind fun _ => s.verifyResult d n
     else .error (.undecodable d)
   else .error (.digestMismatch d)
 
@@ -811,6 +900,14 @@ theorem verifyEdges_ok {s : Store} {at_ : Digest} : ∀ {es : List AnyRef},
       · exact nomatch h
     · exact nomatch h
 
+/-- A bind that answered `ok` had an `ok` on its left; cased on a variable, so nothing under it is
+reduced. -/
+theorem except_bind_ok {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {b : β}
+    (h : x.bind f = .ok b) : ∃ a, x = .ok a ∧ f a = .ok b := by
+  cases x with
+  | ok a => exact ⟨a, rfl, h⟩
+  | error e => exact nomatch h
+
 theorem verifyNode_ok {s : Store} {d : Digest} {n : Node} (h : s.verifyNode d n = .ok ()) :
     d = sha256 n.encode ∧ n.payload.WF ∧ n.version = 0 ∧ n.malformedRef = false ∧
       ∀ e ∈ n.checkedEdges, s.Resolves e := by
@@ -825,7 +922,9 @@ theorem verifyNode_ok {s : Store} {d : Digest} {n : Node} (h : s.verifyNode d n 
         split at h
         · exact nomatch h
         · obtain ⟨_, hwf, hv⟩ := Node.decode_exact hdec
-          exact ⟨hd.symm, hwf, hv, bool_eq_false_of_not hm, verifyEdges_ok h⟩
+          obtain ⟨u, hedges, _⟩ := except_bind_ok h
+          cases u
+          exact ⟨hd.symm, hwf, hv, bool_eq_false_of_not hm, verifyEdges_ok hedges⟩
     · exact nomatch h
   · exact nomatch h
 
@@ -843,13 +942,24 @@ theorem verifyNode_handleFree {s : Store} {d : Digest} {n : Node}
     · exact nomatch h
   · exact nomatch h
 
-/-- A bind that answered `ok` had an `ok` on its left; cased on a variable, so nothing under it is
-reduced. -/
-theorem except_bind_ok {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {b : β}
-    (h : x.bind f = .ok b) : ∃ a, x = .ok a ∧ f a = .ok b := by
-  cases x with
-  | ok a => exact ⟨a, rfl, h⟩
-  | error e => exact nomatch h
+/-- Helper of `cas-result-once`: every verified node passes the result rule among all bindings. -/
+theorem verifyNode_result {s : Store} {d : Digest} {n : Node} (h : s.verifyNode d n = .ok ()) :
+    ResultOnce s.nodes n := by
+  unfold Store.verifyNode at h
+  split at h
+  · split at h
+    · split at h
+      · exact nomatch h
+      · split at h
+        · exact nomatch h
+        · obtain ⟨u, _, hresult⟩ := except_bind_ok h
+          unfold Store.verifyResult at hresult
+          split at hresult
+          · exact nomatch hresult
+          · exact nomatch hresult
+          · next passes => exact (resultFault_none_iff s.nodes n).mp passes
+    · exact nomatch h
+  · exact nomatch h
 
 /-- By the `induction` tactic, not by recursion: the structural-recursion compiler reduces the
 hypothesis's type through `verifyNode`'s hash comparison and times out. -/
@@ -893,7 +1003,7 @@ theorem verify_ok {s : Store} (h : s.verify = .ok ()) :
   · exact nomatch h
 
 /-- A store that verifies is sound: every node at its own address, version `0`, well-formed, no
-malformed reference, no handle in content, and closed. -/
+malformed reference, no handle in content, closed, and passing the result rule. -/
 theorem verify_sound {s : Store} (h : s.verify = .ok ()) : s.Sound := by
   have hn := verifyNodes_ok (verify_ok h).1
   have hall : ∀ d n, s.find d = some n → d = sha256 n.encode ∧ n.payload.WF ∧ n.version = 0 ∧
@@ -903,7 +1013,8 @@ theorem verify_sound {s : Store} (h : s.verify = .ok ()) : s.Sound := by
     fun d n hd => (hall d n hd).2.2.2.1,
     fun d n hd => verifyNode_handleFree (hn (d, n) (findIn_mem hd)),
     fun d n hd => (hall d n hd).1,
-    fun d n hd => (hall d n hd).2.2.2.2⟩
+    fun d n hd => (hall d n hd).2.2.2.2,
+    fun b member => verifyNode_result (hn b member)⟩
 
 /-- A store that verifies resolves every root at its kind. -/
 theorem verify_roots {s : Store} (h : s.verify = .ok ()) :

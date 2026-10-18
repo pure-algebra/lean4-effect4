@@ -30,6 +30,8 @@ import Effect4.Store.Domain.Canonical
 import Effect4.Store.Domain.Clock
 import Effect4.Store.Domain.RowCanonical
 import Effect4.Store.Domain.Node
+import Effect4.Store.Domain.Document
+import Effect4.Store.Domain.Action
 import Effect4.Store.Domain.Store
 import Effect4.Store.Domain.Cas
 import Effect4.Store.Domain.Word

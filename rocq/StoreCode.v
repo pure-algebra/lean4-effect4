@@ -105,6 +105,13 @@ Inductive admission : Set :=
 | Admission_oversize : admission
 | Admission_badVersion : admission
 | Admission_conflict : digest -> node -> admission
+| Admission_badEnvelope : admission
+| Admission_poisoned : digest -> digest -> digest -> admission
+.
+
+Inductive result_fault : Set :=
+| ResultFault_badEnvelope : result_fault
+| ResultFault_poisoned : digest -> digest -> result_fault
 .
 
 Inductive outcome : Set :=
@@ -127,6 +134,8 @@ Inductive verify_error : Set :=
 | VerifyError_dangling : digest -> digest -> verify_error
 | VerifyError_wrongKind : digest -> digest -> kind -> kind -> verify_error
 | VerifyError_rootUnresolved : string -> verify_error
+| VerifyError_badEnvelope : digest -> verify_error
+| VerifyError_poisoned : digest -> digest -> digest -> verify_error
 .
 
 
@@ -141,8 +150,9 @@ Parameter Val_floatFrame : (int -> bool).
 Parameter instDecidableEqKind : (kind -> kind -> bool).
 Parameter zeroDigest : digest.
 Parameter Digest_instDecidableEq : (digest -> digest -> bool).
-Parameter sha256 : ((list int) -> digest).
+Parameter Node_resultQuery_opt : (node -> (option digest)).
 Parameter instDecidableEqNode : (node -> node -> bool).
+Parameter sha256 : ((list int) -> digest).
 Parameter Node_decode : ((list int) -> (option node)).
 
 End Prim.
@@ -1178,6 +1188,74 @@ Definition Store_checkEdges (v_s : store) (v_n : node) : (Except admission unit)
   v__x_2
 .
 
+Fixpoint resultConflict (v_x_1 : (list (prod digest node))) (v_x_2 : digest) (v_x_3 : node) {struct v_x_1} : (option (prod digest node)) :=
+  match v_x_1 with
+  | nil =>
+      let v__x_4 := None in
+      v__x_4
+  | cons v_head_5 v_tail_6 =>
+      match v_head_5 with
+      | pair v_fst_7 v_snd_8 =>
+          let v__x_9 := (Node_resultQuery_opt v_snd_8) in
+          match v__x_9 with
+          | None =>
+              let v__x_10 := (resultConflict v_tail_6 v_x_2 v_x_3) in
+              v__x_10
+          | Some v_val_11 =>
+              let v__x_12 := (Digest_instDecidableEq v_val_11 v_x_2) in
+              match v__x_12 with
+              | false =>
+                  let v__x_14 := (resultConflict v_tail_6 v_x_2 v_x_3) in
+                  v__x_14
+              | true =>
+                  let v__x_16 := (instDecidableEqNode v_snd_8 v_x_3) in
+                  match v__x_16 with
+                  | false =>
+                      let v__x_18 := (Some v_head_5) in
+                      v__x_18
+                  | true =>
+                      let v__x_20 := (resultConflict v_tail_6 v_x_2 v_x_3) in
+                      v__x_20
+                  end
+              end
+          end
+      end
+  end
+.
+
+Definition resultFault (v_nodes : (list (prod digest node))) (v_n : node) : (option result_fault) :=
+  let v__x_1 := (node_kind v_n) in
+  let v__x_2 := Kind_result in
+  let v__x_3 := (instDecidableEqKind v__x_1 v__x_2) in
+  match v__x_3 with
+  | false =>
+      let v__x_5 := None in
+      v__x_5
+  | true =>
+      let v__x_7 := (Node_resultQuery_opt v_n) in
+      match v__x_7 with
+      | None =>
+          let v__x_8 := ResultFault_badEnvelope in
+          let v__x_9 := (Some v__x_8) in
+          v__x_9
+      | Some v_val_10 =>
+          let v__x_11 := (resultConflict v_nodes v_val_10 v_n) in
+          match v__x_11 with
+          | None =>
+              let v__x_12 := None in
+              v__x_12
+          | Some v_val_13 =>
+              match v_val_13 with
+              | pair v_fst_14 v_snd_15 =>
+                  let v__x_16 := (ResultFault_poisoned v_val_10 v_fst_14) in
+                  let v__x_17 := (Some v__x_16) in
+                  v__x_17
+              end
+          end
+      end
+  end
+.
+
 Definition Store_putNode (v_s : store) (v_n : node) : (Except admission (prod outcome (prod digest store))) :=
   let v__x_1 := (node_payload v_n) in
   let v__x_2 := (Val_decWF v__x_1) in
@@ -1208,50 +1286,67 @@ Definition Store_putNode (v_s : store) (v_n : node) : (Except admission (prod ou
                       let v__x_18 := (Except_error v_a_17) in
                       v__x_18
                   | Except_ok v_a_19 =>
-                      let v__x_20 := (Node_encode v_n) in
-                      let v__x_21 := (sha256 v__x_20) in
-                      let v__x_22 := (Store_find v_s v__x_21) in
-                      match v__x_22 with
+                      let v__x_20 := (store_nodes v_s) in
+                      let v__x_21 := (resultFault v__x_20 v_n) in
+                      match v__x_21 with
                       | None =>
-                          let v__x_23 := Outcome_fresh in
-                          let v__x_24 := (store_nodes v_s) in
-                          let v__x_25 := (pair v__x_21 v_n) in
-                          let v__x_26 := nil in
-                          let v__x_27 := (cons v__x_25 v__x_26) in
-                          let v__x_28 := (app v__x_24 v__x_27) in
-                          let v__x_29 := (store_roots v_s) in
-                          let v__x_30 := (Store_mk v__x_28 v__x_29) in
-                          let v__x_31 := (pair v__x_21 v__x_30) in
-                          let v__x_32 := (pair v__x_23 v__x_31) in
-                          let v__x_33 := (Except_ok v__x_32) in
-                          v__x_33
-                      | Some v_val_34 =>
-                          let v__x_35 := (instDecidableEqNode v_val_34 v_n) in
-                          match v__x_35 with
-                          | false =>
-                              let v__x_37 := (Outcome_conflict v_val_34) in
-                              let v__x_38 := (pair v__x_21 v_s) in
-                              let v__x_39 := (pair v__x_37 v__x_38) in
-                              let v__x_40 := (Except_ok v__x_39) in
-                              v__x_40
-                          | true =>
-                              let v__x_42 := Outcome_duplicate in
-                              let v__x_43 := (pair v__x_21 v_s) in
-                              let v__x_44 := (pair v__x_42 v__x_43) in
-                              let v__x_45 := (Except_ok v__x_44) in
-                              v__x_45
+                          let v__x_22 := (Node_encode v_n) in
+                          let v__x_23 := (sha256 v__x_22) in
+                          let v__x_24 := (Store_find v_s v__x_23) in
+                          match v__x_24 with
+                          | None =>
+                              let v__x_25 := Outcome_fresh in
+                              let v__x_26 := (pair v__x_23 v_n) in
+                              let v__x_27 := nil in
+                              let v__x_28 := (cons v__x_26 v__x_27) in
+                              let v__x_29 := (app v__x_20 v__x_28) in
+                              let v__x_30 := (store_roots v_s) in
+                              let v__x_31 := (Store_mk v__x_29 v__x_30) in
+                              let v__x_32 := (pair v__x_23 v__x_31) in
+                              let v__x_33 := (pair v__x_25 v__x_32) in
+                              let v__x_34 := (Except_ok v__x_33) in
+                              v__x_34
+                          | Some v_val_35 =>
+                              let v__x_36 := (instDecidableEqNode v_val_35 v_n) in
+                              match v__x_36 with
+                              | false =>
+                                  let v__x_38 := (Outcome_conflict v_val_35) in
+                                  let v__x_39 := (pair v__x_23 v_s) in
+                                  let v__x_40 := (pair v__x_38 v__x_39) in
+                                  let v__x_41 := (Except_ok v__x_40) in
+                                  v__x_41
+                              | true =>
+                                  let v__x_43 := Outcome_duplicate in
+                                  let v__x_44 := (pair v__x_23 v_s) in
+                                  let v__x_45 := (pair v__x_43 v__x_44) in
+                                  let v__x_46 := (Except_ok v__x_45) in
+                                  v__x_46
+                              end
+                          end
+                      | Some v_val_47 =>
+                          match v_val_47 with
+                          | ResultFault_badEnvelope =>
+                              let v__x_48 := Admission_badEnvelope in
+                              let v__x_49 := (Except_error v__x_48) in
+                              v__x_49
+                          | ResultFault_poisoned v_query_50 v_first_51 =>
+                              let v__x_52 := (Node_encode v_n) in
+                              let v__x_53 := (sha256 v__x_52) in
+                              let v__x_54 := (Admission_poisoned v_query_50 v_first_51 v__x_53) in
+                              let v__x_55 := (Except_error v__x_54) in
+                              v__x_55
                           end
                       end
                   end
               | true =>
-                  let v__x_46 := Admission_handleInContent in
-                  let v__x_47 := (Except_error v__x_46) in
-                  v__x_47
+                  let v__x_56 := Admission_handleInContent in
+                  let v__x_57 := (Except_error v__x_56) in
+                  v__x_57
               end
           | true =>
-              let v__x_48 := Admission_malformedRef in
-              let v__x_49 := (Except_error v__x_48) in
-              v__x_49
+              let v__x_58 := Admission_malformedRef in
+              let v__x_59 := (Except_error v__x_58) in
+              v__x_59
           end
       end
   end
@@ -1287,6 +1382,29 @@ Fixpoint Word_apply (v_x_1 : (list binding)) (v_x_2 : store) {struct v_x_1} : (E
           end
       end
   end
+.
+
+Fixpoint List_mapTR_loop__at__Effect4_Store_Word_toStore_spec_0 (v_a_1 : (list binding)) (v_a_2 : (list (prod digest node))) {struct v_a_1} : (list (prod digest node)) :=
+  match v_a_1 with
+  | nil =>
+      let v__x_3 := (rev v_a_2) in
+      v__x_3
+  | cons v_head_4 v_tail_5 =>
+      let v__x_6 := (binding_digest v_head_4) in
+      let v__x_7 := (binding_node v_head_4) in
+      let v__x_8 := (pair v__x_6 v__x_7) in
+      let v__x_9 := (cons v__x_8 v_a_2) in
+      let v__x_10 := (List_mapTR_loop__at__Effect4_Store_Word_toStore_spec_0 v_tail_5 v__x_9) in
+      v__x_10
+  end
+.
+
+Definition Word_toStore (v_w : (list binding)) : store :=
+  let v__x_1 := nil in
+  let v__x_2 := (List_mapTR_loop__at__Effect4_Store_Word_toStore_spec_0 v_w v__x_1) in
+  let v__x_3 := nil in
+  let v__x_4 := (Store_mk v__x_2 v__x_3) in
+  v__x_4
 .
 
 Fixpoint List_any__at__Effect4_Store_resolvesAmong_spec_0 (v_e : any_ref) (v_x_1 : (list binding)) {struct v_x_1} : bool :=
@@ -1390,7 +1508,20 @@ Definition Binding_admissibleAfter (v_earlier : (list binding)) (v_b : binding) 
                       | false =>
                           let v__x_12 := (Node_checkedEdges v__x_3) in
                           let v__x_13 := (List_all__at__Effect4_Store_Binding_admissibleAfter_spec_1 v_earlier v__x_12) in
-                          v__x_13
+                          match v__x_13 with
+                          | false =>
+                              v__x_13
+                          | true =>
+                              let v__x_14 := (Word_toStore v_earlier) in
+                              let v__x_15 := (store_nodes v__x_14) in
+                              let v__x_16 := (resultFault v__x_15 v__x_3) in
+                              match v__x_16 with
+                              | None =>
+                                  v__x_13
+                              | Some v_val_17 =>
+                                  v__x_11
+                              end
+                          end
                       | true =>
                           v__x_5
                       end
@@ -1399,22 +1530,22 @@ Definition Binding_admissibleAfter (v_earlier : (list binding)) (v_b : binding) 
                   v__x_4
               end
           | true =>
-              let v__x_14 := false in
-              v__x_14
+              let v__x_18 := false in
+              v__x_18
           end
       end) in
-  let v__x_15 := (binding_node v_b) in
-  let v__x_16 := (node_version v__x_15) in
-  let v__x_17 := 0%Z in
-  let v__x_18 := (Z.eqb v__x_16 v__x_17) in
-  let v__x_19 := (id v__x_18) in
-  match v__x_19 with
+  let v__x_19 := (binding_node v_b) in
+  let v__x_20 := (node_version v__x_19) in
+  let v__x_21 := 0%Z in
+  let v__x_22 := (Z.eqb v__x_20 v__x_21) in
+  let v__x_23 := (id v__x_22) in
+  match v__x_23 with
   | false =>
-      (v__jp_1 v__x_19)
+      (v__jp_1 v__x_23)
   | true =>
-      let v__x_20 := (node_payload v__x_15) in
-      let v__x_21 := (Val_wf v__x_20) in
-      (v__jp_1 v__x_21)
+      let v__x_24 := (node_payload v__x_19) in
+      let v__x_25 := (Val_wf v__x_24) in
+      (v__jp_1 v__x_25)
   end
 .
 
@@ -1475,6 +1606,28 @@ Fixpoint verifyEdges (v_s : store) (v_at_ : digest) (v_x_1 : (list any_ref)) {st
   end
 .
 
+Definition Store_verifyResult (v_s : store) (v_d : digest) (v_n : node) : (Except verify_error unit) :=
+  let v__x_1 := (store_nodes v_s) in
+  let v__x_2 := (resultFault v__x_1 v_n) in
+  match v__x_2 with
+  | None =>
+      let v__x_3 := tt in
+      let v__x_4 := (Except_ok v__x_3) in
+      v__x_4
+  | Some v_val_5 =>
+      match v_val_5 with
+      | ResultFault_badEnvelope =>
+          let v__x_6 := (VerifyError_badEnvelope v_d) in
+          let v__x_7 := (Except_error v__x_6) in
+          v__x_7
+      | ResultFault_poisoned v_query_8 v_first_9 =>
+          let v__x_10 := (VerifyError_poisoned v_d v_query_8 v_first_9) in
+          let v__x_11 := (Except_error v__x_10) in
+          v__x_11
+      end
+  end
+.
+
 Definition Store_verifyNode (v_s : store) (v_d : digest) (v_n : node) : (Except verify_error unit) :=
   let v__x_1 := (Node_encode v_n) in
   let v__x_2 := (sha256 v__x_1) in
@@ -1503,16 +1656,22 @@ Definition Store_verifyNode (v_s : store) (v_d : digest) (v_n : node) : (Except 
               | false =>
                   let v__x_18 := (Node_checkedEdges v_n) in
                   let v__x_19 := (verifyEdges v_s v_d v__x_18) in
-                  v__x_19
+                  match v__x_19 with
+                  | Except_error v_a_20 =>
+                      v__x_19
+                  | Except_ok v_a_21 =>
+                      let v__x_22 := (Store_verifyResult v_s v_d v_n) in
+                      v__x_22
+                  end
               | true =>
-                  let v__x_20 := (VerifyError_handleInContent v_d) in
-                  let v__x_21 := (Except_error v__x_20) in
-                  v__x_21
+                  let v__x_23 := (VerifyError_handleInContent v_d) in
+                  let v__x_24 := (Except_error v__x_23) in
+                  v__x_24
               end
           | true =>
-              let v__x_22 := (VerifyError_malformedRef v_d) in
-              let v__x_23 := (Except_error v__x_22) in
-              v__x_23
+              let v__x_25 := (VerifyError_malformedRef v_d) in
+              let v__x_26 := (Except_error v__x_25) in
+              v__x_26
           end
       end
   end

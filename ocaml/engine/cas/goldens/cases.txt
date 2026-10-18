@@ -22,6 +22,10 @@
 #   g6   words and closures: bytes = wordVal w or nodesVal ns; expected ok unless a replay
 #        refused.
 #   g7   verify: bytes = storeVal s, expected = the VerifyError word.
+#   g8   results (seams ST3): bytes = wordVal (preload ++ [n]); expected = the outcome of
+#        putNode n into the store whose nodes are the preload, forged without admission.
+#   g8word  bytes = wordVal w without its first binding, the genesis (g1-genesisNode);
+#        expected = ok, notWf, or the word of Word.apply's refusal.
 #
 # tool-side projections (the Lean tree has no Canonical instance for Root, Binding, Store,
 # MemoEntry or MemoMap, so these five shapes are this tool's; every other byte is a Lean
@@ -186,3 +190,16 @@ g7-wrong-key	g7	digestMismatch
 g7-dangling-edge	g7	dangling f8cbebc1e9c83f4f70fe015ac0b2c18fac5a7bd76aeb2acff15096a4587c5de4
 g7-root-wrong-kind	g7	rootUnresolved stdlib/rc112
 g7-root-ok	g7	ok
+g7-result-poisoned	g7	poisoned 0f379961ade90686f9f9c166139fd35669145ea80bbfe2764a1d17f049f286b4 5720a4d683214578cb0e2086044776eb287e78199abf6e014f845a020fc5eca1
+g7-result-not-envelope	g7	badEnvelope
+g8-result-fresh	g8	fresh
+g8-result-duplicate	g8	duplicate
+g8-result-poisoned	g8	poisoned 0f379961ade90686f9f9c166139fd35669145ea80bbfe2764a1d17f049f286b4 00345a1d8facccb85a19273841260de5300c0ca79c02593adbb431f978931951 5720a4d683214578cb0e2086044776eb287e78199abf6e014f845a020fc5eca1
+g8-result-incidental	g8	fresh
+g8-result-not-envelope	g8	badEnvelope
+g8-result-version	g8	badEnvelope
+g8-result-spec	g8	badEnvelope
+g8-result-query-kind	g8	wrongKind
+g8-result-dangling	g8	dangling 0f379961ade90686f9f9c166139fd35669145ea80bbfe2764a1d17f049f286b4
+g8word-one-result	g8word	ok
+g8word-two-results	g8word	poisoned 0f379961ade90686f9f9c166139fd35669145ea80bbfe2764a1d17f049f286b4 00345a1d8facccb85a19273841260de5300c0ca79c02593adbb431f978931951 5720a4d683214578cb0e2086044776eb287e78199abf6e014f845a020fc5eca1

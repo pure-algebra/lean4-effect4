@@ -43,14 +43,27 @@ type cidmap = {
   mutable c_staged_n : int; (* how many entries of `v_order` are already folded in *)
 }
 
+(* The by-query table of results (seams ST3): which resident result nodes answer each designated
+   query, for the result rule (`resultFault`, Store (src/Effect4/Store/Domain/Store.lean)).  It
+   has the by-Cid index's two halves: `r_tbl` covers the durable records up to `r_end` and is
+   extended by one pass over what the last call did not see, reading only records the index
+   files at kind `result`; `v_rstaged` holds the staged results, filed at staging and emptied at
+   promotion, when the durable pass picks them up.  Both answer in insertion order. *)
+type resultmap = {
+  r_tbl : (string, E4_addr.Addr.t list ref) Hashtbl.t;
+  mutable r_end : int * int; (* the durable watermark this table covers *)
+}
+
 type view = {
   v_dir : string;
   mutable v_reader : E4_pack.reader;
   v_slots : int;
   mutable v_index : E4_index.t option; (* None: dropped; the next query rebuilds it *)
   mutable v_cids : cidmap option; (* None: not built yet, or dropped; see `cid_map` *)
+  mutable v_results : resultmap option; (* None: not built yet, or dropped; see `result_map` *)
   mutable v_end : int * int; (* what this view indexes: the durable watermark *)
   v_staged : (string, staged) Hashtbl.t; (* address bytes -> the record put staged *)
+  v_rstaged : (string, E4_addr.Addr.t list ref) Hashtbl.t; (* query bytes -> staged results *)
   mutable v_order : string list; (* reversed: the staged addresses, in put order *)
   mutable v_control : E4_control.t;
   v_counters : counters;
@@ -81,6 +94,8 @@ type verify_error =
       actual : E4_kind.t;
     }
   | Root_unresolved of string
+  | Verify_bad_envelope of E4_addr.Addr.t
+  | Verify_poisoned of { node : E4_addr.Addr.t; query : E4_addr.Addr.t; first : E4_addr.Addr.t }
 
 exception Locked of string
 exception Store_error of string
@@ -148,7 +163,11 @@ let admission_word = function
     | E4_admission.Unregistered_kind byte -> "unregisteredKind " ^ string_of_int byte
     | E4_admission.Bad_frame -> "badFrame"
     | E4_admission.Trailing -> "trailing"
-    | E4_admission.Conflict _ -> "conflict")
+    | E4_admission.Conflict _ -> "conflict"
+    | E4_admission.Bad_envelope -> "badEnvelope"
+    | E4_admission.Poisoned (query, first, second) ->
+      "poisoned " ^ E4_addr.Addr.hex query ^ " " ^ E4_addr.Addr.hex first ^ " "
+      ^ E4_addr.Addr.hex second)
   | Capacity reason -> "capacity " ^ reason
   | Fault fault -> E4_fault.word fault
 
@@ -160,6 +179,9 @@ let verify_error_word = function
   | Verify_dangling { missing; _ } -> "dangling " ^ E4_addr.Addr.hex missing
   | Verify_wrong_kind _ -> "wrongKind"
   | Root_unresolved name -> "rootUnresolved " ^ name
+  | Verify_bad_envelope _ -> "badEnvelope"
+  | Verify_poisoned { query; first; _ } ->
+    "poisoned " ^ E4_addr.Addr.hex query ^ " " ^ E4_addr.Addr.hex first
 
 let recovery_stop_word = function
   | Clean -> "clean"
@@ -351,6 +373,83 @@ let nodes view =
     (fun a -> match get_node view a with Some n -> Some (a, n) | None -> None)
     (addresses view)
 
+(* `Node.resultQuery?` (Node.resultQuery? (src/Effect4/Store/Domain/Action.lean)): a result
+   node's designated query, read as the common envelope `ctor 0 [nat 0, ref query q, output]` at
+   node version 0 and the common specification (`E4_result`, generated); None for every other
+   node.  It names the query field, never a reference inside the output. *)
+let result_query (n : E4_node.t) =
+  let s = n.E4_node.payload in
+  let len = String.length s in
+  if not (E4_kind.equal n.E4_node.kind E4_kind.Result && n.E4_node.version = 0
+          && String.equal n.E4_node.spec E4_result.spec) then None
+  else
+    match Eff_frame.read_ctor s 0 len with
+    | Some (0, start, limit, ending) when ending = len -> (
+      match Eff_frame.decode_nat s start limit with
+      | Some (version, after) when version = E4_result.envelope_version -> (
+        match Eff_frame.decode_ref s after limit with
+        | Some ((kind, digest), next)
+          when kind = E4_kind.byte E4_kind.Query && String.length digest = 32 -> (
+          match Eff_frame.read_frame s next limit with
+          | Some (_, _, _, finish) when finish = limit -> Some (E4_addr.Addr.of_digest digest)
+          | _ -> None)
+        | _ -> None)
+      | _ -> None)
+    | _ -> None
+
+let stage_result view (address : E4_addr.Addr.t) (n : E4_node.t) =
+  match result_query n with
+  | Some query -> cid_add view.v_rstaged (key_of query) address
+  | None -> ()
+
+(* Bring the by-query table up to the watermark and answer it; a watermark that went backwards
+   drops it, as it drops the by-Cid index. *)
+let result_map view =
+  let m =
+    match view.v_results with
+    | Some m when not (pos_lt view.v_end m.r_end) -> m
+    | _ ->
+      let m = { r_tbl = Hashtbl.create 64; r_end = E4_index.from_start } in
+      view.v_results <- Some m;
+      m
+  in
+  if pos_lt m.r_end view.v_end then begin
+    ignore
+      (walk_records view ~from:m.r_end ~upto:view.v_end ~f:(fun (seg, off) r ->
+           match E4_index.kind_at_default view.v_reader ~seg ~off with
+           | Some kind when E4_kind.equal kind E4_kind.Result -> (
+             match E4_pack.read_at view.v_reader ~seg ~off with
+             | None -> ()
+             | Some (_, bytes) -> (
+               match E4_node.decode bytes with
+               | Error _ -> ()
+               | Ok n -> (
+                 match result_query n with
+                 | Some query -> cid_add m.r_tbl (key_of query) r.E4_pack.r_addr
+                 | None -> ())))
+           | _ -> ()));
+    m.r_end <- view.v_end
+  end;
+  m
+
+(* `resultFault` (resultFault (src/Effect4/Store/Domain/Store.lean)): a result reads as the
+   envelope, and no resident result answers its query with another node.  The first such
+   resident is named, with the query and the refused node's own address. *)
+let check_result view (n : E4_node.t) =
+  if not (E4_kind.equal n.E4_node.kind E4_kind.Result) then Ok ()
+  else
+    match result_query n with
+    | None -> Error (Model E4_admission.Bad_envelope)
+    | Some query ->
+      let key = key_of query in
+      let bytes = E4_node.encode n in
+      let differs a =
+        match resident_bytes view a with Some b -> not (String.equal b bytes) | None -> false
+      in
+      match List.find_opt differs (cid_find (result_map view).r_tbl key @ cid_find view.v_rstaged key) with
+      | Some first -> Error (Model (E4_admission.Poisoned (query, first, E4_node.address n)))
+      | None -> Ok ()
+
 (* ============================================================ 4. admission *)
 
 (* CS2 / L-CAS-4.  The stages that are functions of the node alone, in Lean's order
@@ -399,7 +498,10 @@ let check_edges view (n : E4_node.t) =
   in
   go (E4_node.checked_edges n)
 
-let admissible view n = match check_pure n with Error a -> Error a | Ok () -> check_edges view n
+let admissible view n =
+  match check_pure n with
+  | Error a -> Error a
+  | Ok () -> ( match check_edges view n with Error a -> Error a | Ok () -> check_result view n)
 
 
 (* A snapshot contains values only: no mutable view, index, or pack handle. *)
@@ -410,8 +512,9 @@ type image = {
 }
 
 let empty_admission_view view =
-  {view with v_index = Some (E4_index.create ~slots:8); v_cids = None;
-    v_end = E4_index.from_start; v_staged = Hashtbl.create 16; v_order = [];
+  {view with v_index = Some (E4_index.create ~slots:8); v_cids = None; v_results = None;
+    v_end = E4_index.from_start; v_staged = Hashtbl.create 16; v_rstaged = Hashtbl.create 16;
+    v_order = [];
     v_control = E4_control.initial}
 
 let checked_image view =
@@ -440,8 +543,10 @@ let checked_image view =
             | Ok occupant -> refuse (Model (E4_admission.Conflict (address, occupant)))
             | Error why -> refuse (E4_admission.of_decode why))
          | Some _ -> ()
-         | None -> Hashtbl.add shadow.v_staged (key_of address)
-             {st_bytes = raw; st_seg = seg; st_off = off; st_kind = node.E4_node.kind});
+         | None ->
+           Hashtbl.add shadow.v_staged (key_of address)
+             {st_bytes = raw; st_seg = seg; st_off = off; st_kind = node.E4_node.kind};
+           stage_result shadow address node);
         bytes := (address, String.sub raw 0 (String.length raw)) :: !bytes;
         ending := record_end position record.E4_pack.r_len)
     in
@@ -509,6 +614,7 @@ let put_admitted t (n : E4_node.t) =
       let key = key_of addr in
       Hashtbl.replace view.v_staged key
         { st_bytes = bytes; st_seg = seg; st_off = off; st_kind = n.E4_node.kind };
+      stage_result view addr n;
       view.v_order <- key :: view.v_order;
       Ok (Fresh, addr))
 
@@ -532,6 +638,7 @@ let promote_staged view =
           { E4_index.seg = s.st_seg; off = s.st_off; kind = s.st_kind })
       view.v_staged;
     Hashtbl.reset view.v_staged;
+    Hashtbl.reset view.v_rstaged;
     view.v_order <- []
   end;
   (* The staged half of the by-Cid index is now below the watermark `commit` is about to
@@ -655,7 +762,8 @@ type prepared = {
 }
 
 let prepare_transaction view transaction =
-  let shadow = {view with v_staged = Hashtbl.copy view.v_staged; v_order = view.v_order} in
+  let shadow = {view with v_staged = Hashtbl.copy view.v_staged;
+    v_rstaged = Hashtbl.copy view.v_rstaged; v_order = view.v_order} in
   let exception Refused_transaction of transaction_error in
   let refuse why = raise (Refused_transaction why) in
   try
@@ -678,6 +786,7 @@ let prepare_transaction view transaction =
         | None ->
           Hashtbl.add shadow.v_staged (key_of address)
             {st_bytes = raw; st_seg = 0; st_off = 0; st_kind = node.E4_node.kind};
+          stage_result shadow address node;
           fresh := (address, node, raw) :: !fresh;
           Fresh_node in
       address, outcome) transaction.txn_nodes in
@@ -715,6 +824,7 @@ let commit_transaction ?hook writer transaction =
         let seg, off = E4_pack.stage writer.w_pack ~addr:address ~node_bytes:raw in
         Hashtbl.replace view.v_staged (key_of address)
           {st_bytes = raw; st_seg = seg; st_off = off; st_kind = node.E4_node.kind};
+        stage_result view address node;
         view.v_order <- key_of address :: view.v_order;
         (match hook with None -> () | Some _ -> E4_pack.flush writer.w_pack);
         call (After_write (index + 1))) prepared.prepared_fresh;
@@ -733,13 +843,16 @@ let commit_transaction ?hook writer transaction =
 (* ============================================================ 6. words *)
 
 (* `Binding.admissibleAfter` (Binding.admissibleAfter (src/Effect4/Store/Domain/Word.lean)) with the bindings before it
-   carried as a digest -> kind table. *)
-let admissible_after (seen : (string, E4_kind.t) Hashtbl.t) (b : binding) =
+   carried as a digest -> kind table, and their results as a query -> node table: the result
+   rule (`resultFault`) among the earlier bindings, and M2's handle test, as Lean's has them. *)
+let admissible_after (seen : (string, E4_kind.t) Hashtbl.t)
+    (results : (string, E4_node.t) Hashtbl.t) (b : binding) =
   let n = b.node in
   let key = key_of b.addr in
   n.E4_node.version = 0
   && E4_node.payload_ok n.E4_node.payload = Ok ()
   && (not (E4_node.malformed_ref n))
+  && (not (E4_node.handle_in_content n))
   && String.equal (E4_sha256.digest (E4_node.encode n)) key
   && (not (Hashtbl.mem seen key))
   && List.for_all
@@ -748,13 +861,27 @@ let admissible_after (seen : (string, E4_kind.t) Hashtbl.t) (b : binding) =
          | Some k -> E4_kind.equal k e.E4_addr.Ref.kind
          | None -> false)
        (E4_node.checked_edges n)
+  && ((not (E4_kind.equal n.E4_node.kind E4_kind.Result))
+      || match result_query n with
+         | None -> false
+         | Some query -> (
+           match Hashtbl.find_opt results (key_of query) with
+           | Some earlier -> earlier = n
+           | None -> true))
+
+let admit_binding seen results (b : binding) =
+  Hashtbl.replace seen (key_of b.addr) b.node.E4_node.kind;
+  match result_query b.node with
+  | Some query when not (Hashtbl.mem results (key_of query)) ->
+    Hashtbl.replace results (key_of query) b.node
+  | _ -> ()
 
 let word_wf w =
-  let seen = Hashtbl.create 64 in
+  let seen = Hashtbl.create 64 and results = Hashtbl.create 8 in
   List.for_all
     (fun b ->
-      if admissible_after seen b then begin
-        Hashtbl.replace seen (key_of b.addr) b.node.E4_node.kind;
+      if admissible_after seen results b then begin
+        admit_binding seen results b;
         true
       end
       else false)
@@ -766,6 +893,7 @@ let word_wf w =
 let closure view (r : E4_addr.Ref.t) =
   let fuel0 = count view in
   let seen : (string, E4_kind.t) Hashtbl.t = Hashtbl.create 64 in
+  let results : (string, E4_node.t) Hashtbl.t = Hashtbl.create 8 in
   let acc = ref [] in
   let rec go fuel (a : E4_addr.Addr.t) =
     if fuel <= 0 then ()
@@ -776,9 +904,9 @@ let closure view (r : E4_addr.Ref.t) =
       | Some n ->
         List.iter (fun (e : E4_addr.Ref.t) -> go (fuel - 1) e.E4_addr.Ref.addr) (E4_node.checked_edges n);
         let b = { addr = a; node = n } in
-        if admissible_after seen b then begin
+        if admissible_after seen results b then begin
           acc := b :: !acc;
-          Hashtbl.replace seen (key_of a) n.E4_node.kind
+          admit_binding seen results b
         end
   in
   go fuel0 r.E4_addr.Ref.addr;
@@ -831,6 +959,40 @@ let verify view =
             Hashtbl.replace kinds key n.E4_node.kind;
             Some n.E4_node.kind)))
   in
+  (* `Store.verifyResult` (Store.verifyResult (src/Effect4/Store/Domain/Word.lean)): the result
+     rule among every record, named by the first other result for the query. *)
+  let by_query =
+    lazy
+      (let table : (string, (E4_addr.Addr.t * string) list ref) Hashtbl.t = Hashtbl.create 16 in
+       List.iter
+         (fun (key, pos) ->
+           match read_bytes pos with
+           | Some bytes when String.length bytes > 1
+                             && Char.code bytes.[1] = E4_kind.byte E4_kind.Result -> (
+             match E4_node.decode bytes with
+             | Ok n -> (
+               match result_query n with
+               | Some query -> cid_add table (key_of query) (E4_addr.Addr.of_digest key, bytes)
+               | None -> ())
+             | Error _ -> ())
+           | _ -> ())
+         order;
+       table)
+  in
+  let result_of a n =
+    if not (E4_kind.equal n.E4_node.kind E4_kind.Result) then Ok ()
+    else
+      match result_query n with
+      | None -> Error (Verify_bad_envelope a)
+      | Some query -> (
+        let bytes = E4_node.encode n in
+        match
+          List.find_opt (fun (_, b) -> not (String.equal b bytes))
+            (cid_find (Lazy.force by_query) (key_of query))
+        with
+        | Some (first, _) -> Error (Verify_poisoned { node = a; query; first })
+        | None -> Ok ())
+  in
   let edges_of a n =
     let rec go = function
       | [] -> Ok ()
@@ -859,7 +1021,7 @@ let verify view =
         | Ok n ->
           if E4_node.malformed_ref n then Error (Verify_malformed_ref a)
           else if E4_node.handle_in_content n then Error (Verify_handle_in_content a)
-          else edges_of a n)
+          else match edges_of a n with Error e -> Error e | Ok () -> result_of a n)
   in
   let rec nodes_pass = function
     | [] -> Ok ()
@@ -898,7 +1060,14 @@ let verify_node view a =
                     (Verify_wrong_kind
                        { node = a; ref_ = e.E4_addr.Ref.addr; expected = e.E4_addr.Ref.kind; actual = k }))
           in
-          go (E4_node.checked_edges n))
+          match go (E4_node.checked_edges n) with
+          | Error e -> Error e
+          | Ok () -> (
+            match check_result view n with
+            | Ok () -> Ok ()
+            | Error (Model (E4_admission.Poisoned (query, first, _))) ->
+              Error (Verify_poisoned { node = a; query; first })
+            | Error _ -> Error (Verify_bad_envelope a)))
 
 let closed view =
   List.for_all
@@ -1029,8 +1198,10 @@ let make_view ~dir ~slots ~control ~upto =
     v_slots = slots;
     v_index = None;
     v_cids = None;
+    v_results = None;
     v_end = upto;
     v_staged = Hashtbl.create 64;
+    v_rstaged = Hashtbl.create 16;
     v_order = [];
     v_control = control;
     v_counters = { commits = 0; fsyncs = 0; conflicts = 0 };
@@ -1060,9 +1231,10 @@ let reopen_ro view =
   else if pos_lt upto view.v_end then begin
     view.v_end <- upto;
     view.v_index <- None;
-    (* the watermark went backwards, so the by-Cid index names records this view can no longer
-       see: it is not extendable and is dropped, exactly as the node index is *)
-    drop_cids view
+    (* the watermark went backwards, so the by-Cid and by-query indexes name records this view
+       can no longer see: they are not extendable and are dropped, exactly as the node index is *)
+    drop_cids view;
+    view.v_results <- None
   end;
   view
 

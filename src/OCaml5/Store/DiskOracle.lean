@@ -30,6 +30,8 @@ def admission : Admission → String
   | .oversize => "oversize"
   | .badVersion => "badVersion"
   | .conflict address occupant => "conflict:" ++ address.hex ++ ":" ++ hex occupant.encode
+  | .badEnvelope => "badEnvelope"
+  | .poisoned query first second => s!"poisoned:{query.hex}:{first.hex}:{second.hex}"
 
 def refusal : TxnRefusal → String
   | .node index why => s!"node:{index}:" ++ admission why

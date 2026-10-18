@@ -549,7 +549,8 @@ def ShapeShape : Shape :=
         ("cases", .list (.pair ((shape _root_.String).root) (.pair ((shape _root_.Nat).root) (.list (.pair ((shape _root_.String).root) (.named "Shape"))))))]),
       ("ref", 11, [("kind", (shape _root_.Effect4.Store.Kind).root)]),
       ("anyRef", 12, []),
-      ("named", 13, [("name", (shape _root_.String).root)])]
+      ("named", 13, [("name", (shape _root_.String).root)]),
+      ("value", 14, [])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
@@ -573,6 +574,7 @@ def toValShape : _root_.Effect4.Store.Shape → Val
   | .ref a0 => .ctor 11 [Canonical.toVal a0]
   | .anyRef => .ctor 12 []
   | .named a0 => .ctor 13 [Canonical.toVal a0]
+  | .value => .ctor 14 []
 def toValP0 : @_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape) → Val
   | (x, y) => .pair (Canonical.toVal x) (toValShape y)
 def toValL1 : @_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)) → List Val
@@ -627,6 +629,7 @@ def rawShape : Val → Option (_root_.Effect4.Store.Shape)
     match Canonical.ofVal (α := _root_.String) v0 with
     | some a0 => some (.named a0)
     | _ => none
+  | .ctor 14 [] => some .value
   | _ => none
 def rawP0 : Val → Option (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))
   | .pair v w =>
@@ -723,6 +726,7 @@ theorem rawShape_toValShape (a : _root_.Effect4.Store.Shape) :
   | «anyRef» => rfl
   | «named» a0 =>
     simp only [toValShape, rawShape_arm13, Canonical.ofVal_toVal]
+  | «value» => rfl
 termination_by structural a
 theorem rawP0_toValP0 (p : @_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)) :
     rawP0 (toValP0 p) = some p := by
@@ -824,6 +828,8 @@ theorem fitsShape (a : _root_.Effect4.Store.Shape) :
   | «named» a0 =>
     exact acceptsAt_sum _ _ _ 13 "named" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «value» =>
+    exact acceptsAt_sum _ _ _ 14 "value" [] [] rfl (acceptsFields_nil _)
 termination_by structural a
 theorem fitsP0 (p : @_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)) :
     acceptsIn defs (.pair ((shape _root_.String).root) (.named "Shape"))

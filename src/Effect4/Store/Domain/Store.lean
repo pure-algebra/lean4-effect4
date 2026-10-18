@@ -2,6 +2,7 @@ module
 
 public import Effect4.Store.Domain.NodeRead
 public import Effect4.Store.Domain.Transaction
+public import Effect4.Store.Domain.Action
 meta import Effect4.Store.Carrier.Kind
 meta import Effect4.Store.Domain.Node
 meta import Effect4.Store.Domain.Transaction
@@ -19,7 +20,10 @@ in the roots plane, and a node is found by its digest (`find`, the first binding
 frame with an unregistered kind byte or a wrong length (`malformedRef`), a handle in a content
 node (`handleInContent`, M2), then an edge that names no node (`dangling`) or a node of another kind (`wrongKind`). The spec edge is exempt exactly
 for the genesis — kind `schema` with the zero spec — and for nothing else (Q6), so a zero spec
-anywhere else is `dangling zeroDigest`. After admission the address is `sha256 (Node.encode n)`
+anywhere else is `dangling zeroDigest`. Then the result rule (`resultFault`, seams ST3): a result
+node must read as the common envelope (`badEnvelope`, `Node.resultQuery?`), and no binding may
+answer its query with another node (`poisoned`, naming the query and both results). A resident
+address waives no check. After admission the address is `sha256 (Node.encode n)`
 and the outcome is `fresh` (appended), `duplicate` (the resident is `n`; nothing changes), or
 `conflict occupant` (the resident differs: an exhibited collision, surfaced and never
 overwritten — the store is grow-only).
@@ -28,7 +32,8 @@ overwritten — the store is grow-only).
 stores, not a subtype: `empty_closed`, and `putNode_closed` for every outcome. `Sound` is the
 full invariant a store built by `putNode` keeps — every resident node is version `0`, has a
 well-formed payload, no malformed reference, and no handle in content. Each node sits at its own
-address, and the store is `Closed`. `Store.verify` re-establishes these properties from bytes.
+address, and the store is `Closed`. Every binding passes the result rule among all bindings
+(`ResultOnce`), so no two distinct results answer one query (`cas-result-once`). `Store.verify` re-establishes these properties from bytes.
 `putNode_ok` retains the existing admission and outcome conclusions. `putNode_ok_handleFree`
 establishes M2 for every successful insertion.
 
@@ -168,6 +173,10 @@ inductive Admission where
   /-- A word's binding whose address holds a different node: an exhibited collision, surfaced by
   `Word.apply`, never overwritten. -/
   | conflict (address : Digest) (occupant : Node)
+  /-- A result node whose payload does not read as the common envelope (`Node.resultQuery?`). -/
+  | badEnvelope
+  /-- A second distinct result for one query: the query, the resident result and the refused one. -/
+  | poisoned (query first second : Digest)
 deriving DecidableEq, Repr
 
 /-- Preserve byte-reading refusals before semantic node admission. -/
@@ -267,6 +276,218 @@ theorem resolves_mono {a b : Store} (h : a.sub b) {e : AnyRef} (hr : a.Resolves 
   let ⟨m, hm, hk⟩ := hr
   ⟨m, h _ _ hm, hk⟩
 
+/-! ## Results: one per query -/
+
+/-- The first binding that answers `query` with a node other than `node`. It scans every binding,
+shadowed ones included, and compares nodes, never addresses. -/
+def resultConflict : List (Digest × Node) → Digest → Node → Option (Digest × Node)
+  | [], _, _ => none
+  | (digest, other) :: rest, query, node =>
+    match other.resultQuery? with
+    | some found =>
+      if found = query then
+        if other = node then resultConflict rest query node else some (digest, other)
+      else resultConflict rest query node
+    | none => resultConflict rest query node
+
+/-- No conflicting binding means that every binding answering the query is the node itself.
+Helper of `cas-result-once`. -/
+theorem resultConflict_none_iff (nodes : List (Digest × Node)) (query : Digest) (node : Node) :
+    resultConflict nodes query node = none ↔
+      ∀ binding ∈ nodes, binding.2.resultQuery? = some query → binding.2 = node := by
+  induction nodes with
+  | nil => exact ⟨(fun _ _ member => nomatch member), fun _ => rfl⟩
+  | cons binding rest ih =>
+    obtain ⟨digest, other⟩ := binding
+    simp only [resultConflict]
+    cases answers : other.resultQuery? with
+    | none =>
+      simp only
+      rw [ih]
+      constructor
+      · intro all b member same
+        rcases List.mem_cons.mp member with rfl | member
+        · rw [answers] at same
+          exact nomatch same
+        · exact all b member same
+      · intro all b member same
+        exact all b (List.mem_cons_of_mem _ member) same
+    | some found =>
+      simp only
+      by_cases sameQuery : found = query
+      · rw [if_pos sameQuery]
+        by_cases sameNode : other = node
+        · rw [if_pos sameNode, ih]
+          constructor
+          · intro all b member same
+            rcases List.mem_cons.mp member with rfl | member
+            · exact sameNode
+            · exact all b member same
+          · intro all b member same
+            exact all b (List.mem_cons_of_mem _ member) same
+        · rw [if_neg sameNode]
+          constructor
+          · intro h
+            exact nomatch h
+          · intro all
+            exact absurd (all (digest, other) List.mem_cons_self (by rw [answers, sameQuery]))
+              sameNode
+      · rw [if_neg sameQuery, ih]
+        constructor
+        · intro all b member same
+          rcases List.mem_cons.mp member with rfl | member
+          · rw [answers] at same
+            exact absurd (Option.some.inj same) sameQuery
+          · exact all b member same
+        · intro all b member same
+          exact all b (List.mem_cons_of_mem _ member) same
+
+/-- A conflict names a binding of the list that answers the query with another node. -/
+theorem resultConflict_some {nodes : List (Digest × Node)} {query : Digest} {node : Node}
+    {found : Digest × Node} (h : resultConflict nodes query node = some found) :
+    found ∈ nodes ∧ found.2.resultQuery? = some query ∧ found.2 ≠ node := by
+  induction nodes with
+  | nil => exact nomatch h
+  | cons binding rest ih =>
+    obtain ⟨digest, other⟩ := binding
+    simp only [resultConflict] at h
+    split at h
+    · next answer answers =>
+      split at h
+      · next sameQuery =>
+        split at h
+        · obtain ⟨member, same, differ⟩ := ih h
+          exact ⟨List.mem_cons_of_mem _ member, same, differ⟩
+        · next differ =>
+          injection h with h
+          subst h
+          exact ⟨List.mem_cons_self, by rw [answers, sameQuery], differ⟩
+      · obtain ⟨member, same, differ⟩ := ih h
+        exact ⟨List.mem_cons_of_mem _ member, same, differ⟩
+    · obtain ⟨member, same, differ⟩ := ih h
+      exact ⟨List.mem_cons_of_mem _ member, same, differ⟩
+
+/-- Fewer bindings find no new conflict. Helper of `cas-result-once`, for closures and words. -/
+theorem resultConflict_none_subset {small large : List (Digest × Node)} {query : Digest} {node : Node}
+    (subset : ∀ binding ∈ small, binding ∈ large) (absent : resultConflict large query node = none) :
+    resultConflict small query node = none :=
+  (resultConflict_none_iff small query node).mpr fun binding member same =>
+    (resultConflict_none_iff large query node).mp absent binding (subset binding member) same
+
+/-- Why a node fails the result rule: it does not read as the envelope, or a binding answers its
+query with another node. -/
+inductive ResultFault where
+  | badEnvelope
+  | poisoned (query first : Digest)
+deriving DecidableEq, Repr
+
+/-- The result rule among `nodes`, the one operation every node entrance applies: insertion
+(`Store.putNode`), word admission (`Binding.admissibleAfter`) and verification
+(`Store.verifyNode`). A node that is not a result passes. -/
+def resultFault (nodes : List (Digest × Node)) (n : Node) : Option ResultFault :=
+  if n.kind = .result then
+    match n.resultQuery? with
+    | none => some .badEnvelope
+    | some query =>
+      match resultConflict nodes query n with
+      | some (first, _) => some (.poisoned query first)
+      | none => none
+  else none
+
+/-- A node passes the result rule among `nodes`: a result reads as the envelope, and every binding
+answering its query is the node itself. -/
+def ResultOnce (nodes : List (Digest × Node)) (n : Node) : Prop :=
+  n.kind = .result → ∃ query, n.resultQuery? = some query ∧ resultConflict nodes query n = none
+
+theorem resultFault_none_iff (nodes : List (Digest × Node)) (n : Node) :
+    resultFault nodes n = none ↔ ResultOnce nodes n := by
+  unfold resultFault ResultOnce
+  by_cases result : n.kind = .result
+  · rw [if_pos result]
+    constructor
+    · intro h _
+      split at h
+      · exact nomatch h
+      · next query answers =>
+        split at h
+        · exact nomatch h
+        · next absent => exact ⟨query, answers, absent⟩
+    · intro h
+      obtain ⟨query, answers, absent⟩ := h result
+      rw [answers]
+      simp only [absent]
+  · rw [if_neg result]
+    exact ⟨fun _ isResult => absurd isResult result, fun _ => rfl⟩
+
+/-- A node that is not a result passes the result rule anywhere. -/
+theorem resultOnce_of_not_result {nodes : List (Digest × Node)} {n : Node} (h : n.kind ≠ .result) :
+    ResultOnce nodes n :=
+  fun isResult => absurd isResult h
+
+/-- The rule survives fewer bindings. Helper of `cas-result-once`, for closures. -/
+theorem resultOnce_subset {small large : List (Digest × Node)} {n : Node}
+    (subset : ∀ binding ∈ small, binding ∈ large) (h : ResultOnce large n) : ResultOnce small n :=
+  fun isResult =>
+    let ⟨query, answers, absent⟩ := h isResult
+    ⟨query, answers, resultConflict_none_subset subset absent⟩
+
+/-- The rule survives more bindings that answer the node's query only with the node itself. -/
+theorem resultOnce_append_of {nodes extra : List (Digest × Node)} {n : Node} (h : ResultOnce nodes n)
+    (same : ∀ g ∈ extra, ∀ query, n.resultQuery? = some query → g.2.resultQuery? = some query →
+      g.2 = n) :
+    ResultOnce (nodes ++ extra) n := fun isResult =>
+  let ⟨query, answers, absent⟩ := h isResult
+  ⟨query, answers, (resultConflict_none_iff _ query n).mpr fun c member qc =>
+    (List.mem_append.mp member).elim
+      (fun inNodes => (resultConflict_none_iff nodes query n).mp absent c inNodes qc)
+      (fun inExtra => same c inExtra query answers qc)⟩
+
+/-- Every binding passes the result rule among all bindings. -/
+def ResultsOnce (nodes : List (Digest × Node)) : Prop := ∀ binding ∈ nodes, ResultOnce nodes binding.2
+
+/-- Under the rule, two bindings that answer one query hold one node: `result_once`'s step. -/
+theorem ResultsOnce.unique {nodes : List (Digest × Node)} (h : ResultsOnce nodes)
+    {a b : Digest × Node} (ha : a ∈ nodes) (hb : b ∈ nodes) {query : Digest}
+    (qa : a.2.resultQuery? = some query) (qb : b.2.resultQuery? = some query) : a.2 = b.2 := by
+  obtain ⟨query', answers, absent⟩ := h a ha (Node.resultQuery?_kind qa)
+  rw [qa] at answers
+  injection answers with same
+  subst same
+  exact ((resultConflict_none_iff nodes query a.2).mp absent b hb qb).symm
+
+/-- Appending a node that passed the rule keeps every binding passing it. Helper of
+`cas-result-once`, consumed by `putNode_sound` and the word laws. -/
+theorem resultsOnce_append {nodes : List (Digest × Node)} {d : Digest} {n : Node}
+    (old : ResultsOnce nodes) (new : ResultOnce nodes n) : ResultsOnce (nodes ++ [(d, n)]) := by
+  have toNew : ∀ c ∈ nodes, ∀ query, n.resultQuery? = some query →
+      c.2.resultQuery? = some query → c.2 = n := by
+    intro c member query answers same
+    obtain ⟨query', answers', absent⟩ := new (Node.resultQuery?_kind answers)
+    rw [answers] at answers'
+    injection answers' with q
+    subst q
+    exact (resultConflict_none_iff nodes query n).mp absent c member same
+  intro b member isResult
+  rcases List.mem_append.mp member with member | member
+  · obtain ⟨query, answers, absent⟩ := old b member isResult
+    refine ⟨query, answers, (resultConflict_none_iff _ query b.2).mpr ?_⟩
+    intro c memberC same
+    rcases List.mem_append.mp memberC with memberC | memberC
+    · exact (resultConflict_none_iff nodes query b.2).mp absent c memberC same
+    · rw [List.mem_singleton] at memberC
+      subst memberC
+      exact (toNew b member query same answers).symm
+  · rw [List.mem_singleton] at member
+    subst member
+    obtain ⟨query, answers, absent⟩ := new isResult
+    refine ⟨query, answers, (resultConflict_none_iff _ query n).mpr ?_⟩
+    intro c memberC same
+    rcases List.mem_append.mp memberC with memberC | memberC
+    · exact (resultConflict_none_iff nodes query n).mp absent c memberC same
+    · rw [List.mem_singleton] at memberC
+      subst memberC
+      rfl
+
 /-! ## The put -/
 
 /-- Admission, then the address, then the outcome. -/
@@ -279,11 +500,15 @@ def Store.putNode (s : Store) (n : Node) : Except Admission (Outcome × Digest �
         match s.checkEdges n with
         | .error a => .error a
         | .ok () =>
-          match s.find (sha256 n.encode) with
-          | some m =>
-            if m = n then .ok (.duplicate, sha256 n.encode, s)
-            else .ok (.conflict m, sha256 n.encode, s)
-          | none => .ok (.fresh, sha256 n.encode, { s with nodes := s.nodes ++ [(sha256 n.encode, n)] })
+          match resultFault s.nodes n with
+          | some .badEnvelope => .error .badEnvelope
+          | some (.poisoned query first) => .error (.poisoned query first (sha256 n.encode))
+          | none =>
+            match s.find (sha256 n.encode) with
+            | some m =>
+              if m = n then .ok (.duplicate, sha256 n.encode, s)
+              else .ok (.conflict m, sha256 n.encode, s)
+            | none => .ok (.fresh, sha256 n.encode, { s with nodes := s.nodes ++ [(sha256 n.encode, n)] })
     else .error .badVersion
   else .error .oversize
 
@@ -318,33 +543,36 @@ theorem putNode_accepted_new_to_old {s : Store} {n : Node} {o : Outcome} {d : Di
             have hres := (checkEdges_ok_iff s n).mp hce
             have hm' := bool_eq_false_of_not hm
             split at h
-            · next m hfind =>
-              split at h
-              · next heq =>
+            · exact nomatch h
+            · exact nomatch h
+            · split at h
+              · next m hfind =>
+                split at h
+                · next heq =>
+                  simp only [Except.ok.injEq, Prod.mk.injEq] at h
+                  obtain ⟨ho, hd, hs⟩ := h
+                  subst heq
+                  refine ⟨hwf, hv, hm', hres, hd.symm, Or.inr (Or.inl ⟨ho.symm, ?_, hs.symm⟩)⟩
+                  rw [← hd]
+                  exact hfind
+                · next hne =>
+                  simp only [Except.ok.injEq, Prod.mk.injEq] at h
+                  obtain ⟨ho, hd, hs⟩ := h
+                  refine ⟨hwf, hv, hm', hres, hd.symm, Or.inr (Or.inr ⟨m, ho.symm, ?_, hne, hs.symm⟩)⟩
+                  rw [← hd]
+                  exact hfind
+              · next hfind =>
                 simp only [Except.ok.injEq, Prod.mk.injEq] at h
                 obtain ⟨ho, hd, hs⟩ := h
-                subst heq
-                refine ⟨hwf, hv, hm', hres, hd.symm, Or.inr (Or.inl ⟨ho.symm, ?_, hs.symm⟩)⟩
-                rw [← hd]
-                exact hfind
-              · next hne =>
-                simp only [Except.ok.injEq, Prod.mk.injEq] at h
-                obtain ⟨ho, hd, hs⟩ := h
-                refine ⟨hwf, hv, hm', hres, hd.symm, Or.inr (Or.inr ⟨m, ho.symm, ?_, hne, hs.symm⟩)⟩
-                rw [← hd]
-                exact hfind
-            · next hfind =>
-              simp only [Except.ok.injEq, Prod.mk.injEq] at h
-              obtain ⟨ho, hd, hs⟩ := h
-              refine ⟨hwf, hv, hm', hres, hd.symm, Or.inl ⟨ho.symm, ?_, ?_⟩⟩
-              · rw [← hd]
-                exact hfind
-              · rw [← hs, hd]
+                refine ⟨hwf, hv, hm', hres, hd.symm, Or.inl ⟨ho.symm, ?_, ?_⟩⟩
+                · rw [← hd]
+                  exact hfind
+                · rw [← hs, hd]
     · exact nomatch h
   · exact nomatch h
 
 /-- The existing admission and outcome conclusions of a successful put.
-The M2 conclusion is `putNode_ok_handleFree`. -/
+The M2 conclusion is `putNode_ok_handleFree`; the result rule's is `putNode_ok_result`. -/
 theorem putNode_ok {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
     (h : s.putNode n = .ok (o, d, s')) :
     n.payload.WF ∧ n.version = 0 ∧ n.malformedRef = false ∧
@@ -370,26 +598,46 @@ theorem putNode_ok_handleFree {s : Store} {n : Node} {o : Outcome} {d : Digest} 
     · exact nomatch h
   · exact nomatch h
 
+/-- Every accepted node passes the result rule among the store's bindings (seams ST3).
+Helper of `cas-result-once`: consumed by `putNode_sound` and the word laws. -/
+theorem putNode_ok_result {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
+    (h : s.putNode n = .ok (o, d, s')) : ResultOnce s.nodes n := by
+  unfold Store.putNode at h
+  split at h
+  · split at h
+    · split at h
+      · exact nomatch h
+      · split at h
+        · exact nomatch h
+        · split at h
+          · exact nomatch h
+          · split at h
+            · exact nomatch h
+            · exact nomatch h
+            · next passes => exact (resultFault_none_iff s.nodes n).mp passes
+    · exact nomatch h
+  · exact nomatch h
+
 /-- The put of an admissible node whose address is free: `fresh`, appended. -/
 theorem putNode_fresh {s : Store} {n : Node} (hwf : n.payload.WF) (hv : n.version = 0)
     (hm : n.malformedRef = false) (hm2 : n.handleInContent = false)
-    (he : ∀ e ∈ n.checkedEdges, s.Resolves e)
+    (he : ∀ e ∈ n.checkedEdges, s.Resolves e) (hr : ResultOnce s.nodes n)
     (hf : s.find (sha256 n.encode) = none) :
     s.putNode n = .ok (.fresh, sha256 n.encode, { s with nodes := s.nodes ++ [(sha256 n.encode, n)] }) := by
   unfold Store.putNode
   rw [if_pos hwf, if_pos hv, hm, if_neg Bool.false_ne_true, hm2,
-    if_neg Bool.false_ne_true, (checkEdges_ok_iff s n).mpr he]
+    if_neg Bool.false_ne_true, (checkEdges_ok_iff s n).mpr he, (resultFault_none_iff s.nodes n).mpr hr]
   simp only [hf]
 
 /-- The put of an admissible node already resident at its address: `duplicate`, unchanged. -/
 theorem putNode_duplicate {s : Store} {n : Node} (hwf : n.payload.WF) (hv : n.version = 0)
     (hm : n.malformedRef = false) (hm2 : n.handleInContent = false)
-    (he : ∀ e ∈ n.checkedEdges, s.Resolves e)
+    (he : ∀ e ∈ n.checkedEdges, s.Resolves e) (hr : ResultOnce s.nodes n)
     (hf : s.find (sha256 n.encode) = some n) :
     s.putNode n = .ok (.duplicate, sha256 n.encode, s) := by
   unfold Store.putNode
   rw [if_pos hwf, if_pos hv, hm, if_neg Bool.false_ne_true, hm2,
-    if_neg Bool.false_ne_true, (checkEdges_ok_iff s n).mpr he]
+    if_neg Bool.false_ne_true, (checkEdges_ok_iff s n).mpr he, (resultFault_none_iff s.nodes n).mpr hr]
   simp only [hf, if_true]
 
 /-- A put never removes or replaces a node: the store is grow-only. -/
@@ -429,7 +677,8 @@ theorem putNode_closed {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : S
   · exact hc
 
 /-- The invariant a store built by `putNode` keeps: every resident node would be admitted into
-the store around it, and sits at its own address. -/
+the store around it, and sits at its own address. Every binding passes the result rule among all
+bindings, shadowed ones included, because the conflict scan reads them all. -/
 structure Store.Sound (s : Store) : Prop where
   version : ∀ d n, s.find d = some n → n.version = 0
   wf : ∀ d n, s.find d = some n → n.payload.WF
@@ -437,18 +686,20 @@ structure Store.Sound (s : Store) : Prop where
   handles : ∀ d n, s.find d = some n → n.handleInContent = false
   addressed : ∀ d n, s.find d = some n → d = sha256 n.encode
   closed : Closed s
+  results : ResultsOnce s.nodes
 
 theorem empty_sound : Store.empty.Sound :=
   ⟨(fun _ _ h => nomatch h), (fun _ _ h => nomatch h), (fun _ _ h => nomatch h),
-    (fun _ _ h => nomatch h), (fun _ _ h => nomatch h), empty_closed⟩
+    (fun _ _ h => nomatch h), (fun _ _ h => nomatch h), empty_closed, (fun _ h => nomatch h)⟩
 
 theorem putNode_sound {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store}
     (hs : s.Sound) (h : s.putNode n = .ok (o, d, s')) : s'.Sound := by
   obtain ⟨hwf, hv, hm, _, hd, hcase⟩ := putNode_ok h
   have hcl := putNode_closed hs.closed h
   have hm2 := putNode_ok_handleFree h
+  have hr := putNode_ok_result h
   rcases hcase with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨k, _, _, _, rfl⟩
-  · refine ⟨?_, ?_, ?_, ?_, ?_, hcl⟩
+  · refine ⟨?_, ?_, ?_, ?_, ?_, hcl, resultsOnce_append hs.results hr⟩
     · intro d' m hm'
       rcases findIn_append_single (l := s.nodes) hm' with hold | ⟨_, _, rfl⟩
       · exact hs.version d' m hold
@@ -515,9 +766,9 @@ are what the resident's own admission established. -/
 theorem put_duplicate {α : Type} [Content α] {a : α} {s : Store}
     (hres : s.find (address a).digest = some (nodeOf a)) (hwf : (toVal a).WF)
     (hm : (nodeOf a).malformedRef = false) (hm2 : (nodeOf a).handleInContent = false)
-    (hc : Closed s) :
+    (hc : Closed s) (hr : ResultOnce s.nodes (nodeOf a)) :
     s.put a = .ok (.duplicate, address a, s) := by
-  have hp := putNode_duplicate (s := s) (n := nodeOf a) hwf rfl hm hm2 (hc _ _ hres) hres
+  have hp := putNode_duplicate (s := s) (n := nodeOf a) hwf rfl hm hm2 (hc _ _ hres) hr hres
   unfold Store.put
   rw [hp]
   rfl

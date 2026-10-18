@@ -3,18 +3,19 @@ module
 public import Effect4.Store.Domain.Node
 public import Effect4.Store.Domain.Store
 public import Effect4.Store.Domain.Traits
-public import Effect4.Store.Domain.Derived.Schema
+public import Effect4.Store.Domain.Document
 
 /-!
 # Store.Genesis
 
-Owner: the one instance that closes the loop — `Content Document` at kind `schema` — and the
-theorems it turns from statements under a binder into facts.
+Owner: the theorems that the one `Content Document` instance turns from statements under a
+binder into facts. The instance itself, at kind `schema`, lives below the store
+(`src/Effect4/Store/Domain/Document.lean`), so node admission can compute a fixed specification.
 
 `src/Effect4/Store/Domain/Node.lean` writes everything that needs `Canonical Document` — the meta-schema, the
 genesis node, `specOf`, `nodeOf`, `address` and the lattice — under `variable [Content
 Document]`, and `SchemaGen.DocumentC.instCanonical` (`src/Effect4/Store/Domain/Derived/Schema.lean`) derives `Canonical Document` from the carrier
-itself. This module supplies the kind, and with it every statement of that section is an
+itself. With the kind, every statement of that section is an
 ordinary theorem: the meta-schema is the genesis node (`nodeOf_metaSchema'`), the spec of
 `Document` is the genesis address (`specOf_document`), every other document's node is a schema
 node under the genesis (`nodeOf_document'`), and the meta-schema fits its own shape
@@ -34,10 +35,6 @@ about two seconds (lane B's measurement, 2026-09-05).
 set_option autoImplicit false
 
 namespace Effect4.Store
-
-/-- The schema kind's carrier: every spec is a stored `Document`. -/
-instance instContentDocument : Content Document where
-  kind := .schema
 
 /-- The kind the genesis rule assumes, by construction. -/
 theorem kind_document : Content.kind Document = .schema := rfl

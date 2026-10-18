@@ -1259,6 +1259,12 @@ def registry : Registry where
     { id := "cas-interrupted-roots", concept := "exact-codecs", role := .compatibility
       title := "An accepted cut retains the exact old root table or returns the exact committed store; no host persistence, crash, or progress claim (seams ST1b, R13)"
       pointer := .witness `Effect4.Store.interrupted_roots },
+    { id := "cas-result-envelope", concept := "exact-codecs", role := .compatibility
+      title := "A node answers a designated query exactly when it is the node of a version-0 result envelope of that query at the common specification; the query field, never a reference inside the output; no result truth, host determinism, or hash injectivity claim (seams ST3, R13)"
+      pointer := .witness `Effect4.Store.Node.resultQuery?_eq_some_iff },
+    { id := "cas-result-once", concept := "exact-codecs", role := .preservation
+      title := "Two bindings of a reached store that answer one designated query hold the same node, through commits, interrupted prefixes and checked restoration; the result rule scans every binding; no result truth, host determinism, progress, or hash injectivity claim (seams ST3, R13)"
+      pointer := .witness `Effect4.Store.Cas.result_once },
     { id := "cas-resident-injective", concept := "exact-codecs", role := .compatibility
       title := "Two nodes resident at their own equal addresses in one store are equal; both lookup premises remain; no hash injectivity or host persistence claim (seams K0, R13)"
       pointer := .witness `Effect4.Store.address_inj_resident },

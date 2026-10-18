@@ -47,6 +47,11 @@
                                `admission_stages` below is where it moves, in one line)
          4  `Dangling`         a checked edge names no node          [checked_edges order,
          5  `Wrong_kind`       a checked edge names another kind      spec edge first]
+         6  `Bad_envelope`     a result node that does not read as the common envelope
+                               (`result_query`, Node.resultQuery? (src/Effect4/Store/Domain/Action.lean))
+         7  `Poisoned`         another resident result answers the same designated query:
+                               the query, that result, and the refused node's address
+                               (`resultFault`, seams ST3)
        The genesis (kind `schema` with the zero spec) is exempt from the spec edge and nothing
        else is (`Node.checkedEdges`, Node.checkedEdges (src/Effect4/Store/Domain/Node.lean)).      tested: golden G2, prop L-CAS-4
    Raw native payload strings pass byte reading before the CS2 semantic stages.
@@ -71,9 +76,14 @@
    CS7 / L-CAS-6  `verify` is `Store.verify`: it re-reads every record from the pack and
        re-hashes it, re-decodes it, re-resolves every checked edge at its kind and resolves
        every root.  It also refuses a handle in content as `put` does (amendment M2's
-       default; `Verify_handle_in_content`, OCaml only).  It NEVER consults the index and
-       never trusts a record's recorded digest — both are caches of it.
-                                                    by construction; tested (G7, X3, CS7-h)
+       default; `Verify_handle_in_content`, OCaml only), and applies the result rule among
+       every record (`Verify_bad_envelope`, `Verify_poisoned`, as Lean's `verifyResult`).
+       It NEVER consults the index and never trusts a record's recorded digest — both are
+       caches of it.                                  by construction; tested (G7, X3, CS7-h, R1)
+   CS10 Results (seams ST3).  Every entrance — `put`, a transaction, recovery's re-admission,
+       `word_wf`, `closure` and both verifications — applies one result rule: a result node
+       reads as the common envelope, and no other result answers its designated query.  The
+       by-query table is a cache with a rebuild, as the by-Cid index is.            tested (R1)
    CS8  The store never collects (Store (src/Effect4/Store/Domain/Store.lean), cas-design §8).  `reachable` and `by_cid` are
        queries, never edges (amendment M1: `Reachable` does not walk `Cid` fields), and
        `pin_all` mints the pin roots a publish owes.                          tested (G3)
@@ -187,6 +197,9 @@ type verify_error =
       actual : E4_kind.t;
     }
   | Root_unresolved of string
+  | Verify_bad_envelope of E4_addr.Addr.t  (** a result that does not read as the envelope *)
+  | Verify_poisoned of { node : E4_addr.Addr.t; query : E4_addr.Addr.t; first : E4_addr.Addr.t }
+      (** another result answers the same designated query (CS10) *)
 (** `Word.VerifyError` (src/Effect4/Store/Domain/Word.lean), constructor for constructor, with
     `Verify_handle_in_content` added for amendment M2. *)
 
@@ -352,6 +365,10 @@ val pin_all :
 
 type binding = { addr : E4_addr.Addr.t; node : E4_node.t }
 (** `Word.Binding` (Binding (src/Effect4/Store/Domain/Word.lean)). *)
+
+val result_query : E4_node.t -> E4_addr.Addr.t option
+(** `Node.resultQuery?`: a result node's designated query, read as the common envelope at node
+    version 0 and the common specification (`E4_result`); [None] for every other node (CS10). *)
 
 val word_wf : binding list -> bool
 (** `Word.wf` Word.wf (src/Effect4/Store/Domain/Word.lean): children first, digests exact, no digest twice. *)

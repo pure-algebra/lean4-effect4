@@ -16,7 +16,7 @@ import tempfile
 import time
 from pathlib import Path
 
-VERSION = 1
+VERSION = 2
 
 
 def json_bytes(value):
@@ -128,6 +128,11 @@ def digest(value):
     return hashlib.sha256(json_bytes(value)).hexdigest()
 
 
+def query_key(input_key, command):
+    """Identify one host action over the prepared input snapshot."""
+    return digest({'version': VERSION, 'input': input_key, 'command': list(command)})
+
+
 def shared_store(root):
     common = Path(output_of(root, ['git', 'rev-parse', '--path-format=absolute', '--git-common-dir']))
     return common.parent / (common.name + '-checks')
@@ -150,11 +155,13 @@ def prepare(root, name, inputs, runtime='none', environment=(), outputs=()):
 def run(root, name, command, force=False, store=None):
     """Reuse a matching pass, or run the command and publish only an unchanged-input success."""
     flags = shlex.split(os.environ.get('MAKEFLAGS', ''))
-    short = flags[0].lstrip('-') if flags and not flags[0].startswith('--') and '=' not in flags[0] else ''
+    short = ''.join(flag.lstrip('-') for flag in flags
+                    if not flag.startswith('--') and '=' not in flag and flag.lstrip('-').isalpha())
     if set(short) & set('ntq') or any(f in ('--dry-run', '--just-print', '--recon', '--touch', '--question') for f in flags):
         # GNU make executes recursive recipes even under -n/-t/-q. They cannot publish evidence.
         print(f'SKIP {name}: make requested no execution', flush=True)
         return 0
+    force = force or 'B' in short or '--always-make' in flags
     root = Path(root)
     check = root / '.lake/check'
     request = json.loads((check / (name + '.inputs.json')).read_text())
@@ -166,19 +173,21 @@ def run(root, name, command, force=False, store=None):
     if digest(current()) != key:
         raise ValueError('check inputs changed after key preparation')
     store = Path(store) if store is not None else shared_store(root)
-    result_path = store / name / key
-    marker = check / name
     expected_command = list(command)
+    action_key = query_key(key, expected_command)
+    result_path = store / name / action_key
+    marker = check / name
     if not force and result_path.is_file():
         try:
             record = json.loads(result_path.read_text())
         except ValueError:
             record = {}
-        if record.get('key') == key and record.get('command') == expected_command and record.get('exit') == 0:
+        if (record.get('key') == action_key and record.get('input') == key and
+                record.get('command') == expected_command and record.get('exit') == 0):
             # A previous marker can hold the same bytes but predate the key's latest return.
             write_changed(marker, (key + '\n').encode())
             marker.touch()
-            print(f'PASS {name}: shared result {key[:12]}', flush=True)
+            print(f'PASS {name}: shared result {action_key[:12]}', flush=True)
             return 0
     marker.unlink(missing_ok=True)
     started = time.monotonic()
@@ -187,10 +196,11 @@ def run(root, name, command, force=False, store=None):
         return code
     if digest(current()) != key:
         raise ValueError('check inputs changed during its run; no pass recorded')
-    record = {'version': VERSION, 'key': key, 'command': expected_command, 'exit': 0,
+    record = {'version': VERSION, 'key': action_key, 'input': key,
+              'command': expected_command, 'exit': 0,
               'seconds': round(time.monotonic() - started, 6)}
     write_changed(result_path, json_bytes(record))
     write_changed(marker, (key + '\n').encode())
     marker.touch()
-    print(f'PASS {name}: recorded {key[:12]} ({record["seconds"]:.3f}s)', flush=True)
+    print(f'PASS {name}: recorded {action_key[:12]} ({record["seconds"]:.3f}s)', flush=True)
     return 0
