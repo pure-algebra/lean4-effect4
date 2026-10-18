@@ -18,25 +18,34 @@
    PLT3 node c p = walk c base p, the whole walk from the root, on every call
                                                                         by construction *)
 
-type 'n t = { path : int list; base : 'n }
+type 'n t =
+  { path : int list
+  ; base : 'n
+  }
 
 let make (n : 'n) : 'n t = { path = []; base = n }
-
 let root (p : 'n t) : 'n = p.base
 
 let snoc (_child : 'n -> int -> 'n option) (p : 'n t) (i : int) : 'n t =
   { p with path = p.path @ [ i ] }
+;;
 
 let rec walk (child : 'n -> int -> 'n option) (n : 'n) (l : int list) : 'n option =
   match l with
   | [] -> Some n
-  | i :: rest -> (match child n i with None -> None | Some m -> walk child m rest)
+  | i :: rest ->
+    (match child n i with
+     | None -> None
+     | Some m -> walk child m rest)
+;;
 
 let append (child : 'n -> int -> 'n option) (p : 'n t) (l : int list) : 'n t =
   List.fold_left (fun q i -> snoc child q i) p l
+;;
 
-let node (child : 'n -> int -> 'n option) (p : 'n t) : 'n option = walk child p.base p.path
+let node (child : 'n -> int -> 'n option) (p : 'n t) : 'n option =
+  walk child p.base p.path
+;;
 
 let to_list (p : 'n t) : int list = p.path
-
 let length (p : 'n t) : int = List.length p.path

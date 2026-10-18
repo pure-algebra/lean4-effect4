@@ -69,26 +69,25 @@ val kind_callback : int
 val kind_exited : int
 val kind_unknown : int
 
-val kind_count : int
 (** 21.  The size of the content table today; it grows only at the end (X2 of the CAS
     amendments), so this constant is a floor on future tables and never a modulus. *)
+val kind_count : int
 
-val kind_name : int -> string
 (** The constructor's name, or ["kind<n>"] for an ordinal this build does not know. *)
+val kind_name : int -> string
 
 (** {1 The entry} *)
 
-type entry = {
-  index : int;  (** the trace index: the reading axis *)
-  kind : int;  (** the `RunEvent` constructor ordinal, from the content table *)
-  fiber : int option;
-  token : int option;  (** parkedOn / resumedWith: the park protocol's identity *)
-  scope : int option;  (** scopeLinked / scopeClosedOnLink *)
-  task_owner : int option;  (** scheduledTask / ranTask: the fiber's queue staff *)
-  decision : int;  (** which decision's segment this row falls in *)
-}
+type entry =
+  { index : int (** the trace index: the reading axis *)
+  ; kind : int (** the `RunEvent` constructor ordinal, from the content table *)
+  ; fiber : int option
+  ; token : int option (** parkedOn / resumedWith: the park protocol's identity *)
+  ; scope : int option (** scopeLinked / scopeClosedOnLink *)
+  ; task_owner : int option (** scheduledTask / ranTask: the fiber's queue staff *)
+  ; decision : int (** which decision's segment this row falls in *)
+  }
 
-val parse_run_event_row : decision:int -> int -> E4_log.row -> entry
 (** The codec of the public log AS IT IS RENDERED TODAY: the rows
     `E4_engine.ENGINE.trace_rows` prints (`ocaml/engine/e4_engine.ml:472-505`), which are
     `name(arg,arg,...)` with the arguments nested by parentheses and brackets.  It reads the
@@ -101,53 +100,56 @@ val parse_run_event_row : decision:int -> int -> E4_log.row -> entry
     `finalizerProgram` carries fiber, finalizer and exit but NO scope, so a finalizer row is
     not joined to its scope until X2 lands `finalizerRegistered`.  `scopeOpened` and
     `scopeClosed` do not exist at all.  This function invents none of them. *)
+val parse_run_event_row : decision:int -> int -> E4_log.row -> entry
 
 (** {1 The index} *)
 
 type t
 
 val empty : t
-val add : t -> entry -> t
+
 (** Append one row's entry.  X1, X2.
     @raise Invalid_argument if [entry.index] is not greater than the last added index, or if
       [entry.decision] is below the last added decision -- both would break X2 or the
       contiguity {!segment} rests on. *)
+val add : t -> entry -> t
 
-val of_log : E4_log.t -> parse:(int -> E4_log.row -> entry) -> t
 (** One pass over the log, in index order; [parse i row] must answer an entry with
     [index = i].  Use {!parse_run_event_row} for the codec above. *)
+val of_log : E4_log.t -> parse:(int -> E4_log.row -> entry) -> t
 
 val count : t -> int
-
 val by_index : t -> int -> entry option
 val by_fiber : t -> int -> int list
 val by_kind : t -> int -> int list
 val by_token : t -> int -> int list
 val by_scope : t -> int -> int list
 val by_task_owner : t -> int -> int list
-val by_decision : t -> int -> int list
+
 (** All ascending.  X2.  {!by_decision} is {!segment} enumerated: the rows of one decision
     are contiguous, so there is no posting list to keep. *)
+val by_decision : t -> int -> int list
 
 val fibers : t -> int list
 val tokens : t -> int list
 val scopes : t -> int list
-val kinds : t -> int list
+
 (** All ascending. *)
+val kinds : t -> int list
 
 val task_owners : t -> int list
 
-val decisions : t -> int
 (** How many decisions appended at least one row, i.e. how many segments {!segment} has. *)
+val decisions : t -> int
 
-val decision_keys : t -> int list
 (** Those decisions, ascending. *)
+val decision_keys : t -> int list
 
-val segment : t -> int -> (int * int) option
 (** The half-open row range [\[log_from, log_upto)] one decision appended
     (design-language §1.6: "each decision appends a segment").  [None] for a decision that
     appended nothing -- an empty segment is not a gap in the log, it is a bar line with no
     note under it. *)
+val segment : t -> int -> (int * int) option
 
-val decision_of : t -> int -> int option
 (** The decision whose segment row [i] falls in: `(by_index t i).decision`. *)
+val decision_of : t -> int -> int option

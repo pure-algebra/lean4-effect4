@@ -182,135 +182,137 @@ open Effect4_engine
 (* ---------------------------------------------------------------- the node *)
 
 type image =
-  | Whole of string  (** ctor 0: the image inline, below `E4_chunk.threshold` *)
-  | Chunked of E4_addr.Ref.t list  (** ctor 1: chunk refs, in image order *)
-  | Manifested of E4_addr.Ref.t  (** ctor 2: the root of a manifest tree (D3) *)
+  | Whole of string (** ctor 0: the image inline, below `E4_chunk.threshold` *)
+  | Chunked of E4_addr.Ref.t list (** ctor 1: chunk refs, in image order *)
+  | Manifested of E4_addr.Ref.t (** ctor 2: the root of a manifest tree (D3) *)
 
-type t = {
-  job : E4_addr.Ref.t;  (** kind `job` *)
-  position : int;
-  tape_prefix : E4_addr.Ref.t option;  (** kind `tape`; pending, D4 *)
-  prev : E4_addr.Ref.t option;  (** kind `checkpoint` *)
-  engine : E4_addr.Addr.t;  (** sha256 of the image; a stamp, never an edge (D5) *)
-  image_length : int;
-  image : image;
-}
+type t =
+  { job : E4_addr.Ref.t (** kind `job` *)
+  ; position : int
+  ; tape_prefix : E4_addr.Ref.t option (** kind `tape`; pending, D4 *)
+  ; prev : E4_addr.Ref.t option (** kind `checkpoint` *)
+  ; engine : E4_addr.Addr.t (** sha256 of the image; a stamp, never an edge (D5) *)
+  ; image_length : int
+  ; image : image
+  }
 
-val encode : t -> string
 (** The payload bytes, in the byte table at the head of this file. *)
+val encode : t -> string
 
-val decode : string -> t option
 (** Exact: a trailing byte, a wrong ctor index, a ref at the wrong kind, a missing field and
     an `engine` that is not 32 bytes are all refusals. *)
+val decode : string -> t option
 
 val payload_of : t -> string
 val t_of_payload : string -> t option
 
-val node : spec:E4_addr.Addr.t -> t -> E4_node.t
 (** The checkpoint node itself: version 0, kind `checkpoint`, this spec, `encode t`. *)
+val node : spec:E4_addr.Addr.t -> t -> E4_node.t
 
 (* ---------------------------------------------------------------- the pending schema (D7) *)
 
-val image_version : int
 (** 0 — the engine-side image's version while CAS commit 7 is owed. *)
+val image_version : int
 
-val pending : bool
 (** true until the run-relative shapes are Lean's.  Read it in a report, not in a branch. *)
+val pending : bool
 
 val schema_payload : string
-val schema_node : E4_node.t
+
 (** kind `schema`, the zero spec — a genesis in the store's sense, so it is admitted with no
     edge of its own.  Its payload names the pending version. *)
+val schema_node : E4_node.t
 
 val schema_address : E4_addr.Addr.t
-val ensure_schema : E4_cas.t -> E4_addr.Addr.t
+
 (** File the schema node if it is not resident and answer its address.  Staged, not durable.
     Raises [E4_cas.Store_error] when the store refuses it or its address holds another node
     (a collision or a corrupt record); [write] answers the same as a value. *)
+val ensure_schema : E4_cas.t -> E4_addr.Addr.t
 
 (* ---------------------------------------------------------------- the roots *)
 
-val head_root_name : E4_addr.Addr.t -> string
 (** `runs/<job hex>/checkpoint` — a `swap` root, so the `prev` check of amendment M7
     applies to it (CP3). *)
+val head_root_name : E4_addr.Addr.t -> string
 
-val pin_root_name : job:E4_addr.Addr.t -> E4_addr.Cid.t -> string
 (** `runs/<job hex>/pin/<cid hex>` — lane P4's `pin_all` name (E4_cas D8), so the pin this
     module mints is the root `pin_all` would have minted (D6). *)
+val pin_root_name : job:E4_addr.Addr.t -> E4_addr.Cid.t -> string
 
 (* ---------------------------------------------------------------- writing *)
 
 type write_error =
-  | Refused of E4_cas.admission  (** the store refused the checkpoint node *)
+  | Refused of E4_cas.admission (** the store refused the checkpoint node *)
   | Occupied of E4_cas.outcome
-      (** the schema's or the checkpoint's address holds a colliding node or a corrupt record
+  (** the schema's or the checkpoint's address holds a colliding node or a corrupt record
           ([E4_cas.Conflict], [E4_cas.Corrupt]); nothing was committed *)
-  | Chunk_refused of string  (** the store refused a chunk or manifest node *)
-  | Root_refused of E4_control.root_error  (** the head root or a pin *)
+  | Chunk_refused of string (** the store refused a chunk or manifest node *)
+  | Root_refused of E4_control.root_error (** the head root or a pin *)
 
 val write_error_word : write_error -> string
 
 exception Write_refused of string
 
-val write :
-  E4_cas.t ->
-  job:E4_addr.Addr.t ->
-  position:int ->
-  machine_image:string ->
-  prev:E4_addr.Addr.t option ->
-  ?params:E4_chunk.params ->
-  ?threshold:int ->
-  ?manifest:bool ->
-  ?tape_prefix:E4_addr.Addr.t ->
-  ?pin:bool ->
-  ?pin_via_cid:bool ->
-  ?head:bool ->
-  unit ->
-  (E4_addr.Addr.t, write_error) result
 (** Chunk the image above [threshold] (default `E4_chunk.threshold`), stage every chunk and
     manifest node and the checkpoint node, GROUP-COMMIT them in one `E4_cas.commit`, mint the
     pin root (M1, D6) and advance the head root `runs/<job hex>/checkpoint` with the `prev`
     check (CP3).  [prev] is the previous checkpoint's address, or None for the first.
     [manifest] (default true) chooses the two-level form; [pin] and [head] (both default true)
     turn off the roots for a caller that is only measuring bytes. *)
+val write
+  :  E4_cas.t
+  -> job:E4_addr.Addr.t
+  -> position:int
+  -> machine_image:string
+  -> prev:E4_addr.Addr.t option
+  -> ?params:E4_chunk.params
+  -> ?threshold:int
+  -> ?manifest:bool
+  -> ?tape_prefix:E4_addr.Addr.t
+  -> ?pin:bool
+  -> ?pin_via_cid:bool
+  -> ?head:bool
+  -> unit
+  -> (E4_addr.Addr.t, write_error) result
 
-val write_exn :
-  E4_cas.t ->
-  job:E4_addr.Addr.t ->
-  position:int ->
-  machine_image:string ->
-  prev:E4_addr.Addr.t option ->
-  E4_addr.Addr.t
 (** The prompt's shape (D2).  @raise Write_refused *)
+val write_exn
+  :  E4_cas.t
+  -> job:E4_addr.Addr.t
+  -> position:int
+  -> machine_image:string
+  -> prev:E4_addr.Addr.t option
+  -> E4_addr.Addr.t
 
-type written = {
-  addr : E4_addr.Addr.t;
-  chunks_cut : int;
-  chunks_fresh : int;
-  chunks_dup : int;
-  manifest_nodes : int;
-  manifest_fresh : int;
-  manifest_dup : int;
-  payload_bytes : int;
-  image_bytes_written : int;  (** the image's own length, chunked or not *)
-}
+type written =
+  { addr : E4_addr.Addr.t
+  ; chunks_cut : int
+  ; chunks_fresh : int
+  ; chunks_dup : int
+  ; manifest_nodes : int
+  ; manifest_fresh : int
+  ; manifest_dup : int
+  ; payload_bytes : int
+  ; image_bytes_written : int (** the image's own length, chunked or not *)
+  }
 
-val write_counted :
-  E4_cas.t ->
-  job:E4_addr.Addr.t ->
-  position:int ->
-  machine_image:string ->
-  prev:E4_addr.Addr.t option ->
-  ?params:E4_chunk.params ->
-  ?threshold:int ->
-  ?manifest:bool ->
-  ?tape_prefix:E4_addr.Addr.t ->
-  ?pin:bool ->
-  ?pin_via_cid:bool ->
-  ?head:bool ->
-  unit ->
-  (written, write_error) result
 (** `write` with the sharing counts A2 §4.4 and bench cell B7 are about. *)
+val write_counted
+  :  E4_cas.t
+  -> job:E4_addr.Addr.t
+  -> position:int
+  -> machine_image:string
+  -> prev:E4_addr.Addr.t option
+  -> ?params:E4_chunk.params
+  -> ?threshold:int
+  -> ?manifest:bool
+  -> ?tape_prefix:E4_addr.Addr.t
+  -> ?pin:bool
+  -> ?pin_via_cid:bool
+  -> ?head:bool
+  -> unit
+  -> (written, write_error) result
 
 (* ---------------------------------------------------------------- reading *)
 
@@ -319,82 +321,98 @@ type read_error =
   | Not_a_checkpoint of E4_kind.t
   | Bad_payload
   | Missing_chunk
-  | Image_mismatch of { expected : E4_addr.Addr.t; actual : E4_addr.Addr.t }
-  | Length_mismatch of { expected : int; actual : int }
+  | Image_mismatch of
+      { expected : E4_addr.Addr.t
+      ; actual : E4_addr.Addr.t
+      }
+  | Length_mismatch of
+      { expected : int
+      ; actual : int
+      }
 
 val read_error_word : read_error -> string
 
-val image_bytes : E4_cas.ro -> t -> string option
 (** The image behind a decoded checkpoint: inline, from its chunks, or through its manifest.
     It does NOT verify — `read` is what verifies (CP7). *)
+val image_bytes : E4_cas.ro -> t -> string option
 
-val read : E4_cas.ro -> E4_addr.Addr.t -> (t * string, read_error) result
 (** The checkpoint and its image, VERIFIED (CP7): the image is reassembled, its length is
     checked against `image_length` and its sha256 against `engine`. *)
+val read : E4_cas.ro -> E4_addr.Addr.t -> (t * string, read_error) result
 
-val read_parts :
-  E4_cas.ro ->
-  E4_addr.Addr.t ->
-  (E4_addr.Addr.t * int * E4_addr.Addr.t option * string, read_error) result
 (** The prompt's four-field answer: (job, position, prev, image). *)
+val read_parts
+  :  E4_cas.ro
+  -> E4_addr.Addr.t
+  -> (E4_addr.Addr.t * int * E4_addr.Addr.t option * string, read_error) result
 
-val head : E4_cas.ro -> E4_addr.Addr.t -> E4_addr.Addr.t option
 (** The head of `runs/<job hex>/checkpoint`, if the root is there. *)
+val head : E4_cas.ro -> E4_addr.Addr.t -> E4_addr.Addr.t option
 
 (* ---------------------------------------------------------------- the chain *)
 
-type chain_error = Cycle of E4_addr.Addr.t | Unreadable of E4_addr.Addr.t * read_error
+type chain_error =
+  | Cycle of E4_addr.Addr.t
+  | Unreadable of E4_addr.Addr.t * read_error
 
-val chain : E4_cas.ro -> E4_addr.Addr.t -> (E4_addr.Addr.t list, chain_error) result
 (** The `prev` walk from this checkpoint back to the first, head first (CP8). *)
+val chain : E4_cas.ro -> E4_addr.Addr.t -> (E4_addr.Addr.t list, chain_error) result
 
-val chain_from :
-  prev_of:(E4_addr.Addr.t -> E4_addr.Addr.t option) ->
-  E4_addr.Addr.t ->
-  (E4_addr.Addr.t list, chain_error) result
 (** The same walk over an arbitrary predecessor function, so a cycle can be exhibited and
     refused in a test (CP8). *)
+val chain_from
+  :  prev_of:(E4_addr.Addr.t -> E4_addr.Addr.t option)
+  -> E4_addr.Addr.t
+  -> (E4_addr.Addr.t list, chain_error) result
 
 (* ---------------------------------------------------------------- the closure (R8) *)
 
-val closure_streaming :
-  E4_cas.ro -> E4_addr.Ref.t -> (E4_addr.Addr.t -> E4_node.t -> unit) -> unit
 (** The checked-edge closure of a chunk-bearing root, children first, each address once,
     delivered one node at a time and never accumulated (CP9). *)
+val closure_streaming
+  :  E4_cas.ro
+  -> E4_addr.Ref.t
+  -> (E4_addr.Addr.t -> E4_node.t -> unit)
+  -> unit
 
-val closure_fold :
-  E4_cas.ro -> E4_addr.Ref.t -> init:'a -> f:('a -> E4_addr.Addr.t -> E4_node.t -> 'a) -> 'a
+val closure_fold
+  :  E4_cas.ro
+  -> E4_addr.Ref.t
+  -> init:'a
+  -> f:('a -> E4_addr.Addr.t -> E4_node.t -> 'a)
+  -> 'a
 
-val closure_size : E4_cas.ro -> E4_addr.Ref.t -> int * int
 (** (nodes, node bytes) over the same walk, without holding a byte of it. *)
+val closure_size : E4_cas.ro -> E4_addr.Ref.t -> int * int
 
 (* ---------------------------------------------------------------- ephemeral (CP10) *)
 
-val ephemeral : E4_wal.t -> position:int -> unit
 (** A `Checkpoint_mark` row with no address: a log row, never a CAS node (L-CP-2). *)
+val ephemeral : E4_wal.t -> position:int -> unit
 
 (* ---------------------------------------------------------------- the machine image *)
 
-type machine_image = {
-  mi_version : int;
-  mi_carriers : string;
-  mi_fuel : int;
-  mi_outcome : string;
-  mi_answer : string;
-  mi_fiber_count : int;
-  mi_trace_length : int;
-  mi_root_exit : string option;
-  mi_exits : (int * string) list;
-  mi_fiber_rows : (int * string) list;
-  mi_trace_rows : string list;
-  mi_refs : string list;
-  mi_store_row : string;
-}
 (** The free rows of `E4_engine.ENGINE` in the fixed order the byte table above gives. *)
+type machine_image =
+  { mi_version : int
+  ; mi_carriers : string
+  ; mi_fuel : int
+  ; mi_outcome : string
+  ; mi_answer : string
+  ; mi_fiber_count : int
+  ; mi_trace_length : int
+  ; mi_root_exit : string option
+  ; mi_exits : (int * string) list
+  ; mi_fiber_rows : (int * string) list
+  ; mi_trace_rows : string list
+  ; mi_refs : string list
+  ; mi_store_row : string
+  }
 
 val encode_image : machine_image -> string
-val machine_of_image : string -> machine_image option
+
 (** Exact (CP11). *)
+val machine_of_image : string -> machine_image option
 
 module Of_engine (En : E4_engine.ENGINE) : sig
   val state : En.t -> machine_image
@@ -402,5 +420,6 @@ module Of_engine (En : E4_engine.ENGINE) : sig
 end
 
 val machine_state : E4_engine.Fast.t -> machine_image
-val image_of_machine : E4_engine.Fast.t -> string
+
 (** The pending canonical image of a `Fast` machine (CP11, and the PENDING note above). *)
+val image_of_machine : E4_engine.Fast.t -> string

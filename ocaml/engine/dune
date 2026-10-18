@@ -7,14 +7,29 @@
 ; hexadecimal, the 63-bit naturals, SHA-256) — nothing else without a measured need recorded
 ; in the design that asks for it. Builds as part of the estate workspace (ocaml/dune lists
 ; engine; `cd ocaml && dune build engine`).
+
 (library
  (name effect4_engine)
  (public_name effect4_engine)
- (libraries unix threads.posix effect4_eff effect4_clock effect4_bytes effect4_lcnf)
- (flags (:standard -w +a-4-9-40-41-42-44-45-70 -w @55)))
+ (libraries
+  unix
+  threads.posix
+  effect4_eff
+  effect4_clock
+  effect4_bytes
+  effect4_lcnf)
+ (flags
+  (:standard -w +a-4-9-40-41-42-44-45-70 -w @55)))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .effect4_engine.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:../tools/typed_lint/main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .effect4_engine.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../tools/typed_lint/main.exe} %{cmt}))))

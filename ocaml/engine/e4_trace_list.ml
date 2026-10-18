@@ -18,8 +18,20 @@
 type 'e t = 'e list
 
 let empty : 'e t = []
-let emit (evs : 'e list) (t : 'e t) : 'e t = match evs with [] -> t | _ -> t @ evs
+
+let emit (evs : 'e list) (t : 'e t) : 'e t =
+  match evs with
+  | [] -> t
+  | _ -> t @ evs
+;;
+
 let to_list (t : 'e t) : 'e list = t
 let length (t : 'e t) : int = List.length t
-let is_empty (t : 'e t) : bool = match t with [] -> true | _ :: _ -> false
+
+let is_empty (t : 'e t) : bool =
+  match t with
+  | [] -> true
+  | _ :: _ -> false
+;;
+
 let nth_opt (i : int) (t : 'e t) : 'e option = if i < 0 then None else List.nth_opt t i

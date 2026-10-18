@@ -2,6 +2,7 @@
 ; property test of the wire on random programs. (The hand-written checker, the GADT surface
 ; and their four tests were retired on 2026-09-13: the typing has one face, effTy, and the
 ; Lean-cut `.ty` goldens are its expected output.)
+
 (test
  (name test_eff)
  (modules test_eff)
@@ -23,31 +24,37 @@
 ; and handle (12), the last two constructors of Effect4.Store.Val. Its two goldens
 ; (goldens/val_handle.hex, goldens/val_ref.hex) are HAND-DERIVED from Val.lean's encoder and
 ; confirmed against its #guards (Val.lean:1131,1136,1147,1174); see the test's header.
+
 (test
  (name test_val_frames)
  (modules test_val_frames)
  (libraries effect4_eff)
- (deps (glob_files %{project_root}/goldens/*)))
+ (deps
+  (glob_files %{project_root}/goldens/*)))
 
 ; The differential against Lean's own encoder (Effect4.Program.Wire, printed as hex by
 ; src/OCaml5/Tools/EffWire.lean into ocaml/goldens/eff). That directory is a sibling of this
 ; dune project, so it cannot be a tracked dep: the test reaches it relatively and says so
 ; when it is absent. Our own goldens are deps because it compares against them.
+
 (test
  (name test_lean_wire)
  (modules test_lean_wire)
  (libraries effect4_eff)
- (deps (glob_files %{project_root}/goldens/*)))
+ (deps
+  (glob_files %{project_root}/goldens/*)))
 
 (test
  (name test_metadata)
  (modules test_metadata)
  (libraries effect4_eff)
- (deps (glob_files %{project_root}/goldens/*)))
+ (deps
+  (glob_files %{project_root}/goldens/*)))
 
 ; The program types at their owner, read by a client (slice 1.2a): the Eff-Stmt-Stmts cycle
 ; traversed with its type parameter kept, the Lean names in the generated tables, and the wire
 ; on a program and a record built here.
+
 (test
  (name test_owner)
  (modules test_owner)

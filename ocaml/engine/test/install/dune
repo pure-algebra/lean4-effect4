@@ -18,4 +18,9 @@
   installed.expected
   check_install.sh)
  (action
-  (run bash %{dep:check_install.sh} %{workspace_root} consumer installed.expected)))
+  (run
+   bash
+   %{dep:check_install.sh}
+   %{workspace_root}
+   consumer
+   installed.expected)))

@@ -29,10 +29,11 @@ let failures = ref 0
 
 let check (name : string) (ok : bool) : unit =
   incr checks;
-  if not ok then begin
+  if not ok
+  then (
     incr failures;
-    Printf.printf "FAIL: %s\n%!" name
-  end
+    Printf.printf "FAIL: %s\n%!" name)
+;;
 
 let read_file (path : string) : string =
   let ic = open_in_bin path in
@@ -40,6 +41,7 @@ let read_file (path : string) : string =
   let s = really_input_string ic n in
   close_in ic;
   s
+;;
 
 let goldens = "../goldens/"
 
@@ -53,7 +55,8 @@ let unhex (s : string) : string =
   in
   let clean = Buffer.create (String.length s) in
   String.iter
-    (fun c -> if c <> '\n' && c <> '\r' && c <> ' ' && c <> '\t' then Buffer.add_char clean c)
+    (fun c ->
+       if c <> '\n' && c <> '\r' && c <> ' ' && c <> '\t' then Buffer.add_char clean c)
     s;
   let clean = Buffer.contents clean in
   if String.length clean mod 2 <> 0 then invalid_arg "unhex: odd number of digits";
@@ -64,9 +67,15 @@ let unhex (s : string) : string =
     i := !i + 2
   done;
   Buffer.contents out
+;;
 
 let hex (s : string) : string =
-  String.concat "" (List.map (fun c -> Printf.sprintf "%02x" (Char.code c)) (List.init (String.length s) (String.get s)))
+  String.concat
+    ""
+    (List.map
+       (fun c -> Printf.sprintf "%02x" (Char.code c))
+       (List.init (String.length s) (String.get s)))
+;;
 
 (* ---- the subset of Store.Val the goldens use, as a tree ---- *)
 
@@ -86,30 +95,46 @@ let rec emit (b : Eff_frame.writer) (t : v) : unit =
   | Ctor (i, args) -> Eff_frame.emit_ctor b i (fun p -> List.iter (emit p) args)
   | Ref (k, d) -> Eff_frame.emit_ref b (k, d)
   | Handle (k, n) -> Eff_frame.emit_handle b (k, n)
+;;
 
 (* The reader entry point over that subset: dispatch on the frame's tag, then hand the frame
    to the kernel decoder for it. Every arm is the kernel's, so every arm's exactness is. *)
-let rec dec : v Eff_frame.decoder = fun s pos limit ->
+let rec dec : v Eff_frame.decoder =
+  fun s pos limit ->
   let open Eff_frame in
   match read_frame s pos limit with
   | None -> None
   | Some (t, _, _, _) ->
-    let map f = function None -> None | Some (x, n) -> Some (f x, n) in
-    if t = tag_nat then map (fun n -> Nat n) (decode_nat s pos limit)
-    else if t = tag_string then map (fun x -> Str x) (decode_string s pos limit)
-    else if t = tag_list then map (fun xs -> List xs) (decode_list dec s pos limit)
-    else if t = tag_ref then map (fun (k, d) -> Ref (k, d)) (decode_ref s pos limit)
-    else if t = tag_handle then map (fun (k, n) -> Handle (k, n)) (decode_handle s pos limit)
-    else if t = tag_ctor then
-      (match read_ctor s pos limit with
-       | None -> None
-       | Some (i, p, e, next) ->
-         let rec go p acc =
-           if p = e then Some (Ctor (i, List.rev acc), next)
-           else match dec s p e with None -> None | Some (x, p') -> go p' (x :: acc)
-         in
-         go p [])
+    let map f = function
+      | None -> None
+      | Some (x, n) -> Some (f x, n)
+    in
+    if t = tag_nat
+    then map (fun n -> Nat n) (decode_nat s pos limit)
+    else if t = tag_string
+    then map (fun x -> Str x) (decode_string s pos limit)
+    else if t = tag_list
+    then map (fun xs -> List xs) (decode_list dec s pos limit)
+    else if t = tag_ref
+    then map (fun (k, d) -> Ref (k, d)) (decode_ref s pos limit)
+    else if t = tag_handle
+    then map (fun (k, n) -> Handle (k, n)) (decode_handle s pos limit)
+    else if t = tag_ctor
+    then (
+      match read_ctor s pos limit with
+      | None -> None
+      | Some (i, p, e, next) ->
+        let rec go p acc =
+          if p = e
+          then Some (Ctor (i, List.rev acc), next)
+          else (
+            match dec s p e with
+            | None -> None
+            | Some (x, p') -> go p' (x :: acc))
+        in
+        go p [])
     else None
+;;
 
 let bytes_of (t : v) : string = Eff_frame.to_string emit t
 
@@ -155,16 +180,28 @@ let tree_ref : v = Ctor (0, [ Str "Effect"; Ref (2, String.make 32 '\000') ])
 let golden (name : string) (tree : v) (expected_len : int) : unit =
   let want = unhex (read_file (goldens ^ name ^ ".hex")) in
   let got = bytes_of tree in
-  check (name ^ ": the golden is " ^ string_of_int expected_len ^ " bytes")
+  check
+    (name ^ ": the golden is " ^ string_of_int expected_len ^ " bytes")
     (String.length want = expected_len);
   check (name ^ ": the emitters write the golden byte for byte") (got = want);
   if got <> want then Printf.printf "    want %s\n    got  %s\n%!" (hex want) (hex got);
-  check (name ^ ": the golden decodes exactly to the tree") (Eff_frame.exact dec want = Some tree);
-  check (name ^ ": a trailing byte is refused") (Eff_frame.exact dec (want ^ "\000") = None);
-  check (name ^ ": a truncated golden is refused")
+  check
+    (name ^ ": the golden decodes exactly to the tree")
+    (Eff_frame.exact dec want = Some tree);
+  check
+    (name ^ ": a trailing byte is refused")
+    (Eff_frame.exact dec (want ^ "\000") = None);
+  check
+    (name ^ ": a truncated golden is refused")
     (Eff_frame.exact dec (String.sub want 0 (String.length want - 1)) = None);
-  check (name ^ ": the program wire refuses it") (Eff_wire.decode_program_exact want = None);
-  Printf.printf "  %-14s %4d bytes  emit=golden  decode=tree\n%!" name (String.length want)
+  check
+    (name ^ ": the program wire refuses it")
+    (Eff_wire.decode_program_exact want = None);
+  Printf.printf
+    "  %-14s %4d bytes  emit=golden  decode=tree\n%!"
+    name
+    (String.length want)
+;;
 
 (* ---- V1 ---- *)
 
@@ -172,6 +209,7 @@ let () =
   Printf.printf "test_val_frames: the ref (11) and handle (12) frames\n%!";
   golden "val_handle" tree_handle 59;
   golden "val_ref" tree_ref 75
+;;
 
 (* ---- V2, V3, V4 ---- *)
 
@@ -180,44 +218,67 @@ let () =
   let frame tag payload = to_string (fun b () -> emit_frame b tag payload) () in
   (* round trips of the frames alone *)
   let rt_h k n = exact decode_handle (to_string emit_handle (k, n)) = Some (k, n) in
-  check "handle round trip at keys 0, 1, 255, 256, 2^32, max_int"
-    (rt_h 2 0 && rt_h 2 1 && rt_h 0 255 && rt_h 255 256 && rt_h 7 (1 lsl 32) && rt_h 1 max_int);
+  check
+    "handle round trip at keys 0, 1, 255, 256, 2^32, max_int"
+    (rt_h 2 0
+     && rt_h 2 1
+     && rt_h 0 255
+     && rt_h 255 256
+     && rt_h 7 (1 lsl 32)
+     && rt_h 1 max_int);
   let rt_r k d = exact decode_ref (to_string emit_ref (k, d)) = Some (k, d) in
-  check "ref round trip on an empty, a short and a 32-byte digest"
+  check
+    "ref round trip on an empty, a short and a 32-byte digest"
     (rt_r 2 "" && rt_r 0 "\001\002\003" && rt_r 255 (String.make 32 '\255'));
   (* V3: no digits is the key 0, the encoder's rule (Val.lean:1136) *)
-  check "a handle payload of one kind byte is the key 0"
+  check
+    "a handle payload of one kind byte is the key 0"
     (exact decode_handle (frame tag_handle "\001") = Some (1, 0)
      && to_string emit_handle (1, 0) = frame tag_handle "\001");
   (* V2: the refusals *)
-  check "a handle key with a leading zero digit is refused"
+  check
+    "a handle key with a leading zero digit is refused"
     (exact decode_handle (frame tag_handle "\002\000\007") = None);
-  check "a handle with an empty payload (no kind byte) is refused"
+  check
+    "a handle with an empty payload (no kind byte) is refused"
     (exact decode_handle (frame tag_handle "") = None);
-  check "a ref with an empty payload (no kind byte) is refused"
+  check
+    "a ref with an empty payload (no kind byte) is refused"
     (exact decode_ref (frame tag_ref "") = None);
-  check "a handle key of nine digits is refused"
-    (exact decode_handle (frame tag_handle "\002\001\000\000\000\000\000\000\000\000") = None);
-  check "a handle key of eight digits above max_int is refused"
+  check
+    "a handle key of nine digits is refused"
+    (exact decode_handle (frame tag_handle "\002\001\000\000\000\000\000\000\000\000")
+     = None);
+  check
+    "a handle key of eight digits above max_int is refused"
     (exact decode_handle (frame tag_handle "\002\064\000\000\000\000\000\000\000") = None);
-  check "a handle key of eight digits at max_int is accepted"
-    (exact decode_handle (frame tag_handle "\002\063\255\255\255\255\255\255\255") = Some (2, max_int));
-  check "the two tags do not read each other's frames"
+  check
+    "a handle key of eight digits at max_int is accepted"
+    (exact decode_handle (frame tag_handle "\002\063\255\255\255\255\255\255\255")
+     = Some (2, max_int));
+  check
+    "the two tags do not read each other's frames"
     (exact decode_handle (frame tag_ref "\002\003") = None
      && exact decode_ref (frame tag_handle "\002\003") = None);
-  check "a ref or handle frame under any other decoder is refused"
+  check
+    "a ref or handle frame under any other decoder is refused"
     (exact decode_nat (frame tag_handle "\002\003") = None
      && exact decode_string (frame tag_ref "\002\003") = None
      && exact (decode_list decode_nat) (frame tag_ref "\002") = None);
-  check "a frame whose length prefix runs past the end is refused"
-    (exact decode_handle ("\012\000\000\000\000\000\000\000\004\002\003") = None
-     && exact decode_ref ("\011\000\000\000\000\000\000\000\004\002") = None);
-  check "a ref or handle frame shorter than nine bytes is refused"
+  check
+    "a frame whose length prefix runs past the end is refused"
+    (exact decode_handle "\012\000\000\000\000\000\000\000\004\002\003" = None
+     && exact decode_ref "\011\000\000\000\000\000\000\000\004\002" = None);
+  check
+    "a ref or handle frame shorter than nine bytes is refused"
     (exact decode_ref "\011\000\000" = None && exact decode_handle "\012" = None);
   (* V4: neither frame is a program frame *)
-  check "the program wire refuses a bare handle and a bare ref"
+  check
+    "the program wire refuses a bare handle and a bare ref"
     (Eff_wire.decode_program_exact (to_string emit_handle (1, 3)) = None
-     && Eff_wire.decode_program_exact (to_string emit_ref (2, String.make 32 '\000')) = None)
+     && Eff_wire.decode_program_exact (to_string emit_ref (2, String.make 32 '\000'))
+        = None)
+;;
 
 (* V5: a negative integer `-(n+1)` is tag 13 over n's digits (Val.lean's `Tag.int`), and
    Eff_val reads it back by the `nat` digit rule. *)
@@ -226,18 +287,24 @@ let () =
   let frame tag payload = to_string (fun b () -> emit_frame b tag payload) () in
   List.iter
     (fun n ->
-      check (Printf.sprintf "the negative integer -(%d+1) reads back" n)
-        (Eff_val.decode_exact (Eff_val.to_bytes (Eff_types.Val.NegInt n))
-         = Some (Eff_types.Val.NegInt n)))
+       check
+         (Printf.sprintf "the negative integer -(%d+1) reads back" n)
+         (Eff_val.decode_exact (Eff_val.to_bytes (Eff_types.Val.NegInt n))
+          = Some (Eff_types.Val.NegInt n)))
     [ 0; 1; 255; 256; max_int ];
-  check "a negative integer with a leading zero digit is refused"
+  check
+    "a negative integer with a leading zero digit is refused"
     (Eff_val.decode_exact (frame tag_int "\000\001") = None);
-  check "a negative integer of nine digits is refused"
+  check
+    "a negative integer of nine digits is refused"
     (Eff_val.decode_exact (frame tag_int "\001\000\000\000\000\000\000\000\000") = None);
-  check "the negative integer and the natural do not read each other's frames"
+  check
+    "the negative integer and the natural do not read each other's frames"
     (exact decode_neg_int (frame tag_nat "\001") = None
      && exact decode_nat (frame tag_int "\001") = None)
+;;
 
 let () =
   Printf.printf "test_val_frames: %d checks, %d failures\n%!" !checks !failures;
   if !failures > 0 then exit 1
+;;

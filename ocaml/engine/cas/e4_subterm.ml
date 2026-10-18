@@ -1,6 +1,5 @@
 (* E4_subterm — see e4_subterm.mli for what this is and the behaviours it holds itself to. *)
 
-
 (* ============================================================ 1. families, the child table,
    the value side
 
@@ -10,20 +9,30 @@
    pair `(value argument index, child sort)` at position k is the M5 row: program child k is
    that argument.  There is no fallback (M3): a constructor without a row has no children. *)
 
-type family = Eff_subterm.family = Eff | Stmts | Stmt | Action | Effs | Layer | Layers
+type family = Eff_subterm.family =
+  | Eff
+  | Stmts
+  | Stmt
+  | Action
+  | Effs
+  | Layer
+  | Layers
 
 let family_name = Eff_subterm.family_name
 let families = Eff_subterm.families
 let family_ctor_names = Eff_subterm.family_ctor_names
 let children = Eff_subterm.children
-
 let arity f = List.length (family_ctor_names f)
 
 let path_to_string (p : int list) : string =
   if List.is_empty p then "." else String.concat "." (List.map string_of_int p)
+;;
 
 let val_of_prog (f : family) (c : int) (k : int) : int option =
-  match List.nth_opt (children f c) k with Some (v, _) -> Some v | None -> None
+  match List.nth_opt (children f c) k with
+  | Some (v, _) -> Some v
+  | None -> None
+;;
 
 let prog_of_val (f : family) (c : int) (j : int) : int option =
   let rec go k = function
@@ -31,6 +40,7 @@ let prog_of_val (f : family) (c : int) (j : int) : int option =
     | (v, _) :: rest -> if v = j then Some k else go (k + 1) rest
   in
   go 0 (children f c)
+;;
 
 module Tree = struct
   type node = Eff_subterm.node =
@@ -52,34 +62,51 @@ module Tree = struct
   let rec at_ (n : node) (p : int list) : node option =
     match p with
     | [] -> Some n
-    | i :: rest -> ( match child n i with None -> None | Some c -> at_ c rest)
+    | i :: rest ->
+      (match child n i with
+       | None -> None
+       | Some c -> at_ c rest)
+  ;;
 
   let of_bytes (s : string) : node option =
-    match Eff_wire.decode_program_exact s with None -> None | Some e -> Some (N_eff e)
+    match Eff_wire.decode_program_exact s with
+    | None -> None
+    | Some e -> Some (N_eff e)
+  ;;
 
   let rec subtree_count (n : node) : int =
-    let f = family_of n and c = ctor_index n in
+    let f = family_of n
+    and c = ctor_index n in
     List.fold_left
-      (fun acc k -> match child n k with None -> acc | Some ch -> acc + subtree_count ch)
+      (fun acc k ->
+         match child n k with
+         | None -> acc
+         | Some ch -> acc + subtree_count ch)
       1
       (List.init (List.length (children f c)) (fun k -> k))
+  ;;
 end
 
 (* ============================================================ 4. the index *)
 
-type entry = {
-  prog_path : int list;
-  val_path : int list;
-  family : family;
-  ctor : int;
-  off : int;
-  len : int;
-  cid : E4_addr.Cid.t;
-}
+type entry =
+  { prog_path : int list
+  ; val_path : int list
+  ; family : family
+  ; ctor : int
+  ; off : int
+  ; len : int
+  ; cid : E4_addr.Cid.t
+  }
 
-type t = { t_bytes : string; t_entries : entry array }
+type t =
+  { t_bytes : string
+  ; t_entries : entry array
+  }
 
-let cid_of_bytes (s : string) : E4_addr.Cid.t = E4_addr.Addr.of_digest (E4_sha256.digest s)
+let cid_of_bytes (s : string) : E4_addr.Cid.t =
+  E4_addr.Addr.of_digest (E4_sha256.digest s)
+;;
 
 exception Malformed
 
@@ -89,56 +116,69 @@ let arg_positions (s : string) (from : int) (limit : int) : int array =
   let acc = ref [] in
   let cur = ref from in
   while !cur < limit do
-    (match Eff_frame.read_frame s !cur limit with
-     | None -> raise Malformed
-     | Some (_, _, _, next) ->
-       if next <= !cur then raise Malformed;
-       acc := !cur :: !acc;
-       cur := next)
+    match Eff_frame.read_frame s !cur limit with
+    | None -> raise Malformed
+    | Some (_, _, _, next) ->
+      if next <= !cur then raise Malformed;
+      acc := !cur :: !acc;
+      cur := next
   done;
   if !cur <> limit then raise Malformed;
   Array.of_list (List.rev !acc)
+;;
 
 let build (b : string) : t =
   let n = String.length b in
   let acc = ref [] in
-  let rec go ~(family : family) ~(prog_rev : int list) ~(val_rev : int list) ~(pos : int)
-      ~(limit : int) : unit =
+  let rec go
+            ~(family : family)
+            ~(prog_rev : int list)
+            ~(val_rev : int list)
+            ~(pos : int)
+            ~(limit : int)
+    : unit
+    =
     match Eff_frame.read_ctor b pos limit with
     | None -> raise Malformed
     | Some (tag, after_index, payload_end, next) ->
       (* The bytes carry a wire tag; the entry and the children table speak declaration
          positions (`Tree.ctor_index`). The two differ once a constructor has retired. *)
       let ci =
-        match Eff_subterm.position_of_tag family tag with Some p -> p | None -> raise Malformed
+        match Eff_subterm.position_of_tag family tag with
+        | Some p -> p
+        | None -> raise Malformed
       in
       let len = next - pos in
       if len <= 0 then raise Malformed;
       let e =
-        {
-          prog_path = List.rev prog_rev;
-          val_path = List.rev val_rev;
-          family;
-          ctor = ci;
-          off = pos;
-          len;
-          cid = E4_addr.Addr.of_digest (E4_sha256.digest_sub b pos len);
+        { prog_path = List.rev prog_rev
+        ; val_path = List.rev val_rev
+        ; family
+        ; ctor = ci
+        ; off = pos
+        ; len
+        ; cid = E4_addr.Addr.of_digest (E4_sha256.digest_sub b pos len)
         }
       in
       acc := e :: !acc;
       (match children family ci with
-      | [] -> ()
-      | rows ->
-        let args = arg_positions b after_index payload_end in
-        List.iteri
-          (fun k (vidx, cf) ->
-            if vidx < 0 || vidx >= Array.length args then raise Malformed;
-            go ~family:cf ~prog_rev:(k :: prog_rev) ~val_rev:(vidx :: val_rev)
-              ~pos:args.(vidx) ~limit:payload_end)
-          rows)
+       | [] -> ()
+       | rows ->
+         let args = arg_positions b after_index payload_end in
+         List.iteri
+           (fun k (vidx, cf) ->
+              if vidx < 0 || vidx >= Array.length args then raise Malformed;
+              go
+                ~family:cf
+                ~prog_rev:(k :: prog_rev)
+                ~val_rev:(vidx :: val_rev)
+                ~pos:args.(vidx)
+                ~limit:payload_end)
+           rows)
   in
   go ~family:Eff ~prog_rev:[] ~val_rev:[] ~pos:0 ~limit:n;
   { t_bytes = b; t_entries = Array.of_list (List.rev !acc) }
+;;
 
 (* SB7: exactness is the WIRE's own refusal.  `decode_program_exact` is what says these bytes
    are one program; the walk that follows can then only fail if this module's table and
@@ -146,12 +186,16 @@ let build (b : string) : t =
 let of_program_opt (b : string) : t option =
   match Eff_wire.decode_program_exact b with
   | None -> None
-  | Some _ -> ( try Some (build b) with Malformed -> None)
+  | Some _ ->
+    (try Some (build b) with
+     | Malformed -> None)
+;;
 
 let of_program (b : string) : t =
   match of_program_opt b with
   | Some t -> t
   | None -> invalid_arg "E4_subterm.of_program: not exactly one well-formed program"
+;;
 
 let bytes (t : t) : string = t.t_bytes
 let entries (t : t) : entry list = Array.to_list t.t_entries
@@ -159,10 +203,11 @@ let count (t : t) : int = Array.length t.t_entries
 let root (t : t) : entry = t.t_entries.(0)
 
 let rec path_eq (a : int list) (b : int list) : bool =
-  match (a, b) with
+  match a, b with
   | [], [] -> true
   | x :: xs, y :: ys -> x = y && path_eq xs ys
   | _ -> false
+;;
 
 let find_entry (t : t) (pick : entry -> bool) : entry option =
   let n = Array.length t.t_entries in
@@ -171,28 +216,38 @@ let find_entry (t : t) (pick : entry -> bool) : entry option =
   let i = ref 0 in
   while (not !found) && !i < n do
     let e = t.t_entries.(!i) in
-    if pick e then begin
+    if pick e
+    then (
       res := Some e;
-      found := true
-    end;
+      found := true);
     incr i
   done;
   !res
+;;
 
 let at_prog_path (t : t) (p : int list) : entry option =
   find_entry t (fun e -> path_eq e.prog_path p)
+;;
 
 let at_val_path (t : t) (p : int list) : entry option =
   find_entry t (fun e -> path_eq e.val_path p)
+;;
 
 let family_eq (a : family) (b : family) : bool =
   match a, b with
-  | Eff, Eff | Stmts, Stmts | Stmt, Stmt | Action, Action | Effs, Effs | Layer, Layer
+  | Eff, Eff
+  | Stmts, Stmts
+  | Stmt, Stmt
+  | Action, Action
+  | Effs, Effs
+  | Layer, Layer
   | Layers, Layers -> true
   | (Eff | Stmts | Stmt | Action | Effs | Layer | Layers), _ -> false
+;;
 
 let entries_at_family (t : t) (f : family) : entry list =
   List.filter (fun e -> family_eq e.family f) (Array.to_list t.t_entries)
+;;
 
 let slice (b : string) (e : entry) : string = String.sub b e.off e.len
 let slice_of (t : t) (e : entry) : string = slice t.t_bytes e

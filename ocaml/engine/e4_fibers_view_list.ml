@@ -34,10 +34,19 @@
    TFV4 no polymorphic comparison touches a value: every comparison is on an int key
         (ocaml/STANDARDS.md §4)                                            by construction *)
 
-type ('a, 'x) t = { l : (int * 'a) list; ex : ('a -> 'x option) option }
+type ('a, 'x) t =
+  { l : (int * 'a) list
+  ; ex : ('a -> 'x option) option
+  }
 
 let empty : ('a, 'x) t = { l = []; ex = None }
-let is_empty (t : ('a, 'x) t) : bool = match t.l with [] -> true | _ :: _ -> false
+
+let is_empty (t : ('a, 'x) t) : bool =
+  match t.l with
+  | [] -> true
+  | _ :: _ -> false
+;;
+
 let mem (k : int) (t : ('a, 'x) t) : bool = List.exists (fun (k', _) -> k' = k) t.l
 
 let find_opt (k : int) (t : ('a, 'x) t) : 'a option =
@@ -46,27 +55,36 @@ let find_opt (k : int) (t : ('a, 'x) t) : 'a option =
     | (k', v) :: r -> if k' = k then Some v else go r
   in
   go t.l
+;;
 
 let set ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 'x) t =
-  if mem k t then
-    { l = List.map (fun (k', v') -> if k' = k then (k', v) else (k', v')) t.l;
-      ex = Some exit_of }
+  if mem k t
+  then
+    { l = List.map (fun (k', v') -> if k' = k then k', v else k', v') t.l
+    ; ex = Some exit_of
+    }
   else t
+;;
 
 let add ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 'x) t =
-  if mem k t then set ~exit_of k v t else { l = t.l @ [ (k, v) ]; ex = Some exit_of }
+  if mem k t then set ~exit_of k v t else { l = t.l @ [ k, v ]; ex = Some exit_of }
+;;
 
 let map ~(exit_of : 'a -> 'x option) (f : 'a -> 'a) (t : ('a, 'x) t) : ('a, 'x) t =
-  { l = List.map (fun (k, v) -> (k, f v)) t.l; ex = Some exit_of }
+  { l = List.map (fun (k, v) -> k, f v) t.l; ex = Some exit_of }
+;;
 
 let cardinal (t : ('a, 'x) t) : int = List.length t.l
 
 let bindings (t : ('a, 'x) t) : (int * 'a) list =
   List.stable_sort (fun (a, _) (b, _) -> compare (a : int) b) t.l
+;;
 
 let to_list (t : ('a, 'x) t) : 'a list = List.map snd (bindings t)
+
 let for_all (f : int -> 'a -> bool) (t : ('a, 'x) t) : bool =
   List.for_all (fun (k, v) -> f k v) t.l
+;;
 
 (* Lean's filterMap, walked — no maintenance, no cache. *)
 let completed (t : ('a, 'x) t) : (int * 'x) list =
@@ -74,11 +92,16 @@ let completed (t : ('a, 'x) t) : (int * 'x) list =
   | None -> []
   | Some exit_of ->
     List.filter_map
-      (fun (k, v) -> match exit_of v with None -> None | Some x -> Some (k, x))
+      (fun (k, v) ->
+         match exit_of v with
+         | None -> None
+         | Some x -> Some (k, x))
       (bindings t)
+;;
 
 let of_list ~(exit_of : 'a -> 'x option) (l : (int * 'a) list) : ('a, 'x) t =
   List.fold_left (fun t (k, v) -> add ~exit_of k v t) empty l
+;;
 
 (* --- the twin's own windows (TFV1) and the E4_fibers_view extras. --- *)
 let raw (t : ('a, 'x) t) : (int * 'a) list = t.l

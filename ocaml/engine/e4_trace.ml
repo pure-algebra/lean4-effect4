@@ -11,7 +11,10 @@ let is_empty (t : 'e t) : bool = Lcnf_array.is_empty t
 (* TR2 is the `[] ->` arm: the argument itself, physically.  The general arm appends in list
    order, which is the order `RunMachine.emit` appends in (RunMachine.emit (src/Effect4/Machine/Fibers.lean)). *)
 let emit (evs : 'e list) (t : 'e t) : 'e t =
-  match evs with [] -> t | _ -> List.fold_left Lcnf_array.push t evs
+  match evs with
+  | [] -> t
+  | _ -> List.fold_left Lcnf_array.push t evs
+;;
 
 let to_list (t : 'e t) : 'e list = Lcnf_array.to_list t
 

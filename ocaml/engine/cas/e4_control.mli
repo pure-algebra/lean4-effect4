@@ -8,21 +8,77 @@
     The wire bounds encoded root generations below 2^62; arithmetic uses Z.t.
     Root bytes: u16 name-byte count; name bytes; u8 policy; u8 target kind;
     32 digest bytes; be64 generation. The fixed payload and checksum stay unchanged. *)
-type root_policy = E4_root_policy.t = Swap | Journal | Pin
-type head = { digest : E4_addr.Addr.t; generation : Z.t }
-type target = { kind : E4_kind.t; digest : E4_addr.Addr.t }
-type root = { name : string; policy : root_policy; kind : E4_kind.t; head : head }
-type move = Create of string * root_policy * target | Advance of string * head * target
-type status = Fresh | Gced | Imported | Reserved of int * string
-type payload = { pack_end : int * int; index_end : int * int; generation : int;
-  scheme_version : int; ledger_generation : int; roots : root list; status : status }
+type root_policy = E4_root_policy.t =
+  | Swap
+  | Journal
+  | Pin
+
+type head =
+  { digest : E4_addr.Addr.t
+  ; generation : Z.t
+  }
+
+type target =
+  { kind : E4_kind.t
+  ; digest : E4_addr.Addr.t
+  }
+
+type root =
+  { name : string
+  ; policy : root_policy
+  ; kind : E4_kind.t
+  ; head : head
+  }
+
+type move =
+  | Create of string * root_policy * target
+  | Advance of string * head * target
+
+type status =
+  | Fresh
+  | Gced
+  | Imported
+  | Reserved of int * string
+
+type payload =
+  { pack_end : int * int
+  ; index_end : int * int
+  ; generation : int
+  ; scheme_version : int
+  ; ledger_generation : int
+  ; roots : root list
+  ; status : status
+  }
+
 type t = payload
-type open_error = Missing | Stale_binary of string | Corrupt of string | Bad_magic | Other_scheme of int
-type root_error = No_root of string
-  | Stale_root of {name : string; expected : head option; actual : head option}
-  | Pinned of string | Dangling of E4_addr.Addr.t
-  | Wrong_kind of {at : E4_addr.Addr.t; expected : E4_kind.t; actual : E4_kind.t}
-  | Fork of {name : string; head : E4_addr.Addr.t; target : E4_addr.Addr.t}
+
+type open_error =
+  | Missing
+  | Stale_binary of string
+  | Corrupt of string
+  | Bad_magic
+  | Other_scheme of int
+
+type root_error =
+  | No_root of string
+  | Stale_root of
+      { name : string
+      ; expected : head option
+      ; actual : head option
+      }
+  | Pinned of string
+  | Dangling of E4_addr.Addr.t
+  | Wrong_kind of
+      { at : E4_addr.Addr.t
+      ; expected : E4_kind.t
+      ; actual : E4_kind.t
+      }
+  | Fork of
+      { name : string
+      ; head : E4_addr.Addr.t
+      ; target : E4_addr.Addr.t
+      }
+
 val initial : t
 val magic : string
 val version_string : string
@@ -46,8 +102,14 @@ val generation : t -> int
 val scheme_version : t -> int
 val ledger_generation : t -> int
 val status : t -> status
-val advance_root : payload -> resolve:(E4_addr.Addr.t -> E4_kind.t option) ->
-  ?parent:(E4_addr.Addr.t -> E4_addr.Addr.t option) -> move -> (payload, root_error) result
+
+val advance_root
+  :  payload
+  -> resolve:(E4_addr.Addr.t -> E4_kind.t option)
+  -> ?parent:(E4_addr.Addr.t -> E4_addr.Addr.t option)
+  -> move
+  -> (payload, root_error) result
+
 val bump : t -> t
 val set_pack_end : t -> int * int -> t
 val set_index_end : t -> int * int -> t

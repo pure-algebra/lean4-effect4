@@ -50,71 +50,80 @@
 module Addr : sig
   type t
 
-  val length : int
   (** 32. *)
+  val length : int
 
-  val of_digest : string -> t
   (** Invalid_argument unless the string is exactly 32 bytes (AD1). *)
+  val of_digest : string -> t
 
   val of_digest_opt : string -> t option
 
-  val bytes : t -> string
   (** The 32 raw bytes. *)
+  val bytes : t -> string
 
-  val hex : t -> string
   (** = E4_hex.of_bytes (bytes t): 64 lowercase characters (AD2). *)
+  val hex : t -> string
 
-  val of_hex : string -> t option
   (** = E4_hex.digest_of_hex: either case, exactly 64 characters (AD2). *)
+  val of_hex : string -> t option
 
   val equal : t -> t -> bool
   val compare : t -> t -> int
 
-  val prefix63 : t -> int
   (** The leading 62 bits, as a non-negative int; an index key, never an identity (AD6, D1). *)
+  val prefix63 : t -> int
 
-  val zero : t
   (** zeroDigest — thirty-two zero bytes (zeroDigest (src/Effect4/Store/Domain/Node.lean)) (AD5). *)
+  val zero : t
 end
 
 module Ref : sig
-  type t = { kind : E4_kind.t; addr : Addr.t }
   (** Store.AnyRef (AnyRef (src/Effect4/Store/Domain/Node.lean)). *)
+  type t =
+    { kind : E4_kind.t
+    ; addr : Addr.t
+    }
 
   val make : E4_kind.t -> Addr.t -> t
 
-  val present : t -> string
   (** "<kind>:<hex>" (AD4). *)
+  val present : t -> string
 
-  val parse : string -> t option
   (** Refuses the Cid form (AD4). *)
+  val parse : string -> t option
 
   val equal : t -> t -> bool
   val compare : t -> t -> int
 end
 
 module Cid : sig
-  type t = Addr.t
   (** The payload digest; kind-free (amendment M6). *)
+  type t = Addr.t
 
-  val present : E4_kind.t -> t -> string
   (** "<kind>:cid:<hex>" (AD4). *)
+  val present : E4_kind.t -> t -> string
 
-  val parse : string -> (E4_kind.t * t) option
   (** Refuses the Ref form (AD4). *)
+  val parse : string -> (E4_kind.t * t) option
 
   val equal : t -> t -> bool
 end
 
 module Handle : sig
   type t = private
-    | Direct of { addr : Addr.t; seg : int; off : int; len : int }
+    | Direct of
+        { addr : Addr.t
+        ; seg : int
+        ; off : int
+        ; len : int
+        }
     | Located of Addr.t
 
   val direct : addr:Addr.t -> seg:int -> off:int -> len:int -> t
   val located : Addr.t -> t
-  val addr : t -> Addr.t
+
   (** Total (AD3). *)
+  val addr : t -> Addr.t
 
   (* Deliberately absent, and this is the point of the module: encode, decode, of_string,
      to_string, compare, equal, hash, of_addr. *)

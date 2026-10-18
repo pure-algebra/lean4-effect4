@@ -65,21 +65,40 @@ struct
   type fevent = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_event
 
   type machine =
-    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_, ffiber, fevent) run_machine
+    ( nu
+      , s
+      , Val.t
+      , Err.t
+      , Defect.t
+      , fiber_id
+      , unit
+      , ctx
+      , stores
+      , prim_
+      , ffiber
+      , fevent )
+      run_machine
 
-  type fiber = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, ffiber) run_fiber
-  type event = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, fevent) run_event
+  type fiber =
+    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, ffiber) run_fiber
+
+  type event =
+    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, fevent) run_event
+
   (* The tape's decision. `decision` itself is the program's `Decision` (`select`'s carrier),
      generated with the rest of the program types. *)
   type api_decision = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) run_decision
-  type interp = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_) run_interp
+
+  type interp =
+    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_) run_interp
 
   (* No program conversion: the generated engine opens `Eff_types`, the one program type of the
      wire and every instance, so no instance names a program type of its own. *)
   type program = NativeOp.t Eff.t
 
-  let prepare (table : Row.t list) (p : program) : prepared = program_prepared_make p table
-
+  let prepare (table : Row.t list) (p : program) : prepared =
+    program_prepared_make p table
+  ;;
 
   (* -- loading and stepping ----------------------------------------------------------- *)
 
@@ -87,20 +106,25 @@ struct
 
   let load (p : program) ~(fuel : int) : machine =
     sh_api_load program_compile empty_ctx stores p fuel
+  ;;
 
   (* The prepared package retains the interpreter and native evaluator. *)
   let step (prepared : prepared) ~(fuel : int) (m : machine) (d : api_decision)
-    : machine * bool =
+    : machine * bool
+    =
     program_prepared_step prepared fuel m d
+  ;;
 
   let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine =
     let r = api_run p fuel table fuel in
-    (r.outcome, r.machine)
+    r.outcome, r.machine
+  ;;
 
   (* The machine's admission at the application of this row table: the wire carries no named
      type, so the application declares none (decisions row 407 (5)). *)
   let admit (prepared : prepared) (m : machine) (d : api_decision) : bool =
     Option.is_none (program_prepared_admit prepared m d)
+  ;;
 
   (* -- the free rows ------------------------------------------------------------------ *)
 
@@ -117,8 +141,10 @@ struct
   let finished (m : machine) : bool = sh_machine_finished m
 
   let completed_exits (m : machine)
-    : (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list =
+    : (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list
+    =
     sh_machine_completed_exits m
+  ;;
 
   let stores_of (m : machine) : stores = m.state
   let refs (m : machine) : Val.t list = M.to_list (stores_of m).refs
@@ -130,19 +156,25 @@ struct
 
   let memo_paths (m : machine) : (int * (int list * int list list) list) list =
     List.map
-      (fun (mm : memo_map) -> (mm.id, List.map fst (L.bindings mm.entries)))
+      (fun (mm : memo_map) -> mm.id, List.map fst (L.bindings mm.entries))
       (stores_of m).memo
+  ;;
 
   (* -- the fiber's own fields --------------------------------------------------------- *)
 
   let f_id (f : fiber) : fiber_id = f.id
-  let f_exit (f : fiber) : (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t option = f.exit_
+
+  let f_exit (f : fiber) : (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t option =
+    f.exit_
+  ;;
+
   let f_parked (f : fiber) : parked = f.parked
   let f_running (f : fiber) : bool = f.running
   let f_finalizing (f : fiber) : bool = Option.is_some f.finalizing
 
   let f_pending_tokens (f : fiber) : int list =
     List.map (fun (p : (_, _, _, _, _, _) pending) -> p.token) f.pending
+  ;;
 
   let f_observers (f : fiber) : observer list = f.observers
   let f_children (f : fiber) : fiber_id list = f.children
@@ -153,5 +185,6 @@ struct
   let f_context (f : fiber) : ctx = f.context
 
   let f_dispatcher (f : fiber) : (int * int) list =
-    List.map (fun (p, ts) -> (p, List.length ts)) (D.to_list f.dispatcher)
+    List.map (fun (p, ts) -> p, List.length ts) (D.to_list f.dispatcher)
+  ;;
 end

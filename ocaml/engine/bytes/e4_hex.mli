@@ -25,11 +25,11 @@
 
    No deviation from docs/research/2026-09-08-engine-a1-state.md §3.3. *)
 
-val of_bytes : string -> string
 (** Lowercase, two characters per byte. *)
+val of_bytes : string -> string
 
-val to_bytes : string -> string option
 (** None on an odd length or a non-digit.  Accepts either case. *)
+val to_bytes : string -> string option
 
-val digest_of_hex : string -> string option
 (** to_bytes, then exactly 32 bytes or None -- Digest.ofHex? (src/Effect4/Store/Carrier/Digest.lean). *)
+val digest_of_hex : string -> string option

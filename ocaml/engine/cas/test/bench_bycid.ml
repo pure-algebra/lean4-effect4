@@ -23,20 +23,24 @@ let open_writer ~dir opts =
   match E4_cas.open_rw ~dir opts with
   | Ok writer -> writer
   | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+;;
 
 let now = Unix.gettimeofday
 let rate n dt = if dt <= 0.0 then infinity else float_of_int n /. dt
 let hr () = print_endline (String.make 78 '-')
 
 let base_dir =
-  if Array.length Sys.argv > 1 then Sys.argv.(1)
-  else
+  if Array.length Sys.argv > 1
+  then Sys.argv.(1)
+  else (
     let d =
-      Filename.concat (Filename.get_temp_dir_name ())
+      Filename.concat
+        (Filename.get_temp_dir_name ())
         (Printf.sprintf "e4bench-bycid-%d" (Unix.getpid ()))
     in
     Unix.mkdir d 0o755;
-    d
+    d)
+;;
 
 let owns_dir = Array.length Sys.argv <= 1
 
@@ -45,8 +49,12 @@ let rec rm_rf p =
   | exception Unix.Unix_error _ -> ()
   | { Unix.st_kind = Unix.S_DIR; _ } ->
     Array.iter (fun n -> rm_rf (Filename.concat p n)) (Sys.readdir p);
-    (try Unix.rmdir p with Unix.Unix_error _ -> ())
-  | _ -> ( try Sys.remove p with Sys_error _ -> ())
+    (try Unix.rmdir p with
+     | Unix.Unix_error _ -> ())
+  | _ ->
+    (try Sys.remove p with
+     | Sys_error _ -> ())
+;;
 
 (* the frame builders bench_cache uses, so the store shape is the same one P7-D measured *)
 let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
@@ -63,15 +71,20 @@ let build ~dir ~n =
   let payloads = ref [] in
   for i = 0 to n - 1 do
     let refs =
-      if i = 0 then [] else [ v_ref (E4_kind.byte E4_kind.Entry) (E4_addr.Addr.bytes !prev) ]
+      if i = 0
+      then []
+      else [ v_ref (E4_kind.byte E4_kind.Entry) (E4_addr.Addr.bytes !prev) ]
     in
     let nd = node E4_kind.Entry schema (v_ctor 0 (v_nat i :: refs)) in
-    (match E4_cas.put st nd with Ok _ -> () | Error _ -> ());
-    if i mod (max 1 (n / 8)) = 0 then payloads := nd.E4_node.payload :: !payloads;
+    (match E4_cas.put st nd with
+     | Ok _ -> ()
+     | Error _ -> ());
+    if i mod max 1 (n / 8) = 0 then payloads := nd.E4_node.payload :: !payloads;
     prev := E4_node.address nd
   done;
   E4_cas.commit st;
-  (st, List.rev !payloads)
+  st, List.rev !payloads
+;;
 
 let cell n =
   let dir = Filename.concat base_dir (Printf.sprintf "bycid%d" n) in
@@ -103,7 +116,11 @@ let cell n =
      index build and rounds 2.. pay only the root writes. *)
   let rounds = 20 in
   let ok = ref 0 in
-  let pin1 () = match E4_cas.pin_all st ~job:E4_addr.Addr.zero cids with Ok () -> incr ok | Error _ -> () in
+  let pin1 () =
+    match E4_cas.pin_all st ~job:E4_addr.Addr.zero cids with
+    | Ok () -> incr ok
+    | Error _ -> ()
+  in
   let t2 = now () in
   pin1 ();
   let dt_pin1 = now () -. t2 in
@@ -115,18 +132,30 @@ let cell n =
   Printf.printf
     "  %6d nodes  W4a cold by_cid %8.3f ms  W4b %d warm calls %8.3f ms (%12.0f calls/s, \
      %8.1f us each)\n\
-    \                 W4c pin_all (%d cids each): 1st %8.3f ms, next %d %8.3f ms (%8.3f ms \
-     per publish)\n\
+    \                 W4c pin_all (%d cids each): 1st %8.3f ms, next %d %8.3f ms (%8.3f \
+     ms per publish)\n\
     \                 W4d answers: cold %d filing(s), %d of %d warm calls found one, %d \
-     publishes ok\n%!"
-    n (dt_cold *. 1000.) k (dt_warm *. 1000.) (rate k dt_warm)
+     publishes ok\n\
+     %!"
+    n
+    (dt_cold *. 1000.)
+    k
+    (dt_warm *. 1000.)
+    (rate k dt_warm)
     (dt_warm *. 1e6 /. float_of_int k)
-    (List.length cids) (dt_pin1 *. 1000.) (rounds - 1) (dt_pin *. 1000.)
+    (List.length cids)
+    (dt_pin1 *. 1000.)
+    (rounds - 1)
+    (dt_pin *. 1000.)
     (dt_pin *. 1000. /. float_of_int (rounds - 1))
-    (List.length cold) !found k !ok;
+    (List.length cold)
+    !found
+    k
+    !ok;
   E4_cas.close_ro ro;
   E4_cas.close st;
   rm_rf dir
+;;
 
 let () =
   print_endline "bench_bycid — lane W item 4 (E4_cas.by_cid / pin_all; P6 finding F6)";
@@ -135,3 +164,4 @@ let () =
   List.iter cell [ 1_000; 10_000; 50_000 ];
   hr ();
   if owns_dir then rm_rf base_dir
+;;

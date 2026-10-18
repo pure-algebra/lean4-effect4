@@ -23,45 +23,57 @@
    while it is never an input to a decision (design §1.2.1, survey trap #8): a parked run
    spends no budget and the value never reaches the tape. *)
 
-type t = {
-  mu : Mutex.t;
-  cv : Condition.t;
-  mutable outstanding : int;
-  mutable entered : int;
-  mutable left : int;
-}
+type t =
+  { mu : Mutex.t
+  ; cv : Condition.t
+  ; mutable outstanding : int
+  ; mutable entered : int
+  ; mutable left : int
+  }
 
-let create () = { mu = Mutex.create (); cv = Condition.create (); outstanding = 0; entered = 0; left = 0 }
+let create () =
+  { mu = Mutex.create ()
+  ; cv = Condition.create ()
+  ; outstanding = 0
+  ; entered = 0
+  ; left = 0
+  }
+;;
 
 let enter t =
   Mutex.protect t.mu (fun () ->
-      t.outstanding <- t.outstanding + 1;
-      t.entered <- t.entered + 1)
+    t.outstanding <- t.outstanding + 1;
+    t.entered <- t.entered + 1)
+;;
 
 let leave t =
   Mutex.protect t.mu (fun () ->
-      if t.outstanding <= 0 then invalid_arg "E4_quiescence.leave: nothing outstanding";
-      t.outstanding <- t.outstanding - 1;
-      t.left <- t.left + 1;
-      if t.outstanding = 0 then Condition.broadcast t.cv)
+    if t.outstanding <= 0 then invalid_arg "E4_quiescence.leave: nothing outstanding";
+    t.outstanding <- t.outstanding - 1;
+    t.left <- t.left + 1;
+    if t.outstanding = 0 then Condition.broadcast t.cv)
+;;
 
 let outstanding t = Mutex.protect t.mu (fun () -> t.outstanding)
-let totals t = Mutex.protect t.mu (fun () -> (t.entered, t.left))
+let totals t = Mutex.protect t.mu (fun () -> t.entered, t.left)
 
 let wait_zero t =
   Mutex.protect t.mu (fun () ->
-      while t.outstanding > 0 do
-        Condition.wait t.cv t.mu
-      done)
+    while t.outstanding > 0 do
+      Condition.wait t.cv t.mu
+    done)
+;;
 
 let wait_zero_for t ~seconds =
   let deadline = Unix.gettimeofday () +. seconds in
   let rec poll () =
-    if outstanding t = 0 then true
-    else if Float.compare (Unix.gettimeofday ()) deadline >= 0 then false
-    else begin
+    if outstanding t = 0
+    then true
+    else if Float.compare (Unix.gettimeofday ()) deadline >= 0
+    then false
+    else (
       Unix.sleepf 0.0002;
-      poll ()
-    end
+      poll ())
   in
   poll ()
+;;

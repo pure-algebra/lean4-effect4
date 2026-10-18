@@ -50,32 +50,32 @@
 
 type 'n t
 
-val make : 'n -> 'n t
 (** The empty path rooted at this node.  [to_list (make n) = \[\]] and [node c (make n) =
     Some n]. *)
+val make : 'n -> 'n t
 
-val root : 'n t -> 'n
 (** The node [make] was given.  Used by the seam's `Node.at_` row to decide whether the node
     a caller passes is the one this spine was built from. *)
+val root : 'n t -> 'n
 
-val snoc : ('n -> int -> 'n option) -> 'n t -> int -> 'n t
 (** [snoc child p i] is the path [to_list p @ [i]], sharing [p]'s spine, with its node
     computed from [p]'s by one [child] (PP1, PP2). *)
+val snoc : ('n -> int -> 'n option) -> 'n t -> int -> 'n t
 
-val append : ('n -> int -> 'n option) -> 'n t -> int list -> 'n t
 (** [snoc] folded over the list (PP5). *)
+val append : ('n -> int -> 'n option) -> 'n t -> int list -> 'n t
 
-val node : ('n -> int -> 'n option) -> 'n t -> 'n option
 (** The node this path addresses: [walk child (root p) (to_list p)], answered in O(1) from
     the carried node (PP3).  [child] is taken so that the list twin can walk. *)
+val node : ('n -> int -> 'n option) -> 'n t -> 'n option
 
-val walk : ('n -> int -> 'n option) -> 'n -> int list -> 'n option
 (** Lean's `Node.at_`: [child] applied along the list, [None] as soon as one step fails. *)
+val walk : ('n -> int -> 'n option) -> 'n -> int list -> 'n option
 
-val to_list : 'n t -> int list
 (** The Lean `Point.path` value.  One reversal, O(length); it is what the three observable
     sites (`FinName.memoEntry`, `SyncOp.memoBuild`, `SyncOp.memoGet` — all `LayerId`) are
     handed, so the memo keys and the layer bytes are unchanged. *)
+val to_list : 'n t -> int list
 
-val length : 'n t -> int
 (** The depth.  O(length): the spine is not counted, because nothing on the hot path asks. *)
+val length : 'n t -> int

@@ -9,14 +9,23 @@
 ; E4_sha256 / E4_hex / E4_be (never a second hash and never a second framing writer -- brief
 ; §2.2), effect4_eff for Eff_frame's tag alphabet and UTF-8 rule (read-only), and
 ; effect4_engine for E4_checkpoint alone, which images the engine's machine.
+
 (library
  (name effect4_engine_cas)
  (public_name effect4_engine_cas)
  (libraries unix zarith effect4_bytes effect4_engine effect4_eff)
- (flags (:standard -w +a-4-9-40-41-42-44-45-70)))
+ (flags
+  (:standard -w +a-4-9-40-41-42-44-45-70)))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .effect4_engine_cas.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .effect4_engine_cas.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))

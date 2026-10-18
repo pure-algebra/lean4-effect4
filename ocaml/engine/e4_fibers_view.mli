@@ -58,9 +58,9 @@
    because the ordering argument that licenses the whole substitution is "no fiber is ever
    removed" (gen-check.sh C1). *)
 
-type ('a, 'x) t
 (** The fiber table and its completed view.  Abstract: the invariant FV1 is the module's, and
     a caller that could build the record could break it. *)
+type ('a, 'x) t
 
 val empty : ('a, 'x) t
 val find_opt : int -> ('a, 'x) t -> 'a option

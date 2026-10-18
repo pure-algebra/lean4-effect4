@@ -14,5 +14,5 @@
    L2  An exception that `inst` raises passes through, and no later element is reached.
                                                                         tested (test_lcnf) *)
 
-val contains : ('a -> 'a -> bool) -> 'a list -> 'a -> bool
 (** [contains inst l a]: whether [inst a e] holds for some element [e] of [l]. *)
+val contains : ('a -> 'a -> bool) -> 'a list -> 'a -> bool

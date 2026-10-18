@@ -53,45 +53,49 @@ type decision =
   | Flush
   | Fire of int
   | Yield_verdict of int * bool
-  | Answer_async of int * int * int  (** fiber, token, the nat the completion carries *)
+  | Answer_async of int * int * int (** fiber, token, the nat the completion carries *)
   | Interrupt_from of int option * int
   | Install_middleware
 
 val show_decision : decision -> string
 val show_tape : decision list -> string
 
-val drive_tape : decision list
 (** `Api.run`'s own tape: `[Evaluate 0; Flush]` (run (src/Effect4/Api.lean)). *)
+val drive_tape : decision list
 
 (** {1 The projection} *)
 
-type projection = {
-  p1_outcome : string;  (** "finished" | "frontier" | "stuck <why>" *)
-  p2_stuck : string option;  (** the `Stuck` constructor, spelled *)
-  p3_settled : bool;  (** the generated `settled` of the last step: `Delay` iff false *)
-  p4_answer : string;  (** the four-letter alphabet, with the frontier *)
-  p5_fiber_count : int;
-  p6_fiber_ids : int list;  (** IN MACHINE ORDER -- the ordering law is exactly this row *)
-  p7_exits : (int * string) list;
-  p8_root_exit : string option;
-  p9_fiber_rows : (int * string) list;  (** park, exit, observers, children, dispatcher, ctx *)
-  p10_armed : string;  (** the armed owners, in arming order, as the store row spells them *)
-  p11_trace_length : int;
-  p12_trace_rows : string list;  (** every row, in emission order *)
-  p13_store_row : string;  (** refs, cells, scopes, memo paths, nextName, due, ids, races *)
-}
+type projection =
+  { p1_outcome : string (** "finished" | "frontier" | "stuck <why>" *)
+  ; p2_stuck : string option (** the `Stuck` constructor, spelled *)
+  ; p3_settled : bool (** the generated `settled` of the last step: `Delay` iff false *)
+  ; p4_answer : string (** the four-letter alphabet, with the frontier *)
+  ; p5_fiber_count : int
+  ; p6_fiber_ids : int list
+    (** IN MACHINE ORDER -- the ordering law is exactly this row *)
+  ; p7_exits : (int * string) list
+  ; p8_root_exit : string option
+  ; p9_fiber_rows : (int * string) list
+    (** park, exit, observers, children, dispatcher, ctx *)
+  ; p10_armed : string
+    (** the armed owners, in arming order, as the store row spells them *)
+  ; p11_trace_length : int
+  ; p12_trace_rows : string list (** every row, in emission order *)
+  ; p13_store_row : string
+    (** refs, cells, scopes, memo paths, nextName, due, ids, races *)
+  }
 
-type divergence = {
-  d_field : string;
-  d_index : int option;  (** the position inside a list-shaped field *)
-  d_left : string;
-  d_right : string;
-}
+type divergence =
+  { d_field : string
+  ; d_index : int option (** the position inside a list-shaped field *)
+  ; d_left : string
+  ; d_right : string
+  }
 
-val compare : projection -> projection -> divergence list
 (** [] iff the two projections are equal.  One entry per differing field, in the record's
     order; for a list-shaped field the entry names the first differing index (or the
     lengths, when one side is shorter). *)
+val compare : projection -> projection -> divergence list
 
 val show_divergence : divergence -> string
 
@@ -105,17 +109,18 @@ module type SIDE = sig
 
   val load : Eff_wire.program -> fuel:int -> t
   val step : t -> decision -> t
-  val project : t -> projection
+
   (** @raise E4_clock.Profile_refusal for an Outside_profile host answer. *)
+  val project : t -> projection
 
-  val positions : Eff_wire.program -> fuel:int -> decision list -> projection list
   (** The projection at every position of `replay_steps`: `|tape| + 1` of them. *)
+  val positions : Eff_wire.program -> fuel:int -> decision list -> projection list
 
-  val gen_tape : Eff_wire.program -> fuel:int -> seed:int -> max_len:int -> decision list
   (** An ADMISSIBLE tape: at each step the next decision is drawn from what this machine
       shows -- its fiber ids, its armed owners, its parked (fiber, token) pairs -- so the
       tape never names something the machine has not minted (D6).  Deterministic in
       [seed]. *)
+  val gen_tape : Eff_wire.program -> fuel:int -> seed:int -> max_len:int -> decision list
 end
 
 module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t

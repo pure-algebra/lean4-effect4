@@ -44,108 +44,122 @@
    on the contended path only. `pop_batch`, `wait`, `length` and `stats` are unchanged and
    are not counted: B-Q4a names the push path. *)
 
-type 'a t = {
-  mu : Mutex.t;
-  nonempty : Condition.t;
-  q : 'a Queue.t;
-  bound : int;
-  wake : (unit -> unit) option;
-  mutable wake_outstanding : bool;
-  mutable pushed : int;
-  mutable popped : int;
-  mutable refused : int;
-  mutable wakes : int;
-  contention : int Atomic.t;
-}
+type 'a t =
+  { mu : Mutex.t
+  ; nonempty : Condition.t
+  ; q : 'a Queue.t
+  ; bound : int
+  ; wake : (unit -> unit) option
+  ; mutable wake_outstanding : bool
+  ; mutable pushed : int
+  ; mutable popped : int
+  ; mutable refused : int
+  ; mutable wakes : int
+  ; contention : int Atomic.t
+  }
 
-type stats = { pushed : int; popped : int; refused : int; wakes : int; contended : int; length : int }
+type stats =
+  { pushed : int
+  ; popped : int
+  ; refused : int
+  ; wakes : int
+  ; contended : int
+  ; length : int
+  }
 
 let create ?wake ~bound () =
   if bound < 1 then invalid_arg "E4_mailbox.create: bound must be at least 1";
-  {
-    mu = Mutex.create ();
-    nonempty = Condition.create ();
-    q = Queue.create ();
-    bound;
-    wake;
-    wake_outstanding = false;
-    pushed = 0;
-    popped = 0;
-    refused = 0;
-    wakes = 0;
-    contention = Atomic.make 0;
+  { mu = Mutex.create ()
+  ; nonempty = Condition.create ()
+  ; q = Queue.create ()
+  ; bound
+  ; wake
+  ; wake_outstanding = false
+  ; pushed = 0
+  ; popped = 0
+  ; refused = 0
+  ; wakes = 0
+  ; contention = Atomic.make 0
   }
+;;
 
 let bound t = t.bound
 
 (* The push path's lock: `Mutex.protect` with the contended acquisitions counted (B-Q4a).
    The counter is an `Atomic` because the increment happens before the lock is held. *)
 let protect_counting t f =
-  if not (Mutex.try_lock t.mu) then begin
+  if not (Mutex.try_lock t.mu)
+  then (
     Atomic.incr t.contention;
-    Mutex.lock t.mu
-  end;
+    Mutex.lock t.mu);
   Fun.protect ~finally:(fun () -> Mutex.unlock t.mu) f
+;;
 
 let push_with t make =
   let answer =
     protect_counting t (fun () ->
-        if Queue.length t.q >= t.bound then begin
-          t.refused <- t.refused + 1;
-          Error `Full
-        end
-        else begin
-          let x = make () in
-          Queue.push x t.q;
-          t.pushed <- t.pushed + 1;
-          (match t.wake with
-          | Some wake when not t.wake_outstanding ->
-              t.wake_outstanding <- true;
-              t.wakes <- t.wakes + 1;
-              wake ()
-          | _ -> ());
-          Ok ()
-        end)
+      if Queue.length t.q >= t.bound
+      then (
+        t.refused <- t.refused + 1;
+        Error `Full)
+      else (
+        let x = make () in
+        Queue.push x t.q;
+        t.pushed <- t.pushed + 1;
+        (match t.wake with
+         | Some wake when not t.wake_outstanding ->
+           t.wake_outstanding <- true;
+           t.wakes <- t.wakes + 1;
+           wake ()
+         | _ -> ());
+        Ok ()))
   in
   (* Q-A3-8: outside the critical section. *)
-  (match answer with Ok () -> Condition.broadcast t.nonempty | Error `Full -> ());
+  (match answer with
+   | Ok () -> Condition.broadcast t.nonempty
+   | Error `Full -> ());
   answer
+;;
 
 let push t x = push_with t (fun () -> x)
 
 let pop_batch t ~max =
   if max < 1 then invalid_arg "E4_mailbox.pop_batch: max must be at least 1";
   Mutex.protect t.mu (fun () ->
-      let rec take n acc =
-        if n = 0 || Queue.is_empty t.q then List.rev acc else take (n - 1) (Queue.pop t.q :: acc)
-      in
-      let batch = take max [] in
-      t.popped <- t.popped + List.length batch;
-      (match t.wake with
-      | Some wake when not (Queue.is_empty t.q) ->
-          (* still work here: stay outstanding, and go to the back of the run queue *)
-          t.wakes <- t.wakes + 1;
-          wake ()
-      | _ -> t.wake_outstanding <- false);
-      batch)
+    let rec take n acc =
+      if n = 0 || Queue.is_empty t.q
+      then List.rev acc
+      else take (n - 1) (Queue.pop t.q :: acc)
+    in
+    let batch = take max [] in
+    t.popped <- t.popped + List.length batch;
+    (match t.wake with
+     | Some wake when not (Queue.is_empty t.q) ->
+       (* still work here: stay outstanding, and go to the back of the run queue *)
+       t.wakes <- t.wakes + 1;
+       wake ()
+     | _ -> t.wake_outstanding <- false);
+    batch)
+;;
 
 (* Block until the mailbox is non-empty (the single-consumer case without a run queue). *)
 let wait t =
   Mutex.protect t.mu (fun () ->
-      while Queue.is_empty t.q do
-        Condition.wait t.nonempty t.mu
-      done)
+    while Queue.is_empty t.q do
+      Condition.wait t.nonempty t.mu
+    done)
+;;
 
 let length t = Mutex.protect t.mu (fun () -> Queue.length t.q)
 let is_empty t = length t = 0
 
 let stats t =
   Mutex.protect t.mu (fun () ->
-      {
-        pushed = t.pushed;
-        popped = t.popped;
-        refused = t.refused;
-        wakes = t.wakes;
-        contended = Atomic.get t.contention;
-        length = Queue.length t.q;
-      })
+    { pushed = t.pushed
+    ; popped = t.popped
+    ; refused = t.refused
+    ; wakes = t.wakes
+    ; contended = Atomic.get t.contention
+    ; length = Queue.length t.q
+    })
+;;

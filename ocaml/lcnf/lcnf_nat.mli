@@ -21,11 +21,11 @@
    N4  `pow` recurses once for each unit of `b`, so its depth is `b`, and a negative `b` never
        reaches its base case.                                           by construction *)
 
-val mul : int -> int -> int
 (** The product of two naturals, stopped at [max_int]. *)
+val mul : int -> int -> int
 
-val pow : int -> int -> int
 (** The power of two naturals, stopped at [max_int]. *)
+val pow : int -> int -> int
 
-val shift_left : int -> int -> int
 (** [a * 2 ^ b] for two naturals, stopped at [max_int]. *)
+val shift_left : int -> int -> int

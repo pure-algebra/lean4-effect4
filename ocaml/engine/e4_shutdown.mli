@@ -49,50 +49,51 @@
    Refused: a signal handler in this module. `run` is called by whoever caught the signal;
    this file installs nothing global. Refusal row A3-SHUTDOWN-SIGNAL. *)
 
-type id
 (** A registered hook. Carries its registration index, its name and its `~loc:`, and the
     registry it belongs to, so an id from another registry is refused rather than silently
     treated as "already attempted". *)
+type id
 
 val name : id -> string
 val loc : id -> string
 
-val index : id -> int
 (** The registration index, from 0. SD2's tie-break is on this. *)
+val index : id -> int
 
 val equal : id -> id -> bool
 
-type report = {
-  ran : (id * float) list;  (** in the order they ran; the float is the hook's elapsed seconds *)
-  failed : (id * exn) list;  (** SD3, in the order they raised *)
-  unfinished : id list;  (** SD5 and SD4, in registration order *)
-  passes : int;  (** SD4: how many passes actually ran a hook *)
-  exit_code : int;
-}
+type report =
+  { ran : (id * float) list
+    (** in the order they ran; the float is the hook's elapsed seconds *)
+  ; failed : (id * exn) list (** SD3, in the order they raised *)
+  ; unfinished : id list (** SD5 and SD4, in registration order *)
+  ; passes : int (** SD4: how many passes actually ran a hook *)
+  ; exit_code : int
+  }
 
-val max_passes : int
 (** SD4's bound. A named constant in the file, never [max_int] (trap #17). *)
+val max_passes : int
 
-val no_deadline : float
 (** [infinity]: run every hook to completion, on this thread, however long it takes. *)
+val no_deadline : float
 
-val poll_seconds : float
 (** The granularity of the bounded wait of SD5. `Condition` has no timed wait, so the wait
     polls, exactly as `E4_quiescence.wait_zero_for` does. *)
+val poll_seconds : float
 
-val exit_clean : int
 (** 127 — clean shutdown: nothing failed, nothing unfinished. *)
+val exit_clean : int
 
-val exit_cleanup_failed : int
 (** 128 — exited, but a clean-up hook raised. *)
+val exit_cleanup_failed : int
 
-val exit_cleanup_unfinished : int
 (** 129 — clean-up trouble: a hook was not reached, or overran the deadline. In Octez's
     contract 129-253 is the error-with-clean-up-trouble band; we use its first code. *)
+val exit_cleanup_unfinished : int
 
-val exit_forced : int
 (** 255 — forced: `run` was called with a deadline that had already passed, so no hook was
     even attempted. *)
+val exit_forced : int
 
 (** {1 The process registry}
 
@@ -101,18 +102,18 @@ val exit_forced : int
     state named, which is what makes two independent shutdowns testable in one process and
     what {!E4_sched.shutdown} uses for the host's own four-hook DAG. *)
 
-val register : ?after:id list -> loc:string -> name:string -> (unit -> unit) -> id
 (** Register a clean-up hook in the process registry. [~loc] is meant to be [__LOC__], so a
     hung clean-up names its own source line (lwt-exit's rule).
     @raise Invalid_argument if an id in [after] belongs to another registry, or if the
     process registry has already produced its report (SD6: the pass is over). *)
+val register : ?after:id list -> loc:string -> name:string -> (unit -> unit) -> id
 
-val run : deadline:float -> report
 (** Run the process registry's DAG. SD1-SD6. Idempotent: the second call returns the first
     report. *)
+val run : deadline:float -> report
 
-val report : unit -> report option
 (** The process registry's report, if {!run} has produced one. *)
+val report : unit -> report option
 
 module Registry : sig
   type t
@@ -122,6 +123,6 @@ module Registry : sig
   val run : t -> deadline:float -> report
   val report : t -> report option
 
-  val registered : t -> id list
   (** In registration order. *)
+  val registered : t -> id list
 end

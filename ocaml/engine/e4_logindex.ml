@@ -47,15 +47,37 @@ let kind_unknown = -1
 let kind_count = 21
 
 let kind_names =
-  [| "forked"; "started"; "scheduledTask"; "ranTask"; "yieldInjected"; "parkedOn";
-     "resumedWith"; "interruptRecorded"; "interruptDeferred"; "childrenInterrupted";
-     "observerFired"; "frame"; "finalizerProgram"; "scopeLinked"; "scopeClosedOnLink";
-     "raceStarted"; "raceLaunched"; "raceSettled"; "contextSet"; "callback"; "exited" |]
+  [| "forked"
+   ; "started"
+   ; "scheduledTask"
+   ; "ranTask"
+   ; "yieldInjected"
+   ; "parkedOn"
+   ; "resumedWith"
+   ; "interruptRecorded"
+   ; "interruptDeferred"
+   ; "childrenInterrupted"
+   ; "observerFired"
+   ; "frame"
+   ; "finalizerProgram"
+   ; "scopeLinked"
+   ; "scopeClosedOnLink"
+   ; "raceStarted"
+   ; "raceLaunched"
+   ; "raceSettled"
+   ; "contextSet"
+   ; "callback"
+   ; "exited"
+  |]
+;;
 
 let kind_name k =
-  if k >= 0 && k < kind_count then kind_names.(k)
-  else if k = kind_unknown then "unknown"
+  if k >= 0 && k < kind_count
+  then kind_names.(k)
+  else if k = kind_unknown
+  then "unknown"
   else Printf.sprintf "kind%d" k
+;;
 
 let kind_of_name = function
   | "forked" -> kind_forked
@@ -80,18 +102,19 @@ let kind_of_name = function
   | "callback" -> kind_callback
   | "exited" -> kind_exited
   | _ -> kind_unknown
+;;
 
 (* ------------------------------------------------------------------------- the codec *)
 
-type entry = {
-  index : int;
-  kind : int;
-  fiber : int option;
-  token : int option;
-  scope : int option;
-  task_owner : int option;
-  decision : int;
-}
+type entry =
+  { index : int
+  ; kind : int
+  ; fiber : int option
+  ; token : int option
+  ; scope : int option
+  ; task_owner : int option
+  ; decision : int
+  }
 
 (* `name(a,b,c)` with the arguments nested by `(`/`[` and by OCaml string literals -- a
    `Val.str` payload prints through `%S` (e4_engine.ml:332) and may hold any delimiter, so
@@ -102,77 +125,93 @@ let head_and_args (row : string) : string * string list =
     if i >= n then -1 else if String.unsafe_get row i = '(' then i else find_open (i + 1)
   in
   let o = find_open 0 in
-  if o < 0 then (row, [])
-  else begin
+  if o < 0
+  then row, []
+  else (
     let name = String.sub row 0 o in
     let buf = Buffer.create 24 in
     let args = ref [] in
-    let depth = ref 0 and inq = ref false and esc = ref false in
-    let i = ref (o + 1) and fin = ref false in
+    let depth = ref 0
+    and inq = ref false
+    and esc = ref false in
+    let i = ref (o + 1)
+    and fin = ref false in
     while (not !fin) && !i < n do
       let c = String.unsafe_get row !i in
-      if !inq then begin
-        if !esc then esc := false
-        else if c = '\\' then esc := true
-        else if c = '"' then inq := false;
-        Buffer.add_char buf c
-      end
-      else
-        (match c with
-         | '"' ->
-           inq := true;
-           Buffer.add_char buf c
-         | '(' | '[' ->
-           incr depth;
-           Buffer.add_char buf c
-         | ']' ->
-           decr depth;
-           Buffer.add_char buf c
-         | ')' ->
-           if !depth = 0 then begin
-             args := Buffer.contents buf :: !args;
-             fin := true
-           end
-           else begin
-             decr depth;
-             Buffer.add_char buf c
-           end
-         | ',' when !depth = 0 ->
-           args := Buffer.contents buf :: !args;
-           Buffer.clear buf
-         | _ -> Buffer.add_char buf c);
+      if !inq
+      then (
+        if !esc
+        then esc := false
+        else if c = '\\'
+        then esc := true
+        else if c = '"'
+        then inq := false;
+        Buffer.add_char buf c)
+      else (
+        match c with
+        | '"' ->
+          inq := true;
+          Buffer.add_char buf c
+        | '(' | '[' ->
+          incr depth;
+          Buffer.add_char buf c
+        | ']' ->
+          decr depth;
+          Buffer.add_char buf c
+        | ')' ->
+          if !depth = 0
+          then (
+            args := Buffer.contents buf :: !args;
+            fin := true)
+          else (
+            decr depth;
+            Buffer.add_char buf c)
+        | ',' when !depth = 0 ->
+          args := Buffer.contents buf :: !args;
+          Buffer.clear buf
+        | _ -> Buffer.add_char buf c);
       incr i
     done;
     if not !fin then args := Buffer.contents buf :: !args;
-    (name, List.rev !args)
-  end
+    name, List.rev !args)
+;;
 
 let arg_int (args : string list) (k : int) : int option =
   match List.nth_opt args k with
   | None -> None
   | Some s -> int_of_string_opt (String.trim s)
+;;
 
 let parse_run_event_row ~(decision : int) (index : int) (row : E4_log.row) : entry =
   let name, args = head_and_args row in
   let kind = kind_of_name name in
   let a k = arg_int args k in
-  let none = { index; kind; fiber = None; token = None; scope = None; task_owner = None;
-               decision }
+  let none =
+    { index; kind; fiber = None; token = None; scope = None; task_owner = None; decision }
   in
-  if kind = kind_unknown then none
-  else if kind = kind_scheduled_task || kind = kind_ran_task then
-    { none with fiber = a 0; task_owner = a 0 }
-  else if kind = kind_parked_on || kind = kind_resumed_with then
-    { none with fiber = a 0; token = a 1 }
-  else if kind = kind_interrupt_recorded then { none with fiber = a 1 }
+  if kind = kind_unknown
+  then none
+  else if kind = kind_scheduled_task || kind = kind_ran_task
+  then { none with fiber = a 0; task_owner = a 0 }
+  else if kind = kind_parked_on || kind = kind_resumed_with
+  then { none with fiber = a 0; token = a 1 }
+  else if kind = kind_interrupt_recorded
+  then
+    { none with fiber = a 1 }
     (* `interruptRecorded(who,target)`: `who` may be `-`; the row is ABOUT the target
        (RunEvent (src/Effect4/Machine/Fibers.lean)). *)
-  else if kind = kind_scope_linked then { none with scope = a 1; fiber = a 3 }
+  else if kind = kind_scope_linked
+  then
+    { none with scope = a 1; fiber = a 3 }
     (* `scopeLinked(mode,scope,key,fiber)` -- RunEvent (src/Effect4/Machine/Fibers.lean). *)
-  else if kind = kind_scope_closed_on_link then { none with scope = a 0; fiber = a 1 }
-  else if kind = kind_race_started || kind = kind_race_launched then { none with fiber = a 1 }
-  else if kind = kind_race_settled || kind = kind_callback then none
+  else if kind = kind_scope_closed_on_link
+  then { none with scope = a 0; fiber = a 1 }
+  else if kind = kind_race_started || kind = kind_race_launched
+  then { none with fiber = a 1 }
+  else if kind = kind_race_settled || kind = kind_callback
+  then none
   else { none with fiber = a 0 }
+;;
 
 (* ------------------------------------------------------------------------- the index *)
 
@@ -184,67 +223,106 @@ let parse_run_event_row ~(decision : int) (index : int) (row : E4_log.row) : ent
    `Lcnf_array` -- one append per DECISION, not per row -- and `segment` is a binary search
    over it.  Measured: this alone took the 1e6-row build from 416 ms to the number in the
    lane receipt's bench table. *)
-type t = {
-  entries : entry Lcnf_array.t;
-  fib : int list Im.t;
-  knd : int list Im.t;
-  tok : int list Im.t;
-  scp : int list Im.t;
-  own : int list Im.t;
-  segs : (int * int * int) Lcnf_array.t;  (** closed segments: (decision, from, upto) *)
-  cur_dec : int;  (** the in-flight segment; [no_decision] when the index is empty *)
-  cur_from : int;
-  cur_upto : int;
-  last_index : int;
-}
+type t =
+  { entries : entry Lcnf_array.t
+  ; fib : int list Im.t
+  ; knd : int list Im.t
+  ; tok : int list Im.t
+  ; scp : int list Im.t
+  ; own : int list Im.t
+  ; segs : (int * int * int) Lcnf_array.t (** closed segments: (decision, from, upto) *)
+  ; cur_dec : int (** the in-flight segment; [no_decision] when the index is empty *)
+  ; cur_from : int
+  ; cur_upto : int
+  ; last_index : int
+  }
 
 let no_decision = min_int
 
 let empty =
-  { entries = Lcnf_array.empty; fib = Im.empty; knd = Im.empty; tok = Im.empty;
-    scp = Im.empty; own = Im.empty; segs = Lcnf_array.empty; cur_dec = no_decision;
-    cur_from = 0; cur_upto = 0; last_index = -1 }
+  { entries = Lcnf_array.empty
+  ; fib = Im.empty
+  ; knd = Im.empty
+  ; tok = Im.empty
+  ; scp = Im.empty
+  ; own = Im.empty
+  ; segs = Lcnf_array.empty
+  ; cur_dec = no_decision
+  ; cur_from = 0
+  ; cur_upto = 0
+  ; last_index = -1
+  }
+;;
 
 let push m k v =
-  Im.add k (v :: (match Im.find_opt k m with None -> [] | Some l -> l)) m
+  Im.add
+    k
+    (v
+     ::
+     (match Im.find_opt k m with
+      | None -> []
+      | Some l -> l))
+    m
+;;
 
-let push_opt m k v = match k with None -> m | Some k -> push m k v
+let push_opt m k v =
+  match k with
+  | None -> m
+  | Some k -> push m k v
+;;
 
 let add t e =
-  if e.index <= t.last_index then
+  if e.index <= t.last_index
+  then
     invalid_arg
-      (Printf.sprintf "E4_logindex.add: index %d is not above the last index %d (X2)" e.index
+      (Printf.sprintf
+         "E4_logindex.add: index %d is not above the last index %d (X2)"
+         e.index
          t.last_index);
-  if t.cur_dec <> no_decision && e.decision < t.cur_dec then
+  if t.cur_dec <> no_decision && e.decision < t.cur_dec
+  then
     invalid_arg
-      (Printf.sprintf "E4_logindex.add: decision %d is below the last decision %d" e.decision
+      (Printf.sprintf
+         "E4_logindex.add: decision %d is below the last decision %d"
+         e.decision
          t.cur_dec);
   let segs, cur_dec, cur_from =
-    if e.decision = t.cur_dec then (t.segs, t.cur_dec, t.cur_from)
+    if e.decision = t.cur_dec
+    then t.segs, t.cur_dec, t.cur_from
     else
-      ( (if t.cur_dec = no_decision then t.segs
-         else Lcnf_array.push t.segs (t.cur_dec, t.cur_from, t.cur_upto)),
-        e.decision,
-        e.index )
+      ( (if t.cur_dec = no_decision
+         then t.segs
+         else Lcnf_array.push t.segs (t.cur_dec, t.cur_from, t.cur_upto))
+      , e.decision
+      , e.index )
   in
-  { entries = Lcnf_array.push t.entries e;
-    knd = push t.knd e.kind e.index;
-    fib = push_opt t.fib e.fiber e.index;
-    tok = push_opt t.tok e.token e.index;
-    scp = push_opt t.scp e.scope e.index;
-    own = push_opt t.own e.task_owner e.index;
-    segs;
-    cur_dec;
-    cur_from;
-    cur_upto = e.index + 1;
-    last_index = e.index }
+  { entries = Lcnf_array.push t.entries e
+  ; knd = push t.knd e.kind e.index
+  ; fib = push_opt t.fib e.fiber e.index
+  ; tok = push_opt t.tok e.token e.index
+  ; scp = push_opt t.scp e.scope e.index
+  ; own = push_opt t.own e.task_owner e.index
+  ; segs
+  ; cur_dec
+  ; cur_from
+  ; cur_upto = e.index + 1
+  ; last_index = e.index
+  }
+;;
 
 let of_log (l : E4_log.t) ~(parse : int -> E4_log.row -> entry) : t =
   E4_log.fold l ~init:empty ~f:(fun i row acc -> add acc (parse i row))
+;;
 
 let count t = Lcnf_array.length t.entries
 let by_index t i = Lcnf_array.get t.entries i
-let posting m k = match Im.find_opt k m with None -> [] | Some l -> List.rev l
+
+let posting m k =
+  match Im.find_opt k m with
+  | None -> []
+  | Some l -> List.rev l
+;;
+
 let by_fiber t f = posting t.fib f
 let by_kind t k = posting t.knd k
 let by_token t k = posting t.tok k
@@ -254,23 +332,26 @@ let by_task_owner t k = posting t.own k
 (* the closed segments are ascending in the decision, so a binary search answers in
    O(log (decisions) * log (decisions / 256)) and no map is kept *)
 let segment t d =
-  if t.cur_dec <> no_decision && d = t.cur_dec then Some (t.cur_from, t.cur_upto)
-  else begin
+  if t.cur_dec <> no_decision && d = t.cur_dec
+  then Some (t.cur_from, t.cur_upto)
+  else (
     let n = Lcnf_array.length t.segs in
     let rec go lo hi =
-      if lo > hi then None
-      else
+      if lo > hi
+      then None
+      else (
         let mid = (lo + hi) / 2 in
         let dm, a, z = Lcnf_array.get_exn t.segs mid in
-        if dm = d then Some (a, z) else if dm < d then go (mid + 1) hi else go lo (mid - 1)
+        if dm = d then Some (a, z) else if dm < d then go (mid + 1) hi else go lo (mid - 1))
     in
-    go 0 (n - 1)
-  end
+    go 0 (n - 1))
+;;
 
 let by_decision t d =
   match segment t d with
   | None -> []
   | Some (from, upto) -> List.init (upto - from) (fun i -> from + i)
+;;
 
 let keys m = List.map fst (Im.bindings m)
 let fibers t = keys t.fib
@@ -278,13 +359,17 @@ let tokens t = keys t.tok
 let scopes t = keys t.scp
 let kinds t = keys t.knd
 let task_owners t = keys t.own
-
-let decisions t =
-  Lcnf_array.length t.segs + if t.cur_dec = no_decision then 0 else 1
+let decisions t = Lcnf_array.length t.segs + if t.cur_dec = no_decision then 0 else 1
 
 let decision_keys t =
   let closed =
     List.rev (Lcnf_array.fold t.segs ~init:[] ~f:(fun _ (d, _, _) acc -> d :: acc))
   in
   if t.cur_dec = no_decision then closed else closed @ [ t.cur_dec ]
-let decision_of t i = match by_index t i with None -> None | Some e -> Some e.decision
+;;
+
+let decision_of t i =
+  match by_index t i with
+  | None -> None
+  | Some e -> Some e.decision
+;;

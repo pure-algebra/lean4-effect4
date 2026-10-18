@@ -49,23 +49,32 @@ let check name ok =
   incr checks;
   Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
   if not ok then incr failures
+;;
 
 (* ================================================================ the fixture's text *)
 
-type run = { name : string; fuel : int; program : string; exit_text : string }
+type run =
+  { name : string
+  ; fuel : int
+  ; program : string
+  ; exit_text : string
+  }
 
 let words (line : string) : string list =
   List.filter (fun w -> w <> "") (String.split_on_char ' ' line)
+;;
 
 let bytes_of_hex (hex : string) : string =
   match E4_hex.to_bytes hex with
   | Some b -> b
   | None -> failwith "fixture: the program is not hexadecimal"
+;;
 
 (* The text after a line's first word and one space. *)
 let after_word (line : string) (word : string) : string =
   let n = String.length word + 1 in
   String.sub line n (String.length line - n)
+;;
 
 (* The fixture into its runs.  Any line this reader does not know is a failure: a fixture is
    never read loosely. *)
@@ -74,7 +83,9 @@ let read_fixture (path : string) : run list =
   let rec lines acc =
     match input_line ic with
     | line -> lines (line :: acc)
-    | exception End_of_file -> close_in ic; List.rev acc
+    | exception End_of_file ->
+      close_in ic;
+      List.rev acc
   in
   let rec runs acc = function
     | [] -> List.rev acc
@@ -92,21 +103,23 @@ let read_fixture (path : string) : run list =
        | [ "fuel"; n ] -> body { r with fuel = int_of_string n } rest
        | [ "program"; hex ] -> body { r with program = bytes_of_hex hex } rest
        | "exit" :: _ -> body { r with exit_text = after_word line "exit" } rest
-       | [ "end" ] -> (r, rest)
-       | _ -> failwith (Printf.sprintf "fixture %s: run %s, unknown line %S" path r.name line))
+       | [ "end" ] -> r, rest
+       | _ ->
+         failwith (Printf.sprintf "fixture %s: run %s, unknown line %S" path r.name line))
   in
   runs [] (lines [])
+;;
 
 (* ================================================================ one report per run *)
 
-type report = {
-  outcome : string;
-  root : string option;
-  exits : (int * string) list;
-  fibers : (int * string) list;
-  trace : string list;
-  store : string;
-}
+type report =
+  { outcome : string
+  ; root : string option
+  ; exits : (int * string) list
+  ; fibers : (int * string) list
+  ; trace : string list
+  ; store : string
+  }
 
 module Rep (En : E4_engine.ENGINE) = struct
   (* The program from its bytes, then the engine's own drive loop. *)
@@ -116,12 +129,14 @@ module Rep (En : E4_engine.ENGINE) = struct
     | Some p ->
       let t = En.run_program p ~fuel in
       Some
-        { outcome = En.outcome t;
-          root = En.root_exit t;
-          exits = En.exits t;
-          fibers = En.fiber_rows t;
-          trace = En.trace_rows t;
-          store = En.store_row t }
+        { outcome = En.outcome t
+        ; root = En.root_exit t
+        ; exits = En.exits t
+        ; fibers = En.fiber_rows t
+        ; trace = En.trace_rows t
+        ; store = En.store_row t
+        }
+  ;;
 end
 
 module RF = Rep (E4_engine.Fast)
@@ -134,12 +149,25 @@ let find_fixture () : string =
   match List.find_opt Sys.file_exists candidates with
   | Some path -> path
   | None -> failwith "pool.txt not found from the cwd"
+;;
 
 (* The fixture's runs, in the order Lean writes them
    (Test.Program.PoolPublic.engineRuns). *)
 let expected_names =
-  [ "pp4"; "pp5control"; "public-pp1"; "public-pp2"; "public-pp3"; "public-pp4"; "public-pp5";
-    "public-pp6"; "public-pp7"; "public-pp8"; "public-closed"; "public-closing" ]
+  [ "pp4"
+  ; "pp5control"
+  ; "public-pp1"
+  ; "public-pp2"
+  ; "public-pp3"
+  ; "public-pp4"
+  ; "public-pp5"
+  ; "public-pp6"
+  ; "public-pp7"
+  ; "public-pp8"
+  ; "public-closed"
+  ; "public-closing"
+  ]
+;;
 
 (* The fuel of the red control: no run of the fixture finishes at it. *)
 let small_fuel = 3
@@ -149,6 +177,7 @@ let rec distinct (texts : string list) : bool =
   match texts with
   | [] -> true
   | text :: rest -> (not (List.mem text rest)) && distinct rest
+;;
 
 (* A list turned by one place: each run beside the run after it, and the last beside the
    first. *)
@@ -156,6 +185,7 @@ let turned (items : 'a list) : 'a list =
   match items with
   | [] -> []
   | first :: rest -> rest @ [ first ]
+;;
 
 let () =
   let runs = read_fixture (find_fixture ()) in
@@ -166,52 +196,74 @@ let () =
   let roots =
     List.map
       (fun (r : run) ->
-         Printf.printf "== run %s: %d bytes, fuel %d ==\n" r.name (String.length r.program) r.fuel;
-         match (RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel) with
+         Printf.printf
+           "== run %s: %d bytes, fuel %d ==\n"
+           r.name
+           (String.length r.program)
+           r.fuel;
+         match RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel with
          | Some fast, Some slow ->
            check (r.name ^ ": P1 the program's bytes decode on both instances") true;
            check (r.name ^ ": P2 Fast finishes") (fast.outcome = "finished");
            check (r.name ^ ": P2 Ref finishes") (slow.outcome = "finished");
-           Printf.printf "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n" r.exit_text
-             (Option.value fast.root ~default:"-") (Option.value slow.root ~default:"-");
-           check (r.name ^ ": P2 Fast's root exit is the exit Lean wrote")
+           Printf.printf
+             "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n"
+             r.exit_text
+             (Option.value fast.root ~default:"-")
+             (Option.value slow.root ~default:"-");
+           check
+             (r.name ^ ": P2 Fast's root exit is the exit Lean wrote")
              (fast.root = Some r.exit_text);
-           check (r.name ^ ": P2 Ref's root exit is the exit Lean wrote")
+           check
+             (r.name ^ ": P2 Ref's root exit is the exit Lean wrote")
              (slow.root = Some r.exit_text);
-           check (r.name ^ ": P3 Fast = Ref: outcome, exits, fibers, trace, store") (fast = slow);
+           check
+             (r.name ^ ": P3 Fast = Ref: outcome, exits, fibers, trace, store")
+             (fast = slow);
            (* P4: a program cut by one byte is refused *)
            let cut = String.sub r.program 0 (String.length r.program - 1) in
-           check (r.name ^ ": P4 a program cut by one byte is refused on both instances")
+           check
+             (r.name ^ ": P4 a program cut by one byte is refused on both instances")
              (RF.report cut ~fuel:r.fuel = None && RR.report cut ~fuel:r.fuel = None);
            (* P4: at a small fuel the run does not finish *)
            (match
-              (RF.report r.program ~fuel:small_fuel, RR.report r.program ~fuel:small_fuel)
+              RF.report r.program ~fuel:small_fuel, RR.report r.program ~fuel:small_fuel
             with
             | Some f, Some s ->
               check
                 (Printf.sprintf
-                   "%s: P4 at fuel %d neither instance finishes, and none has a root exit" r.name
+                   "%s: P4 at fuel %d neither instance finishes, and none has a root exit"
+                   r.name
                    small_fuel)
-                (f.outcome <> "finished" && s.outcome <> "finished" && f.root = None
+                (f.outcome <> "finished"
+                 && s.outcome <> "finished"
+                 && f.root = None
                  && s.root = None)
             | _ -> check (r.name ^ ": P4 the program decodes at the small fuel") false);
-           (fast.root, slow.root)
+           fast.root, slow.root
          | _ ->
            check (r.name ^ ": P1 the program's bytes decode on both instances") false;
-           (None, None))
+           None, None)
       runs
   in
   (* P4: the runs answer twelve exits, so each run's check can fail. *)
   let texts = List.map (fun (r : run) -> r.exit_text) runs in
-  check "P4 the runs' exits are twelve texts"
+  check
+    "P4 the runs' exits are twelve texts"
     (List.length texts = List.length expected_names && distinct texts);
   List.iter2
     (fun ((r : run), (fast, slow)) (next : run) ->
        check
-         (Printf.sprintf "%s: P4 its exit is not the exit of %s, on both instances" r.name
+         (Printf.sprintf
+            "%s: P4 its exit is not the exit of %s, on both instances"
+            r.name
             next.name)
-         (fast <> None && slow <> None && fast <> Some next.exit_text
+         (fast <> None
+          && slow <> None
+          && fast <> Some next.exit_text
           && slow <> Some next.exit_text))
-    (List.combine runs roots) (turned runs);
+    (List.combine runs roots)
+    (turned runs);
   Printf.printf "test_pool: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
+;;

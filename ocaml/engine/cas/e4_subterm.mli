@@ -85,83 +85,91 @@
 
 (* ============================================================ families and paths *)
 
-type family = Eff_subterm.family = Eff | Stmts | Stmt | Action | Effs | Layer | Layers
-(** The node sorts of `Effect4.Program.Node`, in its declaration order (GENERATED,
+type family = Eff_subterm.family =
+  | Eff
+  | Stmts
+  | Stmt
+  | Action
+  | Effs
+  | Layer
+  | Layers
+  (** The node sorts of `Effect4.Program.Node`, in its declaration order (GENERATED,
     `ocaml/eff/eff_subterm.ml`). *)
 
 val family_name : family -> string
 val family_eq : family -> family -> bool
 val families : family list
 
-val family_ctor_names : family -> string list
 (** `Eff_ctors.ctor_names_<t>` for the family: the alphabet the index is table-driven over
     (SB5). *)
+val family_ctor_names : family -> string list
 
-val arity : family -> int
 (** The number of constructors of the family — `List.length (family_ctor_names f)`. *)
+val arity : family -> int
 
-val path_to_string : int list -> string
 (** "." for the root, else "0.1.0"; for messages and the receipt, never an identity. *)
+val path_to_string : int list -> string
 
 (* ============================================================ the child table *)
 
-val children : family -> int -> (int * family) list
 (** [children f c] is the children of constructor [c] of family [f], in `ProgPath` order: the
     k-th element is program child k, and it is `(value argument index, the child's family)`.
     `[]` for a constructor with no addressed children.  Out-of-range constructor indices answer
     `[]`.  This is the whole table (SB5), generated from the declarations by the rule
     `Node.child` follows (node-typed arguments in declaration order); there is no fallback
     (M3). *)
+val children : family -> int -> (int * family) list
 
-val val_of_prog : family -> int -> int -> int option
 (** [val_of_prog f ctor k] is the value-argument index of program child [k] (SB4). *)
+val val_of_prog : family -> int -> int -> int option
 
-val prog_of_val : family -> int -> int -> int option
 (** The other direction: the program child index of value argument [j], or None when that
     argument is not an addressed child (a `term`, a `native_op`, a `fork_options`) (SB4). *)
+val prog_of_val : family -> int -> int -> int option
 
 (* ============================================================ the index *)
 
-type entry = {
-  prog_path : int list;  (** child indices in `Node.child` — a `ProgPath` (M5) *)
-  val_path : int list;  (** argument indices in the encoded tree — a `ValPath` (M5) *)
-  family : family;  (** the family of the node this entry addresses (D1) *)
-  ctor : int;  (** its constructor's declaration position in that family (not its wire tag) *)
-  off : int;  (** the first byte of its frame, in the whole program's bytes *)
-  len : int;  (** the length of its frame *)
-  cid : E4_addr.Cid.t;  (** sha256 of the slice (SB3) *)
-}
+type entry =
+  { prog_path : int list (** child indices in `Node.child` — a `ProgPath` (M5) *)
+  ; val_path : int list (** argument indices in the encoded tree — a `ValPath` (M5) *)
+  ; family : family (** the family of the node this entry addresses (D1) *)
+  ; ctor : int
+    (** its constructor's declaration position in that family (not its wire tag) *)
+  ; off : int (** the first byte of its frame, in the whole program's bytes *)
+  ; len : int (** the length of its frame *)
+  ; cid : E4_addr.Cid.t (** sha256 of the slice (SB3) *)
+  }
 
 type t
 
-val of_program : string -> t
 (** The program's canonical bytes — `Eff_wire.encode_program`'s output.  Raises
     `Invalid_argument` unless the bytes are exactly one well-formed program (SB7, D2). *)
+val of_program : string -> t
 
 val of_program_opt : string -> t option
 
-val bytes : t -> string
 (** The bytes the index was built from: its identity (SB8). *)
+val bytes : t -> string
 
-val entries : t -> entry list
 (** Pre-order, root first (SB6). *)
+val entries : t -> entry list
 
 val count : t -> int
 val root : t -> entry
 val at_prog_path : t -> int list -> entry option
 val at_val_path : t -> int list -> entry option
 
-val entries_at_family : t -> family -> entry list
 (** The entries of one family, in the order of [entries]. *)
+val entries_at_family : t -> family -> entry list
 
-val slice : string -> entry -> string
 (** `String.sub bytes entry.off entry.len` — §1.6's form, over any bytes. *)
+val slice : string -> entry -> string
 
-val slice_of : t -> entry -> string
 (** [slice (bytes t) e]. *)
+val slice_of : t -> entry -> string
 
-val cid_of_bytes : string -> E4_addr.Cid.t
 (** `E4_sha256.digest`, as an address.  The identity a slice carries (SB3). *)
+val cid_of_bytes : string -> E4_addr.Cid.t
 
 (* ============================================================ the value side (D3) *)
 
@@ -182,23 +190,23 @@ module Tree : sig
   val family_of : node -> family
   val ctor_index : node -> int
 
-  val child : node -> int -> node option
   (** `Node.child`, generated from the declarations. *)
+  val child : node -> int -> node option
 
-  val witnesses : node list
   (** One least inhabitant of every constructor of every sort, in sort then declaration
       order (GENERATED). *)
+  val witnesses : node list
 
-  val at_ : node -> int list -> node option
   (** `Node.at_` (Node.at_ (src/Effect4/Program/Refs.lean)). *)
+  val at_ : node -> int list -> node option
 
-  val encode : node -> string
   (** The family's own encoder from `Eff_wire`; for `N_eff` at the root it is
       `Eff_wire.encode_program`. *)
+  val encode : node -> string
 
-  val of_bytes : string -> node option
   (** `Eff_wire.decode_program_exact`, as an `N_eff`. *)
+  val of_bytes : string -> node option
 
-  val subtree_count : node -> int
   (** The number of nodes in the subtree, counting this one: what `count` must equal. *)
+  val subtree_count : node -> int
 end

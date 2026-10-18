@@ -46,20 +46,20 @@ open Eff_types
 
 (* ==================================================================== the shape *)
 
-type program = {
-  name : string;  (** the golden's basename, or `g<NNN>` for a generated program *)
-  corpus : string;  (** "goldens" | "truth" | "lean" *)
-  eff : NativeOp.t Eff.t;
-  bytes : string option;  (** the canonical wire bytes, when the program came from them *)
-  typed : bool option;  (** Lean's `Api.wellTyped` verdict, when the source records it *)
-}
+type program =
+  { name : string (** the golden's basename, or `g<NNN>` for a generated program *)
+  ; corpus : string (** "goldens" | "truth" | "lean" *)
+  ; eff : NativeOp.t Eff.t
+  ; bytes : string option (** the canonical wire bytes, when the program came from them *)
+  ; typed : bool option (** Lean's `Api.wellTyped` verdict, when the source records it *)
+  }
 
-type load_report = {
-  lr_dir : string;
-  lr_found : int;
-  lr_decoded : int;
-  lr_refused : string list;  (** the file names `decode_program_exact` refused *)
-}
+type load_report =
+  { lr_dir : string
+  ; lr_found : int
+  ; lr_decoded : int
+  ; lr_refused : string list (** the file names `decode_program_exact` refused *)
+  }
 
 (* ==================================================================== finding files *)
 
@@ -68,6 +68,7 @@ let ancestors (d : string) (n : int) : string list =
     if n = 0 then List.rev acc else go (Filename.dirname d) (n - 1) (d :: acc)
   in
   go d n []
+;;
 
 (* The same ancestor walk `test/test_engine.ml` uses: from the cwd (in dune,
    `_build/default/engine/test`) upwards, trying both `<a>/<rel>` and `<a>/ocaml/<rel>`,
@@ -77,15 +78,19 @@ let find_path ?(env : string option) (suffix : string list) : string option =
   let from_env =
     match env with
     | None -> []
-    | Some e -> (try [ Sys.getenv e ] with Not_found -> [])
+    | Some e ->
+      (try [ Sys.getenv e ] with
+       | Not_found -> [])
   in
   let cands =
     from_env
     @ List.concat_map
-        (fun a -> [ Filename.concat a rel; Filename.concat a (Filename.concat "ocaml" rel) ])
+        (fun a ->
+           [ Filename.concat a rel; Filename.concat a (Filename.concat "ocaml" rel) ])
         (ancestors (Sys.getcwd ()) 9)
   in
   List.find_opt Sys.file_exists cands
+;;
 
 let read_file (path : string) : string =
   let ic = open_in_bin path in
@@ -93,6 +98,7 @@ let read_file (path : string) : string =
   let s = really_input_string ic n in
   close_in ic;
   s
+;;
 
 let hex_decode (s : string) : string option =
   let b = Buffer.create (String.length s / 2) in
@@ -112,17 +118,26 @@ let hex_decode (s : string) : string option =
       go rest
   in
   if go digits then Some (Buffer.contents b) else None
+;;
 
 (* ==================================================================== the byte goldens *)
 
 let files_with (dir : string) (ext : string) : string list =
-  List.sort compare
+  List.sort
+    compare
     (List.filter (fun f -> Filename.check_suffix f ext) (Array.to_list (Sys.readdir dir)))
+;;
 
-let load_dir (dir : string) (ext : string) (corpus : string) (decode : string -> string option)
-  : program list * load_report =
+let load_dir
+      (dir : string)
+      (ext : string)
+      (corpus : string)
+      (decode : string -> string option)
+  : program list * load_report
+  =
   let names = files_with dir ext in
-  let refused = ref [] and progs = ref [] in
+  let refused = ref []
+  and progs = ref [] in
   List.iter
     (fun f ->
        let raw = read_file (Filename.concat dir f) in
@@ -132,24 +147,34 @@ let load_dir (dir : string) (ext : string) (corpus : string) (decode : string ->
          (match Eff_wire.decode_program_exact wire with
           | None -> refused := f :: !refused
           | Some e ->
-            progs :=
-              { name = Filename.remove_extension f; corpus; eff = e; bytes = Some wire;
-                typed = None }
-              :: !progs))
+            progs
+            := { name = Filename.remove_extension f
+               ; corpus
+               ; eff = e
+               ; bytes = Some wire
+               ; typed = None
+               }
+               :: !progs))
     names;
-  ( List.rev !progs,
-    { lr_dir = dir;
-      lr_found = List.length names;
-      lr_decoded = List.length !progs;
-      lr_refused = List.rev !refused } )
+  ( List.rev !progs
+  , { lr_dir = dir
+    ; lr_found = List.length names
+    ; lr_decoded = List.length !progs
+    ; lr_refused = List.rev !refused
+    } )
+;;
 
 let goldens () : program list * load_report =
   match find_path ~env:"E4_EFF_GOLDENS" [ "eff"; "goldens"; "p42.bin" ] with
   | None ->
-    ([], { lr_dir = "<not found: ocaml/eff/goldens>"; lr_found = 0; lr_decoded = 0;
-           lr_refused = [] })
-  | Some marker ->
-    load_dir (Filename.dirname marker) ".bin" "goldens" (fun s -> Some s)
+    ( []
+    , { lr_dir = "<not found: ocaml/eff/goldens>"
+      ; lr_found = 0
+      ; lr_decoded = 0
+      ; lr_refused = []
+      } )
+  | Some marker -> load_dir (Filename.dirname marker) ".bin" "goldens" (fun s -> Some s)
+;;
 
 (* ==================================================================== the truth corpus *)
 
@@ -157,21 +182,43 @@ let goldens () : program list * load_report =
    TypeScript declaration; its canonical bytes live elsewhere, so this list is the index
    and {!truth} is the join with the two byte sources. *)
 let truth_names : string list =
-  [ "p42"; "pBind"; "pFork"; "pAwait"; "pGen"; "pLoop"; "pCatch"; "pScope"; "pTwo";
-    "pAcquire"; "pAcquireClosed"; "pProvide"; "pProvideMerge"; "pProvideTwice" ]
+  [ "p42"
+  ; "pBind"
+  ; "pFork"
+  ; "pAwait"
+  ; "pGen"
+  ; "pLoop"
+  ; "pCatch"
+  ; "pScope"
+  ; "pTwo"
+  ; "pAcquire"
+  ; "pAcquireClosed"
+  ; "pProvide"
+  ; "pProvideMerge"
+  ; "pProvideTwice"
+  ]
+;;
 
 let truth () : program list * load_report * string list =
   let hex_dir =
-    Option.map Filename.dirname (find_path ~env:"E4_HEX_GOLDENS" [ "goldens"; "eff"; "p42.hex" ])
+    Option.map
+      Filename.dirname
+      (find_path ~env:"E4_HEX_GOLDENS" [ "goldens"; "eff"; "p42.hex" ])
   in
   let bin_dir =
-    Option.map Filename.dirname (find_path ~env:"E4_EFF_GOLDENS" [ "eff"; "goldens"; "p42.bin" ])
+    Option.map
+      Filename.dirname
+      (find_path ~env:"E4_EFF_GOLDENS" [ "eff"; "goldens"; "p42.bin" ])
   in
   let from_hex, rep =
     match hex_dir with
     | None ->
-      ([], { lr_dir = "<not found: ocaml/goldens/eff>"; lr_found = 0; lr_decoded = 0;
-             lr_refused = [] })
+      ( []
+      , { lr_dir = "<not found: ocaml/goldens/eff>"
+        ; lr_found = 0
+        ; lr_decoded = 0
+        ; lr_refused = []
+        } )
     | Some d -> load_dir d ".hex" "truth" hex_decode
   in
   let have = List.map (fun p -> p.name) from_hex in
@@ -182,21 +229,29 @@ let truth () : program list * load_report * string list =
     | Some d ->
       List.filter_map
         (fun n ->
-           if List.mem n have then None
-           else
+           if List.mem n have
+           then None
+           else (
              let f = Filename.concat d (n ^ ".bin") in
-             if not (Sys.file_exists f) then None
-             else
+             if not (Sys.file_exists f)
+             then None
+             else (
                let wire = read_file f in
                Option.map
                  (fun e ->
-                    { name = n; corpus = "truth"; eff = e; bytes = Some wire; typed = None })
-                 (Eff_wire.decode_program_exact wire))
+                    { name = n
+                    ; corpus = "truth"
+                    ; eff = e
+                    ; bytes = Some wire
+                    ; typed = None
+                    })
+                 (Eff_wire.decode_program_exact wire))))
         truth_names
   in
   let got = have @ List.map (fun p -> p.name) extra in
   let missing = List.filter (fun n -> not (List.mem n got)) truth_names in
-  (from_hex @ extra, rep, missing)
+  from_hex @ extra, rep, missing
+;;
 
 (* -------------------------------------------------------- corpus.json, as an oracle *)
 
@@ -210,47 +265,76 @@ let json_parse (s : string) : Eff_json_text.t =
   let fail m = raise (Json_error (Printf.sprintf "%s at byte %d" m !i)) in
   let peek () = if !i < n then s.[!i] else '\000' in
   let rec skip () =
-    if !i < n then
-      match s.[!i] with ' ' | '\t' | '\n' | '\r' -> incr i; skip () | _ -> ()
+    if !i < n
+    then (
+      match s.[!i] with
+      | ' ' | '\t' | '\n' | '\r' ->
+        incr i;
+        skip ()
+      | _ -> ())
   in
   let lit w v =
     let l = String.length w in
-    if !i + l <= n && String.sub s !i l = w then (i := !i + l; v) else fail ("expected " ^ w)
+    if !i + l <= n && String.sub s !i l = w
+    then (
+      i := !i + l;
+      v)
+    else fail ("expected " ^ w)
   in
   let string_ () =
     if peek () <> '"' then fail "expected a string";
     incr i;
     let b = Buffer.create 16 in
     let rec go () =
-      if !i >= n then fail "unterminated string"
-      else
+      if !i >= n
+      then fail "unterminated string"
+      else (
         match s.[!i] with
         | '"' -> incr i
         | '\\' ->
           incr i;
-          (if !i >= n then fail "unterminated escape");
+          if !i >= n then fail "unterminated escape";
           (match s.[!i] with
-           | 'n' -> Buffer.add_char b '\n'; incr i
-           | 't' -> Buffer.add_char b '\t'; incr i
-           | 'r' -> Buffer.add_char b '\r'; incr i
-           | 'b' -> Buffer.add_char b '\b'; incr i
-           | 'f' -> Buffer.add_char b '\012'; incr i
+           | 'n' ->
+             Buffer.add_char b '\n';
+             incr i
+           | 't' ->
+             Buffer.add_char b '\t';
+             incr i
+           | 'r' ->
+             Buffer.add_char b '\r';
+             incr i
+           | 'b' ->
+             Buffer.add_char b '\b';
+             incr i
+           | 'f' ->
+             Buffer.add_char b '\012';
+             incr i
            | 'u' ->
              if !i + 4 >= n then fail "short \\u";
              let h = String.sub s (!i + 1) 4 in
              i := !i + 5;
              Buffer.add_char b (Char.chr (int_of_string ("0x" ^ h) land 0xff))
-           | c -> Buffer.add_char b c; incr i);
+           | c ->
+             Buffer.add_char b c;
+             incr i);
           go ()
-        | c -> Buffer.add_char b c; incr i; go ()
+        | c ->
+          Buffer.add_char b c;
+          incr i;
+          go ())
     in
     go ();
     Buffer.contents b
   in
   let number () =
     let start = !i in
-    let ok c = (c >= '0' && c <= '9') || c = '-' || c = '+' || c = '.' || c = 'e' || c = 'E' in
-    while !i < n && ok s.[!i] do incr i done;
+    let ok c =
+      (c >= '0' && c <= '9') || c = '-' || c = '+' || c = '.' || c = 'e' || c = 'E'
+    in
+    while !i < n && ok s.[!i] do
+      incr i
+    done;
     let t = String.sub s start (!i - start) in
     match int_of_string_opt t with
     | Some k -> Eff_json_text.Int k
@@ -262,8 +346,11 @@ let json_parse (s : string) : Eff_json_text.t =
     | '{' ->
       incr i;
       skip ();
-      if peek () = '}' then (incr i; Eff_json_text.Object [])
-      else
+      if peek () = '}'
+      then (
+        incr i;
+        Eff_json_text.Object [])
+      else (
         let acc = ref [] in
         let rec go () =
           skip ();
@@ -275,29 +362,36 @@ let json_parse (s : string) : Eff_json_text.t =
           acc := (k, v) :: !acc;
           skip ();
           match peek () with
-          | ',' -> incr i; go ()
+          | ',' ->
+            incr i;
+            go ()
           | '}' -> incr i
           | _ -> fail "expected , or }"
         in
         go ();
-        Eff_json_text.Object (List.rev !acc)
+        Eff_json_text.Object (List.rev !acc))
     | '[' ->
       incr i;
       skip ();
-      if peek () = ']' then (incr i; Eff_json_text.Array [])
-      else
+      if peek () = ']'
+      then (
+        incr i;
+        Eff_json_text.Array [])
+      else (
         let acc = ref [] in
         let rec go () =
           let v = value () in
           acc := v :: !acc;
           skip ();
           match peek () with
-          | ',' -> incr i; go ()
+          | ',' ->
+            incr i;
+            go ()
           | ']' -> incr i
           | _ -> fail "expected , or ]"
         in
         go ();
-        Eff_json_text.Array (List.rev !acc)
+        Eff_json_text.Array (List.rev !acc))
     | '"' -> Eff_json_text.String (string_ ())
     | 't' -> lit "true" (Eff_json_text.Bool true)
     | 'f' -> lit "false" (Eff_json_text.Bool false)
@@ -307,52 +401,65 @@ let json_parse (s : string) : Eff_json_text.t =
   let v = value () in
   skip ();
   v
+;;
 
 let jfield (k : string) (v : Eff_json_text.t) : Eff_json_text.t option =
-  match v with Eff_json_text.Object kvs -> List.assoc_opt k kvs | _ -> None
+  match v with
+  | Eff_json_text.Object kvs -> List.assoc_opt k kvs
+  | _ -> None
+;;
 
 let jstr (v : Eff_json_text.t option) : string option =
-  match v with Some (Eff_json_text.String s) -> Some s | _ -> None
+  match v with
+  | Some (Eff_json_text.String s) -> Some s
+  | _ -> None
+;;
 
 let jint (v : Eff_json_text.t option) : int option =
-  match v with Some (Eff_json_text.Int k) -> Some k | _ -> None
+  match v with
+  | Some (Eff_json_text.Int k) -> Some k
+  | _ -> None
+;;
 
-type truth_expect = {
-  te_name : string;
-  te_outcome : string;  (** `run.outcome`: "finished" | "frontier" | "stuck …" *)
-  te_fibers : int;
-  te_exit_kind : string;  (** `run.exitKind`: "success" | "fail" | "die" | "interrupt" *)
-  te_success_nat : int option;  (** `run.exit.success` when it is a plain number *)
-}
+type truth_expect =
+  { te_name : string
+  ; te_outcome : string (** `run.outcome`: "finished" | "frontier" | "stuck …" *)
+  ; te_fibers : int
+  ; te_exit_kind : string (** `run.exitKind`: "success" | "fail" | "die" | "interrupt" *)
+  ; te_success_nat : int option (** `run.exit.success` when it is a plain number *)
+  }
 
 let truth_expectations () : (truth_expect list, string) result =
   match find_path ~env:"E4_TRUTH_CORPUS" [ "harness"; "truth"; "corpus.json" ] with
   | None -> Error "harness/truth/corpus.json not found from the cwd"
-  | Some path -> (
-    match json_parse (read_file path) with
-    | exception Json_error m -> Error m
-    | j -> (
-      match jfield "programs" j with
-      | Some (Eff_json_text.Array ps) ->
-        Ok
-          (List.filter_map
-             (fun p ->
-                let run = jfield "run" p in
-                match jstr (jfield "name" p), run with
-                | Some name, Some r ->
-                  Some
-                    { te_name = name;
-                      te_outcome = Option.value (jstr (jfield "outcome" r)) ~default:"?";
-                      te_fibers = Option.value (jint (jfield "fiberCount" r)) ~default:(-1);
-                      te_exit_kind = Option.value (jstr (jfield "exitKind" r)) ~default:"?";
-                      te_success_nat =
-                        (match jfield "exit" r with
-                         | Some e -> jint (jfield "success" e)
-                         | None -> None) }
-                | _ -> None)
-             ps)
-      | _ -> Error "corpus.json has no `programs` array"))
-
+  | Some path ->
+    (match json_parse (read_file path) with
+     | exception Json_error m -> Error m
+     | j ->
+       (match jfield "programs" j with
+        | Some (Eff_json_text.Array ps) ->
+          Ok
+            (List.filter_map
+               (fun p ->
+                  let run = jfield "run" p in
+                  match jstr (jfield "name" p), run with
+                  | Some name, Some r ->
+                    Some
+                      { te_name = name
+                      ; te_outcome = Option.value (jstr (jfield "outcome" r)) ~default:"?"
+                      ; te_fibers =
+                          Option.value (jint (jfield "fiberCount" r)) ~default:(-1)
+                      ; te_exit_kind =
+                          Option.value (jstr (jfield "exitKind" r)) ~default:"?"
+                      ; te_success_nat =
+                          (match jfield "exit" r with
+                           | Some e -> jint (jfield "success" e)
+                           | None -> None)
+                      }
+                  | _ -> None)
+               ps)
+        | _ -> Error "corpus.json has no `programs` array"))
+;;
 
 (* ==================================================================== the Lean corpus *)
 
@@ -377,34 +484,45 @@ let lean_corpus () : program list * load_report =
   in
   match index with
   | None ->
-    ([], { lr_dir = "<not found: .lake/corpus -- run `make corpus`>"; lr_found = 0;
-           lr_decoded = 0; lr_refused = [] })
+    ( []
+    , { lr_dir = "<not found: .lake/corpus -- run `make corpus`>"
+      ; lr_found = 0
+      ; lr_decoded = 0
+      ; lr_refused = []
+      } )
   | Some index ->
     let dir = Filename.dirname index in
     let rows =
       List.filter (fun l -> l <> "") (String.split_on_char '\n' (read_file index))
     in
-    let refused = ref [] and progs = ref [] in
+    let refused = ref []
+    and progs = ref [] in
     List.iter
       (fun row ->
          match String.split_on_char '\t' row with
          | name :: verdict :: _ ->
            let file = Filename.concat dir (name ^ ".eff") in
-           if not (Sys.file_exists file) then refused := (name ^ ".eff") :: !refused
-           else begin
+           if not (Sys.file_exists file)
+           then refused := (name ^ ".eff") :: !refused
+           else (
              let wire = read_file file in
              match Eff_wire.decode_program_exact wire with
              | None -> refused := (name ^ ".eff") :: !refused
              | Some e ->
-               progs :=
-                 { name; corpus = "lean"; eff = e; bytes = Some wire;
-                   typed = Some (verdict = "true") }
-                 :: !progs
-           end
+               progs
+               := { name
+                  ; corpus = "lean"
+                  ; eff = e
+                  ; bytes = Some wire
+                  ; typed = Some (verdict = "true")
+                  }
+                  :: !progs)
          | _ -> refused := ("index row: " ^ row) :: !refused)
       rows;
-    ( List.rev !progs,
-      { lr_dir = dir;
-        lr_found = List.length rows;
-        lr_decoded = List.length !progs;
-        lr_refused = List.rev !refused } )
+    ( List.rev !progs
+    , { lr_dir = dir
+      ; lr_found = List.length rows
+      ; lr_decoded = List.length !progs
+      ; lr_refused = List.rev !refused
+      } )
+;;

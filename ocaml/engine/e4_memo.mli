@@ -51,55 +51,55 @@
                                                                  tested (>= 10 000 ops, LCG)
    Bound: a path is a list of host ints; `cardinal` counts DISTINCT keys. *)
 
-type key = int list * int list list
 (** A layer's identity: its path and the call that runs it. *)
+type key = int list * int list list
 
 type 'a t
 
 val empty : 'a t
 
-val find_opt : key -> 'a t -> 'a option
 (** `MemoWorld.entryAt`'s inner half (MM1). *)
+val find_opt : key -> 'a t -> 'a option
 
-val insert : key -> 'a -> 'a t -> 'a t
 (** KEEPS an existing binding (MM2), and returns the table PHYSICALLY when the key is
     already bound. *)
+val insert : key -> 'a -> 'a t -> 'a t
 
-val update : key -> ('a -> 'a) -> 'a t -> 'a t
 (** `MemoWorld.updateEntry`'s inner half; a no-op when absent (MM3). *)
+val update : key -> ('a -> 'a) -> 'a t -> 'a t
 
-val delete : key -> 'a t -> 'a t
 (** `MemoWorld.deleteEntry`'s inner half (MM4). *)
+val delete : key -> 'a t -> 'a t
 
-val bindings : 'a t -> (key * 'a) list
 (** Ascending by `compare_key` (MM6), NOT insertion order. *)
+val bindings : 'a t -> (key * 'a) list
 
-val cardinal : 'a t -> int
 (** Distinct keys. *)
+val cardinal : 'a t -> int
 
 val mem : key -> 'a t -> bool
 
-val compare_path : int list -> int list -> int
 (** The lexicographic order on paths, written out: element by element, and a proper prefix
     first. *)
+val compare_path : int list -> int list -> int
 
-val compare_call : int list list -> int list list -> int
 (** The order on calls: path by path with `compare_path`, a proper prefix first. *)
+val compare_call : int list list -> int list list -> int
 
-val compare_key : key -> key -> int
 (** The order `bindings` is sorted by: the path, then the call.  Exposed so the twin and the
     differential sort the same way. *)
+val compare_key : key -> key -> int
 
-val lookup :
-  parent:('m -> int option) ->
-  id:('m -> int) ->
-  entries:('m -> 'a t) ->
-  'm list ->
-  key ->
-  int ->
-  (int * 'a) option
 (** [lookup ~parent ~id ~entries world layer start] is `MemoWorld.get`
     (MemoWorld.lookup (src/Effect4/Machine/Stores.lean)): the map at [start] first, then the parent
     chain, with fuel `List.length world + 1` (MM5).  `mapAt` is `world.find?`, so the FIRST
     map with a given id wins.  Answers None at fuel exhaustion — a forged parent can make
     the chain cyclic and the fuel is what makes `lookup` total. *)
+val lookup
+  :  parent:('m -> int option)
+  -> id:('m -> int)
+  -> entries:('m -> 'a t)
+  -> 'm list
+  -> key
+  -> int
+  -> (int * 'a) option

@@ -28,29 +28,29 @@
                                                         tested (test/missing.expected) *)
 
 type rule =
-  | Compare  (** rule 7: comparison by type *)
-  | Raise  (** rule 6: a function that raises ends in [_exn] *)
+  | Compare (** rule 7: comparison by type *)
+  | Raise (** rule 6: a function that raises ends in [_exn] *)
 
-type finding = {
-  rule : rule;
-  loc : Location.t;
-  operator : string;
-      (** the watched value's path, such as ["Stdlib.="]; for rule 6, followed by the
+type finding =
+  { rule : rule
+  ; loc : Location.t
+  ; operator : string
+    (** the watched value's path, such as ["Stdlib.="]; for rule 6, followed by the
           constructor raised when the argument is one, as in ["Stdlib.raise Exit"] *)
-  at : string;  (** rule 7: the compared type; rule 6: the enclosing binding *)
-}
+  ; at : string (** rule 7: the compared type; rule 6: the enclosing binding *)
+  }
 
 type refusal =
-  | Unreadable of string * string  (** the .cmt, and why *)
-  | No_source of string * string  (** the source file, and why *)
-  | Environment of string * string  (** the location, and the module not found *)
+  | Unreadable of string * string (** the .cmt, and why *)
+  | No_source of string * string (** the source file, and why *)
+  | Environment of string * string (** the location, and the module not found *)
 
-val check : raises:bool -> string -> (finding list, refusal) result
 (** [check ~raises cmt] is the findings of one .cmt in source order: rule 7's always, rule 6's
     when [raises]. A GENERATED unit and an interface have none. *)
+val check : raises:bool -> string -> (finding list, refusal) result
 
-val render : finding -> string
 (** One line: the location as the compiler prints it, the rule, the operator and its type or
     binding. *)
+val render : finding -> string
 
 val message : refusal -> string

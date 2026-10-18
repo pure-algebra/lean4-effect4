@@ -53,31 +53,31 @@
        reads them with Eff_frame.decode_nat, which reads digits inside their frame only.
        `exact_frame` is Eff_frame.exact over one frame. *)
 
-val be64 : int -> string
 (** Eight big-endian bytes.  Raises Invalid_argument on a negative int. *)
+val be64 : int -> string
 
-val read_be64 : string -> int -> int option
 (** Eight bytes at pos, or None past the end / below 0 / at or above 2^62 (B5). *)
+val read_be64 : string -> int -> int option
 
-val framed : int -> string -> string
 (** tag :: be64 (length payload) ++ payload.  Raises Invalid_argument unless 0 <= tag <= 255. *)
+val framed : int -> string -> string
 
-val read_frame : string -> int -> int -> (int * int * int * int) option
 (** [read_frame s pos limit] is (tag, payload_pos, payload_end, frame_end), or None --
     Eff_frame.read_frame. *)
+val read_frame : string -> int -> int -> (int * int * int * int) option
 
-val exact_frame : string -> (int * string) option
 (** The whole string is one frame: (tag, payload).  Trailing bytes are a refusal. *)
+val exact_frame : string -> (int * string) option
 
-val nat_digits : int -> string
 (** Base-256 big-endian, no leading zero; 0 is "".  Raises Invalid_argument if negative. *)
+val nat_digits : int -> string
 
-val nat_of_digits : string -> int option
 (** The inverse of nat_digits: None on a leading zero digit, on more than eight digits, or
     on eight digits whose top byte is >= 0x40 (Eff_frame.decode_nat). *)
+val nat_of_digits : string -> int option
 
-val frame_length : int -> int
 (** The bytes a frame over a payload of this length occupies: 9 + n. *)
+val frame_length : int -> int
 
-val header_length : int
 (** 9: the tag byte and the be64 length. *)
+val header_length : int

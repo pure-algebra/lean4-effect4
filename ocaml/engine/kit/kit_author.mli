@@ -23,20 +23,21 @@
 
 (** {1 Terms} *)
 
-type term
 (** A term under construction: Lean's [TermSrc], a function of the scope it is placed in. *)
+type term
 
 val nat : int -> term
 val str : string -> term
 val bool : bool -> term
 val unit : term
 
-val atom : string -> term list -> term
 (** An atom of the term language by its name ([Authoring.app]): ["add"], ["lt"], ["length"], … *)
+val atom : string -> term list -> term
 
 val ( + ) : term -> term -> term
-val ( - ) : term -> term -> term
+
 (** Truncated at zero, as Lean's [Nat.sub] ([natSub]). *)
+val ( - ) : term -> term -> term
 
 val ( * ) : term -> term -> term
 val ( < ) : term -> term -> term
@@ -54,87 +55,108 @@ val append : term -> term -> term
 
 (** {1 Programs} *)
 
-type t
 (** A program under construction: Lean's [Src NativeOp]. *)
+type t
 
 val succeed : term -> t
 val fail : term -> t
 val sync : term -> t
 val suspend : t -> t
 
-val ( let* ) : t -> (term -> t) -> t
 (** Run the first program, then the rest with its value bound ([bindWith]). *)
+val ( let* ) : t -> (term -> t) -> t
 
-val ( >> ) : t -> t -> t
 (** Run the first program, then the second, dropping the first one's value ([andThen]). *)
+val ( >> ) : t -> t -> t
 
-val perform : string -> term -> t
 (** Call the host row of this spelling with the request ([Row.callNamed]). *)
+val perform : string -> term -> t
 
-val cell : term -> t
 (** A new cell with this initial value ([Ref.make]); its value is the cell. *)
+val cell : term -> t
 
-val get : term -> t
 (** The value of the cell ([Ref.get]). *)
+val get : term -> t
 
-val set : term -> term -> t
 (** Write the cell ([Ref.set]). *)
+val set : term -> term -> t
 
-val if_ : term -> then_:t -> else_:t -> t
 (** Choose by a boolean ([ifElse]). *)
+val if_ : term -> then_:t -> else_:t -> t
 
-val on_option : term -> none:t -> some:(term -> t) -> t
 (** Choose by an option, binding the [some]'s value ([selectOptionWith]). *)
+val on_option : term -> none:t -> some:(term -> t) -> t
 
-val loop :
-  init:term -> test:(term -> term) -> step:(term -> term -> term) -> result:(term -> term) ->
-  (term -> t) -> t
 (** [loop ~init ~test ~step ~result body]: from the cursor [init], while [test c] holds run
     [body c] and move to [step c a], [a] the body's value; then answer [result c]
     ([loopWith], over [iterateWith]). *)
+val loop
+  :  init:term
+  -> test:(term -> term)
+  -> step:(term -> term -> term)
+  -> result:(term -> term)
+  -> (term -> t)
+  -> t
 
-val catch : t -> (term -> t) -> t
 (** Run the program; on a failure, run the handler with the failure's cause as a value
     ([catchWith]). *)
+val catch : t -> (term -> t) -> t
 
-val on_exit : t -> (term -> t) -> t
 (** Run the program, then the finalizer with its exit as a value; keep the program's exit unless
     the finalizer fails ([onExitWith]). *)
+val on_exit : t -> (term -> t) -> t
 
-val exit_of : t -> t
 (** The program's exit as a value ([exit]). *)
+val exit_of : t -> t
 
 (** {1 Definitions} *)
 
-type def
 (** A definition: Lean's [DefSrc] of one request parameter. *)
+type def
 
-val def : string -> request:Eff_types.Ty.t -> answer:Eff_types.Ty.t -> ?error:Eff_types.Ty.t -> (term -> t) -> def
+val def
+  :  string
+  -> request:Eff_types.Ty.t
+  -> answer:Eff_types.Ty.t
+  -> ?error:Eff_types.Ty.t
+  -> (term -> t)
+  -> def
 
-val call : string -> term -> t
 (** Invoke the definition of this name with the request ([Def.invoke]). *)
+val call : string -> term -> t
 
 (** {1 Rows} *)
 
-val row : string -> request:Eff_types.Ty.t -> answer:Eff_types.Ty.t -> ?error:Eff_types.Ty.t -> ?cite:string -> unit -> Eff_types.Row.t
 (** A row the host answers, by its spelling and its three type columns ([Row.host]): asynchronous
     and externally registered, as the machine's reply admission demands. *)
+val row
+  :  string
+  -> request:Eff_types.Ty.t
+  -> answer:Eff_types.Ty.t
+  -> ?error:Eff_types.Ty.t
+  -> ?cite:string
+  -> unit
+  -> Eff_types.Row.t
 
 (** {1 Building} *)
 
-type refusal = Effect4_gen.Api_gen.effect4_program_authoring_refusal
 (** Why elaboration refused, at the address where it did ([Authoring.Refusal]). *)
+type refusal = Effect4_gen.Api_gen.effect4_program_authoring_refusal
 
 val refusal_text : refusal -> string
 
-val build : ?app:Kit.app -> ?defs:def list -> t -> (Kit.program, refusal) result
 (** The program of a main program and its definitions, its names resolved against the
     application's rows and the definitions ([elaborateAt]). *)
+val build : ?app:Kit.app -> ?defs:def list -> t -> (Kit.program, refusal) result
 
-val build_checked :
-  ?app:Kit.app -> ?defs:def list -> t ->
-  ( Kit.program * Eff_types.EffTy.t,
-    [ `Name of refusal
-    | `Type of (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located ] )
-  result
 (** The program and its type, or the name or the node it is refused at. *)
+val build_checked
+  :  ?app:Kit.app
+  -> ?defs:def list
+  -> t
+  -> ( Kit.program * Eff_types.EffTy.t
+       , [ `Name of refusal
+         | `Type of
+             (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located
+         ] )
+       result

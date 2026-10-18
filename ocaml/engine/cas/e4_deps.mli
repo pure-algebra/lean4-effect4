@@ -71,67 +71,71 @@
    D4  Added: `of_nodes`, `of_store`, `rebuild_dir`, `to_pairs`, `equal`, `dependees`,
        `dependents_of` and `fields_default` — (a) to (d) above. *)
 
-type t = E4_index.Deps.t
 (** The lane P2 index, under this lane's name (D1). *)
+type t = E4_index.Deps.t
 
-val fields_default : E4_shape.t
 (** `E4_shape.table` — the only table there is (finding R1). *)
+val fields_default : E4_shape.t
 
 (* ---------------------------------------------------------------- building *)
 
 val empty : t
 
-val add : t -> dep:E4_addr.Addr.t -> by:E4_addr.Ref.t -> t
 (** Persistent (DP4); idempotent on a pair already present. *)
+val add : t -> dep:E4_addr.Addr.t -> by:E4_addr.Ref.t -> t
 
-val of_node : ?fields:E4_shape.t -> E4_node.t -> E4_addr.Addr.t list
 (** DP5: the dependees of one node, in order — `checked_edges` then `cids_of`. *)
+val of_node : ?fields:E4_shape.t -> E4_node.t -> E4_addr.Addr.t list
 
 val add_node : t -> ?fields:E4_shape.t -> at:E4_addr.Addr.t -> E4_node.t -> t
 
-val of_nodes : ?fields:E4_shape.t -> (E4_addr.Addr.t * E4_node.t) list -> t
 (** The INCREMENTAL build: fold `add_node` over the bindings in the order given, which for
     `E4_cas.nodes` is write order (DP1). *)
+val of_nodes : ?fields:E4_shape.t -> (E4_addr.Addr.t * E4_node.t) list -> t
 
-val of_store : ?fields:E4_shape.t -> E4_cas.ro -> t
 (** [of_nodes (E4_cas.nodes ro)]. *)
+val of_store : ?fields:E4_shape.t -> E4_cas.ro -> t
 
-val rebuild :
-  ?fields:E4_shape.t -> from:int * int -> E4_pack.reader -> t * E4_pack.scan_stop
 (** The FULL SCAN (DP1, DP6).  `E4_index.Deps.rebuild`, with the arguments ordered so the
     optional one can be erased. *)
+val rebuild
+  :  ?fields:E4_shape.t
+  -> from:int * int
+  -> E4_pack.reader
+  -> t * E4_pack.scan_stop
 
-val rebuild_dir : ?fields:E4_shape.t -> string -> t * E4_pack.scan_stop
 (** [rebuild] from the start of the pack of the store directory named, opening and closing its
     own reader. *)
+val rebuild_dir : ?fields:E4_shape.t -> string -> t * E4_pack.scan_stop
 
 (* ---------------------------------------------------------------- querying *)
 
-val find : t -> E4_addr.Addr.t -> E4_addr.Ref.t list
 (** The nodes that name this address, in discovery order. *)
+val find : t -> E4_addr.Addr.t -> E4_addr.Ref.t list
 
 val mem : t -> E4_addr.Addr.t -> bool
-val cardinal : t -> int
-(** Distinct dependees. *)
 
-val edges : t -> int
+(** Distinct dependees. *)
+val cardinal : t -> int
+
 (** (dependee, dependent) pairs. *)
+val edges : t -> int
 
 val iter : t -> (E4_addr.Addr.t -> E4_addr.Ref.t list -> unit) -> unit
 
-val dependees : t -> E4_addr.Addr.t list
 (** Every address something names, sorted by address, so two indexes can be compared without
     depending on either one's discovery order. *)
+val dependees : t -> E4_addr.Addr.t list
 
-val dependents_of : t -> E4_addr.Addr.t -> E4_addr.Ref.t list
 (** [find], named the long way round for a caller that reads. *)
+val dependents_of : t -> E4_addr.Addr.t -> E4_addr.Ref.t list
 
-val to_pairs : t -> (E4_addr.Addr.t * E4_addr.Ref.t list) list
 (** Sorted by dependee; each dependent list in DISCOVERY order, because that order is part of
     what DP1 claims. *)
+val to_pairs : t -> (E4_addr.Addr.t * E4_addr.Ref.t list) list
 
-val equal : t -> t -> bool
 (** [to_pairs] equal, address for address and dependent for dependent (DP1). *)
+val equal : t -> t -> bool
 
-val diff : t -> t -> string option
 (** None when [equal]; otherwise the first disagreement, spelled for a test's failure line. *)
+val diff : t -> t -> string option

@@ -29,22 +29,25 @@ module J = Eff_json_text
 type t = { mutable session : G.session }
 
 let create () = { session = G.tool_native_start }
-
-let refused (why : J.t) = J.render (J.Object [ ("refused", why) ])
+let refused (why : J.t) = J.render (J.Object [ "refused", why ])
 
 let wire_refused (why : G.effect4_tool_wire_refusal) =
   refused (Kit_json.print G.tool_native_refusal_shape (G.tool_native_refusal_to_val why))
+;;
 
 let serve_line (t : t) (line : string) : string =
   match Kit.Json.parse line with
   | Error why -> refused (J.String why)
-  | Ok json -> (
-    match Kit_json.read G.tool_native_envelope_shape json with
-    | None ->
-      wire_refused (G.Effect4_tool_wire_refusal_codec G.Effect4_tool_codec_profile_refusal_unreadable)
-    | Some v -> (
-      match G.tool_native_serve t.session v with
-      | Error why -> wire_refused why
-      | Ok (reply, session) ->
-        t.session <- session;
-        J.render (Kit_json.print G.tool_native_reply_envelope_shape reply)))
+  | Ok json ->
+    (match Kit_json.read G.tool_native_envelope_shape json with
+     | None ->
+       wire_refused
+         (G.Effect4_tool_wire_refusal_codec
+            G.Effect4_tool_codec_profile_refusal_unreadable)
+     | Some v ->
+       (match G.tool_native_serve t.session v with
+        | Error why -> wire_refused why
+        | Ok (reply, session) ->
+          t.session <- session;
+          J.render (Kit_json.print G.tool_native_reply_envelope_shape reply)))
+;;

@@ -9,7 +9,8 @@
  (wrapped false)
  (modules typed_lint)
  (libraries compiler-libs.common)
- (flags (:standard -w +a-4-9-40-41-42-44-45-70)))
+ (flags
+  (:standard -w +a-4-9-40-41-42-44-45-70)))
 
 (executable
  (name main)
@@ -18,5 +19,11 @@
 
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .typed_lint.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .typed_lint.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:main.exe} %{cmt}))))

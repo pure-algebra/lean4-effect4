@@ -29,53 +29,53 @@
 
 type 'a t
 
-val chunk_size : int
 (** 256, a named constant (no bound is taken from [max_int]). *)
+val chunk_size : int
 
 val empty : 'a t
 
-val with_capacity : int -> 'a t
 (** Lean's [Array.mkEmpty] and [Array.emptyWithCapacity]: the capacity is a hint, and the answer
     is [empty]. *)
+val with_capacity : int -> 'a t
 
 val length : 'a t -> int
 val is_empty : 'a t -> bool
 
-val push : 'a t -> 'a -> 'a t
 (** The vector with the element appended: Lean's [Array.push]. *)
+val push : 'a t -> 'a -> 'a t
 
 val get : 'a t -> int -> 'a option
 
-val get_exn : 'a t -> int -> 'a
 (** Lean's [Array.uget] and [Array.getInternal], whose index is proved in range.
     @raise Invalid_argument outside [0, length). *)
+val get_exn : 'a t -> int -> 'a
 
-val set_exn : 'a t -> int -> 'a -> 'a t
 (** The vector with the element at the index replaced: Lean's [Array.uset], whose index is proved
     in range. The answer is a new value; the argument is unchanged (V1, V4).
     @raise Invalid_argument outside [0, length). *)
+val set_exn : 'a t -> int -> 'a -> 'a t
 
-val slice : 'a t -> from:int -> upto:int -> 'a list
 (** The half-open range, in index order. Clamped to [0, length]; empty when [upto <= from]. *)
+val slice : 'a t -> from:int -> upto:int -> 'a list
 
-val fold : 'a t -> init:'b -> f:(int -> 'a -> 'b -> 'b) -> 'b
 (** In index order, ascending, with each element's index. *)
+val fold : 'a t -> init:'b -> f:(int -> 'a -> 'b -> 'b) -> 'b
 
-val fold_left : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b
 (** [fold] in the argument order of [List.fold_left]. *)
+val fold_left : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b
 
-val to_list : 'a t -> 'a list
 (** Lean's [Array.toList]. Uses a temporary array within host capacity and a list fold above it. *)
+val to_list : 'a t -> 'a list
 
-val to_list_with_capacity : capacity:int -> 'a t -> 'a list
 (** The same conversion with a smaller temporary-array capacity, for the allocation controls.
     The capacity never exceeds either host array bound. It does not bound the returned list. *)
+val to_list_with_capacity : capacity:int -> 'a t -> 'a list
 
-val of_list : 'a list -> 'a t
 (** Lean's [Array.mk] and [List.toArray]. *)
+val of_list : 'a list -> 'a t
 
-val append_list : 'a t -> 'a list -> 'a t
 (** The vector with the list's elements appended in order: Lean's [Array.appendList]. *)
+val append_list : 'a t -> 'a list -> 'a t
 
-val replicate : int -> 'a -> 'a t
 (** [n] copies of the element, [empty] when [n <= 0]: Lean's [Array.replicate]. *)
+val replicate : int -> 'a -> 'a t

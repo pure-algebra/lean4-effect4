@@ -20,20 +20,20 @@
 type 'a t = 'a list
 
 let empty : 'a t = []
-
 let snoc (e : 'a t) (v : 'a) : 'a t = e @ [ v ]
-
 let append (e : 'a t) (l : 'a list) : 'a t = e @ l
-
 let get (e : 'a t) (i : int) : 'a option = if i < 0 then None else List.nth_opt e i
-
 let length (e : 'a t) : int = List.length e
 
 let rec take_go (e : 'a t) (k : int) : 'a t =
-  if k <= 0 then [] else match e with [] -> [] | v :: rest -> v :: take_go rest (k - 1)
+  if k <= 0
+  then []
+  else (
+    match e with
+    | [] -> []
+    | v :: rest -> v :: take_go rest (k - 1))
+;;
 
 let take (e : 'a t) (k : int) : 'a t = take_go e k
-
 let to_list (e : 'a t) : 'a list = e
-
 let of_list (l : 'a list) : 'a t = l

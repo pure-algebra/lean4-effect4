@@ -37,7 +37,10 @@
          [by construction (the bands are an ascending partition of `room`);
          tested: admit-monotone] *)
 
-type t = Any | Priority_only | None_now
+type t =
+  | Any
+  | Priority_only
+  | None_now
 
 (* The slots kept back for priority traffic. A named constant, as every integer bound in the
    engine is (design §1, "every integer bound is a named constant in the file"). *)
@@ -46,6 +49,11 @@ let priority_reserve = 4
 let of_state ~mailbox_len ~mailbox_bound ~in_flight =
   let room = mailbox_bound - mailbox_len - in_flight in
   if room <= 0 then None_now else if room <= priority_reserve then Priority_only else Any
+;;
 
 let admits t ~priority =
-  match t with Any -> true | Priority_only -> priority | None_now -> false
+  match t with
+  | Any -> true
+  | Priority_only -> priority
+  | None_now -> false
+;;

@@ -25,6 +25,7 @@ let build n =
     t := E4_trace.emit [ i ] !t
   done;
   !t
+;;
 
 let hr () = print_endline (String.make 78 '-')
 
@@ -35,56 +36,80 @@ let walk () =
   print_endline "W2a  the viewer's walk: nth_opt at every index";
   List.iter
     (fun n ->
-      let t = build n in
-      let sink = ref 0 in
-      let t0 = now () in
-      for i = 0 to n - 1 do
-        match E4_trace.nth_opt i t with Some v -> sink := !sink + v | None -> ()
-      done;
-      let dt_f = now () -. t0 in
-      let t1 = now () in
-      for i = n - 1 downto 0 do
-        match E4_trace.nth_opt i t with Some v -> sink := !sink + v | None -> ()
-      done;
-      let dt_b = now () -. t1 in
-      let j = ref 0 in
-      let t2 = now () in
-      for _ = 1 to n do
-        (match E4_trace.nth_opt !j t with Some v -> sink := !sink + v | None -> ());
-        j := (!j + 2731) mod n
-      done;
-      let dt_s = now () -. t2 in
-      Printf.printf
-        "  %6d rows  forward %8.3f ms (%10.0f rows/s)  backward %8.3f ms  strided %8.3f ms  \
-         [sink %d]\n%!"
-        n (dt_f *. 1000.) (rate n dt_f) (dt_b *. 1000.) (dt_s *. 1000.) !sink)
+       let t = build n in
+       let sink = ref 0 in
+       let t0 = now () in
+       for i = 0 to n - 1 do
+         match E4_trace.nth_opt i t with
+         | Some v -> sink := !sink + v
+         | None -> ()
+       done;
+       let dt_f = now () -. t0 in
+       let t1 = now () in
+       for i = n - 1 downto 0 do
+         match E4_trace.nth_opt i t with
+         | Some v -> sink := !sink + v
+         | None -> ()
+       done;
+       let dt_b = now () -. t1 in
+       let j = ref 0 in
+       let t2 = now () in
+       for _ = 1 to n do
+         (match E4_trace.nth_opt !j t with
+          | Some v -> sink := !sink + v
+          | None -> ());
+         j := (!j + 2731) mod n
+       done;
+       let dt_s = now () -. t2 in
+       Printf.printf
+         "  %6d rows  forward %8.3f ms (%10.0f rows/s)  backward %8.3f ms  strided %8.3f \
+          ms  [sink %d]\n\
+          %!"
+         n
+         (dt_f *. 1000.)
+         (rate n dt_f)
+         (dt_b *. 1000.)
+         (dt_s *. 1000.)
+         !sink)
     [ 1_000; 6_003; 20_000 ]
+;;
 
 let emit_cell () =
   hr ();
   print_endline "W2b  emit: one event per call";
   List.iter
     (fun n ->
-      let t0 = now () in
-      let t = build n in
-      let dt = now () -. t0 in
-      Printf.printf "  %8d emits  %8.3f ms  (%12.0f events/s)  length %d\n%!" n (dt *. 1000.)
-        (rate n dt) (E4_trace.length t))
+       let t0 = now () in
+       let t = build n in
+       let dt = now () -. t0 in
+       Printf.printf
+         "  %8d emits  %8.3f ms  (%12.0f events/s)  length %d\n%!"
+         n
+         (dt *. 1000.)
+         (rate n dt)
+         (E4_trace.length t))
     [ 100_000; 1_000_000 ]
+;;
 
 let to_list_cell () =
   hr ();
   print_endline "W2c  to_list: the once-per-run read";
   List.iter
     (fun n ->
-      let t = build n in
-      let t0 = now () in
-      let l = E4_trace.to_list t in
-      let dt = now () -. t0 in
-      Printf.printf "  %8d rows  %8.3f ms  (%12.0f rows/s)  head %s\n%!" n (dt *. 1000.)
-        (rate n dt)
-        (match l with [] -> "-" | x :: _ -> string_of_int x))
+       let t = build n in
+       let t0 = now () in
+       let l = E4_trace.to_list t in
+       let dt = now () -. t0 in
+       Printf.printf
+         "  %8d rows  %8.3f ms  (%12.0f rows/s)  head %s\n%!"
+         n
+         (dt *. 1000.)
+         (rate n dt)
+         (match l with
+          | [] -> "-"
+          | x :: _ -> string_of_int x))
     [ 6_003; 1_000_000 ]
+;;
 
 let () =
   print_endline "bench_trace — lane W item 2 (E4_trace over Lcnf_array)";
@@ -92,3 +117,4 @@ let () =
   emit_cell ();
   to_list_cell ();
   hr ()
+;;

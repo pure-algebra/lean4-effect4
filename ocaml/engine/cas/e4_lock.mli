@@ -21,10 +21,10 @@
 
 type t
 
-val acquire : dir:string -> (t, string) result
 (** Takes the lock on <dir>/LOCK, creating the file if absent; <dir> must exist.  [Error key]
     when another holder has it, in this process or another, with [key] the directory's real
     path.  Raises Unix.Unix_error when the file cannot be opened. *)
+val acquire : dir:string -> (t, string) result
 
-val release : t -> unit
 (** Drops the lock and its descriptor.  Idempotent (L4). *)
+val release : t -> unit

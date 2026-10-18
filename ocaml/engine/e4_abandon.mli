@@ -39,53 +39,55 @@
    Refused: discarding a scope that overran (Riot's `unwind`). Refusal row
    A3-ABANDON-DISCARD. *)
 
-type budget = {
-  finalizer_fuel : int;  (** command steps per scope *)
-  max_scopes : int;  (** a bound on the close pass, so AB1 terminates *)
-}
+type budget =
+  { finalizer_fuel : int (** command steps per scope *)
+  ; max_scopes : int (** a bound on the close pass, so AB1 terminates *)
+  }
 
-val default_finalizer_fuel : int
 (** 1 000 (Q-A3-3). A named constant in the file, never [max_int] (trap #17). *)
+val default_finalizer_fuel : int
 
-val default_max_scopes : int
 (** 1 024. A named constant in the file, never [max_int]. *)
+val default_max_scopes : int
 
-val default_budget : budget
 (** [{ finalizer_fuel = default_finalizer_fuel; max_scopes = default_max_scopes }]. *)
+val default_budget : budget
 
-type report = {
-  closed : int list;  (** scope keys whose finalizers all ran, in close order *)
-  unfinished : int list;  (** AB2: budget exhausted, or beyond [max_scopes]; the owed closes *)
-  exits : string list;  (** the accumulated exits, in close order *)
-  fuel_left : int;  (** granted minus spent: [finalizer_fuel] x scopes attempted, less the
+type report =
+  { closed : int list (** scope keys whose finalizers all ran, in close order *)
+  ; unfinished : int list
+    (** AB2: budget exhausted, or beyond [max_scopes]; the owed closes *)
+  ; exits : string list (** the accumulated exits, in close order *)
+  ; fuel_left : int
+    (** granted minus spent: [finalizer_fuel] x scopes attempted, less the
                         steps actually run *)
-  decisions : int;  (** AB4: what was appended to the tape *)
-}
+  ; decisions : int (** AB4: what was appended to the tape *)
+  }
 
-type 'm driver = {
-  interrupt : 'm -> reason:string -> 'm * int;
-      (** AB1's first half: interrupt the root. Returns the machine and the number of
+(** What `abandon` needs of a machine. A record of functions, not a functor (design §1.2.2:
+    "one machine over one carrier is the case RWO says dictionary passing handles well"). *)
+type 'm driver =
+  { interrupt : 'm -> reason:string -> 'm * int
+    (** AB1's first half: interrupt the root. Returns the machine and the number of
           decisions it appended. *)
-  open_scopes : 'm -> int list;
-      (** Every open scope of the machine, OUTERMOST FIRST. {!run} closes them in reverse,
+  ; open_scopes : 'm -> int list
+    (** Every open scope of the machine, OUTERMOST FIRST. {!run} closes them in reverse,
           which is innermost-first. Read once, at entry: AB3's "at entry" is this list. *)
-  finalizer_step : 'm -> scope:int -> ('m * string list * int) option;
-      (** ONE command step of [scope]'s finalizers: the machine after the step, the exits
+  ; finalizer_step : 'm -> scope:int -> ('m * string list * int) option
+    (** ONE command step of [scope]'s finalizers: the machine after the step, the exits
           that step produced, and the number of decisions it appended. [None] means the
           scope has no more finalizer work and is now closed -- a [None] costs no fuel,
           because it is the answer to "is there more", not a step. *)
-}
-(** What `abandon` needs of a machine. A record of functions, not a functor (design §1.2.2:
-    "one machine over one carrier is the case RWO says dictionary passing handles well"). *)
+  }
 
-val run : 'm driver -> 'm -> reason:string -> budget:budget -> 'm * report
 (** [run driver m ~reason ~budget] is AB1: read the open scopes of [m], interrupt the root,
     then close the scopes innermost-first under the budget. Total: it performs at most
     [budget.max_scopes * budget.finalizer_fuel] finalizer steps and then returns.
     @raise Invalid_argument if [budget.finalizer_fuel < 0] or [budget.max_scopes < 0]. *)
+val run : 'm driver -> 'm -> reason:string -> budget:budget -> 'm * report
 
-val accounted : report -> at_entry:int list -> bool
 (** AB3 as a predicate: [closed @ unfinished] and [at_entry] are the same multiset. *)
+val accounted : report -> at_entry:int list -> bool
 
-val to_string : report -> string
 (** One line, for a receipt or a log. Not a wire format and never an identity. *)
+val to_string : report -> string

@@ -10,7 +10,16 @@ type refusal =
   | Missing_types of string list
 
 val message : refusal -> string
-val select : roots:string list -> abstract_types:string list -> Types.signature ->
-  (Types.signature, refusal) result
-val generate : cmt:string -> roots:string list -> abstract_types:string list ->
-  prelude:string option -> (string, refusal) result
+
+val select
+  :  roots:string list
+  -> abstract_types:string list
+  -> Types.signature
+  -> (Types.signature, refusal) result
+
+val generate
+  :  cmt:string
+  -> roots:string list
+  -> abstract_types:string list
+  -> prelude:string option
+  -> (string, refusal) result

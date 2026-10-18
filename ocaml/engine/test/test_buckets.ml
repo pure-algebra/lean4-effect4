@@ -26,6 +26,7 @@ let failures = ref 0
 let check name ok =
   Printf.printf "%s  %s\n" (if ok then "PASS" else "FAIL") name;
   if not ok then incr failures
+;;
 
 let note fmt = Printf.printf ("NOTE  " ^^ fmt ^^ "\n")
 
@@ -35,6 +36,7 @@ let seed = ref 20260908
 let next_rand () =
   seed := ((!seed * 1103515245) + 12345) land 0x3FFFFFFF;
   !seed
+;;
 
 let rand n = if n <= 0 then 0 else next_rand () mod n
 
@@ -43,6 +45,7 @@ let rand n = if n <= 0 then 0 else next_rand () mod n
 let for_each_carrier (f : string -> (module E4_buckets.S) -> unit) =
   f "Assoc" (module E4_buckets.Assoc);
   f "Map_variant" (module E4_buckets.Map_variant)
+;;
 
 (* ============================================================ the reference observations *)
 
@@ -50,15 +53,19 @@ let for_each_carrier (f : string -> (module E4_buckets.S) -> unit) =
    bucket in ascending position if there is none. This is `insertIn` of Lib/Map.lean read at
    the observation level. *)
 let rec upd p x = function
-  | [] -> [ (p, [ x ]) ]
+  | [] -> [ p, [ x ] ]
   | (q, xs) :: rest ->
-    if q = p then (q, xs @ [ x ]) :: rest
-    else if p < q then (p, [ x ]) :: (q, xs) :: rest
+    if q = p
+    then (q, xs @ [ x ]) :: rest
+    else if p < q
+    then (p, [ x ]) :: (q, xs) :: rest
     else (q, xs) :: upd p x rest
+;;
 
 let rec strictly_ascending = function
   | [] | [ _ ] -> true
   | a :: (b :: _ as rest) -> a < b && strictly_ascending rest
+;;
 
 let flatten l = List.concat (List.map snd l)
 
@@ -83,119 +90,125 @@ let test_properties (module B : E4_buckets.S) label =
   let b1 =
     List.for_all
       (fun t ->
-        strictly_ascending (B.priorities t)
-        && B.priorities t = List.map fst (B.to_list t)
-        && strictly_ascending (B.priorities (B.enqueue t ~priority:(rand 10) 7)))
+         strictly_ascending (B.priorities t)
+         && B.priorities t = List.map fst (B.to_list t)
+         && strictly_ascending (B.priorities (B.enqueue t ~priority:(rand 10) 7)))
       states
   in
   check (label ^ " buckets-ascending  P-B1") b1;
-
   (* P-B2 [bucketPairs_enqueue, drain_fifo_within_bucket] and
      P-B6 [enqueue_find_other] *)
   let b2 =
     List.for_all
       (fun t ->
-        let p = rand 10 in
-        let x = -1 in
-        fst (B.drain (B.enqueue t ~priority:p x)) = flatten (upd p x (B.to_list t)))
+         let p = rand 10 in
+         let x = -1 in
+         fst (B.drain (B.enqueue t ~priority:p x)) = flatten (upd p x (B.to_list t)))
       states
   in
   let b6 =
     List.for_all
       (fun t ->
-        let p = rand 10 in
-        let q = rand 10 in
-        q = p
-        || List.assoc_opt q (B.to_list (B.enqueue t ~priority:p (-2)))
-           = List.assoc_opt q (B.to_list t))
+         let p = rand 10 in
+         let q = rand 10 in
+         q = p
+         || List.assoc_opt q (B.to_list (B.enqueue t ~priority:p (-2)))
+            = List.assoc_opt q (B.to_list t))
       states
   in
-  check (label ^ " buckets-fifo  P-B2 (tail of its own bucket) and P-B6 (others untouched)")
+  check
+    (label ^ " buckets-fifo  P-B2 (tail of its own bucket) and P-B6 (others untouched)")
     (b2 && b6);
-
   (* P-B3 [drain_eq_flatten, drain_projection] *)
   let b3 = List.for_all (fun t -> fst (B.drain t) = flatten (B.to_list t)) states in
   check (label ^ " buckets-drain-order  P-B3") b3;
-
   (* P-B4 [drained_once, drain_snd_empty] *)
   let b4 =
     List.for_all
       (fun t ->
-        let _, t' = B.drain t in
-        B.to_list t' = [] && B.armed t' = false && B.is_empty t' && B.length t' = 0
-        && fst (B.drain t') = [])
+         let _, t' = B.drain t in
+         B.to_list t' = []
+         && B.armed t' = false
+         && B.is_empty t'
+         && B.length t' = 0
+         && fst (B.drain t') = [])
       states
   in
   check (label ^ " buckets-drained-once  P-B4") b4;
-
   (* P-B5 [drain_enqueue_length, drain_enqueue_mem] *)
   let b5 =
     List.for_all
       (fun t ->
-        let p = rand 10 in
-        let x = -3 in
-        let before = fst (B.drain t) in
-        let after = fst (B.drain (B.enqueue t ~priority:p x)) in
-        List.length after = List.length before + 1
-        && List.mem x after
-        && B.length t = List.length before)
+         let p = rand 10 in
+         let x = -3 in
+         let before = fst (B.drain t) in
+         let after = fst (B.drain (B.enqueue t ~priority:p x)) in
+         List.length after = List.length before + 1
+         && List.mem x after
+         && B.length t = List.length before)
       states
   in
   check (label ^ " buckets-exactly-once  P-B5") b5;
-
   (* B6: enqueue arms, drain disarms, arm arms without enqueueing, disarm disarms without
      touching the buckets. *)
   let armed_ok =
     B.armed B.empty = false
     && List.for_all
          (fun t ->
-           let e = B.enqueue t ~priority:0 (-4) in
-           B.armed e
-           && B.armed (snd (B.drain t)) = false
-           && B.armed (B.arm t)
-           && B.to_list (B.arm t) = B.to_list t
-           && B.armed (B.disarm t) = false
-           && B.to_list (B.disarm t) = B.to_list t
-           && B.armed (B.arm (B.disarm t))
-           && B.armed (B.disarm (B.arm t)) = false)
+            let e = B.enqueue t ~priority:0 (-4) in
+            B.armed e
+            && B.armed (snd (B.drain t)) = false
+            && B.armed (B.arm t)
+            && B.to_list (B.arm t) = B.to_list t
+            && B.armed (B.disarm t) = false
+            && B.to_list (B.disarm t) = B.to_list t
+            && B.armed (B.arm (B.disarm t))
+            && B.armed (B.disarm (B.arm t)) = false)
          states
   in
-  check (label ^ " buckets-armed  B6 (enqueue arms, drain disarms, arm/disarm are the flag)")
+  check
+    (label ^ " buckets-armed  B6 (enqueue arms, drain disarms, arm/disarm are the flag)")
     armed_ok;
-
   (* B7: an old value still answers the old questions after work on a derived one. *)
   let persistent =
     List.for_all
       (fun t ->
-        let before = B.to_list t in
-        let n = B.length t in
-        let a = B.armed t in
-        let _ = B.enqueue (B.enqueue t ~priority:3 (-5)) ~priority:0 (-6) in
-        let _ = B.drain t in
-        let _ = B.arm (B.disarm t) in
-        B.to_list t = before && B.length t = n && B.armed t = a)
+         let before = B.to_list t in
+         let n = B.length t in
+         let a = B.armed t in
+         let _ = B.enqueue (B.enqueue t ~priority:3 (-5)) ~priority:0 (-6) in
+         let _ = B.drain t in
+         let _ = B.arm (B.disarm t) in
+         B.to_list t = before && B.length t = n && B.armed t = a)
       states
   in
   check (label ^ " buckets-persistent  B7") persistent;
-
   (* to_list / of_list, and the refusals of of_list. *)
   let roundtrip =
     List.for_all
       (fun t ->
-        let l = B.to_list t in
-        let t' = B.of_list ~armed:(B.armed t) l in
-        B.to_list t' = l && B.armed t' = B.armed t && fst (B.drain t') = fst (B.drain t))
+         let l = B.to_list t in
+         let t' = B.of_list ~armed:(B.armed t) l in
+         B.to_list t' = l && B.armed t' = B.armed t && fst (B.drain t') = fst (B.drain t))
       states
   in
-  let refuses f = try f () |> ignore; false with Invalid_argument _ -> true in
+  let refuses f =
+    try
+      f () |> ignore;
+      false
+    with
+    | Invalid_argument _ -> true
+  in
   let refusals =
-    refuses (fun () -> B.of_list ~armed:false [ (1, []); (1, []) ])
-    && refuses (fun () -> B.of_list ~armed:false [ (2, []); (1, []) ])
-    && refuses (fun () -> B.of_list ~armed:false [ (-1, []) ])
+    refuses (fun () -> B.of_list ~armed:false [ 1, []; 1, [] ])
+    && refuses (fun () -> B.of_list ~armed:false [ 2, []; 1, [] ])
+    && refuses (fun () -> B.of_list ~armed:false [ -1, [] ])
     && refuses (fun () -> B.enqueue B.empty ~priority:(-1) 0)
   in
-  check (label ^ " buckets-of-list  to_list/of_list round trip, and the four refusals")
+  check
+    (label ^ " buckets-of-list  to_list/of_list round trip, and the four refusals")
     (roundtrip && refusals)
+;;
 
 (* ============================================================ the differential *)
 
@@ -209,9 +222,15 @@ let differential_ops = 100_000
 
 let gen_ops n =
   List.init n (fun i ->
-      let r = rand 100 in
-      if r < 80 then Enq (rand 16, i) else if r < 90 then Drain else if r < 95 then Arm
-      else Disarm)
+    let r = rand 100 in
+    if r < 80
+    then Enq (rand 16, i)
+    else if r < 90
+    then Drain
+    else if r < 95
+    then Arm
+    else Disarm)
+;;
 
 let differential (module B : E4_buckets.S) label ops =
   let bad = ref 0 in
@@ -221,43 +240,47 @@ let differential (module B : E4_buckets.S) label ops =
   let b = ref B.empty in
   List.iter
     (fun op ->
-      let same_drain =
-        match op with
-        | Enq (p, x) ->
-          r := Dispatcher_ref.enqueue !r p x;
-          b := B.enqueue !b ~priority:p x;
-          true
-        | Drain ->
-          let rl, r' = Dispatcher_ref.drain !r in
-          let bl, b' = B.drain !b in
-          r := r';
-          b := b';
-          rl = bl
-        | Arm ->
-          r := Dispatcher_ref.arm !r;
-          b := B.arm !b;
-          true
-        | Disarm ->
-          r := Dispatcher_ref.disarm !r;
-          b := B.disarm !b;
-          true
-      in
-      let ok =
-        same_drain
-        && Dispatcher_ref.to_list !r = B.to_list !b
-        && Dispatcher_ref.armed !r = B.armed !b
-      in
-      if not ok then begin
-        incr bad;
-        if !first_bad < 0 then first_bad := !step
-      end;
-      incr step)
+       let same_drain =
+         match op with
+         | Enq (p, x) ->
+           r := Dispatcher_ref.enqueue !r p x;
+           b := B.enqueue !b ~priority:p x;
+           true
+         | Drain ->
+           let rl, r' = Dispatcher_ref.drain !r in
+           let bl, b' = B.drain !b in
+           r := r';
+           b := b';
+           rl = bl
+         | Arm ->
+           r := Dispatcher_ref.arm !r;
+           b := B.arm !b;
+           true
+         | Disarm ->
+           r := Dispatcher_ref.disarm !r;
+           b := B.disarm !b;
+           true
+       in
+       let ok =
+         same_drain
+         && Dispatcher_ref.to_list !r = B.to_list !b
+         && Dispatcher_ref.armed !r = B.armed !b
+       in
+       if not ok
+       then (
+         incr bad;
+         if !first_bad < 0 then first_bad := !step);
+       incr step)
     ops;
   check
-    (Printf.sprintf "%s buckets-differential  %d ops against Dispatcher_ref (Dispatcher (src/Effect4/Machine/Fibers.lean))"
-       label differential_ops)
+    (Printf.sprintf
+       "%s buckets-differential  %d ops against Dispatcher_ref (Dispatcher \
+        (src/Effect4/Machine/Fibers.lean))"
+       label
+       differential_ops)
     (!bad = 0);
   if !bad <> 0 then note "%s: %d divergences, first at op %d" label !bad !first_bad
+;;
 
 (* ============================================================ the bench (B-Q1a / B-Q1b) *)
 
@@ -287,22 +310,27 @@ let bench_carrier (module B : E4_buckets.S) label =
   in
   List.iter
     (fun p ->
-      let cells = List.map (fun d -> cell ~p ~d) bench_drains in
-      let at_1024 = List.nth cells 3 in
-      Printf.printf "   %-11s %3d |%s | %8.1f M/s\n" label p
-        (String.concat "" (List.map (fun ms -> Printf.sprintf " %7.2f" ms) cells))
-        (float_of_int bench_n /. (at_1024 /. 1000.0) /. 1e6))
+       let cells = List.map (fun d -> cell ~p ~d) bench_drains in
+       let at_1024 = List.nth cells 3 in
+       Printf.printf
+         "   %-11s %3d |%s | %8.1f M/s\n"
+         label
+         p
+         (String.concat "" (List.map (fun ms -> Printf.sprintf " %7.2f" ms) cells))
+         (float_of_int bench_n /. (at_1024 /. 1000.0) /. 1e6))
     bench_priorities
+;;
 
 let bench () =
   print_endline
-    "-- BENCH B-Q1a/B-Q1b: 100 000 enqueues, a drain every d, p priorities (ms, best of 3)";
+    "-- BENCH B-Q1a/B-Q1b: 100 000 enqueues, a drain every d, p priorities (ms, best of \
+     3)";
   print_endline
     "   carrier      p |     d=1     d=8    d=64  d=1024   d=1e5 |  enq/s at d=1024";
   for_each_carrier (fun label m -> bench_carrier m label);
   note
-    "the Lean carrier (Dispatcher_ref, tasks ++ [t]) needs 79 619 ms for the p=1 d=1e5 cell \
-     (design §6.2); B-Q1b asks for that cell under 10 ms";
+    "the Lean carrier (Dispatcher_ref, tasks ++ [t]) needs 79 619 ms for the p=1 d=1e5 \
+     cell (design §6.2); B-Q1b asks for that cell under 10 ms";
   let lean_1e5 =
     Gc.compact ();
     let t0 = Unix.gettimeofday () in
@@ -315,8 +343,10 @@ let bench () =
     ignore (Sys.opaque_identity l : int list);
     (t1 -. t0) *. 1000.0
   in
-  note "Dispatcher_ref at ONE TENTH the depth (1e4 enqueues, one drain, p=1): %.2f ms"
+  note
+    "Dispatcher_ref at ONE TENTH the depth (1e4 enqueues, one drain, p=1): %.2f ms"
     lean_1e5
+;;
 
 (* ============================================================ *)
 
@@ -326,7 +356,9 @@ let () =
   let ops = gen_ops differential_ops in
   for_each_carrier (fun label m -> differential m label ops);
   bench ();
-  Printf.printf "== %s: %d failure(s) ==\n"
+  Printf.printf
+    "== %s: %d failure(s) ==\n"
     (if !failures = 0 then "ALL PASS" else "FAILED")
     !failures;
   exit (if !failures = 0 then 0 else 1)
+;;

@@ -53,11 +53,6 @@
 
 type ('m, 'd) source
 
-type status = {
-  finished : bool;  (** every fiber has exited and the last step settled *)
-  stuck : string option;  (** the `Stuck` constructor, spelled *)
-  fuel_left : int;
-}
 (** THE ONE MACHINE PROJECTION THIS MODULE TAKES, and the one deviation from the design's
     `of_run` (lane receipt D-Q3-1).  `outcome` is a fact about the machine at the end of the
     tape and the design's `of_run` had no way to read it: the module holds `'m` abstract and
@@ -65,26 +60,31 @@ type status = {
     interpreter, which brief §1 forbids.  So the caller supplies the projection -- for the
     engine it is `E4_engine.ENGINE.answer` read off in three lines -- and this module
     combines it with what the LOG knows (the open scopes) into {!outcome}. *)
+type status =
+  { finished : bool (** every fiber has exited and the last step settled *)
+  ; stuck : string option (** the `Stuck` constructor, spelled *)
+  ; fuel_left : int
+  }
 
-type frontier = {
-  open_scopes : int list;  (** scope keys with a link row and no close row, ascending *)
-  awaited : string option;
-      (** INV-TAPE-2: the row the frontier names.  [None] until X2 lands the row
+type frontier =
+  { open_scopes : int list (** scope keys with a link row and no close row, ascending *)
+  ; awaited : string option
+    (** INV-TAPE-2: the row the frontier names.  [None] until X2 lands the row
           (A3 §1.3.4, risk R-A3-3) -- it is `None`, NEVER A GUESS. *)
-  fuel_left : int;
-}
+  ; fuel_left : int
+  }
 
-val of_run :
-  log:E4_log.t ->
-  index:E4_logindex.t ->
-  tape:'d array ->
-  replay:('m -> 'd -> 'm) ->
-  initial:'m ->
-  checkpoint_every:int ->
-  status:('m -> status) ->
-  ('m, 'd) source
 (** The single constructor.  Replays the tape once to materialise the checkpoint schedule.
     @raise Invalid_argument if [checkpoint_every < 1]. *)
+val of_run
+  :  log:E4_log.t
+  -> index:E4_logindex.t
+  -> tape:'d array
+  -> replay:('m -> 'd -> 'm)
+  -> initial:'m
+  -> checkpoint_every:int
+  -> status:('m -> status)
+  -> ('m, 'd) source
 
 (** {1 The reading axis} *)
 
@@ -92,36 +92,37 @@ val length : ('m, 'd) source -> int
 val row : ('m, 'd) source -> int -> string option
 val rows : ('m, 'd) source -> from:int -> upto:int -> string list
 val segment_of_decision : ('m, 'd) source -> int -> (int * int) option
-val decision_of_row : ('m, 'd) source -> int -> int option
+
 (** The two directions of design-language §1.6's "each decision appends a segment".  A bar
     line always falls between two rows and a segment boundary always falls on a row (§4.8),
     so these two are inverse on their domains. *)
+val decision_of_row : ('m, 'd) source -> int -> int option
 
 (** {1 By identity} *)
 
 val fiber_rows : ('m, 'd) source -> int -> (int * string) list
-val scope_rows : ('m, 'd) source -> int -> (int * string) list
+
 (** open / close / finalizer rows of one scope: the locking-table view (design-language
     §6.5).  Today it is the `scopeLinked` / `scopeClosedOnLink` rows only: `scopeOpened`,
     `scopeClosed` and `finalizerRegistered` need X2, and `finalizerProgram` carries no scope
     key, so a finalizer joins its scope only for a linked fiber (A3 §1.3.4). *)
+val scope_rows : ('m, 'd) source -> int -> (int * string) list
 
-val token_rows : ('m, 'd) source -> int -> (int * string) list
 (** the park and the answer for one token: the hollow box and the filled box
     (design-language §2). *)
+val token_rows : ('m, 'd) source -> int -> (int * string) list
 
-val task_rows : ('m, 'd) source -> owner:int -> (int * string) list
 (** `scheduledTask` / `ranTask`: one fiber's queue staff. *)
+val task_rows : ('m, 'd) source -> owner:int -> (int * string) list
 
 val fibers : ('m, 'd) source -> int list
 val scopes : ('m, 'd) source -> int list
 val tokens : ('m, 'd) source -> int list
 
-val open_scopes : ('m, 'd) source -> int list
 (** Every scope with a link row and no close row, ascending: the empty `closed at` cells of
     the locking table (design-language §6.5).  PARTIAL until X2, as {!scope_rows} says. *)
+val open_scopes : ('m, 'd) source -> int list
 
-val by_cid : ('m, 'd) source -> cid:string -> (int * string) list
 (** Every row whose content address is [cid].  The address is the SHA-256 of canonical bytes
     as Lean computes them; THIS FUNCTION NEVER COMPUTES ONE (brief rule 2, survey trap #1) --
     it looks for the seal A2's writer already put in the row, as the literal text [cid].  A
@@ -130,63 +131,68 @@ val by_cid : ('m, 'd) source -> cid:string -> (int * string) list
     codec gains the seal (A3 §1.3.4, "the tape in the manifest" and the Cid rows), this
     becomes one more `E4_logindex` posting list behind an unchanged signature.
     @raise Invalid_argument on an empty [cid] -- it would match every row. *)
+val by_cid : ('m, 'd) source -> cid:string -> (int * string) list
 
-val by_occurrence : ('m, 'd) source -> program:string -> path:int list -> (int * string) list
 (** The `Occurrence {program, path}` identity (2026-09-07-cas-design.md §1), as the text
     {!occurrence_text} spells it. *)
+val by_occurrence
+  :  ('m, 'd) source
+  -> program:string
+  -> path:int list
+  -> (int * string) list
 
-val by_path : ('m, 'd) source -> path:int list -> (int * string) list
 (** Every occurrence at this path in any program of the run, as {!path_text} spells it. *)
+val by_path : ('m, 'd) source -> path:int list -> (int * string) list
 
-val path_text : int list -> string
 (** [\[1;1;0\]] is ["[1 1 0]"] -- the design language's own glyph for a path
     (design-language §3).  SPACE separated and not comma separated, which is what keeps it
     apart from the engine's rendered id lists (`childrenInterrupted(0,[1,2])`). *)
+val path_text : int list -> string
 
-val occurrence_text : program:string -> path:int list -> string
 (** ["program:2ddd3c…/[1 0]"] -- design-language §3, the occurrence row. *)
+val occurrence_text : program:string -> path:int list -> string
 
 (** {1 The tape and the outcome} *)
 
 val tape : ('m, 'd) source -> 'd list
 val tape_length : ('m, 'd) source -> int
 
-val outcome : ('m, 'd) source -> [ `Finished | `Frontier of frontier | `Stuck of string ]
 (** Three outcomes and one latched frontier (grill §1 Q7).  The machine half comes from the
     {!status} the caller supplied, the `open_scopes` half from the log. *)
+val outcome : ('m, 'd) source -> [ `Finished | `Frontier of frontier | `Stuck of string ]
 
 (** {1 The machine at a position} *)
 
 type ('m, 'd) cursor
 
-val cursor : ('m, 'd) source -> from:int -> ('m, 'd) cursor
 (** @raise Invalid_argument outside [0, tape_length]. *)
+val cursor : ('m, 'd) source -> from:int -> ('m, 'd) cursor
 
-val next : ('m, 'd) cursor -> ('m * ('m, 'd) cursor) option
 (** One replayed decision: the machine AFTER the cursor's next decision, and the cursor
     advanced onto it.  [None] at the end of the tape.  THE PRIMARY ENTRY POINT. *)
+val next : ('m, 'd) cursor -> ('m * ('m, 'd) cursor) option
 
-val current : ('m, 'd) cursor -> 'm
 (** The machine at {!position}.  Free: the cursor already holds it. *)
+val current : ('m, 'd) cursor -> 'm
 
 val position : ('m, 'd) cursor -> int
 
-val at : ('m, 'd) source -> int -> 'm
 (** [i mod checkpoint_every] replayed decisions.
     @raise Invalid_argument outside [0, tape_length]. *)
+val at : ('m, 'd) source -> int -> 'm
 
-val replay_steps : ('m, 'd) source -> from:int -> upto:int -> 'm list
 (** `Api.replaySteps`, "the viewer's one real need" (2026-09-08-build-path.md §3 row 3).
     The machines at positions [from .. upto] INCLUSIVE, so [upto - from + 1] of them.
     Cost: [(upto - from) + (from mod k)] replays.
     @raise Invalid_argument unless [0 <= from <= upto <= tape_length]. *)
+val replay_steps : ('m, 'd) source -> from:int -> upto:int -> 'm list
 
-val cost : ('m, 'd) source -> from:int -> upto:int -> int
 (** How many decisions the corresponding call WILL replay.  Free, and exact -- a viewer
     decides whether to ask before it asks.  [cost s ~from:i ~upto:i] is what {!at} [i]
     costs. *)
+val cost : ('m, 'd) source -> from:int -> upto:int -> int
 
-val checkpoints : ('m, 'd) source -> int list
 (** The retained positions, ascending: [0, k, 2k, ...] up to the tape length. *)
+val checkpoints : ('m, 'd) source -> int list
 
 val checkpoint_every : ('m, 'd) source -> int

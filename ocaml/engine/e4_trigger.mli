@@ -11,8 +11,17 @@
      TR4 The post runs with NEITHER effect NOR exception handlers installed and must return
          fast; `post` is `E4_mailbox.push`, which is bounded and refuses. *)
 
-type addr = { machine : int; fiber : int; token : int }
-type state = Initial | Awaiting of addr | Signaled
+type addr =
+  { machine : int
+  ; fiber : int
+  ; token : int
+  }
+
+type state =
+  | Initial
+  | Awaiting of addr
+  | Signaled
+
 type t
 
 val create : unit -> t

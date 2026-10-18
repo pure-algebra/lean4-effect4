@@ -3,6 +3,7 @@
    Properties: its values are recipe roots or pure adapter projections, by construction.
    The engine differential tests both carrier instances through E4_engine.INSTANCE. *)
 open Eff_types
+
 module Make
     (M : Api_engine.TABLE)
     (T : Api_engine.TRACE)
@@ -12,6 +13,7 @@ module Make
     (E : Api_engine.PENV)
     (F : Api_engine.FIBERS) : sig
   include module type of Api_engine.Make (M) (T) (L) (D) (P) (E) (F)
+
   type nu = eff_name
   type s = eff_thunk
   type prim_ = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) prim
@@ -19,14 +21,32 @@ module Make
   type fevent = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_event
 
   type machine =
-    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_, ffiber, fevent) run_machine
+    ( nu
+      , s
+      , Val.t
+      , Err.t
+      , Defect.t
+      , fiber_id
+      , unit
+      , ctx
+      , stores
+      , prim_
+      , ffiber
+      , fevent )
+      run_machine
 
-  type fiber = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, ffiber) run_fiber
-  type event = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, fevent) run_event
+  type fiber =
+    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, ffiber) run_fiber
+
+  type event =
+    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, prim_, fevent) run_event
+
   (* The tape's decision. `decision` itself is the program's `Decision` (`select`'s carrier),
      generated with the rest of the program types. *)
   type api_decision = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) run_decision
-  type interp = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_) run_interp
+
+  type interp =
+    (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit, ctx, stores, prim_) run_interp
 
   (* No program conversion: the generated engine opens `Eff_types`, the one program type of the
      wire and every instance, so no instance names a program type of its own. *)
@@ -49,7 +69,11 @@ module Make
   val race_count : machine -> int
   val middleware : machine -> bool
   val finished : machine -> bool
-  val completed_exits : machine -> (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list
+
+  val completed_exits
+    :  machine
+    -> (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list
+
   val stores_of : machine -> stores
   val refs : machine -> Val.t list
   val next_name : machine -> int

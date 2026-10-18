@@ -52,35 +52,61 @@ let checks = ref 0
 
 let check name ok =
   incr checks;
-  if ok then Printf.printf "PASS %s\n" name
-  else begin
+  if ok
+  then Printf.printf "PASS %s\n" name
+  else (
     incr failures;
-    Printf.printf "FAIL %s\n" name
-  end
+    Printf.printf "FAIL %s\n" name)
+;;
 
 let nat n = Term.Lit (Lit.Nat n)
 let add a b = Term.App ("add", Terms.Cons (a, Terms.Cons (b, Terms.Nil)))
-let success v : (Val.t, Err.t, Defect.t, int, unit) Completion.t = Completion.OfExit (Exit.Success v)
+
+let success v : (Val.t, Err.t, Defect.t, int, unit) Completion.t =
+  Completion.OfExit (Exit.Success v)
+;;
 
 (* One host row: a call with no request, answered by a natural. *)
 let table : Row.t list =
-  [ { Row.name = "next"; spelling = "next"; shape = RowShape.Call; trailing = []; kind = RowKind.Async;
-      request = Ty.Unit; answer = Ty.Nat; error = Ty.Never; requires = []; cite = "test_serve";
-      type_args = []; registration = Registration.External } ]
+  [ { Row.name = "next"
+    ; spelling = "next"
+    ; shape = RowShape.Call
+    ; trailing = []
+    ; kind = RowKind.Async
+    ; request = Ty.Unit
+    ; answer = Ty.Nat
+    ; error = Ty.Never
+    ; requires = []
+    ; cite = "test_serve"
+    ; type_args = []
+    ; registration = Registration.External
+    }
+  ]
+;;
 
 (* Codex's program: call the row, then add 1 to its answer. *)
 let call_add1 : NativeOp.t Eff.t =
-  Eff.Bind (Eff.Perform (NativeOp.External 0, Term.Lit Lit.Unit), Eff.Succeed (add (Term.Var 0) (nat 1)))
+  Eff.Bind
+    ( Eff.Perform (NativeOp.External 0, Term.Lit Lit.Unit)
+    , Eff.Succeed (add (Term.Var 0) (nat 1)) )
+;;
 
 let rec chain n : NativeOp.t Eff.t =
-  if n <= 0 then Eff.Succeed (Term.Lit Lit.Unit)
+  if n <= 0
+  then Eff.Succeed (Term.Lit Lit.Unit)
   else Eff.Bind (Eff.Perform (NativeOp.RefMake, nat (n - 1)), chain (n - 1))
+;;
 
-let call_then_chain : NativeOp.t Eff.t = Eff.Bind (Eff.Perform (NativeOp.External 0, Term.Lit Lit.Unit), chain 50)
+let call_then_chain : NativeOp.t Eff.t =
+  Eff.Bind (Eff.Perform (NativeOp.External 0, Term.Lit Lit.Unit), chain 50)
+;;
 
 (* The assessment's programs (docs/research/2026-10-17-ocaml-refactor-assessment/evidence/
    actual_host.ml): a sum bound to a literal, at the profile's edge and inside it. *)
-let bound_sum a b : NativeOp.t Eff.t = Eff.Bind (Eff.Succeed (nat a), Eff.Succeed (add (Term.Var 0) (nat b)))
+let bound_sum a b : NativeOp.t Eff.t =
+  Eff.Bind (Eff.Succeed (nat a), Eff.Succeed (add (Term.Var 0) (nat b)))
+;;
+
 let closed_sum : NativeOp.t Eff.t = Eff.Succeed (add (nat 9007199254740991) (nat 1))
 let sleeper : NativeOp.t Eff.t = Eff.Perform (NativeOp.Sleep, nat 1000)
 
@@ -88,7 +114,11 @@ let sleeper : NativeOp.t Eff.t = Eff.Perform (NativeOp.Sleep, nat 1000)
 module Stuck_engine (E : E4_engine.ENGINE) : E4_engine.ENGINE = struct
   include E
 
-  let answer t = match E.answer t with E4_engine.Finished -> E4_engine.Refused "unknownFiber 9" | a -> a
+  let answer t =
+    match E.answer t with
+    | E4_engine.Finished -> E4_engine.Refused "unknownFiber 9"
+    | a -> a
+  ;;
 end
 
 module Checks (E : E4_engine.ENGINE) = struct
@@ -98,24 +128,47 @@ module Checks (E : E4_engine.ENGINE) = struct
 
   (* A provider answering [answer] to every call, counting its calls in [count]. *)
   let counting count answer : int H.provider =
-   fun _ _ st ->
+    fun _ _ st ->
     incr count;
     Some (answer, st + 1)
+  ;;
 
   let serve ?(table = table) ?rounds ~fuel program provider =
     H.serve ~table ?rounds provider program ~fuel 0
+  ;;
 
   (* What an engine shows: its outcome, fibers, trace and the calls it waits on. *)
-  let observation e = (E.outcome e, E.fiber_rows e, E.trace_rows e, E.host_calls e)
+  let observation e = E.outcome e, E.fiber_rows e, E.trace_rows e, E.host_calls e
 
-  let evaluated ?(table = table) ~fuel program = E.step (E.load ~table program ~fuel) (E.evaluate 0)
+  let evaluated ?(table = table) ~fuel program =
+    E.step (E.load ~table program ~fuel) (E.evaluate 0)
+  ;;
 
   (* The stops, read by pattern: a stop may carry an exception, which `=` must not compare. *)
-  let is_finished = function H.Machine H.Finished -> true | _ -> false
-  let is_delay = function H.Machine H.Delay -> true | _ -> false
-  let is_waiting = function H.Machine H.Waiting -> true | _ -> false
-  let is_outside = function H.Host (H.Outside_profile _) -> true | _ -> false
-  let finished = function Ok (s : int H.served) -> is_finished s.stop | Error _ -> false
+  let is_finished = function
+    | H.Machine H.Finished -> true
+    | _ -> false
+  ;;
+
+  let is_delay = function
+    | H.Machine H.Delay -> true
+    | _ -> false
+  ;;
+
+  let is_waiting = function
+    | H.Machine H.Waiting -> true
+    | _ -> false
+  ;;
+
+  let is_outside = function
+    | H.Host (H.Outside_profile _) -> true
+    | _ -> false
+  ;;
+
+  let finished = function
+    | Ok (s : int H.served) -> is_finished s.stop
+    | Error _ -> false
+  ;;
 
   (* S1, S2: a refused reply stops the drive at once, leaving everything as before the call. *)
   let refused_reply label answer expected =
@@ -128,9 +181,13 @@ module Checks (E : E4_engine.ENGINE) = struct
       check (name (label ^ ": the provider was called once")) (!count = 1);
       check (name (label ^ ": the host's state is the one before the call")) (s.state = 0);
       check (name (label ^ ": no call is recorded")) (s.calls = []);
-      check (name (label ^ ": the call is still outstanding")) (List.length (E.host_calls s.engine) = 1);
-      check (name (label ^ ": the engine is the machine before the reply"))
+      check
+        (name (label ^ ": the call is still outstanding"))
+        (List.length (E.host_calls s.engine) = 1);
+      check
+        (name (label ^ ": the engine is the machine before the reply"))
         (observation s.engine = observation before)
+  ;;
 
   let run () =
     (* S1 *)
@@ -140,41 +197,57 @@ module Checks (E : E4_engine.ENGINE) = struct
      | (fiber, token, _, _) :: _ ->
        let d = E.answer_async fiber token edge in
        check (name "S1 premise: the reply passes ingress and admission") (E.admits t d);
-       check (name "S1 premise: the step that applies it leaves the profile")
-         (match E.answer (E.step t d) with E4_engine.Outside_profile _ -> true | _ -> false)
+       check
+         (name "S1 premise: the step that applies it leaves the profile")
+         (match E.answer (E.step t d) with
+          | E4_engine.Outside_profile _ -> true
+          | _ -> false)
      | [] -> check (name "S1 premise: the program calls its row") false);
     refused_reply "S1 a reply whose step leaves the profile" edge is_outside;
     (* S2 *)
     let text = success (Val.Str "forty-one") in
     (match E.host_calls t with
      | (fiber, token, _, _) :: _ ->
-       check (name "S2 premise: admission refuses a string for a natural")
+       check
+         (name "S2 premise: admission refuses a string for a natural")
          (not (E.admits t (E.answer_async fiber token text)))
      | [] -> check (name "S2 premise: the program calls its row") false);
-    refused_reply "S2 a reply admission refuses" text (function H.Host H.Refused -> true | _ -> false);
+    refused_reply "S2 a reply admission refuses" text (function
+      | H.Host H.Refused -> true
+      | _ -> false);
     (* S3 *)
     let count = ref 0 in
-    (match serve ~rounds:2 ~fuel:1000 call_add1 (counting count (success (Val.Nat 41))) with
+    (match
+       serve ~rounds:2 ~fuel:1000 call_add1 (counting count (success (Val.Nat 41)))
+     with
      | Ok s ->
        check (name "S3 the reply 41 finishes") (is_finished s.stop);
-       check (name "S3 the root's exit is 42") (E.root_exit_of s.engine = Some (Exit.Success (Val.Nat 42)));
-       check (name "S3 one call is recorded, with the host's state after it")
+       check
+         (name "S3 the root's exit is 42")
+         (E.root_exit_of s.engine = Some (Exit.Success (Val.Nat 42)));
+       check
+         (name "S3 one call is recorded, with the host's state after it")
          (!count = 1 && List.length s.calls = 1 && s.state = 1)
      | Error _ -> check (name "S3 the program loads") false);
     (* S4 *)
     let starved = serve ~fuel:5 (chain 50) (counting (ref 0) (success (Val.Nat 0))) in
-    check (name "S4 a chain short of fuel at evaluate stops with Delay, never Finished")
-      (match starved with Ok s -> is_delay s.stop && s.calls = [] | Error _ -> false);
-    check (name "S4 red control: the chain with fuel to spare finishes")
+    check
+      (name "S4 a chain short of fuel at evaluate stops with Delay, never Finished")
+      (match starved with
+       | Ok s -> is_delay s.stop && s.calls = []
+       | Error _ -> false);
+    check
+      (name "S4 red control: the chain with fuel to spare finishes")
       (finished (serve ~fuel:100_000 (chain 50) (counting (ref 0) (success (Val.Nat 0)))));
     (* The least fuel at which [call_then_chain] parks on its call runs out in the chain. *)
     let rec parks_at fuel =
-      if fuel > 1000 then None
-      else
+      if fuel > 1000
+      then None
+      else (
         let t = evaluated ~fuel call_then_chain in
         match E.answer t, E.host_calls t with
         | E4_engine.Suspended _, _ :: _ -> Some fuel
-        | _ -> parks_at (fuel + 1)
+        | _ -> parks_at (fuel + 1))
     in
     (match parks_at 1 with
      | None -> check (name "S4 premise: the call is reached at some fuel") false
@@ -182,23 +255,39 @@ module Checks (E : E4_engine.ENGINE) = struct
        let count = ref 0 in
        (match serve ~fuel call_then_chain (counting count (success (Val.Nat 0))) with
         | Ok s ->
-          check (name (Printf.sprintf "S4 at fuel %d a reply short of fuel stops with Delay" fuel))
+          check
+            (name
+               (Printf.sprintf
+                  "S4 at fuel %d a reply short of fuel stops with Delay"
+                  fuel))
             (is_delay s.stop);
-          check (name "S4 the reply was applied: its call is recorded, with the state after it")
+          check
+            (name
+               "S4 the reply was applied: its call is recorded, with the state after it")
             (!count = 1 && List.length s.calls = 1 && s.state = 1)
         | Error _ -> check (name "S4 the program loads") false);
-       check (name "S4 red control: the same program with fuel to spare finishes")
-         (finished (serve ~fuel:100_000 call_then_chain (counting (ref 0) (success (Val.Nat 0))))));
+       check
+         (name "S4 red control: the same program with fuel to spare finishes")
+         (finished
+            (serve ~fuel:100_000 call_then_chain (counting (ref 0) (success (Val.Nat 0))))));
     (* S6 *)
     (match serve ~table:[] ~fuel:1000 sleeper (counting (ref 0) (success Val.Unit)) with
      | Ok s ->
-       check (name "S6 premise: the sleeping machine is suspended")
-         (match E.answer s.engine with E4_engine.Suspended _ -> true | _ -> false);
-       check (name "S6 a machine sleeping with no clock advance stops with Waiting")
+       check
+         (name "S6 premise: the sleeping machine is suspended")
+         (match E.answer s.engine with
+          | E4_engine.Suspended _ -> true
+          | _ -> false);
+       check
+         (name "S6 a machine sleeping with no clock advance stops with Waiting")
          (is_waiting s.stop && s.calls = [] && E.root_exit_of s.engine = None)
      | Error _ -> check (name "S6 the program loads") false);
     (* S7 *)
-    let raises p = match E.load p ~fuel:1000 with exception E4_clock.Profile_refusal _ -> true | _ -> false in
+    let raises p =
+      match E.load p ~fuel:1000 with
+      | exception E4_clock.Profile_refusal _ -> true
+      | _ -> false
+    in
     let refused_load p =
       match H.serve (fun _ _ st -> Some (success Val.Unit, st)) p ~fuel:1000 () with
       | Error (H.Load_outside_profile _) -> true
@@ -207,27 +296,49 @@ module Checks (E : E4_engine.ENGINE) = struct
     in
     let big = Eff.Succeed (nat (1 lsl 53)) in
     check (name "S7 premise: E.load raises on a literal outside the profile") (raises big);
-    check (name "S7 a literal outside the profile is the loading refusal, nothing raised") (refused_load big);
-    check (name "S7 premise: the closed sum compiles, and E.load raises on it")
-      ((match E.compile closed_sum with exception _ -> false | _ -> true) && raises closed_sum);
-    check (name "S7 a closed sum whose loading leaves the profile is the loading refusal") (refused_load closed_sum);
-    check (name "S7 red control: the largest literal inside the profile loads and finishes")
-      (finished (serve ~table:[] ~fuel:1000 (Eff.Succeed (nat 9007199254740991)) (counting (ref 0) (success Val.Unit))));
+    check
+      (name "S7 a literal outside the profile is the loading refusal, nothing raised")
+      (refused_load big);
+    check
+      (name "S7 premise: the closed sum compiles, and E.load raises on it")
+      ((match E.compile closed_sum with
+        | exception _ -> false
+        | _ -> true)
+       && raises closed_sum);
+    check
+      (name "S7 a closed sum whose loading leaves the profile is the loading refusal")
+      (refused_load closed_sum);
+    check
+      (name "S7 red control: the largest literal inside the profile loads and finishes")
+      (finished
+         (serve
+            ~table:[]
+            ~fuel:1000
+            (Eff.Succeed (nat 9007199254740991))
+            (counting (ref 0) (success Val.Unit))));
     (* S8 *)
     let count = ref 0 in
     let overflow = bound_sum 9007199254740991 1 in
     (match serve ~table:[] ~fuel:1000 overflow (counting count (success Val.Unit)) with
      | Ok s ->
-       check (name "S8 an evaluation that leaves the profile stops with Outside_profile, no provider call")
+       check
+         (name
+            "S8 an evaluation that leaves the profile stops with Outside_profile, no \
+             provider call")
          (is_outside s.stop && !count = 0);
-       check (name "S8 the engine is the machine as loaded")
+       check
+         (name "S8 the engine is the machine as loaded")
          (observation s.engine = observation (E.load ~table:[] overflow ~fuel:1000))
      | Error _ -> check (name "S8 the program loads") false);
-    (match serve ~table:[] ~fuel:1000 (bound_sum 20 22) (counting (ref 0) (success Val.Unit)) with
-     | Ok s ->
-       check (name "S8 red control: 20 + 22 finishes with 42")
-         (is_finished s.stop && E.root_exit_of s.engine = Some (Exit.Success (Val.Nat 42)))
-     | Error _ -> check (name "S8 red control: the program loads") false)
+    match
+      serve ~table:[] ~fuel:1000 (bound_sum 20 22) (counting (ref 0) (success Val.Unit))
+    with
+    | Ok s ->
+      check
+        (name "S8 red control: 20 + 22 finishes with 42")
+        (is_finished s.stop && E.root_exit_of s.engine = Some (Exit.Success (Val.Nat 42)))
+    | Error _ -> check (name "S8 red control: the program loads") false
+  ;;
 end
 
 (* S5: the stuck answer, read through the stand-in on both instances. *)
@@ -237,23 +348,34 @@ module Stuck_checks (E : E4_engine.ENGINE) = struct
   module R = Effect4_engine.E4_host.Make (E)
 
   let name what = Printf.sprintf "%s: %s" E.name what
-  let stuck = function H.Machine (H.Stuck why) -> why = "unknownFiber 9" | _ -> false
+
+  let stuck = function
+    | H.Machine (H.Stuck why) -> why = "unknownFiber 9"
+    | _ -> false
+  ;;
 
   let run () =
     let unit_provider _ _ st = Some (success Val.Unit, st) in
-    check (name "S5 a stuck answer after evaluate stops with Stuck and the engine's reason")
+    check
+      (name "S5 a stuck answer after evaluate stops with Stuck and the engine's reason")
       (match H.serve unit_provider (bound_sum 20 22) ~fuel:1000 () with
        | Ok s -> stuck s.stop && s.calls = []
        | Error _ -> false);
-    check (name "S5 red control: the real instance finishes the same program")
+    check
+      (name "S5 red control: the real instance finishes the same program")
       (match R.serve unit_provider (bound_sum 20 22) ~fuel:1000 () with
-       | Ok s -> (match s.stop with R.Machine R.Finished -> true | _ -> false)
+       | Ok s ->
+         (match s.stop with
+          | R.Machine R.Finished -> true
+          | _ -> false)
        | Error _ -> false);
     let answer41 _ _ st = Some (success (Val.Nat 41), st + 1) in
-    check (name "S5 a stuck answer after a reply stops with Stuck, the call recorded")
+    check
+      (name "S5 a stuck answer after a reply stops with Stuck, the call recorded")
       (match H.serve ~table answer41 call_add1 ~fuel:1000 0 with
        | Ok s -> stuck s.stop && List.length s.calls = 1 && s.state = 1
        | Error _ -> false)
+  ;;
 end
 
 module Fast = Checks (E4_engine.Fast)
@@ -268,3 +390,4 @@ let () =
   Stuck_ref.run ();
   Printf.printf "%d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
+;;

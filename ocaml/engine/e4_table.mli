@@ -74,59 +74,59 @@ val empty : 'a t
 val is_empty : 'a t -> bool
 val mem : int -> 'a t -> bool
 
-val find_opt : int -> 'a t -> 'a option
 (** The key first: the shape the generated call sites use. *)
+val find_opt : int -> 'a t -> 'a option
 
-val find_opt' : 'a t -> int -> 'a option
 (** The TABLE first: Lean's argument order for `RunMachine.fiber?` (RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)) and
     `DeferredStore.cellAt` (DeferredStore.cellAt (src/Effect4/Machine/Stores.lean)), so an extern row is a name substitution and
     not an argument permutation.  See the deviation note in
     docs/research/2026-09-08-engine-lane-c-delivery.md. *)
+val find_opt' : 'a t -> int -> 'a option
 
-val set : int -> 'a -> 'a t -> 'a t
 (** Replace an EXISTING binding.  A no-op — and PHYSICALLY the same table — when the key is
     absent (T1).  This is Lean's `List.set` / replace-by-key `List.map`. *)
+val set : int -> 'a -> 'a t -> 'a t
 
-val add : int -> 'a -> 'a t -> 'a t
 (** Insert or replace.  Allocation uses [add k v t] with [k = cardinal t] (the ref heap's
     `refMake`). *)
+val add : int -> 'a -> 'a t -> 'a t
 
-val remove : int -> 'a t -> 'a t
 (** No Lean carrier removes; `remove` exists for the property tests and for A3. *)
+val remove : int -> 'a t -> 'a t
 
-val cardinal : 'a t -> int
 (** O(1): carried in the value.  See the representation note above. *)
+val cardinal : 'a t -> int
 
-val map : ('a -> 'a) -> 'a t -> 'a t
 (** Key-preserving bulk transform (RunMachine.dropObservers, dropObservers (src/Effect4/Machine/Fibers.lean)). *)
+val map : ('a -> 'a) -> 'a t -> 'a t
 
-val filter_map : (int -> 'a -> 'b option) -> 'a t -> 'b list
 (** ASCENDING; the shape of RunMachine.completedExits (completedExits (src/Effect4/Machine/Fibers.lean)). *)
+val filter_map : (int -> 'a -> 'b option) -> 'a t -> 'b list
 
-val for_all : (int -> 'a -> bool) -> 'a t -> bool
 (** The shape of RunMachine.finished (RunMachine.finished (src/Effect4/Machine/Fibers.lean)).  Short-circuits; the visit ORDER is
     unspecified (T5) — the answer is not. *)
+val for_all : (int -> 'a -> bool) -> 'a t -> bool
 
-val fold : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
 (** Ascending key order. *)
+val fold : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
 
-val bindings : 'a t -> (int * 'a) list
 (** Ascending.  O(n) and 4-5x a list walk (§6.2 C6): paid once per READ, never per step. *)
+val bindings : 'a t -> (int * 'a) list
 
-val to_list : 'a t -> 'a list
 (** Ascending, values only: the Lean list, for every table whose keys are allocated
     monotonically (§4.2's licence). *)
+val to_list : 'a t -> 'a list
 
-val of_list : (int * 'a) list -> 'a t
 (** Left to right, each pair through [add]: a later duplicate key REPLACES an earlier one. *)
+val of_list : (int * 'a) list -> 'a t
 
 val singleton : int -> 'a -> 'a t
 
 (* --- representation introspection: for the property tests and the bench, not for the
    machine.  Nothing in the engine's hot path may branch on these. --- *)
 
-val small_max : int
 (** The assoc-list / Map threshold, MEASURED in test/bench_carriers.ml: 0. *)
+val small_max : int
 
-val is_small : 'a t -> bool
 (** True iff the table is held as an assoc list (R6a: iff [cardinal t <= small_max]). *)
+val is_small : 'a t -> bool

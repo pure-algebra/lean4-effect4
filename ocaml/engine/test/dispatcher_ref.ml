@@ -15,8 +15,15 @@
 
    Depends on: nothing. Test-only; not part of the library. *)
 
-type 'a bucket = { priority : int; tasks : 'a list }
-type 'a t = { buckets : 'a bucket list; armed : bool }
+type 'a bucket =
+  { priority : int
+  ; tasks : 'a list
+  }
+
+type 'a t =
+  { buckets : 'a bucket list
+  ; armed : bool
+  }
 
 (* Dispatcher.empty (src/Effect4/Machine/Fibers.lean) *)
 let empty = { buckets = []; armed = false }
@@ -25,17 +32,20 @@ let empty = { buckets = []; armed = false }
 let rec insert priority task = function
   | [] -> [ { priority; tasks = [ task ] } ]
   | bucket :: rest ->
-    if bucket.priority = priority then
-      { priority = bucket.priority; tasks = bucket.tasks @ [ task ] } :: rest
-    else if priority < bucket.priority then { priority; tasks = [ task ] } :: bucket :: rest
+    if bucket.priority = priority
+    then { priority = bucket.priority; tasks = bucket.tasks @ [ task ] } :: rest
+    else if priority < bucket.priority
+    then { priority; tasks = [ task ] } :: bucket :: rest
     else bucket :: insert priority task rest
+;;
 
 (* Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean) *)
 let enqueue d priority task = { buckets = insert priority task d.buckets; armed = true }
 
 (* Dispatcher.drain (src/Effect4/Machine/Fibers.lean) *)
 let drain d =
-  (List.concat (List.map (fun b -> b.tasks) d.buckets), { buckets = []; armed = false })
+  List.concat (List.map (fun b -> b.tasks) d.buckets), { buckets = []; armed = false }
+;;
 
 (* RunMachine.arm (src/Effect4/Machine/Fibers.lean), at one owner's dispatcher *)
 let arm d = { d with armed = true }
@@ -43,5 +53,5 @@ let disarm d = { d with armed = false }
 
 (* The observation the differential compares: `Dispatcher.bucketPairs` with each `Deque` read
    as its `toList` (Dispatcher.bucketPairs, git:ddb51b6c:src/OCaml5/Lib/Deque.lean). *)
-let to_list d = List.map (fun b -> (b.priority, b.tasks)) d.buckets
+let to_list d = List.map (fun b -> b.priority, b.tasks) d.buckets
 let armed d = d.armed

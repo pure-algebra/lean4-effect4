@@ -53,10 +53,11 @@ let checks = ref 0
 
 let check name ok =
   incr checks;
-  if not ok then begin
+  if not ok
+  then (
     incr failures;
-    Printf.printf "FAIL %s\n%!" name
-  end
+    Printf.printf "FAIL %s\n%!" name)
+;;
 
 let unit_ok : Kit.exit = Kit.succeed Val.Unit
 let units n = List.init n (fun _ -> unit_ok)
@@ -65,18 +66,37 @@ let app = Kit.app ~rows:[ echo ] ()
 
 (* the doubling loop of Examples.v, by name *)
 let doubling_src =
-  A.loop ~init:(A.nat 1) ~test:(fun c -> A.(c < nat 16)) ~step:(fun c _ -> A.(c * nat 2))
-    ~result:(fun c -> c) (fun c -> A.perform "echo" c)
+  A.loop
+    ~init:(A.nat 1)
+    ~test:(fun c -> A.(c < nat 16))
+    ~step:(fun c _ -> A.(c * nat 2))
+    ~result:(fun c -> c)
+    (fun c -> A.perform "echo" c)
+;;
 
-let build ?defs p = match A.build ~app ?defs p with Ok e -> e | Error r -> failwith (A.refusal_text r)
+let build ?defs p =
+  match A.build ~app ?defs p with
+  | Ok e -> e
+  | Error r -> failwith (A.refusal_text r)
+;;
+
 let doubling = build doubling_src
 
 let forever =
-  build (A.loop ~init:(A.nat 0) ~test:(fun _ -> A.bool true) ~step:(fun c _ -> c)
-           ~result:(fun _ -> A.unit) (fun _ -> A.succeed A.unit))
+  build
+    (A.loop
+       ~init:(A.nat 0)
+       ~test:(fun _ -> A.bool true)
+       ~step:(fun c _ -> c)
+       ~result:(fun _ -> A.unit)
+       (fun _ -> A.succeed A.unit))
+;;
 
 let self_call =
-  build ~defs:[ A.def "f" ~request:Ty.Nat ~answer:Ty.Nat (fun r -> A.call "f" r) ] (A.call "f" (A.nat 0))
+  build
+    ~defs:[ A.def "f" ~request:Ty.Nat ~answer:Ty.Nat (fun r -> A.call "f" r) ]
+    (A.call "f" (A.nat 0))
+;;
 
 let stop_text : Kit.stop -> string = function
   | Kit.Finished (Exit.Success (Val.Nat n)) -> Printf.sprintf "finished %d" n
@@ -86,80 +106,132 @@ let stop_text : Kit.stop -> string = function
   | Kit.Waiting (i, _) -> Printf.sprintf "waiting %d" i
   | Kit.Refused (i, _, _, _) -> Printf.sprintf "refused %d" i
   | Kit.Stopped why -> "stopped " ^ why
+;;
 
 let report_text (r : 's Kit.report) =
-  Printf.sprintf "%s %s %d"
-    (match r.budget with Some k -> string_of_int k | None -> "-")
-    (stop_text r.trace.stop) (List.length (Kit.calls r.trace))
+  Printf.sprintf
+    "%s %s %d"
+    (match r.budget with
+     | Some k -> string_of_int k
+     | None -> "-")
+    (stop_text r.trace.stop)
+    (List.length (Kit.calls r.trace))
+;;
 
 let t1 () =
-  check "T1 doubling settles at 5 with 16, four calls"
+  check
+    "T1 doubling settles at 5 with 16, four calls"
     (report_text (Kit.run app Kit.Reactor.tape (units 4) doubling) = "5 finished 16 4");
-  check "T1 three replies: waiting on row 0 with 8"
+  check
+    "T1 three replies: waiting on row 0 with 8"
     (report_text (Kit.run app Kit.Reactor.tape (units 3) doubling) = "4 waiting 0 8 3");
-  check "T1 the silent loop is unsettled"
+  check
+    "T1 the silent loop is unsettled"
     (report_text (Kit.run ~limit:200 app Kit.Reactor.silent () forever) = "- unsettled 0");
-  check "T1 the self call is unsettled"
+  check
+    "T1 the self call is unsettled"
     (report_text (Kit.run ~limit:64 app Kit.Reactor.silent () self_call) = "- unsettled 0");
   let r = Kit.run ~frames:true app Kit.Reactor.tape (units 4) doubling in
-  let rec prefix a b = match a, b with [], _ -> true | x :: a, y :: b -> x = y && prefix a b | _ -> false in
+  let rec prefix a b =
+    match a, b with
+    | [], _ -> true
+    | x :: a, y :: b -> x = y && prefix a b
+    | _ -> false
+  in
   let rec grows = function
     | f :: (g :: _ as rest) -> prefix (Kit.calls f) (Kit.calls g) && grows rest
     | _ -> true
   in
   check "T1 frames grow, budgets 0 to 5" (grows r.frames && List.length r.frames = 6);
   let counter m =
-    build (A.loop ~init:(A.nat 0) ~test:(fun c -> A.(c < nat m)) ~step:(fun c _ -> A.atom "succ" [ c ])
-             ~result:(fun c -> c) (fun c -> A.perform "echo" c))
+    build
+      (A.loop
+         ~init:(A.nat 0)
+         ~test:(fun c -> A.(c < nat m))
+         ~step:(fun c _ -> A.atom "succ" [ c ])
+         ~result:(fun c -> c)
+         (fun c -> A.perform "echo" c))
   in
   let least m =
-    let r = Kit.run ~limit:200 ~frames:true ~check:false app Kit.Reactor.tape (units m) (counter m) in
+    let r =
+      Kit.run
+        ~limit:200
+        ~frames:true
+        ~check:false
+        app
+        Kit.Reactor.tape
+        (units m)
+        (counter m)
+    in
     match r.budget, List.rev r.frames with
     | Some k, last :: before ->
-      List.length r.frames = k + 1 && last.stop <> Kit.Unsettled
+      List.length r.frames = k + 1
+      && last.stop <> Kit.Unsettled
       && List.for_all (fun (f : Kit.trace) -> f.stop = Kit.Unsettled) before
     | _ -> false
   in
-  check "T1 the settled budget is the least, loops of 0..40 rounds" (List.for_all least (List.init 41 Fun.id))
+  check
+    "T1 the settled budget is the least, loops of 0..40 rounds"
+    (List.for_all least (List.init 41 Fun.id))
+;;
 
 let t2 () =
-  let ok s = match Kit.Json.parse s with Ok _ -> true | Error _ -> false in
+  let ok s =
+    match Kit.Json.parse s with
+    | Ok _ -> true
+    | Error _ -> false
+  in
   check "T2 object" (ok {| {"a": [1, -2, true, null, "xé\n"]} |});
   check "T2 surrogate pair" (Kit.Json.parse {|"😀"|} = Ok (J.String "\xf0\x9f\x98\x80"));
   check "T2 refuses a fraction" (not (ok "1.5"));
   check "T2 refuses trailing text" (not (ok "[1] 2"));
   check "T2 refuses a bad escape" (not (ok {|"\q"|}))
+;;
 
 let round_trip_program p =
   match Kit.Json.parse (Kit.Json.render (Kit.Json.program_json p)) with
   | Ok j -> Kit.Json.program j = Some p
   | Error _ -> false
+;;
 
 (* The fixture: one program a line (write.lean). *)
 let read_file f = In_channel.with_open_bin f In_channel.input_all
 
 let bytes_of_hex h =
-  String.init (String.length h / 2) (fun i -> Char.chr (int_of_string ("0x" ^ String.sub h (2 * i) 2)))
+  String.init
+    (String.length h / 2)
+    (fun i -> Char.chr (int_of_string ("0x" ^ String.sub h (2 * i) 2)))
+;;
 
-type entry = { name : string; program : Kit.program option; verdict : string list; json : string }
+type entry =
+  { name : string
+  ; program : Kit.program option
+  ; verdict : string list
+  ; json : string
+  }
 
 let fixture () =
   String.split_on_char '\n' (read_file "verdicts.txt")
   |> List.filter_map (fun l ->
-         match String.split_on_char '\t' l with
-         | name :: hex :: rest when rest <> [] ->
-           let json = List.nth rest (List.length rest - 1) in
-           let verdict = List.filteri (fun i _ -> i < List.length rest - 1) rest in
-           Some { name; program = Kit.program_of_bytes (bytes_of_hex hex); verdict; json }
-         | _ -> None)
+    match String.split_on_char '\t' l with
+    | name :: hex :: rest when rest <> [] ->
+      let json = List.nth rest (List.length rest - 1) in
+      let verdict = List.filteri (fun i _ -> i < List.length rest - 1) rest in
+      Some { name; program = Kit.program_of_bytes (bytes_of_hex hex); verdict; json }
+    | _ -> None)
+;;
 
 (* JSON up to the order of an object's keys *)
 let rec sorted (j : J.t) : J.t =
   match j with
   | J.Object fields ->
-    J.Object (List.sort (fun (a, _) (b, _) -> compare a b) (List.map (fun (k, v) -> (k, sorted v)) fields))
+    J.Object
+      (List.sort
+         (fun (a, _) (b, _) -> compare a b)
+         (List.map (fun (k, v) -> k, sorted v) fields))
   | J.Array js -> J.Array (List.map sorted js)
   | j -> j
+;;
 
 let t3 corpus =
   check "T3 doubling round trips" (round_trip_program doubling);
@@ -170,50 +242,87 @@ let t3 corpus =
     | Error _ -> false
   in
   check "T3 a row table round trips" rows_back;
-  let tape = [ unit_ok; Kit.fail (Val.Str "boom"); Kit.succeed (Val.List [ Val.Nat 3 ]) ] in
+  let tape =
+    [ unit_ok; Kit.fail (Val.Str "boom"); Kit.succeed (Val.List [ Val.Nat 3 ]) ]
+  in
   let tape_back =
-    match Kit.Json.parse (Kit.Json.render (J.Array (List.map Kit.Json.exit_json tape))) with
+    match
+      Kit.Json.parse (Kit.Json.render (J.Array (List.map Kit.Json.exit_json tape)))
+    with
     | Ok j -> Kit.Json.exits j = Some tape
     | Error _ -> false
   in
   check "T3 a tape round trips" tape_back;
-  let decoded = List.filter_map (fun e -> Option.map (fun p -> (e, p)) e.program) corpus in
+  let decoded = List.filter_map (fun e -> Option.map (fun p -> e, p) e.program) corpus in
   check "T3 every fixture program decodes" (List.length decoded = List.length corpus);
   let reads =
-    List.filter (fun (e, p) -> match Kit.Json.parse e.json with
-        | Ok j -> Kit.Json.program j = Some p | Error _ -> false) decoded in
+    List.filter
+      (fun (e, p) ->
+         match Kit.Json.parse e.json with
+         | Ok j -> Kit.Json.program j = Some p
+         | Error _ -> false)
+      decoded
+  in
   let prints =
-    List.filter (fun (e, p) -> match Kit.Json.parse e.json with
-        | Ok j -> sorted j = sorted (Kit.Json.program_json p) | Error _ -> false) decoded in
-  Printf.printf "T3 fixture: %d programs; Lean's JSON reads back for %d; the kit prints Lean's JSON for %d\n"
-    (List.length decoded) (List.length reads) (List.length prints);
+    List.filter
+      (fun (e, p) ->
+         match Kit.Json.parse e.json with
+         | Ok j -> sorted j = sorted (Kit.Json.program_json p)
+         | Error _ -> false)
+      decoded
+  in
+  Printf.printf
+    "T3 fixture: %d programs; Lean's JSON reads back for %d; the kit prints Lean's JSON \
+     for %d\n"
+    (List.length decoded)
+    (List.length reads)
+    (List.length prints);
   check "T3 Lean's JSON reads to the program" (List.length reads = List.length decoded);
   check "T3 the kit prints Lean's JSON" (List.length prints = List.length decoded)
+;;
 
 let t4 () =
   let raw =
     let v0 = Term.Var 0 in
     let lt a b = Term.App ("lt", Terms.Cons (a, Terms.Cons (b, Terms.Nil))) in
     let mul a b = Term.App ("mul", Terms.Cons (a, Terms.Cons (b, Terms.Nil))) in
-    Eff.Iterate (None, Term.Lit (Lit.Nat 1), lt v0 (Term.Lit (Lit.Nat 16)), mul v0 (Term.Lit (Lit.Nat 2)), v0,
-                 Eff.Perform (NativeOp.External 0, v0))
+    Eff.Iterate
+      ( None
+      , Term.Lit (Lit.Nat 1)
+      , lt v0 (Term.Lit (Lit.Nat 16))
+      , mul v0 (Term.Lit (Lit.Nat 2))
+      , v0
+      , Eff.Perform (NativeOp.External 0, v0) )
   in
   check "T4 the doubling loop by name is the raw one" (doubling = raw);
-  let reason p = match A.build ~app p with Error (r : A.refusal) -> Some r.reason | Ok _ -> None in
-  check "T4 an unbound row is refused by name"
-    (reason (A.perform "nope" A.unit) = Some (Effect4_gen.Api_gen.Reason_unboundRow "nope"));
-  check "T4 an unbound definition is refused by name"
+  let reason p =
+    match A.build ~app p with
+    | Error (r : A.refusal) -> Some r.reason
+    | Ok _ -> None
+  in
+  check
+    "T4 an unbound row is refused by name"
+    (reason (A.perform "nope" A.unit)
+     = Some (Effect4_gen.Api_gen.Reason_unboundRow "nope"));
+  check
+    "T4 an unbound definition is refused by name"
     (reason (A.call "nope" A.unit) = Some (Effect4_gen.Api_gen.Reason_unboundDef "nope"));
-  check "T4 a row declared twice is refused"
+  check
+    "T4 a row declared twice is refused"
     (match A.build ~app:(Kit.app ~rows:[ echo; echo ] ()) (A.succeed A.unit) with
      | Error r -> r.reason = Effect4_gen.Api_gen.Reason_duplicateRow "echo"
      | Ok _ -> false);
-  (match A.build_checked ~app doubling_src with
-   | Ok (_, t) -> check "T4 doubling types at Effect<number, never>"
-                    (Kit.ty_text t.EffTy.answer = "number" && Kit.ty_text t.EffTy.error = "never")
-   | Error _ -> check "T4 doubling types" false)
+  match A.build_checked ~app doubling_src with
+  | Ok (_, t) ->
+    check
+      "T4 doubling types at Effect<number, never>"
+      (Kit.ty_text t.EffTy.answer = "number" && Kit.ty_text t.EffTy.error = "never")
+  | Error _ -> check "T4 doubling types" false
+;;
 
-let reason_head (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located) =
+let reason_head
+      (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located)
+  =
   match Kit.Json.refusal_json r with
   | J.Object fields ->
     (match List.assoc_opt "reason" fields with
@@ -221,58 +330,110 @@ let reason_head (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api
      | Some (J.Object (("_tag", J.String s) :: _)) -> s
      | _ -> "?")
   | _ -> "?"
+;;
 
-let path_text (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located) =
+let path_text
+      (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located)
+  =
   if r.site = [] then "." else String.concat "." (List.map string_of_int r.site)
+;;
 
 let t5 corpus =
   let empty = Kit.app () in
   let disagree =
     List.filter_map
       (fun e ->
-        match e.program with
-        | None -> Some (e.name ^ ": no decode")
-        | Some p ->
-          let ours = match Kit.check empty p with
-            | Ok t -> [ "typed"; Kit.ty_text t.EffTy.answer; Kit.ty_text t.EffTy.error ]
-            | Error r -> [ "refused"; reason_head r; path_text r ] in
-          if ours = e.verdict then None
-          else Some (Printf.sprintf "%s: %s, Lean %s" e.name (String.concat " " ours) (String.concat " " e.verdict)))
+         match e.program with
+         | None -> Some (e.name ^ ": no decode")
+         | Some p ->
+           let ours =
+             match Kit.check empty p with
+             | Ok t -> [ "typed"; Kit.ty_text t.EffTy.answer; Kit.ty_text t.EffTy.error ]
+             | Error r -> [ "refused"; reason_head r; path_text r ]
+           in
+           if ours = e.verdict
+           then None
+           else
+             Some
+               (Printf.sprintf
+                  "%s: %s, Lean %s"
+                  e.name
+                  (String.concat " " ours)
+                  (String.concat " " e.verdict)))
       corpus
   in
-  Printf.printf "T5 fixture: %d programs, %d disagreements with Lean's verdicts\n" (List.length corpus)
+  Printf.printf
+    "T5 fixture: %d programs, %d disagreements with Lean's verdicts\n"
+    (List.length corpus)
     (List.length disagree);
   List.iteri (fun i d -> if i < 10 then Printf.printf "  %s\n" d) disagree;
   check "T5 the lowered checker is Lean's" (disagree = [])
+;;
 
 let t6 () =
   let wrong = A.perform "echo" (A.str "milk") in
-  check "T6 a wrong request type is refused" (match A.build_checked ~app wrong with Error (`Type _) -> true | _ -> false);
-  check "T6 the right one types" (match A.build_checked ~app (A.perform "echo" (A.nat 1)) with Ok _ -> true | _ -> false)
+  check
+    "T6 a wrong request type is refused"
+    (match A.build_checked ~app wrong with
+     | Error (`Type _) -> true
+     | _ -> false);
+  check
+    "T6 the right one types"
+    (match A.build_checked ~app (A.perform "echo" (A.nat 1)) with
+     | Ok _ -> true
+     | _ -> false)
+;;
 
 let t7 () =
   let bad = [ unit_ok; Kit.succeed (Val.Str "oops"); unit_ok; unit_ok ] in
   let r = Kit.run app Kit.Reactor.tape bad doubling in
-  check "T7 the run stops refused at the reply, with the fault"
-    (r.trace.stop = Kit.Refused (0, Val.Nat 2, Kit.succeed (Val.Str "oops"), Some (Kit.ReplyFault_answerType Ty.Unit)));
+  check
+    "T7 the run stops refused at the reply, with the fault"
+    (r.trace.stop
+     = Kit.Refused
+         ( 0
+         , Val.Nat 2
+         , Kit.succeed (Val.Str "oops")
+         , Some (Kit.ReplyFault_answerType Ty.Unit) ));
   check "T7 the refused reply is not applied" (List.length (Kit.calls r.trace) = 1);
   check "T7 the machine refuses it too" (r.agrees = Some true);
-  let failing_row = A.row "lookup" ~request:Ty.Nat ~answer:Ty.String ~error:Ty.String () in
+  let failing_row =
+    A.row "lookup" ~request:Ty.Nat ~answer:Ty.String ~error:Ty.String ()
+  in
   let app2 = Kit.app ~rows:[ failing_row ] () in
-  let p = match A.build ~app:app2 (A.perform "lookup" (A.nat 1)) with Ok e -> e | Error _ -> assert false in
+  let p =
+    match A.build ~app:app2 (A.perform "lookup" (A.nat 1)) with
+    | Ok e -> e
+    | Error _ -> assert false
+  in
   let r2 = Kit.run app2 Kit.Reactor.tape [ Kit.fail (Val.Str "missing") ] p in
-  check "T7 a failure in the error column is applied"
-    (match r2.trace.stop with Kit.Finished (Exit.Failure _) -> true | _ -> false)
+  check
+    "T7 a failure in the error column is applied"
+    (match r2.trace.stop with
+     | Kit.Finished (Exit.Failure _) -> true
+     | _ -> false)
+;;
 
 let t8 corpus =
   let agrees name app reactor st p =
-    check ("T8 the runners agree: " ^ name) ((Kit.run ~limit:256 app reactor st p).agrees = Some true) in
+    check
+      ("T8 the runners agree: " ^ name)
+      ((Kit.run ~limit:256 app reactor st p).agrees = Some true)
+  in
   agrees "doubling, four replies" app Kit.Reactor.tape (units 4) doubling;
   agrees "doubling, three replies" app Kit.Reactor.tape (units 3) doubling;
   let cells =
-    build A.(let* c = cell (nat 0) in
-             loop ~init:(nat 1) ~test:(fun i -> i < nat 8) ~step:(fun i _ -> i * nat 2) ~result:(fun _ -> unit)
-               (fun i -> set c i) >> get c) in
+    build
+      A.(
+        let* c = cell (nat 0) in
+        loop
+          ~init:(nat 1)
+          ~test:(fun i -> i < nat 8)
+          ~step:(fun i _ -> i * nat 2)
+          ~result:(fun _ -> unit)
+          (fun i -> set c i)
+        >> get c)
+  in
   agrees "a cell written in a loop" app Kit.Reactor.silent () cells;
   let caught = build A.(catch (fail (str "boom")) (fun _ -> succeed (nat 7))) in
   agrees "a caught failure" app Kit.Reactor.silent () caught;
@@ -280,68 +441,155 @@ let t8 corpus =
   let results =
     List.filter_map
       (fun e ->
-        match e.program with
-        | Some p when Effect4_gen.Api_gen.run_tree_outside_at p = None ->
-          Some (e.name, Kit.run ~limit:256 empty Kit.Reactor.silent () p)
-        | _ -> None)
+         match e.program with
+         | Some p when Effect4_gen.Api_gen.run_tree_outside_at p = None ->
+           Some (e.name, Kit.run ~limit:256 empty Kit.Reactor.silent () p)
+         | _ -> None)
       corpus
   in
   let count f = List.length (List.filter (fun (_, r) -> f r) results) in
-  let differ = List.filter_map (fun (n, (r : unit Kit.report)) -> if r.agrees = Some false then Some n else None) results in
-  Printf.printf "T8 fixture: %d programs in the fragment; %d agree, %d unsettled at 256, %d differ%s\n"
-    (List.length results) (count (fun r -> r.agrees = Some true)) (count (fun r -> r.budget = None)) (List.length differ)
-    (if differ = [] then "" else ": " ^ String.concat " " (List.filteri (fun i _ -> i < 12) differ));
-  check "T8 every fixture program in the fragment ran on the tree" (List.for_all (fun (_, (r : unit Kit.report)) -> r.by_tree) results);
+  let differ =
+    List.filter_map
+      (fun (n, (r : unit Kit.report)) -> if r.agrees = Some false then Some n else None)
+      results
+  in
+  Printf.printf
+    "T8 fixture: %d programs in the fragment; %d agree, %d unsettled at 256, %d differ%s\n"
+    (List.length results)
+    (count (fun r -> r.agrees = Some true))
+    (count (fun r -> r.budget = None))
+    (List.length differ)
+    (if differ = []
+     then ""
+     else ": " ^ String.concat " " (List.filteri (fun i _ -> i < 12) differ));
+  check
+    "T8 every fixture program in the fragment ran on the tree"
+    (List.for_all (fun (_, (r : unit Kit.report)) -> r.by_tree) results);
   check "T8 the runners agree on the fixture" (differ = [])
+;;
 
 let t9 () =
   let deferred = { echo with Row.registration = Registration.Deferred } in
   let refused = Kit.admit (Kit.app ~rows:[ deferred ] ()) doubling in
-  check "T9 a deferred host row is refused at admission"
-    (match refused with Some (Effect4_gen.Api_gen.AdmitRefusal_signature _) -> true | _ -> false);
-  check "T9 the program still types there" (Result.is_ok (Kit.check (Kit.app ~rows:[ deferred ] ()) doubling));
+  check
+    "T9 a deferred host row is refused at admission"
+    (match refused with
+     | Some (Effect4_gen.Api_gen.AdmitRefusal_signature _) -> true
+     | _ -> false);
+  check
+    "T9 the program still types there"
+    (Result.is_ok (Kit.check (Kit.app ~rows:[ deferred ] ()) doubling));
   check "T9 an external host row is admitted" (Kit.admit app doubling = None)
+;;
 
 let t10 () =
-  let field k = function J.Object f -> List.assoc_opt k f | _ -> None in
-  let parse s = match Kit.Json.parse s with Ok j -> j | Error e -> failwith e in
+  let field k = function
+    | J.Object f -> List.assoc_opt k f
+    | _ -> None
+  in
+  let parse s =
+    match Kit.Json.parse s with
+    | Ok j -> j
+    | Error e -> failwith e
+  in
   let line fields = parse (Kit_serve.serve_line (Kit.Json.render (J.Object fields))) in
   let tape = J.Array (List.map Kit.Json.exit_json (units 4)) in
-  let answer = line [ ("op", J.String "run"); ("program", Kit.Json.program_json doubling);
-                      ("rows", Kit.Json.rows_json [ echo ]); ("tape", tape); ("frames", J.Bool true) ] in
+  let answer =
+    line
+      [ "op", J.String "run"
+      ; "program", Kit.Json.program_json doubling
+      ; "rows", Kit.Json.rows_json [ echo ]
+      ; "tape", tape
+      ; "frames", J.Bool true
+      ]
+  in
   check "T10 run finishes" (field "status" answer = Some (J.String "finished"));
   check "T10 the machine agrees" (field "machine" answer = Some (J.String "agrees"));
-  check "T10 the frames come when asked"
-    (match field "frames" answer with Some (J.Array fs) -> List.length fs = 6 | _ -> false);
-  check "T10 an unreadable program is an error"
-    (field "status" (line [ ("op", J.String "check"); ("program", J.Int 3) ]) = Some (J.String "error"));
-  let fork = Eff.WithFiber (ActionTerm.Fork (Eff.Succeed (Term.Lit (Lit.Nat 7)), { ForkOptions.start_immediately = false; daemon = false; mask_mode = MaskMode.Inherit })) in
-  let op name = [ ("op", J.String name); ("program", Kit.Json.program_json fork) ] in
-  check "T10 a forked program runs on the machine" (field "via" (line (op "run")) = Some (J.String "machine"));
-  check "T10 explore of a forked program answers its address outside the tree"
+  check
+    "T10 the frames come when asked"
+    (match field "frames" answer with
+     | Some (J.Array fs) -> List.length fs = 6
+     | _ -> false);
+  check
+    "T10 an unreadable program is an error"
+    (field "status" (line [ "op", J.String "check"; "program", J.Int 3 ])
+     = Some (J.String "error"));
+  let fork =
+    Eff.WithFiber
+      (ActionTerm.Fork
+         ( Eff.Succeed (Term.Lit (Lit.Nat 7))
+         , { ForkOptions.start_immediately = false
+           ; daemon = false
+           ; mask_mode = MaskMode.Inherit
+           } ))
+  in
+  let op name = [ "op", J.String name; "program", Kit.Json.program_json fork ] in
+  check
+    "T10 a forked program runs on the machine"
+    (field "via" (line (op "run")) = Some (J.String "machine"));
+  check
+    "T10 explore of a forked program answers its address outside the tree"
     (field "status" (line (op "explore")) = Some (J.String "outside"))
+;;
 
 let t11 () =
-  let add = A.row "Todos.add" ~request:Ty.String ~answer:(Ty.List Ty.String) ~error:Ty.String () in
+  let add =
+    A.row "Todos.add" ~request:Ty.String ~answer:(Ty.List Ty.String) ~error:Ty.String ()
+  in
   let app = Kit.app ~rows:[ add ] () in
-  let p = match A.build ~app A.(let* todos = perform "Todos.add" (str "milk") in
-                                 if_ (length todos < nat 2) ~then_:(succeed (length todos)) ~else_:(fail (str "full"))) with
-    | Ok e -> e | Error _ -> assert false in
+  let p =
+    match
+      A.build
+        ~app
+        A.(
+          let* todos = perform "Todos.add" (str "milk") in
+          if_
+            (length todos < nat 2)
+            ~then_:(succeed (length todos))
+            ~else_:(fail (str "full")))
+    with
+    | Ok e -> e
+    | Error _ -> assert false
+  in
   let replies = Kit.replies app 0 in
-  check "T11 every drawn reply fits its row" (List.for_all (fun ex -> Kit.reply_fault app 0 ex = None) replies);
+  check
+    "T11 every drawn reply fits its row"
+    (List.for_all (fun ex -> Kit.reply_fault app 0 ex = None) replies);
   match Kit.explore app ~budget:8 ~width:64 p with
   | Error _ -> check "T11 the program is in the tree" false
   | Ok paths ->
-    let exits = List.filter_map (fun (t : Kit.trace) -> match t.stop with Kit.Finished ex -> Some ex | _ -> None) paths in
-    check "T11 a path for each branch and each failure"
+    let exits =
+      List.filter_map
+        (fun (t : Kit.trace) ->
+           match t.stop with
+           | Kit.Finished ex -> Some ex
+           | _ -> None)
+        paths
+    in
+    check
+      "T11 a path for each branch and each failure"
       (List.length paths = List.length replies
-       && List.mem (Kit.succeed (Val.Nat 0)) exits && List.mem (Kit.succeed (Val.Nat 1)) exits
+       && List.mem (Kit.succeed (Val.Nat 0)) exits
+       && List.mem (Kit.succeed (Val.Nat 1)) exits
        && List.mem (Kit.fail (Val.Str "full")) exits);
-    check "T11 each path's tape replays it on the machine"
+    check
+      "T11 each path's tape replays it on the machine"
       (List.for_all (fun t -> Kit.replays app p t = Some true) paths)
+;;
 
 let () =
   let corpus = fixture () in
-  t1 (); t2 (); t3 corpus; t4 (); t5 corpus; t6 (); t7 (); t8 corpus; t9 (); t10 (); t11 ();
+  t1 ();
+  t2 ();
+  t3 corpus;
+  t4 ();
+  t5 corpus;
+  t6 ();
+  t7 ();
+  t8 corpus;
+  t9 ();
+  t10 ();
+  t11 ();
   Printf.printf "test_kit: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
+;;

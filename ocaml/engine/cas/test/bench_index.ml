@@ -26,6 +26,7 @@ let now () = Unix.gettimeofday ()
 
 let verdict name ok want =
   Printf.printf "  %-6s %s  (%s)\n%!" (if ok then "PASS" else "MISS") name want
+;;
 
 let digest_of i = E4_sha256.digest (Printf.sprintf "bench-%d" i)
 
@@ -69,16 +70,22 @@ let lookup_cell entries lookups =
   let st = E4_index.stats ix in
   Printf.printf
     "  %8d entries  build %6.3f s   slots %8d   %8d bytes (%.1f B/entry)   live_words +%d\n\
-    \             confirmed %10.0f lookups/s    unconfirmed %10.0f lookups/s   max_probe %d   \
-     confirm misses %d\n%!"
-    entries build st.E4_index.s_slots st.E4_index.s_bytes
+    \             confirmed %10.0f lookups/s    unconfirmed %10.0f lookups/s   max_probe \
+     %d   confirm misses %d\n\
+     %!"
+    entries
+    build
+    st.E4_index.s_slots
+    st.E4_index.s_bytes
     (float_of_int st.E4_index.s_bytes /. float_of_int entries)
     (w1 - w0)
     (float_of_int lookups /. dt)
     (float_of_int lookups /. dtu)
-    st.E4_index.s_max_probe st.E4_index.s_confirm_misses;
+    st.E4_index.s_max_probe
+    st.E4_index.s_confirm_misses;
   ignore (!acc + !acc2);
-  (float_of_int st.E4_index.s_bytes /. float_of_int entries, w1 - w0)
+  float_of_int st.E4_index.s_bytes /. float_of_int entries, w1 - w0
+;;
 
 (* ---------------------------------------------------------------- rebuild *)
 
@@ -94,7 +101,8 @@ let build_pack dir n node_bytes =
   let t0 = now () in
   for i = 0 to n - 1 do
     let nd =
-      E4_node.make ~version:0
+      E4_node.make
+        ~version:0
         ~kind:kinds.(i mod 4)
         ~spec:E4_node.zero_digest
         ~payload:(f_ctor 0 [ f_nat i; f_bytes filler ])
@@ -107,10 +115,14 @@ let build_pack dir n node_bytes =
   let e = E4_pack.pack_end w in
   let dt = now () -. t0 in
   E4_pack.close w;
-  Printf.printf "  built %d nodes of ~%d bytes in %.3f s (%.0f nodes/s, write path)\n%!" n
-    node_bytes dt
+  Printf.printf
+    "  built %d nodes of ~%d bytes in %.3f s (%.0f nodes/s, write path)\n%!"
+    n
+    node_bytes
+    dt
     (float_of_int n /. dt);
   e
+;;
 
 let rebuild_cell dir n node_bytes =
   let pack_end = build_pack dir n node_bytes in
@@ -119,7 +131,8 @@ let rebuild_cell dir n node_bytes =
   let t0 = now () in
   let ix, stop = E4_index.of_pack ~capacity:n rd ~from:E4_index.from_start in
   let dt = now () -. t0 in
-  Printf.printf "  R1 rebuild (kind from read_at)   %7.3f s  %10.0f nodes/s   entries %d   %s\n%!"
+  Printf.printf
+    "  R1 rebuild (kind from read_at)   %7.3f s  %10.0f nodes/s   entries %d   %s\n%!"
     dt
     (float_of_int n /. dt)
     (E4_index.count ix)
@@ -128,10 +141,15 @@ let rebuild_cell dir n node_bytes =
   let t0 = now () in
   let ix1b = E4_index.with_capacity ~capacity:n in
   let stop1b =
-    E4_index.rebuild ~kind_at:(E4_index.kind_at_of_dir ~dir) rd ~from:E4_index.from_start ix1b
+    E4_index.rebuild
+      ~kind_at:(E4_index.kind_at_of_dir ~dir)
+      rd
+      ~from:E4_index.from_start
+      ix1b
   in
   let dt1b = now () -. t0 in
-  Printf.printf "  R1b rebuild (kind_at_of_dir)     %7.3f s  %10.0f nodes/s   entries %d   %s\n%!"
+  Printf.printf
+    "  R1b rebuild (kind_at_of_dir)     %7.3f s  %10.0f nodes/s   entries %d   %s\n%!"
     dt1b
     (float_of_int n /. dt1b)
     (E4_index.count ix1b)
@@ -141,11 +159,18 @@ let rebuild_cell dir n node_bytes =
   let t0 = now () in
   let ix2 = E4_index.with_capacity ~capacity:n in
   let stop2 =
-    E4_index.rebuild ~kind_at:(fun _ ~seg ~off -> ignore seg; ignore off; Some E4_kind.Source)
-      rd ~from:E4_index.from_start ix2
+    E4_index.rebuild
+      ~kind_at:(fun _ ~seg ~off ->
+        ignore seg;
+        ignore off;
+        Some E4_kind.Source)
+      rd
+      ~from:E4_index.from_start
+      ix2
   in
   let dt2 = now () -. t0 in
-  Printf.printf "  R2 rebuild (header scan alone)   %7.3f s  %10.0f nodes/s   entries %d   %s\n%!"
+  Printf.printf
+    "  R2 rebuild (header scan alone)   %7.3f s  %10.0f nodes/s   entries %d   %s\n%!"
     dt2
     (float_of_int n /. dt2)
     (E4_index.count ix2)
@@ -159,10 +184,16 @@ let rebuild_cell dir n node_bytes =
   let t0 = now () in
   let loaded = E4_index.load_at ~path ~pack_end in
   let dtl = now () -. t0 in
-  Printf.printf "  R3 save %.3f s   load %.3f s   (%s)\n%!" dts dtl
-    (match loaded with Ok _ -> "loaded" | Error v -> E4_index.load_verdict_to_string v);
+  Printf.printf
+    "  R3 save %.3f s   load %.3f s   (%s)\n%!"
+    dts
+    dtl
+    (match loaded with
+     | Ok _ -> "loaded"
+     | Error v -> E4_index.load_verdict_to_string v);
   E4_pack.close_reader rd;
-  (float_of_int n /. dt, fast, float_of_int n /. dt2, dt1b)
+  float_of_int n /. dt, fast, float_of_int n /. dt2, dt1b
+;;
 
 (* ---------------------------------------------------------------- *)
 
@@ -171,20 +202,29 @@ let rec rm_rf p =
   | exception Unix.Unix_error _ -> ()
   | { Unix.st_kind = Unix.S_DIR; _ } ->
     Array.iter (fun n -> rm_rf (Filename.concat p n)) (Sys.readdir p);
-    (try Unix.rmdir p with Unix.Unix_error _ -> ())
-  | _ -> ( try Sys.remove p with Sys_error _ -> ())
+    (try Unix.rmdir p with
+     | Unix.Unix_error _ -> ())
+  | _ ->
+    (try Sys.remove p with
+     | Sys_error _ -> ())
+;;
 
 let () =
   let argv = Sys.argv in
   let dir =
-    if Array.length argv > 1 then argv.(1)
-    else
-      let base = try Sys.getenv "E4_INDEX_TMP" with Not_found -> Filename.get_temp_dir_name () in
-      Filename.concat base (Printf.sprintf "e4bench-index-%d" (Unix.getpid ()))
+    if Array.length argv > 1
+    then argv.(1)
+    else (
+      let base =
+        try Sys.getenv "E4_INDEX_TMP" with
+        | Not_found -> Filename.get_temp_dir_name ()
+      in
+      Filename.concat base (Printf.sprintf "e4bench-index-%d" (Unix.getpid ())))
   in
   let n = if Array.length argv > 2 then int_of_string argv.(2) else 100_000 in
   let node_bytes = if Array.length argv > 3 then int_of_string argv.(3) else 256 in
-  (try Unix.mkdir dir 0o755 with Unix.Unix_error _ -> ());
+  (try Unix.mkdir dir 0o755 with
+   | Unix.Unix_error _ -> ());
   Printf.printf "bench_index — %s\n%!" dir;
   Printf.printf "\n[lookups and memory]\n%!";
   let b1, w1 = lookup_cell 100_000 5_000_000 in
@@ -193,12 +233,18 @@ let () =
   let r1, r1b, r2, dt1b = rebuild_cell dir n node_bytes in
   Printf.printf "\n[verdicts against A2 §4.5]\n%!";
   verdict "B5a" (b2 <= 40.) "<= 40 bytes per node at 1e6 (the size A2 §6.4 measured)";
-  verdict "B5a'" (b1 <= 64.)
-    "<= 64 bytes per node at 1e5: a power-of-two slot count tracks n only to a factor of two";
+  verdict
+    "B5a'"
+    (b1 <= 64.)
+    "<= 64 bytes per node at 1e5: a power-of-two slot count tracks n only to a factor of \
+     two";
   verdict "B5b" (w1 <= 64 && w2 <= 64) "live_words growth <= 64";
   verdict "B4a" (r1b >= 1_000_000.) ">= 1 000 000 nodes/s, rebuild with kind_at_of_dir";
   verdict "B4b" (dt1b <= 1.5) "<= 1.5 s for 1 M nodes";
   verdict "B4c" (r2 >= 1_000_000.) ">= 1 000 000 nodes/s, header scan alone";
-  verdict "B4d" (r1 >= 1_000_000.)
+  verdict
+    "B4d"
+    (r1 >= 1_000_000.)
     ">= 1 000 000 nodes/s with the DEFAULT kind probe (read_at; O(bytes))";
   rm_rf dir
+;;

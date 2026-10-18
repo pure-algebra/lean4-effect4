@@ -28,7 +28,6 @@ type 'a t = (E4_memo.key * 'a) list
 
 (* Written out rather than `=`, so no polymorphic comparison appears in this file. *)
 let key_eq (a : E4_memo.key) (b : E4_memo.key) : bool = E4_memo.compare_key a b = 0
-
 let empty : 'a t = []
 
 let find_opt (p : E4_memo.key) (t : 'a t) : 'a option =
@@ -37,31 +36,39 @@ let find_opt (p : E4_memo.key) (t : 'a t) : 'a option =
     | (q, v) :: r -> if key_eq q p then Some v else go r
   in
   go t
+;;
 
 let mem (p : E4_memo.key) (t : 'a t) : bool =
-  match find_opt p t with Some _ -> true | None -> false
+  match find_opt p t with
+  | Some _ -> true
+  | None -> false
+;;
 
 (* Lean's insertEntry: `m.entries ++ [(layer, entry)]`, with no membership test (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean). *)
-let insert (p : E4_memo.key) (v : 'a) (t : 'a t) : 'a t = t @ [ (p, v) ]
+let insert (p : E4_memo.key) (v : 'a) (t : 'a t) : 'a t = t @ [ p, v ]
 
 (* Lean's updateEntry: `m.entries.map fun e => if e.1 = layer then (e.1, f e.2) else e`
    MemoWorld.updateEntry (src/Effect4/Machine/Stores.lean) — every matching entry, and a no-op when none matches. *)
 let update (p : E4_memo.key) (f : 'a -> 'a) (t : 'a t) : 'a t =
-  List.map (fun (q, v) -> if key_eq q p then (q, f v) else (q, v)) t
+  List.map (fun (q, v) -> if key_eq q p then q, f v else q, v) t
+;;
 
 (* Lean's deleteEntry: `m.entries.filter fun e => !(e.1 = layer)` MemoWorld.deleteEntry (src/Effect4/Machine/Stores.lean). *)
 let delete (p : E4_memo.key) (t : 'a t) : 'a t =
   List.filter (fun (q, _) -> not (key_eq q p)) t
+;;
 
 (* ML6: the observable projection — first binding per key, sorted by key. *)
 let bindings (t : 'a t) : (E4_memo.key * 'a) list =
   let rec dedupe seen = function
     | [] -> []
     | (q, v) :: r ->
-        if List.exists (fun s -> key_eq s q) seen then dedupe seen r
-        else (q, v) :: dedupe (q :: seen) r
+      if List.exists (fun s -> key_eq s q) seen
+      then dedupe seen r
+      else (q, v) :: dedupe (q :: seen) r
   in
   List.stable_sort (fun (a, _) (b, _) -> E4_memo.compare_key a b) (dedupe [] t)
+;;
 
 let cardinal (t : 'a t) : int = List.length (bindings t)
 
@@ -70,17 +77,29 @@ let raw (t : 'a t) : (E4_memo.key * 'a) list = t
 let raw_length (t : 'a t) : int = List.length t
 
 (* MemoWorld.lookup over list-backed entry tables (MemoWorld.lookup (src/Effect4/Machine/Stores.lean)); the same fuel. *)
-let lookup ~(parent : 'm -> int option) ~(id : 'm -> int) ~(entries : 'm -> 'a t)
-    (world : 'm list) (layer : E4_memo.key) (start : int) : (int * 'a) option =
+let lookup
+      ~(parent : 'm -> int option)
+      ~(id : 'm -> int)
+      ~(entries : 'm -> 'a t)
+      (world : 'm list)
+      (layer : E4_memo.key)
+      (start : int)
+  : (int * 'a) option
+  =
   let map_at (i : int) : 'm option = List.find_opt (fun m -> id m = i) world in
   let rec go (fuel : int) (i : int) : (int * 'a) option =
-    if fuel <= 0 then None
-    else
+    if fuel <= 0
+    then None
+    else (
       match map_at i with
       | None -> None
-      | Some m -> (
-          match find_opt layer (entries m) with
-          | Some e -> Some (i, e)
-          | None -> ( match parent m with None -> None | Some p -> go (fuel - 1) p))
+      | Some m ->
+        (match find_opt layer (entries m) with
+         | Some e -> Some (i, e)
+         | None ->
+           (match parent m with
+            | None -> None
+            | Some p -> go (fuel - 1) p)))
   in
   go (List.length world + 1) start
+;;

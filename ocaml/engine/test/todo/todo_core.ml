@@ -19,44 +19,65 @@
    C5  No function fails: the error type is the rows' error, which a host built over this core
        answers only through `native_todo.ml`'s fault hooks.               by construction *)
 
-type todo = { id : int; title : string; done_ : bool }
+type todo =
+  { id : int
+  ; title : string
+  ; done_ : bool
+  }
 
 (* The rows' error: the tag `SqlError`, written as this one constructor, and its message. *)
 type error = Sql_error of string
 
 (* The repository: the next id and the stored to-dos, in insertion order. *)
-type t = { next : int; items : todo list }
+type t =
+  { next : int
+  ; items : todo list
+  }
 
 let rec snoc (items : todo list) (item : todo) : todo list =
-  match items with [] -> [ item ] | x :: rest -> x :: snoc rest item
+  match items with
+  | [] -> [ item ]
+  | x :: rest -> x :: snoc rest item
+;;
 
 let rec find (id : int) (items : todo list) : todo option =
-  match items with [] -> None | x :: rest -> if x.id = id then Some x else find id rest
+  match items with
+  | [] -> None
+  | x :: rest -> if x.id = id then Some x else find id rest
+;;
 
 let rec mark (id : int) (d : bool) (items : todo list) : todo list =
   match items with
   | [] -> []
   | x :: rest -> (if x.id = id then { x with done_ = d } else x) :: mark id d rest
+;;
 
 let rec mem (id : int) (items : todo list) : bool =
-  match items with [] -> false | x :: rest -> x.id = id || mem id rest
+  match items with
+  | [] -> false
+  | x :: rest -> x.id = id || mem id rest
+;;
 
 let rec remove (id : int) (items : todo list) : todo list =
   match items with
   | [] -> []
   | x :: rest -> if x.id = id then remove id rest else x :: remove id rest
+;;
 
 let insert (title : string) (s : t) : (todo, error) result * t =
   let item = { id = s.next; title; done_ = false } in
-  (Ok item, { next = s.next + 1; items = snoc s.items item })
+  Ok item, { next = s.next + 1; items = snoc s.items item }
+;;
 
-let all (_ : unit) (s : t) : (todo list, error) result * t = (Ok s.items, s)
+let all (_ : unit) (s : t) : (todo list, error) result * t = Ok s.items, s
 
 let set_done (request : int * bool) (s : t) : (todo option, error) result * t =
   let id, d = request in
   match find id s.items with
-  | None -> (Ok None, s)
-  | Some x -> (Ok (Some { x with done_ = d }), { next = s.next; items = mark id d s.items })
+  | None -> Ok None, s
+  | Some x -> Ok (Some { x with done_ = d }), { next = s.next; items = mark id d s.items }
+;;
 
 let delete (id : int) (s : t) : (bool, error) result * t =
-  (Ok (mem id s.items), { next = s.next; items = remove id s.items })
+  Ok (mem id s.items), { next = s.next; items = remove id s.items }
+;;

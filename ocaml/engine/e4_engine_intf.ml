@@ -25,19 +25,19 @@ open Eff_types
 (* One submodule, so that `E4_engine` re-exports the two types with their constructors and
    fields (`include module type of struct include Alphabet end`) without a second copy. *)
 module Alphabet = struct
-  type frontier = {
-    parked : (int * int) list;  (** (fiber id, park guard token), ascending by fiber *)
-    armed : int list;           (** owners with an armed dispatcher, in arming order *)
-    due : int;                  (** resumes the deferred store owes right now *)
-  }
+  type frontier =
+    { parked : (int * int) list (** (fiber id, park guard token), ascending by fiber *)
+    ; armed : int list (** owners with an armed dispatcher, in arming order *)
+    ; due : int (** resumes the deferred store owes right now *)
+    }
 
   type answer =
     | Finished
     | Suspended of frontier
-    | Refused of string  (** the `Stuck` constructor, spelled *)
+    | Refused of string (** the `Stuck` constructor, spelled *)
     | Outside_profile of E4_clock.refusal
-        (** a value refused at a named crossing (D9); the input machine is retained *)
-    | Delay of frontier  (** the fuel ran out; the command residue is non-empty *)
+    (** a value refused at a named crossing (D9); the input machine is retained *)
+    | Delay of frontier (** the fuel ran out; the command residue is non-empty *)
 end
 
 include Alphabet
@@ -50,25 +50,31 @@ module type INSTANCE = sig
 
   (** The two payloads the projection does not descend into. *)
 
-  type nu  (** [Effect4.Program.EffName]; [eff_name] in ocaml/engine/api_engine.ml. *)
+  (** [Effect4.Program.EffName]; [eff_name] in ocaml/engine/api_engine.ml. *)
+  type nu
 
-  type s  (** [Effect4.Program.EffThunk]; [eff_thunk] in ocaml/engine/api_engine.ml. *)
+  (** [Effect4.Program.EffThunk]; [eff_thunk] in ocaml/engine/api_engine.ml. *)
+  type s
 
   (** The machine-side alphabet, transcribed from api_engine.ml. The program alphabet is
       `Eff_types`, opened here and by the generated engine. `ocamlopt` checks this transcription
       against every instance: a constructor added, dropped, renamed or re-ordered in the generated file is
       a compile error here. *)
 
-  type fiber_id = int  (* fiber_id (ocaml/engine/api_engine.ml) *)
+  type fiber_id = int (* fiber_id (ocaml/engine/api_engine.ml) *)
 
-  type stuck =  (* stuck (ocaml/engine/api_engine.ml) *)
+  type stuck =
+    (* stuck (ocaml/engine/api_engine.ml) *)
     | Stuck_unknownFiber of fiber_id
     | Stuck_unknownScope of int
     | Stuck_unknownRace of int
 
-  type parked = Parked_notParked | Parked_withGuard of int  (* parked (ocaml/engine/api_engine.ml) *)
+  type parked =
+    | Parked_notParked
+    | Parked_withGuard of int (* parked (ocaml/engine/api_engine.ml) *)
 
-  type observer =  (* observer (ocaml/engine/api_engine.ml) *)
+  type observer =
+    (* observer (ocaml/engine/api_engine.ml) *)
     | Observer_resumeAwait of fiber_id * int * ObserverMode.t
     | Observer_untrackChild of fiber_id
     | Observer_dropScopeFinalizer of int * int
@@ -76,18 +82,32 @@ module type INSTANCE = sig
     | Observer_raceCallback of int
     | Observer_callback of int
 
-  type scope_mode = ScopeMode_forkIn | ScopeMode_fiberRunIn  (* scope_mode (ocaml/engine/api_engine.ml) *)
-  type outcome = Outcome_finished | Outcome_frontier | Outcome_stuck of stuck  (* outcome (ocaml/engine/api_engine.ml) *)
-  type 'u service = { key : ServiceKey.t; value : 'u }  (* service (ocaml/engine/api_engine.ml) *)
-  type 'u context = 'u service list  (* context (ocaml/engine/api_engine.ml) *)
+  type scope_mode =
+    | ScopeMode_forkIn
+    | ScopeMode_fiberRunIn (* scope_mode (ocaml/engine/api_engine.ml) *)
 
-  type ctx = {  (* ctx (ocaml/engine/api_engine.ml) *)
-    services : Val.t context;
-    max_ops_before_yield : int;
-    prevent_yield : bool;
-  }
+  type outcome =
+    | Outcome_finished
+    | Outcome_frontier
+    | Outcome_stuck of stuck (* outcome (ocaml/engine/api_engine.ml) *)
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =  (* prim (ocaml/engine/api_engine.ml) *)
+  type 'u service =
+    { key : ServiceKey.t
+    ; value : 'u
+    }
+
+  (* service (ocaml/engine/api_engine.ml) *)
+  type 'u context = 'u service list (* context (ocaml/engine/api_engine.ml) *)
+
+  type ctx =
+    { (* ctx (ocaml/engine/api_engine.ml) *)
+      services : Val.t context
+    ; max_ops_before_yield : int
+    ; prevent_yield : bool
+    }
+
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =
+    (* prim (ocaml/engine/api_engine.ml) *)
     | Prim_success of 'b
     | Prim_failure of ('e, 'd, 'i, 'a) Cause.t
     | Prim_sync of 's
@@ -108,7 +128,8 @@ module type INSTANCE = sig
     | Prim_async of 'nu * bool * 'nu option
     | Prim_asyncFinalizer of 'nu
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =  (* frame_event (ocaml/engine/api_engine.ml) *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =
+    (* frame_event (ocaml/engine/api_engine.ml) *)
     | FrameEvent_popped of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
     | FrameEvent_ranContAll of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
     | FrameEvent_pushed of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
@@ -125,14 +146,19 @@ module type INSTANCE = sig
     | HandleKind_memoMap
     | HandleKind_external
 
-  type wake_key = { kind : handle_kind; index : int }
+  type wake_key =
+    { kind : handle_kind
+    ; index : int
+    }
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =  (* task (ocaml/engine/api_engine.ml) *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =
+    (* task (ocaml/engine/api_engine.ml) *)
     | Task_start of fiber_id
     | Task_resume of fiber_id * int * 'k
     | Task_wake of wake_key * int
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =  (* run_event (ocaml/engine/api_engine.ml) *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =
+    (* run_event (ocaml/engine/api_engine.ml) *)
     | RunEvent_forked of fiber_id * fiber_id * bool
     | RunEvent_started of fiber_id
     | RunEvent_scheduledTask of fiber_id * int * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
@@ -155,7 +181,8 @@ module type INSTANCE = sig
     | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) Exit.t
     | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) Exit.t
 
-  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =  (* run_decision (ocaml/engine/api_engine.ml) *)
+  type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =
+    (* run_decision (ocaml/engine/api_engine.ml) *)
     | RunDecision_fire of fiber_id
     | RunDecision_flush
     | RunDecision_evaluate of fiber_id
@@ -175,38 +202,48 @@ module type INSTANCE = sig
   type program = NativeOp.t Eff.t
 
   type event =
-    ( nu,
-      s,
-      Val.t,
-      Err.t,
-      Defect.t,
-      fiber_id,
-      unit,
-      ctx,
-      (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) prim,
-      (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_event )
-    run_event
+    ( nu
+      , s
+      , Val.t
+      , Err.t
+      , Defect.t
+      , fiber_id
+      , unit
+      , ctx
+      , (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) prim
+      , (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) frame_event )
+      run_event
 
   type api_decision = (nu, s, Val.t, Err.t, Defect.t, fiber_id, unit) run_decision
 
-  val api_evaluate : api_decision
   (** `Effect4.Api.evaluate`, the first row of `Api.run`'s tape. *)
+  val api_evaluate : api_decision
 
   (** The row table: the program's host rows, as `Api.Built` carries them; `[]` for a program
       with none. *)
   val interp_of : Row.t list -> program -> interp
+
   val prepare : Row.t list -> program -> prepared
   val load : program -> fuel:int -> machine
   val step : prepared -> fuel:int -> machine -> api_decision -> machine * bool
   val run_api : Row.t list -> program -> fuel:int -> outcome * machine
+
   (* Lean's checked replay asks this before each decision (`Effect4.Program.admit`): a stale
      token, a call that is not a host row's, a wrong answer type, a dead handle or a reserved
      defect is refused. `true` when the decision is admitted. *)
   val admit : prepared -> machine -> api_decision -> bool
+
   (* The calls the machine waits on (`Effect4.Program.awaits`): each parked fiber's token, its
      operation and its request. A host driver answers the host rows among them. *)
-  type await = { fiber : fiber_id; token : int; op : NativeOp.t; request : Val.t }
+  type await =
+    { fiber : fiber_id
+    ; token : int
+    ; op : NativeOp.t
+    ; request : Val.t
+    }
+
   val program_awaits : machine -> await list
+
   (* An exit as a value (`Effect4.Machine.exitImage`), as Lean's `reifyExitVal` writes it. *)
   val reify_exit_val : (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t -> Val.t
 
@@ -223,8 +260,11 @@ module type INSTANCE = sig
   val race_count : machine -> int
   val middleware : machine -> bool
   val finished : machine -> bool
-  val completed_exits :
-    machine -> (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list
+
+  val completed_exits
+    :  machine
+    -> (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list
+
   val refs : machine -> Val.t list
   val next_name : machine -> int
   val due_count : machine -> int
@@ -265,12 +305,16 @@ module type ENGINE = sig
   val fire : int -> decision
   val yield_verdict : int -> bool -> decision
 
-  val answer_async_success : int -> int -> int -> decision
   (** [answer_async_success fiber token n] answers the parked token with
       `Completion.ofExit (Exit.success (Val.nat n))`.
       @raise E4_clock.Profile_refusal at [Reply] for a negative or out-of-profile natural. *)
+  val answer_async_success : int -> int -> int -> decision
 
-  val answer_async : int -> int -> (Val.t, Err.t, Defect.t, int, unit) Completion.t -> decision
+  val answer_async
+    :  int
+    -> int
+    -> (Val.t, Err.t, Defect.t, int, unit) Completion.t
+    -> decision
   (* [answer_async fiber token c] answers the parked token with the completion [c], a success or a
      failure, after the host-ingress check (EN9). *)
 
@@ -281,24 +325,25 @@ module type ENGINE = sig
      @raise E4_clock.Profile_refusal at [Reply] for an out-of-profile natural or a string that
      is not valid UTF-8 inside [v]. *)
 
-  val answer_async_float : int -> int -> float -> decision
   (** Answers with the exact IEEE-754 bit pattern when it fits [Val.Float]'s carrier.
       @raise E4_clock.Profile_refusal at [Reply] before conversion when those bits do not fit. *)
+  val answer_async_float : int -> int -> float -> decision
 
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
   val advance : int -> decision
-  val advance_exact : E4_clock.t -> decision
+
   (** Exact logical milliseconds. [advance] promotes a nonnegative host integer;
       [advance_exact] also accepts values above the host integer range. *)
+  val advance_exact : E4_clock.t -> decision
 
   (** {2 Loading} *)
 
-  val compile : Eff_wire.program -> program
   (** The program, its natural literals checked against the selected profile. The program type
       is `Eff_types`', which the LCNF route declares once for every instance.
       @raise E4_clock.Profile_refusal at [Literal] for a negative or out-of-profile natural
       literal. *)
+  val compile : Eff_wire.program -> program
 
   val of_bytes : string -> program option
 
@@ -311,45 +356,46 @@ module type ENGINE = sig
   (** {2 Driving} *)
 
   val step : t -> decision -> t
+
   (* Whether Lean's checked replay (`Api.replayChecked`) admits the decision here, at the
      program's row table. `step` applies a decision either way, as `Api.replay` does; a host
      driver asks `admits` first, so a reply that does not fit its row is refused. *)
   val admits : t -> decision -> bool
 
-  val replay : t -> decision list -> t
   (** `Api.replay`'s machine (replay (src/Effect4/Api.lean)): decisions are applied until the replay stops
       (EN4), and the rest of the tape is never read. *)
+  val replay : t -> decision list -> t
 
-  val replay_to : t -> decision list -> t * decision list
   (** {!replay} beside the decisions it did NOT read: `([], …)` when the tape was spent, and
       otherwise the suffix that begins at the position the replay stopped at.  When the
       machine is stuck (`answer` = {!Refused}) the head of that suffix is the REFUSED decision
       -- Lean answers `ReplayResult.stuck why m` without applying it -- and the position of
       the refusal is `List.length tape - List.length residue`.  When the fuel ran out
       (`answer` = {!Delay}) the head is simply the next unread decision. *)
+  val replay_to : t -> decision list -> t * decision list
 
-  val replay_steps : t -> decision list -> t Seq.t
   (** THE TAPE AXIS (EN4): `|tape| + 1` machines, the initial one first, position i equal to
       {!replay} of the first i decisions.  Past the stop the machine is PHYSICALLY the halted
       one — `a == b` is how a caller tells a repetition from a step — so a caller counting
       the positions a RUN has must use {!replay_positions} or {!replay_to} and not the length
       of this sequence (EN4b, lane P6's finding F1). *)
+  val replay_steps : t -> decision list -> t Seq.t
 
-  val replay_positions : t -> decision list -> t Seq.t
   (** THE RUN AXIS (EN4b): the machines the replay actually visits, the initial one first,
       ending at the position `replayEval` stops in and repeating nothing.  It is
       `replay_steps` truncated to `|tape| - |residue| + 1` machines, and equal to it when the
       tape is spent. *)
+  val replay_positions : t -> decision list -> t Seq.t
 
-  val drive : t -> t
   (** `Api.run`'s tape, `[evaluate root; flush]` (run (src/Effect4/Api.lean)). *)
+  val drive : t -> t
 
   val run : ?table:Row.t list -> Eff_wire.program -> fuel:int -> t
   val run_program : ?table:Row.t list -> program -> fuel:int -> t
 
-  val api_run : ?table:Row.t list -> program -> fuel:int -> string
   (** The GENERATED `Effect4.Api.run`, unwrapped, answering only its outcome: the W1 bench
       cell, and the oracle {!run} is checked against. *)
+  val api_run : ?table:Row.t list -> program -> fuel:int -> string
 
   (** {2 Reading -- every row free} *)
 
@@ -358,8 +404,10 @@ module type ENGINE = sig
   val exits : t -> (int * string) list
   val root_exit : t -> string option
   val root_exit_of : t -> (Val.t, Err.t, Defect.t, int, unit) Exit.t option
+
   (* The root's exit itself, as Lean's `Run.exit` answers it; `root_exit` renders it. *)
   val host_calls : t -> (int * int * int * Val.t) list
+
   (* The host calls the machine waits on: (fiber, token, the row's external position, request),
      in the order of `Effect4.Program.awaits`. *)
   val fiber_rows : t -> (int * string) list
@@ -367,8 +415,8 @@ module type ENGINE = sig
   val trace_rows : t -> string list
   val trace_length : t -> int
 
-  val refs : t -> string list
   (** The ref heap, ascending by cell key. *)
+  val refs : t -> string list
 
   val store_row : t -> string
   val snapshot : t -> t
@@ -378,11 +426,12 @@ end
 (** {1 E4_engine's interface} *)
 
 module type E4_engine = sig
-  include module type of struct include Alphabet end
+  include module type of struct
+    include Alphabet
+  end
 
   (** {1 A host's answer at ingress} *)
 
-  val check_answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t -> unit
   (** EN9: every natural of a host's answer ([Api.HostSession.Answer], src/Effect4/Api/HostSession.lean)
       through [E4_clock.check_nat Reply]: [Val.nat], a [Val.ctor] index, a [Val.handle] key, a
       [Val.negInt] magnitude, [Err.tag], [Defect.user], an interrupting fiber and a [RefKey].
@@ -390,18 +439,19 @@ module type E4_engine = sig
       strings of [Err.tagged], [Err.text] and each annotation's key. Raises
       [E4_clock.Profile_refusal] at [Reply] at the first natural outside the profile or the first
       string that is not valid UTF-8. The byte and bit-pattern fields are not read here. *)
+  val check_answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t -> unit
 
   module type INSTANCE = INSTANCE
   module type ENGINE = ENGINE
 
   module Make (I : INSTANCE) : ENGINE with type program = I.program
 
-  module Fast : ENGINE
   (** {!Make} of `Api_engine_inst`: the generated engine over the substituted carriers,
       `E4_instance.Make (E4_table) (E4_trace) (E4_memo) (E4_buckets) (E4_ppath) (E4_env)
       (E4_fibers_view)`. *)
+  module Fast : ENGINE
 
-  module Ref : ENGINE
   (** {!Make} of `Api_engine_ref`: the same generated bodies over Lean's own carriers, the
       seven list twins given to `E4_instance.Make`. *)
+  module Ref : ENGINE
 end

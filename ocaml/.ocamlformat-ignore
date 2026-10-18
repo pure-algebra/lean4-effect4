@@ -1,0 +1,40 @@
+# GENERATED files: each is rewritten by its producer (docs/GENERATED.md), so the formatter leaves it as
+# printed. A new generated output joins this list.
+eff/eff_ctors.ml
+eff/eff_json.ml
+eff/eff_layout.ml
+eff/eff_native.ml
+eff/eff_subterm.ml
+eff/eff_types.ml
+eff/eff_types.mli
+eff/eff_wire.ml
+engine/api_engine.ml
+engine/api_engine.mli
+engine/cas/e4_admission.ml
+engine/cas/e4_admission.mli
+engine/cas/e4_kind.ml
+engine/cas/e4_kind.mli
+engine/cas/e4_result.ml
+engine/cas/e4_result.mli
+engine/cas/e4_root_policy.ml
+engine/cas/e4_root_policy.mli
+engine/test/api_gen_inst.ml
+engine/test/ctors/ctors_gen.ml
+engine/test/ctors/ctors_gen.mli
+engine/test/modeled/modeled_gen.ml
+engine/test/modeled/modeled_gen.mli
+engine/test/rocq/rocq_gen.ml
+engine/test/rocq/rocq_gen.mli
+engine/test/rocq/rocq_run.ml
+engine/test/rocq/rocq_run.mli
+engine/test/todo/todo_gen.ml
+engine/test/todo/todo_gen.mli
+gen/api_check.ml
+gen/api_gen.ml
+gen/api_gen.mli
+gen/facade/effect4.ml
+gen/facade/effect4.mli
+tools/typed_lint/test/generated.ml
+# Lint fixtures: their .expected files pin line and column positions, so their layout is data.
+tools/typed_lint/test/red.ml
+tools/typed_lint/test/raise.ml

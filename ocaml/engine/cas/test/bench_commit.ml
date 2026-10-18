@@ -15,18 +15,28 @@ let () =
   ignore (get (E4_disk.commit disk (transaction [ schema ] [])));
   let times = Array.make n 0.0 in
   for i = 0 to n - 1 do
-    let fresh = node E4_kind.Export (E4_addr.Addr.bytes s) (vstr (Printf.sprintf "node-%d" i)) in
+    let fresh =
+      node E4_kind.Export (E4_addr.Addr.bytes s) (vstr (Printf.sprintf "node-%d" i))
+    in
     let start = Unix.gettimeofday () in
     ignore (get (E4_disk.commit disk (transaction [ fresh ] [])));
     times.(i) <- (Unix.gettimeofday () -. start) *. 1000.0
   done;
   let mean lo hi =
     let sum = ref 0.0 in
-    for i = lo to hi - 1 do sum := !sum +. times.(i) done;
+    for i = lo to hi - 1 do
+      sum := !sum +. times.(i)
+    done;
     !sum /. float_of_int (hi - lo)
   in
   let block = min 100 n in
-  Printf.printf "commits %d: first %d mean %.3f ms, last %d mean %.3f ms\n" n block (mean 0 block) block
+  Printf.printf
+    "commits %d: first %d mean %.3f ms, last %d mean %.3f ms\n"
+    n
+    block
+    (mean 0 block)
+    block
     (mean (n - block) n);
   E4_disk.close disk;
   remove directory
+;;

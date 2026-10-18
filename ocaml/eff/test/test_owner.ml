@@ -24,6 +24,7 @@ let failures = ref 0
 let check name ok =
   Printf.printf "%s  %s\n" (if ok then "PASS" else "FAIL") name;
   if not ok then incr failures
+;;
 
 let rec size_eff : 'op. 'op Eff.t -> int = function
   | Eff.Gen ss -> 1 + size_stmts ss
@@ -40,29 +41,37 @@ and size_stmt : 'op. 'op Stmt.t -> int = function
   | Stmt.IfElse (_, a, b) -> 1 + size_stmts a + size_stmts b
   | Stmt.WhileTrue b -> 1 + size_stmts b
   | Stmt.Ret _ | Stmt.BreakLoop -> 1
+;;
 
 let nat n = Term.Lit (Lit.Nat n)
-
 let body () : 'op Stmts.t = Stmts.Cons (Stmt.Ret (nat 1), Stmts.Nil)
 
 let program op : 'op Eff.t =
   Eff.Gen (Stmts.Cons (Stmt.BindYield (Eff.Perform (op, nat 0)), body ()))
+;;
 
 let () =
   let native : NativeOp.t Eff.t = program NativeOp.ClockNow in
   let named : string Eff.t = program "row" in
-  check "O1 one traversal at NativeOp.t and at string, 'op kept" (size_eff native = 3 && size_eff named = 3);
-  check "O2 the constructor tables name Ty.Never and Eff.Succeed by the Lean names"
-    (Eff_ctors.ctor_name_ty Ty.Never = "never" && Eff_ctors.ctor_name_eff (Eff.Succeed (nat 0)) = "succeed");
+  check
+    "O1 one traversal at NativeOp.t and at string, 'op kept"
+    (size_eff native = 3 && size_eff named = 3);
+  check
+    "O2 the constructor tables name Ty.Never and Eff.Succeed by the Lean names"
+    (Eff_ctors.ctor_name_ty Ty.Never = "never"
+     && Eff_ctors.ctor_name_eff (Eff.Succeed (nat 0)) = "succeed");
   let bytes = Eff_wire.encode_program native in
-  check "O3 a program built here reads back to the same bytes"
+  check
+    "O3 a program built here reads back to the same bytes"
     (match Eff_wire.decode_program_exact bytes with
      | Some p -> Eff_wire.encode_program p = bytes
      | None -> false);
   let key = { ServiceKey.name = 1; service = 2 } in
   let key_bytes = Eff_wire.encode_service_key key in
-  check "O3 a record of the owner by its fields reads back"
+  check
+    "O3 a record of the owner by its fields reads back"
     (match Eff_wire.decode_service_key_exact key_bytes with
      | Some k -> k.ServiceKey.name = 1 && k.ServiceKey.service = 2
      | None -> false);
   if !failures > 0 then exit 1
+;;

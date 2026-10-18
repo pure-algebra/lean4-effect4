@@ -26,18 +26,20 @@ let escape (b : Buffer.t) (s : string) : unit =
   Buffer.add_char b '"';
   String.iter
     (fun c ->
-      match c with
-      | '"' -> Buffer.add_string b "\\\""
-      | '\\' -> Buffer.add_string b "\\\\"
-      | '\n' -> Buffer.add_string b "\\n"
-      | '\r' -> Buffer.add_string b "\\r"
-      | '\t' -> Buffer.add_string b "\\t"
-      | '\b' -> Buffer.add_string b "\\b"
-      | '\012' -> Buffer.add_string b "\\f"
-      | c when Char.code c < 0x20 -> Buffer.add_string b (Printf.sprintf "\\u%04x" (Char.code c))
-      | c -> Buffer.add_char b c)
+       match c with
+       | '"' -> Buffer.add_string b "\\\""
+       | '\\' -> Buffer.add_string b "\\\\"
+       | '\n' -> Buffer.add_string b "\\n"
+       | '\r' -> Buffer.add_string b "\\r"
+       | '\t' -> Buffer.add_string b "\\t"
+       | '\b' -> Buffer.add_string b "\\b"
+       | '\012' -> Buffer.add_string b "\\f"
+       | c when Char.code c < 0x20 ->
+         Buffer.add_string b (Printf.sprintf "\\u%04x" (Char.code c))
+       | c -> Buffer.add_char b c)
     s;
   Buffer.add_char b '"'
+;;
 
 let rec write (b : Buffer.t) (v : t) : unit =
   match v with
@@ -48,20 +50,26 @@ let rec write (b : Buffer.t) (v : t) : unit =
   | String s -> escape b s
   | Array xs ->
     Buffer.add_char b '[';
-    List.iteri (fun i x -> if i > 0 then Buffer.add_char b ','; write b x) xs;
+    List.iteri
+      (fun i x ->
+         if i > 0 then Buffer.add_char b ',';
+         write b x)
+      xs;
     Buffer.add_char b ']'
   | Object kvs ->
     Buffer.add_char b '{';
     List.iteri
       (fun i (k, x) ->
-        if i > 0 then Buffer.add_char b ',';
-        escape b k;
-        Buffer.add_char b ':';
-        write b x)
+         if i > 0 then Buffer.add_char b ',';
+         escape b k;
+         Buffer.add_char b ':';
+         write b x)
       kvs;
     Buffer.add_char b '}'
+;;
 
 let render (v : t) : string =
   let b = Buffer.create 256 in
   write b v;
   Buffer.contents b
+;;

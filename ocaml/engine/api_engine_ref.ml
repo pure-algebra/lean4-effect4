@@ -20,7 +20,15 @@
    E4_fibers_view_list -- whose completed is Lean's filterMap WALK, not a maintained view, so
    Ref vs Fast is exactly the question lane G3's view has to answer. *)
 
-include E4_instance.Make (E4_table_list) (E4_trace_list) (E4_memo_list) (E4_buckets_list) (E4_ppath_list) (E4_env_list) (E4_fibers_view_list)
+include
+  E4_instance.Make (E4_table_list) (E4_trace_list) (E4_memo_list) (E4_buckets_list)
+    (E4_ppath_list)
+    (E4_env_list)
+    (E4_fibers_view_list)
 
 let name = "Ref"
-let carriers = "E4_table_list / E4_trace_list / E4_memo_list / E4_buckets_list / E4_ppath_list / E4_env_list / E4_fibers_view_list"
+
+let carriers =
+  "E4_table_list / E4_trace_list / E4_memo_list / E4_buckets_list / E4_ppath_list / \
+   E4_env_list / E4_fibers_view_list"
+;;

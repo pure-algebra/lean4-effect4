@@ -46,29 +46,34 @@ let check name ok =
   incr checks;
   Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
   if not ok then incr failures
+;;
 
 (* ================================================================ the fixture's text *)
 
-type run = {
-  name : string;
-  fuel : int;
-  tape : string list;  (* the decisions, one word each; empty for the engine's own drive loop *)
-  program : string;
-  exit_text : string;
-}
+type run =
+  { name : string
+  ; fuel : int
+  ; tape : string list
+    (* the decisions, one word each; empty for the engine's own drive loop *)
+  ; program : string
+  ; exit_text : string
+  }
 
 let words (line : string) : string list =
   List.filter (fun w -> w <> "") (String.split_on_char ' ' line)
+;;
 
 let bytes_of_hex (hex : string) : string =
   match E4_hex.to_bytes hex with
   | Some b -> b
   | None -> failwith "fixture: the program is not hexadecimal"
+;;
 
 (* The text after a line's first word and one space. *)
 let after_word (line : string) (word : string) : string =
   let n = String.length word + 1 in
   String.sub line n (String.length line - n)
+;;
 
 (* The fixture into its runs.  Any line this reader does not know is a failure: a fixture is
    never read loosely. *)
@@ -77,7 +82,9 @@ let read_fixture (path : string) : run list =
   let rec lines acc =
     match input_line ic with
     | line -> lines (line :: acc)
-    | exception End_of_file -> close_in ic; List.rev acc
+    | exception End_of_file ->
+      close_in ic;
+      List.rev acc
   in
   let rec runs acc = function
     | [] -> List.rev acc
@@ -98,22 +105,24 @@ let read_fixture (path : string) : run list =
        | "tape" :: (_ :: _ as decisions) -> body { r with tape = decisions } rest
        | [ "program"; hex ] -> body { r with program = bytes_of_hex hex } rest
        | "exit" :: _ -> body { r with exit_text = after_word line "exit" } rest
-       | [ "end" ] -> (r, rest)
-       | _ -> failwith (Printf.sprintf "fixture %s: run %s, unknown line %S" path r.name line))
+       | [ "end" ] -> r, rest
+       | _ ->
+         failwith (Printf.sprintf "fixture %s: run %s, unknown line %S" path r.name line))
   in
   runs [] (lines [])
+;;
 
 (* ================================================================ one report per run *)
 
-type report = {
-  outcome : string;
-  root : string option;
-  exits : (int * string) list;
-  fibers : (int * string) list;
-  trace : string list;
-  store : string;
-  unread : int;  (* the decisions of the tape that the replay did not read *)
-}
+type report =
+  { outcome : string
+  ; root : string option
+  ; exits : (int * string) list
+  ; fibers : (int * string) list
+  ; trace : string list
+  ; store : string
+  ; unread : int (* the decisions of the tape that the replay did not read *)
+  }
 
 module Rep (En : E4_engine.ENGINE) = struct
   (* One decision of a fixture's tape.  A word this reader does not know is a failure. *)
@@ -124,6 +133,7 @@ module Rep (En : E4_engine.ENGINE) = struct
     | [ "yieldVerdict"; fiber; verdict ] ->
       En.yield_verdict (int_of_string fiber) (bool_of_string verdict)
     | _ -> failwith (Printf.sprintf "fixture: unknown decision %S" word)
+  ;;
 
   (* The program from its bytes.  With no tape: the engine's own drive loop.  With a tape:
      that tape replayed from the loaded machine. *)
@@ -133,17 +143,20 @@ module Rep (En : E4_engine.ENGINE) = struct
     | Some p ->
       let t, unread =
         match tape with
-        | [] -> (En.run_program p ~fuel, [])
-        | decisions -> En.replay_to (En.load_program p ~fuel) (List.map decision decisions)
+        | [] -> En.run_program p ~fuel, []
+        | decisions ->
+          En.replay_to (En.load_program p ~fuel) (List.map decision decisions)
       in
       Some
-        { outcome = En.outcome t;
-          root = En.root_exit t;
-          exits = En.exits t;
-          fibers = En.fiber_rows t;
-          trace = En.trace_rows t;
-          store = En.store_row t;
-          unread = List.length unread }
+        { outcome = En.outcome t
+        ; root = En.root_exit t
+        ; exits = En.exits t
+        ; fibers = En.fiber_rows t
+        ; trace = En.trace_rows t
+        ; store = En.store_row t
+        ; unread = List.length unread
+        }
+  ;;
 end
 
 module RF = Rep (E4_engine.Fast)
@@ -151,12 +164,15 @@ module RR = Rep (E4_engine.Ref)
 
 let find_fixture () : string =
   let candidates =
-    [ "semaphore.txt"; "engine/test/semaphore/semaphore.txt";
-      "ocaml/engine/test/semaphore/semaphore.txt" ]
+    [ "semaphore.txt"
+    ; "engine/test/semaphore/semaphore.txt"
+    ; "ocaml/engine/test/semaphore/semaphore.txt"
+    ]
   in
   match List.find_opt Sys.file_exists candidates with
   | Some path -> path
   | None -> failwith "semaphore.txt not found from the cwd"
+;;
 
 (* The fixture's runs, in the order Lean writes them
    (Test.Program.SemaphoreScenarios.engineRuns). *)
@@ -171,9 +187,11 @@ let without_verdict (tape : string list) : string list =
   List.map
     (fun word ->
        match String.split_on_char ':' word with
-       | [ "yieldVerdict"; fiber; _ ] -> String.concat ":" [ "yieldVerdict"; fiber; "false" ]
+       | [ "yieldVerdict"; fiber; _ ] ->
+         String.concat ":" [ "yieldVerdict"; fiber; "false" ]
        | _ -> word)
     tape
+;;
 
 let () =
   let runs = read_fixture (find_fixture ()) in
@@ -182,81 +200,113 @@ let () =
     (List.map (fun (r : run) -> r.name) runs = expected_names);
   List.iter
     (fun (r : run) ->
-       Printf.printf "== run %s: %d bytes, fuel %d, tape [%s] ==\n" r.name
-         (String.length r.program) r.fuel (String.concat " " r.tape);
+       Printf.printf
+         "== run %s: %d bytes, fuel %d, tape [%s] ==\n"
+         r.name
+         (String.length r.program)
+         r.fuel
+         (String.concat " " r.tape);
        match
-         (RF.report r.program ~fuel:r.fuel ~tape:r.tape,
-          RR.report r.program ~fuel:r.fuel ~tape:r.tape)
+         ( RF.report r.program ~fuel:r.fuel ~tape:r.tape
+         , RR.report r.program ~fuel:r.fuel ~tape:r.tape )
        with
        | Some fast, Some slow ->
          check (r.name ^ ": S1 the program's bytes decode on both instances") true;
          check (r.name ^ ": S2 Fast finishes") (fast.outcome = "finished");
          check (r.name ^ ": S2 Ref finishes") (slow.outcome = "finished");
-         Printf.printf "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n" r.exit_text
-           (Option.value fast.root ~default:"-") (Option.value slow.root ~default:"-");
-         check (r.name ^ ": S2 Fast's root exit is the exit Lean wrote") (fast.root = Some r.exit_text);
-         check (r.name ^ ": S2 Ref's root exit is the exit Lean wrote") (slow.root = Some r.exit_text);
-         check (r.name ^ ": S3 Fast = Ref: outcome, exits, fibers, trace, store") (fast = slow);
+         Printf.printf
+           "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n"
+           r.exit_text
+           (Option.value fast.root ~default:"-")
+           (Option.value slow.root ~default:"-");
+         check
+           (r.name ^ ": S2 Fast's root exit is the exit Lean wrote")
+           (fast.root = Some r.exit_text);
+         check
+           (r.name ^ ": S2 Ref's root exit is the exit Lean wrote")
+           (slow.root = Some r.exit_text);
+         check
+           (r.name ^ ": S3 Fast = Ref: outcome, exits, fibers, trace, store")
+           (fast = slow);
          (* S4: a program cut by one byte is refused *)
          let cut = String.sub r.program 0 (String.length r.program - 1) in
-         check (r.name ^ ": S4 a program cut by one byte is refused on both instances")
+         check
+           (r.name ^ ": S4 a program cut by one byte is refused on both instances")
            (RF.report cut ~fuel:r.fuel ~tape:r.tape = None
             && RR.report cut ~fuel:r.fuel ~tape:r.tape = None);
          (* S4: at a small fuel the run does not finish *)
          (match
-            (RF.report r.program ~fuel:small_fuel ~tape:r.tape,
-             RR.report r.program ~fuel:small_fuel ~tape:r.tape)
+            ( RF.report r.program ~fuel:small_fuel ~tape:r.tape
+            , RR.report r.program ~fuel:small_fuel ~tape:r.tape )
           with
           | Some f, Some s ->
             check
-              (Printf.sprintf "%s: S4 at fuel %d neither instance finishes, and none has a root exit"
-                 r.name small_fuel)
-              (f.outcome <> "finished" && s.outcome <> "finished" && f.root = None && s.root = None)
+              (Printf.sprintf
+                 "%s: S4 at fuel %d neither instance finishes, and none has a root exit"
+                 r.name
+                 small_fuel)
+              (f.outcome <> "finished"
+               && s.outcome <> "finished"
+               && f.root = None
+               && s.root = None)
           | _ -> check (r.name ^ ": S4 the program decodes at the small fuel") false);
          (* S5: a run with a tape *)
-         if r.tape <> [] then begin
-           check (r.name ^ ": S5 the tape is spent on both instances: no decision is unread")
+         if r.tape <> []
+         then (
+           check
+             (r.name ^ ": S5 the tape is spent on both instances: no decision is unread")
              (fast.unread = 0 && slow.unread = 0);
            let first = List.hd runs in
            (match
-              (RF.report r.program ~fuel:r.fuel ~tape:[], RR.report r.program ~fuel:r.fuel ~tape:[])
+              ( RF.report r.program ~fuel:r.fuel ~tape:[]
+              , RR.report r.program ~fuel:r.fuel ~tape:[] )
             with
             | Some f, Some s ->
               check
                 (r.name
-                 ^ ": S5 under the engine's own drive loop the program gives the first run's exit, not its own")
-                (f.root = Some first.exit_text && s.root = Some first.exit_text
+                 ^ ": S5 under the engine's own drive loop the program gives the first \
+                    run's exit, not its own")
+                (f.root = Some first.exit_text
+                 && s.root = Some first.exit_text
                  && first.exit_text <> r.exit_text)
             | _ -> check (r.name ^ ": S5 the program decodes with no tape") false);
-           (match
-              (RF.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape),
-               RR.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape))
-            with
-            | Some f, Some s ->
-              check
-                (r.name
-                 ^ ": S5 with the verdict false the tape gives the first run's exit, not its own")
-                (f.root = Some first.exit_text && s.root = Some first.exit_text
-                 && f.unread = 0 && s.unread = 0)
-            | _ -> check (r.name ^ ": S5 the program decodes with the other verdict") false)
-         end
+           match
+             ( RF.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape)
+             , RR.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape) )
+           with
+           | Some f, Some s ->
+             check
+               (r.name
+                ^ ": S5 with the verdict false the tape gives the first run's exit, not \
+                   its own")
+               (f.root = Some first.exit_text
+                && s.root = Some first.exit_text
+                && f.unread = 0
+                && s.unread = 0)
+           | _ -> check (r.name ^ ": S5 the program decodes with the other verdict") false)
        | _ -> check (r.name ^ ": S1 the program's bytes decode on both instances") false)
     runs;
   (* S4: the three runs answer three exits, so each run's check can fail. *)
   (match runs with
    | [ a; b; c ] ->
-     check "S4 the three runs' exits are three texts"
-       (a.exit_text <> b.exit_text && a.exit_text <> c.exit_text && b.exit_text <> c.exit_text);
-     check "S4 the first and the last run hold one program, under two tapes"
+     check
+       "S4 the three runs' exits are three texts"
+       (a.exit_text <> b.exit_text
+        && a.exit_text <> c.exit_text
+        && b.exit_text <> c.exit_text);
+     check
+       "S4 the first and the last run hold one program, under two tapes"
        (a.program = c.program && a.tape <> c.tape);
      (match
-        (RF.report a.program ~fuel:a.fuel ~tape:a.tape,
-         RR.report a.program ~fuel:a.fuel ~tape:a.tape)
+        ( RF.report a.program ~fuel:a.fuel ~tape:a.tape
+        , RR.report a.program ~fuel:a.fuel ~tape:a.tape )
       with
       | Some fast, Some slow ->
-        check "S4 the first run's exit is not the second run's, on both instances"
+        check
+          "S4 the first run's exit is not the second run's, on both instances"
           (fast.root <> Some b.exit_text && slow.root <> Some b.exit_text)
       | _ -> check "S4 the first run decodes" false)
    | _ -> check "S4 three runs to compare" false);
   Printf.printf "test_semaphore: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
+;;

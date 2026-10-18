@@ -31,7 +31,6 @@
         ./_build/default/engine/test/bench_query.exe *)
 
 open Effect4_engine
-
 module E = Eff_types
 module F = E4_engine.Fast
 module S = E4_diff.Of (E4_engine.Fast)
@@ -51,6 +50,7 @@ let best k f =
     if t1 -. t0 < !b then b := t1 -. t0
   done;
   !b *. 1000.
+;;
 
 let rate ops ms = float_of_int ops /. (ms /. 1000.)
 
@@ -58,17 +58,31 @@ let cell name what ~ms ~ops ~unit_ ~floor =
   let r = rate ops ms in
   let ok = r >= floor in
   if not ok then incr below;
-  Printf.printf "%-7s %-36s %9.3f ms %12.0f %-12s floor %10.0f  %s\n%!" name what ms r unit_
+  Printf.printf
+    "%-7s %-36s %9.3f ms %12.0f %-12s floor %10.0f  %s\n%!"
+    name
+    what
+    ms
+    r
+    unit_
     floor
     (if ok then "PASS" else "FAIL")
+;;
 
 let note name what ~ms ~ops ~unit_ =
-  Printf.printf "%-7s %-36s %9.3f ms %12.0f %-12s (reported)\n%!" name what ms (rate ops ms)
+  Printf.printf
+    "%-7s %-36s %9.3f ms %12.0f %-12s (reported)\n%!"
+    name
+    what
+    ms
+    (rate ops ms)
     unit_
+;;
 
 let verdict name what ok =
   if not ok then incr below;
   Printf.printf "%-7s %-36s %s\n%!" name what (if ok then "PASS" else "FAIL")
+;;
 
 let live_words (f : unit -> 'a) : int * 'a =
   Gc.compact ();
@@ -77,7 +91,8 @@ let live_words (f : unit -> 'a) : int * 'a =
   Gc.full_major ();
   let after = (Gc.stat ()).Gc.live_words in
   ignore (Sys.opaque_identity v);
-  (after - before, v)
+  after - before, v
+;;
 
 (* ======================================================== B-Q3: the log and the index *)
 
@@ -86,21 +101,24 @@ let live_words (f : unit -> 'a) : int * 'a =
    append cell and it is said here rather than hidden. *)
 let row_pool =
   Array.init 1024 (fun i ->
-      match i mod 6 with
-      | 0 -> Printf.sprintf "started(%d)" (i mod 64)
-      | 1 -> Printf.sprintf "parkedOn(%d,%d)" (i mod 64) (i mod 97)
-      | 2 -> Printf.sprintf "frame(%d,popped(success %d))" (i mod 64) i
-      | 3 -> Printf.sprintf "scheduledTask(%d,0,start(%d))" (i mod 64) ((i + 1) mod 64)
-      | 4 -> Printf.sprintf "scopeLinked(forkIn,%d,%d,%d)" (i mod 13) i (i mod 64)
-      | _ -> Printf.sprintf "exited(%d,success %d)" (i mod 64) i)
+    match i mod 6 with
+    | 0 -> Printf.sprintf "started(%d)" (i mod 64)
+    | 1 -> Printf.sprintf "parkedOn(%d,%d)" (i mod 64) (i mod 97)
+    | 2 -> Printf.sprintf "frame(%d,popped(success %d))" (i mod 64) i
+    | 3 -> Printf.sprintf "scheduledTask(%d,0,start(%d))" (i mod 64) ((i + 1) mod 64)
+    | 4 -> Printf.sprintf "scopeLinked(forkIn,%d,%d,%d)" (i mod 13) i (i mod 64)
+    | _ -> Printf.sprintf "exited(%d,success %d)" (i mod 64) i)
+;;
 
 let rows n =
   Random.init seed;
   Array.init n (fun _ -> row_pool.(Random.int (Array.length row_pool)))
+;;
 
 let probes n m =
   Random.init (seed + 1);
   Array.init m (fun _ -> Random.int n)
+;;
 
 module Im = Map.Make (Int)
 
@@ -114,11 +132,20 @@ let bench_log () =
   let ps = probes n 10_000 in
   let ms =
     best 3 (fun () ->
-        Array.fold_left
-          (fun a i -> match E4_log.get log i with Some r -> a + String.length r | None -> a)
-          0 ps)
+      Array.fold_left
+        (fun a i ->
+           match E4_log.get log i with
+           | Some r -> a + String.length r
+           | None -> a)
+        0
+        ps)
   in
-  cell "B-Q3b" "log random get, 1e4 over 1e6" ~ms ~ops:(Array.length ps) ~unit_:"gets/s"
+  cell
+    "B-Q3b"
+    "log random get, 1e4 over 1e6"
+    ~ms
+    ~ops:(Array.length ps)
+    ~unit_:"gets/s"
     ~floor:3_000_000.;
   (* one decision per seven rows: ~1.4e5 decisions, the shape a real run has *)
   let entries =
@@ -128,30 +155,42 @@ let bench_log () =
   note "B-Q3c" "breakdown: the entry vector alone" ~ms ~ops:n ~unit_:"rows/s";
   let ms =
     best 3 (fun () ->
-        Array.fold_left
-          (fun m (e : E4_logindex.entry) ->
-             match e.E4_logindex.fiber with
-             | None -> m
-             | Some f ->
-               Im.add f
-                 (e.E4_logindex.index
-                  :: (match Im.find_opt f m with None -> [] | Some l -> l))
-                 m)
-          Im.empty entries)
+      Array.fold_left
+        (fun m (e : E4_logindex.entry) ->
+           match e.E4_logindex.fiber with
+           | None -> m
+           | Some f ->
+             Im.add
+               f
+               (e.E4_logindex.index
+                ::
+                (match Im.find_opt f m with
+                 | None -> []
+                 | Some l -> l))
+               m)
+        Im.empty
+        entries)
   in
   note "B-Q3c" "breakdown: ONE posting map (the §6.3 cell)" ~ms ~ops:n ~unit_:"rows/s";
   let ms = best 3 (fun () -> Array.fold_left E4_logindex.add E4_logindex.empty entries) in
-  cell "B-Q3c" "index build: the whole thing" ~ms ~ops:n ~unit_:"rows/s" ~floor:10_000_000.;
+  cell
+    "B-Q3c"
+    "index build: the whole thing"
+    ~ms
+    ~ops:n
+    ~unit_:"rows/s"
+    ~floor:10_000_000.;
   let ms =
     best 2 (fun () ->
-        E4_logindex.of_log log ~parse:(fun i r ->
-            E4_logindex.parse_run_event_row ~decision:(i / 7) i r))
+      E4_logindex.of_log log ~parse:(fun i r ->
+        E4_logindex.parse_run_event_row ~decision:(i / 7) i r))
   in
   note "B-Q3c" "end to end: of_log, codec included" ~ms ~ops:n ~unit_:"rows/s";
   let idx = Array.fold_left E4_logindex.add E4_logindex.empty entries in
   Printf.printf
     "        the index over 1e6 rows: %d fibers, %d tokens, %d scopes, %d kinds, %d \
-     decisions\n%!"
+     decisions\n\
+     %!"
     (List.length (E4_logindex.fibers idx))
     (List.length (E4_logindex.tokens idx))
     (List.length (E4_logindex.scopes idx))
@@ -162,7 +201,9 @@ let bench_log () =
     \        posting map over a 3-field record.  That reference cell is re-measured above,\n\
     \        on this build and this machine, and it does not reach the floor either: the\n\
     \        floor is a number about a different object.  The whole index keeps five\n\
-    \        posting maps and an entry vector, and the breakdown says where the time goes."
+    \        posting maps and an entry vector, and the breakdown says where the time \
+     goes."
+;;
 
 (* ========================================================= B-Q5: the cursor and `at` *)
 
@@ -171,13 +212,22 @@ let step (m : int Im.t) (d : int) : int Im.t = Im.add d (d * 3) m
 let synth_tape n =
   Random.init (seed + 2);
   Array.init n (fun _ -> Random.int (n * 4))
+;;
 
 let any_status (_ : 'm) : E4_query.status =
   { E4_query.finished = true; stuck = None; fuel_left = 0 }
+;;
 
 let src ?(replay = step) (tape : int array) ~k =
-  E4_query.of_run ~log:E4_log.empty ~index:E4_logindex.empty ~tape ~replay ~initial:Im.empty
-    ~checkpoint_every:k ~status:any_status
+  E4_query.of_run
+    ~log:E4_log.empty
+    ~index:E4_logindex.empty
+    ~tape
+    ~replay
+    ~initial:Im.empty
+    ~checkpoint_every:k
+    ~status:any_status
+;;
 
 let bench_cursor () =
   print_endline "";
@@ -187,10 +237,17 @@ let bench_cursor () =
   let raw_ms = best 3 (fun () -> Array.fold_left step Im.empty tape) in
   note "B-Q5a" "raw replay (the baseline)" ~ms:raw_ms ~ops:n ~unit_:"decisions/s";
   let build_ms = best 3 (fun () -> src tape ~k:1024) in
-  note "B-Q5a" "of_run: one forward pass, k = 1024" ~ms:build_ms ~ops:n ~unit_:"decisions/s";
+  note
+    "B-Q5a"
+    "of_run: one forward pass, k = 1024"
+    ~ms:build_ms
+    ~ops:n
+    ~unit_:"decisions/s";
   let s = src tape ~k:1024 in
   let scan () =
-    let c = ref (E4_query.cursor s ~from:0) and last = ref Im.empty and go = ref true in
+    let c = ref (E4_query.cursor s ~from:0)
+    and last = ref Im.empty
+    and go = ref true in
     while !go do
       match E4_query.next !c with
       | None -> go := false
@@ -202,8 +259,14 @@ let bench_cursor () =
   in
   let scan_ms = best 3 scan in
   let ratio = raw_ms /. scan_ms in
-  Printf.printf "%-7s %-36s %9.3f ms %12.0f %-12s ratio %.3f x raw\n%!" "B-Q5a" "cursor scan"
-    scan_ms (rate n scan_ms) "decisions/s" ratio;
+  Printf.printf
+    "%-7s %-36s %9.3f ms %12.0f %-12s ratio %.3f x raw\n%!"
+    "B-Q5a"
+    "cursor scan"
+    scan_ms
+    (rate n scan_ms)
+    "decisions/s"
+    ratio;
   verdict "B-Q5a" "cursor scan >= 0.9 x raw replay" (ratio >= 0.9);
   (* B-Q5b.  Two means: the DETERMINISTIC one over every i of the tape, which is what the
      "<= k/2 in expectation" acceptance actually asserts, and the sampled one over 1e3
@@ -221,7 +284,9 @@ let bench_cursor () =
   done;
   let all_mean = float_of_int !all_total /. float_of_int (n + 1) in
   let ix = probes (n + 1) 1_000 in
-  let worst = ref 0 and total = ref 0 and exact = ref true in
+  let worst = ref 0
+  and total = ref 0
+  and exact = ref true in
   let t0 = now () in
   Array.iter
     (fun i ->
@@ -235,11 +300,17 @@ let bench_cursor () =
   let at_ms = (now () -. t0) *. 1000. in
   let mean = float_of_int !total /. float_of_int (Array.length ix) in
   Printf.printf
-    "%-7s %-36s %9.3f ms  sampled mean %.1f, worst %d; mean over ALL i = %.1f\n%!" "B-Q5b"
-    "1e3 random `at`, k = 1024" at_ms mean !worst all_mean;
+    "%-7s %-36s %9.3f ms  sampled mean %.1f, worst %d; mean over ALL i = %.1f\n%!"
+    "B-Q5b"
+    "1e3 random `at`, k = 1024"
+    at_ms
+    mean
+    !worst
+    all_mean;
   verdict "B-Q5b" "mean over every i <= k/2 = 512" (all_mean <= 512.);
   verdict "B-Q5b" "worst replays <= k - 1 = 1023" (!worst <= 1023);
   verdict "B-Q5b" "`cost` is exact at every i" !exact
+;;
 
 (* ------------------------------------------------------------- B-Q5c: the retention *)
 
@@ -247,49 +318,72 @@ let bench_cursor () =
    inside the measurement; at k = infinity the source keeps only the initial machine, and
    the row is therefore "the run with no checkpoints at all", which is the baseline the
    acceptance means. *)
-let retention (type m d) label (tape : d array) (replay : m -> d -> m) (initial : m)
-    (ks : int list) =
+let retention
+      (type m d)
+      label
+      (tape : d array)
+      (replay : m -> d -> m)
+      (initial : m)
+      (ks : int list)
+  =
   Printf.printf "  shape %s: %d decisions\n%!" label (Array.length tape);
   let rows =
     List.map
       (fun k ->
          let w, keep =
            live_words (fun () ->
-               let s =
-                 E4_query.of_run ~log:E4_log.empty ~index:E4_logindex.empty ~tape ~replay
-                   ~initial ~checkpoint_every:k ~status:any_status
-               in
-               (s, E4_query.at s (Array.length tape)))
+             let s =
+               E4_query.of_run
+                 ~log:E4_log.empty
+                 ~index:E4_logindex.empty
+                 ~tape
+                 ~replay
+                 ~initial
+                 ~checkpoint_every:k
+                 ~status:any_status
+             in
+             s, E4_query.at s (Array.length tape))
          in
          ignore (Sys.opaque_identity keep);
-         (k, w))
+         k, w)
       ks
   in
-  let base = try List.assoc max_int rows with Not_found -> 1 in
+  let base =
+    try List.assoc max_int rows with
+    | Not_found -> 1
+  in
   List.iter
     (fun (k, w) ->
-       Printf.printf "        k = %-11s %10d live words  %+8.1f %% over k = infinity\n%!"
+       Printf.printf
+         "        k = %-11s %10d live words  %+8.1f %% over k = infinity\n%!"
          (if k = max_int then "infinity" else string_of_int k)
          w
          (100. *. float_of_int (w - base) /. float_of_int (max 1 base)))
     rows;
-  let target = try List.assoc 1024 rows with Not_found -> base in
+  let target =
+    try List.assoc 1024 rows with
+    | Not_found -> base
+  in
   let over = float_of_int (target - base) /. float_of_int (max 1 base) in
-  (label, over)
+  label, over
+;;
 
 (* the G0 fork program, in `Eff_types`, as lane D writes it (test_engine.ml:103-114) *)
 let fork_opts : E.ForkOptions.t =
-  { E.ForkOptions.start_immediately = false;
-    daemon = false;
-    mask_mode = E.MaskMode.Inherit }
+  { E.ForkOptions.start_immediately = false
+  ; daemon = false
+  ; mask_mode = E.MaskMode.Inherit
+  }
+;;
 
 let p_fork : E.NativeOp.t E.Eff.t =
   E.Eff.Bind
     ( E.Eff.WithFiber
         (E.ActionTerm.Fork
-           ( E.Eff.Bind (E.Eff.YieldNow 0, E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 7))),
-             fork_opts )),
-      E.Eff.AwaitFiber (E.Term.Var 0, E.ObserverMode.AwaitValue) )
+           ( E.Eff.Bind (E.Eff.YieldNow 0, E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 7)))
+           , fork_opts ))
+    , E.Eff.AwaitFiber (E.Term.Var 0, E.ObserverMode.AwaitValue) )
+;;
 
 let dec_of (d : E4_diff.decision) : F.decision =
   match d with
@@ -300,6 +394,7 @@ let dec_of (d : E4_diff.decision) : F.decision =
   | E4_diff.Answer_async (f, tk, nn) -> F.answer_async_success f tk nn
   | E4_diff.Interrupt_from (w, tg) -> F.interrupt_from w tg
   | E4_diff.Install_middleware -> F.install_middleware
+;;
 
 let bench_retention () =
   print_endline "";
@@ -314,7 +409,9 @@ let bench_retention () =
   let dtape = S.gen_tape p_fork ~fuel:100_000 ~seed ~max_len:4_000 in
   let etape = Array.of_list (List.map dec_of dtape) in
   let _, over_c =
-    retention "C the engine (E4_engine.Fast, pFork)" etape
+    retention
+      "C the engine (E4_engine.Fast, pFork)"
+      etape
       (fun m d -> F.replay m [ d ])
       (F.load p_fork ~fuel:100_000)
       ks
@@ -327,18 +424,24 @@ let bench_retention () =
     \        for an append-only carrier (A: every version is a suffix, retention is free)\n\
     \        and false for a path-copying store (B: a retained version keeps the spine the\n\
     \        final machine replaced).  The engine (C) is where the answer that matters is,\n\
-    \        and the number above is it.  The §4.3 acceptance \"within 5 % of k = infinity\"\n\
+    \        and the number above is it.  The §4.3 acceptance \"within 5 % of k = \
+     infinity\"\n\
     \        holds only for shape A; for the others k is a real retention knob and the\n\
     \        table is the cost of turning it."
+;;
 
 let () =
   Printf.printf
-    "== lane Q3: the query bench (OCaml %s, int_size %d, best of 3, Gc.compact between) ==\n%!"
-    Sys.ocaml_version Sys.int_size;
+    "== lane Q3: the query bench (OCaml %s, int_size %d, best of 3, Gc.compact between) ==\n\
+     %!"
+    Sys.ocaml_version
+    Sys.int_size;
   print_endline "";
   bench_log ();
   bench_cursor ();
   bench_retention ();
   print_endline "";
-  Printf.printf "== bench: %d cell(s) below floor (a bench is a measurement, not a gate) ==\n"
+  Printf.printf
+    "== bench: %d cell(s) below floor (a bench is a measurement, not a gate) ==\n"
     !below
+;;

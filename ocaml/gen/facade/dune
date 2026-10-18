@@ -5,8 +5,10 @@
 ; sealed package stays abstract through it. Additive: Api_gen keeps its own names.
 ; `-open Effect4_gen` lets the generated text name Api_gen as the staged producer compiles it.
 ; ocaml/engine/test/install builds a project outside ocaml/ against the installed library.
+
 (library
  (name effect4)
  (public_name effect4_gen.effect4)
- (flags (:standard -open Effect4_gen))
+ (flags
+  (:standard -open Effect4_gen))
  (libraries effect4_gen effect4_eff))

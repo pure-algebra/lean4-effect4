@@ -423,7 +423,7 @@ The tree already holds several production habits:
 
 The order:
 1. Now: H9, H14, H17, H20 and the docstrings of H13.
-2. After seat 1 merges: H1, the one formatting commit.
+2. After seat 1 merges: H1, the one formatting commit. H1 and H9 landed on 2026-10-18.
 3. With wave 2's cuts: H3, H5, H7 and H8. H2 lands with C5.
 4. Before the first release: H4, H6, H18 and H19.
 5. Ongoing: H10 and H11.

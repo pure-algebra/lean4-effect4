@@ -109,180 +109,187 @@
 
 (* ---------------------------------------------------------------- the grammar *)
 
-val magic : string
 (** "E4LOG\000" — the six bytes every segment starts with. *)
+val magic : string
 
-val version : string
 (** "00000001" — eight ASCII bytes, compared as a string and never parsed (L-CF-1's rule,
     applied to the log). *)
+val version : string
 
-val head_length : int
 (** 34: the segment head, checksum included. *)
+val head_length : int
 
-val row_header_length : int
 (** 8: `be32 row_len :: be32 row_crc`. *)
+val row_header_length : int
 
-val body_header_length : int
 (** 9: the row tag and the be64 index inside `row_body`. *)
+val body_header_length : int
 
-val row_max : int
 (** 1 MiB: the largest `row_body` (LG9). *)
+val row_max : int
 
-val default_seg_max : int
 (** 64 MiB: the rotation threshold `open_` is given when a caller has no reason to choose. *)
+val default_seg_max : int
 
-val min_seg_max : int
 (** The smallest legal `seg_max`: a head plus one empty row.  `seg_max` is a THRESHOLD tested
     after a commit, never a cap: a row is never split and never refused for the room left, so
     a segment may exceed `seg_max` by the size of the commit that crossed it. *)
+val min_seg_max : int
 
-val segment_name : int -> string
 (** The file name of the segment whose first data row has this index: sixteen lowercase hex
     digits and ".seg", so the lexicographic order of the names is the order of the indices. *)
+val segment_name : int -> string
 
-val job_dir : dir:string -> job:E4_addr.Addr.t -> string
 (** `<dir>/log/<job-hex>` (A2 §1.0; per-job, owner question OQ5). *)
+val job_dir : dir:string -> job:E4_addr.Addr.t -> string
 
 (* ---------------------------------------------------------------- rows *)
 
-type seq = int
 (** A (job, index) position: the count of data rows before this one in this job.  Never a
     global sequence number (LAW LOG-REL). *)
+type seq = int
 
 type row =
   | Decision of string
-      (** The canonical decision bytes — the same bytes Lean would hash (brief §2.2).
+  (** The canonical decision bytes — the same bytes Lean would hash (brief §2.2).
           Opaque here. *)
   | Event of string
-      (** The canonical event bytes; `string` until the LogEvent carrier lands (risk R7). *)
-  | Checkpoint_mark of { position : seq; addr : E4_addr.Addr.t option }
-      (** A checkpoint covers the positions `< position`; replay from that checkpoint is
+  (** The canonical event bytes; `string` until the LogEvent carrier lands (risk R7). *)
+  | Checkpoint_mark of
+      { position : seq
+      ; addr : E4_addr.Addr.t option
+      }
+  (** A checkpoint covers the positions `< position`; replay from that checkpoint is
           `replay ~from:position`.  `addr` is the checkpoint node's address once it is
           published, `None` while it is not. *)
   | Seal of { next_first_seq : seq }
-      (** Written by rotation, consumed by replay, never staged and never delivered (D2). *)
+  (** Written by rotation, consumed by replay, never staged and never delivered (D2). *)
 
-exception Locked of string
 (** A second writer on one job directory (LG7); the string is the directory. *)
+exception Locked of string
 
-exception Row_too_large of int
 (** A staged body of more than `row_max` bytes (LG9); the int is its length. *)
+exception Row_too_large of int
 
 (* ---------------------------------------------------------------- the writer *)
 
 type t
 
-val open_ : dir:string -> job:E4_addr.Addr.t -> seg_max:int -> t
 (** Creates `<dir>/log/<job-hex>/` if it is absent, takes the writer's claim (LG7) and opens
     the job's last segment for append, truncating a torn tail to its last good row (LG5).
     Raises `Locked` if another `t` holds the directory, `Invalid_argument` if
     `seg_max < min_seg_max`, and `Failure (stop_to_string s)` when the last segment's damage
     is structural — `Bad_header`, `Wrong_job` or `Gap` — because truncating those would hide
     them.  A torn tail (`Short`, `Bad_crc`, `Bad_row`, `Oversize`) is recovered, not raised. *)
+val open_ : dir:string -> job:E4_addr.Addr.t -> seg_max:int -> t
 
-val open_job : dir:string -> job:string -> seg_max:int -> t
 (** `open_` with the job as 64 hexadecimal characters (either case).  Raises
     `Invalid_argument` on anything that is not a 32-byte digest in hex. *)
+val open_job : dir:string -> job:string -> seg_max:int -> t
 
-val close : t -> unit
 (** Commits what is staged (D7), closes the segment and releases the claim.  Idempotent. *)
+val close : t -> unit
 
 val job : t -> E4_addr.Addr.t
-val dir_of : t -> string
-(** The job directory `open_` created or found. *)
 
-val stage : t -> row -> seq
+(** The job directory `open_` created or found. *)
+val dir_of : t -> string
+
 (** Buffers one row and returns the index it will have (LG3).  Not durable until `commit`.
     Raises `Row_too_large`, and `Invalid_argument` on a `Seal` (D2). *)
+val stage : t -> row -> seq
 
-val append : t -> row -> seq
 (** `stage`, under the build brief's name. *)
+val append : t -> row -> seq
 
-val commit : t -> unit
 (** One write(2) of the staged buffer, then one fsync(2); then rotation if the segment has
     reached `seg_max` (LG5).  Idempotent when nothing is staged. *)
+val commit : t -> unit
 
-val sync : t -> unit
 (** `commit`, under the build brief's name. *)
+val sync : t -> unit
 
-val rotate : t -> unit
 (** Commit, seal the current segment and open the next one, whatever the segment's size.
     What `commit` does for itself at the threshold. *)
+val rotate : t -> unit
 
-val checkpoint_mark : t -> seq -> unit
 (** Record — durably — that a checkpoint covers the positions `< position`, so that replay
     from that checkpoint is `replay ~from:position`.  Stages a `Checkpoint_mark` with no
     address yet and commits it. *)
+val checkpoint_mark : t -> seq -> unit
 
-val next_seq : t -> seq
 (** The index the next staged row will be given: one past the last, staged rows included. *)
+val next_seq : t -> seq
 
-val last_index : t -> seq option
 (** The index of the last row, staged rows included; `None` for a job with no rows. *)
+val last_index : t -> seq option
 
-val durable_upto : t -> seq
 (** Every index strictly below this is on the disk and fsynced; nothing at or above it is
     (LG3). *)
+val durable_upto : t -> seq
 
-val staged_bytes : t -> int
 (** The bytes buffered and not yet written. *)
+val staged_bytes : t -> int
 
-val truncate_to : t -> seq -> unit
 (** Discard the staged buffer and every stored row at or above this index, then continue
     from it.  Writer only.  Raises `Invalid_argument` for an index above `next_seq` or below
     the current segment's first index — this module deletes no segment. *)
+val truncate_to : t -> seq -> unit
 
 (* ---------------------------------------------------------------- the reader *)
 
-type reader
 (** Holds no file handle: a segment is opened, read and closed inside one `replay`, so a
     reader is safe across a rotation and needs no lock (LG7). *)
+type reader
 
 val open_reader : dir:string -> job:E4_addr.Addr.t -> reader
 val open_reader_job : dir:string -> job:string -> reader
 val close_reader : reader -> unit
 
 type stop =
-  | Eof
-      (** The clean end: every stored row was delivered. *)
+  | Eof (** The clean end: every stored row was delivered. *)
   | Short of seq
-      (** A row at this index was cut off by the end of its segment (a torn write). *)
-  | Bad_crc of seq
-      (** The row at this index failed its CRC. *)
+  (** A row at this index was cut off by the end of its segment (a torn write). *)
+  | Bad_crc of seq (** The row at this index failed its CRC. *)
   | Bad_row of seq
-      (** The row at this index passed its CRC and is not a row: an unknown tag, or a body
+  (** The row at this index passed its CRC and is not a row: an unknown tag, or a body
           too short to carry one. *)
-  | Oversize of { at : seq; len : int }
-      (** The row at this index declares more than `row_max` bytes (LG9, M9's shape). *)
-  | Gap of { expected : seq; found : seq }
-      (** The next row's index is not the one that must follow: a missing middle segment, a
+  | Oversize of
+      { at : seq
+      ; len : int
+      } (** The row at this index declares more than `row_max` bytes (LG9, M9's shape). *)
+  | Gap of
+      { expected : seq
+      ; found : seq
+      }
+  (** The next row's index is not the one that must follow: a missing middle segment, a
           renumbered row, or a seal that does not meet its successor (LG2). *)
   | Bad_header of { path : string }
-      (** A segment head that fails its magic, its version string or its own CRC. *)
+  (** A segment head that fails its magic, its version string or its own CRC. *)
   | Wrong_job of { path : string }
-      (** A segment whose `job_lo` is another job's: a file moved between directories. *)
+  (** A segment whose `job_lo` is another job's: a file moved between directories. *)
 
-val stop_to_string : stop -> string
 (** One line naming the damage and where it is; what an operator is shown. *)
+val stop_to_string : stop -> string
 
-val replay : reader -> from:seq -> f:(seq -> row -> unit) -> stop
 (** Calls [f] for every DATA row from [from] in index order and returns why it stopped
     (LG1, LG2, LG6).  Every row's CRC is verified, including the rows below [from], which are
     walked but not delivered.  `Seal` rows are consumed, not delivered (D2). *)
+val replay : reader -> from:seq -> f:(seq -> row -> unit) -> stop
 
-val replay_seq : reader -> from:seq -> verdict:stop ref -> (seq * row) Seq.t
 (** The same walk as a sequence; [verdict] is set when the sequence ends, to `Eof` or to the
     damage that stopped it (D6).  The sequence is re-startable and reads the segments again
     each time it is forced from the front. *)
+val replay_seq : reader -> from:seq -> verdict:stop ref -> (seq * row) Seq.t
 
-val tape : reader -> from:seq -> upto:seq -> string list
 (** Just the `Decision` bodies at the indices in `[from, upto)`, in order: the tape prefix a
     checkpoint's `tapePrefix` names. *)
+val tape : reader -> from:seq -> upto:seq -> string list
 
-val segments : reader -> (seq * string) list
 (** (first index, path) for every `*.seg` in the job's directory, ascending.  A reading of
     the directory, not of the files. *)
+val segments : reader -> (seq * string) list
 
-val end_index : reader -> seq * stop
 (** Walk to the end and answer the index one past the last good row, with the verdict.  The
     cheap "where does this job stand" question, and what a writer's `open_` uses. *)
+val end_index : reader -> seq * stop

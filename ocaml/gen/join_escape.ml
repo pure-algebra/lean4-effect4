@@ -16,4 +16,5 @@
 
 let escape x =
   let[@local always] join y = x + y in
-  (join, join)
+  join, join
+;;

@@ -117,13 +117,17 @@
 
 type t
 
-type index = t
 (** An alias, so the sub-modules below can name the node index after shadowing `t`. *)
+type index = t
 
 type seg = int
 type off = int
 
-type entry = { seg : seg; off : off; kind : E4_kind.t }
+type entry =
+  { seg : seg
+  ; off : off
+  ; kind : E4_kind.t
+  }
 
 (* ---- the shape of a slot, as constants (D1) ---- *)
 
@@ -143,44 +147,44 @@ val magic : string
 val version : string
 val head_length : int
 
-val from_start : seg * off
 (** `(0, E4_pack.head_length)` — where the first record of a store's segment 0 lives, and the
     `~from` a full rebuild uses. *)
+val from_start : seg * off
 
 (* ---- building ---- *)
 
-val create : slots:int -> t
 (** [slots] is rounded UP to a power of two, at least [min_slots]. *)
+val create : slots:int -> t
 
-val with_capacity : capacity:int -> t
 (** Slots for [capacity] entries at load 0.5 — the lane brief's `create ~capacity`. *)
+val with_capacity : capacity:int -> t
 
-val add : t -> E4_addr.Addr.t -> entry -> unit
 (** IX4, IX7.  Invalid_argument if `seg > max_seg` or `off > max_off` or `off < 0`. *)
+val add : t -> E4_addr.Addr.t -> entry -> unit
 
 val add_at : t -> E4_addr.Addr.t -> seg:seg -> off:off -> kind:E4_kind.t -> unit
 
 (* ---- looking up ---- *)
 
-type confirm = seg:seg -> off:off -> E4_addr.Addr.t option
 (** The RECORDED digest of the record at that place, or None.  `E4_pack.read_header` is the
     41-byte implementation and `confirm_of_reader` wraps it. *)
+type confirm = seg:seg -> off:off -> E4_addr.Addr.t option
 
 val confirm_of_reader : E4_pack.reader -> confirm
 
-val find : confirm:confirm -> t -> E4_addr.Addr.t -> entry option
 (** IX1: probes, confirms at the record, and keeps probing past a prefix collision. *)
+val find : confirm:confirm -> t -> E4_addr.Addr.t -> entry option
 
-val find_in : E4_pack.reader -> t -> E4_addr.Addr.t -> entry option
 (** [find ~confirm:(confirm_of_reader rd)]. *)
+val find_in : E4_pack.reader -> t -> E4_addr.Addr.t -> entry option
 
-val find_full : E4_pack.reader -> t -> E4_addr.Addr.t -> (entry * int) option
 (** The entry and the record's `node_len`, from the same header the confirmation reads (D2). *)
+val find_full : E4_pack.reader -> t -> E4_addr.Addr.t -> (entry * int) option
 
-val find_unconfirmed : t -> E4_addr.Addr.t -> entry option
 (** The first slot whose 62-bit key matches, with NO confirmation.  It may be a collision and it
     may be wrong; it exists for the bench and for a caller that is about to read the record for
     other reasons.  Never use it to answer `mem` (D3). *)
+val find_unconfirmed : t -> E4_addr.Addr.t -> entry option
 
 val mem : confirm:confirm -> t -> E4_addr.Addr.t -> bool
 val mem_in : E4_pack.reader -> t -> E4_addr.Addr.t -> bool
@@ -193,86 +197,94 @@ val slots : t -> int
 val bytes : t -> int
 val load_factor : t -> float
 
-val iter : t -> (int -> entry -> unit) -> unit
 (** Every occupied slot, in slot order, as `key entry` where `key` is the 62-bit prefix (D4). *)
+val iter : t -> (int -> entry -> unit) -> unit
 
-type stats = {
-  s_entries : int;
-  s_slots : int;
-  s_bytes : int;
-  s_growths : int;  (** rehashes since `create` *)
-  s_max_probe : int;  (** the longest probe an `add` walked *)
-  s_confirms : int;  (** confirmations attempted by `find` *)
-  s_confirm_misses : int;  (** confirmations that failed — prefix collisions paid for (IX1) *)
-}
+type stats =
+  { s_entries : int
+  ; s_slots : int
+  ; s_bytes : int
+  ; s_growths : int (** rehashes since `create` *)
+  ; s_max_probe : int (** the longest probe an `add` walked *)
+  ; s_confirms : int (** confirmations attempted by `find` *)
+  ; s_confirm_misses : int
+    (** confirmations that failed — prefix collisions paid for (IX1) *)
+  }
 
 val stats : t -> stats
 val reset_counters : t -> unit
 
-val heap_live_words : unit -> int
 (** `Gc.compact (); (Gc.stat ()).live_words` — what IX3 and bench cell B5 measure. *)
+val heap_live_words : unit -> int
 
 (* ---- rebuilding from the pack (the identity) ---- *)
 
 type kind_at = E4_pack.reader -> seg:seg -> off:off -> E4_kind.t option
 
-val kind_at_default : kind_at
 (** Reads the record through `E4_pack.read_at` and takes `node_bytes.[1]` (D5).  O(bytes): it
     pays a CRC over the whole record for one byte.  Measured 864 661 nodes/s on a 1 M-node pack
     of 256-byte nodes, against 3 453 301 nodes/s for the header scan alone. *)
+val kind_at_default : kind_at
 
-val kind_at_of_dir : dir:string -> kind_at
 (** The fast probe (D5): one byte at `E4_pack.record_header_length + 1` into the record, out of
     a private read-only mapping of the segment file, using `E4_pack.seg_path` and the two
     exported constants and reimplementing no reader.  Measured 3 336 837 nodes/s on the same
     pack, i.e. within 1.7% of the header scan alone (3 393 200).  It is exactly as trusting as the non-verifying scan it runs beside (neither checks a
     CRC), and it does not see bytes appended after the closure first mapped a segment — so it is
     for a rebuild to a fixed `pack_end` and for nothing else. *)
+val kind_at_of_dir : dir:string -> kind_at
 
-val rebuild :
-  ?kind_at:kind_at -> E4_pack.reader -> from:seg * off -> t -> E4_pack.scan_stop
 (** IX2.  Adds every record from [from] in write order; grows as needed. *)
+val rebuild
+  :  ?kind_at:kind_at
+  -> E4_pack.reader
+  -> from:seg * off
+  -> t
+  -> E4_pack.scan_stop
 
-val of_pack :
-  ?kind_at:kind_at ->
-  ?dir:string ->
-  ?capacity:int ->
-  E4_pack.reader ->
-  from:seg * off ->
-  t * E4_pack.scan_stop
 (** [dir] is the store directory; giving it selects `kind_at_of_dir` over `kind_at_default`,
     which is a 3.9x rebuild (measured, bench_index R1/R1b).  An explicit [kind_at] wins over
     both. *)
+val of_pack
+  :  ?kind_at:kind_at
+  -> ?dir:string
+  -> ?capacity:int
+  -> E4_pack.reader
+  -> from:seg * off
+  -> t * E4_pack.scan_stop
 
 (* ---- the file: save, load, and the discard-and-rebuild rule (IX6) ---- *)
 
-val save : path:string -> t -> covers:seg * off -> unit
 (** tmp + rename + fsync of the file and of its directory; the file is published read-only
     (IX9). *)
+val save : path:string -> t -> covers:seg * off -> unit
 
 type load_verdict =
   | Loaded
   | No_file
-  | Bad_file of string  (** magic, version, a CRC, a length, a slot count *)
-  | Stale of { covers : seg * off; pack_end : seg * off }
+  | Bad_file of string (** magic, version, a CRC, a length, a slot count *)
+  | Stale of
+      { covers : seg * off
+      ; pack_end : seg * off
+      }
 
 val load_verdict_to_string : load_verdict -> string
 
-val load : path:string -> (t * (seg * off)) option
 (** §1.6's form: the table and what it covers, or None for every refusal. *)
+val load : path:string -> (t * (seg * off)) option
 
-val load_at : path:string -> pack_end:seg * off -> (t, load_verdict) result
 (** [load] plus the staleness test against the pack's durable end (IX6). *)
+val load_at : path:string -> pack_end:seg * off -> (t, load_verdict) result
 
-val open_index :
-  ?kind_at:kind_at ->
-  ?dir:string ->
-  path:string ->
-  E4_pack.reader ->
-  pack_end:seg * off ->
-  t * load_verdict * E4_pack.scan_stop option
 (** [load_at], else create and `rebuild` from [from_start].  The verdict says which happened and
     why; the scan stop is present exactly when a rebuild ran.  [dir] as in [of_pack]. *)
+val open_index
+  :  ?kind_at:kind_at
+  -> ?dir:string
+  -> path:string
+  -> E4_pack.reader
+  -> pack_end:seg * off
+  -> t * load_verdict * E4_pack.scan_stop option
 
 (* ============================================================ the by-kind index *)
 
@@ -294,11 +306,14 @@ module By_kind : sig
   val kinds : t -> E4_kind.t list
   val bytes : t -> int
 
-  val of_index : index -> t
   (** From the node index alone: it already carries a kind per entry. *)
+  val of_index : index -> t
 
-  val rebuild :
-    ?kind_at:kind_at -> E4_pack.reader -> from:seg * off -> t * E4_pack.scan_stop
+  val rebuild
+    :  ?kind_at:kind_at
+    -> E4_pack.reader
+    -> from:seg * off
+    -> t * E4_pack.scan_stop
 end
 
 (* ============================================================ the dependents index *)
@@ -317,17 +332,17 @@ module Deps : sig
   val cardinal : t -> int
   val edges : t -> int
 
-  val add : t -> dep:E4_addr.Addr.t -> by:E4_addr.Ref.t -> t
   (** Persistent (IX8).  Idempotent on a pair already present, and the idempotence test is
       O(log k) in the number k of dependents that dependee already has: a `Set` of the same
       `Ref`s is held beside the list, which is kept because `find`/`iter` owe DISCOVERY
       ORDER.  It was a `List.exists` over the list, which made a build over a hub dependee
       quadratic (lane P7 finding F1, 2026-09-08-engine-lane-w-delivery.md item 1). *)
+  val add : t -> dep:E4_addr.Addr.t -> by:E4_addr.Ref.t -> t
 
-  val of_node : fields:E4_shape.t -> E4_node.t -> E4_addr.Addr.t list
   (** The dependees of one node, in order: `E4_node.checked_edges`' addresses (exact, no table)
       then `E4_shape.cids_of` (the table's Cid fields).  This is the SPECIFICATION the
       brute-force test recomputes (IX9). *)
+  val of_node : fields:E4_shape.t -> E4_node.t -> E4_addr.Addr.t list
 
   val add_node : t -> fields:E4_shape.t -> at:E4_addr.Addr.t -> E4_node.t -> t
 
@@ -337,10 +352,13 @@ module Deps : sig
   val mem : t -> E4_addr.Addr.t -> bool
   val iter : t -> (E4_addr.Addr.t -> E4_addr.Ref.t list -> unit) -> unit
 
-  val rebuild :
-    ?fields:E4_shape.t -> E4_pack.reader -> from:seg * off -> t * E4_pack.scan_stop
   (** A full scan: every record's node bytes are decoded, so this is O(bytes) by construction —
       it has to be, since a Cid is only a Cid through the table (E4_shape finding R1).  A record
       whose bytes do not decode contributes nothing and does not stop the scan; the scan stops
       only where `E4_pack.scan` stops. *)
+  val rebuild
+    :  ?fields:E4_shape.t
+    -> E4_pack.reader
+    -> from:seg * off
+    -> t * E4_pack.scan_stop
 end

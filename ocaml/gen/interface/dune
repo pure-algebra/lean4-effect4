@@ -5,10 +5,17 @@
  (libraries compiler-libs.common))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .lcnf_interface.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .lcnf_interface.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
 
 (executable
  (name main)
@@ -18,11 +25,13 @@
 (rule
  (targets fixture.cmo fixture.cmi fixture.cmt)
  (deps fixture.ml)
- (action (run %{ocamlc} -bin-annot -w -32 -c %{dep:fixture.ml})))
+ (action
+  (run %{ocamlc} -bin-annot -w -32 -c %{dep:fixture.ml})))
 
 (test
  (name test_interface)
  (modules test_interface)
  (libraries lcnf_interface)
  (deps fixture.cmt fixture_prelude.ml)
- (action (run %{test} %{dep:fixture.cmt} %{dep:fixture_prelude.ml})))
+ (action
+  (run %{test} %{dep:fixture.cmt} %{dep:fixture_prelude.ml})))

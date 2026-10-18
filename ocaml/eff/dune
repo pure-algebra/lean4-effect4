@@ -1,15 +1,34 @@
 ; effect4_eff — see README.md. Generated modules (eff_types, eff_layout, eff_wire, eff_subterm, eff_json,
 ; eff_native) come from `make gen-eff` (src/OCaml5/Tools/EffGen.lean) and carry a GENERATED
 ; header; eff_frame, eff_json_text and eff_val are the hand-written kernel. Standard library only.
+
 (library
  (name effect4_eff)
  (public_name effect4_eff)
  (wrapped false)
- (modules eff_frame eff_json_text eff_val eff_types eff_ctors eff_layout eff_wire eff_subterm eff_json eff_native)
- (flags (:standard -w -4-9-39-40-41-42-44-45-70)))
+ (modules
+  eff_frame
+  eff_json_text
+  eff_val
+  eff_types
+  eff_ctors
+  eff_layout
+  eff_wire
+  eff_subterm
+  eff_json
+  eff_native)
+ (flags
+  (:standard -w -4-9-39-40-41-42-44-45-70)))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .effect4_eff.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:../tools/typed_lint/main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .effect4_eff.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../tools/typed_lint/main.exe} %{cmt}))))

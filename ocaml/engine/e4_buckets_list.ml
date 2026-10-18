@@ -29,8 +29,15 @@
    BL7  `of_list`/`to_list` are the canonical form E4_buckets uses, so a differential can
         compare the two carriers' dispatchers without knowing either representation. *)
 
-type 'a bucket = { priority : int; tasks : 'a list }
-type 'a t = { buckets : 'a bucket list; armed : bool }
+type 'a bucket =
+  { priority : int
+  ; tasks : 'a list
+  }
+
+type 'a t =
+  { buckets : 'a bucket list
+  ; armed : bool
+  }
 
 (* Dispatcher.empty (src/Effect4/Machine/Fibers.lean) *)
 let empty = { buckets = []; armed = false }
@@ -39,19 +46,23 @@ let empty = { buckets = []; armed = false }
 let rec insert priority task = function
   | [] -> [ { priority; tasks = [ task ] } ]
   | bucket :: rest ->
-    if bucket.priority = priority then
-      { priority = bucket.priority; tasks = bucket.tasks @ [ task ] } :: rest
-    else if priority < bucket.priority then { priority; tasks = [ task ] } :: bucket :: rest
+    if bucket.priority = priority
+    then { priority = bucket.priority; tasks = bucket.tasks @ [ task ] } :: rest
+    else if priority < bucket.priority
+    then { priority; tasks = [ task ] } :: bucket :: rest
     else bucket :: insert priority task rest
+;;
 
 (* Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean).  The label is the generated DISPATCHER's (api_engine.ml:58). *)
 let enqueue d ~priority task =
   if priority < 0 then invalid_arg "E4_buckets_list.enqueue: negative priority";
   { buckets = insert priority task d.buckets; armed = true }
+;;
 
 (* Dispatcher.drain (src/Effect4/Machine/Fibers.lean) *)
 let drain d =
-  (List.concat_map (fun b -> b.tasks) d.buckets, { buckets = []; armed = false })
+  List.concat_map (fun b -> b.tasks) d.buckets, { buckets = []; armed = false }
+;;
 
 (* RunMachine.disarm at one owner's dispatcher, RunMachine.disarm (src/Effect4/Machine/Fibers.lean). *)
 let disarm d = { d with armed = false }
@@ -59,7 +70,7 @@ let armed d = d.armed
 let is_empty d = List.for_all (fun b -> List.is_empty b.tasks) d.buckets
 let length d = List.fold_left (fun n b -> n + List.length b.tasks) 0 d.buckets
 let priorities d = List.map (fun b -> b.priority) d.buckets
-let to_list d = List.map (fun b -> (b.priority, b.tasks)) d.buckets
+let to_list d = List.map (fun b -> b.priority, b.tasks) d.buckets
 
 let of_list ~armed rows =
   let rec check last = function
@@ -67,9 +78,11 @@ let of_list ~armed rows =
     | (p, _) :: rest ->
       if p < 0 then invalid_arg "E4_buckets_list.of_list: negative priority";
       (match last with
-       | Some q when q >= p -> invalid_arg "E4_buckets_list.of_list: priorities not ascending"
+       | Some q when q >= p ->
+         invalid_arg "E4_buckets_list.of_list: priorities not ascending"
        | _ -> ());
       check (Some p) rest
   in
   check None rows;
   { buckets = List.map (fun (priority, tasks) -> { priority; tasks }) rows; armed }
+;;

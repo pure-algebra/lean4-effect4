@@ -12,15 +12,14 @@
  (name effect4_gen)
  (public_name effect4_gen)
  (modules api_gen)
- (flags (:standard -w @55))
- (libraries effect4_clock effect4_eff effect4_lcnf)
-)
+ (flags
+  (:standard -w @55))
+ (libraries effect4_clock effect4_eff effect4_lcnf))
 
 (executable
  (name api_check)
  (modules api_check)
- (libraries effect4_gen)
-)
+ (libraries effect4_gen))
 
 (rule
  (alias runtest)
@@ -31,12 +30,16 @@
 ; jump. The rule compiles it as the native build does, with ocamlopt and -w @55 (ocamlc -g never
 ; runs the check), and `dune test` passes only on the refusal: exit 2 and the message of
 ; join_escape.expected. The sandbox drops the .cmi that ocamlopt writes before it refuses.
+
 (rule
  (targets join_escape.stderr)
- (deps (sandbox always))
+ (deps
+  (sandbox always))
  (action
-  (with-stderr-to %{targets}
-   (with-accepted-exit-codes 2
+  (with-stderr-to
+   %{targets}
+   (with-accepted-exit-codes
+    2
     (run %{ocamlopt} -color never -w @55 -c %{dep:join_escape.ml})))))
 
 (rule

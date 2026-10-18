@@ -164,22 +164,22 @@
 
 (* ---------------------------------------------------------------- the store *)
 
-type t
 (** A writer: the pack's lock, the staging buffer, the index and the control payload. *)
+type t
 
-type ro
 (** A read view: no lock.  `read_only` derives one from a writer (it sees that writer's staged
     records); `open_ro` opens one on a store another process is writing (it sees exactly what
     the last control commit made durable). *)
+type ro
 
 type outcome =
-  | Fresh  (** appended *)
-  | Duplicate  (** the resident IS this node; nothing changed *)
+  | Fresh (** appended *)
+  | Duplicate (** the resident IS this node; nothing changed *)
   | Conflict of E4_node.t
-      (** another node, whose bytes hash to this address, is resident: an exhibited
+  (** another node, whose bytes hash to this address, is resident: an exhibited
           collision; nothing changed (CS1) *)
   | Corrupt of E4_addr.Addr.t
-      (** the resident record's bytes do not hash to its address: corruption; nothing
+  (** the resident record's bytes do not hash to its address: corruption; nothing
           changed (CS1) *)
 
 type admission = E4_admission.t =
@@ -187,161 +187,200 @@ type admission = E4_admission.t =
   | Capacity of string
   | Fault of E4_fault.t
 
+(** `Word.VerifyError` (src/Effect4/Store/Domain/Word.lean), constructor for constructor, with
+    `Verify_handle_in_content` added for amendment M2. *)
 type verify_error =
   | Digest_mismatch of E4_addr.Addr.t
   | Undecodable of E4_addr.Addr.t
   | Verify_malformed_ref of E4_addr.Addr.t
-  | Verify_handle_in_content of E4_addr.Addr.t  (** amendment M2's default, as [put] (CS7) *)
-  | Verify_dangling of { node : E4_addr.Addr.t; missing : E4_addr.Addr.t }
-  | Verify_wrong_kind of {
-      node : E4_addr.Addr.t;
-      ref_ : E4_addr.Addr.t;
-      expected : E4_kind.t;
-      actual : E4_kind.t;
-    }
+  | Verify_handle_in_content of E4_addr.Addr.t
+  (** amendment M2's default, as [put] (CS7) *)
+  | Verify_dangling of
+      { node : E4_addr.Addr.t
+      ; missing : E4_addr.Addr.t
+      }
+  | Verify_wrong_kind of
+      { node : E4_addr.Addr.t
+      ; ref_ : E4_addr.Addr.t
+      ; expected : E4_kind.t
+      ; actual : E4_kind.t
+      }
   | Root_unresolved of string
-  | Verify_bad_envelope of E4_addr.Addr.t  (** a result that does not read as the envelope *)
-  | Verify_poisoned of { node : E4_addr.Addr.t; query : E4_addr.Addr.t; first : E4_addr.Addr.t }
-      (** another result answers the same designated query (CS10) *)
-(** `Word.VerifyError` (src/Effect4/Store/Domain/Word.lean), constructor for constructor, with
-    `Verify_handle_in_content` added for amendment M2. *)
+  | Verify_bad_envelope of E4_addr.Addr.t
+  (** a result that does not read as the envelope *)
+  | Verify_poisoned of
+      { node : E4_addr.Addr.t
+      ; query : E4_addr.Addr.t
+      ; first : E4_addr.Addr.t
+      } (** another result answers the same designated query (CS10) *)
 
-exception Locked of string
 (** Another writer holds <dir>/LOCK (CS4).  Carries the directory. *)
+exception Locked of string
 
-exception Store_error of string
 (** The store cannot be opened or cannot be grown: a control file this binary does not
     understand, a pack whose head does not check, or an unadmitted tail (D6). *)
+exception Store_error of string
 
 (* ---------------------------------------------------------------- the words *)
 
-val outcome_word : outcome -> string
 (** "fresh" | "duplicate" | "conflict" | "corrupt" — `Store.Outcome`'s spelling, so golden G2's
     `expected` column compares as a string; "corrupt" is this side's refinement of Lean's
     "conflict" (CS1). *)
+val outcome_word : outcome -> string
 
-val admission_word : admission -> string
 (** "oversize" | "unknownTag <n>" | "hostLimit <why>" | "badVersion" | "malformedRef" |
     "handleInContent" | "dangling <hex>" | "wrongKind" — `Store.Admission`'s spelling
     (Admission (src/Effect4/Store/Domain/Store.lean)), with the refusals Lean does not have named as the amendments name
     them, and `unknownTag` as CS2 row 1b names it. *)
+val admission_word : admission -> string
 
-val verify_error_word : verify_error -> string
 (** "digestMismatch" | "undecodable" | "malformedRef" | "handleInContent" |
     "dangling <missing hex>" | "wrongKind" | "rootUnresolved <name>" — golden G7's vocabulary,
     with "handleInContent" added for amendment M2 (CS7). *)
+val verify_error_word : verify_error -> string
 
 (** Frozen checked values. Node bytes pass the exact reader and ordered admission.
     Root targets lie within image_boundary; generations remain exact. *)
-type image = {
-  image_nodes : (E4_addr.Addr.t * string) list;
-  image_roots : E4_control.root list;
-  image_boundary : int * int;
-}
+type image =
+  { image_nodes : (E4_addr.Addr.t * string) list
+  ; image_roots : E4_control.root list
+  ; image_boundary : int * int
+  }
+
 val checked_image : ro -> (image, admission) result
 
 (* ---------------------------------------------------------------- opening *)
 
-type open_opts = {
-  seg_max : int;  (** pack segment rotation, bytes *)
-  index_slots : int;  (** the index's initial capacity *)
-  verify_on_open : bool;  (** run `verify` after recovery; opening returns a concrete fault on failure *)
-}
+type open_opts =
+  { seg_max : int (** pack segment rotation, bytes *)
+  ; index_slots : int (** the index's initial capacity *)
+  ; verify_on_open : bool
+    (** run `verify` after recovery; opening returns a concrete fault on failure *)
+  }
 
-val default_opts : open_opts
 (** seg_max = 1 GiB (`E4_pack.default_seg_max`), index_slots = 1 lsl 12, no verify.  §1.8's
     default is 1 lsl 20; that is 32 MB of table for a store of any size, and `E4_index` grows
     itself at load 0.6 (IX4), so the large number is only a tax on small stores.  A caller
     that knows how many nodes it will hold passes `index_slots` and lands at the load factor
     A2 §6.4 measured — bench cell B5's bytes-per-node is a function of exactly that. *)
+val default_opts : open_opts
 
 type recovery_stop =
-  | Clean  (** the tail ended where the pack ended *)
-  | Torn of E4_pack.scan_stop  (** the pack refused a record: CRC, digest, tag, length *)
-  | Refused of {
-      seg : int;
-      off : int;
-      addr : E4_addr.Addr.t;
-      why : admission;
-    }  (** a physically intact record the store refuses to admit (D6) *)
+  | Clean (** the tail ended where the pack ended *)
+  | Torn of E4_pack.scan_stop (** the pack refused a record: CRC, digest, tag, length *)
+  | Refused of
+      { seg : int
+      ; off : int
+      ; addr : E4_addr.Addr.t
+      ; why : admission
+      } (** a physically intact record the store refuses to admit (D6) *)
 
-type recovery = {
-  from : int * int;  (** the control file's `pack_end` — where re-admission started *)
-  admitted : int;  (** records admitted `Fresh` *)
-  duplicates : int;  (** records already resident at their address *)
-  ends_at : int * int;  (** the end of the last admitted record: the new watermark *)
-  stop : recovery_stop;
-  pack : E4_pack.recovery;  (** what the pack's own scan found (E4_pack PK7) *)
-}
+type recovery =
+  { from : int * int (** the control file's `pack_end` — where re-admission started *)
+  ; admitted : int (** records admitted `Fresh` *)
+  ; duplicates : int (** records already resident at their address *)
+  ; ends_at : int * int (** the end of the last admitted record: the new watermark *)
+  ; stop : recovery_stop
+  ; pack : E4_pack.recovery (** what the pack's own scan found (E4_pack PK7) *)
+  }
 
 val recovery_stop_word : recovery_stop -> string
 val recovery : t -> recovery
 
-val open_rw : dir:string -> open_opts -> (t, admission) result
 (** Create or open the store at [dir], take the writer lock, recover the tail (CS6) and commit
     the watermark. Opening returns located admission refusals, capacity limits, or concrete faults.
     A held writer lock returns [Fault (Locked _)]. *)
+val open_rw : dir:string -> open_opts -> (t, admission) result
 
-val open_ro : dir:string -> ro
 (** A read view over what the control file says is durable.  Takes no lock, admits nothing and
     never writes.  `Store_error` when the control file cannot be read. *)
+val open_ro : dir:string -> ro
 
-val read_only : t -> ro
 (** The writer's own read view (D4): it sees the records staged since the last commit. *)
+val read_only : t -> ro
 
 val close : t -> unit
 val close_ro : ro -> unit
 
-val reopen_ro : ro -> ro
 (** Re-read the control file and index whatever another writer has committed since (X5). *)
+val reopen_ro : ro -> ro
 
 val dir : t -> string
 
 (** Full preflight precedes every write. Hooks expose actual write, sync, and publication points for kill controls. *)
-type transaction = { txn_nodes : string list; txn_moves : E4_control.move list }
-type node_outcome = Fresh_node | Duplicate_node
-type move_outcome = Created of Z.t | Advanced of Z.t | Duplicate_move of Z.t
-type receipt = {
-  receipt_nodes : (E4_addr.Addr.t * node_outcome) list;
-  receipt_moves : move_outcome list;
-}
+type transaction =
+  { txn_nodes : string list
+  ; txn_moves : E4_control.move list
+  }
+
+type node_outcome =
+  | Fresh_node
+  | Duplicate_node
+
+type move_outcome =
+  | Created of Z.t
+  | Advanced of Z.t
+  | Duplicate_move of Z.t
+
+type receipt =
+  { receipt_nodes : (E4_addr.Addr.t * node_outcome) list
+  ; receipt_moves : move_outcome list
+  }
+
 type transaction_error =
-  | Node_refused of { index : Z.t; why : admission }
-  | Move_refused of { name : string; why : E4_control.root_error }
+  | Node_refused of
+      { index : Z.t
+      ; why : admission
+      }
+  | Move_refused of
+      { name : string
+      ; why : E4_control.root_error
+      }
   | Host_refused of admission
-type commit_point = Before_write of int | After_write of int | After_sync | Before_publish | After_publish
-(** Admit and write one transaction atomically. It checks only the transaction: the writer's
+
+type commit_point =
+  | Before_write of int
+  | After_write of int
+  | After_sync
+  | Before_publish
+  | After_publish
+  (** Admit and write one transaction atomically. It checks only the transaction: the writer's
     records were admitted whole at open (E4_disk.open_), and every later record is its own. *)
-val commit_transaction : ?hook:(commit_point -> unit) -> t -> transaction -> (receipt, transaction_error) result
+
+val commit_transaction
+  :  ?hook:(commit_point -> unit)
+  -> t
+  -> transaction
+  -> (receipt, transaction_error) result
 
 (* ---------------------------------------------------------------- nodes *)
 
-val put : t -> E4_node.t -> (outcome * E4_addr.Addr.t, admission) result
 (** CS1, CS2, CS3.  Stages the record; not durable until [commit]. *)
+val put : t -> E4_node.t -> (outcome * E4_addr.Addr.t, admission) result
 
-val put_bytes : t -> string -> (outcome * E4_addr.Addr.t, admission) result
 (** [put] of `E4_node.decode`'s answer.  Bytes that do not decode are refused in the order a
     node's own admission would refuse them: a version byte other than 0 is `Bad_version`, a
     frame at or above 2^62 is `Host_limit`, anything else is `Oversize`. *)
+val put_bytes : t -> string -> (outcome * E4_addr.Addr.t, admission) result
 
-val commit : t -> unit
 (** CS5: one write(2) and one fsync(2) per touched pack segment, then the control file's
     watermark by tmp+rename+fsync — one durable step.  A no-op when nothing is staged and the
     watermark has not moved. *)
+val commit : t -> unit
 
-val get_node : ro -> E4_addr.Addr.t -> E4_node.t option
 (** `Store.find` (Store.find (src/Effect4/Store/Domain/Store.lean)). *)
+val get_node : ro -> E4_addr.Addr.t -> E4_node.t option
 
 val get_bytes : ro -> E4_addr.Addr.t -> string option
 val get_kind : ro -> E4_addr.Addr.t -> E4_kind.t option
 val mem : ro -> E4_addr.Addr.t -> bool
 
-val resolves : ro -> E4_addr.Ref.t -> bool
 (** `Store.Resolves` Store.Resolves (src/Effect4/Store/Domain/Store.lean): a node is filed at that digest, at that kind. *)
+val resolves : ro -> E4_addr.Ref.t -> bool
 
-val nodes : ro -> (E4_addr.Addr.t * E4_node.t) list
 (** `Store.nodes` Store (src/Effect4/Store/Domain/Store.lean): the bindings in INSERTION order, which is the pack's write order.
     Order-dependent by construction — that is what L-CAS-7 is about. *)
+val nodes : ro -> (E4_addr.Addr.t * E4_node.t) list
 
 val addresses : ro -> E4_addr.Addr.t list
 val count : ro -> int
@@ -352,90 +391,104 @@ val root : ro -> string -> E4_control.root option
 val roots : ro -> E4_control.root list
 val generation : ro -> int
 
-val advance_root : t -> E4_control.move -> (unit, E4_control.root_error) result
 (** Full-head comparison, fixed policy and kind, and designated-parent journal moves.
     Commits current nodes before publishing the new root table. *)
+val advance_root : t -> E4_control.move -> (unit, E4_control.root_error) result
 
-val pin : t -> name:string -> E4_kind.t -> E4_addr.Cid.t -> (unit, E4_control.root_error) result
 (** Amendment M1's `pin name target`: a `Pin` root over the address `by_cid` finds for that
     `Cid` at that kind.  `Dangling` when the `Cid` has no filing — a pin never files a node. *)
+val pin
+  :  t
+  -> name:string
+  -> E4_kind.t
+  -> E4_addr.Cid.t
+  -> (unit, E4_control.root_error) result
 
-val pin_all :
-  t -> job:E4_addr.Addr.t -> E4_addr.Cid.t list -> (unit, E4_control.root_error) result
 (** §1.8's signature (D8): one `Pin` root per filing, named `runs/<job hex>/pin/<cid hex>`.
     Refuses the whole publish with `Dangling` when any `Cid` has no filing, and files nothing
     in that case. *)
+val pin_all
+  :  t
+  -> job:E4_addr.Addr.t
+  -> E4_addr.Cid.t list
+  -> (unit, E4_control.root_error) result
 
 (* ---------------------------------------------------------------- words, closure, verify *)
 
-type binding = { addr : E4_addr.Addr.t; node : E4_node.t }
 (** `Word.Binding` (Binding (src/Effect4/Store/Domain/Word.lean)). *)
+type binding =
+  { addr : E4_addr.Addr.t
+  ; node : E4_node.t
+  }
 
-val result_query : E4_node.t -> E4_addr.Addr.t option
 (** `Node.resultQuery?`: a result node's designated query, read as the common envelope at node
     version 0 and the common specification (`E4_result`); [None] for every other node (CS10). *)
+val result_query : E4_node.t -> E4_addr.Addr.t option
 
-val word_wf : binding list -> bool
 (** `Word.wf` Word.wf (src/Effect4/Store/Domain/Word.lean): children first, digests exact, no digest twice. *)
+val word_wf : binding list -> bool
 
-val closure : ro -> E4_addr.Ref.t -> binding list
 (** `Store.closure` Store.closure (src/Effect4/Store/Domain/Word.lean): the reachable subgraph of a reference, children first, each digest
     once, with `Word.emit`'s guard, at fuel `count`.  Order-independent (L-CAS-7). *)
+val closure : ro -> E4_addr.Ref.t -> binding list
 
 type word_error =
   | Refused_by of admission
-  | Word_conflict of { at : E4_addr.Addr.t; occupant : E4_node.t }
-      (** `Admission.conflict` (src/Effect4/Store/Domain/Store.lean), which `put` can never
+  | Word_conflict of
+      { at : E4_addr.Addr.t
+      ; occupant : E4_node.t
+      }
+  (** `Admission.conflict` (src/Effect4/Store/Domain/Store.lean), which `put` can never
           answer (D3): a binding whose address holds a colliding node *)
   | Word_corrupt of E4_addr.Addr.t
-      (** a binding whose address holds a record that does not hash to it (CS1) *)
+  (** a binding whose address holds a record that does not hash to it (CS1) *)
 
-val apply_word : t -> binding list -> (unit, word_error) result
 (** `Word.apply` Word.apply (src/Effect4/Store/Domain/Word.lean): a fold of `put`; a `Duplicate` is fine, a `Conflict` or a `Corrupt`
     refuses. *)
+val apply_word : t -> binding list -> (unit, word_error) result
 
-val verify : ro -> (unit, verify_error) result
 (** `Store.verify` (Store.verify (src/Effect4/Store/Domain/Word.lean)).  CS7: its own scan of the pack, every record re-hashed and
     re-decoded, every checked edge re-resolved at its kind, every root resolved.  The index is
     not consulted and the recorded digest is not trusted. *)
+val verify : ro -> (unit, verify_error) result
 
-val verify_node : ro -> E4_addr.Addr.t -> (unit, verify_error) result
 (** `Store.verifyNode` (Store.verifyNode (src/Effect4/Store/Domain/Word.lean)) for one address (D9). *)
+val verify_node : ro -> E4_addr.Addr.t -> (unit, verify_error) result
 
-val closed : ro -> bool
 (** `Closed` (Closed (src/Effect4/Store/Domain/Store.lean)): every resident node's checked edges resolve at their kinds. *)
+val closed : ro -> bool
 
 (* ---------------------------------------------------------------- queries that are not edges *)
 
-val by_cid : ro -> E4_kind.t -> E4_addr.Cid.t -> E4_addr.Addr.t list
 (** Amendment M6: the filings of a payload digest AT A KIND, in insertion order (D5).
     O(matches) plus one payload hash for each node written since the previous call. *)
+val by_cid : ro -> E4_kind.t -> E4_addr.Cid.t -> E4_addr.Addr.t list
 
 val by_cid_any : ro -> E4_addr.Cid.t -> (E4_kind.t * E4_addr.Addr.t) list
 
-val reachable : ro -> E4_addr.Addr.t -> bool
 (** `Store.Reachable`: some root's checked-edge closure contains this address.  It never walks
     a `Cid` field (amendment M1). *)
+val reachable : ro -> E4_addr.Addr.t -> bool
 
 (* ---------------------------------------------------------------- the caches, statistics *)
 
-val drop_index : ro -> unit
 (** L-IDX-0: throw the digest index away.  The next query rebuilds it from the pack and every
     answer is the same (crash family X3). *)
+val drop_index : ro -> unit
 
 val index_count : ro -> int
 
-type stats = {
-  nodes : int;
-  bytes : int;
-  index_slots : int;
-  index_bytes : int;
-  commits : int;
-  fsyncs : int;
-  conflicts : int;
-}
+type stats =
+  { nodes : int
+  ; bytes : int
+  ; index_slots : int
+  ; index_bytes : int
+  ; commits : int
+  ; fsyncs : int
+  ; conflicts : int
+  }
 
-val stats : ro -> stats
 (** The writer's counters are visible through `read_only`; a view from `open_ro` reports zero
     for `commits`, `fsyncs` and `conflicts` because it performs none.  `conflicts` counts the
     exhibited collisions (`Conflict`) only, never a `Corrupt` answer (CS1). *)
+val stats : ro -> stats

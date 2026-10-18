@@ -73,7 +73,11 @@ type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
 module Types = struct
   type 'st provider = Row.t -> Val.t -> 'st -> (completion * 'st) option
 
-  type outcome = Finished | Waiting | Delay | Stuck of string
+  type outcome =
+    | Finished
+    | Waiting
+    | Delay
+    | Stuck of string
 
   type host_stop =
     | Declined
@@ -83,7 +87,9 @@ module Types = struct
     | Unknown_row
     | Out_of_rounds
 
-  type stop = Machine of outcome | Host of host_stop
+  type stop =
+    | Machine of outcome
+    | Host of host_stop
 
   let stop_name = function
     | Machine Finished -> "finished"
@@ -96,10 +102,15 @@ module Types = struct
     | Host (Outside_profile why) -> "outside the profile: " ^ E4_clock.refusal_text why
     | Host Unknown_row -> "unknown row"
     | Host Out_of_rounds -> "out of rounds"
+  ;;
 
   type load_refusal = Load_outside_profile of E4_clock.refusal
 
-  type call = { row : int; request : Val.t; answer : completion }
+  type call =
+    { row : int
+    ; request : Val.t
+    ; answer : completion
+    }
 end
 
 include Types
@@ -107,38 +118,60 @@ include Types
 module Make (E : E4_engine.ENGINE) = struct
   include Types
 
-  type 'st served = { engine : E.t; state : 'st; calls : call list; stop : stop }
+  type 'st served =
+    { engine : E.t
+    ; state : 'st
+    ; calls : call list
+    ; stop : stop
+    }
 
-  let serve ?(table = []) ?(rounds = 64) (provider : 'st provider) (program : Eff_wire.program)
-      ~(fuel : int) (state : 'st) : ('st served, load_refusal) result =
+  let serve
+        ?(table = [])
+        ?(rounds = 64)
+        (provider : 'st provider)
+        (program : Eff_wire.program)
+        ~(fuel : int)
+        (state : 'st)
+    : ('st served, load_refusal) result
+    =
     match E.load ~table program ~fuel with
     | exception E4_clock.Profile_refusal why -> Error (Load_outside_profile why)
     | loaded ->
       let rows = Array.of_list table in
-      let served engine st calls stop = { engine; state = st; calls = List.rev calls; stop } in
+      let served engine st calls stop =
+        { engine; state = st; calls = List.rev calls; stop }
+      in
       (* One round: answer the first host call, or flush. Every step before it was read, so
          the machine [t] is live and was refused nothing (H9, H10). *)
       let rec round n t st calls =
-        if n = 0 then served t st calls (Host Out_of_rounds)
-        else
+        if n = 0
+        then served t st calls (Host Out_of_rounds)
+        else (
           match E.host_calls t with
-          | (fiber, token, row, request) :: _ -> (
-            if row < 0 || row >= Array.length rows then served t st calls (Host Unknown_row)
-            else
+          | (fiber, token, row, request) :: _ ->
+            if row < 0 || row >= Array.length rows
+            then served t st calls (Host Unknown_row)
+            else (
               match provider rows.(row) request st with
               | exception ((Out_of_memory | Sys.Break) as e) -> raise e
               | exception e -> served t st calls (Host (Raised e))
               | None -> served t st calls (Host Declined)
-              | Some (answer, st') -> (
-                match E.answer_async fiber token answer with
-                | exception E4_clock.Profile_refusal why ->
-                  served t st calls (Host (Outside_profile why))
-                | d ->
-                  if not (E.admits t d) then served t st calls (Host Refused)
-                  else
-                    read (n - 1) (t, st, calls) (E.step t d) st' ({ row; request; answer } :: calls)
-                      ~flushed:false))
-          | [] -> read (n - 1) (t, st, calls) (E.step t E.flush) st calls ~flushed:true
+              | Some (answer, st') ->
+                (match E.answer_async fiber token answer with
+                 | exception E4_clock.Profile_refusal why ->
+                   served t st calls (Host (Outside_profile why))
+                 | d ->
+                   if not (E.admits t d)
+                   then served t st calls (Host Refused)
+                   else
+                     read
+                       (n - 1)
+                       (t, st, calls)
+                       (E.step t d)
+                       st'
+                       ({ row; request; answer } :: calls)
+                       ~flushed:false))
+          | [] -> read (n - 1) (t, st, calls) (E.step t E.flush) st calls ~flushed:true)
       (* The answer of the step that took [t] to [t']; [st'] and [calls'] are the host's state
          and the calls once that step is taken. A refusal at the profile boundary keeps [t],
          [st] and [calls] (H2, H9); a stuck machine and one short of fuel are what the machine
@@ -155,5 +188,13 @@ module Make (E : E4_engine.ENGINE) = struct
           served t' st' calls' (Machine Waiting)
         | E4_engine.Finished | E4_engine.Suspended _ -> round n t' st' calls'
       in
-      Ok (read rounds (loaded, state, []) (E.step loaded (E.evaluate 0)) state [] ~flushed:false)
+      Ok
+        (read
+           rounds
+           (loaded, state, [])
+           (E.step loaded (E.evaluate 0))
+           state
+           []
+           ~flushed:false)
+  ;;
 end

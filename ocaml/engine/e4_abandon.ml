@@ -20,39 +20,48 @@
    machine the caller handed us -- which is precisely the silent drop the ruling forbids. A
    scope the interrupt already finished is still reported, as `closed` with zero steps. *)
 
-type budget = { finalizer_fuel : int; max_scopes : int }
+type budget =
+  { finalizer_fuel : int
+  ; max_scopes : int
+  }
 
 (* Named constants, never `max_int` (trap #17): the same program must not abandon
    differently on a 63-bit and a 31-bit host. *)
 let default_finalizer_fuel = 1000
 let default_max_scopes = 1024
-let default_budget = { finalizer_fuel = default_finalizer_fuel; max_scopes = default_max_scopes }
 
-type report = {
-  closed : int list;
-  unfinished : int list;
-  exits : string list;
-  fuel_left : int;
-  decisions : int;
-}
+let default_budget =
+  { finalizer_fuel = default_finalizer_fuel; max_scopes = default_max_scopes }
+;;
 
-type 'm driver = {
-  interrupt : 'm -> reason:string -> 'm * int;
-  open_scopes : 'm -> int list;
-  finalizer_step : 'm -> scope:int -> ('m * string list * int) option;
-}
+type report =
+  { closed : int list
+  ; unfinished : int list
+  ; exits : string list
+  ; fuel_left : int
+  ; decisions : int
+  }
+
+type 'm driver =
+  { interrupt : 'm -> reason:string -> 'm * int
+  ; open_scopes : 'm -> int list
+  ; finalizer_step : 'm -> scope:int -> ('m * string list * int) option
+  }
 
 (* One scope, under `fuel` command steps. Returns the machine, the exits in emission order
    (reversed onto `exits_rev`), the decisions appended, and whether the scope closed. *)
 let close_scope driver m ~scope ~fuel ~exits_rev ~decisions =
   let rec go m left exits_rev decisions =
-    if left <= 0 then (m, exits_rev, decisions, `Exhausted)
-    else
+    if left <= 0
+    then m, exits_rev, decisions, `Exhausted
+    else (
       match driver.finalizer_step m ~scope with
-      | None -> (m, exits_rev, decisions, `Closed left)
-      | Some (m', exits, d) -> go m' (left - 1) (List.rev_append exits exits_rev) (decisions + d)
+      | None -> m, exits_rev, decisions, `Closed left
+      | Some (m', exits, d) ->
+        go m' (left - 1) (List.rev_append exits exits_rev) (decisions + d))
   in
   go m fuel exits_rev decisions
+;;
 
 let run driver m ~reason ~budget =
   if budget.finalizer_fuel < 0 then invalid_arg "E4_abandon.run: negative finalizer_fuel";
@@ -64,38 +73,49 @@ let run driver m ~reason ~budget =
   let inner_first = List.rev at_entry in
   let rec pass n m scopes closed unfinished exits_rev decisions fuel_left =
     match scopes with
-    | [] -> (m, closed, unfinished, exits_rev, decisions, fuel_left)
+    | [] -> m, closed, unfinished, exits_rev, decisions, fuel_left
     | scope :: rest ->
-        if n >= budget.max_scopes then
-          (* Beyond the pass bound: never attempted, never granted fuel, always reported. *)
-          pass n m rest closed (scope :: unfinished) exits_rev decisions fuel_left
-        else
-          let m, exits_rev, decisions, outcome =
-            close_scope driver m ~scope ~fuel:budget.finalizer_fuel ~exits_rev ~decisions
-          in
-          let closed, unfinished, fuel_left =
-            match outcome with
-            | `Closed left -> (scope :: closed, unfinished, fuel_left + left)
-            | `Exhausted -> (closed, scope :: unfinished, fuel_left)
-          in
-          pass (n + 1) m rest closed unfinished exits_rev decisions fuel_left
+      if n >= budget.max_scopes
+      then
+        (* Beyond the pass bound: never attempted, never granted fuel, always reported. *)
+        pass n m rest closed (scope :: unfinished) exits_rev decisions fuel_left
+      else (
+        let m, exits_rev, decisions, outcome =
+          close_scope driver m ~scope ~fuel:budget.finalizer_fuel ~exits_rev ~decisions
+        in
+        let closed, unfinished, fuel_left =
+          match outcome with
+          | `Closed left -> scope :: closed, unfinished, fuel_left + left
+          | `Exhausted -> closed, scope :: unfinished, fuel_left
+        in
+        pass (n + 1) m rest closed unfinished exits_rev decisions fuel_left)
   in
   let m, closed, unfinished, exits_rev, decisions, fuel_left =
     pass 0 m inner_first [] [] [] interrupt_decisions 0
   in
-  ( m,
-    {
-      closed = List.rev closed;
-      unfinished = List.rev unfinished;
-      exits = List.rev exits_rev;
-      fuel_left;
-      decisions;
+  ( m
+  , { closed = List.rev closed
+    ; unfinished = List.rev unfinished
+    ; exits = List.rev exits_rev
+    ; fuel_left
+    ; decisions
     } )
+;;
 
 let accounted r ~at_entry =
-  List.equal Int.equal (List.sort Int.compare (r.closed @ r.unfinished)) (List.sort Int.compare at_entry)
+  List.equal
+    Int.equal
+    (List.sort Int.compare (r.closed @ r.unfinished))
+    (List.sort Int.compare at_entry)
+;;
 
 let to_string r =
   let ints xs = String.concat "," (List.map string_of_int xs) in
-  Printf.sprintf "closed=[%s] unfinished=[%s] exits=%d fuel_left=%d decisions=%d" (ints r.closed)
-    (ints r.unfinished) (List.length r.exits) r.fuel_left r.decisions
+  Printf.sprintf
+    "closed=[%s] unfinished=[%s] exits=%d fuel_left=%d decisions=%d"
+    (ints r.closed)
+    (ints r.unfinished)
+    (List.length r.exits)
+    r.fuel_left
+    r.decisions
+;;

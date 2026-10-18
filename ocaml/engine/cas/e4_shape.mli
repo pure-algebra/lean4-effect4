@@ -88,28 +88,28 @@
        QUERY: `cids_of_checked` answers `Error`, `E4_node.decode` and admission are untouched. *)
 
 type step =
-  | Arg of int  (** the i-th child, 0-based *)
-  | Each  (** every child — a list frame's elements *)
+  | Arg of int (** the i-th child, 0-based *)
+  | Each (** every child — a list frame's elements *)
 
-type path = step list
 (** A `ValPath`: argument indices in the encoded tree (amendment M5). *)
+type path = step list
 
-val args : int list -> path
 (** `[i; j]` as `[Arg i; Arg j]` — A2 §1.7's `int list` paths (D1). *)
+val args : int list -> path
 
-val path_to_string : path -> string
 (** "0.2" / "0.*.1"; for messages and the receipt, never an identity. *)
+val path_to_string : path -> string
 
 type field =
   | Cid_field of path
-      (** a tag-8 `bytes` frame of exactly 32 bytes that IS an address (finding R1) *)
+  (** a tag-8 `bytes` frame of exactly 32 bytes that IS an address (finding R1) *)
   | Ref_field of path * E4_kind.t option
-      (** a tag-11 `ref` frame; the kind is the one the shape fixes, or None when the shape
+  (** a tag-11 `ref` frame; the kind is the one the shape fixes, or None when the shape
           says `AnyRef` *)
   | Stamp of path
-      (** a tag-8 `bytes` frame of exactly 32 bytes that names NOTHING in the store: an
+  (** a tag-8 `bytes` frame of exactly 32 bytes that names NOTHING in the store: an
           `engine` manifest digest, a `spanDigest`, a `stores` digest *)
-  | Data_field of path  (** deliberately not an address (D2) *)
+  | Data_field of path (** deliberately not an address (D2) *)
 
 val field_path : field -> path
 
@@ -119,70 +119,81 @@ type cls =
   | Cls_stamp
   | Cls_data
   | Cls_unknown
-      (** the row does not classify this path: a `Shared`, `Unused` or `Tombstoned` kind, or a
+  (** the row does not classify this path: a `Shared`, `Unused` or `Tombstoned` kind, or a
           path the row does not mention *)
 
 type status =
-  | Frozen  (** one carrier; the row is its shape *)
-  | Shared of string list  (** finding R1': several carriers share the byte *)
-  | Unused  (** registered, no carrier today *)
-  | Tombstoned  (** fiber (15) *)
+  | Frozen (** one carrier; the row is its shape *)
+  | Shared of string list (** finding R1': several carriers share the byte *)
+  | Unused (** registered, no carrier today *)
+  | Tombstoned (** fiber (15) *)
   | Pending
-      (** 16..23: no Lean carrier yet; the shape is cas-design §4's / A2 §1.9's, or, for a
+  (** 16..23: no Lean carrier yet; the shape is cas-design §4's / A2 §1.9's, or, for a
           checkpoint, the payload `E4_checkpoint` writes *)
 
-type row = {
-  kind : E4_kind.t;
-  status : status;
-  carriers : string list;  (** the Lean declarations that file under this byte, for provenance *)
-  fields : field list;  (** empty unless [status] is [Frozen] or [Pending] *)
-  note : string;  (** why the row is what it is; printed by the receipt, never parsed *)
-}
+type row =
+  { kind : E4_kind.t
+  ; status : status
+  ; carriers : string list
+    (** the Lean declarations that file under this byte, for provenance *)
+  ; fields : field list (** empty unless [status] is [Frozen] or [Pending] *)
+  ; note : string (** why the row is what it is; printed by the receipt, never parsed *)
+  }
 
 type t
 
-val table : t
 (** The transcribed table (SH2, SH4). *)
+val table : t
 
-val rows : t -> row list
 (** One row per `E4_kind.all`, in byte order. *)
+val rows : t -> row list
 
 val row : t -> E4_kind.t -> row
 val status_of : t -> E4_kind.t -> status
 val fields_of : t -> E4_kind.t -> field list
 val class_at : t -> E4_kind.t -> path -> cls
 
-val cid_length : int
 (** 32: the length a Cid, a Ref digest and a Stamp all share (finding R1). *)
+val cid_length : int
 
 (* ---- resolving a path over payload bytes ---- *)
 
-val resolve : payload:string -> path -> (int * int * int) list
 (** Every frame the path reaches, as `(tag, payload_start, payload_end)`, in tree order.  `[]`
     when the path does not resolve or the payload is not a well-formed frame tree (SH5, SH6). *)
+val resolve : payload:string -> path -> (int * int * int) list
 
 (* ---- the queries the repository needs ---- *)
 
-val cids_of : t -> E4_kind.t -> payload:string -> E4_addr.Cid.t list
 (** What `pin_all` and `by_cid` need (A2 §1.8).  `[]` for every kind whose row has no
     `Cid_field`, which today is every kind except `job` (SH2). *)
+val cids_of : t -> E4_kind.t -> payload:string -> E4_addr.Cid.t list
 
-val refs_of : t -> E4_kind.t -> payload:string -> E4_addr.Ref.t list
 (** The TABLE's refs — a subset of `E4_node.scan_refs`, which is the exact answer (SH1). *)
+val refs_of : t -> E4_kind.t -> payload:string -> E4_addr.Ref.t list
 
-val stamps_of : t -> E4_kind.t -> payload:string -> string list
 (** The 32-byte digests that name nothing.  They are listed so that a caller can see they were
     considered and rejected, never so that they can be followed. *)
+val stamps_of : t -> E4_kind.t -> payload:string -> string list
 
-type mismatch = {
-  m_kind : E4_kind.t;
-  m_at : path;
-  m_reason : string;  (** "no such path" | "tag 5, want 8" | "bytes 17, want 32" | ... *)
-}
+type mismatch =
+  { m_kind : E4_kind.t
+  ; m_at : path
+  ; m_reason : string (** "no such path" | "tag 5, want 8" | "bytes 17, want 32" | ... *)
+  }
 
 val mismatch_to_string : mismatch -> string
 
-val cids_of_checked : t -> E4_kind.t -> payload:string -> (E4_addr.Cid.t list, mismatch) result
-val refs_of_checked : t -> E4_kind.t -> payload:string -> (E4_addr.Ref.t list, mismatch) result
-val stamps_of_checked : t -> E4_kind.t -> payload:string -> (string list, mismatch) result
+val cids_of_checked
+  :  t
+  -> E4_kind.t
+  -> payload:string
+  -> (E4_addr.Cid.t list, mismatch) result
+
+val refs_of_checked
+  :  t
+  -> E4_kind.t
+  -> payload:string
+  -> (E4_addr.Ref.t list, mismatch) result
+
 (** SH3, D4: a refusal of the QUERY, never of admission. *)
+val stamps_of_checked : t -> E4_kind.t -> payload:string -> (string list, mismatch) result

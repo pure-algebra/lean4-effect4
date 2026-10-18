@@ -39,9 +39,16 @@ let lines (f : string -> string option) =
     match In_channel.input_line stdin with
     | None -> ()
     | Some line when String.trim line = "" -> loop ()
-    | Some line -> Option.iter (fun out -> print_endline out; flush stdout) (f line); loop ()
+    | Some line ->
+      Option.iter
+        (fun out ->
+           print_endline out;
+           flush stdout)
+        (f line);
+      loop ()
   in
   loop ()
+;;
 
 let serve () = lines (fun line -> Some (serve_line line))
 
@@ -49,15 +56,20 @@ let serve () = lines (fun line -> Some (serve_line line))
 let tool () =
   let session = Kit_tool.create () in
   lines (fun line -> Some (Kit_tool.serve_line session line))
+;;
+
 let mcp () =
   let server = Kit_mcp.create () in
   lines (Kit_mcp.line server)
+;;
 
 let usage =
-  "usage: eff (check|run|explore) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--frames] [--budget K] [--width N] [--fast]\n\
+  "usage: eff (check|run|explore) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] \
+   [--frames] [--budget K] [--width N] [--fast]\n\
   \       eff serve\n\
   \       eff tool\n\
   \       eff mcp"
+;;
 
 let () =
   match Array.to_list Sys.argv with
@@ -66,8 +78,10 @@ let () =
   | [ _; "mcp" ] -> mcp ()
   | _ :: op :: path :: flags ->
     let rec parse r = function
-      | "--rows" :: f :: rest -> parse { r with rows = rows_of_json (json_of (read_file f) f) } rest
-      | "--tape" :: f :: rest -> parse { r with tape = Some (tape_of_json (json_of (read_file f) f)) } rest
+      | "--rows" :: f :: rest ->
+        parse { r with rows = rows_of_json (json_of (read_file f) f) } rest
+      | "--tape" :: f :: rest ->
+        parse { r with tape = Some (tape_of_json (json_of (read_file f) f)) } rest
       | "--limit" :: n :: rest -> parse { r with limit = int_of_string n } rest
       | "--budget" :: n :: rest -> parse { r with budget = int_of_string n } rest
       | "--frames" :: rest -> parse { r with frames = true } rest
@@ -77,10 +91,28 @@ let () =
       | flag :: _ -> input "unknown flag %S" flag
     in
     (match
-       answer (parse { op; program = Some (program_of_path path); rows = []; tape = None; limit = 1024; frames = false;
-                       budget = 64; width = 64; fast = false } flags)
+       answer
+         (parse
+            { op
+            ; program = Some (program_of_path path)
+            ; rows = []
+            ; tape = None
+            ; limit = 1024
+            ; frames = false
+            ; budget = 64
+            ; width = 64
+            ; fast = false
+            }
+            flags)
      with
      | a -> print_endline (Kit.Json.render a)
-     | exception Input e -> print_endline (Kit.Json.render (error_json e)); exit 2
-     | exception Failure e -> print_endline (Kit.Json.render (error_json e)); exit 2)
-  | _ -> prerr_endline usage; exit 2
+     | exception Input e ->
+       print_endline (Kit.Json.render (error_json e));
+       exit 2
+     | exception Failure e ->
+       print_endline (Kit.Json.render (error_json e));
+       exit 2)
+  | _ ->
+    prerr_endline usage;
+    exit 2
+;;

@@ -10,50 +10,77 @@
 (rule
  (targets red.cmo red.cmi red.cmt)
  (deps red.ml)
- (action (chdir %{workspace_root} (run %{ocamlc} -bin-annot -w -a -c %{dep:red.ml}))))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{ocamlc} -bin-annot -w -a -c %{dep:red.ml}))))
 
 (rule
  (targets generated.cmo generated.cmi generated.cmt)
  (deps generated.ml)
- (action (chdir %{workspace_root} (run %{ocamlc} -bin-annot -w -a -c %{dep:generated.ml}))))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{ocamlc} -bin-annot -w -a -c %{dep:generated.ml}))))
 
 (rule
  (targets raise.cmo raise.cmi raise.cmt)
  (deps raise.ml)
- (action (chdir %{workspace_root} (run %{ocamlc} -bin-annot -w -a -c %{dep:raise.ml}))))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{ocamlc} -bin-annot -w -a -c %{dep:raise.ml}))))
 
 (rule
  (targets red.out)
- (deps (sandbox none) red.cmt red.ml generated.cmt generated.ml)
+ (deps
+  (sandbox none)
+  red.cmt
+  red.ml
+  generated.cmt
+  generated.ml)
  (action
-  (with-stdout-to %{targets}
-   (chdir %{workspace_root}
-    (with-accepted-exit-codes 1
+  (with-stdout-to
+   %{targets}
+   (chdir
+    %{workspace_root}
+    (with-accepted-exit-codes
+     1
      (run %{exe:../main.exe} %{dep:red.cmt} %{dep:generated.cmt}))))))
 
 (rule
  (alias runtest)
- (action (diff red.expected red.out)))
+ (action
+  (diff red.expected red.out)))
 
 (rule
  (targets raise.out)
- (deps (sandbox none) raise.cmt raise.ml)
+ (deps
+  (sandbox none)
+  raise.cmt
+  raise.ml)
  (action
-  (with-stdout-to %{targets}
-   (chdir %{workspace_root}
+  (with-stdout-to
+   %{targets}
+   (chdir
+    %{workspace_root}
     (run %{exe:../main.exe} --raises %{dep:raise.cmt})))))
 
 (rule
  (alias runtest)
- (action (diff raise.expected raise.out)))
+ (action
+  (diff raise.expected raise.out)))
 
 (rule
  (targets missing.out)
  (action
-  (with-stderr-to %{targets}
-   (with-accepted-exit-codes 2
+  (with-stderr-to
+   %{targets}
+   (with-accepted-exit-codes
+    2
     (run %{exe:../main.exe} missing.cmt)))))
 
 (rule
  (alias runtest)
- (action (diff missing.expected missing.out)))
+ (action
+  (diff missing.expected missing.out)))

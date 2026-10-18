@@ -40,23 +40,32 @@ let check name ok =
   incr checks;
   Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
   if not ok then incr failures
+;;
 
 (* ================================================================ the fixture's text *)
 
-type run = { name : string; fuel : int; program : string; exit_text : string }
+type run =
+  { name : string
+  ; fuel : int
+  ; program : string
+  ; exit_text : string
+  }
 
 let words (line : string) : string list =
   List.filter (fun w -> w <> "") (String.split_on_char ' ' line)
+;;
 
 let bytes_of_hex (hex : string) : string =
   match E4_hex.to_bytes hex with
   | Some b -> b
   | None -> failwith "fixture: the program is not hexadecimal"
+;;
 
 (* The text after a line's first word and one space. *)
 let after_word (line : string) (word : string) : string =
   let n = String.length word + 1 in
   String.sub line n (String.length line - n)
+;;
 
 (* The fixture into its runs.  Any line this reader does not know is a failure: a fixture is
    never read loosely. *)
@@ -65,7 +74,9 @@ let read_fixture (path : string) : run list =
   let rec lines acc =
     match input_line ic with
     | line -> lines (line :: acc)
-    | exception End_of_file -> close_in ic; List.rev acc
+    | exception End_of_file ->
+      close_in ic;
+      List.rev acc
   in
   let rec runs acc = function
     | [] -> List.rev acc
@@ -83,21 +94,23 @@ let read_fixture (path : string) : run list =
        | [ "fuel"; n ] -> body { r with fuel = int_of_string n } rest
        | [ "program"; hex ] -> body { r with program = bytes_of_hex hex } rest
        | "exit" :: _ -> body { r with exit_text = after_word line "exit" } rest
-       | [ "end" ] -> (r, rest)
-       | _ -> failwith (Printf.sprintf "fixture %s: run %s, unknown line %S" path r.name line))
+       | [ "end" ] -> r, rest
+       | _ ->
+         failwith (Printf.sprintf "fixture %s: run %s, unknown line %S" path r.name line))
   in
   runs [] (lines [])
+;;
 
 (* ================================================================ one report per run *)
 
-type report = {
-  outcome : string;
-  root : string option;
-  exits : (int * string) list;
-  fibers : (int * string) list;
-  trace : string list;
-  store : string;
-}
+type report =
+  { outcome : string
+  ; root : string option
+  ; exits : (int * string) list
+  ; fibers : (int * string) list
+  ; trace : string list
+  ; store : string
+  }
 
 module Rep (En : E4_engine.ENGINE) = struct
   (* The program from its bytes, then the engine's own drive loop. *)
@@ -107,26 +120,32 @@ module Rep (En : E4_engine.ENGINE) = struct
     | Some p ->
       let t = En.run_program p ~fuel in
       Some
-        { outcome = En.outcome t;
-          root = En.root_exit t;
-          exits = En.exits t;
-          fibers = En.fiber_rows t;
-          trace = En.trace_rows t;
-          store = En.store_row t }
+        { outcome = En.outcome t
+        ; root = En.root_exit t
+        ; exits = En.exits t
+        ; fibers = En.fiber_rows t
+        ; trace = En.trace_rows t
+        ; store = En.store_row t
+        }
+  ;;
 end
 
 module RF = Rep (E4_engine.Fast)
 module RR = Rep (E4_engine.Ref)
 
 let find_fixture () : string =
-  let candidates = [ "mask.txt"; "engine/test/mask/mask.txt"; "ocaml/engine/test/mask/mask.txt" ] in
+  let candidates =
+    [ "mask.txt"; "engine/test/mask/mask.txt"; "ocaml/engine/test/mask/mask.txt" ]
+  in
   match List.find_opt Sys.file_exists candidates with
   | Some path -> path
   | None -> failwith "mask.txt not found from the cwd"
+;;
 
 (* The fixture's runs, in the order Lean writes them (Test.Program.MaskContract.engineRuns). *)
 let expected_names =
   [ "s1"; "s2"; "s3"; "s4"; "s5inner"; "s5outer"; "s6"; "s7"; "s9"; "s10" ]
+;;
 
 (* The fuel of the red control: no run of the fixture finishes at it
    (Test/Program/MaskContract.lean guards the same on Lean's machine). *)
@@ -139,44 +158,67 @@ let () =
     (List.map (fun (r : run) -> r.name) runs = expected_names);
   List.iter
     (fun (r : run) ->
-       Printf.printf "== run %s: %d bytes, fuel %d ==\n" r.name (String.length r.program) r.fuel;
-       match (RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel) with
+       Printf.printf
+         "== run %s: %d bytes, fuel %d ==\n"
+         r.name
+         (String.length r.program)
+         r.fuel;
+       match RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel with
        | Some fast, Some slow ->
          check (r.name ^ ": M1 the program's bytes decode on both instances") true;
          check (r.name ^ ": M2 Fast finishes") (fast.outcome = "finished");
          check (r.name ^ ": M2 Ref finishes") (slow.outcome = "finished");
-         Printf.printf "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n" r.exit_text
-           (Option.value fast.root ~default:"-") (Option.value slow.root ~default:"-");
-         check (r.name ^ ": M2 Fast's root exit is the exit Lean wrote") (fast.root = Some r.exit_text);
-         check (r.name ^ ": M2 Ref's root exit is the exit Lean wrote") (slow.root = Some r.exit_text);
-         check (r.name ^ ": M3 Fast = Ref: outcome, exits, fibers, trace, store") (fast = slow);
+         Printf.printf
+           "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n"
+           r.exit_text
+           (Option.value fast.root ~default:"-")
+           (Option.value slow.root ~default:"-");
+         check
+           (r.name ^ ": M2 Fast's root exit is the exit Lean wrote")
+           (fast.root = Some r.exit_text);
+         check
+           (r.name ^ ": M2 Ref's root exit is the exit Lean wrote")
+           (slow.root = Some r.exit_text);
+         check
+           (r.name ^ ": M3 Fast = Ref: outcome, exits, fibers, trace, store")
+           (fast = slow);
          (* M4: a program cut by one byte is refused *)
          let cut = String.sub r.program 0 (String.length r.program - 1) in
-         check (r.name ^ ": M4 a program cut by one byte is refused on both instances")
+         check
+           (r.name ^ ": M4 a program cut by one byte is refused on both instances")
            (RF.report cut ~fuel:r.fuel = None && RR.report cut ~fuel:r.fuel = None);
          (* M4: at a small fuel the run does not finish *)
-         (match (RF.report r.program ~fuel:small_fuel, RR.report r.program ~fuel:small_fuel) with
+         (match
+            RF.report r.program ~fuel:small_fuel, RR.report r.program ~fuel:small_fuel
+          with
           | Some f, Some s ->
             check
-              (Printf.sprintf "%s: M4 at fuel %d neither instance finishes, and none has a root exit"
-                 r.name small_fuel)
-              (f.outcome <> "finished" && s.outcome <> "finished" && f.root = None && s.root = None)
+              (Printf.sprintf
+                 "%s: M4 at fuel %d neither instance finishes, and none has a root exit"
+                 r.name
+                 small_fuel)
+              (f.outcome <> "finished"
+               && s.outcome <> "finished"
+               && f.root = None
+               && s.root = None)
           | _ -> check (r.name ^ ": M4 the program decodes at the small fuel") false)
        | _ -> check (r.name ^ ": M1 the program's bytes decode on both instances") false)
     runs;
   (* M4: the interrupted wait and the masked caller's wait answer two exits, so each run's
      check can fail. *)
   (match
-     ( List.find_opt (fun (r : run) -> r.name = "s2") runs,
-       List.find_opt (fun (r : run) -> r.name = "s3") runs )
+     ( List.find_opt (fun (r : run) -> r.name = "s2") runs
+     , List.find_opt (fun (r : run) -> r.name = "s3") runs )
    with
    | Some a, Some b ->
      check "M4 the exits of s2 and s3 are two texts" (a.exit_text <> b.exit_text);
-     (match (RF.report a.program ~fuel:a.fuel, RR.report a.program ~fuel:a.fuel) with
+     (match RF.report a.program ~fuel:a.fuel, RR.report a.program ~fuel:a.fuel with
       | Some fast, Some slow ->
-        check "M4 the exit of s2 is not the exit of s3, on both instances"
+        check
+          "M4 the exit of s2 is not the exit of s3, on both instances"
           (fast.root <> Some b.exit_text && slow.root <> Some b.exit_text)
       | _ -> check "M4 the run s2 decodes" false)
    | _ -> check "M4 the runs s2 and s3 are in the fixture" false);
   Printf.printf "test_mask: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
+;;

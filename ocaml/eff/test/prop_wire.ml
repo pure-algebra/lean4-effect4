@@ -26,24 +26,40 @@ let rand_nat () =
   | 2 -> ri 100000
   | 3 -> Random.State.bits rng
   | _ -> (Random.State.bits rng lsl 32) lor Random.State.bits rng
+;;
 
 let strings =
-  [ ""; "a"; "succ"; "Ref.Ref<number>"; "h\xc3\xa9llo"; "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e"; "\xf0\x9f\x98\x80"
-  ; "quote\"back\\slash"; "\n\t\001\127"; "Deferred.Deferred<number, number>" ]
+  [ ""
+  ; "a"
+  ; "succ"
+  ; "Ref.Ref<number>"
+  ; "h\xc3\xa9llo"
+  ; "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e"
+  ; "\xf0\x9f\x98\x80"
+  ; "quote\"back\\slash"
+  ; "\n\t\001\127"
+  ; "Deferred.Deferred<number, number>"
+  ]
+;;
 
 let rand_string () = pick strings
 
-let rand_mask () = pick [ MaskMode.Interruptible; MaskMode.Uninterruptible; MaskMode.Inherit ]
+let rand_mask () =
+  pick [ MaskMode.Interruptible; MaskMode.Uninterruptible; MaskMode.Inherit ]
+;;
+
 let rand_mode () = pick [ ObserverMode.AwaitValue; ObserverMode.JoinEffect ]
 
 let rand_options () =
   { ForkOptions.start_immediately = rb (); daemon = rb (); mask_mode = rand_mask () }
+;;
 
-let rand_service_key () =
-  { ServiceKey.name = (rand_nat ()); service = (rand_nat ()) }
+let rand_service_key () = { ServiceKey.name = rand_nat (); service = rand_nat () }
 
 (* A canonical row of keys: strictly ascending by name, then service (`Effect4.Row`, `ServiceKey.Lt`). *)
-let rand_keys () = List.sort_uniq compare (List.init (ri 4) (fun _ -> rand_service_key ()))
+let rand_keys () =
+  List.sort_uniq compare (List.init (ri 4) (fun _ -> rand_service_key ()))
+;;
 
 let rand_lit () =
   match ri 4 with
@@ -51,26 +67,41 @@ let rand_lit () =
   | 1 -> Lit.Nat (rand_nat ())
   | 2 -> Lit.Bool (rb ())
   | _ -> Lit.Str (rand_string ())
+;;
 
 let rec rand_term d =
-  if d <= 0 then (if rb () then Term.Var (ri 20) else Term.Lit (rand_lit ()))
-  else
+  if d <= 0
+  then if rb () then Term.Var (ri 20) else Term.Lit (rand_lit ())
+  else (
     match ri 8 with
     | 0 -> Term.Var (rand_nat ())
     | 1 -> Term.Lit (rand_lit ())
     | 2 -> Term.App (rand_string (), rand_terms (d - 1))
-    | 3 -> Term.Record
-        (List.init (ri 4) (fun _ -> rand_string (), (rb (), pick [Ty.Nat; Ty.Int; Ty.Number; Ty.String])),
-         List.init (ri 4) (fun _ -> rand_string ()), rand_terms (d - 1))
-    | 4 -> Term.Field
-        (pick [FieldReadMode.Required; FieldReadMode.Optional], rand_term (d - 1), rand_string ())
+    | 3 ->
+      Term.Record
+        ( List.init (ri 4) (fun _ ->
+            rand_string (), (rb (), pick [ Ty.Nat; Ty.Int; Ty.Number; Ty.String ]))
+        , List.init (ri 4) (fun _ -> rand_string ())
+        , rand_terms (d - 1) )
+    | 4 ->
+      Term.Field
+        ( pick [ FieldReadMode.Required; FieldReadMode.Optional ]
+        , rand_term (d - 1)
+        , rand_string () )
     | 5 -> Term.RecordSet (rand_term (d - 1), rand_string (), rand_term (d - 1))
     | 6 -> Term.TupleAt (rand_term (d - 1), rand_nat ())
-    | _ -> Term.Fold
-        ((if rb () then None else Some (pick [Ty.Nat; Ty.String; Ty.List Ty.Nat])),
-         rand_term (d - 1), rand_term (d - 1), rand_term (d - 1))
+    | _ ->
+      Term.Fold
+        ( (if rb () then None else Some (pick [ Ty.Nat; Ty.String; Ty.List Ty.Nat ]))
+        , rand_term (d - 1)
+        , rand_term (d - 1)
+        , rand_term (d - 1) ))
 
-and rand_terms d = if d <= 0 || ri 3 = 0 then Terms.Nil else Terms.Cons (rand_term (d - 1), rand_terms (d - 1))
+and rand_terms d =
+  if d <= 0 || ri 3 = 0
+  then Terms.Nil
+  else Terms.Cons (rand_term (d - 1), rand_terms (d - 1))
+;;
 
 (* The 23 built-in op values (`Eff_native.all_ops`) enumerate every FinalizerStrategy and hold
    each of the eight read-modify-write rows once, at its face: the unit literal for its binder
@@ -89,12 +120,14 @@ let rand_term_op () =
   | 5 -> NativeOp.RefUpdateSomeAndGetWith f
   | 6 -> NativeOp.RefModifyWith f
   | _ -> NativeOp.RefModifySomeWith f
+;;
 
 let rand_op () =
   match ri 4 with
   | 0 -> NativeOp.External (rand_nat ())
   | 1 -> rand_term_op ()
   | _ -> pick Eff_native.all_ops
+;;
 
 let rec rand_cause d =
   match if d <= 0 then ri 3 else ri 4 with
@@ -102,20 +135,27 @@ let rec rand_cause d =
   | 1 -> CauseTerm.Die (rand_term d)
   | 2 -> CauseTerm.Interrupt (if rb () then None else Some (rand_term d))
   | _ -> CauseTerm.Both (rand_cause (d - 1), rand_cause (d - 1))
+;;
 
 let rand_decision () =
-  pick [Decision.Bool; Decision.Option; Decision.Tag (rand_string ());
-        Decision.RecordTag (rand_string ())]
+  pick
+    [ Decision.Bool
+    ; Decision.Option
+    ; Decision.Tag (rand_string ())
+    ; Decision.RecordTag (rand_string ())
+    ]
+;;
 
 let rec rand_eff d =
   let t () = rand_term (min d 2) in
-  if d <= 0 then
+  if d <= 0
+  then (
     match ri 4 with
     | 0 -> Eff.Succeed (t ())
     | 1 -> Eff.YieldNow (rand_nat ())
     | 2 -> Eff.Fail (t ())
-    | _ -> Eff.Perform (rand_op (), t ())
-  else
+    | _ -> Eff.Perform (rand_op (), t ()))
+  else (
     let e () = rand_eff (d - 1) in
     match ri 29 with
     | 0 -> Eff.Succeed (t ())
@@ -134,7 +174,8 @@ let rec rand_eff d =
     | 13 -> Eff.Uninterruptible (e ())
     | 14 -> Eff.Interruptible (e ())
     | 15 -> Eff.Select (t (), rand_decision (), e (), e ())
-    | 16 -> Eff.Iterate ((if rb () then None else Some Ty.Nat), t (), t (), t (), t (), e ())
+    | 16 ->
+      Eff.Iterate ((if rb () then None else Some Ty.Nat), t (), t (), t (), t (), e ())
     | 17 -> Eff.YieldNow (rand_nat ())
     | 18 -> Eff.Perform (rand_op (), t ())
     | 19 -> Eff.AwaitFiber (t (), rand_mode ())
@@ -146,11 +187,12 @@ let rec rand_eff d =
     | 25 -> Eff.ProvideService (rand_service_key (), t (), e ())
     | 26 -> Eff.Restore (t (), e ())
     | 27 -> Eff.ProvideContext (t (), e ())
-    | _ -> Eff.CatchIf (t (), e (), e ())
+    | _ -> Eff.CatchIf (t (), e (), e ()))
 
 and rand_layer d =
-  if d <= 0 then LayerTerm.Succeed (rand_service_key (), rand_lit ())
-  else
+  if d <= 0
+  then LayerTerm.Succeed (rand_service_key (), rand_lit ())
+  else (
     match ri 8 with
     | 0 -> LayerTerm.Succeed (rand_service_key (), rand_lit ())
     | 1 -> LayerTerm.Effect (rand_service_key (), rand_eff (d - 1))
@@ -159,7 +201,7 @@ and rand_layer d =
     | 4 -> LayerTerm.ProvideMerge (rand_layer (d - 1), rand_layer (d - 1))
     | 5 -> LayerTerm.Merge (rand_layer (d - 1), rand_layer (d - 1))
     | 6 -> LayerTerm.Fresh (rand_layer (d - 1))
-    | _ -> LayerTerm.OrDie (rand_layer (d - 1))
+    | _ -> LayerTerm.OrDie (rand_layer (d - 1)))
 
 and rand_stmt d =
   match ri 6 with
@@ -170,8 +212,13 @@ and rand_stmt d =
   | 4 -> Stmt.WhileTrue (rand_stmts (d - 1))
   | _ -> Stmt.BreakLoop
 
-and rand_stmts d = if d <= 0 || ri 3 = 0 then Stmts.Nil else Stmts.Cons (rand_stmt (d - 1), rand_stmts (d - 1))
-and rand_effs d = if d <= 0 || ri 3 = 0 then Effs.Nil else Effs.Cons (rand_eff (d - 1), rand_effs (d - 1))
+and rand_stmts d =
+  if d <= 0 || ri 3 = 0
+  then Stmts.Nil
+  else Stmts.Cons (rand_stmt (d - 1), rand_stmts (d - 1))
+
+and rand_effs d =
+  if d <= 0 || ri 3 = 0 then Effs.Nil else Effs.Cons (rand_eff (d - 1), rand_effs (d - 1))
 
 and rand_action d =
   let t () = rand_term (min d 2) in
@@ -193,6 +240,7 @@ and rand_action d =
   | 14 -> ActionTerm.GetInterruptible
   | 15 -> ActionTerm.CloseScope (t (), t ())
   | _ -> ActionTerm.RaceAllFirst (rand_effs d)
+;;
 
 let rec rand_ty d =
   match if d <= 0 then ri 7 else ri 15 with
@@ -211,10 +259,9 @@ let rec rand_ty d =
   | 12 -> Ty.CauseOf (rand_ty (d - 1))
   | 13 -> Ty.FiberOf (rand_ty (d - 1), rand_ty (d - 1))
   | _ -> Ty.Union (rand_ty (d - 1), rand_ty (d - 1))
+;;
 
-let rand_key () =
-  { ServiceKey.name = (rand_nat ()); service = (rand_nat ()) }
-
+let rand_key () = { ServiceKey.name = rand_nat (); service = rand_nat () }
 let rand_list f = List.init (ri 4) (fun _ -> f ())
 
 (* Requirement rows are canonical sets in the Lean source image. Invalid ordering and
@@ -222,37 +269,61 @@ let rand_list f = List.init (ri 4) (fun _ -> f ())
 let rand_requirements () =
   let key (k : ServiceKey.t) = k.ServiceKey.name, k.ServiceKey.service in
   List.sort_uniq (fun a b -> compare (key a) (key b)) (rand_list rand_key)
+;;
 
 let rand_row_arg () =
   if rb () then RowArg.Name (rand_string ()) else RowArg.Str (rand_string ())
+;;
 
 let rand_row () =
-  { Row.name = rand_string (); spelling = rand_string ();
-    shape = pick [ RowShape.Call; RowShape.Value; RowShape.TupleCall; RowShape.Method ]; trailing = rand_list rand_row_arg;
-    kind = pick [ RowKind.Sync; RowKind.Async; RowKind.Program ];
-    request = rand_ty 2; answer = rand_ty 2; error = rand_ty 2;
-    requires = rand_requirements (); cite = rand_string ();
-    type_args = rand_list rand_string;
-    registration = pick [ Registration.Deferred; Registration.External ] }
+  { Row.name = rand_string ()
+  ; spelling = rand_string ()
+  ; shape = pick [ RowShape.Call; RowShape.Value; RowShape.TupleCall; RowShape.Method ]
+  ; trailing = rand_list rand_row_arg
+  ; kind = pick [ RowKind.Sync; RowKind.Async; RowKind.Program ]
+  ; request = rand_ty 2
+  ; answer = rand_ty 2
+  ; error = rand_ty 2
+  ; requires = rand_requirements ()
+  ; cite = rand_string ()
+  ; type_args = rand_list rand_string
+  ; registration = pick [ Registration.Deferred; Registration.External ]
+  }
+;;
 
-let rand_eff_ty () = { EffTy.answer = rand_ty 3; error = rand_ty 3; requires = rand_requirements () }
+let rand_eff_ty () =
+  { EffTy.answer = rand_ty 3; error = rand_ty 3; requires = rand_requirements () }
+;;
 
 let checks = ref 0
 let failures = ref 0
 
-let fail what i = incr failures; Printf.printf "FAIL: %s at sample %d\n%!" what i
+let fail what i =
+  incr failures;
+  Printf.printf "FAIL: %s at sample %d\n%!" what i
+;;
 
-let property (what : string) (n : int) (gen : unit -> 'a) (encode : 'a -> string)
-    (decode_exact : string -> 'a option) (decode : string -> ('a * int) option) (print : 'a -> string) : unit =
+let property
+      (what : string)
+      (n : int)
+      (gen : unit -> 'a)
+      (encode : 'a -> string)
+      (decode_exact : string -> 'a option)
+      (decode : string -> ('a * int) option)
+      (print : 'a -> string)
+  : unit
+  =
   let seen = Hashtbl.create 1024 in
   for i = 1 to n do
     let v = gen () in
     let b = encode v in
     let junk = "\000\001\002" in
     incr checks;
-    if decode_exact b <> Some v then fail (what ^ ": P1 decode_exact (encode v) = Some v") i;
+    if decode_exact b <> Some v
+    then fail (what ^ ": P1 decode_exact (encode v) = Some v") i;
     incr checks;
-    if decode (b ^ junk) <> Some (v, String.length b) then fail (what ^ ": P2 self-delimiting") i;
+    if decode (b ^ junk) <> Some (v, String.length b)
+    then fail (what ^ ": P2 self-delimiting") i;
     incr checks;
     if decode_exact (b ^ junk) <> None then fail (what ^ ": P3 trailing bytes refused") i;
     incr checks;
@@ -262,68 +333,141 @@ let property (what : string) (n : int) (gen : unit -> 'a) (encode : 'a -> string
     incr checks;
     if String.length (print v) = 0 then fail (what ^ ": P5 JSON") i
   done
+;;
 
 let record_controls =
-  let raw = Term.Record
-      (["z", (true, Ty.Int); "z", (false, Ty.Number); "__proto__", (true, Ty.Nat)],
-       ["unknown"; "unknown"], Terms.Cons (Term.Lit (Lit.Nat 1), Terms.Nil)) in
-  [ raw;
-    Term.Record (["x", (true, Ty.Nat)], [], Terms.Cons (Term.Lit (Lit.Nat 1), Terms.Nil));
-    Term.Record (["x", (true, Ty.Nat)], [], Terms.Nil);
-    Term.Field (FieldReadMode.Required, raw, "__proto__");
-    Term.Field (FieldReadMode.Optional, raw, "a-b");
-    Term.RecordSet (raw, "a-b", Term.Var 3) ]
+  let raw =
+    Term.Record
+      ( [ "z", (true, Ty.Int); "z", (false, Ty.Number); "__proto__", (true, Ty.Nat) ]
+      , [ "unknown"; "unknown" ]
+      , Terms.Cons (Term.Lit (Lit.Nat 1), Terms.Nil) )
+  in
+  [ raw
+  ; Term.Record ([ "x", (true, Ty.Nat) ], [], Terms.Cons (Term.Lit (Lit.Nat 1), Terms.Nil))
+  ; Term.Record ([ "x", (true, Ty.Nat) ], [], Terms.Nil)
+  ; Term.Field (FieldReadMode.Required, raw, "__proto__")
+  ; Term.Field (FieldReadMode.Optional, raw, "a-b")
+  ; Term.RecordSet (raw, "a-b", Term.Var 3)
+  ]
+;;
 
 let tuple_controls =
-  [ Term.TupleAt (Term.Var 0, 0);
-    Term.TupleAt (Term.Var 1, 9007199254740993);
-    Term.TupleAt (Term.TupleAt (Term.Var 2, 65537), max_int);
-    Term.Field (FieldReadMode.Optional, Term.TupleAt (Term.Var 3, 1), "a-b") ]
+  [ Term.TupleAt (Term.Var 0, 0)
+  ; Term.TupleAt (Term.Var 1, 9007199254740993)
+  ; Term.TupleAt (Term.TupleAt (Term.Var 2, 65537), max_int)
+  ; Term.Field (FieldReadMode.Optional, Term.TupleAt (Term.Var 3, 1), "a-b")
+  ]
+;;
 
 (* The list fold (decisions row 228): with no stated type and with one, and a fold inside a
    fold's body. *)
 let fold_controls =
-  [ Term.Fold (None, Term.Var 0, Term.Lit (Lit.Nat 0), Term.Var 1);
-    Term.Fold (Some (Ty.List Ty.Nat), Term.Var 0, Term.App ("nil", Terms.Nil), Term.Var 1);
-    Term.Fold (None, Term.Var 0, Term.Var 1,
-      Term.Fold (Some Ty.Never, Term.Var 3, Term.Var 2, Term.TupleAt (Term.Var 5, 0))) ]
+  [ Term.Fold (None, Term.Var 0, Term.Lit (Lit.Nat 0), Term.Var 1)
+  ; Term.Fold (Some (Ty.List Ty.Nat), Term.Var 0, Term.App ("nil", Terms.Nil), Term.Var 1)
+  ; Term.Fold
+      ( None
+      , Term.Var 0
+      , Term.Var 1
+      , Term.Fold (Some Ty.Never, Term.Var 3, Term.Var 2, Term.TupleAt (Term.Var 5, 0)) )
+  ]
+;;
 
 let decision_controls =
-  [ Decision.Bool; Decision.Option; Decision.Tag "Found";
-    Decision.RecordTag "Found"; Decision.RecordTag "";
-    Decision.RecordTag "é\n\"raw" ]
+  [ Decision.Bool
+  ; Decision.Option
+  ; Decision.Tag "Found"
+  ; Decision.RecordTag "Found"
+  ; Decision.RecordTag ""
+  ; Decision.RecordTag "é\n\"raw"
+  ]
+;;
 
 let () =
   let at d s p l = d s p l in
-  List.iteri (fun i term ->
-      property ("record-term-" ^ string_of_int i) 1 (fun () -> term)
-        Eff_wire.encode_term Eff_wire.decode_term_exact
-        (fun s -> at Eff_wire.decode_term s 0 (String.length s)) Eff_json.print_term)
+  List.iteri
+    (fun i term ->
+       property
+         ("record-term-" ^ string_of_int i)
+         1
+         (fun () -> term)
+         Eff_wire.encode_term
+         Eff_wire.decode_term_exact
+         (fun s -> at Eff_wire.decode_term s 0 (String.length s))
+         Eff_json.print_term)
     record_controls;
-  List.iteri (fun i term ->
-      property ("tuple-term-" ^ string_of_int i) 1 (fun () -> term)
-        Eff_wire.encode_term Eff_wire.decode_term_exact
-        (fun s -> at Eff_wire.decode_term s 0 (String.length s)) Eff_json.print_term)
+  List.iteri
+    (fun i term ->
+       property
+         ("tuple-term-" ^ string_of_int i)
+         1
+         (fun () -> term)
+         Eff_wire.encode_term
+         Eff_wire.decode_term_exact
+         (fun s -> at Eff_wire.decode_term s 0 (String.length s))
+         Eff_json.print_term)
     tuple_controls;
-  List.iteri (fun i term ->
-      property ("fold-term-" ^ string_of_int i) 1 (fun () -> term)
-        Eff_wire.encode_term Eff_wire.decode_term_exact
-        (fun s -> at Eff_wire.decode_term s 0 (String.length s)) Eff_json.print_term)
+  List.iteri
+    (fun i term ->
+       property
+         ("fold-term-" ^ string_of_int i)
+         1
+         (fun () -> term)
+         Eff_wire.encode_term
+         Eff_wire.decode_term_exact
+         (fun s -> at Eff_wire.decode_term s 0 (String.length s))
+         Eff_json.print_term)
     fold_controls;
-  List.iteri (fun i decision ->
-      property ("decision-" ^ string_of_int i) 1 (fun () -> decision)
-        Eff_wire.encode_decision Eff_wire.decode_decision_exact
-        (fun s -> at Eff_wire.decode_decision s 0 (String.length s)) Eff_json.print_decision)
+  List.iteri
+    (fun i decision ->
+       property
+         ("decision-" ^ string_of_int i)
+         1
+         (fun () -> decision)
+         Eff_wire.encode_decision
+         Eff_wire.decode_decision_exact
+         (fun s -> at Eff_wire.decode_decision s 0 (String.length s))
+         Eff_json.print_decision)
     decision_controls;
-  property "eff" 400 (fun () -> rand_eff (ri 7)) Eff_wire.encode_eff Eff_wire.decode_eff_exact
-    (fun s -> at Eff_wire.decode_eff s 0 (String.length s)) Eff_json.print_eff;
-  property "ty" 400 (fun () -> rand_ty (ri 6)) Eff_wire.encode_ty Eff_wire.decode_ty_exact
-    (fun s -> at Eff_wire.decode_ty s 0 (String.length s)) Eff_json.print_ty;
-  property "row" 200 rand_row Eff_wire.encode_row Eff_wire.decode_row_exact
-    (fun s -> at Eff_wire.decode_row s 0 (String.length s)) Eff_json.print_row;
-  property "eff_ty" 200 rand_eff_ty Eff_wire.encode_eff_ty Eff_wire.decode_eff_ty_exact
-    (fun s -> at Eff_wire.decode_eff_ty s 0 (String.length s)) Eff_json.print_eff_ty;
-  property "fork_options" 50 rand_options Eff_wire.encode_fork_options Eff_wire.decode_fork_options_exact
-    (fun s -> at Eff_wire.decode_fork_options s 0 (String.length s)) Eff_json.print_fork_options;
+  property
+    "eff"
+    400
+    (fun () -> rand_eff (ri 7))
+    Eff_wire.encode_eff
+    Eff_wire.decode_eff_exact
+    (fun s -> at Eff_wire.decode_eff s 0 (String.length s))
+    Eff_json.print_eff;
+  property
+    "ty"
+    400
+    (fun () -> rand_ty (ri 6))
+    Eff_wire.encode_ty
+    Eff_wire.decode_ty_exact
+    (fun s -> at Eff_wire.decode_ty s 0 (String.length s))
+    Eff_json.print_ty;
+  property
+    "row"
+    200
+    rand_row
+    Eff_wire.encode_row
+    Eff_wire.decode_row_exact
+    (fun s -> at Eff_wire.decode_row s 0 (String.length s))
+    Eff_json.print_row;
+  property
+    "eff_ty"
+    200
+    rand_eff_ty
+    Eff_wire.encode_eff_ty
+    Eff_wire.decode_eff_ty_exact
+    (fun s -> at Eff_wire.decode_eff_ty s 0 (String.length s))
+    Eff_json.print_eff_ty;
+  property
+    "fork_options"
+    50
+    rand_options
+    Eff_wire.encode_fork_options
+    Eff_wire.decode_fork_options_exact
+    (fun s -> at Eff_wire.decode_fork_options s 0 (String.length s))
+    Eff_json.print_fork_options;
   Printf.printf "prop_wire: %d checks, %d failures (seed 42)\n%!" !checks !failures;
   if !failures > 0 then exit 1
+;;

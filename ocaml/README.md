@@ -74,7 +74,11 @@ opam exec --switch=effect4 -- dune test eff gen clock lcnf tools
 opam exec --switch=effect4 -- dune test engine        # reads the printed corpus through E4_LEAN_CORPUS
 ```
 
-From the repository root, `make check-ocaml` re-cuts the LCNF group when the machine changed,
+`dune fmt` formats the hand code with the Jane Street profile (`.ocamlformat`, ocamlformat 0.29.0).
+`.ocamlformat-ignore` lists the generated files and the lint fixtures whose positions are data.
+
+From the repository root, `make check-ocaml` first checks the format (`dune build @fmt`).
+It then re-cuts the LCNF group when the machine changed,
 runs these three commands in `ocaml/`, then the engine's seam check
 (`ocaml/engine/tools/gen-check.sh`). It depends on the printed corpus, the engine's fixtures and
 the LCNF group, and `make check-full` names it (`Makefile`).

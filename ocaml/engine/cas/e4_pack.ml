@@ -8,7 +8,6 @@
      4. the reader
      5. the writer: the lock, staging, flush/sync, rotation, recovery, truncation *)
 
-
 (* ============================================================ 1. the grammar *)
 
 let magic = "E4PACK\000"
@@ -23,8 +22,12 @@ type seg = int
 type off = int
 
 let equal_position (s1, o1) (s2, o2) = Int.equal s1 s2 && Int.equal o1 o2
+
 let compare_position (s1, o1) (s2, o2) =
-  match Int.compare s1 s2 with 0 -> Int.compare o1 o2 | c -> c
+  match Int.compare s1 s2 with
+  | 0 -> Int.compare o1 o2
+  | c -> c
+;;
 
 exception Locked of string
 exception Bad_pack of string
@@ -43,27 +46,33 @@ let write_all fd s =
   let b = Bytes.unsafe_of_string s in
   let rec go o = if o < n then go (o + Unix.write fd b o (n - o)) in
   go 0
+;;
 
 let fsync_dir path =
   match Unix.openfile path [ Unix.O_RDONLY ] 0 with
   | fd ->
-    (try Unix.fsync fd with Unix.Unix_error _ -> ());
+    (try Unix.fsync fd with
+     | Unix.Unix_error _ -> ());
     Unix.close fd
   | exception Unix.Unix_error _ -> ()
+;;
 
 let mkdir_p path =
   let rec go p =
-    if p <> "" && p <> "/" && p <> "." && not (Sys.file_exists p) then begin
+    if p <> "" && p <> "/" && p <> "." && not (Sys.file_exists p)
+    then (
       go (Filename.dirname p);
-      try Unix.mkdir p 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
-    end
+      try Unix.mkdir p 0o755 with
+      | Unix.Unix_error (Unix.EEXIST, _, _) -> ())
   in
   go path
+;;
 
 let file_size path =
   match Unix.LargeFile.stat path with
   | st -> Some (Int64.to_int st.Unix.LargeFile.st_size)
   | exception Unix.Unix_error _ -> None
+;;
 
 let list_segments dir =
   let d = pack_subdir dir in
@@ -75,14 +84,18 @@ let list_segments dir =
       && Filename.check_suffix n ".pack"
       &&
       let good = ref true in
-      String.iteri (fun i c -> if i < 6 && not (c >= '0' && c <= '9') then good := false) n;
+      String.iteri
+        (fun i c -> if i < 6 && not (c >= '0' && c <= '9') then good := false)
+        n;
       !good
     in
-    let idx = List.filter_map
+    let idx =
+      List.filter_map
         (fun n -> if ok n then int_of_string_opt (String.sub n 0 6) else None)
         (Array.to_list names)
     in
     List.sort compare idx
+;;
 
 (* The 27 head bytes of a segment. *)
 let head_bytes seg_index =
@@ -93,6 +106,7 @@ let head_bytes seg_index =
   let crc = E4_crc.string (Buffer.contents b) in
   Buffer.add_string b (E4_crc.be32 crc);
   Buffer.contents b
+;;
 
 (* One record, straight into a staging buffer: no per-record intermediate string, and the
    crc is folded over the four pieces in place. *)
@@ -108,49 +122,79 @@ let add_record buf ~digest ~node_bytes =
   let c = E4_crc.update c digest in
   let c = E4_crc.update c node_bytes in
   Buffer.add_string buf (E4_crc.be32 c)
+;;
 
 let record_crc ~header ~node_bytes =
   (* [header] is the 41 header bytes. *)
   let c = E4_crc.update_char E4_crc.init record_tag in
   let c = E4_crc.update_sub c header 1 (record_header_length - 1) in
   E4_crc.update c node_bytes
+;;
 
 (* ============================================================ 2. sources *)
 
-type source = {
-  src_size : seg -> int option;      (* None: no such segment *)
-  src_refresh : seg -> int option;   (* re-stat and re-map; the fresh size *)
-  src_read : seg -> off -> int -> string option;
-}
+type source =
+  { src_size : seg -> int option (* None: no such segment *)
+  ; src_refresh : seg -> int option (* re-stat and re-map; the fresh size *)
+  ; src_read : seg -> off -> int -> string option
+  }
 
 let check_head src seg =
   match src.src_read seg 0 head_length with
   | None -> Error "the segment is shorter than its 27-byte head"
   | Some h ->
-    if String.sub h 0 7 <> magic then Error "bad magic"
-    else if String.sub h 7 8 <> version then
-      Error (Printf.sprintf "pack version %S, this binary knows %S" (String.sub h 7 8) version)
-    else
+    if String.sub h 0 7 <> magic
+    then Error "bad magic"
+    else if String.sub h 7 8 <> version
+    then
+      Error
+        (Printf.sprintf
+           "pack version %S, this binary knows %S"
+           (String.sub h 7 8)
+           version)
+    else (
       let want = E4_crc.sub h 0 23 in
-      (match (E4_be.read_be64 h 15, E4_crc.read_be32 h 23) with
-       | Some i, Some c when c = want && i = seg -> Ok ()
-       | Some i, Some c when c = want ->
-         Error (Printf.sprintf "head says segment %d, the file is %d" i seg)
-       | Some _, Some _ -> Error "head crc"
-       | _ -> Error "short head")
+      match E4_be.read_be64 h 15, E4_crc.read_be32 h 23 with
+      | Some i, Some c when c = want && i = seg -> Ok ()
+      | Some i, Some c when c = want ->
+        Error (Printf.sprintf "head says segment %d, the file is %d" i seg)
+      | Some _, Some _ -> Error "head crc"
+      | _ -> Error "short head")
+;;
 
 (* ============================================================ 3. one record *)
 
 type scan_stop =
   | Eof
-  | Short of { seg : seg; off : off }
-  | Bad_crc of { seg : seg; off : off }
-  | Bad_digest of { seg : seg; off : off }
-  | Host_limit of { seg : seg; off : off }
-  | Bad_tag of { seg : seg; off : off; byte : int }
+  | Short of
+      { seg : seg
+      ; off : off
+      }
+  | Bad_crc of
+      { seg : seg
+      ; off : off
+      }
+  | Bad_digest of
+      { seg : seg
+      ; off : off
+      }
+  | Host_limit of
+      { seg : seg
+      ; off : off
+      }
+  | Bad_tag of
+      { seg : seg
+      ; off : off
+      ; byte : int
+      }
   | Bad_head of { seg : seg }
 
-exception Damaged_sealed of { seg : int; off : int; reason : scan_stop }
+exception
+  Damaged_sealed of
+    { seg : int
+    ; off : int
+    ; reason : scan_stop
+    }
 
 let scan_stop_to_string = function
   | Eof -> "Eof"
@@ -158,14 +202,16 @@ let scan_stop_to_string = function
   | Bad_crc { seg; off } -> Printf.sprintf "Bad_crc(seg=%d,off=%d)" seg off
   | Bad_digest { seg; off } -> Printf.sprintf "Bad_digest(seg=%d,off=%d)" seg off
   | Host_limit { seg; off } -> Printf.sprintf "Host_limit(seg=%d,off=%d)" seg off
-  | Bad_tag { seg; off; byte } -> Printf.sprintf "Bad_tag(seg=%d,off=%d,byte=%d)" seg off byte
+  | Bad_tag { seg; off; byte } ->
+    Printf.sprintf "Bad_tag(seg=%d,off=%d,byte=%d)" seg off byte
   | Bad_head { seg } -> Printf.sprintf "Bad_head(seg=%d)" seg
+;;
 
-type record = {
-  r_addr : E4_addr.Addr.t;
-  r_len : int;
-  r_bytes : string option;
-}
+type record =
+  { r_addr : E4_addr.Addr.t
+  ; r_len : int
+  ; r_bytes : string option
+  }
 
 type step =
   | S_record of record * (seg * off)
@@ -176,35 +222,48 @@ type step =
    scan); when a bound is about to end the walk we refresh once and retry.  That is what
    makes a scan of a file the writer is still growing correct. *)
 let rec step_at ?(retried = false) src ~verify seg off =
-  let retry () = if retried then None else Some (step_at ~retried:true src ~verify seg off) in
-  let short () = match retry () with Some s -> s | None -> S_stop (Short { seg; off }) in
+  let retry () =
+    if retried then None else Some (step_at ~retried:true src ~verify seg off)
+  in
+  let short () =
+    match retry () with
+    | Some s -> s
+    | None -> S_stop (Short { seg; off })
+  in
   match src.src_size seg with
   | None -> S_stop Eof
   | Some size ->
-    if off > size then short ()
-    else if off = size then
+    if off > size
+    then short ()
+    else if off = size
+    then
       (* the clean end of this segment — unless the writer grew it since we mapped it *)
-      (if retried then S_next_seg (seg + 1)
-       else
-         match src.src_refresh seg with
-         | Some n when n > size -> step_at ~retried:true src ~verify seg off
-         | _ -> S_next_seg (seg + 1))
-    else if off + record_overhead > size then short ()
+      if retried
+      then S_next_seg (seg + 1)
+      else (
+        match src.src_refresh seg with
+        | Some n when n > size -> step_at ~retried:true src ~verify seg off
+        | _ -> S_next_seg (seg + 1))
+    else if off + record_overhead > size
+    then short ()
     else (
       match src.src_read seg off record_header_length with
       | None -> short ()
       | Some h ->
-        if h.[0] <> record_tag then S_stop (Bad_tag { seg; off; byte = Char.code h.[0] })
+        if h.[0] <> record_tag
+        then S_stop (Bad_tag { seg; off; byte = Char.code h.[0] })
         else (
           match E4_be.read_be64 h 1 with
           | None -> S_stop (Host_limit { seg; off })
           | Some len ->
             let total = record_overhead + len in
-            if off + total > size then short ()
-            else
+            if off + total > size
+            then short ()
+            else (
               let addr = E4_addr.Addr.of_digest (String.sub h 9 32) in
-              let next = (seg, off + total) in
-              if not verify then S_record ({ r_addr = addr; r_len = len; r_bytes = None }, next)
+              let next = seg, off + total in
+              if not verify
+              then S_record ({ r_addr = addr; r_len = len; r_bytes = None }, next)
               else (
                 match src.src_read seg (off + record_header_length) (len + 4) with
                 | None -> short ()
@@ -214,23 +273,26 @@ let rec step_at ?(retried = false) src ~verify seg off =
                   (match E4_crc.read_be32 tail len with
                    | None -> short ()
                    | Some stored ->
-                     if stored <> want then S_stop (Bad_crc { seg; off })
-                     else if E4_sha256.digest body <> E4_addr.Addr.bytes addr then
-                       S_stop (Bad_digest { seg; off })
+                     if stored <> want
+                     then S_stop (Bad_crc { seg; off })
+                     else if E4_sha256.digest body <> E4_addr.Addr.bytes addr
+                     then S_stop (Bad_digest { seg; off })
                      else
-                       S_record
-                         ({ r_addr = addr; r_len = len; r_bytes = Some body }, next)))))
+                       S_record ({ r_addr = addr; r_len = len; r_bytes = Some body }, next))))))
+;;
 
 (* Where the next segment's records begin, or the verdict that ends the walk. *)
 let seg_start src s =
   match src.src_size s with
   | None -> Error Eof
   | Some size ->
-    if size < head_length then Error (Bad_head { seg = s })
+    if size < head_length
+    then Error (Bad_head { seg = s })
     else (
       match check_head src s with
       | Error _ -> Error (Bad_head { seg = s })
       | Ok () -> Ok (s, head_length))
+;;
 
 (* The one walk.  [f] sees every admitted record; the result is the verdict and the position
    after the last admitted record. *)
@@ -239,107 +301,130 @@ let walk src ~verify ~from ~f =
   let rec go (seg, off) =
     match step_at src ~verify seg off with
     | S_stop stop -> stop
-    | S_next_seg s -> (
-      match seg_start src s with
-      | Error stop -> stop
-      | Ok p ->
-        last := p;
-        go p)
+    | S_next_seg s ->
+      (match seg_start src s with
+       | Error stop -> stop
+       | Ok p ->
+         last := p;
+         go p)
     | S_record (r, next) ->
       f (seg, off) r;
       last := next;
       go next
   in
   let stop = go from in
-  (stop, !last)
+  stop, !last
+;;
 
 (* ============================================================ 4. the reader *)
 
 type bigstring = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
 
-type rseg = {
-  rs_fd : Unix.file_descr;
-  mutable rs_map : bigstring option;
-  mutable rs_len : int;
-}
+type rseg =
+  { rs_fd : Unix.file_descr
+  ; mutable rs_map : bigstring option
+  ; mutable rs_len : int
+  }
 
-type reader = {
-  rd_dir : string;
-  rd_segs : (seg, rseg option) Hashtbl.t;
-  mutable rd_closed : bool;
-}
+type reader =
+  { rd_dir : string
+  ; rd_segs : (seg, rseg option) Hashtbl.t
+  ; mutable rd_closed : bool
+  }
 
 let map_of fd len =
-  if len <= 0 then None
-  else
+  if len <= 0
+  then None
+  else (
     match
       Bigarray.array1_of_genarray
         (Unix.map_file fd Bigarray.char Bigarray.c_layout false [| len |])
     with
     | m -> Some m
-    | exception Unix.Unix_error _ -> None
+    | exception Unix.Unix_error _ -> None)
+;;
 
 let rseg_remap rs len =
   rs.rs_map <- map_of rs.rs_fd len;
-  rs.rs_len <- (match rs.rs_map with Some _ -> len | None -> 0);
   rs.rs_len
+  <- (match rs.rs_map with
+      | Some _ -> len
+      | None -> 0);
+  rs.rs_len
+;;
 
 (* Absence is never cached: a segment the writer rotates into must become visible without
    reopening the reader.  A missing segment costs one failed openfile, once per scan end. *)
 let reader_seg rd s =
   match Hashtbl.find_opt rd.rd_segs s with
   | Some (Some rs) -> Some rs
-  | Some None | None -> (
+  | Some None | None ->
     let path = seg_path ~dir:rd.rd_dir s in
-    match Unix.openfile path [ Unix.O_RDONLY ] 0 with
-    | exception Unix.Unix_error _ ->
-      Hashtbl.replace rd.rd_segs s None;
-      None
-    | fd ->
-      let len = match file_size path with Some n -> n | None -> 0 in
-      let rs = { rs_fd = fd; rs_map = None; rs_len = 0 } in
-      ignore (rseg_remap rs len);
-      Hashtbl.replace rd.rd_segs s (Some rs);
-      Some rs)
+    (match Unix.openfile path [ Unix.O_RDONLY ] 0 with
+     | exception Unix.Unix_error _ ->
+       Hashtbl.replace rd.rd_segs s None;
+       None
+     | fd ->
+       let len =
+         match file_size path with
+         | Some n -> n
+         | None -> 0
+       in
+       let rs = { rs_fd = fd; rs_map = None; rs_len = 0 } in
+       ignore (rseg_remap rs len);
+       Hashtbl.replace rd.rd_segs s (Some rs);
+       Some rs)
+;;
 
 let reader_source rd =
-  let size s = match reader_seg rd s with Some rs -> Some rs.rs_len | None -> None in
+  let size s =
+    match reader_seg rd s with
+    | Some rs -> Some rs.rs_len
+    | None -> None
+  in
   let refresh s =
     match reader_seg rd s with
     | None -> None
-    | Some rs -> (
-      match file_size (seg_path ~dir:rd.rd_dir s) with
-      | None -> Some rs.rs_len
-      | Some n -> if n = rs.rs_len then Some n else Some (rseg_remap rs n))
+    | Some rs ->
+      (match file_size (seg_path ~dir:rd.rd_dir s) with
+       | None -> Some rs.rs_len
+       | Some n -> if n = rs.rs_len then Some n else Some (rseg_remap rs n))
   in
   let read s o n =
     match reader_seg rd s with
     | None -> None
-    | Some rs -> (
-      match rs.rs_map with
-      | None -> None
-      | Some m ->
-        if o < 0 || n < 0 || o + n > rs.rs_len then None
-        else
-          let b = Bytes.create n in
-          for i = 0 to n - 1 do
-            Bytes.unsafe_set b i (Bigarray.Array1.unsafe_get m (o + i))
-          done;
-          Some (Bytes.unsafe_to_string b))
+    | Some rs ->
+      (match rs.rs_map with
+       | None -> None
+       | Some m ->
+         if o < 0 || n < 0 || o + n > rs.rs_len
+         then None
+         else (
+           let b = Bytes.create n in
+           for i = 0 to n - 1 do
+             Bytes.unsafe_set b i (Bigarray.Array1.unsafe_get m (o + i))
+           done;
+           Some (Bytes.unsafe_to_string b)))
   in
   { src_size = size; src_refresh = refresh; src_read = read }
+;;
 
-let open_reader ~dir =
-  { rd_dir = dir; rd_segs = Hashtbl.create 8; rd_closed = false }
+let open_reader ~dir = { rd_dir = dir; rd_segs = Hashtbl.create 8; rd_closed = false }
 
 let close_reader rd =
-  if not rd.rd_closed then begin
+  if not rd.rd_closed
+  then (
     Hashtbl.iter
-      (fun _ v -> match v with Some rs -> (try Unix.close rs.rs_fd with Unix.Unix_error _ -> ()) | None -> ())
+      (fun _ v ->
+         match v with
+         | Some rs ->
+           (try Unix.close rs.rs_fd with
+            | Unix.Unix_error _ -> ())
+         | None -> ())
       rd.rd_segs;
     Hashtbl.reset rd.rd_segs;
-    rd.rd_closed <- true
-  end
+    rd.rd_closed <- true)
+;;
 
 let segments rd = list_segments rd.rd_dir
 
@@ -347,28 +432,63 @@ let segments rd = list_segments rd.rd_dir
 
 type refusal =
   | No_segment of seg
-  | Past_end of { seg : seg; off : off; size : int }
-  | Not_a_record of { seg : seg; off : off; byte : int }
-  | Truncated of { seg : seg; off : off }
-  | Over_host_limit of { seg : seg; off : off }
-  | Crc_mismatch of { seg : seg; off : off; crc_recorded : int; crc_computed : int }
-  | Digest_mismatch of { seg : seg; off : off; dig_recorded : string; dig_computed : string }
+  | Past_end of
+      { seg : seg
+      ; off : off
+      ; size : int
+      }
+  | Not_a_record of
+      { seg : seg
+      ; off : off
+      ; byte : int
+      }
+  | Truncated of
+      { seg : seg
+      ; off : off
+      }
+  | Over_host_limit of
+      { seg : seg
+      ; off : off
+      }
+  | Crc_mismatch of
+      { seg : seg
+      ; off : off
+      ; crc_recorded : int
+      ; crc_computed : int
+      }
+  | Digest_mismatch of
+      { seg : seg
+      ; off : off
+      ; dig_recorded : string
+      ; dig_computed : string
+      }
 
 let hex = E4_hex.of_bytes
 
 let refusal_to_string = function
   | No_segment s -> Printf.sprintf "No_segment(%d)" s
-  | Past_end { seg; off; size } -> Printf.sprintf "Past_end(seg=%d,off=%d,size=%d)" seg off size
+  | Past_end { seg; off; size } ->
+    Printf.sprintf "Past_end(seg=%d,off=%d,size=%d)" seg off size
   | Not_a_record { seg; off; byte } ->
     Printf.sprintf "Not_a_record(seg=%d,off=%d,byte=%d)" seg off byte
   | Truncated { seg; off } -> Printf.sprintf "Truncated(seg=%d,off=%d)" seg off
-  | Over_host_limit { seg; off } -> Printf.sprintf "Over_host_limit(seg=%d,off=%d)" seg off
+  | Over_host_limit { seg; off } ->
+    Printf.sprintf "Over_host_limit(seg=%d,off=%d)" seg off
   | Crc_mismatch { seg; off; crc_recorded; crc_computed } ->
-    Printf.sprintf "Crc_mismatch(seg=%d,off=%d,recorded=%08x,computed=%08x)" seg off
-      crc_recorded crc_computed
+    Printf.sprintf
+      "Crc_mismatch(seg=%d,off=%d,recorded=%08x,computed=%08x)"
+      seg
+      off
+      crc_recorded
+      crc_computed
   | Digest_mismatch { seg; off; dig_recorded; dig_computed } ->
-    Printf.sprintf "Digest_mismatch(seg=%d,off=%d,recorded=%s,computed=%s)" seg off
-      (hex dig_recorded) (hex dig_computed)
+    Printf.sprintf
+      "Digest_mismatch(seg=%d,off=%d,recorded=%s,computed=%s)"
+      seg
+      off
+      (hex dig_recorded)
+      (hex dig_computed)
+;;
 
 (* The whole record, with every check named.  [verify] decides whether the digest is
    recomputed; the CRC and the length are always checked. *)
@@ -376,22 +496,30 @@ let read_full src ~verify seg off =
   match src.src_size seg with
   | None -> Error (No_segment seg)
   | Some size0 ->
-    let size = if off + record_overhead > size0 then
-        (match src.src_refresh seg with Some n -> n | None -> size0)
+    let size =
+      if off + record_overhead > size0
+      then (
+        match src.src_refresh seg with
+        | Some n -> n
+        | None -> size0)
       else size0
     in
-    if off < 0 || off >= size then Error (Past_end { seg; off; size })
-    else if off + record_overhead > size then Error (Truncated { seg; off })
+    if off < 0 || off >= size
+    then Error (Past_end { seg; off; size })
+    else if off + record_overhead > size
+    then Error (Truncated { seg; off })
     else (
       match src.src_read seg off record_header_length with
       | None -> Error (Truncated { seg; off })
       | Some h ->
-        if h.[0] <> record_tag then Error (Not_a_record { seg; off; byte = Char.code h.[0] })
+        if h.[0] <> record_tag
+        then Error (Not_a_record { seg; off; byte = Char.code h.[0] })
         else (
           match E4_be.read_be64 h 1 with
           | None -> Error (Over_host_limit { seg; off })
           | Some len ->
-            if off + record_overhead + len > size then Error (Truncated { seg; off })
+            if off + record_overhead + len > size
+            then Error (Truncated { seg; off })
             else (
               match src.src_read seg (off + record_header_length) (len + 4) with
               | None -> Error (Truncated { seg; off })
@@ -401,27 +529,38 @@ let read_full src ~verify seg off =
                 (match E4_crc.read_be32 tail len with
                  | None -> Error (Truncated { seg; off })
                  | Some stored ->
-                   if stored <> want then
+                   if stored <> want
+                   then
                      Error
-                       (Crc_mismatch { seg; off; crc_recorded = stored; crc_computed = want })
-                   else
+                       (Crc_mismatch
+                          { seg; off; crc_recorded = stored; crc_computed = want })
+                   else (
                      let recorded = String.sub h 9 32 in
-                     if verify then (
+                     if verify
+                     then (
                        let computed = E4_sha256.digest body in
-                       if computed <> recorded then
+                       if computed <> recorded
+                       then
                          Error
                            (Digest_mismatch
-                              { seg; off; dig_recorded = recorded; dig_computed = computed })
+                              { seg
+                              ; off
+                              ; dig_recorded = recorded
+                              ; dig_computed = computed
+                              })
                        else
                          Ok
-                           { r_addr = E4_addr.Addr.of_digest recorded;
-                             r_len = len;
-                             r_bytes = Some body })
+                           { r_addr = E4_addr.Addr.of_digest recorded
+                           ; r_len = len
+                           ; r_bytes = Some body
+                           })
                      else
                        Ok
-                         { r_addr = E4_addr.Addr.of_digest recorded;
-                           r_len = len;
-                           r_bytes = Some body }))))
+                         { r_addr = E4_addr.Addr.of_digest recorded
+                         ; r_len = len
+                         ; r_bytes = Some body
+                         })))))
+;;
 
 let read rd ~seg ~off = read_full (reader_source rd) ~verify:true seg off
 
@@ -429,22 +568,25 @@ let read_at rd ~seg ~off =
   match read_full (reader_source rd) ~verify:false seg off with
   | Ok { r_addr; r_bytes = Some b; _ } -> Some (r_addr, b)
   | Ok _ | Error _ -> None
+;;
 
 let read_header rd ~seg ~off =
   let src = reader_source rd in
   match step_at src ~verify:false seg off with
   | S_record (r, _) -> Some (r.r_addr, r.r_len)
   | S_next_seg _ | S_stop _ -> None
+;;
 
 let blit_at rd ~seg ~off buf pos =
   match read_at rd ~seg ~off with
   | None -> -1
   | Some (_, b) ->
     let n = String.length b in
-    if pos < 0 || pos + n > Bytes.length buf then
-      invalid_arg "E4_pack.blit_at: the buffer is too small";
+    if pos < 0 || pos + n > Bytes.length buf
+    then invalid_arg "E4_pack.blit_at: the buffer is too small";
     Bytes.blit_string b 0 buf pos n;
     n
+;;
 
 (* ---- the two scans ---- *)
 
@@ -452,6 +594,7 @@ let scan ?(verify = false) rd ~from ~f =
   let src = reader_source rd in
   let stop, _ = walk src ~verify ~from ~f:(fun (s, o) r -> f r.r_addr s o r.r_len) in
   stop
+;;
 
 type scanned =
   | Scanned of (seg * off) * record
@@ -462,44 +605,49 @@ let scan_seq ?(verify = false) rd ~from =
   let rec go (seg, off) () =
     match step_at src ~verify seg off with
     | S_stop stop -> Seq.Cons (Stopped stop, Seq.empty)
-    | S_next_seg s -> (
-      match seg_start src s with
-      | Error stop -> Seq.Cons (Stopped stop, Seq.empty)
-      | Ok p -> go p ())
+    | S_next_seg s ->
+      (match seg_start src s with
+       | Error stop -> Seq.Cons (Stopped stop, Seq.empty)
+       | Ok p -> go p ())
     | S_record (r, next) -> Seq.Cons (Scanned ((seg, off), r), go next)
   in
   go from
+;;
 
 (* ============================================================ 5. the writer *)
 
 (* One staged run of bytes destined for one segment, starting at p_start in that segment. *)
-type pending = { p_seg : seg; p_start : off; p_buf : Buffer.t }
+type pending =
+  { p_seg : seg
+  ; p_start : off
+  ; p_buf : Buffer.t
+  }
 
-type recovery = {
-  from : seg * off;
-  stop : scan_stop;
-  records : int;
-  ends_at : seg * off;
-  truncated : bool;
-  verified : bool;
-}
+type recovery =
+  { from : seg * off
+  ; stop : scan_stop
+  ; records : int
+  ; ends_at : seg * off
+  ; truncated : bool
+  ; verified : bool
+  }
 
-type t = {
-  w_dir : string;
-  w_seg_max : int;
-  w_lock : E4_lock.t;
-  mutable w_fds : (seg * Unix.file_descr) list;
-  mutable w_pend : pending list;          (* newest first *)
-  mutable w_cur_seg : seg;
-  mutable w_cur_end : off;                (* the staged end within w_cur_seg *)
-  mutable w_written : seg * off;
-  mutable w_durable : seg * off;
-  mutable w_staged : int;                 (* bytes buffered *)
-  mutable w_staged_n : int;               (* records buffered *)
-  mutable w_dirty : seg list;             (* written since the last fsync *)
-  mutable w_closed : bool;
-  w_recovery : recovery;
-}
+type t =
+  { w_dir : string
+  ; w_seg_max : int
+  ; w_lock : E4_lock.t
+  ; mutable w_fds : (seg * Unix.file_descr) list
+  ; mutable w_pend : pending list (* newest first *)
+  ; mutable w_cur_seg : seg
+  ; mutable w_cur_end : off (* the staged end within w_cur_seg *)
+  ; mutable w_written : seg * off
+  ; mutable w_durable : seg * off
+  ; mutable w_staged : int (* bytes buffered *)
+  ; mutable w_staged_n : int (* records buffered *)
+  ; mutable w_dirty : seg list (* written since the last fsync *)
+  ; mutable w_closed : bool
+  ; w_recovery : recovery
+  }
 
 (* PK6: the single-writer lock is E4_lock's: an in-process table beside the fcntl lock, under
    one mutex. *)
@@ -512,6 +660,7 @@ let fd_for t s =
     let fd = Unix.openfile (seg_path ~dir:t.w_dir s) [ Unix.O_RDWR ] 0o600 in
     t.w_fds <- (s, fd) :: t.w_fds;
     fd
+;;
 
 (* The writer's own source: positioned reads through its file descriptors.  Used only by
    recovery at open, so a stat per size call is free. *)
@@ -529,7 +678,11 @@ let writer_source dir =
       Hashtbl.replace fds s v;
       v
   in
-  let size s = match get s with None -> None | Some _ -> file_size (seg_path ~dir s) in
+  let size s =
+    match get s with
+    | None -> None
+    | Some _ -> file_size (seg_path ~dir s)
+  in
   let read s o n =
     match get s with
     | None -> None
@@ -537,19 +690,28 @@ let writer_source dir =
       let b = Bytes.create n in
       ignore (Unix.LargeFile.lseek fd (Int64.of_int o) Unix.SEEK_SET);
       let rec go got =
-        if got = n then Some (Bytes.unsafe_to_string b)
-        else
+        if got = n
+        then Some (Bytes.unsafe_to_string b)
+        else (
           match Unix.read fd b got (n - got) with
           | 0 -> None
           | r -> go (got + r)
-          | exception Unix.Unix_error _ -> None
+          | exception Unix.Unix_error _ -> None)
       in
       go 0
   in
   let close () =
-    Hashtbl.iter (fun _ v -> match v with Some fd -> (try Unix.close fd with Unix.Unix_error _ -> ()) | None -> ()) fds
+    Hashtbl.iter
+      (fun _ v ->
+         match v with
+         | Some fd ->
+           (try Unix.close fd with
+            | Unix.Unix_error _ -> ())
+         | None -> ())
+      fds
   in
-  ({ src_size = size; src_refresh = size; src_read = read }, close)
+  { src_size = size; src_refresh = size; src_read = read }, close
+;;
 
 (* PK9: a sealed segment is read-only. *)
 let sealed_perm = 0o444
@@ -558,6 +720,7 @@ let writable path =
   match Unix.stat path with
   | st -> st.Unix.st_perm land 0o200 <> 0
   | exception Unix.Unix_error _ -> false
+;;
 
 let create_segment ~dir s =
   let path = seg_path ~dir s in
@@ -566,19 +729,24 @@ let create_segment ~dir s =
   Unix.fsync fd;
   fsync_dir (pack_subdir dir);
   fd
+;;
 
 let open_at ?lock ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
   (* A given lock is owned from here: every refusal releases it, as it releases one taken here. *)
   let lock =
     try
-      if seg_max <= head_length + record_overhead then
-        invalid_arg "E4_pack.open_: seg_max is smaller than one record";
+      if seg_max <= head_length + record_overhead
+      then invalid_arg "E4_pack.open_: seg_max is smaller than one record";
       mkdir_p dir;
       mkdir_p (pack_subdir dir);
       match lock with
       | Some lock -> lock
-      | None -> ( match E4_lock.acquire ~dir with Ok lock -> lock | Error key -> raise (Locked key))
-    with failure ->
+      | None ->
+        (match E4_lock.acquire ~dir with
+         | Ok lock -> lock
+         | Error key -> raise (Locked key))
+    with
+    | failure ->
       Option.iter E4_lock.release lock;
       raise failure
   in
@@ -586,135 +754,161 @@ let open_at ?lock ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
     E4_lock.release lock;
     match damage with
     | None -> raise (Bad_pack msg)
-    | Some (seg, off, reason) -> raise (Damaged_sealed {seg; off; reason})
+    | Some (seg, off, reason) -> raise (Damaged_sealed { seg; off; reason })
   in
   let finish_with r cur_seg cur_end fds =
-    { w_dir = dir;
-      w_seg_max = seg_max;
-      w_lock = lock;
-      w_fds = fds;
-      w_pend = [];
-      w_cur_seg = cur_seg;
-      w_cur_end = cur_end;
-      w_written = (cur_seg, cur_end);
-      w_durable = (cur_seg, cur_end);
-      w_staged = 0;
-      w_staged_n = 0;
-      w_dirty = [];
-      w_closed = false;
-      w_recovery = r }
+    { w_dir = dir
+    ; w_seg_max = seg_max
+    ; w_lock = lock
+    ; w_fds = fds
+    ; w_pend = []
+    ; w_cur_seg = cur_seg
+    ; w_cur_end = cur_end
+    ; w_written = cur_seg, cur_end
+    ; w_durable = cur_seg, cur_end
+    ; w_staged = 0
+    ; w_staged_n = 0
+    ; w_dirty = []
+    ; w_closed = false
+    ; w_recovery = r
+    }
   in
-  try (
-  match list_segments dir with
-  | [] ->
-    let fd = create_segment ~dir 0 in
-    finish_with
-      { from = (0, head_length);
-        stop = Eof;
-        records = 0;
-        ends_at = (0, head_length);
-        truncated = false;
-        verified = verify }
-      0 head_length
-      [ (0, fd) ]
-  | segs0 ->
-    (* A crash inside `create_segment` can leave a trailing file with no head.  It carries no
+  try
+    match list_segments dir with
+    | [] ->
+      let fd = create_segment ~dir 0 in
+      finish_with
+        { from = 0, head_length
+        ; stop = Eof
+        ; records = 0
+        ; ends_at = 0, head_length
+        ; truncated = false
+        ; verified = verify
+        }
+        0
+        head_length
+        [ 0, fd ]
+    | segs0 ->
+      (* A crash inside `create_segment` can leave a trailing file with no head.  It carries no
        record, so with [truncate] it is removed rather than called corruption. *)
-    let segs =
-      if not truncate then segs0
-      else
-        let rec drop l =
-          match List.rev l with
-          | s :: rest
-            when (match file_size (seg_path ~dir s) with
-                  | Some n -> n < head_length
-                  | None -> true)
-                 && not (List.is_empty rest) ->
-            if not (writable (seg_path ~dir s)) then
-              refuse_open ~damage:(s, 0, Bad_head {seg = s}) "short sealed segment head";
-            (try Sys.remove (seg_path ~dir s) with Sys_error _ -> ());
-            drop (List.rev rest)
-          | _ -> l
-        in
-        drop segs0
-    in
-    let last = List.fold_left max 0 segs in
-    let src, close_src = writer_source dir in
-    (match check_head src last with
-     | Error why ->
-       close_src ();
-       refuse_open (Printf.sprintf "%s: %s" (seg_path ~dir last) why)
-     | Ok () -> ());
-    let start = match from with Some p -> p | None -> (last, head_length) in
-    let n = ref 0 in
-    let stop, ends_at = walk src ~verify ~from:start ~f:(fun _ _ -> incr n) in
-    close_src ();
-    (* A torn or corrupt RECORD is truncated away (PK3, crash family X1); a segment whose
+      let segs =
+        if not truncate
+        then segs0
+        else (
+          let rec drop l =
+            match List.rev l with
+            | s :: rest
+              when (match file_size (seg_path ~dir s) with
+                    | Some n -> n < head_length
+                    | None -> true)
+                   && not (List.is_empty rest) ->
+              if not (writable (seg_path ~dir s))
+              then
+                refuse_open
+                  ~damage:(s, 0, Bad_head { seg = s })
+                  "short sealed segment head";
+              (try Sys.remove (seg_path ~dir s) with
+               | Sys_error _ -> ());
+              drop (List.rev rest)
+            | _ -> l
+          in
+          drop segs0)
+      in
+      let last = List.fold_left max 0 segs in
+      let src, close_src = writer_source dir in
+      (match check_head src last with
+       | Error why ->
+         close_src ();
+         refuse_open (Printf.sprintf "%s: %s" (seg_path ~dir last) why)
+       | Ok () -> ());
+      let start =
+        match from with
+        | Some p -> p
+        | None -> last, head_length
+      in
+      let n = ref 0 in
+      let stop, ends_at = walk src ~verify ~from:start ~f:(fun _ _ -> incr n) in
+      close_src ();
+      (* A torn or corrupt RECORD is truncated away (PK3, crash family X1); a segment whose
        27-byte head does not check is not: there is no offset inside it that recovery
        reached, and deleting it would destroy bytes nobody has diagnosed.  It is reported
        and left for lane P4. *)
-    let cut = match stop with Eof | Bad_head _ -> false | _ -> true in
-    let did_truncate = ref false in
-    let cseg, coff = ends_at in
-    (* PK9: a sealed segment holds only bytes a sync had fsynced, so a record that fails
+      let cut =
+        match stop with
+        | Eof | Bad_head _ -> false
+        | _ -> true
+      in
+      let did_truncate = ref false in
+      let cseg, coff = ends_at in
+      (* PK9: a sealed segment holds only bytes a sync had fsynced, so a record that fails
        inside one is damage, not a torn tail.  Recovery never truncates it: the open is
        refused and nothing is cut. *)
-    let damaged_position = match stop with
-      | Bad_head {seg} -> Some (seg, 0)
-      | _ when cut -> Some (cseg, coff)
-      | _ -> None in
-    (match damaged_position with
-     | Some (seg, off) when truncate && not (writable (seg_path ~dir seg)) ->
-       refuse_open ~damage:(seg, off, stop)
-         (Printf.sprintf "%s is sealed and recovery fails inside it (%s): damage, not a torn tail"
-           (seg_path ~dir seg) (scan_stop_to_string stop))
-     | _ -> ());
-    let fds = ref [] in
-    if truncate && cut then begin
-      (* PK3: the torn tail becomes the file's end, and every later segment goes. *)
-      let fd = Unix.openfile (seg_path ~dir cseg) [ Unix.O_RDWR ] 0o600 in
-      (match file_size (seg_path ~dir cseg) with
-       | Some sz when sz > coff ->
-         Unix.LargeFile.ftruncate fd (Int64.of_int coff);
-         Unix.fsync fd;
-         did_truncate := true
+      let damaged_position =
+        match stop with
+        | Bad_head { seg } -> Some (seg, 0)
+        | _ when cut -> Some (cseg, coff)
+        | _ -> None
+      in
+      (match damaged_position with
+       | Some (seg, off) when truncate && not (writable (seg_path ~dir seg)) ->
+         refuse_open
+           ~damage:(seg, off, stop)
+           (Printf.sprintf
+              "%s is sealed and recovery fails inside it (%s): damage, not a torn tail"
+              (seg_path ~dir seg)
+              (scan_stop_to_string stop))
        | _ -> ());
-      fds := [ (cseg, fd) ];
+      let fds = ref [] in
+      if truncate && cut
+      then (
+        (* PK3: the torn tail becomes the file's end, and every later segment goes. *)
+        let fd = Unix.openfile (seg_path ~dir cseg) [ Unix.O_RDWR ] 0o600 in
+        (match file_size (seg_path ~dir cseg) with
+         | Some sz when sz > coff ->
+           Unix.LargeFile.ftruncate fd (Int64.of_int coff);
+           Unix.fsync fd;
+           did_truncate := true
+         | _ -> ());
+        fds := [ cseg, fd ];
+        List.iter
+          (fun s ->
+             if s > cseg
+             then (
+               (try Sys.remove (seg_path ~dir s) with
+                | Sys_error _ -> ());
+               did_truncate := true))
+          segs;
+        if !did_truncate then fsync_dir (pack_subdir dir));
+      (* PK9: every segment below the writer's is sealed; the durable end has passed it. *)
       List.iter
         (fun s ->
-          if s > cseg then begin
-            (try Sys.remove (seg_path ~dir s) with Sys_error _ -> ());
-            did_truncate := true
-          end)
+           let path = seg_path ~dir s in
+           if s < cseg && writable path then Unix.chmod path sealed_perm)
         segs;
-      if !did_truncate then fsync_dir (pack_subdir dir)
-    end;
-    (* PK9: every segment below the writer's is sealed; the durable end has passed it. *)
-    List.iter
-      (fun s ->
-        let path = seg_path ~dir s in
-        if s < cseg && writable path then Unix.chmod path sealed_perm)
-      segs;
-    finish_with
-      { from = start;
-        stop;
-        records = !n;
-        ends_at;
-        truncated = !did_truncate;
-        verified = verify }
-      cseg coff !fds
-) with failure ->
+      finish_with
+        { from = start
+        ; stop
+        ; records = !n
+        ; ends_at
+        ; truncated = !did_truncate
+        ; verified = verify
+        }
+        cseg
+        coff
+        !fds
+  with
+  | failure ->
     E4_lock.release lock;
     raise failure
+;;
 
 let open_ ~dir ~seg_max = open_at ~dir ~seg_max ()
-
 let dir t = t.w_dir
 let seg_max t = t.w_seg_max
 let pack_end t = t.w_durable
 let durable_upto t = t.w_durable
 let written_upto t = t.w_written
-let staged_end t = (t.w_cur_seg, t.w_cur_end)
+let staged_end t = t.w_cur_seg, t.w_cur_end
 let staged_bytes t = t.w_staged
 let staged_count t = t.w_staged_n
 let recovery t = t.w_recovery
@@ -726,6 +920,7 @@ let ensure_pending t =
     let p = { p_seg = t.w_cur_seg; p_start = t.w_cur_end; p_buf = Buffer.create 65536 } in
     t.w_pend <- p :: t.w_pend;
     p
+;;
 
 (* PK8.  The new segment's 27-byte head is written and fsynced HERE, not staged: a segment
    file that exists but carries no head is indistinguishable at open from a corrupt one, and
@@ -739,12 +934,13 @@ let rotate t =
   let p = { p_seg = s; p_start = head_length; p_buf = Buffer.create 65536 } in
   t.w_pend <- p :: t.w_pend;
   p
+;;
 
 let stage t ~addr ~node_bytes =
   if t.w_closed then invalid_arg "E4_pack.stage: the writer is closed";
   let len = String.length node_bytes in
-  if len < 0 || len > max_int - record_overhead then
-    invalid_arg "E4_pack.stage: node_len cannot be framed on this host (M9)";
+  if len < 0 || len > max_int - record_overhead
+  then invalid_arg "E4_pack.stage: node_len cannot be framed on this host (M9)";
   let total = record_overhead + len in
   let p = ensure_pending t in
   let p =
@@ -755,52 +951,57 @@ let stage t ~addr ~node_bytes =
   t.w_cur_end <- off + total;
   t.w_staged <- t.w_staged + total;
   t.w_staged_n <- t.w_staged_n + 1;
-  (t.w_cur_seg, off)
+  t.w_cur_seg, off
+;;
 
 let append t ~digest ~node_bytes =
-  if String.length digest <> 32 then
-    invalid_arg "E4_pack.append: the digest is not 32 bytes";
+  if String.length digest <> 32
+  then invalid_arg "E4_pack.append: the digest is not 32 bytes";
   stage t ~addr:(E4_addr.Addr.of_digest digest) ~node_bytes
+;;
 
 let flush t =
   if t.w_closed then invalid_arg "E4_pack.flush: the writer is closed";
-  if not (List.is_empty t.w_pend) then begin
+  if not (List.is_empty t.w_pend)
+  then (
     List.iter
       (fun p ->
-        let n = Buffer.length p.p_buf in
-        if n > 0 then begin
-          let fd = fd_for t p.p_seg in
-          ignore (Unix.LargeFile.lseek fd (Int64.of_int p.p_start) Unix.SEEK_SET);
-          write_all fd (Buffer.contents p.p_buf);
-          if not (List.mem p.p_seg t.w_dirty) then t.w_dirty <- p.p_seg :: t.w_dirty;
-          t.w_written <- (p.p_seg, p.p_start + n)
-        end)
+         let n = Buffer.length p.p_buf in
+         if n > 0
+         then (
+           let fd = fd_for t p.p_seg in
+           ignore (Unix.LargeFile.lseek fd (Int64.of_int p.p_start) Unix.SEEK_SET);
+           write_all fd (Buffer.contents p.p_buf);
+           if not (List.mem p.p_seg t.w_dirty) then t.w_dirty <- p.p_seg :: t.w_dirty;
+           t.w_written <- p.p_seg, p.p_start + n))
       (List.rev t.w_pend);
     t.w_pend <- [];
     t.w_staged <- 0;
-    t.w_staged_n <- 0
-  end
+    t.w_staged_n <- 0)
+;;
 
 let sync t =
   flush t;
-  if not (List.is_empty t.w_dirty) then begin
+  if not (List.is_empty t.w_dirty)
+  then (
     List.iter (fun s -> Unix.fsync (fd_for t s)) (List.sort compare t.w_dirty);
-    t.w_dirty <- []
-  end;
+    t.w_dirty <- []);
   t.w_durable <- t.w_written;
   (* PK9: a segment the durable end has passed is sealed.  Every byte of it was fsynced,
      here or at an earlier sync, and nothing writes it again: the writer's descriptor is
      closed and the file becomes 0444. *)
   let dseg = fst t.w_durable in
   let passed, kept = List.partition (fun (s, _) -> s < dseg) t.w_fds in
-  if not (List.is_empty passed) then begin
+  if not (List.is_empty passed)
+  then (
     List.iter
       (fun (s, fd) ->
-        (try Unix.close fd with Unix.Unix_error _ -> ());
-        Unix.chmod (seg_path ~dir:t.w_dir s) sealed_perm)
+         (try Unix.close fd with
+          | Unix.Unix_error _ -> ());
+         Unix.chmod (seg_path ~dir:t.w_dir s) sealed_perm)
       passed;
-    t.w_fds <- kept
-  end
+    t.w_fds <- kept)
+;;
 
 let commit = sync
 
@@ -808,36 +1009,52 @@ let truncate_to t ~seg ~off =
   if t.w_closed then invalid_arg "E4_pack.truncate_to: the writer is closed";
   if t.w_staged > 0 then invalid_arg "E4_pack.truncate_to: bytes are staged";
   let dseg, doff = t.w_durable in
-  if seg < dseg || (seg = dseg && off < doff) then
+  if seg < dseg || (seg = dseg && off < doff)
+  then
     invalid_arg
-      (Printf.sprintf "E4_pack.truncate_to: (%d,%d) is below pack_end (%d,%d)" seg off dseg doff);
+      (Printf.sprintf
+         "E4_pack.truncate_to: (%d,%d) is below pack_end (%d,%d)"
+         seg
+         off
+         dseg
+         doff);
   let fd = fd_for t seg in
   Unix.LargeFile.ftruncate fd (Int64.of_int off);
   Unix.fsync fd;
   let removed = ref false in
   List.iter
     (fun s ->
-      if s > seg then begin
-        (match List.assoc_opt s t.w_fds with
-         | Some f -> (try Unix.close f with Unix.Unix_error _ -> ())
-         | None -> ());
-        t.w_fds <- List.filter (fun (x, _) -> x <> s) t.w_fds;
-        (try Sys.remove (seg_path ~dir:t.w_dir s) with Sys_error _ -> ());
-        removed := true
-      end)
+       if s > seg
+       then (
+         (match List.assoc_opt s t.w_fds with
+          | Some f ->
+            (try Unix.close f with
+             | Unix.Unix_error _ -> ())
+          | None -> ());
+         t.w_fds <- List.filter (fun (x, _) -> x <> s) t.w_fds;
+         (try Sys.remove (seg_path ~dir:t.w_dir s) with
+          | Sys_error _ -> ());
+         removed := true))
     (list_segments t.w_dir);
   if !removed then fsync_dir (pack_subdir t.w_dir);
   t.w_cur_seg <- seg;
   t.w_cur_end <- off;
-  t.w_written <- (seg, off);
-  t.w_durable <- (seg, off);
+  t.w_written <- seg, off;
+  t.w_durable <- seg, off;
   t.w_dirty <- []
+;;
 
 let close t =
-  if not t.w_closed then begin
-    (try sync t with Unix.Unix_error _ -> ());
-    List.iter (fun (_, fd) -> try Unix.close fd with Unix.Unix_error _ -> ()) t.w_fds;
+  if not t.w_closed
+  then (
+    (try sync t with
+     | Unix.Unix_error _ -> ());
+    List.iter
+      (fun (_, fd) ->
+         try Unix.close fd with
+         | Unix.Unix_error _ -> ())
+      t.w_fds;
     t.w_fds <- [];
     release_lock t;
-    t.w_closed <- true
-  end
+    t.w_closed <- true)
+;;

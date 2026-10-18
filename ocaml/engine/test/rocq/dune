@@ -11,6 +11,7 @@
 (test
  (name test_rocq)
  (modules lane_eval rocq_run rocq_gen test_rocq)
- (flags (:standard -w -a -w @55))
+ (flags
+  (:standard -w -a -w @55))
  (deps ../todo/todo-host.txt ../kit/verdicts.txt)
  (libraries effect4_kit effect4_eff effect4_gen todo_lane effect4_lcnf))

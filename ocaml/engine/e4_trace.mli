@@ -21,20 +21,20 @@ type 'e t
 
 val empty : 'e t
 
-val emit : 'e list -> 'e t -> 'e t
 (** Append, in order.  [emit [] t] returns [t] ITSELF (TR2). *)
+val emit : 'e list -> 'e t -> 'e t
 
-val to_list : 'e t -> 'e list
 (** The trace in emission order.  Conversion follows the carrier owner (TR3). *)
+val to_list : 'e t -> 'e list
 
-val length : 'e t -> int
 (** O(1) (TR4). *)
+val length : 'e t -> int
 
 val is_empty : 'e t -> bool
 
-val nth_opt : int -> 'e t -> 'e option
 (** Row [i] of the finished trace, for A3's trace index (2026-09-08-design-language.md §3:
     the reading axis is the trace index).  O(log (length t / 256)): the substitution the old
     text promised ("A3 may substitute a finger tree behind this signature without touching
     the engine") has been made, and the substitute is A3's own `Lcnf_array`.  It is
     deliberately the only random-access operation, so that A3 needs no second seam. *)
+val nth_opt : int -> 'e t -> 'e option

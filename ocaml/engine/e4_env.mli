@@ -39,23 +39,23 @@ type 'a t
 
 val empty : 'a t
 
-val snoc : 'a t -> 'a -> 'a t
 (** Bind one more value: [to_list (snoc e v) = to_list e @ [v]], O(1) (PE1, PE2). *)
+val snoc : 'a t -> 'a -> 'a t
 
-val append : 'a t -> 'a list -> 'a t
 (** [snoc] folded over the list. *)
+val append : 'a t -> 'a list -> 'a t
 
-val get : 'a t -> int -> 'a option
 (** Lean's [env[i]?] — index from the front (PE3). *)
+val get : 'a t -> int -> 'a option
 
-val length : 'a t -> int
 (** O(1) (PE4). *)
+val length : 'a t -> int
 
-val take : 'a t -> int -> 'a t
 (** Lean's [List.take k], clamped at both ends; shares the tail of the spine (PE5). *)
+val take : 'a t -> int -> 'a t
 
-val to_list : 'a t -> 'a list
 (** The Lean `Point.env` value.  One reversal, O(length). *)
+val to_list : 'a t -> 'a list
 
-val of_list : 'a list -> 'a t
 (** The inverse of [to_list]; for the tests and for a caller that holds a Lean list. *)
+val of_list : 'a list -> 'a t

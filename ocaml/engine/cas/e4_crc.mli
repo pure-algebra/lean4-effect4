@@ -41,32 +41,32 @@
        the only be32 in the whole CAS grammar is a checksum or a length beside one, so the
        field travels with the checksum that fills it. *)
 
-val poly : int
 (** 0xEDB88320 — the reflected IEEE 802.3 polynomial this module is built from. *)
+val poly : int
 
-val init : int
 (** 0: the crc of the empty string, and the seed of an incremental run (C2). *)
+val init : int
 
-val string : string -> int
 (** The crc of a whole string. *)
+val string : string -> int
 
-val sub : string -> int -> int -> int
 (** [sub s pos len] is the crc of that window (C4).  Invalid_argument if out of range. *)
+val sub : string -> int -> int -> int
 
-val update : int -> string -> int
 (** [update crc s] extends a running crc by every byte of [s] (C2). *)
+val update : int -> string -> int
 
-val update_sub : int -> string -> int -> int -> int
 (** [update_sub crc s pos len] extends a running crc by that window (C2, C4). *)
+val update_sub : int -> string -> int -> int -> int
 
-val update_char : int -> char -> int
 (** One byte. *)
+val update_char : int -> char -> int
 
-val be32 : int -> string
 (** Four big-endian bytes.  Invalid_argument outside 0 .. 0xFFFFFFFF (C5). *)
+val be32 : int -> string
 
-val read_be32 : string -> int -> int option
 (** Four big-endian bytes at a position, or None past the end.  Total (C5). *)
+val read_be32 : string -> int -> int option
 
-val field_length : int
 (** 4: the bytes a `be32` checksum field occupies. *)
+val field_length : int

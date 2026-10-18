@@ -72,17 +72,22 @@ let checks = ref 0
 
 let check name ok =
   incr checks;
-  if ok then Printf.printf "PASS %s\n" name
-  else begin
+  if ok
+  then Printf.printf "PASS %s\n" name
+  else (
     incr failures;
-    Printf.printf "FAIL %s\n" name
-  end
+    Printf.printf "FAIL %s\n" name)
+;;
 
 (* T14 to T17: the hosts written in OCaml, driven by E4_host over one engine instance. *)
 module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
   module H = Effect4_engine.E4_host.Make (E)
 
-  let finished (stop : H.stop) = match stop with H.Machine H.Finished -> true | _ -> false
+  let finished (stop : H.stop) =
+    match stop with
+    | H.Machine H.Finished -> true
+    | _ -> false
+  ;;
 
   (* Every request's program is inside the profile, so a loading refusal is a broken fixture. *)
   let serve (built : Todo_gen.built) provider state =
@@ -90,6 +95,7 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
     | Ok served -> served
     | Error (H.Load_outside_profile why) ->
       failwith ("a request's program did not load: " ^ E4_clock.refusal_text why)
+  ;;
 
   (* The served run packaged by the lowered `resultVal`, at the host's state read as the lane's. *)
   let result (s : 'st H.served) (lane : Native_todo.lane_state) : string =
@@ -97,46 +103,76 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
       (Todo_gen.test_dogfood_scenario_todo_host_result_val
          ( ( List.map
                (fun (c : H.call) ->
-                 ({ Todo_gen.row = c.row; request = c.request; completion = c.answer } : Todo_gen.call))
-               s.calls,
-             E.root_exit_of s.engine ),
-           lane ))
+                  ({ Todo_gen.row = c.row; request = c.request; completion = c.answer }
+                   : Todo_gen.call))
+               s.calls
+           , E.root_exit_of s.engine )
+         , lane ))
+  ;;
 
   (* What a drive leaves in the engine: the outcome, the fibers, the trace and the calls waiting. *)
   let observation (e : E.t) =
-    ( E.outcome e,
-      E.fiber_rows e,
-      E.trace_rows e,
-      List.map (fun (fiber, token, row, request) -> (fiber, token, row, hex_of request)) (E.host_calls e) )
+    ( E.outcome e
+    , E.fiber_rows e
+    , E.trace_rows e
+    , List.map
+        (fun (fiber, token, row, request) -> fiber, token, row, hex_of request)
+        (E.host_calls e) )
+  ;;
 
-  let table_host = Native_todo.host (module Native_todo.Table : Native_todo.REPO with type t = Native_todo.Table.t)
+  let table_host =
+    Native_todo.host
+      (module Native_todo.Table : Native_todo.REPO with type t = Native_todo.Table.t)
+  ;;
 
   let disk_full name = if name = "insert" then raise (Sys_error "disk full")
-
   let reached = ref 0
 
-  let run (i : int) (r : request) (built : Todo_gen.built) (state : Native_todo.lane_state) =
+  let run
+        (i : int)
+        (r : request)
+        (built : Todo_gen.built)
+        (state : Native_todo.lane_state)
+    =
     let name what = Printf.sprintf "%d %s (%s): %s" i r.entry E.name what in
     (* T14 *)
-    let through (type s) (h : s Todo_gen.host) (make : unit -> s) (lane : s -> Native_todo.lane_state) =
+    let through
+          (type s)
+          (h : s Todo_gen.host)
+          (make : unit -> s)
+          (lane : s -> Native_todo.lane_state)
+      =
       let s = serve built (Native_todo.provider h) (make ()) in
       finished s.stop && result s (lane s.state) = r.result
     in
-    check (name "T14 the record host on E4_host is Lean's")
+    check
+      (name "T14 the record host on E4_host is Lean's")
       (through Native_todo.record (fun () -> state) Fun.id);
-    check (name "T14 the pure core behind REPO on E4_host is Lean's")
+    check
+      (name "T14 the pure core behind REPO on E4_host is Lean's")
       (through
-         (Native_todo.host (module Native_todo.Core : Native_todo.REPO with type t = Todo_core.t))
+         (Native_todo.host
+            (module Native_todo.Core : Native_todo.REPO with type t = Todo_core.t))
          (fun () -> Native_todo.core_of_lane state)
          Native_todo.lane_of_core);
-    check (name "T14 the hash table behind REPO on E4_host is Lean's")
-      (through table_host (fun () -> Native_todo.Table.create state) Native_todo.Table.snapshot);
+    check
+      (name "T14 the hash table behind REPO on E4_host is Lean's")
+      (through
+         table_host
+         (fun () -> Native_todo.Table.create state)
+         Native_todo.Table.snapshot);
     (* the provider that declines insert: the reference a raise and a refusal are read against *)
     let declining row request st =
-      if row.Row.spelling = "TodoRepo.insert" then None else Native_todo.provider Native_todo.record row request st
+      if row.Row.spelling = "TodoRepo.insert"
+      then None
+      else Native_todo.provider Native_todo.record row request st
     in
     let declined = serve built declining state in
-    let calls_insert = match declined.stop with H.Host H.Declined -> true | _ -> false in
+    let calls_insert =
+      match declined.stop with
+      | H.Host H.Declined -> true
+      | _ -> false
+    in
     let as_declined (type st) (s : st H.served) (lane : st -> Native_todo.lane_state) =
       observation s.engine = observation declined.engine
       && E.host_calls s.engine <> []
@@ -144,50 +180,79 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
       && List.length s.calls = List.length declined.calls
     in
     (* T15 *)
-    let raised = serve built (Native_todo.provider table_host) (Native_todo.Table.create ~fault:disk_full state) in
-    if calls_insert then begin
+    let raised =
+      serve
+        built
+        (Native_todo.provider table_host)
+        (Native_todo.Table.create ~fault:disk_full state)
+    in
+    if calls_insert
+    then (
       incr reached;
-      check (name "T15 a raise at insert stops the drive with Raised, as a decline leaves it")
-        ((match raised.stop with H.Host (H.Raised (Sys_error m)) -> m = "disk full" | _ -> false)
-         && as_declined raised Native_todo.Table.snapshot)
-    end
+      check
+        (name "T15 a raise at insert stops the drive with Raised, as a decline leaves it")
+        ((match raised.stop with
+          | H.Host (H.Raised (Sys_error m)) -> m = "disk full"
+          | _ -> false)
+         && as_declined raised Native_todo.Table.snapshot))
     else
-      check (name "T15 a raise at insert, never called, leaves Lean's result")
-        (finished raised.stop && result raised (Native_todo.Table.snapshot raised.state) = r.result);
+      check
+        (name "T15 a raise at insert, never called, leaves Lean's result")
+        (finished raised.stop
+         && result raised (Native_todo.Table.snapshot raised.state) = r.result);
     (* T16 *)
-    let named = function Sys_error m -> Some (Todo_gen.SqlTag_SqlError, m) | _ -> None in
+    let named = function
+      | Sys_error m -> Some (Todo_gen.SqlTag_SqlError, m)
+      | _ -> None
+    in
     let caught =
-      serve built
+      serve
+        built
         (Native_todo.provider (Native_todo.catching named table_host))
         (Native_todo.Table.create ~fault:disk_full state)
     in
-    check (name "T16 the raise named as the rows' failure is Lean's broken result")
-      (finished caught.stop && result caught (Native_todo.Table.snapshot caught.state) = r.broken);
+    check
+      (name "T16 the raise named as the rows' failure is Lean's broken result")
+      (finished caught.stop
+       && result caught (Native_todo.Table.snapshot caught.state) = r.broken);
     let unnamed =
-      serve built
+      serve
+        built
         (Native_todo.provider (Native_todo.catching (fun _ -> None) table_host))
         (Native_todo.Table.create ~fault:disk_full state)
     in
-    check (name "T16 a raise no catch names is raised again")
-      (if calls_insert then
-         (match unnamed.stop with H.Host (H.Raised (Sys_error m)) -> m = "disk full" | _ -> false)
+    check
+      (name "T16 a raise no catch names is raised again")
+      (if calls_insert
+       then
+         (match unnamed.stop with
+          | H.Host (H.Raised (Sys_error m)) -> m = "disk full"
+          | _ -> false)
          && as_declined unnamed Native_todo.Table.snapshot
        else finished unnamed.stop);
     (* T17 *)
     List.iter
       (fun id ->
-        let forged =
-          { Native_todo.record with
-            Todo_gen.insert =
-              (fun title (next, items) ->
-                (Ok (Native_todo.todo id title false), (next + 1, items @ [ (next, (title, false)) ]))) }
-        in
-        let s = serve built (Native_todo.provider forged) state in
-        check (name (Printf.sprintf "T17 an id %d outside the profile is never applied" id))
-          (if calls_insert then
-             (match s.stop with H.Host (H.Outside_profile _) -> true | _ -> false) && as_declined s Fun.id
-           else finished s.stop && result s s.state = r.result))
+         let forged =
+           { Native_todo.record with
+             Todo_gen.insert =
+               (fun title (next, items) ->
+                 ( Ok (Native_todo.todo id title false)
+                 , (next + 1, items @ [ next, (title, false) ]) ))
+           }
+         in
+         let s = serve built (Native_todo.provider forged) state in
+         check
+           (name (Printf.sprintf "T17 an id %d outside the profile is never applied" id))
+           (if calls_insert
+            then
+              (match s.stop with
+               | H.Host (H.Outside_profile _) -> true
+               | _ -> false)
+              && as_declined s Fun.id
+            else finished s.stop && result s s.state = r.result))
       [ -1; 1 lsl 53 ]
+  ;;
 end
 
 module Native_fast = Native_checks (Effect4_engine.E4_engine.Fast)
@@ -195,59 +260,107 @@ module Native_ref = Native_checks (Effect4_engine.E4_engine.Ref)
 
 let () =
   let requests = read_fixture "todo-host.txt" in
-  check (Printf.sprintf "the fixture holds %d requests" (List.length requests)) (requests <> []);
+  check
+    (Printf.sprintf "the fixture holds %d requests" (List.length requests))
+    (requests <> []);
   List.iteri
     (fun i r ->
-      let built = built_of r in
-      let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
-      let name = Printf.sprintf "%d %s" i r.entry in
-      check (name ^ ": the reference host's result is Lean's")
-        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_val built state) = r.result);
-      check (name ^ ": the forgetful host's result is Lean's")
-        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_forgetful_val built state)
-         = r.forgetful);
-      (* T10 and T11: the typed hosts, lowered and written in OCaml *)
-      check (name ^ ": the lowered typed model's result is Lean's")
-        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
-                   Todo_gen.test_dogfood_scenario_todo_typed_model built state) = r.result);
-      check (name ^ ": the typed host written in OCaml gives Lean's result")
-        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val Native_todo.record
-                   built state) = r.result);
-      (* T12 and T13: the broken typed hosts, lowered and written in OCaml *)
-      check (name ^ ": the lowered broken host's result is Lean's")
-        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
-                   Todo_gen.test_dogfood_scenario_todo_typed_broken built state) = r.broken);
-      check (name ^ ": the broken host written in OCaml gives Lean's result")
-        (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val Native_todo.broken
-                   built state) = r.broken))
+       let built = built_of r in
+       let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
+       let name = Printf.sprintf "%d %s" i r.entry in
+       check
+         (name ^ ": the reference host's result is Lean's")
+         (hex_of (Todo_gen.test_dogfood_scenario_todo_host_serve_built_val built state)
+          = r.result);
+       check
+         (name ^ ": the forgetful host's result is Lean's")
+         (hex_of
+            (Todo_gen.test_dogfood_scenario_todo_host_serve_built_forgetful_val
+               built
+               state)
+          = r.forgetful);
+       (* T10 and T11: the typed hosts, lowered and written in OCaml *)
+       check
+         (name ^ ": the lowered typed model's result is Lean's")
+         (hex_of
+            (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
+               Todo_gen.test_dogfood_scenario_todo_typed_model
+               built
+               state)
+          = r.result);
+       check
+         (name ^ ": the typed host written in OCaml gives Lean's result")
+         (hex_of
+            (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
+               Native_todo.record
+               built
+               state)
+          = r.result);
+       (* T12 and T13: the broken typed hosts, lowered and written in OCaml *)
+       check
+         (name ^ ": the lowered broken host's result is Lean's")
+         (hex_of
+            (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
+               Todo_gen.test_dogfood_scenario_todo_typed_broken
+               built
+               state)
+          = r.broken);
+       check
+         (name ^ ": the broken host written in OCaml gives Lean's result")
+         (hex_of
+            (Todo_gen.test_dogfood_scenario_todo_host_serve_built_typed_val
+               Native_todo.broken
+               built
+               state)
+          = r.broken))
     requests;
   (* T5: the engine runs each request's program at its row table, on both instances, and they
      agree after a reply. *)
   List.iteri
     (fun i r ->
-      let built = built_of r in
-      let table = built.Todo_gen.app.Todo_gen.rows and program = built.Todo_gen.program in
-      let module F = Effect4_engine.E4_engine.Fast in
-      let module R = Effect4_engine.E4_engine.Ref in
-      let f0 = F.run ~table program ~fuel:100000 and g0 = R.run ~table program ~fuel:100000 in
-      let f = F.step f0 (F.answer_async_success 0 0 7) in
-      let g = R.step g0 (R.answer_async_success 0 0 7) in
-      check (Printf.sprintf "%d %s: the engine's two instances agree at the row table after a reply" i r.entry)
-        (F.outcome f = R.outcome g && F.fiber_rows f = R.fiber_rows g);
-      (* T6: the engine admits a reply as Lean's checked replay does *)
-      let verdicts t admits answer =
-        Printf.sprintf "%b %b" (admits t (answer 0 7)) (admits t (answer 1 7)) in
-      check (Printf.sprintf "%d %s: the engine admits a natural reply as Lean does (%s)" i r.entry r.admits)
-        (verdicts f0 F.admits (F.answer_async_success 0) = r.admits
-         && verdicts g0 R.admits (R.answer_async_success 0) = r.admits);
-      (* T7: the reference repository's own answer to the first call is admitted, as by Lean *)
-      (match String.split_on_char ' ' r.answer with
+       let built = built_of r in
+       let table = built.Todo_gen.app.Todo_gen.rows
+       and program = built.Todo_gen.program in
+       let module F = Effect4_engine.E4_engine.Fast in
+       let module R = Effect4_engine.E4_engine.Ref in
+       let f0 = F.run ~table program ~fuel:100000
+       and g0 = R.run ~table program ~fuel:100000 in
+       let f = F.step f0 (F.answer_async_success 0 0 7) in
+       let g = R.step g0 (R.answer_async_success 0 0 7) in
+       check
+         (Printf.sprintf
+            "%d %s: the engine's two instances agree at the row table after a reply"
+            i
+            r.entry)
+         (F.outcome f = R.outcome g && F.fiber_rows f = R.fiber_rows g);
+       (* T6: the engine admits a reply as Lean's checked replay does *)
+       let verdicts t admits answer =
+         Printf.sprintf "%b %b" (admits t (answer 0 7)) (admits t (answer 1 7))
+       in
+       check
+         (Printf.sprintf
+            "%d %s: the engine admits a natural reply as Lean does (%s)"
+            i
+            r.entry
+            r.admits)
+         (verdicts f0 F.admits (F.answer_async_success 0) = r.admits
+          && verdicts g0 R.admits (R.answer_async_success 0) = r.admits);
+       (* T7: the reference repository's own answer to the first call is admitted, as by Lean *)
+       match String.split_on_char ' ' r.answer with
        | [ hex; lean ] ->
          let v = exactly "the answer" Eff_val.decode_exact hex in
-         check (Printf.sprintf "%d %s: the engine admits the reference answer as Lean does (%s)" i r.entry lean)
+         check
+           (Printf.sprintf
+              "%d %s: the engine admits the reference answer as Lean does (%s)"
+              i
+              r.entry
+              lean)
            (string_of_bool (F.admits f0 (F.answer_async_value 0 0 v)) = lean
             && string_of_bool (R.admits g0 (R.answer_async_value 0 0 v)) = lean)
-       | _ -> check (Printf.sprintf "%d %s: the fixture carries the reference answer" i r.entry) false))
+       | _ ->
+         check
+           (Printf.sprintf "%d %s: the fixture carries the reference answer" i r.entry)
+           false)
     requests;
   (* T8: E4_host drives each request on the engine with the lowered reactors as providers, and
      its result, packaged by the lowered `resultVal`, is Lean's, byte for byte *)
@@ -255,50 +368,81 @@ let () =
   let module HR = Effect4_engine.E4_host.Make (Effect4_engine.E4_engine.Ref) in
   List.iteri
     (fun i r ->
-      let built = built_of r in
-      let table = built.Todo_gen.app.Todo_gen.rows and program = built.Todo_gen.program in
-      let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
-      let result calls exit st =
-        hex_of
-          (Todo_gen.test_dogfood_scenario_todo_host_result_val
-             ((List.map
-                 (fun (c : Effect4_engine.E4_host.call) ->
-                   ({ Todo_gen.row = c.row; request = c.request; completion = c.answer } : Todo_gen.call))
-                 calls,
-               exit),
-              st))
-      in
-      (* A loading refusal makes the check fail: every request's program is inside the profile. *)
-      let through provider =
-        match HF.serve ~table provider program ~fuel:1000 state, HR.serve ~table provider program ~fuel:1000 state with
-        | Ok f, Ok g ->
-          let rf = result f.calls (Effect4_engine.E4_engine.Fast.root_exit_of f.engine) f.state in
-          let rg = result g.calls (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state in
-          ((match f.stop, g.stop with HF.Machine HF.Finished, HR.Machine HR.Finished -> true | _ -> false), rf, rg)
-        | _ -> (false, "", "")
-      in
-      let finished, rf, rg = through Todo_gen.test_dogfood_scenario_todo_repository in
-      check (Printf.sprintf "%d %s: the engine under E4_host, over the reference host, is Lean's" i r.entry)
-        (finished && rf = r.result && rg = r.result);
-      let finished, ff, fg = through Todo_gen.test_dogfood_scenario_todo_forgetful in
-      check (Printf.sprintf "%d %s: the engine under E4_host, over the forgetful host, is Lean's" i r.entry)
-        (finished && ff = r.forgetful && fg = r.forgetful);
-      (* T9: the same with the repository written in OCaml *)
-      let finished, nf, ng = through Native_todo.Untyped.provider in
-      check (Printf.sprintf "%d %s: the engine under E4_host, over the OCaml repository, is Lean's" i r.entry)
-        (finished && nf = r.result && ng = r.result))
+       let built = built_of r in
+       let table = built.Todo_gen.app.Todo_gen.rows
+       and program = built.Todo_gen.program in
+       let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
+       let result calls exit st =
+         hex_of
+           (Todo_gen.test_dogfood_scenario_todo_host_result_val
+              ( ( List.map
+                    (fun (c : Effect4_engine.E4_host.call) ->
+                       ({ Todo_gen.row = c.row
+                        ; request = c.request
+                        ; completion = c.answer
+                        }
+                        : Todo_gen.call))
+                    calls
+                , exit )
+              , st ))
+       in
+       (* A loading refusal makes the check fail: every request's program is inside the profile. *)
+       let through provider =
+         match
+           ( HF.serve ~table provider program ~fuel:1000 state
+           , HR.serve ~table provider program ~fuel:1000 state )
+         with
+         | Ok f, Ok g ->
+           let rf =
+             result f.calls (Effect4_engine.E4_engine.Fast.root_exit_of f.engine) f.state
+           in
+           let rg =
+             result g.calls (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state
+           in
+           ( (match f.stop, g.stop with
+              | HF.Machine HF.Finished, HR.Machine HR.Finished -> true
+              | _ -> false)
+           , rf
+           , rg )
+         | _ -> false, "", ""
+       in
+       let finished, rf, rg = through Todo_gen.test_dogfood_scenario_todo_repository in
+       check
+         (Printf.sprintf
+            "%d %s: the engine under E4_host, over the reference host, is Lean's"
+            i
+            r.entry)
+         (finished && rf = r.result && rg = r.result);
+       let finished, ff, fg = through Todo_gen.test_dogfood_scenario_todo_forgetful in
+       check
+         (Printf.sprintf
+            "%d %s: the engine under E4_host, over the forgetful host, is Lean's"
+            i
+            r.entry)
+         (finished && ff = r.forgetful && fg = r.forgetful);
+       (* T9: the same with the repository written in OCaml *)
+       let finished, nf, ng = through Native_todo.Untyped.provider in
+       check
+         (Printf.sprintf
+            "%d %s: the engine under E4_host, over the OCaml repository, is Lean's"
+            i
+            r.entry)
+         (finished && nf = r.result && ng = r.result))
     requests;
-  check "red control: the two hosts' results differ on some request"
+  check
+    "red control: the two hosts' results differ on some request"
     (List.exists (fun r -> r.result <> r.forgetful) requests);
   (* T14 to T17, on both instances *)
   List.iteri
     (fun i r ->
-      let built = built_of r in
-      let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
-      Native_fast.run i r built state;
-      Native_ref.run i r built state)
+       let built = built_of r in
+       let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
+       Native_fast.run i r built state;
+       Native_ref.run i r built state)
     requests;
-  check "T15 red control: some request reaches the raise, on both instances"
+  check
+    "T15 red control: some request reaches the raise, on both instances"
     (!Native_fast.reached > 0 && !Native_ref.reached > 0);
   Printf.printf "%d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
+;;

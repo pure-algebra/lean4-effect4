@@ -19,7 +19,12 @@
    Depends on: E4_instance (and through it Api_engine, generated), E4_table, E4_trace,
    E4_memo, E4_buckets, E4_ppath, E4_env, E4_fibers_view. *)
 
-include E4_instance.Make (E4_table) (E4_trace) (E4_memo) (E4_buckets) (E4_ppath) (E4_env) (E4_fibers_view)
+include
+  E4_instance.Make (E4_table) (E4_trace) (E4_memo) (E4_buckets) (E4_ppath) (E4_env)
+    (E4_fibers_view)
 
 let name = "Fast"
-let carriers = "E4_table / E4_trace / E4_memo / E4_buckets / E4_ppath / E4_env / E4_fibers_view"
+
+let carriers =
+  "E4_table / E4_trace / E4_memo / E4_buckets / E4_ppath / E4_env / E4_fibers_view"
+;;

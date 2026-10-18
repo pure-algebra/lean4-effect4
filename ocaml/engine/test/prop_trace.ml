@@ -25,8 +25,8 @@ end
 
 module _ : TRACE = E4_trace
 module _ : TRACE = E4_trace_list
-[@@@warning "+32"]
 
+[@@@warning "+32"]
 
 module R = E4_trace
 module L = E4_trace_list
@@ -36,6 +36,7 @@ let failures = ref 0
 let check name ok =
   Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
   if not ok then incr failures
+;;
 
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why
 
@@ -49,6 +50,7 @@ let reset () = s := lcg_seed
 let next () =
   s := ((!s * 25214903917) + 11) land lcg_mask;
   !s lsr 16
+;;
 
 let rand n = if n <= 0 then 0 else next () mod n
 
@@ -58,26 +60,31 @@ let rand n = if n <= 0 then 0 else next () mod n
 let schedule n =
   reset ();
   List.init n (fun i ->
-      match rand 10 with
-      | 0 | 1 | 2 | 3 | 4 | 5 -> []
-      | 6 | 7 | 8 -> [ i ]
-      | _ -> List.init (1 + rand 4) (fun j -> (i * 100) + j))
+    match rand 10 with
+    | 0 | 1 | 2 | 3 | 4 | 5 -> []
+    | 6 | 7 | 8 -> [ i ]
+    | _ -> List.init (1 + rand 4) (fun j -> (i * 100) + j))
+;;
 
 let tr1_tr8 n =
   let sch = schedule n in
-  let expected = ref [] and fast = ref R.empty and slow = ref L.empty in
-  let ok1 = ref true and ok8 = ref true in
+  let expected = ref []
+  and fast = ref R.empty
+  and slow = ref L.empty in
+  let ok1 = ref true
+  and ok8 = ref true in
   List.iter
     (fun evs ->
-      expected := !expected @ evs;
-      fast := R.emit evs !fast;
-      slow := L.emit evs !slow;
-      if R.to_list !fast <> !expected then ok1 := false;
-      if L.to_list !slow <> R.to_list !fast then ok8 := false)
+       expected := !expected @ evs;
+       fast := R.emit evs !fast;
+       slow := L.emit evs !slow;
+       if R.to_list !fast <> !expected then ok1 := false;
+       if L.to_list !slow <> R.to_list !fast then ok8 := false)
     sch;
   check (Printf.sprintf "TR1 to_list (emit evs t) = to_list t @ evs (%d emits)" n) !ok1;
   check (Printf.sprintf "TR8 agreement with the list twin (%d emits)" n) !ok8;
-  (!fast, !slow, !expected)
+  !fast, !slow, !expected
+;;
 
 let tr2 () =
   reset ();
@@ -95,21 +102,30 @@ let tr2 () =
     u := L.emit [ i ] !u
   done;
   check "TR2 emit [] t == t (physically equal, both carriers)" !ok
+;;
 
 let tr4 (fast, _, expected) =
-  check "TR4 length t = List.length (to_list t), maintained incrementally"
+  check
+    "TR4 length t = List.length (to_list t), maintained incrementally"
     (R.length fast = List.length expected && R.length fast = List.length (R.to_list fast))
+;;
 
 let tr5 () =
   reset ();
-  let t = List.fold_left (fun t i -> R.emit [ i; i + 1 ] t) R.empty (List.init 200 (fun i -> i)) in
-  let before = R.to_list t and n = R.length t in
+  let t =
+    List.fold_left (fun t i -> R.emit [ i; i + 1 ] t) R.empty (List.init 200 (fun i -> i))
+  in
+  let before = R.to_list t
+  and n = R.length t in
   for i = 1 to 500 do
     ignore (R.emit [ i ] t);
     ignore (R.emit [] t);
     ignore (R.to_list t)
   done;
-  check "TR5 persistence: t is unchanged by any emit on it" (R.to_list t = before && R.length t = n)
+  check
+    "TR5 persistence: t is unchanged by any emit on it"
+    (R.to_list t = before && R.length t = n)
+;;
 
 let tr6 () =
   (* Equal event sequences give equal lists, whatever the chunking. *)
@@ -120,25 +136,39 @@ let tr6 () =
     let rec go t = function
       | [] -> t
       | l ->
-          let k = 1 + (List.length l mod 7) in
-          let rec split i l = if i = 0 then ([], l) else match l with [] -> ([], []) | x :: r -> let a, b = split (i - 1) r in (x :: a, b) in
-          let head, tail = split k l in
-          go (R.emit head t) tail
+        let k = 1 + (List.length l mod 7) in
+        let rec split i l =
+          if i = 0
+          then [], l
+          else (
+            match l with
+            | [] -> [], []
+            | x :: r ->
+              let a, b = split (i - 1) r in
+              x :: a, b)
+        in
+        let head, tail = split k l in
+        go (R.emit head t) tail
     in
     go R.empty evs
   in
-  check "TR6 the reversal is stable: same events, any chunking, same to_list"
+  check
+    "TR6 the reversal is stable: same events, any chunking, same to_list"
     (R.to_list whole = evs && R.to_list one_by_one = evs && R.to_list chunks = evs)
+;;
 
 let tr7 (fast, slow, expected) =
   let n = List.length expected in
   let ok = ref true in
-  List.iter (fun i -> if R.nth_opt i fast <> None then ok := false) [ -5; -1; n; n + 1; n + 100 ];
+  List.iter
+    (fun i -> if R.nth_opt i fast <> None then ok := false)
+    [ -5; -1; n; n + 1; n + 100 ];
   for i = 0 to n - 1 do
     if R.nth_opt i fast <> List.nth_opt expected i then ok := false;
     if L.nth_opt i slow <> R.nth_opt i fast then ok := false
   done;
   check "TR7 nth_opt i t = List.nth_opt (to_list t) i, None outside the range" !ok
+;;
 
 (* TR9 — lane W, proposal N2: the carrier is `Lcnf_array`, so `nth_opt` is a lookup and not a
    walk.  The law is TR7's, taken over a trace LONGER THAN THE CHUNK (6 003 rows against a
@@ -174,7 +204,9 @@ let tr9 () =
     visit !j;
     j := (!j + 2731) mod n
   done;
-  List.iter (fun i -> if R.nth_opt i fast <> None then ok := false) [ -1; -256; n; n + 255 ];
+  List.iter
+    (fun i -> if R.nth_opt i fast <> None then ok := false)
+    [ -1; -256; n; n + 255 ];
   (* the chunk boundaries themselves: the last row of a frozen chunk and the first of the
      next, and the first row of the open tail *)
   List.iter
@@ -182,10 +214,11 @@ let tr9 () =
     [ 0; 255; 256; 511; 512; 5887; 5888 ];
   check
     (Printf.sprintf
-       "TR9 nth_opt is the reading axis: %d rows (23 frozen chunks + a tail), every index \
-        forward, backward and strided"
+       "TR9 nth_opt is the reading axis: %d rows (23 frozen chunks + a tail), every \
+        index forward, backward and strided"
        n)
     !ok
+;;
 
 let () =
   let st = tr1_tr8 4000 in
@@ -195,7 +228,16 @@ let () =
   tr6 ();
   tr7 st;
   tr9 ();
-  argue "TR3 emit is O(length evs); to_list is O(length t), called once per run"
-    "emit is one Lcnf_array.push per event onto the open chunk (a cons, plus one 256-element array and one Map insertion every 256 events) and never walks t; to_list delegates to Lcnf_array.to_list, which uses a bounded temporary array or its fold/reverse fallback; allocation observations are in ocaml/lcnf/test_array_conversion.ml";
-  Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;
+  argue
+    "TR3 emit is O(length evs); to_list is O(length t), called once per run"
+    "emit is one Lcnf_array.push per event onto the open chunk (a cons, plus one \
+     256-element array and one Map insertion every 256 events) and never walks t; \
+     to_list delegates to Lcnf_array.to_list, which uses a bounded temporary array or \
+     its fold/reverse fallback; allocation observations are in \
+     ocaml/lcnf/test_array_conversion.ml";
+  Printf.printf
+    "== %s: %d failure(s) ==\n"
+    (if !failures = 0 then "ALL PASS" else "FAILED")
+    !failures;
   exit (if !failures = 0 then 0 else 1)
+;;

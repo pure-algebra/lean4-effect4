@@ -121,10 +121,17 @@
  (libraries effect4_engine effect4_eff effect4_gen))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .e4_gen_instance.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .e4_gen_instance.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
 
 (test
  (name test_diff)
@@ -181,6 +188,7 @@
  (name bench_trace)
  (modules bench_trace)
  (libraries effect4_engine unix))
+
 ; lane G2 — the point's position and environment: the carriers behind `Point.path` and
 ; `Point.env` (docs/research/2026-09-08-engine-prof-chain.md).
 ;   prop_point   E4_ppath PP1-PP7 and E4_env PE1-PE7, each against its list twin (which
@@ -188,6 +196,7 @@
 ;                PPATH and PENV module types of the generated functor ascribed to both
 ;                carriers.  PP2/PE2 measure the words `snoc` allocates at depth 1 and at
 ;                depth 2000 on both, which is the sharing law as a number.
+
 (test
  (name prop_point)
  (modules prop_point)
@@ -218,6 +227,7 @@
 ;                     functor ascribed to both carriers.  FV8 is the sharing law: a write
 ;                     that does not change an exit leaves the answer PHYSICALLY the same
 ;                     list, which is why `completedExits` costs nothing per step.
+
 (test
  (name prop_fibers_view)
  (modules prop_fibers_view)

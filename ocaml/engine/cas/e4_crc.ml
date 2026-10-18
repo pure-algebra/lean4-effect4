@@ -19,30 +19,34 @@ let table =
     t.(n) <- !c
   done;
   t
+;;
 
 let init = 0
 
 let update_sub (crc : int) (s : string) (pos : int) (len : int) : int =
-  if pos < 0 || len < 0 || pos + len > String.length s then
-    invalid_arg "E4_crc.update_sub: window out of range";
+  if pos < 0 || len < 0 || pos + len > String.length s
+  then invalid_arg "E4_crc.update_sub: window out of range";
   if crc < 0 || crc > mask then invalid_arg "E4_crc.update_sub: crc is not a 32-bit value";
   let c = ref (lnot crc land mask) in
   for i = pos to pos + len - 1 do
-    c := Array.unsafe_get table ((!c lxor Char.code (String.unsafe_get s i)) land 0xff)
-         lxor (!c lsr 8)
+    c
+    := Array.unsafe_get table (!c lxor Char.code (String.unsafe_get s i) land 0xff)
+       lxor (!c lsr 8)
   done;
   lnot !c land mask
+;;
 
 let update (crc : int) (s : string) : int = update_sub crc s 0 (String.length s)
 
 let update_char (crc : int) (c : char) : int =
-  if crc < 0 || crc > mask then invalid_arg "E4_crc.update_char: crc is not a 32-bit value";
+  if crc < 0 || crc > mask
+  then invalid_arg "E4_crc.update_char: crc is not a 32-bit value";
   let x = lnot crc land mask in
-  let x = Array.unsafe_get table ((x lxor Char.code c) land 0xff) lxor (x lsr 8) in
+  let x = Array.unsafe_get table (x lxor Char.code c land 0xff) lxor (x lsr 8) in
   lnot x land mask
+;;
 
 let string (s : string) : int = update_sub init s 0 (String.length s)
-
 let sub (s : string) (pos : int) (len : int) : int = update_sub init s pos len
 
 (* ---- the checksum field: four big-endian bytes (§1.2 `be32 rec_crc`) ---- *)
@@ -54,15 +58,17 @@ let be32 (n : int) : string =
     Bytes.unsafe_set b i (Char.unsafe_chr ((n lsr (8 * (3 - i))) land 0xff))
   done;
   Bytes.unsafe_to_string b
+;;
 
 let read_be32 (s : string) (pos : int) : int option =
-  if pos < 0 || pos + 4 > String.length s then None
-  else begin
+  if pos < 0 || pos + 4 > String.length s
+  then None
+  else (
     let n = ref 0 in
     for i = 0 to 3 do
       n := (!n lsl 8) lor Char.code (String.unsafe_get s (pos + i))
     done;
-    Some !n
-  end
+    Some !n)
+;;
 
 let field_length = 4

@@ -22,30 +22,37 @@
    and honest instead of absent, they answer [] on a log with no seals, and when the codec
    gains one they become three more `E4_logindex` posting lists behind this signature. *)
 
-type status = { finished : bool; stuck : string option; fuel_left : int }
+type status =
+  { finished : bool
+  ; stuck : string option
+  ; fuel_left : int
+  }
 
-type ('m, 'd) source = {
-  s_log : E4_log.t;
-  s_index : E4_logindex.t;
-  s_tape : 'd array;
-  s_replay : 'm -> 'd -> 'm;
-  s_k : int;
-  s_ckpt : 'm array;  (** [s_ckpt.(j)] is the machine at position [j * s_k] *)
-  s_status : 'm -> status;
-}
+type ('m, 'd) source =
+  { s_log : E4_log.t
+  ; s_index : E4_logindex.t
+  ; s_tape : 'd array
+  ; s_replay : 'm -> 'd -> 'm
+  ; s_k : int
+  ; s_ckpt : 'm array (** [s_ckpt.(j)] is the machine at position [j * s_k] *)
+  ; s_status : 'm -> status
+  }
 
-type frontier = {
-  open_scopes : int list;
-  awaited : string option;
-  fuel_left : int;
-}
+type frontier =
+  { open_scopes : int list
+  ; awaited : string option
+  ; fuel_left : int
+  }
 
 (* ------------------------------------------------------------------- the constructor *)
 
 let of_run ~log ~index ~tape ~replay ~initial ~checkpoint_every ~status =
-  if checkpoint_every < 1 then
+  if checkpoint_every < 1
+  then
     invalid_arg
-      (Printf.sprintf "E4_query.of_run: checkpoint_every = %d, must be >= 1" checkpoint_every);
+      (Printf.sprintf
+         "E4_query.of_run: checkpoint_every = %d, must be >= 1"
+         checkpoint_every);
   let n = Array.length tape in
   let k = checkpoint_every in
   let ckpt = Array.make ((n / k) + 1) initial in
@@ -55,8 +62,15 @@ let of_run ~log ~index ~tape ~replay ~initial ~checkpoint_every ~status =
     let p = i + 1 in
     if p mod k = 0 then ckpt.(p / k) <- !m
   done;
-  { s_log = log; s_index = index; s_tape = tape; s_replay = replay; s_k = k;
-    s_ckpt = ckpt; s_status = status }
+  { s_log = log
+  ; s_index = index
+  ; s_tape = tape
+  ; s_replay = replay
+  ; s_k = k
+  ; s_ckpt = ckpt
+  ; s_status = status
+  }
+;;
 
 (* --------------------------------------------------------------- the reading axis *)
 
@@ -69,7 +83,13 @@ let decision_of_row s i = E4_logindex.decision_of s.s_index i
 (* ------------------------------------------------------------------- by identity *)
 
 let at_rows s (ixs : int list) : (int * string) list =
-  List.filter_map (fun i -> match row s i with None -> None | Some r -> Some (i, r)) ixs
+  List.filter_map
+    (fun i ->
+       match row s i with
+       | None -> None
+       | Some r -> Some (i, r))
+    ixs
+;;
 
 let fiber_rows s f = at_rows s (E4_logindex.by_fiber s.s_index f)
 let scope_rows s k = at_rows s (E4_logindex.by_scope s.s_index k)
@@ -90,26 +110,31 @@ let open_scopes s =
                | None -> false)
             (E4_logindex.by_scope s.s_index k)))
     (E4_logindex.scopes s.s_index)
+;;
 
 (* -------------------------------------------------------------- the three addresses *)
 
 let contains (hay : string) (needle : string) : bool =
-  let n = String.length needle and h = String.length hay in
-  if n = 0 then true
-  else if n > h then false
-  else begin
+  let n = String.length needle
+  and h = String.length hay in
+  if n = 0
+  then true
+  else if n > h
+  then false
+  else (
     let c0 = String.unsafe_get needle 0 in
     let rec go i =
       i + n <= h
       && ((String.unsafe_get hay i = c0 && String.sub hay i n = needle) || go (i + 1))
     in
-    go 0
-  end
+    go 0)
+;;
 
 let scan s needle =
   List.rev
     (E4_log.fold s.s_log ~init:[] ~f:(fun i r acc ->
-         if contains r needle then (i, r) :: acc else acc))
+       if contains r needle then (i, r) :: acc else acc))
+;;
 
 let path_text path = "[" ^ String.concat " " (List.map string_of_int path) ^ "]"
 let occurrence_text ~program ~path = program ^ "/" ^ path_text path
@@ -117,6 +142,7 @@ let occurrence_text ~program ~path = program ^ "/" ^ path_text path
 let by_cid s ~cid =
   if cid = "" then invalid_arg "E4_query.by_cid: the empty address matches every row";
   scan s cid
+;;
 
 let by_occurrence s ~program ~path = scan s (occurrence_text ~program ~path)
 let by_path s ~path = scan s (path_text path)
@@ -126,16 +152,16 @@ let by_path s ~path = scan s (path_text path)
 let tape s = Array.to_list s.s_tape
 let tape_length s = Array.length s.s_tape
 let checkpoint_every s = s.s_k
-
-let checkpoints s =
-  List.init (Array.length s.s_ckpt) (fun j -> j * s.s_k)
+let checkpoints s = List.init (Array.length s.s_ckpt) (fun j -> j * s.s_k)
 
 (* ------------------------------------------------------- the machine at a position *)
 
 let bounds s name i =
-  if i < 0 || i > Array.length s.s_tape then
+  if i < 0 || i > Array.length s.s_tape
+  then
     invalid_arg
       (Printf.sprintf "E4_query.%s: %d outside [0,%d]" name i (Array.length s.s_tape))
+;;
 
 let at s i =
   bounds s "at" i;
@@ -145,59 +171,71 @@ let at s i =
     m := s.s_replay !m s.s_tape.(j)
   done;
   !m
+;;
 
 let cost s ~from ~upto =
   bounds s "cost" from;
   bounds s "cost" upto;
-  if upto < from then
-    invalid_arg (Printf.sprintf "E4_query.cost: from %d is above upto %d" from upto);
+  if upto < from
+  then invalid_arg (Printf.sprintf "E4_query.cost: from %d is above upto %d" from upto);
   (from mod s.s_k) + (upto - from)
+;;
 
 let replay_steps s ~from ~upto =
   bounds s "replay_steps" from;
   bounds s "replay_steps" upto;
-  if upto < from then
-    invalid_arg (Printf.sprintf "E4_query.replay_steps: from %d is above upto %d" from upto);
+  if upto < from
+  then
+    invalid_arg
+      (Printf.sprintf "E4_query.replay_steps: from %d is above upto %d" from upto);
   let m0 = at s from in
   let rec go i m acc =
-    if i >= upto then List.rev (m :: acc)
-    else
+    if i >= upto
+    then List.rev (m :: acc)
+    else (
       let m' = s.s_replay m s.s_tape.(i) in
-      go (i + 1) m' (m :: acc)
+      go (i + 1) m' (m :: acc))
   in
   go from m0 []
+;;
 
-type ('m, 'd) cursor = {
-  c_src : ('m, 'd) source;
-  c_pos : int;
-  c_m : 'm;
-}
+type ('m, 'd) cursor =
+  { c_src : ('m, 'd) source
+  ; c_pos : int
+  ; c_m : 'm
+  }
 
 let cursor s ~from =
   bounds s "cursor" from;
   { c_src = s; c_pos = from; c_m = at s from }
+;;
 
 let position c = c.c_pos
 let current c = c.c_m
 
 let next c =
   let s = c.c_src in
-  if c.c_pos >= Array.length s.s_tape then None
-  else
+  if c.c_pos >= Array.length s.s_tape
+  then None
+  else (
     let m = s.s_replay c.c_m s.s_tape.(c.c_pos) in
-    Some (m, { c with c_pos = c.c_pos + 1; c_m = m })
+    Some (m, { c with c_pos = c.c_pos + 1; c_m = m }))
+;;
 
 let outcome s =
   let st = s.s_status (at s (Array.length s.s_tape)) in
   match st.stuck with
   | Some why -> `Stuck why
   | None ->
-    if st.finished then `Finished
+    if st.finished
+    then `Finished
     else
       `Frontier
-        { open_scopes = open_scopes s;
-          (* INV-TAPE-2: `None` until X2 lands the row (A3 §1.3.4, R-A3-3).  Never a
+        { open_scopes = open_scopes s
+        ; (* INV-TAPE-2: `None` until X2 lands the row (A3 §1.3.4, R-A3-3).  Never a
              guess: the machine's Pending/Observer state can name a token, but the ROW the
              frontier awaits is not in the log and this module does not invent it. *)
-          awaited = None;
-          fuel_left = st.fuel_left }
+          awaited = None
+        ; fuel_left = st.fuel_left
+        }
+;;

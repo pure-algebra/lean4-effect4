@@ -22,58 +22,77 @@ let hex_of (v : Eff_types.Val.t) : string = E4_hex.of_bytes (Eff_val.to_bytes v)
 let val_of_hex (hex : string) : Eff_types.Val.t =
   match E4_hex.to_bytes hex with
   | None -> failwith ("fixture: not hexadecimal: " ^ hex)
-  | Some b -> (
-    match Eff_val.decode_exact b with
-    | Some v -> v
-    | None -> failwith ("fixture: no value reads exactly from " ^ hex))
+  | Some b ->
+    (match Eff_val.decode_exact b with
+     | Some v -> v
+     | None -> failwith ("fixture: no value reads exactly from " ^ hex))
+;;
 
 let fixture () =
   let ic = open_in_bin "modeled.txt" in
   let rec go samples inputs =
     match input_line ic with
-    | exception End_of_file -> close_in ic; (List.rev samples, List.rev inputs)
+    | exception End_of_file ->
+      close_in ic;
+      List.rev samples, List.rev inputs
     | line when String.length line = 0 || line.[0] = '#' -> go samples inputs
-    | line -> (
-      match String.split_on_char ' ' line with
-      | [ "sample"; hex ] -> go (hex :: samples) inputs
-      | [ "input"; hex; answer; why ] -> go samples ((hex, answer, why) :: inputs)
-      | _ -> failwith ("fixture: an unknown line: " ^ line))
+    | line ->
+      (match String.split_on_char ' ' line with
+       | [ "sample"; hex ] -> go (hex :: samples) inputs
+       | [ "input"; hex; answer; why ] -> go samples ((hex, answer, why) :: inputs)
+       | _ -> failwith ("fixture: an unknown line: " ^ line))
   in
   go [] []
+;;
 
 let failures = ref 0
 
 let check name ok =
-  if ok then Printf.printf "PASS %s\n" name
-  else (incr failures; Printf.printf "FAIL %s\n" name)
+  if ok
+  then Printf.printf "PASS %s\n" name
+  else (
+    incr failures;
+    Printf.printf "FAIL %s\n" name)
+;;
 
 let () =
   let samples, inputs = fixture () in
   (* M1 *)
   let written = List.map hex_of Modeled_gen.test_codegen_modeled_lane_sample_vals in
-  check (Printf.sprintf "M1 %d samples encode to Lean's bytes" (List.length samples))
+  check
+    (Printf.sprintf "M1 %d samples encode to Lean's bytes" (List.length samples))
     (written = samples);
   (* M2 *)
   List.iter
     (fun (hex, answer, why) ->
-      let got =
-        match Modeled_gen.test_codegen_modeled_lane_round_trip (val_of_hex hex) with
-        | None -> "none"
-        | Some v -> hex_of v
-      in
-      check ("M2 " ^ why) (got = answer))
+       let got =
+         match Modeled_gen.test_codegen_modeled_lane_round_trip (val_of_hex hex) with
+         | None -> "none"
+         | Some v -> hex_of v
+       in
+       check ("M2 " ^ why) (got = answer))
     inputs;
   (* M3 *)
   let native : Modeled_gen.item =
-    { name = "caf\xc3\xa9"; qty = -3; tags = []; note = None; status = Modeled_gen.Status_pending;
-      todo = { id = 1; title = "write the lane"; done_ = false }; color = Modeled_gen.Color_red }
+    { name = "caf\xc3\xa9"
+    ; qty = -3
+    ; tags = []
+    ; note = None
+    ; status = Modeled_gen.Status_pending
+    ; todo = { id = 1; title = "write the lane"; done_ = false }
+    ; color = Modeled_gen.Color_red
+    }
   in
-  check "M3 a value built in OCaml encodes to Lean's bytes"
+  check
+    "M3 a value built in OCaml encodes to Lean's bytes"
     (match samples with
-     | first :: _ -> hex_of (Modeled_gen.test_codegen_modeled_lane_encode_item native) = first
+     | first :: _ ->
+       hex_of (Modeled_gen.test_codegen_modeled_lane_encode_item native) = first
      | [] -> false);
   (* M4 *)
-  check "M4 the fixture holds refused and read inputs"
+  check
+    "M4 the fixture holds refused and read inputs"
     (List.exists (fun (_, a, _) -> a = "none") inputs
      && List.exists (fun (_, a, _) -> a <> "none") inputs);
   if !failures > 0 then exit 1
+;;

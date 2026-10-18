@@ -84,89 +84,90 @@
        it as `Oversize` first, exactly as `Store.putNode` tests `payload.WF` first.
        `scan_payload` is the total form and reports the error. *)
 
-type t = {
-  version : int;                 (* 0 for every admissible node *)
-  kind : E4_kind.t;
-  spec : string;                 (* exactly 32 bytes: edge 0, at kind Schema *)
-  payload : string;              (* one Val frame tree *)
-}
+type t =
+  { version : int (* 0 for every admissible node *)
+  ; kind : E4_kind.t
+  ; spec : string (* exactly 32 bytes: edge 0, at kind Schema *)
+  ; payload : string (* one Val frame tree *)
+  }
 
-val equal : t -> t -> bool
 (** Field by field: the version, the kind, the spec bytes and the payload bytes. *)
+val equal : t -> t -> bool
 
 type decode_error =
-  | Trailing                     (** bytes after the payload's one frame *)
-  | Bad_version of int           (** the byte that was not 0 *)
-  | Unregistered_kind of int     (** the byte no kind is filed under *)
-  | Short_spec                   (** fewer than 34 header bytes *)
-  | Bad_frame                    (** the payload is not one well-formed frame tree *)
-  | Host_limit                   (** a frame length >= 2^62, amendment M9 (ND8) *)
-  | Unknown_tag of int           (** a frame tag no reader knows: 0, or 15 to 255 (ND12) *)
+  | Trailing (** bytes after the payload's one frame *)
+  | Bad_version of int (** the byte that was not 0 *)
+  | Unregistered_kind of int (** the byte no kind is filed under *)
+  | Short_spec (** fewer than 34 header bytes *)
+  | Bad_frame (** the payload is not one well-formed frame tree *)
+  | Host_limit (** a frame length >= 2^62, amendment M9 (ND8) *)
+  | Unknown_tag of int (** a frame tag no reader knows: 0, or 15 to 255 (ND12) *)
 
-type scan = {
-  refs : E4_addr.Ref.t list;     (** Val.refs, in traversal order *)
-  malformed : bool;              (** Val.malformedRef *)
-  handles : (int * int) list;    (** (kind byte, allocation index), in traversal order *)
-}
+type scan =
+  { refs : E4_addr.Ref.t list (** Val.refs, in traversal order *)
+  ; malformed : bool (** Val.malformedRef *)
+  ; handles : (int * int) list (** (kind byte, allocation index), in traversal order *)
+  }
 
 type pure_refusal =
-  | Oversize of decode_error     (** the payload is not one well-formed frame tree; the
+  | Oversize of decode_error
+  (** the payload is not one well-formed frame tree; the
                                      carried error is `Host_limit` for amendment M9's case
                                      and lets lane P4 report `hostLimit` apart from
                                      `oversize` (A2 §1.9 CS2 rows 1 and 1') *)
-  | Unknown_tag of int            (** a frame tag no reader knows (ND12), never `Oversize` *)
+  | Unknown_tag of int (** a frame tag no reader knows (ND12), never `Oversize` *)
   | Bad_version_byte of int
   | Malformed_ref
   | Handle_in_content
 
-val make : version:int -> kind:E4_kind.t -> spec:string -> payload:string -> t
 (** Invalid_argument unless the spec is exactly 32 bytes and the version is a byte. *)
+val make : version:int -> kind:E4_kind.t -> spec:string -> payload:string -> t
 
-val encode : t -> string
 (** version :: kind.byte :: spec ++ payload (ND1). *)
+val encode : t -> string
 
-val decode : string -> (t, decode_error) result
 (** Exact (ND2). *)
+val decode : string -> (t, decode_error) result
 
-val address : t -> E4_addr.Addr.t
 (** sha256 (encode t) (ND9). *)
+val address : t -> E4_addr.Addr.t
 
 (* ---- the payload walk: one pass, no tree ---- *)
 
-val payload_ok : string -> (unit, decode_error) result
 (** The bytes are exactly one well-formed frame tree. *)
+val payload_ok : string -> (unit, decode_error) result
 
-val scan_payload : string -> (scan, decode_error) result
 (** Refs, the malformed verdict and the handles of a bare payload, in one traversal. *)
+val scan_payload : string -> (scan, decode_error) result
 
-val scan_refs : string -> E4_addr.Ref.t list
 (** [] on a payload that does not parse (D3). *)
+val scan_refs : string -> E4_addr.Ref.t list
 
 val scan_malformed_ref : string -> bool
 val scan_handles : string -> (int * int) list
 
-val refs : t -> E4_addr.Ref.t list
 (** ND3: Val.refs of the payload, in traversal order. *)
+val refs : t -> E4_addr.Ref.t list
 
-val malformed_ref : t -> bool
 (** ND4: Val.malformedRef of the payload. *)
+val malformed_ref : t -> bool
 
-val handles : t -> (int * int) list
 (** ND6: the tag-12 frames, in traversal order. *)
+val handles : t -> (int * int) list
 
 (* ---- the spec edge, the genesis, the edges admission checks ---- *)
 
-val zero_digest : string
 (** Thirty-two zero bytes (zeroDigest (src/Effect4/Store/Domain/Node.lean)). *)
+val zero_digest : string
 
-val is_genesis : t -> bool
 (** kind = Schema && spec = zero_digest Node.IsGenesis (src/Effect4/Store/Domain/Node.lean). *)
+val is_genesis : t -> bool
 
-val edges : t -> E4_addr.Ref.t list
 (** {Schema; spec} :: refs Node.edges (src/Effect4/Store/Domain/Node.lean) (ND7). *)
+val edges : t -> E4_addr.Ref.t list
 
-val checked_edges : t -> E4_addr.Ref.t list
 (** Node.checkedEdges Node.checkedEdges (src/Effect4/Store/Domain/Node.lean): [edges], or [refs] alone for the genesis (ND7). *)
+val checked_edges : t -> E4_addr.Ref.t list
 
 (* ---- the admission tests that are functions of the node alone (ND10) ---- *)
 
@@ -174,6 +175,6 @@ val oversize : t -> bool
 val bad_version : t -> bool
 val handle_in_content : t -> bool
 
-val check_pure : t -> (unit, pure_refusal) result
 (** oversize -> bad_version -> malformed_ref -> handle_in_content.  The store-relative
     `dangling` / `wrongKind` over [checked_edges] belong to lane P4. *)
+val check_pure : t -> (unit, pure_refusal) result

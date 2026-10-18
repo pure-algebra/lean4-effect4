@@ -33,30 +33,30 @@
        than answering an undefined digest.  The .mli said only "unusable afterwards".
                                                                                   tested *)
 
-type ctx
 (** A streaming context.  Mutable and step-local: never store one in a machine value. *)
+type ctx
 
 val create : unit -> ctx
 
-val update : ctx -> string -> int -> int -> unit
 (** [update c s pos len] feeds s.[pos .. pos+len-1].
     Raises Invalid_argument on an out-of-range window or a finished context. *)
+val update : ctx -> string -> int -> int -> unit
 
 val update_string : ctx -> string -> unit
 
-val finish : ctx -> string
 (** The 32 raw digest bytes.  The context is unusable afterwards: a second call, or an
     update after it, raises Invalid_argument. *)
+val finish : ctx -> string
 
-val digest : string -> string
 (** One-shot: 32 raw bytes. *)
+val digest : string -> string
 
-val digest_sub : string -> int -> int -> string
 (** One-shot over a window: 32 raw bytes. *)
+val digest_sub : string -> int -> int -> string
 
-val hex : string -> string
 (** [hex s] is [E4_hex.of_bytes (digest s)]: 64 lowercase hex characters, exactly
     `Effect4.Store.Digest.hex` of `Effect4.Store.sha256` of the same bytes. *)
+val hex : string -> string
 
-val digest_length : int   (* 32 *)
-val block_length : int    (* 64 *)
+val digest_length : int (* 32 *)
+val block_length : int (* 64 *)

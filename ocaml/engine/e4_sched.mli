@@ -102,170 +102,179 @@
 type machine_id = int
 type domain_id = int
 
-type answer = Finished | Suspended | Refused | Delay
-(** The step answer alphabet (survey #1, Riot `proc_state.mli`; proposal 11). `Delay` means
+type answer =
+  | Finished
+  | Suspended
+  | Refused
+  | Delay
+  (** The step answer alphabet (survey #1, Riot `proc_state.mli`; proposal 11). `Delay` means
     "not ready, re-present the same row, consume nothing" (DL1) and is a STORE answer, not a
     decision (DL2), so it never reaches the tape. *)
 
-type ('m, 'd) engine = {
-  init : unit -> unit;  (** once, on the main domain (H1) *)
-  thread_init : unit -> unit;  (** first thing on each worker *)
-  thread_finalize : unit -> unit;
-  programs : unit -> string list;
-  load : program:string -> fuel:int -> 'm;
-  step : 'm -> fuel:int -> 'd -> 'm;
-  release : 'm -> unit;
-  finished : 'm -> bool;
-  answer : 'm -> answer;
-  armed : 'm -> int list;  (** the armed dispatchers (R2-15) *)
-  fire_of : int -> 'd;  (** the `fire owner` decision *)
-  trace_len : 'm -> int;
-  rows : 'm -> cursor:int -> string list;  (** the log rows since the cursor *)
-  to_wire : 'd -> string;
-  snapshot : 'm -> string;
-  abandon : 'm E4_abandon.driver;
-}
 (** A record of functions, not a functor: one machine over one carrier is the case RWO says
     dictionary passing handles well, and packages-plan §4.4 forbids functors beyond what
     `Ml.Syntax` spells (survey §7). Nothing in this record names Lean, `ocaml/gen` or
     `ocaml/link`; the same scheduler drives any of them. *)
+type ('m, 'd) engine =
+  { init : unit -> unit (** once, on the main domain (H1) *)
+  ; thread_init : unit -> unit (** first thing on each worker *)
+  ; thread_finalize : unit -> unit
+  ; programs : unit -> string list
+  ; load : program:string -> fuel:int -> 'm
+  ; step : 'm -> fuel:int -> 'd -> 'm
+  ; release : 'm -> unit
+  ; finished : 'm -> bool
+  ; answer : 'm -> answer
+  ; armed : 'm -> int list (** the armed dispatchers (R2-15) *)
+  ; fire_of : int -> 'd (** the `fire owner` decision *)
+  ; trace_len : 'm -> int
+  ; rows : 'm -> cursor:int -> string list (** the log rows since the cursor *)
+  ; to_wire : 'd -> string
+  ; snapshot : 'm -> string
+  ; abandon : 'm E4_abandon.driver
+  }
 
-type config = {
-  domains : int;
-  mailbox_bound : int;  (** M2's bound; a refusal, never a drop *)
-  ring_capacity : int;  (** see deviation (e) *)
-  batch : int;  (** pop_batch size: the lock is taken once per batch *)
-  spin_budget : int;
-      (** #27: FIXED, never adaptive -- an adaptive budget would be timing-dependent,
+type config =
+  { domains : int
+  ; mailbox_bound : int (** M2's bound; a refusal, never a drop *)
+  ; ring_capacity : int (** see deviation (e) *)
+  ; batch : int (** pop_batch size: the lock is taken once per batch *)
+  ; spin_budget : int
+    (** #27: FIXED, never adaptive -- an adaptive budget would be timing-dependent,
           harmless here only because spinning changes WHEN, never WHICH. The worker tries
           this many non-blocking inbox reads before it blocks on the condition variable. *)
-  finalizer_fuel : int;  (** D-A3-9: the abandon budget's per-scope fuel *)
-  checkpoint_every : int;  (** D-A3-7: the replay_steps retention knob (carried, not used here) *)
-  minor_heap_words : int;  (** raised well above the 256k default; survey §6 D *)
-}
+  ; finalizer_fuel : int (** D-A3-9: the abandon budget's per-scope fuel *)
+  ; checkpoint_every : int
+    (** D-A3-7: the replay_steps retention knob (carried, not used here) *)
+  ; minor_heap_words : int (** raised well above the 256k default; survey §6 D *)
+  }
 
 val default_config : config
 
-val config_of_env : unit -> config
 (** Octez's `Env` pattern (survey §6): every knob from one env-var record with documented
     defaults, logged at boot, so an operator tunes without a rebuild. The variables are
     [E4_DOMAINS], [E4_MAILBOX_BOUND], [E4_RING_CAPACITY], [E4_BATCH], [E4_SPIN_BUDGET],
     [E4_FINALIZER_FUEL], [E4_CHECKPOINT_EVERY], [E4_MINOR_HEAP_WORDS]; an unset or
     unparseable variable keeps {!default_config}'s value. Every value that reaches a
     decision is on the tape; nothing here does. *)
+val config_of_env : unit -> config
 
-val describe_config : config -> string
 (** The one line {!start} logs at boot when [E4_LOG_CONFIG] is set. *)
+val describe_config : config -> string
 
-type status = {
-  id : machine_id;
-  domain : domain_id;
-  program : string;
-  fuel : int;
-  steps : int;
-  cursor : int;
-  finished : bool;
-  status_answer : answer;
-  armed : int list;
-  trace_len : int;
-  snapshot : string option;
-  abandoned : E4_abandon.report option;
-}
 (** What `inspect` answers with: link's `E4_worker.status` without its Lean fiber list.
     Built on the owning domain and carrying only ints and strings (THE MEMORY RULE). *)
+type status =
+  { id : machine_id
+  ; domain : domain_id
+  ; program : string
+  ; fuel : int
+  ; steps : int
+  ; cursor : int
+  ; finished : bool
+  ; status_answer : answer
+  ; armed : int list
+  ; trace_len : int
+  ; snapshot : string option
+  ; abandoned : E4_abandon.report option
+  }
 
 type ('m, 'd) t
 
-val start : ('m, 'd) engine -> config -> ('m, 'd) t
 (** H1. Spawns [config.domains] worker domains and returns once each has been created.
     @raise Invalid_argument if any of [domains], [mailbox_bound], [ring_capacity], [batch]
     is below 1, or if [spin_budget], [finalizer_fuel] or [checkpoint_every] is negative. *)
+val start : ('m, 'd) engine -> config -> ('m, 'd) t
 
 val config : ('m, 'd) t -> config
 val domains : (_, _) t -> int
 
-val spawn :
-  ?domain:domain_id ->
-  ('m, 'd) t ->
-  program:string ->
-  fuel:int ->
-  (machine_id, [ `Unknown_program of string | `Stopped ]) result
 (** S1, S5, R4: returns only after `Load` is in the owner's inbox, so any later send to the
     id is ordered after it. Without [?domain] the placement is round-robin and unobservable.
     @raise Invalid_argument if [fuel] is negative. *)
+val spawn
+  :  ?domain:domain_id
+  -> ('m, 'd) t
+  -> program:string
+  -> fuel:int
+  -> (machine_id, [ `Unknown_program of string | `Stopped ]) result
 
-val send : ('m, 'd) t -> machine_id -> 'd -> (int, [ `Unknown | `Stopped | `Full ]) result
 (** R1: the answer is the global sequence number, stamped under the target mailbox's lock,
     so per mailbox the stamps are strictly increasing in FIFO order and across mailboxes
     they are one total order every machine's application order respects. S5. *)
+val send : ('m, 'd) t -> machine_id -> 'd -> (int, [ `Unknown | `Stopped | `Full ]) result
 
-val send_many :
-  ('m, 'd) t -> machine_id -> 'd list -> (int list, [ `Unknown | `Stopped | `Full of int ]) result
 (** [`Full n] means the first [n] were accepted and the rest refused, so the caller never
     has to reconstruct a partial push. See deviation (d). *)
+val send_many
+  :  ('m, 'd) t
+  -> machine_id
+  -> 'd list
+  -> (int list, [ `Unknown | `Stopped | `Full of int ]) result
 
-val admit : ('m, 'd) t -> machine_id -> E4_admit.t
 (** S2. A pure function of saved host state: the target's mailbox length, the mailbox bound
     and the pending count. An unknown or stopped machine admits nothing. *)
+val admit : ('m, 'd) t -> machine_id -> E4_admit.t
 
 val domain_of : (_, _) t -> machine_id -> domain_id option
 val machines : (_, _) t -> machine_id list
 
-val pending : (_, _) t -> int
 (** The quiescence count: accepted-but-not-yet-applied work. Q1. *)
+val pending : (_, _) t -> int
 
-val last_seq : (_, _) t -> int
 (** The last global sequence number stamped. R1. *)
+val last_seq : (_, _) t -> int
 
-val refusals : (_, _) t -> int
 (** How many times the event-loop rule was refused at a full mailbox (W3). *)
+val refusals : (_, _) t -> int
 
-val run_until_quiescent : ?timeout:float -> (_, _) t -> bool
 (** H3, Q2, Q3. The timeout is a DURATION in seconds and a HOST deadline: a parked run
     spends no budget, and the value never reaches a decision. *)
+val run_until_quiescent : ?timeout:float -> (_, _) t -> bool
 
-val inspect : ?snapshot:bool -> ('m, 'd) t -> machine_id -> status option
 (** Asks the owning domain for a status record and waits for the reply. Deviation (b). *)
+val inspect : ?snapshot:bool -> ('m, 'd) t -> machine_id -> status option
 
 val ring_read : (_, _) t -> domain:domain_id -> cursor:int -> E4_ring.read
-val events : (_, _) t -> E4_ring.entry list * bool
+
 (** H5: the merge of the rings in sequence order, stable within a step. The bool is "some
     ring overflowed": observation, not the receipt (S6). *)
+val events : (_, _) t -> E4_ring.entry list * bool
 
-val subscribe_finished : (_, _) t -> (machine_id -> unit) -> unit
 (** H4: hooks run on the finishing machine's domain and may `send`; the message is accepted
     before the finishing step leaves the pending count. *)
+val subscribe_finished : (_, _) t -> (machine_id -> unit) -> unit
 
-val trigger : (_, _) t -> machine_id -> fiber:int -> token:int -> E4_trigger.t
 (** S4, deviation (c). The one-shot trigger of one park, created on first ask and returned
     unchanged after: two domains that look up the same (machine, fiber, token) get the same
     trigger, which is what makes {!signal_once} post once between them. *)
+val trigger : (_, _) t -> machine_id -> fiber:int -> token:int -> E4_trigger.t
 
-val signal_once :
-  ('m, 'd) t ->
-  E4_trigger.t ->
-  'd ->
-  (int, [ `Unknown | `Stopped | `Full | `Already | `Not_awaited ]) result
 (** Signal a trigger: the CAS winner sends [decision] to the awaited machine and answers
     with its sequence number; a loser, or a second signal, answers [`Already]; a trigger
     nobody awaited answers [`Not_awaited] and posts nothing (TR1, TR3). *)
+val signal_once
+  :  ('m, 'd) t
+  -> E4_trigger.t
+  -> 'd
+  -> (int, [ `Unknown | `Stopped | `Full | `Already | `Not_awaited ]) result
 
-val abandon :
-  ('m, 'd) t ->
-  machine_id ->
-  reason:string ->
-  budget:E4_abandon.budget ->
-  (E4_abandon.report, [ `Unknown | `Stopped ]) result
 (** S3, AB1-AB5. Posted into the owner's inbox and run there; the caller blocks on a reply
     cell. AB5: a second call on an abandoned machine returns the first report and runs no
     second pass. *)
+val abandon
+  :  ('m, 'd) t
+  -> machine_id
+  -> reason:string
+  -> budget:E4_abandon.budget
+  -> (E4_abandon.report, [ `Unknown | `Stopped ]) result
 
-val abandon_budget : (_, _) t -> E4_abandon.budget
 (** The budget {!config}'s `finalizer_fuel` names, with `E4_abandon.default_max_scopes`. *)
+val abandon_budget : (_, _) t -> E4_abandon.budget
 
-val shutdown : ?deadline:float -> (_, _) t -> E4_shutdown.report
 (** The ordered clean-up DAG, not `stop` + `join`: seal the router, drain to quiescence,
     stop the workers, join the domains -- four hooks with `after` edges, so SD2's order is
     the one written down and not the one registration happens to give. The report's
     `exit_code` is E4_shutdown's contract. SD6: a second call returns the first report.
     [?deadline] is an ABSOLUTE instant (deviation (f)); the default is no deadline. *)
+val shutdown : ?deadline:float -> (_, _) t -> E4_shutdown.report

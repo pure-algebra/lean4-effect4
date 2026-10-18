@@ -27,10 +27,22 @@ let open_writer ~dir opts =
   match E4_cas.open_rw ~dir opts with
   | Ok writer -> writer
   | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
+;;
 
-let n_nodes = try int_of_string (Sys.getenv "E4_BENCH_N") with _ -> 20_000
-let batch = try int_of_string (Sys.getenv "E4_BENCH_BATCH") with _ -> 512
-let chain_len = try int_of_string (Sys.getenv "E4_BENCH_CHAIN") with _ -> 2_000
+let n_nodes =
+  try int_of_string (Sys.getenv "E4_BENCH_N") with
+  | _ -> 20_000
+;;
+
+let batch =
+  try int_of_string (Sys.getenv "E4_BENCH_BATCH") with
+  | _ -> 512
+;;
+
+let chain_len =
+  try int_of_string (Sys.getenv "E4_BENCH_CHAIN") with
+  | _ -> 2_000
+;;
 
 let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
 let v_str s = E4_be.framed Eff_frame.tag_string s
@@ -43,39 +55,68 @@ let genesis = node E4_kind.Schema zero (v_str "schema")
 let spec = E4_addr.Addr.bytes (E4_node.address genesis)
 
 let flat size i =
-  node E4_kind.Export spec (v_ctor 0 [ v_nat i; v_bytes (String.make (max 1 (size - 60)) 'x') ])
+  node
+    E4_kind.Export
+    spec
+    (v_ctor 0 [ v_nat i; v_bytes (String.make (max 1 (size - 60)) 'x') ])
+;;
 
 let rec rm_rf p =
   match Unix.lstat p with
   | exception Unix.Unix_error _ -> ()
   | { Unix.st_kind = Unix.S_DIR; _ } ->
     Array.iter (fun n -> rm_rf (Filename.concat p n)) (Sys.readdir p);
-    (try Unix.rmdir p with Unix.Unix_error _ -> ())
-  | _ -> ( try Sys.remove p with Sys_error _ -> ())
+    (try Unix.rmdir p with
+     | Unix.Unix_error _ -> ())
+  | _ ->
+    (try Sys.remove p with
+     | Sys_error _ -> ())
+;;
 
 let rec mkdir_p d =
-  if d <> "" && d <> "/" && d <> Filename.dirname d && not (Sys.file_exists d) then begin
+  if d <> "" && d <> "/" && d <> Filename.dirname d && not (Sys.file_exists d)
+  then (
     mkdir_p (Filename.dirname d);
-    try Unix.mkdir d 0o755 with Unix.Unix_error _ -> ()
-  end
+    try Unix.mkdir d 0o755 with
+    | Unix.Unix_error _ -> ())
+;;
 
 let now () = Unix.gettimeofday ()
 
 let row cell what n secs unit_ verdict =
-  Printf.printf "| %-14s | %-30s | %8d | %7.3f s | %10.0f %-8s | %s |\n%!" cell what n secs
+  Printf.printf
+    "| %-14s | %-30s | %8d | %7.3f s | %10.0f %-8s | %s |\n%!"
+    cell
+    what
+    n
+    secs
     (if secs > 0.0 then float_of_int n /. secs else 0.0)
-    unit_ verdict
+    unit_
+    verdict
+;;
 
 let plain cell what value verdict =
-  Printf.printf "| %-14s | %-30s | %8s | %9s | %19s | %s |\n%!" cell what "-" "-" value verdict
+  Printf.printf
+    "| %-14s | %-30s | %8s | %9s | %19s | %s |\n%!"
+    cell
+    what
+    "-"
+    "-"
+    value
+    verdict
+;;
 
 let verdict ok = if ok then "PASS" else "under"
 
 let header () =
   Printf.printf
-    "\n| cell           | what                           |        n |      time |         rate        | verdict |\n";
+    "\n\
+     | cell           | what                           |        n |      time |         \
+     rate        | verdict |\n";
   Printf.printf
-    "| -------------- | ------------------------------ | -------- | --------- | ------------------- | ------- |\n"
+    "| -------------- | ------------------------------ | -------- | --------- | \
+     ------------------- | ------- |\n"
+;;
 
 (* The ceiling every put and every verify sits under: one SHA-256 of the node's bytes. *)
 let bench_sha256 size =
@@ -87,6 +128,7 @@ let bench_sha256 size =
   done;
   let t = now () -. t0 in
   row "sha256" (Printf.sprintf "%d B, the address's own cost" size) n t "hash/s" "ceiling"
+;;
 
 let bench_size dir size =
   let dir = Printf.sprintf "%s-%d" dir size in
@@ -99,17 +141,27 @@ let bench_size dir size =
   let t0 = now () in
   Array.iteri
     (fun i n ->
-      ignore (E4_cas.put s n);
-      if (i + 1) mod batch = 0 then E4_cas.commit s)
+       ignore (E4_cas.put s n);
+       if (i + 1) mod batch = 0 then E4_cas.commit s)
     nodes;
   E4_cas.commit s;
   let t_fresh = now () -. t0 in
-  row "B1 put fresh" (Printf.sprintf "%d B nodes, batch %d" size batch) n_nodes t_fresh "nodes/s"
+  row
+    "B1 put fresh"
+    (Printf.sprintf "%d B nodes, batch %d" size batch)
+    n_nodes
+    t_fresh
+    "nodes/s"
     (verdict (float_of_int n_nodes /. t_fresh >= 50_000.0));
   let t0 = now () in
   Array.iter (fun n -> ignore (E4_cas.put s n)) nodes;
   let t_dup = now () -. t0 in
-  row "B2 put dup" (Printf.sprintf "%d B nodes, resident" size) n_nodes t_dup "nodes/s"
+  row
+    "B2 put dup"
+    (Printf.sprintf "%d B nodes, resident" size)
+    n_nodes
+    t_dup
+    "nodes/s"
     (verdict (float_of_int n_nodes /. t_dup >= 1_000_000.0));
   let ro = E4_cas.read_only s in
   let addrs = Array.map E4_node.address nodes in
@@ -118,34 +170,58 @@ let bench_size dir size =
   let total = ref 0 in
   Array.iter
     (fun i ->
-      match E4_cas.get_bytes ro addrs.(i) with
-      | Some b -> total := !total + String.length b
-      | None -> ())
+       match E4_cas.get_bytes ro addrs.(i) with
+       | Some b -> total := !total + String.length b
+       | None -> ())
     order;
   let t_get = now () -. t0 in
-  row "B3 get_bytes" (Printf.sprintf "%d B, warm, scattered" size) n_nodes t_get "nodes/s"
+  row
+    "B3 get_bytes"
+    (Printf.sprintf "%d B, warm, scattered" size)
+    n_nodes
+    t_get
+    "nodes/s"
     (verdict (float_of_int n_nodes /. t_get >= 500_000.0));
   if !total = 0 then prerr_endline "the reads answered nothing";
   E4_cas.drop_index ro;
   let t0 = now () in
   let n_idx = E4_cas.index_count ro in
   let t_idx = now () -. t0 in
-  row "B4 idx rebuild" "drop, rebuild from the pack" n_idx t_idx "nodes/s"
+  row
+    "B4 idx rebuild"
+    "drop, rebuild from the pack"
+    n_idx
+    t_idx
+    "nodes/s"
     (verdict (float_of_int n_idx /. t_idx >= 1_000_000.0));
   let st = E4_cas.stats ro in
-  plain "B5 idx memory" "off-heap bytes per node"
-    (Printf.sprintf "%.1f B/node" (float_of_int st.E4_cas.index_bytes /. float_of_int (max 1 st.E4_cas.nodes)))
+  plain
+    "B5 idx memory"
+    "off-heap bytes per node"
+    (Printf.sprintf
+       "%.1f B/node"
+       (float_of_int st.E4_cas.index_bytes /. float_of_int (max 1 st.E4_cas.nodes)))
     (verdict (st.E4_cas.index_bytes <= 40 * st.E4_cas.nodes));
   let t0 = now () in
   let v = E4_cas.verify ro in
   let t_verify = now () -. t0 in
-  row "verify" "re-read, re-hash, re-resolve" st.E4_cas.nodes t_verify "nodes/s"
+  row
+    "verify"
+    "re-read, re-hash, re-resolve"
+    st.E4_cas.nodes
+    t_verify
+    "nodes/s"
     (if v = Ok () then "ok" else "FAILED");
-  plain "store bytes" "the pack on disk"
-    (Printf.sprintf "%.1f B/node" (float_of_int st.E4_cas.bytes /. float_of_int (max 1 st.E4_cas.nodes)))
+  plain
+    "store bytes"
+    "the pack on disk"
+    (Printf.sprintf
+       "%.1f B/node"
+       (float_of_int st.E4_cas.bytes /. float_of_int (max 1 st.E4_cas.nodes)))
     "-";
   E4_cas.close s;
   rm_rf dir
+;;
 
 let bench_closure dir =
   let dir = dir ^ "-chain" in
@@ -157,8 +233,12 @@ let bench_closure dir =
   let tip = ref (E4_node.address genesis) in
   for i = 1 to chain_len do
     let payload =
-      if i = 1 then v_ctor 0 [ v_nat i ]
-      else v_ctor 0 [ v_nat i; v_ref (E4_kind.byte E4_kind.Export) (E4_addr.Addr.bytes !prev) ]
+      if i = 1
+      then v_ctor 0 [ v_nat i ]
+      else
+        v_ctor
+          0
+          [ v_nat i; v_ref (E4_kind.byte E4_kind.Export) (E4_addr.Addr.bytes !prev) ]
     in
     let n = node E4_kind.Export spec payload in
     ignore (E4_cas.put s n);
@@ -170,16 +250,26 @@ let bench_closure dir =
   let t0 = now () in
   let w = E4_cas.closure ro { E4_addr.Ref.kind = E4_kind.Export; addr = !tip } in
   let t_clo = now () -. t0 in
-  row "closure" (Printf.sprintf "a chain of %d, children first" chain_len) (List.length w) t_clo
+  row
+    "closure"
+    (Printf.sprintf "a chain of %d, children first" chain_len)
+    (List.length w)
+    t_clo
     "nodes/s"
     (if List.length w = chain_len + 1 then "ok" else "SHORT");
   let t0 = now () in
   let ok = E4_cas.word_wf w in
   let t_wf = now () -. t0 in
-  row "word_wf" "Word.wf over that closure" (List.length w) t_wf "nodes/s"
+  row
+    "word_wf"
+    "Word.wf over that closure"
+    (List.length w)
+    t_wf
+    "nodes/s"
     (if ok then "ok" else "FAILED");
   E4_cas.close s;
   rm_rf dir
+;;
 
 let bench_dir dir =
   Printf.printf "\n### %s\n" dir;
@@ -189,13 +279,18 @@ let bench_dir dir =
   bench_size dir 1024;
   bench_size dir 64;
   bench_closure dir
+;;
 
 let () =
   let dirs =
     match Array.to_list Sys.argv with
     | _ :: (_ :: _ as ds) -> ds
     | _ ->
-      [ Filename.concat (Filename.get_temp_dir_name ()) (Printf.sprintf "e4bench-%d" (Unix.getpid ())) ]
+      [ Filename.concat
+          (Filename.get_temp_dir_name ())
+          (Printf.sprintf "e4bench-%d" (Unix.getpid ()))
+      ]
   in
   Printf.printf "bench_cas: n=%d batch=%d chain=%d\n%!" n_nodes batch chain_len;
   List.iter bench_dir dirs
+;;

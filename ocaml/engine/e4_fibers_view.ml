@@ -13,7 +13,11 @@ module IMap = Map.Make (Int)
    `view` is the exits of the fibers whose exit is set, ASCENDING by id: exactly the value
    `RunMachine.completedExits` answers (completedExits (src/Effect4/Machine/Fibers.lean)), maintained by
    every write, so `completed` is this field and nothing else (FV1). *)
-type ('a, 'x) t = { n : int; m : 'a IMap.t; view : (int * 'x) list }
+type ('a, 'x) t =
+  { n : int
+  ; m : 'a IMap.t
+  ; view : (int * 'x) list
+  }
 
 let empty : ('a, 'x) t = { n = 0; m = IMap.empty; view = [] }
 let find_opt (k : int) (t : ('a, 'x) t) : 'a option = IMap.find_opt k t.m
@@ -32,22 +36,41 @@ let completed (t : ('a, 'x) t) : (int * 'x) list = t.view
 let view_put (id : int) (x : 'x option) (l : (int * 'x) list) : (int * 'x) list =
   let rec go acc l =
     match l with
-    | [] -> List.rev_append acc (match x with None -> [] | Some v -> [ (id, v) ])
+    | [] ->
+      List.rev_append
+        acc
+        (match x with
+         | None -> []
+         | Some v -> [ id, v ])
     | (k, _) :: rest when k = id ->
-      List.rev_append acc (match x with None -> rest | Some v -> (id, v) :: rest)
+      List.rev_append
+        acc
+        (match x with
+         | None -> rest
+         | Some v -> (id, v) :: rest)
     | (k, _) :: _ when k > id ->
-      List.rev_append acc (match x with None -> l | Some v -> (id, v) :: l)
+      List.rev_append
+        acc
+        (match x with
+         | None -> l
+         | Some v -> (id, v) :: l)
     | e :: rest -> go (e :: acc) rest
   in
   go [] l
+;;
 
 (* The view derived from the table by the scan it replaces — FV1's right-hand side.  `map` is
    the one operation that has to use it, because the mapping function may change any exit. *)
 let derive ~(exit_of : 'a -> 'x option) (m : 'a IMap.t) : (int * 'x) list =
   List.rev
     (IMap.fold
-       (fun k v acc -> match exit_of v with None -> acc | Some x -> (k, x) :: acc)
-       m [])
+       (fun k v acc ->
+          match exit_of v with
+          | None -> acc
+          | Some x -> (k, x) :: acc)
+       m
+       [])
+;;
 
 (* `RunMachine.update` (RunMachine.update (src/Effect4/Machine/Fibers.lean)): the replace-by-key map, a NO-OP on an absent id
    (FV2).  `IMap.update` answering `None` rebuilds nothing and the stdlib's `if l == ll then m`
@@ -64,15 +87,37 @@ let set ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
     (* Nothing has exited and this write does not exit anything, so the view cannot move and
        the old value need not be read at all.  This is the write the machine does on almost
        every step, and it costs less than a `TABLE.set` did. *)
-    let m = IMap.update k (function None -> None | Some _ -> Some v) t.m in
+    let m =
+      IMap.update
+        k
+        (function
+          | None -> None
+          | Some _ -> Some v)
+        t.m
+    in
     if m == t.m then t else { t with m }
   | _ ->
     let old = ref None in
-    let m = IMap.update k (function None -> None | Some o -> old := Some o; Some v) t.m in
-    if m == t.m then t
-    else
-      let same = match !old with None -> false | Some o -> x == exit_of o in
-      if same then { t with m } else { n = t.n; m; view = view_put k x t.view }
+    let m =
+      IMap.update
+        k
+        (function
+          | None -> None
+          | Some o ->
+            old := Some o;
+            Some v)
+        t.m
+    in
+    if m == t.m
+    then t
+    else (
+      let same =
+        match !old with
+        | None -> false
+        | Some o -> x == exit_of o
+      in
+      if same then { t with m } else { n = t.n; m; view = view_put k x t.view })
+;;
 
 (* `spawn`'s `m.fibers ++ [child]` (spawn (src/Effect4/Machine/Fibers.lean)) and `Api.load`'s root: an insertion at a
    freshly minted id.  Written to be right at a key that is already there as well, because
@@ -81,17 +126,31 @@ let add ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
   let x = exit_of v in
   let old = ref None in
   let fresh = ref true in
-  let m = IMap.update k (function
-    | None -> Some v
-    | Some o -> fresh := false; old := Some o; Some v) t.m
+  let m =
+    IMap.update
+      k
+      (function
+        | None -> Some v
+        | Some o ->
+          fresh := false;
+          old := Some o;
+          Some v)
+      t.m
   in
   let n = if !fresh then t.n + 1 else t.n in
   match x, t.view with
   | None, [] -> { n; m; view = [] }
   | _ ->
-    let same = match !old with None -> (match x with None -> true | Some _ -> false)
-                            | Some o -> x == exit_of o in
+    let same =
+      match !old with
+      | None ->
+        (match x with
+         | None -> true
+         | Some _ -> false)
+      | Some o -> x == exit_of o
+    in
     if same then { n; m; view = t.view } else { n; m; view = view_put k x t.view }
+;;
 
 (* `dropObservers`' bulk `fibers.map` (dropObservers (src/Effect4/Machine/Fibers.lean)).  Id-preserving, and the view
    is re-derived rather than remapped: `f` is the caller's, so it may set or clear an exit,
@@ -99,6 +158,8 @@ let add ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
 let map ~(exit_of : 'a -> 'x option) (f : 'a -> 'a) (t : ('a, 'x) t) : ('a, 'x) t =
   let m = IMap.map f t.m in
   { n = t.n; m; view = derive ~exit_of m }
+;;
 
 let of_list ~(exit_of : 'a -> 'x option) (l : (int * 'a) list) : ('a, 'x) t =
   List.fold_left (fun t (k, v) -> add ~exit_of k v t) empty l
+;;

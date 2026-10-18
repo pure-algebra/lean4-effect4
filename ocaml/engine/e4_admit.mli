@@ -8,7 +8,10 @@
          [by construction; tested: admit-pure]
      A2  Monotone in room: more room never admits less. [tested: admit-monotone] *)
 
-type t = Any | Priority_only | None_now
+type t =
+  | Any
+  | Priority_only
+  | None_now
 
 val of_state : mailbox_len:int -> mailbox_bound:int -> in_flight:int -> t
 val admits : t -> priority:bool -> bool

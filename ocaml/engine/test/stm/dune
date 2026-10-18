@@ -15,32 +15,73 @@
  (libraries qcheck-core qcheck-core.runner))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .e4_stm_support.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:../../../tools/typed_lint/main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .e4_stm_support.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../../../tools/typed_lint/main.exe} %{cmt}))))
 
 (test
  (name stm_mailbox)
  (modules stm_mailbox)
- (libraries effect4_engine e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain))
+ (libraries
+  effect4_engine
+  e4_stm_support
+  qcheck-core
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain))
 
 (test
  (name stm_inbox)
  (modules stm_inbox)
- (libraries effect4_engine e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain))
+ (libraries
+  effect4_engine
+  e4_stm_support
+  qcheck-core
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain))
 
 (test
  (name stm_admit)
  (modules stm_admit)
- (libraries effect4_engine e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain))
+ (libraries
+  effect4_engine
+  e4_stm_support
+  qcheck-core
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain))
 
 (test
  (name stm_disk)
  (modules stm_disk)
- (libraries effect4_engine_cas effect4_disk_test_support e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain zarith))
+ (libraries
+  effect4_engine_cas
+  effect4_disk_test_support
+  e4_stm_support
+  qcheck-core
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain
+  zarith))
 
 (test
  (name stm_tool)
  (modules stm_tool)
- (libraries effect4_kit effect4_gen effect4_eff e4_stm_support qcheck-core qcheck-stm.stm qcheck-stm.sequential qcheck-stm.domain))
+ (libraries
+  effect4_kit
+  effect4_gen
+  effect4_eff
+  e4_stm_support
+  qcheck-core
+  qcheck-stm.stm
+  qcheck-stm.sequential
+  qcheck-stm.domain))

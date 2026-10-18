@@ -4,10 +4,17 @@
     transactions preflight before writing; retained images hold no mutable handles.
     Finite comparison and kill tests establish only their observed command lists. *)
 type t
+
 type image
-type transaction = E4_cas.transaction = { txn_nodes : string list; txn_moves : E4_control.move list }
+
+type transaction = E4_cas.transaction =
+  { txn_nodes : string list
+  ; txn_moves : E4_control.move list
+  }
+
 type receipt = E4_cas.receipt
 type error = E4_cas.transaction_error
+
 val open_ : dir:string -> E4_cas.open_opts -> (t, E4_admission.t) result
 val close : t -> unit
 val image : t -> (image, E4_admission.t) result
@@ -16,4 +23,9 @@ val roots : image -> E4_control.root list
 val boundary : image -> int * int
 val get_bytes : image -> E4_addr.Addr.t -> string option
 val read : t -> E4_addr.Addr.t -> (string option, E4_admission.t) result
-val commit : ?hook:(E4_cas.commit_point -> unit) -> t -> transaction -> (receipt, error) result
+
+val commit
+  :  ?hook:(E4_cas.commit_point -> unit)
+  -> t
+  -> transaction
+  -> (receipt, error) result

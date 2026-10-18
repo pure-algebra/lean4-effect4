@@ -8,19 +8,19 @@
    Only plain data crosses: ints, strings and records of them — never a Lean value and
    never a machine (THE MEMORY RULE, design §1.2). *)
 
-type 'a t
 (** A one-shot cell. Host-level and mutable. *)
+type 'a t
 
-val create : unit -> 'a t
 (** Empty. *)
+val create : unit -> 'a t
 
-val fill : 'a t -> 'a -> unit
 (** Fill the cell once and wake every waiter. P1, P2.
     @raise Invalid_argument on a second fill; the first value stays in place. *)
+val fill : 'a t -> 'a -> unit
 
-val await : 'a t -> 'a
 (** Block until the cell is filled, then return its value, to every waiter, exactly as
     filled. P2. *)
+val await : 'a t -> 'a
 
-val peek : 'a t -> 'a option
 (** The value if the cell is filled; never blocks. *)
+val peek : 'a t -> 'a option

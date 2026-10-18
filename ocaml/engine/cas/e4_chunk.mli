@@ -138,13 +138,13 @@
 
 (* ---------------------------------------------------------------- the parameters *)
 
-type params = {
-  avg : int;  (** the target average chunk size; a power of two — it is the cut mask plus one *)
-  min : int;  (** no cut is taken before this many bytes; must be > [window] *)
-  max : int;  (** a cut is forced here *)
-}
+type params =
+  { avg : int
+    (** the target average chunk size; a power of two — it is the cut mask plus one *)
+  ; min : int (** no cut is taken before this many bytes; must be > [window] *)
+  ; max : int (** a cut is forced here *)
+  }
 
-val default : params
 (** avg = 16384, min = 4096, max = 65536 — A2 §4.4's optimum and owner question OQ2's applied
     default.  The closed form behind it is `c* = sqrt (42 * S / k)` for an image of S bytes
     with k edited regions and 42 the bytes of a framed `ref`; at S = 64 MB and k = 2 that is
@@ -162,27 +162,28 @@ val default : params
     mean of 12 170 B per checkpoint against a 104 KB image).  A checkpointing engine should
     therefore choose `avg` from the image size rather than take this constant; owner question
     OQ2 fixed the default and this lane does not turn it. *)
+val default : params
 
-val params_ok : params -> bool
 (** window < min <= avg <= max, avg a power of two and at most 2^30 (the mask must fit above
     the 62-bit word).  Every entry point raises `Invalid_argument` on params this refuses. *)
+val params_ok : params -> bool
 
-val window : int
 (** 62: the number of bytes the gear recurrence remembers.  `min > window` is what makes CH6
     hold, and it is why resetting h at a chunk start is free. *)
+val window : int
 
-val threshold : int
 (** 1 MiB (A2 §5.1 OQ2): the image size at or above which `E4_checkpoint.write` chunks.  A
     value, not a limit — see D3. *)
+val threshold : int
 
 (* ---------------------------------------------------------------- cutting *)
 
-val cut : params -> string -> (int * int) list
 (** The (offset, length) of every chunk, in order, covering the whole string exactly
     (CH1, CH2).  `cut p ""` is `[]`. *)
+val cut : params -> string -> (int * int) list
 
-val chunks : string -> (int * int) list
 (** `cut default`. *)
+val chunks : string -> (int * int) list
 
 val piece : string -> int * int -> string
 val pieces : params -> string -> string list
@@ -190,75 +191,96 @@ val pieces : params -> string -> string list
 (* ---------------------------------------------------------------- the manifest *)
 
 type manifest =
-  | Leaf of E4_addr.Ref.t list  (** ctor 0: refs at kind `chunk`, in image order *)
-  | Interior of E4_addr.Ref.t list  (** ctor 1: refs at kind `manifest`, in image order *)
+  | Leaf of E4_addr.Ref.t list (** ctor 0: refs at kind `chunk`, in image order *)
+  | Interior of E4_addr.Ref.t list (** ctor 1: refs at kind `manifest`, in image order *)
 
-type groups = { g_avg : int; g_min : int; g_max : int }
 (** The content-defined cut of a REF LIST into manifest groups (CH7).  `g_avg` is a power of
     two: a ref ends a group when its address's `prefix63` is 0 modulo it. *)
+type groups =
+  { g_avg : int
+  ; g_min : int
+  ; g_max : int
+  }
 
-val groups_default : groups
 (** g_avg = 256, g_min = 64, g_max = 1024: ~10.7 KB of framed refs per group node, which is
     what turns A2 §4.4's 139 KB flat manifest into ~10 KB of rewritten manifest per edit. *)
+val groups_default : groups
 
-val single_max : int
 (** 1024: a chunk-ref list no longer than this is one leaf manifest and no groups are cut. *)
+val single_max : int
 
-val group_cut : groups -> E4_addr.Ref.t list -> E4_addr.Ref.t list list
 (** The groups, in order, concatenating back to the input (CH7). *)
+val group_cut : groups -> E4_addr.Ref.t list -> E4_addr.Ref.t list list
 
-val encode_manifest : manifest -> string
 (** The payload bytes of a manifest node, in the grammar at the head of this file. *)
+val encode_manifest : manifest -> string
 
-val decode_manifest : string -> manifest option
 (** Exact: trailing bytes, a wrong ctor index, a ref at the wrong kind and a frame that is not
     a ref are all refusals. *)
+val decode_manifest : string -> manifest option
 
 (* ---------------------------------------------------------------- storing *)
 
-val chunk_payload : string -> string
 (** The payload bytes of a chunk node over these bytes: one `bytes` frame. *)
+val chunk_payload : string -> string
 
-val chunk_node : spec:E4_addr.Addr.t -> string -> E4_node.t
 (** The chunk node itself, at kind `chunk`, version 0. *)
+val chunk_node : spec:E4_addr.Addr.t -> string -> E4_node.t
 
-val store : E4_cas.t -> spec:E4_addr.Addr.t -> params -> string -> E4_addr.Ref.t list
 (** Cut the image and stage one `chunk` node per piece, in image order, answering their refs
     (D1).  Staged, not durable: the caller commits.  Raises `Store_error` if the store refuses
     a chunk node — which can only be a spec that does not resolve, since a `bytes` payload is
     admissible by construction. *)
+val store : E4_cas.t -> spec:E4_addr.Addr.t -> params -> string -> E4_addr.Ref.t list
 
-val store_counted : E4_cas.t -> spec:E4_addr.Addr.t -> params -> string ->
-  E4_addr.Ref.t list * int * int
 (** `store`, also answering (fresh, duplicate) — the sharing count (D2). *)
+val store_counted
+  :  E4_cas.t
+  -> spec:E4_addr.Addr.t
+  -> params
+  -> string
+  -> E4_addr.Ref.t list * int * int
 
-val store_manifest :
-  E4_cas.t -> spec:E4_addr.Addr.t -> ?groups:groups -> ?single_max:int ->
-  E4_addr.Ref.t list -> E4_addr.Ref.t
 (** Build the manifest tree over these chunk refs and stage every node of it, answering the
     ROOT manifest's ref (CH7, CH8). *)
+val store_manifest
+  :  E4_cas.t
+  -> spec:E4_addr.Addr.t
+  -> ?groups:groups
+  -> ?single_max:int
+  -> E4_addr.Ref.t list
+  -> E4_addr.Ref.t
 
-val store_manifest_counted :
-  E4_cas.t -> spec:E4_addr.Addr.t -> ?groups:groups -> ?single_max:int ->
-  E4_addr.Ref.t list -> E4_addr.Ref.t * int * int * int
 (** `store_manifest`, also answering (nodes, fresh, duplicate) over the manifest tree. *)
+val store_manifest_counted
+  :  E4_cas.t
+  -> spec:E4_addr.Addr.t
+  -> ?groups:groups
+  -> ?single_max:int
+  -> E4_addr.Ref.t list
+  -> E4_addr.Ref.t * int * int * int
 
 (* ---------------------------------------------------------------- reading *)
 
-val get_chunk : E4_cas.ro -> E4_addr.Ref.t -> string option
 (** The bytes of one chunk node: resident, at kind `chunk`, payload one `bytes` frame. *)
+val get_chunk : E4_cas.ro -> E4_addr.Ref.t -> string option
 
-val reassemble : E4_cas.ro -> E4_addr.Ref.t list -> string option
 (** CH4: the concatenation of the chunks, or None if any is missing or malformed. *)
+val reassemble : E4_cas.ro -> E4_addr.Ref.t list -> string option
 
 val get_manifest : E4_cas.ro -> E4_addr.Ref.t -> manifest option
 
-val flatten : E4_cas.ro -> E4_addr.Ref.t -> E4_addr.Ref.t list option
 (** The chunk refs under a root manifest, in image order (CH8). *)
+val flatten : E4_cas.ro -> E4_addr.Ref.t -> E4_addr.Ref.t list option
 
-val reassemble_manifest : E4_cas.ro -> E4_addr.Ref.t -> string option
 (** `flatten` then `reassemble`. *)
+val reassemble_manifest : E4_cas.ro -> E4_addr.Ref.t -> string option
 
-val fold_chunks : E4_cas.ro -> E4_addr.Ref.t -> init:'a -> f:('a -> string -> 'a) -> 'a option
 (** Walk the manifest tree and fold over the chunks in image order, holding ONE chunk's bytes
     at a time (CH9, risk R8).  None if any node is missing or malformed. *)
+val fold_chunks
+  :  E4_cas.ro
+  -> E4_addr.Ref.t
+  -> init:'a
+  -> f:('a -> string -> 'a)
+  -> 'a option

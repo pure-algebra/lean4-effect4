@@ -32,10 +32,11 @@ let failures = ref 0
 
 let check (name : string) (ok : bool) : unit =
   incr checks;
-  if not ok then begin
+  if not ok
+  then (
     incr failures;
-    Printf.printf "FAIL: %s\n%!" name
-  end
+    Printf.printf "FAIL: %s\n%!" name)
+;;
 
 let read_file (path : string) : string =
   let ic = open_in_bin path in
@@ -43,13 +44,17 @@ let read_file (path : string) : string =
   let s = really_input_string ic n in
   close_in ic;
   s
+;;
 
 (* _build/default/test and _build/default/eff/test are both four levels below ocaml/. *)
 let default_dir = "../../../../goldens/eff"
 
 let dir =
   let d = if Array.length Sys.argv > 1 then Sys.argv.(1) else default_dir in
-  if String.length d > 0 && d.[String.length d - 1] = '/' then String.sub d 0 (String.length d - 1) else d
+  if String.length d > 0 && d.[String.length d - 1] = '/'
+  then String.sub d 0 (String.length d - 1)
+  else d
+;;
 
 let unhex (s : string) : string =
   let digit c =
@@ -60,7 +65,10 @@ let unhex (s : string) : string =
     | _ -> invalid_arg "unhex: not a hex digit"
   in
   let clean = Buffer.create (String.length s) in
-  String.iter (fun c -> if c <> '\n' && c <> '\r' && c <> ' ' && c <> '\t' then Buffer.add_char clean c) s;
+  String.iter
+    (fun c ->
+       if c <> '\n' && c <> '\r' && c <> ' ' && c <> '\t' then Buffer.add_char clean c)
+    s;
   let clean = Buffer.contents clean in
   if String.length clean mod 2 <> 0 then invalid_arg "unhex: odd number of digits";
   let out = Buffer.create (String.length clean / 2) in
@@ -70,40 +78,52 @@ let unhex (s : string) : string =
     i := !i + 2
   done;
   Buffer.contents out
+;;
 
 (* The first index where two byte strings differ, or where the shorter one ends. *)
 let first_diff (a : string) (b : string) : int option =
   let n = min (String.length a) (String.length b) in
   let rec go i =
-    if i >= n then if String.length a = String.length b then None else Some i
-    else if a.[i] <> b.[i] then Some i
+    if i >= n
+    then if String.length a = String.length b then None else Some i
+    else if a.[i] <> b.[i]
+    then Some i
     else go (i + 1)
   in
   go 0
+;;
 
 let byte_at (s : string) (i : int) : string =
   if i < String.length s then Printf.sprintf "%02x" (Char.code s.[i]) else "<end>"
+;;
 
 (* Produced by comparing actual Eff values in both Lean corpora. *)
 let same_program =
-  read_file (Filename.concat dir "same-programs.txt") |> String.split_on_char '\n'
+  read_file (Filename.concat dir "same-programs.txt")
+  |> String.split_on_char '\n'
   |> List.filter (fun name -> name <> "")
+;;
 
 let words (s : string) : string list =
   String.split_on_char ' ' s |> List.filter (fun w -> w <> "")
+;;
 
 (* This library's own golden of the same name, if the corpus has one. *)
 let ours_bin (name : string) : string option =
   let p = "../goldens/" ^ name ^ ".bin" in
   if Sys.file_exists p then Some (read_file p) else None
+;;
 
 let () =
-  if not (Sys.file_exists dir && Sys.is_directory dir) then
+  if not (Sys.file_exists dir && Sys.is_directory dir)
+  then
     Printf.printf
-      "test_lean_wire: SKIPPED — %s is absent. Regenerate it with `lake env lean -M4096 --run \
-       src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff`, or pass the directory as argv(1).\n%!"
+      "test_lean_wire: SKIPPED — %s is absent. Regenerate it with `lake env lean -M4096 \
+       --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff`, or pass the directory as \
+       argv(1).\n\
+       %!"
       dir
-  else begin
+  else (
     (* ---- L1: the manifest ---- *)
     let manifest =
       read_file (Filename.concat dir "manifest.txt")
@@ -113,14 +133,19 @@ let () =
     let line (key : string) : string list option =
       let k = key ^ ":" in
       let n = String.length k in
-      match List.find_opt (fun l -> String.length l >= n && String.sub l 0 n = k) manifest with
+      match
+        List.find_opt (fun l -> String.length l >= n && String.sub l 0 n = k) manifest
+      with
       | None -> None
       | Some l -> Some (words (String.sub l n (String.length l - n)))
     in
     let family key names =
-      check (Printf.sprintf "manifest %s is this library's constructor order" key) (line key = Some names)
+      check
+        (Printf.sprintf "manifest %s is this library's constructor order" key)
+        (line key = Some names)
     in
-    check "manifest covers the shared selected description"
+    check
+      "manifest covers the shared selected description"
       (List.length manifest = List.length Eff_layout.wire_families + 1);
     List.iter (fun (name, fields) -> family name fields) Eff_layout.wire_families;
     let tags =
@@ -128,17 +153,31 @@ let () =
       | None -> []
       | Some ws ->
         List.filter_map
-          (fun w -> match String.split_on_char '=' w with [ n; v ] -> Some (n, int_of_string v) | _ -> None)
+          (fun w ->
+             match String.split_on_char '=' w with
+             | [ n; v ] -> Some (n, int_of_string v)
+             | _ -> None)
           ws
     in
     let open Eff_frame in
-    check "the manifest's tag numbers are Eff_frame's"
+    check
+      "the manifest's tag numbers are Eff_frame's"
       (tags
-       = [ ("bool", tag_bool); ("nat", tag_nat); ("string", tag_string); ("list", tag_list);
-           ("pair", tag_pair); ("none", tag_none); ("some", tag_some); ("bytes", tag_bytes);
-           ("unit", tag_unit); ("ctor", tag_ctor); ("ref", tag_ref); ("handle", tag_handle);
-           ("int", tag_int); ("float", tag_float) ]);
-
+       = [ "bool", tag_bool
+         ; "nat", tag_nat
+         ; "string", tag_string
+         ; "list", tag_list
+         ; "pair", tag_pair
+         ; "none", tag_none
+         ; "some", tag_some
+         ; "bytes", tag_bytes
+         ; "unit", tag_unit
+         ; "ctor", tag_ctor
+         ; "ref", tag_ref
+         ; "handle", tag_handle
+         ; "int", tag_int
+         ; "float", tag_float
+         ]);
     (* ---- L1b: the wire tags ---- *)
     let tag_lines =
       read_file (Filename.concat dir "wire-tags.txt")
@@ -148,71 +187,105 @@ let () =
     let tag_line (key : string) : (string * int) list option =
       let k = key ^ ":" in
       let n = String.length k in
-      match List.find_opt (fun l -> String.length l >= n && String.sub l 0 n = k) tag_lines with
+      match
+        List.find_opt (fun l -> String.length l >= n && String.sub l 0 n = k) tag_lines
+      with
       | None -> None
       | Some l ->
         Some
           (List.filter_map
              (fun w ->
-               match String.split_on_char '=' w with
-               | [ c; v ] -> Some (c, int_of_string v)
-               | _ -> None)
+                match String.split_on_char '=' w with
+                | [ c; v ] -> Some (c, int_of_string v)
+                | _ -> None)
              (words (String.sub l n (String.length l - n))))
     in
-    check "wire-tags.txt covers every inductive family of this library"
+    check
+      "wire-tags.txt covers every inductive family of this library"
       (List.length tag_lines = List.length Eff_layout.wire_tags);
     List.iter
       (fun (name, rows) ->
-        check (Printf.sprintf "wire tags of %s are Lean's" name) (tag_line name = Some rows);
-        let tags = List.map snd rows in
-        check (Printf.sprintf "wire tags of %s are pairwise distinct" name)
-          (List.length (List.sort_uniq compare tags) = List.length tags))
+         check
+           (Printf.sprintf "wire tags of %s are Lean's" name)
+           (tag_line name = Some rows);
+         let tags = List.map snd rows in
+         check
+           (Printf.sprintf "wire tags of %s are pairwise distinct" name)
+           (List.length (List.sort_uniq compare tags) = List.length tags))
       Eff_layout.wire_tags;
-
     (* ---- L2..L5: the programs ---- *)
     let names =
-      Sys.readdir dir |> Array.to_list
+      Sys.readdir dir
+      |> Array.to_list
       |> List.filter (fun f -> Filename.check_suffix f ".hex")
       |> List.map (fun f -> Filename.chop_suffix f ".hex")
       |> List.sort compare
     in
     check "the Lean corpus is not empty" (names <> []);
-    Printf.printf "  %-12s %6s  %-9s %-10s %s\n" "program" "bytes" "decode" "re-encode" "vs goldens/<name>.bin";
+    Printf.printf
+      "  %-12s %6s  %-9s %-10s %s\n"
+      "program"
+      "bytes"
+      "decode"
+      "re-encode"
+      "vs goldens/<name>.bin";
     List.iter
       (fun name ->
-        let bytes = unhex (read_file (Filename.concat dir (name ^ ".hex"))) in
-        match Eff_wire.decode_program_exact bytes with
-        | None ->
-          check (name ^ ": Lean's bytes decode exactly") false;
-          Printf.printf "  %-12s %6d  %-9s %-10s %s\n" name (String.length bytes) "REFUSED" "-" "-"
-        | Some p ->
-          check (name ^ ": Lean's bytes decode exactly") true;
-          let re = Eff_wire.encode_program p in
-          check (name ^ ": re-encoding reproduces Lean's bytes") (re = bytes);
-          check (name ^ ": the JSON printer runs") (String.length (Eff_json.print_eff p) > 0);
-          check (name ^ ": a trailing byte is refused") (Eff_wire.decode_program_exact (bytes ^ "\000") = None);
-          let ours = ours_bin name in
-          let verdict =
-            match ours with
-            | None -> "(no golden of that name)"
-            | Some b ->
-              let same = List.mem name same_program in
-              check (name ^ ": common-program data matches actual decoded identity")
-                (same = (Eff_wire.decode_program_exact b = Some p));
-              if same then check (name ^ ": Lean's bytes are this library's golden") (b = bytes);
-              (match first_diff b bytes with
-               | None -> "identical"
-               | Some i ->
-                 (* A byte difference is only ever allowed to be a program difference: the
+         let bytes = unhex (read_file (Filename.concat dir (name ^ ".hex"))) in
+         match Eff_wire.decode_program_exact bytes with
+         | None ->
+           check (name ^ ": Lean's bytes decode exactly") false;
+           Printf.printf
+             "  %-12s %6d  %-9s %-10s %s\n"
+             name
+             (String.length bytes)
+             "REFUSED"
+             "-"
+             "-"
+         | Some p ->
+           check (name ^ ": Lean's bytes decode exactly") true;
+           let re = Eff_wire.encode_program p in
+           check (name ^ ": re-encoding reproduces Lean's bytes") (re = bytes);
+           check
+             (name ^ ": the JSON printer runs")
+             (String.length (Eff_json.print_eff p) > 0);
+           check
+             (name ^ ": a trailing byte is refused")
+             (Eff_wire.decode_program_exact (bytes ^ "\000") = None);
+           let ours = ours_bin name in
+           let verdict =
+             match ours with
+             | None -> "(no golden of that name)"
+             | Some b ->
+               let same = List.mem name same_program in
+               check
+                 (name ^ ": common-program data matches actual decoded identity")
+                 (same = (Eff_wire.decode_program_exact b = Some p));
+               if same
+               then check (name ^ ": Lean's bytes are this library's golden") (b = bytes);
+               (match first_diff b bytes with
+                | None -> "identical"
+                | Some i ->
+                  (* A byte difference is only ever allowed to be a program difference: the
                     two decoded programs must then differ too, which rules out the wire. *)
-                 check (name ^ ": a byte difference is a program difference, not a wire one")
-                   (Eff_wire.decode_program_exact b <> Some p);
-                 Printf.sprintf "differs at %d (%s vs %s)%s" i (byte_at b i) (byte_at bytes i)
-                   (if same then "" else " — different programs, same name"))
-          in
-          Printf.printf "  %-12s %6d  %-9s %-10s %s\n" name (String.length bytes) "ok"
-            (if re = bytes then "identical" else "DIFFERS") verdict)
+                  check
+                    (name ^ ": a byte difference is a program difference, not a wire one")
+                    (Eff_wire.decode_program_exact b <> Some p);
+                  Printf.sprintf
+                    "differs at %d (%s vs %s)%s"
+                    i
+                    (byte_at b i)
+                    (byte_at bytes i)
+                    (if same then "" else " — different programs, same name"))
+           in
+           Printf.printf
+             "  %-12s %6d  %-9s %-10s %s\n"
+             name
+             (String.length bytes)
+             "ok"
+             (if re = bytes then "identical" else "DIFFERS")
+             verdict)
       names;
     Printf.printf "test_lean_wire: %d checks, %d failures\n%!" !checks !failures;
-    if !failures > 0 then exit 1
-  end
+    if !failures > 0 then exit 1)
+;;

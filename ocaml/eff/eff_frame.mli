@@ -17,110 +17,115 @@ val tag_ctor : int
 val tag_ref : int
 val tag_handle : int
 
-val tag_int : int
 (** The signed frame of the value append; a program's wire carries none. *)
+val tag_int : int
 
-val tag_float : int
 (** The binary64 frame of the value append; a program's wire carries none. *)
+val tag_float : int
 
-val utf8_valid : string -> bool
 (** RFC 3629: no overlongs, no surrogates, at most U+10FFFF. *)
+val utf8_valid : string -> bool
 
 (** {1 Writing} *)
 
-type writer
 (** One encoding being written: a growable buffer that only {!encode} and {!to_string} make
     and only they publish (F7). *)
+type writer
 
-val emit_be64 : writer -> int -> unit
 (** The eight bytes of the 63-bit pattern of any int, bit 63 clear (F6). *)
+val emit_be64 : writer -> int -> unit
 
-val emit_frame : writer -> int -> string -> unit
 (** One frame of a payload in hand. @raise Invalid_argument for a tag outside a byte, before
     any byte is written. *)
+val emit_frame : writer -> int -> string -> unit
 
-val with_payload : writer -> int -> (writer -> unit) -> unit
 (** One frame whose payload the callback writes in place; the length is filled after (F7). The
     callback runs once; if it raises, the writer is rolled back to before the frame (F9).
     @raise Invalid_argument for a tag outside a byte, before the callback runs. *)
+val with_payload : writer -> int -> (writer -> unit) -> unit
 
-val nat_digits : int -> string
 (** Base-256 digits, big-endian, no leading zero; 0 is the empty string.
     @raise Invalid_argument on a negative int. *)
+val nat_digits : int -> string
 
 val emit_unit : writer -> unit -> unit
 val emit_bool : writer -> bool -> unit
 
-val emit_nat : writer -> int -> unit
 (** @raise Invalid_argument on a negative int (F4). *)
+val emit_nat : writer -> int -> unit
 
-val emit_string : writer -> string -> unit
 (** @raise Invalid_argument on a string that is not valid UTF-8, before any byte (F4). *)
+val emit_string : writer -> string -> unit
 
 val emit_list : writer -> (writer -> 'a -> unit) -> 'a list -> unit
 val emit_option : writer -> (writer -> 'a -> unit) -> 'a option -> unit
-val emit_pair : writer -> (writer -> 'a -> unit) -> (writer -> 'b -> unit) -> 'a * 'b -> unit
 
-val emit_ctor : writer -> int -> (writer -> unit) -> unit
+val emit_pair
+  :  writer
+  -> (writer -> 'a -> unit)
+  -> (writer -> 'b -> unit)
+  -> 'a * 'b
+  -> unit
+
 (** A constructor frame: the index, then what the callback writes. *)
+val emit_ctor : writer -> int -> (writer -> unit) -> unit
 
-val emit_ref : writer -> int * string -> unit
 (** A content reference: the kind byte, then the digest (Val.lean:158).
     @raise Invalid_argument for a kind outside a byte. *)
+val emit_ref : writer -> int * string -> unit
 
-val emit_handle : writer -> int * int -> unit
 (** A live handle: the kind byte, then the key's Nat digits (Val.lean:159).
     @raise Invalid_argument for a kind outside a byte or a negative key. *)
+val emit_handle : writer -> int * int -> unit
 
-type too_large = { limit : int }
 (** Why {!encode} published nothing: the encoding needs more than [limit] bytes. *)
+type too_large = { limit : int }
 
-val encode : ?limit:int -> (writer -> 'a -> unit) -> 'a -> (string, too_large) result
 (** The bytes the writer function writes for the value, or the refusal when they need more than
     [limit] bytes (default Sys.max_string_length); nothing is published on a refusal, even one a
     callback swallowed (F8). A value outside the Lean image raises Invalid_argument (F4). *)
+val encode : ?limit:int -> (writer -> 'a -> unit) -> 'a -> (string, too_large) result
 
-val to_string : (writer -> 'a -> unit) -> 'a -> string
 (** {!encode} at the default limit, its refusal raised as Invalid_argument (F8). *)
+val to_string : (writer -> 'a -> unit) -> 'a -> string
 
 (** {1 Reading: (s, pos, limit) to (value, next), never reading at or past limit} *)
 
 type 'a decoder = string -> int -> int -> ('a * int) option
 
-val read_be64 : string -> int -> int option
 (** Eight bytes at [pos], unchecked: the caller has checked the window. [None] when the top byte
     is at least 0x40, so the length is outside 0 .. 2^62 - 1. *)
+val read_be64 : string -> int -> int option
 
-val read_frame : string -> int -> int -> (int * int * int * int) option
 (** [(tag, payload_start, payload_end, next)], or [None] for a window that holds no frame. *)
+val read_frame : string -> int -> int -> (int * int * int * int) option
 
-val expect : int -> string -> int -> int -> (int * int * int) option
 (** A frame of this tag: [(payload_start, payload_end, next)]. *)
+val expect : int -> string -> int -> int -> (int * int * int) option
 
 val decode_unit : unit decoder
 val decode_bool : bool decoder
 
-val nat_of_digits : string -> int -> int -> int option
 (** A natural's shortest big-endian digits in [s.[p..e)], or [None]: a leading zero, nine digits,
     or eight above max_int. *)
+val nat_of_digits : string -> int -> int -> int option
 
 val decode_nat : int decoder
 val decode_neg_int : int decoder
 val decode_string : string decoder
 val decode_list : 'a decoder -> 'a list decoder
-
 val strictly_ascending : ('a -> 'a -> bool) -> 'a list -> bool
 
-val decode_checked_list : 'a decoder -> ('a -> 'a -> bool) -> 'a list decoder
 (** A list whose elements are strictly ascending under the order given; no sort repairs input. *)
+val decode_checked_list : 'a decoder -> ('a -> 'a -> bool) -> 'a list decoder
 
 val decode_option : 'a decoder -> 'a option decoder
 val decode_pair : 'a decoder -> 'b decoder -> ('a * 'b) decoder
 val decode_ref : (int * string) decoder
 val decode_handle : (int * int) decoder
 
-val read_ctor : string -> int -> int -> (int * int * int * int) option
 (** A constructor frame: [(index, position after the index, payload_end, next)]. *)
+val read_ctor : string -> int -> int -> (int * int * int * int) option
 
-val exact : 'a decoder -> string -> 'a option
 (** The whole string is one frame: trailing bytes are a refusal. *)
+val exact : 'a decoder -> string -> 'a option

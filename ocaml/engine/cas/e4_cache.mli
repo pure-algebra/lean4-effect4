@@ -107,39 +107,41 @@
 module Bytes_cache : sig
   type t
 
-  type stats = {
-    hits : int;  (** `find` / `get` calls answered from the cache *)
-    misses : int;  (** `find` / `get` calls not answered from the cache *)
-    evictions : int;  (** entries dropped to make room *)
-    slot_bound_evictions : int;  (** of those, the ones forced by the slot bound, not by bytes (D1) *)
-    admissions : int;  (** `add` calls that installed an entry *)
-    refusals : int;  (** `add` calls refused because the value is heavier than the capacity (CA2) *)
-    bytes : int;  (** the live weight; `<= capacity_bytes` (CA2) *)
-    entries : int;  (** the live entries; `<= slots` (CA2) *)
-    slots : int;
-    capacity_bytes : int;
-  }
+  type stats =
+    { hits : int (** `find` / `get` calls answered from the cache *)
+    ; misses : int (** `find` / `get` calls not answered from the cache *)
+    ; evictions : int (** entries dropped to make room *)
+    ; slot_bound_evictions : int
+      (** of those, the ones forced by the slot bound, not by bytes (D1) *)
+    ; admissions : int (** `add` calls that installed an entry *)
+    ; refusals : int
+      (** `add` calls refused because the value is heavier than the capacity (CA2) *)
+    ; bytes : int (** the live weight; `<= capacity_bytes` (CA2) *)
+    ; entries : int (** the live entries; `<= slots` (CA2) *)
+    ; slots : int
+    ; capacity_bytes : int
+    }
 
-  val create : capacity_bytes:int -> t
   (** §1.10's constructor; the slot count is derived (D1). *)
+  val create : capacity_bytes:int -> t
 
-  val create_sized : slots:int -> capacity_bytes:int -> t
   (** Both bounds named (D1).  [slots] is at least 1. *)
+  val create_sized : slots:int -> capacity_bytes:int -> t
 
-  val find : t -> E4_addr.Addr.t -> string option
   (** CA1, CA3: a hit sets the slot's reference bit and allocates nothing. *)
+  val find : t -> E4_addr.Addr.t -> string option
 
-  val mem : t -> E4_addr.Addr.t -> bool
   (** Membership without touching the reference bit and without counting a hit or a miss (D3). *)
+  val mem : t -> E4_addr.Addr.t -> bool
 
-  val add : t -> E4_addr.Addr.t -> string -> unit
   (** CA2, CA4.  A value longer than `capacity_bytes` is refused, not admitted. *)
+  val add : t -> E4_addr.Addr.t -> string -> unit
 
-  val get : t -> E4_cas.ro -> E4_addr.Addr.t -> string option
   (** [find], else `E4_cas.get_bytes` and admit (D2).  This is the function CA1 is about. *)
+  val get : t -> E4_cas.ro -> E4_addr.Addr.t -> string option
 
-  val drop : t -> unit
   (** Throw every entry away; the counters survive (D4). *)
+  val drop : t -> unit
 
   val stats : t -> stats
   val reset_counters : t -> unit
@@ -148,11 +150,11 @@ module Bytes_cache : sig
   val slots : t -> int
   val capacity_bytes : t -> int
 
-  val invariant : t -> (unit, string) result
   (** CA8: the checker the property tests run after every operation. *)
+  val invariant : t -> (unit, string) result
 
-  val hit_ratio : stats -> float
   (** hits / (hits + misses), or 0.0 when neither happened.  Bench cell B10 (A2 §4.5). *)
+  val hit_ratio : stats -> float
 end
 
 (* ============================================================ the decoded tier *)
@@ -160,15 +162,15 @@ end
 module type VALUE = sig
   type t
 
-  val kind : E4_kind.t
   (** The node kind whose payload this decoder reads (D5). *)
+  val kind : E4_kind.t
 
-  val decode : string -> t option
   (** Over the node PAYLOAD, not the envelope. *)
+  val decode : string -> t option
 
-  val weight : t -> int
   (** Bytes, for CA2.  It need not be exact; it must be non-negative and must not change for a
       value already in a cache. *)
+  val weight : t -> int
 end
 
 module Decoded (V : VALUE) : sig
@@ -180,9 +182,9 @@ module Decoded (V : VALUE) : sig
   val mem : t -> E4_addr.Addr.t -> bool
   val add : t -> E4_addr.Addr.t -> V.t -> unit
 
-  val get : t -> E4_cas.ro -> E4_addr.Addr.t -> V.t option
   (** [find], else read the node, refuse it unless its kind is `V.kind` (D5), `V.decode` its
       payload, admit, answer. *)
+  val get : t -> E4_cas.ro -> E4_addr.Addr.t -> V.t option
 
   val drop : t -> unit
   val stats : t -> Bytes_cache.stats
@@ -196,10 +198,10 @@ end
 
 (* ============================================================ a ready instance *)
 
-module Node_value : VALUE with type t = E4_node.t
 (** The whole decoded node, weighed by its encoded length.  `kind` is `Program`; a caller that
     wants another kind writes three lines, which is the price §1.10 names for refusing `Obj`
     (ocaml/STANDARDS.md §4) and a heterogeneous decoded cache. *)
+module Node_value : VALUE with type t = E4_node.t
 
 module Node_cache : sig
   type t
@@ -210,9 +212,9 @@ module Node_cache : sig
   val mem : t -> E4_addr.Addr.t -> bool
   val add : t -> E4_addr.Addr.t -> E4_node.t -> unit
 
-  val get : t -> E4_cas.ro -> E4_addr.Addr.t -> E4_node.t option
   (** Unlike `Decoded(Node_value).get`, this one accepts a node of ANY kind: the envelope
       decoder is total over kinds and there is nothing to refuse. *)
+  val get : t -> E4_cas.ro -> E4_addr.Addr.t -> E4_node.t option
 
   val drop : t -> unit
   val stats : t -> Bytes_cache.stats

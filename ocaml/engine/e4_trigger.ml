@@ -40,25 +40,45 @@
    one post between them (S4), and a trigger signalled before it was awaited makes none --
    the awaiter learns it by the `Already_signaled` answer instead. *)
 
-type addr = { machine : int; fiber : int; token : int }
-type state = Initial | Awaiting of addr | Signaled
+type addr =
+  { machine : int
+  ; fiber : int
+  ; token : int
+  }
+
+type state =
+  | Initial
+  | Awaiting of addr
+  | Signaled
+
 type t = { st : state Atomic.t }
 
 let create () = { st = Atomic.make Initial }
 let state t = Atomic.get t.st
-let is_signaled t = match Atomic.get t.st with Signaled -> true | Initial | Awaiting _ -> false
+
+let is_signaled t =
+  match Atomic.get t.st with
+  | Signaled -> true
+  | Initial | Awaiting _ -> false
+;;
 
 let rec await t addr =
   match Atomic.get t.st with
   | Signaled -> `Already_signaled
   | Awaiting _ -> invalid_arg "E4_trigger.await: already awaited (TR2)"
-  | Initial as current -> if Atomic.compare_and_set t.st current (Awaiting addr) then `Awaiting else await t addr
+  | Initial as current ->
+    if Atomic.compare_and_set t.st current (Awaiting addr)
+    then `Awaiting
+    else await t addr
+;;
 
 let rec signal t ~post =
   match Atomic.get t.st with
   | Signaled -> () (* TR1 *)
-  | Initial as current -> if Atomic.compare_and_set t.st current Signaled then () else signal t ~post
+  | Initial as current ->
+    if Atomic.compare_and_set t.st current Signaled then () else signal t ~post
   | Awaiting addr as current ->
-      (* Only the CAS winner posts, so a double signal posts one row (S4), and the address
+    (* Only the CAS winner posts, so a double signal posts one row (S4), and the address
          is gone from the state before `post` runs (TR3). *)
-      if Atomic.compare_and_set t.st current Signaled then post addr else signal t ~post
+    if Atomic.compare_and_set t.st current Signaled then post addr else signal t ~post
+;;

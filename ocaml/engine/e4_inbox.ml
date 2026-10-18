@@ -18,52 +18,63 @@
      I3  After `close`, `push` returns false (the element is not queued) and `pop` drains
          what is left, then returns `None`. [by construction; tested: inbox-close] *)
 
-type 'a t = {
-  mu : Mutex.t;
-  cv : Condition.t;
-  q : 'a Queue.t;
-  mutable closed : bool;
-  mutable pushed : int;
-  mutable popped : int;
-}
+type 'a t =
+  { mu : Mutex.t
+  ; cv : Condition.t
+  ; q : 'a Queue.t
+  ; mutable closed : bool
+  ; mutable pushed : int
+  ; mutable popped : int
+  }
 
 let create () =
-  { mu = Mutex.create (); cv = Condition.create (); q = Queue.create (); closed = false; pushed = 0; popped = 0 }
+  { mu = Mutex.create ()
+  ; cv = Condition.create ()
+  ; q = Queue.create ()
+  ; closed = false
+  ; pushed = 0
+  ; popped = 0
+  }
+;;
 
 let push t x =
   Mutex.protect t.mu (fun () ->
-      if t.closed then false
-      else begin
-        Queue.push x t.q;
-        t.pushed <- t.pushed + 1;
-        Condition.broadcast t.cv;
-        true
-      end)
+    if t.closed
+    then false
+    else (
+      Queue.push x t.q;
+      t.pushed <- t.pushed + 1;
+      Condition.broadcast t.cv;
+      true))
+;;
 
 let pop t =
   Mutex.protect t.mu (fun () ->
-      while Queue.is_empty t.q && not t.closed do
-        Condition.wait t.cv t.mu
-      done;
-      if Queue.is_empty t.q then None
-      else begin
-        t.popped <- t.popped + 1;
-        Some (Queue.pop t.q)
-      end)
+    while Queue.is_empty t.q && not t.closed do
+      Condition.wait t.cv t.mu
+    done;
+    if Queue.is_empty t.q
+    then None
+    else (
+      t.popped <- t.popped + 1;
+      Some (Queue.pop t.q)))
+;;
 
 let pop_opt t =
   Mutex.protect t.mu (fun () ->
-      if Queue.is_empty t.q then None
-      else begin
-        t.popped <- t.popped + 1;
-        Some (Queue.pop t.q)
-      end)
+    if Queue.is_empty t.q
+    then None
+    else (
+      t.popped <- t.popped + 1;
+      Some (Queue.pop t.q)))
+;;
 
 let close t =
   Mutex.protect t.mu (fun () ->
-      t.closed <- true;
-      Condition.broadcast t.cv)
+    t.closed <- true;
+    Condition.broadcast t.cv)
+;;
 
 let length t = Mutex.protect t.mu (fun () -> Queue.length t.q)
 let is_closed t = Mutex.protect t.mu (fun () -> t.closed)
-let stats t = Mutex.protect t.mu (fun () -> (t.pushed, t.popped))
+let stats t = Mutex.protect t.mu (fun () -> t.pushed, t.popped)

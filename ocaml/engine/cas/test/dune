@@ -160,6 +160,7 @@
  (name bench_checkpoint)
  (modules bench_checkpoint)
  (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
+
 ;   test_cache  lane P7 — E4_cache, E4_subterm and E4_deps: the weight and slot bounds of
 ;               ../e4_cache.mli under a 20 000-step random sequence with the invariant
 ;               re-checked after every operation, CLOCK's choice of victim, the hit/miss/
@@ -199,6 +200,7 @@
  (libraries effect4_engine_cas effect4_bytes effect4_eff unix))
 
 ; Generated kind and admission facts, read at real native byte refusals.
+
 (test
  (name test_shared_facts)
  (modules test_shared_facts)
@@ -207,7 +209,13 @@
 (test
  (name test_disk)
  (modules test_disk)
- (libraries effect4_engine_cas effect4_bytes effect4_eff effect4_disk_test_support unix zarith))
+ (libraries
+  effect4_engine_cas
+  effect4_bytes
+  effect4_eff
+  effect4_disk_test_support
+  unix
+  zarith))
 
 (library
  (name effect4_disk_test_support)
@@ -216,22 +224,39 @@
  (libraries effect4_engine_cas effect4_bytes effect4_eff unix zarith))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .effect4_disk_test_support.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:../../../tools/typed_lint/main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .effect4_disk_test_support.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../../../tools/typed_lint/main.exe} %{cmt}))))
 
 (test
  (name test_disk_kill)
  (modules test_disk_kill)
- (deps (glob_files ../goldens/*))
+ (deps
+  (glob_files ../goldens/*))
  (libraries effect4_engine_cas effect4_disk_test_support unix zarith))
 
 (test
  (name test_disk_stm)
  (modules test_disk_stm)
- (deps (glob_files ../goldens/*))
- (libraries effect4_engine_cas effect4_bytes effect4_disk_test_support qcheck-core qcheck-core.runner qcheck-stm.sequential unix zarith))
+ (deps
+  (glob_files ../goldens/*))
+ (libraries
+  effect4_engine_cas
+  effect4_bytes
+  effect4_disk_test_support
+  qcheck-core
+  qcheck-core.runner
+  qcheck-stm.sequential
+  unix
+  zarith))
 
 (test
  (name test_disk_damage)
@@ -241,7 +266,12 @@
 (test
  (name test_disk_boundary)
  (modules test_disk_boundary)
- (libraries effect4_engine_cas effect4_disk_test_support effect4_bytes unix zarith))
+ (libraries
+  effect4_engine_cas
+  effect4_disk_test_support
+  effect4_bytes
+  unix
+  zarith))
 
 ;   bench_commit  what one E4_disk commit costs as the store grows: the mean of the first and the
 ;                 last 100 of N one-node commits. An executable, run by hand (it fsyncs N times).

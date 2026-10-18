@@ -30,24 +30,25 @@
    The carrier is `Lcnf_array` (ocaml/lcnf/lcnf_array.mli).
    The log and the machine trace share that persistent vector. *)
 
-type row = string
 (** One canonical event row.  Bytes are the identity; the sexp face is beside them, never an
     address (2026-09-07-ocaml-proposals.md §0.2). *)
+type row = string
 
 (** {1 The log} *)
 
 type t
 
-val chunk_size : int
 (** 256, a named constant in the file (trap #17: no bound is ever taken from [max_int]). *)
+val chunk_size : int
 
 val empty : t
 val length : t -> int
 val append : t -> row -> t
-val append_all : t -> row list -> t
+
 (** Appends in list order; this is the shape `RunMachine.emit` has
     (RunMachine.emit (src/Effect4/Machine/Fibers.lean)), so that the index (`E4_logindex`) can be fed
     by the SAME call and never by a rescan (A3 §1.4d). *)
+val append_all : t -> row list -> t
 
 val get : t -> int -> row option
 val slice : t -> from:int -> upto:int -> row list

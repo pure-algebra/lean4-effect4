@@ -4,15 +4,24 @@
 ; the CAS needs the engine only for E4_checkpoint. Unwrapped, as effect4_eff and effect4_clock
 ; are, so the generated engine and the CAS name its modules directly. A sub-library of the
 ; engine's dune project (ocaml/engine/dune-project), as cas/ is.
+
 (library
  (name effect4_bytes)
  (public_name effect4_bytes)
  (wrapped false)
  (libraries effect4_eff)
- (flags (:standard -w +a-4-9-40-41-42-44-45-70)))
+ (flags
+  (:standard -w +a-4-9-40-41-42-44-45-70)))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
 (rule
  (alias runtest)
- (deps (sandbox none) (:cmt (glob_files .effect4_bytes.objs/byte/*.cmt)))
- (action (chdir %{workspace_root} (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .effect4_bytes.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../../tools/typed_lint/main.exe} %{cmt}))))
