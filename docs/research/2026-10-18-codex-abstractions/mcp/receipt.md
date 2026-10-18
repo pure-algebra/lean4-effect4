@@ -34,8 +34,8 @@ uv run --with jsonschema==4.25.1 python scripts/check-mcp-protocol.py --binary o
 
 The final integrated gate is `PATH=/private/tmp/abstractions-lean-bin:$PATH make check-ocaml LAKE=lake`.
 It exits zero and records `51a359f1f372`, with `gen-check: PASS`.
-`../validation/check-ocaml.log` contains that final output.
-The earlier isolated MCP gate also passes and is retained in `check-ocaml.log` here.
+`git:6c09715f0:docs/research/2026-10-18-codex-abstractions/validation/check-ocaml.log` contains that final output.
+The earlier isolated MCP gate also passes; its log is `git:6c09715f0:docs/research/2026-10-18-codex-abstractions/mcp/check-ocaml.log`.
 `controls.log` and `schema.json` contain the final integrated protocol observations.
 
 No Lean semantic law changes in this slice.

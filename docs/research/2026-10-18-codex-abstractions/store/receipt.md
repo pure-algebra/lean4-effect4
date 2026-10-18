@@ -38,8 +38,8 @@ The temporary `lake` wrapper contains:
 exec python3 /private/tmp/seams-lean-one.py /Users/pooks/.elan/bin/lake "$@"
 ```
 
-`check-ocaml.log` retains the complete gate output.
-`narrow-build.log`, `axiom-output.log`, and `replay-probe.log` retain their exact outputs.
+`git:6c09715f0:docs/research/2026-10-18-codex-abstractions/store/check-ocaml.log` retains the complete gate output.
+`axiom-output.log` and `replay-probe.log` retain their exact outputs; `narrow-build.log` is at `git:6c09715f0`.
 `Audit.lean` contains the temporary audit module's source.
 Copy it to temporary `tools/Tools/StorePortAudit.lean` to reproduce the audit command.
 The receipt passes `python3 scripts/check-language.py --strict`.

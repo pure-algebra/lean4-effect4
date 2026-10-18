@@ -908,7 +908,7 @@ It reports `PASS native: shared result eae05ee17bd3` and `PASS compiler: shared 
 It records `PASS ocaml: recorded 51a359f1f372 (34.639s)` and `gen-check: PASS`.
 The recorded OCaml duration excludes the preceding generation work.
 The package checks accept two lawful aliases and reject twelve hostile clients.
-The final gate log is `validation/check-ocaml.log` beside this note.
+The final gate log is `git:6c09715f0:docs/research/2026-10-18-codex-abstractions/validation/check-ocaml.log`.
 Its command is the wrapped `make check-ocaml` command above.
 
 The complete store logs and probe sources live under `store/` beside this note.
