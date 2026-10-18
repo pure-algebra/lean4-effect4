@@ -816,12 +816,13 @@ let prepare_transaction view transaction =
       prepared_receipt = {receipt_nodes = outcomes; receipt_moves = moves}}
   with Refused_transaction why -> Error why
 
+(* The writer's records were admitted whole when it opened (E4_disk.open_ takes a checked image),
+   and every later record is its own, admitted here under the pack lock. So a commit checks only its
+   transaction: its cost is the transaction's, not the store's. *)
 let commit_transaction ?hook writer transaction =
   ensure_open writer;
   let view = writer.w_view in
-  match checked_image view with
-  | Error why -> Error (Host_refused why)
-  | Ok _ -> match prepare_transaction view transaction with
+  match prepare_transaction view transaction with
     | Error why -> Error why
     | Ok prepared ->
       let call point = match hook with None -> () | Some callback -> callback point in

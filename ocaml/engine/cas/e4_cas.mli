@@ -308,6 +308,8 @@ type transaction_error =
   | Move_refused of { name : string; why : E4_control.root_error }
   | Host_refused of admission
 type commit_point = Before_write of int | After_write of int | After_sync | Before_publish | After_publish
+(** Admit and write one transaction atomically. It checks only the transaction: the writer's
+    records were admitted whole at open (E4_disk.open_), and every later record is its own. *)
 val commit_transaction : ?hook:(commit_point -> unit) -> t -> transaction -> (receipt, transaction_error) result
 
 (* ---------------------------------------------------------------- nodes *)

@@ -236,3 +236,11 @@
  (name test_disk_boundary)
  (modules test_disk_boundary)
  (libraries effect4_engine_cas effect4_disk_test_support effect4_bytes unix zarith))
+
+;   bench_commit  what one E4_disk commit costs as the store grows: the mean of the first and the
+;                 last 100 of N one-node commits. An executable, run by hand (it fsyncs N times).
+
+(executable
+ (name bench_commit)
+ (modules bench_commit)
+ (libraries effect4_engine_cas effect4_disk_test_support unix))

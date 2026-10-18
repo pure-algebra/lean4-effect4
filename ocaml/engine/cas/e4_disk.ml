@@ -1,5 +1,9 @@
 (* Properties: one locked writer; faults remain values; images hold values only.
    All byte input reaches E4_node.decode and the generated refusal adapter before admission.
+   The store is admitted whole once, at open (a checked image); afterwards every record is this
+   writer's own, admitted by its commit under the pack lock, so a commit costs its transaction and
+   a read costs its node (re-hashed against its address). Bytes changed by another process while
+   the lock is held are outside this model; reopening checks them.
    A host failure closes the uncertain writer; reopening performs checked recovery.
    Historical root ancestry and generation provenance are not reconstructed. *)
 type t = { writer : E4_cas.t; mutable closed : bool }
@@ -32,9 +36,18 @@ let roots image = image.E4_cas.image_roots
 let boundary image = image.E4_cas.image_boundary
 let get_bytes image address =
   List.find_map (fun (at, bytes) -> if E4_addr.Addr.equal at address then Some bytes else None) (nodes image)
-let read disk address = match image disk with
-  | Error why -> Error why
-  | Ok snapshot -> Ok (get_bytes snapshot address)
+let read disk address =
+  if disk.closed then Error (E4_admission.Fault (E4_fault.Store "writer closed"))
+  else try
+    match E4_cas.get_bytes (E4_cas.read_only disk.writer) address with
+    | None -> Ok None
+    | Some bytes when String.equal (E4_sha256.digest bytes) (E4_addr.Addr.bytes address) -> Ok (Some bytes)
+    | Some _ -> Error (E4_admission.Fault (E4_fault.Corrupt address))
+  with
+  | Sys_error reason -> Error (E4_admission.Fault (E4_fault.Io reason))
+  | E4_cas.Store_error reason -> Error (E4_admission.Fault (E4_fault.Store reason))
+  | Unix.Unix_error (error, call, argument) ->
+    Error (E4_admission.Fault (E4_fault.Io (call ^ " " ^ argument ^ ": " ^ Unix.error_message error)))
 let commit ?hook disk transaction =
   if disk.closed then Error (E4_cas.Host_refused (E4_admission.Fault (E4_fault.Store "writer closed")))
   else
