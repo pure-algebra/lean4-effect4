@@ -141,10 +141,11 @@ def stalled : Option Live :=
     let d ← Deferred.make .nat .never
     Deferred.await d }).toOption.map fun b => ((Live.open b "stalled").feed .start).1
 
--- The view names the internal wait with its wait site, and it flags the empty frontier at a
--- live machine. The host's view of calls is empty: no reply can end this wait.
+-- The view names the internal wait by its site, the deferred it awaits, and it flags the empty
+-- frontier at a live machine. The host's view of calls is empty: no reply can end this wait.
 #guard stalled.any fun l => l.view.awaiting.isEmpty && l.view.waits.length == 1 &&
-  l.view.waits.all (·.site.isSome) && l.view.emptyFrontier && l.view.reasons.isEmpty
+  l.view.waits.all (·.site matches some (.deferred _)) && l.view.emptyFrontier &&
+  l.view.reasons.isEmpty
 -- Green twin: a run that waits on host calls names them, so its frontier is not empty. Beside
 -- them the root waits on its children, an internal wait that no frontier reason names.
 #guard !parked.view.emptyFrontier && parked.view.waits.map (·.fiber) == [Api.root]
