@@ -350,6 +350,19 @@ theorem Checked.ask_value (o : Oracle) (i : CheckInput) : (Checked.ask o i).valu
       (((deps (.module app holes program)).map (fun d => (d.input, run d.input))).map Prod.snd) = _
     rw [List.map_map]
     exact combine_deps _
+
+/-- A checked computation's value after a bind is the continuation's at the value. A step of
+`checker-ask-value` for its consumers. Its consumers are the feed's laws
+(`SourceSession.feed_ok_cases`, `Laws/Program/SourceTable.lean`). -/
+@[semantics "host-session-protocol" (requirement := R14)]
+theorem Checked.bind_value {α β : Type} (x : Checked α) (f : α → Checked β) :
+    (x >>= f).value = (f x.value).value := rfl
+
+/-- A pure checked computation's value is its argument. A step of `checker-ask-value` for its
+consumers. Its consumers are the feed's laws (`SourceSession.feed_ok_cases`). -/
+@[semantics "host-session-protocol" (requirement := R14)]
+theorem Checked.pure_value {α : Type} (a : α) : (pure a : Checked α).value = a := rfl
+
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem run_module (app : SigApp) (holes : RowTable) (program : NativeEff) :
     run (.module app holes program) =

@@ -335,6 +335,36 @@ theorem EditSession.feed_edit {l : EditSession} {e : Edit} {s' : Sketch}
   | fill a q => exact (EditSession.feed_keeps l (.fill a q)).2 a q s' rfl h
   | omitAt a row => exact EditSession.feed_omit_sketch h
 
+/-- **A program stands where an edit of a program applies**: the replacement checks the sort of
+the node it replaces. A step of `source-feed-edit`. Its consumer is `Sketch.edit_at`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.at_of_replaceAt_eff {n n' : Node NativeOp} {path : List Nat} {q : NativeEff}
+    (h : n.replaceAt path (.eff q) = some n') : ∃ old, n.at_ path = some (.eff old) := by
+  have happ := Node.replaceAt_append n path [] (.eff q)
+  rw [List.append_nil, h] at happ
+  cases hat : n.at_ path with
+  | none =>
+    rw [hat] at happ
+    cases happ
+  | some m =>
+    rw [hat, Option.bind_some] at happ
+    cases m with
+    | eff old => exact ⟨old, rfl⟩
+    | _ => cases happ
+
+/-- **An edit that applies stands at a program**: a filling or an omission replaces a program. A
+step of `source-feed-edit`. Its consumer is `SourceSession.feed_ok_cases`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.edit_at {s c : Sketch} {app : SigApp} {e : Edit} (h : s.edit app e = some c) :
+    ∃ old, (Node.eff s.program).at_ e.path = some (.eff old) := by
+  cases e with
+  | fill a q =>
+    obtain ⟨p', hrep, -⟩ := Sketch.fillAt_some h
+    exact Node.at_of_replaceAt_eff hrep
+  | omitAt a row =>
+    obtain ⟨p', hrep, -⟩ := Sketch.fillAt_some h
+    exact Node.at_of_replaceAt_eff hrep
+
 
 /-!
 Placement: initial-algebras-folds; source-session-coherent and typed-replacement, R14.
@@ -353,18 +383,257 @@ theorem open_coherent (o : Oracle) (app : SigApp) (s : Sketch) :
   rw [Checked.ask_value]
   exact Sketch.sourceAnnotate_eq_sourceTable s app
 
+/-! ## What a feed answers
+
+`feed_ok_cases` reads every accepted feed off the definition: an edit that does not apply under
+`draft` leaves the session, and an edit that applies either rechecks the module or splices a part
+check's table. The statements below are steps of the claims `source-feed-edit`,
+`source-feed-root` and `kept-fill-reference`, and each names its consumer. -/
+
+/-- **A finished feed answers its next session and step.** A step of `source-feed-edit`. Its
+consumer is `recheck_ok`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem finish_ok {policy : FeedPolicy} {s n : SourceSession} {e : Edit} {st : Edit.Step}
+    {v : Verdict} {r : SourceSession × Edit.Step} (h : finish policy s n e st v = .ok r) :
+    r = (n, st) := by
+  unfold finish at h
+  split at h
+  · cases h
+    rfl
+  · cases h
+  · cases h
+    rfl
+  · split at h
+    · cases h
+    · split at h
+      · cases h
+      · cases h
+        rfl
+
+/-- **An accepted recheck holds the candidate and the module check's table**, and records a
+rechecked step. A step of `source-feed-edit`. Its consumer is `feed_ok_cases`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem recheck_ok {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {c : Sketch} {e : Edit}
+    {old : NativeEff} {r : SourceSession × Edit.Step}
+    (h : (s.recheck o policy c e old).value = .ok r) :
+    r = (⟨s.app, c, (run (.module s.app c.holes c.program)).table⟩, ⟨e, some old, .rechecked⟩) := by
+  unfold recheck at h
+  rw [Checked.bind_value, Checked.pure_value, Checked.ask_value] at h
+  exact finish_ok h
+
+/-- **Every accepted feed, by its route.** An edit that does not apply is accepted only by
+`draft`, which leaves the session. An edit that applies either rechecks the module, or splices
+the part check's table below the root at a typed focus, where the part keeps the focus's type and
+the expansion moved only at the address; a draft splice also needs `draftOmitAllows` and a typed
+root. A step of `source-feed-edit`. Its consumers are `feed_keeps` and the feed's coherence. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_ok_cases {o : Oracle} {policy : FeedPolicy} {s : SourceSession} {e : Edit}
+    {r : SourceSession × Edit.Step} (h : (s.feed o policy e).value = .ok r) :
+    (s.sketch.edit s.app e = none ∧ policy = .draft ∧ r = (s, ⟨e, none, .unchanged⟩)) ∨
+    ∃ old c, (Node.eff s.sketch.program).at_ e.path = some (.eff old) ∧
+      s.sketch.edit s.app e = some c ∧
+      (r = (⟨s.app, c, (run (.module s.app c.holes c.program)).table⟩, ⟨e, some old, .rechecked⟩) ∨
+       ∃ key focus, e.path ≠ [] ∧ s.focusAt e.path = some focus ∧
+         s.candidatePartKey e.path c = some key ∧ (run key).result = .ok focus.ty ∧
+         s.expandedEditAgrees c e = true ∧
+         (policy = .draft → draftOmitAllows e focus.ty = true ∧ s.view.type.isSome = true) ∧
+         r = s.splice c e old (run key)) := by
+  unfold feed at h
+  split at h
+  · rename_i old c hat hedit
+    refine Or.inr ⟨old, c, hat, hedit, ?_⟩
+    split at h
+    · exact Or.inl (recheck_ok h)
+    · rename_i i rest hpath
+      have hne : e.path ≠ [] := by
+        rw [hpath]
+        exact List.cons_ne_nil i rest
+      cases policy with
+      | recheck => exact Or.inl (recheck_ok h)
+      | draft =>
+        dsimp only at h
+        split at h
+        · rename_i focus ty hfocus hview
+          split at h
+          · exact Or.inl (recheck_ok h)
+          · rename_i hcond
+            simp only [Bool.or_eq_true, Bool.not_eq_true', not_or, Bool.not_eq_false] at hcond
+            split at h
+            · exact Or.inl (recheck_ok h)
+            · rename_i key hkey
+              rw [Checked.bind_value, Checked.ask_value] at h
+              split at h
+              · rename_i ty' hres
+                split at h
+                · rename_i hty
+                  rw [Checked.pure_value] at h
+                  cases h
+                  refine Or.inr ⟨key, focus, hne, hfocus, hkey, ?_, hcond.1,
+                    fun _ => ⟨hcond.2, ?_⟩, rfl⟩
+                  · rw [hres, hty]
+                  · rw [hview]
+                    rfl
+                · exact Or.inl (recheck_ok h)
+              · exact Or.inl (recheck_ok h)
+        · exact Or.inl (recheck_ok h)
+      | keepExact =>
+        dsimp only at h
+        split at h
+        · cases h
+        · rename_i focus hfocus
+          split at h
+          · cases h
+          · rename_i key hkey
+            rw [Checked.bind_value, Checked.ask_value] at h
+            split at h
+            · cases h
+            · rename_i ty' hres
+              split at h
+              · cases h
+              · rename_i hty
+                split at h
+                · rename_i hagree
+                  rw [Checked.pure_value] at h
+                  cases h
+                  refine Or.inr ⟨key, focus, hne, hfocus, hkey, ?_, hagree, (fun hd => nomatch hd),
+                    rfl⟩
+                  rw [hres]
+                  simp only [bne_iff_ne, ne_eq, Decidable.not_not] at hty
+                  rw [hty]
+                · exact Or.inl (recheck_ok h)
+  · rename_i hnone
+    left
+    have hedit : s.sketch.edit s.app e = none := by
+      cases hc : s.sketch.edit s.app e with
+      | none => rfl
+      | some c =>
+        obtain ⟨old, hat⟩ := Sketch.edit_at hc
+        exact (hnone old c hat hc).elim
+    cases policy with
+    | draft =>
+      rw [Checked.pure_value] at h
+      cases h
+      exact ⟨hedit, rfl, rfl⟩
+    | keepExact => cases h
+    | recheck => cases h
+
+/-- **An accepted `keepExact` feed below the root passed the focus and the part check**, and it
+spliced exactly where the expanded edit agrees. A step of `kept-fill-reference`. Its consumer is
+`kept_eq_certified` (`Laws/Program/FillSet.lean`). -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_keepExact_ok {o : Oracle} {s : SourceSession} {e : Edit}
+    {r : SourceSession × Edit.Step} (hne : e.path ≠ [])
+    (h : (s.feed o .keepExact e).value = .ok r) :
+    ∃ old c key focus, (Node.eff s.sketch.program).at_ e.path = some (.eff old) ∧
+      s.sketch.edit s.app e = some c ∧ s.focusAt e.path = some focus ∧
+      s.candidatePartKey e.path c = some key ∧ (run key).result = .ok focus.ty ∧
+      (s.expandedEditAgrees c e = true → r = s.splice c e old (run key)) ∧
+      (s.expandedEditAgrees c e = false → (s.recheck o .keepExact c e old).value = .ok r) := by
+  unfold feed at h
+  split at h
+  · rename_i old c hat hedit
+    split at h
+    · rename_i h0
+      exact absurd h0 hne
+    · dsimp only at h
+      split at h
+      · cases h
+      · rename_i focus hfocus
+        split at h
+        · cases h
+        · rename_i key hkey
+          rw [Checked.bind_value, Checked.ask_value] at h
+          split at h
+          · cases h
+          · rename_i ty hres
+            split at h
+            · cases h
+            · rename_i hty
+              have hty' : ty = focus.ty := by
+                simp only [bne_iff_ne, ne_eq, Decidable.not_not] at hty
+                exact hty
+              refine ⟨old, c, key, focus, hat, hedit, hfocus, hkey, by rw [hres, hty'], ?_, ?_⟩
+              · intro hagree
+                rw [if_pos hagree, Checked.pure_value] at h
+                cases h
+                rfl
+              · intro hagree
+                rw [if_neg (by rw [hagree]; exact Bool.false_ne_true)] at h
+                exact h
+  · cases h
+
+/-- **A `keepExact` feed below the root splices** where the focus is typed, the part keeps the
+focus's type and the expanded edit agrees. A step of `kept-fill-reference`. Its consumer is
+`kept_eq_certified`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_keepExact_of {o : Oracle} {s : SourceSession} {e : Edit} {old : NativeEff}
+    {c : Sketch} {key : CheckInput} {focus : Focus NativeOp} (hne : e.path ≠ [])
+    (hat : (Node.eff s.sketch.program).at_ e.path = some (.eff old))
+    (hedit : s.sketch.edit s.app e = some c) (hfocus : s.focusAt e.path = some focus)
+    (hkey : s.candidatePartKey e.path c = some key) (hres : (run key).result = .ok focus.ty)
+    (hagree : s.expandedEditAgrees c e = true) :
+    (s.feed o .keepExact e).value = .ok (s.splice c e old (run key)) := by
+  obtain ⟨i, rest, hpath⟩ := List.exists_cons_of_ne_nil hne
+  unfold feed
+  simp only [hat, hedit]
+  split
+  · rename_i h0
+    rw [hpath] at h0
+    cases h0
+  · simp only [hfocus, hkey, Checked.bind_value, Checked.ask_value, hres, bne_self_eq_false,
+      Bool.false_eq_true, ↓reduceIte, hagree, Checked.pure_value]
+
+/-- **An accepted `keepExact` feed applies its edit**: the next sketch is the edited one. A step
+of `pending-fill-publication`. Its consumer is `batch_keepExact_fills`
+(`Laws/Program/FillSet.lean`). -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_keepExact_sketch {o : Oracle} {s next : SourceSession} {e : Edit}
+    {step : Edit.Step} (h : (s.feed o .keepExact e).value = .ok (next, step)) :
+    s.sketch.edit s.app e = some next.sketch := by
+  rcases feed_ok_cases h with ⟨-, hpol, -⟩ | ⟨old, c, -, hedit, hr | ⟨key, focus, -, -, -, -, -, -, hr⟩⟩
+  · cases hpol
+  · rw [hedit]
+    obtain ⟨rfl, -⟩ := Prod.mk.inj hr
+    rfl
+  · rw [hedit]
+    obtain ⟨rfl, -⟩ := Prod.mk.inj hr
+    rfl
+
 @[semantics "initial-algebras-folds" (requirement := R14)]
 proof_goal feed_coherent {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
     {e : Edit} {step : Edit.Step} (hc : s.Coherent)
     (h : (s.feed o policy e).value = .ok (next,step)) : next.Coherent
 
+/-- **An accepted feed keeps the application and the edit, leaves the session where the edit does
+not apply, and holds the edited sketch where it does.** Read off `feed_ok_cases`. The pointer of
+`source-feed-edit`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal feed_keeps {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
+theorem feed_keeps {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
     {e : Edit} {step : Edit.Step}
     (h : (s.feed o policy e).value = .ok (next,step)) :
     next.app = s.app ∧ step.edit = e ∧
       (s.sketch.edit s.app e = none → next = s) ∧
-      (∀ candidate, s.sketch.edit s.app e = some candidate → next.sketch = candidate)
+      (∀ candidate, s.sketch.edit s.app e = some candidate → next.sketch = candidate) := by
+  rcases feed_ok_cases h with
+    ⟨hnone, -, hr⟩ | ⟨old, c, -, hedit, hr | ⟨key, focus, -, -, -, -, -, -, hr⟩⟩
+  · cases hr
+    refine ⟨rfl, rfl, fun _ => rfl, fun c hc => ?_⟩
+    rw [hnone] at hc
+    cases hc
+  · cases hr
+    refine ⟨rfl, rfl, fun hn => ?_, fun c' hc' => ?_⟩
+    · rw [hedit] at hn
+      cases hn
+    · rw [hedit] at hc'
+      cases hc'
+      rfl
+  · cases hr
+    refine ⟨rfl, rfl, fun hn => ?_, fun c' hc' => ?_⟩
+    · rw [hedit] at hn
+      cases hn
+    · rw [hedit] at hc'
+      cases hc'
+      rfl
 
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem table_eq {s : SourceSession} (hc : s.Coherent) : s.table = s.sketch.sourceTable s.app := hc
@@ -457,12 +726,16 @@ proof_goal feed_keepExact {o : Oracle} {s next : SourceSession} {e : Edit} {step
       (s.expandedEditAgrees next.sketch e = true → step.delta = .spliced [e.path]) ∧
       (s.expandedEditAgrees next.sketch e = false → step.delta = .rechecked)
 
-/-- The root feed is exactly the module recheck route, including its actual part trace. -/
+/-- **The root feed is exactly the module recheck route**, including its actual part trace: the
+root holds the whole program, and every policy asks the module key there. The pointer of
+`source-feed-root`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal feed_root (o : Oracle) (policy : FeedPolicy) (s : SourceSession)
+theorem feed_root (o : Oracle) (policy : FeedPolicy) (s : SourceSession)
     (e : Edit) (candidate : Sketch) (hp : e.path = [])
     (hedit : s.sketch.edit s.app e = some candidate) :
-    s.feed o policy e = s.recheck o policy candidate e s.sketch.program
+    s.feed o policy e = s.recheck o policy candidate e s.sketch.program := by
+  unfold feed
+  simp only [hp, hedit, Node.at_]
 
 @[semantics "initial-algebras-folds" (requirement := R14)]
 proof_goal feed_undo {o : Oracle} {s next : SourceSession} {a : List Nat} {q old : NativeEff}
@@ -473,6 +746,28 @@ proof_goal feed_undo {o : Oracle} {s next : SourceSession} {a : List Nat} {q old
     ∃ back, (next.feed o .draft (.fill a old)).value = .ok (s,back)
 
 end SourceSession
+
+/-- **An accepted document step**: the snapshot is current, the sole interpreter answered a fresh
+state, and the next document holds that state's session after one more action. A step of
+`source-document-step` and of `pending-fill-publication`. Its consumer is
+`FillSet.publish_eq_materialize` (`Laws/Program/FillSet.lean`). -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Doc.step_ok {o : Check.Oracle} {d next : Doc} {at_ : Snap} {action : DocAction}
+    {receipt : Receipt} (h : (d.step o at_ action).value = .ok (next, receipt)) :
+    d.check at_ = .ok () ∧ ∃ fresh, (DocInternal.apply o d.runtime action).value = .ok fresh ∧
+      next.origin = d.origin ∧ next.history = d.history ++ [action] ∧
+      next.session = fresh.session ∧ receipt = fresh.receipt := by
+  unfold Doc.step at h
+  split at h
+  · cases h
+  · rename_i hcheck
+    refine ⟨hcheck, ?_⟩
+    dsimp only [Check.Checked.bind', Check.Checked.pure_value] at h
+    split at h
+    · cases h
+    · rename_i fresh hfresh
+      cases h
+      exact ⟨fresh, hfresh, rfl, rfl, rfl, rfl⟩
 
 /-- Placement: initial-algebras-folds; source-session-coherent's reachable-state obligation, R14.
 The sealed replay witnesses every accepted action history, including revert.
