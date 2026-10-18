@@ -19,7 +19,7 @@ The owner pauses work after V1.
 | S3b | Pending | Pending | Open |
 | ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` ; receipt `0bb42e37d4fa99fd84979df03beb3dd0391a4e98` | [ST1a](ST1a.md) | Required checks pass. |
 | ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` ; receipt `709f9f10a9401150af66870a8665860e45cc63d3` | [ST1b](ST1b.md) | Required checks pass. |
-| ST2 | Pending | Pending | Open |
+| ST2 | `e163b1ac64aa9c4c8ce91f2b7d54bd4d3aa3d061` | [ST2](ST2.md) | Required checks pass; all three recovery claims are proved. |
 | ST3 | Pending | Pending | Open |
 | ST4 | Pending | Pending | Open |
 | S6 | Pending | Pending | Open |
@@ -87,6 +87,12 @@ The owner pauses work after V1.
 | S3a | Four compile repairs to the never-compiled drafts and one inspection control that could never pass. |
 | S3a | Retiring `Tools.Query` moves to S3b: its JSON-lines driver needs the generated Tool codecs. |
 
+| ST2 | Recovery validates an image with exact legacy generations instead of inventing a transaction journal. |
+| ST2 | Native bytes enter one generated refusal adapter before semantic admission; decoded Val order stays unchanged. |
+| ST2 | Missing published bytes and sealed damage refuse without evidence loss; only writable uncommitted tails truncate. |
+| ST2 | The empty boundary sentinel normalizes without changing root generations; the vacuous R4 control is removed. |
+| ST2 | The golden printer handles the two recovery refusals; native CI installs the tested STM dependencies. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -122,5 +128,9 @@ The owner pauses work after V1.
 
 | S3a | Adopt `Tool.serve` over one action interpreter, with a state sealed by its transcript's replay. |
 | S3a | Append `Tool.Refusal.suggest`, `place` and `noProgram` after the original constructors; renumber no tag. |
+
+| ST2 | Admit empty-store checked images, retaining exact roots and shared node admission without historical ancestry claims. |
+| ST2 | Keep Capacity and Fault separate; expose frozen images through one owned writer. |
+| ST2 | Preserve published and sealed damage; retain actual-model tables, command comparisons, and real interruption controls. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

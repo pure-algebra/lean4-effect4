@@ -1,0 +1,4 @@
+["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st2-sol/ocaml", "engine/cas/test/test_disk.exe"]
+Fatal error: exception Failure("legacy snapshot aliases writer")
+disk snapshots, rollback, receipts, heads and retained alias red passed
+exit_status=0

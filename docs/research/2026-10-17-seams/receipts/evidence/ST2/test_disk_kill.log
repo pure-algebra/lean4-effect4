@@ -1,0 +1,8 @@
+["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st2-sol/ocaml", "engine/cas/test/test_disk_kill.exe"]
+PASS actual kill before-write0 matches accepted Cut
+PASS actual kill after-write1 matches accepted Cut
+PASS actual kill after-write2 matches accepted Cut
+PASS actual kill after-sync matches accepted Cut
+PASS actual kill before-publish matches accepted Cut
+PASS actual kill after-publish matches accepted Cut
+exit_status=0

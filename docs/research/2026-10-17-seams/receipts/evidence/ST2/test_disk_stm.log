@@ -1,0 +1,7 @@
+["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st2-sol/ocaml", "engine/cas/test/test_disk_stm.exe"]
+actual Cas oracle: 12 states, 14 actions, 168 transitions, command-list bound 40
+generated error fail pass / total     time test name
+[2K[ ]    0    0    0    0 /  300     0.0s owned disk against actual Cas transitions[2K[ ]   49    0    0   49 /  300     0.1s owned disk against actual Cas transitions[2K[ ]   94    0    0   94 /  300     0.2s owned disk against actual Cas transitions[2K[ ]  145    0    0  145 /  300     0.3s owned disk against actual Cas transitions[2K[ ]  199    0    0  199 /  300     0.4s owned disk against actual Cas transitions[2K[ ]  251    0    0  251 /  300     0.5s owned disk against actual Cas transitions[2K[[32;1m✓[0m]  300    0    0  300 /  300     0.6s owned disk against actual Cas transitions
+================================================================================
+[32;1msuccess[0m (ran 1 tests)
+exit_status=0

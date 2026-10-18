@@ -1,0 +1,3 @@
+["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st2-sol/ocaml", "engine/cas/test/test_disk_boundary.exe"]
+disk capacity, corruption and shared recovery mapping passed
+exit_status=0

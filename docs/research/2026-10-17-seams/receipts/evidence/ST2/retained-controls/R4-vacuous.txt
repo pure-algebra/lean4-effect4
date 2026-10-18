@@ -1,0 +1,9 @@
+  check "R4 the bytes before status do not move when only the status changes"
+    (String.equal
+       (String.sub b0 0 (String.length b0 - 1))
+       (String.sub (E4_control.encode { one_root_payload with E4_control.status = E4_control.Gced })
+          0
+          (String.length b0 - 1))
+    = false
+    (* the checksum covers the status, so the CHECKSUM moves; everything else must not *)
+    || true);

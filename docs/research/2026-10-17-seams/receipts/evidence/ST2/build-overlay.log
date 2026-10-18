@@ -1,0 +1,216 @@
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/OCaml5/Store/Facts.olean", "/private/tmp/seams-st2-sol/src/OCaml5/Store/Facts.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Store/Domain/Transaction.olean", "/private/tmp/seams-st2-sol/src/Effect4/Store/Domain/Transaction.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+/private/tmp/seams-st2-sol/src/Effect4/Store/Domain/Transaction.lean:50:10: error: `Effect4.Store.Image` has already been declared
+/private/tmp/seams-st2-sol/src/Effect4/Store/Domain/Transaction.lean:95:21: error: type expected, got
+  (Image : Type → Type)
+exit_status=1
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Store/Domain/Transaction.olean", "/private/tmp/seams-st2-sol/src/Effect4/Store/Domain/Transaction.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Store/Domain/Store.olean", "/private/tmp/seams-st2-sol/src/Effect4/Store/Domain/Store.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Store/Domain/Word.olean", "/private/tmp/seams-st2-sol/src/Effect4/Store/Domain/Word.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Store/Domain/Cas.olean", "/private/tmp/seams-st2-sol/src/Effect4/Store/Domain/Cas.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Laws/Store/Recovery.olean", "/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Laws/Store/Recovery.olean", "/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:20:20: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.error` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.error`
+  [apply] `EST.Out.error`
+  [apply] `EStateM.Result.error`
+  [apply] `Lean.Exception.error`
+  [apply] `Lean.MessageSeverity.error`
+  [apply] `Lean.Parser.error`
+  [apply] `Lean.TraceResult.error`
+  [apply] `Lean.Lsp.DiagnosticSeverity.error`
+  [apply] `Lean.Lsp.MessageType.error`
+  [apply] `Lean.Macro.Exception.error`
+  [apply] `Lean.Server.FileWorker.FileSetupResult.error`
+  [apply] `Std.Internal.Parsec.ParseResult.error`
+  [apply] `Lean.Meta.Tactic.TryThis.SuggestionStyle.error`
+  [apply] `Std.Http.Protocol.H1.Machine.error`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:22:22: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.error` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.error`
+  [apply] `EST.Out.error`
+  [apply] `EStateM.Result.error`
+  [apply] `Lean.Exception.error`
+  [apply] `Lean.MessageSeverity.error`
+  [apply] `Lean.Parser.error`
+  [apply] `Lean.TraceResult.error`
+  [apply] `Lean.Lsp.DiagnosticSeverity.error`
+  [apply] `Lean.Lsp.MessageType.error`
+  [apply] `Lean.Macro.Exception.error`
+  [apply] `Lean.Server.FileWorker.FileSetupResult.error`
+  [apply] `Std.Internal.Parsec.ParseResult.error`
+  [apply] `Lean.Meta.Tactic.TryThis.SuggestionStyle.error`
+  [apply] `Std.Http.Protocol.H1.Machine.error`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:23:18: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Lean.Meta.DefEqArgsFirstPassResult.ok`
+  [apply] `Std.Http.Response.ok`
+  [apply] `Std.Http.Status.ok`
+  [apply] `Lean.Meta.Grind.CheckCoverageResult.ok`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:23:60: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Lean.Meta.DefEqArgsFirstPassResult.ok`
+  [apply] `Std.Http.Response.ok`
+  [apply] `Std.Http.Status.ok`
+  [apply] `Lean.Meta.Grind.CheckCoverageResult.ok`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:38:20: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.error` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.error`
+  [apply] `EST.Out.error`
+  [apply] `EStateM.Result.error`
+  [apply] `Lean.Exception.error`
+  [apply] `Lean.MessageSeverity.error`
+  [apply] `Lean.Parser.error`
+  [apply] `Lean.TraceResult.error`
+  [apply] `Lean.Lsp.DiagnosticSeverity.error`
+  [apply] `Lean.Lsp.MessageType.error`
+  [apply] `Lean.Macro.Exception.error`
+  [apply] `Lean.Server.FileWorker.FileSetupResult.error`
+  [apply] `Std.Internal.Parsec.ParseResult.error`
+  [apply] `Lean.Meta.Tactic.TryThis.SuggestionStyle.error`
+  [apply] `Std.Http.Protocol.H1.Machine.error`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:40:22: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.error` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.error`
+  [apply] `EST.Out.error`
+  [apply] `EStateM.Result.error`
+  [apply] `Lean.Exception.error`
+  [apply] `Lean.MessageSeverity.error`
+  [apply] `Lean.Parser.error`
+  [apply] `Lean.TraceResult.error`
+  [apply] `Lean.Lsp.DiagnosticSeverity.error`
+  [apply] `Lean.Lsp.MessageType.error`
+  [apply] `Lean.Macro.Exception.error`
+  [apply] `Lean.Server.FileWorker.FileSetupResult.error`
+  [apply] `Std.Internal.Parsec.ParseResult.error`
+  [apply] `Lean.Meta.Tactic.TryThis.SuggestionStyle.error`
+  [apply] `Std.Http.Protocol.H1.Machine.error`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:41:18: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Lean.Meta.DefEqArgsFirstPassResult.ok`
+  [apply] `Std.Http.Response.ok`
+  [apply] `Std.Http.Status.ok`
+  [apply] `Lean.Meta.Grind.CheckCoverageResult.ok`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:41:60: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.ok` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.ok`
+  [apply] `EST.Out.ok`
+  [apply] `EStateM.Result.ok`
+  [apply] `Lean.Meta.DefEqArgsFirstPassResult.ok`
+  [apply] `Std.Http.Response.ok`
+  [apply] `Std.Http.Status.ok`
+  [apply] `Lean.Meta.Grind.CheckCoverageResult.ok`
+exit_status=1
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Laws/Store/Recovery.olean", "/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Store/Domain/Cas.olean", "/private/tmp/seams-st2-sol/src/Effect4/Store/Domain/Cas.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Laws/Store/Recovery.olean", "/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Test/Store/SeamsTransactions.olean", "/private/tmp/seams-st2-sol/src/Test/Store/SeamsTransactions.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Test/Store/SeamsRecovery.olean", "/private/tmp/seams-st2-sol/src/Test/Store/SeamsRecovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Test/Store/SeamsRecoveryAudit.olean", "/private/tmp/seams-st2-sol/src/Test/Store/SeamsRecoveryAudit.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+#axiom_audit: 1023 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/OCaml5/Store/DiskOracle.olean", "/private/tmp/seams-st2-sol/src/OCaml5/Store/DiskOracle.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+/private/tmp/seams-st2-sol/src/OCaml5/Store/DiskOracle.lean:22:14: error: unexpected token 'at'; expected '=>'
+exit_status=1
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/OCaml5/Store/DiskOracle.olean", "/private/tmp/seams-st2-sol/src/OCaml5/Store/DiskOracle.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Laws/Store/Recovery.olean", "/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Laws/Store/Recovery.olean", "/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:58:45: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.error` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.error`
+  [apply] `EST.Out.error`
+  [apply] `EStateM.Result.error`
+  [apply] `Lean.Exception.error`
+  [apply] `Lean.MessageSeverity.error`
+  [apply] `Lean.Parser.error`
+  [apply] `Lean.TraceResult.error`
+  [apply] `Lean.Lsp.DiagnosticSeverity.error`
+  [apply] `Lean.Lsp.MessageType.error`
+  [apply] `Lean.Macro.Exception.error`
+  [apply] `Lean.Server.FileWorker.FileSetupResult.error`
+  [apply] `Std.Internal.Parsec.ParseResult.error`
+  [apply] `Lean.Meta.Tactic.TryThis.SuggestionStyle.error`
+  [apply] `Std.Http.Protocol.H1.Machine.error`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:60:24: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.error` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Except.error`
+  [apply] `EST.Out.error`
+  [apply] `EStateM.Result.error`
+  [apply] `Lean.Exception.error`
+  [apply] `Lean.MessageSeverity.error`
+  [apply] `Lean.Parser.error`
+  [apply] `Lean.TraceResult.error`
+  [apply] `Lean.Lsp.DiagnosticSeverity.error`
+  [apply] `Lean.Lsp.MessageType.error`
+  [apply] `Lean.Macro.Exception.error`
+  [apply] `Lean.Server.FileWorker.FileSetupResult.error`
+  [apply] `Std.Internal.Parsec.ParseResult.error`
+  [apply] `Lean.Meta.Tactic.TryThis.SuggestionStyle.error`
+  [apply] `Std.Http.Protocol.H1.Machine.error`
+/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean:90:37: error: Application type mismatch: The argument
+  checked
+has type
+  staged.checkImageRoots [] image.roots = Except.ok PUnit.unit
+but is expected to have type
+  { nodes := staged.nodes, roots := image.roots }.checkImageRoots ?m.240
+      { nodes := staged.nodes, roots := image.roots }.roots =
+    Except.ok ()
+in the application
+  checkImageRoots_resolves checked
+exit_status=1
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Effect4/Laws/Store/Recovery.olean", "/private/tmp/seams-st2-sol/src/Effect4/Laws/Store/Recovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Test/Store/SeamsRecovery.olean", "/private/tmp/seams-st2-sol/src/Test/Store/SeamsRecovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Test/Store/SeamsRecoveryAudit.olean", "/private/tmp/seams-st2-sol/src/Test/Store/SeamsRecoveryAudit.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+#axiom_audit: 1041 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/OCaml5/Store/DiskOracle.olean", "/private/tmp/seams-st2-sol/src/OCaml5/Store/DiskOracle.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Test/Store/SeamsRecovery.olean", "/private/tmp/seams-st2-sol/src/Test/Store/SeamsRecovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+/private/tmp/seams-st2-sol/src/Test/Store/SeamsRecovery.lean:46:39: error: Function expected at
+  List.mem_cons_self
+but this term has type
+  ?m.10 ∈ ?m.10 :: ?m.11
+
+Note: Expected a function because this term is being applied to the argument
+  legacyRoot
+exit_status=1
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Test/Store/SeamsRecovery.olean", "/private/tmp/seams-st2-sol/src/Test/Store/SeamsRecovery.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+exit_status=0
+{"command": ["lean", "-M6144", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "-o", "/private/tmp/seams-st2-sol/lib/lean/Test/Store/SeamsRecoveryAudit.olean", "/private/tmp/seams-st2-sol/src/Test/Store/SeamsRecoveryAudit.lean"], "LEAN_PATH": "/private/tmp/seams-st2-sol/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"}
+#axiom_audit: 1041 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+exit_status=0

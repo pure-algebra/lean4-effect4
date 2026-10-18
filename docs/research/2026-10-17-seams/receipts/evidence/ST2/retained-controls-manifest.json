@@ -1,0 +1,50 @@
+[
+  {
+    "path": "retained-controls/CasGoldens-new-refusal-exhaustiveness.log",
+    "sha256": "aa1c8a741137e53102587a1cefa3b4de24b212f519e59b70e52b63f53bbfe889"
+  },
+  {
+    "path": "retained-controls/K14-payload-phase-old-assertion.log",
+    "sha256": "dfd3e0bb8b22d1436b643db28451acbb6f776b4df8a178477e102cc9f4b2cf75"
+  },
+  {
+    "path": "retained-controls/R4-vacuous.txt",
+    "sha256": "4b13fc76430a68a55cd787cef32cf5f0c883ab92d2b09f5f9db62d808e696b1f"
+  },
+  {
+    "path": "retained-controls/Recovery.goals.lean",
+    "sha256": "a25ffe26230dd42c4352e818fe021ad291358cbd99462f4220aea98e278e760c"
+  },
+  {
+    "path": "retained-controls/Recovery.targets-goal.lean",
+    "sha256": "e616751da02b4b06df1c3782e7adb91cdb1a1e83d6237717ede385da4638a672"
+  },
+  {
+    "path": "retained-controls/disk-oracle-missing.tsv",
+    "sha256": "6fa2a6b1ba84c329e8ab11ac74984c5c13667957d00a057c2f0cded6a2f821be"
+  },
+  {
+    "path": "retained-controls/oracle-missing-red.log",
+    "sha256": "f14753b7efeabc17d27637bd1f8206cc1125bc9fab60a41662abdb58277a77b4"
+  },
+  {
+    "path": "retained-controls/sealed-published-damage-red.log",
+    "sha256": "7b76f0141db5a1b6831e6fd4f563ea93d1fedb9e965777d48130911e8729da8d"
+  },
+  {
+    "path": "retained-controls/test_crash-before-boundary-repair.ml",
+    "sha256": "2ac6eb1692e2500af5f2ecbd2ff77597ad16b00b311fb1f38221076f428aa786"
+  },
+  {
+    "path": "retained-controls/test_pack-before-head-repair.ml",
+    "sha256": "af71f8a7771207641620c6e13dbfb67ff5a9523989654ede445ef6ca7e925163"
+  },
+  {
+    "path": "retained-controls/writer-mutation.json",
+    "sha256": "4f2d617aae55add0177e538ef34addda6f02872cb5070df50257b8c12e3b97aa"
+  },
+  {
+    "path": "retained-controls/writer-publication-red.log",
+    "sha256": "a3af2302a576f73cd22cb22717c24994dc58c0f0f33340f89f467b8f949f8fb7"
+  }
+]

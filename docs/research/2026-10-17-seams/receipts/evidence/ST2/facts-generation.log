@@ -1,0 +1,5 @@
+{"command": ["lean", "-DwarningAsError=true", "--root=/private/tmp/seams-st2-sol/src", "--run", "/private/tmp/seams-st2-sol/src/OCaml5/Tools/CasFacts.lean", "/private/tmp/seams-st2-sol/native-facts"]}
+wrote e4_kind.ml and e4_kind.mli
+wrote e4_admission.ml and e4_admission.mli
+wrote e4_root_policy.ml and e4_root_policy.mli
+exit_status=0

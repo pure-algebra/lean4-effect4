@@ -1,0 +1,266 @@
+[
+  {
+    "source": "src/Effect4/Laws/Store/Recovery.lean",
+    "target": "src/Effect4/Laws/Store/Recovery.lean",
+    "pre_sha256": null,
+    "sha256": "00a05989a7d09cf92fc5a2f43ff98eeae1b1bc42ae9efb652d5f80c0d022b11e"
+  },
+  {
+    "source": "src/Effect4/Store/Domain/Cas.lean",
+    "target": "src/Effect4/Store/Domain/Cas.lean",
+    "pre_sha256": "e8d69ef986e51fc54be236b8d4e8cdaff729c8b45b092ff020564ae61ac99236",
+    "sha256": "8dd7a684a313f515bde6f5d00d72b9bd85e189d8ab84471736a55952fb58fa18"
+  },
+  {
+    "source": "src/Effect4/Store/Domain/Store.lean",
+    "target": "src/Effect4/Store/Domain/Store.lean",
+    "pre_sha256": "7da2a33a4b3794e66d8bd84faa5eed0d2cacbafd826d50937921b9cbd839362a",
+    "sha256": "1cd3070a6658d6ff0c52a650baa46d54cff0beca0ec762ac1466e8840e55aedb"
+  },
+  {
+    "source": "src/Effect4/Store/Domain/Transaction.lean",
+    "target": "src/Effect4/Store/Domain/Transaction.lean",
+    "pre_sha256": "202f6a85f76edfab0a7e75fa7a33c02db2a992b5800b734bd2ec11e26260e298",
+    "sha256": "afd2d4692f76131f1b7d8007fd900591d330324c7d94b56d55a5d19e78c1b653"
+  },
+  {
+    "source": "src/OCaml5/Store/DiskOracle.lean",
+    "target": "src/OCaml5/Store/DiskOracle.lean",
+    "pre_sha256": null,
+    "sha256": "e6a5aaae615c817344aa3a7bddbcd5730bc07aa0d1776228e13750904983abb8"
+  },
+  {
+    "source": "src/OCaml5/Store/Facts.lean",
+    "target": "src/OCaml5/Store/Facts.lean",
+    "pre_sha256": "9f0e25c1355d9206437b540c86e8e169557288c0541e78b687a953a7669243a8",
+    "sha256": "04efab1b6a92dfd31f9181618522175689cfd891899511dab1ef843d2b755040"
+  },
+  {
+    "source": "src/OCaml5/Tools/CasDiskCuts.lean",
+    "target": "src/OCaml5/Tools/CasDiskCuts.lean",
+    "pre_sha256": null,
+    "sha256": "86afce1f8ca2fbd94885340b28950703bbde90e20ebe9a83cf96d1da59290e7f"
+  },
+  {
+    "source": "src/OCaml5/Tools/CasDiskOracle.lean",
+    "target": "src/OCaml5/Tools/CasDiskOracle.lean",
+    "pre_sha256": null,
+    "sha256": "c2f0432ca4d359c3da98a4886855eae190e22dd6ef407c80f9e58ed652e86d86"
+  },
+  {
+    "source": "src/OCaml5/Tools/CasGoldens.lean",
+    "target": "src/OCaml5/Tools/CasGoldens.lean",
+    "pre_sha256": "b047596404e8818fdcc00742e8aa3429ddfdac897dcc27f3dc7d419c44e6f95b",
+    "sha256": "7de1b0e01ad18926a309339dd7e392df2517755c3b5a8f4040abe4dace71ca01"
+  },
+  {
+    "source": "src/Test/Store/SeamsRecovery.lean",
+    "target": "Test/Store/SeamsRecovery.lean",
+    "pre_sha256": null,
+    "sha256": "94bb72973f4e6707f865a07de056b9b433f7049aa212029dceb74f828d88a319"
+  },
+  {
+    "source": "src/Test/Store/SeamsRecoveryAudit.lean",
+    "target": "Test/Store/SeamsRecoveryAudit.lean",
+    "pre_sha256": null,
+    "sha256": "f82fde19eb63d7481b2c1a7a3253ddee063a1213f302289215d207895c57cf2b"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_admission.ml",
+    "target": "ocaml/engine/cas/e4_admission.ml",
+    "pre_sha256": "de1601e19faf50805c2e2d67fa299046e25820c82c27a5dba125cef117dc48b9",
+    "sha256": "7234292f4f25d46e9e6a5b0db3483f7f9beb40335d495d488be1df5a328eb0e5"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_admission.mli",
+    "target": "ocaml/engine/cas/e4_admission.mli",
+    "pre_sha256": "b4361e0bd51e40e917bd72100dfb6f403ca6a0b3f0f344252608c4002c438b26",
+    "sha256": "805855f0707e656656453c9d0575dbf9eb5539469b94a82d29421668002b3b1d"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_cas.ml",
+    "target": "ocaml/engine/cas/e4_cas.ml",
+    "pre_sha256": "8565094af74ed868cc2f5f75c3348e7cf8d24e30522a19387baccaf9d4167b19",
+    "sha256": "877b52e731e2dea6f7e8d98569683eadd5a79df51a376957a241ecec2535fd0e"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_cas.mli",
+    "target": "ocaml/engine/cas/e4_cas.mli",
+    "pre_sha256": "b256d7bb86b0f7545474896464949f5e62c184080d0b4a57bdaa332f9911a731",
+    "sha256": "86a9c95946cf0d1fed9814eb2922002058c19783ed1262f086319dc95d8c96c9"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_disk.ml",
+    "target": "ocaml/engine/cas/e4_disk.ml",
+    "pre_sha256": null,
+    "sha256": "b07826d672449682dc068cab245383acff8186f107cb530472361a4d0ee9cb49"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_disk.mli",
+    "target": "ocaml/engine/cas/e4_disk.mli",
+    "pre_sha256": null,
+    "sha256": "8628fdce2f8814808fa7054d1f535a1ac8df7c37a0bcf1f030e3aa5341daa486"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_fault.ml",
+    "target": "ocaml/engine/cas/e4_fault.ml",
+    "pre_sha256": null,
+    "sha256": "8d683d7f3d20ce76cb2a5962117c7d26f238603705d95c8c18791febcde75055"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_fault.mli",
+    "target": "ocaml/engine/cas/e4_fault.mli",
+    "pre_sha256": null,
+    "sha256": "91c189a3ed07973b7a8add4442adc5f32010bfe21182f9027bec7f3184a2e3f2"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_pack.ml",
+    "target": "ocaml/engine/cas/e4_pack.ml",
+    "pre_sha256": "48090c4fa18ee1395b47273aaed5c1f785c6fb7d022536cfe83cc4433f581d19",
+    "sha256": "63f933b014f11060a87395d32339506a8d3701a11b8b947f7c2e5e5fb1dd1fa1"
+  },
+  {
+    "source": "ocaml/engine/cas/e4_pack.mli",
+    "target": "ocaml/engine/cas/e4_pack.mli",
+    "pre_sha256": "0626ce4893d1b00a66b5cb01996024b7972ffa9cc08b795c623fe047ab899ad6",
+    "sha256": "30cd590359fc82629b8b612f7bcefa6345fd7c155fcd40204d3c48ac42c4a97c"
+  },
+  {
+    "source": "ocaml/engine/cas/goldens/disk-cuts.tsv",
+    "target": "ocaml/engine/cas/goldens/disk-cuts.tsv",
+    "pre_sha256": null,
+    "sha256": "0c30d6e4cb1c612fac6cfac09320c1d3f01cfa6c0b8a025c1919088f29b2d035"
+  },
+  {
+    "source": "ocaml/engine/cas/goldens/disk-oracle.tsv",
+    "target": "ocaml/engine/cas/goldens/disk-oracle.tsv",
+    "pre_sha256": null,
+    "sha256": "4cf5ef33f63c3be3ba0c28a06d3f3e4324c3bd10b4604bea2654eb44e835b79c"
+  },
+  {
+    "source": "ocaml/engine/cas/test/bench_bycid.ml",
+    "target": "ocaml/engine/cas/test/bench_bycid.ml",
+    "pre_sha256": "7201e5c424d224df211e5502746f667d5a25465f5f67c090978e83122f418aaf",
+    "sha256": "589686b4acf1609baf479363fe63ef2801f9b2cfc4743418e47b957acde13eac"
+  },
+  {
+    "source": "ocaml/engine/cas/test/bench_cache.ml",
+    "target": "ocaml/engine/cas/test/bench_cache.ml",
+    "pre_sha256": "a018b4b9d1636cdfe2b0fdd86aaebed7d4b92dd8265421e7c767b36e69684896",
+    "sha256": "59211dd712bf3256645551867b6d5974fc688801aa7be5c105f0e65bd8b9539a"
+  },
+  {
+    "source": "ocaml/engine/cas/test/bench_cas.ml",
+    "target": "ocaml/engine/cas/test/bench_cas.ml",
+    "pre_sha256": "007fd8a6232f9c0785bfec75f7fe40519894ec802e220d601408f10ce227bd8b",
+    "sha256": "7f634ef260abce32659ff8e775694a05b52f0705efe80f78e1a796604352710c"
+  },
+  {
+    "source": "ocaml/engine/cas/test/bench_checkpoint.ml",
+    "target": "ocaml/engine/cas/test/bench_checkpoint.ml",
+    "pre_sha256": "cddcea991ccb609e0315527b95d895c3e273bf4655eac365eefa1686d15fa1b4",
+    "sha256": "f436e4715e3932a2b1a06385014178e0edc813aef40a8f23c2f0048bdea37404"
+  },
+  {
+    "source": "ocaml/engine/cas/test/disk_test_support.ml",
+    "target": "ocaml/engine/cas/test/disk_test_support.ml",
+    "pre_sha256": null,
+    "sha256": "596d875c30f70c9144c25e3ecd15626aacf3a608ea4f71f73e1891ef220169d0"
+  },
+  {
+    "source": "ocaml/engine/cas/test/dune",
+    "target": "ocaml/engine/cas/test/dune",
+    "pre_sha256": "e669a906592603e7b1d96b51b3a19dbc2314077aa155efe2448d8003ada87bb4",
+    "sha256": "e53e1b96b86725d8f325a226274431e768da6de7d4b07c1f1f5b33a90d6c9e3f"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_cache.ml",
+    "target": "ocaml/engine/cas/test/test_cache.ml",
+    "pre_sha256": "eb81ac8fd559ddc5511ccc56665aedbf7b681db03665ba66e34d2271fe85d877",
+    "sha256": "024fe420c205bc5fd7fb95e6597ace77fd744141b372039f7135ae75fba9fa46"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_cas.ml",
+    "target": "ocaml/engine/cas/test/test_cas.ml",
+    "pre_sha256": "e409ad9badec20058e5c749f499c9dd939fb3e7819ed06acb3367c4f8577eda3",
+    "sha256": "2b75f4a370cc9f8ff11b7e19842af1de4470ada95e1afe3f70f0169ef1582560"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_checkpoint.ml",
+    "target": "ocaml/engine/cas/test/test_checkpoint.ml",
+    "pre_sha256": "7cf4ddfbd4883efba4a72f31c51265435dfda3fc82971c4c128fd7885e11c83c",
+    "sha256": "ebe2d442f814e20585a1e9375bccec575c7f8fa28d9ceb7cc66a0227a4ac92e1"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_control.ml",
+    "target": "ocaml/engine/cas/test/test_control.ml",
+    "pre_sha256": "25ada6ab3ad7842f30438aeb858e713d37311a5b55b2ca97fbcb132f7ce2fddc",
+    "sha256": "169cca74bb80e2b2fcc487f9bda017a10be62ab0bc24b4b834d2cb72f6cbf14e"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_crash.ml",
+    "target": "ocaml/engine/cas/test/test_crash.ml",
+    "pre_sha256": "7287f07567c656b880efc67c9d5adefc723417ef0788b9ac9f330da522c88ac3",
+    "sha256": "db71ec9689b7bb3ca53bcb1857b904cf8b6376cb9e08c673c525e790988d8df4"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_disk.ml",
+    "target": "ocaml/engine/cas/test/test_disk.ml",
+    "pre_sha256": null,
+    "sha256": "f19343f1df5e30d70d3c5b97f8d8e184e93b74a4c4f9aa619fe3e23236338901"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_disk_boundary.ml",
+    "target": "ocaml/engine/cas/test/test_disk_boundary.ml",
+    "pre_sha256": null,
+    "sha256": "c8cb41422f20a9ae3f5cd40a14ebe4e95aa972f3deb566ce040b44847ff92652"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_disk_damage.ml",
+    "target": "ocaml/engine/cas/test/test_disk_damage.ml",
+    "pre_sha256": null,
+    "sha256": "31fb04c72a210c8214899d86f59075a15403d611390d7d3bc36305be59fdf6eb"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_disk_kill.ml",
+    "target": "ocaml/engine/cas/test/test_disk_kill.ml",
+    "pre_sha256": null,
+    "sha256": "e20af3af7621ac78349bc9875bc5d0ac1b1b9a834b1deaae2cb1ae92a56bfb1d"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_disk_stm.ml",
+    "target": "ocaml/engine/cas/test/test_disk_stm.ml",
+    "pre_sha256": null,
+    "sha256": "883faaffc6b90a9d5cf0b053bd2fa4e7d5c2bd57cc345f2582f3a6e6046087e8"
+  },
+  {
+    "source": "ocaml/engine/cas/test/test_pack.ml",
+    "target": "ocaml/engine/cas/test/test_pack.ml",
+    "pre_sha256": "151212e53cdae0e315d06783bd60f30f25c329c57d846666dd29074ca5248c59",
+    "sha256": "36a6fd002c7bbc7ec8b7f27d91f49337781b04adbfac99e8a9b75b1ff4c5f9e2"
+  },
+  {
+    "source": "scripts/generate.py",
+    "target": "scripts/generate.py",
+    "pre_sha256": "f90f9f99a8a99a636fad7f08506e513bc5733ac69d6f182d550d3159e0233cb0",
+    "sha256": "06d914e3044ae5ece84687ac48eae74834acc1731f4e91e50054963619053ffb"
+  },
+  {
+    "source": "Makefile",
+    "target": "Makefile",
+    "pre_sha256": "98a14e84e4e8f9e18cd85f7acd7e7734fb4df0c09034cd3e45f86bff101e03c0",
+    "sha256": "19bd51177d910badab8372ae5386c7e88b1137676ee0377846639f3a79b680c8"
+  },
+  {
+    "source": "docs/GENERATED.md",
+    "target": "docs/GENERATED.md",
+    "pre_sha256": "92b7aeeb00b1849c697a78ebf27093e568cc67ecf2af8bfa66bcb4700fe74a77",
+    "sha256": "435d8f5c641aeafc5a1107c96da69e6f3c175648696033e1490f3a4986b50115"
+  },
+  {
+    "source": ".github/actions/ocaml/action.yml",
+    "target": ".github/actions/ocaml/action.yml",
+    "pre_sha256": "6d399d177f63ccb1f493e2c70e86b9e583b86bace4234a4ab3d1d6f3c574c2bc",
+    "sha256": "355ee7ed85b46b9b1e99b89b579daf96c6080a85934cb9d8fbe88abc720e0f53"
+  }
+]

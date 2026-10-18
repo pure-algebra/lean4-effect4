@@ -1,0 +1,19 @@
+Constructing initial basis...
+Number of 0-1 knapsack inequalities = 4419
+Constructing conflict graph...
+Conflict graph has 1072 + 615 = 1687 vertices
+The following actions will be performed:
+  ∗ install qcheck-core                0.91 [required by qcheck-stm]
+  ∗ install qcheck-multicoretests-util 0.10 [required by qcheck-stm]
+  ∗ install qcheck-stm                 0.10
+===== ∗ 3 =====
+
+<><> Processing actions <><><><><><><><><><><><><><><><><><><><><><><><><><>  🐫 
+⬇ retrieved qcheck-multicoretests-util.0.10  (https://github.com/ocaml-multicore/multicoretests/archive/refs/tags/0.10.tar.gz)
+⬇ retrieved qcheck-core.0.91  (https://github.com/c-cube/qcheck/archive/v0.91.tar.gz)
+⬇ retrieved qcheck-stm.0.10  (https://github.com/ocaml-multicore/multicoretests/archive/refs/tags/0.10.tar.gz)
+∗ installed qcheck-core.0.91
+∗ installed qcheck-multicoretests-util.0.10
+∗ installed qcheck-stm.0.10
+Done.
+# Run eval $(opam env) to update the current shell environment

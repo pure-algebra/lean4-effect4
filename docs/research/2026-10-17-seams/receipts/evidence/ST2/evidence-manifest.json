@@ -1,0 +1,66 @@
+[
+  {
+    "path": "build-overlay.log",
+    "sha256": "753f6cc6ff0c7a5f42d6813cb22223e365f9bb1b30bc8e08e5d8271564c03ed0"
+  },
+  {
+    "path": "generate-goldens.log",
+    "sha256": "bd93b1c04772b296429f3bdb3a5d24118ed8e0b7e94a13efcf8707ad08d28d1f"
+  },
+  {
+    "path": "CasDiskOracle.log",
+    "sha256": "c034eb52bade8c16e76674380784912911d8e29aa9544b6eb8223b14c6d81ed3"
+  },
+  {
+    "path": "CasDiskCuts.log",
+    "sha256": "a45a824bdb572d032d7614c006a4dd2a197f7b76022ed2581a9a83b82a8a9029"
+  },
+  {
+    "path": "generate-rocq.log",
+    "sha256": "6b749315a6ceb135b4df52bf83a1321ec1afb938b39db9f68513b2ea5dcec450"
+  },
+  {
+    "path": "rocq-st2.log",
+    "sha256": "ebe7cdd576e6d94ed542e0cb688685488f0c5f14da678046225e0468e17ccbb3"
+  },
+  {
+    "path": "native-full-store-final.log",
+    "sha256": "0c6f4ae32c3e0e550faa4a96a5ca1e87e11cc6cfda12cb3e07269e5c1c28977a"
+  },
+  {
+    "path": "native-all-build.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "opam-install.log",
+    "sha256": "79a5309305b523ddda46e6d46336f3418018843f9b3cfb38e4611360e58832a5"
+  },
+  {
+    "path": "opam-compare.txt",
+    "sha256": "63c953ce6d7c3232cc8c5a30081b8c71e69a5a6f60fc576fd01660627d1aa147"
+  },
+  {
+    "path": "REPORT.md",
+    "sha256": "4c423d2f83dfbee824001325c51c2bb36e93a2517465dedfabb704bafee3f58c"
+  },
+  {
+    "path": "NEXT-ST3.md",
+    "sha256": "666935016d4e3e768d0b50eb3ac286c1a6fcd139e50e1ba4f24bcd2a0ba494d0"
+  },
+  {
+    "path": "st2-all.patch",
+    "sha256": "ddc632febdeac1d785c8a106d2ff767a1265e0ad1675341df6fe3f12971ecf9c"
+  },
+  {
+    "path": "source-manifest.json",
+    "sha256": "85184114a1dcd1900308f496d50ecaa9b81f561e8b0005a88b0979698d37f6eb"
+  },
+  {
+    "path": "patch-check.log",
+    "sha256": "ed163d69a09ddc0ffcbdf126a42d5745a93449fa7a39354788e948b7ac795c04"
+  },
+  {
+    "path": "retained-controls-manifest.json",
+    "sha256": "a57991b35e95b878a3add79366373e64aaaf87d8bd404a40afa45dc81cb1dabf"
+  }
+]

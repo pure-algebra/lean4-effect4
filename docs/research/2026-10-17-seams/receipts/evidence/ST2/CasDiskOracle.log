@@ -1,0 +1,3 @@
+["lean", "-M6144", "-DwarningAsError=true", "--run", "/private/tmp/seams-st2-sol/src/OCaml5/Tools/CasDiskOracle.lean", "/private/tmp/seams-st2-sol/ocaml/engine/cas/goldens/disk-oracle.tsv"]
+wrote /private/tmp/seams-st2-sol/ocaml/engine/cas/goldens/disk-oracle.tsv
+exit_status=0

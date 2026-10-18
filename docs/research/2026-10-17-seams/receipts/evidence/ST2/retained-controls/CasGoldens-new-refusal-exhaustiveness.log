@@ -1,0 +1,5 @@
+["lean", "-M4096", "-DwarningAsError=true", "--run", "/private/tmp/seams-st2-sol/src/OCaml5/Tools/CasGoldens.lean", "/private/tmp/seams-st2-sol/ocaml/engine/cas/goldens"]
+/private/tmp/seams-st2-sol/src/OCaml5/Tools/CasGoldens.lean:146:2: error: Missing cases:
+(Except.error TxnRefusal.restoreNonempty)
+(Except.error (TxnRefusal.duplicateRoot (String.ofByteArray (ByteArray.mk (Array.mk _)) (ByteArray.IsValidUTF8.intro _ _))))
+exit_status=1

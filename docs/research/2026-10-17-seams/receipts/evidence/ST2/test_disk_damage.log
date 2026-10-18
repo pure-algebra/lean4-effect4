@@ -1,0 +1,9 @@
+["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st2-sol/ocaml", "engine/cas/test/test_disk_damage.exe"]
+interior sealed bad head: Fault sealedDamage 1:0 Bad_head(seg=1)
+interior sealed bad head: pack evidence unchanged=true, control unchanged=true
+short sealed trailing head: Fault sealedDamage 2:0 Bad_head(seg=2)
+short sealed trailing head: pack evidence unchanged=true, control unchanged=true
+published boundary beyond truncated bytes: Fault store published durable boundary is outside the pack
+published boundary beyond truncated bytes: pack evidence unchanged=true, control unchanged=true
+published and sealed damage return faults without changing evidence
+exit_status=0
