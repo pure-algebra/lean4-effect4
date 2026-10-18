@@ -84,6 +84,17 @@ structure HoleView where
   path : List Nat
   focus : Option (TyEnv × EffTy)
 
+/-- **One declared hole**: its index in the hole table, its name, the exact program that performs
+it (`Sketch.hole`: the row after the application's rows, on a unit request), and whether the
+program performs it anywhere. A declared hole the program never performs shows here: hole 0 of
+an application with one row is `external 1`, never `external 0`. -/
+structure HoleDecl where
+  index : Nat
+  name : String
+  perform : NativeEff
+  performed : Bool
+deriving DecidableEq
+
 /-- **What the tool answers at an address**: the sub-program, its signature context, its focus,
 its table entry and any refusal there. -/
 structure Inspection where
@@ -102,13 +113,14 @@ structure SlotView where
   env : Option TyEnv
   ty : Option Ty
 
-/-- **What the tool shows of a document**: snapshot, root type, refusals, holes and an optional
-inspection. -/
+/-- **What the tool shows of a document**: snapshot, root type, refusals, every hole occurrence,
+every declared hole with its exact `perform` term, and an optional inspection. -/
 structure DocView where
   snap : Program.Snap
   type : Option EffTy
   refusals : List TypeRefusal
   holes : List HoleView
+  declared : List HoleDecl
   inspection : Option Inspection
 
 /-- In this order: `noDocument`, then the document's own (`foreign`, `stale`, …), then the action's. -/

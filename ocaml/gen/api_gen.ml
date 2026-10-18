@@ -1217,6 +1217,7 @@ and doc_view = {
   type_ : EffTy.t option;
   refusals : (int list, type_reason) located list;
   holes : hole_view list;
+  declared : hole_decl list;
   inspection : effect4_tool_inspection option;
 }
 and doc = { origin : doc_origin; history : doc_action list; runtime : effect4_program_doc_internal_state }
@@ -1398,6 +1399,12 @@ and work = {
   timers : (fiber_id * E4_clock.t) list;
 }
 and retired_call = { bound : bound_call; pending : effect4_api_host_session_reply option }
+and hole_decl = {
+  index : int;
+  name : string;
+  perform : NativeOp.t Eff.t;
+  performed : bool;
+}
 and effect4_run_preview_refusal =
   | Effect4_run_preview_refusal_admission of admit_refusal
   | Effect4_run_preview_refusal_outsideTree of int list
@@ -50928,6 +50935,35 @@ let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_d
 
 
 
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_HoleDeclC.toVal (x.1 : Effect4.Tool.HoleDecl) : Effect4.Store.Val *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_decl_c_to_val (x_1 : hole_decl) : Val.t =
+  match (x_1 : hole_decl) with
+    | { index = index_2; name = name_3; perform = perform_4; performed = performed_5 } -> (let _x_6 = 0 in
+      let _x_7 = Val.Nat index_2 in
+      let _x_8 = Val.Str name_3 in
+      let _x_9 = store_program_gen_eff_c_to_val_eff perform_4 in
+      let _x_10 = Val.Bool performed_5 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      let _x_13 = _x_9 :: _x_12 in
+      let _x_14 = _x_8 :: _x_13 in
+      let _x_15 = _x_7 :: _x_14 in
+      Val.Ctor (_x_6, _x_15))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_DocViewC.toVal.spec_1 (a.1 : List Effect4.Tool.HoleDecl) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_1 (a_1 : hole_decl list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_decl_c_to_val head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_1 tail_5 _x_7)
+
+
+
 (* LCNF mono: Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_PartSigC.toVal (x.1 : Effect4.Program.PartSig) : Effect4.Store.Val *)
 
 let store_check_gen_t_95_root_95__46_effect4_46_program_46_part_sig_c_to_val (x_1 : part_sig) : Val.t =
@@ -51058,18 +51094,18 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val (x_1 
       let _x_12 = store_program_gen_eff_c_to_val_eff expected_3 in
       let _x_13 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_to_val context_4 in
       let[@local always] _jp_14 = fun _y_15 _y_16 _y_17 -> let _x_18 = _y_17 :: _x_9 in
-      let _x_19 = _y_16 :: _x_18 in
-      let _x_20 = _y_15 :: _x_19 in
+      let _x_19 = _y_15 :: _x_18 in
+      let _x_20 = _y_16 :: _x_19 in
       let _x_21 = _x_13 :: _x_20 in
       let _x_22 = _x_12 :: _x_21 in
       let _x_23 = _x_11 :: _x_22 in
       Val.Ctor (_x_8, _x_23) in
       let[@local always] _jp_25 = fun _y_26 _y_27 -> match refusal_7 with
         | None -> (let _x_28 = Val.None in
-          _jp_14 _y_26 _y_27 _x_28)
+          _jp_14 _y_27 _y_26 _x_28)
         | Some val__29 -> (let _x_30 = store_refusals_gen_located_c_to_val val__29 in
           let _x_31 = Val.Some _x_30 in
-          _jp_14 _y_26 _y_27 _x_31) in
+          _jp_14 _y_27 _y_26 _x_31) in
       let[@local always] _jp_32 = fun _y_33 -> match entry_6 with
         | None -> (let _x_34 = Val.None in
           _jp_25 _y_33 _x_34)
@@ -51089,31 +51125,34 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val (x_1 
 
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val (x_1 : doc_view) : Val.t =
   match (x_1 : doc_view) with
-    | { snap = snap_2; type_ = type__3; refusals = refusals_4; holes = holes_5; inspection = inspection_6 } -> (let _x_7 = 0 in
-      let _x_8 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_to_val snap_2 in
-      let[@local always] _jp_9 = fun _y_10 _y_11 _y_12 _y_13 _y_14 -> let _x_15 = _y_14 :: _y_11 in
-      let _x_16 = _y_10 :: _x_15 in
-      let _x_17 = _y_12 :: _x_16 in
-      let _x_18 = _y_13 :: _x_17 in
-      let _x_19 = _x_8 :: _x_18 in
-      Val.Ctor (_x_7, _x_19) in
-      let[@local always] _jp_21 = fun _y_22 -> let _x_23 = [] in
-      let _x_24 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 refusals_4 _x_23 in
-      let _x_25 = Val.List _x_24 in
-      let _x_26 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_0 holes_5 _x_23 in
-      let _x_27 = Val.List _x_26 in
-      match inspection_6 with
-        | None -> (let _x_28 = Val.None in
-          _jp_9 _x_27 _x_23 _x_25 _y_22 _x_28)
-        | Some val__29 -> (let _x_30 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val val__29 in
-          let _x_31 = Val.Some _x_30 in
-          _jp_9 _x_27 _x_23 _x_25 _y_22 _x_31) in
+    | { snap = snap_2; type_ = type__3; refusals = refusals_4; holes = holes_5; declared = declared_6; inspection = inspection_7 } -> (let _x_8 = 0 in
+      let _x_9 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_to_val snap_2 in
+      let[@local always] _jp_10 = fun _y_11 _y_12 _y_13 _y_14 _y_15 _y_16 -> let _x_17 = _y_16 :: _y_11 in
+      let _x_18 = _y_12 :: _x_17 in
+      let _x_19 = _y_14 :: _x_18 in
+      let _x_20 = _y_15 :: _x_19 in
+      let _x_21 = _y_13 :: _x_20 in
+      let _x_22 = _x_9 :: _x_21 in
+      Val.Ctor (_x_8, _x_22) in
+      let[@local always] _jp_24 = fun _y_25 -> let _x_26 = [] in
+      let _x_27 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 refusals_4 _x_26 in
+      let _x_28 = Val.List _x_27 in
+      let _x_29 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_0 holes_5 _x_26 in
+      let _x_30 = Val.List _x_29 in
+      let _x_31 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_1 declared_6 _x_26 in
+      let _x_32 = Val.List _x_31 in
+      match inspection_7 with
+        | None -> (let _x_33 = Val.None in
+          _jp_10 _x_26 _x_32 _y_25 _x_30 _x_28 _x_33)
+        | Some val__34 -> (let _x_35 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val val__34 in
+          let _x_36 = Val.Some _x_35 in
+          _jp_10 _x_26 _x_32 _y_25 _x_30 _x_28 _x_36) in
       match type__3 with
-        | None -> (let _x_32 = Val.None in
-          _jp_21 _x_32)
-        | Some val__33 -> (let _x_34 = store_program_gen_eff_ty_c_to_val val__33 in
-          let _x_35 = Val.Some _x_34 in
-          _jp_21 _x_35))
+        | None -> (let _x_37 = Val.None in
+          _jp_24 _x_37)
+        | Some val__38 -> (let _x_39 = store_program_gen_eff_ty_c_to_val val__38 in
+          let _x_40 = Val.Some _x_39 in
+          _jp_24 _x_40))
 
 
 
@@ -52686,16 +52725,16 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_slot_view_c_to_val (x_1 :
       let _x_7 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_ext_slot_c_to_val slot_2 in
       let[@local always] _jp_8 = fun _y_9 _y_10 _y_11 -> let _x_12 = [] in
       let _x_13 = _y_11 :: _x_12 in
-      let _x_14 = _y_10 :: _x_13 in
-      let _x_15 = _y_9 :: _x_14 in
+      let _x_14 = _y_9 :: _x_13 in
+      let _x_15 = _y_10 :: _x_14 in
       let _x_16 = _x_7 :: _x_15 in
       Val.Ctor (_x_6, _x_16) in
       let[@local always] _jp_18 = fun _y_19 _y_20 -> match ty_5 with
         | None -> (let _x_21 = Val.None in
-          _jp_8 _y_19 _y_20 _x_21)
+          _jp_8 _y_20 _y_19 _x_21)
         | Some val__22 -> (let _x_23 = store_program_gen_ty_c_to_val_ty val__22 in
           let _x_24 = Val.Some _x_23 in
-          _jp_8 _y_19 _y_20 _x_24) in
+          _jp_8 _y_20 _y_19 _x_24) in
       let[@local always] _jp_25 = fun _y_26 -> match env_4 with
         | None -> (let _x_27 = Val.None in
           _jp_18 _y_26 _x_27)
@@ -53205,6 +53244,19 @@ let program_edit_session_view (l : edit_session) : effect4_program_edit_session_
 let program_source_session_view (s : source_session) : effect4_program_edit_session_view =
   let _x_1 = program_source_session_shown s in
   program_edit_session_view _x_1
+
+
+
+(* LCNF mono: Effect4.Program.Sketch.hole (app : Effect4.Program.SigApp) (k : Nat) : Effect4.Program.Eff Effect4.Program.NativeOp *)
+
+let program_sketch_hole (app : sig_app) (k : int) : NativeOp.t Eff.t =
+  match (app : sig_app) with
+    | { rows = rows; _ } -> (let _x_1 = List.length rows in
+      let _x_2 = _x_1 + k in
+      let _x_3 = NativeOp.External _x_2 in
+      let _x_4 = Lit.Unit in
+      let _x_5 = Term.Lit _x_4 in
+      Eff.Perform (_x_3, _x_5))
 
 
 
@@ -55078,43 +55130,47 @@ let program_inst_decidable_eq_node_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ nod
 
 
 
-(* LCNF mono: List.filterTR.loop._at_.Effect4.Tool.Internal.docView.spec_0._lam_0 (a : Effect4.Program.Node Effect4.Program.NativeOp) (b : Effect4.Program.Node Effect4.Program.NativeOp) : Bool *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Tool.Internal.docView.spec_1._lam_0 (a : Effect4.Program.Node Effect4.Program.NativeOp) (b : Effect4.Program.Node Effect4.Program.NativeOp) : Bool *)
 
-let list_filter_tr_loop_at_tool_internal_doc_view_spec_0__lam_0 (a : NativeOp.t node) (b : NativeOp.t node) : bool =
+let list_filter_tr_loop_at_tool_internal_doc_view_spec_1__lam_0 (a : NativeOp.t node) (b : NativeOp.t node) : bool =
   let _x_1 = program_inst_decidable_eq_native_op in
   program_inst_decidable_eq_node_dec_eq _x_1 a b
 
 
 
-(* LCNF mono: Effect4.Program.Sketch.hole (app : Effect4.Program.SigApp) (k : Nat) : Effect4.Program.Eff Effect4.Program.NativeOp *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Tool.Internal.docView.spec_1 (program : Effect4.Program.Eff Effect4.Program.NativeOp) (term : Effect4.Program.Eff Effect4.Program.NativeOp) (a.1 : List (List Nat)) (a.2 : List (List Nat)) : List (List Nat) *)
 
-let program_sketch_hole (app : sig_app) (k : int) : NativeOp.t Eff.t =
-  match (app : sig_app) with
-    | { rows = rows; _ } -> (let _x_1 = List.length rows in
-      let _x_2 = _x_1 + k in
-      let _x_3 = NativeOp.External _x_2 in
-      let _x_4 = Lit.Unit in
-      let _x_5 = Term.Lit _x_4 in
-      Eff.Perform (_x_3, _x_5))
+let rec list_filter_tr_loop_at_tool_internal_doc_view_spec_1 (program : NativeOp.t Eff.t) (term : NativeOp.t Eff.t) (a_1 : int list list) (a_2 : int list list) : int list list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _f_6 = list_filter_tr_loop_at_tool_internal_doc_view_spec_1__lam_0 in
+      let _x_7 = Node_eff program in
+      let _x_8 = program_node_at_ _x_7 head_4 in
+      let _x_9 = Node_eff term in
+      let _x_10 = Some _x_9 in
+      let _x_11 = option_inst_decidable_eq _f_6 _x_8 _x_10 in
+      if _x_11 then (let _x_13 = head_4 :: a_2 in
+        list_filter_tr_loop_at_tool_internal_doc_view_spec_1 program term tail_5 _x_13) else list_filter_tr_loop_at_tool_internal_doc_view_spec_1 program term tail_5 a_2)
 
 
 
-(* LCNF mono: List.filterTR.loop._at_.Effect4.Tool.Internal.docView.spec_0 (_x.1 : Effect4.Program.SourceSession) (snd.2 : Nat) (a.3 : List (List Nat)) (a.4 : List (List Nat)) : List (List Nat) *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.docView.spec_2 (_x.1 : Effect4.Program.SourceSession) (program : Effect4.Program.Eff Effect4.Program.NativeOp) (a.2 : List (Prod Effect4.Program.Row Nat)) (a.3 : List (Prod Effect4.Program.Row (Prod Nat (Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List (List Nat)))))) : List (Prod Effect4.Program.Row (Prod Nat (Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List (List Nat))))) *)
 
-let rec list_filter_tr_loop_at_tool_internal_doc_view_spec_0 (_x_1 : source_session) (snd_2 : int) (a_3 : int list list) (a_4 : int list list) : int list list =
-  match a_3 with
-    | [] -> List.rev a_4
-    | head_6 :: tail_7 -> (match (_x_1 : source_session) with
-        | { app = app; sketch = sketch; _ } -> (match (sketch : sketch) with
-            | { program = program; _ } -> (let _f_8 = list_filter_tr_loop_at_tool_internal_doc_view_spec_0__lam_0 in
+let rec list_map_tr_loop_at_tool_internal_doc_view_spec_2 (_x_1 : source_session) (program : NativeOp.t Eff.t) (a_2 : (Row.t * int) list) (a_3 : (Row.t * (int * (NativeOp.t Eff.t * int list list))) list) : (Row.t * (int * (NativeOp.t Eff.t * int list list))) list =
+  match a_2 with
+    | [] -> List.rev a_3
+    | head_5 :: tail_6 -> (match head_5 with
+        | fst_7, snd_8 -> (match (_x_1 : source_session) with
+            | { app = app; _ } -> (let term = program_sketch_hole app snd_8 in
               let _x_9 = Node_eff program in
-              let _x_10 = program_node_at_ _x_9 head_6 in
-              let _x_11 = program_sketch_hole app snd_2 in
-              let _x_12 = Node_eff _x_11 in
-              let _x_13 = Some _x_12 in
-              let _x_14 = option_inst_decidable_eq _f_8 _x_10 _x_13 in
-              if _x_14 then (let _x_16 = head_6 :: a_4 in
-                list_filter_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 snd_2 tail_7 _x_16) else list_filter_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 snd_2 tail_7 a_4)))
+              let _x_10 = program_node_addresses _x_9 in
+              let _x_11 = [] in
+              let _x_12 = list_filter_tr_loop_at_tool_internal_doc_view_spec_1 program term _x_10 _x_11 in
+              let _x_13 = term, _x_12 in
+              let _x_14 = snd_8, _x_13 in
+              let _x_15 = fst_7, _x_14 in
+              let _x_16 = _x_15 :: a_3 in
+              list_map_tr_loop_at_tool_internal_doc_view_spec_2 _x_1 program tail_6 _x_16)))
 
 
 
@@ -55138,41 +55194,58 @@ let program_source_session_focus_at (s : source_session) (path : int list) : Nat
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.docView.spec_1 (_x.1 : Effect4.Program.SourceSession) (snd.2 : Nat) (fst.3 : Effect4.Program.Row) (a.4 : List (List Nat)) (a.5 : List Effect4.Tool.HoleView) : List Effect4.Tool.HoleView *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.docView.spec_0 (_x.1 : Effect4.Program.SourceSession) (fst.2 : Nat) (fst.3 : Effect4.Program.Row) (a.4 : List (List Nat)) (a.5 : List Effect4.Tool.HoleView) : List Effect4.Tool.HoleView *)
 
-let rec list_map_tr_loop_at_tool_internal_doc_view_spec_1 (_x_1 : source_session) (snd_2 : int) (fst_3 : Row.t) (a_4 : int list list) (a_5 : hole_view list) : hole_view list =
+let rec list_map_tr_loop_at_tool_internal_doc_view_spec_0 (_x_1 : source_session) (fst_2 : int) (fst_3 : Row.t) (a_4 : int list list) (a_5 : hole_view list) : hole_view list =
   match a_4 with
     | [] -> List.rev a_5
     | head_7 :: tail_8 -> (let[@local always] _jp_9 = fun _y_10 -> let _x_11 = _y_10 :: a_5 in
-      list_map_tr_loop_at_tool_internal_doc_view_spec_1 _x_1 snd_2 fst_3 tail_8 _x_11 in
+      list_map_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 fst_2 fst_3 tail_8 _x_11 in
       let _x_13 = program_source_session_focus_at _x_1 head_7 in
       match _x_13 with
         | None -> (let _x_14 = None in
-          let _x_15 = ({ index = snd_2; row = fst_3; path = head_7; focus = _x_14 } : hole_view) in
+          let _x_15 = ({ index = fst_2; row = fst_3; path = head_7; focus = _x_14 } : hole_view) in
           _jp_9 _x_15)
         | Some val__16 -> (match (val__16 : _ focus) with
             | { env = env; ty = ty; _ } -> (let _x_17 = env, ty in
               let _x_18 = Some _x_17 in
-              let _x_19 = ({ index = snd_2; row = fst_3; path = head_7; focus = _x_18 } : hole_view) in
+              let _x_19 = ({ index = fst_2; row = fst_3; path = head_7; focus = _x_18 } : hole_view) in
               _jp_9 _x_19)))
 
 
 
-(* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Tool.Internal.docView.spec_2 (_x.1 : Effect4.Program.SourceSession) (a.2 : List (Prod Effect4.Program.Row Nat)) (a.3 : Array Effect4.Tool.HoleView) : List Effect4.Tool.HoleView *)
+(* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Tool.Internal.docView.spec_3 (_x.1 : Effect4.Program.SourceSession) (a.2 : List (Prod Effect4.Program.Row (Prod Nat (Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List (List Nat)))))) (a.3 : Array Effect4.Tool.HoleView) : List Effect4.Tool.HoleView *)
 
-let rec list_flat_map_tr_go_at_tool_internal_doc_view_spec_2 (_x_1 : source_session) (a_2 : (Row.t * int) list) (a_3 : hole_view Lcnf_array.t) : hole_view list =
+let rec list_flat_map_tr_go_at_tool_internal_doc_view_spec_3 (_x_1 : source_session) (a_2 : (Row.t * (int * (NativeOp.t Eff.t * int list list))) list) (a_3 : hole_view Lcnf_array.t) : hole_view list =
   match a_2 with
     | [] -> Lcnf_array.to_list a_3
     | head_5 :: tail_6 -> (match head_5 with
-        | fst_7, snd_8 -> (match (_x_1 : source_session) with
-            | { sketch = sketch; _ } -> (match (sketch : sketch) with
-                | { program = program; _ } -> (let _x_9 = Node_eff program in
-                  let _x_10 = program_node_addresses _x_9 in
-                  let _x_11 = [] in
-                  let paths = list_filter_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 snd_8 _x_10 _x_11 in
-                  let _x_12 = list_map_tr_loop_at_tool_internal_doc_view_spec_1 _x_1 snd_8 fst_7 paths _x_11 in
-                  let _x_13 = Lcnf_array.append_list a_3 _x_12 in
-                  list_flat_map_tr_go_at_tool_internal_doc_view_spec_2 _x_1 tail_6 _x_13))))
+        | fst_7, snd_8 -> (match snd_8 with
+            | fst_9, snd_10 -> (match snd_10 with
+                | _, snd_12 -> (let _x_13 = [] in
+                  let _x_14 = list_map_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 fst_9 fst_7 snd_12 _x_13 in
+                  let _x_15 = Lcnf_array.append_list a_3 _x_14 in
+                  list_flat_map_tr_go_at_tool_internal_doc_view_spec_3 _x_1 tail_6 _x_15))))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.docView.spec_4 (a.1 : List (Prod Effect4.Program.Row (Prod Nat (Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List (List Nat)))))) (a.2 : List Effect4.Tool.HoleDecl) : List Effect4.Tool.HoleDecl *)
+
+let rec list_map_tr_loop_at_tool_internal_doc_view_spec_4 (a_1 : (Row.t * (int * (NativeOp.t Eff.t * int list list))) list) (a_2 : hole_decl list) : hole_decl list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let[@local always] _jp_6 = fun _y_7 -> let _x_8 = _y_7 :: a_2 in
+      list_map_tr_loop_at_tool_internal_doc_view_spec_4 tail_5 _x_8 in
+      match head_4 with
+        | fst_10, snd_11 -> (match snd_11 with
+            | fst_12, snd_13 -> (match snd_13 with
+                | fst_14, snd_15 -> (match (fst_10 : Row.t) with
+                    | { Row.name = name; _ } -> (let _x_16 = snd_15 = [] in
+                      if _x_16 then (let _x_19 = false in
+                        let _x_20 = ({ index = fst_12; name = name; perform = fst_14; performed = _x_19 } : hole_decl) in
+                        _jp_6 _x_20) else (let _x_17 = true in
+                        let _x_18 = ({ index = fst_12; name = name; perform = fst_14; performed = _x_17 } : hole_decl) in
+                        _jp_6 _x_18))))))
 
 
 
@@ -55192,15 +55265,18 @@ let tool_internal_doc_view (d : doc) : doc_view =
   let _x_1 = program_doc_session d in
   match (_x_1 : source_session) with
     | { sketch = sketch; _ } -> (match (sketch : sketch) with
-        | { holes = holes; _ } -> (let v = program_source_session_view _x_1 in
+        | { program = program; holes = holes } -> (let v = program_source_session_view _x_1 in
+          let _x_2 = 0 in
+          let _x_3 = list_zip_idx_tr holes _x_2 in
+          let _x_4 = [] in
+          let found = list_map_tr_loop_at_tool_internal_doc_view_spec_2 _x_1 program _x_3 _x_4 in
           match (v : effect4_program_edit_session_view) with
-            | { refusals = refusals; type_ = type_; _ } -> (let _x_2 = 0 in
-              let _x_3 = list_zip_idx_tr holes _x_2 in
-              let _x_4 = Lcnf_array.with_capacity _x_2 in
-              let holes_1 = list_flat_map_tr_go_at_tool_internal_doc_view_spec_2 _x_1 _x_3 _x_4 in
-              let _x_5 = program_doc_snap d in
-              let _x_6 = None in
-              ({ snap = _x_5; type_ = type_; refusals = refusals; holes = holes_1; inspection = _x_6 } : doc_view))))
+            | { refusals = refusals; type_ = type_; _ } -> (let _x_5 = Lcnf_array.with_capacity _x_2 in
+              let holes_1 = list_flat_map_tr_go_at_tool_internal_doc_view_spec_3 _x_1 found _x_5 in
+              let declared = list_map_tr_loop_at_tool_internal_doc_view_spec_4 found _x_4 in
+              let _x_6 = program_doc_snap d in
+              let _x_7 = None in
+              ({ snap = _x_6; type_ = type_; refusals = refusals; holes = holes_1; declared = declared; inspection = _x_7 } : doc_view))))
 
 
 
@@ -57603,20 +57679,19 @@ let rec list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 (target
   match a_2 with
     | [] -> Lcnf_array.to_list a_3
     | head_5 :: tail_6 -> (match (head_5 : entry) with
-        | { path = path; env = env; _ } -> (let _x_7 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_8 = inst_decidable_eq_list _x_7 path target_path in
-          if _x_8 then list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3 else (match (_x_1 : sketch) with
-              | { program = program; _ } -> (let _x_9 = Node_eff program in
-                let _x_10 = program_node_at_ _x_9 path in
-                match _x_10 with
-                  | Some val__11 -> (match (val__11 : _ node) with
-                      | Node_eff e_12 -> (match env with
-                          | Some val__13 -> (match (val__13 : node_env) with
-                              | NodeEnv_env env_14 -> (let _x_15 = Some path in
-                                let _x_16 = env_14, e_12 in
-                                let _x_17 = _x_15, _x_16 in
-                                let _x_18 = Lcnf_array.push a_3 _x_17 in
-                                list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 _x_18)
+        | { path = path; env = env; _ } -> (let _x_7 = list_is_prefix_of_at_program_table_under_spec_0 path target_path in
+          if _x_7 then list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3 else (match (_x_1 : sketch) with
+              | { program = program; _ } -> (let _x_8 = Node_eff program in
+                let _x_9 = program_node_at_ _x_8 path in
+                match _x_9 with
+                  | Some val__10 -> (match (val__10 : _ node) with
+                      | Node_eff e_11 -> (match env with
+                          | Some val__12 -> (match (val__12 : node_env) with
+                              | NodeEnv_env env_13 -> (let _x_14 = Some path in
+                                let _x_15 = env_13, e_11 in
+                                let _x_16 = _x_14, _x_15 in
+                                let _x_17 = Lcnf_array.push a_3 _x_16 in
+                                list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 _x_17)
                               | _ -> list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3)
                           | _ -> list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3)
                       | _ -> list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3)
@@ -57624,9 +57699,24 @@ let rec list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 (target
 
 
 
-(* LCNF mono: Option.instBEq.beq._at_.List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_4.spec_4 (x.1 : Option (List Nat)) (x.2 : Option (List Nat)) : Bool *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Program.Suggest.localCandidates.spec_4 (focus : Effect4.Program.Focus Effect4.Program.NativeOp) (a.1 : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp)))) (a.2 : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp)))) : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) *)
 
-let option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_spec_4_spec_4 (x_1 : int list option) (x_2 : int list option) : bool =
+let rec list_filter_tr_loop_at_program_suggest_local_candidates_spec_4 (focus : NativeOp.t focus) (a_1 : (int list option * (Ty.t list * NativeOp.t Eff.t)) list) (a_2 : (int list option * (Ty.t list * NativeOp.t Eff.t)) list) : (int list option * (Ty.t list * NativeOp.t Eff.t)) list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (match head_4 with
+        | _, snd_1 -> (match snd_1 with
+            | _, snd_2 -> (match (focus : _ focus) with
+                | { program = program; _ } -> (let _x_6 = program_inst_decidable_eq_native_op in
+                  let _x_7 = program_inst_decidable_eq_eff_dec_eq_1 _x_6 snd_2 program in
+                  if _x_7 then list_filter_tr_loop_at_program_suggest_local_candidates_spec_4 focus tail_5 a_2 else (let _x_8 = head_4 :: a_2 in
+                    list_filter_tr_loop_at_program_suggest_local_candidates_spec_4 focus tail_5 _x_8)))))
+
+
+
+(* LCNF mono: Option.instBEq.beq._at_.List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_5.spec_5 (x.1 : Option (List Nat)) (x.2 : Option (List Nat)) : Bool *)
+
+let option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_spec_5_spec_5 (x_1 : int list option) (x_2 : int list option) : bool =
   match x_1 with
     | None -> (match x_2 with
         | None -> true
@@ -57637,12 +57727,12 @@ let option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_s
 
 
 
-(* LCNF mono: List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_4._lam_0 (x1.1 : Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) (x2.2 : Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) : Bool *)
+(* LCNF mono: List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_5._lam_0 (x1.1 : Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) (x2.2 : Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) : Bool *)
 
-let list_erase_dups_at_program_suggest_local_candidates_spec_4__lam_0 (x1_1 : int list option * (Ty.t list * NativeOp.t Eff.t)) (x2_2 : int list option * (Ty.t list * NativeOp.t Eff.t)) : bool =
+let list_erase_dups_at_program_suggest_local_candidates_spec_5__lam_0 (x1_1 : int list option * (Ty.t list * NativeOp.t Eff.t)) (x2_2 : int list option * (Ty.t list * NativeOp.t Eff.t)) : bool =
   match x1_1 with
     | fst_3, snd_4 -> (match x2_2 with
-        | fst_5, snd_6 -> (let _x_7 = option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_spec_4_spec_4 fst_3 fst_5 in
+        | fst_5, snd_6 -> (let _x_7 = option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_spec_5_spec_5 fst_3 fst_5 in
           if _x_7 then (match snd_4 with
               | fst_8, snd_9 -> (match snd_6 with
                   | fst_10, snd_11 -> (let _x_12 = list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_0_spec_0 fst_8 fst_10 in
@@ -57651,10 +57741,10 @@ let list_erase_dups_at_program_suggest_local_candidates_spec_4__lam_0 (x1_1 : in
 
 
 
-(* LCNF mono: List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_4 (as : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp)))) : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) *)
+(* LCNF mono: List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_5 (as : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp)))) : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) *)
 
-let list_erase_dups_at_program_suggest_local_candidates_spec_4 (as_ : (int list option * (Ty.t list * NativeOp.t Eff.t)) list) : (int list option * (Ty.t list * NativeOp.t Eff.t)) list =
-  let _f_1 = list_erase_dups_at_program_suggest_local_candidates_spec_4__lam_0 in
+let list_erase_dups_at_program_suggest_local_candidates_spec_5 (as_ : (int list option * (Ty.t list * NativeOp.t Eff.t)) list) : (int list option * (Ty.t list * NativeOp.t Eff.t)) list =
+  let _f_1 = list_erase_dups_at_program_suggest_local_candidates_spec_5__lam_0 in
   list_erase_dups_by _f_1 as_
 
 
@@ -57681,7 +57771,8 @@ let program_suggest_local_candidates (d : doc) (target_path : int list) (focus :
                   let _x_9 = supplied_items @ var_items in
                   let _x_10 = _x_9 @ row_items in
                   let _x_11 = _x_10 @ table_items in
-                  list_erase_dups_at_program_suggest_local_candidates_spec_4 _x_11))))
+                  let _x_12 = list_filter_tr_loop_at_program_suggest_local_candidates_spec_4 focus _x_11 _x_3 in
+                  list_erase_dups_at_program_suggest_local_candidates_spec_5 _x_12))))
 
 
 
@@ -58319,9 +58410,9 @@ let tool_internal_query (o : check_input -> verdict) (st : raw) (x_1 : query) : 
                   program_check_checked_pure' _x_22)
                 | Ok a_24 -> (let _x_25 = tool_internal_doc_view a_14 in
                   match (_x_25 : doc_view) with
-                    | { snap = snap; type_ = type_; refusals = refusals; holes = holes; _ } -> (let _x_26 = None in
+                    | { snap = snap; type_ = type_; refusals = refusals; holes = holes; declared = declared; _ } -> (let _x_26 = None in
                       let _x_27 = Some a_24 in
-                      let _x_28 = ({ snap = snap; type_ = type_; refusals = refusals; holes = holes; inspection = _x_27 } : doc_view) in
+                      let _x_28 = ({ snap = snap; type_ = type_; refusals = refusals; holes = holes; declared = declared; inspection = _x_27 } : doc_view) in
                       let _x_29 = Answer_doc _x_28 in
                       let _x_30 = Ok _x_29 in
                       program_check_checked_pure' _x_30)))))
@@ -60214,6 +60305,37 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_shape_doc : s
 
 
 
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_HoleDeclC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_decl_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Tool.HoleDecl" in
+  let _x_2 = "index" in
+  let _x_3 = Shape_nat in
+  let _x_4 = [] in
+  let _x_5 = _x_2, _x_3 in
+  let _x_6 = "name" in
+  let _x_7 = Shape_string in
+  let _x_8 = _x_6, _x_7 in
+  let _x_9 = "perform" in
+  let _x_10 = "Eff" in
+  let _x_11 = Shape_named _x_10 in
+  let _x_12 = store_program_gen_eff_c_defs in
+  let _x_13 = _x_9, _x_11 in
+  let _x_14 = "performed" in
+  let _x_15 = Shape_bool in
+  let _x_16 = _x_14, _x_15 in
+  let _x_17 = _x_16 :: _x_4 in
+  let _x_18 = _x_13 :: _x_17 in
+  let _x_19 = _x_8 :: _x_18 in
+  let _x_20 = _x_5 :: _x_19 in
+  let _x_21 = Shape_struct (_x_1, _x_20) in
+  let _x_22 = _x_4 @ _x_4 in
+  let _x_23 = _x_22 @ _x_12 in
+  let _x_24 = _x_23 @ _x_4 in
+  ({ root = _x_21; defs = _x_24 } : shape_doc)
+
+
+
 (* LCNF mono: Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_PartSigC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_check_gen_t_95_root_95__46_effect4_46_program_46_part_sig_c_shape_doc : shape_doc =
@@ -60450,35 +60572,42 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_shape_doc : sh
           match (_x_3 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_shape_doc in
               match (_x_4 : shape_doc) with
-                | { root = root_3; defs = defs_3 } -> (let _x_5 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_shape_doc in
+                | { root = root_3; defs = defs_3 } -> (let _x_5 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_decl_c_shape_doc in
                   match (_x_5 : shape_doc) with
-                    | { root = root_4; defs = defs_4 } -> (let _x_6 = "Effect4.Tool.DocView" in
-                      let _x_7 = "snap" in
-                      let _x_8 = _x_7, root in
-                      let _x_9 = "type" in
-                      let _x_10 = Shape_option root_1 in
-                      let _x_11 = _x_9, _x_10 in
-                      let _x_12 = "refusals" in
-                      let _x_13 = Shape_list root_2 in
-                      let _x_14 = _x_12, _x_13 in
-                      let _x_15 = "holes" in
-                      let _x_16 = Shape_list root_3 in
-                      let _x_17 = _x_15, _x_16 in
-                      let _x_18 = "inspection" in
-                      let _x_19 = Shape_option root_4 in
-                      let _x_20 = _x_18, _x_19 in
-                      let _x_21 = [] in
-                      let _x_22 = _x_20 :: _x_21 in
-                      let _x_23 = _x_17 :: _x_22 in
-                      let _x_24 = _x_14 :: _x_23 in
-                      let _x_25 = _x_11 :: _x_24 in
-                      let _x_26 = _x_8 :: _x_25 in
-                      let _x_27 = Shape_struct (_x_6, _x_26) in
-                      let _x_28 = defs @ defs_1 in
-                      let _x_29 = _x_28 @ defs_2 in
-                      let _x_30 = _x_29 @ defs_3 in
-                      let _x_31 = _x_30 @ defs_4 in
-                      ({ root = _x_27; defs = _x_31 } : shape_doc))))))
+                    | { root = root_4; defs = defs_4 } -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_shape_doc in
+                      match (_x_6 : shape_doc) with
+                        | { root = root_5; defs = defs_5 } -> (let _x_7 = "Effect4.Tool.DocView" in
+                          let _x_8 = "snap" in
+                          let _x_9 = _x_8, root in
+                          let _x_10 = "type" in
+                          let _x_11 = Shape_option root_1 in
+                          let _x_12 = _x_10, _x_11 in
+                          let _x_13 = "refusals" in
+                          let _x_14 = Shape_list root_2 in
+                          let _x_15 = _x_13, _x_14 in
+                          let _x_16 = "holes" in
+                          let _x_17 = Shape_list root_3 in
+                          let _x_18 = _x_16, _x_17 in
+                          let _x_19 = "declared" in
+                          let _x_20 = Shape_list root_4 in
+                          let _x_21 = _x_19, _x_20 in
+                          let _x_22 = "inspection" in
+                          let _x_23 = Shape_option root_5 in
+                          let _x_24 = _x_22, _x_23 in
+                          let _x_25 = [] in
+                          let _x_26 = _x_24 :: _x_25 in
+                          let _x_27 = _x_21 :: _x_26 in
+                          let _x_28 = _x_18 :: _x_27 in
+                          let _x_29 = _x_15 :: _x_28 in
+                          let _x_30 = _x_12 :: _x_29 in
+                          let _x_31 = _x_9 :: _x_30 in
+                          let _x_32 = Shape_struct (_x_7, _x_31) in
+                          let _x_33 = defs @ defs_1 in
+                          let _x_34 = _x_33 @ defs_2 in
+                          let _x_35 = _x_34 @ defs_3 in
+                          let _x_36 = _x_35 @ defs_4 in
+                          let _x_37 = _x_36 @ defs_5 in
+                          ({ root = _x_32; defs = _x_37 } : shape_doc)))))))
 
 
 

@@ -173,3 +173,48 @@ def syncApp : SigApp := { rows := [{ Row.hole "ask" .nat with kind := .sync }] }
   | .error (.illTyped ⟨[], .unboundVariable [] 1 0⟩) => true
   | _ => false
 end Test.Program.SeamsS2.LocatedRoutes
+
+/-! ## Hole hygiene (slice 1b): every declared hole, its `perform` term, and the suggestions
+
+The probe's F1: with one application row, `external 0` is the row, not hole 0. The view lists the
+declared hole with its exact program, `external 1`, and says that the program never performs it.
+A suggestion at a hole offers neither the hole itself nor a program that encloses it. -/
+namespace Test.Program.SeamsS2.HoleHygiene
+open Effect4 Effect4.Program Effect4.Program.Check Effect4.Tool
+
+def app : SigApp := { rows := [Row.hole "ask" .nat] }
+def h0 : Row := Row.hole "h0" .nat
+def serve1 (s : State) (r : Request) : State × Reply := (serve Oracle.uncached s r).value
+def opened (program : NativeEff) : State × Reply :=
+  serve1 empty (.act (.open_ "f1" app ⟨program, [h0]⟩))
+def viewAt (program : NativeEff) : Option DocView :=
+  match (opened program).2.result with
+  | .ok (.acted (.opened v)) => some v
+  | _ => none
+def askRow : NativeEff := .perform (.external 0) (.lit .unit)
+
+-- red (the probe's F1): `external 0` twice performs the row; hole 0 is declared and unused
+def miscounted : NativeEff := .bind askRow askRow
+#guard (viewAt miscounted).map (·.holes.length) = some 0
+#guard (viewAt miscounted).map (·.declared) =
+  some [⟨0, "h0", .perform (.external 1) (.lit .unit), false⟩]
+-- green: the hole written as its `perform` term is performed, at its one address
+def counted : NativeEff := .bind askRow (Sketch.hole app 0)
+#guard (viewAt counted).map (·.declared) =
+  some [⟨0, "h0", .perform (.external 1) (.lit .unit), true⟩]
+#guard (viewAt counted).map (fun v => v.holes.map (·.path)) = some [[1]]
+
+/-- The suggestions at hole 0 of a program, all on one page. -/
+def suggestAt (program : NativeEff) : Option (List Suggest.Suggestion) :=
+  match (serve1 (opened program).1 (.ask (.suggest ⟨⟨"f1", 0⟩, 0⟩ (.hole 0) [] 0 32))).2.result with
+  | .ok (.suggested items _) => some items
+  | _ => none
+-- the hole's own program and the program that encloses it are not offered
+#guard (suggestAt counted).any fun items => items.all fun s => s.program != Sketch.hole app 0
+#guard (suggestAt counted).any fun items => items.all fun s => s.program != counted
+-- the row's call and the variable in scope are, each an exact fit
+#guard (suggestAt counted).any fun items => items.any fun s =>
+  s.program == askRow && s.evidence == .exactFit (.pure .nat)
+#guard (suggestAt counted).any fun items => items.any fun s =>
+  s.program == .succeed (.var 0) && s.evidence == .exactFit (.pure .nat)
+end Test.Program.SeamsS2.HoleHygiene

@@ -1544,6 +1544,7 @@ and doc_view = {
   type_ : Eff_types.EffTy.t option;
   refusals : (int list, type_reason) located list;
   holes : hole_view list;
+  declared : hole_decl list;
   inspection : effect4_tool_inspection option;
 }
 and doc = {
@@ -1785,6 +1786,12 @@ and work = {
 and retired_call = {
   bound : bound_call;
   pending : effect4_api_host_session_reply option;
+}
+and hole_decl = {
+  index : int;
+  name : string;
+  perform : Eff_types.NativeOp.t Eff_types.Eff.t;
+  performed : bool;
 }
 and effect4_run_preview_refusal =
     Effect4_run_preview_refusal_admission of admit_refusal

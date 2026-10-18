@@ -359,6 +359,7 @@
         "Effect4.Tool.Query",
         "Effect4.Tool.Request",
         "Effect4.Tool.HoleView",
+        "Effect4.Tool.HoleDecl",
         "Effect4.Tool.SlotView",
         "Effect4.Tool.Inspection",
         "Effect4.Tool.DocView",

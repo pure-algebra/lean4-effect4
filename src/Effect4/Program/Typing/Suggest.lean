@@ -84,8 +84,10 @@ def suggestPage (o : Oracle) (d : Doc) (focus : Focus NativeOp) (path : List Nat
 2. Variables in `focus.env` as `.succeed (.var i)`.
 3. Unit-request external rows in `(d.session.app.withHoles d.session.sketch.holes).rows` as
    `.perform (.external i) (.lit .unit)`.
-4. Typed sub-programs in `d.session.table` outside `targetPath`, with their own `e.path` and
-   `e.env`. -/
+4. Typed sub-programs in `d.session.table` that do not enclose `targetPath`, with their own
+   `e.path` and `e.env`: an enclosing program put at the target only reproduces it.
+
+None is the target's own program (`focus.program`): a hole filled with itself is no fill. -/
 def localCandidates (d : Doc) (targetPath : List Nat) (focus : Focus NativeOp)
     (supplied : List NativeEff := []) : List (Option (List Nat) × TyEnv × NativeEff) :=
   let suppliedItems : List (Option (List Nat) × TyEnv × NativeEff) :=
@@ -99,12 +101,13 @@ def localCandidates (d : Doc) (targetPath : List Nat) (focus : Focus NativeOp)
       else none
   let tableItems : List (Option (List Nat) × TyEnv × NativeEff) :=
     d.session.table.filterMap fun e =>
-      if decide (e.path = targetPath) then none
+      if Table.under e.path targetPath then none
       else
         match (Node.eff d.session.sketch.program).at_ e.path, e.env with
         | some (.eff p), some (.env tys) => some (some e.path, tys, p)
         | _, _ => none
-  (suppliedItems ++ varItems ++ rowItems ++ tableItems).eraseDups
+  ((suppliedItems ++ varItems ++ rowItems ++ tableItems).filter fun item =>
+    item.2.2 != focus.program).eraseDups
 
 /-- **A page of suggestions** at an address: the candidates `localCandidates` lists, from `cursor`, at
 most `limit`, each evaluated by `suggestOne`; and the next cursor, where candidates remain past a
