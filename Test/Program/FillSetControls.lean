@@ -1,234 +1,118 @@
-import Tools.Session
+import Effect4.Program.Typing.FillSet
+import Test.Program.SourceDocumentControls
 import Effect4.Laws.Program.FillSet
-
-/-!
-# Test.Program.FillSetControls — acceptance controls for Slice D (§7.4)
-
-1. Two certified fills materialize to one program in either order and with a repeat (`collapsed`).
-2. A second filling at an address in the set is refused as `conflict` at that address; the refusal
-   depends on which fill came first.
-3. Red: a fill that changes its focus's type is refused as `notCertified` at `FillSet.add`.
-4. Red: two exact fills merge through layer references into a reference fault, so the materializer
-   refuses them.
-5. Red: two omissions from one base append different rows at one ordinal, so a merged sketch reads
-   the wrong row.
-6. Red: an ancestor's fill and a descendant's fill do not commute; the second is refused as
-   `overlap` at `FillSet.add`.
-7. A fill at `[99]` is refused as `unknownAddress`, alone and beside a valid fill.
-8. A fill at `[]` is refused as `root`.
-9. Red (the review of 2026-10-17): the list materializer refuses an unknown address and the root,
-   instead of dropping or applying them.
-10. Red: a set opened at another base than the document's is refused at publication.
-11. Red, then control: once the document moves, a set that holds a fill refuses new fills and
-    publication; `fills.reset` opens a new set, and an empty set follows the document.
-12. A published set is one journal entry: `undo` takes it back.
--/
-
+import Tools.Session
 set_option autoImplicit false
+namespace Test.Program.SeamsS2
+open Effect4 Effect4.Program Check
+open Test.Program.SeamsV1 (n1)
+open Test.Program.SeamsS1.FeedControls (n7 str)
+def h : Row := Row.hole "nat" .nat
+def base : Sketch := ⟨.bind (Sketch.hole {} 0)
+  (.bind (Sketch.hole {} 1) (Sketch.hole {} 2)), [h,h,h]⟩
+def doc : Doc := (Doc.open_ ⟨⟨"fills",0⟩,{},base⟩).value
+def start : FillSet := FillSet.open_ doc
+def added := start.add Oracle.uncached [([0],n1),([1,0],str),([1,1],n7)]
+#guard added.value.2 = [.applied [0],.refused [1,0] .notCertified,.applied [1,1]]
+def pending := added.value.1
+#guard pending.pending = [([0],n1),([1,1],n7)]
+#guard pending.anchor.revision = 0
+#guard match pending.publication with
+  | .ok (.commit items .keepExact) => items.length = 2
+  | _ => false
+def action : DocAction := pending.publication.toOption.getD (.commit [] .keepExact)
+def published := doc.step Oracle.uncached pending.anchor action
+def next : Doc := (published.value.toOption.map Prod.fst).getD doc
+#guard next.snap.revision = 1
+#guard next.history.length = 1
+#guard (FillSet.open_ next).pending = []
+#guard match next.check pending.anchor with | .error (.stale _) => true | _ => false
+#guard (start.add Oracle.uncached [([],n1),([9],n1)]).value.2 =
+  [.refused [] .root,.refused [9] .unknownAddress]
+#guard (pending.add Oracle.uncached [([0],n1),([0],n7)]).value.2 =
+  [.collapsed [0],.refused [0] .conflict]
+#guard (pending.add Oracle.uncached [([1],.bind n1 n7)]).value.2 =
+  [.refused [1] (.overlap [1,1])]
+#guard match start.publication with | .error .empty => true | _ => false
+#guard match doc.check ⟨⟨"foreign",0⟩,0⟩ with | .error (.foreign _) => true | _ => false
+-- References certify at the whole anchor expansion; publication rechecks dependencies.
+def key : ServiceKey := ⟨⟨127⟩,⟨127⟩⟩
+def app : SigApp := { services := [(key,.string)] }
+def referenceBase : Sketch := ⟨.bind (.provideLayer (.effect key str) false n1) n7,[]⟩
+def referenceFill : NativeEff := .provideLayer (.ref [0,0]) false n7
+def refDoc : Doc := (Doc.open_ ⟨⟨"refs",0⟩,app,referenceBase⟩).value
+def refSet := (FillSet.open_ refDoc).add Oracle.uncached [([1],referenceFill),([0],n7)]
+#guard refSet.value.2 = [.applied [1],.applied [0]]
+def refAction := refSet.value.1.publication.toOption.getD (.commit [] .keepExact)
+#guard (refDoc.step Oracle.uncached refSet.value.1.anchor refAction).value.toOption.isNone
 
-namespace Test.Program.FillSetControls
+#guard next.session.sketch.holes = base.holes
+#guard (next.step Oracle.uncached next.snap (.revert 0)).value.toOption.map
+  (fun result => decide (result.1.session.sketch.program = base.program)) = some true
+#guard FillReference.certifiedB referenceBase app [1] referenceFill = false
+#guard referenceBase.program.refSites [] = []
+#guard (referenceFill.refSites []).isEmpty = false
+#guard match FillReference.materialize {} base [([],n1)] with | .error .root => true | _ => false
+#guard match FillReference.materialize {} base [([9],n1),([0],n1)] with
+  | .error .unknownAddress => true | _ => false
 
-open Effect4 Effect4.Program Effect4.Store
-open Tools.Session (State Request answer)
-open Tools.JsonBridge (printJson)
+def broken : Sketch := ⟨.bind n1 (.succeed (.var 2)),[]⟩
+def brokenDoc : Doc := (Doc.open_ ⟨⟨"broken",0⟩,{},broken⟩).value
+#guard FillReference.certifiedB broken {} [0] n7
+#guard ((FillSet.open_ brokenDoc).add Oracle.uncached [([0],n7)]).value.2 = [.applied [0]]
+#guard match FillReference.materialize {} broken [([0],n7)] with
+  | .error (.refused _) => true | _ => false
 
-def nat1 : NativeEff := .succeed (.lit (.nat 1))
-def nat2 : NativeEff := .succeed (.lit (.nat 2))
-def nat7 : NativeEff := .succeed (.lit (.nat 7))
-def strA : NativeEff := .succeed (.lit (.str "a"))
-def natTy : EffTy := .pure .nat
-def keyA : ServiceKey := ⟨⟨127⟩, ⟨127⟩⟩
-def keyB : ServiceKey := ⟨⟨128⟩, ⟨128⟩⟩
-def appA : SigApp := { services := [(keyA, .string)] }
-def appB : SigApp := { services := [(keyB, .nat)] }
-
-/-! ## Control 1: two certified fills materialize to one program in either order and with a repeat -/
-
-def base2 : Sketch :=
-  { program := .bind (Sketch.hole {} 0) (Sketch.hole {} 1)
-    holes := [Program.Row.hole "a" .nat, Program.Row.hole "b" .nat] }
-
-#guard base2.check {} = .ok natTy
-
-def fsEmpty2 : FillSet := FillSet.empty {} base2
-def addLR := fsEmpty2.add [([0], nat7), ([1], .succeed (.var 0))]
-def addRL := fsEmpty2.add [([1], .succeed (.var 0)), ([0], nat7), ([0], nat7)]
-
-#guard addLR.2 = [.applied [0], .applied [1]]
-#guard addRL.2 = [.applied [1], .applied [0], .collapsed [0]]
-#guard addLR.1.view = addRL.1.view
-#guard addLR.1.materializeSketch = addRL.1.materializeSketch
-#guard (addLR.1.materializeSketch.toOption.map (·.check {})) = some (.ok natTy)
-
--- Reader: `FillSet.add_wf` and `FillSet.materializeSketch_refFree` on `addLR.1`.
-theorem addLR_wf : addLR.1.WellFormed :=
-  (FillSet.add_wf (FillSet.empty_wf {} base2) [([0], nat7), ([1], .succeed (.var 0))]).1
-
-/-! ## Control 2: a second filling at an address in the set is refused as `conflict` -/
-
-def addClash1 := fsEmpty2.add [([0], nat7), ([0], nat2), ([1], nat1)]
-def addClash2 := fsEmpty2.add [([0], nat2), ([0], nat7), ([1], nat1)]
-
-#guard addClash1.2 = [.applied [0], .refused [0] .conflict, .applied [1]]
-#guard addClash2.2 = [.applied [0], .refused [0] .conflict, .applied [1]]
--- Which filling stays in the set depends on which submission came first:
-#guard addClash1.1.view != addClash2.1.view
-
-/-! ## Control 3 (Red): a fill that changes its focus's type is refused as `notCertified` at `add` -/
-
-def baseD : Sketch := { program := .bind nat1 nat2 }
-def readsFirst : NativeEff := .provideService keyB (.var 0) nat2
-
--- Each edit alone keeps the root type under raw `applyFills`, and together they fail `check`:
-#guard (applyFills baseD [([0], strA)]).map (·.check appB) = some (.ok natTy)
-#guard (applyFills baseD [([1], readsFirst)]).map (·.check appB) = some (.ok natTy)
-#guard ((applyFills baseD [([0], strA), ([1], readsFirst)]).map (·.check appB)).map
-  (fun r => r.toOption.isNone) = some true
-
--- `FillSet.add` refuses `([0], strA)` at `add` as `notCertified`:
-def fsBaseD : FillSet := FillSet.empty appB baseD
-#guard (fsBaseD.add [([0], strA), ([1], readsFirst)]).2 =
-  [.refused [0] .notCertified, .applied [1]]
-
-/-! ## Control 4 (Red): two exact fills merge through references into a reference fault -/
-
-def refBase : Sketch := { program := .bind (.provideLayer (.effect keyA strA) false nat1) nat2 }
-def addRef : NativeEff := .provideLayer (.ref [0, 0]) false nat2
-
-#guard (applyFills refBase [([0], nat7)]).map (·.sourceCheck appA) = some (.ok natTy)
-#guard (applyFills refBase [([1], addRef)]).map (·.sourceCheck appA) = some (.ok natTy)
-#guard (match materialize appA refBase [([0], nat7), ([1], addRef)] with
-  | .error (.refused _) => true
-  | _ => false)
--- And `FillSet.add` refuses the unexpanded layer reference at `add` as `notCertified`:
-#guard ((FillSet.empty appA refBase).add [([0], nat7), ([1], addRef)]).2 =
-  [.applied [0], .refused [1] .notCertified]
-
-/-! ## Control 5 (Red): two omissions append rows at one ordinal; a merge reads the wrong row -/
-
-def pairBase : Sketch := { program := .bind nat1 (.succeed (.lit (.str "s"))) }
-#guard pairBase.check {} = .ok (.pure .string)
-def omitL := pairBase.omitAt {} [0] (Program.Row.hole "l" .nat)
-def omitR := pairBase.omitAt {} [1] (Program.Row.hole "r" .string)
-def merged (holes : RowTable) : Sketch :=
-  { program := .bind (Sketch.hole {} 0) (Sketch.hole {} 0), holes }
-
-#guard (omitL.map fun l => (merged l.holes).check {}) = some (.ok natTy)
-#guard (omitR.bind fun r => ((merged r.holes).focusAt {} [0]).map (·.ty)) = some (.pure .string)
-
-/-! ## Control 6 (Red): ancestor and descendant fills do not commute; the second is refused as `overlap` -/
-
-def nested : Sketch := { program := .bind (.bind nat1 nat2) nat7 }
-#guard (applyFills nested [([0], nat7), ([0, 1], nat1)]).map (·.program) !=
-  (applyFills nested [([0, 1], nat1), ([0], nat7)]).map (·.program)
-
-def fsNested : FillSet := FillSet.empty {} nested
-#guard (fsNested.add [([0], nat7), ([0, 1], nat1)]).2 =
-  [.applied [0], .refused [0, 1] (.overlap [0])]
-#guard (fsNested.add [([0, 1], nat1), ([0], nat7)]).2 =
-  [.applied [0, 1], .refused [0] (.overlap [0, 1])]
-
-/-! ## Control 7: a fill at `[99]` is refused as `unknownAddress`, alone and beside a valid fill -/
-
-#guard (fsEmpty2.add [([99], nat7)]).2 = [.refused [99] .unknownAddress]
-#guard (fsEmpty2.add [([99], nat7), ([0], nat7)]).2 =
-  [.refused [99] .unknownAddress, .applied [0]]
-#guard (fsEmpty2.add [([99], nat7), ([0], nat7)]).1.view = [([0], nat7)]
-
-/-! ## Control 8: a fill at `[]` is refused as `root` -/
-
-#guard (fsEmpty2.add [([], nat7)]).2 = [.refused [] .root]
-
-/-! ## Tool integration (`fills.add`, `fills.view`, `fills.materialize`) -/
-
+-- Equal identities and revisions do not authorize an anchor against another base.
+def otherBase : Sketch := ⟨.bind n1 (.bind n7 n1),[]⟩
+def otherDoc : Doc := (Doc.open_ ⟨doc.origin.id,{},otherBase⟩).value
+#guard otherDoc.snap.doc = pending.anchor.doc
+#guard otherDoc.snap.revision = pending.anchor.revision
+#guard (otherDoc.check pending.anchor).toOption.isSome
 #guard
-  let st0 :=
-    (answer {}
-      { op := "open"
-        programJson := some (printJson base2.program)
-        holesJson := some (printJson base2.holes) }).1
-  let stepAdd1 :=
-    answer st0
-      { op := "fills.add"
-        fillsJson := some (printJson ([([1], .succeed (.var 0)), ([0], nat7), ([0], nat7)] : List (List Nat × NativeEff))) }
-  let stepView1 := answer stepAdd1.1 { op := "fills.view" }
-  let stepMat1 := answer stepView1.1 { op := "fills.materialize" }
-  stepAdd1.2.ok && stepView1.2.ok && stepMat1.2.ok &&
-    stepMat1.1.revision == 1 &&
-    (stepMat1.1.source.map (·.sketch.program)) == some (.bind nat7 (.succeed (.var 0)))
+  let state := ({ } : Tools.Session.State).withDoc otherDoc
+  let state := { state with fills := some pending }
+  let result := Tools.Session.answer state
+    { op := "fills.add", path := [1,0], replacementJson := some (Tools.JsonBridge.printJson n1) }
+  !result.2.ok && result.1.revision = state.revision
 
-/-! ## Controls 9 to 12: the raw materializer, a moved document, and `undo` -/
 
--- Control 9 (red): an unknown address and the root, beside a valid fill or alone.
-#guard (match materialize {} base2 [([99], nat7), ([0], nat7)] with
-  | .error .unknownAddress => true
-  | _ => false)
-#guard (match materialize {} base2 [([], nat7)] with
-  | .error .root => true
-  | _ => false)
+namespace SuggestionKeyControls
+open Effect4 Effect4.Program Effect4.Program.Check
+def rootProgram : NativeEff := .succeed (.lit (.nat 0))
+def rootCandidate : NativeEff := .succeed (.lit (.nat 1))
+def rootDoc : Doc := (Doc.open_ ⟨⟨"root-key",0⟩,{},⟨rootProgram,[]⟩⟩).value
+def rootFocus : Focus NativeOp := ⟨rootProgram,[],.pure .nat⟩
+def rootSuggestion := CheckCache.suggestOne Oracle.uncached rootDoc rootFocus [] none [] rootCandidate
+#guard rootDoc.session.partKey [] rootCandidate = none
+#guard match rootSuggestion.value with
+  | .ok candidate => candidate.key == .module {} [] rootCandidate
+  | .error _ => false
+#guard (rootDoc.session.feed Oracle.uncached .keepExact (.fill [] rootCandidate)).value.isOk
+#guard (rootDoc.session.feed Oracle.uncached .keepExact (.fill [] rootCandidate)).trace =
+  (Checked.ask Oracle.uncached (.module {} [] rootCandidate)).trace
+#guard rootSuggestion.trace = (Checked.ask Oracle.uncached (.module {} [] rootCandidate)).trace
 
--- Control 10 (red): a set built at `baseD` and tagged with `d`'s identity and revision.
-#guard
-  let d : Doc := (Doc.open_ ⟨⟨"d",0⟩,{},base2⟩).value
-  let forged := (FillSet.empty {} baseD d.id d.revision).add [([0], nat7)]
-  forged.2 = [.applied [0]] &&
-    (match forged.1.materializeDoc d with
-     | .error .foreignBase => true
-     | _ => false)
+def badChild : NativeEff := .succeed (.var 0)
+def badProgram : NativeEff := .bind badChild (.succeed (.var 0))
+def badDoc : Doc := (Doc.open_ ⟨⟨"missing-focus-key",0⟩,{},⟨badProgram,[]⟩⟩).value
+#guard match Place.resolve {} ⟨badProgram,[]⟩ (.at_ [0] badChild) with
+  | .ok (path, program) => path == [0] && program == badChild
+  | .error _ => false
+#guard (badDoc.session.focusAt [0]).isNone
+#guard badDoc.session.partKey [0] rootCandidate = none
+#guard match (badDoc.session.feed Oracle.uncached .keepExact (.fill [0] rootCandidate)).value with
+  | .error (.noFocus [0]) => true
+  | _ => false
+#guard (badDoc.session.feed Oracle.uncached .keepExact (.fill [0] rootCandidate)).trace.isEmpty
+#guard (CheckCache.suggest Oracle.uncached badDoc [0]).value.isNone
+#guard (CheckCache.suggest Oracle.uncached badDoc [0]).trace.isEmpty
+#guard match (CheckCache.suggestOne Oracle.uncached badDoc
+    ⟨badChild,[],.pure .nat⟩ [0] none [] rootCandidate).value with
+  | .error (.noFocus [0]) => true
+  | _ => false
+#guard (CheckCache.suggestOne Oracle.uncached badDoc
+  ⟨badChild,[],.pure .nat⟩ [0] none [] rootCandidate).trace.isEmpty
+end SuggestionKeyControls
 
--- Control 11 (red, then control): a fill at revision 0, then an ordinary checked edit.
-#guard
-  let st0 :=
-    (answer {}
-      { op := "open"
-        programJson := some (printJson base2.program)
-        holesJson := some (printJson base2.holes) }).1
-  let stAdd := answer st0
-    { op := "fills.add", path := [0], replacementJson := some (printJson nat7) }
-  let stEdit := answer stAdd.1
-    { op := "replace", path := [1], docName := some "default", docGeneration := some 0,
-      revision := some 0, expectedJson := some (printJson (Sketch.hole {} 1 : NativeEff)),
-      replacementJson := some (printJson nat2) }
-  let stStale := answer stEdit.1
-    { op := "fills.add", path := [0], replacementJson := some (printJson nat1) }
-  let stMatStale := answer stEdit.1 { op := "fills.materialize" }
-  let stView := answer stEdit.1 { op := "fills.view" }
-  let stReset := answer stEdit.1 { op := "fills.reset" }
-  let stAgain := answer stReset.1
-    { op := "fills.add", path := [0], replacementJson := some (printJson nat1) }
-  let stPub := answer stAgain.1 { op := "fills.materialize" }
-  stAdd.2.ok && stEdit.2.ok && !stStale.2.ok && !stMatStale.2.ok &&
-    stView.2.result.getObjValD "stale" == Lean.Json.bool true &&
-    stReset.2.ok && stAgain.2.ok && stPub.2.ok && stPub.1.revision == 2 &&
-    (stPub.1.source.map (·.sketch.program)) == some (.bind nat1 nat2)
-
--- Control 11, continued: an empty set follows a draft edit, and an empty set publishes nothing.
-#guard
-  let st0 :=
-    (answer {}
-      { op := "open"
-        programJson := some (printJson base2.program)
-        holesJson := some (printJson base2.holes) }).1
-  let stEmpty := answer st0 { op := "fills.materialize" }
-  let stDraft := answer st0
-    { op := "draft", path := [1], replacementJson := some (printJson nat2) }
-  let stAdd := answer stDraft.1
-    { op := "fills.add", path := [0], replacementJson := some (printJson nat7) }
-  !stEmpty.2.ok && stDraft.2.ok && stAdd.2.ok
-
--- Control 12: a published set, then `undo`.
-#guard
-  let st0 :=
-    (answer {}
-      { op := "open"
-        programJson := some (printJson base2.program)
-        holesJson := some (printJson base2.holes) }).1
-  let stAdd := answer st0
-    { op := "fills.add"
-      fillsJson := some (printJson ([([0], nat7), ([1], nat2)] : List (List Nat × NativeEff))) }
-  let stPub := answer stAdd.1 { op := "fills.materialize" }
-  let stUndo := answer stPub.1 { op := "undo" }
-  stAdd.2.ok && stPub.2.ok && stUndo.2.ok && stUndo.1.revision == 2 &&
-    (stUndo.1.source.map (·.sketch.program)) == some base2.program
-
-end Test.Program.FillSetControls
+end Test.Program.SeamsS2

@@ -1284,6 +1284,13 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   The pointer is `Doc.commit_single_sound` in `src/Effect4/Laws/Program/SourceDocument.lean`.
 - **`source-document-revert`**: An accepted action and its immediate selected-entry revert restore the prior program and retain appended hole rows.
   The pointer is `Doc.revert_program` in `src/Effect4/Laws/Program/SourceDocument.lean`.
+- **`kept-fill-reference`**: For coherent sources at nonroot addresses, keepExact acceptance equals old certification when both base and filling have no references.
+  The pointer is `kept_eq_certified` in `src/Effect4/Laws/Program/FillSet.lean`.
+- **`pending-fill-construction`**: Every sealed pending set has conflict-free, incomparable entries certified by the anchor's keepExact feed.
+  The pointer is `FillSet.add_wf` in `src/Effect4/Laws/Program/FillSet.lean`.
+- **`pending-fill-publication`**: A successful publication agrees with old materialization at its exact coherent anchor, under positive-base and reference-free premises.
+  The pointer is `FillSet.publish_eq_materialize` in `src/Effect4/Laws/Program/FillSet.lean`.
+  These R14 properties establish no admission, progress, or native execution.
 - **The replacement law (`typed-replacement`)**: a typed node splits at an address of a program
   into an environment and a type of the focus. Every program of that type in that environment
   stands in the focus's place, under every extension of the typing signature

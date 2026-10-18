@@ -1,5 +1,15 @@
 import Effect4.Program.Check
 import Effect4.Program.Typing.SourceDocument
+
+/-!
+# Program.Typing.CheckCache — contextual suggestions at a focus
+
+The checker cache this module once held is gone: `Check.Memo` owns reuse (`Program/Check.lean`).
+What stays is the suggestion: candidate programs for an address, each with its evidence. A
+candidate is evaluated by the same `keepExact` feed that certifies a fill (`suggestOne`), so a
+suggestion and a fill never disagree. Every check goes through the oracle, so a memo learns it.
+-/
+
 set_option autoImplicit false
 namespace Effect4.Program.CheckCache
 open Effect4 Effect4.Program Check
@@ -11,6 +21,8 @@ inductive Evidence where
   | typeMismatch (expected actual : EffTy)
   /-- The candidate is refused by the checker at the target's signature, environment and path. -/
   | refused (why : TypeRefusal)
+  /-- The `keepExact` feed refuses the candidate for a reason other than its part's type. -/
+  | feedRefused (why : FeedRefusal)
   /-- The candidate comes from another lexical environment (`sourceEnv` vs `targetEnv`); moving it needs a scope shift (Slice F). -/
   | differentEnv (sourceEnv targetEnv : TyEnv)
 deriving DecidableEq
@@ -24,26 +36,47 @@ structure Suggestion where
   evidence : Evidence
 deriving DecidableEq
 
-def evaluateCandidate (o : Oracle) (sig : SigData) (targetEnv : TyEnv) (expected : EffTy)
-    (targetPath : List Nat) (sourcePath : Option (List Nat)) (sourceEnv : TyEnv)
-    (prog : NativeEff) : Checked Suggestion := do
-  let key := CheckInput.part sig targetEnv prog
-  if sourceEnv = targetEnv then
-    let answer ← Checked.ask o key
-    let verdict := answer.result.mapError ((fun r => ⟨targetPath ++ r.path,r.reason⟩))
-    let evidence := match verdict with
-      | .ok ty => if ty = expected then Evidence.exactFit ty else .typeMismatch expected ty
-      | .error why => .refused why
-    pure ⟨prog, sourcePath, key, evidence⟩
-  else pure ⟨prog, sourcePath, key, .differentEnv sourceEnv targetEnv⟩
+/-- **Evaluate one candidate** at a focus through the same `keepExact` feed that certifies a fill.
+Its key is the module key at the root and the part key below it (`SourceSession.partKey`). A path
+with no program or no typed part refuses before any check; no key is invented. -/
+def suggestOne (o : Oracle) (d : Doc) (focus : Focus NativeOp)
+    (path : List Nat) (sourcePath : Option (List Nat)) (sourceEnv : TyEnv)
+    (program : NativeEff) : Checked (Except FeedRefusal Suggestion) := do
+  let candidate : Except FeedRefusal Sketch ← match d.session.sketch.fillAt path program with
+    | none => pure (.error (.noProgram path))
+    | some candidate => pure (.ok candidate)
+  match candidate with
+  | .error why => return .error why
+  | .ok candidate =>
+    let key := if path.isEmpty then
+      some (.module d.session.app candidate.holes candidate.program)
+      else d.session.partKey path program
+    match key with
+    | none => return .error (.noFocus path)
+    | some key =>
+      if sourceEnv ≠ focus.env then
+        return .ok ⟨program,sourcePath,key,.differentEnv sourceEnv focus.env⟩
+      match ← d.session.feed o .keepExact (.fill path program) with
+      | .ok _ => return .ok ⟨program,sourcePath,key,.exactFit focus.ty⟩
+      | .error (.notKept _ verdict) =>
+        let evidence := match verdict with
+          | .ok actual => Evidence.typeMismatch focus.ty actual
+          | .error why => .refused ⟨path ++ why.path,why.reason⟩
+        return .ok ⟨program,sourcePath,key,evidence⟩
+      | .error why => return .ok ⟨program,sourcePath,key,.feedRefused why⟩
 
-def evaluateCandidates (o : Oracle) (sig : SigData) (targetEnv : TyEnv) (expected : EffTy)
-    (targetPath : List Nat) : List (Option (List Nat) × TyEnv × NativeEff) → Checked (List Suggestion)
-  | [] => pure []
-  | (sp, sourceEnv, prog) :: rest => do
-    let suggestion ← evaluateCandidate o sig targetEnv expected targetPath sp sourceEnv prog
-    let later ← evaluateCandidates o sig targetEnv expected targetPath rest
-    pure (suggestion :: later)
+/-- **Evaluate a page of candidates** in order; the first refusal refuses the page. -/
+def suggestPage (o : Oracle) (d : Doc) (focus : Focus NativeOp) (path : List Nat) :
+    List (Option (List Nat) × TyEnv × NativeEff) → Checked (Except FeedRefusal (List Suggestion))
+  | [] => pure (.ok [])
+  | (sourcePath,sourceEnv,program) :: rest => do
+    match ← suggestOne o d focus path sourcePath sourceEnv program with
+    | .error why => pure (.error why)
+    | .ok item =>
+      match ← suggestPage o d focus path rest with
+      | .error why => pure (.error why)
+      | .ok later => pure (.ok (item :: later))
+
 /-- Harvest local candidate items `(sourcePath, sourceEnv, prog)` for `d` at `targetPath` and
 `focus`:
 1. Any caller-supplied candidate programs `supplied`, checked at `focus.env`.
@@ -97,9 +130,10 @@ def suggest (o : Oracle) (d : Doc) (path : List Nat) (limit : Nat := 16)
     let total := all.length
     let page := (all.drop cursor).take limit
     let nextCursor := if cursor + limit < total then some (cursor + limit) else none
-    let suggestions ← evaluateCandidates o sig focus.env focus.ty path page
-    pure (some {
-      doc := d.id, revision := d.revision, path := path,
-      cursor := cursor, limit := limit, total := total, nextCursor := nextCursor,
-      sig := sig, env := focus.env, expected := focus.ty, suggestions := suggestions })
+    match ← suggestPage o d focus path page with
+    | .error _ => pure none
+    | .ok suggestions => pure (some {
+        doc := d.id, revision := d.revision, path := path,
+        cursor := cursor, limit := limit, total := total, nextCursor := nextCursor,
+        sig := sig, env := focus.env, expected := focus.ty, suggestions := suggestions })
 end Effect4.Program.CheckCache

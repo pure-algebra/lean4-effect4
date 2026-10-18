@@ -59,7 +59,7 @@ one.
 | `fills.add` | `fills` or `fillsJson`, or `path` with `replacement` / `replacementJson` | each fill's outcome at the set's base (`FillSet.add`): applied, collapsed or refused at its address; a set opened at an earlier revision refuses | `FillSet.add_wf` |
 | `fills.view` | nothing | the set's fills in the base's address order, its revision, and whether the document has moved past it | `ordered_congr` |
 | `fills.reset` | nothing | a new set at the document's current revision, and the fills discarded | none |
-| `fills.materialize` | nothing | the set published as one new revision (`FillSet.materializeDoc`), journaled as one edit at the root, or a refusal | `FillSet.add_wf`, `materialize_congr`, `ordered_compose`, `materialize_refFree` |
+| `fills.materialize` | nothing | the set published as one new revision (`FillSet.publication`), journaled as one edit at the root, or a refusal | `FillSet.add_wf`, `materialize_congr`, `ordered_compose`, `materialize_refFree` |
 | `fork` | `docName` (optional) | forks the open document with a fresh generation | none |
 | `view` | `path`, or none | at an address, its entry and its focus; with none, the whole table | `SourceSession.reached_view`; `SourceSession.focusAt_typed` at an address |
 | `undo` | nothing | the last journaled edit taken back at a new revision (`Doc.step`): a checked or draft edit, or a published fill set; the delta and the view | `SourceSession.feed_undo` |
@@ -148,13 +148,13 @@ new one at the open document's current revision. So an empty set follows the doc
 that holds fills keeps the base its fills were certified at. -/
 def State.fillsFor (st : State) (d : Doc) : FillSet :=
   match st.fills with
-  | some fs => if fs.entries.isEmpty then FillSet.ofDoc d else fs
-  | none => FillSet.ofDoc d
+  | some fs => if fs.entries.isEmpty then FillSet.open_ d else fs
+  | none => FillSet.open_ d
 
 /-- Whether a fill set was opened at another document or another revision than `d`'s current one:
 its fills were certified at a base the document no longer holds. -/
 def fillsStale (fs : FillSet) (d : Doc) : Bool :=
-  fs.doc != d.id || fs.revision != d.revision
+  fs.anchor.doc != d.id || fs.anchor.revision != d.revision || fs.base != d.session.sketch || fs.app != d.session.app
 
 /-- One request. -/
 structure Request where
@@ -490,6 +490,7 @@ def evidenceJson (sig : Signature NativeOp) (prog : Option NativeEff) :
       ("actual", effTyJson actual)]
   | .refused why =>
     Json.mkObj [("kind", .str "refused"), ("refusal", refusalJson why prog sig)]
+  | .feedRefused why => Json.mkObj [("kind",.str "feedRefused"),("refusal",Json.mkObj (feedRefusalFields sig none why))]
   | .differentEnv sourceEnv targetEnv =>
     Json.mkObj [("kind", .str "differentEnv"), ("sourceEnv", printJson sourceEnv),
       ("targetEnv", printJson targetEnv)]
@@ -539,25 +540,6 @@ def fillEntryJson (entry : List Nat × NativeEff) (hex : Bool := false) : Json :
   Json.mkObj <|
     [("path", toJson entry.1), ("programJson", printJson entry.2)] ++
     if hex then [("program", .str (toHex entry.2))] else []
-
-/-- A materialization refusal (`MaterializeRefusal`) as JSON. -/
-def materializeRefusalJson (sig : Signature NativeOp) (prog : Option NativeEff) :
-    MaterializeRefusal → Json
-  | .conflict path =>
-    Json.mkObj [("reason", .str "conflict"), ("path", toJson path)]
-  | .root => Json.mkObj [("reason", .str "root")]
-  | .unknownAddress => Json.mkObj [("reason", .str "unknownAddress")]
-  | .notApplicable =>
-    Json.mkObj [("reason", .str "notApplicable")]
-  | .refused why =>
-    Json.mkObj [("reason", .str "refused"), ("refusal", refusalJson why prog sig)]
-  | .foreignDoc expected actual =>
-    Json.mkObj [("reason", .str "foreignDoc"), ("expected", docIdJson expected),
-      ("actual", docIdJson actual)]
-  | .staleRevision expected actual =>
-    Json.mkObj [("reason", .str "staleRevision"), ("expected", toJson expected),
-      ("actual", toJson actual)]
-  | .foreignBase => Json.mkObj [("reason", .str "foreignBase")]
 
 /-- Parse a call selector (`Effect4.Run.Sel`) from `req`'s `fiber`, `token`, or `rowName`. -/
 def selFrom? (req : Request) : Option Effect4.Run.Sel :=
@@ -688,7 +670,7 @@ def answer (st : State) (req : Request) : State × Answer :=
       let d := opened.value
       ({ document := some d, source := some d.session, journal := [], app := name,
           docId := d.id, revision := d.revision, generation := st.generation + 1,
-          live := st.live, cache := st.cache.learn opened, fills := some (FillSet.ofDoc d) },
+          live := st.live, cache := st.cache.learn opened, fills := some (FillSet.open_ d) },
         Answer.mk req.op name (readLaws ++ [``SourceSession.reached_view]) true
           (viewJson d.session) none req.id)
   | "catalogue" =>
@@ -824,7 +806,7 @@ def answer (st : State) (req : Request) : State × Answer :=
       | "fills.add" =>
         let fs0 := st.fillsFor d
         if fillsStale fs0 d then
-          none' s!"the fill set was opened at revision {fs0.revision} of {fs0.doc.name}; the document is at revision {d.revision} of {d.id.name}; `fills.reset` discards the set"
+          none' s!"the fill set was opened at revision {fs0.anchor.revision} of {fs0.anchor.doc.name}; the document is at revision {d.revision} of {d.id.name}; `fills.reset` discards the set"
         else
         let items? : Option (Option (List (List Nat × NativeEff)) × List Lean.Name) :=
           if req.fills.isSome || req.fillsJson.isSome then
@@ -845,14 +827,15 @@ def answer (st : State) (req : Request) : State × Answer :=
             (st, unreadable (α := NativeEff) req.op "the filling does not read"
               req.replacementJson req.id)
         | some (some items, readLaws) =>
-          let (fs', outs) := fs0.add items
+          let checked := fs0.add (st.cache.oracle (Check.HitRule.exact.or Check.extension)) items
+          let (fs',outs) := checked.value
           let allOk := outs.all fun o => match o with | .refused _ _ => false | _ => true
-          let st' := { st with fills := some fs' }
+          let st' := { st with fills := some fs', cache := st.cache.learn checked }
           let result := Json.mkObj
-            [("doc", docIdJson fs'.doc),
-              ("revision", toJson fs'.revision),
+            [("doc", docIdJson fs'.anchor.doc),
+              ("revision", toJson fs'.anchor.revision),
               ("outcomes", Json.arr (outs.map addOutcomeJson).toArray),
-              ("fills", Json.arr (fs'.view.map fun e => fillEntryJson e req.hex).toArray)]
+              ("fills", Json.arr (fs'.pending.map fun e => fillEntryJson e req.hex).toArray)]
           (st',
             { op := op, app := st.app,
               laws := (readLaws ++ [``FillSet.add_wf]).eraseDups,
@@ -863,45 +846,47 @@ def answer (st : State) (req : Request) : State × Answer :=
       | "fills.view" =>
         let fs := st.fillsFor d
         let result := Json.mkObj
-          [("doc", docIdJson fs.doc),
-            ("revision", toJson fs.revision),
+          [("doc", docIdJson fs.anchor.doc),
+            ("revision", toJson fs.anchor.revision),
             ("stale", toJson (fillsStale fs d)),
-            ("fills", Json.arr (fs.view.map fun e => fillEntryJson e req.hex).toArray)]
+            ("fills", Json.arr (fs.pending.map fun e => fillEntryJson e req.hex).toArray)]
         (st, Answer.mk op st.app [``ordered_congr] true result none req.id)
       | "fills.reset" =>
         let fs := st.fillsFor d
-        let fresh := FillSet.ofDoc d
+        let fresh := FillSet.open_ d
         let result := Json.mkObj
-          [("doc", docIdJson fresh.doc),
-            ("revision", toJson fresh.revision),
-            ("discarded", Json.arr (fs.view.map fun e => fillEntryJson e req.hex).toArray)]
+          [("doc", docIdJson fresh.anchor.doc),
+            ("revision", toJson fresh.anchor.revision),
+            ("discarded", Json.arr (fs.pending.map fun e => fillEntryJson e req.hex).toArray)]
         ({ st with fills := some fresh }, Answer.mk op st.app [] true result none req.id)
       | "fills.materialize" =>
         let fs := st.fillsFor d
-        if fs.entries.isEmpty then none' "the fill set holds no fill" else
-        match fs.materializeDoc d with
-        | .error why =>
-          (st,
-            { op := op, app := st.app,
-              laws := [``FillSet.add_wf, ``materialize_congr],
-              ok := false,
-              result := materializeRefusalJson sig (some d.session.sketch.program) why,
-              error := some "the fill set did not materialize",
-              id := req.id })
-        | .ok d' =>
-          -- the journal holds the publication as one edit at the root, so `undo` takes it back
-          let step : Edit.Step := ⟨.fill [] d'.session.sketch.program, some d.session.sketch.program, .rechecked⟩
-          let st' := { (st.withDoc d') with journal := step :: st.journal,
-                                             fills := some (FillSet.ofDoc d') }
-          let result := Json.mkObj
-            [("doc", docIdJson d'.id),
-              ("revision", toJson d'.revision),
-              ("delta", deltaJson step.delta),
-              ("view", viewJson d'.session)]
-          (st', Answer.mk op st.app
-            [``FillSet.add_wf, ``materialize_congr, ``ordered_compose, ``materialize_refFree,
-              ``SourceSession.reached_view]
-            true result none req.id)
+        match d.check fs.anchor with
+        | .error why => (st, {
+            op := op, app := st.app, ok := false,
+            result := editRefusalJson sig (some l.sketch.program) why,
+            error := some "the fill anchor is stale", id := req.id })
+        | .ok () =>
+          if fs.base != d.session.sketch || fs.app != d.session.app then
+            none' "the fill anchor holds another base or application"
+          else
+            match fs.publication with
+            | .error .empty => none' "the fill set holds no fill"
+            | .ok action =>
+              let checked := d.step (st.cache.oracle (Check.HitRule.exact.or Check.extension)) fs.anchor action
+              let learned := { st with cache := st.cache.learn checked }
+              match checked.value with
+              | .error why => (learned, {
+                  op := op, app := st.app, ok := false,
+                  result := editRefusalJson sig (some l.sketch.program) why,
+                  error := some "the publication is refused", id := req.id })
+              | .ok (next,receipt) =>
+                let updated := { (learned.withDoc next) with
+                  journal := receipt.steps.reverse ++ st.journal,
+                  fills := some (FillSet.open_ next) }
+                (updated,Answer.mk op st.app [``FillSet.add_wf,``SourceSession.reached_view] true
+                  (Json.mkObj [("doc",docIdJson next.id),("revision",toJson next.revision),
+                    ("view",viewJson next.session)]) none req.id)
       | "replace" | "commit" | "fill" =>
         match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
         | some (some q, readLaws) => commitAnswer st d req (.fill q) readLaws
@@ -924,7 +909,7 @@ def answer (st : State) (req : Request) : State × Answer :=
         let newId : DocId := ⟨req.docName.getD d.id.name, st.generation⟩
         let opened := Doc.open_ ⟨newId,d.session.app,d.session.sketch⟩
         let d' := opened.value
-        let st' := { (st.withDoc d') with generation := st.generation + 1, cache := st.cache.learn opened, fills := some (FillSet.ofDoc d') }
+        let st' := { (st.withDoc d') with generation := st.generation + 1, cache := st.cache.learn opened, fills := some (FillSet.open_ d') }
         let result := Json.mkObj [("doc", docIdJson d'.id), ("revision", toJson d'.revision),
           ("view", viewJson d'.session)]
         (st', Answer.mk op st.app [``SourceSession.reached_view] true result none req.id)

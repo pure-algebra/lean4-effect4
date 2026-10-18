@@ -1,4 +1,5 @@
-import Effect4.Program.Typing.FillSet
+import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Program.FillReference
 import Effect4.Laws.Program.Typing.PartsTable
 import Effect4.Laws.Program.AddressMove
 import Effect4.Laws.Program.Edit
@@ -17,15 +18,17 @@ Slice D of `docs/research/2026-10-17-proof-scout/README.md` (§7.4).
 * D4 (`focusAt_fill_incomparable`): an exact fill keeps the focus at an incomparable address.
 * D5 (`fills_compose`): certified fills at pairwise incomparable addresses all apply and keep the
   base's type.
-* D6 (`materialize_congr`): two lists with the same members and no located conflict materialize
+* D6 (`materialize_congr`): two lists with the same members and no located conflict FillReference.materialize
   alike, via `lookup_congr`, `ordered_congr`, and `conflictFree_of_conflictAt`.
 * D7 (`ordered_compose`): the materializer's order satisfies D5's premises.
 * D8 (`refSites_replaceAt_nil`): a reference-free fill keeps a program free of references.
 * D9 (`materialize_refFree`): the materializer accepts a conflict-free set of certified
   reference-free fills through the source check, at the base's type.
-* Construction invariant (`FillSet.WellFormed`, `FillSet.empty_wf`, `FillSet.addOne_wf`,
-  `FillSet.add_wf`, `FillSet.conflictAt_eq_none`): every `FillSet` built from `FillSet.empty` by
-  `FillSet.add` is `ConflictFree`, pairwise `Incomparable`, and `Certified` at its base.
+* Construction invariant (`FillSet.add_wf`): every sealed set opened from a document has conflict-free, incomparable entries.
+  Each entry satisfies the anchor's keepExact feed observation.
+  This remains a placed goal.
+* `kept_eq_certified` and `FillSet.publish_eq_materialize` connect the new operations to the retained D1–D9 reference observations.
+  Their positive-base and reference-free premises remain explicit.
 -/
 
 set_option autoImplicit false
@@ -287,15 +290,10 @@ theorem focusAt_fill_incomparable {s s' : Sketch} {app : SigApp} {T : EffTy} {p1
 
 /-! ## D5: certified fills at incomparable addresses compose -/
 
-/-- A fill certified against a sketch: below the root, at a focus that the sketch answers, typed
-at the focus's type in its environment at the address's signature. -/
-def Certified (s : Sketch) (app : SigApp) (x : List Nat × NativeEff) : Prop :=
-  x.1 ≠ [] ∧ ∃ f, s.focusAt app x.1 = some f ∧ HasTy (s.sigAt app x.1) f.env x.2 f.ty
-
-/-- `certifiedB` soundness: when `certifiedB s app p q = true`, `(p, q)` is `Certified s app`. -/
+/-- `FillReference.certifiedB` soundness: when `FillReference.certifiedB s app p q = true`, `(p, q)` is `FillReference.Certified s app`. -/
 theorem certified_of_certifiedB {s : Sketch} {app : SigApp} {p : List Nat} {q : NativeEff}
-    (h : certifiedB s app p q = true) : Certified s app (p, q) := by
-  unfold certifiedB at h
+    (h : FillReference.certifiedB s app p q = true) : FillReference.Certified s app (p, q) := by
+  unfold FillReference.certifiedB at h
   obtain ⟨hp, hf⟩ := Bool.and_eq_true_iff.mp h
   have hp_ne : p ≠ [] := by
     intro h0
@@ -318,15 +316,15 @@ Placement:
 1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
 2. Question: step D5 of the proposed claim `workspace-fill-agreement` (role compatibility);
    consumer: `ordered_compose` (D7).
-3. Reach: one checked base sketch `s`, a list of fills pairwise `Incomparable` and each `Certified`
+3. Reach: one checked base sketch `s`, a list of fills pairwise `Incomparable` and each `FillReference.Certified`
    against `s` and `app`.
 4. What it does not establish: source admission through layer references (`Sketch.sourceCheck`),
-   which `materialize_refFree` (D9) and `materialize` cover.
+   which `materialize_refFree` (D9) and `FillReference.materialize` cover.
 5. Unlocks: R14 (`workspace-fill-agreement`). -/
 theorem fills_compose {app : SigApp} {T : EffTy} :
     ∀ (fills : List (List Nat × NativeEff)) (s : Sketch), s.check app = .ok T →
       fills.Pairwise (fun a b => Incomparable a.1 b.1) →
-      (∀ x ∈ fills, Certified s app x) →
+      (∀ x ∈ fills, FillReference.Certified s app x) →
       ∃ s', applyFills s fills = some s' ∧ s'.check app = .ok T
   | [], s, hs, _, _ => ⟨s, rfl, hs⟩
   | (p, q) :: rest, s, hs, hpw, hcert => by
@@ -335,7 +333,7 @@ theorem fills_compose {app : SigApp} {T : EffTy} :
     have hfill := Sketch.fillAt_of_replaceAt hrep
     have hs1 := Sketch.check_fill_kept hs hf hq hrep
     obtain ⟨hhead, htail⟩ := List.pairwise_cons.mp hpw
-    have hcert' : ∀ x ∈ rest, Certified { s with program := p' } app x := by
+    have hcert' : ∀ x ∈ rest, FillReference.Certified { s with program := p' } app x := by
       intro x hx
       obtain ⟨hxp, fx, hfx, hqx⟩ := hcert x (List.mem_cons_of_mem _ hx)
       refine ⟨hxp, fx, focusAt_fill_incomparable hs hp hf hq hfill hfx (hhead x hx), ?_⟩
@@ -458,17 +456,17 @@ Placement:
 theorem ordered_compose {app : SigApp} {T : EffTy} {base : Sketch}
     {fs : List (List Nat × NativeEff)} (hs : base.check app = .ok T)
     (hinc : ∀ x ∈ fs, ∀ y ∈ fs, x.1 ≠ y.1 → Incomparable x.1 y.1)
-    (hcert : ∀ x ∈ fs, Certified base app x) :
+    (hcert : ∀ x ∈ fs, FillReference.Certified base app x) :
     ∃ s', applyFills base (ordered base fs) = some s' ∧ s'.check app = .ok T := by
   refine fills_compose _ base hs ?_ (fun x hx => hcert x (ordered_mem hx))
   exact List.Pairwise.imp_of_mem (fun hx hy hne => hinc _ (ordered_mem hx) _ (ordered_mem hy) hne)
     (ordered_pairwise base fs)
 
 /-- A set with no located conflict is conflict-free. -/
-theorem conflictFree_of_conflictAt {fs : List (List Nat × NativeEff)} (h : conflictAt fs = none) :
+theorem conflictFree_of_conflictAt {fs : List (List Nat × NativeEff)} (h : FillReference.conflictAt fs = none) :
     ConflictFree fs := by
   intro x hx y hy hxy
-  unfold conflictAt at h
+  unfold FillReference.conflictAt at h
   have hnone : fs.find? (fun x => fs.any fun y => decide (y.1 = x.1) && decide (y.2 ≠ x.2)) = none := by
     cases hf : fs.find? (fun x => fs.any fun y => decide (y.1 = x.1) && decide (y.2 ≠ x.2)) with
     | none => rfl
@@ -490,10 +488,10 @@ theorem conflictFree_of_conflictAt {fs : List (List Nat × NativeEff)} (h : conf
       rfl
   exact Prod.ext hxy h2
 
-/-- Converse of `conflictFree_of_conflictAt`: a `ConflictFree` list has `conflictAt fs = none`. -/
+/-- Converse of `conflictFree_of_conflictAt`: a `ConflictFree` list has `FillReference.conflictAt fs = none`. -/
 theorem conflictAt_eq_none_of_conflictFree {fs : List (List Nat × NativeEff)}
-    (hcf : ConflictFree fs) : conflictAt fs = none := by
-  unfold conflictAt
+    (hcf : ConflictFree fs) : FillReference.conflictAt fs = none := by
+  unfold FillReference.conflictAt
   suffices hnone : fs.find? (fun x => fs.any fun y => decide (y.1 = x.1) && decide (y.2 ≠ x.2)) = none by
     rw [hnone]
     rfl
@@ -506,7 +504,7 @@ theorem conflictAt_eq_none_of_conflictFree {fs : List (List Nat × NativeEff)}
 
 /-! ## The materializer's address checks
 
-`materialize` refuses a root fill and a fill where the base holds no program, before it orders the
+`FillReference.materialize` refuses a root fill and a fill where the base holds no program, before it orders the
 fills. Both checks read the fills' members only, so D6 still holds, and certified fills pass both,
 so D9 still holds. -/
 
@@ -531,11 +529,11 @@ Placement:
 1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
 2. Question: a step of D9 (`materialize_refFree`), the second half of the proposed claim
    `workspace-fill-agreement` (role compatibility); consumer: `certified_passes_checks`.
-3. Reach: any fill `Certified` against a sketch and an application.
+3. Reach: any fill `FillReference.Certified` against a sketch and an application.
 4. What it does not establish: that the fill applies beside other fills (D5 does).
 5. Unlocks: R14 (`workspace-fill-agreement`). -/
 theorem holdsProgram_of_certified {s : Sketch} {app : SigApp} {x : List Nat × NativeEff}
-    (h : Certified s app x) : x.1.isEmpty = false ∧ holdsProgram s x.1 = true := by
+    (h : FillReference.Certified s app x) : x.1.isEmpty = false ∧ holdsProgram s x.1 = true := by
   obtain ⟨hne, f, hf, -⟩ := h
   refine ⟨?_, ?_⟩
   · cases hx : x.1 with
@@ -544,18 +542,18 @@ theorem holdsProgram_of_certified {s : Sketch} {app : SigApp} {x : List Nat × N
   · unfold holdsProgram
     rw [Sketch.focusAt_at hf]
 
-/-- Certified fills pass both of the materializer's address checks.
+/-- FillReference.Certified fills pass both of the materializer's address checks.
 
 Placement:
 1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
 2. Question: a step of D9 (`materialize_refFree`), the second half of the proposed claim
    `workspace-fill-agreement` (role compatibility); consumer: `materialize_refFree`.
-3. Reach: any list of fills, each `Certified` against one base and one application.
+3. Reach: any list of fills, each `FillReference.Certified` against one base and one application.
 4. What it does not establish: that the materializer accepts them (D9 does, on reference-free
    fills at incomparable addresses).
 5. Unlocks: R14 (`workspace-fill-agreement`). -/
 theorem certified_passes_checks {s : Sketch} {app : SigApp} {fs : List (List Nat × NativeEff)}
-    (hcert : ∀ x ∈ fs, Certified s app x) :
+    (hcert : ∀ x ∈ fs, FillReference.Certified s app x) :
     fs.any (fun x => x.1.isEmpty) = false ∧ fs.any (fun x => !holdsProgram s x.1) = false := by
   refine ⟨List.any_eq_false.mpr fun x hx h => ?_, List.any_eq_false.mpr fun x hx h => ?_⟩
   · have h' : x.1.isEmpty = true := h
@@ -566,7 +564,7 @@ theorem certified_passes_checks {s : Sketch} {app : SigApp} {fs : List (List Nat
     exact Bool.false_ne_true h'
 
 /-- **D6: the materializer reads a set**: two lists with the same members, neither with a located
-conflict, materialize alike, whatever their order and repeats.
+conflict, FillReference.materialize alike, whatever their order and repeats.
 
 Placement:
 1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
@@ -574,13 +572,13 @@ Placement:
    consumer: `FillSet.materializeSketch` and `FillSet.materializeDoc`.
 3. Reach: any two conflict-free fill lists `fs` and `gs` with the same members over one `app` and
    `base`.
-4. What it does not establish: that `materialize` succeeds (D9 establishes acceptance on
+4. What it does not establish: that `FillReference.materialize` succeeds (D9 establishes acceptance on
    reference-free fills).
 5. Unlocks: R14 (`workspace-fill-agreement`). -/
 theorem materialize_congr {app : SigApp} {base : Sketch} {fs gs : List (List Nat × NativeEff)}
-    (hmem : ∀ x, x ∈ fs ↔ x ∈ gs) (hf : conflictAt fs = none) (hg : conflictAt gs = none) :
-    materialize app base fs = materialize app base gs := by
-  unfold materialize
+    (hmem : ∀ x, x ∈ fs ↔ x ∈ gs) (hf : FillReference.conflictAt fs = none) (hg : FillReference.conflictAt gs = none) :
+    FillReference.materialize app base fs = FillReference.materialize app base gs := by
+  unfold FillReference.materialize
   rw [any_eq_of_mem_iff hmem (fun x => x.1.isEmpty), any_eq_of_mem_iff hmem (fun x => !holdsProgram base x.1),
     hf, hg, ordered_congr hmem (conflictFree_of_conflictAt hf)]
 
@@ -654,11 +652,11 @@ Placement:
 5. Unlocks: R14 (`workspace-fill-agreement`). -/
 theorem materialize_refFree {app : SigApp} {T : EffTy} {base : Sketch}
     {fs : List (List Nat × NativeEff)} (hs : base.check app = .ok T)
-    (hcf : conflictAt fs = none)
+    (hcf : FillReference.conflictAt fs = none)
     (hinc : ∀ x ∈ fs, ∀ y ∈ fs, x.1 ≠ y.1 → Incomparable x.1 y.1)
-    (hcert : ∀ x ∈ fs, Certified base app x) (hbase : base.program.refSites [] = [])
+    (hcert : ∀ x ∈ fs, FillReference.Certified base app x) (hbase : base.program.refSites [] = [])
     (hfills : ∀ x ∈ fs, x.2.refSites [] = []) :
-    ∃ s', materialize app base fs = .ok s' ∧ s'.check app = .ok T := by
+    ∃ s', FillReference.materialize app base fs = .ok s' ∧ s'.check app = .ok T := by
   obtain ⟨s', happ, hs'⟩ := ordered_compose hs hinc hcert
   have hnil := refSites_applyFills_nil _ base s' hbase
     (fun x hx => hfills x (ordered_mem hx)) happ
@@ -671,7 +669,7 @@ theorem materialize_refFree {app : SigApp} {T : EffTy} {base : Sketch}
     rw [expandRefs_eq_self_of_refSites_nil s'.program hnil]
   refine ⟨s', ?_, hs'⟩
   obtain ⟨hroot, hknown⟩ := certified_passes_checks hcert
-  unfold materialize
+  unfold FillReference.materialize
   rw [hroot, hknown, hcf]
   dsimp only
   rw [happ]
@@ -683,134 +681,44 @@ theorem materialize_refFree {app : SigApp} {T : EffTy} {base : Sketch}
 
 /-! ## Construction invariant of `FillSet` (§7.4, F1) -/
 
-namespace FillSet
 
-/-- **The construction invariant of a `FillSet`**: its entries are `ConflictFree`, pairwise
-`Incomparable` at distinct addresses, and every entry is `Certified` at `fs.base` and `fs.app`. -/
+/-!
+Placement: initial-algebras-folds, typed-replacement and source-session-coherent, R14.
+Question: the new add_wf construction claim and the reference-fragment connectors below.
+Reach: the sealed anchor, exact source-session feed, non-root edits, and explicit reference-free premises.
+Exclusions: arbitrary reference composition, admission, progress, and native execution.
+Consumers: ordered publication, the tool's pending set, and the D1-D9 reference battery.
+-/
+open _root_.Effect4.Program.Check
+
+def FeedCertified (s : SourceSession) (x : List Nat × NativeEff) : Prop :=
+  x.1 ≠ [] ∧ ∃ next step,
+    (s.feed Oracle.uncached .keepExact (.fill x.1 x.2)).value = .ok (next,step)
+
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal kept_eq_certified (s : SourceSession) (hc : s.Coherent)
+    (p : List Nat) (q : NativeEff) (hp : p ≠ [])
+    (hb : s.sketch.program.refSites [] = []) (hq : q.refSites [] = []) :
+    FeedCertified s (p,q) ↔ FillReference.certifiedB s.sketch s.app p q = true
+
+namespace FillSet
 structure WellFormed (fs : FillSet) : Prop where
   conflictFree : ConflictFree fs.entries
   incomparable : ∀ x ∈ fs.entries, ∀ y ∈ fs.entries, x.1 ≠ y.1 → Incomparable x.1 y.1
-  certified : ∀ x ∈ fs.entries, Certified fs.base fs.app x
+  certified : ∀ x ∈ fs.entries, FeedCertified fs.source x
 
-/-- `FillSet.empty` satisfies `WellFormed`. -/
-theorem empty_wf (app : SigApp) (base : Sketch) (doc : DocId := ⟨"", 0⟩) (revision : Nat := 0) :
-    (empty app base doc revision).WellFormed :=
-  { conflictFree := fun _ hx => by cases hx
-    incomparable := fun _ hx => by cases hx
-    certified := fun _ hx => by cases hx }
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal add_wf (o : Oracle) (fs : FillSet) (submissions : List (List Nat × NativeEff)) :
+    ((fs.add o submissions).value.1).WellFormed
 
-/-- `FillSet.ofDoc` satisfies `WellFormed`. -/
-theorem ofDoc_wf (d : Doc) : (ofDoc d).WellFormed :=
-  empty_wf d.session.app d.session.sketch d.id d.revision
-
-/-- `FillSet.addOne` preserves `WellFormed`, and keeps `app`, `base`, `doc` and `revision`. -/
-theorem addOne_wf {fs : FillSet} (hwf : fs.WellFormed) (p : List Nat) (q : NativeEff) :
-    (fs.addOne p q).1.WellFormed ∧
-      (fs.addOne p q).1.app = fs.app ∧
-      (fs.addOne p q).1.base = fs.base ∧
-      (fs.addOne p q).1.doc = fs.doc ∧
-      (fs.addOne p q).1.revision = fs.revision := by
-  unfold addOne
-  cases hp : p.isEmpty with
-  | true => exact ⟨hwf, rfl, rfl, rfl, rfl⟩
-  | false =>
-    rw [if_neg Bool.false_ne_true]
-    cases hat : (Node.eff fs.base.program).at_ p with
-    | none => exact ⟨hwf, rfl, rfl, rfl, rfl⟩
-    | some n =>
-      cases n with
-      | effs _ | layer _ | layers _ | stmts _ | stmt _ | action _ => exact ⟨hwf, rfl, rfl, rfl, rfl⟩
-      | eff sub =>
-        dsimp only
-        cases hfind1 : fs.entries.find? (fun x => decide (x.1 = p)) with
-        | some existing =>
-          dsimp only
-          cases decide (existing.2 = q) <;> exact ⟨hwf, rfl, rfl, rfl, rfl⟩
-        | none =>
-          dsimp only
-          cases hfind2 : fs.entries.find? (fun x => !incomparableB p x.1) with
-          | some over => exact ⟨hwf, rfl, rfl, rfl, rfl⟩
-          | none =>
-            dsimp only
-            cases hcert : certifiedB fs.base fs.app p q with
-            | false =>
-              rw [if_neg Bool.false_ne_true]
-              exact ⟨hwf, rfl, rfl, rfl, rfl⟩
-            | true =>
-              rw [if_pos rfl]
-              refine ⟨⟨?_, ?_, ?_⟩, rfl, rfl, rfl, rfl⟩
-              · intro x hx y hy hxy
-                have hno_p : ∀ z ∈ fs.entries, z.1 ≠ p := by
-                  intro z hz heq
-                  have hnone := List.find?_eq_none.mp hfind1 z hz
-                  exact hnone (decide_eq_true heq)
-                rcases List.mem_cons.mp hx with rfl | hx' <;>
-                  rcases List.mem_cons.mp hy with rfl | hy'
-                · rfl
-                · exact absurd hxy.symm (hno_p y hy')
-                · exact absurd hxy (hno_p x hx')
-                · exact hwf.conflictFree x hx' y hy' hxy
-              · intro x hx y hy hne
-                have hinc_p : ∀ z ∈ fs.entries, Incomparable p z.1 := by
-                  intro z hz
-                  have hnone := List.find?_eq_none.mp hfind2 z hz
-                  cases hincB : incomparableB p z.1 with
-                  | false =>
-                    exfalso
-                    apply hnone
-                    rw [hincB]
-                    rfl
-                  | true => exact incomparable_of_incomparableB hincB
-                rcases List.mem_cons.mp hx with rfl | hx' <;>
-                  rcases List.mem_cons.mp hy with rfl | hy'
-                · exact absurd rfl hne
-                · exact hinc_p y hy'
-                · exact (hinc_p x hx').symm
-                · exact hwf.incomparable x hx' y hy' hne
-              · intro x hx
-                rcases List.mem_cons.mp hx with rfl | hx'
-                · exact certified_of_certifiedB hcert
-                · exact hwf.certified x hx'
-
-/-- **Construction invariant of `FillSet.add`**: every `FillSet` built from a `WellFormed` `FillSet`
-(in particular `FillSet.empty` or `FillSet.ofDoc`) by `FillSet.add` is `ConflictFree`, pairwise
-`Incomparable`, and `Certified` at its base.
-
-Placement:
-1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
-2. Question: the construction invariant for the proposed claim `workspace-fill-agreement`
-   (role compatibility); consumer: `FillSet.materializeSketch`, `FillSet.materializeDoc`, and
-   `Tools.Session.answer` (`fills.add`, `fills.materialize`).
-3. Reach: any `WellFormed` `FillSet` and any batch of submitted fills `items`.
-4. What it does not establish: absence of layer-reference faults across fills (checked by
-   `Sketch.sourceCheck` in `materialize`).
-5. Unlocks: R14 (`workspace-fill-agreement`, F1). -/
-theorem add_wf {fs : FillSet} (hwf : fs.WellFormed) :
-    ∀ (items : List (List Nat × NativeEff)),
-      (fs.add items).1.WellFormed ∧
-        (fs.add items).1.app = fs.app ∧
-        (fs.add items).1.base = fs.base ∧
-        (fs.add items).1.doc = fs.doc ∧
-        (fs.add items).1.revision = fs.revision
-  | [] => ⟨hwf, rfl, rfl, rfl, rfl⟩
-  | (p, q) :: rest => by
-    obtain ⟨hwf1, happ1, hbase1, hdoc1, hrev1⟩ := addOne_wf hwf p q
-    obtain ⟨hwf2, happ2, hbase2, hdoc2, hrev2⟩ := add_wf hwf1 rest
-    exact ⟨hwf2, happ2.trans happ1, hbase2.trans hbase1, hdoc2.trans hdoc1, hrev2.trans hrev1⟩
-
-/-- Every `WellFormed` `FillSet` has `conflictAt fs.entries = none`. -/
-theorem conflictAt_eq_none {fs : FillSet} (hwf : fs.WellFormed) :
-    conflictAt fs.entries = none :=
-  conflictAt_eq_none_of_conflictFree hwf.conflictFree
-
-/-- Every `WellFormed` `FillSet` over a checked reference-free base whose entries are reference-free
-materializes via `fs.materializeSketch` to a sketch of the base's type. -/
-theorem materializeSketch_refFree {fs : FillSet} {T : EffTy} (hwf : fs.WellFormed)
-    (hs : fs.base.check fs.app = .ok T) (hbase : fs.base.program.refSites [] = [])
-    (hfills : ∀ x ∈ fs.entries, x.2.refSites [] = []) :
-    ∃ s', fs.materializeSketch = .ok s' ∧ s'.check fs.app = .ok T :=
-  materialize_refFree hs (conflictAt_eq_none hwf) hwf.incomparable hwf.certified hbase hfills
-
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal publish_eq_materialize {o : Oracle} {fs : FillSet} {d next : Doc} {action : DocAction}
+    {receipt : Receipt} {T : EffTy} (ha : fs.anchor = d.snap) (hs : fs.source = d.session)
+    (hc : d.session.Coherent) (hpositive : fs.base.sourceCheck fs.app = .ok T)
+    (hb : fs.base.program.refSites [] = [])
+    (hq : ∀ x ∈ fs.entries, x.2.refSites [] = [])
+    (hpublication : fs.publication = .ok action)
+    (hstep : (d.step o fs.anchor action).value = .ok (next,receipt)) :
+    FillReference.materialize fs.app fs.base fs.entries = .ok next.session.sketch
 end FillSet
-
 end Effect4.Program

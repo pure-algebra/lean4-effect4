@@ -1273,6 +1273,15 @@ def registry : Registry where
     { id := "source-document-revert", concept := "initial-algebras-folds", role := .compatibility
       title := "An accepted action and its immediate selected-entry revert restore the prior program and retain appended hole rows; no admission, progress, or native execution claim (seams S1, R14)"
       pointer := .witness `Effect4.Program.Doc.revert_program },
+    { id := "kept-fill-reference", concept := "initial-algebras-folds", role := .compatibility
+      title := "For coherent sources at nonroot addresses, keepExact acceptance equals old certification when both base and filling have no references; no admission, progress, or native execution claim (seams S2, R14)"
+      pointer := .witness `Effect4.Program.kept_eq_certified },
+    { id := "pending-fill-construction", concept := "initial-algebras-folds", role := .preservation
+      title := "Every sealed pending set has conflict-free, incomparable entries certified by the anchor's keepExact feed; no admission, progress, or native execution claim (seams S2, R14)"
+      pointer := .witness `Effect4.Program.FillSet.add_wf },
+    { id := "pending-fill-publication", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful publication agrees with old materialization at its exact coherent anchor, under positive-base and reference-free premises; no admission, progress, or native execution claim (seams S2, R14)"
+      pointer := .witness `Effect4.Program.FillSet.publish_eq_materialize },
     { id := "source-session-coherent", concept := "initial-algebras-folds", role := .preservation
       title := "Every sealed document shows its exact source table, refusals, and root type without a separate coherence premise; source-session-draft-transport retains the old application, sketch, and edit-list scope; no native execution, progress, or cost claim (seams S1, R14)"
       pointer := .witness `Effect4.Program.SourceSession.reached_view },
