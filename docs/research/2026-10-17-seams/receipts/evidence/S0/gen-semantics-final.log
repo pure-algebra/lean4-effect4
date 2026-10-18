@@ -1,0 +1,14 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "make", "gen-semantics"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T04:04:19.512912+00:00"}
+lake build semantics-report Effect4.Laws Test.Program.TypedProgBindRed Test.Dogfood.P1HttpCache Test.Dogfood.P2HandlerLayers Test.Dogfood.P3WorkerQueue Test.Dogfood.P4RateLimiter Test.Dogfood.P5LedgerService Test.Dogfood.Bank Tools.View.FlowReach
+✔ [1814/1824] Built ProofGraph.Registry (1.0s)
+✔ [1815/1824] Built ProofGraph.Registry:c.o (919ms)
+✔ [1816/1824] Built Tools.Semantics (2.9s)
+✔ [1818/1824] Built Effect4.Laws.Author.Explain (3.3s)
+✔ [1819/1824] Built Tools.SemanticsDocument (3.5s)
+✔ [1821/1824] Built Drivers.Semantics (1.1s)
+✔ [1823/1824] Built Effect4.Laws (4.9s)
+✔ [1824/1824] Built «semantics-report»:exe (1.6s)
+Build completed successfully (1824 jobs).
+rm -rf .lake/gen/semantics-report && mkdir -p .lake/gen/semantics-report
+lake exe semantics-report .lake/gen/semantics-report
+cp .lake/gen/semantics-report/semantics.md generated/semantics.md

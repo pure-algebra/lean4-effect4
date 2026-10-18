@@ -1,0 +1,16 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "\\.step .*~fuel|I.interp_of|interp = I.interp_of|let step .*_i",
+    "ocaml/engine/e4_engine.ml",
+    "ocaml/engine/e4_instance.ml",
+    "ocaml/engine/test/api_gen_inst.ml",
+    "ocaml/engine/test/test_engine.ml"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T03:42:05.885133+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 0.019,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S0/step-callsite-census.log"
+}

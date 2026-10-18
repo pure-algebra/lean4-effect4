@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/s0-linkage-inventory.py"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T03:44:57.082223+00:00",
+  "exit_status": 1,
+  "elapsed_seconds": 17.984,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S0/full-linkage-inventory-2.log"
+}

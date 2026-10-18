@@ -1,0 +1,990 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "build", "--root", "ocaml", "gen/test_seams_s0.exe", "engine/effect4_engine.cma"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:38:59.472559+00:00"}
+Entering directory '/Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml'
+File "gen/api_gen.mli", line 148, characters 2-29:
+148 |   rows : (string * int) list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label rows is defined in both types sig_app and env.
+
+File "gen/api_gen.mli", line 149, characters 2-29:
+149 |   defs : (string * int) list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label defs is defined in both types shape_doc and env.
+
+File "gen/api_gen.mli", line 153, characters 2-22:
+153 |   rows : row_def list;
+        ^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label rows is defined in both types sig_app and module_.
+
+File "gen/api_gen.mli", line 154, characters 2-30:
+154 |   services : service_def list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label services is defined in both types sig_app and module_.
+
+File "gen/api_gen.mli", lines 155-160, characters 2-9:
+155 | ..layers :
+156 |     (string *
+157 |      (env ->
+158 |       int list ->
+159 |       ('op Eff_types.LayerTerm.t, effect4_program_authoring_refusal) result))
+160 |     list;
+Error (warning 30 [duplicate-definitions]): the label layers is defined in both types env and module_.
+
+File "gen/api_gen.mli", line 161, characters 2-26:
+161 |   defs : 'op def_src list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label defs is defined in both types shape_doc and module_.
+
+File "gen/api_gen.mli", line 166, characters 2-41:
+166 |   types : (string * Eff_types.Ty.t) list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label types is defined in both types sig_app and module_.
+
+File "gen/api_gen.mli", line 174, characters 2-49:
+174 |   program : Eff_types.NativeOp.t Eff_types.Eff.t;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label program is defined in both types typed and sketch.
+
+File "gen/api_gen.mli", line 178, characters 2-52:
+178 |   result : (Eff_types.EffTy.t, type_refusal) result;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label result is defined in both types loop_spec and verdict.
+
+File "gen/api_gen.mli", lines 186-198, characters 2-16:
+186 | ..machine :
+187 |     (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+188 |      Eff_types.Defect.t, fiber_id, unit, ctx, stores,
+189 |      (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+190 |       Eff_types.Defect.t, fiber_id, unit)
+...
+195 |      (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+196 |       Eff_types.Defect.t, fiber_id, unit)
+197 |      frame_event)
+198 |     run_machine;
+Error (warning 30 [duplicate-definitions]): the label machine is defined in both types inspection and session.
+
+File "gen/api_gen.mli", line 202, characters 2-28:
+202 |   pending : reply_slot list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label pending is defined in both types run_fiber and session.
+
+File "gen/api_gen.mli", line 212, characters 2-31:
+212 |   table : Eff_types.Row.t list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label table is defined in both types verdict and header.
+
+File "gen/api_gen.mli", line 216, characters 2-49:
+216 |   program : Eff_types.NativeOp.t Eff_types.Eff.t;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label program is defined in both types typed and built.
+
+File "gen/api_gen.mli", line 217, characters 2-30:
+217 |   admitted : admitted_program;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label admitted is defined in both types session and built.
+
+File "gen/api_gen.mli", line 221, characters 2-16:
+221 |   version : int;
+        ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label version is defined in both types header and live_record.
+
+File "gen/api_gen.mli", line 222, characters 2-16:
+222 |   app : sig_app;
+        ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label app is defined in both types built and live_record.
+
+File "gen/api_gen.mli", line 223, characters 2-49:
+223 |   program : Eff_types.NativeOp.t Eff_types.Eff.t;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label program is defined in both types typed and live_record.
+
+File "gen/api_gen.mli", line 224, characters 2-19:
+224 |   session : string;
+        ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label session is defined in both types header and live_record.
+
+File "gen/api_gen.mli", line 225, characters 2-19:
+225 |   binding : string;
+        ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label binding is defined in both types header and live_record.
+
+File "gen/api_gen.mli", line 228, characters 2-34:
+228 |   row_names : (string * int) list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label row_names is defined in both types built and live_record.
+
+File "gen/api_gen.mli", line 235, characters 2-18:
+235 |   budget : budget;
+        ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label budget is defined in both types live_record and run.
+
+File "gen/api_gen.mli", line 236, characters 2-20:
+236 |   session : session;
+        ^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label session is defined in both types header and run.
+
+File "gen/api_gen.mli", line 237, characters 2-25:
+237 |   journal : command list;
+        ^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label journal is defined in both types live_record and run.
+
+File "gen/api_gen.mli", line 339, characters 2-14:
+339 |   state : 'st;
+        ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label state is defined in both types effect4_run_tree_outcome and run_machine.
+
+File "gen/api_gen.mli", line 583, characters 2-76:
+583 |   machine : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label machine is defined in both types inspection and iter.
+
+File "gen/api_gen.mli", line 586, characters 2-66:
+586 |   outcome : ('nu, 's, 'b, 'e, 'd, 'i, 'a) effect4_machine_outcome;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label outcome is defined in both types inspection and iter.
+
+File "gen/api_gen.mli", line 591, characters 2-47:
+591 |   current : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label current is defined in both types fiber_core and frame_fiber.
+
+File "gen/api_gen.mli", line 593, characters 2-23:
+593 |   interruptible : bool;
+        ^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label interruptible is defined in both types fiber_core and frame_fiber.
+
+File "gen/api_gen.mli", line 594, characters 2-64:
+594 |   interrupted_cause : ('e, 'd, 'i, 'a) Eff_types.Cause.t option;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label interrupted_cause is defined in both types fiber_core and frame_fiber.
+
+File "gen/api_gen.mli", line 595, characters 2-28:
+595 |   deferred_interrupt : bool;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label deferred_interrupt is defined in both types fiber_core and frame_fiber.
+
+File "gen/api_gen.mli", line 639, characters 2-11:
+639 |   id : int;
+        ^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label id is defined in both types run_fiber and race.
+
+File "gen/api_gen.mli", line 641, characters 2-14:
+641 |   token : int;
+        ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types pending and race.
+
+File "gen/api_gen.mli", line 642, characters 2-46:
+642 |   state : ('b, 'e, 'd, 'i, 'a) race_all_state;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label state is defined in both types effect4_run_tree_outcome and race.
+
+File "gen/api_gen.mli", line 654, characters 2-18:
+654 |   remaining : int;
+        ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label remaining is defined in both types pending and race_all_state.
+
+File "gen/api_gen.mli", line 710, characters 21-37:
+710 | and type_refusal = { path : int list; reason : type_reason; }
+                           ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and type_refusal.
+
+File "gen/api_gen.mli", line 710, characters 38-59:
+710 | and type_refusal = { path : int list; reason : type_reason; }
+                                            ^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label reason is defined in both types effect4_program_authoring_refusal and type_refusal.
+
+File "gen/api_gen.mli", line 757, characters 2-16:
+757 |   app : sig_app;
+        ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label app is defined in both types built and sig_data.
+
+File "gen/api_gen.mli", line 758, characters 2-31:
+758 |   holes : Eff_types.Row.t list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label holes is defined in both types sketch and sig_data.
+
+File "gen/api_gen.mli", line 795, characters 2-41:
+795 |   types : (string * Eff_types.Ty.t) list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label types is defined in both types sig_app and signature.
+
+File "gen/api_gen.mli", line 799, characters 2-25:
+799 |   error : Eff_types.Ty.t;
+        ^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label error is defined in both types gen_ty and layer_ty.
+
+File "gen/api_gen.mli", line 800, characters 2-60:
+800 |   requires : Eff_types.ServiceKey.t Eff_types.Effect4_row.t;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label requires is defined in both types gen_ty and layer_ty.
+
+File "gen/api_gen.mli", line 831, characters 2-37:
+831 |   services : Eff_types.Val.t context;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label services is defined in both types sig_app and ctx.
+
+File "gen/api_gen.mli", line 832, characters 2-29:
+832 |   max_ops_before_yield : int;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label max_ops_before_yield is defined in both types run_fiber and ctx.
+
+File "gen/api_gen.mli", line 833, characters 2-23:
+833 |   prevent_yield : bool;
+        ^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label prevent_yield is defined in both types run_fiber and ctx.
+
+File "gen/api_gen.mli", line 836, characters 2-18:
+836 |   path : int list;
+        ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and point.
+
+File "gen/api_gen.mli", line 837, characters 2-29:
+837 |   env : Eff_types.Val.t list;
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label env is defined in both types frame and point.
+
+File "gen/api_gen.mli", line 838, characters 2-13:
+838 |   fuel : int;
+        ^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fuel is defined in both types budget and point.
+
+File "gen/api_gen.mli", line 845, characters 2-13:
+845 |   root : int;
+        ^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label root is defined in both types shape_doc and point.
+
+File "gen/api_gen.mli", line 1002, characters 17-33:
+1002 | and arg_site = { path : int list; env : Eff_types.Val.t list; }
+                        ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and arg_site.
+
+File "gen/api_gen.mli", line 1002, characters 34-61:
+1002 | and arg_site = { path : int list; env : Eff_types.Val.t list; }
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label env is defined in both types frame and arg_site.
+
+File "gen/api_gen.mli", line 1004, characters 2-18:
+1004 |   path : int list;
+         ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and capture.
+
+File "gen/api_gen.mli", line 1005, characters 2-29:
+1005 |   env : Eff_types.Val.t list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label env is defined in both types frame and capture.
+
+File "gen/api_gen.mli", line 1006, characters 2-13:
+1006 |   fuel : int;
+         ^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fuel is defined in both types budget and capture.
+
+File "gen/api_gen.mli", line 1007, characters 2-19:
+1007 |   tape : bool list;
+         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label tape is defined in both types point and capture.
+
+File "gen/api_gen.mli", line 1009, characters 2-13:
+1009 |   root : int;
+         ^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label root is defined in both types shape_doc and capture.
+
+File "gen/api_gen.mli", line 1010, characters 2-30:
+1010 |   params : arg_site list list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label params is defined in both types point and capture.
+
+File "gen/api_gen.mli", line 1011, characters 2-23:
+1011 |   call : int list list;
+         ^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label call is defined in both types point and capture.
+
+File "gen/api_gen.mli", line 1015, characters 2-53:
+1015 |   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label answer is defined in both types gen_ty and frame_pop.
+
+File "gen/api_gen.mli", line 1018, characters 2-52:
+1018 |   fiber : ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and frame_pop.
+
+File "gen/api_gen.mli", line 1045, characters 2-19:
+1045 |   id : memo_map_id;
+         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label id is defined in both types run_fiber and memo_map.
+
+File "gen/api_gen.mli", line 1046, characters 2-30:
+1046 |   parent : memo_map_id option;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label parent is defined in both types fork_record and memo_map.
+
+File "gen/api_gen.mli", line 1050, characters 2-18:
+1050 |   observers : int;
+         ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label observers is defined in both types run_fiber and memo_entry.
+
+File "gen/api_gen.mli", line 1066, characters 2-21:
+1066 |   path : string list;
+         ^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and formation_refusal.
+
+File "gen/api_gen.mli", line 1068, characters 2-28:
+1068 |   reason : formation_reason;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label reason is defined in both types effect4_program_authoring_refusal and formation_refusal.
+
+File "gen/api_gen.mli", line 1070, characters 13-31:
+1070 | and path = { steps : step list; stop : stop; }
+                    ^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label steps is defined in both types effect4_run_tree_outcome and path.
+
+File "gen/api_gen.mli", line 1070, characters 32-44:
+1070 | and path = { steps : step list; stop : stop; }
+                                       ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label stop is defined in both types effect4_run_tree_outcome and path.
+
+File "gen/api_gen.mli", line 1077, characters 2-18:
+1077 |   path : int list;
+         ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and entry.
+
+File "gen/api_gen.mli", line 1078, characters 2-24:
+1078 |   env : node_env option;
+         ^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label env is defined in both types frame and entry.
+
+File "gen/api_gen.mli", line 1079, characters 2-59:
+1079 |   result : (Eff_types.EffTy.t, type_refusal) result option;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label result is defined in both types loop_spec and entry.
+
+File "gen/api_gen.mli", line 1091, characters 2-16:
+1091 |   version : int;
+         ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label version is defined in both types header and protocol.
+
+File "gen/api_gen.mli", line 1137, characters 49-71:
+1137 | and 'k deferred_cell = { completion : 'k option; wake : unit wake_list; }
+                                                        ^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label wake is defined in both types timer_store and deferred_cell.
+
+File "gen/api_gen.mli", line 1140, characters 2-14:
+1140 |   token : int;
+         ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types pending and owed.
+
+File "gen/api_gen.mli", line 1142, characters 2-19:
+1142 |   mode : wake_mode;
+         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label mode is defined in both types race and owed.
+
+File "gen/api_gen.mli", line 1160, characters 2-14:
+1160 |   result : 't;
+         ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label result is defined in both types loop_spec and wait_state.
+
+File "gen/api_gen.mli", line 1168, characters 2-19:
+1168 |   fiber : fiber_id;
+         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and await.
+
+File "gen/api_gen.mli", line 1169, characters 2-14:
+1169 |   token : int;
+         ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types pending and await.
+
+File "gen/api_gen.mli", line 1173, characters 12-29:
+1173 | and key = { fiber : fiber_id; token : int; }
+                   ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and key.
+
+File "gen/api_gen.mli", line 1173, characters 30-42:
+1173 | and key = { fiber : fiber_id; token : int; }
+                                     ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types pending and key.
+
+File "gen/api_gen.mli", line 1174, characters 18-35:
+1174 | and 'p waiter = { fiber : fiber_id; token : int; phase : int; payload : 'p; }
+                         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and waiter.
+
+File "gen/api_gen.mli", line 1174, characters 36-48:
+1174 | and 'p waiter = { fiber : fiber_id; token : int; phase : int; payload : 'p; }
+                                           ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types pending and waiter.
+
+File "gen/api_gen.mli", line 1174, characters 49-61:
+1174 | and 'p waiter = { fiber : fiber_id; token : int; phase : int; payload : 'p; }
+                                                        ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label phase is defined in both types wake_list and waiter.
+
+File "gen/api_gen.mli", line 1177, characters 2-51:
+1177 |   state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label state is defined in both types effect4_run_tree_outcome and scope.
+
+File "gen/api_gen.mli", line 1209, characters 28-44:
+1209 | and record_term_refusal = { path : int list; reason : record_typing_reason; }
+                                   ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and record_term_refusal.
+
+File "gen/api_gen.mli", line 1209, characters 45-75:
+1209 | and record_term_refusal = { path : int list; reason : record_typing_reason; }
+                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label reason is defined in both types effect4_program_authoring_refusal and record_term_refusal.
+
+File "gen/api_gen.mli", line 1215, characters 2-18:
+1215 |   path : int list;
+         ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and tuple_term_refusal.
+
+File "gen/api_gen.mli", line 1216, characters 2-14:
+1216 |   index : int;
+         ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label index is defined in both types wake_key and tuple_term_refusal.
+
+File "gen/api_gen.mli", line 1217, characters 2-31:
+1217 |   reason : tuple_typing_reason;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label reason is defined in both types effect4_program_authoring_refusal and tuple_term_refusal.
+
+File "gen/api_gen.mli", line 1220, characters 2-24:
+1220 |   cause_path : int list;
+         ^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label cause_path is defined in both types record_cause_refusal and tuple_cause_refusal.
+
+File "gen/api_gen.mli", line 1221, characters 2-28:
+1221 |   term : tuple_term_refusal;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label term is defined in both types record_cause_refusal and tuple_cause_refusal.
+
+File "gen/api_gen.mli", line 1223, characters 26-42:
+1223 | and fold_term_refusal = { path : int list; reason : fold_typing_reason; }
+                                 ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and fold_term_refusal.
+
+File "gen/api_gen.mli", line 1223, characters 43-71:
+1223 | and fold_term_refusal = { path : int list; reason : fold_typing_reason; }
+                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label reason is defined in both types effect4_program_authoring_refusal and fold_term_refusal.
+
+File "gen/api_gen.mli", line 1224, characters 27-49:
+1224 | and fold_cause_refusal = { cause_path : int list; term : fold_term_refusal; }
+                                  ^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label cause_path is defined in both types record_cause_refusal and fold_cause_refusal.
+
+File "gen/api_gen.mli", line 1224, characters 50-75:
+1224 | and fold_cause_refusal = { cause_path : int list; term : fold_term_refusal; }
+                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label term is defined in both types record_cause_refusal and fold_cause_refusal.
+
+File "gen/api_gen.mli", line 1226, characters 2-31:
+1226 |   key : Eff_types.ServiceKey.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and service_def.
+
+File "gen/api_gen.mli", line 1232, characters 2-42:
+1232 |   params : (string * Eff_types.Ty.t) list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label params is defined in both types point and def_src.
+
+File "gen/api_gen.mli", line 1233, characters 2-26:
+1233 |   answer : Eff_types.Ty.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label answer is defined in both types gen_ty and def_src.
+
+File "gen/api_gen.mli", line 1234, characters 2-25:
+1234 |   error : Eff_types.Ty.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label error is defined in both types gen_ty and def_src.
+
+File "gen/api_gen.mli", line 1235, characters 2-41:
+1235 |   requires : Eff_types.ServiceKey.t list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label requires is defined in both types gen_ty and def_src.
+
+File "gen/api_gen.mli", lines 1236-1242, characters 2-68:
+1236 | ..body :
+1237 |     (env ->
+1238 |      int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result)
+1239 |     list ->
+1240 |     env ->
+1241 |     int list ->
+1242 |     ('op Eff_types.Eff.t, effect4_program_authoring_refusal) result;
+Error (warning 30 [duplicate-definitions]): the label body is defined in both types loop_spec and def_src.
+
+File "gen/api_gen.mli", line 1244, characters 2-46:
+1244 |   program_params : Eff_types.ParamDecl.t list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label program_params is defined in both types env and def_src.
+
+File "gen/api_gen.mli", line 1255, characters 2-26:
+1255 |   term : Eff_types.Term.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label term is defined in both types record_cause_refusal and binder_term.
+
+File "gen/api_gen.mli", line 1257, characters 2-26:
+1257 |   result : Eff_types.Ty.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label result is defined in both types loop_spec and binder_term.
+
+File "gen/api_gen.mli", line 1260, characters 2-25:
+1260 |   param : Eff_types.Ty.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label param is defined in both types binder_term and term_use.
+
+File "gen/api_gen.mli", line 1261, characters 2-26:
+1261 |   result : Eff_types.Ty.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label result is defined in both types loop_spec and term_use.
+
+File "gen/api_gen.mli", line 1270, characters 42-57:
+1270 | and edge = { source : state; label : tag; target : state; }
+                                                 ^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label target is defined in both types timer_store and edge.
+
+File "gen/api_gen.mli", line 1277, characters 21-35:
+1277 | and record_shape = { kind : string; fields : (string * field_type) list; }
+                            ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label kind is defined in both types wake_key and record_shape.
+
+File "gen/api_gen.mli", line 1278, characters 13-32:
+1278 | and site = { path : string list; template : bool; ty : Eff_types.Ty.t; }
+                    ^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and site.
+
+File "gen/api_gen.mli", line 1278, characters 50-70:
+1278 | and site = { path : string list; template : bool; ty : Eff_types.Ty.t; }
+                                                         ^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label ty is defined in both types formation_refusal and site.
+
+File "gen/api_gen.mli", line 1290, characters 19-48:
+1290 | and 'u service = { key : Eff_types.ServiceKey.t; value : 'u; }
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and service.
+
+File "gen/api_gen.mli", line 1347, characters 27-53:
+1347 | and seen = { row : string; request : Eff_types.Val.t; key : key; }
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label request is defined in both types await and seen.
+
+File "gen/api_gen.mli", line 1347, characters 54-64:
+1347 | and seen = { row : string; request : Eff_types.Val.t; key : key; }
+                                                             ^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and seen.
+
+File "gen/api_gen.mli", line 1348, characters 21-50:
+1348 | and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and reference.
+
+File "gen/api_gen.mli", line 1356, characters 2-16:
+1356 |   name : string;
+         ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label name is defined in both types def_src and atom_row.
+
+File "gen/api_gen.mli", line 1400, characters 2-28:
+1400 |   env : Eff_types.Ty.t list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label env is defined in both types frame and part.
+
+File "gen/api_gen.mli", line 1401, characters 2-32:
+1401 |   program : 'op Eff_types.Eff.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label program is defined in both types typed and part.
+
+File "gen/api_gen.mli", line 1404, characters 2-16:
+1404 |   version : int;
+         ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label version is defined in both types header and call.
+
+File "gen/api_gen.mli", line 1405, characters 2-19:
+1405 |   session : string;
+         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label session is defined in both types header and call.
+
+File "gen/api_gen.mli", line 1406, characters 2-31:
+1406 |   table : Eff_types.Row.t list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label table is defined in both types verdict and call.
+
+File "gen/api_gen.mli", line 1408, characters 2-19:
+1408 |   fiber : fiber_id;
+         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and call.
+
+File "gen/api_gen.mli", line 1409, characters 2-28:
+1409 |   op : Eff_types.NativeOp.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label op is defined in both types await and call.
+
+File "gen/api_gen.mli", line 1410, characters 2-28:
+1410 |   request : Eff_types.Val.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label request is defined in both types await and call.
+
+File "gen/api_gen.mli", line 1413, characters 2-16:
+1413 |   version : int;
+         ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label version is defined in both types header and reply.
+
+File "gen/api_gen.mli", line 1414, characters 2-19:
+1414 |   session : string;
+         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label session is defined in both types header and reply.
+
+File "gen/api_gen.mli", line 1415, characters 2-16:
+1415 |   call_id : int;
+         ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label call_id is defined in both types call and reply.
+
+File "gen/api_gen.mli", line 1416, characters 2-12:
+1416 |   key : key;
+         ^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and reply.
+
+File "gen/api_gen.mli", lines 1417-1419, characters 2-27:
+1417 | ..completion :
+1418 |     (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+1419 |     Eff_types.Completion.t;
+Error (warning 30 [duplicate-definitions]): the label completion is defined in both types deferred_cell and reply.
+
+File "gen/api_gen.mli", line 1422, characters 2-49:
+1422 |   program : Eff_types.NativeOp.t Eff_types.Eff.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label program is defined in both types typed and runner.
+
+File "gen/api_gen.mli", line 1423, characters 2-16:
+1423 |   app : sig_app;
+         ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label app is defined in both types built and runner.
+
+File "gen/api_gen.mli", line 1424, characters 2-13:
+1424 |   fuel : int;
+         ^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fuel is defined in both types budget and runner.
+
+File "gen/api_gen.mli", line 1425, characters 2-20:
+1425 |   session : session;
+         ^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label session is defined in both types header and runner.
+
+File "gen/api_gen.mli", line 1521, characters 2-32:
+1521 |   program : 'op Eff_types.Eff.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label program is defined in both types typed and focus.
+
+File "gen/api_gen.mli", line 1522, characters 2-28:
+1522 |   env : Eff_types.Ty.t list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label env is defined in both types frame and focus.
+
+File "gen/api_gen.mli", line 1523, characters 2-25:
+1523 |   ty : Eff_types.EffTy.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label ty is defined in both types formation_refusal and focus.
+
+File "gen/api_gen.mli", line 1526, characters 2-11:
+1526 |   op : 'op;
+         ^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label op is defined in both types await and call_instance.
+
+File "gen/api_gen.mli", line 1527, characters 2-27:
+1527 |   request : Eff_types.Ty.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label request is defined in both types await and call_instance.
+
+File "gen/api_gen.mli", line 1528, characters 2-26:
+1528 |   answer : Eff_types.Ty.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label answer is defined in both types gen_ty and call_instance.
+
+File "gen/api_gen.mli", line 1529, characters 2-25:
+1529 |   error : Eff_types.Ty.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label error is defined in both types gen_ty and call_instance.
+
+File "gen/api_gen.mli", line 1539, characters 16-30:
+1539 | and result_ = { phase : phase; session : session; }
+                       ^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label phase is defined in both types wake_list and result_.
+
+File "gen/api_gen.mli", line 1539, characters 31-49:
+1539 | and result_ = { phase : phase; session : session; }
+                                      ^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label session is defined in both types header and result_.
+
+File "gen/api_gen.mli", line 1541, characters 2-31:
+1541 |   child : int -> eff_fam -> 'a;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label child is defined in both types fork_record and arg_reader.
+
+File "gen/api_gen.mli", line 1542, characters 2-39:
+1542 |   term : int -> Eff_types.Term.t -> 'a;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label term is defined in both types record_cause_refusal and arg_reader.
+
+File "gen/api_gen.mli", line 1544, characters 2-24:
+1544 |   op : int -> 'op -> 'a;
+         ^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label op is defined in both types await and arg_reader.
+
+File "gen/api_gen.mli", line 1546, characters 2-47:
+1546 |   mode : int -> Eff_types.ObserverMode.t -> 'a;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label mode is defined in both types race and arg_reader.
+
+File "gen/api_gen.mli", line 1548, characters 2-44:
+1548 |   key : int -> Eff_types.ServiceKey.t -> 'a;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and arg_reader.
+
+File "gen/api_gen.mli", line 1556, characters 2-31:
+1556 |   path : int -> int list -> 'a;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types effect4_program_authoring_refusal and arg_reader.
+
+File "gen/api_gen.mli", line 1567, characters 19-31:
+1567 | and bound_call = { call : call; token : int; }
+                          ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label call is defined in both types point and bound_call.
+
+File "gen/api_gen.mli", line 1567, characters 32-44:
+1567 | and bound_call = { call : call; token : int; }
+                                       ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types pending and bound_call.
+
+File "gen/api_gen.mli", line 1568, characters 19-29:
+1568 | and reply_slot = { key : key; reply : reply option; }
+                          ^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and reply_slot.
+
+File "gen/api_gen.mli", line 1576, characters 2-31:
+1576 |   table : Eff_types.Row.t list;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label table is defined in both types verdict and recorded_reply.
+
+File "gen/api_gen.mli", line 1577, characters 2-19:
+1577 |   fiber : fiber_id;
+         ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and recorded_reply.
+
+File "gen/api_gen.mli", line 1578, characters 2-14:
+1578 |   token : int;
+         ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types pending and recorded_reply.
+
+File "gen/api_gen.mli", line 1579, characters 2-28:
+1579 |   op : Eff_types.NativeOp.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label op is defined in both types await and recorded_reply.
+
+File "gen/api_gen.mli", line 1580, characters 2-28:
+1580 |   request : Eff_types.Val.t;
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label request is defined in both types await and recorded_reply.
+
+File "gen/api_gen.mli", lines 1581-1583, characters 2-27:
+1581 | ..completion :
+1582 |     (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+1583 |     Eff_types.Completion.t;
+Error (warning 30 [duplicate-definitions]): the label completion is defined in both types deferred_cell and recorded_reply.
+
+File "gen/api_gen.mli", line 1585, characters 41-64:
+1585 | and retired_call = { bound : bound_call; pending : reply option; }
+                                                ^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label pending is defined in both types run_fiber and retired_call.
+File "engine/api_engine.mli", line 246, characters 8-57:
+246 |         state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label state is defined in both types run_machine and scope.
+
+File "engine/api_engine.mli", line 251, characters 8-35:
+251 |         max_ops_before_yield : int;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label max_ops_before_yield is defined in both types run_fiber and ctx.
+
+File "engine/api_engine.mli", line 252, characters 8-29:
+252 |         prevent_yield : bool;
+              ^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label prevent_yield is defined in both types run_fiber and ctx.
+
+File "engine/api_engine.mli", line 389, characters 8-66:
+389 |         services : (Eff_types.ServiceKey.t * Eff_types.Ty.t) list;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label services is defined in both types ctx and sig_app.
+
+File "engine/api_engine.mli", line 477, characters 8-17:
+477 |         id : int;
+              ^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label id is defined in both types run_fiber and race.
+
+File "engine/api_engine.mli", line 480, characters 8-52:
+480 |         state : ('b, 'e, 'd, 'i, 'a) race_all_state;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label state is defined in both types run_machine and race.
+
+File "engine/api_engine.mli", line 513, characters 8-20:
+513 |         token : int;
+              ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types race and pending.
+
+File "engine/api_engine.mli", line 515, characters 8-34:
+515 |         remaining : fiber_id list;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label remaining is defined in both types race_all_state and pending.
+
+File "engine/api_engine.mli", lines 529-530, characters 8-74:
+529 | ........machine :
+530 |           ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine;
+Error (warning 30 [duplicate-definitions]): the label machine is defined in both types inspection and iter.
+
+File "engine/api_engine.mli", line 533, characters 8-72:
+533 |         outcome : ('nu, 's, 'b, 'e, 'd, 'i, 'a) effect4_machine_outcome;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label outcome is defined in both types inspection and iter.
+
+File "engine/api_engine.mli", line 779, characters 8-53:
+779 |         current : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label current is defined in both types fiber_core and frame_fiber.
+
+File "engine/api_engine.mli", line 781, characters 8-29:
+781 |         interruptible : bool;
+              ^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label interruptible is defined in both types fiber_core and frame_fiber.
+
+File "engine/api_engine.mli", line 782, characters 8-70:
+782 |         interrupted_cause : ('e, 'd, 'i, 'a) Eff_types.Cause.t option;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label interrupted_cause is defined in both types fiber_core and frame_fiber.
+
+File "engine/api_engine.mli", line 783, characters 8-34:
+783 |         deferred_interrupt : bool;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label deferred_interrupt is defined in both types fiber_core and frame_fiber.
+
+File "engine/api_engine.mli", line 814, characters 23-39:
+814 |       and arg_site = { path : int list; env : Eff_types.Val.t E.t; }
+                             ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types point and arg_site.
+
+File "engine/api_engine.mli", line 814, characters 40-66:
+814 |       and arg_site = { path : int list; env : Eff_types.Val.t E.t; }
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label env is defined in both types point and arg_site.
+
+File "engine/api_engine.mli", line 816, characters 8-45:
+816 |         path : Eff_types.NativeOp.t node P.t;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label path is defined in both types point and capture.
+
+File "engine/api_engine.mli", line 817, characters 8-34:
+817 |         env : Eff_types.Val.t E.t;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label env is defined in both types point and capture.
+
+File "engine/api_engine.mli", line 818, characters 8-19:
+818 |         fuel : int;
+              ^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fuel is defined in both types point and capture.
+
+File "engine/api_engine.mli", line 819, characters 8-25:
+819 |         tape : bool list;
+              ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label tape is defined in both types point and capture.
+
+File "engine/api_engine.mli", line 821, characters 8-19:
+821 |         root : int;
+              ^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label root is defined in both types point and capture.
+
+File "engine/api_engine.mli", line 822, characters 8-36:
+822 |         params : arg_site list list;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label params is defined in both types point and capture.
+
+File "engine/api_engine.mli", line 823, characters 8-29:
+823 |         call : int list list;
+              ^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label call is defined in both types point and capture.
+
+File "engine/api_engine.mli", line 837, characters 8-20:
+837 |         token : int;
+              ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types race and owed.
+
+File "engine/api_engine.mli", line 839, characters 8-25:
+839 |         mode : wake_mode;
+              ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label mode is defined in both types race and owed.
+
+File "engine/api_engine.mli", line 868, characters 8-24:
+868 |         observers : int;
+              ^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label observers is defined in both types run_fiber and memo_entry.
+
+File "engine/api_engine.mli", line 875, characters 8-30:
+875 |         wake : unit wake_list;
+              ^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label wake is defined in both types timer_store and deferred_cell.
+
+File "engine/api_engine.mli", line 880, characters 8-25:
+880 |         fiber : fiber_id;
+              ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and await.
+
+File "engine/api_engine.mli", line 881, characters 8-20:
+881 |         token : int;
+              ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types race and await.
+
+File "engine/api_engine.mli", line 885, characters 18-35:
+885 |       and key = { fiber : fiber_id; token : int; }
+                        ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and key.
+
+File "engine/api_engine.mli", line 885, characters 36-48:
+885 |       and key = { fiber : fiber_id; token : int; }
+                                          ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types race and key.
+
+File "engine/api_engine.mli", line 887, characters 8-25:
+887 |         fiber : fiber_id;
+              ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and waiter.
+
+File "engine/api_engine.mli", line 888, characters 8-20:
+888 |         token : int;
+              ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label token is defined in both types race and waiter.
+
+File "engine/api_engine.mli", line 889, characters 8-20:
+889 |         phase : int;
+              ^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label phase is defined in both types wake_list and waiter.
+
+File "engine/api_engine.mli", line 899, characters 25-54:
+899 |       and 'u service = { key : Eff_types.ServiceKey.t; value : 'u; }
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and service.
+
+File "engine/api_engine.mli", line 953, characters 8-25:
+953 |         id : memo_map_id;
+              ^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label id is defined in both types run_fiber and memo_map.
+
+File "engine/api_engine.mli", line 957, characters 27-56:
+957 |       and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label key is defined in both types scope_entry and reference.
+
+File "engine/api_engine.mli", line 962, characters 8-58:
+962 |         fiber : ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber;
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label fiber is defined in both types iter and frame_pop.
+
+File "engine/api_engine.mli", line 995, characters 8-26:
+995 |         parent : fiber_id;
+              ^^^^^^^^^^^^^^^^^^
+Error (warning 30 [duplicate-definitions]): the label parent is defined in both types memo_map and fork_record.
+Leaving directory '/Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml'

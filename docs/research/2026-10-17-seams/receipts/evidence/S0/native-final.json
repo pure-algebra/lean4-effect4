@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-s0-native-final.py"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T04:06:16.178564+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 15.147,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S0/native-final.log"
+}

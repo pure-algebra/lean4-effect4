@@ -1,0 +1,1 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "build", "--root", "ocaml", "gen/interface/main.exe"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:27:37.109140+00:00"}

@@ -1,0 +1,22 @@
+{
+  "command": [
+    "lake",
+    "env",
+    "env",
+    "LEAN_PATH=/private/tmp/seams-s0-scout:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/seams/lean4-effect4/.lake/build/lib/lean",
+    "lean",
+    "-M4096",
+    "--run",
+    "src/OCaml5/Tools/LcnfGen.lean",
+    "--out",
+    "/private/tmp/seams-s0-scout/live_gen.ml",
+    "--import",
+    "Effect4.Run.LiveRecord",
+    "--cap",
+    "6000",
+    "Effect4.Live.start",
+    "Effect4.LiveRecord.restore"
+  ],
+  "exit": 0,
+  "seconds": 23.748473167419434
+}

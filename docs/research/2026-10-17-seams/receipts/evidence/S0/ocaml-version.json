@@ -1,0 +1,15 @@
+{
+  "command": [
+    "opam",
+    "exec",
+    "--switch=effect4",
+    "--",
+    "ocamlc",
+    "-version"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T03:47:42.491952+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 0.195,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S0/ocaml-version.log"
+}

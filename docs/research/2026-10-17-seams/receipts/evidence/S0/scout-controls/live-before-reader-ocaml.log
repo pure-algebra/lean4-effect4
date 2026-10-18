@@ -1,0 +1,5 @@
+File "live_before_reader.ml", line 5656, characters 37-44:
+5656 |       let _x_29 = ArgF_child (_x_28, body_26) in
+                                            ^^^^^^^
+Error: This expression has type 'a eff but an expression was expected of type
+         lcnf_unknown

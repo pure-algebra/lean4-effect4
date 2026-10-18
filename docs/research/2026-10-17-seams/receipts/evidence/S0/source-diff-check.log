@@ -1,0 +1,1 @@
+{"command": ["git", "diff", "--check"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:49:10.639943+00:00"}

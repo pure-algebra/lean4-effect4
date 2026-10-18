@@ -1,0 +1,7 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "ocaml", "gen/test_seams_s0.exe"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:43:42.099661+00:00"}
+PASS ask-learn-hit-bind-readVerdict
+PASS full-start-save-restore
+PASS both-budgets
+PASS duplicate-field-start-refused
+PASS duplicate-field-restore-refused
+PASS record-version-refused

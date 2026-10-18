@@ -1,0 +1,18 @@
+{
+  "command": [
+    "opam",
+    "exec",
+    "--switch=effect4",
+    "--",
+    "ocamlc",
+    "-bin-annot",
+    "-I",
+    "/Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte",
+    "-I",
+    "/Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte",
+    "-c",
+    "live_before_reader.ml"
+  ],
+  "exit": 2,
+  "expected": 2
+}

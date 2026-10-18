@@ -1,0 +1,2 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "ocamlc", "-version"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:47:42.491952+00:00"}
+5.1.1

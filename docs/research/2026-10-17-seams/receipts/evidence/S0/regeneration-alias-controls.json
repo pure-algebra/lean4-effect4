@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "scripts/check-lcnf-interfaces.py"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T04:05:39.320186+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 4.471,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S0/regeneration-alias-controls.log"
+}

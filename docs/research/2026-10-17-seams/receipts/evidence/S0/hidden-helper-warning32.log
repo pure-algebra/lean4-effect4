@@ -1,0 +1,52 @@
+{"command": ["python3", "/private/tmp/seams-warning32.py"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T03:40:08.894165+00:00"}
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 45823, characters 4-20:
+45823 | let dispatcher_empty _u957 _u963 _u946 _u949 _u948 _u953 _u945 _u954 : (_, _, _, _, _, _, _, _) bucket list =
+            ^^^^^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value dispatcher_empty.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 45830, characters 4-22:
+45830 | let dispatcher_enqueue _u957 _u963 _u946 _u949 _u948 _u953 _u945 _u954 (d : (_, _, _, _, _, _, _, _) bucket list) (priority : int) (task : (_, _, _, _, _, _, _, _) task) : (_, _, _, _, _, _, _, _) bucket list =
+            ^^^^^^^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value dispatcher_enqueue.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 45837, characters 4-31:
+45837 | let run_fiber_interrupt_pending (core : (_, _, _, _, _, _, _, _) fiber_core) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) : bool =
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value run_fiber_interrupt_pending.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 46085, characters 4-18:
+46085 | let countdown_park (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) (targets : int list) (resume_with : _ resume) (fail_fast : bool) =
+            ^^^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value countdown_park.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 46953, characters 4-17:
+46953 | let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (interp : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim) run_interp) (m : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) run_machine) (f : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber) (yielding : bool) : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) iter =
+            ^^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value evaluate_prim.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 48060, characters 4-17:
+48060 | let step_decision (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (evaluator : (_, _, _, _, _, _, _, _, _, _) run_interp -> (_, _, _, _, _, _, _, _, _, _, _, _) run_machine -> (_, _, _, _, _, _, _, _, _, _) run_fiber -> bool -> (_, _, _, _, _, _, _, _, _, _, _, _) iter) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (fuel : int) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (decision : (_, _, _, _, _, _, _) run_decision) =
+            ^^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value step_decision.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 48069, characters 8-19:
+48069 | let rec replay_eval (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (evaluator : (_, _, _, _, _, _, _, _, _, _) run_interp -> (_, _, _, _, _, _, _, _, _, _, _, _) run_machine -> (_, _, _, _, _, _, _, _, _, _) run_fiber -> bool -> (_, _, _, _, _, _, _, _, _, _, _, _) iter) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (fuel : int) (x_5 : (_, _, _, _, _, _, _) run_decision list) (x_6 : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) : (_, _, _, _, _, _, _, _, _, _, _, _) replay_result =
+                ^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value replay_eval.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 48112, characters 4-16:
+48112 | let run_callback (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (evaluator : (_, _, _, _, _, _, _, _, _, _) run_interp -> (_, _, _, _, _, _, _, _, _, _, _, _) run_machine -> (_, _, _, _, _, _, _, _, _, _) run_fiber -> bool -> (_, _, _, _, _, _, _, _, _, _, _, _) iter) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (fuel : int) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) program context (key : int) : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine * int =
+            ^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value run_callback.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 48185, characters 4-17:
+48185 | let run_sync_exit (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (evaluator : (_, _, _, _, _, _, _, _, _, _) run_interp -> (_, _, _, _, _, _, _, _, _, _, _, _) run_machine -> (_, _, _, _, _, _, _, _, _, _) run_fiber -> bool -> (_, _, _, _, _, _, _, _, _, _, _, _) iter) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (fuel : int) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) program context : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine * (_, _, _, _, _) Exit.t =
+            ^^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value run_sync_exit.
+
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/seams-warning32-nsny1ibo/api_gen.ml", line 48264, characters 4-19:
+48264 | let promise_outcome (exit_ : (_, _, _, _, _) Exit.t) : (_, (_, _) squashed) result =
+            ^^^^^^^^^^^^^^^
+Error (warning 32 [unused-value-declaration]): unused value promise_outcome.
+
+status 2

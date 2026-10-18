@@ -1,0 +1,18 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "lake",
+    "build",
+    "OCaml5.Tools.LcnfGen",
+    "Effect4.Program.Check",
+    "Effect4.Run.LiveRecord",
+    "Effect4.Laws.Program.Typing.Closed",
+    "Test.Program.SeamsS0"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T03:31:27.262007+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 38.379,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S0/source-checkpoint-final.log"
+}

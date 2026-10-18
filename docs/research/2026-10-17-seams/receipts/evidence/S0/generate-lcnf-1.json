@@ -1,0 +1,15 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "python3",
+    "scripts/generate.py",
+    "--only",
+    "lcnf"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T03:32:17.641315+00:00",
+  "exit_status": 1,
+  "elapsed_seconds": 60.282,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S0/generate-lcnf-1.log"
+}
