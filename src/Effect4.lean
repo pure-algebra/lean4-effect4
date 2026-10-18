@@ -274,6 +274,7 @@ import Effect4.Tool.Origin
 import Effect4.Tool.Serve
 import Effect4.Tool.Session
 import Effect4.Tool.Exchange
+import Effect4.Tool.Native
 import Effect4.Tool.Wire
 import Effect4.Run.Preview
 import Effect4.Program.Typing.CheckCache

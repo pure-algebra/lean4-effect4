@@ -56,7 +56,8 @@
         "Effect4.Api",
         "Effect4.Run.Kit",
         "Effect4.Program.Check",
-        "Effect4.Run.LiveRecord"
+        "Effect4.Run.LiveRecord",
+        "Effect4.Tool.Native"
       ],
       "cap": 4000,
       "types": [
@@ -166,7 +167,19 @@
         "Effect4.Machine.syncOpStep",
         "Effect4.Machine.Stores.empty",
         "Effect4.Program.Check.extension",
-        "Effect4.Program.Check.explain"
+        "Effect4.Program.Check.explain",
+        "Effect4.Tool.Native.requestShape",
+        "Effect4.Tool.Native.replyShape",
+        "Effect4.Tool.Native.requestOfVal",
+        "Effect4.Tool.Native.replyToVal",
+        "Effect4.Tool.Native.start",
+        "Effect4.Tool.Native.serveVal",
+        "Effect4.Tool.Native.serveUncached",
+        "Effect4.Tool.Native.envelopeShape",
+        "Effect4.Tool.Native.replyEnvelopeShape",
+        "Effect4.Tool.Native.refusalShape",
+        "Effect4.Tool.Native.refusalToVal",
+        "Effect4.Tool.Native.serveEnvelope"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",

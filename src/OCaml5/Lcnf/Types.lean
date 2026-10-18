@@ -204,7 +204,10 @@ structure ParamVars where
 the type constants it mentions and `none` when the shape could not be spelled. -/
 partial def kernelTy (ex : Externs) (tn : TypeNames) (params : ParamVars)
     (e : Lean.Expr) : MetaM (Option Ml.Ty × Array Name) := do
-  let e ← whnf e  -- unfold a `def`/`abbrev` head; an inductive head stays
+  -- unfold a `def`/`abbrev` head; an inductive head stays. Each reduction has its own heartbeat
+  -- budget: the counter counts every allocation of the run, so a shared budget bounded the
+  -- closure's size, not the reduction (seams S6, `Tool.serve`'s closure).
+  let e ← withCurrHeartbeats (whnf e)
   match e with
   | .fvar id =>
     match params.vars[id]? with
@@ -292,7 +295,9 @@ def externField (chain : List String) (owner : Name) (field : String) (t : Ml.Ty
   | _ => .error s!"{owner}.{field}: a `field` extern row needs a `list` field type"
 
 /-- Read one inductive. `none` when `n` is not an inductive type. -/
-def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInfo) := do
+def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInfo) :=
+  -- one heartbeat budget per type spelled (seams S6; see `kernelTy`)
+  withCurrHeartbeats do
   let env ← getEnv
   let some (.inductInfo info) := env.find? n | return none
   let slots ← match typeParameterSlots (finiteIndexIn env) n info.numParams info.type with

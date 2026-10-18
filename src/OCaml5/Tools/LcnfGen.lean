@@ -90,10 +90,9 @@ def main (argv : List String) : IO Unit := do
       IO.println s!"imported {args.imports} in {(t1 - t0) / 1000000} ms"
       envs := envs.push (args.imports, env)
     IO.println s!"== {args.out}"
-    -- One `MetaM` run spells every type of the closure, and Lean's heartbeat budget counts the
-    -- whole run. The default (200000 thousand) stopped the `api_gen` cut once the error payload
-    -- carrier (decisions row 120) grew its closure; the budget is five times that, still finite,
-    -- so a runaway cut stops deterministically.
+    -- One `MetaM` run spells every type of the closure. Each type reduction resets the heartbeat
+    -- counter (`kernelTy`, `src/OCaml5/Lcnf/Types.lean`), so this budget bounds one reduction,
+    -- not the closure's size, and a runaway reduction still stops deterministically.
     let ctx : Core.Context :=
       { fileName := "<lcnf-gen>", fileMap := default, maxHeartbeats := 1000000 * 1000 }
     let _ ← ((Gen.run run recipeOuts stage).run' {}).toIO ctx { env := env }

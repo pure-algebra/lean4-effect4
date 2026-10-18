@@ -26,3 +26,13 @@
  (modules test_transcript)
  (deps serve.transcript)
  (libraries effect4_kit effect4_eff))
+
+; the authoring tool's native shell (seams S6): the session fixture served by Kit_tool over the
+; generated Tool.serve, against tools/Drivers/Session.lean's replies; cached against uncached;
+; hostile lines refused.
+
+(test
+ (name test_tool)
+ (modules test_tool)
+ (deps tool-requests.jsonl tool-replies.jsonl)
+ (libraries effect4_kit effect4_eff effect4_gen))

@@ -190,7 +190,7 @@ private def manifestRow (env : Environment) (mono : MonoIndex)
 this type keeps the package names that an OCaml interface makes abstract. An unspelled binder
 or result refuses the root; the generator never falls back to its erased representation. -/
 private def nominalRootType (ex : Externs) (tn : TypeNames) (root : Name) :
-    MetaM (Ml.Ty × Array Name) := do
+    MetaM (Ml.Ty × Array Name) := withCurrHeartbeats do
   let info ← getConstInfo root
   Meta.forallTelescope info.type fun xs result => do
     let mut params : ParamVars := {}

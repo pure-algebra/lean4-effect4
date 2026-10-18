@@ -55,16 +55,23 @@ let lines (f : string -> string option) =
   loop ()
 
 let serve () = lines (fun line -> Some (serve_line line))
+
+(* `eff tool`: the authoring tool's JSON lines, served by the generated Tool.serve (Kit_tool). *)
+let tool () =
+  let session = Kit_tool.create () in
+  lines (fun line -> Some (Kit_tool.serve_line session line))
 let mcp () = lines mcp_line
 
 let usage =
   "usage: eff (check|run|explore|view) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--frames] [--budget K] [--width N] [--fast]\n\
   \       eff serve\n\
+  \       eff tool\n\
   \       eff mcp"
 
 let () =
   match Array.to_list Sys.argv with
   | [ _; "serve" ] -> serve ()
+  | [ _; "tool" ] -> tool ()
   | [ _; "mcp" ] -> mcp ()
   | _ :: op :: path :: flags ->
     let rec parse r = function

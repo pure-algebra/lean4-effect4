@@ -73,10 +73,11 @@ def responds (request : Request) (reply : Reply) : Bool :=
   | .ok _, .act _ => false
   | .ok answer, .ask q => queryPairs q answer
 
-/-- **Decode a request** at the connection's chosen method version, before calling the tool. -/
-def decode (connection : Connection) (json : Effect4.Json) : Except Refusal (Envelope Request) := do
+/-- **Check a read envelope** against the connection: a valid connection, the payload's own method,
+selected at a supported version, and that version. The JSON adapter (`decode`) and the native
+shell (`Tool/Native.lean`) both call it. -/
+def check (connection : Connection) (envelope : Envelope Request) : Except Refusal (Envelope Request) := do
   if !connection.valid then throw .connection
-  let envelope ← (CodecProfile.read (α := Envelope Request) json).mapError Refusal.codec
   let actual := envelope.payload.method
   if envelope.method != actual then throw (.method envelope.method actual)
   match connection.selected.lookup actual with
@@ -85,6 +86,12 @@ def decode (connection : Connection) (json : Effect4.Json) : Except Refusal (Env
     if !(((supportedMethods.lookup actual).getD []).contains selected) then throw (.unselected actual)
     if envelope.version != selected then throw (.version actual selected envelope.version)
     pure envelope
+
+/-- **Decode a request** at the connection's chosen method version, before calling the tool. -/
+def decode (connection : Connection) (json : Effect4.Json) : Except Refusal (Envelope Request) := do
+  if !connection.valid then throw .connection
+  let envelope ← (CodecProfile.read (α := Envelope Request) json).mapError Refusal.codec
+  check connection envelope
 
 /-- **Serve one JSON request.** The adapter publishes its next pure state only after the reply
 pairs with the request and passes the JSON write guard. -/

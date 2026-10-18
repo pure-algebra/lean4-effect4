@@ -539,6 +539,18 @@ and 'k deferred_store = {
   cells : 'k deferred_cell list;
   due : 'k owed list;
 }
+and effect4_tool_codec_profile_refusal =
+    Effect4_tool_codec_profile_refusal_unsupportedProfile
+  | Effect4_tool_codec_profile_refusal_unreadable
+  | Effect4_tool_codec_profile_refusal_unprintable
+and effect4_tool_wire_refusal =
+    Effect4_tool_wire_refusal_codec of effect4_tool_codec_profile_refusal
+  | Effect4_tool_wire_refusal_unselected of string
+  | Effect4_tool_wire_refusal_version of string * int * int
+  | Effect4_tool_wire_refusal_method of string * string
+  | Effect4_tool_wire_refusal_response
+  | Effect4_tool_wire_refusal_connection
+and 'a envelope = { method_ : string; version : int; payload : 'a; }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket = {
   priority : int;
   tasks : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task list;
@@ -1028,6 +1040,32 @@ and explanation = {
   site : site;
   part : check_input option;
 }
+and request = Request_act of action | Request_ask of query
+and reply = {
+  result : (answer, effect4_tool_refusal) result;
+  now : snap option;
+}
+and raw = {
+  doc : doc option;
+  fills : fill_set option;
+  runs : run_entry list;
+  generation : int;
+}
+and state = { transcript : action list; raw : raw; }
+and answer =
+    Answer_acted of action_answer
+  | Answer_doc of doc_view
+  | Answer_history of doc_action list
+  | Answer_fills of snap option *
+      (int list * Eff_types.NativeOp.t Eff_types.Eff.t) list
+  | Answer_suggested of candidate list * int option
+  | Answer_run of run_id * run_answer
+  | Answer_preview of preview_answer
+  | Answer_dry of (action_answer, effect4_tool_refusal) result
+  | Answer_methods of (string * int list) list
+  | Answer_table of entry list
+  | Answer_addresses of int list list
+  | Answer_slots of int list * bool * slot_view list
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
   popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
@@ -1083,16 +1121,16 @@ and row_typing_refusal =
   | RowTypingRefusal_resultNotSubtype of Eff_types.Ty.t * Eff_types.Ty.t
 and protocol = {
   version : int;
-  initial : state;
-  states : state list;
+  initial : effect4_api_host_protocol_state;
+  states : effect4_api_host_protocol_state list;
   transitions : edge list;
   records : record_shape list;
 }
-and state =
-    State_idle
-  | State_awaitingAsync
-  | State_parked
-  | State_terminated
+and effect4_api_host_protocol_state =
+    Effect4_api_host_protocol_state_idle
+  | Effect4_api_host_protocol_state_awaitingAsync
+  | Effect4_api_host_protocol_state_parked
+  | Effect4_api_host_protocol_state_terminated
 and prog_name =
     ProgName_value of Eff_types.Val.t
   | ProgName_failCause of
@@ -1149,6 +1187,90 @@ and site =
   | Site_inCopy of int list * int list
   | Site_column of int list
   | Site_application
+and action =
+    Action_open_ of string * sig_app * sketch
+  | Action_edit of snap * doc_action
+  | Action_fill of snap *
+      (int list * Eff_types.NativeOp.t Eff_types.Eff.t) list
+  | Action_publish of snap
+  | Action_reset
+  | Action_start of snap * budget
+  | Action_restore of live_record
+  | Action_play of run_id * event list
+and query =
+    Query_doc of int list option
+  | Query_history
+  | Query_fills
+  | Query_suggest of snap * place *
+      Eff_types.NativeOp.t Eff_types.Eff.t list * int * int
+  | Query_run of run_id * run_form
+  | Query_preview of preview_query
+  | Query_dry of action
+  | Query_discover
+  | Query_table
+  | Query_addresses
+  | Query_slots of int list * ext_slot option
+and snap = { doc : doc_id; revision : int; }
+and doc_id = { name : string; generation : int; }
+and doc_origin = { id : doc_id; app : sig_app; sketch : sketch; }
+and fill_set = {
+  anchor : snap;
+  source : source_session;
+  entries : (int list * Eff_types.NativeOp.t Eff_types.Eff.t) list;
+}
+and effect4_tool_refusal =
+    Effect4_tool_refusal_noDocument
+  | Effect4_tool_refusal_doc of doc_refusal
+  | Effect4_tool_refusal_fillsStale of snap * snap
+  | Effect4_tool_refusal_fillsEmpty
+  | Effect4_tool_refusal_admission of admit_refusal
+  | Effect4_tool_refusal_restore of effect4_live_record_refusal
+  | Effect4_tool_refusal_preview of effect4_run_preview_refusal
+  | Effect4_tool_refusal_noRun of run_id
+  | Effect4_tool_refusal_unresolved of run_id * int * sel
+  | Effect4_tool_refusal_suggest of feed_refusal
+  | Effect4_tool_refusal_place of place_refusal
+  | Effect4_tool_refusal_noProgram of int list
+and action_answer =
+    ActionAnswer_opened of doc_view
+  | ActionAnswer_edited of doc_view * receipt
+  | ActionAnswer_filled of add_outcome list
+  | ActionAnswer_published of doc_view * receipt
+  | ActionAnswer_reset of
+      (int list * Eff_types.NativeOp.t Eff_types.Eff.t) list
+  | ActionAnswer_started of run_id * origin * view
+  | ActionAnswer_played of run_id * effect4_run_verdict list * view
+  | ActionAnswer_restored of run_id * view
+and source_session = { app : sig_app; sketch : sketch; table : entry list; }
+and origin = Origin_snapshot of snap * sig_app * sketch | Origin_standalone
+and run_entry = { origin : origin; live : live; }
+and doc_view = {
+  snap : snap;
+  type_ : Eff_types.EffTy.t option;
+  refusals : type_refusal list;
+  holes : hole_view list;
+  inspection : effect4_tool_inspection option;
+}
+and doc = {
+  origin : doc_origin;
+  history : doc_action list;
+  runtime : effect4_program_doc_internal_state;
+}
+and feed_refusal =
+    FeedRefusal_noProgram of int list
+  | FeedRefusal_noFocus of int list
+  | FeedRefusal_notKept of (Eff_types.Ty.t list * Eff_types.EffTy.t) *
+      (Eff_types.EffTy.t, type_refusal) result
+  | FeedRefusal_refused of type_refusal list
+  | FeedRefusal_typeChanged of Eff_types.EffTy.t option * Eff_types.EffTy.t
+  | FeedRefusal_localChanged of
+      (Eff_types.Ty.t list * Eff_types.EffTy.t) option *
+      (Eff_types.Ty.t list * Eff_types.EffTy.t) option
+and run_form = RunForm_view | RunForm_record | RunForm_journal
+and run_answer =
+    RunAnswer_view of view
+  | RunAnswer_record of live_record
+  | RunAnswer_journal of command list
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
     FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber
   | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
@@ -1262,7 +1384,11 @@ and tag =
   | Tag_advanceClock
   | Tag_cancel
   | Tag_schedule
-and edge = { source : state; label : tag; target : state; }
+and edge = {
+  source : effect4_api_host_protocol_state;
+  label : tag;
+  target : effect4_api_host_protocol_state;
+}
 and field_type =
     FieldType_natural
   | FieldType_boolean
@@ -1362,6 +1488,100 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
   layers_nil : 'r_layers;
   layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
 }
+and doc_action =
+    DocAction_commit of (place * change) list * feed_policy
+  | DocAction_draft of edit
+  | DocAction_revert of int
+and place =
+    Place_hole of int
+  | Place_at_ of int list * Eff_types.NativeOp.t Eff_types.Eff.t
+and preview_query =
+    PreviewQuery_settle of
+      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+      Eff_types.Exit.t list * int
+  | PreviewQuery_frames of
+      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+      Eff_types.Exit.t list * int
+  | PreviewQuery_explore of int * int
+and ext_slot =
+    ExtSlot_catchIfTest
+  | ExtSlot_iterateTest
+  | ExtSlot_iterateStep
+  | ExtSlot_iterateResult
+  | ExtSlot_opTerm
+and effect4_program_doc_internal_state = {
+  session : source_session;
+  entries : effect4_program_doc_internal_entry list;
+}
+and fresh = {
+  session : source_session;
+  receipt : receipt;
+  entry : effect4_program_doc_internal_entry;
+}
+and feed_policy =
+    FeedPolicy_draft
+  | FeedPolicy_keepExact
+  | FeedPolicy_recheck
+and publish_refusal = PublishRefusal_empty
+and view = {
+  state : effect4_api_host_protocol_state;
+  outcome : outcome;
+  exit_ :
+    (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+    Eff_types.Exit.t option;
+  reasons : frontier_reason list;
+  awaiting : call_view list;
+  waits : wait_view list;
+  empty_frontier : bool;
+  retired : key list;
+  applied : int;
+  runnable : fiber_id list;
+  queued : fiber_id list;
+  timers : (fiber_id * E4_clock.t) list;
+  cells : Eff_types.Val.t list;
+  fibers : (fiber_id * fiber_status) list;
+  steps : int;
+  funded : bool;
+  at_rest : bool;
+}
+and effect4_program_edit_session_view = {
+  table : entry list;
+  refusals : type_refusal list;
+  type_ : Eff_types.EffTy.t option;
+}
+and effect4_tool_inspection = {
+  path : int list;
+  expected : Eff_types.NativeOp.t Eff_types.Eff.t;
+  context : sig_data;
+  focus : Eff_types.NativeOp.t focus option;
+  entry : entry option;
+  refusal : type_refusal option;
+}
+and place_refusal =
+    PlaceRefusal_outOfRange of int
+  | PlaceRefusal_absent of int
+  | PlaceRefusal_repeated of int * int list list
+  | PlaceRefusal_moved of int list
+and 'op focus = {
+  program : 'op Eff_types.Eff.t;
+  env : Eff_types.Ty.t list;
+  ty : Eff_types.EffTy.t;
+}
+and preview_answer =
+    PreviewAnswer_settled of
+      (int *
+       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+       Eff_types.Exit.t list effect4_run_tree_outcome)
+      option
+  | PreviewAnswer_frames of
+      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+      Eff_types.Exit.t list effect4_run_tree_outcome list
+  | PreviewAnswer_explored of path list
+and 'op part = {
+  sig_ : 'op signature;
+  env : Eff_types.Ty.t list;
+  program : 'op Eff_types.Eff.t;
+}
 and record_typing_reason =
     RecordTypingReason_duplicateDeclaration of string
   | RecordTypingReason_duplicateSupplied of string
@@ -1411,13 +1631,72 @@ and effect4_program_formation_site = {
 }
 and command =
     Command_bind of call * int
-  | Command_submit of reply
+  | Command_submit of effect4_api_host_session_reply
   | Command_apply of key
   | Command_control of
       (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
        Eff_types.Defect.t, fiber_id, unit)
       run_decision
 and seen = { row : string; request : Eff_types.Val.t; key : key; }
+and edit =
+    Edit_fill of int list * Eff_types.NativeOp.t Eff_types.Eff.t
+  | Edit_omitAt of int list * Eff_types.Row.t
+and doc_refusal =
+    DocRefusal_foreign of doc_id
+  | DocRefusal_stale of snap
+  | DocRefusal_empty
+  | DocRefusal_noEntry of int
+  | DocRefusal_place of int * place_refusal
+  | DocRefusal_feed of int * feed_refusal
+and effect4_run_preview_refusal =
+    Effect4_run_preview_refusal_admission of admit_refusal
+  | Effect4_run_preview_refusal_outsideTree of int list
+  | Effect4_run_preview_refusal_genericRow of int list * int
+  | Effect4_run_preview_refusal_handleAnswer of int list * int
+and sel = Sel_key of key | Sel_fiber of fiber_id | Sel_row of string
+and effect4_program_doc_internal_entry = {
+  policy : feed_policy;
+  items : undo_item list;
+}
+and change =
+    Change_fill of Eff_types.NativeOp.t Eff_types.Eff.t
+  | Change_omitHole of string
+and work = {
+  runnable : fiber_id list;
+  queued : fiber_id list;
+  awaiting : await list;
+  pending : key list;
+  timers : (fiber_id * E4_clock.t) list;
+}
+and retired_call = {
+  bound : bound_call;
+  pending : effect4_api_host_session_reply option;
+}
+and phase =
+    Phase_bound
+  | Phase_preflight
+  | Phase_applied
+  | Phase_progressed
+  | Phase_frontier
+  | Phase_refused of effect4_api_host_session_refusal
+and suggestion = {
+  program : Eff_types.NativeOp.t Eff_types.Eff.t;
+  source_path : int list option;
+  key : check_input;
+  evidence : evidence;
+}
+and candidate = {
+  program : Eff_types.NativeOp.t Eff_types.Eff.t;
+  source_path : int list option;
+  key : check_input;
+  evidence : evidence;
+}
+and slot_view = {
+  slot : ext_slot;
+  term : Eff_types.Term.t option;
+  env : Eff_types.Ty.t list option;
+  ty : Eff_types.Ty.t option;
+}
 and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
 and fn_shape =
     FnShape_update
@@ -1468,11 +1747,6 @@ and 'r_cause cause_term_algebra = {
   cause_interrupt : Eff_types.Term.t option -> 'r_cause;
   cause_both : 'r_cause -> 'r_cause -> 'r_cause;
 }
-and 'op part = {
-  sig_ : 'op signature;
-  env : Eff_types.Ty.t list;
-  program : 'op Eff_types.Eff.t;
-}
 and call = {
   version : int;
   session : string;
@@ -1482,7 +1756,7 @@ and call = {
   op : Eff_types.NativeOp.t;
   request : Eff_types.Val.t;
 }
-and reply = {
+and effect4_api_host_session_reply = {
   version : int;
   session : string;
   call_id : int;
@@ -1497,6 +1771,61 @@ and runner = {
   fuel : int;
   session : session;
 }
+and delta =
+    Delta_unchanged
+  | Delta_spliced of int list list
+  | Delta_rechecked
+and effect4_program_edit_step = {
+  edit : edit;
+  replaced : Eff_types.NativeOp.t Eff_types.Eff.t option;
+  delta : delta;
+}
+and undo_item = {
+  path : int list;
+  before : Eff_types.NativeOp.t Eff_types.Eff.t;
+  product : Eff_types.NativeOp.t Eff_types.Eff.t;
+}
+and add_refusal =
+    AddRefusal_root
+  | AddRefusal_unknownAddress
+  | AddRefusal_notCertified
+  | AddRefusal_conflict
+  | AddRefusal_overlap of int list
+and add_outcome =
+    AddOutcome_applied of int list
+  | AddOutcome_collapsed of int list
+  | AddOutcome_refused of int list * add_refusal
+and call_view = {
+  await : await;
+  origin : int list option;
+  checked : Eff_types.NativeOp.t call_instance option;
+  held : held_call option;
+}
+and bound_call = { call : call; token : int; }
+and held_call = {
+  call_id : int;
+  received :
+    (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+    Eff_types.Completion.t option;
+}
+and wait_view = {
+  fiber : fiber_id;
+  token : int;
+  registration : eff_name option;
+}
+and edit_session = { app : sig_app; sketch : sketch; table : entry list; }
+and hole_view = {
+  index : int;
+  row : Eff_types.Row.t;
+  path : int list;
+  focus : (Eff_types.Ty.t list * Eff_types.EffTy.t) option;
+}
+and evidence =
+    Evidence_exactFit of Eff_types.EffTy.t
+  | Evidence_typeMismatch of Eff_types.EffTy.t * Eff_types.EffTy.t
+  | Evidence_refused of type_refusal
+  | Evidence_feedRefused of feed_refusal
+  | Evidence_differentEnv of Eff_types.Ty.t list * Eff_types.Ty.t list
 and scheme =
     Scheme_mono of Eff_types.Ty.t list * Eff_types.Ty.t
   | Scheme_variadic of Eff_types.Ty.t * Eff_types.Ty.t
@@ -1509,11 +1838,6 @@ and custom_scheme =
   | CustomScheme_causeError
   | CustomScheme_tuple
   | CustomScheme_sameHandle
-and 'op focus = {
-  program : 'op Eff_types.Eff.t;
-  env : Eff_types.Ty.t list;
-  ty : Eff_types.EffTy.t;
-}
 and 'op call_instance = {
   op : 'op;
   request : Eff_types.Ty.t;
@@ -1521,15 +1845,39 @@ and 'op call_instance = {
   error : Eff_types.Ty.t;
   bindings : (int * Eff_types.Ty.t) list;
 }
-and phase =
-    Phase_bound
-  | Phase_preflight
-  | Phase_applied
-  | Phase_progressed
-  | Phase_frontier
-  | Phase_refused of effect4_api_host_session_refusal
 and result_ = { phase : phase; session : session; }
-and sel = Sel_key of key | Sel_fiber of fiber_id | Sel_row of string
+and reply_slot = {
+  key : key;
+  reply : effect4_api_host_session_reply option;
+}
+and effect4_machine_origin =
+    Effect4_machine_origin_root
+  | Effect4_machine_origin_forked of fiber_id * bool * int list
+and fiber_status =
+    FiberStatus_child of fiber_id
+  | FiberStatus_pinned of int * int
+  | FiberStatus_daemon
+  | FiberStatus_root
+  | FiberStatus_exited of
+      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+      Eff_types.Exit.t
+and effect4_api_host_session_refusal =
+    Effect4_api_host_session_refusal_version
+  | Effect4_api_host_session_refusal_session
+  | Effect4_api_host_session_refusal_profile
+  | Effect4_api_host_session_refusal_table
+  | Effect4_api_host_session_refusal_program of admit_refusal
+  | Effect4_api_host_session_refusal_duplicateCall
+  | Effect4_api_host_session_refusal_protocol
+  | Effect4_api_host_session_refusal_selectionRequired
+  | Effect4_api_host_session_refusal_pendingReply
+  | Effect4_api_host_session_refusal_callOrder
+  | Effect4_api_host_session_refusal_noCall
+  | Effect4_api_host_session_refusal_staleCall
+  | Effect4_api_host_session_refusal_envelope
+  | Effect4_api_host_session_refusal_directAnswer
+  | Effect4_api_host_session_refusal_pendingControl
+  | Effect4_api_host_session_refusal_stuck
 and ('op, 'a) arg_reader = {
   child : int -> eff_fam -> 'a;
   term : int -> Eff_types.Term.t -> 'a;
@@ -1556,25 +1904,6 @@ and eff_fam =
   | EffFam_action
   | EffFam_layer
   | EffFam_layers
-and effect4_api_host_session_refusal =
-    Effect4_api_host_session_refusal_version
-  | Effect4_api_host_session_refusal_session
-  | Effect4_api_host_session_refusal_profile
-  | Effect4_api_host_session_refusal_table
-  | Effect4_api_host_session_refusal_program of admit_refusal
-  | Effect4_api_host_session_refusal_duplicateCall
-  | Effect4_api_host_session_refusal_protocol
-  | Effect4_api_host_session_refusal_selectionRequired
-  | Effect4_api_host_session_refusal_pendingReply
-  | Effect4_api_host_session_refusal_callOrder
-  | Effect4_api_host_session_refusal_noCall
-  | Effect4_api_host_session_refusal_staleCall
-  | Effect4_api_host_session_refusal_envelope
-  | Effect4_api_host_session_refusal_directAnswer
-  | Effect4_api_host_session_refusal_pendingControl
-  | Effect4_api_host_session_refusal_stuck
-and bound_call = { call : call; token : int; }
-and reply_slot = { key : key; reply : reply option; }
 and label =
     Label_submit of key
   | Label_answer of key
@@ -1591,7 +1920,6 @@ and recorded_reply = {
     (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
     Eff_types.Completion.t;
 }
-and retired_call = { bound : bound_call; pending : reply option; }
 and kind =
     Kind_source
   | Kind_export
@@ -1630,6 +1958,8 @@ and memo_map_id = int
 and 'u context = 'u service list
 and scope_store = scope_entry list
 and external_store = string list
+and run_id = int
+and receipt = effect4_program_edit_step list
 and 'op typed_program = Eff_types.EffTy.t
 val api_evaluate :
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
@@ -2061,6 +2391,25 @@ val program_step_checked :
     Eff_types.Defect.t, int, unit)
    frame_event)
   run_machine * bool
+val tool_native_request_shape : shape_doc
+val tool_native_reply_shape : shape_doc
+val tool_native_request_of_val : Eff_types.Val.t -> request option
+val tool_native_reply_to_val : reply -> Eff_types.Val.t
+val tool_native_start : state * (check_input * verdict) list
+val tool_native_serve_val :
+  state * (check_input * verdict) list ->
+  request -> (state * reply) * (check_input * verdict) list
+val tool_native_serve_uncached : state -> request -> state * reply
+val tool_native_envelope_shape : shape_doc
+val tool_native_reply_envelope_shape : shape_doc
+val tool_native_refusal_shape : shape_doc
+val tool_native_refusal_to_val : effect4_tool_wire_refusal -> Eff_types.Val.t
+val tool_native_serve_envelope :
+  state * (check_input * verdict) list ->
+  Eff_types.Val.t ->
+  (Eff_types.Val.t * (state * (check_input * verdict) list),
+   effect4_tool_wire_refusal)
+  result
 val program_check_run : check_input -> verdict
 val program_check_oracle_uncached : oracle
 val program_check_checked_pure' : 'a0 -> 'a0 checked
