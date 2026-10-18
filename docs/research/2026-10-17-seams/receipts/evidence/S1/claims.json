@@ -1,0 +1,16 @@
+[
+ ["source-feed-coherent", "SourceSession.feed_coherent", "preservation", "A successful feed preserves the source table under initial coherence and the selected policy"],
+ ["source-feed-edit", "SourceSession.feed_keeps", "compatibility", "A successful feed retains the application and exact edit; an invalid edit retains the source, and a valid edit returns its candidate"],
+ ["source-feed-draft", "SourceSession.feed_draft", "compatibility", "Every draft from a coherent source agrees with the existing expanded edit observation and exact source projection"],
+ ["source-feed-keep-exact", "SourceSession.feed_keepExact", "compatibility", "A successful nonroot keepExact feed retains root and local types, using the exact whole-expansion guard for splice or recheck"],
+ ["source-feed-root", "SourceSession.feed_root", "compatibility", "Every root edit with a candidate equals the entire checked module recheck, including actual dependency answers"],
+ ["source-document-coherent", "Doc.coherent", "preservation", "Every sealed document has its exact source table, without a separate coherence premise"],
+ ["source-session-draft-transport", "SourceSession.replay_drafts_view", "compatibility", "Every old application, sketch, and edit list has canonical draft replay with the exact edited sketch, source table, refusals, and root observation"],
+ ["source-document-replay", "Doc.step_replay", "compatibility", "Appending an action replays through the same interpreter and exact history ledger"],
+ ["source-document-atomic", "Doc.step_refuses", "compatibility", "A refused step offers no replacement document, so the caller retains the original document"],
+ ["source-document-step", "Doc.step_coherent", "preservation", "A successful step from a coherent document retains its origin and application, appends one action, and remains coherent"],
+ ["source-document-commit", "Doc.commit_sound", "compatibility", "A successful keepExact or recheck commit is positive, with initial positivity required for keepExact"],
+ ["source-document-local-keep", "Doc.commit_one_keepExact", "compatibility", "A successful single nonroot kept change retains the exact root and local observations, including an initially refused root"],
+ ["source-document-single-transport", "Doc.commit_single_sound", "compatibility", "The old single-edit observation holds under its exact replacement and initial positive-root premise for keepExact"],
+ ["source-document-revert", "Doc.revert_program", "compatibility", "An accepted action and its immediate selected-entry revert restore the prior program and retain appended hole rows"]
+]

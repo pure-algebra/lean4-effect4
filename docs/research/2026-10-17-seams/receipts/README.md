@@ -11,8 +11,8 @@ The owner pauses work after V1.
 | --- | --- | --- | --- |
 | K0 | `66f292a095e57e7c94586434aab9c5c597f82d6e`; receipt `faa7d0122bd550186e4c622517509ac001763a35` | [K0](K0.md) | Required checks pass. |
 | S0 | `d46b1e6d6f184764a7ee1a00b01a800a45f35d33`; receipt `489e127a8b94f4796ff40ef4200080b5e83a94f2` | [S0](S0.md) | Required checks pass. |
-| V1 | `d6ad9482303a1998bfbcc826bf0d12ab4f6aa3c9`; receipt `6406fa8d47b99e1b6224dffac5025f622235893c` | [V1](V1.md) | Required checks pass; two placed goals remain. |
-| S1 | Pending | Pending | Open |
+| V1 | `d6ad9482303a1998bfbcc826bf0d12ab4f6aa3c9`; receipt `6406fa8d47b99e1b6224dffac5025f622235893c` ; receipt `6406fa8d47b99e1b6224dffac5025f622235893c` | [V1](V1.md) | Required checks pass; two placed goals remain. |
+| S1 | `2e71c9dc69b1d06e2b2241f8374e0600daa90a0f` | [S1](S1.md) | Required checks pass; thirteen placed goals remain. |
 | S2 | Pending | Pending | Open |
 | S4 | Pending | Pending | Open |
 | S3a | Pending | Pending | Open |
@@ -68,6 +68,12 @@ The owner pauses work after V1.
 | V1 | Extension and explanation exports use explicit roots and nominal ascriptions; S0 package abstraction remains checked. |
 | V1 | A specialized wrapper retains a stale source recursion flag; emitted self-reference now determines recursive singleton bindings. |
 
+| S1 | Initial root positivity is required only by positive keepExact commit claims; the local-edit counterexample remains. |
+| S1 | Replay retains the undo ledger; equal source sessions can require different selected inverses. |
+| S1 | Sealed runtime state retains that ledger with its replay equation; revert performs no earlier action again. |
+| S1 | Reached-state observations retain their exact scope through placed goals and explicit proof-status changes. |
+| S1 | Module asks retain actual dependency traces; native Doc sealing waits for the actual exported protocol closure. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -88,5 +94,10 @@ The owner pauses work after V1.
 | V1 | Keep full verdict equality, including tables; retain placed decomposition and explanation goals and the exact ask-value dependency. |
 | V1 | Keep pure support connectors in core, existing attributed wrappers in Laws, and host cost outside semantic traces. |
 | V1 | Derive singleton recursion from actual emitted references; keep mutual dependency components unchanged. |
+
+| S1 | Adopt one policy feed and one accepted-action interpreter for commit, draft, revert, and document replay. |
+| S1 | Derive revision from history; preserve atomic refusal and exact snapshot checks. |
+| S1 | Retain derived undo entries only in sealed memory; reconstruct them from accepted actions on load. |
+| S1 | Retain initial-positive premises and full reached-state goals, with proof status measured by the report. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

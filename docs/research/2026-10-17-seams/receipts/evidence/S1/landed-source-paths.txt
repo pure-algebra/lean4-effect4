@@ -1,0 +1,13 @@
+Test/Program/CheckCacheControls.lean
+Test/Program/FillSetControls.lean
+Test/Program/SourceDocumentControls.lean
+Test/Program/SourceFeedControls.lean
+docs/core/semantics.md
+generated/semantics.md
+src/Effect4/Laws/Program/SourceDocument.lean
+src/Effect4/Laws/Program/SourceTable.lean
+src/Effect4/Program/Typing/FillSet.lean
+src/Effect4/Program/Typing/SourceDocument.lean
+src/Effect4/Program/Typing/SourceSession.lean
+tools/ProofGraph/Registry.lean
+tools/Tools/Session.lean

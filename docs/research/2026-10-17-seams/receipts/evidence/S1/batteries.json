@@ -1,0 +1,14 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "make",
+    "batteries-touched",
+    "BASE=1c4551d73061c536a7ecc30dd7306e1e74bde151"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4",
+  "started_utc": "2026-10-18T05:59:47.893525+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 103.966,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/S1/batteries.log"
+}
