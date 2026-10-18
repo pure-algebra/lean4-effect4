@@ -1,0 +1,3 @@
+["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st1b-sol/ocaml", "engine/cas/test/test_shared_facts.exe"]
+shared facts: kind, policy and node refusal controls passed
+exit_status=0

@@ -1,0 +1,7 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "python3", "scripts/generate.py", "--only", "store-rocq"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T04:55:47.668891+00:00"}
++ lake build Effect4.Run.Tree Effect4.Store.Domain.Word OCaml5.Lcnf.Gallina
+Build completed successfully (139 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/GallinaGen.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-4adprp6c/rocq/Skeleton.v /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-4adprp6c/rocq/StoreCode.v
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-4adprp6c/rocq/Skeleton.v (23291 bytes)
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-4adprp6c/rocq/StoreCode.v (48712 bytes)
+PASS generate: requested producers ran in dependency order

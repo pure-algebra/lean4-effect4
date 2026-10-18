@@ -1,0 +1,3 @@
+{"command": ["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st1b-sol/policy-red-native", "engine/cas/test/test_shared_facts.exe"], "original_sha256": "2c073572ad9efcdc85d66ff2c53b1d342f564ad57c8691e07217c6f26348d18a", "mutated_sha256": "4ca234010a21a352097d0e6a75a2445cdc41dae4d0362ae1b0fba14ae6ebdb0c"}
+Fatal error: exception Failure("policy byte round trip")
+exit_status=2

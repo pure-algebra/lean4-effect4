@@ -1,0 +1,5 @@
+["lean", "-M4096", "-DwarningAsError=true", "--run", "/private/tmp/seams-st1b-sol/src/OCaml5/Tools/GallinaGen.lean", "/private/tmp/seams-st1b-sol/rocq/Skeleton.v", "/private/tmp/seams-st1b-sol/rocq/StoreCode.v"]
+wrote /private/tmp/seams-st1b-sol/rocq/Skeleton.v (23291 bytes)
+uncaught exception: Gallina: 1 refused:
+type _uniq.9
+exit_status=1

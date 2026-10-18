@@ -1,0 +1,1398 @@
+{"command": ["python3", "/private/tmp/seams-lean-one.py", "make", "check-ocaml"], "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4", "started_utc": "2026-10-18T04:59:14.884898+00:00"}
+python3 scripts/check-conform.py compiler
+Build completed successfully (102 jobs).
+conform compiler: PASS, exit 0; .lake/conform/compiler.json
+PASS compiler: recorded 6a7737ab84b6 (10.249s)
+python3 scripts/generate.py --only lcnf
++ lake build Effect4.Api Effect4.Laws.Run.Tree Effect4.Program.Check Effect4.Run.Kit Effect4.Run.LiveRecord Test.Codegen.ConstructorLane Test.Codegen.ModeledLane Test.Dogfood.Scenario.Todo.HostRun OCaml5.Tools.LcnfGen
+✔ [923/925] Built Test.Dogfood.Scenario.Todo.Runs (4.8s)
+✔ [924/925] Built Test.Dogfood.Scenario.Todo.Typed (5.0s)
+✔ [925/925] Built Test.Dogfood.Scenario.Todo.HostRun (1.5s)
+Build completed successfully (925 jobs).
++ opam exec --switch=effect4 -- dune build --root ocaml gen/interface/main.exe clock/effect4_clock.cma lcnf/effect4_lcnf.cma
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/stage --recipe ocaml/gen/roots.json --one 0
+imported #[Effect4.Api] in 1237 ms
+== ocaml/eff/eff_types.ml
+closure: 0 of --cap 0 (0 of headroom); manifest ocaml/gen/closure-eff_types.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[]
+todos (0):
+clock refusals (0):
+types in full: #[Effect4.ServiceKey, Effect4.Program.Ty, Effect4.Program.Lit, Effect4.Program.FieldReadMode, Effect4.Program.Term, Effect4.Program.Terms, Effect4.Program.CauseTerm, Effect4.Supervision.MaskMode, Effect4.Supervision.ForkOptions, Effect4.Supervision.ObserverMode, Effect4.FinalizerStrategy, Effect4.Program.NativeOp, Effect4.Program.Decision, Effect4.Program.DefRole, Effect4.Program.ParamDecl, Effect4.Program.DefDecl, Effect4.Program.Eff, Effect4.Program.Stmt, Effect4.Program.Stmts, Effect4.Program.Effs, Effect4.Program.ActionTerm, Effect4.Program.LayerTerm, Effect4.Program.LayerTerms, Effect4.Program.RowKind, Effect4.Program.RowShape, Effect4.Program.Registration, Effect4.Program.RowArg, Effect4.Program.Row, Effect4.Program.EffTy, Effect4.Store.Val, Effect4.Machine.Err, Effect4.Machine.Defect, Effect4.Reason, Effect4.Exit, Effect4.Machine.Completion]
+types as abbreviations: #[Effect4.ServiceName, Effect4.ServiceTypeCode, Effect4.Row, Effect4.Machine.Payload, Effect4.ReasonAnnotations, Effect4.Cause, Effect4.Machine.RefKey]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(row, (Effect4.Program.Row, Effect4.Row))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/eff/eff_types.ml and ocaml/gen/closure-eff_types.tsv
+time (ms): closure 125, types 28, renaming 63, emission 4, manifest 29, checks 7, rendering 8
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/stage --recipe ocaml/gen/roots.json --one 1
+imported #[Effect4.Api, Effect4.Run.Kit, Effect4.Program.Check, Effect4.Run.LiveRecord] in 2490 ms
+== ocaml/gen/api_gen.ml
+closure: 2226 of --cap 4000 (1774 of headroom); manifest ocaml/gen/closure-api_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Run.Tree.cutAt, Effect4.Machine.Stores.wakeList, _private.Init.Data.List.Impl.0.List.takeTR.go, Effect4.Exit.isSuccess, Effect4.Row.union._at_.Effect4.Machine.Env.Requirement.union.spec_0, Effect4.FrameFiber.uninterruptible, List.zipWith._at_.List.zip.spec_0, Effect4.Store.Image.toList, Effect4.Store.Image.ofList, _private.Init.Data.List.Impl.0.List.setTR.go, Effect4.Store.Image.toOption, Effect4.Machine.fireStep, Effect4.Program.LayerTerm.refSite, Effect4.Program.argTy, Effect4.Program.argsTy, Effect4.Store.Image.ofCtor1, Effect4.Machine.Value.toReason, Effect4.Machine.Value.ofReason, Effect4.Machine.Value.toExit, Effect4.Machine.Value.ofExit, Effect4.Store.Image.toPair, Effect4.Store.Image.ofPair, Effect4.Store.Image.ofCtor2, Effect4.Api.HostSession.Session.callInstance]
+todos (0):
+clock refusals (0):
+types in full: #[Effect4.Machine.RunDecision, Effect4.Machine.ReplayResult, Effect4.Api.Outcome, Effect4.Api.Inspection, Effect4.Program.Refusal, Effect4.Machine.RunFiber, Effect4.Machine.Parked, Effect4.Program.SigApp, Effect4.Run.Tree.Outcome, Effect4.Api.Typed, Effect4.Program.AdmitRefusal, Effect4.Run.Kit.ReplyFault, Effect4.Store.Shape, Effect4.Store.ShapeDoc, Effect4.Program.Authoring.Reason, Effect4.Program.Authoring.Refusal, Effect4.Program.Authoring.LoopSpec, Effect4.Program.Authoring.Env, Effect4.Program.Authoring.Module, Effect4.Program.Check.CheckInput, Effect4.Program.Sketch, Effect4.Program.Check.Verdict, Effect4.Program.Check.Checked, Effect4.Api.Budget, Effect4.Api.HostSession.Session, Effect4.Api.HostSession.Header, Effect4.Api.Built, Effect4.LiveRecord, Effect4.LiveRecord.Refusal, Effect4.Run, Effect4.Machine.RunInterp, Effect4.Machine.Name, Effect4.Machine.RunMachine, Effect4.Store.Image, Effect4.PrimInterp, Effect4.Program.EffName, Effect4.Program.NativeAtom, Effect4.ReasonTag, Effect4.Machine.HandleKind, Effect4.Machine.SyncOp, Effect4.Machine.Stores, Effect4.Machine.TimerStore, Effect4.Machine.ScopeEntry, Effect4.Machine.MemoMap, Effect4.Machine.MemoEntry, Effect4.Machine.FinName, Effect4.Machine.DeferredStore, Effect4.Machine.Bucket, Effect4.Machine.FiberCore, Effect4.Machine.Pending, Effect4.Machine.ForkRecord, Effect4.Machine.RunEvent, Effect4.Machine.Task, Effect4.Machine.Cmd, Effect4.Machine.Outcome, Effect4.Machine.Iter, Effect4.FrameFiber, Effect4.Prim, Effect4.Machine.Resume, Effect4.Machine.ParkKind, Effect4.Machine.Stuck, Effect4.Machine.Observer, Effect4.Machine.FiberEdit, Effect4.Machine.Race, Effect4.Supervision.RaceAllState, Effect4.Supervision.RaceMode, Effect4.Machine.Exhaustion, Effect4.Api.FrontierReason, Effect4.Run.Tree, Effect4.Run.Tree.Frame, Effect4.Run.Tree.Stop, Effect4.Run.Tree.Step, Effect4.Program.TypeRefusal, Effect4.Program.TypeReason, Effect4.Program.SigData, Effect4.Program.PartSig, Effect4.Program.Node, Effect4.Program.GenTy, Effect4.Program.Signature, Effect4.Program.LayerTy, Effect4.Api.HostSession.Refusal, Effect4.Run.Event, Effect4.Machine.Ctx, Effect4.Program.Point, Effect4.IterStep, Effect4.LoopNext, Effect4.Program.EffThunk, Effect4.Machine.Thunk, Effect4.Machine.ActionName, Effect4.Machine.WithFiberAction, Effect4.Supervision.ScopeMode, Effect4.Machine.Env.ContextUpdate, Effect4.Program.Region, Effect4.Machine.ArgSite, Effect4.Machine.Capture, Effect4.Machine.WakeKey, Effect4.Program.Await, Effect4.Machine.DeferredCell, Effect4.Scope, Effect4.FramePop, Effect4.ContAnswer, Effect4.Arm, Effect4.Machine.WakeList, Effect4.Program.SigRefusal, Effect4.Program.FormationRefusal, Effect4.Run.Tree.Path, Effect4.Program.NodeEnv, Effect4.Program.Table.Entry, Effect4.Program.TermTypingRefusal, Effect4.Program.RowTypingRefusal, Effect4.Api.HostProtocol.Protocol, Effect4.Api.HostProtocol.State, Effect4.Machine.ProgName, Effect4.Machine.Owed, Effect4.Program.CombineMode, Effect4.Machine.Waiter, Effect4.Machine.WakeMode, Effect4.ScopeState, Effect4.FrameStep, Effect4.FrameEvent, Effect4.Supervision.WaitState, Effect4.Squashed, Effect4.Api.HostProtocol.Key, Effect4.Program.RowReason, Effect4.Program.ServiceReason, Effect4.Program.DeclReason, Effect4.Program.FormationReason, Effect4.Program.RefFault, Effect4.Program.RecordTermRefusal, Effect4.Program.RecordCauseRefusal, Effect4.Program.TupleTermRefusal, Effect4.Program.TupleCauseRefusal, Effect4.Program.FoldTermRefusal, Effect4.Program.FoldCauseRefusal, Effect4.Program.Authoring.ServiceDef, Effect4.Program.Authoring.DefSrc, Effect4.Program.StmtTy, Effect4.Program.CauseTypingRefusal, Effect4.Program.BinderTerm, Effect4.Program.TermUse, Effect4.Api.HostProtocol.Tag, Effect4.Api.HostProtocol.Edge, Effect4.Api.HostProtocol.FieldType, Effect4.Api.HostProtocol.RecordShape, Effect4.Program.Formation.Site, Effect4.Run.Verdict, Effect4.Machine.RaceName, Effect4.Machine.Env.Service, Effect4.Program.RecordTypingReason, Effect4.Program.TupleTypingReason, Effect4.Program.FoldTypingReason, Effect4.Program.TermAlgebra, Effect4.Program.Ty.LeafHead, Effect4.Program.Ty.Variance, Effect4.Api.Runner.Command, Effect4.Run.Seen, Effect4.Machine.Env.Context.Reference, Effect4.Program.FnShape, Effect4.Program.NativeAtom.Spec, Effect4.Program.NativeAtom.AtomRow, Effect4.Program.TyAlgebra, Effect4.Program.CauseTermAlgebra, Effect4.Program.Part, Effect4.Api.HostSession.Call, Effect4.Api.HostSession.Reply, Effect4.Api.Runner.Runner, Effect4.Program.EffAlgebra, Effect4.Program.NativeAtom.Scheme, Effect4.Program.NativeAtom.CustomScheme, Effect4.Program.Focus, Effect4.Program.CallInstance, Effect4.Api.HostSession.Phase, Effect4.Api.HostSession.Result, Effect4.Program.ArgReader, Effect4.Program.EffFam, Effect4.Run.Sel, Effect4.Api.HostSession.BoundCall, Effect4.Api.HostSession.ReplySlot, Effect4.Api.HostProtocol.Label, Effect4.Program.RecordedReply, Effect4.Api.HostSession.RetiredCall, Effect4.Store.Kind]
+types as abbreviations: #[Effect4.ServiceUniverse, Effect4.Program.Check.Memo, Effect4.Program.Check.Oracle, Effect4.Program.Check.HitRule, Effect4.Live, Effect4.FiberId, Effect4.Machine.Dispatcher, Effect4.Program.TypedProgram, Effect4.Program.Authoring.RowDef, Effect4.Program.AdmittedProgram, Effect4.Machine.DeferredKey, Effect4.Machine.MemoMapId, Effect4.Machine.Env.Context, Effect4.Machine.ScopeStore, Effect4.Machine.ExternalStore]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(outcome, (Effect4.Api.Outcome, Effect4.Run.Tree.Outcome)), (refusal, (Effect4.Program.Refusal, Effect4.Program.Authoring.Refusal)), (refusal, (Effect4.Program.Authoring.Refusal, Effect4.LiveRecord.Refusal)), (outcome, (Effect4.Run.Tree.Outcome, Effect4.Machine.Outcome)), (refusal, (Effect4.LiveRecord.Refusal, Effect4.Api.HostSession.Refusal)), (verdict, (Effect4.Program.Check.Verdict, Effect4.Run.Verdict))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/gen/api_gen.ml and ocaml/gen/closure-api_gen.tsv
+time (ms): closure 32356, types 69, renaming 2550, emission 217, manifest 217, checks 2670, rendering 226
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/stage --recipe ocaml/gen/roots.json --one 2
+imported #[Effect4.Api] in 1265 ms
+== ocaml/engine/api_engine.ml
+closure: 810 of --cap 2000 (1190 of headroom); manifest ocaml/gen/closure-api_engine.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Machine.Stores.wakeList, Effect4.Machine.fireStep, Effect4.Exit.isSuccess, Effect4.Store.Image.toList, Effect4.Store.Image.ofList, Effect4.Store.Image.ofCtor1, Effect4.Machine.Value.toReason, Effect4.Machine.Value.ofReason, _private.Init.Data.List.Impl.0.List.takeTR.go, Effect4.Machine.Value.toExit, Effect4.Machine.Value.ofExit, List.zipWith._at_.List.zip.spec_0, Effect4.Store.Image.toOption, Effect4.Store.Image.ofOption, Effect4.Store.Image.toPair, Effect4.Store.Image.ofPair, Effect4.Store.Image.ofCtor2]
+todos (0):
+clock refusals (0):
+types in full: #[Effect4.Machine.RunDecision, Effect4.Machine.ReplayResult, Effect4.Api.Outcome, Effect4.Api.Inspection, Effect4.Machine.Cmd, Effect4.Machine.RunMachine, Effect4.Machine.FiberCore, Effect4.Machine.RunFiber, Effect4.Machine.RunEvent, Effect4.ScopeState, Effect4.Scope, Effect4.Machine.Parked, Effect4.Machine.Ctx, Effect4.PrimInterp, Effect4.Machine.Name, Effect4.Machine.RunInterp, Effect4.Program.Node, Effect4.Program.Refusal, Effect4.Program.SigApp, Effect4.Program.EffName, Effect4.Store.Image, Effect4.Machine.Exhaustion, Effect4.Api.FrontierReason, Effect4.Machine.Race, Effect4.Supervision.RaceAllState, Effect4.Machine.Observer, Effect4.Machine.Resume, Effect4.Machine.Pending, Effect4.Machine.Outcome, Effect4.Machine.Iter, Effect4.Machine.ParkKind, Effect4.Program.EffThunk, Effect4.Prim, Effect4.Program.Point, Effect4.Machine.Env.ContextUpdate, Effect4.Program.Region, Effect4.Machine.Stores, Effect4.Machine.Thunk, Effect4.IterStep, Effect4.LoopNext, Effect4.Machine.ActionName, Effect4.Machine.FinName, Effect4.Supervision.ScopeMode, Effect4.Machine.SyncOp, Effect4.Machine.WakeKey, Effect4.Machine.HandleKind, Effect4.Machine.ProgName, Effect4.FrameFiber, Effect4.Machine.WithFiberAction, Effect4.Machine.ArgSite, Effect4.Machine.Capture, Effect4.Program.Await, Effect4.Machine.TimerStore, Effect4.Machine.WakeList, Effect4.Machine.Owed, Effect4.Machine.WakeMode, Effect4.Machine.Task, Effect4.Machine.Stuck, Effect4.Machine.FiberEdit, Effect4.Supervision.RaceMode, Effect4.Machine.DeferredStore, Effect4.Machine.ScopeEntry, Effect4.Machine.MemoEntry, Effect4.Machine.DeferredCell, Effect4.Program.CombineMode, Effect4.Api.HostProtocol.Key, Effect4.Machine.Waiter, Effect4.Machine.RaceName, Effect4.Machine.Env.Service, Effect4.Supervision.WaitState, Effect4.Program.NativeAtom, Effect4.ReasonTag, Effect4.Machine.MemoMap, Effect4.Machine.Env.Context.Reference, Effect4.FramePop, Effect4.ContAnswer, Effect4.Arm, Effect4.FrameEvent, Effect4.Program.Ty.LeafHead, Effect4.Program.Ty.Variance, Effect4.FrameStep, Effect4.Machine.Origin, Effect4.Machine.ForkRecord]
+types as abbreviations: #[Effect4.ServiceUniverse, Effect4.FiberId, Effect4.Machine.Env.Context, Effect4.Machine.DeferredKey, Effect4.Machine.MemoMapId, Effect4.Machine.ScopeStore, Effect4.Machine.ExternalStore]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(outcome, (Effect4.Api.Outcome, Effect4.Machine.Outcome))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+extern rows: 28 fn, 1 type, 11 field, 1 elem
+fn rows used (28):
+  Effect4.Api.load -> sh_api_load
+  Effect4.Machine.RunMachine.fiber? -> sh_machine_fiber
+  Effect4.Machine.RunMachine.update -> sh_machine_update
+  Effect4.Machine.RunMachine.emit -> sh_machine_emit
+  Effect4.Program.rootPoint -> sh_root_point
+  Effect4.Machine.RunMachine.finished -> sh_machine_finished
+  Effect4.Machine.Dispatcher.drain -> D.drain
+  List.find?@Effect4.Machine.ScopeStore.entryAt -> sh_scope_entry_at
+  Effect4.Program.Node.at_ -> sh_node_at
+  Effect4.Program.Point.redirect -> sh_point_redirect
+  Effect4.Machine.spawn -> sh_spawn_generic
+  Effect4.Machine.DeferredStore.make -> sh_deferred_make
+  Effect4.Machine.ScopeStore.make -> sh_scope_store_make
+  Effect4.Machine.ScopeStore.setEntry -> sh_scope_set_entry
+  Effect4.Machine.ScopeStore.forkChild -> sh_scope_fork_child
+  Effect4.Machine.MemoMap.mk -> sh_memo_map_mk
+  Effect4.Machine.MemoWorld.updateEntry -> sh_memo_update_entry
+  Effect4.Machine.MemoWorld.insertEntry -> sh_memo_insert_entry
+  Effect4.Machine.MemoWorld.entryAt -> sh_memo_entry_at
+  Effect4.Machine.MemoWorld.deleteEntry -> sh_memo_delete_entry
+  Effect4.Machine.refStep -> sh_ref_step
+  Effect4.Machine.DeferredStore.cellAt -> sh_deferred_cell_at
+  Effect4.Machine.DeferredStore.setCell -> sh_deferred_set_cell
+  Effect4.Machine.Dispatcher.insert -> sh_dispatcher_insert
+  Effect4.Machine.RunMachine.dropToken -> sh_machine_drop_token
+  Effect4.Machine.RunMachine.completedExits -> sh_machine_completed_exits
+  Effect4.Machine.spawn@Effect4.Machine.launchEntrant -> sh_spawn
+  Effect4.Machine.spawn@Effect4.Machine.evaluatePrim.withFiber -> sh_spawn
+type rows used (1): #[Effect4.Machine.Dispatcher]
+field rows used (11): #[Effect4.Machine.RunMachine.fibers, Effect4.Machine.RunMachine.trace, Effect4.Program.Point.path, Effect4.Program.Point.env, Effect4.Machine.Stores.refs, Effect4.Machine.SyncOp.env, Effect4.Machine.ArgSite.env, Effect4.Machine.Capture.path, Effect4.Machine.Capture.env, Effect4.Machine.DeferredStore.cells, Effect4.Machine.MemoMap.entries]
+elem rows used (1): #[Effect4.Machine.ScopeEntry]
+ops rows: 11, used (11): #[D.t#empty, F.t#to_list, M.t#to_list, E.t#snoc, P.t#to_list, E.t#take, P.t#snoc, E.t#get, P.t#append, E.t#append, E.t#length]
+carg rows: 0 stated, used (12): #[Effect4.Program.evalTerm, Effect4.Program.causeOf, Effect4.Program.NativeOp.syncOpOf, Effect4.Program.runStmts, Effect4.Program.caughtErrorValue?, Effect4.Program.argSitesAt, Effect4.Program.evalTerms, List.foldlM._at_.Effect4.Program.evalTerm.spec_0, Effect4.Program.blockExit, Effect4.Program.runStmts.yieldOf, Effect4.Program.loopExit, Effect4.Program.blockEnv]
+carg rows inferred from the call sites (12):
+  carg Effect4.Program.evalTerm 0 E.t
+  carg Effect4.Program.causeOf 0 E.t
+  carg Effect4.Program.NativeOp.syncOpOf 1 E.t
+  carg Effect4.Program.runStmts 4 E.t
+  carg Effect4.Program.caughtErrorValue? 0 E.t
+  carg Effect4.Program.argSitesAt 1 E.t
+  carg Effect4.Program.evalTerms 0 E.t
+  carg List.foldlM._at_.Effect4.Program.evalTerm.spec_0 0 E.t
+  carg Effect4.Program.blockExit 3 E.t
+  carg Effect4.Program.runStmts.yieldOf 6 E.t
+  carg Effect4.Program.loopExit 4 E.t
+  carg Effect4.Program.blockEnv 4 E.t
+carrier to_list sites (19):
+  List.filterMapTR.go._at_.Effect4.Program.awaits.spec_0 #1 [F.t]
+  List.get?Internal._redArg #0 [M.t]
+  Effect4.Machine.WithFiberAction.fork.site [P.t]
+  List.cons.head [P.t]
+  Effect4.Program.argSitesAt #0 [P.t]
+  List.cons.head [P.t]
+  List.filterMapTR.go._at_.Effect4.Api.compileReasons.spec_0 #0 [F.t]
+  List.any._at_.Effect4.Api.hasRunnable.spec_0 #0 [F.t]
+  Effect4.Program.EffName.external.origin [P.t]
+  Effect4.Machine.WithFiberAction.fork.site [P.t]
+  Effect4.Machine.WithFiberAction.forkIn.site [P.t]
+  Option.some.val [P.t]
+  Option.some.val [P.t]
+  Effect4.Machine.WithFiberAction.forkIn.site [P.t]
+  Prod.mk.fst [P.t]
+  Effect4.Program.pathInBodies #0 [P.t]
+  List.mapTR.loop._at_.Effect4.Program.handleLive.spec_0 #0 [F.t]
+  Effect4.Program.handleLive: builtin List.lengthTR._redArg [M.t]
+  Effect4.Program.handleLive: builtin List.lengthTR._redArg [M.t]
+wrote ocaml/engine/api_engine.ml and ocaml/gen/closure-api_engine.tsv
+time (ms): closure 6132, types 29, renaming 933, emission 69, manifest 85, checks 647, rendering 78
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/stage --recipe ocaml/gen/roots.json --one 3
+imported #[Test.Dogfood.Scenario.Todo.HostRun] in 3498 ms
+== ocaml/engine/test/todo/todo_gen.ml
+closure: 1430 of --cap 4000 (2570 of headroom); manifest ocaml/gen/closure-todo_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Store.Image.toList, Effect4.Store.Image.ofList, Test.Dogfood.Scenario.Todo.Host.recording, Effect4.Machine.Value.toExit, Effect4.Machine.Value.ofExit, Effect4.Store.Image.ofTuple2, Effect4.Store.Image.toOption, Effect4.Store.Image.ofOption, Effect4.Store.Image.ofCtor1, Effect4.Machine.Value.toReason, Effect4.Machine.Value.ofReason, Effect4.Machine.Stores.wakeList, Effect4.Program.LayerTerm.refSite, Effect4.Store.Image.toPair, Effect4.Store.Image.ofPair, _private.Init.Data.List.Impl.0.List.setTR.go, Effect4.Api.HostSession.Session.callInstance, List.zipWith._at_.List.zip.spec_0, Effect4.Row.union._at_.Effect4.Machine.Env.Requirement.union.spec_0, Effect4.Store.Image.ofCtor2, Effect4.Row.normalize._at_.Effect4.Row.union._at_.Effect4.Machine.Env.Requirement.union.spec_0.spec_0]
+todos (0):
+clock refusals (0):
+types in full: #[Test.Dogfood.Scenario.Todo.Typed.Host, Effect4.Store.Image, Test.Dogfood.Scenario.Todo.Typed.Todo, Effect4.Api.Built, Effect4.Program.SigApp, Effect4.Api.Budget, Test.Dogfood.Scenario.Todo.Typed.SqlTag, Tools.RunChecks.Call, Effect4.Store.Columns, Effect4.Api.HostSession.Header, Effect4.Api.HostSession.Session, Effect4.Run, Effect4.Api.Inspection, Effect4.Machine.RunFiber, Effect4.Api.HostProtocol.Protocol, Effect4.Api.HostProtocol.State, Effect4.Machine.RunInterp, Effect4.Machine.Name, Effect4.Machine.RunMachine, Effect4.Machine.RunDecision, Effect4.Api.Runner.Runner, Effect4.Program.Await, Effect4.Api.HostProtocol.Key, Effect4.Machine.ReplayResult, Effect4.Api.Outcome, Effect4.Api.HostProtocol.Tag, Effect4.Api.HostProtocol.Edge, Effect4.Api.HostProtocol.FieldType, Effect4.Api.HostProtocol.RecordShape, Effect4.PrimInterp, Effect4.Machine.DeferredStore, Effect4.Machine.Stores, Effect4.Machine.Ctx, Effect4.FrameFiber, Effect4.Machine.Parked, Effect4.Program.Signature, Effect4.Program.Node, Effect4.Api.HostSession.Result, Effect4.Api.Runner.Command, Effect4.Program.EffName, Effect4.Machine.Exhaustion, Effect4.Api.FrontierReason, Effect4.Machine.Thunk, Effect4.Prim, Effect4.IterStep, Effect4.LoopNext, Effect4.Machine.ActionName, Effect4.Machine.FinName, Effect4.Supervision.ScopeMode, Effect4.Machine.ParkKind, Effect4.Machine.SyncOp, Effect4.Machine.WakeKey, Effect4.Machine.HandleKind, Effect4.Machine.ProgName, Effect4.Machine.TimerStore, Effect4.Api.HostSession.Call, Effect4.Api.HostSession.Reply, Effect4.Program.Point, Effect4.Program.EffThunk, Effect4.Machine.WithFiberAction, Effect4.Machine.Env.ContextUpdate, Effect4.Program.Region, Effect4.Machine.ArgSite, Effect4.Machine.Capture, Effect4.Machine.Cmd, Effect4.Machine.RunEvent, Effect4.Machine.WakeList, Effect4.Machine.ScopeEntry, Effect4.Machine.MemoMap, Effect4.Machine.MemoEntry, Effect4.Machine.DeferredCell, Effect4.Machine.Owed, Effect4.Program.BinderTerm, Effect4.Program.Part, Effect4.Api.HostSession.Phase, Effect4.Api.HostSession.Refusal, Effect4.Api.HostSession.BoundCall, Effect4.Api.HostSession.ReplySlot, Effect4.Api.HostProtocol.Label, Effect4.Program.CombineMode, Effect4.Machine.Waiter, Effect4.Machine.RaceName, Effect4.Scope, Effect4.Machine.WakeMode, Effect4.Machine.Env.Service, Effect4.Program.FnShape, Effect4.Program.NativeAtom, Effect4.Program.NativeAtom.Spec, Effect4.Program.NativeAtom.AtomRow, Effect4.Program.EffAlgebra, Effect4.Program.Focus, Effect4.Program.CallInstance, Effect4.Machine.Race, Effect4.Supervision.RaceAllState, Effect4.Machine.Observer, Effect4.Machine.Resume, Effect4.Machine.Pending, Effect4.Machine.Outcome, Effect4.Machine.Iter, Effect4.Machine.Task, Effect4.ScopeState, Effect4.Program.NativeAtom.Scheme, Effect4.Program.NativeAtom.CustomScheme, Effect4.Program.NodeEnv, Effect4.Program.TermUse, Effect4.Program.RecordedReply, Effect4.Api.HostSession.RetiredCall, Effect4.ReasonTag, Effect4.Machine.Bucket, Effect4.Machine.Stuck, Effect4.Machine.FiberEdit, Effect4.Supervision.RaceMode, Effect4.Program.Ty.Variance, Effect4.Program.RowTypingRefusal, Effect4.Program.Refusal, Effect4.Machine.Env.Context.Reference, Effect4.FramePop, Effect4.ContAnswer, Effect4.Arm, Effect4.Machine.ForkRecord, Effect4.Program.Ty.LeafHead, Effect4.Program.TypeRefusal, Effect4.Program.TypeReason, Effect4.Program.GenTy, Effect4.Program.LayerTy, Effect4.Program.Formation.Site, Effect4.Program.FormationRefusal, Effect4.FrameEvent, Effect4.Supervision.WaitState, Effect4.Program.TermTypingRefusal, Effect4.Program.CauseTypingRefusal, Effect4.Program.FormationReason, Effect4.FrameStep, Effect4.Program.StmtTy, Effect4.Program.TermAlgebra, Effect4.Program.CauseTermAlgebra, Effect4.Program.RecordTermRefusal, Effect4.Program.TupleTermRefusal, Effect4.Program.FoldTypingReason, Effect4.Program.FoldTermRefusal, Effect4.Program.RecordTypingReason, Effect4.Program.RecordCauseRefusal, Effect4.Program.TupleCauseRefusal, Effect4.Program.FoldCauseRefusal, Effect4.Program.TupleTypingReason]
+types as abbreviations: #[Effect4.ServiceUniverse, Effect4.Program.AdmittedProgram, Effect4.FiberId, Effect4.Machine.Dispatcher, Effect4.Machine.DeferredKey, Effect4.Machine.ScopeStore, Effect4.Machine.ExternalStore, Effect4.Machine.Env.Context, Effect4.Machine.MemoMapId, Effect4.Program.TypedProgram]
+types as placeholders: #[Effect4.Program.AdmitRefusal, Effect4.Program.RefFault]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(call, (Tools.RunChecks.Call, Effect4.Api.HostSession.Call)), (outcome, (Effect4.Api.Outcome, Effect4.Machine.Outcome)), (refusal, (Effect4.Api.HostSession.Refusal, Effect4.Program.Refusal))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/test/todo/todo_gen.ml and ocaml/gen/closure-todo_gen.tsv
+time (ms): closure 20005, types 55, renaming 1630, emission 131, manifest 275, checks 1230, rendering 131
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/stage --recipe ocaml/gen/roots.json --one 4
+imported #[Test.Codegen.ConstructorLane] in 614 ms
+== ocaml/engine/test/ctors/ctors_gen.ml
+closure: 55 of --cap 400 (345 of headroom); manifest ocaml/gen/closure-ctors_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[]
+todos (0):
+clock refusals (0):
+types in full: #[Test.Codegen.ConstructorLane.Shade, Test.Codegen.ConstructorLane.Pt]
+types as abbreviations: #[]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/test/ctors/ctors_gen.ml and ocaml/gen/closure-ctors_gen.tsv
+time (ms): closure 57, types 1, renaming 0, emission 2, manifest 11, checks 8, rendering 4
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/stage --recipe ocaml/gen/roots.json --one 5
+imported #[Test.Codegen.ModeledLane] in 3198 ms
+== ocaml/engine/test/modeled/modeled_gen.ml
+closure: 68 of --cap 800 (732 of headroom); manifest ocaml/gen/closure-modeled_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Store.Image.toOption, Effect4.Store.Image.ofOption, Effect4.Store.Image.toList, Effect4.Store.Image.ofList]
+todos (0):
+clock refusals (0):
+types in full: #[Effect4.Store.Image, Test.Codegen.ModeledLane.Status, Test.Codegen.ModeledLane.Todo, Test.Codegen.ModeledLane.Color, Test.Codegen.ModeledLane.Item, Effect4.Store.Columns, Sum]
+types as abbreviations: #[]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/test/modeled/modeled_gen.ml and ocaml/gen/closure-modeled_gen.tsv
+time (ms): closure 506, types 1, renaming 0, emission 4, manifest 142, checks 20, rendering 10
++ lake env lean -DwarningAsError=true -M4096 --run src/OCaml5/Tools/LcnfGen.lean --stage /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/stage --recipe ocaml/gen/roots.json --one 6
+imported #[Effect4.Laws.Run.Tree] in 4182 ms
+== ocaml/engine/test/rocq/rocq_gen.ml
+closure: 18 of --cap 200 (182 of headroom); manifest ocaml/gen/closure-rocq_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[]
+todos (0):
+clock refusals (0):
+types in full: #[]
+types as abbreviations: #[]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/test/rocq/rocq_gen.ml and ocaml/gen/closure-rocq_gen.tsv
+time (ms): closure 701, types 0, renaming 0, emission 1, manifest 156, checks 13, rendering 3
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/eff_types.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/eff_types.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/eff_types.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/eff_types.mli '' '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/eff_types.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/eff_types.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/eff_types.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/eff_types.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_gen.mli 'api_run,api_replay,program_admit,run_tree_of_program,run_tree_run,run_tree_outside_at,run_tree_host_tape,run_tree_host_silent,run_tree_host_of_reactor,run_tree_probe,run_tree_settle,run_tree_frames,run_kit_check,run_kit_admit,run_kit_admit_shape,run_kit_admit_to_val,run_kit_reply_fault,run_kit_samples,run_kit_replies,run_kit_explore,run_kit_program_shape,run_kit_program_to_val,run_kit_program_of_val,run_kit_rows_shape,run_kit_rows_to_val,run_kit_rows_of_val,run_kit_services_shape,run_kit_services_of_val,run_kit_ty_shape,run_kit_ty_to_val,run_kit_eff_ty_shape,run_kit_eff_ty_to_val,run_kit_refusal_shape,run_kit_refusal_to_val,run_kit_exit_shape,run_kit_exit_to_val,run_kit_exit_of_val,run_kit_val_shape,run_kit_ty_text,program_authoring_var,program_authoring_nat,program_authoring_str,program_authoring_bool,program_authoring_unit,program_authoring_app,program_authoring_succeed,program_authoring_fail,program_authoring_sync,program_authoring_suspend,program_authoring_bind_with,program_authoring_and_then,program_authoring_if_else,program_authoring_select_option_with,program_authoring_loop_with,program_authoring_catch_with,program_authoring_on_exit_with,program_authoring_exit_,program_authoring_ref_make,program_authoring_ref_get,program_authoring_ref_set,program_authoring_row_host,program_authoring_row_call_named,program_authoring_def_invoke,program_authoring_elaborate_at,program_check_run,program_check_oracle_uncached,program_check_checked_pure'"'"',program_check_checked_bind'"'"',program_check_checked_ask,program_check_checked_read_verdict,program_check_memo_empty,program_check_memo_learn,program_check_memo_oracle,program_check_hit_rule_exact,program_check_hit_rule_or_,live_start,live_record_restore,live_record_save,api_load,program_decision_decide,program_err_of,program_eval_term,program_interp_of,reify_exit_val,run_machine_completed_exits,run_machine_finished,program_step_checked,run_tree_eval_bad_shape,run_tree_eval_outside,program_native_atom_eval,handle_kind_byte,api_evaluate,program_awaits,program_native_op_sync_op_of,sync_op_step,stores_empty' checked,memo,oracle,hit_rule,live ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_gen.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_engine.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_engine.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_engine.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_engine.mli api_run,api_replay,step_decision_state,drive_state,settled,scope_make,scope_fork,run_fiber_make,empty_ctx,program_compile,stores,program_node_child,program_admit,program_interp_of,program_step_checked,api_evaluate,program_awaits,reify_exit_val '' /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/engine/tools/api_engine_prelude.ml
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_engine.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_engine.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_engine.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/api_engine.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/todo_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/todo_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/todo_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/todo_gen.mli test_dogfood_scenario_todo_host_serve_built_val,test_dogfood_scenario_todo_host_serve_built_forgetful_val,test_dogfood_scenario_todo_host_serve_built_typed_val,test_dogfood_scenario_todo_typed_model,test_dogfood_scenario_todo_typed_broken,test_dogfood_scenario_todo_typed_host_reactor,test_dogfood_scenario_todo_host_result_val,test_dogfood_scenario_todo_repository,test_dogfood_scenario_todo_forgetful,store_image_equiv,store_image_list,test_dogfood_scenario_todo_typed_todo_modeled_staged,test_dogfood_scenario_todo_typed_todo_modeled_of_c,test_dogfood_scenario_todo_typed_todo_modeled_to_c '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/todo_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/todo_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/todo_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/todo_gen.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/ctors_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/ctors_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/ctors_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/ctors_gen.mli test_codegen_constructor_lane_int_of_nat,test_codegen_constructor_lane_int_neg_succ,test_codegen_constructor_lane_int_match,test_codegen_constructor_lane_int_match_zero,test_codegen_constructor_lane_nat_succ,test_codegen_constructor_lane_nat_zero,test_codegen_constructor_lane_nat_match,test_codegen_constructor_lane_arr_mk,test_codegen_constructor_lane_arr_to_list,test_codegen_constructor_lane_arr_match,test_codegen_constructor_lane_ba_mk,test_codegen_constructor_lane_ba_data,test_codegen_constructor_lane_ba_match,test_codegen_constructor_lane_str_bytes,test_codegen_constructor_lane_str_match,test_codegen_constructor_lane_str_of_bytes,test_codegen_constructor_lane_char_of_nat,test_codegen_constructor_lane_char_val,test_codegen_constructor_lane_char_match,test_codegen_constructor_lane_u8_of_bit_vec,test_codegen_constructor_lane_u8_match,test_codegen_constructor_lane_u16_of_bit_vec,test_codegen_constructor_lane_u16_match,test_codegen_constructor_lane_u32_of_bit_vec,test_codegen_constructor_lane_u32_match,test_codegen_constructor_lane_u64_of_bit_vec,test_codegen_constructor_lane_u64_match,test_codegen_constructor_lane_bv_match,test_codegen_constructor_lane_fin_mk,test_codegen_constructor_lane_fin_match,test_codegen_constructor_lane_sub_mk,test_codegen_constructor_lane_sub_match,test_codegen_constructor_lane_sub_val,test_codegen_constructor_lane_opt_match,test_codegen_constructor_lane_list_match,test_codegen_constructor_lane_prod_match,test_codegen_constructor_lane_except_match,test_codegen_constructor_lane_except_mk,test_codegen_constructor_lane_unit_match,test_codegen_constructor_lane_shade_match,test_codegen_constructor_lane_pt_mk,test_codegen_constructor_lane_pt_y,test_codegen_constructor_lane_map_find,test_codegen_constructor_lane_map_buckets,test_codegen_constructor_lane_map_retained,test_codegen_constructor_lane_map_siblings '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/ctors_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/ctors_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/ctors_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/ctors_gen.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/modeled_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/modeled_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/modeled_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/modeled_gen.mli test_codegen_modeled_lane_encode_item,test_codegen_modeled_lane_decode_item,test_codegen_modeled_lane_round_trip,test_codegen_modeled_lane_sample_vals '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/modeled_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/modeled_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/modeled_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/modeled_gen.cmx
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/rocq_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/rocq_gen.cmx
++ opam exec --switch=effect4 -- /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/gen/interface/main.exe /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/rocq_gen.cmt /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/rocq_gen.mli run_tree_in_rocq,run_tree_plain '' ''
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/rocq_gen.mli -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/rocq_gen.cmi
++ opam exec --switch=effect4 -- ocamlopt -bin-annot -w @55 -I /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/clock/.effect4_clock.objs/byte -I /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte -c /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/rocq_gen.ml -o /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-2dog9j_3/compile/rocq_gen.cmx
+PASS generate: requested producers ran in dependency order
+cd ocaml && opam exec --switch=effect4 -- dune build && opam exec --switch=effect4 -- dune test eff gen clock
+cd ocaml && opam exec --switch=effect4 -- dune test engine
+-- R: the byte grammar round-trips (CF1, CF3, CF9)
+PASS  R1 empty: decode (encode p) = Ok p
+PASS  R2 empty: encode is a function of the payload alone
+PASS  R1 one root: decode (encode p) = Ok p
+PASS  R2 one root: encode is a function of the payload alone
+PASS  R1 three roots: decode (encode p) = Ok p
+PASS  R2 three roots: encode is a function of the payload alone
+PASS  R1 a reserved status with a body: decode (encode p) = Ok p
+PASS  R2 a reserved status with a body: encode is a function of the payload alone
+PASS  R1 the be64 and name boundaries: decode (encode p) = Ok p
+PASS  R2 the be64 and name boundaries: encode is a function of the payload alone
+PASS  CF10 a scheme_version of 1 is refused as Other_scheme 1, never read
+PASS  CF10 a scheme_version of 4294967295 is refused as Other_scheme 4294967295, never read
+PASS  CF10 red control: the same payload at scheme 0 reads
+PASS  R3 magic is the first six bytes
+PASS  R3 the version is the next eight, ASCII, exact
+PASS  R3 the fixed payload is 56 bytes and the header 14
+PASS  R4 status is LAST: an empty-bodied status is the final byte
+PASS  R4 the bytes before status do not move when only the status changes
+PASS  R4 changing the status moves the checksum field and nothing else before it
+PASS  R5 commit then read is the payload
+PASS  R5 commit leaves no control.tmp beside it
+PASS  R6 write = commit, and a reserved status survives the file
+-- E: every constructor of open_error (CF1, CF2, D3, CF9)
+PASS  E1 Missing: no file
+PASS  E2 Bad_magic: the six magic bytes are wrong
+PASS  E2 Bad_magic: a file too short to hold the magic
+PASS  E3 Stale_binary: an unknown ASCII version, never a parse (CF1)
+PASS  E3 Stale_binary: a version of the right width but the wrong bytes
+PASS  E3 a truncated version field is Corrupt, not Stale_binary
+PASS  E4 Corrupt: a flipped checksum field
+PASS  E4 Corrupt: a flipped payload byte
+PASS  E5 Corrupt: a payload shorter than the fixed fields
+PASS  E6 Corrupt: an unregistered kind byte in a root
+PASS  E6 Corrupt: an unregistered root-kind byte
+PASS  E6 uppercase name retains its bytes
+PASS  E6 spaces retain their bytes
+PASS  E6 legacy uppercase remains outside v1 domain
+PASS  E6 UTF-8 names retain exact bytes
+PASS  E6 invalid UTF-8 is byte damage
+PASS  E7 Corrupt: a root version at or above 2^62 (CF9, M9)
+PASS  E7 Corrupt: pack_end_seg at or above 2^62 (CF9, M9)
+PASS  E8 Corrupt: no status tag at all
+PASS  E8 Corrupt: a body at status tag 0 under version 00000001
+PASS  E8 Corrupt: a status tag above the reserved range
+PASS  E9 Corrupt: a truncated root
+PASS  E10 a reserved tag with an empty body is NOT a refusal
+PASS  E11 encode refuses a root name that is too long
+PASS  E11 encode retains an uppercase root name
+PASS  E11 encode refuses a negative be64 field (CF9, M9)
+PASS  E11 encode accepts the largest be64 the wire admits
+PASS  E11 encode refuses a reserved status tag below 3
+-- X: A2 §4.3 X4 — a torn tmp, a rename that did not happen, a bad checksum
+PASS  X4a a torn control.tmp does not touch `control`
+PASS  X4a cleanup removes the torn tmp and leaves control alone
+PASS  X4b an unrenamed complete tmp is not the truth — the previous control is
+PASS  X4b cleanup discards it; `control` still reads as the previous payload
+PASS  X4b after the rename the new payload is the truth, and no tmp survives
+PASS  X4c a corrupt control is Corrupt, never a half-parse
+PASS  X4c and the previous control is the truth
+PASS  W1 pack_end is recorded and read back exactly
+PASS  W1 set_pack_end bumps the generation (CF7)
+-- P9/CF3: reserved status tags survive a reader that does not understand them
+PASS  P9 every reserved tag 3..15 and its body round-trip through a rewrite
+PASS  P9 a rewrite by a reader that does not understand tag 11 is byte-identical
+PASS  D2 legacy policy byte 0
+PASS  D2 legacy policy byte 1
+PASS  D2 legacy policy byte 2
+PASS  D2 legacy policy byte 3
+PASS  D2 legacy policy byte 4
+PASS  D2 legacy policy byte 5
+PASS  D2 legacy policy byte 6
+PASS  D2 v2 byte one is journal
+PASS  D2 v2 refuses legacy pin byte
+PASS  ST2 legacy generation two stays distinct from new create plus duplicate
+-- complete-head root moves
+PASS  create generation one
+PASS  duplicate create stale
+PASS  identical target retains exact payload
+PASS  ABA retains generation
+PASS  ABA stale expectation refuses
+PASS  stale precedes wrong kind
+PASS  absent advance precedes target
+PASS  target kind remains fixed
+PASS  dangling target refuses
+PASS  pin duplicate accepted
+PASS  pin changed target refuses
+PASS  journal without designated parent refuses
+PASS  journal follows transitive designated parents
+PASS  fork creates independent journal name
+PASS  names retain case exactly
+PASS  generation arithmetic is exact beyond machine integers
+-- M: one flipped byte anywhere in the file, and read must refuse
+PASS  M1 every one of the 127 single-byte flips is refused
+NOTE    verdicts: badMagic=6 corrupt=113 staleBinary=8
+PASS  M1 and the unflipped file still reads
+PASS  M2 a repeated create refuses stale absence
+PASS  G3 control g3-v1
+PASS  G3 control g3-roots-after-v1
+PASS  G3 control g3-stale
+PASS  G3 control g3-wrongKind
+PASS  G3 control g3-dangling
+PASS  G3 control g3-advance-v2
+PASS  G3 control g3-roots-after-v2
+== ALL PASS: 0 failure(s) ==
+-- E4_crc: CRC-32, IEEE 802.3 reflected (poly 0xEDB88320)
+PASS  C0 poly is the reflected IEEE 802.3 polynomial
+PASS  C1 crc "" = 0x00000000
+PASS  C1 crc "123456789" = 0xCBF43926
+PASS  C1 crc "a" = 0xE8B7BE43
+PASS  C1 crc "abc" = 0x352441C2
+PASS  C1 crc pangram = 0x414FA339
+PASS  C2 init = crc ""
+PASS  C2 update (string a) b = string (a ^ b) for every split
+PASS  C2 update_char folds to the same value
+PASS  C4 sub s pos len = string (String.sub s pos len)
+PASS  C4 an out-of-range window is Invalid_argument
+PASS  C3 a crc argument outside 0..0xFFFFFFFF is Invalid_argument
+PASS  C3 every crc is in 0 .. 0xFFFFFFFF
+PASS  C5 field_length = 4
+PASS  C5 be32 0xCBF43926 = cb f4 39 26
+PASS  C5 read_be32 (be32 n) 0 = Some n
+PASS  C5 read_be32 past the end is None
+PASS  C5 be32 refuses a value outside 32 bits
+-- E4_kind: the table of src/Effect4/Store/Carrier/Kind.lean, appended per CAS commit 1
+PASS  K1 all has 23 entries
+PASS  K1 all is in byte order 1..23
+PASS  K1 of_byte (byte k) = Some k for every kind
+PASS  K1 of_byte b = Some k -> byte k = b
+PASS  K1 byte is injective
+PASS  K5 name is injective and round-trips
+PASS  K1 #guard source=1 export=2 schema=4 program=5 annotation=6
+PASS  K1 #guard tree=11 component=13 vector=14 fiber=15
+PASS  K2 #guard of_byte 0 = None (0 is the version byte)
+PASS  K1 #guard of_byte 2 = Some export
+PASS  K5 #guard of_name "export" = Some export, of_name "Export" = None
+NOTE  Kind.ofByte? (src/Effect4/Store/Carrier/Kind.lean) maps byte 16 to job; the legacy unregistered-byte example no longer applies.
+NOTE  Kind.sentinel in that owner is 127, the unregistered-kind witness from amendment M4.
+PASS  K2 of_byte 127 = None (the sentinel, amendment M4)
+PASS  K2 of_byte 24, 100, 128, 255, -1 = None
+PASS  K2 is_registered agrees with of_byte on -20..299
+PASS  K2 version_byte = 0 and is never a kind
+PASS  K3 fiber (15) is the tombstone and the only one
+PASS  K4 is_run_relative = {tape, log, exits, checkpoint} (amendment M2)
+PASS  K4 is_content is the complement of is_run_relative
+PASS  K6 is_interior = {chunk}
+PASS  K1 the reserved append is job 16 .. table 23
+-- E4_addr: Addr / Ref / Cid / Handle
+PASS  AD1 Addr.length = 32
+PASS  AD1 of_digest refuses anything but 32 bytes
+PASS  AD1 of_digest_opt is None off 32 and Some on 32
+PASS  AD1 bytes (of_digest d) = d
+PASS  AD2 hex = E4_hex.of_bytes, lowercase, 64 chars, either case in
+PASS  AD2 of_hex refuses a short, an odd and a non-hex string
+PASS  AD5 zero is 32 zero bytes and 64 hex zeros
+PASS  AD6 prefix63 is non-negative, fits an int, and depends only on the leading 8 bytes
+PASS  AD6 prefix63 zero = 0 and prefix63 0xff.. is the top key
+PASS  AD6 prefix63 separates 200 distinct leading bytes
+PASS  AD4 Ref/Cid present-parse round trip over every kind, each refusing the other's form
+PASS  AD4 parse refuses an unregistered kind name, a short hex, and a missing colon
+PASS  AD3 Handle.addr is total on both constructors
+PASS  AD3 a Direct handle carries its place and a Located one does not
+-- E4_node: the envelope (Node.encode (src/Effect4/Store/Domain/Node.lean))
+PASS  N0 sha256 (Val.encode sampleEntry) = 8fab1618… (sha256 (src/Effect4/Store/Carrier/Digest.lean))
+PASS  N1 #guard sampleNode.encode.length = 108
+PASS  N1 #guard sampleNode.encode.take 2 = [0, 2]
+PASS  N1 #guard sampleNode.encode.drop 34 = Val.encode sampleEntry
+PASS  N1 the spec sits at bytes 2..33
+PASS  N1 #guard decode (encode sampleNode) = some sampleNode
+PASS  N2 #guard decode (encode ++ [0]) = none  -> Trailing
+PASS  N2 #guard decode (1 :: drop 1) = none  -> Bad_version 1
+PASS  N2 #guard decode (0 :: 0 :: drop 2) = none  -> Unregistered_kind 0
+PASS  N2 an unregistered kind byte (127, the sentinel) is Unregistered_kind 127
+PASS  N2 #guard decode (take 33) = none  -> Short_spec
+PASS  N2 #guard decode [] = none  -> Short_spec
+NOTE  Node.decode (src/Effect4/Store/Domain/Node.lean) and this lane use byte 127
+NOTE  as the unregistered-byte witness (amendment M4).
+PASS  ND1 decode (encode n) = Ok n over 23 kinds x 20 payloads
+PASS  ND2 decode b = Ok n -> encode n = b (exactness)
+PASS  ND9 address = sha256 (encode n)
+PASS  ND9 the address moves when any byte of the node moves
+PASS  the envelope refuses a spec that is not 32 bytes
+-- E4_node: the edge scan (Val.refs / Val.malformedRef, Val.refs (src/Effect4/Store/Domain/Node.lean))
+PASS  N6 #guard sampleNode.refsOf = []
+PASS  N6 #guard sampleNode.malformedRef = false
+PASS  N6 #guard sampleNode.edges = [<schema, zeroDigest>]
+PASS  N6 #guard sampleNode.checkedEdges = sampleNode.edges
+PASS  N6 #guard (Node.mk 0 schema zeroDigest sampleEntry).checkedEdges = []
+PASS  ND7 is_genesis is schema AND the zero spec, and nothing else
+PASS  N6 #guard (Val.ref 2 (replicate 32 1)).refs = [<export, 1…>]
+PASS  N6 #guard (Val.ref <unregistered> _).refs = []
+PASS  N6 #guard (Val.ref <unregistered> _).malformedRef = true
+PASS  N6 #guard (Val.ref 2 (replicate 31 1)).malformedRef = true
+PASS  N6 a registered kind byte with a 33-byte digest is malformed and yields no ref
+PASS  N6 #guard (Val.ctor 0 [ref 4 …7, nat 3, some (ref 6 …9)]).refs = [schema 7, annotation 9]
+PASS  N6 #guard (Val.ctor 0 [ref 4 …7, nat 3]).malformedRef = false
+PASS  N9 #guard (Canonical.encode (AnyRef export zeroDigest)).length = 42
+PASS  N9 #guard its first ten bytes are [0x0b,0,0,0,0,0,0,0,0x21,0x02]
+PASS  L-SCAN-1 refs are left to right across pair, ctor, list and some
+PASS  L-SCAN-2 a `bytes` frame holding a valid ref frame yields NO ref
+PASS  L-SCAN-2 and it is not malformed either (Val.refs (.bytes bs) = [])
+PASS  L-SCAN-2 the same bytes UNWRAPPED do yield the ref (the wrapper is what hides it)
+PASS  L-SCAN-2 a `bytes` frame holding a malformed ref frame is still not malformed
+PASS  L-SCAN-2 nested: bytes inside a list inside a pair still hides its refs
+PASS  ND6 handles lists the tag-12 frames in traversal order
+PASS  ND6 a handle key of 0 is the kind byte and no digits (Val.encode (src/Effect4/Store/Carrier/Val.lean))
+PASS  ND6 handle_in_content is true at a content kind, false at a run-relative one
+PASS  ND6 a node with no handle frame is never handle_in_content
+-- E4_node: payload refusals, the host limit, and the pure admission order
+PASS  ND-frame an empty payload -> Bad_frame
+PASS  ND-frame a truncated header -> Bad_frame
+PASS  ND-frame a declared length past the end -> Bad_frame
+PASS  ND-frame a bool of two bytes -> Bad_frame
+PASS  ND-frame a bool byte other than 0/1 -> Bad_frame
+PASS  ND-frame a nat with a leading zero digit -> Bad_frame
+PASS  ND-frame a string that is not valid UTF-8 -> Bad_frame
+PASS  ND-frame a unit with a payload -> Bad_frame
+PASS  ND-frame a none with a payload -> Bad_frame
+PASS  ND-frame a pair of one frame -> Bad_frame
+PASS  ND-frame a pair of three frames -> Trailing
+PASS  ND-frame a some of no frame -> Bad_frame
+PASS  ND-frame a some of two frames -> Trailing
+PASS  ND-frame a list of two frames back to back is accepted (the control)
+PASS  ND-frame a list with a byte left over -> Bad_frame
+PASS  ND-frame a ctor with no index frame -> Bad_frame
+PASS  ND-frame a ctor whose index frame is not a nat -> Bad_frame
+PASS  ND-frame a ctor index with a leading zero digit -> Bad_frame
+PASS  ND-frame a ref with an empty payload -> Bad_frame
+PASS  ND-frame a handle with an empty payload -> Bad_frame
+PASS  ND-frame a handle whose digits have a leading zero -> Bad_frame
+PASS  ND-frame tag 0 -> Unknown_tag 0
+PASS  ND-frame tag 15, the first tag past Lean's -> Unknown_tag 15
+PASS  ND-frame tag 255 -> Unknown_tag 255
+PASS  ND-frame tag 15 nested in a list -> Unknown_tag 15
+PASS  ND-frame tag 13 (negInt) is read as Lean reads it: no digits is -1, 256 is -257
+PASS  ND-frame a negInt with a leading zero digit -> Bad_frame
+PASS  ND-frame tag 14 (float) holds the doubles with no integer image: 0.5, 2.5, -0, inf, nan
+PASS  ND-frame a float frame holding 1.0, whose image is the nat 1 -> Bad_frame
+PASS  ND-frame a float frame holding +0, whose image is the nat 0 -> Bad_frame
+PASS  ND-frame a float frame holding -3.0, whose image is negInt 2 -> Bad_frame
+PASS  ND-frame a float frame holding 2^53, an integer -> Bad_frame
+PASS  ND-frame a float frame of seven bytes -> Bad_frame
+PASS  ND-frame a float frame of nine bytes -> Bad_frame
+PASS  ND-frame two frames where one is owed -> Trailing
+PASS  ND-frame one frame and a trailing byte -> Trailing
+PASS  ND-frame a well-formed tree is accepted
+PASS  ND-frame a nat above the host bound is NOT refused (deviation D1: Lean's Nat is unbounded)
+PASS  ND8 a frame whose be64 length is 2^62 is Host_limit
+PASS  ND8 the same frame nested in a list is Host_limit
+PASS  ND8 a ctor whose index frame declares 2^62 is Host_limit
+PASS  ND8 a handle key of nine digits is Host_limit
+PASS  D3 refs/malformed/handles are [] / false / [] on a payload that does not parse
+PASS  ND10 a well-formed content node is admitted
+PASS  ND10 an unparseable payload -> Oversize(Host_limit)
+PASS  ND10 an unparseable payload AND a bad version (payload wins) -> Oversize(Host_limit)
+PASS  ND10 a bad version -> Bad_version_byte 1
+PASS  ND10 a bad version AND a malformed ref (version wins) -> Bad_version_byte 1
+PASS  ND10 a malformed ref -> Malformed_ref
+PASS  ND10 a malformed ref AND a handle in content (malformed wins) -> Malformed_ref
+PASS  ND10 a handle at a content kind (M2) -> Handle_in_content
+PASS  ND10 the same handle payload at a run-relative kind is admitted (M2)
+PASS  ND10 oversize / bad_version / handle_in_content agree with check_pure
+-- the mutation check on a locally built node
+PASS  G-mut every one-bit flip of the sample node changes the address and the bytes
+PASS  G-mut the unflipped node still agrees
+-- the goldens of ocaml/engine/cas/goldens
+NOTE  goldens directory: /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/engine/cas/goldens
+NOTE  143 golden file(s)
+PASS  G-bytes 135/143 goldens are a node that re-encodes exactly or one frame tree, and the 8 others are exactly g2-badVersion and the rows Lean refuses
+PASS  G-man manifest.txt: 143/143 rows agree with sha256 of the golden bytes
+NOTE  143 case row(s) in cases.txt
+PASS  G-case family g2: 14/14 rows agree
+PASS  G-case family other: 50/50 rows agree
+PASS  G-case family a1: 37/37 rows agree
+PASS  G-case family g5: 10/10 rows agree
+PASS  G-case family g1: 32/32 rows agree
+PASS  K1 every kind of E4_kind has a Lean-cut node golden of that kind (g1-kind-<name>)
+PASS  G-mut a1-decode-float-half: the golden agrees, and one flipped byte does not
+== ALL PASS: 0 failure(s) ==
+-- W1 the round trip over three segments
+PASS  W1 stage hands out contiguous indices from 0
+PASS  W1 next_seq is one past the last
+PASS  W1 last_index is the last
+PASS  W1 durable_upto is next_seq after a commit
+PASS  W1 nothing is staged after a commit
+NOTE  W1 120 rows in 3 segments
+PASS  W1 the rows filled at least three segments
+PASS  W1 the segment names are the first indices, ascending
+PASS  W1 replay from 0 is Eof
+PASS  W1 replay returns every row, in order, with its index
+PASS  W1 no Seal is ever delivered
+PASS  W1 every decision body came back byte for byte
+PASS  W1 the empty body round-tripped
+-- W2 replay from a position, and the tape window
+PASS  W2 replay ~from:k is exactly the rows at k and above, for eight k
+PASS  W3 tape is the decision bodies of the window, in order
+PASS  W3 an empty window is the empty tape
+PASS  W4 replay_seq agrees with replay and sets the verdict
+-- W5 group commit: staged is not durable
+PASS  W5 next_seq counts staged rows
+PASS  W5 durable_upto does not
+PASS  W5 staged_bytes is positive
+PASS  W5 a reader sees no staged row
+PASS  W5 one commit makes both rows durable at once
+PASS  W5 staged_bytes is zero after the commit
+-- W6 the single-writer claim, and the refusals
+PASS  W6 a second writer on one job raises Locked
+PASS  W6 another job in the same store is not blocked
+PASS  W6 a body above row_max is refused at stage
+PASS  W6 the refused row advanced nothing
+PASS  W6 staging a Seal is refused: rotation owns it
+PASS  W6 a body of exactly row_max - 9 is accepted and round-trips
+-- W7 rotate, checkpoint_mark, truncate_to, end_index
+PASS  W7 rotate adds one segment and consumes no index
+PASS  W7 checkpoint_mark is a durable row covering the positions below it
+PASS  W7 the index chain crosses the rotation unbroken
+PASS  W7 truncate_to lowers next_seq and durable_upto
+PASS  W7 the truncated row is gone and replay is clean
+PASS  W7 truncate_to above next_seq is refused
+PASS  W7 end_index is one past the last good row
+-- X6(a) a torn last row
+PASS  X6(a) replay stops Short at the torn row's index
+PASS  X6(a) every row before the tear was delivered, and none after
+NOTE  X6(a) tore the last row (index 119) at offset 732, len 38, of 0000000000000060.seg
+-- X6(d) reopening an unsealed, torn tail
+PASS  X6(d) the writer recovered to the last good row
+PASS  X6(d) the next row takes the recovered index and replay is clean again
+-- X6(b) a flipped row checksum (the mutation check)
+PASS  X6(b) the unflipped log replays clean
+PASS  X6(b) the test's own walk of the grammar found every row
+PASS  X6(b) replay stops exactly at the flipped row and names it
+PASS  X6(b) every row before it was delivered and none after
+NOTE  X6(b) verdict: bad-crc: the row at index 37 failed its checksum
+PASS  X6(b) a flip in any byte of that checksum is caught at the same index
+PASS  X6(b) a flip in the body is caught at the same index
+PASS  X6(b) restoring the bytes restores the clean replay
+-- X6(c) a missing segment in the middle
+PASS  X6(c) there are at least three segments to lose the middle of
+PASS  X6(c) the refusal names the gap
+PASS  X6(c) only the rows before the gap were delivered
+NOTE  X6(c) verdict: gap: index 56 is missing; the next stored row is 88
+-- X6(e) a segment head that fails its CRC, and a segment of another job
+PASS  X6(e) a head whose CRC fails is Bad_header, not a row verdict
+PASS  X6(e) a writer refuses to open over structural damage rather than truncate it
+PASS  X6(e) a segment moved into another job's directory is Wrong_job
+NOTE  X6(e) verdict: wrong-job: /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/build_24ddfd_dune/e4_wal_test_45952/store06/log/0707070707070707070707070707070707070707070707070707070707070707/0000000000000000.seg belongs to another job
+PASS  X6(f) a length field above row_max is Oversize, never misread
+PASS  X6(f) a well-checksummed row with an unknown tag is Bad_row
+NOTE  X6(f) verdicts: oversize: the row at index 1 declares 1048577 bytes, above row_max 1048576 | bad-row: the row at index 1 is not a row (unknown tag or short body)
+-- REL LAW LOG-REL: two jobs, one row programme
+PASS  REL the two jobs handed out identical indices
+PASS  REL the two jobs replay identical rows in identical order
+PASS  REL the segment names and first indices are identical
+PASS  REL the row bytes on disk are identical, segment by segment
+PASS  REL the heads differ only in job_lo — the job directory's own identity
+NOTE  REL 120 rows, 3 segments, identical positions in two jobs
+== ALL PASS: 0 failure(s) ==
+NOTE  sandbox: /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/build_24ddfd_dune/e4pack-45954-1792299718
+-- H: the byte grammar of A2 §1.2
+PASS  H1 the head is 27 bytes and the first record follows it
+PASS  H2 magic is "E4PACK\000"
+PASS  H3 the version is the ASCII string "00000001"
+PASS  H4 be64 seg_index = 0
+PASS  H5 head_crc is CRC-32 over the 23 bytes before it
+PASS  H6 the record is 'R' :: be64 len :: digest :: node_bytes :: be32 crc
+PASS  H7 rec_crc is CRC-32 over the 41 header bytes ++ node_bytes
+PASS  H8 the record occupies exactly 45 + node_len bytes
+-- R: round trip (PK1)
+PASS  R1 read: every record verifies and its bytes are what was appended
+PASS  R2 read_at: the recorded digest and the bytes come back
+PASS  R3 read_header: the digest and the length, 41 bytes
+PASS  R4 blit_at: the bytes land in the caller's buffer
+PASS  R5 a zero-length node round trips
+PASS  R6 read at an offset that is not a record boundary refuses
+PASS  R7 read past the end refuses with Past_end
+PASS  R8 read in a segment that does not exist refuses with No_segment
+-- G: group commit (PK2)
+PASS  G1 append does not advance pack_end
+PASS  G1 append does not write: the file still holds only the head
+PASS  G2 staged_bytes counts what is buffered
+PASS  G3 staged_end runs ahead of written_upto and pack_end
+PASS  G4 flush writes but does not make durable
+PASS  G5 sync advances pack_end to the written end
+PASS  G6 sync with nothing staged is idempotent
+PASS  G7 pack_end lands where the arithmetic says
+PASS  G8 a reopen recovers all 100 committed records and stops at Eof
+-- S: scanning (PK4)
+PASS  S1 scan visits every record in write order and stops at Eof
+PASS  S2 scan_seq ends in exactly one Stopped verdict, as the last element
+PASS  S3 the header scan reads no payload (r_bytes = None), the verifying one does
+PASS  S4 the verifying scan agrees with the header scan on every offset and length
+PASS  S5 scan from a pack_end in the middle yields exactly the tail, in write order
+-- X1: truncate the data file mid-record (§4.3 X1)
+NOTE  30 truncation points
+PASS  X1 exactly the records wholly before the cut are recovered
+PASS  X1 the verdict is Short at the torn record's offset (or Eof at a boundary cut)
+PASS  X1 the tail is truncated at open and the lost node re-appends and reads back
+-- X2: flip a crc byte, a digest byte, a payload byte (§4.3 X2)
+PASS  X2a a flipped crc byte: the prefix before it is recovered, the verdict is Bad_crc at its offset
+PASS  X2b a flipped digest byte with the crc repaired: Bad_digest at its offset (L-CAS-6)
+PASS  X2c a flipped payload byte with the crc repaired: Bad_digest at its offset
+PASS  X2c' the same flip with the crc left alone is Bad_crc — the cheaper check first
+PASS  X2d a flipped record tag is Bad_tag at its offset, never a silent skip
+PASS  X2e a torn last record: five records recovered, Short at the sixth's offset
+PASS  X2f the corrupt record and everything after it are refused, though records 2..5 are intact
+-- M: the recorded digest is a cache, and `read` never trusts it (L-CAS-6)
+PASS  M1 read_at — which trusts the recorded digest — SUCCEEDS on the corrupted record
+PASS  M2 read — which re-hashes — refuses it as Digest_mismatch at that offset
+PASS  M3 a test that expected the recorded digest to be trusted is therefore red
+PASS  M4 the records beside the corrupt one still verify
+-- W: the single-writer discipline (PK6)
+PASS  W1 a second open_ in this process raises Locked
+PASS  W2 the LOCK file exists beside the pack directory
+PASS  W3 a second PROCESS is refused with Locked (Unix.lockf on <dir>/LOCK)
+PASS  W4 after close the lock is released and another process may open
+PASS  W5 a reader needs no lock
+-- Z: segment rotation (PK8)
+PASS  Z1 60 records of 245 bytes across a 4 KiB seg_max use several segments
+PASS  Z2 no segment exceeds seg_max
+PASS  Z3 every rotated segment carries its own head, with its own index
+PASS  Z4 the scan crosses segments in write order
+PASS  Z5 reads work in a segment that is not the last
+PASS  Z6 pack_end names the last segment and its end
+PASS  Z7 segments lists what is on disk, ascending
+PASS  Z8 open_ recovers the LAST segment's tail by default (D4)
+PASS  Z9 open_at ~from:(0,27) verifies and re-admits every record in the store
+PASS  Z10 every segment below the last is sealed 0444, and the last is writable
+PASS  Z12 open_ seals a segment below the writer's that an older writer left writable
+PASS  Z11 the seal waits for the fsync: writable after the flush, 0444 after the sync
+PASS  Z13 a record that fails inside a sealed segment: open_ refuses with Bad_pack, cuts nothing, and frees the lock
+PASS  Z13 control: the same flip in the last segment is a torn tail, cut at the record
+-- T: truncate_to and the host limit (PK3, PK5)
+PASS  T1 truncate_to below pack_end is refused
+PASS  T2 truncate_to AT pack_end is allowed and changes nothing
+PASS  T3 truncate_to with bytes staged is refused
+PASS  T4 a node_len >= 2^62 is Host_limit at its offset, never misread (M9)
+PASS  T5 a segment head that does not check is Bad_pack at open, not a misread record
+PASS  T6 a scan that steps into a segment with a bad head stops at Bad_head there
+PASS  T7 the records of the segments before it are still delivered, in write order
+PASS  T8 an interior bad head does not stop open_ (the LAST head still checks); recovery names it, and no segment is deleted
+-- P: a seeded sweep over sizes, batches and crash points
+PASS  P1 every record round trips, over 12 random (count, batch, size) draws
+PASS  P2 a cut at a random byte recovers exactly the records wholly before it
+== ALL PASS: 0 failure(s) ==
+NOTE  sandbox: /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/build_24ddfd_dune/e4cas-45955-1792299718
+NOTE  goldens: /Users/pooks/.codex/worktrees/seams/lean4-effect4/ocaml/engine/cas/goldens
+-- L-CAS-1, L-CAS-2, L-CAS-3: the address, exactness, injectivity
+PASS  L-CAS-1 put answers sha256 (E4_node.encode n) for every node
+PASS  L-CAS-2 get_node (put n) = n and get_bytes = encode n, exactly
+PASS  L-CAS-3 65 distinct nodes have 65 distinct addresses
+PASS  L-CAS-2 the store is closed after 65 admissible puts
+-- L-CAS-4: admission refuses in Lean's order, first refusal wins
+PASS  L-CAS-4 oversize + badVersion (oversize is tested first) -> oversize
+PASS  L-CAS-4 unknownTag + badVersion (the tag is read in the payload test, first; never oversize) -> unknownTag 253
+PASS  L-CAS-4 badVersion + malformedRef + handleInContent -> badVersion
+PASS  L-CAS-4 malformedRef + handleInContent + dangling -> malformedRef
+PASS  L-CAS-4 handleInContent + dangling -> handleInContent
+PASS  L-CAS-4 dangling + wrongKind (the spec edge is checked first) -> dangling 0707070707070707070707070707070707070707070707070707070707070707
+PASS  L-CAS-4 dangling before wrongKind among the refs -> dangling 0909090909090909090909090909090909090909090909090909090909090909
+PASS  L-CAS-4 wrongKind -> wrongKind
+PASS  L-CAS-4 a handle payload at a run-relative kind is not refused
+PASS  L-CAS-4 the genesis exemption: kind schema with the zero spec is admitted
+PASS  L-CAS-4 the zero spec at any other kind dangles
+-- L-CAS-5: grow-only, and the outcomes (CS1: an occupant is re-hashed)
+PASS  L-CAS-5 a fresh put is Fresh
+PASS  L-CAS-5 the same node again is Duplicate
+PASS  L-CAS-5 a Duplicate changes nothing
+PASS  L-CAS-5 a Duplicate after a commit is still Duplicate
+PASS  L-CAS-5 the node is resident at its address
+PASS  L-CAS-5 the forged occupant's bytes do not hash to the address it is filed under
+PASS  L-CAS-5 an address held by bytes that do not hash to it answers Corrupt, not Conflict
+PASS  L-CAS-5 the corrupt record is NOT overwritten
+PASS  L-CAS-5 a Corrupt answer changes nothing
+PASS  L-CAS-5 a corrupt record is not counted as a collision
+PASS  L-CAS-5 a word that meets the corrupt record stops with Word_corrupt at its address
+-- L-CAS-6: the recorded digest is a cache; verify re-hashes
+PASS  L-CAS-6 a read that trusts the recorded digest hands back the forged bytes
+PASS  L-CAS-6 verify re-hashes and refuses it as digestMismatch
+PASS  L-CAS-6 verify gives the same verdict with the index dropped
+PASS  L-CAS-6 the dropped index rebuilds and answers the same
+PASS  L-CAS-6 verify on a store this module wrote is ok
+PASS  L-CAS-6 verify_node agrees on every node
+-- CS7-h: verify refuses a handle in content, as put does (amendment M2's default)
+PASS  CS7-h put refuses the handle at a content kind
+PASS  CS7-h verify refuses the forged record as handleInContent
+PASS  CS7-h verify_node refuses it as handleInContent
+PASS  CS7-h control: at a run-relative kind put, verify and verify_node all admit it
+-- L-CAS-7 / golden G6: three nodes in two insertion orders
+PASS  L-CAS-7 both stores hold the same three nodes
+PASS  L-CAS-7 `nodes` DIFFERS between the two insertion orders
+PASS  L-CAS-7 every find agrees
+PASS  L-CAS-7 the closures are byte-identical
+PASS  L-CAS-7 the tree closures are byte-identical
+PASS  L-CAS-7 a closure is a well-formed word (Word.wf)
+PASS  L-CAS-7 the closure of an absent reference is the empty word
+PASS  G6 closure ⟨export, E⟩ equals Lean's cut, byte for byte (order A)
+PASS  G6 closure ⟨export, E⟩ equals Lean's cut, byte for byte (order B)
+PASS  G6 closure ⟨tree, T⟩ equals Lean's cut (order A)
+PASS  G6 closure ⟨tree, T⟩ equals Lean's cut (order B)
+PASS  G6 the empty closure is the empty list frame
+PASS  G6 `nodes` in order A equals Lean's cut
+PASS  G6 `nodes` in order B equals Lean's cut
+PASS  G6 the two `nodes` cuts differ, as Lean's do
+PASS  G6 the closure replays into an empty store
+PASS  G6 the replayed `nodes` equal Lean's cut
+PASS  G6 the two replays are byte-identical, as Lean's are
+PASS  L-CAS-8 the replayed store is closed
+PASS  L-CAS-8 replaying a word twice is idempotent
+-- golden G6: Word.wf and Word.apply
+PASS  G6 Word.wf probeWord = true
+PASS  G6 Word.wf probeWord.reverse = false
+PASS  G6 probeWord applies
+PASS  G6 the replayed nodes equal Lean's cut
+PASS  G6 probeWord.reverse refuses: dangling f8cbebc1e9c83f4f70fe015ac0b2c18fac5a7bd76aeb2acff15096a4587c5de4
+-- golden G2: admission replayed through put, in Lean's order
+PASS  G2 14/14 admission rows agree with Lean through put
+PASS  G2 g2-conflict: Lean's occupant does not hash to its address, and put answers corrupt
+PASS  G3 g3-v1 ok
+PASS  G3 g3-stale staleRoot stdlib/rc112 none 0014c107b3900a17bdd5905f4d9f8709f4ae01df9a8dc48fc6dbe39d9b9ab82a:1
+PASS  G3 g3-wrongKind wrongKind
+PASS  G3 g3-dangling dangling 0000000000000000000000000000000000000000000000000000000000000000
+PASS  G3 g3-advance-v2 ok
+PASS  G3 g3-roots-after-v1
+PASS  G3 g3-roots-after-v2
+PASS  G3 roots are present
+PASS  journal create at origin
+PASS  incidental edge is not a designated parent
+PASS  native journal follows transitive canonical parents
+PASS  root closure keeps its schema reachable
+PASS  G3/M1 pin_all mints one pin root per filing
+PASS  G3/M1 unfiled content refuses and publishes nothing
+-- golden G7: verify on a good store and its mutations
+PASS  G7 7/7 verify rows agree with Lean
+-- differential D5: the same nodes in two topological orders
+PASS  D5 both stores hold every node
+PASS  D5 the two insertion orders differ
+PASS  D5 `nodes` differs between them
+PASS  D5 every get agrees
+PASS  D5 the closures are byte-identical
+PASS  D5 the closure is a well-formed word
+PASS  D5 the closure replays into a store that is closed
+PASS  D5 both stores verify
+-- the mutation check: flip one byte of a golden and the comparison goes red
+PASS  M1 the unmutated golden is admitted at its Lean address
+PASS  M1 one flipped byte moves the address, so the golden cannot be silently wrong
+PASS  M2 the closure comparison is red against a flipped golden
+PASS  M2 and green against the golden itself
+PASS  M3 verify is ok on the golden store
+PASS  M3 verify is digestMismatch when one payload byte is flipped
+-- the queries that are not edges, and the statistics
+PASS  by_cid answers the filing of a payload digest at its kind
+PASS  by_cid at another kind answers nothing
+PASS  resolves is Store.Resolves
+PASS  reachable is false with no roots
+PASS  reachable follows the checked edges from a root
+PASS  stats counts the nodes and the bytes
+PASS  stats reports the index off-heap bytes
+PASS  stats counts the commits and the fsyncs
+PASS  get_kind answers without a payload read
+PASS  mem is false for an absent address
+-- a second view, and the durable prefix
+PASS  X5 a reader sees the committed prefix
+PASS  X5 a reader does NOT see a staged, uncommitted record
+PASS  X5 after a reopen the reader sees it
+PASS  X5 the generation is strictly increasing across commits
+PASS  X5 a second writer is refused with Locked
+PASS  X5 the lock is released at close
+PASS  X5 reopening admits nothing new
+PASS  CF10 control: the store opens at scheme 0
+PASS  CF10 open_ro refuses a store of scheme 1, naming the scheme
+PASS  CF10 open_rw refuses it too
+== ALL PASS: 0 failure(s) ==
+NOTE  sandbox: /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/build_24ddfd_dune/e4crash-45956-1792299718
+-- X1: the pack truncated mid-node, at every interesting offset
+PASS  X1 over 42 cuts: exactly the records wholly before the cut are recovered
+PASS  X1 every recovered store verifies and is Closed
+PASS  X1 the pack is truncated to the end of the last good record
+PASS  X1 a put of the lost nodes succeeds and the store verifies again
+-- X2: one flipped byte, in the tail and below the watermark
+PASS  X2(a) a flipped CRC byte: recovery names the failure at the exact offset
+PASS  X2(a) a flipped CRC byte: exactly the prefix is admitted
+PASS  X2(a) a flipped CRC byte: the prefix verifies
+PASS  X2(a) a flipped CRC byte: the pack is truncated at the failure
+PASS  X2(a) a flipped CRC byte: the lost node goes back in fresh
+PASS  X2(a) a flipped digest byte: recovery names the failure at the exact offset
+PASS  X2(a) a flipped digest byte: exactly the prefix is admitted
+PASS  X2(a) a flipped digest byte: the prefix verifies
+PASS  X2(a) a flipped digest byte: the pack is truncated at the failure
+PASS  X2(a) a flipped digest byte: the lost node goes back in fresh
+PASS  X2(a) a flipped payload byte: recovery names the failure at the exact offset
+PASS  X2(a) a flipped payload byte: exactly the prefix is admitted
+PASS  X2(a) a flipped payload byte: the prefix verifies
+PASS  X2(a) a flipped payload byte: the pack is truncated at the failure
+PASS  X2(a) a flipped payload byte: the lost node goes back in fresh
+PASS  X2(b1) a record corrupted BELOW the watermark does not stop the open
+PASS  X2(b1) the read that trusts the recorded digest hands the bytes back
+PASS  X2(b1) verify re-hashes and finds it: digestMismatch
+PASS  X2(b1) verify_on_open turns it into a refusal to open
+PASS  X2(b2) a raw flipped byte below the watermark does not stop the open
+PASS  X2(b2) the record does not read at all, and verify says undecodable
+-- X3: lose the index
+PASS  X3 the writer left an index snapshot behind
+PASS  X3 with index/ deleted, every answer is the same
+PASS  X3 the rebuilt index holds every record
+PASS  X3 with the in-memory table dropped, every answer is the same
+PASS  X3 verify is unchanged by either
+PASS  X3 a corrupt index file is discarded and rebuilt
+-- X4: the control file
+PASS  X4(a) a stale control.tmp is removed and `control` is used
+PASS  X4(b) a pack_end past the pack's end is lowered to the scan's end, and the store opens
+PASS  X4(b) and it verifies
+PASS  X4(c) a corrupt control file is `corrupt`, and the store refuses to open
+PASS  X4(d) an unknown ASCII version is `staleBinary` — a DIFFERENT verdict, and a different operator action
+PASS  X4(c/d) the store opens again once the control file is restored
+PASS  X4(e) a reserved status tag survives a commit by a reader that does not know it
+-- X5: two writers, and a reader's consistent prefix
+PASS  X5 a second open_rw is refused with Locked
+PASS  X5 a reader takes no lock and sees the committed prefix
+PASS  X5 the reader does not see a staged record
+PASS  X5 and still does not until it re-reads
+PASS  X5 after reopen_ro it does
+PASS  X5 the generation is strictly increasing across the reader's re-reads
+PASS  X5 the reader's store verifies at every prefix it saw
+-- X6: the log
+SKIP  X6 the WAL crash family (e4_wal.{ml,mli} and test_wal.ml are lane P5's files)
+-- X7: a torn tail of valid records, and the root race
+PASS  X7(a) over 11 watermarks: the whole tail is re-admitted
+PASS  X7(a) the recovered store is Closed and verifies
+PASS  X7(a) re-admission is in write order
+PASS  X7(b) recovery stops at the first record it cannot admit
+PASS  X7(b) the prefix is readable and Closed
+PASS  X7(b) the store refuses to GROW until an operator acts (e4_cas.mli D6)
+NOTE  the refusal reads: refused seg=0 off=228 3a7feb64fe24de0bda93da74d46ccbce1ac207ff16cfb229c235005fef2967fe dangling 0707070707070707070707070707070707070707070707070707070707070707
+PASS  X7(c) the first move wins
+PASS  X7(c) stale absence refuses
+PASS  X7(c) full-head duplicate retains generation
+PASS  X7(c) the plane holds one root of that name, and no node was overwritten
+== ALL PASS: 0 failure(s) ==
+NOTE  sandbox: /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/build_24ddfd_dune/e4index-45957-1792299719
+PASS  A1 (seg, off, kind) round trips through a slot over the whole legal range
+PASS  A2 a segment past max_seg or an offset past max_off is Invalid_argument, never a wrap
+PASS  A3 every kind byte is >= 1, so an occupied slot is never the empty marker
+PASS  A4 the slot is 16 bytes and `bytes` is slots * 16
+PASS  B1 every staged record is found at the place `append` returned
+PASS  B2 a digest that is not in the pack answers None
+PASS  B3 `count` is the number of distinct entries added
+PASS  B4 `add` of an (address, entry) pair already present is idempotent
+PASS  B5 `find_full` returns the record's node_len beside the entry
+PASS  C1 the three hand-made digests share a 62-bit prefix and differ
+PASS  C2 three colliding entries occupy three slots
+PASS  C3 a 62-bit prefix collision is resolved by confirming at the record (L-IDX-1)
+PASS  C4 the collision was PAID FOR with a read: some confirmation failed and probing went on
+PASS  C5 `find_unconfirmed` answers the WRONG record for the colliders, so C3 is not vacuous
+PASS  C6 a non-resident digest that collides on the prefix still answers None
+PASS  G1 the load factor never passes max_load
+PASS  G2 growth doubled the slot count and the slot count is a power of two
+PASS  G3 nothing is lost by a growth: every entry is still there, at its place
+PASS  G4 `iter` visits every occupied slot exactly once, with a non-negative 62-bit key
+NOTE  H1 live_words 1868890 -> 1868914 (+24) for 262144 entries in 8388608 off-heap bytes (32.0 B/entry)
+PASS  H1 the table is off-heap: live_words grows by at most 64 words (IX3)
+PASS  H2 the table is at most 40 bytes per entry at this size (A2 §4.5 B5)
+PASS  H3 the structural bound: never more than 64 bytes per entry above the min_slots floor
+PASS  F1 save then load round trips the table and what it covers
+PASS  F2 `load_at` at the pack's durable end succeeds
+PASS  F3 a `covers` that is not the pack end is Stale, never loaded
+PASS  F11 a saved snapshot is read-only (0444)
+PASS  F11 a second save replaces the read-only snapshot, read-only again, and it loads
+PASS  F12 a read-only tmp left by a stopped save does not block the next save
+PASS  F4 a flipped body byte fails the body CRC and is Bad_file
+PASS  F5 a flipped head byte fails the head CRC and is Bad_file
+PASS  F6 an ASCII version this binary does not know is Bad_file, never a parse
+PASS  F7 a truncated file is Bad_file
+PASS  F8 a missing file is No_file
+PASS  F9 a stale or corrupt index file is DISCARDED and rebuilt, and the rebuild agrees (IX6)
+PASS  F10 `open_index` on a good file loads it and runs no scan
+NOTE  R0 rebuild of a 10000-node pack in 0.015 s (685075 nodes/s), stop = Eof
+PASS  R1 the scan reached the clean end of the pack
+PASS  R2 `rebuild` has the same cardinality as the incrementally built index
+PASS  R3 `rebuild` equals the incrementally built index on every resident digest (IX2)
+PASS  R4 the rebuilt index answers None for a digest that is not in the pack
+PASS  R5 `kind_at_of_dir` agrees with the default probe on every record
+PASS  R6 `of_pack ~dir` selects the fast probe and gives the same index
+PASS  K1 the by-kind rebuild reached the clean end
+PASS  K2 by-kind agrees with a brute-force scan, from the index and from the pack
+PASS  K3 `count` and `cardinal` agree with the lists
+PASS  K4 `kinds` lists exactly the non-empty kinds, in byte order
+PASS  K5 `find` of a kind with no entries is the empty list
+PASS  K6 the by-kind index is off-heap and non-empty
+PASS  D1 the dependents rebuild reached the clean end
+PASS  D2 the dependents index agrees with a brute-force scan, entry for entry (IX9)
+PASS  D3 a `job`'s Cid field is a dependent edge, and it is found ONLY through E4_shape
+PASS  D4 identical 32-byte `bytes` frames under a kind with no Cid row are NOT edges
+PASS  D5 `Deps` is persistent: the old value is unchanged by a later `add`
+PASS  D6 `add` of a pair already present is idempotent
+PASS  S1 the table has one row per registered kind, in byte order (SH2)
+PASS  S2 every row has a positive case: its own payload gives back exactly its fields
+PASS  S3 every row has a negative case: a payload that violates it is refused, never guessed
+NOTE  S0 rows with a constructible positive payload: 9 of 23
+PASS  S4 `refs_of` is a subset of E4_node.scan_refs, which needs no table (SH1)
+PASS  S5 a Shared row claims nothing, and E4_node.scan_refs still finds its refs exactly
+PASS  S6 the statuses are what the two findings say they are
+PASS  S7 `class_at` is the four-way view, and Cls_unknown for a path no row mentions
+PASS  S8 a Cid field and a Stamp are the SAME bytes, and only the table tells them apart
+PASS  P1 `Arg i` selects the i-th argument of a ctor, and the index frame is not an argument
+PASS  P2 `Each` selects every element of a list frame (SH5)
+PASS  P3 `Arg 0` of a `some` frame is its content
+PASS  P4 a path that does not resolve gives the empty list, never an exception
+PASS  P5 the walk never descends into a tag-8 `bytes` payload, even one full of frames (SH6)
+PASS  P6 a pair has exactly two children and a handle frame has none
+PASS  P7 `path_to_string` prints `Each` as `*` and is not an identity
+PASS  Q1 over 8 random packs: rebuild, save and load all agree with the staged places
+== ALL PASS: 0 failure(s) ==
+shared facts: kind, policy and node refusal controls passed
+test_cache — lane P7 (E4_cache, E4_subterm, E4_deps)
+-- E4_cache: the weight and slot bounds (CA2, CA5, CA8)
+PASS  B1 bytes <= capacity_bytes and entries <= slots after every operation
+PASS  B2 `invariant` holds after every operation (CA8)
+NOTE  B1/B2 20000 ops: hits=694 misses=7211 admissions=8118 evictions=7275 (of which slot-bound 4) refusals=0
+PASS  B3 the slot array never grew: slots is what `create_sized` was given (CA5)
+PASS  B4 an entry heavier than the capacity is refused, not admitted (CA2)
+PASS  B5 capacity 0 and one slot are caches, not errors (CA7)
+-- E4_cache: CLOCK eviction (CA3)
+PASS  E1 the entry that was read survives; the one that was not is evicted
+PASS  E2 with nothing read the sweep evicts the oldest (FIFO)
+NOTE  E3 minor words per hit: 0.0000
+PASS  E3 a hit allocates nothing (< 1 minor word per hit, CA3)
+-- E4_cache: hit / miss / eviction accounting
+PASS  H1 hits, misses, admissions and evictions are exactly the scripted counts
+PASS  H2 `bytes` is the sum of the live values' lengths
+PASS  H3 hit_ratio is hits / (hits + misses)
+PASS  H4 `mem` counts neither a hit nor a miss
+-- E4_cache: replace (CA4)
+PASS  M1 a replace leaves `entries` where it was and moves `bytes` by the difference
+PASS  M2 the invariant survives a replace
+-- E4_cache: identity and drop-and-rebuild (CA1, L-IDX-0)
+PASS  I1 `get` through the cache is `E4_cas.get_bytes`, address for address (CA1)
+PASS  I2 a second round, mostly from the cache, answers the same
+PASS  I3 `drop` empties the cache and keeps the counters
+PASS  I4 after a full drop every answer is the same, and the misses show it re-read
+NOTE  I4 609 addresses, 609 misses after the drop
+PASS  I5 an absent address is None through the cache and admits nothing
+-- E4_cache: `verify` never consults a cache (CA6, L-CAS-6, risk R3)
+PASS  V1 the poison is really in the cache (this is what makes V2-V4 mean something)
+PASS  V2 `E4_cas.verify` is ok with the cache poisoned
+PASS  V3 `E4_cas.verify_node` on the poisoned address is ok
+PASS  V4 `E4_cas.get_bytes` still answers the pack, not the cache
+PASS  V5 a cache entry for an absent address does not make it resident
+-- E4_cache: the decoded tier (Decoded(V), CA1, D5)
+PASS  K1 `Decoded(V).get` decodes the payload and answers the value it holds
+PASS  K2 the same after a full drop (the identity is the pack plus V.decode)
+PASS  K3 a node whose kind is not V.kind is refused and admits nothing (D5)
+PASS  K4 the decoded tier's invariant holds
+PASS  K5 `Node_cache` answers the decoded envelope and it re-encodes to the pack's bytes
+-- E4_subterm: the slice law over ocaml/eff/goldens (L-SUB-1, slice_atPath)
+NOTE  S1 p42              bytes=66     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pAcquire         bytes=168    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pActions         bytes=1881   subterms=59   eff=42   stmt=0   stmts=0   effs=3  action=14
+NOTE  S1 pAwait           bytes=197    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pBind            bytes=199    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pBranch          bytes=218    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pCallback        bytes=197    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pCatch           bytes=151    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pCatchError      bytes=179    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pCatchIf         bytes=292    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pDefs            bytes=344    subterms=6    eff=3    stmt=0   stmts=0   effs=2  action=0
+NOTE  S1 pDefsLayers      bytes=596    subterms=11   eff=5    stmt=0   stmts=0   effs=2  action=0
+NOTE  S1 pDefsRec         bytes=375    subterms=6    eff=3    stmt=0   stmts=0   effs=2  action=0
+NOTE  S1 pDefsService     bytes=691    subterms=10   eff=6    stmt=0   stmts=0   effs=3  action=0
+NOTE  S1 pDiamond         bytes=346    subterms=6    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pExit            bytes=86     subterms=2    eff=2    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pExternal        bytes=84     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pFailCause       bytes=313    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pFailText        bytes=70     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pFold            bytes=693    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pFoldAtoms       bytes=1592   subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pFoldCapture     bytes=756    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pFoldInOp        bytes=941    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pFoldNested      bytes=1521   subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pFork            bytes=290    subterms=7    eff=6    stmt=0   stmts=0   effs=0  action=1
+NOTE  S1 pGen             bytes=274    subterms=7    eff=2    stmt=2   stmts=3   effs=0  action=0
+NOTE  S1 pIll             bytes=135    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllBranch       bytes=217    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllBreak        bytes=75     subterms=4    eff=1    stmt=1   stmts=2   effs=0  action=0
+NOTE  S1 pIllCallOutside  bytes=95     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllCallback     bytes=168    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllCatchIf      bytes=179    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllCauseBool    bytes=85     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllDefsBody     bytes=365    subterms=6    eff=3    stmt=0   stmts=0   effs=2  action=0
+NOTE  S1 pIllExternalDomain bytes=160    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllFailBool     bytes=67     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllFoldBody     bytes=423    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllFoldNotList  bytes=168    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllInterruptor  bytes=95     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllInvokeArity  bytes=553    subterms=9    eff=5    stmt=0   stmts=0   effs=3  action=0
+NOTE  S1 pIllJoin         bytes=217    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllMaskAsBool   bytes=253    subterms=6    eff=5    stmt=0   stmts=0   effs=0  action=1
+NOTE  S1 pIllParamOutside bytes=95     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllRecordExtraValue bytes=197    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllRecordRaw    bytes=286    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllRecordTagRaw bytes=173    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllReq          bytes=86     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllRestoreBool  bytes=133    subterms=2    eff=2    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllRet          bytes=209    subterms=6    eff=1    stmt=2   stmts=3   effs=0  action=0
+NOTE  S1 pIllSameHandle   bytes=403    subterms=5    eff=5    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllStep         bytes=349    subterms=2    eff=2    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllTupleAtIndex bytes=237    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIllVar          bytes=45     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pInvoke          bytes=686    subterms=11   eff=6    stmt=0   stmts=0   effs=4  action=0
+NOTE  S1 pIterate         bytes=387    subterms=2    eff=2    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pIterateAnswer   bytes=294    subterms=2    eff=2    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pJoin            bytes=291    subterms=7    eff=6    stmt=0   stmts=0   effs=0  action=1
+NOTE  S1 pMask            bytes=540    subterms=10   eff=9    stmt=0   stmts=0   effs=0  action=1
+NOTE  S1 pMaskEscape      bytes=252    subterms=8    eff=7    stmt=0   stmts=0   effs=0  action=1
+NOTE  S1 pMaskNested      bytes=376    subterms=13   eff=11   stmt=0   stmts=0   effs=0  action=2
+NOTE  S1 pMasks           bytes=104    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pMatch           bytes=267    subterms=4    eff=4    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pMergeAll        bytes=729    subterms=13   eff=5    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pOnExit          bytes=114    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pOps             bytes=3870   subterms=41   eff=41   stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pPair            bytes=270    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pProvide         bytes=945    subterms=16   eff=7    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pRaceFirst       bytes=231    subterms=7    eff=3    stmt=0   stmts=0   effs=3  action=1
+NOTE  S1 pRecord          bytes=412    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pRecordOptionalAbsent bytes=467    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pRecordOptionalPresent bytes=460    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pRecordRequired  bytes=461    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pRecordSet       bytes=500    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pScoped          bytes=320    subterms=6    eff=5    stmt=0   stmts=0   effs=0  action=1
+NOTE  S1 pSelectBool      bytes=217    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pSelectOption    bytes=337    subterms=5    eff=5    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pSelectRecordTag bytes=497    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pSelectRecordTagMiss bytes=497    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pSelectTag       bytes=342    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pSleep           bytes=180    subterms=3    eff=3    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pStmts           bytes=599    subterms=19   eff=3    stmt=6   stmts=10  effs=0  action=0
+NOTE  S1 pStr             bytes=76     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pSuspend         bytes=74     subterms=2    eff=2    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pSync            bytes=202    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pTupleAt         bytes=236    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pTupleAtNested   bytes=625    subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pTwo             bytes=599    subterms=15   eff=13   stmt=0   stmts=0   effs=0  action=2
+NOTE  S1 pWhile           bytes=397    subterms=2    eff=2    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 pYieldError      bytes=67     subterms=1    eff=1    stmt=0   stmts=0   effs=0  action=0
+NOTE  S1 89 golden programs, 0 refused by the wire, 441 subterms in all
+PASS  S1 every subterm's own encoding equals the slice its entry names (89 programs, 441 subterms)
+PASS  S3 the root entry is the whole program, at path .
+PASS  S8 `entries` is a pre-order: a parent precedes every descendant
+-- E4_subterm: the child table over EVERY constructor (L-SUB-3, M3)
+NOTE  S2 68 witnesses, 68 constructors declared over 7 sorts
+PASS  S2 every constructor of every family: the entry, its slice, its children, its ValPath
+PASS  S7 `children` covers exactly the constructors `Eff_types` declares
+-- E4_subterm: ProgPath vs ValPath (L-SUB-2, amendment M5)
+NOTE  S5 eff ctor 19: program child 1 is argument 2
+NOTE  S5 eff ctor 21: program child 0 is argument 2
+NOTE  S5 eff ctor 22: program child 0 is argument 1
+NOTE  S5 eff ctor 22: program child 1 is argument 2
+NOTE  S5 eff ctor 23: program child 0 is argument 2
+NOTE  S5 eff ctor 23: program child 1 is argument 3
+NOTE  S5 eff ctor 24: program child 0 is argument 5
+NOTE  S5 eff ctor 25: program child 0 is argument 1
+NOTE  S5 eff ctor 26: program child 0 is argument 1
+NOTE  S5 eff ctor 26: program child 1 is argument 2
+NOTE  S5 eff ctor 26: program child 2 is argument 3
+NOTE  S5 eff ctor 27: program child 0 is argument 2
+NOTE  S5 eff ctor 28: program child 0 is argument 1
+NOTE  S5 layer ctor 1: program child 0 is argument 1
+NOTE  S5 stmt ctor 3: program child 0 is argument 1
+NOTE  S5 stmt ctor 3: program child 1 is argument 2
+PASS  S5 the two path spaces differ somewhere, and every row is in declaration order
+PASS  S6 `val_of_prog` and `prog_of_val` are inverse where both are defined
+PASS  S6b a value argument that is not an addressed child has no program index
+-- E4_subterm: Cids, refusals, and the index as a function of the bytes
+PASS  S4 two occurrences of one subterm share a Cid and differ in offset (SB3)
+PASS  S4b a Cid is sha256 of the slice and of nothing else
+PASS  S9 bytes that are not exactly one program are refused whole (SB7)
+PASS  S10 building the index twice from one string is identical (SB8: it is a cache)
+PASS  S11 `bytes` gives back the identity the index was derived from
+-- E4_deps: the dependents index (DP1-DP7)
+NOTE  D0 the store holds 10000 nodes (9990 entry, 9 job, 1 genesis schema)
+PASS  D2 `of_node` is `checked_edges` then `E4_shape.cids_of`, node for node (DP5)
+PASS  D4 a `job` node contributes its three Cid fields, which no byte scan could see (R1)
+NOTE  D1 incremental 0.048 s (210349 nodes/s), full scan 0.043 s (235200 nodes/s)
+NOTE  D1 10017 dependees, 30002 edges; the scan stopped at Eof
+PASS  D1 rebuild = incremental over a 10000-node store (dependee for dependee, dependent for dependent)
+PASS  D5 the whole index equals a brute-force recomputation, in discovery order
+PASS  D3 persistent: the value held before a hundred additions still answers as it did
+PASS  D3b `add` of a pair already present is idempotent
+PASS  D6 NOT AN EDGE (M1): `reachable` and `closure` answer the same with the index built
+NOTE  D6 the closure of the last entry is 9991 bindings
+PASS  D6b the dependees are sorted and unique, so two indexes compare without an order
+-- mutation checks (cas-design §11 commit 9)
+PASS  X1 the slice law is falsifiable: one byte off, and the slice is not the subterm
+PASS  X2 the index is a function of the bytes: one bit flipped and it is another index
+PASS  X3 the ValPath of `catchIf` is falsifiable: argument 0 is a term, not an eff
+PASS  X4 the CA6 test is falsifiable: a pack that really is damaged fails `verify`
+PASS  X5 `E4_deps.equal` is falsifiable: one added edge and the two differ
+-- E4_deps: a truncated pack (DP6)
+NOTE  D7 whole: 66 dependees, stop Eof; truncated: 63 dependees, stop Short(seg=0,off=11696)
+PASS  D7 a truncated pack stops the scan and the verdict comes back beside the index
+== ALL PASS: 0 failure(s) ==
+== test_checkpoint (lane P6: E4_chunk, E4_checkpoint) ==
+  sandbox: /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/build_24ddfd_dune/e4ckpt-45958-1792299719
+
+== 1. E4_chunk: cutting ==
+  image 1024000 B, 761 chunks, mean 1345 B
+PASS CH1 cut is deterministic (same bytes, same cut)
+PASS CH1 cut is a function of the bytes, not the string identity
+PASS CH1 reassembly is the identity: concat (pieces s) = s
+PASS CH1 the cut covers the string exactly, in order
+PASS CH2 every chunk but the last is in [min, max]
+PASS CH2 the last chunk is non-empty and at most max
+PASS CH2 the empty image cuts to nothing
+PASS CH2 an image below min is one chunk
+PASS the window is smaller than min (what makes CH6 hold)
+PASS params_ok refuses min <= window
+PASS params_ok refuses an avg that is not a power of two
+PASS params_ok refuses max < avg
+PASS params_ok accepts the default
+PASS cut raises Invalid_argument on refused params
+  200 one-byte insertions (worst at offset 450511): worst boundaries moved 3; worst new chunks — content-defined 3, fixed 1 KB 999
+  boundaries moved, over 200 trials: 0->162  1->19  2->18  3->1  4->0  5+->0
+PASS CH6(a) every boundary at or before a one-byte insertion is unchanged
+PASS CH6(b) a one-byte insertion moves boundaries only locally (at most 3)
+PASS CH6(b) at most three chunks are rewritten
+PASS MUTATION: fixed-size chunking fails CH6(b) — the property has teeth
+  100 one-byte deletions: worst new chunks 2
+PASS CH6(b) a one-byte deletion makes at most three new chunks
+  LIMITATION, period-90 image (306 chunks, mean 3346 B): worst new chunks — content-defined 10, fixed 1 KB 988
+PASS on adversarial period-90 content, content-defined chunking still beats fixed-size
+PASS an append rewrites at most one chunk
+  default params on 4194304 B: 210 chunks, mean 19972 B
+PASS the default params hold CH2 on a 4 MB image
+PASS the default params reassemble
+
+== 2. E4_chunk: the manifest ==
+PASS the leaf manifest round-trips
+PASS the interior manifest round-trips
+PASS a trailing byte is refused
+PASS a truncated manifest is refused
+PASS a leaf whose refs are at the wrong kind is refused
+PASS an interior whose refs are at the wrong kind is refused
+PASS an unknown ctor index is refused
+PASS a non-list body is refused
+PASS the empty leaf round-trips
+  5000 refs -> 16 groups, sizes min 64 max 759 mean 312
+PASS CH7 the groups concatenate back to the ref list
+PASS CH7 every group but the last is within [g_min, g_max]
+PASS CH7 the group cut is deterministic
+PASS CH7 inserting one ref changes at most two groups
+
+== 3. E4_checkpoint: the byte table ==
+PASS the whole form round-trips
+PASS the whole form refuses a trailing byte
+PASS the whole form refuses a truncation
+PASS the chunked form round-trips
+PASS the chunked form refuses a trailing byte
+PASS the chunked form refuses a truncation
+PASS the manifested form round-trips
+PASS the manifested form refuses a trailing byte
+PASS the manifested form refuses a truncation
+PASS the optional fields round-trip as none
+PASS a job ref at the wrong kind is refused
+PASS the payload begins with ctor 0 and the job ref, in that order
+PASS `engine` is a bytes frame, so the edge scan treats it as a leaf (D5, risk R1)
+PASS E4_shape's checkpoint row reads the payload written, options present (every image form)
+PASS E4_shape's checkpoint row reads the payload written, options absent
+PASS E4_shape's checkpoint row has the payload's seven fields, the stamp at 4
+PASS the pending schema is a genesis: kind schema, the zero spec
+PASS the pending marker is on
+
+== 4. E4_checkpoint: write, read, LOG-REL, the chain ==
+PASS a small image is stored Whole
+PASS CP5 read gives the image back byte for byte (whole)
+  chunked: 2048000 B image, 39 chunks (39 fresh, 0 dup), 1 manifest nodes, payload 244 B
+PASS a large image is stored through a manifest
+PASS CP5 read gives the image back byte for byte (chunked)
+PASS the checkpoint's payload is small and constant: the image is not inside it
+PASS CH8 flatten is the inverse of the build
+PASS CH9 fold_chunks reassembles one chunk at a time
+PASS the one-level form is available and reads back
+PASS read_parts answers (job, position, prev, image)
+PASS CP2 a checkpoint whose job is not stored is refused Dangling by the STORE
+PASS CP2 a checkpoint whose prev is not stored is refused Dangling
+PASS LOG-REL two jobs, same content and position: the addresses differ
+PASS LOG-REL two jobs differ in the job field's 32 bytes and in nothing else
+PASS LOG-REL the same job at two positions: two addresses
+PASS LOG-REL the same job, position and content: one address
+PASS LOG-REL the chunk digests are a function of the image alone
+PASS LOG-REL / D3 two store layouts, one checkpoint address
+
+== 4b. the prev chain, the head root, the cycle refusal ==
+PASS CP8 chain walks prev from the head to the first
+PASS CP3 the head root names the last checkpoint
+PASS M1 the pin root of the last checkpoint is minted
+PASS CP3 a publish whose prev is not the head is refused (M7 Fork)
+PASS CP8 chain refuses a cycle instead of looping
+PASS CP8 chain_from on a finite chain is the chain
+PASS chain refuses an address that is not a checkpoint
+PASS read refuses a node that is not a checkpoint
+
+== 4c. a flipped byte inside a stored chunk ==
+PASS CP7 read verifies before the mutation
+PASS MUTATION a flipped byte inside a stored chunk makes read refuse
+  refusal: missingChunk
+
+== 4d. an occupied address: write answers Occupied and commits nothing ==
+PASS 4d control: the clean store writes the checkpoint at its address
+PASS 4d write answers Occupied (Corrupt) at the schema's address
+PASS 4d nothing was staged, committed or rooted
+PASS 4d ensure_schema raises Store_error on the same store
+PASS 4d write answers Occupied (Corrupt) at the checkpoint's address
+PASS 4d nothing was committed and no root moved, the squatter stays
+
+== 5. CP9 / risk R8: closure_streaming ==
+  closure: 34 nodes, 1539077 node bytes; the largest node held at once is 65579 B (image 1536000 B)
+PASS CP9 the streaming closure visits exactly E4_cas.closure's addresses
+PASS CP9 each address once
+PASS CP9 children first: every checked edge is delivered before its node
+PASS CP9 the closure never holds the image: the peak node is one chunk, not the image
+PASS CP9 closure_size counts the same nodes
+PASS the closure covers the chunks, the manifests, the checkpoint, the job and the schema
+
+== 6. CP10: an ephemeral checkpoint files no node ==
+PASS CP10 an ephemeral checkpoint files no CAS node
+PASS CP10 the marks are in the log, with no address
+
+== 7. CP11: image_of_machine / machine_of_image ==
+  chain 40 at fuel 2000: finished, 83 trace rows, 40 refs, image 5672 B
+PASS CP11 machine_of_image (image_of_machine m) = machine_state m
+PASS CP11 re-encoding the decoded state gives the same bytes
+PASS CP11 the decoder is exact: a trailing byte is refused
+PASS CP11 the decoder is exact: a truncation is refused
+PASS CP11 the decoder is exact: the empty string is refused
+PASS CP11 the image names the instance's carriers
+PASS CP11 the image carries the reading axis: one row per trace index
+PASS CP11 the image carries the ref heap
+PASS CP11 the image version is the pending one
+PASS CP11 machines at different points of one run give distinct images
+PASS CP11 the image is a function of the machine value alone
+PASS MUTATION a changed field changes the image bytes
+
+== 8. A2 §4.4 / bench B7: 64 consecutive checkpoints of chain n=2000 ==
+  64 positions of chain 2000 at fuel 50..3200, driven in 0.06 s
+PASS the premise: the run has not finished at the last position, so every image differs
+  image 2147 B -> 104479 B; trace 26 -> 1600 rows; refs 12 -> 800
+PASS the run really grows: every image is larger than the one before it
+  consecutive positions: trace 1576 -> 1600 rows (common prefix 1576); refs 787 -> 800 (common prefix 787)
+PASS the machine image grows by APPENDING: the trace and the ref heap are stable prefixes
+  the closed form c* = sqrt(42 * S / k) at S = 104479 B, k = 2 is 1481 B
+
+  chunking on at avg 1 KB / min 256 B / max 4 KB (nearest the closed form):
+   i   image B  chunks  fresh   dup  manif  mfresh   delta B   cumulative B
+   0      2147       2      2     0      1       1      2792           2792
+   1      3725       2      2     0      1       1      4413           7205
+   2      5397       3      3     0      1       1      6215          13420
+   3      6976       3      3     0      1       1      7794          21214
+   8     15149       7      5     2      1       1     11241          71328
+  16     28150      12      4     8      1       1     10251         175462
+  24     41150      16      4    12      1       1     10517         264482
+  32     54150      21      5    16      1       1     10705         351302
+  40     67151      25      5    20      1       1      9237         478613
+  48     80151      28      4    24      1       1     12028         562852
+  56     93151      32      5    27      1       1     12996         677888
+  63    104479      34      4    30      1       1     14300         764534
+
+  plan                                       cumulative B   mean delta B     vs off
+  avg 16 KB (the default, tuned for 64 MB)        3456896          54829      0.99x
+  avg 4 KB                                        2014548          31932      1.70x
+  avg 1 KB (nearest the closed form)               764534          12091      4.49x
+  OFF: the whole blob, M2 as written              3430516          54414      1.00x
+  the 64 images themselves sum to 3412103 B (2147 B .. 104479 B)
+PASS CP6 at the closed-form average, chunking stores far less than the whole blob
+PASS CP6 the chunked store is smaller than the sum of the images it holds
+PASS CP6 chunks are shared: at the last checkpoint most chunks are Duplicate
+PASS B7 a checkpoint that shares half its chunks costs less than its image
+PASS A2 §4.4's closed form is real: the 64 MB default saves nothing on a 100 KB image
+PASS every store reads every checkpoint back byte for byte
+  READ THIS BEFORE QUOTING THE RATIO.  The default average is tuned for a 64 MB image
+  (A2 §4.4, owner question OQ2) and on a 100 KB machine image it cuts one to three
+  chunks, shares nothing and costs the node overhead — the closed form says so and the
+  row above measures it.  A checkpointing engine must therefore pick `avg` from the
+  image size, not from a constant; that is a finding for the coordinator, not a knob
+  this lane may turn (OQ2 fixed the default).  B7's own acceptance (<= 300 KB per
+  checkpoint and >= 200x) is stated at 64 MB with a one-cell edit and is
+  bench_checkpoint.ml's cell, not this one.
+
+== ALL PASS: 0 failure(s) ==
+   116 checks
+python3 scripts/check-lcnf-interfaces.py
+PASS comparison-output alias refused: implementation
+PASS comparison-output alias refused: interface
+PASS comparison-output alias refused: manifest
+PASS comparison-output alias refused: cross-artifact
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-t2625n90/compile/second.ml", line 2, characters 22-30:
+2 | let malformed : int = "refuse"
+                          ^^^^^^^^
+Error: This expression has type string but an expression was expected of type
+         int
+
+PASS: stale interface replacement and whole-family retention after native refusal
+python3 scripts/check-lcnf-sealing.py
+lawful-alias: exit 0, expected 0
+
+memo-public-alias: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-ia2oy7zn/client.ml", line 3, characters 28-30:
+3 | let forged : public_alias = []
+                                ^^
+Error: This expression has type 'a list
+       but an expression was expected of type
+         public_alias = Effect4_gen.Api_gen.memo
+
+checked-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-ia2oy7zn/client.ml", line 2, characters 31-36:
+2 | let forged : int A.checked = { value = 7; trace = [] }
+                                   ^^^^^
+Error: Unbound record field value
+
+oracle-callback: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-ia2oy7zn/client.ml", line 2, characters 24-62:
+2 | let forged : A.oracle = fun input -> A.program_check_run input
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This expression should not be a function, the expected type is
+       A.oracle
+
+hit-rule-callback: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-ia2oy7zn/client.ml", line 2, characters 26-41:
+2 | let forged : A.hit_rule = fun _ _ -> true
+                              ^^^^^^^^^^^^^^^
+Error: This expression should not be a function, the expected type is
+       A.hit_rule
+
+checked-update: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-ia2oy7zn/client.ml", line 2, characters 41-46:
+2 | let forge (c : int A.checked) = { c with value = 99 }
+                                             ^^^^^
+Error: Unbound record field value
+
+hidden-helper: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-ia2oy7zn/client.ml", line 2, characters 13-42:
+2 | let helper = A.program_check_typed_program
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Unbound value A.program_check_typed_program
+
+PASS: lawful public alias and six hostile sealed-package clients
+opam exec --switch=effect4 -- bash ocaml/engine/tools/gen-check.sh
+ok   C1 no filter/erase/removeAll/dropWhile on RunMachine.fibers in the core sources
+ok   C2 ocaml/gen builds and @gen/runtest passes (api_gen.ml is the oracle)
+ok   C3a dune build engine
+ok   C3b api_engine.ml type-checks against E4_clock/Lcnf_* interfaces and Eff_types: the functor needs no instance, so the
+          extern table is closed (every unconverted carrier site would be a type error)
+ok   C4 the generated file carries the current prelude
+
+gen-check: PASS
+PASS ocaml: recorded bc143d0a396a (18.082s)

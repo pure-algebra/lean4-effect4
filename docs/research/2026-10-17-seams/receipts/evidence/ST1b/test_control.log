@@ -1,0 +1,107 @@
+["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/private/tmp/seams-st1b-sol/ocaml", "engine/cas/test/test_control.exe"]
+-- R: the byte grammar round-trips (CF1, CF3, CF9)
+PASS  R1 empty: decode (encode p) = Ok p
+PASS  R2 empty: encode is a function of the payload alone
+PASS  R1 one root: decode (encode p) = Ok p
+PASS  R2 one root: encode is a function of the payload alone
+PASS  R1 three roots: decode (encode p) = Ok p
+PASS  R2 three roots: encode is a function of the payload alone
+PASS  R1 a reserved status with a body: decode (encode p) = Ok p
+PASS  R2 a reserved status with a body: encode is a function of the payload alone
+PASS  R1 the be64 and name boundaries: decode (encode p) = Ok p
+PASS  R2 the be64 and name boundaries: encode is a function of the payload alone
+PASS  CF10 a scheme_version of 1 is refused as Other_scheme 1, never read
+PASS  CF10 a scheme_version of 4294967295 is refused as Other_scheme 4294967295, never read
+PASS  CF10 red control: the same payload at scheme 0 reads
+PASS  R3 magic is the first six bytes
+PASS  R3 the version is the next eight, ASCII, exact
+PASS  R3 the fixed payload is 56 bytes and the header 14
+PASS  R4 status is LAST: an empty-bodied status is the final byte
+PASS  R4 the bytes before status do not move when only the status changes
+PASS  R4 changing the status moves the checksum field and nothing else before it
+PASS  R5 commit then read is the payload
+PASS  R5 commit leaves no control.tmp beside it
+PASS  R6 write = commit, and a reserved status survives the file
+-- E: every constructor of open_error (CF1, CF2, D3, CF9)
+PASS  E1 Missing: no file
+PASS  E2 Bad_magic: the six magic bytes are wrong
+PASS  E2 Bad_magic: a file too short to hold the magic
+PASS  E3 Stale_binary: an unknown ASCII version, never a parse (CF1)
+PASS  E3 Stale_binary: a version of the right width but the wrong bytes
+PASS  E3 a truncated version field is Corrupt, not Stale_binary
+PASS  E4 Corrupt: a flipped checksum field
+PASS  E4 Corrupt: a flipped payload byte
+PASS  E5 Corrupt: a payload shorter than the fixed fields
+PASS  E6 Corrupt: an unregistered kind byte in a root
+PASS  E6 Corrupt: an unregistered root-kind byte
+PASS  E6 uppercase name retains its bytes
+PASS  E6 spaces retain their bytes
+PASS  E6 legacy uppercase remains outside v1 domain
+PASS  E6 UTF-8 names retain exact bytes
+PASS  E6 invalid UTF-8 is byte damage
+PASS  E7 Corrupt: a root version at or above 2^62 (CF9, M9)
+PASS  E7 Corrupt: pack_end_seg at or above 2^62 (CF9, M9)
+PASS  E8 Corrupt: no status tag at all
+PASS  E8 Corrupt: a body at status tag 0 under version 00000001
+PASS  E8 Corrupt: a status tag above the reserved range
+PASS  E9 Corrupt: a truncated root
+PASS  E10 a reserved tag with an empty body is NOT a refusal
+PASS  E11 encode refuses a root name that is too long
+PASS  E11 encode retains an uppercase root name
+PASS  E11 encode refuses a negative be64 field (CF9, M9)
+PASS  E11 encode accepts the largest be64 the wire admits
+PASS  E11 encode refuses a reserved status tag below 3
+-- X: A2 §4.3 X4 — a torn tmp, a rename that did not happen, a bad checksum
+PASS  X4a a torn control.tmp does not touch `control`
+PASS  X4a cleanup removes the torn tmp and leaves control alone
+PASS  X4b an unrenamed complete tmp is not the truth — the previous control is
+PASS  X4b cleanup discards it; `control` still reads as the previous payload
+PASS  X4b after the rename the new payload is the truth, and no tmp survives
+PASS  X4c a corrupt control is Corrupt, never a half-parse
+PASS  X4c and the previous control is the truth
+PASS  W1 pack_end is recorded and read back exactly
+PASS  W1 set_pack_end bumps the generation (CF7)
+-- P9/CF3: reserved status tags survive a reader that does not understand them
+PASS  P9 every reserved tag 3..15 and its body round-trip through a rewrite
+PASS  P9 a rewrite by a reader that does not understand tag 11 is byte-identical
+PASS  D2 legacy policy byte 0
+PASS  D2 legacy policy byte 1
+PASS  D2 legacy policy byte 2
+PASS  D2 legacy policy byte 3
+PASS  D2 legacy policy byte 4
+PASS  D2 legacy policy byte 5
+PASS  D2 legacy policy byte 6
+PASS  D2 v2 byte one is journal
+PASS  D2 v2 refuses legacy pin byte
+PASS  ST2 legacy generation two stays distinct from new create plus duplicate
+-- complete-head root moves
+PASS  create generation one
+PASS  duplicate create stale
+PASS  identical target retains exact payload
+PASS  ABA retains generation
+PASS  ABA stale expectation refuses
+PASS  stale precedes wrong kind
+PASS  absent advance precedes target
+PASS  target kind remains fixed
+PASS  dangling target refuses
+PASS  pin duplicate accepted
+PASS  pin changed target refuses
+PASS  journal without designated parent refuses
+PASS  journal follows transitive designated parents
+PASS  fork creates independent journal name
+PASS  names retain case exactly
+PASS  generation arithmetic is exact beyond machine integers
+-- M: one flipped byte anywhere in the file, and read must refuse
+PASS  M1 every one of the 127 single-byte flips is refused
+NOTE    verdicts: badMagic=6 corrupt=113 staleBinary=8
+PASS  M1 and the unflipped file still reads
+PASS  M2 a repeated create refuses stale absence
+PASS  G3 control g3-v1
+PASS  G3 control g3-roots-after-v1
+PASS  G3 control g3-stale
+PASS  G3 control g3-wrongKind
+PASS  G3 control g3-dangling
+PASS  G3 control g3-advance-v2
+PASS  G3 control g3-roots-after-v2
+== ALL PASS: 0 failure(s) ==
+exit_status=0

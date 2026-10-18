@@ -1,0 +1,15 @@
+{
+  "command": [
+    "opam",
+    "exec",
+    "--switch=rocq",
+    "--",
+    "rocq",
+    "--version"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T05:07:22.305593+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 0.93,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/ST1b/rocq-version.log"
+}

@@ -14,8 +14,8 @@ The coordinator merges; this branch is never pushed.
 | S4 | Pending | Pending | Open |
 | S3a | Pending | Pending | Open |
 | S3b | Pending | Pending | Open |
-| ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` | [ST1a](ST1a.md) | Required checks pass. |
-| ST1b | Pending | Pending | Open |
+| ST1a | `637fd14686343632378427190c9a4ed9142a0fc7` ; receipt `0bb42e37d4fa99fd84979df03beb3dd0391a4e98` | [ST1a](ST1a.md) | Required checks pass. |
+| ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` | [ST1b](ST1b.md) | Required checks pass. |
 | ST2 | Pending | Pending | Open |
 | ST3 | Pending | Pending | Open |
 | ST4 | Pending | Pending | Open |
@@ -52,6 +52,12 @@ The coordinator merges; this branch is never pushed.
 | ST1a | Cross-artifact output aliases refuse before generation; the red control overwrites only a disposable victim, and the repaired control preserves it. |
 | ST1a | The old M2 mismatch tripwires fail after regeneration in both native fixtures. Both replacements require every admission row to agree with Lean. |
 
+| ST1b | Duplicate targets retain generation; the changed-target increase law and duplicate-retention law keep ordinary row five. |
+| ST1b | Version 2 retains exact UTF-8 names; legacy byte decoding keeps its original name domain and maps old planes explicitly. |
+| ST1b | Checkpoint roots use journal policy and their canonical fourth parent field; incidental references refuse ancestry. |
+| ST1b | Gallina prints generic Head through explicit type parameters; value parameters refuse and the type name avoids a projection collision. |
+| ST1b | The audit input remains receipt evidence; acceptance fixtures stay under Test. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -63,5 +69,9 @@ The coordinator merges; this branch is never pushed.
 | ST1a | Adopt typed version, kind, per-value specification, and exact payload checks; preserve the genesis exception. |
 | ST1a | Keep the accepted-new-to-old connector when admission gains M2, and generate native kind and refusal facts from the Lean owners. |
 | ST1a | Keep semantic naturals exact and native capacity outside modeled admission. |
+
+| ST1b | Adopt full expected heads, unchanged duplicate generations, generated policy data, and stale-first root checks. |
+| ST1b | Retain explicit legacy root-byte mapping and exact version-2 names. |
+| ST1b | Count fresh durable nodes only after full transaction validation; keep model cuts distinct from host crash observations. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

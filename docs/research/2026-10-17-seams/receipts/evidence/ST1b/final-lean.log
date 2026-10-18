@@ -1,0 +1,27 @@
+["python3", "/private/tmp/seams-st1b-sol/build_overlay.py", "Effect4.Store.Domain.Transaction", "Effect4.Store.Domain.Store", "Effect4.Store.Domain.Word", "Effect4.Store.Domain.Cas", "Test.Store.SeamsTransactions", "Test.Store.WordContract", "OCaml5.Lcnf.Gallina", "OCaml5.Tools.CasGoldens", "OCaml5.Store.Facts", "Test.Store.SeamsHeadPrinter", "Test.Store.SeamsTransactionsAudit"]
+Effect4.Store.Domain.Transaction: exit 0
+Effect4.Store.Domain.Store: exit 0
+Effect4.Store.Domain.Word: exit 0
+Effect4.Store.Domain.Cas: exit 0
+Test.Store.SeamsTransactions: exit 0
+Test.Store.WordContract: exit 0
+OCaml5.Lcnf.Gallina: exit 0
+OCaml5.Tools.CasGoldens: exit 0
+OCaml5.Store.Facts: exit 0
+Test.Store.SeamsHeadPrinter: exit 0
+Test.Store.SeamsTransactionsAudit: exit 0
+exit_status=0
+["python3", "/private/tmp/seams-st1b-sol/generate_rocq.py"]
+Rocq generator: exit 0
+exit_status=0
+["python3", "/private/tmp/seams-st1b-sol/generate-goldens.py"]
+Actual CasGoldens: 0
+exit_status=0
+["python3", "/private/tmp/seams-st1b-sol/run_facts.py"]
+{"command": ["lean", "-DwarningAsError=true", "--root=/private/tmp/seams-st1b-sol/src", "--run", "/private/tmp/seams-st1b-sol/src/OCaml5/Tools/CasFacts.lean", "/private/tmp/seams-st1b-sol/native-facts"]}
+wrote e4_kind.ml and e4_kind.mli
+wrote e4_admission.ml and e4_admission.mli
+wrote e4_root_policy.ml and e4_root_policy.mli
+exit_status=0
+
+exit_status=0

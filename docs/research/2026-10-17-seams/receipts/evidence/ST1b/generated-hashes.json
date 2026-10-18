@@ -1,0 +1,16 @@
+{
+  "rocq/StoreCode.v": "55dc289f393e067d28e6d1413ec2d25643cd29a24deb01ef177bf4cbcc3531ba",
+  "ocaml/engine/cas/e4_admission.ml": "de1601e19faf50805c2e2d67fa299046e25820c82c27a5dba125cef117dc48b9",
+  "ocaml/engine/cas/e4_admission.mli": "b4361e0bd51e40e917bd72100dfb6f403ca6a0b3f0f344252608c4002c438b26",
+  "ocaml/engine/cas/e4_root_policy.ml": "2c073572ad9efcdc85d66ff2c53b1d342f564ad57c8691e07217c6f26348d18a",
+  "ocaml/engine/cas/e4_root_policy.mli": "23724b1a8f9bb836e816a22db13861b6d85755ae259f966042d497be49b518e6",
+  "ocaml/engine/cas/goldens/cases.txt": "8a6e2dcb456e8ccf1655f5b46728cc5d9dac91c7bb0849eb54bc4d50453cc341",
+  "ocaml/engine/cas/goldens/g3-advance-v2.hex": "989c661e9260f3ffe19ceaaba96c2cac1f24595442181fb2202495bb20b72c86",
+  "ocaml/engine/cas/goldens/g3-dangling.hex": "f8cea00614d8d3dbf834e6acc40fc96327d6d1ec73c2375da457b37f3c8e4fdd",
+  "ocaml/engine/cas/goldens/g3-roots-after-v2.hex": "a55634b831cc7f957402b8e1216fa410bb8f1b3f5350c7eaf2ec2ad75df58036",
+  "ocaml/engine/cas/goldens/g3-stale.hex": "7e2fbf6ffa33cef7007e200c168ed16ce5eb879c927383febeddca6775695015",
+  "ocaml/engine/cas/goldens/g3-target-v2.hex": "1e00b5bce979200b4ceb15d44c1e71fbbbef66244c797b4b7727e56bd103b01a",
+  "ocaml/engine/cas/goldens/g3-v1.hex": "7e2fbf6ffa33cef7007e200c168ed16ce5eb879c927383febeddca6775695015",
+  "ocaml/engine/cas/goldens/g3-wrongKind.hex": "a698f2841807c6d85ebbaaa099838c3341aac0bda0d4331c0da7449d5937b82e",
+  "ocaml/engine/cas/goldens/manifest.txt": "ecd59844cee6e98cadb5cee7c2c79a298ba820660f8447bdf56c55fd00f4c150"
+}

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "opam",
+    "exec",
+    "--switch=effect4",
+    "--",
+    "sh",
+    "-c",
+    "ocamlc -version; dune --version; python3 --version"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T05:03:49.767810+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 0.366,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/ST1b/native-versions.log"
+}

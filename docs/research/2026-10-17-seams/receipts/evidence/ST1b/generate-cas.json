@@ -1,0 +1,15 @@
+{
+  "command": [
+    "python3",
+    "/private/tmp/seams-lean-one.py",
+    "python3",
+    "scripts/generate.py",
+    "--only",
+    "cas"
+  ],
+  "cwd": "/Users/pooks/.codex/worktrees/seams/lean4-effect4",
+  "started_utc": "2026-10-18T04:55:41.281228+00:00",
+  "exit_status": 0,
+  "elapsed_seconds": 6.363,
+  "log": "docs/research/2026-10-17-seams/receipts/evidence/ST1b/generate-cas.log"
+}
