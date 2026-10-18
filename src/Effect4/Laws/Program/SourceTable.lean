@@ -599,6 +599,13 @@ theorem feed_keepExact_sketch {o : Oracle} {s next : SourceSession} {e : Edit}
     obtain ⟨rfl, -⟩ := Prod.mk.inj hr
     rfl
 
+/-- **An accepted feed keeps a coherent session coherent.** The pointer of `source-feed-coherent`.
+It is false at head (`FeedCounterexample.feed_coherent_refuted`): `SourceSession.splice` places
+the part's table through `Table.atSource` with the candidate's ill-formed reference, which puts a
+second root entry in place of the entry at the edited address, and a splice keeps the old root
+entry where the edit adds or removes an ill-formed reference. The statement is the
+specification. It holds once the feed splices only where neither the session's sketch nor the
+candidate holds an ill-formed reference (the seat's receipt, option A). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 proof_goal feed_coherent {o : Oracle} {policy : FeedPolicy} {s next : SourceSession}
     {e : Edit} {step : Edit.Step} (hc : s.Coherent)
@@ -696,10 +703,16 @@ theorem Coherent.ext {a b : SourceSession} (ha : a.Coherent) (hb : b.Coherent)
 
 /-- Exact old feedStep observations through the existing expansion edit engine.
 The expression uses EditSession.feed as its reference; it defines no second edit interpreter.
-Reach: coherent source sessions, every edit, and certified oracles.
+Reach: coherent source sessions whose sketch and candidate hold no ill-formed reference, every
+edit, and certified oracles. The first form had no such premise and is false: on a sketch with
+an ill-formed reference the draft refuses to splice, since its root is refused, while the
+expansion's edit session splices (`FeedCounterexample.feed_draft_refuted`); and a candidate
+with one spliced wrongly (`FeedCounterexample.feed_coherent_refuted`).
 Consumer: replay_drafts_view and transport of source-session-coherent. R14. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit) :
+proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Edit)
+    (hfault : s.sketch.program.firstRefFault = none)
+    (hcand : ∀ c, s.sketch.edit s.app e = some c → c.program.firstRefFault = none) :
     ∃ next step, (s.feed o .draft e).value = .ok (next,step) ∧
       step.edit = e ∧
       step.replaced = (match (Node.eff s.sketch.program).at_ e.path with
@@ -717,13 +730,19 @@ proof_goal feed_draft (o : Oracle) (s : SourceSession) (hc : s.Coherent) (e : Ed
          next.table = Table.atSource candidate.sites candidate.program.firstRefFault reference.1.table ∧
            step.delta = reference.2.atSource candidate.sites)
 
+/-- **A kept-exact feed below the root keeps the root's and the address's types, and splices
+exactly where the expanded edit agrees.** The pointer of `source-feed-keep-exact`. The first
+form said a splice shows `[e.path]` alone; a splice shows every address of the new subtree
+(`FeedCounterexample.feed_keepExact_delta_refuted`), so the conjunct now names a splice. It is
+false at head where the candidate holds an ill-formed reference
+(`FeedCounterexample.feed_keepExact_refuted`), by the splice of `feed_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 proof_goal feed_keepExact {o : Oracle} {s next : SourceSession} {e : Edit} {step : Edit.Step}
     (hc : s.Coherent) (hne : e.path ≠ [])
     (h : (s.feed o .keepExact e).value = .ok (next,step)) :
     next.view.type = s.view.type ∧
       Table.typedAt next.table e.path = Table.typedAt s.table e.path ∧
-      (s.expandedEditAgrees next.sketch e = true → step.delta = .spliced [e.path]) ∧
+      (s.expandedEditAgrees next.sketch e = true → ∃ shown, step.delta = .spliced shown) ∧
       (s.expandedEditAgrees next.sketch e = false → step.delta = .rechecked)
 
 /-- **The root feed is exactly the module recheck route**, including its actual part trace: the
@@ -798,4 +817,267 @@ theorem reached_view (d : Doc) :
     d.session.view.type = (d.session.sketch.sourceCheck d.session.app).toOption :=
   view_eq (Doc.coherent d)
 end SourceSession
+
+/-! ## Counterexamples at head
+
+`SourceSession.splice` places a part check's table through `Table.atSource` with the candidate's
+first ill-formed reference. Where the candidate has one, `Table.atSource` replaces the head of
+the part's table, the entry at the edited address, by a root entry. The spliced table then holds
+two root entries and no entry at the edited address. A splice also keeps the old root entry,
+which is wrong where the edit adds or removes an ill-formed reference.
+
+The base below has no reference. Its filling `late` names the layer at `[1, 0]`, which follows
+the site `[0, 0]` in program order (`RefFault.notBefore`). The expansion still expands the
+reference, so the part check keeps the focus's type and both `draft` and `keepExact` splice.
+
+Each statement below is a control, kernel-checked by evaluation (`decide`): it shows where a
+planned goal stops at head. Its placement names the concept and no requirement. They will
+fail to elaborate once the feed splices only inputs with no ill-formed reference, and then they
+go. -/
+
+namespace FeedCounterexample
+open _root_.Effect4.Program.Check
+
+/-- The literal program `7`. -/
+def seven : NativeEff := .succeed (.lit (.nat 7))
+/-- The literal program `1`. -/
+def one : NativeEff := .succeed (.lit (.nat 1))
+/-- A base with no layer reference: a layer at `[1, 0]`, after the edited address `[0]`. -/
+def base : Sketch := ⟨.bind seven (.provideLayer (.effectDiscard one) false one), []⟩
+/-- A filling of `[0]` whose reference targets the later layer. -/
+def late : NativeEff := .provideLayer (.ref [1, 0]) false seven
+/-- A filling of `[0]` with children, of the focus's type, with no reference. -/
+def wide : NativeEff := .bind one seven
+/-- The base with `late` at `[0]`: one ill-formed reference, at `[0, 0]`. -/
+def faulty : Sketch := ⟨.bind late (.provideLayer (.effectDiscard one) false one), []⟩
+/-- The faulty base with `7` at `[1, 1]`. -/
+def faultyFilled : Sketch := ⟨.bind late (.provideLayer (.effectDiscard one) false seven), []⟩
+
+/-- The session the base opens. -/
+def opened : SourceSession := (SourceSession.open Oracle.uncached {} base).value
+/-- The session the faulty base opens. -/
+def faultyOpened : SourceSession := (SourceSession.open Oracle.uncached {} faulty).value
+
+/-- The draft of `late` is accepted and its next session is incoherent. -/
+def draftLate : Bool :=
+  match (opened.feed Oracle.uncached .draft (.fill [0] late)).value with
+  | .ok (next, _) => !decide (next.table = next.sketch.sourceTable next.app)
+  | .error _ => false
+
+/-- The kept-exact fill of `late` is accepted and loses the typed entry at `[0]`. -/
+def keepLate : Bool :=
+  match (opened.feed Oracle.uncached .keepExact (.fill [0] late)).value with
+  | .ok (next, _) => !decide (Table.typedAt next.table [0] = Table.typedAt opened.table [0])
+  | .error _ => false
+
+/-- The kept-exact fill of `wide` splices its whole subtree, so its delta lists three addresses. -/
+def keepWide : Bool :=
+  match (opened.feed Oracle.uncached .keepExact (.fill [0] wide)).value with
+  | .ok (next, step) => !decide (step.delta = .spliced [[0]]) &&
+      opened.expandedEditAgrees next.sketch (.fill [0] wide)
+  | .error _ => false
+
+/-- A document that drafts `late` is incoherent. -/
+def docLate : Bool :=
+  match ((Doc.open_ ⟨{}, {}, base⟩).value.step Oracle.uncached (Doc.open_ ⟨{}, {}, base⟩).value.snap
+      (.draft (.fill [0] late))).value with
+  | .ok (d, _) => !decide (d.session.table = d.session.sketch.sourceTable d.session.app)
+  | .error _ => false
+
+/-- Replaying the draft of `late` shows a table that is not the source table. -/
+def replayLate : Bool :=
+  match replayDoc ⟨{}, {}, base⟩ [.draft (.fill [0] late)] with
+  | .ok session => !decide (session.table = session.sketch.sourceTable {})
+  | .error _ => false
+
+/-- From the faulty base, drafting `7` at `[0]` and then putting `late` back does not restore the
+session: the second feed splices a candidate with an ill-formed reference. -/
+def undoFaulty : Bool :=
+  match (faultyOpened.feed Oracle.uncached .draft (.fill [0] seven)).value with
+  | .ok (next, _) =>
+    match (next.feed Oracle.uncached .draft (.fill [0] late)).value with
+    | .ok (back, _) => !decide (back.table = faultyOpened.table)
+    | .error _ => false
+  | .error _ => false
+
+/-- On the faulty base, a draft away from the reference rechecks: its root is refused. -/
+def draftFaultyRechecks : Bool :=
+  match (faultyOpened.feed Oracle.uncached .draft (.fill [1, 1] seven)).value with
+  | .ok (_, step) => decide (step.delta = .rechecked)
+  | .error _ => false
+
+set_option maxRecDepth 100000 in
+/-- The evaluation of the seven verdicts. -/
+theorem verdicts : draftLate = true ∧ keepLate = true ∧ keepWide = true ∧ docLate = true ∧
+    replayLate = true ∧ undoFaulty = true ∧ draftFaultyRechecks = true := by
+  decide
+
+end FeedCounterexample
+
+open _root_.Effect4.Program.Check in
+/-- **`SourceSession.feed_coherent` is false at head**: the draft of `late` from the coherent
+session of `FeedCounterexample.base` answers an incoherent session. A control of the claim
+`source-feed-coherent`; its register entry is proposed in the seat's receipt. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.feed_coherent_refuted :
+    ¬ ∀ (o : Oracle) (policy : FeedPolicy) (s next : SourceSession) (e : Edit) (step : Edit.Step),
+      s.Coherent → (s.feed o policy e).value = .ok (next, step) → next.Coherent := by
+  intro h
+  have hv := FeedCounterexample.verdicts.1
+  unfold FeedCounterexample.draftLate at hv
+  split at hv
+  · rename_i next step heq
+    have hcoh := h _ _ _ _ _ _ (SourceSession.open_coherent _ _ _) heq
+    rw [Bool.not_eq_true', decide_eq_false_iff_not] at hv
+    exact hv hcoh
+  · cases hv
+
+/-- **`Doc.coherent` is false at head**, and with it `SourceSession.reached_view`, the pointer of
+`source-session-coherent`: a document that drafts `late` holds an incoherent session. A control
+of the claims `source-document-coherent` and `source-session-coherent`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.doc_coherent_refuted : ¬ ∀ d : Doc, d.session.Coherent := by
+  intro h
+  have hv := FeedCounterexample.verdicts.2.2.2.1
+  unfold FeedCounterexample.docLate at hv
+  split at hv
+  · rename_i d r heq
+    rw [Bool.not_eq_true', decide_eq_false_iff_not] at hv
+    exact hv (h d)
+  · cases hv
+
+/-- **`SourceSession.replay_drafts_view` is false at head**: the replay of the draft of `late`
+shows a table that is not the source table. A control of the claim
+`source-session-draft-transport`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.replay_drafts_view_refuted :
+    ¬ ∀ (app : SigApp) (initial : Sketch) (edits : List Edit) (id : DocId),
+      ∃ session, replayDoc ⟨id,app,initial⟩ (edits.map DocAction.draft) = .ok session ∧
+        session.app = app ∧
+        session.sketch = edits.foldl (fun s e => (s.edit app e).getD s) initial ∧
+        session.view.table = session.sketch.sourceTable app ∧
+        session.view.refusals = session.sketch.sourceRefusals app ∧
+        session.view.type = (session.sketch.sourceCheck app).toOption := by
+  intro h
+  obtain ⟨session, hreplay, -, -, htable, -, -⟩ :=
+    h {} FeedCounterexample.base [.fill [0] FeedCounterexample.late] {}
+  have hv := FeedCounterexample.verdicts.2.2.2.2.1
+  unfold FeedCounterexample.replayLate at hv
+  simp only [List.map_cons, List.map_nil] at hreplay
+  rw [hreplay] at hv
+  rw [Bool.not_eq_true', decide_eq_false_iff_not] at hv
+  exact hv htable
+
+open _root_.Effect4.Program.Check in
+/-- **`SourceSession.feed_undo` is false at head**: from the coherent session of the faulty
+base, drafting `7` at `[0]` and then putting `late` back answers another session. Its implicit
+arguments are explicit here. A control of the claim `source-session-undo`, which the base
+`774ddc3d7` proved over the feed of that time. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.feed_undo_refuted :
+    ¬ ∀ (o : Oracle) (s next : SourceSession) (a : List Nat) (q old : NativeEff)
+      (candidate : Sketch) (step : Edit.Step), s.Coherent →
+      (Node.eff s.sketch.program).at_ a = some (.eff old) →
+      s.sketch.fillAt a q = some candidate →
+      (s.feed o .draft (.fill a q)).value = .ok (next, step) →
+      ∃ back, (next.feed o .draft (.fill a old)).value = .ok (s, back) := by
+  intro h
+  have hv := FeedCounterexample.verdicts.2.2.2.2.2.1
+  unfold FeedCounterexample.undoFaulty at hv
+  split at hv
+  · rename_i next step heq
+    split at hv
+    · rename_i back bstep heq2
+      have hfill : FeedCounterexample.faulty.fillAt [0] FeedCounterexample.seven =
+          some ⟨.bind FeedCounterexample.seven (.provideLayer (.effectDiscard FeedCounterexample.one)
+            false FeedCounterexample.one), []⟩ := rfl
+      have hat : (Node.eff FeedCounterexample.faulty.program).at_ [0] =
+          some (.eff FeedCounterexample.late) := rfl
+      obtain ⟨back', hback⟩ := h Oracle.uncached FeedCounterexample.faultyOpened next [0]
+        FeedCounterexample.seven FeedCounterexample.late _ step
+        (SourceSession.open_coherent _ _ _) hat hfill heq
+      rw [hback] at heq2
+      cases heq2
+      rw [Bool.not_eq_true', decide_eq_false_iff_not] at hv
+      exact hv rfl
+    · cases hv
+  · cases hv
+
+open _root_.Effect4.Program.Check in
+/-- **The first form of `SourceSession.feed_draft`, with no premise on ill-formed references, is
+false**: on the faulty base, a draft of `7` at `[1, 1]`, away from the reference, rechecks since
+the root is refused, while the expansion's edit session splices. A control of the claim
+`source-feed-draft`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.feed_draft_refuted :
+    ¬ ∀ (o : Oracle) (s : SourceSession) (_ : s.Coherent) (e : Edit),
+      ∃ next step, (s.feed o .draft e).value = .ok (next,step) ∧
+        step.edit = e ∧
+        step.replaced = (match (Node.eff s.sketch.program).at_ e.path with
+          | some (.eff old) => some old | _ => none) ∧
+        (match s.sketch.edit s.app e with
+         | none => next = s ∧ step.delta = .unchanged
+         | some candidate =>
+           next.app = s.app ∧ next.sketch = candidate ∧
+           let expanded := EditSession.open s.app s.sketch.expand
+           let reference := match Edit.expanded candidate.expand e with
+             | some edit =>
+               if s.expandedEditAgrees candidate e then expanded.feed edit
+               else (EditSession.open s.app candidate.expand,Edit.Delta.rechecked)
+             | none => (EditSession.open s.app candidate.expand,Edit.Delta.rechecked)
+           next.table = Table.atSource candidate.sites candidate.program.firstRefFault
+             reference.1.table ∧
+             step.delta = reference.2.atSource candidate.sites) := by
+  intro h
+  obtain ⟨next, step, hfeed, -, -, hmatch⟩ := h Oracle.uncached FeedCounterexample.faultyOpened
+    (SourceSession.open_coherent _ _ _) (.fill [1, 1] FeedCounterexample.seven)
+  have hedit : FeedCounterexample.faultyOpened.sketch.edit FeedCounterexample.faultyOpened.app
+      (.fill [1, 1] FeedCounterexample.seven) = some FeedCounterexample.faultyFilled := rfl
+  rw [hedit] at hmatch
+  dsimp only at hmatch
+  obtain ⟨-, -, -, hdelta⟩ := hmatch
+  have hv := FeedCounterexample.verdicts.2.2.2.2.2.2
+  unfold FeedCounterexample.draftFaultyRechecks at hv
+  rw [hfeed] at hv
+  rw [of_decide_eq_true hv] at hdelta
+  exact absurd hdelta (by decide)
+
+open _root_.Effect4.Program.Check in
+/-- **The first form of `SourceSession.feed_keepExact` was false for any filling with
+children**: the kept fill of `wide` splices the whole new subtree, so its delta lists every
+address of the subtree, not the edited address alone. A control of the claim
+`source-feed-keep-exact`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.feed_keepExact_delta_refuted :
+    ¬ ∀ (o : Oracle) (s next : SourceSession) (e : Edit) (step : Edit.Step),
+      s.Coherent → e.path ≠ [] → (s.feed o .keepExact e).value = .ok (next, step) →
+      (s.expandedEditAgrees next.sketch e = true → step.delta = .spliced [e.path]) := by
+  intro h
+  have hv := FeedCounterexample.verdicts.2.2.1
+  unfold FeedCounterexample.keepWide at hv
+  split at hv
+  · rename_i next step heq
+    rw [Bool.and_eq_true, Bool.not_eq_true', decide_eq_false_iff_not] at hv
+    exact hv.1 (h _ _ _ (.fill [0] FeedCounterexample.wide) _ (SourceSession.open_coherent _ _ _)
+      (List.cons_ne_nil 0 []) heq hv.2)
+  · cases hv
+
+open _root_.Effect4.Program.Check in
+/-- **`SourceSession.feed_keepExact` is false at head**: the kept fill of `late` loses the typed
+entry at the edited address. A control of the claim `source-feed-keep-exact`. -/
+@[semantics "initial-algebras-folds"]
+theorem FeedCounterexample.feed_keepExact_refuted :
+    ¬ ∀ (o : Oracle) (s next : SourceSession) (e : Edit) (step : Edit.Step),
+      s.Coherent → e.path ≠ [] → (s.feed o .keepExact e).value = .ok (next, step) →
+      Table.typedAt next.table e.path = Table.typedAt s.table e.path := by
+  intro h
+  have hv := FeedCounterexample.verdicts.2.1
+  unfold FeedCounterexample.keepLate at hv
+  split at hv
+  · rename_i next step heq
+    rw [Bool.not_eq_true', decide_eq_false_iff_not] at hv
+    exact hv (h _ _ _ (.fill [0] FeedCounterexample.late) _ (SourceSession.open_coherent _ _ _)
+      (List.cons_ne_nil 0 []) heq)
+  · cases hv
+
 end Effect4.Program
