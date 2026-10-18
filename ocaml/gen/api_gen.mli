@@ -75,9 +75,14 @@ and 's effect4_run_tree_outcome = {
   stores : stores;
   state : 's;
 }
-and typed = {
-  program : Eff_types.NativeOp.t Eff_types.Eff.t;
-  certificate : Eff_types.NativeOp.t typed_program;
+and check_input =
+    CheckInput_module of sig_app * Eff_types.Row.t list *
+      Eff_types.NativeOp.t Eff_types.Eff.t
+  | CheckInput_part of sig_data * Eff_types.Ty.t list *
+      Eff_types.NativeOp.t Eff_types.Eff.t
+and verdict = {
+  result : (Eff_types.EffTy.t, type_refusal) result;
+  table : entry list;
 }
 and admit_refusal =
     AdmitRefusal_illTyped
@@ -166,18 +171,9 @@ and 'op module_ = {
     ('op Eff_types.Eff.t, effect4_program_authoring_refusal) result;
   types : (string * Eff_types.Ty.t) list;
 }
-and check_input =
-    CheckInput_module of sig_app * Eff_types.Row.t list *
-      Eff_types.NativeOp.t Eff_types.Eff.t
-  | CheckInput_part of sig_data * Eff_types.Ty.t list *
-      Eff_types.NativeOp.t Eff_types.Eff.t
 and sketch = {
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
   holes : Eff_types.Row.t list;
-}
-and verdict = {
-  result : (Eff_types.EffTy.t, type_refusal) result;
-  table : entry list;
 }
 and +!'a checked
 and budget = { fuel : int; compile_fuel : int; }
@@ -878,6 +874,8 @@ and layer_ty = {
   error : Eff_types.Ty.t;
   requires : Eff_types.ServiceKey.t Eff_types.Effect4_row.t;
 }
+and dep_role = DepRole_body of int | DepRole_main | DepRole_layers
+and dep = { role : dep_role; base : int list; input : check_input; }
 and effect4_api_host_session_refusal =
     Effect4_api_host_session_refusal_version
   | Effect4_api_host_session_refusal_session
@@ -1046,6 +1044,11 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope = {
   strategy : Eff_types.FinalizerStrategy.t;
   state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
 }
+and explanation = {
+  refusal : type_refusal;
+  site : site;
+  part : check_input option;
+}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
   popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
@@ -1162,6 +1165,11 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
   | ScopeState_openInline of 'k * 'f
   | ScopeState_openMap of ('k * 'f) list
   | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+and site =
+    Site_address of int list
+  | Site_inCopy of int list * int list
+  | Site_column of int list
+  | Site_application
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
     FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber
   | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
@@ -1283,7 +1291,11 @@ and field_type =
   | FieldType_json
   | FieldType_clockMillis
 and record_shape = { kind : string; fields : (string * field_type) list; }
-and site = { path : string list; template : bool; ty : Eff_types.Ty.t; }
+and effect4_program_formation_site = {
+  path : string list;
+  template : bool;
+  ty : Eff_types.Ty.t;
+}
 and effect4_run_verdict =
     Effect4_run_verdict_played of phase list
   | Effect4_run_verdict_unresolved of sel
@@ -1295,6 +1307,87 @@ and race_name =
   | RaceName_parkOnly
   | RaceName_parkThenSuccess
 and 'u service = { key : Eff_types.ServiceKey.t; value : 'u; }
+and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
+    eff_algebra = {
+  eff_succeed : Eff_types.Term.t -> 'r_eff;
+  eff_fail : Eff_types.Term.t -> 'r_eff;
+  eff_fail_cause : Eff_types.CauseTerm.t -> 'r_eff;
+  eff_sync : Eff_types.Term.t -> 'r_eff;
+  eff_suspend : 'r_eff -> 'r_eff;
+  eff_perform : 'op -> Eff_types.Term.t -> 'r_eff;
+  eff_bind : 'r_eff -> 'r_eff -> 'r_eff;
+  eff_gen : 'r_stmts -> 'r_eff;
+  eff_catch_cause : 'r_eff -> 'r_eff -> 'r_eff;
+  eff_match_cause : 'r_eff -> 'r_eff -> 'r_eff -> 'r_eff;
+  eff_on_exit : 'r_eff -> 'r_eff -> 'r_eff;
+  eff_exit : 'r_eff -> 'r_eff;
+  eff_uninterruptible : 'r_eff -> 'r_eff;
+  eff_interruptible : 'r_eff -> 'r_eff;
+  eff_yield_now : int -> 'r_eff;
+  eff_await_fiber : Eff_types.Term.t -> Eff_types.ObserverMode.t -> 'r_eff;
+  eff_with_fiber : 'r_action -> 'r_eff;
+  eff_scoped : 'r_eff -> 'r_eff;
+  eff_acquire_release : 'r_eff -> 'r_eff -> 'r_eff;
+  eff_provide_layer : 'r_layer -> bool -> 'r_eff -> 'r_eff;
+  eff_service : Eff_types.ServiceKey.t -> 'r_eff;
+  eff_provide_service :
+    Eff_types.ServiceKey.t -> Eff_types.Term.t -> 'r_eff -> 'r_eff;
+  eff_catch_if : Eff_types.Term.t -> 'r_eff -> 'r_eff -> 'r_eff;
+  eff_select :
+    Eff_types.Term.t -> Eff_types.Decision.t -> 'r_eff -> 'r_eff -> 'r_eff;
+  eff_iterate :
+    Eff_types.Ty.t option ->
+    Eff_types.Term.t ->
+    Eff_types.Term.t ->
+    Eff_types.Term.t -> Eff_types.Term.t -> 'r_eff -> 'r_eff;
+  eff_restore : Eff_types.Term.t -> 'r_eff -> 'r_eff;
+  eff_defs :
+    Eff_types.DefDecl.t list -> 'r_effs -> 'r_eff -> 'r_layers -> 'r_eff;
+  eff_invoke : int -> Eff_types.Term.t -> 'r_effs -> 'r_eff;
+  eff_provide_context : Eff_types.Term.t -> 'r_eff -> 'r_eff;
+  stmt_bind_yield : 'r_eff -> 'r_stmt;
+  stmt_yield_discard : 'r_eff -> 'r_stmt;
+  stmt_ret : Eff_types.Term.t -> 'r_stmt;
+  stmt_if_else : Eff_types.Term.t -> 'r_stmts -> 'r_stmts -> 'r_stmt;
+  stmt_while_true : 'r_stmts -> 'r_stmt;
+  stmt_break_loop : 'r_stmt;
+  stmts_nil : 'r_stmts;
+  stmts_cons : 'r_stmt -> 'r_stmts -> 'r_stmts;
+  effs_nil : 'r_effs;
+  effs_cons : 'r_eff -> 'r_effs -> 'r_effs;
+  action_fork : 'r_eff -> Eff_types.ForkOptions.t -> 'r_action;
+  action_fork_in :
+    'r_eff -> Eff_types.ForkOptions.t -> Eff_types.Term.t -> 'r_action;
+  action_fork_scoped : 'r_eff -> Eff_types.ForkOptions.t -> 'r_action;
+  action_run_in : Eff_types.Term.t -> Eff_types.Term.t -> 'r_action;
+  action_interrupt : Eff_types.Term.t -> 'r_action;
+  action_interrupt_scoped : Eff_types.Term.t -> 'r_action;
+  action_interrupt_all :
+    Eff_types.Term.t -> Eff_types.Term.t option -> 'r_action;
+  action_await_all : Eff_types.Term.t -> 'r_action;
+  action_await_all_fail_fast : Eff_types.Term.t -> 'r_action;
+  action_snapshot_children : 'r_action;
+  action_await_new_children : Eff_types.Term.t -> 'r_action;
+  action_race_all : 'r_effs -> 'r_action;
+  action_get_id : 'r_action;
+  action_close_scope : Eff_types.Term.t -> Eff_types.Term.t -> 'r_action;
+  action_get_interruptible : 'r_action;
+  action_race_all_first : 'r_effs -> 'r_action;
+  action_context :
+    Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'r_action;
+  layer_succeed : Eff_types.ServiceKey.t -> Eff_types.Lit.t -> 'r_layer;
+  layer_effect : Eff_types.ServiceKey.t -> 'r_eff -> 'r_layer;
+  layer_effect_discard : 'r_eff -> 'r_layer;
+  layer_provide : 'r_layer -> 'r_layer -> 'r_layer;
+  layer_provide_merge : 'r_layer -> 'r_layer -> 'r_layer;
+  layer_merge : 'r_layer -> 'r_layer -> 'r_layer;
+  layer_fresh : 'r_layer -> 'r_layer;
+  layer_or_die : 'r_layer -> 'r_layer;
+  layer_ref : int list -> 'r_layer;
+  layer_merge_all : 'r_layers -> 'r_layer;
+  layers_nil : 'r_layers;
+  layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
+}
 and record_typing_reason =
     RecordTypingReason_duplicateDeclaration of string
   | RecordTypingReason_duplicateSupplied of string
@@ -1425,87 +1518,6 @@ and runner = {
   fuel : int;
   session : session;
 }
-and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
-    eff_algebra = {
-  eff_succeed : Eff_types.Term.t -> 'r_eff;
-  eff_fail : Eff_types.Term.t -> 'r_eff;
-  eff_fail_cause : Eff_types.CauseTerm.t -> 'r_eff;
-  eff_sync : Eff_types.Term.t -> 'r_eff;
-  eff_suspend : 'r_eff -> 'r_eff;
-  eff_perform : 'op -> Eff_types.Term.t -> 'r_eff;
-  eff_bind : 'r_eff -> 'r_eff -> 'r_eff;
-  eff_gen : 'r_stmts -> 'r_eff;
-  eff_catch_cause : 'r_eff -> 'r_eff -> 'r_eff;
-  eff_match_cause : 'r_eff -> 'r_eff -> 'r_eff -> 'r_eff;
-  eff_on_exit : 'r_eff -> 'r_eff -> 'r_eff;
-  eff_exit : 'r_eff -> 'r_eff;
-  eff_uninterruptible : 'r_eff -> 'r_eff;
-  eff_interruptible : 'r_eff -> 'r_eff;
-  eff_yield_now : int -> 'r_eff;
-  eff_await_fiber : Eff_types.Term.t -> Eff_types.ObserverMode.t -> 'r_eff;
-  eff_with_fiber : 'r_action -> 'r_eff;
-  eff_scoped : 'r_eff -> 'r_eff;
-  eff_acquire_release : 'r_eff -> 'r_eff -> 'r_eff;
-  eff_provide_layer : 'r_layer -> bool -> 'r_eff -> 'r_eff;
-  eff_service : Eff_types.ServiceKey.t -> 'r_eff;
-  eff_provide_service :
-    Eff_types.ServiceKey.t -> Eff_types.Term.t -> 'r_eff -> 'r_eff;
-  eff_catch_if : Eff_types.Term.t -> 'r_eff -> 'r_eff -> 'r_eff;
-  eff_select :
-    Eff_types.Term.t -> Eff_types.Decision.t -> 'r_eff -> 'r_eff -> 'r_eff;
-  eff_iterate :
-    Eff_types.Ty.t option ->
-    Eff_types.Term.t ->
-    Eff_types.Term.t ->
-    Eff_types.Term.t -> Eff_types.Term.t -> 'r_eff -> 'r_eff;
-  eff_restore : Eff_types.Term.t -> 'r_eff -> 'r_eff;
-  eff_defs :
-    Eff_types.DefDecl.t list -> 'r_effs -> 'r_eff -> 'r_layers -> 'r_eff;
-  eff_invoke : int -> Eff_types.Term.t -> 'r_effs -> 'r_eff;
-  eff_provide_context : Eff_types.Term.t -> 'r_eff -> 'r_eff;
-  stmt_bind_yield : 'r_eff -> 'r_stmt;
-  stmt_yield_discard : 'r_eff -> 'r_stmt;
-  stmt_ret : Eff_types.Term.t -> 'r_stmt;
-  stmt_if_else : Eff_types.Term.t -> 'r_stmts -> 'r_stmts -> 'r_stmt;
-  stmt_while_true : 'r_stmts -> 'r_stmt;
-  stmt_break_loop : 'r_stmt;
-  stmts_nil : 'r_stmts;
-  stmts_cons : 'r_stmt -> 'r_stmts -> 'r_stmts;
-  effs_nil : 'r_effs;
-  effs_cons : 'r_eff -> 'r_effs -> 'r_effs;
-  action_fork : 'r_eff -> Eff_types.ForkOptions.t -> 'r_action;
-  action_fork_in :
-    'r_eff -> Eff_types.ForkOptions.t -> Eff_types.Term.t -> 'r_action;
-  action_fork_scoped : 'r_eff -> Eff_types.ForkOptions.t -> 'r_action;
-  action_run_in : Eff_types.Term.t -> Eff_types.Term.t -> 'r_action;
-  action_interrupt : Eff_types.Term.t -> 'r_action;
-  action_interrupt_scoped : Eff_types.Term.t -> 'r_action;
-  action_interrupt_all :
-    Eff_types.Term.t -> Eff_types.Term.t option -> 'r_action;
-  action_await_all : Eff_types.Term.t -> 'r_action;
-  action_await_all_fail_fast : Eff_types.Term.t -> 'r_action;
-  action_snapshot_children : 'r_action;
-  action_await_new_children : Eff_types.Term.t -> 'r_action;
-  action_race_all : 'r_effs -> 'r_action;
-  action_get_id : 'r_action;
-  action_close_scope : Eff_types.Term.t -> Eff_types.Term.t -> 'r_action;
-  action_get_interruptible : 'r_action;
-  action_race_all_first : 'r_effs -> 'r_action;
-  action_context :
-    Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'r_action;
-  layer_succeed : Eff_types.ServiceKey.t -> Eff_types.Lit.t -> 'r_layer;
-  layer_effect : Eff_types.ServiceKey.t -> 'r_eff -> 'r_layer;
-  layer_effect_discard : 'r_eff -> 'r_layer;
-  layer_provide : 'r_layer -> 'r_layer -> 'r_layer;
-  layer_provide_merge : 'r_layer -> 'r_layer -> 'r_layer;
-  layer_merge : 'r_layer -> 'r_layer -> 'r_layer;
-  layer_fresh : 'r_layer -> 'r_layer;
-  layer_or_die : 'r_layer -> 'r_layer;
-  layer_ref : int list -> 'r_layer;
-  layer_merge_all : 'r_layers -> 'r_layer;
-  layers_nil : 'r_layers;
-  layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
-}
 and scheme =
     Scheme_mono of Eff_types.Ty.t list * Eff_types.Ty.t
   | Scheme_variadic of Eff_types.Ty.t * Eff_types.Ty.t
@@ -1615,7 +1627,6 @@ and live
 and fiber_id = int
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher =
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket list
-and 'op typed_program = Eff_types.EffTy.t
 and row_def = Eff_types.Row.t
 and admitted_program = Eff_types.NativeOp.t typed_program
 and deferred_key = int
@@ -1623,6 +1634,7 @@ and memo_map_id = int
 and 'u context = 'u service list
 and scope_store = scope_entry list
 and external_store = string list
+and 'op typed_program = Eff_types.EffTy.t
 val api_evaluate :
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
    int, unit)
@@ -2073,3 +2085,6 @@ val live_start :
 val live_record_restore :
   live_record -> (live, effect4_live_record_refusal) result
 val live_record_save : live -> live_record
+val program_check_extension : hit_rule
+val program_check_explain :
+  oracle -> check_input -> explanation option checked

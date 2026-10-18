@@ -97,7 +97,7 @@ carrier. It is `SigApp.rows_append` at the hole table. Every law of a sketch res
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem SigApp.withHoles_extends (app : SigApp) (holes : RowTable) :
     SigExtends app.signature (app.withHoles holes).signature :=
-  app.rows_append holes
+  SigApp.withHoles_extendsCore app holes
 
 /-- Declaring more holes is appending to the hole table. A step of `sketch_weakening`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]

@@ -1,4 +1,4 @@
-import Effect4.Program.Typing.CheckCache
+import Effect4.Program.Typing.Support
 
 /-!
 # Certified checking
@@ -47,6 +47,119 @@ def run : CheckInput → Verdict
   | .part d env q =>
       let o := Annotate.check d.signature env [] q
       ⟨o.2, o.1⟩
+
+namespace Internal
+def place (base : List Nat) (v : Verdict) : Verdict :=
+  ⟨v.result.mapError ((fun r => ⟨base ++ r.path, r.reason⟩)), v.table.map ((fun e => ⟨base ++ e.path, e.env, e.result.map (fun r => r.mapError (fun why => ⟨base ++ why.path, why.reason⟩))⟩))⟩
+
+inductive DepRole where
+  | body (index : Nat) | main | layers
+deriving DecidableEq
+
+structure Dep where
+  role : DepRole
+  base : List Nat
+  input : CheckInput
+
+def bodyDeps (app : SigApp) (holes : RowTable) (allDecls : List DefDecl) :
+    List DefDecl → Effs NativeOp → Nat → List Nat → List Dep
+  | d :: ds, .cons b bs, index, base =>
+    ⟨.body index, base ++ [0],
+      .part ⟨app, holes, .body allDecls d.params⟩ [d.request.normalize] b⟩ ::
+      bodyDeps app holes allDecls ds bs (index + 1) (base ++ [1])
+  | _, _, _, _ => []
+
+def deps : CheckInput → List Dep
+  | .part .. => []
+  | .module app holes p =>
+    match p.expandRefs with
+    | .defs decls bodies main layers =>
+      bodyDeps app holes decls decls bodies 0 [0] ++
+        [⟨.main, [1], .part ⟨app, holes, .block decls⟩ [] main⟩] ++
+        match layers with
+        | .nil => []
+        | .cons _ _ =>
+          [⟨.layers, [2], .part ⟨app, holes, .block decls⟩ [] (Part.layersProgram layers)⟩]
+    | expanded => [⟨.main, [], .part ⟨app, holes, .root⟩ [] expanded⟩]
+
+def layerPath : List Nat → List Nat
+  | 0 :: 0 :: rest => 2 :: rest
+  | p => p
+
+def layerRefusal (r : TypeRefusal) : TypeRefusal := ⟨layerPath r.path, r.reason⟩
+
+def layerTable (v : Verdict) : List Table.Entry :=
+  v.table.filterMap fun e =>
+    match e.path with
+    | 0 :: 0 :: rest =>
+      some ⟨2 :: rest, e.env, e.result.map fun r => r.mapError layerRefusal⟩
+    | _ => none
+
+def joinBodies : List DefDecl → Effs NativeOp → List Nat → List Verdict →
+    Option (List Table.Entry × Except TypeRefusal Unit × List Verdict)
+  | d :: ds, .cons _body rest, base, v :: vs => do
+    let (tail, checked, unused) ← joinBodies ds rest (base ++ [1]) vs
+    let placed := place (base ++ [0]) v
+    let result : Except TypeRefusal Unit := do
+      unless d.formed do throw ⟨base ++ [0], .definitionColumns d.name⟩
+      let t ← placed.result
+      unless d.admits t do throw ⟨base ++ [0], .bodyNotDeclared d.name t⟩
+      checked
+    pure (⟨base, none, none⟩ :: (placed.table ++ tail), result, unused)
+  | [], .cons body rest, base, vs => do
+    let (tail, _, unused) ← joinBodies [] rest (base ++ [1]) vs
+    let bodyEntries := (Node.addresses (.eff body)).map fun p => ⟨base ++ 0 :: p, none, none⟩
+    pure (⟨base, none, none⟩ :: (bodyEntries ++ tail), .ok (), unused)
+  | _, .nil, base, vs => some ([⟨base, none, none⟩], .ok (), vs)
+  | _ :: _, .cons _ _, _, [] => none
+
+def joinModule (_app : SigApp) (holes : RowTable) (p : NativeEff)
+    (vs : List Verdict) : Option Verdict := do
+  let s : Sketch := ⟨p, holes⟩
+  let (root, table) ←
+    match p.expandRefs with
+    | .defs decls bodies _main layers => do
+      let (bodyTable, bodyResult, remaining) ← joinBodies decls bodies [0] vs
+      match remaining with
+      | mainVerdict :: rest =>
+        let mainPlaced := place [1] mainVerdict
+        let (layerResult, layerEntries) ←
+          match layers, rest with
+          | .nil, [] => some ((.ok () : Except TypeRefusal Unit), [⟨[2], none, none⟩])
+          | .cons _ _, [v] => some (v.result.map (fun _ => ()) |>.mapError layerRefusal, layerTable v)
+          | _, _ => none
+        let root : Except TypeRefusal EffTy := do
+          unless decls.length = bodies.toList.length do
+            throw ⟨[], .definitionsMismatch decls.length bodies.toList.length⟩
+          bodyResult
+          let t ← mainPlaced.result
+          layerResult
+          pure t
+        some (root, ⟨[], some (.env []), some root⟩ ::
+          (bodyTable ++ (mainPlaced.table ++ layerEntries)))
+      | [] => none
+    | _ =>
+      match vs with
+      | [v] => some (v.result, v.table)
+      | _ => none
+  let sourceRoot := match p.firstRefFault with
+    | some (site, target, why) => .error ⟨site, .referenceIllFormed target why⟩
+    | none => root
+  pure ⟨sourceRoot, Table.atSource s.sites p.firstRefFault table⟩
+
+def combine (i : CheckInput) (vs : List Verdict) : Verdict :=
+  if vs.length != (deps i).length then run i
+  else match i with
+    | .part .. => run i
+    | .module app holes p =>
+      match joinModule app holes p vs with
+      | some v => v
+      | none => run i
+
+
+
+end Internal
+open Internal
 
 /-- A certified oracle: the only way a consumer checks. Its agreement field erases. -/
 structure Oracle where
@@ -100,14 +213,21 @@ instance : Monad Checked where
   pure := pure'
   bind := bind'
 
-/-- Ask the oracle and record the key with its answer. Module decomposition lands in V1. -/
+/-- Record actual dependency requests and combine their answers; record one answer for a part. -/
 def ask (o : Oracle) (i : CheckInput) : Checked Verdict :=
-  ⟨o.ask i, [(i, o.ask i)], fun p hp => by
-    simp only [List.mem_singleton] at hp
-    subst hp
-    exact o.agrees i⟩
+  match i with
+  | .part .. => ⟨o.ask i, [(i, o.ask i)], fun p hp => by
+      simp only [List.mem_singleton] at hp
+      subst hp
+      exact o.agrees i⟩
+  | .module .. =>
+    let trace := (deps i).map (fun d => (d.input, o.ask d.input))
+    ⟨combine i (trace.map Prod.snd), trace, fun p hp => by
+      obtain ⟨d, _hd, he⟩ := List.mem_map.mp hp
+      subst p
+      exact o.agrees d.input⟩
 
-theorem ask_value (o : Oracle) (i : CheckInput) : (ask o i).value = run i := o.agrees i
+
 
 end Checked
 
@@ -150,6 +270,35 @@ def HitRule.or (r s : HitRule) : HitRule where
     | inl h => exact r.sound i e h he
     | inr h => exact s.sound i e h he
 
+def extensionHit (i : CheckInput) (e : CheckInput × Verdict) : Bool :=
+  match i, e.1 with
+  | .part newer env p, .part older oldEnv oldP =>
+      decide (oldP = p) && decide (oldEnv = env) && older.extendsB newer &&
+        e.2.result.toBool && supportB older.signature oldP
+  | _, _ => false
+
+def extension : HitRule where
+  hit := extensionHit
+  sound := by
+    intro i e hh hv
+    obtain ⟨old, verdict⟩ := e
+    cases i with
+    | module app holes p =>
+      cases old <;> cases hh
+    | part newer env p =>
+      cases old with
+      | module app holes q => cases hh
+      | part older oldEnv oldP =>
+        simp only [extensionHit, Bool.and_eq_true, decide_eq_true_eq] at hh
+        obtain ⟨⟨⟨⟨hq, henv⟩, he⟩, _positive⟩, hs⟩ := hh
+        subst oldP
+        subst oldEnv
+        exact hv.trans (congrArg (fun out : List Table.Entry × Except TypeRefusal EffTy =>
+          (⟨out.2, out.1⟩ : Verdict)) (guarded_extends p env he hs))
+
+
+
+
 /-- A memo-backed oracle under a sound hit rule: a hit, else `run`. -/
 def Memo.oracle (m : Memo) (r : HitRule) : Oracle where
   ask i := match m.entries.find? (r.hit i) with
@@ -168,6 +317,47 @@ def Memo.oracle (m : Memo) (r : HitRule) : Oracle where
 
 /-- The native export of the existing value projection. -/
 def Checked.readVerdict (c : Checked Verdict) : Verdict := c.value
+
+inductive Site where
+  | address (path : List Nat)
+  | inCopy (site path : List Nat)
+  | column (at_ : List Nat)
+  | application
+
+structure Explanation where
+  refusal : TypeRefusal
+  site : Site
+  part : Option CheckInput
+
+def locatedResult (d : Dep) (v : Verdict) : Except TypeRefusal EffTy :=
+  match d.role with
+  | .layers => v.result.mapError layerRefusal
+  | _ => (place d.base v).result
+
+def refusalSite (i : CheckInput) (why : TypeRefusal) : Site :=
+  match i with
+  | .part .. => .address why.path
+  | .module _ _ p =>
+    match (p.refSites []).find? (fun site => site.1.isPrefixOf why.path && decide (site.1 ≠ why.path)) with
+    | some (site,_) => .inCopy site why.path
+    | none =>
+      match why.reason with
+      | .definitionColumns _ => .column why.path
+      | _ => .address why.path
+
+/-- Explain an actual answer. Only an actual local refusal populates part. -/
+def explain (o : Oracle) (i : CheckInput) : Checked (Option Explanation) :=
+  let checked := Checked.ask o i
+  checked.bind' fun verdict => pure <|
+    match verdict.result with
+    | .ok _ => none
+    | .error why =>
+      let localPart := match i with
+        | .part .. => some i
+        | .module .. =>
+          (((deps i).zip checked.trace).find? (fun (d,e) =>
+            decide (locatedResult d e.2 = .error why))).map (fun (d,_) => d.input)
+      some ⟨why,refusalSite i why,localPart⟩
 
 end Check
 end Effect4.Program

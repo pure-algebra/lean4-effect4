@@ -48,3 +48,8 @@
  (name test_seams_s0)
  (modules test_seams_s0)
  (libraries effect4_gen effect4_eff))
+
+(test
+ (name test_seams_v1)
+ (modules test_seams_v1)
+ (libraries effect4_gen effect4_eff))

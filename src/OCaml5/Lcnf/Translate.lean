@@ -1096,10 +1096,12 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
                          result := if tyIsAnon result then none else some result, body := body }
     let callees := (← get).calls
     let sig := s!"{d.name}{sketchParams d.params} : {sketchType rty}"
+    -- Specialization can move a self-call into another helper while retaining the source flag.
+    -- Only an actual free reference to this emitted binding needs a recursive singleton.
     return { leanName := d.name, userName := userName, ocamlName := ocamlName, bind := b,
              callees := callees, externDeps := (← get).externDeps,
              freeRefs := (← get).freeRefs, externHeads := (← get).externHeads, signature := sig,
-             recursive := d.recursive || callees.contains d.name }
+             recursive := (← get).freeRefs.contains ocamlName }
   -- A join point is translated before the jumps to it, so which of its parameters are handed
   -- a carrier is known only after a pass: translate again with those parameters seeded until
   -- a pass finds nothing new. The variables are the declaration's own, so they are the same

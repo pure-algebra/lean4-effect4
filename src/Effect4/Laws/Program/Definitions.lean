@@ -62,24 +62,8 @@ variable {Op : Type}
 
 /-! ## The block's signature -/
 
-/-- At an operation that invokes no definition, the block's signature has the signature's own
-domain bit. A step of `defs_check_agreeOn`. -/
-theorem Signature.withDefs_dom_of_none (sig : Signature Op) (decls : List DefDecl) {op : Op}
-    (h : sig.callOf op = none) : (sig.withDefs decls).dom op = sig.dom op := by
-  simp only [Signature.withDefs, h]
 
-/-- At an operation that invokes no definition, the block's signature has the signature's own
-row. A step of `defs_check_agreeOn`. -/
-theorem Signature.withDefs_rowOf_of_none (sig : Signature Op) (decls : List DefDecl) {op : Op}
-    (h : sig.callOf op = none) : (sig.withDefs decls).rowOf op = sig.rowOf op := by
-  simp only [Signature.withDefs, h]
 
-/-- The invocation of definition `k` is in the block's domain exactly when the block has a
-definition `k` that takes no program (decisions rows 328 and 340). A step of `invoke_hasTy`. -/
-theorem Signature.withDefs_dom_call (sig : Signature Op) (decls : List DefDecl) {op : Op}
-    {k : Nat} (h : sig.callOf op = some k) :
-    (sig.withDefs decls).dom op = decls[k]?.any (·.params.isEmpty) := by
-  simp only [Signature.withDefs, h]
 
 /-- An invocation in the block's domain names a definition of the block, and that definition
 takes no program (decisions row 340). The step that the readers and the typed run's
@@ -99,12 +83,6 @@ theorem Signature.withDefs_dom_call_lt (sig : Signature Op) (decls : List DefDec
   obtain ⟨d, hk, -⟩ := sig.withDefs_dom_call_some decls h hd
   exact (List.getElem?_eq_some_iff.mp hk).1
 
-/-- The invocation of definition `k` reads the row that definition `k` declares, in normal form.
-A step of `invoke_hasTy`. -/
-theorem Signature.withDefs_rowOf_call (sig : Signature Op) (decls : List DefDecl) {op : Op}
-    {k : Nat} {d : DefDecl} (h : sig.callOf op = some k) (hd : decls[k]? = some d) :
-    (sig.withDefs decls).rowOf op = d.row.normalizeTypes := by
-  simp only [Signature.withDefs, h, hd]
 
 /-- **An empty block changes nothing** at a signature that keeps every invocation outside its
 domain, as an application's does (`SigApp.signature_callsOutside`). A step of `rootCode_typed`
@@ -474,70 +452,7 @@ theorem checkModule_complete (sig : Signature Op) (e : Eff Op) (t : EffTy)
 laws of the whole program's typing are the module's: its judgment (`ModuleHasTy`), its
 monotonicity along an extension, and, on a program with no block, the checker's own answer. -/
 
-/-- **A block extends both signatures alike**: an extension keeps which operations are
-invocations (`SigExtends.callOf`), so it extends the block's signature too. A step of
-`moduleHasTy_ext`. -/
-theorem SigExtends.withDefs {s s' : Signature Op} (h : SigExtends s s') (decls : List DefDecl) :
-    SigExtends (s.withDefs decls) (s'.withDefs decls) := by
-  refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf,
-    fun k d hk => ?_, h.paramOf, h.types⟩
-  rotate_left
-  · -- the block's declaration first, then the signature's, which the extension keeps
-    show decls[k]?.or (s'.defOf k) = some d
-    cases hdk : decls[k]? with
-    | some d' =>
-      change decls[k]?.or (s.defOf k) = some d at hk
-      rw [hdk] at hk
-      exact hk
-    | none =>
-      change decls[k]?.or (s.defOf k) = some d at hk
-      rw [hdk] at hk
-      exact h.defOf k d hk
-  cases hc : s.callOf op with
-  | none =>
-    have hc' : s'.callOf op = none := by rw [h.callOf]; exact hc
-    rw [s.withDefs_dom_of_none decls hc] at hd
-    rw [s'.withDefs_dom_of_none decls hc', s'.withDefs_rowOf_of_none decls hc',
-      s.withDefs_rowOf_of_none decls hc]
-    exact h.row op hd
-  | some k =>
-    have hc' : s'.callOf op = some k := by rw [h.callOf]; exact hc
-    rw [s.withDefs_dom_call decls hc] at hd
-    refine ⟨by rw [s'.withDefs_dom_call decls hc']; exact hd, ?_⟩
-    obtain ⟨d, hdk⟩ : ∃ d, decls[k]? = some d := by
-      cases hk : decls[k]? with
-      | none => rw [hk] at hd; cases hd
-      | some d => exact ⟨d, rfl⟩
-    rw [s'.withDefs_rowOf_call decls hc' hdk, s.withDefs_rowOf_call decls hc hdk]
 
-/-- **A body's parameters extend both signatures alike** (decisions row 340): an extension keeps
-which operations run parameters (`SigExtends.paramOf`), so it extends the body's signature too.
-A step of `bodiesHasTy_ext`. -/
-theorem SigExtends.withParams {s s' : Signature Op} (h : SigExtends s s') :
-    ∀ ps : List ParamDecl, SigExtends (s.withParams ps) (s'.withParams ps)
-  | [] => h
-  | q :: qs => by
-    refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf,
-      h.defOf, h.paramOf, h.types⟩
-    have hp : s'.paramOf op = s.paramOf op := by rw [h.paramOf]
-    cases hc : s.paramOf op with
-    | none =>
-      have hc' : s'.paramOf op = none := by rw [hp, hc]
-      simp only [Signature.withParams, hc] at hd
-      simp only [Signature.withParams, hc, hc']
-      exact h.row op hd
-    | some i =>
-      have hc' : s'.paramOf op = some i := by rw [hp, hc]
-      constructor
-      · simp only [Signature.withParams, hc] at hd
-        simp only [Signature.withParams, hc']
-        exact hd
-      · simp only [Signature.withParams, hc', hc]
-        cases hi : (q :: qs)[i]? with
-        | some d => rfl
-        | none =>
-          simp only [Signature.withParams, hc] at hd
-          exact absurd (of_decide_eq_true hd) (Nat.not_lt.mpr (List.getElem?_eq_none_iff.mp hi))
 
 /-- **A body's parameters extend a signature that keeps every parameter's run outside its
 domain** (decisions row 340), as an application's signature does. A step of

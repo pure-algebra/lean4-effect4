@@ -48,104 +48,7 @@ smaller signature: at a leaf it is the checker's answer, whose algebra agrees
 theorem Annotate.check_alg_agreeOn {s s' : Signature Op} (h : SigExtends s s') :
     (Annotate.check.alg s').AgreeOn (Annotate.check.alg s) (SigOkOp s) (SigOkKey s)
       (SigOkDef s) := by
-  have hterm := term?_ext h
-  have hcause := cause?_ext h
-  have hbody : bodyRequires s' = bodyRequires s := funext h.bodyRequires
-  exact {
-    eff_succeed := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_fail := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_failCause := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_sync := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_suspend := rfl
-    eff_perform := fun op hd => by
-      have hdom : s.dom op = true := hd
-      simp only [Annotate.check.alg, Checker.check, hterm, (h.row op hdom).1, (h.row op hdom).2,
-        hdom, h.termUse]
-    eff_bind := rfl
-    eff_gen := rfl
-    eff_catchCause := rfl
-    eff_matchCause := rfl
-    eff_onExit := rfl
-    eff_exit := rfl
-    eff_uninterruptible := rfl
-    eff_interruptible := rfl
-    eff_yieldNow := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_awaitFiber := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_withFiber := rfl
-    eff_scoped := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_acquireRelease := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_provideLayer := rfl
-    eff_service := fun key hk => by
-      obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
-      simp only [Annotate.check.alg, Checker.check, h.service key ty hty, hty]
-    eff_provideService := fun key hk => by
-      obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
-      simp only [Annotate.check.alg, h.service key ty hty, hty, hterm]
-    eff_provideContext := by simp only [Annotate.check.alg, hterm]
-    eff_catchIf := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_select := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey, h.types]
-    eff_iterate := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_restore := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    eff_defs := rfl
-    eff_invoke := fun k hk => by
-      obtain ⟨d, hd⟩ := Option.isSome_iff_exists.mp hk
-      simp only [Annotate.check.alg, h.defOf k d hd, hd, hterm]
-    stmt_bindYield := rfl
-    stmt_yieldDiscard := rfl
-    stmt_ret := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    stmt_ifElse := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    stmt_whileTrue := rfl
-    stmt_breakLoop := rfl
-    stmts_nil := rfl
-    stmts_cons := rfl
-    effs_nil := rfl
-    effs_cons := rfl
-    action_fork := rfl
-    action_forkIn := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_forkScoped := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_runIn := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_interrupt := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_interruptScoped := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_interruptAll := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_awaitAll := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_awaitAllFailFast := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_snapshotChildren := rfl
-    action_awaitNewChildren := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_raceAll := rfl
-    action_raceAllFirst := rfl
-    action_context := fun keys hk => by
-      apply Prod.ext
-      · rfl
-      · funext env p
-        have old : ∀ key ∈ keys.elems, ∃ carrier, s.serviceTy key = some carrier :=
-          fun key hkey => Option.isSome_iff_exists.mp (hk key hkey)
-        have newer : ∀ key ∈ keys.elems, ∃ carrier, s'.serviceTy key = some carrier := by
-          intro key hkey
-          obtain ⟨carrier, hc⟩ := old key hkey
-          exact ⟨carrier, h.service key carrier hc⟩
-        simp only [Annotate.check.alg]
-        rw [checkAction_complete s' (.context keys) env _ (.context newer) p,
-          checkAction_complete s (.context keys) env _ (.context old) p]
-    action_getId := rfl
-    action_closeScope := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_getInterruptible := rfl
-    layer_succeed := fun key hk => by
-      obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
-      simp only [Annotate.check.alg, Checker.checkLayer, h.service key ty hty, hty]
-    layer_effect := fun key hk => by
-      obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
-      simp only [Annotate.check.alg, h.service key ty hty, hty, hbody]
-    layer_effectDiscard := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    layer_provide := rfl
-    layer_provideMerge := rfl
-    layer_merge := rfl
-    layer_fresh := rfl
-    layer_orDie := rfl
-    layer_ref := rfl
-    layer_mergeAll := rfl
-    layers_nil := rfl
-    layers_cons := rfl
-  }
+  exact Annotate.check_alg_agreeOnCore h
 
 /-- **The annotating traversal answers the same at an extension**, on a program that reads only
 the smaller signature. The fold congruence at `Annotate.check_alg_agreeOn`. A step of
@@ -154,8 +57,7 @@ the smaller signature. The fold congruence at `Annotate.check_alg_agreeOn`. A st
 theorem Annotate.check_restrict {s s' : Signature Op} (h : SigExtends s s') {e : Eff Op}
     (hp : SigProgram s e) (env : TyEnv) (p : List Nat) :
     Annotate.check s' env p e = Annotate.check s env p e := by
-  rw [Annotate.check.eq_cata, Annotate.check.eq_cata]
-  rw [cata_eff_congr_on (Annotate.check_alg_agreeOn h) e hp]
+  exact Annotate.check_restrictCore h hp env p
 
 /-- The bodies' spine answers the same at an extension. A step of `omit-splices-table`. Its
 consumer is `annotateModule_restrict`. -/

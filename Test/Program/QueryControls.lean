@@ -51,7 +51,9 @@ def text : NativeEff := .succeed (.lit (.str "x"))
 #guard (answer (ask "check" original)).result == checkJson ((original : Sketch).check {})
 #guard (answer (ask "check" original)).result ==
   checkJson (.ok ⟨.nat, .never, Requirement.empty⟩)
-#guard (answer (ask "check" original)).laws == [``Sketch.check_program]
+#guard (answer (ask "check" original)).laws == [``Check.run_module]
+-- control: the retired checker owner is not the operational query law
+#guard (answer (ask "check" original)).laws != [``Sketch.check_program]
 -- red (tested): a refused program has an answer, and the answer is the first refusal
 #guard ((answer (ask "check" twoBad)).result.getObjVal? "refusal").toOption ==
   (explain sig [] twoBad).map refusalJson

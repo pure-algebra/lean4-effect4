@@ -289,6 +289,21 @@ def registry : Registry where
     { id := "type-metadata-exact", concept := "exact-codecs", role := .compatibility
       title := "Structural TypeScript metadata retains the exact stored Ty declaration"
       pointer := .witness `Effect4.Codegen.Metadata.type_metadata_exact },
+    { id := "checker-combine-deps", concept := "initial-algebras-folds", role := .compatibility
+      title := "The combined actual dependency answers equal the complete verdict. This includes source layer projection for every module and part key; no admission, native execution, or progress claim (seams V1, R14)"
+      pointer := .witness `Effect4.Program.Check.combine_deps },
+    { id := "checker-placed-verdict", concept := "initial-algebras-folds", role := .compatibility
+      title := "A part verdict placed at a base equals checking that part at the base, including the complete annotation table; no admission, native execution, or progress claim (seams V1, R14)"
+      pointer := .witness `Effect4.Program.Check.run_placed },
+    { id := "checker-part-extension", concept := "initial-algebras-folds", role := .compatibility
+      title := "A positive part verdict agrees at an extending signature, including the complete annotation table. Negative and module reuse are excluded; no admission, native execution, or progress claim (seams V1, R14)"
+      pointer := .witness `Effect4.Program.Check.run_part_extends },
+    { id := "checker-explanation-replays", concept := "initial-algebras-folds", role := .compatibility
+      title := "A selected local explanation names an actual dependency with its exact placed refusal. Aggregate failures need no invented part; no admission, native execution, or progress claim (seams V1, R14)"
+      pointer := .witness `Effect4.Program.Check.explain_replays },
+    { id := "checker-ask-value", concept := "host-session-protocol", role := .compatibility
+      title := "Every certified oracle ask returns the exact uncached verdict. Semantic traces contain answers and exclude invocation counts; no admission, native execution, or progress claim (seams V1, R14)"
+      pointer := .witness `Effect4.Program.Check.Checked.ask_value },
     { id := "checker-oracle-agrees", concept := "host-session-protocol", role := .compatibility
       title := "Every certified checker oracle equals the uncached checker on the complete verdict; no arbitrary native callback or forged package is admitted (seams S0, R6 and R14)"
       pointer := .witness `Effect4.Program.Check.Oracle.eq_uncached },

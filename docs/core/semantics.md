@@ -1191,7 +1191,7 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
 - **Inhabitation characterization (`inhabited-iff-fits`)**: Syntactic `inhabited` fold characterizes semantic non-emptiness in `Fits`.
   (`inhabited_iff_fits` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Fold congruence (`cata-eff-congr-on`)**: Fold congruence over agreeing algebra implementations
-  (`cata_eff_congr_on` (`src/Effect4/Laws/Program/Signature.lean`)).
+  (`cata_eff_congr_on` (`src/Effect4/Program/Typing/SignatureSupport.lean`)).
 - **Traversal census maintenance**: 100% fold coverage enforced by `#traversal_census`.
 - **Operation data scoped (`operation-data-scoped`)**: the scope fold decides a `perform` node
   from its operation's own data, read by the alphabet's `ScopedOp`, and from its request
@@ -1244,6 +1244,15 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   (`src/Effect4/Laws/Program/Definitions.lean`)). A block stands at the root only. The checker
   refuses a block below the root. Neither the rule nor the check says that a declared row is
   inhabited, or that a body terminates.
+- **`checker-combine-deps`**: The combined actual dependency answers equal the complete verdict. This includes source layer projection for every module and part key.
+  The pointer is `Check.combine_deps` in `src/Effect4/Laws/Program/CheckAgreement.lean`.
+- **`checker-placed-verdict`**: A part verdict placed at a base equals checking that part at the base, including the complete annotation table.
+  The pointer is `Check.run_placed` in `src/Effect4/Laws/Program/CheckAgreement.lean`.
+- **`checker-part-extension`**: A positive part verdict agrees at an extending signature, including the complete annotation table. Negative and module reuse are excluded.
+  The pointer is `Check.run_part_extends` in `src/Effect4/Laws/Program/CheckAgreement.lean`.
+- **`checker-explanation-replays`**: A selected local explanation names an actual dependency with its exact placed refusal. Aggregate failures need no invented part.
+  The pointer is `Check.explain_replays` in `src/Effect4/Laws/Program/CheckAgreement.lean`.
+  These compatibility properties serve R14 and establish no program admission, progress, or native execution.
 - **The replacement law (`typed-replacement`)**: a typed node splits at an address of a program
   into an environment and a type of the focus. Every program of that type in that environment
   stands in the focus's place, under every extension of the typing signature
@@ -1442,6 +1451,9 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 (`src/Effect4/Api/HostProtocol.lean:48`). External answers are submitted through `HostSession.submit` and applied via `HostSession.applyReply`.
 
 #### 4. Required Properties and Obligations
+- **Exact checker asks (`checker-ask-value`)**: Every certified oracle ask returns the exact uncached verdict.
+  `Check.Checked.ask_value` states this property in `src/Effect4/Laws/Program/CheckAgreement.lean`.
+  It serves R6 and R14; native execution and invocation counts remain outside its observation.
 - **Checker substitution (`checker-oracle-agrees`)**: Every certified checker oracle equals the uncached checker.
   `Check.Oracle.eq_uncached` states this equality in `src/Effect4/Program/Check.lean`.
   Its agreement premise fixes the entire verdict, including the annotation table.

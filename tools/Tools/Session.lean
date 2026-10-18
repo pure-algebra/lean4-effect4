@@ -55,7 +55,7 @@ one.
 | `replace` (also `fill`, `commit`) | `path`, `replacement` (hex) or `replacementJson`, the whole target (`docName`, `docGeneration`, `revision`, and `expected` or `expectedJson`), `policy` | atomic checked replacement (`Doc.commit`): the new revision, the delta and the view, or a located refusal; a request without its replacement or any part of its target is refused | `Doc.commit_sound`, `SourceSession.reached_view` |
 | `omit` | `path`, `holeName`, the whole target, `policy` | atomic checked omission (`Doc.commit`): a hole row of the focus's type in the program's place | the same |
 | `draft` | `path`, and `replacement` / `replacementJson` or `holeName` | the one unchecked edit (`Doc.draft`) | the law the delta took, `SourceSession.feed_coherent`, `SourceSession.reached_view` |
-| `suggest` | `path`, `candidates` or `candidatesJson`, `limit`, `cursor` | candidate fillings at the focus, each with its cached or computed verdict (`CheckCache.suggest`) | `sketchSigData_signature`, `CheckCache.lookup_sound`, `CheckCache.evaluateCandidate_valid_and_sound` |
+| `suggest` | `path`, `candidates` or `candidatesJson`, `limit`, `cursor` | candidate fillings at the focus, each with its cached or computed verdict (`CheckCache.suggest`) | `sketchSigData_signature`, `Check.Oracle.eq_uncached`, `Check.run_part_extends` |
 | `fills.add` | `fills` or `fillsJson`, or `path` with `replacement` / `replacementJson` | each fill's outcome at the set's base (`FillSet.add`): applied, collapsed or refused at its address; a set opened at an earlier revision refuses | `FillSet.add_wf` |
 | `fills.view` | nothing | the set's fills in the base's address order, its revision, and whether the document has moved past it | `ordered_congr` |
 | `fills.reset` | nothing | a new set at the document's current revision, and the fills discarded | none |
@@ -125,8 +125,8 @@ structure State where
   generation : Nat := 0
   /-- the persistent live session, once started or loaded -/
   live : Option Effect4.Live := none
-  /-- the checker-verdict cache across candidate searches -/
-  cache : List CheckCache.Entry := []
+  /-- the certified in-process memo across candidate searches -/
+  cache : Check.Memo := Check.Memo.empty
   /-- the fixed-base fill set (`FillSet`) for parallel fills -/
   fills : Option FillSet := none
 
@@ -474,14 +474,13 @@ def sigDataJson (d : SigData) : Json :=
 /-- Candidate contextual evidence (`CheckCache.Evidence`) as JSON. -/
 def evidenceJson (sig : Signature NativeOp) (prog : Option NativeEff) :
     CheckCache.Evidence → Json
-  | .exactFit ty fromCache =>
-    Json.mkObj [("kind", .str "exactFit"), ("type", effTyJson ty), ("fromCache", toJson fromCache)]
-  | .typeMismatch expected actual fromCache =>
+  | .exactFit ty =>
+    Json.mkObj [("kind", .str "exactFit"), ("type", effTyJson ty)]
+  | .typeMismatch expected actual =>
     Json.mkObj [("kind", .str "typeMismatch"), ("expected", effTyJson expected),
-      ("actual", effTyJson actual), ("fromCache", toJson fromCache)]
-  | .refused why fromCache =>
-    Json.mkObj [("kind", .str "refused"), ("refusal", refusalJson why prog sig),
-      ("fromCache", toJson fromCache)]
+      ("actual", effTyJson actual)]
+  | .refused why =>
+    Json.mkObj [("kind", .str "refused"), ("refusal", refusalJson why prog sig)]
   | .differentEnv sourceEnv targetEnv =>
     Json.mkObj [("kind", .str "differentEnv"), ("sourceEnv", printJson sourceEnv),
       ("targetEnv", printJson targetEnv)]
@@ -492,7 +491,7 @@ def suggestionJson (sig : Signature NativeOp) (s : CheckCache.Suggestion)
   Json.mkObj <|
     [("programJson", printJson s.program),
       ("sourcePath", match s.sourcePath with | some p => toJson p | none => .null),
-      ("env", printJson s.key.env),
+      ("env", printJson (match s.key with | .part _ env _ => env | .module .. => [])),
       ("evidence", evidenceJson sig (some s.program) s.evidence)] ++
     if hex then [("program", .str (toHex s.program))] else []
 
@@ -508,7 +507,6 @@ def suggestResultJson (res : CheckCache.SuggestResult) (hex : Bool := false) : J
     ("context", sigDataJson res.sig),
     ("env", printJson res.env),
     ("expected", effTyJson res.expected),
-    ("cacheEntries", toJson res.cache.length),
     ("suggestions", Json.arr (res.suggestions.map fun s => suggestionJson sig s hex).toArray)]
 
 /-- A fill addition refusal (`AddRefusal`) as JSON. -/
@@ -806,13 +804,15 @@ def answer (st : State) (req : Request) : State × Answer :=
           (st, unreadable (α := List NativeEff) req.op "the candidate programs do not read"
             req.candidatesJson req.id)
         | some supplied =>
-          match CheckCache.suggest d st.cache req.path req.limit req.cursor supplied with
+          let checked := CheckCache.suggest (st.cache.oracle (Check.HitRule.exact.or Check.extension))
+            d req.path req.limit req.cursor supplied
+          let learned := st.cache.learn checked
+          match checked.value with
           | none => none' "no typed focus at the address"
           | some res =>
-            let st' := { st with cache := res.cache }
+            let st' := { st with cache := learned }
             (st', Answer.mk op st.app
-              (supLaws ++ [``sketchSigData_signature, ``CheckCache.lookup_sound,
-                ``CheckCache.evaluateCandidate_valid_and_sound]).eraseDups
+              (supLaws ++ [``sketchSigData_signature, ``Check.Oracle.eq_uncached]).eraseDups
               true (suggestResultJson res req.hex) none req.id)
       | "fills.add" =>
         let fs0 := st.fillsFor d

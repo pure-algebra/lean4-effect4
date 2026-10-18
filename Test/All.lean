@@ -288,6 +288,7 @@ import Test.Audit.RuntimeCoverage
 import Test.Audit.ClockLowering
 import Test.Audit.LetReturn
 import Test.Audit.ConstructorOwners
+import Test.Audit.SeamsRecursion
 import Test.Audit.AxiomGate
 import Test.Audit.PositionAnalysis
 import Test.Audit.TypedStateDecl

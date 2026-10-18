@@ -12,8 +12,8 @@ Effect4.Run.Tree.Plain._lam_7	run_tree_plain__lam_7	false	0	0	0	0	0	1	0	0	0	0	0	
 Effect4.Program.foldMap_eff._redArg	program_fold_map_eff	true	86	0	0	0	1	22	0	0	0	0	32	54	0	0	0	0	0	0	0	0	406	0	21	1	1	0	4624667903562043373	Effect4.Program.foldMap_eff	false
 Effect4.Run.Tree.Plain._lam_1	run_tree_plain__lam_1	false	2	0	0	0	2	13	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	12	2	1	0	14337339730421699797	Effect4.Run.Tree.Plain._lam_1	false
 Effect4.Program.foldMap_stmts._redArg	program_fold_map_stmts	true	6	0	0	0	1	2	0	0	0	0	2	4	0	0	0	0	0	0	0	0	26	0	2	0	1	0	6436640612283155587	Effect4.Program.foldMap_stmts	false
-Effect4.Program.foldMap_action._redArg	program_fold_map_action	true	16	0	0	0	1	6	0	0	0	0	5	11	0	0	0	0	0	0	0	0	66	0	5	1	1	0	10946828276172614323	Effect4.Program.foldMap_action	false
+Effect4.Program.foldMap_action._redArg	program_fold_map_action	false	16	0	0	0	1	6	0	0	0	0	5	11	0	0	0	0	0	0	0	0	66	0	5	1	1	0	10946828276172614323	Effect4.Program.foldMap_action	false
 Effect4.Program.foldMap_layer._redArg	program_fold_map_layer	true	31	0	0	0	1	9	0	0	0	0	11	20	0	0	0	0	0	0	0	0	141	0	8	1	1	0	6684381523484413401	Effect4.Program.foldMap_layer	false
 Effect4.Program.foldMap_effs._redArg	program_fold_map_effs	true	6	0	0	0	1	2	0	0	0	0	2	4	0	0	0	0	0	0	0	0	26	0	2	0	1	0	396455810871807274	Effect4.Program.foldMap_effs	false
 Effect4.Program.foldMap_layers._redArg	program_fold_map_layers	true	6	0	0	0	1	2	0	0	0	0	2	4	0	0	0	0	0	0	0	0	26	0	2	0	1	0	2205798620707169542	Effect4.Program.foldMap_layers	false
-Effect4.Program.foldMap_stmt._redArg	program_fold_map_stmt	true	15	0	0	0	1	5	0	0	0	0	5	10	0	0	0	0	0	0	0	0	65	0	4	1	1	0	12178543258006351058	Effect4.Program.foldMap_stmt	false
+Effect4.Program.foldMap_stmt._redArg	program_fold_map_stmt	false	15	0	0	0	1	5	0	0	0	0	5	10	0	0	0	0	0	0	0	0	65	0	4	1	1	0	12178543258006351058	Effect4.Program.foldMap_stmt	false

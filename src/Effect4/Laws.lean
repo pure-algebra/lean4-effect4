@@ -435,6 +435,7 @@ import Effect4.Laws.Program.SourceDocument
 import Effect4.Laws.Api.LiveRecord
 import Effect4.Laws.Api.Preview
 import Effect4.Laws.Program.Typing.CheckCache
+import Effect4.Laws.Program.CheckAgreement
 import Effect4.Laws.Program.FillSet
 
 /-!

@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.CheckAgreement
 import Effect4.Program.Sketch
 import Effect4.Program.SketchWire
 import Effect4.Program.Typing.Table
@@ -20,7 +21,7 @@ prints one answer for each: it is `answerLine` and nothing more.
 
 | Operation | Function | The law that an answer names |
 | --- | --- | --- |
-| `check` | `Sketch.check` | `Sketch.check_program` |
+| `check` | `Check.run` | `Check.run_module` |
 | `addresses` | `Node.addresses` | `mem_addresses_iff` |
 | `focus` | `Sketch.focusAt` | at the root, `Sketch.focusAt_nil` and `checkModule_sound`; elsewhere `focusAt_typed`, at the part that holds the address; where the focus is answered |
 | `table` | `Sketch.table` | `mem_addresses_iff`, `Sketch.table_head` |
@@ -386,7 +387,7 @@ def answer (req : Request) : Answer :=
     let done (laws : List Lean.Name) (result : Json) : Answer :=
       { op := req.op, laws, ok := true, result, id := req.id }
     match req.op with
-    | "check" => done [``Sketch.check_program] (checkJson (sketch.check {}) (some program) sig)
+    | "check" => done [``Check.run_module] (checkJson (Check.run (.module {} sketch.holes sketch.program)).result (some program) sig)
     | "addresses" => done [``mem_addresses_iff] (toJson (Node.addresses (.eff program)))
     | "focus" =>
       -- the root's focus is the module check's answer, which may be a block's; any other is the
@@ -418,7 +419,7 @@ def answer (req : Request) : Answer :=
             (Json.mkObj [("program", .str (hexOf omitted.program)),
               ("holes", toJson omitted.holes.length), ("needsHoleTable", .bool true),
               ("holeTable", .str (toHex omitted.holes)),
-              ("check", checkJson (omitted.check {}) (some omitted.program)
+              ("check", checkJson (Check.run (.module {} omitted.holes omitted.program)).result (some omitted.program)
                 (({} : SigApp).withHoles omitted.holes).signature)])
     | "fill" =>
       match req.replacement.bind (ofHex? (α := NativeEff)) with
@@ -433,7 +434,7 @@ def answer (req : Request) : Answer :=
           done (if matched then [``Sketch.check_fill_focusAt] else [])
             (Json.mkObj [("program", .str (hexOf filled.program)),
               ("matchedFocus", .bool matched),
-              ("check", checkJson (filled.check {}) (some filled.program) sig)])
+              ("check", checkJson (Check.run (.module {} filled.holes filled.program)).result (some filled.program) sig)])
     | other => refused other s!"unknown operation {other}" req.id
 
 /-! ## The driver's one function -/

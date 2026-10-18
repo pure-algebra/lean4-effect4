@@ -1,3 +1,4 @@
+import Effect4.Program.Check
 import Effect4.Run.Tree
 import Effect4.Api.RefusalsDerived
 import Effect4.Api.RunnerDerived
@@ -35,7 +36,7 @@ open Effect4 Effect4.Store Effect4.Program Effect4.Machine
 /-- **The checker's answer**: the program's type at the application, or where and why it is
 refused (`Api.check`, which is total by `Api.explain_none_iff`). -/
 def check (app : SigApp) (program : NativeEff) : Except TypeRefusal EffTy :=
-  (Api.check program app).map (·.certificate.ty)
+  (Check.run (.module app [] program)).result
 
 /-- **Program admission**, as far as the native route lowers it (`Program.admitProgram`): the
 signature's own admission (`admitSig`: each row's registration and kind, its key, the service

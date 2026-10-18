@@ -163,7 +163,9 @@
         "Effect4.Program.awaits",
         "Effect4.Program.NativeOp.syncOpOf",
         "Effect4.Machine.syncOpStep",
-        "Effect4.Machine.Stores.empty"
+        "Effect4.Machine.Stores.empty",
+        "Effect4.Program.Check.extension",
+        "Effect4.Program.Check.explain"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",
@@ -226,7 +228,9 @@
         "Effect4.Program.Check.HitRule.or",
         "Effect4.Live.start",
         "Effect4.LiveRecord.restore",
-        "Effect4.LiveRecord.save"
+        "Effect4.LiveRecord.save",
+        "Effect4.Program.Check.extension",
+        "Effect4.Program.Check.explain"
       ],
       "abstract": [
         "Effect4.Program.Check.Checked",

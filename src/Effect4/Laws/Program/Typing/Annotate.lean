@@ -1,3 +1,4 @@
+import Effect4.Program.Typing.AnnotateFold
 import Effect4.Program.FoldOf
 import Effect4.Program.Typing.Annotate
 import Effect4.Laws.Program.Typing.Sound
@@ -57,7 +58,7 @@ open Conform.Effect4.Typing
 
 variable {Op : Type}
 
-fold_of Effect4.Program.Annotate.check
+
 
 /-! ## The address list, one step down -/
 
