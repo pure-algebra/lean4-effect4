@@ -4,11 +4,14 @@ K0 lands from `c752e565b4e1afac95d1258b0a4a570b81bcdf81` on `codex/seams`.
 The table records landed slices. Every unlanded slice remains open. This receipt claims no completed goal.
 The coordinator merges; this branch is never pushed.
 
+The owner pauses work after V1.
+[The pause checkpoint](../preparation/paused-2026-10-18/README.md) retains prepared sources, evidence, and resume instructions.
+
 | Slice | Implementation commit | Receipt | State |
 | --- | --- | --- | --- |
 | K0 | `66f292a095e57e7c94586434aab9c5c597f82d6e`; receipt `faa7d0122bd550186e4c622517509ac001763a35` | [K0](K0.md) | Required checks pass. |
 | S0 | `d46b1e6d6f184764a7ee1a00b01a800a45f35d33`; receipt `489e127a8b94f4796ff40ef4200080b5e83a94f2` | [S0](S0.md) | Required checks pass. |
-| V1 | `d6ad9482303a1998bfbcc826bf0d12ab4f6aa3c9` | [V1](V1.md) | Required checks pass; two placed goals remain. |
+| V1 | `d6ad9482303a1998bfbcc826bf0d12ab4f6aa3c9`; receipt `6406fa8d47b99e1b6224dffac5025f622235893c` | [V1](V1.md) | Required checks pass; two placed goals remain. |
 | S1 | Pending | Pending | Open |
 | S2 | Pending | Pending | Open |
 | S4 | Pending | Pending | Open |

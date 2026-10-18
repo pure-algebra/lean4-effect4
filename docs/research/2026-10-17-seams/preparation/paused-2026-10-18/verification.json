@@ -1,0 +1,13 @@
+{
+  "archiveSha256": "d03bce2a048d17b2f90832699edc979e5cf23df3ab454e25f7a0aa13c45efa64",
+  "fileCount": 957,
+  "allMembersMatchManifest": true,
+  "allMembersMatchFrozenSources": true,
+  "compiledArtifactsExcluded": true,
+  "restoreCheck": {
+    "restoredFiles": 957,
+    "repeatedRestoreWrites": 0,
+    "changedDestinationRefused": true,
+    "changedDestinationRetained": true
+  }
+}
