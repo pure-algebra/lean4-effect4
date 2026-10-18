@@ -83,6 +83,16 @@ srcDir = "tools"
 root = "Effect4Gen.Exe"
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The LCNF → OCaml generator, compiled. Run as `lean --run`, its route modules (`OCaml5.Lcnf`,
+# `OCaml5.Ml`) were interpreted: a CPU sample of the api_gen step sat in the IR interpreter, and
+# the step took 231 s (2026-10-18). It imports no Effect4 module; the recipe's modules are loaded
+# at run time (`importModules`).
+[[lean_exe]]
+name = "lcnfgen"
+srcDir = "src"
+root = "OCaml5.Tools.LcnfGen"
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
 # Catalogue generators read compiled rows, forms and atom specifications.
 [[lean_exe]]
 name = "effect4gen-catalogue"

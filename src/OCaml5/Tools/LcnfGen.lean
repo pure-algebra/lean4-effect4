@@ -11,10 +11,11 @@ alone, at the arguments the recipe gives it; `make gen-lcnf` runs each artifact 
 process, so a process holds one artifact's imports (one process for all six peaked at 6.3 GB on
 2026-10-16, past the 4096 MB cap). With an artifact's own arguments it makes that artifact
 alone; that is the command each artifact's header carries. The three forms write the same bytes.
+It runs compiled (`lake exe lcnfgen`, the lakefile's `lean_exe`); `lean --run` of this file still
+works, interpreted and many times slower.
 
-    lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean --recipe ocaml/gen/roots.json --one 0
-    lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean \
-      --out ocaml/gen/api_gen.ml --import Effect4.Api --cap 2000 \
+    lake exe lcnfgen --recipe ocaml/gen/roots.json --one 0
+    lake exe lcnfgen --out ocaml/gen/api_gen.ml --import Effect4.Api --cap 2000 \
       Effect4.Api.run Effect4.Api.replay …
 
 An artifact's options: `--out <path>` (required), `--import M` (a module whose environment the

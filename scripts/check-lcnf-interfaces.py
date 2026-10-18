@@ -36,7 +36,7 @@ def main():
         def run(command):
             if command[:2] == ['lake', 'build'] or command[:2] == ['opam', 'exec'] and 'dune' in command:
                 return
-            if command[:2] == ['lake', 'env']:
+            if command[:3] == ['lake', 'exe', 'lcnfgen']:
                 stage = Path(command[command.index('--stage') + 1])
                 index = int(command[command.index('--one') + 1])
                 source = stage / outputs[index]

@@ -26,7 +26,7 @@ def generate(root, recipe_path, out, checking, run, install):
             if (out / path).resolve() == (root / path).resolve():
                 raise ValueError(f'{path}: output aliases repository destination')
     imports = sorted({module for entry in artifacts for module in entry.get('import', [])})
-    run(['lake', 'build', *imports, 'OCaml5.Tools.LcnfGen'])
+    run(['lake', 'build', *imports, 'lcnfgen'])
     run(['opam', 'exec', '--switch=effect4', '--', 'dune', 'build', '--root', 'ocaml',
          'gen/interface/main.exe', 'clock/effect4_clock.cma', 'lcnf/effect4_lcnf.cma'])
     with tempfile.TemporaryDirectory(prefix='effect4-lcnf-') as directory:
@@ -35,7 +35,7 @@ def generate(root, recipe_path, out, checking, run, install):
         fresh.mkdir()
         # One process holds one artifact's imports. Nothing is installed in this loop.
         for index in range(len(artifacts)):
-            run(['lake', 'env', 'lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean',
+            run(['lake', 'exe', 'lcnfgen',
                  '--stage', str(stage), '--recipe', recipe_path, '--one', str(index)])
         includes = [fresh, root / 'ocaml/_build/default/clock/.effect4_clock.objs/byte',
                     root / 'ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte']

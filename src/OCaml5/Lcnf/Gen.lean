@@ -98,7 +98,7 @@ def recipeFormat : String := "effect4-lcnf-roots-v2"
 
 /-- The command an artifact's header carries: the driver run on this artifact alone. -/
 def commandOf (argv : List String) : String :=
-  "lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean " ++ " ".intercalate argv
+  "lake exe lcnfgen " ++ " ".intercalate argv
 
 /-- One recipe entry's argv, in the recipe's fixed order: `--out`, one `--import` per module,
 `--cap`, `--types` (comma-joined, when any), `--modules` (when the entry is the program types'
