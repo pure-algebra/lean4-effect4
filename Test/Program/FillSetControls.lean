@@ -16,6 +16,12 @@ import Effect4.Laws.Program.FillSet
    `overlap` at `FillSet.add`.
 7. A fill at `[99]` is refused as `unknownAddress`, alone and beside a valid fill.
 8. A fill at `[]` is refused as `root`.
+9. Red (the review of 2026-10-17): the list materializer refuses an unknown address and the root,
+   instead of dropping or applying them.
+10. Red: a set opened at another base than the document's is refused at publication.
+11. Red, then control: once the document moves, a set that holds a fill refuses new fills and
+    publication; `fills.reset` opens a new set, and an empty set follows the document.
+12. A published set is one journal entry: `undo` takes it back.
 -/
 
 set_option autoImplicit false
@@ -150,5 +156,79 @@ def fsNested : FillSet := FillSet.empty {} nested
   stepAdd1.2.ok && stepView1.2.ok && stepMat1.2.ok &&
     stepMat1.1.revision == 1 &&
     (stepMat1.1.source.map (·.sketch.program)) == some (.bind nat7 (.succeed (.var 0)))
+
+/-! ## Controls 9 to 12: the raw materializer, a moved document, and `undo` -/
+
+-- Control 9 (red): an unknown address and the root, beside a valid fill or alone.
+#guard (match materialize {} base2 [([99], nat7), ([0], nat7)] with
+  | .error .unknownAddress => true
+  | _ => false)
+#guard (match materialize {} base2 [([], nat7)] with
+  | .error .root => true
+  | _ => false)
+
+-- Control 10 (red): a set built at `baseD` and tagged with `d`'s identity and revision.
+#guard
+  let d : Doc := Doc.open {} base2 ⟨"d", 0⟩
+  let forged := (FillSet.empty {} baseD d.id d.revision).add [([0], nat7)]
+  forged.2 = [.applied [0]] &&
+    (match forged.1.materializeDoc d with
+     | .error .foreignBase => true
+     | _ => false)
+
+-- Control 11 (red, then control): a fill at revision 0, then an ordinary checked edit.
+#guard
+  let st0 :=
+    (answer {}
+      { op := "open"
+        programJson := some (printJson base2.program)
+        holesJson := some (printJson base2.holes) }).1
+  let stAdd := answer st0
+    { op := "fills.add", path := [0], replacementJson := some (printJson nat7) }
+  let stEdit := answer stAdd.1
+    { op := "replace", path := [1], docName := some "default", docGeneration := some 0,
+      revision := some 0, expectedJson := some (printJson (Sketch.hole {} 1 : NativeEff)),
+      replacementJson := some (printJson nat2) }
+  let stStale := answer stEdit.1
+    { op := "fills.add", path := [0], replacementJson := some (printJson nat1) }
+  let stMatStale := answer stEdit.1 { op := "fills.materialize" }
+  let stView := answer stEdit.1 { op := "fills.view" }
+  let stReset := answer stEdit.1 { op := "fills.reset" }
+  let stAgain := answer stReset.1
+    { op := "fills.add", path := [0], replacementJson := some (printJson nat1) }
+  let stPub := answer stAgain.1 { op := "fills.materialize" }
+  stAdd.2.ok && stEdit.2.ok && !stStale.2.ok && !stMatStale.2.ok &&
+    stView.2.result.getObjValD "stale" == Lean.Json.bool true &&
+    stReset.2.ok && stAgain.2.ok && stPub.2.ok && stPub.1.revision == 2 &&
+    (stPub.1.source.map (·.sketch.program)) == some (.bind nat1 nat2)
+
+-- Control 11, continued: an empty set follows a draft edit, and an empty set publishes nothing.
+#guard
+  let st0 :=
+    (answer {}
+      { op := "open"
+        programJson := some (printJson base2.program)
+        holesJson := some (printJson base2.holes) }).1
+  let stEmpty := answer st0 { op := "fills.materialize" }
+  let stDraft := answer st0
+    { op := "draft", path := [1], replacementJson := some (printJson nat2) }
+  let stAdd := answer stDraft.1
+    { op := "fills.add", path := [0], replacementJson := some (printJson nat7) }
+  !stEmpty.2.ok && stDraft.2.ok && stAdd.2.ok
+
+-- Control 12: a published set, then `undo`.
+#guard
+  let st0 :=
+    (answer {}
+      { op := "open"
+        programJson := some (printJson base2.program)
+        holesJson := some (printJson base2.holes) }).1
+  let stAdd := answer st0
+    { op := "fills.add"
+      fillsJson := some (printJson ([([0], nat7), ([1], nat2)] : List (List Nat × NativeEff))) }
+  let stPub := answer stAdd.1 { op := "fills.materialize" }
+  let stUndo := answer stPub.1 { op := "undo" }
+  stAdd.2.ok && stPub.2.ok && stUndo.2.ok && stUndo.1.revision == 2 &&
+    (stUndo.1.source.map (·.sketch.program)) == some base2.program
 
 end Test.Program.FillSetControls

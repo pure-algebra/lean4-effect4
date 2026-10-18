@@ -504,6 +504,67 @@ theorem conflictAt_eq_none_of_conflictFree {fs : List (List Nat × NativeEff)}
   have hne : y.2 ≠ x.2 := decide_eq_true_eq.mp h2
   exact hne (congrArg Prod.snd hxy)
 
+/-! ## The materializer's address checks
+
+`materialize` refuses a root fill and a fill where the base holds no program, before it orders the
+fills. Both checks read the fills' members only, so D6 still holds, and certified fills pass both,
+so D9 still holds. -/
+
+/-- Two lists with the same members agree on `List.any`.
+
+Placement:
+1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
+2. Question: a step of D6 (`materialize_congr`), the first half of the proposed claim
+   `workspace-fill-agreement` (role compatibility); consumer: `materialize_congr`.
+3. Reach: any two lists with the same members, and any test.
+4. What it does not establish: anything about the order or the repeats of the lists.
+5. Unlocks: R14 (`workspace-fill-agreement`). -/
+theorem any_eq_of_mem_iff {α : Type} {fs gs : List α} (hmem : ∀ x, x ∈ fs ↔ x ∈ gs) (P : α → Bool) :
+    fs.any P = gs.any P := by
+  apply Bool.eq_iff_iff.mpr
+  simp only [List.any_eq_true]
+  exact ⟨fun ⟨x, hx, h⟩ => ⟨x, (hmem x).mp hx, h⟩, fun ⟨x, hx, h⟩ => ⟨x, (hmem x).mpr hx, h⟩⟩
+
+/-- A certified fill names no root, and an address at which the base holds a program.
+
+Placement:
+1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
+2. Question: a step of D9 (`materialize_refFree`), the second half of the proposed claim
+   `workspace-fill-agreement` (role compatibility); consumer: `certified_passes_checks`.
+3. Reach: any fill `Certified` against a sketch and an application.
+4. What it does not establish: that the fill applies beside other fills (D5 does).
+5. Unlocks: R14 (`workspace-fill-agreement`). -/
+theorem holdsProgram_of_certified {s : Sketch} {app : SigApp} {x : List Nat × NativeEff}
+    (h : Certified s app x) : x.1.isEmpty = false ∧ holdsProgram s x.1 = true := by
+  obtain ⟨hne, f, hf, -⟩ := h
+  refine ⟨?_, ?_⟩
+  · cases hx : x.1 with
+    | nil => exact absurd hx hne
+    | cons _ _ => rfl
+  · unfold holdsProgram
+    rw [Sketch.focusAt_at hf]
+
+/-- Certified fills pass both of the materializer's address checks.
+
+Placement:
+1. Concept: `initial-algebras-folds`; property: `typed-replacement`.
+2. Question: a step of D9 (`materialize_refFree`), the second half of the proposed claim
+   `workspace-fill-agreement` (role compatibility); consumer: `materialize_refFree`.
+3. Reach: any list of fills, each `Certified` against one base and one application.
+4. What it does not establish: that the materializer accepts them (D9 does, on reference-free
+   fills at incomparable addresses).
+5. Unlocks: R14 (`workspace-fill-agreement`). -/
+theorem certified_passes_checks {s : Sketch} {app : SigApp} {fs : List (List Nat × NativeEff)}
+    (hcert : ∀ x ∈ fs, Certified s app x) :
+    fs.any (fun x => x.1.isEmpty) = false ∧ fs.any (fun x => !holdsProgram s x.1) = false := by
+  refine ⟨List.any_eq_false.mpr fun x hx h => ?_, List.any_eq_false.mpr fun x hx h => ?_⟩
+  · have h' : x.1.isEmpty = true := h
+    rw [(holdsProgram_of_certified (hcert x hx)).1] at h'
+    exact Bool.false_ne_true h'
+  · have h' : (!holdsProgram s x.1) = true := h
+    rw [(holdsProgram_of_certified (hcert x hx)).2] at h'
+    exact Bool.false_ne_true h'
+
 /-- **D6: the materializer reads a set**: two lists with the same members, neither with a located
 conflict, materialize alike, whatever their order and repeats.
 
@@ -520,7 +581,8 @@ theorem materialize_congr {app : SigApp} {base : Sketch} {fs gs : List (List Nat
     (hmem : ∀ x, x ∈ fs ↔ x ∈ gs) (hf : conflictAt fs = none) (hg : conflictAt gs = none) :
     materialize app base fs = materialize app base gs := by
   unfold materialize
-  rw [hf, hg, ordered_congr hmem (conflictFree_of_conflictAt hf)]
+  rw [any_eq_of_mem_iff hmem (fun x => x.1.isEmpty), any_eq_of_mem_iff hmem (fun x => !holdsProgram base x.1),
+    hf, hg, ordered_congr hmem (conflictFree_of_conflictAt hf)]
 
 /-! ## D8 and D9: reference-free fills keep a reference-free program, so the materializer accepts them -/
 
@@ -608,8 +670,9 @@ theorem materialize_refFree {app : SigApp} {T : EffTy} {base : Sketch}
     unfold Sketch.expand
     rw [expandRefs_eq_self_of_refSites_nil s'.program hnil]
   refine ⟨s', ?_, hs'⟩
+  obtain ⟨hroot, hknown⟩ := certified_passes_checks hcert
   unfold materialize
-  rw [hcf]
+  rw [hroot, hknown, hcf]
   dsimp only
   rw [happ]
   dsimp only

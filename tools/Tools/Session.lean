@@ -52,13 +52,17 @@ one.
 | --- | --- | --- | --- |
 | `open` | `program` (hex) or `programJson`, and the hole table, the rows, the services and the types if any, each as hex or JSON | the view | `SourceSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJsonAnyOrder_exact` for JSON |
 | `inspect` | `path` | the target (`doc`, `revision`, `path`, `expected`), the typed focus, the entry, and any refusal | `SourceSession.reached_view`, `SourceSession.focusAt_typed` |
-| `replace` | `path`, `replacement` (hex) or `replacementJson`, target (`docName`, `docGeneration`, `revision`, `expected` or `expectedJson`), `policy` | atomic checked replacement (`Doc.commit`): the new revision, the delta and the view, or a located refusal | `Doc.commit_sound`, `SourceSession.reached_view` |
-| `fill` | `path`, `replacement` (hex) or `replacementJson` (and optional target) | with a target, `Doc.commit`; without, `Doc.draft` | `Doc.commit_sound` or the law the delta took, `SourceSession.feed_coherent`, `SourceSession.reached_view` |
-| `omit` | `path`, `holeName` (and optional target) | with a target, `Doc.commit`; without, `Doc.draft` | the same |
-| `draft` | `path`, and `replacement` / `replacementJson` or `holeName` | raw unchecked edit (`Doc.draft`) | the law the delta took, `SourceSession.feed_coherent`, `SourceSession.reached_view` |
+| `replace` (also `fill`, `commit`) | `path`, `replacement` (hex) or `replacementJson`, the whole target (`docName`, `docGeneration`, `revision`, and `expected` or `expectedJson`), `policy` | atomic checked replacement (`Doc.commit`): the new revision, the delta and the view, or a located refusal; a request without its replacement or any part of its target is refused | `Doc.commit_sound`, `SourceSession.reached_view` |
+| `omit` | `path`, `holeName`, the whole target, `policy` | atomic checked omission (`Doc.commit`): a hole row of the focus's type in the program's place | the same |
+| `draft` | `path`, and `replacement` / `replacementJson` or `holeName` | the one unchecked edit (`Doc.draft`) | the law the delta took, `SourceSession.feed_coherent`, `SourceSession.reached_view` |
+| `suggest` | `path`, `candidates` or `candidatesJson`, `limit`, `cursor` | candidate fillings at the focus, each with its cached or computed verdict (`CheckCache.suggest`) | `sketchSigData_signature`, `CheckCache.lookup_sound`, `CheckCache.evaluateCandidate_valid_and_sound` |
+| `fills.add` | `fills` or `fillsJson`, or `path` with `replacement` / `replacementJson` | each fill's outcome at the set's base (`FillSet.add`): applied, collapsed or refused at its address; a set opened at an earlier revision refuses | `FillSet.add_wf` |
+| `fills.view` | nothing | the set's fills in the base's address order, its revision, and whether the document has moved past it | `ordered_congr` |
+| `fills.reset` | nothing | a new set at the document's current revision, and the fills discarded | none |
+| `fills.materialize` | nothing | the set published as one new revision (`FillSet.materializeDoc`), journaled as one edit at the root, or a refusal | `FillSet.add_wf`, `materialize_congr`, `ordered_compose`, `materialize_refFree` |
 | `fork` | `docName` (optional) | forks the open document with a fresh generation | none |
 | `view` | `path`, or none | at an address, its entry and its focus; with none, the whole table | `SourceSession.reached_view`; `SourceSession.focusAt_typed` at an address |
-| `undo` | nothing | the last fill taken back at a new revision (`Doc.undo`): the delta and the view | `SourceSession.feed_undo` |
+| `undo` | nothing | the last journaled edit taken back at a new revision (`Doc.undo`): a checked or draft edit, or a published fill set; the delta and the view | `SourceSession.feed_undo` |
 | `journal` | nothing | each edit, its address and its delta | none |
 | `sketch` | nothing | the sketch and the application as JSON, and as bytes with `hex` | `Sketch.decode_exact`, `Canonical.decode_exact` |
 | `catalogue` | nothing; open or not | the program's forms, the atoms with their typing schemes, the application's rows by index (`Tools.Catalogue`) | `Canonical.ofJsonAnyOrder_exact`, `NativeAtom.atom_table_wf` |
@@ -84,6 +88,10 @@ table holds there: the expansion's focus (`SourceSession.focusAt_typed`).
 
 **An undo of an omission** puts the program back, and keeps the hole row it declared: the law of
 undo is stated for a fill.
+
+**A fill set follows the document while it is empty.** Once it holds a fill, it keeps the base its
+fills were certified at. After any other edit it refuses new fills until `fills.reset`, and
+`fills.materialize` refuses it as stale.
 
 **What it is not.** It is no MCP server: an MCP tool is a thin wrapper over `answerLine`. It
 holds one session. It does not admit the application's signature (`admitSig`) at `open`: it shows
@@ -133,6 +141,19 @@ def State.doc (st : State) : Option Doc :=
 /-- Store an updated document (`Doc`) in the tool state. -/
 def State.withDoc (st : State) (d : Doc) : State :=
   { st with source := some d.session, docId := d.id, revision := d.revision }
+
+/-- The fill set the fill operations read: the stored one while it holds a fill, and otherwise a
+new one at the open document's current revision. So an empty set follows the document, and a set
+that holds fills keeps the base its fills were certified at. -/
+def State.fillsFor (st : State) (d : Doc) : FillSet :=
+  match st.fills with
+  | some fs => if fs.entries.isEmpty then FillSet.ofDoc d else fs
+  | none => FillSet.ofDoc d
+
+/-- Whether a fill set was opened at another document or another revision than `d`'s current one:
+its fills were certified at a base the document no longer holds. -/
+def fillsStale (fs : FillSet) (d : Doc) : Bool :=
+  fs.doc != d.id || fs.revision != d.revision
 
 /-- One request. -/
 structure Request where
@@ -211,12 +232,6 @@ structure Request where
   fills : Option String := none
   /-- batch of `(path, filling)` pairs for `fills.add`, as their JSON print -/
   fillsJson : Option Json := none
-
-/-- Whether a request supplies an explicit edit target (`revision`, `expected`, `docName`, or
-`docGeneration`). -/
-def Request.hasTarget (r : Request) : Bool :=
-  r.revision.isSome || r.expected.isSome || r.expectedJson.isSome ||
-    r.docName.isSome || r.docGeneration.isSome
 
 /-- Read a request; a field of the wrong type is refused with its name. -/
 def Request.fromJson? (j : Json) : Except String Request := do
@@ -523,6 +538,8 @@ def materializeRefusalJson (sig : Signature NativeOp) (prog : Option NativeEff) 
     MaterializeRefusal → Json
   | .conflict path =>
     Json.mkObj [("reason", .str "conflict"), ("path", toJson path)]
+  | .root => Json.mkObj [("reason", .str "root")]
+  | .unknownAddress => Json.mkObj [("reason", .str "unknownAddress")]
   | .notApplicable =>
     Json.mkObj [("reason", .str "notApplicable")]
   | .refused why =>
@@ -533,6 +550,7 @@ def materializeRefusalJson (sig : Signature NativeOp) (prog : Option NativeEff) 
   | .staleRevision expected actual =>
     Json.mkObj [("reason", .str "staleRevision"), ("expected", toJson expected),
       ("actual", toJson actual)]
+  | .foreignBase => Json.mkObj [("reason", .str "foreignBase")]
 
 /-- Parse a call selector (`Effect4.Run.Sel`) from `req`'s `fiber`, `token`, or `rowName`. -/
 def selFrom? (req : Request) : Option Effect4.Run.Sel :=
@@ -601,27 +619,20 @@ def feedAnswer (st : State) (d : Doc) (req : Request) (e : Edit)
 /-- Run an atomic checked edit (`Doc.commit`) from `req`'s target and policy. -/
 def commitAnswer (st : State) (d : Doc) (req : Request) (c : Change)
     (readLaws : List Lean.Name := []) : State × Answer :=
-  match policyFrom? req.policy with
-  | none => (st, refused req.op "unknown policy" req.id)
-  | some policy =>
-    let expected? : Option (Option NativeEff × List Lean.Name) :=
-      match valueFrom? (α := NativeEff) req.expected req.expectedJson with
-      | some p => some p
-      | none =>
-        match (Node.eff d.session.sketch.program).at_ req.path with
-        | some (.eff q) => some (some q, [])
-        | _ => some (none, [])
-    match expected? with
-    | none | some (none, _) =>
-      if req.expected.isSome || req.expectedJson.isSome then
-        (st, unreadable (α := NativeEff) req.op "the expected sub-program does not read"
-          req.expectedJson req.id)
-      else (st, refused req.op "no part of the sketch at the address" req.id)
+  let noTarget : State × Answer := (st, refused req.op ("a checked edit needs its whole target, " ++
+    "as `inspect` answers it: `docName`, `docGeneration`, `revision`, and `expected` or " ++
+    "`expectedJson`; `draft` makes an unchecked edit") req.id)
+  match policyFrom? req.policy, req.docName, req.docGeneration, req.revision with
+  | none, _, _, _ => (st, refused req.op "unknown policy" req.id)
+  | some _, none, _, _ | some _, _, none, _ | some _, _, _, none => noTarget
+  | some policy, some docName, some docGeneration, some targetRev =>
+    match valueFrom? (α := NativeEff) req.expected req.expectedJson with
+    | none => noTarget
+    | some (none, _) =>
+      (st, unreadable (α := NativeEff) req.op "the expected sub-program does not read"
+        req.expectedJson req.id)
     | some (some exp, expLaws) =>
-      let targetDoc : DocId :=
-        ⟨req.docName.getD d.id.name, req.docGeneration.getD d.id.generation⟩
-      let targetRev : Nat := req.revision.getD d.revision
-      let target : EditTarget := ⟨targetDoc, targetRev, req.path, exp⟩
+      let target : EditTarget := ⟨⟨docName, docGeneration⟩, targetRev, req.path, exp⟩
       let sig := (d.session.app.withHoles d.session.sketch.holes).signature
       match d.commit target c policy with
       | .error why =>
@@ -804,7 +815,10 @@ def answer (st : State) (req : Request) : State × Answer :=
                 ``CheckCache.evaluateCandidate_valid_and_sound]).eraseDups
               true (suggestResultJson res req.hex) none req.id)
       | "fills.add" =>
-        let fs0 := st.fills.getD (FillSet.ofDoc d)
+        let fs0 := st.fillsFor d
+        if fillsStale fs0 d then
+          none' s!"the fill set was opened at revision {fs0.revision} of {fs0.doc.name}; the document is at revision {d.revision} of {d.id.name}; `fills.reset` discards the set"
+        else
         let items? : Option (Option (List (List Nat × NativeEff)) × List Lean.Name) :=
           if req.fills.isSome || req.fillsJson.isSome then
             let (batch?, laws) := listFrom? (α := List Nat × NativeEff) req.fills req.fillsJson
@@ -840,14 +854,24 @@ def answer (st : State) (req : Request) : State × Answer :=
               error := if allOk then none else some "one or more fills were refused",
               id := req.id })
       | "fills.view" =>
-        let fs := st.fills.getD (FillSet.ofDoc d)
+        let fs := st.fillsFor d
         let result := Json.mkObj
           [("doc", docIdJson fs.doc),
             ("revision", toJson fs.revision),
+            ("stale", toJson (fillsStale fs d)),
             ("fills", Json.arr (fs.view.map fun e => fillEntryJson e req.hex).toArray)]
         (st, Answer.mk op st.app [``ordered_congr] true result none req.id)
+      | "fills.reset" =>
+        let fs := st.fillsFor d
+        let fresh := FillSet.ofDoc d
+        let result := Json.mkObj
+          [("doc", docIdJson fresh.doc),
+            ("revision", toJson fresh.revision),
+            ("discarded", Json.arr (fs.view.map fun e => fillEntryJson e req.hex).toArray)]
+        ({ st with fills := some fresh }, Answer.mk op st.app [] true result none req.id)
       | "fills.materialize" =>
-        let fs := st.fills.getD (FillSet.ofDoc d)
+        let fs := st.fillsFor d
+        if fs.entries.isEmpty then none' "the fill set holds no fill" else
         match fs.materializeDoc d with
         | .error why =>
           (st,
@@ -858,35 +882,26 @@ def answer (st : State) (req : Request) : State × Answer :=
               error := some "the fill set did not materialize",
               id := req.id })
         | .ok d' =>
-          let st' := { (st.withDoc d') with fills := some (FillSet.ofDoc d') }
+          -- the journal holds the publication as one edit at the root, so `undo` takes it back
+          let step := (d.session.feedStep (.fill [] d'.session.sketch.program)).2
+          let st' := { (st.withDoc d') with journal := step :: st.journal,
+                                             fills := some (FillSet.ofDoc d') }
           let result := Json.mkObj
             [("doc", docIdJson d'.id),
               ("revision", toJson d'.revision),
+              ("delta", deltaJson step.delta),
               ("view", viewJson d'.session)]
           (st', Answer.mk op st.app
             [``FillSet.add_wf, ``materialize_congr, ``ordered_compose, ``materialize_refFree,
               ``SourceSession.reached_view]
             true result none req.id)
-      | "replace" | "commit" =>
+      | "replace" | "commit" | "fill" =>
         match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
         | some (some q, readLaws) => commitAnswer st d req (.fill q) readLaws
-        | none => commitAnswer st d req (.omitHole req.holeName) []
-        | _ =>
+        | none => none' "a checked replacement needs its program (`replacement` or `replacementJson`); `omit` declares a hole"
+        | some (none, _) =>
           (st, unreadable (α := NativeEff) req.op "the filling does not read" req.replacementJson req.id)
-      | "fill" =>
-        match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
-        | some (some q, readLaws) =>
-          if req.hasTarget then commitAnswer st d req (.fill q) readLaws
-          else if (l.sketch.fillAt req.path q).isSome then feedAnswer st d req (.fill req.path q) readLaws
-          else none' "no part of the sketch at the address"
-        | _ =>
-          (st, unreadable (α := NativeEff) req.op "the filling does not read" req.replacementJson req.id)
-      | "omit" =>
-        if req.hasTarget then commitAnswer st d req (.omitHole req.holeName) []
-        else
-          match l.focusAt req.path with
-          | none => none' "no focus at the address"
-          | some f => feedAnswer st d req (.omitAt req.path (holeRow req.holeName f))
+      | "omit" => commitAnswer st d req (.omitHole req.holeName) []
       | "draft" =>
         match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
         | some (some q, readLaws) =>

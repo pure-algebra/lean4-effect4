@@ -3,7 +3,13 @@
 ## 1. What the coordinator must know before merging
 
 All six assigned authoring slices (A, B, E, P, C and D) land on `gemini/authoring` as six commits.
-Every new and touched declaration audits within `[propext, Quot.sound]` with 0 planned goals.
+A review on 2026-10-17 found six requirement defects and two evidence defects. The coordinator's
+repair commit closes them (§3.7).
+
+Every declaration of the new and touched core, law and battery modules audits within
+`[propext, Quot.sound]` with 0 planned goals. The three edited tool modules (`Tools.Query`,
+`Tools.Session.Snapshot`, `Tools.Session`) are outside that audit. They reach `Classical.choice`
+through the toolchain's `Lean.Json` and `String` functions, as they did at the base (§4).
 No gate input changes (`src/Effect4/Api/**`, `src/Effect4/Run/Kit.lean`, `src/Effect4/Program/Compile.lean`),
 and `tools/ProofGraph/Registry.lean` and `docs/core/decisions.md` stay untouched for the coordinator.
 
@@ -55,7 +61,7 @@ flowchart LR
 
 - `src/Effect4/Program/Typing/SourceDocument.lean` (new, 172 lines): `DocId`, `Doc`, `EditTarget`, `Change`, `Policy`, `Refusal`, `Inspection`, `Doc.open`, `Doc.fork`, `Doc.target`, `Doc.inspect`, `Doc.editOf`, `Doc.commit`, `Doc.draft` and `Doc.undo`.
 - `src/Effect4/Laws/Program/SourceDocument.lean` (new, 130 lines): `edit_exists` and `Doc.commit_sound`.
-- `tools/Tools/Session.lean`: operations `inspect`, `replace`, `commit`, `draft` and `fork`, plus target-gated `fill` and `omit`.
+- `tools/Tools/Session.lean`: operations `inspect`, `replace`, `commit`, `draft` and `fork`, plus target-gated `fill` and `omit`. The review found the untargeted forms still drafting, against plan §7.2; §3.7 makes both checked only.
 - `Test/Program/SourceDocumentControls.lean` (new, 193 lines): controls 1 to 9 of plan §7.2.
 - `src/Effect4.lean`, `src/Effect4/Laws.lean`, `Test/All.lean`: root imports.
 
@@ -78,7 +84,7 @@ flowchart LR
 **Changed files** (`7 files changed, 503 insertions(+), 3 deletions(-)`):
 
 - `src/Effect4/Run/LiveRecord.lean` (new, 102 lines): `LiveRecord`, `LiveRecord.currentVersion`, `RestoreRefusal`, `LiveRecord.save`, `LiveRecord.restore`, `LiveRecord.encode` and `LiveRecord.decode`.
-- `src/Effect4/Laws/Api/LiveRecord.lean` (new, 88 lines): `LiveRecord.restore_save`, `LiveRecord.decode_encode`, `LiveRecord.encode_decode_exact` and `LiveRecord.restore_unsupportedVersion`.
+- `src/Effect4/Laws/Api/LiveRecord.lean` (new, 88 lines): `LiveRecord.restore_save`, `LiveRecord.restore_unsupportedVersion`, `LiveRecord.ofTuple_toTuple` and `LiveRecord.decode_encode`. The last holds only for a record whose canonical value tree is well formed (`(toVal r.toTuple).WF`). No theorem states that a decoded byte string is its record's encoding. An earlier line named such a theorem, which does not exist.
 - `tools/Tools/Session.lean`: `State.live` and operations `start`, `receive`, `apply`, `liveView`, `save` and `load`.
 - `Test/Program/LiveRecordControls.lean` (new, 113 lines): controls 1 to 6 of plan §7.5.
 - `src/Effect4.lean`, `src/Effect4/Laws.lean`, `Test/All.lean`: root imports.
@@ -125,7 +131,7 @@ flowchart LR
 **Changed files** (`7 files changed, 794 insertions(+), 4 deletions(-)`):
 
 - `src/Effect4/Program/Typing/CheckCache.lean` (new, 257 lines): `PartSig`, `SigData`, `SigData.signature`, `bodyIndex`, `partSigAt`, `sketchSigData`, `CheckCache.CheckKey`, `CheckCache.Entry`, `SigData.extendsB`, `CheckCache.lookup`, `CheckCache.insert`, `CheckCache.Evidence`, `CheckCache.Suggestion`, `CheckCache.SuggestResult` and `CheckCache.suggest`.
-- `src/Effect4/Laws/Program/Typing/CheckCache.lean` (new, 296 lines): `bodyAt_sig_index`, `partAt_sig_eq`, `sketchSigData_signature`, `SigData.extends_of_extendsB`, `CheckCache.lookup_sound` and `CheckCache.evaluateCandidate_valid_and_sound`.
+- `src/Effect4/Laws/Program/Typing/CheckCache.lean` (new, 296 lines): `bodyAt_sig_index`, `sketchSigData_signature`, `SigData.extends_of_extendsB`, `CheckCache.Entry.compute_valid`, `CheckCache.lookup_sound`, `CheckCache.insert_valid` and `CheckCache.evaluateCandidate_valid_and_sound` (corrected: an earlier line named `partAt_sig_eq`, which does not exist).
 - `tools/Tools/Session.lean`: `State.cache`, `inspect` context as `SigData`, and operation `suggest`.
 - `Test/Program/CheckCacheControls.lean` (new, 147 lines): controls 1 to 4 of plan §7.3.
 - `src/Effect4.lean`, `src/Effect4/Laws.lean`, `Test/All.lean`: root imports.
@@ -167,10 +173,61 @@ flowchart LR
 
 **Proposed decisions rows**: propose recording the private-constructor `FillSet` admission invariant (`FillSet.WellFormed`, `FillSet.add_wf`) under R14.
 
+### 3.7 The coordinator's repair after the review of 2026-10-17
+
+The review is Codex's, of `03a4cf7fd` to `8984bd15e`. Its record is
+`scratch/authoring-review-8984bd15e/run-record.json` in the main checkout (not tracked). The
+coordinator read each finding against the plan and the code, and each holds.
+
+| Finding | Repair | Control |
+| --- | --- | --- |
+| 1. `fill` and `omit` without a target made unchecked edits | both are checked edits only; `draft` is the one unchecked edit (plan §7.2) | `Test/Program/SourceDocumentControls.lean`, controls 13 and 16 |
+| 2. A missing document name, generation, revision or expected sub-program came from the current document | `commitAnswer` (`tools/Tools/Session.lean`) refuses a request without its whole target | control 14 |
+| 3. `Program.materialize` dropped an unknown address and applied a root fill | it refuses both, with `MaterializeRefusal.unknownAddress` and `root`, from the fills' members only | `Test/Program/FillSetControls.lean`, control 9 |
+| 4. After an ordinary edit, new fills joined a set at the opening revision and could not publish | an empty set follows the document; a set that holds a fill refuses new fills once the document moves; `fills.view` reports `stale`; `fills.reset` opens a new set | control 11 |
+| 5. A published set had no journal entry, so `undo` failed or took back an older edit | `fills.materialize` journals the publication as one edit at the root | control 12 |
+| 6. `{"op":"replace"}` with no replacement declared a hole | `replace`, `commit` and `fill` refuse a request with no replacement | control 15 |
+
+The coordinator found one more gap of the same kind. `FillSet.materializeDoc` published at the
+document's sketch, not at the base the fills were certified at. It now materializes the set at its
+own base, and refuses a document whose sketch or application differs (`MaterializeRefusal.foreignBase`,
+control 10).
+
+The laws change in step. `Effect4.Laws.Program.FillSet` gains `any_eq_of_mem_iff`,
+`holdsProgram_of_certified` and `certified_passes_checks`. `materialize_congr` (D6) and
+`materialize_refFree` (D9) keep their statements, and their proofs read the two new checks. The
+plan said the session battery and its fixture move to `draft`. They now do
+(`Test/Program/SessionToolControls.lean` reads `Test/fixtures/session/requests.jsonl`), and so does
+`Test/Program/SketchAdmissionControls.lean`.
+
+**Changed files**: `src/Effect4/Program/Typing/FillSet.lean`, `src/Effect4/Laws/Program/FillSet.lean`,
+`tools/Tools/Session.lean`, `Test/Program/FillSetControls.lean`,
+`Test/Program/SourceDocumentControls.lean`, `Test/Program/SketchAdmissionControls.lean`,
+`Test/fixtures/session/requests.jsonl` and this receipt.
+
+**Commands and results** (each through `scratch/lean-slot.sh`):
+
+- `lake env lean -DwarningAsError=true` on each of the two fill-set modules, `Tools.Session` and the
+  four changed batteries: exit 0, no message.
+- `lake build Effect4.Program.Typing.FillSet`, `Effect4.Laws.Program.FillSet`, `Tools.Session`:
+  exit 0 (83, 321 and 653 jobs).
+- `lake build Effect4 Effect4.Laws`: exit 0, `1387 jobs`. Its first run refused a duplicate name
+  (`Effect4.Program.any_congr_mem` exists in `Effect4.Laws.Program.TyExpand`), which no narrow
+  build imports together; the new lemma is `any_eq_of_mem_iff`.
+- `make batteries-touched BASE=8984bd15e`: exit 0, `7 batteries`, `1131 jobs`.
+- `#axiom_audit` of the two fill-set modules and the four changed batteries:
+  `501 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals`.
+- `#axiom_audit Tools.Query Tools.Session.Snapshot Tools.Session`: `184 of 404 declarations reach
+  axioms outside [propext, Quot.sound]`, each `Classical.choice` through the toolchain. Codex's runs
+  give 137 of 271 at the base and 185 of 405 at `8984bd15e`.
+
 ## 4. Aggregate audit, open obligations and what was not run
 
 - Aggregate `#axiom_audit` across all 17 new and edited proof and test modules:
   `#axiom_audit: 1353 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals`.
+  It covers no tool module. `Tools.Query`, `Tools.Session.Snapshot` and `Tools.Session` reach
+  `Classical.choice` through `Lean.Json` and `String` functions, at the base as at the head. The
+  axiom gate audits `Effect4.*` and `Test.*` modules only.
 - Aggregate `#closure_audit` across all 20 new and edited modules:
   `#closure_audit: 1760 declarations; none binds a table before a returned closure`.
 - Open obligations:

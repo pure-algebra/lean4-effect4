@@ -34,16 +34,16 @@ def appFull : SigApp :=
 def progSvc : NativeEff :=
   .provideService kSvc (.lit (.nat 42)) (.service kSvc)
 
--- Positive + C1: `open` with `services` and `types`, `omit`, `fill`, `sketch` preserve both, and
--- `run` admits and runs `progSvc` at the full `SigApp`.
+-- Positive + C1: `open` with `services` and `types`, two `draft` edits (an omission, then a fill),
+-- and `sketch` preserve both, and `run` admits and runs `progSvc` at the full `SigApp`.
 #guard
   let r0 := answer {}
     { op := "open", program := some (toHex progSvc),
       services := some (toHex appFull.services),
       types := some (toHex appFull.types) }
-  let r1 := answer r0.1 { op := "omit", path := [0], holeName := "h0" }
+  let r1 := answer r0.1 { op := "draft", path := [0], holeName := "h0" }
   let r2 := answer r1.1
-    { op := "fill", path := [0], replacement := some (toHex (Eff.service kSvc : NativeEff)) }
+    { op := "draft", path := [0], replacement := some (toHex (Eff.service kSvc : NativeEff)) }
   let ask := (answer r2.1 { op := "sketch", hex := true }).2
   let arun := (answer r2.1 { op := "run" }).2
   r0.2.ok && r1.2.ok && r2.2.ok && ask.ok && arun.ok &&

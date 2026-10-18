@@ -26,6 +26,12 @@ import Effect4.Laws.Program.SourceDocument
     from one document) receive distinct identities and refuse each other's targets as `foreign`.
 12. **Monotonic revision across `undo`**: after `undo`, a target taken before the undone edit
     refuses as `stale` because the revision moved on.
+13. **Only `draft` edits unchecked** (the review of 2026-10-17): `fill` and `omit` without a target
+    change nothing, even for an ill-typed filling.
+14. **The whole target is required**: a target without its document's name and generation is
+    refused, not completed from the current document.
+15. **A replacement is required**: `replace` with no replacement changes nothing.
+16. **Controls**: the whole target edits, and `draft` still makes the unchecked edit.
 -/
 
 set_option autoImplicit false
@@ -173,12 +179,14 @@ example {d d' : Doc} {t : EditTarget} {c : Change} {policy : Policy}
   let r1 := answer r0.1 { op := "open", program := some (toHex (Eff.bind nat7 nat7 : NativeEff)) }
   let rFork := answer r1.1 { op := "fork", docName := some "branch" }
   let rEdit := answer r1.1
-    { op := "replace", path := [0], revision := some 0,
+    { op := "replace", path := [0], docName := some "default", docGeneration := some 1,
+      revision := some 0,
       expected := some (toHex nat7),
       replacement := some (toHex (Eff.succeed (.lit (.nat 8)) : NativeEff)) }
   let rUndo := answer rEdit.1 { op := "undo" }
   let rStaleAfterUndo := answer rUndo.1
-    { op := "replace", path := [0], revision := some 1,
+    { op := "replace", path := [0], docName := some "default", docGeneration := some 1,
+      revision := some 1,
       expected := some (toHex (Eff.succeed (.lit (.nat 8)) : NativeEff)),
       replacement := some (toHex nat7) }
   (foreignRecheck.map refusalOf) == some (some (.foreign ⟨"docText", 0⟩)) &&
@@ -189,5 +197,30 @@ example {d d' : Doc} {t : EditTarget} {c : Change} {policy : Policy}
     rUndo.2.ok && rUndo.1.revision == 2 &&
     !rStaleAfterUndo.2.ok &&
     rStaleAfterUndo.2.result.getObjValD "reason" == Lean.Json.str "stale"
+
+-- Controls 13 to 16: every checked edit of the tool needs its whole target and its replacement,
+-- and `draft` is the one unchecked edit. A refused request leaves the document as it was.
+#guard
+  let r0 := answer {} { op := "open", program := some (toHex (Eff.bind nat7 nat7 : NativeEff)) }
+  let unchanged (r : State × Tools.Query.Answer) : Bool :=
+    !r.2.ok && r.1.revision == 0 &&
+      (r.1.source.map (·.sketch.program)) == some (Eff.bind nat7 nat7)
+  let rFill := answer r0.1
+    { op := "fill", path := [0],
+      replacement := some (toHex (Eff.succeed (.var 99) : NativeEff)) }
+  let rOmit := answer r0.1 { op := "omit", path := [0] }
+  let rBare := answer r0.1 { op := "replace" }
+  let rPartial := answer r0.1
+    { op := "replace", path := [0], revision := some 0,
+      expected := some (toHex nat7), replacement := some (toHex nat7) }
+  let rWhole := answer r0.1
+    { op := "replace", path := [0], docName := some "default",
+      docGeneration := some 0, revision := some 0, expected := some (toHex nat7),
+      replacement := some (toHex (Eff.succeed (.lit (.nat 8)) : NativeEff)) }
+  let rDraft := answer r0.1
+    { op := "draft", path := [0],
+      replacement := some (toHex (Eff.succeed (.var 99) : NativeEff)) }
+  unchanged rFill && unchanged rOmit && unchanged rBare && unchanged rPartial &&
+    rWhole.2.ok && rWhole.1.revision == 1 && rDraft.2.ok && rDraft.1.revision == 1
 
 end Test.Program.SourceDocumentControls

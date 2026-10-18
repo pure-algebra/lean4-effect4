@@ -12,9 +12,14 @@ Slice D of `docs/research/2026-10-17-proof-scout/README.md` (§7.4).
   populated only through `FillSet.add` (F1). Each submitted fill is either applied, collapsed (if an
   identical filling is already present), or refused at its address (`root`, `unknownAddress`,
   `notCertified`, `conflict`, or `overlap`).
-* `applyFills`, `lookup`, `uniq`, `ordered`, `conflictAt`, `MaterializeRefusal`, `materialize`,
-  `FillSet.materialize`: deterministic materialization in the base's address order, followed by
-  the source check through layer references (`Sketch.sourceCheck`).
+* `applyFills`, `lookup`, `uniq`, `ordered`, `holdsProgram`, `conflictAt`, `MaterializeRefusal`,
+  `materialize`: deterministic materialization in the base's address order, followed by the source
+  check through layer references (`Sketch.sourceCheck`). `materialize` refuses a root fill and a fill
+  at an address where the base holds no program, so a list that bypasses `FillSet.add` loses no fill
+  in silence. Its refusals there carry no address: the answer depends on the fills' members only.
+* `FillSet.materializeSketch`, `FillSet.materializeDoc`: a set's materialization, at its own base;
+  `materializeDoc` publishes it only on the document, revision, base and application it was opened
+  at.
 
 The laws (D1–D9 and the construction invariant `FillSet.add_wf`) are in
 `Effect4.Laws.Program.FillSet`.
@@ -66,32 +71,54 @@ def uniq : List (List Nat) → List (List Nat)
 def ordered (base : Sketch) (fs : List (List Nat × NativeEff)) : List (List Nat × NativeEff) :=
   (uniq (Node.addresses (.eff base.program))).filterMap fun a => (lookup fs a).map fun q => (a, q)
 
+/-- Whether the base holds a program at an address: the addresses `FillSet.add` admits, the root
+aside. -/
+def holdsProgram (base : Sketch) (p : List Nat) : Bool :=
+  match (Node.eff base.program).at_ p with
+  | some (.eff _) => true
+  | _ => false
+
 /-- Why a fill set does not materialize. -/
 inductive MaterializeRefusal where
+  /-- two different fillings at this address -/
   | conflict (path : List Nat)
+  /-- a fill names the root, which an ordinary `Doc.commit` replaces -/
+  | root
+  /-- a fill names an address at which the base holds no program -/
+  | unknownAddress
+  /-- the fills do not apply in the base's address order -/
   | notApplicable
+  /-- the result does not check through its references -/
   | refused (why : TypeRefusal)
+  /-- the document is another one than the set was opened at -/
   | foreignDoc (expected actual : DocId)
+  /-- the document has moved past the revision the set was opened at -/
   | staleRevision (expected actual : Nat)
+  /-- the document at the set's identity and revision holds another base or application -/
+  | foreignBase
 deriving DecidableEq
 
 /-- The first address with two different fillings. -/
 def conflictAt (fs : List (List Nat × NativeEff)) : Option (List Nat) :=
   (fs.find? fun x => fs.any fun y => decide (y.1 = x.1) && decide (y.2 ≠ x.2)).map (·.1)
 
-/-- **Materialize**: refuse a conflict, apply the fills in the base's address order, and check
-the result through its references. -/
+/-- **Materialize**: refuse a root fill, a fill where the base holds no program, and a conflict;
+apply the fills in the base's address order, and check the result through its references. -/
 def materialize (app : SigApp) (base : Sketch) (fs : List (List Nat × NativeEff)) :
     Except MaterializeRefusal Sketch :=
-  match conflictAt fs with
-  | some p => .error (.conflict p)
-  | none =>
-    match applyFills base (ordered base fs) with
-    | none => .error .notApplicable
-    | some s' =>
-      match s'.sourceCheck app with
-      | .ok _ => .ok s'
-      | .error why => .error (.refused why)
+  match fs.any (fun x => x.1.isEmpty), fs.any (fun x => !holdsProgram base x.1) with
+  | true, _ => .error .root
+  | false, true => .error .unknownAddress
+  | false, false =>
+    match conflictAt fs with
+    | some p => .error (.conflict p)
+    | none =>
+      match applyFills base (ordered base fs) with
+      | none => .error .notApplicable
+      | some s' =>
+        match s'.sourceCheck app with
+        | .ok _ => .ok s'
+        | .error why => .error (.refused why)
 
 /-! ## `FillSet`: constructor-guarded fixed-base fill set (F1) -/
 
@@ -175,20 +202,23 @@ def add (fs : FillSet) : List (List Nat × NativeEff) → FillSet × List AddOut
     let (fs2, outs) := fs1.add rest
     (fs2, out1 :: outs)
 
-/-- Materialize `fs` into a new `Sketch` via `Program.materialize`. -/
+/-- Materialize `fs` into a new `Sketch` via `Program.materialize`, at the set's own base. -/
 def materializeSketch (fs : FillSet) : Except MaterializeRefusal Sketch :=
   Program.materialize fs.app fs.base fs.entries
 
-/-- Materialize `fs` against `d` as a new document revision: verifies that `d` matches `fs.doc` and
-`fs.revision`, runs `Program.materialize`, and advances the document revision by one. -/
+/-- Materialize `fs` against `d` as a new document revision. It verifies that `d` is the document,
+the revision, the base and the application the set was opened at, materializes the set at its own
+base (`materializeSketch`), and advances the document revision by one. -/
 def materializeDoc (fs : FillSet) (d : Doc) : Except MaterializeRefusal Doc :=
   if d.id != fs.doc then
     .error (.foreignDoc fs.doc d.id)
   else if d.revision != fs.revision then
     .error (.staleRevision fs.revision d.revision)
+  else if d.session.sketch != fs.base || d.session.app != fs.app then
+    .error .foreignBase
   else do
-    let s' ← Program.materialize d.session.app d.session.sketch fs.entries
-    .ok ⟨d.id, SourceSession.open d.session.app s', d.revision + 1⟩
+    let s' ← fs.materializeSketch
+    .ok ⟨d.id, SourceSession.open fs.app s', d.revision + 1⟩
 
 end FillSet
 
