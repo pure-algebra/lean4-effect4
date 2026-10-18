@@ -1,0 +1,202 @@
+{
+  "checked_utc": "2026-10-18T01:50:28.111145+00:00",
+  "command": [
+    "python3",
+    "docs/research/2026-10-17-seams/review-probes/check_amendment.py"
+  ],
+  "checks": {
+    "all_findings_disposed_once": true,
+    "all_dispositions_have_owner_and_acceptance": true,
+    "all_original_cuts_have_amended_rows": true,
+    "local_links_exist": true,
+    "cited_source_paths_exist": true,
+    "slice_graph_acyclic": true,
+    "required_slice_dependencies_present": true,
+    "cleanup_does_not_block_checker": true,
+    "reviewed_drafts_retained_exactly": true,
+    "existing_review_designs_and_probes_unchanged": true,
+    "earlier_plans_and_briefs_unchanged": true,
+    "new_representation_probe_passed": true,
+    "language_check_passed": true,
+    "retained_lean_evidence_matches_success_records": true,
+    "host_test_log_unchanged": true,
+    "unchanged_head": true,
+    "unchanged_branch": true,
+    "unchanged_status": true,
+    "unchanged_tracked_paths": true,
+    "unchanged_tracked_bytes_sha256": true,
+    "unchanged_diff_sha256": true
+  },
+  "all_passed": true,
+  "documents": {
+    "docs/research/2026-10-17-seams/README.md": "b4b95e89052d57e5eec44fa6453ae8f8edc0e5b29b3efd250bccd4bd153c2d16",
+    "docs/research/2026-10-17-seams/cuts.md": "b9c6750b1a9f3fb6cbded3bd12c63d2d8fe0e681edd6bd6c54b1ab496e1e10fd",
+    "docs/research/2026-10-17-seams/ledger.md": "079e729070f6ee3237a9ed0abb99e55e1d49893e69d31bc834f26f96b352ad31"
+  },
+  "state": {
+    "head": "774ddc3d784c0e0a04bd0d1e0bf6556c630074b2",
+    "branch": "refactor/phase1-phase3",
+    "status": "?? tools/view/make_videos.py\n",
+    "tracked_paths": 12651,
+    "tracked_bytes_sha256": "2b293dd5e922b944a237686fc70a9fa660e2f4211313942f8ef7be7cdd03cc3f",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "details": {
+    "finding_ids": [
+      "SM-C-1",
+      "SM-C-2",
+      "SM-C-3",
+      "SM-C-4",
+      "SM-C-5",
+      "SM-C-6",
+      "SM-C-7",
+      "SM-C-8",
+      "SM-C-9",
+      "SM-C-10",
+      "SM-C-11",
+      "SM-C-12",
+      "SM-C-13",
+      "SM-C-14",
+      "SM-C-15",
+      "SM-C-16",
+      "SM-C-17",
+      "SM-C-18",
+      "SM-C-19",
+      "SM-C-20",
+      "SM-C-21",
+      "SM-C-22",
+      "SM-C-23",
+      "SM-C-24",
+      "SM-C-25",
+      "SM-C-26",
+      "SM-C-27"
+    ],
+    "cut_ids": [
+      "K-01",
+      "K-02",
+      "K-03",
+      "K-04",
+      "K-05",
+      "K-06",
+      "K-07",
+      "K-08",
+      "K-09",
+      "K-10",
+      "K-11",
+      "K-12",
+      "K-13",
+      "K-14",
+      "K-15",
+      "K-16",
+      "K-17",
+      "K-18"
+    ],
+    "missing_links": [],
+    "missing_paths": [],
+    "slice_edges": [
+      [
+        "S0",
+        "V1"
+      ],
+      [
+        "V1",
+        "S1"
+      ],
+      [
+        "S1",
+        "S2"
+      ],
+      [
+        "S1",
+        "S4"
+      ],
+      [
+        "S2",
+        "S3a"
+      ],
+      [
+        "S4",
+        "S3a"
+      ],
+      [
+        "S3a",
+        "S3b"
+      ],
+      [
+        "ST1a",
+        "ST1b"
+      ],
+      [
+        "ST1b",
+        "ST2"
+      ],
+      [
+        "ST1b",
+        "ST3"
+      ],
+      [
+        "V1",
+        "ST3"
+      ],
+      [
+        "ST2",
+        "ST4"
+      ],
+      [
+        "ST3",
+        "ST4"
+      ],
+      [
+        "S3b",
+        "ST4"
+      ],
+      [
+        "ST4",
+        "S6"
+      ],
+      [
+        "S6",
+        "I"
+      ]
+    ],
+    "unexpected_changes_to_retained_files": [],
+    "unexpected_input_changes": [],
+    "amendment_files_since_baseline": [
+      "docs/research/2026-10-17-seams/ledger.md",
+      "docs/research/2026-10-17-seams/review-probes/TranscriptCarrierControl.lean",
+      "docs/research/2026-10-17-seams/review-probes/TranscriptCarrierControl.log",
+      "docs/research/2026-10-17-seams/review-probes/amendment-baseline.json",
+      "docs/research/2026-10-17-seams/review-probes/amendment-checks.json",
+      "docs/research/2026-10-17-seams/review-probes/amendment-language.log",
+      "docs/research/2026-10-17-seams/review-probes/amendment-probe.json",
+      "docs/research/2026-10-17-seams/review-probes/check_amendment.py",
+      "docs/research/2026-10-17-seams/review-probes/concurrent-inputs.json"
+    ],
+    "concurrent_files_not_owned_by_amendment": [
+      "docs/research/2026-10-17-seams/implementation-brief.md",
+      "docs/research/2026-10-17-seams/interface-probe/SeamsInterfaces.lean",
+      "docs/research/2026-10-17-seams/interfaces.md",
+      "docs/research/2026-10-17-seams/self-review-probes/SelfReviewControls.lean",
+      "docs/research/2026-10-17-seams/self-review-probes/SelfReviewControls.log"
+    ],
+    "new_file_scope_note": "Named amendment outputs are tracked separately; other additions are observed, not attributed or edited.",
+    "concurrent_inputs": {
+      "docs/research/2026-10-17-seams/interfaces.md": {
+        "read_sha256": "e3d30181083284244a237e776f4ef9d9c3617525e3252cd55bc6a8f680a6b2ab",
+        "current_sha256": "e3d30181083284244a237e776f4ef9d9c3617525e3252cd55bc6a8f680a6b2ab",
+        "matches_read_version": true
+      },
+      "docs/research/2026-10-17-seams/interface-probe/SeamsInterfaces.lean": {
+        "read_sha256": "45681cef19ca4b1519c745f7919dc0c45e13cec52a277317cf3c3d7d539cb3a0",
+        "current_sha256": "45681cef19ca4b1519c745f7919dc0c45e13cec52a277317cf3c3d7d539cb3a0",
+        "matches_read_version": true
+      },
+      "docs/research/2026-10-17-seams/implementation-brief.md": {
+        "read_sha256": "14f019a20e7e11e4a79c8171404b71bc5b73a59d938f62bb037581f91d758646",
+        "current_sha256": "14f019a20e7e11e4a79c8171404b71bc5b73a59d938f62bb037581f91d758646",
+        "matches_read_version": true
+      }
+    }
+  },
+  "scope": "Document structure and retained evidence integrity. No implementation or new theorem is tested."
+}

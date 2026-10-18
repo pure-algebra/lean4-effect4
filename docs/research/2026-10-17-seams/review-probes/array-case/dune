@@ -1,0 +1,1 @@
+(executable (name array_probe) (modules array_probe lcnf_array e4_log e4_trace))

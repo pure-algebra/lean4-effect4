@@ -1,0 +1,6 @@
+Certified checker port (agreement erased):
+type certified_checker_port = int -> bool
+Erased replay carrier:
+type replay_state = int
+Nondependent port:
+type checker_port = int -> bool

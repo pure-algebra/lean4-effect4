@@ -1,0 +1,6 @@
+Except.error "line 57: the line after `let ctor_index_ty : Ty.t -> int =` is neither `match … with` nor an `|` alternative"
+Except.error "line 121: the line after `let ctor_name_ty : Ty.t -> string =` is neither `match … with` nor an `|` alternative"
+Except.ok #["Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty",
+  "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty"]
+Except.ok #["Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty",
+  "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty", "Ty"]

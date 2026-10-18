@@ -1,0 +1,1 @@
+{"command":["/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3","-c","from pathlib import Path; p=Path('invocations'); p.write_text(p.read_text()+'B\\n')"],"exit":0,"key":"5289417825c1bc8a9a7583fad17c3af76392e18cf3592d28e1dbde4919b4b453","seconds":0.026816,"version":1}

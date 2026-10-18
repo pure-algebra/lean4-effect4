@@ -1,0 +1,41 @@
+{
+  "checks": {
+    "head": true,
+    "branch": true,
+    "status": true,
+    "tracked_paths": true,
+    "tracked_bytes_sha256": true,
+    "diff_sha256": true,
+    "inputs": true
+  },
+  "after": {
+    "head": "774ddc3d784c0e0a04bd0d1e0bf6556c630074b2",
+    "branch": "refactor/phase1-phase3",
+    "status": "?? tools/view/make_videos.py\n",
+    "tracked_paths": 12651,
+    "tracked_bytes_sha256": "2b293dd5e922b944a237686fc70a9fa660e2f4211313942f8ef7be7cdd03cc3f",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "inputs": {
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/README.md": "1379bcfb4c53df9c9351f5d04daf3cc704f9872140b48d3bf62135f909c658d0",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/brief-common.md": "3ac78b2a3b95d1b9261c31c428892b3f3d60fcf919f403415ebfe96dc9509bb3",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/codex-brief.md": "cdc1169692ace6caa0db18770b32e4ab5ba5e39bc8c1f678bb03ae192ac55a9c",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/cuts-survey.md": "1c1bdabb7ef967bfc9c081557c91dddda7615722dcffa9981afc6b7838b298b1",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/cuts.md": "076af3c7e3b1e9ee3439850c4c9c96094256e8f567e057f40e7dbfb3e32b7871",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/A1-protocol-minimal.md": "d36d5ae313c571a5da57dfea87484b02dc278cd65bfa0f4f1e755c545dfe653e",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/A2-protocol-common-caller.md": "2d7aaab2983a6a9f3f5db2f4aace0ae83d7136a7e117414b9fee54c511922997",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/A3-protocol-ports.md": "bb6ff19adb155cfc3c90a68d5d77b845fd07305db709037ed51d1053ea552c57",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/B1-store-minimal.md": "97c61ad2ae77660e7adb57a39d66eb77de1d4dce08dc2ca133f1f279c73791ba",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/B2-store-extensible.md": "f3a961013907a12bf1dca19e0799f80abd2985ff6c5e898ccd1e6fc50bf518e5",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/B3-store-lean-ocaml.md": "33d51b6594eac549cddab6de834dedc8f244ca983f459b425c7ad4989d218b08",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/C1-verdict-minimal.md": "36d59761a95de46c52f234a905f8fa277707117c0099d453cee664e49b5dc1fc",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/C2-verdict-flexible.md": "5ea50a2eea12c73d63b773751ec8ae24cf7c2e399f11e954bd95113e7b624d35",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/designs/C3-verdict-common-caller.md": "2fbc098d9b2d9b6cef71b9b5031ada183359557571b044953b6edf32951fe8ed",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-session-composition/plan.md": "1fce857d34e2387c549fa5ff804901fe6c4a51469c5edc6a278af9318f1ecb3b",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-session-composition/ledger.md": "4220c1cf5df3701bb9dc7eab21729dfe1508cce22e487cc3b62d26bf8cae312e",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-session-composition/codex-review.md": "c66a25fca89e281839de032b2b5295c00eb9a655912c0ece794588aed72b7da3",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-authoring-and-store/README.md": "98a6b8d983c8f54c77975cab01fef85a5c93b5c440b2259b4aa583e13d774b67",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-ocaml-estate-review/cas/README.md": "87fa70014793dad17954e425326417fc4cbb07d7518cbd8c0c7425022cf16734",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-ocaml-estate-review/plan.md": "bf49a4fb155ead4f788f2af10019be847651eb4323fe970f720c7d56d60e7773"
+    }
+  }
+}

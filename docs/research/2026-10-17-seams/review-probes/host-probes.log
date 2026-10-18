@@ -1,0 +1,16 @@
+PASS seams-command: recorded 5289417825c1 (0.024s)
+PASS seams-command: recorded 5289417825c1 (0.027s)
+PASS seams-command: shared result 5289417825c1
+{"probe": "changed_gate_command", "same_input_key": true, "invocations": ["A", "B"], "third_call_reused": true}
+{"probe": "array_allocations", "command": ["opam", "exec", "--switch=effect4", "--", "dune", "exec", "--root", "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/review-probes/array-case", "--build-dir", "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-17-seams/review-probes/array-case/_build", "--profile", "release", "./array_probe.exe"], "cwd": "/Users/pooks/Dev/lean4-effect4/ocaml"}
+{"ocaml_version":"5.1.1","word_size":64}
+{"kind":"int","n":0,"old_words":26,"trace_words":12,"equal":true,"retained_snapshot":true}
+{"kind":"int","n":1,"old_words":32,"trace_words":38,"equal":true,"retained_snapshot":true}
+{"kind":"int","n":255,"old_words":1556,"trace_words":1054,"equal":true,"retained_snapshot":true}
+{"kind":"int","n":256,"old_words":1562,"trace_words":1060,"equal":true,"retained_snapshot":true}
+{"kind":"int","n":257,"old_words":1568,"trace_words":1064,"equal":true,"retained_snapshot":true}
+{"kind":"int","n":6003,"old_words":36044,"trace_words":24048,"equal":true,"retained_snapshot":true}
+{"kind":"int","n":1000000,"old_words":6000026,"trace_words":4000036,"equal":true,"retained_snapshot":true}
+{"kind":"float","n":1,"old_words":32,"trace_words":40,"equal":true,"retained_snapshot":true}
+{"kind":"float","n":257,"old_words":2080,"trace_words":2092,"equal":true,"retained_snapshot":true}
+{"kind":"float","n":6003,"old_words":47820,"trace_words":47832,"equal":true,"retained_snapshot":true}

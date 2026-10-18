@@ -1,0 +1,19 @@
+{
+  "observed_utc": "2026-10-18T01:45:21.403534+00:00",
+  "scope": "Concurrent files read as integration input, not edited or compiled by this amendment.",
+  "files": {
+    "docs/research/2026-10-17-seams/interfaces.md": {
+      "sha256": "e3d30181083284244a237e776f4ef9d9c3617525e3252cd55bc6a8f680a6b2ab",
+      "bytes": 32855
+    },
+    "docs/research/2026-10-17-seams/interface-probe/SeamsInterfaces.lean": {
+      "sha256": "45681cef19ca4b1519c745f7919dc0c45e13cec52a277317cf3c3d7d539cb3a0",
+      "bytes": 18942
+    },
+    "docs/research/2026-10-17-seams/implementation-brief.md": {
+      "sha256": "14f019a20e7e11e4a79c8171404b71bc5b73a59d938f62bb037581f91d758646",
+      "bytes": 3562
+    }
+  },
+  "additional_read_utc": "2026-10-18T01:50:19.472771+00:00"
+}
