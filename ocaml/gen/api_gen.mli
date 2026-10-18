@@ -1051,12 +1051,17 @@ and effect4_tool_wire_refusal =
   | Effect4_tool_wire_refusal_version of string * int * int
   | Effect4_tool_wire_refusal_method of string * string
   | Effect4_tool_wire_refusal_connection
-and describe = {
+and listing = {
   name : string;
   description : string;
-  schema : string;
-  answers : (string * string) list;
+  input_schema : string;
+  output_schema : string;
+  read_only : bool;
+  destructive : bool;
+  idempotent : bool;
+  open_world : bool;
 }
+and describe = { listing : listing; answers : (string * string) list; }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
   popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
@@ -1401,13 +1406,31 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
   layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
 }
 and request = Request_act of action | Request_ask of query
+and method_key =
+    MethodKey_open_
+  | MethodKey_edit
+  | MethodKey_fill
+  | MethodKey_publish
+  | MethodKey_reset
+  | MethodKey_start
+  | MethodKey_restore
+  | MethodKey_play
+  | MethodKey_doc
+  | MethodKey_history
+  | MethodKey_fills
+  | MethodKey_suggest
+  | MethodKey_run
+  | MethodKey_preview
+  | MethodKey_dry
+  | MethodKey_discover
+  | MethodKey_table
+  | MethodKey_addresses
+  | MethodKey_slots
 and effect4_tool_methods_entry = {
-  name : string;
-  description : string;
+  listing : listing;
   kind : string;
   field : string;
   case_name : string;
-  schema : string;
 }
 and record_typing_reason =
     RecordTypingReason_duplicateDeclaration of string
@@ -1558,6 +1581,22 @@ and run_answer =
   | RunAnswer_record of live_record
   | RunAnswer_journal of command list
 and plan = { shared : string list; tools : string list; }
+and method_kind = MethodKind_action | MethodKind_query
+and method_descriptor = {
+  name : string;
+  kind : method_kind;
+  versions : int list;
+  arguments : shape_doc;
+  result : shape_doc;
+  description : string;
+  read_only : bool;
+  hints : method_hints;
+}
+and method_hints = {
+  destructive : bool;
+  idempotent : bool;
+  open_world : bool;
+}
 and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
 and fn_shape =
     FnShape_update

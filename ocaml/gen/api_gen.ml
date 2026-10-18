@@ -827,12 +827,17 @@ and effect4_tool_wire_refusal =
   | Effect4_tool_wire_refusal_version of string * int * int
   | Effect4_tool_wire_refusal_method of string * string
   | Effect4_tool_wire_refusal_connection
-and describe = {
+and listing = {
   name : string;
   description : string;
-  schema : string;
-  answers : (string * string) list;
+  input_schema : string;
+  output_schema : string;
+  read_only : bool;
+  destructive : bool;
+  idempotent : bool;
+  open_world : bool;
 }
+and describe = { listing : listing; answers : (string * string) list }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
   popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
@@ -1101,13 +1106,31 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers) ef
   layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
 }
 and request = Request_act of action | Request_ask of query
+and method_key =
+  | MethodKey_open_
+  | MethodKey_edit
+  | MethodKey_fill
+  | MethodKey_publish
+  | MethodKey_reset
+  | MethodKey_start
+  | MethodKey_restore
+  | MethodKey_play
+  | MethodKey_doc
+  | MethodKey_history
+  | MethodKey_fills
+  | MethodKey_suggest
+  | MethodKey_run
+  | MethodKey_preview
+  | MethodKey_dry
+  | MethodKey_discover
+  | MethodKey_table
+  | MethodKey_addresses
+  | MethodKey_slots
 and effect4_tool_methods_entry = {
-  name : string;
-  description : string;
+  listing : listing;
   kind : string;
   field : string;
   case_name : string;
-  schema : string;
 }
 and record_typing_reason =
   | RecordTypingReason_duplicateDeclaration of string
@@ -1224,6 +1247,18 @@ and doc = { origin : doc_origin; history : doc_action list; runtime : effect4_pr
 and run_form = RunForm_view | RunForm_record | RunForm_journal
 and run_answer = RunAnswer_view of view | RunAnswer_record of live_record | RunAnswer_journal of command list
 and plan = { shared : string list; tools : string list }
+and method_kind = MethodKind_action | MethodKind_query
+and method_descriptor = {
+  name : string;
+  kind : method_kind;
+  versions : int list;
+  arguments : shape_doc;
+  result : shape_doc;
+  description : string;
+  read_only : bool;
+  hints : method_hints;
+}
+and method_hints = { destructive : bool; idempotent : bool; open_world : bool }
 and 'u reference = { key : ServiceKey.t; default : 'u }
 and fn_shape =
   | FnShape_update
@@ -52928,42 +52963,28 @@ let tool_native_answer__lam_0 (__do_lift_1 : (state * reply envelope, effect4_to
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.supportedMethods.spec_0 (a.1 : List String) (a.2 : List (Prod String (List Nat))) : List (Prod String (List Nat)) *)
+(* LCNF mono: Effect4.Tool.MethodKey.all : List Effect4.Tool.MethodKey *)
 
-let rec list_map_tr_loop_at_tool_supported_methods_spec_0 (a_1 : string list) (a_2 : (string * int list) list) : (string * int list) list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = 1 in
-      let _x_7 = [] in
-      let _x_8 = _x_6 :: _x_7 in
-      let _x_9 = head_4, _x_8 in
-      let _x_10 = _x_9 :: a_2 in
-      list_map_tr_loop_at_tool_supported_methods_spec_0 tail_5 _x_10)
-
-
-
-(* LCNF mono: Effect4.Tool.supportedMethods : List (Prod String (List Nat)) *)
-
-let tool_supported_methods : (string * int list) list =
-  let _x_1 = "open" in
-  let _x_2 = "edit" in
-  let _x_3 = "fill" in
-  let _x_4 = "publish" in
-  let _x_5 = "reset" in
-  let _x_6 = "start" in
-  let _x_7 = "restore" in
-  let _x_8 = "play" in
-  let _x_9 = "doc" in
-  let _x_10 = "history" in
-  let _x_11 = "fills" in
-  let _x_12 = "suggest" in
-  let _x_13 = "run" in
-  let _x_14 = "preview" in
-  let _x_15 = "dry" in
-  let _x_16 = "discover" in
-  let _x_17 = "table" in
-  let _x_18 = "addresses" in
-  let _x_19 = "slots" in
+let tool_method_key_all : method_key list =
+  let _x_1 = MethodKey_open_ in
+  let _x_2 = MethodKey_edit in
+  let _x_3 = MethodKey_fill in
+  let _x_4 = MethodKey_publish in
+  let _x_5 = MethodKey_reset in
+  let _x_6 = MethodKey_start in
+  let _x_7 = MethodKey_restore in
+  let _x_8 = MethodKey_play in
+  let _x_9 = MethodKey_doc in
+  let _x_10 = MethodKey_history in
+  let _x_11 = MethodKey_fills in
+  let _x_12 = MethodKey_suggest in
+  let _x_13 = MethodKey_run in
+  let _x_14 = MethodKey_preview in
+  let _x_15 = MethodKey_dry in
+  let _x_16 = MethodKey_discover in
+  let _x_17 = MethodKey_table in
+  let _x_18 = MethodKey_addresses in
+  let _x_19 = MethodKey_slots in
   let _x_20 = [] in
   let _x_21 = _x_19 :: _x_20 in
   let _x_22 = _x_18 :: _x_21 in
@@ -52983,8 +53004,64 @@ let tool_supported_methods : (string * int list) list =
   let _x_36 = _x_4 :: _x_35 in
   let _x_37 = _x_3 :: _x_36 in
   let _x_38 = _x_2 :: _x_37 in
-  let _x_39 = _x_1 :: _x_38 in
-  list_map_tr_loop_at_tool_supported_methods_spec_0 _x_39 _x_20
+  _x_1 :: _x_38
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.name (k : Effect4.Tool.MethodKey) : String *)
+
+let tool_method_key_name (k : method_key) : string =
+  match (k : method_key) with
+    | MethodKey_open_ -> "open"
+    | MethodKey_edit -> "edit"
+    | MethodKey_fill -> "fill"
+    | MethodKey_publish -> "publish"
+    | MethodKey_reset -> "reset"
+    | MethodKey_start -> "start"
+    | MethodKey_restore -> "restore"
+    | MethodKey_play -> "play"
+    | MethodKey_doc -> "doc"
+    | MethodKey_history -> "history"
+    | MethodKey_fills -> "fills"
+    | MethodKey_suggest -> "suggest"
+    | MethodKey_run -> "run"
+    | MethodKey_preview -> "preview"
+    | MethodKey_dry -> "dry"
+    | MethodKey_discover -> "discover"
+    | MethodKey_table -> "table"
+    | MethodKey_addresses -> "addresses"
+    | MethodKey_slots -> "slots"
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.versions (x.1 : Effect4.Tool.MethodKey) : List Nat *)
+
+let tool_method_key_versions (x_1 : method_key) : int list =
+  let _x_2 = 1 in
+  let _x_3 = [] in
+  _x_2 :: _x_3
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.supportedMethods.spec_0 (a.1 : List Effect4.Tool.MethodKey) (a.2 : List (Prod String (List Nat))) : List (Prod String (List Nat)) *)
+
+let rec list_map_tr_loop_at_tool_supported_methods_spec_0 (a_1 : method_key list) (a_2 : (string * int list) list) : (string * int list) list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = tool_method_key_name head_4 in
+      let _x_7 = tool_method_key_versions head_4 in
+      let _x_8 = _x_6, _x_7 in
+      let _x_9 = _x_8 :: a_2 in
+      list_map_tr_loop_at_tool_supported_methods_spec_0 tail_5 _x_9)
+
+
+
+(* LCNF mono: Effect4.Tool.supportedMethods : List (Prod String (List Nat)) *)
+
+let tool_supported_methods : (string * int list) list =
+  let _x_1 = tool_method_key_all in
+  let _x_2 = [] in
+  list_map_tr_loop_at_tool_supported_methods_spec_0 _x_1 _x_2
 
 
 
@@ -53081,31 +53158,39 @@ let tool_wire_connection_valid (connection : (string * int) list) : bool =
 
 
 
-(* LCNF mono: Effect4.Tool.Request.method (x.1 : Effect4.Tool.Request) : String *)
+(* LCNF mono: Effect4.Tool.Request.methodKey (r : Effect4.Tool.Request) : Effect4.Tool.MethodKey *)
 
-let tool_request_method_ (x_1 : request) : string =
-  match (x_1 : request) with
-    | Request_act a_2 -> (match (a_2 : action) with
-        | Action_open_ (_, _, _) -> "open"
-        | Action_edit (_, _) -> "edit"
-        | Action_fill (_, _) -> "fill"
-        | Action_publish _ -> "publish"
-        | Action_reset -> "reset"
-        | Action_start (_, _) -> "start"
-        | Action_restore _ -> "restore"
-        | Action_play (_, _) -> "play")
-    | Request_ask q_24 -> (match (q_24 : query) with
-        | Query_doc _ -> "doc"
-        | Query_history -> "history"
-        | Query_fills -> "fills"
-        | Query_suggest (_, _, _, _, _) -> "suggest"
-        | Query_run (_, _) -> "run"
-        | Query_preview _ -> "preview"
-        | Query_dry _ -> "dry"
-        | Query_discover -> "discover"
-        | Query_table -> "table"
-        | Query_addresses -> "addresses"
-        | Query_slots (_, _) -> "slots")
+let tool_request_method_key (r : request) : method_key =
+  match (r : request) with
+    | Request_act a_1 -> (match (a_1 : action) with
+        | Action_open_ (_, _, _) -> MethodKey_open_
+        | Action_edit (_, _) -> MethodKey_edit
+        | Action_fill (_, _) -> MethodKey_fill
+        | Action_publish _ -> MethodKey_publish
+        | Action_reset -> MethodKey_reset
+        | Action_start (_, _) -> MethodKey_start
+        | Action_restore _ -> MethodKey_restore
+        | Action_play (_, _) -> MethodKey_play)
+    | Request_ask q_23 -> (match (q_23 : query) with
+        | Query_doc _ -> MethodKey_doc
+        | Query_history -> MethodKey_history
+        | Query_fills -> MethodKey_fills
+        | Query_suggest (_, _, _, _, _) -> MethodKey_suggest
+        | Query_run (_, _) -> MethodKey_run
+        | Query_preview _ -> MethodKey_preview
+        | Query_dry _ -> MethodKey_dry
+        | Query_discover -> MethodKey_discover
+        | Query_table -> MethodKey_table
+        | Query_addresses -> MethodKey_addresses
+        | Query_slots (_, _) -> MethodKey_slots)
+
+
+
+(* LCNF mono: Effect4.Tool.Request.method (r : Effect4.Tool.Request) : String *)
+
+let tool_request_method_ (r : request) : string =
+  let _x_1 = tool_request_method_key r in
+  tool_method_key_name _x_1
 
 
 
@@ -64059,173 +64144,289 @@ let tool_methods_definitions_of (defs : (string * shape) list) (tools : string l
 
 
 
-(* LCNF mono: Effect4.Tool.Methods.argumentSchema (defs : List (Prod String Effect4.Store.Shape)) (tools : List String) (fields : List (Prod String Effect4.Store.Shape)) : String *)
+(* LCNF mono: Effect4.Tool.Methods.fieldsSchema (defs : List (Prod String Effect4.Store.Shape)) (tools : List String) (lazy : Bool) (fields : List (Prod String Effect4.Store.Shape)) : String *)
 
-let tool_methods_argument_schema (defs : (string * shape) list) (tools : string list) (fields : (string * shape) list) : string =
-  let _x_1 = true in
-  let _x_2 = tool_methods_definitions_of defs tools _x_1 fields in
-  match _x_2 with
-    | fst_3, snd_4 -> (let _x_5 = "type" in
-      let _x_6 = "object" in
-      let _x_7 = tool_methods_quote _x_6 in
-      let _x_8 = _x_5, _x_7 in
-      let _x_9 = tool_methods_schema_fields fst_3 fields in
-      let _x_10 = tool_methods_exactly _x_9 in
-      let _x_11 = _x_8 :: _x_10 in
-      let[@local always] _jp_12 = fun _y_13 -> let _x_14 = _x_11 @ _y_13 in
-      tool_methods_object_ _x_14 in
-      let _x_16 = snd_4 = [] in
-      if _x_16 then (let _x_22 = [] in
-        _jp_12 _x_22) else (let _x_17 = "$defs" in
-        let _x_18 = tool_methods_object_ snd_4 in
-        let _x_19 = _x_17, _x_18 in
-        let _x_20 = [] in
-        let _x_21 = _x_19 :: _x_20 in
-        _jp_12 _x_21))
-
-
-
-(* LCNF mono: Effect4.Tool.Methods.descriptions : List (Prod String (Prod String String)) *)
-
-let tool_methods_descriptions : (string * (string * string)) list =
-  let _x_1 = "open_" in
-  let _x_2 = "open" in
-  let _x_3 = "Open a document: a program with holes (the sketch: the program and its hole table) at an application (its host rows, services and types), under a name. It replaces the open document and drops pending fills. Answers the document's view: its snapshot, the program's type or the located refusals of Lean's checker, and every hole with its address and typed focus." in
-  let _x_4 = _x_2, _x_3 in
-  let _x_5 = _x_1, _x_4 in
-  let _x_6 = "edit" in
-  let _x_7 = "Apply one document action at the snapshot you read (`at_`): a commit of several changes under one feed policy, one draft edit, or the revert of an accepted entry. A moved document refuses `stale` and changes nothing. Answers the new view and a receipt of what each change did." in
-  let _x_8 = _x_6, _x_7 in
-  let _x_9 = _x_6, _x_8 in
-  let _x_10 = "fill" in
-  let _x_11 = "Add pending fills at a snapshot: each item puts a program at an address, and each is certified alone against the snapshot's typed source (kept exact). Answers one outcome per item: applied, already there, or refused with its reason. Nothing changes the document until `publish`." in
-  let _x_12 = _x_10, _x_11 in
-  let _x_13 = _x_10, _x_12 in
-  let _x_14 = "publish" in
-  let _x_15 = "Publish the pending fills as one commit at the snapshot they were certified at. Refuses when no fill is pending or the document moved since." in
-  let _x_16 = _x_14, _x_15 in
-  let _x_17 = _x_14, _x_16 in
-  let _x_18 = "reset" in
-  let _x_19 = "Drop the pending fills. Answers the fillings it dropped." in
-  let _x_20 = _x_18, _x_19 in
-  let _x_21 = _x_18, _x_20 in
-  let _x_22 = "start" in
-  let _x_23 = "Admit the document's program at its application and start a live run on the machine, under a budget. Answers the run's id, where it came from, and the run's view: its state, outcome, the host calls it waits on, and its internal waits." in
-  let _x_24 = _x_22, _x_23 in
-  let _x_25 = _x_22, _x_24 in
-  let _x_26 = "restore" in
-  let _x_27 = "Restore a saved run record (from `run` with form `record`): it reruns admission and replays the record's journal, so the restored run is the saved one. Answers the new run id and its view." in
-  let _x_28 = _x_26, _x_27 in
-  let _x_29 = _x_26, _x_28 in
-  let _x_30 = "play" in
-  let _x_31 = "Feed host events to a run in order: control decisions, holding a call, receiving and applying a reply. An event whose call selector does not resolve refuses the whole list and changes nothing. Answers each event's verdict and the run's view." in
-  let _x_32 = _x_30, _x_31 in
-  let _x_33 = _x_30, _x_32 in
-  let _x_34 = "doc" in
-  let _x_35 = "Read the document's view; with an address, also inspect it: the sub-program there, its signature context, its typed focus, its table entry and any refusal there." in
-  let _x_36 = _x_34, _x_35 in
-  let _x_37 = _x_34, _x_36 in
-  let _x_38 = "history" in
-  let _x_39 = "Read the document's accepted actions, oldest first." in
-  let _x_40 = _x_38, _x_39 in
-  let _x_41 = _x_38, _x_40 in
-  let _x_42 = "fills" in
-  let _x_43 = "Read the pending fills and the snapshot they are anchored at." in
-  let _x_44 = _x_42, _x_43 in
-  let _x_45 = _x_42, _x_44 in
-  let _x_46 = "suggest" in
-  let _x_47 = "Suggest programs for a place (a hole by index, or an address with the program expected there): your supplied candidates, the variables in scope, unit requests of the rows and typed sub-programs elsewhere, each checked at the place as a fill would be, with its evidence (fits exactly, type mismatch, refused, another scope). Paged by cursor and limit; the answer gives the next cursor." in
-  let _x_48 = _x_46, _x_47 in
-  let _x_49 = _x_46, _x_48 in
-  let _x_50 = "run" in
-  let _x_51 = "Read a run (by id) in one form: its view, its saved record (for `restore`), or its ordered journal." in
-  let _x_52 = _x_50, _x_51 in
-  let _x_53 = _x_50, _x_52 in
-  let _x_54 = "preview" in
-  let _x_55 = "Run the document's program in the call tree, without starting a run: settle it under a reply tape at the least budget that does not cut it, answer its runs at every budget up to a limit (frames), or explore its paths with replies drawn from the rows' types." in
-  let _x_56 = _x_54, _x_55 in
-  let _x_57 = _x_54, _x_56 in
-  let _x_58 = "dry" in
-  let _x_59 = "Answer an action as if it were applied, and change nothing." in
-  let _x_60 = _x_58, _x_59 in
-  let _x_61 = _x_58, _x_60 in
-  let _x_62 = "discover" in
-  let _x_63 = "List the supported methods and their versions." in
-  let _x_64 = _x_62, _x_63 in
-  let _x_65 = _x_62, _x_64 in
-  let _x_66 = "table" in
-  let _x_67 = "Read the program's whole address table: for every address, the typing environment there and, at a program, Lean's checker answer." in
-  let _x_68 = _x_66, _x_67 in
-  let _x_69 = _x_66, _x_68 in
-  let _x_70 = "addresses" in
-  let _x_71 = "List every address of the program as written, in the table's order." in
-  let _x_72 = _x_70, _x_71 in
-  let _x_73 = _x_70, _x_72 in
-  let _x_74 = "slots" in
-  let _x_75 = "Read the term slots of the node at an address (one named slot, or every slot): each slot's term, the environment it reads and its type there." in
-  let _x_76 = _x_74, _x_75 in
-  let _x_77 = _x_74, _x_76 in
-  let _x_78 = [] in
-  let _x_79 = _x_77 :: _x_78 in
-  let _x_80 = _x_73 :: _x_79 in
-  let _x_81 = _x_69 :: _x_80 in
-  let _x_82 = _x_65 :: _x_81 in
-  let _x_83 = _x_61 :: _x_82 in
-  let _x_84 = _x_57 :: _x_83 in
-  let _x_85 = _x_53 :: _x_84 in
-  let _x_86 = _x_49 :: _x_85 in
-  let _x_87 = _x_45 :: _x_86 in
-  let _x_88 = _x_41 :: _x_87 in
-  let _x_89 = _x_37 :: _x_88 in
-  let _x_90 = _x_33 :: _x_89 in
-  let _x_91 = _x_29 :: _x_90 in
-  let _x_92 = _x_25 :: _x_91 in
-  let _x_93 = _x_21 :: _x_92 in
-  let _x_94 = _x_17 :: _x_93 in
-  let _x_95 = _x_13 :: _x_94 in
-  let _x_96 = _x_9 :: _x_95 in
-  _x_5 :: _x_96
+let tool_methods_fields_schema (defs : (string * shape) list) (tools : string list) (lazy_ : bool) (fields : (string * shape) list) : string =
+  let _x_1 = tool_methods_definitions_of defs tools lazy_ fields in
+  match _x_1 with
+    | fst_2, snd_3 -> (let _x_4 = "type" in
+      let _x_5 = "object" in
+      let _x_6 = tool_methods_quote _x_5 in
+      let _x_7 = _x_4, _x_6 in
+      let _x_8 = tool_methods_schema_fields fst_2 fields in
+      let _x_9 = tool_methods_exactly _x_8 in
+      let _x_10 = _x_7 :: _x_9 in
+      let[@local always] _jp_11 = fun _y_12 -> let _x_13 = _x_10 @ _y_12 in
+      tool_methods_object_ _x_13 in
+      let _x_15 = snd_3 = [] in
+      if _x_15 then (let _x_21 = [] in
+        _jp_11 _x_21) else (let _x_16 = "$defs" in
+        let _x_17 = tool_methods_object_ snd_3 in
+        let _x_18 = _x_16, _x_17 in
+        let _x_19 = [] in
+        let _x_20 = _x_18 :: _x_19 in
+        _jp_11 _x_20))
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Methods.entries.spec_1 (fst.1 : String) (fst.2 : String) (a.3 : List (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape))))) (a.4 : List Effect4.Tool.Methods.Entry) : List Effect4.Tool.Methods.Entry *)
+(* LCNF mono: Effect4.Tool.Methods.docSchema (tools : List String) (lazy : Bool) (doc : Effect4.Store.ShapeDoc) : String *)
 
-let rec list_map_tr_loop_at_tool_methods_entries_spec_1 (fst_1 : string) (fst_2 : string) (a_3 : (string * (int * (string * shape) list)) list) (a_4 : effect4_tool_methods_entry list) : effect4_tool_methods_entry list =
-  match a_3 with
-    | [] -> List.rev a_4
-    | head_6 :: tail_7 -> (match head_6 with
-        | fst_8, snd_9 -> (match snd_9 with
-            | _, snd_11 -> (let _x_12 = tool_methods_groups in
-              let _x_13 = [] in
-              let tools = list_map_tr_loop_at_tool_methods_entries_spec_0 _x_12 _x_13 in
-              let[@local always] _jp_14 = fun fst_15 snd_16 -> let _x_17 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_request_c_shape_doc in
-              match (_x_17 : shape_doc) with
-                | { defs = defs; _ } -> (let _x_18 = tool_methods_argument_schema defs tools snd_11 in
-                  let _x_19 = ({ name = fst_15; description = snd_16; kind = fst_1; field = fst_2; case_name = fst_8; schema = _x_18 } : effect4_tool_methods_entry) in
-                  let _x_20 = _x_19 :: a_4 in
-                  list_map_tr_loop_at_tool_methods_entries_spec_1 fst_1 fst_2 tail_7 _x_20) in
-              let _x_22 = tool_methods_descriptions in
-              let _x_23 = list_lookup_at_store_arrays_fields_spec_2 fst_8 _x_22 in
-              match _x_23 with
-                | None -> (let _x_24 = "" in
-                  _jp_14 fst_8 _x_24)
-                | Some val__25 -> (match val__25 with
-                    | fst_26, snd_27 -> _jp_14 fst_26 snd_27))))
+let tool_methods_doc_schema (tools : string list) (lazy_ : bool) (doc : shape_doc) : string =
+  match (doc : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_1 = store_head_shape defs root in
+      match (_x_1 : shape) with
+        | Shape_struct (_, fields_3) -> tool_methods_fields_schema defs tools lazy_ fields_3
+        | _ -> (let _x_5 = "" in
+          let _x_6 = _x_5, _x_1 in
+          let _x_7 = [] in
+          let _x_8 = _x_6 :: _x_7 in
+          let _x_9 = tool_methods_definitions_of defs tools lazy_ _x_8 in
+          match _x_9 with
+            | fst_10, snd_11 -> (let _x_12 = "type" in
+              let _x_13 = "object" in
+              let _x_14 = tool_methods_quote _x_13 in
+              let _x_15 = _x_12, _x_14 in
+              let _x_16 = "allOf" in
+              let _x_17 = tool_methods_schema_in fst_10 _x_1 in
+              let _x_18 = _x_17 :: _x_7 in
+              let _x_19 = tool_methods_array _x_18 in
+              let _x_20 = _x_16, _x_19 in
+              let _x_21 = _x_20 :: _x_7 in
+              let _x_22 = _x_15 :: _x_21 in
+              let[@local always] _jp_23 = fun _y_24 -> let _x_25 = _x_22 @ _y_24 in
+              tool_methods_object_ _x_25 in
+              let _x_27 = snd_11 = [] in
+              if _x_27 then _jp_23 _x_7 else (let _x_28 = "$defs" in
+                let _x_29 = tool_methods_object_ snd_11 in
+                let _x_30 = _x_28, _x_29 in
+                let _x_31 = _x_30 :: _x_7 in
+                _jp_23 _x_31))))
 
 
 
-(* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Tool.Methods.entries.spec_2 (a.1 : List (Prod String (Prod String (Prod String (List (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape))))))))) (a.2 : Array Effect4.Tool.Methods.Entry) : List Effect4.Tool.Methods.Entry *)
+(* LCNF mono: Effect4.Tool.Methods.replySchema : String *)
 
-let rec list_flat_map_tr_go_at_tool_methods_entries_spec_2 (a_1 : (string * (string * (string * (string * (int * (string * shape) list)) list))) list) (a_2 : effect4_tool_methods_entry Lcnf_array.t) : effect4_tool_methods_entry list =
+let tool_methods_reply_schema : string =
+  let _x_1 = [] in
+  let _x_2 = false in
+  let _x_3 = store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__40__95_root_95__46_effect4_46_tool_46_reply_41_c_shape_doc in
+  tool_methods_doc_schema _x_1 _x_2 _x_3
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.caseName (k : Effect4.Tool.MethodKey) : String *)
+
+let tool_method_key_case_name (k : method_key) : string =
+  match (k : method_key) with
+    | MethodKey_open_ -> "open_"
+    | MethodKey_edit -> "edit"
+    | MethodKey_fill -> "fill"
+    | MethodKey_publish -> "publish"
+    | MethodKey_reset -> "reset"
+    | MethodKey_start -> "start"
+    | MethodKey_restore -> "restore"
+    | MethodKey_play -> "play"
+    | MethodKey_doc -> "doc"
+    | MethodKey_history -> "history"
+    | MethodKey_fills -> "fills"
+    | MethodKey_suggest -> "suggest"
+    | MethodKey_run -> "run"
+    | MethodKey_preview -> "preview"
+    | MethodKey_dry -> "dry"
+    | MethodKey_discover -> "discover"
+    | MethodKey_table -> "table"
+    | MethodKey_addresses -> "addresses"
+    | MethodKey_slots -> "slots"
+
+
+
+(* LCNF mono: List.find?._at_.Effect4.Tool.Methods.caseOf.spec_0 (k : Effect4.Tool.MethodKey) (x.1 : List (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape))))) : Option (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape)))) *)
+
+let rec list_find_opt_at_tool_methods_case_of_spec_0 (k : method_key) (x_1 : (string * (int * (string * shape) list)) list) : (string * (int * (string * shape) list)) option =
+  match x_1 with
+    | [] -> None
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_1, _ -> (let _x_5 = tool_method_key_case_name k in
+          let _x_6 = fst_1 = _x_5 in
+          if _x_6 then Some head_3 else list_find_opt_at_tool_methods_case_of_spec_0 k tail_4))
+
+
+
+(* LCNF mono: List.findSome?._at_.Effect4.Tool.Methods.caseOf.spec_1 (k : Effect4.Tool.MethodKey) (x.1 : List (Prod String (Prod String (Prod String (List (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape))))))))) : Option (Prod String (Prod String (List (Prod String Effect4.Store.Shape)))) *)
+
+let rec list_find_some_opt_at_tool_methods_case_of_spec_1 (k : method_key) (x_1 : (string * (string * (string * (string * (int * (string * shape) list)) list))) list) : (string * (string * (string * shape) list)) option =
+  match x_1 with
+    | [] -> None
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_5, snd_6 -> (match snd_6 with
+            | fst_7, snd_8 -> (match snd_8 with
+                | _, snd_10 -> (let _x_11 = list_find_opt_at_tool_methods_case_of_spec_0 k snd_10 in
+                  match _x_11 with
+                    | None -> list_find_some_opt_at_tool_methods_case_of_spec_1 k tail_4
+                    | Some val__13 -> (match val__13 with
+                        | _, snd_1 -> (match snd_1 with
+                            | _, snd_2 -> (let _x_14 = fst_7, snd_2 in
+                              let _x_15 = fst_5, _x_14 in
+                              Some _x_15)))))))
+
+
+
+(* LCNF mono: Effect4.Tool.Methods.caseOf (k : Effect4.Tool.MethodKey) : Option (Prod String (Prod String (List (Prod String Effect4.Store.Shape)))) *)
+
+let tool_methods_case_of (k : method_key) : (string * (string * (string * shape) list)) option =
+  let _x_1 = tool_methods_groups in
+  list_find_some_opt_at_tool_methods_case_of_spec_1 k _x_1
+
+
+
+(* LCNF mono: Effect4.Tool.Methods.caseFor (k : Effect4.Tool.MethodKey) : Prod String (Prod String (List (Prod String Effect4.Store.Shape))) *)
+
+let tool_methods_case_for (k : method_key) : string * (string * (string * shape) list) =
+  let _x_1 = tool_methods_case_of k in
+  match _x_1 with
+    | None -> assert false
+    | Some val__2 -> val__2
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.kind (k : Effect4.Tool.MethodKey) : Effect4.Tool.MethodKind *)
+
+let tool_method_key_kind (k : method_key) : method_kind =
+  match (k : method_key) with
+    | MethodKey_open_ -> MethodKind_action
+    | MethodKey_edit -> MethodKind_action
+    | MethodKey_fill -> MethodKind_action
+    | MethodKey_publish -> MethodKind_action
+    | MethodKey_reset -> MethodKind_action
+    | MethodKey_start -> MethodKind_action
+    | MethodKey_restore -> MethodKind_action
+    | MethodKey_play -> MethodKind_action
+    | _ -> MethodKind_query
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.description (x.1 : Effect4.Tool.MethodKey) : String *)
+
+let tool_method_key_description (x_1 : method_key) : string =
+  match (x_1 : method_key) with
+    | MethodKey_open_ -> "Open a document: a program with holes (the sketch: the program and its hole table) at an application (its host rows, services and types), under a name. It replaces the open document and drops pending fills. Answers the document's view: its snapshot, the program's type or the located refusals of Lean's checker, every hole occurrence with its address and typed focus, and every declared hole with the exact program that performs it (with n application rows, hole k is external row n + k) and whether the program performs it."
+    | MethodKey_edit -> "Apply one document action at the snapshot you read (`at_`): a commit of several changes under one feed policy, one draft edit, or the revert of an accepted entry. A moved document refuses `stale` and changes nothing. A refused change names its item and its reason, located at the program's own address; a kept-exact commit at a document whose root does not type refuses `rootRefused`, and a draft edit repairs it. Answers the new view and a receipt of what each change did."
+    | MethodKey_fill -> "Add pending fills at a snapshot: each item puts a program at an address, and each is certified alone against the snapshot's typed source (kept exact). Answers one outcome per item: applied, already there, or refused with its reason, a refused certification with the feed's own refusal at the program's address. Nothing changes the document until `publish`."
+    | MethodKey_publish -> "Publish the pending fills as one commit at the snapshot they were certified at. Refuses when no fill is pending or the document moved since."
+    | MethodKey_reset -> "Drop the pending fills. Answers the fillings it dropped."
+    | MethodKey_start -> "Admit the document's program at its application and start a live run on the machine, under a budget. A program that does not type is refused with the checker's refusal at its address. Answers the run's id, where it came from, and the run's view: its state, outcome, the host calls it waits on, and its internal waits."
+    | MethodKey_restore -> "Restore a saved run record (from `run` with form `record`): it reruns admission and replays the record's journal, so the restored run is the saved one. Answers the new run id and its view."
+    | MethodKey_play -> "Feed host events to a run in order: control decisions, holding a call, receiving and applying a reply. An event whose call selector does not resolve refuses the whole list and changes nothing. Answers each event's verdict and the run's view."
+    | MethodKey_doc -> "Read the document's view: its type or its located refusals, its hole occurrences, and every declared hole with its exact `perform` program; with an address, also inspect it: the sub-program there, its signature context, its typed focus, its table entry and any refusal there."
+    | MethodKey_history -> "Read the document's accepted actions, oldest first."
+    | MethodKey_fills -> "Read the pending fills and the snapshot they are anchored at."
+    | MethodKey_suggest -> "Suggest programs for a place (a hole by index, or an address with the program expected there): your supplied candidates, the variables in scope, unit requests of the rows and typed sub-programs elsewhere, each checked at the place as a fill would be, with its evidence (fits exactly, type mismatch, refused at its address, another scope). The place's own program and the programs that enclose the place are not offered. Paged by cursor and limit; the answer gives the next cursor."
+    | MethodKey_run -> "Read a run (by id) in one form: its view, its saved record (for `restore`), or its ordered journal."
+    | MethodKey_preview -> "Run the document's program in the call tree, without starting a run: settle it under a reply tape at the least budget that does not cut it, answer its runs at every budget up to a limit (frames), or explore its paths with replies drawn from the rows' types."
+    | MethodKey_dry -> "Answer an action as if it were applied, and change nothing."
+    | MethodKey_discover -> "List the supported methods and their versions."
+    | MethodKey_table -> "Read the program's whole address table: for every address, the typing environment there and, at a program, Lean's checker answer."
+    | MethodKey_addresses -> "List every address of the program as written, in the table's order."
+    | MethodKey_slots -> "Read the term slots of the node at an address (one named slot, or every slot): each slot's term, the environment it reads and its type there."
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKind.ctorIdx (x : Effect4.Tool.MethodKind) : Nat *)
+
+let tool_method_kind_ctor_idx (x : method_kind) : int =
+  match (x : method_kind) with
+    | MethodKind_action -> 0
+    | MethodKind_query -> 1
+
+
+
+(* LCNF mono: Effect4.Tool.instDecidableEqMethodKind (x.1 : Effect4.Tool.MethodKind) (y.2 : Effect4.Tool.MethodKind) : Bool *)
+
+let tool_inst_decidable_eq_method_kind (x_1 : method_kind) (y_2 : method_kind) : bool =
+  let _x_3 = tool_method_kind_ctor_idx x_1 in
+  let _x_4 = tool_method_kind_ctor_idx y_2 in
+  _x_3 = _x_4
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.hints (x.1 : Effect4.Tool.MethodKey) : Effect4.Tool.MethodHints *)
+
+let tool_method_key_hints (x_1 : method_key) : method_hints =
+  let[@local always] _jp_2 = fun () -> let _x_3 = false in
+  ({ destructive = _x_3; idempotent = _x_3; open_world = _x_3 } : method_hints) in
+  match (x_1 : method_key) with
+    | MethodKey_open_ -> (let _x_5 = true in
+      let _x_6 = false in
+      ({ destructive = _x_5; idempotent = _x_6; open_world = _x_6 } : method_hints))
+    | MethodKey_reset -> (let _x_8 = true in
+      let _x_9 = false in
+      ({ destructive = _x_8; idempotent = _x_8; open_world = _x_9 } : method_hints))
+    | MethodKey_start -> _jp_2 ()
+    | MethodKey_restore -> _jp_2 ()
+    | MethodKey_play -> _jp_2 ()
+    | _ -> (let _x_11 = false in
+      let _x_12 = true in
+      ({ destructive = _x_11; idempotent = _x_12; open_world = _x_11 } : method_hints))
+
+
+
+(* LCNF mono: Effect4.Tool.methodDescriptor (k : Effect4.Tool.MethodKey) : Effect4.Tool.MethodDescriptor *)
+
+let tool_method_descriptor (k : method_key) : method_descriptor =
+  let _x_1 = tool_method_key_name k in
+  let _x_2 = tool_method_key_kind k in
+  let _x_3 = tool_method_key_versions k in
+  let _x_4 = tool_method_key_case_name k in
+  let _x_5 = tool_methods_case_for k in
+  match _x_5 with
+    | _, snd_1 -> (match snd_1 with
+        | _, snd_2 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_request_c_shape_doc in
+          match (_x_6 : shape_doc) with
+            | { defs = defs; _ } -> (let _x_7 = Shape_struct (_x_4, snd_2) in
+              let _x_8 = ({ root = _x_7; defs = defs } : shape_doc) in
+              let _x_9 = store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__40__95_root_95__46_effect4_46_tool_46_reply_41_c_shape_doc in
+              let _x_10 = tool_method_key_description k in
+              let _x_11 = MethodKind_query in
+              let _x_12 = tool_inst_decidable_eq_method_kind _x_2 _x_11 in
+              let _x_13 = tool_method_key_hints k in
+              ({ name = _x_1; kind = _x_2; versions = _x_3; arguments = _x_8; result = _x_9; description = _x_10; read_only = _x_12; hints = _x_13 } : method_descriptor))))
+
+
+
+(* LCNF mono: Effect4.Tool.Methods.listingOf (tools : List String) (output : String) (d : Effect4.Tool.MethodDescriptor) : Effect4.Tool.Methods.Listing *)
+
+let tool_methods_listing_of (tools : string list) (output : string) (d : method_descriptor) : listing =
+  match (d : method_descriptor) with
+    | { name = name; arguments = arguments; description = description; read_only = read_only; hints = hints; _ } -> (match (hints : method_hints) with
+        | { destructive = destructive; idempotent = idempotent; open_world = open_world } -> (let _x_1 = true in
+          let _x_2 = tool_methods_doc_schema tools _x_1 arguments in
+          ({ name = name; description = description; input_schema = _x_2; output_schema = output; read_only = read_only; destructive = destructive; idempotent = idempotent; open_world = open_world } : listing)))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Methods.entriesAt.spec_0 (tools : List String) (output : String) (a.1 : List Effect4.Tool.MethodKey) (a.2 : List Effect4.Tool.Methods.Entry) : List Effect4.Tool.Methods.Entry *)
+
+let rec list_map_tr_loop_at_tool_methods_entries_at_spec_0 (tools : string list) (output : string) (a_1 : method_key list) (a_2 : effect4_tool_methods_entry list) : effect4_tool_methods_entry list =
   match a_1 with
-    | [] -> Lcnf_array.to_list a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_6, snd_7 -> (match snd_7 with
-            | fst_8, snd_9 -> (match snd_9 with
-                | _, snd_11 -> (let _x_12 = [] in
-                  let _x_13 = list_map_tr_loop_at_tool_methods_entries_spec_1 fst_6 fst_8 snd_11 _x_12 in
-                  let _x_14 = Lcnf_array.append_list a_2 _x_13 in
-                  list_flat_map_tr_go_at_tool_methods_entries_spec_2 tail_5 _x_14))))
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = tool_methods_case_for head_4 in
+      match _x_6 with
+        | fst_7, snd_8 -> (match snd_8 with
+            | fst_9, _ -> (let _x_11 = tool_method_descriptor head_4 in
+              let _x_12 = tool_methods_listing_of tools output _x_11 in
+              let _x_13 = tool_method_key_case_name head_4 in
+              let _x_14 = ({ listing = _x_12; kind = fst_7; field = fst_9; case_name = _x_13 } : effect4_tool_methods_entry) in
+              let _x_15 = _x_14 :: a_2 in
+              list_map_tr_loop_at_tool_methods_entries_at_spec_0 tools output tail_5 _x_15)))
+
+
+
+(* LCNF mono: Effect4.Tool.Methods.entriesAt (tools : List String) (output : String) : List Effect4.Tool.Methods.Entry *)
+
+let tool_methods_entries_at (tools : string list) (output : string) : effect4_tool_methods_entry list =
+  let _x_1 = tool_method_key_all in
+  let _x_2 = [] in
+  list_map_tr_loop_at_tool_methods_entries_at_spec_0 tools output _x_1 _x_2
 
 
 
@@ -64233,9 +64434,10 @@ let rec list_flat_map_tr_go_at_tool_methods_entries_spec_2 (a_1 : (string * (str
 
 let tool_methods_entries : effect4_tool_methods_entry list =
   let _x_1 = tool_methods_groups in
-  let _x_2 = 0 in
-  let _x_3 = Lcnf_array.with_capacity _x_2 in
-  list_flat_map_tr_go_at_tool_methods_entries_spec_2 _x_1 _x_3
+  let _x_2 = [] in
+  let _x_3 = list_map_tr_loop_at_tool_methods_entries_spec_0 _x_1 _x_2 in
+  let _x_4 = tool_methods_reply_schema in
+  tool_methods_entries_at _x_3 _x_4
 
 
 
@@ -64321,8 +64523,29 @@ let tool_methods_describe : describe =
       let _x_14 = _x_7, _x_13 in
       let _x_15 = _x_14 :: _x_2 in
       let _x_16 = tool_methods_object_schema _x_15 in
-      let _x_17 = list_map_tr_loop_at_tool_methods_describe_spec_1 names _x_2 in
-      ({ name = _x_5; description = _x_6; schema = _x_16; answers = _x_17 } : describe))
+      let _x_17 = "$ref" in
+      let _x_18 = "type" in
+      let _x_19 = "string" in
+      let _x_20 = tool_methods_quote _x_19 in
+      let _x_21 = _x_18, _x_20 in
+      let _x_22 = _x_21 :: _x_2 in
+      let _x_23 = tool_methods_object_ _x_22 in
+      let _x_24 = _x_17, _x_23 in
+      let _x_25 = "$defs" in
+      let _x_26 = "object" in
+      let _x_27 = tool_methods_quote _x_26 in
+      let _x_28 = _x_18, _x_27 in
+      let _x_29 = _x_28 :: _x_2 in
+      let _x_30 = tool_methods_object_ _x_29 in
+      let _x_31 = _x_25, _x_30 in
+      let _x_32 = _x_31 :: _x_2 in
+      let _x_33 = _x_24 :: _x_32 in
+      let _x_34 = tool_methods_object_schema _x_33 in
+      let _x_35 = true in
+      let _x_36 = false in
+      let _x_37 = ({ name = _x_5; description = _x_6; input_schema = _x_16; output_schema = _x_34; read_only = _x_35; destructive = _x_36; idempotent = _x_35; open_world = _x_36 } : listing) in
+      let _x_38 = list_map_tr_loop_at_tool_methods_describe_spec_1 names _x_2 in
+      ({ listing = _x_37; answers = _x_38 } : describe))
 
 
 

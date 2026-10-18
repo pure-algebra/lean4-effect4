@@ -4,6 +4,12 @@
 Run with jsonschema 4.25.1. The native test_mcp suite remains part of check-ocaml.
 This probe exercises the actual executable, including initialization and framing.
 It does not certify HTTP, cancellation during computation, or later protocol versions.
+
+Every listed tool carries its four behaviour hints (`annotations`) and an `outputSchema`. Each
+structured result validates against its tool's emitted output schema: the method tools answer a
+`Wire.Envelope Reply`, and `describe` a schema document. Red control: the bare `Reply` schema
+(the envelope's payload, with the same definitions) refuses the enveloped result it does not
+describe, and accepts its payload.
 """
 
 import argparse
@@ -60,7 +66,8 @@ def main():
     process = subprocess.run([str(args.binary.resolve()), "mcp"],
         input="\n".join(map(json.dumps, requests)) + "\n", text=True, capture_output=True, timeout=60)
     assert process.returncode == 0, process.stderr
-    replies = [json.loads(line) for line in process.stdout.splitlines()]
+    lines = process.stdout.splitlines()
+    replies = [json.loads(line) for line in lines]
     expected = [r["id"] for r in requests if "id" in r]
     assert [r["id"] for r in replies] == expected, "stdout framing, notification silence or request IDs differ"
     by_id = {reply["id"]: reply for reply in replies}
@@ -71,18 +78,41 @@ def main():
     validate("ListToolsResult", by_id[1]["result"])
     tools = {tool["name"]: tool for tool in by_id[1]["result"]["tools"]}
     assert len(tools) == len(by_id[1]["result"]["tools"]) and tools
+    hints = ("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")
     for tool in tools.values():
         Draft202012Validator.check_schema(tool["inputSchema"])
         checks += 1
+        annotations = tool.get("annotations")
+        assert isinstance(annotations, dict), tool["name"] + " has no annotations"
+        assert all(isinstance(annotations.get(h), bool) for h in hints), tool["name"] + " lacks a hint"
+        assert "outputSchema" in tool, tool["name"] + " has no outputSchema"
+        Draft202012Validator.check_schema(tool["outputSchema"])
+        checks += 1
+    # the classification: a query, `describe` included, is read-only, and an action is not
+    assert tools["doc"]["annotations"]["readOnlyHint"] is True
+    assert tools["describe"]["annotations"]["readOnlyHint"] is True
+    assert tools["open"]["annotations"]["readOnlyHint"] is False
     for request in requests:
         if request.get("id") in (2, 3, 4, 8, 9, 12):
             params = request["params"]
             Draft202012Validator(tools[params["name"]]["inputSchema"]).validate(params["arguments"])
             checks += 1
+    names = {r["id"]: r["params"]["name"] for r in requests if "id" in r and r["method"] == "tools/call"}
     for request_id in (2, 3, 4, 8, 9, 12):
         result = by_id[request_id]["result"]
         validate("CallToolResult", result)
         assert json.loads(result["content"][0]["text"]) == result["structuredContent"]
+        Draft202012Validator(tools[names[request_id]]["outputSchema"]).validate(result["structuredContent"])
+        checks += 1
+    # red control: the bare Reply schema refuses the enveloped result, and accepts its payload
+    envelope_schema = tools["open"]["outputSchema"]
+    bare = {**envelope_schema["properties"]["payload"], "$defs": envelope_schema.get("$defs", {})}
+    Draft202012Validator.check_schema(bare)
+    for request_id in (2, 3, 4):
+        enveloped = by_id[request_id]["result"]["structuredContent"]
+        assert not Draft202012Validator(bare).is_valid(enveloped), "a bare Reply schema accepts the envelope"
+        assert Draft202012Validator(bare).is_valid(enveloped["payload"]), "the bare Reply schema refuses the payload"
+        checks += 2
     assert by_id[2]["result"]["isError"] is False
     assert by_id[4]["result"]["isError"] is True
     assert by_id[12]["result"]["isError"] is False
@@ -93,7 +123,13 @@ def main():
     assert by_id[3]["result"] == by_id[8]["result"] == by_id[9]["result"], "refusals or notifications changed the document"
     print(json.dumps({"status": "PASS", "protocol": "2025-06-18", "schema_checks": checks,
         "input_messages": len(requests), "output_messages": len(replies), "tools": len(tools),
-        "exact_large_id": str(2**64), "scope": "finite stdio trace; official schemas and generated argument schemas"}))
+        "annotated_tools": sum(1 for t in tools.values() if "annotations" in t),
+        "output_schema_tools": sum(1 for t in tools.values() if "outputSchema" in t),
+        "tools_list_bytes": len(lines[[r["id"] for r in replies].index(1)].encode()),
+        "input_schema_bytes": sum(len(json.dumps(t["inputSchema"])) for t in tools.values()),
+        "output_schema_bytes": sum(len(json.dumps(t["outputSchema"])) for t in tools.values()),
+        "exact_large_id": str(2**64),
+        "scope": "finite stdio trace; official schemas, generated argument and output schemas"}))
 
 
 if __name__ == "__main__":
