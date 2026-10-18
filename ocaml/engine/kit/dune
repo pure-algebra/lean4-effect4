@@ -10,7 +10,7 @@
 
 (library
  (name effect4_kit)
- (modules kit_json kit kit_author kit_machine kit_serve kit_view kit_tool kit_mcp)
+ (modules kit_json kit kit_author kit_machine kit_serve kit_tool kit_mcp)
  (flags (:standard -w -4-9-26-27-32-33-35-37-39-40-41-42-44-45-69-70))
  (libraries effect4_eff effect4_clock effect4_gen effect4_engine yojson))
 

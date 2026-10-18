@@ -4,9 +4,10 @@
    session tool's form, or its canonical bytes), the application's rows, and a reply tape, and
    answers one JSON object, and `eff serve` answers the same requests as JSON lines. `eff tool`
    serves the authoring tool as JSON lines (Kit_tool), and `eff mcp` serves it as a Model Context
-   Protocol server (Kit_mcp), its tool table generated from Lean's request shape.
+   Protocol server (Kit_mcp), its tool table generated from Lean's request shape. A run's
+   picture is the view's, not the kit's: `tools/view/v` (tools/view/README.md).
    Depends on: Effect4_kit.Kit_serve (the commands' requests and answers), Effect4_kit.Kit,
-   Effect4_kit.Kit_view, Effect4_kit.Kit_tool, Effect4_kit.Kit_mcp.
+   Effect4_kit.Kit_tool, Effect4_kit.Kit_mcp.
 
    Behaviours it holds itself to:
    E1  Every answer is one JSON object with a "status": the commands' own ("ok", "refused",
@@ -23,7 +24,6 @@
      eff check   PROGRAM [--rows ROWS]
      eff run     PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--frames] [--fast]
      eff explore PROGRAM [--rows ROWS] [--budget K] [--width N] [--fast]
-     eff view    PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--width N] > run.html
      eff serve
      eff tool
      eff mcp
@@ -33,18 +33,6 @@
 open Effect4_kit
 open Kit_serve
 module J = Eff_json_text
-
-(* `eff view`: the page of a run's frames and the program's paths (Kit_view), on stdout. *)
-let view ~title (r : request) : string =
-  let app = Kit.app ~rows:r.rows () in
-  let p = match r.program with Some p -> p | None -> input "no program" in
-  with_host r
-    { go = (fun reactor st ->
-          let report = Kit.run ~limit:r.limit ~frames:true ~check:false app reactor st p in
-          let budget = match report.budget with Some k -> max k 1 | None -> 8 in
-          let paths =
-            if r.rows = [] then [] else Result.value ~default:[] (Kit.explore app ~budget ~width:r.width p) in
-          Kit_view.page (Kit_view.data ~title ~app ~report ~paths ())) }
 
 let lines (f : string -> string option) =
   let rec loop () =
@@ -66,7 +54,7 @@ let mcp () =
   lines (Kit_mcp.line server)
 
 let usage =
-  "usage: eff (check|run|explore|view) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--frames] [--budget K] [--width N] [--fast]\n\
+  "usage: eff (check|run|explore) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--frames] [--budget K] [--width N] [--fast]\n\
   \       eff serve\n\
   \       eff tool\n\
   \       eff mcp"
@@ -89,12 +77,10 @@ let () =
       | flag :: _ -> input "unknown flag %S" flag
     in
     (match
-       let r = parse { op; program = Some (program_of_path path); rows = []; tape = None; limit = 1024; frames = false;
-                       budget = 64; width = 64; fast = false } flags in
-       if op = "view" then `Page (view ~title:(Filename.remove_extension (Filename.basename path)) r) else `Json (answer r)
+       answer (parse { op; program = Some (program_of_path path); rows = []; tape = None; limit = 1024; frames = false;
+                       budget = 64; width = 64; fast = false } flags)
      with
-     | `Page html -> print_string html
-     | `Json a -> print_endline (Kit.Json.render a)
+     | a -> print_endline (Kit.Json.render a)
      | exception Input e -> print_endline (Kit.Json.render (error_json e)); exit 2
      | exception Failure e -> print_endline (Kit.Json.render (error_json e)); exit 2)
   | _ -> prerr_endline usage; exit 2
