@@ -40,6 +40,9 @@ Everything left of `Kit_tool` and `Wire.serveJson` is text and IO. Everything fr
 | `43e7cb7d5` | Both drivers carry naturals up to 2^53 − 1 and refuse the same values, keeping the same state (decision A). Replies stop leaking machine internals: previews drop the machine's store set, and waits drop the compiler's continuation names. The run record's second, hand-written codec is gone. | Audit 3,235 within ceiling; Tool codec file 10,908 → 8,335 lines; a new cross-driver fixture N4 (6/6); `write_read` re-proved |
 | `26fa723e4` | The OCaml generator runs compiled (`lake exe lcnfgen`) instead of interpreted. This was the 412 s. | `api_gen` step 231 s → 10.6 s, output byte-identical; a cold `check-ocaml` reached its last step in 3 min 3 s (was 8 min 20 s) |
 | `338fab800` | `eff mcp` serves the authoring tool to agents. Its 19 tools and their JSON Schemas are generated from Lean's request shape (`Tool.Methods`); the only hand input is each method's description, checked against the method list. The kit's hand-written MCP server is gone (decision B, its MCP half). | Every fixture request validates against its schema (JSON Schema 2020-12), except the two ids both drivers refuse; MCP tests C1–C3 pass; transcript 40/40 |
+| `277c9c95d` | A refused session load names its fault: the chain reaching its origin early, or an action out of order, with both indices. It no longer shares one `parent` refusal. | Exchange laws audited; a new red control |
+| `06d9ecf89` | Shape names that enter stored digests are data names (`Effect4.Program.Focus(Effect4.Program.NativeOp)`), not the generator's Lean source spelling (`_root_.`, `@`). | Audit 2,300 within ceiling; no golden changed; `check-ocaml` 2 min 17 s cold |
+| `96d53d693` | The fifteen `Seams*` batteries and three `test_seams_*` native tests are named after their subjects. | Renamed batteries built; native tests pass |
 
 ## Measured, before and after
 
@@ -81,8 +84,9 @@ The decisions:
 - **Decision D:** who owns the store's node laws, Lean or Rocq.
 - **The kit's commands:** whether `check`/`run`/`explore` fold into tool queries. That would drop
   the tree-versus-machine cross-check they run, or move it into the tool.
-- **S6b, the native exchange over the disk store:** the next large slice. It needs the exchange
-  written against a store interface, so the generated code can run over the disk store.
+- **S6b, the native exchange over the disk store:** the next large slice, designed in
+  [2026-10-18-native-exchange](../2026-10-18-native-exchange/README.md). The exchange is written once
+  over a three-operation store port, proved at the Lean model, and generated over `E4_disk`.
 
 ## Not verified
 
