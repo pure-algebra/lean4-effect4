@@ -57812,7 +57812,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc :
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_service_key_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Program.SigApp" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Effect4.Program.SigApp" in
           let _x_4 = "rows" in
           let _x_5 = Shape_list root in
           let _x_6 = _x_4, _x_5 in
@@ -57846,7 +57846,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc :
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_shape_doc : shape_doc =
   let _x_1 = store_program_gen_row_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Program.Sketch" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Program.Sketch" in
       let _x_3 = "program" in
       let _x_4 = "Eff" in
       let _x_5 = Shape_named _x_4 in
@@ -57867,7 +57867,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_shape_doc : s
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_DocIdC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_doc_id_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.DocId" in
+  let _x_1 = "Effect4.Program.DocId" in
   let _x_2 = "name" in
   let _x_3 = Shape_string in
   let _x_4 = [] in
@@ -57888,7 +57888,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_doc_id_c_shape_doc : s
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_shape_doc : shape_doc =
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_doc_id_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Program.Snap" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Program.Snap" in
       let _x_3 = "doc" in
       let _x_4 = _x_3, root in
       let _x_5 = "revision" in
@@ -57906,7 +57906,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_shape_doc : sha
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PlaceC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_place_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.Place" in
+  let _x_1 = "Effect4.Program.Place" in
   let _x_2 = "hole" in
   let _x_3 = 0 in
   let _x_4 = "index" in
@@ -57942,7 +57942,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_place_c_shape_doc : sh
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_ChangeC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_change_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.Change" in
+  let _x_1 = "Effect4.Program.Change" in
   let _x_2 = "fill" in
   let _x_3 = 0 in
   let _x_4 = "q" in
@@ -57973,7 +57973,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_change_c_shape_doc : s
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_FeedPolicyC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_policy_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.FeedPolicy" in
+  let _x_1 = "Effect4.Program.FeedPolicy" in
   let _x_2 = "draft" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -58000,7 +58000,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_policy_c_shape_do
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_c_shape_doc : shape_doc =
   let _x_1 = store_program_gen_row_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Program.Edit" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Program.Edit" in
       let _x_3 = "fill" in
       let _x_4 = 0 in
       let _x_5 = "path" in
@@ -58046,7 +58046,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_doc_action_c_shape_doc
             | { root = root_2; _ } -> (let _x_4 = [] in
               let _x_5 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_c_shape_doc in
               match (_x_5 : shape_doc) with
-                | { root = root_3; defs = defs_2 } -> (let _x_6 = "_root_.Effect4.Program.DocAction" in
+                | { root = root_3; defs = defs_2 } -> (let _x_6 = "Effect4.Program.DocAction" in
                   let _x_7 = "commit" in
                   let _x_8 = 0 in
                   let _x_9 = "items" in
@@ -58089,7 +58089,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_doc_action_c_shape_doc
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Api_46_BudgetC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Api.Budget" in
+  let _x_1 = "Effect4.Api.Budget" in
   let _x_2 = "fuel" in
   let _x_3 = Shape_nat in
   let _x_4 = [] in
@@ -58437,7 +58437,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_shape_doc : shape_d
             | { root = root_2; defs = defs_1 } -> (let _x_5 = "session" in
               let _x_6 = Shape_string in
               let _x_7 = _x_5, _x_6 in
-              let _x_8 = "_root_.Effect4.LiveRecord" in
+              let _x_8 = "Effect4.LiveRecord" in
               let _x_9 = "version" in
               let _x_10 = Shape_nat in
               let _x_11 = _x_9, _x_10 in
@@ -58482,7 +58482,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_shape_doc : shape_d
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_RunIdC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_run_id_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Tool.RunId" in
+  let _x_1 = "Effect4.Tool.RunId" in
   let _x_2 = "n" in
   let _x_3 = Shape_nat in
   let _x_4 = [] in
@@ -58503,7 +58503,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_sel_c_shape_doc : shape_do
         | { root = root_1; _ } -> (let _x_3 = [] in
           let _x_4 = "key" in
           let _x_5 = _x_4, root in
-          let _x_6 = "_root_.Effect4.Run.Sel" in
+          let _x_6 = "Effect4.Run.Sel" in
           let _x_7 = 0 in
           let _x_8 = _x_5 :: _x_3 in
           let _x_9 = _x_7, _x_8 in
@@ -58553,7 +58553,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_event_c_shape_doc : shape_
                   let _x_11 = _x_10, root_1 in
                   let _x_12 = _x_11 :: _x_6 in
                   let _x_13 = _x_9, _x_12 in
-                  let _x_14 = "_root_.Effect4.Run.Event" in
+                  let _x_14 = "Effect4.Run.Event" in
                   let _x_15 = "control" in
                   let _x_16 = 0 in
                   let _x_17 = _x_16, _x_7 in
@@ -58639,7 +58639,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_c_shape_doc : shap
                                 | { root = root_7; defs = defs_5 } -> (let _x_34 = "budget" in
                                   let _x_35 = _x_34, root_4 in
                                   let _x_36 = _x_35 :: _x_5 in
-                                  let _x_37 = "_root_.Effect4.Tool.Action" in
+                                  let _x_37 = "Effect4.Tool.Action" in
                                   let _x_38 = "open_" in
                                   let _x_39 = 0 in
                                   let _x_40 = "name" in
@@ -58713,7 +58713,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_c_shape_doc : shap
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_RunFormC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_run_form_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Tool.RunForm" in
+  let _x_1 = "Effect4.Tool.RunForm" in
   let _x_2 = "view" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -58740,7 +58740,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_run_form_c_shape_doc : sh
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_shape_doc : shape_doc =
   let _x_1 = store_runner_gen_exit_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Tool.PreviewQuery" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Tool.PreviewQuery" in
       let _x_3 = "settle" in
       let _x_4 = 0 in
       let _x_5 = "tape" in
@@ -58780,7 +58780,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_query_c_shape_doc
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_ExtSlotC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_ext_slot_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.ExtSlot" in
+  let _x_1 = "Effect4.Program.ExtSlot" in
   let _x_2 = "catchIfTest" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -58859,7 +58859,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_query_c_shape_doc : shape
                             | { root = root_6; _ } -> (let _x_35 = _x_1, root in
                               let _x_36 = 8 in
                               let _x_37 = _x_36, _x_3 in
-                              let _x_38 = "_root_.Effect4.Tool.Query" in
+                              let _x_38 = "Effect4.Tool.Query" in
                               let _x_39 = "doc" in
                               let _x_40 = 0 in
                               let _x_41 = _x_40, _x_7 in
@@ -58950,7 +58950,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_request_c_shape_doc : sha
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_query_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Tool.Request" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Effect4.Tool.Request" in
           let _x_4 = "act" in
           let _x_5 = 0 in
           let _x_6 = "a" in
@@ -58979,7 +58979,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_request_c_shape_doc : sha
 let store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__40__95_root_95__46_effect4_46_tool_46_request_41_c_shape_doc : shape_doc =
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_request_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "@_root_.Effect4.Tool.Wire.Envelope (_root_.Effect4.Tool.Request)" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Tool.Wire.Envelope(Effect4.Tool.Request)" in
       let _x_3 = "method" in
       let _x_4 = Shape_string in
       let _x_5 = [] in
@@ -59009,7 +59009,7 @@ let tool_native_envelope_shape : shape_doc =
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_PlaceRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_place_refusal_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.PlaceRefusal" in
+  let _x_1 = "Effect4.Program.PlaceRefusal" in
   let _x_2 = "outOfRange" in
   let _x_3 = 0 in
   let _x_4 = "index" in
@@ -59058,7 +59058,7 @@ let store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_4
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_eff_ty_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy)" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Except(Effect4.Program.TypeRefusal, Effect4.Program.EffTy)" in
           let _x_4 = "error" in
           let _x_5 = 0 in
           let _x_6 = "arg0" in
@@ -59098,7 +59098,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_shape_d
               let _x_9 = _x_5, _x_8 in
               let _x_10 = _x_9 :: _x_7 in
               let _x_11 = _x_4, _x_10 in
-              let _x_12 = "_root_.Effect4.Program.FeedRefusal" in
+              let _x_12 = "Effect4.Program.FeedRefusal" in
               let _x_13 = "noProgram" in
               let _x_14 = _x_13, _x_11 in
               let _x_15 = "noFocus" in
@@ -59190,7 +59190,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_doc_refusal_c_shape_do
                   let _x_15 = Shape_nat in
                   let _x_16 = _x_14, _x_15 in
                   let _x_17 = _x_16 :: _x_5 in
-                  let _x_18 = "_root_.Effect4.Program.DocRefusal" in
+                  let _x_18 = "Effect4.Program.DocRefusal" in
                   let _x_19 = "foreign" in
                   let _x_20 = 0 in
                   let _x_21 = _x_20, _x_6 in
@@ -59242,7 +59242,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_doc_refusal_c_shape_do
 let store_tool_gen_t_95_root_95__46_effect4_46_live_record_46_refusal_c_shape_doc : shape_doc =
   let _x_1 = store_refusals_gen_admit_refusal_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.LiveRecord.Refusal" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.LiveRecord.Refusal" in
       let _x_3 = "unsupportedVersion" in
       let _x_4 = 0 in
       let _x_5 = "version" in
@@ -59272,7 +59272,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_46_refusal_c_shape_do
 let store_tool_gen_t_95_root_95__46_effect4_46_run_46_preview_46_refusal_c_shape_doc : shape_doc =
   let _x_1 = store_refusals_gen_admit_refusal_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Run.Preview.Refusal" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Run.Preview.Refusal" in
       let _x_3 = "admission" in
       let _x_4 = 0 in
       let _x_5 = "why" in
@@ -59359,7 +59359,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_refusal_c_shape_doc : sha
                                     | { root = root_8; defs = defs_7 } -> (let _x_32 = "sel" in
                                       let _x_33 = _x_32, root_6 in
                                       let _x_34 = _x_33 :: _x_4 in
-                                      let _x_35 = "_root_.Effect4.Tool.Refusal" in
+                                      let _x_35 = "Effect4.Tool.Refusal" in
                                       let _x_36 = "noDocument" in
                                       let _x_37 = _x_36, _x_5 in
                                       let _x_38 = "doc" in
@@ -59455,7 +59455,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_shape_doc : s
         | { root = root_1; defs = defs_1 } -> (let _x_3 = "index" in
           let _x_4 = Shape_nat in
           let _x_5 = _x_3, _x_4 in
-          let _x_6 = "_root_.Effect4.Tool.HoleView" in
+          let _x_6 = "Effect4.Tool.HoleView" in
           let _x_7 = [] in
           let _x_8 = "row" in
           let _x_9 = _x_8, root in
@@ -59493,7 +59493,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_part_sig_c_shape_doc 
         | { root = root_1; defs = defs_1 } -> (let _x_3 = 0 in
           let _x_4 = [] in
           let _x_5 = _x_3, _x_4 in
-          let _x_6 = "_root_.Effect4.Program.PartSig" in
+          let _x_6 = "Effect4.Program.PartSig" in
           let _x_7 = "root" in
           let _x_8 = _x_7, _x_5 in
           let _x_9 = "block" in
@@ -59531,7 +59531,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_shape_doc 
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = store_check_gen_t_95_root_95__46_effect4_46_program_46_part_sig_c_shape_doc in
           match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = "_root_.Effect4.Program.SigData" in
+            | { root = root_2; defs = defs_2 } -> (let _x_4 = "Effect4.Program.SigData" in
               let _x_5 = "app" in
               let _x_6 = _x_5, root in
               let _x_7 = "holes" in
@@ -59555,7 +59555,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_shape_doc 
 let store_tool_gen_t_64__95_root_95__46_effect4_46_program_46_focus_32__40__95_root_95__46_effect4_46_program_46_native_op_41_c_shape_doc : shape_doc =
   let _x_1 = store_program_gen_eff_ty_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "@_root_.Effect4.Program.Focus (_root_.Effect4.Program.NativeOp)" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Program.Focus(Effect4.Program.NativeOp)" in
       let _x_3 = "program" in
       let _x_4 = "Eff" in
       let _x_5 = Shape_named _x_4 in
@@ -59596,7 +59596,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_node_env_c_shape_doc 
       let _x_10 = Shape_bool in
       let _x_11 = _x_9, _x_10 in
       let _x_12 = _x_11 :: _x_6 in
-      let _x_13 = "_root_.Effect4.Program.NodeEnv" in
+      let _x_13 = "Effect4.Program.NodeEnv" in
       let _x_14 = 0 in
       let _x_15 = store_program_gen_ty_c_defs in
       let _x_16 = _x_14, _x_7 in
@@ -59637,7 +59637,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_table_46_entry_c_shap
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46_program_46_type_refusal_41__32__40__95_root_95__46_effect4_46_program_46_eff_ty_41_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Program.Table.Entry" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Effect4.Program.Table.Entry" in
           let _x_4 = "path" in
           let _x_5 = Shape_nat in
           let _x_6 = [] in
@@ -59670,7 +59670,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_shape_doc : 
           match (_x_3 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_4 = store_refusals_gen_type_refusal_c_shape_doc in
               match (_x_4 : shape_doc) with
-                | { root = root_3; defs = defs_3 } -> (let _x_5 = "_root_.Effect4.Tool.Inspection" in
+                | { root = root_3; defs = defs_3 } -> (let _x_5 = "Effect4.Tool.Inspection" in
                   let _x_6 = "path" in
                   let _x_7 = Shape_nat in
                   let _x_8 = [] in
@@ -59721,7 +59721,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_shape_doc : sh
               match (_x_4 : shape_doc) with
                 | { root = root_3; defs = defs_3 } -> (let _x_5 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_shape_doc in
                   match (_x_5 : shape_doc) with
-                    | { root = root_4; defs = defs_4 } -> (let _x_6 = "_root_.Effect4.Tool.DocView" in
+                    | { root = root_4; defs = defs_4 } -> (let _x_6 = "Effect4.Tool.DocView" in
                       let _x_7 = "snap" in
                       let _x_8 = _x_7, root in
                       let _x_9 = "type" in
@@ -59754,7 +59754,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_shape_doc : sh
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_Edit_46_DeltaC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.Edit.Delta" in
+  let _x_1 = "Effect4.Program.Edit.Delta" in
   let _x_2 = "unchanged" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -59790,7 +59790,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_step_c_shape_d
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_delta_c_shape_doc in
       match (_x_2 : shape_doc) with
         | { root = root_1; _ } -> (let _x_3 = [] in
-          let _x_4 = "_root_.Effect4.Program.Edit.Step" in
+          let _x_4 = "Effect4.Program.Edit.Step" in
           let _x_5 = "edit" in
           let _x_6 = _x_5, root in
           let _x_7 = "replaced" in
@@ -59816,7 +59816,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_step_c_shape_d
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_receipt_c_shape_doc : shape_doc =
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_edit_46_step_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Program.Receipt" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Program.Receipt" in
       let _x_3 = "steps" in
       let _x_4 = Shape_list root in
       let _x_5 = _x_3, _x_4 in
@@ -59830,7 +59830,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_receipt_c_shape_doc : 
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_AddRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_refusal_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Program.AddRefusal" in
+  let _x_1 = "Effect4.Program.AddRefusal" in
   let _x_2 = "root" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -59880,7 +59880,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_outcome_c_shape_do
       let _x_7 = _x_4, _x_6 in
       let _x_8 = _x_7 :: _x_2 in
       let _x_9 = _x_3, _x_8 in
-      let _x_10 = "_root_.Effect4.Program.AddOutcome" in
+      let _x_10 = "Effect4.Program.AddOutcome" in
       let _x_11 = "applied" in
       let _x_12 = _x_11, _x_9 in
       let _x_13 = "collapsed" in
@@ -59913,7 +59913,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_origin_c_shape_doc : shap
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_shape_doc in
           match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = "_root_.Effect4.Tool.Origin" in
+            | { root = root_2; defs = defs_2 } -> (let _x_4 = "Effect4.Tool.Origin" in
               let _x_5 = "snapshot" in
               let _x_6 = 0 in
               let _x_7 = "snap" in
@@ -60130,7 +60130,7 @@ let store_runner_gen_await_c_shape_doc : shape_doc =
 let store_tool_gen_t_64__95_root_95__46_effect4_46_program_46_call_instance_32__40__95_root_95__46_effect4_46_program_46_native_op_41_c_shape_doc : shape_doc =
   let _x_1 = store_program_gen_native_op_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "@_root_.Effect4.Program.CallInstance (_root_.Effect4.Program.NativeOp)" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Program.CallInstance(Effect4.Program.NativeOp)" in
       let _x_3 = "op" in
       let _x_4 = _x_3, root in
       let _x_5 = "request" in
@@ -60166,7 +60166,7 @@ let store_tool_gen_t_64__95_root_95__46_effect4_46_program_46_call_instance_32__
 let store_tool_gen_t_95_root_95__46_effect4_46_live_46_held_call_c_shape_doc : shape_doc =
   let _x_1 = store_runner_gen_completion_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Live.HeldCall" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Live.HeldCall" in
       let _x_3 = "callId" in
       let _x_4 = Shape_nat in
       let _x_5 = [] in
@@ -60191,7 +60191,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_call_view_c_shape_doc : s
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_live_46_held_call_c_shape_doc in
           match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = "_root_.Effect4.Live.CallView" in
+            | { root = root_2; defs = defs_2 } -> (let _x_4 = "Effect4.Live.CallView" in
               let _x_5 = "await" in
               let _x_6 = _x_5, root in
               let _x_7 = "origin" in
@@ -60221,7 +60221,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_call_view_c_shape_doc : s
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_DeferredKeyC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Machine.DeferredKey" in
+  let _x_1 = "Effect4.Machine.DeferredKey" in
   let _x_2 = "index" in
   let _x_3 = Shape_nat in
   let _x_4 = [] in
@@ -60238,7 +60238,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_site_c_shape_doc : s
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_deferred_key_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "_root_.Effect4.Live.WaitSite" in
+      let _x_3 = "Effect4.Live.WaitSite" in
       let _x_4 = "deferred" in
       let _x_5 = 0 in
       let _x_6 = "cell" in
@@ -60265,7 +60265,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_view_c_shape_doc : s
     | { root = root; _ } -> (let _x_2 = [] in
       let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_live_46_wait_site_c_shape_doc in
       match (_x_3 : shape_doc) with
-        | { root = root_1; _ } -> (let _x_4 = "_root_.Effect4.Live.WaitView" in
+        | { root = root_1; _ } -> (let _x_4 = "Effect4.Live.WaitView" in
           let _x_5 = "fiber" in
           let _x_6 = _x_5, root in
           let _x_7 = "token" in
@@ -60365,7 +60365,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_view_c_shape_doc : shape_
                                         | { root = root_9; defs = defs_7 } -> (let _x_12 = "runnable" in
                                           let _x_13 = Shape_list root_7 in
                                           let _x_14 = _x_12, _x_13 in
-                                          let _x_15 = "_root_.Effect4.Live.View" in
+                                          let _x_15 = "Effect4.Live.View" in
                                           let _x_16 = "state" in
                                           let _x_17 = _x_16, root in
                                           let _x_18 = "outcome" in
@@ -60596,7 +60596,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_verdict_c_shape_doc : shap
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_run_46_sel_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Run.Verdict" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Effect4.Run.Verdict" in
           let _x_4 = "played" in
           let _x_5 = 0 in
           let _x_6 = "phases" in
@@ -60663,7 +60663,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_answer_c_shape_doc
                               let _x_30 = Shape_list _x_29 in
                               let _x_31 = _x_24, _x_30 in
                               let _x_32 = _x_31 :: _x_6 in
-                              let _x_33 = "_root_.Effect4.Tool.ActionAnswer" in
+                              let _x_33 = "Effect4.Tool.ActionAnswer" in
                               let _x_34 = "opened" in
                               let _x_35 = 0 in
                               let _x_36 = _x_35, _x_7 in
@@ -60737,7 +60737,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_shape_doc in
           match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = "_root_.Effect4.Program.Check.CheckInput" in
+            | { root = root_2; defs = defs_2 } -> (let _x_4 = "Effect4.Program.Check.CheckInput" in
               let _x_5 = "module" in
               let _x_6 = 0 in
               let _x_7 = "app" in
@@ -60799,7 +60799,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_evidence_c_
             | { root = root_2; defs = defs_2 } -> (let _x_10 = "actual" in
               let _x_11 = _x_10, root in
               let _x_12 = _x_11 :: _x_5 in
-              let _x_13 = "_root_.Effect4.Program.Suggest.Evidence" in
+              let _x_13 = "Effect4.Program.Suggest.Evidence" in
               let _x_14 = "exactFit" in
               let _x_15 = 0 in
               let _x_16 = _x_15, _x_6 in
@@ -60856,7 +60856,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_suggestion_
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_evidence_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Program.Suggest.Suggestion" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Effect4.Program.Suggest.Suggestion" in
           let _x_4 = "program" in
           let _x_5 = "Eff" in
           let _x_6 = Shape_named _x_5 in
@@ -60897,7 +60897,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_run_answer_c_shape_doc : 
               let _x_5 = _x_4, root in
               let _x_6 = [] in
               let _x_7 = _x_5 :: _x_6 in
-              let _x_8 = "_root_.Effect4.Tool.RunAnswer" in
+              let _x_8 = "Effect4.Tool.RunAnswer" in
               let _x_9 = "view" in
               let _x_10 = 0 in
               let _x_11 = _x_10, _x_7 in
@@ -60970,7 +60970,7 @@ let store_context_c_shape_doc : shape_doc =
 let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_shape_doc : shape_doc =
   let _x_1 = store_context_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Machine.Ctx" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Machine.Ctx" in
       let _x_3 = "services" in
       let _x_4 = _x_3, root in
       let _x_5 = "maxOpsBeforeYield" in
@@ -60993,7 +60993,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_ctx_c_shape_doc : shap
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_arg_site_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Machine.ArgSite" in
+  let _x_1 = "Effect4.Machine.ArgSite" in
   let _x_2 = "path" in
   let _x_3 = Shape_nat in
   let _x_4 = [] in
@@ -61024,7 +61024,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_shape_doc : 
       match (_x_4 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_5 = "fuel" in
           let _x_6 = _x_5, _x_2 in
-          let _x_7 = "_root_.Effect4.Machine.Capture" in
+          let _x_7 = "Effect4.Machine.Capture" in
           let _x_8 = "path" in
           let _x_9 = [] in
           let _x_10 = _x_8, _x_3 in
@@ -61071,7 +61071,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_capture_c_shape_doc : 
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Machine_46_MemoMapIdC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_memo_map_id_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Machine.MemoMapId" in
+  let _x_1 = "Effect4.Machine.MemoMapId" in
   let _x_2 = "index" in
   let _x_3 = Shape_nat in
   let _x_4 = [] in
@@ -61127,7 +61127,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_fin_name_c_shape_doc :
               let _x_37 = _x_36, _x_12 in
               let _x_38 = Shape_list _x_10 in
               let _x_39 = Shape_list _x_38 in
-              let _x_40 = "_root_.Effect4.Machine.FinName" in
+              let _x_40 = "Effect4.Machine.FinName" in
               let _x_41 = "interruptFiber" in
               let _x_42 = 0 in
               let _x_43 = _x_4 :: _x_8 in
@@ -61313,7 +61313,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_shape_doc : 
                                   let _x_104 = _x_103 :: _x_2 in
                                   let _x_105 = _x_101 :: _x_104 in
                                   let _x_106 = _x_98, _x_105 in
-                                  let _x_107 = "_root_.Effect4.Machine.SyncOp" in
+                                  let _x_107 = "Effect4.Machine.SyncOp" in
                                   let _x_108 = "refMake" in
                                   let _x_109 = 0 in
                                   let _x_110 = store_value_gen_val_c_defs in
@@ -61474,7 +61474,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_step_c_shape_doc :
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_machine_46_sync_op_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Run.Tree.Step" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Effect4.Run.Tree.Step" in
           let _x_4 = "called" in
           let _x_5 = 0 in
           let _x_6 = "row" in
@@ -61517,7 +61517,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_step_c_shape_doc :
 let store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_stop_c_shape_doc : shape_doc =
   let _x_1 = store_runner_gen_exit_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "_root_.Effect4.Run.Tree.Stop" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Run.Tree.Stop" in
       let _x_3 = "finished" in
       let _x_4 = 0 in
       let _x_5 = "exit" in
@@ -61563,7 +61563,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_run_c_shape_doc :
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = store_runner_gen_exit_c_shape_doc in
           match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = "_root_.Effect4.Tool.PreviewRun" in
+            | { root = root_2; defs = defs_2 } -> (let _x_4 = "Effect4.Tool.PreviewRun" in
               let _x_5 = "steps" in
               let _x_6 = Shape_list root in
               let _x_7 = _x_5, _x_6 in
@@ -61590,7 +61590,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_path_c_shape_doc :
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_run_46_tree_46_stop_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Run.Tree.Path" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Effect4.Run.Tree.Path" in
           let _x_4 = "steps" in
           let _x_5 = Shape_list root in
           let _x_6 = _x_4, _x_5 in
@@ -61620,7 +61620,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_preview_answer_c_shape_do
           let _x_8 = Shape_option _x_7 in
           let _x_9 = _x_5, _x_8 in
           let _x_10 = _x_9 :: _x_2 in
-          let _x_11 = "_root_.Effect4.Tool.PreviewAnswer" in
+          let _x_11 = "Effect4.Tool.PreviewAnswer" in
           let _x_12 = "settled" in
           let _x_13 = 0 in
           let _x_14 = _x_13, _x_10 in
@@ -61658,7 +61658,7 @@ let store_tool_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_answer_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.ActionAnswer)" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Except(Effect4.Tool.Refusal, Effect4.Tool.ActionAnswer)" in
           let _x_4 = "error" in
           let _x_5 = 0 in
           let _x_6 = "arg0" in
@@ -61687,7 +61687,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_slot_view_c_shape_doc : s
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_ext_slot_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "_root_.Effect4.Tool.SlotView" in
+      let _x_3 = "Effect4.Tool.SlotView" in
       let _x_4 = "slot" in
       let _x_5 = _x_4, root in
       let _x_6 = "term" in
@@ -61788,7 +61788,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_answer_c_shape_doc : shap
                                               let _x_54 = _x_52, _x_53 in
                                               let _x_55 = _x_54 :: _x_6 in
                                               let _x_56 = Shape_list _x_23 in
-                                              let _x_57 = "_root_.Effect4.Tool.Answer" in
+                                              let _x_57 = "Effect4.Tool.Answer" in
                                               let _x_58 = "acted" in
                                               let _x_59 = 0 in
                                               let _x_60 = _x_59, _x_7 in
@@ -61901,7 +61901,7 @@ let store_tool_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_answer_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.Answer)" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Except(Effect4.Tool.Refusal, Effect4.Tool.Answer)" in
           let _x_4 = "error" in
           let _x_5 = 0 in
           let _x_6 = "arg0" in
@@ -61931,7 +61931,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_reply_c_shape_doc : shape
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = "_root_.Effect4.Tool.Reply" in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "Effect4.Tool.Reply" in
           let _x_4 = "result" in
           let _x_5 = _x_4, root in
           let _x_6 = "now" in
@@ -61951,7 +61951,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_reply_c_shape_doc : shape
 let store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__40__95_root_95__46_effect4_46_tool_46_reply_41_c_shape_doc : shape_doc =
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_reply_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "@_root_.Effect4.Tool.Wire.Envelope (_root_.Effect4.Tool.Reply)" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Tool.Wire.Envelope(Effect4.Tool.Reply)" in
       let _x_3 = "method" in
       let _x_4 = Shape_string in
       let _x_5 = [] in
@@ -61981,7 +61981,7 @@ let tool_native_reply_envelope_shape : shape_doc =
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_CodecProfile_46_RefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_codec_profile_46_refusal_c_shape_doc : shape_doc =
-  let _x_1 = "_root_.Effect4.Tool.CodecProfile.Refusal" in
+  let _x_1 = "Effect4.Tool.CodecProfile.Refusal" in
   let _x_2 = "unsupportedProfile" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -62009,7 +62009,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_wire_46_refusal_c_shape_d
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_codec_profile_46_refusal_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "_root_.Effect4.Tool.Wire.Refusal" in
+      let _x_3 = "Effect4.Tool.Wire.Refusal" in
       let _x_4 = "codec" in
       let _x_5 = 0 in
       let _x_6 = "why" in

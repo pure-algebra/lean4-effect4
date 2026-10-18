@@ -30,7 +30,7 @@ namespace CheckGen
 namespace T_95_root_95__46_Effect4_46_Program_46_SigAppC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.SigApp" [
+  ⟨.struct "Effect4.Program.SigApp" [
      ("rows", (shape (@_root_.List (_root_.Effect4.Program.Row))).root),
      ("services", (shape (@_root_.List (@_root_.Prod (_root_.Effect4.ServiceKey) (_root_.Effect4.Program.Ty)))).root),
      ("types", (shape (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Program.Ty)))).root)],
@@ -103,7 +103,7 @@ end T_95_root_95__46_Effect4_46_Program_46_SigAppC
 namespace T_95_root_95__46_Effect4_46_Program_46_PartSigC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.PartSig"
+  ⟨.sum "Effect4.Program.PartSig"
      [("root", 0, []),
       ("block", 1, [("decls", (shape (@_root_.List (_root_.Effect4.Program.DefDecl))).root)]),
       ("body", 2, [("decls", (shape (@_root_.List (_root_.Effect4.Program.DefDecl))).root),
@@ -179,7 +179,7 @@ end T_95_root_95__46_Effect4_46_Program_46_PartSigC
 namespace T_95_root_95__46_Effect4_46_Program_46_SigDataC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.SigData" [("app", (shape _root_.Effect4.Program.SigApp).root),
+  ⟨.struct "Effect4.Program.SigData" [("app", (shape _root_.Effect4.Program.SigApp).root),
      ("holes", (shape (@_root_.List (_root_.Effect4.Program.Row))).root),
      ("part", (shape _root_.Effect4.Program.PartSig).root)],
    (shape _root_.Effect4.Program.SigApp).defs ++
@@ -251,7 +251,7 @@ end T_95_root_95__46_Effect4_46_Program_46_SigDataC
 namespace T_95_root_95__46_Effect4_46_Program_46_Check_46_CheckInputC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.Check.CheckInput"
+  ⟨.sum "Effect4.Program.Check.CheckInput"
      [("module", 0, [("app", (shape _root_.Effect4.Program.SigApp).root),
         ("holes", (shape (@_root_.List (_root_.Effect4.Program.Row))).root),
         ("program", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root)]),
@@ -356,7 +356,7 @@ end T_95_root_95__46_Effect4_46_Program_46_Check_46_CheckInputC
 namespace T_95_root_95__46_Effect4_46_Program_46_NodeEnvC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.NodeEnv"
+  ⟨.sum "Effect4.Program.NodeEnv"
      [("env", 0, [("env", (shape (@_root_.List (_root_.Effect4.Program.Ty))).root)]),
       ("body", 1, [("env", (shape (@_root_.List (_root_.Effect4.Program.Ty))).root),
         ("inLoop", (shape _root_.Bool).root)]),
@@ -455,7 +455,7 @@ end T_95_root_95__46_Effect4_46_Program_46_NodeEnvC
 namespace T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_C
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy)"
+  ⟨.sum "Except(Effect4.Program.TypeRefusal, Effect4.Program.EffTy)"
      [("error", 0, [("arg0", (shape _root_.Effect4.Program.TypeRefusal).root)]),
       ("ok", 1, [("arg0", (shape _root_.Effect4.Program.EffTy).root)])],
    (shape _root_.Effect4.Program.TypeRefusal).defs ++ (shape _root_.Effect4.Program.EffTy).defs⟩
@@ -515,8 +515,7 @@ end T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Program_46_Typ
 namespace T_95_root_95__46_Effect4_46_Program_46_Table_46_EntryC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Table.Entry" [
-     ("path", (shape (@_root_.List (_root_.Nat))).root),
+  ⟨.struct "Effect4.Program.Table.Entry" [("path", (shape (@_root_.List (_root_.Nat))).root),
      ("env", (shape (@_root_.Option (_root_.Effect4.Program.NodeEnv))).root),
      ("result", (shape (@_root_.Option (@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy)))).root)],
    (shape (@_root_.List (_root_.Nat))).defs ++
@@ -587,7 +586,7 @@ end T_95_root_95__46_Effect4_46_Program_46_Table_46_EntryC
 namespace T_95_root_95__46_Effect4_46_Program_46_Check_46_VerdictC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Check.Verdict" [
+  ⟨.struct "Effect4.Program.Check.Verdict" [
      ("result", (shape (@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy))).root),
      ("table", (shape (@_root_.List (_root_.Effect4.Program.Table.Entry))).root)],
    (shape (@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy))).defs ++
@@ -652,7 +651,7 @@ end T_95_root_95__46_Effect4_46_Program_46_Check_46_VerdictC
 namespace T_95_root_95__46_Effect4_46_Program_46_Check_46_SiteC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.Check.Site"
+  ⟨.sum "Effect4.Program.Check.Site"
      [("address", 0, [("path", (shape (@_root_.List (_root_.Nat))).root)]),
       ("inCopy", 1, [("site", (shape (@_root_.List (_root_.Nat))).root),
         ("path", (shape (@_root_.List (_root_.Nat))).root)]),
@@ -731,7 +730,7 @@ end T_95_root_95__46_Effect4_46_Program_46_Check_46_SiteC
 namespace T_95_root_95__46_Effect4_46_Program_46_Check_46_ExplanationC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Check.Explanation" [
+  ⟨.struct "Effect4.Program.Check.Explanation" [
      ("refusal", (shape _root_.Effect4.Program.TypeRefusal).root),
      ("site", (shape _root_.Effect4.Program.Check.Site).root),
      ("part", (shape (@_root_.Option (_root_.Effect4.Program.Check.CheckInput))).root)],

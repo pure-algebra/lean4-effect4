@@ -157,6 +157,17 @@ partial def tyText (e : Expr) : String :=
     else "@" ++ base ++ " " ++ String.intercalate " " (args.toList.map fun a => "(" ++ tyText a ++ ")")
   | _ => "«unprintable»"
 
+/-- **A type's name as data**: its head constant's full name, then its arguments' names in
+parentheses. Never Lean source (no `_root_.`, no `@`): a qualified group's shape names enter every
+digest of its nodes, so they must not depend on how the generator spells source. -/
+partial def dataName (e : Expr) : String :=
+  match e.getAppFn with
+  | .const n _ =>
+    let args := e.getAppArgs
+    if args.isEmpty then n.toString
+    else n.toString ++ "(" ++ ", ".intercalate (args.toList.map dataName) ++ ")"
+  | _ => "?"
+
 /-- A type as Lean source text, parenthesised when it is an application, so that it can stand
 as one argument. -/
 def tyTextP (e : Expr) : String :=
@@ -329,7 +340,7 @@ def buildItem (tags : Tools.WireTags.Assignment) (seed : Expr)
       else if idents.contains base then identOf t else base
     idents := idents.push ident
     let row : MemberInfo :=
-      { ty := t, tyText := tyText t, shapeName := (if qualifiedNames then tyText t else ident), ident := ident,
+      { ty := t, tyText := tyText t, shapeName := (if qualifiedNames then dataName t else ident), ident := ident,
         isStruct := isStructure env n, ctors := #[] }
     st := { st with members := st.members.push row }
   let act : GenM Unit := do

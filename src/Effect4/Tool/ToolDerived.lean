@@ -55,7 +55,7 @@ namespace ToolGen
 namespace T_95_root_95__46_Effect4_46_Program_46_SketchC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Sketch" [
+  ⟨.struct "Effect4.Program.Sketch" [
      ("program", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root),
      ("holes", (shape (@_root_.List (_root_.Effect4.Program.Row))).root)],
    (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).defs ++
@@ -120,7 +120,7 @@ end T_95_root_95__46_Effect4_46_Program_46_SketchC
 namespace T_64__95_root_95__46_Effect4_46_Program_46_Focus_32__40__95_root_95__46_Effect4_46_Program_46_NativeOp_41_C
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "@_root_.Effect4.Program.Focus (_root_.Effect4.Program.NativeOp)" [
+  ⟨.struct "Effect4.Program.Focus(Effect4.Program.NativeOp)" [
      ("program", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root),
      ("env", (shape (@_root_.List (_root_.Effect4.Program.Ty))).root),
      ("ty", (shape _root_.Effect4.Program.EffTy).root)],
@@ -194,7 +194,7 @@ end T_64__95_root_95__46_Effect4_46_Program_46_Focus_32__40__95_root_95__46_Effe
 namespace T_95_root_95__46_Effect4_46_Program_46_EditC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.Edit"
+  ⟨.sum "Effect4.Program.Edit"
      [("fill", 0, [("path", (shape (@_root_.List (_root_.Nat))).root),
         ("program", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root)]),
       ("omitAt", 1, [("path", (shape (@_root_.List (_root_.Nat))).root),
@@ -277,7 +277,7 @@ end T_95_root_95__46_Effect4_46_Program_46_EditC
 namespace T_95_root_95__46_Effect4_46_Program_46_Edit_46_DeltaC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.Edit.Delta"
+  ⟨.sum "Effect4.Program.Edit.Delta"
      [("unchanged", 0, []),
       ("spliced", 1, [("shown", (shape (@_root_.List (@_root_.List (_root_.Nat)))).root)]),
       ("rechecked", 2, [])],
@@ -334,8 +334,7 @@ end T_95_root_95__46_Effect4_46_Program_46_Edit_46_DeltaC
 namespace T_95_root_95__46_Effect4_46_Program_46_Edit_46_StepC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Edit.Step" [
-     ("edit", (shape _root_.Effect4.Program.Edit).root),
+  ⟨.struct "Effect4.Program.Edit.Step" [("edit", (shape _root_.Effect4.Program.Edit).root),
      ("replaced", (shape (@_root_.Option (_root_.Effect4.Program.NativeEff))).root),
      ("delta", (shape _root_.Effect4.Program.Edit.Delta).root)],
    (shape _root_.Effect4.Program.Edit).defs ++
@@ -406,7 +405,7 @@ end T_95_root_95__46_Effect4_46_Program_46_Edit_46_StepC
 namespace T_95_root_95__46_Effect4_46_Program_46_DocIdC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.DocId" [("name", (shape _root_.String).root),
+  ⟨.struct "Effect4.Program.DocId" [("name", (shape _root_.String).root),
      ("generation", (shape _root_.Nat).root)],
    (shape _root_.String).defs ++ (shape _root_.Nat).defs⟩
 
@@ -465,7 +464,7 @@ end T_95_root_95__46_Effect4_46_Program_46_DocIdC
 namespace T_95_root_95__46_Effect4_46_Program_46_SnapC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Snap" [("doc", (shape _root_.Effect4.Program.DocId).root),
+  ⟨.struct "Effect4.Program.Snap" [("doc", (shape _root_.Effect4.Program.DocId).root),
      ("revision", (shape _root_.Nat).root)],
    (shape _root_.Effect4.Program.DocId).defs ++ (shape _root_.Nat).defs⟩
 
@@ -526,7 +525,7 @@ end T_95_root_95__46_Effect4_46_Program_46_SnapC
 namespace T_95_root_95__46_Effect4_46_Program_46_PlaceC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.Place"
+  ⟨.sum "Effect4.Program.Place"
      [("hole", 0, [("index", (shape _root_.Nat).root)]),
       ("at_", 1, [("path", (shape (@_root_.List (_root_.Nat))).root),
         ("expected", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root)])],
@@ -599,7 +598,7 @@ end T_95_root_95__46_Effect4_46_Program_46_PlaceC
 namespace T_95_root_95__46_Effect4_46_Program_46_ChangeC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.Change"
+  ⟨.sum "Effect4.Program.Change"
      [("fill", 0, [
         ("q", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root)]),
       ("omitHole", 1, [("name", (shape _root_.String).root)])],
@@ -660,7 +659,7 @@ end T_95_root_95__46_Effect4_46_Program_46_ChangeC
 namespace T_95_root_95__46_Effect4_46_Program_46_FeedPolicyC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.FeedPolicy"
+  ⟨.sum "Effect4.Program.FeedPolicy"
      [("draft", 0, []),
       ("keepExact", 1, []),
       ("recheck", 2, [])],
@@ -704,7 +703,7 @@ end T_95_root_95__46_Effect4_46_Program_46_FeedPolicyC
 namespace T_95_root_95__46_Effect4_46_Program_46_DocActionC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.DocAction"
+  ⟨.sum "Effect4.Program.DocAction"
      [("commit", 0, [
         ("items", (shape (@_root_.List (@_root_.Prod (_root_.Effect4.Program.Place) (_root_.Effect4.Program.Change)))).root),
         ("policy", (shape _root_.Effect4.Program.FeedPolicy).root)]),
@@ -796,7 +795,7 @@ end T_95_root_95__46_Effect4_46_Program_46_DocActionC
 namespace T_95_root_95__46_Effect4_46_Program_46_PlaceRefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.PlaceRefusal"
+  ⟨.sum "Effect4.Program.PlaceRefusal"
      [("outOfRange", 0, [("index", (shape _root_.Nat).root)]),
       ("absent", 1, [("index", (shape _root_.Nat).root)]),
       ("repeated", 2, [("index", (shape _root_.Nat).root),
@@ -889,7 +888,7 @@ end T_95_root_95__46_Effect4_46_Program_46_PlaceRefusalC
 namespace T_95_root_95__46_Effect4_46_Program_46_FeedRefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.FeedRefusal"
+  ⟨.sum "Effect4.Program.FeedRefusal"
      [("noProgram", 0, [("path", (shape (@_root_.List (_root_.Nat))).root)]),
       ("noFocus", 1, [("path", (shape (@_root_.List (_root_.Nat))).root)]),
       ("notKept", 2, [
@@ -1052,7 +1051,7 @@ end T_95_root_95__46_Effect4_46_Program_46_FeedRefusalC
 namespace T_95_root_95__46_Effect4_46_Program_46_DocRefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.DocRefusal"
+  ⟨.sum "Effect4.Program.DocRefusal"
      [("foreign", 0, [("expected", (shape _root_.Effect4.Program.DocId).root)]),
       ("stale", 1, [("now", (shape _root_.Effect4.Program.Snap).root)]),
       ("empty", 2, []),
@@ -1181,7 +1180,7 @@ end T_95_root_95__46_Effect4_46_Program_46_DocRefusalC
 namespace T_95_root_95__46_Effect4_46_Program_46_ReceiptC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Receipt" [
+  ⟨.struct "Effect4.Program.Receipt" [
      ("steps", (shape (@_root_.List (_root_.Effect4.Program.Edit.Step))).root)],
    (shape (@_root_.List (_root_.Effect4.Program.Edit.Step))).defs⟩
 
@@ -1236,7 +1235,7 @@ end T_95_root_95__46_Effect4_46_Program_46_ReceiptC
 namespace T_95_root_95__46_Effect4_46_Program_46_AddRefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.AddRefusal"
+  ⟨.sum "Effect4.Program.AddRefusal"
      [("root", 0, []),
       ("unknownAddress", 1, []),
       ("notCertified", 2, []),
@@ -1304,7 +1303,7 @@ end T_95_root_95__46_Effect4_46_Program_46_AddRefusalC
 namespace T_95_root_95__46_Effect4_46_Program_46_AddOutcomeC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.AddOutcome"
+  ⟨.sum "Effect4.Program.AddOutcome"
      [("applied", 0, [("path", (shape (@_root_.List (_root_.Nat))).root)]),
       ("collapsed", 1, [("path", (shape (@_root_.List (_root_.Nat))).root)]),
       ("refused", 2, [("path", (shape (@_root_.List (_root_.Nat))).root),
@@ -1382,7 +1381,7 @@ end T_95_root_95__46_Effect4_46_Program_46_AddOutcomeC
 namespace T_95_root_95__46_Effect4_46_Program_46_Suggest_46_EvidenceC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.Suggest.Evidence"
+  ⟨.sum "Effect4.Program.Suggest.Evidence"
      [("exactFit", 0, [("ty", (shape _root_.Effect4.Program.EffTy).root)]),
       ("typeMismatch", 1, [("expected", (shape _root_.Effect4.Program.EffTy).root),
         ("actual", (shape _root_.Effect4.Program.EffTy).root)]),
@@ -1504,7 +1503,7 @@ end T_95_root_95__46_Effect4_46_Program_46_Suggest_46_EvidenceC
 namespace T_95_root_95__46_Effect4_46_Api_46_BudgetC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Api.Budget" [("fuel", (shape _root_.Nat).root),
+  ⟨.struct "Effect4.Api.Budget" [("fuel", (shape _root_.Nat).root),
      ("compileFuel", (shape _root_.Nat).root)],
    (shape _root_.Nat).defs⟩
 
@@ -1559,7 +1558,7 @@ end T_95_root_95__46_Effect4_46_Api_46_BudgetC
 namespace T_95_root_95__46_Effect4_46_LiveRecordC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.LiveRecord" [("version", (shape _root_.Nat).root),
+  ⟨.struct "Effect4.LiveRecord" [("version", (shape _root_.Nat).root),
      ("app", (shape _root_.Effect4.Program.SigApp).root),
      ("program", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root),
      ("session", (shape _root_.String).root), ("binding", (shape _root_.String).root),
@@ -1668,7 +1667,7 @@ end T_95_root_95__46_Effect4_46_LiveRecordC
 namespace T_95_root_95__46_Effect4_46_LiveRecord_46_RefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.LiveRecord.Refusal"
+  ⟨.sum "Effect4.LiveRecord.Refusal"
      [("unsupportedVersion", 0, [("version", (shape _root_.Nat).root)]),
       ("admission", 1, [("why", (shape _root_.Effect4.Program.AdmitRefusal).root)])],
    (shape _root_.Nat).defs ++ (shape _root_.Effect4.Program.AdmitRefusal).defs⟩
@@ -1727,7 +1726,7 @@ end T_95_root_95__46_Effect4_46_LiveRecord_46_RefusalC
 namespace T_95_root_95__46_Effect4_46_Run_46_SelC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Run.Sel"
+  ⟨.sum "Effect4.Run.Sel"
      [("key", 0, [("key", (shape _root_.Effect4.Api.HostProtocol.Key).root)]),
       ("fiber", 1, [("id", (shape _root_.Effect4.FiberId).root)]),
       ("row", 2, [("spelling", (shape _root_.String).root)])],
@@ -1801,7 +1800,7 @@ end T_95_root_95__46_Effect4_46_Run_46_SelC
 namespace T_95_root_95__46_Effect4_46_Run_46_EventC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Run.Event"
+  ⟨.sum "Effect4.Run.Event"
      [("control", 0, [
         ("decision", (shape (@_root_.Effect4.Machine.RunDecision (_root_.Effect4.Program.EffName) (_root_.Effect4.Program.EffThunk) (_root_.Effect4.Machine.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)]),
       ("hold", 1, [("call", (shape _root_.Effect4.Run.Sel).root)]),
@@ -1913,7 +1912,7 @@ end T_95_root_95__46_Effect4_46_Run_46_EventC
 namespace T_95_root_95__46_Effect4_46_Run_46_VerdictC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Run.Verdict"
+  ⟨.sum "Effect4.Run.Verdict"
      [("played", 0, [
         ("phases", (shape (@_root_.List (_root_.Effect4.Api.HostSession.Phase))).root)]),
       ("unresolved", 1, [("call", (shape _root_.Effect4.Run.Sel).root)])],
@@ -1974,7 +1973,7 @@ end T_95_root_95__46_Effect4_46_Run_46_VerdictC
 namespace T_64__95_root_95__46_Effect4_46_Program_46_CallInstance_32__40__95_root_95__46_Effect4_46_Program_46_NativeOp_41_C
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "@_root_.Effect4.Program.CallInstance (_root_.Effect4.Program.NativeOp)" [
+  ⟨.struct "Effect4.Program.CallInstance(Effect4.Program.NativeOp)" [
      ("op", (shape _root_.Effect4.Program.NativeOp).root),
      ("request", (shape _root_.Effect4.Program.Ty).root),
      ("answer", (shape _root_.Effect4.Program.Ty).root),
@@ -2053,7 +2052,7 @@ end T_64__95_root_95__46_Effect4_46_Program_46_CallInstance_32__40__95_root_95__
 namespace T_95_root_95__46_Effect4_46_Live_46_HeldCallC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Live.HeldCall" [("callId", (shape _root_.Nat).root),
+  ⟨.struct "Effect4.Live.HeldCall" [("callId", (shape _root_.Nat).root),
      ("received", (shape (@_root_.Option (_root_.Effect4.Api.HostSession.Answer))).root)],
    (shape _root_.Nat).defs ++
      (shape (@_root_.Option (_root_.Effect4.Api.HostSession.Answer))).defs⟩
@@ -2115,7 +2114,7 @@ end T_95_root_95__46_Effect4_46_Live_46_HeldCallC
 namespace T_95_root_95__46_Effect4_46_Machine_46_DeferredKeyC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Machine.DeferredKey" [("index", (shape _root_.Nat).root)],
+  ⟨.struct "Effect4.Machine.DeferredKey" [("index", (shape _root_.Nat).root)],
    (shape _root_.Nat).defs⟩
 
 def toVal : _root_.Effect4.Machine.DeferredKey → Val
@@ -2168,7 +2167,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_DeferredKeyC
 namespace T_95_root_95__46_Effect4_46_Machine_46_MemoMapIdC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Machine.MemoMapId" [("index", (shape _root_.Nat).root)],
+  ⟨.struct "Effect4.Machine.MemoMapId" [("index", (shape _root_.Nat).root)],
    (shape _root_.Nat).defs⟩
 
 def toVal : _root_.Effect4.Machine.MemoMapId → Val
@@ -2221,7 +2220,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_MemoMapIdC
 namespace T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Machine.ArgSite" [("path", (shape (@_root_.List (_root_.Nat))).root),
+  ⟨.struct "Effect4.Machine.ArgSite" [("path", (shape (@_root_.List (_root_.Nat))).root),
      ("env", (shape (@_root_.List (_root_.Effect4.Store.Val))).root)],
    (shape (@_root_.List (_root_.Nat))).defs ++
      (shape (@_root_.List (_root_.Effect4.Store.Val))).defs⟩
@@ -2283,7 +2282,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_ArgSiteC
 namespace T_95_root_95__46_Effect4_46_Program_46_PointC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Point" [("path", (shape (@_root_.List (_root_.Nat))).root),
+  ⟨.struct "Effect4.Program.Point" [("path", (shape (@_root_.List (_root_.Nat))).root),
      ("env", (shape (@_root_.List (_root_.Effect4.Machine.Val))).root),
      ("fuel", (shape _root_.Nat).root), ("tape", (shape (@_root_.List (_root_.Bool))).root),
      ("completed", (shape (@_root_.List (@_root_.Prod (_root_.Effect4.FiberId) (_root_.Effect4.Machine.ExitV)))).root),
@@ -2395,7 +2394,7 @@ end T_95_root_95__46_Effect4_46_Program_46_PointC
 namespace T_95_root_95__46_Effect4_46_Program_46_RegionC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.Region"
+  ⟨.sum "Effect4.Program.Region"
      [("program", 0, [("q", (shape _root_.Effect4.Program.Point).root)]),
       ("build", 1, [("q", (shape _root_.Effect4.Program.Point).root),
         ("memoMap", (shape _root_.Effect4.Machine.MemoMapId).root),
@@ -2520,7 +2519,7 @@ end T_95_root_95__46_Effect4_46_Program_46_RegionC
 namespace T_95_root_95__46_Effect4_46_Program_46_CombineModeC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.CombineMode"
+  ⟨.sum "Effect4.Program.CombineMode"
      [("provide", 0, []),
       ("provideMerge", 1, [])],
    []⟩
@@ -2558,7 +2557,7 @@ end T_95_root_95__46_Effect4_46_Program_46_CombineModeC
 namespace T_95_root_95__46_Effect4_46_Machine_46_Env_46_ContextUpdateC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Machine.Env.ContextUpdate"
+  ⟨.sum "Effect4.Machine.Env.ContextUpdate"
      [("setTo", 0, [
         ("context", (shape (@_root_.Effect4.Machine.Env.Context (_root_.Effect4.Machine.Env.ValU))).root)]),
       ("provide", 1, [
@@ -2643,7 +2642,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_Env_46_ContextUpdateC
 namespace T_95_root_95__46_Effect4_46_Machine_46_CtxC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Machine.Ctx" [
+  ⟨.struct "Effect4.Machine.Ctx" [
      ("services", (shape (@_root_.Effect4.Machine.Env.Context (_root_.Effect4.Machine.Env.ValU))).root),
      ("maxOpsBeforeYield", (shape _root_.Nat).root), ("preventYield", (shape _root_.Bool).root)],
    (shape (@_root_.Effect4.Machine.Env.Context (_root_.Effect4.Machine.Env.ValU))).defs ++
@@ -2712,7 +2711,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_CtxC
 namespace T_95_root_95__46_Effect4_46_Machine_46_CaptureC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Machine.Capture" [("path", (shape (@_root_.List (_root_.Nat))).root),
+  ⟨.struct "Effect4.Machine.Capture" [("path", (shape (@_root_.List (_root_.Nat))).root),
      ("env", (shape (@_root_.List (_root_.Effect4.Store.Val))).root),
      ("fuel", (shape _root_.Nat).root), ("tape", (shape (@_root_.List (_root_.Bool))).root),
      ("ctx", (shape _root_.Effect4.Machine.Ctx).root), ("root", (shape _root_.Nat).root),
@@ -2821,7 +2820,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_CaptureC
 namespace T_95_root_95__46_Effect4_46_Machine_46_FinNameC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Machine.FinName"
+  ⟨.sum "Effect4.Machine.FinName"
      [("interruptFiber", 0, [("fiber", (shape _root_.Effect4.FiberId).root),
         ("skipSelf", (shape _root_.Bool).root)]),
       ("closeChildScope", 1, [("scope", (shape _root_.Nat).root)]),
@@ -3034,7 +3033,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_FinNameC
 namespace T_95_root_95__46_Effect4_46_Machine_46_SyncOpC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Machine.SyncOp"
+  ⟨.sum "Effect4.Machine.SyncOp"
      [("refMake", 0, [("initial", (shape _root_.Effect4.Store.Val).root)]),
       ("refGet", 1, [("cell", (shape _root_.Effect4.Machine.RefKey).root)]),
       ("refSet", 2, [("cell", (shape _root_.Effect4.Machine.RefKey).root),
@@ -3698,7 +3697,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_SyncOpC
 namespace T_95_root_95__46_Effect4_46_Machine_46_RaceNameC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Machine.RaceName"
+  ⟨.sum "Effect4.Machine.RaceName"
      [("empty", 0, []),
       ("successThenSecond", 1, []),
       ("failThenSuccess", 2, []),
@@ -3762,7 +3761,7 @@ namespace T_95_root_95__46_Effect4_46_Machine_46_ProgNameC
 /-! The block's shapes: every member by name, every field through its own type. -/
 
 def T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape : Shape :=
-  .sum "_root_.Effect4.Machine.ProgName"
+  .sum "Effect4.Machine.ProgName"
      [("value", 0, [("v", (shape _root_.Effect4.Store.Val).root)]),
       ("failCause", 1, [
         ("cause", (shape (@_root_.Effect4.Cause (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)]),
@@ -3770,36 +3769,36 @@ def T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape : Shape :=
       ("yieldNow", 3, [("priority", (shape _root_.Nat).root)]),
       ("park", 4, [("slot", (shape _root_.Nat).root)]),
       ("awaitDeferred", 5, [("cell", (shape _root_.Effect4.Machine.DeferredKey).root)]),
-      ("intoDeferred", 6, [("body", .named "_root_.Effect4.Machine.ProgName"),
+      ("intoDeferred", 6, [("body", .named "Effect4.Machine.ProgName"),
         ("cell", (shape _root_.Effect4.Machine.DeferredKey).root)]),
-      ("intoBody", 7, [("body", .named "_root_.Effect4.Machine.ProgName"),
+      ("intoBody", 7, [("body", .named "Effect4.Machine.ProgName"),
         ("cell", (shape _root_.Effect4.Machine.DeferredKey).root)]),
       ("maskedPark", 8, [("slot", (shape _root_.Nat).root)]),
       ("awaitFibers", 9, [("targets", (shape (@_root_.List (_root_.Effect4.FiberId))).root)]),
       ("finalizerOf", 10, [("fin", (shape _root_.Effect4.Machine.FinName).root),
         ("exit", (shape (@_root_.Effect4.Exit (_root_.Effect4.Machine.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)]),
       ("interruptDeferred", 11, [("cell", (shape _root_.Effect4.Machine.DeferredKey).root)]),
-      ("onExitOf", 12, [("body", .named "_root_.Effect4.Machine.ProgName"),
+      ("onExitOf", 12, [("body", .named "Effect4.Machine.ProgName"),
         ("fin", (shape _root_.Effect4.Machine.FinName).root),
         ("finalizerInterruptible", (shape _root_.Bool).root)]),
-      ("seqOf", 13, [("first", .named "_root_.Effect4.Machine.ProgName"),
-        ("second", .named "_root_.Effect4.Machine.ProgName")]),
-      ("forkThen", 14, [("child", .named "_root_.Effect4.Machine.ProgName"),
+      ("seqOf", 13, [("first", .named "Effect4.Machine.ProgName"),
+        ("second", .named "Effect4.Machine.ProgName")]),
+      ("forkThen", 14, [("child", .named "Effect4.Machine.ProgName"),
         ("options", (shape _root_.Effect4.Supervision.ForkOptions).root),
         ("mode", (shape _root_.Effect4.Supervision.ObserverMode).root)]),
-      ("forkOnly", 15, [("child", .named "_root_.Effect4.Machine.ProgName"),
+      ("forkOnly", 15, [("child", .named "Effect4.Machine.ProgName"),
         ("options", (shape _root_.Effect4.Supervision.ForkOptions).root)]),
-      ("forkInScope", 16, [("child", .named "_root_.Effect4.Machine.ProgName"),
+      ("forkInScope", 16, [("child", .named "Effect4.Machine.ProgName"),
         ("options", (shape _root_.Effect4.Supervision.ForkOptions).root),
         ("scope", (shape _root_.Nat).root)]),
       ("runInScope", 17, [("target", (shape _root_.Effect4.FiberId).root),
         ("scope", (shape _root_.Nat).root)]),
-      ("forkScopedOf", 18, [("child", .named "_root_.Effect4.Machine.ProgName"),
+      ("forkScopedOf", 18, [("child", .named "Effect4.Machine.ProgName"),
         ("options", (shape _root_.Effect4.Supervision.ForkOptions).root)]),
       ("raceOf", 19, [("race", (shape _root_.Effect4.Machine.RaceName).root)]),
       ("closeScopeOf", 20, [("scope", (shape _root_.Nat).root),
         ("exit", (shape (@_root_.Effect4.Exit (_root_.Effect4.Machine.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)]),
-      ("awaitAllNew", 21, [("body", .named "_root_.Effect4.Machine.ProgName")]),
+      ("awaitAllNew", 21, [("body", .named "Effect4.Machine.ProgName")]),
       ("interruptFibers", 22, [
         ("targets", (shape (@_root_.List (_root_.Effect4.FiberId))).root)]),
       ("cancelRace", 23, [("race", (shape _root_.Nat).root)]),
@@ -3811,7 +3810,7 @@ def T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape : Shape :=
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
-  ("_root_.Effect4.Machine.ProgName", T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape) ::
+  ("Effect4.Machine.ProgName", T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape) ::
     ((shape _root_.Effect4.Store.Val).defs ++
       (shape (@_root_.Effect4.Cause (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).defs ++
       (shape _root_.Effect4.Machine.SyncOp).defs ++ (shape _root_.Nat).defs ++
@@ -4241,7 +4240,7 @@ end
 
 /-! The table memberships and the field lifts, one per member and one per field type. -/
 
-theorem mem_T_95_root_95__46_Effect4_46_Machine_46_ProgName : ("_root_.Effect4.Machine.ProgName", T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape) ∈ defs :=
+theorem mem_T_95_root_95__46_Effect4_46_Machine_46_ProgName : ("Effect4.Machine.ProgName", T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape) ∈ defs :=
   List.Mem.head _
 
 /-- Into the appended tail of the block's table. -/
@@ -4343,7 +4342,7 @@ theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Machine
 mutual
 theorem fitsT_95_root_95__46_Effect4_46_Machine_46_ProgName
   (a : _root_.Effect4.Machine.ProgName) :
-    acceptsIn defs (.named "_root_.Effect4.Machine.ProgName") (toValT_95_root_95__46_Effect4_46_Machine_46_ProgName a) = true := by
+    acceptsIn defs (.named "Effect4.Machine.ProgName") (toValT_95_root_95__46_Effect4_46_Machine_46_ProgName a) = true := by
   apply accepts_named_of_mem _ _ T_95_root_95__46_Effect4_46_Machine_46_ProgNameShape _ mem_T_95_root_95__46_Effect4_46_Machine_46_ProgName
   cases a with
   | «value» a0 =>
@@ -4446,7 +4445,7 @@ end
 
 instance instCanonicalT_95_root_95__46_Effect4_46_Machine_46_ProgName :
   Canonical (_root_.Effect4.Machine.ProgName) :=
-  ⟨⟨.named "_root_.Effect4.Machine.ProgName", defs⟩, toValT_95_root_95__46_Effect4_46_Machine_46_ProgName, guarded toValT_95_root_95__46_Effect4_46_Machine_46_ProgName rawT_95_root_95__46_Effect4_46_Machine_46_ProgName,
+  ⟨⟨.named "Effect4.Machine.ProgName", defs⟩, toValT_95_root_95__46_Effect4_46_Machine_46_ProgName, guarded toValT_95_root_95__46_Effect4_46_Machine_46_ProgName rawT_95_root_95__46_Effect4_46_Machine_46_ProgName,
     fun a => guarded_toVal _ _ a (rawT_95_root_95__46_Effect4_46_Machine_46_ProgName_toValT_95_root_95__46_Effect4_46_Machine_46_ProgName a), fun h => guarded_exact h,
     fitsT_95_root_95__46_Effect4_46_Machine_46_ProgName⟩
 
@@ -4460,7 +4459,7 @@ namespace T_95_root_95__46_Effect4_46_Machine_46_NameC
 /-! The block's shapes: every member by name, every field through its own type. -/
 
 def T_95_root_95__46_Effect4_46_Machine_46_NameShape : Shape :=
-  .sum "_root_.Effect4.Machine.Name"
+  .sum "Effect4.Machine.Name"
      [("restore", 0, [
         ("exit", (shape (@_root_.Effect4.Exit (_root_.Effect4.Machine.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)]),
       ("merge", 1, [
@@ -4480,7 +4479,7 @@ def T_95_root_95__46_Effect4_46_Machine_46_NameShape : Shape :=
       ("abortController", 14, []),
       ("cancelPark", 15, []),
       ("cancelRace", 16, [("race", (shape _root_.Nat).root)]),
-      ("withWaiter", 17, [("base", .named "_root_.Effect4.Machine.Name"),
+      ("withWaiter", 17, [("base", .named "Effect4.Machine.Name"),
         ("waiter", (shape _root_.Effect4.FiberId).root), ("token", (shape _root_.Nat).root)]),
       ("reFail", 18, [
         ("cause", (shape (@_root_.Effect4.Cause (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)]),
@@ -4495,7 +4494,7 @@ def T_95_root_95__46_Effect4_46_Machine_46_NameShape : Shape :=
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
-  ("_root_.Effect4.Machine.Name", T_95_root_95__46_Effect4_46_Machine_46_NameShape) ::
+  ("Effect4.Machine.Name", T_95_root_95__46_Effect4_46_Machine_46_NameShape) ::
     (
       (shape (@_root_.Effect4.Exit (_root_.Effect4.Machine.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).defs ++
       (shape _root_.Effect4.Machine.ProgName).defs ++
@@ -4800,7 +4799,7 @@ end
 
 /-! The table memberships and the field lifts, one per member and one per field type. -/
 
-theorem mem_T_95_root_95__46_Effect4_46_Machine_46_Name : ("_root_.Effect4.Machine.Name", T_95_root_95__46_Effect4_46_Machine_46_NameShape) ∈ defs :=
+theorem mem_T_95_root_95__46_Effect4_46_Machine_46_Name : ("Effect4.Machine.Name", T_95_root_95__46_Effect4_46_Machine_46_NameShape) ∈ defs :=
   List.Mem.head _
 
 /-- Into the appended tail of the block's table. -/
@@ -4884,7 +4883,7 @@ theorem lift_T_64__95_root_95__46_List_32__40__64__95_root_95__46_Effect4_46_Rea
 
 mutual
 theorem fitsT_95_root_95__46_Effect4_46_Machine_46_Name (a : _root_.Effect4.Machine.Name) :
-    acceptsIn defs (.named "_root_.Effect4.Machine.Name") (toValT_95_root_95__46_Effect4_46_Machine_46_Name a) = true := by
+    acceptsIn defs (.named "Effect4.Machine.Name") (toValT_95_root_95__46_Effect4_46_Machine_46_Name a) = true := by
   apply accepts_named_of_mem _ _ T_95_root_95__46_Effect4_46_Machine_46_NameShape _ mem_T_95_root_95__46_Effect4_46_Machine_46_Name
   cases a with
   | «restore» a0 =>
@@ -4960,7 +4959,7 @@ end
 
 instance instCanonicalT_95_root_95__46_Effect4_46_Machine_46_Name :
   Canonical (_root_.Effect4.Machine.Name) :=
-  ⟨⟨.named "_root_.Effect4.Machine.Name", defs⟩, toValT_95_root_95__46_Effect4_46_Machine_46_Name, guarded toValT_95_root_95__46_Effect4_46_Machine_46_Name rawT_95_root_95__46_Effect4_46_Machine_46_Name,
+  ⟨⟨.named "Effect4.Machine.Name", defs⟩, toValT_95_root_95__46_Effect4_46_Machine_46_Name, guarded toValT_95_root_95__46_Effect4_46_Machine_46_Name rawT_95_root_95__46_Effect4_46_Machine_46_Name,
     fun a => guarded_toVal _ _ a (rawT_95_root_95__46_Effect4_46_Machine_46_Name_toValT_95_root_95__46_Effect4_46_Machine_46_Name a), fun h => guarded_exact h,
     fitsT_95_root_95__46_Effect4_46_Machine_46_Name⟩
 
@@ -4972,7 +4971,7 @@ end T_95_root_95__46_Effect4_46_Machine_46_NameC
 namespace T_95_root_95__46_Effect4_46_Live_46_CallViewC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Live.CallView" [("await", (shape _root_.Effect4.Program.Await).root),
+  ⟨.struct "Effect4.Live.CallView" [("await", (shape _root_.Effect4.Program.Await).root),
      ("origin", (shape (@_root_.Option (@_root_.List (_root_.Nat)))).root),
      ("checked", (shape (@_root_.Option (@_root_.Effect4.Program.CallInstance (_root_.Effect4.Program.NativeOp)))).root),
      ("held", (shape (@_root_.Option (_root_.Effect4.Live.HeldCall))).root)],
@@ -5055,7 +5054,7 @@ end T_95_root_95__46_Effect4_46_Live_46_CallViewC
 namespace T_95_root_95__46_Effect4_46_Live_46_WaitSiteC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Live.WaitSite"
+  ⟨.sum "Effect4.Live.WaitSite"
      [("deferred", 0, [("cell", (shape _root_.Effect4.Machine.DeferredKey).root)]),
       ("other", 1, [])],
    (shape _root_.Effect4.Machine.DeferredKey).defs⟩
@@ -5106,7 +5105,7 @@ end T_95_root_95__46_Effect4_46_Live_46_WaitSiteC
 namespace T_95_root_95__46_Effect4_46_Live_46_WaitViewC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Live.WaitView" [("fiber", (shape _root_.Effect4.FiberId).root),
+  ⟨.struct "Effect4.Live.WaitView" [("fiber", (shape _root_.Effect4.FiberId).root),
      ("token", (shape _root_.Nat).root),
      ("site", (shape (@_root_.Option (_root_.Effect4.Live.WaitSite))).root)],
    (shape _root_.Effect4.FiberId).defs ++ (shape _root_.Nat).defs ++
@@ -5174,8 +5173,7 @@ end T_95_root_95__46_Effect4_46_Live_46_WaitViewC
 namespace T_95_root_95__46_Effect4_46_Live_46_ViewC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Live.View" [
-     ("state", (shape _root_.Effect4.Api.HostProtocol.State).root),
+  ⟨.struct "Effect4.Live.View" [("state", (shape _root_.Effect4.Api.HostProtocol.State).root),
      ("outcome", (shape _root_.Effect4.Api.Outcome).root),
      ("exit", (shape (@_root_.Option (_root_.Effect4.Machine.ExitV))).root),
      ("reasons", (shape (@_root_.List (_root_.Effect4.Api.FrontierReason))).root),
@@ -5353,7 +5351,7 @@ end T_95_root_95__46_Effect4_46_Live_46_ViewC
 namespace T_95_root_95__46_Effect4_46_Run_46_Preview_46_RefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Run.Preview.Refusal"
+  ⟨.sum "Effect4.Run.Preview.Refusal"
      [("admission", 0, [("why", (shape _root_.Effect4.Program.AdmitRefusal).root)]),
       ("outsideTree", 1, [("path", (shape (@_root_.List (_root_.Nat))).root)]),
       ("genericRow", 2, [("path", (shape (@_root_.List (_root_.Nat))).root),
@@ -5455,7 +5453,7 @@ end T_95_root_95__46_Effect4_46_Run_46_Preview_46_RefusalC
 namespace T_95_root_95__46_Effect4_46_Run_46_Tree_46_StepC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Run.Tree.Step"
+  ⟨.sum "Effect4.Run.Tree.Step"
      [("called", 0, [("row", (shape _root_.Nat).root),
         ("request", (shape _root_.Effect4.Store.Val).root),
         ("answer", (shape (@_root_.Effect4.Exit (_root_.Effect4.Machine.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)]),
@@ -5547,7 +5545,7 @@ end T_95_root_95__46_Effect4_46_Run_46_Tree_46_StepC
 namespace T_95_root_95__46_Effect4_46_Run_46_Tree_46_StopC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Run.Tree.Stop"
+  ⟨.sum "Effect4.Run.Tree.Stop"
      [("finished", 0, [
         ("exit", (shape (@_root_.Effect4.Exit (_root_.Effect4.Machine.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)]),
       ("cut", 1, []),
@@ -5627,7 +5625,7 @@ end T_95_root_95__46_Effect4_46_Run_46_Tree_46_StopC
 namespace T_95_root_95__46_Effect4_46_Run_46_Tree_46_PathC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Run.Tree.Path" [
+  ⟨.struct "Effect4.Run.Tree.Path" [
      ("steps", (shape (@_root_.List (_root_.Effect4.Run.Tree.Step))).root),
      ("stop", (shape _root_.Effect4.Run.Tree.Stop).root)],
    (shape (@_root_.List (_root_.Effect4.Run.Tree.Step))).defs ++
@@ -5691,7 +5689,7 @@ end T_95_root_95__46_Effect4_46_Run_46_Tree_46_PathC
 namespace T_95_root_95__46_Effect4_46_Tool_46_OriginC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.Origin"
+  ⟨.sum "Effect4.Tool.Origin"
      [("snapshot", 0, [("snap", (shape _root_.Effect4.Program.Snap).root),
         ("app", (shape _root_.Effect4.Program.SigApp).root),
         ("sketch", (shape _root_.Effect4.Program.Sketch).root)]),
@@ -5765,7 +5763,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_OriginC
 namespace T_95_root_95__46_Effect4_46_Tool_46_RunIdC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Tool.RunId" [("n", (shape _root_.Nat).root)],
+  ⟨.struct "Effect4.Tool.RunId" [("n", (shape _root_.Nat).root)],
    (shape _root_.Nat).defs⟩
 
 def toVal : _root_.Effect4.Tool.RunId → Val
@@ -5818,7 +5816,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_RunIdC
 namespace T_95_root_95__46_Effect4_46_Tool_46_RunFormC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.RunForm"
+  ⟨.sum "Effect4.Tool.RunForm"
      [("view", 0, []),
       ("record", 1, []),
       ("journal", 2, [])],
@@ -5862,7 +5860,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_RunFormC
 namespace T_95_root_95__46_Effect4_46_Tool_46_PreviewQueryC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.PreviewQuery"
+  ⟨.sum "Effect4.Tool.PreviewQuery"
      [("settle", 0, [("tape", (shape (@_root_.List (_root_.Effect4.Machine.ExitV))).root),
         ("limit", (shape _root_.Nat).root)]),
       ("frames", 1, [("tape", (shape (@_root_.List (_root_.Effect4.Machine.ExitV))).root),
@@ -5955,7 +5953,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_PreviewQueryC
 namespace T_95_root_95__46_Effect4_46_Tool_46_ActionC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.Action"
+  ⟨.sum "Effect4.Tool.Action"
      [("open_", 0, [("name", (shape _root_.String).root),
         ("app", (shape _root_.Effect4.Program.SigApp).root),
         ("sketch", (shape _root_.Effect4.Program.Sketch).root)]),
@@ -6161,7 +6159,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_ActionC
 namespace T_95_root_95__46_Effect4_46_Program_46_ExtSlotC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Program.ExtSlot"
+  ⟨.sum "Effect4.Program.ExtSlot"
      [("catchIfTest", 0, []),
       ("iterateTest", 1, []),
       ("iterateStep", 2, []),
@@ -6217,7 +6215,7 @@ end T_95_root_95__46_Effect4_46_Program_46_ExtSlotC
 namespace T_95_root_95__46_Effect4_46_Tool_46_QueryC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.Query"
+  ⟨.sum "Effect4.Tool.Query"
      [("doc", 0, [("at_", (shape (@_root_.Option (@_root_.List (_root_.Nat)))).root)]),
       ("history", 1, []),
       ("fills", 2, []),
@@ -6429,7 +6427,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_QueryC
 namespace T_95_root_95__46_Effect4_46_Tool_46_RequestC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.Request"
+  ⟨.sum "Effect4.Tool.Request"
      [("act", 0, [("a", (shape _root_.Effect4.Tool.Action).root)]),
       ("ask", 1, [("q", (shape _root_.Effect4.Tool.Query).root)])],
    (shape _root_.Effect4.Tool.Action).defs ++ (shape _root_.Effect4.Tool.Query).defs⟩
@@ -6487,7 +6485,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_RequestC
 namespace T_95_root_95__46_Effect4_46_Tool_46_HoleViewC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Tool.HoleView" [("index", (shape _root_.Nat).root),
+  ⟨.struct "Effect4.Tool.HoleView" [("index", (shape _root_.Nat).root),
      ("row", (shape _root_.Effect4.Program.Row).root),
      ("path", (shape (@_root_.List (_root_.Nat))).root),
      ("focus", (shape (@_root_.Option (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy)))).root)],
@@ -6566,7 +6564,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_HoleViewC
 namespace T_95_root_95__46_Effect4_46_Tool_46_SlotViewC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Tool.SlotView" [("slot", (shape _root_.Effect4.Program.ExtSlot).root),
+  ⟨.struct "Effect4.Tool.SlotView" [("slot", (shape _root_.Effect4.Program.ExtSlot).root),
      ("term", (shape (@_root_.Option (_root_.Effect4.Program.Term))).root),
      ("env", (shape (@_root_.Option (_root_.Effect4.Program.TyEnv))).root),
      ("ty", (shape (@_root_.Option (_root_.Effect4.Program.Ty))).root)],
@@ -6649,7 +6647,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_SlotViewC
 namespace T_95_root_95__46_Effect4_46_Tool_46_InspectionC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Tool.Inspection" [("path", (shape (@_root_.List (_root_.Nat))).root),
+  ⟨.struct "Effect4.Tool.Inspection" [("path", (shape (@_root_.List (_root_.Nat))).root),
      ("expected", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root),
      ("context", (shape _root_.Effect4.Program.SigData).root),
      ("focus", (shape (@_root_.Option (@_root_.Effect4.Program.Focus (_root_.Effect4.Program.NativeOp)))).root),
@@ -6749,7 +6747,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_InspectionC
 namespace T_95_root_95__46_Effect4_46_Tool_46_DocViewC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Tool.DocView" [("snap", (shape _root_.Effect4.Program.Snap).root),
+  ⟨.struct "Effect4.Tool.DocView" [("snap", (shape _root_.Effect4.Program.Snap).root),
      ("type", (shape (@_root_.Option (_root_.Effect4.Program.EffTy))).root),
      ("refusals", (shape (@_root_.List (_root_.Effect4.Program.TypeRefusal))).root),
      ("holes", (shape (@_root_.List (_root_.Effect4.Tool.HoleView))).root),
@@ -6840,7 +6838,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_DocViewC
 namespace T_95_root_95__46_Effect4_46_Tool_46_RefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.Refusal"
+  ⟨.sum "Effect4.Tool.Refusal"
      [("noDocument", 0, []),
       ("doc", 1, [("why", (shape _root_.Effect4.Program.DocRefusal).root)]),
       ("fillsStale", 2, [("anchor", (shape _root_.Effect4.Program.Snap).root),
@@ -7059,7 +7057,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_RefusalC
 namespace T_95_root_95__46_Effect4_46_Tool_46_ActionAnswerC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.ActionAnswer"
+  ⟨.sum "Effect4.Tool.ActionAnswer"
      [("opened", 0, [("view", (shape _root_.Effect4.Tool.DocView).root)]),
       ("edited", 1, [("view", (shape _root_.Effect4.Tool.DocView).root),
         ("receipt", (shape _root_.Effect4.Program.Receipt).root)]),
@@ -7265,7 +7263,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_ActionAnswerC
 namespace T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Tool_46_Refusal_41__32__40__95_root_95__46_Effect4_46_Tool_46_ActionAnswer_41_C
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.ActionAnswer)"
+  ⟨.sum "Except(Effect4.Tool.Refusal, Effect4.Tool.ActionAnswer)"
      [("error", 0, [("arg0", (shape _root_.Effect4.Tool.Refusal).root)]),
       ("ok", 1, [("arg0", (shape _root_.Effect4.Tool.ActionAnswer).root)])],
    (shape _root_.Effect4.Tool.Refusal).defs ++ (shape _root_.Effect4.Tool.ActionAnswer).defs⟩
@@ -7324,7 +7322,7 @@ end T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Tool_46_Refusa
 namespace T_95_root_95__46_Effect4_46_Program_46_Suggest_46_SuggestionC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Program.Suggest.Suggestion" [
+  ⟨.struct "Effect4.Program.Suggest.Suggestion" [
      ("program", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root),
      ("sourcePath", (shape (@_root_.Option (@_root_.List (_root_.Nat)))).root),
      ("key", (shape _root_.Effect4.Program.Check.CheckInput).root),
@@ -7409,7 +7407,7 @@ end T_95_root_95__46_Effect4_46_Program_46_Suggest_46_SuggestionC
 namespace T_95_root_95__46_Effect4_46_Tool_46_RunAnswerC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.RunAnswer"
+  ⟨.sum "Effect4.Tool.RunAnswer"
      [("view", 0, [("v", (shape _root_.Effect4.Live.View).root)]),
       ("record", 1, [("r", (shape _root_.Effect4.LiveRecord).root)]),
       ("journal", 2, [
@@ -7484,7 +7482,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_RunAnswerC
 namespace T_95_root_95__46_Effect4_46_Tool_46_PreviewRunC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Tool.PreviewRun" [
+  ⟨.struct "Effect4.Tool.PreviewRun" [
      ("steps", (shape (@_root_.List (_root_.Effect4.Run.Tree.Step))).root),
      ("stop", (shape _root_.Effect4.Run.Tree.Stop).root),
      ("unread", (shape (@_root_.List (_root_.Effect4.Machine.ExitV))).root)],
@@ -7557,7 +7555,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_PreviewRunC
 namespace T_95_root_95__46_Effect4_46_Tool_46_PreviewAnswerC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.PreviewAnswer"
+  ⟨.sum "Effect4.Tool.PreviewAnswer"
      [("settled", 0, [
         ("result", (shape (@_root_.Option (@_root_.Prod (_root_.Nat) (_root_.Effect4.Tool.PreviewRun)))).root)]),
       ("frames", 1, [("results", (shape (@_root_.List (_root_.Effect4.Tool.PreviewRun))).root)]),
@@ -7635,7 +7633,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_PreviewAnswerC
 namespace T_95_root_95__46_Effect4_46_Tool_46_AnswerC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.Answer"
+  ⟨.sum "Effect4.Tool.Answer"
      [("acted", 0, [("a", (shape _root_.Effect4.Tool.ActionAnswer).root)]),
       ("doc", 1, [("view", (shape _root_.Effect4.Tool.DocView).root)]),
       ("history", 2, [
@@ -7925,7 +7923,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_AnswerC
 namespace T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Tool_46_Refusal_41__32__40__95_root_95__46_Effect4_46_Tool_46_Answer_41_C
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.Answer)"
+  ⟨.sum "Except(Effect4.Tool.Refusal, Effect4.Tool.Answer)"
      [("error", 0, [("arg0", (shape _root_.Effect4.Tool.Refusal).root)]),
       ("ok", 1, [("arg0", (shape _root_.Effect4.Tool.Answer).root)])],
    (shape _root_.Effect4.Tool.Refusal).defs ++ (shape _root_.Effect4.Tool.Answer).defs⟩
@@ -7983,7 +7981,7 @@ end T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Tool_46_Refusa
 namespace T_95_root_95__46_Effect4_46_Tool_46_ReplyC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "_root_.Effect4.Tool.Reply" [
+  ⟨.struct "Effect4.Tool.Reply" [
      ("result", (shape (@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.Answer))).root),
      ("now", (shape (@_root_.Option (_root_.Effect4.Program.Snap))).root)],
    (shape (@_root_.Except (_root_.Effect4.Tool.Refusal) (_root_.Effect4.Tool.Answer))).defs ++
@@ -8048,7 +8046,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_ReplyC
 namespace T_95_root_95__46_Effect4_46_Tool_46_CodecProfile_46_RefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.CodecProfile.Refusal"
+  ⟨.sum "Effect4.Tool.CodecProfile.Refusal"
      [("unsupportedProfile", 0, []),
       ("unreadable", 1, []),
       ("unprintable", 2, [])],
@@ -8092,7 +8090,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_CodecProfile_46_RefusalC
 namespace T_95_root_95__46_Effect4_46_Tool_46_Wire_46_RefusalC
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "_root_.Effect4.Tool.Wire.Refusal"
+  ⟨.sum "Effect4.Tool.Wire.Refusal"
      [("codec", 0, [("why", (shape _root_.Effect4.Tool.CodecProfile.Refusal).root)]),
       ("unselected", 1, [("method", (shape _root_.String).root)]),
       ("version", 2, [("method", (shape _root_.String).root),
@@ -8199,7 +8197,7 @@ end T_95_root_95__46_Effect4_46_Tool_46_Wire_46_RefusalC
 namespace T_64__95_root_95__46_Effect4_46_Tool_46_Wire_46_Envelope_32__40__95_root_95__46_Effect4_46_Tool_46_Request_41_C
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "@_root_.Effect4.Tool.Wire.Envelope (_root_.Effect4.Tool.Request)" [
+  ⟨.struct "Effect4.Tool.Wire.Envelope(Effect4.Tool.Request)" [
      ("method", (shape _root_.String).root), ("version", (shape _root_.Nat).root),
      ("payload", (shape _root_.Effect4.Tool.Request).root)],
    (shape _root_.String).defs ++ (shape _root_.Nat).defs ++
@@ -8266,7 +8264,7 @@ end T_64__95_root_95__46_Effect4_46_Tool_46_Wire_46_Envelope_32__40__95_root_95_
 namespace T_64__95_root_95__46_Effect4_46_Tool_46_Wire_46_Envelope_32__40__95_root_95__46_Effect4_46_Tool_46_Reply_41_C
 
 def shapeDoc : ShapeDoc :=
-  ⟨.struct "@_root_.Effect4.Tool.Wire.Envelope (_root_.Effect4.Tool.Reply)" [
+  ⟨.struct "Effect4.Tool.Wire.Envelope(Effect4.Tool.Reply)" [
      ("method", (shape _root_.String).root), ("version", (shape _root_.Nat).root),
      ("payload", (shape _root_.Effect4.Tool.Reply).root)],
    (shape _root_.String).defs ++ (shape _root_.Nat).defs ++
