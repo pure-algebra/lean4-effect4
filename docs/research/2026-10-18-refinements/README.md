@@ -101,6 +101,19 @@ Evidence:
   `[propext, Quot.sound]`: 15 rest on planned goals, and there are 4 planned goals.
 - **Gate:** `make check-ocaml` passes in 3 min 8 s.
 
+## Two side sessions, merged (`e2e8571b2`, `816d24bc6`)
+
+| Merge | What changed, in plain words | Evidence |
+| --- | --- | --- |
+| `e2e8571b2` | The MCP tool list says each thing once. The schemas name the program grammar by `$ref`, and a generated `describe` tool answers each definition's schema from Lean's table. `tools/list` drops from 353,485 to 40,069 bytes of schema | `api_gen.ml` regenerated from the merged Lean equals the textual merge byte for byte; `scripts/check-mcp-protocol.py` gives PASS with 69 schema checks over 20 tools |
+| `816d24bc6` | STANDARDS rule 7 is checked by the compiler's own types. `ocaml/tools/typed_lint` reads each hand library's `.cmt` files under `dune test` and refuses a polymorphic comparison at a type other than `int`, `char`, `bool` or `string`. Its 85 sites are fixed, the plan's manual phase 6 is gone, and `--raises` reports rule 6 | `dune test tools` (red control and fixtures) passes |
+
+Evidence for both merges together:
+- **Build:** `Effect4`, `Effect4.Laws` and the reached batteries, 1,878 jobs green.
+- **Audit:** `#axiom_audit` over `Tool.Methods`, `Tool.Native` and their battery gives 234
+  declarations within `[propext, Quot.sound]`.
+- **Gate:** `make check-ocaml` passes (recorded `2babea115c92`, `gen-check` PASS).
+
 ## For you
 
 - **The S1 feed is repaired and its laws are proved** (`4111bf9d6`). A kept-exact feed now splices
