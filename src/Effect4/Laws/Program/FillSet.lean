@@ -610,6 +610,27 @@ theorem SourceSession.expandedEditAgrees_refFree {s : SourceSession} {p : List N
   simp only [Edit.expanded, hat, Sketch.edit, Sketch.fillAt_of_replaceAt hrep, Option.map_some]
   exact decide_eq_true trivial
 
+/-- A program with no layer reference has no ill-formed one. A step of `kept-fill-reference`.
+Its consumer is `SourceSession.canSplice_refFree`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem firstRefFault_of_refSites_nil {p : NativeEff} (h : p.refSites [] = []) :
+    p.firstRefFault = none := by
+  unfold Eff.firstRefFault
+  rw [h]
+  rfl
+
+/-- **With no layer reference in the base or in the filling, a kept fill may splice**: the
+expansion moves only at the edited address, and neither side holds an ill-formed reference. A
+step of `kept-fill-reference`. Its consumer is `kept_eq_certified`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem SourceSession.canSplice_refFree {s : SourceSession} {p : List Nat}
+    {q p' : NativeEff} (hb : s.sketch.program.refSites [] = []) (hc : p'.refSites [] = [])
+    (hrep : (Node.eff s.sketch.program).replaceAt p (.eff q) = some (.eff p')) :
+    s.canSplice { s.sketch with program := p' } (.fill p q) = true := by
+  rw [SourceSession.canSplice_of_faultFree (firstRefFault_of_refSites_nil hb)
+    (firstRefFault_of_refSites_nil (p := p') hc)]
+  exact SourceSession.expandedEditAgrees_refFree hb hc hrep
+
 /-- **The part key of a reference-free filling at a typed focus** checks the filling in the
 focus's environment, at the filled sketch's signature data there. A step of
 `kept-fill-reference`. Its consumer is `kept_eq_certified`. -/
@@ -736,7 +757,7 @@ theorem kept_eq_certified (s : SourceSession) (hc : s.Coherent)
         exact hchk
       exact ⟨hp, _, _, SourceSession.feed_keepExact_of (o := Oracle.uncached) hp hat
         (Sketch.fillAt_of_replaceAt hrep) hfocus (SourceSession.partKey_refFree hc' hrep hfocus)
-        hres (SourceSession.expandedEditAgrees_refFree hb hc' hrep)⟩
+        hres (SourceSession.canSplice_refFree hb hc' hrep)⟩
 
 /-! ## The construction invariant -/
 

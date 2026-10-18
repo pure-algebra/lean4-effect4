@@ -71,5 +71,49 @@ def larger : NativeEff := .bind n1 n7
   ((referencedBody.fillAt [0, 0] larger).getD referencedBody) (.fill [0, 0] larger))
 
 
+/-! Preserved S1 counterexamples: reference faults must use the module table. -/
+namespace ReferenceFault
+
+def base : Sketch := ⟨.bind n7 (.provideLayer (.effectDiscard n1) false n1), []⟩
+def late : NativeEff := .provideLayer (.ref [1, 0]) false n7
+def faulty : Sketch := ⟨.bind late (.provideLayer (.effectDiscard n1) false n1), []⟩
+def start : SourceSession := opened base
+def broken : SourceSession := opened faulty
+def drafted := start.feed Oracle.uncached .draft (.fill [0] late)
+#guard drafted.value.toOption.map (fun r =>
+  (decide (r.1.table = r.1.sketch.sourceTable {}), r.2.delta, r.1.view.type)) =
+    some (true, .rechecked, none)
+#guard match (start.feed Oracle.uncached .keepExact (.fill [0] late)).value with
+  | .error (.refused _) => true
+  | _ => false
+-- Removing an existing fault must refresh the root, even when the part keeps its type.
+#guard (broken.feed Oracle.uncached .draft (.fill [0] n7)).value.toOption.map (fun r =>
+  (decide (r.1.table = r.1.sketch.sourceTable {}), r.2.delta, r.1.view.type)) =
+    some (true, .rechecked, some (.pure .nat))
+#guard (broken.feed Oracle.uncached .keepExact (.fill [1, 1] n7)).value.toOption.isNone
+-- Undo restores the whole source table, including its reference refusal.
+#guard match (broken.feed Oracle.uncached .draft (.fill [0] n7)).value with
+  | .ok (next, _) => (next.feed Oracle.uncached .draft (.fill [0] late)).value.toOption.map
+      (fun r => decide (r.1.table = broken.table ∧ r.1.sketch = broken.sketch)) = some true
+  | _ => false
+-- A splice reports every source address in the replacement subtree.
+#guard (start.feed Oracle.uncached .keepExact (.fill [0] (.bind n1 n7))).value.toOption.map
+  (fun r => (r.2.delta, decide (r.1.table = r.1.sketch.sourceTable {}),
+    decide (r.2.delta = .spliced
+      ((Node.addresses (.eff r.1.sketch.program)).filter (Table.under [0]))))) =
+    some (.spliced [[0], [0, 0], [0, 1]], true, true)
+-- The source list excludes the copied descendants of a valid reference.
+#guard ((opened refBase).feed Oracle.uncached .keepExact (.fill [1] refFilling)).value.toOption.map
+  (fun r => (r.2.delta, decide (r.2.delta = .spliced
+    ((Node.addresses (.eff r.1.sketch.program)).filter (Table.under [1]))))) =
+    some (.spliced [[1], [1, 0], [1, 1]], true)
+-- The document interpreter and replay expose the same exact source table.
+def doc : Doc := (Doc.open_ ⟨{}, {}, base⟩).value
+#guard (doc.step Oracle.uncached doc.snap (.draft (.fill [0] late))).value.toOption.map
+  (fun r => decide (r.1.session.table = r.1.session.sketch.sourceTable {})) = some true
+#guard (replayDoc ⟨{}, {}, base⟩ [.draft (.fill [0] late)]).toOption.map
+  (fun r => decide (r.table = r.sketch.sourceTable {})) = some true
+end ReferenceFault
+
 end FeedControls
 end Test.Program.SeamsS1

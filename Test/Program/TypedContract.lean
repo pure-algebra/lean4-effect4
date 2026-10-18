@@ -677,3 +677,8 @@ def optionPairUnion : Ty :=
 end TermRows
 
 end Test.Program.TypedContract
+
+-- Read the package law at one concrete source, machine, fuel and decision.
+example := Effect4.Program.Prepared.step_eq
+  (Effect4.Program.Prepared.make (.succeed (.lit (.nat 7))) []) 100
+  (Effect4.Machine.RunMachine.empty Effect4.Machine.Stores.empty) (.evaluate ⟨0⟩)

@@ -422,7 +422,8 @@ let clock_profile_check () =
   let () =
     let module I = Api_engine_inst in
     let p = sleep_then_42 in
-    let step m d = I.step [] p (I.interp_of [] p) ~fuel:100 m d in
+    let prepared = I.prepare [] p in
+    let step m d = I.step prepared ~fuel:100 m d in
     check_generated I.name (fun () -> I.load p ~fuel:100)
       (fun millis m -> step m (I.RunDecision_advance millis))
       (fun m -> step m (I.RunDecision_evaluate 0))
@@ -435,7 +436,8 @@ let clock_profile_check () =
   let () =
     let module I = Api_engine_ref in
     let p = sleep_then_42 in
-    let step m d = I.step [] p (I.interp_of [] p) ~fuel:100 m d in
+    let prepared = I.prepare [] p in
+    let step m d = I.step prepared ~fuel:100 m d in
     check_generated I.name (fun () -> I.load p ~fuel:100)
       (fun millis m -> step m (I.RunDecision_advance millis))
       (fun m -> step m (I.RunDecision_evaluate 0))

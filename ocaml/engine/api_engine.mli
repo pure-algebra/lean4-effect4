@@ -467,6 +467,7 @@ module Make :
         | EffName_external of Eff_types.NativeOp.t * Eff_types.Val.t *
             int list
         | EffName_caughtError of point
+      and prepared
       and 'a image = {
         to_val : 'a -> Eff_types.Val.t;
         of_val : Eff_types.Val.t -> 'a option;
@@ -898,6 +899,19 @@ module Make :
         | RaceName_parkOnly
         | RaceName_parkThenSuccess
       and 'u service = { key : Eff_types.ServiceKey.t; value : 'u; }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
+        answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
+        popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
+        events : ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event list;
+        fiber : ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber;
+        carried_cause : ('e, 'd, 'i, 'a) Eff_types.Cause.t option;
+      }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer =
+          ContAnswer_deferred of ('e, 'd, 'i, 'a) Eff_types.Cause.t
+        | ContAnswer_replacement of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
+        | ContAnswer_frame of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
+        | ContAnswer_empty
+      and arm = Arm_contA | Arm_contE | Arm_contAll
       and 't wait_state = {
         targets : fiber_id list;
         published : fiber_id list;
@@ -955,20 +969,6 @@ module Make :
         parent : memo_map_id option;
         entries : memo_entry L.t;
       }
-      and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
-        answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
-        popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
-        events : ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event list;
-        fiber : ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber;
-        carried_cause : ('e, 'd, 'i, 'a) Eff_types.Cause.t option;
-      }
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer =
-          ContAnswer_deferred of ('e, 'd, 'i, 'a) Eff_types.Cause.t
-        | ContAnswer_replacement of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
-        | ContAnswer_frame of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
-        | ContAnswer_empty
-      and arm = Arm_contA | Arm_contE | Arm_contAll
       and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =
           FrameEvent_popped of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
         | FrameEvent_ranContAll of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
@@ -978,6 +978,10 @@ module Make :
         | FrameEvent_substituted of ('e, 'd, 'i, 'a) Eff_types.Cause.t
         | FrameEvent_deferred of ('e, 'd, 'i, 'a) Eff_types.Cause.t
         | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+      and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
+          FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber
+        | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
       and leaf_head =
           LeafHead_lit
         | LeafHead_string
@@ -987,9 +991,6 @@ module Make :
         | LeafHead_undefined
         | LeafHead_unit
       and variance = Variance_co | Variance_contra | Variance_inv
-      and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
-          FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber
-        | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
       and origin = Origin_root | Origin_forked of fiber_id * bool * int list
       and fork_record = {
         child : fiber_id;
@@ -1001,6 +1002,11 @@ module Make :
       and 'u context = 'u service list
       and deferred_key = int
       and memo_map_id = int
+      and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) fiber_evaluator =
+          ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp ->
+          ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine ->
+          ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber ->
+          bool -> ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) iter
       and scope_store = scope_entry M.t
       and external_store = string list
       val sh_stores_empty : stores
@@ -1276,9 +1282,11 @@ module Make :
         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
          Eff_types.Defect.t, int, unit)
         run_decision -> refusal option
-      val program_step_checked :
+      val program_prepared_make :
         Eff_types.NativeOp.t Eff_types.Eff.t ->
-        Eff_types.Row.t list ->
+        Eff_types.Row.t list -> prepared
+      val program_prepared_step :
+        prepared ->
         int ->
         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
          Eff_types.Defect.t, int, unit, ctx, stores,
@@ -1307,4 +1315,21 @@ module Make :
           Eff_types.Defect.t, int, unit)
          frame_event)
         run_machine * bool
+      val program_prepared_admit :
+        prepared ->
+        (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+         Eff_types.Defect.t, int, unit, ctx, stores,
+         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+          Eff_types.Defect.t, int, unit)
+         prim,
+         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+          Eff_types.Defect.t, int, unit)
+         frame_fiber,
+         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+          Eff_types.Defect.t, int, unit)
+         frame_event)
+        run_machine ->
+        (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
+         Eff_types.Defect.t, int, unit)
+        run_decision -> refusal option
     end

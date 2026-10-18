@@ -1,0 +1,183 @@
+PASS native: shared result eae05ee17bd3
+PASS compiler: shared result 623ea144ee19
+cd ocaml && opam exec --switch=effect4 -- dune build && opam exec --switch=effect4 -- dune test eff gen clock
+cd ocaml && opam exec --switch=effect4 -- dune test engine
+PASS Fast prepared step retains each source across repeated decisions
+Fast prepare+step bytes=10071.3 cpu_us=0.620; reuse+step bytes=9020.1 cpu_us=0.742 (10000 decisions)
+PASS Ref prepared step retains each source across repeated decisions
+Ref prepare+step bytes=10494.0 cpu_us=0.632; reuse+step bytes=9440.4 cpu_us=0.586 (10000 decisions)
+PASS Gen prepared step retains each source across repeated decisions
+Gen prepare+step bytes=9236.0 cpu_us=0.587; reuse+step bytes=8188.2 cpu_us=0.520 (10000 decisions)
+== lane X: the differential over every corpus, three engines ==
+  Gen  = ocaml/gen/api_gen.ml as generated: List everywhere, no externs
+  Ref  = E4_table_list / E4_trace_list / E4_memo_list / E4_buckets_list / E4_ppath_list / E4_env_list / E4_fibers_view_list
+  Fast = E4_table / E4_trace / E4_memo / E4_buckets / E4_ppath / E4_env / E4_fibers_view
+
+PASS DF-classification: all three profile refusals are not agreement
+PASS DF-classification: Gen profile refusal with two answers is not agreement
+PASS DF-classification: Ref profile refusal with two answers is not agreement
+PASS DF-classification: Fast profile refusal with two answers is not agreement
+PASS DF-classification: profile refusal and unexpected exception remain distinct
+PASS DF-classification: three unexpected exceptions are not agreement
+PASS DF-classification: unexpected exception with two answers is not agreement
+PASS DF-classification: three answers remain comparable
+PASS DF-classification: semantic divergence fails independently
+== 1. ocaml/eff/goldens: the byte goldens (fuel 1000) ==
+  /Users/pooks/.codex/worktrees/abstractions-runtime/lean4-effect4/ocaml/_build/default/eff/goldens: 89 files, 89 decoded
+PASS the byte corpus decodes: all 89 programs found
+  goldens: 89 programs x 712 tapes (longest 64 decisions), 17622 positions, 35244 projection comparisons (2 pairs each position), 0 profile-refused tapes, 0 raised tapes, 2.34 s
+PASS goldens: 0 divergences and no unvalidated tapes
+
+== 2. the truth corpus: the Lean-cut wire goldens (fuel 1000) ==
+  /Users/pooks/.codex/worktrees/abstractions-runtime/lean4-effect4/ocaml/goldens/eff: 8 files, 8 decoded
+  truth programs with canonical bytes: 11 of 14 (p42,pAwait,pBind,pCatch,pFork,pGen,pLoop,pScope,pTwo,pAcquire,pProvide)
+  NOTE no canonical bytes anywhere in the tree for: pAcquireClosed pProvideMerge pProvideTwice -- they are TypeScript declarations in corpus.json and Lean has not cut their wire, so they cannot enter a byte-driven differential
+PASS the truth corpus has at least the 8 Lean-cut goldens
+  truth: 11 programs x 88 tapes (longest 64 decisions), 2178 positions, 4356 projection comparisons (2 pairs each position), 0 profile-refused tapes, 0 raised tapes, 0.20 s
+PASS truth: 0 divergences and no unvalidated tapes
+
+== 3. the Lean corpus: the programs `make corpus` printed (random tapes, fuel sweep) ==
+  /Users/pooks/.codex/worktrees/abstractions-runtime/lean4-effect4/.lake/corpus: 408 files, 408 decoded
+PASS the Lean corpus is present (`make corpus` writes it under .lake/corpus)
+PASS every program of the Lean corpus decodes exactly
+PASS every program of the Lean corpus re-encodes to Lean's bytes
+  408 programs: 137 well typed by Lean (Api.wellTyped), 271 ill-typed -- the machine's answer to both is semantics
+  lean: 408 programs x 2448 tapes (longest 64 decisions), 53040 positions, 106080 projection comparisons (2 pairs each position), 0 profile-refused tapes, 0 raised tapes, 2.20 s
+PASS lean: 0 divergences and no unvalidated tapes
+
+== 4. the owed rows ==
+PASS FB1 (lane C, owed): the Fast fiber table = api_gen's m.fibers, ids AND rows, on 89/89 goldens
+  NOTE DF-3 (query agreement, `E4_query.at s i` = `api_replay` of the first i) waits on lane Q3 and is out of this lane's scope. The half of it that exists -- `replay_steps` at position i equals a replay of the first i decisions -- is what every position of every tape above compares, on three engines.
+
+== 5. the comparison has teeth: one mutation per field ==
+PASS compare p p = [] (the projection is equal to itself)
+  base = pFork at the end of [evaluate 0; flush], fuel 1000: 2 fibers, 26 trace rows
+PASS mutating p1_outcome is caught, and only it
+PASS mutating p2_stuck is caught, and only it
+PASS mutating p3_settled is caught, and only it
+PASS mutating p4_answer is caught, and only it
+PASS mutating p5_fiber_count is caught, and only it
+PASS mutating p6_fiber_ids is caught, and only it (at index 0)
+PASS mutating p7_exits is caught, and only it (at index 0)
+PASS mutating p8_root_exit is caught, and only it
+PASS mutating p9_fiber_rows is caught, and only it (at index 1)
+PASS mutating p10_armed is caught, and only it
+PASS mutating p11_trace_length is caught, and only it
+PASS mutating p12_trace_rows is caught, and only it (at index 7)
+PASS mutating p13_store_row is caught, and only it
+
+== the cross face: the engines against harness/truth/corpus.json ==
+  corpus.json: 93 programs recorded at fuel 1000
+  DIFFERS pAcquire       engine: outcome=finished fibers=1 exit=failure [die(missingService)] | lean: outcome=finished fibers=1 exitKind=success
+  DIFFERS pProvide       engine: outcome=finished fibers=6 exit=success 2 | lean: outcome=finished fibers=1 exitKind=success
+  agree=9  differ=2  not in corpus.json=0
+  NOTE reported, not gated: 9 of the truth programs agree with Lean's recorded run
+
+== totals: 508 programs, 3248 tapes, 72840 positions, 145680 projection comparisons, 0 divergences, 0 profile-refused tapes, 0 raised tapes, 4.74 s ==
+== ALL PASS: 0 failure(s) == (32 checks)
+python3 scripts/check-lcnf-interfaces.py
+PASS comparison-output alias refused: implementation
+PASS comparison-output alias refused: interface
+PASS comparison-output alias refused: manifest
+PASS comparison-output alias refused: cross-artifact
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-lcnf-ikmwpr5s/compile/second.ml", line 2, characters 22-30:
+2 | let malformed : int = "refuse"
+                          ^^^^^^^^
+Error: This expression has type string but an expression was expected of type
+         int
+
+PASS: stale interface replacement and whole-family retention after native refusal
+python3 scripts/check-lcnf-sealing.py
+lawful-alias: exit 0, expected 0
+
+prepared-alias: exit 0, expected 0
+
+prepared-table-update: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 38-43:
+2 | let forge (p : A.prepared) = { p with table = [] }
+                                          ^^^^^
+Error: Unbound record field table
+
+prepared-interpreter-read: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 37-43:
+2 | let interpreter (p : A.prepared) = p.interp
+                                         ^^^^^^
+Error: Unbound record field interp
+
+built-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 3, characters 36-39:
+3 | let forged : public_built_alias = { app = { rows = []; services = []; types = [] }; program = Eff_types.Eff.Perform (Eff_types.NativeOp.External 0, Eff_types.Term.Lit Eff_types.Lit.Unit); admitted = { answer = Eff_types.Ty.Nat; error = Eff_types.Ty.Never; requires = [] }; row_names = [] }
+                                        ^^^
+Error: Unbound record field app
+
+memo-public-alias: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 3, characters 28-30:
+3 | let forged : public_alias = []
+                                ^^
+Error: This expression has type 'a list
+       but an expression was expected of type
+         public_alias = Effect4_gen.Api_gen.memo
+
+checked-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 31-36:
+2 | let forged : int A.checked = { value = 7; trace = [] }
+                                   ^^^^^
+Error: Unbound record field value
+
+oracle-callback: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 24-62:
+2 | let forged : A.oracle = fun input -> A.program_check_run input
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This expression should not be a function, the expected type is
+       A.oracle
+
+hit-rule-callback: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 26-41:
+2 | let forged : A.hit_rule = fun _ _ -> true
+                              ^^^^^^^^^^^^^^^
+Error: This expression should not be a function, the expected type is
+       A.hit_rule
+
+checked-update: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 41-46:
+2 | let forge (c : int A.checked) = { c with value = 99 }
+                                             ^^^^^
+Error: Unbound record field value
+
+hidden-helper: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 13-42:
+2 | let helper = A.program_check_typed_program
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Unbound value A.program_check_typed_program
+
+session-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 27-32:
+2 | let forged : A.session = { state = A.tool_native_start; memo = [] }
+                               ^^^^^
+Error: Unbound record field state
+
+state-literal: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 25-35:
+2 | let forged : A.state = { transcript = []; raw = Obj.magic 0 }
+                             ^^^^^^^^^^
+Error: Unbound record field transcript
+
+memo-as-session: exit 2, expected 2
+File "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-sealing-z7h_ov6m/client.ml", line 2, characters 33-72:
+2 | let forged = A.tool_native_serve ([] : (A.check_input * A.verdict) list)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: This expression has type (A.check_input * A.verdict) list
+       but an expression was expected of type
+         A.session = Effect4_gen.Api_gen.session
+
+PASS: 2 lawful aliases and 12 hostile sealed-package clients
+opam exec --switch=effect4 -- bash ocaml/engine/tools/gen-check.sh
+ok   C1 no filter/erase/removeAll/dropWhile on RunMachine.fibers in the core sources
+ok   C2 ocaml/gen builds and @gen/runtest passes (api_gen.ml is the oracle)
+ok   C3a dune build engine
+ok   C3b api_engine.ml type-checks against E4_clock/Lcnf_* interfaces and Eff_types: the functor needs no instance, so the
+          extern table is closed (every unconverted carrier site would be a type error)
+ok   C4 the generated file carries the current prelude
+
+gen-check: PASS
+PASS ocaml: recorded 9913e5e23f3b (45.151s)
